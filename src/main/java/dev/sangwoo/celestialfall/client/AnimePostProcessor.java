@@ -21,7 +21,7 @@ public final class AnimePostProcessor {
     public static void focus(float x,float y) { focusX=Math.max(.08f,Math.min(.92f,x));focusY=Math.max(.08f,Math.min(.92f,y)); }
     public static void render(float delta) {
         MinecraftClient mc=MinecraftClient.getInstance();
-        boolean timeStop=StandClient.monochrome();
+        float mono=StandClient.monoAmount(delta);boolean timeStop=mono>0;
         if(failed || mc.world==null || mc.player==null || !CelestialFall.CONFIG.postProcessing&&!timeStop)return;
         ClientSpell spell=CinematicDirector.active();
         if(spell==null)spell=CelestialFallClient.nearest();
@@ -60,7 +60,7 @@ public final class AnimePostProcessor {
             f("Bloom",(float)CelestialFall.CONFIG.bloomStrength);
             float wave=timeStop||isAtomic?0:isKageno?dev.sangwoo.celestialfall.client.kageno.KagenoCamera.pulse(kageno.skill(),age):isHeaven?HeavenTimeline.aftershock(age):SpellTimeline.wavePulse(age),clash=timeStop||isKageno||isAtomic || isHeaven?0:SpellTimeline.clashPulse(age);
             f("HeavenTone",isHeaven?1:0);
-            f("TimeStopMono",timeStop?1:0);
+            f("TimeStopMono",mono);
             var grade=immersion.grade();
             f("AtomicMode",isAtomic?1:0);
             f("AtomicTint",grade.tint());

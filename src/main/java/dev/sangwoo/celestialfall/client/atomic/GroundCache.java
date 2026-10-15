@@ -6,7 +6,7 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 
 /** Walkable surface heights around a cast point, so decals and slabs sit on uneven terrain. */
-final class GroundCache {
+public final class GroundCache {
     private final Vec3d origin;
     private final int radius;
     private final float[] top;
@@ -29,7 +29,7 @@ final class GroundCache {
     }
     int radius() { return radius; }
     /** The solid top face closest to {@code y} within 6 blocks below and 3 above. */
-    static float surface(ClientWorld world,int x,int z,double y) {
+    public static float surface(ClientWorld world,int x,int z,double y) {
         var pos=new BlockPos.Mutable();float best=Float.NaN;double bestGap=1e9;
         int y0=(int)Math.floor(y);
         for(int by=y0+3;by>=y0-6;by--){

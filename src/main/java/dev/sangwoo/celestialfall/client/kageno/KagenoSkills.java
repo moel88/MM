@@ -14,6 +14,7 @@ public final class KagenoSkills {
         SKILLS[RUSH]=new ThroughSkill();
         SKILLS[Y]=new FallenSkill();
         SKILLS[H]=new HighestSkill();
+        SKILLS[P]=new PoseSkill();
     }
     public static Fx.Skill of(int skill){return skill>=0&&skill<SKILLS.length?SKILLS[skill]:null;}
 }

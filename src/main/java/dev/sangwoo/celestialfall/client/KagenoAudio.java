@@ -15,7 +15,9 @@ final class KagenoAudio {
         String name=switch(c.skill()){case M1->"m1_"+c.combo();case E->"e";case R->"r";case T->"t";case RUSH->"rush";case Y->"y";case H->"h";default->null;};if(name==null)return;
         float volume=(float)(CelestialFall.CONFIG.effectVolume*(c.includes(mc.player.getUuid())?1:Math.max(0,1-mc.player.getPos().distanceTo(c.origin())/40)));
         var sound=new PositionedSoundInstance(CelestialFall.id("kageno_"+name),SoundCategory.PLAYERS,volume,1,net.minecraft.util.math.random.Random.create(),false,0,SoundInstance.AttenuationType.NONE,0,0,0,true);
-        PLAYING.put(c.id(),sound);mc.getSoundManager().play(sound);
+        // Y's boom belongs to the flash 1.03 s in; the recording starts with 0.25 s of silence.
+        int delay=c.skill()==Y?Math.max(0,16-(int)c.age(0)):0;
+        PLAYING.put(c.id(),sound);if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
     }
     static void stop(UUID id){var sound=PLAYING.remove(id);if(sound!=null)MinecraftClient.getInstance().getSoundManager().stop(sound);}
     static void retain(Set<UUID> ids){for(var id:new ArrayList<>(PLAYING.keySet()))if(!ids.contains(id))stop(id);}

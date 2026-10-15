@@ -60,10 +60,12 @@ public final class KagenoRenderer {
             if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
             KagenoFire.crescentGain=1;RenderSystem.defaultBlendFunc();
             for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
+            dev.sangwoo.celestialfall.client.kageno.HealNumbers.render(mc,matrices,delta,camera);
             RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
             // Full-frame flashes for nearby viewers.
             float flash=0;int color=0xffffff;
-            for(var x:casts)if(x.origin.squaredDistanceTo(camera)<28*28){float v=KagenoSkills.of(x.cast.skill()).flash(x);if(v>flash){flash=v;color=KagenoSkills.of(x.cast.skill()).flashColor(x);}}
+            for(var x:casts)if(Math.min(x.origin.squaredDistanceTo(camera),x.pos.squaredDistanceTo(camera))<28*28){float v=KagenoSkills.of(x.cast.skill()).flash(x);if(v>flash){flash=v;color=KagenoSkills.of(x.cast.skill()).flashColor(x);}}
+            float glow=KagenoStatusFx.flash(mc,delta,camera);if(glow>flash){flash=glow;color=0xfffcff;}
             if(flash>0){
                 RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.disableDepthTest();
                 buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
@@ -72,11 +74,15 @@ public final class KagenoRenderer {
                 m.quad(p.add(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).subtract(vu.multiply(3)),p.add(side.multiply(3)).subtract(vu.multiply(3)),color,Math.min(1,flash));
                 BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.enableDepthTest();
             }
-            // Owner-only shadow marks, visible through walls.
-            RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.disableDepthTest();
+            // Geometry that reads through the white-out (Y's violet pillars), depth-tested against the world.
+            RenderSystem.setShader(GameRenderer::getPositionColorProgram);
             buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
-            KagenoStatusFx.marks(mc,m,delta,camera);
+            for(var x:casts)KagenoSkills.of(x.cast.skill()).overFlash(x,m,false);
             BufferRenderer.drawWithGlobalProgram(buffer.end());
+            RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
+            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
+            for(var x:casts)KagenoSkills.of(x.cast.skill()).overFlash(x,m,true);
+            BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.defaultBlendFunc();
         }finally{matrices.pop();RenderSystem.depthMask(true);RenderSystem.enableDepthTest();RenderSystem.enableCull();RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();RenderSystem.setShaderColor(1,1,1,1);}
     }
     private static List<LivingEntity> targets(MinecraftClient mc,StandClient.Cast s,float delta){
@@ -86,8 +92,7 @@ public final class KagenoRenderer {
     }
     public static void hud(DrawContext draw,float delta){
         var mc=MinecraftClient.getInstance();if(mc.player==null||mc.world==null||!MapClient.enabled()||mc.options.hudHidden)return;
-        var cinematic=StandClient.cinematic();int width=draw.getScaledWindowWidth(),height=draw.getScaledWindowHeight();
-        if(cinematic!=null)return;
+        int width=draw.getScaledWindowWidth(),height=draw.getScaledWindowHeight();
         // Reference UI: "N Hits" at the left, a third down. It flashes red #F62223 on every hit and
         // eases back to white in 0.25 s with a small drift and tilt; the purple timer below counts
         // seconds since the first hit of the combo.
@@ -115,7 +120,7 @@ public final class KagenoRenderer {
             String text=keys[i]+"  "+NAMES[skill]+suffix;float scale=Math.min(1,126f/Math.max(1,mc.textRenderer.getWidth(text)));
             var matrix=draw.getMatrices();matrix.push();matrix.translate(x,y+i*13,0);matrix.scale(scale,scale,1);draw.drawTextWithShadow(mc.textRenderer,text,0,0,wait>0?0xff887a9c:0xffe6ddf5);matrix.pop();
         }
-        draw.drawTextWithShadow(mc.textRenderer,"T 길게: 돌진 · I: 가방",x,y+94,0xffa99bc0);
+        draw.drawTextWithShadow(mc.textRenderer,"P  "+NAMES[P]+" · T 길게: 돌진 · I: 가방",x,y+94,0xffa99bc0);
         panel.pop();
         if(state!=null&&state.until()>now)draw.drawCenteredTextWithShadow(mc.textRenderer,String.format(java.util.Locale.ROOT,"OVERDRIVE  %.1fs  ×%.2f",(state.until()-now)/20.,1+state.boost()),width/2,height-72,0xffdc9cff);
     }

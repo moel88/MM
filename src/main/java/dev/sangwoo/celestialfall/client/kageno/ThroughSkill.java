@@ -17,7 +17,7 @@ import static dev.sangwoo.celestialfall.client.kageno.SparkSkill.H;
  */
 final class ThroughSkill implements Fx.Skill {
     /** Dash start (D), end of the glide, dome window and the final cut. */
-    static final float D=B+1.09f,GLIDE=D+.25f,DOME=D+.35f,CUT=D+.8f;
+    static final float D=B+1.09f,GLIDE=D+.25f,DOME=D+.35f,CUT=D+.85f;
     static final R6.Pose GUARD_LOW=pose().body(0,18,0).at(0,-.18,0).rArm(-10,30).lArm(-80,-15).rLeg(-65,90).lLeg(-65,-90).blade(30,-20);
     static final R6.Pose LUNGE=pose().body(0,45,0).at(0,-.54,0).rArm(10,0).lArm(0,180).rLeg(-60,0).lLeg(-30,180).blade(20,0);
     static final R6.Pose COMET=pose().body(0,80,0).at(0,-.68,0).rArm(80,0).lArm(60,-20).blade(80,0);
@@ -83,23 +83,24 @@ final class ThroughSkill implements Fx.Skill {
     }
     @Override public void crescents(Fx c){
         float t=c.sec;Vec3d pos=c.pos;
-        // Cage of vertical crescents (meridians) flickering all around the body.
-        if(t>=DOME&&t<CUT){
-            for(int k=0;k<15;k++){
-                float born=DOME+(float)Ease.hash(k*11+1)*(CUT-DOME-.1f),life=.1f+.1f*(float)Ease.hash(k*13+2),u=(t-born)/life;
+        // Cage of vertical crescents (meridians) flickering all around the body: 12-16 alive at once,
+        // each 0.1-0.2 s, white-pink and magenta with a few dark violet ones.
+        if(t>=DOME-.05f&&t<CUT){
+            for(int k=0;k<60;k++){
+                float born=DOME-.05f+(float)Ease.hash(k*11+1)*(CUT-DOME-.1f),life=.14f+.1f*(float)Ease.hash(k*13+2),u=(t-born)/life;
                 if(u<0||u>=1)continue;
                 double az=Ease.hash(k*17+3)*Math.PI*2+(t-DOME)*2.5,len=100+60*Ease.hash(k*19+4);
                 Vec3d r=new Vec3d(Math.cos(az),0,Math.sin(az));
-                boolean dark=k%5==2;
-                KagenoFire.crescent(pos,r,new Vec3d(0,1,0),2.2*H,(.1+.15*Ease.hash(k*23))*H,Ease.hash(k*29)*20,len,dark?2:5,k,Ease.smooth(u,.5f,1),.5f,dark?.7f:.55f*(float)Math.sin(Math.PI*u));
+                boolean dark=k%6==2;
+                KagenoFire.crescent(pos,r,new Vec3d(0,1,0),1.4*H*(.85+.3*Ease.hash(k*31)),(.1+.15*Ease.hash(k*23))*H,Ease.hash(k*29)*20,len,dark?2:5,k,Ease.smooth(u,.55f,1),.5f,dark?.75f:.9f*(float)Math.sin(Math.PI*Math.min(1,u*1.6)));
             }
         }
-        // Horizontal ring slash expanding past 5 H in 0.05 s, lilac-pink top and an indigo rim.
+        // Horizontal ring slash expanding past 5 H in 0.04 s, lilac-pink top and an indigo rim.
         if(t>=CUT&&t<CUT+.28f){
-            float u=t-CUT,grow=Ease.out(u,0,.05f);double r=(1.5+4*grow)*H;
+            float u=t-CUT,grow=Ease.out(u,0,.04f);double r=(3+3*grow)*H;
             // Slightly tilted: the far side a little higher than the near side.
-            Vec3d front=c.f.add(0,Math.sin(Math.toRadians(5)),0).normalize();
-            KagenoFire.crescent(pos.add(0,.7,0),front,c.right,r,r*.55,0,360,6,3,Ease.smooth(u,.12f,.28f)*.7f,.5f,1-Ease.smooth(u,.16f,.28f));
+            Vec3d front=c.f.add(0,Math.sin(Math.toRadians(12)),0).normalize();
+            KagenoFire.crescent(pos.add(0,.7,0),front,c.right,r,r*.6,0,360,6,3,Ease.smooth(u,.12f,.28f)*.7f,.5f,1-Ease.smooth(u,.16f,.28f));
         }
     }
     @Override public void shaders(Fx c){
@@ -115,13 +116,13 @@ final class ThroughSkill implements Fx.Skill {
         if(t>=.2f&&t<D-B+.3f){
             float in=Ease.smooth(t,.2f,.4f),out=1-Ease.smooth(t,D-B-.1f,D-B+.3f);
             List<Vec3d> roots=new ArrayList<>();List<double[]> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-            for(int i=0;i<18;i++){
+            for(int i=0;i<26;i++){
                 double along=(2+13*Ease.hash(i*7+1))*H,side=(1+3*Ease.hash(i*13+2))*H*(Ease.hash(i*3)<.25?-.4:1);
                 double cycle=(t*(.9+.5*Ease.hash(i*3))+Ease.hash(i*5))%1,flare=.55+.45*Math.sin(Math.PI*cycle);
                 roots.add(c.origin.add(c.f.multiply(along)).add(c.right.multiply(side)).add(0,.02,0));
-                sizes.add(new double[]{1.0+.7*Ease.hash(i*17),3.6*H*flare*(.6+.4*Ease.hash(i*19))});alphas.add(in*out*(float)(.75+.25*flare));
+                sizes.add(new double[]{1.4+.9*Ease.hash(i*17),3.6*H*flare*(.6+.4*Ease.hash(i*19))});alphas.add(in*out*(float)(.85+.15*flare));
             }
-            KagenoFire.tongues(c.matrix,c.camera,5,roots,sizes,alphas,c.age);
+            KagenoFire.tongues(c.matrix,c.camera,11,roots,sizes,alphas,c.age);
         }
         SparkSkill.orbs(c,t,D-B+.6f,D-B+.75f);
         // Dense white cloud left at the dash start.
@@ -135,8 +136,8 @@ final class ThroughSkill implements Fx.Skill {
         if(c.sec>=CUT+.1f&&c.sec<CUT+1.0f){
             float a=Ease.smooth(c.sec,CUT+.1f,CUT+.2f)*(1-Ease.smooth(c.sec,CUT+.6f,CUT+1.0f));
             List<Vec3d> roots=new ArrayList<>();List<double[]> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-            for(int i=0;i<12;i++){double az=Ease.hash(i*3)*Math.PI*2,r=(1.5+1.5*Ease.hash(i*5))*H;roots.add(c.pos.add(Math.cos(az)*r,.02,Math.sin(az)*r));sizes.add(new double[]{.35,(.3+.5*Ease.hash(i*7))*H});alphas.add(a);}
-            KagenoFire.tongues(c.matrix,c.camera,0,roots,sizes,alphas,c.age);
+            for(int i=0;i<12;i++){double az=Ease.hash(i*3)*Math.PI*2,r=(1.5+1.5*Ease.hash(i*5))*H;roots.add(c.pos.add(Math.cos(az)*r,.02+.9*Ease.hash(i*9),Math.sin(az)*r));sizes.add(new double[]{.45+.25*Ease.hash(i*11),(.3+.5*Ease.hash(i*7))*H});alphas.add(a);}
+            KagenoFire.tongues(c.matrix,c.camera,11,roots,sizes,alphas,c.age);
         }
     }
     @Override public float flash(Fx c){

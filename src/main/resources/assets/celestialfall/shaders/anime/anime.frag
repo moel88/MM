@@ -77,7 +77,8 @@ void main() {
         fragColor=vec4(sum/total,1.0);
         return;
     }
-    if(TimeStopMono>.5){vec3 c=texture(SceneTex,texCoord).rgb;float gray=dot(c,vec3(.2126,.7152,.0722));fragColor=vec4(vec3(gray),1.0);return;}
+    // R time stop: the world (not the HUD) desaturates to Rec.601 luma.
+    if(TimeStopMono>.001){vec3 c=texture(SceneTex,texCoord).rgb;float gray=dot(c,vec3(.299,.587,.114));fragColor=vec4(mix(c,vec3(gray),TimeStopMono),1.0);return;}
     vec2 aspect=vec2(Resolution.x/max(Resolution.y,1.0),1.0);
     vec2 delta=(texCoord-Focus)*aspect;
     float radius=length(delta);

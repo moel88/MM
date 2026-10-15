@@ -33,19 +33,31 @@ public final class KagenoCamera {
         float yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z)),pitch=(float)-Math.toDegrees(Math.asin(Math.max(-1,Math.min(1,d.y))));
         return new CinematicDirector.Pose(eye,yaw,pitch,s.roll());
     }
+    /** Hands the last cutscene orientation to the orbit camera when the cutscene cuts back. */
+    public static void handoff(StandClient.Cast c){
+        var s=KagenoSkills.of(c.skill());if(s==null)return;var shot=s.shot(4.95f);if(shot==null)return;
+        Vec3d f=Vec3d.fromPolar(0,c.yaw()),right=new Vec3d(-f.z,0,f.x);
+        Vec3d d=f.multiply(shot.lookFw()-shot.eyeFw()).add(right.multiply(shot.lookRt()-shot.eyeRt()));if(d.lengthSquared()<1e-6)return;
+        dev.sangwoo.celestialfall.client.BotandCamera.STATE.yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z));
+        dev.sangwoo.celestialfall.client.BotandCamera.STATE.pitch=10;
+    }
     /** Post-process pulse for the anime shader (0 = none). */
     public static float pulse(int skill,float age){var s=KagenoSkills.of(skill);return s==null?0:s.pulse(age/20f);}
     /** Gameplay-camera shake for the local viewer: {yaw, pitch, roll} degrees. */
     public static float[] shake(float delta){
         var mc=MinecraftClient.getInstance();if(mc.world==null||mc.player==null||!MapClient.enabled()||StandClient.cinematic()!=null)return null;
-        float amount=0;float time=mc.world.getTime()+delta;
+        float amount=0;float time=mc.world.getTime()+delta;float[] kick=null;
         for(var c:StandClient.CASTS.values()){
             var s=KagenoSkills.of(c.skill());if(s==null)continue;
-            float k=s.shake(c.age(delta)/20f);if(k<=0)continue;
-            double dist=c.origin().distanceTo(mc.player.getPos());
-            amount=Math.max(amount,k*(float)Math.max(0,1-dist/40));
+            double dist=c.origin().distanceTo(mc.player.getPos());float reach=(float)Math.max(0,1-dist/40);
+            var k=s.kick(c.age(delta)/20f);
+            if(k!=null&&reach>0){if(kick==null)kick=new float[3];for(int i=0;i<3;i++)kick[i]+=k[i]*reach;}
+            float v=s.shake(c.age(delta)/20f);if(v<=0)continue;
+            amount=Math.max(amount,v*reach);
         }
-        if(amount<=0)return null;amount*=(float)CelestialFall.CONFIG.screenShakeStrength;
-        return new float[]{amount*(float)(Math.sin(time*2.9)*.7+Math.sin(time*5.3)*.3),amount*(float)(Math.cos(time*3.7)*.7+Math.sin(time*6.1)*.3),amount*.35f*(float)Math.sin(time*4.4)};
+        if(amount<=0&&kick==null)return null;float strength=(float)CelestialFall.CONFIG.screenShakeStrength;amount*=strength;
+        float[] out={amount*(float)(Math.sin(time*2.9)*.7+Math.sin(time*5.3)*.3),amount*(float)(Math.cos(time*3.7)*.7+Math.sin(time*6.1)*.3),amount*.35f*(float)Math.sin(time*4.4)};
+        if(kick!=null)for(int i=0;i<3;i++)out[i]+=kick[i]*strength;
+        return out;
     }
 }

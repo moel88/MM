@@ -34,7 +34,7 @@ public final class KagenoManager {
     }
     private static final class State {
         final ServerWorld world;State(ServerPlayerEntity p){world=p.getServerWorld();}
-        final long[] ready=new long[9];long press=-1,pulse=-1,lastCombo=-100,overUntil,lastHit=-1000;int combo,window,packets,hits;float boost;
+        final long[] ready=new long[9];long press=-1,pulse=-1,lastCombo=-100,overUntil,lastHit=-1000,poseReady;int combo,window,packets,hits;float boost;
     }
     private record Mark(ServerPlayerEntity owner,LivingEntity target,long until){}
     private static final Map<ServerPlayerEntity,State> STATES=new HashMap<>();
@@ -47,7 +47,7 @@ public final class KagenoManager {
     public static void setClientFrozen(Predicate<LivingEntity> value){clientFrozen=value;}
     public static void initialize(){
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,p,h,b,r)->{
-            if(b.readableBytes()!=1)return;int action=b.readUnsignedByte();if(action>PULSE)return;
+            if(b.readableBytes()!=1)return;int action=b.readUnsignedByte();if(action>POSE)return;
             server.execute(()->{
                 var s=STATES.computeIfAbsent(p,k->new State(k));int win=server.getTicks()/20;
                 if(s.window!=win){s.window=win;s.packets=0;}if(++s.packets>50)return;
@@ -81,6 +81,14 @@ public final class KagenoManager {
             if(s.press<0)return false;long held=now-s.press;s.press=-1;
             return begin(p,held>=HOLD?RUSH:T);
         }
+        // P is an emote: pressing it again releases the pose; any other skill input releases it first.
+        if(action==POSE){
+            for(var c:new ArrayList<>(CASTS.values()))if(c.player==p&&c.skill==P){stop(c);return true;}
+            if(!valid(p)||busy(p)||CombatManager.busy(p)||CombatManager.cinematic(p)||now<s.poseReady)return false;
+            var c=new Cast(p,P,0);CASTS.put(c.id,c);s.poseReady=now+COOLDOWN[P];
+            p.clearActiveItem();p.setSprinting(false);p.setVelocity(0,p.getVelocity().y,0);sync(c);return true;
+        }
+        if(action!=Q)for(var c:new ArrayList<>(CASTS.values()))if(c.player==p&&c.skill==P)stop(c);
         if(!valid(p)||busy(p)||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
         if(action==T_DOWN){if(s.press<0&&ready(p,s,T,now)){s.press=s.pulse=now;return true;}return false;}
         if(action==G)return AtomicManager.cast(p);
@@ -135,7 +143,8 @@ public final class KagenoManager {
             var p=entry.getKey();var s=entry.getValue();long now=p.getWorld().getTime();
             if(s.press>=0){if(now-s.pulse>6||busy(p)){s.press=-1;}else if(now-s.press>=HOLD){s.press=-1;begin(p,RUSH);}}
             if(s.overUntil>0&&now>=s.overUntil){s.overUntil=0;s.boost=0;status(p,s);}
-            if(now%20==0&&!frozen(p))p.heal(1);
+            // Passive 1 (초재생): 1 HP per second, applied as 0.5 every half second like the review's counter.
+            if(now%10==0&&!frozen(p))p.heal(.5f);
             if(now%10==0)status(p,s);
         }
         // Owners with no casts still regenerate, and are initialized after equip/join.
@@ -183,11 +192,20 @@ public final class KagenoManager {
                     if(t instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
                 }
             }
+            // Y: targets struck by the flash stand still until the launch, then rise straight up.
+            if(c.skill==Y&&age==Y_FLASH)c.targets.clear();
+            if(c.skill==Y&&age>=Y_LAUNCH&&age<Y_LAUNCH+16){
+                for(var t:c.targets.keySet()){
+                    int k=age-Y_LAUNCH;if(k>1&&t.isOnGround()||frozen(t))continue;
+                    t.setVelocity(0,yLift(k),0);t.fallDistance=0;t.velocityModified=true;
+                    if(t instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+                }
+            }
             float amount=damage(c.skill,age,c.combo);
             if(amount>0){
                 for(var target:strikeTargets(c))hit(c,target,amount,age);
             }
-            if(age%10==0)sync(c);
+            if(age%10==0||c.skill==Y&&age==Y_FLASH)sync(c);
         }
     }
     private static void hold(LivingEntity e,Vec3d pos,float yaw,float pitch){
@@ -201,18 +219,20 @@ public final class KagenoManager {
         var s=STATES.get(c.player);boolean over=s!=null&&s.overUntil>c.world.getTime();
         double multiplier=multiplier(c.world.isNight(),over?s.boost:0,false);
         var source=c.world.getDamageSources().playerAttack(c.player);
-        boolean unblock=c.skill==R||c.skill==H||c.skill==Y||c.skill==E&&age==52||c.skill==M1&&c.combo==4||c.skill==RUSH&&age==RUSH_FINISH;
+        boolean unblock=c.skill==R||c.skill==H||c.skill==Y||c.skill==E&&age==E_FINISH||c.skill==M1&&c.combo==4||c.skill==RUSH&&age==RUSH_FINISH;
         if(unblock)CombatManager.interrupt(e);
         e.timeUntilRegen=0;
         if(CombatManager.damageWithoutKnockback(e,source,(float)(amount*multiplier))){
-            if(s!=null){long now=c.world.getTime();s.hits=now-s.lastHit>50?1:s.hits+1;s.lastHit=now;
+            if(s!=null){long now=c.world.getTime();int n=KagenoRules.hits(c.skill,age);s.hits=now-s.lastHit>50?n:s.hits+n;s.lastHit=now;
                 if(ServerPlayNetworking.canSend(c.player,HITS)){var b=PacketByteBufs.create();b.writeVarInt(s.hits);ServerPlayNetworking.send(c.player,HITS,b);}}
             if((c.skill==T||c.skill==RUSH&&age<RUSH_START)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
-            if(over){s.boost=Math.min(1,s.boost+(amount>=7?.02f:.01f));s.overUntil=Math.min(c.world.getTime()+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,c.world.getTime()+200));}
-            if(c.skill==Y&&age==24&&!frozen(e)){e.setVelocity(0,.5,0);e.velocityModified=true;if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));}
+            // Overdrive: +0.01 damage multiplier per skill hit, a little more time, and the shadow mark
+            // (lasting as long as the overdrive itself).
+            if(over){long now=c.world.getTime();s.boost=Math.min(1,s.boost+.01f*KagenoRules.hits(c.skill,age));s.overUntil=Math.min(now+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,Math.max(now+200,s.overUntil)));}
+            if(c.skill==Y&&(age==Y_STOMP||age==Y_FLASH)&&!frozen(e))c.targets.putIfAbsent(e,e.getPos());
             // M1 hit 4: the target is held in the thrust's smoke, then launched (see tick).
             if(c.skill==M1&&c.combo==4&&!frozen(e))c.targets.put(e,e.getPos());
-            if((c.skill==RUSH&&age==RUSH_FINISH||c.skill==H&&age==102)&&!frozen(e)){
+            if(c.skill==RUSH&&age==RUSH_FINISH&&!frozen(e)){
                 Vec3d dir=Vec3d.fromPolar(0,c.yaw);e.setVelocity(dir.multiply(.65).add(0,.25,0));e.velocityModified=true;
                 if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
             }

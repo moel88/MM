@@ -76,6 +76,19 @@ public final class KagenoClips {
         }
         m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(bodyYaw-cast.yaw()));
     }
+    /**
+     * World position of the sword hand and the world blade direction for pose {@code p} of a
+     * caster standing at {@code feet} facing {@code yaw}; mirrors {@link #root}.
+     */
+    public static Vec3d[] blade(Vec3d feet,float yaw,Pose p){
+        Vec3d f=Vec3d.fromPolar(0,yaw),left=new Vec3d(f.z,0,-f.x),right=left.negate();float k=(float)Math.PI/180;
+        var q=new Quaternionf().rotationAxis(p.yaw*k,0,1,0).rotateAxis(p.pitch*k,(float)left.x,0,(float)left.z).rotateAxis(p.roll*k,(float)f.x,0,(float)f.z);
+        Vec3d off=f.multiply(p.fw).add(0,p.up,0).add(right.multiply(p.rt));
+        Vec3d local=right.multiply(.3125).add(0,1.375-PIVOT,0).add(world(p.rArm,f,right).multiply(.625));
+        return new Vec3d[]{feet.add(off).add(0,PIVOT,0).add(rotate(q,local)),rotate(q,world(p.blade,f,right)).normalize()};
+    }
+    private static Vec3d world(R6.Dir d,Vec3d f,Vec3d right){return right.multiply(d.rt()).add(0,d.up(),0).add(f.multiply(d.fw()));}
+    private static Vec3d rotate(Quaternionf q,Vec3d v){var r=q.transform(new org.joml.Vector3f((float)v.x,(float)v.y,(float)v.z));return new Vec3d(r.x,r.y,r.z);}
     public static Vec3d groundOffset(StandClient.Cast cast,float delta){
         var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,cast.yaw()),left=new Vec3d(f.z,0,-f.x);
         return f.multiply(fr.fw()).add(left.multiply(-fr.rt()));

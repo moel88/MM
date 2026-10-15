@@ -29,8 +29,10 @@ public final class StandClient {
     public record Status(long until,float boost,long[] ready,List<Mark> marks){}
     public static final Map<UUID,Cast> CASTS=new LinkedHashMap<>();
     public static final Map<UUID,Status> STATES=new HashMap<>();
+    /** World tick at which each stand user's overdrive (Q) was switched on, for the activation glow. */
+    public static final Map<UUID,Long> OVERDRIVE=new HashMap<>();
     private static Object world,player;private static long nextPunch,lastThemeUntil;private static int ticks;
-    private static boolean holdingT;private static final Set<Integer> captured=new HashSet<>();
+    private static UUID handedOff;private static boolean holdingT;private static final Set<Integer> captured=new HashSet<>();
     private static SoundInstance theme;
     /** In-game "N Hits" combo counter of the local player. */
     public static int hitCount;public static long hitTime=-1000,comboStart=-1000;
@@ -43,7 +45,7 @@ public final class StandClient {
         KagenoManager.setClientFrozen(StandClient::frozen);
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.CAST,(mc,h,b,r)->{
             UUID id=b.readUuid(),caster=b.readUuid();var dim=b.readIdentifier();int skill=b.readUnsignedByte(),combo=b.readUnsignedByte();long start=b.readLong(),serverNow=b.readLong();Vec3d origin=vec(b);float yaw=b.readFloat();int n=b.readVarInt();
-            if(skill<0||skill>H||n<0||n>4096)return;
+            if(skill<0||skill>H&&skill!=P||n<0||n>4096)return;
             var targets=new ArrayList<Target>();for(int i=0;i<n;i++)targets.add(new Target(b.readUuid(),b.readInt(),vec(b)));
             mc.execute(()->{if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);acceptCast(new Cast(id,caster,dim,skill,combo,start,serverNow,ticks,origin,yaw,List.copyOf(targets)));});
         });
@@ -51,7 +53,12 @@ public final class StandClient {
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STATUS,(mc,h,b,r)->{
             UUID id=b.readUuid();var dim=b.readIdentifier();long until=b.readLong();float boost=b.readFloat();long[] ready=new long[9];for(int i=0;i<9;i++)ready[i]=b.readLong();int n=b.readVarInt();if(n<0||n>4096)return;
             var marks=new ArrayList<Mark>();for(int i=0;i<n;i++)marks.add(new Mark(b.readUuid(),b.readInt(),b.readLong()));
-            mc.execute(()->{if(mc.world==null||!MapClient.enabled()||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);STATES.put(id,new Status(until,boost,ready,marks));});
+            mc.execute(()->{if(mc.world==null||!MapClient.enabled()||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);
+                long now=mc.world.getTime();var old=STATES.get(id);
+                // A fresh activation runs 30 s; refreshes and late joins never replay the glow.
+                if(until-now>=585&&(old==null||old.until()<=now))OVERDRIVE.put(id,now);
+                if(until<=now)OVERDRIVE.remove(id);
+                STATES.put(id,new Status(until,boost,ready,marks));});
         });
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.HITS,(mc,h,b,r)->{int n=b.readVarInt();mc.execute(()->{if(mc.world!=null){int count=Math.max(0,Math.min(9999,n));if(count<=1||count<hitCount)comboStart=mc.world.getTime();hitCount=count;hitTime=mc.world.getTime();}});});
         ClientTickEvents.START_CLIENT_TICK.register(StandClient::tick);
@@ -67,7 +74,7 @@ public final class StandClient {
     }
     private static Vec3d vec(net.minecraft.network.PacketByteBuf b){return new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());}
     private static void observe(MinecraftClient mc){if(world!=mc.world||player!=mc.player){clear(mc);world=mc.world;player=mc.player;}}
-    public static void clear(MinecraftClient mc){KagenoAudio.clear();CASTS.clear();STATES.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
+    public static void clear(MinecraftClient mc){KagenoAudio.clear();CASTS.clear();STATES.clear();OVERDRIVE.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
     private static void tick(MinecraftClient mc){
         observe(mc);if(mc.world==null||mc.player==null||!MapClient.enabled()){clear(mc);return;}
         ticks++;long now=mc.world.getTime();
@@ -79,6 +86,9 @@ public final class StandClient {
             var caster=mc.world.getPlayerByUuid(c.caster);if(caster!=null&&c.skill!=R)KagenoManager.freeze(caster);
             for(var t:c.targets){var e=mc.world.getEntityById(t.entity);if(e instanceof LivingEntity l&&e.getUuid().equals(t.uuid))KagenoManager.freeze(l);}
         }
+        // H: the gameplay camera comes back with the last cutscene shot's orientation (hard cut, no blend).
+        var cine=cinematic();
+        if(cine!=null&&cine.skill==H&&cine.age(0)>=KagenoRules.H_CUT&&!cine.id.equals(handedOff)){handedOff=cine.id;dev.sangwoo.celestialfall.client.kageno.KagenoCamera.handoff(cine);}
         if(StandManager.kageno(mc.player)&&mc.options.attackKey.isPressed()&&!dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand())punch();
         var state=STATES.get(mc.player.getUuid());long until=state!=null&&visible(mc.player)?state.until:0;
         if(until>now&&lastThemeUntil==0){
@@ -87,11 +97,39 @@ public final class StandClient {
         }else if(until<=now&&lastThemeUntil!=0){if(theme!=null)mc.getSoundManager().stop(theme);theme=null;lastThemeUntil=0;}
     }
     private static boolean deadCaster(MinecraftClient mc,Cast c){var p=mc.world.getPlayerByUuid(c.caster);return p!=null&&(!p.isAlive()||!StandManager.kageno(p));}
-    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||c.skill==RUSH&&c.age(0)>=RUSH_START&&c.age(0)<RUSH_FINISH&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
+    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
     /** Action lock and locomotion lock differ: R's caster can walk at half speed. */
     public static boolean locked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;return action(mc.player.getUuid())!=null;}
     public static boolean movementLocked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;var cast=action(mc.player.getUuid());return cast!=null&&cast.skill()!=R;}
     public static boolean rWalking(UUID id){var cast=action(id);return cast!=null&&cast.skill()==R;}
+    /** Q shadow mark: some stand user's live mark sits on this entity (drawn as a black silhouette). */
+    public static boolean shadowMarked(net.minecraft.entity.Entity e){
+        var mc=MinecraftClient.getInstance();if(mc.world==null||!MapClient.enabled()||STATES.isEmpty())return false;long now=mc.world.getTime();
+        for(var s:STATES.values())for(var m:s.marks())if(m.until()>now&&m.entity()==e.getId()&&m.id().equals(e.getUuid()))return true;
+        return false;
+    }
+    /** The local player's own shadow marks also reveal the target through walls with a violet outline. */
+    public static boolean shadowOutlined(net.minecraft.entity.Entity e){
+        var mc=MinecraftClient.getInstance();if(mc.world==null||mc.player==null||!MapClient.enabled())return false;var s=STATES.get(mc.player.getUuid());if(s==null)return false;long now=mc.world.getTime();
+        for(var m:s.marks())if(m.until()>now&&m.entity()==e.getId()&&m.id().equals(e.getUuid()))return true;
+        return false;
+    }
+    /** R caster during the gray phase (cyan outline). */
+    public static boolean rOutlined(net.minecraft.entity.Entity e){
+        if(!MapClient.enabled()||!(e instanceof net.minecraft.entity.player.PlayerEntity))return false;
+        for(var c:CASTS.values())if(c.skill==R&&c.caster.equals(e.getUuid())){float a=c.age(0);if(a>=KagenoRules.R_GRAY&&a<KagenoRules.R_COLOR)return true;}
+        return false;
+    }
+    /** World grayscale amount for the local viewer: in over 4 frames, back to colour over ≈8 frames. */
+    public static float monoAmount(float delta){
+        var p=MinecraftClient.getInstance().player;if(p==null||!p.isAlive())return 0;float best=0;
+        for(var c:CASTS.values())if(c.skill==R&&c.includes(p.getUuid())){
+            float a=c.age(delta);
+            float in=Math.max(0,Math.min(1,(a-KagenoRules.R_GRAY)/1.33f)),out=1-Math.max(0,Math.min(1,(a-KagenoRules.R_COLOR)/2.67f));
+            best=Math.max(best,Math.min(in,out));
+        }
+        return best;
+    }
     public static boolean monochrome(){var p=MinecraftClient.getInstance().player;return p!=null&&p.isAlive()&&CASTS.values().stream().anyMatch(c->c.skill==R&&KagenoRules.frozen(R,c.age(0))&&c.includes(p.getUuid()));}
     public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<DURATION[H]&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
     public static Cast action(UUID id){return CASTS.values().stream().filter(c->c.caster.equals(id)&&c.age(0)<inputEnd(c.skill)).reduce((a,b)->b).orElse(null);}
@@ -110,7 +148,7 @@ public final class StandClient {
         if(captured.contains(key))return true;
         if(mc.currentScreen!=null||!StandManager.kageno(mc.player)||key==GLFW.GLFW_KEY_Q&&(modifiers&GLFW.GLFW_MOD_CONTROL)!=0||key==GLFW.GLFW_KEY_G&&(modifiers&GLFW.GLFW_MOD_ALT)!=0)return false;
         if(action!=GLFW.GLFW_PRESS)return false;
-        int skill=switch(key){case GLFW.GLFW_KEY_E->E;case GLFW.GLFW_KEY_R->R;case GLFW.GLFW_KEY_T->T_DOWN;case GLFW.GLFW_KEY_Y->Y;case GLFW.GLFW_KEY_Q->Q;case GLFW.GLFW_KEY_H->H;case GLFW.GLFW_KEY_G->G;default->-1;};
+        int skill=switch(key){case GLFW.GLFW_KEY_E->E;case GLFW.GLFW_KEY_R->R;case GLFW.GLFW_KEY_T->T_DOWN;case GLFW.GLFW_KEY_Y->Y;case GLFW.GLFW_KEY_Q->Q;case GLFW.GLFW_KEY_H->H;case GLFW.GLFW_KEY_G->G;case GLFW.GLFW_KEY_P->POSE;default->-1;};
         if(skill<0){
             if(!CombatClient.actionLocked()&&key==GLFW.GLFW_KEY_I){mc.setScreen(new net.minecraft.client.gui.screen.ingame.InventoryScreen(mc.player));return true;}
             if(key==GLFW.GLFW_KEY_ENTER){mc.setScreen(new net.minecraft.client.gui.screen.ChatScreen(""));return true;}

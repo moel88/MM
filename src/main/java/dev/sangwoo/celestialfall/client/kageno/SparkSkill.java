@@ -78,8 +78,8 @@ final class SparkSkill implements Fx.Skill {
         if(t>=.6f)return;
         float grow=Ease.out(t,0,.05f),a=1-Ease.smooth(t,.3f,.55f);
         List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-        for(int i=0;i<16;i++){
-            double fw=(Ease.hash(i*3+1)-.5)*width*.9*stretch,rt=(Ease.hash(i*5+2)-.45)*width*.8,up=.4+Ease.hash(i*7+3)*3.4*H*.55;
+        for(int i=0;i<22;i++){
+            double fw=(Ease.hash(i*3+1)-.35)*width*1.2*stretch,rt=(Ease.hash(i*5+2)-.45)*width*.85,up=.4+Ease.hash(i*7+3)*3.4*H*.55;
             pts.add(centre.add(c.f.multiply(fw*grow)).add(c.right.multiply(rt*grow)).add(0,up*grow+.3,0));
             sizes.add((1.6+1.4*Ease.hash(i*11+4))*grow+.05);alphas.add(a);
         }
@@ -98,15 +98,15 @@ final class SparkSkill implements Fx.Skill {
         if(t<.25f||t>=4.05f)return;
         double top=plume(t)*H;float in=Ease.smooth(t,.25f,.5f);
         List<Vec3d> roots=new ArrayList<>();List<double[]> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-        int n=dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?14:22;
+        int n=dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?20:34;
         for(int i=0;i<n;i++){
             double fw=(-1.4+6.1*Ease.hash(i*7+1))*H,rt=(-2.5+6*Ease.hash(i*13+2))*H;
             double cycle=(t*(.8+.5*Ease.hash(i*3))+Ease.hash(i*5))%1,flare=.55+.45*Math.sin(Math.PI*cycle);
             roots.add(c.origin.add(c.f.multiply(fw)).add(c.right.multiply(rt)).add(0,.02,0));
-            sizes.add(new double[]{.9+.6*Ease.hash(i*17),Math.max(.2,top*flare*(.6+.4*Ease.hash(i*19)))});
-            alphas.add(in*(float)(.75+.25*flare));
+            sizes.add(new double[]{1.3+.9*Ease.hash(i*17),Math.max(.2,top*flare*(.6+.4*Ease.hash(i*19)))});
+            alphas.add(in*(float)(.85+.15*flare));
         }
-        KagenoFire.tongues(c.matrix,c.camera,5,roots,sizes,alphas,c.age);
+        KagenoFire.tongues(c.matrix,c.camera,11,roots,sizes,alphas,c.age);
     }
     /** Dark ink orb on each target (≈1.2 H across), forming over +0.15..0.31 s, breaking up at the end. */
     static void orbs(Fx c,float t,float hold,float end){
@@ -119,7 +119,7 @@ final class SparkSkill implements Fx.Skill {
     /** Opaque black ink splash under the fire, eroding away over +4.2..5.5 s. */
     static void scorch(Fx c,float t){
         if(t>=5.5f)return;float a=1-Ease.smooth(t,4.3f,5.5f);
-        Vec3d centre=c.origin.add(c.f.multiply(1.3*H)).add(c.right.multiply(.4*H)).add(0,.015,0);
-        KagenoFire.pool(c.matrix,centre,c.f.multiply(2.4*H),c.right.multiply(2.9*H),c.age,a);
+        Vec3d centre=c.origin.add(c.f.multiply(1.7*H)).add(c.right.multiply(.4*H)).add(0,.015,0);
+        KagenoFire.pool(c.matrix,centre,c.f.multiply(2.9*H),c.right.multiply(3.1*H),c.age,a);
     }
 }

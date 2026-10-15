@@ -50,6 +50,7 @@ public final class SkillShots implements ClientModInitializer {
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
     private float clock(){
         float delta=mc.getTickDelta();
+        if("Q".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
         else{StandClient.Cast best=null;for(var c:StandClient.CASTS.values())if(c.caster().equals(mc.player.getUuid())&&(best==null||c.start()>best.start()))best=c;if(best!=null&&mc.world.getTime()-castTick<400)return best.age(delta);}
         return (mc.world.getTime()-castTick)+delta;
@@ -69,7 +70,7 @@ public final class SkillShots implements ClientModInitializer {
         w.setTimeOfDay(6000);w.getGameRules().get(GameRules.DO_DAYLIGHT_CYCLE).set(false,w.getServer());w.getGameRules().get(GameRules.DO_MOB_SPAWNING).set(false,w.getServer());
         w.setWeather(999999,0,false,false);p.getServer().setPvpEnabled(true);p.changeGameMode(GameMode.SURVIVAL);
         int y=p.getBlockY()-1;
-        for(int x=-40;x<=40;x++)for(int z=-40;z<=40;z++){w.setBlockState(new BlockPos(x,y,z),((x>>2)+(z>>2)&1)==0?Blocks.LIGHT_GRAY_CONCRETE.getDefaultState():Blocks.SMOOTH_STONE.getDefaultState());}
+        for(int x=-40;x<=40;x++)for(int z=-40;z<=40;z++){w.setBlockState(new BlockPos(x,y,z),((x>>2)+(z>>2)&1)==0?Blocks.LIGHT_GRAY_CONCRETE.getDefaultState():Blocks.POLISHED_ANDESITE.getDefaultState());}
         for(int x=-14;x<=14;x+=7){for(int h=0;h<12;h++)w.setBlockState(new BlockPos(x,y+1+h,-26),Blocks.LIGHT_BLUE_TERRACOTTA.getDefaultState());}
         ProgressManager.set(p,new ProgressProfile(1,0,0,"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),true);
         p.getInventory().clear();p.currentScreenHandler.syncState();
@@ -125,6 +126,8 @@ public final class SkillShots implements ClientModInitializer {
                     for(int i=1;i<at.length;i++)if(age==Integer.parseInt(at[i].trim())){final int hit=i;server(p->{if(faces.length>hit&&!faces[hit].isBlank())face(p,Float.parseFloat(faces[hit]));KagenoManager.input(p,M1);});}
                 }
                 if(current.equals("RUSH")&&age<14)server(p->KagenoManager.input(p,KagenoRules.PULSE));
+                // Follow-up inputs during the shot, "then=M1@60/E@90".
+                if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length==2&&age==Integer.parseInt(sa[1].trim())){int id=skill(sa[0].trim());server(p->KagenoManager.input(p,id));}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
                 if(age>length(current)+4){log.append(current).append(" frames ").append(shotIndex).append('\n');if(current.equals("Q"))server(p->{});phase=3;age=0;}}

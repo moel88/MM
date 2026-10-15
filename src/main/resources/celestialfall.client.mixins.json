@@ -22,7 +22,10 @@
     "StandHeldItemFeatureMixin",
     "KagenoCullingMixin",
     "StandFovMixin",
-    "KagenoShadowMixin"
+    "KagenoShadowMixin",
+    "KagenoOutlineMixin",
+    "KagenoOutlineColorMixin",
+    "KagenoShadowTintMixin"
   ],
   "injectors": {
     "defaultRequire": 1

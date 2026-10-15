@@ -52,10 +52,10 @@ final class ComboSkill implements Fx.Skill {
         k(.58,H3_END,Anim.Ease.HOLD),
         k(.95,pose().body(-360,0,0)));
     // H4: lean and draw back, then a forward thrust.
-    static final R6.Pose THRUST=pose().body(-60,5,0).rArm(0,0).lArm(0,10).rLeg(-75,20).lLeg(-60,175).blade(0,0);
+    static final R6.Pose THRUST=pose().body(0,5,0).rArm(0,0).lArm(0,10).rLeg(-75,20).lLeg(-60,175).blade(0,0);
     static final Anim H4=Anim.of(
         k(0,H3_END.body(0,0,25)),
-        k(.25,pose().body(-60,27,0).head(0,5,0).rArm(6,162).lArm(-45,0).rLeg(-75,20).lLeg(-55,180).blade(0,180),Anim.Ease.OUT),
+        k(.25,pose().body(0,27,0).head(0,5,0).rArm(6,162).lArm(-45,0).rLeg(-75,20).lLeg(-55,180).blade(0,180),Anim.Ease.OUT),
         k(.275,THRUST,Anim.Ease.LINEAR),
         k(.30,THRUST.lArm(0,-108),Anim.Ease.OUT),
         k(.70,THRUST.lArm(0,-108),Anim.Ease.HOLD),
@@ -72,8 +72,8 @@ final class ComboSkill implements Fx.Skill {
         return new Vec3d[]{u,v};
     }
     static Vec3d torso(Fx c){return c.origin.add(0,3*STUD,0);}
-    /** H4 thrust axis: 60° to the caster's right of the cast facing (the body turns into the thrust). */
-    static Vec3d thrustAxis(Fx c){return c.f.multiply(Math.cos(Math.toRadians(60))).add(c.right.multiply(Math.sin(Math.toRadians(60))));}
+    /** H4 thrust axis: the cast facing (the player's aim); the body turns into it during the draw-back. */
+    static Vec3d thrustAxis(Fx c){return c.f;}
 
     @Override public void crescents(Fx c){
         float t=c.sec-HIT;if(t<0)return;int combo=c.cast.combo();

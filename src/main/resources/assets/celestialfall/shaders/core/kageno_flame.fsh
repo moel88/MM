@@ -95,14 +95,44 @@ void main(){
   else if(style<2.5){rim=vec3(.38,.17,.89);vio=vec3(.65,.31,.96);core=vec3(.92,.55,.98);hi=vec3(.87,.85,.96);navy=vec3(.02,.02,.10);}
   else if(style<3.5){rim=vec3(.48,.39,.94);vio=vec3(.65,.27,.98);core=vec3(.93,.54,.98);hi=vec3(.99,.85,.98);navy=vec3(.07,.05,.47);}
   else if(style<4.5){rim=vec3(.54,.58,.88);vio=vec3(.72,.64,.95);core=vec3(.88,.76,.98);hi=vec3(.98,.94,.98);navy=vec3(.54,.58,.88);}
-  else if(style<5.5){rim=vec3(.64,.35,.75);vio=vec3(.73,.53,.93);core=vec3(.93,.6,.97);hi=vec3(.98,.89,.98);navy=vec3(.84,.32,.96);}
+  else if(style<5.5){rim=vec3(.64,.35,.75);vio=vec3(.84,.32,.96);core=vec3(.93,.6,.97);hi=vec3(.98,.89,.98);navy=vec3(.73,.53,.93);}
   else{rim=vec3(.15,.1,.66);vio=vec3(.5,.23,.96);core=vec3(.79,.44,.98);hi=vec3(.97,.9,.98);navy=vec3(.86,.53,.98);}
   rgb=d<.08?rim:d<.3?mix(rim,vio,(d-.08)/.22):d<.45?mix(vio,core,(d-.3)/.15):d<.7?mix(core,vio,(d-.45)/.25):d<.88?mix(vio,rim,(d-.7)/.18):mix(rim,navy,clamp((d-.88)/.1,0.0,1.0));
+  // E finisher (measured stops, outer → inner): bright violet rim, pink highlight, electric-violet
+  // body, a hot white-pink streak, violet again and a dark indigo inner edge.
+  if(style>2.5&&style<3.5){
+   vec3 r0=vec3(.54,.26,.96),pk=vec3(.96,.61,.98),b0=vec3(.65,.27,.98),b1=vec3(.41,.13,.99),h0=vec3(.84,.45,1.0),h1=vec3(.99,.92,.98),v1=vec3(.59,.29,.92),i0=vec3(.19,.11,.74),i1=vec3(.07,.05,.47);
+   rgb=d<.06?r0:d<.14?mix(r0,pk,(d-.06)/.08):d<.22?mix(pk,b0,(d-.14)/.08):d<.42?mix(b0,b1,(d-.22)/.2):d<.5?mix(b1,h0,(d-.42)/.08):d<.56?mix(h0,h1,(d-.5)/.06):d<.64?mix(h1,h0,(d-.56)/.08):d<.74?mix(h0,v1,(d-.64)/.1):d<.86?mix(v1,i0,(d-.74)/.12):mix(i0,i1,clamp((d-.86)/.12,0.0,1.0));
+  }
   // Spin ring: a narrow bright band outside, then an opaque dark-navy band inside it.
   if(style>1.5&&style<2.5)rgb=d<.06?rim:d<.18?mix(rim,vio,(d-.06)/.12):d<.28?mix(vio,core,(d-.18)/.1):d<.4?mix(core,vio,(d-.28)/.12):d<.52?mix(vio,navy,(d-.4)/.12):navy;
   float hair=noise(vec2(x*9.0+sd,y*95.0));
   rgb=mix(rgb,hi,smoothstep(.72,.9,hair)*smoothstep(.12,.3,d)*(1.0-smoothstep(.5,.7,d)));
   alpha=body*(.86+.14*strand)*tint.a;
+ }else if(Mode==11){
+  // T fire (k-means of the review): white cores, light pink, pink, magenta, vivid violet and a
+  // deep violet body, an indigo base and a thin blue-violet line along the silhouette. It turns
+  // pinker late in its life.
+  vec2 q=vec2(p.x,p.y*.88);
+  vec2 flow=uv*3.4+vec2(seed,-Age*.085);
+  vec2 warp=vec2(fbm(flow+4.7),fbm(flow-13.2));
+  float n=fbm(flow+warp*2.1);
+  float lobes=.11*sin(atan(q.y,q.x)*5.0+seed+Age*.08);
+  float shape=.8+lobes+(n-.48)*.9-length(q+vec2(sin(Age*.07+seed)*.10,0));
+  float body=smoothstep(-.06,.06,shape);
+  float holes=smoothstep(.55,.7,fbm(flow*1.45+warp*3.4));
+  body*=1.0-holes*smoothstep(.04,.2,shape)*.85;
+  float heat=smoothstep(.04,.3,shape)*smoothstep(.25,.62,n+.14);
+  float late=smoothstep(36.0,60.0,Age);
+  vec3 deep=vec3(.69,.05,.98),vivid=vec3(.82,.17,.98),mag=vec3(.91,.36,.98),pink=vec3(.95,.56,.98),light=vec3(.97,.72,.98),white=vec3(.99,.91,.98);
+  // Most of the body sits in the magenta-pink range; light pink only in the hottest cores.
+  float h=clamp(max(shape,0.0)*.78+late*.15,0.0,1.0);
+  rgb=h<.25?mix(deep,vivid,h/.25):h<.5?mix(vivid,mag,(h-.25)/.25):h<.75?mix(mag,pink,(h-.5)/.25):mix(pink,light,(h-.75)/.25);
+  rgb=mix(rgb,white,clamp(pow(heat,3.2)*.45,0.0,1.0));
+  rgb=mix(vec3(.23,.12,.82),rgb,smoothstep(.0,.22,uv.y));
+  float rim=smoothstep(-.1,-.03,shape)*(1.0-smoothstep(-.03,.02,shape));
+  rgb=mix(rgb,vec3(.45,.36,1.0),rim*.7);
+  alpha=max(body*.97,rim*.55)*tint.a;
  }else if(Mode==9){
   // T blast cloud: billowy white cumulus with lobed edges, pink rim and a thin lilac outline.
   vec2 flow=p*1.6+vec2(seed,-Age*.03);

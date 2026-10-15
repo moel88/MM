@@ -64,6 +64,10 @@ public final class Fx {
         default float shotBlend(float sec){return shot(sec)==null?0:1;}
         /** Gameplay-camera shake strength in degrees. */
         default float shake(float sec){return 0;}
+        /** Authored gameplay-camera motion {yaw, pitch, roll} in degrees (pitch + looks down), or null. */
+        default float[] kick(float sec){return null;}
+        /** Geometry drawn over the full-screen flash: the alpha pass, then the additive pass. */
+        default void overFlash(Fx c,EffectMesh m,boolean additive){}
         default float pulse(float sec){return 0;}
         /** Seconds after the cast during which this skill still draws. */
         default float lifetime(){return 6;}

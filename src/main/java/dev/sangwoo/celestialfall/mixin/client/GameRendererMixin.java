@@ -37,8 +37,6 @@ public abstract class GameRendererMixin {
     private void celestialfall$post(float delta,long limitTime,MatrixStack matrices,CallbackInfo ci) {
         if(!TitleMapCamera.active())AnimePostProcessor.render(delta);
     }
-    @Inject(method="render",at=@At("TAIL"))
-    private void botand$fullScreenTimeStop(float delta,long limitTime,boolean tick,CallbackInfo ci){if(dev.sangwoo.celestialfall.client.StandClient.monochrome())AnimePostProcessor.render(delta);}
     @Inject(method="close",at=@At("HEAD"))
     private void celestialfall$release(CallbackInfo ci) { AnimePostProcessor.release(); }
     @Inject(method="getViewDistance",at=@At("RETURN"),cancellable=true)
