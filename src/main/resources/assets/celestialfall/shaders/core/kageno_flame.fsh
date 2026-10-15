@@ -16,8 +16,8 @@ void main(){
   float edge=1.0-smoothstep(.72+n*.17,.96+n*.10,r);
   float swirl=sin(atan(p.y,p.x)*5.0+r*16.0-t*.8+fbm(p*5.0+t*.2)*7.0)*.5+.5;
   float veins=pow(swirl,7.0)*smoothstep(.15,.7,r);
-  rgb=mix(vec3(.004,.001,.012),vec3(.32,.008,.78),veins*.75);
-  rgb+=vec3(.38,.07,.65)*pow(n,4.0)*2.0;
+  rgb=mix(vec3(.004,.001,.012),vec3(.32,.008,.78),veins*.3);
+  rgb+=vec3(.25,.04,.5)*pow(n,4.0)*1.2;
   alpha=edge*tint.a*.91;
  }else if(Mode==2){
   float r=length(p);float n=fbm(p*5.0+vec2(t*.4,-t*.7));
@@ -50,10 +50,32 @@ void main(){
   body*=1.0-holes*smoothstep(.02,.18,shape)*.92;
   float heat=smoothstep(.02,.28,shape)*smoothstep(.25,.62,n+.14);
   float initial=1.0-smoothstep(2.0,11.0,Age);
-  rgb=mix(vec3(.40,.005,1.0),vec3(.96,.18,1.0),smoothstep(-.05,.13,shape));
-  rgb=mix(rgb,vec3(1.0,.96,1.0),clamp(pow(heat,1.8)*.90+initial*.75,0.0,1.0));
+  rgb=mix(vec3(.55,.0,1.0),vec3(1.0,.42,1.0),smoothstep(-.05,.13,shape));
+  rgb=mix(rgb,vec3(1.0,.93,1.0),clamp(pow(heat,2.4)*.45+initial*.75,0.0,1.0));
   float glow=smoothstep(-.24,-.015,shape)*(1.0-body)*.16;
   alpha=max(body,glow)*tint.a;
+ }else if(Mode==6){
+  // Anime brush stroke: uv.x runs tail(0)->head(1), uv.y across the band.
+  float x=uv.x,y=uv.y*2.0-1.0;
+  float streak=fbm(vec2(x*5.0+seed,uv.y*15.0));
+  float fine=noise(vec2(x*18.0-seed,uv.y*42.0));
+  float width=pow(sin(3.14159*clamp(x,0.0,1.0)),.55)*(.78+.22*streak);
+  float d=abs(y)/max(width,.02);
+  float body=1.0-smoothstep(.55+.25*fine,1.0,d);
+  float core=1.0-smoothstep(.0,.55,d+(1.0-x)*.35);
+  float tail=smoothstep(0.0,.55,x)*(1.0-smoothstep(.97,1.0,x));
+  vec3 deep=vec3(.20,.0,.55),mid=vec3(.62,.12,1.0),hot=vec3(1.0,.86,1.0);
+  rgb=mix(deep,mid,smoothstep(.95,.35,d));
+  rgb=mix(rgb,hot,core*(.55+.45*x));
+  alpha=body*tail*(.55+.45*streak)*tint.a;
+ }else if(Mode==7){
+  // Dark violet smoke puff with ragged rim.
+  vec2 flow=p*2.2+vec2(seed,-Age*.04);
+  float n=fbm(flow+vec2(fbm(flow+3.1),fbm(flow-5.7))*1.7);
+  float r=length(p);
+  float body=1.0-smoothstep(.45+n*.45,.95,r);
+  rgb=mix(vec3(.02,.0,.05),vec3(.30,.04,.62),smoothstep(.45,.85,n)*.8);
+  alpha=body*(.55+.45*n)*tint.a;
  }else{
   float y=uv.y;
   vec2 flow=vec2(uv.x*3.0+seed, y*3.7-t*2.1);

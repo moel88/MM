@@ -58,6 +58,7 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
         if(stand!=null){
             float age=stand.age(delta);float spin=dev.sangwoo.celestialfall.client.KagenoMotion.spin(stand.skill(),age,stand.combo());
             matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(spin));
+            if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.Y)matrices.translate(0,dev.sangwoo.celestialfall.client.KagenoMotion.yHop(age),0);
             if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.E){
                 var f=net.minecraft.util.math.Vec3d.fromPolar(0,stand.yaw());double lunge=dev.sangwoo.celestialfall.client.KagenoMotion.thrust(age)*.24;
                 matrices.translate(f.x*lunge,0,f.z*lunge);

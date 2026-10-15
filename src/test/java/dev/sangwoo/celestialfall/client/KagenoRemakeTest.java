@@ -49,10 +49,26 @@ class KagenoRemakeTest {
         assertTrue(KagenoCameraPath.sample(82).right()<-2,"final shot views the right side of the caster");
         assertTrue(KagenoCameraPath.sample(74).forward()<1.3,"hand insert is a close shot");
     }
-    @Test void cameraBlendsIntoAndOutOfPlayerView(){
+    @Test void cameraBlendsInAndHardCutsBackAtTheReferenceTime(){
         assertEquals(0,KagenoCameraPath.blend(0));assertEquals(1,KagenoCameraPath.blend(6));
-        assertEquals(1,KagenoCameraPath.blend(105));assertEquals(0,KagenoCameraPath.blend(116));
-        assertTrue(KagenoCameraPath.blend(115)<.01);
+        assertEquals(1,KagenoCameraPath.blend(100));assertEquals(0,KagenoCameraPath.blend(102.5f),1e-6);
+        assertEquals(0,KagenoCameraPath.blend(116));
+    }
+    @Test void rebuiltTimelinesMatchTheReviewFootage(){
+        // R: release at 36 (33.6 s), caster lock ends before the petals finish.
+        assertTrue(inputEnd(R)<DURATION[R]);assertTrue(DURATION[R]>=72);
+        // Y: slam crouch at 16, white blast and heavy hit at 24, plates linger ~3 s.
+        assertEquals(16,KagenoFx.Y_SLAM);assertEquals(24,KagenoFx.Y_BLAST);assertEquals(14,damage(Y,24,0));
+        assertTrue(KagenoFx.plateRise(KagenoFx.Y_BLAST)<.01f&&KagenoFx.plateRise(40)>.99f&&KagenoFx.plateRise(DURATION[Y])==0);
+        assertTrue(KagenoFx.flash(Y,KagenoFx.Y_BLAST+1)>.9f&&KagenoFx.flash(Y,KagenoFx.Y_BLAST+8)<.01f);
+        // T: white blast at the sword plant, fire ends before the black scorch fades.
+        assertTrue(KagenoFx.flash(T,T_STRIKE+1)>.9f);assertEquals(112,DURATION[T]);
+        // M1: four distinct stroke planes (two diagonals in opposite directions, ring, vertical).
+        var a=KagenoFx.m1Plane(1,new net.minecraft.util.math.Vec3d(0,0,1),new net.minecraft.util.math.Vec3d(1,0,0));
+        var b=KagenoFx.m1Plane(2,new net.minecraft.util.math.Vec3d(0,0,1),new net.minecraft.util.math.Vec3d(1,0,0));
+        assertTrue(a.sweep()*b.sweep()<0,"hit 2 sweeps the other way");
+        assertTrue(Math.abs(KagenoFx.m1Plane(3,new net.minecraft.util.math.Vec3d(0,0,1),new net.minecraft.util.math.Vec3d(1,0,0)).sweep())>Math.PI*2,"hit 3 wraps fully around");
+        assertEquals(1,KagenoFx.m1Plane(4,new net.minecraft.util.math.Vec3d(0,0,1),new net.minecraft.util.math.Vec3d(1,0,0)).v().y,1e-9);
     }
     @Test void castClockHandlesLateArrivalWithoutDependingOnWorldTime(){
         var clock=new KagenoCastClock(27,100);

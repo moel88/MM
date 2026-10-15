@@ -40,5 +40,6 @@ public final class KagenoCameraPath {
     }
     private static double lerp(double a,double b,double t){return a+(b-a)*t;}
     private static Shot mix(Shot a,Shot b,double t){return new Shot(lerp(a.right,b.right,t),lerp(a.height,b.height,t),lerp(a.forward,b.forward,t),lerp(a.focusHeight,b.focusHeight,t),lerp(a.fov,b.fov,t),lerp(a.roll,b.roll,t),lerp(a.focusRight,b.focusRight,t));}
-    public static float blend(float age){return (float)(ease(age/2.0)*(1-ease((age-106)/10.0)));}
+    /** 126.06 s in the reference is a hard cut back to the ordinary wide view. */
+    public static float blend(float age){return (float)(ease(age/2.0)*(1-ease((age-100.5)/1.5)));}
 }

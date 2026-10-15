@@ -64,6 +64,31 @@ final class EffectMesh {
             line(p,q,width,rgb,alpha);
         }
     }
+    Vec3d camera(){return camera;}
+    /** Camera-facing blade stroke: sharp at both ends, widest at {@code peak} (0..1 along a→b). */
+    void needle(Vec3d a,Vec3d b,double width,double peak,int rgb,float alpha){
+        Vec3d d=b.subtract(a);if(d.lengthSquared()<1e-10||alpha<=0)return;
+        Vec3d mid=a.add(d.multiply(peak));
+        Vec3d side=d.crossProduct(camera.subtract(mid)).normalize().multiply(width*.5);
+        if(!Double.isFinite(side.x))return;
+        quad(a,mid.add(side),b,mid.subtract(side),rgb,alpha);
+    }
+    /** Camera-facing radial gradient: opaque centre fading to a transparent rim. */
+    void softDisc(Vec3d p,double radius,int rgb,float alpha){
+        if(alpha<=0||radius<=0)return;
+        Vec3d normal=camera.subtract(p).normalize(),u=normal.crossProduct(new Vec3d(0,1,0)).normalize();
+        if(u.lengthSquared()<.1)u=new Vec3d(1,0,0);Vec3d v=u.crossProduct(normal).normalize();
+        for(int i=0;i<20;i++){
+            double a=i*Math.PI/10,b=(i+1)*Math.PI/10;
+            Vec3d pa=p.add(u.multiply(Math.cos(a)*radius)).add(v.multiply(Math.sin(a)*radius)),pb=p.add(u.multiply(Math.cos(b)*radius)).add(v.multiply(Math.sin(b)*radius));
+            vertex(p,rgb,alpha);vertex(pa,rgb,0);vertex(pb,rgb,0);vertex(p,rgb,alpha);
+        }
+    }
+    /** Flat quad in an arbitrary plane with soft edges along {@code v}. */
+    void sheet(Vec3d center,Vec3d u,Vec3d v,int rgb,float alpha){
+        vertex(center.subtract(u).subtract(v),rgb,0);vertex(center.add(u).subtract(v),rgb,0);vertex(center.add(u),rgb,alpha);vertex(center.subtract(u),rgb,alpha);
+        vertex(center.subtract(u),rgb,alpha);vertex(center.add(u),rgb,alpha);vertex(center.add(u).add(v),rgb,0);vertex(center.subtract(u).add(v),rgb,0);
+    }
     void box(Vec3d base, double x0,double y0,double z0,double x1,double y1,double z1,int rgb,float alpha) {
         Vec3d a=base.add(x0,y0,z0),b=base.add(x1,y0,z0),c=base.add(x1,y1,z0),d=base.add(x0,y1,z0);
         Vec3d e=base.add(x0,y0,z1),f=base.add(x1,y0,z1),g=base.add(x1,y1,z1),h=base.add(x0,y1,z1);

@@ -91,6 +91,14 @@ public final class AtomicRenderer {
                 double y=(a*.12+i*.83)%5;Vec3d star=ground.add(0,y,0);m.glowLine(star.add(0,-.6,0),star.add(0,1.3,0),.055,0xf9e1ff,v);m.star(star,.23,0xf1d0ff,v);
             }
         }
+        // Kageno footage 142.6–147.3 s: a forest of violet light pillars rises around the chant.
+        for(int i=0;i<quality(40,90);i++){
+            double h1=Math.abs(Math.sin(i*12.9898)*43758.5453)%1,h2=Math.abs(Math.sin(i*78.233)*12543.37)%1,h3=Math.abs(Math.sin(i*39.425)*24634.63)%1;
+            double az=h1*Math.PI*2,r=3.5+15*h2,h=1.2+(2+6*h3)*AtomicTimeline.ease(a,i%20,i%20+14);
+            float flick=v*(.55f+.45f*(float)Math.sin(a*.35+i*1.7));
+            Vec3d base=s.origin.add(Math.cos(az)*r,0,Math.sin(az)*r);
+            m.glowLine(base,base.add(0,h,0),.07+.08*h3,0x8a2cff,flick);m.glowLine(base,base.add(0,h*.85,0),.025,0xe2c4ff,flick*.8f);
+        }
         for(int i=0;i<quality(18,44);i++){
             double az=i*2.399963,rad=2+i%13;Vec3d point=s.origin.add(Math.cos(az)*rad,(a*.055+i*.31)%4.2,Math.sin(az)*rad);
             m.star(point,.07+(i%4)*.035,0xf3caff,v);m.glowLine(point.add(0,-.25,0),point.add(0,.6,0),.022,0xb885ff,v*.7f);

@@ -185,6 +185,7 @@ public final class KagenoManager {
         e.timeUntilRegen=0;
         if(CombatManager.damageWithoutKnockback(e,source,(float)(amount*multiplier))){
             if(over){s.boost=Math.min(1,s.boost+(amount>=7?.02f:.01f));s.overUntil=Math.min(c.world.getTime()+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,c.world.getTime()+200));}
+            if(c.skill==Y&&age==24&&!frozen(e)){e.setVelocity(0,.5,0);e.velocityModified=true;if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));}
             if((c.skill==M1&&c.combo==4||c.skill==RUSH&&age==RUSH_FINISH||c.skill==H&&age==102)&&!frozen(e)){
                 Vec3d dir=Vec3d.fromPolar(0,c.yaw);e.setVelocity(dir.multiply(.65).add(0,.25,0));e.velocityModified=true;
                 if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));

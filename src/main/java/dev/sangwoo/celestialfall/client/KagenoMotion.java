@@ -112,6 +112,8 @@ public final class KagenoMotion {
     }
     /** Rotation about the caster's local right axis; an actual held upside-down silhouette. */
     public static float flip(float a){if(a<12)return -180*smooth(a,4,12);if(a<30)return -180;if(a<34)return -180-180*smooth(a,30,34);return 0;}
+    /** Small hop before the Y slam (model space, blocks). */
+    public static float yHop(float a){return a<10||a>KagenoFx.Y_SLAM?0:(float)(.45*Math.sin(Math.PI*(a-10)/(KagenoFx.Y_SLAM-10)));}
     public static float spin(int skill,float a,int combo){return skill==M1&&combo==3?360*smooth(a,2,8):0;}
     public static MotionPose sample(int skill,float a,int combo){
         return switch(skill){
@@ -129,9 +131,11 @@ public final class KagenoMotion {
                 yield track(a,k(46,rushGlide()),k(49,BACK),k(51,REVERSE),k(56,REVERSE),k(68,REST));
             }
             case Y->{
-                MotionPose up=pose(-8,0,35,0,25,-55,0,15);up.rot(LEFT_LEG,-90,0,-8);up.knee[1]=95;
-                MotionPose down=pose(28,0,40,0,20,-42,0,15);down.bob=4;down.knee[0]=down.knee[1]=28;
-                yield track(a,k(0,REST),k(9,up),k(15,up),k(20,down),k(24,down),k(33,REST));
+                // 75.7 s sword raised overhead, 76.0 small hop with arms spread, 76.4 two-foot slam crouch.
+                MotionPose raise=pose(-8,-6,-172,0,-6,-30,-4,6);raise.rot(HEAD,-12,0,0);
+                MotionPose hop=pose(-4,0,-60,0,62,-60,-30,10);hop.rot(LEFT_ARM,-55,0,-62);hop.rot(LEFT_LEG,-24,0,-8);hop.knee[0]=hop.knee[1]=45;
+                MotionPose slam=pose(30,0,-38,0,70,-38,-62,12);slam.rot(LEFT_ARM,-38,0,-70);slam.rot(LEFT_LEG,-62,0,-12);slam.rot(RIGHT_LEG,-62,0,12);slam.knee[0]=slam.knee[1]=96;slam.bob=5.2f;slam.rot(HEAD,-20,0,0);
+                yield track(a,k(0,REST),k(6,raise),k(10,raise),k(13,hop),k(KagenoFx.Y_SLAM,slam),k(30,slam),k(38,REST));
             }
             case H->track(a,H_KEYS);
             default->REST.copy();
