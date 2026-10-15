@@ -27,7 +27,7 @@ final class HighestSkill implements Fx.Skill {
     /** Apex of the leap, in the cast frame (up and back, away from the shot-1 camera). */
     static final double APEX_FW=-14,APEX_UP=28;
     /** Street landing spot (shot 3c): the hero slides in ≈4 studs in front of the street camera. */
-    static final double STREET_CAM=-14.0,LAND_FW=STREET_CAM-5*STUD;
+    static final double STREET_CAM=-14.0,LAND_FW=STREET_CAM-6.5*STUD;
 
     // ───────────────────────────── poses ─────────────────────────────
     static final R6.Pose K1=pose().rArm(-70,90).lArm(-70,-90).blade(-10,90);
@@ -156,7 +156,7 @@ final class HighestSkill implements Fx.Skill {
     }
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec;
-        flare(c,m,t);
+        flare(c,m,t,true);
         zig(c,m,t,true);
         burst(c,m,t);
         beam(c,m,t);
@@ -165,6 +165,7 @@ final class HighestSkill implements Fx.Skill {
     }
     @Override public void alpha(Fx c,EffectMesh m){
         float t=c.sec;
+        flare(c,m,t,false);
         zig(c,m,t,false);
         smear(c,m,t);
         crescent(c,m,t);
@@ -176,7 +177,7 @@ final class HighestSkill implements Fx.Skill {
         return new Vec3d[]{fw.crossProduct(up).normalize(),up.normalize()};
     }
     /** V1: four-point star flare locked to the screen axes at the hero, sized in screen fractions. */
-    static void flare(Fx c,EffectMesh m,float t){
+    static void flare(Fx c,EffectMesh m,float t,boolean additive){
         if(t<FLARE||t>=2.40f)return;
         var r=root(t);Vec3d o=c.at0(r.fw,r.up+1.05,r.rt);double d=Math.max(1,o.distanceTo(c.camera));
         double hs=2*d*Math.tan(Math.toRadians(35));
@@ -185,15 +186,18 @@ final class HighestSkill implements Fx.Skill {
         double vert=.5*hs*grow*shrink*flick,horiz=.44*hs*grow*(.6+.4*shrink)*flick,core=.03*hs*grow*shrink;
         Vec3d[] ax=screen(c);Vec3d right=ax[0],up=ax[1];
         float a=Math.min(1,grow*1.3f)*(.35f+.65f*shrink);
-        m.softDisc(o,core*3.2,0xfed1fe,a*.45f);m.softDisc(o,core*1.8,0xe278f5,a*.35f);
-        for(int k=0;k<4;k++){
-            Vec3d dir=k==0?up:k==1?up.negate():k==2?right:right.negate();double len=k<2?vert:horiz;
-            Vec3d tip=o.add(dir.multiply(len));
-            m.needle(o,o.add(dir.multiply(len*.42)),core*1.2,.02,0xd96ef9,a);
-            m.needle(o,tip,core*.36,.02,0x9d6af5,a);
-            m.needle(o,o.add(dir.multiply(len*.25)),core*.45,.02,0xe893fa,a);
-            m.needle(o,o.add(dir.multiply(len*.12)),core*.2,.02,0xfcf6fd,a*.8f);
+        if(!additive){
+            // Pink-violet rays read over any sky: drawn alpha-blended, white only near the core.
+            m.softDisc(o,core*3.4,0xfcc8fd,a*.55f);m.softDisc(o,core*2.0,0xe278f5,a*.55f);
+            for(int k=0;k<4;k++){
+                Vec3d dir=k==0?up:k==1?up.negate():k==2?right:right.negate();double len=k<2?vert:horiz;
+                m.needle(o,o.add(dir.multiply(len)),core*.42,.02,0x8c6af8,a*.85f);
+                m.needle(o,o.add(dir.multiply(len*.55)),core*.7,.02,0xb26ef5,a*.9f);
+                m.needle(o,o.add(dir.multiply(len*.3)),core*1.0,.02,0xd96ef9,a);
+            }
+            return;
         }
+        for(int k=0;k<4;k++){Vec3d dir=k==0?up:k==1?up.negate():k==2?right:right.negate();double len=k<2?vert:horiz;m.needle(o,o.add(dir.multiply(len*.14)),core*.35,.02,0xfcf6fd,a*.9f);}
         m.softDisc(o,core*1.15,0xffffff,a);m.softDisc(o,core*.7,0xffffff,a);
     }
     /** V2: flat neon magenta tubes, one segment per dash; held, then fading as the street shot ends. */
@@ -216,14 +220,14 @@ final class HighestSkill implements Fx.Skill {
     static void burst(Fx c,EffectMesh m,float t){
         float level=burstLevel(t);if(level<=0)return;
         Vec3d[] ax=screen(c);Vec3d right=ax[0],up=ax[1];int seed=(int)c.cast.id().getMostSignificantBits();
-        int last=(int)Math.floor((t-BURST)*240);
-        for(int k=Math.max(0,last-22);k<=last;k++){
-            float born=BURST+k/240f,life=.033f+.05f*(float)Ease.hash(seed+k*3),u=(t-born)/life;if(u<0||u>=1)continue;
+        int last=(int)Math.floor((t-BURST)*480);
+        for(int k=Math.max(0,last-44);k<=last;k++){
+            float born=BURST+k/480f,life=.033f+.05f*(float)Ease.hash(seed+k*3),u=(t-born)/life;if(u<0||u>=1)continue;
             if(Ease.hash(seed+k*5)>burstLevel(born)*.95f)continue;
-            Vec3d centre=c.at0(-.4-2*Ease.hash(seed+k*7),.4+3.6*Ease.hash(seed+k*11),-1+5*Ease.hash(seed+k*13));
+            Vec3d centre=c.at0(-.2-1.3*Ease.hash(seed+k*7),.8+2.7*Ease.hash(seed+k*11),-.5+3*Ease.hash(seed+k*13));
             double kind=Ease.hash(seed+k*17),ang=kind<.55?Math.toRadians(-35+(Ease.hash(seed+k*19)-.5)*30):kind<.9?Math.toRadians((Ease.hash(seed+k*19)-.5)*20):Math.toRadians(90);
             Vec3d dir=right.multiply(Math.cos(ang)).add(up.multiply(Math.sin(ang)));
-            double len=(1.2+4.2*Ease.hash(seed+k*23)),w=.04+.13*Ease.hash(seed+k*29);
+            double len=(2+4*Ease.hash(seed+k*23)),w=.04+.13*Ease.hash(seed+k*29);
             Vec3d a=centre.subtract(dir.multiply(len*.5)),b=centre.add(dir.multiply(len*.5));
             float al=(float)Math.sin(Math.PI*Math.min(1,u*1.4));
             m.needle(a,b,w*2.2,.5,0x7462e0,al*.5f);m.needle(a,b,w*1.3,.5,0xd7b1f8,al*.85f);m.needle(a,b,w*.5,.5,0xffffff,al);
@@ -250,7 +254,7 @@ final class HighestSkill implements Fx.Skill {
         m.line(a.add(upOff),b.add(upOff),w*.9,0x5946bb,al*.45f);m.line(a.add(upOff.multiply(.6)),b.add(upOff.multiply(.6)),w*.7,0xb495f4,al*.7f);
         m.line(a.subtract(upOff),b.subtract(upOff),w*.9,0x7976a3,al*.35f);m.line(a.subtract(upOff.multiply(.6)),b.subtract(upOff.multiply(.6)),w*.7,0xf6e9fa,al*.7f);
         m.line(a,b,w*.55,0xfdfdfa,al);
-        if(u>=.04f)m.line(a,b,w*3,u<.2f?0xb6a8f1:0x8f6cf2,al*.3f);
+        if(u>=.04f)m.line(a,b,w*1.7,u<.2f?0xb6a8f1:0x8f6cf2,al*.3f);
         // Short white vertical plume at his right for three frames.
         if(t>=4.65f&&t<4.70f){Vec3d p=c.at0(-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,.9,0),.3,.4,0xffffff,.8f);}
     }
@@ -296,7 +300,7 @@ final class HighestSkill implements Fx.Skill {
     static void crescent(Fx c,EffectMesh m,float t){
         if(t<BEAM||t>=END+1.4f)return;
         float a=t<END?.85f:.85f*(1-Ease.unit(t,END,END+1.4f));
-        Vec3d near=c.at0(.25,.05,1.0),far=c.at0(-.4,1.25,14*STUD+1.0);
+        Vec3d near=c.at0(.35,.05,.9),far=c.at0(.3,1.2,3.4);
         int n=24;
         for(int i=0;i<n;i++){
             double s0=i/(double)n,s1=(i+1)/(double)n;

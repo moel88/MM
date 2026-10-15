@@ -71,12 +71,18 @@ final class PoseSkill implements Fx.Skill {
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec;
         trails(c,m,t);
+        streaks(c,m,t);
+        glint(c,m,t);
+        // A small white-hot glow over the star; its colours are drawn in the alpha pass.
+        if(t>=STAR&&t<RELEASE+.27f)m.softDisc(c.origin.add(0,.08,0),(white(t)?.8:.5),white(t)?0xffffff:0xfb9afc,.35f*(1-Ease.smooth(t,RELEASE,RELEASE+.27f)));
+    }
+    /** Ground light, star, rings and crescents: alpha-blended so their violet/pink holds on a bright floor. */
+    @Override public void alpha(Fx c,EffectMesh m){
+        float t=c.sec;
         pool(c,m,t);
         star(c,m,t);
         rings(c,m,t);
         crescents(c,m,t);
-        streaks(c,m,t);
-        glint(c,m,t);
     }
     /** Lavender ribbons left in the air by the sword tip during the flourish (each piece ≈0.7 s). */
     static void trails(Fx c,EffectMesh m,float t){
@@ -94,7 +100,7 @@ final class PoseSkill implements Fx.Skill {
     /** Large violet light pool on the ground (≈20 studs), ramping on in 0.1 s. */
     static void pool(Fx c,EffectMesh m,float t){
         if(t<POOL||t>=RELEASE+.2f)return;
-        float a=Ease.smooth(t,POOL,POOL+.1f)*(1-Ease.smooth(t,RELEASE+.1f,RELEASE+.2f))*.5f;
+        float a=Ease.smooth(t,POOL,POOL+.1f)*(1-Ease.smooth(t,RELEASE+.1f,RELEASE+.2f))*.62f;
         Vec3d o=c.origin.add(0,.02,0);double r=20*STUD;
         for(int i=0;i<32;i++){
             double a0=i*Math.PI/16,a1=(i+1)*Math.PI/16;
@@ -107,7 +113,7 @@ final class PoseSkill implements Fx.Skill {
     static void star(Fx c,EffectMesh m,float t){
         if(t<STAR||t>=RELEASE+.27f)return;
         boolean w=white(t);float grow=t<STAR+.1f?(float)(1+2*Ease.out(t,STAR,STAR+.1f))/3f:1,shrink=1-Ease.smooth(t,RELEASE,RELEASE+.27f);
-        double base=(w?3.9:3.1)*STUD*grow*shrink;int frame=(int)(t*20);
+        double base=(w?4.4:3.4)*STUD*grow*shrink;int frame=(int)(t*20);
         Vec3d o=c.origin.add(0,.03,0);int fill=w?0xfbf5f9:0xfb9afc,rim=w?0xfdb6fb:0xf07efd;
         int n=18;
         for(int k=0;k<n;k++){
@@ -139,7 +145,7 @@ final class PoseSkill implements Fx.Skill {
     static void crescents(Fx c,EffectMesh m,float t){
         Vec3d o=c.origin.add(0,.05,0);double back=Math.atan2(-c.f.z,-c.f.x);
         for(float side:CRESCENTS){
-            float born=side-.14f,u=t-born;if(u<0||u>=.8f||born>=RELEASE)continue;
+            float born=side-.14f,u=t-born;if(u<0||u>=.8f||born>=RELEASE+.1f)continue;
             double outer=17.4*STUD*(1-Math.pow(1-Math.min(1,u/.55),2.6)),inner=Math.max(0,(u-.14)*16)*STUD+7.05*STUD*Ease.smooth(u,.06f,.14f);
             inner=Math.min(inner,outer-.03);if(outer<=.05)continue;
             double span=Math.toRadians(200)*Ease.out(u,0,.14f)/2;

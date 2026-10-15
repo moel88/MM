@@ -44,6 +44,7 @@ public final class KagenoRenderer {
             buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
             for(var x:casts)KagenoSkills.of(x.cast.skill()).alpha(x,m);
             KagenoStatusFx.alpha(mc,m,delta,camera);
+            dev.sangwoo.celestialfall.client.kageno.HitFeedback.blood(mc,m,delta);
             BufferRenderer.drawWithGlobalProgram(buffer.end());
             // Additive emission.
             RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
@@ -61,6 +62,7 @@ public final class KagenoRenderer {
             KagenoFire.crescentGain=1;RenderSystem.defaultBlendFunc();
             for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
             dev.sangwoo.celestialfall.client.kageno.HealNumbers.render(mc,matrices,delta,camera);
+            dev.sangwoo.celestialfall.client.kageno.HitFeedback.numbers(mc,matrices,delta);
             RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
             // Full-frame flashes for nearby viewers.
             float flash=0;int color=0xffffff;

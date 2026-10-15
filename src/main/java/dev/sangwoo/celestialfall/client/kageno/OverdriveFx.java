@@ -47,23 +47,6 @@ final class OverdriveFx {
             m.softDisc(e,.18*boost,0xb7aff1,.55f*eye);m.softDisc(e,.13*boost,0xccbff6,.7f*eye);m.softDisc(e,.09,0xe8dcfb,.9f*eye);m.softDisc(e,.05,0xffffff,eye);
             m.needle(e.subtract(hr.multiply(.05)),e.add(hr.multiply(.3)),.06,.25,0xe8dcfb,.6f*eye);
         }
-        // Violet flame wisps: ≈27 per second, each 0.25-0.4 s, born on a limb and drifting out and up.
-        float flames=Ease.smooth(s,.3f,.6f);
-        if(flames>0){
-            float pulse=.75f+.25f*(float)Math.sin(time*Math.PI*2/.7f);
-            int last=(int)Math.floor(time*27),seed=(int)p.getUuid().getLeastSignificantBits();
-            for(int k=last-12;k<=last;k++){
-                float born=k/27f,life=.25f+.15f*(float)Ease.hash(seed+k*3),u=(time-born)/life;if(u<0||u>=1)continue;
-                Vec3d root=limb(b,(int)(Ease.hash(seed+k*5+1)*11));
-                Vec3d out=root.subtract(b.at(0,root.y-b.feet().y,0));if(out.lengthSquared()<1e-4)out=b.right();out=out.normalize();
-                double drift=(.4+.6*Ease.hash(seed+k*7+2))*2.2*(time-born);
-                Vec3d base=root.add(out.multiply(drift*.6)).add(0,drift*.8,0);
-                double size=(.26+.12*Ease.hash(seed+k*11+3))*(1-.45*u),flick=.8+.2*Math.sin(time*40+k);
-                Vec3d tip=base.add(out.multiply(size*.4)).add(0,size*1.6*flick,0);
-                float a=flames*pulse*(1-Ease.smooth(u,.55f,1))*Ease.smooth(u,0,.15f);
-                m.needle(base,tip,size*1.4,.3,0xac78eb,a*.65f);m.needle(base,tip,size*.9,.3,0xdea9fa,a*.85f);m.needle(base.add(0,size*.1,0),tip.add(0,-size*.3,0),size*.42,.3,0xf8c6ff,a);
-            }
-        }
         // Tiny white glints on the shirt and arms, and violet motes around the legs.
         float rest=Ease.smooth(s,.3f,.6f);
         if(rest>0){
@@ -77,6 +60,29 @@ final class OverdriveFx {
                 double ang=time*1.3+k*1.26,r=.28+.08*Math.sin(time*2+k);
                 Vec3d pt=b.feet().add(Math.cos(ang)*r,.1+.5*((time*.4+k*.21)%1),Math.sin(ang)*r);
                 m.softDisc(pt,.05,0xa15cf0,rest*.8f);
+            }
+        }
+    }
+    /**
+     * Violet flame wisps, ≈27 per second, each 0.25-0.4 s, born on a limb and drifting out and up.
+     * Alpha-blended so they stay violet over a bright daytime sky.
+     */
+    static void flames(EffectMesh m,MinecraftClient mc,PlayerEntity p,float delta,float now){
+        float s=since(mc,p,delta);Body b=body(p,delta);float time=now/20f;
+        float flames=Ease.smooth(s,.3f,.6f);
+        if(flames>0){
+            float pulse=.75f+.25f*(float)Math.sin(time*Math.PI*2/.7f);
+            int last=(int)Math.floor(time*27),seed=(int)p.getUuid().getLeastSignificantBits();
+            for(int k=last-12;k<=last;k++){
+                float born=k/27f,life=.25f+.15f*(float)Ease.hash(seed+k*3),u=(time-born)/life;if(u<0||u>=1)continue;
+                Vec3d root=limb(b,(int)(Ease.hash(seed+k*5+1)*11));
+                Vec3d out=root.subtract(b.at(0,root.y-b.feet().y,0));if(out.lengthSquared()<1e-4)out=b.right();out=out.normalize();
+                double drift=(.4+.6*Ease.hash(seed+k*7+2))*2.2*(time-born);
+                Vec3d base=root.add(out.multiply(drift*.6)).add(0,drift*.8,0);
+                double size=(.26+.12*Ease.hash(seed+k*11+3))*(1-.45*u),flick=.8+.2*Math.sin(time*40+k);
+                Vec3d tip=base.add(out.multiply(size*.4)).add(0,size*1.6*flick,0);
+                float a=flames*pulse*(1-Ease.smooth(u,.55f,1))*Ease.smooth(u,0,.15f);
+                m.needle(base,tip,size*1.4,.3,0x9d5ee8,a*.55f);m.needle(base,tip,size*.9,.3,0xc78af5,a*.8f);m.needle(base.add(0,size*.1,0),tip.add(0,-size*.3,0),size*.42,.3,0xf3c4ff,a*.9f);
             }
         }
     }

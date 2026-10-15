@@ -60,6 +60,7 @@ public final class StandClient {
                 if(until<=now)OVERDRIVE.remove(id);
                 STATES.put(id,new Status(until,boost,ready,marks));});
         });
+        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.DAMAGE,(mc,h,b,r)->{int entity=b.readVarInt();float amount=b.readFloat(),yaw=b.readFloat();if(!Float.isFinite(amount)||amount<0||amount>10000)return;mc.execute(()->{if(MapClient.enabled())dev.sangwoo.celestialfall.client.kageno.HitFeedback.hit(mc,entity,amount,yaw);});});
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.HITS,(mc,h,b,r)->{int n=b.readVarInt();mc.execute(()->{if(mc.world!=null){int count=Math.max(0,Math.min(9999,n));if(count<=1||count<hitCount)comboStart=mc.world.getTime();hitCount=count;hitTime=mc.world.getTime();}});});
         ClientTickEvents.START_CLIENT_TICK.register(StandClient::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->mc.execute(()->clear(mc)));
@@ -74,7 +75,7 @@ public final class StandClient {
     }
     private static Vec3d vec(net.minecraft.network.PacketByteBuf b){return new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());}
     private static void observe(MinecraftClient mc){if(world!=mc.world||player!=mc.player){clear(mc);world=mc.world;player=mc.player;}}
-    public static void clear(MinecraftClient mc){KagenoAudio.clear();CASTS.clear();STATES.clear();OVERDRIVE.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
+    public static void clear(MinecraftClient mc){KagenoAudio.clear();CASTS.clear();STATES.clear();OVERDRIVE.clear();dev.sangwoo.celestialfall.client.kageno.HitFeedback.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
     private static void tick(MinecraftClient mc){
         observe(mc);if(mc.world==null||mc.player==null||!MapClient.enabled()){clear(mc);return;}
         ticks++;long now=mc.world.getTime();

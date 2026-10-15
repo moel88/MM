@@ -90,9 +90,9 @@ void main(){
   // Measured k-means stops (M1 hit 1): blue-violet rim, violet, pink core, violet, blue-violet,
   // dark navy along the inner edge; white-pink highlights only on the brightest hairs.
   vec3 rim,vio,core,hi,navy;
-  if(style<.5){rim=vec3(.31,.15,.92);vio=vec3(.60,.30,.97);core=vec3(.85,.51,.98);hi=vec3(.94,.83,.98);navy=vec3(.08,.09,.41);}
-  else if(style<1.5){rim=vec3(.25,.14,.90);vio=vec3(.45,.22,.96);core=vec3(.87,.53,.98);hi=vec3(.95,.85,.98);navy=vec3(.15,.17,.65);}
-  else if(style<2.5){rim=vec3(.38,.17,.89);vio=vec3(.65,.31,.96);core=vec3(.92,.55,.98);hi=vec3(.87,.85,.96);navy=vec3(.02,.02,.10);}
+  if(style<.5){rim=vec3(.29,.16,.92);vio=vec3(.48,.27,.97);core=vec3(.70,.46,.98);hi=vec3(.90,.80,.98);navy=vec3(.08,.09,.41);}
+  else if(style<1.5){rim=vec3(.25,.14,.90);vio=vec3(.42,.21,.96);core=vec3(.66,.42,.98);hi=vec3(.92,.82,.98);navy=vec3(.15,.17,.65);}
+  else if(style<2.5){rim=vec3(.34,.17,.89);vio=vec3(.52,.27,.96);core=vec3(.74,.48,.98);hi=vec3(.87,.85,.96);navy=vec3(.02,.02,.10);}
   else if(style<3.5){rim=vec3(.48,.39,.94);vio=vec3(.65,.27,.98);core=vec3(.93,.54,.98);hi=vec3(.99,.85,.98);navy=vec3(.07,.05,.47);}
   else if(style<4.5){rim=vec3(.54,.58,.88);vio=vec3(.72,.64,.95);core=vec3(.88,.76,.98);hi=vec3(.98,.94,.98);navy=vec3(.54,.58,.88);}
   else if(style<5.5){rim=vec3(.64,.35,.75);vio=vec3(.84,.32,.96);core=vec3(.93,.6,.97);hi=vec3(.98,.89,.98);navy=vec3(.73,.53,.93);}

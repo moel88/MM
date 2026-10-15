@@ -24,7 +24,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 
 /** Server owns casts, hold duration, target membership, damage and all movement locks. */
 public final class KagenoManager {
-    public static final Identifier INPUT=CelestialFall.id("kageno_input_v1"),CAST=CelestialFall.id("kageno_cast_v1"),STOP=CelestialFall.id("kageno_stop_v1"),STATUS=CelestialFall.id("kageno_status_v1"),HITS=CelestialFall.id("kageno_hits_v1");
+    public static final Identifier INPUT=CelestialFall.id("kageno_input_v1"),CAST=CelestialFall.id("kageno_cast_v1"),STOP=CelestialFall.id("kageno_stop_v1"),STATUS=CelestialFall.id("kageno_status_v1"),HITS=CelestialFall.id("kageno_hits_v1"),DAMAGE=CelestialFall.id("kageno_damage_v1");
     public static final class Cast {
         public final UUID id=UUID.randomUUID();public final ServerPlayerEntity player;public final ServerWorld world;
         public final Vec3d origin;public final float yaw,pitch;public final int skill,combo;public final long start;
@@ -225,6 +225,8 @@ public final class KagenoManager {
         if(CombatManager.damageWithoutKnockback(e,source,(float)(amount*multiplier))){
             if(s!=null){long now=c.world.getTime();int n=KagenoRules.hits(c.skill,age);s.hits=now-s.lastHit>50?n:s.hits+n;s.lastHit=now;
                 if(ServerPlayNetworking.canSend(c.player,HITS)){var b=PacketByteBufs.create();b.writeVarInt(s.hits);ServerPlayNetworking.send(c.player,HITS,b);}}
+            // Attacker-side hit feedback (red cumulative number and blood), as in the review's dummy demos.
+            if(ServerPlayNetworking.canSend(c.player,DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat((float)(amount*multiplier));b.writeFloat(c.yaw);ServerPlayNetworking.send(c.player,DAMAGE,b);}
             if((c.skill==T||c.skill==RUSH&&age<RUSH_START)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
             // Overdrive: +0.01 damage multiplier per skill hit, a little more time, and the shadow mark
             // (lasting as long as the overdrive itself).

@@ -198,7 +198,7 @@ final class FallenSkill implements Fx.Skill {
                     double y0=base.y+(top-base.y)*k/4.0*.6,y1=k==3?top:base.y+(top-base.y)*(k+1)/4.0*.6;
                     float pa=wa*(1-Ease.smooth(t,.26f+.025f*k+.06f*(float)Ease.hash(i*17+k),.37f));if(pa<=0)continue;
                     Vec3d p0=new Vec3d(base.x,Math.max(y0,bottom),base.z),p1=new Vec3d(base.x,y1,base.z);
-                    m.line(p0,p1,.3,0xd8e0f8,pa*.22f);m.line(p0,p1,.12,0xe6e9f4,pa*.4f);m.line(p0,p1,.05,0xf9fef8,pa);
+                    m.line(p0,p1,.2,0xd8e0f8,pa*.18f);m.line(p0,p1,.08,0xe6e9f4,pa*.35f);m.line(p0,p1,.035,0xf9fef8,pa);
                 }
             }
         }
@@ -234,10 +234,10 @@ final class FallenSkill implements Fx.Skill {
     }
     /** Luminous low fog over the crater floor as the white-out clears. */
     static void mist(Fx c,EffectMesh m,float t){
-        if(t<.12f||t>=.55f)return;float a=.42f*(1-Ease.smooth(t,.3f,.55f));
-        for(int i=0;i<14;i++){
-            double ang=Ease.hash(i*3+71)*Math.PI*2,r=(.5+3.5*Ease.hash(i*5+72))*H;
-            m.softDisc(c.origin.add(Math.cos(ang)*r,.3,Math.sin(ang)*r),1.6+1.0*Ease.hash(i*7+73),0xf2f4ff,a);
+        if(t<.12f||t>=.55f)return;float a=.22f*(1-Ease.smooth(t,.3f,.55f));
+        for(int i=0;i<16;i++){
+            double ang=Ease.hash(i*3+71)*Math.PI*2,r=(1.2+3.6*Ease.hash(i*5+72))*H;
+            m.softDisc(c.origin.add(Math.cos(ang)*r,.12,Math.sin(ang)*r),1.4+.9*Ease.hash(i*7+73),0xf2f4ff,a);
         }
     }
     /** Grey-blue dust hugging the slab bases. */

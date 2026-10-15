@@ -86,8 +86,9 @@ final class ComboSkill implements Fx.Skill {
         if(combo==2&&t<.22f){
             // Tilted 17°, highest at the left-front; left → front → right → right-rear.
             var b=plane(c,.22,.96,-.19);
-            float erase=(float)Math.pow(t/.216f,.65);
-            KagenoFire.crescent(torso(c),b[0],b[1],6.3*STUD,3.2*STUD,-80,240,1,7,erase,1,1,.55);
+            // Holds its full length ≈0.06 s, then erodes from the start end.
+            float erase=t<.06f?0:(float)Math.pow((t-.06f)/.16f,1.2);
+            KagenoFire.crescent(torso(c),b[0],b[1],6.3*STUD,3.2*STUD,-80,240,1,7,erase,1,1,1.0);
         }
         if(combo==3&&t<.15f){
             // Horizontal ring at the end of the spin: forms in ~2 frames, holds, then thins out.
@@ -130,10 +131,10 @@ final class ComboSkill implements Fx.Skill {
         float t=c.sec-HIT;if(c.cast.combo()!=3||t<.1f||t>=.62f)return;
         // Wide translucent lavender wind bands sweeping around (and through) the camera, drifting up and out.
         int[] colors={0xd4c2fb,0xaea2f8,0x8b84e8,0x6c6edc,0x454aaf,0xaea2f8,0x8b84e8};
-        float life=Ease.unit(t,.1f,.62f),a=.6f*Ease.smooth(t,.1f,.16f)*(1-Ease.smooth(t,.4f,.62f));
+        float life=Ease.unit(t,.1f,.62f),a=.85f*Ease.smooth(t,.1f,.16f)*(1-Ease.smooth(t,.4f,.62f));
         for(int i=0;i<7;i++){
             double r=3+1.6*i+4*life,y=.3+.55*i+1.8*life,start=i*67+60*life,len=150+30*i;
-            band(m,c.origin.add(0,y,0),r,.6+.25*i,start,len,colors[i],a*(1-.08f*i));
+            band(m,c.origin.add(0,y,0),r,.85+.35*i,start,len,colors[i],a*(1-.08f*i));
         }
     }
     @Override public void shaders(Fx c){

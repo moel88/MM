@@ -30,6 +30,7 @@ public final class KagenoStatusFx {
             if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
             if(p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
             OverdriveFx.circuits(m,mc,p,delta,now+delta);
+            OverdriveFx.flames(m,mc,p,delta,now+delta);
         }
     }
     /** Full-screen brightening while an overdrive switches on nearby. */

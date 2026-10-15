@@ -56,7 +56,7 @@ public final class SkillShots implements ClientModInitializer {
         return (mc.world.getTime()-castTick)+delta;
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;default->-1;};}
-    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "F"->50;case "M1"->75;case "Q"->140;case "G"->560;case "T"->110;case "RUSH"->90;default->DURATION[skill(name)]+20;};}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;default->DURATION[skill(name)]+20;};}
 
     private void frame()throws Exception{
         if(phase!=4||current==null)return;
@@ -83,10 +83,14 @@ public final class SkillShots implements ClientModInitializer {
         float yaw=facing(opt("face",0));
         p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
         var d=p.getServerWorld().getEntityById(dummyId);
+        if(!(d instanceof net.minecraft.entity.LivingEntity)||!d.isAlive()){
+            var dummy=TrainingDummies.TYPES.values().iterator().next().create(p.getServerWorld());dummy.refreshPositionAndAngles(.5,y,3.5,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
+        }
         if(d instanceof net.minecraft.entity.LivingEntity l){
             var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
             boolean show=opt("dummy",1)>0;var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
-            l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(at.x,show?y:y-40,at.z,yaw+180,0);l.setVelocity(0,0,0);
+            // Hidden dummies wait far to the side (below the floor they would fall out of the world).
+            l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(show?at.x:at.x+70,y,at.z,yaw+180,0);l.setVelocity(0,0,0);
         }
     }
     private float opt(String key,float fallback){var v=opts.get(key);return v==null?fallback:Float.parseFloat(v);}
@@ -139,6 +143,7 @@ public final class SkillShots implements ClientModInitializer {
             case "F"->key(GLFW_KEY_F,true);
             case "RUSH"->server(p->KagenoManager.input(p,T_DOWN));
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
+            case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
             default->server(p->{if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');});
         }
     }
