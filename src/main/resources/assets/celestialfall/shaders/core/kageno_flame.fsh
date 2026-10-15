@@ -68,6 +68,63 @@ void main(){
   rgb=mix(deep,mid,smoothstep(.95,.35,d));
   rgb=mix(rgb,hot,core*(.55+.45*x));
   alpha=body*tail*(.55+.45*streak)*tint.a;
+ }else if(Mode==8){
+  // Brush crescent: uv.x start(0)->end(1) along the arc, uv.y inner(0)->outer(1) across the band.
+  // tint.r = style*16+seed, tint.g = erased fraction from the start, tint.b = taper
+  // (0 widest at the start, .5 even, 1 widest at the end), tint.a = alpha.
+  float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
+  float x=clamp(uv.x,0.0,1.0),y=uv.y,taper=tint.b;
+  float w=mix(mix(1.0,.18,x),mix(.18,1.0,x),taper);
+  w=taper>.4&&taper<.6?1.0:w;
+  w*=smoothstep(0.0,.06,x)*(1.0-smoothstep(.9,1.0,x))*.75+.25;
+  float strand=fbm(vec2(x*4.0+sd,y*38.0));
+  float serr=(noise(vec2(x*60.0+sd,3.0))-.5)*.18;
+  float d=(1.0-y+serr*w)/max(w,.02);
+  float body=(1.0-smoothstep(.92,1.0,d))*smoothstep(-.06,.0,1.0-y);
+  // Split strands at the thin end: gaps open between the hairs of the brush.
+  float split=smoothstep(.55,.9,1.0-w);
+  body*=1.0-split*smoothstep(.42,.58,strand);
+  // Erosion from the start end with a ragged front.
+  float front=tint.g*1.08-.04+(strand-.5)*.12;
+  body*=smoothstep(front,front+.05,x);
+  // Measured k-means stops (M1 hit 1): blue-violet rim, violet, pink core, violet, blue-violet,
+  // dark navy along the inner edge; white-pink highlights only on the brightest hairs.
+  vec3 rim,vio,core,hi,navy;
+  if(style<.5){rim=vec3(.31,.15,.92);vio=vec3(.60,.30,.97);core=vec3(.85,.51,.98);hi=vec3(.94,.83,.98);navy=vec3(.08,.09,.41);}
+  else if(style<1.5){rim=vec3(.25,.14,.90);vio=vec3(.45,.22,.96);core=vec3(.87,.53,.98);hi=vec3(.95,.85,.98);navy=vec3(.15,.17,.65);}
+  else if(style<2.5){rim=vec3(.38,.17,.89);vio=vec3(.65,.31,.96);core=vec3(.92,.55,.98);hi=vec3(.87,.85,.96);navy=vec3(.02,.02,.10);}
+  else if(style<3.5){rim=vec3(.48,.39,.94);vio=vec3(.65,.27,.98);core=vec3(.93,.54,.98);hi=vec3(.99,.85,.98);navy=vec3(.07,.05,.47);}
+  else if(style<4.5){rim=vec3(.54,.58,.88);vio=vec3(.72,.64,.95);core=vec3(.88,.76,.98);hi=vec3(.98,.94,.98);navy=vec3(.54,.58,.88);}
+  else if(style<5.5){rim=vec3(.64,.35,.75);vio=vec3(.73,.53,.93);core=vec3(.93,.6,.97);hi=vec3(.98,.89,.98);navy=vec3(.84,.32,.96);}
+  else{rim=vec3(.15,.1,.66);vio=vec3(.5,.23,.96);core=vec3(.79,.44,.98);hi=vec3(.97,.9,.98);navy=vec3(.86,.53,.98);}
+  rgb=d<.08?rim:d<.3?mix(rim,vio,(d-.08)/.22):d<.45?mix(vio,core,(d-.3)/.15):d<.7?mix(core,vio,(d-.45)/.25):d<.88?mix(vio,rim,(d-.7)/.18):mix(rim,navy,clamp((d-.88)/.1,0.0,1.0));
+  // Spin ring: a narrow bright band outside, then an opaque dark-navy band inside it.
+  if(style>1.5&&style<2.5)rgb=d<.06?rim:d<.18?mix(rim,vio,(d-.06)/.12):d<.28?mix(vio,core,(d-.18)/.1):d<.4?mix(core,vio,(d-.28)/.12):d<.52?mix(vio,navy,(d-.4)/.12):navy;
+  float hair=noise(vec2(x*9.0+sd,y*95.0));
+  rgb=mix(rgb,hi,smoothstep(.72,.9,hair)*smoothstep(.12,.3,d)*(1.0-smoothstep(.5,.7,d)));
+  alpha=body*(.86+.14*strand)*tint.a;
+ }else if(Mode==9){
+  // T blast cloud: billowy white cumulus with lobed edges, pink rim and a thin lilac outline.
+  vec2 flow=p*1.6+vec2(seed,-Age*.03);
+  float n=fbm(flow+vec2(fbm(flow+2.3),fbm(flow-4.1))*1.3);
+  float r=length(p);
+  float edge=.62+n*.42+.08*sin(atan(p.y,p.x)*6.0+seed);
+  float body=1.0-smoothstep(edge-.12,edge,r);
+  float rim=smoothstep(edge-.3,edge-.08,r);
+  rgb=mix(vec3(.99,.99,.97),vec3(.98,.82,.98),rim*.7);
+  rgb=mix(rgb,vec3(.84,.69,.98),smoothstep(edge-.1,edge,r)*.8);
+  alpha=body*tint.a;
+ }else if(Mode==10){
+  // T dark orb: churning dark ink ball with glowing lavender bubble holes and a violet rim.
+  float r=length(p);vec2 flow=p*2.6+vec2(seed+Age*.05,-Age*.07);
+  float n=fbm(flow+vec2(fbm(flow+1.7),fbm(flow-6.3))*1.6);
+  float edge=.78+(n-.5)*.28;
+  float body=1.0-smoothstep(edge-.06,edge+.06,r);
+  rgb=mix(vec3(.086,.024,.5),vec3(.2,.08,.71),smoothstep(.3,.7,n));
+  rgb=mix(rgb,vec3(.59,.35,.93),smoothstep(edge-.18,edge,r)*.6);
+  float holes=smoothstep(.72,.8,noise(p*7.0+vec2(Age*.06,seed)));
+  rgb=mix(rgb,vec3(.95,.86,.96),holes*(1.0-smoothstep(.6,.75,r)));
+  alpha=body*tint.a*.96;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

@@ -27,6 +27,7 @@ public abstract class LivingCombatMixin {
     private float botand$shadowMark(float amount){return dev.sangwoo.celestialfall.stand.KagenoManager.incomingDamage((LivingEntity)(Object)this,amount);}
     @Inject(method="damage",at=@At("HEAD"),cancellable=true)
     private void botand$guard(DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir) {
+        if((Object)this instanceof ServerPlayerEntity p && dev.sangwoo.celestialfall.AtomicManager.invulnerable(p) && !source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)){cir.setReturnValue(false);return;}
         if((Object)this instanceof ServerPlayerEntity p && CombatManager.block(p,source,amount))cir.setReturnValue(false);
     }
     @Inject(method="damage",at=@At("RETURN"))

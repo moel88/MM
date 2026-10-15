@@ -39,8 +39,14 @@ public abstract class CameraMixin {
         } else {
             // Offset the view reconstructed from mouse input each frame. Never
             // accumulate shake into BotandCamera.STATE or seize cinematic ownership.
+            var kick=dev.sangwoo.celestialfall.client.kageno.KagenoCamera.shake(delta);
+            if(kick!=null){
+                setRotation(getYaw()+kick[0],getPitch()+kick[1]);
+                var q=getRotation().rotateZ((float)Math.toRadians(kick[2]));
+                getHorizontalPlane().set(0,0,1).rotate(q);getVerticalPlane().set(0,1,0).rotate(q);getDiagonalPlane().set(1,0,0).rotate(q);
+            }
             var blast=dev.sangwoo.celestialfall.client.AtomicImmersion.at(getPos(),delta);
-            if(blast.violet()>0){
+            if(blast.yaw()!=0||blast.pitch()!=0||blast.roll()!=0){
                 setRotation(getYaw()+blast.yaw(),getPitch()+blast.pitch());
                 var q=getRotation().rotateZ((float)Math.toRadians(blast.roll()));
                 getHorizontalPlane().set(0,0,1).rotate(q);

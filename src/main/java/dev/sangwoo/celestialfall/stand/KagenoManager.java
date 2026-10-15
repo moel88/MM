@@ -24,7 +24,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 
 /** Server owns casts, hold duration, target membership, damage and all movement locks. */
 public final class KagenoManager {
-    public static final Identifier INPUT=CelestialFall.id("kageno_input_v1"),CAST=CelestialFall.id("kageno_cast_v1"),STOP=CelestialFall.id("kageno_stop_v1"),STATUS=CelestialFall.id("kageno_status_v1");
+    public static final Identifier INPUT=CelestialFall.id("kageno_input_v1"),CAST=CelestialFall.id("kageno_cast_v1"),STOP=CelestialFall.id("kageno_stop_v1"),STATUS=CelestialFall.id("kageno_status_v1"),HITS=CelestialFall.id("kageno_hits_v1");
     public static final class Cast {
         public final UUID id=UUID.randomUUID();public final ServerPlayerEntity player;public final ServerWorld world;
         public final Vec3d origin;public final float yaw,pitch;public final int skill,combo;public final long start;
@@ -34,7 +34,7 @@ public final class KagenoManager {
     }
     private static final class State {
         final ServerWorld world;State(ServerPlayerEntity p){world=p.getServerWorld();}
-        final long[] ready=new long[9];long press=-1,pulse=-1,lastCombo=-100,overUntil;int combo,window,packets;float boost;
+        final long[] ready=new long[9];long press=-1,pulse=-1,lastCombo=-100,overUntil,lastHit=-1000;int combo,window,packets,hits;float boost;
     }
     private record Mark(ServerPlayerEntity owner,LivingEntity target,long until){}
     private static final Map<ServerPlayerEntity,State> STATES=new HashMap<>();
@@ -69,7 +69,7 @@ public final class KagenoManager {
         if(!MapGate.enabled(e.getWorld())||!e.isAlive()||e.isRemoved())return false;
         if(e.getWorld().isClient)return clientFrozen.test(e);
         if(e instanceof PlayerEntity p&&AtomicManager.immobilized(p))return true;
-        for(var c:CASTS.values())if(c.world==e.getWorld()&&(KagenoRules.frozen(c.skill,c.age())&&((c.player==e&&c.skill!=R)||c.targets.containsKey(e))||c.skill==RUSH&&c.age()>=RUSH_START&&c.age()<RUSH_FINISH&&c.targets.containsKey(e)))return true;
+        for(var c:CASTS.values())if(c.world==e.getWorld()&&(KagenoRules.frozen(c.skill,c.age())&&((c.player==e&&c.skill!=R)||c.targets.containsKey(e))||KagenoRules.trapped(c.skill,c.age())&&c.targets.containsKey(e)))return true;
         return false;
     }
     public static void freeze(LivingEntity e){e.setVelocity(Vec3d.ZERO);e.fallDistance=0;e.setSprinting(false);e.clearActiveItem();}
@@ -104,7 +104,7 @@ public final class KagenoManager {
                 c.targets.put(e,e.getPos());CombatManager.interrupt(e);if(e instanceof PlayerEntity target)cancelCaster(target);
             }
         }
-        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=now+(skill==M1?(s.combo==4?24:13):COOLDOWN[skill]);
+        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=now+(skill==M1?(s.combo==4?24:8):COOLDOWN[skill]);
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
         sync(c);status(p,s);
         return true;
@@ -114,8 +114,16 @@ public final class KagenoManager {
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)&&inside(e.getPos().squaredDistanceTo(origin),radius)&&(!sight||p.canSee(e)));
     }
     public static List<LivingEntity> radiusTargets(ServerPlayerEntity p,double radius){return near(p.getServerWorld(),p.getPos(),radius,p,false);}
+    /** Point in the cast frame: forward, lateral (character's right) and height relative to the origin. */
+    private static Vec3d local(Cast c,Vec3d p){Vec3d f=Vec3d.fromPolar(0,c.yaw),right=new Vec3d(-f.z,0,f.x),d=p.subtract(c.origin);return new Vec3d(d.dotProduct(f),d.dotProduct(right),d.y);}
     private static List<LivingEntity> strikeTargets(Cast c){
-        if(c.skill==R||c.skill==H||c.skill==RUSH&&!c.targets.isEmpty())return new ArrayList<>(c.targets.keySet());
+        if(c.skill==R||c.skill==H)return new ArrayList<>(c.targets.keySet());
+        int age=c.age();
+        // T: the ≈6×6 character-height fire field, biased forward and to the sword side.
+        if(c.skill==T)return near(c.world,c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(3)),9,c.player,false).stream().filter(e->{var l=local(c,e.getPos());return l.x>=-2.6&&l.x<=8.6&&l.y>=-4.6&&l.y<=6.4&&l.z>=-2&&l.z<=7;}).toList();
+        // T+ fire ticks: the long strip 2-15 character heights ahead.
+        if(c.skill==RUSH&&age<RUSH_START)return near(c.world,c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(15)),15,c.player,false).stream().filter(e->{var l=local(c,e.getPos());return l.x>=2.5&&l.x<=28&&l.y>=-3.8&&l.y<=7.6&&l.z>=-2&&l.z<=7;}).toList();
+        if(c.skill==RUSH){var out=new LinkedHashSet<>(c.targets.keySet());out.addAll(near(c.world,c.player.getPos(),3.2,c.player,true));return new ArrayList<>(out);}
         boolean field=c.skill==T||c.skill==Y;Vec3d center=c.skill==T?c.origin:c.player.getPos();double r=field?4:c.skill==RUSH?3.2:3.4;
         Vec3d facing=Vec3d.fromPolar(0,c.yaw);
         if(c.skill==E){Vec3d right=new Vec3d(facing.z,0,-facing.x);return near(c.world,center,r,c.player,true).stream().filter(e->{Vec3d offset=e.getPos().subtract(center);return thrustLane(offset.dotProduct(facing),offset.dotProduct(right),offset.y,e.getWidth()*.5);}).toList();}
@@ -143,15 +151,20 @@ public final class KagenoManager {
                 for(var e:c.targets.entrySet())hold(e.getKey(),e.getValue(),e.getKey().getYaw(),e.getKey().getPitch());
             }
             if(c.skill==RUSH&&age>=RUSH_START&&age<=RUSH_FINISH){
-                Vec3d direction=Vec3d.fromPolar(0,c.yaw),step=direction.multiply(rushSpeed(age));
-                if(c.targets.isEmpty()&&age<=RUSH_START+10)for(var target:near(c.world,c.player.getPos().add(direction.multiply(.5)),2,c.player,true))if(target.getPos().subtract(c.player.getPos()).dotProduct(direction)>-.5){c.targets.put(target,target.getPos());CombatManager.interrupt(target);}
+                Vec3d direction=Vec3d.fromPolar(0,c.yaw);
+                if(age<=RUSH_START+8)for(var target:near(c.world,c.player.getPos().add(direction.multiply(.5)),2,c.player,true))if(target.getPos().subtract(c.player.getPos()).dotProduct(direction)>-.5&&c.targets.putIfAbsent(target,target.getPos())==null)CombatManager.interrupt(target);
+                // Trapped targets are dragged toward the dash (≈3 character heights), then held just in front.
+                boolean reached=false;
                 if(age<RUSH_FINISH)for(var target:c.targets.keySet()){
-                    Vec3d carry=c.player.getPos().add(direction.multiply(1.3));
-                    if(c.world.isSpaceEmpty(target,target.getBoundingBox().offset(carry.subtract(target.getPos())))){
-                        hold(target,carry,target.getYaw(),target.getPitch());
-                        if(target instanceof ServerPlayerEntity victim&&age%2==0)victim.networkHandler.requestTeleport(carry.x,carry.y,carry.z,victim.getYaw(),victim.getPitch());
+                    Vec3d carry=c.player.getPos().add(direction.multiply(1.3)),from=target.getPos(),pull=carry.subtract(from);
+                    Vec3d next=pull.length()<=1.2?carry:from.add(pull.normalize().multiply(Math.min(pull.length(),.75)));
+                    if(pull.length()<=2.2)reached=true;
+                    if(c.world.isSpaceEmpty(target,target.getBoundingBox().offset(next.subtract(from)))){
+                        hold(target,next,target.getYaw(),target.getPitch());
+                        if(target instanceof ServerPlayerEntity victim&&age%2==0)victim.networkHandler.requestTeleport(next.x,next.y,next.z,victim.getYaw(),victim.getPitch());
                     }
                 }
+                Vec3d step=reached?Vec3d.ZERO:direction.multiply(rushSpeed(age));
                 var box=c.player.getBoundingBox().stretch(step);
                 if(c.world.isSpaceEmpty(c.player,box)){
                     c.player.setVelocity(step.add(0,Math.min(0,c.player.getVelocity().y),0));c.player.velocityModified=true;
@@ -161,6 +174,14 @@ public final class KagenoManager {
             if(c.skill==RUSH&&age==RUSH_FINISH+1){
                 c.player.setVelocity(0,Math.min(0,c.player.getVelocity().y),0);c.player.velocityModified=true;
                 c.player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(c.player));
+            }
+            if(c.skill==M1&&c.combo==4&&age>6&&age<=M1_LAUNCH){
+                for(var e:c.targets.entrySet()){
+                    if(age<M1_LAUNCH){hold(e.getKey(),e.getValue(),e.getKey().getYaw(),e.getKey().getPitch());continue;}
+                    // Up ≈1.25 character heights, ≈2.2 character heights away, landing ≈0.56 s later.
+                    Vec3d dir=Vec3d.fromPolar(0,c.yaw);var t=e.getKey();t.setVelocity(dir.multiply(.5).add(0,.6,0));t.velocityModified=true;
+                    if(t instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+                }
             }
             float amount=damage(c.skill,age,c.combo);
             if(amount>0){
@@ -184,9 +205,14 @@ public final class KagenoManager {
         if(unblock)CombatManager.interrupt(e);
         e.timeUntilRegen=0;
         if(CombatManager.damageWithoutKnockback(e,source,(float)(amount*multiplier))){
+            if(s!=null){long now=c.world.getTime();s.hits=now-s.lastHit>50?1:s.hits+1;s.lastHit=now;
+                if(ServerPlayNetworking.canSend(c.player,HITS)){var b=PacketByteBufs.create();b.writeVarInt(s.hits);ServerPlayNetworking.send(c.player,HITS,b);}}
+            if((c.skill==T||c.skill==RUSH&&age<RUSH_START)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
             if(over){s.boost=Math.min(1,s.boost+(amount>=7?.02f:.01f));s.overUntil=Math.min(c.world.getTime()+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,c.world.getTime()+200));}
             if(c.skill==Y&&age==24&&!frozen(e)){e.setVelocity(0,.5,0);e.velocityModified=true;if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));}
-            if((c.skill==M1&&c.combo==4||c.skill==RUSH&&age==RUSH_FINISH||c.skill==H&&age==102)&&!frozen(e)){
+            // M1 hit 4: the target is held in the thrust's smoke, then launched (see tick).
+            if(c.skill==M1&&c.combo==4&&!frozen(e))c.targets.put(e,e.getPos());
+            if((c.skill==RUSH&&age==RUSH_FINISH||c.skill==H&&age==102)&&!frozen(e)){
                 Vec3d dir=Vec3d.fromPolar(0,c.yaw);e.setVelocity(dir.multiply(.65).add(0,.25,0));e.velocityModified=true;
                 if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
             }

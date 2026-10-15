@@ -49,12 +49,12 @@ public final class CelestialRenderer {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.world == null || mc.player == null || !CelestialFall.CONFIG.skyEffect) return;
         ClientSpell spell = CelestialFallClient.nearest();
-        AtomicClient.Cast atomic=null; // Current Kageno reference keeps its daytime sky.
+        // G keeps its daytime sky (the reference never darkens it).
         var heaven=HeavenClient.nearest();
-        if (spell == null && atomic==null && heaven==null) return;
-        float age = spell!=null?spell.age(mc.world.getTime(),tickDelta):atomic!=null?atomic.age(tickDelta):heaven.age(tickDelta);
-        float visibility = spell!=null?SpellTimeline.visibility(age):atomic!=null?dev.sangwoo.celestialfall.AtomicTimeline.visibility(age):dev.sangwoo.celestialfall.HeavenTimeline.visibility(age);
-        double distance = mc.player.getPos().distanceTo(spell!=null?spell.target:atomic!=null?atomic.origin:heaven.target);
+        if (spell == null && heaven==null) return;
+        float age = spell!=null?spell.age(mc.world.getTime(),tickDelta):heaven.age(tickDelta);
+        float visibility = spell!=null?SpellTimeline.visibility(age):dev.sangwoo.celestialfall.HeavenTimeline.visibility(age);
+        double distance = mc.player.getPos().distanceTo(spell!=null?spell.target:heaven.target);
         visibility *= (float)Math.max(0,Math.min(1,(640-distance)/240));
         if (visibility <= 0) return;
         BufferBuilder buffer = Tessellator.getInstance().getBuffer();

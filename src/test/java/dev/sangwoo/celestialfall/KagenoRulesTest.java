@@ -11,7 +11,13 @@ final class KagenoRulesTest {
     }
     @Test void affectedRadiiIncludeBoundaryButRejectOutsideAndNan(){assertTrue(inside(9,STOP_RADIUS));assertFalse(inside(9.00001,STOP_RADIUS));assertTrue(inside(25,HIGHEST_RADIUS));assertFalse(inside(25.00001,HIGHEST_RADIUS));assertFalse(inside(Double.NaN,5));}
     @Test void freezeEndsBeforeDamageAndAlwaysReleases(){assertFalse(frozen(R,7.99f));assertTrue(frozen(R,8));assertTrue(frozen(R,35.99f));assertFalse(frozen(R,36));assertEquals(0,damage(R,35,0));assertTrue(damage(R,36,0)>0);assertTrue(frozen(H,115));assertFalse(frozen(H,116));}
-    @Test void groundFireReleasesCasterWhileHazardContinues(){assertEquals(28,inputEnd(T));assertTrue(damage(T,78,0)>0);assertEquals(15,damage(T,6,0));assertEquals(8,HOLD);assertEquals(COOLDOWN[T],COOLDOWN[RUSH]);}
+    @Test void groundFireReleasesCasterWhileHazardContinues(){assertEquals(15,inputEnd(T));assertEquals(15,damage(T,T_STRIKE,0));assertTrue(damage(T,T_STRIKE+64,0)>0);assertEquals(0,damage(T,T_STRIKE+65,0));assertEquals(8,HOLD);assertEquals(COOLDOWN[T],COOLDOWN[RUSH]);}
+    @Test void throughTheDarkDashesAfterTheBlastAndCutsAtTheEnd(){
+        double moved=0;for(int a=0;a<DURATION[RUSH];a++)moved+=rushSpeed(a);
+        assertEquals(32,moved,1e-9);assertEquals(0,rushSpeed(RUSH_START-1));assertTrue(rushSpeed(RUSH_START)>rushSpeed(RUSH_START+5));
+        assertEquals(13,damage(RUSH,RUSH_START,0));assertEquals(18,damage(RUSH,RUSH_FINISH,0));
+        assertTrue(trapped(T,T_STRIKE)&&!trapped(T,T_STRIKE+71)&&trapped(RUSH,RUSH_START)&&!trapped(RUSH,RUSH_FINISH));
+    }
     @Test void overdriveNightAndMarkHaveDistinctMultipliers(){assertEquals(1,KagenoRules.multiplier(false,0,false));assertEquals(1.35,KagenoRules.multiplier(true,0,false));assertEquals(1.05*1.15,KagenoRules.multiplier(false,.05f,true),1e-6);}
     @Test void ownRHonorsUserOverrideToTimeStopImmunity(){assertFalse(ignoresForeignTimeStop("kageno"));assertFalse(ignoresForeignTimeStop("sakuya"));assertFalse(ignoresForeignTimeStop("return_to_zero"));assertTrue(ignoresForeignTimeStop("dio"));}
 }

@@ -32,9 +32,9 @@ public final class KagenoFire {
         if(pool){var b=begin(age,1);quad(b,m,center.add(0,.025,0),X.multiply(radius*.95),Z.multiply(radius*.82),0,alpha);end(b);}
         if(pool&&age>=80)return;
         double strength=pool?3.4:3.2;
-        double burst=1.0+.55*(1-KagenoMotion.smooth(age,0,10));
+        double burst=1.0+.55*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(age,0,10));
         int count=CelestialFall.CONFIG.visualQuality==0?8:12;var flames=new ArrayList<Flame>();
-        float tail=pool?1-KagenoMotion.smooth(age,62,78):1-KagenoMotion.smooth(age,74,98);
+        float tail=pool?1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(age,62,78):1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(age,74,98);
         for(int i=0;i<count;i++){
             double theta=i*2.39996,rad=radius*Math.sqrt((i+.4)/count)*.85;
             Vec3d p=center.add(Math.cos(theta)*rad,0,Math.sin(theta)*rad);
@@ -54,8 +54,33 @@ public final class KagenoFire {
         }end(b);
         if(age<6){
             Vec3d p=center.add(0,1.1,0),normal=camera.subtract(p).normalize(),u=normal.crossProduct(UP).normalize();if(u.lengthSquared()<.1)u=X;Vec3d v=u.crossProduct(normal).normalize();
-            double size=radius*(.35+KagenoMotion.smooth(age,0,4)*.18);b=begin(age,3);quad(b,m,p,u.multiply(size),v.multiply(size),0,alpha*(1-KagenoMotion.smooth(age,1,6)));end(b);
+            double size=radius*(.35+dev.sangwoo.celestialfall.client.kageno.Ease.smooth(age,0,4)*.18);b=begin(age,3);quad(b,m,p,u.multiply(size),v.multiply(size),0,alpha*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(age,1,6)));end(b);
         }
+    }
+    /** Camera-facing squares in one shader mode (3 glow, 7 smoke, 9 blast cloud, 10 dark orb), drawn back to front. */
+    public static void billboards(Matrix4f m,Vec3d camera,int mode,List<Vec3d> pts,List<Double> sizes,List<Float> alphas,float age){
+        if(shader==null||pts.isEmpty())return;
+        Integer[] order=new Integer[pts.size()];for(int i=0;i<order.length;i++)order[i]=i;
+        Arrays.sort(order,Comparator.comparingDouble((Integer i)->pts.get(i).squaredDistanceTo(camera)).reversed());
+        var b=begin(age,mode);
+        for(int i:order){float a=alphas.get(i);if(a<=0)continue;Vec3d p=pts.get(i);Vec3d n=camera.subtract(p).normalize(),u=n.crossProduct(UP).normalize();if(u.lengthSquared()<.1)u=X;Vec3d v=u.crossProduct(n).normalize();double s=sizes.get(i);
+            quad(b,m,p,u.multiply(s),v.multiply(s),i*37+11,a);}
+        end(b);
+    }
+    /** Upright flame tongues rooted at {wx,wy,wz} with {width,height}, turned to the camera (mode 5 lobes, 0 tongues). */
+    public static void tongues(Matrix4f m,Vec3d camera,int mode,List<Vec3d> roots,List<double[]> sizes,List<Float> alphas,float age){
+        if(shader==null||roots.isEmpty())return;
+        Integer[] order=new Integer[roots.size()];for(int i=0;i<order.length;i++)order[i]=i;
+        Arrays.sort(order,Comparator.comparingDouble((Integer i)->roots.get(i).squaredDistanceTo(camera)).reversed());
+        var b=begin(age,mode);
+        for(int i:order){float a=alphas.get(i);if(a<=0)continue;Vec3d r=roots.get(i);double w=sizes.get(i)[0],h=sizes.get(i)[1];
+            Vec3d right=camera.subtract(r).crossProduct(UP).normalize();if(right.lengthSquared()<.1)right=X;
+            quad(b,m,r.add(0,h*.5,0),right.multiply(w),UP.multiply(h*.5),i*53+7,a);}
+        end(b);
+    }
+    /** Flat ground decal in mode 1 (black ink pool with violet veins). */
+    public static void pool(Matrix4f m,Vec3d center,Vec3d u,Vec3d v,float age,float alpha){
+        if(shader==null||alpha<=0)return;var b=begin(age,1);quad(b,m,center,u,v,0,alpha);end(b);
     }
     /** Ragged flame fragments on the rush's curved pressure shell, rather than a stationary field. */
     public static void rush(Matrix4f m,Vec3d camera,Vec3d origin,Vec3d forward,float age,float alpha){
@@ -83,6 +108,36 @@ public final class KagenoFire {
             point(strokes,strokeMatrix,o.add(r1.multiply(radius-width*.5)),(float)t1,0,seed,alpha);
             point(strokes,strokeMatrix,o.add(r1.multiply(radius+width*.5)),(float)t1,1,seed,alpha);
             point(strokes,strokeMatrix,o.add(r0.multiply(radius+width*.5)),(float)t0,1,seed,alpha);
+        }
+    }
+    // ── Brush crescents (shader mode 8): styles 0 M1 hit 1, 1 M1 hit 2, 2 spin ring, 3 E finisher, 4 white-lavender ──
+    private static BufferBuilder crescents;private static Matrix4f crescentMatrix;
+    /** Alpha multiplier for the second, additive glow pass of the crescents. */
+    public static float crescentGain=1;
+    public static boolean beginCrescents(Matrix4f m,float age){if(shader==null)return false;crescents=begin(age,8);crescentMatrix=m;return true;}
+    public static void endCrescents(){if(crescents!=null){end(crescents);crescents=null;}}
+    private static void cpoint(Vec3d p,float u,float v,int code,float erase,float taper,float alpha){
+        crescents.vertex(crescentMatrix,(float)p.x,(float)p.y,(float)p.z).texture(u,v)
+            .color(code&255,Math.max(0,Math.min(255,Math.round(erase*255))),Math.max(0,Math.min(255,Math.round(taper*255))),Math.max(0,Math.min(255,(int)(alpha*crescentGain*255)))).next();
+    }
+    /**
+     * Brush crescent in the plane (u,v) (point = o + (u cos a + v sin a) r) from {@code startDeg}
+     * sweeping {@code lengthDeg}; the band's outer edge sits at {@code outer}, its widest part is
+     * {@code width} deep. {@code erase} is the fraction already eaten from the start end and
+     * {@code taper} 0 = widest at the start, .5 = even, 1 = widest at the end.
+     */
+    public static void crescent(Vec3d o,Vec3d u,Vec3d v,double outer,double width,double startDeg,double lengthDeg,int style,int seed,float erase,float taper,float alpha){
+        crescent(o,u,v,outer,width,startDeg,lengthDeg,style,seed,erase,taper,alpha,0);
+    }
+    /** As above; {@code bevel} drops the inner edge out of the plane (fraction of the width) so a band seen edge-on still reads as a thick stroke. */
+    public static void crescent(Vec3d o,Vec3d u,Vec3d v,double outer,double width,double startDeg,double lengthDeg,int style,int seed,float erase,float taper,float alpha,double bevel){
+        if(crescents==null||alpha<=0||erase>=1)return;int n=48,code=(style&15)*16+(seed&15);
+        double inner=Math.max(0,outer-width);Vec3d drop=u.crossProduct(v).normalize().multiply(-bevel*width);
+        for(int i=0;i<n;i++){
+            double t0=i/(double)n,t1=(i+1)/(double)n,a0=Math.toRadians(startDeg+lengthDeg*t0),a1=Math.toRadians(startDeg+lengthDeg*t1);
+            Vec3d r0=u.multiply(Math.cos(a0)).add(v.multiply(Math.sin(a0))),r1=u.multiply(Math.cos(a1)).add(v.multiply(Math.sin(a1)));
+            cpoint(o.add(r0.multiply(inner)).add(drop),(float)t0,0,code,erase,taper,alpha);cpoint(o.add(r1.multiply(inner)).add(drop),(float)t1,0,code,erase,taper,alpha);
+            cpoint(o.add(r1.multiply(outer)),(float)t1,1,code,erase,taper,alpha);cpoint(o.add(r0.multiply(outer)),(float)t0,1,code,erase,taper,alpha);
         }
     }
     /** Straight band a→b, width measured along {@code side}. */

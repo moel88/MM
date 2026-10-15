@@ -39,7 +39,7 @@ public final class SkillShots implements ClientModInitializer {
     private final List<Future<?>> jobs=new ArrayList<>();
     private MinecraftClient mc;private int phase,age,shotIndex;private long started=System.nanoTime();
     private final Deque<String> queue=new ArrayDeque<>(Arrays.asList(System.getProperty("botand.shots.list","F,M1,E,R,T,RUSH,Y,Q,H,G").split(",")));
-    private String current;private long castTick;private int dummyId=-1;private final StringBuilder log=new StringBuilder();
+    private String current;private Map<String,String> opts=new HashMap<>();private long castTick;private int dummyId=-1;private final StringBuilder log=new StringBuilder();
     private boolean slowed;
     private float camYaw=Float.parseFloat(System.getProperty("botand.shots.yaw","145")),camPitch=12,camDist=Float.parseFloat(System.getProperty("botand.shots.dist","6.5"));
 
@@ -47,9 +47,15 @@ public final class SkillShots implements ClientModInitializer {
     private void fail(Throwable t){t.printStackTrace();try{Files.createDirectories(OUT);Files.writeString(OUT.resolve("error.txt"),phase+" "+current+" "+t+"\n"+log);}catch(Exception ignored){}mc.scheduleStop();phase=99;}
     private void server(Consumer<ServerPlayerEntity> f){mc.getServer().submit(()->f.accept(mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid()))).join();}
     private void key(int key,boolean down){mc.keyboard.onKey(mc.getWindow().getHandle(),key,0,down?GLFW_PRESS:GLFW_RELEASE,0);}
-    private float clock(){return (mc.world.getTime()-castTick)+mc.getTickDelta();}
+    /** The client's own clock of the newest local cast (falls back to the trigger tick). */
+    private float clock(){
+        float delta=mc.getTickDelta();
+        if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
+        else{StandClient.Cast best=null;for(var c:StandClient.CASTS.values())if(c.caster().equals(mc.player.getUuid())&&(best==null||c.start()>best.start()))best=c;if(best!=null&&mc.world.getTime()-castTick<400)return best.age(delta);}
+        return (mc.world.getTime()-castTick)+delta;
+    }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;default->-1;};}
-    private int length(String name){return switch(name){case "F"->50;case "M1"->75;case "Q"->140;case "G"->480;case "T"->110;case "RUSH"->90;default->DURATION[skill(name)]+20;};}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "F"->50;case "M1"->75;case "Q"->140;case "G"->560;case "T"->110;case "RUSH"->90;default->DURATION[skill(name)]+20;};}
 
     private void frame()throws Exception{
         if(phase!=4||current==null)return;
@@ -73,10 +79,21 @@ public final class SkillShots implements ClientModInitializer {
     private void reset(ServerPlayerEntity p){
         KagenoManager.clear(p.getServer());AtomicManager.clear(p.getServer());
         int y=p.getServerWorld().getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,0,0);
-        p.networkHandler.requestTeleport(.5,y,.5,0,0);p.setYaw(0);p.setHeadYaw(0);p.setBodyYaw(0);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
-        var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(.5,y,3.5,180,0);l.setVelocity(0,0,0);}
+        float yaw=facing(opt("face",0));
+        p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
+        var d=p.getServerWorld().getEntityById(dummyId);
+        if(d instanceof net.minecraft.entity.LivingEntity l){
+            var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+            boolean show=opt("dummy",1)>0;var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
+            l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(at.x,show?y:y-40,at.z,yaw+180,0);l.setVelocity(0,0,0);
+        }
     }
-    private void camera(){BotandCamera.STATE.yaw=camYaw;BotandCamera.STATE.pitch=camPitch;BotandCamera.STATE.targetDistance=camDist;BotandCamera.STATE.distance=camDist;}
+    private float opt(String key,float fallback){var v=opts.get(key);return v==null?fallback:Float.parseFloat(v);}
+    /** Camera looks along camyaw (default north); the character's facing is given relative to it. */
+    private float camLook(){return opt("camyaw",180);}
+    private float facing(float face){return camLook()+180+face;}
+    private void camera(){float d=opt("dist",camDist);BotandCamera.STATE.yaw=camLook();BotandCamera.STATE.pitch=opt("pitch",camPitch);BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;}
+    private void face(ServerPlayerEntity p,float face){float y=facing(face);p.setYaw(y);p.setHeadYaw(y);p.setBodyYaw(y);p.networkHandler.requestTeleport(p.getX(),p.getY(),p.getZ(),y,0);}
 
     @Override public void onInitializeClient(){
         instance=this;
@@ -99,11 +116,14 @@ public final class SkillShots implements ClientModInitializer {
                 if(mc.player!=null&&mc.world!=null&&mc.currentScreen==null&&age>60){server(this::setup);phase=2;age=0;}}
             case 2->{if(age>60&&StandClient.visible(mc.player)){phase=3;age=0;}else if(age>400)throw new IllegalStateException("stand never visible, map="+MapClient.enabled());}
             case 3->{ // next skill
-                if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}current=queue.poll();server(this::reset);}
+                if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}server(this::reset);}
                 if(age==2)camera();
                 if(age>=30){camera();castTick=mc.world.getTime()+1;shotIndex=0;trigger(current);phase=4;age=0;}}
             case 4->{
-                if(current.equals("M1")&&age%13==0&&age<=39)server(p->KagenoManager.input(p,M1));
+                if(current.equals("M1")){
+                    String[] at=opts.getOrDefault("hits","0/13/26/39").split("[,/]");String[] faces=opts.getOrDefault("faces","").split("[,/]");
+                    for(int i=1;i<at.length;i++)if(age==Integer.parseInt(at[i].trim())){final int hit=i;server(p->{if(faces.length>hit&&!faces[hit].isBlank())face(p,Float.parseFloat(faces[hit]));KagenoManager.input(p,M1);});}
+                }
                 if(current.equals("RUSH")&&age<14)server(p->KagenoManager.input(p,KagenoRules.PULSE));
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();

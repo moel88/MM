@@ -225,11 +225,6 @@ public final class ImpactEffects {
                 float shrink=1-SpellTimeline.smooth(SpellTimeline.progress(t,255,300));
                 if(shrink<=0)continue;
                 Vec3d p=d.previous.lerp(d.position,context.tickDelta());
-                var atomic=AtomicClient.CASTS.get(d.spell);
-                if(atomic!=null) {
-                    float remaining=dev.sangwoo.celestialfall.AtomicTimeline.remainingScale(atomic.age(context.tickDelta()));
-                    shrink*=remaining;p=new Vec3d(atomic.origin.x+(p.x-atomic.origin.x)*remaining,p.y,atomic.origin.z+(p.z-atomic.origin.z)*remaining);
-                }
                 matrices.push();matrices.translate(p.x,p.y,p.z);
                 double angle=d.phase+t*d.spin;
                 // Rested fragments settle without endlessly rotating on the floor.

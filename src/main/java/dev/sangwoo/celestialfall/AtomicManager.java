@@ -24,8 +24,12 @@ public final class AtomicManager {
     private static final List<Cast> ACTIVE=new ArrayList<>();
     private static final Map<UUID,Long> COOLDOWNS=new HashMap<>();
     private AtomicManager() {}
-    public static boolean isCasting(UUID player) { return ACTIVE.stream().anyMatch(c -> c.caster.equals(player)); }
-    public static boolean immobilized(net.minecraft.entity.player.PlayerEntity p){return ACTIVE.stream().anyMatch(c->c.caster.equals(p.getUuid())&&c.world==p.getWorld());}
+    private static long age(Cast c) { return c.world.getTime()-c.start; }
+    /** The caster is rooted (and cannot act) from the first frame until the colour grade has faded. */
+    public static boolean isCasting(UUID player) { return ACTIVE.stream().anyMatch(c -> c.caster.equals(player)&&AtomicTimeline.locked(age(c))); }
+    public static boolean immobilized(net.minecraft.entity.player.PlayerEntity p){return ACTIVE.stream().anyMatch(c->c.caster.equals(p.getUuid())&&c.world==p.getWorld()&&AtomicTimeline.locked(age(c)));}
+    /** The caster takes no damage while casting. */
+    public static boolean invulnerable(net.minecraft.entity.player.PlayerEntity p){return immobilized(p);}
     public static boolean hasActive() { return !ACTIVE.isEmpty(); }
     public static boolean cast(ServerPlayerEntity player) {
         if(!dev.sangwoo.celestialfall.map.MapGate.require(player))return false;
@@ -50,7 +54,17 @@ public final class AtomicManager {
         ACTIVE.add(cast);
         if(!free) { COOLDOWNS.put(player.getUuid(),now+c.atomicCooldownSeconds*20L);
             player.getItemCooldownManager().set(CelestialFall.ATOMIC_SWORD,c.atomicCooldownSeconds*20); }
+        slowNearby(player,c.atomicVisualRadius);
         sync(cast);player.sendMessage(Text.translatable("message.celestialfall.atomic_cast"),true);return true;
+    }
+    /** On cast, enemies around the caster are slowed by 99 % for 4 seconds. */
+    private static void slowNearby(ServerPlayerEntity caster,double radius) {
+        var world=caster.getServerWorld();var box=caster.getBoundingBox().expand(radius,radius*.5,radius);
+        for(var e:world.getEntitiesByClass(LivingEntity.class,box,e->e.isAlive()&&e!=caster&&!e.isSpectator())){
+            if(e.squaredDistanceTo(caster)>radius*radius)continue;
+            if(!(e instanceof Monster)&&!(e instanceof net.minecraft.entity.player.PlayerEntity target&&world.getServer().isPvpEnabled()&&caster.shouldDamagePlayer(target)))continue;
+            e.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(net.minecraft.entity.effect.StatusEffects.SLOWNESS,80,6,false,false,true),caster);
+        }
     }
     private static void sync(Cast s) {
         Set<UUID> present=new HashSet<>();
@@ -77,11 +91,14 @@ public final class AtomicManager {
             Cast s=it.next();long a=s.world.getTime()-s.start;
             if(a>=AtomicTimeline.END || a<0 || !dev.sangwoo.celestialfall.map.MapGate.enabled(s.world)) { cancel(s);it.remove();continue; }
             var caster=server.getPlayerManager().getPlayer(s.caster);
-            if(caster==null||!caster.isAlive()||caster.isSpectator()||caster.getWorld()!=s.world||!dev.sangwoo.celestialfall.progression.ProgressManager.canUseKageno(caster)){
+            // Once the caster is released the crater plays out on its own.
+            if(AtomicTimeline.locked(a)&&(caster==null||!caster.isAlive()||caster.isSpectator()||caster.getWorld()!=s.world||!dev.sangwoo.celestialfall.progression.ProgressManager.canUseKageno(caster))){
                 cancel(s);it.remove();continue;
             }
-            dev.sangwoo.celestialfall.stand.KagenoManager.freeze(caster);
-            caster.setPosition(s.origin);caster.prevX=s.origin.x;caster.prevY=s.origin.y;caster.prevZ=s.origin.z;
+            if(AtomicTimeline.locked(a)){
+                dev.sangwoo.celestialfall.stand.KagenoManager.freeze(caster);
+                caster.setPosition(s.origin);caster.prevX=s.origin.x;caster.prevY=s.origin.y;caster.prevZ=s.origin.z;
+            }
             if(a%10==0)sync(s);
             // No terrain mutation, explosion block collection, or restoration ledger for G.
             if(AtomicTimeline.damageDue(a))damage(s);
@@ -92,8 +109,7 @@ public final class AtomicManager {
         if(s.damage<=0)return;
         var owner=s.world.getPlayerByUuid(s.caster);
         var source=new DamageSource(s.world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(ATOMIC_DAMAGE),owner);
-        double r=AtomicTimeline.blastRadius(s.world.getTime()-s.start,s.visualRadius);
-        if(r<=0)return;
+        double r=s.visualRadius;
         Box bounds=new Box(s.origin.x-r,s.origin.y-2,s.origin.z-r,
             s.origin.x+r,s.origin.y+AtomicTimeline.damageHeight(s.visualRadius),s.origin.z+r);
         // Query loaded entities only. The bright cylinder and damage cylinder share their dimensions.
@@ -101,7 +117,7 @@ public final class AtomicManager {
             if(e instanceof net.minecraft.entity.player.PlayerEntity target&&(owner==null||!s.world.getServer().isPvpEnabled()||!owner.shouldDamagePlayer(target)))continue;
             Vec3d d=e.getPos().subtract(s.origin);
             if(e.isSpectator() || !AtomicTimeline.insideColumn(d.x,d.y,d.z,r,AtomicTimeline.damageHeight(s.visualRadius)))continue;
-            // Twenty ticks apart; no distance falloff, armor, resistance or enchantment reduction.
+            // Once a second from the impact frames to the end of the eruption beam; fixed damage.
             e.damage(source,owner instanceof ServerPlayerEntity caster?dev.sangwoo.celestialfall.stand.KagenoManager.outgoingDamage(caster,(float)s.damage):(float)s.damage);
         }
     }

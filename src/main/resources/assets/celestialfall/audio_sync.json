@@ -28,8 +28,8 @@
       }
     ],
     "anchors": {
-      "impact_tick": 128,
-      "end_tick": 468
+      "impact_tick": 112,
+      "end_tick": 552
     },
     "notes": "2.25 original spoken I am Atomic opening preserved without separation; separated explosion tail at 1x",
     "verification_scope": "Decoded OGG versus protected PCM plus original source correlation for complete spoken opening; not device audio recording."

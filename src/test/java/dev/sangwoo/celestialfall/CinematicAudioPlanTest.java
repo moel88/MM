@@ -37,20 +37,20 @@ class CinematicAudioPlanTest {
         }
     }
     @Test void soundRemakeAlignsDamageAndRetainsOtherCastRules() {
-        assertEquals(AtomicTimeline.END,AtomicTimeline.CAST_LOCK_END);
+        assertEquals(AtomicTimeline.GRADE_END,AtomicTimeline.CAST_LOCK_END);
         assertEquals(100,HeavenTimeline.IMPACT);assertEquals(180,HeavenTimeline.EMBED_END);
         assertEquals(244,HeavenTimeline.CAMERA_END);assertEquals(340,HeavenTimeline.END);
         int hits=0;
         for(int a=0;a<=740;a++) {
-            boolean expected=a>=128 && a<468 && (a-128)%20==0;
+            boolean expected=a>=112 && a<441 && (a-112)%20==0;
             assertEquals(expected,AtomicTimeline.damageDue(a));if(expected)hits++;
         }
         assertEquals(17,hits);
     }
-    @Test void atomicSlashAndSoundUseOneClockWithoutCameraHandoffs() {
-        assertEquals(100,AtomicTimeline.SLASH_START);assertEquals(110,AtomicTimeline.SLASH_END);
-        for(int age=0;age<468;age++)assertEquals(0,CinematicAudioPlan.segment(CinematicAudioPlan.ATOMIC,age));
-        assertEquals(0,CinematicAudioPlan.ATOMIC.get(0).start());assertEquals(468,CinematicAudioPlan.ATOMIC.get(0).end());
+    @Test void atomicSoundUsesOneClockWithoutCameraHandoffs() {
+        for(int age=0;age<AtomicTimeline.AUDIO_START;age++)assertEquals(-1,CinematicAudioPlan.segment(CinematicAudioPlan.ATOMIC,age));
+        for(int age=AtomicTimeline.AUDIO_START;age<AtomicTimeline.END;age++)assertEquals(0,CinematicAudioPlan.segment(CinematicAudioPlan.ATOMIC,age));
+        assertEquals(4,CinematicAudioPlan.ATOMIC.get(0).start());assertEquals(552,CinematicAudioPlan.ATOMIC.get(0).end());
     }
     @Test void shippedAudioMatchesVerifiedNormalSpeedSamplesAndCueDurations() throws Exception {
         var stream=getClass().getResourceAsStream("/assets/celestialfall/audio_sync.json");assertNotNull(stream);

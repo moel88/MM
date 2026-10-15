@@ -32,11 +32,14 @@ public final class StandClient {
     private static Object world,player;private static long nextPunch,lastThemeUntil;private static int ticks;
     private static boolean holdingT;private static final Set<Integer> captured=new HashSet<>();
     private static SoundInstance theme;
+    /** In-game "N Hits" combo counter of the local player. */
+    public static int hitCount;public static long hitTime=-1000,comboStart=-1000;
     private StandClient(){}
     public static ItemStack sword(){return SWORD;}
     public static boolean visible(PlayerEntity p){return StandManager.kageno(p)&&!p.isInvisible()&&!p.isSleeping();}
     public static void initialize(){
-        KagenoSword.initialize();KagenoFire.initialize();
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.sangwoo.celestialfall.client.kageno.KagenoClips::trackGuards);
+        KagenoSword.initialize();KagenoFire.initialize();dev.sangwoo.celestialfall.client.atomic.AtomicShader.initialize();
         KagenoManager.setClientFrozen(StandClient::frozen);
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.CAST,(mc,h,b,r)->{
             UUID id=b.readUuid(),caster=b.readUuid();var dim=b.readIdentifier();int skill=b.readUnsignedByte(),combo=b.readUnsignedByte();long start=b.readLong(),serverNow=b.readLong();Vec3d origin=vec(b);float yaw=b.readFloat();int n=b.readVarInt();
@@ -50,6 +53,7 @@ public final class StandClient {
             var marks=new ArrayList<Mark>();for(int i=0;i<n;i++)marks.add(new Mark(b.readUuid(),b.readInt(),b.readLong()));
             mc.execute(()->{if(mc.world==null||!MapClient.enabled()||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);STATES.put(id,new Status(until,boost,ready,marks));});
         });
+        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.HITS,(mc,h,b,r)->{int n=b.readVarInt();mc.execute(()->{if(mc.world!=null){int count=Math.max(0,Math.min(9999,n));if(count<=1||count<hitCount)comboStart=mc.world.getTime();hitCount=count;hitTime=mc.world.getTime();}});});
         ClientTickEvents.START_CLIENT_TICK.register(StandClient::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->mc.execute(()->clear(mc)));
         WorldRenderEvents.LAST.register(KagenoRenderer::render);
@@ -115,16 +119,7 @@ public final class StandClient {
         captured.add(key);if(CombatClient.combatInput()){BotandCamera.prepareInteraction();send(skill);if(skill==T_DOWN)holdingT=true;}
         return true;
     }
-    public static float cameraBlend(float delta){var c=cinematic();return c==null?0:KagenoCameraPath.blend(c.age(delta));}
-    public static double cameraFov(float delta){var c=cinematic();return c==null?60:KagenoCameraPath.sample(c.age(delta)).fov();}
-    public static CinematicDirector.Pose camera(float delta){
-        var c=cinematic();if(c==null)return null;float a=c.age(delta);Vec3d forward=Vec3d.fromPolar(0,c.yaw),right=new Vec3d(forward.z,0,-forward.x);
-        var shot=KagenoCameraPath.sample(a);
-        double slide=KagenoMotion.hTravel(a);
-        Vec3d eye=c.origin.add(forward.multiply(shot.forward()+slide*.45)).add(right.multiply(shot.right())).add(0,shot.height(),0),focus=c.origin.add(forward.multiply(slide)).add(right.multiply(shot.focusRight())).add(0,shot.focusHeight(),0);
-        var mc=MinecraftClient.getInstance();var hit=mc.world.raycast(new net.minecraft.world.RaycastContext(focus,eye,net.minecraft.world.RaycastContext.ShapeType.COLLIDER,net.minecraft.world.RaycastContext.FluidHandling.NONE,mc.player));
-        if(hit.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)eye=hit.getPos().lerp(focus,.08);
-        Vec3d d=focus.subtract(eye).normalize();float yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z)),pitch=(float)-Math.toDegrees(Math.asin(d.y));
-        return new CinematicDirector.Pose(eye,yaw,pitch,(float)shot.roll());
-    }
+    public static float cameraBlend(float delta){var c=cinematic();return c==null?0:dev.sangwoo.celestialfall.client.kageno.KagenoCamera.blend(c,delta);}
+    public static double cameraFov(float delta){var c=cinematic();return c==null?60:dev.sangwoo.celestialfall.client.kageno.KagenoCamera.fov(c,delta);}
+    public static CinematicDirector.Pose camera(float delta){var c=cinematic();return c==null?null:dev.sangwoo.celestialfall.client.kageno.KagenoCamera.pose(c,delta);}
 }

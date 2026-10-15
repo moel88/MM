@@ -16,17 +16,16 @@ public abstract class HeldItemRendererMixin {
     private void botand$hands(float delta,MatrixStack matrices,VertexConsumerProvider.Immediate vertices,ClientPlayerEntity player,int light,CallbackInfo ci) {
         if(dev.sangwoo.celestialfall.client.StandClient.visible(player)){
             float swing=player.getHandSwingProgress(delta);
-            var cast=dev.sangwoo.celestialfall.client.StandClient.action(player.getUuid());
+            var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
             matrices.push();
             var atomic=dev.sangwoo.celestialfall.client.AtomicClient.poseCast(player.getUuid());
             if(atomic!=null){
-                float a=atomic.age(delta),raise=dev.sangwoo.celestialfall.AtomicTimeline.ease(a,0,12)*(1-dev.sangwoo.celestialfall.AtomicTimeline.ease(a,100,110));
-                float cut=dev.sangwoo.celestialfall.AtomicTimeline.ease(a,100,110)*(1-dev.sangwoo.celestialfall.AtomicTimeline.ease(a,118,144));
-                matrices.translate(-raise*.17-cut*.55,raise*.38-cut*.2,-raise*.16);
-                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(raise*-23+cut*72));
-                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(-raise*18+cut*30));swing=0;
+                // First person: the sword rises overhead with the A-frame and stays raised through the blast.
+                float sec=atomic.age(delta)/20f;
+                float raise=dev.sangwoo.celestialfall.client.kageno.Ease.smooth(sec,.067f,.267f)*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(sec,21.9f,22.6f));
+                matrices.translate(-raise*.12,raise*.42,-raise*.12);
+                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(raise*25));swing=0;
             }
-            if(cast!=null&&cast.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.E){float a=cast.age(delta),thrust=dev.sangwoo.celestialfall.client.KagenoMotion.thrust(a);matrices.translate(0,-thrust*.08,-thrust*.65);matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(dev.sangwoo.celestialfall.client.KagenoMotion.wrist(a)*.62f));swing=0;}
             renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.MAIN_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?0:swing,dev.sangwoo.celestialfall.client.StandClient.sword(),0,matrices,vertices,light);
             matrices.pop();
             if(!player.getOffHandStack().isEmpty())renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?swing:0,player.getOffHandStack(),0,matrices,vertices,light);

@@ -19,22 +19,25 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             rightArm.setTransform(vanillaRight);leftArm.setTransform(vanillaLeft);
             rightArm.getChild("elbow").pitch=leftArm.getChild("elbow").pitch=0;
         }
-        var stand=StandClient.action(player.getUuid());
+        var stand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=AtomicClient.poseCast(player.getUuid());
         if(atomic!=null){
             articulated=true;
-            MotionRig.apply(this,dev.sangwoo.celestialfall.combat.AtomicMotion.sample(atomic.age(animationProgress-player.age)),0,0);
+            MotionRig.apply(this,dev.sangwoo.celestialfall.client.kageno.AtomicPose.frame(atomic.age(animationProgress-player.age)/20f).joints(),0,0);
         }
         else if(stand!=null){
-            articulated=true;var pose=KagenoMotion.sample(stand.skill(),stand.age(animationProgress-player.age),stand.combo());
-            if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.R){var walk=CombatClient.pose(player,animationProgress-player.age);for(int i=4;i<=5;i++)pose.joint[i]=walk.joint[i].clone();pose.knee[0]=walk.knee[0];pose.knee[1]=walk.knee[1];}
+            articulated=true;var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(stand,animationProgress-player.age);
+            var pose=frame.joints();
+            if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.R&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.walkLegs(stand,animationProgress-player.age)){var walk=CombatClient.pose(player,animationProgress-player.age);for(int i=4;i<=5;i++)pose.joint[i]=walk.joint[i].clone();}
             MotionRig.apply(this,pose,0,0);
         }
-        else if(StandClient.visible(player)&&CombatClient.snapshot(player.getUuid()).guard()){
-            articulated=true;var pose=KagenoMotion.idle();pose.rot(2,-75,-35,65).rot(3,-75,15,-45);pose.elbow[0]=-45;pose.elbow[1]=-50;MotionRig.apply(this,pose,headYaw,headPitch);
+        else if(StandClient.visible(player)&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),animationProgress-player.age)!=null){
+            articulated=true;var guard=dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),animationProgress-player.age).joints();
+            for(int i=2;i<=3;i++){var arm=i==2?rightArm:leftArm;arm.pitch=MotionRig.rad(guard.joint[i][0]);arm.yaw=MotionRig.rad(guard.joint[i][1]);arm.roll=MotionRig.rad(guard.joint[i][2]);arm.getChild("elbow").pitch=0;}
         }
         else if(StandClient.visible(player)&&!player.isUsingItem()){
-            articulated=true;var rest=KagenoMotion.idle();rightArm.pitch=MotionRig.rad(rest.joint[2][0]);rightArm.yaw=0;rightArm.roll=MotionRig.rad(rest.joint[2][2]);rightArm.getChild("elbow").pitch=MotionRig.rad(rest.elbow[0]);
+            articulated=true;var rest=dev.sangwoo.celestialfall.client.kageno.KagenoClips.idle().joints();
+            rightArm.pitch=MotionRig.rad(rest.joint[2][0])+rightArm.pitch*.25f;rightArm.yaw=MotionRig.rad(rest.joint[2][1]);rightArm.roll=MotionRig.rad(rest.joint[2][2]);rightArm.getChild("elbow").pitch=0;
         }
         overlays();
     }

@@ -1,171 +1,109 @@
 package dev.sangwoo.celestialfall.client;
 import com.mojang.blaze3d.systems.RenderSystem;
-import dev.sangwoo.celestialfall.CelestialFall;
+import dev.sangwoo.celestialfall.client.kageno.Ease;
+import dev.sangwoo.celestialfall.client.kageno.Fx;
+import dev.sangwoo.celestialfall.client.kageno.KagenoSkills;
+import dev.sangwoo.celestialfall.client.kageno.KagenoStatusFx;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.*;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.*;
+import java.util.ArrayList;
+import java.util.List;
 import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 
-/** Per-skill reference geometry. All motion and ribbons use the cast clock, including late viewers. */
+/** Dispatches every Kageno cast to its rebuilt skill visuals, pass by pass. */
 public final class KagenoRenderer {
-    private static final Vec3d X=new Vec3d(1,0,0),UP=new Vec3d(0,1,0),Z=new Vec3d(0,0,1);
     private KagenoRenderer(){}
     public static void render(WorldRenderContext c){
-        var mc=MinecraftClient.getInstance();if(mc.world==null||!MapClient.enabled()||StandClient.CASTS.isEmpty()&&StandClient.STATES.isEmpty())return;
-        var matrices=c.matrixStack();var camera=c.camera().getPos();matrices.push();matrices.translate(-camera.x,-camera.y,-camera.z);
+        var mc=MinecraftClient.getInstance();if(mc.world==null||!MapClient.enabled())return;
+        var matrices=c.matrixStack();var camera=c.camera().getPos();float delta=c.tickDelta();
+        matrices.push();matrices.translate(-camera.x,-camera.y,-camera.z);
+        var matrix=matrices.peek().getPositionMatrix();
+        List<Fx> casts=new ArrayList<>();
+        for(var s:StandClient.CASTS.values()){
+            var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
+            float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
+            var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(delta);
+            if(pos.squaredDistanceTo(camera)>96*96&&s!=StandClient.cinematic())continue;
+            casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
+        }
         var primary=StandClient.visualCast();
         if(primary!=null&&AtomicClient.CASTS.isEmpty()&&HeavenClient.CASTS.isEmpty()){
-            Vec3d focus=primary.origin().add(0,primary.skill()==H?1+KagenoMotion.lift(primary.age(c.tickDelta())):1.1,0);
-            var clip=new org.joml.Vector4f((float)focus.x,(float)focus.y,(float)focus.z,1).mul(matrices.peek().getPositionMatrix()).mul(c.projectionMatrix());
+            Vec3d focus=primary.origin().add(0,1.1,0);
+            var clip=new org.joml.Vector4f((float)focus.x,(float)focus.y,(float)focus.z,1).mul(matrix).mul(c.projectionMatrix());
             AnimePostProcessor.focus(clip.w>.01f?clip.x/clip.w*.5f+.5f:.5f,clip.w>.01f?clip.y/clip.w*.5f+.5f:.5f);
         }
         var buffer=Tessellator.getInstance().getBuffer();
         try{
-            RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.setShaderColor(1,1,1,1);
-            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrices.peek().getPositionMatrix(),camera);
-            for(var s:StandClient.CASTS.values()){
-                float a=s.age(c.tickDelta());if(a<0||a>=DURATION[s.skill()])continue;
-                var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(c.tickDelta());
-                if(pos.squaredDistanceTo(camera)>80*80&&s!=StandClient.cinematic())continue;
-                Vec3d f=Vec3d.fromPolar(0,s.yaw()),right=new Vec3d(f.z,0,-f.x),center=pos.add(0,1.1,0);
-                switch(s.skill()){
-                    case M1->KagenoFx.m1(m,pos,f,right,a,s.combo(),false);
-                    case E->KagenoFx.e(m,pos,f,right,a,false);
-                    case R->KagenoFx.r(m,s.origin(),f,right,a,false);
-                    case T->KagenoFx.t(m,pos,s.origin(),f,right,a,targets(mc,s,c.tickDelta()),false);
-                    case RUSH->KagenoFx.rush(m,pos,s.origin(),f,right,a,false);
-                    case Y->KagenoFx.y(m,s.origin(),f,right,a,false);
-                    case H->{
-                        KagenoStrikeEffects.landingSlide(m,s.origin(),f,right,a);
-                        if(a>=32&&a<54){float alpha=KagenoMotion.smooth(a,32,36)*(1-KagenoMotion.smooth(a,50,54));glint(m,s.origin().add(0,70,0),camera,55.0,alpha);}
-                        if(a>=47&&a<58){
-                            Vec3d[] points={s.origin().add(right.multiply(-17)).add(f.multiply(-17)).add(0,70,0),s.origin().add(right.multiply(17)).add(f.multiply(-10)).add(0,70,0),s.origin().add(right.multiply(-14)).add(f.multiply(1)).add(0,70,0),s.origin().add(right.multiply(17)).add(f.multiply(10)).add(0,70,0),s.origin().add(right.multiply(-17)).add(f.multiply(17)).add(0,70,0),s.origin().add(0,1,0)};
-                            for(int j=0;j<5;j++){float t=KagenoMotion.unit(a,47+j*1.4f,49+j*1.4f);if(t>0)m.glowLine(points[j],points[j].lerp(points[j+1],t),.32,0xf748ff,1-KagenoMotion.smooth(a,55,58));}
-                        }
-                        KagenoStrikeEffects.highest(m,s.origin(),f,right,a,false);
-                        KagenoFx.hFinal(m,s.origin(),f,right,a,false);
-                    }
-                }
-            }
-            for(var p:mc.world.getPlayers())if(StandClient.visible(p)&&CombatClient.snapshot(p.getUuid()).guard()){
-                Vec3d o=p.getLerpedPos(c.tickDelta()).add(0,.95,0),view=camera.subtract(o).normalize();
-                for(int y=0;y<16;y++)for(int x=0;x<32;x++){
-                    double t0=-Math.PI/2+y*Math.PI/16,t1=t0+Math.PI/16,a0=x*Math.PI/16,a1=a0+Math.PI/16;
-                    Vec3d n0=new Vec3d(Math.cos(t0)*Math.cos(a0),Math.sin(t0),Math.cos(t0)*Math.sin(a0)),n1=new Vec3d(Math.cos(t0)*Math.cos(a1),Math.sin(t0),Math.cos(t0)*Math.sin(a1)),n2=new Vec3d(Math.cos(t1)*Math.cos(a1),Math.sin(t1),Math.cos(t1)*Math.sin(a1)),n3=new Vec3d(Math.cos(t1)*Math.cos(a0),Math.sin(t1),Math.cos(t1)*Math.sin(a0));
-                    float edge=(float)Math.pow(1-Math.abs(n0.add(n2).normalize().dotProduct(view)),4);m.quad(o.add(n0.multiply(1.32)),o.add(n1.multiply(1.32)),o.add(n2.multiply(1.32)),o.add(n3.multiply(1.32)),0xf2fbff,.06f+edge*.85f);
-                }
-            }
-            overdrive(m,mc,c.tickDelta(),camera,false);
+            RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
+            RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.setShaderColor(1,1,1,1);
+            // Opaque-ish blended geometry.
+            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
+            for(var x:casts)KagenoSkills.of(x.cast.skill()).alpha(x,m);
+            KagenoStatusFx.alpha(mc,m,delta,camera);
             BufferRenderer.drawWithGlobalProgram(buffer.end());
-            // Emit light only at the authored E/R/H shapes; do not raise whole-world exposure.
+            // Additive emission.
             RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
-            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);
-            m=new EffectMesh(buffer,matrices.peek().getPositionMatrix(),camera);
-            for(var s:StandClient.CASTS.values()){
-                float a=s.age(c.tickDelta());if(a<0||a>=DURATION[s.skill()])continue;
-                var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(c.tickDelta());
-                if(pos.squaredDistanceTo(camera)>80*80&&s!=StandClient.cinematic())continue;
-                Vec3d f=Vec3d.fromPolar(0,s.yaw()),right=new Vec3d(f.z,0,-f.x);
-                switch(s.skill()){
-                    case M1->KagenoFx.m1(m,pos,f,right,a,s.combo(),true);
-                    case E->KagenoFx.e(m,pos,f,right,a,true);
-                    case R->KagenoFx.r(m,s.origin(),f,right,a,true);
-                    case Y->KagenoFx.y(m,s.origin(),f,right,a,true);
-                    case H->{KagenoStrikeEffects.highest(m,s.origin(),f,right,a,true);KagenoFx.hFinal(m,s.origin(),f,right,a,true);}
-                    case RUSH->KagenoFx.rush(m,pos,s.origin(),f,right,a,true);
-                    case T->KagenoFx.t(m,pos,s.origin(),f,right,a,targets(mc,s,c.tickDelta()),true);
-                }
-            }
-            overdrive(m,mc,c.tickDelta(),camera,true);
+            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
+            for(var x:casts)KagenoSkills.of(x.cast.skill()).additive(x,m);
+            KagenoStatusFx.additive(mc,m,delta,camera);
             BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.defaultBlendFunc();
-            // Separate shader passes prevent blended fire from becoming flat polygon ribbons.
-            for(var s:StandClient.CASTS.values()){
-                float a=s.age(c.tickDelta());if(a<0||a>=DURATION[s.skill()])continue;var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(c.tickDelta());
-                if(pos.squaredDistanceTo(camera)>80*80)continue;Vec3d f=Vec3d.fromPolar(0,s.yaw()),right=new Vec3d(f.z,0,-f.x);
-                var pts=new java.util.ArrayList<Vec3d>();var sizes=new java.util.ArrayList<Double>();float alpha=KagenoFx.smoke(pts,sizes,s.skill(),pos,s.origin(),f,right,a,s.combo());
-                KagenoFire.smoke(matrices.peek().getPositionMatrix(),camera,pts,sizes,a,alpha);
-            }
-            for(var s:StandClient.CASTS.values()){
-                float a=s.age(c.tickDelta());var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(c.tickDelta());Vec3d f=Vec3d.fromPolar(0,s.yaw());
-                if(pos.squaredDistanceTo(camera)>80*80)continue;
-                if(s.skill()==T&&a>=T_STRIKE)KagenoFire.field(matrices.peek().getPositionMatrix(),camera,s.origin(),a-T_STRIKE,6.2,1-KagenoMotion.smooth(a,98,112),true);
-                if(s.skill()==RUSH&&a>=RUSH_IGNITE&&a<RUSH_START+3)KagenoFire.field(matrices.peek().getPositionMatrix(),camera,s.origin().add(f.multiply(1.2)),a-RUSH_IGNITE,5.2,1-KagenoMotion.smooth(a,24,RUSH_START+3),false);
-                if(s.skill()==RUSH&&a>=RUSH_START)KagenoFire.rush(matrices.peek().getPositionMatrix(),camera,pos,f,a-RUSH_START,1-KagenoMotion.smooth(a,RUSH_FINISH,66));
-                if(s.skill()==RUSH&&a>=RUSH_FINISH)KagenoFire.field(matrices.peek().getPositionMatrix(),camera,pos.add(f.multiply(1.2)),a-RUSH_FINISH+8,1.7,1-KagenoMotion.smooth(a,RUSH_FINISH+4,62),false);
-            }
-            long now=mc.world.getTime();
-            if(KagenoFire.beginStrokes(matrices.peek().getPositionMatrix(),mc.world.getTime()+c.tickDelta())){
-                for(var s:StandClient.CASTS.values()){
-                    float a=s.age(c.tickDelta());if(a<0||a>=DURATION[s.skill()])continue;var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(c.tickDelta());
-                    if(pos.squaredDistanceTo(camera)>80*80)continue;Vec3d f=Vec3d.fromPolar(0,s.yaw()),right=new Vec3d(f.z,0,-f.x);
-                    KagenoFx.strokes(s.skill(),pos,s.origin(),f,right,a,s.combo());
-                }
-                KagenoFire.endStrokes();
-            }
-            // Full-frame blast flashes for nearby viewers.
-            float flash=0;for(var s:StandClient.CASTS.values()){float a=s.age(c.tickDelta());if(s.origin().squaredDistanceTo(camera)<24*24)flash=Math.max(flash,KagenoFx.flash(s.skill(),a));}
-            if(flash>0){RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.disableDepthTest();buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrices.peek().getPositionMatrix(),camera);
+            // Shader passes (fire, smoke, brush strokes) manage their own buffers.
+            for(var x:casts)KagenoSkills.of(x.cast.skill()).shaders(x);
+            if(KagenoFire.beginStrokes(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).strokes(x);KagenoFire.endStrokes();}
+            if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
+            // Same crescents again, added on top, for the bright glow of the reference slashes.
+            RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);KagenoFire.crescentGain=.18f;
+            if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
+            KagenoFire.crescentGain=1;RenderSystem.defaultBlendFunc();
+            for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
+            RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
+            // Full-frame flashes for nearby viewers.
+            float flash=0;int color=0xffffff;
+            for(var x:casts)if(x.origin.squaredDistanceTo(camera)<28*28){float v=KagenoSkills.of(x.cast.skill()).flash(x);if(v>flash){flash=v;color=KagenoSkills.of(x.cast.skill()).flashColor(x);}}
+            if(flash>0){
+                RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.disableDepthTest();
+                buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
                 var look=c.camera().getHorizontalPlane();Vec3d fwd=new Vec3d(look.x(),look.y(),look.z());var up=c.camera().getVerticalPlane();Vec3d vu=new Vec3d(up.x(),up.y(),up.z());Vec3d side=fwd.crossProduct(vu).normalize();
-                Vec3d p=camera.add(fwd.multiply(.2));m.quad(p.add(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).subtract(vu.multiply(3)),p.add(side.multiply(3)).subtract(vu.multiply(3)),0xfff8ff,flash*.95f);
-                BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.enableDepthTest();}
-            rubble(c);
-            // Target mark is owner-only and visible through walls.
+                Vec3d p=camera.add(fwd.multiply(.2));
+                m.quad(p.add(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).subtract(vu.multiply(3)),p.add(side.multiply(3)).subtract(vu.multiply(3)),color,Math.min(1,flash));
+                BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.enableDepthTest();
+            }
+            // Owner-only shadow marks, visible through walls.
             RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.disableDepthTest();
-            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrices.peek().getPositionMatrix(),camera);
-            if(mc.player!=null){var local=StandClient.STATES.get(mc.player.getUuid());if(local!=null)for(var mark:local.marks())if(mark.until()>now){var e=mc.world.getEntityById(mark.entity());if(e!=null&&e.getUuid().equals(mark.id())&&e.isAlive())glint(m,e.getLerpedPos(c.tickDelta()).add(0,e.getHeight()+.35,0),camera,.17,.85f);}}
+            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
+            KagenoStatusFx.marks(mc,m,delta,camera);
             BufferRenderer.drawWithGlobalProgram(buffer.end());
         }finally{matrices.pop();RenderSystem.depthMask(true);RenderSystem.enableDepthTest();RenderSystem.enableCull();RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();RenderSystem.setShaderColor(1,1,1,1);}
     }
-    private static void overdrive(EffectMesh m,MinecraftClient mc,float delta,Vec3d camera,boolean light){
-        long now=mc.world.getTime();
-        for(var entry:StandClient.STATES.entrySet()){
-            if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
-            Vec3d feet=p.getLerpedPos(delta);if(feet.squaredDistanceTo(camera)>64*64)continue;
-            Vec3d f=Vec3d.fromPolar(0,p.getBodyYaw()),right=new Vec3d(f.z,0,-f.x);float t=now+delta;
-            KagenoFx.q(m,feet,f,right,t,p.getHeight(),light);
-            if(!(p==mc.player&&mc.options.getPerspective().isFirstPerson()))KagenoFx.eye(m,p.getLerpedPos(delta).add(0,p.getStandingEyeHeight(),0),Vec3d.fromPolar(p.getPitch(delta),p.getHeadYaw()),Vec3d.fromPolar(0,p.getHeadYaw()+90).negate(),t,light);
-        }
-    }
-    private static java.util.List<Vec3d> targets(MinecraftClient mc,StandClient.Cast s,float delta){
-        var out=new java.util.ArrayList<Vec3d>();for(var t:s.targets()){var e=mc.world.getEntityById(t.entity());out.add(e!=null?e.getLerpedPos(delta):t.position());}
-        if(s.skill()==T)for(var e:mc.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,new Box(s.origin(),s.origin()).expand(4.5),e->!e.getUuid().equals(s.caster())&&e.isAlive()&&e.squaredDistanceTo(s.origin())<=16.5))out.add(e.getLerpedPos(delta));
+    private static List<LivingEntity> targets(MinecraftClient mc,StandClient.Cast s,float delta){
+        var out=new ArrayList<LivingEntity>();
+        for(var t:s.targets()){var e=mc.world.getEntityById(t.entity());if(e instanceof LivingEntity l&&e.getUuid().equals(t.uuid()))out.add(l);}
         return out;
-    }
-    private static void glint(EffectMesh m,Vec3d p,Vec3d camera,double radius,float alpha){
-        Vec3d normal=camera.subtract(p).normalize(),u=normal.crossProduct(UP).normalize();if(u.lengthSquared()<.1)u=X;Vec3d v=u.crossProduct(normal).normalize();
-        for(int layer=5;layer>=0;layer--){double width=radius*(.018+layer*.025);float opacity=alpha*(layer==0?1:.07f);int color=layer==0?0xffffff:0xf254ff;
-            for(int i=0;i<4;i++){Vec3d axis=i==0?u:i==1?v:i==2?u.negate():v.negate(),perp=i%2==0?v:u;m.triangle(p.add(axis.multiply(radius*(1+layer*.1))),p.add(perp.multiply(width)),p.subtract(perp.multiply(width)),color,opacity);}
-        }
-        for(int i=0;i<32;i++){double a=i*Math.PI/16,b=(i+1)*Math.PI/16;m.triangle(p,p.add(u.multiply(Math.cos(a)*radius*.035)).add(v.multiply(Math.sin(a)*radius*.035)),p.add(u.multiply(Math.cos(b)*radius*.035)).add(v.multiply(Math.sin(b)*radius*.035)),0xffffff,alpha);}
-    }
-    private static void rubble(WorldRenderContext c){
-        var mc=MinecraftClient.getInstance();var matrix=c.matrixStack();var providers=mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
-        RenderSystem.enableDepthTest();RenderSystem.depthMask(true);
-        for(var cast:StandClient.CASTS.values())if(cast.skill()==Y){float a=cast.age(c.tickDelta());float rise=KagenoFx.plateRise(a);if(rise<=0)continue;
-            var origin=cast.origin();var state=mc.world.getBlockState(BlockPos.ofFloored(origin).down());if(state.isAir())state=net.minecraft.block.Blocks.STONE.getDefaultState();
-            int light=net.minecraft.client.render.WorldRenderer.getLightmapCoordinates(mc.world,BlockPos.ofFloored(origin));
-            for(int i=0;i<KagenoFx.Y_PLATES.length;i++){
-                double[] q=KagenoFx.Y_PLATES[i];double angle=q[0]+cast.yaw()*Math.PI/180,r=q[1];
-                // Outer edge lifted, inner edge buried: the opened crater of the reference.
-                matrix.push();matrix.translate(origin.x+Math.cos(angle)*r,origin.y-q[5]*.6-.9*(1-rise),origin.z+Math.sin(angle)*r);
-                matrix.multiply(RotationAxis.POSITIVE_Y.rotation((float)-angle));matrix.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float)(q[4]*rise)));
-                matrix.scale((float)q[2],(float)q[5],(float)q[3]);matrix.translate(-.5,0,-.5);
-                mc.getBlockRenderManager().renderBlockAsEntity(state,matrix,providers,light,OverlayTexture.DEFAULT_UV);matrix.pop();drew=true;
-            }
-            // Small chunks thrown up at the feet during the slam.
-            float chunk=KagenoMotion.smooth(a,KagenoFx.Y_SLAM,KagenoFx.Y_SLAM+2)*(1-KagenoMotion.smooth(a,KagenoFx.Y_SLAM+10,KagenoFx.Y_SLAM+16));
-            if(chunk>0)for(int i=0;i<8;i++){double angle=i*.785+.3,r=.9+.5*KagenoFx.hash(i);float t=a-KagenoFx.Y_SLAM;
-                matrix.push();matrix.translate(origin.x+Math.cos(angle)*r*(1+t*.04),origin.y-.25+.5*chunk+Math.max(0,t*.18-t*t*.012),origin.z+Math.sin(angle)*r*(1+t*.04));
-                matrix.multiply(RotationAxis.POSITIVE_Y.rotation((float)-angle));matrix.multiply(RotationAxis.NEGATIVE_Z.rotationDegrees(35*chunk));matrix.scale(.8f,.3f,.7f);matrix.translate(-.5,0,-.5);
-                mc.getBlockRenderManager().renderBlockAsEntity(state,matrix,providers,light,OverlayTexture.DEFAULT_UV);matrix.pop();drew=true;}
-        }if(drew)providers.draw();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
     }
     public static void hud(DrawContext draw,float delta){
         var mc=MinecraftClient.getInstance();if(mc.player==null||mc.world==null||!MapClient.enabled()||mc.options.hudHidden)return;
         var cinematic=StandClient.cinematic();int width=draw.getScaledWindowWidth(),height=draw.getScaledWindowHeight();
         if(cinematic!=null)return;
+        // Reference UI: "N Hits" at the left, a third down. It flashes red #F62223 on every hit and
+        // eases back to white in 0.25 s with a small drift and tilt; the purple timer below counts
+        // seconds since the first hit of the combo.
+        float since=(mc.world.getTime()-StandClient.hitTime+delta)/20f;
+        if(StandClient.visible(mc.player)&&StandClient.hitCount>0&&since<2.75f){
+            String text=StandClient.hitCount+(StandClient.hitCount==1?" Hit":" Hits");
+            float scale=Math.max(1.2f,height*.0315f/7f),alpha=1-Ease.smooth(since,2.5f,2.75f);int a=Math.max(8,(int)(alpha*255));
+            float k=Math.min(1,since/.25f);int r=(int)(246+(248-246)*k),g=(int)(34+(251-34)*k*k*.6f+(251-34)*k*.4f),b=(int)(35+(249-35)*k*k*.6f+(249-35)*k*.4f);
+            float pop=1-Ease.smooth(since,0,.37f);
+            var mat=draw.getMatrices();mat.push();mat.translate(width*.042f-pop*width*.0037f,height*.31f,0);
+            mat.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(-3*pop));mat.scale(scale,scale,1);
+            draw.drawText(mc.textRenderer,text,0,-4,(a<<24)|(r<<16)|(Math.min(255,g)<<8)|Math.min(255,b),true);mat.pop();
+            float combo=(mc.world.getTime()-StandClient.comboStart+delta)/20f;
+            mat.push();mat.translate(width*.042f,height*.31f+scale*9,0);mat.scale(scale*.55f,scale*.55f,1);
+            draw.drawText(mc.textRenderer,mc.player.getName().getString()+" : "+String.format(java.util.Locale.ROOT,"%.2f",Math.max(0,combo)),0,0,(a<<24)|0x9156e0,true);mat.pop();
+        }
         if(!StandClient.visible(mc.player)||mc.currentScreen!=null||CinematicDirector.isActive())return;
         var state=StandClient.STATES.get(mc.player.getUuid());long now=mc.world.getTime();
         var panel=draw.getMatrices();panel.push();float ui=.72f;panel.translate(width-106,Math.max(68,height/2-40),0);panel.scale(ui,ui,1);

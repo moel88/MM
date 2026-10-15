@@ -2,7 +2,6 @@ package dev.sangwoo.celestialfall.client;
 
 import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.SpellTimeline;
-import dev.sangwoo.celestialfall.AtomicTimeline;
 import dev.sangwoo.celestialfall.HeavenTimeline;
 import net.minecraft.client.MinecraftClient;
 import org.lwjgl.opengl.*;
@@ -32,9 +31,10 @@ public final class AnimePostProcessor {
         boolean isKageno=spell==null&&atomic==null&&heaven==null&&kageno!=null;
         if(spell==null && atomic==null && heaven==null&&!timeStop&&!isKageno)return;
         boolean isHeaven=!timeStop&&spell==null && heaven!=null,isAtomic=!timeStop&&spell==null && !isHeaven&&atomic!=null;
+        var immersion=isAtomic?AtomicImmersion.at(mc.gameRenderer.getCamera().getPos(),delta):AtomicImmersion.NONE;
         float age=timeStop?mc.world.getTime()%1000+delta:isKageno?kageno.age(delta):isHeaven?heaven.age(delta):isAtomic?atomic.age(delta):spell.age(mc.world.getTime(),delta);
         float strength=timeStop?1:isKageno?.88f:isHeaven?HeavenTimeline.visibility(age)*(float)Math.max(0,Math.min(1,(1100-mc.player.getPos().distanceTo(heaven.target))/400))
-            :isAtomic?AtomicTimeline.visibility(age)*(float)Math.max(0,Math.min(1,(1600-mc.player.getPos().distanceTo(atomic.origin))/800))
+            :isAtomic?(immersion.active()?1:0)
             :SpellTimeline.visibility(age)*(float)Math.max(0,Math.min(1,(640-mc.player.getPos().distanceTo(spell.target))/220));
         if(strength<.005f)return;
         var main=mc.getFramebuffer();
@@ -58,17 +58,20 @@ public final class AnimePostProcessor {
             GL13.glActiveTexture(GL13.GL_TEXTURE1);GL11.glBindTexture(GL11.GL_TEXTURE_2D,textures[2]);
             f("Strength",strength);f("Time",age/20f);
             f("Bloom",(float)CelestialFall.CONFIG.bloomStrength);
-            float wave=timeStop?0:isKageno?KagenoVfx.pulse(kageno.skill(),age):isHeaven?HeavenTimeline.aftershock(age):isAtomic?AtomicTimeline.pulse(age):SpellTimeline.wavePulse(age),clash=timeStop||isKageno||isAtomic || isHeaven?0:SpellTimeline.clashPulse(age);
+            float wave=timeStop||isAtomic?0:isKageno?dev.sangwoo.celestialfall.client.kageno.KagenoCamera.pulse(kageno.skill(),age):isHeaven?HeavenTimeline.aftershock(age):SpellTimeline.wavePulse(age),clash=timeStop||isKageno||isAtomic || isHeaven?0:SpellTimeline.clashPulse(age);
             f("HeavenTone",isHeaven?1:0);
             f("TimeStopMono",timeStop?1:0);
-            var immersion=AtomicImmersion.at(mc.gameRenderer.getCamera().getPos(),delta);
-            f("AtomicViolet",timeStop?0:immersion.violet());
-            f("AtomicFlash",!timeStop&&CelestialFall.CONFIG.screenFlash?immersion.flash():0);
-            f("AtomicCharge",0);
-            f("AtomicInk",0);
+            var grade=immersion.grade();
+            f("AtomicMode",isAtomic?1:0);
+            f("AtomicTint",grade.tint());
+            f("AtomicFrame",CelestialFall.CONFIG.screenFlash?grade.frame():0);
+            f("AtomicMorph",grade.morph());
+            f("AtomicGrade",grade.mix());
+            rgb("AtomicLo",grade.lo());rgb("AtomicHi",grade.hi());
+            f("AtomicHorizon",horizon(mc,delta));
             f("Power",Math.max(wave,clash*.65f));
             f("Distortion",CelestialFall.CONFIG.screenDistortion?1:0);
-            f("Speed",!timeStop&&CelestialFall.CONFIG.speedLines?(isKageno?(kageno.skill()==4&&age>=dev.sangwoo.celestialfall.stand.KagenoRules.RUSH_START&&age<dev.sangwoo.celestialfall.stand.KagenoRules.RUSH_FINISH?.22f:0):isHeaven?HeavenTimeline.rush(age):isAtomic?AtomicTimeline.pulse(age)*.65f:SpellTimeline.descentPower(age)):0);
+            f("Speed",!timeStop&&CelestialFall.CONFIG.speedLines?(isKageno?0:isHeaven?HeavenTimeline.rush(age):isAtomic?0:SpellTimeline.descentPower(age)):0);
             f("Mono",!timeStop&&!isKageno&&!isAtomic && !isHeaven && CelestialFall.CONFIG.screenFlash && CelestialFall.CONFIG.animeImpactFrames?SpellTimeline.monoImpact(age):0);
             GL20.glUniform2f(GL20.glGetUniformLocation(program,"Focus"),focusX,focusY);
             GL20.glUniform2f(GL20.glGetUniformLocation(program,"Resolution"),width,height);
@@ -85,6 +88,13 @@ public final class AnimePostProcessor {
         GL11.glDrawArrays(GL11.GL_TRIANGLES,0,3);
     }
     private static void f(String name,float value) { GL20.glUniform1f(GL20.glGetUniformLocation(program,name),value); }
+    private static void rgb(String name,int c) { GL20.glUniform3f(GL20.glGetUniformLocation(program,name),((c>>16)&255)/255f,((c>>8)&255)/255f,(c&255)/255f); }
+    /** Screen-space height (0 bottom, 1 top) of the horizon for the current camera pitch. */
+    private static float horizon(MinecraftClient mc,float delta) {
+        float m11=com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix().m11();
+        double pitch=Math.toRadians(Math.max(-89,Math.min(89,mc.gameRenderer.getCamera().getPitch())));
+        return (float)Math.max(-1,Math.min(2,.5+.5*m11*Math.tan(pitch)));
+    }
     private static void i(String name,int value) { GL20.glUniform1i(GL20.glGetUniformLocation(program,name),value); }
     private static int compile(MinecraftClient mc,int type,String file) throws Exception {
         String source;

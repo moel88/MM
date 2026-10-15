@@ -53,25 +53,9 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
             &&!dev.sangwoo.celestialfall.client.CinematicDirector.isActive()&&dev.sangwoo.celestialfall.client.BotandCamera.STATE.collisionDistance<.7){ci.cancel();return;}
         if(player.isAlive() && (AtomicClient.actor(player.getUuid())!=null || dev.sangwoo.celestialfall.client.HeavenClient.actor(player.getUuid())!=null)){ci.cancel();return;}
         matrices.push();botand$posed=true;
-        var stand=dev.sangwoo.celestialfall.client.StandClient.action(player.getUuid());
-        if(stand!=null&&stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.H&&stand.age(delta)>=dev.sangwoo.celestialfall.client.KagenoCameraPath.SKY_CUT&&stand.age(delta)<56){matrices.pop();botand$posed=false;ci.cancel();return;}
-        if(stand!=null){
-            float age=stand.age(delta);float spin=dev.sangwoo.celestialfall.client.KagenoMotion.spin(stand.skill(),age,stand.combo());
-            matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(spin));
-            if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.Y)matrices.translate(0,dev.sangwoo.celestialfall.client.KagenoMotion.yHop(age),0);
-            if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.E){
-                var f=net.minecraft.util.math.Vec3d.fromPolar(0,stand.yaw());double lunge=dev.sangwoo.celestialfall.client.KagenoMotion.thrust(age)*.24;
-                matrices.translate(f.x*lunge,0,f.z*lunge);
-            }
-            if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.H){
-                var direction=net.minecraft.util.math.Vec3d.fromPolar(0,stand.yaw());
-                double travel=dev.sangwoo.celestialfall.client.KagenoMotion.hTravel(age);
-                matrices.translate(direction.x*travel,dev.sangwoo.celestialfall.client.KagenoMotion.lift(age),direction.z*travel);
-                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(dev.sangwoo.celestialfall.client.KagenoMotion.hTurn(age)));
-                float flip=dev.sangwoo.celestialfall.client.KagenoMotion.flip(age);
-                matrices.translate(0,.9,0);matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(-stand.yaw()));matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(dev.sangwoo.celestialfall.client.KagenoMotion.hBank(age)));matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(flip));matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(stand.yaw()));matrices.translate(0,-.9,0);
-            }
-        }
+        var stand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
+        if(stand!=null&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.hidden(stand,delta)){matrices.pop();botand$posed=false;ci.cancel();return;}
+        if(stand!=null)dev.sangwoo.celestialfall.client.kageno.KagenoClips.root(matrices,stand,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,player.prevBodyYaw,player.bodyYaw));
     }
     @Inject(method="render(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("RETURN"))
     private void botand$restoreLift(AbstractClientPlayerEntity player,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){if(botand$posed){matrices.pop();botand$posed=false;}}

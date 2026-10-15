@@ -5,7 +5,8 @@ import java.util.List;
 /** Sample-speed audio chunks are triggered by the same server-age clock as the visuals. */
 public final class CinematicAudioPlan {
     public record Cue(String sound,int start,int end) {}
-    public static final List<Cue> ATOMIC=List.of(new Cue("atomic_full",0,AtomicTimeline.END));
+    // The clip starts 0.217 s after the first G frame (cross-correlated against the 60 fps review).
+    public static final List<Cue> ATOMIC=List.of(new Cue("atomic_full",AtomicTimeline.AUDIO_START,AtomicTimeline.END));
     // One uninterrupted sound: camera/contact transitions must never stop the chant.
     public static final List<Cue> HEAVEN=List.of(new Cue("heaven_full",1,HeavenTimeline.CAMERA_END));
     private CinematicAudioPlan() {}
