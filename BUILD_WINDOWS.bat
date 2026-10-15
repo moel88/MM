@@ -7,5 +7,6 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-echo Built: build\libs\celestial-fall-1.0.0.jar
+echo Built (put the jar without "-sources" in mods):
+dir /b build\libs\botand-*.jar
 pause
