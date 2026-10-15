@@ -312,13 +312,14 @@ final class HighestSkill implements Fx.Skill {
         for(int i=0;i<n;i++){
             double s0=i/(double)n,s1=(i+1)/(double)n;
             Vec3d u0=near.lerp(far,s0),u1=near.lerp(far,s1);
-            double th0=2.4*STUD*4*s0*(1-s0)*(1-.3*s0),th1=2.4*STUD*4*s1*(1-s1)*(1-.3*s1);
+            // Scythe profile: thickest a third of the way out, the lower edge a deep concave curve.
+            double th0=2.6*STUD*Math.pow(Math.sin(Math.PI*s0),.75)*(1-.45*s0),th1=2.6*STUD*Math.pow(Math.sin(Math.PI*s1),.75)*(1-.45*s1);
             // Sagging toward the ground and slightly outward (forward of the beam line).
             Vec3d l0=u0.add(fin(c,.25*th0,-th0*1.6,0).subtract(c.origin)),l1=u1.add(fin(c,.25*th1,-th1*1.6,0).subtract(c.origin));
             l0=new Vec3d(l0.x,Math.max(c.origin.y+.02,l0.y),l0.z);l1=new Vec3d(l1.x,Math.max(c.origin.y+.02,l1.y),l1.z);
             Vec3d m0=u0.lerp(l0,.45),m1=u1.lerp(l1,.45);
-            m.vertex(u0,0x818afd,a);m.vertex(u1,0x818afd,a);m.vertex(m1,0x2229b8,a);m.vertex(m0,0x2229b8,a);
-            m.vertex(m0,0x2229b8,a);m.vertex(m1,0x2229b8,a);m.vertex(l1,0x0d1c6b,a);m.vertex(l0,0x0d1c6b,a);
+            m.vertex(u0,0x5969de,a);m.vertex(u1,0x5969de,a);m.vertex(m1,0x1a2190,a);m.vertex(m0,0x1a2190,a);
+            m.vertex(m0,0x1a2190,a);m.vertex(m1,0x1a2190,a);m.vertex(l1,0x070c3a,a);m.vertex(l0,0x070c3a,a);
             // Crisp black-indigo outer rim.
             Vec3d o0=l0.add(0,-.03,0),o1=l1.add(0,-.03,0);
             m.vertex(l0,0x04011c,a);m.vertex(l1,0x04011c,a);m.vertex(o1,0x000001,a);m.vertex(o0,0x000001,a);
