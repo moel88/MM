@@ -36,6 +36,25 @@ public final class EffectMesh {
         if (side.lengthSquared() < 1e-12) side = new Vec3d(width * 0.5,0,0);
         quad(a.subtract(side), a.add(side), b.add(side), b.subtract(side), rgb, alpha);
     }
+    /** Camera-facing line with soft edges: full alpha on the axis, fading to nothing at ±width/2. */
+    public void softLine(Vec3d a, Vec3d b, double width, int rgb, float alpha) {
+        Vec3d direction = b.subtract(a);
+        if (direction.lengthSquared() < 1e-10 || alpha <= 0) return;
+        Vec3d side = direction.crossProduct(camera.subtract(a)).normalize().multiply(width * 0.5);
+        if (!Double.isFinite(side.x)) return;
+        vertex(a,rgb,alpha);vertex(b,rgb,alpha);vertex(b.add(side),rgb,0);vertex(a.add(side),rgb,0);
+        vertex(a.subtract(side),rgb,0);vertex(b.subtract(side),rgb,0);vertex(b,rgb,alpha);vertex(a,rgb,alpha);
+    }
+    /** Soft line whose width runs linearly from {@code wa} at a to {@code wb} at b. */
+    public void softTaper(Vec3d a, Vec3d b, double wa, double wb, int rgb, float alpha) {
+        Vec3d direction = b.subtract(a);
+        if (direction.lengthSquared() < 1e-10 || alpha <= 0) return;
+        Vec3d sa = direction.crossProduct(camera.subtract(a)).normalize(), sb = direction.crossProduct(camera.subtract(b)).normalize();
+        if (!Double.isFinite(sa.x) || !Double.isFinite(sb.x)) return;
+        Vec3d ha = sa.multiply(wa * 0.5), hb = sb.multiply(wb * 0.5);
+        vertex(a,rgb,alpha);vertex(b,rgb,alpha);vertex(b.add(hb),rgb,0);vertex(a.add(ha),rgb,0);
+        vertex(a.subtract(ha),rgb,0);vertex(b.subtract(hb),rgb,0);vertex(b,rgb,alpha);vertex(a,rgb,alpha);
+    }
     public void glowLine(Vec3d a, Vec3d b, double width, int rgb, float alpha) {
         line(a,b,width * 7,rgb,alpha * 0.07f);
         line(a,b,width * 3,rgb,alpha * 0.22f);

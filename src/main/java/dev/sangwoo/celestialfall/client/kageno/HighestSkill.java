@@ -41,20 +41,23 @@ final class HighestSkill implements Fx.Skill {
     static final float SQUARE=35;
     static final R6.Pose K8=pose().head(SQUARE,0,0).rArm(78,-30).blade(78,-150).lArm(-78,-5);
     static final R6.Pose K10=pose().at(0,-.05,0).body(-SQUARE,0,0).rArm(-42,75).lArm(-42,-75).blade(-37,75).rLeg(-72,90).lLeg(-72,-90);
-    /** Leap curve: fast start, strong ease-out, apex at ≈0.5 s. */
-    static double leap(float t){double u=Math.min(1,t/.5);return 1-Math.pow(1-u,2.4);}
+    /**
+     * Leap curve, eased in and out over 0.55 s: seen from the worm's-eye camera his elevation climbs
+     * ≈29° → 43° → 51° at 0.05 / 0.10 / 0.15 s and settles near 60°, as the review's tilt-up does.
+     */
+    static double leap(float t){double u=Math.min(1,t/.55);return u*u*(3-2*u);}
     static final Anim CLIP;
     static {
         List<Key> keys=new ArrayList<>();
         keys.add(k(0,KagenoClips.IDLE));
         keys.add(k(.017,K1,Anim.Ease.SNAP));
         // Launch: T-pose snapped in 2-3 frames, root on the leap curve; the somersault 0.28-0.53 s.
-        for(float t=.05f;t<=SHOT2+.001f;t+=.05f){
+        for(float t=.025f;t<=SHOT2+.001f;t+=.025f){
             double s=leap(t);R6.Pose p;
             if(t<.28f)p=K2.blade(t<.2f?0:38,90);
             else if(t<.53f){float u=(t-.28f)/.25f;p=R6.Pose.lerp(K2.blade(38,90),K3,u*u*(3-2*u));}
             else p=K3;
-            keys.add(k(t,p.at(APEX_FW*s,APEX_UP*s,0),t<.06f?Anim.Ease.SNAP:Anim.Ease.LINEAR));
+            keys.add(k(t,p.at(APEX_FW*s,APEX_UP*s,0),Anim.Ease.LINEAR));
         }
         // Inverted hover: one leg out sideways, swinging up to straight; slow drift.
         keys.add(k(.72,K4.at(APEX_FW-.05,APEX_UP+.05,0)));
@@ -91,14 +94,14 @@ final class HighestSkill implements Fx.Skill {
     @Override public KagenoCamera.Shot shot(float t){
         if(t<0||t>=END)return null;
         if(t<SHOT2){
-            // Worm's-eye ≈6.5 studs in front at ankle height; tilts up after him with a little lag, slight push.
-            var r=root(Math.max(0,t-.05f));double fov=70-8*Ease.out(t,0,.25f)-2*Ease.smooth(t,.25f,SHOT2);
+            // Worm's-eye ≈6.5 studs in front at ankle height; tilts up with him (one frame behind), slight push.
+            var r=root(Math.max(0,t-.017f));double fov=70-8*Ease.out(t,0,.25f)-2*Ease.smooth(t,.25f,SHOT2);
             return look(6.5*STUD,.15,0,r.fw,r.up+1.0,r.rt,0,(float)fov);
         }
         if(t<SHOT3){
             // Behind the inverted hero at his altitude: settle (tilt up, push in, roll) then a slow roll drift.
             var r=root(t);float settle=Ease.out(t,SHOT2,.9f);
-            double back=1.45-.18*settle;
+            double back=1.8-.18*settle;
             return look(r.fw+back,r.up+1.05+.15-.25*settle,r.rt-.25,r.fw,r.up+1.05+.05,r.rt+.15,3*settle+2.5f*Ease.smooth(t,.9f,SHOT3),70);
         }
         double gx=APEX_FW-.25,gz=0;
@@ -126,8 +129,8 @@ final class HighestSkill implements Fx.Skill {
             return look(camFw,.9,0,lx,.55,lz,(float)roll,fov);
         }
         if(t<SHOT5){
-            // Face close-up ≈2.2 studs in front, slightly below eye level.
-            return look(.85,1.3,0,0,1.55,0,0,70);
+            // Face close-up: head and shoulders, the arms across the bottom of the frame.
+            return look(1.25,1.35,0,0,1.42,0,0,70);
         }
         // Shot 5: front-right (azimuth ≈35°) at chest height; starts ≈2.4 studs away (the hand and tsuba
         // sweep past the lens), dollies back to ≈6.5 studs, then locked with a tiny roll shake at the downswing.
@@ -140,19 +143,20 @@ final class HighestSkill implements Fx.Skill {
     @Override public float shotBlend(float sec){return sec>=0&&sec<END?1:0;}
 
     // ───────────────────────────── effects ─────────────────────────────
-    /** Zigzag polyline in the sky (cast frame): starts at the hero, ten sharp segments descending. */
+    /**
+     * Zigzag polyline in the sky (cast frame), a jagged star around the hero: the first segment runs
+     * through him, every later one turns back by 135-165°, and the path sinks ≈2.6 blocks a segment;
+     * from the sixth corner on it swings out past the street camera, so the lower, nearer segments
+     * read thicker and cross the top of the street shot.
+     */
     static Vec3d[] zigzag(Fx c){
         int seed=(int)c.cast.id().getLeastSignificantBits();Vec3d[] pts=new Vec3d[11];
-        double x=APEX_FW-.25,y=APEX_UP+1.2,z=0,dir=Ease.hash(seed)*Math.PI*2;
-        pts[0]=c.at0(x,y,z);
-        for(int i=1;i<=10;i++){
-            double len=14+16*Ease.hash(seed+i*7);
-            // Sharp acute turns: the path doubles back by 135-155°.
-            if(i>1)dir+=Math.toRadians((Ease.hash(seed+i*11)>.5?1:-1)*(135+20*Ease.hash(seed+i*13)));
-            x+=Math.cos(dir)*len;z+=Math.sin(dir)*len;y-=1.6+.6*Ease.hash(seed+i*17);
-            // Keep the pattern centred over the landing area.
-            x=APEX_FW+(x-APEX_FW)*.8;z*=.8;
-            pts[i]=c.at0(x,y,z);
+        double cx=APEX_FW-.25,cy=APEX_UP+1.2,th=Ease.hash(seed)*Math.PI*2;
+        for(int i=0;i<=10;i++){
+            if(i==1)th+=Math.PI;else if(i>1)th+=Math.toRadians(150+30*(Ease.hash(seed+i*11)-.5));
+            if(i>=6)th=Math.PI+(i%2==0?.6:-.6)+.25*(Ease.hash(seed+i*19)-.5);
+            double r=16+8*Ease.hash(seed+i*7),y=cy-2.6*Math.max(0,i-1);
+            pts[i]=c.at0(cx+Math.cos(th)*r,y,Math.sin(th)*r);
         }
         return pts;
     }
@@ -160,8 +164,8 @@ final class HighestSkill implements Fx.Skill {
         float t=c.sec;
         flare(c,m,t,true);
         zig(c,m,t,true);
-        burst(c,m,t);
-        beam(c,m,t);
+        burst(c,m,t,true);
+        beam(c,m,t,true);
         handSmoke(c,m,t);
         sparkles(c,m,t);
     }
@@ -169,8 +173,10 @@ final class HighestSkill implements Fx.Skill {
         float t=c.sec;
         flare(c,m,t,false);
         zig(c,m,t,false);
+        burst(c,m,t,false);
         smear(c,m,t);
         crescent(c,m,t);
+        beam(c,m,t,false);
     }
     /** Point in the finisher frame: the cast frame turned to face the shot-5 camera (forward, up, right). */
     static Vec3d fin(Fx c,double fw,double up,double rt){
@@ -213,8 +219,9 @@ final class HighestSkill implements Fx.Skill {
         Vec3d[] p=zigzag(c);float fade=1-Ease.smooth(t,3.2f,SHOT4);
         for(int i=0;i<10;i++){
             if(t<ZIG[i])break;Vec3d a=p[i],b=p[i+1];
-            if(additive){m.line(a,b,2.6,0x9c97fa,.1f*fade);m.line(a,b,1.6,0xc19cfe,.18f*fade);m.line(a,b,.22,0xfebbfe,.8f*fade);}
-            else{m.line(a,b,1.2,0xe6a7fc,.55f*fade);m.line(a,b,.8,0xf77ffa,fade);}
+            // Solid magenta body with a pale hot streak (alpha-blended so the bloom keeps it magenta), faint violet halo.
+            if(additive)m.softLine(a,b,2.6,0x9c97fa,.12f*fade);
+            else{m.softLine(a,b,2.3,0xc19cfe,.45f*fade);m.line(a,b,1.25,0xe842f5,fade);m.line(a,b,.25,0xfebbfe,.9f*fade);}
         }
     }
     /** Intensity envelope of the slash-line burst (peak ≈3.88 s, pulsing, gone ≈4.42 s). */
@@ -224,21 +231,23 @@ final class HighestSkill implements Fx.Skill {
         return (.55f+.15f*(float)Math.sin(t*38))*(1-Ease.smooth(t,4.2f,4.42f))+.45f*(1-Ease.smooth(t,3.88f,3.98f));
     }
     /** V4: slash streaks and four-point sparkles, mostly behind the hero, on his right and above. */
-    static void burst(Fx c,EffectMesh m,float t){
+    static void burst(Fx c,EffectMesh m,float t,boolean additive){
         float level=burstLevel(t);if(level<=0)return;
         Vec3d[] ax=screen(c);Vec3d right=ax[0],up=ax[1];int seed=(int)c.cast.id().getMostSignificantBits();
-        int last=(int)Math.floor((t-BURST)*480);
-        for(int k=Math.max(0,last-44);k<=last;k++){
-            float born=BURST+k/480f,life=.033f+.05f*(float)Ease.hash(seed+k*3),u=(t-born)/life;if(u<0||u>=1)continue;
+        int last=(int)Math.floor((t-BURST)*600);
+        for(int k=Math.max(0,last-60);k<=last;k++){
+            float born=BURST+k/600f,life=.033f+.05f*(float)Ease.hash(seed+k*3),u=(t-born)/life;if(u<0||u>=1)continue;
             if(Ease.hash(seed+k*5)>burstLevel(born)*.95f)continue;
             Vec3d centre=c.at0(-.2-1.3*Ease.hash(seed+k*7),.8+2.7*Ease.hash(seed+k*11),-.5+3*Ease.hash(seed+k*13));
             double kind=Ease.hash(seed+k*17),ang=kind<.55?Math.toRadians(-35+(Ease.hash(seed+k*19)-.5)*30):kind<.9?Math.toRadians((Ease.hash(seed+k*19)-.5)*20):Math.toRadians(90);
             Vec3d dir=right.multiply(Math.cos(ang)).add(up.multiply(Math.sin(ang)));
-            double len=(2+4*Ease.hash(seed+k*23)),w=.04+.13*Ease.hash(seed+k*29);
+            double len=(2.5+4.5*Ease.hash(seed+k*23)),w=.05+.15*Ease.hash(seed+k*29);
             Vec3d a=centre.subtract(dir.multiply(len*.5)),b=centre.add(dir.multiply(len*.5));
             float al=(float)Math.sin(Math.PI*Math.min(1,u*1.4));
-            m.needle(a,b,w*2.2,.5,0x7462e0,al*.5f);m.needle(a,b,w*1.3,.5,0xd7b1f8,al*.85f);m.needle(a,b,w*.5,.5,0xffffff,al);
+            if(additive){m.needle(a,b,w*1.2,.5,0xd7b1f8,al*.8f);m.needle(a,b,w*.45,.5,0xffffff,al);}
+            else{m.needle(a,b,w*2.8,.5,0x6a3cd6,al*.55f);m.needle(a,b,w*1.7,.5,0x9d6cf0,al*.6f);}
         }
+        if(!additive)return;
         int stars=(int)Math.floor((t-BURST)*40);
         for(int k=Math.max(0,stars-4);k<=stars;k++){
             float born=BURST+k/40f,life=.05f+.05f*(float)Ease.hash(seed+k*31),u=(t-born)/life;if(u<0||u>=1)continue;
@@ -251,19 +260,23 @@ final class HighestSkill implements Fx.Skill {
         if(t>=3.965f&&t<4.0f)m.softDisc(c.at0(0,1.2,-1),.95,0x7462e0,.45f);
     }
     /** V6: horizontal white-violet beam behind the torso along the lateral axis, far to his right. */
-    static void beam(Fx c,EffectMesh m,float t){
+    static void beam(Fx c,EffectMesh m,float t,boolean additive){
         if(t<BEAM||t>=END+.4f)return;
         Vec3d a=fin(c,-.2,1.25,-3*STUD),b=fin(c,-.2,1.25,45*STUD);
         float u=t-BEAM;
-        double w=u<.05f?.42:u<.08f?.42-.28*Ease.unit(t,BEAM+.05f,BEAM+.08f):.14-.06*Ease.smooth(t,BEAM+.1f,END);
+        // A broad white mass for a frame or two, then a thin glowing core inside a soft violet halo.
+        double w=u<.05f?.42:u<.08f?.42-.3*Ease.unit(t,BEAM+.05f,BEAM+.08f):.12-.05*Ease.smooth(t,BEAM+.1f,END);
         float al=1-Ease.smooth(t,END,END+.4f);
-        Vec3d upOff=new Vec3d(0,w*.38,0);
-        m.line(a.add(upOff),b.add(upOff),w*.9,0x5946bb,al*.45f);m.line(a.add(upOff.multiply(.6)),b.add(upOff.multiply(.6)),w*.7,0xb495f4,al*.7f);
-        m.line(a.subtract(upOff),b.subtract(upOff),w*.9,0x7976a3,al*.35f);m.line(a.subtract(upOff.multiply(.6)),b.subtract(upOff.multiply(.6)),w*.7,0xf6e9fa,al*.7f);
-        m.line(a,b,w*.55,0xfdfdfa,al);
-        if(u>=.04f)m.line(a,b,w*1.7,u<.2f?0xb6a8f1:0x8f6cf2,al*.3f);
+        if(!additive){
+            m.softLine(a,b,w*6,u<.2f?0xb6a8f1:0x8f6cf2,al*.45f);
+            m.softLine(a.add(0,w*.6,0),b.add(0,w*.6,0),w*2.5,0x5946bb,al*.3f);
+            return;
+        }
+        // The first frames' white mass widens out to his right (it comes toward the camera on screen-left).
+        if(u<.08f)m.softTaper(a,b,.15,2.6,0xfdfdfa,.85f*(1-Ease.unit(t,BEAM+.05f,BEAM+.08f)));
+        m.softLine(a,b,w*2.2,0xf6e9fa,al*.8f);m.line(a,b,w*.6,0xfdfdfa,al);
         // Short white vertical plume at his right for three frames.
-        if(t>=4.65f&&t<4.70f){Vec3d p=fin(c,-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,.9,0),.3,.4,0xffffff,.8f);}
+        if(t>=4.65f&&t<4.72f){Vec3d p=fin(c,-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,2.6,0),.32,.3,0xffffff,.9f);}
     }
     /** V8: pink-violet glowing puff around the sword fist. */
     static void handSmoke(Fx c,EffectMesh m,float t){
@@ -276,14 +289,14 @@ final class HighestSkill implements Fx.Skill {
         if(t<4.67f||t>=5.47f)return;
         // Violet haze and glittering dots along the beam on his right.
         float haze=Ease.smooth(t,4.65f,4.72f)*(1-Ease.smooth(t,4.9f,5.3f));
-        for(int k=0;k<8;k++)m.softDisc(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5),.8+5.5*k/8.0),.45+.2*Ease.hash(k*3),0x6a4bd0,.3f*haze);
-        for(int k=0;k<40;k++){
-            double rt=.6+6*Ease.hash(k*7+1),up=1.25+(Ease.hash(k*9+2)-.5)*.9,drift=(t-4.67f)*.25;
+        for(int k=0;k<12;k++)m.softDisc(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5),.8+5.5*k/12.0),.45+.2*Ease.hash(k*3),0x6a4bd0,.3f*haze);
+        for(int k=0;k<90;k++){
+            double rt=.5+6*Ease.hash(k*7+1),up=.4+2*Ease.hash(k*9+2),drift=(t-4.67f)*.25;
             float a=haze*(float)Math.abs(Math.sin(t*9+k*1.7));
             m.softDisc(fin(c,-.25+(Ease.hash(k*13)-.5)*.4,up+drift,rt),.035+.035*Ease.hash(k*11),k%3==0?0xe2e5fb:0xb8a0ff,a);
         }
-        for(int k=0;k<22;k++){
-            double rt=.4+5*Ease.hash(k*3+5),up=.7+1.2*Ease.hash(k*5+6),drift=(t-4.67f)*(.2+.3*Ease.hash(k*7+7));
+        for(int k=0;k<36;k++){
+            double rt=.4+5.5*Ease.hash(k*3+5),up=.5+1.8*Ease.hash(k*5+6),drift=(t-4.67f)*(.2+.3*Ease.hash(k*7+7));
             Vec3d p=fin(c,-.4+.6*Ease.hash(k*11+8),up+drift*.5,rt+drift);
             float a=(float)Math.sin(Math.PI*Ease.unit(t,4.67f+.15f*(float)Ease.hash(k*13),5.47f));
             m.star(p,.04+.05*Ease.hash(k*17),0xe2e5fb,a);
@@ -300,29 +313,41 @@ final class HighestSkill implements Fx.Skill {
         }
     }
     /**
-     * V7: dark scythe crescent on his right: the straight upper edge runs from far out along the beam
-     * down to the sword tip at his feet, the lower edge sags to the ground. It stays after the cut as
-     * the violet line on the ground and fades out linearly over ≈1.4 s.
+     * V7: dark scythe crescent on his right: the straight upper edge rises from the sword tip at his
+     * feet out to his right (and a little toward the camera), the lower edge sags to the ground. A
+     * violet glow comes off it for half a second; after the cut it is the violet line on the ground,
+     * fading out linearly over ≈1.4 s.
      */
     static void crescent(Fx c,EffectMesh m,float t){
         if(t<BEAM||t>=END+1.4f)return;
-        float a=t<END?.85f:.85f*(1-Ease.unit(t,END,END+1.4f));
-        Vec3d near=fin(c,.3,.05,1.0),far=fin(c,-.4,1.25,14*STUD+1.0);
+        float a=t<END?.9f:.9f*(1-Ease.unit(t,END,END+1.4f));
+        // In shot 5 the far horn climbs toward the camera-left, past the beam; after the cut it lies along the ground.
+        boolean cut=t>=END;
+        Vec3d near=fin(c,.25,.05,.7),far=cut?fin(c,-.3,.8,5.5):fin(c,1.0,3.8,4.0);
+        double thick=(cut?1.1:2.0)*STUD;
         int n=24;
         for(int i=0;i<n;i++){
             double s0=i/(double)n,s1=(i+1)/(double)n;
             Vec3d u0=near.lerp(far,s0),u1=near.lerp(far,s1);
-            // Scythe profile: thickest a third of the way out, the lower edge a deep concave curve.
-            double th0=2.6*STUD*Math.pow(Math.sin(Math.PI*s0),.75)*(1-.45*s0),th1=2.6*STUD*Math.pow(Math.sin(Math.PI*s1),.75)*(1-.45*s1);
-            // Sagging toward the ground and slightly outward (forward of the beam line).
-            Vec3d l0=u0.add(fin(c,.25*th0,-th0*1.6,0).subtract(c.origin)),l1=u1.add(fin(c,.25*th1,-th1*1.6,0).subtract(c.origin));
+            // Scythe profile: thickest a third of the way out, the lower edge a concave curve.
+            double th0=thick*Math.pow(Math.sin(Math.PI*s0),.75)*(1-.3*s0),th1=thick*Math.pow(Math.sin(Math.PI*s1),.75)*(1-.3*s1);
+            Vec3d l0=u0.add(fin(c,.15*th0,-th0,0).subtract(c.origin)),l1=u1.add(fin(c,.15*th1,-th1,0).subtract(c.origin));
             l0=new Vec3d(l0.x,Math.max(c.origin.y+.02,l0.y),l0.z);l1=new Vec3d(l1.x,Math.max(c.origin.y+.02,l1.y),l1.z);
             Vec3d m0=u0.lerp(l0,.45),m1=u1.lerp(l1,.45);
-            m.vertex(u0,0x5969de,a);m.vertex(u1,0x5969de,a);m.vertex(m1,0x1a2190,a);m.vertex(m0,0x1a2190,a);
-            m.vertex(m0,0x1a2190,a);m.vertex(m1,0x1a2190,a);m.vertex(l1,0x070c3a,a);m.vertex(l0,0x070c3a,a);
-            // Crisp black-indigo outer rim.
+            // Near-black navy blade, violet-blue only along the inner edge, then a crisp black-indigo outer rim.
+            m.vertex(u0,0x262c94,a);m.vertex(u1,0x262c94,a);m.vertex(m1,0x0d1150,a);m.vertex(m0,0x0d1150,a);
+            m.vertex(m0,0x0d1150,a);m.vertex(m1,0x0d1150,a);m.vertex(l1,0x04061e,a);m.vertex(l0,0x04061e,a);
             Vec3d o0=l0.add(0,-.03,0),o1=l1.add(0,-.03,0);
             m.vertex(l0,0x04011c,a);m.vertex(l1,0x04011c,a);m.vertex(o1,0x000001,a);m.vertex(o0,0x000001,a);
+        }
+        // Lavender inner edge where it meets the beam.
+        m.line(near,far,.05,0x818afd,a*.8f);
+        // Violet glow rising off the blade for half a second after the beam.
+        float glow=Ease.smooth(t,BEAM+.05f,BEAM+.12f)*(1-Ease.smooth(t,4.95f,5.45f));
+        if(glow>0)for(int k=0;k<12;k++){
+            // Violet over the blade, turning magenta toward the sword hand.
+            double s=(k+.5)/12;Vec3d p=near.lerp(far,s).add(0,.1+.3*Ease.hash(k*7+3),0);
+            m.softDisc(p,.55+.45*Math.sin(Math.PI*s),s<.3?0xb848e0:k%2==0?0x7a3ce0:0x9a4cf0,.5f*glow);
         }
     }
 }

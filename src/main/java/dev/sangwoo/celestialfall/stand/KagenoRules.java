@@ -13,7 +13,9 @@ public final class KagenoRules {
     public static final double STOP_RADIUS=3,HIGHEST_RADIUS=5;
     /** P: the pose lets go of the body at 18.68 s; the cast runs on to 19.45 s so the fading effects and a crescent in flight finish. */
     public static final int P_RELEASE=374;
-    public static final int[] DURATION={24,78,80,124,74,92,600,116,468,389};
+    /** H holds the caster and the struck until 5.8 s; the cast runs on to 6.45 s while the ground crescent fades. */
+    public static final int H_HOLD=116;
+    public static final int[] DURATION={24,78,80,124,74,92,600,129,468,389};
     /** E: barrage ticks 0.262 s apart from 0.8 s, finisher (guard break) with the crescent at 2.9 s. */
     static final int[] E_TICKS={16,21,26,32,37,42,47};
     public static final int E_FINISH=58;
@@ -33,10 +35,10 @@ public final class KagenoRules {
     private KagenoRules(){}
     public static boolean inside(double distanceSquared,double radius){return Double.isFinite(distanceSquared)&&distanceSquared>=0&&distanceSquared<=radius*radius;}
     public static boolean thrustLane(double forward,double side,double height,double targetHalfWidth){return forward>=-.15&&forward<=3.4+targetHalfWidth&&Math.abs(side)<=.65+targetHalfWidth&&Math.abs(height)<=2.2;}
-    public static boolean frozen(int skill,float age){return skill==R&&age>=R_GRAY&&age<R_COLOR||skill==H&&age>=0&&age<DURATION[H];}
+    public static boolean frozen(int skill,float age){return skill==R&&age>=R_GRAY&&age<R_COLOR||skill==H&&age>=0&&age<H_HOLD;}
     /** Targets caught in T's fire stand frozen inside the dark orb; T+ holds them until the cut. */
     public static boolean trapped(int skill,float age){return skill==T&&age>=T_STRIKE&&age<T_STRIKE+71||skill==RUSH&&age>=T_STRIKE+7&&age<RUSH_FINISH||skill==Y&&age>=Y_FLASH&&age<Y_LAUNCH;}
-    public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:skill==P?P_RELEASE:DURATION[skill];}
+    public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:skill==P?P_RELEASE:skill==H?H_HOLD:DURATION[skill];}
     /** Vertical speed (blocks per tick) of a Y target {@code ticks} after the launch. */
     public static double yLift(int ticks){return Y_LIFT-Y_GRAVITY*ticks;}
     /** Hits one damage tick stands for (R's four stored cuts register together). */

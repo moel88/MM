@@ -142,7 +142,7 @@ public final class StandClient {
         }
         return 0;
     }
-    public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<DURATION[H]&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
+    public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<KagenoRules.H_HOLD&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
     public static Cast action(UUID id){return CASTS.values().stream().filter(c->c.caster.equals(id)&&c.age(0)<inputEnd(c.skill)).reduce((a,b)->b).orElse(null);}
     public static Cast visualCast(){var mc=MinecraftClient.getInstance();if(mc.player==null)return null;Cast cinematic=cinematic();if(cinematic!=null)return cinematic;return CASTS.values().stream().filter(c->c.origin.squaredDistanceTo(mc.player.getPos())<32*32).min(Comparator.comparingDouble(c->c.caster.equals(mc.player.getUuid())?-1:c.origin.squaredDistanceTo(mc.player.getPos()))).orElse(null);}
     public static void send(int action){if(!ClientPlayNetworking.canSend(KagenoManager.INPUT))return;var b=PacketByteBufs.create();b.writeByte(action);ClientPlayNetworking.send(KagenoManager.INPUT,b);}
