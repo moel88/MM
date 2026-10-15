@@ -15,11 +15,15 @@ final class KagenoAudio {
         String name=switch(c.skill()){case M1->"m1_"+c.combo();case E->"e";case R->"r";case T->"t";case RUSH->"rush";case Y->"y";case H->"h";default->null;};if(name==null)return;
         float volume=(float)(CelestialFall.CONFIG.effectVolume*(c.includes(mc.player.getUuid())?1:Math.max(0,1-mc.player.getPos().distanceTo(c.origin())/40)));
         var sound=new PositionedSoundInstance(CelestialFall.id("kageno_"+name),SoundCategory.PLAYERS,volume,1,net.minecraft.util.math.random.Random.create(),false,0,SoundInstance.AttenuationType.NONE,0,0,0,true);
-        // Y's boom belongs to the flash 1.03 s in; the recording starts with 0.25 s of silence.
-        int delay=c.skill()==Y?Math.max(0,16-(int)c.age(0)):0;
+        // Start offsets measured by cross-correlating each recording with the 60 fps review's audio
+        // (spectral flux, r = 0.64-0.93): the sounds belong this long after the first motion frame.
+        int lead=switch(c.skill()){case M1->c.combo()==1?8:c.combo()==4?10:9;case E->10;case R->7;case T->12;case RUSH->8;case Y->12;case H->3;default->0;};
+        int delay=Math.max(0,lead-(int)c.age(0));
         PLAYING.put(c.id(),sound);if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
     }
     static void stop(UUID id){var sound=PLAYING.remove(id);if(sound!=null)MinecraftClient.getInstance().getSoundManager().stop(sound);}
-    static void retain(Set<UUID> ids){for(var id:new ArrayList<>(PLAYING.keySet()))if(!ids.contains(id))stop(id);}
+    /** A cast that ran its full length lets its (delayed) recording finish instead of cutting it. */
+    static void finish(UUID id){PLAYING.remove(id);}
+    static void retain(Set<UUID> ids){for(var id:new ArrayList<>(PLAYING.keySet()))if(!ids.contains(id))finish(id);}
     static void clear(){for(var id:new ArrayList<>(PLAYING.keySet()))stop(id);}
 }

@@ -100,7 +100,7 @@ final class PoseSkill implements Fx.Skill {
     /** Large violet light pool on the ground (≈20 studs), ramping on in 0.1 s. */
     static void pool(Fx c,EffectMesh m,float t){
         if(t<POOL||t>=RELEASE+.2f)return;
-        float a=Ease.smooth(t,POOL,POOL+.1f)*(1-Ease.smooth(t,RELEASE+.1f,RELEASE+.2f))*.62f;
+        float a=Ease.smooth(t,POOL,POOL+.1f)*(1-Ease.smooth(t,RELEASE+.1f,RELEASE+.2f))*.78f;
         Vec3d o=c.origin.add(0,.02,0);double r=20*STUD;
         for(int i=0;i<32;i++){
             double a0=i*Math.PI/16,a1=(i+1)*Math.PI/16;
@@ -118,11 +118,13 @@ final class PoseSkill implements Fx.Skill {
         int n=18;
         for(int k=0;k<n;k++){
             // Spikes re-randomise every frame or two (flickering shape); a few long single spikes in phase 2.
-            double th=(k+.5*Ease.hash(frame*31+k))*Math.PI*2/n,len=base*(.65+.45*Ease.hash(frame*17+k*3))*(w&&Ease.hash(frame*7+k)>.85?1.35:1),half=Math.PI/n*.55;
+            double th=(k+.5*Ease.hash(frame*31+k))*Math.PI*2/n,len=base*(.65+.45*Ease.hash(frame*17+k*3))*(w&&Ease.hash(frame*7+k)>.85?1.35:1),half=Math.PI/n*.85;
             Vec3d l=o.add(Math.cos(th-half)*base*.32,0,Math.sin(th-half)*base*.32),r=o.add(Math.cos(th+half)*base*.32,0,Math.sin(th+half)*base*.32),tipP=o.add(Math.cos(th)*len,0,Math.sin(th)*len);
             m.vertex(o,fill,.95f);m.vertex(l,fill,.9f);m.vertex(tipP,rim,.6f);m.vertex(r,fill,.9f);
         }
         m.softDisc(o.add(0,.05,0),base*1.25,rim,.25f);
+        // Solid hot centre.
+        annulus(m,o.add(0,.005,0),0,base*.42,0,Math.PI*2,24,fill,.95f);
     }
     /** Phase 2 small pulse: a magenta filled disc that hollows into a pink annulus and a thin white ring (0.38 s). */
     static void rings(Fx c,EffectMesh m,float t){

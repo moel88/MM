@@ -98,7 +98,7 @@ final class BarrageSkill implements Fx.Skill {
             // Jagged branching lightning forward and down to the ground, re-randomised every frame or two;
             // densest at the onset.
             if(t>=.534f){
-                long step=(long)Math.floor(t*40);int bolts=t<.69f?7:Ease.hash((int)step)>.3?3:1;
+                long step=(long)Math.floor(t*40);int bolts=t<.69f?8:Ease.hash((int)step)>.3?5:2;
                 for(int k=0;k<bolts;k++){
                     Vec3d p=o.add(rotateAim(c,(Ease.hash((int)step*7+k)-.5)*50,(Ease.hash((int)step*13+k)-.6)*40).multiply(1.1*size));double len=(.5+1.9*Ease.hash((int)step*3+k))*H;
                     Vec3d end=p.add(rotateAim(c,(Ease.hash((int)step*5+k)-.5)*60,-35-30*Ease.hash((int)step*9+k)).multiply(len));

@@ -37,8 +37,10 @@ final class HighestSkill implements Fx.Skill {
     static final R6.Pose K5=pose().body(0,55,0).head(0,-40,0).rArm(-20,150).blade(10,160).lArm(55,-20).lLeg(10,0).rLeg(-85,180);
     static final R6.Pose K6=pose().body(0,40,0).head(0,-35,0).lArm(15,-10).rArm(-15,110).blade(0,120).rLeg(-50,140).lLeg(-5,-15);
     static final R6.Pose K7=pose().head(0,-5,0).lArm(25,-10).rArm(-20,60).blade(-30,70);
-    static final R6.Pose K8=pose().body(35,0,0).head(65,0,0).rArm(78,-30).blade(78,-150).lArm(-78,-5);
-    static final R6.Pose K10=pose().at(0,-.05,0).rArm(-42,75).lArm(-42,-75).blade(-37,75).rLeg(-72,90).lLeg(-72,-90);
+    /** Shot-5 camera azimuth: he stands turned 35° away from it, then squares up to it at the downswing. */
+    static final float SQUARE=35;
+    static final R6.Pose K8=pose().head(SQUARE,0,0).rArm(78,-30).blade(78,-150).lArm(-78,-5);
+    static final R6.Pose K10=pose().at(0,-.05,0).body(-SQUARE,0,0).rArm(-42,75).lArm(-42,-75).blade(-37,75).rLeg(-72,90).lLeg(-72,-90);
     /** Leap curve: fast start, strong ease-out, apex at ≈0.5 s. */
     static double leap(float t){double u=Math.min(1,t/.5);return 1-Math.pow(1-u,2.4);}
     static final Anim CLIP;
@@ -71,7 +73,7 @@ final class HighestSkill implements Fx.Skill {
         keys.add(k(3.58,K7.rArm(40,-10).blade(50,-20),Anim.Ease.LINEAR));
         keys.add(k(3.66,K8,Anim.Ease.OUT));
         keys.add(k(DOWN,K8,Anim.Ease.HOLD));
-        keys.add(k(DOWN+.025f,pose().body(15,0,0).rArm(20,80).blade(10,85).rLeg(-80,90).lLeg(-80,-90),Anim.Ease.LINEAR));
+        keys.add(k(DOWN+.025f,pose().body(-SQUARE*.5f,0,0).rArm(20,80).blade(10,85).rLeg(-80,90).lLeg(-80,-90),Anim.Ease.LINEAR));
         keys.add(k(DOWN+.05f,K10,Anim.Ease.LINEAR));
         keys.add(k(END,K10,Anim.Ease.HOLD));
         keys.add(k(END+.45f,KagenoClips.IDLE));
@@ -170,6 +172,11 @@ final class HighestSkill implements Fx.Skill {
         smear(c,m,t);
         crescent(c,m,t);
     }
+    /** Point in the finisher frame: the cast frame turned to face the shot-5 camera (forward, up, right). */
+    static Vec3d fin(Fx c,double fw,double up,double rt){
+        double a=Math.toRadians(SQUARE);Vec3d f=c.f.multiply(Math.cos(a)).add(c.right.multiply(Math.sin(a))),r=c.right.multiply(Math.cos(a)).subtract(c.f.multiply(Math.sin(a)));
+        return c.origin.add(f.multiply(fw)).add(0,up,0).add(r.multiply(rt));
+    }
     /** Camera screen axes (right, up), including the cutscene roll. */
     static Vec3d[] screen(Fx c){
         var cam=c.mc.gameRenderer.getCamera();var f=cam.getHorizontalPlane();var u=cam.getVerticalPlane();
@@ -191,9 +198,9 @@ final class HighestSkill implements Fx.Skill {
             m.softDisc(o,core*3.4,0xfcc8fd,a*.55f);m.softDisc(o,core*2.0,0xe278f5,a*.55f);
             for(int k=0;k<4;k++){
                 Vec3d dir=k==0?up:k==1?up.negate():k==2?right:right.negate();double len=k<2?vert:horiz;
-                m.needle(o,o.add(dir.multiply(len)),core*.42,.02,0x8c6af8,a*.85f);
-                m.needle(o,o.add(dir.multiply(len*.55)),core*.7,.02,0xb26ef5,a*.9f);
-                m.needle(o,o.add(dir.multiply(len*.3)),core*1.0,.02,0xd96ef9,a);
+                m.needle(o,o.add(dir.multiply(len)),core*.6,.02,0x8c6af8,a*.9f);
+                m.needle(o,o.add(dir.multiply(len*.55)),core*1.0,.02,0xb26ef5,a*.95f);
+                m.needle(o,o.add(dir.multiply(len*.3)),core*1.5,.02,0xd96ef9,a);
             }
             return;
         }
@@ -206,8 +213,8 @@ final class HighestSkill implements Fx.Skill {
         Vec3d[] p=zigzag(c);float fade=1-Ease.smooth(t,3.2f,SHOT4);
         for(int i=0;i<10;i++){
             if(t<ZIG[i])break;Vec3d a=p[i],b=p[i+1];
-            if(additive){m.line(a,b,1.8,0x9c97fa,.1f*fade);m.line(a,b,1.1,0xc19cfe,.18f*fade);m.line(a,b,.14,0xfebbfe,.8f*fade);}
-            else{m.line(a,b,.75,0xe6a7fc,.55f*fade);m.line(a,b,.5,0xf77ffa,fade);}
+            if(additive){m.line(a,b,2.6,0x9c97fa,.1f*fade);m.line(a,b,1.6,0xc19cfe,.18f*fade);m.line(a,b,.22,0xfebbfe,.8f*fade);}
+            else{m.line(a,b,1.2,0xe6a7fc,.55f*fade);m.line(a,b,.8,0xf77ffa,fade);}
         }
     }
     /** Intensity envelope of the slash-line burst (peak ≈3.88 s, pulsing, gone ≈4.42 s). */
@@ -246,7 +253,7 @@ final class HighestSkill implements Fx.Skill {
     /** V6: horizontal white-violet beam behind the torso along the lateral axis, far to his right. */
     static void beam(Fx c,EffectMesh m,float t){
         if(t<BEAM||t>=END+.4f)return;
-        Vec3d a=c.at0(-.2,1.25,-3*STUD),b=c.at0(-.2,1.25,45*STUD);
+        Vec3d a=fin(c,-.2,1.25,-3*STUD),b=fin(c,-.2,1.25,45*STUD);
         float u=t-BEAM;
         double w=u<.05f?.42:u<.08f?.42-.28*Ease.unit(t,BEAM+.05f,BEAM+.08f):.14-.06*Ease.smooth(t,BEAM+.1f,END);
         float al=1-Ease.smooth(t,END,END+.4f);
@@ -256,7 +263,7 @@ final class HighestSkill implements Fx.Skill {
         m.line(a,b,w*.55,0xfdfdfa,al);
         if(u>=.04f)m.line(a,b,w*1.7,u<.2f?0xb6a8f1:0x8f6cf2,al*.3f);
         // Short white vertical plume at his right for three frames.
-        if(t>=4.65f&&t<4.70f){Vec3d p=c.at0(-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,.9,0),.3,.4,0xffffff,.8f);}
+        if(t>=4.65f&&t<4.70f){Vec3d p=fin(c,-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,.9,0),.3,.4,0xffffff,.8f);}
     }
     /** V8: pink-violet glowing puff around the sword fist. */
     static void handSmoke(Fx c,EffectMesh m,float t){
@@ -269,15 +276,15 @@ final class HighestSkill implements Fx.Skill {
         if(t<4.67f||t>=5.47f)return;
         // Violet haze and glittering dots along the beam on his right.
         float haze=Ease.smooth(t,4.65f,4.72f)*(1-Ease.smooth(t,4.9f,5.3f));
-        for(int k=0;k<8;k++)m.softDisc(c.at0(-.25,1.2+.2*(Ease.hash(k*5+1)-.5),.8+5.5*k/8.0),.45+.2*Ease.hash(k*3),0x6a4bd0,.3f*haze);
+        for(int k=0;k<8;k++)m.softDisc(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5),.8+5.5*k/8.0),.45+.2*Ease.hash(k*3),0x6a4bd0,.3f*haze);
         for(int k=0;k<40;k++){
             double rt=.6+6*Ease.hash(k*7+1),up=1.25+(Ease.hash(k*9+2)-.5)*.9,drift=(t-4.67f)*.25;
             float a=haze*(float)Math.abs(Math.sin(t*9+k*1.7));
-            m.softDisc(c.at0(-.25+(Ease.hash(k*13)-.5)*.4,up+drift,rt),.035+.035*Ease.hash(k*11),k%3==0?0xe2e5fb:0xb8a0ff,a);
+            m.softDisc(fin(c,-.25+(Ease.hash(k*13)-.5)*.4,up+drift,rt),.035+.035*Ease.hash(k*11),k%3==0?0xe2e5fb:0xb8a0ff,a);
         }
         for(int k=0;k<22;k++){
             double rt=.4+5*Ease.hash(k*3+5),up=.7+1.2*Ease.hash(k*5+6),drift=(t-4.67f)*(.2+.3*Ease.hash(k*7+7));
-            Vec3d p=c.at0(-.4+.6*Ease.hash(k*11+8),up+drift*.5,rt+drift);
+            Vec3d p=fin(c,-.4+.6*Ease.hash(k*11+8),up+drift*.5,rt+drift);
             float a=(float)Math.sin(Math.PI*Ease.unit(t,4.67f+.15f*(float)Ease.hash(k*13),5.47f));
             m.star(p,.04+.05*Ease.hash(k*17),0xe2e5fb,a);
         }
@@ -285,10 +292,10 @@ final class HighestSkill implements Fx.Skill {
     /** V5: brief translucent dark-blue ribbon along the downswing arc. */
     static void smear(Fx c,EffectMesh m,float t){
         if(t<4.255f||t>=4.30f)return;
-        float a=.4f*(1-Ease.smooth(t,4.28f,4.30f));Vec3d s=c.at0(0,1.4,.35);
+        float a=.4f*(1-Ease.smooth(t,4.28f,4.30f));Vec3d s=fin(c,0,1.4,.35);
         for(int i=0;i<12;i++){
             double a0=Math.toRadians(85-122*i/12.0),a1=Math.toRadians(85-122*(i+1)/12.0);
-            Vec3d d0=c.vec(.15,Math.sin(a0),Math.cos(a0)),d1=c.vec(.15,Math.sin(a1),Math.cos(a1));
+            Vec3d d0=fin(c,.15,Math.sin(a0),Math.cos(a0)).subtract(c.origin),d1=fin(c,.15,Math.sin(a1),Math.cos(a1)).subtract(c.origin);
             m.quad(s.add(d0.multiply(.6)),s.add(d1.multiply(.6)),s.add(d1.multiply(1.75)),s.add(d0.multiply(1.75)),0x3c5aa0,a);
         }
     }
@@ -300,14 +307,14 @@ final class HighestSkill implements Fx.Skill {
     static void crescent(Fx c,EffectMesh m,float t){
         if(t<BEAM||t>=END+1.4f)return;
         float a=t<END?.85f:.85f*(1-Ease.unit(t,END,END+1.4f));
-        Vec3d near=c.at0(.35,.05,.9),far=c.at0(.3,1.2,3.4);
+        Vec3d near=fin(c,.3,.05,1.0),far=fin(c,-.4,1.25,14*STUD+1.0);
         int n=24;
         for(int i=0;i<n;i++){
             double s0=i/(double)n,s1=(i+1)/(double)n;
             Vec3d u0=near.lerp(far,s0),u1=near.lerp(far,s1);
             double th0=2.4*STUD*4*s0*(1-s0)*(1-.3*s0),th1=2.4*STUD*4*s1*(1-s1)*(1-.3*s1);
             // Sagging toward the ground and slightly outward (forward of the beam line).
-            Vec3d l0=u0.add(c.vec(.25*th0,-th0*1.6,0)),l1=u1.add(c.vec(.25*th1,-th1*1.6,0));
+            Vec3d l0=u0.add(fin(c,.25*th0,-th0*1.6,0).subtract(c.origin)),l1=u1.add(fin(c,.25*th1,-th1*1.6,0).subtract(c.origin));
             l0=new Vec3d(l0.x,Math.max(c.origin.y+.02,l0.y),l0.z);l1=new Vec3d(l1.x,Math.max(c.origin.y+.02,l1.y),l1.z);
             Vec3d m0=u0.lerp(l0,.45),m1=u1.lerp(l1,.45);
             m.vertex(u0,0x818afd,a);m.vertex(u1,0x818afd,a);m.vertex(m1,0x2229b8,a);m.vertex(m0,0x2229b8,a);

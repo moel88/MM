@@ -38,7 +38,7 @@ public final class HealNumbers {
             Vec3d look=camera.subtract(p.getLerpedPos(delta)).multiply(1,0,1);if(look.lengthSquared()<1e-4)look=new Vec3d(0,0,1);look=look.normalize();
             Vec3d right=new Vec3d(look.z,0,-look.x);
             double dx=(Ease.hash(seed)*2-1)*.75*.36,dy=(-1.05+1.6*Ease.hash(seed+1))*.36,tilt=(Ease.hash(seed+2)*2-1)*17;
-            Vec3d at=p.getLerpedPos(delta).add(0,1.1+dy,0).add(right.multiply(dx)).add(look.multiply(.3));
+            Vec3d at=p.getLerpedPos(delta).add(0,1.1+dy,0).add(right.multiply(dx)).add(look.multiply(.55));
             float scale=1,dark=0;
             if(age>HOLD){
                 float u=(age-HOLD)/EXIT,k=u*u*u;double ang=Ease.hash(seed+3)*Math.PI*2;

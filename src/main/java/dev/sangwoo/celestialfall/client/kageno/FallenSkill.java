@@ -30,7 +30,7 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  */
 final class FallenSkill implements Fx.Skill {
     static final double H=1.8;
-    static final float LAND=.467f,CHUNKS=LAND+.08f,FLASH=1.034f,STAND=1.60f,SINK=FLASH+3.0f;
+    static final float LAND=.467f,CHUNKS=LAND+.08f,FLASH=1.034f,STAND=1.60f,SINK=FLASH+3.08f;
 
     // Windup: the torso turns 25-35° left and leans back while the left knee rises to the chest.
     static final R6.Pose K1=pose().body(25,-5,0).rArm(-30,-21).blade(-55,-10).lArm(-70,-106).lLeg(-50,0).rLeg(-85,180);

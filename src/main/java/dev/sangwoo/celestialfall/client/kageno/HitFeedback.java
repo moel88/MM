@@ -48,7 +48,7 @@ public final class HitFeedback {
                 double sp=1.5+2*Ease.hash(b.seed()+k*7);Vec3d v=b.dir().multiply(sp).add(side.multiply((Ease.hash(b.seed()+k*11)-.5)*2)).add(0,1+1.5*Ease.hash(b.seed()+k*13),0);
                 Vec3d p=b.at().add(v.multiply(t)).add(0,-4.9*t*t,0);double s=.03+.04*Ease.hash(b.seed()+k*17);
                 int col=k%3==0?0x87070a:k%3==1?0x701c26:0xc43b39;
-                m.quad(p.add(-s,0,0),p.add(0,s,0),p.add(s,0,0),p.add(0,-s,0),col,a);
+                m.needle(p.add(0,s,0),p.subtract(0,s,0),s*1.6,.5,col,a);
             }
         }
     }
@@ -60,7 +60,9 @@ public final class HitFeedback {
             Entity e=mc.world.getEntityById(en.getKey());var n=en.getValue();
             float since=(now-n.last+delta)/20f,a=1-Ease.smooth(since,COMBO,COMBO+.3f);if(a<=0)continue;
             float pop=1+.35f*(1-Ease.smooth(since,0,.12f));
-            Vec3d at=e.getLerpedPos(delta).add(0,e.getHeight()*.62,0);
+            // On the chest, but in front of the body as seen from the camera so the model never hides it.
+            Vec3d chest=e.getLerpedPos(delta).add(0,e.getHeight()*.62,0),toCam=mc.gameRenderer.getCamera().getPos().subtract(chest);
+            Vec3d at=toCam.lengthSquared()<1e-4?chest:chest.add(toCam.normalize().multiply(e.getWidth()*.5+.35));
             matrices.push();matrices.translate(at.x,at.y,at.z);matrices.multiply(mc.gameRenderer.getCamera().getRotation());
             float s=.026f*pop;matrices.scale(-s,-s,s);
             var text=Text.literal(HealNumbers.format(n.total)).asOrderedText();float w=mc.textRenderer.getWidth(text);

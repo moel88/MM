@@ -49,7 +49,7 @@ public final class StandClient {
             var targets=new ArrayList<Target>();for(int i=0;i<n;i++)targets.add(new Target(b.readUuid(),b.readInt(),vec(b)));
             mc.execute(()->{if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);acceptCast(new Cast(id,caster,dim,skill,combo,start,serverNow,ticks,origin,yaw,List.copyOf(targets)));});
         });
-        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STOP,(mc,h,b,r)->{UUID id=b.readUuid();mc.execute(()->{CASTS.remove(id);KagenoAudio.stop(id);});});
+        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STOP,(mc,h,b,r)->{UUID id=b.readUuid();mc.execute(()->{var c=CASTS.remove(id);if(c!=null&&c.age(0)>=DURATION[c.skill]-2)KagenoAudio.finish(id);else KagenoAudio.stop(id);});});
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STATUS,(mc,h,b,r)->{
             UUID id=b.readUuid();var dim=b.readIdentifier();long until=b.readLong();float boost=b.readFloat();long[] ready=new long[9];for(int i=0;i<9;i++)ready[i]=b.readLong();int n=b.readVarInt();if(n<0||n>4096)return;
             var marks=new ArrayList<Mark>();for(int i=0;i<n;i++)marks.add(new Mark(b.readUuid(),b.readInt(),b.readLong()));
