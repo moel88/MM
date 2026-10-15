@@ -46,8 +46,8 @@ final class PoseSkill implements Fx.Skill {
         // Breathing sway: the arms and blade rise and fall ≈3° with a 3 s period.
         for(float t=2.75f;t<RELEASE;t+=.75f){double s=Math.sin((t-2.0)*Math.PI*2/3.0)*3;keys.add(k(t,FINAL.rArm(-27+s,60).lArm(-47+s,-50).blade(-20+s,75)));}
         keys.add(k(RELEASE,FINAL,Anim.Ease.HOLD));
+        // The clip ends with the snap so walking takes the legs back as soon as the pose lets go.
         keys.add(k(RELEASE+.033f,KagenoClips.IDLE,Anim.Ease.LINEAR));
-        keys.add(k(RELEASE+.3f,KagenoClips.IDLE));
         CLIP=Anim.of(keys.toArray(Key[]::new));
     }
     @Override public Anim clip(int combo){return CLIP;}

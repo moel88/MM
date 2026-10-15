@@ -132,14 +132,31 @@ public final class StandClient {
         return best;
     }
     public static boolean monochrome(){var p=MinecraftClient.getInstance().player;return p!=null&&p.isAlive()&&CASTS.values().stream().anyMatch(c->c.skill==R&&KagenoRules.frozen(R,c.age(0))&&c.includes(p.getUuid()));}
+    /** H: on the participants' screens the struck appear in no cutscene shot; they come back at the hard cut. */
+    public static boolean cutsceneHidden(Entity e){var c=cinematic();return c!=null&&!c.caster.equals(e.getUuid())&&c.includes(e.getUuid())&&c.age(0)<KagenoRules.H_CUT;}
+    /** H: after the cut each target leans back ≈35° (stagger) and is upright again 0.7 s later; its feet stay put. */
+    public static float stagger(Entity e,float delta){
+        for(var c:CASTS.values())if(c.skill==H&&!c.caster.equals(e.getUuid())&&c.includes(e.getUuid())){
+            float t=(c.age(delta)-KagenoRules.H_CUT)/20f;
+            if(t>=0&&t<.7f){float u=t/.7f;return 35*(1-u*u*(3-2*u));}
+        }
+        return 0;
+    }
     public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<DURATION[H]&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
     public static Cast action(UUID id){return CASTS.values().stream().filter(c->c.caster.equals(id)&&c.age(0)<inputEnd(c.skill)).reduce((a,b)->b).orElse(null);}
     public static Cast visualCast(){var mc=MinecraftClient.getInstance();if(mc.player==null)return null;Cast cinematic=cinematic();if(cinematic!=null)return cinematic;return CASTS.values().stream().filter(c->c.origin.squaredDistanceTo(mc.player.getPos())<32*32).min(Comparator.comparingDouble(c->c.caster.equals(mc.player.getUuid())?-1:c.origin.squaredDistanceTo(mc.player.getPos()))).orElse(null);}
     public static void send(int action){if(!ClientPlayNetworking.canSend(KagenoManager.INPUT))return;var b=PacketByteBufs.create();b.writeByte(action);ClientPlayNetworking.send(KagenoManager.INPUT,b);}
     public static boolean punch(){
         var mc=MinecraftClient.getInstance();if(!StandManager.kageno(mc.player))return false;
-        if(CombatClient.combatInput()&&mc.world.getTime()>=nextPunch){BotandCamera.prepareInteraction();send(M1);nextPunch=mc.world.getTime()+1;}
+        if(skillInput()&&mc.world.getTime()>=nextPunch){BotandCamera.prepareInteraction();send(M1);nextPunch=mc.world.getTime()+1;}
         return true;
+    }
+    /** The pose holds the body still but not the keys that end it: P again or any skill (the server releases the pose first). */
+    private static boolean skillInput(){
+        if(CombatClient.combatInput())return true;
+        var mc=MinecraftClient.getInstance();if(mc.player==null||mc.world==null)return false;var c=action(mc.player.getUuid());
+        return c!=null&&c.skill()==P&&!frozen(mc.player)&&CombatClient.connected()&&mc.currentScreen==null&&!CinematicDirector.isActive()&&mc.player.isAlive()&&!mc.player.isSpectator()
+            &&!HitStunClient.localStunned()&&!CombatClient.snapshot(mc.player.getUuid()).broken(mc.world.getTime());
     }
     /** Item-use is independent of the stand keys; a held fruit/stone never determines ownership. */
     public static boolean useSkill(){return false;}
@@ -155,7 +172,7 @@ public final class StandClient {
             if(key==GLFW.GLFW_KEY_ENTER){mc.setScreen(new net.minecraft.client.gui.screen.ChatScreen(""));return true;}
             return false;
         }
-        captured.add(key);if(CombatClient.combatInput()){BotandCamera.prepareInteraction();send(skill);if(skill==T_DOWN)holdingT=true;}
+        captured.add(key);if(skillInput()){BotandCamera.prepareInteraction();send(skill);if(skill==T_DOWN)holdingT=true;}
         return true;
     }
     public static float cameraBlend(float delta){var c=cinematic();return c==null?0:dev.sangwoo.celestialfall.client.kageno.KagenoCamera.blend(c,delta);}

@@ -47,8 +47,7 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
         botand$posed=false;
         var atomic=dev.sangwoo.celestialfall.client.AtomicClient.cinematic();
         if(atomic!=null&&!atomic.caster.equals(player.getUuid())&&player.squaredDistanceTo(atomic.origin)<32*32){ci.cancel();return;}
-        var highest=dev.sangwoo.celestialfall.client.StandClient.cinematic();
-        if(highest!=null&&!highest.caster().equals(player.getUuid())&&highest.includes(player.getUuid())){ci.cancel();return;}
+        if(dev.sangwoo.celestialfall.client.StandClient.cutsceneHidden(player)){ci.cancel();return;}
         if(player==net.minecraft.client.MinecraftClient.getInstance().player&&dev.sangwoo.celestialfall.client.BotandCamera.enabled()
             &&!dev.sangwoo.celestialfall.client.CinematicDirector.isActive()&&dev.sangwoo.celestialfall.client.BotandCamera.STATE.collisionDistance<.7){ci.cancel();return;}
         if(player.isAlive() && (AtomicClient.actor(player.getUuid())!=null || dev.sangwoo.celestialfall.client.HeavenClient.actor(player.getUuid())!=null)){ci.cancel();return;}

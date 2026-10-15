@@ -26,5 +26,9 @@ final class KagenoRulesTest {
         assertEquals(3.8,apex,.25);assertTrue(up>=5&&up<=7,"rise ticks "+up);assertTrue(air>=12&&air<=14,"air ticks "+air);
     }
     @Test void overdriveNightAndMarkHaveDistinctMultipliers(){assertEquals(1,KagenoRules.multiplier(false,0,false));assertEquals(1.35,KagenoRules.multiplier(true,0,false));assertEquals(1.05*1.15,KagenoRules.multiplier(false,.05f,true),1e-6);}
+    @Test void poseLetsGoAtTheReleaseWhileItsEffectsFinish(){
+        assertEquals(18.683*20,P_RELEASE,.5);assertEquals(P_RELEASE,inputEnd(P));
+        assertTrue(DURATION[P]>=P_RELEASE+.75*20);assertEquals(0,damage(P,P_RELEASE,0));
+    }
     @Test void ownRHonorsUserOverrideToTimeStopImmunity(){assertFalse(ignoresForeignTimeStop("kageno"));assertFalse(ignoresForeignTimeStop("sakuya"));assertFalse(ignoresForeignTimeStop("return_to_zero"));assertTrue(ignoresForeignTimeStop("dio"));}
 }

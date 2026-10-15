@@ -11,7 +11,9 @@ public final class KagenoRules {
     /** T+ dash: blocks moved on each tick from {@link #RUSH_START} (≈32 blocks, explosive start, eased out). */
     static final double[] RUSH_STEPS={8.5,6.5,4.5,4.5,3,2.5,1.5,1.0};
     public static final double STOP_RADIUS=3,HIGHEST_RADIUS=5;
-    public static final int[] DURATION={24,78,80,124,74,92,600,116,468,375};
+    /** P: the pose lets go of the body at 18.68 s; the cast runs on to 19.45 s so the fading effects and a crescent in flight finish. */
+    public static final int P_RELEASE=374;
+    public static final int[] DURATION={24,78,80,124,74,92,600,116,468,389};
     /** E: barrage ticks 0.262 s apart from 0.8 s, finisher (guard break) with the crescent at 2.9 s. */
     static final int[] E_TICKS={16,21,26,32,37,42,47};
     public static final int E_FINISH=58;
@@ -34,7 +36,7 @@ public final class KagenoRules {
     public static boolean frozen(int skill,float age){return skill==R&&age>=R_GRAY&&age<R_COLOR||skill==H&&age>=0&&age<DURATION[H];}
     /** Targets caught in T's fire stand frozen inside the dark orb; T+ holds them until the cut. */
     public static boolean trapped(int skill,float age){return skill==T&&age>=T_STRIKE&&age<T_STRIKE+71||skill==RUSH&&age>=T_STRIKE+7&&age<RUSH_FINISH||skill==Y&&age>=Y_FLASH&&age<Y_LAUNCH;}
-    public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:DURATION[skill];}
+    public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:skill==P?P_RELEASE:DURATION[skill];}
     /** Vertical speed (blocks per tick) of a Y target {@code ticks} after the launch. */
     public static double yLift(int ticks){return Y_LIFT-Y_GRAVITY*ticks;}
     /** Hits one damage tick stands for (R's four stored cuts register together). */

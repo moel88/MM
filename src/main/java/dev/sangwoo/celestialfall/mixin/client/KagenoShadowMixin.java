@@ -16,8 +16,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Keep the projected shadow under the animated root (slides, lunges, dashes). */
 @Mixin(EntityRenderDispatcher.class)
 public abstract class KagenoShadowMixin {
-    @Inject(method="renderShadow",at=@At("HEAD"))
+    @Inject(method="renderShadow",at=@At("HEAD"),cancellable=true)
     private static void botand$slideShadow(MatrixStack m,VertexConsumerProvider v,Entity entity,float opacity,float delta,WorldView world,float radius,CallbackInfo ci){
+        // H targets kept out of the cutscene leave no shadow behind either.
+        if(StandClient.cutsceneHidden(entity)){ci.cancel();return;}
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(entity.getUuid());
         if(cast==null)return;
         m.push();var offset=dev.sangwoo.celestialfall.client.kageno.KagenoClips.groundOffset(cast,delta);

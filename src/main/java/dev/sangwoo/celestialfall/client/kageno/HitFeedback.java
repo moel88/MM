@@ -58,6 +58,8 @@ public final class HitFeedback {
         NUMBERS.entrySet().removeIf(en->(now-en.getValue().last)/20f>COMBO+.3f||mc.world.getEntityById(en.getKey())==null);
         for(var en:NUMBERS.entrySet()){
             Entity e=mc.world.getEntityById(en.getKey());var n=en.getValue();
+            // H: the total pops up at the target once the cutscene cuts back, as in the review.
+            if(dev.sangwoo.celestialfall.client.StandClient.cutsceneHidden(e))continue;
             float since=(now-n.last+delta)/20f,a=1-Ease.smooth(since,COMBO,COMBO+.3f);if(a<=0)continue;
             float pop=1+.35f*(1-Ease.smooth(since,0,.12f));
             // On the chest, but in front of the body as seen from the camera so the model never hides it.

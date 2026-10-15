@@ -140,7 +140,7 @@ public final class CelestialFall implements ModInitializer {
             dev.sangwoo.celestialfall.commerce.CommerceCommands.add(botand);
             dispatcher.register(botand);
         });
-        LOGGER.info("Botand 2.18.0 initialized");
+        LOGGER.info("Botand {} initialized",net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("celestialfall").map(m->m.getMetadata().getVersion().getFriendlyString()).orElse("?"));
     }
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<ServerCommandSource> noCooldownMode(String name,boolean enabled) {
         return CommandManager.literal(name)
