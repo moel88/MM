@@ -1,0 +1,4 @@
+gradle.projectsEvaluated { rootProject.tasks.named("runClient") {
+    jvmArgs "-Dbotand.capture.map=true", "-Dbotand.cinema.compatibility="+(System.getenv("BOTAND_CAPTURE_COMPAT") ?: "false"), "-Dfabric.addMods="+rootProject.file("build/cinema-client-capture/cinema-capture.jar").absolutePath
+    args "--width", "1280", "--height", "720"
+} }

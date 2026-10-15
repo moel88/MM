@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "celestialfall",
+  "version": "${version}",
+  "name": "보탠드 모드 | Botand",
+  "description": "Articulated movement, four-hit unarmed combat, directional dash and guard break, with three cinematic skills.",
+  "authors": [
+    "SO DI"
+  ],
+  "license": "MIT",
+  "icon": "assets/celestialfall/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.sangwoo.celestialfall.CelestialFall"
+    ],
+    "client": [
+      "dev.sangwoo.celestialfall.client.CelestialFallClient"
+    ]
+  },
+  "mixins": [
+    "celestialfall.client.mixins.json",
+    "celestialfall.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.6",
+    "minecraft": "1.20.1",
+    "java": ">=17",
+    "fabric-api": ">=0.92.2+1.20.1"
+  },
+  "accessWidener": "celestialfall.accesswidener"
+}

@@ -1,0 +1,111 @@
+{
+  "atomic": {
+    "result": "passed",
+    "source_name": "01-1000022644.mp4",
+    "source_sha256": "bc22672e32210f7595a49b6307828f64564886535abb5e4124099defa5df0738",
+    "normal_sample_speed": true,
+    "tracks": [
+      {
+        "sound": "atomic_full",
+        "seconds": 23.4,
+        "source_start_seconds": 142.0,
+        "sample_rate": 48000,
+        "channels": 2,
+        "playback_speed": 1.0,
+        "decoded_correlation": 0.9976541737605544,
+        "decoded_peak": 0.8878435492515564,
+        "sha256": "e1fcb47c62ce786049d6b0b299c866d99a846e0f60426931dc66bdef5bd4dd16",
+        "source": "Original unseparated spoken opening 0-6.4s, 0.2s crossfade into separated explosion; no dialogue replacement",
+        "gain": 0.8768077438705504,
+        "separation_gain": 0.9342951574355524,
+        "protected_source_seconds": [
+          142.01,
+          148.39
+        ],
+        "protected_source_correlation": 0.9967628916757295,
+        "music_intentionally_preserved": false,
+        "source_sha256": "bc22672e32210f7595a49b6307828f64564886535abb5e4124099defa5df0738"
+      }
+    ],
+    "anchors": {
+      "impact_tick": 128,
+      "end_tick": 468
+    },
+    "notes": "2.25 original spoken I am Atomic opening preserved without separation; separated explosion tail at 1x",
+    "verification_scope": "Decoded OGG versus protected PCM plus original source correlation for complete spoken opening; not device audio recording."
+  },
+  "heaven": {
+    "result": "passed",
+    "source_name": "1000022226.mp4",
+    "source_sha256": "7423bddc18ddb75b52f79ff285094ce42bda33e9ea97cfd2802702e03366c6cc",
+    "normal_sample_speed": true,
+    "tracks": [
+      {
+        "sound": "heaven_full",
+        "seconds": 12.15,
+        "sample_rate": 48000,
+        "channels": 2,
+        "playback_speed": 1.0,
+        "decoded_correlation": 0.9983955734092492,
+        "decoded_peak": 0.6584791541099548,
+        "sha256": "61d39d08db2ae71921c47cc1e354c98669bf54f9af4ce0524de5061270bd2ac8"
+      }
+    ],
+    "anchors": {
+      "charge_tick": 1,
+      "contact_tick": 100,
+      "release_tick": 180,
+      "camera_end_tick": 244,
+      "complete_opening_source_seconds": [
+        0,
+        7.4
+      ],
+      "complete_opening_playback_seconds": [
+        0.05,
+        7.45
+      ],
+      "normal_speed_source_checks": [
+        {
+          "phase": "entire_reference_uninterrupted",
+          "source_seconds": [
+            0.01,
+            7.25
+          ],
+          "sample_correlation": 1.0
+        }
+      ],
+      "source_intervals_used_once": [
+        {
+          "start": 0,
+          "end": 7.4
+        }
+      ],
+      "chant_repeat_checks": [
+        {
+          "source_seconds": [
+            1.9,
+            2.2
+          ],
+          "maximum_repeat_correlation_after_3_3s": 0.18138029109879517
+        },
+        {
+          "source_seconds": [
+            2.0,
+            2.3
+          ],
+          "maximum_repeat_correlation_after_3_3s": 0.19206508531809072
+        },
+        {
+          "source_seconds": [
+            2.15,
+            2.45
+          ],
+          "maximum_repeat_correlation_after_3_3s": 0.24724766612414023
+        }
+      ],
+      "ambience_source": "procedural noise only; no source audio"
+    },
+    "notes": "2.5.0: Entire reference 0--7.4 s plays ONCE at 1.0x with no internal cuts, silence inserts, delayed dialogue or camera-triggered restarts. Only voice-free procedural ambience and final impact extend the master to 12.15 s. Reference sound effects remain in their original uninterrupted positions.",
+    "verification_scope": "Decoded sample/length checks and source-frame anchors; not in-game audio-device latency measurement."
+  }
+}

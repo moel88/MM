@@ -1,0 +1,130 @@
+package dev.sangwoo.celestialfall.client;
+
+import dev.sangwoo.celestialfall.CelestialFall;
+import dev.sangwoo.celestialfall.stand.*;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.*;
+import net.fabricmc.fabric.api.client.rendering.v1.*;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.sound.*;
+import net.minecraft.entity.*;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.*;
+import net.minecraft.util.math.*;
+import net.minecraft.sound.SoundCategory;
+import org.lwjgl.glfw.GLFW;
+import java.util.*;
+import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
+
+public final class StandClient {
+    private static final ItemStack SWORD=new ItemStack(CelestialFall.ATOMIC_SWORD);
+    public record Target(UUID uuid,int entity,Vec3d position){}
+    public record Cast(UUID id,UUID caster,Identifier dimension,int skill,int combo,long start,long serverNow,long received,Vec3d origin,float yaw,List<Target> targets){
+        public float age(float delta){return MinecraftClient.getInstance().world==null?9999:new KagenoCastClock(serverNow-start,received).age(ticks,delta);}
+        public boolean includes(UUID id){return caster.equals(id)||targets.stream().anyMatch(t->t.uuid.equals(id));}
+    }
+    public record Mark(UUID id,int entity,long until){}
+    public record Status(long until,float boost,long[] ready,List<Mark> marks){}
+    public static final Map<UUID,Cast> CASTS=new LinkedHashMap<>();
+    public static final Map<UUID,Status> STATES=new HashMap<>();
+    private static Object world,player;private static long nextPunch,lastThemeUntil;private static int ticks;
+    private static boolean holdingT;private static final Set<Integer> captured=new HashSet<>();
+    private static SoundInstance theme;
+    private StandClient(){}
+    public static ItemStack sword(){return SWORD;}
+    public static boolean visible(PlayerEntity p){return StandManager.kageno(p)&&!p.isInvisible()&&!p.isSleeping();}
+    public static void initialize(){
+        KagenoSword.initialize();KagenoFire.initialize();
+        KagenoManager.setClientFrozen(StandClient::frozen);
+        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.CAST,(mc,h,b,r)->{
+            UUID id=b.readUuid(),caster=b.readUuid();var dim=b.readIdentifier();int skill=b.readUnsignedByte(),combo=b.readUnsignedByte();long start=b.readLong(),serverNow=b.readLong();Vec3d origin=vec(b);float yaw=b.readFloat();int n=b.readVarInt();
+            if(skill<0||skill>H||n<0||n>4096)return;
+            var targets=new ArrayList<Target>();for(int i=0;i<n;i++)targets.add(new Target(b.readUuid(),b.readInt(),vec(b)));
+            mc.execute(()->{if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);acceptCast(new Cast(id,caster,dim,skill,combo,start,serverNow,ticks,origin,yaw,List.copyOf(targets)));});
+        });
+        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STOP,(mc,h,b,r)->{UUID id=b.readUuid();mc.execute(()->{CASTS.remove(id);KagenoAudio.stop(id);});});
+        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STATUS,(mc,h,b,r)->{
+            UUID id=b.readUuid();var dim=b.readIdentifier();long until=b.readLong();float boost=b.readFloat();long[] ready=new long[9];for(int i=0;i<9;i++)ready[i]=b.readLong();int n=b.readVarInt();if(n<0||n>4096)return;
+            var marks=new ArrayList<Mark>();for(int i=0;i<n;i++)marks.add(new Mark(b.readUuid(),b.readInt(),b.readLong()));
+            mc.execute(()->{if(mc.world==null||!MapClient.enabled()||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);STATES.put(id,new Status(until,boost,ready,marks));});
+        });
+        ClientTickEvents.START_CLIENT_TICK.register(StandClient::tick);
+        ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->mc.execute(()->clear(mc)));
+        WorldRenderEvents.LAST.register(KagenoRenderer::render);
+        HudRenderCallback.EVENT.register(KagenoRenderer::hud);
+    }
+    public static void acceptCast(Cast incoming){
+        Cast old=CASTS.get(incoming.id);
+        // Targets may change during a rush. Their refresh must not reset pose/camera/audio time.
+        Cast cast=old==null?incoming:new Cast(old.id,old.caster,old.dimension,old.skill,old.combo,old.start,old.serverNow,old.received,old.origin,old.yaw,incoming.targets);
+        if(cast.age(0)<DURATION[cast.skill]){CASTS.put(cast.id,cast);if(old==null)KagenoAudio.begin(cast);}
+    }
+    private static Vec3d vec(net.minecraft.network.PacketByteBuf b){return new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());}
+    private static void observe(MinecraftClient mc){if(world!=mc.world||player!=mc.player){clear(mc);world=mc.world;player=mc.player;}}
+    public static void clear(MinecraftClient mc){KagenoAudio.clear();CASTS.clear();STATES.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
+    private static void tick(MinecraftClient mc){
+        observe(mc);if(mc.world==null||mc.player==null||!MapClient.enabled()){clear(mc);return;}
+        ticks++;long now=mc.world.getTime();
+        CASTS.values().removeIf(c->!c.dimension.equals(mc.world.getRegistryKey().getValue())||c.age(0)>=DURATION[c.skill]||c.age(0)<0||deadCaster(mc,c));
+        KagenoAudio.retain(CASTS.keySet());
+        STATES.entrySet().removeIf(e->mc.world.getPlayerByUuid(e.getKey())==null);
+        if(holdingT){if(!StandManager.kageno(mc.player)||mc.currentScreen!=null||!mc.isWindowFocused()){send(CANCEL);holdingT=false;}else if(ticks%3==0)send(PULSE);}
+        for(var c:CASTS.values())if(KagenoRules.frozen(c.skill,c.age(0))){
+            var caster=mc.world.getPlayerByUuid(c.caster);if(caster!=null&&c.skill!=R)KagenoManager.freeze(caster);
+            for(var t:c.targets){var e=mc.world.getEntityById(t.entity);if(e instanceof LivingEntity l&&e.getUuid().equals(t.uuid))KagenoManager.freeze(l);}
+        }
+        if(StandManager.kageno(mc.player)&&mc.options.attackKey.isPressed()&&!dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand())punch();
+        var state=STATES.get(mc.player.getUuid());long until=state!=null&&visible(mc.player)?state.until:0;
+        if(until>now&&lastThemeUntil==0){
+            theme=new PositionedSoundInstance(CelestialFall.KAGENO_THEME.getId(),SoundCategory.RECORDS,(float)CelestialFall.CONFIG.effectVolume,1,net.minecraft.util.math.random.Random.create(),false,0,SoundInstance.AttenuationType.NONE,0,0,0,true);
+            mc.getSoundManager().play(theme);lastThemeUntil=until;
+        }else if(until<=now&&lastThemeUntil!=0){if(theme!=null)mc.getSoundManager().stop(theme);theme=null;lastThemeUntil=0;}
+    }
+    private static boolean deadCaster(MinecraftClient mc,Cast c){var p=mc.world.getPlayerByUuid(c.caster);return p!=null&&(!p.isAlive()||!StandManager.kageno(p));}
+    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||c.skill==RUSH&&c.age(0)>=RUSH_START&&c.age(0)<RUSH_FINISH&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
+    /** Action lock and locomotion lock differ: R's caster can walk at half speed. */
+    public static boolean locked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;return action(mc.player.getUuid())!=null;}
+    public static boolean movementLocked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;var cast=action(mc.player.getUuid());return cast!=null&&cast.skill()!=R;}
+    public static boolean rWalking(UUID id){var cast=action(id);return cast!=null&&cast.skill()==R;}
+    public static boolean monochrome(){var p=MinecraftClient.getInstance().player;return p!=null&&p.isAlive()&&CASTS.values().stream().anyMatch(c->c.skill==R&&KagenoRules.frozen(R,c.age(0))&&c.includes(p.getUuid()));}
+    public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<DURATION[H]&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
+    public static Cast action(UUID id){return CASTS.values().stream().filter(c->c.caster.equals(id)&&c.age(0)<inputEnd(c.skill)).reduce((a,b)->b).orElse(null);}
+    public static Cast visualCast(){var mc=MinecraftClient.getInstance();if(mc.player==null)return null;Cast cinematic=cinematic();if(cinematic!=null)return cinematic;return CASTS.values().stream().filter(c->c.origin.squaredDistanceTo(mc.player.getPos())<32*32).min(Comparator.comparingDouble(c->c.caster.equals(mc.player.getUuid())?-1:c.origin.squaredDistanceTo(mc.player.getPos()))).orElse(null);}
+    public static void send(int action){if(!ClientPlayNetworking.canSend(KagenoManager.INPUT))return;var b=PacketByteBufs.create();b.writeByte(action);ClientPlayNetworking.send(KagenoManager.INPUT,b);}
+    public static boolean punch(){
+        var mc=MinecraftClient.getInstance();if(!StandManager.kageno(mc.player))return false;
+        if(CombatClient.combatInput()&&mc.world.getTime()>=nextPunch){BotandCamera.prepareInteraction();send(M1);nextPunch=mc.world.getTime()+1;}
+        return true;
+    }
+    /** Item-use is independent of the stand keys; a held fruit/stone never determines ownership. */
+    public static boolean useSkill(){return false;}
+    public static boolean key(long window,int key,int action,int modifiers){
+        var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
+        if(action==GLFW.GLFW_RELEASE&&captured.remove(key)){if(key==GLFW.GLFW_KEY_T){if(holdingT)send(T_UP);holdingT=false;}return true;}
+        if(captured.contains(key))return true;
+        if(mc.currentScreen!=null||!StandManager.kageno(mc.player)||key==GLFW.GLFW_KEY_Q&&(modifiers&GLFW.GLFW_MOD_CONTROL)!=0||key==GLFW.GLFW_KEY_G&&(modifiers&GLFW.GLFW_MOD_ALT)!=0)return false;
+        if(action!=GLFW.GLFW_PRESS)return false;
+        int skill=switch(key){case GLFW.GLFW_KEY_E->E;case GLFW.GLFW_KEY_R->R;case GLFW.GLFW_KEY_T->T_DOWN;case GLFW.GLFW_KEY_Y->Y;case GLFW.GLFW_KEY_Q->Q;case GLFW.GLFW_KEY_H->H;case GLFW.GLFW_KEY_G->G;default->-1;};
+        if(skill<0){
+            if(!CombatClient.actionLocked()&&key==GLFW.GLFW_KEY_I){mc.setScreen(new net.minecraft.client.gui.screen.ingame.InventoryScreen(mc.player));return true;}
+            if(key==GLFW.GLFW_KEY_ENTER){mc.setScreen(new net.minecraft.client.gui.screen.ChatScreen(""));return true;}
+            return false;
+        }
+        captured.add(key);if(CombatClient.combatInput()){BotandCamera.prepareInteraction();send(skill);if(skill==T_DOWN)holdingT=true;}
+        return true;
+    }
+    public static float cameraBlend(float delta){var c=cinematic();return c==null?0:KagenoCameraPath.blend(c.age(delta));}
+    public static double cameraFov(float delta){var c=cinematic();return c==null?60:KagenoCameraPath.sample(c.age(delta)).fov();}
+    public static CinematicDirector.Pose camera(float delta){
+        var c=cinematic();if(c==null)return null;float a=c.age(delta);Vec3d forward=Vec3d.fromPolar(0,c.yaw),right=new Vec3d(forward.z,0,-forward.x);
+        var shot=KagenoCameraPath.sample(a);
+        double slide=KagenoMotion.hTravel(a);
+        Vec3d eye=c.origin.add(forward.multiply(shot.forward()+slide*.45)).add(right.multiply(shot.right())).add(0,shot.height(),0),focus=c.origin.add(forward.multiply(slide)).add(right.multiply(shot.focusRight())).add(0,shot.focusHeight(),0);
+        var mc=MinecraftClient.getInstance();var hit=mc.world.raycast(new net.minecraft.world.RaycastContext(focus,eye,net.minecraft.world.RaycastContext.ShapeType.COLLIDER,net.minecraft.world.RaycastContext.FluidHandling.NONE,mc.player));
+        if(hit.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)eye=hit.getPos().lerp(focus,.08);
+        Vec3d d=focus.subtract(eye).normalize();float yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z)),pitch=(float)-Math.toDegrees(Math.asin(d.y));
+        return new CinematicDirector.Pose(eye,yaw,pitch,(float)shot.roll());
+    }
+}

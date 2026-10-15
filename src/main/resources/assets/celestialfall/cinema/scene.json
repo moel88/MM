@@ -1,0 +1,332 @@
+{
+  "format": 1,
+  "stride_floats": 14,
+  "bones": [
+    {
+      "name": "root",
+      "parent": null,
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "body",
+      "parent": "root",
+      "pivot": [
+        0.0,
+        22.5,
+        -0.0
+      ]
+    },
+    {
+      "name": "head",
+      "parent": "body",
+      "pivot": [
+        0.0,
+        22.5,
+        -0.0
+      ]
+    },
+    {
+      "name": "right_arm",
+      "parent": "body",
+      "pivot": [
+        -4.6875,
+        20.15625,
+        -0.0
+      ]
+    },
+    {
+      "name": "left_arm",
+      "parent": "body",
+      "pivot": [
+        4.6875,
+        20.15625,
+        -0.0
+      ]
+    },
+    {
+      "name": "right_leg",
+      "parent": "root",
+      "pivot": [
+        -1.78125,
+        11.25,
+        -0.0
+      ]
+    },
+    {
+      "name": "left_leg",
+      "parent": "root",
+      "pivot": [
+        1.78125,
+        11.25,
+        -0.0
+      ]
+    }
+  ],
+  "hourglass_center": [
+    0.0,
+    1.1,
+    0.565
+  ],
+  "meshes": {
+    "stage": 322164,
+    "glow": 48,
+    "bomi": 432,
+    "prop": 24000,
+    "glass": 8988
+  },
+  "tiles": {
+    "white": [
+      0.7,
+      0.7,
+      63.3,
+      63.3
+    ],
+    "stone": [
+      64.7,
+      0.7,
+      127.3,
+      63.3
+    ],
+    "paver": [
+      128.7,
+      0.7,
+      191.3,
+      63.3
+    ],
+    "bark": [
+      192.7,
+      0.7,
+      255.3,
+      63.3
+    ],
+    "leaves": [
+      256.7,
+      0.7,
+      319.3,
+      63.3
+    ],
+    "glass": [
+      320.7,
+      0.7,
+      383.3,
+      63.3
+    ],
+    "blue": [
+      384.7,
+      0.7,
+      447.3,
+      63.3
+    ],
+    "gold": [
+      448.7,
+      0.7,
+      511.3,
+      63.3
+    ],
+    "navy": [
+      0.7,
+      64.7,
+      63.3,
+      127.3
+    ],
+    "sand": [
+      64.7,
+      64.7,
+      127.3,
+      127.3
+    ],
+    "green": [
+      128.7,
+      64.7,
+      191.3,
+      127.3
+    ],
+    "window": [
+      192.7,
+      64.7,
+      255.3,
+      127.3
+    ],
+    "light": [
+      256.7,
+      64.7,
+      319.3,
+      127.3
+    ],
+    "dark": [
+      320.7,
+      64.7,
+      383.3,
+      127.3
+    ],
+    "glow": [
+      0.5,
+      256.5,
+      127.5,
+      383.5
+    ],
+    "shadow": [
+      128.5,
+      256.5,
+      255.5,
+      383.5
+    ]
+  },
+  "sun": [
+    -0.3998001498751093,
+    0.8295853109908518,
+    0.3898051461282316
+  ],
+  "sky": [
+    0.73,
+    0.85,
+    0.99
+  ],
+  "source": "Native Minecraft slim player + unchanged user skin; client-side Botand park set",
+  "character": {
+    "source": "Minecraft 1.20.1 PlayerEntityModel.getTexturedModelData(Dilation.NONE, true)",
+    "arm_model": "slim",
+    "skin_size": [
+      64,
+      64
+    ],
+    "player_renderer_scale": 0.9375,
+    "bones": [
+      {
+        "name": "root",
+        "parent": null,
+        "pivot": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "body",
+        "parent": "root",
+        "pivot": [
+          0.0,
+          22.5,
+          -0.0
+        ]
+      },
+      {
+        "name": "head",
+        "parent": "body",
+        "pivot": [
+          0.0,
+          22.5,
+          -0.0
+        ]
+      },
+      {
+        "name": "right_arm",
+        "parent": "body",
+        "pivot": [
+          -4.6875,
+          20.15625,
+          -0.0
+        ]
+      },
+      {
+        "name": "left_arm",
+        "parent": "body",
+        "pivot": [
+          4.6875,
+          20.15625,
+          -0.0
+        ]
+      },
+      {
+        "name": "right_leg",
+        "parent": "root",
+        "pivot": [
+          -1.78125,
+          11.25,
+          -0.0
+        ]
+      },
+      {
+        "name": "left_leg",
+        "parent": "root",
+        "pivot": [
+          1.78125,
+          11.25,
+          -0.0
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "name": "body",
+        "bone": "body",
+        "vertices": 36
+      },
+      {
+        "name": "jacket",
+        "bone": "body",
+        "vertices": 36
+      },
+      {
+        "name": "head",
+        "bone": "head",
+        "vertices": 36
+      },
+      {
+        "name": "hat",
+        "bone": "head",
+        "vertices": 36
+      },
+      {
+        "name": "right_arm",
+        "bone": "right_arm",
+        "vertices": 36
+      },
+      {
+        "name": "right_sleeve",
+        "bone": "right_arm",
+        "vertices": 36
+      },
+      {
+        "name": "left_arm",
+        "bone": "left_arm",
+        "vertices": 36
+      },
+      {
+        "name": "left_sleeve",
+        "bone": "left_arm",
+        "vertices": 36
+      },
+      {
+        "name": "right_leg",
+        "bone": "right_leg",
+        "vertices": 36
+      },
+      {
+        "name": "right_pants",
+        "bone": "right_leg",
+        "vertices": 36
+      },
+      {
+        "name": "left_leg",
+        "bone": "left_leg",
+        "vertices": 36
+      },
+      {
+        "name": "left_pants",
+        "bone": "left_leg",
+        "vertices": 36
+      }
+    ],
+    "custom_geometry": false,
+    "skin_layers": true,
+    "skin_sha256": "b1b9d06472e7dd15e448e0c58c174d453940d98ba648b9ce3ebf91e63ac382ad"
+  },
+  "uses_background_image": false,
+  "post_processing_required": true,
+  "renderer": "Aurora PC HDR + shadow map + depth of field + bloom"
+}

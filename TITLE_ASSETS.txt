@@ -1,0 +1,12 @@
+보탠드 2.11.2 시작 화면 에셋
+
+배경: 실제 Minecraft 월드 렌더. 배경 그림 텍스처 없음.
+로고: 이전 사용자 참고 기반 메뉴에서 BOMI STAND 글자/꽃/토끼만 이미지 편집 도구로 분리.
+textures/title/logo.png: 투명 RGBA, 1846×852. 캐릭터/벽/배경을 제거하고 로고만 사용.
+메뉴와 선택 표시, 확인창은 Java 코드로 별도 렌더.
+
+글꼴: Noto Sans CJK KR Regular 비트맵 아틀라스.
+라이선스: assets/celestialfall/licenses/NotoSansCJK-OFL.txt (SIL OFL 1.1).
+글꼴 재생성 입력: ../preview-assets/NotoSansCJKkr-Regular.otf.
+python3 tools/generate_title_font.py.
+preview PNG는 동일 UI 명령/로고/글꼴로 만든 투명 UI 레이어. 실제 Minecraft 캡처 아님.
