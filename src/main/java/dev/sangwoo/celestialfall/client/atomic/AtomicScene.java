@@ -25,6 +25,11 @@ final class AtomicScene {
     final Curtain[] curtains;
     final List<Slab> slabs=new ArrayList<>();
     private boolean slabsBuilt;
+    /** Blast radius over the 28-block footage radius: every explosion size scales with it. */
+    final double scale;
+    final Chunk[] debris;
+    final Puff[] cap,wall,dust;
+    final Ember[] embers;
 
     /** Thin light shaft (and its base flare spot) on the plaza edge, 25–40 studs out. */
     record Pillar(double x,double z,float spawn,float drop,float phase) {}
@@ -35,9 +40,16 @@ final class AtomicScene {
     /** Crater slab: ring index, centre angle/radius, size, tilt and its life. */
     record Slab(int ring,double angle,double radius,double length,double width,double thick,double tilt,double twist,
                 double lift,float rise,float vanish,double y,BlockState state) {}
+    /** Ground chunk thrown by the blast: launch angle and radius, speeds (blast radii per second), half sizes, spin axis and rate. */
+    record Chunk(double angle,double r0,double speed,double rise,double sx,double sy,double sz,Vec3d axis,double spin,float delay) {}
+    /** Smoke puff of the dust wall, the cloud cap or the dust column. */
+    record Puff(double angle,double phase,double size,float alpha) {}
+    /** Glowing ember drifting out of the crater after the beam. */
+    record Ember(double angle,double radius,double vx,double vy,double vz,float life,float phase,double size) {}
 
-    AtomicScene(UUID id,Vec3d origin,float yaw) {
-        this.id=id;this.origin=origin;f=Vec3d.fromPolar(0,yaw);right=new Vec3d(-f.z,0,f.x);
+    AtomicScene(UUID id,Vec3d origin,float yaw) { this(id,origin,yaw,28); }
+    AtomicScene(UUID id,Vec3d origin,float yaw,double radius) {
+        this.id=id;this.origin=origin;f=Vec3d.fromPolar(0,yaw);right=new Vec3d(-f.z,0,f.x);scale=Math.max(8,radius)/28;
         Random r=new Random(id.getMostSignificantBits()^id.getLeastSignificantBits());
         seed=r.nextInt(997);
         ground=new GroundCache(origin,16);
@@ -70,6 +82,21 @@ final class AtomicScene {
             curtains[k]=new Curtain(r.nextDouble()*Math.PI*2,rad,2.5+6.5*r.nextDouble(),50+60*r.nextDouble(),
                 Math.toRadians(5+9*r.nextDouble()),(r.nextDouble()-.4)*.2,light?0xd8ccff:0x0c0530,light?.45f+.3f*r.nextFloat():.55f+.3f*r.nextFloat(),extra);
         }
+        // Explosion: thrown chunks, the dust wall, the cloud cap, the dust column after the beam and embers.
+        debris=new Chunk[96];
+        for(int k=0;k<debris.length;k++){
+            double base=.025+.055*r.nextDouble();
+            Vec3d axis=new Vec3d(r.nextDouble()-.5,r.nextDouble()-.5,r.nextDouble()-.5);
+            debris[k]=new Chunk(r.nextDouble()*Math.PI*2,.2+.9*r.nextDouble(),.6+.7*r.nextDouble(),.6+.8*r.nextDouble(),
+                base*(.7+.8*r.nextDouble()),base*(.5+.9*r.nextDouble()),base*(.7+.8*r.nextDouble()),
+                axis.lengthSquared()<1e-4?new Vec3d(0,1,0):axis.normalize(),(r.nextDouble()-.5)*9,.45f*r.nextFloat());
+        }
+        wall=new Puff[24];for(int k=0;k<wall.length;k++)wall[k]=new Puff((k+.5*r.nextDouble())*Math.PI*2/wall.length,r.nextDouble()*6.28,.7+.6*r.nextDouble(),.7f+.3f*r.nextFloat());
+        cap=new Puff[18];for(int k=0;k<cap.length;k++)cap[k]=new Puff((k+.4*r.nextDouble())*Math.PI*2/cap.length,r.nextDouble()*6.28,.75+.5*r.nextDouble(),.75f+.25f*r.nextFloat());
+        dust=new Puff[16];for(int k=0;k<dust.length;k++)dust[k]=new Puff(r.nextDouble()*Math.PI*2,r.nextDouble()*6.28,r.nextDouble(),.6f+.4f*r.nextFloat());
+        embers=new Ember[160];
+        for(int k=0;k<embers.length;k++)embers[k]=new Ember(r.nextDouble()*Math.PI*2,.1+1.3*Math.sqrt(r.nextDouble()),(r.nextDouble()-.5)*.12,.12+.22*r.nextDouble(),(r.nextDouble()-.5)*.12,
+            1.8f+2.2f*r.nextFloat(),r.nextFloat(),.02+.03*r.nextDouble());
     }
 
     /** Crater rings at 14, 27, 36, 48, 63 and 80 studs, then large up-heaved plates out to ≈120. */

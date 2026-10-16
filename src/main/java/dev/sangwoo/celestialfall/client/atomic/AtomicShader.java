@@ -15,7 +15,8 @@ import org.lwjgl.opengl.GL11;
  * alpha-blended ground wash and blast curtains.
  */
 public final class AtomicShader {
-    public static final int CIRCUIT=1,SKY=2,BEAM=3,FLARE=4,DISC=5,CURTAIN=6,ORB=7,STRIATED=8,PILLAR=9;
+    public static final int CIRCUIT=1,SKY=2,BEAM=3,FLARE=4,DISC=5,CURTAIN=6,ORB=7,STRIATED=8,PILLAR=9,
+        DOME=10,SHOCK=11,COLUMN=12,PUFF=13,SKYRING=14,FLASH=15;
     static final Vec3d UP=new Vec3d(0,1,0);
     private static ShaderProgram shader;
     private AtomicShader() {}
@@ -75,12 +76,48 @@ public final class AtomicShader {
             if(alpha<=0)return;
             quad(p.add(-r,0,-r),p.add(r,0,-r),p.add(r,0,r),p.add(-r,0,r),rgb,alpha);
         }
+        /** Camera-facing square whose uv.x runs k..k+1, so a puff shader can pick its own noise per quad. */
+        public void facingSeeded(Vec3d p,double r,int rgb,float alpha,int k) {
+            if(alpha<=0)return;Vec3d n=camera.subtract(p).normalize(),u=n.crossProduct(UP);
+            if(u.lengthSquared()<1e-4)u=new Vec3d(1,0,0);u=u.normalize();Vec3d v=u.crossProduct(n).normalize();
+            u=u.multiply(r);v=v.multiply(r);
+            point(p.subtract(u).subtract(v),k,0,rgb,alpha);point(p.add(u).subtract(v),k+1,0,rgb,alpha);
+            point(p.add(u).add(v),k+1,1,rgb,alpha);point(p.subtract(u).add(v),k,1,rgb,alpha);
+        }
+        /** Lat-long shell of radius r around c from elevation el0 to el1 (radians); uv.x azimuth, uv.y elevation fraction. */
+        public void dome(Vec3d c,double r,int nAz,int nEl,double el0,double el1,int rgb,float alpha) {
+            if(alpha<=0||r<=0)return;
+            for(int j=0;j<nEl;j++){
+                double e0=el0+(el1-el0)*j/nEl,e1=el0+(el1-el0)*(j+1)/nEl;
+                float v0=(float)j/nEl,v1=(float)(j+1)/nEl;
+                double c0=Math.cos(e0)*r,s0=Math.sin(e0)*r,c1=Math.cos(e1)*r,s1=Math.sin(e1)*r;
+                for(int i=0;i<nAz;i++){
+                    double a0=i*Math.PI*2/nAz,a1=(i+1)*Math.PI*2/nAz;float u0=(float)i/nAz,u1=(float)(i+1)/nAz;
+                    point(c.add(Math.cos(a0)*c0,s0,Math.sin(a0)*c0),u0,v0,rgb,alpha);point(c.add(Math.cos(a1)*c0,s0,Math.sin(a1)*c0),u1,v0,rgb,alpha);
+                    point(c.add(Math.cos(a1)*c1,s1,Math.sin(a1)*c1),u1,v1,rgb,alpha);point(c.add(Math.cos(a0)*c1,s1,Math.sin(a0)*c1),u0,v1,rgb,alpha);
+                }
+            }
+        }
+        /** Horizontal ring at c.y between radii r0 and r1; uv.x around, uv.y 0 at r0 and 1 at r1. */
+        public void annulus(Vec3d c,double r0,double r1,int n,int rgb,float alpha) {
+            if(alpha<=0||r1<=0)return;r0=Math.max(0,r0);
+            for(int i=0;i<n;i++){
+                double a0=i*Math.PI*2/n,a1=(i+1)*Math.PI*2/n;float u0=(float)i/n,u1=(float)(i+1)/n;
+                point(c.add(Math.cos(a0)*r0,0,Math.sin(a0)*r0),u0,0,rgb,alpha);point(c.add(Math.cos(a1)*r0,0,Math.sin(a1)*r0),u1,0,rgb,alpha);
+                point(c.add(Math.cos(a1)*r1,0,Math.sin(a1)*r1),u1,1,rgb,alpha);point(c.add(Math.cos(a0)*r1,0,Math.sin(a0)*r1),u0,1,rgb,alpha);
+            }
+        }
     }
     /** Starts a batch for one mode; uniforms are uploaded when the batch is drawn by {@link #end}. */
     static Batch begin(Matrix4f matrix,Vec3d camera,int mode,float sec,float seed,float p0,float p1,float p2,float p3) {
+        return beginAt(camera,matrix,camera,mode,sec,seed,p0,p1,p2,p3);
+    }
+    /** Like {@link #begin} with a shell centre (world position) for the modes that shade by the offset from it. */
+    static Batch beginAt(Vec3d center,Matrix4f matrix,Vec3d camera,int mode,float sec,float seed,float p0,float p1,float p2,float p3) {
         RenderSystem.setShader(()->shader);
         shader.getUniform("Mode").set(mode);shader.getUniform("Age").set(sec);shader.getUniform("Seed").set(seed);
         shader.getUniform("Params").set(p0,p1,p2,p3);
+        shader.getUniform("Center").set((float)(center.x-camera.x),(float)(center.y-camera.y),(float)(center.z-camera.z),0f);
         var b=Tessellator.getInstance().getBuffer();b.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_TEXTURE_COLOR);
         return new Batch(b,matrix,camera);
     }

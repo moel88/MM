@@ -19,17 +19,20 @@ import java.util.*;
 /**
  * G ("I am Atomic") world effects, timed in seconds after the first skill frame of the review
  * footage: cast flash, circuit floor and sky, light pillars, needle flares, wisps, orbs, the
- * ribbon vortex and X glint, the violet void frame, the blast interior and the crater. Nothing
- * here edits a block.
+ * ribbon vortex and X glint, the violet void frame, the blast interior, the explosion seen from
+ * outside (dome, shockwaves, light column, cloud cap, debris and the dissipation) and the crater.
+ * Nothing here edits a block.
  */
 public final class AtomicWorld {
     private static final Map<UUID,AtomicScene> SCENES=new HashMap<>();
     private static final float[] PULSES={.367f,1.437f,2.437f,3.457f,4.387f,5.437f};
     private static final float PULSE_LEN=.32f;
     private static final double DECAL=14.5,SKY_RADIUS=30,SKY_TOP=46,STUD=AtomicScene.STUD;
+    /** The dust and embers are gone a little before the cast ends (27.6 s). */
+    static final float BLAST_END=27.4f;
     private AtomicWorld() {}
 
-    static AtomicScene scene(AtomicClient.Cast c) { return SCENES.computeIfAbsent(c.id,k->new AtomicScene(c.id,c.origin,c.yaw)); }
+    static AtomicScene scene(AtomicClient.Cast c) { return SCENES.computeIfAbsent(c.id,k->new AtomicScene(c.id,c.origin,c.yaw,c.radius)); }
     static double h(double n) { double x=Math.sin(n*12.9898+78.233)*43758.5453;return x-Math.floor(x); }
     static float smooth(float a,float b,float c) { return AtomicLook.smooth(a,b,c); }
     static float out(float a,float b,float c) { float t=1-AtomicLook.unit(a,b,c);return 1-t*t*t; }
@@ -51,15 +54,17 @@ public final class AtomicWorld {
         for(var c:AtomicClient.CASTS.values())if(c.dimension.equals(dim)&&c.origin.squaredDistanceTo(cam)<640*640)casts.add(c);
         if(casts.isEmpty())return;
         try{
-            RenderSystem.enableDepthTest();AtomicShader.premultiplied();
+            // The opaque crater slabs go first so the translucent blast layers can blend over them.
             for(var c:casts){
                 var s=scene(c);float sec=c.age(delta)/20f;s.ground.refresh(mc.world);
+                if(sec>=7.0f)crater(ctx,s,sec,mc);
+            }
+            RenderSystem.enableDepthTest();AtomicShader.premultiplied();
+            for(var c:casts){
+                var s=scene(c);float sec=c.age(delta)/20f;
                 if(sec<AtomicLook.PINK+.06f)chant(s,sec,rot,world,cam,mc.world);
                 if(sec>=AtomicLook.PINK&&sec<AtomicLook.BEAM_END)blast(s,sec,rot,world,cam,mc.world);
-            }
-            for(var c:casts){
-                float sec=c.age(delta)/20f;
-                if(sec>=7.0f)crater(ctx,scene(c),sec,mc);
+                if(sec>=AtomicLook.IMPACT&&sec<BLAST_END)explosion(s,sec,rot,world,cam,mc.world);
             }
             // The violet void replaces the whole view for three frames, so it is drawn last over everything.
             for(var c:casts){
@@ -326,9 +331,10 @@ public final class AtomicWorld {
         double y0=s.origin.y-2;
         var b=AtomicShader.begin(rot,cam,AtomicShader.CURTAIN,sec,s.seed,0,0,0,0);
         float in=smooth(sec,AtomicLook.PINK,AtomicLook.PINK+.1f);
+        float outside=smooth((float)Math.hypot(cam.x-s.origin.x,cam.z-s.origin.z),(float)(56*s.scale),(float)(84*s.scale));
         for(int k=0;k<s.curtains.length;k++){
             var c=s.curtains[k];
-            float a=c.alpha()*in*(1-gone)*(c.extra()?columns:1);
+            float a=c.alpha()*in*(1-gone)*(c.extra()?columns:1)*(c.color()==0x0c0530?1-outside:1);
             if(a<=.003f)continue;
             double th=c.angle()+c.spin()*t,tilt=c.tilt()*(1+columns*.6);
             double rb=c.radius()*(1-.92*vee),rt=Math.max(.6,c.radius()-c.height()*Math.tan(tilt))*(1-vee)+(c.radius()+6)*vee;
@@ -388,6 +394,258 @@ public final class AtomicWorld {
         }
         BufferRenderer.drawWithGlobalProgram(buffer.end());
         AtomicShader.premultiplied();
+    }
+
+    // ───────────────────────────── explosion seen from outside (5.59 → 27.4 s) ─────────────────────────────
+    // Sizes are in blast radii R (28 blocks at the default setting) and dome radii D = 2.5 R, so the
+    // whole picture scales with the configured radius. Alpha-blended bodies (debris, dust, clouds,
+    // the parted sky) are drawn first, the dome over them, then the additive light.
+
+    static void explosion(AtomicScene s,float sec,Matrix4f rot,Matrix4f world,Vec3d cam,ClientWorld w) {
+        double R=28*s.scale,D=2.5*R;
+        Vec3d o=new Vec3d(s.origin.x,s.groundY(w,s.origin.x,s.origin.z),s.origin.z);
+        int quality=CelestialFall.CONFIG.visualQuality;
+        if(sec>=AtomicLook.PINK){
+            if(quality>0)debris(s,sec,world,cam,o,R,quality);
+            dustWall(s,sec,rot,cam,o,R,D);
+            cap(s,sec,rot,cam,o,R,D);
+            dustColumn(s,sec,rot,cam,o,R);
+            skyRing(s,sec,rot,cam,o,D);
+            dome(s,sec,rot,cam,o,R,D);
+            shock(s,sec,rot,cam,o,R);
+            halos(s,sec,rot,cam,o,R);
+            if(quality>0)arcs(s,sec,world,cam,o,D,quality);
+            embers(s,sec,rot,cam,o,R,quality);
+        }
+        pillar(s,sec,rot,cam,o,R);
+        flash(s,sec,rot,cam,o,R,D);
+    }
+    static float unit(float a,float b,float c) { return AtomicLook.unit(a,b,c); }
+    /** Dome radius: a fast ease-out to 0.82 D in 1.1 s, slow growth to D by 12 s, a faint pulse, then the collapse into the beam. */
+    static double domeRadius(float sec,double D) {
+        if(sec<AtomicLook.PINK)return 0;
+        double r=D*(.82*out(sec,AtomicLook.PINK,AtomicLook.PINK+1.1f)+.18*unit(sec,AtomicLook.PINK+1.1f,12f));
+        r*=1+.02*Math.sin((sec-7)*2*Math.PI*1.35)*smooth(sec,7,8);
+        if(sec>=AtomicLook.COLLAPSE){float u=smooth(sec,AtomicLook.COLLAPSE,21.78f);r*=(1-u)*(1-u);}
+        return r;
+    }
+    /** Point of light at the impact that swells into the blast, and the pulse when the dome falls into the beam. */
+    static void flash(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double D) {
+        float a=0;double size=0;
+        if(sec>=AtomicLook.IMPACT&&sec<6.4f){
+            float grow=out(sec,AtomicLook.IMPACT,AtomicLook.PINK+.15f);
+            size=R*(.15+1.25*grow);a=1-smooth(sec,AtomicLook.PINK+.1f,6.4f);
+        }else if(sec>=AtomicLook.COLLAPSE_FLAT&&sec<21.8f){
+            float u=unit(sec,AtomicLook.COLLAPSE_FLAT,21.8f);size=D*(.4+1.4*u);a=(1-u)*(1-u);
+        }
+        if(a<=0||size<=0)return;
+        var b=AtomicShader.begin(rot,cam,AtomicShader.FLASH,sec,s.seed,1.2f,.6f,0,0);
+        Vec3d p=o.add(0,R*.35,0);
+        b.facing(p,size,0xffffff,a*near(cam,p,2,6));
+        AtomicShader.end(b);
+    }
+    /** The violet energy dome, and the faint air blast racing ahead of it in the first second. */
+    static void dome(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double D) {
+        if(sec>=21.8f)return;
+        double r=domeRadius(sec,D);if(r<.5)return;
+        float in=smooth(sec,AtomicLook.PINK,AtomicLook.PINK+.08f);
+        float white=smooth(sec,AtomicLook.COLLAPSE,21.6f);
+        float bolts=.9f+.6f*(float)Math.max(0,Math.sin(sec*5.1))*smooth(sec,6.2f,6.8f);
+        float body=.6f*(1-.3f*smooth(sec,19.5f,AtomicLook.COLLAPSE));
+        Vec3d c=new Vec3d(o.x,o.y-.5,o.z);
+        var b=AtomicShader.beginAt(c,rot,cam,AtomicShader.DOME,sec,s.seed,1.15f,white,bolts,body);
+        b.dome(c,r,48,14,-.04,Math.PI/2,0xffffff,in);
+        AtomicShader.end(b);
+        if(sec<7.4f){
+            float u=unit(sec,AtomicLook.PINK,7.4f);double ra=4.2*R*(1-Math.pow(1-u,2.6));
+            float a=.9f*(1-u)*(1-u)*in;
+            if(a>.01&&ra>1){
+                b=AtomicShader.beginAt(c,rot,cam,AtomicShader.DOME,sec,s.seed+3,.6f,0,.25f,.06f);
+                b.dome(c,ra,40,10,-.04,Math.PI/2,0xf0e0ff,a);
+                AtomicShader.end(b);
+            }
+        }
+    }
+    /** Ground shockwaves: the first races to 4.6 R; the second leaves with the slab eruption. */
+    static void shock(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R) {
+        ring(s,sec,rot,cam,new Vec3d(o.x,o.y+.12,o.z),AtomicLook.PINK,1.7f,4.6*R,.42*R,1,8.6f,0xffffff,.95f,.35f);
+        ring(s,sec,rot,cam,new Vec3d(o.x,o.y+.17,o.z),7.07f,1.3f,3.1*R,.3*R,.6f,8.9f,0xffd0ff,.8f,.15f);
+    }
+    /** One expanding flat ring born at t0, reaching rmax after grow seconds and gone at tEnd. */
+    static void ring(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d c,float t0,float grow,double rmax,double band,float whiteMix,float tEnd,int rgb,float alpha,float cover) {
+        if(sec<t0||sec>=tEnd)return;
+        float u=unit(sec,t0,t0+grow);double r=rmax*(1-Math.pow(1-u,3)),w=band*(.6+.9*u);
+        float a=alpha*smooth(sec,t0,t0+.05f)*(1-smooth(sec,t0+grow*.7f,tEnd));
+        if(a<=.005||r<.3)return;
+        var b=AtomicShader.begin(rot,cam,AtomicShader.SHOCK,sec,s.seed,cover,whiteMix,.86f,.55f);
+        b.annulus(c,r-w,r,96,rgb,a);
+        AtomicShader.end(b);
+    }
+    /** Central light column: a hairline at the impact, full width by 6.3 s, swelling when the dome collapses into it. */
+    static void pillar(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R) {
+        if(sec<AtomicLook.IMPACT||sec>=21.95f)return;
+        double height=9*R*out(sec,AtomicLook.IMPACT,AtomicLook.IMPACT+.12f);
+        double width=R*(.06+.26*smooth(sec,AtomicLook.PINK,AtomicLook.PINK+.45f));
+        width*=1+1.3*smooth(sec,AtomicLook.COLLAPSE,21.65f);
+        float a=(.85f+.15f*(float)Math.sin(sec*17))*(1-smooth(sec,21.75f,21.95f));
+        a*=near(cam,o,width*.45,width*1.2);
+        if(a>.005){
+            var b=AtomicShader.begin(rot,cam,AtomicShader.COLUMN,sec,s.seed,14f,.55f,7f,.5f);
+            b.upright(new Vec3d(o.x,o.y-1,o.z),height,width,0xffffff,a);
+            AtomicShader.end(b);
+        }
+        float g=smooth(sec,AtomicLook.PINK,AtomicLook.PINK+.3f)*(1-smooth(sec,21.6f,21.95f));
+        if(g>0){
+            var b=AtomicShader.begin(rot,cam,AtomicShader.ORB,sec,0,0,0,0,0);
+            Vec3d p=o.add(0,R*.25,0);
+            b.facing(p,R*1.1,0xd9a6ff,g*.7f*near(cam,p,3,8));
+            AtomicShader.end(b);
+        }
+    }
+    /** Halo rings climbing the column every 1.25 s, widening and thinning as they rise. */
+    static void halos(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R) {
+        if(sec<6.3f||sec>=AtomicLook.COLLAPSE+.4f)return;
+        var b=AtomicShader.begin(rot,cam,AtomicShader.SHOCK,sec,s.seed,0,.7f,.8f,.7f);
+        for(int i=0;i<16;i++){
+            float t0=6.3f+1.25f*i;if(sec<t0)break;float u=unit(sec,t0,t0+2.8f);if(u>=1)continue;
+            double y=o.y+R*(.45+8*(1-Math.pow(1-u,2.2))),r=R*(.5+1.3*u),w=R*(.16+.2*u);
+            float a=.6f*(1-u)*(1-u)*(1-smooth(sec,AtomicLook.COLLAPSE,AtomicLook.COLLAPSE+.4f));
+            b.annulus(new Vec3d(o.x,y,o.z),r-w,r,64,0xf4d8ff,a);
+        }
+        AtomicShader.end(b);
+    }
+    /** Cloud cap: a ring of lit puffs rolling over the top of the dome, pulled in when it collapses. */
+    static void cap(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double D) {
+        if(sec<6.9f||sec>=21.7f)return;
+        float in=smooth(sec,6.9f,8.2f),outF=1-smooth(sec,AtomicLook.COLLAPSE,21.7f),pull=smooth(sec,AtomicLook.COLLAPSE,21.6f);
+        double r=domeRadius(sec,D);float t=sec-6.9f;
+        var b=AtomicShader.begin(rot,cam,AtomicShader.PUFF,sec,s.seed,.62f,.45f+.25f*(float)Math.sin(sec*3.3),0,0);
+        int k=0;
+        for(var p:s.cap){
+            double ang=p.angle()+.045*t,rad=r*.66*(1-.6*pull);
+            double y=o.y+r*.74+r*.07*Math.sin(t*.7+p.phase())+R*.25*t/14;
+            Vec3d q=new Vec3d(o.x+Math.cos(ang)*rad,y,o.z+Math.sin(ang)*rad);
+            b.facingSeeded(q,r*.42*p.size(),0xffffff,in*outF*p.alpha(),k++);
+        }
+        AtomicShader.end(b);
+    }
+    /** Dust wall: dark puffs skirting the foot of the dome, drifting up and thinning before the collapse. */
+    static void dustWall(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double D) {
+        if(sec<6.1f||sec>=21.6f)return;
+        float in=smooth(sec,6.1f,7.2f),outF=1-smooth(sec,20.6f,21.6f),t=sec-6.1f;
+        double r=Math.min(domeRadius(sec,D)*1.12+R*.2,D*1.15);
+        var b=AtomicShader.begin(rot,cam,AtomicShader.PUFF,sec,s.seed+7,.58f,.3f,0,0);
+        int k=0;
+        for(var p:s.wall){
+            double ang=p.angle()+.02*t,rad=r*(.95+.1*p.size()),y=o.y+R*.14*p.size()+R*.05*t;
+            Vec3d q=new Vec3d(o.x+Math.cos(ang)*rad,y,o.z+Math.sin(ang)*rad);
+            b.facingSeeded(q,R*.55*p.size()*(1+.04*t),0xffffff,in*outF*p.alpha()*near(cam,q,3,9),k++);
+        }
+        AtomicShader.end(b);
+    }
+    /** Dust column rising out of the crater once the beam is gone. */
+    static void dustColumn(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R) {
+        if(sec<21.8f||sec>=BLAST_END)return;
+        float t=sec-21.8f,in=smooth(sec,21.8f,22.6f),outF=1-smooth(sec,24.5f,BLAST_END);
+        var b=AtomicShader.begin(rot,cam,AtomicShader.PUFF,sec,s.seed+11,.7f,.35f*(1-smooth(sec,22.5f,25f)),0,0);
+        int k=0;
+        for(var p:s.dust){
+            double y=o.y+R*(.1+p.size()*.5)+R*.22*t*(.6+.7*p.size()),r=R*(.1+.45*p.size())+R*.04*t,ang=p.angle()+.12*t;
+            Vec3d q=new Vec3d(o.x+Math.cos(ang)*r,y,o.z+Math.sin(ang)*r);
+            b.facingSeeded(q,R*(.28+.3*p.size())*(1+.06*t),0xffffff,in*outF*p.alpha()*near(cam,q,2,7),k++);
+        }
+        AtomicShader.end(b);
+    }
+    /** The overcast above is torn open: a dark ring 2.1 D up whose hole widens to 4 D, lit pink on the inside. */
+    static void skyRing(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double D) {
+        if(sec<6.0f||sec>=24.0f)return;
+        float a=.7f*smooth(sec,6.0f,6.7f)*(1-smooth(sec,AtomicLook.COLLAPSE,24.0f));
+        double inner=D*(1.0+3.0*out(sec,6.0f,13.0f)),width=D*1.4,y=o.y+2.4*D;
+        float lit=(.8f+.3f*(float)Math.sin(sec*4.7))*(1-smooth(sec,AtomicLook.COLLAPSE,21.9f));
+        var b=AtomicShader.begin(rot,cam,AtomicShader.SKYRING,sec,s.seed,1,lit,0,0);
+        b.annulus(new Vec3d(o.x,y,o.z),inner,inner+width,96,0xffffff,a);
+        AtomicShader.end(b);
+    }
+    /** Lightning crawling over the dome surface, redrawn twelve times a second. */
+    static void arcs(AtomicScene s,float sec,Matrix4f world,Vec3d cam,Vec3d o,double D,int quality) {
+        if(sec<6.0f||sec>=AtomicLook.COLLAPSE)return;
+        double r=domeRadius(sec,D)*1.012;if(r<2)return;
+        long step=(long)Math.floor(sec*12);float fade=smooth(sec,6.0f,6.4f);
+        var buffer=Tessellator.getInstance().getBuffer();
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.blendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE);
+        buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,world,cam);
+        Vec3d c=new Vec3d(o.x,o.y-.5,o.z);
+        int n=quality>1?7:4;
+        for(int k=0;k<n;k++){
+            double seed=step*53.7+k*17.9+s.seed;
+            if(h(seed+99)<.35)continue;
+            double az=h(seed)*Math.PI*2,el=.08+1.1*h(seed+1),daz=(h(seed+2)-.5)*1.5,del=(h(seed+3)-.5)*.9;
+            Vec3d prev=null;
+            for(int i=0;i<=12;i++){
+                double t=i/12.;
+                double a=az+daz*t+(h(seed+10+i)-.5)*.08,e=Math.max(.02,Math.min(1.5,el+del*t+(h(seed+30+i)-.5)*.07));
+                Vec3d p=c.add(Math.cos(e)*Math.cos(a)*r,Math.sin(e)*r,Math.cos(e)*Math.sin(a)*r);
+                if(prev!=null)m.glowLine(prev,p,.014*D,0xf0c8ff,.9f*fade);
+                prev=p;
+            }
+        }
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
+        AtomicShader.premultiplied();
+    }
+    static Vec3d turn(Vec3d v,Vec3d axis,double ang) {
+        double c=Math.cos(ang),sn=Math.sin(ang);
+        return v.multiply(c).add(axis.crossProduct(v).multiply(sn)).add(axis.multiply(axis.dotProduct(v)*(1-c)));
+    }
+    /** Ground chunks hurled out by the blast, tumbling and lit pink on the side facing the column. */
+    static void debris(AtomicScene s,float sec,Matrix4f world,Vec3d cam,Vec3d o,double R,int quality) {
+        float t0=AtomicLook.PINK;
+        if(sec<t0||sec>=t0+6.5f)return;
+        var buffer=Tessellator.getInstance().getBuffer();
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.defaultBlendFunc();
+        buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,world,cam);
+        int n=quality>1?s.debris.length:s.debris.length/2;
+        double g=.8*R;
+        for(int k=0;k<n;k++){
+            var d=s.debris[k];float t=sec-t0-d.delay();if(t<0)continue;
+            double rr=d.r0()*R+d.speed()*R*t,y=o.y+d.rise()*R*t-.5*g*t*t;
+            if(y<o.y-.5)continue;
+            Vec3d p=new Vec3d(o.x+Math.cos(d.angle())*rr,y,o.z+Math.sin(d.angle())*rr);
+            float a=.95f*(1-smooth(t,4.2f,6.0f))*near(cam,p,1.5,4);
+            if(a<=.01)continue;
+            double ang=d.spin()*t;
+            Vec3d u=turn(new Vec3d(1,0,0),d.axis(),ang).multiply(d.sx()*R),v=turn(new Vec3d(0,1,0),d.axis(),ang).multiply(d.sy()*R),w=turn(new Vec3d(0,0,1),d.axis(),ang).multiply(d.sz()*R);
+            Vec3d light=o.add(0,R*.6,0).subtract(p).normalize();
+            face(m,p,u,v,w,light,a);face(m,p,u.multiply(-1),w,v,light,a);
+            face(m,p,v,w,u,light,a);face(m,p,v.multiply(-1),u,w,light,a);
+            face(m,p,w,u,v,light,a);face(m,p,w.multiply(-1),v,u,light,a);
+        }
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
+        AtomicShader.premultiplied();
+    }
+    /** One box face: centre p + n, spanned by a and b, shaded by how much it faces the column. */
+    static void face(EffectMesh m,Vec3d p,Vec3d n,Vec3d a,Vec3d b,Vec3d light,float alpha) {
+        double lit=Math.max(0,n.normalize().dotProduct(light));
+        int rgb=AtomicLook.lerpColor(0x150a2b,0x9a4fd6,(float)(.08+.92*lit*lit));
+        Vec3d c=p.add(n);
+        m.quad(c.subtract(a).subtract(b),c.add(a).subtract(b),c.add(a).add(b),c.subtract(a).add(b),rgb,alpha);
+    }
+    /** Embers drifting out of the crater after the beam, over the violet afterglow pooled in it. */
+    static void embers(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,int quality) {
+        float start=AtomicLook.BEAM_END-.2f;
+        if(sec<start||sec>=BLAST_END)return;
+        float t=sec-start,in=smooth(sec,start,start+.8f),outF=1-smooth(sec,25.5f,BLAST_END);
+        var b=AtomicShader.begin(rot,cam,AtomicShader.ORB,sec,0,0,0,0,0);
+        float glow=in*(1-smooth(sec,AtomicLook.BEAM_END,26.5f));
+        if(glow>0)b.flat(new Vec3d(o.x,o.y+.2,o.z),R*1.5,0xb070ff,glow*.6f);
+        int n=quality>1?s.embers.length:quality>0?s.embers.length/2:s.embers.length/4;
+        for(int k=0;k<n;k++){
+            var e=s.embers[k];float cyc=t/e.life()+e.phase();int c=(int)Math.floor(cyc);float u=cyc-c;
+            double a=e.angle()+h(c*3.1+k)*1.2,r=e.radius()*R*(.6+.6*h(c*5.7+k));
+            Vec3d p=o.add(Math.cos(a)*r+e.vx()*R*u*e.life(),R*.05+e.vy()*R*u*e.life(),Math.sin(a)*r+e.vz()*R*u*e.life());
+            float tw=(float)Math.pow(Math.max(0,Math.sin(sec*(5+h(k*6.1)*7)+k)),2);
+            b.facing(p,e.size()*R,0xffb0ff,in*outF*(float)Math.sqrt(Math.max(0,Math.sin(Math.PI*u)))*(.5f+.5f*tw)*near(cam,p,1,3));
+        }
+        AtomicShader.end(b);
     }
 
     // ───────────────────────────── crater (7.07 → 27.6 s) ─────────────────────────────

@@ -39,9 +39,19 @@ public final class SkillShots implements ClientModInitializer {
     private final List<Future<?>> jobs=new ArrayList<>();
     private MinecraftClient mc;private int phase,age,shotIndex;private long started=System.nanoTime();
     private final Deque<String> queue=new ArrayDeque<>(Arrays.asList(System.getProperty("botand.shots.list","F,M1,E,R,T,RUSH,Y,Q,H,G").split(",")));
-    private String current;private Map<String,String> opts=new HashMap<>();private long castTick;private int dummyId=-1;private final StringBuilder log=new StringBuilder();
+    private String current,folder;private Map<String,String> opts=new HashMap<>();private long castTick;private int dummyId=-1;private final StringBuilder log=new StringBuilder();
+    private final Map<String,Integer> repeats=new HashMap<>();
     private boolean slowed;
     private float camYaw=Float.parseFloat(System.getProperty("botand.shots.yaw","145")),camPitch=12,camDist=Float.parseFloat(System.getProperty("botand.shots.dist","6.5"));
+    private net.minecraft.util.math.Vec3d castPos=net.minecraft.util.math.Vec3d.ZERO;private static volatile double[] far;
+
+    /** Fixed far camera of the current entry ("far=ex/ey/ez/tx/ty/tz[/fov]" in blocks from the cast spot), or null. */
+    public static dev.sangwoo.celestialfall.client.CinematicDirector.Pose farPose(){
+        double[] f=far;var self=instance;if(f==null||f.length<6||self==null||self.phase<3)return null;
+        var o=self.castPos;var eye=o.add(f[0],f[1],f[2]);var d=o.add(f[3],f[4],f[5]).subtract(eye).normalize();
+        return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-d.x,d.z)),(float)-Math.toDegrees(Math.asin(d.y)),0);
+    }
+    public static double farFov(){double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;}
 
     public static void afterFrame(){if(instance!=null)try{instance.frame();}catch(Throwable t){instance.fail(t);}}
     private void fail(Throwable t){t.printStackTrace();try{Files.createDirectories(OUT);Files.writeString(OUT.resolve("error.txt"),phase+" "+current+" "+t+"\n"+log);}catch(Exception ignored){}mc.scheduleStop();phase=99;}
@@ -62,7 +72,7 @@ public final class SkillShots implements ClientModInitializer {
         if(phase!=4||current==null)return;
         float t=clock();if(t<-2||t>length(current))return;
         var image=ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());
-        String name=String.format(Locale.ROOT,"%s/%05d_%07.2f.png",current,shotIndex++,t);
+        String name=String.format(Locale.ROOT,"%s/%05d_%07.2f.png",folder,shotIndex++,t);
         jobs.add(writer.submit(()->{try(image){Path p=OUT.resolve(name);Files.createDirectories(p.getParent());image.writeTo(p);}catch(Exception e){throw new RuntimeException(e);}}));
     }
     private void setup(ServerPlayerEntity p){
@@ -121,9 +131,13 @@ public final class SkillShots implements ClientModInitializer {
                 if(mc.player!=null&&mc.world!=null&&mc.currentScreen==null&&age>60){server(this::setup);phase=2;age=0;}}
             case 2->{if(age>60&&StandClient.visible(mc.player)){phase=3;age=0;}else if(age>400)throw new IllegalStateException("stand never visible, map="+MapClient.enabled());}
             case 3->{ // next skill
-                if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}server(this::reset);}
+                if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];int n=repeats.merge(current,1,Integer::sum);folder=n==1?current:current+"."+n;opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}server(this::reset);
+                    far=null;if(opts.containsKey("far")){String[] v=opts.get("far").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());far=f;}
+                    int view=(int)opt("view",Integer.getInteger("botand.shots.view",6));if(mc.options.getViewDistance().getValue()!=view){mc.options.getViewDistance().setValue(view);mc.worldRenderer.reload();}}
                 if(age==2)camera();
-                if(age>=30){camera();castTick=mc.world.getTime()+1;shotIndex=0;trigger(current);phase=4;age=0;}}
+                if(age==2&&opts.containsKey("far"))castPos=mc.player.getPos();
+                if(age==2)camera();
+                if(age>=(opts.containsKey("far")?90:30)){camera();castPos=mc.player.getPos();castTick=mc.world.getTime()+1;shotIndex=0;trigger(current);phase=4;age=0;}}
             case 4->{
                 if(current.equals("M1")){
                     String[] at=opts.getOrDefault("hits","0/13/26/39").split("[,/]");String[] faces=opts.getOrDefault("faces","").split("[,/]");
@@ -134,7 +148,7 @@ public final class SkillShots implements ClientModInitializer {
                 if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length==2&&age==Integer.parseInt(sa[1].trim())){int id=skill(sa[0].trim());server(p->KagenoManager.input(p,id));}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
-                if(age>length(current)+4){log.append(current).append(" frames ").append(shotIndex).append('\n');if(current.equals("Q"))server(p->{});phase=3;age=0;}}
+                if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }
     }
     private void trigger(String name){

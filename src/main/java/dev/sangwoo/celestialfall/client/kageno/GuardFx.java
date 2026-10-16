@@ -48,5 +48,26 @@ final class GuardFx {
             }
         }
     }
+    /** Additive part: a ring sweeping down the sphere as it forms, orbiting glints, a ground ring, a burst on release. */
+    static void glints(EffectMesh m,Vec3d feet,float in,float out,float time){
+        Vec3d o=feet.add(0,CENTER,0);float t=time/20f;
+        if(!Float.isNaN(in)){
+            if(in<.3f){
+                double th=Math.PI*Ease.unit(in,0,.3f);
+                FxLib.ring(m,o.add(0,RADIUS*Math.cos(th),0),RADIUS*Math.sin(th)+.05,.12,0xd8d0ff,.9f*(1-Ease.smooth(in,.2f,.3f)));
+                FxLib.sparks(m,o,12,1.4,.04,0xf0ecff,1-Ease.smooth(in,.08f,.3f),3,Ease.out(in,0,.12f));
+            }
+            float a=Ease.smooth(in,.1f,.3f);
+            for(int k=0;k<6;k++){
+                double tilt=.4+.5*(k%3),ang=t*(2+.4*k)+k*1.05;
+                Vec3d p=o.add(Math.cos(ang)*RADIUS*1.03,Math.sin(ang)*Math.sin(tilt)*RADIUS*1.03,Math.sin(ang)*Math.cos(tilt)*RADIUS*1.03);
+                m.star(p,.05,0xffffff,a*(.6f+.4f*(float)Math.sin(t*9+k)));
+            }
+            FxLib.ring(m,feet.add(0,.04,0),RADIUS*1.05,.15,0xc8c0ff,.3f*a);
+        }else if(!Float.isNaN(out)&&out<.2f){
+            float u=Ease.unit(out,0,.2f);
+            FxLib.ring(m,o,RADIUS*(1+.8*u),.2,0xe0d8ff,.8f*(1-u));
+        }
+    }
     private static Vec3d sph(double t,double a){return new Vec3d(Math.cos(t)*Math.cos(a),Math.sin(t),Math.cos(t)*Math.sin(a));}
 }

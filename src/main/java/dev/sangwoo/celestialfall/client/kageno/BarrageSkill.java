@@ -12,6 +12,10 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  * E "신속한 맹공": a 0.47 s cross-body draw, a one-frame snap into a lunge with a glowing blade,
  * a white-violet energy ball spitting ≈26 pulses of needle streaks and lightning for ≈1.95 s, a
  * rising cut and a vertical crescent with a lightning pillar. Seconds after the cast.
+ * Layered on top: motes charging the blade and a tightening ground ring during the draw, a ground
+ * shockwave and tip flash at the snap, gyroscope rings and forward ripples around the ball with
+ * impact sparks and dust where the streaks land, an implosion before the cut, a vertical ring on
+ * the rising cut, sparks on the crescent and a ground ring, side bolts and embers at the pillar.
  */
 final class BarrageSkill implements Fx.Skill {
     static final double H=1.8;
@@ -62,6 +66,20 @@ final class BarrageSkill implements Fx.Skill {
             if(t<SNAP+.05f){Vec3d mid=hand.add(tip).multiply(.5),cross=hb[1].crossProduct(new Vec3d(0,1,0)).normalize().multiply(.45).add(0,.2,0);m.glowLine(mid.subtract(cross),mid.add(cross),.05,0xf0a0f8,1);}
         }
         if(t>=CUT&&t<CUT+.05f)m.star(hand,.27,0xffffff,1);
+        // Charge: motes spiral into the blade tip during the draw while a violet ring tightens under the feet.
+        if(t>=.12f&&t<SNAP){
+            float u=Ease.unit(t,.12f,SNAP);
+            FxLib.converge(m,tip,2.2,28,t,.12f,SNAP,0xb48cff,11);
+            m.softDisc(tip,.12+.25*u,0xd9b8ff,.5f*u);m.softDisc(tip,.06+.1*u,0xffffff,.8f*u);
+            FxLib.ring(m,c.origin.add(0,.04,0),2.4-1.8*u,.12,0x9a6cf5,.55f*Ease.smooth(t,.12f,.25f));
+        }
+        // Snap: the lunge punches a shockwave over the ground, the tip flashes and throws sparks.
+        if(t>=SNAP&&t<SNAP+.25f){
+            float u=Ease.unit(t,SNAP,SNAP+.25f);
+            FxLib.ring(m,c.origin.add(0,.05,0),.4+3.2*Ease.out(t,SNAP,SNAP+.25f),.35+.5*u,0xe6c8ff,.85f*(1-u));
+            FxLib.flash(m,tip,.6*(1-u)+.15,0xd9a6ff,.9f*(1-u));
+            FxLib.sparks(m,tip,10,1.4,.06,0xf4e6ff,.9f*(1-u),23,Ease.out(t,SNAP,SNAP+.12f));
+        }
         // Swirl ring at the ball's onset, expanding into the ball.
         if(t>=BALL&&t<BALL+.08f){
             float u=Ease.unit(t,BALL,BALL+.08f);Vec3d o=ballCentre(c);
@@ -86,6 +104,22 @@ final class BarrageSkill implements Fx.Skill {
                 ComboSkill.arc(m,o,u,v,(.75+.13*j)*size,spin,190,.045,0xd781ff,.85f);
                 ComboSkill.arc(m,o,u,v,(.75+.13*j)*size,spin,95,.018,0xffedff,1);
             }
+            // Two gyroscope rings tumbling around the ball, and the ground lit violet beneath it.
+            for(int j=0;j<2;j++){
+                double spin=t*(3.2+1.1*j)+j*2.1,tilt=.6+.9*j;
+                Vec3d axis=aim(c).multiply(Math.cos(tilt)).add(0,Math.sin(tilt),0).normalize();
+                Vec3d u0=c.right.multiply(Math.cos(spin)).add(0,Math.sin(spin),0);
+                Vec3d v=axis.crossProduct(u0).normalize(),u=v.crossProduct(axis).normalize();
+                ComboSkill.arc(m,o,u,v,2.0*size*(1+.08*j),0,360,.035,0xcfa8ff,.7f*flick);
+            }
+            FxLib.glow(m,c.origin.add(aim(c).multiply(1.1)).add(0,.05,0),2.6*size,0x7a48e8,.35f*flick);
+            // Energy ripples: rings facing the aim leave the ball every 0.15 s and swell as they travel ahead.
+            int rip=(int)Math.floor((t-BALL)/.15f);
+            for(int p=Math.max(0,rip-3);p<=rip;p++){
+                float born=BALL+p*.15f,u=(t-born)/.5f;if(u<0||u>=1)continue;
+                Vec3d at=o.add(aim(c).multiply(.6+u*2.0*H));
+                ComboSkill.arc(m,at,c.right,new Vec3d(0,1,0),(.5+1.6*u)*size,0,360,.025,0xe0c8ff,.6f*(1-u)*(1-u));
+            }
             // Needle streaks: ≈26 pulses, 3–5 streaks each, shooting forward in a ±25° cone that
             // leans down, far ends reaching ≈3 character heights from the ball.
             if(t>=.584f){
@@ -100,6 +134,8 @@ final class BarrageSkill implements Fx.Skill {
                         Vec3d a0=o.add(dir.multiply(start)),a1=o.add(dir.multiply(start+len*Math.min(1,u*3)));
                         float a=1-Ease.smooth(u,.5f,1);
                         m.needle(a0,a1,.34,.5,0xa04cf0,a*.65f);m.needle(a0,a1,.18,.52,0xf7b3ff,a*.9f);m.needle(a0,a1,.07,.55,0xfff2ff,a);
+                        // The streak lands: a spark star where it ends, during the pulse's second half.
+                        if(u>.5&&s<3)m.star(a1,.1+.08*h3,0xffffff,(float)Math.sin(Math.PI*(u-.5)*2));
                     }
                 }
             }
@@ -116,6 +152,26 @@ final class BarrageSkill implements Fx.Skill {
                     zig(m,mid,branch,3,.025,0x7e7ad8,.8f,(int)step*37+k);
                 }
             }
+        }
+        // Implosion: the ball's light rushes inward and pops white as it is gone.
+        if(t>=COLLAPSE&&t<BALL_END+.1f){
+            FxLib.converge(m,ballCentre(c),2.6,24,t,COLLAPSE,BALL_END,0xf0d8ff,41);
+            if(t>=BALL_END-.03f){float u=Ease.unit(t,BALL_END-.03f,BALL_END+.1f);FxLib.flash(m,ballCentre(c),.3+1.2*u,0xffffff,1-u);}
+        }
+        // The rising cut throws a vertical ring along the aim.
+        if(t>=CUT&&t<CUT+.3f){
+            float u=Ease.unit(t,CUT,CUT+.3f);
+            FxLib.ringPlane(m,c.origin.add(aim(c).multiply(.9)).add(0,1.1,0),aim(c),new Vec3d(0,1,0),.5+2.5*Ease.out(t,CUT,CUT+.3f),.2,0xe8d0ff,.8f*(1-u));
+        }
+        // Sparks thrown off the crescent and a flash where it crests.
+        if(t>=CRESCENT&&t<CRESCENT+.35f){
+            Vec3d o=crescentCentre(c);float u=Ease.unit(t,CRESCENT,CRESCENT+.35f);
+            for(int k=0;k<14;k++){
+                double ang=Math.toRadians(-45+175*Ease.hash(k*3+1)),rr=1.0*H*(1+.3*u+.2*Ease.hash(k*5));
+                Vec3d p=o.add(aim(c).multiply(Math.cos(ang)*rr)).add(0,Math.sin(ang)*rr+u*1.2*Ease.hash(k*7),0);
+                m.star(p,.06+.07*Ease.hash(k*9),0xf6e6ff,(1-u)*(float)Math.sin(Math.PI*Math.min(1,u*1.5+.2)));
+            }
+            if(t<CRESCENT+.12f)FxLib.flash(m,o.add(0,1.0*H,0),.5,0xf0c0ff,.8f*(1-Ease.unit(t,CRESCENT,CRESCENT+.12f)));
         }
         // Faint violet haze for 0.3 s after the collapse.
         if(t>=BALL_END&&t<BALL_END+.3f)ellipse(m,ballCentre(c),1.9,1.4,0x9a77c8,.3f*(1-Ease.unit(t,BALL_END,BALL_END+.3f)));
@@ -168,8 +224,36 @@ final class BarrageSkill implements Fx.Skill {
                 prev=p;
             }
             m.softDisc(base.add(0,.2,0),.4*H,0x391ea7,.6f*a);
+            // The ground lit under the bolt, a glow where it meets the sky, and side bolts jumping to the ground.
+            FxLib.glow(m,base.add(0,.05,0),1.6,0x8a5cf0,.5f*a);
+            m.softDisc(base.add(lean.multiply(h)),1.2*grow,0xc9a8ff,.35f*a);
+            for(int k=0;k<3;k++){
+                if(Ease.hash((int)step*3+k)<.4)continue;
+                Vec3d from=base.add(lean.multiply(h*(.2+.5*Ease.hash((int)step*7+k)))),to=base.add((Ease.hash((int)step*11+k)-.5)*4,0,(Ease.hash((int)step*13+k)-.5)*4);
+                zig(m,from,to,5,.03,0xb898ff,a*.8f,(int)step*17+k);
+            }
         }
+        // Ground shockwave from the strike point.
+        if(t<PILLAR+.5f){float u=Ease.unit(t,PILLAR,PILLAR+.5f);FxLib.ring(m,base.add(0,.06,0),.3+2.6*Ease.out(t,PILLAR,PILLAR+.5f),.3,0xd8b8ff,.8f*(1-u));}
         for(int k=0;k<10;k++){double life=((t-PILLAR)*1.5+k*.1)%1;m.star(base.add((Ease.hash(k*3)-.5)*.8,life*5,(Ease.hash(k*5)-.5)*.8),.08,0xe0d0ff,(float)(1-life)*(1-Ease.smooth(t,PILLAR+.6f,PILLAR+.85f)));}
+        // Embers drifting up from the scorched ground.
+        FxLib.embers(m,base,1.5,3,20,t-PILLAR-.3f,1.1f,.06,0xe8b8ff,Ease.smooth(t,PILLAR+.3f,PILLAR+.45f)*(1-Ease.smooth(t,PILLAR+.6f,PILLAR+.85f)),31);
+    }
+    /** Dust kicked up where the streaks land, and at the crescent's strike point. */
+    @Override public void shaders(Fx c){
+        float t=c.sec,size=ballSize(t);
+        List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();float alpha=0;
+        if(size>0&&t>=BALL+.2f){
+            alpha=.3f*size*(.8f+.2f*(float)Math.sin(t*17));
+            for(int i=0;i<4;i++){double fw=(2.6+1.2*Ease.hash(i*3+1))*H,rt=(Ease.hash(i*5+2)-.5)*2.2*H,rise=.3+.5*Ease.hash(i*7+3)+.4*((t*.6+Ease.hash(i*11))%1);
+                pts.add(c.origin.add(aim(c).multiply(fw)).add(c.right.multiply(rt)).add(0,rise,0));sizes.add(.5+.5*Ease.hash(i*13+4));}
+        }
+        if(t>=PILLAR&&t<PILLAR+.7f){
+            alpha=Math.max(alpha,.45f*Ease.smooth(t,PILLAR,PILLAR+.1f)*(1-Ease.smooth(t,PILLAR+.4f,PILLAR+.7f)));
+            Vec3d base=c.targets.isEmpty()?c.origin.add(aim(c).multiply(.8*H)):c.targets.get(0).getLerpedPos(c.delta);float grow=Ease.out(t,PILLAR,PILLAR+.5f);
+            for(int i=0;i<5;i++){double a=i*1.26+1,r=.4+1.4*grow;pts.add(base.add(Math.cos(a)*r,.3+.5*grow*Ease.hash(i*5+7),Math.sin(a)*r));sizes.add(.35+.5*grow);}
+        }
+        if(!pts.isEmpty())KagenoFire.smoke(c.matrix,c.camera,pts,sizes,c.age,alpha);
     }
     @Override public void crescents(Fx c){
         float t=c.sec-CRESCENT;if(t<0||t>=.29f)return;

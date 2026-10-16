@@ -43,7 +43,11 @@ public final class KagenoStatusFx {
         return best;
     }
     public static void additive(MinecraftClient mc,EffectMesh m,float delta,Vec3d camera){
-        long now=mc.world.getTime();
+        long now=mc.world.getTime();float time=(now%100000)+delta;
+        for(var p:mc.world.getPlayers()){
+            if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
+            GuardFx.glints(m,p.getLerpedPos(delta),KagenoClips.guardSec(p.getUuid(),delta),KagenoClips.releaseSec(p.getUuid(),delta),time);
+        }
         for(var entry:StandClient.STATES.entrySet()){
             if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
             if(p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;

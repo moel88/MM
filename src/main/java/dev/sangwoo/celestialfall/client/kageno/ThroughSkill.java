@@ -14,6 +14,10 @@ import static dev.sangwoo.celestialfall.client.kageno.SparkSkill.H;
  * T held "어둠을 가로지르다": the same windup and blast as T but the fire runs as a long strip
  * forward; 1.09 s after the blast a flat-out "comet" dash along the facing, a cage of vertical
  * crescents, then a horizontal ring slash. Seconds after the cast.
+ * Layered on top: the T charge and blast, embers and glow along the strip, speed lines and a
+ * tightening ring before the dash, afterimages, a ground shockwave and sparks along the dash, a
+ * light column, ground glow and orbiting glints inside the cage, a shockwave, arcs, flash and dust
+ * at the cut, then an aura and embers around the finish.
  */
 final class ThroughSkill implements Fx.Skill {
     /** Dash start (D), end of the glide, dome window and the final cut. */
@@ -48,8 +52,52 @@ final class ThroughSkill implements Fx.Skill {
 
     @Override public void additive(Fx c,EffectMesh m){
         SparkSkill.sparkles(c,m);
+        SparkSkill.charge(c,m,CLIP);
+        SparkSkill.blastFx(c,m,c.origin.add(c.f.multiply(2*H)),4*H);
         SparkSkill.orbArcs(c,m,B,D+.6f,D+.75f);
         float t=c.sec;Vec3d pos=c.pos;
+        // Embers and a violet glow along the burning strip.
+        if(t>=B+.4f&&t<D+.2f){
+            float a=Ease.smooth(t,B+.4f,B+.7f)*(1-Ease.smooth(t,D-.1f,D+.2f));
+            for(int i=0;i<5;i++){Vec3d p=c.origin.add(c.f.multiply((3+3*i)*H)).add(c.right.multiply(1.5*H));FxLib.glow(m,new Vec3d(p.x,c.origin.y+.04,p.z),2.2*H,0x7c3cf0,.3f*a);}
+            FxLib.embers(m,c.origin.add(c.f.multiply(8*H)).add(c.right.multiply(1.5*H)).add(0,.05,0),7*H,3*H,30,t-B,.9f,.07,0xffb0ff,a,9);
+        }
+        // Charge before the dash: a ring tightens at the feet and speed lines rush in from ahead.
+        if(t>=B+.75f&&t<D){
+            float u=Ease.unit(t,B+.75f,D);
+            FxLib.ring(m,c.origin.add(0,.04,0),3.2-2.6*u,.15,0xb088ff,.7f*Ease.smooth(t,B+.75f,B+.9f));
+            long step=(long)Math.floor(t*30);
+            for(int k=0;k<6;k++){
+                double side=(Ease.hash((int)step*3+k)-.5)*5,y=.3+2*Ease.hash((int)step*5+k),from=10+8*Ease.hash((int)step*7+k);
+                Vec3d a0=c.origin.add(c.f.multiply(from)).add(c.right.multiply(side)).add(0,y,0),a1=c.origin.add(c.f.multiply(from-4-6*u)).add(c.right.multiply(side*.6)).add(0,y,0);
+                m.needle(a0,a1,.05,.5,0xd8c0ff,.7f*u);
+            }
+        }
+        // Dash: afterimages trailing the body, a shockwave at the start and sparks skipping along the ground.
+        if(t>=D&&t<D+.4f){
+            float fade=1-Ease.smooth(t,D+.25f,D+.4f);
+            for(int i=1;i<=6;i++){Vec3d gp=c.origin.lerp(pos,Math.max(0,1-i*.12));BarrageSkill.ellipse(m,gp.add(0,.75,0),.45,.95,0xb088ff,(1-i/7f)*.5f*fade);}
+            FxLib.ring(m,c.origin.add(0,.05,0),.5+5*Ease.out(t,D,D+.3f),.5,0xe0c8ff,.8f*(1-Ease.unit(t,D,D+.3f)));
+            for(int k=0;k<14;k++){float born=D+k*.02f,u=(t-born)/.3f;if(u<0||u>=1)continue;Vec3d p=c.origin.add(c.f.multiply(1+k*1.6)).add(c.right.multiply((Ease.hash(k*3)-.5)*1.2)).add(0,.1+u*1.5,0);m.star(p,.07,0xf0d8ff,1-u);}
+        }
+        // Inside the cage: a flickering light column, the ground lit and glints orbiting the body.
+        if(t>=DOME-.05f&&t<CUT+.1f){
+            float a=Ease.smooth(t,DOME-.05f,DOME+.05f)*(1-Ease.smooth(t,CUT,CUT+.1f));
+            FxLib.column(m,pos,3.2*H,.6+.15*Math.sin(t*30),0xc8a0ff,.6f*a);FxLib.glow(m,pos.add(0,.04,0),2.2*H,0x8a4cf4,.45f*a);
+            for(int k=0;k<8;k++){double ang=t*6+k*Math.PI/4;m.star(pos.add(Math.cos(ang)*1.5*H,.5+1.5*Ease.hash(k*3)+.3*Math.sin(t*4+k),Math.sin(ang)*1.5*H),.08,0xffffff,a);}
+        }
+        // The cut: a ground shockwave, two white arcs chasing the ring and a flash at the body.
+        if(t>=CUT&&t<CUT+.45f){
+            float u=Ease.unit(t,CUT,CUT+.45f);
+            FxLib.ring(m,pos.add(0,.06,0),1+7*H*Ease.out(t,CUT,CUT+.45f),.8,0xf0d8ff,.85f*(1-u));
+            for(int i=0;i<2;i++)ComboSkill.arc(m,pos.add(0,.7+.4*i,0),c.f,c.right,(3+3*Ease.out(t,CUT+.05f*i,CUT+.35f))*H*(1+.15*i),0,360,.03,0xffffff,.7f*(1-u));
+            if(t<CUT+.1f)FxLib.flash(m,pos.add(0,1,0),1.8,0xf8e8ff,1-Ease.unit(t,CUT,CUT+.1f));
+        }
+        // Finish: a violet aura around the body and embers drifting up.
+        if(t>=CUT+.1f&&t<D+1.6f){
+            float a=Ease.smooth(t,CUT+.1f,CUT+.2f)*(1-Ease.smooth(t,D+1.2f,D+1.6f));
+            BarrageSkill.ellipse(m,pos.add(0,.9,0),.9,1.3,0x8a50f0,.3f*a);FxLib.embers(m,pos,2.5*H,2.5*H,20,t-CUT,.8f,.06,0xffb0ff,a,13);
+        }
         // Comets shooting ahead along the dash line just before the dash.
         if(t>=B+.8f&&t<D){
             long burst=(long)Math.floor((t-B-.8f)/.07f);float u=((t-B-.8f)/.07f)%1;
@@ -103,8 +151,17 @@ final class ThroughSkill implements Fx.Skill {
             KagenoFire.crescent(pos.add(0,.7,0),front,c.right,r,r*.6,0,360,6,3,Ease.smooth(u,.12f,.28f)*.7f,.5f,1-Ease.smooth(u,.16f,.28f));
         }
     }
+    @Override public void alpha(Fx c,EffectMesh m){SparkSkill.heat(c,m,c.origin.add(c.f.multiply(6*H)).add(c.right.multiply(1.5*H)),D-B-.1f,D-B+.3f);}
     @Override public void shaders(Fx c){
         float t=c.sec-B;if(t<0)return;
+        SparkSkill.smoke(c,t,c.origin.add(c.f.multiply(7*H)).add(c.right.multiply(1.5*H)),5*H,D-B+.5f);
+        // Dust kicked up around the cut.
+        if(c.sec>=CUT&&c.sec<CUT+.9f){
+            float a=.5f*Ease.smooth(c.sec,CUT,CUT+.1f)*(1-Ease.smooth(c.sec,CUT+.5f,CUT+.9f));float grow=Ease.out(c.sec,CUT,CUT+.5f);
+            List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();
+            for(int i=0;i<8;i++){double az=i*.785+Ease.hash(i*3)*.4,r=(2+3*grow)*H;pts.add(c.pos.add(Math.cos(az)*r,.3+.6*grow*Ease.hash(i*5+7),Math.sin(az)*r));sizes.add(.5+.7*grow);}
+            KagenoFire.smoke(c.matrix,c.camera,pts,sizes,c.age,a);
+        }
         // The blast cloud reaches down the whole line in 0.1 s; the fire runs as a long forward strip.
         if(t<.45f){
             float grow=Ease.out(t,0,.1f),a=1-Ease.smooth(t,.25f,.42f);

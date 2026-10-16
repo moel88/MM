@@ -43,6 +43,39 @@ final class TimeWalkerSkill implements Fx.Skill {
     @Override public boolean walkLegs(float sec){return sec>=GRAY&&sec<COLOR;}
     @Override public float lifetime(){return 4.0f;}
 
+    /** The world stops: a white pulse at the chest, rings racing out, then glints hanging frozen in the air until colour returns. */
+    static void freeze(Fx c,EffectMesh m){
+        float t=c.sec;Vec3d chest=c.pos.add(0,1.1,0);
+        if(t>=GRAY&&t<GRAY+.5f){
+            float u=Ease.unit(t,GRAY,GRAY+.5f);
+            FxLib.flash(m,chest,1.2*(1-u)+.2,0xe8f4ff,1-Ease.smooth(t,GRAY+.03f,GRAY+.2f));
+            FxLib.ring(m,new Vec3d(c.pos.x,c.origin.y+.05,c.pos.z),.4+6*H*Ease.out(t,GRAY,GRAY+.5f),.5,0xf4f8ff,.8f*(1-u));
+            FxLib.ringPlane(m,chest,c.f,new Vec3d(0,1,0),.3+3*H*Ease.out(t,GRAY,GRAY+.4f),.3,0xf4f8ff,.7f*(1-Ease.unit(t,GRAY,GRAY+.4f)));
+        }
+        if(t>=GRAY+.1f&&t<COLOR+.15f){
+            float a=Ease.smooth(t,GRAY+.1f,GRAY+.4f)*(1-Ease.smooth(t,COLOR,COLOR+.15f));
+            for(int k=0;k<24;k++){
+                double ang=Ease.hash(k*7+41)*Math.PI*2,r=(1+3*Ease.hash(k*5+42))*H,y=.3+2.2*H*Ease.hash(k*3+43),drift=(t-GRAY)*.08;
+                Vec3d p=c.origin.add(Math.cos(ang)*r,y+drift,Math.sin(ang)*r);
+                float tw=.6f+.4f*(float)Math.sin(t*(4+3*Ease.hash(k*11))+k);
+                m.star(p,.05+.05*Ease.hash(k*13),k%3==0?0xffffff:0xd8f0ff,a*tw);
+            }
+        }
+    }
+    /** Every cut flashes where it crosses and throws a few glass-like shards. */
+    static void cutFlash(Fx c,EffectMesh m){
+        float t=c.sec;if(t<CUTS[0]||t>=RELEASE)return;var list=cuts(c);
+        for(int i=0;i<4;i++){
+            float u=(t-CUTS[i])/.28f;if(u<0||u>=1)continue;var cut=list.get(i);
+            FxLib.flash(m,cut.centre(),.6*(1-u)+.1,0xf0f8ff,(1-Ease.smooth(u,.3f,1)));
+            for(int k=0;k<6;k++){
+                double az=Ease.hash(i*17+k*3)*Math.PI*2,el=(Ease.hash(i*19+k*5)-.4)*1.6,len=(.3+.5*Ease.hash(i*23+k*7))*H;
+                Vec3d d=new Vec3d(Math.cos(el)*Math.cos(az),Math.sin(el),Math.cos(el)*Math.sin(az));
+                Vec3d p=cut.centre().add(d.multiply(len*u*2));
+                m.needle(p,p.add(d.multiply(.25)),.05,.5,0xffffff,(1-u)*(1-u));
+            }
+        }
+    }
     /** One frozen cut: centre, direction, length, primary thickness. */
     record Cut(Vec3d centre,Vec3d dir,double length,double width){}
     static List<Cut> cuts(Fx c){
@@ -60,6 +93,7 @@ final class TimeWalkerSkill implements Fx.Skill {
     }
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec;
+        freeze(c,m);cutFlash(c,m);
         if(t>=CUTS[0]&&t<RELEASE){
             var list=cuts(c);
             // White light during the gray phase; once colour returns the lavender-periwinkle glow shows.
@@ -89,6 +123,13 @@ final class TimeWalkerSkill implements Fx.Skill {
             BarrageSkill.ellipse(m,burst,1.4*H*s,.88*H*s,0xc7b7fb,a*.6f);
             BarrageSkill.ellipse(m,burst,1.2*H*s,.72*H*s,0xfbfdf8,a);BarrageSkill.ellipse(m,burst,.9*H*s,.55*H*s,0xffffff,a);
             for(int k=0;k<14;k++){double az=k*Math.PI/7+Ease.hash(k)*.3,len=(.7+.8*Ease.hash(k*3))*H*s;Vec3d d=c.right.multiply(Math.cos(az)).add(0,Math.sin(az)*.6,0);m.needle(burst,burst.add(d.multiply(len)),.3,.2,0xffffff,a);}
+        }
+        // Release shockwave: a ground ring racing out to 8 H, a vertical ring on the facing and a violet ground glow.
+        if(t>=RELEASE&&t<RELEASE+.6f){
+            float u=Ease.unit(t,RELEASE,RELEASE+.6f);Vec3d g=new Vec3d(burst.x,c.origin.y+.05,burst.z);
+            FxLib.ring(m,g,.5+8*H*Ease.out(t,RELEASE,RELEASE+.6f),.7,0xe8e0ff,.85f*(1-u));
+            FxLib.ringPlane(m,burst,c.right,new Vec3d(0,1,0),.4+3*H*Ease.out(t,RELEASE,RELEASE+.4f),.3,0xd8ccff,.8f*(1-Ease.unit(t,RELEASE,RELEASE+.4f)));
+            FxLib.glow(m,g,2.5*H,0x7a50e8,.45f*(1-u));
         }
         if(t>=RELEASE+.05f&&t<RELEASE+.67f){
             float a=1-Ease.smooth(t,RELEASE+.3f,RELEASE+.67f);

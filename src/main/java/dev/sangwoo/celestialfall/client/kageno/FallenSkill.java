@@ -204,13 +204,45 @@ final class FallenSkill implements Fx.Skill {
         }
     }
     @Override public void additive(Fx c,EffectMesh m){
-        hitSpark(c,m);
+        hitSpark(c,m);stomp(c,m);charge(c,m);
         float t=c.sec-FLASH;if(t<0)return;
         starburst(c,m,t);
         mist(c,m,t);
         orbs(c,m,t);
         motes(c,m,t);
         arcs(c,m,t,true);
+        pillarFx(c,m,t);
+        emberFx(c,m,t);
+    }
+    /** The stomp: a ground shockwave and sparks from the foot. */
+    static void stomp(Fx c,EffectMesh m){
+        float t=c.sec-LAND;if(t<0||t>=.4f)return;float u=Ease.unit(t,0,.4f);
+        Vec3d g=c.origin.add(0,.05,0);
+        FxLib.ring(m,g,.3+3*H*Ease.out(t,0,.35f),.45,0xe0d4ff,.85f*(1-u));
+        FxLib.flash(m,c.origin.add(c.f.multiply(.3)).add(0,.2,0),.5*(1-u)+.1,0xd8c8ff,.9f*(1-Ease.smooth(t,.03f,.18f)));
+        FxLib.sparks(m,c.origin.add(c.f.multiply(.3)).add(0,.15,0),10,1.3,.05,0xf0e8ff,1-Ease.smooth(t,.1f,.35f),77,Ease.out(t,0,.15f));
+    }
+    /** The crouch gathers power: motes spiral into the torso, the ground glows and a ring tightens on the caster. */
+    static void charge(Fx c,EffectMesh m){
+        float t=c.sec;if(t<LAND+.15f||t>=FLASH)return;float u=Ease.unit(t,LAND+.15f,FLASH);
+        Vec3d torso=c.origin.add(0,.9,0);
+        FxLib.converge(m,torso,2.6*H,36,t,LAND+.15f,FLASH,0xc0a0ff,21);
+        FxLib.glow(m,c.origin.add(0,.04,0),1.2+2*u,0x6a3ce0,.45f*u*(float)(.8+.2*Math.sin(t*25)));
+        FxLib.ring(m,c.origin.add(0,.05,0),3.2*H*(1-u)+.4,.2,0xb090ff,.7f*Ease.smooth(t,LAND+.15f,LAND+.3f));
+        m.softDisc(torso,.2+.5*u,0xd8c0ff,.6f*u);
+    }
+    /** The flash: a column of light up from the caster and two ground shockwaves. */
+    static void pillarFx(Fx c,EffectMesh m,float t){
+        if(t>=1.2f)return;
+        FxLib.column(m,c.origin,25*Ease.out(t,0,.1f),1.3*(1-Ease.smooth(t,.1f,.45f))+.1,0xffffff,1-Ease.smooth(t,.15f,.45f));
+        Vec3d g=c.origin.add(0,.06,0);
+        if(t<.5f)FxLib.ring(m,g,.4+6*H*Ease.out(t,0,.5f),.7,0xf0e8ff,.9f*(1-Ease.unit(t,0,.5f)));
+        FxLib.ring(m,g.add(0,.03,0),.4+9*H*Ease.out(t,.05f,1.2f),.5,0xb898ff,.6f*(1-Ease.smooth(t,.4f,1.2f)));
+    }
+    /** Embers drifting up out of the crater while the slabs stand. */
+    static void emberFx(Fx c,EffectMesh m,float t){
+        float a=Ease.smooth(t,.4f,.8f)*(1-Ease.smooth(t,SINK-FLASH-.3f,SINK-FLASH+.3f));
+        FxLib.embers(m,c.origin.add(0,.1,0),4*H,2.5*H,dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?12:30,t-.4f,.8f,.07,0xe0b8ff,a,57);
     }
     @Override public void alpha(Fx c,EffectMesh m){
         float t=c.sec-FLASH;if(t<0)return;

@@ -37,6 +37,13 @@ final class OverdriveFx {
             BarrageSkill.ellipse(m,mid,1.2,1.6,0xf4ecff,a*.6f);
             for(int k=0;k<4;k++)BarrageSkill.ellipse(m,mid,.55-.04*k,1.1-.04*k,0xffffff,a);
         }
+        // Activation shockwave: a ring over the ground, a column of light and sparks out of the body.
+        if(s<.45f){
+            float u=Ease.unit(s,0,.45f);
+            FxLib.ring(m,b.feet().add(0,.05,0),.3+4*Ease.out(s,0,.35f),.5,0xe0d0ff,.85f*(1-u));
+            FxLib.column(m,b.feet(),8*Ease.out(s,0,.08f),1.0*(1-u)+.1,0xf4ecff,.9f*(1-Ease.smooth(s,.08f,.35f)));
+            FxLib.sparks(m,b.at(0,1.0,0),14,1.8,.05,0xf0e4ff,1-Ease.smooth(s,.1f,.4f),9,Ease.out(s,0,.15f));
+        }
         // Right eye: white core, lavender falloff, a slight flare outward; brighter for the first 0.3 s.
         float eye=Ease.smooth(s,.08f,.2f);
         if(eye>0){
@@ -61,6 +68,11 @@ final class OverdriveFx {
                 Vec3d pt=b.feet().add(Math.cos(ang)*r,.1+.5*((time*.4+k*.21)%1),Math.sin(ang)*r);
                 m.softDisc(pt,.05,0xa15cf0,rest*.8f);
             }
+            // The ground lit under the feet, embers rising off the body and arcs jumping between the shoulders.
+            FxLib.glow(m,b.feet().add(0,.04,0),1.3,0x6a38e0,.3f*rest*(float)(.8+.2*Math.sin(time*5)));
+            FxLib.embers(m,b.feet(),.6,2.2,10,time,.7f,.04,0xd8a8ff,.8f*rest,(int)p.getUuid().getMostSignificantBits());
+            long step=(long)Math.floor(time*20);
+            if(Ease.hash((int)step*7+(int)p.getUuid().getLeastSignificantBits())>.7)FxLib.zig(m,b.at(0,1.42,.36),b.at(0,1.42,-.36),4,.02,0xb890ff,.8f*rest,(int)step*13);
         }
     }
     /**

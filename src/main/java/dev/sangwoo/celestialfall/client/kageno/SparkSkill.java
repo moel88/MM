@@ -13,7 +13,10 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  * T "어둠 속의 불꽃": a 0.65 s windup (body turned 55° right, left hand raised in a burst of
  * sparkles, sword planted point-down), then a white blast cloud that turns into pink/violet fire
  * over a 6×6 character-height field, a dark orb on each hit target and an ink-black scorch.
- * Seconds after the cast; B = 0.65 s is the blast. 1 character height (H) = 1.8 blocks.
+ * Layered on top: motes charging the raised hand and violet cracks spreading from the planted
+ * sword, a flash, ground shockwave, light column and spark burst at the blast, embers, crackling
+ * bolts, smoke and heat rings over the burning field, a glow halo on the trapped orbs and a last
+ * pulse as the fire dies. Seconds after the cast; B = 0.65 s is the blast. 1 character height (H) = 1.8 blocks.
  */
 final class SparkSkill implements Fx.Skill {
     static final float B=.65f;
@@ -53,13 +56,80 @@ final class SparkSkill implements Fx.Skill {
             m.star(p,size,0xd0c4ef,(float)Math.sin(Math.PI*Math.min(1,u*1.4)));
         }
     }
-    @Override public void additive(Fx c,EffectMesh m){sparkles(c,m);orbArcs(c,m,B,B+3.55f,B+3.8f);}
-    /** Violet orbit arcs caging each trapped target's dark orb. */
+    @Override public void additive(Fx c,EffectMesh m){sparkles(c,m);charge(c,m,CLIP);blastFx(c,m,c.origin.add(c.f.multiply(1.5*H)),3.5*H);emberFx(c,m,c.origin.add(c.f.multiply(1.7*H)).add(c.right.multiply(.4*H)),2.2*H,3.6f,4.3f);orbArcs(c,m,B,B+3.55f,B+3.8f);}
+    @Override public void alpha(Fx c,EffectMesh m){heat(c,m,c.origin.add(c.f.multiply(1.6*H)).add(c.right.multiply(.3*H)),3.6f,4.2f);}
+
+    /** Tip of the planted sword, from the windup clip. */
+    static Vec3d swordTip(Fx c,Anim clip){var hb=KagenoClips.blade(c.origin,c.cast.yaw(),R6.poseOf(clip.frame(Math.min(c.sec,B))));return hb[0].add(hb[1].multiply(1.35));}
+    /** Windup: motes spiral into the raised hand while violet cracks spread over the ground from the sword tip. */
+    static void charge(Fx c,EffectMesh m,Anim clip){
+        float t=c.sec;if(t<.11f||t>=B+.05f)return;Vec3d hand=hand(c);
+        float u=Ease.unit(t,.11f,B),pulse=.85f+.15f*(float)Math.sin(t*40);
+        FxLib.converge(m,hand,1.8,30,t,.11f,B,0xc8a8ff,7);
+        m.softDisc(hand,.14+.3*u,0xcdb0ff,.45f*u*pulse);m.softDisc(hand,.07+.12*u,0xffffff,.9f*u);
+        Vec3d tip=swordTip(c,clip);Vec3d g=new Vec3d(tip.x,c.origin.y+.03,tip.z);int seed=(int)c.cast.id().getLeastSignificantBits();
+        float grow=Ease.out(t,.2f,B);
+        for(int k=0;k<5;k++){
+            double ang=k*1.2566+Ease.hash(seed+k)*.6;Vec3d p=g;int segs=(int)(6*grow);
+            for(int i=0;i<segs;i++){double a2=ang+(Ease.hash(seed+k*13+i)-.5)*1.2;Vec3d q=p.add(Math.cos(a2)*.35,0,Math.sin(a2)*.35);m.glowLine(p,q,.025,0x9a60f0,.8f*grow);p=q;}
+        }
+        FxLib.glow(m,g,.5+.6*grow,0x5a2cc0,.5f*grow);
+    }
+    /** The blast: a flash, a ground shockwave, a light column shooting up and sparks thrown into the air. */
+    static void blastFx(Fx c,EffectMesh m,Vec3d centre,double ringRadius){
+        float t=c.sec-B;if(t<0||t>=.5f)return;float u=Ease.unit(t,0,.5f);
+        Vec3d ground=new Vec3d(centre.x,c.origin.y,centre.z);
+        FxLib.flash(m,centre.add(0,1.4,0),2.2*(1-Ease.smooth(t,0,.25f))+.2,0xf8e8ff,1-Ease.smooth(t,.05f,.25f));
+        FxLib.ring(m,ground.add(0,.06,0),.5+ringRadius*Ease.out(t,0,.3f),.6,0xffe0ff,.9f*(1-Ease.smooth(t,.1f,.4f)));
+        FxLib.column(m,ground,6*H*Ease.out(t,0,.08f),.9*(1-u),0xffffff,.9f*(1-Ease.smooth(t,.08f,.3f)));
+        for(int k=0;k<36;k++){
+            double az=Ease.hash(k*3)*Math.PI*2,el=.4+1.1*Ease.hash(k*5),sp=(2+4*Ease.hash(k*7))*H;float life=(float)(.25+.25*Ease.hash(k*11)),v=t/life;if(v>=1)continue;
+            Vec3d d=new Vec3d(Math.cos(el)*Math.cos(az),Math.sin(el),Math.cos(el)*Math.sin(az));
+            m.star(centre.add(d.multiply(sp*v)).add(0,.4-3*v*v,0),.08+.06*Ease.hash(k*13),0xffe8ff,(1-v)*(1-v));
+        }
+    }
+    /** Over the burning field: the ground lit violet, embers rising, bolts crackling between the flames, a last pulse. */
+    static void emberFx(Fx c,EffectMesh m,Vec3d centre,double radius,float dieStart,float dieEnd){
+        float t=c.sec-B;if(t<.3f||t>=dieEnd)return;float a=Ease.smooth(t,.3f,.6f)*(1-Ease.smooth(t,dieStart,dieEnd));
+        Vec3d ground=new Vec3d(centre.x,c.origin.y+.04,centre.z);
+        FxLib.glow(m,ground,radius*1.1,0x7c3cf0,.35f*a*(float)(.8+.2*Math.sin(t*6)));
+        FxLib.embers(m,ground,radius,3.5*H,dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?14:32,t,.9f,.07,0xffb0ff,a,5);
+        long step=(long)Math.floor(c.sec*30);
+        for(int k=0;k<3;k++){
+            if(Ease.hash((int)step*5+k)<.45)continue;
+            Vec3d p=ground.add((Ease.hash((int)step*7+k)-.5)*radius*1.6,.8*H+1.2*H*Ease.hash((int)step*11+k),(Ease.hash((int)step*13+k)-.5)*radius*1.6);
+            Vec3d q=p.add((Ease.hash((int)step*17+k)-.5)*1.8,(Ease.hash((int)step*19+k)-.3)*1.2,(Ease.hash((int)step*23+k)-.5)*1.8);
+            BarrageSkill.zig(m,p,q,4,.03,0xd0a8ff,.85f*a,(int)step*29+k);
+        }
+        if(t>=dieStart-.1f&&t<dieStart+.4f){float u=Ease.unit(t,dieStart-.1f,dieStart+.4f);FxLib.ring(m,ground,radius*.7+radius*Ease.out(t,dieStart-.1f,dieStart+.4f),.4,0xc8a0ff,.5f*(1-u));}
+    }
+    /** Heat rings: translucent lavender bands drifting out and up over the field (alpha pass). */
+    static void heat(Fx c,EffectMesh m,Vec3d centre,float dieStart,float dieEnd){
+        float t=c.sec-B;if(t<.3f||t>=dieEnd)return;
+        for(int k=0;k<3;k++){
+            float cyc=((t-.3f)/.9f+k/3f)%1;double r=(1.2+2.6*cyc)*H;
+            float a=.16f*(1-cyc)*Ease.smooth(cyc,0,.15f)*(1-Ease.smooth(t,dieStart,dieEnd));
+            ComboSkill.band(m,new Vec3d(centre.x,c.origin.y+.3+.5*cyc,centre.z),r,.25+.3*cyc,k*120+t*20,360,0xbfa6f6,a);
+        }
+    }
+    /** Dark smoke rolling up above the flames. */
+    static void smoke(Fx c,float t,Vec3d centre,double radius,float end){
+        if(t<.6f||t>=end)return;float a=.55f*Ease.smooth(t,.6f,1.2f)*(1-Ease.smooth(t,end-.8f,end));
+        List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();
+        for(int i=0;i<7;i++){
+            double ang=Ease.hash(i*7+5)*Math.PI*2,r=radius*Math.sqrt(Ease.hash(i*13+6)),rise=(.8+.6*Ease.hash(i*3))*(t-.6)*.35*H;
+            pts.add(centre.add(Math.cos(ang)*r,1.6*H+rise+.4*Math.sin(t*1.3+i),Math.sin(ang)*r));sizes.add((.9+.6*Ease.hash(i*11+7))*(1+.15*(t-.6)));
+        }
+        KagenoFire.smoke(c.matrix,c.camera,pts,sizes,c.age,a);
+    }
+    /** Violet orbit arcs caging each trapped target's dark orb, a glow halo around it and ink drips. */
     static void orbArcs(Fx c,EffectMesh m,float from,float hold,float end){
         float t=c.sec;if(t<from+.15f||t>=end)return;
         float a=Ease.smooth(t,from+.15f,from+.31f)*(1-Ease.smooth(t,hold,end));
         for(LivingEntity e:c.targets){
             Vec3d o=e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0);
+            m.softDisc(o,1.25*H,0x7a3cf0,.25f*a*(float)(.8+.2*Math.sin(t*9)));
+            for(int k=0;k<6;k++){float cyc=((t-from)*1.3f+(float)Ease.hash(k*7))%1;Vec3d p=o.add((Ease.hash(k*3)-.5)*.9,.3-cyc*1.6,(Ease.hash(k*5)-.5)*.9);m.needle(p,p.add(0,-.25,0),.06,.2,0x4a2a9a,a*(1-cyc));}
             for(int k=0;k<2;k++){
                 double tilt=.5+k*1.1,spin=t*(2.2+k)+k;Vec3d u=new Vec3d(Math.cos(spin),Math.sin(tilt)*.4,Math.sin(spin)).normalize(),v=new Vec3d(0,1,0).crossProduct(u).normalize().add(0,Math.cos(tilt)*.3,0).normalize();
                 Vec3d prev=null;
@@ -73,6 +143,7 @@ final class SparkSkill implements Fx.Skill {
         cloud(c,t,c.origin.add(c.f.multiply(1.5*H)),2.9*H,1);
         fire(c,t);
         orbs(c,t,3.55f,3.8f);
+        smoke(c,t,c.origin.add(c.f.multiply(1.7*H)).add(c.right.multiply(.4*H)),2.2*H,4.8f);
     }
     /** Billowy white cloud that grows in 3 frames, stays white to +0.27 s and gives way to the fire by +0.55 s. */
     static void cloud(Fx c,float t,Vec3d centre,double width,double stretch){
