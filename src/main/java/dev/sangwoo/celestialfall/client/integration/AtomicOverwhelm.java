@@ -24,8 +24,8 @@ public final class AtomicOverwhelm {
     public static final Identifier PIPELINE=CelestialFall.id("atomic_overwhelm");
     private static float strength,surge,centerX=.5f,centerY=.5f,facing,width,bar;
     private static float next=-1,nextSurge,nextX,nextY,nextFacing,nextWidth;
-    private static long renderedFrames;
-    private static int idleTicks,checkedProgram=-1;
+    private static long renderedFrames,lastOffer;
+    private static int checkedProgram=-1;
     private static boolean warned,linked;
     private AtomicOverwhelm(){}
 
@@ -42,8 +42,9 @@ public final class AtomicOverwhelm {
             pipeline.setFloat("AtomicBar",bar);
         });
         FabricVeilPostProcessingEvent.POST.register((id,pipeline,context)->{if(PIPELINE.equals(id))renderedFrames++;});
-        // A cast that ends, a dimension change or a stalled world render leaves no offers: drop the pipeline.
-        ClientTickEvents.END_CLIENT_TICK.register(mc->{if(++idleTicks>3&&(strength>0||pipelineActive()))stop();});
+        // Each rendered frame either renews or drops the pipeline; if the world stops rendering altogether, drop it after
+        // a second (by time, not ticks: a slow machine may render fewer frames than it runs ticks).
+        ClientTickEvents.END_CLIENT_TICK.register(mc->{if(System.nanoTime()-lastOffer>1_000_000_000L&&(strength>0||pipelineActive()))stop();});
         ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->client.execute(AtomicOverwhelm::stop));
     }
 
@@ -63,7 +64,7 @@ public final class AtomicOverwhelm {
         if(next<=.002f){if(strength>0)stop();return;}
         if(!ready()){stop();return;}
         strength=Math.min(1,next);surge=nextSurge;centerX=nextX;centerY=nextY;facing=nextFacing;width=nextWidth;bar=letterbox;
-        idleTicks=0;
+        lastOffer=System.nanoTime();
         if(!manager().isActive(PIPELINE))manager().add(PIPELINE);
     }
     public static void stop(){
