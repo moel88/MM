@@ -125,8 +125,8 @@ final class ComboSkill implements Fx.Skill {
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec-HIT;int combo=c.cast.combo();
         // Sword trail: a white-lavender ribbon swept by the outer blade through the strike.
-        float tr=Ease.smooth(c.sec,.18f,.23f)*(1-Ease.smooth(c.sec,.31f,.40f));
-        if(tr>0)FxLib.trail(m,c,clip(combo),c.sec,.1f,8,.7,1.35,0xece0ff,tr);
+        float tr=Ease.smooth(c.sec,.20f,.25f)*(1-Ease.smooth(c.sec,.31f,.40f));
+        if(tr>0)FxLib.trail(m,c,clip(combo),c.sec,.09f,8,.85,1.35,0xece0ff,.75f*tr);
         if(t<0)return;
         if(combo==1||combo==2||combo==3){
             // Thin white wind arcs in the swing plane, expanding 30 % while fading.
@@ -179,8 +179,8 @@ final class ComboSkill implements Fx.Skill {
     @Override public void alpha(Fx c,EffectMesh m){
         int combo=c.cast.combo();
         // Violet body of the sword trail under the white ribbon.
-        float tr=Ease.smooth(c.sec,.18f,.23f)*(1-Ease.smooth(c.sec,.31f,.40f));
-        if(tr>0)FxLib.trail(m,c,clip(combo),c.sec,.1f,8,.3,1.3,0x7a40e0,.55f*tr);
+        float tr=Ease.smooth(c.sec,.20f,.25f)*(1-Ease.smooth(c.sec,.31f,.40f));
+        if(tr>0)FxLib.trail(m,c,clip(combo),c.sec,.09f,8,.4,1.3,0x7a40e0,.45f*tr);
         float t=c.sec-HIT;if(combo!=4||t<-.03f||t>=.5f)return;
         // Wide translucent lavender wind bands thrown out by the spin, drifting up and out.
         int[] colors={0xd4c2fb,0xaea2f8};
@@ -195,9 +195,9 @@ final class ComboSkill implements Fx.Skill {
         List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();float alpha=0;
         if(combo==3&&t>=.02f&&t<.5f){
             // Dust kicked up where the chop lands.
-            alpha=Ease.smooth(t,.02f,.1f)*(1-Ease.smooth(t,.3f,.5f));float grow=Ease.out(t,.02f,.3f);
+            alpha=.6f*Ease.smooth(t,.02f,.1f)*(1-Ease.smooth(t,.3f,.5f));float grow=Ease.out(t,.02f,.3f);
             Vec3d at=c.origin.add(c.f.multiply(1.9));
-            for(int i=0;i<4;i++){double a=i*1.57+.4,r=.2+.7*grow;pts.add(at.add(Math.cos(a)*r,.2+.3*grow*Ease.hash(i*5+2),Math.sin(a)*r));sizes.add(.25+.35*grow);}
+            for(int i=0;i<4;i++){double a=i*1.57+.4,r=.2+.6*grow;pts.add(at.add(Math.cos(a)*r,.15+.25*grow*Ease.hash(i*5+2),Math.sin(a)*r));sizes.add(.2+.28*grow);}
         }
         if(combo==4&&t>=.1f&&t<.78f){
             // Ground-hugging dark indigo smoke at the thrust's impact point, peaking 0.48 s after it.
