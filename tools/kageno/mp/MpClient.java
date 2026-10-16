@@ -39,7 +39,8 @@ public final class MpClient implements ClientModInitializer {
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
     private MinecraftClient mc;private int phase,age,frames;private boolean caster;private final Set<Integer> held=new HashSet<>();
-    private float quakePeak,overwhelmPeak,lightPeak;
+    private float quakePeak,overwhelmPeak,lightPeak;private net.minecraft.util.math.Vec3d walkLast;private long walkStart=-1;
+    private final List<Double> steps=new ArrayList<>();
 
     @Override public void onInitializeClient(){
         if(ROLE==null)return;caster=ROLE.equals("caster");
@@ -83,12 +84,31 @@ public final class MpClient implements ClientModInitializer {
                     for(String step:SCRIPT){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
+                    walk();
                     if(age%20==0&&Files.exists(OUT.resolve("done"))){note("caster done");phase=3;age=0;}
                     if(age>4000){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
             case 3->{if(age==20){writer.shutdown();writer.awaitTermination(60,TimeUnit.SECONDS);note("frames "+frames);mc.scheduleStop();}}
+        }
+    }
+    /**
+     * During G the watcher walks forward for 30 ticks outside the column (cast age 280) and again inside it (325; the
+     * server moves it in at 320 and out at 360) on the real movement path, and logs its walking speed: the median
+     * distance per tick on the ground once it is up to speed, leaving out the ticks after a hit (knockback).
+     */
+    private void walk(){
+        var cast=AtomicClient.CASTS.values().stream().findFirst().orElse(null);if(cast==null||mc.player==null)return;
+        long a=mc.world.getTime()-cast.start;var p=mc.player.getPos();
+        if(walkStart<0&&(a==280||a==325)){walkStart=a;walkLast=p;steps.clear();key(GLFW_KEY_W,true);return;}
+        if(walkStart<0)return;
+        if(a-walkStart>=6&&mc.player.isOnGround()&&mc.player.hurtTime==0)steps.add(Math.hypot(p.x-walkLast.x,p.z-walkLast.z));
+        walkLast=p;
+        if(a>=walkStart+30){
+            key(GLFW_KEY_W,false);steps.sort(null);double median=steps.isEmpty()?0:steps.get(steps.size()/2);
+            note(String.format(Locale.ROOT,"walking %.2f blocks/s on the ground at cast age %d (median of %d ticks, %s)",median*20,a,steps.size(),AtomicClient.held(mc.player)?"held":"free"));
+            walkStart=-1;
         }
     }
     private void act(String step,boolean down){
@@ -126,6 +146,9 @@ public final class MpClient implements ClientModInitializer {
         }
         flag("atomic",AtomicClient.CASTS.size());flag("overdrive",StandClient.OVERDRIVE.size());flag("hits",StandClient.hitCount);
         flag("health",Math.round(mc.player.getHealth()));
+        // G's hold on this player: its speed against its base, and that the slowdown is not taken for an optical zoom.
+        var speed=mc.player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
+        flag("atomic_hold",AtomicClient.held(mc.player)?String.format(Locale.ROOT,"speed x%.2f fov x%.2f",speed.getValue()/speed.getBaseValue(),mc.player.getFovMultiplier()):"off");
         if(lastPos==null||lastPos.squaredDistanceTo(mc.player.getPos())>1){lastPos=mc.player.getPos();note(String.format(Locale.ROOT,"selfpos %.2f %.2f %.2f",lastPos.x,lastPos.y,lastPos.z));}
         var other=mc.world.getPlayers().stream().filter(p->p!=mc.player).findFirst().orElse(null);
         if(other!=null){flag("other_marked",StandClient.shadowMarked(other));flag("other_outlined",StandClient.shadowOutlined(other));}
