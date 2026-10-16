@@ -23,10 +23,14 @@
     "celestialfall.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.15.6",
+    "fabricloader": ">=0.16.10",
     "minecraft": "1.20.1",
     "java": ">=17",
-    "fabric-api": ">=0.92.2+1.20.1"
+    "fabric-api": ">=0.92.2+1.20.1",
+    "player-animator": "1.0.2-rc1+1.20",
+    "geckolib": "4.8.4",
+    "immersive_cinematics": "0.3.5",
+    "veil": "1.0.0"
   },
   "accessWidener": "celestialfall.accesswidener"
 }

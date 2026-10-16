@@ -25,6 +25,7 @@ public abstract class CameraMixin {
     @Shadow public abstract org.joml.Vector3f getDiagonalPlane();
     @Inject(method="update",at=@At("TAIL"))
     private void celestialfall$camera(BlockView area,Entity entity,boolean third,boolean inverse,float delta,CallbackInfo ci) {
+        if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.ownsCamera())return;
         var menu=dev.sangwoo.celestialfall.client.title.TitleMapCamera.pose();
         if(menu!=null){setPos(menu.position());setRotation(menu.yaw(),menu.pitch());thirdPerson=true;return;}
         var base=dev.sangwoo.celestialfall.client.BotandCamera.pose(delta);

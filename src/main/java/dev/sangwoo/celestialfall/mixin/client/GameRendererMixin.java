@@ -28,7 +28,7 @@ public abstract class GameRendererMixin {
         target="Lnet/minecraft/client/render/Camera;update(Lnet/minecraft/world/BlockView;Lnet/minecraft/entity/Entity;ZZF)V",
         shift=At.Shift.AFTER))
     private void celestialfall$roll(float delta,long limitTime,MatrixStack matrices,CallbackInfo ci) {
-        if(TitleMapCamera.active())return;
+        if(TitleMapCamera.active()||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.ownsCamera())return;
         float roll=CinematicDirector.roll(delta);
         if(!CinematicDirector.isActive())roll+=dev.sangwoo.celestialfall.client.AtomicImmersion.at(net.minecraft.client.MinecraftClient.getInstance().gameRenderer.getCamera().getPos(),delta).roll();
         if(roll!=0)matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(roll));
@@ -53,6 +53,7 @@ public abstract class GameRendererMixin {
     }
     @Inject(method="getFov",at=@At("RETURN"),cancellable=true)
     private void celestialfall$fov(Camera camera,float delta,boolean changing,CallbackInfoReturnable<Double> cir) {
+        if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.ownsCamera())return;
         if(TitleMapCamera.active()){cir.setReturnValue(TitleCameraTour.FOV);return;}
         if(changing)cir.setReturnValue(CinematicDirector.fov(cir.getReturnValue(),delta));
     }

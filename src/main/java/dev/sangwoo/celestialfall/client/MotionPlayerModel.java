@@ -39,6 +39,7 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             articulated=true;var rest=dev.sangwoo.celestialfall.client.kageno.KagenoClips.idle().joints();
             rightArm.pitch=MotionRig.rad(rest.joint[2][0])+rightArm.pitch*.25f;rightArm.yaw=MotionRig.rad(rest.joint[2][1]);rightArm.roll=MotionRig.rad(rest.joint[2][2]);rightArm.getChild("elbow").pitch=0;
         }
+        dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.apply(player,this,animationProgress-player.age);
         overlays();
     }
     public void overlays() {

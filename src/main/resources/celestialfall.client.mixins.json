@@ -29,7 +29,8 @@
     "KagenoStaggerMixin",
     "AtomicSkyMixin",
     "AtomicFogMixin",
-    "AtomicLightMixin"
+    "AtomicLightMixin",
+    "ImmersiveNetworkClientMixin"
   ],
   "injectors": {
     "defaultRequire": 1

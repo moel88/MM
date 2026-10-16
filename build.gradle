@@ -15,7 +15,17 @@ dependencies {
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    // Pinned Fabric 1.20.1 distributions with SHA-512 digests; shipped beside Botand in the installation ZIP.
+    for (name in ['player-animation-lib-fabric-1.0.2-rc1+1.20.jar',
+                 'geckolib-fabric-1.20.1-4.8.4.jar',
+                 'Veil-fabric-1.20.1-1.0.0.296.jar',
+                 'ImmersiveCinematics-fabric-1.20.1-0.3.5.jar']) {
+        modImplementation files("libs/${name}")
+    }
+    // Veil ships these nested JARs; expose them in development runs too.
+    modImplementation fileTree(dir: 'libs/veil-nested', include: '*.jar')
+    modImplementation files('libs/mclib-20.jar')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2' 
 }
 processResources {
     inputs.property 'version', project.version

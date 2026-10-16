@@ -25,6 +25,9 @@ if env.get('BOTAND_CAPTURE_ONLINE') == '1':
         gradle_network += [f'-D{scheme}.proxyHost={proxy.hostname}' for scheme in ['http','https']]
         gradle_network += [f'-D{scheme}.proxyPort={proxy.port}' for scheme in ['http','https']]
     env['JAVA_TOOL_OPTIONS'] = ' '.join(gradle_network)
+capture_width = int(env.get('BOTAND_CAPTURE_WIDTH', '1280'))
+capture_height = int(env.get('BOTAND_CAPTURE_HEIGHT', '720'))
+assert 320 <= capture_width <= 1920 and 180 <= capture_height <= 1080
 atomic_only = env.get('BOTAND_REVIEW_ATOMIC') == '1'
 atomic_far = env.get('BOTAND_REVIEW_ATOMIC_FAR') == '1'
 cp = (ROOT / 'build/test-classpath.txt').read_text().strip()
@@ -52,7 +55,7 @@ init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient")
     ('"-Dbotand.review.atomicFar=true", ' if atomic_far else '') +
     '"-Dbotand.review.fixed=false", "-Dbotand.remake.proof=' + str(proof) + '", '
     '"-Dfabric.addMods=' + str(jar) + '"; args "--username", "BotandRemakeQA", '
-    '"--uuid", "1ed53dfdc16b36d48f8e17ad842911da", "--width", "1280", "--height", "720" } }')
+    '"--uuid", "1ed53dfdc16b36d48f8e17ad842911da", "--width", "' + str(capture_width) + '", "--height", "' + str(capture_height) + '" } }')
 display = next(i for i in range(151, 180) if not Path(f'/tmp/.X{i}-lock').exists())
 env['DISPLAY'] = f'127.0.0.1:{display}'
 xkb_link = Path('/usr/bin/xkbcomp')
@@ -65,7 +68,7 @@ try:
     with (proof/'xvfb.log').open('w') as xl, (proof/'native.log').open('w') as log, (proof/'recording.log').open('w') as vl:
         x = subprocess.Popen([env.get('BOTAND_XVFB', 'Xvfb'), f':{display}',
             '-nolisten', 'unix', '-nolisten', 'local', '-listen', 'tcp', '-ac',
-            '-screen', '0', '1280x720x24'], env=env, stdout=xl, stderr=subprocess.STDOUT)
+            '-screen', '0', f'{capture_width}x{capture_height}x24'], env=env, stdout=xl, stderr=subprocess.STDOUT)
         for attempt in range(60):
             try:
                 with socket.create_connection(('127.0.0.1', 6000+display), timeout=.2):
@@ -75,7 +78,7 @@ try:
         assert x.poll() is None, 'Virtual display failed: ' + (proof/'xvfb.log').read_text()
         (proof/'video-start.txt').write_text(str(time.time()))
         recorder = subprocess.Popen(['ffmpeg', '-v', 'warning', '-f', 'x11grab',
-            '-draw_mouse', '0', '-framerate', '30', '-video_size', '1280x720',
+            '-draw_mouse', '0', '-framerate', '30', '-video_size', f'{capture_width}x{capture_height}',
             '-i', env['DISPLAY']+'.0', '-an', '-c:v', 'libx264', '-threads', '2',
             '-preset', 'ultrafast', '-crf', '20', '-pix_fmt', 'yuv420p', '-g', '30',
             '-movflags', '+frag_keyframe+empty_moov+default_base_moof', '-flush_packets', '1', '-y',

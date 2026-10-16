@@ -24,6 +24,10 @@ public final class CelestialFallClient implements ClientModInitializer {
     private static final List<PositionedSoundInstance> SOUNDS = new ArrayList<>();
     public static Collection<ClientSpell> spells() { return SPELLS.values(); }
     @Override public void onInitializeClient() {
+        dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.initialize();
+        dev.sangwoo.celestialfall.client.integration.VeilBridge.initialize();
+        dev.sangwoo.celestialfall.client.integration.CinematicsBridge.initialize();
+        dev.sangwoo.celestialfall.client.integration.IntegrationCommands.initialize();
         dev.sangwoo.celestialfall.client.title.TitlePortal.initialize();
         MapClient.initialize();
         TrainingDummyRenderer.initialize();

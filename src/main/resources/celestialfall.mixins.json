@@ -12,7 +12,9 @@
     "HungerManagerMixin",
     "RecoveryWorldMixin",
     "PlayerStandMixin",
-    "KagenoFreezeMixin"
+    "KagenoFreezeMixin",
+    "ImmersiveNetworkServerMixin",
+    "ImmersiveDisconnectMixin"
   ],
   "injectors": {
     "defaultRequire": 1

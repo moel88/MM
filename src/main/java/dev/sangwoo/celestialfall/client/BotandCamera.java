@@ -40,7 +40,7 @@ public final class BotandCamera {
         var mc=MinecraftClient.getInstance();return mc.player!=null&&mc.world!=null&&CombatClient.connected()
             &&mc.getCameraEntity()==mc.player&&!mc.player.isSpectator();
     }
-    public static boolean gameplay(){var mc=MinecraftClient.getInstance();return enabled()&&mc.currentScreen==null&&mc.getOverlay()==null&&mc.isWindowFocused()&&mc.player.isAlive();}
+    public static boolean gameplay(){var mc=MinecraftClient.getInstance();return !dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active()&&enabled()&&mc.currentScreen==null&&mc.getOverlay()==null&&mc.isWindowFocused()&&mc.player.isAlive();}
     public static boolean controls(){return gameplay()&&!CinematicDirector.isActive();}
     public static boolean locked(){return STATE.shiftLock||STATE.firstPerson();}
     public static boolean sprinting() {
@@ -74,7 +74,7 @@ public final class BotandCamera {
         refreshCapture();
     }
     public static void frame() {
-        if(!enabled()||player!=MinecraftClient.getInstance().player)return;
+        if(!enabled()||player!=MinecraftClient.getInstance().player||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return;
         long now=System.nanoTime();dt=lastFrame==0?1.0/60:Math.min(.1,(now-lastFrame)*1e-9);lastFrame=now;frameId++;
         var mc=MinecraftClient.getInstance();boolean cinematic=CinematicDirector.isActive();
         if(!cinematic&&!mc.isPaused())STATE.step(dt);
@@ -87,7 +87,7 @@ public final class BotandCamera {
         refreshCapture();
     }
     public static void refreshCapture() {
-        if(!enabled())return;
+        if(!enabled()||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return;
         boolean capture=gameplay()&&(CinematicDirector.isActive()||STATE.captured(rightDrag));
         ((MouseCapture)MinecraftClient.getInstance().mouse).botand$capture(capture);
     }
@@ -146,7 +146,7 @@ public final class BotandCamera {
         input.movementForward=movement[0];input.movementSideways=movement[1];
     }
     public static CinematicDirector.Pose pose(float delta) {
-        if(!enabled())return null;var mc=MinecraftClient.getInstance();
+        if(!enabled()||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.ownsCamera())return null;var mc=MinecraftClient.getInstance();
         Vec3d eye=mc.player.getLerpedPos(delta).add(0,mc.player.getStandingEyeHeight(),0);
         if(STATE.firstPerson())return new CinematicDirector.Pose(eye,STATE.yaw,STATE.pitch,0);
         var offset=STATE.offset(STATE.distance,STATE.shoulder);

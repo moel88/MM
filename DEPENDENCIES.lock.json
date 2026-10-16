@@ -1,0 +1,31 @@
+[
+  {
+    "project": "playeranimator",
+    "version": "1.0.2-rc1+1.20-fabric",
+    "filename": "player-animation-lib-fabric-1.0.2-rc1+1.20.jar",
+    "url": "https://cdn.modrinth.com/data/gedNE4y2/versions/yDqYTUaf/player-animation-lib-fabric-1.0.2-rc1%2B1.20.jar",
+    "sha512": "4ed2659c9e9c1a1fa8936523f7d6de1b8012d8e06e6c58ef65ea5c7acef2b3a113afe584b3a31d70eee00423dbe533c06022cc5f169ab5a2ddf8167acf259ec8"
+  },
+  {
+    "project": "geckolib",
+    "version": "4.8.4",
+    "filename": "geckolib-fabric-1.20.1-4.8.4.jar",
+    "url": "https://cdn.modrinth.com/data/8BmcQJ2H/versions/SD2lOScS/geckolib-fabric-1.20.1-4.8.4.jar",
+    "sha512": "757cf010eef44500c0722afc193d874b62fb1b3e61ba8dea952f8434b2a939536e3440e04c01bc58922d75bb76c16c605d72f9fa9157ac62806e862d9652d13f"
+  },
+  {
+    "project": "cinematics",
+    "version": "0.3.5",
+    "filename": "ImmersiveCinematics-fabric-1.20.1-0.3.5.jar",
+    "url": "https://cdn.modrinth.com/data/9374fX7L/versions/Arm1yp1a/ImmersiveCinematics-fabric-1.20.1-0.3.5.jar",
+    "sha512": "67cd5dbf845718d332f1d858e04d50aa77584f4e563f7c202381874f7eca00a6e54c6869582cf174eb33735f6c355c8cf18015da31e98a301088e9b9cae104d0"
+  },
+  {
+    "project": "veil",
+    "version": "1.0.0.296",
+    "fabric_mod_version": "1.0.0",
+    "filename": "Veil-fabric-1.20.1-1.0.0.296.jar",
+    "url": "https://maven.blamejared.com/foundry/veil/Veil-fabric-1.20.1/1.0.0.296/Veil-fabric-1.20.1-1.0.0.296.jar",
+    "sha512": "20912a68c722c80711ff6162999a56ec607cff317e41db099466d07385bd7bb80a177ac52400a635a801ee3c3d9702bfea58dc4be04a4210ae408a3501d8115b"
+  }
+]

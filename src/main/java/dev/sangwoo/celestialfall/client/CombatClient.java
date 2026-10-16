@@ -65,6 +65,7 @@ public final class CombatClient {
             &&p.isOnGround()&&AtomicClient.actor(p.getUuid())==null&&HeavenClient.actor(p.getUuid())==null;
     }
     public static boolean combatInput() {
+        if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return false;
         var mc=MinecraftClient.getInstance();return mc.player!=null&&mc.world!=null&&connected()&&mc.currentScreen==null&&!CinematicDirector.isActive()&&!actionLocked()&&mc.player.isAlive()&&!mc.player.isSpectator();
     }
     public static boolean punch() {

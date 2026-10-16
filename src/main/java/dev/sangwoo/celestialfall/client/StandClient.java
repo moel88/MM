@@ -73,7 +73,8 @@ public final class StandClient {
         // Targets may change during a rush. Their refresh must not reset pose/camera/audio time.
         Cast cast=old==null?incoming:new Cast(old.id,old.caster,old.dimension,old.skill,old.combo,old.start,old.serverNow,old.received,old.origin,old.yaw,incoming.targets);
         if(cast.age(0)<DURATION[cast.skill]){
-            if(old==null)dev.sangwoo.celestialfall.client.kageno.KagenoClips.begin(cast);
+            if(old==null){dev.sangwoo.celestialfall.client.kageno.KagenoClips.begin(cast);
+                if(cast.skill==H&&MinecraftClient.getInstance().player!=null&&cast.includes(MinecraftClient.getInstance().player.getUuid()))dev.sangwoo.celestialfall.client.integration.CinematicsBridge.nativeCutscene();}
             CASTS.put(cast.id,cast);if(old==null)KagenoAudio.begin(cast);
         }
     }

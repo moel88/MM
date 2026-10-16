@@ -19,7 +19,10 @@ import net.minecraft.util.math.*;
 import net.minecraft.world.World;
 
 /** A real damageable mob using the same strike/guard state machine as players. */
-public final class TrainingDummyEntity extends PathAwareEntity implements Monster {
+public final class TrainingDummyEntity extends PathAwareEntity implements Monster, software.bernie.geckolib.animatable.GeoEntity {
+    private final software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache geoCache=software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
+    @Override public software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache getAnimatableInstanceCache(){return geoCache;}
+    @Override public void registerControllers(software.bernie.geckolib.core.animation.AnimatableManager.ControllerRegistrar controllers){}
     private static final TrackedData<Integer> ATTACK=DataTracker.registerData(TrainingDummyEntity.class,TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Long> ATTACK_START=DataTracker.registerData(TrainingDummyEntity.class,TrackedDataHandlerRegistry.LONG);
     private static final TrackedData<Boolean> GUARD=DataTracker.registerData(TrainingDummyEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
