@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.31.4** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.31.5** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.31.5 — 아토믹에 맞는 동안 이동속도 75% 감소
+
+G 피해 기둥 안에 있는 동안(피해를 받는 대상) 이동속도가 75% 줄고, 기둥 밖으로 나가면 그 틱에 바로 원래 속도로 돌아옵니다. 기둥이 끝나거나 시전이 취소되면 모두 풀리고, 시야가 확대되지 않습니다. 나머지는 2.31.4와 같습니다. [RELEASE_2.31.5_KO.md](RELEASE_2.31.5_KO.md)를 확인하세요.
 
 # 보탠드 2.31.4 — 아토믹 기둥을 달려서 피할 수 있게, 더 강한 빛
 
