@@ -224,16 +224,16 @@ void main(){
         float s3=noise3(vec3(n.x*80.,v*3.5-t*5.5,n.y*80.)+Seed*3.);
         float bright=pow(s2,3.)*1.1+pow(s3,5.)*1.3;
         float dark=smoothstep(.55,.25,s1)*.5;
-        vec3 white=vec3(1.,.97,1.),lav=vec3(.80,.66,1.),vio=vec3(.56,.26,1.),deep=vec3(.32,.1,.8);
-        vec3 body=mix(deep,vio,smoothstep(0.,.18,facing));
-        body=mix(body,lav,smoothstep(.15,.55,facing));
+        vec3 white=vec3(1.,.97,1.),lav=vec3(.86,.74,1.),vio=vec3(.56,.26,1.),deep=vec3(.32,.1,.8);
+        vec3 body=mix(deep,vio,smoothstep(0.,.16,facing));
+        body=mix(body,lav,smoothstep(.13,.5,facing));
         body=mix(body,vio,dark*(1.-.5*facing));
-        body=mix(body,white,smoothstep(.7,1.,facing)*.45);
+        body=mix(body,white,smoothstep(.65,1.,facing)*.65);
         body=mix(body,white,clamp(bright,0.,1.)*(.4+.6*facing));
         body=mix(body,white,Params.x);
         float top=1.-smoothstep(Params.y,1.,v),foot=smoothstep(0.,.01,v);
-        float tear=smoothstep(0.,.2,facing+.22*(noise3(vec3(n.x*30.,v*25.-t*4.,n.y*30.))-.5));
-        float a=clamp((.95*tear+.05)*top*foot*tint.a*Params.w,0.,1.);
+        float tear=smoothstep(0.,.12,facing+.18*(noise3(vec3(n.x*30.,v*25.-t*4.,n.y*30.))-.5));
+        float a=clamp((.97*tear+.03)*top*foot*tint.a*Params.w,0.,1.);
         c=vec4(body*a*tint.rgb,a);
     }else if(Mode==17){
         // Ground light: the floor inside the blast radius bathed in magenta with radial rays and concentric
@@ -242,10 +242,10 @@ void main(){
         vec2 q=rel.xz/Params.x;float r=length(q),ang=atan(q.y,q.x);
         float ray=pow(noise3(vec3(ang*12.,r*2.-Age*.6,Seed)),2.)*(.5+.5*noise3(vec3(ang*40.,r*5.,Seed*3.)));
         float rings=pow(max(0.,sin((r*5.-Age*2.2)*PI)),6.)*smoothstep(.1,.3,r);
-        float inside=1.-smoothstep(.9,1.,r),tail=(1.-smoothstep(1.,1.4,r))*smoothstep(.85,1.,r);
-        vec3 mag=vec3(.95,.45,1.),vio=vec3(.6,.2,1.),white=vec3(1.,.9,1.);
-        vec3 col=mix(vio,mag,smoothstep(1.,.2,r))*(.6+.6*ray)+white*rings*.8+white*(1.-smoothstep(0.,.35,r))*.5;
-        float a=(inside*.75+tail*.5)*Params.y*tint.a;
+        float inside=1.-smoothstep(.9,1.,r),tail=(1.-smoothstep(1.,1.45,r))*smoothstep(.85,1.,r);
+        vec3 mag=vec3(.95,.45,1.),vio=vec3(.66,.24,1.),white=vec3(1.,.9,1.);
+        vec3 col=mix(vio,mag,smoothstep(1.3,.2,r))*(.6+.6*ray)+white*rings*.8+white*(1.-smoothstep(0.,.35,r))*.5;
+        float a=(inside*.75+tail*.9)*Params.y*tint.a;
         c=vec4(col*a,a*.35);
     }else if(Mode==15){
         // Core flash: white-hot centre, violet halo and a few soft rays. Params: x = brightness, y = core cover.

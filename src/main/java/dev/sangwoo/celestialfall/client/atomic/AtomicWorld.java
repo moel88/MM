@@ -438,18 +438,19 @@ public final class AtomicWorld {
         float a=1-smooth(sec,AtomicLook.BEAM_END-.08f,AtomicLook.BEAM_END);
         float flow=1f+.6f*smooth(sec,AtomicLook.COLLAPSE,AtomicLook.BEAM_END);
         double flare=.3;
-        var b=AtomicShader.beginAt(o,rot,cam,AtomicShader.TOWER,sec,s.seed,white,.62f,flow,1f);
+        var b=AtomicShader.beginAt(o,rot,cam,AtomicShader.TOWER,sec,s.seed,white,.75f,flow,1f);
         b.cylinder(o,y0,y1,v->r*(1+flare*Math.pow(1-v,6)),64,24,0xffffff,a);
         AtomicShader.end(b);
-        b=AtomicShader.beginAt(o,rot,cam,AtomicShader.TOWER,sec,s.seed+5,white*.5f,.5f,flow*.6f,.14f);
+        b=AtomicShader.beginAt(o,rot,cam,AtomicShader.TOWER,sec,s.seed+5,white*.5f,.6f,flow*.6f,.2f);
         b.cylinder(o,y0,y1*.95+o.y*.05,v->r*(1.18+flare*Math.pow(1-v,6)),48,12,0xb088ff,a*.8f);
         AtomicShader.end(b);
         // Violet glow thrown into the air around the tower: light bleed, not an attack boundary.
         float g=smooth(sec,AtomicLook.PINK,AtomicLook.PINK+.4f)*a;
         if(g>0){
             b=AtomicShader.begin(rot,cam,AtomicShader.ORB,sec,0,0,0,0,0);
-            b.facing(o.add(0,R*1.3,0),r*1.1+R*.4,0x9a64ff,g*.3f);
-            b.facing(o.add(0,R*.3,0),r*1.0+R*.25,0xc080ff,g*.4f*near(cam,o,3,8));
+            b.facing(o.add(0,R*1.0,0),r*1.3+R*.5,0x8a50ff,g*.45f);
+            b.facing(o.add(0,R*2.4,0),r*1.1+R*.4,0x9a64ff,g*.3f);
+            b.facing(o.add(0,R*.3,0),r*1.0+R*.25,0xc080ff,g*.45f*near(cam,o,3,8));
             AtomicShader.end(b);
         }
     }
@@ -476,12 +477,12 @@ public final class AtomicWorld {
         if(sec<AtomicLook.PINK+.1f||sec>=AtomicLook.BEAM_END)return;
         double r=towerRadius(sec,R);
         float in=smooth(sec,AtomicLook.PINK+.1f,AtomicLook.PINK+.6f),outF=1-smooth(sec,AtomicLook.BEAM_END-.25f,AtomicLook.BEAM_END),t=sec-AtomicLook.PINK;
-        var b=AtomicShader.begin(rot,cam,AtomicShader.PUFF,sec,s.seed+7,.97f,.5f,0,0);
+        var b=AtomicShader.begin(rot,cam,AtomicShader.PUFF,sec,s.seed+7,.97f,.6f,0,0);
         int k=0;
         for(var p:s.wall){
-            double ang=p.angle()+.03*t,rad=r*(.96+.06*p.size()),size=R*(.12+.12*p.size())*(1+.15*Math.sin(t*1.7+p.phase()));
-            Vec3d q=new Vec3d(o.x+Math.cos(ang)*rad,o.y+size*.9,o.z+Math.sin(ang)*rad);
-            b.facingSeeded(q,size,0x3a2460,in*outF*p.alpha()*near(cam,q,2,6),k++);
+            double j=h(k*3.7+s.seed),ang=p.angle()+.03*t,rad=r*(.93+.1*j),size=R*(.1+.14*p.size())*(1+.15*Math.sin(t*1.7+p.phase()));
+            Vec3d q=new Vec3d(o.x+Math.cos(ang)*rad,o.y+size*(.7+.5*j),o.z+Math.sin(ang)*rad);
+            b.facingSeeded(q,size,0x4c3480,in*outF*p.alpha()*near(cam,q,2,6),k++);
         }
         AtomicShader.end(b);
     }
