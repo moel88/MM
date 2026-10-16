@@ -65,6 +65,14 @@ public final class AtomicTimeline {
     public static double damageRadius(long age,double R) {
         return age<DAMAGE_START?0:openingRadius(pillarClock((age-DAMAGE_START)/20.0),R);
     }
+    /** Inside the column a target moves 75 % slower (a quarter of its speed), and at its own speed again the moment it is out. */
+    public static final double HIT_SLOW=.75;
+    /** The movement speed modifier that holds a target in the column (transient, never saved). */
+    public static final java.util.UUID HIT_SLOW_ID=java.util.UUID.fromString("8e7d4281-016d-45fc-97d3-af497070f9d6");
+    /** Radius of the column that holds its targets at a cast age: the damage column from the impact until the beam ends, none otherwise. */
+    public static double holdRadius(long age,double R) {
+        return age>=DAMAGE_START&&age<DAMAGE_END?damageRadius(age,R):0;
+    }
     public static boolean insideColumn(double dx,double dy,double dz,double radius,double height) {
         return radius>0 && dx*dx+dz*dz<=radius*radius && dy>=-2 && dy<=height;
     }

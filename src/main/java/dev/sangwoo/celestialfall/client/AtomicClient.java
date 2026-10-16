@@ -65,6 +65,11 @@ public final class AtomicClient {
         return null;
     }
     public static boolean locked(UUID caster){return MapClient.enabled()&&CASTS.values().stream().anyMatch(c->c.caster.equals(caster)&&AtomicTimeline.locked(c.age(0)));}
+    /** A G column holds this player (the server's 75 % movement modifier has arrived). */
+    public static boolean held(net.minecraft.entity.player.PlayerEntity p){
+        var speed=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
+        return speed!=null&&speed.getModifier(AtomicTimeline.HIT_SLOW_ID)!=null;
+    }
     public static void skip() {}
     public static float blend(float delta) { return 0; }
     public static float roll(float delta) { return 0; }

@@ -10,6 +10,6 @@ public abstract class StandFovMixin {
     @Inject(method="getFovMultiplier",at=@At("RETURN"),cancellable=true)
     private void botand$stableGuardLens(CallbackInfoReturnable<Float> cir){
         var p=(AbstractClientPlayerEntity)(Object)this;
-        if(MapClient.enabled()&&(CombatClient.snapshot(p.getUuid()).guard()||StandClient.rWalking(p.getUuid())||AtomicClient.locked(p.getUuid())))cir.setReturnValue(1f);
+        if(MapClient.enabled()&&(CombatClient.snapshot(p.getUuid()).guard()||StandClient.rWalking(p.getUuid())||AtomicClient.locked(p.getUuid())||AtomicClient.held(p)))cir.setReturnValue(1f);
     }
 }
