@@ -39,6 +39,7 @@ public final class MpClient implements ClientModInitializer {
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
     private MinecraftClient mc;private int phase,age,frames;private boolean caster;private final Set<Integer> held=new HashSet<>();
+    private float quakePeak,overwhelmPeak;
 
     @Override public void onInitializeClient(){
         if(ROLE==null)return;caster=ROLE.equals("caster");
@@ -111,6 +112,17 @@ public final class MpClient implements ClientModInitializer {
         }
         for(var it=casts.entrySet().iterator();it.hasNext();){var e=it.next();if(!StandClient.CASTS.containsKey(e.getKey())){note("end "+SKILLS[(int)e.getValue()[0]]+" age~"+(now-e.getValue()[1]));it.remove();}}
         flag("cinematic",StandClient.cinematic()!=null);flag("mono",StandClient.monochrome());flag("frozen",StandClient.frozen(mc.player));flag("locked",StandClient.locked());
+        // G seen from here: the strongest camera quake and Veil screen treatment while it lasts, logged when it ends.
+        if(!AtomicClient.CASTS.isEmpty()){
+            var s=dev.sangwoo.celestialfall.client.AtomicImmersion.at(mc.gameRenderer.getCamera().getPos(),0);
+            quakePeak=Math.max(quakePeak,Math.max(Math.abs(s.yaw()),Math.abs(s.pitch())));
+            overwhelmPeak=Math.max(overwhelmPeak,dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.strength());
+            flag("veil_overwhelm_active",dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.active());
+        }else if(quakePeak>0||overwhelmPeak>0){
+            note(String.format(Locale.ROOT,"G seen: quake peak %.2f deg, overwhelm peak %.2f, veil frames %d",quakePeak,overwhelmPeak,
+                dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.renderedFrames()));
+            quakePeak=0;overwhelmPeak=0;
+        }
         flag("atomic",AtomicClient.CASTS.size());flag("overdrive",StandClient.OVERDRIVE.size());flag("hits",StandClient.hitCount);
         flag("health",Math.round(mc.player.getHealth()));
         if(lastPos==null||lastPos.squaredDistanceTo(mc.player.getPos())>1){lastPos=mc.player.getPos();note(String.format(Locale.ROOT,"selfpos %.2f %.2f %.2f",lastPos.x,lastPos.y,lastPos.z));}

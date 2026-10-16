@@ -67,10 +67,14 @@ loader = [one(f"net.fabricmc/fabric-loader/{props['loader_version']}/*/fabric-lo
           one('net.fabricmc/sponge-mixin/*/*/sponge-mixin-*[0-9].jar')] + asm
 cp = ':'.join(loader + [str(inter)] + libs)
 fabric_api = one(f"net.fabricmc.fabric-api/fabric-api/{props['fabric_version']}/*/fabric-api-{props['fabric_version']}.jar")
+# The pinned library jars the mod requires (Player Animator, GeckoLib, Immersive Cinematics, Veil), exactly as released.
+deps = [ROOT / 'libs' / d['filename'] for d in json.loads((ROOT / 'DEPENDENCIES.lock.json').read_text())]
+for jar in deps:
+    if not jar.exists(): sys.exit(f'missing pinned library: {jar}')
 
 def game_dir(name):
     d = out / name; (d / 'mods').mkdir(parents=True)
-    for jar in (mod, fabric_api, bot): shutil.copy(jar, d / 'mods')
+    for jar in (mod, fabric_api, bot, *deps): shutil.copy(jar, d / 'mods')
     return d
 
 server = game_dir('server')

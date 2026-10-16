@@ -1,7 +1,9 @@
 package dev.sangwoo.botandtools;
 
 import dev.sangwoo.celestialfall.client.atomic.AtomicPillarShape;
+import dev.sangwoo.celestialfall.client.atomic.AtomicStage;
 import dev.sangwoo.celestialfall.client.vfx.VfxNoise;
+import dev.sangwoo.celestialfall.client.vfx.VfxStreaks;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
@@ -70,13 +72,16 @@ public final class VfxPreview {
     private static void render(float sec,double R,Vector3f eye,Vector3f target,float fov){
         Matrix4f proj=new Matrix4f().perspective((float)Math.toRadians(fov),width/(float)height,.05f,4000f);
         Matrix4f view=new Matrix4f().lookAt(new Vector3f(),new Vector3f(target).sub(eye),new Vector3f(0,1,0));
-        GL33.glDepthMask(true);GL33.glClearColor(.62f,.74f,1f,1f);GL33.glClearDepth(1);GL33.glClear(GL33.GL_COLOR_BUFFER_BIT|GL33.GL_DEPTH_BUFFER_BIT);
+        // Sky and terrain dim toward deep violet like the game does for viewers outside the blast.
+        float dim=AtomicStage.sky(sec)*.92f;
+        GL33.glDepthMask(true);GL33.glClearColor(.62f+(.035f-.62f)*dim,.74f+(.02f-.74f)*dim,1f+(.11f-1f)*dim,1f);GL33.glClearDepth(1);GL33.glClear(GL33.GL_COLOR_BUFFER_BIT|GL33.GL_DEPTH_BUFFER_BIT);
+        float dark=1-.38f*dim,lr=dark*(1+(.82f-1)*dim),lg=dark*(1+(.6f-1)*dim),lb=dark*(1+(1.22f-1)*dim);
         // Ground: a grey plaza of radius 1.6 R in a green field, opaque and depth-writing like terrain.
         GL33.glEnable(GL33.GL_DEPTH_TEST);GL33.glDepthMask(true);GL33.glDisable(GL33.GL_BLEND);GL33.glDisable(GL33.GL_CULL_FACE);
         GL33.glUseProgram(bgProgram);
         mats(bgProgram,new Matrix4f(view).translate(new Vector3f(eye).negate()),proj);
-        draw(quad(-2000,2000,0,.36f,.5f,.25f));
-        draw(quad((float)-R*1.6f,(float)R*1.6f,.01f,.55f,.55f,.56f));
+        draw(quad(-2000,2000,0,.36f*lr,.5f*lg,.25f*lb));
+        draw(quad((float)-R*1.6f,(float)R*1.6f,.01f,.55f*lr,.55f*lg,.56f*lb));
         // The pillar, exactly as AtomicPillar draws it.
         GL33.glDepthMask(false);GL33.glEnable(GL33.GL_BLEND);GL33.glBlendFuncSeparate(GL33.GL_ONE,GL33.GL_ONE_MINUS_SRC_ALPHA,GL33.GL_ONE,GL33.GL_ONE_MINUS_SRC_ALPHA);
         GL33.glUseProgram(program);
@@ -96,15 +101,37 @@ public final class VfxPreview {
             float white=AtomicPillarShape.whiteOut(sec),heat=AtomicPillarShape.heat(sec),a=AtomicPillarShape.opacity(sec),h=(float)(y1-y0);
             Matrix4f mv=new Matrix4f(view).translate(new Vector3f(eye).negate()).translate(0,(float)y0,0).scale((float)r,h,(float)r);
             GL33.glEnable(GL33.GL_CULL_FACE);
-            material(1,flow,(float)r,h,(float)R,white,1,heat,a,.3f);mats(program,mv,proj);draw(cylinder());
-            material(2,flow,(float)r,h,(float)R,white,1,heat,a,.3f);mats(program,mv,proj);draw(cylinder());
+            float front=(float)AtomicStage.surgeFront(sec,R),glow=AtomicStage.surgeGlow(sec);
+            material(1,flow,(float)r,h,(float)R,white,1,heat,a,.3f);surge(front,glow);mats(program,mv,proj);draw(cylinder());
+            material(2,flow,(float)r,h,(float)R,white,1,heat,a,.3f);surge(front,glow);mats(program,mv,proj);draw(cylinder());
             GL33.glDisable(GL33.GL_CULL_FACE);
+            float level=AtomicPillarShape.streaks(sec);
+            if(level>.01f&&!noStreaks){
+                material(17,flow,(float)r,h,(float)R,level,1,1,0,0);surge(front,glow);
+                mats(program,new Matrix4f(view).translate(new Vector3f(eye).negate()).translate(0,(float)y0,0),proj);
+                draw(streakField());
+            }
         }
     }
     private static int loc(String n){return GL33.glGetUniformLocation(program,n);}
+    private static final boolean noStreaks=Boolean.getBoolean("vfx.noStreaks");
     private static void material(int mode,float time,float a,float b,float c,float d,float e,float f,float g,float h){
         GL33.glUniform1i(loc("Mode"),mode);GL33.glUniform1f(loc("Time"),time);
         GL33.glUniform4f(loc("Params"),a,b,c,d);GL33.glUniform4f(loc("Params2"),e,f,g,h);
+        surge(-1,0);
+    }
+    private static void surge(float front,float strength){GL33.glUniform4f(loc("Params3"),front,strength,0,0);}
+    private static float[] streaks;
+    /** The same streak field as Vfx: seeds in Position and Color (0..1), the corner in UV0, as triangles. */
+    private static float[] streakField(){
+        if(streaks!=null)return streaks;
+        int n=VfxStreaks.COUNT;float[] p=VfxStreaks.positions(n);int[] c=VfxStreaks.colors(n);
+        float[] v=new float[n*6*9];int k=0;int[][] corners={{0,0},{1,0},{1,1},{0,0},{1,1},{0,1}};
+        for(int i=0;i<n;i++)for(int[] q:corners){
+            v[k++]=p[i*3];v[k++]=p[i*3+1];v[k++]=p[i*3+2];v[k++]=q[0];v[k++]=q[1];
+            v[k++]=c[i*4]/255f;v[k++]=c[i*4+1]/255f;v[k++]=c[i*4+2]/255f;v[k++]=c[i*4+3]/255f;
+        }
+        return streaks=v;
     }
     private static void mats(int prog,Matrix4f mv,Matrix4f proj){
         try(var stack=org.lwjgl.system.MemoryStack.stackPush()){
