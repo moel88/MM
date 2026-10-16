@@ -45,6 +45,8 @@ public final class AtomicPillarShape {
         float d=AtomicLook.BEAM_END-AtomicLook.COLLAPSE,u=AtomicLook.unit(sec,AtomicLook.COLLAPSE,AtomicLook.BEAM_END);
         return sec+.6f*d*(u*u*u-u*u*u*u*.5f)+.6f*Math.max(0,sec-AtomicLook.BEAM_END);
     }
+    /** Brightness of the energy streaks: up with the ignition, gone with the pillar. */
+    public static float streaks(float sec){return AtomicLook.smooth(sec,AtomicLook.IMPACT,AtomicLook.PINK+.25f)*opacity(sec);}
     /** Solid while it stands; gone over the last frames of the beam. */
     public static float opacity(float sec){return 1-AtomicLook.smooth(sec,AtomicLook.BEAM_END-.08f,AtomicLook.BEAM_END);}
     /** Magenta light on the floor: on with the ignition, fading 1.5 s after the beam. */

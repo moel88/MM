@@ -38,6 +38,27 @@ class AtomicImmersionTest {
         double sum=0;int n=4000;for(int i=0;i<n;i++){float j=AtomicLook.jitter(i,0);sum+=j*j;}
         assertEquals(1,Math.sqrt(sum/n),.15);
     }
+    @Test void outsideQuakeTopsUpTheBlastShakeWithoutStacking() {
+        double R=28;
+        for(float sec=5;sec<26;sec+=.01f)for(double d:new double[]{R*1.2,R*2,R*3,R*5,R*7,R*9}){
+            float extra=AtomicImmersion.quakeBeyondShake(sec,d,R,1);
+            float shake=AtomicLook.shake(sec)*AtomicImmersion.reach(d,R),quake=dev.sangwoo.celestialfall.client.atomic.AtomicStage.quake(sec,d,R);
+            assertTrue(extra>=0&&extra<=quake+1e-5);
+            // Together the two shake about as hard as the stronger one.
+            assertEquals(Math.max(shake,quake),Math.sqrt(shake*shake+extra*extra),1e-4);
+        }
+        // Beyond the blast shake's reach the whole quake is felt; the shake setting scales it.
+        assertEquals(dev.sangwoo.celestialfall.client.atomic.AtomicStage.quake(10,R*5,R),AtomicImmersion.quakeBeyondShake(10,R*5,R,1),1e-5);
+        assertEquals(0,AtomicImmersion.quakeBeyondShake(10,R*5,R,0));
+    }
+    @Test void rumbleIsSmoothAndZeroMean() {
+        double sum=0,sq=0,jump=0;int n=20000;float prev=AtomicImmersion.rumble(0,1);
+        for(int i=1;i<n;i++){float t=i*.01f,v=AtomicImmersion.rumble(t,1);sum+=v;sq+=v*v;jump=Math.max(jump,Math.abs(v-prev));prev=v;}
+        assertEquals(0,sum/n,.15);
+        assertTrue(Math.sqrt(sq/n)>.4&&Math.sqrt(sq/n)<1.1);
+        // Eased between steps: 0.01 of a step never moves it far.
+        assertTrue(jump<.15,"jump "+jump);
+    }
     @Test void viewersFarAwayAreUntouched() {
         assertEquals(AtomicImmersion.NONE,AtomicImmersion.sample(15,200,28,1));
         var near=AtomicImmersion.sample(15,10,28,1);

@@ -22,9 +22,30 @@ public final class AtomicImmersion {
             if(amplitude<=0)return this;
             return new Sample(grade,yaw+amplitude*AtomicLook.jitter(step,0),pitch+amplitude*.8f*AtomicLook.jitter(step,1),roll+amplitude*.5f*AtomicLook.jitter(step,2));
         }
+        /** Adds the earthquake felt near the pillar from outside (amplitude in degrees): a rolling sway under a fast tremble, mostly vertical. */
+        public Sample withQuake(float amplitude,float sec) {
+            if(amplitude<=0)return this;
+            float sway=sec*5.5f,tremble=sec*23f;
+            return new Sample(grade,yaw+amplitude*(.5f*rumble(sway,0)+.3f*rumble(tremble,3)),
+                pitch+amplitude*(.65f*rumble(sway,1)+.45f*rumble(tremble,4)),roll+amplitude*.35f*rumble(sway*.7f,2));
+        }
     }
     public static final Sample NONE=new Sample(AtomicLook.Grade.NONE,0,0,0);
     private AtomicImmersion(){}
+    /** Smooth zero-mean noise over time (one random value per unit of t, eased between them), roughly unit size. */
+    static float rumble(float t,int axis) {
+        long i=(long)Math.floor(t);float f=t-i;f=f*f*(3-2*f);
+        float a=AtomicLook.jitter(i,axis+10),b=AtomicLook.jitter(i+1,axis+10);
+        return a+(b-a)*f;
+    }
+    /**
+     * The part of the outside quake not already carried by the blast shake close to the pillar, so the two
+     * together shake about as hard as the stronger one (degrees).
+     */
+    static float quakeBeyondShake(float sec,double distance,double radius,float shake) {
+        float quake=AtomicStage.quake(sec,distance,radius)*shake,existing=AtomicLook.shake(sec)*reach(distance,radius)*shake;
+        return (float)Math.sqrt(Math.max(0,quake*quake-existing*existing));
+    }
     /** Full strength within 1.6 blast radii of the cast, gone at 4 radii. */
     public static float reach(double distance,double radius) {
         return (float)Math.max(0,Math.min(1,(radius*4-distance)/(radius*2.4)));
@@ -51,9 +72,12 @@ public final class AtomicImmersion {
             var value=sample(sec,d,cast.radius,CelestialFall.CONFIG.screenShakeStrength);
             if(AtomicPillar.available()&&!AtomicPillar.interior(cast,camera)){
                 // The violet grade belongs to the hit view; outside the damage column the pillar shows its own colours,
-                // and the air shock jolts the camera when it arrives, even beyond the quake's reach.
-                float jolt=AtomicStage.jolt(sec,camera.distanceTo(cast.origin),cast.radius)*(float)Math.max(0,Math.min(2,CelestialFall.CONFIG.screenShakeStrength));
-                value=(value==NONE?new Sample(AtomicLook.Grade.NONE,0,0,0):value.withoutGrade()).withJolt(jolt,(long)Math.floor(sec*45));
+                // the ground near the pillar quakes with every surge, and the air shock jolts the camera when it arrives,
+                // even beyond the quake's reach.
+                float shake=(float)Math.max(0,Math.min(2,CelestialFall.CONFIG.screenShakeStrength));
+                float jolt=AtomicStage.jolt(sec,camera.distanceTo(cast.origin),cast.radius)*shake;
+                value=(value==NONE?new Sample(AtomicLook.Grade.NONE,0,0,0):value.withoutGrade()).withJolt(jolt,(long)Math.floor(sec*45))
+                    .withQuake(quakeBeyondShake(sec,d,cast.radius,shake),sec);
                 if(!value.active())value=NONE;
             }
             if(value!=NONE){result=value;best=d;}

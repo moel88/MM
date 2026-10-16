@@ -1,0 +1,7 @@
+{
+  "stages": [
+    {"type":"veil:blit", "shader":"celestialfall:atomic_overwhelm", "in":"veil:post", "out":"swap"},
+    {"type":"veil:copy", "in":"swap", "out":"veil:post"}
+  ],
+  "framebuffers": {"swap":{"depth":true,"format":"RGBA16F"}}
+}

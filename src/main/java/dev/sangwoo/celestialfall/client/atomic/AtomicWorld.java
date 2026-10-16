@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.client.AtomicClient;
 import dev.sangwoo.celestialfall.client.EffectMesh;
+import dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.*;
@@ -43,9 +44,10 @@ public final class AtomicWorld {
 
     public static void render(WorldRenderContext ctx) {
         var mc=MinecraftClient.getInstance();
-        if(mc.world==null||AtomicClient.CASTS.isEmpty()){SCENES.clear();return;}
+        AtomicOverwhelm.beginFrame();
+        if(mc.world==null||AtomicClient.CASTS.isEmpty()){SCENES.clear();AtomicOverwhelm.endFrame(0);return;}
         SCENES.keySet().retainAll(AtomicClient.CASTS.keySet());
-        if(!AtomicShader.ready())return;
+        if(!AtomicShader.ready()){AtomicOverwhelm.endFrame(0);return;}
         float delta=ctx.tickDelta();Vec3d cam=ctx.camera().getPos();
         Matrix4f rot=ctx.matrixStack().peek().getPositionMatrix();
         Matrix4f world=new Matrix4f(rot).translate((float)-cam.x,(float)-cam.y,(float)-cam.z);
@@ -53,7 +55,7 @@ public final class AtomicWorld {
         List<AtomicClient.Cast> casts=new ArrayList<>();
         // The pillar is visible from far off; the crater and the hit view only matter near it.
         for(var c:AtomicClient.CASTS.values())if(c.dimension.equals(dim)&&c.origin.squaredDistanceTo(cam)<1600*1600)casts.add(c);
-        if(casts.isEmpty())return;
+        if(casts.isEmpty()){AtomicOverwhelm.endFrame(0);return;}
         try{
             // The opaque crater slabs go first so the translucent blast layers can blend over them.
             for(var c:casts){
@@ -82,6 +84,7 @@ public final class AtomicWorld {
         }finally{
             RenderSystem.depthMask(true);RenderSystem.enableDepthTest();RenderSystem.enableCull();
             RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();RenderSystem.setShaderColor(1,1,1,1);
+            AtomicOverwhelm.endFrame(AtomicAmbience.bar(delta));
         }
     }
 

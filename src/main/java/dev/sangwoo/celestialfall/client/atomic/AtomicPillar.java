@@ -1,22 +1,26 @@
 package dev.sangwoo.celestialfall.client.atomic;
 
 import dev.sangwoo.celestialfall.CelestialFall;
+import com.mojang.blaze3d.systems.RenderSystem;
 import dev.sangwoo.celestialfall.client.AtomicClient;
+import dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm;
 import dev.sangwoo.celestialfall.client.vfx.Vfx;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 /**
  * G's light pillar as seen from outside the blast, drawn on the VFX layer: one straight GPU cylinder
- * of exactly the damage radius whose material scrolls layered noise (rising wave bands, streaks of
- * several widths and speeds, surges) over a white core and deep violet edges, a glowing floor, the
- * ignition wave, debris and sparks caught in the near surface, heat shimmer where the pillar stood,
- * then dust and embers. Nothing reaches past the damage radius.
+ * of exactly the damage radius whose material scrolls layered noise (rising wave bands, white flow
+ * lines of several widths and speeds, surges) over light violet, thousands of white energy streaks
+ * racing up its surface layer (moved on the GPU), a glowing floor, the ignition wave, debris and
+ * sparks caught in the near surface, heat shimmer where the pillar stood, then dust and embers.
+ * The pillar and its streaks never reach past the damage radius; only light and air do.
  *
  * <p>Viewers in the damage column (the hit view) keep the interior renderer of {@link AtomicWorld}
  * and the screen grade exactly as before; nothing here runs for them.
@@ -50,6 +54,9 @@ public final class AtomicPillar {
         float shock=AtomicStage.shockLevel(real,R);
         boolean refract=quality>1&&Vfx.refractionSupported()&&(ripple>0||haze>0||column>0||shock>0);
         double clouds=cloudHeight(w,o,R,y1);
+        // Close outside the column the screen itself is overwhelmed (Veil post), pulsing with the surges.
+        float over=AtomicStage.overwhelm(real,Math.hypot(cam.x-o.x,cam.z-o.z),R);
+        if(over>0)overwhelm(over,real,rot,cam,o,r,y0,y1);
         Vfx.begin();
         try{
             ground(sec,rot,cam,o,R,r);
@@ -58,7 +65,10 @@ public final class AtomicPillar {
             rings(real,rot,cam,o,R,clouds,-1);
             if(standing)glow(s,sec,rot,cam,o,R,r,y0,y1);
             wave(sec,rot,cam,o,R,r,-1);
-            if(standing)pillar(s,sec,flow,rot,cam,o,R,r,y0,y1,inside);
+            if(standing){
+                pillar(s,sec,flow,rot,cam,o,R,r,y0,y1,inside);
+                streaks(sec,flow,rot,cam,o,R,r,y0,y1,inside,quality);
+            }
             if(refract){
                 Vfx.captureScene();
                 if(ripple>0)ripple(sec,rot,cam,o,R,r);
@@ -76,6 +86,21 @@ public final class AtomicPillar {
         }finally{Vfx.end();}
     }
 
+    /** Offers the close-range screen treatment with the pillar's axis (at eye height) and half width on screen. */
+    private static void overwhelm(float strength,float real,Matrix4f rot,Vec3d cam,Vec3d o,double r,double y0,double y1){
+        var proj=RenderSystem.getProjectionMatrix();
+        var p=new Vector4f((float)(o.x-cam.x),(float)(Math.max(y0,Math.min(y1,cam.y))-cam.y),(float)(o.z-cam.z),1);
+        new Matrix4f(proj).mul(RenderSystem.getModelViewMatrix()).mul(rot).transform(p);
+        float x=.5f,y=.5f,facing=0,half=0;
+        if(p.w>.05f){
+            float nx=p.x/p.w,ny=p.y/p.w;
+            // Kept near the frame: a centre far off screen would smear the whole view.
+            x=Math.max(-.25f,Math.min(1.25f,nx*.5f+.5f));y=Math.max(-.25f,Math.min(1.25f,ny*.5f+.5f));
+            facing=1-AtomicLook.smooth(Math.abs(nx),1.1f,2.2f);
+            half=(float)(r*proj.m00()/p.w*.5);
+        }
+        AtomicOverwhelm.offer(strength,AtomicStage.surge(real),x,y,facing,half);
+    }
     /** Violet light the pillar throws on the ground around it, out to 4.5 R (light, not the blast). */
     private static void pool(float real,Matrix4f rot,Vec3d cam,Vec3d o,double R){
         float level=AtomicStage.sky(real);if(level<=.01f)return;
@@ -173,15 +198,29 @@ public final class AtomicPillar {
     /** The pillar: opaque body, the fastest streaks added over it, and its top seen from above. */
     private static void pillar(AtomicScene s,float sec,float flow,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r,double y0,double y1,boolean inside){
         float white=AtomicPillarShape.whiteOut(sec),heat=AtomicPillarShape.heat(sec),a=AtomicPillarShape.opacity(sec);
-        float offset=(s.seed%97)/97f,h=(float)(y1-y0);
+        float offset=(s.seed%97)/97f,h=(float)(y1-y0),front=(float)AtomicStage.surgeFront(sec,R),glow=AtomicStage.surgeGlow(sec);
         Vfx.material(Vfx.BODY,flow,(float)r,h,(float)R,white,1,heat,a,offset);
+        Vfx.surge(front,glow);
         Vfx.cylinder(rot,cam,o.x,y0,o.z,r,h,inside);
         Vfx.material(Vfx.SKIN,flow,(float)r,h,(float)R,white,1,heat,a,offset);
+        Vfx.surge(front,glow);
         Vfx.cylinder(rot,cam,o.x,y0,o.z,r,h,inside);
         if(cam.y>y1){
             Vfx.material(Vfx.CAP,flow,(float)r,h,(float)R,white,1,heat,a,offset);
             Vfx.disc(rot,cam,o.x,y1,o.z,r);
         }
+    }
+    /**
+     * Thousands of white energy streaks racing up the pillar's surface layer at 8 to 15 R/s (bolts the fastest),
+     * flaring where a surge passes; the vertex shader moves them, nothing is rebuilt per frame. A share of them
+     * at lower quality settings.
+     */
+    private static void streaks(float sec,float flow,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r,double y0,double y1,boolean inside,int quality){
+        float level=AtomicPillarShape.streaks(sec);if(level<=.01f)return;
+        float share=quality>1?1:quality>0?.6f:.35f;
+        Vfx.material(Vfx.STREAK,flow,(float)r,(float)(y1-y0),(float)R,level,1,share,inside?1:0,0);
+        Vfx.surge((float)AtomicStage.surgeFront(sec,R),AtomicStage.surgeGlow(sec));
+        Vfx.streaks(rot,cam,o.x,y0,o.z);
     }
     /** Shimmer where the pillar stood: the scene behind the space it left wavers and rises. */
     private static void heatColumn(AtomicScene s,float sec,float flow,Matrix4f rot,Vec3d cam,Vec3d o,double R,float level){
@@ -227,7 +266,7 @@ public final class AtomicPillar {
     /** One box face, counter-clockwise from outside: dark where it faces away from the light, pink where it faces it. */
     private static void face(Vfx.Sprites b,Vec3d p,Vec3d n,Vec3d a,Vec3d c,Vec3d light,float alpha,float u0){
         double lit=Math.max(0,n.normalize().dotProduct(light));
-        int rgb=AtomicLook.lerpColor(0x120826,0xc488ff,(float)(.06+.94*lit*lit));
+        int rgb=AtomicLook.lerpColor(0x160c2a,0xd6b8ff,(float)(.06+.94*lit*lit));
         Vec3d m=p.add(n);
         b.quad(m.subtract(a).subtract(c),m.add(a).subtract(c),m.add(a).add(c),m.subtract(a).add(c),u0,rgb,alpha);
     }
@@ -244,7 +283,7 @@ public final class AtomicPillar {
             Vec3d p=new Vec3d(o.x+Math.cos(ang)*rr,y,o.z+Math.sin(ang)*rr);
             float a=(float)Math.sin(Math.PI*u)*(1-(float)Math.min(1,depthInside(cam,o,r,p)/deep))*AtomicWorld.near(cam,p,1,3);
             if(a<=.02f)continue;
-            b.streak(p.add(0,-R*(.1+.12*AtomicWorld.h(k*9.2)),0),p,R*.01+.1,k%3==0?0xffd8ff:0xc070ff,a);
+            b.streak(p.add(0,-R*(.1+.12*AtomicWorld.h(k*9.2)),0),p,R*.01+.1,k%3==0?0xffe8ff:0xd2b0ff,a);
         }
         Vfx.draw(b,false);
     }
@@ -282,7 +321,7 @@ public final class AtomicPillar {
             if(hz>R-size){double k2=Math.max(0,R-size)/hz;x*=k2;z*=k2;}
             Vec3d p=o.add(x,R*.05+e.vy()*R*u*e.life(),z);
             float tw=(float)Math.pow(Math.max(0,Math.sin(sec*(5+AtomicWorld.h(k*6.1)*7)+k)),2);
-            b.billboard(p,size,0xe080ff,in*out*(float)Math.sqrt(Math.max(0,Math.sin(Math.PI*u)))*(.5f+.5f*tw)*AtomicWorld.near(cam,p,1,3));
+            b.billboard(p,size,0xe6c4ff,in*out*(float)Math.sqrt(Math.max(0,Math.sin(Math.PI*u)))*(.5f+.5f*tw)*AtomicWorld.near(cam,p,1,3));
         }
         Vfx.draw(b,false);
     }

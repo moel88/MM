@@ -26,6 +26,7 @@ public final class CelestialFallClient implements ClientModInitializer {
     @Override public void onInitializeClient() {
         dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.initialize();
         dev.sangwoo.celestialfall.client.integration.VeilBridge.initialize();
+        dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.initialize();
         dev.sangwoo.celestialfall.client.integration.CinematicsBridge.initialize();
         dev.sangwoo.celestialfall.client.integration.IntegrationCommands.initialize();
         dev.sangwoo.celestialfall.client.title.TitlePortal.initialize();

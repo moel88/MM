@@ -84,10 +84,14 @@ public final class AtomicAmbience {
         return v==null?0:AtomicStage.fov(v.sec(),v.distance(),v.radius());
     }
 
+    /** Height of the letterbox bars as a fraction of the screen (0 when none). */
+    public static float bar(float delta){
+        var v=view(camera(),delta);
+        return v==null?0:AtomicStage.letterbox(v.sec(),v.distance(),v.radius());
+    }
     /** Black bars top and bottom, drawn over the world before post-processing and the HUD. */
     public static void letterbox(float delta){
-        var v=view(camera(),delta);if(v==null)return;
-        float bar=AtomicStage.letterbox(v.sec(),v.distance(),v.radius());if(bar<=.001f)return;
+        float bar=bar(delta);if(bar<=.001f)return;
         RenderSystem.backupProjectionMatrix();
         RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0,1,1,0,-1,1),VertexSorter.BY_Z);
         var stack=RenderSystem.getModelViewStack();stack.push();stack.loadIdentity();RenderSystem.applyModelViewMatrix();

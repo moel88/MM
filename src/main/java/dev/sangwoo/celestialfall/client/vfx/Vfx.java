@@ -26,8 +26,8 @@ import org.lwjgl.opengl.GL30;
  * Botand VFX rendering layer. One shader program ({@code vfx_energy}) whose materials scroll a
  * tileable noise texture in several layers (no per-pixel procedural noise), static unit meshes kept
  * on the GPU and placed with a model matrix (no per-frame vertex rebuild for the big structures), a
- * copy of the scene colour for refraction, and a small sprite batch for secondary sparks, debris,
- * smoke and flares. Every pass blends premultiplied (ONE, ONE_MINUS_SRC_ALPHA): alpha 0 adds light,
+ * copy of the scene colour for refraction, a field of energy streaks animated entirely in the
+ * vertex shader, and a small sprite batch for secondary sparks, debris, smoke and flares. Every pass blends premultiplied (ONE, ONE_MINUS_SRC_ALPHA): alpha 0 adds light,
  * alpha 1 covers. Depth is tested against the world and never written.
  *
  * <p>The program is bound here for every draw and the blend function is set again right after the
@@ -37,11 +37,11 @@ import org.lwjgl.opengl.GL30;
 public final class Vfx {
     /** Material modes of vfx_energy.fsh. */
     public static final int BODY=1,SKIN=2,CAP=3,GROUND=4,RING=5,RING_REFRACT=6,HEAT_COLUMN=7,SPARK=8,FLARE=9,SMOKE=10,HAZE=11,SOLID=12,
-        GLOW=13,CLOUD=14,SHOCK=15,POOL=16;
+        GLOW=13,CLOUD=14,SHOCK=15,POOL=16,STREAK=17;
     private static final int SIDES=160,DISC=128,DOME_AZ=96,DOME_EL=24;
     private static ShaderProgram shader;
     private static NativeImageBackedTexture noise;
-    private static VertexBuffer cylinderOut,cylinderIn,disc,dome;
+    private static VertexBuffer cylinderOut,cylinderIn,disc,dome,streakField;
     private static SimpleFramebuffer scene;
     private static int sceneTexture;
     private static boolean failed;
@@ -89,6 +89,7 @@ public final class Vfx {
         cylinderIn=upload(cylinderMesh(false));
         disc=upload(discMesh());
         dome=upload(domeMesh());
+        streakField=upload(streakMesh());
     }
     private static VertexBuffer upload(BufferBuilder.BuiltBuffer built){
         var vb=new VertexBuffer(VertexBuffer.Usage.STATIC);vb.bind();vb.upload(built);VertexBuffer.unbind();return vb;
@@ -132,6 +133,15 @@ public final class Vfx {
         }
         return b.end();
     }
+    /** Streak field: one quad per streak, its seeds in Position and Color and its corner in UV0 (moved by vfx_energy.vsh, mode 17). */
+    private static BufferBuilder.BuiltBuffer streakMesh(){
+        int n=VfxStreaks.COUNT;float[] p=VfxStreaks.positions(n);int[] c=VfxStreaks.colors(n);
+        var b=new BufferBuilder(n*4*VertexFormats.POSITION_TEXTURE_COLOR.getVertexSizeByte());
+        b.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_TEXTURE_COLOR);
+        for(int i=0;i<n;i++)for(int k=0;k<4;k++)
+            b.vertex(p[i*3],p[i*3+1],p[i*3+2]).texture(k==1||k==2?1:0,k>=2?1:0).color(c[i*4],c[i*4+1],c[i*4+2],c[i*4+3]).next();
+        return b.end();
+    }
     private static void v(BufferBuilder b,float x,float y,float z,float u,float w){b.vertex(x,y,z).texture(u,w).color(255,255,255,255).next();}
 
     /** Starts a group of VFX draws: depth tested, no depth writes, premultiplied blending. */
@@ -146,10 +156,15 @@ public final class Vfx {
     /** Ends a group: drops the scene copy binding and leaves culling off like the other effect renderers. */
     public static void end(){sceneTexture=noise==null?0:noise.getGlId();RenderSystem.disableCull();}
 
-    /** Sets the material for the next draws. */
+    /** Sets the material for the next draws (and clears the surge parameters). */
     public static void material(int mode,float time,float a,float b,float c,float d,float e,float f,float g,float h){
         shader.getUniform("Mode").set(mode);shader.getUniform("Time").set(time);
         shader.getUniform("Params").set(a,b,c,d);shader.getUniform("Params2").set(e,f,g,h);
+        surge(-1,0);
+    }
+    /** The surge racing up the pillar for the body, skin and streaks: front height above the pillar's base (blocks, negative for none) and strength. */
+    public static void surge(float front,float strength){
+        var u=shader.getUniform("Params3");if(u!=null)u.set(front,strength,0f,0f);
     }
     /** Straight cylinder of radius r from y0 up {@code height} around (x,z): outward faces from outside, inward from inside. */
     public static void cylinder(Matrix4f rot,Vec3d cam,double x,double y0,double z,double r,double height,boolean cameraInside){
@@ -158,6 +173,10 @@ public final class Vfx {
     /** Hemisphere of radius r standing on (x,y,z); both sides drawn. */
     public static void dome(Matrix4f rot,Vec3d cam,double x,double y,double z,double r){
         mesh(dome,rot,cam,x,y,z,(float)r,(float)r,(float)r,false);
+    }
+    /** The energy streak field of a pillar standing on (x,y0,z); its size and timing come from the {@link #STREAK} material. */
+    public static void streaks(Matrix4f rot,Vec3d cam,double x,double y0,double z){
+        mesh(streakField,rot,cam,x,y0,z,1,1,1,false);
     }
     /** Horizontal disc of radius r centred at (x,y,z). */
     public static void disc(Matrix4f rot,Vec3d cam,double x,double y,double z,double r){

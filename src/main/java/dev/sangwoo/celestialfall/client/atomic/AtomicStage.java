@@ -6,7 +6,8 @@ import static dev.sangwoo.celestialfall.client.atomic.AtomicLook.*;
  * Timing and distance shaping of G's spectacle for viewers outside the damage column, in seconds
  * after the first skill frame: the sky and world light dimming to violet around the pillar, the
  * slowed ignition, the air shock racing out from the blast (with the jolt, FOV punch and boom it
- * brings when it reaches the viewer), the letterbox and the cloud rings. R is the damage radius;
+ * brings when it reaches the viewer), the letterbox and the cloud rings, and near the pillar the
+ * surges racing up it, the earthquake and the overwhelming screen treatment. R is the damage radius;
  * the pillar itself never grows past it, only light, sky and air reach farther. Pure functions.
  */
 public final class AtomicStage {
@@ -42,11 +43,15 @@ public final class AtomicStage {
         float t=sec-arrival;
         return smooth(t,0,.05f)*(float)Math.exp(-Math.max(0,t-.05f)/.35f);
     }
-    /** FOV offset in degrees: a slow push-in through the slowed ignition, a punch outward when the shock arrives. */
+    /**
+     * FOV offset in degrees: a slow push-in through the slowed ignition, a punch outward when the shock arrives,
+     * and near the pillar a throb outward with every surge. Never more than 12 degrees.
+     */
     public static float fov(float sec,double distance,double R){
         float reach=reach(distance,R);if(reach<=0)return 0;
         float push=smooth(sec,IMPACT,IMPACT+.35f)*(1-smooth(sec,IMPACT+.5f,IMPACT+1.1f));
-        return reach*(-4f*push+12f*kick(sec,arrival(distance,R)));
+        float k=near(distance,R);
+        return Math.min(12f,reach*(-4f*push+12f*kick(sec,arrival(distance,R)))+2.2f*k*surge(sec));
     }
     /** Camera jolt amplitude in degrees when the shock arrives; weaker farther out. */
     public static float jolt(float sec,double distance,double R){
@@ -61,6 +66,40 @@ public final class AtomicStage {
     /** Letterbox bar height as a fraction of the screen height. */
     public static float letterbox(float sec,double distance,double R){
         return .085f*smooth(sec,IMPACT,IMPACT+.6f)*(1-smooth(sec,BEAM_END+.4f,BEAM_END+1.6f))*reach(distance,R);
+    }
+
+    /** Nearness to the pillar for the quake and the post effect: 1 within 1.5 R, gone at 8 R. */
+    public static float near(double distance,double R){return R>0?clamp((8*R-distance)/(6.5*R)):0;}
+    /** A surge of light leaves the pillar's base every 0.8 s from the pink frame until the beam ends, racing up at 14 R/s. */
+    public static final float SURGE_PERIOD=.8f;
+    public static final double SURGE_SPEED=14;
+    /** Seconds since the latest surge left the base, or -1 when none. */
+    public static float surgeAge(float sec){
+        if(!(sec>=PINK)||sec>=BEAM_END)return -1;
+        float a=(sec-PINK)%SURGE_PERIOD;
+        return a<0?a+SURGE_PERIOD:a;
+    }
+    /** Height of the latest surge's front above the pillar's base, in blocks (-1 when none). */
+    public static double surgeFront(float sec,double R){float a=surgeAge(sec);return a<0?-1:a*SURGE_SPEED*R;}
+    /** Brightness of the climbing surge: flashes on at the base and fades as it climbs. */
+    public static float surgeGlow(float sec){float a=surgeAge(sec);return a<0?0:smooth(a,0,.04f)*(1-.6f*a/SURGE_PERIOD);}
+    /** The pulse each surge sends through the ground and the air (shared by the quake, the FOV throb and the post effect). */
+    public static float surge(float sec){
+        float a=surgeAge(sec);if(a<0)return 0;
+        float s=a/SURGE_PERIOD;
+        return smooth(s,0,.08f)*(1-smooth(s,.08f,.45f));
+    }
+    /** While the pillar stands: on with the ignition, off over 2 s after the beam. */
+    public static float standing(float sec){return smooth(sec,IMPACT,PINK+.3f)*(1-smooth(sec,BEAM_END,BEAM_END+2f));}
+    /** Earthquake felt near the pillar from outside (degrees): a steady quake with a kick on every surge. */
+    public static float quake(float sec,double distance,double R){
+        float k=near(distance,R);
+        return k<=0?0:k*k*standing(sec)*(1.1f+.9f*surge(sec));
+    }
+    /** Strength of the overwhelming screen treatment near the pillar (0..1). */
+    public static float overwhelm(float sec,double distance,double R){
+        float k=near(distance,R);
+        return k<=0?0:k*standing(sec)*(.75f+.25f*surge(sec));
     }
 
     /** Cloud ring at cloud height, outer radius in R: punched out by the blast, racing to about 14 R. */

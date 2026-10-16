@@ -56,4 +56,48 @@ class AtomicStageTest {
         assertTrue(AtomicStage.condensationRing(6.5f)>1&&AtomicStage.condensationRing(9)<=3.2);
         assertEquals(0,AtomicStage.condensationLevel(8),1e-6);
     }
+    @Test void nearPillarQuakeAndOverwhelmStayBounded() {
+        double R=28;
+        assertEquals(1,AtomicStage.near(R*1.2,R),1e-6);
+        assertEquals(0,AtomicStage.near(R*8.1,R),1e-6);
+        for(float sec=0;sec<30;sec+=.01f)for(double d:new double[]{R*1.1,R*3,R*6,R*9}){
+            float q=AtomicStage.quake(sec,d,R),o=AtomicStage.overwhelm(sec,d,R);
+            assertTrue(q>=0&&q<=2.0001f,"quake "+q);
+            assertTrue(o>=0&&o<=1.0001f,"overwhelm "+o);
+        }
+        assertEquals(0,AtomicStage.quake(5,R*1.2,R),1e-6);
+        assertTrue(AtomicStage.quake(10,R*1.2,R)>1);
+        assertEquals(0,AtomicStage.quake(AtomicLook.BEAM_END+2.1f,R*1.2,R),1e-6);
+        assertEquals(0,AtomicStage.overwhelm(10,R*9,R),1e-6);
+    }
+    @Test void surgesPulseWhileThePillarStands() {
+        assertEquals(0,AtomicStage.surge(AtomicLook.PINK-.1f));
+        float max=0;for(float sec=8;sec<9.6f;sec+=.005f)max=Math.max(max,AtomicStage.surge(sec));
+        assertTrue(max>.95f);
+        assertEquals(0,AtomicStage.surge(AtomicLook.BEAM_END+.1f));
+    }
+    @Test void surgeFrontLeavesTheBaseOnEachPulseAndClearsTheTop() {
+        double R=28;
+        assertEquals(-1,AtomicStage.surgeFront(AtomicLook.PINK-.01f,R));
+        assertEquals(-1,AtomicStage.surgeFront(AtomicLook.BEAM_END,R));
+        assertEquals(0,AtomicStage.surgeGlow(AtomicLook.PINK-.01f));
+        for(int k=0;k<15;k++){
+            float launch=AtomicLook.PINK+k*AtomicStage.SURGE_PERIOD;
+            assertEquals(0,AtomicStage.surgeFront(launch+1e-4f,R),.2);
+            // The front climbs steadily and passes the pillar's top (9 R above the ground) before the next one.
+            double prev=-1;for(float a=.01f;a<AtomicStage.SURGE_PERIOD-.01f;a+=.01f){double f=AtomicStage.surgeFront(launch+a,R);assertTrue(f>prev);prev=f;}
+            assertTrue(prev>9*R+2);
+            // The quake kick and the visible surge start together.
+            assertTrue(AtomicStage.surge(launch+.06f)>.7f&&AtomicStage.surgeGlow(launch+.06f)>.9f);
+        }
+    }
+    @Test void nearViewersFovThrobsWithSurgesWithinTheCap() {
+        double R=28;float max=0;
+        for(float sec=AtomicLook.PINK;sec<AtomicLook.BEAM_END;sec+=.005f)for(double d:new double[]{R*1.1,R*2,R*3}){
+            float fov=AtomicStage.fov(sec,d,R);assertTrue(fov<=12f+1e-5);max=Math.max(max,fov);
+        }
+        assertTrue(AtomicStage.fov(12.0f,R*1.2,R)>=0);
+        float launch=AtomicLook.PINK+10*AtomicStage.SURGE_PERIOD;
+        assertTrue(AtomicStage.fov(launch+.06f,R*1.2,R)-AtomicStage.fov(launch+.6f,R*1.2,R)>1.2f);
+    }
 }
