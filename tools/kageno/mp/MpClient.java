@@ -39,7 +39,7 @@ public final class MpClient implements ClientModInitializer {
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
     private MinecraftClient mc;private int phase,age,frames;private boolean caster;private final Set<Integer> held=new HashSet<>();
-    private float quakePeak,overwhelmPeak;
+    private float quakePeak,overwhelmPeak,lightPeak;
 
     @Override public void onInitializeClient(){
         if(ROLE==null)return;caster=ROLE.equals("caster");
@@ -117,11 +117,12 @@ public final class MpClient implements ClientModInitializer {
             var s=dev.sangwoo.celestialfall.client.AtomicImmersion.at(mc.gameRenderer.getCamera().getPos(),0);
             quakePeak=Math.max(quakePeak,Math.max(Math.abs(s.yaw()),Math.abs(s.pitch())));
             overwhelmPeak=Math.max(overwhelmPeak,dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.strength());
+            lightPeak=Math.max(lightPeak,dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.radiance());
             flag("veil_overwhelm_active",dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.active());
-        }else if(quakePeak>0||overwhelmPeak>0){
-            note(String.format(Locale.ROOT,"G seen: quake peak %.2f deg, overwhelm peak %.2f, veil frames %d",quakePeak,overwhelmPeak,
+        }else if(quakePeak>0||overwhelmPeak>0||lightPeak>0){
+            note(String.format(Locale.ROOT,"G seen: quake peak %.2f deg, overwhelm peak %.2f, light peak %.2f, veil frames %d",quakePeak,overwhelmPeak,lightPeak,
                 dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.renderedFrames()));
-            quakePeak=0;overwhelmPeak=0;
+            quakePeak=0;overwhelmPeak=0;lightPeak=0;
         }
         flag("atomic",AtomicClient.CASTS.size());flag("overdrive",StandClient.OVERDRIVE.size());flag("hits",StandClient.hitCount);
         flag("health",Math.round(mc.player.getHealth()));

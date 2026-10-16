@@ -20,12 +20,15 @@ import java.util.*;
  * Multiplayer smoke test, dedicated-server half (only with -Dbotand.mp.server=true): a flat lit stage,
  * "Caster" gets Kageno without cooldowns, "Watcher" stands 2.5 blocks in front of it (64 blocks out,
  * outside the damage column, while G runs). Both are kept alive and put back on their marks whenever no
- * Kageno cast is running. Not shipped in the mod jar.
+ * Kageno cast is running. During G, still husks stand 4, 12, 20 and 26 blocks from the caster and the
+ * cast age of the first hit on each is logged (the damage column opens with the pillar). Not shipped in
+ * the mod jar.
  */
 public final class MpServer implements ModInitializer {
     static final Path OUT=Path.of(System.getProperty("botand.mp.out","mp"));
     private final Map<UUID,int[]> live=new HashMap<>();private final Map<UUID,net.minecraft.util.math.Vec3d> logged=new HashMap<>();
     private int ground=Integer.MIN_VALUE;private boolean atomic,idle;
+    private long atomicStart;private final Map<UUID,double[]> targets=new LinkedHashMap<>();
 
     @Override public void onInitialize(){
         if(!Boolean.getBoolean("botand.mp.server"))return;
@@ -64,7 +67,9 @@ public final class MpServer implements ModInitializer {
             if(c.age()<(c.skill==KagenoRules.Q?30:KagenoRules.DURATION[c.skill]))busy=true;
         }
         for(var it=live.entrySet().iterator();it.hasNext();){var e=it.next();if(!seen.contains(e.getKey())){note(server,"end "+e.getValue()[0]+" targets="+e.getValue()[1]);it.remove();}}
-        if(AtomicManager.hasActive()&&!atomic){atomic=true;note(server,"atomic start");outside(server);}else if(!AtomicManager.hasActive()&&atomic){atomic=false;note(server,"atomic end");}
+        if(AtomicManager.hasActive()&&!atomic){atomic=true;atomicStart=server.getOverworld().getTime();note(server,"atomic start");outside(server);targets(server);}
+        else if(!AtomicManager.hasActive()&&atomic){atomic=false;note(server,"atomic end");clearTargets(server);}
+        if(atomic)watchTargets(server);
         busy|=atomic;
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -77,6 +82,33 @@ public final class MpServer implements ModInitializer {
     private void outside(MinecraftServer server){
         var w=server.getOverworld();int y=w.getTopY(Heightmap.Type.MOTION_BLOCKING,0,64);
         for(var p:server.getPlayerManager().getPlayerList())if(!caster(p)){p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,y,64.5,180,0);note(server,"watcher outside y="+y);}
+    }
+    /** Still husks (no AI, sun-proof) in a line away from the watcher, at known distances from the caster. */
+    private void targets(MinecraftServer server){
+        var w=server.getOverworld();
+        for(double d:new double[]{4,12,20,26}){
+            var husk=net.minecraft.entity.EntityType.HUSK.create(w);if(husk==null)continue;
+            husk.refreshPositionAndAngles(.5-d,ground,.5,90,0);husk.setAiDisabled(true);husk.setPersistent();husk.setSilent(true);
+            w.spawnEntity(husk);targets.put(husk.getUuid(),new double[]{d,-1,husk.getHealth()});
+        }
+        note(server,"targets "+targets.size());
+    }
+    private void watchTargets(MinecraftServer server){
+        var w=server.getOverworld();long age=w.getTime()-atomicStart;
+        for(var e:targets.entrySet()){
+            var t=e.getValue();if(t[1]>=0)continue;
+            var mob=w.getEntity(e.getKey());
+            float health=mob instanceof net.minecraft.entity.LivingEntity l&&l.isAlive()?l.getHealth():0;
+            if(health<t[2]){t[1]=age;note(server,String.format(java.util.Locale.ROOT,"target %.0f blocks first hit at cast age %d",t[0],age));}
+        }
+    }
+    private void clearTargets(MinecraftServer server){
+        var w=server.getOverworld();
+        for(var e:targets.entrySet()){
+            if(e.getValue()[1]<0)note(server,String.format(java.util.Locale.ROOT,"target %.0f blocks never hit",e.getValue()[0]));
+            var mob=w.getEntity(e.getKey());if(mob!=null)mob.discard();
+        }
+        targets.clear();
     }
     private void restore(MinecraftServer server){
         if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0)return;
