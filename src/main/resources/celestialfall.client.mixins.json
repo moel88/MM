@@ -26,7 +26,10 @@
     "KagenoOutlineMixin",
     "KagenoOutlineColorMixin",
     "KagenoShadowTintMixin",
-    "KagenoStaggerMixin"
+    "KagenoStaggerMixin",
+    "AtomicSkyMixin",
+    "AtomicFogMixin",
+    "AtomicLightMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -35,7 +35,9 @@ public abstract class GameRendererMixin {
     }
     @Inject(method="renderWorld",at=@At("TAIL"))
     private void celestialfall$post(float delta,long limitTime,MatrixStack matrices,CallbackInfo ci) {
-        if(!TitleMapCamera.active())AnimePostProcessor.render(delta);
+        if(TitleMapCamera.active())return;
+        dev.sangwoo.celestialfall.client.atomic.AtomicAmbience.letterbox(delta);
+        AnimePostProcessor.render(delta);
     }
     @Inject(method="close",at=@At("HEAD"))
     private void celestialfall$release(CallbackInfo ci) { AnimePostProcessor.release(); }

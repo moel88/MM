@@ -4,7 +4,8 @@
 // copy of the scene colour for the refraction modes. Output is premultiplied (blend ONE,
 // ONE_MINUS_SRC_ALPHA): alpha 0 adds light, alpha 1 covers what is behind.
 // Modes: 1 tower body, 2 tower skin, 3 tower cap, 4 ground glow, 5 wave front, 6 wave refraction,
-// 7 heat column, 8 spark sprite, 9 flare, 10 smoke puff, 11 ground heat haze, 12 solid (debris).
+// 7 heat column, 8 spark sprite, 9 flare, 10 smoke puff, 11 ground heat haze, 12 solid (debris),
+// 13 glow around the pillar, 14 cloud ring, 15 air shock band, 16 light pool on the ground.
 uniform sampler2D Sampler0;
 uniform sampler2D Sampler1;
 uniform int Mode;
@@ -179,6 +180,59 @@ void main(){
         // Solid debris: the vertex colour with a little grain, opaque.
         float grain=N(uv*vec2(0.37,0.29)).r;
         c=vec4(tint.rgb*(0.8+0.4*grain)*tint.a,tint.a);
+    }else if(Mode==13){
+        // Glow around the pillar (added light) on a camera-facing strip through its axis: uv.x across, uv.y up.
+        // Params: x pillar radius / strip half width, y strength, z where the pillar's top falls on the strip (0..1).
+        float x=abs(uv.x*2.0-1.0),edge=Params.x;
+        float beyond=max(0.0,x-edge)/max(1.0-edge,0.001);
+        float g=exp(-beyond*beyond*4.5)*(1.0-smoothstep(0.8,1.0,x));
+        float above=max(0.0,uv.y-Params.z)/max(1.0-Params.z,0.001);
+        g*=(1.0-smoothstep(0.0,1.0,above))*smoothstep(0.0,0.02,uv.y);
+        g*=0.85+0.3*N(vec2(uv.x*2.0,uv.y*3.0-Time*0.3)).r;
+        vec3 col=mix(vec3(0.42,0.12,1.0),vec3(0.86,0.72,1.0),exp(-beyond*4.0));
+        c=vec4(col*g*Params.y,0.0);
+    }else if(Mode==14){
+        // Cloud ring (covers) on a disc: a wide band of cloud racing outward, lit violet by the pillar and brightest
+        // on its inner edge. Params: x inner / outer radius, y opacity, z light, w 1 for white condensation mist.
+        // Params2: x pass (+1 near half, -1 far half), yz unit direction to the camera.
+        vec2 d=local.xz;float rr=length(d);if(rr>1.0||rr<Params.x)discard;
+        bool near=dot(d,Params2.yz)>0.0;
+        if((Params2.x>0.5&&!near)||(Params2.x<-0.5&&near))discard;
+        float w=(rr-Params.x)/max(1.0-Params.x,0.001);
+        float ang=atan(d.y,d.x)/(2.0*PI);
+        float puff=N(vec2(ang*24.0,w*1.5-Time*0.05)).r*0.6+N(vec2(ang*61.0+0.3,w*3.0)).g*0.4;
+        float band=smoothstep(0.0,0.35,w)*(1.0-smoothstep(0.45,1.0,w));
+        float shape=smoothstep(0.3,0.7,band*0.8+puff*0.45);
+        float lit=clamp(exp(-w*2.2)*Params.z,0.0,1.0);
+        vec3 cloud=mix(vec3(0.3,0.16,0.5),vec3(0.75,0.5,1.0),lit)+vec3(1.0,0.9,1.0)*lit*lit*lit*0.5;
+        vec3 mist=mix(vec3(0.8,0.75,0.95),vec3(1.0),lit);
+        float a=shape*Params.y*(1.0-0.45*Params.w);
+        c=vec4(mix(cloud,mist,Params.w)*a,a);
+    }else if(Mode==15){
+        // Air shock: the low band of a dome rolling out over the ground. Where the view grazes it and along its top
+        // edge it bends the scene and catches a faint sheen. Params: x strength, y sheen, z 1 when the scene copy is
+        // bound, w band height (fraction of the way from the ground to the dome's top).
+        float cap=Params.w;if(uv.y>cap)discard;
+        float f=facing(),rim=pow(1.0-f,3.0);
+        float edge=exp(-pow((uv.y-cap*0.8)/(cap*0.18),2.0)),fade=1.0-smoothstep(cap*0.8,cap,uv.y);
+        vec2 dir=normalize(viewNrm.xy+vec2(0.00001,0.0));
+        float bend=(rim*0.7+edge*0.6)*fade*Params.x*(0.6+0.4*N(vec2(uv.x*40.0,uv.y*6.0-Time*2.0)).r);
+        vec3 sheen=vec3(0.9,0.85,1.0)*(pow(1.0-f,6.0)*0.5+edge*0.25)*fade*Params.y;
+        if(Params.z>0.5){
+            float a=min(1.0,bend*6.0);
+            if(a<0.004&&dot(sheen,sheen)<0.00001)discard;
+            c=vec4(texture(Sampler1,gl_FragCoord.xy/ScreenSize+dir*bend*0.03).rgb*a+sheen,a);
+        }else{
+            if(dot(sheen,sheen)<0.00001)discard;
+            c=vec4(sheen,0.0);
+        }
+    }else if(Mode==16){
+        // Light pool (added light) on the ground around the pillar, falling off past its radius.
+        // Params: x disc radius in R, y strength, z pillar radius in R.
+        float d=length(local.xz)*Params.x;if(d>Params.x)discard;
+        float past=max(0.0,d-Params.z);
+        float g=Params.y/(1.0+past*past*1.6)*(1.0-smoothstep(Params.x*0.75,Params.x,d))*smoothstep(Params.z*0.9,Params.z,d);
+        c=vec4(vec3(0.5,0.26,1.0)*g,0.0);
     }
     fragColor=c*ColorModulator;
 }

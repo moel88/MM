@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall.client;
 import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.client.atomic.AtomicLook;
 import dev.sangwoo.celestialfall.client.atomic.AtomicPillar;
+import dev.sangwoo.celestialfall.client.atomic.AtomicStage;
 import net.minecraft.util.math.Vec3d;
 
 /**
@@ -15,6 +16,11 @@ public final class AtomicImmersion {
         /** The same sample without the blast colour grade (haze, impact frames and quake stay). */
         public Sample withoutGrade() {
             return grade.mix()==0?this:new Sample(new AtomicLook.Grade(grade.tint(),grade.frame(),grade.morph(),0,grade.lo(),grade.hi()),yaw,pitch,roll);
+        }
+        /** Adds the jolt of the air shock reaching an outside viewer (amplitude in degrees). */
+        public Sample withJolt(float amplitude,long step) {
+            if(amplitude<=0)return this;
+            return new Sample(grade,yaw+amplitude*AtomicLook.jitter(step,0),pitch+amplitude*.8f*AtomicLook.jitter(step,1),roll+amplitude*.5f*AtomicLook.jitter(step,2));
         }
     }
     public static final Sample NONE=new Sample(AtomicLook.Grade.NONE,0,0,0);
@@ -41,9 +47,15 @@ public final class AtomicImmersion {
             if(!cast.dimension.equals(mc.world.getRegistryKey().getValue()))continue;
             double d=Math.hypot(camera.x-cast.origin.x,camera.z-cast.origin.z);
             if(d>=best)continue;
-            var value=sample(cast.age(delta)/20f,d,cast.radius,CelestialFall.CONFIG.screenShakeStrength);
-            // The violet grade belongs to the hit view; outside the damage column the pillar shows its own colours.
-            if(value!=NONE&&AtomicPillar.available()&&!AtomicPillar.interior(cast,camera))value=value.withoutGrade();
+            float sec=cast.age(delta)/20f;
+            var value=sample(sec,d,cast.radius,CelestialFall.CONFIG.screenShakeStrength);
+            if(AtomicPillar.available()&&!AtomicPillar.interior(cast,camera)){
+                // The violet grade belongs to the hit view; outside the damage column the pillar shows its own colours,
+                // and the air shock jolts the camera when it arrives, even beyond the quake's reach.
+                float jolt=AtomicStage.jolt(sec,camera.distanceTo(cast.origin),cast.radius)*(float)Math.max(0,Math.min(2,CelestialFall.CONFIG.screenShakeStrength));
+                value=(value==NONE?new Sample(AtomicLook.Grade.NONE,0,0,0):value.withoutGrade()).withJolt(jolt,(long)Math.floor(sec*45));
+                if(!value.active())value=NONE;
+            }
             if(value!=NONE){result=value;best=d;}
         }
         return result;

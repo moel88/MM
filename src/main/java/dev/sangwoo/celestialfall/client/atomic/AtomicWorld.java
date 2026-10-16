@@ -51,25 +51,27 @@ public final class AtomicWorld {
         Matrix4f world=new Matrix4f(rot).translate((float)-cam.x,(float)-cam.y,(float)-cam.z);
         var dim=mc.world.getRegistryKey().getValue();
         List<AtomicClient.Cast> casts=new ArrayList<>();
-        for(var c:AtomicClient.CASTS.values())if(c.dimension.equals(dim)&&c.origin.squaredDistanceTo(cam)<640*640)casts.add(c);
+        // The pillar is visible from far off; the crater and the hit view only matter near it.
+        for(var c:AtomicClient.CASTS.values())if(c.dimension.equals(dim)&&c.origin.squaredDistanceTo(cam)<1600*1600)casts.add(c);
         if(casts.isEmpty())return;
         try{
             // The opaque crater slabs go first so the translucent blast layers can blend over them.
             for(var c:casts){
                 var s=scene(c);float sec=c.age(delta)/20f;s.ground.refresh(mc.world);
-                if(sec>=7.0f)crater(ctx,s,sec,mc);
+                if(sec>=7.0f&&c.origin.squaredDistanceTo(cam)<640*640)crater(ctx,s,sec,mc);
             }
             RenderSystem.enableDepthTest();AtomicShader.premultiplied();
             for(var c:casts){
-                var s=scene(c);float sec=c.age(delta)/20f;
-                if(sec<AtomicLook.PINK+.06f)chant(s,sec,rot,world,cam,mc.world);
+                var s=scene(c);float sec=c.age(delta)/20f;boolean close=c.origin.squaredDistanceTo(cam)<640*640;
+                if(close&&sec<AtomicLook.PINK+.06f)chant(s,sec,rot,world,cam,mc.world);
                 // The hit view (inside the damage column) keeps its own renderer; everyone outside sees the pillar.
                 if(!AtomicPillar.available()||AtomicPillar.interior(c,cam)){
-                    if(sec>=AtomicLook.PINK&&sec<AtomicLook.BEAM_END)blast(s,sec,rot,world,cam,mc.world);
-                    if(sec>=AtomicLook.IMPACT&&sec<BLAST_END)explosion(s,sec,rot,world,cam,mc.world);
+                    if(close&&sec>=AtomicLook.PINK&&sec<AtomicLook.BEAM_END)blast(s,sec,rot,world,cam,mc.world);
+                    if(close&&sec>=AtomicLook.IMPACT&&sec<BLAST_END)explosion(s,sec,rot,world,cam,mc.world);
                 }else if(sec>=AtomicLook.IMPACT&&sec<BLAST_END){
                     AtomicPillar.render(s,sec,rot,cam,mc.world);
                     AtomicShader.premultiplied();
+                    AtomicAmbience.boom(c,sec,cam);
                 }
             }
             // The violet void replaces the whole view for three frames, so it is drawn last over everything.

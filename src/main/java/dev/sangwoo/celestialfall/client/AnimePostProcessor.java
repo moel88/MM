@@ -37,7 +37,7 @@ public final class AnimePostProcessor {
         var immersion=isAtomic?AtomicImmersion.at(mc.gameRenderer.getCamera().getPos(),delta):AtomicImmersion.NONE;
         float age=timeStop?mc.world.getTime()%1000+delta:isKageno?kageno.age(delta):isHeaven?heaven.age(delta):isAtomic?atomic.age(delta):spell.age(mc.world.getTime(),delta);
         float strength=timeStop?1:isKageno?.88f:isHeaven?HeavenTimeline.visibility(age)*(float)Math.max(0,Math.min(1,(1100-mc.player.getPos().distanceTo(heaven.target))/400))
-            :isAtomic?(immersion.active()?1:0)
+            :isAtomic?(immersion.active()||dev.sangwoo.celestialfall.client.atomic.AtomicAmbience.dim(delta)>0?1:0)
             :SpellTimeline.visibility(age)*(float)Math.max(0,Math.min(1,(640-mc.player.getPos().distanceTo(spell.target))/220));
         if(strength<.005f)return;
         var main=mc.getFramebuffer();

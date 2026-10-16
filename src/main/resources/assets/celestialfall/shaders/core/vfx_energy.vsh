@@ -5,6 +5,7 @@ in vec2 UV0;
 in vec4 Color;
 uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
+uniform int Mode;
 out vec2 uv;
 out vec4 tint;
 out vec3 viewPos;
@@ -14,6 +15,7 @@ void main(){
     vec4 view=ModelViewMat*vec4(Position,1.0);
     gl_Position=ProjMat*view;
     uv=UV0;tint=Color;viewPos=view.xyz;local=Position;
-    // On the unit cylinder the radial direction is the surface normal (the xz scale is uniform).
-    viewNrm=mat3(ModelViewMat)*vec3(Position.x,0.0,Position.z);
+    // On the unit cylinder the radial direction is the surface normal (the xz scale is uniform); on the
+    // unit dome (mode 15, uniform scale) it is the position itself.
+    viewNrm=mat3(ModelViewMat)*(Mode==15?Position:vec3(Position.x,0.0,Position.z));
 }

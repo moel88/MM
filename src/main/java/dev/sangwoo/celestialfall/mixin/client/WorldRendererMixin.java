@@ -34,7 +34,9 @@ public abstract class WorldRendererMixin {
     @ModifyArg(method="renderSky(Lnet/minecraft/client/util/math/MatrixStack;Lorg/joml/Matrix4f;FLnet/minecraft/client/render/Camera;ZLjava/lang/Runnable;)V",
         at=@At(value="INVOKE",target="Lcom/mojang/blaze3d/systems/RenderSystem;setShaderColor(FFFF)V",ordinal=2),index=3)
     private float botand$hideSun(float alpha) {
-        return dev.sangwoo.celestialfall.client.kageno.KagenoCamera.hideSun(MinecraftClient.getInstance().getTickDelta())?0:alpha;
+        float delta=MinecraftClient.getInstance().getTickDelta();
+        // The sun and moon also fade while G's pillar darkens the sky around a viewer outside it.
+        return dev.sangwoo.celestialfall.client.kageno.KagenoCamera.hideSun(delta)?0:alpha*(1-dev.sangwoo.celestialfall.client.atomic.AtomicAmbience.dim(delta));
     }
     @Inject(method="renderSky(Lnet/minecraft/client/util/math/MatrixStack;Lorg/joml/Matrix4f;FLnet/minecraft/client/render/Camera;ZLjava/lang/Runnable;)V", at=@At("TAIL"))
     private void celestialfall$sky(MatrixStack matrices, Matrix4f projectionMatrix, float tickDelta,

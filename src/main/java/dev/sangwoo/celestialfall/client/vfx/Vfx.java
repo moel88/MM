@@ -36,11 +36,12 @@ import org.lwjgl.opengl.GL30;
  */
 public final class Vfx {
     /** Material modes of vfx_energy.fsh. */
-    public static final int BODY=1,SKIN=2,CAP=3,GROUND=4,RING=5,RING_REFRACT=6,HEAT_COLUMN=7,SPARK=8,FLARE=9,SMOKE=10,HAZE=11,SOLID=12;
-    private static final int SIDES=160,DISC=128;
+    public static final int BODY=1,SKIN=2,CAP=3,GROUND=4,RING=5,RING_REFRACT=6,HEAT_COLUMN=7,SPARK=8,FLARE=9,SMOKE=10,HAZE=11,SOLID=12,
+        GLOW=13,CLOUD=14,SHOCK=15,POOL=16;
+    private static final int SIDES=160,DISC=128,DOME_AZ=96,DOME_EL=24;
     private static ShaderProgram shader;
     private static NativeImageBackedTexture noise;
-    private static VertexBuffer cylinderOut,cylinderIn,disc;
+    private static VertexBuffer cylinderOut,cylinderIn,disc,dome;
     private static SimpleFramebuffer scene;
     private static int sceneTexture;
     private static boolean failed;
@@ -87,6 +88,7 @@ public final class Vfx {
         cylinderOut=upload(cylinderMesh(true));
         cylinderIn=upload(cylinderMesh(false));
         disc=upload(discMesh());
+        dome=upload(domeMesh());
     }
     private static VertexBuffer upload(BufferBuilder.BuiltBuffer built){
         var vb=new VertexBuffer(VertexBuffer.Usage.STATIC);vb.bind();vb.upload(built);VertexBuffer.unbind();return vb;
@@ -114,6 +116,22 @@ public final class Vfx {
         }
         return b.end();
     }
+    /** Unit hemisphere above the xz plane (radius 1), uv.x around, uv.y from the rim (0) to the top (1); outward faces. */
+    private static BufferBuilder.BuiltBuffer domeMesh(){
+        var b=new BufferBuilder(DOME_AZ*DOME_EL*4*VertexFormats.POSITION_TEXTURE_COLOR.getVertexSizeByte());
+        b.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_TEXTURE_COLOR);
+        for(int j=0;j<DOME_EL;j++){
+            float v0=(float)j/DOME_EL,v1=(float)(j+1)/DOME_EL;double e0=v0*Math.PI/2,e1=v1*Math.PI/2;
+            for(int i=0;i<DOME_AZ;i++){
+                float u0=(float)i/DOME_AZ,u1=(float)(i+1)/DOME_AZ;double a0=u0*Math.PI*2,a1=u1*Math.PI*2;
+                v(b,(float)(Math.cos(a1)*Math.cos(e0)),(float)Math.sin(e0),(float)(Math.sin(a1)*Math.cos(e0)),u1,v0);
+                v(b,(float)(Math.cos(a0)*Math.cos(e0)),(float)Math.sin(e0),(float)(Math.sin(a0)*Math.cos(e0)),u0,v0);
+                v(b,(float)(Math.cos(a0)*Math.cos(e1)),(float)Math.sin(e1),(float)(Math.sin(a0)*Math.cos(e1)),u0,v1);
+                v(b,(float)(Math.cos(a1)*Math.cos(e1)),(float)Math.sin(e1),(float)(Math.sin(a1)*Math.cos(e1)),u1,v1);
+            }
+        }
+        return b.end();
+    }
     private static void v(BufferBuilder b,float x,float y,float z,float u,float w){b.vertex(x,y,z).texture(u,w).color(255,255,255,255).next();}
 
     /** Starts a group of VFX draws: depth tested, no depth writes, premultiplied blending. */
@@ -136,6 +154,10 @@ public final class Vfx {
     /** Straight cylinder of radius r from y0 up {@code height} around (x,z): outward faces from outside, inward from inside. */
     public static void cylinder(Matrix4f rot,Vec3d cam,double x,double y0,double z,double r,double height,boolean cameraInside){
         mesh(cameraInside?cylinderIn:cylinderOut,rot,cam,x,y0,z,(float)r,(float)height,(float)r,true);
+    }
+    /** Hemisphere of radius r standing on (x,y,z); both sides drawn. */
+    public static void dome(Matrix4f rot,Vec3d cam,double x,double y,double z,double r){
+        mesh(dome,rot,cam,x,y,z,(float)r,(float)r,(float)r,false);
     }
     /** Horizontal disc of radius r centred at (x,y,z). */
     public static void disc(Matrix4f rot,Vec3d cam,double x,double y,double z,double r){

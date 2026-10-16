@@ -36,20 +36,27 @@ public final class AtomicPillar {
             &&p.getEyePos().squaredDistanceTo(cam)<AtomicPillarShape.OWN_CAMERA*AtomicPillarShape.OWN_CAMERA;
     }
 
-    static void render(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,ClientWorld w){
+    static void render(AtomicScene s,float real,Matrix4f rot,Vec3d cam,ClientWorld w){
         double R=28*s.scale;
         Vec3d o=new Vec3d(s.origin.x,s.groundY(w,s.origin.x,s.origin.z),s.origin.z);
         int quality=CelestialFall.CONFIG.visualQuality;
+        // The pillar's own clock runs slowed through the first instant of the ignition; sky, shock and clouds keep real time.
+        float sec=AtomicStage.visual(real);
         double r=AtomicPillarShape.radius(sec,R),y0=AtomicPillarShape.base(o.y),y1=AtomicPillarShape.top(sec,o.y,R);
         float flow=AtomicPillarShape.flowTime(sec);
         boolean standing=r>.05;
         boolean inside=standing&&Math.hypot(cam.x-o.x,cam.z-o.z)<r&&cam.y>y0&&cam.y<y1;
         float ripple=AtomicPillarShape.ignitionLevel(sec),haze=standing&&r<R*.995?1:0,column=AtomicPillarShape.heatColumn(sec);
-        boolean refract=quality>1&&Vfx.refractionSupported()&&(ripple>0||haze>0||column>0);
+        float shock=AtomicStage.shockLevel(real,R);
+        boolean refract=quality>1&&Vfx.refractionSupported()&&(ripple>0||haze>0||column>0||shock>0);
+        double clouds=cloudHeight(w,o,R,y1);
         Vfx.begin();
         try{
             ground(sec,rot,cam,o,R,r);
+            pool(real,rot,cam,o,R);
             // Behind the pillar first, then the pillar covers it, then everything in front of it.
+            rings(real,rot,cam,o,R,clouds,-1);
+            if(standing)glow(s,sec,rot,cam,o,R,r,y0,y1);
             wave(sec,rot,cam,o,R,r,-1);
             if(standing)pillar(s,sec,flow,rot,cam,o,R,r,y0,y1,inside);
             if(refract){
@@ -58,6 +65,8 @@ public final class AtomicPillar {
                 if(haze>0)groundHaze(sec,rot,cam,o,R,r);
                 if(column>0)heatColumn(s,sec,flow,rot,cam,o,R,column);
             }
+            if(shock>0)shock(real,rot,cam,o,R,shock,refract);
+            rings(real,rot,cam,o,R,clouds,1);
             wave(sec,rot,cam,o,R,r,1);
             if(quality>0)debris(s,sec,rot,cam,o,R,r,quality);
             sparks(s,sec,rot,cam,o,R,r,quality);
@@ -65,6 +74,54 @@ public final class AtomicPillar {
             embers(s,sec,rot,cam,o,R,quality);
             flares(sec,rot,cam,o,R);
         }finally{Vfx.end();}
+    }
+
+    /** Violet light the pillar throws on the ground around it, out to 4.5 R (light, not the blast). */
+    private static void pool(float real,Matrix4f rot,Vec3d cam,Vec3d o,double R){
+        float level=AtomicStage.sky(real);if(level<=.01f)return;
+        Vfx.material(Vfx.POOL,real,4.5f,.55f*level,1,0,0,0,0,0);
+        Vfx.disc(rot,cam,o.x,o.y+.09,o.z,4.5*R);
+    }
+    /** Height of the cloud ring: the world's cloud layer, kept between 2.5 R above the ground and the pillar's top. */
+    private static double cloudHeight(ClientWorld w,Vec3d o,double R,double top){
+        float h=w.getDimensionEffects().getCloudsHeight();
+        double y=Float.isNaN(h)?o.y+5*R:h+1;
+        return Math.max(o.y+2.5*R,Math.min(y,o.y+8*R));
+    }
+    /** Light thrown into the air around the pillar: a soft violet-white glow past its silhouette that carries on above its top. */
+    private static void glow(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r,double y0,double y1){
+        float level=AtomicStage.sky(sec)*.9f+.1f*AtomicLook.smooth(sec,AtomicLook.IMPACT,AtomicLook.PINK);
+        level*=AtomicPillarShape.opacity(sec);if(level<=.01f)return;
+        double half=r+1.25*R,top=y1+1.6*R;
+        var b=Vfx.sprites(rot,cam,Vfx.GLOW,sec,(float)(r/half),.85f*level,(float)((y1-y0)/(top-y0)),0);
+        b.streak(new Vec3d(o.x,y0,o.z),new Vec3d(o.x,top,o.z),half*2,0xffffff,1);
+        Vfx.draw(b,false);
+    }
+    /**
+     * The air shock: a dome racing out from the blast at 5.5 R per second, bending the scene where the view grazes it,
+     * long after the pillar's own radius (it is air, not the blast).
+     */
+    private static void shock(float real,Matrix4f rot,Vec3d cam,Vec3d o,double R,float level,boolean refract){
+        double radius=AtomicStage.shockRadius(real,R);if(radius<1)return;
+        // Only its low band, rolling over the ground: a pressure wave, not a shell over the world.
+        Vfx.material(Vfx.SHOCK,real,level,.05f*level,refract?1:0,.33f,0,0,0,0);
+        Vfx.dome(rot,cam,o.x,o.y-1,o.z,radius);
+    }
+    /** The cloud ring pushed out at cloud height and the condensation ring around the pillar's middle; far (pass -1) or near (+1) half. */
+    private static void rings(float real,Matrix4f rot,Vec3d cam,Vec3d o,double R,double clouds,int pass){
+        double[] d=toCamera(cam,o);
+        double outer=AtomicStage.cloudRing(real)*R;float level=AtomicStage.cloudRingLevel(real);
+        if(level>.01f&&outer>1.3*R){
+            double inner=Math.max(1.02*R,outer*.55);
+            Vfx.material(Vfx.CLOUD,real,(float)(inner/outer),.72f*level,1.3f,0,pass,(float)d[0],(float)d[1],0);
+            Vfx.disc(rot,cam,o.x,clouds,o.z,outer);
+        }
+        outer=AtomicStage.condensationRing(real)*R;level=AtomicStage.condensationLevel(real);
+        if(level>.01f){
+            double inner=Math.max(1.02*R,outer*.78);
+            Vfx.material(Vfx.CLOUD,real,(float)(inner/outer),.65f*level,1.2f,1,pass,(float)d[0],(float)d[1],0);
+            Vfx.disc(rot,cam,o.x,o.y+2.2*R,o.z,outer);
+        }
     }
 
     /** Unit vector from the cast toward the camera in the ground plane. */

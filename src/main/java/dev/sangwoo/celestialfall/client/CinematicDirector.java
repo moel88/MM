@@ -70,7 +70,8 @@ public final class CinematicDirector {
         if(HeavenClient.cinematic()!=null)return HeavenClient.fov(vanilla,delta);
         if(AtomicClient.cinematic()!=null)return AtomicClient.fov(vanilla,delta);
         ClientSpell s=active();
-        if(s==null)return vanilla;
+        // G seen from outside: a slow push-in through the ignition and a punch when the air shock arrives.
+        if(s==null)return vanilla+dev.sangwoo.celestialfall.client.atomic.AtomicAmbience.fov(delta);
         float age=s.age(MinecraftClient.getInstance().world.getTime(),delta);
         return vanilla+(CinematicPath.sample(age).fov()-vanilla)*CinematicPath.blend(age);
     }
