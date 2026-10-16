@@ -13,12 +13,14 @@ Their licenses apply separately to their respective contents. Botand's existing 
 
 Original license notices and nested dependencies remain inside each upstream JAR.
 Exact downloaded file URLs and SHA-512 digests are in DEPENDENCIES.lock.json.
-Photon, LDLib and YSM are not distributed in 2.31.2.
+Photon, LDLib and YSM are not distributed in 2.31.2 or 2.31.3.
 
 The original Veil artifact and its matching source artifact are supplied unchanged. The upstream 1.20 branch license and GPL text are in `third_party/veil`. The legacy JAR metadata license text is preserved as-is; it differs from the upstream branch license. Nested ImGui/LWJGL/Molang files keep their original notices. Veil can be replaced as a separate JAR.
 
 Veil binary URL: https://maven.blamejared.com/foundry/veil/Veil-fabric-1.20.1/1.0.0.296/Veil-fabric-1.20.1-1.0.0.296.jar
 
 Matching source URL: https://maven.blamejared.com/foundry/veil/Veil-fabric-1.20.1/1.0.0.296/Veil-fabric-1.20.1-1.0.0.296-sources.jar
+
+The Git repository keeps the binary in `libs/` but does not commit the source artifact; it is available unchanged at the matching source URL above.
 
 Official Maven SHA-1 was verified: `85a91a10ee1595dbbb70e089d837e3bc52c0df56`. The local SHA-512 is recorded in the lock file.
