@@ -256,7 +256,9 @@ void main(){
         float across=exp(-x*x*4.0);
         float along=pow(y,1.5)*(1.0-smoothstep(1.0-min(0.5,1.5/max(local.y,1.0)),1.0,y)*0.7);
         float core=exp(-x*x*14.0)*smoothstep(0.6,1.0,y);
-        vec3 col=(mix(LAVENDER,WHITE,smoothstep(0.3,0.9,y))*across*along+WHITE*core*0.5)*(1.0+0.5*tint.x+0.6*tint.y);
+        // A bright tip within a couple of widths of the head: the streaks sparkle as they race.
+        float tip=exp(-pow((1.0-y)*local.y*0.5,2.0))*exp(-x*x*3.0);
+        vec3 col=(mix(LAVENDER,WHITE,smoothstep(0.3,0.9,y))*across*along+WHITE*(core*0.6+tip*0.8))*(1.0+0.5*tint.x+0.6*tint.y);
         c=vec4(col*tint.a*foot,0.0);
     }
     fragColor=c*ColorModulator;

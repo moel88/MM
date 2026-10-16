@@ -91,6 +91,19 @@ class AtomicStageTest {
             assertTrue(AtomicStage.surge(launch+.06f)>.7f&&AtomicStage.surgeGlow(launch+.06f)>.9f);
         }
     }
+    @Test void radianceFlashesWithTheIgnitionHoldsAndThinsWithDistance() {
+        double R=28;
+        assertEquals(0,AtomicStage.radiance(AtomicLook.IMPACT-.01f,R*3,R),1e-6);
+        for(float sec=0;sec<30;sec+=.01f)for(double d:new double[]{R*2,R*10,R*30,R*60}){
+            float v=AtomicStage.radiance(sec,d,R);assertTrue(v>=0&&v<=1.3001f,"radiance "+v);
+        }
+        // A burst at the flash, the whole light while the pillar stands, nothing past 48 R.
+        assertTrue(AtomicStage.radiance(AtomicLook.IMPACT+.08f,R*3,R)>.4f);
+        assertEquals(1,AtomicStage.radiance(12,R*3,R),1e-6);
+        assertTrue(AtomicStage.radiance(12,R*30,R)<1&&AtomicStage.radiance(12,R*30,R)>0);
+        assertEquals(0,AtomicStage.radiance(12,R*49,R),1e-6);
+        assertEquals(0,AtomicStage.radiance(AtomicLook.BEAM_END+2.1f,R*3,R),1e-6);
+    }
     @Test void nearViewersFovThrobsWithSurgesWithinTheCap() {
         double R=28;float max=0;
         for(float sec=AtomicLook.PINK;sec<AtomicLook.BEAM_END;sec+=.005f)for(double d:new double[]{R*1.1,R*2,R*3}){

@@ -1,7 +1,17 @@
 {
   "stages": [
+    {"type":"veil:blit", "shader":"celestialfall:atomic_bright", "in":"veil:post", "out":"light"},
+    {"type":"veil:blit", "shader":"celestialfall:atomic_blur_h", "in":"light", "out":"glow_h"},
+    {"type":"veil:blit", "shader":"celestialfall:atomic_blur_v", "in":"glow_h", "out":"glow"},
+    {"type":"veil:blit", "shader":"celestialfall:atomic_rays", "in":"light", "out":"rays"},
     {"type":"veil:blit", "shader":"celestialfall:atomic_overwhelm", "in":"veil:post", "out":"swap"},
     {"type":"veil:copy", "in":"swap", "out":"veil:post"}
   ],
-  "framebuffers": {"swap":{"depth":true,"format":"RGBA16F"}}
+  "framebuffers": {
+    "light": {"width":"q.screen_width/4", "height":"q.screen_height/4", "format":"RGBA16F", "linear":true, "depth":false},
+    "glow_h": {"width":"q.screen_width/8", "height":"q.screen_height/8", "format":"RGBA16F", "linear":true, "depth":false},
+    "glow": {"width":"q.screen_width/8", "height":"q.screen_height/8", "format":"RGBA16F", "linear":true, "depth":false},
+    "rays": {"width":"q.screen_width/4", "height":"q.screen_height/4", "format":"RGBA16F", "linear":true, "depth":false},
+    "swap": {"depth":true, "format":"RGBA16F"}
+  }
 }

@@ -95,6 +95,15 @@ public final class AtomicStage {
         float k=near(distance,R);
         return k<=0?0:k*k*standing(sec)*(1.1f+.9f*surge(sec));
     }
+    /**
+     * How strongly the pillar's light pours into the view of an outside viewer (glow and light shafts), 0..1.3:
+     * a burst with the ignition flash, held while the pillar stands, thinning with distance like the sky.
+     */
+    public static float radiance(float sec,double distance,double R){
+        float k=reach(distance,R);if(k<=0)return 0;
+        float flash=smooth(sec,IMPACT,IMPACT+.06f)*(1-smooth(sec,PINK,PINK+.6f));
+        return k*Math.min(1.3f,standing(sec)+.5f*flash);
+    }
     /** Strength of the overwhelming screen treatment near the pillar (0..1). */
     public static float overwhelm(float sec,double distance,double R){
         float k=near(distance,R);

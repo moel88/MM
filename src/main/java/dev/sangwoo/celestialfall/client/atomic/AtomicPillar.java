@@ -57,15 +57,17 @@ public final class AtomicPillar {
         float shock=AtomicStage.shockLevel(real,R);
         boolean refract=quality>1&&Vfx.refractionSupported()&&(ripple>0||haze>0||column>0||shock>0);
         double clouds=cloudHeight(w,o,R,y1);
-        // Close outside the column the screen itself is overwhelmed (Veil post), pulsing with the surges.
-        float over=AtomicStage.overwhelm(real,Math.hypot(cam.x-o.x,cam.z-o.z),R);
-        if(over>0)overwhelm(over,real,rot,cam,o,r,y0,y1);
+        // Its light pours into the view of everyone outside who sees it, and close to it the screen is overwhelmed
+        // (Veil post), pulsing with the surges.
+        float over=AtomicStage.overwhelm(real,Math.hypot(cam.x-o.x,cam.z-o.z),R),shine=AtomicStage.radiance(real,cam.distanceTo(o),R);
+        if(over>0||shine>0)screen(over,shine,real,rot,cam,o,r,y1);
         Vfx.begin();
         try{
             ground(sec,rot,cam,o,R,r);
             pool(real,rot,cam,o,R);
             // Behind the pillar first, then the pillar covers it, then everything in front of it.
             rings(real,rot,cam,o,R,clouds,-1);
+            if(standing)motes(s,sec,rot,cam,o,R,r,y1,quality,-1);
             if(standing)glow(s,sec,rot,cam,o,R,r,y0,y1);
             wave(sec,rot,cam,o,R,r,-1);
             if(standing){
@@ -80,20 +82,25 @@ public final class AtomicPillar {
             }
             if(shock>0)shock(real,rot,cam,o,R,shock,refract);
             rings(real,rot,cam,o,R,clouds,1);
+            if(standing)motes(s,sec,rot,cam,o,R,r,y1,quality,1);
             wave(sec,rot,cam,o,R,r,1);
             if(quality>0)debris(s,sec,rot,cam,o,R,r,quality);
             sparks(s,sec,rot,cam,o,R,r,quality);
             dust(s,sec,rot,cam,o,R);
             embers(s,sec,rot,cam,o,R,quality);
-            flares(sec,rot,cam,o,R);
+            flares(sec,rot,cam,o,R,r,y0,y1);
         }finally{Vfx.end();}
     }
 
-    /** Offers the close-range screen treatment with the pillar's axis (at eye height) and half width on screen. */
-    private static void overwhelm(float strength,float real,Matrix4f rot,Vec3d cam,Vec3d o,double r,double y0,double y1){
+    /**
+     * Offers the Veil screen pass: the pillar's axis at eye height and its half width on screen (the overwhelm's
+     * centre), and its axis from the ground to its top with the middle of the visible part (where the light comes from).
+     */
+    private static void screen(float strength,float shine,float real,Matrix4f rot,Vec3d cam,Vec3d o,double r,double y1){
         var proj=RenderSystem.getProjectionMatrix();
-        var p=new Vector4f((float)(o.x-cam.x),(float)(Math.max(y0,Math.min(y1,cam.y))-cam.y),(float)(o.z-cam.z),1);
-        new Matrix4f(proj).mul(RenderSystem.getModelViewMatrix()).mul(rot).transform(p);
+        var view=new Matrix4f(RenderSystem.getModelViewMatrix()).mul(rot);
+        var p=new Vector4f((float)(o.x-cam.x),(float)(Math.max(o.y,Math.min(y1,cam.y))-cam.y),(float)(o.z-cam.z),1);
+        new Matrix4f(proj).mul(view).transform(p);
         float x=.5f,y=.5f,facing=0,half=0;
         if(p.w>.05f){
             float nx=p.x/p.w,ny=p.y/p.w;
@@ -102,7 +109,40 @@ public final class AtomicPillar {
             facing=1-AtomicLook.smooth(Math.abs(nx),1.1f,2.2f);
             half=(float)(r*proj.m00()/p.w*.5);
         }
-        AtomicOverwhelm.offer(strength,AtomicStage.surge(real),x,y,facing,half);
+        var a=view.transform(new Vector4f((float)(o.x-cam.x),(float)(o.y-cam.y),(float)(o.z-cam.z),1));
+        var b=view.transform(new Vector4f((float)(o.x-cam.x),(float)(y1-cam.y),(float)(o.z-cam.z),1));
+        AtomicOverwhelm.offer(strength,shine,AtomicStage.surge(real),x,y,facing,half,screenAxis(a,b,proj,Math.max(half,.02f)));
+    }
+    /**
+     * The pillar's axis on screen from view-space points a (ground) and b (top): {ax, ay, bx, by, lx, ly, on} in 0..1
+     * screen coordinates (y up). The segment is cut where it passes behind the camera; (lx, ly) is the middle of the
+     * part within the screen widened by {@code margin}, and on is 1 when there is such a part. Null when the whole
+     * axis is behind the camera.
+     */
+    static float[] screenAxis(Vector4f a,Vector4f b,Matrix4f proj,float margin){
+        final float near=-.1f;
+        if(a.z>near&&b.z>near)return null;
+        Vector4f pa=a.z>near?cut(a,b,near):a,pb=b.z>near?cut(b,a,near):b;
+        float[] sa=project(pa,proj),sb=project(pb,proj);
+        float dx=sb[0]-sa[0],dy=sb[1]-sa[1],t0=0,t1=1;
+        float[][] edges={{-dx,sa[0]+margin},{dx,1+margin-sa[0]},{-dy,sa[1]+margin},{dy,1+margin-sa[1]}};
+        boolean on=true;
+        for(float[] e:edges){
+            if(e[0]==0){if(e[1]<0)on=false;continue;}
+            float t=e[1]/e[0];
+            if(e[0]<0)t0=Math.max(t0,t);else t1=Math.min(t1,t);
+        }
+        if(t0>t1)on=false;
+        float mid=on?(t0+t1)*.5f:.5f;
+        return new float[]{sa[0],sa[1],sb[0],sb[1],sa[0]+dx*mid,sa[1]+dy*mid,on?1:0};
+    }
+    private static Vector4f cut(Vector4f from,Vector4f to,float z){
+        float t=(z-from.z)/(to.z-from.z);
+        return new Vector4f(from.x+(to.x-from.x)*t,from.y+(to.y-from.y)*t,z,1);
+    }
+    private static float[] project(Vector4f v,Matrix4f proj){
+        var c=proj.transform(new Vector4f(v.x,v.y,v.z,1));
+        return new float[]{c.x/c.w*.5f+.5f,c.y/c.w*.5f+.5f};
     }
     /** Violet light the pillar throws on the ground around it, out to 4.5 R (light, not the blast). */
     private static void pool(float real,Matrix4f rot,Vec3d cam,Vec3d o,double R){
@@ -120,8 +160,8 @@ public final class AtomicPillar {
     private static void glow(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r,double y0,double y1){
         float level=AtomicStage.sky(sec)*.9f+.1f*AtomicLook.smooth(sec,AtomicLook.IMPACT,AtomicLook.PINK);
         level*=AtomicPillarShape.opacity(sec);if(level<=.01f)return;
-        double half=r+1.25*R,top=y1+1.6*R;
-        var b=Vfx.sprites(rot,cam,Vfx.GLOW,sec,(float)(r/half),.85f*level,(float)((y1-y0)/(top-y0)),0);
+        double half=r+1.5*R,top=y1+1.8*R;
+        var b=Vfx.sprites(rot,cam,Vfx.GLOW,sec,(float)(r/half),1.0f*level,(float)((y1-y0)/(top-y0)),0);
         b.streak(new Vec3d(o.x,y0,o.z),new Vec3d(o.x,top,o.z),half*2,0xffffff,1);
         Vfx.draw(b,false);
     }
@@ -290,6 +330,31 @@ public final class AtomicPillar {
         }
         Vfx.draw(b,false);
     }
+    /**
+     * Motes of light streaming up around the pillar, just outside its surface (out to 1.6 times its radius: light, not
+     * the blast), twinkling. Those on the far half go before the pillar (it hides the ones behind it), the near half after.
+     */
+    private static void motes(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r,double y1,int quality,int pass){
+        float level=AtomicStage.standing(sec)*AtomicPillarShape.opacity(sec)*AtomicLook.smooth((float)(r/R),.25f,.6f);
+        if(level<=.01f)return;
+        int n=quality>1?160:quality>0?100:50;
+        double[] d=toCamera(cam,o);
+        var b=Vfx.sprites(rot,cam,Vfx.SPARK,sec,0,0,0,0);
+        for(int k=0;k<n;k++){
+            double life=1.6+1.4*AtomicWorld.h(k*2.3+s.seed);
+            double cyc=sec/life+AtomicWorld.h(k*1.9);int c=(int)Math.floor(cyc);double u=cyc-c;
+            double ang=AtomicWorld.h(c*4.1+k*3.7+s.seed)*Math.PI*2,rr=r*(1.04+.56*Math.pow(AtomicWorld.h(c*6.3+k),1.5));
+            double px=Math.cos(ang)*rr,pz=Math.sin(ang)*rr;
+            if((px*d[0]+pz*d[1]>0)!=(pass>0))continue;
+            double y=o.y+R*(.05+.3*AtomicWorld.h(c*2.9+k*1.1))+u*(y1-o.y)*(.35+.4*AtomicWorld.h(k*5.1));
+            Vec3d p=new Vec3d(o.x+px,Math.min(y,y1),o.z+pz);
+            float tw=.55f+.45f*(float)Math.sin(sec*(6+5*AtomicWorld.h(k*7.7))+k);
+            float a=level*(float)Math.sin(Math.PI*u)*tw*AtomicWorld.near(cam,p,1.5,4);
+            if(a<=.02f)continue;
+            b.billboard(p,R*.012+.12,k%4==0?0xffffff:0xe2d0ff,a);
+        }
+        Vfx.draw(b,false);
+    }
     /** Dust rising out of the crater once the pillar is gone, inside the radius. */
     private static void dust(AtomicScene s,float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R){
         float start=AtomicLook.BEAM_END-.3f;
@@ -328,9 +393,19 @@ public final class AtomicPillar {
         }
         Vfx.draw(b,false);
     }
-    /** Star flares: the ignition at the caster's feet, the pulse when the pillar starts to close and the spark where it vanishes. */
-    private static void flares(float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R){
+    /**
+     * Star flares: the ignition at the caster's feet, the top of the pillar shining like a star while it stands (bursting
+     * as each surge arrives), the pulse when the pillar starts to close and the spark where it vanishes.
+     */
+    private static void flares(float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r,double y0,double y1){
         var b=Vfx.sprites(rot,cam,Vfx.FLARE,sec,0,0,0,0);
+        float crown=AtomicStage.standing(sec)*AtomicPillarShape.opacity(sec)*AtomicLook.smooth((float)(r/R),.25f,.6f);
+        if(crown>.01f){
+            double front=AtomicStage.surgeFront(sec,R);
+            float burst=front<0?0:(float)Math.exp(-Math.abs(front-(y1-y0))/(1.2*R))*AtomicStage.surgeGlow(sec)*2;
+            Vec3d p=new Vec3d(o.x,y1,o.z);
+            b.billboard(p,R*(1.15+.45*burst),0xffffff,crown*(.5f+.45f*Math.min(1,burst))*AtomicWorld.near(cam,p,2,6));
+        }
         if(sec>=AtomicLook.IMPACT&&sec<6.5f){
             float grow=AtomicWorld.out(sec,AtomicLook.IMPACT,AtomicLook.PINK+.15f);
             Vec3d p=o.add(0,R*.3,0);
