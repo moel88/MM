@@ -19,7 +19,7 @@ final class BarrageSkill implements Fx.Skill {
     // Aim = the cast facing. The windup twists ≈18° to the left and snaps square to the aim in one frame.
     static final R6.Pose DRAW=pose().body(18,10,0).head(0,12,0).rArm(15,-60).lArm(-70,-20).rLeg(-70,160).lLeg(-75,-20).blade(0,95);
     static final R6.Pose LUNGE=pose().body(0,8,0).at(0,-.25,0).rArm(0,0).lArm(-40,-150).lLeg(-60,0).rLeg(-60,180).blade(0,0);
-    static final R6.Pose PUMP=LUNGE.rArm(-28,6).blade(-22,4);
+    static final R6.Pose PUMP=LUNGE.at(-.08,-.22,0).body(-4,12,0).rArm(-48,45).blade(-8,0);
     static final Anim CLIP;
     static {
         List<Key> keys=new ArrayList<>(List.of(
@@ -30,7 +30,7 @@ final class BarrageSkill implements Fx.Skill {
             k(.166,DRAW,Anim.Ease.OUT),
             k(.266,DRAW,Anim.Ease.HOLD),
             k(.416,DRAW.at(0,-.18,0).lArm(-60,-150).blade(-25,90)),
-            k(SNAP,LUNGE,Anim.Ease.SNAP)));
+            k(SNAP,LUNGE,Anim.Ease.OUT)));
         // The sword arm pumps a thrust every ≈4.5 frames while the ball hides the body.
         boolean out=false;for(float t=BALL;t<COLLAPSE;t+=.0375f){keys.add(k(t,out?LUNGE:PUMP,Anim.Ease.LINEAR));out=!out;}
         keys.addAll(List.of(
@@ -42,7 +42,7 @@ final class BarrageSkill implements Fx.Skill {
             k(3.036,pose().rArm(85,0).lArm(0,-90).blade(72,180),Anim.Ease.HOLD),
             k(3.186,pose().rArm(-45,60).lArm(-60,-40).blade(-40,60)),
             k(3.336,KagenoClips.IDLE)));
-        CLIP=Anim.of(keys.toArray(Key[]::new));
+        CLIP=Anim.joints(keys.toArray(Key[]::new));
     }
     @Override public Anim clip(int combo){return CLIP;}
     @Override public float lifetime(){return 3.9f;}
@@ -54,7 +54,7 @@ final class BarrageSkill implements Fx.Skill {
 
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec;
-        var hb=KagenoClips.blade(c.origin,c.cast.yaw(),CLIP.pose(t));Vec3d hand=hb[0],tip=hand.add(hb[1].multiply(1.35));
+        var hb=KagenoClips.blade(c.origin,c.cast.yaw(),R6.poseOf(CLIP.frame(t)));Vec3d hand=hb[0],tip=hand.add(hb[1].multiply(1.35));
         // Neon blade from the snap to the end of the overhead hold; a pink X glint at ignition.
         if(t>=SNAP&&t<2.89f){
             float a=1-.25f*Ease.smooth(t,2.7f,2.89f);
@@ -74,24 +74,32 @@ final class BarrageSkill implements Fx.Skill {
             // white core; the bright area pulses irregularly (peaks every 0.15-0.3 s).
             float flick=.78f+.22f*(float)Math.sin(t*23)*(float)Math.sin(t*9.3+1);
             ellipse(m,o,2.15*size,1.55*size,0x6577b6,.3f);
-            ellipse(m,o,1.85*size,1.32*size,0x9a77c8,.45f*flick);
-            ellipse(m,o,1.45*size,1.05*size,0xe0a0ff,.7f*flick);
-            ellipse(m,o,1.0*size,.75*size,0xf3cdfa,.85f);
-            ellipse(m,o,.55*size,.45*size,0xffffff,1);
+            ellipse(m,o,1.85*size,1.32*size,0xa957ef,.64f*flick);
+            ellipse(m,o,1.45*size,1.05*size,0xf0b0ff,.88f*flick);
+            ellipse(m,o,1.0*size,.75*size,0xffe2ff,.95f);
+            ellipse(m,o,.68*size,.55*size,0xffffff,1);
+            // Distinct rotating filaments survive even when optional bloom is disabled.
+            for(int j=0;j<5;j++){
+                double spin=t*580+j*72;
+                Vec3d u=c.right.multiply(Math.cos(j*.7)).add(c.f.multiply(Math.sin(j*.7)));
+                Vec3d v=new Vec3d(0,1,0);
+                ComboSkill.arc(m,o,u,v,(.75+.13*j)*size,spin,190,.045,0xd781ff,.85f);
+                ComboSkill.arc(m,o,u,v,(.75+.13*j)*size,spin,95,.018,0xffedff,1);
+            }
             // Needle streaks: ≈26 pulses, 3–5 streaks each, shooting forward in a ±25° cone that
             // leans down, far ends reaching ≈3 character heights from the ball.
             if(t>=.584f){
                 int pulse=(int)Math.floor((t-.584f)/.075f);
                 for(int p=Math.max(0,pulse-2);p<=pulse;p++){
                     float born=.584f+p*.075f,u=(t-born)/.1f;if(u<0||u>=1)continue;
-                    int count=3+(int)(Ease.hash(p*41+7)*3);
+                    int count=5+(int)(Ease.hash(p*41+7)*3);
                     for(int s=0;s<count;s++){
                         double h1=Ease.hash(p*17+s*5+3),h2=Ease.hash(p*29+s*7+1),h3=Ease.hash(p*11+s*13+2);
                         double yaw=(h1-.5)*50,pitch=-(h2*.8-.2)*25;Vec3d dir=rotateAim(c,yaw,pitch);
                         double len=(.3+1.0*h3)*H,start=.5+u*3.2;
                         Vec3d a0=o.add(dir.multiply(start)),a1=o.add(dir.multiply(start+len*Math.min(1,u*3)));
                         float a=1-Ease.smooth(u,.5f,1);
-                        m.needle(a0,a1,.3,.5,0x7a78d6,a*.5f);m.needle(a0,a1,.16,.52,0xdca8ed,a*.8f);m.needle(a0,a1,.06,.55,0xfdcbfb,a);
+                        m.needle(a0,a1,.34,.5,0xa04cf0,a*.65f);m.needle(a0,a1,.18,.52,0xf7b3ff,a*.9f);m.needle(a0,a1,.07,.55,0xfff2ff,a);
                     }
                 }
             }

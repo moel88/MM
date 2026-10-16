@@ -3,7 +3,7 @@ package dev.sangwoo.celestialfall.stand;
 /** Shared, tick-based timings sampled from the supplied review. No client-supplied damage/radius. */
 public final class KagenoRules {
     public static final int M1=0,E=1,R=2,T=3,RUSH=4,Y=5,Q=6,H=7,G=8,P=9;
-    public static final int T_DOWN=3,T_UP=4,CANCEL=9,PULSE=10,HOLD=8,POSE=11;
+    public static final int T_DOWN=3,T_UP=4,CANCEL=9,PULSE=10,HOLD=8,POSE=11,POSE_CANCEL=12;
     /** T and T+: blast 0.65 s after the cast; T+ dash 1.09 s after the blast; final cut 0.8 s into the dash. */
     public static final int T_STRIKE=13,RUSH_IGNITE=13,RUSH_START=35,RUSH_FINISH=52;
     /** T fire ticks after the blast (0.267 s apart). */
@@ -13,9 +13,7 @@ public final class KagenoRules {
     public static final double STOP_RADIUS=3,HIGHEST_RADIUS=5;
     /** P: the pose lets go of the body at 18.68 s; the cast runs on to 19.45 s so the fading effects and a crescent in flight finish. */
     public static final int P_RELEASE=374;
-    /** H holds the caster and the struck until 5.8 s; the cast runs on to 6.45 s while the ground crescent fades. */
-    public static final int H_HOLD=116;
-    public static final int[] DURATION={24,78,80,124,74,92,600,129,468,389};
+    public static final int[] DURATION={24,78,80,124,74,92,600,116,468,389};
     /** E: barrage ticks 0.262 s apart from 0.8 s, finisher (guard break) with the crescent at 2.9 s. */
     static final int[] E_TICKS={16,21,26,32,37,42,47};
     public static final int E_FINISH=58;
@@ -35,10 +33,10 @@ public final class KagenoRules {
     private KagenoRules(){}
     public static boolean inside(double distanceSquared,double radius){return Double.isFinite(distanceSquared)&&distanceSquared>=0&&distanceSquared<=radius*radius;}
     public static boolean thrustLane(double forward,double side,double height,double targetHalfWidth){return forward>=-.15&&forward<=3.4+targetHalfWidth&&Math.abs(side)<=.65+targetHalfWidth&&Math.abs(height)<=2.2;}
-    public static boolean frozen(int skill,float age){return skill==R&&age>=R_GRAY&&age<R_COLOR||skill==H&&age>=0&&age<H_HOLD;}
+    public static boolean frozen(int skill,float age){return skill==R&&age>=R_GRAY&&age<R_COLOR||skill==H&&age>=0&&age<DURATION[H];}
     /** Targets caught in T's fire stand frozen inside the dark orb; T+ holds them until the cut. */
     public static boolean trapped(int skill,float age){return skill==T&&age>=T_STRIKE&&age<T_STRIKE+71||skill==RUSH&&age>=T_STRIKE+7&&age<RUSH_FINISH||skill==Y&&age>=Y_FLASH&&age<Y_LAUNCH;}
-    public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:skill==P?P_RELEASE:skill==H?H_HOLD:DURATION[skill];}
+    public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:skill==P?P_RELEASE:DURATION[skill];}
     /** Vertical speed (blocks per tick) of a Y target {@code ticks} after the launch. */
     public static double yLift(int ticks){return Y_LIFT-Y_GRAVITY*ticks;}
     /** Hits one damage tick stands for (R's four stored cuts register together). */

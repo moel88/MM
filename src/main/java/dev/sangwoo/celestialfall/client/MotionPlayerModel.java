@@ -23,7 +23,7 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         var atomic=AtomicClient.poseCast(player.getUuid());
         if(atomic!=null){
             articulated=true;
-            MotionRig.apply(this,dev.sangwoo.celestialfall.client.kageno.AtomicPose.frame(atomic.age(animationProgress-player.age)/20f).joints(),0,0);
+            dev.sangwoo.celestialfall.client.kageno.AtomicPose.apply(this,atomic.age(animationProgress-player.age)/20f);
         }
         else if(stand!=null){
             articulated=true;var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(stand,animationProgress-player.age);

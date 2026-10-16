@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.SpellTimelineTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:08" hostname="b667a55f97cd" time="0.005">
+  <properties/>
+  <testcase name="effectFadesInAndFullyDisappears()" classname="dev.sangwoo.celestialfall.SpellTimelineTest" time="0.001"/>
+  <testcase name="contactHoldsFourTicksThenReleasesImpact()" classname="dev.sangwoo.celestialfall.SpellTimelineTest" time="0.0"/>
+  <testcase name="threeShockwavesHaveSeparateOnsetsAndBoundedExpansion()" classname="dev.sangwoo.celestialfall.SpellTimelineTest" time="0.002"/>
+  <testcase name="swordAcceleratesToContactAndNeverGoesBelowGround()" classname="dev.sangwoo.celestialfall.SpellTimelineTest" time="0.0"/>
+  <testcase name="everyConstellationCollisionHasItsOwnPulseBeforeDescent()" classname="dev.sangwoo.celestialfall.SpellTimelineTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

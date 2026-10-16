@@ -32,7 +32,7 @@ public final class StandClient {
     /** World tick at which each stand user's overdrive (Q) was switched on, for the activation glow. */
     public static final Map<UUID,Long> OVERDRIVE=new HashMap<>();
     private static Object world,player;private static long nextPunch,lastThemeUntil;private static int ticks;
-    private static UUID handedOff;private static boolean holdingT;private static final Set<Integer> captured=new HashSet<>();
+    private static UUID handedOff,cancelledPose;private static boolean holdingT;private static final Set<Integer> captured=new HashSet<>();
     private static SoundInstance theme;
     /** In-game "N Hits" combo counter of the local player. */
     public static int hitCount;public static long hitTime=-1000,comboStart=-1000;
@@ -68,14 +68,18 @@ public final class StandClient {
         HudRenderCallback.EVENT.register(KagenoRenderer::hud);
     }
     public static void acceptCast(Cast incoming){
+        if(incoming.id.equals(cancelledPose))return;
         Cast old=CASTS.get(incoming.id);
         // Targets may change during a rush. Their refresh must not reset pose/camera/audio time.
         Cast cast=old==null?incoming:new Cast(old.id,old.caster,old.dimension,old.skill,old.combo,old.start,old.serverNow,old.received,old.origin,old.yaw,incoming.targets);
-        if(cast.age(0)<DURATION[cast.skill]){CASTS.put(cast.id,cast);if(old==null)KagenoAudio.begin(cast);}
+        if(cast.age(0)<DURATION[cast.skill]){
+            if(old==null)dev.sangwoo.celestialfall.client.kageno.KagenoClips.begin(cast);
+            CASTS.put(cast.id,cast);if(old==null)KagenoAudio.begin(cast);
+        }
     }
     private static Vec3d vec(net.minecraft.network.PacketByteBuf b){return new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());}
     private static void observe(MinecraftClient mc){if(world!=mc.world||player!=mc.player){clear(mc);world=mc.world;player=mc.player;}}
-    public static void clear(MinecraftClient mc){KagenoAudio.clear();CASTS.clear();STATES.clear();OVERDRIVE.clear();dev.sangwoo.celestialfall.client.kageno.HitFeedback.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
+    public static void clear(MinecraftClient mc){cancelledPose=handedOff=null;dev.sangwoo.celestialfall.client.kageno.KagenoClips.clear();KagenoAudio.clear();CASTS.clear();STATES.clear();OVERDRIVE.clear();dev.sangwoo.celestialfall.client.kageno.HitFeedback.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
     private static void tick(MinecraftClient mc){
         observe(mc);if(mc.world==null||mc.player==null||!MapClient.enabled()){clear(mc);return;}
         ticks++;long now=mc.world.getTime();
@@ -98,6 +102,14 @@ public final class StandClient {
         }else if(until<=now&&lastThemeUntil!=0){if(theme!=null)mc.getSoundManager().stop(theme);theme=null;lastThemeUntil=0;}
     }
     private static boolean deadCaster(MinecraftClient mc,Cast c){var p=mc.world.getPlayerByUuid(c.caster);return p!=null&&(!p.isAlive()||!StandManager.kageno(p));}
+    /** Read movement before the camera applies the stand movement lock. */
+    public static void cancelPoseOnMovement(net.minecraft.client.input.Input input){
+        var mc=MinecraftClient.getInstance();
+        if(mc.player==null||mc.currentScreen!=null||!mc.isWindowFocused()||!MapClient.enabled())return;
+        if(Math.abs(input.movementForward)<.01f&&Math.abs(input.movementSideways)<.01f)return;
+        var c=action(mc.player.getUuid());if(c==null||c.skill!=P)return;
+        cancelledPose=c.id;send(POSE_CANCEL);CASTS.remove(c.id);KagenoAudio.stop(c.id);
+    }
     public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
     /** Action lock and locomotion lock differ: R's caster can walk at half speed. */
     public static boolean locked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;return action(mc.player.getUuid())!=null;}
@@ -142,7 +154,7 @@ public final class StandClient {
         }
         return 0;
     }
-    public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<KagenoRules.H_HOLD&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
+    public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<DURATION[H]&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
     public static Cast action(UUID id){return CASTS.values().stream().filter(c->c.caster.equals(id)&&c.age(0)<inputEnd(c.skill)).reduce((a,b)->b).orElse(null);}
     public static Cast visualCast(){var mc=MinecraftClient.getInstance();if(mc.player==null)return null;Cast cinematic=cinematic();if(cinematic!=null)return cinematic;return CASTS.values().stream().filter(c->c.origin.squaredDistanceTo(mc.player.getPos())<32*32).min(Comparator.comparingDouble(c->c.caster.equals(mc.player.getUuid())?-1:c.origin.squaredDistanceTo(mc.player.getPos()))).orElse(null);}
     public static void send(int action){if(!ClientPlayNetworking.canSend(KagenoManager.INPUT))return;var b=PacketByteBufs.create();b.writeByte(action);ClientPlayNetworking.send(KagenoManager.INPUT,b);}

@@ -27,6 +27,19 @@ public final class KagenoClips {
         k(.1,GUARD,Anim.Ease.OUT));
     private static final Anim GUARD_OUT=Anim.of(k(0,GUARD),k(.12,IDLE));
     private static final java.util.Map<java.util.UUID,long[]> GUARDS=new java.util.HashMap<>();
+    private static final java.util.Map<java.util.UUID,R6.Frame> COMBO_STARTS=new java.util.LinkedHashMap<>();
+    /** A queued M1 starts at the pose actually on screen, including early combo inputs. */
+    public static void begin(StandClient.Cast cast){
+        if(cast.skill()!=M1)return;
+        var previous=animated(cast.caster());
+        if(previous!=null){
+            var f=action(previous,0);
+            COMBO_STARTS.put(cast.id(),new R6.Frame(f.joints(),f.grip(),f.fw(),f.up(),f.rt(),
+                net.minecraft.util.math.MathHelper.wrapDegrees(f.yaw()),f.pitch(),f.roll()));
+            while(COMBO_STARTS.size()>64)COMBO_STARTS.remove(COMBO_STARTS.keySet().iterator().next());
+        }
+    }
+    public static void clear(){GUARDS.clear();COMBO_STARTS.clear();}
     /** Client tick: remembers when each stand user raised and lowered the guard. */
     public static void trackGuards(net.minecraft.client.MinecraftClient mc){
         if(mc.world==null){GUARDS.clear();return;}long now=mc.world.getTime();
@@ -56,7 +69,11 @@ public final class KagenoClips {
     }
     private static final Anim STILL=Anim.of(k(0,IDLE),k(.5,IDLE));
     public static Anim clip(int skill,int combo){var s=KagenoSkills.of(skill);var c=s==null?null:s.clip(combo);return c==null?STILL:c;}
-    public static R6.Frame action(StandClient.Cast cast,float delta){return clip(cast.skill(),cast.combo()).frame(cast.age(delta)/20f);}
+    public static R6.Frame action(StandClient.Cast cast,float delta){
+        float sec=cast.age(delta)/20f;var frame=clip(cast.skill(),cast.combo()).frame(sec);
+        var start=COMBO_STARTS.get(cast.id());
+        return start!=null&&sec<.08f?R6.blend(start,frame,Ease.smooth(sec,0,.08f)):frame;
+    }
     public static boolean hidden(StandClient.Cast cast,float delta){var s=KagenoSkills.of(cast.skill());return s!=null&&s.hidden(cast.age(delta)/20f);}
     public static boolean walkLegs(StandClient.Cast cast,float delta){var s=KagenoSkills.of(cast.skill());return s!=null&&s.walkLegs(cast.age(delta)/20f);}
     /** Torso pivot (R6 RootJoint) above the feet, in blocks. */

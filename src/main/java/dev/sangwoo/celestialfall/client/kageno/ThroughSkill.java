@@ -23,7 +23,7 @@ final class ThroughSkill implements Fx.Skill {
     static final R6.Pose COMET=pose().body(0,80,0).at(0,-.68,0).rArm(80,0).lArm(60,-20).blade(80,0);
     static final R6.Pose CROUCH=pose().body(0,30,0).at(0,-.35,0).rArm(0,90).lArm(-60,-40).rLeg(-65,60).lLeg(-65,-60).blade(0,100);
     static final R6.Pose FINISH=pose().rArm(-20,20).lArm(-75,-20).rLeg(-60,90).lLeg(-60,-90).blade(88,0);
-    static final Anim CLIP=Anim.of(
+    static final Anim CLIP=Anim.joints(
         k(0,KagenoClips.IDLE),
         k(.04,pose().body(-15,0,0).lArm(-45,30).rArm(-80,20).blade(-55,40)),
         k(.11,pose().body(-55,0,0).lArm(0,-55).rArm(-85,150).lLeg(-75,0).rLeg(-75,180).blade(-60,0),Anim.Ease.LINEAR),
@@ -116,11 +116,11 @@ final class ThroughSkill implements Fx.Skill {
         if(t>=.2f&&t<D-B+.3f){
             float in=Ease.smooth(t,.2f,.4f),out=1-Ease.smooth(t,D-B-.1f,D-B+.3f);
             List<Vec3d> roots=new ArrayList<>();List<double[]> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-            for(int i=0;i<26;i++){
+            for(int i=0;i<16;i++){
                 double along=(2+13*Ease.hash(i*7+1))*H,side=(1+3*Ease.hash(i*13+2))*H*(Ease.hash(i*3)<.25?-.4:1);
                 double cycle=(t*(.9+.5*Ease.hash(i*3))+Ease.hash(i*5))%1,flare=.55+.45*Math.sin(Math.PI*cycle);
                 roots.add(c.origin.add(c.f.multiply(along)).add(c.right.multiply(side)).add(0,.02,0));
-                sizes.add(new double[]{1.4+.9*Ease.hash(i*17),3.6*H*flare*(.6+.4*Ease.hash(i*19))});alphas.add(in*out*(float)(.85+.15*flare));
+                sizes.add(new double[]{ .55+.40*Ease.hash(i*17),1.65*H*flare*(.6+.4*Ease.hash(i*19))});alphas.add(in*out*(float)(.85+.15*flare));
             }
             KagenoFire.tongues(c.matrix,c.camera,11,roots,sizes,alphas,c.age);
         }

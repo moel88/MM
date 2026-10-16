@@ -47,7 +47,7 @@ public final class KagenoManager {
     public static void setClientFrozen(Predicate<LivingEntity> value){clientFrozen=value;}
     public static void initialize(){
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,p,h,b,r)->{
-            if(b.readableBytes()!=1)return;int action=b.readUnsignedByte();if(action>POSE)return;
+            if(b.readableBytes()!=1)return;int action=b.readUnsignedByte();if(action>POSE_CANCEL)return;
             server.execute(()->{
                 var s=STATES.computeIfAbsent(p,k->new State(k));int win=server.getTicks()/20;
                 if(s.window!=win){s.window=win;s.packets=0;}if(++s.packets>50)return;
@@ -76,6 +76,11 @@ public final class KagenoManager {
     public static boolean input(ServerPlayerEntity p,int action){
         var s=STATES.computeIfAbsent(p,k->new State(k));long now=p.getServerWorld().getTime();
         if(action==CANCEL){s.press=-1;return true;}
+        // Movement may release an emote, but must never toggle a new emote on.
+        if(action==POSE_CANCEL){
+            for(var c:new ArrayList<>(CASTS.values()))if(c.player==p&&c.skill==P)stop(c);
+            return true;
+        }
         if(action==PULSE){if(s.press>=0)s.pulse=now;return s.press>=0;}
         if(action==T_UP){
             if(s.press<0)return false;long held=now-s.press;s.press=-1;

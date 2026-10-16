@@ -74,7 +74,10 @@ public abstract class GameRendererMixin {
     @Inject(method="render",at=@At(value="INVOKE",ordinal=0,
         target="Lnet/minecraft/client/MinecraftClient;getOverlay()Lnet/minecraft/client/gui/screen/Overlay;"))
     private void celestialfall$cinematic(float delta,long limitTime,boolean tick,CallbackInfo ci) {
-        if(!TitleMapCamera.active())dev.sangwoo.celestialfall.client.CinematicHud.render(delta);
+        if(!TitleMapCamera.active()){
+            AnimePostProcessor.renderMonochrome(delta);
+            dev.sangwoo.celestialfall.client.CinematicHud.render(delta);
+        }
     }
     @Inject(method="renderFloatingItem",at=@At("HEAD"),cancellable=true)
     private void celestialfall$hideFloatingItem(int width,int height,float delta,CallbackInfo ci) {

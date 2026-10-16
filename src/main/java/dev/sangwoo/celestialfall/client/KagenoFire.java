@@ -67,9 +67,10 @@ public final class KagenoFire {
             quad(b,m,p,u.multiply(s),v.multiply(s),i*37+11,a);}
         end(b);
     }
-    /** Upright flame tongues rooted at {wx,wy,wz} with {width,height}, turned to the camera (mode 5 lobes, 0 tongues). */
+    /** T/T+ use curling 3D flame surfaces; other modes retain their sprite treatment. */
     public static void tongues(Matrix4f m,Vec3d camera,int mode,List<Vec3d> roots,List<double[]> sizes,List<Float> alphas,float age){
         if(shader==null||roots.isEmpty())return;
+        if(mode==11){volumes(m,camera,roots,sizes,alphas,age);return;}
         Integer[] order=new Integer[roots.size()];for(int i=0;i<order.length;i++)order[i]=i;
         Arrays.sort(order,Comparator.comparingDouble((Integer i)->roots.get(i).squaredDistanceTo(camera)).reversed());
         var b=begin(age,mode);
@@ -77,6 +78,41 @@ public final class KagenoFire {
             Vec3d right=camera.subtract(r).crossProduct(UP).normalize();if(right.lengthSquared()<.1)right=X;
             quad(b,m,r.add(0,h*.5,0),right.multiply(w),UP.multiply(h*.5),i*53+7,a);}
         end(b);
+    }
+    private static Vec3d flameVertex(Vec3d root,double width,double height,double y,double angle,double time,int seed){
+        double phase=time*.105+seed*.73;
+        double bend=width*y*y;
+        double cx=Math.sin(phase+y*7.1)*bend*.72,cz=Math.cos(phase*.83+y*6.3)*bend*.62;
+        // Rounded, rolling lobes instead of a straight cone. The tip still curls with the flow.
+        double round=Math.pow(Math.max(0,Math.sin(Math.PI*y)),.52);
+        double profile=(.25*Math.pow(1-y,2)+round*(1-.24*y))*(.85+.15*Math.sin(y*15-phase));
+        double lobe=1+.21*Math.sin(angle*3+y*10-phase)+.08*Math.cos(angle*5-y*13+phase);
+        double r=width*.64*profile*lobe;
+        return root.add(cx+Math.cos(angle)*r,height*y,cz+Math.sin(angle)*r);
+    }
+    private static void volumes(Matrix4f m,Vec3d camera,List<Vec3d> roots,List<double[]> sizes,List<Float> alphas,float age){
+        Integer[] order=new Integer[roots.size()];for(int i=0;i<order.length;i++)order[i]=i;
+        Arrays.sort(order,Comparator.comparingDouble((Integer i)->roots.get(i).squaredDistanceTo(camera)).reversed());
+        int sides=CelestialFall.CONFIG.visualQuality==0?12:24,rings=CelestialFall.CONFIG.visualQuality==0?12:22;
+        // Draw only the outside, with depth writes: two sides of a translucent shell otherwise
+        // paint over each other in strips and expose the quad triangulation during camera moves.
+        RenderSystem.enableCull();RenderSystem.depthMask(true);
+        var b=begin(age,12);
+        for(int i:order){
+            float alpha=alphas.get(i);if(alpha<=0)continue;
+            Vec3d root=roots.get(i);double width=sizes.get(i)[0],height=sizes.get(i)[1];int seed=i*53+7;
+            double horizontal=Math.hypot(camera.x-root.x,camera.z-root.z);
+            // A camera inside the fire should see through its nearest plume, not hit a solid wall.
+            alpha*=.22f+.78f*dev.sangwoo.celestialfall.client.kageno.Ease.smooth((float)horizontal,(float)(width*.55),(float)(width*1.8));
+            for(int j=0;j<rings;j++)for(int k=0;k<sides;k++){
+                double y0=j/(double)rings,y1=(j+1)/(double)rings,u0=k/(double)sides,u1=(k+1)/(double)sides;
+                point(b,m,flameVertex(root,width,height,y0,u0*Math.PI*2,age,seed),(float)u0,(float)y0,seed,alpha);
+                point(b,m,flameVertex(root,width,height,y1,u0*Math.PI*2,age,seed),(float)u0,(float)y1,seed,alpha);
+                point(b,m,flameVertex(root,width,height,y1,u1*Math.PI*2,age,seed),(float)u1,(float)y1,seed,alpha);
+                point(b,m,flameVertex(root,width,height,y0,u1*Math.PI*2,age,seed),(float)u1,(float)y0,seed,alpha);
+            }
+        }
+        end(b);RenderSystem.depthMask(false);RenderSystem.disableCull();
     }
     /** Flat ground decal in mode 1 (black ink pool with violet veins). */
     public static void pool(Matrix4f m,Vec3d center,Vec3d u,Vec3d v,float age,float alpha){

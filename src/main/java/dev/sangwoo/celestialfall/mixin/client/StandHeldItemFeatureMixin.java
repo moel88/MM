@@ -17,7 +17,7 @@ public abstract class StandHeldItemFeatureMixin {
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=dev.sangwoo.celestialfall.client.AtomicClient.poseCast(player.getUuid());
         if(atomic!=null){
-            matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(dev.sangwoo.celestialfall.client.kageno.AtomicPose.frame(atomic.age(net.minecraft.client.MinecraftClient.getInstance().getTickDelta())/20f).grip()));return;
+            dev.sangwoo.celestialfall.client.kageno.AtomicPose.applyGrip(matrices,atomic.age(net.minecraft.client.MinecraftClient.getInstance().getTickDelta())/20f,arm);return;
         }
         float delta=net.minecraft.client.MinecraftClient.getInstance().getTickDelta();
         var frame=cast!=null?dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(cast,delta)

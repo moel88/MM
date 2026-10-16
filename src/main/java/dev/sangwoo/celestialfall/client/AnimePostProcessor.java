@@ -15,13 +15,16 @@ public final class AnimePostProcessor {
     private static int program,vao,width,height;
     private static final int[] fbos=new int[3],textures=new int[3];
     private static boolean failed;
+    private static int monoProgram,monoVao,monoTexture,monoFbo,monoWidth,monoHeight;
+    private static boolean monoFailed;
     private static float focusX=.5f,focusY=.5f;
     private AnimePostProcessor() {}
     public static boolean available(){return !failed;}
     public static void focus(float x,float y) { focusX=Math.max(.08f,Math.min(.92f,x));focusY=Math.max(.08f,Math.min(.92f,y)); }
     public static void render(float delta) {
         MinecraftClient mc=MinecraftClient.getInstance();
-        float mono=StandClient.monoAmount(delta);boolean timeStop=mono>0;
+        // R has a separate final pass, after hands and other post processors.
+        float mono=0;boolean timeStop=false;
         if(failed || mc.world==null || mc.player==null || !CelestialFall.CONFIG.postProcessing&&!timeStop)return;
         ClientSpell spell=CinematicDirector.active();
         if(spell==null)spell=CelestialFallClient.nearest();
@@ -88,6 +91,49 @@ public final class AnimePostProcessor {
         GL11.glDrawArrays(GL11.GL_TRIANGLES,0,3);
     }
     private static void f(String name,float value) { GL20.glUniform1f(GL20.glGetUniformLocation(program,name),value); }
+    /** Independent of optional bloom/distortion and its failure flag. */
+    public static void renderMonochrome(float delta){
+        var mc=MinecraftClient.getInstance();float amount=StandClient.monoAmount(delta);
+        if(amount<=0||monoFailed||mc.world==null||mc.player==null)return;
+        var main=mc.getFramebuffer();int w=main.textureWidth,h=main.textureHeight;
+        if(w<=0||h<=0)return;
+        try(State state=new State()){
+            if(monoProgram==0){
+                int vs=0,fs=0,p=0;
+                try{
+                    vs=compile(mc,GL20.GL_VERTEX_SHADER,"fullscreen.vert");
+                    fs=compile(mc,GL20.GL_FRAGMENT_SHADER,"monochrome.frag");
+                    p=GL20.glCreateProgram();GL20.glAttachShader(p,vs);GL20.glAttachShader(p,fs);GL20.glLinkProgram(p);
+                    if(GL20.glGetProgrami(p,GL20.GL_LINK_STATUS)==0)throw new IllegalStateException(GL20.glGetProgramInfoLog(p));
+                    monoProgram=p;p=0;monoVao=GL30.glGenVertexArrays();
+                }finally{if(vs!=0)GL20.glDeleteShader(vs);if(fs!=0)GL20.glDeleteShader(fs);if(p!=0)GL20.glDeleteProgram(p);}
+            }
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            if(monoTexture==0){monoTexture=GL11.glGenTextures();monoFbo=GL30.glGenFramebuffers();}
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D,monoTexture);
+            if(w!=monoWidth||h!=monoHeight){
+                GL11.glTexImage2D(GL11.GL_TEXTURE_2D,0,GL11.GL_RGBA8,w,h,0,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,(ByteBuffer)null);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER,GL11.GL_NEAREST);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER,GL11.GL_NEAREST);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_WRAP_S,GL12.GL_CLAMP_TO_EDGE);
+                GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_WRAP_T,GL12.GL_CLAMP_TO_EDGE);
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,monoFbo);
+                GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER,GL30.GL_COLOR_ATTACHMENT0,GL11.GL_TEXTURE_2D,monoTexture,0);
+                if(GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER)!=GL30.GL_FRAMEBUFFER_COMPLETE)throw new IllegalStateException("Incomplete R framebuffer");
+                monoWidth=w;monoHeight=h;
+            }
+            GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDepthMask(false);GL11.glDisable(GL11.GL_BLEND);
+            GL11.glDisable(GL11.GL_CULL_FACE);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_STENCIL_TEST);
+            GL11.glDisable(GL30.GL_FRAMEBUFFER_SRGB);GL11.glColorMask(true,true,true,true);
+            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER,main.fbo);GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER,monoFbo);
+            GL30.glBlitFramebuffer(0,0,w,h,0,0,w,h,GL11.GL_COLOR_BUFFER_BIT,GL11.GL_NEAREST);
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER,main.fbo);GL11.glViewport(0,0,w,h);
+            GL20.glUseProgram(monoProgram);GL30.glBindVertexArray(monoVao);
+            GL20.glUniform1i(GL20.glGetUniformLocation(monoProgram,"SceneTex"),0);
+            GL20.glUniform1f(GL20.glGetUniformLocation(monoProgram,"Amount"),amount);
+            GL11.glDrawArrays(GL11.GL_TRIANGLES,0,3);
+        }catch(Exception|LinkageError e){monoFailed=true;CelestialFall.LOGGER.error("R monochrome pass failed",e);}
+    }
     private static void rgb(String name,int c) { GL20.glUniform3f(GL20.glGetUniformLocation(program,name),((c>>16)&255)/255f,((c>>8)&255)/255f,(c&255)/255f); }
     /** Screen-space height (0 bottom, 1 top) of the horizon for the current camera pitch. */
     private static float horizon(MinecraftClient mc,float delta) {
@@ -145,6 +191,9 @@ public final class AnimePostProcessor {
         freeBuffers();width=height=0;
         if(program!=0)GL20.glDeleteProgram(program);if(vao!=0)GL30.glDeleteVertexArrays(vao);
         program=vao=0;failed=false;focusX=focusY=.5f;
+        if(monoProgram!=0)GL20.glDeleteProgram(monoProgram);if(monoVao!=0)GL30.glDeleteVertexArrays(monoVao);
+        if(monoTexture!=0)GL11.glDeleteTextures(monoTexture);if(monoFbo!=0)GL30.glDeleteFramebuffers(monoFbo);
+        monoProgram=monoVao=monoTexture=monoFbo=monoWidth=monoHeight=0;monoFailed=false;
     }
     /** Raw GL calls are restored exactly so RenderSystem's cached state stays valid. */
     private static final class State implements AutoCloseable {

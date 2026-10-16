@@ -21,11 +21,6 @@ public final class KagenoCamera {
         private static double l(double a,double b,double t){return a+(b-a)*t;}
     }
     private static Shot shot(StandClient.Cast c,float delta){var s=KagenoSkills.of(c.skill());return s==null?null:s.shot(c.age(delta)/20f);}
-    /** H: while the camera looks up (launch, sky), Minecraft's square sun would sit in the frame near the hero; it stays out of those shots. */
-    public static boolean hideSun(float delta){
-        var c=StandClient.cinematic();if(c==null||c.skill()!=dev.sangwoo.celestialfall.stand.KagenoRules.H)return false;
-        float t=c.age(delta)/20f;return t<HighestSkill.SHOT2||t>=HighestSkill.SHOT3&&t<HighestSkill.STREET;
-    }
     public static float blend(StandClient.Cast c,float delta){var s=KagenoSkills.of(c.skill());return s==null?0:s.shotBlend(c.age(delta)/20f);}
     public static double fov(StandClient.Cast c,float delta){var s=shot(c,delta);return s==null?70:s.fov();}
     public static CinematicDirector.Pose pose(StandClient.Cast c,float delta){

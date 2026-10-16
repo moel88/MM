@@ -109,6 +109,19 @@ void main(){
   float hair=noise(vec2(x*9.0+sd,y*95.0));
   rgb=mix(rgb,hi,smoothstep(.72,.9,hair)*smoothstep(.12,.3,d)*(1.0-smoothstep(.5,.7,d)));
   alpha=body*(.86+.14*strand)*tint.a;
+ }else if(Mode==12){
+  // UV wraps a real 3D surface. Periodic angular noise keeps its seam invisible.
+  float angle=uv.x*6.2831853;
+  vec2 flow=vec2(cos(angle),sin(angle))*2.1+vec2(seed+uv.y*1.9,uv.y*4.8-Age*.115);
+  float n=fbm(flow),f=noise(flow*2.7+Age*.027);
+  float heat=clamp(.68-uv.y*.18+(n-.46)*1.65+.09*sin(angle*3.-Age*.14+uv.y*8.),0.,1.);
+  rgb=mix(vec3(.28,.035,.85),vec3(.72,.14,.98),smoothstep(.18,.43,heat));
+  rgb=mix(rgb,vec3(.97,.47,.99),smoothstep(.43,.60,heat));
+  rgb=mix(rgb,vec3(1.,.91,1.),smoothstep(.60,.78,heat));
+  // Broken hot pockets scroll up through the rounded volume, with a dark violet foot.
+  rgb=mix(vec3(.26,.055,.65),rgb,smoothstep(.015,.20,uv.y));
+  rgb+=vec3(.04,.015,.05)*f;
+  alpha=smoothstep(0.,.035,uv.y)*(1.-smoothstep(.94,1.,uv.y))*.96*tint.a;
  }else if(Mode==11){
   // T fire (k-means of the review): white cores, light pink, pink, magenta, vivid violet and a
   // deep violet body, an indigo base and a thin blue-violet line along the silhouette. It turns

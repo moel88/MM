@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.ProgressionTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:08" hostname="b667a55f97cd" time="0.002">
+  <properties/>
+  <testcase name="corruptCountersCannotCreateNegativeOrOverCapState()" classname="dev.sangwoo.celestialfall.ProgressionTest" time="0.0"/>
+  <testcase name="defaultsAreFreshAndKagenoIsAStand()" classname="dev.sangwoo.celestialfall.ProgressionTest" time="0.0"/>
+  <testcase name="saveRoundTripKeepsPlayersAndWorldsIndependent()" classname="dev.sangwoo.celestialfall.ProgressionTest" time="0.0"/>
+  <testcase name="rebirthIsAtomicAndRequiresLevelFifty()" classname="dev.sangwoo.celestialfall.ProgressionTest" time="0.0"/>
+  <testcase name="fifteenRebirthsThenTranscendResetOnlyRebirthCounter()" classname="dev.sangwoo.celestialfall.ProgressionTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

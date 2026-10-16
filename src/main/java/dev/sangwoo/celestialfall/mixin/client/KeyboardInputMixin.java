@@ -7,5 +7,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(KeyboardInput.class)
 public abstract class KeyboardInputMixin {
     @Inject(method="tick",at=@At("TAIL"))
-    private void botand$input(boolean slow,float multiplier,CallbackInfo ci){BotandCamera.input((Input)(Object)this);}
+    private void botand$input(boolean slow,float multiplier,CallbackInfo ci){
+        Input input=(Input)(Object)this;
+        dev.sangwoo.celestialfall.client.StandClient.cancelPoseOnMovement(input);
+        BotandCamera.input(input);
+    }
 }

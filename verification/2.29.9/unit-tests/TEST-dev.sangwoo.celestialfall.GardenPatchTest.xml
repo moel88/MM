@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.GardenPatchTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:06" hostname="b667a55f97cd" time="1.25">
+  <properties/>
+  <testcase name="repairTargetsOnlyOldPavementInsertsAndMatchesNewDecoration()" classname="dev.sangwoo.celestialfall.GardenPatchTest" time="0.399"/>
+  <testcase name="venuesOnlyTouchTheTwoParcelsAndBaselinesAreAligned()" classname="dev.sangwoo.celestialfall.GardenPatchTest" time="0.024"/>
+  <testcase name="bundledPatchHasUniqueCoordinatesAndDoesNotObstructCombatOrAlterContainers()" classname="dev.sangwoo.celestialfall.GardenPatchTest" time="0.576"/>
+  <testcase name="liquidsAreAppliedOnlyAfterAllRetainingWalls()" classname="dev.sangwoo.celestialfall.GardenPatchTest" time="0.246"/>
+  <testcase name="corruptPatchFailsBeforeAnyMutation()" classname="dev.sangwoo.celestialfall.GardenPatchTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

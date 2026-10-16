@@ -23,9 +23,22 @@ public final class R6 {
     public record Dir(double rt,double up,double fw){
         public Dir norm(){double l=Math.sqrt(rt*rt+up*up+fw*fw);return l<1e-9?new Dir(0,-1,0):new Dir(rt/l,up/l,fw/l);}
         public double dot(Dir o){return rt*o.rt+up*o.up+fw*o.fw;}
-        static Dir lerp(Dir a,Dir b,double t){
+        static Dir lerpLegacy(Dir a,Dir b,double t){
             double d=Math.max(-1,Math.min(1,a.dot(b)));
             if(d>.9995)return new Dir(a.rt+(b.rt-a.rt)*t,a.up+(b.up-a.up)*t,a.fw+(b.fw-a.fw)*t).norm();
+            double th=Math.acos(d),s=Math.sin(th),wa=Math.sin((1-t)*th)/s,wb=Math.sin(t*th)/s;
+            return new Dir(a.rt*wa+b.rt*wb,a.up*wa+b.up*wb,a.fw*wa+b.fw*wb).norm();
+        }
+        static Dir lerp(Dir a,Dir b,double t){
+            if(t<=0)return a;if(t>=1)return b;
+            double d=Math.max(-1,Math.min(1,a.dot(b)));
+            if(d>.9995)return new Dir(a.rt+(b.rt-a.rt)*t,a.up+(b.up-a.up)*t,a.fw+(b.fw-a.fw)*t).norm();
+            if(d<-.9995){
+                Dir basis=Math.abs(a.up)<.9?new Dir(0,1,0):new Dir(1,0,0);
+                double projection=a.dot(basis);Dir side=new Dir(basis.rt-a.rt*projection,basis.up-a.up*projection,basis.fw-a.fw*projection).norm();
+                double c=Math.cos(Math.PI*t),s=Math.sin(Math.PI*t);
+                return new Dir(a.rt*c+side.rt*s,a.up*c+side.up*s,a.fw*c+side.fw*s).norm();
+            }
             double th=Math.acos(d),s=Math.sin(th),wa=Math.sin((1-t)*th)/s,wb=Math.sin(t*th)/s;
             return new Dir(a.rt*wa+b.rt*wb,a.up*wa+b.up*wb,a.fw*wa+b.fw*wb).norm();
         }
@@ -57,12 +70,19 @@ public final class R6 {
         /** Direction the katana blade points, in body space. */
         public Pose blade(double elev,double az){Pose p=copy();p.blade=dir(elev,az);return p;}
         public static Pose lerp(Pose a,Pose b,float t){
+            return interpolate(a,b,t,false);
+        }
+        static Pose lerpLegacy(Pose a,Pose b,float t){return interpolate(a,b,t,true);}
+        private static Pose interpolate(Pose a,Pose b,float t,boolean legacy){
             Pose p=new Pose();
             p.fw=a.fw+(b.fw-a.fw)*t;p.up=a.up+(b.up-a.up)*t;p.rt=a.rt+(b.rt-a.rt)*t;
             p.yaw=a.yaw+(b.yaw-a.yaw)*t;p.pitch=a.pitch+(b.pitch-a.pitch)*t;p.roll=a.roll+(b.roll-a.roll)*t;
             p.headYaw=a.headYaw+(b.headYaw-a.headYaw)*t;p.headPitch=a.headPitch+(b.headPitch-a.headPitch)*t;p.headRoll=a.headRoll+(b.headRoll-a.headRoll)*t;
-            p.rArm=Dir.lerp(a.rArm,b.rArm,t);p.lArm=Dir.lerp(a.lArm,b.lArm,t);p.rLeg=Dir.lerp(a.rLeg,b.rLeg,t);p.lLeg=Dir.lerp(a.lLeg,b.lLeg,t);
-            p.blade=Dir.lerp(a.blade,b.blade,t);
+            if(legacy){
+                p.rArm=Dir.lerpLegacy(a.rArm,b.rArm,t);p.lArm=Dir.lerpLegacy(a.lArm,b.lArm,t);p.rLeg=Dir.lerpLegacy(a.rLeg,b.rLeg,t);p.lLeg=Dir.lerpLegacy(a.lLeg,b.lLeg,t);p.blade=Dir.lerpLegacy(a.blade,b.blade,t);
+            }else{
+                p.rArm=Dir.lerp(a.rArm,b.rArm,t);p.lArm=Dir.lerp(a.lArm,b.lArm,t);p.rLeg=Dir.lerp(a.rLeg,b.rLeg,t);p.lLeg=Dir.lerp(a.lLeg,b.lLeg,t);p.blade=Dir.lerp(a.blade,b.blade,t);
+            }
             return p;
         }
     }
@@ -70,6 +90,21 @@ public final class R6 {
 
     /** Solved pose ready for the Minecraft rig. */
     public record Frame(MotionPose joints,float grip,double fw,double up,double rt,float yaw,float pitch,float roll){}
+
+    /** Blend full rotations, avoiding twist flips when a limb crosses its forward axis. */
+    static Frame blend(Frame a,Frame b,float t){
+        MotionPose m=new MotionPose();float k=(float)Math.PI/180;
+        for(int i=0;i<6;i++){
+            float[] x=a.joints.joint[i],y=b.joints.joint[i];
+            var q=new Quaternionf().rotationZYX(x[2]*k,x[1]*k,x[0]*k);
+            q.slerp(new Quaternionf().rotationZYX(y[2]*k,y[1]*k,y[0]*k),t).normalize();
+            m.joint[i]=euler(q);
+        }
+        // Preserve deliberate full root turns, including M1's 360 degree spin.
+        return new Frame(m,a.grip+(b.grip-a.grip)*t,
+            a.fw+(b.fw-a.fw)*t,a.up+(b.up-a.up)*t,a.rt+(b.rt-a.rt)*t,
+            a.yaw+(b.yaw-a.yaw)*t,a.pitch+(b.pitch-a.pitch)*t,a.roll+(b.roll-a.roll)*t);
+    }
 
     /** Body space → Minecraft model space (model x = character's left, y = down, z = backwards). */
     private static Vector3f model(Dir d){return new Vector3f((float)-d.rt,(float)-d.up,(float)-d.fw);}
@@ -118,5 +153,17 @@ public final class R6 {
         var q=new Quaternionf().rotationZYX(e[2]*k,e[1]*k,e[0]*k).rotateX(-90*k).rotateY(180*k).rotateX(f.grip()*k).rotateY(-90*k);
         var v=q.transform(new Vector3f(0,1,0));
         return new Dir(-v.x,-v.y,-v.z);
+    }
+    private static Dir direction(float[] e){
+        float k=(float)Math.PI/180;
+        var v=new Quaternionf().rotationZYX(e[2]*k,e[1]*k,e[0]*k).transform(new Vector3f(0,1,0));
+        return new Dir(-v.x,-v.y,-v.z);
+    }
+    /** Effects use the same solved sword and arm directions as the rendered model. */
+    public static Pose poseOf(Frame f){
+        Pose p=pose().at(f.fw,f.up,f.rt).body(f.yaw,f.pitch,f.roll);
+        p.rArm=direction(f.joints.joint[MotionPose.RIGHT_ARM]);p.lArm=direction(f.joints.joint[MotionPose.LEFT_ARM]);
+        p.rLeg=direction(f.joints.joint[MotionPose.RIGHT_LEG]);p.lLeg=direction(f.joints.joint[MotionPose.LEFT_LEG]);
+        p.blade=bladeOf(f);return p;
     }
 }

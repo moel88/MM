@@ -30,9 +30,5 @@ final class KagenoRulesTest {
         assertEquals(18.683*20,P_RELEASE,.5);assertEquals(P_RELEASE,inputEnd(P));
         assertTrue(DURATION[P]>=P_RELEASE+.75*20);assertEquals(0,damage(P,P_RELEASE,0));
     }
-    @Test void highestHoldsUntilFivePointEightWhileTheCrescentFades(){
-        assertEquals(116,H_HOLD);assertEquals(H_HOLD,inputEnd(H));assertTrue(frozen(H,H_HOLD-1));assertFalse(frozen(H,H_HOLD));
-        assertTrue(DURATION[H]>=H_CUT+1.4*20);assertEquals(0,damage(H,H_HOLD,0));
-    }
     @Test void ownRHonorsUserOverrideToTimeStopImmunity(){assertFalse(ignoresForeignTimeStop("kageno"));assertFalse(ignoresForeignTimeStop("sakuya"));assertFalse(ignoresForeignTimeStop("return_to_zero"));assertTrue(ignoresForeignTimeStop("dio"));}
 }

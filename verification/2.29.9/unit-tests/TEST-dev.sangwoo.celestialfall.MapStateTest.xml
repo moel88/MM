@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.MapStateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:07" hostname="b667a55f97cd" time="0.01">
+  <properties/>
+  <testcase name="repeatedEntriesNeverOverwriteOriginalPlayerHealthAndHunger()" classname="dev.sangwoo.celestialfall.MapStateTest" time="0.007"/>
+  <testcase name="savesKeepIndependentPerDimensionOverrides()" classname="dev.sangwoo.celestialfall.MapStateTest" time="0.0"/>
+  <testcase name="invalidEntryDoesNotDiscardOtherPlayers()" classname="dev.sangwoo.celestialfall.MapStateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

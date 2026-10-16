@@ -20,19 +20,20 @@ final class SparkSkill implements Fx.Skill {
     static final double H=1.8;
     /** Windup shared with T+ (through the dark). */
     static final R6.Pose PLANT=pose().body(-55,33,0).at(0,-.09,0).head(0,15,0).lArm(40,-50).rArm(-82,160).lLeg(-75,0).rLeg(-75,180).blade(-75,25);
-    static final Anim WINDUP=Anim.of(
+    static final Anim WINDUP=Anim.joints(
         k(0,KagenoClips.IDLE),
         k(.04,pose().body(-15,0,0).lArm(-45,30).rArm(-80,20).blade(-55,40)),
         k(.11,pose().body(-55,0,0).lArm(0,-55).rArm(-85,150).lLeg(-75,0).rLeg(-75,180).blade(-60,0),Anim.Ease.LINEAR),
         k(.20,PLANT,Anim.Ease.OUT),
         k(B,PLANT.body(-55,35,0),Anim.Ease.HOLD));
-    static final Anim CLIP=Anim.of(
+    static final Anim CLIP=Anim.joints(
         k(0,KagenoClips.IDLE),
         k(.04,pose().body(-15,0,0).lArm(-45,30).rArm(-80,20).blade(-55,40)),
         k(.11,pose().body(-55,0,0).lArm(0,-55).rArm(-85,150).lLeg(-75,0).rLeg(-75,180).blade(-60,0),Anim.Ease.LINEAR),
         k(.20,PLANT,Anim.Ease.OUT),
         k(B,PLANT.body(-55,35,0),Anim.Ease.HOLD),
-        k(B+.07,KagenoClips.IDLE,Anim.Ease.SNAP),
+        k(B+.035,PLANT.body(-27,18,0).lArm(10,-35).rArm(-75,100),Anim.Ease.LINEAR),
+        k(B+.09,KagenoClips.IDLE,Anim.Ease.OUT),
         k(B+.5,KagenoClips.IDLE));
     @Override public Anim clip(int combo){return CLIP;}
     @Override public float lifetime(){return B+5.6f;}
@@ -69,7 +70,7 @@ final class SparkSkill implements Fx.Skill {
     @Override public void shaders(Fx c){
         float t=c.sec-B;if(t<0)return;
         scorch(c,t);
-        cloud(c,t,c.origin.add(c.f.multiply(1.5*H)),5*H,1);
+        cloud(c,t,c.origin.add(c.f.multiply(1.5*H)),2.9*H,1);
         fire(c,t);
         orbs(c,t,3.55f,3.8f);
     }
@@ -78,10 +79,10 @@ final class SparkSkill implements Fx.Skill {
         if(t>=.6f)return;
         float grow=Ease.out(t,0,.05f),a=1-Ease.smooth(t,.3f,.55f);
         List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-        for(int i=0;i<22;i++){
-            double fw=(Ease.hash(i*3+1)-.35)*width*1.2*stretch,rt=(Ease.hash(i*5+2)-.45)*width*.85,up=.4+Ease.hash(i*7+3)*3.4*H*.55;
+        for(int i=0;i<10;i++){
+            double fw=(Ease.hash(i*3+1)-.35)*width*1.2*stretch,rt=(Ease.hash(i*5+2)-.45)*width*.85,up=.3+Ease.hash(i*7+3)*1.7*H*.55;
             pts.add(centre.add(c.f.multiply(fw*grow)).add(c.right.multiply(rt*grow)).add(0,up*grow+.3,0));
-            sizes.add((1.6+1.4*Ease.hash(i*11+4))*grow+.05);alphas.add(a);
+            sizes.add((.65+.65*Ease.hash(i*11+4))*grow+.05);alphas.add(a);
         }
         KagenoFire.billboards(c.matrix,c.camera,9,pts,sizes,alphas,c.age);
     }
@@ -96,15 +97,15 @@ final class SparkSkill implements Fx.Skill {
     /** World-anchored pink/violet fire over ≈6×6 H, biased forward and to the sword side. */
     static void fire(Fx c,float t){
         if(t<.25f||t>=4.05f)return;
-        double top=plume(t)*H;float in=Ease.smooth(t,.25f,.5f);
+        double top=plume(t)*H*.44;float in=Ease.smooth(t,.25f,.5f);
         List<Vec3d> roots=new ArrayList<>();List<double[]> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-        int n=dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?20:34;
+        int n=dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?10:18;
         for(int i=0;i<n;i++){
-            double fw=(-1.4+6.1*Ease.hash(i*7+1))*H,rt=(-2.5+6*Ease.hash(i*13+2))*H;
+            double fw=(-.35+3.8*Ease.hash(i*7+1))*H,rt=(-1.6+3.2*Ease.hash(i*13+2))*H;
             double cycle=(t*(.8+.5*Ease.hash(i*3))+Ease.hash(i*5))%1,flare=.55+.45*Math.sin(Math.PI*cycle);
             roots.add(c.origin.add(c.f.multiply(fw)).add(c.right.multiply(rt)).add(0,.02,0));
-            sizes.add(new double[]{1.3+.9*Ease.hash(i*17),Math.max(.2,top*flare*(.6+.4*Ease.hash(i*19)))});
-            alphas.add(in*(float)(.85+.15*flare));
+            sizes.add(new double[]{ .50+.40*Ease.hash(i*17),Math.max(.2,top*flare*(.6+.4*Ease.hash(i*19)))});
+            alphas.add(in*(float)(.65+.15*flare));
         }
         KagenoFire.tongues(c.matrix,c.camera,11,roots,sizes,alphas,c.age);
     }
@@ -120,6 +121,6 @@ final class SparkSkill implements Fx.Skill {
     static void scorch(Fx c,float t){
         if(t>=5.5f)return;float a=1-Ease.smooth(t,4.3f,5.5f);
         Vec3d centre=c.origin.add(c.f.multiply(1.7*H)).add(c.right.multiply(.4*H)).add(0,.015,0);
-        KagenoFire.pool(c.matrix,centre,c.f.multiply(2.9*H),c.right.multiply(3.1*H),c.age,a);
+        KagenoFire.pool(c.matrix,centre,c.f.multiply(2.1*H),c.right.multiply(1.9*H),c.age,a);
     }
 }

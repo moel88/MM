@@ -10,77 +10,113 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
 /**
  * H "최강": a 4.97 s scripted cutscene shown to the caster and everyone caught within 5 blocks.
  * Shot 1 worm's-eye launch (the hero rockets up and back, somersaults head-down), shot 2 inverted
- * close-up from behind, shot 3 one take: straight up at the hero (the sky rolls 175°, a four-point
+ * close-up from the side, shot 3 one take: straight up at the hero (the sky rolls 175°, a four-point
  * star flare, ten magenta zigzag dashes = ten hits), a whip-tilt down to the street, the hero slides
- * in and skids into a three-point crouch (jolt, dolly-zoom, Dutch tilt), shot 4 a two-frame face
- * close-up, shot 5 the hand insert and pull-back to the raised-sword stance, a burst of slash lines
+ * in and skids into a three-point crouch (jolt, dolly-zoom, Dutch tilt), shot 4 a two-frame side
+ * insert, shot 5 the hand insert and pull-back to the raised-sword stance, a burst of slash lines
  * (hit 11), the downswing and a horizontal beam with a dark crescent along the ground (hit 12).
  * Hard cut back to gameplay at 4.972 s; the beam line and the ground crescent linger.
  * Seconds after the cast; cast frame = (forward, up, right) of the caster; 1 stud = 0.36 blocks.
  */
 final class HighestSkill implements Fx.Skill {
     static final double STUD=.36;
-    static final float SHOT2=.635f,SHOT3=1.486f,FLARE=1.619f,WHIP=2.570f,STREET=2.653f,LAND=2.737f,SHOT4=3.487f,SHOT5=3.521f,
+    static final float SHOT2=.635f,SHOT3=1.486f,FLARE=1.619f,WHIP=2.570f,STREET=2.687f,LAND=2.737f,SHOT4=3.487f,SHOT5=3.521f,
         BURST=3.838f,DOWN=4.239f,BEAM=4.606f,END=4.972f;
     /** The ten zigzag dashes (one hit each), then the burst and the beam. */
     static final float[] ZIG={2.167f,2.268f,2.334f,2.418f,2.534f,2.668f,2.701f,2.818f,2.885f,2.985f};
     /** Apex of the leap, in the cast frame (up and back, away from the shot-1 camera). */
     static final double APEX_FW=-14,APEX_UP=28;
     /** Street landing spot (shot 3c): the hero slides in ≈4 studs in front of the street camera. */
-    static final double STREET_CAM=-14.0,LAND_FW=STREET_CAM-6.5*STUD;
+    static final double LAND_FW=-1.70,RETREAT=5.0,BRAKE_FW=LAND_FW-RETREAT;
+    static final float BRAKE=3.20f,DRIVE=3.22f;
 
     // ───────────────────────────── poses ─────────────────────────────
     static final R6.Pose K1=pose().rArm(-70,90).lArm(-70,-90).blade(-10,90);
     static final R6.Pose K2=pose().rArm(-8,90).lArm(-8,-90).blade(0,90);
     static final R6.Pose K3=pose().body(0,-180,0).rArm(-72,90).lArm(-72,-90).blade(-85,0);
     static final R6.Pose K4=pose().body(0,-180,0).rArm(-85,12).lArm(-85,-12).blade(-82,0).lLeg(0,-90);
-    static final R6.Pose K5=pose().body(0,55,0).head(0,-40,0).rArm(-20,150).blade(10,160).lArm(55,-20).lLeg(10,0).rLeg(-85,180);
-    static final R6.Pose K6=pose().body(0,40,0).head(0,-35,0).lArm(15,-10).rArm(-15,110).blade(0,120).rLeg(-50,140).lLeg(-5,-15);
+    /** Feet braced above the body, hips drawn in before the downward push. */
+    static final R6.Pose BRACE=pose().body(0,-155,-8).head(0,-12,0)
+        .rLeg(-48,12).lLeg(-58,-18).rArm(-55,75).lArm(-65,-55).blade(-70,100);
+    static final R6.Pose PUSH=pose().body(0,-205,-5).head(0,8,0)
+        .rLeg(-88,5).lLeg(-85,-6).rArm(-8,95).lArm(-55,-50).blade(5,100);
     static final R6.Pose K7=pose().head(0,-5,0).lArm(25,-10).rArm(-20,60).blade(-30,70);
-    /** Shot-5 camera azimuth: he stands turned 35° away from it, then squares up to it at the downswing. */
-    static final float SQUARE=35;
-    static final R6.Pose K8=pose().head(SQUARE,0,0).rArm(78,-30).blade(78,-150).lArm(-78,-5);
-    static final R6.Pose K10=pose().at(0,-.05,0).body(-SQUARE,0,0).rArm(-42,75).lArm(-42,-75).blade(-37,75).rLeg(-72,90).lLeg(-72,-90);
-    /**
-     * Leap curve, eased in and out over 0.55 s: seen from the worm's-eye camera his elevation climbs
-     * ≈29° → 43° → 51° at 0.05 / 0.10 / 0.15 s and settles near 60°, as the review's tilt-up does.
-     */
-    static double leap(float t){double u=Math.min(1,t/.55);return u*u*(3-2*u);}
+    // Every ground pose keeps the cast heading; the camera never drives the body or head yaw.
+    static final R6.Pose K8=pose().head(0,0,0).rArm(78,-30).blade(78,-150).lArm(-78,-5);
+    static final R6.Pose K10=pose().rArm(-42,75).lArm(-90,0).blade(-37,75).rLeg(-90,0).lLeg(-90,0);
+
+    /** Convert a world-space limb direction into the pitched torso's local space. */
+    private static R6.Dir unpitch(double right,double up,double forward,double pitch){
+        double a=Math.toRadians(pitch),c=Math.cos(a),s=Math.sin(a);
+        return new R6.Dir(right,up*c+forward*s,-up*s+forward*c).norm();
+    }
+    /** Low sliding stance. Both boots skim the floor; the free hand drags on it while braking. */
+    static R6.Pose streetPose(double forward,double height,float pitch,boolean braking){
+        double a=Math.toRadians(pitch),c=Math.cos(a);
+        var p=pose().at(forward,height,0).body(0,pitch,0).head(0,-pitch+24,0)
+            .rArm(-15,150).blade(10,170).lArm(-12,-22);
+        p.rArm=unpitch(.94,.08,-.33,pitch);
+        p.blade=unpitch(.91,-.10,-.40,pitch);
+        double hip=height+1.05-.30*c,legUp=(.045-hip)/.75;
+        double legFw=Math.sqrt(Math.max(0,1-legUp*legUp-.06*.06));
+        p.lLeg=unpitch(-.06,legUp,legFw,pitch);
+        p.rLeg=unpitch(.06,legUp,-legFw,pitch);
+        if(braking){
+            double shoulder=height+1.05+.325*c,handUp=(.07-shoulder)/.625;
+            double handFw=-Math.sqrt(Math.max(0,1-handUp*handUp-.10*.10));
+            p.lArm=unpitch(-.10,handUp,handFw,pitch);
+        }
+        return p;
+    }
+    /** Leap curve: fast start, strong ease-out, apex at ≈0.5 s. */
+    static double leap(float t){double u=Math.min(1,t/.5);return 1-Math.pow(1-u,2.4);}
     static final Anim CLIP;
     static {
         List<Key> keys=new ArrayList<>();
         keys.add(k(0,KagenoClips.IDLE));
-        keys.add(k(.017,K1,Anim.Ease.SNAP));
+        keys.add(k(.017,K1,Anim.Ease.LINEAR));
         // Launch: T-pose snapped in 2-3 frames, root on the leap curve; the somersault 0.28-0.53 s.
-        for(float t=.025f;t<=SHOT2+.001f;t+=.025f){
+        for(int frame=2;frame<=38;frame++){
+            float t=frame/60f;
             double s=leap(t);R6.Pose p;
             if(t<.28f)p=K2.blade(t<.2f?0:38,90);
             else if(t<.53f){float u=(t-.28f)/.25f;p=R6.Pose.lerp(K2.blade(38,90),K3,u*u*(3-2*u));}
             else p=K3;
             keys.add(k(t,p.at(APEX_FW*s,APEX_UP*s,0),Anim.Ease.LINEAR));
         }
-        // Inverted hover: one leg out sideways, swinging up to straight; slow drift.
+        // Side-on ceiling plant: the splayed leg joins the other foot, hips compress, then
+        // both legs extend and the root leaves the contact height before the sky cut.
         keys.add(k(.72,K4.at(APEX_FW-.05,APEX_UP+.05,0)));
-        keys.add(k(.97,K4.lLeg(-88,-5).at(APEX_FW-.15,APEX_UP+.15,0)));
-        keys.add(k(SHOT3,K4.lLeg(-88,-5).at(APEX_FW-.25,APEX_UP+.25,0)));
-        keys.add(k(LAND-.01,K4.lLeg(-88,-5).at(APEX_FW-.25,APEX_UP+.25,0),Anim.Ease.HOLD));
-        // Street: lunge-slide, skid back (≈1.5 studs, drifting to camera-left), forward (≈3 studs), crouch.
-        keys.add(k(LAND,K5.at(LAND_FW,-.75,0),Anim.Ease.SNAP));
-        keys.add(k(2.87,K5.at(LAND_FW-1.5*STUD,-.72,1*STUD)));
-        keys.add(k(2.94,K6.at(LAND_FW-.8*STUD,-.55,.8*STUD)));
-        keys.add(k(3.07,K6.at(LAND_FW+1.5*STUD,-.55,.6*STUD),Anim.Ease.OUT));
-        keys.add(k(SHOT4-.01,K6.at(LAND_FW+1.5*STUD,-.55,.6*STUD),Anim.Ease.HOLD));
-        // Hard cut: back at the cast origin, rising from the crouch with the left arm up near the face.
-        keys.add(k(SHOT4,K7.at(0,-.25,0).body(0,15,0).rArm(-40,80),Anim.Ease.SNAP));
+        keys.add(k(.94,K4.lLeg(-85,-8).rLeg(-85,5).at(APEX_FW-.10,APEX_UP+.12,0)));
+        keys.add(k(1.10,BRACE.body(0,-168,-5).at(APEX_FW-.18,APEX_UP+.28,0)));
+        keys.add(k(1.30,BRACE.at(APEX_FW-.22,APEX_UP+.47,0),Anim.Ease.OUT));
+        keys.add(k(1.385,BRACE.at(APEX_FW-.22,APEX_UP+.47,0),Anim.Ease.HOLD));
+        keys.add(k(1.445,PUSH.at(APEX_FW-.12,APEX_UP-.12,0),Anim.Ease.IN));
+        keys.add(k(SHOT3,PUSH.body(0,-238,-5).at(APEX_FW+.30,APEX_UP-1.50,0),Anim.Ease.IN));
+        keys.add(k(FLARE,PUSH.body(0,-265,0).at(APEX_FW+.75,APEX_UP-3.5,0),Anim.Ease.LINEAR));
+        keys.add(k(LAND-.01,PUSH.body(0,-265,0).at(APEX_FW+.75,APEX_UP-3.5,0),Anim.Ease.HOLD));
+        // One continuous ground path: retreat with the left palm on the floor, brake,
+        // release the hand, then immediately drive forward into the sword preparation.
+        keys.add(k(LAND,streetPose(LAND_FW,-.65,55,true),Anim.Ease.SNAP));
+        keys.add(k(2.82,streetPose(LAND_FW-1.40,-.67,58,true),Anim.Ease.LINEAR));
+        keys.add(k(2.96,streetPose(LAND_FW-3.40,-.66,57,true),Anim.Ease.LINEAR));
+        keys.add(k(3.10,streetPose(LAND_FW-4.70,-.64,53,true),Anim.Ease.LINEAR));
+        keys.add(k(BRAKE,streetPose(BRAKE_FW,-.63,52,true),Anim.Ease.OUT));
+        keys.add(k(DRIVE,streetPose(BRAKE_FW,-.61,49,true),Anim.Ease.HOLD));
+        keys.add(k(3.28,streetPose(-5.80,-.50,45,false).lArm(-20,-20),Anim.Ease.IN));
+        keys.add(k(3.36,streetPose(-3.40,-.40,42,false).lArm(8,-18),Anim.Ease.LINEAR));
+        keys.add(k(3.43,streetPose(-1.10,-.25,35,false).lArm(30,-12),Anim.Ease.LINEAR));
+        keys.add(k(3.47,streetPose(0,-.12,18,false).lArm(52,-12).rArm(-30,95),Anim.Ease.LINEAR));
+        keys.add(k(SHOT4,K7.at(0,-.05,0).body(0,12,0).head(0,-12,0).rArm(-40,80)));
         keys.add(k(3.54,K7.rArm(-10,40)));
         keys.add(k(3.58,K7.rArm(40,-10).blade(50,-20),Anim.Ease.LINEAR));
         keys.add(k(3.66,K8,Anim.Ease.OUT));
         keys.add(k(DOWN,K8,Anim.Ease.HOLD));
-        keys.add(k(DOWN+.025f,pose().body(-SQUARE*.5f,0,0).rArm(20,80).blade(10,85).rLeg(-80,90).lLeg(-80,-90),Anim.Ease.LINEAR));
+        keys.add(k(DOWN+.025f,pose().rArm(20,80).blade(10,85).rLeg(-90,0).lLeg(-90,0),Anim.Ease.LINEAR));
         keys.add(k(DOWN+.05f,K10,Anim.Ease.LINEAR));
         keys.add(k(END,K10,Anim.Ease.HOLD));
         keys.add(k(END+.45f,KagenoClips.IDLE));
-        CLIP=Anim.of(keys.toArray(Key[]::new));
+        CLIP=Anim.joints(keys.toArray(Key[]::new));
     }
     @Override public Anim clip(int combo){return CLIP;}
     /** The hero is a dot under the flare and along the zigzag. */
@@ -94,15 +130,16 @@ final class HighestSkill implements Fx.Skill {
     @Override public KagenoCamera.Shot shot(float t){
         if(t<0||t>=END)return null;
         if(t<SHOT2){
-            // Worm's-eye ≈6.5 studs in front at ankle height; tilts up with him (one frame behind), slight push.
-            var r=root(Math.max(0,t-.017f));double fov=70-8*Ease.out(t,0,.25f)-2*Ease.smooth(t,.25f,SHOT2);
-            return look(6.5*STUD,.15,0,r.fw,r.up+1.0,r.rt,0,(float)fov);
+            // Worm's-eye ≈6.5 studs in front at ankle height; tilts up after him with a little lag, slight push.
+            var r=root(Math.max(0,t-.05f));double fov=70-8*Ease.out(t,0,.25f)-2*Ease.smooth(t,.25f,SHOT2);
+            return look(1.10,.15,2.70,r.fw,r.up+1.0,r.rt,0,(float)fov);
         }
         if(t<SHOT3){
-            // Behind the inverted hero at his altitude: settle (tilt up, push in, roll) then a slow roll drift.
-            var r=root(t);float settle=Ease.out(t,SHOT2,.9f);
-            double back=1.8-.18*settle;
-            return look(r.fw+back,r.up+1.05+.15-.25*settle,r.rt-.25,r.fw,r.up+1.05+.05,r.rt+.15,3*settle+2.5f*Ease.smooth(t,.9f,SHOT3),70);
+            // Right-rear profile, not an axial view of the inverted torso. Keep the eye at
+            // the contact height so compression and the subsequent push are visible.
+            var r=root(Math.max(SHOT2,t-.025f));float settle=Ease.out(t,SHOT2,.9f);
+            return look(APEX_FW-.50,APEX_UP+1.14,2.38-.15*settle,
+                r.fw,r.up+1.02,r.rt,3+4*settle,70);
         }
         double gx=APEX_FW-.25,gz=0;
         if(t<WHIP){
@@ -111,52 +148,66 @@ final class HighestSkill implements Fx.Skill {
             return look(gx,.6,gz,gx+Math.cos(th)*.02,30,gz+Math.sin(th)*.02,-37,70);
         }
         if(t<STREET){
-            // Whip-tilt down in 6 frames with the roll correction, ending level along the street (−forward).
-            float u=Ease.smooth(t,WHIP,STREET);double a=Math.toRadians(90*u);
-            double lx=gx-Math.sin(a)*10-.02,ly=.6+Math.cos(a)*10;
-            return look(gx,.6+.3*u,gz,lx,ly,gz,-37*(1-u),70);
+            // Retain the downward whip and tilted horizon through the empty street frame.
+            // Approach the same side as the mirrored ground sequence.
+            float u=Ease.out(t,WHIP,STREET);double a=Math.toRadians(90*u);
+            var end=streetShot(STREET);
+            return look(gx+(end.eyeFw()-gx)*u,.6+(end.eyeUp()-.6)*u,end.eyeRt()*u,
+                gx+(end.lookFw()-gx)*Math.sin(a),end.lookUp()+Math.cos(a)*10,0,
+                -37+(end.roll()+37)*u,70+(end.fov()-70)*u);
         }
-        if(t<SHOT4){
-            // Street camera ≈0.5 H high: pan right, pan left after the hero, push-in, 3-frame jolt
-            // (zoom punch, −9° roll), then a dolly-zoom (70 → 45°) backing off to hold him, Dutch drift.
-            float pan=(float)(14*Ease.smooth(t,STREET,2.72f)-29*Ease.out(t,2.75f,2.87f));
-            double camFw=STREET_CAM+.12*Ease.smooth(t,2.75f,2.87f)-.25*Ease.smooth(t,2.87f,2.99f);
-            float fov=70;double roll=0;
-            fov-=10*Ease.out(t,3.004f,3.054f);roll-=9*Ease.out(t,3.004f,3.054f);
-            float dz=Ease.smooth(t,3.07f,SHOT4-.02f);fov-=15*dz;camFw+=.4*dz;roll-=8*Ease.smooth(t,3.27f,SHOT4);
-            double ph=Math.toRadians(pan);
-            double lx=camFw-Math.cos(ph)*6,lz=-Math.sin(ph)*6;
-            return look(camFw,.9,0,lx,.55,lz,(float)roll,fov);
-        }
+        if(t<SHOT4)return streetShot(t);
         if(t<SHOT5){
-            // Face close-up: head and shoulders, the arms across the bottom of the frame.
-            return look(1.25,1.35,0,0,1.42,0,0,70);
+            // Oblique close-up. Head/body heading stays fixed in the cast frame.
+            return look(.95,1.30,.75,0,1.36,0,-12,70);
         }
-        // Shot 5: front-right (azimuth ≈35°) at chest height; starts ≈2.4 studs away (the hand and tsuba
-        // sweep past the lens), dollies back to ≈6.5 studs, then locked with a tiny roll shake at the downswing.
-        double az=Math.toRadians(35),d=2.4*STUD+(6.5-2.4)*STUD*Ease.out(t,3.605f,3.82f);
-        float roll=0;
-        if(t>=4.289f&&t<4.34f)roll=(float)(1.3*Math.sin(Math.PI*Ease.unit(t,4.289f,4.34f)));
-        else if(t>=4.372f&&t<4.42f)roll=(float)(-1.0*Math.sin(Math.PI*Ease.unit(t,4.372f,4.42f)));
+        double d=1.05+1.65*Ease.out(t,3.605f,3.82f),az=Math.toRadians(38);
+        float roll=-6*(1-Ease.out(t,3.605f,3.82f));
+        if(t>=4.289f&&t<4.34f)roll+=(float)(1.3*Math.sin(Math.PI*Ease.unit(t,4.289f,4.34f)));
+        else if(t>=4.372f&&t<4.42f)roll-=(float)(1.0*Math.sin(Math.PI*Ease.unit(t,4.372f,4.42f)));
+        // Reverse only the viewing side: preserve the 38-degree angle, lens and pull-back.
         return look(Math.cos(az)*d,1.08,Math.sin(az)*d,0,1.08,0,roll,70);
+    }
+    /** Time, eye forward/up/right, target height, roll, FOV, target lead. */
+    private static final double[][] STREET_CAMERA={
+        {DRIVE,.06-.55*RETREAT,.95,2.60+.16*RETREAT,.80,-6,50,1},
+        {3.36,-1.05,.85,2.65,.87,-9,52,0},
+        {3.43,.65,1.0,1.85,1.05,-12,60,0},
+        {SHOT4,.95,1.30,.75,1.36,-12,70,0}
+    };
+    private static KagenoCamera.Shot streetShot(float t){
+        var r=root(Math.max(LAND,t));
+        if(t<=DRIVE){
+            // A root value of -5 alone is not enough: the previous dolly-zoom made
+            // the retreat grow toward the viewer. Keep the lens fixed and move the
+            // camera only 55% as far as the body. Depth must increase until braking.
+            double back=LAND_FW-r.fw;
+            float roll=t<LAND?-9+6*Ease.smooth(t,STREET,LAND):-3-3*Ease.smooth(t,LAND,DRIVE);
+            return look(.06-.55*back,.95,2.60+.16*back,
+                r.fw+.20*back,.80,0,roll,50);
+        }
+        int i=1;while(i<STREET_CAMERA.length-1&&t>STREET_CAMERA[i][0])i++;
+        var a=STREET_CAMERA[i-1];var b=STREET_CAMERA[i];
+        float u=Ease.smooth(t,(float)a[0],(float)b[0]);double[] v=new double[8];
+        for(int n=1;n<8;n++)v[n]=a[n]+(b[n]-a[n])*u;
+        return look(v[1],v[2],v[3],r.fw+v[7],v[4],0,(float)v[5],(float)v[6]);
     }
     @Override public float shotBlend(float sec){return sec>=0&&sec<END?1:0;}
 
     // ───────────────────────────── effects ─────────────────────────────
-    /**
-     * Zigzag polyline in the sky (cast frame), a jagged star around the hero: the first segment runs
-     * through him, every later one turns back by 135-165°, and the path sinks ≈2.6 blocks a segment;
-     * from the sixth corner on it swings out past the street camera, so the lower, nearer segments
-     * read thicker and cross the top of the street shot.
-     */
+    /** Zigzag polyline in the sky (cast frame): starts at the hero, ten sharp segments descending. */
     static Vec3d[] zigzag(Fx c){
         int seed=(int)c.cast.id().getLeastSignificantBits();Vec3d[] pts=new Vec3d[11];
-        double cx=APEX_FW-.25,cy=APEX_UP+1.2,th=Ease.hash(seed)*Math.PI*2;
-        for(int i=0;i<=10;i++){
-            if(i==1)th+=Math.PI;else if(i>1)th+=Math.toRadians(150+30*(Ease.hash(seed+i*11)-.5));
-            if(i>=6)th=Math.PI+(i%2==0?.6:-.6)+.25*(Ease.hash(seed+i*19)-.5);
-            double r=16+8*Ease.hash(seed+i*7),y=cy-2.6*Math.max(0,i-1);
-            pts[i]=c.at0(cx+Math.cos(th)*r,y,Math.sin(th)*r);
+        double x=APEX_FW-.25,y=APEX_UP+1.2,z=0,dir=Ease.hash(seed)*Math.PI*2;
+        pts[0]=c.at0(x,y,z);
+        for(int i=1;i<=10;i++){
+            double len=14+16*Ease.hash(seed+i*7);
+            // Sharp acute turns: the path doubles back by 135-155°.
+            if(i>1)dir+=Math.toRadians((Ease.hash(seed+i*11)>.5?1:-1)*(135+20*Ease.hash(seed+i*13)));
+            x+=Math.cos(dir)*len;z+=Math.sin(dir)*len;y-=1.6+.6*Ease.hash(seed+i*17);
+            // Keep the pattern centred over the landing area.
+            x=APEX_FW+(x-APEX_FW)*.8;z*=.8;
+            pts[i]=c.at0(x,y,z);
         }
         return pts;
     }
@@ -164,8 +215,8 @@ final class HighestSkill implements Fx.Skill {
         float t=c.sec;
         flare(c,m,t,true);
         zig(c,m,t,true);
-        burst(c,m,t,true);
-        beam(c,m,t,true);
+        burst(c,m,t);
+        beam(c,m,t);
         handSmoke(c,m,t);
         sparkles(c,m,t);
     }
@@ -173,16 +224,11 @@ final class HighestSkill implements Fx.Skill {
         float t=c.sec;
         flare(c,m,t,false);
         zig(c,m,t,false);
-        burst(c,m,t,false);
         smear(c,m,t);
         crescent(c,m,t);
-        beam(c,m,t,false);
     }
-    /** Point in the finisher frame: the cast frame turned to face the shot-5 camera (forward, up, right). */
-    static Vec3d fin(Fx c,double fw,double up,double rt){
-        double a=Math.toRadians(SQUARE);Vec3d f=c.f.multiply(Math.cos(a)).add(c.right.multiply(Math.sin(a))),r=c.right.multiply(Math.cos(a)).subtract(c.f.multiply(Math.sin(a)));
-        return c.origin.add(f.multiply(fw)).add(0,up,0).add(r.multiply(rt));
-    }
+    /** The finisher follows the cast direction, independently of the side camera. */
+    static Vec3d fin(Fx c,double fw,double up,double rt){return c.at0(fw,up,rt);}
     /** Camera screen axes (right, up), including the cutscene roll. */
     static Vec3d[] screen(Fx c){
         var cam=c.mc.gameRenderer.getCamera();var f=cam.getHorizontalPlane();var u=cam.getVerticalPlane();
@@ -219,9 +265,8 @@ final class HighestSkill implements Fx.Skill {
         Vec3d[] p=zigzag(c);float fade=1-Ease.smooth(t,3.2f,SHOT4);
         for(int i=0;i<10;i++){
             if(t<ZIG[i])break;Vec3d a=p[i],b=p[i+1];
-            // Solid magenta body with a pale hot streak (alpha-blended so the bloom keeps it magenta), faint violet halo.
-            if(additive)m.softLine(a,b,2.6,0x9c97fa,.12f*fade);
-            else{m.softLine(a,b,2.3,0xc19cfe,.45f*fade);m.line(a,b,1.25,0xe842f5,fade);m.line(a,b,.25,0xfebbfe,.9f*fade);}
+            if(additive){m.line(a,b,2.6,0x9c97fa,.1f*fade);m.line(a,b,1.6,0xc19cfe,.18f*fade);m.line(a,b,.22,0xfebbfe,.8f*fade);}
+            else{m.line(a,b,1.2,0xe6a7fc,.55f*fade);m.line(a,b,.8,0xf77ffa,fade);}
         }
     }
     /** Intensity envelope of the slash-line burst (peak ≈3.88 s, pulsing, gone ≈4.42 s). */
@@ -231,23 +276,21 @@ final class HighestSkill implements Fx.Skill {
         return (.55f+.15f*(float)Math.sin(t*38))*(1-Ease.smooth(t,4.2f,4.42f))+.45f*(1-Ease.smooth(t,3.88f,3.98f));
     }
     /** V4: slash streaks and four-point sparkles, mostly behind the hero, on his right and above. */
-    static void burst(Fx c,EffectMesh m,float t,boolean additive){
+    static void burst(Fx c,EffectMesh m,float t){
         float level=burstLevel(t);if(level<=0)return;
         Vec3d[] ax=screen(c);Vec3d right=ax[0],up=ax[1];int seed=(int)c.cast.id().getMostSignificantBits();
-        int last=(int)Math.floor((t-BURST)*600);
-        for(int k=Math.max(0,last-60);k<=last;k++){
-            float born=BURST+k/600f,life=.033f+.05f*(float)Ease.hash(seed+k*3),u=(t-born)/life;if(u<0||u>=1)continue;
+        int last=(int)Math.floor((t-BURST)*480);
+        for(int k=Math.max(0,last-44);k<=last;k++){
+            float born=BURST+k/480f,life=.033f+.05f*(float)Ease.hash(seed+k*3),u=(t-born)/life;if(u<0||u>=1)continue;
             if(Ease.hash(seed+k*5)>burstLevel(born)*.95f)continue;
             Vec3d centre=c.at0(-.2-1.3*Ease.hash(seed+k*7),.8+2.7*Ease.hash(seed+k*11),-.5+3*Ease.hash(seed+k*13));
             double kind=Ease.hash(seed+k*17),ang=kind<.55?Math.toRadians(-35+(Ease.hash(seed+k*19)-.5)*30):kind<.9?Math.toRadians((Ease.hash(seed+k*19)-.5)*20):Math.toRadians(90);
             Vec3d dir=right.multiply(Math.cos(ang)).add(up.multiply(Math.sin(ang)));
-            double len=(2.5+4.5*Ease.hash(seed+k*23)),w=.05+.15*Ease.hash(seed+k*29);
+            double len=(2+4*Ease.hash(seed+k*23)),w=.04+.13*Ease.hash(seed+k*29);
             Vec3d a=centre.subtract(dir.multiply(len*.5)),b=centre.add(dir.multiply(len*.5));
             float al=(float)Math.sin(Math.PI*Math.min(1,u*1.4));
-            if(additive){m.needle(a,b,w*1.2,.5,0xd7b1f8,al*.8f);m.needle(a,b,w*.45,.5,0xffffff,al);}
-            else{m.needle(a,b,w*2.8,.5,0x6a3cd6,al*.55f);m.needle(a,b,w*1.7,.5,0x9d6cf0,al*.6f);}
+            m.needle(a,b,w*2.2,.5,0x7462e0,al*.5f);m.needle(a,b,w*1.3,.5,0xd7b1f8,al*.85f);m.needle(a,b,w*.5,.5,0xffffff,al);
         }
-        if(!additive)return;
         int stars=(int)Math.floor((t-BURST)*40);
         for(int k=Math.max(0,stars-4);k<=stars;k++){
             float born=BURST+k/40f,life=.05f+.05f*(float)Ease.hash(seed+k*31),u=(t-born)/life;if(u<0||u>=1)continue;
@@ -260,23 +303,19 @@ final class HighestSkill implements Fx.Skill {
         if(t>=3.965f&&t<4.0f)m.softDisc(c.at0(0,1.2,-1),.95,0x7462e0,.45f);
     }
     /** V6: horizontal white-violet beam behind the torso along the lateral axis, far to his right. */
-    static void beam(Fx c,EffectMesh m,float t,boolean additive){
+    static void beam(Fx c,EffectMesh m,float t){
         if(t<BEAM||t>=END+.4f)return;
         Vec3d a=fin(c,-.2,1.25,-3*STUD),b=fin(c,-.2,1.25,45*STUD);
         float u=t-BEAM;
-        // A broad white mass for a frame or two, then a thin glowing core inside a soft violet halo.
-        double w=u<.05f?.42:u<.08f?.42-.3*Ease.unit(t,BEAM+.05f,BEAM+.08f):.12-.05*Ease.smooth(t,BEAM+.1f,END);
+        double w=u<.05f?.42:u<.08f?.42-.28*Ease.unit(t,BEAM+.05f,BEAM+.08f):.14-.06*Ease.smooth(t,BEAM+.1f,END);
         float al=1-Ease.smooth(t,END,END+.4f);
-        if(!additive){
-            m.softLine(a,b,w*6,u<.2f?0xb6a8f1:0x8f6cf2,al*.45f);
-            m.softLine(a.add(0,w*.6,0),b.add(0,w*.6,0),w*2.5,0x5946bb,al*.3f);
-            return;
-        }
-        // The first frames' white mass widens out to his right (it comes toward the camera on screen-left).
-        if(u<.08f)m.softTaper(a,b,.15,2.6,0xfdfdfa,.85f*(1-Ease.unit(t,BEAM+.05f,BEAM+.08f)));
-        m.softLine(a,b,w*2.2,0xf6e9fa,al*.8f);m.line(a,b,w*.6,0xfdfdfa,al);
+        Vec3d upOff=new Vec3d(0,w*.38,0);
+        m.line(a.add(upOff),b.add(upOff),w*.9,0x5946bb,al*.45f);m.line(a.add(upOff.multiply(.6)),b.add(upOff.multiply(.6)),w*.7,0xb495f4,al*.7f);
+        m.line(a.subtract(upOff),b.subtract(upOff),w*.9,0x7976a3,al*.35f);m.line(a.subtract(upOff.multiply(.6)),b.subtract(upOff.multiply(.6)),w*.7,0xf6e9fa,al*.7f);
+        m.line(a,b,w*.55,0xfdfdfa,al);
+        if(u>=.04f)m.line(a,b,w*1.7,u<.2f?0xb6a8f1:0x8f6cf2,al*.3f);
         // Short white vertical plume at his right for three frames.
-        if(t>=4.65f&&t<4.72f){Vec3d p=fin(c,-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,2.6,0),.32,.3,0xffffff,.9f);}
+        if(t>=4.65f&&t<4.70f){Vec3d p=fin(c,-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,.9,0),.3,.4,0xffffff,.8f);}
     }
     /** V8: pink-violet glowing puff around the sword fist. */
     static void handSmoke(Fx c,EffectMesh m,float t){
@@ -289,14 +328,14 @@ final class HighestSkill implements Fx.Skill {
         if(t<4.67f||t>=5.47f)return;
         // Violet haze and glittering dots along the beam on his right.
         float haze=Ease.smooth(t,4.65f,4.72f)*(1-Ease.smooth(t,4.9f,5.3f));
-        for(int k=0;k<12;k++)m.softDisc(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5),.8+5.5*k/12.0),.45+.2*Ease.hash(k*3),0x6a4bd0,.3f*haze);
-        for(int k=0;k<90;k++){
-            double rt=.5+6*Ease.hash(k*7+1),up=.4+2*Ease.hash(k*9+2),drift=(t-4.67f)*.25;
+        for(int k=0;k<8;k++)m.softDisc(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5),.8+5.5*k/8.0),.45+.2*Ease.hash(k*3),0x6a4bd0,.3f*haze);
+        for(int k=0;k<40;k++){
+            double rt=.6+6*Ease.hash(k*7+1),up=1.25+(Ease.hash(k*9+2)-.5)*.9,drift=(t-4.67f)*.25;
             float a=haze*(float)Math.abs(Math.sin(t*9+k*1.7));
             m.softDisc(fin(c,-.25+(Ease.hash(k*13)-.5)*.4,up+drift,rt),.035+.035*Ease.hash(k*11),k%3==0?0xe2e5fb:0xb8a0ff,a);
         }
-        for(int k=0;k<36;k++){
-            double rt=.4+5.5*Ease.hash(k*3+5),up=.5+1.8*Ease.hash(k*5+6),drift=(t-4.67f)*(.2+.3*Ease.hash(k*7+7));
+        for(int k=0;k<22;k++){
+            double rt=.4+5*Ease.hash(k*3+5),up=.7+1.2*Ease.hash(k*5+6),drift=(t-4.67f)*(.2+.3*Ease.hash(k*7+7));
             Vec3d p=fin(c,-.4+.6*Ease.hash(k*11+8),up+drift*.5,rt+drift);
             float a=(float)Math.sin(Math.PI*Ease.unit(t,4.67f+.15f*(float)Ease.hash(k*13),5.47f));
             m.star(p,.04+.05*Ease.hash(k*17),0xe2e5fb,a);
@@ -313,41 +352,29 @@ final class HighestSkill implements Fx.Skill {
         }
     }
     /**
-     * V7: dark scythe crescent on his right: the straight upper edge rises from the sword tip at his
-     * feet out to his right (and a little toward the camera), the lower edge sags to the ground. A
-     * violet glow comes off it for half a second; after the cut it is the violet line on the ground,
-     * fading out linearly over ≈1.4 s.
+     * V7: dark scythe crescent on his right: the straight upper edge runs from far out along the beam
+     * down to the sword tip at his feet, the lower edge sags to the ground. It stays after the cut as
+     * the violet line on the ground and fades out linearly over ≈1.4 s.
      */
     static void crescent(Fx c,EffectMesh m,float t){
         if(t<BEAM||t>=END+1.4f)return;
-        float a=t<END?.9f:.9f*(1-Ease.unit(t,END,END+1.4f));
-        // In shot 5 the far horn climbs toward the camera-left, past the beam; after the cut it lies along the ground.
-        boolean cut=t>=END;
-        Vec3d near=fin(c,.25,.05,.7),far=cut?fin(c,-.3,.8,5.5):fin(c,1.0,3.8,4.0);
-        double thick=(cut?1.1:2.0)*STUD;
+        float a=t<END?.85f:.85f*(1-Ease.unit(t,END,END+1.4f));
+        Vec3d near=fin(c,.3,.05,1.0),far=fin(c,-.4,1.25,14*STUD+1.0);
         int n=24;
         for(int i=0;i<n;i++){
             double s0=i/(double)n,s1=(i+1)/(double)n;
             Vec3d u0=near.lerp(far,s0),u1=near.lerp(far,s1);
-            // Scythe profile: thickest a third of the way out, the lower edge a concave curve.
-            double th0=thick*Math.pow(Math.sin(Math.PI*s0),.75)*(1-.3*s0),th1=thick*Math.pow(Math.sin(Math.PI*s1),.75)*(1-.3*s1);
-            Vec3d l0=u0.add(fin(c,.15*th0,-th0,0).subtract(c.origin)),l1=u1.add(fin(c,.15*th1,-th1,0).subtract(c.origin));
+            // Scythe profile: thickest a third of the way out, the lower edge a deep concave curve.
+            double th0=2.6*STUD*Math.pow(Math.sin(Math.PI*s0),.75)*(1-.45*s0),th1=2.6*STUD*Math.pow(Math.sin(Math.PI*s1),.75)*(1-.45*s1);
+            // Sagging toward the ground and slightly outward (forward of the beam line).
+            Vec3d l0=u0.add(fin(c,.25*th0,-th0*1.6,0).subtract(c.origin)),l1=u1.add(fin(c,.25*th1,-th1*1.6,0).subtract(c.origin));
             l0=new Vec3d(l0.x,Math.max(c.origin.y+.02,l0.y),l0.z);l1=new Vec3d(l1.x,Math.max(c.origin.y+.02,l1.y),l1.z);
             Vec3d m0=u0.lerp(l0,.45),m1=u1.lerp(l1,.45);
-            // Near-black navy blade, violet-blue only along the inner edge, then a crisp black-indigo outer rim.
-            m.vertex(u0,0x262c94,a);m.vertex(u1,0x262c94,a);m.vertex(m1,0x0d1150,a);m.vertex(m0,0x0d1150,a);
-            m.vertex(m0,0x0d1150,a);m.vertex(m1,0x0d1150,a);m.vertex(l1,0x04061e,a);m.vertex(l0,0x04061e,a);
+            m.vertex(u0,0x5969de,a);m.vertex(u1,0x5969de,a);m.vertex(m1,0x1a2190,a);m.vertex(m0,0x1a2190,a);
+            m.vertex(m0,0x1a2190,a);m.vertex(m1,0x1a2190,a);m.vertex(l1,0x070c3a,a);m.vertex(l0,0x070c3a,a);
+            // Crisp black-indigo outer rim.
             Vec3d o0=l0.add(0,-.03,0),o1=l1.add(0,-.03,0);
             m.vertex(l0,0x04011c,a);m.vertex(l1,0x04011c,a);m.vertex(o1,0x000001,a);m.vertex(o0,0x000001,a);
-        }
-        // Lavender inner edge where it meets the beam.
-        m.line(near,far,.05,0x818afd,a*.8f);
-        // Violet glow rising off the blade for half a second after the beam.
-        float glow=Ease.smooth(t,BEAM+.05f,BEAM+.12f)*(1-Ease.smooth(t,4.95f,5.45f));
-        if(glow>0)for(int k=0;k<12;k++){
-            // Violet over the blade, turning magenta toward the sword hand.
-            double s=(k+.5)/12;Vec3d p=near.lerp(far,s).add(0,.1+.3*Ease.hash(k*7+3),0);
-            m.softDisc(p,.55+.45*Math.sin(Math.PI*s),s<.3?0xb848e0:k%2==0?0x7a3ce0:0x9a4cf0,.5f*glow);
         }
     }
 }
