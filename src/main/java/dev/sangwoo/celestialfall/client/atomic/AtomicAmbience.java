@@ -41,7 +41,7 @@ public final class AtomicAmbience {
             float sec=c.age(delta)/20f;
             if(sec<AtomicLook.IMPACT||sec>=AtomicWorld.BLAST_END+1.5f)continue;
             // Inside any damage column the hit view owns the screen.
-            if(AtomicPillar.interior(c,cam))return null;
+            if(AtomicPillar.interior(c,cam,sec))return null;
             double d=cam.distanceTo(c.origin);
             if(AtomicStage.reach(d,c.radius)<=0)continue;
             if(best==null||d<best.distance())best=new View(c,sec,d);

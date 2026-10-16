@@ -70,7 +70,7 @@ public final class AtomicImmersion {
             if(d>=best)continue;
             float sec=cast.age(delta)/20f;
             var value=sample(sec,d,cast.radius,CelestialFall.CONFIG.screenShakeStrength);
-            if(AtomicPillar.available()&&!AtomicPillar.interior(cast,camera)){
+            if(AtomicPillar.available()&&!AtomicPillar.interior(cast,camera,sec)){
                 // The violet grade belongs to the hit view; outside the damage column the pillar shows its own colours,
                 // the ground near the pillar quakes with every surge, and the air shock jolts the camera when it arrives,
                 // even beyond the quake's reach.

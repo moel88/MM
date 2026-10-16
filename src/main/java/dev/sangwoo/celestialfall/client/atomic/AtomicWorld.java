@@ -67,7 +67,7 @@ public final class AtomicWorld {
                 var s=scene(c);float sec=c.age(delta)/20f;boolean close=c.origin.squaredDistanceTo(cam)<640*640;
                 if(close&&sec<AtomicLook.PINK+.06f)chant(s,sec,rot,world,cam,mc.world);
                 // The hit view (inside the damage column) keeps its own renderer; everyone outside sees the pillar.
-                if(!AtomicPillar.available()||AtomicPillar.interior(c,cam)){
+                if(!AtomicPillar.available()||AtomicPillar.interior(c,cam,sec)){
                     if(close&&sec>=AtomicLook.PINK&&sec<AtomicLook.BEAM_END)blast(s,sec,rot,world,cam,mc.world);
                     if(close&&sec>=AtomicLook.IMPACT&&sec<BLAST_END)explosion(s,sec,rot,world,cam,mc.world);
                 }else if(sec>=AtomicLook.IMPACT&&sec<BLAST_END){

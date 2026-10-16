@@ -28,6 +28,43 @@ public final class AtomicTimeline {
     public static boolean locked(float age) { return age>=0 && age<CAST_LOCK_END; }
     /** Damage cylinder height above the origin; the radius is the visual blast radius. */
     public static double damageHeight(double radius) { return radius*2.5; }
+
+    /** The pillar opens out of a hairline this wide (fraction of the blast radius R) at the impact. */
+    public static final double HAIRLINE=.04;
+    /**
+     * Fastest the opening pillar's edge spreads, in blocks per second: a sprinting player (about 5.6 blocks/s) outruns
+     * it, a walking one (about 4.3) does not. It eases in and out over {@link #OPEN_RAMP} seconds, and spreads faster
+     * only when a very large configured radius would otherwise not open within {@link #OPEN_LIMIT} seconds.
+     */
+    public static final double OPEN_SPEED=4.5,OPEN_RAMP=.5,OPEN_LIMIT=12;
+    /** The pillar's own clock runs slowed for the first 0.9 s after the impact (0.35x at first) and catches up smoothly. */
+    public static final double IGNITION_SLOW=.9;
+    /** Seconds since the impact on the pillar's own clock, for t real seconds since the impact. */
+    public static double pillarClock(double t) {
+        if(!(t>0)||t>=IGNITION_SLOW)return t;
+        double u=t/IGNITION_SLOW;
+        return IGNITION_SLOW*u*(.35+u*(1.3-.65*u));
+    }
+    /** Seconds the opening takes for a blast radius R. */
+    public static double openingSeconds(double R) {
+        double d=R*(1-HAIRLINE);
+        return d/Math.max(OPEN_SPEED,d/(OPEN_LIMIT-OPEN_RAMP))+OPEN_RAMP;
+    }
+    /** Radius of the opening pillar t seconds after the impact on its own clock: from the hairline to R at the opening speed. */
+    public static double openingRadius(double t,double R) {
+        if(!(t>=0)||!(R>0))return 0;
+        double d=R*(1-HAIRLINE),v=Math.max(OPEN_SPEED,d/(OPEN_LIMIT-OPEN_RAMP)),T=d/v+OPEN_RAMP;
+        if(t>=T)return R;
+        double spread=t<OPEN_RAMP?v*t*t/(2*OPEN_RAMP):t<=T-OPEN_RAMP?v*OPEN_RAMP/2+v*(t-OPEN_RAMP):d-v*(T-t)*(T-t)/(2*OPEN_RAMP);
+        return Math.min(R,R*HAIRLINE+spread);
+    }
+    /**
+     * Radius of the damage column at a cast age in ticks: none before the impact, then the opening pillar's (on the same
+     * clock the pillar is drawn with), the full radius once open and through the collapse until the beam ends.
+     */
+    public static double damageRadius(long age,double R) {
+        return age<DAMAGE_START?0:openingRadius(pillarClock((age-DAMAGE_START)/20.0),R);
+    }
     public static boolean insideColumn(double dx,double dy,double dz,double radius,double height) {
         return radius>0 && dx*dx+dz*dz<=radius*radius && dy>=-2 && dy<=height;
     }

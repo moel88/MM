@@ -16,7 +16,7 @@ public final class AtomicStage {
     /** Full strength within 16 R of the blast, nothing beyond 48 R. */
     public static final double NEAR=16,FAR=48;
     /** The ignition plays slowed for its first 0.9 s, then joins real time. */
-    public static final float SLOW=.9f;
+    public static final float SLOW=(float)dev.sangwoo.celestialfall.AtomicTimeline.IGNITION_SLOW;
     private AtomicStage(){}
 
     static float clamp(double v){return (float)Math.max(0,Math.min(1,v));}
@@ -29,8 +29,7 @@ public final class AtomicStage {
     /** Visual clock of the pillar: the first 0.9 s after the impact run slowed (0.35x at first) and catch up, joining real time smoothly. */
     public static float visual(float sec){
         if(!(sec>IMPACT)||sec>=IMPACT+SLOW)return sec;
-        float u=(sec-IMPACT)/SLOW;
-        return IMPACT+SLOW*u*(.35f+u*(1.3f-.65f*u));
+        return IMPACT+(float)dev.sangwoo.celestialfall.AtomicTimeline.pillarClock(sec-IMPACT);
     }
 
     /** Radius of the air shock front, in blocks from the blast centre. */

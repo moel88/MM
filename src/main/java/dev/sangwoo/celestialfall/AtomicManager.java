@@ -109,7 +109,8 @@ public final class AtomicManager {
         if(s.damage<=0)return;
         var owner=s.world.getPlayerByUuid(s.caster);
         var source=new DamageSource(s.world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(ATOMIC_DAMAGE),owner);
-        double r=s.visualRadius;
+        // The column opens with the pillar: only what its edge has reached is hit, so running ahead of it escapes.
+        double r=AtomicTimeline.damageRadius(s.world.getTime()-s.start,s.visualRadius);if(r<=0)return;
         Box bounds=new Box(s.origin.x-r,s.origin.y-2,s.origin.z-r,
             s.origin.x+r,s.origin.y+AtomicTimeline.damageHeight(s.visualRadius),s.origin.z+r);
         // Query loaded entities only. The bright cylinder and damage cylinder share their dimensions.

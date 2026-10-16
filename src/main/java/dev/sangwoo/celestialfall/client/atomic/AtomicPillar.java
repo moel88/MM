@@ -31,12 +31,15 @@ public final class AtomicPillar {
     /** False until the VFX layer is up (or if it failed): the previous renderer and grade are used instead. */
     public static boolean available(){return Vfx.ready();}
 
-    /** The hit view: the camera is in the damage column, or the local player is and the camera is their own. */
-    public static boolean interior(AtomicClient.Cast c,Vec3d cam){
-        double R=c.radius;
-        if(AtomicPillarShape.inside(cam.x-c.origin.x,cam.y-c.origin.y,cam.z-c.origin.z,R))return true;
+    /**
+     * The hit view: the camera is in the damage column as far as it has opened (sec: real seconds of the cast), or the
+     * local player is and the camera is their own. Someone the opening pillar has not reached yet still sees it from outside.
+     */
+    public static boolean interior(AtomicClient.Cast c,Vec3d cam,float sec){
+        double R=c.radius;float at=AtomicStage.visual(sec);
+        if(AtomicPillarShape.inside(at,cam.x-c.origin.x,cam.y-c.origin.y,cam.z-c.origin.z,R))return true;
         var p=MinecraftClient.getInstance().player;
-        return p!=null&&AtomicPillarShape.inside(p.getX()-c.origin.x,p.getY()-c.origin.y,p.getZ()-c.origin.z,R)
+        return p!=null&&AtomicPillarShape.inside(at,p.getX()-c.origin.x,p.getY()-c.origin.y,p.getZ()-c.origin.z,R)
             &&p.getEyePos().squaredDistanceTo(cam)<AtomicPillarShape.OWN_CAMERA*AtomicPillarShape.OWN_CAMERA;
     }
 
