@@ -28,7 +28,7 @@ final class AtomicScene {
     /** Blast radius over the 28-block footage radius: every explosion size scales with it. */
     final double scale;
     final Chunk[] debris;
-    final Puff[] cap,wall,dust;
+    final Puff[] wall,dust;
     final Ember[] embers;
 
     /** Thin light shaft (and its base flare spot) on the plaza edge, 25–40 studs out. */
@@ -42,7 +42,7 @@ final class AtomicScene {
                 double lift,float rise,float vanish,double y,BlockState state) {}
     /** Ground chunk thrown by the blast: launch angle and radius, speeds (blast radii per second), half sizes, spin axis and rate. */
     record Chunk(double angle,double r0,double speed,double rise,double sx,double sy,double sz,Vec3d axis,double spin,float delay) {}
-    /** Smoke puff of the dust wall, the cloud cap or the dust column. */
+    /** Smoke puff of the base ring or the dust column. */
     record Puff(double angle,double phase,double size,float alpha) {}
     /** Glowing ember drifting out of the crater after the beam. */
     record Ember(double angle,double radius,double vx,double vy,double vz,float life,float phase,double size) {}
@@ -82,7 +82,7 @@ final class AtomicScene {
             curtains[k]=new Curtain(r.nextDouble()*Math.PI*2,rad,2.5+6.5*r.nextDouble(),50+60*r.nextDouble(),
                 Math.toRadians(5+9*r.nextDouble()),(r.nextDouble()-.4)*.2,light?0xd8ccff:0x0c0530,light?.45f+.3f*r.nextFloat():.55f+.3f*r.nextFloat(),extra);
         }
-        // Explosion: thrown chunks, the dust wall, the cloud cap, the dust column after the beam and embers.
+        // Explosion: lifted chunks, the smoke ring at the tower's foot, the dust column after the tower and embers.
         debris=new Chunk[96];
         for(int k=0;k<debris.length;k++){
             double base=.025+.055*r.nextDouble();
@@ -91,8 +91,7 @@ final class AtomicScene {
                 base*(.7+.8*r.nextDouble()),base*(.5+.9*r.nextDouble()),base*(.7+.8*r.nextDouble()),
                 axis.lengthSquared()<1e-4?new Vec3d(0,1,0):axis.normalize(),(r.nextDouble()-.5)*9,.45f*r.nextFloat());
         }
-        wall=new Puff[24];for(int k=0;k<wall.length;k++)wall[k]=new Puff((k+.5*r.nextDouble())*Math.PI*2/wall.length,r.nextDouble()*6.28,.7+.6*r.nextDouble(),.7f+.3f*r.nextFloat());
-        cap=new Puff[18];for(int k=0;k<cap.length;k++)cap[k]=new Puff((k+.4*r.nextDouble())*Math.PI*2/cap.length,r.nextDouble()*6.28,.75+.5*r.nextDouble(),.75f+.25f*r.nextFloat());
+        wall=new Puff[40];for(int k=0;k<wall.length;k++)wall[k]=new Puff((k+.5*r.nextDouble())*Math.PI*2/wall.length,r.nextDouble()*6.28,.7+.6*r.nextDouble(),.7f+.3f*r.nextFloat());
         dust=new Puff[16];for(int k=0;k<dust.length;k++)dust[k]=new Puff(r.nextDouble()*Math.PI*2,r.nextDouble()*6.28,r.nextDouble(),.6f+.4f*r.nextFloat());
         embers=new Ember[160];
         for(int k=0;k<embers.length;k++)embers[k]=new Ember(r.nextDouble()*Math.PI*2,.1+1.3*Math.sqrt(r.nextDouble()),(r.nextDouble()-.5)*.12,.12+.22*r.nextDouble(),(r.nextDouble()-.5)*.12,

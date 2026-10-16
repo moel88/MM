@@ -16,7 +16,7 @@ import org.lwjgl.opengl.GL11;
  */
 public final class AtomicShader {
     public static final int CIRCUIT=1,SKY=2,BEAM=3,FLARE=4,DISC=5,CURTAIN=6,ORB=7,STRIATED=8,PILLAR=9,
-        DOME=10,SHOCK=11,COLUMN=12,PUFF=13,SKYRING=14,FLASH=15;
+        DOME=10,SHOCK=11,COLUMN=12,PUFF=13,SKYRING=14,FLASH=15,TOWER=16,GROUND=17;
     static final Vec3d UP=new Vec3d(0,1,0);
     private static ShaderProgram shader;
     private AtomicShader() {}
@@ -95,6 +95,19 @@ public final class AtomicShader {
                     double a0=i*Math.PI*2/nAz,a1=(i+1)*Math.PI*2/nAz;float u0=(float)i/nAz,u1=(float)(i+1)/nAz;
                     point(c.add(Math.cos(a0)*c0,s0,Math.sin(a0)*c0),u0,v0,rgb,alpha);point(c.add(Math.cos(a1)*c0,s0,Math.sin(a1)*c0),u1,v0,rgb,alpha);
                     point(c.add(Math.cos(a1)*c1,s1,Math.sin(a1)*c1),u1,v1,rgb,alpha);point(c.add(Math.cos(a0)*c1,s1,Math.sin(a0)*c1),u0,v1,rgb,alpha);
+                }
+            }
+        }
+        /** Cylinder shell around the vertical axis through c from y0 to y1 with radius {@code radius.apply(v)} at height fraction v; uv.x around, uv.y up. */
+        public void cylinder(Vec3d c,double y0,double y1,java.util.function.DoubleUnaryOperator radius,int nAz,int nY,int rgb,float alpha) {
+            if(alpha<=0)return;
+            for(int j=0;j<nY;j++){
+                double v0=(double)j/nY,v1=(double)(j+1)/nY,r0=radius.applyAsDouble(v0),r1=radius.applyAsDouble(v1);
+                double ya=y0+(y1-y0)*v0,yb=y0+(y1-y0)*v1;
+                for(int i=0;i<nAz;i++){
+                    double a0=i*Math.PI*2/nAz,a1=(i+1)*Math.PI*2/nAz;float u0=(float)i/nAz,u1=(float)(i+1)/nAz;
+                    point(new Vec3d(c.x+Math.cos(a0)*r0,ya,c.z+Math.sin(a0)*r0),u0,(float)v0,rgb,alpha);point(new Vec3d(c.x+Math.cos(a1)*r0,ya,c.z+Math.sin(a1)*r0),u1,(float)v0,rgb,alpha);
+                    point(new Vec3d(c.x+Math.cos(a1)*r1,yb,c.z+Math.sin(a1)*r1),u1,(float)v1,rgb,alpha);point(new Vec3d(c.x+Math.cos(a0)*r1,yb,c.z+Math.sin(a0)*r1),u0,(float)v1,rgb,alpha);
                 }
             }
         }
