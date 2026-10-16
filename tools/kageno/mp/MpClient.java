@@ -56,7 +56,8 @@ public final class MpClient implements ClientModInitializer {
     private void key(int key,boolean down){mc.keyboard.onKey(mc.getWindow().getHandle(),key,0,down?GLFW_PRESS:GLFW_RELEASE,0);if(down)held.add(key);else held.remove(key);}
     private void attack(boolean down){var k=InputUtil.Type.MOUSE.createFromCode(GLFW_MOUSE_BUTTON_LEFT);KeyBinding.setKeyPressed(k,down);if(down)KeyBinding.onKeyPressed(k);}
     private String name(UUID id){var p=mc.world.getPlayerByUuid(id);return p==null?id.toString().substring(0,8):p.getGameProfile().getName();}
-    private void face(){if(mc.player==null)return;BotandCamera.STATE.yaw=caster?0:180;BotandCamera.STATE.pitch=12;}
+    /** The watcher looks a little up at G's pillar from outside; otherwise both look slightly down at each other. */
+    private void face(){if(mc.player==null)return;BotandCamera.STATE.yaw=caster?0:180;BotandCamera.STATE.pitch=!caster&&!AtomicClient.CASTS.isEmpty()?-8:12;}
 
     private void tick()throws Exception{
         age++;
@@ -80,7 +81,7 @@ public final class MpClient implements ClientModInitializer {
                     if(age%40==0&&held.isEmpty())face();
                     for(String step:SCRIPT){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
-                    if(age%20==0&&StandClient.cinematic()==null)face();
+                    if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
                     if(age%20==0&&Files.exists(OUT.resolve("done"))){note("caster done");phase=3;age=0;}
                     if(age>4000){note("ERROR watcher timeout");phase=3;age=0;}
                 }

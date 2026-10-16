@@ -18,8 +18,9 @@ import java.util.*;
 
 /**
  * Multiplayer smoke test, dedicated-server half (only with -Dbotand.mp.server=true): a flat lit stage,
- * "Caster" gets Kageno without cooldowns, "Watcher" stands 2.5 blocks in front of it. Both are kept
- * alive and put back on their marks whenever no Kageno cast is running. Not shipped in the mod jar.
+ * "Caster" gets Kageno without cooldowns, "Watcher" stands 2.5 blocks in front of it (64 blocks out,
+ * outside the damage column, while G runs). Both are kept alive and put back on their marks whenever no
+ * Kageno cast is running. Not shipped in the mod jar.
  */
 public final class MpServer implements ModInitializer {
     static final Path OUT=Path.of(System.getProperty("botand.mp.out","mp"));
@@ -63,7 +64,7 @@ public final class MpServer implements ModInitializer {
             if(c.age()<(c.skill==KagenoRules.Q?30:KagenoRules.DURATION[c.skill]))busy=true;
         }
         for(var it=live.entrySet().iterator();it.hasNext();){var e=it.next();if(!seen.contains(e.getKey())){note(server,"end "+e.getValue()[0]+" targets="+e.getValue()[1]);it.remove();}}
-        if(AtomicManager.hasActive()&&!atomic){atomic=true;note(server,"atomic start");}else if(!AtomicManager.hasActive()&&atomic){atomic=false;note(server,"atomic end");}
+        if(AtomicManager.hasActive()&&!atomic){atomic=true;note(server,"atomic start");outside(server);}else if(!AtomicManager.hasActive()&&atomic){atomic=false;note(server,"atomic end");}
         busy|=atomic;
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -71,6 +72,11 @@ public final class MpServer implements ModInitializer {
             if(p.isAlive()&&p.getHealth()<p.getMaxHealth())p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
+    }
+    /** During G the watcher stands 64 blocks out (outside the 28-block damage column), facing the caster. */
+    private void outside(MinecraftServer server){
+        var w=server.getOverworld();int y=w.getTopY(Heightmap.Type.MOTION_BLOCKING,0,64);
+        for(var p:server.getPlayerManager().getPlayerList())if(!caster(p)){p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,y,64.5,180,0);note(server,"watcher outside y="+y);}
     }
     private void restore(MinecraftServer server){
         if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0)return;

@@ -63,8 +63,14 @@ public final class AtomicWorld {
             for(var c:casts){
                 var s=scene(c);float sec=c.age(delta)/20f;
                 if(sec<AtomicLook.PINK+.06f)chant(s,sec,rot,world,cam,mc.world);
-                if(sec>=AtomicLook.PINK&&sec<AtomicLook.BEAM_END)blast(s,sec,rot,world,cam,mc.world);
-                if(sec>=AtomicLook.IMPACT&&sec<BLAST_END)explosion(s,sec,rot,world,cam,mc.world);
+                // The hit view (inside the damage column) keeps its own renderer; everyone outside sees the pillar.
+                if(!AtomicPillar.available()||AtomicPillar.interior(c,cam)){
+                    if(sec>=AtomicLook.PINK&&sec<AtomicLook.BEAM_END)blast(s,sec,rot,world,cam,mc.world);
+                    if(sec>=AtomicLook.IMPACT&&sec<BLAST_END)explosion(s,sec,rot,world,cam,mc.world);
+                }else if(sec>=AtomicLook.IMPACT&&sec<BLAST_END){
+                    AtomicPillar.render(s,sec,rot,cam,mc.world);
+                    AtomicShader.premultiplied();
+                }
             }
             // The violet void replaces the whole view for three frames, so it is drawn last over everything.
             for(var c:casts){
