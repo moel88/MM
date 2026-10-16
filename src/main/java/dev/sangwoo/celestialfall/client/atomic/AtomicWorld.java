@@ -394,16 +394,16 @@ public final class AtomicWorld {
         double R=28*s.scale;
         Vec3d o=new Vec3d(s.origin.x,s.groundY(w,s.origin.x,s.origin.z),s.origin.z);
         int quality=CelestialFall.CONFIG.visualQuality;
+        if(sec>=AtomicLook.PINK)ground(s,sec,rot,cam,o,R);
+        tower(s,sec,rot,cam,o,R);
         if(sec>=AtomicLook.PINK){
-            ground(s,sec,rot,cam,o,R);
-            if(quality>0)debris(s,sec,world,cam,o,R,quality);
+            crown(s,sec,rot,cam,o,R);
             smokeBand(s,sec,rot,cam,o,R);
+            if(quality>0)debris(s,sec,world,cam,o,R,quality);
             dustColumn(s,sec,rot,cam,o,R);
             shock(s,sec,rot,cam,o,R);
             embers(s,sec,rot,cam,o,R,quality);
         }
-        tower(s,sec,rot,cam,o,R);
-        if(sec>=AtomicLook.PINK)crown(s,sec,rot,cam,o,R);
         flash(s,sec,rot,cam,o,R);
     }
     static float unit(float a,float b,float c) { return AtomicLook.unit(a,b,c); }
@@ -441,14 +441,15 @@ public final class AtomicWorld {
         var b=AtomicShader.beginAt(o,rot,cam,AtomicShader.TOWER,sec,s.seed,white,.62f,flow,1f);
         b.cylinder(o,y0,y1,v->r*(1+flare*Math.pow(1-v,6)),64,24,0xffffff,a);
         AtomicShader.end(b);
-        b=AtomicShader.beginAt(o,rot,cam,AtomicShader.TOWER,sec,s.seed+5,white*.5f,.5f,flow*.6f,.22f);
-        b.cylinder(o,y0,y1*.95+o.y*.05,v->r*(1.18+flare*Math.pow(1-v,6)),48,12,0xd8b8ff,a*.8f);
+        b=AtomicShader.beginAt(o,rot,cam,AtomicShader.TOWER,sec,s.seed+5,white*.5f,.5f,flow*.6f,.14f);
+        b.cylinder(o,y0,y1*.95+o.y*.05,v->r*(1.18+flare*Math.pow(1-v,6)),48,12,0xb088ff,a*.8f);
         AtomicShader.end(b);
+        // Violet glow thrown into the air around the tower: light bleed, not an attack boundary.
         float g=smooth(sec,AtomicLook.PINK,AtomicLook.PINK+.4f)*a;
         if(g>0){
             b=AtomicShader.begin(rot,cam,AtomicShader.ORB,sec,0,0,0,0,0);
-            b.facing(o.add(0,R*1.2,0),r*1.6+R*.3,0xa070ff,g*.35f);
-            b.facing(o.add(0,R*.25,0),r*1.4+R*.2,0xd090ff,g*.5f*near(cam,o,3,8));
+            b.facing(o.add(0,R*1.3,0),r*1.1+R*.4,0x9a64ff,g*.3f);
+            b.facing(o.add(0,R*.3,0),r*1.0+R*.25,0xc080ff,g*.4f*near(cam,o,3,8));
             AtomicShader.end(b);
         }
     }
@@ -463,7 +464,7 @@ public final class AtomicWorld {
         int n=28;
         for(int k=0;k<n;k++){
             double seed=k*7.31+s.seed+(k%3==0?step*13.7:0);
-            double ang=(k+h(seed))*Math.PI*2/n,lean=Math.toRadians(18+22*h(seed+1)),hgt=R*(.6+1.1*h(seed+2))*(.6+.4*level);
+            double ang=(k+h(seed))*Math.PI*2/n,lean=Math.toRadians(18+22*h(seed+1)),hgt=R*(.9+1.4*h(seed+2))*(.6+.4*level);
             Vec3d base=new Vec3d(o.x+Math.cos(ang)*r*1.02,o.y,o.z+Math.sin(ang)*r*1.02);
             Vec3d top=base.add(Math.cos(ang)*Math.sin(lean)*hgt,Math.cos(lean)*hgt,Math.sin(ang)*Math.sin(lean)*hgt);
             b.strip(base,top,R*(.05+.07*h(seed+3)),0xffffff,level*(float)(.6+.4*h(seed+4))*near(cam,base,2,6));
@@ -475,12 +476,12 @@ public final class AtomicWorld {
         if(sec<AtomicLook.PINK+.1f||sec>=AtomicLook.BEAM_END)return;
         double r=towerRadius(sec,R);
         float in=smooth(sec,AtomicLook.PINK+.1f,AtomicLook.PINK+.6f),outF=1-smooth(sec,AtomicLook.BEAM_END-.25f,AtomicLook.BEAM_END),t=sec-AtomicLook.PINK;
-        var b=AtomicShader.begin(rot,cam,AtomicShader.PUFF,sec,s.seed+7,.95f,.55f,0,0);
+        var b=AtomicShader.begin(rot,cam,AtomicShader.PUFF,sec,s.seed+7,.97f,.5f,0,0);
         int k=0;
         for(var p:s.wall){
-            double ang=p.angle()+.03*t,rad=r*(1.0+.08*p.size()),size=R*(.09+.09*p.size())*(1+.2*Math.sin(t*1.7+p.phase()));
-            Vec3d q=new Vec3d(o.x+Math.cos(ang)*rad,o.y+size*.55,o.z+Math.sin(ang)*rad);
-            b.facingSeeded(q,size,0x6a4a9a,in*outF*p.alpha()*near(cam,q,2,6),k++);
+            double ang=p.angle()+.03*t,rad=r*(.96+.06*p.size()),size=R*(.12+.12*p.size())*(1+.15*Math.sin(t*1.7+p.phase()));
+            Vec3d q=new Vec3d(o.x+Math.cos(ang)*rad,o.y+size*.9,o.z+Math.sin(ang)*rad);
+            b.facingSeeded(q,size,0x3a2460,in*outF*p.alpha()*near(cam,q,2,6),k++);
         }
         AtomicShader.end(b);
     }
@@ -490,7 +491,7 @@ public final class AtomicWorld {
         double rr=Math.max(towerRadius(sec,R),R*.3);
         float a=smooth(sec,AtomicLook.PINK,AtomicLook.PINK+.3f)*(1-smooth(sec,AtomicLook.BEAM_END,AtomicLook.BEAM_END+1.5f));
         var b=AtomicShader.beginAt(o,rot,cam,AtomicShader.GROUND,sec,s.seed,(float)rr,1f,0,0);
-        double e=rr*1.35;Vec3d p=o.add(0,.08,0);
+        double e=rr*1.45;Vec3d p=o.add(0,.08,0);
         b.quad(p.add(-e,0,-e),p.add(e,0,-e),p.add(e,0,e),p.add(-e,0,e),0xffffff,a);
         AtomicShader.end(b);
     }
@@ -537,7 +538,7 @@ public final class AtomicWorld {
         int n=quality>1?s.debris.length:s.debris.length/2;
         for(int k=0;k<n;k++){
             var d=s.debris[k];float t=sec-t0-d.delay()*3;if(t<0||t>=4.6f)continue;
-            double rr=Math.min(R*.95,d.r0()*R*.85+d.speed()*R*.12*t),y=o.y+d.rise()*R*1.6*t-R*.06*t*t;
+            double rr=Math.min(R*1.0,towerRadius(sec,R)*(.9+.12*d.r0())+d.speed()*R*.03*t),y=o.y+d.rise()*R*1.6*t-R*.06*t*t;
             Vec3d p=new Vec3d(o.x+Math.cos(d.angle())*rr,y,o.z+Math.sin(d.angle())*rr);
             float a=.95f*(1-smooth(t,3.4f,4.6f))*near(cam,p,1.5,4);
             if(a<=.01)continue;
