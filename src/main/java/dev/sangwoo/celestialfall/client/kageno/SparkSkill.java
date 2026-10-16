@@ -80,7 +80,7 @@ final class SparkSkill implements Fx.Skill {
         float t=c.sec-B;if(t<0||t>=.5f)return;float u=Ease.unit(t,0,.5f);
         Vec3d ground=new Vec3d(centre.x,c.origin.y,centre.z);
         FxLib.flash(m,centre.add(0,1.4,0),2.2*(1-Ease.smooth(t,0,.25f))+.2,0xf8e8ff,1-Ease.smooth(t,.05f,.25f));
-        FxLib.ring(m,ground.add(0,.06,0),.5+ringRadius*Ease.out(t,0,.3f),.6,0xffe0ff,.9f*(1-Ease.smooth(t,.1f,.4f)));
+        FxLib.ring(m,ground.add(0,.06,0),.5+ringRadius*Ease.out(t,0,.3f),.5,0xe8c8ff,.7f*(1-Ease.smooth(t,.1f,.4f)));
         FxLib.column(m,ground,6*H*Ease.out(t,0,.08f),.9*(1-u),0xffffff,.9f*(1-Ease.smooth(t,.08f,.3f)));
         for(int k=0;k<36;k++){
             double az=Ease.hash(k*3)*Math.PI*2,el=.4+1.1*Ease.hash(k*5),sp=(2+4*Ease.hash(k*7))*H;float life=(float)(.25+.25*Ease.hash(k*11)),v=t/life;if(v>=1)continue;
@@ -114,11 +114,11 @@ final class SparkSkill implements Fx.Skill {
     }
     /** Dark smoke rolling up above the flames. */
     static void smoke(Fx c,float t,Vec3d centre,double radius,float end){
-        if(t<.6f||t>=end)return;float a=.55f*Ease.smooth(t,.6f,1.2f)*(1-Ease.smooth(t,end-.8f,end));
+        if(t<.6f||t>=end)return;float a=.38f*Ease.smooth(t,.6f,1.2f)*(1-Ease.smooth(t,end-.8f,end));
         List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();
         for(int i=0;i<7;i++){
             double ang=Ease.hash(i*7+5)*Math.PI*2,r=radius*Math.sqrt(Ease.hash(i*13+6)),rise=(.8+.6*Ease.hash(i*3))*(t-.6)*.35*H;
-            pts.add(centre.add(Math.cos(ang)*r,1.6*H+rise+.4*Math.sin(t*1.3+i),Math.sin(ang)*r));sizes.add((.9+.6*Ease.hash(i*11+7))*(1+.15*(t-.6)));
+            pts.add(centre.add(Math.cos(ang)*r,1.7*H+rise+.4*Math.sin(t*1.3+i),Math.sin(ang)*r));sizes.add((.65+.45*Ease.hash(i*11+7))*(1+.12*(t-.6)));
         }
         KagenoFire.smoke(c.matrix,c.camera,pts,sizes,c.age,a);
     }

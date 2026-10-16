@@ -128,7 +128,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         if(t>=RELEASE&&t<RELEASE+.6f){
             float u=Ease.unit(t,RELEASE,RELEASE+.6f);Vec3d g=new Vec3d(burst.x,c.origin.y+.05,burst.z);
             FxLib.ring(m,g,.5+8*H*Ease.out(t,RELEASE,RELEASE+.6f),.7,0xe8e0ff,.85f*(1-u));
-            FxLib.ringPlane(m,burst,c.right,new Vec3d(0,1,0),.4+3*H*Ease.out(t,RELEASE,RELEASE+.4f),.3,0xd8ccff,.8f*(1-Ease.unit(t,RELEASE,RELEASE+.4f)));
+            FxLib.ringPlane(m,burst,c.right,new Vec3d(0,1,0),.4+1.8*H*Ease.out(t,RELEASE,RELEASE+.4f),.25,0xd8ccff,.7f*(1-Ease.unit(t,RELEASE,RELEASE+.4f)));
             FxLib.glow(m,g,2.5*H,0x7a50e8,.45f*(1-u));
         }
         if(t>=RELEASE+.05f&&t<RELEASE+.67f){

@@ -60,7 +60,7 @@ public final class SkillShots implements ClientModInitializer {
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
     private float clock(){
         float delta=mc.getTickDelta();
-        if("Q".equals(current))return (mc.world.getTime()-castTick)+delta;
+        if("Q".equals(current)||"M1".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
         else{StandClient.Cast best=null;for(var c:StandClient.CASTS.values())if(c.caster().equals(mc.player.getUuid())&&(best==null||c.start()>best.start()))best=c;if(best!=null&&mc.world.getTime()-castTick<400)return best.age(delta);}
         return (mc.world.getTime()-castTick)+delta;

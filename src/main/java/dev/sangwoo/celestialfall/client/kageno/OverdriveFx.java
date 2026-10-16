@@ -69,8 +69,8 @@ final class OverdriveFx {
                 m.softDisc(pt,.05,0xa15cf0,rest*.8f);
             }
             // The ground lit under the feet, embers rising off the body and arcs jumping between the shoulders.
-            FxLib.glow(m,b.feet().add(0,.04,0),1.3,0x6a38e0,.3f*rest*(float)(.8+.2*Math.sin(time*5)));
-            FxLib.embers(m,b.feet(),.6,2.2,10,time,.7f,.04,0xd8a8ff,.8f*rest,(int)p.getUuid().getMostSignificantBits());
+            FxLib.glow(m,b.feet().add(0,.04,0),1.5,0x7a44f0,.5f*rest*(float)(.8+.2*Math.sin(time*5)));
+            FxLib.embers(m,b.feet(),.7,2.4,14,time,.7f,.05,0xd8a8ff,rest,(int)p.getUuid().getMostSignificantBits());
             long step=(long)Math.floor(time*20);
             if(Ease.hash((int)step*7+(int)p.getUuid().getLeastSignificantBits())>.7)FxLib.zig(m,b.at(0,1.42,.36),b.at(0,1.42,-.36),4,.02,0xb890ff,.8f*rest,(int)step*13);
         }
