@@ -34,7 +34,13 @@ public abstract class GameRendererMixin {
         if(roll!=0)matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(roll));
     }
     @Inject(method="renderWorld",at=@At("TAIL"))
-    private void celestialfall$post(float delta,long limitTime,MatrixStack matrices,CallbackInfo ci) {
+    private void celestialfall$worldDone(float delta,long limitTime,MatrixStack matrices,CallbackInfo ci) { AnimePostProcessor.captureWorldProjection(); }
+    // The letterbox and the anime post chain (G's violet hit-view grade, impact frames, bloom) run after Veil's
+    // post-processing, right where the main framebuffer is bound again before the HUD. Veil copies the frame when
+    // the world finishes and writes that copy back after the entity outlines, so anything drawn on the main
+    // framebuffer in between (the end of renderWorld) would be erased.
+    @Inject(method="render",at=@At(value="INVOKE",target="Lnet/minecraft/client/gl/Framebuffer;beginWrite(Z)V",ordinal=0,shift=At.Shift.AFTER))
+    private void celestialfall$post(float delta,long limitTime,boolean tick,CallbackInfo ci) {
         if(TitleMapCamera.active())return;
         dev.sangwoo.celestialfall.client.atomic.AtomicAmbience.letterbox(delta);
         AnimePostProcessor.render(delta);

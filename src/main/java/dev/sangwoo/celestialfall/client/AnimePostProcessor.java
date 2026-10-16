@@ -17,8 +17,10 @@ public final class AnimePostProcessor {
     private static boolean failed;
     private static int monoProgram,monoVao,monoTexture,monoFbo,monoWidth,monoHeight;
     private static boolean monoFailed;
-    private static float focusX=.5f,focusY=.5f;
+    private static float focusX=.5f,focusY=.5f,worldM11=Float.NaN;
     private AnimePostProcessor() {}
+    /** Remembers the world projection at the end of the world pass; the chain itself runs later (after Veil), when other passes may have replaced it. */
+    public static void captureWorldProjection(){worldM11=com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix().m11();}
     public static boolean available(){return !failed;}
     public static void focus(float x,float y) { focusX=Math.max(.08f,Math.min(.92f,x));focusY=Math.max(.08f,Math.min(.92f,y)); }
     public static void render(float delta) {
@@ -137,7 +139,7 @@ public final class AnimePostProcessor {
     private static void rgb(String name,int c) { GL20.glUniform3f(GL20.glGetUniformLocation(program,name),((c>>16)&255)/255f,((c>>8)&255)/255f,(c&255)/255f); }
     /** Screen-space height (0 bottom, 1 top) of the horizon for the current camera pitch. */
     private static float horizon(MinecraftClient mc,float delta) {
-        float m11=com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix().m11();
+        float m11=Float.isNaN(worldM11)?com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrix().m11():worldM11;
         double pitch=Math.toRadians(Math.max(-89,Math.min(89,mc.gameRenderer.getCamera().getPitch())));
         return (float)Math.max(-1,Math.min(2,.5+.5*m11*Math.tan(pitch)));
     }
