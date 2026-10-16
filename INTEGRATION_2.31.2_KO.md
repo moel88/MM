@@ -1,5 +1,7 @@
 # 보탠드 2.31.2 — 새 2.30.3 업로드 기반 연동
 
+> **2.31.4 갱신**: G의 Veil 파이프라인 `celestialfall:atomic_overwhelm`이 여러 단계(밝은 부분 추출 → 가로·세로 블러 → 빛줄기 → 합성)로 늘어, 피해 범위 밖에서 기둥을 보는 모든 시청자에게 기둥 빛을 화면으로 번지게 합니다. 의존성 버전과 설치 JAR 6개는 그대로입니다. 기둥이 넓어지는 속도와 서버 피해 범위, 전용 맵 상자 점검은 [RELEASE_2.31.4_KO.md](RELEASE_2.31.4_KO.md)를 확인하세요.
+>
 > **2.31.3 갱신**: Veil이 처음으로 실제 스킬에 연결되었습니다. G 아토믹을 피해 범위 밖 가까이에서 볼 때 Veil 후처리 `celestialfall:atomic_overwhelm`이 서버 시전 시계에 맞춰 켜집니다. 기둥의 에너지 줄기는 보탠드 VFX 레이어(GPU 메시 + 정점 셰이더)로 만들었습니다. 또 2.31.2에서 Veil 때문에 보탠드 화면 처리(아토믹 내부 보라색 화면, 섬광 프레임, 블룸, 레터박스)가 지워지던 문제를 고쳤습니다. 자세한 내용은 [RELEASE_2.31.3_KO.md](RELEASE_2.31.3_KO.md)를 확인하세요. 아래 표에 2.31.3 기준 연결 상태를 정리했습니다.
 
 이번에 업로드한 **Botand 2.30.3**을 기준으로 Immersive Cinematics와 Veil을 연결했습니다. Player Animator와 GeckoLib 연동도 포함했습니다. Photon과 LDLib는 포함하지 않습니다. **Immersive Cinematics는 하나의 모드 이름**입니다.
@@ -25,11 +27,11 @@
 
 Veil의 Maven 배포 버전은 `1.0.0.296`이고 JAR 내부 Fabric 버전은 `1.0.0`입니다. 설치 파일 이름과 `DEPENDENCIES.lock.json`의 해시로 정확한 배포본을 구분합니다.
 
-### 실제 스킬 적용 현황 (2.31.3)
+### 실제 스킬 적용 현황 (2.31.4)
 
 | 대상 | 현재 구현 | 새 라이브러리 적용 |
 |---|---|---|
-| G 아토믹 외부 기둥 | 보탠드 VFX 레이어(`client/vfx`, `client/atomic/AtomicPillar`): GPU 원기둥 + 노이즈 재질 + 에너지 줄기 2,600개(정점 셰이더) | 근거리 압도 화면을 **Veil 후처리**로 실제 연결(`client/integration/AtomicOverwhelm`) |
+| G 아토믹 외부 기둥 | 보탠드 VFX 레이어(`client/vfx`, `client/atomic/AtomicPillar`): GPU 원기둥 + 노이즈 재질 + 에너지 줄기 2,600개(정점 셰이더) | 기둥 빛(빛무리·헤일로·빛줄기, 2.31.4)과 근거리 압도 화면을 **Veil 후처리** 여러 단계로 실제 연결(`client/integration/AtomicOverwhelm`) |
 | G 아토믹 내부(피격 시점) | 2.30.1 렌더러 + 보라색 화면(`AnimePostProcessor`) + 지진 | 적용하지 않음(유지 요구) |
 | G 외부 환경(하늘·조명·구름·충격파·레터박스·폭음) | 2.30.3 그대로 + 근거리 지진·시야 맥동 추가 | 없음 |
 | H 카메라 컷신 | 기존 `CinematicDirector` | Immersive Cinematics로 재제작하지 않음(예제만 있음) |
@@ -55,8 +57,9 @@ Veil의 Maven 배포 버전은 `1.0.0.296`이고 JAR 내부 Fabric 버전은 `1.
 - Veil 후처리 구성: `src/main/resources/assets/celestialfall/pinwheel/post/veil_preview.json`
 - Veil 셰이더: `src/main/resources/assets/celestialfall/pinwheel/shaders/program/veil_preview.fsh`
 - Veil 연동/수명 관리: `client/integration/VeilBridge.java`
-- G 근거리 압도 화면(Veil): `pinwheel/post/atomic_overwhelm.json`, `pinwheel/shaders/program/atomic_overwhelm.fsh`, `client/integration/AtomicOverwhelm.java`
+- G 기둥 빛·근거리 압도 화면(Veil): `pinwheel/post/atomic_overwhelm.json`, `pinwheel/shaders/program/atomic_bright.fsh`·`atomic_blur_h.fsh`·`atomic_blur_v.fsh`·`atomic_rays.fsh`·`atomic_overwhelm.fsh`, `client/integration/AtomicOverwhelm.java`
 - G 기둥 재질·에너지 줄기: `assets/celestialfall/shaders/core/vfx_energy.vsh/.fsh`, `client/atomic/AtomicPillar.java`, 시간·거리 함수 `client/atomic/AtomicStage.java`
+- G 기둥이 넓어지는 속도와 서버 피해 반경(같은 함수): `AtomicTimeline.java`(`OPEN_SPEED`, `openingRadius`, `damageRadius`)
 - 플레이어 동작: `assets/celestialfall/player_animation/botand_preview.json`
 - 기존 스킬 모션: `client/kageno/` 아래 기존 코드.
 

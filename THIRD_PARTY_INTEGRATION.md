@@ -13,7 +13,7 @@ Their licenses apply separately to their respective contents. Botand's existing 
 
 Original license notices and nested dependencies remain inside each upstream JAR.
 Exact downloaded file URLs and SHA-512 digests are in DEPENDENCIES.lock.json.
-Photon, LDLib and YSM are not distributed in 2.31.2 or 2.31.3.
+Photon, LDLib and YSM are not distributed in 2.31.2, 2.31.3 or 2.31.4.
 
 The original Veil artifact and its matching source artifact are supplied unchanged. The upstream 1.20 branch license and GPL text are in `third_party/veil`. The legacy JAR metadata license text is preserved as-is; it differs from the upstream branch license. Nested ImGui/LWJGL/Molang files keep their original notices. Veil can be replaced as a separate JAR.
 

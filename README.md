@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.31.3** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요.
+> **현재 통합본: Botand 2.31.4** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.31.4 — 아토믹 기둥을 달려서 피할 수 있게, 더 강한 빛
+
+G 기둥이 점화 뒤 초당 최대 4.5블록으로 넓어지고(기본 반경 28블록은 약 6.5초), 서버 피해 범위도 같이 넓어져 아직 맞지 않은 사람은 달리면 피할 수 있습니다. 수축은 그대로입니다. 밖에서 보는 모든 시청자에게 기둥 빛이 화면으로 번지는 Veil 빛 단계(빛무리·헤일로·광택·빛줄기)와 꼭대기 플레어·빛 입자를 더했습니다. 전용 맵 v1.3에서 상자 11곳의 위치·전환·복구를 실제 클라이언트로 점검했습니다. [RELEASE_2.31.4_KO.md](RELEASE_2.31.4_KO.md)를 확인하세요.
 
 # 보탠드 2.31.3 — 아토믹 에너지 기둥 대폭 개선
 
