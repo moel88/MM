@@ -15,9 +15,9 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  * aura flares as the body dips and raises the sword into a hanging guard over the head; at 0.5 s the world goes gray
  * and the blade turns cyan. Four fast cuts and one big wound-up sweep each leave a long white-lavender line frozen in
  * the air ahead, crossing into a star; the body settles low with the sword down. Colour returns at 1.77 s: the lines
- * go violet and vanish into a column of light (the server's four stored cuts at 1.8 s), a violet ray dome, then at
- * 1.9 s the big cut lands (5 hits in all): a white starburst and a magenta band exploding sideways along it with
- * streaks, sparks, pink stars, shards and smoke. Walking, the same arms and sword play over the walk cycle
+ * go violet and vanish into a column of light as the four stored cuts burst out as purple slashes (the server's four
+ * stored hits at 1.8 s), then at 1.9 s the big cut lands as one long purple slash (5 hits in all) with a white
+ * starburst and a magenta band exploding sideways along it with streaks, sparks, pink stars, shards and smoke. Walking, the same arms and sword play over the walk cycle
  * ({@link #walking}). Seconds after the cast.
  */
 final class TimeWalkerSkill implements Fx.Skill {
@@ -28,8 +28,8 @@ final class TimeWalkerSkill implements Fx.Skill {
     static final float[] CUTS={1.00f,1.14f,1.28f,1.42f,1.60f};
     /** The sword's aura (haze, glow, body, core): purple, and cyan while the world is stopped. */
     static final int[] AURA={0x5a1ab8,0x9447ff,0xd7a6ff,0xfff3ff},ICE={0x157f9e,0x3fd6f2,0xb6f5ff,0xffffff};
-    /** The cuts' white and lavender, the violet they turn, the release's magenta, pink, rose and dark violet. */
-    static final int WHITE=0xffffff,LAVENDER=0xdcc8ff,LILAC=0xb995ff,VIOLET=0x9a4dff,MAGENTA=0xff2bd6,PINK=0xff6fe2,ROSE=0xffbdf0,DUSK=0x3a1080;
+    /** The cuts' white and lavender, the violet they turn, the release's magenta, pink and rose. */
+    static final int WHITE=0xffffff,LAVENDER=0xdcc8ff,LILAC=0xb995ff,VIOLET=0x9a4dff,MAGENTA=0xff2bd6,PINK=0xff6fe2,ROSE=0xffbdf0;
     /** The guard and the tip, in blocks along the blade from the hand. */
     static final double GUARD=.24,TIP=1.35;
 
@@ -173,6 +173,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         if(t>=COCKS[0]&&t<STORED+.05f){strikes(c,m,t);frozenCuts(c,m,t);}
         rift(c,m,t,true);
         burst(c,m,t,true);
+        slashLight(c,m,t);
         band(c,m,t,true);
         hits(c,m,t);
     }
@@ -260,7 +261,7 @@ final class TimeWalkerSkill implements Fx.Skill {
      */
     static void frozenCuts(Fx c,EffectMesh m,float t){
         float fade=frozen(t);if(fade<=0)return;float tint=Ease.smooth(t,COLOR-.02f,COLOR+.05f),thin=1-.6f*tint;
-        int glow=mix(LAVENDER,VIOLET,tint),haze=mix(LILAC,0x8c3cff,tint);
+        int glow=mix(0xc9a2ff,VIOLET,tint),haze=mix(0x9d6cff,0x8c3cff,tint);
         var list=cuts(c);
         for(int i=0;i<list.size();i++){
             float k=drawn(t,i);if(k<=0)continue;var cut=list.get(i);Vec3d[] e=span(cut,k);Vec3d a=e[0],b=e[1];
@@ -301,7 +302,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         Vec3d x=crossing(c);float open=Ease.out(t,STORED-.01f,STORED+.025f),u=Ease.unit(t,STORED,STORED+.1f),a=open*(1-u*u);
         double r=(.5+1.7*open)*(1-.75*u*u);
         Vec3d lo=new Vec3d(x.x,Math.min(x.y-1,c.origin.y),x.z),hi=lo.add(0,8*(.7+.3*open),0),side=across(m.camera().subtract(x).multiply(1,0,1));
-        if(!additive){m.softLine(lo,hi,r*2.6,DUSK,.28f*a);return;}
+        if(!additive){m.softLine(lo,hi,r*2.6,0x8a40e0,.28f*a);return;}
         m.softLine(lo,hi,r*2.2,PINK,.4f*a);
         m.softLine(lo,hi,r*1.1,ROSE,.45f*a);
         m.needle(lo,hi,.55*(1-.6*u),.4,WHITE,a);
@@ -311,25 +312,12 @@ final class TimeWalkerSkill implements Fx.Skill {
             FxLib.zig(m,lo.add(side.multiply(s*r*1.05)),hi.add(side.multiply(s*r*.8)),9,.05,ROSE,.85f*a,(int)(t*40)+s*17);
         }
     }
-    /**
-     * The violet ray burst: a dome of dark violet rays and arcs rising from the ground round the crossing and swelling to
-     * 5.5 blocks, with a violet glow inside; then the white starburst.
-     */
+    /** A violet glow swelling round the crossing as the stored cuts land (the purple slashes are {@link #crescents}), then the white starburst. */
     static void burst(Fx c,EffectMesh m,float t,boolean additive){
         Vec3d x=crossing(c);
-        if(t>=STORED+.02f&&t<RELEASE+.18f){
-            float u=Ease.unit(t,STORED+.02f,RELEASE+.18f),r=(float)(1.2+4.3*Ease.out(t,STORED+.02f,RELEASE+.12f)),a=Ease.smooth(t,STORED+.02f,STORED+.045f)*(1-u*u);
-            Vec3d g=new Vec3d(x.x,c.origin.y+.05,x.z),n=m.camera().subtract(g).multiply(1,0,1);if(n.lengthSquared()<1e-4)n=c.f.negate();n=n.normalize();Vec3d p=n.crossProduct(Fx.UP).normalize();
-            for(int k=0;k<30;k++){
-                // Rays fanning over the dome (above the ground), a few leaning toward or away from the viewer.
-                double ang=(k+.6*Ease.hash(k*3))*Math.PI/29,len=r*(.6+.4*Ease.hash(k*5)),lean=(Ease.hash(k*7)-.5)*.8;
-                Vec3d d=p.multiply(Math.cos(ang)).add(0,Math.sin(ang),0).add(n.multiply(lean)).normalize();
-                Vec3d from=g.add(d.multiply(len*.3)),to=g.add(d.multiply(len));
-                if(additive)m.needle(from,to,.08,.3,LILAC,.6f*a);else m.needle(from,to,.36,.35,DUSK,.6f*a);
-            }
-            // Arcs of the dome's shell.
-            for(int i=0;i<3;i++){double rr=r*(.72+.14*i);if(additive)FxLib.ringPlane(m,g,p,Fx.UP,rr,.12,VIOLET,.55f*a*(1-.25f*i));else FxLib.ringPlane(m,g,p,Fx.UP,rr,.5,DUSK,.5f*a*(1-.25f*i));}
-            if(additive)m.softDisc(x,r*.8,VIOLET,.4f*a);else m.softDisc(x,r*.95,0x6a2bd0,.3f*a);
+        if(t>=STORED&&t<RELEASE+.18f){
+            float u=Ease.unit(t,STORED,RELEASE+.18f),r=(float)(1.2+3.3*Ease.out(t,STORED,RELEASE+.1f)),a=Ease.smooth(t,STORED,STORED+.03f)*(1-u*u);
+            if(additive){m.softDisc(x,r*.85,VIOLET,.4f*a);m.softDisc(x,r*.4,LILAC,.35f*a);}else m.softDisc(x,r,0x8a3cf0,.22f*a);
         }
         if(additive&&t>=RELEASE-.01f&&t<RELEASE+.16f){
             float u=Ease.unit(t,RELEASE,RELEASE+.16f),a=Ease.smooth(t,RELEASE-.01f,RELEASE+.015f)*(1-u);double s=1-.35*u;
@@ -413,6 +401,51 @@ final class TimeWalkerSkill implements Fx.Skill {
             Vec3d p=e.getLerpedPos(c.delta).add(0,e.getHeight()*.6,0);
             if(t<STORED+.16f){float u=Ease.unit(t,STORED,STORED+.16f),a=Ease.smooth(t,STORED-.01f,STORED+.01f)*(1-u);FxLib.flash(m,p,.9*(1-u)+.2,LAVENDER,a);FxLib.sparks(m,p,8,1.2,.04,WHITE,a,e.getId()*7,Ease.out(t,STORED,STORED+.12f));}
             if(t>=RELEASE-.01f){float u=Ease.unit(t,RELEASE,RELEASE+.25f),a=Ease.smooth(t,RELEASE-.01f,RELEASE+.01f)*(1-u);FxLib.flare(m,p,1.6*(1-.4*u),MAGENTA,a,45);m.softDisc(p,1.1,PINK,.5f*a);}
+        }
+    }
+    /** Chord direction (start end to end end), the way the slash bows, its radius and half-angle (radians) for cut i. */
+    static Vec3d[] slashPlane(Cut cut,int i){
+        Vec3d chord=cut.dir().multiply(-cut.from()),bulge=Fx.UP.subtract(chord.multiply(chord.dotProduct(Fx.UP)));
+        if(bulge.lengthSquared()<1e-4)bulge=new Vec3d(0,0,1);bulge=bulge.normalize();
+        return new Vec3d[]{chord,i%2==1?bulge.negate():bulge};
+    }
+    /** When slash i bursts out: the four stored cuts one after another from 1.8 s, the big cut with the final hit at 1.9 s. */
+    static float slashAt(int i){return i==CUTS.length-1?RELEASE-.01f:STORED+.018f*i;}
+    static float slashLife(int i){return i==CUTS.length-1?.5f:.32f;}
+    /**
+     * The cuts land as purple slashes along their frozen lines: at 1.8 s the four stored cuts burst out one after another
+     * (the server's four stored hits), at 1.9 s the big cut sweeps out as one long, wide slash (the final hit). Each is a
+     * brush crescent that sweeps out in a few frames and wears away from its tail.
+     */
+    @Override public void crescents(Fx c){
+        float t=c.sec;if(t<STORED-.01f||t>=RELEASE+.5f)return;
+        var list=cuts(c);
+        for(int i=0;i<list.size();i++){
+            boolean big=i==list.size()-1;float age=t-slashAt(i),life=slashLife(i);if(age<0||age>=life)continue;
+            var cut=list.get(i);Vec3d[] pl=slashPlane(cut,i);
+            double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h),deg=Math.toDegrees(h);
+            Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h)));
+            float grow=Ease.out(age,0,big?.07f:.05f),erase=Ease.smooth(age,big?.14f:.1f,life),a=Ease.smooth(age,0,.015f);
+            KagenoFire.crescent(o,pl[1],pl[0],r,r*(big?.3:.26),-deg,2*deg*grow,3,i*3+7,erase,.7f,a,.15);
+            if(big)KagenoFire.crescent(o,pl[1],pl[0],r*.9,r*.12,-deg+6,(2*deg-12)*grow,5,i*3+8,erase,.7f,.8f*a,.1);
+        }
+    }
+    /** Light on the purple slashes: a flash running with each one's head and sparks thrown off it. */
+    static void slashLight(Fx c,EffectMesh m,float t){
+        if(t<STORED-.01f||t>=RELEASE+.3f)return;
+        var list=cuts(c);
+        for(int i=0;i<list.size();i++){
+            boolean big=i==list.size()-1;float age=t-slashAt(i);if(age<0||age>=.22f)continue;
+            var cut=list.get(i);Vec3d[] pl=slashPlane(cut,i);
+            double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h);
+            float grow=Ease.out(age,0,big?.07f:.05f),u=age/.22f;double ang=-h+2*h*grow;
+            Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h))),head=o.add(pl[1].multiply(Math.cos(ang)*r)).add(pl[0].multiply(Math.sin(ang)*r));
+            FxLib.flash(m,head,(big?1.5:.8)*(1-u)+.2,0xc77dff,(1-u)*Ease.smooth(age,0,.015f));
+            for(int k=0;k<(big?12:6);k++){
+                Vec3d d=pl[0].multiply(.8).add((Ease.hash(i*37+k*3)-.5)*1.2,(Ease.hash(i*41+k*5)-.4)*1.2,(Ease.hash(i*43+k*7)-.5)*1.2).normalize();
+                Vec3d p=head.add(d.multiply((big?3:1.8)*u*(.5+.5*Ease.hash(i*47+k))));
+                m.needle(p,p.add(d.multiply(.3)),.06,.5,k%2==0?WHITE:0xd9a8ff,(1-u)*(1-u));
+            }
         }
     }
     /** Fire-shader cells on fixed planes: the purple aura licking off the sword, and the magenta smoke the band leaves hanging. */

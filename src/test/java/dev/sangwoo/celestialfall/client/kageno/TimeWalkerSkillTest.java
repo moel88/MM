@@ -59,6 +59,16 @@ class TimeWalkerSkillTest {
         }
         assertEquals(TimeWalkerSkill.CUTS.length,TimeWalkerSkill.SPEC.length);
     }
+    /** The cuts land as purple slashes with the server's hits: the four stored ones one after another from 1.8 s, the big one with the final hit. */
+    @Test void slashesLandWithTheHits(){
+        int n=TimeWalkerSkill.CUTS.length-1;
+        for(int i=0;i<n;i++){
+            assertTrue(TimeWalkerSkill.slashAt(i)>=TimeWalkerSkill.STORED&&TimeWalkerSkill.slashAt(i)<TimeWalkerSkill.RELEASE-.03f,"stored slash "+i);
+            if(i>0)assertTrue(TimeWalkerSkill.slashAt(i)>TimeWalkerSkill.slashAt(i-1),"one after another");
+            assertTrue(TimeWalkerSkill.slashLife(n)>TimeWalkerSkill.slashLife(i));
+        }
+        assertEquals(TimeWalkerSkill.RELEASE,TimeWalkerSkill.slashAt(n),.02);
+    }
     /** The cuts are long lines lying across the front, crossing at many angles (never straight at the caster). */
     @Test void cutsLieAcrossTheFrontAndCross(){
         double low=0,high=0;
