@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.33.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.33.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.33.1 — R 검격을 보라 검격 4개 + 마지막 큰 검격 1개로
+
+R이 터질 때 보이던 진보라(검게 보이던) 빛살 반구를 없애고, 베기 4번이 1.8초에 보라 검격 4개로 차례로 터지고(베기 4타) 1.9초 마지막 큰 베기가 길고 굵은 보라 검격 1개로 터지게(마지막 1타) 했습니다. 허공에 멈춘 베기 선도 보랏빛으로 바꿨습니다. 피해·판정·쿨타임은 2.33.0 그대로입니다. [RELEASE_2.33.1_KO.md](RELEASE_2.33.1_KO.md)를 확인하세요.
 
 # 보탠드 2.33.0 — R(시간을 걷는 자) 리워크와 대폭 강화
 
