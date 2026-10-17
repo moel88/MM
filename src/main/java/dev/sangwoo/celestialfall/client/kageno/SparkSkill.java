@@ -99,7 +99,7 @@ final class SparkSkill implements Fx.Skill {
             if(Ease.hash((int)step*5+k)<.45)continue;
             Vec3d p=ground.add((Ease.hash((int)step*7+k)-.5)*radius*1.6,.8*H+1.2*H*Ease.hash((int)step*11+k),(Ease.hash((int)step*13+k)-.5)*radius*1.6);
             Vec3d q=p.add((Ease.hash((int)step*17+k)-.5)*1.8,(Ease.hash((int)step*19+k)-.3)*1.2,(Ease.hash((int)step*23+k)-.5)*1.8);
-            BarrageSkill.zig(m,p,q,4,.03,0xd0a8ff,.85f*a,(int)step*29+k);
+            FxLib.zig(m,p,q,4,.03,0xd0a8ff,.85f*a,(int)step*29+k);
         }
         if(t>=dieStart-.1f&&t<dieStart+.4f){float u=Ease.unit(t,dieStart-.1f,dieStart+.4f);FxLib.ring(m,ground,radius*.7+radius*Ease.out(t,dieStart-.1f,dieStart+.4f),.4,0xc8a0ff,.5f*(1-u));}
     }

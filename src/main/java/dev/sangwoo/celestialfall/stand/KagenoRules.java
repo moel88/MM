@@ -17,6 +17,8 @@ public final class KagenoRules {
     /** E: barrage ticks 0.262 s apart from 0.8 s, finisher (guard break) with the crescent at 2.9 s. */
     static final int[] E_TICKS={16,21,26,32,37,42,47};
     public static final int E_FINISH=58;
+    /** E's barrage ticks (a copy). */
+    public static int[] eTicks(){return E_TICKS.clone();}
     /** R: the world is gray from 0.5 s; the four stored cuts land together as colour returns, then the release. */
     public static final int R_GRAY=10,R_COLOR=35,R_STORED=36,R_RELEASE=38;
     /** Y: the stomp (hit 1) at 0.5 s, the flash (hit 2, guard break) at 1.05 s, the launch 0.5 s later. */

@@ -8,7 +8,7 @@ public final class KagenoSkills {
     private static final Fx.Skill[] SKILLS=new Fx.Skill[16];
     static {
         SKILLS[M1]=new ComboSkill();
-        SKILLS[E]=new BarrageSkill();
+        SKILLS[E]=new NeonThrustSkill();
         SKILLS[R]=new TimeWalkerSkill();
         SKILLS[T]=new SparkSkill();
         SKILLS[RUSH]=new ThroughSkill();

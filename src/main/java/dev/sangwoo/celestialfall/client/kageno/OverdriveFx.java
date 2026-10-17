@@ -34,8 +34,8 @@ final class OverdriveFx {
         if(s<.3f){
             float a=Ease.smooth(s,0,.06f)*(1-Ease.smooth(s,.12f,.3f));
             Vec3d mid=b.at(0,.95,0);
-            BarrageSkill.ellipse(m,mid,1.2,1.6,0xf4ecff,a*.6f);
-            for(int k=0;k<4;k++)BarrageSkill.ellipse(m,mid,.55-.04*k,1.1-.04*k,0xffffff,a);
+            FxLib.ellipse(m,mid,1.2,1.6,0xf4ecff,a*.6f);
+            for(int k=0;k<4;k++)FxLib.ellipse(m,mid,.55-.04*k,1.1-.04*k,0xffffff,a);
         }
         // Activation shockwave: a ring over the ground, a column of light and sparks out of the body.
         if(s<.45f){

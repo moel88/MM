@@ -76,7 +76,7 @@ final class ThroughSkill implements Fx.Skill {
         // Dash: afterimages trailing the body, a shockwave at the start and sparks skipping along the ground.
         if(t>=D&&t<D+.4f){
             float fade=1-Ease.smooth(t,D+.25f,D+.4f);
-            for(int i=1;i<=6;i++){Vec3d gp=c.origin.lerp(pos,Math.max(0,1-i*.12));BarrageSkill.ellipse(m,gp.add(0,.75,0),.45,.95,0xb088ff,(1-i/7f)*.5f*fade);}
+            for(int i=1;i<=6;i++){Vec3d gp=c.origin.lerp(pos,Math.max(0,1-i*.12));FxLib.ellipse(m,gp.add(0,.75,0),.45,.95,0xb088ff,(1-i/7f)*.5f*fade);}
             FxLib.ring(m,c.origin.add(0,.05,0),.5+5*Ease.out(t,D,D+.3f),.5,0xe0c8ff,.8f*(1-Ease.unit(t,D,D+.3f)));
             for(int k=0;k<14;k++){float born=D+k*.02f,u=(t-born)/.3f;if(u<0||u>=1)continue;Vec3d p=c.origin.add(c.f.multiply(1+k*1.6)).add(c.right.multiply((Ease.hash(k*3)-.5)*1.2)).add(0,.1+u*1.5,0);m.star(p,.07,0xf0d8ff,1-u);}
         }
@@ -96,7 +96,7 @@ final class ThroughSkill implements Fx.Skill {
         // Finish: a violet aura around the body and embers drifting up.
         if(t>=CUT+.1f&&t<D+1.6f){
             float a=Ease.smooth(t,CUT+.1f,CUT+.2f)*(1-Ease.smooth(t,D+1.2f,D+1.6f));
-            BarrageSkill.ellipse(m,pos.add(0,.9,0),.9,1.3,0x8a50f0,.3f*a);FxLib.embers(m,pos,2.5*H,2.5*H,20,t-CUT,.8f,.06,0xffb0ff,a,13);
+            FxLib.ellipse(m,pos.add(0,.9,0),.9,1.3,0x8a50f0,.3f*a);FxLib.embers(m,pos,2.5*H,2.5*H,20,t-CUT,.8f,.06,0xffb0ff,a,13);
         }
         // Comets shooting ahead along the dash line just before the dash.
         if(t>=B+.8f&&t<D){

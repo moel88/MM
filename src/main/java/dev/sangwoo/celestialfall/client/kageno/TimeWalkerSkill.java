@@ -119,9 +119,9 @@ final class TimeWalkerSkill implements Fx.Skill {
         // ragged outline, 5 frames, then it collapses into the release line.
         if(t>=RELEASE&&t<RELEASE+.13f){
             float a=1-Ease.smooth(t,RELEASE+.05f,RELEASE+.13f);double s=1-.6*Ease.smooth(t,RELEASE+.05f,RELEASE+.13f);
-            BarrageSkill.ellipse(m,burst,1.6*H*s,1.0*H*s,0x596bd0,a*.35f);
-            BarrageSkill.ellipse(m,burst,1.4*H*s,.88*H*s,0xc7b7fb,a*.6f);
-            BarrageSkill.ellipse(m,burst,1.2*H*s,.72*H*s,0xfbfdf8,a);BarrageSkill.ellipse(m,burst,.9*H*s,.55*H*s,0xffffff,a);
+            FxLib.ellipse(m,burst,1.6*H*s,1.0*H*s,0x596bd0,a*.35f);
+            FxLib.ellipse(m,burst,1.4*H*s,.88*H*s,0xc7b7fb,a*.6f);
+            FxLib.ellipse(m,burst,1.2*H*s,.72*H*s,0xfbfdf8,a);FxLib.ellipse(m,burst,.9*H*s,.55*H*s,0xffffff,a);
             for(int k=0;k<14;k++){double az=k*Math.PI/7+Ease.hash(k)*.3,len=(.7+.8*Ease.hash(k*3))*H*s;Vec3d d=c.right.multiply(Math.cos(az)).add(0,Math.sin(az)*.6,0);m.needle(burst,burst.add(d.multiply(len)),.3,.2,0xffffff,a);}
         }
         // Release shockwave: a ground ring racing out to 8 H, a vertical ring on the facing and a violet ground glow.

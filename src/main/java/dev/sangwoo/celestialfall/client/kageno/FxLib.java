@@ -3,7 +3,7 @@ package dev.sangwoo.celestialfall.client.kageno;
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import net.minecraft.util.math.Vec3d;
 
-/** Shared effect primitives for the Kageno skills: rings, flashes, converging motes, embers, columns, sword trails. */
+/** Shared effect primitives for the Kageno skills: rings, flashes, converging motes, embers, columns, sword trails, bolts, glows. */
 final class FxLib {
     private FxLib(){}
     static final Vec3d UP=new Vec3d(0,1,0);
@@ -85,5 +85,23 @@ final class FxLib {
         }
     }
     /** Jagged bolt from a to b with {@code n} kinks. */
-    static void zig(EffectMesh m,Vec3d a,Vec3d b,int n,double width,int rgb,float alpha,int seed){BarrageSkill.zig(m,a,b,n,width,rgb,alpha,seed);}
+    static void zig(EffectMesh m,Vec3d a,Vec3d b,int n,double width,int rgb,float alpha,int seed){
+        Vec3d prev=a,d=b.subtract(a);double len=d.length();if(len<1e-4)return;
+        Vec3d side=d.crossProduct(new Vec3d(0,1,0));if(side.lengthSquared()<1e-6)side=new Vec3d(1,0,0);side=side.normalize();Vec3d up=side.crossProduct(d).normalize();
+        for(int i=1;i<=n;i++){
+            double t=i/(double)n;Vec3d p=a.add(d.multiply(t));
+            if(i<n)p=p.add(side.multiply((Ease.hash(seed*13+i)-.5)*len*.22)).add(up.multiply((Ease.hash(seed*7+i)-.5)*len*.12));
+            m.glowLine(prev,p,width,rgb,alpha);prev=p;
+        }
+    }
+    /** Camera-facing elliptical glow, {@code rx} across and {@code ry} up (blocks). */
+    static void ellipse(EffectMesh m,Vec3d p,double rx,double ry,int rgb,float alpha){
+        if(alpha<=0||rx<=0)return;
+        Vec3d n=m.camera().subtract(p).normalize(),u=n.crossProduct(new Vec3d(0,1,0));if(u.lengthSquared()<1e-4)u=new Vec3d(1,0,0);u=u.normalize();Vec3d v=u.crossProduct(n).normalize();
+        for(int i=0;i<24;i++){
+            double a=i*Math.PI/12,b=(i+1)*Math.PI/12;
+            Vec3d pa=p.add(u.multiply(Math.cos(a)*rx)).add(v.multiply(Math.sin(a)*ry)),pb=p.add(u.multiply(Math.cos(b)*rx)).add(v.multiply(Math.sin(b)*ry));
+            m.vertex(p,rgb,alpha);m.vertex(pa,rgb,0);m.vertex(pb,rgb,0);m.vertex(p,rgb,alpha);
+        }
+    }
 }
