@@ -1,30 +1,33 @@
 package dev.sangwoo.celestialfall.client.kageno;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import org.joml.Quaternionf;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Golden samples were generated from the user's untouched 2.28.1 R/Anim/R6 sources. */
+/**
+ * R keeps every authored pose on its own time (the motion design of 2.28.1); between the keys it now moves on
+ * smooth curves. 2.28.1's in-betweens flipped the sword arm by up to 179 degrees in an instant at the cuts.
+ */
 class RMotionPreservationTest {
-    @Test void everyRJointAndRootMatches2281At120Hz() throws Exception {
-        try(var in=getClass().getResourceAsStream("/kageno/r_2_28_1.csv")){
-            assertNotNull(in);
-            var lines=new BufferedReader(new InputStreamReader(in,StandardCharsets.UTF_8)).lines().toList();
-            int count=0;
-            for(String line:lines){
-                if(line.startsWith("#"))continue;
-                String[] values=line.split(",");float sec=Float.parseFloat(values[0]);
-                var f=TimeWalkerSkill.CLIP.frame(sec);
-                double[] actual=new double[25];int n=0;
-                actual[n++]=f.grip();actual[n++]=f.fw();actual[n++]=f.up();actual[n++]=f.rt();
-                actual[n++]=f.yaw();actual[n++]=f.pitch();actual[n++]=f.roll();
-                for(float[] joint:f.joints().joint)for(float angle:joint)actual[n++]=angle;
-                for(int j=0;j<n;j++)assertEquals(Double.parseDouble(values[j+1]),actual[j],.00001,"R at "+sec+", component "+j);
-                count++;
-            }
-            assertEquals(361,count);
+    static Quaternionf q(float[] e){float k=(float)Math.PI/180;return new Quaternionf().rotationZYX(e[2]*k,e[1]*k,e[0]*k);}
+    static double angle(float[] a,float[] b){return Math.toDegrees(2*Math.acos(Math.min(1,Math.abs(q(a).dot(q(b))))));}
+    @Test void everyAuthoredRPoseIsReachedOnItsKey(){
+        var clip=TimeWalkerSkill.CLIP;float[] t=clip.times();
+        assertEquals(19,t.length);
+        assertArrayEquals(new float[]{1.018f,1.218f,1.384f,1.535f},TimeWalkerSkill.CUTS);
+        for(int k=0;k<t.length;k++){
+            var f=clip.frame(t[k]);var key=clip.key(k);
+            for(int j=0;j<6;j++)assertTrue(angle(f.joints().joint[j],key.joints().joint[j])<.1,"joint "+j+" at key "+k);
+            assertEquals(key.grip(),f.grip(),1e-3);assertEquals(key.fw(),f.fw(),1e-5);assertEquals(key.up(),f.up(),1e-5);
+            assertEquals(key.yaw(),f.yaw(),1e-3);assertEquals(key.pitch(),f.pitch(),1e-3);
+        }
+    }
+    @Test void rMovesWithoutJumps(){
+        var clip=TimeWalkerSkill.CLIP;float h=1/960f;var prev=clip.frame(0);
+        for(float t=h;t<=clip.length();t+=h){
+            var next=clip.frame(t);
+            for(int j=0;j<6;j++)assertTrue(angle(prev.joints().joint[j],next.joints().joint[j])<12,"joint "+j+" jumps at "+t);
+            prev=next;
         }
     }
 }

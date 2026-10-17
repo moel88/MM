@@ -23,12 +23,6 @@ public final class R6 {
     public record Dir(double rt,double up,double fw){
         public Dir norm(){double l=Math.sqrt(rt*rt+up*up+fw*fw);return l<1e-9?new Dir(0,-1,0):new Dir(rt/l,up/l,fw/l);}
         public double dot(Dir o){return rt*o.rt+up*o.up+fw*o.fw;}
-        static Dir lerpLegacy(Dir a,Dir b,double t){
-            double d=Math.max(-1,Math.min(1,a.dot(b)));
-            if(d>.9995)return new Dir(a.rt+(b.rt-a.rt)*t,a.up+(b.up-a.up)*t,a.fw+(b.fw-a.fw)*t).norm();
-            double th=Math.acos(d),s=Math.sin(th),wa=Math.sin((1-t)*th)/s,wb=Math.sin(t*th)/s;
-            return new Dir(a.rt*wa+b.rt*wb,a.up*wa+b.up*wb,a.fw*wa+b.fw*wb).norm();
-        }
         static Dir lerp(Dir a,Dir b,double t){
             if(t<=0)return a;if(t>=1)return b;
             double d=Math.max(-1,Math.min(1,a.dot(b)));
@@ -69,20 +63,13 @@ public final class R6 {
         public Pose lLeg(double elev,double az){Pose p=copy();p.lLeg=dir(elev,az);return p;}
         /** Direction the katana blade points, in body space. */
         public Pose blade(double elev,double az){Pose p=copy();p.blade=dir(elev,az);return p;}
+        /** In-between of two authored poses (for building keys; clips interpolate solved joints instead). */
         public static Pose lerp(Pose a,Pose b,float t){
-            return interpolate(a,b,t,false);
-        }
-        static Pose lerpLegacy(Pose a,Pose b,float t){return interpolate(a,b,t,true);}
-        private static Pose interpolate(Pose a,Pose b,float t,boolean legacy){
             Pose p=new Pose();
             p.fw=a.fw+(b.fw-a.fw)*t;p.up=a.up+(b.up-a.up)*t;p.rt=a.rt+(b.rt-a.rt)*t;
             p.yaw=a.yaw+(b.yaw-a.yaw)*t;p.pitch=a.pitch+(b.pitch-a.pitch)*t;p.roll=a.roll+(b.roll-a.roll)*t;
             p.headYaw=a.headYaw+(b.headYaw-a.headYaw)*t;p.headPitch=a.headPitch+(b.headPitch-a.headPitch)*t;p.headRoll=a.headRoll+(b.headRoll-a.headRoll)*t;
-            if(legacy){
-                p.rArm=Dir.lerpLegacy(a.rArm,b.rArm,t);p.lArm=Dir.lerpLegacy(a.lArm,b.lArm,t);p.rLeg=Dir.lerpLegacy(a.rLeg,b.rLeg,t);p.lLeg=Dir.lerpLegacy(a.lLeg,b.lLeg,t);p.blade=Dir.lerpLegacy(a.blade,b.blade,t);
-            }else{
-                p.rArm=Dir.lerp(a.rArm,b.rArm,t);p.lArm=Dir.lerp(a.lArm,b.lArm,t);p.rLeg=Dir.lerp(a.rLeg,b.rLeg,t);p.lLeg=Dir.lerp(a.lLeg,b.lLeg,t);p.blade=Dir.lerp(a.blade,b.blade,t);
-            }
+            p.rArm=Dir.lerp(a.rArm,b.rArm,t);p.lArm=Dir.lerp(a.lArm,b.lArm,t);p.rLeg=Dir.lerp(a.rLeg,b.rLeg,t);p.lLeg=Dir.lerp(a.lLeg,b.lLeg,t);p.blade=Dir.lerp(a.blade,b.blade,t);
             return p;
         }
     }
@@ -120,12 +107,30 @@ public final class R6 {
         Matrix3f m=new Matrix3f().setColumn(0,x).setColumn(1,y).setColumn(2,z);
         return new Quaternionf().setFromNormalized(m);
     }
-    /** Minecraft ModelPart order is Rz·Ry·Rx: returns {pitch,yaw,roll} in degrees. */
+    /**
+     * Minecraft ModelPart order is Rz·Ry·Rx: returns {pitch,yaw,roll} in degrees. Read off the rotation matrix; at
+     * gimbal lock (yaw ±90°, a limb straight out to the side) roll is set to 0 and pitch takes the whole remaining
+     * turn, so the angles always rebuild the same rotation.
+     */
     static float[] euler(Quaternionf q){
-        double pitch=Math.atan2(2*(q.w*q.x+q.y*q.z),1-2*(q.x*q.x+q.y*q.y));
-        double yaw=Math.asin(Math.max(-1,Math.min(1,2*(q.w*q.y-q.z*q.x))));
-        double roll=Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z));
+        double w=q.w,x=q.x,y=q.y,z=q.z;
+        double r00=1-2*(y*y+z*z),r01=2*(x*y-w*z),r10=2*(x*y+w*z),r11=1-2*(x*x+z*z),r20=2*(x*z-w*y),r21=2*(y*z+w*x),r22=1-2*(x*x+y*y);
+        double pitch,yaw,roll;
+        if(Math.abs(r20)<.99999){yaw=Math.asin(-r20);pitch=Math.atan2(r21,r22);roll=Math.atan2(r10,r00);}
+        else if(r20<0){yaw=Math.PI/2;roll=0;pitch=Math.atan2(r01,r11);}
+        else{yaw=-Math.PI/2;roll=0;pitch=Math.atan2(-r01,r11);}
         return new float[]{(float)Math.toDegrees(pitch),(float)Math.toDegrees(yaw),(float)Math.toDegrees(roll)};
+    }
+    /**
+     * Front of a limb swung from hanging straight down to {@code d} without twisting about itself: forward for a
+     * hanging limb, up for one raised straight ahead, unchanged for one raised out to the side. Continuous for every
+     * direction but straight up (where it faces backward, as when raised over the front).
+     */
+    static Dir swingFront(Dir d){
+        Vector3f to=new Vector3f((float)d.rt,(float)d.up,(float)d.fw).normalize();
+        if(to.y>.9999f)return new Dir(0,0,-1);
+        var f=new Quaternionf().rotationTo(new Vector3f(0,-1,0),to).transform(new Vector3f(0,0,1));
+        return new Dir(f.x,f.y,f.z);
     }
     private static Dir perpendicular(Dir v,Dir axis){double d=v.dot(axis);return new Dir(v.rt-axis.rt*d,v.up-axis.up*d,v.fw-axis.fw*d);}
 
@@ -138,12 +143,13 @@ public final class R6 {
         Dir arm=p.rArm.norm(),blade=p.blade.norm();
         Dir side=perpendicular(blade,arm);
         double sideLen=Math.sqrt(side.dot(side));
-        Dir front=sideLen>1e-3?side.norm():perpendicular(FORWARD,arm);
+        Dir front=sideLen>1e-3?side.norm():swingFront(arm);
         float grip=(float)-Math.toDegrees(Math.atan2(blade.dot(arm),sideLen));
         m.joint[MotionPose.RIGHT_ARM]=euler(limb(arm,front));
-        m.joint[MotionPose.LEFT_ARM]=euler(limb(p.lArm.norm(),FORWARD));
-        m.joint[MotionPose.RIGHT_LEG]=euler(limb(p.rLeg.norm(),FORWARD));
-        m.joint[MotionPose.LEFT_LEG]=euler(limb(p.lLeg.norm(),FORWARD));
+        // The free arm and the legs swing without twisting, so they never flip when they point ahead (kicks, reaches).
+        m.joint[MotionPose.LEFT_ARM]=euler(limb(p.lArm.norm(),swingFront(p.lArm.norm())));
+        m.joint[MotionPose.RIGHT_LEG]=euler(limb(p.rLeg.norm(),swingFront(p.rLeg.norm())));
+        m.joint[MotionPose.LEFT_LEG]=euler(limb(p.lLeg.norm(),swingFront(p.lLeg.norm())));
         return new Frame(m,grip,p.fw,p.up,p.rt,p.yaw,p.pitch,p.roll);
     }
 
@@ -161,7 +167,8 @@ public final class R6 {
     }
     /** Effects use the same solved sword and arm directions as the rendered model. */
     public static Pose poseOf(Frame f){
-        Pose p=pose().at(f.fw,f.up,f.rt).body(f.yaw,f.pitch,f.roll);
+        float[] h=f.joints.joint[MotionPose.HEAD];
+        Pose p=pose().at(f.fw,f.up,f.rt).body(f.yaw,f.pitch,f.roll).head(h[1],h[0],h[2]);
         p.rArm=direction(f.joints.joint[MotionPose.RIGHT_ARM]);p.lArm=direction(f.joints.joint[MotionPose.LEFT_ARM]);
         p.rLeg=direction(f.joints.joint[MotionPose.RIGHT_LEG]);p.lLeg=direction(f.joints.joint[MotionPose.LEFT_LEG]);
         p.blade=bladeOf(f);return p;
