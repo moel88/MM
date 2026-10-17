@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.31.6** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.31.7** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.31.7 — 아토믹이 넓어질 때의 가장자리 효과와 벽 근처 강한 흔들림
+
+G 기둥이 넓어지는 동안 벽 발치가 땅을 찢고 나아갑니다: 흰 접촉선과 바깥으로 번지는 빛·균열, 벽을 덮는 빛 막, 튀어 나가는 흙덩이, 굴러가는 먼지 벽, 불꽃과 전기 아크, 벽이 닿는 순간 솟는 분화구. 최대 반경에 닿으면 바닥 충격파 고리가 퍼집니다. 기둥 표면 바깥 8블록 안에서는 화면이 세게 흔들립니다. 피해·범위·속도·감속과 기둥 안 피격 시점은 그대로입니다. [RELEASE_2.31.7_KO.md](RELEASE_2.31.7_KO.md)를 확인하세요.
 
 # 보탠드 2.31.6 — 아토믹 감속을 몬스터에게도 실제 25%로
 
