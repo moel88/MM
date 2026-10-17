@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.32.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.32.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.32.1 — 불꽃이 카메라를 따라 돌지 않게, T홀드 마무리를 베기로
+
+T 불꽃·연기·불꽃 조각, T홀드 연기, 평타 안개, Q 불꽃이 카메라 쪽으로 돌아서지 않습니다. 그림은 2.32.0 그대로이고, 마인크래프트 불 블록처럼 월드에 고정된 교차 평면에 그립니다. T홀드 마무리는 파란 원판 대신, 허리 높이에서 몸을 휘감으며 도는 짙은 파란 칼날 초승달 베기로 바꿨습니다. 피해·판정·쿨타임은 그대로입니다. [RELEASE_2.32.1_KO.md](RELEASE_2.32.1_KO.md)를 확인하세요.
 
 # 보탠드 2.32.0 — 상용 액션 게임 수준의 모션, 평타·T·T홀드를 참고 영상대로
 
