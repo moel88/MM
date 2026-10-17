@@ -1,5 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
-FILM_SKILL=G|E picks the stage names in the caption, FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
+FILM_SKILL=G|E|T|RUSH|BASE picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -34,6 +34,14 @@ elif csv_path:
         for r in csv.DictReader(fh):
             if r['name'] == actor: rows[int(r['age'])] = r
 
+# Stage captions per skill: (until second, name), checked in order.
+STAGES = {
+    'T': [(.65, '준비 · 왼손 별빛'), (.95, '폭발 · 검은 연기 → 파랑·보라'), (4.2, '자홍 불꽃 · 별빛 (3.5초간 13회 타격)'), (4.85, '분홍 불꽃 조각으로 사그라듦')],
+    'RUSH': [(.78, '준비 (T와 같음)'), (.86, '자세'), (1.62, '검은 연기 날개 · 세 번 베기 · 파란 검기 3발'), (1.74, '칼을 세움'),
+             (1.94, '분홍 섬광 돌진'), (2.46, '세로 고리 · 분홍 구슬'), (3.1, '회전 베기 (2.6초 마무리 타격)'), (3.7, '분홍 불꽃 · 칼을 세워 듦')],
+    'BASE': [(.5, '서 있기'), (3.4, '점프 · 공중 자세 · 착지'), (5.0, '피격 움찔 (2번)'), (7.5, '평타')],
+}
+
 def stage(t):
     if SKILL == 'E':
         if t < .48: return '네온 점화 · 찌르기 자세'
@@ -42,6 +50,11 @@ def stage(t):
         if t < 2.88: return '올려베기'
         if t < 3.35: return '폭발 · 빛기둥 (2.9초 마무리 타격)'
         return '끝'
+    if SKILL in STAGES:
+        for until, name in STAGES[SKILL]:
+            if t < until: return name
+        return '끝'
+    if SKILL != 'G': return ''
     if t < 5.59: return '영창'
     if t < 5.95: return '점화'
     if t < 12.06: return '기둥이 넓어지는 중 (초당 최대 4.5블록)'
@@ -81,7 +94,8 @@ def actor_line(t):
 def caption(img, t):
     d = ImageDraw.Draw(img, 'RGBA')
     speed = '' if SPEED == 1 else f' · {SPEED:g}배속'
-    lines = [(title, big, (255, 255, 255)), (f'시전 후 {max(0, t):.{2 if SKILL == "E" else 1}f}초 · {stage(t)}{speed}', small, (255, 230, 120))]
+    name = stage(t)
+    lines = [(title, big, (255, 255, 255)), (f'시전 후 {max(0, t):.{2 if SKILL == "E" else 1}f}초{" · " + name if name else ""}{speed}', small, (255, 230, 120))]
     text, color = actor_line(t)
     y = 10
     for s, font, col in lines:

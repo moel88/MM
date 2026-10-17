@@ -34,7 +34,7 @@ final class SparkSkill implements Fx.Skill {
         k(.045,LIFT),
         k(.085,SWEEP,Anim.Ease.LINEAR),
         // The sweep runs out into the plant; the left hand is still rising.
-        k(.14,PLANT.lArm(28,-40).body(-52,26,0),Anim.Ease.OUT),
+        k(.14,PLANT.lArm(28,-40).body(-52,26,0)),
         k(.24,PLANT),
         // Moving hold: the raised hand keeps reaching while the body sinks a little.
         k(B-.04,PLANT.body(-57,27,0).at(0,-.11,0).lArm(46,-30)),
