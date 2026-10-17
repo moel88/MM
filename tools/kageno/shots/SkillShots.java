@@ -36,7 +36,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * or a cast age in ticks) it runs straight away from the spot at SPEED blocks per second on the ground, through the
  * game's own movement (so G's hold slows it), stopping 60 blocks out. "track=NAME:MODE:DIST:UP:SIDE[:FOV]" films it
  * with a camera that follows it: MODE "ahead" (DIST blocks further out and SIDE to the side, looking back at it with the
- * pillar behind) or "side" (DIST blocks to its side and SIDE behind). Every tick of a shot with actors goes to
+ * pillar behind), "front" (the same, with G's hit view going by the actor's spot), "side" (DIST blocks to its side and
+ * SIDE behind) or "behind" (DIST blocks behind it like a player's own third-person camera; G's hit view going by the
+ * actor's spot). Every tick of a shot with actors goes to
  * NAME/actors.csv. Fixed and following cameras are onlookers: G's hit view goes by where they are (SkillShotsObserverMixin).
  */
 public final class SkillShots implements ClientModInitializer {
@@ -72,6 +74,16 @@ public final class SkillShots implements ClientModInitializer {
         String[] t=track;if(t!=null&&instance!=null&&instance.phase>=3)return t.length>5?Double.parseDouble(t[5]):70;
         double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;
     }
+    /**
+     * Where G's hit view is decided for the onlooker camera: the tracked actor's own spot when the camera stands for that
+     * actor's view ("behind", "front": the screen shows the hit view exactly while the actor is held), otherwise null
+     * (the camera's spot).
+     */
+    public static net.minecraft.util.math.Vec3d viewer(){
+        String[] t=track;var self=instance;if(t==null||self==null||self.phase<3||!(t[1].equals("behind")||t[1].equals("front")))return null;
+        var mc=MinecraftClient.getInstance();Integer id=ACTOR_IDS.get(t[0]);var e=id==null||mc.world==null?null:mc.world.getEntityById(id);
+        return e==null?null:e.getLerpedPos(mc.getTickDelta());
+    }
     /** The camera following an actor ("track=..."), from its interpolated position on this frame. */
     private static dev.sangwoo.celestialfall.client.CinematicDirector.Pose trackPose(){
         String[] t=track;var self=instance;if(t==null||self==null||self.phase<3)return null;
@@ -81,6 +93,7 @@ public final class SkillShots implements ClientModInitializer {
         double d=Double.parseDouble(t[2]),up=Double.parseDouble(t[3]),s=Double.parseDouble(t[4]);
         net.minecraft.util.math.Vec3d eye,look;
         if(t[1].equals("side")){eye=p.add(side.multiply(d)).add(dir.multiply(-s)).add(0,up,0);look=p.add(dir.multiply(1.5)).add(0,1.1,0);}
+        else if(t[1].equals("behind")){eye=p.add(dir.multiply(-d)).add(side.multiply(s)).add(0,up,0);look=p.add(dir.multiply(3)).add(0,.9,0);}
         else{eye=p.add(dir.multiply(d)).add(side.multiply(s)).add(0,up,0);look=p.add(0,1.1,0);}
         var v=look.subtract(eye).normalize();
         return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-v.x,v.z)),(float)-Math.toDegrees(Math.asin(v.y)),0);
