@@ -301,13 +301,14 @@ public final class FxLayer {
     private static int noise(){
         int[] px=VfxNoise.abgr();int n=VfxNoise.SIZE;
         int t=TextureUtil.generateTextureId();GlStateManager._bindTexture(t);
-        try(MemoryStack stack=MemoryStack.stackPush()){
-            ByteBuffer data=stack.malloc(n*n*4);
+        // 256 KB: too big for the thread's small native stack, so it goes on the native heap and is freed right after.
+        ByteBuffer data=org.lwjgl.system.MemoryUtil.memAlloc(n*n*4);
+        try{
             for(int v:px){data.put((byte)(v&255)).put((byte)((v>>8)&255)).put((byte)((v>>16)&255)).put((byte)((v>>>24)&255));}
             data.flip();
             GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT,4);GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH,0);GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS,0);GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS,0);
             GL11.glTexImage2D(GL11.GL_TEXTURE_2D,0,GL11.GL_RGBA8,n,n,0,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,data);
-        }
+        }finally{org.lwjgl.system.MemoryUtil.memFree(data);}
         GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER,GL11.GL_LINEAR_MIPMAP_LINEAR);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER,GL11.GL_LINEAR);
