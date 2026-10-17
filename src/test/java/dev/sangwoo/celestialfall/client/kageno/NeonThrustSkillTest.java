@@ -15,8 +15,9 @@ class NeonThrustSkillTest {
     }
     @Test void everyServerHitLandsOnAThrustAndOneMoreFallsBetweenEachPair(){
         int[] ticks=KagenoRules.eTicks();
-        assertEquals(ticks.length*2-1,NeonThrustSkill.THRUSTS.length);
+        assertEquals(NeonThrustSkill.OPENERS.length+ticks.length*2-1,NeonThrustSkill.THRUSTS.length);
         assertEquals(NeonThrustSkill.THRUSTS.length,NeonThrustSkill.AIM.length);
+        assertTrue(NeonThrustSkill.THRUSTS[0]>NeonThrustSkill.BARRAGE,"the barrage opens with a thrust");
         int strikes=0;
         for(int i=0;i<NeonThrustSkill.THRUSTS.length;i++){
             if(i>0)assertTrue(NeonThrustSkill.THRUSTS[i]-NeonThrustSkill.THRUSTS[i-1]>=.1f,"thrust "+i+" too soon after the last");
@@ -30,23 +31,35 @@ class NeonThrustSkillTest {
             var out=sword(NeonThrustSkill.THRUSTS[i]);
             Vec3d want=world(NeonThrustSkill.AIM[i][0],NeonThrustSkill.AIM[i][1]);
             assertTrue(out[1].dotProduct(want)>Math.cos(Math.toRadians(3)),"thrust "+i+" points "+out[1]+" not "+want);
-            // Fully out: the tip is well ahead of where it was drawn back to before (the stance, or the last recoil).
+            // Fully out: the tip is well ahead of where it was drawn in to before (at the start of the barrage, or the last recoil).
             double tipOut=out[0].add(out[1].multiply(NeonThrustSkill.TIP)).z;
-            var back=sword(i==0?.73f:NeonThrustSkill.THRUSTS[i-1]+.06f);
+            var back=sword(i==0?NeonThrustSkill.BARRAGE:NeonThrustSkill.THRUSTS[i-1]+.06f);
             double tipBack=back[0].add(back[1].multiply(NeonThrustSkill.TIP)).z;
             assertTrue(tipOut>2,"thrust "+i+" tip only "+tipOut+" ahead");
             assertTrue(tipOut-tipBack>.3,"thrust "+i+" moves the tip only "+(tipOut-tipBack));
         }
     }
-    @Test void theRisingSlashCrossesTheTargetOnTheFinisherAndEndsOverTheHead(){
+    @Test void theLungeLevelsTheBladeAtTheTargetSideOn(){
+        var set=sword(.3f);
+        assertTrue(set[1].z>.99,"the blade points "+set[1]);
+        // The sword hand leads: well ahead of the body and on its right (-x).
+        assertTrue(set[0].z>.8&&set[0].x<0,"the hand is at "+set[0]);
+        var p=R6.poseOf(NeonThrustSkill.CLIP.frame(.3f));
+        assertTrue(p.yaw>45,"side-on, turned "+p.yaw);
+    }
+    @Test void theSwingDrawsBackThenRisesThroughTheFrontAndIsBehindTheHeadWhenTheTargetBursts(){
+        var back=sword(NeonThrustSkill.BACK+.05f);
+        assertTrue(back[1].z<-.9,"drawn back, the blade points "+back[1]);
+        assertTrue(back[0].y<1.3,"at the hip, the hand is at "+back[0].y);
+        var low=sword(NeonThrustSkill.LOW);
+        assertTrue(low[1].y<-.25&&low[1].z>.8,"low in front, the blade points "+low[1]);
+        assertTrue(low[0].add(low[1].multiply(NeonThrustSkill.TIP)).y>0,"the tip stays off the ground");
+        var rising=sword(2.665f);
+        assertTrue(rising[1].y>.3&&rising[1].z>.5,"rising through the front, the blade points "+rising[1]);
+        assertTrue(sword(NeonThrustSkill.UPRIGHT)[1].y>.95,"straight up");
         var cut=sword(NeonThrustSkill.SLASH);
-        double elevation=Math.toDegrees(Math.asin(cut[1].y));
-        assertTrue(elevation>0&&elevation<35&&cut[1].z>.8,"at the cut the blade points "+cut[1]);
-        assertTrue(sword(NeonThrustSkill.SLASH-.05f)[1].y<-.2,"it comes from below");
-        assertTrue(sword(2.975f)[1].y>.9,"over the head");
-        // The swing sweeps up through the plane the crescent is drawn in, ending past the vertical.
-        double before=Math.toDegrees(Math.atan2(sword(2.87f)[1].y,sword(2.87f)[1].z)),after=Math.toDegrees(Math.atan2(sword(2.975f)[1].y,sword(2.975f)[1].z));
-        assertTrue(before<-10&&after>75,"swing from "+before+" to "+after);
+        assertTrue(cut[1].z<-.5&&cut[1].y>.15,"over and behind on the burst, the blade points "+cut[1]);
+        assertTrue(sword(NeonThrustSkill.LEVEL)[1].z<-.95,"level behind at the end of the swing");
     }
     @Test void backAtRestBeforeTheInputIsHandedBack(){
         assertTrue(NeonThrustSkill.REST<=KagenoRules.inputEnd(KagenoRules.E)/20f+1e-6);
@@ -66,12 +79,25 @@ class NeonThrustSkillTest {
         assertTrue(NeonThrustSkill.ghosts(first-.1f).isEmpty());
         assertTrue(NeonThrustSkill.ghosts(last+.3f).isEmpty());
     }
-    @Test void theNeonRunsUpTheBladeThenStaysLitUntilItFlakesAway(){
-        assertEquals(0,NeonThrustSkill.lit(0));assertEquals(0,NeonThrustSkill.glow(.1f));
-        assertTrue(NeonThrustSkill.lit(.29f)>.2f&&NeonThrustSkill.lit(.29f)<.8f);
-        assertEquals(1,NeonThrustSkill.lit(NeonThrustSkill.LIT1));
-        for(float t=.6f;t<3.1f;t+=.01f)assertTrue(NeonThrustSkill.glow(t)>=.99f,"dark at "+t);
-        assertTrue(NeonThrustSkill.glow(NeonThrustSkill.RISE)>1.8f,"charged before the slash");
+    @Test void theStormBlowsFromTheBarrageUntilTheSwordIsDrawnBack(){
+        assertEquals(0,NeonThrustSkill.storm(NeonThrustSkill.BARRAGE-.05f),1e-6);
+        for(float t=NeonThrustSkill.BARRAGE+.08f;t<2.36f;t+=.01f)assertEquals(1,NeonThrustSkill.storm(t),1e-6,"at "+t);
+        assertEquals(0,NeonThrustSkill.storm(NeonThrustSkill.CALM),1e-6);
+        assertTrue(NeonThrustSkill.CALM<NeonThrustSkill.BACK);
+    }
+    @Test void theNeonFlaresUpTheBladeWithTheStepThenStaysLitUntilItFlakesAway(){
+        assertEquals(0,NeonThrustSkill.lit(0));assertEquals(0,NeonThrustSkill.glow(0));
+        assertTrue(NeonThrustSkill.lit(.06f)>.2f&&NeonThrustSkill.lit(.06f)<.8f);
+        assertEquals(1,NeonThrustSkill.lit(NeonThrustSkill.FLARE));
+        for(float t=.25f;t<3.1f;t+=.01f)assertTrue(NeonThrustSkill.glow(t)>=.99f,"dark at "+t);
+        assertTrue(NeonThrustSkill.glow(2.8f)>1.8f,"charged through the swing");
         assertEquals(0,NeonThrustSkill.glow(3.4f),1e-6);
+    }
+    @Test void theScreenShocksHardestWhenTheTargetBursts(){
+        var e=new NeonThrustSkill();
+        assertTrue(e.pulse(NeonThrustSkill.SLASH+.01f)>.7f);
+        assertTrue(e.pulse(NeonThrustSkill.SLASH-.05f)<.1f);
+        assertTrue(e.shake(NeonThrustSkill.SLASH+.01f)>1f);
+        assertNull(e.kick(3.5f));
     }
 }

@@ -13,68 +13,69 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.*;
 import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
 
 /**
- * E "신속한 맹공". The sword is presented level across the chest and the left palm runs pink neon up the
- * blade from the guard to the tip; the body drops into a low stance with the sword drawn back beside the
- * head and levelled at the target; thirteen thrusts land in 1.55 s (the server's seven hits,
- * {@link KagenoRules#eTicks}, and one between each pair), each shooting a lance of light while afterimage
- * stabs fill the air ahead; the sword coils low behind the body while energy gathers; the rising slash crosses
- * the target on the finisher tick ({@link KagenoRules#E_FINISH}), throwing a neon crescent and a geyser
- * of violet light; the sword is held high, flicked down and the neon flakes away. Only the sword is pink;
- * everything the skill throws is violet. Times are seconds after the cast and every effect is a pure
- * function of the cast clock.
+ * E "신속한 맹공", after the user's reference recordings. The blade flares pink neon as the body steps side-on
+ * into a lunge with the sword levelled at the target; from 0.48 s fifteen thrusts (the server's seven hits,
+ * {@link KagenoRules#eTicks}, one between each pair and two openers) pour a storm out ahead of the hand: a
+ * magenta core, streaks of light shooting ahead, hooked dark lightning, a thin beam standing through the core,
+ * afterimage stabs, purple haze and motes. The sword is drawn back behind the hip, swept low in front and swung up over
+ * the head and down behind; as it comes down the target bursts (the server's finisher, {@link KagenoRules#E_FINISH})
+ * into a white-pink flash and a pillar of light, while the dark-cored magenta crescent over the caster spreads into
+ * rings that cool to blue-violet. Only the sword is pink; the skill's light is magenta and purple. Times are seconds
+ * after the cast and every effect is a pure function of the cast clock, so it moves at the render frame rate.
  */
 final class NeonThrustSkill implements Fx.Skill {
     /** The sword's neon is pink: white-hot core, light pink, hot pink, magenta. */
     static final int CORE=0xfff2fb,LIGHT=0xffa6e2,HOT=0xff48c4,MAGENTA=0xff1c98;
-    /** The skill's own light is violet: white-violet core, lavender, violet, indigo. */
-    static final int VCORE=0xece0ff,LAVENDER=0xb388ff,VIOLET=0x8448ff,INDIGO=0x5418d0;
-    /** Tube palettes (haze, glow, body, core): the pink neon of the sword, the violet of the skill. */
-    static final int[] PINK={MAGENTA,HOT,LIGHT,CORE},PURPLE={INDIGO,VIOLET,LAVENDER,VCORE};
-    /** The palm lights the blade from the guard (LIT0) to the tip (LIT1); the stance is set at STANCE. */
-    static final float LIT0=.16f,LIT1=.42f,STANCE=.62f;
-    /** The coil after the last thrust, the start of the rising slash, the slash through the target, the follow-through, the rest. */
-    static final float COIL=2.47f,RISE=2.84f,SLASH=KagenoRules.E_FINISH/20f,OVER=3.04f,REST=3.35f;
+    /** The skill's light, picked off the reference: white-pink glare, light fuchsia, fuchsia, purple, violet, the blue-violet the rings cool to, the dark of the lightning. */
+    static final int GLARE=0xffe6ff,PINKISH=0xfe8bfe,FUCHSIA=0xfd17fc,PURPLE=0x9d45d3,VIOLET=0x6832b9,BLUE=0x6f5cff,SHADOW=0x1c0634;
+    /** Tube palettes (haze, glow, body, core): the sword's pink neon, the skill's magenta. */
+    static final int[] PINK={MAGENTA,HOT,LIGHT,CORE},ARC={VIOLET,FUCHSIA,PINKISH,GLARE};
+    /** The neon has run up the blade by FLARE; the lunge is set at LUNGE; the storm ahead of the hand blows from BARRAGE until CALM. */
+    static final float FLARE=.12f,LUNGE=.11f,BARRAGE=.48f,CALM=2.42f;
+    /** The sword drawn back behind the hip, swept low in front, straight up, the burst on the target (the server's finisher), level behind, the rest. */
+    static final float BACK=2.47f,LOW=2.63f,UPRIGHT=2.72f,SLASH=KagenoRules.E_FINISH/20f,LEVEL=2.96f,REST=3.35f;
+    /** Two thrusts open the barrage before the server's first hit. */
+    static final float[] OPENERS={.55f,.675f};
     /** Thrust times (seconds) and whether the server strikes on each. */
     static final float[] THRUSTS;
     static final boolean[] STRIKES;
     /** Where each thrust goes: elevation and azimuth (degrees, toward the right) from the cast facing. */
-    static final double[][] AIM={{2,0},{9,-7},{-5,6},{12,4},{-8,-5},{5,9},{0,-2},{10,-9},{-6,4},{7,8},{-3,-6},{11,2},{0,0}};
+    static final double[][] AIM={{3,2},{-4,-6},{2,0},{9,-7},{-5,6},{12,4},{-8,-5},{5,9},{0,-2},{10,-9},{-6,4},{7,8},{-3,-6},{11,2},{0,0}};
     /** The guard and the tip, in blocks along the blade from the hand. */
     static final double GUARD=.24,TIP=1.35;
     static final Anim CLIP;
     static {
         int[] ticks=KagenoRules.eTicks();
-        THRUSTS=new float[ticks.length*2-1];STRIKES=new boolean[THRUSTS.length];
-        for(int i=0;i<ticks.length;i++){THRUSTS[2*i]=ticks[i]/20f;STRIKES[2*i]=true;if(i+1<ticks.length)THRUSTS[2*i+1]=(ticks[i]+ticks[i+1])/40f;}
+        THRUSTS=new float[OPENERS.length+ticks.length*2-1];STRIKES=new boolean[THRUSTS.length];
+        System.arraycopy(OPENERS,0,THRUSTS,0,OPENERS.length);
+        for(int i=0;i<ticks.length;i++){int k=OPENERS.length+2*i;THRUSTS[k]=ticks[i]/20f;STRIKES[k]=true;if(i+1<ticks.length)THRUSTS[k+1]=(ticks[i]+ticks[i+1])/40f;}
         List<Key> keys=new ArrayList<>(List.of(
             k(0,KagenoClips.IDLE),
-            k(.1,present(40),Anim.Ease.OUT),
-            k(LIT0,present(40),Anim.Ease.HOLD),
-            k(.29,present(-8)),
-            k(LIT1,present(-48),Anim.Ease.LINEAR),
-            // The palm leaves the tip with a flick.
-            k(.49,world(0,0,8,0,0,d(14,14),d(6,-88),d(40,-100),d(-84,100),d(-84,-100)).head(-30,0,0),Anim.Ease.OUT),
-            k(STANCE,stance(0),Anim.Ease.OUT),
-            k(.73,stance(1))));
+            // A step into the lunge: side-on, the sword arm straight at the target, the free arm back.
+            k(.06,world(.05,-.1,30,6,0,d(-25,22),d(-10,8),d(-40,-150),d(-68,18),d(-72,-175)),Anim.Ease.IN),
+            k(LUNGE,lunge(.14,0),Anim.Ease.OUT),
+            k(.3,lunge(.2,1)),
+            k(BARRAGE,cocked(0),Anim.Ease.SMOOTH)));
         for(int i=0;i<THRUSTS.length;i++){
-            boolean last=i==THRUSTS.length-1;
             keys.add(k(THRUSTS[i],thrust(i),Anim.Ease.OUT));
-            if(!last)keys.add(k(THRUSTS[i]+.06f,cocked(i+1)));
+            if(i+1<THRUSTS.length)keys.add(k(THRUSTS[i]+.06f,cocked(i+1)));
         }
-        float end=THRUSTS[THRUSTS.length-1];
         keys.addAll(List.of(
-            k(end+.06f,thrust(THRUSTS.length-1),Anim.Ease.HOLD),
-            k(COIL,coil(0)),
-            k(RISE,coil(1)),
-            // The rising slash: from low behind, through the target at chest height, up over the head and behind.
-            k(2.87,world(.24,-.26,-30,14,0,d(-34,58),d(-22,36),d(-18,-70),d(-50,40),d(-52,-150)),Anim.Ease.IN),
-            k(SLASH,world(.3,-.08,-6,4,0,d(6,14),d(14,4),d(-45,-115),d(-55,25),d(-58,-165)),Anim.Ease.LINEAR),
-            k(2.935,world(.32,.16,8,-8,4,d(52,8),d(62,0),d(-50,-120),d(-62,20),d(-66,-170)),Anim.Ease.LINEAR),
-            k(2.975,world(.32,.3,14,-14,5,d(80,-6),d(76,178),d(-50,-120),d(-70,15),d(-72,-175)),Anim.Ease.OUT),
-            k(OVER,world(.3,.22,16,-12,4,d(75,175),d(30,178),d(-45,-110),d(-68,15),d(-70,-170))),
-            // Held high, then flicked down to the right, then at rest.
-            k(3.13,world(.24,-.04,10,-4,0,d(68,14),d(78,4),d(-50,-100),d(-62,25),d(-64,-165))),
-            k(3.24,world(.12,-.05,0,6,0,d(-45,42),d(-38,72),d(-80,-12),d(-75,20),d(-78,-160)),Anim.Ease.OUT),
+            // Drawn back: the blade swings round to lie level behind the hip.
+            k(2.41,world(.16,-.2,20,4,0,d(-30,95),d(-20,130),d(-30,-60),d(-50,16),d(-50,188))),
+            k(BACK,back(0),Anim.Ease.OUT),
+            k(2.56,back(1)),
+            // Swept down and forward under the arm, crouched low with the blade low in front.
+            k(LOW,world(.16,-.34,8,24,0,d(-45,25),d(-22,10),d(-40,-110),d(-45,20),d(-48,-172)),Anim.Ease.IN),
+            // Swung up through the front, straight up, over the head and down behind.
+            k(2.665,world(.2,-.2,2,10,0,d(28,8),d(38,2),d(-30,-120),d(-55,18),d(-58,-172)),Anim.Ease.LINEAR),
+            k(UPRIGHT,world(.22,-.08,-4,-4,0,d(80,6),d(88,0),d(-25,-125),d(-62,16),d(-64,-174)),Anim.Ease.LINEAR),
+            k(2.78,world(.22,-.06,-6,-8,0,d(80,172),d(52,178),d(-22,-110),d(-64,16),d(-66,-174)),Anim.Ease.OUT),
+            k(2.86,world(.2,-.08,-8,-8,0,d(52,172),d(30,178),d(-20,-100),d(-62,16),d(-64,-174))),
+            k(LEVEL,world(.18,-.1,-10,-4,0,d(18,168),d(3,178),d(-20,-90),d(-60,16),d(-62,-174)),Anim.Ease.OUT),
+            k(3.12,world(.16,-.08,-10,-2,0,d(14,168),d(0,178),d(-25,-90),d(-62,16),d(-64,-174))),
+            // Brought round the right side, the tip kept off the ground, and at rest.
+            k(3.24,world(.1,-.05,0,4,0,d(-50,50),d(-30,70),d(-70,-20),d(-75,16),d(-78,-172)),Anim.Ease.OUT),
             k(REST,KagenoClips.IDLE)));
         CLIP=Anim.joints(keys.toArray(Key[]::new));
     }
@@ -104,43 +105,41 @@ final class NeonThrustSkill implements Fx.Skill {
         p.rLeg=local(p,rLeg[0],rLeg[1]);p.lLeg=local(p,lLeg[0],lLeg[1]);
         return p;
     }
-    /** The sword held level across the chest pointing left; the left palm on the blade at azimuth lAz, the eyes on it. */
-    static R6.Pose present(double lAz){
-        return world(0,0,8,0,0,d(14,14),d(6,-88),d(12,lAz),d(-84,100),d(-84,-100)).head((float)(8+.6*lAz),12,0);
+    /** The lunge: low and side-on (the sword shoulder leading), the sword arm and blade level at the target, the free arm back. */
+    static R6.Pose lunge(double fw,int k){
+        return world(fw,-.2-.02*k,60,6,0,d(0,4),d(1,2),d(-16,182),d(-50,16),d(-50,188));
     }
-    /** The stance: low, the torso turned right, the sword drawn back beside the head and level at the target, the left hand guiding it. */
-    static R6.Pose stance(int deeper){
-        return world(-.04-.04*deeper,-.2-.03*deeper,-40,8,0,d(36+4*deeper,165),d(-1,0),d(16,-4),d(-55,160),d(-58,-14));
-    }
-    /** Drawn back between thrusts, levelled at thrust i, in the lunge (right foot forward). */
+    /** Drawn in between thrusts, the shoulder turned back and the hand pulled in, the blade levelled at thrust i. */
     static R6.Pose cocked(int i){
-        return world(.1,-.2,-18,8,0,d(22,122),d(AIM[i][0],AIM[i][1]),d(-38,-150),d(-52,22),d(-55,-168));
+        return world(.12,-.22,38,6,0,d(-18,62),d(AIM[i][0],AIM[i][1]),d(-24,178),d(-50,16),d(-50,188));
     }
-    /** Thrust i fully out; the last one lunges deepest. */
+    /** Thrust i fully out, the sword shoulder driven forward; the last one lunges deepest. */
     static R6.Pose thrust(int i){
         boolean last=i==THRUSTS.length-1;double e=AIM[i][0],a=AIM[i][1];
-        return world(last?.4:.22+.04*(i%3),-.22,last?16:i%2==0?10:6,last?16:12,0,d(e-5,a+6),d(e,a),d(-40,-150),d(-50,22),d(-52,-168));
+        return world(last?.34:.22+.04*(i%3),-.24,last?68:62+3*(i%2),6,0,d(e-3,a+4),d(e,a),d(-14,184),d(-50,16),d(-50,188));
     }
-    /** Coiled for the rising slash: crouched, turned right, the sword low behind. */
-    static R6.Pose coil(int deeper){
-        return world(.2,-.3-.04*deeper,-55-5*deeper,20,-6,d(-25,150),d(-20,160),d(4,-28),d(-48,128),d(-52,-30));
+    /** The sword drawn back, the blade level behind the hip, the chest turned to the right. */
+    static R6.Pose back(int k){
+        return world(.1-.02*k,-.16-.02*k,-25,4,0,d(-50,160),d(-6,176),d(-40,-40),d(-50,16),d(-52,188));
     }
 
     // ───────────────────────────── timing ─────────────────────────────
 
     /** Index of the latest thrust at or before sec (-1 before the first). */
     static int thrustAt(float sec){int i=-1;for(int k=0;k<THRUSTS.length;k++)if(THRUSTS[k]<=sec)i=k;return i;}
-    /** Fraction of the blade lit, from the guard. */
-    static float lit(float t){return Ease.smooth(t,LIT0,LIT1);}
-    /** Brightness of the blade's neon: the ignition flicker, a kick on every thrust, the charge before the slash, out after the rest. */
+    /** Fraction of the blade lit, from the guard: the neon runs up it as the lunge is set. */
+    static float lit(float t){return Ease.smooth(t,0,FLARE);}
+    /** Brightness of the blade's neon: a flicker as it catches, a kick on every thrust, the charge through the swing, out after the rest. */
     static float glow(float t){
-        if(t<LIT0)return 0;
+        if(t<=0)return 0;
         float g=1;
-        if(t>=LIT1&&t<.53f){float u=t-LIT1;g=u<.025f?1:u<.045f?.25f:u<.06f?1:u<.08f?.5f:1;}
-        int i=thrustAt(t);if(i>=0&&t<COIL)g+=.6f*(float)Math.exp(-(t-THRUSTS[i])/.05);
-        g+=.9f*Ease.smooth(t,COIL,RISE)*(1-Ease.smooth(t,SLASH,SLASH+.2f));
+        if(t>=FLARE&&t<FLARE+.08f){float u=t-FLARE;g=u<.02f?1.4f:u<.035f?.4f:u<.05f?1.2f:u<.065f?.6f:1;}
+        int i=thrustAt(t);if(i>=0&&t<BACK)g+=.6f*(float)Math.exp(-(t-THRUSTS[i])/.05);
+        g+=.9f*Ease.smooth(t,BACK,LOW)*(1-Ease.smooth(t,SLASH,SLASH+.2f));
         return g*(1-Ease.smooth(t,3.12f,3.36f));
     }
+    /** Strength of the storm ahead of the hand. */
+    static float storm(float t){return Ease.smooth(t,BARRAGE-.03f,BARRAGE+.08f)*(1-Ease.smooth(t,2.36f,CALM));}
 
     // ───────────────────────────── effects ─────────────────────────────
 
@@ -149,26 +148,28 @@ final class NeonThrustSkill implements Fx.Skill {
     static Vec3d aim(Fx c,int i){return c.dir(AIM[i][0],AIM[i][1]);}
     /** A unit vector across d. */
     static Vec3d across(Vec3d d){Vec3d x=d.crossProduct(new Vec3d(0,1,0));if(x.lengthSquared()<1e-4)x=d.crossProduct(new Vec3d(1,0,0));return x.normalize();}
+    /** The heart of the storm: just ahead of the sword hand at full stretch. */
+    static Vec3d core(Fx c){var hb=sword(c,THRUSTS[2]);return hb[0].add(hb[1].multiply(.7));}
+    /** Unit vector at angle rad in the plane (u,v). */
+    static Vec3d in(Vec3d u,Vec3d v,double rad){return u.multiply(Math.cos(rad)).add(v.multiply(Math.sin(rad)));}
+    /** Colour k of the way from a to b. */
+    static int mix(int a,int b,float k){
+        int r=Math.round(((a>>16)&255)*(1-k)+((b>>16)&255)*k),g=Math.round(((a>>8)&255)*(1-k)+((b>>8)&255)*k),bl=Math.round((a&255)*(1-k)+(b&255)*k);
+        return r<<16|g<<8|bl;
+    }
 
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec;
         var hb=sword(c,t);Vec3d hand=hb[0],dir=hb[1],guard=hand.add(dir.multiply(GUARD)),tip=hand.add(dir.multiply(TIP));
         blade(m,t,guard,tip);
-        ignition(m,t,guard,tip,dir);
-        if(t>=.5f&&t<THRUSTS[0]){
-            float u=Ease.unit(t,.5f,THRUSTS[0]);
-            FxLib.converge(m,tip,1.8,22,t,.5f,THRUSTS[0]-.04f,VIOLET,7);
-            FxLib.ring(m,c.pos.add(0,.04,0),2.3-1.4*u,.16,VIOLET,.6f*Ease.smooth(t,.5f,.58f));
-            m.softDisc(tip,.12+.18*u,LAVENDER,.6f*u);
-        }
-        // The ground in front glows while the thrusts land.
-        if(t>=THRUSTS[0]-.05f&&t<COIL+.1f)FxLib.glow(m,c.pos.add(c.f.multiply(1.8)).add(0,.04,0),2.0,INDIGO,.28f*Ease.smooth(t,THRUSTS[0]-.05f,THRUSTS[0]+.1f)*(1-Ease.smooth(t,COIL-.05f,COIL+.1f)));
+        flare(c,m,t,guard,tip,dir);
+        storm(c,m,t);
         for(int i=0;i<THRUSTS.length;i++)thrust(c,m,t,i);
         afterimages(c,m,t);
         // The real blade smears through each thrust.
-        if(t>=THRUSTS[0]-.05f&&t<COIL)trail(c,m,t,.05f,5,GUARD,TIP,HOT,.45f);
-        coil(c,m,t,guard,tip);
-        slash(c,m,t);
+        if(t>=THRUSTS[0]-.05f&&t<BACK)trail(c,m,t,.05f,5,GUARD,TIP,HOT,.45f);
+        swing(c,m,t);
+        burst(c,m,t);
         // The neon flakes off the blade and drifts up as it goes out.
         if(t>=3.1f&&t<3.6f){
             float u=Ease.unit(t,3.1f,3.6f);
@@ -177,6 +178,27 @@ final class NeonThrustSkill implements Fx.Skill {
                 m.softDisc(p,.05+.04*Ease.hash(k*11),k%3==0?CORE:HOT,(1-u)*(float)Math.sin(Math.PI*Math.min(1,u*2+.2)));
             }
         }
+    }
+    /**
+     * The colour and the dark, blended over the scene so the magenta and purple stay saturated against a bright sky:
+     * the storm's magenta heart, purple haze and streak bodies, the lightning's dark cores and the ring the storm turns in;
+     * the swing's crescent with its dark inside, the whirl when the target bursts and the rings it spreads into.
+     */
+    @Override public void alpha(Fx c,EffectMesh m){
+        float t=c.sec,s=storm(t);
+        if(s>0){
+            Vec3d core=core(c);int i=thrustAt(t);float kick=i>=0?(float)Math.exp(-(t-THRUSTS[i])/.06):0;
+            m.softDisc(core,1.15+.4*kick,FUCHSIA,.42f*s);
+            for(int k=0;k<6;k++){
+                float ph=(float)((t*.9+Ease.hash(k*7+1))%1);double ang=Ease.hash(k*5+2)*Math.PI*2;
+                Vec3d p=core.add(c.right.multiply(Math.cos(ang)*(.5+1.1*ph))).add(0,Math.sin(ang)*(.4+.8*ph)+.5*ph,0).add(c.f.multiply(-.3+.6*Ease.hash(k*3)));
+                m.softDisc(p,.8+.7*ph,k%2==0?PURPLE:mix(PURPLE,FUCHSIA,.5f),.2f*s*(float)Math.sin(Math.PI*ph));
+            }
+            streaks(c,m,t,core,s,true);
+            bolts(c,m,t,core,s,true);
+            band(m,core,c.right,FxLib.UP,1.05,1.4,1.75,0,360,SHADOW,.14f*s);
+        }
+        vortex(c,m,t);
     }
     /** Glowing tube a→b in palette c (haze, glow, body, core). */
     static void neon(EffectMesh m,Vec3d a,Vec3d b,double width,float alpha,int[] c){
@@ -187,7 +209,7 @@ final class NeonThrustSkill implements Fx.Skill {
         m.line(a,b,width,c[2],alpha);
         m.line(a,b,width*.45,c[3],alpha);
     }
-    /** The blade's neon, lit from the guard as far as the palm has run. */
+    /** The blade's neon, lit from the guard as far as it has run. */
     static void blade(EffectMesh m,float t,Vec3d guard,Vec3d tip){
         float g=glow(t),f=lit(t);if(g<=0||f<=0)return;
         Vec3d end=guard.add(tip.subtract(guard).multiply(f));float on=Math.min(1,g);
@@ -197,23 +219,102 @@ final class NeonThrustSkill implements Fx.Skill {
         m.softDisc(end,.18+.12*on,HOT,.55f*on);
         if(f>=1)m.softDisc(tip,.08,CORE,.8f*Math.min(1,g));
     }
-    /** The front of the neon runs up the blade under the palm; when it reaches the tip a ring pulses out and sparks fly off. */
-    static void ignition(EffectMesh m,float t,Vec3d guard,Vec3d tip,Vec3d dir){
-        if(t>=LIT0&&t<LIT1+.02f){
+    /** The neon runs up the blade with the step and rings out when it reaches the tip; through the lunge glints run along it and motes gather. */
+    static void flare(Fx c,EffectMesh m,float t,Vec3d guard,Vec3d tip,Vec3d dir){
+        if(t>0&&t<FLARE+.01f){
             Vec3d front=guard.add(tip.subtract(guard).multiply(lit(t)));
-            m.star(front,.34,CORE,1);m.softDisc(front,.3,HOT,.8f);
-            FxLib.sparks(m,front,7,.45,.025,LIGHT,.9f,(int)(t*60),1);
+            m.star(front,.4,GLARE,1);m.softDisc(front,.35,FUCHSIA,.8f);
+            FxLib.sparks(m,front,7,.5,.025,PINKISH,.9f,(int)(t*120),1);
         }
-        if(t>=LIT1&&t<LIT1+.22f){
-            float u=Ease.unit(t,LIT1,LIT1+.22f);Vec3d mid=guard.add(tip).multiply(.5),a=across(dir),b=dir.crossProduct(a).normalize();
-            FxLib.ringPlane(m,mid,a,b,.2+1.6*Ease.out(t,LIT1,LIT1+.22f),.16,VIOLET,.9f*(1-u));
-            FxLib.flash(m,tip,.35*(1-u)+.1,VIOLET,.9f*(1-u));
-            for(int k=0;k<8;k++){
-                Vec3d p=guard.add(tip.subtract(guard).multiply(Ease.hash(k*7+3)));
-                Vec3d out=a.multiply(Ease.hash(k*5)-.5).add(b.multiply(Ease.hash(k*9)-.5)).normalize();
-                m.needle(p.add(out.multiply(.05+.6*u)),p.add(out.multiply(.25+.9*u)),.04,.3,LAVENDER,1-u);
+        if(t>=FLARE&&t<FLARE+.22f){
+            float u=Ease.unit(t,FLARE,FLARE+.22f);Vec3d mid=guard.add(tip).multiply(.5),a=across(dir),b=dir.crossProduct(a).normalize();
+            FxLib.ringPlane(m,mid,a,b,.2+1.6*Ease.out(t,FLARE,FLARE+.22f),.16,FUCHSIA,.9f*(1-u));
+            FxLib.flash(m,tip,.35*(1-u)+.1,FUCHSIA,.9f*(1-u));
+        }
+        if(t>=LUNGE&&t<BARRAGE+.05f){
+            float a=Ease.smooth(t,LUNGE,LUNGE+.08f)*(1-Ease.smooth(t,BARRAGE-.03f,BARRAGE+.05f));
+            for(int k=0;k<9;k++){
+                float ph=(float)(((t-LUNGE)*2.6+Ease.hash(k*5))%1);
+                Vec3d p=guard.add(tip.subtract(guard).multiply(Ease.hash(k*7+1))).add(c.vec(-.3*ph,.25*ph+(Ease.hash(k*9)-.5)*.15,(Ease.hash(k*11)-.5)*.2));
+                m.star(p,.1+.06*Ease.hash(k*13),k%2==0?GLARE:PINKISH,a*(float)Math.sin(Math.PI*ph));
+            }
+            FxLib.converge(m,guard.add(tip).multiply(.5),1.6,18,t,LUNGE,BARRAGE-.05f,PURPLE,7);
+            FxLib.ring(m,c.pos.add(0,.04,0),1.8-.8*Ease.unit(t,LUNGE,BARRAGE),.14,FUCHSIA,.5f*a);
+        }
+    }
+    /**
+     * The storm's light while the thrusts land: the white-pink heart swelling with every thrust, a thin beam standing
+     * through it, the lit ground, pink motes, broken arcs whirling round the dark ring it turns in, the streaks' bright
+     * cores and the glow round the dark lightning (the colour and the dark are in the alpha pass).
+     */
+    static void storm(Fx c,EffectMesh m,float t){
+        float s=storm(t);if(s<=0)return;
+        Vec3d core=core(c),foot=new Vec3d(core.x,c.pos.y,core.z);
+        int i=thrustAt(t);float kick=i>=0?(float)Math.exp(-(t-THRUSTS[i])/.06):0;
+        float flick=.8f+.2f*(float)(Math.sin(t*53)*Math.sin(t*31+2));
+        m.softDisc(core,1.5+.5*kick,FUCHSIA,.18f*s*flick);
+        m.softDisc(core,.8+.3*kick,PINKISH,.45f*s);
+        m.softDisc(core,.38+.2*kick,GLARE,.9f*s);
+        m.star(core,.6+.4*kick,GLARE,.6f*s*flick);
+        Vec3d top=foot.add(0,7,0);
+        m.softLine(foot,top,.4,FUCHSIA,.22f*s*flick);m.line(foot,top,.04,GLARE,.65f*s*flick);
+        FxLib.glow(m,foot.add(0,.04,0),2.4,FUCHSIA,.25f*s);
+        FxLib.embers(m,c.pos.add(c.f.multiply(.9)),2.0,2.8,20,t-BARRAGE,1.7f,.07,PINKISH,s,41);
+        // Broken arcs whirl round the rim of the dark ring.
+        for(int k=0;k<3;k++){double rot=k*120+t*260;band(m,core,c.right,FxLib.UP,1.32,1.45,1.56,rot,rot+70,VIOLET,.55f*s);}
+        streaks(c,m,t,core,s,false);
+        bolts(c,m,t,core,s,false);
+    }
+    /** A streak leaves the core every STREAK seconds of the storm: most shoot ahead in a cone, the rest every way. */
+    static final float STREAK=1/150f;
+    /** The streaks alive at t: body draws their magenta bodies (alpha pass), else their white-pink cores. */
+    static void streaks(Fx c,EffectMesh m,float t,Vec3d core,float s,boolean body){
+        int newest=(int)Math.floor((Math.min(t,2.36f)-BARRAGE)/STREAK);
+        for(int k=Math.max(0,newest-25);k<=newest;k++){
+            float born=BARRAGE+k*STREAK,life=.09f+.06f*(float)Ease.hash(k*7+1),u=(t-born)/life;if(u<0||u>=1)continue;
+            boolean ahead=Ease.hash(k*11+2)<.75;
+            Vec3d d=ahead?c.dir((Ease.hash(k*13+3)-.5)*40,(Ease.hash(k*17+4)-.5)*70):c.dir((Ease.hash(k*13+3)-.5)*120,Ease.hash(k*17+4)*360);
+            double speed=12+10*Ease.hash(k*19+5),len=(1.4+2.0*Ease.hash(k*23+6))*Math.min(1,u*4);
+            Vec3d head=core.add(d.multiply(.3+speed*life*u)),tail=head.subtract(d.multiply(len));
+            float a=s*(1-u*u);
+            if(body)m.needle(tail,head,.24,.7,FUCHSIA,a*.6f);
+            else{m.needle(tail,head,.09,.75,PINKISH,a*.9f);m.line(tail.add(d.multiply(len*.4)),head,.03,GLARE,a);}
+        }
+    }
+    /** A hooked dark bolt cracks out of the storm every BOLT seconds and lives .12–.2 s; dark draws its core, else its purple glow. */
+    static final float BOLT=.04f;
+    static void bolts(Fx c,EffectMesh m,float t,Vec3d core,float s,boolean dark){
+        if(s<=0)return;
+        int newest=(int)Math.floor((Math.min(t,2.38f)-BARRAGE)/BOLT);
+        for(int k=Math.max(0,newest-5);k<=newest;k++){
+            float born=BARRAGE+k*BOLT,life=.12f+.08f*(float)Ease.hash(k*5+2),u=(t-born)/life;if(u<0||u>=1)continue;
+            Vec3d[] p=boltPath(c,core,k);float grow=Math.min(1,u/.3f)*(p.length-1),a=s*(1-Ease.smooth(u,.45f,1));
+            for(int j=1;j<p.length&&j-1<grow;j++){
+                Vec3d a0=p[j-1],a1=j<=grow?p[j]:p[j-1].add(p[j].subtract(p[j-1]).multiply(grow-(j-1)));
+                double w=.18*(1-.5*(j-1)/(p.length-1));
+                if(dark){m.line(a0,a1,w,SHADOW,.9f*a);continue;}
+                // The glow runs along both sides of the dark core, leaving it dark.
+                Vec3d side=a1.subtract(a0).crossProduct(m.camera().subtract(a0));if(side.lengthSquared()<1e-10)continue;side=side.normalize().multiply(w*1.3);
+                int rim=mix(PURPLE,FUCHSIA,.4f);
+                m.softLine(a0.add(side),a1.add(side),w*1.6,rim,.9f*a);m.softLine(a0.subtract(side),a1.subtract(side),w*1.6,rim,.9f*a);
+                m.softLine(a0.add(side.multiply(1.6)),a1.add(side.multiply(1.6)),w*5,VIOLET,.16f*a);m.softLine(a0.subtract(side.multiply(1.6)),a1.subtract(side.multiply(1.6)),w*5,VIOLET,.16f*a);
             }
         }
+    }
+    /** Path of bolt k: a few sharp zigzags out of the storm, mostly upward, ending in a hook bent back. */
+    static Vec3d[] boltPath(Fx c,Vec3d core,int k){
+        int n=4+(int)(Ease.hash(k*3+1)*3);Vec3d[] p=new Vec3d[n+2];
+        p[0]=core.add(c.vec((Ease.hash(k*7+2)-.5)*.6,(Ease.hash(k*9+3)-.3)*.7,(Ease.hash(k*11+4)-.5)*.9));
+        Vec3d d=c.dir(25+55*Ease.hash(k*13+5),(Ease.hash(k*17+6)-.5)*260);
+        for(int i=1;i<=n;i++){
+            double phi=Ease.hash(k*19+i)*Math.PI*2,turn=Math.toRadians((i%2==0?1:-1)*(30+50*Ease.hash(k*23+i)));
+            Vec3d x=across(d),y=d.crossProduct(x).normalize(),axis=x.multiply(Math.cos(phi)).add(y.multiply(Math.sin(phi)));
+            d=d.multiply(Math.cos(turn)).add(axis.crossProduct(d).multiply(Math.sin(turn))).normalize();
+            p[i]=p[i-1].add(d.multiply(.4+.4*Ease.hash(k*29+i)));
+        }
+        double turn=Math.toRadians(125);Vec3d x=across(d);
+        p[n+1]=p[n].add(d.multiply(Math.cos(turn)).add(x.crossProduct(d).multiply(Math.sin(turn))).normalize().multiply(.3));
+        return p;
     }
     /**
      * Thrust i: a lance of light shot ahead of the tip and sliding on as it fades (a faint line of it lingers),
@@ -224,34 +325,34 @@ final class NeonThrustSkill implements Fx.Skill {
         var hb=sword(c,THRUSTS[i]);Vec3d hand=hb[0],dir=hb[1],tip=hand.add(dir.multiply(TIP)),aim=aim(c,i);
         float big=i==THRUSTS.length-1?1.3f:STRIKES[i]?1:.7f;
         if(u<.17f){
-            double len=(2.2+.7*big)*Ease.out(u,0,.035f),start=.1+1.4*u;float a=1-Ease.smooth(u,.06f,.17f);
+            double len=(2.4+.8*big)*Ease.out(u,0,.035f),start=.1+1.5*u;float a=1-Ease.smooth(u,.06f,.17f);
             Vec3d a0=tip.add(aim.multiply(start)),a1=a0.add(aim.multiply(len));
-            m.needle(a0,a1,.6*big,.3,INDIGO,a*.35f);m.needle(a0,a1,.3*big,.32,VIOLET,a*.9f);m.needle(a0,a1,.1*big,.35,VCORE,a);
-            m.star(a1,.22*big,VCORE,a);
+            m.needle(a0,a1,.6*big,.3,VIOLET,a*.35f);m.needle(a0,a1,.3*big,.32,FUCHSIA,a*.9f);m.needle(a0,a1,.1*big,.35,GLARE,a);
+            m.star(a1,.22*big,GLARE,a);
             // A spray of thinner needles around it: many stabs at once.
             if(u<.11f){
                 float s=1-u/.11f;int n=STRIKES[i]?5:3;
                 for(int k=0;k<n;k++){
                     Vec3d d=c.dir(AIM[i][0]+(Ease.hash(i*17+k*3)-.5)*16,AIM[i][1]+(Ease.hash(i*23+k*5)-.5)*24);
                     Vec3d b0=tip.add(d.multiply(.2+2.2*u+.4*Ease.hash(i*7+k))),b1=b0.add(d.multiply((.8+.8*Ease.hash(i*13+k))*Ease.out(u,0,.03f)));
-                    m.needle(b0,b1,.16,.35,VIOLET,s*.8f);m.needle(b0,b1,.05,.4,VCORE,s);
+                    m.needle(b0,b1,.16,.35,FUCHSIA,s*.8f);m.needle(b0,b1,.05,.4,GLARE,s);
                 }
             }
         }else{
-            Vec3d a0=tip.add(aim.multiply(.1+1.4*.17)),a1=a0.add(aim.multiply(2.0+.3*big));
-            m.softLine(a0,a1,.05,VIOLET,.22f*(1-Ease.unit(u,.17f,.45f)));
+            Vec3d a0=tip.add(aim.multiply(.1+1.5*.17)),a1=a0.add(aim.multiply(2.2+.3*big));
+            m.softLine(a0,a1,.05,FUCHSIA,.2f*(1-Ease.unit(u,.17f,.45f)));
         }
         if(u<.14f){
             float a=1-u/.14f;Vec3d p=tip.add(aim.multiply(.25+.8*u)),x=across(aim),y=aim.crossProduct(x).normalize();
-            FxLib.ringPlane(m,p,x,y,.15+1.1*big*Ease.out(u,0,.14f),.12,LAVENDER,.85f*a);
-            if(u<.07f){float f=1-u/.07f;m.star(tip,(.4+.3*big)*f+.1,VCORE,1);m.softDisc(tip,.45*big,VIOLET,.7f*f);}
+            FxLib.ringPlane(m,p,x,y,.15+1.1*big*Ease.out(u,0,.14f),.12,PINKISH,.85f*a);
+            if(u<.07f){float f=1-u/.07f;m.star(tip,(.4+.3*big)*f+.1,GLARE,1);m.softDisc(tip,.45*big,FUCHSIA,.7f*f);}
         }
         if(STRIKES[i]&&u<.24f){
             Vec3d p=bite(c,tip,aim);float a=1-Ease.smooth(u,.04f,.24f);
-            FxLib.flash(m,p,(.8+.4*big)*(1-.5*u/.24f),VIOLET,a);
-            FxLib.sparks(m,p,18,1.4*big,.05,LAVENDER,a,i*31+5,Ease.out(u,0,.1f));
+            FxLib.flash(m,p,(.8+.4*big)*(1-.5*u/.24f),FUCHSIA,a);
+            FxLib.sparks(m,p,18,1.4*big,.05,PINKISH,a,i*31+5,Ease.out(u,0,.1f));
             Vec3d x=across(aim),y=aim.crossProduct(x).normalize(),d1=x.add(y).normalize(),d2=x.subtract(y).normalize();double r=(.5+.6*u/.24f)*big;
-            m.glowLine(p.subtract(d1.multiply(r)),p.add(d1.multiply(r)),.06,VIOLET,a);m.glowLine(p.subtract(d2.multiply(r)),p.add(d2.multiply(r)),.06,VIOLET,a);
+            m.glowLine(p.subtract(d1.multiply(r)),p.add(d1.multiply(r)),.06,FUCHSIA,a);m.glowLine(p.subtract(d2.multiply(r)),p.add(d2.multiply(r)),.06,FUCHSIA,a);
         }
     }
     /** Afterimage stabs are born every GHOST seconds from the first thrust to the last, and five more with every thrust. */
@@ -278,8 +379,8 @@ final class NeonThrustSkill implements Fx.Skill {
         for(var g:live)ghost(c,m,t,shoulder,g);
     }
     /**
-     * One afterimage stab: a violet ghost of the arm and a pink ghost of the blade snapping out along a direction in
-     * the cone ahead, a blurred streak along it, a glint at its tip, then fading.
+     * One afterimage stab: a purple ghost of the arm and a pink ghost of the blade snapping out along a direction in
+     * the fan ahead, a magenta smear along it, a glint at its tip, then fading.
      */
     static void ghost(Fx c,EffectMesh m,float t,Vec3d shoulder,Ghost g){
         int seed=g.seed();double reach=g.reach();float life=g.life(),u=t-g.born();
@@ -288,10 +389,10 @@ final class NeonThrustSkill implements Fx.Skill {
         Vec3d s=shoulder.add(c.right.multiply((Ease.hash(seed+2)-.5)*1.1)).add(0,(Ease.hash(seed+3)-.3)*.6,0);
         Vec3d hand=s.add(d.multiply(.62*reach-.35*(1-Ease.out(u,0,.035f)))),tip=hand.add(d.multiply(TIP*reach));
         float a=Ease.smooth(u,0,.015f)*(1-Ease.smooth(u,life*.4f,life));
-        m.softLine(s,hand,.2,LAVENDER,.2f*a);
-        m.softLine(hand.subtract(d.multiply(.3)),tip,.16,VIOLET,.15f*a);
+        m.softLine(s,hand,.2,PURPLE,.1f*a);
+        m.softLine(hand.subtract(d.multiply(.3)),tip,.16,FUCHSIA,.12f*a);
         neon(m,hand.add(d.multiply(GUARD)),tip,.03,.6f*a,PINK);
-        m.star(tip,.16,VCORE,.75f*a);
+        m.star(tip,.16,GLARE,.75f*a);
     }
     /** Where a thrust bites: the nearest body in the server's thrust lane, on its near side at the lance's height; else just past the tip. */
     static Vec3d bite(Fx c,Vec3d tip,Vec3d aim){
@@ -308,59 +409,125 @@ final class NeonThrustSkill implements Fx.Skill {
         }
         return tip.add(aim.multiply(.9));
     }
-    /** The coil: energy spirals into the blade, a ring tightens on the ground and sparks drip off the tip. */
-    static void coil(Fx c,EffectMesh m,float t,Vec3d guard,Vec3d tip){
-        if(t<COIL-.05f||t>=RISE+.03f)return;
-        float u=Ease.unit(t,COIL-.05f,RISE);Vec3d mid=guard.add(tip).multiply(.5);
-        FxLib.converge(m,mid,2.4,30,t,COIL-.05f,RISE-.05f,LAVENDER,19);
-        FxLib.ring(m,c.pos.add(0,.04,0),2.8-1.7*u,.2,VIOLET,.7f*Ease.smooth(t,COIL-.05f,COIL+.08f));
-        FxLib.glow(m,c.pos.add(0,.03,0),1.6,INDIGO,.35f*u);
-        for(int k=0;k<6;k++){float life=((t-COIL)*2.2f+k/6f)%1;if(life<0)life+=1;m.star(tip.add((Ease.hash(k*3)-.5)*.2,-life*.9,(Ease.hash(k*5)-.5)*.2),.06,LAVENDER,(1-life)*u);}
+    /** Where the finisher bursts: the nearest body in the thrust lane, else ahead. */
+    static Vec3d target(Fx c){return bite(c,c.pos.add(c.f.multiply(1.9)).add(0,1.1,0),c.f);}
+
+    /** The swing's plane: through the sword shoulder, along the facing and up, rolled toward the right so it reads from behind too. */
+    static final double TILT=18;
+    static Vec3d swingCentre(Fx c){return c.pos.add(c.f.multiply(.2)).add(0,1.35,0).add(c.right.multiply(.3));}
+    static Vec3d swingUp(Fx c,double tilt){double k=Math.toRadians(tilt);return new Vec3d(0,Math.cos(k),0).add(c.right.multiply(Math.sin(k)));}
+    /** Angle of the blade in the swing's plane at sec: 0 ahead, 90 straight up, 180 behind. */
+    static double swingAngle(Fx c,float sec){
+        Vec3d d=sword(c,sec)[1];double a=Math.toDegrees(Math.atan2(d.dotProduct(swingUp(c,TILT)),d.dotProduct(c.f)));
+        return a<-90?a+360:a;
     }
-    /** Plane of the rising slash: through the sword shoulder at the cut, along the facing and up, tilted 12° toward the left. */
-    static Vec3d slashCentre(Fx c){return c.pos.add(c.f.multiply(.42)).add(0,1.5,0).add(c.right.multiply(.3));}
-    static Vec3d slashUp(Fx c){double k=Math.toRadians(12);return new Vec3d(0,Math.cos(k),0).add(c.left.multiply(Math.sin(k)));}
-    /** Angle of the blade in the slash plane at sec (0 straight ahead, 90 straight up). */
-    static double swingAngle(Fx c,float sec){Vec3d d=sword(c,sec)[1];return Math.toDegrees(Math.atan2(d.dotProduct(slashUp(c)),d.dotProduct(c.f)));}
+    /** The crescent's head runs a little ahead of the blade, from low in front over the head to low behind. */
+    static final double TAIL=-30;
+    static double head(Fx c,float t){return Math.max(TAIL,Math.min(205,swingAngle(c,Math.min(t,LEVEL))+18));}
+    /** Blades of the crescent that spreads into rings: their tilts and births. */
+    static final double[] RING_TILT={TILT,-6,36,8};
+    static final float[] RING_BORN={SLASH,SLASH+.05f,SLASH+.11f,SLASH+.18f};
+    static final float RING_LIFE=.62f;
+    /** Radius of ring k a fraction x through its life. */
+    static double ringRadius(int k,float x){return (k==0?2.5:2.1)+3.0*Ease.out(x,0,1);}
+    /** Colour of a ring a fraction x through its life: magenta, purple, then the blue-violet it cools to. */
+    static int ringColour(float x){return x<.35f?mix(FUCHSIA,PURPLE,x/.35f):mix(PURPLE,BLUE,Ease.smooth(x,.35f,.85f));}
     /**
-     * The rising slash: the blade's hot trail, a crescent growing with it from below the target to over the head
-     * that holds and burns away from its tail; at the finisher a flash, sparks fountaining up, a ground shock,
-     * a geyser of violet light with rings racing up it, and embers rising after.
+     * The swing's light: the blade's hot trail and the bright edge of the crescent growing with the blade from low in front
+     * over the head and down behind (its magenta body and dark inside are in the alpha pass); when the target bursts, the
+     * bright rims of the rings it spreads into and magenta streaks whirling round the dark heart.
      */
-    static void slash(Fx c,EffectMesh m,float t){
-        if(t<RISE||t>=3.7f)return;
-        Vec3d o=slashCentre(c),u=c.f,v=slashUp(c);
-        if(t<OVER+.05f){
-            float a=1-Ease.smooth(t,OVER-.04f,OVER+.05f);
-            trail(c,m,t,.07f,8,.3,TIP,VIOLET,.85f*a);trail(c,m,t,.05f,6,.85,TIP,VCORE,.7f*a);
+    static void swing(Fx c,EffectMesh m,float t){
+        if(t<LOW-.04f||t>=3.75f)return;
+        Vec3d o=swingCentre(c),u=c.f,v=swingUp(c,TILT);
+        if(t<LEVEL+.05f){
+            float a=Ease.smooth(t,LOW-.04f,LOW+.02f)*(1-Ease.smooth(t,LEVEL-.02f,LEVEL+.05f));
+            trail(c,m,t,.07f,8,.3,TIP,FUCHSIA,.85f*a);trail(c,m,t,.05f,6,.8,TIP,GLARE,.6f*a);
         }
-        if(t>=2.86f&&t<3.3f){
-            double from=-48,head=Math.max(from,Math.min(118,swingAngle(c,Math.min(t,OVER))));
-            float burn=Ease.unit(t,3.02f,3.3f);double tail=from+(head-from)*burn;
-            band(m,o,u,v,1.25,2.3,tail,head,1-.6f*burn);
-            neonArc(m,o,u,v,2.25,tail,head,.09,1-burn*.5f);
-            neonArc(m,o,u,v,1.65,tail+(head-tail)*.25,head,.04,.7f*(1-burn));
+        if(t>=LOW&&t<SLASH+.1f){
+            double head=head(c,t);float a=1-Ease.smooth(t,SLASH,SLASH+.1f);
+            crescent(m,o,u,v,2.5,.35,TAIL,head,PINKISH,.45f*a);
+            edge(m,o,u,v,2.5,TAIL,head,.08,a);
         }
-        Vec3d bite=bite(c,c.pos.add(c.f.multiply(1.9)).add(0,1.1,0),c.f),ground=new Vec3d(bite.x,c.pos.y,bite.z);
-        if(t>=SLASH&&t<SLASH+.32f){
-            float a=1-Ease.smooth(t,SLASH+.05f,SLASH+.32f),grow=Ease.out(t,SLASH,SLASH+.16f);
-            FxLib.flash(m,bite,1.1*(1-.4*Ease.unit(t,SLASH,SLASH+.32f)),VIOLET,a);
-            for(int k=0;k<16;k++){
-                double az=Ease.hash(k*3+1)*Math.PI*2,el=Math.toRadians(35+50*Ease.hash(k*5+2)),l=(1.2+1.8*Ease.hash(k*7))*grow;
-                Vec3d d=new Vec3d(Math.cos(el)*Math.cos(az),Math.sin(el),Math.cos(el)*Math.sin(az));
-                m.needle(bite.add(d.multiply(l*.3)),bite.add(d.multiply(l)),.06,.3,k%3==0?VCORE:LAVENDER,a);
+        for(int k=0;k<RING_TILT.length;k++){
+            float age=t-RING_BORN[k];if(age<0||age>=RING_LIFE)continue;float x=age/RING_LIFE;
+            double r=ringRadius(k,x);float a=(float)Math.pow(1-x,1.3)*(k==0?.9f:.7f);
+            band(m,o,u,swingUp(c,RING_TILT[k]),r-.12,r-.03,r+.03,-12,196,x<.4f?PINKISH:mix(PINKISH,BLUE,Ease.smooth(x,.4f,.9f)),.4f*a*(1-x));
+        }
+        if(t>=SLASH&&t<3.2f){
+            float a=Ease.smooth(t,SLASH,SLASH+.04f)*(1-Ease.smooth(t,3.05f,3.2f));double r=1.6+1.8*Ease.out(t,SLASH-.05f,3.15f);
+            for(int k=0;k<5;k++){double rk=r*(.3+.15*k),rot=k*72+(t-SLASH)*420;band(m,o,u,v,rk-.05,rk,rk+.05,rot,rot+100,k%2==0?FUCHSIA:PURPLE,.5f*a);}
+        }
+    }
+    /** The swing's colour and dark: the crescent's magenta body and dark inside, the rings it spreads into, and a dark whirl round the caster as the target bursts. */
+    static void vortex(Fx c,EffectMesh m,float t){
+        if(t<LOW||t>=3.75f)return;
+        Vec3d o=swingCentre(c),u=c.f,v=swingUp(c,TILT);
+        if(t<3.0f){
+            double head=head(c,t);float a=1-Ease.smooth(t,SLASH,3.0f);
+            crescent(m,o,u,v,2.05,1.5,TAIL,head,SHADOW,.75f*a);
+            crescent(m,o,u,v,2.5,.9,TAIL,head,FUCHSIA,.6f*a);
+        }
+        for(int k=0;k<RING_TILT.length;k++){
+            float age=t-RING_BORN[k];if(age<0||age>=RING_LIFE)continue;float x=age/RING_LIFE;
+            double r=ringRadius(k,x);float a=(float)Math.pow(1-x,1.3)*(k==0?.75f:.6f);
+            band(m,o,u,swingUp(c,RING_TILT[k]),r-.75*(1-.5*x),r-.05,r+.06,-12,196,ringColour(x),a);
+        }
+        if(t>=3.25f)return;
+        if(t>=SLASH-.05f){
+            float a=Ease.smooth(t,SLASH-.05f,SLASH+.02f)*(1-Ease.smooth(t,3.0f,3.25f));double r=1.6+1.8*Ease.out(t,SLASH-.05f,3.15f);
+            band(m,o,u,v,0,.05,r,0,360,SHADOW,.5f*a);
+            for(int k=0;k<5;k++){double rk=r*(.3+.15*k),rot=k*72+36+(t-SLASH)*420;band(m,o,u,v,rk-.18,rk,rk+.18,rot,rot+140,SHADOW,.45f*a);}
+        }
+    }
+    /**
+     * The finisher on the target: a white-pink flash with a level flare, a pillar of light up past the sky with sparkles
+     * rising round it, rings swirling out over the ground at its foot, a pink haze rolling up and embers.
+     */
+    static void burst(Fx c,EffectMesh m,float t){
+        if(t<SLASH-.02f||t>=3.9f)return;
+        Vec3d p=target(c),g=new Vec3d(p.x,c.pos.y,p.z);
+        if(t<SLASH+.3f){
+            float u=Ease.unit(t,SLASH-.02f,SLASH+.3f),a=1-Ease.smooth(t,SLASH+.04f,SLASH+.3f);
+            FxLib.flash(m,p,2.2*(1-.4*u)+.3,FUCHSIA,.85f*a);
+            m.softDisc(p,1.2*(1-.5*u),GLARE,a);
+            // The flare lies level across the screen: along the camera's own right.
+            var cam=c.mc.gameRenderer.getCamera();var look=cam.getHorizontalPlane();var up=cam.getVerticalPlane();
+            Vec3d x=new Vec3d(look.x(),look.y(),look.z()).crossProduct(new Vec3d(up.x(),up.y(),up.z()));
+            if(x.lengthSquared()>1e-6){
+                x=x.normalize();
+                m.needle(p.subtract(x.multiply(5)),p.add(x.multiply(5)),.9*(1-.5*u),.5,PINKISH,.5f*a);
+                m.needle(p.subtract(x.multiply(3.5)),p.add(x.multiply(3.5)),.22*(1-.5*u),.5,GLARE,.8f*a);
             }
-            FxLib.ring(m,ground.add(0,.05,0),.3+3.6*Ease.out(t,SLASH,SLASH+.32f),.35,VIOLET,.8f*a);
         }
-        if(t>=SLASH&&t<3.55f){
-            float a=1-Ease.smooth(t,3.08f,3.55f);double h=8*Ease.out(t,SLASH,SLASH+.12f);
-            FxLib.column(m,ground,h,.35,VIOLET,a);
-            m.needle(ground,ground.add(0,h*.85,0),.9,.15,INDIGO,a*.25f);
-            for(int k=0;k<6;k++){float born=SLASH+k*.05f,r=(t-born)/.45f;if(r<0||r>=1)continue;
-                FxLib.ring(m,ground.add(0,.3+r*h*.9,0),.55+.5*r,.12,k%2==0?LAVENDER:VIOLET,.75f*(1-r)*a);}
-            FxLib.glow(m,ground.add(0,.04,0),1.7,INDIGO,.5f*a);
+        if(t>=SLASH&&t<3.66f){
+            float a=1-Ease.smooth(t,3.25f,3.66f),thin=1-.55f*Ease.smooth(t,3.0f,3.5f);Vec3d top=g.add(0,16*Ease.out(t,SLASH,SLASH+.07f),0);
+            m.softLine(g,top,2.0*thin,PURPLE,.1f*a);
+            m.softLine(g,top,.8*thin,FUCHSIA,.6f*a);
+            m.line(g,top,.12*thin,GLARE,a);
+            m.softDisc(g.add(0,.3,0),1.6*thin,FUCHSIA,.55f*a);m.softDisc(g.add(0,.3,0),.7,GLARE,.7f*a);
+            FxLib.glow(m,g.add(0,.04,0),2.4,FUCHSIA,.45f*a);
         }
-        if(t>=SLASH+.05f)FxLib.embers(m,ground,1.3,4.5,26,t-SLASH-.05f,1.4f,.07,LAVENDER,Ease.smooth(t,SLASH+.05f,SLASH+.15f)*(1-Ease.smooth(t,3.4f,3.7f)),23);
+        for(int k=0;k<30;k++){
+            float born=SLASH+.02f+.5f*(float)Ease.hash(k*7+3),life=.5f+.35f*(float)Ease.hash(k*11+5),u=(t-born)/life;if(u<0||u>=1)continue;
+            double ang=Ease.hash(k*13)*Math.PI*2+u*1.5,r=.15+.8*Ease.hash(k*17);
+            Vec3d s=g.add(Math.cos(ang)*r,.3+(1.5+5.5*Ease.hash(k*19))*u,Math.sin(ang)*r);
+            float tw=.6f+.4f*(float)Math.sin(t*(30+20*Ease.hash(k*23))+k);
+            m.star(s,.08+.08*Ease.hash(k*29),k%4==0?GLARE:PINKISH,(1-u)*tw);
+        }
+        for(int k=0;k<3;k++){
+            float born=SLASH+k*.07f,u=(t-born)/.55f;if(u<0||u>=1)continue;
+            FxLib.ring(m,g.add(0,.05+.1*k,0),.3+2.0*Ease.out(u,0,1),.3,k==1?VIOLET:FUCHSIA,.55f*(1-u));
+        }
+        if(t>=SLASH+.05f){
+            float a=Ease.smooth(t,SLASH+.05f,SLASH+.25f)*(1-Ease.smooth(t,3.45f,3.88f));
+            for(int k=0;k<10;k++){
+                double ang=Ease.hash(k*31+1)*Math.PI*2,r=.3+.9*Ease.hash(k*37+2),rise=(t-SLASH)*(.6+.8*Ease.hash(k*41+3));
+                Vec3d s=g.add(Math.cos(ang)*r+.2*Math.sin(t*1.7+k),.6+2.2*Ease.hash(k*43+4)+rise,Math.sin(ang)*r+.2*Math.cos(t*1.3+k));
+                m.softDisc(s,.9+.6*Ease.hash(k*47)+.5*(t-SLASH),k%3==0?PURPLE:FUCHSIA,.07f*a);
+            }
+        }
+        FxLib.embers(m,g,1.2,4.5,22,t-SLASH,1.5f,.06,PINKISH,Ease.smooth(t,SLASH,SLASH+.1f)*(1-Ease.smooth(t,3.5f,3.85f)),23);
     }
     /** Ribbon swept by the blade (from..to blocks along it) over the last {@code span} seconds, on the moving body. */
     static void trail(Fx c,EffectMesh m,float t,float span,int samples,double from,double to,int rgb,float alpha){
@@ -371,45 +538,60 @@ final class NeonThrustSkill implements Fx.Skill {
             m.vertex(a[i],rgb,a0*.35f);m.vertex(b[i],rgb,a0);m.vertex(b[i+1],rgb,a1);m.vertex(a[i+1],rgb,a1*.35f);
         }
     }
-    /** Band of the crescent in the plane (u,v) from tail to head (degrees): bright at the outer edge, fading inward, thin at the tail. */
-    static void band(EffectMesh m,Vec3d o,Vec3d u,Vec3d v,double inner,double outer,double tail,double head,float alpha){
-        if(alpha<=0||head-tail<1)return;int n=Math.max(4,(int)((head-tail)/4));
+    /** Soft band in the plane (u,v) between radii r0 and r1, brightest at rPeak, over the angles a0..a1 (degrees); an open arc fades at both ends. */
+    static void band(EffectMesh m,Vec3d o,Vec3d u,Vec3d v,double r0,double rPeak,double r1,double a0,double a1,int rgb,float alpha){
+        if(alpha<=0||a1-a0<.5)return;int n=Math.max(6,(int)((a1-a0)/4));boolean open=a1-a0<359;
         for(int i=0;i<n;i++){
-            double a0=Math.toRadians(tail+(head-tail)*i/n),a1=Math.toRadians(tail+(head-tail)*(i+1)/n);
-            float w0=(float)Math.pow((double)i/n,.6),w1=(float)Math.pow((double)(i+1)/n,.6);
-            Vec3d d0=u.multiply(Math.cos(a0)).add(v.multiply(Math.sin(a0))),d1=u.multiply(Math.cos(a1)).add(v.multiply(Math.sin(a1)));
-            m.vertex(o.add(d0.multiply(outer-(outer-inner)*w0)),INDIGO,0);m.vertex(o.add(d1.multiply(outer-(outer-inner)*w1)),INDIGO,0);
-            m.vertex(o.add(d1.multiply(outer)),VIOLET,alpha*w1);m.vertex(o.add(d0.multiply(outer)),VIOLET,alpha*w0);
+            double x0=(double)i/n,x1=(double)(i+1)/n;
+            float k0=alpha*(open?(float)Math.min(1,Math.min(x0,1-x0)/.12):1),k1=alpha*(open?(float)Math.min(1,Math.min(x1,1-x1)/.12):1);
+            Vec3d d0=in(u,v,Math.toRadians(a0+(a1-a0)*x0)),d1=in(u,v,Math.toRadians(a0+(a1-a0)*x1));
+            m.vertex(o.add(d0.multiply(r0)),rgb,0);m.vertex(o.add(d1.multiply(r0)),rgb,0);m.vertex(o.add(d1.multiply(rPeak)),rgb,k1);m.vertex(o.add(d0.multiply(rPeak)),rgb,k0);
+            m.vertex(o.add(d0.multiply(rPeak)),rgb,k0);m.vertex(o.add(d1.multiply(rPeak)),rgb,k1);m.vertex(o.add(d1.multiply(r1)),rgb,0);m.vertex(o.add(d0.multiply(r1)),rgb,0);
+        }
+    }
+    /** Crescent in the plane (u,v) from tail to head (degrees): bright at its outer edge r and fading inward, widest at the head. */
+    static void crescent(EffectMesh m,Vec3d o,Vec3d u,Vec3d v,double r,double width,double tail,double head,int rgb,float alpha){
+        if(alpha<=0||head-tail<1)return;int n=Math.max(6,(int)((head-tail)/3));
+        for(int i=0;i<n;i++){
+            double x0=(double)i/n,x1=(double)(i+1)/n,w0=width*Math.sqrt(x0),w1=width*Math.sqrt(x1);
+            float k0=alpha*(float)Math.min(1,x0*4),k1=alpha*(float)Math.min(1,x1*4);
+            Vec3d d0=in(u,v,Math.toRadians(tail+(head-tail)*x0)),d1=in(u,v,Math.toRadians(tail+(head-tail)*x1));
+            m.vertex(o.add(d0.multiply(r-w0)),rgb,0);m.vertex(o.add(d1.multiply(r-w1)),rgb,0);m.vertex(o.add(d1.multiply(r)),rgb,k1);m.vertex(o.add(d0.multiply(r)),rgb,k0);
+            m.vertex(o.add(d0.multiply(r)),rgb,k0);m.vertex(o.add(d1.multiply(r)),rgb,k1);m.vertex(o.add(d1.multiply(r+.12)),rgb,0);m.vertex(o.add(d0.multiply(r+.12)),rgb,0);
         }
     }
     /** Neon tube along the crescent's outer edge, thickening toward its head, which glows. */
-    static void neonArc(EffectMesh m,Vec3d o,Vec3d u,Vec3d v,double r,double tail,double head,double width,float alpha){
+    static void edge(EffectMesh m,Vec3d o,Vec3d u,Vec3d v,double r,double tail,double head,double width,float alpha){
         if(alpha<=0||head-tail<1)return;int n=Math.max(4,(int)((head-tail)/5));Vec3d prev=null;
         for(int i=0;i<=n;i++){
-            double a=Math.toRadians(tail+(head-tail)*i/n);Vec3d p=o.add(u.multiply(Math.cos(a)*r)).add(v.multiply(Math.sin(a)*r));
-            if(prev!=null){float k=(float)i/n;neon(m,prev,p,width*(.3+.7*k),alpha*(.25f+.75f*k),PURPLE);}
+            Vec3d p=o.add(in(u,v,Math.toRadians(tail+(head-tail)*i/n)).multiply(r));
+            if(prev!=null){float k=(float)i/n;neon(m,prev,p,width*(.3+.7*k),alpha*(.25f+.75f*k),ARC);}
             prev=p;
         }
-        m.softDisc(prev,.35,VIOLET,.6f*alpha);
+        m.softDisc(prev,.4,FUCHSIA,.6f*alpha);
     }
 
     // ───────────────────────────── screen ─────────────────────────────
 
-    @Override public float flash(Fx c){float t=c.sec;return t>=SLASH&&t<SLASH+.1f?.14f*(1-Ease.unit(t,SLASH,SLASH+.1f)):0;}
-    @Override public int flashColor(Fx c){return 0xd8c4ff;}
-    /** Post-process shock: small on the server's thrust hits, strong on the slash. */
+    @Override public float flash(Fx c){float t=c.sec;return t>=SLASH-.01f&&t<SLASH+.12f?.2f*(1-Ease.unit(t,SLASH-.01f,SLASH+.12f)):0;}
+    @Override public int flashColor(Fx c){return 0xffd8ff;}
+    /** Post-process shock: a hum through the storm, small on the server's thrust hits, strong on the burst. */
     @Override public float pulse(float sec){
-        float p=0;
+        float p=.05f*storm(sec);
         for(int i=0;i<THRUSTS.length;i++)if(STRIKES[i]){float u=sec-THRUSTS[i];if(u>=0&&u<.12f)p=Math.max(p,.18f*(1-u/.12f));}
-        if(sec>=SLASH&&sec<SLASH+.3f)p=Math.max(p,.7f*(1-Ease.smooth(sec,SLASH,SLASH+.3f)));
+        if(sec>=SLASH&&sec<SLASH+.35f)p=Math.max(p,.8f*(1-Ease.smooth(sec,SLASH,SLASH+.35f)));
         return p;
     }
-    @Override public float shake(float sec){return sec>=SLASH&&sec<SLASH+.35f?1.1f*(1-Ease.unit(sec,SLASH,SLASH+.35f)):0;}
-    /** A small nod on every thrust, the view thrown up with the slash. */
+    @Override public float shake(float sec){
+        float s=.12f*storm(sec);
+        if(sec>=SLASH&&sec<SLASH+.4f)s=Math.max(s,1.2f*(1-Ease.unit(sec,SLASH,SLASH+.4f)));
+        return s;
+    }
+    /** A small nod on every thrust, the view thrown up with the burst; both ease in over a frame or two. */
     @Override public float[] kick(float sec){
-        if(sec>=SLASH&&sec<SLASH+.4f){float k=(float)Math.exp(-(sec-SLASH)/.1);return new float[]{0,-2.4f*k,.9f*k};}
+        if(sec>=SLASH-.01f&&sec<SLASH+.4f){float k=Ease.smooth(sec,SLASH-.01f,SLASH+.03f)*(float)Math.exp(-Math.max(0,sec-SLASH-.03f)/.1);return new float[]{0,-2.4f*k,.9f*k};}
         int i=thrustAt(sec);
-        if(i>=0&&sec<COIL){float u=sec-THRUSTS[i];if(u<.08f){float k=1-u/.08f;return new float[]{(i%2==0?.3f:-.3f)*k,.5f*k*(STRIKES[i]?1:.6f),0};}}
+        if(i>=0&&sec<BACK){float u=sec-THRUSTS[i];if(u<.1f){float k=Ease.smooth(u,0,.02f)*(1-Ease.smooth(u,.02f,.1f));return new float[]{(i%2==0?.3f:-.3f)*k,.5f*k*(STRIKES[i]?1:.6f),0};}}
         return null;
     }
 }
