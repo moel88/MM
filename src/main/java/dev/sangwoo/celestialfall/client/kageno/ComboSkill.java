@@ -322,7 +322,7 @@ final class ComboSkill implements Fx.Skill {
             return;
         }
         TimeWalkerSkill.glint(m,p.add(0,.15,0),1.5*(1-.5*u)+.3,VIOLET,a*(1-u));
-        FxLib.ring(m,p.add(0,.06,0),.4+4.6*Ease.out(t,HIT,HIT+.38f),.5,LILAC,.85f*a*(1-u));
+        FxLib.ring(m,p.add(0,.06,0),.4+4.6*Ease.out(t,HIT,HIT+.38f),.5,SEAL,.7f*a*(1-u));
         FxLib.ring(m,p.add(0,.05,0),.3+2.6*Ease.out(t,HIT,HIT+.3f),.3,MAGENTA,.6f*a*(1-Ease.unit(t,HIT,HIT+.3f)));
         float s=a*(1-Ease.smooth(t,HIT+.1f,HIT+.4f));
         for(int k=0;k<16;k++){
