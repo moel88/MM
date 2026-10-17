@@ -324,7 +324,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         if(additive&&t>=RELEASE-.01f&&t<RELEASE+.16f){
             float u=Ease.unit(t,RELEASE,RELEASE+.16f),a=Ease.smooth(t,RELEASE-.01f,RELEASE+.015f)*(1-u);double s=1-.35*u;
             m.softDisc(x,2.6*s,PINK,.5f*a);m.softDisc(x,1.6*s,WHITE,.9f*a);
-            FxLib.flare(m,x,3.6*s,ROSE,a,45);FxLib.flare(m,x,2.4*s,WHITE,a*.8f,0);
+            FxLib.flare(m,x,2.2*s,ROSE,a,45);
         }
     }
     /**
@@ -401,7 +401,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         for(var e:c.targets){
             Vec3d p=e.getLerpedPos(c.delta).add(0,e.getHeight()*.6,0);
             if(t<STORED+.16f){float u=Ease.unit(t,STORED,STORED+.16f),a=Ease.smooth(t,STORED-.01f,STORED+.01f)*(1-u);FxLib.flash(m,p,.9*(1-u)+.2,LAVENDER,a);FxLib.sparks(m,p,8,1.2,.04,WHITE,a,e.getId()*7,Ease.out(t,STORED,STORED+.12f));}
-            if(t>=RELEASE-.01f){float u=Ease.unit(t,RELEASE,RELEASE+.25f),a=Ease.smooth(t,RELEASE-.01f,RELEASE+.01f)*(1-u);FxLib.flare(m,p,1.6*(1-.4*u),MAGENTA,a,45);m.softDisc(p,1.1,PINK,.5f*a);}
+            if(t>=RELEASE-.01f){float u=Ease.unit(t,RELEASE,RELEASE+.25f),a=Ease.smooth(t,RELEASE-.01f,RELEASE+.01f)*(1-u);FxLib.flare(m,p,1.1*(1-.4*u),MAGENTA,a,45);m.softDisc(p,1.1,PINK,.5f*a);}
         }
     }
     /** Chord direction (start end to end end), the way the slash bows, its radius and half-angle (radians) for cut i. */
@@ -441,7 +441,12 @@ final class TimeWalkerSkill implements Fx.Skill {
             if(big)KagenoFire.crescent(o,pl[1],pl[0],r*.9,r*.12,-deg+6,(2*deg-12)*grow,5,i*3+8,erase,.7f,.8f*a,.1);
         }
     }
-    /** Light on the purple slashes: a flash running with each one's head and sparks thrown off it. */
+    /** A round glint: soft light and a small white star (no long cross arms that would read as more cuts). */
+    static void glint(EffectMesh m,Vec3d p,double r,int rgb,float alpha){
+        if(alpha<=0||r<=0)return;
+        m.softDisc(p,r,rgb,alpha*.45f);m.softDisc(p,r*.55,rgb,alpha*.7f);m.softDisc(p,r*.3,WHITE,alpha);m.star(p,r*.35,WHITE,alpha*.8f);
+    }
+    /** Light on the purple slashes: a glint running with each one's head and sparks thrown off it. */
     static void slashLight(Fx c,EffectMesh m,float t){
         if(t<STORED-.01f||t>=RELEASE+.3f)return;
         var list=cuts(c);
@@ -451,7 +456,7 @@ final class TimeWalkerSkill implements Fx.Skill {
             double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h);
             float grow=Ease.out(age,0,big?.07f:.05f),u=age/.22f;double ang=-h+2*h*grow;
             Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h))),head=o.add(pl[1].multiply(Math.cos(ang)*r)).add(pl[0].multiply(Math.sin(ang)*r));
-            FxLib.flash(m,head,(big?1.5:.8)*(1-u)+.2,0xc77dff,(1-u)*Ease.smooth(age,0,.015f));
+            glint(m,head,(big?1.5:.8)*(1-u)+.2,0xc77dff,(1-u)*Ease.smooth(age,0,.015f));
             for(int k=0;k<(big?5:2);k++){
                 Vec3d d=pl[0].multiply(.8).add((Ease.hash(i*37+k*3)-.5)*1.2,(Ease.hash(i*41+k*5)-.4)*1.2,(Ease.hash(i*43+k*7)-.5)*1.2).normalize();
                 Vec3d p=head.add(d.multiply((big?3:1.8)*u*(.5+.5*Ease.hash(i*47+k))));
