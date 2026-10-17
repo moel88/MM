@@ -266,8 +266,8 @@ final class TimeWalkerSkill implements Fx.Skill {
             // The cut's birth: a flash at its start and sparks thrown along it (bigger for the last, big sweep).
             float b=t-COCKS[i];if(b<0||b>=.2f)continue;boolean big=i==CUTS.length-1;
             var cut=list.get(i);Vec3d[] e=span(cut,drawn(t,i));float u=b/.2f;
-            FxLib.flash(m,e[0],(big?1.3:.7)*(1-u)+.15,LAVENDER,(1-u)*Ease.smooth(b,0,.02f));
-            if(big)FxLib.flash(m,e[1],1.1*(1-u)+.2,WHITE,(1-u)*Ease.smooth(b,.04f,.07f));
+            glint(m,e[0],(big?1.3:.7)*(1-u)+.15,LAVENDER,(1-u)*Ease.smooth(b,0,.02f));
+            if(big)glint(m,e[1],1.1*(1-u)+.2,WHITE,(1-u)*Ease.smooth(b,.04f,.07f));
             for(int k=0;k<(big?6:3);k++){
                 Vec3d d=cut.dir().multiply(-cut.from()).multiply(.6+.6*Ease.hash(i*31+k*3)).add((Ease.hash(i*17+k*5)-.5)*.9,(Ease.hash(i*19+k*7)-.4)*.9,(Ease.hash(i*23+k*11)-.5)*.9).normalize();
                 Vec3d p=e[0].add(d.multiply(.3+2.4*u*(.5+.5*Ease.hash(i*29+k))));
@@ -400,7 +400,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         if(t<STORED-.01f||t>=RELEASE+.25f)return;
         for(var e:c.targets){
             Vec3d p=e.getLerpedPos(c.delta).add(0,e.getHeight()*.6,0);
-            if(t<STORED+.16f){float u=Ease.unit(t,STORED,STORED+.16f),a=Ease.smooth(t,STORED-.01f,STORED+.01f)*(1-u);FxLib.flash(m,p,.9*(1-u)+.2,LAVENDER,a);FxLib.sparks(m,p,8,1.2,.04,WHITE,a,e.getId()*7,Ease.out(t,STORED,STORED+.12f));}
+            if(t<STORED+.16f){float u=Ease.unit(t,STORED,STORED+.16f),a=Ease.smooth(t,STORED-.01f,STORED+.01f)*(1-u);glint(m,p,.9*(1-u)+.2,LAVENDER,a);FxLib.sparks(m,p,8,1.2,.04,WHITE,a,e.getId()*7,Ease.out(t,STORED,STORED+.12f));}
             if(t>=RELEASE-.01f){float u=Ease.unit(t,RELEASE,RELEASE+.25f),a=Ease.smooth(t,RELEASE-.01f,RELEASE+.01f)*(1-u);FxLib.flare(m,p,1.1*(1-.4*u),MAGENTA,a,45);m.softDisc(p,1.1,PINK,.5f*a);}
         }
     }
