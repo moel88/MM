@@ -76,6 +76,44 @@ public final class MotionClips {
         if(age<hit+1.25f)return MotionPose.blend(contact,follow,smooth((age-hit)/1.25f));
         return MotionPose.blend(follow,a,smooth((age-hit-1.25f)/(end-hit-1.25f)));
     }
+    /** In the air: the knees draw up while rising ({@code rise} 1 = a jump's take-off speed), the legs reach down and the arms lift while falling. */
+    public static MotionPose air(float rise,float time) {
+        MotionPose p=ready(time);
+        float up=Math.max(0,Math.min(1,rise)),down=Math.max(0,Math.min(1,-rise)),tuck=.35f+.65f*up;
+        p.rot(BODY,8*tuck-3*down,-6,0).rot(HEAD,-4*down,8,0);
+        p.rot(RIGHT_ARM,-28-22*down,8,18+16*down).rot(LEFT_ARM,-34-20*down,-8,-16-16*down);
+        p.elbow[0]=-70+25*down;p.elbow[1]=-64+25*down;
+        p.rot(RIGHT_LEG,-30*tuck-6*down,0,2).rot(LEFT_LEG,-14*tuck+8*down,0,-2);
+        p.knee[0]=60*tuck+10*down;p.knee[1]=40*tuck+6*down;
+        p.bob=-.6f*tuck;
+        return p;
+    }
+    /** Depth of a landing dip {@code since} ticks after touching down: down in 1.6 ticks, back up over 6. */
+    public static float dip(float since) {
+        if(since<0||since>=7.6f)return 0;
+        return since<1.6f?smooth(since/1.6f):1-smooth((since-1.6f)/6);
+    }
+    /** Absorbs a landing ({@code k} 0..1): the hips drop, the knees bend, the torso and arms follow. */
+    public static void land(MotionPose p,float k) {
+        if(k<=0)return;
+        p.bob+=1.8f*k;
+        for(int i=0;i<2;i++){p.joint[RIGHT_LEG+i][0]-=32*k;p.knee[i]+=62*k;}
+        p.joint[BODY][0]+=9*k;p.joint[HEAD][0]-=5*k;
+        p.joint[RIGHT_ARM][0]-=10*k;p.joint[LEFT_ARM][0]-=10*k;p.joint[RIGHT_ARM][2]+=8*k;p.joint[LEFT_ARM][2]-=8*k;
+    }
+    /** Strength of a flinch {@code since} ticks after a blow: snaps in within a tick, dies away over about half a second. */
+    public static float recoil(float since) {
+        if(since<0)return 0;
+        return since<1?smooth(since):(float)Math.exp(-(since-1)/2.5f);
+    }
+    /** The torso snaps back from a blow, the head and arms follow; {@code side} turns it away from a blow from the side. */
+    public static void flinch(MotionPose p,float k,float side) {
+        if(k<=0)return;
+        p.joint[BODY][0]-=11*k;p.joint[BODY][1]+=side*6*k;p.joint[BODY][2]+=side*7*k;
+        p.joint[HEAD][0]-=9*k;p.joint[HEAD][2]+=side*6*k;
+        p.joint[RIGHT_ARM][2]+=10*k;p.joint[LEFT_ARM][2]-=10*k;
+        p.lean+=.35f*k;
+    }
     public static MotionPose guard(float time,float pressure) {
         MotionPose p=ready(time);p.rot(BODY,8,-8,0).rot(HEAD,5,8,0);
         p.rot(RIGHT_ARM,-44,-18,20).rot(LEFT_ARM,-49,18,-20);p.elbow[0]=-112;p.elbow[1]=-106;

@@ -27,8 +27,12 @@ public final class CombatClient {
     private static final Map<UUID,Snapshot> STATES=new HashMap<>();
     private static final Map<UUID,Movement> MOVEMENT=new HashMap<>();
     private static final class Movement {
-        double x,z;float phase,previousPhase,amount,previousAmount,forward,side,sprint,combat,guard;
-        boolean ready;float smoothPressure;
+        double x,y,z;float phase,previousPhase,amount,previousAmount,forward,side,sprint,combat,guard;
+        boolean ready,grounded=true;float smoothPressure;
+        /** Vertical speed (blocks per tick), how airborne the body looks (0..1), the fastest fall since leaving the ground. */
+        float vy,previousVy,air,previousAir,fall;
+        /** World tick of the last landing and how hard it was (0..1). */
+        long landAt=-1000;float landPower;
     }
     private static KeyBinding DASH,GUARD;
     private static final DashInput DASH_INPUT=new DashInput();
@@ -50,7 +54,7 @@ public final class CombatClient {
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->clear());
         HudRenderCallback.EVENT.register(CombatClient::hud);
     }
-    public static void clear(){STATES.clear();MOVEMENT.clear();DASH_INPUT.clear();guardHeld=false;world=null;}
+    public static void clear(){STATES.clear();MOVEMENT.clear();DASH_INPUT.clear();guardHeld=false;world=null;PoseBlend.clear();}
     public static void dashKey(long window,int key,int scanCode,int action) {
         var mc=MinecraftClient.getInstance();
         if(DASH==null||window!=mc.getWindow().getHandle()||!DASH.matchesKey(key,scanCode))return;
@@ -60,9 +64,10 @@ public final class CombatClient {
     public static Snapshot snapshot(UUID id){return STATES.getOrDefault(id,EMPTY);}
     public static boolean connected(){return MapClient.enabled()&&ClientPlayNetworking.canSend(CombatManager.INPUT);}
     public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(StandClient.locked()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).broken(mc.world.getTime()));}
+    /** The articulated rig drives this player (on the ground and in a jump or fall; not for sneaking, swimming, gliding, sleeping or riding). */
     public static boolean animate(AbstractClientPlayerEntity p) {
         return MapClient.enabled()&&p.isAlive()&&!p.isSpectator()&&!p.isSneaking()&&!p.isInSneakingPose()&&!p.isSwimming()&&!p.isFallFlying()&&!p.isSleeping()&&!p.hasVehicle()
-            &&p.isOnGround()&&AtomicClient.actor(p.getUuid())==null&&HeavenClient.actor(p.getUuid())==null;
+            &&(p.isOnGround()||!p.isClimbing()&&!p.isTouchingWater())&&AtomicClient.actor(p.getUuid())==null&&HeavenClient.actor(p.getUuid())==null;
     }
     public static boolean combatInput() {
         if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return false;
@@ -103,8 +108,14 @@ public final class CombatClient {
         long now=mc.world.getTime();Set<UUID> alive=new HashSet<>();
         for(var p:mc.world.getPlayers()) {
             alive.add(p.getUuid());Movement m=MOVEMENT.computeIfAbsent(p.getUuid(),id->new Movement());
-            double dx=m.ready?p.getX()-m.x:0,dz=m.ready?p.getZ()-m.z:0;
-            m.x=p.getX();m.z=p.getZ();m.ready=true;
+            double dx=m.ready?p.getX()-m.x:0,dz=m.ready?p.getZ()-m.z:0,dy=m.ready?p.getY()-m.y:0;
+            m.x=p.getX();m.y=p.getY();m.z=p.getZ();m.ready=true;
+            // Airborne look and landings: a landing after a real fall dips the body, harder for a faster fall.
+            boolean ground=p.isOnGround();
+            m.previousVy=m.vy;m.vy=Math.abs(dy)>3?0:(float)dy;m.previousAir=m.air;m.air=approach(m.air,ground?0:1,.5f);
+            if(!ground)m.fall=Math.min(m.fall,m.vy);
+            else{if(!m.grounded&&m.fall<-.3f){m.landAt=now;m.landPower=Math.min(1,.35f+(-m.fall-.3f)/.6f);}m.fall=0;}
+            m.grounded=ground;
             double distance=Math.hypot(dx,dz);if(distance>1.5)distance=0;
             double yaw=Math.toRadians(p.getYaw()),f=-Math.sin(yaw)*dx+Math.cos(yaw)*dz,side=Math.cos(yaw)*dx+Math.sin(yaw)*dz;
             m.previousPhase=m.phase;m.previousAmount=m.amount;
@@ -121,12 +132,33 @@ public final class CombatClient {
     }
     private static float approach(float a,float b,float step){return MathHelper.lerp(step,a,b);}
     private static void sendLook(){var mc=MinecraftClient.getInstance();mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));}
+    /** Which part of the articulated motion plays now (a new value for every hit, dash and punch), so the model can crossfade between them. */
+    public static Object state(AbstractClientPlayerEntity p,float delta) {
+        Snapshot s=snapshot(p.getUuid());double now=p.getWorld().getTime()+delta;
+        var reaction=HitStunClient.reaction(p);
+        if(reaction!=null)return "hit"+reaction.hitAt();
+        if(s.broken(now))return "broken";
+        if(s.dashAge(now)>=0&&s.dashAge(now)<CombatState.DASH_TICKS)return "dash"+s.dashStart();
+        if(s.attack>0&&s.attack<=4&&s.attackAge(now)>=0&&s.attackAge(now)<CombatState.DURATION[s.attack])return "attack"+s.attackStart();
+        return "base";
+    }
+    /** Ticks to fade into a state: a flinch lands at once, a punch or dash quickly, anything else gently. */
+    public static float fade(Object state) {
+        String s=String.valueOf(state);
+        return s.startsWith("hit")?1.2f:s.startsWith("dash")||s.startsWith("attack")?1.6f:3;
+    }
     public static MotionPose pose(AbstractClientPlayerEntity p,float delta) {
         Movement m=MOVEMENT.get(p.getUuid());Snapshot s=snapshot(p.getUuid());double now=p.getWorld().getTime()+delta;
         if(m==null)m=new Movement();
         var reaction=HitStunClient.reaction(p);
         if(reaction!=null)return MotionClips.hitReaction((float)(now-reaction.hitAt()),reaction.strike());
         MotionPose base=MotionClips.locomotion(MathHelper.lerp(delta,m.previousPhase,m.phase),MathHelper.lerp(delta,m.previousAmount,m.amount),m.forward,m.side,m.sprint,m.combat,p.age+delta);
+        // In the air the knees draw up while rising and the legs reach down while falling; a landing dips the hips.
+        float air=MathHelper.lerp(delta,m.previousAir,m.air);
+        if(air>.001f)base=MotionPose.blend(base,MotionClips.air(MathHelper.lerp(delta,m.previousVy,m.vy)/.42f,p.age+delta),air);
+        MotionClips.land(base,m.landPower*MotionClips.dip((float)(now-m.landAt)));
+        // Any blow makes the body flinch away from it for a moment.
+        if(p.hurtTime>0&&p.maxHurtTime>0)MotionClips.flinch(base,MotionClips.recoil(p.maxHurtTime-p.hurtTime+delta),(float)Math.sin(Math.toRadians(p.getDamageTiltYaw()))*.7f);
         if(s.broken(now)) {
             MotionPose broken=MotionClips.broken((float)(now-s.brokenUntil+20));
             // The staggered upper body remains visible while the slowed feet still take steps.

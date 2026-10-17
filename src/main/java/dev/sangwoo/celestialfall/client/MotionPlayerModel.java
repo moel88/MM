@@ -12,9 +12,9 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         MotionRig.reset(this);super.setAngles(player,limbAngle,limbDistance,animationProgress,headYaw,headPitch);
         var vanillaBody=body.getTransform();var vanillaHead=head.getTransform();
         var vanillaRight=rightArm.getTransform();var vanillaLeft=leftArm.getTransform();
-        articulated=CombatClient.animate(player);
+        articulated=CombatClient.animate(player);boolean rig=articulated,using=player.isUsingItem()||player.handSwingProgress>0;
         if(articulated)MotionRig.apply(this,CombatClient.pose(player,animationProgress-player.age),headYaw,headPitch);
-        if(player.isUsingItem()||player.handSwingProgress>0) {
+        if(using) {
             body.setTransform(vanillaBody);head.setTransform(vanillaHead);
             rightArm.setTransform(vanillaRight);leftArm.setTransform(vanillaLeft);
             rightArm.getChild("elbow").pitch=leftArm.getChild("elbow").pitch=0;
@@ -38,6 +38,16 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         else if(StandClient.visible(player)&&!player.isUsingItem()){
             articulated=true;var rest=dev.sangwoo.celestialfall.client.kageno.KagenoClips.idle().joints();
             rightArm.pitch=MotionRig.rad(rest.joint[2][0])+rightArm.pitch*.25f;rightArm.yaw=MotionRig.rad(rest.joint[2][1]);rightArm.roll=MotionRig.rad(rest.joint[2][2]);rightArm.getChild("elbow").pitch=0;
+        }
+        // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
+        float delta=animationProgress-player.age;
+        if(delta>=0&&delta<=1.001f){
+            Object source;float fade;
+            if(atomic!=null){source="atomic";fade=3;}
+            else if(stand!=null){source=stand.id();fade=1.6f;}
+            else if(rig){source=CombatClient.state(player,delta);fade=CombatClient.fade(source);}
+            else{source="vanilla";fade=3;}
+            PoseBlend.apply(player.getUuid(),this,java.util.List.of(source,using),fade,animationProgress);
         }
         dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.apply(player,this,animationProgress-player.age);
         overlays();

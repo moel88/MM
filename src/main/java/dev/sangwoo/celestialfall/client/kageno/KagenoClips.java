@@ -39,7 +39,7 @@ public final class KagenoClips {
             while(COMBO_STARTS.size()>64)COMBO_STARTS.remove(COMBO_STARTS.keySet().iterator().next());
         }
     }
-    public static void clear(){GUARDS.clear();COMBO_STARTS.clear();}
+    public static void clear(){GUARDS.clear();COMBO_STARTS.clear();FACINGS.clear();}
     /** Client tick: remembers when each stand user raised and lowered the guard. */
     public static void trackGuards(net.minecraft.client.MinecraftClient mc){
         if(mc.world==null){GUARDS.clear();return;}long now=mc.world.getTime();
@@ -83,6 +83,8 @@ public final class KagenoClips {
      * the cast direction, so the body and the world-anchored effects stay aligned.
      */
     public static void root(MatrixStack m,StandClient.Cast cast,float delta,float bodyYaw){
+        var w=net.minecraft.client.MinecraftClient.getInstance().world;
+        if(w!=null)FACINGS.put(cast.caster(),new float[]{cast.yaw(),w.getTime()+delta});
         var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,cast.yaw()),left=new Vec3d(f.z,0,-f.x);
         Vec3d off=f.multiply(fr.fw()).add(0,fr.up(),0).add(left.multiply(-fr.rt()));
         m.translate(off.x,off.y,off.z);
@@ -91,7 +93,23 @@ public final class KagenoClips {
             var q=new Quaternionf().rotationAxis(fr.yaw()*k,0,1,0).rotateAxis(fr.pitch()*k,(float)left.x,0,(float)left.z).rotateAxis(fr.roll()*k,(float)f.x,0,(float)f.z);
             m.translate(0,PIVOT,0);m.multiply(q);m.translate(0,-PIVOT,0);
         }
-        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(bodyYaw-cast.yaw()));
+        // The body turns to the cast facing over the first frames instead of snapping to it.
+        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-cast.yaw())*Ease.smooth(cast.age(delta)/20f,0,.08f)));
+    }
+    /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */
+    private static final java.util.Map<java.util.UUID,float[]> FACINGS=new java.util.HashMap<>();
+    /** Ticks the body takes to turn from a finished clip's facing back to its own. */
+    static final float UNWIND=4;
+    /**
+     * After a body clip ends, turns the body from the clip's facing back to its own over {@link #UNWIND} ticks
+     * (the player may have looked elsewhere meanwhile) instead of snapping.
+     */
+    public static void unwind(MatrixStack m,java.util.UUID caster,float delta,float bodyYaw){
+        var e=FACINGS.get(caster);var w=net.minecraft.client.MinecraftClient.getInstance().world;if(e==null||w==null)return;
+        float since=w.getTime()+delta-e[1];
+        if(since<0||since>=UNWIND){if(since>=UNWIND)FACINGS.remove(caster);return;}
+        float u=since/UNWIND,keep=1-u*u*(3-2*u);
+        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-e[0])*keep));
     }
     /**
      * World position of the sword hand and the world blade direction for pose {@code p} of a
