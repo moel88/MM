@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.31.8** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.31.9** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.31.9 — E 찌르기 잔상을 훨씬 많이
+
+E로 연속 찌르기를 하는 동안 보라 팔과 분홍 칼의 찌르기 잔상이 몸 둘레 넓은 부채꼴로 쉬지 않고 튀어나옵니다(한 번에 9~21개, 찌르는 순간 13개 이상). 실제 칼도 찌를 때마다 잔상 꼬리를 남깁니다. 나머지는 2.31.8과 같습니다. [RELEASE_2.31.9_KO.md](RELEASE_2.31.9_KO.md)를 확인하세요.
 
 # 보탠드 2.31.8 — E(신속한 맹공) 자세와 이펙트를 새로 만들기
 
