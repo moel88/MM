@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.31.5** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.31.6** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.31.6 — 아토믹 감속을 몬스터에게도 실제 25%로
+
+2.31.5의 아토믹 감속이 몬스터에게는 실제로 원래 속도의 6.25%로 걸리던 것을 바로잡아, 플레이어와 몬스터 모두 기둥 안에서 원래 속도의 25%로 움직입니다. [RELEASE_2.31.6_KO.md](RELEASE_2.31.6_KO.md)를 확인하세요.
 
 # 보탠드 2.31.5 — 아토믹에 맞는 동안 이동속도 75% 감소
 
