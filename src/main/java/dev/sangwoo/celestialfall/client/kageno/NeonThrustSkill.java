@@ -19,12 +19,17 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  * {@link KagenoRules#eTicks}, and one between each pair), each shooting a lance of light with two
  * afterimage blades; the sword coils low behind the body while energy gathers; the rising slash crosses
  * the target on the finisher tick ({@link KagenoRules#E_FINISH}), throwing a neon crescent and a geyser
- * of pink light; the sword is held high, flicked down and the neon flakes away. Times are seconds after
- * the cast and every effect is a pure function of the cast clock.
+ * of violet light; the sword is held high, flicked down and the neon flakes away. Only the sword is pink;
+ * everything the skill throws is violet. Times are seconds after the cast and every effect is a pure
+ * function of the cast clock.
  */
 final class NeonThrustSkill implements Fx.Skill {
-    /** Neon: white-hot core, light pink, hot pink, magenta. */
+    /** The sword's neon is pink: white-hot core, light pink, hot pink, magenta. */
     static final int CORE=0xfff2fb,LIGHT=0xffa6e2,HOT=0xff48c4,MAGENTA=0xff1c98;
+    /** The skill's own light is violet: white-violet core, lavender, violet, indigo. */
+    static final int VCORE=0xece0ff,LAVENDER=0xb388ff,VIOLET=0x8448ff,INDIGO=0x5418d0;
+    /** Tube palettes (haze, glow, body, core): the pink neon of the sword, the violet of the skill. */
+    static final int[] PINK={MAGENTA,HOT,LIGHT,CORE},PURPLE={INDIGO,VIOLET,LAVENDER,VCORE};
     /** The palm lights the blade from the guard (LIT0) to the tip (LIT1); the stance is set at STANCE. */
     static final float LIT0=.16f,LIT1=.42f,STANCE=.62f;
     /** The coil after the last thrust, the start of the rising slash, the slash through the target, the follow-through, the rest. */
@@ -152,12 +157,12 @@ final class NeonThrustSkill implements Fx.Skill {
         ignition(m,t,guard,tip,dir);
         if(t>=.5f&&t<THRUSTS[0]){
             float u=Ease.unit(t,.5f,THRUSTS[0]);
-            FxLib.converge(m,tip,1.8,22,t,.5f,THRUSTS[0]-.04f,HOT,7);
-            FxLib.ring(m,c.pos.add(0,.04,0),2.3-1.4*u,.16,HOT,.6f*Ease.smooth(t,.5f,.58f));
-            m.softDisc(tip,.12+.18*u,LIGHT,.6f*u);
+            FxLib.converge(m,tip,1.8,22,t,.5f,THRUSTS[0]-.04f,VIOLET,7);
+            FxLib.ring(m,c.pos.add(0,.04,0),2.3-1.4*u,.16,VIOLET,.6f*Ease.smooth(t,.5f,.58f));
+            m.softDisc(tip,.12+.18*u,LAVENDER,.6f*u);
         }
         // The ground in front glows while the thrusts land.
-        if(t>=THRUSTS[0]-.05f&&t<COIL+.1f)FxLib.glow(m,c.pos.add(c.f.multiply(1.8)).add(0,.04,0),2.0,MAGENTA,.28f*Ease.smooth(t,THRUSTS[0]-.05f,THRUSTS[0]+.1f)*(1-Ease.smooth(t,COIL-.05f,COIL+.1f)));
+        if(t>=THRUSTS[0]-.05f&&t<COIL+.1f)FxLib.glow(m,c.pos.add(c.f.multiply(1.8)).add(0,.04,0),2.0,INDIGO,.28f*Ease.smooth(t,THRUSTS[0]-.05f,THRUSTS[0]+.1f)*(1-Ease.smooth(t,COIL-.05f,COIL+.1f)));
         for(int i=0;i<THRUSTS.length;i++)thrust(c,m,t,i);
         coil(c,m,t,guard,tip);
         slash(c,m,t);
@@ -170,20 +175,20 @@ final class NeonThrustSkill implements Fx.Skill {
             }
         }
     }
-    /** Neon tube a→b: wide magenta haze, hot pink glow, a light pink body and a white-hot core. */
-    static void neon(EffectMesh m,Vec3d a,Vec3d b,double width,float alpha){
+    /** Glowing tube a→b in palette c (haze, glow, body, core). */
+    static void neon(EffectMesh m,Vec3d a,Vec3d b,double width,float alpha,int[] c){
         if(alpha<=0)return;
-        m.softLine(a,b,width*12,MAGENTA,alpha*.12f);
-        m.softLine(a,b,width*5.5,HOT,alpha*.3f);
-        m.softLine(a,b,width*2.4,HOT,alpha*.75f);
-        m.line(a,b,width,LIGHT,alpha);
-        m.line(a,b,width*.45,CORE,alpha);
+        m.softLine(a,b,width*12,c[0],alpha*.12f);
+        m.softLine(a,b,width*5.5,c[1],alpha*.3f);
+        m.softLine(a,b,width*2.4,c[1],alpha*.75f);
+        m.line(a,b,width,c[2],alpha);
+        m.line(a,b,width*.45,c[3],alpha);
     }
     /** The blade's neon, lit from the guard as far as the palm has run. */
     static void blade(EffectMesh m,float t,Vec3d guard,Vec3d tip){
         float g=glow(t),f=lit(t);if(g<=0||f<=0)return;
         Vec3d end=guard.add(tip.subtract(guard).multiply(f));float on=Math.min(1,g);
-        neon(m,guard,end,.065*(1+.35*Math.max(0,Math.min(1,g-1))),Math.min(1.6f,g));
+        neon(m,guard,end,.065*(1+.35*Math.max(0,Math.min(1,g-1))),Math.min(1.6f,g),PINK);
         // A soft bloom along the lit blade.
         for(int k=0;k<=4;k++)m.softDisc(guard.add(end.subtract(guard).multiply(k/4.0)),.22,HOT,.14f*on);
         m.softDisc(end,.18+.12*on,HOT,.55f*on);
@@ -198,12 +203,12 @@ final class NeonThrustSkill implements Fx.Skill {
         }
         if(t>=LIT1&&t<LIT1+.22f){
             float u=Ease.unit(t,LIT1,LIT1+.22f);Vec3d mid=guard.add(tip).multiply(.5),a=across(dir),b=dir.crossProduct(a).normalize();
-            FxLib.ringPlane(m,mid,a,b,.2+1.6*Ease.out(t,LIT1,LIT1+.22f),.16,HOT,.9f*(1-u));
-            FxLib.flash(m,tip,.35*(1-u)+.1,HOT,.9f*(1-u));
+            FxLib.ringPlane(m,mid,a,b,.2+1.6*Ease.out(t,LIT1,LIT1+.22f),.16,VIOLET,.9f*(1-u));
+            FxLib.flash(m,tip,.35*(1-u)+.1,VIOLET,.9f*(1-u));
             for(int k=0;k<8;k++){
                 Vec3d p=guard.add(tip.subtract(guard).multiply(Ease.hash(k*7+3)));
                 Vec3d out=a.multiply(Ease.hash(k*5)-.5).add(b.multiply(Ease.hash(k*9)-.5)).normalize();
-                m.needle(p.add(out.multiply(.05+.6*u)),p.add(out.multiply(.25+.9*u)),.04,.3,LIGHT,1-u);
+                m.needle(p.add(out.multiply(.05+.6*u)),p.add(out.multiply(.25+.9*u)),.04,.3,LAVENDER,1-u);
             }
         }
     }
@@ -219,20 +224,20 @@ final class NeonThrustSkill implements Fx.Skill {
         if(u<.17f){
             double len=(2.2+.7*big)*Ease.out(u,0,.035f),start=.1+1.4*u;float a=1-Ease.smooth(u,.06f,.17f);
             Vec3d a0=tip.add(aim.multiply(start)),a1=a0.add(aim.multiply(len));
-            m.needle(a0,a1,.6*big,.3,MAGENTA,a*.35f);m.needle(a0,a1,.3*big,.32,HOT,a*.9f);m.needle(a0,a1,.1*big,.35,CORE,a);
-            m.star(a1,.22*big,CORE,a);
+            m.needle(a0,a1,.6*big,.3,INDIGO,a*.35f);m.needle(a0,a1,.3*big,.32,VIOLET,a*.9f);m.needle(a0,a1,.1*big,.35,VCORE,a);
+            m.star(a1,.22*big,VCORE,a);
             // A spray of thinner needles around it: many stabs at once.
             if(u<.11f){
                 float s=1-u/.11f;int n=STRIKES[i]?5:3;
                 for(int k=0;k<n;k++){
                     Vec3d d=c.dir(AIM[i][0]+(Ease.hash(i*17+k*3)-.5)*16,AIM[i][1]+(Ease.hash(i*23+k*5)-.5)*24);
                     Vec3d b0=tip.add(d.multiply(.2+2.2*u+.4*Ease.hash(i*7+k))),b1=b0.add(d.multiply((.8+.8*Ease.hash(i*13+k))*Ease.out(u,0,.03f)));
-                    m.needle(b0,b1,.16,.35,HOT,s*.8f);m.needle(b0,b1,.05,.4,CORE,s);
+                    m.needle(b0,b1,.16,.35,VIOLET,s*.8f);m.needle(b0,b1,.05,.4,VCORE,s);
                 }
             }
         }else{
             Vec3d a0=tip.add(aim.multiply(.1+1.4*.17)),a1=a0.add(aim.multiply(2.0+.3*big));
-            m.softLine(a0,a1,.05,HOT,.22f*(1-Ease.unit(u,.17f,.45f)));
+            m.softLine(a0,a1,.05,VIOLET,.22f*(1-Ease.unit(u,.17f,.45f)));
         }
         if(u<.09f){
             float a=.55f*(1-u/.09f);
@@ -240,20 +245,20 @@ final class NeonThrustSkill implements Fx.Skill {
                 double side=g==0?-1:1;
                 Vec3d d=c.dir(AIM[i][0]+(Ease.hash(i*11+g)-.5)*10,AIM[i][1]+side*(5+4*Ease.hash(i*7+g)));
                 Vec3d h=hand.add(c.right.multiply(side*.1)).add(0,(Ease.hash(i*5+g)-.5)*.15,0);
-                neon(m,h.add(d.multiply(GUARD)),h.add(d.multiply(TIP+.15)),.03,a);
+                neon(m,h.add(d.multiply(GUARD)),h.add(d.multiply(TIP+.15)),.03,a,PINK);
             }
         }
         if(u<.14f){
             float a=1-u/.14f;Vec3d p=tip.add(aim.multiply(.25+.8*u)),x=across(aim),y=aim.crossProduct(x).normalize();
-            FxLib.ringPlane(m,p,x,y,.15+1.1*big*Ease.out(u,0,.14f),.12,LIGHT,.85f*a);
-            if(u<.07f){float f=1-u/.07f;m.star(tip,(.4+.3*big)*f+.1,CORE,1);m.softDisc(tip,.45*big,HOT,.7f*f);}
+            FxLib.ringPlane(m,p,x,y,.15+1.1*big*Ease.out(u,0,.14f),.12,LAVENDER,.85f*a);
+            if(u<.07f){float f=1-u/.07f;m.star(tip,(.4+.3*big)*f+.1,VCORE,1);m.softDisc(tip,.45*big,VIOLET,.7f*f);}
         }
         if(STRIKES[i]&&u<.24f){
             Vec3d p=bite(c,tip,aim);float a=1-Ease.smooth(u,.04f,.24f);
-            FxLib.flash(m,p,(.8+.4*big)*(1-.5*u/.24f),HOT,a);
-            FxLib.sparks(m,p,18,1.4*big,.05,LIGHT,a,i*31+5,Ease.out(u,0,.1f));
+            FxLib.flash(m,p,(.8+.4*big)*(1-.5*u/.24f),VIOLET,a);
+            FxLib.sparks(m,p,18,1.4*big,.05,LAVENDER,a,i*31+5,Ease.out(u,0,.1f));
             Vec3d x=across(aim),y=aim.crossProduct(x).normalize(),d1=x.add(y).normalize(),d2=x.subtract(y).normalize();double r=(.5+.6*u/.24f)*big;
-            m.glowLine(p.subtract(d1.multiply(r)),p.add(d1.multiply(r)),.06,HOT,a);m.glowLine(p.subtract(d2.multiply(r)),p.add(d2.multiply(r)),.06,HOT,a);
+            m.glowLine(p.subtract(d1.multiply(r)),p.add(d1.multiply(r)),.06,VIOLET,a);m.glowLine(p.subtract(d2.multiply(r)),p.add(d2.multiply(r)),.06,VIOLET,a);
         }
     }
     /** Where a thrust bites: the nearest body in the server's thrust lane, on its near side at the lance's height; else just past the tip. */
@@ -275,10 +280,10 @@ final class NeonThrustSkill implements Fx.Skill {
     static void coil(Fx c,EffectMesh m,float t,Vec3d guard,Vec3d tip){
         if(t<COIL-.05f||t>=RISE+.03f)return;
         float u=Ease.unit(t,COIL-.05f,RISE);Vec3d mid=guard.add(tip).multiply(.5);
-        FxLib.converge(m,mid,2.4,30,t,COIL-.05f,RISE-.05f,LIGHT,19);
-        FxLib.ring(m,c.pos.add(0,.04,0),2.8-1.7*u,.2,HOT,.7f*Ease.smooth(t,COIL-.05f,COIL+.08f));
-        FxLib.glow(m,c.pos.add(0,.03,0),1.6,MAGENTA,.35f*u);
-        for(int k=0;k<6;k++){float life=((t-COIL)*2.2f+k/6f)%1;if(life<0)life+=1;m.star(tip.add((Ease.hash(k*3)-.5)*.2,-life*.9,(Ease.hash(k*5)-.5)*.2),.06,LIGHT,(1-life)*u);}
+        FxLib.converge(m,mid,2.4,30,t,COIL-.05f,RISE-.05f,LAVENDER,19);
+        FxLib.ring(m,c.pos.add(0,.04,0),2.8-1.7*u,.2,VIOLET,.7f*Ease.smooth(t,COIL-.05f,COIL+.08f));
+        FxLib.glow(m,c.pos.add(0,.03,0),1.6,INDIGO,.35f*u);
+        for(int k=0;k<6;k++){float life=((t-COIL)*2.2f+k/6f)%1;if(life<0)life+=1;m.star(tip.add((Ease.hash(k*3)-.5)*.2,-life*.9,(Ease.hash(k*5)-.5)*.2),.06,LAVENDER,(1-life)*u);}
     }
     /** Plane of the rising slash: through the sword shoulder at the cut, along the facing and up, tilted 12° toward the left. */
     static Vec3d slashCentre(Fx c){return c.pos.add(c.f.multiply(.42)).add(0,1.5,0).add(c.right.multiply(.3));}
@@ -288,14 +293,14 @@ final class NeonThrustSkill implements Fx.Skill {
     /**
      * The rising slash: the blade's hot trail, a crescent growing with it from below the target to over the head
      * that holds and burns away from its tail; at the finisher a flash, sparks fountaining up, a ground shock,
-     * a geyser of pink light with rings racing up it, and embers rising after.
+     * a geyser of violet light with rings racing up it, and embers rising after.
      */
     static void slash(Fx c,EffectMesh m,float t){
         if(t<RISE||t>=3.7f)return;
         Vec3d o=slashCentre(c),u=c.f,v=slashUp(c);
         if(t<OVER+.05f){
             float a=1-Ease.smooth(t,OVER-.04f,OVER+.05f);
-            trail(c,m,t,.07f,8,.3,TIP,HOT,.85f*a);trail(c,m,t,.05f,6,.85,TIP,CORE,.7f*a);
+            trail(c,m,t,.07f,8,.3,TIP,VIOLET,.85f*a);trail(c,m,t,.05f,6,.85,TIP,VCORE,.7f*a);
         }
         if(t>=2.86f&&t<3.3f){
             double from=-48,head=Math.max(from,Math.min(118,swingAngle(c,Math.min(t,OVER))));
@@ -307,23 +312,23 @@ final class NeonThrustSkill implements Fx.Skill {
         Vec3d bite=bite(c,c.pos.add(c.f.multiply(1.9)).add(0,1.1,0),c.f),ground=new Vec3d(bite.x,c.pos.y,bite.z);
         if(t>=SLASH&&t<SLASH+.32f){
             float a=1-Ease.smooth(t,SLASH+.05f,SLASH+.32f),grow=Ease.out(t,SLASH,SLASH+.16f);
-            FxLib.flash(m,bite,1.1*(1-.4*Ease.unit(t,SLASH,SLASH+.32f)),HOT,a);
+            FxLib.flash(m,bite,1.1*(1-.4*Ease.unit(t,SLASH,SLASH+.32f)),VIOLET,a);
             for(int k=0;k<16;k++){
                 double az=Ease.hash(k*3+1)*Math.PI*2,el=Math.toRadians(35+50*Ease.hash(k*5+2)),l=(1.2+1.8*Ease.hash(k*7))*grow;
                 Vec3d d=new Vec3d(Math.cos(el)*Math.cos(az),Math.sin(el),Math.cos(el)*Math.sin(az));
-                m.needle(bite.add(d.multiply(l*.3)),bite.add(d.multiply(l)),.06,.3,k%3==0?CORE:LIGHT,a);
+                m.needle(bite.add(d.multiply(l*.3)),bite.add(d.multiply(l)),.06,.3,k%3==0?VCORE:LAVENDER,a);
             }
-            FxLib.ring(m,ground.add(0,.05,0),.3+3.6*Ease.out(t,SLASH,SLASH+.32f),.35,HOT,.8f*a);
+            FxLib.ring(m,ground.add(0,.05,0),.3+3.6*Ease.out(t,SLASH,SLASH+.32f),.35,VIOLET,.8f*a);
         }
         if(t>=SLASH&&t<3.55f){
             float a=1-Ease.smooth(t,3.08f,3.55f);double h=8*Ease.out(t,SLASH,SLASH+.12f);
-            FxLib.column(m,ground,h,.35,HOT,a);
-            m.needle(ground,ground.add(0,h*.85,0),.9,.15,MAGENTA,a*.25f);
+            FxLib.column(m,ground,h,.35,VIOLET,a);
+            m.needle(ground,ground.add(0,h*.85,0),.9,.15,INDIGO,a*.25f);
             for(int k=0;k<6;k++){float born=SLASH+k*.05f,r=(t-born)/.45f;if(r<0||r>=1)continue;
-                FxLib.ring(m,ground.add(0,.3+r*h*.9,0),.55+.5*r,.12,k%2==0?LIGHT:HOT,.75f*(1-r)*a);}
-            FxLib.glow(m,ground.add(0,.04,0),1.7,MAGENTA,.5f*a);
+                FxLib.ring(m,ground.add(0,.3+r*h*.9,0),.55+.5*r,.12,k%2==0?LAVENDER:VIOLET,.75f*(1-r)*a);}
+            FxLib.glow(m,ground.add(0,.04,0),1.7,INDIGO,.5f*a);
         }
-        if(t>=SLASH+.05f)FxLib.embers(m,ground,1.3,4.5,26,t-SLASH-.05f,1.4f,.07,LIGHT,Ease.smooth(t,SLASH+.05f,SLASH+.15f)*(1-Ease.smooth(t,3.4f,3.7f)),23);
+        if(t>=SLASH+.05f)FxLib.embers(m,ground,1.3,4.5,26,t-SLASH-.05f,1.4f,.07,LAVENDER,Ease.smooth(t,SLASH+.05f,SLASH+.15f)*(1-Ease.smooth(t,3.4f,3.7f)),23);
     }
     /** Ribbon swept by the blade (from..to blocks along it) over the last {@code span} seconds, on the moving body. */
     static void trail(Fx c,EffectMesh m,float t,float span,int samples,double from,double to,int rgb,float alpha){
@@ -341,8 +346,8 @@ final class NeonThrustSkill implements Fx.Skill {
             double a0=Math.toRadians(tail+(head-tail)*i/n),a1=Math.toRadians(tail+(head-tail)*(i+1)/n);
             float w0=(float)Math.pow((double)i/n,.6),w1=(float)Math.pow((double)(i+1)/n,.6);
             Vec3d d0=u.multiply(Math.cos(a0)).add(v.multiply(Math.sin(a0))),d1=u.multiply(Math.cos(a1)).add(v.multiply(Math.sin(a1)));
-            m.vertex(o.add(d0.multiply(outer-(outer-inner)*w0)),MAGENTA,0);m.vertex(o.add(d1.multiply(outer-(outer-inner)*w1)),MAGENTA,0);
-            m.vertex(o.add(d1.multiply(outer)),HOT,alpha*w1);m.vertex(o.add(d0.multiply(outer)),HOT,alpha*w0);
+            m.vertex(o.add(d0.multiply(outer-(outer-inner)*w0)),INDIGO,0);m.vertex(o.add(d1.multiply(outer-(outer-inner)*w1)),INDIGO,0);
+            m.vertex(o.add(d1.multiply(outer)),VIOLET,alpha*w1);m.vertex(o.add(d0.multiply(outer)),VIOLET,alpha*w0);
         }
     }
     /** Neon tube along the crescent's outer edge, thickening toward its head, which glows. */
@@ -350,16 +355,16 @@ final class NeonThrustSkill implements Fx.Skill {
         if(alpha<=0||head-tail<1)return;int n=Math.max(4,(int)((head-tail)/5));Vec3d prev=null;
         for(int i=0;i<=n;i++){
             double a=Math.toRadians(tail+(head-tail)*i/n);Vec3d p=o.add(u.multiply(Math.cos(a)*r)).add(v.multiply(Math.sin(a)*r));
-            if(prev!=null){float k=(float)i/n;neon(m,prev,p,width*(.3+.7*k),alpha*(.25f+.75f*k));}
+            if(prev!=null){float k=(float)i/n;neon(m,prev,p,width*(.3+.7*k),alpha*(.25f+.75f*k),PURPLE);}
             prev=p;
         }
-        m.softDisc(prev,.35,HOT,.6f*alpha);
+        m.softDisc(prev,.35,VIOLET,.6f*alpha);
     }
 
     // ───────────────────────────── screen ─────────────────────────────
 
     @Override public float flash(Fx c){float t=c.sec;return t>=SLASH&&t<SLASH+.1f?.14f*(1-Ease.unit(t,SLASH,SLASH+.1f)):0;}
-    @Override public int flashColor(Fx c){return 0xff9fe0;}
+    @Override public int flashColor(Fx c){return 0xd8c4ff;}
     /** Post-process shock: small on the server's thrust hits, strong on the slash. */
     @Override public float pulse(float sec){
         float p=0;
