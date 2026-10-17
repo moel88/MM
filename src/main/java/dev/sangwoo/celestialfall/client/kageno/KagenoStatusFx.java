@@ -44,12 +44,14 @@ public final class KagenoStatusFx {
         }
         return best;
     }
-    /** Additive light; {@code layered} on the effect layer, where the overdrive's flames and circuits glow as well. */
+    /** Additive light; {@code layered} on the effect layer, where the guard bubble and the overdrive's flames and circuits glow as well. */
     public static void additive(MinecraftClient mc,EffectMesh m,float delta,Vec3d camera,boolean layered){
         long now=mc.world.getTime();float time=(now%100000)+delta;
         for(var p:mc.world.getPlayers()){
             if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
-            GuardFx.glints(m,p.getLerpedPos(delta),KagenoClips.guardSec(p.getUuid(),delta),KagenoClips.releaseSec(p.getUuid(),delta),time);
+            float in=KagenoClips.guardSec(p.getUuid(),delta),out=KagenoClips.releaseSec(p.getUuid(),delta);
+            GuardFx.glints(m,p.getLerpedPos(delta),in,out,time);
+            if(layered)GuardFx.light(m,p.getLerpedPos(delta),camera,in,out,time);
         }
         for(var entry:StandClient.STATES.entrySet()){
             if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
@@ -64,7 +66,7 @@ public final class KagenoStatusFx {
         for(var p:mc.world.getPlayers()){
             if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
             if(!Float.isNaN(KagenoClips.guardSec(p.getUuid(),delta)))return true;
-            float out=KagenoClips.releaseSec(p.getUuid(),delta);if(!Float.isNaN(out)&&out<.2f)return true;
+            float out=KagenoClips.releaseSec(p.getUuid(),delta);if(!Float.isNaN(out)&&out<.4f)return true;
         }
         long now=mc.world.getTime();
         for(var entry:StandClient.STATES.entrySet()){
@@ -73,11 +75,13 @@ public final class KagenoStatusFx {
         }
         return false;
     }
-    /** Lights on the effect layer: the guard bubble's soft white-violet glow (a flare as it goes up), the overdrive's activation and aura. */
+    /** Lights on the effect layer: the guard bubble's soft white-violet glow (a flare as it goes up, a flash as it bursts), the overdrive's activation and aura. */
     public static void frame(MinecraftClient mc,FxFrame f,float delta,Vec3d camera){
         for(var p:mc.world.getPlayers()){
             if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
             float in=KagenoClips.guardSec(p.getUuid(),delta),out=KagenoClips.releaseSec(p.getUuid(),delta);
+            // The bubble bursting as it drops.
+            if(!Float.isNaN(out)&&out<.3f)f.light(p.getLerpedPos(delta).add(0,GuardFx.CENTER,0),0xe8e0ff,5,1.5f*FxLib.kick(out,.01f,.08f));
             float a=!Float.isNaN(in)?Ease.smooth(in,0,.05f):!Float.isNaN(out)?1-Ease.smooth(out,0,.15f):0;
             if(a<=0)continue;
             float rise=Float.isNaN(in)?0:1-Ease.smooth(in,.05f,.3f);

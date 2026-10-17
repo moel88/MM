@@ -77,7 +77,48 @@ final class PoseSkill implements Fx.Skill {
         glint(c,m,t);
         // A small white-hot glow over the star; its colours are drawn in the alpha pass.
         if(t>=STAR&&t<RELEASE+.27f)m.softDisc(c.origin.add(0,.08,0),(white(t)?.8:.5),white(t)?0xffffff:0xfb9afc,.35f*(1-Ease.smooth(t,RELEASE,RELEASE+.27f)));
+        if(dev.sangwoo.celestialfall.client.vfx.FxLayer.available())glow(c,m,t);
     }
+    /**
+     * On the effect layer, as light: the crescents' white core and pink edge and every pulse ring burn hotter than
+     * white and bloom, the star bursts on each white re-flash, violet motes rise off the pool and slow ripples run
+     * out over it.
+     */
+    static void glow(Fx c,EffectMesh m,float t){
+        Vec3d o=c.origin.add(0,.06,0);double back=Math.atan2(-c.f.z,-c.f.x);
+        for(float side:CRESCENTS){
+            float born=side-.14f,u=t-born;if(u<0||u>=.8f||born>=RELEASE+.1f)continue;
+            double outer=17.4*STUD*(1-Math.pow(1-Math.min(1,u/.55),2.6)),inner=Math.max(0,(u-.14)*16)*STUD+7.05*STUD*Ease.smooth(u,.06f,.14f);
+            inner=Math.min(inner,outer-.03);if(outer<=.05)continue;
+            double span=Math.toRadians(200)*Ease.out(u,0,.14f)/2,width=outer-inner;
+            float a=1-Ease.smooth(u,.5f,.8f);
+            annulus(m,o,inner+width*.3,outer-width*.12,back-span,back+span,40,u<.38f?0xfff0ff:0xff7ef0,.45f*a);
+            annulus(m,o,outer-width*.12,outer,back-span,back+span,40,0xff9cf4,.35f*a);
+        }
+        for(float p:PULSES){
+            float u=t-p;if(u<0||u>=.38f||p>=RELEASE)continue;
+            double outer=(2+6.45*(1-Math.pow(1-Math.min(1,u/.36),3)))*STUD;
+            double inner=u<.11f?0:outer-Math.max(.12,(1.6-1.3*Ease.unit(u,.11f,.33f)))*STUD;
+            annulus(m,o,inner,outer,0,Math.PI*2,48,u<.18f?0xf07cfe:0xffd6fd,.4f*(1-Ease.unit(u,.2f,.38f)));
+        }
+        if(t>=STAR&&t<RELEASE+.27f){
+            float flare=0;for(float w:WHITE)if(t>=w-.01f)flare=Math.max(flare,FxLib.kick(t,w,.15f));
+            if(flare>.01f){Vec3d s=c.origin.add(0,.25,0);m.softDisc(s,.6+2.2*flare,0xffd8fb,.55f*flare);m.softDisc(s,.3+.8*flare,0xffffff,.7f*flare);}
+        }
+        float pool=pool(t);if(pool<=0)return;
+        int seed=(int)c.cast.id().getMostSignificantBits();
+        for(int k=0;k<28;k++){
+            double x=(t-POOL)/(1.6+.8*Ease.hash(seed+k*3))+Ease.hash(seed+k*5);int gen=(int)Math.floor(x);float ph=(float)(x-gen);
+            double ang=Ease.hash(seed+k*7+gen*13)*Math.PI*2,r=(1.5+14*Math.sqrt(Ease.hash(seed+k*11+gen*17)))*STUD;
+            m.softDisc(c.origin.add(Math.cos(ang)*r,.1+1.6*ph,Math.sin(ang)*r),.05+.03*Ease.hash(seed+k*19),k%4==0?0xff9cf4:0xa77cff,.8f*pool*(float)Math.sin(Math.PI*ph));
+        }
+        for(int k=0;k<2;k++){
+            float u=(float)(((t-POOL)/2.4+k*.5)%1);
+            FxLib.ring(m,c.origin.add(0,.05,0),(1+16*u)*STUD,.25,0x8a64f0,.3f*pool*(1-u)*Ease.smooth(u,0,.08f));
+        }
+    }
+    /** How much the violet pool shows: on with it, a little slower than its light, off at the release. */
+    static float pool(float t){return t<POOL||t>=RELEASE+.2f?0:Ease.smooth(t,POOL,POOL+.4f)*(1-Ease.smooth(t,RELEASE,RELEASE+.2f));}
     /** Ground light, star, rings and crescents: alpha-blended so their violet/pink holds on a bright floor. */
     @Override public void alpha(Fx c,EffectMesh m){
         float t=c.sec;
@@ -256,9 +297,20 @@ final class PoseSkill implements Fx.Skill {
         }
         if(t>=EYE&&t<RELEASE+.12f)f.light(c.at0(.4,1.72,.12),0xff2a2a,1.6,.45f*Ease.out(t,EYE,EYE+.067f)*(1-Ease.smooth(t,RELEASE+.02f,RELEASE+.12f)));
     }
-    /** The air bends in every pulse ring as it runs out over the floor and along each ground crescent. */
+    /**
+     * The air bends in every pulse ring as it runs out over the floor and along each ground crescent, and shimmers
+     * over the pool like heat on crossed upright bands rising round the body.
+     */
     @Override public void distort(Fx c,FxDistort d){
         float t=c.sec;Vec3d o=c.origin.add(0,.05,0);
+        float pool=pool(t);
+        if(pool>0)for(int k=0;k<8;k++){
+            double x=(t-POOL)*(.6+.3*Ease.hash(k*3+1))+Ease.hash(k*5+2);int gen=(int)Math.floor(x);float u=(float)(x-gen);
+            double ang=Ease.hash(k*7+gen*11)*Math.PI*2,r=.6+1.8*Ease.hash(k*11+gen*13);
+            Vec3d base=c.origin.add(Math.cos(ang)*r,.2+u*2.2,Math.sin(ang)*r);
+            float a=.25f*pool*(float)Math.sin(Math.PI*u);
+            d.band(base,base.add(0,1.2,0),c.right,.8,a);d.band(base,base.add(0,1.2,0),c.f,.8,a);
+        }
         for(float p:PULSES){
             float u=t-p;if(u<0||u>=.38f||p>=RELEASE)continue;
             double outer=(2+6.45*(1-Math.pow(1-Math.min(1,u/.36),3)))*STUD;
