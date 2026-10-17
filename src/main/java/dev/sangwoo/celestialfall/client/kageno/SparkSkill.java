@@ -83,7 +83,7 @@ final class SparkSkill implements Fx.Skill {
         if(t<FIRE_END+.3f){
             float a=Ease.smooth(t,.08f,.3f)*(1-Ease.smooth(t,FIRE_END-.3f,FIRE_END+.3f));
             FxLib.glow(m,ground,6,0x7c2cf0,.32f*a*(float)(.85+.15*Math.sin(t*5)));
-            FxLib.embers(m,ground,4.5,4.6,dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?14:30,t,.9f,.06,0xff6cf5,a,5);
+            FxLib.embers(m,ground,4.5,4.6,dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?14:FxLayer.available()?48:30,t,.9f,.06,0xff6cf5,a,5);
         }
         flares(c,m,t,mid,alive);
         orbArcs(c,m,B,B+FIRE_END,B+FIRE_END+.25f);
@@ -132,7 +132,10 @@ final class SparkSkill implements Fx.Skill {
         blast(c,t,centre(c),pts,cells);
         fire(c,t,centre(c),pts,cells);
         wisps(c,t,centre(c),5.5,FIRE_END-.2f,WISPS_END,pts,cells,0);
+        // On the effect layer the fire's hottest cores burn above white and bloom.
+        KagenoFire.hot(FxLayer.available()?1.1f:0);
         KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
+        KagenoFire.hot(0);
         orbs(c,t,FIRE_END,FIRE_END+.25f);
         // On the effect layer the blast throws dust out over the floor round the field.
         if(t<1.2f&&FxLayer.available()){
@@ -243,7 +246,13 @@ final class SparkSkill implements Fx.Skill {
         float field=Ease.smooth(tt,.1f,.4f)*(1-Ease.smooth(tt,FIRE_END-.35f,FIRE_END+.15f));
         if(field>0)for(int k=0;k<4;k++){
             double a=k*Math.PI/2+.6,flick=.82+.18*Math.sin(t*(11+3*k)+k)*Math.sin(t*(7+2*k));
-            f.light(g.add(c.f.multiply(Math.cos(a)*2.4)).add(c.right.multiply(Math.sin(a)*2.4)).add(0,1.2,0),k%2==0?0xd03cff:0xff48dc,7.5,(float)(1.1*field*flick));
+            f.light(g.add(c.f.multiply(Math.cos(a)*2.4)).add(c.right.multiply(Math.sin(a)*2.4)).add(0,1.2,0),k%2==0?0xd03cff:0xff48dc,9,(float)(1.9*field*flick));
+        }
+        // The blast tears the floor open under the field: cracks glowing magenta, cooling to burns while the fire burns.
+        float heat=1-Ease.smooth(tt,.05f,1.6f),al=Ease.smooth(tt,0,.05f)*(1-Ease.smooth(tt,FIRE_END-.3f,FIRE_END+.2f));double open=Ease.out(tt,0,.12f);
+        if(al>0)for(int k=0;k<4;k++){
+            double ang=Math.toRadians(20+90*k+25*Ease.hash(k*7+1301));Vec3d dir=c.f.multiply(Math.cos(ang)).add(c.right.multiply(Math.sin(ang)));
+            f.decal(g.add(dir.multiply(1.9*open+.4)),dir,1.8*open+.2,.5,heat,al,61.3f+k*4.1f);
         }
         float wisps=Ease.smooth(tt,FIRE_END-.3f,FIRE_END)*(1-Ease.smooth(tt,WISPS_END-.4f,WISPS_END));
         if(wisps>0)f.light(g.add(0,.8,0),0xff6cf5,8,.6f*wisps);

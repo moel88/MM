@@ -31,8 +31,8 @@ public final class KagenoStatusFx {
         for(var entry:StandClient.STATES.entrySet()){
             if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
             if(p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
-            OverdriveFx.circuits(m,mc,p,delta,now+delta);
-            OverdriveFx.flames(m,mc,p,delta,now+delta);
+            OverdriveFx.circuits(m,mc,p,delta,now+delta,false);
+            OverdriveFx.flames(m,mc,p,delta,now+delta,false);
         }
     }
     /** Full-screen brightening while an overdrive switches on nearby. */
@@ -44,7 +44,8 @@ public final class KagenoStatusFx {
         }
         return best;
     }
-    public static void additive(MinecraftClient mc,EffectMesh m,float delta,Vec3d camera){
+    /** Additive light; {@code layered} on the effect layer, where the overdrive's flames and circuits glow as well. */
+    public static void additive(MinecraftClient mc,EffectMesh m,float delta,Vec3d camera,boolean layered){
         long now=mc.world.getTime();float time=(now%100000)+delta;
         for(var p:mc.world.getPlayers()){
             if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
@@ -54,6 +55,7 @@ public final class KagenoStatusFx {
             if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
             if(p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
             OverdriveFx.aura(m,mc,p,delta,now+delta);
+            if(layered){OverdriveFx.circuits(m,mc,p,delta,now+delta,true);OverdriveFx.flames(m,mc,p,delta,now+delta,true);}
         }
     }
     /** A guard bubble or an overdrive shows near the camera (they are drawn on the effect layer then). */

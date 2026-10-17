@@ -250,6 +250,10 @@ void main(){
   // A deeper rim keeps overlapping billows apart.
   float rim=smoothstep(edge-.2,edge-.03,r);
   rgb*=1.0-rim*.35*smoothstep(.2,.5,heat);
+  // On the effect layer (T) the hottest magenta-pink cores burn above white, so they glow, and the body leans back
+  // to magenta: the layer's bloom is the light added over the grey floor, which comes out bluer than the fire.
+  rgb*=1.0+Hot*smoothstep(.72,1.1,h)*(1.0-rim*.6);
+  rgb.r*=1.0+.13*Hot;
   alpha=body*tint.a;
  }else if(Mode==14){
   // Anime dust puff (on the fire cells' fixed planes): three flat tones (shadowed base, middle, lit top), a lobed

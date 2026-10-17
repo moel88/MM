@@ -78,8 +78,10 @@ final class OverdriveFx {
     /**
      * Violet flame wisps, ≈27 per second, each 0.25-0.4 s, born on a limb and drifting out and up.
      * Alpha-blended so they stay violet over a bright daytime sky; drawn on fixed planes, not turned to the camera.
+     * {@code light} draws the same wisps again as light on the effect layer: violet glow round them and a hot
+     * lavender core that blooms where wisps overlap.
      */
-    static void flames(EffectMesh m,MinecraftClient mc,PlayerEntity p,float delta,float now){
+    static void flames(EffectMesh m,MinecraftClient mc,PlayerEntity p,float delta,float now,boolean light){
         float s=since(mc,p,delta);Body b=body(p,delta);float time=now/20f;
         float flames=Ease.smooth(s,.3f,.6f);
         if(flames>0){
@@ -98,6 +100,7 @@ final class OverdriveFx {
                 double turn=Ease.hash(seed+k*19+6)*Math.PI;
                 for(int q=0;q<2;q++){
                     Vec3d side=new Vec3d(Math.cos(turn+q*Math.PI/2),0,Math.sin(turn+q*Math.PI/2));
+                    if(light){m.needle(base,tip,side,size*1.7,.3,0x7a3ce8,a*.3f);m.needle(base.add(0,size*.05,0),tip.add(0,-size*.2,0),side,size*.55,.3,0xd9a8ff,a*.55f);continue;}
                     m.needle(base,tip,side,size*1.4,.3,0x9d5ee8,a*.55f);m.needle(base,tip,side,size*.9,.3,0xc78af5,a*.8f);m.needle(base.add(0,size*.1,0),tip.add(0,-size*.3,0),side,size*.42,.3,0xf3c4ff,a*.9f);
                 }
             }
@@ -119,8 +122,9 @@ final class OverdriveFx {
     /**
      * Alpha-blended circuit-trace field: thin violet PCB traces with 90° turns on a camera-facing
      * plane behind the upper body (≈2.5 × 2 blocks), popping in and growing, pulsing at 1.3-2.6 Hz.
+     * {@code light} draws the traces again as a neon glow on the effect layer.
      */
-    static void circuits(EffectMesh m,MinecraftClient mc,PlayerEntity p,float delta,float now){
+    static void circuits(EffectMesh m,MinecraftClient mc,PlayerEntity p,float delta,float now,boolean light){
         float s=since(mc,p,delta),in=Ease.smooth(s,.2f,.5f);if(in<=0)return;
         Body b=body(p,delta);float time=now/20f;
         Vec3d cam=m.camera(),centre=b.at(0,1.35,0),n=cam.subtract(centre).normalize();
@@ -143,11 +147,12 @@ final class OverdriveFx {
                 double len=Math.min(lens[k],total*grow-shown),sign=Ease.hash(h+9+k)>.5?1:-1;
                 double nx=x+(horizontal?sign*len:0),ny=y+(horizontal?0:sign*len);
                 Vec3d a0=o.add(u.multiply(x)).add(v.multiply(y)),a1=o.add(u.multiply(nx)).add(v.multiply(ny));
-                m.line(a0,a1,.075,0x6a3cff,a*.25f);m.line(a0,a1,.028,0x6a3cff,a);
+                if(light){m.line(a0,a1,.09,0x6a3cff,a*.22f);m.line(a0,a1,.022,0xb59cff,a*.6f);}else{m.line(a0,a1,.075,0x6a3cff,a*.25f);m.line(a0,a1,.028,0x6a3cff,a);}
                 x=nx;y=ny;shown+=len;horizontal=!horizontal;
             }
             // Pad at the trace end.
             Vec3d pad=o.add(u.multiply(x)).add(v.multiply(y));double r=.03;
+            if(light){m.softDisc(pad,.08,0x9a7cff,a*.5f);continue;}
             m.quad(pad.add(u.multiply(r)).add(v.multiply(r)),pad.subtract(u.multiply(r)).add(v.multiply(r)),pad.subtract(u.multiply(r)).subtract(v.multiply(r)),pad.add(u.multiply(r)).subtract(v.multiply(r)),0x7a50ff,a);
         }
     }
@@ -158,7 +163,8 @@ final class OverdriveFx {
     }
     /**
      * Lights on the effect layer: the activation's white-violet flash with a light shaft for viewers close by, then a
-     * steady violet glow round the body (pulsing with the flames) and the eye's glint.
+     * steady violet glow round the body (pulsing with the flames), the hands' flames flickering on what is near and
+     * the eye's glint.
      */
     static void frame(MinecraftClient mc,PlayerEntity p,float delta,Vec3d camera,dev.sangwoo.celestialfall.client.vfx.FxFrame f){
         float s=since(mc,p,delta);Body b=body(p,delta);float time=(mc.world.getTime()+delta)/20f;
@@ -171,7 +177,11 @@ final class OverdriveFx {
         float rest=Ease.smooth(s,.3f,.6f);
         if(rest>0){
             float pulse=.8f+.2f*(float)Math.sin(time*Math.PI*2/.7f);
-            f.light(b.at(0,1.0,0),0x9a5cff,4.5,.75f*rest*pulse);
+            f.light(b.at(0,1.0,0),0x9a5cff,6,1.25f*rest*pulse);
+            for(int k=0;k<2;k++){
+                float flicker=.75f+.15f*(float)Math.sin(time*23+k*2.1)+.1f*(float)Math.sin(time*37+k*4.3);
+                f.light(b.at(.02,.8,k==0?.42:-.42),0xb67cff,2.6,.7f*rest*flicker);
+            }
             f.light(p.getLerpedPos(delta).add(0,p.getStandingEyeHeight()+.1,0),0xd8ccff,1.8,.45f*Ease.smooth(s,.08f,.2f));
         }
     }
