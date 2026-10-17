@@ -98,12 +98,21 @@ public final class KagenoClips {
      * caster standing at {@code feet} facing {@code yaw}; mirrors {@link #root}.
      */
     public static Vec3d[] blade(Vec3d feet,float yaw,Pose p){
-        Vec3d f=Vec3d.fromPolar(0,yaw),left=new Vec3d(f.z,0,-f.x),right=left.negate();float k=(float)Math.PI/180;
-        var q=new Quaternionf().rotationAxis(p.yaw*k,0,1,0).rotateAxis(p.pitch*k,(float)left.x,0,(float)left.z).rotateAxis(p.roll*k,(float)f.x,0,(float)f.z);
-        Vec3d off=f.multiply(p.fw).add(0,p.up,0).add(right.multiply(p.rt));
+        Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);var q=torso(f,p);
         Vec3d local=right.multiply(.3125).add(0,1.375-PIVOT,0).add(world(p.rArm,f,right).multiply(.625));
-        return new Vec3d[]{feet.add(off).add(0,PIVOT,0).add(rotate(q,local)),rotate(q,world(p.blade,f,right)).normalize()};
+        return new Vec3d[]{pivot(feet,f,p).add(rotate(q,local)),rotate(q,world(p.blade,f,right)).normalize()};
     }
+    /** World position of the sword shoulder for pose {@code p}, as {@link #blade}. */
+    public static Vec3d shoulder(Vec3d feet,float yaw,Pose p){
+        Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);
+        return pivot(feet,f,p).add(rotate(torso(f,p),right.multiply(.3125).add(0,1.375-PIVOT,0)));
+    }
+    /** The torso's rotation and the world position of its pivot for pose {@code p} facing {@code f}. */
+    private static Quaternionf torso(Vec3d f,Pose p){
+        Vec3d left=new Vec3d(f.z,0,-f.x);float k=(float)Math.PI/180;
+        return new Quaternionf().rotationAxis(p.yaw*k,0,1,0).rotateAxis(p.pitch*k,(float)left.x,0,(float)left.z).rotateAxis(p.roll*k,(float)f.x,0,(float)f.z);
+    }
+    private static Vec3d pivot(Vec3d feet,Vec3d f,Pose p){return feet.add(f.multiply(p.fw)).add(0,p.up+PIVOT,0).add(new Vec3d(-f.z,0,f.x).multiply(p.rt));}
     private static Vec3d world(R6.Dir d,Vec3d f,Vec3d right){return right.multiply(d.rt()).add(0,d.up(),0).add(f.multiply(d.fw()));}
     private static Vec3d rotate(Quaternionf q,Vec3d v){var r=q.transform(new org.joml.Vector3f((float)v.x,(float)v.y,(float)v.z));return new Vec3d(r.x,r.y,r.z);}
     public static Vec3d groundOffset(StandClient.Cast cast,float delta){

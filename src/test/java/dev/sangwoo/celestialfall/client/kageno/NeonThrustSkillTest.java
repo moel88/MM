@@ -54,6 +54,18 @@ class NeonThrustSkillTest {
         assertTrue(sword(NeonThrustSkill.REST)[1].dotProduct(sword(0)[1])>.999);
         assertTrue(new NeonThrustSkill().lifetime()*20>=KagenoRules.DURATION[KagenoRules.E]);
     }
+    @Test void manyAfterimageStabsFillTheAirWhileTheThrustsLand(){
+        float first=NeonThrustSkill.THRUSTS[0],last=NeonThrustSkill.THRUSTS[NeonThrustSkill.THRUSTS.length-1];
+        int fewest=99;
+        for(float t=first+.05f;t<=last;t+=.01f)fewest=Math.min(fewest,NeonThrustSkill.ghosts(t).size());
+        assertTrue(fewest>=8,"only "+fewest+" afterimages at once");
+        // Right on a thrust there are more of them.
+        int onThrust=NeonThrustSkill.ghosts(NeonThrustSkill.THRUSTS[4]+.02f).size();
+        assertTrue(onThrust>=13,"only "+onThrust+" on a thrust");
+        // None before the thrusts; the last ones have faded a quarter of a second after the last thrust.
+        assertTrue(NeonThrustSkill.ghosts(first-.1f).isEmpty());
+        assertTrue(NeonThrustSkill.ghosts(last+.3f).isEmpty());
+    }
     @Test void theNeonRunsUpTheBladeThenStaysLitUntilItFlakesAway(){
         assertEquals(0,NeonThrustSkill.lit(0));assertEquals(0,NeonThrustSkill.glow(.1f));
         assertTrue(NeonThrustSkill.lit(.29f)>.2f&&NeonThrustSkill.lit(.29f)<.8f);

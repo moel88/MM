@@ -16,8 +16,8 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  * E "신속한 맹공". The sword is presented level across the chest and the left palm runs pink neon up the
  * blade from the guard to the tip; the body drops into a low stance with the sword drawn back beside the
  * head and levelled at the target; thirteen thrusts land in 1.55 s (the server's seven hits,
- * {@link KagenoRules#eTicks}, and one between each pair), each shooting a lance of light with two
- * afterimage blades; the sword coils low behind the body while energy gathers; the rising slash crosses
+ * {@link KagenoRules#eTicks}, and one between each pair), each shooting a lance of light while afterimage
+ * stabs fill the air ahead; the sword coils low behind the body while energy gathers; the rising slash crosses
  * the target on the finisher tick ({@link KagenoRules#E_FINISH}), throwing a neon crescent and a geyser
  * of violet light; the sword is held high, flicked down and the neon flakes away. Only the sword is pink;
  * everything the skill throws is violet. Times are seconds after the cast and every effect is a pure
@@ -164,6 +164,9 @@ final class NeonThrustSkill implements Fx.Skill {
         // The ground in front glows while the thrusts land.
         if(t>=THRUSTS[0]-.05f&&t<COIL+.1f)FxLib.glow(m,c.pos.add(c.f.multiply(1.8)).add(0,.04,0),2.0,INDIGO,.28f*Ease.smooth(t,THRUSTS[0]-.05f,THRUSTS[0]+.1f)*(1-Ease.smooth(t,COIL-.05f,COIL+.1f)));
         for(int i=0;i<THRUSTS.length;i++)thrust(c,m,t,i);
+        afterimages(c,m,t);
+        // The real blade smears through each thrust.
+        if(t>=THRUSTS[0]-.05f&&t<COIL)trail(c,m,t,.05f,5,GUARD,TIP,HOT,.45f);
         coil(c,m,t,guard,tip);
         slash(c,m,t);
         // The neon flakes off the blade and drifts up as it goes out.
@@ -214,8 +217,7 @@ final class NeonThrustSkill implements Fx.Skill {
     }
     /**
      * Thrust i: a lance of light shot ahead of the tip and sliding on as it fades (a faint line of it lingers),
-     * two afterimage blades fanned around the real one, a flash and a ring of pressure at the tip, and on the
-     * server's hits a burst where the blade bites.
+     * a flash and a ring of pressure at the tip, and on the server's hits a burst where the blade bites.
      */
     static void thrust(Fx c,EffectMesh m,float t,int i){
         float u=t-THRUSTS[i];if(u<0||u>=.45f)return;
@@ -239,15 +241,6 @@ final class NeonThrustSkill implements Fx.Skill {
             Vec3d a0=tip.add(aim.multiply(.1+1.4*.17)),a1=a0.add(aim.multiply(2.0+.3*big));
             m.softLine(a0,a1,.05,VIOLET,.22f*(1-Ease.unit(u,.17f,.45f)));
         }
-        if(u<.09f){
-            float a=.55f*(1-u/.09f);
-            for(int g=0;g<2;g++){
-                double side=g==0?-1:1;
-                Vec3d d=c.dir(AIM[i][0]+(Ease.hash(i*11+g)-.5)*10,AIM[i][1]+side*(5+4*Ease.hash(i*7+g)));
-                Vec3d h=hand.add(c.right.multiply(side*.1)).add(0,(Ease.hash(i*5+g)-.5)*.15,0);
-                neon(m,h.add(d.multiply(GUARD)),h.add(d.multiply(TIP+.15)),.03,a,PINK);
-            }
-        }
         if(u<.14f){
             float a=1-u/.14f;Vec3d p=tip.add(aim.multiply(.25+.8*u)),x=across(aim),y=aim.crossProduct(x).normalize();
             FxLib.ringPlane(m,p,x,y,.15+1.1*big*Ease.out(u,0,.14f),.12,LAVENDER,.85f*a);
@@ -260,6 +253,45 @@ final class NeonThrustSkill implements Fx.Skill {
             Vec3d x=across(aim),y=aim.crossProduct(x).normalize(),d1=x.add(y).normalize(),d2=x.subtract(y).normalize();double r=(.5+.6*u/.24f)*big;
             m.glowLine(p.subtract(d1.multiply(r)),p.add(d1.multiply(r)),.06,VIOLET,a);m.glowLine(p.subtract(d2.multiply(r)),p.add(d2.multiply(r)),.06,VIOLET,a);
         }
+    }
+    /** Afterimage stabs are born every GHOST seconds from the first thrust to the last, and five more with every thrust. */
+    static final float GHOST=.018f;
+    /** An afterimage stab: when it was born, its seed and how far it reaches (1 = the real arm and blade). */
+    record Ghost(float born,int seed,double reach){
+        float life(){return .14f+.08f*(float)Ease.hash(seed+5);}
+        boolean alive(float t){return t>=born&&t<born+life();}
+    }
+    /** The afterimage stabs alive at t: the steady stream and the bursts that come with each thrust. */
+    static List<Ghost> ghosts(float t){
+        List<Ghost> out=new ArrayList<>();
+        float first=THRUSTS[0]-.02f,last=THRUSTS[THRUSTS.length-1]+.05f;
+        if(t<first||t>=last+.25f)return out;
+        int newest=(int)Math.floor((Math.min(t,last)-first)/GHOST);
+        for(int g=Math.max(0,newest-14);g<=newest;g++){var x=new Ghost(first+g*GHOST,g*7+1,1.05);if(x.alive(t))out.add(x);}
+        for(int i=0;i<THRUSTS.length;i++)for(int k=0;k<5;k++){var x=new Ghost(THRUSTS[i]+k*.008f,i*53+k*11+500,1.2);if(x.alive(t))out.add(x);}
+        return out;
+    }
+    /** The air ahead fills with afterimage stabs while the thrusts land, all coming from the sword shoulder. */
+    static void afterimages(Fx c,EffectMesh m,float t){
+        var live=ghosts(t);if(live.isEmpty())return;
+        Vec3d shoulder=KagenoClips.shoulder(c.pos,c.cast.yaw(),R6.poseOf(CLIP.frame(t)));
+        for(var g:live)ghost(c,m,t,shoulder,g);
+    }
+    /**
+     * One afterimage stab: a violet ghost of the arm and a pink ghost of the blade snapping out along a direction in
+     * the cone ahead, a blurred streak along it, a glint at its tip, then fading.
+     */
+    static void ghost(Fx c,EffectMesh m,float t,Vec3d shoulder,Ghost g){
+        int seed=g.seed();double reach=g.reach();float life=g.life(),u=t-g.born();
+        // A wide fan around the body, so the stabs show past it even from right behind.
+        Vec3d d=c.dir(4+(Ease.hash(seed)-.5)*32,(Ease.hash(seed+1)-.5)*44);
+        Vec3d s=shoulder.add(c.right.multiply((Ease.hash(seed+2)-.5)*1.1)).add(0,(Ease.hash(seed+3)-.3)*.6,0);
+        Vec3d hand=s.add(d.multiply(.62*reach-.35*(1-Ease.out(u,0,.035f)))),tip=hand.add(d.multiply(TIP*reach));
+        float a=Ease.smooth(u,0,.015f)*(1-Ease.smooth(u,life*.4f,life));
+        m.softLine(s,hand,.2,LAVENDER,.2f*a);
+        m.softLine(hand.subtract(d.multiply(.3)),tip,.16,VIOLET,.15f*a);
+        neon(m,hand.add(d.multiply(GUARD)),tip,.03,.6f*a,PINK);
+        m.star(tip,.16,VCORE,.75f*a);
     }
     /** Where a thrust bites: the nearest body in the server's thrust lane, on its near side at the lance's height; else just past the tip. */
     static Vec3d bite(Fx c,Vec3d tip,Vec3d aim){
