@@ -39,7 +39,7 @@ public final class MpClient implements ClientModInitializer {
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
     private MinecraftClient mc;private int phase,age,frames;private boolean caster;private final Set<Integer> held=new HashSet<>();
-    private float quakePeak,overwhelmPeak,lightPeak;private net.minecraft.util.math.Vec3d walkLast;private long walkStart=-1;
+    private float quakePeak,overwhelmPeak,lightPeak,wallPeak;private net.minecraft.util.math.Vec3d walkLast;private long walkStart=-1;
     private final List<Double> steps=new ArrayList<>();
 
     @Override public void onInitializeClient(){
@@ -138,11 +138,19 @@ public final class MpClient implements ClientModInitializer {
             quakePeak=Math.max(quakePeak,Math.max(Math.abs(s.yaw()),Math.abs(s.pitch())));
             overwhelmPeak=Math.max(overwhelmPeak,dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.strength());
             lightPeak=Math.max(lightPeak,dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.radiance());
+            // The wall shake this camera gets (degrees, with the shake setting) from the nearest cast.
+            for(var c:AtomicClient.CASTS.values()){
+                var cam=mc.gameRenderer.getCamera().getPos();float sec=c.age(0)/20f;
+                double r=dev.sangwoo.celestialfall.client.atomic.AtomicPillarShape.radius(dev.sangwoo.celestialfall.client.atomic.AtomicStage.visual(sec),c.radius);
+                if(!dev.sangwoo.celestialfall.client.atomic.AtomicPillar.interior(c,cam,sec))
+                    wallPeak=Math.max(wallPeak,dev.sangwoo.celestialfall.client.atomic.AtomicStage.wallShake(sec,Math.hypot(cam.x-c.origin.x,cam.z-c.origin.z),r,c.radius)
+                        *(float)dev.sangwoo.celestialfall.CelestialFall.CONFIG.screenShakeStrength);
+            }
             flag("veil_overwhelm_active",dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.active());
         }else if(quakePeak>0||overwhelmPeak>0||lightPeak>0){
-            note(String.format(Locale.ROOT,"G seen: quake peak %.2f deg, overwhelm peak %.2f, light peak %.2f, veil frames %d",quakePeak,overwhelmPeak,lightPeak,
+            note(String.format(Locale.ROOT,"G seen: quake peak %.2f deg, wall shake amplitude peak %.2f deg, overwhelm peak %.2f, light peak %.2f, veil frames %d",quakePeak,wallPeak,overwhelmPeak,lightPeak,
                 dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.renderedFrames()));
-            quakePeak=0;overwhelmPeak=0;lightPeak=0;
+            quakePeak=0;overwhelmPeak=0;lightPeak=0;wallPeak=0;
         }
         flag("atomic",AtomicClient.CASTS.size());flag("overdrive",StandClient.OVERDRIVE.size());flag("hits",StandClient.hitCount);
         flag("health",Math.round(mc.player.getHealth()));
