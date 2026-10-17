@@ -12,9 +12,10 @@ public final class KagenoSword {
     private KagenoSword(){}
     public static void initialize(){BuiltinItemRendererRegistry.INSTANCE.register(CelestialFall.ATOMIC_SWORD,(stack,mode,m,b,light,overlay)->render(m,b,light,overlay));}
     public static void render(MatrixStack m,VertexConsumerProvider buffers,int light,int overlay){
+        dev.sangwoo.celestialfall.client.kageno.BodyGhost.sword(m);
         renderMesh(m,buffers.getBuffer(RenderLayer.getEntityCutoutNoCull(TEXTURE)),light,overlay);
     }
-    static void renderMesh(MatrixStack m,VertexConsumer v,int light,int overlay){
+    public static void renderMesh(MatrixStack m,VertexConsumer v,int light,int overlay){
         m.push();m.translate(.5,0,.5);m.scale(1/16f,1/16f,1/16f);
         // Blade shoulders, taper and needle point; bevel catches directional light.
         prism(m,v,new float[][]{{-1.02f,8},{-.86f,26.5f},{0,31.5f},{.86f,26.5f},{1.02f,8}},.17f,0x25272b,light,overlay);

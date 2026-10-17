@@ -64,7 +64,9 @@ public final class StandClient {
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.HITS,(mc,h,b,r)->{int n=b.readVarInt();mc.execute(()->{if(mc.world!=null){int count=Math.max(0,Math.min(9999,n));if(count<=1||count<hitCount)comboStart=mc.world.getTime();hitCount=count;hitTime=mc.world.getTime();}});});
         ClientTickEvents.START_CLIENT_TICK.register(StandClient::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->mc.execute(()->clear(mc)));
+        WorldRenderEvents.START.register(c->dev.sangwoo.celestialfall.client.kageno.BodyGhost.world(true));
         WorldRenderEvents.LAST.register(KagenoRenderer::render);
+        WorldRenderEvents.END.register(c->dev.sangwoo.celestialfall.client.kageno.BodyGhost.world(false));
         HudRenderCallback.EVENT.register(KagenoRenderer::hud);
     }
     public static void acceptCast(Cast incoming){

@@ -55,9 +55,10 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
         var stand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         if(stand!=null&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.hidden(stand,delta)){matrices.pop();botand$posed=false;ci.cancel();return;}
         float bodyYaw=net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,player.prevBodyYaw,player.bodyYaw);
+        dev.sangwoo.celestialfall.client.kageno.BodyGhost.begin(player,matrices,delta,this.getPositionOffset(player,delta));
         if(stand!=null)dev.sangwoo.celestialfall.client.kageno.KagenoClips.root(matrices,stand,delta,bodyYaw);
         else dev.sangwoo.celestialfall.client.kageno.KagenoClips.unwind(matrices,player.getUuid(),delta,bodyYaw);
     }
     @Inject(method="render(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("RETURN"))
-    private void botand$restoreLift(AbstractClientPlayerEntity player,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){if(botand$posed){matrices.pop();botand$posed=false;}}
+    private void botand$restoreLift(AbstractClientPlayerEntity player,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){dev.sangwoo.celestialfall.client.kageno.BodyGhost.end();if(botand$posed){matrices.pop();botand$posed=false;}}
 }

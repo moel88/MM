@@ -52,6 +52,10 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.apply(player,this,animationProgress-player.age);
         overlays();
     }
+    @Override public void render(MatrixStack matrices,net.minecraft.client.render.VertexConsumer vertices,int light,int overlay,float red,float green,float blue,float alpha) {
+        super.render(matrices,vertices,light,overlay,red,green,blue,alpha);
+        dev.sangwoo.celestialfall.client.kageno.BodyGhost.body(this,matrices);
+    }
     public void overlays() {
         hat.copyTransform(head);jacket.copyTransform(body);
         for(ModelPart[] pair:new ModelPart[][]{{rightSleeve,rightArm},{leftSleeve,leftArm},{rightPants,rightLeg},{leftPants,leftLeg}}) {

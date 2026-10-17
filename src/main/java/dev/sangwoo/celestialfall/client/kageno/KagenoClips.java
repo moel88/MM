@@ -39,7 +39,7 @@ public final class KagenoClips {
             while(COMBO_STARTS.size()>64)COMBO_STARTS.remove(COMBO_STARTS.keySet().iterator().next());
         }
     }
-    public static void clear(){GUARDS.clear();COMBO_STARTS.clear();FACINGS.clear();}
+    public static void clear(){GUARDS.clear();COMBO_STARTS.clear();FACINGS.clear();BodyGhost.clear();}
     /** Client tick: remembers when each stand user raised and lowered the guard. */
     public static void trackGuards(net.minecraft.client.MinecraftClient mc){
         if(mc.world==null){GUARDS.clear();return;}long now=mc.world.getTime();

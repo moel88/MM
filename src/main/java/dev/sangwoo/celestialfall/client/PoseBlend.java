@@ -46,13 +46,15 @@ public final class PoseBlend {
     private static ModelPart[] bends(BipedEntityModel<?> m){
         return new ModelPart[]{m.rightArm.getChild("elbow"),m.leftArm.getChild("elbow"),m.rightLeg.getChild("knee"),m.leftLeg.getChild("knee")};
     }
-    private static float[][] capture(BipedEntityModel<?> m){
+    /** Every part's angles and pivot, then the elbows' and knees' bend, as shown now. */
+    public static float[][] capture(BipedEntityModel<?> m){
         float[][] out=new float[PARTS+BENDS][];var p=parts(m);var b=bends(m);
         for(int i=0;i<PARTS;i++)out[i]=new float[]{p[i].pitch,p[i].yaw,p[i].roll,p[i].pivotX,p[i].pivotY,p[i].pivotZ};
         for(int i=0;i<BENDS;i++)out[PARTS+i]=new float[]{b[i].pitch};
         return out;
     }
-    private static void write(BipedEntityModel<?> m,float[][] v){
+    /** Puts angles and pivots taken by {@link #capture} back on the model. */
+    public static void write(BipedEntityModel<?> m,float[][] v){
         var p=parts(m);var b=bends(m);
         for(int i=0;i<PARTS;i++){p[i].pitch=v[i][0];p[i].yaw=v[i][1];p[i].roll=v[i][2];p[i].pivotX=v[i][3];p[i].pivotY=v[i][4];p[i].pivotZ=v[i][5];}
         for(int i=0;i<BENDS;i++)b[i].pitch=v[PARTS+i][0];
