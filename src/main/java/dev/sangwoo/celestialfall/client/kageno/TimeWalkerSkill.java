@@ -532,22 +532,22 @@ final class TimeWalkerSkill implements Fx.Skill {
         float held=frozen(t)*Ease.smooth(t,COCKS[0],CUTS[0]);
         if(held>0)f.light(x,0xc9a2ff,6,.7f*held);
         for(int i=0;i<CUTS.length;i++){float b=t-COCKS[i];if(b>=0&&b<.15f)f.light(span(list.get(i),drawn(t,i))[0],LAVENDER,4,1.4f*(1-b/.15f)*Ease.smooth(b,0,.015f));}
-        if(t>=STORED-.01f&&t<STORED+.12f){float u=Ease.unit(t,STORED,STORED+.12f);f.light(x,ROSE,10,2.6f*Ease.smooth(t,STORED-.01f,STORED+.02f)*(1-u*u));}
+        if(t>=STORED-.01f&&t<STORED+.12f){float u=Ease.unit(t,STORED,STORED+.12f);f.light(x,ROSE,10,1.6f*Ease.smooth(t,STORED-.01f,STORED+.02f)*(1-u*u));}
         for(int i=0;i<list.size();i++){
             float age=t-slashAt(i),life=slashLife(i);if(age<0||age>=life)continue;boolean big=i==list.size()-1;
-            f.light(list.get(i).centre(),big?0xc06bff:VIOLET,big?9:6,(big?3.2f:1.8f)*Ease.smooth(age,0,.02f)*(1-Ease.smooth(age,.05f,life)));
+            f.light(list.get(i).centre(),big?0xc06bff:VIOLET,big?9:6,(big?2.2f:1.2f)*Ease.smooth(age,0,.02f)*(1-Ease.smooth(age,.05f,life)));
         }
         if(t>=RELEASE-.01f){
-            f.light(x,0xffd6f6,15,5f*kick(t,RELEASE,.16f));
+            f.light(x,0xffd6f6,15,3f*kick(t,RELEASE,.16f));
             float band=Ease.smooth(t,RELEASE,RELEASE+.04f)*(1-Ease.smooth(t,RELEASE+.15f,RELEASE+.9f));
-            for(int k=-1;k<=1;k+=2)f.light(x.add(c.right.multiply(k*5.5)),MAGENTA,9,2.2f*band);
+            for(int k=-1;k<=1;k+=2)f.light(x.add(c.right.multiply(k*5.5)),MAGENTA,9,1.5f*band);
             float haze=Ease.smooth(t,RELEASE+.1f,RELEASE+.3f)*(1-Ease.smooth(t,RELEASE+.6f,RELEASE+1.8f));
             f.light(x.add(0,.5,0),0xd040ff,11,.7f*haze);
         }
-        float shaft=.55f*Ease.window(t,STORED-.01f,STORED+.1f,.02f,.03f)+1.25f*kick(t,RELEASE,.18f);
+        float shaft=.22f*Ease.window(t,STORED-.01f,STORED+.1f,.02f,.03f)+.6f*kick(t,RELEASE,.18f);
         if(shaft>.01f)f.shaft(x,0xffc8f4,shaft);
         float near=(float)Math.max(0,Math.min(1,(26-c.camera.distanceTo(x))/12));
-        if(near>0){f.impact(near*impact(t),impactMode(t));f.chroma(near*.014f*kick(t,RELEASE,.12f));}
+        if(near>0){f.impact(near*impact(t),impactMode(t));f.chroma(near*.01f*kick(t,RELEASE,.12f));}
         if(t>=RELEASE){
             float heat=1-Ease.smooth(t,RELEASE+.2f,RELEASE+1.6f),a=Ease.smooth(t,RELEASE,RELEASE+.06f)*(1-Ease.smooth(t,3.5f,3.95f));
             Vec3d g0=floorUnder(c);double open=Ease.out(t,RELEASE,RELEASE+.12f);

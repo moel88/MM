@@ -16,8 +16,12 @@ public final class KagenoFire {
     private KagenoFire(){}
     public static void initialize(){CoreShaderRegistrationCallback.EVENT.register(c->c.register(CelestialFall.id("kageno_flame"),VertexFormats.POSITION_TEXTURE_COLOR,s->shader=s));}
     public static boolean ready(){return shader!=null;}
+    private static float hot;
+    /** Extra light (above white) on the hottest streaks of the R slashes, for the effect layer's glow pass; 0 off. */
+    public static void hot(float amount){hot=amount;}
     private static BufferBuilder begin(float age,int mode){
         RenderSystem.setShader(()->shader);shader.getUniform("Age").set(age);shader.getUniform("Mode").set(mode);
+        var h=shader.getUniform("Hot");if(h!=null)h.set(hot);
         var b=Tessellator.getInstance().getBuffer();b.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_TEXTURE_COLOR);return b;
     }
     private static void end(BufferBuilder b){BufferRenderer.drawWithGlobalProgram(b.end());}

@@ -131,7 +131,7 @@ public final class FxLayer {
             if(s.modelViewMat!=null)s.modelViewMat.set(RenderSystem.getModelViewMatrix());
             if(s.projectionMat!=null)s.projectionMat.set(RenderSystem.getProjectionMatrix());
             if(s.screenSize!=null)s.screenSize.set((float)width,(float)height);
-            var amount=s.getUniform("Amount");if(amount!=null)amount.set(height*.032f);
+            var amount=s.getUniform("Amount");if(amount!=null)amount.set(height*.022f);
             s.bind();
             RenderSystem.enableBlend();RenderSystem.blendEquation(GL14.GL_FUNC_ADD);
             RenderSystem.blendFuncSeparate(GL11.GL_ONE,GL11.GL_ONE,GL11.GL_ONE,GL11.GL_ONE);
@@ -209,7 +209,7 @@ public final class FxLayer {
                 target(downFbo[k],levelW[k],levelH[k]);
                 if(k==0){bind(0,hdrTex);bind(1,baseTex);f2(downProg,"Texel",1f/width,1f/height);}
                 else{bind(0,downTex[k-1]);bind(1,blackTex);f2(downProg,"Texel",1f/levelW[k-1],1f/levelH[k-1]);}
-                i(downProg,"SrcA",0);i(downProg,"SrcB",1);i(downProg,"First",k==0?1:0);
+                i(downProg,"SrcA",0);i(downProg,"SrcB",1);i(downProg,"First",k==0?1:0);f(downProg,"Threshold",.22f);
                 triangle();
             }
             use(upProg);
@@ -242,16 +242,16 @@ public final class FxLayer {
                     focus[0]=Math.max(-.2f,Math.min(1.2f,u));focus[1]=Math.max(-.2f,Math.min(1.2f,v));
                     use(shaftProg);target(shaftFbo,levelW[0],levelH[0]);
                     bind(0,downTex[0]);i(shaftProg,"Src",0);
-                    f2(shaftProg,"Center",focus[0],focus[1]);f(shaftProg,"Length",.85f);f(shaftProg,"Decay",.96f);
+                    f2(shaftProg,"Center",focus[0],focus[1]);f(shaftProg,"Length",.6f);f(shaftProg,"Decay",.96f);
                     f2(shaftProg,"Aspect",(float)width/height,1f);
                     triangle();shafts=shaftTex;shaftGain=frame.shaftStrength();
                 }
             }
             // Composite onto the screen.
             use(compProg);target(main.fbo,width,height);
-            bind(0,hdrTex);bind(1,upTex[0]);bind(2,histTex[histCurrent]);bind(3,downTex[0]);bind(4,shafts);
-            i(compProg,"HdrTex",0);i(compProg,"BloomTex",1);i(compProg,"HistTex",2);i(compProg,"LightTex",3);i(compProg,"ShaftTex",4);
-            f(compProg,"BloomGain",(float)(.62*CelestialFall.CONFIG.bloomStrength/1.35));
+            bind(0,hdrTex);bind(1,upTex[0]);bind(2,histTex[histCurrent]);bind(3,downTex[0]);bind(4,shafts);bind(5,sceneCopyTex);bind(6,baseTex);
+            i(compProg,"HdrTex",0);i(compProg,"BloomTex",1);i(compProg,"HistTex",2);i(compProg,"LightTex",3);i(compProg,"ShaftTex",4);i(compProg,"SceneTex",5);i(compProg,"BaseTex",6);
+            f(compProg,"BloomGain",(float)(.5*CelestialFall.CONFIG.bloomStrength/1.35));
             f(compProg,"Afterglow",.75f);
             f(compProg,"ShaftGain",shaftGain);
             int rgb=frame.shaftRgb();f3(compProg,"ShaftTint",((rgb>>16)&255)/255f,((rgb>>8)&255)/255f,(rgb&255)/255f);

@@ -80,6 +80,14 @@
       "values": [
         0
       ]
+    },
+    {
+      "name": "Hot",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
     }
   ],
   "blend": {

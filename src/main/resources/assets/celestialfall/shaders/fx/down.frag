@@ -5,12 +5,19 @@ uniform sampler2D SrcA;
 uniform sampler2D SrcB;
 uniform vec2 Texel;
 uniform int First;
+uniform float Threshold;
 in vec2 texCoord;
 out vec4 fragColor;
 vec3 s(vec2 o){
     vec2 uv=texCoord+o*Texel;
     vec3 c=texture(SrcA,uv).rgb;
-    if(First==1)c=max(c-texture(SrcB,uv).rgb,0.0);
+    if(First==1){
+        c=max(c-texture(SrcB,uv).rgb,0.0);
+        // Soft knee: faint glows stay put, the bright cores bloom.
+        float l=max(c.r,max(c.g,c.b));
+        float knee=Threshold*.5,soft=clamp(l-Threshold+knee,0.0,2.0*knee);
+        c*=max(soft*soft/(4.0*knee+1e-4),l-Threshold)/max(l,1e-4);
+    }
     return min(c,vec3(64.0));
 }
 void main(){

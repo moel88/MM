@@ -75,7 +75,7 @@ public final class KagenoRenderer {
         }finally{matrices.pop();RenderSystem.depthMask(true);RenderSystem.enableDepthTest();RenderSystem.enableCull();RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();RenderSystem.setShaderColor(1,1,1,1);}
     }
     /** Light gain of the additive pass on the effect layer (above 1 the overlapping light turns white-hot). */
-    static final float LAYER_GAIN=1.35f;
+    static final float LAYER_GAIN=1f;
     /** Blocks over which effect surfaces fade out where they meet the world, on the effect layer. */
     static final float LAYER_SOFT=.35f;
     /**
@@ -108,9 +108,9 @@ public final class KagenoRenderer {
         if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
         // Same crescents again, added on top, for the bright glow of the reference slashes (hotter on the layer).
         RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
-        KagenoFire.crescentGain=layered?.32f:.18f;if(layered)RenderSystem.setShaderColor(1.7f,1.55f,1.8f,1);
+        KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
         if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
-        KagenoFire.crescentGain=1;RenderSystem.setShaderColor(1,1,1,1);RenderSystem.defaultBlendFunc();
+        KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
         for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
     }
     /**

@@ -4,6 +4,7 @@ in vec4 tint;
 uniform vec4 ColorModulator;
 uniform float Age;
 uniform int Mode;
+uniform float Hot;
 out vec4 fragColor;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1)),f.x),f.y);}
@@ -138,6 +139,8 @@ void main(){
    rgb=mix(rgb,vec3(.96,.82,1.0),smoothstep(.75,.92,hair)*smoothstep(.15,.3,d)*(1.0-smoothstep(.5,.7,d))*.6);
    float ember=(1.0-smoothstep(.0,.06,x-front))*eat;
    rgb=mix(rgb,vec3(1.0,.62,.96),ember*.9);
+   // On the effect layer the streak and the eaten edge burn above white (Hot), so only they turn white-hot.
+   rgb*=1.0+Hot*(streak*smoothstep(.15,.7,x)+ember*.6);
    alpha=body*tint.a;
   }
  }else if(Mode==12){
