@@ -96,7 +96,15 @@ void main(){
   else if(style<3.5){rim=vec3(.48,.39,.94);vio=vec3(.65,.27,.98);core=vec3(.93,.54,.98);hi=vec3(.99,.85,.98);navy=vec3(.07,.05,.47);}
   else if(style<4.5){rim=vec3(.54,.58,.88);vio=vec3(.72,.64,.95);core=vec3(.88,.76,.98);hi=vec3(.98,.94,.98);navy=vec3(.54,.58,.88);}
   else if(style<5.5){rim=vec3(.64,.35,.75);vio=vec3(.84,.32,.96);core=vec3(.93,.6,.97);hi=vec3(.98,.89,.98);navy=vec3(.73,.53,.93);}
-  else{rim=vec3(.15,.1,.66);vio=vec3(.5,.23,.96);core=vec3(.79,.44,.98);hi=vec3(.97,.9,.98);navy=vec3(.86,.53,.98);}
+  else if(style<6.5){rim=vec3(.15,.1,.66);vio=vec3(.5,.23,.96);core=vec3(.79,.44,.98);hi=vec3(.97,.9,.98);navy=vec3(.86,.53,.98);}
+  // T+ blue (k-means of the T+ reference): deep blue body, electric blue-violet core, white-pink hairs.
+  else if(style<7.5){rim=vec3(.06,.01,.51);vio=vec3(.10,.0,.70);core=vec3(.40,.06,.95);hi=vec3(.96,.86,.99);navy=vec3(.04,.0,.30);}
+  // M1 ring (k-means of the M1 reference): violet rim, magenta body, hot pink core, a dark inner edge.
+  else if(style<8.5){rim=vec3(.40,.0,.62);vio=vec3(.82,.04,.93);core=vec3(.93,.22,.96);hi=vec3(.99,.72,.99);navy=vec3(.13,.03,.23);}
+  // M1 ring as it forms: black-violet with a violet core.
+  else if(style<9.5){rim=vec3(.30,.0,.60);vio=vec3(.25,.07,.37);core=vec3(.61,.10,.89);hi=vec3(.75,.35,.95);navy=vec3(.08,.02,.14);}
+  // M1 ring fading into blue-violet streaks.
+  else{rim=vec3(.26,.13,.53);vio=vec3(.38,.18,.73);core=vec3(.64,.24,.86);hi=vec3(.85,.70,.98);navy=vec3(.21,.10,.36);}
   rgb=d<.08?rim:d<.3?mix(rim,vio,(d-.08)/.22):d<.45?mix(vio,core,(d-.3)/.15):d<.7?mix(core,vio,(d-.45)/.25):d<.88?mix(vio,rim,(d-.7)/.18):mix(rim,navy,clamp((d-.88)/.1,0.0,1.0));
   // E finisher (measured stops, outer → inner): bright violet rim, pink highlight, electric-violet
   // body, a hot white-pink streak, violet again and a dark indigo inner edge.
@@ -168,6 +176,50 @@ void main(){
   float holes=smoothstep(.72,.8,noise(p*7.0+vec2(Age*.06,seed)));
   rgb=mix(rgb,vec3(.95,.86,.96),holes*(1.0-smoothstep(.6,.75,r)));
   alpha=body*tint.a*.96;
+ }else if(Mode==13){
+  // Dark-spark fire cell (k-means of the T reference): a lobed cartoon billow coloured by tint.g from
+  // black smoke through indigo and vivid violet to magenta, pink and white-pink cores; tint.b turns
+  // the round billow into a narrow curling wisp.
+  float heat=tint.g,wisp=tint.b;
+  vec2 q=p;
+  q.x+=wisp*sin(q.y*2.6+seed+Age*.11)*.3*(q.y+1.0)*.5;
+  q.x*=1.0+wisp*max(0.0,q.y+.2)*1.5;
+  vec2 flow=q*1.55+vec2(seed*.37,-Age*.07);
+  vec2 warp=vec2(noise(flow+3.7),noise(flow-6.1));
+  float n=fbm(flow*1.25+warp*1.9);
+  float r=length(q*vec2(1.0,.94));
+  float edge=.70+(n-.5)*.62+.07*sin(atan(q.y,q.x)*5.0+seed+Age*.06);
+  float body=1.0-smoothstep(edge-.12,edge,r);
+  float core=1.0-smoothstep(.0,edge,r);
+  float h=clamp(heat+(n-.5)*.3+core*.22*heat-max(0.0,-q.y)*.08,0.0,1.25);
+  vec3 c0=vec3(.02,.01,.05),c1=vec3(.21,.09,.37),c2=vec3(.27,.05,.62),c3=vec3(.39,.0,.91),c4=vec3(.60,.0,.94),c5=vec3(.79,.02,.95),c6=vec3(.92,.23,.95),c7=vec3(.96,.89,.98);
+  rgb=h<.15?mix(c0,c1,h/.15):h<.32?mix(c1,c2,(h-.15)/.17):h<.47?mix(c2,c3,(h-.32)/.15):h<.62?mix(c3,c4,(h-.47)/.15):h<.78?mix(c4,c5,(h-.62)/.16):h<.95?mix(c5,c6,(h-.78)/.17):mix(c6,c7,clamp((h-.95)/.3,0.0,1.0));
+  // A deeper rim keeps overlapping billows apart.
+  float rim=smoothstep(edge-.2,edge-.03,r);
+  rgb*=1.0-rim*.35*smoothstep(.2,.5,heat);
+  alpha=body*tint.a;
+ }else if(Mode==14){
+  // T+ final cut (k-means of the T+ reference): a wide deep-blue blade band sweeping round the body,
+  // streaked along its sweep with electric blue-violet and a few lavender lines. uv.x runs round (whole
+  // turns), uv.y from the body (0) out to the band's edge (1); tint.g runs from the band's tail (0) to its
+  // leading edge (1).
+  float ang=uv.x*6.2831853,rr=uv.y,along=tint.g;
+  vec2 pc=vec2(cos(ang),sin(ang))*rr;
+  // Streaks run round the body like the motion lines of the cut: mostly concentric, gently wavering.
+  float n=fbm(pc*2.4+vec2(Age*.04,-Age*.03)),w=noise(pc*5.0+vec2(-Age*.06,Age*.05));
+  float spiral=rr*7.0+n*.7+.12*sin(ang*2.0+rr*5.0-Age*.2)-Age*.2;
+  float band=.5+.5*sin(spiral*6.2831853);
+  float ribbon=.5+.5*sin((rr*2.3+n*.25-Age*.09)*6.2831853);
+  vec3 deep=vec3(.06,.01,.51),blue=vec3(.10,.0,.70),elec=vec3(.17,.01,.89),vio=vec3(.40,.06,.95),lav=vec3(.65,.22,.97);
+  rgb=mix(deep,blue,smoothstep(.3,.7,n));
+  rgb=mix(rgb,elec,smoothstep(.55,.92,band)*.8*(.6+.4*w));
+  rgb=mix(rgb,vio,smoothstep(.85,.98,band)*.7);
+  rgb=mix(rgb,lav,smoothstep(.9,1.0,ribbon)*.6);
+  // The outer edge and the leading edge of the sweep are brighter, like the blade's edge.
+  rgb=mix(rgb,vio,smoothstep(.86,1.0,rr)*.5);
+  rgb=mix(rgb,lav,smoothstep(.9,1.0,along)*.55);
+  float edge=1.0-smoothstep(.93,1.0,rr+(n-.5)*.08);
+  alpha=.9*smoothstep(.1,.35,rr)*edge*smoothstep(0.0,.18,along)*tint.a;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

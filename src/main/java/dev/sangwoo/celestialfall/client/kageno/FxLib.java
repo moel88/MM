@@ -94,6 +94,19 @@ final class FxLib {
             m.glowLine(prev,p,width,rgb,alpha);prev=p;
         }
     }
+    /**
+     * Four-point star flare: a soft glow, four long rays tapering from the centre ({@code turn} degrees on screen, 45
+     * for an X), four short ones between them and a white core. {@code r} is the ray length.
+     */
+    static void flare(EffectMesh m,Vec3d p,double r,int rgb,float alpha,double turn){
+        if(alpha<=0||r<=0)return;
+        Vec3d n=m.camera().subtract(p).normalize(),u=n.crossProduct(UP);if(u.lengthSquared()<1e-4)u=new Vec3d(1,0,0);u=u.normalize();Vec3d v=u.crossProduct(n).normalize();
+        double a=Math.toRadians(turn);Vec3d x=u.multiply(Math.cos(a)).add(v.multiply(Math.sin(a))),y=v.multiply(Math.cos(a)).subtract(u.multiply(Math.sin(a)));
+        m.softDisc(p,r*.45,rgb,alpha*.5f);
+        for(Vec3d d:new Vec3d[]{x,y,x.negate(),y.negate()}){m.needle(p,p.add(d.multiply(r)),r*.14,0,rgb,alpha*.95f);m.needle(p,p.add(d.multiply(r*.5)),r*.05,0,0xffffff,alpha);}
+        for(Vec3d d:new Vec3d[]{x.add(y),x.subtract(y),y.subtract(x),x.add(y).negate()})m.needle(p,p.add(d.normalize().multiply(r*.3)),r*.06,0,rgb,alpha*.7f);
+        m.softDisc(p,r*.18,0xffffff,alpha);
+    }
     /** Camera-facing elliptical glow, {@code rx} across and {@code ry} up (blocks). */
     static void ellipse(EffectMesh m,Vec3d p,double rx,double ry,int rgb,float alpha){
         if(alpha<=0||rx<=0)return;

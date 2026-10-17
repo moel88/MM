@@ -10,117 +10,188 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.*;
 import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
 
 /**
- * T "어둠 속의 불꽃": a 0.65 s windup (body turned 55° right, left hand raised in a burst of
- * sparkles, sword planted point-down), then a white blast cloud that turns into pink/violet fire
- * over a 6×6 character-height field, a dark orb on each hit target and an ink-black scorch.
- * Layered on top: motes charging the raised hand and violet cracks spreading from the planted
- * sword, a flash, ground shockwave, light column and spark burst at the blast, embers, crackling
- * bolts, smoke and heat rings over the burning field, a glow halo on the trapped orbs and a last
- * pulse as the fire dies. Seconds after the cast; B = 0.65 s is the blast. 1 character height (H) = 1.8 blocks.
+ * T "어둠 속의 불꽃", rebuilt from the user's recording: the sword lifts, sweeps down to the back right in a blink and
+ * stays low while the left hand goes up beside the face in a burst of four-point sparkles; 0.65 s after the cast
+ * black smoke erupts over the field, blue and violet billows break out of it within a tenth of a second and it
+ * turns into a dense magenta fire full of big four-point star flares and small black bolts. After ≈3.5 s the fire
+ * breaks up into separate pink wisps that die out. Targets in the field are held in dark orbs. Seconds after the
+ * cast; B = 0.65 s is the blast (the server's {@code T_STRIKE}). 1 character height (H) = 1.8 blocks.
  */
 final class SparkSkill implements Fx.Skill {
     static final float B=.65f;
     static final double H=1.8;
-    /** Windup shared with T+ (through the dark). */
-    static final R6.Pose PLANT=pose().body(-55,33,0).at(0,-.09,0).head(0,15,0).lArm(40,-50).rArm(-82,160).lLeg(-75,0).rLeg(-75,180).blade(-75,25);
-    static final Anim WINDUP=Anim.joints(
-        k(0,KagenoClips.IDLE),
-        k(.04,pose().body(-15,0,0).lArm(-45,30).rArm(-80,20).blade(-55,40)),
-        k(.11,pose().body(-55,0,0).lArm(0,-55).rArm(-85,150).lLeg(-75,0).rLeg(-75,180).blade(-60,0),Anim.Ease.LINEAR),
-        k(.20,PLANT,Anim.Ease.OUT),
-        k(B,PLANT.body(-55,35,0),Anim.Ease.HOLD));
+    /** Dense fire until FIRE_END after the blast, wisps until WISPS_END (the server holds targets for 3.55 s). */
+    static final float FIRE_END=3.55f,WISPS_END=4.15f;
+    /** The sword up and back for the sweep. */
+    static final R6.Pose LIFT=pose().body(12,-5,0).at(0,.03,0).head(-6,-4,0).lArm(-72,-28).rArm(-15,62).rLeg(-88,10).lLeg(-89,-6).blade(58,78);
+    /** Mid-sweep: the blade cutting down past the right hip. */
+    static final R6.Pose SWEEP=pose().body(-32,12,0).at(0,-.05,0).head(10,6,0).lArm(-38,-42).rArm(-62,104).rLeg(-80,128).lLeg(-82,-12).blade(-36,118);
+    /** Held through the sparkles: turned right, the sword low behind the right side, the left hand up beside the face. */
+    static final R6.Pose PLANT=pose().body(-55,24,0).at(0,-.09,0).head(0,14,0).lArm(42,-34).rArm(-74,96).lLeg(-76,-4).rLeg(-76,172).blade(-32,108);
     static final Anim CLIP=Anim.joints(
         k(0,KagenoClips.IDLE),
-        k(.04,pose().body(-15,0,0).lArm(-45,30).rArm(-80,20).blade(-55,40)),
-        k(.11,pose().body(-55,0,0).lArm(0,-55).rArm(-85,150).lLeg(-75,0).rLeg(-75,180).blade(-60,0),Anim.Ease.LINEAR),
-        k(.20,PLANT,Anim.Ease.OUT),
-        k(B,PLANT.body(-55,35,0)),
-        k(B+.035,PLANT.body(-27,18,0).lArm(10,-35).rArm(-75,100),Anim.Ease.LINEAR),
-        k(B+.09,KagenoClips.IDLE,Anim.Ease.OUT),
-        k(B+.5,KagenoClips.IDLE)).stops(Anim.stop(B,.05,.1));
+        // Anticipation: the sword comes up and the weight goes onto the left foot.
+        k(.045,LIFT),
+        k(.085,SWEEP,Anim.Ease.LINEAR),
+        // The sweep runs out into the plant; the left hand is still rising.
+        k(.14,PLANT.lArm(28,-40).body(-52,26,0),Anim.Ease.OUT),
+        k(.24,PLANT),
+        // Moving hold: the raised hand keeps reaching while the body sinks a little.
+        k(B-.04,PLANT.body(-57,27,0).at(0,-.11,0).lArm(46,-30)),
+        // The blast: the hand thrusts out and the body is thrown back for a moment.
+        k(B,PLANT.body(-50,18,0).at(0,-.1,0).lArm(30,-12),Anim.Ease.LINEAR),
+        k(B+.06,PLANT.body(-38,4,0).at(0,-.04,0).head(0,4,0).lArm(10,-10).blade(-40,95)),
+        k(B+.32,KagenoClips.IDLE)).stops(Anim.stop(B,.05,.1));
     @Override public Anim clip(int combo){return CLIP;}
-    @Override public float lifetime(){return B+5.6f;}
+    @Override public float lifetime(){return B+WISPS_END+.1f;}
 
-    /** The raised left hand, in front of the face of the turned body. */
+    /** The raised left hand, beside the face of the turned body. */
     static Vec3d hand(Fx c){return c.origin.add(c.f.multiply(.5)).add(0,1.8,0).add(c.right.multiply(-.15));}
-    /** Four-point stars bursting from the left hand during the windup (densest right away, then decaying). */
+    /** Middle of the field the server burns (forward 3, right 0.9 of the cast spot). */
+    static Vec3d centre(Fx c){return c.origin.add(c.f.multiply(3)).add(c.right.multiply(.9));}
+    /** Four-point stars bursting from the left hand during the windup: a bright cluster first, then rising and fading. */
     static void sparkles(Fx c,EffectMesh m){
-        if(c.sec<.11f||c.sec>=B)return;Vec3d hand=hand(c);
+        if(c.sec<.13f||c.sec>=B)return;Vec3d hand=hand(c);
         for(int i=0;i<40;i++){
-            float born=.11f+.5f*(i/40f)*(i/40f),life=.1f+.15f*(float)Ease.hash(i*13+1),u=(c.sec-born)/life;
+            float born=.13f+.45f*(i/40f)*(i/40f),life=.12f+.2f*(float)Ease.hash(i*13+1),u=(c.sec-born)/life;
             if(u<0||u>=1)continue;
-            double az=Ease.hash(i*7+2)*Math.PI*2,el=(Ease.hash(i*5+3)-.35)*1.6,reach=(.2+2.0*Ease.hash(i*3+4))*(.6+.4*u);
-            Vec3d dir=c.f.multiply(Math.cos(el)*Math.cos(az)*.6+.4).add(c.right.multiply(Math.cos(el)*Math.sin(az))).add(0,Math.sin(el),0);
-            Vec3d p=hand.add(dir.normalize().multiply(reach)).add(0,-.6*Ease.hash(i*17),0);
-            double size=(.18+.18*Ease.hash(i*11+5))*(1+.25*Math.sin(u*Math.PI*3));
-            m.star(p,size,0xd0c4ef,(float)Math.sin(Math.PI*Math.min(1,u*1.4)));
+            double az=Ease.hash(i*7+2)*Math.PI*2,el=(Ease.hash(i*5+3)-.3)*1.6,reach=(.15+1.6*Ease.hash(i*3+4))*(.55+.45*u);
+            Vec3d dir=c.f.multiply(Math.cos(el)*Math.cos(az)*.6+.3).add(c.right.multiply(Math.cos(el)*Math.sin(az)-.25)).add(0,Math.sin(el)+.35,0);
+            Vec3d p=hand.add(dir.normalize().multiply(reach)).add(0,.5*u*Ease.hash(i*17),0);
+            double size=(.16+.2*Ease.hash(i*11+5))*(1+.3*Math.sin(u*Math.PI*3))*(i<12?1.35:1);
+            m.star(p,size,0xe2d4ff,(float)Math.sin(Math.PI*Math.min(1,u*1.4)));
         }
     }
-    @Override public void additive(Fx c,EffectMesh m){sparkles(c,m);charge(c,m,CLIP);blastFx(c,m,c.origin.add(c.f.multiply(1.5*H)),3.5*H);emberFx(c,m,c.origin.add(c.f.multiply(1.7*H)).add(c.right.multiply(.4*H)),2.2*H,3.6f,4.3f);orbArcs(c,m,B,B+3.55f,B+3.8f);}
-    @Override public void alpha(Fx c,EffectMesh m){heat(c,m,c.origin.add(c.f.multiply(1.6*H)).add(c.right.multiply(.3*H)),3.6f,4.2f);}
+    /** A faint glow gathering in the raised hand while the sparkles fly. */
+    static void charge(Fx c,EffectMesh m){
+        float t=c.sec;if(t<.13f||t>=B+.05f)return;Vec3d hand=hand(c);
+        float u=Ease.unit(t,.13f,B),pulse=.85f+.15f*(float)Math.sin(t*40);
+        FxLib.converge(m,hand,1.4,18,t,.13f,B,0xc8a8ff,7);
+        m.softDisc(hand,.12+.25*u,0xcdb0ff,.35f*u*pulse);m.softDisc(hand,.06+.08*u,0xffffff,.7f*u);
+    }
 
-    /** Tip of the planted sword, from the windup clip. */
-    static Vec3d swordTip(Fx c,Anim clip){var hb=KagenoClips.blade(c.origin,c.cast.yaw(),R6.poseOf(clip.frame(Math.min(c.sec,B))));return hb[0].add(hb[1].multiply(1.35));}
-    /** Windup: motes spiral into the raised hand while violet cracks spread over the ground from the sword tip. */
-    static void charge(Fx c,EffectMesh m,Anim clip){
-        float t=c.sec;if(t<.11f||t>=B+.05f)return;Vec3d hand=hand(c);
-        float u=Ease.unit(t,.11f,B),pulse=.85f+.15f*(float)Math.sin(t*40);
-        FxLib.converge(m,hand,1.8,30,t,.11f,B,0xc8a8ff,7);
-        m.softDisc(hand,.14+.3*u,0xcdb0ff,.45f*u*pulse);m.softDisc(hand,.07+.12*u,0xffffff,.9f*u);
-        Vec3d tip=swordTip(c,clip);Vec3d g=new Vec3d(tip.x,c.origin.y+.03,tip.z);int seed=(int)c.cast.id().getLeastSignificantBits();
-        float grow=Ease.out(t,.2f,B);
-        for(int k=0;k<5;k++){
-            double ang=k*1.2566+Ease.hash(seed+k)*.6;Vec3d p=g;int segs=(int)(6*grow);
-            for(int i=0;i<segs;i++){double a2=ang+(Ease.hash(seed+k*13+i)-.5)*1.2;Vec3d q=p.add(Math.cos(a2)*.35,0,Math.sin(a2)*.35);m.glowLine(p,q,.025,0x9a60f0,.8f*grow);p=q;}
+    @Override public void additive(Fx c,EffectMesh m){
+        sparkles(c,m);charge(c,m);
+        float t=c.sec-B;if(t<0)return;
+        float alive=1-Ease.smooth(t,FIRE_END-.25f,FIRE_END+.1f);
+        Vec3d mid=centre(c),ground=new Vec3d(mid.x,c.origin.y+.04,mid.z);
+        // The road under the fire lit violet, embers drifting up out of it.
+        if(t<FIRE_END+.3f){
+            float a=Ease.smooth(t,.08f,.3f)*(1-Ease.smooth(t,FIRE_END-.3f,FIRE_END+.3f));
+            FxLib.glow(m,ground,6,0x7c2cf0,.32f*a*(float)(.85+.15*Math.sin(t*5)));
+            FxLib.embers(m,ground,4.5,4.6,dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?14:30,t,.9f,.06,0xff6cf5,a,5);
         }
-        FxLib.glow(m,g,.5+.6*grow,0x5a2cc0,.5f*grow);
+        flares(c,m,t,mid,alive);
+        orbArcs(c,m,B,B+FIRE_END,B+FIRE_END+.25f);
     }
-    /** The blast: a flash, a ground shockwave, a light column shooting up and sparks thrown into the air. */
-    static void blastFx(Fx c,EffectMesh m,Vec3d centre,double ringRadius){
-        float t=c.sec-B;if(t<0||t>=.5f)return;float u=Ease.unit(t,0,.5f);
-        Vec3d ground=new Vec3d(centre.x,c.origin.y,centre.z);
-        FxLib.flash(m,centre.add(0,1.4,0),2.2*(1-Ease.smooth(t,0,.25f))+.2,0xf8e8ff,1-Ease.smooth(t,.05f,.25f));
-        FxLib.ring(m,ground.add(0,.06,0),.5+ringRadius*Ease.out(t,0,.3f),.5,0xe8c8ff,.7f*(1-Ease.smooth(t,.1f,.4f)));
-        FxLib.column(m,ground,6*H*Ease.out(t,0,.08f),.9*(1-u),0xffffff,.9f*(1-Ease.smooth(t,.08f,.3f)));
-        for(int k=0;k<36;k++){
-            double az=Ease.hash(k*3)*Math.PI*2,el=.4+1.1*Ease.hash(k*5),sp=(2+4*Ease.hash(k*7))*H;float life=(float)(.25+.25*Ease.hash(k*11)),v=t/life;if(v>=1)continue;
-            Vec3d d=new Vec3d(Math.cos(el)*Math.cos(az),Math.sin(el),Math.cos(el)*Math.sin(az));
-            m.star(centre.add(d.multiply(sp*v)).add(0,.4-3*v*v,0),.08+.06*Ease.hash(k*13),0xffe8ff,(1-v)*(1-v));
+    /** Big four-point star flares flashing all over the fire (the first, the biggest, right at the blast), small stars twinkling between them. */
+    static void flares(Fx c,EffectMesh m,float t,Vec3d mid,float alive){
+        if(t>=FIRE_END+.1f)return;
+        for(int k=0;k<44;k++){
+            float born=.1f+k*.078f+.05f*(float)Ease.hash(k*3+1),life=.2f+.16f*(float)Ease.hash(k*5+2),u=(t-born)/life;
+            if(u<0||u>=1||born>FIRE_END-.2f)continue;
+            double fw=(Ease.hash(k*7+3)-.5)*8,rt=(Ease.hash(k*11+4)-.5)*8,up=.5+3*Ease.hash(k*13+5);
+            double size=(1.8+2.6*Ease.hash(k*17+6))*(k<2?1.5:1);
+            Vec3d p=k<2?mid.add(c.f.multiply(-1.2+k*1.5)).add(0,1.4+k*.9,0):mid.add(c.f.multiply(fw)).add(c.right.multiply(rt)).add(0,up,0);
+            float a=Ease.smooth(u,0,.12f)*(1-Ease.smooth(u,.35f,1))*alive;
+            FxLib.flare(m,p,size*(.75+.25*u),0xff48dc,a,Ease.hash(k*19+7)<.6?45:0);
         }
-    }
-    /** Over the burning field: the ground lit violet, embers rising, bolts crackling between the flames, a last pulse. */
-    static void emberFx(Fx c,EffectMesh m,Vec3d centre,double radius,float dieStart,float dieEnd){
-        float t=c.sec-B;if(t<.3f||t>=dieEnd)return;float a=Ease.smooth(t,.3f,.6f)*(1-Ease.smooth(t,dieStart,dieEnd));
-        Vec3d ground=new Vec3d(centre.x,c.origin.y+.04,centre.z);
-        FxLib.glow(m,ground,radius*1.1,0x7c3cf0,.35f*a*(float)(.8+.2*Math.sin(t*6)));
-        FxLib.embers(m,ground,radius,3.5*H,dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?14:32,t,.9f,.07,0xffb0ff,a,5);
-        long step=(long)Math.floor(c.sec*30);
-        for(int k=0;k<3;k++){
-            if(Ease.hash((int)step*5+k)<.45)continue;
-            Vec3d p=ground.add((Ease.hash((int)step*7+k)-.5)*radius*1.6,.8*H+1.2*H*Ease.hash((int)step*11+k),(Ease.hash((int)step*13+k)-.5)*radius*1.6);
-            Vec3d q=p.add((Ease.hash((int)step*17+k)-.5)*1.8,(Ease.hash((int)step*19+k)-.3)*1.2,(Ease.hash((int)step*23+k)-.5)*1.8);
-            FxLib.zig(m,p,q,4,.03,0xd0a8ff,.85f*a,(int)step*29+k);
-        }
-        if(t>=dieStart-.1f&&t<dieStart+.4f){float u=Ease.unit(t,dieStart-.1f,dieStart+.4f);FxLib.ring(m,ground,radius*.7+radius*Ease.out(t,dieStart-.1f,dieStart+.4f),.4,0xc8a0ff,.5f*(1-u));}
-    }
-    /** Heat rings: translucent lavender bands drifting out and up over the field (alpha pass). */
-    static void heat(Fx c,EffectMesh m,Vec3d centre,float dieStart,float dieEnd){
-        float t=c.sec-B;if(t<.3f||t>=dieEnd)return;
-        for(int k=0;k<3;k++){
-            float cyc=((t-.3f)/.9f+k/3f)%1;double r=(1.2+2.6*cyc)*H;
-            float a=.16f*(1-cyc)*Ease.smooth(cyc,0,.15f)*(1-Ease.smooth(t,dieStart,dieEnd));
-            ComboSkill.band(m,new Vec3d(centre.x,c.origin.y+.3+.5*cyc,centre.z),r,.25+.3*cyc,k*120+t*20,360,0xbfa6f6,a);
+        for(int k=0;k<26;k++){
+            float cyc=(t*(1.6f+(float)Ease.hash(k*3))+(float)Ease.hash(k*5))%1;
+            Vec3d p=mid.add(c.f.multiply((Ease.hash(k*7)-.5)*9)).add(c.right.multiply((Ease.hash(k*11)-.5)*9)).add(0,.4+3.6*Ease.hash(k*13),0);
+            m.star(p,.1+.16*Ease.hash(k*17),0xffe4ff,alive*(float)Math.sin(Math.PI*cyc)*Ease.smooth(t,.1f,.3f));
         }
     }
-    /** Dark smoke rolling up above the flames. */
-    static void smoke(Fx c,float t,Vec3d centre,double radius,float end){
-        if(t<.6f||t>=end)return;float a=.38f*Ease.smooth(t,.6f,1.2f)*(1-Ease.smooth(t,end-.8f,end));
-        List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();
-        for(int i=0;i<7;i++){
-            double ang=Ease.hash(i*7+5)*Math.PI*2,r=radius*Math.sqrt(Ease.hash(i*13+6)),rise=(.8+.6*Ease.hash(i*3))*(t-.6)*.35*H;
-            pts.add(centre.add(Math.cos(ang)*r,1.7*H+rise+.4*Math.sin(t*1.3+i),Math.sin(ang)*r));sizes.add((.65+.45*Ease.hash(i*11+7))*(1+.12*(t-.6)));
+    @Override public void alpha(Fx c,EffectMesh m){bolts(c,m,c.sec-B,centre(c),1-Ease.smooth(c.sec-B,FIRE_END-.3f,FIRE_END));}
+    /** Small black zigzag bolts flickering inside the fire, one or two every fifth of a second. */
+    static void bolts(Fx c,EffectMesh m,float t,Vec3d mid,float alive){
+        if(t<.25f||alive<=0)return;
+        int window=(int)Math.floor(t/.2f);
+        for(int k=0;k<2;k++){
+            int s=window*7+k*3;if(Ease.hash(s)<.35)continue;
+            float born=window*.2f+.1f*(float)Ease.hash(s+1);if(t<born||t>=born+.09f)continue;
+            Vec3d a=mid.add(c.f.multiply((Ease.hash(s+2)-.5)*7)).add(c.right.multiply((Ease.hash(s+3)-.5)*7)).add(0,.8+2.6*Ease.hash(s+4),0);
+            double len=.7+.7*Ease.hash(s+5),az=Ease.hash(s+6)*Math.PI*2;
+            Vec3d b=a.add(Math.cos(az)*len*.6,(Ease.hash(s+7)-.5)*len,Math.sin(az)*len*.6);
+            Vec3d prev=a;
+            for(int i=1;i<=5;i++){
+                Vec3d p=a.lerp(b,i/5.0);if(i<5)p=p.add((Ease.hash(s*11+i)-.5)*.3,(Ease.hash(s*13+i)-.5)*.3,(Ease.hash(s*17+i)-.5)*.3);
+                m.line(prev,p,.11,0x1a0828,.35f*alive);m.line(prev,p,.045,0x07020c,.95f*alive);prev=p;
+            }
         }
-        KagenoFire.smoke(c.matrix,c.camera,pts,sizes,c.age,a);
+    }
+
+    @Override public void shaders(Fx c){
+        float t=c.sec-B;if(t<0)return;
+        pool(c,t);
+        List<Vec3d> pts=new ArrayList<>();List<float[]> cells=new ArrayList<>();
+        blast(c,t,centre(c),pts,cells);
+        fire(c,t,centre(c),pts,cells);
+        wisps(c,t,centre(c),5.5,FIRE_END-.2f,WISPS_END,pts,cells,0);
+        KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
+        orbs(c,t,FIRE_END,FIRE_END+.25f);
+    }
+    /** Black smoke thrown out over the field at the blast; blue billows break out of it, then violet and magenta, as the fire takes over. */
+    static void blast(Fx c,float t,Vec3d mid,List<Vec3d> pts,List<float[]> cells){
+        if(t>=.6f)return;
+        float spread=Ease.out(t,0,.06f),a=1-Ease.smooth(t,.35f,.6f);
+        for(int i=0;i<22;i++){
+            double az=Ease.hash(i*3+1)*Math.PI*2,r=(.6+5*Math.sqrt(Ease.hash(i*5+2)))*(.55+.45*spread);
+            Vec3d p=mid.add(c.f.multiply(Math.cos(az)*r)).add(c.right.multiply(Math.sin(az)*r)).add(0,.3+2.6*Ease.hash(i*7+3)*(.4+.6*spread),0);
+            // Black at first; most cells break out blue, then violet; a few stay black smoke a little longer.
+            boolean smoke=i%4==0;
+            float heat=smoke?.1f*Ease.smooth(t,.2f,.45f):.3f*Ease.smooth(t,.03f,.12f)+.15f*Ease.smooth(t,.12f,.3f)+.15f*Ease.smooth(t,.3f,.5f);
+            pts.add(p);cells.add(new float[]{(float)((1.0+1.0*Ease.hash(i*11+4))*(.55+.45*spread)),a*(smoke?.95f:1),heat,0,i*29+3});
+        }
+    }
+    /** The fire: billows born all over the field, each rising, swelling and cooling from pink-white to violet and blue. */
+    static void fire(Fx c,float t,Vec3d mid,List<Vec3d> pts,List<float[]> cells){
+        if(t<.08f||t>=FIRE_END+.15f)return;
+        float field=Ease.smooth(t,.12f,.45f)*(1-Ease.smooth(t,FIRE_END-.35f,FIRE_END+.15f));
+        // The fire catches blue and violet first and burns up to magenta over the first half second.
+        float ignite=.4f+.6f*Ease.smooth(t,.3f,.9f);
+        // It also starts compact round the body and spreads over the whole burning field in the first second.
+        double spread=.65+.35*Ease.smooth(t,.1f,1f);
+        double lift=1.25+.45*(1-Ease.smooth(t,.4f,1.4f));
+        int n=dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?32:58;
+        for(int i=0;i<n;i++){
+            float period=.8f+.65f*(float)Ease.hash(i*7+1),cyc=t/period+(float)Ease.hash(i*11+2);int gen=(int)Math.floor(cyc);float u=cyc-gen;
+            double az=Ease.hash(i*13+gen*31)*Math.PI*2,edge=Math.sqrt(Ease.hash(i*17+gen*29));
+            double fw=Math.cos(az)*edge*4.2*spread,rt=Math.sin(az)*edge*4*spread,rise=(1.2+1.7*Ease.hash(i*19+gen*7))*(1-.45*edge)*lift*(.75+.25*spread);
+            Vec3d p=mid.add(c.f.multiply(fw)).add(c.right.multiply(rt)).add(0,.3+u*rise+(1-edge)*.5,0);
+            double size=(.8+.85*Ease.hash(i*23+gen*3))*(1.15-.35*edge)*(.55+.45*Math.sin(Math.PI*Math.min(1,u*1.3)))*(.8+.2*spread);
+            double kind=Ease.hash(i*43+gen*13);
+            // Most billows run violet to magenta; some are dark smoke inside the fire, some white-hot cores, the rim cools to blue.
+            float heat=kind<.22?(float)(.08+.16*Ease.hash(i*5+gen)):kind>.88?ignite*(float)(1.02+.12*Ease.hash(i*5+gen)-.3*u):ignite*(float)(.9-.6*u-.3*edge+.22*Ease.hash(i*5+gen));
+            float a=(float)Math.pow(Math.sin(Math.PI*u),.5)*field;
+            pts.add(p);cells.add(new float[]{(float)size,a,heat,0,i*37+11});
+        }
+        // Flame tongues licking up out of the top of the fire.
+        int tongues=dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?8:16;
+        for(int i=0;i<tongues;i++){
+            float period=.55f+.4f*(float)Ease.hash(i*7+5),cyc=t/period+(float)Ease.hash(i*11+6);int gen=(int)Math.floor(cyc);float u=cyc-gen;
+            double az=Ease.hash(i*13+gen*17+3)*Math.PI*2,edge=Math.sqrt(Ease.hash(i*17+gen*19+4))*.8;
+            Vec3d p=mid.add(c.f.multiply(Math.cos(az)*edge*4.2)).add(c.right.multiply(Math.sin(az)*edge*4)).add(0,(1.6+1.4*Ease.hash(i*19+gen*5))*lift*.85+u*1.6,0);
+            float a=(float)Math.sin(Math.PI*u)*field;
+            pts.add(p);cells.add(new float[]{(float)((.7+.5*Ease.hash(i*23+gen))*(1-.35*u)),a,(float)(.78+.18*Ease.hash(i*29+gen)-.3*u),.75f,i*53+19});
+        }
+    }
+    /** The fire breaking up: separate pink wisps curling up over the field between {@code from} and {@code to}. */
+    static void wisps(Fx c,float t,Vec3d mid,double radius,float from,float to,List<Vec3d> pts,List<float[]> cells,int seed){
+        if(t<from||t>=to)return;
+        for(int i=0;i<24;i++){
+            float born=from+(to-from-.5f)*(float)Ease.hash(seed+i*3+1),life=.4f+.25f*(float)Ease.hash(seed+i*5+2),u=(t-born)/life;
+            if(u<0||u>=1)continue;
+            double az=Ease.hash(seed+i*7+3)*Math.PI*2,r=radius*Math.sqrt(Ease.hash(seed+i*11+4))*(1+.15*u);
+            Vec3d p=mid.add(Math.cos(az)*r,.3+.5*Ease.hash(seed+i*13+5)+.5*u,Math.sin(az)*r);
+            float a=Ease.smooth(u,0,.2f)*(1-Ease.smooth(u,.55f,1));
+            pts.add(p);cells.add(new float[]{(float)((.45+.35*Ease.hash(seed+i*17+6))*(1-.3*u)),a,(float)(.84+.12*Ease.hash(seed+i*19+7)),1,seed+i*41+5});
+        }
+    }
+    /** Dark ground under the fire, gone when the fire dies. */
+    static void pool(Fx c,float t){
+        if(t>=FIRE_END+.3f)return;float a=Ease.smooth(t,.03f,.25f)*(1-Ease.smooth(t,FIRE_END-.4f,FIRE_END+.3f));
+        KagenoFire.pool(c.matrix,centre(c).add(0,.015,0),c.f.multiply(5.2),c.right.multiply(5),c.age,a*.85f);
     }
     /** Violet orbit arcs caging each trapped target's dark orb, a glow halo around it and ink drips. */
     static void orbArcs(Fx c,EffectMesh m,float from,float hold,float end){
@@ -137,49 +208,6 @@ final class SparkSkill implements Fx.Skill {
             }
         }
     }
-    @Override public void shaders(Fx c){
-        float t=c.sec-B;if(t<0)return;
-        scorch(c,t);
-        cloud(c,t,c.origin.add(c.f.multiply(1.5*H)),2.9*H,1);
-        fire(c,t);
-        orbs(c,t,3.55f,3.8f);
-        smoke(c,t,c.origin.add(c.f.multiply(1.7*H)).add(c.right.multiply(.4*H)),2.2*H,4.8f);
-    }
-    /** Billowy white cloud that grows in 3 frames, stays white to +0.27 s and gives way to the fire by +0.55 s. */
-    static void cloud(Fx c,float t,Vec3d centre,double width,double stretch){
-        if(t>=.6f)return;
-        float grow=Ease.out(t,0,.05f),a=1-Ease.smooth(t,.3f,.55f);
-        List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-        for(int i=0;i<10;i++){
-            double fw=(Ease.hash(i*3+1)-.35)*width*1.2*stretch,rt=(Ease.hash(i*5+2)-.45)*width*.85,up=.3+Ease.hash(i*7+3)*1.7*H*.55;
-            pts.add(centre.add(c.f.multiply(fw*grow)).add(c.right.multiply(rt*grow)).add(0,up*grow+.3,0));
-            sizes.add((.65+.65*Ease.hash(i*11+4))*grow+.05);alphas.add(a);
-        }
-        KagenoFire.billboards(c.matrix,c.camera,9,pts,sizes,alphas,c.age);
-    }
-    private static final float[] HT={.3f,1.65f,1.75f,2.15f,2.25f,2.45f,2.55f,2.85f,2.95f,3.35f,3.45f,3.55f,3.65f,3.95f,4.05f};
-    private static final float[] HH={3.6f,3.6f,2.1f,2.1f,2.55f,2.55f,3.2f,3.2f,2.8f,2.8f,2.0f,2.0f,1.75f,1.75f,0};
-    /** Plume height (character heights) over time after the blast, from the dummy-view measurement. */
-    static double plume(float t){
-        if(t<HT[0])return HH[0]*Ease.out(t,0,HT[0]);
-        for(int i=1;i<HT.length;i++)if(t<HT[i])return HH[i-1]+(HH[i]-HH[i-1])*Ease.smooth(t,HT[i-1],HT[i]);
-        return 0;
-    }
-    /** World-anchored pink/violet fire over ≈6×6 H, biased forward and to the sword side. */
-    static void fire(Fx c,float t){
-        if(t<.25f||t>=4.05f)return;
-        double top=plume(t)*H*.44;float in=Ease.smooth(t,.25f,.5f);
-        List<Vec3d> roots=new ArrayList<>();List<double[]> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
-        int n=dev.sangwoo.celestialfall.CelestialFall.CONFIG.visualQuality==0?10:18;
-        for(int i=0;i<n;i++){
-            double fw=(-.35+3.8*Ease.hash(i*7+1))*H,rt=(-1.6+3.2*Ease.hash(i*13+2))*H;
-            double cycle=(t*(.8+.5*Ease.hash(i*3))+Ease.hash(i*5))%1,flare=.55+.45*Math.sin(Math.PI*cycle);
-            roots.add(c.origin.add(c.f.multiply(fw)).add(c.right.multiply(rt)).add(0,.02,0));
-            sizes.add(new double[]{ .50+.40*Ease.hash(i*17),Math.max(.2,top*flare*(.6+.4*Ease.hash(i*19)))});
-            alphas.add(in*(float)(.65+.15*flare));
-        }
-        KagenoFire.tongues(c.matrix,c.camera,11,roots,sizes,alphas,c.age);
-    }
     /** Dark ink orb on each target (≈1.2 H across), forming over +0.15..0.31 s, breaking up at the end. */
     static void orbs(Fx c,float t,float hold,float end){
         if(t<.15f||t>=end||c.targets.isEmpty())return;
@@ -187,11 +215,5 @@ final class SparkSkill implements Fx.Skill {
         List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
         for(LivingEntity e:c.targets){pts.add(e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0));sizes.add(.6*H*(.4+.6*form)*grow);alphas.add(a);}
         KagenoFire.billboards(c.matrix,c.camera,10,pts,sizes,alphas,c.age);
-    }
-    /** Opaque black ink splash under the fire, eroding away over +4.2..5.5 s. */
-    static void scorch(Fx c,float t){
-        if(t>=5.5f)return;float a=1-Ease.smooth(t,4.3f,5.5f);
-        Vec3d centre=c.origin.add(c.f.multiply(1.7*H)).add(c.right.multiply(.4*H)).add(0,.015,0);
-        KagenoFire.pool(c.matrix,centre,c.f.multiply(2.1*H),c.right.multiply(1.9*H),c.age,a);
     }
 }
