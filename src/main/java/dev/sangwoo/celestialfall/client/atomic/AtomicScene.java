@@ -24,6 +24,8 @@ final class AtomicScene {
     final Orb[] orbs;
     final Curtain[] curtains;
     final List<Slab> slabs=new ArrayList<>();
+    /** When each slab erupts for viewers outside the pillar (as the opening wall reaches it), filled on first use. */
+    float[] wallRise;
     private boolean slabsBuilt;
     /** Blast radius over the 28-block footage radius: every explosion size scales with it. */
     final double scale;

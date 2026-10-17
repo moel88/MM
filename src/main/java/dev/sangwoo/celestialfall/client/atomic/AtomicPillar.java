@@ -18,8 +18,9 @@ import java.util.List;
  * G's light pillar as seen from outside the blast, drawn on the VFX layer: one straight GPU cylinder
  * of exactly the damage radius whose material scrolls layered noise (rising wave bands, white flow
  * lines of several widths and speeds, surges) over light violet, thousands of white energy streaks
- * racing up its surface layer (moved on the GPU), a glowing floor, the ignition wave, debris and
- * sparks caught in the near surface, heat shimmer where the pillar stood, then dust and embers.
+ * racing up its surface layer (moved on the GPU), a glowing floor, the ignition wave, the leading edge
+ * tearing up the ground as it opens ({@link AtomicEdge}), debris and sparks caught in the near surface,
+ * heat shimmer where the pillar stood, then dust and embers.
  * The pillar and its streaks never reach past the damage radius; only light and air do.
  *
  * <p>Viewers in the damage column (the hit view) keep the interior renderer of {@link AtomicWorld}
@@ -64,12 +65,14 @@ public final class AtomicPillar {
         Vfx.begin();
         try{
             ground(sec,rot,cam,o,R,r);
-            pool(real,rot,cam,o,R);
+            pool(real,rot,cam,o,R,AtomicPillarShape.column(sec,R));
             // Behind the pillar first, then the pillar covers it, then everything in front of it.
             rings(real,rot,cam,o,R,clouds,-1);
             if(standing)motes(s,sec,rot,cam,o,R,r,y1,quality,-1);
             if(standing)glow(s,sec,rot,cam,o,R,r,y0,y1);
             wave(sec,rot,cam,o,R,r,-1);
+            // The leading edge behind the pillar's axis (its body covers what it hides).
+            AtomicEdge.far(s,sec,rot,cam,o,R,r,quality);
             if(standing){
                 pillar(s,sec,flow,rot,cam,o,R,r,y0,y1,inside);
                 streaks(sec,flow,rot,cam,o,R,r,y0,y1,inside,quality);
@@ -84,6 +87,7 @@ public final class AtomicPillar {
             rings(real,rot,cam,o,R,clouds,1);
             if(standing)motes(s,sec,rot,cam,o,R,r,y1,quality,1);
             wave(sec,rot,cam,o,R,r,1);
+            AtomicEdge.near(s,sec,rot,cam,o,R,r,quality);
             if(quality>0)debris(s,sec,rot,cam,o,R,r,quality);
             sparks(s,sec,rot,cam,o,R,r,quality);
             dust(s,sec,rot,cam,o,R);
@@ -144,10 +148,13 @@ public final class AtomicPillar {
         var c=proj.transform(new Vector4f(v.x,v.y,v.z,1));
         return new float[]{c.x/c.w*.5f+.5f,c.y/c.w*.5f+.5f};
     }
-    /** Violet light the pillar throws on the ground around it, out to 4.5 R (light, not the blast). */
-    private static void pool(float real,Matrix4f rot,Vec3d cam,Vec3d o,double R){
+    /**
+     * Violet light the pillar throws on the ground around it, out to 4.5 R (light, not the blast), brightest at the wall
+     * as far as it has opened ({@code opened}, blocks).
+     */
+    private static void pool(float real,Matrix4f rot,Vec3d cam,Vec3d o,double R,double opened){
         float level=AtomicStage.sky(real);if(level<=.01f)return;
-        Vfx.material(Vfx.POOL,real,4.5f,.55f*level,1,0,0,0,0,0);
+        Vfx.material(Vfx.POOL,real,4.5f,.55f*level,(float)Math.max(.05,Math.min(1,opened/R)),0,0,0,0,0);
         Vfx.disc(rot,cam,o.x,o.y+.09,o.z,4.5*R);
     }
     /** Height of the cloud ring: the world's cloud layer, kept between 2.5 R above the ground and the pillar's top. */
@@ -193,7 +200,7 @@ public final class AtomicPillar {
     }
 
     /** Unit vector from the cast toward the camera in the ground plane. */
-    private static double[] toCamera(Vec3d cam,Vec3d o){
+    static double[] toCamera(Vec3d cam,Vec3d o){
         double dx=cam.x-o.x,dz=cam.z-o.z,l=Math.hypot(dx,dz);
         return l<1e-6?new double[]{0,0}:new double[]{dx/l,dz/l};
     }
@@ -210,11 +217,14 @@ public final class AtomicPillar {
         return Math.max(0,1-tin)*p.distanceTo(cam);
     }
 
-    /** The floor inside the radius lit magenta, rays and waves running outward, a faint spill at the edge. */
+    /**
+     * The floor inside the radius lit magenta, rays and waves running outward, a faint spill at the edge: as far as the
+     * pillar has opened, and the whole radius from then on (through the collapse and after the beam).
+     */
     private static void ground(float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r){
         float g=AtomicPillarShape.groundGlow(sec);if(g<=.005f)return;
         Vfx.material(Vfx.GROUND,sec,0,g,0,0,0,0,0,0);
-        Vfx.disc(rot,cam,o.x,o.y+.06,o.z,R*1.1);
+        Vfx.disc(rot,cam,o.x,o.y+.06,o.z,Math.max(.5,Math.min(R,AtomicPillarShape.column(sec,R)))*1.1);
     }
     /** The ignition wave on the ground, far half (pass -1, before the pillar) or near half (pass +1, after it). */
     private static void wave(float sec,Matrix4f rot,Vec3d cam,Vec3d o,double R,double r,int pass){
@@ -307,7 +317,7 @@ public final class AtomicPillar {
         Vfx.draw(b,true);
     }
     /** One box face, counter-clockwise from outside: dark where it faces away from the light, pink where it faces it. */
-    private static void face(Vfx.Sprites b,Vec3d p,Vec3d n,Vec3d a,Vec3d c,Vec3d light,float alpha,float u0){
+    static void face(Vfx.Sprites b,Vec3d p,Vec3d n,Vec3d a,Vec3d c,Vec3d light,float alpha,float u0){
         double lit=Math.max(0,n.normalize().dotProduct(light));
         int rgb=AtomicLook.lerpColor(0x160c2a,0xd6b8ff,(float)(.06+.94*lit*lit));
         Vec3d m=p.add(n);

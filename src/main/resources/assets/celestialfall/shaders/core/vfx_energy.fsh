@@ -6,7 +6,7 @@
 // Modes: 1 tower body, 2 tower skin, 3 tower cap, 4 ground glow, 5 wave front, 6 wave refraction,
 // 7 heat column, 8 spark sprite, 9 flare, 10 smoke puff, 11 ground heat haze, 12 solid (debris),
 // 13 glow around the pillar, 14 cloud ring, 15 air shock band, 16 light pool on the ground,
-// 17 energy streak (quads moved in the vertex shader).
+// 17 energy streak (quads moved in the vertex shader), 18 leading edge on the ground, 19 sheet of light at the wall's foot.
 uniform sampler2D Sampler0;
 uniform sampler2D Sampler1;
 uniform int Mode;
@@ -260,6 +260,38 @@ void main(){
         float tip=exp(-pow((1.0-y)*local.y*0.5,2.0))*exp(-x*x*3.0);
         vec3 col=(mix(LAVENDER,WHITE,smoothstep(0.3,0.9,y))*across*along+WHITE*(core*0.6+tip*0.8))*(1.0+0.5*tint.x+0.6*tint.y);
         c=vec4(col*tint.a*foot,0.0);
+    }else if(Mode==18){
+        // Leading edge of the opening pillar (added light) on a ground disc reaching a few blocks past its wall: a
+        // white-hot contact line at the wall's foot, violet light and jagged rays thrown outward, bright cracks
+        // splitting the ground ahead, all flickering. Params: x pillar radius / disc radius, y strength, z disc radius
+        // (blocks), w crack strength. Params2: x pass (+1 near half, -1 far half), yz unit direction to the camera.
+        vec2 d=local.xz;float rr=length(d);if(rr>1.0||rr<Params.x-0.002)discard;
+        bool near=dot(d,Params2.yz)>0.0;
+        if((Params2.x>0.5&&!near)||(Params2.x<-0.5&&near))discard;
+        float dist=max(0.0,rr-Params.x)*Params.z,reach=max((1.0-Params.x)*Params.z,0.5);
+        float ang=atan(d.y,d.x)/(2.0*PI);
+        float flick=0.7+0.3*N(vec2(ang*9.0,Time*2.7)).r;
+        float contact=exp(-dist*2.6);
+        float glow=exp(-dist/2.2);
+        // Rays racing outward at about 6 blocks a second, broken up along their length.
+        float ray=smoothstep(0.6,0.9,N(vec2(ang*96.0,dist*0.07-Time*0.4)).b)*smoothstep(0.3,0.7,N(vec2(ang*31.0+0.4,dist*0.05-Time*0.25)).r);
+        // Cracks: ridged lines wandering outward, lit from the wall and dying out toward the rim.
+        float warp=N(vec2(ang*6.0,dist*0.03)).r;
+        float crack=smoothstep(0.88,0.975,N(vec2(ang*38.0+warp*0.8,dist*0.02-Time*0.02)).b);
+        float far=1.0-smoothstep(reach*0.55,reach,dist);
+        vec3 col=WHITE*contact*1.5+mix(VIOLET,LAVENDER,glow)*glow*0.8+LAVENDER*ray*exp(-dist/3.5)*1.1
+            +vec3(1.0,0.86,1.0)*crack*Params.w*(0.4+0.6*exp(-dist/3.0))*1.3;
+        c=vec4(col*far*flick*Params.y,0.0);
+    }else if(Mode==19){
+        // Sheet of light hugging the wall's foot (added light) on a cylinder just outside it: brightest low down and
+        // toward the silhouette, wisps rising and tearing. Params: x strength.
+        float f=facing(),y=uv.y;
+        float low=exp(-y*3.2);
+        float wisp=smoothstep(0.55,0.9,N(vec2(uv.x*52.0,y*1.4-Time*2.4)).r)*(1.0-y);
+        float tear=0.55+0.45*N(vec2(uv.x*18.0,y*0.7-Time*0.9)).g;
+        float rim=pow(1.0-f,1.6);
+        vec3 col=mix(VIOLET,WHITE,low*0.65)*(low*0.75+wisp*0.85+rim*low*0.5)*tear;
+        c=vec4(col*(1.0-smoothstep(0.55,1.0,y))*Params.x,0.0);
     }
     fragColor=c*ColorModulator;
 }

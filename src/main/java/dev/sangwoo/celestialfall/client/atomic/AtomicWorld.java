@@ -60,7 +60,9 @@ public final class AtomicWorld {
             // The opaque crater slabs go first so the translucent blast layers can blend over them.
             for(var c:casts){
                 var s=scene(c);float sec=c.age(delta)/20f;s.ground.refresh(mc.world);
-                if(sec>=7.0f&&c.origin.squaredDistanceTo(cam)<640*640)crater(ctx,s,sec,mc);
+                // Outside the hit view the crater tears open with the wall (AtomicEdge); the hit view keeps its own timing.
+                boolean withWall=AtomicPillar.available()&&!AtomicPillar.interior(c,cam,sec);
+                if(sec>=(withWall?AtomicLook.IMPACT:7.0f)&&c.origin.squaredDistanceTo(cam)<640*640)crater(ctx,s,sec,mc,withWall);
             }
             RenderSystem.enableDepthTest();AtomicShader.premultiplied();
             for(var c:casts){
@@ -592,17 +594,26 @@ public final class AtomicWorld {
 
     // ───────────────────────────── crater (7.07 → 27.6 s) ─────────────────────────────
 
-    static void crater(WorldRenderContext ctx,AtomicScene s,float sec,MinecraftClient mc) {
+    /**
+     * The crater's slabs. In the hit view they erupt at 7.07 s (the footage); seen from outside ({@code withWall}) each
+     * ring erupts as the opening wall reaches it, and the rings past the full radius as the slam's ground shock does.
+     */
+    static void crater(WorldRenderContext ctx,AtomicScene s,float sec,MinecraftClient mc,boolean withWall) {
         s.buildSlabs(mc.world);
+        if(withWall&&s.wallRise==null){
+            s.wallRise=new float[s.slabs.size()];
+            for(int i=0;i<s.slabs.size();i++){var slab=s.slabs.get(i);s.wallRise[i]=AtomicEdge.slabRise(slab.radius(),28*s.scale)+(slab.rise()-7.07f-.06f*slab.ring());}
+        }
         var matrices=ctx.matrixStack();var cam=ctx.camera().getPos();
         var vertices=mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
         RenderSystem.enableDepthTest();RenderSystem.depthMask(true);
         int quality=CelestialFall.CONFIG.visualQuality;
-        for(var slab:s.slabs){
+        for(int index=0;index<s.slabs.size();index++){
+            var slab=s.slabs.get(index);float rise=withWall?s.wallRise[index]:slab.rise();
             if(quality==0&&slab.ring()>=6)continue;
-            if(sec<slab.rise()||sec>=slab.vanish()+.05f)continue;
+            if(sec<rise||sec>=slab.vanish()+.05f)continue;
             double depth=slab.thick()+slab.width()*Math.sin(slab.tilt())+1;
-            float up=out(sec,slab.rise(),slab.rise()+.45f);
+            float up=out(sec,rise,rise+.45f);
             double drop=depth*(1-up)+depth*smooth(sec,slab.vanish(),slab.vanish()+.05f);
             double x=s.origin.x+Math.cos(slab.angle())*slab.radius(),z=s.origin.z+Math.sin(slab.angle())*slab.radius();
             matrices.push();

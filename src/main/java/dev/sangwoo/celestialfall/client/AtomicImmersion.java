@@ -22,6 +22,16 @@ public final class AtomicImmersion {
             if(amplitude<=0)return this;
             return new Sample(grade,yaw+amplitude*AtomicLook.jitter(step,0),pitch+amplitude*.8f*AtomicLook.jitter(step,1),roll+amplitude*.5f*AtomicLook.jitter(step,2));
         }
+        /**
+         * Adds the shake right next to the pillar's wall (amplitude in degrees): a hard jitter on every frame step over a
+         * rolling heave, on all three axes.
+         */
+        public Sample withWall(float amplitude,float sec) {
+            if(amplitude<=0)return this;
+            long step=(long)Math.floor(sec*45);float heave=sec*7f;
+            return new Sample(grade,yaw+amplitude*(.6f*AtomicLook.jitter(step,5)+.5f*rumble(heave,6)),
+                pitch+amplitude*(.75f*AtomicLook.jitter(step,6)+.55f*rumble(heave,7)),roll+amplitude*(.45f*AtomicLook.jitter(step,7)+.35f*rumble(heave*.8f,8)));
+        }
         /** Adds the earthquake felt near the pillar from outside (amplitude in degrees): a rolling sway under a fast tremble, mostly vertical. */
         public Sample withQuake(float amplitude,float sec) {
             if(amplitude<=0)return this;
@@ -72,12 +82,14 @@ public final class AtomicImmersion {
             var value=sample(sec,d,cast.radius,CelestialFall.CONFIG.screenShakeStrength);
             if(AtomicPillar.available()&&!AtomicPillar.interior(cast,camera,sec)){
                 // The violet grade belongs to the hit view; outside the damage column the pillar shows its own colours,
-                // the ground near the pillar quakes with every surge, and the air shock jolts the camera when it arrives,
-                // even beyond the quake's reach.
+                // the ground near the pillar quakes with every surge, the air shock jolts the camera when it arrives,
+                // even beyond the quake's reach, and right next to the wall the screen shakes hard.
                 float shake=(float)Math.max(0,Math.min(2,CelestialFall.CONFIG.screenShakeStrength));
                 float jolt=AtomicStage.jolt(sec,camera.distanceTo(cast.origin),cast.radius)*shake;
+                // Within 8 blocks of the pillar's wall the screen shakes violently.
+                double r=dev.sangwoo.celestialfall.client.atomic.AtomicPillarShape.radius(AtomicStage.visual(sec),cast.radius);
                 value=(value==NONE?new Sample(AtomicLook.Grade.NONE,0,0,0):value.withoutGrade()).withJolt(jolt,(long)Math.floor(sec*45))
-                    .withQuake(quakeBeyondShake(sec,d,cast.radius,shake),sec);
+                    .withQuake(quakeBeyondShake(sec,d,cast.radius,shake),sec).withWall(AtomicStage.wallShake(sec,d,r,cast.radius)*shake,sec);
                 if(!value.active())value=NONE;
             }
             if(value!=NONE){result=value;best=d;}

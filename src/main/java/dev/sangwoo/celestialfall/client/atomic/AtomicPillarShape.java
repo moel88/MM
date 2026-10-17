@@ -34,6 +34,31 @@ public final class AtomicPillarShape {
     public static double column(float sec,double R){
         return sec<AtomicLook.IMPACT?R:AtomicTimeline.openingRadius(sec-AtomicLook.IMPACT,R);
     }
+    /**
+     * How hard the edge is pushing out (sec on the pillar's own clock): its opening speed over the top speed, 0..1.
+     * Nothing before the impact, about 1 while it opens at full pace, easing out to 0 as it reaches R.
+     */
+    public static float push(float sec,double R){
+        if(!(sec>AtomicLook.IMPACT)||!(R>0))return 0;
+        double t=sec-AtomicLook.IMPACT,h=.02,a=Math.max(0,t-h);
+        double v=(AtomicTimeline.openingRadius(t+h,R)-AtomicTimeline.openingRadius(a,R))/(t+h-a);
+        return (float)Math.max(0,Math.min(1,v/AtomicTimeline.OPEN_SPEED));
+    }
+    /**
+     * Strength of the effects at the pillar's foot (sec on its own clock): the push while it opens, a steady churn
+     * (0.3) while it stands, a burst when it slams into its full radius, off for the collapse.
+     */
+    public static float edge(float sec,double R){
+        float stand=AtomicLook.smooth(sec,AtomicLook.IMPACT,AtomicLook.IMPACT+.1f)*(1-AtomicLook.smooth(sec,AtomicLook.COLLAPSE-.15f,AtomicLook.COLLAPSE+.1f));
+        return stand*(Math.max(push(sec,R),.3f)+.8f*slam(sec,R));
+    }
+    /** The pillar slams into its full radius (sec on its own clock): a burst from the moment it gets there, fading over a second. */
+    public static float slam(float sec,double R){
+        float t=sec-open(R);
+        return t<0||sec>=AtomicLook.COLLAPSE?0:AtomicLook.smooth(t,0,.06f)*(float)Math.exp(-t/.5);
+    }
+    /** Radius of the ground shock the slam sends out, in blocks: from R at 30 blocks a second (0 before the slam). */
+    public static double slamFront(float sec,double R){float t=sec-open(R);return t<0?0:R+30*t;}
     /** Bottom of the cylinder, two blocks under the ground like the damage column. */
     public static double base(double groundY){return groundY-FOOT;}
     /** Top of the cylinder: shoots up to 9 R in the first 0.12 s and stays there. */

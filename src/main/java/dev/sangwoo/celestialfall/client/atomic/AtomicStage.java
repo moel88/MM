@@ -95,6 +95,18 @@ public final class AtomicStage {
         float k=near(distance,R);
         return k<=0?0:k*k*standing(sec)*(1.1f+.9f*surge(sec));
     }
+    /** The wall shake reaches this many blocks out from the pillar's surface. */
+    public static final double WALL_RANGE=8;
+    /**
+     * Shake felt within 8 blocks outside the pillar's surface (degrees, before the screen shake setting): violent right at
+     * the wall, gone 8 blocks out, harder on every surge and when the wall slams into its full radius. fromAxis is the
+     * viewer's distance from the pillar's axis and r the pillar's radius now; inside the pillar (the hit view) it is 0.
+     */
+    public static float wallShake(float sec,double fromAxis,double r,double R){
+        if(!(r>.05)||!(fromAxis>=r))return 0;
+        float k=1-smooth((float)(fromAxis-r),0,(float)WALL_RANGE);
+        return k<=0?0:k*standing(sec)*(6f+2f*surge(sec)+4f*AtomicPillarShape.slam(visual(sec),R));
+    }
     /**
      * How strongly the pillar's light pours into the view of an outside viewer (glow and light shafts), 0..1.3:
      * a burst with the ignition flash, held while the pillar stands, thinning with distance like the sky.

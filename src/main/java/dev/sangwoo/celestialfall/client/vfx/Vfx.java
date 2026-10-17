@@ -37,7 +37,7 @@ import org.lwjgl.opengl.GL30;
 public final class Vfx {
     /** Material modes of vfx_energy.fsh. */
     public static final int BODY=1,SKIN=2,CAP=3,GROUND=4,RING=5,RING_REFRACT=6,HEAT_COLUMN=7,SPARK=8,FLARE=9,SMOKE=10,HAZE=11,SOLID=12,
-        GLOW=13,CLOUD=14,SHOCK=15,POOL=16,STREAK=17;
+        GLOW=13,CLOUD=14,SHOCK=15,POOL=16,STREAK=17,EDGE=18,EDGE_WALL=19;
     private static final int SIDES=160,DISC=128,DOME_AZ=96,DOME_EL=24;
     private static ShaderProgram shader;
     private static NativeImageBackedTexture noise;
