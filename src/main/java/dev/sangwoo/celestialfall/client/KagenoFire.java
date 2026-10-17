@@ -74,11 +74,17 @@ public final class KagenoFire {
      * from black smoke (0) through blue and violet to magenta and white-hot pink (1), wisp from a round billow (0) to a
      * curling flame (1).
      */
-    public static void cells(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){
+    public static void cells(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){cells(m,camera,pts,cells,age,13);}
+    /**
+     * Dust puffs on the same fixed planes as the fire cells (shader mode 14): each cell is {size, alpha, violet cast,
+     * thinning, seed}.
+     */
+    public static void dust(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){cells(m,camera,pts,cells,age,14);}
+    private static void cells(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age,int mode){
         if(shader==null||pts.isEmpty())return;
         Integer[] order=new Integer[pts.size()];for(int i=0;i<order.length;i++)order[i]=i;
         Arrays.sort(order,Comparator.comparingDouble((Integer i)->pts.get(i).squaredDistanceTo(camera)).reversed());
-        var b=begin(age,13);float[][] uv={{0,0},{1,0},{1,1},{0,1}};
+        var b=begin(age,mode);float[][] uv={{0,0},{1,0},{1,1},{0,1}};
         for(int i:order){
             float[] c=cells.get(i);if(c[1]<=0||c[0]<=0)continue;Vec3d p=pts.get(i);
             int seed=(int)c[4],heat=Math.round(Math.max(0,Math.min(1,c[2]))*255),wisp=Math.round(Math.max(0,Math.min(1,c[3]))*255),a=Math.max(0,Math.min(255,(int)(c[1]*255)));

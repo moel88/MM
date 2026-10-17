@@ -39,32 +39,15 @@ public final class KagenoRenderer {
             var clip=new org.joml.Vector4f((float)focus.x,(float)focus.y,(float)focus.z,1).mul(matrix).mul(c.projectionMatrix());
             AnimePostProcessor.focus(clip.w>.01f?clip.x/clip.w*.5f+.5f:.5f,clip.w>.01f?clip.y/clip.w*.5f+.5f:.5f);
         }
+        // Skills that opt in go through the HDR effect layer; the rest (and the state effects) are drawn as before.
+        boolean layer=dev.sangwoo.celestialfall.client.vfx.FxLayer.available();
+        List<Fx> direct=new ArrayList<>(),layered=new ArrayList<>();
+        for(var x:casts)(layer&&KagenoSkills.of(x.cast.skill()).layered()?layered:direct).add(x);
         var buffer=Tessellator.getInstance().getBuffer();
         try{
-            RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
-            RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.setShaderColor(1,1,1,1);
-            // Opaque-ish blended geometry.
-            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
-            for(var x:casts)KagenoSkills.of(x.cast.skill()).alpha(x,m);
-            KagenoStatusFx.alpha(mc,m,delta,camera);
-            dev.sangwoo.celestialfall.client.kageno.HitFeedback.blood(mc,m,delta);
-            BufferRenderer.drawWithGlobalProgram(buffer.end());
-            dev.sangwoo.celestialfall.client.kageno.BodyGhost.render(casts,view,camera,delta);
-            // Additive emission.
-            RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
-            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
-            for(var x:casts)KagenoSkills.of(x.cast.skill()).additive(x,m);
-            KagenoStatusFx.additive(mc,m,delta,camera);
-            BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.defaultBlendFunc();
-            // Shader passes (fire, smoke, brush strokes) manage their own buffers.
-            for(var x:casts)KagenoSkills.of(x.cast.skill()).shaders(x);
-            if(KagenoFire.beginStrokes(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).strokes(x);KagenoFire.endStrokes();}
-            if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
-            // Same crescents again, added on top, for the bright glow of the reference slashes.
-            RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);KagenoFire.crescentGain=.18f;
-            if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
-            KagenoFire.crescentGain=1;RenderSystem.defaultBlendFunc();
-            for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
+            effects(mc,direct,true,view,matrix,camera,delta,false);
+            if(layered.isEmpty())dev.sangwoo.celestialfall.client.vfx.FxLayer.idle();
+            else layer(mc,layered,view,matrix,camera,delta);
             dev.sangwoo.celestialfall.client.kageno.HealNumbers.render(mc,matrices,delta,camera);
             dev.sangwoo.celestialfall.client.kageno.HitFeedback.numbers(mc,matrices,delta);
             RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
@@ -74,7 +57,7 @@ public final class KagenoRenderer {
             float glow=KagenoStatusFx.flash(mc,delta,camera);if(glow>flash){flash=glow;color=0xfffcff;}
             if(flash>0){
                 RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.disableDepthTest();
-                buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
+                buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
                 var look=c.camera().getHorizontalPlane();Vec3d fwd=new Vec3d(look.x(),look.y(),look.z());var up=c.camera().getVerticalPlane();Vec3d vu=new Vec3d(up.x(),up.y(),up.z());Vec3d side=fwd.crossProduct(vu).normalize();
                 Vec3d p=camera.add(fwd.multiply(.2));
                 m.quad(p.add(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).add(vu.multiply(3)),p.subtract(side.multiply(3)).subtract(vu.multiply(3)),p.add(side.multiply(3)).subtract(vu.multiply(3)),color,Math.min(1,flash));
@@ -82,7 +65,7 @@ public final class KagenoRenderer {
             }
             // Geometry that reads through the white-out (Y's violet pillars), depth-tested against the world.
             RenderSystem.setShader(GameRenderer::getPositionColorProgram);
-            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
+            buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
             for(var x:casts)KagenoSkills.of(x.cast.skill()).overFlash(x,m,false);
             BufferRenderer.drawWithGlobalProgram(buffer.end());
             RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
@@ -90,6 +73,65 @@ public final class KagenoRenderer {
             for(var x:casts)KagenoSkills.of(x.cast.skill()).overFlash(x,m,true);
             BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.defaultBlendFunc();
         }finally{matrices.pop();RenderSystem.depthMask(true);RenderSystem.enableDepthTest();RenderSystem.enableCull();RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();RenderSystem.setShaderColor(1,1,1,1);}
+    }
+    /** Light gain of the additive pass on the effect layer (above 1 the overlapping light turns white-hot). */
+    static final float LAYER_GAIN=1.35f;
+    /** Blocks over which effect surfaces fade out where they meet the world, on the effect layer. */
+    static final float LAYER_SOFT=.35f;
+    /**
+     * The passes of every skill in order: blended geometry, body afterimages, additive light, fire and smoke cells,
+     * brush strokes, brush crescents (plus their additive glow) and real blocks. {@code status} adds the guard and
+     * overdrive visuals and the blood; on the effect layer ({@code layered}) the geometry passes get soft edges and
+     * the light runs hotter.
+     */
+    private static void effects(MinecraftClient mc,List<Fx> casts,boolean status,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta,boolean layered){
+        var buffer=Tessellator.getInstance().getBuffer();
+        RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.setShaderColor(1,1,1,1);
+        // Opaque-ish blended geometry.
+        buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).alpha(x,m);
+        if(status){KagenoStatusFx.alpha(mc,m,delta,camera);dev.sangwoo.celestialfall.client.kageno.HitFeedback.blood(mc,m,delta);}
+        if(layered)dev.sangwoo.celestialfall.client.vfx.FxLayer.draw(buffer.end(),false,1,LAYER_SOFT);else BufferRenderer.drawWithGlobalProgram(buffer.end());
+        dev.sangwoo.celestialfall.client.kageno.BodyGhost.render(casts,view,camera,delta);
+        // Additive emission.
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
+        buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).additive(x,m);
+        if(status)KagenoStatusFx.additive(mc,m,delta,camera);
+        if(layered)dev.sangwoo.celestialfall.client.vfx.FxLayer.draw(buffer.end(),true,LAYER_GAIN,LAYER_SOFT);else BufferRenderer.drawWithGlobalProgram(buffer.end());
+        RenderSystem.defaultBlendFunc();
+        // Shader passes (fire, smoke, brush strokes) manage their own buffers.
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).shaders(x);
+        if(KagenoFire.beginStrokes(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).strokes(x);KagenoFire.endStrokes();}
+        if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
+        // Same crescents again, added on top, for the bright glow of the reference slashes (hotter on the layer).
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
+        KagenoFire.crescentGain=layered?.32f:.18f;if(layered)RenderSystem.setShaderColor(1.7f,1.55f,1.8f,1);
+        if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
+        KagenoFire.crescentGain=1;RenderSystem.setShaderColor(1,1,1,1);RenderSystem.defaultBlendFunc();
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
+    }
+    /**
+     * Layered casts: their solids on the screen first (with depth), then the effect layer: refraction, the world
+     * pass (lights, decals), every effect pass on the HDR copy, then bloom, afterglow and the composite. If the
+     * layer cannot run this frame, the casts are drawn directly instead.
+     */
+    private static void layer(MinecraftClient mc,List<Fx> casts,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta){
+        var frame=new dev.sangwoo.celestialfall.client.vfx.FxFrame();
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).frame(x,frame);
+        var stack=new net.minecraft.client.util.math.MatrixStack();
+        stack.peek().getPositionMatrix().set(view);stack.peek().getNormalMatrix().set(new org.joml.Matrix3f(view));
+        var solids=dev.sangwoo.celestialfall.client.vfx.FxLayer.solids(stack,camera);
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).solids(x,solids);
+        dev.sangwoo.celestialfall.client.vfx.FxLayer.finishSolids(solids);
+        var d=dev.sangwoo.celestialfall.client.vfx.FxLayer.begin(view,matrix,camera);
+        if(d==null){effects(mc,casts,false,view,matrix,camera,delta,false);return;}
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).distort(x,d);
+        dev.sangwoo.celestialfall.client.vfx.FxLayer.scene(frame);
+        effects(mc,casts,false,view,matrix,camera,delta,true);
+        dev.sangwoo.celestialfall.client.vfx.FxLayer.finish(frame,(mc.world.getTime()+delta)/20.0);
     }
     private static List<LivingEntity> targets(MinecraftClient mc,StandClient.Cast s,float delta){
         var out=new ArrayList<LivingEntity>();

@@ -73,5 +73,16 @@ public final class Fx {
         default float afterimages(float sec){return -1;}
         /** Colour of the speed afterimages. */
         default int afterimageColor(){return 0x8a5cff;}
+        /**
+         * Drawn through the HDR effect layer ({@link dev.sangwoo.celestialfall.client.vfx.FxLayer}): light adds up past
+         * white, bloom from the effects only, soft edges where effects meet the world, afterglow, and the hooks below.
+         */
+        default boolean layered(){return false;}
+        /** Lights on the world, ground decals, a light-shaft source and the impact frame for the effect layer. */
+        default void frame(Fx c,dev.sangwoo.celestialfall.client.vfx.FxFrame f){}
+        /** Refraction bands for the effect layer. */
+        default void distort(Fx c,dev.sangwoo.celestialfall.client.vfx.FxDistort d){}
+        /** Solid world pieces (block chunks, lifted ground) drawn before the effects. */
+        default void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){}
     }
 }

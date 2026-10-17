@@ -41,7 +41,7 @@ public final class StandClient {
     public static boolean visible(PlayerEntity p){return StandManager.kageno(p)&&!p.isInvisible()&&!p.isSleeping();}
     public static void initialize(){
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.sangwoo.celestialfall.client.kageno.KagenoClips::trackGuards);
-        KagenoSword.initialize();KagenoFire.initialize();dev.sangwoo.celestialfall.client.atomic.AtomicShader.initialize();dev.sangwoo.celestialfall.client.vfx.Vfx.initialize();
+        KagenoSword.initialize();KagenoFire.initialize();dev.sangwoo.celestialfall.client.atomic.AtomicShader.initialize();dev.sangwoo.celestialfall.client.vfx.Vfx.initialize();dev.sangwoo.celestialfall.client.vfx.FxLayer.initialize();
         KagenoManager.setClientFrozen(StandClient::frozen);
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.CAST,(mc,h,b,r)->{
             UUID id=b.readUuid(),caster=b.readUuid();var dim=b.readIdentifier();int skill=b.readUnsignedByte(),combo=b.readUnsignedByte();long start=b.readLong(),serverNow=b.readLong();Vec3d origin=vec(b);float yaw=b.readFloat();int n=b.readVarInt();

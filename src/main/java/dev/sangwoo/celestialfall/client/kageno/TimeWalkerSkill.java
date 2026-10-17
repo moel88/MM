@@ -2,8 +2,13 @@ package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.KagenoFire;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
+import dev.sangwoo.celestialfall.client.vfx.FxSolids;
 import dev.sangwoo.celestialfall.stand.KagenoRules;
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import java.util.ArrayList;
 import java.util.List;
@@ -426,7 +431,7 @@ final class TimeWalkerSkill implements Fx.Skill {
             double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h),deg=Math.toDegrees(h);
             Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h)));
             float grow=Ease.out(age,0,big?.07f:.05f),erase=Ease.smooth(age,big?.14f:.1f,life),a=Ease.smooth(age,0,.015f);
-            KagenoFire.crescent(o,pl[1],pl[0],r,r*(big?.3:.26),-deg,2*deg*grow,3,i*3+7,erase,.7f,a,.15);
+            KagenoFire.crescent(o,pl[1],pl[0],r,r*(big?.3:.26),-deg,2*deg*grow,big?12:11,i*3+7,erase,.7f,a,.15);
             if(big)KagenoFire.crescent(o,pl[1],pl[0],r*.9,r*.12,-deg+6,(2*deg-12)*grow,5,i*3+8,erase,.7f,.8f*a,.1);
         }
     }
@@ -471,16 +476,144 @@ final class TimeWalkerSkill implements Fx.Skill {
             }
         }
         if(!pts.isEmpty())KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
+        // Dust thrown up where the floor heaves, on the same fixed planes: each puff rises as the wave passes under it.
+        if(t>=RELEASE&&t<RELEASE+1.6f&&dev.sangwoo.celestialfall.client.vfx.FxLayer.available()){
+            List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();Vec3d floor=floorUnder(c);
+            for(int i=0;i<18;i++){
+                double side=(Ease.hash(i*7+83)-.5)*2;
+                float born=RELEASE+(float)(Math.abs(side)*HEAVE/HEAVE_SPEED)+.04f*(float)Ease.hash(i*3+81),s=t-born,life=.8f+.5f*(float)Ease.hash(i*5+82);
+                if(s<0||s>=life)continue;float u=s/life;
+                dust.add(floor.add(c.right.multiply(side*HEAVE*.95)).add(c.f.multiply((Ease.hash(i*11+84)-.5)*2.2)).add(0,.3+.55*u,0));
+                puffs.add(new float[]{(float)((.4+.55*Ease.out(u,0,.6f))*(.8+.4*Ease.hash(i*13+85))),.9f*Ease.smooth(s,0,.05f)*(1-Ease.smooth(u,.55f,1)),.55f*(1-u),u,i*29+5});
+            }
+            if(!dust.isEmpty())KagenoFire.dust(c.matrix,c.camera,dust,puffs,c.age);
+        }
     }
     /** A pink-white flash for viewers near the crossing as the slit opens and as the band explodes. */
     @Override public float flash(Fx c){
         float t=c.sec;if(t<STORED-.02f||t>=RELEASE+.4f)return 0;
         double d=c.camera.distanceTo(crossing(c));float near=(float)Math.max(0,Math.min(1,(16-d)/10));
         float slit=.3f*Ease.window(t,STORED-.01f,STORED+.06f,.02f,.04f);
-        float release=t>=RELEASE-.01f?.55f*Ease.smooth(t,RELEASE-.01f,RELEASE+.015f)*(float)Math.exp(-Math.max(0,t-RELEASE-.015f)/.08):0;
+        // On the effect layer the impact frame takes the first frames of the release; the flash follows it, softer.
+        float release=dev.sangwoo.celestialfall.client.vfx.FxLayer.available()
+            ?(t>=RELEASE+.09f?.3f*Ease.smooth(t,RELEASE+.09f,RELEASE+.115f)*(float)Math.exp(-Math.max(0,t-RELEASE-.115f)/.1):0)
+            :t>=RELEASE-.01f?.55f*Ease.smooth(t,RELEASE-.01f,RELEASE+.015f)*(float)Math.exp(-Math.max(0,t-RELEASE-.015f)/.08):0;
         return near*Math.max(slit,release);
     }
     @Override public int flashColor(Fx c){return 0xffd8f6;}
+    // ───────────────────────────── effect layer ─────────────────────────────
+
+    @Override public boolean layered(){return true;}
+    /**
+     * The finisher's impact frame: in over two frames as the final cut lands, held about three frames (white shapes on
+     * black, then over a frame and a half dark shapes on white), out over two frames.
+     */
+    static float impact(float t){
+        if(t<RELEASE-.01f||t>=RELEASE+.125f)return 0;
+        return Ease.smooth(t,RELEASE-.01f,RELEASE+.02f)*(1-Ease.smooth(t,RELEASE+.085f,RELEASE+.125f));
+    }
+    static float impactMode(float t){return Ease.smooth(t,RELEASE+.04f,RELEASE+.075f);}
+    /** A pulse that comes in over a frame at {@code at} and dies away with time constant {@code tau}. */
+    static float kick(float t,float at,float tau){return t<at-.01f?0:Ease.smooth(t,at-.01f,at+.015f)*(float)Math.exp(-Math.max(0,t-at-.015f)/tau);}
+    /** Top of the floor under the crossing. */
+    static Vec3d floorUnder(Fx c){Vec3d x=crossing(c);return new Vec3d(x.x,c.origin.y,x.z);}
+    /**
+     * Lights: the sword's aura (cyan while time stands still), the stop's pulse, the frozen cuts, every cut's birth,
+     * the column, each purple slash, then the release's white-pink burst with magenta along the band and the haze it
+     * leaves. Light shafts from the column and the burst, the impact frame and a chromatic split for viewers near the
+     * crossing, and the big cut's scar on the floor: glowing as it tears open along the band, cooling to a burn.
+     */
+    @Override public void frame(Fx c,FxFrame f){
+        float t=c.sec;Vec3d x=crossing(c);var list=cuts(c);
+        float g=Math.min(1.4f,glow(t))*lit(t);
+        if(g>.01f){var hb=sword(c);f.light(hb[0].add(hb[1].multiply((GUARD+TIP)*.5)),palette(cyan(t))[1],4.5,.9f*g);}
+        float stop=Ease.smooth(t,GRAY-.01f,GRAY+.02f)*(1-Ease.smooth(t,GRAY+.04f,GRAY+.3f));
+        if(stop>0)f.light(c.pos.add(0,1.1,0),ICE[2],8,2.2f*stop);
+        float held=frozen(t)*Ease.smooth(t,COCKS[0],CUTS[0]);
+        if(held>0)f.light(x,0xc9a2ff,6,.7f*held);
+        for(int i=0;i<CUTS.length;i++){float b=t-COCKS[i];if(b>=0&&b<.15f)f.light(span(list.get(i),drawn(t,i))[0],LAVENDER,4,1.4f*(1-b/.15f)*Ease.smooth(b,0,.015f));}
+        if(t>=STORED-.01f&&t<STORED+.12f){float u=Ease.unit(t,STORED,STORED+.12f);f.light(x,ROSE,10,2.6f*Ease.smooth(t,STORED-.01f,STORED+.02f)*(1-u*u));}
+        for(int i=0;i<list.size();i++){
+            float age=t-slashAt(i),life=slashLife(i);if(age<0||age>=life)continue;boolean big=i==list.size()-1;
+            f.light(list.get(i).centre(),big?0xc06bff:VIOLET,big?9:6,(big?3.2f:1.8f)*Ease.smooth(age,0,.02f)*(1-Ease.smooth(age,.05f,life)));
+        }
+        if(t>=RELEASE-.01f){
+            f.light(x,0xffd6f6,15,5f*kick(t,RELEASE,.16f));
+            float band=Ease.smooth(t,RELEASE,RELEASE+.04f)*(1-Ease.smooth(t,RELEASE+.15f,RELEASE+.9f));
+            for(int k=-1;k<=1;k+=2)f.light(x.add(c.right.multiply(k*5.5)),MAGENTA,9,2.2f*band);
+            float haze=Ease.smooth(t,RELEASE+.1f,RELEASE+.3f)*(1-Ease.smooth(t,RELEASE+.6f,RELEASE+1.8f));
+            f.light(x.add(0,.5,0),0xd040ff,11,.7f*haze);
+        }
+        float shaft=.55f*Ease.window(t,STORED-.01f,STORED+.1f,.02f,.03f)+1.25f*kick(t,RELEASE,.18f);
+        if(shaft>.01f)f.shaft(x,0xffc8f4,shaft);
+        float near=(float)Math.max(0,Math.min(1,(26-c.camera.distanceTo(x))/12));
+        if(near>0){f.impact(near*impact(t),impactMode(t));f.chroma(near*.014f*kick(t,RELEASE,.12f));}
+        if(t>=RELEASE){
+            float heat=1-Ease.smooth(t,RELEASE+.2f,RELEASE+1.6f),a=Ease.smooth(t,RELEASE,RELEASE+.06f)*(1-Ease.smooth(t,3.5f,3.95f));
+            Vec3d g0=floorUnder(c);double open=Ease.out(t,RELEASE,RELEASE+.12f);
+            f.decal(g0,c.right,7.5*open+.3,.85,heat,a,3.1f);
+            f.decal(g0.add(c.f.multiply(.4)),c.right.multiply(.9).add(c.f.multiply(.43)),3.8*open+.2,.45,heat*.85f,.85f*a,7.3f);
+            f.decal(g0.subtract(c.f.multiply(.4)),c.right.multiply(.9).subtract(c.f.multiply(.43)),3.4*open+.2,.42,heat*.85f,.85f*a,11.7f);
+        }
+    }
+    /** Air bent along every purple slash as it sweeps (most along the big one), a shock ring racing over the floor and one round the crossing at the release. */
+    @Override public void distort(Fx c,FxDistort d){
+        float t=c.sec;if(t<STORED-.01f||t>=RELEASE+.6f)return;
+        var list=cuts(c);Vec3d x=crossing(c);
+        for(int i=0;i<list.size();i++){
+            boolean big=i==list.size()-1;float age=t-slashAt(i),life=big?.3f:.18f;if(age<0||age>=life)continue;
+            var cut=list.get(i);Vec3d[] pl=slashPlane(cut,i);
+            double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h),deg=Math.toDegrees(h);
+            Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h)));
+            float grow=Ease.out(age,0,big?.07f:.05f),s=(big?1f:.55f)*Ease.smooth(age,0,.02f)*(1-Ease.smooth(age,.03f,life));
+            d.arc(o,pl[1],pl[0],r*1.04,r*(big?.42:.34),-deg,2*deg*grow,s);
+        }
+        if(t>=RELEASE-.01f){
+            float in=Ease.smooth(t,RELEASE-.01f,RELEASE+.015f);
+            d.ring(floorUnder(c).add(0,.05,0),c.right,c.f,.6+14*Ease.out(t,RELEASE,RELEASE+.45f),1.8,.9f*in*(1-Ease.unit(t,RELEASE,RELEASE+.45f)));
+            d.ring(x,c.right,Fx.UP,.5+6*Ease.out(t,RELEASE,RELEASE+.3f),1.1,.8f*in*(1-Ease.unit(t,RELEASE,RELEASE+.3f)));
+        }
+    }
+    /** Chunks thrown along the band at the release (out, up, bouncing on the floor). */
+    static final int CHUNKS=26;
+    static Vec3d chunkStart(Vec3d right,Vec3d forward,Vec3d floor,int k){
+        double side=(Ease.hash(k*5+72)-.5)*2;
+        return floor.add(0,.15,0).add(right.multiply(side*7.5)).add(forward.multiply((Ease.hash(k*7+73)-.5)*1.6));
+    }
+    static Vec3d chunkVelocity(Vec3d right,Vec3d forward,int k){
+        double side=Ease.hash(k*5+72)-.5;
+        return right.multiply(Math.signum(side)*(1+4*Ease.hash(k*11+74))).add(forward.multiply((Ease.hash(k*13+75)-.5)*3)).add(0,5+6*Ease.hash(k*17+76),0);
+    }
+    static double chunkSize(int k,float age){return (.14+.2*Ease.hash(k*19+77))*(1-Ease.smooth(age,1.55f,1.95f));}
+    static float chunkBorn(int k){return .015f*(float)Ease.hash(k*3+71);}
+    /** How far out (blocks) and how fast (blocks a second) the floor heaves along the band. */
+    static final int HEAVE=11;static final double HEAVE_SPEED=26;
+    /**
+     * The release tears the floor: chunks of the floor block fly up along the band, spin, bounce and settle, shrinking
+     * away after 1.6 s; the floor heaves in a wave running out both ways along the band (not under the crossing).
+     */
+    @Override public void solids(Fx c,FxSolids s){
+        float t=c.sec;if(t<RELEASE||t>=RELEASE+2.1f)return;
+        float since=t-RELEASE;Vec3d floor=floorUnder(c);
+        BlockState block=s.ground(floor.add(0,-.5,0));
+        if(block!=null)for(int k=0;k<CHUNKS;k++){
+            float age=since-chunkBorn(k);if(age<0)continue;
+            double size=chunkSize(k,age);
+            Vec3d p=FxSolids.flight(chunkStart(c.right,c.f,floor,k),chunkVelocity(c.right,c.f,k),floor.y+size*.5,age);
+            float spin=(float)((240+420*Ease.hash(k*23+78))*.6*(1-Math.exp(-age/.6)));
+            s.chunk(block,p,size,spin+k*37,spin*.7f+k*11,spin*.4f);
+        }
+        java.util.Set<BlockPos> done=new java.util.HashSet<>();
+        BlockPos base=BlockPos.ofFloored(floor.x,floor.y-.5,floor.z);
+        for(int k=-HEAVE;k<=HEAVE;k++)for(int lat=-1;lat<=1;lat++){
+            Vec3d q=Vec3d.ofCenter(base).add(c.right.multiply(k)).add(c.f.multiply(lat));
+            BlockPos pos=BlockPos.ofFloored(q);if(!done.add(pos))continue;
+            double dist=Math.hypot(pos.getX()+.5-floor.x,pos.getZ()+.5-floor.z);
+            double lift=FxSolids.wave(dist,since,.55,HEAVE_SPEED,1.3)*Ease.smooth((float)dist,1.2f,2.6f)*(lat==0?1:.7);
+            if(lift>.02)s.lifted(pos,s.surface(pos),lift,(float)(lift*28*Math.signum(k)),c.f);
+        }
+    }
+
     /** Shake as the stored cuts land and harder with the release, each coming in over two frames. */
     @Override public float shake(float sec){
         float s=0;

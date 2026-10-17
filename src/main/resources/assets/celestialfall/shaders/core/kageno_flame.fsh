@@ -104,7 +104,8 @@ void main(){
   // M1 ring as it forms: black-violet with a violet core.
   else if(style<9.5){rim=vec3(.30,.0,.60);vio=vec3(.25,.07,.37);core=vec3(.61,.10,.89);hi=vec3(.75,.35,.95);navy=vec3(.08,.02,.14);}
   // M1 ring fading into blue-violet streaks.
-  else{rim=vec3(.26,.13,.53);vio=vec3(.38,.18,.73);core=vec3(.64,.24,.86);hi=vec3(.85,.70,.98);navy=vec3(.21,.10,.36);}
+  else if(style<10.5){rim=vec3(.26,.13,.53);vio=vec3(.38,.18,.73);core=vec3(.64,.24,.86);hi=vec3(.85,.70,.98);navy=vec3(.21,.10,.36);}
+  else{rim=vec3(.74,.46,1.0);vio=vec3(.58,.24,.99);core=vec3(.92,.62,1.0);hi=vec3(.98,.88,1.0);navy=vec3(.27,.06,.70);}
   rgb=d<.08?rim:d<.3?mix(rim,vio,(d-.08)/.22):d<.45?mix(vio,core,(d-.3)/.15):d<.7?mix(core,vio,(d-.45)/.25):d<.88?mix(vio,rim,(d-.7)/.18):mix(rim,navy,clamp((d-.88)/.1,0.0,1.0));
   // E finisher (measured stops, outer → inner): bright violet rim, pink highlight, electric-violet
   // body, a hot white-pink streak, violet again and a dark indigo inner edge.
@@ -117,6 +118,28 @@ void main(){
   float hair=noise(vec2(x*9.0+sd,y*95.0));
   rgb=mix(rgb,hi,smoothstep(.72,.9,hair)*smoothstep(.12,.3,d)*(1.0-smoothstep(.5,.7,d)));
   alpha=body*(.86+.14*strand)*tint.a;
+  if(style>10.5){
+   // R (시간을 걷는 자) slashes, style 12 the big final one: crisp anime edges (anti-aliased over a pixel), a dark
+   // violet ink line along the outer edge, a bright violet body with pale hairs, a white-hot streak riding inside
+   // it and a glowing ragged edge where the tail is being eaten.
+   float aa=max(fwidth(d),.0015)*1.3;
+   body=(1.0-smoothstep(1.0-aa,1.0+aa,d))*smoothstep(-aa,aa,1.0-y);
+   body*=1.0-split*smoothstep(.46,.54,strand);
+   float eat=smoothstep(front-.004,front+.012,x);body*=eat;
+   bool big=style>11.5;
+   vec3 ink=vec3(.12,.02,.34),edge=vec3(.76,.48,1.0),mid=big?vec3(.64,.22,1.0):vec3(.58,.24,.99),deep=vec3(.27,.06,.70),hotc=vec3(1.0,.78,.99);
+   rgb=mix(ink,edge,smoothstep(.03,.03+aa*2.0,d));
+   rgb=mix(rgb,mid,smoothstep(.12,.26,d));
+   rgb=mix(rgb,deep,smoothstep(.6,.97,d));
+   float lane=big?.38:.42,wob=.05*sin(x*8.0+sd)+.04*(strand-.5);
+   float streak=1.0-smoothstep(.04,.04+aa*2.0+.03*hair,abs(d-lane-wob));
+   rgb=mix(rgb,hotc,streak);
+   rgb=mix(rgb,vec3(1.0),streak*smoothstep(.2,.85,x));
+   rgb=mix(rgb,vec3(.96,.82,1.0),smoothstep(.75,.92,hair)*smoothstep(.15,.3,d)*(1.0-smoothstep(.5,.7,d))*.6);
+   float ember=(1.0-smoothstep(.0,.06,x-front))*eat;
+   rgb=mix(rgb,vec3(1.0,.62,.96),ember*.9);
+   alpha=body*tint.a;
+  }
  }else if(Mode==12){
   // UV wraps a real 3D surface. Periodic angular noise keeps its seam invisible.
   float angle=uv.x*6.2831853;
@@ -197,6 +220,24 @@ void main(){
   // A deeper rim keeps overlapping billows apart.
   float rim=smoothstep(edge-.2,edge-.03,r);
   rgb*=1.0-rim*.35*smoothstep(.2,.5,heat);
+  alpha=body*tint.a;
+ }else if(Mode==14){
+  // Anime dust puff (on the fire cells' fixed planes): three flat tones (shadowed base, middle, lit top), a lobed
+  // crisp edge, a violet cast from the effects' light (tint.g) and holes opening as it thins out (tint.b).
+  float thin=tint.b,violet=tint.g;
+  vec2 flow=p*1.7+vec2(seed*.31,-Age*.035);
+  float n=fbm(flow+vec2(noise(flow+2.9),noise(flow-4.3))*1.4);
+  float r=length(p*vec2(1.0,1.08));
+  float edge=.74+(n-.5)*.5+.06*sin(atan(p.y,p.x)*6.0+seed);
+  float aa=max(fwidth(r),.002)*1.5;
+  float body=1.0-smoothstep(edge-aa,edge+aa,r);
+  body*=1.0-smoothstep(.52-thin*.3,.58-thin*.3,fbm(flow*1.8+7.0))*thin;
+  float lit=p.y+(n-.5)*.45;
+  float ab=max(fwidth(lit),.002)*1.5;
+  vec3 shade=vec3(.47,.42,.50),midc=vec3(.72,.68,.73),top=vec3(.93,.91,.94);
+  rgb=mix(shade,midc,smoothstep(-.18-ab,-.18+ab,lit));
+  rgb=mix(rgb,top,smoothstep(.22-ab,.22+ab,lit));
+  rgb=mix(rgb,rgb*vec3(.84,.68,1.1),violet);
   alpha=body*tint.a;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.

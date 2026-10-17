@@ -106,4 +106,31 @@ class TimeWalkerSkillTest {
         var half=clip.copy();KagenoClips.walkLegs(half,walk,.5f,0);
         assertEquals(angle(clip.joint[4],walk.joint[4])/2,angle(half.joint[4],clip.joint[4]),.05);
     }
+
+    /** The impact frame lands only with the final cut, comes in and goes out over frames, and turns from white-on-black to dark-on-white. */
+    @Test void theImpactFrameHitsOnlyTheFinisherAndRampsOverFrames(){
+        float r=TimeWalkerSkill.RELEASE;
+        for(float t=0;t<4;t+=1/240f)if(t<r-.011f||t>r+.126f)assertEquals(0,TimeWalkerSkill.impact(t),1e-6,"at "+t);
+        assertTrue(TimeWalkerSkill.impact(r+.05f)>.99f&&TimeWalkerSkill.impact(r+.085f)>.99f);
+        for(float t=r-.05f;t<r+.15f;t+=1/240f){
+            assertTrue(Math.abs(TimeWalkerSkill.impact(t+1/60f)-TimeWalkerSkill.impact(t))<.8f,"impact jumps at "+t);
+            assertTrue(Math.abs(TimeWalkerSkill.impactMode(t+1/60f)-TimeWalkerSkill.impactMode(t))<.8f,"mode jumps at "+t);
+        }
+        assertTrue(TimeWalkerSkill.impactMode(r+.03f)<.01f&&TimeWalkerSkill.impactMode(r+.08f)>.99f);
+    }
+    /** Every chunk of floor thrown at the release has landed and lies still before it starts to shrink away. */
+    @Test void floorChunksLandBeforeTheyShrinkAway(){
+        net.minecraft.util.math.Vec3d right=new net.minecraft.util.math.Vec3d(1,0,0),fw=new net.minecraft.util.math.Vec3d(0,0,1),floor=new net.minecraft.util.math.Vec3d(0,64,0);
+        for(int k=0;k<TimeWalkerSkill.CHUNKS;k++){
+            assertTrue(TimeWalkerSkill.chunkBorn(k)<=.015f);
+            double size=TimeWalkerSkill.chunkSize(k,0),ground=floor.y+size*.5;
+            var start=TimeWalkerSkill.chunkStart(right,fw,floor,k);var v=TimeWalkerSkill.chunkVelocity(right,fw,k);
+            assertTrue(v.y>=5,"thrown up");
+            assertTrue(Math.abs(start.x-floor.x)<=7.5+1e-9,"along the band");
+            var still=dev.sangwoo.celestialfall.client.vfx.FxSolids.flight(start,v,ground,1.55);
+            assertEquals(ground,still.y,1e-9,"chunk "+k+" still in the air when it starts to shrink");
+            assertTrue(still.distanceTo(dev.sangwoo.celestialfall.client.vfx.FxSolids.flight(start,v,ground,3))<.05,"chunk "+k+" still sliding far");
+            assertEquals(size,TimeWalkerSkill.chunkSize(k,1.5f),1e-9);assertEquals(0,TimeWalkerSkill.chunkSize(k,1.95f),1e-9);
+        }
+    }
 }

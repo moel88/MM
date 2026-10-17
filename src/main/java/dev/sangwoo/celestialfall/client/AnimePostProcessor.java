@@ -27,6 +27,8 @@ public final class AnimePostProcessor {
         MinecraftClient mc=MinecraftClient.getInstance();
         // R has a separate final pass, after hands and other post processors.
         float mono=0;boolean timeStop=false;
+        // When the effect layer drew this frame it brought its own bloom (effects only): the scene-wide one stays low.
+        boolean layered=dev.sangwoo.celestialfall.client.vfx.FxLayer.consumeDrawn();
         if(failed || mc.world==null || mc.player==null || !CelestialFall.CONFIG.postProcessing&&!timeStop)return;
         ClientSpell spell=CinematicDirector.active();
         if(spell==null)spell=CelestialFallClient.nearest();
@@ -62,7 +64,7 @@ public final class AnimePostProcessor {
             draw(1,fbos[2],textures[1],bw,bh,1f/bw,1f/bh);
             GL13.glActiveTexture(GL13.GL_TEXTURE1);GL11.glBindTexture(GL11.GL_TEXTURE_2D,textures[2]);
             f("Strength",strength);f("Time",age/20f);
-            f("Bloom",(float)CelestialFall.CONFIG.bloomStrength);
+            f("Bloom",(float)CelestialFall.CONFIG.bloomStrength*(layered?.25f:1f));
             float wave=timeStop||isAtomic?0:isKageno?dev.sangwoo.celestialfall.client.kageno.KagenoCamera.pulse(kageno.skill(),age):isHeaven?HeavenTimeline.aftershock(age):SpellTimeline.wavePulse(age),clash=timeStop||isKageno||isAtomic || isHeaven?0:SpellTimeline.clashPulse(age);
             f("HeavenTone",isHeaven?1:0);
             f("TimeStopMono",mono);

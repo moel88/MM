@@ -47,7 +47,7 @@ public abstract class GameRendererMixin {
         AnimePostProcessor.render(delta);
     }
     @Inject(method="close",at=@At("HEAD"))
-    private void celestialfall$release(CallbackInfo ci) { AnimePostProcessor.release(); }
+    private void celestialfall$release(CallbackInfo ci) { AnimePostProcessor.release();dev.sangwoo.celestialfall.client.vfx.FxLayer.release(); }
     @Inject(method="getViewDistance",at=@At("RETURN"),cancellable=true)
     private void celestialfall$wideFog(CallbackInfoReturnable<Float> cir) {
         if(dev.sangwoo.celestialfall.client.HeavenClient.wideCinematic())
