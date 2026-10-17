@@ -2,7 +2,8 @@
 usage: python3 tools/kageno/shots/run_shots.py OUT_DIR [SKILLS] [WIDTHxHEIGHT] [SLOW]
 Frames go to OUT_DIR/NAME/ (a repeated skill name gets NAME.2, NAME.3, ...).
 SKILLS is a comma list of entries "NAME;opt=value;...". Options: face, dist, pitch, camyaw, hits, faces, dfw, drt,
-dummy=0, len, then=SKILL@age, view=CHUNKS and far=ex/ey/ez/tx/ty/tz[/fov] (fixed camera in blocks from the cast spot).
+dummy=0, len, then=SKILL@age, view=CHUNKS, far=ex/ey/ez/tx/ty/tz[/fov] (fixed camera in blocks from the cast spot),
+act=NAME:DIST:YAW:SPEED:START+... (running husks for G) and track=NAME:MODE:DIST:UP:SIDE[:FOV] (camera following one).
 """
 from pathlib import Path
 import json, os, shutil, subprocess, sys, zipfile, time, socket
@@ -21,12 +22,13 @@ if not cp_file.exists():
     subprocess.run(['./gradlew', '--offline', '-q', 'writeCombatClasspath'], cwd=ROOT, check=True)
 cp = cp_file.read_text().strip()
 subprocess.run(['javac', '-proc:none', '-encoding', 'UTF-8', '-cp', cp, '-d', str(build / 'classes'),
-                str(HERE / 'SkillShots.java'), str(HERE / 'SkillShotsMixins.java'), str(HERE / 'SkillShotsCameraMixin.java'), str(HERE / 'SkillShotsServerMixin.java')], check=True)
+                str(HERE / 'SkillShots.java'), str(HERE / 'SkillShotsMixins.java'), str(HERE / 'SkillShotsCameraMixin.java'), str(HERE / 'SkillShotsObserverMixin.java'),
+                str(HERE / 'SkillShotsServerMixin.java')], check=True)
 jar = build / 'shots.jar'
 with zipfile.ZipFile(jar, 'w') as z:
     z.writestr('fabric.mod.json', json.dumps({'schemaVersion': 1, 'id': 'botand_shots', 'version': '1.0.0', 'environment': 'client',
         'entrypoints': {'client': ['dev.sangwoo.botandshots.SkillShots']}, 'mixins': ['botand-shots.mixins.json']}))
-    z.writestr('botand-shots.mixins.json', json.dumps({'required': True, 'package': 'dev.sangwoo.botandshots.mixin', 'compatibilityLevel': 'JAVA_17', 'client': ['SkillShotsMixins', 'SkillShotsCameraMixin'], 'mixins': ['SkillShotsServerMixin'], 'injectors': {'defaultRequire': 1}}))
+    z.writestr('botand-shots.mixins.json', json.dumps({'required': True, 'package': 'dev.sangwoo.botandshots.mixin', 'compatibilityLevel': 'JAVA_17', 'client': ['SkillShotsMixins', 'SkillShotsCameraMixin', 'SkillShotsObserverMixin'], 'mixins': ['SkillShotsServerMixin'], 'injectors': {'defaultRequire': 1}}))
     for p in (build / 'classes').rglob('*.class'):
         z.write(p, str(p.relative_to(build / 'classes')))
 shutil.rmtree(out, ignore_errors=True); out.mkdir(parents=True)

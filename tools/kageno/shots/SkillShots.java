@@ -30,6 +30,14 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * Visual QA only: creates a flat world, casts each Kageno skill on the integrated server
  * and saves every rendered frame together with the cast clock. Not shipped in the mod jar.
  * -Dbotand.shots.out=DIR  -Dbotand.shots.list=M1,E,R,...  -Dbotand.shots.slow=N
+ *
+ * <p>Actors for G: "act=NAME:DIST:YAW:SPEED:START+..." puts a husk DIST blocks from the cast spot towards YAW
+ * (Minecraft yaw: 0 south, 90 west, 180 north, 270 east). From START ("impact", "held" = once G's column holds it,
+ * or a cast age in ticks) it runs straight away from the spot at SPEED blocks per second on the ground, through the
+ * game's own movement (so G's hold slows it), stopping 60 blocks out. "track=NAME:MODE:DIST:UP:SIDE[:FOV]" films it
+ * with a camera that follows it: MODE "ahead" (DIST blocks further out and SIDE to the side, looking back at it with the
+ * pillar behind) or "side" (DIST blocks to its side and SIDE behind). Every tick of a shot with actors goes to
+ * NAME/actors.csv. Fixed and following cameras are onlookers: G's hit view goes by where they are (SkillShotsObserverMixin).
  */
 public final class SkillShots implements ClientModInitializer {
     static SkillShots instance;
@@ -44,14 +52,39 @@ public final class SkillShots implements ClientModInitializer {
     private boolean slowed;
     private float camYaw=Float.parseFloat(System.getProperty("botand.shots.yaw","145")),camPitch=12,camDist=Float.parseFloat(System.getProperty("botand.shots.dist","6.5"));
     private net.minecraft.util.math.Vec3d castPos=net.minecraft.util.math.Vec3d.ZERO;private static volatile double[] far;
+    private record Actor(String name,double dist,float yaw,double speed,String start){
+        net.minecraft.util.math.Vec3d dir(){double r=Math.toRadians(yaw);return new net.minecraft.util.math.Vec3d(-Math.sin(r),0,Math.cos(r));}
+    }
+    private final List<Actor> actors=new ArrayList<>();
+    private static final Map<String,Integer> ACTOR_IDS=new ConcurrentHashMap<>();private static final Map<String,Actor> ACTORS=new ConcurrentHashMap<>();
+    private static volatile String[] track;
+    private volatile boolean filming;private volatile long serverStart=-1;private volatile net.minecraft.util.math.Vec3d spot=net.minecraft.util.math.Vec3d.ZERO;
+    private final Set<String> moving=new HashSet<>();private final StringBuilder actorLog=new StringBuilder();
 
     /** Fixed far camera of the current entry ("far=ex/ey/ez/tx/ty/tz[/fov]" in blocks from the cast spot), or null. */
     public static dev.sangwoo.celestialfall.client.CinematicDirector.Pose farPose(){
+        var tracked=trackPose();if(tracked!=null)return tracked;
         double[] f=far;var self=instance;if(f==null||f.length<6||self==null||self.phase<3)return null;
         var o=self.castPos;var eye=o.add(f[0],f[1],f[2]);var d=o.add(f[3],f[4],f[5]).subtract(eye).normalize();
         return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-d.x,d.z)),(float)-Math.toDegrees(Math.asin(d.y)),0);
     }
-    public static double farFov(){double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;}
+    public static double farFov(){
+        String[] t=track;if(t!=null&&instance!=null&&instance.phase>=3)return t.length>5?Double.parseDouble(t[5]):70;
+        double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;
+    }
+    /** The camera following an actor ("track=..."), from its interpolated position on this frame. */
+    private static dev.sangwoo.celestialfall.client.CinematicDirector.Pose trackPose(){
+        String[] t=track;var self=instance;if(t==null||self==null||self.phase<3)return null;
+        var mc=MinecraftClient.getInstance();Integer id=ACTOR_IDS.get(t[0]);Actor a=ACTORS.get(t[0]);
+        var e=id==null||mc.world==null?null:mc.world.getEntityById(id);if(e==null||a==null)return null;
+        var p=e.getLerpedPos(mc.getTickDelta());var dir=a.dir();var side=new net.minecraft.util.math.Vec3d(-dir.z,0,dir.x);
+        double d=Double.parseDouble(t[2]),up=Double.parseDouble(t[3]),s=Double.parseDouble(t[4]);
+        net.minecraft.util.math.Vec3d eye,look;
+        if(t[1].equals("side")){eye=p.add(side.multiply(d)).add(dir.multiply(-s)).add(0,up,0);look=p.add(dir.multiply(1.5)).add(0,1.1,0);}
+        else{eye=p.add(dir.multiply(d)).add(side.multiply(s)).add(0,up,0);look=p.add(0,1.1,0);}
+        var v=look.subtract(eye).normalize();
+        return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-v.x,v.z)),(float)-Math.toDegrees(Math.asin(v.y)),0);
+    }
 
     public static void afterFrame(){if(instance!=null)try{instance.frame();}catch(Throwable t){instance.fail(t);}}
     private void fail(Throwable t){t.printStackTrace();try{Files.createDirectories(OUT);Files.writeString(OUT.resolve("error.txt"),phase+" "+current+" "+t+"\n"+log);}catch(Exception ignored){}mc.scheduleStop();phase=99;}
@@ -96,11 +129,48 @@ public final class SkillShots implements ClientModInitializer {
         if(!(d instanceof net.minecraft.entity.LivingEntity)||!d.isAlive()){
             var dummy=TrainingDummies.TYPES.values().iterator().next().create(p.getServerWorld());dummy.refreshPositionAndAngles(.5,y,3.5,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
         }
+        actors(p.getServerWorld(),y);
         if(d instanceof net.minecraft.entity.LivingEntity l){
             var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
             boolean show=opt("dummy",1)>0;var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
             // Hidden dummies wait far to the side (below the floor they would fall out of the world).
             l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(show?at.x:at.x+70,y,at.z,yaw+180,0);l.setVelocity(0,0,0);
+        }
+    }
+    /** Removes the last shot's actors and spawns this one's: still husks with no goals and plenty of health. */
+    private void actors(net.minecraft.server.world.ServerWorld w,int y){
+        for(int id:ACTOR_IDS.values()){var old=w.getEntityById(id);if(old!=null)old.discard();}
+        ACTOR_IDS.clear();ACTORS.clear();moving.clear();
+        for(var a:actors){
+            var husk=net.minecraft.entity.EntityType.HUSK.create(w);if(husk==null)continue;
+            var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(a.dir().multiply(a.dist));
+            husk.refreshPositionAndAngles(at.x,y,at.z,a.yaw,0);husk.setHeadYaw(a.yaw);husk.setBodyYaw(a.yaw);
+            husk.setPersistent();husk.setSilent(true);
+            try{for(String f:new String[]{"goalSelector","targetSelector"}){var field=net.minecraft.entity.mob.MobEntity.class.getDeclaredField(f);field.setAccessible(true);
+                ((net.minecraft.entity.ai.goal.GoalSelector)field.get(husk)).clear(g->true);}}catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+            husk.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MAX_HEALTH).setBaseValue(4000);husk.setHealth(4000);
+            // A mob's ground speed is 0.98 s^2 / (1 - 0.6 * 0.91) blocks a tick for movement speed s (MoveControl at speed 1).
+            husk.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(Math.sqrt(a.speed/20*(1-.6*.91)/.98));
+            w.spawnEntity(husk);ACTOR_IDS.put(a.name,husk.getId());ACTORS.put(a.name,a);
+        }
+    }
+    /** Server tick of a shot with actors: start and steer them, and log where they are, whether G holds them and its edge. */
+    private void actorTick(net.minecraft.server.MinecraftServer server){
+        if(!filming||actors.isEmpty()||serverStart<0)return;
+        var w=server.getOverworld();long age=w.getTime()-serverStart;
+        double edge=dev.sangwoo.celestialfall.AtomicTimeline.holdRadius(age,CelestialFall.CONFIG.atomicVisualRadius);
+        for(var a:actors){
+            Integer id=ACTOR_IDS.get(a.name);var e=id==null?null:w.getEntityById(id);
+            if(!(e instanceof net.minecraft.entity.mob.MobEntity mob))continue;
+            var speed=mob.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
+            boolean held=speed.getModifier(dev.sangwoo.celestialfall.AtomicTimeline.HIT_SLOW_ID)!=null;
+            double out=Math.hypot(mob.getX()-spot.x,mob.getZ()-spot.z);
+            boolean go=moving.contains(a.name)||switch(a.start){case "impact"->age>=dev.sangwoo.celestialfall.AtomicTimeline.IMPACT;case "held"->held;default->age>=Long.parseLong(a.start);};
+            if(go&&out<60){
+                moving.add(a.name);var target=spot.add(a.dir().multiply(400));
+                mob.getMoveControl().moveTo(target.x,mob.getY(),target.z,1);
+            }
+            actorLog.append(String.format(Locale.ROOT,"%d,%s,%.3f,%.3f,%.3f,%d,%.4f,%.3f%n",age,a.name,mob.getX(),mob.getZ(),out,held?1:0,speed.getValue()/speed.getBaseValue(),edge));
         }
     }
     private float opt(String key,float fallback){var v=opts.get(key);return v==null?fallback:Float.parseFloat(v);}
@@ -113,6 +183,7 @@ public final class SkillShots implements ClientModInitializer {
     @Override public void onInitializeClient(){
         instance=this;
         ClientTickEvents.END_CLIENT_TICK.register(client->{mc=client;try{tick();}catch(Throwable t){fail(t);}});
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server->{try{actorTick(server);}catch(Throwable t){if(mc!=null)mc.execute(()->fail(t));}});
     }
     private void tick()throws Exception{
         age++;if((System.nanoTime()-started)/1e9>1500*SLOW)throw new IllegalStateException("timeout");
@@ -131,13 +202,16 @@ public final class SkillShots implements ClientModInitializer {
                 if(mc.player!=null&&mc.world!=null&&mc.currentScreen==null&&age>60){server(this::setup);phase=2;age=0;}}
             case 2->{if(age>60&&StandClient.visible(mc.player)){phase=3;age=0;}else if(age>400)throw new IllegalStateException("stand never visible, map="+MapClient.enabled());}
             case 3->{ // next skill
-                if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];int n=repeats.merge(current,1,Integer::sum);folder=n==1?current:current+"."+n;opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}server(this::reset);
+                if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];int n=repeats.merge(current,1,Integer::sum);folder=n==1?current:current+"."+n;opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}
                     far=null;if(opts.containsKey("far")){String[] v=opts.get("far").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());far=f;}
+                    actors.clear();if(opts.containsKey("act"))for(String spec:opts.get("act").split("\\+")){String[] v=spec.split(":");actors.add(new Actor(v[0],Double.parseDouble(v[1]),Float.parseFloat(v[2]),Double.parseDouble(v[3]),v[4]));}
+                    track=opts.containsKey("track")?opts.get("track").split(":"):null;
+                    server(this::reset);
                     int view=(int)opt("view",Integer.getInteger("botand.shots.view",6));if(mc.options.getViewDistance().getValue()!=view){mc.options.getViewDistance().setValue(view);mc.worldRenderer.reload();}}
                 if(age==2)camera();
                 if(age==2&&opts.containsKey("far"))castPos=mc.player.getPos();
                 if(age==2)camera();
-                if(age>=(opts.containsKey("far")?90:30)){camera();castPos=mc.player.getPos();castTick=mc.world.getTime()+1;shotIndex=0;trigger(current);phase=4;age=0;}}
+                if(age>=(opts.containsKey("far")||opts.containsKey("track")?90:30)){camera();castPos=mc.player.getPos();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
                 if(current.equals("M1")){
                     String[] at=opts.getOrDefault("hits","0/13/26/39").split("[,/]");String[] faces=opts.getOrDefault("faces","").split("[,/]");
@@ -148,7 +222,8 @@ public final class SkillShots implements ClientModInitializer {
                 if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length==2&&age==Integer.parseInt(sa[1].trim())){int id=skill(sa[0].trim());server(p->KagenoManager.input(p,id));}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
-                if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');if(current.equals("Q"))server(p->{});phase=3;age=0;}}
+                if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');
+                    filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }
     }
     private void trigger(String name){
@@ -158,7 +233,8 @@ public final class SkillShots implements ClientModInitializer {
             case "RUSH"->server(p->KagenoManager.input(p,T_DOWN));
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
-            default->server(p->{if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');});
+            default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
+                if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});
         }
     }
 }

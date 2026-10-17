@@ -140,7 +140,7 @@ public final class MpServer implements ModInitializer {
         if(now==(since!=null))return;
         if(now)holdLogged.put(e.getUuid(),age);else holdLogged.remove(e.getUuid());
         var speed=e.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
-        note(server,String.format(java.util.Locale.ROOT,"%s %s at cast age %d (speed x%.2f)",name,now?"held":"released",age,speed.getValue()/speed.getBaseValue()));
+        note(server,String.format(java.util.Locale.ROOT,"%s %s at cast age %d (speed attribute x%.2f)",name,now?"held":"released",age,speed.getValue()/speed.getBaseValue()));
     }
     private void clearTargets(MinecraftServer server){
         var w=server.getOverworld();
