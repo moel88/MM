@@ -44,6 +44,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * next to the pillar's wall) and logs every frame of G to NAME/shake.csv: cast age in ticks, blocks from the
  * camera to the pillar's wall (negative inside), the wall shake amplitude and the applied yaw and pitch in degrees.
  *
+ * <p>"orbit=R/UP/DEGPS[/START/FW/RT/CY]" films with a camera circling the cast: R blocks from a centre FW forward and RT
+ * right of the cast spot and CY up, UP above the ground, turning DEGPS degrees per second of the cast clock from START
+ * (0 behind the caster, 90 to the caster's right). It shows effects from changing angles (3D shapes stay put in the world).
+ *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
  * shot's own (seconds from the start).
@@ -60,7 +64,7 @@ public final class SkillShots implements ClientModInitializer {
     private final Map<String,Integer> repeats=new HashMap<>();
     private boolean slowed;
     private float camYaw=Float.parseFloat(System.getProperty("botand.shots.yaw","145")),camPitch=12,camDist=Float.parseFloat(System.getProperty("botand.shots.dist","6.5"));
-    private net.minecraft.util.math.Vec3d castPos=net.minecraft.util.math.Vec3d.ZERO;private static volatile double[] far;
+    private net.minecraft.util.math.Vec3d castPos=net.minecraft.util.math.Vec3d.ZERO;private static volatile double[] far,orbit;private float castYaw;
     private record Actor(String name,double dist,float yaw,double speed,String start){
         net.minecraft.util.math.Vec3d dir(){double r=Math.toRadians(yaw);return new net.minecraft.util.math.Vec3d(-Math.sin(r),0,Math.cos(r));}
     }
@@ -73,6 +77,7 @@ public final class SkillShots implements ClientModInitializer {
     /** Fixed far camera of the current entry ("far=ex/ey/ez/tx/ty/tz[/fov]" in blocks from the cast spot), or null. */
     public static dev.sangwoo.celestialfall.client.CinematicDirector.Pose farPose(){
         var tracked=trackPose();if(tracked!=null)return tracked;
+        var circling=orbitPose();if(circling!=null)return circling;
         double[] f=far;var self=instance;if(f==null||f.length<6||self==null||self.phase<3)return null;
         var o=self.castPos;var eye=o.add(f[0],f[1],f[2]);var d=o.add(f[3],f[4],f[5]).subtract(eye).normalize();
         return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-d.x,d.z)),(float)-Math.toDegrees(Math.asin(d.y)),0);
@@ -81,6 +86,7 @@ public final class SkillShots implements ClientModInitializer {
     public static boolean shake(){var self=instance;return shake&&self!=null&&self.phase>=3;}
     public static double farFov(){
         String[] t=track;if(t!=null&&instance!=null&&instance.phase>=3)return t.length>5?Double.parseDouble(t[5]):70;
+        if(orbit!=null&&instance!=null&&instance.phase>=3)return 70;
         double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;
     }
     /**
@@ -92,6 +98,17 @@ public final class SkillShots implements ClientModInitializer {
         String[] t=track;var self=instance;if(t==null||self==null||self.phase<3||!(t[1].equals("behind")||t[1].equals("front")))return null;
         var mc=MinecraftClient.getInstance();Integer id=ACTOR_IDS.get(t[0]);var e=id==null||mc.world==null?null:mc.world.getEntityById(id);
         return e==null?null:e.getLerpedPos(mc.getTickDelta());
+    }
+    /** The camera circling the cast ("orbit=..."), at its angle on this frame of the cast clock. */
+    private static dev.sangwoo.celestialfall.client.CinematicDirector.Pose orbitPose(){
+        double[] o=orbit;var self=instance;if(o==null||o.length<3||self==null||self.phase<3)return null;
+        double r=o[0],up=o[1],speed=o[2],start=o.length>3?o[3]:0,fw=o.length>4?o[4]:0,rt=o.length>5?o[5]:0,cy=o.length>6?o[6]:1;
+        var f=net.minecraft.util.math.Vec3d.fromPolar(0,self.castYaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+        var centre=self.castPos.add(f.multiply(fw)).add(right.multiply(rt)).add(0,cy,0);
+        double a=Math.toRadians(start+speed*Math.max(0,self.phase==4?self.clock():0)/20);
+        var eye=centre.add(f.multiply(-Math.cos(a)*r)).add(right.multiply(Math.sin(a)*r)).add(0,up-cy,0);
+        var v=centre.subtract(eye).normalize();
+        return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-v.x,v.z)),(float)-Math.toDegrees(Math.asin(v.y)),0);
     }
     /** The camera following an actor ("track=..."), from its interpolated position on this frame. */
     private static dev.sangwoo.celestialfall.client.CinematicDirector.Pose trackPose(){
@@ -239,14 +256,15 @@ public final class SkillShots implements ClientModInitializer {
             case 3->{ // next skill
                 if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];int n=repeats.merge(current,1,Integer::sum);folder=n==1?current:current+"."+n;opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}
                     far=null;if(opts.containsKey("far")){String[] v=opts.get("far").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());far=f;}
+                    orbit=null;if(opts.containsKey("orbit")){String[] v=opts.get("orbit").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());orbit=f;}
                     actors.clear();if(opts.containsKey("act"))for(String spec:opts.get("act").split("\\+")){String[] v=spec.split(":");actors.add(new Actor(v[0],Double.parseDouble(v[1]),Float.parseFloat(v[2]),Double.parseDouble(v[3]),v[4]));}
                     track=opts.containsKey("track")?opts.get("track").split(":"):null;shake=opts.containsKey("shake")&&!"0".equals(opts.get("shake"));
                     server(this::reset);
                     int view=(int)opt("view",Integer.getInteger("botand.shots.view",6));if(mc.options.getViewDistance().getValue()!=view){mc.options.getViewDistance().setValue(view);mc.worldRenderer.reload();}}
                 if(age==2)camera();
-                if(age==2&&opts.containsKey("far"))castPos=mc.player.getPos();
+                if(age==2&&(opts.containsKey("far")||opts.containsKey("orbit"))){castPos=mc.player.getPos();castYaw=mc.player.getYaw();}
                 if(age==2)camera();
-                if(age>=(opts.containsKey("far")||opts.containsKey("track")?90:30)){camera();castPos=mc.player.getPos();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
+                if(age>=(opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")?90:30)){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
                 if(current.equals("M1")){
                     String[] at=opts.getOrDefault("hits","0/13/26/39").split("[,/]");String[] faces=opts.getOrDefault("faces","").split("[,/]");

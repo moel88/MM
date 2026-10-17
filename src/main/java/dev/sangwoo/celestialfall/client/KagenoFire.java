@@ -68,43 +68,36 @@ public final class KagenoFire {
         end(b);
     }
     /**
-     * Fire cells (shader mode 13), camera facing and drawn back to front. Each cell is {size, alpha, heat, wisp, seed}:
-     * heat runs from black smoke (0) through blue and violet to magenta and white-hot pink (1), wisp from a round billow
-     * (0) to a curling flame (1).
+     * Fire cells (shader mode 13), drawn back to front, each on three upright planes 60° apart whose turn comes from the
+     * cell's seed: like the game's own fire block they stay put in the world instead of turning to follow the camera,
+     * and from any side at least one of them faces the viewer. Each cell is {size, alpha, heat, wisp, seed}: heat runs
+     * from black smoke (0) through blue and violet to magenta and white-hot pink (1), wisp from a round billow (0) to a
+     * curling flame (1).
      */
     public static void cells(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){
         if(shader==null||pts.isEmpty())return;
         Integer[] order=new Integer[pts.size()];for(int i=0;i<order.length;i++)order[i]=i;
         Arrays.sort(order,Comparator.comparingDouble((Integer i)->pts.get(i).squaredDistanceTo(camera)).reversed());
-        var b=begin(age,13);
+        var b=begin(age,13);float[][] uv={{0,0},{1,0},{1,1},{0,1}};
         for(int i:order){
             float[] c=cells.get(i);if(c[1]<=0||c[0]<=0)continue;Vec3d p=pts.get(i);
-            Vec3d n=camera.subtract(p).normalize(),u=n.crossProduct(UP).normalize();if(u.lengthSquared()<.1)u=X;Vec3d v=u.crossProduct(n).normalize();
-            u=u.multiply(c[0]);v=v.multiply(c[0]);int seed=(int)c[4],heat=Math.round(Math.max(0,Math.min(1,c[2]))*255),wisp=Math.round(Math.max(0,Math.min(1,c[3]))*255),a=Math.max(0,Math.min(255,(int)(c[1]*255)));
-            Vec3d[] corner={p.subtract(u).subtract(v),p.add(u).subtract(v),p.add(u).add(v),p.subtract(u).add(v)};float[][] uv={{0,0},{1,0},{1,1},{0,1}};
-            for(int k=0;k<4;k++)b.vertex(m,(float)corner[k].x,(float)corner[k].y,(float)corner[k].z).texture(uv[k][0],uv[k][1]).color(seed&255,heat,wisp,a).next();
-        }
-        end(b);
-    }
-    /**
-     * T+'s final cut (shader mode 14): a flat blade band round {@code c} from {@code inner} to {@code outer} blocks, from
-     * {@code startDeg} over {@code lengthDeg} degrees (increasing turns clockwise seen from above), brightest at the
-     * leading edge.
-     */
-    public static void sweep(Matrix4f m,Vec3d c,double inner,double outer,double startDeg,double lengthDeg,float alpha,float age){
-        if(shader==null||alpha<=0||outer<=inner||lengthDeg<=0)return;
-        int seg=Math.max(4,(int)((CelestialFall.CONFIG.visualQuality==0?32:64)*lengthDeg/360)),rings=6,a=Math.max(0,Math.min(255,(int)(alpha*255)));var b=begin(age,14);
-        for(int i=0;i<seg;i++)for(int j=0;j<rings;j++){
-            double f0=i/(double)seg,f1=(i+1)/(double)seg,r0=inner+(outer-inner)*j/rings,r1=inner+(outer-inner)*(j+1)/rings;
-            double a0=Math.toRadians(startDeg+lengthDeg*f0),a1=Math.toRadians(startDeg+lengthDeg*f1);
-            double[][] q={{a0,r0,f0},{a1,r0,f1},{a1,r1,f1},{a0,r1,f0}};
-            // uv.x counts whole turns without wrapping; the shader only takes its sine and cosine, so there is no seam.
-            for(double[] v:q){
-                float u=(float)((startDeg+lengthDeg*v[2])/360);
-                b.vertex(m,(float)(c.x+Math.cos(v[0])*v[1]),(float)c.y,(float)(c.z+Math.sin(v[0])*v[1])).texture(u,(float)(v[1]/outer)).color(0,(int)Math.round(v[2]*255),255,a).next();
+            int seed=(int)c[4],heat=Math.round(Math.max(0,Math.min(1,c[2]))*255),wisp=Math.round(Math.max(0,Math.min(1,c[3]))*255),a=Math.max(0,Math.min(255,(int)(c[1]*255)));
+            // The same shape on every plane: seen from any side their union reads as one puff of flame (at least 87% of its width).
+            Vec3d v=UP.multiply(c[0]);
+            for(Vec3d plane:cellPlanes(seed)){
+                Vec3d u=plane.multiply(c[0]);
+                Vec3d[] corner={p.subtract(u).subtract(v),p.add(u).subtract(v),p.add(u).add(v),p.subtract(u).add(v)};
+                for(int q=0;q<4;q++)b.vertex(m,(float)corner[q].x,(float)corner[q].y,(float)corner[q].z).texture(uv[q][0],uv[q][1]).color(seed&255,heat,wisp,a).next();
             }
         }
         end(b);
+    }
+    /** Horizontal directions of a fire cell's three upright planes: 60° apart and turned by its seed alone, never by the camera. */
+    public static Vec3d[] cellPlanes(int seed){
+        double turn=((seed*2654435761L)&0xffff)/65536.0*Math.PI/3;
+        Vec3d[] out=new Vec3d[3];
+        for(int k=0;k<3;k++){double a=turn+k*Math.PI/3;out[k]=new Vec3d(Math.cos(a),0,Math.sin(a));}
+        return out;
     }
     /** T/T+ use curling 3D flame surfaces; other modes retain their sprite treatment. */
     public static void tongues(Matrix4f m,Vec3d camera,int mode,List<Vec3d> roots,List<double[]> sizes,List<Float> alphas,float age){

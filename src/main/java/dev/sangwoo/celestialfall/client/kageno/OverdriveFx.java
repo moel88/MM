@@ -77,7 +77,7 @@ final class OverdriveFx {
     }
     /**
      * Violet flame wisps, ≈27 per second, each 0.25-0.4 s, born on a limb and drifting out and up.
-     * Alpha-blended so they stay violet over a bright daytime sky.
+     * Alpha-blended so they stay violet over a bright daytime sky; drawn on fixed planes, not turned to the camera.
      */
     static void flames(EffectMesh m,MinecraftClient mc,PlayerEntity p,float delta,float now){
         float s=since(mc,p,delta);Body b=body(p,delta);float time=now/20f;
@@ -94,7 +94,12 @@ final class OverdriveFx {
                 double size=(.26+.12*Ease.hash(seed+k*11+3))*(1-.45*u),flick=.8+.2*Math.sin(time*40+k);
                 Vec3d tip=base.add(out.multiply(size*.4)).add(0,size*1.6*flick,0);
                 float a=flames*pulse*(1-Ease.smooth(u,.55f,1))*Ease.smooth(u,0,.15f);
-                m.needle(base,tip,size*1.4,.3,0x9d5ee8,a*.55f);m.needle(base,tip,size*.9,.3,0xc78af5,a*.8f);m.needle(base.add(0,size*.1,0),tip.add(0,-size*.3,0),size*.42,.3,0xf3c4ff,a*.9f);
+                // On two crossed upright planes fixed by the wisp's seed (it stays put instead of turning to the camera).
+                double turn=Ease.hash(seed+k*19+6)*Math.PI;
+                for(int q=0;q<2;q++){
+                    Vec3d side=new Vec3d(Math.cos(turn+q*Math.PI/2),0,Math.sin(turn+q*Math.PI/2));
+                    m.needle(base,tip,side,size*1.4,.3,0x9d5ee8,a*.55f);m.needle(base,tip,side,size*.9,.3,0xc78af5,a*.8f);m.needle(base.add(0,size*.1,0),tip.add(0,-size*.3,0),side,size*.42,.3,0xf3c4ff,a*.9f);
+                }
             }
         }
     }

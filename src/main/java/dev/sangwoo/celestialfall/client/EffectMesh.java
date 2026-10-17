@@ -92,6 +92,12 @@ public final class EffectMesh {
         if(!Double.isFinite(side.x))return;
         quad(a,mid.add(side),b,mid.subtract(side),rgb,alpha);
     }
+    /** The same stroke on a fixed plane: {@code side} (a unit vector across the stroke) instead of turning to the camera. */
+    public void needle(Vec3d a,Vec3d b,Vec3d side,double width,double peak,int rgb,float alpha){
+        if(alpha<=0||b.subtract(a).lengthSquared()<1e-10)return;
+        Vec3d mid=a.add(b.subtract(a).multiply(peak)),half=side.multiply(width*.5);
+        quad(a,mid.add(half),b,mid.subtract(half),rgb,alpha);
+    }
     /** Camera-facing radial gradient: opaque centre fading to a transparent rim. */
     public void softDisc(Vec3d p,double radius,int rgb,float alpha){
         if(alpha<=0||radius<=0)return;

@@ -16,13 +16,14 @@ import static dev.sangwoo.celestialfall.client.kageno.SparkSkill.H;
  * stance; black smoke spreads out on both sides like wings while the sword cuts left, right and left again,
  * throwing three deep-blue crescent beams up the dash line (each just before the server's hit at 1.0, 1.3 and
  * 1.55 s); the sword comes up in front of the face, and at 1.74 s a pink burst launches a flat-out dash that ends
- * in a white-violet spike. A cage of vertical rings and pink orbs forms around the body, then the spin cut sweeps a
- * huge deep-blue blade band round the body at waist height that spreads far out and breaks into thick blue arcs
- * flying away, leaving pink flame wisps burning on the ground. Seconds after the cast.
+ * in a white-violet spike. A cage of vertical rings and pink orbs forms around the body, then the spin cut: huge
+ * deep-blue blade crescents whirl round the body at waist height, each a slash whose tail wears away behind its
+ * edge, spreading far out and breaking into thick blue arcs flying away; pink flame wisps are left burning on the
+ * ground. Seconds after the cast.
  */
 final class ThroughSkill implements Fx.Skill {
     /** Ready stance, dash start (D), end of the glide, ring cage and the final cut (the server's {@code RUSH_FINISH}). */
-    static final float READY=B+.13f,D=B+1.09f,GLIDE=D+.14f,DOME=D+.2f,CUT=D+.85f;
+    static final float READY=B+.13f,D=B+1.09f,GLIDE=D+.14f,CAGE=D+.2f,CUT=D+.85f;
     /** Sword-beam launches, each 0.05 s before one of the server's pre-dash hits. */
     static final float[] BEAMS={.95f,1.25f,1.5f};
     /** Beam speed (blocks per second) and how far it flies: the server's strip reaches 28 blocks ahead. */
@@ -116,23 +117,45 @@ final class ThroughSkill implements Fx.Skill {
             m.softDisc(pos.add(0,1.6,0),1.6,0xa070ff,.5f*a);m.softDisc(pos.add(0,1.2,0),.7,0xf4ecff,.7f*a);
         }
         // Inside the cage: pink orbs drifting round the body.
-        if(t>=DOME&&t<CUT+.35f){
-            float a=Ease.smooth(t,DOME,DOME+.12f)*(1-Ease.smooth(t,CUT+.1f,CUT+.35f));
+        if(t>=CAGE&&t<CUT+.35f){
+            float a=Ease.smooth(t,CAGE,CAGE+.12f)*(1-Ease.smooth(t,CUT+.1f,CUT+.35f));
             for(int k=0;k<16;k++){double ang=t*(1.2+.8*Ease.hash(k*3))+k*Math.PI*2/16,r=1.8+2*Ease.hash(k*5)+(t>CUT?6*Ease.out(t,CUT,CUT+.35f):0);
                 Vec3d p=pos.add(Math.cos(ang)*r,.4+2.6*Ease.hash(k*7)+.25*Math.sin(t*3+k),Math.sin(ang)*r);m.softDisc(p,.28+.22*Ease.hash(k*11),0xff4fd0,a);m.softDisc(p,.1+.06*Ease.hash(k*13),0xffd8f4,a);}
         }
-        // The cut: a flash at the body and the blade band's bright outer edge running outward.
+        // The cut: a flash at the body as the slashes leave it.
         if(t>=CUT&&t<CUT+.1f)FxLib.flash(m,pos.add(0,1,0),2,0x9a7cff,1-Ease.unit(t,CUT,CUT+.1f));
-        if(t>=SWELL+SWEEP&&t<SWELL+.4f){float u=Ease.unit(t,SWELL+SWEEP,SWELL+.4f);FxLib.ring(m,pos.add(0,.7,0),reach(t),1.4,0x5c3cff,.7f*(1-u));}
         // Embers rising from the wisps.
         if(t>=CUT+.2f&&t<CUT+1f){float a=Ease.smooth(t,CUT+.2f,CUT+.3f)*(1-Ease.smooth(t,CUT+.7f,CUT+1f));FxLib.embers(m,pos,7,2.5,22,t-CUT,.8f,.05,0xffa8f0,a,13);}
     }
-    /** The spin cut's blade band starts sweeping just before the cut lands so it is round the body with the server's hit; one turn takes SWEEP. */
-    static final float SWELL=CUT-.13f,SWEEP=.09f;
-    /** Outer edge of the blade band (blocks): 3 as it starts, past 16 half a second later. */
-    static double reach(float t){return 3+13*Ease.out(t,SWELL,SWELL+.5f);}
-    /** Where the band starts (degrees, clockwise from above like the spin): beside the sword at the left. */
+    /** The spin cut's slashes leave just before the cut lands, so they are round the body with the server's hit. */
+    static final float SWELL=CUT-.13f;
+    /**
+     * The spin cut's blade crescents, one per row: delay after SWELL and life (s), outer radius from and to, width
+     * (blocks, at most 60% of the radius so each stays a blade with the body clear inside it), length (degrees),
+     * height of its middle, tilt (degrees, higher behind), where its head starts (degrees past the left side) and
+     * how many blades of light it is (1 the wide deep-blue blade, 0 a thin bright streak).
+     */
+    static final double[][] SLASHES={
+        {0,.36,2.8,9.5,4.2,230,.7,0,0,1},
+        {.04,.36,2.2,8,2.6,200,1.15,8,140,1},
+        {.07,.34,3.5,11,1.6,170,.35,-6,260,1},
+        {.02,.32,4,13,.5,150,.9,3,60,0},
+        {.09,.3,5,15,.35,120,.55,-3,200,0}};
+    /** Degrees a slash's head turns per second, clockwise seen from above like the body's spin. */
+    static final double SPIN=1000;
+    /** Outer radius of the widest slash (blocks) at {@code t}, or 0 before and after it. */
+    static double reach(float t){
+        double[] s=SLASHES[0];float age=(float)(t-SWELL-s[0]);if(age<0||age>=s[1])return 0;
+        return s[2]+(s[3]-s[2])*Ease.out(age,0,(float)s[1]);
+    }
+    /** Where the slashes start (degrees, clockwise from above like the spin): beside the sword at the left. */
     static double sweepStart(Fx c){return Math.toDegrees(Math.atan2(c.f.z,c.f.x))-90;}
+    /** Basis {u, v} of a plane through the body tilted up behind by {@code tilt} degrees; angles in it run clockwise seen from above. */
+    static Vec3d[] slashPlane(Fx c,double tilt){
+        double a=Math.toRadians(tilt);Vec3d n=new Vec3d(0,Math.cos(a),0).add(c.f.multiply(Math.sin(a))).normalize();
+        Vec3d u=new Vec3d(1,0,0).subtract(n.multiply(n.x)).normalize();
+        return new Vec3d[]{u,u.crossProduct(n)};
+    }
     @Override public void crescents(Fx c){
         float t=c.sec;Vec3d pos=c.pos;
         // The beams: deep-blue crescents bowed upward, flying up the dash line.
@@ -142,23 +165,32 @@ final class ThroughSkill implements Fx.Skill {
             KagenoFire.crescent(o,c.right,new Vec3d(0,1,0),1.5,.42,25,130,7,i*5+1,Ease.smooth(age,.14f,.26f),.5f,1);
         }
         // Cage of vertical rings flickering round the body: white-pink and magenta with a few dark violet ones.
-        if(t>=DOME-.05f&&t<CUT){
+        if(t>=CAGE-.05f&&t<CUT){
             for(int k=0;k<60;k++){
-                float born=DOME-.05f+(float)Ease.hash(k*11+1)*(CUT-DOME-.1f),life=.14f+.1f*(float)Ease.hash(k*13+2),u=(t-born)/life;
+                float born=CAGE-.05f+(float)Ease.hash(k*11+1)*(CUT-CAGE-.1f),life=.14f+.1f*(float)Ease.hash(k*13+2),u=(t-born)/life;
                 if(u<0||u>=1)continue;
-                double az=Ease.hash(k*17+3)*Math.PI*2+(t-DOME)*2.5,len=100+60*Ease.hash(k*19+4);
+                double az=Ease.hash(k*17+3)*Math.PI*2+(t-CAGE)*2.5,len=100+60*Ease.hash(k*19+4);
                 Vec3d r=new Vec3d(Math.cos(az),0,Math.sin(az));
                 boolean dark=k%6==2;int style=dark?2:k%5==1?5:k%3==0?7:6;
                 KagenoFire.crescent(pos.add(0,.2,0),r,new Vec3d(0,1,0),1.7*H*(.85+.3*Ease.hash(k*31)),(.08+.14*Ease.hash(k*23))*H,Ease.hash(k*29)*20,len,style,k,Ease.smooth(u,.55f,1),.5f,dark?.7f:.9f*(float)Math.sin(Math.PI*Math.min(1,u*1.6)));
             }
         }
-        // A dark-blue ring winds up round the waist just before the cut, then is thrown out with the blade band.
-        if(t>=SWELL-.14f&&t<SWELL+.4f){
-            float a=t<SWELL?Ease.smooth(t,SWELL-.14f,SWELL-.05f):1-Ease.smooth(t,SWELL+.2f,SWELL+.4f);
-            double r=t<SWELL?2.4:reach(t);
-            for(int s=0;s<2;s++)KagenoFire.crescent(pos.add(0,.9-.3*s,0),new Vec3d(1,0,0),new Vec3d(0,0,1),r,.5+.3*s+(t<SWELL?0:r*.08),t*900+s*170,300,7,s*3+2,0,.5f,a);
+        // A dark-blue ring winds up round the waist just before the cut and goes into the slashes.
+        if(t>=SWELL-.14f&&t<SWELL+.08f){
+            float a=t<SWELL?Ease.smooth(t,SWELL-.14f,SWELL-.05f):1-Ease.smooth(t,SWELL,SWELL+.08f);
+            for(int s=0;s<2;s++)KagenoFire.crescent(pos.add(0,.9-.3*s,0),new Vec3d(1,0,0),new Vec3d(0,0,1),2.4,.5+.3*s,t*900+s*170,300,7,s*3+2,0,.5f,a);
         }
-        // The band breaks into thick blue arcs flying away.
+        // The spin cut: blade crescents whirling round the body and spreading out, each wearing away from its tail
+        // toward its edge so it reads as a slash passing, not a disc.
+        for(int i=0;i<SLASHES.length;i++){
+            double[] b=SLASHES[i];float age=(float)(t-SWELL-b[0]),life=(float)b[1];if(age<0||age>=life)continue;
+            double grow=Ease.out(age,0,life),outer=b[2]+(b[3]-b[2])*grow,width=Math.min(b[4]*(.85+.3*grow),outer*.6);
+            double head=sweepStart(c)+b[8]+SPIN*age;
+            var plane=slashPlane(c,b[7]);
+            KagenoFire.crescent(pos.add(0,b[6],0),plane[0],plane[1],outer,width,head-b[5],b[5],b[9]>.5?7:4,i*3+5,
+                .97f*Ease.smooth(age,life*.2f,life),.85f,1-Ease.smooth(age,life*.55f,life),.2);
+        }
+        // The slashes break into thick blue arcs flying away.
         if(t>=SWELL+.18f&&t<SWELL+.68f){
             float u=Ease.unit(t,SWELL+.18f,SWELL+.68f);
             // Thick ribbons, some tilted, sweeping out past a camera standing a few blocks off.
@@ -186,12 +218,6 @@ final class ThroughSkill implements Fx.Skill {
             pts.add(p);cells.add(new float[]{(float)((.6+.45*Ease.hash(i*17+6))*(1-.25*u)),Ease.smooth(u,0,.18f)*(1-Ease.smooth(u,.55f,1)),(float)(1.0+.12*Ease.hash(i*19+7)),1,i*41+77});
         }
         KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
-        // The spin cut: a deep-blue blade band sweeping once round the body at waist height, two layers thick,
-        // spreading far out, then thinning out from its tail as it breaks into the arcs.
-        if(t>=SWELL&&t<SWELL+.42f){
-            float a=1-Ease.smooth(t,SWELL+.2f,SWELL+.42f);double r=reach(t),turn=360*Ease.out(t,SWELL,SWELL+SWEEP),start=sweepStart(c)+150*(t-SWELL);
-            for(int layer=0;layer<2;layer++)KagenoFire.sweep(c.matrix,c.pos.add(0,.55+.55*layer,0),.6,r*(1-.08*layer),start+layer*14,turn,a*(1-.25f*layer),c.age);
-        }
         // Targets hit by the beams are held in dark orbs until the dash takes them.
         if(t>=BEAMS[0]+.05f&&t<D+.4f&&!c.targets.isEmpty()){
             float form=Ease.out(t,BEAMS[0]+.05f,BEAMS[0]+.2f),a=form*(1-Ease.smooth(t,D+.1f,D+.4f));
@@ -201,10 +227,10 @@ final class ThroughSkill implements Fx.Skill {
         }
     }
     @Override public float flash(Fx c){
-        // The blade band's edge passing under a nearby camera tints the view deep blue for a moment.
-        float t=c.sec;if(t<SWELL||t>=SWELL+.4f)return 0;
-        double d=Math.hypot(c.camera.x-c.pos.x,c.camera.z-c.pos.z),r=reach(t);
-        return d>18?0:.38f*(float)Math.max(0,1-Math.abs(r-d)/3)*(1-Ease.smooth(t,SWELL+.2f,SWELL+.4f));
+        // The widest slash passing under a nearby camera tints the view deep blue for a moment.
+        float t=c.sec;double r=reach(t);if(r<=0)return 0;
+        double d=Math.hypot(c.camera.x-c.pos.x,c.camera.z-c.pos.z);
+        return d>18?0:.38f*(float)Math.max(0,1-Math.abs(r-d)/3)*(1-Ease.smooth(t,SWELL+.2f,SWELL+.36f));
     }
     @Override public int flashColor(Fx c){return 0x2c10c8;}
 }

@@ -198,28 +198,6 @@ void main(){
   float rim=smoothstep(edge-.2,edge-.03,r);
   rgb*=1.0-rim*.35*smoothstep(.2,.5,heat);
   alpha=body*tint.a;
- }else if(Mode==14){
-  // T+ final cut (k-means of the T+ reference): a wide deep-blue blade band sweeping round the body,
-  // streaked along its sweep with electric blue-violet and a few lavender lines. uv.x runs round (whole
-  // turns), uv.y from the body (0) out to the band's edge (1); tint.g runs from the band's tail (0) to its
-  // leading edge (1).
-  float ang=uv.x*6.2831853,rr=uv.y,along=tint.g;
-  vec2 pc=vec2(cos(ang),sin(ang))*rr;
-  // Streaks run round the body like the motion lines of the cut: mostly concentric, gently wavering.
-  float n=fbm(pc*2.4+vec2(Age*.04,-Age*.03)),w=noise(pc*5.0+vec2(-Age*.06,Age*.05));
-  float spiral=rr*7.0+n*.7+.12*sin(ang*2.0+rr*5.0-Age*.2)-Age*.2;
-  float band=.5+.5*sin(spiral*6.2831853);
-  float ribbon=.5+.5*sin((rr*2.3+n*.25-Age*.09)*6.2831853);
-  vec3 deep=vec3(.06,.01,.51),blue=vec3(.10,.0,.70),elec=vec3(.17,.01,.89),vio=vec3(.40,.06,.95),lav=vec3(.65,.22,.97);
-  rgb=mix(deep,blue,smoothstep(.3,.7,n));
-  rgb=mix(rgb,elec,smoothstep(.55,.92,band)*.8*(.6+.4*w));
-  rgb=mix(rgb,vio,smoothstep(.85,.98,band)*.7);
-  rgb=mix(rgb,lav,smoothstep(.9,1.0,ribbon)*.6);
-  // The outer edge and the leading edge of the sweep are brighter, like the blade's edge.
-  rgb=mix(rgb,vio,smoothstep(.86,1.0,rr)*.5);
-  rgb=mix(rgb,lav,smoothstep(.9,1.0,along)*.55);
-  float edge=1.0-smoothstep(.93,1.0,rr+(n-.5)*.08);
-  alpha=.9*smoothstep(.1,.35,rr)*edge*smoothstep(0.0,.18,along)*tint.a;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);
