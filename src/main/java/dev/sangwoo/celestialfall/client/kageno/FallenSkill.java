@@ -50,16 +50,15 @@ final class FallenSkill implements Fx.Skill {
         k(.10,K2,Anim.Ease.LINEAR),
         k(.20,K3),
         k(.25,K4),
-        k(.30,K5,Anim.Ease.OUT),
-        k(.416,K5,Anim.Ease.HOLD),
+        k(.30,K5,Anim.Ease.LINEAR),
+        k(.416,K5.body(22,-22,-17).rArm(78,146)),
         k(.433,K6,Anim.Ease.IN),
         k(.45,K7,Anim.Ease.LINEAR),
         k(LAND,K8,Anim.Ease.LINEAR),
-        k(.86,K8,Anim.Ease.HOLD),
+        k(.86,K8.at(0,-.18,0)),
         k(.97,K9),
-        k(STAND,K9,Anim.Ease.HOLD),
-        k(1.65,KagenoClips.IDLE,Anim.Ease.LINEAR),
-        k(1.7,KagenoClips.IDLE));
+        k(1.55,K9.at(0,-.23,0)),
+        k(1.7,KagenoClips.IDLE)).stops(Anim.stop(LAND,.05,.1));
     @Override public Anim clip(int combo){return CLIP;}
     @Override public float lifetime(){return SINK+.45f;}
 

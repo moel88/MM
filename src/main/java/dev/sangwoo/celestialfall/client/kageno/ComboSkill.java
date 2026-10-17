@@ -24,35 +24,36 @@ final class ComboSkill implements Fx.Skill {
     static final R6.Pose H1_END=pose().body(34,10,0).head(-15,4,0).rArm(-12,-55).lArm(-50,-55).blade(-10,-130).rLeg(-78,22).lLeg(-70,-12);
     static final Anim H1=Anim.joints(
         k(0,KagenoClips.IDLE),
-        k(.08,pose().body(-30,4,0).head(20,0,0).rArm(-20,75).lArm(-55,-25).blade(-30,140).rLeg(-82,15).lLeg(-78,-18),Anim.Ease.OUT),
-        k(.20,pose().body(-38,6,0).head(25,0,0).rArm(0,95).lArm(-50,-30).blade(0,165).rLeg(-82,15).lLeg(-78,-18),Anim.Ease.HOLD),
-        k(.26,pose().body(-5,8,0).head(5,0,0).rArm(5,30).lArm(-50,-45).blade(10,40).rLeg(-80,18).lLeg(-74,-15),Anim.Ease.LINEAR),
-        k(.30,pose().body(28,10,0).head(-12,4,0).rArm(0,-40).lArm(-48,-55).blade(0,-120).rLeg(-78,22).lLeg(-70,-12),Anim.Ease.LINEAR),
-        k(.42,H1_END),
-        k(.60,H1_END,Anim.Ease.HOLD),
-        k(.95,KagenoClips.IDLE));
+        k(.08,pose().body(-30,4,0).head(20,0,0).rArm(-20,75).lArm(-55,-25).blade(-30,140).rLeg(-82,15).lLeg(-78,-18),Anim.Ease.LINEAR),
+        // The coil keeps winding slowly (a moving hold), then the hips lead the cut and the weight goes forward.
+        k(.20,pose().body(-38,6,0).head(25,0,0).rArm(0,95).lArm(-50,-30).blade(0,165).rLeg(-82,15).lLeg(-78,-18)),
+        k(.26,pose().body(-5,8,0).head(5,0,0).at(.04,-.02,0).rArm(5,30).lArm(-50,-45).blade(10,40).rLeg(-80,18).lLeg(-74,-15),Anim.Ease.LINEAR),
+        k(.30,pose().body(28,10,0).head(-12,4,0).at(.08,-.04,0).rArm(0,-40).lArm(-48,-55).blade(0,-120).rLeg(-78,22).lLeg(-70,-12),Anim.Ease.LINEAR),
+        k(.42,H1_END.at(.06,-.03,0)),
+        k(.60,H1_END.body(31,8,0).at(.03,-.015,0)),
+        k(.95,KagenoClips.IDLE)).stops(Anim.stop(HIT,.035,.08));
     // H2 — rising backhand: the sword dips low on the left, then climbs through the front to high right.
     static final R6.Pose H2_END=pose().body(-30,-6,0).head(14,-10,0).rArm(66,60).lArm(-55,-25).blade(80,80).rLeg(-82,15).lLeg(-76,-24);
     static final Anim H2=Anim.joints(
         k(0,H1_END),
-        k(.10,pose().body(36,16,0).head(-10,10,0).rArm(-55,-60).lArm(-35,-70).blade(-70,-110).rLeg(-78,22).lLeg(-70,-12),Anim.Ease.OUT),
-        k(.20,pose().body(36,16,0).head(-10,10,0).rArm(-55,-60).lArm(-35,-70).blade(-70,-110).rLeg(-78,22).lLeg(-70,-12),Anim.Ease.HOLD),
-        k(.26,pose().body(8,8,0).head(0,0,0).rArm(5,-5).lArm(-45,-50).blade(25,-20).rLeg(-80,18).lLeg(-74,-18),Anim.Ease.LINEAR),
-        k(.30,pose().body(-26,-4,0).head(12,-8,0).rArm(60,55).lArm(-50,-25).blade(75,70).rLeg(-82,15).lLeg(-76,-24),Anim.Ease.LINEAR),
-        k(.44,H2_END),
-        k(.60,H2_END,Anim.Ease.HOLD),
-        k(.95,KagenoClips.IDLE));
+        k(.10,pose().body(36,16,0).head(-10,10,0).rArm(-55,-60).lArm(-35,-70).blade(-70,-110).rLeg(-78,22).lLeg(-70,-12),Anim.Ease.LINEAR),
+        k(.20,pose().body(40,18,0).head(-10,10,0).rArm(-58,-64).lArm(-35,-72).blade(-72,-114).rLeg(-78,22).lLeg(-70,-12)),
+        k(.26,pose().body(8,8,0).head(0,0,0).at(.04,.02,0).rArm(5,-5).lArm(-45,-50).blade(25,-20).rLeg(-80,18).lLeg(-74,-18),Anim.Ease.LINEAR),
+        k(.30,pose().body(-26,-4,0).head(12,-8,0).at(.06,.04,0).rArm(60,55).lArm(-50,-25).blade(75,70).rLeg(-82,15).lLeg(-76,-24),Anim.Ease.LINEAR),
+        k(.44,H2_END.at(.04,.02,0)),
+        k(.60,H2_END.body(-28,-4,0).at(.02,.01,0)),
+        k(.95,KagenoClips.IDLE)).stops(Anim.stop(HIT,.035,.08));
     // H3 — overhead chop: both hands up, the blade tilted back, then straight down in front with a forward lean.
     static final R6.Pose H3_END=pose().body(0,28,0).head(0,14,0).at(.1,-.08,0).rArm(-28,0).lArm(-35,-20).blade(-48,0).rLeg(-66,18).lLeg(-82,-14);
     static final Anim H3=Anim.joints(
         k(0,H2_END),
-        k(.10,pose().body(-8,-10,0).head(0,-12,0).rArm(88,15).lArm(60,-20).blade(75,170).rLeg(-84,10).lLeg(-80,-12),Anim.Ease.OUT),
-        k(.20,pose().body(-8,-10,0).head(0,-12,0).rArm(88,15).lArm(60,-20).blade(75,170).rLeg(-84,10).lLeg(-80,-12),Anim.Ease.HOLD),
-        k(.26,pose().body(0,12,0).head(0,0,0).rArm(45,0).lArm(30,-15).blade(55,0).rLeg(-80,14).lLeg(-82,-14),Anim.Ease.LINEAR),
+        k(.10,pose().body(-8,-10,0).head(0,-12,0).rArm(88,15).lArm(60,-20).blade(75,170).rLeg(-84,10).lLeg(-80,-12),Anim.Ease.LINEAR),
+        k(.20,pose().body(-8,-13,0).head(0,-14,0).rArm(88,18).lArm(62,-20).blade(78,172).rLeg(-84,10).lLeg(-80,-12)),
+        k(.26,pose().body(0,12,0).head(0,0,0).at(.05,-.02,0).rArm(45,0).lArm(30,-15).blade(55,0).rLeg(-80,14).lLeg(-82,-14),Anim.Ease.LINEAR),
         k(.30,pose().body(0,26,0).head(0,12,0).at(.1,-.06,0).rArm(-20,0).lArm(-30,-20).blade(-40,0).rLeg(-66,18).lLeg(-82,-14),Anim.Ease.LINEAR),
         k(.42,H3_END),
-        k(.60,H3_END,Anim.Ease.HOLD),
-        k(.95,KagenoClips.IDLE));
+        k(.60,H3_END.body(0,24,0).at(.08,-.06,0)),
+        k(.95,KagenoClips.IDLE)).stops(Anim.stop(HIT,.04,.09));
     // H4 — spin thrust: the sword swings out to the right, a full turn with it held level, then a lunge straight ahead.
     static final R6.Pose THRUST=pose().body(-360,10,0).head(0,0,0).at(.30,-.12,0).rArm(0,0).lArm(-5,165).blade(0,0).rLeg(-62,10).lLeg(-58,185);
     static final Anim H4=Anim.joints(
@@ -60,11 +61,12 @@ final class ComboSkill implements Fx.Skill {
         k(.08,pose().body(-45,8,0).head(10,0,0).rArm(-10,70).lArm(-55,-30).blade(-5,95).rLeg(-80,20).lLeg(-78,-20),Anim.Ease.OUT),
         k(.15,pose().body(-170,6,0).rArm(0,90).lArm(-30,-90).blade(0,95).rLeg(-80,20).lLeg(-78,-20),Anim.Ease.LINEAR),
         k(.23,pose().body(-310,10,0).rArm(0,85).lArm(-35,-70).blade(0,85).rLeg(-80,20).lLeg(-78,-20),Anim.Ease.LINEAR),
-        k(.27,pose().body(-360,14,0).head(0,4,0).rArm(-5,140).lArm(-20,-40).blade(0,150).rLeg(-80,20).lLeg(-78,-20),Anim.Ease.LINEAR),
+        // The free arm starts swinging back during the spin so it is not flung in two frames at the thrust.
+        k(.27,pose().body(-360,14,0).head(0,4,0).rArm(-5,140).lArm(-18,60).blade(0,150).rLeg(-80,20).lLeg(-78,-20),Anim.Ease.LINEAR),
         k(.30,THRUST,Anim.Ease.LINEAR),
-        k(.70,THRUST,Anim.Ease.HOLD),
+        k(.70,THRUST.at(.27,-.11,0).body(-360,9,0)),
         k(.85,pose().body(-360,4,0).at(.15,-.05,0).rArm(-30,10).lArm(-60,-20).blade(-20,20).rLeg(-80,12).lLeg(-80,-12)),
-        k(1.15,KagenoClips.IDLE.body(-360,0,0)));
+        k(1.15,KagenoClips.IDLE.body(-360,0,0))).stops(Anim.stop(HIT,.06,.12));
 
     @Override public Anim clip(int combo){return switch(combo){case 2->H2;case 3->H3;case 4->H4;default->H1;};}
     @Override public float lifetime(){return 1.25f;}

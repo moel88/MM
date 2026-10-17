@@ -43,11 +43,12 @@ public final class Anim {
     private final Stop[] stops;
     private float memoSec=Float.NaN;private R6.Frame memo;
 
-    private Anim(Key[] keys){
+    private Anim(Key[] keys){this(keys,null);}
+    private Anim(Key[] keys,R6.Frame[] solved){
         this.keys=keys.clone();int n=keys.length;
         times=new float[n];frames=new R6.Frame[n];rot=new Quaternionf[n][JOINTS];val=new float[n][];
         for(int k=0;k<n;k++){
-            times[k]=keys[k].sec;frames[k]=R6.solve(keys[k].pose);var f=frames[k];
+            times[k]=keys[k].sec;frames[k]=solved!=null?solved[k]:R6.solve(keys[k].pose);var f=frames[k];
             for(int j=0;j<JOINTS;j++){
                 rot[k][j]=quat(f.joints().joint[j]);
                 if(k>0&&rot[k][j].dot(rot[k-1][j])<0)rot[k][j].set(-rot[k][j].x,-rot[k][j].y,-rot[k][j].z,-rot[k][j].w);
@@ -102,6 +103,11 @@ public final class Anim {
     public static Key k(double sec,Pose pose,Ease ease){return new Key((float)sec,pose,ease);}
     public static Anim of(Key... keys){return new Anim(keys);}
     public static Anim joints(Key... keys){return new Anim(keys);}
+    /** A clip straight from solved frames at the given times, every key SMOOTH (breakdowns flow, extremes settle). */
+    static Anim frames(float[] times,R6.Frame[] frames){
+        Key[] keys=new Key[times.length];for(int i=0;i<keys.length;i++)keys[i]=new Key(times[i],null,Ease.SMOOTH);
+        return new Anim(keys,frames.clone());
+    }
     public static Stop stop(double sec,double hold,double recover){return new Stop((float)sec,(float)hold,(float)recover);}
     /** The same clip with hit-stops (impacts at their own times, in order, not overlapping). */
     public Anim stops(Stop... stops){

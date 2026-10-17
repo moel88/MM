@@ -23,8 +23,18 @@ public final class AtomicPose {
         key(-147,32,-142,-32),key(-160,31,-160,-31),key(-160,31,-160,-31),
         key(-145,38,-145,-38),key(-145,38,-145,-38),key(-160,31,-160,-31),
         key(-171,10,-160,-35),key(-176,-4,-6,-1),IDLE};
+    /** The arms on smooth curves through the keys: the raise flows, the holds settle. */
+    private static final Anim ARMS=Anim.frames(TIMES,KEYS);
     private static final float[] SPIN_TIMES={4.45f,4.53f,4.62f,4.72f,4.82f,5.0f,5.045f,5.075f,5.115f,5.19f,SPIN_END};
     private static final float[] SPIN_ANGLES={0,15,70,105,120,120,155,240,280,325,360};
+    /** Turning speed at each spin key (degrees per second): monotone, so the blade never turns back; at rest at both ends. */
+    private static final float[] SPIN_SPEEDS=new float[SPIN_TIMES.length];
+    static {
+        for(int k=1;k+1<SPIN_TIMES.length;k++){
+            float h1=SPIN_TIMES[k]-SPIN_TIMES[k-1],h2=SPIN_TIMES[k+1]-SPIN_TIMES[k];
+            SPIN_SPEEDS[k]=Anim.auto((SPIN_ANGLES[k]-SPIN_ANGLES[k-1])/h1,(SPIN_ANGLES[k+1]-SPIN_ANGLES[k])/h2,h1,h2);
+        }
+    }
 
     private static R6.Frame key(float rightPitch,float rightRoll,float leftPitch,float leftRoll) {
         MotionPose p=IDLE.joints().copy();
@@ -34,12 +44,12 @@ public final class AtomicPose {
     private static Quaternionf rotation(float[] joint) {
         return new Quaternionf().rotationZYX(joint[2]*RAD,joint[1]*RAD,joint[0]*RAD);
     }
-    /** Unwrapped, one-way revolution. Shortest-path quaternion blending erases a full turn. */
+    /** Unwrapped, one-way revolution (shortest-path quaternion blending would erase a full turn), its speed changing smoothly. */
     public static float spinDegrees(float sec) {
         if(sec<=SPIN_START)return 0;
         for(int i=1;i<SPIN_TIMES.length;i++)if(sec<SPIN_TIMES[i]) {
-            float t=(sec-SPIN_TIMES[i-1])/(SPIN_TIMES[i]-SPIN_TIMES[i-1]);
-            return SPIN_ANGLES[i-1]+(SPIN_ANGLES[i]-SPIN_ANGLES[i-1])*t;
+            float h=SPIN_TIMES[i]-SPIN_TIMES[i-1],u=(sec-SPIN_TIMES[i-1])/h;
+            return Anim.hermite(SPIN_ANGLES[i-1],SPIN_SPEEDS[i-1]*h,SPIN_ANGLES[i],SPIN_SPEEDS[i]*h,u);
         }
         return 360;
     }
@@ -113,8 +123,7 @@ public final class AtomicPose {
     }
     public static R6.Frame frame(float sec) {
         float t=Float.isFinite(sec)?Math.max(0,sec):END;
-        int key=0;while(key<TIMES.length-2&&t>=TIMES[key+1])key++;
-        var f=R6.blend(KEYS[key],KEYS[key+1],Ease.smooth(t,TIMES[key],TIMES[key+1]));
+        var f=ARMS.frame(t);
         supportHand(f.joints(),t);return f;
     }
     /** Blade pivot at the palm, not the item model's remote origin: the hilt cannot orbit out of the hand. */

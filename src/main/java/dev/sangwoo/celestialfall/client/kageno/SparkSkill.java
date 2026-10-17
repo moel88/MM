@@ -34,10 +34,10 @@ final class SparkSkill implements Fx.Skill {
         k(.04,pose().body(-15,0,0).lArm(-45,30).rArm(-80,20).blade(-55,40)),
         k(.11,pose().body(-55,0,0).lArm(0,-55).rArm(-85,150).lLeg(-75,0).rLeg(-75,180).blade(-60,0),Anim.Ease.LINEAR),
         k(.20,PLANT,Anim.Ease.OUT),
-        k(B,PLANT.body(-55,35,0),Anim.Ease.HOLD),
+        k(B,PLANT.body(-55,35,0)),
         k(B+.035,PLANT.body(-27,18,0).lArm(10,-35).rArm(-75,100),Anim.Ease.LINEAR),
         k(B+.09,KagenoClips.IDLE,Anim.Ease.OUT),
-        k(B+.5,KagenoClips.IDLE));
+        k(B+.5,KagenoClips.IDLE)).stops(Anim.stop(B,.05,.1));
     @Override public Anim clip(int combo){return CLIP;}
     @Override public float lifetime(){return B+5.6f;}
 

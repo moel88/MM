@@ -49,7 +49,7 @@ public final class KagenoRenderer {
             // Additive emission.
             RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
             buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
-            for(var x:casts)KagenoSkills.of(x.cast.skill()).additive(x,m);
+            for(var x:casts){KagenoSkills.of(x.cast.skill()).additive(x,m);dev.sangwoo.celestialfall.client.kageno.BodyGhost.draw(x,m);}
             KagenoStatusFx.additive(mc,m,delta,camera);
             BufferRenderer.drawWithGlobalProgram(buffer.end());RenderSystem.defaultBlendFunc();
             // Shader passes (fire, smoke, brush strokes) manage their own buffers.

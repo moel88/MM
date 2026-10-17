@@ -32,10 +32,10 @@ final class ThroughSkill implements Fx.Skill {
         k(.04,pose().body(-15,0,0).lArm(-45,30).rArm(-80,20).blade(-55,40)),
         k(.11,pose().body(-55,0,0).lArm(0,-55).rArm(-85,150).lLeg(-75,0).rLeg(-75,180).blade(-60,0),Anim.Ease.LINEAR),
         k(.20,SparkSkill.PLANT,Anim.Ease.OUT),
-        k(B,SparkSkill.PLANT.body(-55,35,0),Anim.Ease.HOLD),
+        k(B,SparkSkill.PLANT.body(-55,35,0)),
         k(B+.07,pose().rArm(-60,20).blade(-40,40),Anim.Ease.LINEAR),
         k(B+.2,pose().rArm(60,60).blade(60,170)),
-        k(B+.32,pose().rArm(0,0).blade(0,0),Anim.Ease.OUT),
+        k(B+.32,pose().rArm(0,0).blade(0,0),Anim.Ease.LINEAR),
         k(B+.5,GUARD_LOW),
         k(D-.06,GUARD_LOW,Anim.Ease.HOLD),
         k(D,LUNGE,Anim.Ease.OUT),
@@ -46,7 +46,7 @@ final class ThroughSkill implements Fx.Skill {
         k(CUT+.05,CROUCH.body(-360,20,0),Anim.Ease.LINEAR),
         k(D+1.0,FINISH.body(-360,0,0)),
         k(D+1.4,FINISH.body(-360,0,0),Anim.Ease.HOLD),
-        k(B+2.85f,KagenoClips.IDLE.body(-360,0,0)));
+        k(B+2.85f,KagenoClips.IDLE.body(-360,0,0))).stops(Anim.stop(B,.05,.1),Anim.stop(dev.sangwoo.celestialfall.stand.KagenoRules.RUSH_FINISH/20f,.06,.12));
     @Override public Anim clip(int combo){return CLIP;}
     @Override public float lifetime(){return D+1.6f;}
 

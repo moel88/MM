@@ -70,14 +70,14 @@ final class NeonThrustSkill implements Fx.Skill {
             // Swung up through the front, straight up, over the head and down behind.
             k(2.665,world(.2,-.2,2,10,0,d(28,8),d(38,2),d(-30,-120),d(-55,18),d(-58,-172)),Anim.Ease.LINEAR),
             k(UPRIGHT,world(.22,-.08,-4,-4,0,d(80,6),d(88,0),d(-25,-125),d(-62,16),d(-64,-174)),Anim.Ease.LINEAR),
-            k(2.78,world(.22,-.06,-6,-8,0,d(80,172),d(52,178),d(-22,-110),d(-64,16),d(-66,-174)),Anim.Ease.OUT),
+            k(2.78,world(.22,-.06,-6,-8,0,d(80,172),d(52,178),d(-22,-110),d(-64,16),d(-66,-174))),
             k(2.86,world(.2,-.08,-8,-8,0,d(52,172),d(30,178),d(-20,-100),d(-62,16),d(-64,-174))),
-            k(LEVEL,world(.18,-.1,-10,-4,0,d(18,168),d(3,178),d(-20,-90),d(-60,16),d(-62,-174)),Anim.Ease.OUT),
+            k(LEVEL,world(.18,-.1,-10,-4,0,d(18,168),d(3,178),d(-20,-90),d(-60,16),d(-62,-174))),
             k(3.12,world(.16,-.08,-10,-2,0,d(14,168),d(0,178),d(-25,-90),d(-62,16),d(-64,-174))),
             // Brought round the right side, the tip kept off the ground, and at rest.
-            k(3.24,world(.1,-.05,0,4,0,d(-50,50),d(-30,70),d(-70,-20),d(-75,16),d(-78,-172)),Anim.Ease.OUT),
+            k(3.24,world(.1,-.05,0,4,0,d(-50,50),d(-30,70),d(-70,-20),d(-75,16),d(-78,-172))),
             k(REST,KagenoClips.IDLE)));
-        CLIP=Anim.joints(keys.toArray(Key[]::new));
+        CLIP=Anim.joints(keys.toArray(Key[]::new)).stops(Anim.stop(SLASH,.06,.1));
     }
     @Override public Anim clip(int combo){return CLIP;}
     @Override public float lifetime(){return 3.9f;}

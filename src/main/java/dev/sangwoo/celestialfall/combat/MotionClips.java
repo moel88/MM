@@ -71,10 +71,56 @@ public final class MotionClips {
         contact.joint[RIGHT_LEG+ei][1]=sign*18;contact.joint[RIGHT_LEG+ei][0]-=9;contact.knee[ei]+=10;
         follow=contact.copy();follow.joint[BODY][1]+=sign*10;follow.elbow[ei]-=12;follow.joint[arm][1]-=sign*14;follow.lean=-.6f;
         float hit=CombatState.WINDUP[strike],end=CombatState.DURATION[strike];
-        if(age<hit*.48f)return MotionPose.blend(a,wind,smooth(age/(hit*.48f)));
-        if(age<hit)return MotionPose.blend(wind,contact,smooth((age-hit*.48f)/(hit*.52f)));
-        if(age<hit+1.25f)return MotionPose.blend(contact,follow,smooth((age-hit)/1.25f));
-        return MotionPose.blend(follow,a,smooth((age-hit-1.25f)/(end-hit-1.25f)));
+        // Wind-up and follow-through settle; the fist passes through contact at speed (no dead stop on the hit),
+        // then a short hit-stop (longer on the fourth punch) and a catch-up.
+        age=hitStop(age,hit,strike==4?1.2f:.7f,1.6f);
+        return sequence(age,new float[]{0,hit*.48f,hit,hit+1.25f,end},new MotionPose[]{a,wind,contact,follow,a.copy()},2);
+    }
+    /** Clip time for a hit-stop at {@code at}: nearly frozen for {@code hold} ticks, then catching up over {@code recover}. */
+    static float hitStop(float age,float at,float hold,float recover) {
+        float a=age-at;if(a<0||a>=hold+recover)return age;
+        float lag=a<hold?a*.88f:hold*.88f*(1-smooth((a-hold)/recover));
+        return age-lag;
+    }
+    /**
+     * Cubic curve through key poses: every channel settles at the keys, except at key {@code flow} where each channel
+     * keeps a monotone speed through (zero where it turns back), so the motion carries through that key.
+     */
+    static MotionPose sequence(float age,float[] t,MotionPose[] k,int flow) {
+        if(age<=t[0])return k[0].copy();
+        if(age>=t[t.length-1])return k[k.length-1].copy();
+        int i=1;while(age>=t[i])i++;
+        float h=t[i]-t[i-1],u=(age-t[i-1])/h;
+        float[] p0=channels(k[i-1]),p1=channels(k[i]),out=new float[p0.length];
+        float[] m0=i-1==flow?speeds(t,k,flow):new float[p0.length],m1=i==flow?speeds(t,k,flow):new float[p0.length];
+        for(int c=0;c<out.length;c++){
+            float u2=u*u,u3=u2*u;
+            out[c]=(2*u3-3*u2+1)*p0[c]+(u3-2*u2+u)*m0[c]*h+(-2*u3+3*u2)*p1[c]+(u3-u2)*m1[c]*h;
+        }
+        return pose(out);
+    }
+    /** Monotone (Fritsch-Carlson) speed of every channel through key {@code k}. */
+    private static float[] speeds(float[] t,MotionPose[] keys,int k) {
+        float[] a=channels(keys[k-1]),b=channels(keys[k]),c=channels(keys[k+1]),m=new float[b.length];
+        float h1=t[k]-t[k-1],h2=t[k+1]-t[k];
+        for(int i=0;i<m.length;i++){
+            float s1=(b[i]-a[i])/h1,s2=(c[i]-b[i])/h2;
+            if(s1*s2<=0)continue;
+            float w1=2*h2+h1,w2=h2+2*h1;m[i]=(w1+w2)/(w1/s1+w2/s2);
+        }
+        return m;
+    }
+    private static float[] channels(MotionPose p) {
+        float[] c=new float[18+7];int n=0;
+        for(float[] j:p.joint)for(float v:j)c[n++]=v;
+        c[n++]=p.elbow[0];c[n++]=p.elbow[1];c[n++]=p.knee[0];c[n++]=p.knee[1];c[n++]=p.bob;c[n++]=p.shift;c[n++]=p.lean;
+        return c;
+    }
+    private static MotionPose pose(float[] c) {
+        MotionPose p=new MotionPose();int n=0;
+        for(int j=0;j<6;j++)for(int a=0;a<3;a++)p.joint[j][a]=c[n++];
+        p.elbow[0]=c[n++];p.elbow[1]=c[n++];p.knee[0]=c[n++];p.knee[1]=c[n++];p.bob=c[n++];p.shift=c[n++];p.lean=c[n++];
+        return p;
     }
     /** In the air: the knees draw up while rising ({@code rise} 1 = a jump's take-off speed), the legs reach down and the arms lift while falling. */
     public static MotionPose air(float rise,float time) {

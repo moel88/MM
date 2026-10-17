@@ -71,5 +71,9 @@ public final class Fx {
         default float pulse(float sec){return 0;}
         /** Seconds after the cast during which this skill still draws. */
         default float lifetime(){return 6;}
+        /** Strength of the body's speed afterimages at {@code sec} (0..1), or -1 to follow the sword tip's and the body's speed. */
+        default float afterimages(float sec){return -1;}
+        /** Colour of the speed afterimages. */
+        default int afterimageColor(){return 0x8a5cff;}
     }
 }

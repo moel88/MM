@@ -97,7 +97,7 @@ final class HighestSkill implements Fx.Skill {
         keys.add(k(LAND-.01,PUSH.body(0,-265,0).at(APEX_FW+.75,APEX_UP-3.5,0),Anim.Ease.HOLD));
         // One continuous ground path: retreat with the left palm on the floor, brake,
         // release the hand, then immediately drive forward into the sword preparation.
-        keys.add(k(LAND,streetPose(LAND_FW,-.65,55,true),Anim.Ease.SNAP));
+        keys.add(k(LAND,streetPose(LAND_FW,-.65,55,true),Anim.Ease.CUT));
         keys.add(k(2.82,streetPose(LAND_FW-1.40,-.67,58,true),Anim.Ease.LINEAR));
         keys.add(k(2.96,streetPose(LAND_FW-3.40,-.66,57,true),Anim.Ease.LINEAR));
         keys.add(k(3.10,streetPose(LAND_FW-4.70,-.64,53,true),Anim.Ease.LINEAR));

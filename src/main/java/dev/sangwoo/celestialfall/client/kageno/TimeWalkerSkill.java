@@ -38,7 +38,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         k(1.75,SWEEP_A.body(90,8,0).rArm(-10,0).blade(-20,-20),Anim.Ease.LINEAR),
         k(RELEASE,SWEEP_A.at(0,-.45,0).body(0,25,0).rArm(-35,0).blade(-60,0)),
         k(2.07,SWEEP_A.at(0,-.45,0).body(0,25,0).rArm(-35,0).blade(-60,0),Anim.Ease.HOLD),
-        k(2.47,KagenoClips.IDLE));
+        k(2.47,KagenoClips.IDLE)).stops(Anim.stop(dev.sangwoo.celestialfall.stand.KagenoRules.R_RELEASE/20f,.06,.12));
     @Override public Anim clip(int combo){return CLIP;}
     @Override public boolean walkLegs(float sec){return sec>=GRAY&&sec<COLOR;}
     @Override public float lifetime(){return 4.0f;}
