@@ -43,6 +43,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * "shake=1" gives those cameras the Atomic camera shake a player standing there would get (quake, jolt, the shake
  * next to the pillar's wall) and logs every frame of G to NAME/shake.csv: cast age in ticks, blocks from the
  * camera to the pillar's wall (negative inside), the wall shake amplitude and the applied yaw and pitch in degrees.
+ *
+ * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
+ * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
+ * shot's own (seconds from the start).
  */
 public final class SkillShots implements ClientModInitializer {
     static SkillShots instance;
@@ -111,13 +115,13 @@ public final class SkillShots implements ClientModInitializer {
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
     private float clock(){
         float delta=mc.getTickDelta();
-        if("Q".equals(current)||"M1".equals(current))return (mc.world.getTime()-castTick)+delta;
+        if("Q".equals(current)||"M1".equals(current)||"BASE".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
         else{StandClient.Cast best=null;for(var c:StandClient.CASTS.values())if(c.caster().equals(mc.player.getUuid())&&(best==null||c.start()>best.start()))best=c;if(best!=null&&mc.world.getTime()-castTick<400)return best.age(delta);}
         return (mc.world.getTime()-castTick)+delta;
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;default->-1;};}
-    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;default->DURATION[skill(name)]+20;};}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;default->DURATION[skill(name)]+20;};}
 
     private void frame()throws Exception{
         if(phase!=4||current==null)return;
@@ -249,6 +253,11 @@ public final class SkillShots implements ClientModInitializer {
                     for(int i=1;i<at.length;i++)if(age==Integer.parseInt(at[i].trim())){final int hit=i;server(p->{if(faces.length>hit&&!faces[hit].isBlank())face(p,Float.parseFloat(faces[hit]));KagenoManager.input(p,M1);});}
                 }
                 if(current.equals("RUSH")&&age<14)server(p->KagenoManager.input(p,KagenoRules.PULSE));
+                if(current.equals("BASE")){
+                    if((age==10||age==40)&&mc.player.isOnGround())mc.player.jump();
+                    if(age==70||age==85)server(p->p.damage(p.getDamageSources().generic(),1));
+                    if(age==100)server(p->KagenoManager.input(p,M1));
+                }
                 // Follow-up inputs during the shot, "then=M1@60/E@90".
                 if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length==2&&age==Integer.parseInt(sa[1].trim())){int id=skill(sa[0].trim());server(p->KagenoManager.input(p,id));}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
@@ -265,6 +274,7 @@ public final class SkillShots implements ClientModInitializer {
             case "RUSH"->server(p->KagenoManager.input(p,T_DOWN));
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
+            case "BASE"->{}
             default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
                 if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});
         }
