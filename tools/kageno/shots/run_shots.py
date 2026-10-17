@@ -1,6 +1,8 @@
 """Render Kageno skills in the real client under Xvfb and save every frame.
 usage: python3 tools/kageno/shots/run_shots.py OUT_DIR [SKILLS] [WIDTHxHEIGHT] [SLOW]
-Frames go to OUT_DIR/NAME/ (a repeated skill name gets NAME.2, NAME.3, ...).
+Frames go to OUT_DIR/NAME/ (a repeated skill name gets NAME.2, NAME.3, ...). SLOW (default 12) runs the game that many
+times slower than real time so the software renderer saves more than 60 frames per second of the cast clock (film.py
+makes 60 fps clips from them).
 SKILLS is a comma list of entries "NAME;opt=value;...". Options: face, dist, pitch, camyaw, hits, faces, dfw, drt,
 dummy=0, len, then=SKILL@age, view=CHUNKS, far=ex/ey/ez/tx/ty/tz[/fov] (fixed camera in blocks from the cast spot),
 act=NAME:DIST:YAW:SPEED:START+... (running husks for G), track=NAME:MODE:DIST:UP:SIDE[:FOV] (camera following one) and
@@ -14,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 out = Path(sys.argv[1]).resolve()
 skills = sys.argv[2] if len(sys.argv) > 2 else 'F,M1,E,R,T,RUSH,Y,Q,H,G'
 size = sys.argv[3] if len(sys.argv) > 3 else '1280x720'
-slow = sys.argv[4] if len(sys.argv) > 4 else '6'
+slow = sys.argv[4] if len(sys.argv) > 4 else '12'
 w, h = size.split('x')
 build = ROOT / 'build/kageno-shots'
 shutil.rmtree(build, ignore_errors=True); build.mkdir(parents=True)

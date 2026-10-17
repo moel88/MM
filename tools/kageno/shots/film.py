@@ -1,11 +1,13 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
-FILM_SKILL=G|E picks the stage names in the caption, FILM_SPEED=0.5 plays it at half speed.
-Real-time 30 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
+FILM_SKILL=G|E picks the stage names in the caption, FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
+Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
 (ACTOR -, MODE wall) how far the camera is from the pillar's wall and the wall shake it gets.
 SHOT_DIR is a run_shots.py output folder (START/END in seconds of the cast clock). Needs Pillow, ffmpeg and a font with
-Hangul (WenQuanYi Zen Hei, fonts-wqy-zenhei).
+Hangul (WenQuanYi Zen Hei, fonts-wqy-zenhei). Every output frame should be its own game frame: capture with a SLOW of
+about 12 (run_shots.py) so the client renders more than FILM_FPS frames per second of the cast clock; the script
+reports how many output frames had to repeat a game frame.
 """
 import sys, os, glob, bisect, csv, subprocess, tempfile, shutil
 from PIL import Image, ImageDraw, ImageFont
@@ -15,7 +17,7 @@ csv_path, actor, mode = (sys.argv[6], sys.argv[7], sys.argv[8]) if len(sys.argv)
 FONT = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
 big, small = ImageFont.truetype(FONT, 26), ImageFont.truetype(FONT, 22)
 W = int(os.environ.get('FILM_WIDTH', '960'))
-SKILL, SPEED = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FILM_SPEED', '1'))
+SKILL, SPEED, FPS = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FILM_SPEED', '1')), int(os.environ.get('FILM_FPS', '60'))
 
 frames = []
 for f in glob.glob(os.path.join(shots, '*.png')):
@@ -34,12 +36,11 @@ elif csv_path:
 
 def stage(t):
     if SKILL == 'E':
-        if t < .42: return '네온 점화'
-        if t < .8: return '찌르기 자세'
-        if t < 2.42: return '연속 찌르기 (13번, 피해 7회)'
-        if t < 2.84: return '올려베기 준비'
-        if t < 3.04: return '올려베기 (2.9초 마무리 타격)'
-        if t < 3.35: return '마무리'
+        if t < .48: return '네온 점화 · 찌르기 자세'
+        if t < 2.42: return '연속 찌르기 (15번, 피해 7회)'
+        if t < 2.6: return '검을 뒤로 빼기'
+        if t < 2.88: return '올려베기'
+        if t < 3.35: return '폭발 · 빛기둥 (2.9초 마무리 타격)'
         return '끝'
     if t < 5.59: return '영창'
     if t < 5.95: return '점화'
@@ -92,13 +93,14 @@ def caption(img, t):
 
 tmp = tempfile.mkdtemp(dir=os.path.dirname(os.path.abspath(out)))
 try:
-    n, t = 0, start
+    n, t, used = 0, start, []
     while t <= end:
-        i = bisect.bisect_left(times, t); i = min(range(max(0, i - 1), min(len(times), i + 1)), key=lambda j: abs(times[j] - t))
+        i = bisect.bisect_left(times, t); i = min(range(max(0, i - 1), min(len(times), i + 1)), key=lambda j: abs(times[j] - t)); used.append(i)
         img = Image.open(frames[i][1]).convert('RGB'); img = img.resize((W, round(img.height * W / img.width / 2) * 2), Image.LANCZOS)
-        caption(img, t); img.save(os.path.join(tmp, f'{n:05d}.png')); n += 1; t += SPEED / 30
-    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', '30', '-i', os.path.join(tmp, '%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+        caption(img, t); img.save(os.path.join(tmp, f'{n:05d}.png')); n += 1; t = start + n * SPEED / FPS
+    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', str(FPS), '-i', os.path.join(tmp, '%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
                     '-crf', '23', '-preset', 'slow', '-movflags', '+faststart', out], check=True)
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
-print(out, n, 'frames')
+repeats = sum(1 for a, b in zip(used, used[1:]) if a == b)
+print(out, n, 'frames at', FPS, 'fps,', repeats, 'repeat the game frame before')
