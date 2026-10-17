@@ -159,8 +159,8 @@ final class TimeWalkerSkill implements Fx.Skill {
         for(int i=0;i<n;i++){at+=(i>0?GAP:0)+free*w[i]/sum;tilt[i]=at;}
         for(int i=n-1;i>0;i--){int j=r.nextInt(i+1);double k=tilt[i];tilt[i]=tilt[j];tilt[j]=k;}
         double[][] out=new double[n+1][];
-        for(int i=0;i<n;i++)out[i]=new double[]{-22+44*r.nextDouble(),tilt[i],9.5+3.5*r.nextDouble(),-.35+.8*r.nextDouble(),-.45+.9*r.nextDouble(),-.2+.6*r.nextDouble(),.062+.01*r.nextDouble()};
-        out[n]=new double[]{-5+10*r.nextDouble(),-6+12*r.nextDouble(),16,0,0,0,.11};
+        for(int i=0;i<n;i++)out[i]=new double[]{-22+44*r.nextDouble(),tilt[i],6+2*r.nextDouble(),-.35+.8*r.nextDouble(),-.45+.9*r.nextDouble(),-.2+.6*r.nextDouble(),.045+.008*r.nextDouble()};
+        out[n]=new double[]{-5+10*r.nextDouble(),-6+12*r.nextDouble(),10,0,0,0,.08};
         return out;
     }
     static long seed(Fx c){var id=c.cast.id();return id.getMostSignificantBits()*31+id.getLeastSignificantBits();}
@@ -286,7 +286,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         for(int i=0;i<list.size();i++){
             float k=drawn(t,i);if(k<=0)continue;var cut=list.get(i);Vec3d[] e=span(cut,k);Vec3d a=e[0],b=e[1];
             float on=fade*Ease.smooth(t,COCKS[i],COCKS[i]+.015f);double wd=cut.width()*1.5*thin;
-            m.softLine(a,b,wd*12,haze,.26f*on);
+            m.softLine(a,b,wd*9,haze,.26f*on);
             m.softLine(a,b,wd*5,glow,.6f*on);
             m.needle(a,b,wd*2.4,.5,glow,.85f*on);
             m.needle(a,b,wd,.5,WHITE,on);
@@ -459,7 +459,7 @@ final class TimeWalkerSkill implements Fx.Skill {
             glint(m,head,(big?1.5:.8)*(1-u)+.2,0xc77dff,(1-u)*Ease.smooth(age,0,.015f));
             for(int k=0;k<(big?5:2);k++){
                 Vec3d d=pl[0].multiply(.8).add((Ease.hash(i*37+k*3)-.5)*1.2,(Ease.hash(i*41+k*5)-.4)*1.2,(Ease.hash(i*43+k*7)-.5)*1.2).normalize();
-                Vec3d p=head.add(d.multiply((big?3:1.8)*u*(.5+.5*Ease.hash(i*47+k))));
+                Vec3d p=head.add(d.multiply((big?2:1.2)*u*(.5+.5*Ease.hash(i*47+k))));
                 m.needle(p,p.add(d.multiply(.3)),.06,.5,k%2==0?WHITE:0xd9a8ff,(1-u)*(1-u));
             }
         }

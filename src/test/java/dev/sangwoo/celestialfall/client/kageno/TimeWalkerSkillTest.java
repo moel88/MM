@@ -94,7 +94,7 @@ class TimeWalkerSkillTest {
             double low=99,high=-99;
             for(int i=0;i<n;i++){
                 double[] s=spec[i];
-                assertTrue(Math.abs(s[0])<=22&&Math.abs(s[1])<=TimeWalkerSkill.TILT+1e-9&&s[2]>=9.5&&s[2]<=13,"cut "+java.util.Arrays.toString(s));
+                assertTrue(Math.abs(s[0])<=22&&Math.abs(s[1])<=TimeWalkerSkill.TILT+1e-9&&s[2]>=6&&s[2]<=8,"cut "+java.util.Arrays.toString(s));
                 for(int j=0;j<i;j++)assertTrue(Math.abs(s[1]-spec[j][1])>=TimeWalkerSkill.GAP-1e-9,"two cuts alike: "+s[1]+" "+spec[j][1]);
                 low=Math.min(low,s[1]);high=Math.max(high,s[1]);
             }
