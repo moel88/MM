@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.31.7** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.31.8** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.31.8 — E(신속한 맹공) 자세와 이펙트를 새로 만들기
+
+E의 자세와 이펙트를 처음부터 다시 만들었습니다. 검만 분홍 네온이고 스킬 이펙트는 보라색입니다. 왼손으로 칼날을 훑어 네온을 켜고, 낮은 찌르기 자세에서 13번 빠르게 찌른 뒤(피해는 그대로 7회), 등 뒤로 감았다가 크게 올려 벱니다. 올려베기 때 보라 초승달과 빛기둥이 솟습니다. 피해·범위·쿨타임·효과음은 그대로입니다. [RELEASE_2.31.8_KO.md](RELEASE_2.31.8_KO.md)를 확인하세요.
 
 # 보탠드 2.31.7 — 아토믹이 넓어질 때의 가장자리 효과와 벽 근처 강한 흔들림
 
