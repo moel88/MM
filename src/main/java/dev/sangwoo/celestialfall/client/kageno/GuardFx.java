@@ -104,9 +104,10 @@ final class GuardFx {
                 double az=Ease.hash(i*7+11)*Math.PI*2,el=Math.asin(2*Ease.hash(i*11+13)-1);
                 Vec3d d=sph(el,az),side=d.crossProduct(new Vec3d(0,1,0));if(side.lengthSquared()<1e-4)side=new Vec3d(1,0,0);side=side.normalize();
                 Vec3d up=side.crossProduct(d).normalize(),p=o.add(d.multiply(RADIUS*(1+1.6*fly))).add(0,-.8*out*out,0);
-                double s=.07+.06*Ease.hash(i*17+19),spin=out*(8+6*Ease.hash(i*19+23))+i;
-                Vec3d e1=side.multiply(Math.cos(spin)).add(up.multiply(Math.sin(spin))).multiply(s),e2=side.multiply(Math.cos(spin+2.1)).add(up.multiply(Math.sin(spin+2.1))).multiply(s*.8);
-                m.triangle(p.add(e1),p.add(e2),p.subtract(e1.add(e2).multiply(.6)),0xf0ecff,.8f*(1-u));
+                double s=.15+.12*Ease.hash(i*17+19),spin=out*(8+6*Ease.hash(i*19+23))+i;
+                Vec3d e1=side.multiply(Math.cos(spin)).add(up.multiply(Math.sin(spin))).multiply(s),e2=side.multiply(Math.cos(spin+2.1)).add(up.multiply(Math.sin(spin+2.1))).multiply(s*.8),e3=e1.add(e2).multiply(-.6);
+                m.triangle(p.add(e1),p.add(e2),p.add(e3),0xb8a8ff,.7f*(1-u));
+                m.triangle(p.add(e1.multiply(.5)),p.add(e2.multiply(.5)),p.add(e3.multiply(.5)),0xffffff,.9f*(1-u));
             }
         }
     }
