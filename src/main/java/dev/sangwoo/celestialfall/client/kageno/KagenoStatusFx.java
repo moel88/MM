@@ -3,6 +3,8 @@ package dev.sangwoo.celestialfall.client.kageno;
 import dev.sangwoo.celestialfall.client.CombatClient;
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.StandClient;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
@@ -52,6 +54,53 @@ public final class KagenoStatusFx {
             if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
             if(p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
             OverdriveFx.aura(m,mc,p,delta,now+delta);
+        }
+    }
+    /** A guard bubble or an overdrive shows near the camera (they are drawn on the effect layer then). */
+    public static boolean showing(MinecraftClient mc,float delta,Vec3d camera){
+        if(mc.world==null)return false;
+        for(var p:mc.world.getPlayers()){
+            if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
+            if(!Float.isNaN(KagenoClips.guardSec(p.getUuid(),delta)))return true;
+            float out=KagenoClips.releaseSec(p.getUuid(),delta);if(!Float.isNaN(out)&&out<.2f)return true;
+        }
+        long now=mc.world.getTime();
+        for(var entry:StandClient.STATES.entrySet()){
+            if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());
+            if(p!=null&&StandClient.visible(p)&&p.getLerpedPos(delta).squaredDistanceTo(camera)<=64*64)return true;
+        }
+        return false;
+    }
+    /** Lights on the effect layer: the guard bubble's soft white-violet glow (a flare as it goes up), the overdrive's activation and aura. */
+    public static void frame(MinecraftClient mc,FxFrame f,float delta,Vec3d camera){
+        for(var p:mc.world.getPlayers()){
+            if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
+            float in=KagenoClips.guardSec(p.getUuid(),delta),out=KagenoClips.releaseSec(p.getUuid(),delta);
+            float a=!Float.isNaN(in)?Ease.smooth(in,0,.05f):!Float.isNaN(out)?1-Ease.smooth(out,0,.15f):0;
+            if(a<=0)continue;
+            float rise=Float.isNaN(in)?0:1-Ease.smooth(in,.05f,.3f);
+            f.light(p.getLerpedPos(delta).add(0,GuardFx.CENTER,0),0xddd4ff,3.6+1.5*rise,.5f*a+1.2f*rise);
+        }
+        long now=mc.world.getTime();
+        for(var entry:StandClient.STATES.entrySet()){
+            if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
+            if(p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
+            OverdriveFx.frame(mc,p,delta,camera,f);
+        }
+    }
+    /** Refraction on the effect layer: the guard bubble bursting as it drops, the overdrive's activation shock. */
+    public static void distort(MinecraftClient mc,FxDistort d,float delta,Vec3d camera){
+        for(var p:mc.world.getPlayers()){
+            if(!StandClient.visible(p)||p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
+            float out=KagenoClips.releaseSec(p.getUuid(),delta);if(Float.isNaN(out)||out>=.2f)continue;
+            float u=Ease.unit(out,0,.2f);Vec3d o=p.getLerpedPos(delta).add(0,GuardFx.CENTER,0);
+            d.ring(o,new Vec3d(1,0,0),new Vec3d(0,0,1),GuardFx.RADIUS*(1+.9*u),.5,.6f*(1-u));
+        }
+        long now=mc.world.getTime();
+        for(var entry:StandClient.STATES.entrySet()){
+            if(entry.getValue().until()<=now)continue;var p=mc.world.getPlayerByUuid(entry.getKey());if(p==null||!StandClient.visible(p))continue;
+            if(p.getLerpedPos(delta).squaredDistanceTo(camera)>64*64)continue;
+            OverdriveFx.distort(mc,p,delta,d);
         }
     }
 }

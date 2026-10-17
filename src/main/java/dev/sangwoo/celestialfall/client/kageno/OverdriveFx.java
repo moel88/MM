@@ -156,4 +156,29 @@ final class OverdriveFx {
         float s=since(mc,p,delta);if(s>=.3f||p.getLerpedPos(delta).squaredDistanceTo(camera)>28*28)return 0;
         return .38f*Ease.smooth(s,0,.05f)*(1-Ease.smooth(s,.18f,.3f));
     }
+    /**
+     * Lights on the effect layer: the activation's white-violet flash with a light shaft for viewers close by, then a
+     * steady violet glow round the body (pulsing with the flames) and the eye's glint.
+     */
+    static void frame(MinecraftClient mc,PlayerEntity p,float delta,Vec3d camera,dev.sangwoo.celestialfall.client.vfx.FxFrame f){
+        float s=since(mc,p,delta);Body b=body(p,delta);float time=(mc.world.getTime()+delta)/20f;
+        if(s<.6f){
+            float k=s<.01f?Ease.smooth(s,0,.01f):(float)Math.exp(-(s-.01f)/.14);
+            f.light(b.at(0,1.0,0),0xf2e6ff,10,3f*k);
+            float near=(float)Math.max(0,Math.min(1,(26-camera.distanceTo(b.feet()))/12));
+            if(near>0)f.shaft(b.at(0,1.0,0),0xe8d8ff,.45f*near*k);
+        }
+        float rest=Ease.smooth(s,.3f,.6f);
+        if(rest>0){
+            float pulse=.8f+.2f*(float)Math.sin(time*Math.PI*2/.7f);
+            f.light(b.at(0,1.0,0),0x9a5cff,4.5,.75f*rest*pulse);
+            f.light(p.getLerpedPos(delta).add(0,p.getStandingEyeHeight()+.1,0),0xd8ccff,1.8,.45f*Ease.smooth(s,.08f,.2f));
+        }
+    }
+    /** The activation's shock: a ring racing over the ground and one round the body. */
+    static void distort(MinecraftClient mc,PlayerEntity p,float delta,dev.sangwoo.celestialfall.client.vfx.FxDistort d){
+        float s=since(mc,p,delta);if(s>=.45f)return;Body b=body(p,delta);float u=Ease.unit(s,0,.45f);
+        d.ring(b.feet().add(0,.05,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.3+4.5*Ease.out(s,0,.4f),1.2,.8f*(1-u));
+        d.ring(b.at(0,1.0,0),b.right(),new Vec3d(0,1,0),.3+2.5*Ease.out(s,0,.3f),.7,.6f*(1-Ease.unit(s,0,.3f)));
+    }
 }

@@ -2,6 +2,10 @@ package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.KagenoFire;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
+import dev.sangwoo.celestialfall.client.vfx.FxLayer;
+import dev.sangwoo.celestialfall.client.vfx.FxSolids;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.Vec3d;
 import java.util.ArrayList;
@@ -104,7 +108,8 @@ final class ThroughSkill implements Fx.Skill {
         if(t>=1.6f&&t<D+.03f){float a=Ease.smooth(t,1.6f,1.72f);Vec3d tip=c.origin.add(c.f.multiply(.45)).add(0,2.2,0);m.softDisc(tip,.3+.35*a,0xff9ce8,.6f*a);m.star(tip,.5*a,0xffffff,a);}
         // Launch: a pink burst left at the start, and the dash line itself fading.
         if(t>=D&&t<D+.22f){
-            float u=Ease.unit(t,D,D+.22f),a=1-Ease.smooth(t,D+.04f,D+.22f);Vec3d o=c.origin.add(0,1,0);
+            // On the effect layer the light adds up past white, so the burst is drawn a little softer there.
+            float u=Ease.unit(t,D,D+.22f),a=(FxLayer.available()?.65f:1)*(1-Ease.smooth(t,D+.04f,D+.22f));Vec3d o=c.origin.add(0,1,0);
             m.softDisc(o,2.5+4*Ease.out(t,D,D+.1f),0xff2fb4,.65f*a);m.softDisc(o,1.2+1.6*u,0xff7ad0,.85f*a);m.softDisc(o,.5+.5*u,0xffd8f4,.7f*a);
             for(int k=0;k<18;k++){double az=k*Math.PI/9+Ease.hash(k*3)*.3,el=(Ease.hash(k*5)-.4)*1.3,len=(2.5+5*Ease.hash(k*7))*(.35+.65*Ease.out(t,D,D+.08f));
                 Vec3d d=c.f.multiply(Math.cos(el)*Math.cos(az)).add(c.right.multiply(Math.cos(el)*Math.sin(az))).add(0,Math.sin(el),0);m.needle(o.add(d.multiply(.5)),o.add(d.multiply(.5+len)),.45,.25,k%3==0?0xffe0f8:0xff3cc8,a);}
@@ -218,6 +223,19 @@ final class ThroughSkill implements Fx.Skill {
             pts.add(p);cells.add(new float[]{(float)((.6+.45*Ease.hash(i*17+6))*(1-.25*u)),Ease.smooth(u,0,.18f)*(1-Ease.smooth(u,.55f,1)),(float)(1.0+.12*Ease.hash(i*19+7)),1,i*41+77});
         }
         KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
+        // On the effect layer: dust kicked up where the dash leaves and along its line, and a ring of it thrown out by the cut.
+        if(FxLayer.available()&&t>=D-.02f&&t<CUT+1.2f){
+            List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();
+            FxLib.dustRing(c.origin,t,D,.4,2.2,10,1,dust,puffs,121);
+            Vec3d end=new Vec3d(c.pos.x,c.origin.y,c.pos.z);double len=c.origin.distanceTo(end);
+            for(int i=0;i<14&&len>2;i++){
+                double along=(i+.5)/14*len;float born=D+.1f*(float)(along/len),s=t-born-.02f*(float)Ease.hash(i*3+131),life=.7f+.3f*(float)Ease.hash(i*5+132);if(s<0||s>=life)continue;float u=s/life;
+                Vec3d q=c.origin.add(c.f.multiply(along)).add(c.right.multiply((Ease.hash(i*7+133)-.5)*1.6*(1+u))).add(0,.25+.5*u,0);
+                dust.add(q);puffs.add(new float[]{(float)((.35+.4*Ease.out(u,0,.5f))*(.8+.4*Ease.hash(i*11+134))),.8f*Ease.smooth(s,0,.05f)*(1-Ease.smooth(u,.5f,1)),.55f*(1-u),u,i*37+135});
+            }
+            FxLib.dustRing(end,t,CUT,1.2,6.5,18,1.4,dust,puffs,141);
+            if(!dust.isEmpty())KagenoFire.dust(c.matrix,c.camera,dust,puffs,c.age);
+        }
         // Targets hit by the beams are held in dark orbs until the dash takes them.
         if(t>=BEAMS[0]+.05f&&t<D+.4f&&!c.targets.isEmpty()){
             float form=Ease.out(t,BEAMS[0]+.05f,BEAMS[0]+.2f),a=form*(1-Ease.smooth(t,D+.1f,D+.4f));
@@ -226,9 +244,77 @@ final class ThroughSkill implements Fx.Skill {
             KagenoFire.billboards(c.matrix,c.camera,10,orbs,sizes,alphas,c.age);
         }
     }
+    // ───────────────────────────── effect layer ─────────────────────────────
+
+    @Override public boolean layered(){return true;}
+    /**
+     * Lights: the hand's glow in the windup, each deep-blue beam lighting the dash line as it flies (and the flash it
+     * leaves at the blade), the raised blade's glow, the pink burst at the dash's start and the caster's light along
+     * it, the cage's pink glow, then the spin cut's blinding flash and the pink wisps it leaves. For viewers close by
+     * the cut has the impact frame, a colour split and a light shaft. Decals: the dash burns its line into the floor,
+     * the spin cut gashes it four ways round the caster.
+     */
+    @Override public void frame(Fx c,FxFrame f){
+        float t=c.sec;Vec3d pos=c.pos;
+        if(t>=.13f&&t<B+.05f)f.light(SparkSkill.hand(c),0xcdb0ff,3,.9f*Ease.unit(t,.13f,B));
+        for(int i=0;i<BEAMS.length;i++){
+            float age=t-BEAMS[i];if(age<-.01f||age>=.26f)continue;
+            if(age>=0)f.light(beam(c,i,age),0x5c4cff,7,1.8f*(1-Ease.smooth(age,.12f,.26f)));
+            f.light(c.origin.add(c.f.multiply(1)).add(0,1.25,0),0x8a7cff,5,1.4f*FxLib.kick(t,BEAMS[i],.06f));
+        }
+        if(t>=1.6f&&t<D+.03f)f.light(c.origin.add(c.f.multiply(.45)).add(0,2.2,0),0xff9ce8,4,1.2f*Ease.smooth(t,1.6f,1.72f));
+        if(t>=D-.01f&&t<D+.6f)f.light(c.origin.add(0,1,0),0xff3cc8,10,2.8f*FxLib.kick(t,D,.15f));
+        if(t>=D&&t<D+.45f)f.light(pos.add(0,1.2,0),0xa070ff,7,1.6f*(1-Ease.smooth(t,D+.24f,D+.45f)));
+        float cage=Ease.smooth(t,CAGE,CAGE+.12f)*(1-Ease.smooth(t,CUT+.05f,CUT+.2f));
+        if(cage>0)f.light(pos.add(0,1.2,0),0xff4fd0,6,.9f*cage);
+        Vec3d end=new Vec3d(pos.x,c.origin.y,pos.z);
+        if(t>=CUT-.01f){
+            f.light(pos.add(0,1,0),0xc8b8ff,15,3.4f*FxLib.kick(t,CUT,.2f));
+            float wisps=Ease.smooth(t,CUT+.1f,CUT+.3f)*(1-Ease.smooth(t,CUT+.7f,CUT+1f));
+            if(wisps>0)f.light(pos.add(0,.8,0),0xffa8f0,9,.8f*wisps);
+            float near=FxLib.near(c,pos);
+            if(near>0){f.impact(near*FxLib.impact(t,CUT),FxLib.impactMode(t,CUT));f.chroma(near*.008f*FxLib.kick(t,CUT,.12f));f.shaft(pos.add(0,1,0),0xd0c4ff,.5f*near*FxLib.kick(t,CUT,.22f));}
+            float heat=1-Ease.smooth(t,CUT+.15f,CUT+1.1f),a=Ease.smooth(t,CUT,CUT+.05f)*(1-Ease.smooth(t,3.35f,3.68f));double open=Ease.out(t,CUT,CUT+.12f);
+            for(int k=0;k<4;k++){double ang=Math.toRadians(25+90*k+10*Ease.hash(k*7+151));Vec3d dir=c.f.multiply(Math.cos(ang)).add(c.right.multiply(Math.sin(ang)));
+                f.decal(end.add(dir.multiply(2.6*open+.6)),dir,2.2*open+.2,.45,heat,a,21.1f+k*3.7f);}
+        }
+        if(t>=D){
+            double len=c.origin.distanceTo(end);
+            if(len>1.5){float heat=1-Ease.smooth(t,D+.2f,D+1.4f),a=Ease.smooth(t,D,D+.08f)*(1-Ease.smooth(t,3.35f,3.68f));
+                f.decal(c.origin.add(end).multiply(.5),c.f,len*.5,.55,heat,a,17.3f);}
+        }
+    }
+    /** The air bends along each beam, along the dash line as it is drawn, and in the spin cut's slashes and its shock over the floor. */
+    @Override public void distort(Fx c,FxDistort d){
+        float t=c.sec;Vec3d pos=c.pos;
+        for(int i=0;i<BEAMS.length;i++){
+            float age=t-BEAMS[i];if(age<0||age>=.22f)continue;
+            Vec3d o=beam(c,i,age).add(0,-1.5*.55,0);
+            d.arc(o,c.right,FxLib.UP,1.6,.8,25,130,.7f*(1-Ease.smooth(age,.1f,.22f)));
+        }
+        if(t>=D&&t<D+.35f){Vec3d from=c.origin.add(0,1,0),to=pos.add(0,1,0);if(from.distanceTo(to)>1)d.band(from,to,FxLib.UP,1.4,.8f*(1-Ease.smooth(t,D+.12f,D+.35f)));}
+        for(int i=0;i<SLASHES.length;i++){
+            double[] b=SLASHES[i];float age=(float)(t-SWELL-b[0]),life=(float)b[1];if(age<0||age>=life)continue;
+            double grow=Ease.out(age,0,life),outer=b[2]+(b[3]-b[2])*grow,width=Math.min(b[4]*(.85+.3*grow),outer*.6);
+            var plane=slashPlane(c,b[7]);double head=sweepStart(c)+b[8]+SPIN*age;
+            d.arc(pos.add(0,b[6],0),plane[0],plane[1],outer,width,head-b[5],b[5],(b[9]>.5?.7f:.4f)*(1-Ease.smooth(age,life*.5f,life)));
+        }
+        if(t>=CUT-.01f&&t<CUT+.5f){
+            float in=Ease.smooth(t,CUT-.01f,CUT+.015f);
+            d.ring(new Vec3d(pos.x,c.origin.y+.05,pos.z),c.right,c.f,.5+11*Ease.out(t,CUT,CUT+.5f),1.8,.9f*in*(1-Ease.unit(t,CUT,CUT+.5f)));
+        }
+    }
+    /** The spin cut tears up the floor: chunks thrown out round the caster and the floor heaving in a ring. */
+    @Override public void solids(Fx c,FxSolids s){
+        float t=c.sec;if(t<CUT||t>=CUT+1.4f)return;Vec3d end=new Vec3d(c.pos.x,c.origin.y,c.pos.z);
+        FxLib.chunks(s,end,t-CUT,16,1401,5,6.5,.2,.9f);
+        FxLib.heave(s,end,t-CUT,8,.32,16,1.1,1.4);
+    }
     @Override public float flash(Fx c){
         // The widest slash passing under a nearby camera tints the view deep blue for a moment.
         float t=c.sec;double r=reach(t);if(r<=0)return 0;
+        // On the effect layer the cut's impact frame owns those frames; the tint follows it.
+        if(FxLayer.available()&&t>=CUT-.02f&&t<CUT+.13f)return 0;
         double d=Math.hypot(c.camera.x-c.pos.x,c.camera.z-c.pos.z);
         return d>18?0:.38f*(float)Math.max(0,1-Math.abs(r-d)/3)*(1-Ease.smooth(t,SWELL+.2f,SWELL+.36f));
     }

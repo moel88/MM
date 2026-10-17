@@ -218,6 +218,17 @@ public final class KagenoFire {
             cpoint(o.add(r1.multiply(outer)),(float)t1,1,code,erase,taper,alpha);cpoint(o.add(r0.multiply(outer)),(float)t0,1,code,erase,taper,alpha);
         }
     }
+    /**
+     * A brush band along any swept path (a sword's own swing): {@code inner[i]}..{@code outer[i]} across it, {@code along[i]}
+     * from 0 at the tail to 1 at the head along it ({@code n} points), drawn like a crescent of {@code style}.
+     */
+    public static void ribbon(Vec3d[] inner,Vec3d[] outer,float[] along,int n,int style,int seed,float erase,float taper,float alpha){
+        if(crescents==null||alpha<=0||erase>=1||n<2)return;int code=(style&15)*16+(seed&15);
+        for(int i=0;i+1<n;i++){
+            cpoint(inner[i],along[i],0,code,erase,taper,alpha);cpoint(inner[i+1],along[i+1],0,code,erase,taper,alpha);
+            cpoint(outer[i+1],along[i+1],1,code,erase,taper,alpha);cpoint(outer[i],along[i],1,code,erase,taper,alpha);
+        }
+    }
     /** Straight band a→b, width measured along {@code side}. */
     public static void streak(Vec3d a,Vec3d b,Vec3d side,double width,int seed,float alpha){
         if(strokes==null||alpha<=0)return;Vec3d s=side.normalize().multiply(width*.5);

@@ -29,12 +29,15 @@ public final class KagenoClips {
     private static final Anim GUARD_OUT=Anim.of(k(0,GUARD),k(.12,IDLE));
     private static final java.util.Map<java.util.UUID,long[]> GUARDS=new java.util.HashMap<>();
     private static final java.util.Map<java.util.UUID,R6.Frame> COMBO_STARTS=new java.util.LinkedHashMap<>();
-    /** A queued M1 starts at the pose actually on screen, including early combo inputs. */
+    /**
+     * A queued M1 starts at the pose actually on screen, including early combo inputs; a later hit of the combo, after
+     * the last one has come to rest, starts from the rest pose instead of jumping to where the last one ended.
+     */
     public static void begin(StandClient.Cast cast){
         if(cast.skill()!=M1)return;
         var previous=animated(cast.caster());
-        if(previous!=null){
-            var f=action(previous,0);
+        if(previous!=null||cast.combo()>1){
+            var f=previous!=null?action(previous,0):idle();
             COMBO_STARTS.put(cast.id(),new R6.Frame(f.joints(),f.grip(),f.fw(),f.up(),f.rt(),
                 net.minecraft.util.math.MathHelper.wrapDegrees(f.yaw()),f.pitch(),f.roll()));
             while(COMBO_STARTS.size()>64)COMBO_STARTS.remove(COMBO_STARTS.keySet().iterator().next());

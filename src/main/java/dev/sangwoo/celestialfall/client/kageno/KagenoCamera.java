@@ -55,9 +55,9 @@ public final class KagenoCamera {
         for(var c:StandClient.CASTS.values()){
             var s=KagenoSkills.of(c.skill());if(s==null)continue;
             double dist=c.origin().distanceTo(mc.player.getPos());float reach=(float)Math.max(0,1-dist/40);
-            var k=s.kick(c.age(delta)/20f);
+            var k=s.kick(c,c.age(delta)/20f);
             if(k!=null&&reach>0){if(kick==null)kick=new float[3];for(int i=0;i<3;i++)kick[i]+=k[i]*reach;}
-            float v=s.shake(c.age(delta)/20f);if(v<=0)continue;
+            float v=s.shake(c,c.age(delta)/20f);if(v<=0)continue;
             amount=Math.max(amount,v*reach);
         }
         if(amount<=0&&kick==null)return null;float strength=(float)CelestialFall.CONFIG.screenShakeStrength;amount*=strength;

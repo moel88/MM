@@ -243,7 +243,7 @@ public final class KagenoManager {
             // (lasting as long as the overdrive itself).
             if(over){long now=c.world.getTime();s.boost=Math.min(1,s.boost+.01f*KagenoRules.hits(c.skill,age));s.overUntil=Math.min(now+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,Math.max(now+200,s.overUntil)));}
             if(c.skill==Y&&(age==Y_STOMP||age==Y_FLASH)&&!frozen(e))c.targets.putIfAbsent(e,e.getPos());
-            // M1 hit 4: the target is held in the thrust's smoke, then launched (see tick).
+            // M1 hit 4: the target is held in the thrust's seal, then launched (see tick).
             if(c.skill==M1&&c.combo==4&&!frozen(e))c.targets.put(e,e.getPos());
             // R's release throws everyone it strikes away from the caster.
             if(c.skill==R&&age==R_RELEASE&&!frozen(e)){

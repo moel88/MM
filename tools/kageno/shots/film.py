@@ -1,5 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
-FILM_SKILL=G|E|T|RUSH|BASE|R picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
+FILM_SKILL=G|E|T|RUSH|BASE|R|M1 picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -40,6 +40,10 @@ STAGES = {
     'RUSH': [(.78, '준비 (T와 같음)'), (.86, '자세'), (1.62, '검은 연기 날개 · 세 번 베기 · 파란 검기 3발'), (1.74, '칼을 세움'),
              (1.94, '분홍 섬광 돌진'), (2.46, '세로 고리 · 분홍 구슬'), (3.1, '회전 베기 (2.6초 마무리 타격)'), (3.7, '분홍 불꽃 · 칼을 세워 듦')],
     'BASE': [(.5, '서 있기'), (3.4, '점프 · 공중 자세 · 착지'), (5.0, '피격 움찔 (2번)'), (7.5, '평타')],
+    # The M1 combo shot clicks at 0, 0.65, 1.3 and 1.95 s of the shot clock.
+    'M1': [(.65, '1타 발도 · 왼쪽 허리에서 오른쪽 위로 올려베기'), (1.3, '2타 되베기 · 오른쪽 위에서 왼쪽 아래로'),
+           (1.95, '3타 회전 내려찍기 · 공중에서 한 바퀴 돌고 바닥을 내려침'), (2.62, '4타 찌르기 · 보라 봉인으로 붙잡음'),
+           (3.3, '4타 올려베기 · 봉인이 깨지며 띄움 (0.7초)')],
     'R': [(.5, '보라 기운 · 몸을 낮췄다가 칼을 머리 위로'), (.92, '세상이 멈춤 (흑백 · 청록 윤곽 · 청록 칼)'),
           (1.45, '베기 4번 · 시전마다 다른 방향으로 앞을 그음 · 허공에 멈춘 선'),
           (1.72, '마지막 큰 베기'), (1.8, '색이 돌아옴'), (1.89, '빛기둥 · 보라 검격 4개 (1.8초 베기 4타)'),

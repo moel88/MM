@@ -1,6 +1,11 @@
 package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
+import dev.sangwoo.celestialfall.client.KagenoFire;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
+import dev.sangwoo.celestialfall.client.vfx.FxLayer;
+import dev.sangwoo.celestialfall.client.vfx.FxSolids;
 import dev.sangwoo.celestialfall.client.StandClient;
 import dev.sangwoo.celestialfall.client.atomic.GroundCache;
 import net.minecraft.block.BlockState;
@@ -206,7 +211,6 @@ final class FallenSkill implements Fx.Skill {
         hitSpark(c,m);stomp(c,m);charge(c,m);
         float t=c.sec-FLASH;if(t<0)return;
         starburst(c,m,t);
-        mist(c,m,t);
         orbs(c,m,t);
         motes(c,m,t);
         arcs(c,m,t,true);
@@ -246,7 +250,6 @@ final class FallenSkill implements Fx.Skill {
     @Override public void alpha(Fx c,EffectMesh m){
         float t=c.sec-FLASH;if(t<0)return;
         arcs(c,m,t,false);
-        dust(c,m,t);
     }
     /** Flat star at chest height: 12 irregular spikes, white centre, pink fringe, violet tips. */
     static void starburst(Fx c,EffectMesh m,float t){
@@ -263,21 +266,34 @@ final class FallenSkill implements Fx.Skill {
         }
         m.softDisc(o,base*1.6,0xfbfdf8,a);
     }
-    /** Luminous low fog over the crater floor as the white-out clears. */
-    static void mist(Fx c,EffectMesh m,float t){
-        if(t<.12f||t>=.55f)return;float a=.22f*(1-Ease.smooth(t,.3f,.55f));
-        for(int i=0;i<16;i++){
-            double ang=Ease.hash(i*3+71)*Math.PI*2,r=(1.2+3.6*Ease.hash(i*5+72))*H;
-            m.softDisc(c.origin.add(Math.cos(ang)*r,.12,Math.sin(ang)*r),1.4+.9*Ease.hash(i*7+73),0xf2f4ff,a);
+    /**
+     * Anime dust puffs on fixed planes (they stay put as the camera moves): the luminous low fog over the crater
+     * floor as the white-out clears and the grey-blue dust hugging the slab bases; on the effect layer also the
+     * stomp's puffs at the foot and the ring of dust the flash throws out over the floor.
+     */
+    @Override public void shaders(Fx c){
+        float t=c.sec-FLASH;List<Vec3d> pts=new ArrayList<>();List<float[]> cells=new ArrayList<>();
+        if(t>=.12f&&t<.55f){
+            float a=.5f*Ease.smooth(t,.12f,.18f)*(1-Ease.smooth(t,.3f,.55f));
+            for(int i=0;i<16;i++){
+                double ang=Ease.hash(i*3+71)*Math.PI*2,r=(1.2+3.6*Ease.hash(i*5+72))*H;
+                pts.add(c.origin.add(Math.cos(ang)*r,.35+.15*(t-.12f),Math.sin(ang)*r));
+                cells.add(new float[]{(float)(.7+.45*Ease.hash(i*7+73)),a,.25f,Ease.unit(t,.12f,.55f)*.6f,i*31+7});
+            }
         }
-    }
-    /** Grey-blue dust hugging the slab bases. */
-    static void dust(Fx c,EffectMesh m,float t){
-        if(t<.42f||t>=1.12f)return;float a=.28f*Ease.window(t,.42f,1.12f,.15f,.4f);
-        for(int i=0;i<10;i++){
-            double ang=Ease.hash(i*3+91)*Math.PI*2,r=(1.3+2.6*Ease.hash(i*5+92))*H+.3*(t-.42f);
-            m.softDisc(c.origin.add(Math.cos(ang)*r,.5+.2*(t-.42f),Math.sin(ang)*r),1.4+.8*Ease.hash(i*7+93),0x9aaed0,a);
+        if(t>=.42f&&t<1.12f){
+            float a=.75f*Ease.window(t,.42f,1.12f,.15f,.4f),u=Ease.unit(t,.42f,1.12f);
+            for(int i=0;i<10;i++){
+                double ang=Ease.hash(i*3+91)*Math.PI*2,r=(1.3+2.6*Ease.hash(i*5+92))*H+.3*(t-.42f);
+                pts.add(c.origin.add(Math.cos(ang)*r,.5+.2*(t-.42f),Math.sin(ang)*r));
+                cells.add(new float[]{(float)(.7+.4*Ease.hash(i*7+93)),a,.2f,u*.8f,i*29+11});
+            }
         }
+        if(FxLayer.available()){
+            FxLib.dustRing(c.origin.add(c.f.multiply(.3)),c.sec,LAND,.3,1.6,8,.9,pts,cells,171);
+            FxLib.dustRing(c.origin,c.sec,FLASH,1.5,9,22,1.6,pts,cells,181);
+        }
+        if(!pts.isEmpty())KagenoFire.dust(c.matrix,c.camera,pts,cells,c.age);
     }
     /** Large white orbs with a pink-violet halo, drifting; some shoot up at the end. */
     static void orbs(Fx c,EffectMesh m,float t){
@@ -337,6 +353,59 @@ final class FallenSkill implements Fx.Skill {
                     m.ring(chest,uu,vv,.6*H*(1+.25*u),24,.55f,.035,0xd9f6ff,a*.85f,k);
                 }
             }
+        }
+    }
+    // ───────────────────────────── effect layer ─────────────────────────────
+
+    @Override public boolean layered(){return true;}
+    /**
+     * Lights: the stomp's flash at the foot, the crouch gathering violet light, then the flash: a blinding white-violet
+     * burst over the crater, every pillar lighting the ground where it lands and the column; the crater glows violet
+     * while the slabs stand. A light shaft from the flash for viewers close by. Decals: the stomp cracks the floor
+     * under the foot; the flash tears it open between the slabs, glowing and cooling to burns that sink with them.
+     */
+    @Override public void frame(Fx c,FxFrame f){
+        float t=c.sec;Vec3d foot=c.origin.add(c.f.multiply(.3)).add(c.right.multiply(.25));
+        if(t>=LAND-.01f&&t<LAND+.5f)f.light(foot.add(0,.3,0),0xe0d4ff,7,2f*FxLib.kick(t,LAND,.1f));
+        if(t>=LAND+.15f&&t<FLASH)f.light(c.origin.add(0,.9,0),0xb08cff,4.5,1.3f*Ease.unit(t,LAND+.15f,FLASH));
+        float tt=t-FLASH;
+        if(t>=LAND){
+            float heat=1-Ease.smooth(t,LAND+.05f,LAND+.6f),a=Ease.smooth(t,LAND,LAND+.04f)*(1-Ease.smooth(t,SINK,SINK+.3f));
+            f.decal(foot,c.right.add(c.f.multiply(.3)),.9*Ease.out(t,LAND,LAND+.08f)+.2,.35,heat,a,3.3f);
+        }
+        if(tt<-.01f)return;
+        f.light(c.origin.add(0,1.5,0),0xf4ecff,18,4f*FxLib.kick(t,FLASH,.25f));
+        if(tt<.4f)for(int i=0;i<PILLARS;i++)f.light(pillar(c,i).add(0,1.5,0),0xa98cf2,5,1.4f*(1-Ease.smooth(tt,.15f,.4f))*Ease.smooth(tt,0,.04f));
+        float stand=Ease.smooth(tt,.2f,.5f)*(1-Ease.smooth(t,SINK-.2f,SINK+.3f));
+        if(stand>0)f.light(c.origin.add(0,1,0),0x9a6cf0,12,.7f*stand);
+        float near=FxLib.near(c,c.origin);
+        if(near>0)f.shaft(c.origin.add(0,2,0),0xf0e8ff,near*.7f*FxLib.kick(t,FLASH,.3f));
+        // Cracks torn between the slabs, outward from under the caster.
+        float heat=1-Ease.smooth(tt,.1f,1.6f),a=Ease.smooth(tt,0,.06f)*(1-Ease.smooth(t,SINK,SINK+.35f));double open=Ease.out(tt,0,.15f);
+        double face=Math.atan2(c.f.z,c.f.x);
+        for(int k=0;k<5;k++){
+            double ang=face+Math.toRadians(45*k*1.6+12*Ease.hash(k*5+191)),len=(2.6+1.6*Ease.hash(k*7+192))*H;
+            Vec3d dir=new Vec3d(Math.cos(ang),0,Math.sin(ang));
+            f.decal(c.origin.add(dir.multiply(len*.5*open+.4)),dir,len*.5*open+.2,.5,heat,a,31.7f+k*5.3f);
+        }
+    }
+    /** The stomp's shock over the floor, the flash's shock running far out over it and round the body, and the air bending inside the pillars. */
+    @Override public void distort(Fx c,FxDistort d){
+        float t=c.sec;
+        if(t>=LAND-.01f&&t<LAND+.4f){float in=Ease.smooth(t,LAND-.01f,LAND+.015f);d.ring(c.origin.add(0,.05,0),c.right,c.f,.3+3*H*Ease.out(t,LAND,LAND+.35f),1,.7f*in*(1-Ease.unit(t,LAND,LAND+.4f)));}
+        float tt=t-FLASH;if(tt<-.01f||tt>=.7f)return;
+        float in=Ease.smooth(tt,-.01f,.015f);
+        d.ring(c.origin.add(0,.05,0),c.right,c.f,.5+7*H*Ease.out(tt,0,.6f),2.2,1f*in*(1-Ease.unit(tt,0,.6f)));
+        if(tt<.35f)d.ring(c.origin.add(0,1,0),c.right,FxLib.UP,.5+4*H*Ease.out(tt,0,.35f),1.4,.7f*in*(1-Ease.unit(tt,0,.35f)));
+        if(tt<.4f)for(int i=0;i<PILLARS;i++){Vec3d b=pillar(c,i);float a=.5f*Ease.smooth(tt,0,.05f)*(1-Ease.smooth(tt,.2f,.4f));d.band(b,b.add(0,10,0),c.right,.9,a);d.band(b,b.add(0,10,0),c.f,.9,a);}
+    }
+    /** Chunks of the floor thrown up by the stomp at the foot and by the flash all round the crater, and the floor heaving out past the slabs. */
+    @Override public void solids(Fx c,FxSolids s){
+        float t=c.sec;
+        if(t>=LAND&&t<LAND+1.2f)FxLib.chunks(s,c.origin.add(c.f.multiply(.3)).add(c.right.multiply(.25)),t-LAND,6,1501,1.5,5,.14,.8f);
+        if(t>=FLASH&&t<FLASH+1.6f){
+            FxLib.chunks(s,c.origin,t-FLASH,22,1601,6.5,8,.24,1.1f);
+            FxLib.heave(s,c.origin,t-FLASH,11,.4,18,1.4,4.6*H);
         }
     }
 }

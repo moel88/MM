@@ -39,15 +39,17 @@ public final class KagenoRenderer {
             var clip=new org.joml.Vector4f((float)focus.x,(float)focus.y,(float)focus.z,1).mul(matrix).mul(c.projectionMatrix());
             AnimePostProcessor.focus(clip.w>.01f?clip.x/clip.w*.5f+.5f:.5f,clip.w>.01f?clip.y/clip.w*.5f+.5f:.5f);
         }
-        // Skills that opt in go through the HDR effect layer; the rest (and the state effects) are drawn as before.
+        // Skills that opt in go through the HDR effect layer, and so do the guard and overdrive visuals while one of
+        // them shows; the rest are drawn as before.
         boolean layer=dev.sangwoo.celestialfall.client.vfx.FxLayer.available();
         List<Fx> direct=new ArrayList<>(),layered=new ArrayList<>();
         for(var x:casts)(layer&&KagenoSkills.of(x.cast.skill()).layered()?layered:direct).add(x);
+        boolean statusLayered=layer&&KagenoStatusFx.showing(mc,delta,camera);
         var buffer=Tessellator.getInstance().getBuffer();
         try{
-            effects(mc,direct,true,view,matrix,camera,delta,false);
-            if(layered.isEmpty())dev.sangwoo.celestialfall.client.vfx.FxLayer.idle();
-            else layer(mc,layered,view,matrix,camera,delta);
+            effects(mc,direct,!statusLayered,view,matrix,camera,delta,false);
+            if(layered.isEmpty()&&!statusLayered)dev.sangwoo.celestialfall.client.vfx.FxLayer.idle();
+            else layer(mc,layered,statusLayered,view,matrix,camera,delta);
             dev.sangwoo.celestialfall.client.kageno.HealNumbers.render(mc,matrices,delta,camera);
             dev.sangwoo.celestialfall.client.kageno.HitFeedback.numbers(mc,matrices,delta);
             RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
@@ -111,26 +113,30 @@ public final class KagenoRenderer {
         KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
         if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
         KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
-        for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
+        // Real blocks: on the effect layer they were drawn on the screen before it, with the solids.
+        if(!layered)for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
     }
     /**
-     * Layered casts: their solids on the screen first (with depth), then the effect layer: refraction, the world
-     * pass (lights, decals), every effect pass on the HDR copy, then bloom, afterglow and the composite. If the
-     * layer cannot run this frame, the casts are drawn directly instead.
+     * Layered casts (and the state effects when {@code status}): their solids and real blocks on the screen first
+     * (with depth), then the effect layer: refraction, the world pass (lights, decals), every effect pass on the HDR
+     * copy, then bloom, afterglow and the composite. If the layer cannot run this frame, they are drawn directly.
      */
-    private static void layer(MinecraftClient mc,List<Fx> casts,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta){
+    private static void layer(MinecraftClient mc,List<Fx> casts,boolean status,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta){
         var frame=new dev.sangwoo.celestialfall.client.vfx.FxFrame();
         for(var x:casts)KagenoSkills.of(x.cast.skill()).frame(x,frame);
+        if(status)KagenoStatusFx.frame(mc,frame,delta,camera);
         var stack=new net.minecraft.client.util.math.MatrixStack();
         stack.peek().getPositionMatrix().set(view);stack.peek().getNormalMatrix().set(new org.joml.Matrix3f(view));
         var solids=dev.sangwoo.celestialfall.client.vfx.FxLayer.solids(stack,camera);
         for(var x:casts)KagenoSkills.of(x.cast.skill()).solids(x,solids);
         dev.sangwoo.celestialfall.client.vfx.FxLayer.finishSolids(solids);
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
         var d=dev.sangwoo.celestialfall.client.vfx.FxLayer.begin(view,matrix,camera);
-        if(d==null){effects(mc,casts,false,view,matrix,camera,delta,false);return;}
+        if(d==null){effects(mc,casts,status,view,matrix,camera,delta,false);return;}
         for(var x:casts)KagenoSkills.of(x.cast.skill()).distort(x,d);
+        if(status)KagenoStatusFx.distort(mc,d,delta,camera);
         dev.sangwoo.celestialfall.client.vfx.FxLayer.scene(frame);
-        effects(mc,casts,false,view,matrix,camera,delta,true);
+        effects(mc,casts,status,view,matrix,camera,delta,true);
         dev.sangwoo.celestialfall.client.vfx.FxLayer.finish(frame,(mc.world.getTime()+delta)/20.0);
     }
     private static List<LivingEntity> targets(MinecraftClient mc,StandClient.Cast s,float delta){

@@ -2,6 +2,10 @@ package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.KagenoFire;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
+import dev.sangwoo.celestialfall.client.vfx.FxLayer;
+import dev.sangwoo.celestialfall.client.vfx.FxSolids;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.Vec3d;
 import java.util.ArrayList;
@@ -130,6 +134,12 @@ final class SparkSkill implements Fx.Skill {
         wisps(c,t,centre(c),5.5,FIRE_END-.2f,WISPS_END,pts,cells,0);
         KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
         orbs(c,t,FIRE_END,FIRE_END+.25f);
+        // On the effect layer the blast throws dust out over the floor round the field.
+        if(t<1.2f&&FxLayer.available()){
+            List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();Vec3d mid=centre(c);
+            FxLib.dustRing(new Vec3d(mid.x,c.origin.y,mid.z),t,0,3,6.5,12,1.05,dust,puffs,91);
+            if(!dust.isEmpty())KagenoFire.dust(c.matrix,c.camera,dust,puffs,c.age);
+        }
     }
     /** Black smoke thrown out over the field at the blast; blue billows break out of it, then violet and magenta, as the fire takes over. */
     static void blast(Fx c,float t,Vec3d mid,List<Vec3d> pts,List<float[]> cells){
@@ -215,5 +225,48 @@ final class SparkSkill implements Fx.Skill {
         List<Vec3d> pts=new ArrayList<>();List<Double> sizes=new ArrayList<>();List<Float> alphas=new ArrayList<>();
         for(LivingEntity e:c.targets){pts.add(e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0));sizes.add(.6*H*(.4+.6*form)*grow);alphas.add(a);}
         KagenoFire.billboards(c.matrix,c.camera,10,pts,sizes,alphas,c.age);
+    }
+    // ───────────────────────────── effect layer ─────────────────────────────
+
+    @Override public boolean layered(){return true;}
+    /**
+     * Lights: the glow gathering in the raised hand, the blast's magenta flash over the field, then the fire lighting
+     * the ground and everyone in and around it (four flickering lights over the field, softer as it breaks into
+     * wisps). A light shaft from the blast for viewers close by.
+     */
+    @Override public void frame(Fx c,FxFrame f){
+        float t=c.sec;
+        if(t>=.13f&&t<B+.05f)f.light(hand(c),0xcdb0ff,3,.9f*Ease.unit(t,.13f,B));
+        float tt=t-B;if(tt<-.01f)return;
+        Vec3d mid=centre(c),g=new Vec3d(mid.x,c.origin.y,mid.z);
+        f.light(mid.add(0,1.5,0),0xff5ce8,14,3.2f*FxLib.kick(t,B,.2f));
+        float field=Ease.smooth(tt,.1f,.4f)*(1-Ease.smooth(tt,FIRE_END-.35f,FIRE_END+.15f));
+        if(field>0)for(int k=0;k<4;k++){
+            double a=k*Math.PI/2+.6,flick=.82+.18*Math.sin(t*(11+3*k)+k)*Math.sin(t*(7+2*k));
+            f.light(g.add(c.f.multiply(Math.cos(a)*2.4)).add(c.right.multiply(Math.sin(a)*2.4)).add(0,1.2,0),k%2==0?0xd03cff:0xff48dc,7.5,(float)(1.1*field*flick));
+        }
+        float wisps=Ease.smooth(tt,FIRE_END-.3f,FIRE_END)*(1-Ease.smooth(tt,WISPS_END-.4f,WISPS_END));
+        if(wisps>0)f.light(g.add(0,.8,0),0xff6cf5,8,.6f*wisps);
+        float near=FxLib.near(c,mid);
+        if(near>0)f.shaft(mid.add(0,1.5,0),0xff9cf0,near*(.45f*FxLib.kick(t,B,.25f)+.1f*field));
+    }
+    /** The blast's shock running out over the floor, then heat haze shimmering up out of the fire on crossed upright bands. */
+    @Override public void distort(Fx c,FxDistort d){
+        float t=c.sec-B;if(t<-.01f)return;Vec3d mid=centre(c);
+        if(t<.5f){float in=Ease.smooth(t,-.01f,.015f);d.ring(new Vec3d(mid.x,c.origin.y+.05,mid.z),c.right,c.f,.5+9*Ease.out(t,0,.5f),1.8,.9f*in*(1-Ease.unit(t,0,.5f)));}
+        float field=Ease.smooth(t,.15f,.5f)*(1-Ease.smooth(t,FIRE_END-.35f,FIRE_END+.15f));
+        if(field<=0)return;
+        for(int k=0;k<12;k++){
+            float cyc=(float)(t*(.9+.4*Ease.hash(k*3+1))+Ease.hash(k*5+2)),u=cyc-(float)Math.floor(cyc);int gen=(int)Math.floor(cyc);
+            Vec3d base=mid.add(c.f.multiply((Ease.hash(k*7+gen*11)-.5)*7)).add(c.right.multiply((Ease.hash(k*11+gen*13)-.5)*7)).add(0,.8+u*2.4,0);
+            float a=.35f*field*(float)Math.sin(Math.PI*u);
+            d.band(base,base.add(0,1.6,0),c.right,1.0,a);d.band(base,base.add(0,1.6,0),c.f,1.0,a);
+        }
+    }
+    /** The blast tears up the floor of the field: chunks thrown up and out, the floor heaving in a ring. */
+    @Override public void solids(Fx c,FxSolids s){
+        float t=c.sec-B;if(t<0||t>=1.3f)return;Vec3d mid=centre(c),g=new Vec3d(mid.x,c.origin.y,mid.z);
+        FxLib.chunks(s,g,t,10,1301,3.4,6.5,.2,.8f);
+        FxLib.heave(s,g,t,6.5,.28,14,1.1,1.2);
     }
 }

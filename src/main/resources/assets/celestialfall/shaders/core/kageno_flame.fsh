@@ -119,7 +119,34 @@ void main(){
   float hair=noise(vec2(x*9.0+sd,y*95.0));
   rgb=mix(rgb,hi,smoothstep(.72,.9,hair)*smoothstep(.12,.3,d)*(1.0-smoothstep(.5,.7,d)));
   alpha=body*(.86+.14*strand)*tint.a;
-  if(style>10.5){
+  if(style>12.5){
+   // M1 (검술의 대가) slashes swept along the blade's own path, style 14 the launching cut: crisp anime edges, an
+   // ink line on the outer (tip) edge, a bright lavender rim inside it, an electric violet body grading to deep
+   // purple with pale speed hairs, one thin white core near the tip edge, a thin magenta line on the inner edge
+   // and a glowing ragged edge where the tail is being eaten. Violet carries it; only the core and the eaten edge
+   // burn white on the effect layer.
+   float aa=max(fwidth(d),.0015)*1.3;
+   body=(1.0-smoothstep(1.0-aa,1.0+aa,d))*smoothstep(-aa,aa,1.0-y);
+   body*=1.0-split*smoothstep(.46,.54,strand);
+   float eat=smoothstep(front-.004,front+.012,x);body*=eat;
+   bool big=style>13.5;
+   vec3 ink=vec3(.08,.01,.26),lav=big?vec3(.86,.6,1.0):vec3(.78,.5,1.0),mid=big?vec3(.64,.22,1.0):vec3(.55,.17,1.0),deep=vec3(.22,.03,.62),rimc=vec3(.98,.34,.9),hotc=vec3(1.0,.8,1.0);
+   rgb=mix(ink,lav,smoothstep(.03,.03+aa*2.0,d));
+   rgb=mix(rgb,mid,smoothstep(.1,.22,d));
+   rgb=mix(rgb,deep,smoothstep(.5,.9,d));
+   float lane=big?.2:.18,wob=.03*sin(x*9.0+sd)+.025*(strand-.5);
+   float whiteCore=1.0-smoothstep(big?.035:.025,(big?.035:.025)+aa*2.0+.02*hair,abs(d-lane-wob));
+   whiteCore*=smoothstep(.05,.35,x);
+   rgb=mix(rgb,hotc,whiteCore);
+   rgb=mix(rgb,vec3(1.0),whiteCore*smoothstep(.4,.9,x)*.8);
+   float innerLine=(1.0-smoothstep(.0,aa*2.0+.015,abs(d-.94)))*smoothstep(.1,.5,x);
+   rgb=mix(rgb,rimc,innerLine*.8);
+   rgb=mix(rgb,vec3(.92,.78,1.0),smoothstep(.74,.92,hair)*smoothstep(.24,.34,d)*(1.0-smoothstep(.6,.8,d))*.5);
+   float ember=(1.0-smoothstep(.0,.06,x-front))*eat*step(.001,tint.g);
+   rgb=mix(rgb,vec3(1.0,.62,.96),ember*.9);
+   rgb*=1.0+Hot*(whiteCore*smoothstep(.2,.8,x)+ember*.6+(big?innerLine*.25:0.0));
+   alpha=body*tint.a;
+  }else if(style>10.5){
    // R (시간을 걷는 자) slashes, style 12 the big final one: crisp anime edges (anti-aliased over a pixel), a dark
    // violet ink line along the outer edge, a bright violet body with pale hairs, a white-hot streak riding inside
    // it and a glowing ragged edge where the tail is being eaten.

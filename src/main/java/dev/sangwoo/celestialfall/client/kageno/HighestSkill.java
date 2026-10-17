@@ -1,6 +1,11 @@
 package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
+import dev.sangwoo.celestialfall.client.KagenoFire;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
+import dev.sangwoo.celestialfall.client.vfx.FxLayer;
+import dev.sangwoo.celestialfall.client.vfx.FxSolids;
 import net.minecraft.util.math.Vec3d;
 import java.util.ArrayList;
 import java.util.List;
@@ -217,7 +222,6 @@ final class HighestSkill implements Fx.Skill {
         zig(c,m,t,true);
         burst(c,m,t,true);
         beam(c,m,t,true);
-        handSmoke(c,m,t);
         sparkles(c,m,t);
     }
     @Override public void alpha(Fx c,EffectMesh m){
@@ -327,18 +331,41 @@ final class HighestSkill implements Fx.Skill {
         // Short white vertical plume at his right for three frames.
         if(t>=4.65f&&t<4.72f){Vec3d p=fin(c,-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,2.6,0),.32,.3,0xffffff,.9f);}
     }
-    /** V8: pink-violet glowing puff around the sword fist. */
-    static void handSmoke(Fx c,EffectMesh m,float t){
-        if(t<4.65f||t>=4.92f)return;
-        var hb=KagenoClips.blade(c.origin,c.cast.yaw(),CLIP.pose(t));float a=1-Ease.smooth(t,4.7f,4.92f);
-        m.softDisc(hb[0],.75,0x4428ea,a*.35f);m.softDisc(hb[0],.5,0xaa60fe,a*.5f);m.softDisc(hb[0],.3,0xe99df7,a*.8f);
+    /**
+     * Fire-shader cells on fixed planes (they stay put as the cutscene camera moves): V8's pink-violet glowing puff
+     * round the sword fist and the violet haze along the beam; on the effect layer the dust thrown up as the hero
+     * lands and skids, and along the ground crescent as the beam fires.
+     */
+    @Override public void shaders(Fx c){
+        float t=c.sec;List<Vec3d> pts=new ArrayList<>();List<float[]> cells=new ArrayList<>();
+        if(t>=4.65f&&t<4.92f){
+            var hb=KagenoClips.blade(c.origin,c.cast.yaw(),CLIP.pose(t));float a=1-Ease.smooth(t,4.7f,4.92f);
+            for(int k=0;k<3;k++){pts.add(hb[0].add(0,.08*k,0));cells.add(new float[]{(float)(.42-.1*k),a*(.4f+.15f*k),.45f+.15f*k,.3f,k*17+201});}
+        }
+        if(t>=4.67f&&t<5.3f){
+            float haze=Ease.smooth(t,4.65f,4.72f)*(1-Ease.smooth(t,4.9f,5.3f));
+            for(int k=0;k<12;k++){pts.add(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5)+.2*(t-4.67f),.8+5.5*k/12.0));cells.add(new float[]{(float)(.32+.14*Ease.hash(k*3)),.26f*haze,.4f,.4f,k*23+211});}
+        }
+        if(!pts.isEmpty())KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
+        if(!FxLayer.available()||t<LAND-.02f||t>=END+1.2f)return;
+        List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();
+        FxLib.dustRing(c.at0(LAND_FW,0,0),t,LAND,.3,1.8,8,.75,dust,puffs,221);
+        for(int i=0;i<6;i++){
+            float born=LAND+.08f*i,s=t-born,life=.5f+.2f*(float)Ease.hash(i*3+231);if(s<0||s>=life)continue;float u=s/life;
+            double fw=LAND_FW+(BRAKE_FW-LAND_FW)*Math.min(1,(born-LAND)/(BRAKE-LAND));
+            dust.add(c.at0(fw,.2+.3*u,(Ease.hash(i*5+232)-.5)*.8));puffs.add(new float[]{(float)(.2+.22*Ease.out(u,0,.5f)),.6f*Ease.smooth(s,0,.04f)*(1-Ease.smooth(u,.45f,1)),.5f*(1-u),u,i*31+233});
+        }
+        for(int i=0;i<10;i++){
+            float s=t-BEAM-.02f*i,life=.7f+.3f*(float)Ease.hash(i*3+241);if(s<0||s>=life)continue;float u=s/life;
+            dust.add(fin(c,.2+.3*u,.25+.5*u,1+i*.45));puffs.add(new float[]{(float)(.35+.35*Ease.out(u,0,.5f)),.75f*Ease.smooth(s,0,.04f)*(1-Ease.smooth(u,.5f,1)),.7f*(1-u),u,i*29+243});
+        }
+        if(!dust.isEmpty())KagenoFire.dust(c.matrix,c.camera,dust,puffs,c.age);
     }
     /** V9: small white / pale-blue petals drifting around the beam on his right. */
     static void sparkles(Fx c,EffectMesh m,float t){
         if(t<4.67f||t>=5.47f)return;
         // Violet haze and glittering dots along the beam on his right.
         float haze=Ease.smooth(t,4.65f,4.72f)*(1-Ease.smooth(t,4.9f,5.3f));
-        for(int k=0;k<12;k++)m.softDisc(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5),.8+5.5*k/12.0),.45+.2*Ease.hash(k*3),0x6a4bd0,.3f*haze);
         for(int k=0;k<90;k++){
             double rt=.5+6*Ease.hash(k*7+1),up=.4+2*Ease.hash(k*9+2),drift=(t-4.67f)*.25;
             float a=haze*(float)Math.abs(Math.sin(t*9+k*1.7));
@@ -394,5 +421,57 @@ final class HighestSkill implements Fx.Skill {
             double s=(k+.5)/12;Vec3d p=near.lerp(far,s).add(0,.1+.3*Ease.hash(k*7+3),0);
             m.softDisc(p,.55+.45*Math.sin(Math.PI*s),s<.3?0xb848e0:k%2==0?0x7a3ce0:0x9a4cf0,.5f*glow);
         }
+    }
+    // ───────────────────────────── effect layer ─────────────────────────────
+
+    @Override public boolean layered(){return true;}
+    /**
+     * Lights: the star flare at the hero in the sky, every magenta zigzag dash lighting the street below as it is
+     * drawn, the landing's flash, the slash-line burst, then the beam: a blinding line of light along the street
+     * with the impact frame, a colour split and a light shaft. Decals: skid marks burned along the slide, and the
+     * dark crescent the beam cuts along the ground, glowing violet as it fires and cooling.
+     */
+    @Override public void frame(Fx c,FxFrame f){
+        float t=c.sec;
+        if(t>=FLARE&&t<2.40f){var r=root(t);float grow=Ease.out(t,FLARE,1.83f),shrink=1-Ease.smooth(t,2.23f,2.40f);f.light(c.at0(r.fw,r.up+1.05,r.rt),0xe278f5,14,2.2f*grow*shrink);}
+        if(t>=ZIG[0]&&t<SHOT4){
+            Vec3d[] p=zigzag(c);float fade=1-Ease.smooth(t,3.2f,SHOT4);
+            for(int i=0;i<10;i++){if(t<ZIG[i])break;f.light(p[i].add(p[i+1]).multiply(.5),0xe842f5,12,(.9f+1.6f*FxLib.kick(t,ZIG[i],.08f))*fade);}
+        }
+        if(t>=LAND-.01f&&t<LAND+.5f)f.light(c.at0(LAND_FW,.6,0),0xc8b8ff,7,2f*FxLib.kick(t,LAND,.12f));
+        float burst=burstLevel(t);
+        if(burst>0)f.light(c.at0(-.4,1.6,1),0xd7b1f8,8,1.6f*burst);
+        if(t>=BEAM-.01f&&t<END+.4f){
+            float k=FxLib.kick(t,BEAM,.2f),linger=Ease.smooth(t,BEAM,BEAM+.05f)*(1-Ease.smooth(t,END,END+.4f));
+            for(int i=0;i<4;i++)f.light(fin(c,-.2,1.25,-3*STUD+i*4.2),0xf0e4ff,7,2.6f*k+.6f*linger);
+            Vec3d hero=fin(c,0,1.2,0);float near=FxLib.near(c,hero);
+            if(near>0){f.impact(near*FxLib.impact(t,BEAM),FxLib.impactMode(t,BEAM));f.chroma(near*.01f*FxLib.kick(t,BEAM,.12f));f.shaft(hero,0xe8dcff,near*(.55f*k+.1f*linger));}
+        }
+        if(t>=LAND){
+            float a=Ease.smooth(t,LAND,LAND+.05f)*(1-Ease.smooth(t,END+.6f,END+1.2f));double grow=Ease.out(t,LAND,BRAKE);
+            double mid=LAND_FW-(LAND_FW-BRAKE_FW)*.5*grow,half=(LAND_FW-BRAKE_FW)*.5*grow+.2;
+            for(int s=-1;s<=1;s+=2)f.decal(c.at0(mid,0,s*.18),c.f,half,.16,.25f*(1-Ease.smooth(t,LAND,BRAKE+.3f)),.8f*a,41.3f+s);
+        }
+        if(t>=BEAM){
+            float heat=1-Ease.smooth(t,BEAM+.1f,END+.8f),a=Ease.smooth(t,BEAM,BEAM+.04f)*(1-Ease.smooth(t,END+.8f,END+1.4f));
+            f.decal(fin(c,.15,0,2.7),c.right,2.6*Ease.out(t,BEAM,BEAM+.08f)+.2,.7,heat,a,47.9f);
+        }
+    }
+    /** The air bends along each zigzag dash as it is drawn, in the landing's shock and along the beam. */
+    @Override public void distort(Fx c,FxDistort d){
+        float t=c.sec;
+        if(t>=ZIG[0]&&t<SHOT4){Vec3d[] p=zigzag(c);for(int i=0;i<10;i++){if(t<ZIG[i])break;float k=1-Ease.smooth(t-ZIG[i],.05f,.25f);if(k>0)d.band(p[i],p[i+1],FxLib.UP,2.2,.6f*k);}}
+        if(t>=LAND-.01f&&t<LAND+.4f){float in=Ease.smooth(t,LAND-.01f,LAND+.015f);d.ring(c.at0(LAND_FW,.05,0),c.right,c.f,.4+4.5*Ease.out(t,LAND,LAND+.4f),1.2,.8f*in*(1-Ease.unit(t,LAND,LAND+.4f)));}
+        if(t>=BEAM-.01f&&t<END+.2f){
+            float in=Ease.smooth(t,BEAM-.01f,BEAM+.015f),k=1-Ease.smooth(t,BEAM+.05f,END+.2f);
+            d.band(fin(c,-.2,1.25,-3*STUD),fin(c,-.2,1.25,45*STUD),FxLib.UP,1.6*(1-.5*Ease.smooth(t,BEAM,BEAM+.2f)),1f*in*k);
+            if(t<BEAM+.35f)d.ring(fin(c,-.2,1.25,0),c.f,FxLib.UP,.5+4*Ease.out(t,BEAM,BEAM+.35f),1,.7f*in*(1-Ease.unit(t,BEAM,BEAM+.35f)));
+        }
+    }
+    /** Chunks of the street thrown up where the hero lands and along the ground crescent as the beam fires. */
+    @Override public void solids(Fx c,FxSolids s){
+        float t=c.sec;
+        if(t>=LAND&&t<LAND+1.2f)FxLib.chunks(s,c.at0(LAND_FW,0,0),t-LAND,8,1701,2.2,5.5,.16,.8f);
+        if(t>=BEAM&&t<BEAM+1.4f)for(int k=0;k<3;k++)FxLib.chunks(s,fin(c,.15,0,1.2+1.6*k),t-BEAM-.02f*k,4,1801+k*17,1.2,5.5,.15,.8f);
     }
 }

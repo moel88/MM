@@ -67,6 +67,8 @@ class AnimationQualityTest {
             for(int age=0;age<=KagenoRules.DURATION[c.skill()];age++)if(KagenoRules.damage(c.skill(),age,c.combo())>0)hits.add(age/20f);
             // T+'s blast is the same visible impact as T's (its fire hits come later).
             if(c.skill()==KagenoRules.RUSH)hits.add(KagenoRules.RUSH_IGNITE/20f);
+            // M1 hit 4's launch is a visible impact too: the rising cut through the seal as the server throws the target.
+            if(c.skill()==KagenoRules.M1&&c.combo()==4)hits.add(KagenoRules.M1_LAUNCH/20f);
             for(var s:c.anim().stops()){
                 assertEquals(s.sec(),c.anim().warp(s.sec()),1e-6,c.name()+": the impact itself is on time");
                 float end=s.sec()+s.hold()+s.recover();

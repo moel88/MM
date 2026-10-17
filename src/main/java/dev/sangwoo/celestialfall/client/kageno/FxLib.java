@@ -1,7 +1,9 @@
 package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import java.util.List;
 
 /** Shared effect primitives for the Kageno skills: rings, flashes, converging motes, embers, columns, sword trails, bolts, glows. */
 final class FxLib {
@@ -115,6 +117,60 @@ final class FxLib {
             double a=i*Math.PI/12,b=(i+1)*Math.PI/12;
             Vec3d pa=p.add(u.multiply(Math.cos(a)*rx)).add(v.multiply(Math.sin(a)*ry)),pb=p.add(u.multiply(Math.cos(b)*rx)).add(v.multiply(Math.sin(b)*ry));
             m.vertex(p,rgb,alpha);m.vertex(pa,rgb,0);m.vertex(pb,rgb,0);m.vertex(p,rgb,alpha);
+        }
+    }
+    // ───────────────────────────── effect layer helpers ─────────────────────────────
+
+    /** A pulse that comes in over a frame at {@code at} and dies away with time constant {@code tau}. */
+    static float kick(float t,float at,float tau){return t<at-.01f?0:Ease.smooth(t,at-.01f,at+.015f)*(float)Math.exp(-Math.max(0,t-at-.015f)/tau);}
+    /**
+     * A big finisher's impact frame: in over two frames as the blow lands at {@code at}, held about three frames (white
+     * shapes on dark, then over a frame and a half dark shapes on white, {@link #impactMode}), out over two frames.
+     */
+    static float impact(float t,float at){
+        if(t<at-.01f||t>=at+.125f)return 0;
+        return Ease.smooth(t,at-.01f,at+.02f)*(1-Ease.smooth(t,at+.085f,at+.125f));
+    }
+    static float impactMode(float t,float at){return Ease.smooth(t,at+.04f,at+.075f);}
+    /** How much the screen-wide touches (impact frame, colour split, light shafts) reach a camera this far from {@code p}: all within 14 blocks, none past 26. */
+    static float near(Fx c,Vec3d p){return (float)Math.max(0,Math.min(1,(26-c.camera.distanceTo(p))/12));}
+    /**
+     * Chunks of the floor block under {@code o}, {@code since} seconds after they were torn up: thrown out round it
+     * ({@code out} blocks a second sideways, {@code up} upward), spinning, bouncing and settling, shrinking away from
+     * {@code shrink} seconds. Only a picture: the world's blocks do not change.
+     */
+    static void chunks(dev.sangwoo.celestialfall.client.vfx.FxSolids s,Vec3d o,float since,int n,int seed,double out,double up,double size,float shrink){
+        double floor=s.groundY(o.add(0,.3,0));Vec3d at=new Vec3d(o.x,floor,o.z);
+        var block=s.ground(at.add(0,-.5,0));if(block==null)return;
+        for(int k=0;k<n;k++){
+            float age=since-.012f*(float)Ease.hash(k*3+seed);if(age<0)continue;
+            double sz=size*(.75+.6*Ease.hash(k*19+seed))*(1-Ease.smooth(age,shrink,shrink+.3f));
+            double az=Ease.hash(k*7+seed)*Math.PI*2,r=.25+.5*Ease.hash(k*5+seed),speed=out*(.5+.5*Ease.hash(k*11+seed));
+            Vec3d v=new Vec3d(Math.cos(az)*speed,up*(.7+.5*Ease.hash(k*13+seed)),Math.sin(az)*speed);
+            Vec3d p=dev.sangwoo.celestialfall.client.vfx.FxSolids.flight(at.add(Math.cos(az)*r,.12,Math.sin(az)*r),v,floor+sz*.5,age);
+            float spin=(float)((300+500*Ease.hash(k*23+seed))*.5*(1-Math.exp(-age/.5)));
+            s.chunk(block,p,sz,spin+k*41,spin*.8f+k*13,spin*.5f);
+        }
+    }
+    /**
+     * The floor round {@code o} heaving in a ring that runs out from it at {@code speed} blocks a second ({@code amp}
+     * high, out to {@code radius}), still within {@code hole} blocks of the middle; each block tips away from the middle.
+     */
+    static void heave(dev.sangwoo.celestialfall.client.vfx.FxSolids s,Vec3d o,float since,double radius,double amp,double speed,double width,double hole){
+        double floor=s.groundY(o.add(0,.3,0));BlockPos base=BlockPos.ofFloored(o.x,floor-.5,o.z);int r=(int)Math.ceil(radius);
+        for(int dx=-r;dx<=r;dx++)for(int dz=-r;dz<=r;dz++){
+            BlockPos pos=base.add(dx,0,dz);double ox=pos.getX()+.5-o.x,oz=pos.getZ()+.5-o.z,dist=Math.hypot(ox,oz);if(dist>radius)continue;
+            double lift=dev.sangwoo.celestialfall.client.vfx.FxSolids.wave(dist,since,amp,speed,width)*Ease.smooth((float)dist,(float)hole,(float)(hole+.8));
+            if(lift>.02){Vec3d away=dist<1e-3?new Vec3d(1,0,0):new Vec3d(ox/dist,0,oz/dist);s.lifted(pos,s.surface(pos),lift,(float)(lift*30),new Vec3d(-away.z,0,away.x));}
+        }
+    }
+    /** A ring of anime dust puffs thrown out over the floor from {@code o} at {@code at}, from radius r0 out to r1 (cells for {@code KagenoFire.dust}). */
+    static void dustRing(Vec3d o,float t,float at,double r0,double r1,int n,double size,List<Vec3d> dust,List<float[]> puffs,int seed){
+        for(int i=0;i<n;i++){
+            float s=t-at-.03f*(float)Ease.hash(seed+i),life=.6f+.35f*(float)Ease.hash(seed+i*3);if(s<0||s>=life)continue;float u=s/life;
+            double az=(i+Ease.hash(seed+i*5)*.6)*Math.PI*2/n,rad=r0+(r1-r0)*Ease.out(u,0,.7f);
+            dust.add(o.add(Math.cos(az)*rad,.22+.45*u+.2*Ease.hash(seed+i*7),Math.sin(az)*rad));
+            puffs.add(new float[]{(float)(size*(.3+.35*Ease.out(u,0,.5f))*(.8+.4*Ease.hash(seed+i*11))),.9f*Ease.smooth(s,0,.04f)*(1-Ease.smooth(u,.55f,1)),.6f*(1-u),u,seed+i*37});
         }
     }
 }

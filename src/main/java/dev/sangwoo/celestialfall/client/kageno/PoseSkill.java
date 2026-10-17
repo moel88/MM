@@ -1,6 +1,8 @@
 package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
@@ -229,5 +231,44 @@ final class PoseSkill implements Fx.Skill {
             }
         }
         if(drew)vertices.draw();
+    }
+    // ───────────────────────────── effect layer ─────────────────────────────
+
+    @Override public boolean layered(){return true;}
+    /**
+     * Lights: the sword tip through the flourish, the violet pool at the feet, the star (flaring white on every
+     * re-flash), each pulse ring and ground crescent as it passes, and the red glint of the eye.
+     */
+    @Override public void frame(Fx c,FxFrame f){
+        float t=c.sec;
+        if(t>=.1f&&t<2.1f)f.light(tip(c,Math.min(t,2.0f)),0xc9bbe5,3.5,.7f*Ease.smooth(t,.1f,.2f)*(1-Ease.smooth(t,1.95f,2.1f)));
+        if(t>=POOL&&t<RELEASE+.2f)f.light(c.origin.add(0,.6,0),0x7a5ce8,7.5,.8f*Ease.smooth(t,POOL,POOL+.1f)*(1-Ease.smooth(t,RELEASE+.1f,RELEASE+.2f)));
+        if(t>=STAR&&t<RELEASE+.27f){
+            float flare=0;for(float w:WHITE)if(t>=w-.01f)flare=Math.max(flare,FxLib.kick(t,w,.12f));
+            f.light(c.origin.add(0,.3,0),white(t)?0xfdeefd:0xfb9afc,6,(.5f+1.8f*flare)*(1-Ease.smooth(t,RELEASE,RELEASE+.27f)));
+        }
+        for(float p:PULSES){float u=t-p;if(u<-.01f||u>=.38f||p>=RELEASE)continue;f.light(c.origin.add(0,.3,0),0xf07cfe,5.5,1.2f*FxLib.kick(t,p,.12f));}
+        double back=Math.atan2(-c.f.z,-c.f.x);
+        for(float side:CRESCENTS){
+            float born=side-.14f,u=t-born;if(u<0||u>=.8f||born>=RELEASE+.1f)continue;
+            double r=17.4*STUD*(1-Math.pow(1-Math.min(1,u/.55),2.6))*.8;
+            f.light(c.origin.add(Math.cos(back)*r,.4,Math.sin(back)*r),0xfb82fd,6,.9f*(1-Ease.smooth(u,.5f,.8f))*Ease.smooth(u,0,.05f));
+        }
+        if(t>=EYE&&t<RELEASE+.12f)f.light(c.at0(.4,1.72,.12),0xff2a2a,1.6,.45f*Ease.out(t,EYE,EYE+.067f)*(1-Ease.smooth(t,RELEASE+.02f,RELEASE+.12f)));
+    }
+    /** The air bends in every pulse ring as it runs out over the floor and along each ground crescent. */
+    @Override public void distort(Fx c,FxDistort d){
+        float t=c.sec;Vec3d o=c.origin.add(0,.05,0);
+        for(float p:PULSES){
+            float u=t-p;if(u<0||u>=.38f||p>=RELEASE)continue;
+            double outer=(2+6.45*(1-Math.pow(1-Math.min(1,u/.36),3)))*STUD;
+            d.ring(o,new Vec3d(1,0,0),new Vec3d(0,0,1),outer+.1,.6,.5f*(1-Ease.unit(u,.2f,.38f)));
+        }
+        double back=Math.toDegrees(Math.atan2(-c.f.z,-c.f.x));
+        for(float side:CRESCENTS){
+            float born=side-.14f,u=t-born;if(u<0||u>=.8f||born>=RELEASE+.1f)continue;
+            double outer=17.4*STUD*(1-Math.pow(1-Math.min(1,u/.55),2.6)),span=200*Ease.out(u,0,.14f);
+            if(outer>.3&&span>2)d.arc(o,new Vec3d(1,0,0),new Vec3d(0,0,1),outer+.1,1.2,back-span/2,span,.45f*(1-Ease.smooth(u,.5f,.8f)));
+        }
     }
 }

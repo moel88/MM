@@ -41,6 +41,14 @@ public final class FxDistort {
             point(center.add(r1.multiply(radius)),(float)((i+1)/(double)n),1,strength);point(center.add(r0.multiply(radius)),(float)(i/(double)n),1,strength);quads++;
         }
     }
+    /** Band along any swept path, {@code inner[i]}..{@code outer[i]} across it ({@code n} points), fading in and out along its length. */
+    public void ribbon(Vec3d[] inner,Vec3d[] outer,int n,float strength){
+        if(!(strength>0)||n<2)return;
+        for(int i=0;i+1<n;i++){
+            float t0=i/(float)(n-1),t1=(i+1)/(float)(n-1),s0=strength*(float)Math.sin(Math.PI*t0),s1=strength*(float)Math.sin(Math.PI*t1);
+            point(inner[i],t0,0,s0);point(inner[i+1],t1,0,s1);point(outer[i+1],t1,1,s1);point(outer[i],t0,1,s0);quads++;
+        }
+    }
     /** Straight band from a to b, {@code width} wide along {@code side}. */
     public void band(Vec3d a,Vec3d b,Vec3d side,double width,float strength){
         if(!(strength>0))return;Vec3d s=side.normalize().multiply(width*.5);

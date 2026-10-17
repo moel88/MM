@@ -64,6 +64,10 @@ public final class Fx {
         default float shake(float sec){return 0;}
         /** Authored gameplay-camera motion {yaw, pitch, roll} in degrees (pitch + looks down), or null. */
         default float[] kick(float sec){return null;}
+        /** Shake for one cast (M1's four hits differ); the skill's own by default. */
+        default float shake(StandClient.Cast cast,float sec){return shake(sec);}
+        /** Camera motion for one cast; the skill's own by default. */
+        default float[] kick(StandClient.Cast cast,float sec){return kick(sec);}
         /** Geometry drawn over the full-screen flash: the alpha pass, then the additive pass. */
         default void overFlash(Fx c,EffectMesh m,boolean additive){}
         default float pulse(float sec){return 0;}

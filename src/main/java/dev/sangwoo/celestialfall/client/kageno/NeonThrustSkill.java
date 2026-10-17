@@ -1,6 +1,11 @@
 package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
+import dev.sangwoo.celestialfall.client.KagenoFire;
+import dev.sangwoo.celestialfall.client.vfx.FxDistort;
+import dev.sangwoo.celestialfall.client.vfx.FxFrame;
+import dev.sangwoo.celestialfall.client.vfx.FxLayer;
+import dev.sangwoo.celestialfall.client.vfx.FxSolids;
 import dev.sangwoo.celestialfall.stand.KagenoRules;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.math.Box;
@@ -189,11 +194,6 @@ final class NeonThrustSkill implements Fx.Skill {
         if(s>0){
             Vec3d core=core(c);int i=thrustAt(t);float kick=i>=0?(float)Math.exp(-(t-THRUSTS[i])/.06):0;
             m.softDisc(core,1.15+.4*kick,FUCHSIA,.42f*s);
-            for(int k=0;k<6;k++){
-                float ph=(float)((t*.9+Ease.hash(k*7+1))%1);double ang=Ease.hash(k*5+2)*Math.PI*2;
-                Vec3d p=core.add(c.right.multiply(Math.cos(ang)*(.5+1.1*ph))).add(0,Math.sin(ang)*(.4+.8*ph)+.5*ph,0).add(c.f.multiply(-.3+.6*Ease.hash(k*3)));
-                m.softDisc(p,.8+.7*ph,k%2==0?PURPLE:mix(PURPLE,FUCHSIA,.5f),.2f*s*(float)Math.sin(Math.PI*ph));
-            }
             streaks(c,m,t,core,s,true);
             bolts(c,m,t,core,s,true);
             band(m,core,c.right,FxLib.UP,1.05,1.4,1.75,0,360,SHADOW,.14f*s);
@@ -519,14 +519,6 @@ final class NeonThrustSkill implements Fx.Skill {
             float born=SLASH+k*.07f,u=(t-born)/.55f;if(u<0||u>=1)continue;
             FxLib.ring(m,g.add(0,.05+.1*k,0),.3+2.0*Ease.out(u,0,1),.3,k==1?VIOLET:FUCHSIA,.55f*(1-u));
         }
-        if(t>=SLASH+.05f){
-            float a=Ease.smooth(t,SLASH+.05f,SLASH+.25f)*(1-Ease.smooth(t,3.45f,3.88f));
-            for(int k=0;k<10;k++){
-                double ang=Ease.hash(k*31+1)*Math.PI*2,r=.3+.9*Ease.hash(k*37+2),rise=(t-SLASH)*(.6+.8*Ease.hash(k*41+3));
-                Vec3d s=g.add(Math.cos(ang)*r+.2*Math.sin(t*1.7+k),.6+2.2*Ease.hash(k*43+4)+rise,Math.sin(ang)*r+.2*Math.cos(t*1.3+k));
-                m.softDisc(s,.9+.6*Ease.hash(k*47)+.5*(t-SLASH),k%3==0?PURPLE:FUCHSIA,.07f*a);
-            }
-        }
         FxLib.embers(m,g,1.2,4.5,22,t-SLASH,1.5f,.06,PINKISH,Ease.smooth(t,SLASH,SLASH+.1f)*(1-Ease.smooth(t,3.5f,3.85f)),23);
     }
     /** Ribbon swept by the blade (from..to blocks along it) over the last {@code span} seconds, on the moving body. */
@@ -573,7 +565,12 @@ final class NeonThrustSkill implements Fx.Skill {
 
     // ───────────────────────────── screen ─────────────────────────────
 
-    @Override public float flash(Fx c){float t=c.sec;return t>=SLASH-.01f&&t<SLASH+.12f?.2f*(1-Ease.unit(t,SLASH-.01f,SLASH+.12f)):0;}
+    /** A pink-white flash as the target bursts; on the effect layer the impact frame takes the first frames and the flash follows it, softer. */
+    @Override public float flash(Fx c){
+        float t=c.sec;
+        if(FxLayer.available())return t>=SLASH+.09f&&t<SLASH+.24f?.15f*Ease.smooth(t,SLASH+.09f,SLASH+.115f)*(1-Ease.unit(t,SLASH+.115f,SLASH+.24f)):0;
+        return t>=SLASH-.01f&&t<SLASH+.12f?.2f*(1-Ease.unit(t,SLASH-.01f,SLASH+.12f)):0;
+    }
     @Override public int flashColor(Fx c){return 0xffd8ff;}
     /** Post-process shock: a hum through the storm, small on the server's thrust hits, strong on the burst. */
     @Override public float pulse(float sec){
@@ -593,5 +590,103 @@ final class NeonThrustSkill implements Fx.Skill {
         int i=thrustAt(sec);
         if(i>=0&&sec<BACK){float u=sec-THRUSTS[i];if(u<.1f){float k=Ease.smooth(u,0,.02f)*(1-Ease.smooth(u,.02f,.1f));return new float[]{(i%2==0?.3f:-.3f)*k,.5f*k*(STRIKES[i]?1:.6f),0};}}
         return null;
+    }
+    // ───────────────────────────── smoke ─────────────────────────────
+
+    /**
+     * Fire-shader cells on fixed planes (they stay put as the camera moves): the purple haze the storm turns in and
+     * the pink haze rolling up from the burst; on the effect layer, dust thrown out over the floor round the target.
+     */
+    @Override public void shaders(Fx c){
+        float t=c.sec;List<Vec3d> pts=new ArrayList<>();List<float[]> cells=new ArrayList<>();
+        float s=storm(t);
+        if(s>0){
+            Vec3d core=core(c);
+            for(int k=0;k<7;k++){
+                float cyc=(float)(t*.9+Ease.hash(k*7+1)),ph=cyc-(float)Math.floor(cyc);int gen=(int)Math.floor(cyc);double ang=Ease.hash(k*5+2+gen*13)*Math.PI*2;
+                Vec3d p=core.add(c.right.multiply(Math.cos(ang)*(.5+1.1*ph))).add(0,Math.sin(ang)*(.4+.8*ph)+.5*ph,0).add(c.f.multiply(-.3+.6*Ease.hash(k*3+gen)));
+                pts.add(p);cells.add(new float[]{(float)(.45+.4*ph),.22f*s*(float)Math.sin(Math.PI*ph),k%2==0?.48f:.6f,.4f,k*31+gen*7+3});
+            }
+        }
+        if(t>=SLASH+.05f&&t<3.88f){
+            Vec3d p=target(c),g=new Vec3d(p.x,c.pos.y,p.z);float a=Ease.smooth(t,SLASH+.05f,SLASH+.25f)*(1-Ease.smooth(t,3.45f,3.88f));
+            for(int k=0;k<10;k++){
+                double ang=Ease.hash(k*31+1)*Math.PI*2,r=.3+.9*Ease.hash(k*37+2),rise=(t-SLASH)*(.6+.8*Ease.hash(k*41+3));
+                Vec3d q=g.add(Math.cos(ang)*r+.2*Math.sin(t*1.7+k),.6+2.2*Ease.hash(k*43+4)+rise,Math.sin(ang)*r+.2*Math.cos(t*1.3+k));
+                pts.add(q);cells.add(new float[]{(float)(.45+.3*Ease.hash(k*47)+.25*(t-SLASH)),.2f*a*(1-Ease.smooth(t,SLASH+.4f,3.6f)),k%3==0?.46f:.64f,.5f,k*29+101});
+            }
+        }
+        if(!pts.isEmpty())KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
+        if(t>=SLASH&&t<SLASH+1.2f&&FxLayer.available()){
+            List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();Vec3d p=target(c);
+            FxLib.dustRing(new Vec3d(p.x,c.pos.y,p.z),t,SLASH,.6,3.2,14,1.1,dust,puffs,61);
+            if(!dust.isEmpty())KagenoFire.dust(c.matrix,c.camera,dust,puffs,c.age);
+        }
+    }
+
+    // ───────────────────────────── effect layer ─────────────────────────────
+
+    @Override public boolean layered(){return true;}
+    /**
+     * Lights: the blade's pink neon, the storm's magenta heart (brighter with every thrust), a white-pink flash where
+     * a striking thrust bites, the swing crescent's head, then the finisher: a blinding burst on the target and its
+     * pillar of light. For viewers close by the finisher has the impact frame, a colour split and a light shaft; a
+     * burn is torn across the floor under the target, glowing and cooling.
+     */
+    @Override public void frame(Fx c,FxFrame f){
+        float t=c.sec;
+        float g=Math.min(1.5f,glow(t))*lit(t);
+        if(g>.02f){var hb=sword(c,t);f.light(hb[0].add(hb[1].multiply(.8)),HOT,4,.8f*g);}
+        float s=storm(t);
+        if(s>0){int i=thrustAt(t);float kick=i>=0?(float)Math.exp(-(t-THRUSTS[i])/.06):0;f.light(core(c),FUCHSIA,6.5,(1.1f+.9f*kick)*s);}
+        for(int i=0;i<THRUSTS.length;i++){
+            if(!STRIKES[i])continue;float u=t-THRUSTS[i];if(u<-.01f||u>=.24f)continue;
+            var hb=sword(c,THRUSTS[i]);f.light(bite(c,hb[0].add(hb[1].multiply(TIP)),aim(c,i)),GLARE,5,1.6f*FxLib.kick(t,THRUSTS[i],.06f));
+        }
+        if(t>=LOW&&t<SLASH+.1f){
+            double h=Math.toRadians(head(c,t));
+            f.light(swingCentre(c).add(c.f.multiply(Math.cos(h)*2.3)).add(swingUp(c,TILT).multiply(Math.sin(h)*2.3)),FUCHSIA,6,1.2f*(1-Ease.smooth(t,SLASH,SLASH+.1f)));
+        }
+        if(t<SLASH-.01f)return;
+        Vec3d p=target(c),g0=new Vec3d(p.x,c.pos.y,p.z);
+        f.light(p,0xffd6ff,13,3.4f*FxLib.kick(t,SLASH,.18f));
+        float pillar=Ease.smooth(t,SLASH,SLASH+.05f)*(1-Ease.smooth(t,3.25f,3.66f));
+        if(pillar>0){f.light(g0.add(0,2.5,0),FUCHSIA,8,1.2f*pillar);f.light(g0.add(0,.4,0),PINKISH,5,.9f*pillar);}
+        float near=FxLib.near(c,p);
+        if(near>0){
+            f.impact(near*FxLib.impact(t,SLASH),FxLib.impactMode(t,SLASH));
+            f.chroma(near*.008f*FxLib.kick(t,SLASH,.12f));
+            f.shaft(p,0xffc8f4,near*(.5f*FxLib.kick(t,SLASH,.22f)+.15f*pillar));
+        }
+        float heat=1-Ease.smooth(t,SLASH+.15f,SLASH+1.1f),a=Ease.smooth(t,SLASH,SLASH+.05f)*(1-Ease.smooth(t,3.5f,3.85f));double open=Ease.out(t,SLASH,SLASH+.1f);
+        f.decal(g0,c.right,2.2*open+.2,.6,heat,a,4.7f);
+        f.decal(g0,c.f,1.4*open+.2,.4,heat*.8f,.85f*a,8.3f);
+    }
+    /** The air bends round each thrust's point and along its lance, along the swing's crescent, and in the burst's shock over the floor and round the target. */
+    @Override public void distort(Fx c,FxDistort d){
+        float t=c.sec;
+        for(int i=0;i<THRUSTS.length;i++){
+            float u=t-THRUSTS[i];if(u<0||u>=.16f)continue;
+            var hb=sword(c,THRUSTS[i]);Vec3d tip=hb[0].add(hb[1].multiply(TIP)),aim=aim(c,i),x=across(aim),y=aim.crossProduct(x).normalize();
+            float big=i==THRUSTS.length-1?1.3f:STRIKES[i]?1:.7f;
+            d.ring(tip.add(aim.multiply(.25+.8*u)),x,y,.2+1.3*big*Ease.out(u,0,.16f),.45,.55f*big*(1-u/.16f));
+            if(u<.12f){Vec3d a0=tip.add(aim.multiply(.1+1.5*u));d.band(a0,a0.add(aim.multiply(2.6)),y,.5*big,.4f*(1-u/.12f));}
+        }
+        if(t>=LOW&&t<SLASH+.12f){
+            double head=head(c,t);
+            if(head>TAIL+1)d.arc(swingCentre(c),c.f,swingUp(c,TILT),2.6,1.1,TAIL,head-TAIL,.6f*(1-Ease.smooth(t,SLASH,SLASH+.12f)));
+        }
+        if(t>=SLASH-.01f&&t<SLASH+.5f){
+            Vec3d p=target(c),g0=new Vec3d(p.x,c.pos.y+.05,p.z);float in=Ease.smooth(t,SLASH-.01f,SLASH+.015f);
+            d.ring(g0,c.right,c.f,.5+8*Ease.out(t,SLASH,SLASH+.5f),1.6,.9f*in*(1-Ease.unit(t,SLASH,SLASH+.5f)));
+            d.ring(p,c.right,FxLib.UP,.5+4*Ease.out(t,SLASH,SLASH+.3f),1,.8f*in*(1-Ease.unit(t,SLASH,SLASH+.3f)));
+        }
+    }
+    /** The burst tears up the floor under the target: chunks thrown up round it, the floor heaving in a ring. */
+    @Override public void solids(Fx c,FxSolids s){
+        float t=c.sec;if(t<SLASH||t>=3.9f)return;
+        Vec3d p=target(c),g0=new Vec3d(p.x,c.pos.y,p.z);
+        FxLib.chunks(s,g0,t-SLASH,10,1201,2.2,7.5,.17,.75f);
+        FxLib.heave(s,g0,t-SLASH,4.5,.3,12,.9,.5);
     }
 }
