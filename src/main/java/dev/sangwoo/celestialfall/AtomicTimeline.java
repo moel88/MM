@@ -69,6 +69,14 @@ public final class AtomicTimeline {
     public static final double HIT_SLOW=.75;
     /** The movement speed modifier that holds a target in the column (transient, never saved). */
     public static final java.util.UUID HIT_SLOW_ID=java.util.UUID.fromString("8e7d4281-016d-45fc-97d3-af497070f9d6");
+    /**
+     * The movement speed attribute change that leaves a target a quarter of its speed. A player's walking speed goes
+     * with the attribute; a mob's ground speed goes with its square (a mob feeds the attribute in both as its forward
+     * input and as the speed scaling it), so a mob's attribute is halved instead.
+     */
+    public static double holdModifier(boolean player) {
+        return player?-HIT_SLOW:Math.sqrt(1-HIT_SLOW)-1;
+    }
     /** Radius of the column that holds its targets at a cast age: the damage column from the impact until the beam ends, none otherwise. */
     public static double holdRadius(long age,double R) {
         return age>=DAMAGE_START&&age<DAMAGE_END?damageRadius(age,R):0;

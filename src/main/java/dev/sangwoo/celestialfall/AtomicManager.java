@@ -134,8 +134,8 @@ public final class AtomicManager {
         return caught;
     }
     /**
-     * Everything the opened column has caught moves 75 % slower while it is in it (same targets as the damage; players
-     * who cannot be hurt, in creative, are left alone). The tick it is out of the column, or the beam ends, it moves at
+     * Everything the opened column has caught moves 75 % slower while it is in it, players and mobs alike
+     * ({@link AtomicTimeline#holdModifier}; same targets as the damage; players who cannot be hurt, in creative, are left alone). The tick it is out of the column, or the beam ends, it moves at
      * its own speed again. The modifier is transient, so it is never saved with the entity.
      */
     private static void hold(Cast s,long age) {
@@ -163,7 +163,7 @@ public final class AtomicManager {
         var speed=e==null?null:e.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(speed==null)return;
         if(!on)speed.removeModifier(AtomicTimeline.HIT_SLOW_ID);
         else if(speed.getModifier(AtomicTimeline.HIT_SLOW_ID)==null)speed.addTemporaryModifier(new EntityAttributeModifier(AtomicTimeline.HIT_SLOW_ID,
-            "Botand Atomic hit",-AtomicTimeline.HIT_SLOW,EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
+            "Botand Atomic hit",AtomicTimeline.holdModifier(e instanceof net.minecraft.entity.player.PlayerEntity),EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
     }
 
     /** Remove both cooldown ledgers without touching active casts or their viewers. */

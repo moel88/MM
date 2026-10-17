@@ -30,6 +30,9 @@ class AtomicTimelineTest {
     @Test void theColumnHoldsWhatItHasReachedFromTheImpactUntilTheBeamEnds() {
         double R=28;
         assertEquals(.75,AtomicTimeline.HIT_SLOW);
+        // A quarter of the speed either way: players linear in the attribute, mobs in its square.
+        assertEquals(.25,1+AtomicTimeline.holdModifier(true),1e-12);
+        assertEquals(.25,Math.pow(1+AtomicTimeline.holdModifier(false),2),1e-12);
         // Nothing before the impact, nothing once the beam has ended.
         for(long a=0;a<AtomicTimeline.IMPACT;a++)assertEquals(0,AtomicTimeline.holdRadius(a,R),"age "+a);
         for(long a=AtomicTimeline.BEAM_END;a<AtomicTimeline.END;a++)assertEquals(0,AtomicTimeline.holdRadius(a,R),"age "+a);
