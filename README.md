@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.31.9** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.31.10** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.31.10 — E를 참고 영상대로 다시 만들기, 모션·영상 60fps
+
+보내 주신 참고 영상대로 E를 다시 만들었습니다. 몸을 옆으로 돌려 칼을 겨누는 찌르기 자세 → 손 앞에서 자홍 빛 폭발·빛줄기·검은 번개가 쏟아지는 15번 연속 찌르기(피해는 그대로 7회) → 칼을 뒤로 뺐다가 앞에서 머리 위로 크게 올려 베기 → 2.9초에 상대 자리의 흰분홍 폭발과 하늘까지 솟는 빛기둥, 시전자 둘레로 퍼지며 청보라로 식는 동심원 호. 검은 분홍 네온 그대로이고, 피해·범위·쿨타임·효과음은 그대로입니다. 자세와 이펙트는 렌더 프레임마다 계산되어 60fps 이상에서 부드럽게 움직이고, 확인 영상도 이제 60fps로 만듭니다. [RELEASE_2.31.10_KO.md](RELEASE_2.31.10_KO.md)를 확인하세요.
 
 # 보탠드 2.31.9 — E 찌르기 잔상을 훨씬 많이
 
