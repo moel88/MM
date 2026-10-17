@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall.client;
 import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.client.atomic.AtomicLook;
 import dev.sangwoo.celestialfall.client.atomic.AtomicPillar;
+import dev.sangwoo.celestialfall.client.atomic.AtomicPillarShape;
 import dev.sangwoo.celestialfall.client.atomic.AtomicStage;
 import net.minecraft.util.math.Vec3d;
 
@@ -56,6 +57,16 @@ public final class AtomicImmersion {
         float quake=AtomicStage.quake(sec,distance,radius)*shake,existing=AtomicLook.shake(sec)*reach(distance,radius)*shake;
         return (float)Math.sqrt(Math.max(0,quake*quake-existing*existing));
     }
+    /**
+     * Distance from a cast's axis that the wall shake goes by: the local player's when the camera is their own view
+     * (first person or the third-person camera behind them), else the camera's.
+     */
+    public static double wallDistance(Vec3d camera,Vec3d origin,float delta){
+        var p=net.minecraft.client.MinecraftClient.getInstance().player;
+        double own=AtomicPillarShape.OWN_CAMERA;
+        Vec3d at=p!=null&&p.getEyePos().squaredDistanceTo(camera)<own*own?p.getLerpedPos(delta):camera;
+        return Math.hypot(at.x-origin.x,at.z-origin.z);
+    }
     /** Full strength within 1.6 blast radii of the cast, gone at 4 radii. */
     public static float reach(double distance,double radius) {
         return (float)Math.max(0,Math.min(1,(radius*4-distance)/(radius*2.4)));
@@ -86,10 +97,11 @@ public final class AtomicImmersion {
                 // even beyond the quake's reach, and right next to the wall the screen shakes hard.
                 float shake=(float)Math.max(0,Math.min(2,CelestialFall.CONFIG.screenShakeStrength));
                 float jolt=AtomicStage.jolt(sec,camera.distanceTo(cast.origin),cast.radius)*shake;
-                // Within 8 blocks of the pillar's wall the screen shakes violently.
-                double r=dev.sangwoo.celestialfall.client.atomic.AtomicPillarShape.radius(AtomicStage.visual(sec),cast.radius);
+                // Within 8 blocks of the pillar's wall (measured from the player in their own view) the screen shakes violently.
+                double r=AtomicPillarShape.radius(AtomicStage.visual(sec),cast.radius);
+                float wall=AtomicStage.wallShake(sec,wallDistance(camera,cast.origin,delta),r,cast.radius)*shake;
                 value=(value==NONE?new Sample(AtomicLook.Grade.NONE,0,0,0):value.withoutGrade()).withJolt(jolt,(long)Math.floor(sec*45))
-                    .withQuake(quakeBeyondShake(sec,d,cast.radius,shake),sec).withWall(AtomicStage.wallShake(sec,d,r,cast.radius)*shake,sec);
+                    .withQuake(quakeBeyondShake(sec,d,cast.radius,shake),sec).withWall(wall,sec);
                 if(!value.active())value=NONE;
             }
             if(value!=NONE){result=value;best=d;}

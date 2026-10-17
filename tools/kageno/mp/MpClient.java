@@ -143,7 +143,7 @@ public final class MpClient implements ClientModInitializer {
                 var cam=mc.gameRenderer.getCamera().getPos();float sec=c.age(0)/20f;
                 double r=dev.sangwoo.celestialfall.client.atomic.AtomicPillarShape.radius(dev.sangwoo.celestialfall.client.atomic.AtomicStage.visual(sec),c.radius);
                 if(!dev.sangwoo.celestialfall.client.atomic.AtomicPillar.interior(c,cam,sec))
-                    wallPeak=Math.max(wallPeak,dev.sangwoo.celestialfall.client.atomic.AtomicStage.wallShake(sec,Math.hypot(cam.x-c.origin.x,cam.z-c.origin.z),r,c.radius)
+                    wallPeak=Math.max(wallPeak,dev.sangwoo.celestialfall.client.atomic.AtomicStage.wallShake(sec,dev.sangwoo.celestialfall.client.AtomicImmersion.wallDistance(cam,c.origin,0),r,c.radius)
                         *(float)dev.sangwoo.celestialfall.CelestialFall.CONFIG.screenShakeStrength);
             }
             flag("veil_overwhelm_active",dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.active());

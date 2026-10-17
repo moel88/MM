@@ -604,14 +604,18 @@ public final class AtomicWorld {
             s.wallRise=new float[s.slabs.size()];
             for(int i=0;i<s.slabs.size();i++){var slab=s.slabs.get(i);s.wallRise[i]=AtomicEdge.slabRise(slab.radius(),28*s.scale)+(slab.rise()-7.07f-.06f*slab.ring());}
         }
+        if(s.shown==null)s.shown=new float[s.slabs.size()];
         var matrices=ctx.matrixStack();var cam=ctx.camera().getPos();
         var vertices=mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
         RenderSystem.enableDepthTest();RenderSystem.depthMask(true);
         int quality=CelestialFall.CONFIG.visualQuality;
         for(int index=0;index<s.slabs.size();index++){
             var slab=s.slabs.get(index);float rise=withWall?s.wallRise[index]:slab.rise();
+            // A slab already seen erupting stays up (and keeps its rise) when the view switches.
+            if(s.shown[index]>0)rise=Math.min(rise,s.shown[index]);
             if(quality==0&&slab.ring()>=6)continue;
             if(sec<rise||sec>=slab.vanish()+.05f)continue;
+            if(s.shown[index]==0)s.shown[index]=rise;
             double depth=slab.thick()+slab.width()*Math.sin(slab.tilt())+1;
             float up=out(sec,rise,rise+.45f);
             double drop=depth*(1-up)+depth*smooth(sec,slab.vanish(),slab.vanish()+.05f);

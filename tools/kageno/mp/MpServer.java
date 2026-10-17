@@ -25,8 +25,8 @@ import java.util.*;
  * Kageno cast is running. During G, still husks stand 4, 12, 20 and 26 blocks from the caster and the
  * cast age of the first hit on each is logged (the damage column opens with the pillar), with the ages the
  * column holds each one (75 % slower) and lets it go; they have enough health to outlast every hit. The 20-block husk is moved out of the column at age 300,
- * and the watcher (Botand health, healed every tick) stands just outside the open wall from 270 to 300 (the wall
- * shake) and is moved into it at 320 and out again at 360, to log how soon the hold takes and lets go; the
+ * and the watcher (Botand health, healed every tick) stands still just outside the open wall from 250 to 276 (the
+ * wall shake) and is moved into it at 320 and out again at 360, to log how soon the hold takes and lets go; the
  * watcher's client measures its walking speed outside and inside. Not shipped in the mod jar.
  */
 public final class MpServer implements ModInitializer {
@@ -115,9 +115,9 @@ public final class MpServer implements ModInitializer {
         }
         for(var p:server.getPlayerManager().getPlayerList()){
             if(caster(p))continue;
-            // Just outside the fully open wall (3 blocks out) for the wall shake, then back out before stepping in.
-            if(age==270){p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,ground,31.5,180,0);note(server,"watcher moved next to the wall (31 blocks) at cast age "+age);}
-            if(age==300){int y=w.getTopY(Heightmap.Type.MOTION_BLOCKING,0,64);p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,y,64.5,180,0);note(server,"watcher moved out (64 blocks) at cast age "+age);}
+            // Standing still just outside the fully open wall (3 blocks out) for the wall shake, back out before its walk at 280.
+            if(age==250){p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,ground,31.5,180,0);note(server,"watcher moved next to the wall (31 blocks) at cast age "+age);}
+            if(age==276){int y=w.getTopY(Heightmap.Type.MOTION_BLOCKING,0,64);p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,y,64.5,180,0);note(server,"watcher moved out (64 blocks) at cast age "+age);}
             if(age==320){
                 p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,ground,10.5,180,0);note(server,"watcher moved into the column (10 blocks) at cast age "+age);
             }
