@@ -50,33 +50,59 @@ class TimeWalkerSkillTest {
             assertTrue(sword(cock+.5f*(cut-cock)).fw()>.5,"strike "+i+" crosses the front");
             int s=sword(cut).rt()>0?1:-1;assertNotEquals(side,s,"strike "+i+" ends on the same side as the one before");side=s;
         }
-        // The big one is wound up longest, sweeps furthest and leaves the longest, widest cut.
-        int n=sweep.length-1;double[] bigCut=TimeWalkerSkill.SPEC[n];
+        // The big one is wound up longest, sweeps furthest and leaves the longest, widest cut (whatever the cast's draw).
+        int n=sweep.length-1;
+        for(long seed=0;seed<50;seed++){
+            double[][] spec=TimeWalkerSkill.spec(seed*7919);
+            assertEquals(TimeWalkerSkill.CUTS.length,spec.length);
+            for(int i=0;i<n;i++)assertTrue(spec[n][2]>spec[i][2]&&spec[n][6]>spec[i][6]);
+        }
         for(int i=0;i<n;i++){
             assertTrue(sweep[n]>sweep[i],"big sweep "+sweep[n]+" vs "+sweep[i]);
             assertTrue(TimeWalkerSkill.CUTS[n]-TimeWalkerSkill.COCKS[n]>TimeWalkerSkill.CUTS[i]-TimeWalkerSkill.COCKS[i]);
-            assertTrue(bigCut[2]>TimeWalkerSkill.SPEC[i][2]&&bigCut[6]>TimeWalkerSkill.SPEC[i][6]);
         }
-        assertEquals(TimeWalkerSkill.CUTS.length,TimeWalkerSkill.SPEC.length);
     }
     /** The cuts land as purple slashes with the server's hits: the four stored ones one after another from 1.8 s, the big one with the final hit. */
     @Test void slashesLandWithTheHits(){
-        int n=TimeWalkerSkill.CUTS.length-1;
-        for(int i=0;i<n;i++){
-            assertTrue(TimeWalkerSkill.slashAt(i)>=TimeWalkerSkill.STORED&&TimeWalkerSkill.slashAt(i)<TimeWalkerSkill.RELEASE-.03f,"stored slash "+i);
-            if(i>0)assertTrue(TimeWalkerSkill.slashAt(i)>TimeWalkerSkill.slashAt(i-1),"one after another");
-            assertTrue(TimeWalkerSkill.slashLife(n)>TimeWalkerSkill.slashLife(i));
+        int n=TimeWalkerSkill.CUTS.length-1;java.util.Set<String> orders=new java.util.HashSet<>();
+        for(long seed=0;seed<60;seed++){
+            float[] at=new float[n];float first=99;StringBuilder order=new StringBuilder();
+            for(int i=0;i<n;i++){
+                at[i]=TimeWalkerSkill.slashAt(i,seed);first=Math.min(first,at[i]);
+                assertTrue(at[i]>=TimeWalkerSkill.STORED&&at[i]<TimeWalkerSkill.RELEASE-.03f,"stored slash "+i+" at "+at[i]);
+                for(int j=0;j<i;j++)assertTrue(Math.abs(at[i]-at[j])>=.0099f,"one after another");
+                assertTrue(TimeWalkerSkill.slashLife(n)>TimeWalkerSkill.slashLife(i));
+            }
+            assertEquals(TimeWalkerSkill.STORED,first,1e-6,"the first lands with the stored hits");
+            for(int i=0;i<n;i++)order.append(Math.round((at[i]-first)*1000)).append(',');
+            orders.add(order.toString());
+            assertEquals(TimeWalkerSkill.RELEASE,TimeWalkerSkill.slashAt(n,seed),.02);
         }
-        assertEquals(TimeWalkerSkill.RELEASE,TimeWalkerSkill.slashAt(n),.02);
+        assertTrue(orders.size()>30,"a different order and rhythm from cast to cast");
     }
-    /** The cuts are long lines lying across the front, crossing at many angles (never straight at the caster). */
-    @Test void cutsLieAcrossTheFrontAndCross(){
-        double low=0,high=0;
-        for(double[] s:TimeWalkerSkill.SPEC){
-            assertTrue(Math.abs(s[0])<=25&&Math.abs(s[1])<=35&&s[2]>=10,"cut "+java.util.Arrays.toString(s));
-            low=Math.min(low,s[1]);high=Math.max(high,s[1]);
+    /**
+     * Four cuts and the big one, no more. The four slash across the front at irregular angles drawn per cast (both
+     * diagonals, never two alike, never straight at the caster), a new set every cast but the same on every client
+     * for the same cast; the big one lies almost level.
+     */
+    @Test void fourRandomCutsAcrossTheFrontEveryCast(){
+        int n=TimeWalkerSkill.CUTS.length-1;java.util.Set<Long> firstTilts=new java.util.HashSet<>();
+        for(long seed=1;seed<300;seed++){
+            long id=seed*0x2545F4914F6CDD1DL;double[][] spec=TimeWalkerSkill.spec(id);
+            assertEquals(n+1,spec.length,"four cuts and the big one");
+            assertArrayEquals(spec[0],TimeWalkerSkill.spec(id)[0],"the same cast draws the same cuts");
+            double low=99,high=-99;
+            for(int i=0;i<n;i++){
+                double[] s=spec[i];
+                assertTrue(Math.abs(s[0])<=22&&Math.abs(s[1])<=TimeWalkerSkill.TILT+1e-9&&s[2]>=9.5&&s[2]<=13,"cut "+java.util.Arrays.toString(s));
+                for(int j=0;j<i;j++)assertTrue(Math.abs(s[1]-spec[j][1])>=TimeWalkerSkill.GAP-1e-9,"two cuts alike: "+s[1]+" "+spec[j][1]);
+                low=Math.min(low,s[1]);high=Math.max(high,s[1]);
+            }
+            assertTrue(low<0&&high>0,"both diagonals");
+            assertTrue(Math.abs(spec[n][1])<=6&&Math.abs(spec[n][0])<=5,"the big one lies almost level");
+            firstTilts.add(Math.round(spec[0][1]));
         }
-        assertTrue(low<=-20&&high>=20,"both diagonals");
+        assertTrue(firstTilts.size()>40,"a new set of angles from cast to cast");
     }
     /** Walking, the body stays over the walking legs: no dip, no crouch, no step of the root; standing it is the authored clip. */
     @Test void walkingCastKeepsTheBodyOverTheLegs(){

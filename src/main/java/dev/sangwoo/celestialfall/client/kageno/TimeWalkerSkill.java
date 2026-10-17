@@ -18,8 +18,9 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
 /**
  * R "시간을 걷는 자", after the user's recordings (standing from four sides, walking from behind). The sword's purple
  * aura flares as the body dips and raises the sword into a hanging guard over the head; at 0.5 s the world goes gray
- * and the blade turns cyan. Four fast cuts and one big wound-up sweep each leave a long white-lavender line frozen in
- * the air ahead, crossing into a star; the body settles low with the sword down. Colour returns at 1.77 s: the lines
+ * and the blade turns cyan. Four fast cuts and one big wound-up sweep each leave one long white-lavender line frozen in
+ * the air ahead: the four slash across the front at angles drawn anew every cast, the big one lies almost level. The
+ * body settles low with the sword down. Colour returns at 1.77 s: the lines
  * go violet and vanish into a column of light as the four stored cuts burst out as purple slashes (the server's four
  * stored hits at 1.8 s), then at 1.9 s the big cut lands as one long purple slash (5 hits in all) with a white
  * starburst and a magenta band exploding sideways along it with streaks, sparks, pink stars, shards and smoke. Walking, the same arms and sword play over the walk cycle
@@ -141,12 +142,32 @@ final class TimeWalkerSkill implements Fx.Skill {
     static double height(Fx c,int id){for(var e:c.targets)if(e.getId()==id)return e.getHeight();return 1.8;}
     /** One frozen cut: centre, direction (toward the caster's right side), length, core width and the end it was drawn from (-1 left, 1 right). */
     record Cut(Vec3d centre,Vec3d dir,double length,double width,int from){}
-    /** Per cut: turn off the sideways axis toward the front, elevation (degrees), length, offsets up, right, forward (blocks), core width. */
-    static final double[][] SPEC={{10,6,11,.1,-.2,0,.07},{-14,-22,12,-.15,.3,.2,.065},{24,22,10.5,.3,.25,.1,.065},{-20,-4,12.5,-.05,-.35,.3,.07},{0,3,16,0,0,0,.11}};
+    /** Tilts of the four cuts lie within ±TILT degrees, at least GAP degrees apart. */
+    static final double TILT=55,GAP=20;
+    /**
+     * The cuts of one cast, drawn from its id (the same on every client): the four cuts slash across the front at
+     * irregular angles, a new set every cast (tilts at least {@value #GAP}° apart in a random order, so both
+     * diagonals are always there), each turned a little toward or away from the caster and offset round the crossing;
+     * the big sweep's cut lies almost level, longest and widest. Each row: turn off the sideways axis toward the front,
+     * elevation (degrees), length, offsets up, right, forward (blocks), core width.
+     */
+    static double[][] spec(long seed){
+        var r=new java.util.SplittableRandom(seed);int n=CUTS.length-1;
+        // Irregular gaps: the slack beyond the minimum spacing is shared out at random.
+        double[] w=new double[n+1];double sum=0;for(int i=0;i<=n;i++){w[i]=-Math.log(1-r.nextDouble());sum+=w[i];}
+        double free=2*TILT-(n-1)*GAP,at=-TILT;double[] tilt=new double[n];
+        for(int i=0;i<n;i++){at+=(i>0?GAP:0)+free*w[i]/sum;tilt[i]=at;}
+        for(int i=n-1;i>0;i--){int j=r.nextInt(i+1);double k=tilt[i];tilt[i]=tilt[j];tilt[j]=k;}
+        double[][] out=new double[n+1][];
+        for(int i=0;i<n;i++)out[i]=new double[]{-22+44*r.nextDouble(),tilt[i],9.5+3.5*r.nextDouble(),-.35+.8*r.nextDouble(),-.45+.9*r.nextDouble(),-.2+.6*r.nextDouble(),.062+.01*r.nextDouble()};
+        out[n]=new double[]{-5+10*r.nextDouble(),-6+12*r.nextDouble(),16,0,0,0,.11};
+        return out;
+    }
+    static long seed(Fx c){var id=c.cast.id();return id.getMostSignificantBits()*31+id.getLeastSignificantBits();}
     static List<Cut> cuts(Fx c){
-        List<Cut> out=new ArrayList<>();Vec3d x=crossing(c);
-        for(int i=0;i<SPEC.length;i++){
-            double[] s=SPEC[i];double yaw=Math.toRadians(s[0]),el=Math.toRadians(s[1]);
+        List<Cut> out=new ArrayList<>();Vec3d x=crossing(c);double[][] spec=spec(seed(c));
+        for(int i=0;i<spec.length;i++){
+            double[] s=spec[i];double yaw=Math.toRadians(s[0]),el=Math.toRadians(s[1]);
             Vec3d dir=c.right.multiply(Math.cos(el)*Math.cos(yaw)).add(c.f.multiply(Math.cos(el)*Math.sin(yaw))).add(0,Math.sin(el),0);
             out.add(new Cut(x.add(0,s[3],0).add(c.right.multiply(s[4])).add(c.f.multiply(s[5])),dir,s[2],s[6],i%2==0?-1:1));
         }
@@ -162,12 +183,6 @@ final class TimeWalkerSkill implements Fx.Skill {
     static Vec3d across(Vec3d d){Vec3d x=d.crossProduct(Fx.UP);if(x.lengthSquared()<1e-4)x=d.crossProduct(new Vec3d(1,0,0));return x.normalize();}
     static int mix(int a,int b,float k){return NeonThrustSkill.mix(a,b,Math.max(0,Math.min(1,k)));}
     static int[] palette(float k){int[] p=new int[4];for(int i=0;i<4;i++)p[i]=mix(AURA[i],ICE[i],k);return p;}
-    /** Other time-stopped targets than the one the cuts cross on: each gets an X of short cuts of its own. */
-    static List<Vec3d> others(Fx c){
-        List<Vec3d> out=new ArrayList<>();Vec3d x=crossing(c);
-        for(var t:c.cast.targets()){Vec3d p=t.position().add(0,height(c,t.entity())*.6,0);if(p.squaredDistanceTo(x)>.8)out.add(p);}
-        return out;
-    }
 
     // ───────────────────────────── effects ─────────────────────────────
 
@@ -253,7 +268,7 @@ final class TimeWalkerSkill implements Fx.Skill {
             var cut=list.get(i);Vec3d[] e=span(cut,drawn(t,i));float u=b/.2f;
             FxLib.flash(m,e[0],(big?1.3:.7)*(1-u)+.15,LAVENDER,(1-u)*Ease.smooth(b,0,.02f));
             if(big)FxLib.flash(m,e[1],1.1*(1-u)+.2,WHITE,(1-u)*Ease.smooth(b,.04f,.07f));
-            for(int k=0;k<(big?14:7);k++){
+            for(int k=0;k<(big?6:3);k++){
                 Vec3d d=cut.dir().multiply(-cut.from()).multiply(.6+.6*Ease.hash(i*31+k*3)).add((Ease.hash(i*17+k*5)-.5)*.9,(Ease.hash(i*19+k*7)-.4)*.9,(Ease.hash(i*23+k*11)-.5)*.9).normalize();
                 Vec3d p=e[0].add(d.multiply(.3+2.4*u*(.5+.5*Ease.hash(i*29+k))));
                 m.needle(p,p.add(d.multiply(.28)),.05,.5,WHITE,(1-u)*(1-u));
@@ -261,8 +276,8 @@ final class TimeWalkerSkill implements Fx.Skill {
         }
     }
     /**
-     * The cuts hang frozen in the air: a white core tapering at both ends inside lavender glow, thin parallel strands
-     * past its ends and a glint running along it. They turn violet and thin out as colour returns.
+     * The cuts hang frozen in the air, one line each (four cuts and the big one, nothing else): a white core tapering
+     * at both ends inside lavender glow and a glint running along it. They turn violet and thin out as colour returns.
      */
     static void frozenCuts(Fx c,EffectMesh m,float t){
         float fade=frozen(t);if(fade<=0)return;float tint=Ease.smooth(t,COLOR-.02f,COLOR+.05f),thin=1-.6f*tint;
@@ -275,27 +290,9 @@ final class TimeWalkerSkill implements Fx.Skill {
             m.softLine(a,b,wd*5,glow,.6f*on);
             m.needle(a,b,wd*2.4,.5,glow,.85f*on);
             m.needle(a,b,wd,.5,WHITE,on);
-            // Thinner strands beside it, offset across the cut, running on past its ends.
-            Vec3d side=across(cut.dir()),d=cut.dir().multiply(-cut.from());double len=cut.length()*k;
-            for(int s=1;s<=2;s++){
-                double off=(s==1?.16:-.27)*(1+.3*Ease.hash(i*7+s)),ext=len*(.08+.1*s);
-                Vec3d o=side.multiply(off).add(0,(s==1?.07:-.1),0);
-                m.needle(a.add(o).subtract(d.multiply(ext*.4)),b.add(o).add(d.multiply(ext)),wd*(s==1?.55:.4),.5,s==1?WHITE:glow,.8f*on);
-            }
             // A glint travelling along the cut while it hangs.
             float ph=(float)((t*.9+Ease.hash(i*13+5))%1);
             if(k>=1)m.star(a.lerp(b,ph),.22,glow,.7f*on*(float)Math.sin(Math.PI*ph));
-        }
-        // The other stopped targets each get a short X of their own.
-        int n=0;
-        for(Vec3d p:others(c)){
-            for(int j=0;j<2;j++){
-                int i=j==0?1:4;float k=drawn(t,i);if(k<=0)continue;
-                double tilt=Math.toRadians((j==0?35:-35)+10*Ease.hash(n*7+j));Vec3d d=c.right.multiply(Math.cos(tilt)).add(0,Math.sin(tilt),0);
-                Vec3d a=p.subtract(d.multiply(1.3)),b=a.add(d.multiply(2.6*k));float on=fade*Ease.smooth(t,COCKS[i],COCKS[i]+.015f);
-                m.softLine(a,b,.45*thin,glow,.45f*on);m.needle(a,b,.06*thin,.5,WHITE,on);
-            }
-            if(++n>=8)break;
         }
     }
     /**
@@ -328,7 +325,6 @@ final class TimeWalkerSkill implements Fx.Skill {
             float u=Ease.unit(t,RELEASE,RELEASE+.16f),a=Ease.smooth(t,RELEASE-.01f,RELEASE+.015f)*(1-u);double s=1-.35*u;
             m.softDisc(x,2.6*s,PINK,.5f*a);m.softDisc(x,1.6*s,WHITE,.9f*a);
             FxLib.flare(m,x,3.6*s,ROSE,a,45);FxLib.flare(m,x,2.4*s,WHITE,a*.8f,0);
-            for(int k=0;k<16;k++){double az=k*Math.PI/8+Ease.hash(k)*.3,len=(1.6+2*Ease.hash(k*3))*s;Vec3d d=c.right.multiply(Math.cos(az)).add(0,Math.sin(az)*.8,0).add(c.f.multiply((Ease.hash(k*7)-.5)*.6));m.needle(x,x.add(d.multiply(len)),.28,.15,WHITE,a);}
         }
     }
     /**
@@ -353,7 +349,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         float haze=Ease.smooth(t,RELEASE+.05f,RELEASE+.2f)*(1-Ease.smooth(t,RELEASE+.5f,RELEASE+1.3f));
         if(haze>0){Vec3d ha=x.subtract(r.multiply(8)),hb=x.add(r.multiply(8));if(additive)m.softLine(ha,hb,2.4,MAGENTA,.22f*haze);else m.softLine(ha,hb,3,0x9a20c8,.25f*haze);}
         // Streaks racing out along the band.
-        for(int k=0;k<72;k++){
+        for(int k=0;k<30;k++){
             float born=RELEASE+.12f*(float)Ease.hash(k*3+1),u=(t-born)/(.28f+.25f*(float)Ease.hash(k*5+2));if(u<0||u>=1)continue;
             double side=Ease.hash(k*7+3)<.5?-1:1,go=(.3+2*Ease.hash(k*11+4))+(5+9*Ease.hash(k*13+5))*(1-(1-u)*(1-u));
             Vec3d p=x.add(r.multiply(side*go)).add(0,(Ease.hash(k*17+6)-.5)*1.2,0).add(c.f.multiply((Ease.hash(k*19+7)-.5)*1.0));
@@ -386,7 +382,7 @@ final class TimeWalkerSkill implements Fx.Skill {
     }
     /** Pink glass shards: out and up off the band, tumbling, then falling as they fade. */
     static void shards(Fx c,EffectMesh m,float t,Vec3d x,boolean additive){
-        for(int k=0;k<72;k++){
+        for(int k=0;k<40;k++){
             float born=RELEASE+.03f+.14f*(float)Ease.hash(k*3+31),life=.9f+.8f*(float)Ease.hash(k*5+32),s=t-born;if(s<0||s>=life)continue;float u=s/life;
             Vec3d p0=x.add(c.right.multiply((Ease.hash(k*7+33)-.5)*13)).add(0,(Ease.hash(k*11+34)-.5)*.9,0);
             double drag=1-Math.exp(-s*2.2);
@@ -415,7 +411,17 @@ final class TimeWalkerSkill implements Fx.Skill {
         return new Vec3d[]{chord,i%2==1?bulge.negate():bulge};
     }
     /** When slash i bursts out: the four stored cuts one after another from 1.8 s, the big cut with the final hit at 1.9 s. */
-    static float slashAt(int i){return i==CUTS.length-1?RELEASE-.01f:STORED+.018f*i;}
+    static float slashAt(int i,long seed){
+        int n=CUTS.length-1;if(i>=n)return RELEASE-.01f;
+        // The four stored cuts burst out in an order and at gaps drawn per cast: the first with the stored hits at 1.8 s.
+        var r=new java.util.SplittableRandom(seed*0x9E3779B97F4A7C15L+7);
+        int[] order=new int[n];for(int k=0;k<n;k++)order[k]=k;
+        for(int k=n-1;k>0;k--){int j=r.nextInt(k+1);int x=order[k];order[k]=order[j];order[j]=x;}
+        float at=STORED;
+        for(int k=0;k<n;k++){if(order[k]==i)return at;at+=.01f+.012f*(float)r.nextDouble();}
+        return at;
+    }
+    static float slashAt(Fx c,int i){return slashAt(i,seed(c));}
     static float slashLife(int i){return i==CUTS.length-1?.5f:.32f;}
     /**
      * The cuts land as purple slashes along their frozen lines: at 1.8 s the four stored cuts burst out one after another
@@ -426,7 +432,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         float t=c.sec;if(t<STORED-.01f||t>=RELEASE+.5f)return;
         var list=cuts(c);
         for(int i=0;i<list.size();i++){
-            boolean big=i==list.size()-1;float age=t-slashAt(i),life=slashLife(i);if(age<0||age>=life)continue;
+            boolean big=i==list.size()-1;float age=t-slashAt(c,i),life=slashLife(i);if(age<0||age>=life)continue;
             var cut=list.get(i);Vec3d[] pl=slashPlane(cut,i);
             double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h),deg=Math.toDegrees(h);
             Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h)));
@@ -440,13 +446,13 @@ final class TimeWalkerSkill implements Fx.Skill {
         if(t<STORED-.01f||t>=RELEASE+.3f)return;
         var list=cuts(c);
         for(int i=0;i<list.size();i++){
-            boolean big=i==list.size()-1;float age=t-slashAt(i);if(age<0||age>=.22f)continue;
+            boolean big=i==list.size()-1;float age=t-slashAt(c,i);if(age<0||age>=.22f)continue;
             var cut=list.get(i);Vec3d[] pl=slashPlane(cut,i);
             double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h);
             float grow=Ease.out(age,0,big?.07f:.05f),u=age/.22f;double ang=-h+2*h*grow;
             Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h))),head=o.add(pl[1].multiply(Math.cos(ang)*r)).add(pl[0].multiply(Math.sin(ang)*r));
             FxLib.flash(m,head,(big?1.5:.8)*(1-u)+.2,0xc77dff,(1-u)*Ease.smooth(age,0,.015f));
-            for(int k=0;k<(big?12:6);k++){
+            for(int k=0;k<(big?5:2);k++){
                 Vec3d d=pl[0].multiply(.8).add((Ease.hash(i*37+k*3)-.5)*1.2,(Ease.hash(i*41+k*5)-.4)*1.2,(Ease.hash(i*43+k*7)-.5)*1.2).normalize();
                 Vec3d p=head.add(d.multiply((big?3:1.8)*u*(.5+.5*Ease.hash(i*47+k))));
                 m.needle(p,p.add(d.multiply(.3)),.06,.5,k%2==0?WHITE:0xd9a8ff,(1-u)*(1-u));
@@ -534,7 +540,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         for(int i=0;i<CUTS.length;i++){float b=t-COCKS[i];if(b>=0&&b<.15f)f.light(span(list.get(i),drawn(t,i))[0],LAVENDER,4,1.4f*(1-b/.15f)*Ease.smooth(b,0,.015f));}
         if(t>=STORED-.01f&&t<STORED+.12f){float u=Ease.unit(t,STORED,STORED+.12f);f.light(x,ROSE,10,1.6f*Ease.smooth(t,STORED-.01f,STORED+.02f)*(1-u*u));}
         for(int i=0;i<list.size();i++){
-            float age=t-slashAt(i),life=slashLife(i);if(age<0||age>=life)continue;boolean big=i==list.size()-1;
+            float age=t-slashAt(c,i),life=slashLife(i);if(age<0||age>=life)continue;boolean big=i==list.size()-1;
             f.light(list.get(i).centre(),big?0xc06bff:VIOLET,big?9:6,(big?2.2f:1.2f)*Ease.smooth(age,0,.02f)*(1-Ease.smooth(age,.05f,life)));
         }
         if(t>=RELEASE-.01f){
@@ -561,7 +567,7 @@ final class TimeWalkerSkill implements Fx.Skill {
         float t=c.sec;if(t<STORED-.01f||t>=RELEASE+.6f)return;
         var list=cuts(c);Vec3d x=crossing(c);
         for(int i=0;i<list.size();i++){
-            boolean big=i==list.size()-1;float age=t-slashAt(i),life=big?.3f:.18f;if(age<0||age>=life)continue;
+            boolean big=i==list.size()-1;float age=t-slashAt(c,i),life=big?.3f:.18f;if(age<0||age>=life)continue;
             var cut=list.get(i);Vec3d[] pl=slashPlane(cut,i);
             double half=cut.length()*(big?.4:.28),h=Math.toRadians(big?62:55),r=half/Math.sin(h),deg=Math.toDegrees(h);
             Vec3d o=cut.centre().subtract(pl[1].multiply(r*Math.cos(h)));
