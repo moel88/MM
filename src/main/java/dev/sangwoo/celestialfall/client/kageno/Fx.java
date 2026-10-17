@@ -46,8 +46,6 @@ public final class Fx {
         default Anim clip(int combo){return null;}
         /** The caster model is hidden (e.g. off screen in a cutscene shot). */
         default boolean hidden(float sec){return false;}
-        /** The caster's legs keep the normal walk cycle (R lets the caster walk). */
-        default boolean walkLegs(float sec){return false;}
         default void alpha(Fx c,EffectMesh m){}
         default void additive(Fx c,EffectMesh m){}
         default void strokes(Fx c){}

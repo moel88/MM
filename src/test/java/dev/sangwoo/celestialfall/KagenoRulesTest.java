@@ -5,12 +5,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 final class KagenoRulesTest {
     @Test void referenceDamageAndHitCounts(){
-        int[] skills={E,R,T,RUSH,Y,H},hits={8,5,13,6,2,12};float[] totals={26,21,51,50,16,32};
+        int[] skills={E,R,T,RUSH,Y,H},hits={8,5,13,6,2,12};float[] totals={26,38,51,50,16,32};
         for(int i=0;i<skills.length;i++){float total=0;int count=0;for(int a=0;a<DURATION[skills[i]];a++){float d=damage(skills[i],a,0);total+=d;if(d>0)count+=KagenoRules.hits(skills[i],a);}assertEquals(totals[i],total,.001);assertEquals(hits[i],count);}
         float total=0;for(int combo=1;combo<=4;combo++)for(int a=0;a<14;a++)total+=damage(M1,a,combo);assertEquals(28,total);
     }
-    @Test void affectedRadiiIncludeBoundaryButRejectOutsideAndNan(){assertTrue(inside(9,STOP_RADIUS));assertFalse(inside(9.00001,STOP_RADIUS));assertTrue(inside(25,HIGHEST_RADIUS));assertFalse(inside(25.00001,HIGHEST_RADIUS));assertFalse(inside(Double.NaN,5));}
-    @Test void freezeEndsBeforeDamageAndAlwaysReleases(){assertFalse(frozen(R,R_GRAY-.01f));assertTrue(frozen(R,R_GRAY));assertTrue(frozen(R,R_COLOR-.01f));assertFalse(frozen(R,R_COLOR));for(int a=0;a<R_COLOR;a++)assertEquals(0,damage(R,a,0));assertEquals(4,hits(R,R_STORED));assertTrue(damage(R,R_RELEASE,0)>0);assertTrue(frozen(H,115));assertFalse(frozen(H,116));}
+    @Test void affectedRadiiIncludeBoundaryButRejectOutsideAndNan(){assertTrue(inside(49,STOP_RADIUS));assertFalse(inside(49.00001,STOP_RADIUS));assertTrue(inside(25,HIGHEST_RADIUS));assertFalse(inside(25.00001,HIGHEST_RADIUS));assertFalse(inside(Double.NaN,5));}
+    @Test void freezeEndsBeforeDamageAndAlwaysReleases(){assertFalse(frozen(R,R_GRAY-.01f));assertTrue(frozen(R,R_GRAY));assertTrue(frozen(R,R_COLOR-.01f));assertFalse(frozen(R,R_COLOR));for(int a=0;a<R_COLOR;a++)assertEquals(0,damage(R,a,0));assertEquals(4,hits(R,R_STORED));assertEquals(R_CUTS,hits(R,R_STORED));assertTrue(damage(R,R_RELEASE,0)>0);assertTrue(frozen(H,115));assertFalse(frozen(H,116));}
+    /** R, buffed: a 7-block time stop, four stored cuts (24) and the big final cut (14), which also strikes the band ahead; 9 s cooldown. */
+    @Test void timeWalkerStopsWiderCutsHarderAndReleasesAlongTheBand(){
+        assertEquals(7,STOP_RADIUS);assertEquals(24,damage(R,R_STORED,0));assertEquals(14,damage(R,R_RELEASE,0));assertEquals(180,COOLDOWN[R]);
+        assertTrue(rBand(0,0,0)&&rBand(7,10,5)&&rBand(3.5,-10,-2));
+        assertFalse(rBand(-.01,0,0));assertFalse(rBand(7.01,0,0));assertFalse(rBand(3,10.01,0));assertFalse(rBand(3,0,5.01));assertFalse(rBand(3,0,-2.01));
+        assertTrue(R_RELEASE>R_STORED&&R_STORED>=R_COLOR);
+    }
     @Test void groundFireReleasesCasterWhileHazardContinues(){assertEquals(15,inputEnd(T));assertEquals(15,damage(T,T_STRIKE,0));assertTrue(damage(T,T_STRIKE+64,0)>0);assertEquals(0,damage(T,T_STRIKE+65,0));assertEquals(8,HOLD);assertEquals(COOLDOWN[T],COOLDOWN[RUSH]);}
     @Test void throughTheDarkDashesAfterTheBlastAndCutsAtTheEnd(){
         double moved=0;for(int a=0;a<DURATION[RUSH];a++)moved+=rushSpeed(a);

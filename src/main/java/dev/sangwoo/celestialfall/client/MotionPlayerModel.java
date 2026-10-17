@@ -28,7 +28,12 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         else if(stand!=null){
             articulated=true;var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(stand,animationProgress-player.age);
             var pose=frame.joints();
-            if(stand.skill()==dev.sangwoo.celestialfall.stand.KagenoRules.R&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.walkLegs(stand,animationProgress-player.age)){var walk=CombatClient.pose(player,animationProgress-player.age);for(int i=4;i<=5;i++)pose.joint[i]=walk.joint[i].clone();}
+            // R's walking cast: the legs take the walk cycle while the upper body plays the cuts.
+            float walking=dev.sangwoo.celestialfall.client.kageno.KagenoClips.walkWeight(stand,animationProgress-player.age);
+            if(walking>0){
+                float d=animationProgress-player.age,body=net.minecraft.util.math.MathHelper.lerpAngleDegrees(d,player.prevBodyYaw,player.bodyYaw);
+                dev.sangwoo.celestialfall.client.kageno.KagenoClips.walkLegs(pose,CombatClient.pose(player,d),walking,frame.yaw()+dev.sangwoo.celestialfall.client.kageno.KagenoClips.facingTurn(stand,d,body));
+            }
             MotionRig.apply(this,pose,0,0);
         }
         else if(StandClient.visible(player)&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),animationProgress-player.age)!=null){

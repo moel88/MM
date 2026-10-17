@@ -93,6 +93,12 @@ public final class AnimePostProcessor {
         GL11.glDrawArrays(GL11.GL_TRIANGLES,0,3);
     }
     private static void f(String name,float value) { GL20.glUniform1f(GL20.glGetUniformLocation(program,name),value); }
+    /** Whether this frame's world already went gray (before the Kageno effects were drawn). */
+    private static boolean monoDrawn;
+    /** R's gray world, drawn at the end of the world pass before the Kageno effects: the cuts, the sword and the caster's outline stay in colour. */
+    public static void renderMonochromeWorld(float delta){monoDrawn=true;renderMonochrome(delta);}
+    /** After the world: grays the frame only if the world pass did not (no world render event this frame). */
+    public static void renderMonochromeFallback(float delta){if(!monoDrawn)renderMonochrome(delta);monoDrawn=false;}
     /** Independent of optional bloom/distortion and its failure flag. */
     public static void renderMonochrome(float delta){
         var mc=MinecraftClient.getInstance();float amount=StandClient.monoAmount(delta);

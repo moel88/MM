@@ -6,6 +6,7 @@ import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Quaternionf;
 import dev.sangwoo.celestialfall.client.kageno.R6.Pose;
+import dev.sangwoo.celestialfall.combat.MotionPose;
 import static dev.sangwoo.celestialfall.client.kageno.Anim.*;
 import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
 import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
@@ -71,11 +72,30 @@ public final class KagenoClips {
     public static Anim clip(int skill,int combo){var s=KagenoSkills.of(skill);var c=s==null?null:s.clip(combo);return c==null?STILL:c;}
     public static R6.Frame action(StandClient.Cast cast,float delta){
         float sec=cast.age(delta)/20f;var frame=clip(cast.skill(),cast.combo()).frame(sec);
+        if(cast.skill()==R)frame=TimeWalkerSkill.walking(frame,walkWeight(cast,delta));
         var start=COMBO_STARTS.get(cast.id());
         return start!=null&&sec<.08f?R6.blend(start,frame,Ease.smooth(sec,0,.08f)):frame;
     }
     public static boolean hidden(StandClient.Cast cast,float delta){var s=KagenoSkills.of(cast.skill());return s!=null&&s.hidden(cast.age(delta)/20f);}
-    public static boolean walkLegs(StandClient.Cast cast,float delta){var s=KagenoSkills.of(cast.skill());return s!=null&&s.walkLegs(cast.age(delta)/20f);}
+    /** How much R's caster walks (0 standing, 1 walking): the walking cast eases in and out with the steps. */
+    public static float walkWeight(StandClient.Cast cast,float delta){
+        return cast.skill()!=R?0:Ease.smooth(dev.sangwoo.celestialfall.client.CombatClient.moving(cast.caster(),delta),.08f,.32f);
+    }
+    /**
+     * R's walking cast: the walk cycle's legs, knees and bob blended in by {@code w}. The legs are turned back against
+     * the body's turn ({@code yaw}, degrees left of the walking facing; the root turn carries the whole model, at most
+     * 50 degrees are undone) so the hips keep facing the way the caster walks while the upper body cuts.
+     */
+    public static void walkLegs(MotionPose pose,MotionPose walk,float w,float yaw){
+        if(w<=0)return;
+        var turn=new Quaternionf().rotationY(Math.max(-50,Math.min(50,yaw))*(float)Math.PI/180);
+        for(int i=MotionPose.RIGHT_LEG;i<=MotionPose.LEFT_LEG;i++){
+            var step=new Quaternionf(turn).mul(Anim.quat(walk.joint[i]));
+            pose.joint[i]=R6.euler(Anim.quat(pose.joint[i]).slerp(step,w));
+        }
+        for(int i=0;i<2;i++)pose.knee[i]=MotionPose.lerp(pose.knee[i],walk.knee[i],w);
+        pose.bob=MotionPose.lerp(pose.bob,walk.bob,w);
+    }
     /** Torso pivot (R6 RootJoint) above the feet, in blocks. */
     public static final float PIVOT=1.05f;
     /**
@@ -95,6 +115,10 @@ public final class KagenoClips {
         }
         // The body turns to the cast facing over the first frames instead of snapping to it.
         m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-cast.yaw())*Ease.smooth(cast.age(delta)/20f,0,.08f)));
+    }
+    /** How far {@link #root} has turned the body left of its own facing {@code bodyYaw} to the cast facing (degrees). */
+    public static float facingTurn(StandClient.Cast cast,float delta,float bodyYaw){
+        return net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-cast.yaw())*Ease.smooth(cast.age(delta)/20f,0,.08f);
     }
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */
     private static final java.util.Map<java.util.UUID,float[]> FACINGS=new java.util.HashMap<>();

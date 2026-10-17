@@ -131,6 +131,8 @@ public final class CombatClient {
         if(ticks%100==0){MOVEMENT.keySet().retainAll(alive);STATES.keySet().retainAll(alive);}
     }
     private static float approach(float a,float b,float step){return MathHelper.lerp(step,a,b);}
+    /** How much a player is walking (0 still, 1 at walking pace or faster), eased over a few ticks like the walk cycle's stride. */
+    public static float moving(UUID id,float delta){Movement m=MOVEMENT.get(id);return m==null?0:MathHelper.lerp(delta,m.previousAmount,m.amount);}
     private static void sendLook(){var mc=MinecraftClient.getInstance();mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));}
     /** Which part of the articulated motion plays now (a new value for every hit, dash and punch), so the model can crossfade between them. */
     public static Object state(AbstractClientPlayerEntity p,float delta) {

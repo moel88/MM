@@ -42,6 +42,7 @@ public abstract class GameRendererMixin {
     @Inject(method="render",at=@At(value="INVOKE",target="Lnet/minecraft/client/gl/Framebuffer;beginWrite(Z)V",ordinal=0,shift=At.Shift.AFTER))
     private void celestialfall$post(float delta,long limitTime,boolean tick,CallbackInfo ci) {
         if(TitleMapCamera.active())return;
+        dev.sangwoo.celestialfall.client.StandClient.redrawOutlines();
         dev.sangwoo.celestialfall.client.atomic.AtomicAmbience.letterbox(delta);
         AnimePostProcessor.render(delta);
     }
@@ -84,7 +85,7 @@ public abstract class GameRendererMixin {
         target="Lnet/minecraft/client/MinecraftClient;getOverlay()Lnet/minecraft/client/gui/screen/Overlay;"))
     private void celestialfall$cinematic(float delta,long limitTime,boolean tick,CallbackInfo ci) {
         if(!TitleMapCamera.active()){
-            AnimePostProcessor.renderMonochrome(delta);
+            AnimePostProcessor.renderMonochromeFallback(delta);
             dev.sangwoo.celestialfall.client.CinematicHud.render(delta);
         }
     }

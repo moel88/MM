@@ -130,8 +130,14 @@ public final class KagenoManager {
     /** Point in the cast frame: forward, lateral (character's right) and height relative to the origin. */
     private static Vec3d local(Cast c,Vec3d p){Vec3d f=Vec3d.fromPolar(0,c.yaw),right=new Vec3d(-f.z,0,f.x),d=p.subtract(c.origin);return new Vec3d(d.dotProduct(f),d.dotProduct(right),d.y);}
     private static List<LivingEntity> strikeTargets(Cast c){
-        if(c.skill==R||c.skill==H)return new ArrayList<>(c.targets.keySet());
         int age=c.age();
+        // R's release: the time-stopped targets and whoever stands in the band it explodes along.
+        if(c.skill==R&&age==R_RELEASE){
+            var out=new LinkedHashSet<>(c.targets.keySet());
+            out.addAll(near(c.world,c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(3.5)),12,c.player,false).stream().filter(e->{var l=local(c,e.getPos());return rBand(l.x,l.y,l.z);}).toList());
+            return new ArrayList<>(out);
+        }
+        if(c.skill==R||c.skill==H)return new ArrayList<>(c.targets.keySet());
         // T: the ≈6×6 character-height fire field, biased forward and to the sword side.
         if(c.skill==T)return near(c.world,c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(3)),9,c.player,false).stream().filter(e->{var l=local(c,e.getPos());return l.x>=-2.6&&l.x<=8.6&&l.y>=-4.6&&l.y<=6.4&&l.z>=-2&&l.z<=7;}).toList();
         // T+ fire ticks: the long strip 2-15 character heights ahead.
@@ -239,6 +245,12 @@ public final class KagenoManager {
             if(c.skill==Y&&(age==Y_STOMP||age==Y_FLASH)&&!frozen(e))c.targets.putIfAbsent(e,e.getPos());
             // M1 hit 4: the target is held in the thrust's smoke, then launched (see tick).
             if(c.skill==M1&&c.combo==4&&!frozen(e))c.targets.put(e,e.getPos());
+            // R's release throws everyone it strikes away from the caster.
+            if(c.skill==R&&age==R_RELEASE&&!frozen(e)){
+                Vec3d away=e.getPos().subtract(c.origin).multiply(1,0,1);if(away.lengthSquared()<1e-4)away=Vec3d.fromPolar(0,c.yaw);
+                e.setVelocity(away.normalize().multiply(.5).add(0,.32,0));e.velocityModified=true;
+                if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+            }
             if(c.skill==RUSH&&age==RUSH_FINISH&&!frozen(e)){
                 Vec3d dir=Vec3d.fromPolar(0,c.yaw);e.setVelocity(dir.multiply(.65).add(0,.25,0));e.velocityModified=true;
                 if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));

@@ -48,6 +48,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * right of the cast spot and CY up, UP above the ground, turning DEGPS degrees per second of the cast clock from START
  * (0 behind the caster, 90 to the caster's right). It shows effects from changing angles (3D shapes stay put in the world).
  *
+ * <p>"walk=N" holds W (the camera-relative walk) from N ticks before the cast until the shot ends: R's walking cast
+ * with "face=180" (camera behind, so W walks the way the caster faces).
+ *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
  * shot's own (seconds from the start).
@@ -264,7 +267,10 @@ public final class SkillShots implements ClientModInitializer {
                 if(age==2)camera();
                 if(age==2&&(opts.containsKey("far")||opts.containsKey("orbit"))){castPos=mc.player.getPos();castYaw=mc.player.getYaw();}
                 if(age==2)camera();
-                if(age>=(opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")?90:30)){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
+                // "walk=N": the player walks (W held, camera-relative) from N ticks before the cast to the end of the shot.
+                int lead=opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")?90:30;
+                if(opts.containsKey("walk")&&age==Math.max(3,lead-(int)opt("walk",10)))key(GLFW_KEY_W,true);
+                if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
                 if(current.equals("M1")){
                     String[] at=opts.getOrDefault("hits","0/13/26/39").split("[,/]");String[] faces=opts.getOrDefault("faces","").split("[,/]");
@@ -281,6 +287,7 @@ public final class SkillShots implements ClientModInitializer {
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
                 if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');
+                    if(opts.containsKey("walk"))key(GLFW_KEY_W,false);
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

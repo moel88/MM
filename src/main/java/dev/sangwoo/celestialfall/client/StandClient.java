@@ -136,6 +136,18 @@ public final class StandClient {
         for(var c:CASTS.values())if(c.skill==R&&c.caster.equals(e.getUuid())){float a=c.age(0);if(a>=KagenoRules.R_GRAY&&a<KagenoRules.R_COLOR)return true;}
         return false;
     }
+    /**
+     * Veil writes its copy of the world back over the frame after the game has drawn the entity outlines, so R's cyan
+     * outline and the Q mark outlines never showed. While one of them is live the outline framebuffer (still holding
+     * this frame's outlines) is drawn again on top, before the HUD.
+     */
+    public static void redrawOutlines(){
+        var mc=MinecraftClient.getInstance();if(mc.world==null||mc.worldRenderer==null||!MapClient.enabled())return;
+        boolean any=false;
+        for(var p:mc.world.getPlayers())if(rOutlined(p)){any=true;break;}
+        if(!any&&mc.player!=null){var s=STATES.get(mc.player.getUuid());long now=mc.world.getTime();if(s!=null)for(var m:s.marks())if(m.until()>now){any=true;break;}}
+        if(any)mc.worldRenderer.drawEntityOutlinesFramebuffer();
+    }
     /** World grayscale amount for the local viewer: in over 4 frames, back to colour over ≈8 frames. */
     public static float monoAmount(float delta){
         var p=MinecraftClient.getInstance().player;if(p==null||!p.isAlive())return 0;float best=0;
