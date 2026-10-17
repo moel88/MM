@@ -1,4 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
+FILM_SKILL=G|E picks the stage names in the caption, FILM_SPEED=0.5 plays it at half speed.
 Real-time 30 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -14,6 +15,7 @@ csv_path, actor, mode = (sys.argv[6], sys.argv[7], sys.argv[8]) if len(sys.argv)
 FONT = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
 big, small = ImageFont.truetype(FONT, 26), ImageFont.truetype(FONT, 22)
 W = int(os.environ.get('FILM_WIDTH', '960'))
+SKILL, SPEED = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FILM_SPEED', '1'))
 
 frames = []
 for f in glob.glob(os.path.join(shots, '*.png')):
@@ -31,6 +33,14 @@ elif csv_path:
             if r['name'] == actor: rows[int(r['age'])] = r
 
 def stage(t):
+    if SKILL == 'E':
+        if t < .42: return '네온 점화'
+        if t < .8: return '찌르기 자세'
+        if t < 2.42: return '연속 찌르기 (13번, 피해 7회)'
+        if t < 2.84: return '올려베기 준비'
+        if t < 3.04: return '올려베기 (2.9초 마무리 타격)'
+        if t < 3.35: return '마무리'
+        return '끝'
     if t < 5.59: return '영창'
     if t < 5.95: return '점화'
     if t < 12.06: return '기둥이 넓어지는 중 (초당 최대 4.5블록)'
@@ -69,7 +79,8 @@ def actor_line(t):
 
 def caption(img, t):
     d = ImageDraw.Draw(img, 'RGBA')
-    lines = [(title, big, (255, 255, 255)), (f'시전 후 {max(0, t):.1f}초 · {stage(t)}', small, (255, 230, 120))]
+    speed = '' if SPEED == 1 else f' · {SPEED:g}배속'
+    lines = [(title, big, (255, 255, 255)), (f'시전 후 {max(0, t):.{2 if SKILL == "E" else 1}f}초 · {stage(t)}{speed}', small, (255, 230, 120))]
     text, color = actor_line(t)
     y = 10
     for s, font, col in lines:
@@ -85,7 +96,7 @@ try:
     while t <= end:
         i = bisect.bisect_left(times, t); i = min(range(max(0, i - 1), min(len(times), i + 1)), key=lambda j: abs(times[j] - t))
         img = Image.open(frames[i][1]).convert('RGB'); img = img.resize((W, round(img.height * W / img.width / 2) * 2), Image.LANCZOS)
-        caption(img, t); img.save(os.path.join(tmp, f'{n:05d}.png')); n += 1; t += 1 / 30
+        caption(img, t); img.save(os.path.join(tmp, f'{n:05d}.png')); n += 1; t += SPEED / 30
     subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', '30', '-i', os.path.join(tmp, '%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
                     '-crf', '23', '-preset', 'slow', '-movflags', '+faststart', out], check=True)
 finally:
