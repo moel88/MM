@@ -40,6 +40,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * SIDE behind) or "behind" (DIST blocks behind it like a player's own third-person camera; G's hit view going by the
  * actor's spot). Every tick of a shot with actors goes to
  * NAME/actors.csv. Fixed and following cameras are onlookers: G's hit view goes by where they are (SkillShotsObserverMixin).
+ * "shake=1" gives those cameras the Atomic camera shake a player standing there would get (quake, jolt, the shake
+ * next to the pillar's wall) and logs every frame of G to NAME/shake.csv: cast age in ticks, blocks from the
+ * camera to the pillar's wall (negative inside), the wall shake amplitude and the applied yaw and pitch in degrees.
  */
 public final class SkillShots implements ClientModInitializer {
     static SkillShots instance;
@@ -59,7 +62,7 @@ public final class SkillShots implements ClientModInitializer {
     }
     private final List<Actor> actors=new ArrayList<>();
     private static final Map<String,Integer> ACTOR_IDS=new ConcurrentHashMap<>();private static final Map<String,Actor> ACTORS=new ConcurrentHashMap<>();
-    private static volatile String[] track;
+    private static volatile String[] track;private static volatile boolean shake;private final StringBuilder shakeLog=new StringBuilder();
     private volatile boolean filming;private volatile long serverStart=-1;private volatile net.minecraft.util.math.Vec3d spot=net.minecraft.util.math.Vec3d.ZERO;
     private final Set<String> moving=new HashSet<>();private final StringBuilder actorLog=new StringBuilder();
 
@@ -70,6 +73,8 @@ public final class SkillShots implements ClientModInitializer {
         var o=self.castPos;var eye=o.add(f[0],f[1],f[2]);var d=o.add(f[3],f[4],f[5]).subtract(eye).normalize();
         return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-d.x,d.z)),(float)-Math.toDegrees(Math.asin(d.y)),0);
     }
+    /** Whether the onlooker camera of this entry shakes like a player standing there ("shake=1"). */
+    public static boolean shake(){var self=instance;return shake&&self!=null&&self.phase>=3;}
     public static double farFov(){
         String[] t=track;if(t!=null&&instance!=null&&instance.phase>=3)return t.length>5?Double.parseDouble(t[5]):70;
         double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;
@@ -117,9 +122,22 @@ public final class SkillShots implements ClientModInitializer {
     private void frame()throws Exception{
         if(phase!=4||current==null)return;
         float t=clock();if(t<-2||t>length(current))return;
+        if(shake&&"G".equals(current))logShake(t);
         var image=ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());
         String name=String.format(Locale.ROOT,"%s/%05d_%07.2f.png",folder,shotIndex++,t);
         jobs.add(writer.submit(()->{try(image){Path p=OUT.resolve(name);Files.createDirectories(p.getParent());image.writeTo(p);}catch(Exception e){throw new RuntimeException(e);}}));
+    }
+    /** One row of shake.csv for this frame (t: cast age in ticks). */
+    private void logShake(float t){
+        var cam=mc.gameRenderer.getCamera().getPos();float delta=mc.getTickDelta();
+        for(var c:AtomicClient.CASTS.values()){
+            if(!c.caster.equals(mc.player.getUuid()))continue;
+            float sec=c.age(delta)/20f;double d=Math.hypot(cam.x-c.origin.x,cam.z-c.origin.z);
+            double r=dev.sangwoo.celestialfall.client.atomic.AtomicPillarShape.radius(dev.sangwoo.celestialfall.client.atomic.AtomicStage.visual(sec),c.radius);
+            float wall=dev.sangwoo.celestialfall.client.atomic.AtomicStage.wallShake(sec,AtomicImmersion.wallDistance(cam,c.origin,delta),r,c.radius)*(float)CelestialFall.CONFIG.screenShakeStrength;
+            var s=AtomicImmersion.at(cam,delta);
+            shakeLog.append(String.format(Locale.ROOT,"%.2f,%.3f,%.3f,%.3f,%.3f%n",t,d-r,wall,s.yaw(),s.pitch()));
+        }
     }
     private void setup(ServerPlayerEntity p){
         var w=p.getServerWorld();MapGate.designate(w,true);
@@ -218,13 +236,13 @@ public final class SkillShots implements ClientModInitializer {
                 if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];int n=repeats.merge(current,1,Integer::sum);folder=n==1?current:current+"."+n;opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}
                     far=null;if(opts.containsKey("far")){String[] v=opts.get("far").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());far=f;}
                     actors.clear();if(opts.containsKey("act"))for(String spec:opts.get("act").split("\\+")){String[] v=spec.split(":");actors.add(new Actor(v[0],Double.parseDouble(v[1]),Float.parseFloat(v[2]),Double.parseDouble(v[3]),v[4]));}
-                    track=opts.containsKey("track")?opts.get("track").split(":"):null;
+                    track=opts.containsKey("track")?opts.get("track").split(":"):null;shake=opts.containsKey("shake")&&!"0".equals(opts.get("shake"));
                     server(this::reset);
                     int view=(int)opt("view",Integer.getInteger("botand.shots.view",6));if(mc.options.getViewDistance().getValue()!=view){mc.options.getViewDistance().setValue(view);mc.worldRenderer.reload();}}
                 if(age==2)camera();
                 if(age==2&&opts.containsKey("far"))castPos=mc.player.getPos();
                 if(age==2)camera();
-                if(age>=(opts.containsKey("far")||opts.containsKey("track")?90:30)){camera();castPos=mc.player.getPos();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
+                if(age>=(opts.containsKey("far")||opts.containsKey("track")?90:30)){camera();castPos=mc.player.getPos();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
                 if(current.equals("M1")){
                     String[] at=opts.getOrDefault("hits","0/13/26/39").split("[,/]");String[] faces=opts.getOrDefault("faces","").split("[,/]");
@@ -236,7 +254,8 @@ public final class SkillShots implements ClientModInitializer {
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
                 if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');
-                    filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
+                    filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
+                    if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }
     }
     private void trigger(String name){

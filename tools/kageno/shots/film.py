@@ -1,7 +1,8 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
 Real-time 30 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
-(MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed).
+(MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
+(ACTOR -, MODE wall) how far the camera is from the pillar's wall and the wall shake it gets.
 SHOT_DIR is a run_shots.py output folder (START/END in seconds of the cast clock). Needs Pillow, ffmpeg and a font with
 Hangul (WenQuanYi Zen Hei, fonts-wqy-zenhei).
 """
@@ -20,8 +21,11 @@ for f in glob.glob(os.path.join(shots, '*.png')):
     except ValueError: pass
 frames.sort(); times = [t for t, _ in frames]
 
-rows = {}
-if csv_path:
+rows, wall = {}, []
+if csv_path and mode == 'wall':
+    with open(csv_path) as fh:
+        wall = sorted((float(r['t']) / 20, float(r['gap']), float(r['wall'])) for r in csv.DictReader(fh))
+elif csv_path:
     with open(csv_path) as fh:
         for r in csv.DictReader(fh):
             if r['name'] == actor: rows[int(r['age'])] = r
@@ -34,7 +38,15 @@ def stage(t):
     if t < 22.07: return '수축'
     return '소멸'
 
+def wall_line(t):
+    if t < 5.59 or not wall: return None, None
+    i = bisect.bisect_left(wall, (t,)); _, gap, amp = wall[min(i, len(wall) - 1)]
+    if gap <= 0: return '기둥 안 (맞는 시점)', (255, 120, 120)
+    if gap > 8: return f'기둥 벽까지 {gap:.1f}블록', (255, 255, 255)
+    return f'기둥 벽까지 {gap:.1f}블록 · 벽 근처 흔들림 {amp:.1f}°', (255, 150, 90)
+
 def actor_line(t):
+    if mode == 'wall': return wall_line(t)
     if not rows: return None, None
     age = int(t * 20); r = rows.get(age) or rows.get(max(k for k in rows if k <= age) if any(k <= age for k in rows) else min(rows))
     if r is None: return None, None

@@ -3,7 +3,8 @@ usage: python3 tools/kageno/shots/run_shots.py OUT_DIR [SKILLS] [WIDTHxHEIGHT] [
 Frames go to OUT_DIR/NAME/ (a repeated skill name gets NAME.2, NAME.3, ...).
 SKILLS is a comma list of entries "NAME;opt=value;...". Options: face, dist, pitch, camyaw, hits, faces, dfw, drt,
 dummy=0, len, then=SKILL@age, view=CHUNKS, far=ex/ey/ez/tx/ty/tz[/fov] (fixed camera in blocks from the cast spot),
-act=NAME:DIST:YAW:SPEED:START+... (running husks for G) and track=NAME:MODE:DIST:UP:SIDE[:FOV] (camera following one).
+act=NAME:DIST:YAW:SPEED:START+... (running husks for G), track=NAME:MODE:DIST:UP:SIDE[:FOV] (camera following one) and
+shake=1 (those cameras get the Atomic camera shake a player there would; G's frames logged to NAME/shake.csv).
 """
 from pathlib import Path
 import json, os, shutil, subprocess, sys, zipfile, time, socket
