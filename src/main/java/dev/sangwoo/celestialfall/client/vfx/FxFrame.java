@@ -11,7 +11,7 @@ import java.util.List;
  * Pure Java (no GL), so the selection is testable.
  */
 public final class FxFrame {
-    public static final int MAX_LIGHTS=12,MAX_DECALS=6;
+    public static final int MAX_LIGHTS=12,MAX_DECALS=10;
     /** A point light: colour already multiplied by its intensity (1 = a bright lamp), radius in blocks. */
     public record Light(Vec3d pos,float r,float g,float b,double radius){
         double peak(){return Math.max(r,Math.max(g,b));}

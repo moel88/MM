@@ -26,7 +26,7 @@ class FxFrameTest {
         var f=new FxFrame();
         f.decal(new Vec3d(0,64,0),new Vec3d(0,1,0),3,1,1,1,0);
         assertEquals(0,f.decalCount(),"a straight-up direction has no direction on the ground");
-        for(int i=8;i>=0;i--)f.decal(new Vec3d(i*3,64,0),new Vec3d(1,.5,1),3,1,i/8f,1,i);
+        int n=FxFrame.MAX_DECALS+3;for(int i=n-1;i>=0;i--)f.decal(new Vec3d(i*3,64,0),new Vec3d(1,.5,1),3,1,i/(n-1f),1,i);
         var decals=f.nearest(new Vec3d(0,64,0));
         assertEquals(FxFrame.MAX_DECALS,decals.size());
         assertEquals(0,decals.get(0).center().x,1e-9);

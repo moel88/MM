@@ -15,9 +15,9 @@ uniform int LightCount;
 uniform vec4 LightPos[12];
 uniform vec4 LightColor[12];
 uniform int DecalCount;
-uniform vec4 DecalA[6];
-uniform vec4 DecalB[6];
-uniform vec4 DecalC[6];
+uniform vec4 DecalA[10];
+uniform vec4 DecalB[10];
+uniform vec4 DecalC[10];
 in vec2 texCoord;
 out vec4 baseOut;
 out vec4 hdrOut;
@@ -40,7 +40,7 @@ void main(){
         N=dot(N,N)>1e-12?normalize(N):vec3(0.0,1.0,0.0);
         if(dot(N,P)>0.0)N=-N;
         vec2 world=P.xz+Anchor.xz;
-        for(int i=0;i<6;i++){
+        for(int i=0;i<10;i++){
             if(i>=DecalCount)break;
             vec4 A=DecalA[i],B=DecalB[i],C=DecalC[i];
             vec3 local=P-A.xyz;
