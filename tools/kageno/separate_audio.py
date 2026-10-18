@@ -16,9 +16,11 @@ import onnxruntime as ort
 
 ROOT=Path(__file__).resolve().parents[2]
 SR=48000; N=384000; FFT=2048; HOP=512
+# E's sound is the user's own recording since 2.37.0 (its audio_reference.json entry says how it was cut). It is not
+# separated from the video, and a rerun keeps it.
 CLIPS={'kageno_m1_1':(7.50,.65),'kageno_m1_2':(8.13,.65),
  'kageno_m1_3':(8.77,.70),'kageno_m1_4':(9.44,.72),
- 'kageno_e':(18.72,3.20),'kageno_r':(31.96,3.20),
+ 'kageno_r':(31.96,3.20),
  'kageno_t':(43.96,5.20),'kageno_rush':(61.16,3.50),
  'kageno_y':(76.00,2.90),'kageno_h':(121.03,5.80),'atomic_full':(142.00,23.40)}
 HASHES={'split':'fa7973660fd3cf90e84fd0a2ea7a096ce25635f9b14e0b9825e47439476eeb77',
@@ -112,6 +114,7 @@ def main():
   records.append({'sound':name,'seconds':duration,'source_start_seconds':start,'sample_rate':SR,'channels':2,'playback_speed':1.0,'decoded_correlation':corr,'decoded_peak':float(np.abs(decoded).max()),'sha256':hashlib.sha256(ogg.read_bytes()).hexdigest(),'source':'supplied video minus BandIt v2 estimated music','gain':gain,'high_frequency_transient_rescue':rescued,'raw_model_residual_rms_fraction':residual_fraction,'residual_rms_fraction':float(np.sqrt(np.mean((effects/gain)**2)/np.mean(original**2)))})
   if args.install:(ROOT/'src/main/resources/assets/celestialfall/sounds'/ogg.name).write_bytes(ogg.read_bytes())
   print(f'{name}: completed, codec correlation {corr:.5f}, {time.monotonic()-t0:.1f}s',flush=True)
+ records+=[x for x in json.loads((ROOT/'tools/kageno/audio_reference.json').read_text())['effects'] if x['sound']=='kageno_e']
  manifest={'version':'2.24.0','method':'original minus estimated music; no generated SFX','model':'BandIt v2, music-only ONNX','Q_source_offset_seconds':134,'skill_audio_contains_reference_video':True,'music_removal_is_perfect':False,'overlap_seconds':4,'effects':records}
  (args.work/('audio-verification-'+(args.only or 'all')+'.json')).write_text(json.dumps(manifest,indent=2)+'\n')
  if args.install and not args.only:

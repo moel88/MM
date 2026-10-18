@@ -73,19 +73,17 @@
     },
     {
       "sound": "kageno_e",
-      "seconds": 3.2,
-      "source_start_seconds": 18.72,
+      "seconds": 4.178333,
+      "source_start_seconds": 0.195,
       "sample_rate": 48000,
       "channels": 2,
       "playback_speed": 1.0,
-      "decoded_correlation": 0.9829296367293829,
-      "decoded_peak": 0.8403980731964111,
-      "sha256": "5331161d8e3fc3c53dc44a7c5c375f027bed5b04cf3f3ed168c50ba933dc7ad9",
-      "source": "supplied video minus BandIt v2 estimated music",
-      "gain": 1.6757449657159955,
-      "high_frequency_transient_rescue": true,
-      "raw_model_residual_rms_fraction": 0.056389082223176956,
-      "residual_rms_fraction": 0.24979203939437866
+      "decoded_peak": 0.8669600486755371,
+      "sha256": "464733e24ad591addae5a989fa900d1ef6054978fb4f15e6d3e5bba1be43d800",
+      "source": "user-supplied recording (2.37.0), not separated: from 0.195 s, -2 dB, faded out over its last 0.3 s",
+      "gain": 0.7943282347242815,
+      "source_file": "Screen_Recording_20261017_145121_Roblox_1.mp3",
+      "source_sha256": "298d2a093f907ddc602270788a8fd7a630aca62558f930b28397a779ddeea7ef"
     },
     {
       "sound": "kageno_r",
