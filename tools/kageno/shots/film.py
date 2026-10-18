@@ -1,5 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
-FILM_SKILL=G|GPOSE|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
+FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
 MODE motion with the shot's motion.csv (ACTOR -) shows the player's walking speed and the lens's FOV multiplier each tick.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
@@ -24,9 +24,16 @@ frames = []
 for f in glob.glob(os.path.join(shots, '*.png')):
     try: frames.append((int(os.path.basename(f)[:-4].split('_')[0]), float(os.path.basename(f)[:-4].split('_')[1]) / 20, f))
     except ValueError: pass
+# When a cast ends the shot's clock falls back from the cast's clock to its own, up to a tick behind: later frames are
+# moved on by that step so the clock keeps running forward (a drop of more than 0.1 s is a restart, below).
+frames.sort(); offset = 0; moved = []
+for k, (i, t, f) in enumerate(frames):
+    if k and 0 < moved[-1][1] - (t + offset) < .1: offset += moved[-1][1] - (t + offset) + .001
+    moved.append((i, t + offset, f))
+frames = moved
 # A held key's frames come first on the shot's own clock (T held: the 0.4 s hold before the cast); keep only the frames
 # after the cast clock last started again, so they never mix with the cast's own first frames.
-frames.sort(); first = 0
+first = 0
 for k in range(1, len(frames)):
     if frames[k][1] < frames[k - 1][1] - .05: first = k
 frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in frames]
@@ -66,6 +73,9 @@ STAGES = {
     'F': [(.12, '방어 올리기'), (2.0, '방어 중'), (3.0, '방어를 풂 (2.0초)')],
     # 2.38.2: R walked (W held through it and after it).
     'REND': [(.92, '걸으면서 R 시전 (R 동안 50% 감속)'), (2.4, '세상이 멈춤 → 베기 · 걸으면서'), (5.5, 'R이 끝남 (2.4초) · 계속 걷기')],
+    # 2.38.2: the Atomic dummy seen up close from outside its column.
+    'GDUMMY': [(4.45, '영창 · 양손으로 칼을 머리 위로'), (5.3, '머리 위에서 칼을 한 바퀴'), (5.59, '두 팔을 펼침 · 폭발 직전'),
+               (6.2, '폭발'), (30, '빛기둥이 넓어짐 (더미는 기둥 안)')],
     'BASE': [(.5, '서 있기'), (3.4, '점프 · 공중 자세 · 착지'), (5.0, '피격 움찔 (2번)'), (7.5, '평타')],
     # The M1 combo shot clicks at 0, 0.65, 1.3 and 1.95 s of the shot clock.
     'M1': [(.65, '1타 발도 · 왼쪽 허리에서 오른쪽 위로 올려베기'), (1.3, '2타 되베기 · 오른쪽 위에서 왼쪽 아래로'),
@@ -109,7 +119,10 @@ def motion_line(t):
     if not motion: return None, None
     i = bisect.bisect_right(motion, (t * 20 + 1e-6, 1e9)) - 1
     if i < 1: return None, None
-    (t0, x0, z0, _), (t1, x1, z1, fov) = motion[i - 1], motion[i]
+    # The tick before (two rows can share a tick where the clock falls back as the cast ends).
+    j = i - 1
+    while j > 0 and motion[i][0] - motion[j][0] < .5: j -= 1
+    (t0, x0, z0, _), (t1, x1, z1, fov) = motion[j], motion[i]
     speed = ((x1 - x0) ** 2 + (z1 - z0) ** 2) ** .5 * 20 / max(1e-3, t1 - t0)
     zoom = '' if abs(fov - 1) < .005 else (' (확대됨)' if fov < 1 else ' (넓어짐)')
     return f'이동 속도 초당 {speed:.1f}블록 · 시야 배율 {fov:.3f}{zoom}', ((255, 120, 120) if abs(fov - 1) >= .005 else (255, 255, 255))

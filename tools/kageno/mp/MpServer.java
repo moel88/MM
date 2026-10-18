@@ -97,7 +97,7 @@ public final class MpServer implements ModInitializer {
             else{note(server,"atomic start");outside(server);targets(server);}
         }
         else if(!AtomicManager.hasActive()&&atomic){atomic=false;note(server,"atomic end");if(dummy!=null)dummyGone=server.getOverworld().getTime()+2;else clearTargets(server);holdLogged.clear();}
-        if(atomic&&dummy==null)watchTargets(server);
+        if(atomic&&dummy==null){watchTargets(server);for(var p:server.getPlayerManager().getPlayerList())if(hurtNow(p))note(server,"player "+p.getGameProfile().getName()+" hurt during the caster's Atomic at cast age "+(server.getOverworld().getTime()-atomicStart));}
         if(atomic&&dummy!=null)watchDummy(server);
         if(dummyGone>0&&server.getOverworld().getTime()>=dummyGone){
             int left=0;for(var e:server.getOverworld().iterateEntities())if(e.getCommandTags().contains(dev.sangwoo.celestialfall.training.TrainingDummies.ATOMIC_TAG))left++;
@@ -112,7 +112,12 @@ public final class MpServer implements ModInitializer {
         idle=!busy;
     }
     private final Set<UUID> struck=new HashSet<>();private net.minecraft.entity.mob.HuskEntity behind;
-    private net.minecraft.entity.Entity dummy;private long dummyGone;private final Set<String> hurtLogged=new HashSet<>();
+    private net.minecraft.entity.Entity dummy;private long dummyGone;private final Map<UUID,Integer> hurtSeen=new HashMap<>();
+    /**
+     * Whether the player was hurt since the last server tick: a blow raises its hurt time back to 10, whichever way this
+     * tick and the skill's damage are ordered (the entity tick counts it down by one before this runs).
+     */
+    private boolean hurtNow(ServerPlayerEntity p){Integer before=hurtSeen.put(p.getUuid(),p.hurtTime);return p.hurtTime>=9&&(before==null||p.hurtTime>before);}
     /** The Atomic dummy casting now, if the cast that just started is its. */
     private static net.minecraft.entity.Entity atomicDummy(MinecraftServer server){
         for(var e:server.getOverworld().iterateEntities())if(e.getCommandTags().contains(dev.sangwoo.celestialfall.training.TrainingDummies.ATOMIC_TAG)&&AtomicManager.active(e.getUuid()))return e;
@@ -126,7 +131,7 @@ public final class MpServer implements ModInitializer {
     private void watchDummy(MinecraftServer server){
         long age=server.getOverworld().getTime()-atomicStart;
         for(var p:server.getPlayerManager().getPlayerList()){
-            if(p.hurtTime==10&&hurtLogged.add(p.getGameProfile().getName()+age))note(server,"player "+p.getGameProfile().getName()+" hurt during the dummy's Atomic at cast age "+age);
+            if(hurtNow(p))note(server,"player "+p.getGameProfile().getName()+" hurt during the dummy's Atomic at cast age "+age);
             hold(server,"player "+p.getGameProfile().getName(),p,age);
         }
         if(age==AtomicTimeline.BEAM_END)note(server,String.format(java.util.Locale.ROOT,"dummy's Atomic at the end of its beam: damage radius reached %.1f blocks, watcher %.1f blocks from the dummy",
@@ -136,7 +141,7 @@ public final class MpServer implements ModInitializer {
     /** E walked and aimed: where the caster went and turned by the plant, the planted way, and each hit on the watcher. */
     private void thrusts(MinecraftServer server,KagenoManager.Cast c){
         int age=c.age();var f=net.minecraft.util.math.Vec3d.fromPolar(0,c.yaw);
-        for(var p:server.getPlayerManager().getPlayerList())if(!caster(p)&&p.hurtTime==10)note(server,String.format(java.util.Locale.ROOT,"watcher hit by E at cast age %d (caster facing %.0f degrees from the cast facing)",age,net.minecraft.util.math.MathHelper.wrapDegrees(c.player.getYaw()-c.yaw)));
+        for(var p:server.getPlayerManager().getPlayerList())if(!caster(p)&&hurtNow(p))note(server,String.format(java.util.Locale.ROOT,"watcher hit by E at cast age %d (caster facing %.0f degrees from the cast facing)",age,net.minecraft.util.math.MathHelper.wrapDegrees(c.player.getYaw()-c.yaw)));
         if(age==KagenoRules.E_PLANT+1){
             var d=c.player.getPos().subtract(c.origin);
             note(server,String.format(java.util.Locale.ROOT,"E planted: caster walked %.2f blocks (%.2f ahead, %.2f to the right) and faces %.0f degrees right of the cast facing",
