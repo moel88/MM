@@ -27,7 +27,11 @@ import java.util.*;
  * column holds each one (75 % slower) and lets it go; they have enough health to outlast every hit. The 20-block husk is moved out of the column at age 300,
  * and the watcher (Botand health, healed every tick) stands still just outside the open wall from 250 to 276 (the
  * wall shake) and is moved into it at 320 and out again at 360, to log how soon the hold takes and lets go; the
- * watcher's client measures its walking speed outside and inside. Not shipped in the mod jar.
+ * watcher's client measures its walking speed outside and inside. Since 2.38.2 it also logs E walked and aimed (how far
+ * the caster moved and turned, the planted way, and every hit on the watcher), when R's slowdown leaves the caster, the
+ * way each T held slash was thrown, and an Atomic cast by the dummy (/botand dummy atomic): the watcher stands inside
+ * its column, and every player hurt or held by it is logged (there should be none), as is the dummy going when it ends.
+ * Not shipped in the mod jar.
  */
 public final class MpServer implements ModInitializer {
     static final Path OUT=Path.of(System.getProperty("botand.mp.out","mp"));
@@ -59,7 +63,7 @@ public final class MpServer implements ModInitializer {
     private static boolean caster(ServerPlayerEntity p){return p.getGameProfile().getName().equals("Caster");}
     private void joined(ServerPlayerEntity p){
         p.changeGameMode(GameMode.SURVIVAL);
-        if(caster(p)){ProgressManager.set(p,new ProgressProfile(1,0,0,"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),true);}
+        if(caster(p)){ProgressManager.set(p,new ProgressProfile(1,0,0,"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),true);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
@@ -81,13 +85,24 @@ public final class MpServer implements ModInitializer {
                         husk.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH).setBaseValue(4000);husk.setHealth(4000);server.getOverworld().spawnEntity(husk);behind=husk;note(server,"husk behind the watcher (18 blocks ahead)");}
                 }}
             if(c.skill==KagenoRules.RUSH)rush(server,c);
+            if(c.skill==KagenoRules.E)thrusts(server,c);
+            if(c.skill==KagenoRules.R)walkingR(server,c);
             info[1]=Math.max(info[1],c.targets.size());
             if(c.age()<(c.skill==KagenoRules.Q?30:KagenoRules.DURATION[c.skill]))busy=true;
         }
         for(var it=live.entrySet().iterator();it.hasNext();){var e=it.next();if(!seen.contains(e.getKey())){note(server,"end "+e.getValue()[0]+" targets="+e.getValue()[1]);it.remove();}}
-        if(AtomicManager.hasActive()&&!atomic){atomic=true;atomicStart=server.getOverworld().getTime();note(server,"atomic start");outside(server);targets(server);}
-        else if(!AtomicManager.hasActive()&&atomic){atomic=false;note(server,"atomic end");clearTargets(server);holdLogged.clear();}
-        if(atomic)watchTargets(server);
+        if(AtomicManager.hasActive()&&!atomic){
+            atomic=true;atomicStart=server.getOverworld().getTime();dummy=atomicDummy(server);
+            if(dummy!=null){note(server,String.format(java.util.Locale.ROOT,"atomic start, cast by the dummy at %.1f %.1f %.1f",dummy.getX(),dummy.getY(),dummy.getZ()));inside(server);}
+            else{note(server,"atomic start");outside(server);targets(server);}
+        }
+        else if(!AtomicManager.hasActive()&&atomic){atomic=false;note(server,"atomic end");if(dummy!=null)dummyGone=server.getOverworld().getTime()+2;else clearTargets(server);holdLogged.clear();}
+        if(atomic&&dummy==null)watchTargets(server);
+        if(atomic&&dummy!=null)watchDummy(server);
+        if(dummyGone>0&&server.getOverworld().getTime()>=dummyGone){
+            int left=0;for(var e:server.getOverworld().iterateEntities())if(e.getCommandTags().contains(dev.sangwoo.celestialfall.training.TrainingDummies.ATOMIC_TAG))left++;
+            note(server,"atomic dummies left after the cast: "+left);dummyGone=0;dummy=null;
+        }
         busy|=atomic;
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -97,6 +112,51 @@ public final class MpServer implements ModInitializer {
         idle=!busy;
     }
     private final Set<UUID> struck=new HashSet<>();private net.minecraft.entity.mob.HuskEntity behind;
+    private net.minecraft.entity.Entity dummy;private long dummyGone;private final Set<String> hurtLogged=new HashSet<>();
+    /** The Atomic dummy casting now, if the cast that just started is its. */
+    private static net.minecraft.entity.Entity atomicDummy(MinecraftServer server){
+        for(var e:server.getOverworld().iterateEntities())if(e.getCommandTags().contains(dev.sangwoo.celestialfall.training.TrainingDummies.ATOMIC_TAG)&&AtomicManager.active(e.getUuid()))return e;
+        return null;
+    }
+    /** For the dummy's Atomic the watcher stands 6 blocks from the dummy, well inside the column it opens. */
+    private void inside(MinecraftServer server){
+        for(var p:server.getPlayerManager().getPlayerList())if(!caster(p)){var at=dummy.getPos().add(0,0,6);p.setVelocity(0,0,0);p.networkHandler.requestTeleport(at.x,dummy.getY(),at.z,180,0);note(server,"watcher moved into the dummy's column (6 blocks from it)");}
+    }
+    /** Every player the dummy's Atomic hurts or holds (none should be) and when its damage column has opened past the watcher. */
+    private void watchDummy(MinecraftServer server){
+        long age=server.getOverworld().getTime()-atomicStart;
+        for(var p:server.getPlayerManager().getPlayerList()){
+            if(p.hurtTime==10&&hurtLogged.add(p.getGameProfile().getName()+age))note(server,"player "+p.getGameProfile().getName()+" hurt during the dummy's Atomic at cast age "+age);
+            hold(server,"player "+p.getGameProfile().getName(),p,age);
+        }
+        if(age==AtomicTimeline.BEAM_END)note(server,String.format(java.util.Locale.ROOT,"dummy's Atomic at the end of its beam: damage radius reached %.1f blocks, watcher %.1f blocks from the dummy",
+            AtomicTimeline.damageRadius(AtomicTimeline.BEAM_END-1,dev.sangwoo.celestialfall.CelestialFall.CONFIG.atomicVisualRadius),
+            server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).mapToDouble(q->q.distanceTo(dummy)).findFirst().orElse(-1)));
+    }
+    /** E walked and aimed: where the caster went and turned by the plant, the planted way, and each hit on the watcher. */
+    private void thrusts(MinecraftServer server,KagenoManager.Cast c){
+        int age=c.age();var f=net.minecraft.util.math.Vec3d.fromPolar(0,c.yaw);
+        for(var p:server.getPlayerManager().getPlayerList())if(!caster(p)&&p.hurtTime==10)note(server,String.format(java.util.Locale.ROOT,"watcher hit by E at cast age %d (caster facing %.0f degrees from the cast facing)",age,net.minecraft.util.math.MathHelper.wrapDegrees(c.player.getYaw()-c.yaw)));
+        if(age==KagenoRules.E_PLANT+1){
+            var d=c.player.getPos().subtract(c.origin);
+            note(server,String.format(java.util.Locale.ROOT,"E planted: caster walked %.2f blocks (%.2f ahead, %.2f to the right) and faces %.0f degrees right of the cast facing",
+                d.horizontalLength(),d.dotProduct(f),d.dotProduct(new net.minecraft.util.math.Vec3d(-f.z,0,f.x)),net.minecraft.util.math.MathHelper.wrapDegrees(c.player.getYaw()-c.yaw)));
+        }
+        if(age==KagenoRules.E_FINISH+1){
+            var d=c.player.getPos().subtract(c.origin);
+            note(server,String.format(java.util.Locale.ROOT,"E finisher: caster %.2f blocks from the cast spot, planted way %.0f degrees right of the cast facing",d.horizontalLength(),net.minecraft.util.math.MathHelper.wrapDegrees(planted(c)-c.yaw)));
+        }
+    }
+    /** The way E's finisher was planted (the cast's first aim), read the way the CAST packet carries it. */
+    private static float planted(KagenoManager.Cast c){
+        try{var f=KagenoManager.Cast.class.getDeclaredField("aims");f.setAccessible(true);return ((float[])f.get(c))[0];}catch(ReflectiveOperationException e){return Float.NaN;}
+    }
+    /** R's slowdown on its caster around the end of R's input window (2.38.2: it ends there, not with the effects). */
+    private void walkingR(MinecraftServer server,KagenoManager.Cast c){
+        int age=c.age();if(age!=KagenoRules.inputEnd(KagenoRules.R)-1&&age!=KagenoRules.inputEnd(KagenoRules.R)+1&&age!=KagenoRules.DURATION[KagenoRules.R]-2)return;
+        var speed=c.player.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
+        note(server,String.format(java.util.Locale.ROOT,"R at cast age %d: caster slowdown %s, speed attribute x%.2f, sprinting %s",age,speed.getModifier(KagenoManager.R_SLOW)!=null?"on":"off",speed.getValue()/speed.getBaseValue(),c.player.isSprinting()));
+    }
     /** T held: when the watcher is first held (a fire slash struck it), where the caster arrives, and the watcher thrown by the spin cut. */
     private void rush(MinecraftServer server,KagenoManager.Cast c){
         int age=c.age();
@@ -105,6 +165,12 @@ public final class MpServer implements ModInitializer {
             if(c.targets.containsKey(p)&&struck.add(c.id))note(server,"watcher struck and held by T+ at cast age "+age+String.format(java.util.Locale.ROOT," (%.2f blocks ahead of the cast spot)",p.getPos().subtract(c.origin).dotProduct(net.minecraft.util.math.Vec3d.fromPolar(0,c.yaw))));
             if(age==KagenoRules.RUSH_BURST+1)note(server,String.format(java.util.Locale.ROOT,"T+ after the arrival: caster %.2f blocks up the line, %.2f blocks from the watcher",c.player.getPos().subtract(c.origin).dotProduct(net.minecraft.util.math.Vec3d.fromPolar(0,c.yaw)),c.player.getPos().distanceTo(p.getPos())));
             if(age==KagenoRules.RUSH_FINISH+6)note(server,String.format(java.util.Locale.ROOT,"T+ after the spin cut: watcher %.2f blocks from the caster",c.player.getPos().distanceTo(p.getPos())));
+        }
+        if(age==KagenoRules.RUSH_START){
+            try{var f=KagenoManager.Cast.class.getDeclaredField("aims");f.setAccessible(true);float[] a=(float[])f.get(c);
+                note(server,String.format(java.util.Locale.ROOT,"T+ slash ways (degrees right of the cast facing): %.0f, %.0f, %.0f",
+                    net.minecraft.util.math.MathHelper.wrapDegrees(a[0]-c.yaw),net.minecraft.util.math.MathHelper.wrapDegrees(a[1]-c.yaw),net.minecraft.util.math.MathHelper.wrapDegrees(a[2]-c.yaw)));
+            }catch(ReflectiveOperationException e){note(server,"T+ slash ways: "+e);}
         }
         if(age==KagenoRules.DURATION[KagenoRules.RUSH]-2&&behind!=null){
             note(server,String.format(java.util.Locale.ROOT,"T+ husk behind the watcher: health %.0f of %.0f",behind.getHealth(),behind.getMaxHealth()));behind.discard();behind=null;}

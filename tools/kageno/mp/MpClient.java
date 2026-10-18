@@ -26,21 +26,33 @@ public final class MpClient implements ClientModInitializer {
     private static final String ADDRESS=System.getProperty("botand.mp.address","127.0.0.1:25565");
     private static final String[] SKILLS={"M1","E","R","T","T+","Y","Q","H","G","P"};
     /** Script tick, then a key: a bare name taps it, "+"/"-" hold and release. */
+    /**
+     * Since 2.38.2: E is walked and aimed (the camera turns 50 degrees right as it starts, W held through its thrusts), R
+     * is walked away from the watcher through it and after it ends (its slowdown must end with it), T held's camera
+     * turns 39 degrees right after the first slash, and "DUMMY" runs /botand dummy atomic 30 (an Atomic with no player
+     * caster, 30 blocks ahead).
+     */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
         "90 F+","130 F-",
-        "170 E","270 R","370 T","510 T+","530 T-",
+        "170 E","172 TURN50","174 W+","214 W-",
+        "270 R","271 TURN180","272 W+","362 W-",
+        "370 T","510 T+","527 TURN39","530 T-",
         "650 Y","770 Q","830 H","980 G",
         "1480 P","1700 P",
         "1760 P","1900 E",
         "2000 P","2420 M1",
-        "2480 END"};
+        "2460 DUMMY",
+        "3060 END"};
+    /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
+    private static final int[][] SPEED={{282,312},{330,360}},LENS={{126,142},{312,340}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
     private MinecraftClient mc;private int phase,age,frames;private boolean caster;private final Set<Integer> held=new HashSet<>();
     private float quakePeak,overwhelmPeak,lightPeak,wallPeak;private net.minecraft.util.math.Vec3d walkLast;private long walkStart=-1;
     private final List<Double> steps=new ArrayList<>();
+    private net.minecraft.util.math.Vec3d speedLast;private final List<Double> speedSteps=new ArrayList<>();private float lensMin=9,lensMax=0;
 
     @Override public void onInitializeClient(){
         if(ROLE==null)return;caster=ROLE.equals("caster");
@@ -81,6 +93,7 @@ public final class MpClient implements ClientModInitializer {
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
+                    measure();
                     for(String step:SCRIPT){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
@@ -111,16 +124,33 @@ public final class MpClient implements ClientModInitializer {
             walkStart=-1;
         }
     }
+    /** The caster's walking speed in each SPEED window (median per tick on the ground) and the lens's FOV multiplier range in each LENS window. */
+    private void measure(){
+        var p=mc.player.getPos();
+        for(int[] w:SPEED){
+            if(age==w[0]){speedLast=p;speedSteps.clear();}
+            else if(age>w[0]&&age<=w[1]){if(mc.player.isOnGround())speedSteps.add(Math.hypot(p.x-speedLast.x,p.z-speedLast.z));speedLast=p;}
+            if(age==w[1]){var sorted=new ArrayList<>(speedSteps);sorted.sort(null);double median=sorted.isEmpty()?0:sorted.get(sorted.size()/2);
+                note(String.format(Locale.ROOT,"walking %.2f blocks/s from script tick %d to %d (median of %d ticks)",median*20,w[0],w[1],sorted.size()));}
+        }
+        for(int[] w:LENS){
+            if(age>=w[0]&&age<=w[1]){float f=mc.player.getFovMultiplier();lensMin=Math.min(lensMin,f);lensMax=Math.max(lensMax,f);}
+            if(age==w[1]){note(String.format(Locale.ROOT,"lens FOV multiplier %.3f to %.3f from script tick %d to %d",lensMin,lensMax,w[0],w[1]));lensMin=9;lensMax=0;}
+        }
+    }
     private void act(String step,boolean down){
         if(step.equals("END")){if(down){note("script end");try{Files.writeString(OUT.resolve("done"),"done");}catch(Exception ignored){}phase=3;age=0;}return;}
+        if(step.startsWith("TURN")){if(down){BotandCamera.STATE.yaw=(caster?0:180)+Float.parseFloat(step.substring(4));note("camera turned to "+BotandCamera.STATE.yaw);}return;}
+        if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
-        if(down)face();
+        if(down&&press&&!k.equals("W"))face();
         if(down||!step.endsWith("+"))note((press?"press ":"release ")+k);
         switch(k){
             case "M1"->attack(press);
             case "F"->key(GLFW_KEY_F,press);
             case "E"->key(GLFW_KEY_E,press);case "R"->key(GLFW_KEY_R,press);case "T"->key(GLFW_KEY_T,press);case "Y"->key(GLFW_KEY_Y,press);
             case "Q"->key(GLFW_KEY_Q,press);case "G"->key(GLFW_KEY_G,press);case "H"->key(GLFW_KEY_H,press);case "P"->key(GLFW_KEY_P,press);
+            case "W"->key(GLFW_KEY_W,press);
             default->note("ERROR unknown step "+step);
         }
     }

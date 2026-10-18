@@ -51,6 +51,13 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * <p>"walk=N" holds W (the camera-relative walk) from N ticks before the cast until the shot ends: R's walking cast
  * with "face=180" (camera behind, so W walks the way the caster faces).
  *
+ * <p>"GDUMMY" runs "/botand dummy atomic" (2.38.2): a dummy "adist" blocks ahead (60 by default) casts Atomic and the
+ * player's own camera watches it from outside; its clock is that cast's.
+ *
+ * <p>Every shot also logs each client tick to NAME/motion.csv (cast clock in ticks, the player's position, the lens's
+ * target and shown FOV multipliers), and an M1 shot logs to NAME/sound.csv the cast clock at which each hit's sound
+ * starts playing in the game's sound system.
+ *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
  * shot's own (seconds from the start).
@@ -76,6 +83,7 @@ public final class SkillShots implements ClientModInitializer {
     private static volatile String[] track;private static volatile boolean shake;private final StringBuilder shakeLog=new StringBuilder();
     private volatile boolean filming;private volatile long serverStart=-1;private volatile net.minecraft.util.math.Vec3d spot=net.minecraft.util.math.Vec3d.ZERO;
     private final Set<String> moving=new HashSet<>();private final StringBuilder actorLog=new StringBuilder();
+    private final StringBuilder motionLog=new StringBuilder(),soundLog=new StringBuilder();private final Set<UUID> sounded=new HashSet<>();
 
     /** Fixed far camera of the current entry ("far=ex/ey/ez/tx/ty/tz[/fov]" in blocks from the cast spot), or null. */
     public static dev.sangwoo.celestialfall.client.CinematicDirector.Pose farPose(){
@@ -137,11 +145,24 @@ public final class SkillShots implements ClientModInitializer {
         float delta=mc.getTickDelta();
         if("Q".equals(current)||"M1".equals(current)||"BASE".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
+        else if("GDUMMY".equals(current)){for(var c:AtomicClient.CASTS.values())return c.age(delta);}
         else{StandClient.Cast best=null;for(var c:StandClient.CASTS.values())if(c.caster().equals(mc.player.getUuid())&&(best==null||c.start()>best.start()))best=c;if(best!=null&&mc.world.getTime()-castTick<400)return best.age(delta);}
         return (mc.world.getTime()-castTick)+delta;
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;default->-1;};}
-    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;default->DURATION[skill(name)]+20;};}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
+    /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
+    private void logTick()throws Exception{
+        var gr=mc.gameRenderer;var f=net.minecraft.client.render.GameRenderer.class.getDeclaredField("fovMultiplier");f.setAccessible(true);
+        var p=mc.player;motionLog.append(String.format(Locale.ROOT,"%.3f,%.4f,%.4f,%.4f,%.2f,%.4f,%.4f%n",clock()-mc.getTickDelta(),p.getX(),p.getY(),p.getZ(),p.getYaw(),p.getFovMultiplier(),f.getFloat(gr)));
+        if(!"M1".equals(current))return;
+        var field=Class.forName("dev.sangwoo.celestialfall.client.KagenoAudio").getDeclaredField("PLAYING");field.setAccessible(true);
+        for(var e:((Map<UUID,net.minecraft.client.sound.SoundInstance>)field.get(null)).entrySet()){
+            if(sounded.contains(e.getKey())||!mc.getSoundManager().isPlaying(e.getValue()))continue;
+            var c=StandClient.CASTS.get(e.getKey());if(c==null)continue;sounded.add(e.getKey());
+            soundLog.append(String.format(Locale.ROOT,"%d,%.3f,%.3f%n",c.combo(),c.age(0),clock()-mc.getTickDelta()));
+        }
+    }
 
     private void frame()throws Exception{
         if(phase!=4||current==null)return;
@@ -286,8 +307,9 @@ public final class SkillShots implements ClientModInitializer {
                 // "walk=N": the player walks (W held, camera-relative) from N ticks before the cast to the end of the shot.
                 int lead=opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")?90:30;
                 if(opts.containsKey("walk")&&age==Math.max(3,lead-(int)opt("walk",10)))key(GLFW_KEY_W,true);
-                if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);filming=true;trigger(current);phase=4;age=0;}}
+                if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);motionLog.setLength(0);soundLog.setLength(0);sounded.clear();filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
+                logTick();
                 if(current.equals("M1")){
                     String[] at=opts.getOrDefault("hits","0/13/26/39").split("[,/]");String[] faces=opts.getOrDefault("faces","").split("[,/]");
                     for(int i=1;i<at.length;i++)if(age==Integer.parseInt(at[i].trim())){final int hit=i;server(p->{if(faces.length>hit&&!faces[hit].isBlank())face(p,Float.parseFloat(faces[hit]));KagenoManager.input(p,M1);});}
@@ -305,7 +327,9 @@ public final class SkillShots implements ClientModInitializer {
                 if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');
                     if(opts.containsKey("walk"))key(GLFW_KEY_W,false);
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
-                    if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
+                    if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
+                    {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
+                    if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }
     }
     private void trigger(String name){
@@ -316,6 +340,7 @@ public final class SkillShots implements ClientModInitializer {
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
             case "BASE"->{}
+            case "GDUMMY"->server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand dummy atomic "+(int)opt("adist",60));if(n<=0)log.append("  rejected GDUMMY\n");});
             default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
                 if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});
         }
