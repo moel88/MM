@@ -1,5 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
-FILM_SKILL=G|E|T|RUSH|BASE|R|M1 picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
+FILM_SKILL=G|GPOSE|E|T|RUSH|BASE|R|M1 picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -47,6 +47,9 @@ STAGES = {
              (.9, '3타 크게 내려 벰 · 가장 큰 세 번째 불 참격'), (1.2, '돌진 · 처음 맞은 대상에게 (아무도 안 맞으면 끝까지)'),
              (1.3, '도착 타격 · 불 폭발'), (1.45, '맞은 대상에서 불이 다시 터짐 · 회전 준비'),
              (1.8, '한 바퀴 회전 베기 · 불의 고리 (1.55초 마무리 타격)'), (3.0, '바닥에 남은 불의 고리 · 연기 · 갈라진 자국')],
+    # G's caster pose around the blast (2.38.0 comparison, a camera in front).
+    'GPOSE': [(4.45, '양손으로 칼을 머리 위로'), (5.3, '머리 위에서 칼을 한 바퀴'), (5.59, '회전 뒤 · 폭발 직전'),
+              (5.95, '폭발 (화면 5.59초 · 서버 5.60초)'), (30, '기둥 안 (보라 화면)')],
     'BASE': [(.5, '서 있기'), (3.4, '점프 · 공중 자세 · 착지'), (5.0, '피격 움찔 (2번)'), (7.5, '평타')],
     # The M1 combo shot clicks at 0, 0.65, 1.3 and 1.95 s of the shot clock.
     'M1': [(.65, '1타 발도 · 왼쪽 허리에서 오른쪽 위로 올려베기'), (1.3, '2타 되베기 · 오른쪽 위에서 왼쪽 아래로'),
