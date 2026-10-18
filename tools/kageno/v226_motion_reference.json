@@ -1,0 +1,59 @@
+{
+  "version": "2.26.0",
+  "source_video": "1000022644.mp4",
+  "source_fps": 30,
+  "H": {
+    "units": "Minecraft blocks along cast forward",
+    "keyframes": [
+      {
+        "tick": 56,
+        "offset": 0
+      },
+      {
+        "tick": 63,
+        "offset": -2.35
+      },
+      {
+        "tick": 66,
+        "offset": -2.35
+      },
+      {
+        "tick": 72,
+        "offset": 0.35
+      },
+      {
+        "tick": 74,
+        "offset": 0.35
+      },
+      {
+        "tick": 78,
+        "offset": 0
+      }
+    ],
+    "interpolation": "smoothstep; visual root only, shared by caster and victim",
+    "camera_tracking_fraction": 0.45
+  },
+  "T": {
+    "source_start": 43.96,
+    "ignition_tick": 6,
+    "damage_hits": 13,
+    "damage_total": 51
+  },
+  "T_hold": {
+    "source_start": 61.16,
+    "ignition_tick": 10,
+    "dash_tick": 30,
+    "finish_tick": 50,
+    "damage_hits": 6,
+    "damage_total": 50
+  },
+  "G": {
+    "source_start": 142.0,
+    "ordinary_camera": true,
+    "chant": "two raised hands near forehead; vertical sword; elbows bent",
+    "interior": "broad dark folds in saturated blue-violet",
+    "shake": "low-frequency quake plus high-frequency tremor; bounded and configurable"
+  },
+  "audio_changed": false,
+  "root_distances_are_adapted_to_minecraft_units": true
+}

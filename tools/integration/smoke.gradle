@@ -1,0 +1,1 @@
+gradle.projectsEvaluated { rootProject.tasks.named("runServer") { jvmArgs "-Dfabric.addMods=/workspace/scratch/8ca227cf5f68/celestial-fall/build/smoke-mod/botand-verification.jar" } }

@@ -1,0 +1,13 @@
+BandIt v2 (Remastering Divide and Remaster) — music mask branch
+Authors: Karn N. Watcharasupat, Chih-Wei Wu, Iroro Orife
+Paper: https://arxiv.org/abs/2407.07275
+Code: https://github.com/kwatcharasupat/bandit-v2 (Apache-2.0, see LICENSE-BANDIT-APACHE-2.0.txt), revision d5563d9031e95fdaa3e5a73d5020b9a0df61adb6
+Weights: checkpoint-multi.ckpt, https://zenodo.org/records/12701995 (DOI 10.5281/zenodo.12701995)
+Weights license: Creative Commons Attribution-ShareAlike 4.0 International
+  https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+Changes by Prompt_what: only the music stem is kept; the network is split into
+bandit-split.onnx, bandit-tf.onnx / bandit-tf.bin (same GRU weights, transposed
+float32 for WebGPU) and bandit-mask.onnx. No retraining, quantization or weight
+edits. These adapted files are shared under the same CC BY-SA 4.0 license.
+Export script: scripts/export_bandit.py.

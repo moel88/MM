@@ -1,0 +1,8 @@
+{
+  "reference_jar": "botand-2.21.0 (1).jar",
+  "sha256": "ec0ece179e6b0d254c0e9c0211b44cc26c17c35671d8c5dff01a21c4a917266d",
+  "class": "dev.sangwoo.celestialfall.combat.AtomicMotion",
+  "sampling": "120 FPS, 0..144 ticks inclusive, plus out-of-range/non-finite cases",
+  "samples": 871,
+  "provenance": "CSV exported by invoking only reviewed pure math classes from the uploaded compiled JAR in an isolated class loader; no game or mod initializer was run."
+}

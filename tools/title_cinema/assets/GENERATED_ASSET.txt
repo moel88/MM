@@ -1,0 +1,11 @@
+Built-in image_gen tool; original reference supplied by the user.
+Asset: bomi_face_albedo.png
+Used as a facial albedo texture on the actual 3D mesh.
+Prompt:
+Use case: stylized-concept
+Asset type: production facial albedo / UV texture for an actual custom anime 3D game character, NOT a rendered character illustration.
+Reference image 1 is identity and expression reference only: Bomi, the pale blue-haired mascot. Make her facial features beautifully match the visible face in the reference.
+Create ONE square flat texture sheet. The ENTIRE canvas is perfectly uniform pale warm skin RGB(255,224,216), reaching all edges, with only facial features drawn onto it. No head silhouette, no ears, no hair, no neck, no skin lighting, no 3D form, no shadows, no grid, no labels. Both eyes are visible on the texture; geometry will cover the left eye later.
+Feature layout is essential: eye centers at 25% and 75% of canvas width, 60% of canvas height. Each eye about 29% canvas width and 22% canvas height. Eyebrows thin pale periwinkle at 44% height. Tiny playful smiling mouth with a little pink tongue at 50% width and 83% height; mouth width about 12% of canvas width.
+Style: exquisite polished Japanese anime game face painting, graceful slightly drooping almond eye shape with thick clean dark indigo upper lashes and fine little outer lashes. Irises sapphire/periwinkle blue at top, luminous sky/cyan lower crescent, subtle lilac reflections, small delicate gold star highlights and white catchlights. NOT huge round cartoon circle eyes, not thick eyebrows. Gentle feminine, charming, soft pink blush just under eyes and 3 faint pink blush strokes. Extremely small minimal nose or none. Sweet mischievous tongue smile, no teeth. Crisp deliberate outlines, subtle smooth iris gradient, no pixelation, no gritty texture.
+It must work as a FLAT face decal texture: only facial graphics on the uniform pale skin color; no hair, accessories, outline of a head, background, body, perspective, text, UI, logos, or lighting.

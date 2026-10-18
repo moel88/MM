@@ -1,0 +1,38 @@
+{
+  "required": true,
+  "package": "dev.sangwoo.celestialfall.mixin.client",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "celestialfall.refmap.json",
+  "client": [
+    "WorldRendererMixin",
+    "CameraMixin",
+    "GameRendererMixin",
+    "PlayerEntityRendererMixin",
+    "InGameHudMixin",
+    "MinecraftClientMixin",
+    "ToastManagerMixin",
+    "HeldItemRendererMixin",
+    "MouseMixin",
+    "KeyboardInputMixin",
+    "KeyboardMixin",
+    "ClientPlayerMixin",
+    "MapOptionsMixin",
+    "MapKeyBindingMixin",
+    "TitleMusicMixin",
+    "StandHeldItemFeatureMixin",
+    "KagenoCullingMixin",
+    "StandFovMixin",
+    "KagenoShadowMixin",
+    "KagenoOutlineMixin",
+    "KagenoOutlineColorMixin",
+    "KagenoShadowTintMixin",
+    "KagenoStaggerMixin",
+    "AtomicSkyMixin",
+    "AtomicFogMixin",
+    "AtomicLightMixin",
+    "ImmersiveNetworkClientMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

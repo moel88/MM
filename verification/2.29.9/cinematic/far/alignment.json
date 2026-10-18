@@ -1,0 +1,27 @@
+[
+  {
+    "cast_requested": 2,
+    "cast_actual": "2.008000",
+    "video_seconds": 47.268983602523804
+  },
+  {
+    "cast_requested": 8,
+    "cast_actual": "8.000000",
+    "video_seconds": 53.26098370552063
+  },
+  {
+    "cast_requested": 15,
+    "cast_actual": "15.004001",
+    "video_seconds": 60.262983560562134
+  },
+  {
+    "cast_requested": 21.9,
+    "cast_actual": "21.894001",
+    "video_seconds": 67.15498352050781
+  },
+  {
+    "cast_requested": 24,
+    "cast_actual": "24.004002",
+    "video_seconds": 69.26998353004456
+  }
+]

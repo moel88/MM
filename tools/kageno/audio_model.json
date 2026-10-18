@@ -1,0 +1,46 @@
+{
+  "model": "BandIt v2 (Watcharasupat, Wu, Orife)",
+  "official_code": "https://github.com/kwatcharasupat/bandit-v2",
+  "official_weights": "https://zenodo.org/records/12701995",
+  "model_license": "CC BY-SA 4.0",
+  "code_license": "Apache-2.0",
+  "conversion": "https://github.com/promptwhat/bgm-separator",
+  "mirror": "https://huggingface.co/Deno2026/bandit-v2-music-onnx",
+  "mirror_revision": "10fd90dd01534e1815879de6373fd1ad2e13188b",
+  "downloaded_files": [
+    {
+      "file": "bandit-split.onnx",
+      "bytes": 2423065,
+      "sha256": "fa7973660fd3cf90e84fd0a2ea7a096ce25635f9b14e0b9825e47439476eeb77"
+    },
+    {
+      "file": "bandit-tf.onnx",
+      "bytes": 55572411,
+      "sha256": "6c4c5d8115d73b6dc8d76572639dd734d82e0ddee8f5c06e417b86a8e89a02bb"
+    },
+    {
+      "file": "bandit-mask.onnx",
+      "bytes": 34958777,
+      "sha256": "e83c135e15be1c4fa74a05b1da7461acaf786b4d19a1adcc51ddfef4572eb691"
+    },
+    {
+      "file": "bandit.json",
+      "bytes": 10572,
+      "sha256": "c94a6350862019d309a76ecdaf56ad1693db88b601ffcf6a1bb368a17cb2b183"
+    },
+    {
+      "file": "NOTICE-BANDIT.txt",
+      "bytes": 900,
+      "sha256": "e6a90c0f2c3c29a69d3420b5c05e56969c2a41acd68405d8d328b10766d706d8"
+    },
+    {
+      "file": "README.md",
+      "bytes": 4175,
+      "sha256": "faf1dc722d51c2d86828ce0968537283e2d92df3ec41d1f2703dade1b357d1a4"
+    }
+  ],
+  "inference": "CPU ONNX Runtime; stereo independently; 48 kHz; 8 s windows / 4 s hop; subtract estimated music; recover noisy high-frequency transient component when the raw residual is under 15% RMS",
+  "limitations": "Music percussion may remain; effects sharing frequencies with music can change timbre. No isolated original game audio assets are available.",
+  "weights_bundled": false,
+  "reference_media": "user-supplied; not relicensed under the source code license"
+}

@@ -1,0 +1,190 @@
+{
+  "video": "01-1000022644.mp4",
+  "theme": {
+    "file": "The Eminence in Shadow OST - Theme of Cid Kagenou(1).mp3",
+    "source_offset_seconds": 134,
+    "output": "assets/celestialfall/sounds/kageno_theme.ogg"
+  },
+  "skills": [
+    {
+      "key": "M1",
+      "name": "검술의 대가",
+      "reference_seconds": [
+        0,
+        17
+      ],
+      "hits": 4,
+      "base_damage": [
+        6,
+        6,
+        6,
+        10
+      ],
+      "motion": "Two diagonal slashes, fast horizontal spin, overhead fourth strike. First three attacks can chain at 13 ticks (0.65 s).",
+      "effects": "Distinct layered crescents, expanding third ring, black-violet fourth impact with fragments"
+    },
+    {
+      "key": "E",
+      "name": "신속한 맹공",
+      "reference_seconds": [
+        18,
+        30
+      ],
+      "hits": 8,
+      "total_base_damage": 26,
+      "motion": "Seven forward thrusts with retracting elbow, forward-aligned grip and straight sword afterimages; one upward finishing slash. User correction supersedes the previous lateral-sweep interpretation.",
+      "effects": "Dense short forward stab trails, nine broken pressure arcs, dark sword afterimages, 29 short impact flashes; no persistent long laser fan"
+    },
+    {
+      "key": "R",
+      "name": "시간을 걷는 자",
+      "reference_seconds": [
+        31,
+        42
+      ],
+      "hits": 5,
+      "total_base_damage": 21,
+      "user_override": "Caster walks at exactly 50% normal walk speed; captured targets within 3 blocks freeze. Both see grayscale. Existing frozen cuts stay world anchored.",
+      "effects": "Six long frozen white crossing cuts, horizontal release flash, 42 drifting violet shards"
+    },
+    {
+      "key": "T",
+      "name": "어둠 속의 불꽃",
+      "reference_seconds": [
+        43,
+        59
+      ],
+      "hits": 13,
+      "total_base_damage": 51,
+      "user_override": "Restore fire presence: ground-field height 1.85x of 2.23 and 22 vs 12 high-quality tongues; retain alpha blending and short flash; rush canopy unchanged",
+      "motion": "Short windup, low sword plant at tick 6, broad white-cored magenta flame billows and dark ground residue"
+    },
+    {
+      "key": "T hold",
+      "name": "어둠을 가로지르다",
+      "reference_seconds": [
+        60,
+        73
+      ],
+      "hits": 6,
+      "total_base_damage": 50,
+      "motion": "Ignition at tick 10, fast grounded launch at tick 30, low planted glide inside curved flame cuts, horizontal finishing sweep at tick 50"
+    },
+    {
+      "key": "Y",
+      "name": "어둠 속으로 빠지다",
+      "reference_seconds": [
+        74,
+        84
+      ],
+      "hits": 2,
+      "total_base_damage": 16,
+      "motion": "raised leg, stomp, circular shockwave and ground fragments"
+    },
+    {
+      "key": "Q",
+      "name": "오버드라이브",
+      "reference_seconds": [
+        85,
+        118
+      ],
+      "on_hit": "damage multiplier +0.01 to +0.02, slightly extend duration, mark target +15% incoming damage and reveal position",
+      "effects": "Translucent body sheath, flowing contour ribbons and rising sparks; remove hand/head fire billboards"
+    },
+    {
+      "key": "H",
+      "name": "최강",
+      "reference_seconds": [
+        119,
+        137
+      ],
+      "hits": 12,
+      "total_base_damage": 32,
+      "shots": [
+        {
+          "ticks": [
+            0,
+            16
+          ],
+          "shot": "wide rising flip"
+        },
+        {
+          "ticks": [
+            16,
+            32
+          ],
+          "shot": "inverted close shot"
+        },
+        {
+          "ticks": [
+            32,
+            56
+          ],
+          "shot": "sky glint then zigzag"
+        },
+        {
+          "ticks": [
+            56,
+            70
+          ],
+          "shot": "close landing and standing"
+        },
+        {
+          "ticks": [
+            70,
+            79
+          ],
+          "shot": "hand and sword insert, pull back"
+        },
+        {
+          "ticks": [
+            79,
+            106
+          ],
+          "shot": "caster on screen right, sharp slashes behind then residual wave"
+        },
+        {
+          "ticks": [
+            106,
+            116
+          ],
+          "shot": "blend back to gameplay"
+        }
+      ],
+      "user_override": "all players within 5 blocks share camera and take damage",
+      "camera": "Authored cuts at ticks 16,32,56. Wide launch, upside-down close-up, sky, landing, hand insert, right-of-frame final composition. Continuous stable cast clock and entry/exit blending.",
+      "motion": "Asymmetric inverted silhouette; crouched landing, backward slide, pause and forward slide into the raised-sword insert; synchronized root and camera clock"
+    },
+    {
+      "key": "G",
+      "name": "I am Atomic",
+      "reference_seconds": [
+        138,
+        174
+      ],
+      "implementation": "Latest user override: no cinematic camera or substitute actor. Caster movement locked throughout 23.4 s; impact 6.4 s. Client-only crater illusion and rim fragments, no world block writes.",
+      "motion": "Real player pose gathers hands at the forehead with upright sword, held chant, then outward release; ordinary gameplay camera remains manual"
+    }
+  ],
+  "passives": {
+    "reference_seconds": [
+      175,
+      209
+    ],
+    "regen": "1 health every 1 second. The earlier 0.5/2 second demonstration is explicitly marked Old; it is not an overdrive branch.",
+    "night_damage_multiplier": 1.35,
+    "time_stop_exceptions": [
+      "sakuya",
+      "return_to_zero",
+      "kageno (explicit user override)"
+    ]
+  },
+  "adaptation": {
+    "hold_threshold_ticks": 8,
+    "cooldowns": "local implementation defaults, not legible in video",
+    "health": "preserves existing project progression/200 base",
+    "visuals": "Native Minecraft pose/mesh recreation; original supplied-video SFX with estimated music removed, transient rescue and possible residual music. Q retains supplied theme.",
+    "foreign_time_stops": "API is provided; other stand implementations do not exist in this project yet"
+  },
+  "revision": "2.24.0 original separated SFX, H pose corrections, E and four distinct M1 strokes, T flame restoration"
+}
