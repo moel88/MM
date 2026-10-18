@@ -76,7 +76,7 @@ public final class KagenoFire {
      * cell's seed: like the game's own fire block they stay put in the world instead of turning to follow the camera,
      * and from any side at least one of them faces the viewer. Each cell is {size, alpha, heat, wisp, seed}: heat runs
      * from black smoke (0) through blue and violet to magenta and white-hot pink (1), wisp from a round billow (0) to a
-     * curling flame (1). An optional sixth value stretches the cell upward (a tall tongue of flame), 1 by default.
+     * curling flame (1).
      */
     public static void cells(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){cells(m,camera,pts,cells,age,13);}
     /**
@@ -93,7 +93,7 @@ public final class KagenoFire {
             float[] c=cells.get(i);if(c[1]<=0||c[0]<=0)continue;Vec3d p=pts.get(i);
             int seed=(int)c[4],heat=Math.round(Math.max(0,Math.min(1,c[2]))*255),wisp=Math.round(Math.max(0,Math.min(1,c[3]))*255),a=Math.max(0,Math.min(255,(int)(c[1]*255)));
             // The same shape on every plane: seen from any side their union reads as one puff of flame (at least 87% of its width).
-            Vec3d v=UP.multiply(c[0]*(c.length>5?c[5]:1));
+            Vec3d v=UP.multiply(c[0]);
             for(Vec3d plane:cellPlanes(seed)){
                 Vec3d u=plane.multiply(c[0]);
                 Vec3d[] corner={p.subtract(u).subtract(v),p.add(u).subtract(v),p.add(u).add(v),p.subtract(u).add(v)};

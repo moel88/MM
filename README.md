@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.38.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.38.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.38.1 — T홀드 왼손 불기둥 되돌리기
+
+요청대로 T홀드 시작 때 왼손으로 소환하던 큰 불길(불꽃 혀 다섯 줄기, 높이 약 5.4블록)을 없앴습니다. 시작 동작은 불을 소환하기 전으로 되돌려, 칼을 오른쪽으로 당기고 왼손으로 칼날을 훑어 불을 붙이며 발밑에 작은 불 고리가 피어납니다. 나머지(관통하지 않는 불 참격, 돌진, 회전 베기, 아토믹 자세)는 2.38.0 그대로입니다. [RELEASE_2.38.1_KO.md](RELEASE_2.38.1_KO.md)를 확인하세요.
 
 # 보탠드 2.38.0 — T홀드(어둠을 가로지르다) 리메이크 · 아토믹이 터질 때의 자세
 

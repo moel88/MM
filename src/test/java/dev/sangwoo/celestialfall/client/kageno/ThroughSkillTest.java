@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * T held (remade in 2.38.0): each fire slash is cut by the blade as it leaves at the server's time, swept the way the
  * slash runs and fits the lane the server strikes in; the spin's one ring of fire goes once round with the blade and
- * has closed when the server's spin cut lands; the fire the left hand summons rises as high and wide as the user asked, in tongues standing apart.
+ * has closed when the server's spin cut lands.
  */
 class ThroughSkillTest {
     /** Where the blade points round from the cast facing (degrees toward the right) and how high (degrees), at {@code t}. */
@@ -65,30 +65,6 @@ class ThroughSkillTest {
         for(float t=ThroughSkill.SWEEP;t+.005f<=ThroughSkill.RING_END;t+=.005f)assertTrue(ThroughSkill.turned(t+.005f)>=ThroughSkill.turned(t)-1e-3,"the blade turns back at "+t);
         double total=ThroughSkill.turned(ThroughSkill.RING_END)-ThroughSkill.turned(ThroughSkill.SWEEP);
         assertTrue(total>=360&&total<=600,"the blade turns "+total+" degrees");
-    }
-    @Test void theSummonedFireRisesFarAboveThePlayerAndBurnsAbout2s(){
-        // User request (with a picture of a fire rising far above the caster and filling the view): three times a
-        // player's 1.8 blocks tall, and two and a half times as wide as the 2.8-block one before.
-        assertEquals(1.8*3,ThroughSkill.FRONT_HEIGHT,1e-9);
-        assertEquals(2.8*2.5,ThroughSkill.FRONT_WIDTH,1e-9);
-        // It has shot up to its full height by the first slash and is gone about 2 s after the hand summons it.
-        assertEquals(ThroughSkill.FRONT_HEIGHT,ThroughSkill.frontHeight(ThroughSkill.SLASH[0]),1e-6);
-        assertTrue(ThroughSkill.front(.3f)>.99f);
-        assertTrue(ThroughSkill.FRONT_END>=1.8f&&ThroughSkill.FRONT_END<=2.3f);
-        assertEquals(0,ThroughSkill.front(ThroughSkill.FRONT_END),0);
-    }
-    @Test void theSummonedFiresTonguesStandApart(){
-        // User request: the flames were stuck together. Neighbouring tongues stand at least 1.4 blocks apart at their
-        // feet and further apart at their tips (they lean out); the middle one is the tallest.
-        var g=ThroughSkill.FRONT_TONGUES;
-        for(int k=1;k<g.length;k++){
-            double feet=Math.abs(g[k-1][0]-g[k][0]),tips=Math.abs(g[k-1][0]+g[k-1][3]-g[k][0]-g[k][3]);
-            assertTrue(feet>=1.4,"tongues "+(k-1)+" and "+k+" stand "+feet+" blocks apart");
-            assertTrue(tips>feet,"tongues "+(k-1)+" and "+k+" lean together");
-        }
-        assertEquals(1,g[g.length/2][2],1e-9);
-        // Across, as wide as the user asked (the outer feet are about 1.5 blocks across).
-        assertEquals(ThroughSkill.FRONT_WIDTH,g[0][0]-g[g.length-1][0]+1.5,.6);
     }
     @Test void theDashLeavesWithTheServerAndTheClipCatchesEveryHit(){
         assertEquals(KagenoRules.RUSH_START/20f,ThroughSkill.D,1e-6);

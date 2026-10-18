@@ -20,8 +20,8 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.*;
 import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
 
 /**
- * T held "어둠을 가로지르다", remade in 2.38.0 (user request): the left hand summons a little fire on the floor just in
- * front, burning for about 2 s, and the blade catches; three fire slashes are cut and thrown up the line (a level cut, a falling backhand and a big falling forehand, at
+ * T held "어둠을 가로지르다", remade in 2.38.0 (user request): the free hand runs out along the blade and sets it alight;
+ * three fire slashes are cut and thrown up the line (a level cut, a falling backhand and a big falling forehand, at
  * the server's {@code RUSH_SLASHES}), each a flaming crescent flying 30 blocks, burning the way it went and striking
  * whoever it passes, who is held in a dark orb. The caster bursts after them, to the first one struck or to the end
  * of the range, arrives in an explosion of fire that bursts again on the one he came for, coils, and spins once round
@@ -46,11 +46,11 @@ final class ThroughSkill implements Fx.Skill {
     // ───────────────────────────── motion ─────────────────────────────
 
     /**
-     * The left hand summons the fire (user request): thrust out and down at the floor just in front, then lifted as the
-     * fire rises from it. The sword hand stays as it is, low at the right side, until it throws the slashes.
+     * The blade drawn back to the right side, the free hand laid on it at the guard, then run out along it. (2.38.1: the
+     * fire the left hand summoned in front for 2.38.0 was taken out at the user's request, and this opening came back.)
      */
-    static final R6.Pose SUMMON=pose().body(8,10,0).at(0,-.1,0).head(-18,13,0).rArm(-78,16).lArm(-10,-14).rLeg(-84,18).lLeg(-82,-20).blade(-36,58);
-    static final R6.Pose RAISE=pose().body(4,6,0).at(0,-.12,0).head(-14,-10,0).rArm(-76,18).lArm(8,-20).rLeg(-82,22).lLeg(-82,-22).blade(-34,60);
+    static final R6.Pose KINDLE=pose().body(-18,6,0).at(0,-.06,0).head(30,10,0).rArm(-45,42).lArm(-25,37).rLeg(-84,20).lLeg(-84,-18).blade(-5,77);
+    static final R6.Pose IGNITE=pose().body(-30,10,0).at(0,-.14,0).head(26,6,0).rArm(-36,50).lArm(-12,70).rLeg(-78,40).lLeg(-80,-34).blade(-4,82);
     /** Cut 1, level from the right to the left: wound back, through the front, carried on round. */
     static final R6.Pose WIND1=pose().body(-46,12,0).at(-.02,-.2,0).head(-28,2,0).rArm(-18,66).lArm(-40,-91).rLeg(-78,44).lLeg(-80,-34).blade(0,92);
     static final R6.Pose PASS1=pose().body(-6,15,0).at(.06,-.22,0).head(-4,2,0).rArm(-4,0).lArm(-48,-86).rLeg(-77,44).lLeg(-78,-32).blade(2,-6);
@@ -79,8 +79,8 @@ final class ThroughSkill implements Fx.Skill {
     static final R6.Pose LOWER=pose().body(-360,4,0).at(0,-.08,0).rArm(-60,30).lArm(-80,-20).rLeg(-84,22).lLeg(-84,-20).blade(-36,64);
     static final Anim CLIP=Anim.joints(
         k(0,KagenoClips.IDLE),
-        k(.13,SUMMON),
-        k(.27,RAISE),
+        k(.12,KINDLE),
+        k(.26,IGNITE),
         k(SLASH[0]-.045,WIND1),
         k(SLASH[0],PASS1,Anim.Ease.LINEAR),
         k(SLASH[0]+.05,END1),
@@ -172,13 +172,6 @@ final class ThroughSkill implements Fx.Skill {
     static Vec3d endPoint(Fx c,int i){var end=slashEnd(c,i);return end.on()!=null?chest(c,end.on()):front(c,i,end.at());}
     /** When {@code e} was first struck: by the first slash if it stands on the line, else by the arrival. */
     static float struck(Fx c,LivingEntity e){Vec3d p=e.getLerpedPos(c.delta);return onLine(c,p)?passes(0,along(c,p)):ARRIVE;}
-    /** The left hand on the caster as drawn now (the torso's turn taken, its lean left out). */
-    static Vec3d leftHand(Fx c){
-        var p=R6.poseOf(KagenoClips.action(c.cast,c.delta));double a=Math.toRadians(p.yaw);
-        Vec3d fw=c.f.multiply(Math.cos(a)).add(c.left.multiply(Math.sin(a))),rt=c.right.multiply(Math.cos(a)).add(c.f.multiply(Math.sin(a)));
-        Vec3d arm=rt.multiply(p.lArm.rt()).add(0,p.lArm.up(),0).add(fw.multiply(p.lArm.fw()));
-        return c.pos.add(fw.multiply(p.fw)).add(0,1.375+p.up,0).subtract(rt.multiply(.3125)).add(arm.multiply(.7));
-    }
     /** The sword hand and blade on the caster as drawn now. */
     static Vec3d[] blade(Fx c){return KagenoClips.blade(c.pos,c.cast.yaw(),R6.poseOf(KagenoClips.action(c.cast,c.delta)));}
 
@@ -280,7 +273,6 @@ final class ThroughSkill implements Fx.Skill {
         float t=c.sec;
         bladeLight(c,m,t);
         for(int i=0;i<SLASH.length;i++)slashLight(c,m,t,i);
-        frontLight(c,m,t);
         launch(c,m,t);
         dashLight(c,m,t);
         arrival(c,m,t);
@@ -312,13 +304,6 @@ final class ThroughSkill implements Fx.Skill {
             bloom(c,m,p,(on?1.8:2.6)+(on?1.2:2)*Ease.out(e,0,.15f),MAGENTA,a);
             FxLib.ring(m,new Vec3d(p.x,c.origin.y+.06,p.z),.5+(on?3.5:6)*Ease.out(e,0,.4f),.7,VIOLET,.7f*(1-Ease.unit(e,0,.45f)));
         }
-    }
-    /** Under the fire that rises in front of the caster as the skill begins: a warm glow on the floor and sparks. */
-    static void frontLight(Fx c,EffectMesh m,float t){
-        float palm=Ease.smooth(t,.03f,.12f)*(1-Ease.smooth(t,.26f,.38f));if(palm>0)bloom(c,m,leftHand(c),.32+.18*palm,PINK,.8f*palm);
-        float a=front(t);if(a<=0)return;Vec3d at=frontSpot(c);
-        FxLib.glow(m,at.add(0,.03,0),FRONT_WIDTH*.75,PINK,.45f*a);
-        FxLib.embers(m,at,FRONT_WIDTH*.35,frontHeight(t)*1.2,28,t,1.5f,.07,0xffb8f0,a,17);
     }
     /** The burst the dash leaves from: a pink-violet flash and shock rings racing out over the floor. */
     static void launch(Fx c,EffectMesh m,float t){
@@ -368,10 +353,8 @@ final class ThroughSkill implements Fx.Skill {
     // ───────────────────────────── fire, smoke and dust ─────────────────────────────
 
     /** One fire cell: {size, alpha, heat, wisp, seed}. */
-    static void cell(List<Vec3d> pts,List<float[]> cells,Vec3d p,double size,float alpha,double heat,double wisp,int seed){cell(pts,cells,p,size,alpha,heat,wisp,seed,1);}
-    /** A fire cell stretched {@code tall} times upward: a tongue of flame. */
-    static void cell(List<Vec3d> pts,List<float[]> cells,Vec3d p,double size,float alpha,double heat,double wisp,int seed,double tall){
-        if(alpha<=.005f||size<=.01)return;pts.add(p);cells.add(new float[]{(float)size,alpha,(float)heat,(float)wisp,seed,(float)tall});
+    static void cell(List<Vec3d> pts,List<float[]> cells,Vec3d p,double size,float alpha,double heat,double wisp,int seed){
+        if(alpha<=.005f||size<=.01)return;pts.add(p);cells.add(new float[]{(float)size,alpha,(float)heat,(float)wisp,seed});
     }
     /** Cells of fire thrown out of {@code o} at {@code at}: flung out (flatter for a small {@code flat}) and up, slowing, swelling and cooling into smoke. */
     static void burst(List<Vec3d> pts,List<float[]> cells,Vec3d o,float t,float at,int n,double out,double size,double flat,int seed){
@@ -385,7 +368,7 @@ final class ThroughSkill implements Fx.Skill {
     @Override public void shaders(Fx c){
         float t=c.sec;List<Vec3d> pts=new ArrayList<>();List<float[]> cells=new ArrayList<>();
         bladeFire(c,t,pts,cells);
-        frontFire(c,t,pts,cells);
+        igniteRing(c,t,pts,cells);
         for(int i=0;i<SLASH.length;i++)slashFire(c,t,i,pts,cells);
         struckFire(c,t,pts,cells);
         dashFire(c,t,pts,cells);
@@ -410,57 +393,13 @@ final class ThroughSkill implements Fx.Skill {
             cell(pts,cells,hb[0].add(hb[1].multiply(along)).add(0,.06,0),(.16+.1*Ease.hash(k*3+1))*flick*(1+.4*FxLib.kick(t,CUT,.15f)),on*lit*.95f,.92+.1*Ease.hash(k*5+2),.8,k*13+5);
         }
     }
-    /**
-     * Where the summoned fire rises: on the floor in front of the caster, toward the left hand that summons it (a fire
-     * straight ahead hid behind his body from a camera behind him); his dash runs through its right side.
-     */
-    static Vec3d frontSpot(Fx c){return c.origin.add(c.f.multiply(FRONT_AHEAD)).add(c.left.multiply(FRONT_LEFT));}
-    static final double FRONT_AHEAD=3.2,FRONT_LEFT=1.6;
-    /**
-     * Its full height and width (user request, with a picture of a fire rising far above the caster and filling the
-     * view): three times a player's 1.8 blocks, and two and a half times the 2.8 blocks of the one before.
-     */
-    static final double FRONT_HEIGHT=5.4,FRONT_WIDTH=7.0;
-    /** How much of it burns at {@code t} (user request): it flares up as the left hand reaches out and is gone about 2 s later. */
-    static float front(float t){return t<.07f||t>=FRONT_END?0:Ease.smooth(t,.07f,.18f)*(1-Ease.smooth(t,FRONT_END-.35f,FRONT_END));}
-    static final float FRONT_END=2.1f;
-    /** How tall it stands at {@code t}: it bursts up out of the floor as the hand points and sinks as it dies. */
-    static double frontHeight(float t){return FRONT_HEIGHT*(.2+.8*Ease.out(t,.07f,.3f))*(1-.5*Ease.smooth(t,FRONT_END-.45f,FRONT_END));}
-    /** How far across it has spread at {@code t}: it bursts up narrower and spreads as it rises. */
-    static double frontSpread(float t){return .55+.45*Ease.out(t,.07f,.34f);}
-    /** The summoned fire's great tongues, left to right as the caster sees them: across (toward his left) and ahead of its middle, height and lean outward at the top (blocks). */
-    static final double[][] FRONT_TONGUES={{3.1,.5,.65,.8},{1.6,-.3,.85,.5},{.1,.4,1,.1},{-1.4,-.5,.85,-.45},{-2.9,.2,.6,-.8}};
-    /**
-     * The fire the left hand summons as T held begins, a great blaze like the user's picture: five great tongues of
-     * flame apart from each other (user request: not stuck together), joined at their white-hot feet and parting as
-     * they rise, each leaning out and swaying, cooling from pink through magenta and purple to indigo at its tip, the
-     * middle one the tallest; and flames licking out over the floor from its ends. Each tongue is three tall flames
-     * climbing it one after another, so it burns as one long flame rather than a string of puffs. It bursts up as the
-     * hand points and dies down about 2 s later.
-     */
-    static void frontFire(Fx c,float t,List<Vec3d> pts,List<float[]> cells){
-        float a=front(t);if(a<=0)return;Vec3d at=frontSpot(c);double h=frontHeight(t),spread=frontSpread(t),grown=.45+.55*h/FRONT_HEIGHT;
-        for(int k=0;k<FRONT_TONGUES.length;k++){
-            double[] g=FRONT_TONGUES[k];double top=h*g[2];
-            Vec3d foot=at.add(c.left.multiply(g[0]*spread)).add(c.f.multiply(g[1]));
-            // Its foot, white-hot.
-            float fl=(float)(.85+.15*Math.sin(t*9+k*2.3));
-            cell(pts,cells,foot.add(0,.65,0),1.25*grown*fl,a*.95f,.97,.3,k*23+71);
-            for(int j=0;j<3;j++){
-                float life=(float)(.55+.15*g[2]),cyc=t/life+j/3f+(float)Ease.hash(k*5+72);int q=(int)Math.floor(cyc);float u=cyc-q;
-                double size=(1.2-.5*u)*(.9+.2*Ease.hash(k*13+q*7+j))*grown,tall=1+.9*u,sway=.3*u*Math.sin(t*4.1+k*1.9+q);
-                // Its middle climbs from just above the foot to where its tip reaches the tongue's top.
-                double y=.9+Math.max(0,top-.9-.7*size*tall)*u;
-                Vec3d p=foot.add(c.left.multiply(g[3]*u*u*grown+sway)).add(c.f.multiply(.2*Math.sin(t*3.3+k)*u)).add(0,y,0);
-                cell(pts,cells,p,size,Ease.smooth(u,0,.1f)*(1-Ease.smooth(u,.65f,1))*a,.93-.6*u,.4+.5*u,k*29+j*7+q*13+95,tall);
-            }
-        }
-        // Flames licking out over the floor from its ends.
-        for(int k=0;k<2;k++){
-            double[] g=FRONT_TONGUES[k==0?0:FRONT_TONGUES.length-1];
-            float life=.55f,cyc=t/life+.37f*k;int q=(int)Math.floor(cyc);float u=cyc-q;
-            Vec3d p=at.add(c.left.multiply((g[0]+Math.signum(g[0])*(.3+.9*Ease.out(u,0,1)))*spread)).add(c.f.multiply(g[1])).add(0,.6+.9*u,0);
-            cell(pts,cells,p,(.85-.4*u)*grown,Ease.smooth(u,0,.15f)*(1-Ease.smooth(u,.5f,1))*a,.85-.45*u,.75,k*31+q*17+105,1.4);
+    /** A ring of fire flaring up round the feet as the blade catches, dying as the cuts begin. */
+    static void igniteRing(Fx c,float t,List<Vec3d> pts,List<float[]> cells){
+        if(t<.2f||t>=.7f)return;
+        for(int k=0;k<10;k++){
+            float born=.2f+.08f*(float)Ease.hash(k*3+41),life=.3f+.15f*(float)Ease.hash(k*5+42),u=(t-born)/life;if(u<0||u>=1)continue;
+            double az=(k+.4*Ease.hash(k*7))*Math.PI*2/10,r=1.3+.4*Ease.hash(k*11);
+            cell(pts,cells,c.origin.add(Math.cos(az)*r,.2+.5*u,Math.sin(az)*r),(.18+.1*Ease.hash(k*13))*(1-.3*u),Ease.smooth(u,0,.15f)*(1-Ease.smooth(u,.5f,1)),.95-.4*u,.9,k*17+3);
         }
     }
     /**
@@ -613,7 +552,6 @@ final class ThroughSkill implements Fx.Skill {
         if(t>=SWEEP-.02f&&t<CLOSED+.45f)f.afterglow(.25f);
         float lit=Ease.smooth(t,.1f,.28f)*(1-Ease.smooth(t,1.8f,2.3f));
         if(lit>0){var hb=blade(c);float flare=0;for(float s:SLASH)flare=Math.max(flare,FxLib.kick(t,s,.1f));f.light(hb[0].add(hb[1].multiply(.8)),0xff6ae0,5,(.9f+1.4f*flare)*lit);}
-        float fire=front(t);if(fire>0)f.light(frontSpot(c).add(0,frontHeight(t)*.35,0),0xff6ae0,10,2.2f*fire*(float)(.85+.15*Math.sin(t*29)));
         for(int i=0;i<SLASH.length;i++){
             float age=t-SLASH[i];if(age<-.01f||age>=FLIGHT+.6f)continue;float end=endsAt(c,i);
             if(age>=0&&t<end)f.light(front(c,i,flown(i,t)),0xd04cff,7,1.8f);
