@@ -29,8 +29,10 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  * Y "어둠 속으로 빠지다": the left knee comes up to the chest with the sword overhead, a three-frame
  * whip down into a wide stomp (hit 1, two ground chunks pop up), a 0.57 s crouch, then the flash
  * (hit 2): violet light pillars come down from the sky over a starburst, the screen whites out for
- * 0.3 s and a ring of eight huge tilted ground slabs stands around the caster, with wind arcs, mist,
- * orbs and motes. The slabs stay ≈3 s and sink straight down. No hop and no turning.
+ * 0.3 s and a ring of eight huge tilted ground slabs breaks out of the floor one after another as the
+ * white fades (each overshoots and settles, throwing chunks and dust off its rim), with wind arcs,
+ * mist, orbs and motes. The slabs stay ≈3 s, then lie back down and sink in 0.6 s, raising dust.
+ * No hop and no turning.
  * Seconds after the cast; 1 character height (H) = 1.8 blocks.
  */
 final class FallenSkill implements Fx.Skill {
@@ -65,7 +67,9 @@ final class FallenSkill implements Fx.Skill {
         k(1.55,K9.at(0,-.23,0)),
         k(1.7,KagenoClips.IDLE)).stops(Anim.stop(LAND,.05,.1));
     @Override public Anim clip(int combo){return CLIP;}
-    @Override public float lifetime(){return SINK+.45f;}
+    @Override public float lifetime(){return SINK+.95f;}
+    /** How long a crater slab takes to lie back down and sink. */
+    static final float SETTLE=.6f;
 
     // ───────────────────────────── crater pieces ─────────────────────────────
 
@@ -91,8 +95,10 @@ final class FallenSkill implements Fx.Skill {
             double x=c.origin.x+out.x*inner,z=c.origin.z+out.z*inner;
             double ground=ground(w,x,z,c.origin.y);
             Vec3d mid=c.origin.add(out.multiply(inner+length*.5));
-            list.add(new Piece(new Vec3d(x,ground-.15*H,z),a,length,width,thick,tilt,roll,FLASH,FLASH+.1f+.05f*(float)Ease.hash(seed+i*31+7),
-                SINK+.1f*(float)Ease.hash(seed+i*37+8),material(w,mid.x,mid.z,c.origin.y,centre),inner,Math.toRadians(22.5)));
+            // They break out one after another round the ring as the flash's white fades (the side slabs last).
+            float rise=FLASH+.16f+.035f*(low?(i==0||i==7?0:2):(i==1||i==6?4:6))+.02f*(float)Ease.hash(seed+i*41+9);
+            list.add(new Piece(new Vec3d(x,ground-.15*H,z),a,length,width,thick,tilt,roll,rise,rise+.12f+.04f*(float)Ease.hash(seed+i*31+7),
+                SINK+.12f*(float)Ease.hash(seed+i*37+8),material(w,mid.x,mid.z,c.origin.y,centre),inner,Math.toRadians(22.5)));
         }
         // Stomp chunks: a flat wedge right-front of the right foot and a smaller one by the left foot.
         Vec3d rOut=c.right.add(c.f.multiply(.3)).normalize(),lOut=c.left.add(c.f.multiply(.1)).normalize();
@@ -107,18 +113,29 @@ final class FallenSkill implements Fx.Skill {
         var pos=BlockPos.ofFloored(x,h-.01,z);var state=w.getBlockState(pos);
         return state.isOpaqueFullCube(w,pos)?state:fallback;
     }
+    /** The outer edge of a crater slab, down on the floor (where it breaks out of the ground and throws chunks and dust). */
+    static Vec3d rim(Fx c,Piece p){double r=p.inner()+p.length()*Math.cos(p.tilt())*.92;return new Vec3d(c.origin.x+Math.cos(p.yaw())*r,p.hinge().y+.15*H,c.origin.z+Math.sin(p.yaw())*r);}
+    /** How far below its standing place a piece is at {@code t}: it breaks out with an overshoot that settles, then sinks. */
+    static double drop(Piece p,float t){
+        boolean crater=p.sector()>0;double depth=p.length()*Math.sin(p.tilt())+p.thick()+.6;
+        double rise=depth*(1-Ease.out(t,p.rise(),p.risen()));
+        // Thrust a little past its place, then settling back (crater slabs only).
+        if(crater&&t>p.risen())rise-=.5*Math.exp(-(t-p.risen())/.09)*Math.sin(Math.min(Math.PI,(t-p.risen())/.22*Math.PI));
+        return rise+(crater?depth*Ease.smooth(t,p.sink(),p.sink()+SETTLE):depth*Ease.in(t,p.sink(),p.sink()+.18f));
+    }
+    /** Tilt of a piece at {@code t}: a crater slab lies back down as it sinks. */
+    static double tilt(Piece p,float t){return p.sector()>0?p.tilt()*(1-.65*Ease.smooth(t,p.sink(),p.sink()+SETTLE*.8f)):p.tilt();}
     @Override public void blocks(Fx c){
-        if(c.sec<CHUNKS||c.sec>=SINK+.35f)return;
+        if(c.sec<CHUNKS||c.sec>=SINK+.85f)return;
         var matrices=c.matrices;var vertices=c.mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
         for(var p:pieces(c)){
-            float t=c.sec;if(t<p.rise()||t>=p.sink()+.2f)continue;
-            double depth=p.length()*Math.sin(p.tilt())+p.thick()+.6;
-            double drop=depth*(1-Ease.out(t,p.rise(),p.risen()))+depth*Ease.in(t,p.sink(),p.sink()+.18f);
+            float t=c.sec;if(t<p.rise()||t>=p.sink()+(p.sector()>0?SETTLE+.05f:.2f))continue;
+            double drop=drop(p,t);
             matrices.push();
             matrices.translate(p.hinge().x,p.hinge().y-drop,p.hinge().z);
             // Local frame: x along the ring, z outward, the outer edge raised by the tilt.
             matrices.multiply(RotationAxis.POSITIVE_Y.rotation((float)(Math.PI/2-p.yaw())));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotation((float)-p.tilt()));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotation((float)-tilt(p,t)));
             matrices.multiply(RotationAxis.POSITIVE_Z.rotation((float)p.roll()));
             // Block-sized cells. A crater slab keeps inside its own 45° sector (narrow near the caster,
             // a thin gap to its neighbours) so neighbouring slabs never cut through each other.
@@ -126,7 +143,7 @@ final class FallenSkill implements Fx.Skill {
             int light=WorldRenderer.getLightmapCoordinates(c.mc.world,BlockPos.ofFloored(p.hinge().x,p.hinge().y+1.2,p.hinge().z));
             for(int i=0;i<nl;i++){
                 double row=p.width();
-                if(p.sector()>0){double r=p.inner()+(i+.15)*pl*Math.cos(p.tilt());row=Math.min(row,2*r*Math.tan(p.sector())-.35);}
+                if(p.sector()>0){double r=p.inner()+(i+.15)*pl*Math.cos(tilt(p,t));row=Math.min(row,2*r*Math.tan(p.sector())-.35);}
                 if(row<.3)continue;
                 int nw=Math.max(1,(int)Math.round(row/1.05));double pw=row/nw;
                 for(int j=0;j<nw;j++){
@@ -291,7 +308,14 @@ final class FallenSkill implements Fx.Skill {
         }
         if(FxLayer.available()){
             FxLib.dustRing(c.origin.add(c.f.multiply(.3)),c.sec,LAND,.3,1.6,8,.9,pts,cells,171);
-            FxLib.dustRing(c.origin,c.sec,FLASH,1.5,9,22,1.6,pts,cells,181);
+            FxLib.dustRing(c.origin,c.sec,FLASH,1.5,9,12,1.4,pts,cells,181);
+            int k=0;
+            for(var p:pieces(c)){
+                if(p.sector()<=0)continue;Vec3d r=rim(c,p);
+                FxLib.dustRing(r,c.sec,p.rise()+.05f,.3,1.7,5,1.2,pts,cells,191+k*7);
+                FxLib.dustRing(r,c.sec,p.sink()+.08f,.4,1.9,5,1.25,pts,cells,291+k*7);
+                k++;
+            }
         }
         if(!pts.isEmpty())KagenoFire.dust(c.matrix,c.camera,pts,cells,c.age);
     }
@@ -362,7 +386,8 @@ final class FallenSkill implements Fx.Skill {
      * Lights: the stomp's flash at the foot, the crouch gathering violet light, then the flash: a blinding white-violet
      * burst over the crater, every pillar lighting the ground where it lands and the column; the crater glows violet
      * while the slabs stand. A light shaft from the flash for viewers close by. Decals: the stomp cracks the floor
-     * under the foot; the flash tears it open between the slabs, glowing and cooling to burns that sink with them.
+     * under the foot; the flash tears it open in the gaps between the slabs, glowing and cooling to burns that close
+     * up as the slabs lie back down.
      */
     @Override public void frame(Fx c,FxFrame f){
         float t=c.sec;Vec3d foot=c.origin.add(c.f.multiply(.3)).add(c.right.multiply(.25));
@@ -376,17 +401,17 @@ final class FallenSkill implements Fx.Skill {
         if(tt<-.01f)return;
         f.light(c.origin.add(0,1.5,0),0xf4ecff,18,4f*FxLib.kick(t,FLASH,.25f));
         if(tt<.4f)for(int i=0;i<PILLARS;i++)f.light(pillar(c,i).add(0,1.5,0),0xa98cf2,5,1.4f*(1-Ease.smooth(tt,.15f,.4f))*Ease.smooth(tt,0,.04f));
-        float stand=Ease.smooth(tt,.2f,.5f)*(1-Ease.smooth(t,SINK-.2f,SINK+.3f));
+        float stand=Ease.smooth(tt,.2f,.5f)*(1-Ease.smooth(t,SINK-.1f,SINK+SETTLE));
         if(stand>0)f.light(c.origin.add(0,1,0),0x9a6cf0,12,.7f*stand);
         float near=FxLib.near(c,c.origin);
         if(near>0)f.shaft(c.origin.add(0,2,0),0xf0e8ff,near*.7f*FxLib.kick(t,FLASH,.3f));
-        // Cracks torn between the slabs, outward from under the caster.
-        float heat=1-Ease.smooth(tt,.1f,1.6f),a=Ease.smooth(tt,0,.06f)*(1-Ease.smooth(t,SINK,SINK+.35f));double open=Ease.out(tt,0,.15f);
-        double face=Math.atan2(c.f.z,c.f.x);
-        for(int k=0;k<5;k++){
-            double ang=face+Math.toRadians(45*k*1.6+12*Ease.hash(k*5+191)),len=(2.6+1.6*Ease.hash(k*7+192))*H;
+        // Cracks torn in the gaps between the slabs, outward from under the caster (not across the slabs' faces).
+        float heat=1-Ease.smooth(tt,.2f,1.8f),a=Ease.smooth(tt,.12f,.2f)*(1-Ease.smooth(t,SINK+.1f,SINK+SETTLE));double open=Ease.out(tt,.12f,.32f);
+        double face=Math.atan2(c.f.z,c.f.x);int[] gaps={0,1,3,5,6};
+        for(int k=0;k<gaps.length;k++){
+            double ang=face+Math.toRadians(45*gaps[k]+4*(Ease.hash(k*5+191)-.5)),len=(3.4+1.4*Ease.hash(k*7+192))*H;
             Vec3d dir=new Vec3d(Math.cos(ang),0,Math.sin(ang));
-            f.decal(c.origin.add(dir.multiply(len*.5*open+.4)),dir,len*.5*open+.2,.5,heat,a,31.7f+k*5.3f);
+            f.decal(c.origin.add(dir.multiply(len*.5*open+.5)),dir,len*.5*open+.2,.3,heat,a,31.7f+k*5.3f);
         }
     }
     /** The stomp's shock over the floor, the flash's shock running far out over it and round the body, and the air bending inside the pillars. */
@@ -399,12 +424,13 @@ final class FallenSkill implements Fx.Skill {
         if(tt<.35f)d.ring(c.origin.add(0,1,0),c.right,FxLib.UP,.5+4*H*Ease.out(tt,0,.35f),1.4,.7f*in*(1-Ease.unit(tt,0,.35f)));
         if(tt<.4f)for(int i=0;i<PILLARS;i++){Vec3d b=pillar(c,i);float a=.5f*Ease.smooth(tt,0,.05f)*(1-Ease.smooth(tt,.2f,.4f));d.band(b,b.add(0,10,0),c.right,.9,a);d.band(b,b.add(0,10,0),c.f,.9,a);}
     }
-    /** Chunks of the floor thrown up by the stomp at the foot and by the flash all round the crater, and the floor heaving out past the slabs. */
+    /** Chunks of the floor thrown up by the stomp at the foot and off each slab's rim as it breaks out, and the floor heaving out past the slabs. */
     @Override public void solids(Fx c,FxSolids s){
         float t=c.sec;
         if(t>=LAND&&t<LAND+1.2f)FxLib.chunks(s,c.origin.add(c.f.multiply(.3)).add(c.right.multiply(.25)),t-LAND,6,1501,1.5,5,.14,.8f);
-        if(t>=FLASH&&t<FLASH+1.6f){
-            FxLib.chunks(s,c.origin,t-FLASH,22,1601,6.5,8,.24,1.1f);
+        if(t>=FLASH&&t<FLASH+2f){
+            int k=0;
+            for(var p:pieces(c)){if(p.sector()<=0||t<p.rise())continue;FxLib.chunks(s,rim(c,p),t-p.rise(),3,1601+k*13,1.8,6.5,.22,.9f);k++;}
             FxLib.heave(s,c.origin,t-FLASH,11,.4,18,1.4,4.6*H);
         }
     }

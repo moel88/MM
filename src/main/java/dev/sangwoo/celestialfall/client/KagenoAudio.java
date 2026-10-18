@@ -17,7 +17,9 @@ final class KagenoAudio {
         var sound=new PositionedSoundInstance(CelestialFall.id("kageno_"+name),SoundCategory.PLAYERS,volume,1,net.minecraft.util.math.random.Random.create(),false,0,SoundInstance.AttenuationType.NONE,0,0,0,true);
         // Start offsets measured by cross-correlating each recording with the 60 fps review's audio
         // (spectral flux, r = 0.64-0.93): the sounds belong this long after the first motion frame.
-        int lead=switch(c.skill()){case M1->c.combo()==1?8:c.combo()==4?10:9;case E->10;case R->7;case T->12;case RUSH->8;case Y->12;case H->3;default->0;};
+        // E's is the user's own recording, trimmed to start with the cast: its first sound falls on the neon flare,
+        // the barrage's end on the pull-back and the blast on the finisher.
+        int lead=switch(c.skill()){case M1->c.combo()==1?8:c.combo()==4?10:9;case E->0;case R->7;case T->12;case RUSH->8;case Y->12;case H->3;default->0;};
         int delay=Math.max(0,lead-(int)c.age(0));
         PLAYING.put(c.id(),sound);if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
     }

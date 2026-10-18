@@ -245,12 +245,7 @@ public final class KagenoManager {
             if(c.skill==Y&&(age==Y_STOMP||age==Y_FLASH)&&!frozen(e))c.targets.putIfAbsent(e,e.getPos());
             // M1 hit 4: the target is held in the thrust's seal, then launched (see tick).
             if(c.skill==M1&&c.combo==4&&!frozen(e))c.targets.put(e,e.getPos());
-            // R's release throws everyone it strikes away from the caster.
-            if(c.skill==R&&age==R_RELEASE&&!frozen(e)){
-                Vec3d away=e.getPos().subtract(c.origin).multiply(1,0,1);if(away.lengthSquared()<1e-4)away=Vec3d.fromPolar(0,c.yaw);
-                e.setVelocity(away.normalize().multiply(.5).add(0,.32,0));e.velocityModified=true;
-                if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
-            }
+            // R strikes without knockback (user request, 2.37.0): its targets stay where they stand when the release hits.
             if(c.skill==RUSH&&age==RUSH_FINISH&&!frozen(e)){
                 Vec3d dir=Vec3d.fromPolar(0,c.yaw);e.setVelocity(dir.multiply(.65).add(0,.25,0));e.velocityModified=true;
                 if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
