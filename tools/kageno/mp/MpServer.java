@@ -68,7 +68,12 @@ public final class MpServer implements ModInitializer {
         boolean busy=false;var seen=new HashSet<UUID>();
         for(var c:KagenoManager.casts()){
             seen.add(c.id);int[] info=live.get(c.id);
-            if(info==null){live.put(c.id,info=new int[]{c.skill,0});note(server,"cast "+c.skill+" by "+c.player.getGameProfile().getName());}
+            if(info==null){live.put(c.id,info=new int[]{c.skill,0});note(server,"cast "+c.skill+" by "+c.player.getGameProfile().getName());
+                // T held: the watcher stands on the line 12 blocks ahead, for the fire slashes to strike and the dash to come to.
+                if(c.skill==KagenoRules.RUSH)for(var p:server.getPlayerManager().getPlayerList())if(!caster(p)){
+                    var at=c.origin.add(net.minecraft.util.math.Vec3d.fromPolar(0,c.yaw).multiply(12));
+                    p.setVelocity(0,0,0);p.networkHandler.requestTeleport(at.x,ground,at.z,c.yaw+180,0);note(server,"watcher moved onto the T+ line (12 blocks ahead)");}}
+            if(c.skill==KagenoRules.RUSH)rush(server,c);
             info[1]=Math.max(info[1],c.targets.size());
             if(c.age()<(c.skill==KagenoRules.Q?30:KagenoRules.DURATION[c.skill]))busy=true;
         }
@@ -83,6 +88,17 @@ public final class MpServer implements ModInitializer {
             if(p.isAlive()&&p.getHealth()<p.getMaxHealth())p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
+    }
+    private final Set<UUID> struck=new HashSet<>();
+    /** T held: when the watcher is first held (a fire slash struck it), where the caster arrives, and the watcher thrown by the spin cut. */
+    private void rush(MinecraftServer server,KagenoManager.Cast c){
+        int age=c.age();
+        for(var p:server.getPlayerManager().getPlayerList()){
+            if(caster(p))continue;
+            if(c.targets.containsKey(p)&&struck.add(c.id))note(server,"watcher struck and held by T+ at cast age "+age+String.format(java.util.Locale.ROOT," (%.2f blocks ahead of the cast spot)",p.getPos().subtract(c.origin).dotProduct(net.minecraft.util.math.Vec3d.fromPolar(0,c.yaw))));
+            if(age==KagenoRules.RUSH_ARRIVE+1)note(server,String.format(java.util.Locale.ROOT,"T+ arrival: caster %.2f blocks up the line, %.2f blocks from the watcher",c.player.getPos().subtract(c.origin).dotProduct(net.minecraft.util.math.Vec3d.fromPolar(0,c.yaw)),c.player.getPos().distanceTo(p.getPos())));
+            if(age==KagenoRules.RUSH_FINISH+6)note(server,String.format(java.util.Locale.ROOT,"T+ after the spin cut: watcher %.2f blocks from the caster",c.player.getPos().distanceTo(p.getPos())));
+        }
     }
     /** During G the watcher stands 64 blocks out (outside the 28-block damage column), facing the caster. */
     private void outside(MinecraftServer server){

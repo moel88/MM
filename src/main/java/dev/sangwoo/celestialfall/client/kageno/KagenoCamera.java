@@ -54,7 +54,9 @@ public final class KagenoCamera {
         float amount=0;float time=mc.world.getTime()+delta;float[] kick=null;
         for(var c:StandClient.CASTS.values()){
             var s=KagenoSkills.of(c.skill());if(s==null)continue;
-            double dist=c.origin().distanceTo(mc.player.getPos());float reach=(float)Math.max(0,1-dist/40);
+            // Distance from the cast spot or from the caster, whichever is nearer (T held's caster ends 30 blocks away).
+            var caster=mc.world.getPlayerByUuid(c.caster());
+            double dist=Math.min(c.origin().distanceTo(mc.player.getPos()),caster==null?1e9:caster.getPos().distanceTo(mc.player.getPos()));float reach=(float)Math.max(0,1-dist/40);
             var k=s.kick(c,c.age(delta)/20f);
             if(k!=null&&reach>0){if(kick==null)kick=new float[3];for(int i=0;i<3;i++)kick[i]+=k[i]*reach;}
             float v=s.shake(c,c.age(delta)/20f);if(v<=0)continue;

@@ -119,19 +119,20 @@
     },
     {
       "sound": "kageno_rush",
-      "seconds": 3.5,
+      "seconds": 2.76,
       "source_start_seconds": 61.16,
       "sample_rate": 48000,
       "channels": 2,
       "playback_speed": 1.0,
-      "decoded_correlation": 0.9983978322453625,
-      "decoded_peak": 0.9044582843780518,
-      "sha256": "fbc0d803be08b63a34606a8ea84a47ee9e6a1abb4a73c19e5ebb65ea61a3ed29",
+      "decoded_peak": 0.9936767220497131,
+      "sha256": "81d19f8216c983be5d16351604cfbb0eb5edaedd618aada12ee67c6a457bd608",
       "source": "supplied video minus BandIt v2 estimated music",
       "gain": 0.9824073194528627,
       "high_frequency_transient_rescue": false,
       "raw_model_residual_rms_fraction": 0.8708456754684448,
-      "residual_rms_fraction": 0.8705469965934753
+      "residual_rms_fraction": 0.8705469965934753,
+      "recut_from_sha256": "fbc0d803be08b63a34606a8ea84a47ee9e6a1abb4a73c19e5ebb65ea61a3ed29",
+      "recut": "2.38.0: the separated 3.5 s clip re-cut to the remade T hold by tools/kageno/recut_rush.py (pieces moved, not stretched or pitched): slashes 0.40/0.60/0.80 s, dash 0.90 s, arrival 1.20 s, burst 1.30 s, spin cut 1.55 s; plays from the cast (lead 0)"
     },
     {
       "sound": "kageno_y",

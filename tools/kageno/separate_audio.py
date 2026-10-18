@@ -1,5 +1,7 @@
 """Base effects separation. After this step run restore_cinematic_audio.py
 to preserve H music and G dialogue according to the current sound policy.
+T held's clip (kageno_rush) is cut on the old timeline; --install re-cuts it to the
+remade skill (2.38.0) with recut_rush.py before it goes into the mod.
 
 Requires numpy, scipy, onnxruntime and the three pinned BandIt-v2 music ONNX graphs.
 Weights are not bundled. See audio_model.json for provenance, hashes and attribution.
@@ -112,7 +114,8 @@ def main():
   decoded=np.frombuffer(subprocess.check_output(['ffmpeg','-v','error','-i',str(ogg),'-f','f32le','-ac','2','-ar',str(SR),'-']),dtype='<f4').reshape(-1,2)
   n=min(len(decoded),len(effects));corr=float(np.corrcoef(effects[:n].ravel(),decoded[:n].ravel())[0,1])
   records.append({'sound':name,'seconds':duration,'source_start_seconds':start,'sample_rate':SR,'channels':2,'playback_speed':1.0,'decoded_correlation':corr,'decoded_peak':float(np.abs(decoded).max()),'sha256':hashlib.sha256(ogg.read_bytes()).hexdigest(),'source':'supplied video minus BandIt v2 estimated music','gain':gain,'high_frequency_transient_rescue':rescued,'raw_model_residual_rms_fraction':residual_fraction,'residual_rms_fraction':float(np.sqrt(np.mean((effects/gain)**2)/np.mean(original**2)))})
-  if args.install:(ROOT/'src/main/resources/assets/celestialfall/sounds'/ogg.name).write_bytes(ogg.read_bytes())
+  if args.install and name=='kageno_rush':subprocess.run(['python3',str(ROOT/'tools/kageno/recut_rush.py'),str(ogg),str(ROOT/'src/main/resources/assets/celestialfall/sounds'/ogg.name)],check=True)
+  elif args.install:(ROOT/'src/main/resources/assets/celestialfall/sounds'/ogg.name).write_bytes(ogg.read_bytes())
   print(f'{name}: completed, codec correlation {corr:.5f}, {time.monotonic()-t0:.1f}s',flush=True)
  records+=[x for x in json.loads((ROOT/'tools/kageno/audio_reference.json').read_text())['effects'] if x['sound']=='kageno_e']
  manifest={'version':'2.24.0','method':'original minus estimated music; no generated SFX','model':'BandIt v2, music-only ONNX','Q_source_offset_seconds':134,'skill_audio_contains_reference_video':True,'music_removal_is_perfect':False,'overlap_seconds':4,'effects':records}

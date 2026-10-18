@@ -41,4 +41,10 @@ class FxFrameTest {
         f.chroma(.01f);f.chroma(.005f);assertEquals(.01f,f.chroma(),1e-6);
         assertFalse(f.empty());
     }
+    /** The shortest afterglow asked for wins, never quite none, and nothing asked leaves the usual one. */
+    @Test void theShortestAfterglowWins(){
+        var f=new FxFrame();assertEquals(1,f.afterglow(),1e-6);
+        f.afterglow(.35f);f.afterglow(.2f);f.afterglow(.5f);f.afterglow(-1);assertEquals(.2f,f.afterglow(),1e-6);
+        f.afterglow(0);assertEquals(.05f,f.afterglow(),1e-6);
+    }
 }

@@ -112,20 +112,28 @@ final class ThroughSkill implements Fx.Skill {
 
     // ───────────────────────────── where things are ─────────────────────────────
 
-    /** Each slash: the tilt of its plane (degrees, its right side up), its radius as it leaves and at the end of its flight, its arc (degrees, signed from its tail to its head toward its right) and the height of its middle. */
-    static final double[] ROLL={0,-35,35},R0={2.3,2.3,2.9},R1={3.3,3.3,4.0},ARC={-140,140,-150},LIFT={1.15,1.3,1.35};
-    /** The side of slash {@code i}'s plane: the caster's right, tilted by its roll. */
-    static Vec3d side(Fx c,int i){double a=Math.toRadians(ROLL[i]);return c.right.multiply(Math.cos(a)).add(0,Math.sin(a),0);}
+    /**
+     * Each slash: the roll of its plane (degrees, its right side up), its radius as it leaves and at the end of its
+     * flight, its arc (degrees, signed from its tail to its head toward its right) and the height of its middle.
+     */
+    static final double[] ROLL={0,-28,28},R0={2.8,2.8,3.3},R1={3.6,3.6,4.0},ARC={-140,140,-150},LIFT={1.5,1.95,2.0};
+    /** How far each slash's plane leans back up from level (degrees), so a camera behind the caster sees its face and not its edge. */
+    static final double LEAN=22;
+    /** Slash {@code i}'s plane: {its forward, leaned back up; its side, the caster's right turned by its roll and square to the forward}. */
+    static Vec3d[] slashPlane(Vec3d f,Vec3d right,int i){
+        double p=Math.toRadians(LEAN),a=Math.toRadians(ROLL[i]);Vec3d fw=f.multiply(Math.cos(p)).add(0,Math.sin(p),0);
+        Vec3d s=right.multiply(Math.cos(a)).add(0,Math.sin(a),0);
+        return new Vec3d[]{fw,s.subtract(fw.multiply(s.dotProduct(fw))).normalize()};
+    }
+    static Vec3d[] slashPlane(Fx c,int i){return slashPlane(c.f,c.right,i);}
     /** How far up the line slash {@code i} has flown at {@code t} (blocks; the server's), or -1 before it leaves. */
     static double flown(int i,float t){return KagenoRules.rushSlash(i,t*20);}
     static double radius(int i,float t){return R0[i]+(R1[i]-R0[i])*Ease.out(t-SLASH[i],0,FLIGHT);}
     /** The middle (front) of slash {@code i}'s arc with it {@code d} blocks up the line. */
     static Vec3d front(Fx c,int i,double d){return c.origin.add(c.f.multiply(d)).add(0,LIFT[i],0);}
-    /** The point {@code deg} degrees from the middle of slash {@code i}'s arc (toward its side), with it {@code d} up the line and {@code r} across. */
-    static Vec3d onArc(Fx c,int i,double d,double r,double deg){
-        double a=Math.toRadians(deg);
-        return front(c,i,d).add(c.f.multiply((Math.cos(a)-1)*r)).add(side(c,i).multiply(Math.sin(a)*r));
-    }
+    /** Where the point {@code deg} degrees round slash {@code i}'s arc from its middle lies from its middle, the arc {@code r} across. */
+    static Vec3d arcOffset(Vec3d[] plane,double r,double deg){double a=Math.toRadians(deg);return plane[0].multiply((Math.cos(a)-1)*r).add(plane[1].multiply(Math.sin(a)*r));}
+    static Vec3d onArc(Fx c,int i,double d,double r,double deg){return front(c,i,d).add(arcOffset(slashPlane(c,i),r,deg));}
     /** When slash {@code i} passes {@code x} blocks up the line. */
     static float passes(int i,double x){return SLASH[i]+(float)(Math.max(0,x-1)/SPEED);}
     /** How far a point lies up the line from the cast spot. */
@@ -214,8 +222,8 @@ final class ThroughSkill implements Fx.Skill {
             float age=t-SLASH[i];if(age<-FORM||age>=FLIGHT+.07f)continue;
             double d=Math.max(1,flown(i,t)),r=radius(i,Math.max(t,SLASH[i]));
             float grow=Ease.out(age,-FORM,0),gone=Ease.smooth(age,FLIGHT-.02f,FLIGHT+.07f);
-            Vec3d o=front(c,i,d).subtract(c.f.multiply(r));double arc=ARC[i]*Math.max(.05,grow);
-            KagenoFire.crescent(o,c.f,side(c,i),r*(.8+.2*grow),r*.56,-ARC[i]/2,arc,15,i*5+3,gone,.5f,Ease.smooth(age,-FORM,-FORM+.017f)*(1-.4f*gone),.3);
+            var p=slashPlane(c,i);Vec3d o=front(c,i,d).subtract(p[0].multiply(r));double arc=ARC[i]*Math.max(.05,grow);
+            KagenoFire.crescent(o,p[0],p[1],r*(.8+.2*grow),r*.6,-ARC[i]/2,arc,15,i*5+3,gone,.5f,Ease.smooth(age,-FORM,-FORM+.017f)*(1-.4f*gone),.15);
         }
         if(t>=SWEEP-.01f&&t<2.15f){
             float closed=closed(c);double[] r=ring(c,t);if(r[1]-r[0]<4)return;
@@ -227,6 +235,13 @@ final class ThroughSkill implements Fx.Skill {
 
     // ───────────────────────────── light ─────────────────────────────
 
+    /** A soft flash: a coloured halo round a hot core, with no rays (a long cross of light would read as more slashes); thinned out close to the camera. */
+    static void bloom(Fx c,EffectMesh m,Vec3d p,double r,int rgb,float a){
+        a*=near(c,p,r);if(a<=.005f||r<=0)return;
+        m.softDisc(p,r,rgb,.4f*a);m.softDisc(p,r*.5,rgb,.65f*a);m.softDisc(p,r*.22,HOT,a);
+    }
+    /** How much of something {@code size} across at {@code p} to draw: all of it from a few blocks off the camera, none of it on the lens. */
+    static float near(Fx c,Vec3d p,double size){return Ease.smooth((float)(c.camera.distanceTo(p)-size),.4f,2.6f);}
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec;
         bladeLight(c,m,t);
@@ -253,15 +268,12 @@ final class ThroughSkill implements Fx.Skill {
     /** A slash leaving: a burst of light where it leaves the blade and a ring of air round its line; its glow flying with it, and its burst at the end of the range. */
     static void slashLight(Fx c,EffectMesh m,float t,int i){
         float age=t-SLASH[i];if(age<-.01f||age>=FLIGHT+.5f)return;
-        Vec3d muzzle=front(c,i,1.2);
-        if(age<.08f)FxLib.flash(m,muzzle,1.6,MAGENTA,1-Ease.unit(age,0,.08f));
-        if(age>=0&&age<.22f)FxLib.ringPlane(m,muzzle,c.right,FxLib.UP,.4+2.6*Ease.out(age,0,.2f),.3,0xffb0f0,.85f*(1-Ease.unit(age,0,.22f)));
-        if(age>=0&&age<FLIGHT)m.softDisc(front(c,i,flown(i,t)).subtract(c.f.multiply(radius(i,t)*.35)),radius(i,t)*.75,MAGENTA,.35f);
+        if(age<.07f)bloom(c,m,front(c,i,1.3),1.3,MAGENTA,1-Ease.smooth(age,.01f,.07f));
+        if(age>=0&&age<FLIGHT)bloom(c,m,front(c,i,flown(i,t)).add(slashPlane(c,i)[0].multiply(-radius(i,t)*.3)),radius(i,t)*.55,MAGENTA,.45f);
         float e=age-FLIGHT;
         if(e>=0&&e<.5f){
             Vec3d p=front(c,i,RANGE);float a=1-Ease.smooth(e,.08f,.5f);
-            FxLib.flash(m,p,2.6+2*Ease.out(e,0,.15f),MAGENTA,a);
-            FxLib.ringPlane(m,p,c.right,FxLib.UP,.6+5*Ease.out(e,0,.35f),.5,PINK,.8f*(1-Ease.unit(e,0,.4f)));
+            bloom(c,m,p,2.6+2*Ease.out(e,0,.15f),MAGENTA,a);
             FxLib.ring(m,new Vec3d(p.x,c.origin.y+.06,p.z),.5+6*Ease.out(e,0,.4f),.7,VIOLET,.7f*(1-Ease.unit(e,0,.45f)));
         }
     }
@@ -272,7 +284,7 @@ final class ThroughSkill implements Fx.Skill {
             Vec3d p=chest(c,e);double x=along(c,e.getLerpedPos(c.delta));
             for(int i=0;i<SLASH.length;i++){
                 float k=FxLib.kick(t,passes(i,x),.1f);if(k<.01f)continue;
-                FxLib.flash(m,p,1.6*k+.4,MAGENTA,k);FxLib.ringPlane(m,p,c.right,FxLib.UP,.4+2*(1-k),.25,HOT,.8f*k);
+                bloom(c,m,p,1.6*k+.5,MAGENTA,k);
             }
         }
     }
@@ -280,32 +292,26 @@ final class ThroughSkill implements Fx.Skill {
     static void launch(Fx c,EffectMesh m,float t){
         if(t<D-.01f||t>=D+.5f)return;
         Vec3d o=c.origin.add(0,.9,0),floor=c.origin.add(0,.06,0);float a=Ease.smooth(t,D-.01f,D+.01f);
-        if(t<D+.18f)FxLib.flash(m,o,2.4+2.4*Ease.out(t,D,D+.1f),MAGENTA,(FxLayer.available()?.75f:1)*(1-Ease.smooth(t,D+.03f,D+.18f)));
-        FxLib.ring(m,floor,.5+9*Ease.out(t,D,D+.45f),.9,PINK,.75f*a*(1-Ease.unit(t,D,D+.45f)));
-        FxLib.ring(m,floor,.3+5*Ease.out(t,D,D+.25f),.4,WHITE,.6f*a*(1-Ease.unit(t,D,D+.25f)));
-        FxLib.ringPlane(m,o,c.right,FxLib.UP,.5+3.6*Ease.out(t,D,D+.22f),.4,0xffb0ec,.8f*a*(1-Ease.unit(t,D,D+.22f)));
+        if(t<D+.16f)bloom(c,m,o,1.8+1.4*Ease.out(t,D,D+.08f),MAGENTA,(FxLayer.available()?.75f:1)*(1-Ease.smooth(t,D+.03f,D+.16f)));
+        FxLib.ring(m,floor,.5+3.8*Ease.out(t,D,D+.35f),.6,PINK,.55f*a*(1-Ease.unit(t,D,D+.35f)));
+        FxLib.ring(m,floor,.3+2.4*Ease.out(t,D,D+.2f),.3,WHITE,.45f*a*(1-Ease.unit(t,D,D+.2f)));
     }
     /** The dash: the body a comet of fire, rings of light popping round its path as it passes. */
     static void dashLight(Fx c,EffectMesh m,float t){
         if(t<D||t>=ARRIVE+.4f)return;
         float body=Ease.smooth(t,D,D+.02f)*(1-Ease.smooth(t,ARRIVE-.02f,ARRIVE+.06f));Vec3d at=c.pos.add(0,.9,0),h=heading(c);
-        if(body>0){m.softDisc(at,1.4,MAGENTA,.55f*body);m.softDisc(at.add(h.multiply(.4)),.6,HOT,.6f*body);}
-        Vec3d side=new Vec3d(-h.z,0,h.x);int k=0;
-        for(var s:stations(c,5)){
-            float from=(float)s[0],u=Ease.unit(t,from,from+.3f);k++;if(t<from||u>=1)continue;
-            FxLib.ringPlane(m,new Vec3d(s[1],s[2]+1,s[3]),side,FxLib.UP,.4+(1.6+.1*k)*Ease.out(t,from,from+.22f),.3,k%2==0?HOT:PINK,.85f*(1-u)*Ease.smooth(t,from,from+.02f));
-        }
+        if(body>0){bloom(c,m,at,1.3,MAGENTA,.6f*body);bloom(c,m,at.add(h.multiply(.4)),.6,PINK,.6f*body);}
     }
     /** The arrival: a flash and a shock ring where he lands, a flash on whom he came for, and the fire bursting on them a moment later. */
     static void arrival(Fx c,EffectMesh m,float t){
         if(t<ARRIVE-.01f||t>=BURST+.5f)return;
         Vec3d o=c.pos.add(0,.9,0);float a=Ease.smooth(t,ARRIVE-.01f,ARRIVE+.01f);
-        if(t<ARRIVE+.2f)FxLib.flash(m,o,2.6+2*Ease.out(t,ARRIVE,ARRIVE+.08f),MAGENTA,(FxLayer.available()?.75f:1)*(1-Ease.smooth(t,ARRIVE+.04f,ARRIVE+.2f)));
-        FxLib.ring(m,floor(c).add(0,.06,0),.5+7*Ease.out(t,ARRIVE,ARRIVE+.35f),.8,PINK,.75f*a*(1-Ease.unit(t,ARRIVE,ARRIVE+.35f)));
+        if(t<ARRIVE+.2f)bloom(c,m,o,2.2+1.6*Ease.out(t,ARRIVE,ARRIVE+.08f),MAGENTA,(FxLayer.available()?.75f:1)*(1-Ease.smooth(t,ARRIVE+.04f,ARRIVE+.2f)));
+        FxLib.ring(m,floor(c).add(0,.06,0),.5+5*Ease.out(t,ARRIVE,ARRIVE+.35f),.7,PINK,.6f*a*(1-Ease.unit(t,ARRIVE,ARRIVE+.35f)));
         for(var e:c.targets){
             Vec3d p=chest(c,e);float k=FxLib.kick(t,ARRIVE,.08f),b=FxLib.kick(t,BURST,.12f);
-            if(k>.01f)FxLib.flash(m,p,1.8*k+.4,HOT,k);
-            if(b>.01f){FxLib.flash(m,p,2.8*b+.6,MAGENTA,b);FxLib.ringPlane(m,p,c.right,FxLib.UP,.5+3*(1-b),.35,PINK,.8f*b);}
+            if(k>.01f)bloom(c,m,p,1.6*k+.4,PINK,k);
+            if(b>.01f)bloom(c,m,p,2.6*b+.6,MAGENTA,b);
         }
     }
     /** The coil before the spin: light drawn into the body and a circle of fire closing in over the floor. */
@@ -313,7 +319,7 @@ final class ThroughSkill implements Fx.Skill {
         if(t<BURST-.02f||t>=CUT+.05f)return;
         float a=Ease.smooth(t,BURST-.02f,BURST+.08f)*(1-Ease.smooth(t,CUT-.03f,CUT+.05f));Vec3d o=c.pos.add(0,1,0);
         FxLib.converge(m,o,3.4,26,t,BURST,CUT-.06f,0xffb8f0,77);
-        FxLib.ring(m,floor(c).add(0,.05,0),2+4.2*(1-Ease.in(t,BURST,CUT)),.5,PINK,.7f*a);
+        FxLib.ring(m,floor(c).add(0,.05,0),2+4.2*(1-Ease.in(t,BURST,CUT)),.4,PINK,.5f*a);
         FxLib.glow(m,floor(c).add(0,.04,0),5,DEEP,.35f*a);
         m.softDisc(o,.8+.6*Ease.smooth(t,BURST,CUT),MAGENTA,.4f*a);
     }
@@ -321,11 +327,10 @@ final class ThroughSkill implements Fx.Skill {
     static void cut(Fx c,EffectMesh m,float t){
         if(t<CUT-.01f||t>=CUT+.6f)return;
         Vec3d pos=c.pos,o=floor(c).add(0,.06,0);float a=Ease.smooth(t,CUT-.01f,CUT+.01f);
-        if(t<CUT+.14f)FxLib.flash(m,pos.add(0,1,0),3.6,MAGENTA,(FxLayer.available()?.8f:1)*(1-Ease.unit(t,CUT,CUT+.14f)));
+        if(t<CUT+.14f)bloom(c,m,pos.add(0,1,0),3.4,MAGENTA,(FxLayer.available()?.8f:1)*(1-Ease.unit(t,CUT,CUT+.14f)));
         FxLib.column(m,pos,10*Ease.out(t,CUT,CUT+.06f),.6*(1-Ease.unit(t,CUT,CUT+.4f))+.1,0xe0a8ff,a*(1-Ease.smooth(t,CUT+.05f,CUT+.4f)));
-        FxLib.ring(m,o,.5+15*Ease.out(t,CUT,CUT+.55f),1,WHITE,.6f*a*(1-Ease.unit(t,CUT,CUT+.55f)));
-        FxLib.ring(m,o,.4+11*Ease.out(t,CUT,CUT+.45f),1.3,VIOLET,.8f*a*(1-Ease.unit(t,CUT,CUT+.45f)));
-        FxLib.ring(m,o,.3+7*Ease.out(t,CUT,CUT+.32f),.7,PINK,.7f*a*(1-Ease.unit(t,CUT,CUT+.32f)));
+        FxLib.ring(m,o,.5+13*Ease.out(t,CUT,CUT+.5f),.8,WHITE,.5f*a*(1-Ease.unit(t,CUT,CUT+.5f)));
+        FxLib.ring(m,o,.4+9*Ease.out(t,CUT,CUT+.4f),1.1,VIOLET,.7f*a*(1-Ease.unit(t,CUT,CUT+.4f)));
     }
 
     // ───────────────────────────── fire, smoke and dust ─────────────────────────────
@@ -352,6 +357,8 @@ final class ThroughSkill implements Fx.Skill {
         dashFire(c,t,pts,cells);
         vortex(c,t,pts,cells);
         cutFire(c,t,pts,cells);
+        // Fire that would fill the lens (the camera trailing the dash runs through what it left) thins out close to it.
+        for(int i=0;i<pts.size();i++){float[] q=cells.get(i);q[1]*=near(c,pts.get(i),q[0]);}
         // On the effect layer the fire's hottest cores burn above white and bloom.
         KagenoFire.hot(FxLayer.available()?1.1f:0);
         KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
@@ -371,12 +378,11 @@ final class ThroughSkill implements Fx.Skill {
     }
     /** A ring of fire flaring up round the feet as the blade catches, dying as the cuts begin. */
     static void igniteRing(Fx c,float t,List<Vec3d> pts,List<float[]> cells){
-        if(t<.2f||t>=1.0f)return;
-        for(int k=0;k<14;k++){
-            float born=.2f+.1f*(float)Ease.hash(k*3+41),life=.38f+.2f*(float)Ease.hash(k*5+42);
-            float cyc=(t-born)/life;if(cyc<0)continue;int n=(int)Math.floor(cyc);float u=cyc-n;if(born+n*life>.72f)continue;
-            double az=(k+.4*Ease.hash(k*7+n*3))*Math.PI*2/14,r=1.5+.5*Ease.hash(k*11+n*5);
-            cell(pts,cells,c.origin.add(Math.cos(az)*r,.3+.6*u,Math.sin(az)*r),(.45+.25*Ease.hash(k*13+n))*(1-.3*u),Ease.smooth(u,0,.15f)*(1-Ease.smooth(u,.5f,1)),.95-.4*u,.9,k*17+n*7+3);
+        if(t<.2f||t>=.7f)return;
+        for(int k=0;k<10;k++){
+            float born=.2f+.08f*(float)Ease.hash(k*3+41),life=.3f+.15f*(float)Ease.hash(k*5+42),u=(t-born)/life;if(u<0||u>=1)continue;
+            double az=(k+.4*Ease.hash(k*7))*Math.PI*2/10,r=1.3+.4*Ease.hash(k*11);
+            cell(pts,cells,c.origin.add(Math.cos(az)*r,.2+.5*u,Math.sin(az)*r),(.18+.1*Ease.hash(k*13))*(1-.3*u),Ease.smooth(u,0,.15f)*(1-Ease.smooth(u,.5f,1)),.95-.4*u,.9,k*17+3);
         }
     }
     /**
@@ -385,26 +391,26 @@ final class ThroughSkill implements Fx.Skill {
      */
     static void slashFire(Fx c,float t,int i,List<Vec3d> pts,List<float[]> cells){
         float age=t-SLASH[i];if(age<0||age>=FLIGHT+.8f)return;
-        int n=i==2?30:24,seed=i*997+11;
+        int n=i==2?14:12,seed=i*997+11;
         for(int k=0;k<n;k++){
-            double d=1.5+(k+.6*Ease.hash(seed+k))*(RANGE-1.5)/n;float born=passes(i,d),life=.32f+.25f*(float)Ease.hash(seed+k*3),s=t-born;if(s<0||s>=life)continue;float u=s/life;
-            double r=radius(i,born)*(.8+.12*Ease.hash(seed+k*5)),deg=(Ease.hash(seed+k*7)-.5)*Math.abs(ARC[i])*.85;
-            Vec3d p=onArc(c,i,d,r,deg).add(0,.7*u,0).subtract(c.f.multiply(.6*u));
-            cell(pts,cells,p,(.42+.3*Ease.hash(seed+k*11))*(.8+.7*Ease.out(u,0,.6f))*(i==2?1.15:1),Ease.smooth(u,0,.06f)*(1-Ease.smooth(u,.45f,1)),1-.7*u,.75,seed+k*29);
+            double d=3+(k+.6*Ease.hash(seed+k))*(RANGE-3)/n;float born=passes(i,d),life=.18f+.14f*(float)Ease.hash(seed+k*3),s=t-born;if(s<0||s>=life)continue;float u=s/life;
+            double r=radius(i,born)*(.72+.12*Ease.hash(seed+k*5)),deg=(Ease.hash(seed+k*7)-.5)*Math.abs(ARC[i])*.7;
+            Vec3d p=onArc(c,i,d,r,deg).add(0,.5*u,0);
+            cell(pts,cells,p,(.3+.2*Ease.hash(seed+k*11))*(.8+.6*Ease.out(u,0,.6f))*(i==2?1.15:1),Ease.smooth(u,0,.08f)*(1-Ease.smooth(u,.45f,1)),1-.6*u,.75,seed+k*29);
         }
-        for(int k=0;k<14;k++){
-            double d=2+(k+.5*Ease.hash(seed+k*13+1))*(RANGE-2)/14;float born=passes(i,d)+.02f,life=.5f+.3f*(float)Ease.hash(seed+k*17),s=t-born;if(s<0||s>=life)continue;float u=s/life;
-            Vec3d p=c.origin.add(c.f.multiply(d)).add(c.right.multiply((Ease.hash(seed+k*19)-.5)*1.4)).add(0,.3+.5*u,0);
-            cell(pts,cells,p,(.45+.3*Ease.hash(seed+k*23))*(1-.2*u),Ease.smooth(u,0,.1f)*(1-Ease.smooth(u,.5f,1)),.9-.5*u,.95,seed+k*37+5);
+        for(int k=0;k<7;k++){
+            double d=4.5+(k+.5*Ease.hash(seed+k*13+1))*(RANGE-4.5)/7;float born=passes(i,d)+.02f,life=.35f+.15f*(float)Ease.hash(seed+k*17),s=t-born;if(s<0||s>=life)continue;float u=s/life;
+            Vec3d p=c.origin.add(c.f.multiply(d)).add(c.right.multiply((Ease.hash(seed+k*19)-.5)*1.2)).add(0,.3+.4*u,0);
+            cell(pts,cells,p,(.35+.15*Ease.hash(seed+k*23))*(1-.2*u),Ease.smooth(u,0,.1f)*(1-Ease.smooth(u,.5f,1)),.9-.5*u,.95,seed+k*37+5);
         }
-        burst(pts,cells,front(c,i,RANGE),t,SLASH[i]+FLIGHT,14,7,.85,1,seed+400);
+        burst(pts,cells,front(c,i,RANGE),t,SLASH[i]+FLIGHT,10,6,.8,1,seed+400);
     }
     /** Fire bursting on whoever a slash passes, small fires burning on whoever is held, and the burst after the arrival. */
     static void struckFire(Fx c,float t,List<Vec3d> pts,List<float[]> cells){
         if(t<SLASH[0]||t>=BURST+.8f)return;int n=0;
         for(var e:inPath(c)){
             Vec3d p=chest(c,e);double x=along(c,e.getLerpedPos(c.delta));
-            for(int i=0;i<SLASH.length;i++)burst(pts,cells,p,t,passes(i,x),8,4.5,.5,1,n*71+i*13+501);
+            for(int i=0;i<SLASH.length;i++)burst(pts,cells,p,t,passes(i,x),6,3.5,.45,1,n*71+i*13+501);
             n++;
         }
         n=0;
@@ -414,7 +420,7 @@ final class ThroughSkill implements Fx.Skill {
                 float life=.4f,cyc=(t-from)/life+(float)Ease.hash(n*7+k);int q=(int)Math.floor(cyc);float u=cyc-q;
                 cell(pts,cells,p.add((Ease.hash(n*11+k*3+q)-.5)*.7,-.4+.9*u,(Ease.hash(n*13+k*5+q)-.5)*.7),.3+.15*Ease.hash(k+q),Ease.smooth(u,0,.2f)*(1-Ease.smooth(u,.5f,1))*(1-Ease.smooth(t,CUT-.1f,CUT)),.9-.4*u,.9,n*41+k*7+q);
             }
-            burst(pts,cells,p,t,BURST,12,6,.7,1,n*53+601);
+            burst(pts,cells,p,t,BURST,10,5,.6,1,n*53+601);
             n++;
         }
     }
@@ -424,30 +430,30 @@ final class ThroughSkill implements Fx.Skill {
      */
     static void dashFire(Fx c,float t,List<Vec3d> pts,List<float[]> cells){
         if(t<D-.01f||t>=ARRIVE+1.0f)return;
-        burst(pts,cells,c.origin.add(0,.5,0),t,D,18,8,.85,.6,701);
+        burst(pts,cells,c.origin.add(0,.5,0),t,D,10,4.5,.55,.6,701);
         int k=0;
-        for(var s:stations(c,.8)){
-            float life=.4f+.3f*(float)Ease.hash(k*3+711),age=t-(float)s[0];k++;if(age<0||age>=life)continue;float u=age/life;
-            Vec3d p=new Vec3d(s[1],s[2],s[3]).add((Ease.hash(k*5+712)-.5)*.9,.45+1.1*Ease.hash(k*7+713)+.6*u,(Ease.hash(k*11+714)-.5)*.9);
-            cell(pts,cells,p,(.5+.4*Ease.hash(k*13+715))*(.8+.6*Ease.out(u,0,.5f)),Ease.smooth(u,0,.06f)*(1-Ease.smooth(u,.45f,1)),1-.7*u,.7,k*19+716);
+        for(var s:stations(c,1.1)){
+            float life=.25f+.15f*(float)Ease.hash(k*3+711),age=t-(float)s[0];k++;if(age<0||age>=life)continue;float u=age/life;
+            Vec3d p=new Vec3d(s[1],s[2],s[3]).add((Ease.hash(k*5+712)-.5)*.6,.5+.9*Ease.hash(k*7+713)+.4*u,(Ease.hash(k*11+714)-.5)*.6);
+            cell(pts,cells,p,(.35+.25*Ease.hash(k*13+715))*(.8+.5*Ease.out(u,0,.5f)),Ease.smooth(u,0,.08f)*(1-Ease.smooth(u,.45f,1)),1-.6*u,.7,k*19+716);
         }
         k=0;
-        for(var s:stations(c,1.6)){
-            float life=.6f+.3f*(float)Ease.hash(k*3+731),age=t-(float)s[0]-.03f;k++;if(age<0||age>=life)continue;float u=age/life;
-            cell(pts,cells,new Vec3d(s[1],s[2],s[3]).add((Ease.hash(k*5+732)-.5)*1.2,.3+.5*u,(Ease.hash(k*7+733)-.5)*1.2),(.5+.3*Ease.hash(k*11+734))*(1-.2*u),Ease.smooth(u,0,.1f)*(1-Ease.smooth(u,.5f,1)),.9-.5*u,.95,k*23+735);
+        for(var s:stations(c,2.4)){
+            float life=.45f+.15f*(float)Ease.hash(k*3+731),age=t-(float)s[0]-.03f;k++;if(age<0||age>=life)continue;float u=age/life;
+            cell(pts,cells,new Vec3d(s[1],s[2],s[3]).add((Ease.hash(k*5+732)-.5)*.9,.25+.4*u,(Ease.hash(k*7+733)-.5)*.9),(.4+.15*Ease.hash(k*11+734))*(1-.2*u),Ease.smooth(u,0,.1f)*(1-Ease.smooth(u,.5f,1)),.9-.5*u,.95,k*23+735);
         }
         float body=Ease.smooth(t,D,D+.02f)*(1-Ease.smooth(t,ARRIVE-.03f,ARRIVE+.05f));
         if(body>0){Vec3d h=heading(c),across=new Vec3d(-h.z,0,h.x);
-            for(int q=0;q<6;q++)cell(pts,cells,c.pos.subtract(h.multiply(.2+.5*q)).add(0,.5+.8*Ease.hash(q*3+741),0).add(across.multiply((Ease.hash(q*5+742)-.5)*.8)),.55-.05*q,body*(1-q/7f),1-.08*q,.6,q*29+743);}
-        burst(pts,cells,floor(c).add(0,.5,0),t,ARRIVE,18,8,.9,.5,751);
+            for(int q=0;q<4;q++)cell(pts,cells,c.pos.subtract(h.multiply(.3+.5*q)).add(0,.6+.7*Ease.hash(q*3+741),0).add(across.multiply((Ease.hash(q*5+742)-.5)*.6)),.45-.06*q,body*(1-q/5f),1-.08*q,.6,q*29+743);}
+        burst(pts,cells,floor(c).add(0,.5,0),t,ARRIVE,12,6,.7,.5,751);
     }
     /** The coil before the spin: fire drawn round and in to the body, heating as it gathers. */
     static void vortex(Fx c,float t,List<Vec3d> pts,List<float[]> cells){
         if(t<BURST||t>=CUT+.02f)return;Vec3d o=c.pos;
-        for(int k=0;k<22;k++){
+        for(int k=0;k<14;k++){
             float born=BURST+(CUT-BURST-.24f)*(float)Ease.hash(k*3+801),life=.24f,u=(t-born)/life;if(u<0||u>=1)continue;
-            double az=Ease.hash(k*5+802)*Math.PI*2-u*2.6,r=4.4*(1-u)*(1-.3*u)+.5,h=.4+1.2*Ease.hash(k*7+803)+.3*u;
-            cell(pts,cells,o.add(Math.cos(az)*r,h,Math.sin(az)*r),.55*(1-.4*u),Ease.smooth(u,0,.2f)*(1-Ease.smooth(u,.8f,1)),.6+.4*u,.6,k*31+804);
+            double az=Ease.hash(k*5+802)*Math.PI*2-u*2.6,r=4.2*(1-u)*(1-.3*u)+.5,h=.4+1.2*Ease.hash(k*7+803)+.3*u;
+            cell(pts,cells,o.add(Math.cos(az)*r,h,Math.sin(az)*r),.42*(1-.4*u),Ease.smooth(u,0,.2f)*(1-Ease.smooth(u,.8f,1)),.6+.4*u,.6,k*31+804);
         }
     }
     /**
@@ -458,31 +464,31 @@ final class ThroughSkill implements Fx.Skill {
         if(t<SWEEP||t>=END)return;Vec3d o=floor(c);
         if(t<2.1f){
             float closed=closed(c);double[] r=ring(c,t);
-            for(int k=0;k<30;k++){
-                double at=r[0]+(r[1]-r[0])*(k+.5)/30;float life=.35f+.2f*(float)Ease.hash(k*3+901),s=(float)((r[1]-at)/4000)+(t<closed?0:t-closed);
-                if(s>=life)continue;float u=s/life;double rad=ringRadius(c,t,closed)*(.8+.1*Ease.hash(k*5+902)),a=Math.toRadians(at);
-                cell(pts,cells,o.add(Math.cos(a)*rad,.9+.4*Ease.hash(k*7+903)+.5*u,Math.sin(a)*rad),(.5+.3*Ease.hash(k*11+904))*(1+.5*u),Ease.smooth(u,0,.05f)*(1-Ease.smooth(u,.5f,1))*(1-Ease.smooth(t,closed+.3f,closed+.5f)),1-.6*u,.7,k*37+905);
+            for(int k=0;k<16;k++){
+                double at=r[0]+(r[1]-r[0])*(k+.5)/16;float life=.25f+.15f*(float)Ease.hash(k*3+901),s=(float)((r[1]-at)/4000)+(t<closed?0:t-closed);
+                if(s>=life)continue;float u=s/life;double rad=ringRadius(c,t,closed)*(.72+.1*Ease.hash(k*5+902)),a=Math.toRadians(at);
+                cell(pts,cells,o.add(Math.cos(a)*rad,.9+.3*Ease.hash(k*7+903)+.4*u,Math.sin(a)*rad),(.4+.2*Ease.hash(k*11+904))*(1+.4*u),Ease.smooth(u,0,.06f)*(1-Ease.smooth(u,.5f,1))*(1-Ease.smooth(t,closed+.3f,closed+.5f)),1-.6*u,.7,k*37+905);
             }
         }
         if(t>=CUT&&t<CUT+.9f){
-            for(int k=0;k<10;k++){
-                float s=t-CUT-.02f*k,life=.5f;if(s<0||s>=life)continue;float u=s/life;
-                cell(pts,cells,o.add((Ease.hash(k*3+921)-.5)*.6,.4+1.0*k+2.5*u,(Ease.hash(k*5+922)-.5)*.6),(.9-.04*k)*(1+.4*u),Ease.smooth(u,0,.06f)*(1-Ease.smooth(u,.4f,1)),1.05-.6*u,.4,k*41+923);
+            for(int k=0;k<7;k++){
+                float s=t-CUT-.02f*k,life=.45f;if(s<0||s>=life)continue;float u=s/life;
+                cell(pts,cells,o.add((Ease.hash(k*3+921)-.5)*.5,.4+1.1*k+2.2*u,(Ease.hash(k*5+922)-.5)*.5),(.7-.04*k)*(1+.4*u),Ease.smooth(u,0,.06f)*(1-Ease.smooth(u,.4f,1)),1.05-.6*u,.4,k*41+923);
             }
-            burst(pts,cells,o.add(0,.9,0),t,CUT,40,22,1.0,.15,931);
+            burst(pts,cells,o.add(0,.9,0),t,CUT,24,15,.75,.15,931);
         }
         if(t>=CUT+.05f){
             float dying=1-Ease.smooth(t,END-.7f,END-.05f);
-            for(int k=0;k<40;k++){
+            for(int k=0;k<28;k++){
                 float born=CUT+.05f+.2f*(float)Ease.hash(k*3+951),life=.42f+.25f*(float)Ease.hash(k*5+952),cyc=(t-born)/life;if(cyc<0)continue;
                 int q=(int)Math.floor(cyc);float u=cyc-q;
-                double az=(k+.6*Ease.hash(k*7+q*3))*Math.PI*2/40,rad=5.2+1.2*Ease.hash(k*11+q*5);
-                cell(pts,cells,o.add(Math.cos(az)*rad,.3+.7*u,Math.sin(az)*rad),(.55+.35*Ease.hash(k*13+q))*(1-.25*u)*(.6+.4*dying),Ease.smooth(u,0,.12f)*(1-Ease.smooth(u,.5f,1))*dying,(.95-.45*u)*(.55+.45*dying),.9,k*43+q*11+953);
+                double az=(k+.6*Ease.hash(k*7+q*3))*Math.PI*2/28,rad=5.2+1.0*Ease.hash(k*11+q*5);
+                cell(pts,cells,o.add(Math.cos(az)*rad,.25+.6*u,Math.sin(az)*rad),(.42+.25*Ease.hash(k*13+q))*(1-.25*u)*(.6+.4*dying),Ease.smooth(u,0,.12f)*(1-Ease.smooth(u,.5f,1))*dying,(.95-.45*u)*(.55+.45*dying),.9,k*43+q*11+953);
             }
-            for(int k=0;k<14;k++){
-                float born=CUT+.4f+.9f*(float)Ease.hash(k*3+971),life=.9f,u=(t-born)/life;if(u<0||u>=1)continue;
-                double az=Ease.hash(k*5+972)*Math.PI*2,rad=5+1.5*Ease.hash(k*7+973);
-                cell(pts,cells,o.add(Math.cos(az)*rad,.8+2.4*u,Math.sin(az)*rad),(.9+.7*u)*(.8+.4*Ease.hash(k*11+974)),.55f*Ease.smooth(u,0,.15f)*(1-Ease.smooth(u,.5f,1)),.06+.08*Ease.hash(k*13+975),.2,k*47+976);
+            for(int k=0;k<8;k++){
+                float born=CUT+.6f+.8f*(float)Ease.hash(k*3+971),life=.9f,u=(t-born)/life;if(u<0||u>=1)continue;
+                double az=Ease.hash(k*5+972)*Math.PI*2,rad=5+1.2*Ease.hash(k*7+973);
+                cell(pts,cells,o.add(Math.cos(az)*rad,.8+2.2*u,Math.sin(az)*rad),(.6+.5*u)*(.8+.4*Ease.hash(k*11+974)),.45f*Ease.smooth(u,0,.15f)*(1-Ease.smooth(u,.5f,1)),.06+.08*Ease.hash(k*13+975),.2,k*47+976);
             }
         }
     }
@@ -525,11 +531,15 @@ final class ThroughSkill implements Fx.Skill {
      */
     @Override public void frame(Fx c,FxFrame f){
         float t=c.sec;
+        // A slash flying 100 blocks a second (and the dash after it) would leave fading copies of itself behind as the
+        // afterglow, side by side like more slashes: the afterglow is kept short while they fly.
+        boolean flying=false;for(float s:SLASH)flying|=t>=s-.02f&&t<s+FLIGHT+.08f;
+        if(flying)f.afterglow(.2f);else if(t>=D-.02f&&t<ARRIVE+.08f)f.afterglow(.35f);
         float lit=Ease.smooth(t,.1f,.28f)*(1-Ease.smooth(t,1.8f,2.3f));
         if(lit>0){var hb=blade(c);float flare=0;for(float s:SLASH)flare=Math.max(flare,FxLib.kick(t,s,.1f));f.light(hb[0].add(hb[1].multiply(.8)),0xff6ae0,5,(.9f+1.4f*flare)*lit);}
         for(int i=0;i<SLASH.length;i++){
             float age=t-SLASH[i];
-            if(age>=0&&age<FLIGHT)f.light(front(c,i,flown(i,t)),0xd04cff,9,2.6f);
+            if(age>=0&&age<FLIGHT)f.light(front(c,i,flown(i,t)),0xd04cff,7,1.8f);
             if(age>=-.01f&&age<.2f)f.light(front(c,i,1.2),0xff6ae0,6,2.2f*FxLib.kick(t,SLASH[i],.07f));
             float e=age-FLIGHT;if(e>=-.01f&&e<.6f)f.light(front(c,i,RANGE),0xe060ff,11,3.4f*FxLib.kick(t,SLASH[i]+FLIGHT,.15f));
         }
@@ -552,9 +562,9 @@ final class ThroughSkill implements Fx.Skill {
             if(burning>0)f.light(end.add(0,.8,0),0xff70e0,11,1.4f*burning*(float)(.85+.15*Math.sin(t*23)));
             float near=FxLib.near(c,pos);
             if(near>0){f.impact(near*FxLib.impact(t,CUT),FxLib.impactMode(t,CUT));f.chroma(near*.012f*FxLib.kick(t,CUT,.12f));f.shaft(pos.add(0,1,0),0xf0b8ff,.7f*near*FxLib.kick(t,CUT,.22f));}
-            float heat=1-Ease.smooth(t,CUT+.15f,CUT+1.1f),a=Ease.smooth(t,CUT,CUT+.05f)*(1-Ease.smooth(t,END-.35f,END));double open=Ease.out(t,CUT,CUT+.12f);
+            float heat=.8f*(1-Ease.smooth(t,CUT+.08f,CUT+.6f)),a=Ease.smooth(t,CUT,CUT+.05f)*(1-Ease.smooth(t,END-.35f,END));double open=Ease.out(t,CUT,CUT+.12f);
             for(int k=0;k<7;k++){double ang=Math.toRadians(20+360.0/7*k+12*Ease.hash(k*7+151)),reach=k%2==0?1:.7;Vec3d dir=c.f.multiply(Math.cos(ang)).add(c.right.multiply(Math.sin(ang)));
-                f.decal(end.add(dir.multiply((3.2*open+.6)*reach)),dir,(2.6*open+.2)*reach,k%2==0?.48:.34,heat,a,21.1f+k*3.7f);}
+                f.decal(end.add(dir.multiply((3*open+.6)*reach)),dir,(2*open+.2)*reach,k%2==0?.42:.3,heat,a,21.1f+k*3.7f);}
         }
         if(t>=SLASH[0]){
             float heat=1-Ease.smooth(t,SLASH[2]+.3f,2.2f),fade=1-Ease.smooth(t,END-.35f,END);
@@ -575,9 +585,8 @@ final class ThroughSkill implements Fx.Skill {
         float t=c.sec;
         for(int i=0;i<SLASH.length;i++){
             float age=t-SLASH[i];if(age<0||age>=FLIGHT)continue;
-            double r=radius(i,t);Vec3d o=front(c,i,flown(i,t)).subtract(c.f.multiply(r));
-            d.arc(o,c.f,side(c,i),r+.15,r*.7,-ARC[i]/2,ARC[i],.8f*(1-Ease.smooth(age,FLIGHT-.06f,FLIGHT)));
-            if(age<.18f)d.ring(front(c,i,1.2),c.right,FxLib.UP,.3+2.4*Ease.out(age,0,.18f),.6,.5f*(1-Ease.unit(age,0,.18f)));
+            double r=radius(i,t);var p=slashPlane(c,i);Vec3d o=front(c,i,flown(i,t)).subtract(p[0].multiply(r));
+            d.arc(o,p[0],p[1],r+.15,r*.7,-ARC[i]/2,ARC[i],.8f*(1-Ease.smooth(age,FLIGHT-.06f,FLIGHT)));
         }
         if(t>=D-.01f&&t<D+.4f){
             float in=Ease.smooth(t,D-.01f,D+.015f);

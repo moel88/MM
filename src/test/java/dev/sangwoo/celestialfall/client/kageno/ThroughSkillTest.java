@@ -1,6 +1,7 @@
 package dev.sangwoo.celestialfall.client.kageno;
 
 import dev.sangwoo.celestialfall.stand.KagenoRules;
+import net.minecraft.util.math.Vec3d;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,13 +36,21 @@ class ThroughSkillTest {
         }
     }
     @Test void theSlashesFitTheLaneTheServerStrikesIn(){
+        Vec3d f=new Vec3d(0,0,1),right=new Vec3d(-1,0,0);
         for(int i=0;i<ThroughSkill.SLASH.length;i++){
+            var plane=ThroughSkill.slashPlane(f,right,i);
+            assertEquals(0,plane[0].dotProduct(plane[1]),1e-9,"slash "+i+"'s plane is square");
             for(double r:new double[]{ThroughSkill.R0[i],ThroughSkill.R1[i]}){
-                // The body of the slash (within 50 degrees of its middle) is the lane's width give or take a body.
-                double across=r*Math.sin(Math.toRadians(50))*Math.cos(Math.toRadians(ThroughSkill.ROLL[i]));
-                assertTrue(across<=KagenoRules.RUSH_SLASH_HALF_WIDTH+1,"slash "+i+" reaches "+across+" blocks to the side");
-                double tip=Math.abs(r*Math.sin(Math.toRadians(Math.abs(ThroughSkill.ARC[i])/2))*Math.sin(Math.toRadians(ThroughSkill.ROLL[i])));
-                assertTrue(ThroughSkill.LIFT[i]+tip<=3.6&&ThroughSkill.LIFT[i]-tip>=-1.6,"slash "+i+" stays within the lane's height");
+                double half=Math.abs(ThroughSkill.ARC[i])/2;
+                for(double deg=-half;deg<=half;deg+=5){
+                    Vec3d o=ThroughSkill.arcOffset(plane,r,deg);double side=o.dotProduct(right),height=ThroughSkill.LIFT[i]+o.y;
+                    // The body of the slash (within 50 degrees of its middle) is the lane's width give or take a body.
+                    if(Math.abs(deg)<=50)assertTrue(Math.abs(side)<=KagenoRules.RUSH_SLASH_HALF_WIDTH+1,"slash "+i+" reaches "+side+" blocks to the side");
+                    // Nowhere far into the floor, and no higher than a body standing at the top of the lane.
+                    assertTrue(height>=-1&&height<=5.3,"slash "+i+" at "+deg+" degrees is "+height+" blocks up");
+                    // The arc bows forward: no part of it is far ahead of its middle (the rolled ones lean a little).
+                    assertTrue(o.dotProduct(f)<=.25,"slash "+i+" at "+deg+" degrees is "+o.dotProduct(f)+" blocks ahead of its middle");
+                }
             }
         }
         assertEquals(KagenoRules.RUSH_RANGE,ThroughSkill.RANGE,1e-9);

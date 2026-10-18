@@ -231,7 +231,7 @@ public final class FxLayer {
             use(histProg);
             int next=1-histCurrent;target(histFbo[next],levelW[0],levelH[0]);
             bind(0,histTex[histCurrent]);bind(1,downTex[0]);i(histProg,"Prev",0);i(histProg,"Cur",1);
-            f(histProg,"Decay",(float)Math.exp(-Math.max(0,dt)/AFTERGLOW_TAU));
+            f(histProg,"Decay",(float)Math.exp(-Math.max(0,dt)/(AFTERGLOW_TAU*frame.afterglow())));
             triangle();histCurrent=next;
             // Light shafts toward the strongest source on screen.
             int shafts=blackTex;float shaftGain=0;float[] focus={.5f,.5f};

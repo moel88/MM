@@ -24,7 +24,7 @@ public final class FxFrame {
     private final List<Light> lights=new ArrayList<>();
     private final List<Decal> decals=new ArrayList<>();
     private Vec3d shaft;private int shaftRgb;private float shaftStrength;
-    private float impact,impactMode,chroma;
+    private float impact,impactMode,chroma,afterglow=1;
 
     public void light(Vec3d pos,int rgb,double radius,float intensity){
         if(!(intensity>0)||!(radius>0)||pos==null)return;
@@ -44,6 +44,11 @@ public final class FxFrame {
     public void impact(float amount,float mode){if(amount>impact){impact=Math.min(1,amount);impactMode=mode;}}
     /** Chromatic split in screen fractions per unit of distance from the focus. */
     public void chroma(float amount){if(amount>chroma)chroma=amount;}
+    /**
+     * How long the afterglow lasts this frame, as a share of the usual (0..1, the shortest asked wins): something
+     * flying fast would otherwise leave fading copies of itself behind it, side by side like extra strokes.
+     */
+    public void afterglow(float share){if(share>=0&&share<afterglow)afterglow=Math.max(.05f,share);}
 
     /** The lights that reach the camera's surroundings most, brightest first, at most {@link #MAX_LIGHTS}. */
     public List<Light> strongest(Vec3d camera){
@@ -65,6 +70,7 @@ public final class FxFrame {
     public float impact(){return impact;}
     public float impactMode(){return impactMode;}
     public float chroma(){return chroma;}
+    public float afterglow(){return afterglow;}
     public int lightCount(){return lights.size();}
     public int decalCount(){return decals.size();}
 }
