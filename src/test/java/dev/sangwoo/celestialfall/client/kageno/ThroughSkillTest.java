@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * T held (remade in 2.38.0): each fire slash is cut by the blade as it leaves at the server's time, swept the way the
  * slash runs and fits the lane the server strikes in; the spin's one ring of fire goes once round with the blade and
- * has closed when the server's spin cut lands.
+ * has closed when the server's spin cut lands; the fire the left hand summons is the size the user asked for.
  */
 class ThroughSkillTest {
     /** Where the blade points round from the cast facing (degrees toward the right) and how high (degrees), at {@code t}. */
@@ -65,6 +65,16 @@ class ThroughSkillTest {
         for(float t=ThroughSkill.SWEEP;t+.005f<=ThroughSkill.RING_END;t+=.005f)assertTrue(ThroughSkill.turned(t+.005f)>=ThroughSkill.turned(t)-1e-3,"the blade turns back at "+t);
         double total=ThroughSkill.turned(ThroughSkill.RING_END)-ThroughSkill.turned(ThroughSkill.SWEEP);
         assertTrue(total>=360&&total<=600,"the blade turns "+total+" degrees");
+    }
+    @Test void theSummonedFireIsHalfAsTallAgainAsAPlayerAndBurnsAbout2s(){
+        // User request: half as tall again as a player (1.8 blocks) and twice the first one's width (1.4 blocks).
+        assertEquals(1.8*1.5,ThroughSkill.FRONT_HEIGHT,1e-9);
+        assertEquals(1.4*2,ThroughSkill.FRONT_WIDTH,1e-9);
+        // It has shot up to its full height by the first slash and is gone about 2 s after the hand summons it.
+        assertEquals(ThroughSkill.FRONT_HEIGHT,ThroughSkill.frontHeight(ThroughSkill.SLASH[0]),1e-6);
+        assertTrue(ThroughSkill.front(.3f)>.99f);
+        assertTrue(ThroughSkill.FRONT_END>=1.8f&&ThroughSkill.FRONT_END<=2.3f);
+        assertEquals(0,ThroughSkill.front(ThroughSkill.FRONT_END),0);
     }
     @Test void theDashLeavesWithTheServerAndTheClipCatchesEveryHit(){
         assertEquals(KagenoRules.RUSH_START/20f,ThroughSkill.D,1e-6);
