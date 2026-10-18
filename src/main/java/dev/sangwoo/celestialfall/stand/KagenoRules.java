@@ -28,8 +28,11 @@ public final class KagenoRules {
     /** H cutscene: ten zigzag dashes, the slash burst and the beam; the camera cuts back at 4.97 s. */
     static final int[] H_ZIG={43,45,47,48,51,53,54,56,58,60};
     public static final int H_BURST=75,H_BEAM=92,H_CUT=99;
-    /** M1 hit 4 holds its target 0.42 s after the thrust, then launches it. */
-    public static final int M1_LAUNCH=14;
+    /**
+     * M1 hit 4: the thrust sends whoever it strikes flying along it (blocks per tick, forward and up): ≈6.9 blocks out
+     * and 1.4 blocks up, landing ≈0.6 s later.
+     */
+    public static final double M1_FLY=1.4,M1_FLY_UP=.45;
     public static final int[] COOLDOWN={0,140,180,260,260,180,1800,600,0,20};
     public static final String[] NAMES={"검술의 대가","신속한 맹공","시간을 걷는 자","어둠 속의 불꽃","어둠을 가로지르다","어둠 속으로 빠지다","오버드라이브","최강","I am Atomic","포즈"};
     private KagenoRules(){}

@@ -23,7 +23,6 @@ class ComboSkillTest {
             for(int age=0;age<=KagenoRules.DURATION[KagenoRules.M1];age++)
                 if(KagenoRules.damage(KagenoRules.M1,age,combo)>0)assertEquals(ComboSkill.HIT,age/20f,1e-6);
         }
-        assertEquals(KagenoRules.M1_LAUNCH/20f,ComboSkill.LAUNCH,1e-6);
     }
     @Test void eachHitSweepsItsOwnWay(){
         double[] a=tip(1,.21f),b=tip(1,.385f);
@@ -34,8 +33,10 @@ class ComboSkillTest {
         assertTrue(a[1]>b[1]+1.2&&b[1]<.35&&b[0]>1,"hit 3 comes down from overhead into the floor ahead");
         a=tip(4,.24f);b=tip(4,ComboSkill.HIT);
         assertTrue(b[0]>a[0]+.6,"hit 4 thrusts");
-        a=tip(4,.585f);b=tip(4,.8f);
-        assertTrue(b[1]>a[1]+1.5,"hit 4's last cut goes straight up");
+        // Held out along the thrust while the target flies, then pulled back.
+        double[] held=tip(4,.55f);
+        assertTrue(held[0]>b[0]-.1&&Math.abs(held[1]-b[1])<.3,"hit 4 holds out along the thrust");
+        assertTrue(tip(4,.9f)[0]<held[0]-.8,"hit 4 pulls back after it");
     }
     @Test void theCombosHandOverWithoutJumps(){
         // A click at 0.4 s or later starts the next hit from the pose on screen; each next clip starts close to it.
@@ -56,16 +57,23 @@ class ComboSkillTest {
         assertTrue(h3.frame(ComboSkill.HIT).up()<0,"down for the slam");
         assertEquals(0,MathHelper.wrapDegrees(h3.frame(ComboSkill.HIT).yaw()),15);
     }
-    @Test void theSealHoldsWhileTheServerHoldsTheTarget(){
-        assertEquals(0,ComboSkill.sealed(ComboSkill.HIT-.02f),1e-6);
-        for(float t=ComboSkill.HIT+.04f;t<ComboSkill.LAUNCH-.005f;t+=.01f)assertTrue(ComboSkill.sealed(t)>.95f,"at "+t);
-        assertEquals(0,ComboSkill.sealed(ComboSkill.LAUNCH+.04f),1e-6);
-        float step=0;for(float t=0;t<1.2f;t+=1/240f)step=Math.max(step,Math.abs(ComboSkill.sealed(t+1/60f)-ComboSkill.sealed(t)));
-        assertTrue(step<.75f,"the seal pops in a single frame: "+step);
+    @Test void theThrustSendsItsTargetFlyingTheWayItPoints(){
+        // The lance shoots along the cast's facing, the way the server throws the target.
+        var hb=KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(SKILL.clip(4).frame(ComboSkill.HIT)));
+        assertTrue(hb[1].z>.95,"the thrust points ahead: "+hb[1]);
+        assertTrue(KagenoRules.M1_FLY>1&&KagenoRules.M1_FLY_UP>0,"the target flies off forward and up");
+        // The trail is there for the flight (it lands ≈0.6 s after the blow) and comes and goes over several frames.
+        assertEquals(0,ComboSkill.flying(ComboSkill.HIT-.01f),1e-6);
+        for(float t=ComboSkill.HIT+.05f;t<ComboSkill.HIT+.4f;t+=.01f)assertTrue(ComboSkill.flying(t)>.95f,"at "+t);
+        assertEquals(0,ComboSkill.flying(ComboSkill.HIT+.71f),1e-6);
+        float step=0;for(float t=0;t<1.2f;t+=1/240f)step=Math.max(step,Math.max(Math.abs(ComboSkill.flying(t+1/60f)-ComboSkill.flying(t)),Math.abs(ComboSkill.lanceLit(t+1/60f)-ComboSkill.lanceLit(t))));
+        assertTrue(step<.75f,"the trail or the lance pops in a single frame: "+step);
     }
     @Test void everythingIsOverBeforeTheCastEnds(){
         float end=KagenoRules.DURATION[KagenoRules.M1]/20f;
-        for(int combo=1;combo<=4;combo++){var s=ComboSkill.slash(combo);assertTrue(s.from()<s.to()&&s.to()<=s.eat1()&&s.eat1()<end,"slash "+combo);}
+        for(int combo=1;combo<=3;combo++){var s=ComboSkill.slash(combo);assertTrue(s.from()<s.to()&&s.to()<=s.eat1()&&s.eat1()<end,"slash "+combo);}
+        assertNull(ComboSkill.slash(4),"hit 4 is a thrust, not a slash");
+        assertEquals(0,ComboSkill.lanceLit(end-.05f),1e-6);assertEquals(0,ComboSkill.flying(end-.05f),1e-6);
         assertTrue(SKILL.clip(4).length()<=end);
     }
 }

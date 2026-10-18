@@ -38,4 +38,10 @@ final class KagenoRulesTest {
         assertTrue(DURATION[P]>=P_RELEASE+.75*20);assertEquals(0,damage(P,P_RELEASE,0));
     }
     @Test void ownRHonorsUserOverrideToTimeStopImmunity(){assertFalse(ignoresForeignTimeStop("kageno"));assertFalse(ignoresForeignTimeStop("sakuya"));assertFalse(ignoresForeignTimeStop("return_to_zero"));assertTrue(ignoresForeignTimeStop("dio"));}
+    /** M1 hit 4 throws whoever it strikes ≈7 blocks along the thrust (vanilla drag: 0.546 on the ground, 0.91 in the air; gravity 0.08). */
+    @Test void theFourthHitSendsItsTargetFlying(){
+        double x=0,y=0,vx=M1_FLY,vy=M1_FLY_UP;int ticks=0;boolean ground=true;
+        do{x+=vx;y+=vy;vx*=ground?.546:.91;vy=(vy-.08)*.98;ground=false;ticks++;}while(y>0&&ticks<100);
+        assertTrue(x>6&&x<8,"flies "+x+" blocks");assertTrue(ticks>=10&&ticks<=16,"lands after "+ticks+" ticks");
+    }
 }

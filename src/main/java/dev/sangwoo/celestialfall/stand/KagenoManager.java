@@ -195,14 +195,6 @@ public final class KagenoManager {
                 c.player.setVelocity(0,Math.min(0,c.player.getVelocity().y),0);c.player.velocityModified=true;
                 c.player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(c.player));
             }
-            if(c.skill==M1&&c.combo==4&&age>6&&age<=M1_LAUNCH){
-                for(var e:c.targets.entrySet()){
-                    if(age<M1_LAUNCH){hold(e.getKey(),e.getValue(),e.getKey().getYaw(),e.getKey().getPitch());continue;}
-                    // Up ≈1.25 character heights, ≈2.2 character heights away, landing ≈0.56 s later.
-                    Vec3d dir=Vec3d.fromPolar(0,c.yaw);var t=e.getKey();t.setVelocity(dir.multiply(.5).add(0,.6,0));t.velocityModified=true;
-                    if(t instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
-                }
-            }
             // Y: targets struck by the flash stand still until the launch, then rise straight up.
             if(c.skill==Y&&age==Y_FLASH)c.targets.clear();
             if(c.skill==Y&&age>=Y_LAUNCH&&age<Y_LAUNCH+16){
@@ -216,7 +208,8 @@ public final class KagenoManager {
             if(amount>0){
                 for(var target:strikeTargets(c))hit(c,target,amount,age);
             }
-            if(age%10==0||c.skill==Y&&age==Y_FLASH)sync(c);
+            // Hit 4's struck targets go out with the blow, so every viewer's trail follows the ones that fly.
+            if(age%10==0||c.skill==Y&&age==Y_FLASH||c.skill==M1&&c.combo==4&&age==6&&!c.targets.isEmpty())sync(c);
         }
     }
     private static void hold(LivingEntity e,Vec3d pos,float yaw,float pitch){
@@ -243,8 +236,12 @@ public final class KagenoManager {
             // (lasting as long as the overdrive itself).
             if(over){long now=c.world.getTime();s.boost=Math.min(1,s.boost+.01f*KagenoRules.hits(c.skill,age));s.overUntil=Math.min(now+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,Math.max(now+200,s.overUntil)));}
             if(c.skill==Y&&(age==Y_STOMP||age==Y_FLASH)&&!frozen(e))c.targets.putIfAbsent(e,e.getPos());
-            // M1 hit 4: the target is held in the thrust's seal, then launched (see tick).
-            if(c.skill==M1&&c.combo==4&&!frozen(e))c.targets.put(e,e.getPos());
+            // M1 hit 4: the thrust sends whoever it strikes flying along it (2.37.0: no hold and no rising cut).
+            if(c.skill==M1&&c.combo==4&&!frozen(e)){
+                c.targets.put(e,e.getPos());
+                e.setVelocity(Vec3d.fromPolar(0,c.yaw).multiply(M1_FLY).add(0,M1_FLY_UP,0));e.velocityModified=true;
+                if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
+            }
             // R strikes without knockback (user request, 2.37.0): its targets stay where they stand when the release hits.
             if(c.skill==RUSH&&age==RUSH_FINISH&&!frozen(e)){
                 Vec3d dir=Vec3d.fromPolar(0,c.yaw);e.setVelocity(dir.multiply(.65).add(0,.25,0));e.velocityModified=true;
