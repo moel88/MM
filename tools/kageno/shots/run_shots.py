@@ -36,7 +36,9 @@ with zipfile.ZipFile(jar, 'w') as z:
         z.write(p, str(p.relative_to(build / 'classes')))
 shutil.rmtree(out, ignore_errors=True); out.mkdir(parents=True)
 init = build / 'shots.gradle'
-init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient") { jvmArgs "-Xmx3G", '
+# A roomy heap so a full collection does not stall a slowed shot (its pauses are logged to OUT_DIR/gc.log).
+init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient") { jvmArgs "-Xmx6G", "-Xms2G", '
+                f'"-Xlog:gc:file={out}/gc.log", '
                 f'"-Dbotand.shots.out={out}", "-Dbotand.shots.slow={slow}", "-Dbotand.shots.list={skills}", "-Dfabric.addMods={jar}"; '
                 f'args "--username", "ShotsQA", "--width", "{w}", "--height", "{h}" }} }}')
 env = os.environ.copy(); env['LIBGL_ALWAYS_SOFTWARE'] = 'true'; env['ALSOFT_DRIVERS'] = 'null'; env['GALLIUM_DRIVER'] = 'llvmpipe'
