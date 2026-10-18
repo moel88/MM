@@ -102,24 +102,32 @@ final class HighestSkill implements Fx.Skill {
         keys.add(k(LAND-.01,PUSH.body(0,-265,0).at(APEX_FW+.75,APEX_UP-3.5,0),Anim.Ease.HOLD));
         // One continuous ground path: retreat with the left palm on the floor, brake,
         // release the hand, then immediately drive forward into the sword preparation.
-        keys.add(k(LAND,streetPose(LAND_FW,-.65,55,true),Anim.Ease.CUT));
-        keys.add(k(2.82,streetPose(LAND_FW-1.40,-.67,58,true),Anim.Ease.LINEAR));
-        keys.add(k(2.96,streetPose(LAND_FW-3.40,-.66,57,true),Anim.Ease.LINEAR));
-        keys.add(k(3.10,streetPose(LAND_FW-4.70,-.64,53,true),Anim.Ease.LINEAR));
-        keys.add(k(BRAKE,streetPose(BRAKE_FW,-.63,52,true),Anim.Ease.OUT));
-        keys.add(k(DRIVE,streetPose(BRAKE_FW,-.61,49,true),Anim.Ease.HOLD));
-        keys.add(k(3.28,streetPose(-5.80,-.50,45,false).lArm(-20,-20),Anim.Ease.IN));
-        keys.add(k(3.36,streetPose(-3.40,-.40,42,false).lArm(8,-18),Anim.Ease.LINEAR));
-        keys.add(k(3.43,streetPose(-1.10,-.25,35,false).lArm(30,-12),Anim.Ease.LINEAR));
+        // The torso rides more upright than a dive (43-46°), so the slide reads as a crouched skid, not lying prone.
+        keys.add(k(LAND,streetPose(LAND_FW,-.65,44,true),Anim.Ease.CUT));
+        keys.add(k(2.82,streetPose(LAND_FW-1.40,-.67,46,true),Anim.Ease.LINEAR));
+        keys.add(k(2.96,streetPose(LAND_FW-3.40,-.66,45,true),Anim.Ease.LINEAR));
+        keys.add(k(3.10,streetPose(LAND_FW-4.70,-.64,43,true),Anim.Ease.LINEAR));
+        keys.add(k(BRAKE,streetPose(BRAKE_FW,-.63,42,true),Anim.Ease.OUT));
+        keys.add(k(DRIVE,streetPose(BRAKE_FW,-.61,41,true),Anim.Ease.HOLD));
+        keys.add(k(3.28,streetPose(-5.80,-.50,38,false).lArm(-20,-20),Anim.Ease.IN));
+        keys.add(k(3.36,streetPose(-3.40,-.40,35,false).lArm(8,-18),Anim.Ease.LINEAR));
+        keys.add(k(3.43,streetPose(-1.10,-.25,30,false).lArm(30,-12),Anim.Ease.LINEAR));
         keys.add(k(3.47,streetPose(0,-.12,18,false).lArm(52,-12).rArm(-30,95),Anim.Ease.LINEAR));
         keys.add(k(SHOT4,K7.at(0,-.05,0).body(0,12,0).head(0,-12,0).rArm(-40,80)));
         keys.add(k(3.54,K7.rArm(-10,40)));
         keys.add(k(3.58,K7.rArm(40,-10).blade(50,-20),Anim.Ease.LINEAR));
-        keys.add(k(3.66,K8,Anim.Ease.OUT));
-        keys.add(k(DOWN,K8,Anim.Ease.HOLD));
-        keys.add(k(DOWN+.025f,pose().rArm(20,80).blade(10,85).rLeg(-90,0).lLeg(-90,0),Anim.Ease.LINEAR));
-        keys.add(k(DOWN+.05f,K10,Anim.Ease.LINEAR));
-        keys.add(k(END,K10,Anim.Ease.HOLD));
+        // The raised sword is held alive: the arm winds a little higher and the head drops as the light gathers.
+        keys.add(k(3.66,K8.rArm(76,-31).blade(75,-148),Anim.Ease.OUT));
+        keys.add(k(3.90,K8.rArm(79,-30).blade(79,-151).head(0,4,0)));
+        keys.add(k(4.10,K8.rArm(82,-29).blade(83,-153).head(0,8,0).lArm(-74,-8)));
+        keys.add(k(DOWN,K8.rArm(84,-28).blade(85,-154).head(0,10,0).lArm(-72,-10),Anim.Ease.OUT));
+        keys.add(k(DOWN+.025f,pose().rArm(20,80).blade(10,85).head(0,12,0).rLeg(-90,0).lLeg(-90,0),Anim.Ease.LINEAR));
+        // The cut carries the arm past its stop, then it settles and breathes until the hard cut.
+        keys.add(k(DOWN+.05f,K10.rArm(-48,74).blade(-44,73).head(0,12,0),Anim.Ease.LINEAR));
+        keys.add(k(DOWN+.09f,K10.rArm(-52,72).blade(-49,71).head(0,14,0),Anim.Ease.OUT));
+        keys.add(k(DOWN+.24f,K10.head(0,8,0)));
+        keys.add(k(4.72f,K10.rArm(-40,75).blade(-35,75).head(0,6,0)));
+        keys.add(k(END,K10.rArm(-43,75).blade(-38,75).head(0,7,0)));
         keys.add(k(END+.45f,KagenoClips.IDLE));
         CLIP=Anim.joints(keys.toArray(Key[]::new));
     }
@@ -218,11 +226,44 @@ final class HighestSkill implements Fx.Skill {
     }
     @Override public void additive(Fx c,EffectMesh m){
         float t=c.sec;
+        launch(c,m,t);
         flare(c,m,t,true);
         zig(c,m,t,true);
+        skid(c,m,t);
+        gather(c,m,t);
         burst(c,m,t,true);
         beam(c,m,t,true);
         sparkles(c,m,t);
+    }
+    /** The launch: a flash and a shock ring over the street where he kicks off, and a pink-violet trail up after him. */
+    static void launch(Fx c,EffectMesh m,float t){
+        if(t>=.6f)return;
+        Vec3d o=c.at0(0,.05,0);float u=Ease.unit(t,0,.45f),k=FxLib.kick(t,.01f,.12f);
+        m.softDisc(o.add(0,.4,0),1.8*k+.2,0xf0c8ff,.8f*k);
+        FxLib.ring(m,o,.3+4.2*Ease.out(t,0,.4f),.5,0xe0b8ff,.85f*(1-u));
+        FxLib.ring(m,o,.2+2.4*Ease.out(t,0,.3f),.3,0xff7af0,.7f*(1-Ease.unit(t,0,.3f)));
+        if(t<.5f){var r=root(t);Vec3d hero=c.at0(r.fw,r.up+.9,r.rt);float a=(1-Ease.smooth(t,.25f,.5f));
+            m.softTaper(o.add(0,.3,0),hero,.05,.55,0xb070f0,.55f*a);m.softTaper(o.add(0,.3,0),hero,.02,.2,0xfff0ff,.8f*a);}
+    }
+    /** Sparks thrown off the street where the free hand and the boots drag through the skid. */
+    static void skid(Fx c,EffectMesh m,float t){
+        if(t<LAND||t>=BRAKE+.35f)return;
+        int last=(int)Math.floor((t-LAND)*120);
+        for(int k=Math.max(0,last-30);k<=last;k++){
+            float born=LAND+k/120f,age=t-born,life=.16f+.12f*(float)Ease.hash(k*7+901);if(born>BRAKE||age<0||age>=life)continue;
+            var r=root(born);Vec3d at=c.at0(r.fw+(Ease.hash(k*3+902)-.5)*.3,.06,Ease.hash(k*5+903)>.5?-.38:.12);
+            Vec3d v=c.vec(1.4+1.8*Ease.hash(k*11+904),.8+1.6*Ease.hash(k*13+905),(Ease.hash(k*17+906)-.5)*1.6);
+            Vec3d q=at.add(v.multiply(age)).add(0,-2*age*age,0);float a=1-age/life;
+            m.needle(q.subtract(v.normalize().multiply(.18)),q,.04,.3,k%3==0?0xffffff:0xffb0f0,a);
+        }
+    }
+    /** As the burst flickers round him, motes of light are drawn into the raised sword and a violet glow swells round him. */
+    static void gather(Fx c,EffectMesh m,float t){
+        if(t<BURST-.1f||t>=DOWN+.05f)return;
+        var hb=KagenoClips.blade(c.origin,c.cast.yaw(),CLIP.pose(t));Vec3d tip=hb[0].add(hb[1].multiply(1.1));
+        FxLib.converge(m,tip,2.4,22,t,BURST-.1f,DOWN,0xd8b8ff,951);
+        float swell=Ease.smooth(t,BURST,DOWN)*(1-Ease.smooth(t,DOWN,DOWN+.05f));
+        m.softDisc(tip,.35+.4*swell,0xf4e6ff,.7f*swell);m.softDisc(c.at0(0,1.1,0),1.6+.4*swell,0x6a3cd6,.22f*swell);
     }
     @Override public void alpha(Fx c,EffectMesh m){
         float t=c.sec;
@@ -264,6 +305,10 @@ final class HighestSkill implements Fx.Skill {
         }
         for(int k=0;k<4;k++){Vec3d dir=k==0?up:k==1?up.negate():k==2?right:right.negate();double len=k<2?vert:horiz;m.needle(o,o.add(dir.multiply(len*.14)),core*.35,.02,0xfcf6fd,a*.9f);}
         m.softDisc(o,core*1.15,0xffffff,a);m.softDisc(o,core*.7,0xffffff,a);
+        // A ring of light racing out from the star as it ignites, and a slower second one.
+        float r1=Ease.unit(t,FLARE,FLARE+.35f),r2=Ease.unit(t,FLARE+.12f,FLARE+.6f);
+        if(r1<1)FxLib.ringPlane(m,o,right,up,core*(2+14*Ease.out(t,FLARE,FLARE+.35f)),core*1.2,0xf0a8f8,.8f*(1-r1));
+        if(r2>0&&r2<1)FxLib.ringPlane(m,o,right,up,core*(2+20*Ease.out(t,FLARE+.12f,FLARE+.6f)),core*.9,0xc890fa,.5f*(1-r2));
     }
     /** V2: flat neon magenta tubes, one segment per dash; held, then fading as the street shot ends. */
     static void zig(Fx c,EffectMesh m,float t,boolean additive){
@@ -272,8 +317,12 @@ final class HighestSkill implements Fx.Skill {
         for(int i=0;i<10;i++){
             if(t<ZIG[i])break;Vec3d a=p[i],b=p[i+1];
             // Solid magenta body with a pale hot streak (alpha-blended so the bloom keeps it magenta), faint violet halo.
-            if(additive)m.softLine(a,b,2.6,0x9c97fa,.12f*fade);
-            else{m.softLine(a,b,2.3,0xc19cfe,.45f*fade);m.line(a,b,1.25,0xe842f5,fade);m.line(a,b,.25,0xfebbfe,.9f*fade);}
+            if(additive){
+                m.softLine(a,b,3.2,0x9c97fa,.16f*fade);m.line(a,b,.35,0xffd8ff,.35f*fade);
+                // A flash at the turn where each dash lands (its hit).
+                float k=FxLib.kick(t,ZIG[i],.07f);if(k>.01f){m.softDisc(b,4.5*k+1,0xff9cf6,.7f*k);m.softDisc(b,1.8*k+.5,0xffffff,.9f*k);}
+            }
+            else{m.softLine(a,b,3.0,0xc19cfe,.45f*fade);m.line(a,b,1.6,0xe842f5,fade);m.line(a,b,.32,0xfebbfe,.9f*fade);}
         }
     }
     /** Intensity envelope of the slash-line burst (peak ≈3.88 s, pulsing, gone ≈4.42 s). */
@@ -318,7 +367,7 @@ final class HighestSkill implements Fx.Skill {
         Vec3d a=fin(c,-.2,1.25,-3*STUD),b=fin(c,-.2,1.25,45*STUD);
         float u=t-BEAM;
         // A broad white mass for a frame or two, then a thin glowing core inside a soft violet halo.
-        double w=u<.05f?.42:u<.08f?.42-.3*Ease.unit(t,BEAM+.05f,BEAM+.08f):.12-.05*Ease.smooth(t,BEAM+.1f,END);
+        double w=u<.05f?.55:u<.08f?.55-.38*Ease.unit(t,BEAM+.05f,BEAM+.08f):.17-.06*Ease.smooth(t,BEAM+.1f,END);
         float al=1-Ease.smooth(t,END,END+.4f);
         if(!additive){
             m.softLine(a,b,w*6,u<.2f?0xb6a8f1:0x8f6cf2,al*.45f);
@@ -326,8 +375,16 @@ final class HighestSkill implements Fx.Skill {
             return;
         }
         // The first frames' white mass widens out to his right.
-        if(u<.08f)m.softTaper(a,b,.15,2.6,0xfdfdfa,.85f*(1-Ease.unit(t,BEAM+.05f,BEAM+.08f)));
-        m.softLine(a,b,w*2.2,0xf6e9fa,al*.8f);m.line(a,b,w*.6,0xfdfdfa,al);
+        if(u<.08f)m.softTaper(a,b,.2,3.4,0xfdfdfa,.9f*(1-Ease.unit(t,BEAM+.05f,BEAM+.08f)));
+        m.softLine(a,b,w*3.2,0xc8a0ff,al*.35f);m.softLine(a,b,w*2.2,0xf6e9fa,al*.8f);m.line(a,b,w*.6,0xfdfdfa,al);
+        // A ring where it leaves him, and sparks racing out along it.
+        if(u<.3f)FxLib.ringPlane(m,fin(c,-.2,1.25,.4),c.f,FxLib.UP,.3+2.6*Ease.out(t,BEAM,BEAM+.3f),.25,0xf0e0ff,.8f*(1-Ease.unit(t,BEAM,BEAM+.3f)));
+        for(int k=0;k<24;k++){
+            float born=BEAM+.012f*k,age=t-born;if(age<0||age>=.35f)continue;
+            double x=(1+18*age*(1+Ease.hash(k*3+961)))*1.0,y=1.25+(Ease.hash(k*5+962)-.5)*.5+.6*age,z=(Ease.hash(k*7+963)-.5)*.4;
+            Vec3d q=fin(c,-.2+z,y,x);float sa=al*(1-age/.35f);
+            m.needle(q.subtract(c.right.multiply(.5)),q,.05,.3,k%3==0?0xffffff:0xd8c0ff,sa);
+        }
         // Short white vertical plume at his right for three frames.
         if(t>=4.65f&&t<4.72f){Vec3d p=fin(c,-.15,1.25,.9);m.needle(p.add(0,-.15,0),p.add(0,2.6,0),.32,.3,0xffffff,.9f);}
     }
@@ -347,17 +404,18 @@ final class HighestSkill implements Fx.Skill {
             for(int k=0;k<12;k++){pts.add(fin(c,-.25,1.2+.2*(Ease.hash(k*5+1)-.5)+.2*(t-4.67f),.8+5.5*k/12.0));cells.add(new float[]{(float)(.32+.14*Ease.hash(k*3)),.26f*haze,.4f,.4f,k*23+211});}
         }
         if(!pts.isEmpty())KagenoFire.cells(c.matrix,c.camera,pts,cells,c.age);
-        if(!FxLayer.available()||t<LAND-.02f||t>=END+1.2f)return;
+        if(!FxLayer.available()||t>=END+1.2f)return;
         List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();
-        FxLib.dustRing(c.at0(LAND_FW,0,0),t,LAND,.3,1.8,8,.75,dust,puffs,221);
-        for(int i=0;i<6;i++){
-            float born=LAND+.08f*i,s=t-born,life=.5f+.2f*(float)Ease.hash(i*3+231);if(s<0||s>=life)continue;float u=s/life;
+        FxLib.dustRing(c.at0(0,0,0),t,.02f,.3,2.6,10,.9,dust,puffs,211);
+        FxLib.dustRing(c.at0(LAND_FW,0,0),t,LAND,.3,3.0,12,.95,dust,puffs,221);
+        for(int i=0;i<9;i++){
+            float born=LAND+.055f*i,s=t-born,life=.5f+.2f*(float)Ease.hash(i*3+231);if(s<0||s>=life)continue;float u=s/life;
             double fw=LAND_FW+(BRAKE_FW-LAND_FW)*Math.min(1,(born-LAND)/(BRAKE-LAND));
             dust.add(c.at0(fw,.2+.3*u,(Ease.hash(i*5+232)-.5)*.8));puffs.add(new float[]{(float)(.2+.22*Ease.out(u,0,.5f)),.6f*Ease.smooth(s,0,.04f)*(1-Ease.smooth(u,.45f,1)),.5f*(1-u),u,i*31+233});
         }
-        for(int i=0;i<10;i++){
-            float s=t-BEAM-.02f*i,life=.7f+.3f*(float)Ease.hash(i*3+241);if(s<0||s>=life)continue;float u=s/life;
-            dust.add(fin(c,.2+.3*u,.25+.5*u,1+i*.45));puffs.add(new float[]{(float)(.35+.35*Ease.out(u,0,.5f)),.75f*Ease.smooth(s,0,.04f)*(1-Ease.smooth(u,.5f,1)),.7f*(1-u),u,i*29+243});
+        for(int i=0;i<16;i++){
+            float s=t-BEAM-.015f*i,life=.7f+.3f*(float)Ease.hash(i*3+241);if(s<0||s>=life)continue;float u=s/life;
+            dust.add(fin(c,.2+.3*u,.25+.5*u,1+i*.4));puffs.add(new float[]{(float)(.35+.35*Ease.out(u,0,.5f)),.75f*Ease.smooth(s,0,.04f)*(1-Ease.smooth(u,.5f,1)),.7f*(1-u),u,i*29+243});
         }
         if(!dust.isEmpty())KagenoFire.dust(c.matrix,c.camera,dust,puffs,c.age);
     }
@@ -433,17 +491,19 @@ final class HighestSkill implements Fx.Skill {
      */
     @Override public void frame(Fx c,FxFrame f){
         float t=c.sec;
+        if(t<.45f)f.light(c.at0(0,.6,0),0xf0c8ff,9,2.6f*FxLib.kick(t,.01f,.12f));
         if(t>=FLARE&&t<2.40f){var r=root(t);float grow=Ease.out(t,FLARE,1.83f),shrink=1-Ease.smooth(t,2.23f,2.40f);f.light(c.at0(r.fw,r.up+1.05,r.rt),0xe278f5,14,2.2f*grow*shrink);}
         if(t>=ZIG[0]&&t<SHOT4){
             Vec3d[] p=zigzag(c);float fade=1-Ease.smooth(t,3.2f,SHOT4);
-            for(int i=0;i<10;i++){if(t<ZIG[i])break;f.light(p[i].add(p[i+1]).multiply(.5),0xe842f5,12,(.9f+1.6f*FxLib.kick(t,ZIG[i],.08f))*fade);}
+            for(int i=0;i<10;i++){if(t<ZIG[i])break;f.light(p[i].add(p[i+1]).multiply(.5),0xe842f5,13,(.9f+2.4f*FxLib.kick(t,ZIG[i],.08f))*fade);}
         }
-        if(t>=LAND-.01f&&t<LAND+.5f)f.light(c.at0(LAND_FW,.6,0),0xc8b8ff,7,2f*FxLib.kick(t,LAND,.12f));
+        if(t>=LAND-.01f&&t<LAND+.5f)f.light(c.at0(LAND_FW,.6,0),0xc8b8ff,9,2.8f*FxLib.kick(t,LAND,.12f));
         float burst=burstLevel(t);
         if(burst>0)f.light(c.at0(-.4,1.6,1),0xd7b1f8,8,1.6f*burst);
+        if(t>=BURST&&t<DOWN+.05f){var hb=KagenoClips.blade(c.origin,c.cast.yaw(),CLIP.pose(t));f.light(hb[0].add(hb[1].multiply(1.1)),0xe0c8ff,5,1.4f*Ease.smooth(t,BURST,DOWN)*(1-Ease.smooth(t,DOWN,DOWN+.05f)));}
         if(t>=BEAM-.01f&&t<END+.4f){
             float k=FxLib.kick(t,BEAM,.2f),linger=Ease.smooth(t,BEAM,BEAM+.05f)*(1-Ease.smooth(t,END,END+.4f));
-            for(int i=0;i<4;i++)f.light(fin(c,-.2,1.25,-3*STUD+i*4.2),0xf0e4ff,7,2.6f*k+.6f*linger);
+            for(int i=0;i<4;i++)f.light(fin(c,-.2,1.25,-3*STUD+i*4.2),0xf0e4ff,8,3.4f*k+.7f*linger);
             Vec3d hero=fin(c,0,1.2,0);float near=FxLib.near(c,hero);
             if(near>0){f.impact(near*FxLib.impact(t,BEAM),FxLib.impactMode(t,BEAM));f.chroma(near*.01f*FxLib.kick(t,BEAM,.12f));f.shaft(hero,0xe8dcff,near*(.55f*k+.1f*linger));}
         }
@@ -460,6 +520,7 @@ final class HighestSkill implements Fx.Skill {
     /** The air bends along each zigzag dash as it is drawn, in the landing's shock and along the beam. */
     @Override public void distort(Fx c,FxDistort d){
         float t=c.sec;
+        if(t<.4f)d.ring(c.at0(0,.05,0),c.right,c.f,.3+4.5*Ease.out(t,0,.4f),1.2,.8f*Ease.smooth(t,0,.02f)*(1-Ease.unit(t,0,.4f)));
         if(t>=ZIG[0]&&t<SHOT4){Vec3d[] p=zigzag(c);for(int i=0;i<10;i++){if(t<ZIG[i])break;float k=1-Ease.smooth(t-ZIG[i],.05f,.25f);if(k>0)d.band(p[i],p[i+1],FxLib.UP,2.2,.6f*k);}}
         if(t>=LAND-.01f&&t<LAND+.4f){float in=Ease.smooth(t,LAND-.01f,LAND+.015f);d.ring(c.at0(LAND_FW,.05,0),c.right,c.f,.4+4.5*Ease.out(t,LAND,LAND+.4f),1.2,.8f*in*(1-Ease.unit(t,LAND,LAND+.4f)));}
         if(t>=BEAM-.01f&&t<END+.2f){
@@ -468,10 +529,11 @@ final class HighestSkill implements Fx.Skill {
             if(t<BEAM+.35f)d.ring(fin(c,-.2,1.25,0),c.f,FxLib.UP,.5+4*Ease.out(t,BEAM,BEAM+.35f),1,.7f*in*(1-Ease.unit(t,BEAM,BEAM+.35f)));
         }
     }
-    /** Chunks of the street thrown up where the hero lands and along the ground crescent as the beam fires. */
+    /** Chunks of the street thrown up where the hero kicks off, where he lands and along the ground crescent as the beam fires. */
     @Override public void solids(Fx c,FxSolids s){
         float t=c.sec;
-        if(t>=LAND&&t<LAND+1.2f)FxLib.chunks(s,c.at0(LAND_FW,0,0),t-LAND,8,1701,2.2,5.5,.16,.8f);
-        if(t>=BEAM&&t<BEAM+1.4f)for(int k=0;k<3;k++)FxLib.chunks(s,fin(c,.15,0,1.2+1.6*k),t-BEAM-.02f*k,4,1801+k*17,1.2,5.5,.15,.8f);
+        if(t<1.2f)FxLib.chunks(s,c.at0(0,0,0),t,10,1651,2.4,7,.17,.8f);
+        if(t>=LAND&&t<LAND+1.2f)FxLib.chunks(s,c.at0(LAND_FW,0,0),t-LAND,16,1701,3,6,.17,.8f);
+        if(t>=BEAM&&t<BEAM+1.4f)for(int k=0;k<4;k++)FxLib.chunks(s,fin(c,.15,0,1.2+1.5*k),t-BEAM-.02f*k,6,1801+k*17,1.4,6,.16,.8f);
     }
 }

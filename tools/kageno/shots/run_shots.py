@@ -41,7 +41,9 @@ init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient")
                 f'"-Xlog:gc:file={out}/gc.log", '
                 f'"-Dbotand.shots.out={out}", "-Dbotand.shots.slow={slow}", "-Dbotand.shots.list={skills}", "-Dfabric.addMods={jar}"; '
                 f'args "--username", "ShotsQA", "--width", "{w}", "--height", "{h}" }} }}')
-env = os.environ.copy(); env['LIBGL_ALWAYS_SOFTWARE'] = 'true'; env['ALSOFT_DRIVERS'] = 'null'; env['GALLIUM_DRIVER'] = 'llvmpipe'
+# Sound goes nowhere unless SHOTS_AUDIO names an OpenAL Soft driver: "wave" with ALSOFT_CONF pointing at a config whose
+# [wave] section names a file records what the game plays (in real time, so use SLOW 1 for timing).
+env = os.environ.copy(); env['LIBGL_ALWAYS_SOFTWARE'] = 'true'; env['ALSOFT_DRIVERS'] = os.environ.get('SHOTS_AUDIO', 'null'); env['GALLIUM_DRIVER'] = 'llvmpipe'
 display = next(i for i in range(151, 190) if not Path(f'/tmp/.X{i}-lock').exists())
 env['DISPLAY'] = f':{display}'
 x = subprocess.Popen(['Xvfb', f':{display}', '-screen', '0', f'{w}x{h}x24', '-nolisten', 'tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
