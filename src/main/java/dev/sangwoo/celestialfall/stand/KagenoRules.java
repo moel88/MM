@@ -8,10 +8,10 @@ public final class KagenoRules {
     public static final int T_STRIKE=13;
     /**
      * T+ (T held, remade in 2.38.0): three fire slashes leave the blade at {@link #RUSH_SLASHES} (ticks) and fly up the
-     * cast's facing at {@link #RUSH_SLASH_SPEED} blocks a tick out to {@link #RUSH_RANGE}, each striking whoever it
-     * passes once. The first one struck is where the dash goes; with no one struck it runs to the end of the range. The
+     * cast's facing at {@link #RUSH_SLASH_SPEED} blocks a tick out to {@link #RUSH_RANGE}; each ends on the first one it
+     * reaches and strikes them (it does not cut through). The first one struck is where the dash goes; with no one struck it runs to the end of the range. The
      * dash runs {@link #RUSH_DASH} ticks from {@link #RUSH_START}, aimed again every tick, so a slash striking someone
-     * while it runs turns it to them. It strikes as it arrives ({@link #RUSH_ARRIVE}), the fire it brings bursts on
+     * while it runs turns it to them; the caster's own client moves him along it ({@link #rushDestination}). It strikes as it arrives ({@link #RUSH_ARRIVE}), the fire it brings bursts on
      * them ({@link #RUSH_BURST}), and the big spin cut lands at {@link #RUSH_FINISH}.
      */
     public static final int RUSH_START=18,RUSH_DASH=6,RUSH_ARRIVE=RUSH_START+RUSH_DASH,RUSH_BURST=RUSH_ARRIVE+2,RUSH_FINISH=31;
@@ -80,6 +80,18 @@ public final class KagenoRules {
     public static double multiplier(boolean night,float overdrive,boolean marked){return (night?1.35:1)*(1+overdrive)*(marked?1.15:1);}
     /** Share of the dash covered by the end of dash tick {@code k} (0 before the dash, 1 once it is over). */
     public static double rushDashed(int k){double d=0;for(int i=0;i<Math.min(k+1,RUSH_STEPS.length);i++)d+=RUSH_STEPS[i];return k<0?0:Math.min(1,d);}
+    /** Share of what is left of the dash covered on its tick {@code k} (the whole of it on the last). */
+    public static double rushStep(int k){double before=rushDashed(k-1);return before>=1?1:(rushDashed(k)-before)/(1-before);}
+    /**
+     * Where the dash heads from {@code at}: {@link #RUSH_STOP} short of the one struck ({@code mark}, null with no one
+     * struck), or the end of the range up {@code facing} from the cast spot. The caster's own client steers the dash
+     * along this (its movement is its own) and the server plans the same path for the arrival strike.
+     */
+    public static net.minecraft.util.math.Vec3d rushDestination(net.minecraft.util.math.Vec3d origin,net.minecraft.util.math.Vec3d facing,net.minecraft.util.math.Vec3d at,net.minecraft.util.math.Vec3d mark){
+        if(mark==null)return origin.add(facing.multiply(RUSH_RANGE));
+        var back=at.subtract(mark).multiply(1,0,1);
+        return back.lengthSquared()>RUSH_STOP*RUSH_STOP?mark.add(back.normalize().multiply(RUSH_STOP)):at;
+    }
     /** How far up the line fire slash {@code i} has flown at {@code age} (ticks), or -1 before it leaves. */
     public static double rushSlash(int i,float age){float t=age-RUSH_SLASHES[i];return t<0?-1:Math.min(RUSH_RANGE,1+RUSH_SLASH_SPEED*t);}
     /** Damage of fire slash {@code i}. */

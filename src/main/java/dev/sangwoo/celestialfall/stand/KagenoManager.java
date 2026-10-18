@@ -29,8 +29,11 @@ public final class KagenoManager {
         public final UUID id=UUID.randomUUID();public final ServerPlayerEntity player;public final ServerWorld world;
         public final Vec3d origin;public final float yaw,pitch;public final int skill,combo;public final long start;
         public final Map<LivingEntity,Vec3d> targets=new LinkedHashMap<>();public final Set<UUID> viewers=new HashSet<>();
-        /** T+: the first one a fire slash struck (where the dash goes) and where it was last seen, whom each slash has struck, and the dash's planned spot. */
-        LivingEntity mark;Vec3d markAt;final List<Set<LivingEntity>> slashed=new ArrayList<>();Vec3d dash;
+        /**
+         * T+: the first one a fire slash struck (where the dash goes) and where it was held, how far up the line each
+         * slash got (it ends on the first one it reaches), and the dash's planned spot.
+         */
+        LivingEntity mark;Vec3d markAt;final double[] slashEnd={RUSH_RANGE,RUSH_RANGE,RUSH_RANGE};Vec3d dash;
         Cast(ServerPlayerEntity p,int skill,int combo){this.player=p;world=p.getServerWorld();origin=p.getPos();yaw=p.getYaw();pitch=p.getPitch();this.skill=skill;this.combo=combo;start=world.getTime();}
         public int age(){return (int)(world.getTime()-start);}
     }
@@ -145,8 +148,12 @@ public final class KagenoManager {
         // T+: the arrival strike and the fire burst after it take whoever stands at the caster and the one the dash went
         // to; the spin cut everyone round him.
         if(c.skill==RUSH){
-            double r=age==RUSH_FINISH?RUSH_SPIN_RADIUS:3;var out=new LinkedHashSet<>(near(c.world,c.player.getPos(),r,c.player,true));
-            if(c.mark!=null&&c.mark.isAlive()&&c.mark.getWorld()==c.world&&c.mark.squaredDistanceTo(c.player)<=(r+1.5)*(r+1.5))out.add(c.mark);
+            double r=age==RUSH_FINISH?RUSH_SPIN_RADIUS:3;Vec3d at=c.player.getPos();
+            // Right after the dash the server still sees the caster a tick or two short of where his client took him:
+            // the arrival and the burst strike at the end of the planned dash (unless something stopped him well short).
+            if(age<RUSH_FINISH&&c.dash!=null&&c.dash.squaredDistanceTo(at)<6*6)at=c.dash;
+            var out=new LinkedHashSet<>(near(c.world,at,r,c.player,true));
+            if(c.mark!=null&&c.mark.isAlive()&&c.mark.getWorld()==c.world&&c.mark.squaredDistanceTo(at)<=(r+1.5)*(r+1.5))out.add(c.mark);
             return new ArrayList<>(out);
         }
         boolean field=c.skill==T||c.skill==Y;Vec3d center=c.skill==T?c.origin:c.player.getPos();double r=field?4:c.skill==RUSH?3.2:3.4;
@@ -170,49 +177,36 @@ public final class KagenoManager {
         for(var c:new ArrayList<>(CASTS.values())){
             if(!CASTS.containsKey(c.id))continue;
             if(!valid(c.player)||c.player.getWorld()!=c.world||c.age()>=DURATION[c.skill]||c.age()<0){stop(c);continue;}
-            c.targets.keySet().removeIf(e->!e.isAlive()||e.isRemoved()||e.getWorld()!=c.world||e instanceof ServerPlayerEntity p&&server.getPlayerManager().getPlayer(p.getUuid())!=p);
+            // T+'s mark stays first among the targets, alive or not: the caster's client dashes to where it was held.
+            c.targets.keySet().removeIf(e->e!=c.mark&&(!e.isAlive()||e.isRemoved()||e.getWorld()!=c.world||e instanceof ServerPlayerEntity p&&server.getPlayerManager().getPlayer(p.getUuid())!=p));
             int age=c.age();if(c.skill==R){rSlow(c.player,true);c.player.setSprinting(false);}
             if(KagenoRules.frozen(c.skill,age)){
                 if(c.skill!=R)hold(c.player,c.origin,c.yaw,c.pitch);
                 for(var e:c.targets.entrySet())hold(e.getKey(),e.getValue(),e.getKey().getYaw(),e.getKey().getPitch());
             }
-            // T+: the fire slashes fly up the line, each striking whoever it passes once, nearest first; the first one
-            // struck is the mark, where the dash goes.
+            // T+: the fire slashes fly up the line, and each ends on the first one it reaches (user request: it does not
+            // cut through to whoever stands behind) and strikes them; the first one struck is the mark, where the dash goes.
             if(c.skill==RUSH&&age>=RUSH_SLASHES[0]&&age<=RUSH_ARRIVE){
                 Vec3d f=Vec3d.fromPolar(0,c.yaw);boolean struck=false;
                 for(int i=0;i<RUSH_SLASHES.length;i++){
-                    double from=Math.max(0,rushSlash(i,age-1)),to=rushSlash(i,age);if(to<0||age>RUSH_SLASHES[i]&&to<=from)continue;
-                    while(c.slashed.size()<=i)c.slashed.add(new HashSet<>());
-                    var passed=new ArrayList<LivingEntity>();
-                    for(var e:near(c.world,c.origin.add(f.multiply((from+to)/2)),(to-from)/2+4,c.player,false)){var l=local(c,e.getPos());if(rushPath(l.x,l.y,l.z,from-.5,to+.5)&&!c.slashed.get(i).contains(e))passed.add(e);}
-                    passed.sort(Comparator.comparingDouble(e->local(c,e.getPos()).x));
-                    for(var e:passed){
-                        c.slashed.get(i).add(e);hit(c,e,rushSlashDamage(i),age);
-                        if(c.targets.containsKey(e)){struck=true;if(c.mark==null){c.mark=e;c.markAt=e.getPos();}}
-                    }
+                    double from=Math.max(0,rushSlash(i,age-1)),to=Math.min(c.slashEnd[i],rushSlash(i,age));if(to<0||age>RUSH_SLASHES[i]&&to<=from)continue;
+                    LivingEntity first=null;double reach=0;
+                    for(var e:near(c.world,c.origin.add(f.multiply((from+to)/2)),(to-from)/2+4,c.player,false)){var l=local(c,e.getPos());if(rushPath(l.x,l.y,l.z,from-.5,to+.5)&&(first==null||l.x<reach)){first=e;reach=l.x;}}
+                    if(first==null)continue;
+                    c.slashEnd[i]=Math.max(1,reach);hit(c,first,rushSlashDamage(i),age);
+                    if(c.targets.containsKey(first)){struck=true;if(c.mark==null){c.mark=first;c.markAt=c.targets.get(first);}}
                 }
                 if(struck)sync(c);
             }
-            // T+ dash: along a path planned from where he stood (not chased from the reported position, which lags) to
-            // just short of the mark (where it fell, if the slash killed it), or to the end of the range with no one
-            // struck; aimed again every tick, so a slash striking someone while it runs turns it to them.
+            // T+ dash: the caster's own client moves him (velocity packets sent every tick get merged when several reach
+            // a client in one frame, and the dash fell short in multiplayer). The server plans the same path, from where
+            // he stood to just short of the mark (where it was held) or to the end of the range, aimed again every tick,
+            // for where the arrival strikes.
             if(c.skill==RUSH&&age>=RUSH_START&&age<RUSH_ARRIVE){
                 int k=age-RUSH_START;if(c.dash==null)c.dash=c.player.getPos();
-                Vec3d dest=c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(RUSH_RANGE));
-                if(c.mark!=null&&c.mark.isAlive()&&c.mark.getWorld()==c.world)c.markAt=c.mark.getPos();
-                if(c.markAt!=null){
-                    Vec3d m=c.markAt,back=c.dash.subtract(m).multiply(1,0,1);
-                    dest=back.lengthSquared()>RUSH_STOP*RUSH_STOP?m.add(back.normalize().multiply(RUSH_STOP)):c.dash;
-                }
-                Vec3d step=dest.subtract(c.dash).multiply(1,0,1).multiply((rushDashed(k)-rushDashed(k-1))/(1-rushDashed(k-1)));
-                c.dash=c.dash.add(step);
-                if(c.world.isSpaceEmpty(c.player,c.player.getBoundingBox().stretch(step)))c.player.setVelocity(step.add(0,Math.min(0,c.player.getVelocity().y),0));
-                else c.player.setVelocity(0,c.player.getVelocity().y,0);
-                c.player.velocityModified=true;c.player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(c.player));
-            }
-            if(c.skill==RUSH&&age==RUSH_ARRIVE){
-                c.player.setVelocity(0,Math.min(0,c.player.getVelocity().y),0);c.player.velocityModified=true;
-                c.player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(c.player));
+                if(c.mark!=null&&c.mark.isAlive()&&c.mark.getWorld()==c.world&&c.targets.containsKey(c.mark))c.markAt=c.targets.get(c.mark);
+                Vec3d dest=rushDestination(c.origin,Vec3d.fromPolar(0,c.yaw),c.dash,c.markAt);
+                c.dash=c.dash.add(dest.subtract(c.dash).multiply(1,0,1).multiply(rushStep(k)));
             }
             // Y: targets struck by the flash stand still until the launch, then rise straight up.
             if(c.skill==Y&&age==Y_FLASH)c.targets.clear();

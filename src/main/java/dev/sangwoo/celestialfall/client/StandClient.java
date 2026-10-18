@@ -88,6 +88,7 @@ public final class StandClient {
         ticks++;long now=mc.world.getTime();
         CASTS.values().removeIf(c->!c.dimension.equals(mc.world.getRegistryKey().getValue())||c.age(0)>=DURATION[c.skill]||c.age(0)<0||deadCaster(mc,c));
         KagenoAudio.retain(CASTS.keySet());
+        dev.sangwoo.celestialfall.client.kageno.RushDash.drive(mc);
         STATES.entrySet().removeIf(e->mc.world.getPlayerByUuid(e.getKey())==null);
         if(holdingT){if(!StandManager.kageno(mc.player)||mc.currentScreen!=null||!mc.isWindowFocused()){send(CANCEL);holdingT=false;}else if(ticks%3==0)send(PULSE);}
         for(var c:CASTS.values())if(KagenoRules.frozen(c.skill,c.age(0))){
@@ -113,7 +114,12 @@ public final class StandClient {
         var c=action(mc.player.getUuid());if(c==null||c.skill!=P)return;
         cancelledPose=c.id;send(POSE_CANCEL);CASTS.remove(c.id);KagenoAudio.stop(c.id);
     }
-    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
+    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0)+(c.skill==RUSH?TRAP_LEAD:0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
+    /**
+     * Ticks by which a T+ target's own client lets go before the server's spin cut: this clock runs behind the
+     * server's by the packet's way here, and a target still held when the cut's throw arrives would lose it.
+     */
+    static final int TRAP_LEAD=2;
     /** Action lock and locomotion lock differ: R's caster can walk at half speed. */
     public static boolean locked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;return action(mc.player.getUuid())!=null;}
     public static boolean movementLocked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;var cast=action(mc.player.getUuid());return cast!=null&&cast.skill()!=R;}

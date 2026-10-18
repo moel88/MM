@@ -41,6 +41,18 @@ final class KagenoRulesTest {
         assertEquals(0,damage(RUSH,RUSH_SLASHES[0],0));assertEquals(0,damage(RUSH,RUSH_START,0));
         assertTrue(trapped(T,T_STRIKE)&&!trapped(T,T_STRIKE+71)&&!trapped(RUSH,RUSH_SLASHES[0]-1)&&trapped(RUSH,RUSH_SLASHES[0])&&trapped(RUSH,RUSH_FINISH-1)&&!trapped(RUSH,RUSH_FINISH));
     }
+    /** Stepping the dash tick by tick lands exactly on its end: just short of the one struck, or the end of the range. */
+    @Test void theDashStepsLandOnItsEnd(){
+        var origin=new net.minecraft.util.math.Vec3d(.5,64,.5);var f=new net.minecraft.util.math.Vec3d(0,0,1);
+        for(var mark:new net.minecraft.util.math.Vec3d[]{null,new net.minecraft.util.math.Vec3d(1.2,64,12.5),new net.minecraft.util.math.Vec3d(.5,64,1.2)}){
+            var at=origin;
+            for(int k=0;k<RUSH_DASH;k++){var dest=rushDestination(origin,f,at,mark);at=at.add(dest.subtract(at).multiply(1,0,1).multiply(rushStep(k)));}
+            if(mark==null)assertEquals(RUSH_RANGE,at.subtract(origin).dotProduct(f),1e-9);
+            else if(origin.distanceTo(mark)>RUSH_STOP)assertEquals(RUSH_STOP,at.distanceTo(mark),1e-9);
+            else assertEquals(0,at.distanceTo(origin),1e-9,"already close enough: he stays");
+        }
+        assertEquals(1,rushStep(RUSH_DASH-1),1e-9);assertEquals(1,rushStep(RUSH_DASH+2),1e-9);assertEquals(.24,rushStep(0),1e-9);
+    }
     /** The last slash leaves ahead of the dash and stays ahead of the caster all the way (the dash never overtakes it). */
     @Test void theDashNeverOvertakesTheLastSlash(){
         int last=RUSH_SLASHES.length-1;

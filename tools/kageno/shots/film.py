@@ -21,9 +21,14 @@ SKILL, SPEED, FPS = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FIL
 
 frames = []
 for f in glob.glob(os.path.join(shots, '*.png')):
-    try: frames.append((float(os.path.basename(f)[:-4].split('_')[1]) / 20, f))
+    try: frames.append((int(os.path.basename(f)[:-4].split('_')[0]), float(os.path.basename(f)[:-4].split('_')[1]) / 20, f))
     except ValueError: pass
-frames.sort(); times = [t for t, _ in frames]
+# A held key's frames come first on the shot's own clock (T held: the 0.4 s hold before the cast); keep only the frames
+# after the cast clock last started again, so they never mix with the cast's own first frames.
+frames.sort(); first = 0
+for k in range(1, len(frames)):
+    if frames[k][1] < frames[k - 1][1] - .05: first = k
+frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in frames]
 
 rows, wall = {}, []
 if csv_path and mode == 'wall':
@@ -37,7 +42,7 @@ elif csv_path:
 # Stage captions per skill: (until second, name), checked in order.
 STAGES = {
     'T': [(.65, '준비 · 왼손 별빛'), (.95, '폭발 · 검은 연기 → 파랑·보라'), (4.2, '자홍 불꽃 · 별빛 (3.5초간 13회 타격)'), (4.85, '분홍 불꽃 조각으로 사그라듦')],
-    'RUSH': [(.12, '칼을 오른쪽으로 끌어당김'), (.38, '왼손으로 칼날을 훑어 불을 붙임 · 발밑에 불꽃'),
+    'RUSH': [(.36, '왼손으로 바로 앞에 불을 소환 (약 2초 타오름) · 칼에 불이 붙음'),
              (.55, '1타 가로 베기 · 첫 불 참격이 앞으로 30블록 날아감'), (.75, '2타 왼쪽 위에서 내려 벰 · 두 번째 불 참격'),
              (.9, '3타 크게 내려 벰 · 가장 큰 세 번째 불 참격'), (1.2, '돌진 · 처음 맞은 대상에게 (아무도 안 맞으면 끝까지)'),
              (1.3, '도착 타격 · 불 폭발'), (1.45, '맞은 대상에서 불이 다시 터짐 · 회전 준비'),
