@@ -29,6 +29,8 @@ public final class KagenoManager {
         public final UUID id=UUID.randomUUID();public final ServerPlayerEntity player;public final ServerWorld world;
         public final Vec3d origin;public final float yaw,pitch;public final int skill,combo;public final long start;
         public final Map<LivingEntity,Vec3d> targets=new LinkedHashMap<>();public final Set<UUID> viewers=new HashSet<>();
+        /** T+: the first one a fire slash struck (where the dash goes) and where it was last seen, whom each slash has struck, and the dash's planned spot. */
+        LivingEntity mark;Vec3d markAt;final List<Set<LivingEntity>> slashed=new ArrayList<>();Vec3d dash;
         Cast(ServerPlayerEntity p,int skill,int combo){this.player=p;world=p.getServerWorld();origin=p.getPos();yaw=p.getYaw();pitch=p.getPitch();this.skill=skill;this.combo=combo;start=world.getTime();}
         public int age(){return (int)(world.getTime()-start);}
     }
@@ -140,9 +142,13 @@ public final class KagenoManager {
         if(c.skill==R||c.skill==H)return new ArrayList<>(c.targets.keySet());
         // T: the ≈6×6 character-height fire field, biased forward and to the sword side.
         if(c.skill==T)return near(c.world,c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(3)),9,c.player,false).stream().filter(e->{var l=local(c,e.getPos());return l.x>=-2.6&&l.x<=8.6&&l.y>=-4.6&&l.y<=6.4&&l.z>=-2&&l.z<=7;}).toList();
-        // T+ fire ticks: the long strip 2-15 character heights ahead.
-        if(c.skill==RUSH&&age<RUSH_START)return near(c.world,c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(15)),15,c.player,false).stream().filter(e->{var l=local(c,e.getPos());return l.x>=2.5&&l.x<=28&&l.y>=-3.8&&l.y<=7.6&&l.z>=-2&&l.z<=7;}).toList();
-        if(c.skill==RUSH){var out=new LinkedHashSet<>(c.targets.keySet());out.addAll(near(c.world,c.player.getPos(),3.2,c.player,true));return new ArrayList<>(out);}
+        // T+: the arrival strike and the fire burst after it take whoever stands at the caster and the one the dash went
+        // to; the spin cut everyone round him.
+        if(c.skill==RUSH){
+            double r=age==RUSH_FINISH?RUSH_SPIN_RADIUS:3;var out=new LinkedHashSet<>(near(c.world,c.player.getPos(),r,c.player,true));
+            if(c.mark!=null&&c.mark.isAlive()&&c.mark.getWorld()==c.world&&c.mark.squaredDistanceTo(c.player)<=(r+1.5)*(r+1.5))out.add(c.mark);
+            return new ArrayList<>(out);
+        }
         boolean field=c.skill==T||c.skill==Y;Vec3d center=c.skill==T?c.origin:c.player.getPos();double r=field?4:c.skill==RUSH?3.2:3.4;
         Vec3d facing=Vec3d.fromPolar(0,c.yaw);
         if(c.skill==E){Vec3d right=new Vec3d(facing.z,0,-facing.x);return near(c.world,center,r,c.player,true).stream().filter(e->{Vec3d offset=e.getPos().subtract(center);return thrustLane(offset.dotProduct(facing),offset.dotProduct(right),offset.y,e.getWidth()*.5);}).toList();}
@@ -170,28 +176,41 @@ public final class KagenoManager {
                 if(c.skill!=R)hold(c.player,c.origin,c.yaw,c.pitch);
                 for(var e:c.targets.entrySet())hold(e.getKey(),e.getValue(),e.getKey().getYaw(),e.getKey().getPitch());
             }
-            if(c.skill==RUSH&&age>=RUSH_START&&age<=RUSH_FINISH){
-                Vec3d direction=Vec3d.fromPolar(0,c.yaw);
-                if(age<=RUSH_START+8)for(var target:near(c.world,c.player.getPos().add(direction.multiply(.5)),2,c.player,true))if(target.getPos().subtract(c.player.getPos()).dotProduct(direction)>-.5&&c.targets.putIfAbsent(target,target.getPos())==null)CombatManager.interrupt(target);
-                // Trapped targets are dragged toward the dash (≈3 character heights), then held just in front.
-                boolean reached=false;
-                if(age<RUSH_FINISH)for(var target:c.targets.keySet()){
-                    Vec3d carry=c.player.getPos().add(direction.multiply(1.3)),from=target.getPos(),pull=carry.subtract(from);
-                    Vec3d next=pull.length()<=1.2?carry:from.add(pull.normalize().multiply(Math.min(pull.length(),.75)));
-                    if(pull.length()<=2.2)reached=true;
-                    if(c.world.isSpaceEmpty(target,target.getBoundingBox().offset(next.subtract(from)))){
-                        hold(target,next,target.getYaw(),target.getPitch());
-                        if(target instanceof ServerPlayerEntity victim&&age%2==0)victim.networkHandler.requestTeleport(next.x,next.y,next.z,victim.getYaw(),victim.getPitch());
+            // T+: the fire slashes fly up the line, each striking whoever it passes once, nearest first; the first one
+            // struck is the mark, where the dash goes.
+            if(c.skill==RUSH&&age>=RUSH_SLASHES[0]&&age<=RUSH_ARRIVE){
+                Vec3d f=Vec3d.fromPolar(0,c.yaw);boolean struck=false;
+                for(int i=0;i<RUSH_SLASHES.length;i++){
+                    double from=Math.max(0,rushSlash(i,age-1)),to=rushSlash(i,age);if(to<0||age>RUSH_SLASHES[i]&&to<=from)continue;
+                    while(c.slashed.size()<=i)c.slashed.add(new HashSet<>());
+                    var passed=new ArrayList<LivingEntity>();
+                    for(var e:near(c.world,c.origin.add(f.multiply((from+to)/2)),(to-from)/2+4,c.player,false)){var l=local(c,e.getPos());if(rushPath(l.x,l.y,l.z,from-.5,to+.5)&&!c.slashed.get(i).contains(e))passed.add(e);}
+                    passed.sort(Comparator.comparingDouble(e->local(c,e.getPos()).x));
+                    for(var e:passed){
+                        c.slashed.get(i).add(e);hit(c,e,rushSlashDamage(i),age);
+                        if(c.targets.containsKey(e)){struck=true;if(c.mark==null){c.mark=e;c.markAt=e.getPos();}}
                     }
                 }
-                Vec3d step=reached?Vec3d.ZERO:direction.multiply(rushSpeed(age));
-                var box=c.player.getBoundingBox().stretch(step);
-                if(c.world.isSpaceEmpty(c.player,box)){
-                    c.player.setVelocity(step.add(0,Math.min(0,c.player.getVelocity().y),0));c.player.velocityModified=true;
-                    c.player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(c.player));
-                }else c.player.setVelocity(0,c.player.getVelocity().y,0);
+                if(struck)sync(c);
             }
-            if(c.skill==RUSH&&age==RUSH_FINISH+1){
+            // T+ dash: along a path planned from where he stood (not chased from the reported position, which lags) to
+            // just short of the mark (where it fell, if the slash killed it), or to the end of the range with no one
+            // struck; aimed again every tick, so a slash striking someone while it runs turns it to them.
+            if(c.skill==RUSH&&age>=RUSH_START&&age<RUSH_ARRIVE){
+                int k=age-RUSH_START;if(c.dash==null)c.dash=c.player.getPos();
+                Vec3d dest=c.origin.add(Vec3d.fromPolar(0,c.yaw).multiply(RUSH_RANGE));
+                if(c.mark!=null&&c.mark.isAlive()&&c.mark.getWorld()==c.world)c.markAt=c.mark.getPos();
+                if(c.markAt!=null){
+                    Vec3d m=c.markAt,back=c.dash.subtract(m).multiply(1,0,1);
+                    dest=back.lengthSquared()>RUSH_STOP*RUSH_STOP?m.add(back.normalize().multiply(RUSH_STOP)):c.dash;
+                }
+                Vec3d step=dest.subtract(c.dash).multiply(1,0,1).multiply((rushDashed(k)-rushDashed(k-1))/(1-rushDashed(k-1)));
+                c.dash=c.dash.add(step);
+                if(c.world.isSpaceEmpty(c.player,c.player.getBoundingBox().stretch(step)))c.player.setVelocity(step.add(0,Math.min(0,c.player.getVelocity().y),0));
+                else c.player.setVelocity(0,c.player.getVelocity().y,0);
+                c.player.velocityModified=true;c.player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(c.player));
+            }
+            if(c.skill==RUSH&&age==RUSH_ARRIVE){
                 c.player.setVelocity(0,Math.min(0,c.player.getVelocity().y),0);c.player.velocityModified=true;
                 c.player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(c.player));
             }
@@ -231,7 +250,7 @@ public final class KagenoManager {
                 if(ServerPlayNetworking.canSend(c.player,HITS)){var b=PacketByteBufs.create();b.writeVarInt(s.hits);ServerPlayNetworking.send(c.player,HITS,b);}}
             // Attacker-side hit feedback (red cumulative number and blood), as in the review's dummy demos.
             if(ServerPlayNetworking.canSend(c.player,DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat((float)(amount*multiplier));b.writeFloat(c.yaw);ServerPlayNetworking.send(c.player,DAMAGE,b);}
-            if((c.skill==T||c.skill==RUSH&&age<RUSH_START)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
+            if((c.skill==T||c.skill==RUSH&&age<RUSH_FINISH)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
             // Overdrive: +0.01 damage multiplier per skill hit, a little more time, and the shadow mark
             // (lasting as long as the overdrive itself).
             if(over){long now=c.world.getTime();s.boost=Math.min(1,s.boost+.01f*KagenoRules.hits(c.skill,age));s.overUntil=Math.min(now+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,Math.max(now+200,s.overUntil)));}
@@ -243,8 +262,10 @@ public final class KagenoManager {
                 if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
             }
             // R strikes without knockback (user request, 2.37.0): its targets stay where they stand when the release hits.
+            // T+'s spin cut throws everyone it strikes out away from the caster.
             if(c.skill==RUSH&&age==RUSH_FINISH&&!frozen(e)){
-                Vec3d dir=Vec3d.fromPolar(0,c.yaw);e.setVelocity(dir.multiply(.65).add(0,.25,0));e.velocityModified=true;
+                Vec3d away=e.getPos().subtract(c.player.getPos()).multiply(1,0,1);if(away.lengthSquared()<1e-4)away=Vec3d.fromPolar(0,c.yaw);
+                e.setVelocity(away.normalize().multiply(.75).add(0,.32,0));e.velocityModified=true;
                 if(e instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(p));
             }
         }

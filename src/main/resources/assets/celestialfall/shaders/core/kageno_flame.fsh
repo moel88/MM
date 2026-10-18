@@ -119,7 +119,41 @@ void main(){
   float hair=noise(vec2(x*9.0+sd,y*95.0));
   rgb=mix(rgb,hi,smoothstep(.72,.9,hair)*smoothstep(.12,.3,d)*(1.0-smoothstep(.5,.7,d)));
   alpha=body*(.86+.14*strand)*tint.a;
-  if(style>12.5){
+  if(style>14.5){
+   // T+ (어둠을 가로지르다, 2.38.0) fire slashes: an anime flame crescent, widest in the middle when even (taper .5)
+   // so one flying has pointed tips. A crisp cutting edge outlined in ink on the outer side and one thin white-hot
+   // core lane just inside it, then flat cel tones of hot pink, magenta and violet, nested, whose inner side breaks
+   // into pointed flame tongues licking back toward the centre (behind a flying slash), outlined in ink and running
+   // toward the tail as the fire burns; the tail is eaten with a glowing ragged edge. Violet carries it; only the
+   // core lane and the eaten edge burn white on the effect layer.
+   float wf=taper>.4&&taper<.6?pow(sin(3.14159*x),.65):mix(mix(1.0,.12,x),mix(.12,1.0,x),taper)*(smoothstep(0.0,.05,x)*.8+.2);
+   wf=max(wf,.02);
+   float df=(1.0-y)/wf-.05;
+   float aa=min(max(fwidth(df),.0015)*1.3,.08);
+   float run=Age*.09;
+   float tx=x*(8.0+6.0*wf)+run*2.3+sd+df*.6*(noise(vec2(x*5.0+sd,run*.8))-.35);
+   float tri=abs(fract(tx)-.5)*2.0;
+   float tn=noise(vec2(tx*.41+sd,run*1.4));
+   float lick=pow(1.0-tri,1.6)*(.45+.75*tn);
+   float edge=.5+.55*lick;
+   body=smoothstep(-aa,aa,df)*(1.0-smoothstep(edge-aa,edge+aa,df));
+   float eat=smoothstep(front-.004,front+.012,x);body*=eat;
+   vec3 ink=vec3(.10,.01,.24),pinkc=vec3(1.0,.40,.92),mag=vec3(.78,.14,1.0),vio=vec3(.46,.07,.92),hotc=vec3(1.0,.84,1.0);
+   float pinkZone=1.0-smoothstep(.22+.2*lick-aa,.22+.2*lick+aa,df);
+   float magZone=1.0-smoothstep(.36+.38*lick-aa,.36+.38*lick+aa,df);
+   float line=smoothstep(edge-.07-aa,edge-.07+aa,df);
+   rgb=mix(vio,mag,magZone);
+   rgb=mix(rgb,pinkc,pinkZone);
+   rgb=mix(rgb,ink,max(line,1.0-smoothstep(.05-aa,.05+aa,df)));
+   float headFade=taper>.4&&taper<.6?1.0-smoothstep(.75,.97,x):1.0;
+   float whiteCore=(1.0-smoothstep(.022,.022+aa*2.0+.012*hair,abs(df-.11-.012*sin(x*11.0+sd))))*smoothstep(.04,.3,x)*headFade;
+   rgb=mix(rgb,hotc,whiteCore);
+   rgb=mix(rgb,vec3(1.0),whiteCore*.6);
+   float ember=(1.0-smoothstep(.0,.06,x-front))*eat*step(.001,tint.g);
+   rgb=mix(rgb,vec3(1.0,.6,.95),ember*.9);
+   rgb*=1.0+Hot*(whiteCore*.9+ember*.6+pinkZone*(1.0-line)*.18);
+   alpha=body*tint.a;
+  }else if(style>12.5){
    // M1 (검술의 대가) slashes swept along the blade's own path, style 14 the launching cut: crisp anime edges, an
    // ink line on the outer (tip) edge, a bright lavender rim inside it, an electric violet body grading to deep
    // purple with pale speed hairs, one thin white core near the tip edge, a thin magenta line on the inner edge

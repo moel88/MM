@@ -65,8 +65,6 @@ class AnimationQualityTest {
             if(c.skill()<0)continue;
             List<Float> hits=new ArrayList<>();
             for(int age=0;age<=KagenoRules.DURATION[c.skill()];age++)if(KagenoRules.damage(c.skill(),age,c.combo())>0)hits.add(age/20f);
-            // T+'s blast is the same visible impact as T's (its fire hits come later).
-            if(c.skill()==KagenoRules.RUSH)hits.add(KagenoRules.RUSH_IGNITE/20f);
             for(var s:c.anim().stops()){
                 assertEquals(s.sec(),c.anim().warp(s.sec()),1e-6,c.name()+": the impact itself is on time");
                 float end=s.sec()+s.hold()+s.recover();

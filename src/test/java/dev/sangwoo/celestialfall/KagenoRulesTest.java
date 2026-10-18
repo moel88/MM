@@ -6,7 +6,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 final class KagenoRulesTest {
     @Test void referenceDamageAndHitCounts(){
         int[] skills={E,R,T,RUSH,Y,H},hits={8,5,13,6,2,12};float[] totals={26,38,51,50,16,32};
-        for(int i=0;i<skills.length;i++){float total=0;int count=0;for(int a=0;a<DURATION[skills[i]];a++){float d=damage(skills[i],a,0);total+=d;if(d>0)count+=KagenoRules.hits(skills[i],a);}assertEquals(totals[i],total,.001);assertEquals(hits[i],count);}
+        for(int i=0;i<skills.length;i++){float total=0;int count=0;for(int a=0;a<DURATION[skills[i]];a++){float d=damage(skills[i],a,0);total+=d;if(d>0)count+=KagenoRules.hits(skills[i],a);}
+            // T+'s fire slashes strike as they fly past, outside the timed hits.
+            if(skills[i]==RUSH)for(int s=0;s<RUSH_SLASHES.length;s++){total+=rushSlashDamage(s);count++;}
+            assertEquals(totals[i],total,.001);assertEquals(hits[i],count);}
         float total=0;for(int combo=1;combo<=4;combo++)for(int a=0;a<14;a++)total+=damage(M1,a,combo);assertEquals(28,total);
     }
     @Test void affectedRadiiIncludeBoundaryButRejectOutsideAndNan(){assertTrue(inside(49,STOP_RADIUS));assertFalse(inside(49.00001,STOP_RADIUS));assertTrue(inside(25,HIGHEST_RADIUS));assertFalse(inside(25.00001,HIGHEST_RADIUS));assertFalse(inside(Double.NaN,5));}
@@ -19,11 +22,32 @@ final class KagenoRulesTest {
         assertTrue(R_RELEASE>R_STORED&&R_STORED>=R_COLOR);
     }
     @Test void groundFireReleasesCasterWhileHazardContinues(){assertEquals(15,inputEnd(T));assertEquals(15,damage(T,T_STRIKE,0));assertTrue(damage(T,T_STRIKE+64,0)>0);assertEquals(0,damage(T,T_STRIKE+65,0));assertEquals(8,HOLD);assertEquals(COOLDOWN[T],COOLDOWN[RUSH]);}
-    @Test void throughTheDarkDashesAfterTheBlastAndCutsAtTheEnd(){
-        double moved=0;for(int a=0;a<DURATION[RUSH];a++)moved+=rushSpeed(a);
-        assertEquals(32,moved,1e-9);assertEquals(0,rushSpeed(RUSH_START-1));assertTrue(rushSpeed(RUSH_START)>rushSpeed(RUSH_START+5));
-        assertEquals(13,damage(RUSH,RUSH_START,0));assertEquals(18,damage(RUSH,RUSH_FINISH,0));
-        assertTrue(trapped(T,T_STRIKE)&&!trapped(T,T_STRIKE+71)&&trapped(RUSH,RUSH_START)&&!trapped(RUSH,RUSH_FINISH));
+    /**
+     * T+ (remade in 2.38.0): three fire slashes fly 30 blocks up the line, the dash covers its whole way in its ticks
+     * (an explosive start, eased out) and arrives before the spin cut, and whoever a slash strikes is held until the cut.
+     */
+    @Test void throughTheDarkThrowsFireSlashesDashesToWhomTheyStruckAndSpins(){
+        assertEquals(0,rushDashed(-1));assertEquals(1,rushDashed(RUSH_DASH-1),1e-9);assertEquals(1,rushDashed(RUSH_DASH+3),1e-9);
+        for(int k=1;k<RUSH_DASH;k++)assertTrue(rushDashed(k)-rushDashed(k-1)<rushDashed(k-1)-rushDashed(k-2)+1e-9,"eases out at "+k);
+        assertTrue(RUSH_SLASHES[0]>0&&RUSH_SLASHES[RUSH_SLASHES.length-1]<RUSH_START&&RUSH_ARRIVE<RUSH_BURST&&RUSH_BURST<RUSH_FINISH);
+        for(int i=0;i<RUSH_SLASHES.length;i++){
+            assertEquals(-1,rushSlash(i,RUSH_SLASHES[i]-.5f));assertEquals(1,rushSlash(i,RUSH_SLASHES[i]),1e-9);
+            assertEquals(RUSH_RANGE,rushSlash(i,RUSH_SLASHES[i]+20),1e-9);
+            // Each is out at the end of its range before the dash is over, so it can still turn the dash.
+            assertTrue(rushSlash(i,RUSH_ARRIVE-1)>=RUSH_RANGE||i==RUSH_SLASHES.length-1);
+        }
+        assertTrue(rushPath(10,2.4,1,9.5,10.5)&&!rushPath(10,2.41,1,9.5,10.5)&&!rushPath(11,0,1,9.5,10.5)&&!rushPath(10,0,3.6,9.5,10.5));
+        assertEquals(13,damage(RUSH,RUSH_ARRIVE,0));assertEquals(5,damage(RUSH,RUSH_BURST,0));assertEquals(18,damage(RUSH,RUSH_FINISH,0));
+        assertEquals(0,damage(RUSH,RUSH_SLASHES[0],0));assertEquals(0,damage(RUSH,RUSH_START,0));
+        assertTrue(trapped(T,T_STRIKE)&&!trapped(T,T_STRIKE+71)&&!trapped(RUSH,RUSH_SLASHES[0]-1)&&trapped(RUSH,RUSH_SLASHES[0])&&trapped(RUSH,RUSH_FINISH-1)&&!trapped(RUSH,RUSH_FINISH));
+    }
+    /** The last slash leaves ahead of the dash and stays ahead of the caster all the way (the dash never overtakes it). */
+    @Test void theDashNeverOvertakesTheLastSlash(){
+        int last=RUSH_SLASHES.length-1;
+        for(int age=RUSH_START;age<RUSH_ARRIVE;age++){
+            double caster=RUSH_RANGE*rushDashed(age-RUSH_START),slash=rushSlash(last,age);
+            assertTrue(slash>=caster||slash>=RUSH_RANGE,"caster "+caster+" passes slash "+slash+" at "+age);
+        }
     }
     @Test void fallenIntoTheDarkStompsFlashesHoldsThenLaunchesTwoCharacterHeights(){
         assertEquals(2,damage(Y,Y_STOMP,0));assertEquals(14,damage(Y,Y_FLASH,0));assertTrue(inputEnd(Y)<=34);

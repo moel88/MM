@@ -4,16 +4,30 @@ package dev.sangwoo.celestialfall.stand;
 public final class KagenoRules {
     public static final int M1=0,E=1,R=2,T=3,RUSH=4,Y=5,Q=6,H=7,G=8,P=9;
     public static final int T_DOWN=3,T_UP=4,CANCEL=9,PULSE=10,HOLD=8,POSE=11,POSE_CANCEL=12;
-    /** T and T+: blast 0.65 s after the cast; T+ dash 1.09 s after the blast; final cut 0.8 s into the dash. */
-    public static final int T_STRIKE=13,RUSH_IGNITE=13,RUSH_START=35,RUSH_FINISH=52;
+    /** T: the blast 0.65 s after the cast. */
+    public static final int T_STRIKE=13;
+    /**
+     * T+ (T held, remade in 2.38.0): three fire slashes leave the blade at {@link #RUSH_SLASHES} (ticks) and fly up the
+     * cast's facing at {@link #RUSH_SLASH_SPEED} blocks a tick out to {@link #RUSH_RANGE}, each striking whoever it
+     * passes once. The first one struck is where the dash goes; with no one struck it runs to the end of the range. The
+     * dash runs {@link #RUSH_DASH} ticks from {@link #RUSH_START}, aimed again every tick, so a slash striking someone
+     * while it runs turns it to them. It strikes as it arrives ({@link #RUSH_ARRIVE}), the fire it brings bursts on
+     * them ({@link #RUSH_BURST}), and the big spin cut lands at {@link #RUSH_FINISH}.
+     */
+    public static final int RUSH_START=18,RUSH_DASH=6,RUSH_ARRIVE=RUSH_START+RUSH_DASH,RUSH_BURST=RUSH_ARRIVE+2,RUSH_FINISH=31;
+    public static final int[] RUSH_SLASHES={8,12,16};
+    static final float[] RUSH_SLASH_DAMAGE={4,5,5};
+    public static final double RUSH_SLASH_SPEED=5,RUSH_RANGE=30,RUSH_SLASH_HALF_WIDTH=2.4,RUSH_SPIN_RADIUS=5.5;
+    /** How far short of the one struck the dash stops (blocks). */
+    public static final double RUSH_STOP=1.6;
     /** T fire ticks after the blast (0.267 s apart). */
     static final int[] T_TICKS={5,11,16,21,27,32,37,43,48,53,59,64};
-    /** T+ dash: blocks moved on each tick from {@link #RUSH_START} (≈32 blocks, explosive start, eased out). */
-    static final double[] RUSH_STEPS={8.5,6.5,4.5,4.5,3,2.5,1.5,1.0};
+    /** T+ dash: the share of its way covered on each of its ticks (an explosive start, eased out). */
+    static final double[] RUSH_STEPS={.24,.2,.17,.15,.13,.11};
     public static final double STOP_RADIUS=7,HIGHEST_RADIUS=5;
     /** P: the pose lets go of the body at 18.68 s; the cast runs on to 19.45 s so the fading effects and a crescent in flight finish. */
     public static final int P_RELEASE=374;
-    public static final int[] DURATION={24,78,80,124,74,92,600,116,468,389};
+    public static final int[] DURATION={24,78,80,124,58,92,600,116,468,389};
     /** E: barrage ticks 0.262 s apart from 0.8 s, finisher (guard break) with the crescent at 2.9 s. */
     static final int[] E_TICKS={16,21,26,32,37,42,47};
     public static final int E_FINISH=58;
@@ -40,7 +54,7 @@ public final class KagenoRules {
     public static boolean thrustLane(double forward,double side,double height,double targetHalfWidth){return forward>=-.15&&forward<=3.4+targetHalfWidth&&Math.abs(side)<=.65+targetHalfWidth&&Math.abs(height)<=2.2;}
     public static boolean frozen(int skill,float age){return skill==R&&age>=R_GRAY&&age<R_COLOR||skill==H&&age>=0&&age<DURATION[H];}
     /** Targets caught in T's fire stand frozen inside the dark orb; T+ holds them until the cut. */
-    public static boolean trapped(int skill,float age){return skill==T&&age>=T_STRIKE&&age<T_STRIKE+71||skill==RUSH&&age>=T_STRIKE+7&&age<RUSH_FINISH||skill==Y&&age>=Y_FLASH&&age<Y_LAUNCH;}
+    public static boolean trapped(int skill,float age){return skill==T&&age>=T_STRIKE&&age<T_STRIKE+71||skill==RUSH&&age>=RUSH_SLASHES[0]&&age<RUSH_FINISH||skill==Y&&age>=Y_FLASH&&age<Y_LAUNCH;}
     public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:skill==P?P_RELEASE:DURATION[skill];}
     /** Vertical speed (blocks per tick) of a Y target {@code ticks} after the launch. */
     public static double yLift(int ticks){return Y_LIFT-Y_GRAVITY*ticks;}
@@ -57,13 +71,20 @@ public final class KagenoRules {
             case E -> age==E_FINISH?5:java.util.Arrays.binarySearch(E_TICKS,age)>=0?3:0;
             case R -> age==R_STORED?24:age==R_RELEASE?14:0;
             case T -> age==T_STRIKE?15:java.util.Arrays.binarySearch(T_TICKS,age-T_STRIKE)>=0?3:0;
-            case RUSH -> age==T_STRIKE+7?4:age==T_STRIKE+13?5:age==T_STRIKE+18?5:age==RUSH_START?13:age==RUSH_START+1?5:age==RUSH_FINISH?18:0;
+            case RUSH -> age==RUSH_ARRIVE?13:age==RUSH_BURST?5:age==RUSH_FINISH?18:0;
             case Y -> age==Y_STOMP?2:age==Y_FLASH?14:0;
             case H -> java.util.Arrays.binarySearch(H_ZIG,age)>=0?2:age==H_BURST?4:age==H_BEAM?8:0;
             default -> 0;
         };
     }
     public static double multiplier(boolean night,float overdrive,boolean marked){return (night?1.35:1)*(1+overdrive)*(marked?1.15:1);}
-    public static double rushSpeed(int age){int i=age-RUSH_START;return i<0||i>=RUSH_STEPS.length?0:RUSH_STEPS[i];}
+    /** Share of the dash covered by the end of dash tick {@code k} (0 before the dash, 1 once it is over). */
+    public static double rushDashed(int k){double d=0;for(int i=0;i<Math.min(k+1,RUSH_STEPS.length);i++)d+=RUSH_STEPS[i];return k<0?0:Math.min(1,d);}
+    /** How far up the line fire slash {@code i} has flown at {@code age} (ticks), or -1 before it leaves. */
+    public static double rushSlash(int i,float age){float t=age-RUSH_SLASHES[i];return t<0?-1:Math.min(RUSH_RANGE,1+RUSH_SLASH_SPEED*t);}
+    /** Damage of fire slash {@code i}. */
+    public static float rushSlashDamage(int i){return RUSH_SLASH_DAMAGE[i];}
+    /** A point (forward, the caster's right and height from the cast spot, blocks) inside a slash's path from {@code from} to {@code to} blocks up the line. */
+    public static boolean rushPath(double forward,double side,double height,double from,double to){return forward>=from&&forward<=to&&Math.abs(side)<=RUSH_SLASH_HALF_WIDTH&&height>=-1.5&&height<=3.5;}
     public static boolean ignoresForeignTimeStop(String source){return !"sakuya".equals(source)&&!"return_to_zero".equals(source)&&!"kageno".equals(source);}
 }
