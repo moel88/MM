@@ -8,23 +8,37 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-/** G body/held sword only. Reference: 1000022861.mp4, cast flash at 0.916 s. */
+/**
+ * G body/held sword only. Reference: 1000022861.mp4, cast flash at 0.916 s. The pose at the blast follows the user's
+ * Atomic_Original.mp4 (2.38.0): after the overhead turn the arms open out and down to the sides, the sword carried
+ * down the right side along the arm, and stay spread through the blast.
+ */
 public final class AtomicPose {
     private AtomicPose() {}
-    /** Finish lowering before the visual flash (5.590 s) and server impact (5.600 s). */
-    public static final float END=5.50f;
     static final float SPIN_START=4.45f,SPIN_END=5.30f;
-    static final float LOWER_START=SPIN_END;
+    /** Arms spread before the visual flash (5.590 s) and server impact (5.600 s): the right arm half way down the side, then spread. */
+    static final float SWEEP=5.42f,SPREAD=5.55f;
+    /** Held through the blast, lowered back to the stand's rest as the column dies, before the caster is let go (23.25 s). */
+    static final float LOWER_START=21.9f;
+    public static final float END=22.6f;
     private static final float RAD=(float)Math.PI/180,HILT=3.5f/16;
     private static final R6.Frame IDLE=R6.solve(KagenoClips.IDLE);
-    private static final float[] TIMES={0,.067f,.10f,.134f,.167f,.20f,.317f,SPIN_START,4.82f,5.0f,5.075f,5.115f,SPIN_END,END};
+    /**
+     * The spread (user request, Atomic_Original.mp4): both arms 35° below level out to the sides and a little ahead.
+     * The arms keep the turn they were raised with (over the front, pitch -170), so they come down the sides by rolling
+     * about the body's front-back axis rather than swinging forward through the front.
+     */
+    private static final R6.Frame SPREAD_KEY=key(-170,-125,-170,125);
+    private static final float[] TIMES={0,.067f,.10f,.134f,.167f,.20f,.317f,SPIN_START,4.82f,5.0f,5.075f,5.115f,SPIN_END,SWEEP,SPREAD,LOWER_START,END};
     private static final R6.Frame[] KEYS={IDLE,IDLE,
         key(-68,8,-45,-10),key(-100,18,-85,-18),key(-132,26,-120,-26),
         key(-147,32,-142,-32),key(-160,31,-160,-31),key(-160,31,-160,-31),
         key(-145,38,-145,-38),key(-145,38,-145,-38),key(-160,31,-160,-31),
-        key(-171,10,-160,-35),key(-176,-4,-6,-1),IDLE};
+        key(-171,10,-160,-35),key(-176,-4,-172,95),key(-174,-70,-171,112),SPREAD_KEY,SPREAD_KEY,IDLE};
     /** The arms on smooth curves through the keys: the raise flows, the holds settle. */
     private static final Anim ARMS=Anim.frames(TIMES,KEYS);
+    /** The sword in the right hand as the turn leaves it (tip up), relative to the arm: from then on it goes with the arm. */
+    private static final Quaternionf CARRY=rotation(ARMS.frame(SPIN_END).joints().joint[MotionPose.RIGHT_ARM]).conjugate().mul(new Quaternionf().rotationX(180*RAD));
     private static final float[] SPIN_TIMES={4.45f,4.53f,4.62f,4.72f,4.82f,5.0f,5.045f,5.075f,5.115f,5.19f,SPIN_END};
     private static final float[] SPIN_ANGLES={0,15,70,105,120,120,155,240,280,325,360};
     /** Turning speed at each spin key (degrees per second): monotone, so the blade never turns back; at rest at both ends. */
@@ -60,13 +74,22 @@ public final class AtomicPose {
     static Quaternionf bladeRotation(float sec) {
         Quaternionf up=new Quaternionf().rotationX(180*RAD);
         if(sec<.317f)return idleBlade().slerp(up,Ease.smooth(sec,.10f,.317f));
-        if(sec>=LOWER_START)return up.slerp(idleBlade(),Ease.smooth(sec,LOWER_START,END));
         // Model +X is the character's left: the tip rolls to screen-right, down, left, then up.
-        return new Quaternionf().rotationZ(spinDegrees(sec)*RAD).mul(up);
+        if(sec<SPIN_END)return new Quaternionf().rotationZ(spinDegrees(sec)*RAD).mul(up);
+        // Then it goes down the right side with the arm, along it (a locked wrist), easing out of the turn's rest.
+        Quaternionf held=rotation(frame(sec).joints().joint[MotionPose.RIGHT_ARM]).mul(CARRY);
+        Quaternionf q=up.slerp(held,Ease.smooth(sec,SPIN_END,SPIN_END+.06f));
+        return sec<LOWER_START?q:q.slerp(idleBlade(),Ease.smooth(sec,LOWER_START,END));
     }
     static float shoulderLift(float sec,Arm side) {
-        float lift=3*Ease.smooth(sec,.067f,.317f)*(1-Ease.smooth(sec,LOWER_START,END));
+        // The shoulders that lifted the joined hands above the brow settle as the arms come down to the sides.
+        float lift=3*Ease.smooth(sec,.067f,.317f)*(1-Ease.smooth(sec,SPIN_END,SPREAD));
         return side==Arm.LEFT?lift*(1-Ease.smooth(sec,5.075f,SPIN_END)):lift;
+    }
+    /** Breathing in the long hold: the spread arms rise and fall a few degrees, faded in after the spread and out before the lowering. */
+    static float breath(float sec) {
+        if(sec<=SPREAD||sec>=LOWER_START)return 0;
+        return 3.5f*(float)Math.sin((sec-SPREAD)*Math.PI*2/2.8)*Ease.smooth(sec,SPREAD,SPREAD+.6f)*(1-Ease.smooth(sec,LOWER_START-.6f,LOWER_START));
     }
     /** A raised shoulder places the joined hands above the brow without stretching the skin mesh. */
     public static void apply(net.minecraft.client.render.entity.model.BipedEntityModel<?> model,float sec) {
@@ -124,6 +147,13 @@ public final class AtomicPose {
     public static R6.Frame frame(float sec) {
         float t=Float.isFinite(sec)?Math.max(0,sec):END;
         var f=ARMS.frame(t);
+        float b=breath(t);
+        if(b!=0) {
+            // Each arm turns about the body's front-back axis, out and up on its own side.
+            var p=f.joints();
+            p.joint[MotionPose.RIGHT_ARM]=R6.euler(new Quaternionf().rotationZ(b*RAD).mul(rotation(p.joint[MotionPose.RIGHT_ARM])));
+            p.joint[MotionPose.LEFT_ARM]=R6.euler(new Quaternionf().rotationZ(-b*RAD).mul(rotation(p.joint[MotionPose.LEFT_ARM])));
+        }
         supportHand(f.joints(),t);return f;
     }
     /** Blade pivot at the palm, not the item model's remote origin: the hilt cannot orbit out of the hand. */

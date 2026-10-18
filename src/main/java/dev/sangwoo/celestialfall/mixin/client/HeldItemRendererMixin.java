@@ -20,9 +20,9 @@ public abstract class HeldItemRendererMixin {
             matrices.push();
             var atomic=dev.sangwoo.celestialfall.client.AtomicClient.poseCast(player.getUuid());
             if(atomic!=null){
-                // First person: the sword rises overhead with the A-frame and stays raised through the blast.
+                // First person: the sword rises overhead with the A-frame and comes down as the arms spread before the blast.
                 float sec=atomic.age(delta)/20f;
-                float raise=dev.sangwoo.celestialfall.client.kageno.Ease.smooth(sec,.067f,.267f)*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(sec,21.9f,22.6f));
+                float raise=dev.sangwoo.celestialfall.client.kageno.Ease.smooth(sec,.067f,.267f)*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(sec,5.30f,5.55f));
                 matrices.translate(-raise*.12,raise*.42,-raise*.12);
                 matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(raise*25));swing=0;
             }
