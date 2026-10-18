@@ -49,7 +49,7 @@ final class ThroughSkill implements Fx.Skill {
      * The left hand summons the fire (user request): thrust out and down at the floor just in front, then lifted as the
      * fire rises from it. The sword hand stays as it is, low at the right side, until it throws the slashes.
      */
-    static final R6.Pose SUMMON=pose().body(8,10,0).at(0,-.1,0).head(-6,22,0).rArm(-78,16).lArm(-42,-6).rLeg(-84,18).lLeg(-82,-20).blade(-36,58);
+    static final R6.Pose SUMMON=pose().body(8,10,0).at(0,-.1,0).head(-6,20,0).rArm(-78,16).lArm(-28,-3).rLeg(-84,18).lLeg(-82,-20).blade(-36,58);
     static final R6.Pose RAISE=pose().body(4,6,0).at(0,-.12,0).head(-4,8,0).rArm(-76,18).lArm(-18,-10).rLeg(-82,22).lLeg(-82,-22).blade(-34,60);
     /** Cut 1, level from the right to the left: wound back, through the front, carried on round. */
     static final R6.Pose WIND1=pose().body(-46,12,0).at(-.02,-.2,0).head(-28,2,0).rArm(-18,66).lArm(-40,-91).rLeg(-78,44).lLeg(-80,-34).blade(0,92);
@@ -408,21 +408,25 @@ final class ThroughSkill implements Fx.Skill {
             cell(pts,cells,hb[0].add(hb[1].multiply(along)).add(0,.06,0),(.16+.1*Ease.hash(k*3+1))*flick*(1+.4*FxLib.kick(t,CUT,.15f)),on*lit*.95f,.92+.1*Ease.hash(k*5+2),.8,k*13+5);
         }
     }
-    /** Where the little fire rises: on the floor just in front of the caster's feet. */
-    static Vec3d frontSpot(Fx c){return c.origin.add(c.f.multiply(1.3));}
+    /**
+     * Where the little fire rises: on the floor just in front of the caster, toward the left hand that summons it (a
+     * fire straight ahead hid behind his body from a camera behind him).
+     */
+    static Vec3d frontSpot(Fx c){return c.origin.add(c.f.multiply(1.7)).add(c.left.multiply(.6));}
     /** How much of it burns at {@code t} (user request): it flares up as the left hand reaches out and is gone about 2 s later. */
     static float front(float t){return t<.07f||t>=FRONT_END?0:Ease.smooth(t,.07f,.18f)*(1-Ease.smooth(t,FRONT_END-.35f,FRONT_END));}
     static final float FRONT_END=2.1f;
     /**
-     * A little fire flaring up from the floor just in front of the caster as T held begins: a row of flames, the
-     * middle ones tallest, each rising from the floor again and again as a small fire does, for about 2 s.
+     * A little fire flaring up from the floor where the left hand points as T held begins: a small heap of flames, the
+     * middle one tallest and eight round it, each rising from the floor again and again as a small fire does, for about 2 s.
      */
     static void frontFire(Fx c,float t,List<Vec3d> pts,List<float[]> cells){
         float a=front(t);if(a<=0)return;Vec3d at=frontSpot(c);
-        for(int k=0;k<7;k++){
+        for(int k=0;k<9;k++){
             float life=.32f+.12f*(float)Ease.hash(k*3+61),cyc=t/life+(float)Ease.hash(k*5+62);int q=(int)Math.floor(cyc);float u=cyc-q;
-            double side=(k-3)*.17+(Ease.hash(k*7+q*3+63)-.5)*.12,fw=(Ease.hash(k*11+q*5+64)-.5)*.3,tall=k==3?1:k==2||k==4?.85:.65;
-            cell(pts,cells,at.add(c.right.multiply(side)).add(c.f.multiply(fw)).add(0,.06+.62*u*tall,0),(.3-.13*u)*(k==3?1.2:1)*(.75+.25*a),
+            double ring=k==0?0:.3+.12*Ease.hash(k*7+q*3+63),az=k*Math.PI/4+(Ease.hash(k*11+q*5+64)-.5)*.5,tall=k==0?1.25:.8;
+            Vec3d off=c.right.multiply(Math.cos(az)*ring).add(c.f.multiply(Math.sin(az)*ring*.8));
+            cell(pts,cells,at.add(off).add(0,.06+tall*u,0),(.3-.11*u)*(k==0?1.3:1)*(.75+.25*a),
                 Ease.smooth(u,0,.15f)*(1-Ease.smooth(u,.55f,1))*a,.98-.35*u,.9,k*19+q*7+65);
         }
     }
