@@ -61,6 +61,11 @@ public abstract class GuardBreakNetworkMixin {
     @Inject(method="onClientCommand",at=@At(value="INVOKE",target=MAIN,shift=At.Shift.AFTER),cancellable=true)
     private void botand$command(ClientCommandC2SPacket packet,CallbackInfo ci) {
         if(dev.sangwoo.celestialfall.map.MapGate.enabled(player.getWorld())&&packet.getMode()==ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY&&!player.hasVehicle()&&!player.getAbilities().flying){player.setSneaking(false);ci.cancel();return;}
-        if(CombatManager.actionLocked(player)){player.setSprinting(false);ci.cancel();}
+        if(packet.getMode()==ClientCommandC2SPacket.Mode.STOP_SPRINTING)CombatManager.runRequest(player,false);
+        if(CombatManager.actionLocked(player)){
+            // A client that starts running as the action ends (its clock can be a tick ahead) runs when the lock lets go.
+            if(packet.getMode()==ClientCommandC2SPacket.Mode.START_SPRINTING)CombatManager.runRequest(player,true);
+            player.setSprinting(false);ci.cancel();
+        }
     }
 }

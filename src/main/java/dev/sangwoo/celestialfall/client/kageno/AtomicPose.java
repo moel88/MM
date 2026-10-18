@@ -164,6 +164,17 @@ public final class AtomicPose {
     static Matrix4f gripCorrection(float sec,Arm side) {
         return heldMatrix(frame(sec).joints(),sec,side).invert().mul(swordMatrix(sec)).mul(itemMatrix().invert());
     }
+    /**
+     * The held sword for a body without a held-item layer (the Atomic dummy): from the body's model frame to where the
+     * item renderer takes over, which adds the item's own display transform, so the sword sits as {@link #swordMatrix}
+     * puts the player's.
+     */
+    public static void applyHeld(MatrixStack matrices,float sec) {
+        var held=swordMatrix(sec).mul(itemMatrix().invert());
+        var pos=held.getTranslation(new Vector3f());
+        matrices.translate(pos.x,pos.y,pos.z);
+        matrices.multiply(held.getUnnormalizedRotation(new Quaternionf()).normalize());
+    }
     public static void applyGrip(MatrixStack matrices,float sec,Arm side) {
         var correction=gripCorrection(sec,side);
         var pos=correction.getTranslation(new Vector3f());

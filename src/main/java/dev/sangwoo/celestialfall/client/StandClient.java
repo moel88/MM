@@ -125,10 +125,15 @@ public final class StandClient {
      * server's by the packet's way here, and a target still held when the cut's throw arrives would lose it.
      */
     static final int TRAP_LEAD=2;
-    /** Action lock and locomotion lock differ: R's caster can walk at half speed. */
+    /** Action lock and locomotion lock differ: R's caster can walk at half speed, and E's walks through its thrusts. */
     public static boolean locked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;return action(mc.player.getUuid())!=null;}
-    public static boolean movementLocked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;var cast=action(mc.player.getUuid());return cast!=null&&cast.skill()!=R;}
+    public static boolean movementLocked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;var cast=action(mc.player.getUuid());return cast!=null&&cast.skill()!=R&&!dev.sangwoo.celestialfall.client.kageno.KagenoAim.aimingThrust(cast);}
     public static boolean rWalking(UUID id){var cast=action(id);return cast!=null&&cast.skill()==R;}
+    /** The server's R slowdown is on this player's speed (it leaves a tick or two after his client's R ends). */
+    public static boolean rSlowed(net.minecraft.entity.player.PlayerEntity p){
+        var speed=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
+        return speed!=null&&speed.getModifier(KagenoManager.R_SLOW)!=null;
+    }
     /** Q shadow mark: some stand user's live mark sits on this entity (drawn as a black silhouette). */
     public static boolean shadowMarked(net.minecraft.entity.Entity e){
         var mc=MinecraftClient.getInstance();if(mc.world==null||!MapClient.enabled()||STATES.isEmpty())return false;long now=mc.world.getTime();
@@ -181,6 +186,8 @@ public final class StandClient {
         return 0;
     }
     public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<DURATION[H]&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
+    /** The local player's E is in its thrusts: he walks and his facing follows his camera (user request, 2.38.2). */
+    public static boolean aimingThrust(){var p=MinecraftClient.getInstance().player;if(p==null)return false;var c=action(p.getUuid());return c!=null&&dev.sangwoo.celestialfall.client.kageno.KagenoAim.aimingThrust(c);}
     /** The local player is throwing T held's slashes: his facing follows his aim until the dash ({@link dev.sangwoo.celestialfall.client.kageno.RushAim}). */
     public static boolean aimingRush(){
         var p=MinecraftClient.getInstance().player;if(p==null)return false;var c=action(p.getUuid());

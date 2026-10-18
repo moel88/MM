@@ -31,6 +31,13 @@ public final class KagenoRules {
     /** E: barrage ticks 0.262 s apart from 0.8 s, finisher (guard break) with the crescent at 2.9 s. */
     static final int[] E_TICKS={16,21,26,32,37,42,47};
     public static final int E_FINISH=58;
+    /**
+     * E's caster walks and turns with his aim through the thrusts (user request, 2.38.2: he could neither move nor
+     * turn); from here, the last thrust struck, the finisher is planted: he stands and it goes the way he faced then.
+     */
+    public static final int E_PLANT=48;
+    /** Whether E's caster still walks and aims at {@code age} (ticks). */
+    public static boolean eWalking(float age){return age>=0&&age<E_PLANT;}
     /** E's barrage ticks (a copy). */
     public static int[] eTicks(){return E_TICKS.clone();}
     /** R: the world is gray from 0.5 s; the four stored cuts land together as colour returns, then the big final cut (the release). */
@@ -55,6 +62,11 @@ public final class KagenoRules {
     public static boolean frozen(int skill,float age){return skill==R&&age>=R_GRAY&&age<R_COLOR||skill==H&&age>=0&&age<DURATION[H];}
     /** Targets caught in T's fire stand frozen inside the dark orb; T+ holds them until the cut. */
     public static boolean trapped(int skill,float age){return skill==T&&age>=T_STRIKE&&age<T_STRIKE+71||skill==RUSH&&age>=RUSH_SLASHES[0]&&age<RUSH_FINISH||skill==Y&&age>=Y_FLASH&&age<Y_LAUNCH;}
+    /**
+     * R's caster walks at half speed and cannot run only while R holds his actions (user request, 2.38.2: he was still
+     * slow for 1.6 s after R looked finished, as the slowdown lasted the whole cast with its effects).
+     */
+    public static boolean rWalking(float age){return age>=0&&age<inputEnd(R);}
     public static int inputEnd(int skill){return skill==T?15:skill==M1?8:skill==E?67:skill==R?48:skill==Y?33:skill==P?P_RELEASE:DURATION[skill];}
     /** Vertical speed (blocks per tick) of a Y target {@code ticks} after the launch. */
     public static double yLift(int ticks){return Y_LIFT-Y_GRAVITY*ticks;}

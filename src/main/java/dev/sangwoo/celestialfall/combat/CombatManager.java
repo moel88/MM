@@ -25,7 +25,13 @@ import net.minecraft.world.RaycastContext;
 public final class CombatManager {
     public static final Identifier INPUT=CelestialFall.id("botand_input_v1"), STATE=CelestialFall.id("botand_state_v1");
     public static final RegistryKey<DamageType> UNARMED=RegistryKey.of(RegistryKeys.DAMAGE_TYPE,CelestialFall.id("unarmed"));
-    private static final UUID SLOW=UUID.fromString("c00bcb8e-e904-4ebf-9f83-8cbb798783ed");
+    /** The guard's and the guard break's slowdown on the movement speed (the client keeps its lens still while it is on). */
+    public static final UUID SLOW=UUID.fromString("c00bcb8e-e904-4ebf-9f83-8cbb798783ed");
+    /**
+     * Players whose client started running while an action held them: the server drops that packet and the client
+     * never sends it again, so they run once the action lets go.
+     */
+    private static final Set<UUID> RUN_AFTER=new HashSet<>();
     private record Entry(CombatState state,Identifier dimension,int entityId) {}
     private static final Map<UUID,Entry> STATES=new HashMap<>();
     private static final ThreadLocal<LivingEntity> NO_KNOCKBACK=new ThreadLocal<>();
@@ -47,11 +53,13 @@ public final class CombatManager {
             return ActionResult.PASS;
         });
         ServerTickEvents.END_SERVER_TICK.register(CombatManager::tick);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{HitStun.disconnect(handler.player.getUuid());STATES.remove(handler.player.getUuid());});
-        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();});
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{HitStun.disconnect(handler.player.getUuid());STATES.remove(handler.player.getUuid());RUN_AFTER.remove(handler.player.getUuid());});
+        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();RUN_AFTER.clear();});
     }
+    /** A sprint packet the action lock dropped ({@code start}) or any stop: the latest wish to run is kept for when the lock ends. */
+    public static void runRequest(ServerPlayerEntity p,boolean start){if(start)RUN_AFTER.add(p.getUuid());else RUN_AFTER.remove(p.getUuid());}
     public static void leave(ServerPlayerEntity p) {
-        HitStun.disconnect(p.getUuid());STATES.remove(p.getUuid());
+        HitStun.disconnect(p.getUuid());STATES.remove(p.getUuid());RUN_AFTER.remove(p.getUuid());
         var attr=p.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr!=null)attr.removeModifier(SLOW);
     }
     public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
@@ -125,6 +133,7 @@ public final class CombatManager {
             }
             if(s.broken(now)){p.clearActiveItem();p.setSprinting(false);}
             speed(p,s,now);
+            if(RUN_AFTER.contains(p.getUuid())&&!actionLocked(p)){RUN_AFTER.remove(p.getUuid());if(valid(p)&&!s.guarding&&!s.broken(now))p.setSprinting(true);}
             if(dirty||now%4==0&&(s.pressure>0||s.combatUntil>now||s.broken(now)))sync(p,s);
         }
         HitStun.tick();

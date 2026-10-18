@@ -31,13 +31,21 @@ public final class KagenoManager {
         public final Map<LivingEntity,Vec3d> targets=new LinkedHashMap<>();public final Set<UUID> viewers=new HashSet<>();
         /**
          * T+: the first one a fire slash struck (where the dash goes) and where it was held, how far up the line each
-         * slash got (it ends on the first one it reaches), the dash's planned spot, and the way each slash was thrown
-         * (the caster's facing as it left, NaN before: user request, turning sends the next slash the new way).
+         * slash got (it ends on the first one it reaches) and the dash's planned spot.
          */
         LivingEntity mark;Vec3d markAt;final double[] slashEnd={RUSH_RANGE,RUSH_RANGE,RUSH_RANGE};Vec3d dash;
-        final float[] slashYaw={Float.NaN,Float.NaN,Float.NaN};
+        /**
+         * Ways the caster aimed (degrees, NaN before), sent to every viewer: T+'s three slashes, each the caster's
+         * facing as it left (user request, 2.38.2: turning sends the next slash the new way), and E's finisher, the
+         * caster's facing as the thrusts end and the finisher is planted ({@link KagenoRules#E_PLANT}).
+         */
+        final float[] aims={Float.NaN,Float.NaN,Float.NaN};
         /** The way the dash goes when no slash struck anyone: after the last slash thrown. */
-        float dashYaw(){for(int i=slashYaw.length-1;i>=0;i--)if(!Float.isNaN(slashYaw[i]))return slashYaw[i];return yaw;}
+        float dashYaw(){for(int i=aims.length-1;i>=0;i--)if(!Float.isNaN(aims[i]))return aims[i];return yaw;}
+        /** E's way now: the caster's facing through the thrusts (user request, 2.38.2), the planted way for the finisher. */
+        float thrustYaw(){return Float.isNaN(aims[0])?player.getYaw():aims[0];}
+        /** The way a strike of this cast goes now. */
+        float strikeYaw(){return skill==E?thrustYaw():skill==RUSH?dashYaw():yaw;}
         Cast(ServerPlayerEntity p,int skill,int combo){this.player=p;world=p.getServerWorld();origin=p.getPos();yaw=p.getYaw();pitch=p.getPitch();this.skill=skill;this.combo=combo;start=world.getTime();}
         public int age(){return (int)(world.getTime()-start);}
     }
@@ -49,7 +57,8 @@ public final class KagenoManager {
     private static final Map<ServerPlayerEntity,State> STATES=new HashMap<>();
     private static final Map<UUID,Cast> CASTS=new LinkedHashMap<>();
     private static final Map<UUID,Mark> MARKS=new HashMap<>();
-    private static final UUID R_SLOW=UUID.fromString("126f3481-4544-4737-ae86-94f61a1e6230");
+    /** R's half walking speed (the client keeps its lens still while it is on). */
+    public static final UUID R_SLOW=UUID.fromString("126f3481-4544-4737-ae86-94f61a1e6230");
     private static Predicate<LivingEntity> clientFrozen=e->false;
     private KagenoManager(){}
     public static Collection<Cast> casts(){return Collections.unmodifiableCollection(CASTS.values());}
@@ -163,7 +172,7 @@ public final class KagenoManager {
             return new ArrayList<>(out);
         }
         boolean field=c.skill==T||c.skill==Y;Vec3d center=c.skill==T?c.origin:c.player.getPos();double r=field?4:c.skill==RUSH?3.2:3.4;
-        Vec3d facing=Vec3d.fromPolar(0,c.yaw);
+        Vec3d facing=Vec3d.fromPolar(0,c.strikeYaw());
         if(c.skill==E){Vec3d right=new Vec3d(facing.z,0,-facing.x);return near(c.world,center,r,c.player,true).stream().filter(e->{Vec3d offset=e.getPos().subtract(center);return thrustLane(offset.dotProduct(facing),offset.dotProduct(right),offset.y,e.getWidth()*.5);}).toList();}
         return near(c.world,center,r,c.player,true).stream().filter(e->field||e.getPos().subtract(center).multiply(1,0,1).normalize().dotProduct(facing)>-.05).toList();
     }
@@ -185,7 +194,10 @@ public final class KagenoManager {
             if(!valid(c.player)||c.player.getWorld()!=c.world||c.age()>=DURATION[c.skill]||c.age()<0){stop(c);continue;}
             // T+'s mark stays first among the targets, alive or not: the caster's client dashes to where it was held.
             c.targets.keySet().removeIf(e->e!=c.mark&&(!e.isAlive()||e.isRemoved()||e.getWorld()!=c.world||e instanceof ServerPlayerEntity p&&server.getPlayerManager().getPlayer(p.getUuid())!=p));
-            int age=c.age();if(c.skill==R){rSlow(c.player,true);c.player.setSprinting(false);}
+            int age=c.age();if(c.skill==R){boolean walk=rWalking(c.player);rSlow(c.player,walk);if(walk)c.player.setSprinting(false);}
+            // E: the caster walks and aims through the thrusts (user request, 2.38.2); as they end the finisher is
+            // planted the way he faces.
+            if(c.skill==E&&age>=E_PLANT&&Float.isNaN(c.aims[0])){c.aims[0]=MathHelper.wrapDegrees(c.player.getYaw());sync(c);}
             if(KagenoRules.frozen(c.skill,age)){
                 if(c.skill!=R)hold(c.player,c.origin,c.yaw,c.pitch);
                 for(var e:c.targets.entrySet())hold(e.getKey(),e.getValue(),e.getKey().getYaw(),e.getKey().getPitch());
@@ -197,9 +209,9 @@ public final class KagenoManager {
             if(c.skill==RUSH&&age>=RUSH_SLASHES[0]&&age<=RUSH_ARRIVE){
                 boolean struck=false,thrown=false;
                 for(int i=0;i<RUSH_SLASHES.length;i++){
-                    if(age>=RUSH_SLASHES[i]&&Float.isNaN(c.slashYaw[i])){c.slashYaw[i]=MathHelper.wrapDegrees(c.player.getYaw());thrown=true;}
+                    if(age>=RUSH_SLASHES[i]&&Float.isNaN(c.aims[i])){c.aims[i]=MathHelper.wrapDegrees(c.player.getYaw());thrown=true;}
                     double from=Math.max(0,rushSlash(i,age-1)),to=Math.min(c.slashEnd[i],rushSlash(i,age));if(to<0||age>RUSH_SLASHES[i]&&to<=from)continue;
-                    float yaw=c.slashYaw[i];Vec3d f=Vec3d.fromPolar(0,yaw);
+                    float yaw=c.aims[i];Vec3d f=Vec3d.fromPolar(0,yaw);
                     LivingEntity first=null;double reach=0;
                     for(var e:near(c.world,c.origin.add(f.multiply((from+to)/2)),(to-from)/2+4,c.player,false)){var l=local(c,e.getPos(),yaw);if(rushPath(l.x,l.y,l.z,from-.5,to+.5)&&(first==null||l.x<reach)){first=e;reach=l.x;}}
                     if(first==null)continue;
@@ -253,7 +265,7 @@ public final class KagenoManager {
             if(s!=null){long now=c.world.getTime();int n=KagenoRules.hits(c.skill,age);s.hits=now-s.lastHit>50?n:s.hits+n;s.lastHit=now;
                 if(ServerPlayNetworking.canSend(c.player,HITS)){var b=PacketByteBufs.create();b.writeVarInt(s.hits);ServerPlayNetworking.send(c.player,HITS,b);}}
             // Attacker-side hit feedback (red cumulative number and blood), as in the review's dummy demos.
-            if(ServerPlayNetworking.canSend(c.player,DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat((float)(amount*multiplier));b.writeFloat(c.yaw);ServerPlayNetworking.send(c.player,DAMAGE,b);}
+            if(ServerPlayNetworking.canSend(c.player,DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat((float)(amount*multiplier));b.writeFloat(c.strikeYaw());ServerPlayNetworking.send(c.player,DAMAGE,b);}
             if((c.skill==T||c.skill==RUSH&&age<RUSH_FINISH)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
             // Overdrive: +0.01 damage multiplier per skill hit, a little more time, and the shadow mark
             // (lasting as long as the overdrive itself).
@@ -289,7 +301,7 @@ public final class KagenoManager {
             if(!ServerPlayNetworking.canSend(viewer,CAST))continue;
             var b=PacketByteBufs.create();b.writeUuid(c.id);b.writeUuid(c.player.getUuid());b.writeIdentifier(c.world.getRegistryKey().getValue());b.writeByte(c.skill);b.writeByte(c.combo);b.writeLong(c.start);b.writeLong(c.world.getTime());vec(b,c.origin);b.writeFloat(c.yaw);b.writeVarInt(c.targets.size());
             for(var t:c.targets.entrySet()){b.writeUuid(t.getKey().getUuid());b.writeInt(t.getKey().getId());vec(b,t.getValue());}
-            for(float y:c.slashYaw)b.writeFloat(y);
+            for(float y:c.aims)b.writeFloat(y);
             ServerPlayNetworking.send(viewer,CAST,b);c.viewers.add(viewer.getUuid());
         }
     }
@@ -305,13 +317,15 @@ public final class KagenoManager {
             ServerPlayNetworking.send(viewer,STATUS,b);
         }
     }
+    /** Whether one of the player's R casts still holds his actions ({@link KagenoRules#rWalking}): the slowdown lasts that long, not as long as R's effects. */
+    private static boolean rWalking(ServerPlayerEntity p){for(var c:CASTS.values())if(c.player==p&&c.skill==R&&KagenoRules.rWalking(c.age()))return true;return false;}
     private static void rSlow(ServerPlayerEntity p,boolean active){
         var attr=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null)return;
         if(!active){attr.removeModifier(R_SLOW);return;}
         if(attr.getModifier(R_SLOW)==null)attr.addTemporaryModifier(new net.minecraft.entity.attribute.EntityAttributeModifier(R_SLOW,"Kageno R half walk speed",-.5,net.minecraft.entity.attribute.EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
     }
     private static void stop(Cast c){
-        CASTS.remove(c.id);if(c.skill==R)rSlow(c.player,false);
+        CASTS.remove(c.id);if(c.skill==R)rSlow(c.player,rWalking(c.player));
         for(var id:c.viewers){var p=c.world.getServer().getPlayerManager().getPlayer(id);if(p!=null&&ServerPlayNetworking.canSend(p,STOP)){var b=PacketByteBufs.create();b.writeUuid(c.id);ServerPlayNetworking.send(p,STOP,b);}}
         if(c.player.isAlive())c.player.setVelocity(0,0,0);
     }

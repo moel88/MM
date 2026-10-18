@@ -1,7 +1,8 @@
 """Base effects separation. After this step run restore_cinematic_audio.py
 to preserve H music and G dialogue according to the current sound policy.
 T held's clip (kageno_rush) is cut on the old timeline; --install re-cuts it to the
-remade skill (2.38.0) with recut_rush.py before it goes into the mod.
+remade skill (2.38.0) with recut_rush.py before it goes into the mod, and lines each
+M1 hit's clip up with its impact (2.38.2) with recut_m1.py.
 
 Requires numpy, scipy, onnxruntime and the three pinned BandIt-v2 music ONNX graphs.
 Weights are not bundled. See audio_model.json for provenance, hashes and attribution.
@@ -115,6 +116,7 @@ def main():
   n=min(len(decoded),len(effects));corr=float(np.corrcoef(effects[:n].ravel(),decoded[:n].ravel())[0,1])
   records.append({'sound':name,'seconds':duration,'source_start_seconds':start,'sample_rate':SR,'channels':2,'playback_speed':1.0,'decoded_correlation':corr,'decoded_peak':float(np.abs(decoded).max()),'sha256':hashlib.sha256(ogg.read_bytes()).hexdigest(),'source':'supplied video minus BandIt v2 estimated music','gain':gain,'high_frequency_transient_rescue':rescued,'raw_model_residual_rms_fraction':residual_fraction,'residual_rms_fraction':float(np.sqrt(np.mean((effects/gain)**2)/np.mean(original**2)))})
   if args.install and name=='kageno_rush':subprocess.run(['python3',str(ROOT/'tools/kageno/recut_rush.py'),str(ogg),str(ROOT/'src/main/resources/assets/celestialfall/sounds'/ogg.name)],check=True)
+  elif args.install and name.startswith('kageno_m1_'):subprocess.run(['python3',str(ROOT/'tools/kageno/recut_m1.py'),str(ogg),str(ROOT/'src/main/resources/assets/celestialfall/sounds'/ogg.name)],check=True)
   elif args.install:(ROOT/'src/main/resources/assets/celestialfall/sounds'/ogg.name).write_bytes(ogg.read_bytes())
   print(f'{name}: completed, codec correlation {corr:.5f}, {time.monotonic()-t0:.1f}s',flush=True)
  records+=[x for x in json.loads((ROOT/'tools/kageno/audio_reference.json').read_text())['effects'] if x['sound']=='kageno_e']

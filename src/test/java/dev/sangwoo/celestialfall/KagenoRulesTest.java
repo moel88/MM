@@ -13,6 +13,11 @@ final class KagenoRulesTest {
         float total=0;for(int combo=1;combo<=4;combo++)for(int a=0;a<14;a++)total+=damage(M1,a,combo);assertEquals(28,total);
     }
     @Test void affectedRadiiIncludeBoundaryButRejectOutsideAndNan(){assertTrue(inside(49,STOP_RADIUS));assertFalse(inside(49.00001,STOP_RADIUS));assertTrue(inside(25,HIGHEST_RADIUS));assertFalse(inside(25.00001,HIGHEST_RADIUS));assertFalse(inside(Double.NaN,5));}
+    /** User report (2.38.2): R's caster stayed slow for 1.6 s after R looked finished; the slowdown ends with R's input window. */
+    @Test void rSlowdownEndsWithItsInputWindow(){
+        assertTrue(rWalking(0));assertTrue(rWalking(inputEnd(R)-1));assertFalse(rWalking(inputEnd(R)));assertFalse(rWalking(DURATION[R]-1));
+        assertTrue(inputEnd(R)<DURATION[R],"the effects still play on after the caster is free");
+    }
     @Test void freezeEndsBeforeDamageAndAlwaysReleases(){assertFalse(frozen(R,R_GRAY-.01f));assertTrue(frozen(R,R_GRAY));assertTrue(frozen(R,R_COLOR-.01f));assertFalse(frozen(R,R_COLOR));for(int a=0;a<R_COLOR;a++)assertEquals(0,damage(R,a,0));assertEquals(4,hits(R,R_STORED));assertEquals(R_CUTS,hits(R,R_STORED));assertTrue(damage(R,R_RELEASE,0)>0);assertTrue(frozen(H,115));assertFalse(frozen(H,116));}
     /** R, buffed: a 7-block time stop, four stored cuts (24) and the big final cut (14), which also strikes the band ahead; 9 s cooldown. */
     @Test void timeWalkerStopsWiderCutsHarderAndReleasesAlongTheBand(){

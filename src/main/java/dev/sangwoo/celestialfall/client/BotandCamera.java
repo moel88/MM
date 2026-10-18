@@ -139,7 +139,8 @@ public final class BotandCamera {
         if(!controls()||p.hasVehicle())return;
         float forward=input.movementForward,side=input.movementSideways;
         var s=CombatClient.snapshot(p.getUuid());
-        boolean facing=locked()||s.guard()||s.attack()>0||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed();
+        // E's thrusts are aimed (user request): the caster faces where the camera looks and walks relative to it.
+        boolean facing=locked()||s.guard()||s.attack()>0||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed()||StandClient.aimingThrust();
         if(facing)aim();
         else if(Math.hypot(forward,side)>.01) {
             p.setYaw(OrbitCameraState.turn(p.getYaw(),OrbitCameraState.movementYaw(STATE.yaw,forward,side),36));

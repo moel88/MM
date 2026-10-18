@@ -259,7 +259,8 @@
     "sounds": [
       {
         "name": "celestialfall:kageno_m1_1",
-        "stream": true
+        "stream": false,
+        "preload": true
       }
     ]
   },
@@ -267,7 +268,8 @@
     "sounds": [
       {
         "name": "celestialfall:kageno_m1_2",
-        "stream": true
+        "stream": false,
+        "preload": true
       }
     ]
   },
@@ -275,7 +277,8 @@
     "sounds": [
       {
         "name": "celestialfall:kageno_m1_3",
-        "stream": true
+        "stream": false,
+        "preload": true
       }
     ]
   },
@@ -283,7 +286,8 @@
     "sounds": [
       {
         "name": "celestialfall:kageno_m1_4",
-        "stream": true
+        "stream": false,
+        "preload": true
       }
     ]
   },

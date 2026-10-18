@@ -76,13 +76,14 @@ public final class KagenoClips {
     public static R6.Frame action(StandClient.Cast cast,float delta){
         float sec=cast.age(delta)/20f;var frame=clip(cast.skill(),cast.combo()).frame(sec);
         if(cast.skill()==R)frame=TimeWalkerSkill.walking(frame,walkWeight(cast,delta));
+        else if(cast.skill()==E)frame=NeonThrustSkill.walking(frame,walkWeight(cast,delta));
         var start=COMBO_STARTS.get(cast.id());
         return start!=null&&sec<.08f?R6.blend(start,frame,Ease.smooth(sec,0,.08f)):frame;
     }
     public static boolean hidden(StandClient.Cast cast,float delta){var s=KagenoSkills.of(cast.skill());return s!=null&&s.hidden(cast.age(delta)/20f);}
-    /** How much R's caster walks (0 standing, 1 walking): the walking cast eases in and out with the steps. */
+    /** How much R's or E's caster walks (0 standing, 1 walking): the walking cast eases in and out with the steps. */
     public static float walkWeight(StandClient.Cast cast,float delta){
-        return cast.skill()!=R?0:Ease.smooth(dev.sangwoo.celestialfall.client.CombatClient.moving(cast.caster(),delta),.08f,.32f);
+        return cast.skill()!=R&&cast.skill()!=E?0:Ease.smooth(dev.sangwoo.celestialfall.client.CombatClient.moving(cast.caster(),delta),.08f,.32f);
     }
     /**
      * R's walking cast: the walk cycle's legs, knees and bob blended in by {@code w}. The legs are turned back against
@@ -123,8 +124,8 @@ public final class KagenoClips {
     public static float facingTurn(StandClient.Cast cast,float delta,float bodyYaw){
         return net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing(cast,delta))*Ease.smooth(cast.age(delta)/20f,0,.08f);
     }
-    /** The way a cast's body is drawn facing (degrees): the cast facing, but T held turns with the caster's aim ({@link RushAim}). */
-    public static float facing(StandClient.Cast cast,float delta){return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.yaw();}
+    /** The way a cast's body is drawn facing (degrees): the cast facing, but T held and E turn with the caster's aim ({@link KagenoAim}). */
+    public static float facing(StandClient.Cast cast,float delta){return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.skill()==E?KagenoAim.thrust(cast,delta):cast.yaw();}
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */
     private static final java.util.Map<java.util.UUID,float[]> FACINGS=new java.util.HashMap<>();
     /** Ticks the body takes to turn from a finished clip's facing back to its own. */

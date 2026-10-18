@@ -39,6 +39,21 @@ class NeonThrustSkillTest {
             assertTrue(tipOut-tipBack>.3,"thrust "+i+" moves the tip only "+(tipOut-tipBack));
         }
     }
+    /** User request (2.38.2): E is walked and aimed through its thrusts, and its finisher is planted. */
+    @Test void walkedThrustsStillGoTheWayTheCasterAimsAndTheFinisherIsPlanted(){
+        for(int i=0;i<NeonThrustSkill.THRUSTS.length;i++){
+            var f=NeonThrustSkill.walking(NeonThrustSkill.CLIP.frame(NeonThrustSkill.THRUSTS[i]),1);
+            var out=KagenoClips.blade(FEET,0,R6.poseOf(f));
+            Vec3d want=world(NeonThrustSkill.AIM[i][0],NeonThrustSkill.AIM[i][1]);
+            // Walking takes out the lunge and the crouch, not the aim.
+            assertTrue(out[1].dotProduct(want)>Math.cos(Math.toRadians(6)),"walked thrust "+i+" points "+out[1]+" not "+want);
+            assertEquals(0,f.fw(),1e-6);assertTrue(Math.abs(f.up())<.06,"walked thrust "+i+" crouches "+f.up());
+        }
+        int[] ticks=KagenoRules.eTicks();int last=ticks[ticks.length-1];
+        assertTrue(KagenoRules.eWalking(0)&&KagenoRules.eWalking(last),"walked and aimed up to the last thrust");
+        assertTrue(KagenoRules.E_PLANT>last&&!KagenoRules.eWalking(KagenoRules.E_PLANT)&&!KagenoRules.eWalking(KagenoRules.E_FINISH),"the finisher is planted");
+        assertTrue(KagenoRules.E_PLANT/20f<=NeonThrustSkill.BACK,"planted before the sword is drawn back");
+    }
     @Test void theLungeLevelsTheBladeAtTheTargetSideOn(){
         var set=sword(.3f);
         assertTrue(set[1].z>.99,"the blade points "+set[1]);

@@ -21,6 +21,7 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         }
         var stand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=AtomicClient.poseCast(player.getUuid());
+        String arms="";
         if(atomic!=null){
             articulated=true;
             dev.sangwoo.celestialfall.client.kageno.AtomicPose.apply(this,atomic.age(animationProgress-player.age)/20f);
@@ -37,11 +38,11 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             MotionRig.apply(this,pose,0,0);
         }
         else if(StandClient.visible(player)&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),animationProgress-player.age)!=null){
-            articulated=true;var guard=dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),animationProgress-player.age).joints();
+            articulated=true;arms="guard";var guard=dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),animationProgress-player.age).joints();
             for(int i=2;i<=3;i++){var arm=i==2?rightArm:leftArm;arm.pitch=MotionRig.rad(guard.joint[i][0]);arm.yaw=MotionRig.rad(guard.joint[i][1]);arm.roll=MotionRig.rad(guard.joint[i][2]);arm.getChild("elbow").pitch=0;}
         }
         else if(StandClient.visible(player)&&!player.isUsingItem()){
-            articulated=true;var rest=dev.sangwoo.celestialfall.client.kageno.KagenoClips.idle().joints();
+            articulated=true;arms="idle";var rest=dev.sangwoo.celestialfall.client.kageno.KagenoClips.idle().joints();
             rightArm.pitch=MotionRig.rad(rest.joint[2][0])+rightArm.pitch*.25f;rightArm.yaw=MotionRig.rad(rest.joint[2][1]);rightArm.roll=MotionRig.rad(rest.joint[2][2]);rightArm.getChild("elbow").pitch=0;
         }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
@@ -52,7 +53,11 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             else if(stand!=null){source=stand.id();fade=1.6f;}
             else if(rig){source=CombatClient.state(player,delta);fade=CombatClient.fade(source);}
             else{source="vanilla";fade=3;}
-            PoseBlend.apply(player.getUuid(),this,java.util.List.of(source,using),fade,animationProgress);
+            // A stand user's arms come from the guard clip while it plays and from the rest pose after it: the change
+            // between them fades too (the free arm popped to the combat stance as the guard's release ended). Into the
+            // guard it fades fast, so the 0.1 s flourish keeps its snap.
+            if(arms.equals("guard"))fade=Math.min(fade,1.2f);
+            PoseBlend.apply(player.getUuid(),this,java.util.List.of(source,using,arms),fade,animationProgress);
         }
         dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.apply(player,this,animationProgress-player.age);
         overlays();

@@ -27,6 +27,8 @@ import static dev.sangwoo.celestialfall.client.kageno.R6.pose;
  * into a white-pink flash and a pillar of light, while the dark-cored magenta crescent over the caster spreads into
  * rings that cool to blue-violet. Only the sword is pink; the skill's light is magenta and purple. Times are seconds
  * after the cast and every effect is a pure function of the cast clock, so it moves at the render frame rate.
+ * Through the thrusts the caster walks and turns with his aim, and the storm turns with him (user request, 2.38.2:
+ * {@link KagenoAim#thrust}); the finisher is planted the way he faced as the thrusts ended.
  */
 final class NeonThrustSkill implements Fx.Skill {
     /** The sword's neon is pink: white-hot core, light pink, hot pink, magenta. */
@@ -128,6 +130,16 @@ final class NeonThrustSkill implements Fx.Skill {
         return world(.1-.02*k,-.16-.02*k,-25,4,0,d(-50,160),d(-6,176),d(-40,-40),d(-50,16),d(-52,188));
     }
 
+    /**
+     * The thrusts walked (user request, 2.38.2): at {@code w} 1 the legs walk (the model's walk cycle) and the body
+     * stays over them, without the lunge or the crouch and with a lighter lean, while the side-on twist and the arms
+     * stay as they are so the blade still points the way the caster aims.
+     */
+    static R6.Frame walking(R6.Frame f,float w){
+        if(w<=0)return f;
+        return new R6.Frame(f.joints(),f.grip(),f.fw()*(1-w),f.up()*(1-.8f*w),f.rt()*(1-w),f.yaw(),f.pitch()*(1-.5f*w),f.roll()*(1-.5f*w));
+    }
+
     // ───────────────────────────── timing ─────────────────────────────
 
     /** Index of the latest thrust at or before sec (-1 before the first). */
@@ -148,8 +160,8 @@ final class NeonThrustSkill implements Fx.Skill {
 
     // ───────────────────────────── effects ─────────────────────────────
 
-    /** Sword hand and blade direction of the rendered body at sec. */
-    static Vec3d[] sword(Fx c,float sec){return KagenoClips.blade(c.pos,c.cast.yaw(),R6.poseOf(CLIP.frame(sec)));}
+    /** Sword hand and blade direction of the rendered body at sec (walking or not, facing the caster's aim). */
+    static Vec3d[] sword(Fx c,float sec){return KagenoClips.blade(c.pos,c.yaw,R6.poseOf(walking(CLIP.frame(sec),KagenoClips.walkWeight(c.cast,c.delta))));}
     static Vec3d aim(Fx c,int i){return c.dir(AIM[i][0],AIM[i][1]);}
     /** A unit vector across d. */
     static Vec3d across(Vec3d d){Vec3d x=d.crossProduct(new Vec3d(0,1,0));if(x.lengthSquared()<1e-4)x=d.crossProduct(new Vec3d(1,0,0));return x.normalize();}
@@ -375,7 +387,7 @@ final class NeonThrustSkill implements Fx.Skill {
     /** The air ahead fills with afterimage stabs while the thrusts land, all coming from the sword shoulder. */
     static void afterimages(Fx c,EffectMesh m,float t){
         var live=ghosts(t);if(live.isEmpty())return;
-        Vec3d shoulder=KagenoClips.shoulder(c.pos,c.cast.yaw(),R6.poseOf(CLIP.frame(t)));
+        Vec3d shoulder=KagenoClips.shoulder(c.pos,c.yaw,R6.poseOf(walking(CLIP.frame(t),KagenoClips.walkWeight(c.cast,c.delta))));
         for(var g:live)ghost(c,m,t,shoulder,g);
     }
     /**

@@ -18,14 +18,16 @@ public final class Fx {
     public final float age,sec,delta;
     /** Caster feet now (follows movement) and at the cast (world anchored). */
     public final Vec3d pos,origin,camera;
-    /** Cast facing, the character's right and left (horizontal unit vectors). */
+    /** The way the body is drawn facing ({@link KagenoClips#facing}, degrees): the cast facing, or the caster's aim for the aimed casts. */
+    public final float yaw;
+    /** That facing, the character's right and left (horizontal unit vectors). */
     public final Vec3d f,right,left;
     public final Matrix4f matrix;
     public final MatrixStack matrices;
     public final List<LivingEntity> targets;
     Fx(MinecraftClient mc,StandClient.Cast cast,float delta,Vec3d pos,Vec3d camera,Matrix4f matrix,MatrixStack matrices,List<LivingEntity> targets){
         this.mc=mc;this.cast=cast;this.delta=delta;this.age=cast.age(delta);this.sec=age/20f;this.pos=pos;this.origin=cast.origin();this.camera=camera;
-        this.f=Vec3d.fromPolar(0,cast.yaw());this.left=new Vec3d(f.z,0,-f.x);this.right=left.negate();this.matrix=matrix;this.matrices=matrices;this.targets=targets;
+        this.yaw=KagenoClips.facing(cast,delta);this.f=Vec3d.fromPolar(0,yaw);this.left=new Vec3d(f.z,0,-f.x);this.right=left.negate();this.matrix=matrix;this.matrices=matrices;this.targets=targets;
     }
     /** Point relative to the moving caster: forward, up, right (blocks). */
     public Vec3d at(double fw,double up,double rt){return pos.add(f.multiply(fw)).add(0,up,0).add(right.multiply(rt));}

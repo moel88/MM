@@ -27,7 +27,7 @@ public final class CombatClient {
     private static final Map<UUID,Snapshot> STATES=new HashMap<>();
     private static final Map<UUID,Movement> MOVEMENT=new HashMap<>();
     private static final class Movement {
-        double x,y,z;float phase,previousPhase,amount,previousAmount,forward,side,sprint,combat,guard;
+        double x,y,z;float phase,previousPhase,amount,previousAmount,forward,side,sprint,combat,guard,previousGuard;
         boolean ready,grounded=true;float smoothPressure;
         /** Vertical speed (blocks per tick), how airborne the body looks (0..1), the fastest fall since leaving the ground. */
         float vy,previousVy,air,previousAir,fall;
@@ -62,6 +62,11 @@ public final class CombatClient {
             DASH_INPUT.key(action==GLFW.GLFW_PRESS,combatInput());
     }
     public static Snapshot snapshot(UUID id){return STATES.getOrDefault(id,EMPTY);}
+    /** The server's guard or guard-break slowdown is on this player's speed (it arrives and leaves a tick or two after the guard flag). */
+    public static boolean slowed(net.minecraft.entity.player.PlayerEntity p){
+        var speed=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
+        return speed!=null&&speed.getModifier(CombatManager.SLOW)!=null;
+    }
     public static boolean connected(){return MapClient.enabled()&&ClientPlayNetworking.canSend(CombatManager.INPUT);}
     public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(StandClient.locked()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).broken(mc.world.getTime()));}
     /** The articulated rig drives this player (on the ground and in a jump or fall; not for sneaking, swimming, gliding, sleeping or riding). */
@@ -118,7 +123,7 @@ public final class CombatClient {
             m.grounded=ground;
             double distance=Math.hypot(dx,dz);if(distance>1.5)distance=0;
             double yaw=Math.toRadians(p.getYaw()),f=-Math.sin(yaw)*dx+Math.cos(yaw)*dz,side=Math.cos(yaw)*dx+Math.sin(yaw)*dz;
-            m.previousPhase=m.phase;m.previousAmount=m.amount;
+            m.previousPhase=m.phase;m.previousAmount=m.amount;m.previousGuard=m.guard;
             float speed=(float)Math.min(1,distance/.2);
             m.amount=approach(m.amount,p.isOnGround()?speed:0,.35f);
             if(distance>.005) {m.forward=approach(m.forward,(float)(f/Math.max(distance,.001)),.35f);m.side=approach(m.side,(float)(side/Math.max(distance,.001)),.35f);}
@@ -176,7 +181,9 @@ public final class CombatClient {
             for(int i=0;i<2;i++)attack.knee[i]=MathHelper.lerp(m.amount*.7f,attack.knee[i],base.knee[i]);
             return MotionPose.blend(base,attack,MotionClips.smooth(s.attackAge(now)/2));
         }
-        if(m.guard>.01f)return MotionPose.blend(base,MotionClips.guard(p.age+delta,s.pressure),m.guard);
+        // The guard eases in and out between ticks too, so it does not step 20 times a second.
+        float guard=MathHelper.lerp(delta,m.previousGuard,m.guard);
+        if(guard>.01f)return MotionPose.blend(base,MotionClips.guard(p.age+delta,s.pressure),guard);
         return base;
     }
     public static void hud(DrawContext c,float delta) {

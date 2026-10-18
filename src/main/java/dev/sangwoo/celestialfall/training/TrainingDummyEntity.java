@@ -76,6 +76,8 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         super.move(type,kind==DummyKind.ATTACK?new Vec3d(0,movement.y,0):movement);
     }
     @Override protected void mobTick() {
+        // The Atomic dummy lives only as long as its cast (one saved mid-cast has none when the server comes back).
+        if(getCommandTags().contains(TrainingDummies.ATOMIC_TAG)&&!dev.sangwoo.celestialfall.AtomicManager.active(getUuid())){discard();return;}
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(getWorld())){combat.cancel();combat.pressure=0;combat.brokenUntil=0;getNavigation().stop();setTarget(null);HitStun.disconnect(getUuid());syncCombat();return;}
         long now=getWorld().getTime();
         if(combat.brokenUntil>0&&now>=combat.brokenUntil){combat.brokenUntil=0;combat.pressure=0;}
