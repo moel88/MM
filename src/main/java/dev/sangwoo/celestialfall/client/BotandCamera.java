@@ -128,7 +128,10 @@ public final class BotandCamera {
         var mc=MinecraftClient.getInstance();var p=mc.player;
         if(StandClient.movementLocked()||HitStunClient.localStunned()) {
             input.movementForward=input.movementSideways=0;input.jumping=input.sneaking=false;
-            input.pressingForward=input.pressingBack=input.pressingLeft=input.pressingRight=false;return;
+            input.pressingForward=input.pressingBack=input.pressingLeft=input.pressingRight=false;
+            // T held is aimed while its slashes are thrown (user request): the caster turns to where the camera looks.
+            if(controls()&&!HitStunClient.localStunned()&&StandClient.aimingRush())aim();
+            return;
         }
         // On-foot crouch is removed. X is only dismount / creative-flight descent.
         input.sneaking=!CombatClient.actionLocked()&&(p.hasVehicle()||p.getAbilities().flying)&&DISMOUNT.isPressed();

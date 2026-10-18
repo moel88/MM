@@ -106,9 +106,9 @@ public final class KagenoClips {
      * the cast direction, so the body and the world-anchored effects stay aligned.
      */
     public static void root(MatrixStack m,StandClient.Cast cast,float delta,float bodyYaw){
-        var w=net.minecraft.client.MinecraftClient.getInstance().world;
-        if(w!=null)FACINGS.put(cast.caster(),new float[]{cast.yaw(),w.getTime()+delta});
-        var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,cast.yaw()),left=new Vec3d(f.z,0,-f.x);
+        var w=net.minecraft.client.MinecraftClient.getInstance().world;float facing=facing(cast,delta);
+        if(w!=null)FACINGS.put(cast.caster(),new float[]{facing,w.getTime()+delta});
+        var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,facing),left=new Vec3d(f.z,0,-f.x);
         Vec3d off=f.multiply(fr.fw()).add(0,fr.up(),0).add(left.multiply(-fr.rt()));
         m.translate(off.x,off.y,off.z);
         if(fr.yaw()!=0||fr.pitch()!=0||fr.roll()!=0){
@@ -117,12 +117,14 @@ public final class KagenoClips {
             m.translate(0,PIVOT,0);m.multiply(q);m.translate(0,-PIVOT,0);
         }
         // The body turns to the cast facing over the first frames instead of snapping to it.
-        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-cast.yaw())*Ease.smooth(cast.age(delta)/20f,0,.08f)));
+        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing)*Ease.smooth(cast.age(delta)/20f,0,.08f)));
     }
     /** How far {@link #root} has turned the body left of its own facing {@code bodyYaw} to the cast facing (degrees). */
     public static float facingTurn(StandClient.Cast cast,float delta,float bodyYaw){
-        return net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-cast.yaw())*Ease.smooth(cast.age(delta)/20f,0,.08f);
+        return net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing(cast,delta))*Ease.smooth(cast.age(delta)/20f,0,.08f);
     }
+    /** The way a cast's body is drawn facing (degrees): the cast facing, but T held turns with the caster's aim ({@link RushAim}). */
+    public static float facing(StandClient.Cast cast,float delta){return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.yaw();}
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */
     private static final java.util.Map<java.util.UUID,float[]> FACINGS=new java.util.HashMap<>();
     /** Ticks the body takes to turn from a finished clip's facing back to its own. */
@@ -161,7 +163,7 @@ public final class KagenoClips {
     private static Vec3d world(R6.Dir d,Vec3d f,Vec3d right){return right.multiply(d.rt()).add(0,d.up(),0).add(f.multiply(d.fw()));}
     private static Vec3d rotate(Quaternionf q,Vec3d v){var r=q.transform(new org.joml.Vector3f((float)v.x,(float)v.y,(float)v.z));return new Vec3d(r.x,r.y,r.z);}
     public static Vec3d groundOffset(StandClient.Cast cast,float delta){
-        var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,cast.yaw()),left=new Vec3d(f.z,0,-f.x);
+        var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,facing(cast,delta)),left=new Vec3d(f.z,0,-f.x);
         return f.multiply(fr.fw()).add(left.multiply(-fr.rt()));
     }
     public static R6.Frame idle(){return R6.solve(IDLE);}

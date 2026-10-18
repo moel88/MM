@@ -12,7 +12,8 @@ import java.util.UUID;
  * T held's dash, moved by the caster's own client (a player's movement is its own): at the start of each client tick
  * of the dash the local caster is given the velocity that takes him to the next point of the path the server plans
  * the same way ({@link KagenoRules#rushDestination}, {@link KagenoRules#rushStep}): just short of the first one a
- * slash struck (its held spot, as the server sends it) or to the end of the range, aimed again every tick so a strike
+ * slash struck (its held spot, as the server sends it) or to the end of the range after the last slash thrown (the way
+ * the server threw it, {@link StandClient.Cast#aims}), aimed again every tick so a strike
  * while it runs turns it; at its end he stops. Server velocity packets, one a tick, were merged when several reached
  * a client within one frame, and the dash fell short in multiplayer.
  */
@@ -39,11 +40,16 @@ public final class RushDash {
             return;
         }
         Vec3d from=plan==null?p.getPos():plan.at(),mark=cast.targets().isEmpty()?null:cast.targets().get(0).position();
-        Vec3d dest=KagenoRules.rushDestination(cast.origin(),Vec3d.fromPolar(0,cast.yaw()),from,mark);
+        Vec3d dest=KagenoRules.rushDestination(cast.origin(),Vec3d.fromPolar(0,dashYaw(cast)),from,mark);
         // A cast first seen mid-dash catches up with the share already due.
         double share=plan==null?KagenoRules.rushDashed(k):KagenoRules.rushStep(k);
         Vec3d to=from.add(dest.subtract(from).multiply(1,0,1).multiply(share)),v=to.subtract(p.getPos()).multiply(1,0,1);
         p.setVelocity(v.x,Math.min(0,p.getVelocity().y),v.z);
         PLANS.put(cast.id(),new Plan(k,to));
+    }
+    /** The way the server dashes when no slash struck anyone: after the last slash thrown, the way it threw it. */
+    private static float dashYaw(StandClient.Cast c){
+        for(int i=c.aims().length-1;i>=0;i--)if(!Float.isNaN(c.aims()[i]))return c.aims()[i];
+        return RushAim.dash(c,0);
     }
 }

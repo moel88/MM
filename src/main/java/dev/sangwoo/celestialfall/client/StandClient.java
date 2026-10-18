@@ -21,7 +21,11 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 public final class StandClient {
     private static final ItemStack SWORD=new ItemStack(CelestialFall.ATOMIC_SWORD);
     public record Target(UUID uuid,int entity,Vec3d position){}
-    public record Cast(UUID id,UUID caster,Identifier dimension,int skill,int combo,long start,long serverNow,long received,Vec3d origin,float yaw,List<Target> targets){
+    /** {@code aims}: T held's slashes, the way each was thrown (degrees, NaN before it leaves; the server's). */
+    public record Cast(UUID id,UUID caster,Identifier dimension,int skill,int combo,long start,long serverNow,long received,Vec3d origin,float yaw,List<Target> targets,float[] aims){
+        public Cast(UUID id,UUID caster,Identifier dimension,int skill,int combo,long start,long serverNow,long received,Vec3d origin,float yaw,List<Target> targets){
+            this(id,caster,dimension,skill,combo,start,serverNow,received,origin,yaw,targets,new float[]{Float.NaN,Float.NaN,Float.NaN});
+        }
         public float age(float delta){return MinecraftClient.getInstance().world==null?9999:new KagenoCastClock(serverNow-start,received).age(ticks,delta);}
         public boolean includes(UUID id){return caster.equals(id)||targets.stream().anyMatch(t->t.uuid.equals(id));}
     }
@@ -47,7 +51,8 @@ public final class StandClient {
             UUID id=b.readUuid(),caster=b.readUuid();var dim=b.readIdentifier();int skill=b.readUnsignedByte(),combo=b.readUnsignedByte();long start=b.readLong(),serverNow=b.readLong();Vec3d origin=vec(b);float yaw=b.readFloat();int n=b.readVarInt();
             if(skill<0||skill>H&&skill!=P||n<0||n>4096)return;
             var targets=new ArrayList<Target>();for(int i=0;i<n;i++)targets.add(new Target(b.readUuid(),b.readInt(),vec(b)));
-            mc.execute(()->{if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);acceptCast(new Cast(id,caster,dim,skill,combo,start,serverNow,ticks,origin,yaw,List.copyOf(targets)));});
+            float[] aims=new float[3];for(int i=0;i<aims.length;i++){float a=b.readFloat();aims[i]=Float.isFinite(a)?a:Float.NaN;}
+            mc.execute(()->{if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;observe(mc);acceptCast(new Cast(id,caster,dim,skill,combo,start,serverNow,ticks,origin,yaw,List.copyOf(targets),aims));});
         });
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STOP,(mc,h,b,r)->{UUID id=b.readUuid();mc.execute(()->{var c=CASTS.remove(id);if(c!=null&&c.age(0)>=DURATION[c.skill]-2)KagenoAudio.finish(id);else KagenoAudio.stop(id);});});
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.STATUS,(mc,h,b,r)->{
@@ -72,8 +77,8 @@ public final class StandClient {
     public static void acceptCast(Cast incoming){
         if(incoming.id.equals(cancelledPose))return;
         Cast old=CASTS.get(incoming.id);
-        // Targets may change during a rush. Their refresh must not reset pose/camera/audio time.
-        Cast cast=old==null?incoming:new Cast(old.id,old.caster,old.dimension,old.skill,old.combo,old.start,old.serverNow,old.received,old.origin,old.yaw,incoming.targets);
+        // Targets and T held's slash aims may change during a cast. Their refresh must not reset pose/camera/audio time.
+        Cast cast=old==null?incoming:new Cast(old.id,old.caster,old.dimension,old.skill,old.combo,old.start,old.serverNow,old.received,old.origin,old.yaw,incoming.targets,incoming.aims);
         if(cast.age(0)<DURATION[cast.skill]){
             if(old==null){dev.sangwoo.celestialfall.client.kageno.KagenoClips.begin(cast);
                 if(cast.skill==H&&MinecraftClient.getInstance().player!=null&&cast.includes(MinecraftClient.getInstance().player.getUuid()))dev.sangwoo.celestialfall.client.integration.CinematicsBridge.nativeCutscene();}
@@ -176,6 +181,11 @@ public final class StandClient {
         return 0;
     }
     public static Cast cinematic(){var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||!mc.player.isAlive())return null;return CASTS.values().stream().filter(c->c.skill==H&&c.age(0)<DURATION[H]&&c.includes(mc.player.getUuid())).findFirst().orElse(null);}
+    /** The local player is throwing T held's slashes: his facing follows his aim until the dash ({@link dev.sangwoo.celestialfall.client.kageno.RushAim}). */
+    public static boolean aimingRush(){
+        var p=MinecraftClient.getInstance().player;if(p==null)return false;var c=action(p.getUuid());
+        return c!=null&&dev.sangwoo.celestialfall.client.kageno.RushAim.aiming(c);
+    }
     public static Cast action(UUID id){return CASTS.values().stream().filter(c->c.caster.equals(id)&&c.age(0)<inputEnd(c.skill)).reduce((a,b)->b).orElse(null);}
     public static Cast visualCast(){var mc=MinecraftClient.getInstance();if(mc.player==null)return null;Cast cinematic=cinematic();if(cinematic!=null)return cinematic;return CASTS.values().stream().filter(c->c.origin.squaredDistanceTo(mc.player.getPos())<32*32).min(Comparator.comparingDouble(c->c.caster.equals(mc.player.getUuid())?-1:c.origin.squaredDistanceTo(mc.player.getPos()))).orElse(null);}
     public static void send(int action){if(!ClientPlayNetworking.canSend(KagenoManager.INPUT))return;var b=PacketByteBufs.create();b.writeByte(action);ClientPlayNetworking.send(KagenoManager.INPUT,b);}

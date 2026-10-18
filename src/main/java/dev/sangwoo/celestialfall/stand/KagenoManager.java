@@ -31,9 +31,13 @@ public final class KagenoManager {
         public final Map<LivingEntity,Vec3d> targets=new LinkedHashMap<>();public final Set<UUID> viewers=new HashSet<>();
         /**
          * T+: the first one a fire slash struck (where the dash goes) and where it was held, how far up the line each
-         * slash got (it ends on the first one it reaches), and the dash's planned spot.
+         * slash got (it ends on the first one it reaches), the dash's planned spot, and the way each slash was thrown
+         * (the caster's facing as it left, NaN before: user request, turning sends the next slash the new way).
          */
         LivingEntity mark;Vec3d markAt;final double[] slashEnd={RUSH_RANGE,RUSH_RANGE,RUSH_RANGE};Vec3d dash;
+        final float[] slashYaw={Float.NaN,Float.NaN,Float.NaN};
+        /** The way the dash goes when no slash struck anyone: after the last slash thrown. */
+        float dashYaw(){for(int i=slashYaw.length-1;i>=0;i--)if(!Float.isNaN(slashYaw[i]))return slashYaw[i];return yaw;}
         Cast(ServerPlayerEntity p,int skill,int combo){this.player=p;world=p.getServerWorld();origin=p.getPos();yaw=p.getYaw();pitch=p.getPitch();this.skill=skill;this.combo=combo;start=world.getTime();}
         public int age(){return (int)(world.getTime()-start);}
     }
@@ -133,7 +137,9 @@ public final class KagenoManager {
     }
     public static List<LivingEntity> radiusTargets(ServerPlayerEntity p,double radius){return near(p.getServerWorld(),p.getPos(),radius,p,false);}
     /** Point in the cast frame: forward, lateral (character's right) and height relative to the origin. */
-    private static Vec3d local(Cast c,Vec3d p){Vec3d f=Vec3d.fromPolar(0,c.yaw),right=new Vec3d(-f.z,0,f.x),d=p.subtract(c.origin);return new Vec3d(d.dotProduct(f),d.dotProduct(right),d.y);}
+    private static Vec3d local(Cast c,Vec3d p){return local(c,p,c.yaw);}
+    /** {@code p} from the cast spot: ahead along {@code yaw}, to the right of it, and up. */
+    private static Vec3d local(Cast c,Vec3d p,float yaw){Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x),d=p.subtract(c.origin);return new Vec3d(d.dotProduct(f),d.dotProduct(right),d.y);}
     private static List<LivingEntity> strikeTargets(Cast c){
         int age=c.age();
         // R's release: the time-stopped targets and whoever stands in the band it explodes along.
@@ -184,19 +190,23 @@ public final class KagenoManager {
                 if(c.skill!=R)hold(c.player,c.origin,c.yaw,c.pitch);
                 for(var e:c.targets.entrySet())hold(e.getKey(),e.getValue(),e.getKey().getYaw(),e.getKey().getPitch());
             }
-            // T+: the fire slashes fly up the line, and each ends on the first one it reaches (user request: it does not
-            // cut through to whoever stands behind) and strikes them; the first one struck is the mark, where the dash goes.
+            // T+: the fire slashes fly up their lines, each the way the caster faced as it left (user request: turning
+            // while they are thrown sends the next one the new way), and each ends on the first one it reaches (user
+            // request: it does not cut through to whoever stands behind) and strikes them; the first one struck is the
+            // mark, where the dash goes.
             if(c.skill==RUSH&&age>=RUSH_SLASHES[0]&&age<=RUSH_ARRIVE){
-                Vec3d f=Vec3d.fromPolar(0,c.yaw);boolean struck=false;
+                boolean struck=false,thrown=false;
                 for(int i=0;i<RUSH_SLASHES.length;i++){
+                    if(age>=RUSH_SLASHES[i]&&Float.isNaN(c.slashYaw[i])){c.slashYaw[i]=MathHelper.wrapDegrees(c.player.getYaw());thrown=true;}
                     double from=Math.max(0,rushSlash(i,age-1)),to=Math.min(c.slashEnd[i],rushSlash(i,age));if(to<0||age>RUSH_SLASHES[i]&&to<=from)continue;
+                    float yaw=c.slashYaw[i];Vec3d f=Vec3d.fromPolar(0,yaw);
                     LivingEntity first=null;double reach=0;
-                    for(var e:near(c.world,c.origin.add(f.multiply((from+to)/2)),(to-from)/2+4,c.player,false)){var l=local(c,e.getPos());if(rushPath(l.x,l.y,l.z,from-.5,to+.5)&&(first==null||l.x<reach)){first=e;reach=l.x;}}
+                    for(var e:near(c.world,c.origin.add(f.multiply((from+to)/2)),(to-from)/2+4,c.player,false)){var l=local(c,e.getPos(),yaw);if(rushPath(l.x,l.y,l.z,from-.5,to+.5)&&(first==null||l.x<reach)){first=e;reach=l.x;}}
                     if(first==null)continue;
                     c.slashEnd[i]=Math.max(1,reach);hit(c,first,rushSlashDamage(i),age);
                     if(c.targets.containsKey(first)){struck=true;if(c.mark==null){c.mark=first;c.markAt=c.targets.get(first);}}
                 }
-                if(struck)sync(c);
+                if(struck||thrown)sync(c);
             }
             // T+ dash: the caster's own client moves him (velocity packets sent every tick get merged when several reach
             // a client in one frame, and the dash fell short in multiplayer). The server plans the same path, from where
@@ -205,7 +215,7 @@ public final class KagenoManager {
             if(c.skill==RUSH&&age>=RUSH_START&&age<RUSH_ARRIVE){
                 int k=age-RUSH_START;if(c.dash==null)c.dash=c.player.getPos();
                 if(c.mark!=null&&c.mark.isAlive()&&c.mark.getWorld()==c.world&&c.targets.containsKey(c.mark))c.markAt=c.targets.get(c.mark);
-                Vec3d dest=rushDestination(c.origin,Vec3d.fromPolar(0,c.yaw),c.dash,c.markAt);
+                Vec3d dest=rushDestination(c.origin,Vec3d.fromPolar(0,c.dashYaw()),c.dash,c.markAt);
                 c.dash=c.dash.add(dest.subtract(c.dash).multiply(1,0,1).multiply(rushStep(k)));
             }
             // Y: targets struck by the flash stand still until the launch, then rise straight up.
@@ -279,6 +289,7 @@ public final class KagenoManager {
             if(!ServerPlayNetworking.canSend(viewer,CAST))continue;
             var b=PacketByteBufs.create();b.writeUuid(c.id);b.writeUuid(c.player.getUuid());b.writeIdentifier(c.world.getRegistryKey().getValue());b.writeByte(c.skill);b.writeByte(c.combo);b.writeLong(c.start);b.writeLong(c.world.getTime());vec(b,c.origin);b.writeFloat(c.yaw);b.writeVarInt(c.targets.size());
             for(var t:c.targets.entrySet()){b.writeUuid(t.getKey().getUuid());b.writeInt(t.getKey().getId());vec(b,t.getValue());}
+            for(float y:c.slashYaw)b.writeFloat(y);
             ServerPlayNetworking.send(viewer,CAST,b);c.viewers.add(viewer.getUuid());
         }
     }

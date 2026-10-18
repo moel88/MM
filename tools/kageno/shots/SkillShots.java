@@ -232,7 +232,23 @@ public final class SkillShots implements ClientModInitializer {
     /** Camera looks along camyaw (default north); the character's facing is given relative to it. */
     private float camLook(){return opt("camyaw",180);}
     private float facing(float face){return camLook()+180+face;}
-    private void camera(){float d=opt("dist",camDist);BotandCamera.STATE.yaw=camLook();BotandCamera.STATE.pitch=opt("pitch",camPitch);BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;}
+    /**
+     * "turn=AGE:DEG/AGE:DEG/...": the player turns the camera during the cast (cast clock ticks, degrees clockwise from
+     * the shot's camera yaw), straight between the keys and held after the last; as a player would, so the game turns
+     * the caster to it (T held's aim).
+     */
+    private float turn(){
+        if(!opts.containsKey("turn")||phase<4)return 0;
+        float age=clock(),prev=0,from=0;boolean first=true;
+        for(String key:opts.get("turn").split("/")){
+            String[] v=key.split(":");float at=Float.parseFloat(v[0].trim()),deg=Float.parseFloat(v[1].trim());
+            if(first&&age<=at)return deg;
+            if(!first&&age<=at)return prev+(deg-prev)*Math.max(0,Math.min(1,(age-from)/Math.max(1e-3f,at-from)));
+            first=false;prev=deg;from=at;
+        }
+        return prev;
+    }
+    private void camera(){float d=opt("dist",camDist);BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;}
     private void face(ServerPlayerEntity p,float face){float y=facing(face);p.setYaw(y);p.setHeadYaw(y);p.setBodyYaw(y);p.networkHandler.requestTeleport(p.getX(),p.getY(),p.getZ(),y,0);}
 
     @Override public void onInitializeClient(){
