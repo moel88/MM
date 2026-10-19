@@ -1,4 +1,8 @@
-> **현재 통합본: Botand 2.40.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.40.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.40.1 — 10회 뽑기의 찬장 3배
+
+10회 뽑기 연출의 찬장을 요청하신 대로 3배로 키웠습니다(꼭대기 약 11m). 모래시계도 찬장에 맞춰 함께 3배(약 2m)가 됐습니다. 카메라는 보미 뒤로 멀리 빠져 작은 보미 위로 우뚝 선 찬장 전체를 보여 준 뒤, 모래시계가 차오르는 동안 천천히 떠올라 다가갑니다. 그 밖의 뽑기 화면·1회 연출·결과·소리·서버 처리는 2.40.0과 같습니다. [RELEASE_2.40.1_KO.md](RELEASE_2.40.1_KO.md)를 확인하세요.
 
 # 보탠드 2.40.0 — 뽑기 리워크 (카게노 배너 · 10회 연출 · 결과 화면 · 성스러운 효과음)
 
