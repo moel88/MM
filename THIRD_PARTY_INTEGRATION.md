@@ -13,7 +13,7 @@ Their licenses apply separately to their respective contents. Botand's existing 
 
 Original license notices and nested dependencies remain inside each upstream JAR.
 Exact downloaded file URLs and SHA-512 digests are in DEPENDENCIES.lock.json.
-Photon, LDLib and YSM are not distributed in 2.31.2 through 2.38.2.
+Photon, LDLib and YSM are not distributed in 2.31.2 through 2.39.0.
 
 The original Veil artifact and its matching source artifact are supplied unchanged. The upstream 1.20 branch license and GPL text are in `third_party/veil`. The legacy JAR metadata license text is preserved as-is; it differs from the upstream branch license. Nested ImGui/LWJGL/Molang files keep their original notices. Veil can be replaced as a separate JAR.
 
@@ -24,3 +24,5 @@ Matching source URL: https://maven.blamejared.com/foundry/veil/Veil-fabric-1.20.
 The Git repository keeps the binary in `libs/` but does not commit the source artifact; it is available unchanged at the matching source URL above.
 
 Official Maven SHA-1 was verified: `85a91a10ee1595dbbb70e089d837e3bc52c0df56`. The local SHA-512 is recorded in the lock file.
+
+The gacha screen's backdrop and logo (`textures/gui/gacha/background.png`, `logo.png`) are taken from the screen draft the mod's owner supplied, and the SSR card's Kageno illustration (`textures/gui/gacha/kageno.png`) is the owner's supplied artwork, resized (2.39.0, `tools/gacha/build_textures.py`).
