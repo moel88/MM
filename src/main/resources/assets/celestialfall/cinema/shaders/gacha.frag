@@ -17,6 +17,8 @@ uniform vec3 SpotPos;
 uniform vec3 SpotDir;
 uniform vec2 SpotCone;
 uniform vec3 SpotColor;
+// how far the hourglasses' light carries, against the 2.39.0 set (2.40.1: three times on the huge cupboard)
+uniform float LightReach;
 in vec3 world;
 in vec3 normal;
 in vec2 uv;
@@ -39,7 +41,7 @@ vec3 points(vec3 n,vec3 v,float wrap,float shine,float specular) {
     for(int i=0;i<12;i++) {
         if(i>=Lights)break;
         vec3 l=LightPos[i]-world;float d=length(l);l/=max(d,1e-4);
-        float fall=1./(1.+d*d*5.5);
+        float fall=1./(1.+d*d*5.5/(LightReach*LightReach));
         float diffuse=max((dot(n,l)+wrap)/(1.+wrap),0.);
         float spec=pow(max(dot(n,normalize(l+v)),0.),shine)*specular;
         sum+=LightColor[i]*fall*(diffuse+spec);
@@ -133,12 +135,12 @@ void main() {
         light+=vec3(1)*smoothstep(.992,1.,grain)*(.04+Glow*.6)*mix(vec3(1),Accent,.6)*wake;
     } else if(material>8.5&&material<9.5) {
         // the spotlight's beam (2.40.0): a cone of light seen through, brightest where it faces the eye, fading at its rim,
-        // at the lamp and into the floor, dust drifting in it
+        // at the lamp and into the floor (over its last 1.3 m, however high the lamp hangs), dust drifting in it
         // (how squarely the eye looks through it: the cone's own outward direction against the view, across the floor)
         vec2 out_=normalize(world.xz-SpotPos.xz+vec2(1e-5)),view=normalize(Camera.xz-world.xz+vec2(1e-5));
         float facing=pow(abs(dot(out_,view)),3.),h=clamp(uv.y,0.,1.);
         float dust=.78+.22*sin(world.y*7.-Time*.5+world.x*11.)*sin(world.x*6.+world.z*9.+Time*.35);
-        light=Accent*Glow*facing*smoothstep(0.,.3,h)*(1.-smoothstep(.82,1.,h))*dust;
+        light=Accent*Glow*facing*smoothstep(0.,1.3,world.y)*(1.-smoothstep(.82,1.,h))*dust;
         alpha=1.;
     } else if(material>9.5&&material<10.5) {
         vec2 p=uv*2.-1.;float r=length(p);

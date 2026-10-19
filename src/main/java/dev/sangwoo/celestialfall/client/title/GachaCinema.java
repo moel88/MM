@@ -52,6 +52,8 @@ public final class GachaCinema implements AutoCloseable {
         public final float[] sparkColor=new float[3],sparkCenter=new float[3];
         /** Half the width of the key light's shadow map, about the point it looks at. */
         public float shadowSpan=3.4f;
+        /** How far the hourglasses' light carries, against the 2.39.0 set (2.40.1: the big cupboard's light scales with it). */
+        public float lightReach=1;
         public final float[] shadowAt={0,.8f,.3f};
     }
 
@@ -126,7 +128,7 @@ public final class GachaCinema implements AutoCloseable {
                 case 4->meshes.put("bomi",upload(CinemaAssets.mesh("bomi")));
                 case 5->meshes.put("prop",upload(CinemaAssets.mesh("prop")));
                 case 6->meshes.put("glass",upload(CinemaAssets.mesh("glass")));
-                case 7->{meshes.put("floor",upload(floor()));meshes.put("chair",upload(chair()));meshes.put("cupboard",upload(cupboard()));meshes.put("wall",upload(wall()));meshes.put("motes",upload(motes(160)));
+                case 7->{meshes.put("floor",upload(floor()));meshes.put("chair",upload(chair()));meshes.put("cupboard",upload(cupboard()));meshes.put("wall",upload(wall()));meshes.put("motes",upload(motes(160,11,2.2f,2.6f,-1.2f,3.6f)));meshes.put("hall",upload(motes(240,29,6.5f,11.5f,-2.5f,5.6f)));
                     meshes.put("beam",upload(beam()));meshes.put("circle",upload(circle()));meshes.put("sparks",upload(sparks(90)));}
                 case 8->shadow=target(2048,2048,true,true);
             }
@@ -222,6 +224,7 @@ public final class GachaCinema implements AutoCloseable {
         hdr.bind();glClearColor(f.clear[0],f.clear[1],f.clear[2],1);glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glUseProgram(lit);matrix(lit,"ViewProjection",vp);matrix(lit,"LightMatrix",light);glUniform1f(uniform(lit,"Time"),f.time);
         glUniform3f(uniform(lit,"Camera"),f.eye[0],f.eye[1],f.eye[2]);glUniform1i(uniform(lit,"Atlas"),0);glUniform1i(uniform(lit,"ShadowMap"),1);texture(1,shadow.depth);
+        glUniform1f(uniform(lit,"LightReach"),Math.max(.1f,f.lightReach));
         glUniform3f(uniform(lit,"KeyDir"),kd.x,kd.y,kd.z);vec3(lit,"Key",f.key);vec3(lit,"Ambient",f.ambient);
         vec3(lit,"SpotPos",f.spotPos);var sd=new Vector3f(f.spotDir[0],f.spotDir[1],f.spotDir[2]).normalize();glUniform3f(uniform(lit,"SpotDir"),sd.x,sd.y,sd.z);
         glUniform2f(uniform(lit,"SpotCone"),f.spotCone[0],f.spotCone[1]);vec3(lit,"SpotColor",f.spotColor);
@@ -235,7 +238,7 @@ public final class GachaCinema implements AutoCloseable {
         Integer[] order=new Integer[Math.min(MAX_GLASSES,f.glasses)];for(int i=0;i<order.length;i++)order[i]=i;
         Arrays.sort(order,Comparator.comparingDouble(i->-distance(f,i)));
         for(int i:order){bones(lit,f.bones,f.held&&i==0?null:f.place[i]);look(lit,f.accent[i],f.glow[i],f.hold[i]);meshes.get("glass").draw();}
-        if(f.motes>0){glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);bones(lit,f.bones,null);look(lit,NONE,0,0);meshes.get("motes").draw();}
+        if(f.motes>0){glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);bones(lit,f.bones,null);look(lit,NONE,0,0);meshes.get("motes").draw();if(f.cupboard)meshes.get("hall").draw();}
         // light drawn as light (2.40.0): the floor's magic circle, the spotlight's beam, sparks about the hourglass
         glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
         if(f.circle>0){float r=f.circleRadius;bones(lit,null,new float[]{r,0,0,f.circleAt[0],0,1,0,.004f,0,0,r,f.circleAt[1]});look(lit,f.circleColor,f.circle,0);meshes.get("circle").draw();}
@@ -298,12 +301,15 @@ public final class GachaCinema implements AutoCloseable {
     static float[] rgb(int hex){return new float[]{(hex>>16&255)/255f,(hex>>8&255)/255f,(hex&255)/255f,1};}
     /** Polished dark stone under everything, fading into the dark (the shader fades it). */
     static CinemaAssets.Mesh floor(){var b=new Builder();float s=9;b.quad(new float[]{-s,0,-s},new float[]{-s,0,s},new float[]{s,0,s},new float[]{s,0,-s},rgb(0x2a2d3c),8);return b.mesh();}
-    /** The wall the cupboard stands against (the 10-pull's room). */
+    /**
+     * The wall the cupboard stands against (the 10-pull's room): tall and wide behind the big cupboard, its skirting, rail
+     * and panels at a person's scale, so the cupboard reads as huge against them.
+     */
     static CinemaAssets.Mesh wall(){
-        var b=new Builder();float z=CUPBOARD_Z+CUPBOARD_DEPTH+.06f;
-        b.quad(new float[]{6,0,z},new float[]{-6,0,z},new float[]{-6,5.2f,z},new float[]{6,5.2f,z},rgb(0x272a44),0);
-        b.box(-6,0,z-.04f,6,.22f,z,rgb(0x2b1d17),0);b.box(-6,1.5f,z-.03f,6,1.56f,z,rgb(0x3a281e),0);
-        for(int i=-8;i<=8;i++)b.box(i*.8f-.008f,0,z-.005f,i*.8f+.008f,1.5f,z,rgb(0x1f2236),0);
+        var b=new Builder();float z=CUPBOARD_Z+CUPBOARD_DEPTH+.06f,half=16,high=16;
+        b.quad(new float[]{half,0,z},new float[]{-half,0,z},new float[]{-half,high,z},new float[]{half,high,z},rgb(0x272a44),0);
+        b.box(-half,0,z-.04f,half,.22f,z,rgb(0x2b1d17),0);b.box(-half,1.5f,z-.03f,half,1.56f,z,rgb(0x3a281e),0);
+        for(int i=-20;i<=20;i++)b.box(i*.8f-.008f,0,z-.005f,i*.8f+.008f,1.5f,z,rgb(0x1f2236),0);
         return b.mesh();
     }
     /** A wooden chair with a pale blue cushion, its seat at the origin's height {@link #SEAT}, facing +Z. */
@@ -321,11 +327,12 @@ public final class GachaCinema implements AutoCloseable {
         return b.mesh();
     }
     /**
-     * The cupboard (찬장), built large (user request, 2.40.0: a bigger cupboard for bigger hourglasses): a closed cabinet
-     * below, two open shelves above for the ten hourglasses, facing -Z toward Bomi; every measure the 2.39.0 one's times
-     * {@link #CUPBOARD_SCALE}.
+     * The cupboard (찬장), built huge (user requests: 2.40.0 a bigger cupboard for bigger hourglasses, 1.55 times the
+     * 2.39.0 one; 2.40.1 three times that again, about 11 m to its crown): a closed cabinet below, two open shelves above
+     * for the ten hourglasses, facing -Z toward Bomi; every measure the 2.39.0 one's times {@link #CUPBOARD_SCALE}. It stands
+     * a little further from her chair than before, clear of the camera in front of her.
      */
-    public static final float CUPBOARD_SCALE=1.55f,CUPBOARD_Z=3.0f,CUPBOARD_DEPTH=.46f*CUPBOARD_SCALE,
+    public static final float CUPBOARD_SCALE=1.55f*3,CUPBOARD_Z=3.6f,CUPBOARD_DEPTH=.46f*CUPBOARD_SCALE,
         SHELF_LOW=.9f*CUPBOARD_SCALE,SHELF_HIGH=1.45f*CUPBOARD_SCALE,SHELF_X=.34f*CUPBOARD_SCALE,CUPBOARD_TOP=2.0f*CUPBOARD_SCALE;
     static CinemaAssets.Mesh cupboard(){
         var b=new Builder();float[] wood=rgb(0x4b2f21),dark=rgb(0x2a1a12),back=rgb(0x1e1416),gold=rgb(0xd7b26a),panel=rgb(0x3d2619);
@@ -384,13 +391,16 @@ public final class GachaCinema implements AutoCloseable {
         }
         return new CinemaAssets.Mesh(v);
     }
-    /** Motes of dust or light drifting up through the scene (material 6; the vertex shader moves and turns them). */
-    static CinemaAssets.Mesh motes(int n){
-        var v=new float[n*6*14];int k=0;var r=new Random(11);
+    /**
+     * Motes of dust or light drifting up through the scene (material 6; the vertex shader moves and turns them): {@code n}
+     * of them within {@code width} either side, up to {@code height}, from {@code z0} over {@code depth}.
+     */
+    static CinemaAssets.Mesh motes(int n,long seed,float width,float height,float z0,float depth){
+        var v=new float[n*6*14];int k=0;var r=new Random(seed);
         for(int i=0;i<n;i++){
-            float x=(r.nextFloat()*2-1)*2.2f,y=r.nextFloat()*2.6f,z=-1.2f+r.nextFloat()*3.6f,speed=.04f+r.nextFloat()*.07f,a=.35f+r.nextFloat()*.65f;
+            float x=(r.nextFloat()*2-1)*width,y=r.nextFloat()*height,z=z0+r.nextFloat()*depth,speed=.04f+r.nextFloat()*.07f,a=.35f+r.nextFloat()*.65f;
             float[][] corner={{0,0},{1,0},{1,1},{0,0},{1,1},{0,1}};
-            for(float[] c:corner)for(float val:new float[]{x,y,z,speed,2.6f,0,c[0],c[1],.85f,.92f,1,a,-1,6})v[k++]=val;
+            for(float[] c:corner)for(float val:new float[]{x,y,z,speed,height,0,c[0],c[1],.85f,.92f,1,a,-1,6})v[k++]=val;
         }
         return new CinemaAssets.Mesh(v);
     }

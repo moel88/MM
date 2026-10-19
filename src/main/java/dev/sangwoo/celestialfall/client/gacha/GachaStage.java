@@ -50,6 +50,8 @@ final class GachaStage {
         return t;
     }
     static final float HOLD_TEN=1.6f*SECOND;
+    /** How much the 10-pull's cupboard grew in 2.40.1 (user request: three times bigger), and the lamp hung above it. */
+    static final float CUPBOARD_GREW=3,LAMP_HIGH=12;
     static float length(List<Grade> grades){
         if(grades.size()==1)return reveal(grades.get(0))+AFTER+FADE;
         return lightAt(grades,grades.size()-1)+HOLD_TEN+FADE;
@@ -81,7 +83,7 @@ final class GachaStage {
     }
     private static void reset(GachaCinema.Frame f){
         f.spotColor[0]=f.spotColor[1]=f.spotColor[2]=0;f.beam=0;f.circle=0;f.sparks=0;f.lights=0;f.motes=1;
-        f.shadowSpan=3.4f;set(f.shadowAt,0,.8f,.3f);
+        f.shadowSpan=3.4f;set(f.shadowAt,0,.8f,.3f);f.lightReach=1;
     }
 
     /** The scene's sounds between its last frame ({@code from}) and this one ({@code to}). */
@@ -167,8 +169,11 @@ final class GachaStage {
         f.bloom=.46f+.28f*Math.min(1,glow/3);f.exposure=1;f.motes=1;
     }
 
-    /** The ten hourglasses' scale on the big cupboard (user request, 2.40.0: bigger hourglasses). */
-    static final float BIG=1.25f;
+    /**
+     * The ten hourglasses' scale against Bomi's (user requests: 2.40.0 bigger hourglasses, 1.25; 2.40.1 a cupboard three
+     * times bigger, its hourglasses with it so its shelves stay full, about 2 m tall).
+     */
+    static final float BIG=1.25f*3;
     /** The ten hourglasses' places on the cupboard's two shelves, in the order they light (screen left to right, top row first). */
     static float[] shelf(int i){
         int row=i/5,col=i%5;float half=.546f*BIG/2;
@@ -197,27 +202,31 @@ final class GachaStage {
         float headY=seat+22.5f/16+.22f;
         float[] look=watch(grades,age);
         float lookYaw=(float)Math.toDegrees(Math.atan2(look[0],look[2]))*.8f,lookPitch=-(float)Math.toDegrees(Math.atan2(look[1]-headY,look[2]))*.85f;
+        // the cupboard towers over her (2.40.1): past what her neck gives, she leans back a little to look up
+        float neck=Math.max(lookPitch,-38),leanBack=Math.min(6,Math.max(0,-38-lookPitch)*.5f);
         // bowed under the lamp, then raising her head to the cupboard (user request)
         float lift=smooth(LIFT,LIFT+LIFT_TIME,age),breathe=(float)Math.sin(s*Math.PI*2/3.8f);
         float settle=age>LIFT+LIFT_TIME?(float)Math.exp(-(age-LIFT-LIFT_TIME)/(.25f*SECOND)):0;
         float[][] e=new float[7][3];
         e[BomiRig.ROOT]=new float[]{0,0,0};
-        e[BomiRig.BODY]=new float[]{mix(9,1.5f,lift)+.5f*breathe,lookYaw*.12f*lift,0};
-        e[BomiRig.HEAD]=new float[]{mix(31,lookPitch,lift)+1.5f*settle*(float)Math.sin((age-LIFT-LIFT_TIME)*.6f),lookYaw*.85f*lift,mix(4,0,lift)};
+        e[BomiRig.BODY]=new float[]{mix(9,1.5f,lift)+.5f*breathe-leanBack*lift,lookYaw*.12f*lift,0};
+        e[BomiRig.HEAD]=new float[]{mix(31,neck,lift)+1.5f*settle*(float)Math.sin((age-LIFT-LIFT_TIME)*.6f),lookYaw*.85f*lift,mix(4,0,lift)};
         e[BomiRig.RIGHT_ARM]=new float[]{mix(-30,-38,lift),0,mix(8,11,lift)};e[BomiRig.LEFT_ARM]=new float[]{mix(-30,-38,lift),0,mix(-8,-11,lift)};
         e[BomiRig.RIGHT_LEG]=new float[]{-72,-9,0};e[BomiRig.LEFT_LEG]=new float[]{-72,9,0};
         System.arraycopy(BomiRig.pose(e,0,seat,-.04f),0,f.bones,0,f.bones.length);
         f.held=false;f.glasses=n;f.chair=f.cupboard=f.wall=true;
-        // the lamp above her: on as the scene opens (a tiny flutter as it catches), giving way to the hourglasses as they fill
+        // the lamp high above her (2.40.1: above the huge cupboard's crown, a narrow cone keeping the same pool of light on
+        // her): on as the scene opens (a tiny flutter as it catches), giving way to the hourglasses as they fill
         float lampOn=smooth(.05f*SECOND,.45f*SECOND,age)*(1-.12f*(float)Math.exp(-Math.pow((age-.3f*SECOND)/(.08f*SECOND),2)));
         float dim=1-.6f*smooth(FIRST-ramp(grades.get(0)),lightAt(grades,n-1),age);
         float turned=smooth(ORBIT,ORBIT+ORBIT_TIME,age);
-        set(f.spotPos,0,4.6f,.02f);set(f.spotDir,0,-1,0);f.spotCone[0]=.963f;f.spotCone[1]=.987f;
-        for(int k=0;k<3;k++)f.spotColor[k]=LAMP[k]*1.25f*lampOn*dim*(1-.8f*turned);
-        f.beam=.028f*lampOn*dim*(1-.7f*turned);f.beamRadius=1.2f;
-        // the hourglasses: a faint stir as she looks up, then each filling with light in turn, flaring in its colour
+        set(f.spotPos,0,LAMP_HIGH,.02f);set(f.spotDir,0,-1,0);f.spotCone[0]=.9946f;f.spotCone[1]=.998f;
+        for(int k=0;k<3;k++)f.spotColor[k]=LAMP[k]*2.6f*lampOn*dim*(1-.8f*turned);
+        f.beam=.028f*lampOn*dim*(1-.7f*turned);f.beamRadius=1.25f;
+        // the hourglasses: a faint stir as she looks up, then each filling with light in turn, flaring in its colour; their
+        // light carries as far against the huge cupboard as it did on the 2.40.0 one
         float stir=.07f*smooth(LIFT,ORBIT+ORBIT_TIME,age);
-        boolean ssr=false;float best=0;
+        boolean ssr=false;float best=0,sum=0;f.lightReach=CUPBOARD_GREW;
         for(int i=0;i<n;i++){
             var p=shelf(i);var g=grades.get(i);int gi=g.ordinal();float at=lightAt(grades,i),ra=ramp(g);
             System.arraycopy(BomiRig.place(GachaCinema.HOURGLASS_CENTER,p[3],180,p[0],p[1],p[2]),0,f.place[i],0,12);
@@ -227,31 +236,35 @@ final class GachaStage {
             float glow=stir+wake*rest*(g==Grade.SSR?1+.25f*(float)Math.sin(s*15)*(1-smooth(at-.1f*SECOND,at,age)):1);
             if(age>=at)glow+=(peak-rest)*(float)Math.exp(-(age-at)/SECOND*3.2f)*Math.min(1,(age-at)/(.12f*SECOND));
             if(g==Grade.SSR){ssr=true;float pulse=smooth(lightAt(grades,n-1)+.4f*SECOND,lightAt(grades,n-1)+.9f*SECOND,age);glow+=pulse*(1.2f+.3f*(float)Math.sin(s*5));}
-            f.accent[i]=c;f.glow[i]=glow;f.hold[i]=1;best=Math.max(best,glow);
-            if(f.lights<GachaCinema.MAX_LIGHTS&&glow>.01f){int l=f.lights++;set(f.lightPos[l],p[0],p[1],p[2]-.08f);for(int k2=0;k2<3;k2++)f.lightColor[l][k2]=c[k2]*glow*.62f;}
+            f.accent[i]=c;f.glow[i]=glow;f.hold[i]=1;best=Math.max(best,glow);sum+=Math.min(glow,2.5f);
+            if(f.lights<GachaCinema.MAX_LIGHTS&&glow>.01f){int l=f.lights++;set(f.lightPos[l],p[0],p[1],p[2]-.065f*p[3]);for(int k2=0;k2<3;k2++)f.lightColor[l][k2]=c[k2]*glow*.62f;}
         }
+        // their light spilling out over the cupboard's doors and the floor before them, and up over its crown, so the huge
+        // cupboard shows as a whole, more of it as more hourglasses fill
+        float spill=.6f+.25f*sum,z=GachaCinema.CUPBOARD_Z,top=GachaCinema.CUPBOARD_TOP;
+        if(f.lights<GachaCinema.MAX_LIGHTS){int l=f.lights++;set(f.lightPos[l],0,3,z-1.6f);for(int k2=0;k2<3;k2++)f.lightColor[l][k2]=new float[]{.78f,.8f,1f}[k2]*spill;}
+        if(f.lights<GachaCinema.MAX_LIGHTS){int l=f.lights++;set(f.lightPos[l],0,top-.4f,z-1.8f);for(int k2=0;k2<3;k2++)f.lightColor[l][k2]=new float[]{.78f,.8f,1f}[k2]*spill*.6f;}
         // the camera: close in front of her bowed head under the lamp; as she looks up it swings round her right side to
-        // behind her, rising, until the whole cupboard stands before it and she sits at the lower left; then a slow drift in
-        // (in front: her whole seated figure under the lamp; behind: over her right shoulder and head, the cupboard filling
-        // the view, and then drawing in over her head toward the hourglasses)
+        // behind her and draws far back (2.40.1), until the whole huge cupboard stands over her, small at the foot of the
+        // frame in the lamp's light; then it rises slowly toward the hourglasses as they fill
         float orbit=smooth(ORBIT,ORBIT+ORBIT_TIME,age),after=smooth(ORBIT+ORBIT_TIME,length(grades),age);
-        float theta=(float)Math.toRadians(mix(25,157,orbit)),radius=mix(mix(3.25f,2.95f,smooth(0,ORBIT,age)),2.28f,orbit),height=mix(1.25f,1.9f,orbit);
+        float theta=(float)Math.toRadians(mix(25,170,orbit)),radius=mix(mix(3.25f,2.95f,smooth(0,ORBIT,age)),8.0f,smooth(.25f,1,orbit)),height=mix(1.25f,2.0f,orbit);
         float[] start={-(float)Math.sin(theta)*radius,height,(float)Math.cos(theta)*radius};
-        set(f.eye,mix(start[0],-.55f,after),mix(start[1],2.0f,after),mix(start[2],-.9f,after));
+        set(f.eye,mix(start[0],-.7f,after),mix(start[1],3.7f,after),mix(start[2],-4.3f,after));
         float[] mid=cupboardMiddle();float aim=smooth(ORBIT+.15f*ORBIT_TIME,ORBIT+ORBIT_TIME,age);
-        float tx=mix(0,mid[0]+.25f-.1f*after,aim),ty=mix(.95f+.3f*lift,mid[1]+.15f+.05f*after,aim),tz=mix(.1f,mid[2],aim);
+        float tx=mix(0,mid[0]+.2f-.2f*after,aim),ty=mix(.95f+.3f*lift,mix(4.9f,mid[1]+.1f,after),aim),tz=mix(.1f,mid[2],aim);
         int first=grades.indexOf(Grade.SSR);
         if(first>=0){
             // the SSR: the camera leans toward it once it has flared
             float lean=smooth(lightAt(grades,first)+.2f*SECOND,lightAt(grades,first)+1.6f*SECOND,age);
-            float[] q=shelf(first);tx=mix(tx,q[0],.45f*lean);ty=mix(ty,q[1],.45f*lean);
-            for(int k=0;k<3;k++)f.eye[k]=mix(f.eye[k],q[k],.12f*lean);
+            float[] q=shelf(first);tx=mix(tx,q[0],.3f*lean);ty=mix(ty,q[1],.3f*lean);
+            for(int k=0;k<3;k++)f.eye[k]=mix(f.eye[k],q[k],.08f*lean);
         }
         set(f.target,tx,ty,tz);
-        f.fov=mix(40,41,orbit)-2*after;f.focus=mix(dist(f.eye,new float[]{0,1.15f,0}),dist(f.eye,mid),aim);f.time=s;
-        // the key light comes from the lamp, straight down, so the shadows are the lamp's
+        f.fov=mix(mix(40,52,orbit),45,after);f.focus=mix(dist(f.eye,new float[]{0,1.15f,0}),dist(f.eye,mid),aim);f.time=s;
+        // the key light comes from the lamp, straight down, so the shadows are the lamp's (over the whole cupboard)
         set(f.keyDir,0,1,0);set(f.key,.012f,.014f,.025f);set(f.ambient,.004f,.0045f,.009f);
-        f.shadowSpan=4.8f;set(f.shadowAt,0,.6f,1.5f);
+        f.shadowSpan=5.2f;set(f.shadowAt,0,.6f,2.2f);
         f.bloom=.42f+.22f*Math.min(1,best/3)+(ssr?.06f:0);f.exposure=1.05f;f.motes=1;
     }
     static float dist(float[] a,float[] b){float x=a[0]-b[0],y=a[1]-b[1],z=a[2]-b[2];return (float)Math.sqrt(x*x+y*y+z*z);}
