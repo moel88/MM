@@ -59,8 +59,15 @@ public final class GachaRules {
     public static boolean tooSoon(long now,long[] last,int n){return now-last[0]<ASK_GAP||n>0&&now-last[1]<PULL_GAP;}
     /** A player's last request and pull, before any. */
     public static long[] never(){return new long[]{Long.MIN_VALUE/2,Long.MIN_VALUE/2};}
-    /** The stand an SSR gives now (user request: only SSR has a reward, Kageno; R and SR have none yet). */
+    /** The stand an SSR gives now (user request: Kageno). */
     public static final String SSR_STAND="kageno";
+    /** How many Rokakaka a pull gives (user request, 2.41.0: every R is a Rokakaka for now; SR has no reward yet). */
+    public static int fruits(List<Grade> grades){int n=0;for(var g:grades)if(g==Grade.R)n++;return n;}
+    /**
+     * How many more of an item stacking to {@code max} fit in an inventory whose slots hold {@code held} of it already
+     * (0 for an empty slot, -1 for anything else).
+     */
+    public static int room(int[] held,int max){int n=0;for(int h:held)if(h>=0)n+=Math.max(0,max-h);return n;}
     /** Pulling needs no stand equipped (user request). */
     public static boolean canPull(String stand){return "none".equals(stand);}
 }

@@ -60,6 +60,9 @@ init = build / 'shots.gradle'
 extra = ''.join(f', "{a}"' for a in os.environ.get('GACHA_SHOTS_JVM', '').split())
 # GACHA_SHOTS_EVERY sets the least time between saved frames in ticks (default 0.15; 1/3 is what 60 fps needs)
 extra += f', "-Dbotand.shots.every={os.environ.get("GACHA_SHOTS_EVERY", "0.15")}"'
+# GACHA_SHOTS_SCENE_ONLY=1 stops each pull at its results (a quick look at the scene)
+if os.environ.get('GACHA_SHOTS_SCENE_ONLY'):
+    extra += ', "-Dbotand.shots.sceneOnly=true"'
 if audio:
     extra += ', "-Dbotand.shots.audio=true"'
 if fast_sound:

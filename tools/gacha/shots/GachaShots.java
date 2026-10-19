@@ -36,7 +36,8 @@ import java.util.function.Consumer;
  * Visual QA of the gacha (2.39.0, 2.40.0), not shipped: a flat world on the dedicated-map rules, then each entry of
  * -Dbotand.gacha.list runs as a player would through the real screens, clicking the real buttons, and every rendered
  * frame is saved as OUT/ENTRY/INDEX_TICKS.png on the entry's own clock (ticks, smooth between ticks).
- * MENU: the menu's dock, the 뽑기 button, the banner, the buttons hovered, the details. STAND: the gacha with a stand
+ * MENU: the menu's dock, the 뽑기 button, the banner, the buttons hovered, the details. FRUIT (2.41.0): the Rokakaka's
+ * 3D model held in first and third person, dropped on the ground and in the inventory. STAND: the gacha with a stand
  * equipped. R1, SR1, SSR1: a single pull whose count makes that grade likely (R) or certain (SR, SSR). TEN: a ten-pull
  * with an SR certain on its 4th pull and an SSR on its 6th; TENR: one with an SR certain on its 4th and no SSR due.
  * The server rolls from a seed per entry (QaRolls), so every run of an entry pulls the same grades.
@@ -119,6 +120,8 @@ public final class GachaShots implements ClientModInitializer {
     /** Off every control (the top of the art). */
     private void away(){cursor(mc.getWindow().getScaledWidth()*.45,mc.getWindow().getScaledHeight()*.3);}
     private static final int LEAD=30;
+    /** A pull's end until its results come (then set from them). */
+    private static final int WAIT=4000;
     private boolean marked;
 
     private void tick()throws Exception{
@@ -150,6 +153,7 @@ public final class GachaShots implements ClientModInitializer {
                     current=queue.poll();index=0;lastSaved=-1;mc.setScreen(null);QaRolls.reseed(current);
                     switch(current){
                         case "STAND"->stand("kageno");
+                        case "FRUIT"->{stand("none");server(p->{p.getInventory().setStack(p.getInventory().selectedSlot,new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA,3));p.currentScreenHandler.sendContentUpdates();});}
                         case "R1"->{stand("none");count(0,0);}
                         case "SR1"->{stand("none");count(0,9);}
                         case "SSR1"->{stand("none");count(99,0);}
@@ -158,7 +162,7 @@ public final class GachaShots implements ClientModInitializer {
                         default->stand("none");
                     }
                 }
-                if(age>=LEAD){base=ticked;end=switch(current){case "MENU"->330;case "STAND"->100;default->900;};log.append(current).append(" at ").append(base).append('\n');phase=4;age=0;
+                if(age>=LEAD){base=ticked;end=switch(current){case "MENU"->330;case "STAND"->100;case "FRUIT"->220;default->WAIT;};log.append(current).append(" at ").append(base).append('\n');phase=4;age=0;
                     if(!current.equals("MENU"))GachaClient.open();else MenuClient.open();}
             }
             case 4->{
@@ -178,21 +182,37 @@ public final class GachaShots implements ClientModInitializer {
                     if(age==284)away();
                 }
                 if(current.equals("STAND")){if(age==40)hover("pullOne");if(age==60)hover("pullTen");}
+                if(current.equals("FRUIT"))fruit();
                 if(current.endsWith("1")||current.startsWith("TEN")){
                     String button=current.startsWith("TEN")?"pullTen":"pullOne";
                     if(age==4)away();
                     if(age==24)hover(button);
                     if(age==36)click(button);
                     if(age==40)away();
+                    // a ten-pull's results one card at a time (2.41.0): each held a moment once it has turned, then a click
+                    // on to the next, as a player would; after the tenth, all ten together
+                    if(current.startsWith("TEN")&&mc.currentScreen instanceof GachaScreen s&&String.valueOf(stageOf(s)).equals("RESULT")){
+                        var gl=(java.util.List<?>)grades(s);int shown=results("shown").getInt(null);
+                        float since=screenClock(s)-field(s,"resultAt")-results("shownAt").getFloat(null);
+                        if(shown<gl.size()){
+                            String g=String.valueOf(gl.get(shown));
+                            float by=g.equals("SSR")?GachaResultsTimes.SSR_TURN+GachaResultsTimes.SPLASH_DONE:GachaResultsTimes.CARD_SHOWN,hold=g.equals("SSR")?40:g.equals("SR")?26:18;
+                            if(since>=by+hold){double x=mc.getWindow().getScaledWidth()*.5,y=mc.getWindow().getScaledHeight()*.62;cursor(x,y);s.mouseClicked(x,y,0);
+                                log.append("  card ").append(shown+1).append(' ').append(g).append(" next t=").append(String.format(Locale.ROOT,"%.2f",clock())).append('\n');}
+                        }else if(end==WAIT+1){end=(int)t+(int)GachaResultsTimes.ALL_DONE+70;log.append("  all ten at ").append(String.format(Locale.ROOT,"%.2f",t)).append('\n');}
+                    }
                     // the scene, then the results until all is out and a while after
-                    if(end==900&&mc.currentScreen instanceof GachaScreen s&&String.valueOf(stageOf(s)).equals("RESULT")){
+                    if(end==WAIT&&mc.currentScreen instanceof GachaScreen s&&String.valueOf(stageOf(s)).equals("RESULT")){
                         var grades=String.valueOf(grades(s));
-                        int hold=current.startsWith("TEN")?(grades.contains("SSR")?170:120):grades.contains("SSR")?110:90;
-                        end=(int)t+hold;log.append("  results at ").append(String.format(Locale.ROOT,"%.2f",t)).append(' ').append(grades).append(" stand=").append(ProgressClient.profile.stand()).append('\n');
+                        int hold=grades.contains("SSR")?110:90;
+                        // (a ten-pull ends once its cards are through: above)
+                        end=current.startsWith("TEN")?WAIT+1:(int)t+hold;
+                        // -Dbotand.shots.sceneOnly: just the scene (quick looks while making it)
+                        if(Boolean.getBoolean("botand.shots.sceneOnly"))end=(int)t+4;log.append("  results at ").append(String.format(Locale.ROOT,"%.2f",t)).append(' ').append(grades).append(" stand=").append(ProgressClient.profile.stand()).append('\n');
                         log.append("  scene ").append(current).append(' ').append(String.format(Locale.ROOT,"%.4f %.4f",field(s,"sceneAt"),field(s,"resultAt"))).append('\n');
                         // R1 films an R: a count with no guarantee gives one 94% of the time; another roll films the R
                         if(current.equals("R1")&&!grades.equals("[R]")&&retries++<4){log.append("  not an R: again\n");queue.addFirst("R1");end=(int)t+2;redo=true;}}
-                    if(end<900&&age%20==0&&mc.currentScreen instanceof GachaScreen s&&t>end-50)hover("okButton");
+                    if(end<WAIT&&age%20==0&&mc.currentScreen instanceof GachaScreen s&&t>end-50)hover("okButton");
                 }
                 if(t>end+2){
                     log.append(current).append(" frames ").append(index).append(" dropped ").append(dropped).append('\n');dropped=0;
@@ -202,6 +222,32 @@ public final class GachaShots implements ClientModInitializer {
                 }
             }
         }
+    }
+    /** FRUIT: first person holding it, the third person from the front, one dropped on the ground, the inventory. The
+     *  mod's orbit camera owns the view (BotandCamera sets the perspective from its distance every frame), so the views
+     *  are set through its state: distance 0 is first person, yaw 0 puts the camera in front of a player facing north. */
+    private void fruit(){
+        var cam=dev.sangwoo.celestialfall.client.BotandCamera.STATE;
+        if(age==1){mc.setScreen(null);view(cam,0,180,12);mc.player.setYaw(180);mc.player.setPitch(12);mc.player.setHeadYaw(180);mc.player.setBodyYaw(180);}
+        if(age==60)view(cam,2.4,0,8);
+        if(age==120){view(cam,0,180,48);mc.player.setPitch(48);
+            server(p->{var e=new net.minecraft.entity.ItemEntity(p.getServerWorld(),p.getX(),p.getY()+.2,p.getZ()-1.6,new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA));
+                e.setPickupDelay(32767);e.setVelocity(0,0,0);p.getServerWorld().spawnEntity(e);});}
+        // (the inventory opens from the third person: the mod keeps the player out of its preview in first person)
+        if(age==170){view(cam,dev.sangwoo.celestialfall.combat.OrbitCameraState.DEFAULT_DISTANCE,180,14);mc.player.setPitch(0);mc.setScreen(new net.minecraft.client.gui.screen.ingame.InventoryScreen(mc.player));}
+        if(age==218){mc.setScreen(null);mc.player.setPitch(0);view(cam,dev.sangwoo.celestialfall.combat.OrbitCameraState.DEFAULT_DISTANCE,180,14);
+            server(p->{p.getInventory().clear();p.currentScreenHandler.sendContentUpdates();for(var e:p.getServerWorld().getEntitiesByClass(net.minecraft.entity.ItemEntity.class,p.getBoundingBox().expand(8),x->true))e.discard();});}
+    }
+    private static void view(dev.sangwoo.celestialfall.combat.OrbitCameraState cam,double distance,float yaw,float pitch){
+        cam.targetDistance=cam.distance=cam.collisionDistance=distance;cam.yaw=yaw;cam.pitch=pitch;
+    }
+    /** The results' own clock and fields (the card on show), as the screen keeps them. */
+    private static float screenClock(GachaScreen s)throws Exception{var f=GachaScreen.class.getDeclaredField("ticks");f.setAccessible(true);return f.getInt(s)+MinecraftClient.getInstance().getTickDelta();}
+    private static java.lang.reflect.Field results(String name)throws Exception{var f=Class.forName("dev.sangwoo.celestialfall.client.gacha.GachaResults").getDeclaredField(name);f.setAccessible(true);return f;}
+    /** The results' beats (GachaResults keeps them package-private). */
+    private static final class GachaResultsTimes {
+        static final float SPLASH_DONE=read("SPLASH_DONE"),CARD_SHOWN=read("CARD_SHOWN"),SSR_TURN=read("SSR_TURN"),ALL_DONE=read("ALL_DONE");
+        private static float read(String n){try{return results(n).getFloat(null);}catch(Exception e){throw new IllegalStateException(e);}}
     }
     private static Object stageOf(GachaScreen s)throws Exception{var m=GachaScreen.class.getDeclaredMethod("stage");m.setAccessible(true);return m.invoke(s);}
     private static float field(GachaScreen s,String name)throws Exception{var f=GachaScreen.class.getDeclaredField(name);f.setAccessible(true);return f.getFloat(s);}

@@ -3,11 +3,13 @@ package dev.sangwoo.celestialfall.gacha;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.sangwoo.celestialfall.CelestialFall;
+import dev.sangwoo.celestialfall.commerce.CommerceRegistry;
 import dev.sangwoo.celestialfall.map.MapGate;
 import dev.sangwoo.celestialfall.progression.ProgressManager;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.*;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -18,8 +20,9 @@ import static net.minecraft.server.command.CommandManager.*;
 
 /**
  * The stand gacha on the server (user request, 2.39.0). A client asks for its count (0 pulls) or for 1 or 10 pulls; the
- * server checks the player may pull (on the dedicated map, out of combat and cutscenes, no stand equipped), rolls, keeps
- * the new count, equips Kageno on an SSR and answers with what was rolled. Pulls are free for now.
+ * server checks the player may pull (on the dedicated map, out of combat and cutscenes, no stand equipped, room for the
+ * Rokakaka that could come), rolls, keeps the new count, equips Kageno on an SSR, gives a Rokakaka for every R (2.41.0)
+ * and answers with what was rolled. Pulls are free for now.
  */
 public final class GachaServer {
     public static final Identifier REQUEST=CelestialFall.id("gacha_request_v1"),RESULT=CelestialFall.id("gacha_result_v1");
@@ -47,13 +50,25 @@ public final class GachaServer {
         if(!ProgressManager.canChange(p))return new Outcome(List.of(),count,false,"전투나 컷씬이 끝난 뒤 뽑을 수 있어요.");
         var profile=ProgressManager.profile(p);
         if(!GachaRules.canPull(profile.stand()))return new Outcome(List.of(),count,false,"장착한 스탠드가 없어야 뽑을 수 있어요.");
+        // every R is a Rokakaka: room for as many as could come, checked before rolling (rewards never fall to the ground)
+        if(fruitRoom(p)<n)return new Outcome(List.of(),count,false,"로카카카를 받을 인벤토리 자리가 없어요.");
         var result=GachaRules.pulls(count,n,()->RANDOM.nextInt(GachaRules.ODDS));
         state.set(p.getUuid(),result.after());
         boolean granted=result.any(GachaRules.Grade.SSR);
         if(granted)ProgressManager.set(p,profile.withStand(GachaRules.SSR_STAND));
-        CelestialFall.LOGGER.info("Gacha: {} ({}) pulled {}: {}; SSR certain in {}, SR in {}, {} pulls in all{}",p.getName().getString(),p.getUuid(),n,
-            result.grades(),result.after().toSsr(),result.after().toSr(),result.after().pulls(),granted?"; Kageno equipped":"");
-        return new Outcome(result.grades(),result.after(),granted,granted?"SSR! 카게노를 얻었어요.":"");
+        int fruits=GachaRules.fruits(result.grades());
+        if(fruits>0)p.getInventory().offerOrDrop(new ItemStack(CommerceRegistry.ROKAKAKA,fruits));
+        CelestialFall.LOGGER.info("Gacha: {} ({}) pulled {}: {}; SSR certain in {}, SR in {}, {} pulls in all{}{}",p.getName().getString(),p.getUuid(),n,
+            result.grades(),result.after().toSsr(),result.after().toSr(),result.after().pulls(),granted?"; Kageno equipped":"",fruits>0?"; "+fruits+" Rokakaka":"");
+        String message=granted?"SSR! 카게노를 얻었어요.":"";
+        if(fruits>0)message+=(message.isEmpty()?"":" ")+"로카카카 "+fruits+"개를 받았어요.";
+        return new Outcome(result.grades(),result.after(),granted,message);
+    }
+    /** How many more Rokakaka the player's main inventory holds. */
+    private static int fruitRoom(ServerPlayerEntity p){
+        var inv=p.getInventory();var fruit=new ItemStack(CommerceRegistry.ROKAKAKA);int[] held=new int[36];
+        for(int i=0;i<36;i++){var s=inv.getStack(i);held[i]=s.isEmpty()?0:ItemStack.canCombine(s,fruit)?s.getCount():-1;}
+        return GachaRules.room(held,fruit.getMaxCount());
     }
 
     private static void request(ServerPlayerEntity p,int serial,int n){

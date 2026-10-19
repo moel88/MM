@@ -32,7 +32,7 @@ public final class GachaCinema implements AutoCloseable {
     public static final class Frame {
         public final float[] eye=new float[3],target=new float[3];public float fov=34,focus=2,time;
         public final float[] bones=new float[7*12];
-        public boolean chair,cupboard,wall,held;
+        public boolean chair,cupboard,wall,held,stool;
         public int glasses;
         public final float[][] place=new float[MAX_GLASSES][12],accent=new float[MAX_GLASSES][3];
         public final float[] glow=new float[MAX_GLASSES],hold=new float[MAX_GLASSES];
@@ -128,7 +128,7 @@ public final class GachaCinema implements AutoCloseable {
                 case 4->meshes.put("bomi",upload(CinemaAssets.mesh("bomi")));
                 case 5->meshes.put("prop",upload(CinemaAssets.mesh("prop")));
                 case 6->meshes.put("glass",upload(CinemaAssets.mesh("glass")));
-                case 7->{meshes.put("floor",upload(floor()));meshes.put("chair",upload(chair()));meshes.put("cupboard",upload(cupboard()));meshes.put("wall",upload(wall()));meshes.put("motes",upload(motes(160,11,2.2f,2.6f,-1.2f,3.6f)));meshes.put("hall",upload(motes(240,29,6.5f,11.5f,-2.5f,5.6f)));
+                case 7->{meshes.put("floor",upload(floor()));meshes.put("chair",upload(chair()));meshes.put("cupboard",upload(cupboard()));meshes.put("stool",upload(stool()));meshes.put("wall",upload(wall()));meshes.put("motes",upload(motes(160,11,2.2f,2.6f,-1.2f,3.6f)));meshes.put("hall",upload(motes(200,29,3.6f,6.2f,-2.5f,5.6f)));
                     meshes.put("beam",upload(beam()));meshes.put("circle",upload(circle()));meshes.put("sparks",upload(sparks(90)));}
                 case 8->shadow=target(2048,2048,true,true);
             }
@@ -275,6 +275,7 @@ public final class GachaCinema implements AutoCloseable {
         if(f.wall&&!shadowPass)meshes.get("wall").draw();
         if(f.chair)meshes.get("chair").draw();
         if(f.cupboard)meshes.get("cupboard").draw();
+        if(f.stool)meshes.get("stool").draw();
         texture(0,skin);meshes.get("bomi").draw();
         texture(0,atlas);
         for(int i=0;i<Math.min(MAX_GLASSES,f.glasses);i++){
@@ -327,12 +328,13 @@ public final class GachaCinema implements AutoCloseable {
         return b.mesh();
     }
     /**
-     * The cupboard (찬장), built huge (user requests: 2.40.0 a bigger cupboard for bigger hourglasses, 1.55 times the
-     * 2.39.0 one; 2.40.1 three times that again, about 11 m to its crown): a closed cabinet below, two open shelves above
-     * for the ten hourglasses, facing -Z toward Bomi; every measure the 2.39.0 one's times {@link #CUPBOARD_SCALE}. It stands
-     * a little further from her chair than before, clear of the camera in front of her.
+     * The cupboard (찬장), built big (user requests: 2.40.0 a bigger cupboard for bigger hourglasses, 1.55 times the
+     * 2.39.0 one; 2.40.1 three times that again; 2.41.0 back down to 1.5 times the 2.40.0 one, about 5.4 m to its crown):
+     * a closed cabinet below, two open shelves above for the ten hourglasses, facing -Z toward Bomi; every measure the
+     * 2.39.0 one's times {@link #CUPBOARD_SCALE}. It stands a little further from her chair than before, room for her to
+     * walk back from it.
      */
-    public static final float CUPBOARD_SCALE=1.55f*3,CUPBOARD_Z=3.6f,CUPBOARD_DEPTH=.46f*CUPBOARD_SCALE,
+    public static final float CUPBOARD_SCALE=1.55f*1.5f,CUPBOARD_Z=3.6f,CUPBOARD_DEPTH=.46f*CUPBOARD_SCALE,
         SHELF_LOW=.9f*CUPBOARD_SCALE,SHELF_HIGH=1.45f*CUPBOARD_SCALE,SHELF_X=.34f*CUPBOARD_SCALE,CUPBOARD_TOP=2.0f*CUPBOARD_SCALE;
     static CinemaAssets.Mesh cupboard(){
         var b=new Builder();float[] wood=rgb(0x4b2f21),dark=rgb(0x2a1a12),back=rgb(0x1e1416),gold=rgb(0xd7b26a),panel=rgb(0x3d2619);
@@ -359,6 +361,24 @@ public final class GachaCinema implements AutoCloseable {
         b.box(-.09f*k,top+.19f*k,z0+.03f*k,.09f*k,top+.33f*k,z0+.06f*k,dark,0);b.box(-.06f*k,top+.215f*k,z0+.02f*k,.06f*k,top+.305f*k,z0+.03f*k,gold,2);
         // pilasters with gold capitals at the hutch's front edges
         for(float x:new float[]{x0,x1-.07f*k}){b.box(x,low,z0+.03f*k,x+.07f*k,top,z0+.07f*k,dark,0);b.box(x-.005f*k,top-.06f*k,z0+.025f*k,x+.075f*k,top-.035f*k,z0+.075f*k,gold,2);}
+        return b.mesh();
+    }
+    /**
+     * The step stool Bomi stands on to shelve the last hourglass (2.41.0): two wooden steps before the cupboard's last
+     * place (the lower shelf's right end, seen from her chair), clear of its doors' knobs, gold along the treads' edges.
+     */
+    public static final float STOOL_X=-2*SHELF_X,STOOL_BACK=CUPBOARD_Z-.15f,STOOL_STEP=.27f,STOOL_TOP=.74f,STOOL_LOW=.37f,STOOL_HALF=.29f;
+    static CinemaAssets.Mesh stool(){
+        var b=new Builder();float[] wood=rgb(0x5b3a26),dark=rgb(0x33200f),gold=rgb(0xd7b26a);
+        float x0=STOOL_X-STOOL_HALF,x1=STOOL_X+STOOL_HALF,z1=STOOL_BACK,zm=STOOL_BACK-STOOL_STEP,z0=STOOL_BACK-2*STOOL_STEP,side=.045f;
+        // the stringers either side, stepped
+        for(float x:new float[]{x0,x1-side}){b.box(x,0,zm,x+side,STOOL_TOP-.04f,z1,dark,0);b.box(x,0,z0,x+side,STOOL_LOW-.04f,zm,dark,0);}
+        // treads, risers and a back
+        b.box(x0,STOOL_TOP-.04f,zm-.02f,x1,STOOL_TOP,z1,wood,0);b.box(x0,STOOL_LOW-.04f,z0-.02f,x1,STOOL_LOW,zm,wood,0);
+        b.box(x0+side,STOOL_LOW,zm-.015f,x1-side,STOOL_TOP-.04f,zm,wood,0);b.box(x0+side,.04f,z0-.005f,x1-side,STOOL_LOW-.04f,z0+.01f,wood,0);
+        b.box(x0+side,.04f,z1-.02f,x1-side,STOOL_TOP-.04f,z1,dark,0);
+        // gold along the treads' front edges
+        b.box(x0,STOOL_TOP-.035f,zm-.03f,x1,STOOL_TOP-.01f,zm-.018f,gold,2);b.box(x0,STOOL_LOW-.035f,z0-.03f,x1,STOOL_LOW-.01f,z0-.018f,gold,2);
         return b.mesh();
     }
     /** The spotlight's beam: an open cone, its apex at (0, 1, 0) over its unit circle on the floor (bone 1 sets its size). */

@@ -1,11 +1,15 @@
-"""Synthesises the gacha's sounds (user request, 2.40.0: holy and luxurious, every one of them).
+"""Synthesises the gacha's sounds (user requests: 2.40.0 holy and luxurious, every one of them; 2.41.0 remade, they were
+too loud and noisy: calm, clear and quiet).
 
-usage: python3 -I tools/gacha/make_sounds.py OUT_DIR
+usage: python3 -I tools/gacha/make_sounds.py OUT_DIR [NAME,...]
 
 Everything is made here from first principles, so there are no samples to license: a choir singing "ah" (many detuned
 voices with vibrato through vowel formants), glass and church bells (their inharmonic partials), a harp (plucked
-strings, Karplus-Strong), sparkles, soft booms, whooshes shaped in time and frequency, and a cathedral's reverb. The
-music sits in D major. Each sound is written as OGG Vorbis (48 kHz stereo) by ffmpeg, which must be on the PATH.
+strings, Karplus-Strong), a soft pad, a few sparkles, and a small hall's reverb; for Bomi's opening of the ten-pull, a
+glass set down on wood, steps, footfalls on stone, a breath of relief and a cushion. 2.41.0 dropped the risers, cymbal
+washes, whooshes, booms and brass, shortened the reverb, softened every attack and set each sound to a loudness well
+below 2.40.0's (EBU R 128 / BS.1770, its own target in LOUDNESS). The music sits in D major. Each sound is written as
+OGG Vorbis (48 kHz stereo) by ffmpeg, which must be on the PATH.
 """
 import os
 import subprocess
@@ -86,37 +90,6 @@ def band(f, centre, width):
     """A soft band-pass gain around {centre} Hz, {width} octaves wide."""
     oct_ = np.log2(np.maximum(f, 1) / np.maximum(centre, 1))
     return np.exp(-(oct_ / width) ** 2)
-
-
-def whoosh(d, f0, f1, width=0.9, peak=0.5, seed=0, curve=1.0):
-    """Air rushing past: a band of noise sliding from f0 to f1 Hz, swelling to its loudest at {peak} of the way."""
-    def mask(t, f):
-        k = np.clip(t / d, 0, 1) ** curve
-        c = f0 * (f1 / f0) ** k
-        env = np.where(k < peak, (k / peak) ** 2, ((1 - k) / (1 - peak)) ** 1.5)
-        return band(f, c, width) * env
-    return shaped_noise(d, mask, seed) * 0.35
-
-
-def riser(d, seed=0):
-    """A cymbal swelling up (a reversed crash): bright noise growing until the end."""
-    def mask(t, f):
-        k = np.clip(t / d, 0, 1)
-        hp = 1 / (1 + (2500 / np.maximum(f, 1)) ** 2)
-        tilt = (np.maximum(f, 1) / 6000) ** (-0.3)
-        return hp * tilt * k ** 3
-    x = shaped_noise(d, mask, seed) * 0.25
-    return x * fade(x.shape[1], 0.01, 0.015)
-
-
-def crash(d, seed=0):
-    """A soft cymbal wash: bright noise fading over {d} seconds, the highs first."""
-    def mask(t, f):
-        hp = 1 / (1 + (1800 / np.maximum(f, 1)) ** 2)
-        decay = np.exp(-t / (0.35 + 1.4 * (3000 / np.maximum(f, 3000))))
-        return hp * decay * (np.maximum(f, 1) / 6000) ** (-0.25)
-    x = shaped_noise(d, mask, seed) * 0.3
-    return x * fade(x.shape[1], 0.002, 0.2)
 
 
 # ---- tones ----
@@ -238,21 +211,6 @@ def sparkles(d, count, notes, seed=0, spread=1.0, decay=(.06, .35), start=0.0, a
     return out * 0.12
 
 
-def boom(d, f0=58, f1=30, decay=1.1, thump=0.4, seed=0):
-    """A deep soft impact: a sine falling in pitch, a felt-mallet thump at its start."""
-    n = int(d * SR)
-    t = np.arange(n) / SR
-    f = f1 + (f0 - f1) * np.exp(-t / 0.18)
-    x = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / decay)
-    x = np.tanh(x * 1.6) / np.tanh(1.6)
-    rng = np.random.default_rng(seed)
-    s = rng.standard_normal(n) * np.exp(-t / 0.03)
-    b, a = signal.butter(2, 280 / (SR / 2))
-    x += signal.lfilter(b, a, s) * thump
-    x *= fade(n, 0.003, 0.1)
-    return x * 0.5
-
-
 def pad(notes, d, attack=0.8, release=1.5, seed=0):
     """A soft warm pad under the choir: detuned saws, filtered dark."""
     rng = np.random.default_rng(seed)
@@ -268,52 +226,6 @@ def pad(notes, d, attack=0.8, release=1.5, seed=0):
     b, a = signal.butter(2, 900 / (SR / 2))
     out = signal.lfilter(b, a, out, axis=1)
     return out * fade(n, attack, release)[None, :] * 0.05 / len(notes)
-
-
-def brass(notes, d, attack=0.06, release=0.8, seed=0, open_=1.0):
-    """A warm brass chord: saws whose filter opens with the attack, a slow vibrato."""
-    rng = np.random.default_rng(seed)
-    n = int(d * SR)
-    t = np.arange(n) / SR
-    out = np.zeros((2, n))
-    for f0 in notes:
-        for k in range(3):
-            det = 2 ** (rng.normal(0, 5) / 1200)
-            vib = 1 + 0.003 * np.sin(2 * np.pi * 5.2 * t + rng.uniform(0, 6)) * np.clip((t - .3) / .5, 0, 1)
-            ph = np.cumsum(f0 * det * vib) / SR
-            saw = 2 * (ph % 1.0) - 1
-            out += pan(saw, rng.uniform(-.5, .5))
-    # the brightness: a low-pass whose corner follows the attack's swell
-    env = 1 - np.exp(-t / attack)
-    corner = 400 + 3200 * open_ * env * np.exp(-t / 2.5)
-    y = np.zeros_like(out)
-    blocks = 64
-    edges = np.linspace(0, n, blocks + 1).astype(int)
-    zi = None
-    for i in range(blocks):
-        c = float(np.clip(corner[edges[i]:edges[i + 1]].mean(), 200, 18000))
-        b, a = signal.butter(2, c / (SR / 2))
-        if zi is None:
-            zi = np.zeros((2, max(len(a), len(b)) - 1))
-        y[:, edges[i]:edges[i + 1]], zi = signal.lfilter(b, a, out[:, edges[i]:edges[i + 1]], axis=1, zi=zi)
-    return y * fade(n, attack, release)[None, :] * 0.09 / np.sqrt(len(notes))
-
-
-def timpani_roll(d, f0=73.4, seed=0):
-    """A timpani roll swelling: many soft mallet strokes on a low drum."""
-    rng = np.random.default_rng(seed)
-    out = np.zeros(int(d * SR))
-    at = 0.0
-    while at < d - 0.02:
-        n = int(min(0.6, d - at) * SR)
-        t = np.arange(n) / SR
-        g = (at / d) ** 1.5 * rng.uniform(.6, 1)
-        x = (np.sin(2 * np.pi * f0 * t) + .5 * np.sin(2 * np.pi * f0 * 1.5 * t) + .3 * np.sin(2 * np.pi * f0 * 1.99 * t)) * np.exp(-t / 0.35)
-        s = rng.standard_normal(n) * np.exp(-t / 0.01) * 0.3
-        out[int(at * SR):int(at * SR) + n] += (x + s) * g * fade(n, 0.002, 0.02)
-        at += rng.uniform(0.035, 0.05)
-    b, a = signal.butter(2, 900 / (SR / 2))
-    return signal.lfilter(b, a, out) * 0.18
 
 
 # ---- the cathedral ----
@@ -357,264 +269,374 @@ def hall(x, rt60=3.2, wet=0.35, seed=0, predelay=0.025):
     return out
 
 
-def master(x, peak_db=-1.0, length=None, tail=0.25):
-    """Low rumble taken away, the reverb's inaudible end cut off, a gentle limiter, the peak set, the tail faded so it
-    never clicks."""
-    b, a = signal.butter(2, 28 / (SR / 2), 'high')
-    x = signal.lfilter(b, a, x, axis=1)
-    if length is not None:
-        x = x[:, :int(length * SR)]
-    loud = np.sqrt(np.convolve(np.mean(x ** 2, 0), np.ones(2400) / 2400, 'same'))
-    alive = np.nonzero(loud > loud.max() * 10 ** (-52 / 20))[0]
-    if len(alive):
-        x = x[:, :min(x.shape[1], alive[-1] + int(0.05 * SR))]
-    x = x * fade(x.shape[1], 0.002, min(tail, x.shape[1] / SR * .4))[None, :]
-    peak = np.abs(x).max() + 1e-12
-    target = 10 ** (peak_db / 20)
-    x = x / peak * target * 1.25
-    x = np.tanh(x / target) * target  # soft knee on the loudest peaks
-    x = x / (np.abs(x).max() + 1e-12) * target
-    return x
-
-
 def chord(names):
     return [hz(n) for n in names]
 
 
-# ---- the sounds ----
-def s_open():
-    out = canvas(3.2)
-    gliss = ['D4', 'E4', 'F#4', 'A4', 'B4', 'D5', 'E5', 'F#5', 'A5', 'B5', 'D6', 'E6']
-    for i, nm in enumerate(gliss):
-        place(out, pan(pluck(hz(nm), 2.4, bright=.55, seed=i), -0.6 + 1.2 * i / len(gliss)), 0.02 + i * 0.045, 0.7)
-    place(out, choir(chord(['A3', 'D4', 'F#4', 'A4', 'E5']), 2.8, 'a', attack=0.45, release=1.4, seed=1), 0.15, 0.9)
-    place(out, sparkles(2.4, 26, chord(['D6', 'F#6', 'A6', 'E6']), seed=2, start=0.3), 0.1, 0.9)
-    place(out, bell(hz('D6'), 2.5, seed=3), 0.55, 0.45)
-    return master(hall(out, 3.0, 0.38, 1), -5.5, tail=0.6)
-
-
-def s_hover():
-    out = canvas(0.5)
-    place(out, pan(bell(hz('A6'), 0.4, GLASS, decay=0.08, seed=4, strike=0.01), 0.1), 0, 1.0)
-    return master(hall(out, 1.2, 0.2, 2), -19, length=0.5, tail=0.15)
-
-
-def s_click():
-    out = canvas(1.4)
-    place(out, bell(hz('D6'), 1.2, GLASS, decay=0.45, seed=5), 0, 1.0)
-    place(out, bell(hz('A6'), 0.9, GLASS, decay=0.3, seed=6), 0.012, 0.35)
-    place(out, whoosh(0.18, 1500, 5000, 0.8, 0.3, seed=7), 0, 0.25)
-    return master(hall(out, 1.8, 0.3, 3), -9, length=1.4, tail=0.4)
-
-
-def s_panel():
-    out = canvas(1.3)
-    place(out, whoosh(0.35, 500, 3200, 0.9, 0.6, seed=8), 0, 0.9)
-    place(out, bell(hz('F#6'), 1.0, GLASS, decay=0.35, seed=9), 0.18, 0.45)
-    place(out, bell(hz('A5'), 1.0, GLASS, decay=0.35, seed=10), 0.2, 0.3)
-    return master(hall(out, 1.8, 0.3, 4), -11, length=1.3, tail=0.4)
-
-
-def s_back():
-    out = canvas(1.0)
-    place(out, whoosh(0.3, 3000, 600, 0.9, 0.35, seed=11), 0, 0.9)
-    place(out, bell(hz('A5'), 0.8, GLASS, decay=0.25, seed=12), 0.05, 0.35)
-    return master(hall(out, 1.4, 0.25, 5), -13, length=1.0, tail=0.35)
-
-
-def s_denied():
-    out = canvas(0.8)
-    place(out, bell(hz('E5'), 0.5, GLASS, decay=0.12, bright=.4, seed=13), 0, 0.8)
-    place(out, bell(hz('C5'), 0.5, GLASS, decay=0.14, bright=.4, seed=14), 0.11, 0.8)
-    return master(hall(out, 1.0, 0.18, 6), -14, length=0.8, tail=0.3)
-
-
-def s_pull():
-    out = canvas(2.6)
-    place(out, riser(0.7, seed=15), 0, 0.7)
-    place(out, bell(hz('D6'), 2.0, GLASS, decay=0.8, seed=16), 0.0, 0.9)
-    place(out, bell(hz('A6'), 1.6, GLASS, decay=0.6, seed=17), 0.04, 0.4)
-    place(out, choir(chord(['D4', 'A4', 'D5', 'F#5']), 1.6, 'a', attack=0.25, release=0.9, seed=18, swell=lambda t: np.clip(t / .5, 0, 1) ** 1.5), 0.0, 1.0)
-    place(out, sparkles(1.8, 22, chord(['D6', 'F#6', 'A6']), seed=19, accel=1.0), 0.05, 1.0)
-    place(out, whoosh(0.6, 400, 6000, 1.0, 0.8, seed=20, curve=1.6), 0, 0.5)
-    return master(hall(out, 2.6, 0.38, 7), -6, tail=0.6)
-
-
-def s_one_start():
-    out = canvas(5.2)
-    place(out, boom(2.5, 52, 30, 1.2, seed=21), 0.05, 0.7)
-    place(out, spotlight(), 0.1, 1.0)
-    place(out, choir(chord(['B2', 'F#3', 'B3', 'D4', 'C#5']), 4.6, 'o', attack=1.6, release=1.6, seed=22, breath=0.12), 0.3, 0.75)
-    place(out, pad(chord(['B2', 'F#3', 'D4']), 4.8, 1.2, 1.8, seed=23), 0.1, 1.0)
-    place(out, sparkles(4.5, 18, chord(['B5', 'D6', 'F#6', 'C#6']), seed=24, start=0.8, decay=(.1, .5)), 0.2, 0.6)
-    return master(hall(out, 3.6, 0.42, 8), -7, tail=1.0)
-
-
-def spotlight():
-    """A great lamp switched on far above: a deep clunk and the hum of the light coming up."""
-    out = canvas(2.0)
-    n = int(0.25 * SR)
+# ---- quiet foley for Bomi's opening ----
+def knock(f0, d=0.35, seed=0, ring=1.0):
+    """Something set down on wood: a few damped body modes and a soft contact click."""
+    rng = np.random.default_rng(seed)
+    n = int(d * SR)
     t = np.arange(n) / SR
-    clunk = np.sin(2 * np.pi * 78 * t) * np.exp(-t / 0.05) + 0.6 * np.sin(2 * np.pi * 156 * t) * np.exp(-t / 0.03)
-    rng = np.random.default_rng(25)
-    s = rng.standard_normal(n) * np.exp(-t / 0.012)
-    b, a = signal.butter(2, [300 / (SR / 2), 2500 / (SR / 2)], 'band')
-    clunk += signal.lfilter(b, a, s) * 0.5
-    place(out, clunk * 0.5, 0)
-    hum_t = secs(1.9)
-    hum = (np.sin(2 * np.pi * 110 * hum_t) * .4 + np.sin(2 * np.pi * 220 * hum_t) * .2 + np.sin(2 * np.pi * 330 * hum_t) * .08)
-    hum *= fade(len(hum_t), 0.4, 1.0) * 0.08
-    place(out, hum, 0.05)
-    place(out, whoosh(1.2, 2500, 9000, 1.2, 0.25, seed=26), 0.02, 0.35)
+    x = np.zeros(n)
+    for ratio, a, dec in [(1.0, 1.0, .05), (2.31, .45, .03), (3.93, .2, .018), (5.4, .08, .012)]:
+        x += a * np.exp(-t / (dec * ring)) * np.sin(2 * np.pi * f0 * ratio * t + rng.uniform(0, 6.3))
+    s = rng.standard_normal(n) * np.exp(-t / 0.004)
+    b, a = signal.butter(2, 2200 / (SR / 2))
+    x += signal.lfilter(b, a, s) * 0.35
+    return x * fade(n, 0.0008, 0.05) * 0.5
+
+
+def thud(d=0.3, f0=72, seed=0, soft=1.0):
+    """A soft weight landing: a low thump and a little muffled air."""
+    rng = np.random.default_rng(seed)
+    n = int(d * SR)
+    t = np.arange(n) / SR
+    x = np.sin(2 * np.pi * f0 * t * (1 + 0.25 * np.exp(-t / 0.02))) * np.exp(-t / (0.07 * soft))
+    s = rng.standard_normal(n) * np.exp(-t / (0.035 * soft))
+    b, a = signal.butter(2, 420 / (SR / 2))
+    x += signal.lfilter(b, a, s) * 0.9
+    return x * fade(n, 0.004 * soft, 0.06) * 0.5
+
+
+def footfall(seed=0):
+    """One footfall on polished stone: the heel, soft, then the toe's light tap."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros(int(0.3 * SR))
+    heel = thud(0.2, 95 + rng.uniform(-6, 6), seed=seed, soft=0.6)
+    out[:len(heel)] += heel * 0.8
+    n = int(0.05 * SR)
+    t = np.arange(n) / SR
+    tap = rng.standard_normal(n) * np.exp(-t / 0.006)
+    b, a = signal.butter(2, [1200 / (SR / 2), 3600 / (SR / 2)], 'band')
+    i = int(rng.uniform(0.05, 0.07) * SR)
+    out[i:i + n] += signal.lfilter(b, a, tap) * 0.25
     return out
 
 
-def s_gather():
+def breath(d=0.75, seed=0):
+    """A soft breath out of relief ("휴"): air through the mouth's resonances, swelling and fading."""
+    def mask(t, f):
+        k = np.clip(t / d, 0, 1)
+        env = np.where(k < 0.22, (k / 0.22) ** 1.5, np.exp(-(k - 0.22) / 0.28))
+        voice = band(f, 520, 0.55) * 1.0 + band(f, 1250, 0.5) * 0.55 + band(f, 2600, 0.45) * 0.18
+        return voice * env
+    x = shaped_noise(d, mask, seed)
+    b, a = signal.butter(2, 5000 / (SR / 2))
+    return signal.lfilter(b, a, x, axis=1) * 0.6
+
+
+def cushion(seed=0):
+    """Sitting down on a cushion: a muffled soft thump, a breath of air from it."""
+    out = canvas(0.6)
+    place(out, thud(0.45, 60, seed=seed, soft=2.2), 0, 1.0)
+    def mask(t, f):
+        return band(f, 700, 0.8) * np.exp(-t / 0.12) * np.clip(t / 0.03, 0, 1)
+    place(out, shaped_noise(0.5, mask, seed + 1) * 0.35, 0.01, 1.0)
+    return out
+
+
+def swish(d=0.16, seed=0):
+    """A card turned over: a short, soft rush of air, its highs rolled off."""
+    def mask(t, f):
+        k = np.clip(t / d, 0, 1)
+        return band(f, 1400 + 1600 * k, 0.8) * np.sin(np.pi * k) ** 1.5
+    x = shaped_noise(d, mask, seed)
+    b, a = signal.butter(2, 4500 / (SR / 2))
+    return signal.lfilter(b, a, x, axis=1) * 0.25
+
+
+def soften(x, corner=7000):
+    """Rolls the top off, so nothing in the gacha hisses or glares."""
+    b, a = signal.butter(2, corner / (SR / 2))
+    return signal.lfilter(b, a, x, axis=1)
+
+
+# ---- how loud each sound is (integrated loudness, LUFS; 2.40.0's ran about 8 LU louder) ----
+LOUDNESS = {
+    'hover': -31, 'click': -26, 'panel': -27, 'back': -28, 'denied': -28, 'star': -30, 'result': -24,
+    'open': -24, 'pull': -23, 'one_start': -28, 'gather': -26, 'reveal_r': -22, 'reveal_sr': -21, 'reveal_ssr': -19.5,
+    'ten_start': -29, 'rise': -25, 'light_r': -25, 'light_sr': -23, 'light_ssr': -21, 'whiteout': -26,
+    'card': -25, 'card_sr': -23, 'card_ssr': -21, 'fanfare': -19,
+    'place': -25, 'step': -29, 'foot': -31, 'sit': -28, 'phew': -31,
+}
+CEILING_DB = -8.0
+
+
+def k_weighted(x):
+    b1, a1 = [1.53512485958697, -2.69169618940638, 1.19839281085285], [1, -1.69065929318241, 0.73248077421585]
+    b2, a2 = [1.0, -2.0, 1.0], [1, -1.99004745483398, 0.99007225036621]
+    return signal.lfilter(b2, a2, signal.lfilter(b1, a1, x, axis=1), axis=1)
+
+
+def loudness(x):
+    """Integrated loudness in LUFS (ITU-R BS.1770: K-weighted, 400 ms blocks, gated)."""
+    y = k_weighted(x)
+    n, hop = int(0.4 * SR), int(0.1 * SR)
+    if y.shape[1] < n:
+        y = np.pad(y, ((0, 0), (0, n - y.shape[1])))
+    z = np.array([np.mean(y[:, i:i + n] ** 2, axis=1).sum() for i in range(0, y.shape[1] - n + 1, hop)])
+    l = -0.691 + 10 * np.log10(z + 1e-15)
+    g = z[l > -70]
+    if len(g) == 0:
+        return -99.0
+    rel = -0.691 + 10 * np.log10(g.mean()) - 10
+    g = z[(l > -70) & (l > rel)]
+    return -0.691 + 10 * np.log10(g.mean())
+
+
+def finish(x, name, tail=0.3, length=None):
+    """Low rumble and the highs' glare taken off, the reverb's inaudible end cut, faded out, then set to its loudness
+    (LOUDNESS) with its peaks held under CEILING_DB."""
+    b, a = signal.butter(2, 40 / (SR / 2), 'high')
+    x = soften(signal.lfilter(b, a, x, axis=1))
+    if length is not None:
+        x = x[:, :int(length * SR)]
+    loud = np.sqrt(np.convolve(np.mean(x ** 2, 0), np.ones(2400) / 2400, 'same'))
+    alive = np.nonzero(loud > loud.max() * 10 ** (-48 / 20))[0]
+    if len(alive):
+        x = x[:, :min(x.shape[1], alive[-1] + int(0.05 * SR))]
+    x = x * fade(x.shape[1], 0.002, min(tail, x.shape[1] / SR * .4))[None, :]
+    x = x * 10 ** ((LOUDNESS[name] - loudness(x)) / 20)
+    ceiling = 10 ** (CEILING_DB / 20)
+    if np.abs(x).max() > ceiling:
+        x = np.tanh(x / ceiling) * ceiling
+    return x
+
+
+def harp(names, at, gap, out, gain=0.6, bright=0.4, seed=0, d=2.0, spread=0.5):
+    """A harp's notes {names}, one after another {gap} s apart from {at}, panned across."""
+    for i, nm in enumerate(names):
+        p = -spread + 2 * spread * i / max(1, len(names) - 1)
+        place(out, pan(pluck(hz(nm), d, bright=bright, seed=seed + i), p), at + i * gap, gain)
+    return out
+
+
+# ---- the sounds (2.41.0: calm, clear and quiet) ----
+def s_open():
     out = canvas(2.6)
-    place(out, riser(2.2, seed=27), 0, 0.9)
-    place(out, choir(chord(['D4', 'A4', 'D5', 'E5', 'F#5']), 2.3, 'a', attack=1.6, release=0.15, seed=28,
-                     swell=lambda t: np.clip(t / 2.2, 0, 1) ** 2), 0, 0.9)
-    place(out, sparkles(2.2, 40, chord(['D6', 'E6', 'F#6', 'A6']), seed=29, accel=2.0, decay=(.04, .2)), 0, 1.0)
-    return master(hall(out, 2.2, 0.3, 9), -8, length=2.5, tail=0.3)
+    harp(['D4', 'F#4', 'A4', 'D5', 'E5'], 0.0, 0.07, out, 0.6, seed=1)
+    place(out, pad(chord(['D3', 'A3', 'F#4']), 2.2, 0.5, 1.2, seed=2), 0.05, 0.8)
+    place(out, bell(hz('A5'), 1.8, GLASS, decay=0.6, seed=3, strike=0.0), 0.36, 0.25)
+    return finish(hall(out, 1.8, 0.25, 1), 'open', tail=0.6)
+
+
+def s_hover():
+    out = canvas(0.35)
+    place(out, pan(bell(hz('A6'), 0.3, GLASS, decay=0.05, seed=4, strike=0.0), 0.1), 0, 1.0)
+    return finish(hall(out, 0.8, 0.12, 2), 'hover', tail=0.12, length=0.35)
+
+
+def s_click():
+    out = canvas(0.8)
+    place(out, bell(hz('D6'), 0.7, GLASS, decay=0.18, seed=5, strike=0.0), 0, 1.0)
+    place(out, knock(820, 0.12, seed=6), 0, 0.25)
+    return finish(hall(out, 1.0, 0.18, 3), 'click', tail=0.3, length=0.8)
+
+
+def s_panel():
+    out = canvas(1.0)
+    harp(['A5', 'D6'], 0.0, 0.07, out, 0.55, seed=7, d=1.0, spread=0.3)
+    place(out, swish(0.18, seed=8), 0, 0.5)
+    return finish(hall(out, 1.2, 0.2, 4), 'panel', tail=0.35)
+
+
+def s_back():
+    out = canvas(0.9)
+    harp(['D6', 'A5'], 0.0, 0.07, out, 0.55, seed=9, d=0.9, spread=0.3)
+    place(out, swish(0.16, seed=10), 0, 0.4)
+    return finish(hall(out, 1.1, 0.18, 5), 'back', tail=0.3)
+
+
+def s_denied():
+    out = canvas(0.6)
+    place(out, knock(330, 0.25, seed=11, ring=1.4), 0, 0.9)
+    place(out, knock(262, 0.25, seed=12, ring=1.4), 0.12, 0.9)
+    return finish(hall(out, 0.8, 0.15, 6), 'denied', tail=0.2)
+
+
+def s_pull():
+    out = canvas(2.2)
+    place(out, bell(hz('D6'), 1.8, GLASS, decay=0.55, seed=13, strike=0.0), 0.0, 0.7)
+    harp(['A4', 'D5', 'F#5', 'A5'], 0.02, 0.05, out, 0.5, seed=14, d=1.6)
+    place(out, choir(chord(['D4', 'A4', 'F#5']), 1.5, 'a', attack=0.35, release=0.9, seed=15, breath=0.03), 0.0, 0.6)
+    return finish(hall(out, 1.8, 0.25, 7), 'pull', tail=0.6)
+
+
+def lamp_click(seed=0):
+    """A lamp switched on far above: a small, soft click."""
+    out = canvas(0.4)
+    place(out, knock(1500, 0.08, seed=seed, ring=0.6), 0, 0.5)
+    place(out, knock(190, 0.2, seed=seed + 1, ring=0.8), 0.005, 0.5)
+    return out
+
+
+def s_one_start():
+    out = canvas(3.6)
+    place(out, lamp_click(16), 0.05, 0.8)
+    place(out, pad(chord(['B2', 'F#3', 'D4']), 3.3, 1.2, 1.4, seed=17), 0.1, 1.0)
+    place(out, choir(chord(['F#3', 'B3', 'D4']), 3.0, 'u', attack=1.4, release=1.2, seed=18, breath=0.04), 0.4, 0.55)
+    return finish(hall(out, 2.2, 0.3, 8), 'one_start', tail=0.9)
+
+
+def s_gather():
+    out = canvas(2.4)
+    place(out, choir(chord(['D4', 'A4', 'D5', 'F#5']), 2.3, 'a', attack=1.5, release=0.2, seed=19, breath=0.03,
+                     swell=lambda t: np.clip(t / 2.2, 0, 1) ** 2), 0, 0.85)
+    place(out, sparkles(2.2, 10, chord(['D6', 'F#6', 'A6']), seed=20, accel=1.5, decay=(.05, .18)), 0, 0.6)
+    return finish(hall(out, 1.6, 0.22, 9), 'gather', tail=0.3, length=2.4)
 
 
 def reveal(grade):
     if grade == 0:
-        out = canvas(3.2)
-        place(out, bell(hz('D6'), 3.0, GLASS, decay=0.9, seed=30), 0, 0.9)
-        place(out, bell(hz('A6'), 2.6, GLASS, decay=0.7, seed=31), 0.03, 0.45)
-        place(out, choir(chord(['D4', 'A4', 'F#5']), 2.2, 'a', attack=0.2, release=1.3, seed=32), 0, 0.55)
-        place(out, sparkles(2.6, 16, chord(['D6', 'F#6', 'A6']), seed=33), 0.02, 0.7)
-        return master(hall(out, 2.8, 0.38, 10), -7, tail=0.8)
+        out = canvas(2.4)
+        place(out, bell(hz('A5'), 2.2, GLASS, decay=0.7, seed=21, strike=0.0), 0, 0.9)
+        place(out, choir(chord(['D4', 'A4', 'F#5']), 1.8, 'a', attack=0.25, release=1.0, seed=22, breath=0.02), 0, 0.5)
+        return finish(hall(out, 1.9, 0.26, 10), 'reveal_r', tail=0.7)
     if grade == 1:
-        out = canvas(3.8)
-        place(out, boom(1.6, 70, 40, 0.6, seed=34), 0, 0.45)
-        for i, nm in enumerate(['D6', 'F#6', 'A6', 'D7']):
-            place(out, bell(hz(nm), 3.0, GLASS, decay=0.9, seed=35 + i), i * 0.035, 0.6)
-        place(out, choir(chord(['D4', 'F#4', 'A4', 'D5', 'A5']), 3.0, 'a', attack=0.12, release=1.6, seed=40, bright=1.4), 0, 0.9)
-        place(out, sparkles(3.2, 34, chord(['D6', 'F#6', 'A6', 'C#7']), seed=41), 0.02, 0.9)
-        place(out, crash(2.5, seed=42), 0, 0.3)
-        return master(hall(out, 3.2, 0.4, 11), -5, tail=1.0)
-    out = canvas(6.0)
-    place(out, boom(3.0, 56, 28, 1.6, thump=0.6, seed=43), 0, 0.9)
-    place(out, bell(hz('D3'), 5.5, CHURCH, decay=1.0, seed=44, strike=0.05), 0, 0.75)
-    for i, nm in enumerate(['A5', 'D6', 'F#6', 'A6', 'D7', 'F#7']):
-        place(out, bell(hz(nm), 4.0, GLASS, decay=1.0, seed=45 + i), 0.05 + i * 0.06, 0.45)
-    place(out, choir(chord(['D3', 'A3', 'D4', 'F#4', 'A4', 'D5', 'E5', 'A5']), 5.2, 'a', voices=7, attack=0.1, release=2.2, seed=52, bright=1.6), 0, 1.15)
-    place(out, brass(chord(['D3', 'A3', 'D4', 'F#4']), 3.5, attack=0.08, release=1.5, seed=53), 0, 0.8)
-    place(out, sparkles(5.5, 70, chord(['D6', 'E6', 'F#6', 'A6', 'B6']), seed=54, decay=(.08, .5)), 0.05, 1.0)
-    place(out, crash(4.5, seed=55), 0, 0.5)
-    return master(hall(out, 4.2, 0.42, 12), -3, tail=1.6)
+        out = canvas(2.8)
+        place(out, bell(hz('D6'), 2.4, GLASS, decay=0.75, seed=23, strike=0.0), 0, 0.75)
+        place(out, bell(hz('A6'), 2.2, GLASS, decay=0.65, seed=24, strike=0.0), 0.06, 0.4)
+        place(out, choir(chord(['D4', 'F#4', 'A4', 'D5']), 2.2, 'a', attack=0.2, release=1.2, seed=25, bright=1.1, breath=0.02), 0, 0.6)
+        place(out, sparkles(1.8, 8, chord(['D6', 'F#6', 'A6']), seed=26, decay=(.06, .2)), 0.04, 0.5)
+        return finish(hall(out, 2.1, 0.28, 11), 'reveal_sr', tail=0.8)
+    out = canvas(3.8)
+    place(out, bell(hz('D3'), 3.4, CHURCH, decay=0.7, bright=0.6, seed=27, strike=0.0), 0, 0.35)
+    for i, nm in enumerate(['D6', 'F#6', 'A6']):
+        place(out, bell(hz(nm), 2.8, GLASS, decay=0.8, seed=28 + i, strike=0.0), 0.04 + i * 0.12, 0.5)
+    place(out, choir(chord(['D3', 'A3', 'D4', 'F#4', 'A4', 'E5']), 3.2, 'a', voices=6, attack=0.3, release=1.5, seed=31, bright=1.2, breath=0.03), 0, 0.85)
+    place(out, pad(chord(['D3', 'A3', 'F#4']), 3.2, 0.3, 1.5, seed=32), 0, 0.8)
+    place(out, sparkles(3.0, 14, chord(['D6', 'F#6', 'A6', 'E6']), seed=33, decay=(.08, .3)), 0.1, 0.5)
+    return finish(hall(out, 2.4, 0.3, 12), 'reveal_ssr', tail=1.1)
 
 
 def s_ten_start():
-    out = canvas(4.8)
-    place(out, boom(2.5, 50, 28, 1.3, seed=56), 0.02, 0.7)
-    place(out, spotlight(), 0.08, 1.0)
-    place(out, choir(chord(['B2', 'F#3', 'B3', 'D4', 'C#5']), 4.4, 'u', attack=1.4, release=1.4, seed=57, breath=0.12), 0.4, 0.8)
-    place(out, pad(chord(['B2', 'F#3', 'D4']), 4.6, 1.0, 1.8, seed=58), 0.1, 1.0)
-    return master(hall(out, 3.8, 0.45, 13), -8, tail=1.0)
+    out = canvas(3.2)
+    place(out, lamp_click(34), 0.05, 0.8)
+    place(out, pad(chord(['D3', 'A3', 'E4']), 3.0, 1.0, 1.4, seed=35), 0.1, 0.9)
+    return finish(hall(out, 2.0, 0.28, 13), 'ten_start', tail=0.9)
 
 
 def s_rise():
-    out = canvas(4.4)
-    gliss = ['D3', 'A3', 'D4', 'E4', 'F#4', 'A4', 'B4', 'D5', 'E5', 'F#5', 'A5', 'B5', 'D6', 'E6', 'F#6', 'A6']
-    for i, nm in enumerate(gliss):
-        place(out, pan(pluck(hz(nm), 3.0, bright=.5, seed=60 + i), -0.7 + 1.4 * i / len(gliss)), 0.15 + i * 0.07, 0.65)
-    place(out, choir(chord(['D3', 'A3', 'D4', 'F#4', 'A4', 'E5']), 4.0, 'a', attack=1.3, release=1.6, seed=80, bright=1.2,
-                     swell=lambda t: 0.5 + 0.5 * np.clip(t / 1.6, 0, 1)), 0.1, 1.0)
-    place(out, sparkles(3.8, 40, chord(['D6', 'E6', 'F#6', 'A6']), seed=81, start=0.5), 0.1, 0.8)
-    place(out, riser(1.4, seed=82), 0.1, 0.4)
-    return master(hall(out, 3.6, 0.42, 14), -6, tail=1.0)
+    out = canvas(3.0)
+    harp(['D4', 'F#4', 'A4', 'D5', 'E5', 'F#5', 'A5', 'D6'], 0.1, 0.09, out, 0.5, seed=36, d=2.2, spread=0.6)
+    place(out, choir(chord(['D3', 'A3', 'D4', 'F#4']), 2.6, 'a', attack=1.0, release=1.2, seed=44, breath=0.03,
+                     swell=lambda t: 0.4 + 0.6 * np.clip(t / 1.4, 0, 1)), 0.1, 0.7)
+    return finish(hall(out, 2.0, 0.28, 14), 'rise', tail=0.9)
 
 
 def light(grade):
     if grade == 0:
-        out = canvas(2.6)
-        place(out, bell(hz('A5'), 2.4, GLASS, decay=0.75, seed=90), 0, 0.9)
-        place(out, bell(hz('E6'), 2.0, GLASS, decay=0.55, seed=91), 0.02, 0.3)
-        place(out, sparkles(1.6, 9, chord(['A6', 'E6', 'C#7']), seed=92, decay=(.05, .25)), 0.02, 0.6)
-        place(out, whoosh(0.5, 2000, 6000, 1.0, 0.2, seed=93), 0, 0.2)
-        return master(hall(out, 2.6, 0.38, 15), -10, tail=0.8)
+        out = canvas(1.8)
+        place(out, bell(hz('A5'), 1.6, GLASS, decay=0.55, seed=45, strike=0.0), 0, 1.0)
+        return finish(hall(out, 1.6, 0.25, 15), 'light_r', tail=0.6)
     if grade == 1:
-        out = canvas(3.2)
-        place(out, bell(hz('A5'), 2.8, GLASS, decay=0.85, seed=94), 0, 0.85)
-        place(out, bell(hz('C#6'), 2.6, GLASS, decay=0.8, seed=95), 0.03, 0.5)
-        place(out, bell(hz('E6'), 2.4, GLASS, decay=0.7, seed=96), 0.06, 0.45)
-        place(out, choir(chord(['A3', 'E4', 'A4', 'C#5', 'E5']), 2.4, 'a', attack=0.1, release=1.5, seed=97, bright=1.3), 0, 0.75)
-        place(out, sparkles(2.6, 26, chord(['A6', 'C#7', 'E6']), seed=98), 0.02, 0.9)
-        place(out, boom(1.2, 80, 45, 0.45, seed=99), 0, 0.3)
-        return master(hall(out, 3.0, 0.4, 16), -6.5, tail=1.0)
-    return reveal(2)
+        out = canvas(2.4)
+        place(out, bell(hz('A5'), 2.1, GLASS, decay=0.7, seed=46, strike=0.0), 0, 0.8)
+        place(out, bell(hz('E6'), 1.9, GLASS, decay=0.6, seed=47, strike=0.0), 0.05, 0.35)
+        place(out, choir(chord(['A3', 'E4', 'A4', 'C#5']), 1.8, 'a', attack=0.15, release=1.1, seed=48, breath=0.02), 0, 0.45)
+        return finish(hall(out, 1.9, 0.27, 16), 'light_sr', tail=0.8)
+    out = canvas(3.4)
+    place(out, bell(hz('D3'), 3.0, CHURCH, decay=0.6, bright=0.6, seed=49, strike=0.0), 0, 0.3)
+    for i, nm in enumerate(['A5', 'D6', 'F#6', 'A6']):
+        place(out, bell(hz(nm), 2.6, GLASS, decay=0.75, seed=50 + i, strike=0.0), 0.03 + i * 0.1, 0.45)
+    place(out, choir(chord(['D3', 'A3', 'D4', 'F#4', 'A4']), 2.8, 'a', attack=0.25, release=1.4, seed=54, bright=1.2, breath=0.03), 0, 0.85)
+    place(out, sparkles(2.6, 12, chord(['D6', 'F#6', 'A6']), seed=55, decay=(.08, .3)), 0.08, 0.45)
+    return finish(hall(out, 2.2, 0.3, 17), 'light_ssr', tail=1.0)
 
 
 def s_whiteout():
-    out = canvas(2.0)
-    place(out, riser(1.2, seed=100), 0, 0.9)
-    place(out, sparkles(1.3, 40, chord(['D6', 'F#6', 'A6', 'D7']), seed=101, accel=1.5, decay=(.04, .18)), 0, 0.9)
-    place(out, whoosh(1.4, 800, 12000, 1.1, 0.85, seed=102, curve=1.4), 0, 0.6)
-    return master(hall(out, 2.0, 0.35, 17), -9, tail=0.5)
+    out = canvas(1.8)
+    harp(['A5', 'D6', 'F#6', 'A6'], 0.0, 0.08, out, 0.4, seed=56, d=1.4, spread=0.5)
+    place(out, choir(chord(['A4', 'D5', 'F#5']), 1.6, 'a', attack=0.8, release=0.6, seed=60, breath=0.02,
+                     swell=lambda t: np.clip(t / 1.0, 0, 1)), 0, 0.6)
+    return finish(hall(out, 1.6, 0.25, 18), 'whiteout', tail=0.5)
 
 
 def card(grade):
     if grade == 0:
-        out = canvas(1.6)
-        place(out, whoosh(0.22, 1200, 4500, 0.8, 0.35, seed=110), 0, 0.8)
-        place(out, bell(hz('E6'), 1.4, GLASS, decay=0.4, seed=111), 0.08, 0.6)
-        return master(hall(out, 1.8, 0.3, 18), -11, tail=0.5)
+        out = canvas(1.2)
+        place(out, swish(0.15, seed=61), 0, 0.8)
+        place(out, bell(hz('E6'), 1.0, GLASS, decay=0.3, seed=62, strike=0.0), 0.07, 0.7)
+        return finish(hall(out, 1.3, 0.22, 19), 'card', tail=0.4)
     if grade == 1:
-        out = canvas(2.4)
-        place(out, whoosh(0.22, 1200, 4500, 0.8, 0.35, seed=112), 0, 0.8)
-        for i, nm in enumerate(['A5', 'C#6', 'E6', 'A6']):
-            place(out, bell(hz(nm), 2.0, GLASS, decay=0.6, seed=113 + i), 0.08 + i * 0.03, 0.5)
-        place(out, choir(chord(['A4', 'C#5', 'E5']), 1.6, 'a', attack=0.08, release=1.0, seed=118, bright=1.3), 0.08, 0.6)
-        place(out, sparkles(1.8, 20, chord(['A6', 'C#7', 'E7']), seed=119), 0.08, 0.8)
-        return master(hall(out, 2.4, 0.36, 19), -7.5, tail=0.8)
-    out = canvas(3.6)
-    place(out, whoosh(0.22, 1200, 4500, 0.8, 0.35, seed=120), 0, 0.8)
-    place(out, boom(2.0, 60, 32, 0.9, seed=121), 0.08, 0.7)
-    place(out, bell(hz('D4'), 3.4, CHURCH, decay=0.7, seed=122), 0.08, 0.5)
-    for i, nm in enumerate(['D6', 'F#6', 'A6', 'D7']):
-        place(out, bell(hz(nm), 3.0, GLASS, decay=0.9, seed=123 + i), 0.1 + i * 0.04, 0.5)
-    place(out, choir(chord(['D4', 'F#4', 'A4', 'D5', 'A5']), 2.8, 'a', attack=0.08, release=1.6, seed=128, bright=1.5), 0.08, 0.9)
-    place(out, sparkles(3.2, 44, chord(['D6', 'F#6', 'A6', 'E6']), seed=129), 0.1, 0.9)
-    return master(hall(out, 3.2, 0.4, 20), -5, tail=1.0)
+        out = canvas(1.8)
+        place(out, swish(0.15, seed=63), 0, 0.8)
+        place(out, bell(hz('A5'), 1.5, GLASS, decay=0.45, seed=64, strike=0.0), 0.07, 0.6)
+        place(out, bell(hz('E6'), 1.4, GLASS, decay=0.4, seed=65, strike=0.0), 0.12, 0.45)
+        place(out, choir(chord(['A4', 'C#5', 'E5']), 1.2, 'a', attack=0.1, release=0.8, seed=66, breath=0.02), 0.07, 0.4)
+        return finish(hall(out, 1.6, 0.25, 20), 'card_sr', tail=0.6)
+    out = canvas(2.6)
+    place(out, swish(0.15, seed=67), 0, 0.8)
+    for i, nm in enumerate(['D6', 'F#6', 'A6']):
+        place(out, bell(hz(nm), 2.2, GLASS, decay=0.6, seed=68 + i, strike=0.0), 0.08 + i * 0.08, 0.5)
+    place(out, choir(chord(['D4', 'F#4', 'A4', 'D5']), 2.0, 'a', attack=0.12, release=1.2, seed=71, breath=0.02), 0.08, 0.7)
+    return finish(hall(out, 2.0, 0.28, 21), 'card_ssr', tail=0.8)
 
 
 def s_fanfare():
-    """The SSR splash: the strike, "SSR", the title cut in, the ribbon; then the held chord ringing out."""
-    out = canvas(7.5)
-    place(out, boom(3.0, 55, 27, 1.5, thump=0.7, seed=130), 0, 0.9)
-    place(out, crash(5.5, seed=131), 0, 0.55)
-    place(out, bell(hz('D3'), 6.5, CHURCH, decay=1.2, seed=132, strike=0.05), 0, 0.7)
-    place(out, brass(chord(['D3', 'A3', 'D4', 'F#4', 'A4']), 1.0, attack=0.04, release=0.4, seed=133), 0, 0.9)
-    # "SSR" strikes (0.35 s), the title is cut (0.7 s): a rising run of brass and bells to the held chord (1.35 s)
-    place(out, brass(chord(['G3', 'B3', 'D4', 'G4']), 0.5, attack=0.03, release=0.25, seed=134), 0.34, 0.85)
-    place(out, boom(1.2, 75, 40, 0.5, seed=135), 0.34, 0.5)
-    run = ['A4', 'D5', 'F#5', 'A5', 'D6', 'F#6']
-    for i, nm in enumerate(run):
-        place(out, bell(hz(nm), 2.5, GLASS, decay=0.8, seed=136 + i), 0.72 + i * 0.1, 0.55)
-    place(out, brass(chord(['A3', 'C#4', 'E4', 'A4']), 0.62, attack=0.05, release=0.3, seed=142), 0.72, 0.8)
-    place(out, brass(chord(['D3', 'A3', 'D4', 'F#4', 'A4', 'D5']), 4.4, attack=0.09, release=2.2, seed=143, open_=1.2), 1.35, 1.0)
-    place(out, choir(chord(['D3', 'A3', 'D4', 'F#4', 'A4', 'D5', 'E5', 'A5']), 5.6, 'a', voices=7, attack=0.3, release=2.6, seed=144, bright=1.6), 0.0, 1.0)
-    place(out, sparkles(6.5, 90, chord(['D6', 'E6', 'F#6', 'A6', 'B6']), seed=146, decay=(.08, .55)), 0.1, 1.0)
-    place(out, bell(hz('D5'), 4.0, CHURCH, decay=0.8, seed=147), 1.35, 0.45)
-    return master(hall(out, 4.4, 0.42, 21), -2.5, tail=2.0)
+    """The SSR splash: a harp sweeping up, "SSR" (0.35 s) and the title (0.7 s) on clear bells, the held chord (1.35 s)
+    sung and ringing out; calm and bright, no drums or brass."""
+    out = canvas(5.2)
+    harp(['D4', 'F#4', 'A4', 'D5', 'F#5', 'A5', 'D6'], 0.0, 0.045, out, 0.45, seed=72, d=2.4, spread=0.7)
+    place(out, bell(hz('D3'), 4.0, CHURCH, decay=0.8, bright=0.5, seed=79, strike=0.0), 0, 0.3)
+    for at, nm in [(0.35, 'A5'), (0.7, 'D6'), (1.35, 'F#6'), (1.38, 'A6')]:
+        place(out, bell(hz(nm), 2.8, GLASS, decay=0.8, seed=80 + int(at * 10), strike=0.0), at, 0.45)
+    place(out, choir(chord(['D3', 'A3', 'D4', 'F#4', 'A4', 'D5', 'E5']), 4.2, 'a', voices=6, attack=0.5, release=2.0, seed=90, bright=1.2, breath=0.03,
+                     swell=lambda t: 0.55 + 0.45 * np.clip((t - 1.0) / 0.6, 0, 1)), 0.0, 0.9)
+    place(out, pad(chord(['D3', 'A3', 'F#4', 'E5']), 4.4, 0.6, 2.0, seed=91), 0.0, 0.9)
+    place(out, sparkles(4.0, 20, chord(['D6', 'E6', 'F#6', 'A6']), seed=92, decay=(.08, .35), start=1.2), 0.1, 0.45)
+    return finish(hall(out, 2.6, 0.3, 22), 'fanfare', tail=1.4)
 
 
 def s_star():
-    out = canvas(0.9)
-    place(out, bell(hz('A6'), 0.8, GLASS, decay=0.25, seed=150), 0, 0.8)
-    place(out, sparkles(0.5, 5, chord(['A6', 'E7']), seed=151, decay=(.03, .1)), 0, 0.6)
-    return master(hall(out, 1.4, 0.3, 22), -14, tail=0.3)
+    out = canvas(0.6)
+    place(out, bell(hz('A6'), 0.5, GLASS, decay=0.12, seed=93, strike=0.0), 0, 1.0)
+    return finish(hall(out, 0.9, 0.18, 23), 'star', tail=0.25)
 
 
 def s_result():
-    out = canvas(2.8)
-    for i, nm in enumerate(['D5', 'F#5', 'A5', 'D6']):
-        place(out, bell(hz(nm), 2.5, GLASS, decay=0.8, seed=160 + i), i * 0.05, 0.5)
-    place(out, choir(chord(['D4', 'F#4', 'A4', 'D5']), 2.2, 'a', attack=0.15, release=1.4, seed=165), 0.05, 0.6)
-    return master(hall(out, 2.8, 0.38, 23), -9, tail=0.9)
+    out = canvas(2.2)
+    harp(['D5', 'F#5', 'A5', 'D6'], 0.0, 0.06, out, 0.5, seed=94, d=1.8, spread=0.4)
+    place(out, choir(chord(['D4', 'F#4', 'A4']), 1.6, 'a', attack=0.15, release=1.0, seed=98, breath=0.02), 0.05, 0.5)
+    return finish(hall(out, 1.8, 0.26, 24), 'result', tail=0.7)
+
+
+# Bomi's opening of the ten-pull (2.41.0)
+def s_place():
+    """The last hourglass set down on the shelf: a soft knock of its foot on the wood and a faint ring of its glass."""
+    out = canvas(1.0)
+    place(out, knock(240, 0.3, seed=99), 0, 1.0)
+    place(out, knock(520, 0.2, seed=100, ring=0.8), 0.03, 0.4)
+    place(out, bell(hz('E6'), 0.8, GLASS, decay=0.22, seed=101, strike=0.0), 0.0, 0.12)
+    return finish(hall(out, 1.0, 0.18, 25), 'place', tail=0.3)
+
+
+def s_step():
+    """A step down: a soft landing."""
+    out = canvas(0.5)
+    place(out, thud(0.35, 80, seed=102), 0, 1.0)
+    place(out, knock(180, 0.15, seed=103, ring=0.6), 0, 0.25)
+    return finish(hall(out, 0.8, 0.15, 26), 'step', tail=0.15)
+
+
+def s_foot():
+    out = canvas(0.4)
+    place(out, footfall(104), 0, 1.0)
+    return finish(hall(out, 0.8, 0.15, 27), 'foot', tail=0.12)
+
+
+def s_sit():
+    out = canvas(0.7)
+    place(out, cushion(105), 0, 1.0)
+    return finish(hall(out, 0.8, 0.12, 28), 'sit', tail=0.2)
+
+
+def s_phew():
+    out = canvas(0.9)
+    place(out, breath(0.8, seed=106), 0, 1.0)
+    return finish(hall(out, 0.8, 0.12, 29), 'phew', tail=0.25)
 
 
 SOUNDS = {
@@ -625,6 +647,7 @@ SOUNDS = {
     'light_r': lambda: light(0), 'light_sr': lambda: light(1), 'light_ssr': lambda: light(2),
     'whiteout': s_whiteout, 'card': lambda: card(0), 'card_sr': lambda: card(1), 'card_ssr': lambda: card(2),
     'fanfare': s_fanfare, 'star': s_star, 'result': s_result,
+    'place': s_place, 'step': s_step, 'foot': s_foot, 'sit': s_sit, 'phew': s_phew,
 }
 
 
@@ -641,8 +664,7 @@ def main():
             wav = os.path.join(tmp, name + '.wav')
             wavfile.write(wav, SR, pcm)
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', wav, '-c:a', 'libvorbis', '-q:a', '5', os.path.join(out, name + '.ogg')], check=True)
-        rms = 20 * np.log10(np.sqrt(np.mean(x ** 2)) + 1e-12)
-        print(f'{name:12s} {x.shape[1] / SR:5.2f} s  peak {20 * np.log10(np.abs(x).max()):6.1f} dB  rms {rms:6.1f} dB')
+        print(f'{name:12s} {x.shape[1] / SR:5.2f} s  {loudness(x):6.1f} LUFS  peak {20 * np.log10(np.abs(x).max()):6.1f} dB')
 
 
 if __name__ == '__main__':

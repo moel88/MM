@@ -98,7 +98,8 @@ public final class GachaScreen extends Screen {
         if(stage==Stage.RESULT){
             float age=t-resultAt;
             if(GachaResults.done(grades,age)){if(GachaArt.inside(okButton(),x,y)){GachaSound.play(GachaSound.Cue.CLICK);toMain();}}
-            else resultAt-=GachaResults.skip(grades,age);
+            else if(GachaResults.oneByOne(grades)&&GachaArt.inside(skipButton(),x,y)){GachaSound.play(GachaSound.Cue.CLICK);GachaResults.all(grades,age);}
+            else resultAt-=GachaResults.click(grades,age);
             return true;
         }
         if(details){var p=panel();if(GachaArt.inside(panelClose(),x,y)||x<p[0]||y<p[1]||x>p[0]+p[2]||y>p[1]+p[3]){details=false;GachaSound.play(GachaSound.Cue.BACK);}return true;}
@@ -126,7 +127,9 @@ public final class GachaScreen extends Screen {
         if(stage==Stage.RESULT){
             float age=t-resultAt;
             GachaResults.draw(d,this,grades,granted,age);
-            hover(GachaResults.done(grades,age)&&GachaArt.inside(okButton(),mx,my)?"ok":"");
+            // a ten-pull's cards one at a time can be skipped to all ten
+            if(GachaResults.oneByOne(grades))drawSkip(d);
+            else hover(GachaResults.done(grades,age)&&GachaArt.inside(okButton(),mx,my)?"ok":"");
             return;
         }
         if(openedAt<0){openedAt=t;GachaSound.play(GachaSound.Cue.OPEN);}
@@ -350,7 +353,7 @@ public final class GachaScreen extends Screen {
         GachaFont.text("뽑기 상세",tx,y+L(56),L(36),Weight.BOLD).color(GachaArt.fade(0xfff3f1ff,in)).draw(d);
         GachaFont.text("카게노 픽업 · 스탠드 뽑기",tx+GachaFont.width("뽑기 상세",L(36),Weight.BOLD)+L(22),y+L(60),L(19),Weight.MEDIUM).color(GachaArt.fade(0xffa69fe0,in)).draw(d);
         // the grades: a crest chip with its stars, the odds, the reward
-        String[] odds={"1%","5%","94%"},reward={"스탠드 카게노 · 바로 장착","보상 준비 중","보상 준비 중"};
+        String[] odds={"1%","5%","94%"},reward={"스탠드 카게노 · 바로 장착","보상 준비 중","로카카카 · 스탠드를 초기화하는 열매"};
         float rowY=y+L(136),rowH=L(70),gap=L(12);
         for(int i=0;i<3;i++){
             int gr=2-i;float ry=rowY+i*(rowH+gap),slide=GachaArt.ease((t-detailsAt-3-i*2)/7f);

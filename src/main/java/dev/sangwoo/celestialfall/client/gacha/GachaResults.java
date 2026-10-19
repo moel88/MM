@@ -9,60 +9,133 @@ import java.util.List;
 /**
  * What a pull brought (user request, 2.40.0: the results drastically reworked). An SSR opens on a full-screen splash: the
  * Kageno banner bursting in gold, "SSR" and five stars striking in, his title cut in by a stroke of light, "스탠드 획득"
- * and NEW. Other grades come as tall cards that fly in face down and turn over in a flash of their colour: a crest with
- * the hourglass that lit, the grade and its stars. Ten pulls lay ten cards in a row, one after another (after the SSR's
- * splash when one came). A click hurries the reveal on to its next beat; the 확인 button shows when all is out. Times are
- * ticks since the results began, smooth between ticks.
+ * and NEW. Other grades come as tall cards that fly in face down and turn over in a flash of their colour: the Rokakaka
+ * an R gives (2.41.0) or the crest of the hourglass that lit, the grade and its stars. A ten-pull (2.41.0, user request)
+ * shows its cards one at a time, a click going on to the next (a click during a card's turn finishes it first; an SSR's
+ * card opens its splash), then all ten in a row with the tally; 건너뛰기 goes straight to the row. The 확인 button shows when
+ * all is out. Times are ticks since the results (or the card on show) began, smooth between ticks.
  */
 final class GachaResults {
     private GachaResults(){}
-    /** The SSR splash's beats, and how long a ten-pull lingers on it before its cards. */
-    static final float SPLASH_DONE=46,SPLASH=62;
-    static final float CARD_STEP=2.6f,CARD_FLY=6,CARD_FLIP=5;
-    static final String[] ITEM={"하늘빛 모래시계","보랏빛 모래시계","카게노"};
+    /** The SSR splash's beats. */
+    static final float SPLASH_DONE=46;
+    static final float CARD_FLY=6,CARD_FLIP=5;
+    /** A ten-pull's card on its own: when it has turned and settled (a click then goes on), and when an SSR's card turns into its splash. */
+    static final float CARD_SHOWN=24,SSR_TURN=CARD_FLY+CARD_FLIP/2;
+    /** All ten together: one card after another this far apart, everything out (확인) by {@link #ALL_DONE}. */
+    static final float ALL_STEP=1.2f,ALL_DONE=30;
+    /** What each grade gives (2.41.0, user request: every R is a Rokakaka for now; SR has no reward yet). */
+    static final String[] ITEM={"로카카카","보랏빛 모래시계","카게노"},GIVES={"스탠드를 초기화하는 열매","보상 준비 중",""};
     private static float last=-1;
+    /** A ten-pull's place: the card on show (0 to 9; the count of cards: all of them) and the results' age when it came. */
+    private static int shown;private static float shownAt,lastSince=-1;private static int lastShown=-1;
 
-    static void begin(List<Grade> grades){last=-1;}
+    static void begin(List<Grade> grades){last=-1;shown=0;shownAt=0;lastSince=-1;lastShown=-1;}
     static boolean splash(List<Grade> grades){return grades.contains(Grade.SSR);}
-    /** When the cards begin (a ten-pull after its splash). */
-    static float cardsAt(List<Grade> grades){return grades.size()>1&&splash(grades)?SPLASH:0;}
-    static float flipAt(List<Grade> grades,int i){return cardsAt(grades)+i*CARD_STEP+CARD_FLY;}
-    /** When everything is out and the 확인 button shows. */
-    static float doneAt(List<Grade> grades){
-        if(grades.size()==1)return grades.get(0)==Grade.SSR?SPLASH_DONE:30;
-        return flipAt(grades,grades.size()-1)+CARD_FLIP+16;
+    /** Whether a ten-pull is still going through its cards one at a time. */
+    static boolean oneByOne(List<Grade> grades){return grades.size()>1&&shown<grades.size();}
+    static boolean done(List<Grade> grades,float age){
+        if(grades.size()==1)return age>=(grades.get(0)==Grade.SSR?SPLASH_DONE:30);
+        return shown>=grades.size()&&age-shownAt>=ALL_DONE;
     }
-    static boolean done(List<Grade> grades,float age){return age>=doneAt(grades);}
-    /** How far a click moves the reveal on: past the splash to the cards, or to the end. */
-    static float skip(List<Grade> grades,float age){
-        float cards=cardsAt(grades);
-        if(cards>0&&age<cards)return cards-age;
-        return Math.max(0,doneAt(grades)-age);
+    /** When a ten-pull's card on show has turned and settled. */
+    private static float shownBy(Grade g){return g==Grade.SSR?SSR_TURN+SPLASH_DONE:CARD_SHOWN;}
+    /**
+     * A click: a single pull's reveal hurries to its end (how far, returned); a ten-pull's card on show finishes turning,
+     * or the next card comes, or after the tenth all ten.
+     */
+    static float click(List<Grade> grades,float age){
+        if(grades.size()==1)return Math.max(0,(grades.get(0)==Grade.SSR?SPLASH_DONE:30)-age);
+        if(shown>=grades.size())return 0;
+        var g=grades.get(shown);float since=age-shownAt,by=shownBy(g);
+        if(since<by){
+            // finish this card's turn, with its sound if it had not turned yet
+            if(since<(g==Grade.SSR?SSR_TURN:CARD_FLY+CARD_FLIP/2))turned(g,shown);
+            shownAt=age-by;lastSince=by;lastShown=shown;return 0;
+        }
+        shown++;shownAt=age;if(shown>=grades.size())GachaSound.play(GachaSound.Cue.RESULT);
+        return 0;
     }
+    /** 건너뛰기 during the cards: straight to all ten. */
+    static void all(List<Grade> grades,float age){shown=grades.size();shownAt=age;GachaSound.play(GachaSound.Cue.RESULT);}
     static float[] okButton(GachaScreen s){return GachaArt.slab(s.width/2f-s.L(160),s.B(812),s.L(320),s.L(70),s.L(18),s.L(8));}
 
     static void draw(DrawContext d,GachaScreen s,List<Grade> grades,boolean granted,float age){
-        int best=grades.stream().mapToInt(Grade::ordinal).max().orElse(0);
-        float cards=cardsAt(grades);
         boolean one=grades.size()==1;
-        if(splash(grades)&&(one||age<cards+6)){
-            splash(d,s,granted,age,one);
-            if(!one&&age>cards){float k=GachaArt.ramp(cards,cards+6,age);d.draw();d.fill(0,0,s.width,s.height,GachaArt.alpha(0x04040f,255*k));}
+        if(one){
+            var g=grades.get(0);
+            if(g==Grade.SSR)splash(d,s,granted,age,true);
+            else{backdrop(d,s,g.ordinal(),age,1);single(d,s,g,age);}
+            if(done(grades,age))ok(d,s,GachaArt.ease((age-(g==Grade.SSR?SPLASH_DONE:30))/6f));
+            cues(grades,age);
+            return;
         }
-        if(!one&&age>=cards){backdrop(d,s,best,age-cards,GachaArt.ramp(cards,cards+6,age));row(d,s,grades,age);}
-        if(one&&grades.get(0)!=Grade.SSR){backdrop(d,s,best,age,1);single(d,s,grades.get(0),age);}
-        // the way on
-        float doneAt=doneAt(grades);
-        if(age>=doneAt)ok(d,s,GachaArt.ease((age-doneAt)/6f));
-        else if(!one&&splash(grades)&&age<cards&&age>30)
-            GachaFont.text("눌러서 계속",s.width/2f,s.B(848),s.L(20),Weight.MEDIUM).align(.5f).color(0xffe9e2ff).alpha(.55f+.45f*(float)Math.sin(age*.2f)).shadow(0xcc000008,s.L(4),0,s.L(1)).draw(d);
-        cues(grades,age);
+        if(shown<grades.size())step(d,s,grades,granted,age-shownAt);
+        else{
+            float since=age-shownAt;int best=grades.stream().mapToInt(Grade::ordinal).max().orElse(0);
+            backdrop(d,s,best,since,GachaArt.ramp(0,5,since));all(d,s,grades,since);
+            if(since>=ALL_DONE)ok(d,s,GachaArt.ease((since-ALL_DONE)/6f));
+        }
+        // the scene's white fading off the first card
+        if(age<WHITE)d.fill(0,0,s.width,s.height,GachaArt.alpha(0xfff6f3ff,255*(1-GachaArt.ease(age/WHITE))));
+    }
+    /** How long the scene's closing white takes to clear off a ten-pull's first card. */
+    static final float WHITE=6;
+
+    // ---- a ten-pull, one card at a time ----
+    /** The card on show, {@code since} ticks after it came: its own ground, the card (an SSR's opening on its splash), where we are. */
+    private static void step(DrawContext d,GachaScreen s,List<Grade> grades,boolean granted,float since){
+        int k=shown;var g=grades.get(k);
+        stepCues(grades,k,since);
+        if(g==Grade.SSR&&since>=SSR_TURN)splash(d,s,granted,since-SSR_TURN,true);
+        else{
+            backdrop(d,s,g==Grade.SSR?0:g.ordinal(),since,GachaArt.ramp(0,4,since));
+            if(g==Grade.SSR){
+                // face down, a gold light gathering behind it, turning: the splash opens as it turns
+                float cw=s.L(300),ch=s.L(440),cx=s.width/2f,cy=s.height*.45f,fly=GachaArt.ease(since/CARD_FLY);
+                var m=d.getMatrices().peek().getPositionMatrix();var halo=GachaArt.sprites(d,GachaArt.SPARK,true);
+                GachaArt.sprite(halo,m,cx,cy,cw*3,cw*3,0,GachaArt.fade(0xffffae1a,.35f*GachaArt.ramp(2,SSR_TURN,since)));GachaArt.endSprites(halo);
+                card(d,s,cx,cy+(1-fly)*s.L(120),cw*(.85f+.15f*fly),ch*(.85f+.15f*fly),2,GachaArt.clamp01((since-CARD_FLY)/CARD_FLIP),-1,fly,true);
+            }else single(d,s,g,since);
+        }
+        pips(d,s,grades,k,since);
+        if(since>=shownBy(g)){
+            float a=.55f+.45f*(float)Math.sin((since-shownBy(g))*.2f);
+            GachaFont.text(k+1<grades.size()?"눌러서 다음":"눌러서 모두 보기",s.width/2f,s.B(870),s.L(20),Weight.MEDIUM).align(.5f).color(0xffe9e2ff).alpha(a).shadow(0xcc000008,s.L(4),0,s.L(1)).draw(d);
+        }
+    }
+    /** Where the ten-pull is: ten marks at the top, the ones seen in their grade's colour, the one on show larger. */
+    private static void pips(DrawContext d,GachaScreen s,List<Grade> grades,int k,float since){
+        var m=d.getMatrices().peek().getPositionMatrix();float step=s.L(30),y=s.T(70),x0=s.width/2f-step*(grades.size()-1)/2f;
+        var b=GachaArt.begin(d,false);
+        for(int i=0;i<grades.size();i++){
+            boolean seen=i<k||i==k&&since>=CARD_FLY+CARD_FLIP/2;float r=s.L(i==k?8:5.5f);
+            int c=seen?GachaScreen.COLOR[grades.get(i).ordinal()]:0x80a7a3d6;
+            GachaArt.fill(b,m,new float[]{x0+i*step,y-r,x0+i*step+r,y,x0+i*step,y+r,x0+i*step-r,y},c);
+        }
+        GachaArt.end(b);
+        GachaFont.text((k+1)+" / "+grades.size(),s.width/2f,y+s.L(30),s.L(19),Weight.BOLD).align(.5f).color(0xffcfd3f5).shadow(0xcc000008,s.L(4),0,s.L(1)).draw(d);
+    }
+    /** The card on show's sounds: its turn, its stars (an SSR's splash its own). */
+    private static void stepCues(List<Grade> grades,int k,float since){
+        float from=lastShown==k?lastSince:-1;lastShown=k;lastSince=since;
+        if(from<0||since-from>4)return;
+        var g=grades.get(k);
+        if(crossed(from,since,g==Grade.SSR?SSR_TURN:CARD_FLY+CARD_FLIP/2))turned(g,k);
+        if(g!=Grade.SSR)for(int j=0;j<g.ordinal()+3;j++)if(crossed(from,since,CARD_FLY+CARD_FLIP+3+j*8f/(g.ordinal()+3)))GachaSound.play(GachaSound.Cue.STAR,1+j*.06f,.6f);
+        if(g==Grade.SSR&&crossed(from,since,SSR_TURN+30))GachaSound.play(GachaSound.Cue.STAR,1.1f,.9f);
+    }
+    /** A card's turning over: its sound (an SSR's splash its fanfare). */
+    private static void turned(Grade g,int k){
+        if(g==Grade.SSR)GachaSound.play(GachaSound.Cue.SSR_FANFARE);
+        else GachaSound.play(g==Grade.R?GachaSound.Cue.CARD:GachaSound.Cue.CARD_SR,1+k*.02f,1);
     }
 
-    /** The results' own ground: a deep blue dark, slow rays in the best grade's colour, motes rising. */
+    /** The results' own ground: a deep blue dark, slow rays in the best grade's colour, motes rising ({@code in}: how far its light is in). */
     private static void backdrop(DrawContext d,GachaScreen s,int best,float age,float in){
         int w=s.width,h=s.height;
-        d.draw();d.fill(0,0,w,h,GachaArt.alpha(0x05050f,255*in));
+        // the dark is always whole (nothing of the world behind ever shows between cards); its light comes in with {@code in}
+        d.draw();d.fill(0,0,w,h,0xff05050f);
         var m=d.getMatrices().peek().getPositionMatrix();float cx=w/2f,cy=h*.44f,big=Math.max(w,h);
         var halo=GachaArt.sprites(d,GachaArt.SPARK,true);
         GachaArt.sprite(halo,m,cx,cy,big*1.2f,big*.9f,0,GachaArt.fade(GachaScreen.GLOW[best],in*.3f));
@@ -168,15 +241,16 @@ final class GachaResults {
     }
 
     // ---- one card ----
+    /** One R or SR card on its own: flying in face down, turning over, then what it gives under it. */
     private static void single(DrawContext d,GachaScreen s,Grade grade,float age){
         int g=grade.ordinal();float cw=s.L(300),ch=s.L(440),cx=s.width/2f,cy=s.height*.45f;
-        float fly=GachaArt.ease(age/8f);
-        float flip=GachaArt.clamp01((age-8)/6f);
-        card(d,s,cx,cy+(1-fly)*s.L(120),cw*(.85f+.15f*fly),ch*(.85f+.15f*fly),g,flip,age-11,fly,true);
+        float fly=GachaArt.ease(age/CARD_FLY);
+        float flip=GachaArt.clamp01((age-CARD_FLY)/CARD_FLIP);
+        card(d,s,cx,cy+(1-fly)*s.L(120),cw*(.85f+.15f*fly),ch*(.85f+.15f*fly),g,flip,age-CARD_FLY-CARD_FLIP/2,fly,true);
         // the name and what it gives
-        float k=GachaArt.ease((age-16)/8f);
+        float k=GachaArt.ease((age-14)/8f);
         GachaFont.text(ITEM[g],cx,cy+ch/2+s.L(44),s.L(28),Weight.BOLD).align(.5f).color(0xfff1f0ff).glow(GachaScreen.GLOW[g],s.L(8),.5f).alpha(k).draw(d);
-        GachaFont.text("보상 준비 중",cx,cy+ch/2+s.L(82),s.L(19),Weight.MEDIUM).align(.5f).color(0xffaab3dc).alpha(GachaArt.ease((age-22)/8f)).draw(d);
+        GachaFont.text(GIVES[g],cx,cy+ch/2+s.L(82),s.L(19),Weight.MEDIUM).align(.5f).color(g==0?0xffffc4e1:0xffaab3dc).alpha(GachaArt.ease((age-20)/8f)).draw(d);
     }
 
     // ---- ten cards ----
@@ -185,17 +259,17 @@ final class GachaResults {
         float cw=s.L(128),ch=s.L(300),gap=s.L(14),total=n*cw+(n-1)*gap,k=Math.min(1,(s.width-s.L(70))/total);
         cw*=k;ch*=k;gap*=k;total*=k;return new float[]{cw,ch,gap,(s.width-total)/2};
     }
-    private static void row(DrawContext d,GachaScreen s,List<Grade> grades,float age){
+    /** All ten together once each has been seen (2.41.0): face up, rising in one after another, then the tally. */
+    private static void all(DrawContext d,GachaScreen s,List<Grade> grades,float age){
         float[] r=rowLayout(s,grades.size());float cw=r[0],ch=r[1],gap=r[2],x0=r[3],cy=s.height*.44f;
-        float start=cardsAt(grades);
         for(int i=0;i<grades.size();i++){
-            float at=start+i*CARD_STEP,fly=GachaArt.ease((age-at)/CARD_FLY);if(fly<=0)continue;
-            float flip=GachaArt.clamp01((age-at-CARD_FLY)/CARD_FLIP);
+            float at=i*ALL_STEP,fly=GachaArt.ease((age-at)/CARD_FLY);if(fly<=0)continue;
             float x=x0+i*(cw+gap)+cw/2;
-            card(d,s,x,cy+(1-fly)*s.L(160),cw,ch,grades.get(i).ordinal(),flip,age-at-CARD_FLY-CARD_FLIP/2,fly,false);
+            // seen already: they come face up, no flash, a shine crossing them as they land
+            card(d,s,x,cy+(1-fly)*s.L(90),cw,ch,grades.get(i).ordinal(),1,8+age-at-CARD_FLY,fly,false);
         }
-        // the tally, once every card has turned
-        float tally=GachaArt.ease((age-flipAt(grades,grades.size()-1)-CARD_FLIP-4)/8f);
+        // the tally, once every card is in, and the Rokakaka they gave
+        float tally=GachaArt.ease((age-(grades.size()-1)*ALL_STEP-CARD_FLY-2)/8f);
         if(tally>0){
             int[] n=new int[3];for(var g:grades)n[g.ordinal()]++;
             float y=cy+ch/2+s.L(56),chip=s.L(150),step=s.L(170),x=s.width/2f-step;
@@ -205,6 +279,7 @@ final class GachaResults {
                 var b=GachaArt.begin(d,false);GachaArt.smooth(b,m,c,GachaArt.fade(0xd0121436,tally),GachaArt.fade(0xd00a0b22,tally));GachaArt.stroke(b,m,c,s.L(1.2f),GachaArt.fade(GachaScreen.COLOR[k],tally*.8f));GachaArt.end(b);
                 GachaFont.text(GachaScreen.NAME[k]+"  "+n[k],cx,y,s.L(25),Weight.BOLD).align(.5f).color(GachaArt.fade(GachaScreen.COLOR[k],tally)).draw(d);
             }
+            if(n[0]>0)GachaFont.text("로카카카 "+n[0]+"개를 받았어요",s.width/2f,y+s.L(52),s.L(20),Weight.MEDIUM).align(.5f).color(GachaArt.fade(0xffffc4e1,tally)).shadow(0xcc000008,s.L(4),0,s.L(1)).draw(d);
         }
     }
 
@@ -243,6 +318,12 @@ final class GachaResults {
             b=GachaArt.begin(d,false);
             GachaArt.fill(b,m,GachaArt.rect(-aw/2,ah*.05f,aw,ah*.45f),GachaArt.fade(0x00100608,alpha),GachaArt.fade(0xf0100608,alpha));
             GachaArt.end(b);
+        }else if(g==0){
+            // the Rokakaka it gives, in 3D, turning on a soft pink glow
+            gl=GachaArt.begin(d,true);
+            GachaArt.glow(gl,m,GachaArt.circle(0,-h*.1f,w*.14f,28),w*.6f,GachaArt.fade(0xffff6fae,alpha*.75f),1);
+            GachaArt.end(gl);
+            fruit(d,0,-h*.12f,w*.66f,since,alpha);
         }else{
             gl=GachaArt.begin(d,true);
             GachaArt.glow(gl,m,GachaArt.circle(0,-h*.1f,w*.12f,28),w*.55f,GachaArt.fade(glow,alpha*.8f),1);
@@ -273,6 +354,25 @@ final class GachaResults {
             if(g>0)rays(gl,m,0,0,Math.max(w,h)*(g==2?1.4f:.9f)*(1.2f-f*.4f),14,since*.02f,GachaArt.fade(glow,alpha*.6f*f),w*.05f);
             GachaArt.end(gl);
         }
+        ms.pop();
+    }
+    /** One Rokakaka for the cards: the item itself, so its 3D GeckoLib model draws (2.41.0). */
+    private static final net.minecraft.item.ItemStack FRUIT_STACK=new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA);
+    /**
+     * The Rokakaka in 3D, {@code width} across, centred on {@code (x, y)} under the current matrices (a card's turn squeezes
+     * it with the card), turning slowly and tipped toward the eye; it grows in with {@code alpha} (a model cannot fade).
+     */
+    private static void fruit(DrawContext d,float x,float y,float width,float since,float alpha){
+        if(alpha<=.05f)return;
+        var mc=net.minecraft.client.MinecraftClient.getInstance();float block=width/(11/16f)*Math.min(1,alpha);
+        var ms=d.getMatrices();ms.push();
+        ms.translate(x,y,150);ms.scale(block,-block,block);
+        ms.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(14));
+        ms.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(-30+since*2.2f));
+        d.draw();com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
+        mc.getItemRenderer().renderItem(FRUIT_STACK,net.minecraft.client.render.model.json.ModelTransformationMode.NONE,net.minecraft.client.render.LightmapTextureManager.MAX_LIGHT_COORDINATE,
+            net.minecraft.client.render.OverlayTexture.DEFAULT_UV,ms,d.getVertexConsumers(),mc.world,0);
+        d.draw();com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
         ms.pop();
     }
     /** The grade's crest: rings and ticks about the hourglass that lit, turning slowly. */
@@ -308,23 +408,15 @@ final class GachaResults {
         GachaFont.text("확인",(ok[10]+ok[4])/2,(ok[1]+ok[7])/2,s.L(30),Weight.BOLD).align(.5f).color(GachaArt.fade(0xff17206e,in)).draw(d);
     }
 
-    /** The results' sounds, between the last frame and this one; a click that hurries the reveal skips what it passes. */
+    /** A single pull's sounds, between the last frame and this one; a click that hurries the reveal skips what it passes. */
     private static void cues(List<Grade> grades,float age){
         float from=last;last=age;
-        if(from<0){if(splash(grades))GachaSound.play(GachaSound.Cue.SSR_FANFARE);return;}
+        var g=grades.get(0);
+        if(from<0){if(g==Grade.SSR)GachaSound.play(GachaSound.Cue.SSR_FANFARE);return;}
         if(age-from>4)return;
-        if(grades.size()==1){
-            var g=grades.get(0);
-            if(g!=Grade.SSR&&crossed(from,age,11))GachaSound.play(g==Grade.SR?GachaSound.Cue.CARD_SR:GachaSound.Cue.CARD);
-            if(g!=Grade.SSR)for(int k=0;k<g.ordinal()+3;k++)if(crossed(from,age,14+k*8f/(g.ordinal()+3)))GachaSound.play(GachaSound.Cue.STAR,1+k*.06f,.6f);
-            if(g==Grade.SSR&&crossed(from,age,30))GachaSound.play(GachaSound.Cue.STAR,1.1f,.9f);
-            return;
-        }
-        for(int i=0;i<grades.size();i++){
-            float at=flipAt(grades,i)+CARD_FLIP/2;
-            if(crossed(from,age,at)){var g=grades.get(i);GachaSound.play(g==Grade.R?GachaSound.Cue.CARD:g==Grade.SR?GachaSound.Cue.CARD_SR:GachaSound.Cue.CARD_SSR,1+i*.02f,1);}
-        }
-        if(crossed(from,age,doneAt(grades)-10))GachaSound.play(GachaSound.Cue.RESULT);
+        if(g!=Grade.SSR&&crossed(from,age,CARD_FLY+CARD_FLIP/2))GachaSound.play(g==Grade.SR?GachaSound.Cue.CARD_SR:GachaSound.Cue.CARD);
+        if(g!=Grade.SSR)for(int k=0;k<g.ordinal()+3;k++)if(crossed(from,age,CARD_FLY+CARD_FLIP+3+k*8f/(g.ordinal()+3)))GachaSound.play(GachaSound.Cue.STAR,1+k*.06f,.6f);
+        if(g==Grade.SSR&&crossed(from,age,30))GachaSound.play(GachaSound.Cue.STAR,1.1f,.9f);
     }
     private static boolean crossed(float from,float to,float at){return from<at&&to>=at;}
 }

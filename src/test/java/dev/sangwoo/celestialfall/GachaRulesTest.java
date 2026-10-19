@@ -82,6 +82,16 @@ class GachaRulesTest {
         assertFalse(GachaRules.tooSoon(105,last,0),"the count can be read");
         assertFalse(GachaRules.tooSoon(110,last,1),"half a second later it goes");
     }
+    @Test void everyRIsARokakakaAndTheyMustFitBeforeAPull(){
+        // user request (2.41.0): every R gives one Rokakaka; SR and SSR give none
+        assertEquals(8,GachaRules.fruits(List.of(Grade.R,Grade.R,Grade.R,Grade.SR,Grade.R,Grade.SSR,Grade.R,Grade.R,Grade.R,Grade.R)));
+        assertEquals(0,GachaRules.fruits(List.of(Grade.SSR)));
+        assertEquals(1,GachaRules.fruits(List.of(Grade.R)));
+        // room: empty slots take a full stack, a stack of it takes the rest, other items none
+        assertEquals(64+(64-60)+0,GachaRules.room(new int[]{0,60,-1,-1},64));
+        assertEquals(0,GachaRules.room(new int[]{-1,64,-1},64),"a full stack and other items leave no room");
+        assertTrue(GachaRules.room(new int[]{58,-1},64)<GachaRules.TEN,"six more do not cover a ten-pull");
+    }
     @Test void onlyAPlayerWithoutAStandPullsAndAnSsrGivesKageno(){
         assertTrue(GachaRules.canPull("none"));
         assertFalse(GachaRules.canPull("kageno"));

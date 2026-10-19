@@ -63,7 +63,7 @@ public final class GachaMpServer implements ModInitializer {
             // stand off, a ten-pull with an SR on the 4th and an SSR on the 6th
             if(stage==0&&kageno&&c.pulls()>=1&&++wait>240){ProgressManager.set(p,ProgressManager.profile(p).withStand("none"));count(p,94,6);note(server,"Puller: stand off, count set for the ten-pull");stage=1;wait=0;mark=c.pulls();}
             // after the ten-pull and its scene (about 12 s since 2.40.0) and its results: stand off again for the double request
-            if(stage==1&&c.pulls()>=mark+10&&++wait>400){ProgressManager.set(p,ProgressManager.profile(p).withStand("none"));count(p,0,0);note(server,"Puller: stand off for the double request");stage=2;wait=0;}
+            if(stage==1&&c.pulls()>=mark+10&&++wait>520){ProgressManager.set(p,ProgressManager.profile(p).withStand("none"));count(p,0,0);note(server,"Puller: stand off for the double request");stage=2;wait=0;}
         }
     }
 }

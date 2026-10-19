@@ -554,5 +554,50 @@
         "preload": true
       }
     ]
+  },
+  "gacha_place": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/place",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_step": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/step",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_foot": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/foot",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_phew": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/phew",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_sit": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/sit",
+        "preload": true
+      }
+    ]
   }
 }

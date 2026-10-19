@@ -7,8 +7,9 @@ import java.util.List;
 
 /**
  * The pull scenes drawn flat (2.39.0), where the title cinema's renderer cannot run (no desktop OpenGL 3.3, mobile
- * launchers): the same timing and colours, with hourglass marks in the dark (one large, or ten on a huge cupboard's two
- * shelves, 2.40.1: running off the screen on every side) and the lamp's light from above while it shines.
+ * launchers): the same timing and colours, with hourglass marks in the dark (one large, or ten on a big cupboard's two
+ * shelves running off the screen on every side, the last of them set into its place as the ten-pull opens) and the
+ * lamp's light from above while it shines.
  */
 final class GachaFlat {
     private GachaFlat(){}
@@ -40,6 +41,8 @@ final class GachaFlat {
         }
         for(int i=0;i<grades.size();i++){
             float[] p=at(i,w,h,one);float glow=f.glow[i];int c=rgb(f.accent[i]);
+            // the ten-pull's last hourglass is set into its place as the scene opens (2.41.0)
+            if(!one&&i==grades.size()-1&&age<GachaTen.PUSHED)p=new float[]{p[0],p[1]+cell*.9f*(1-GachaStage.smooth(0,GachaTen.PUSHED,age))};
             GachaScreen.hourglass(g,m,p[0],p[1],cell,GachaArt.alpha(GachaArt.mix(0xff8b94b8,c,Math.min(1,glow)),230),GachaArt.alpha(c,(int)(120+120*Math.min(1,glow))),.7f);
             float a=Math.min(1.4f,glow*.6f);
             GachaArt.fill(g,m,GachaArt.circle(p[0],p[1],cell*.3f,16),GachaArt.alpha(c,255*.6f*a));

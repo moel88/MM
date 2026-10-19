@@ -83,7 +83,7 @@ public final class GachaMpClient implements ClientModInitializer {
                 if("RESULT".equals(String.valueOf(stage))){var f=GachaScreen.class.getDeclaredField("grades");f.setAccessible(true);note("single pull: "+f.get(mc.currentScreen)+" notice="+GachaClient.notice+" stand="+ProgressClient.profile.stand()+" count "+counted());shown=false;step++;since=0;}
                 if(since>1200){note("ERROR the single pull never showed its result");step=9;}
             }
-            case 3->{if(since==30)shot("result");if(since==40){mc.setScreen(null);note("closed; asking for a pull with Kageno on");GachaClient.request(1);step++;since=0;}}
+            case 3->{if(since==30)shot("result");if(since==40){note("rokakaka "+fruits());mc.setScreen(null);note("closed; asking for a pull with Kageno on");GachaClient.request(1);step++;since=0;}}
             case 4->{if(!GachaClient.pending&&since>5){note("refused: '"+GachaClient.notice+"' count "+counted());step++;since=0;}}
             case 5->{if("none".equals(ProgressClient.profile.stand())&&since>10){GachaClient.open();note("stand off again; opened the gacha");step++;since=0;}if(since>1200){note("ERROR stand never came off");step=9;}}
             case 6->{if(GachaClient.ready&&!GachaClient.pending&&since>30){note("count "+counted());press("pullTen");step++;since=0;}}
@@ -92,11 +92,13 @@ public final class GachaMpClient implements ClientModInitializer {
                 if("RESULT".equals(String.valueOf(stage))){var f=GachaScreen.class.getDeclaredField("grades");f.setAccessible(true);note("ten-pull: "+f.get(mc.currentScreen)+" stand="+ProgressClient.profile.stand()+" count "+counted());step++;since=0;}
                 if(since>2400){note("ERROR the ten-pull never showed its result");step=9;}
             }
-            case 8->{if(since==40)shot("ten_result");if(since==50){mc.setScreen(null);step++;since=0;}}
+            case 8->{if(since==40){shot("ten_result");note("rokakaka "+fruits());}if(since==50){mc.setScreen(null);step++;since=0;}}
             case 9->{if("none".equals(ProgressClient.profile.stand())&&since>40){note("sending two pulls in one tick");raw(1);raw(1);step++;since=0;}if(since>1200){note("ERROR stand never came off for the double request");step=10;since=0;}}
             case 10->{if(since==100){note("done");phase=3;age=0;}}
         }
     }
+    /** Rokakaka in this player's inventory (2.41.0: every R gives one). */
+    private int fruits(){return mc.player.getInventory().count(dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA);}
     private void other()throws Exception{
         since++;
         switch(step){
