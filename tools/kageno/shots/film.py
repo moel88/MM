@@ -1,5 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
-FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate.
+FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate, FILM_CAPTION=center centres the captions at the top.
 MODE motion with the shot's motion.csv (ACTOR -) shows the player's walking speed and the lens's FOV multiplier each tick.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
@@ -166,7 +166,9 @@ def caption(img, t):
     y = 10
     for s, font, col in lines:
         w = d.textlength(s, font=font); h = font.size + 10
-        d.rectangle((8, y, 8 + w + 16, y + h), fill=(0, 0, 0, 150)); d.text((16, y + 4), s, font=font, fill=col); y += h + 4
+        # FILM_CAPTION=center puts the captions at the top's middle (the gacha keeps its logo at the top left)
+        x = (img.width - w - 16) / 2 if os.environ.get('FILM_CAPTION') == 'center' else 8
+        d.rectangle((x, y, x + w + 16, y + h), fill=(0, 0, 0, 150)); d.text((x + 8, y + 4), s, font=font, fill=col); y += h + 4
     if text:
         w = d.textlength(text, font=big); h = big.size + 14; x = (img.width - w) / 2; yb = img.height - h - 14
         d.rectangle((x - 12, yb, x + w + 12, yb + h), fill=(0, 0, 0, 160)); d.text((x, yb + 6), text, font=big, fill=color)

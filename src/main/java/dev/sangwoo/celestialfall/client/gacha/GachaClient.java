@@ -18,6 +18,7 @@ public final class GachaClient {
     private static int serial,ticks,waiting;
     private GachaClient(){}
     public static void initialize(){
+        GachaShaders.initialize();
         ClientTickEvents.END_CLIENT_TICK.register(mc->{ticks++;if(pending&&ticks-waiting>100){pending=false;notice="응답이 늦어지고 있어요. 잠시 후 다시 눌러 주세요.";}});
         ClientPlayNetworking.registerGlobalReceiver(GachaServer.RESULT,(mc,h,b,r)->{
             int id=b.readInt();var c=new GachaRules.Count(b.readVarInt(),b.readVarInt(),b.readVarInt());
@@ -35,7 +36,7 @@ public final class GachaClient {
         // resources are only touched on the render thread, or the game aborts.
         ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->mc.execute(GachaClient::reset));
     }
-    public static void reset(){count=GachaRules.Count.NEW;ready=pending=false;notice="";serial++;var mc=MinecraftClient.getInstance();if(mc.currentScreen instanceof GachaScreen)mc.setScreen(null);GachaStage.end();}
+    public static void reset(){count=GachaRules.Count.NEW;ready=pending=false;notice="";serial++;var mc=MinecraftClient.getInstance();if(mc.currentScreen instanceof GachaScreen)mc.setScreen(null);GachaStage.end();GachaFont.clear();}
     /** Asks for {@code n} pulls (0: only the count). */
     public static void request(int n){
         if(pending)return;

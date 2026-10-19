@@ -41,6 +41,18 @@ public final class GachaCinema implements AutoCloseable {
         public final float[] keyDir={-.35f,.85f,-.4f},key={.10f,.12f,.2f},ambient={.006f,.007f,.012f},clear={.0015f,.0018f,.004f};
         public float bloom=.42f,exposure=1;
         public int motes;
+        /** The spotlight (2.40.0): where it hangs, where it points, its cone (cosines of the outer and inner angle), its light. */
+        public final float[] spotPos=new float[3],spotDir={0,-1,0},spotCone={.94f,.97f},spotColor=new float[3];
+        /** Its visible beam: strength, the floor radius it reaches; the floor's magic circle: strength, colour, centre, radius. */
+        public float beam,beamRadius=1;
+        public float circle,circleRadius=1.2f;
+        public final float[] circleColor=new float[3],circleAt=new float[2];
+        /** Sparks circling a point: strength, colour, centre, radius and the height they rise through. */
+        public float sparks,sparkRadius=.3f,sparkHeight=.5f;
+        public final float[] sparkColor=new float[3],sparkCenter=new float[3];
+        /** Half the width of the key light's shadow map, about the point it looks at. */
+        public float shadowSpan=3.4f;
+        public final float[] shadowAt={0,.8f,.3f};
     }
 
     private record Mesh(int vao,int buffer,int count) implements AutoCloseable {
@@ -114,7 +126,8 @@ public final class GachaCinema implements AutoCloseable {
                 case 4->meshes.put("bomi",upload(CinemaAssets.mesh("bomi")));
                 case 5->meshes.put("prop",upload(CinemaAssets.mesh("prop")));
                 case 6->meshes.put("glass",upload(CinemaAssets.mesh("glass")));
-                case 7->{meshes.put("floor",upload(floor()));meshes.put("chair",upload(chair()));meshes.put("cupboard",upload(cupboard()));meshes.put("wall",upload(wall()));meshes.put("motes",upload(motes(160)));}
+                case 7->{meshes.put("floor",upload(floor()));meshes.put("chair",upload(chair()));meshes.put("cupboard",upload(cupboard()));meshes.put("wall",upload(wall()));meshes.put("motes",upload(motes(160)));
+                    meshes.put("beam",upload(beam()));meshes.put("circle",upload(circle()));meshes.put("sparks",upload(sparks(90)));}
                 case 8->shadow=target(2048,2048,true,true);
             }
             step++;
@@ -195,8 +208,9 @@ public final class GachaCinema implements AutoCloseable {
         for(int id:new int[]{atlas,skin}){texture(0,id);int filter=id==skin?GL_NEAREST:GL_LINEAR;glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,filter);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,filter);}
         vp.identity().perspective((float)Math.toRadians(f.fov),(float)w/h,.05f,90).lookAt(f.eye[0],f.eye[1],f.eye[2],f.target[0],f.target[1],f.target[2],0,1,0);
         var kd=new Vector3f(f.keyDir[0],f.keyDir[1],f.keyDir[2]).normalize();
-        float cz=f.cupboard?1.1f:.3f;
-        light.identity().ortho(-3.4f,3.4f,-3.4f,3.4f,.1f,30).lookAt(kd.x*12,.8f+kd.y*12,cz+kd.z*12,0,.8f,cz,0,1,0);
+        float span=f.shadowSpan,ax=f.shadowAt[0],ay=f.shadowAt[1],az=f.shadowAt[2];
+        boolean overhead=kd.x*kd.x+kd.z*kd.z<1e-4f;
+        light.identity().ortho(-span,span,-span,span,.1f,40).lookAt(ax+kd.x*14,ay+kd.y*14,az+kd.z*14,ax,ay,az,0,overhead?0:1,overhead?1:0);
         glDisable(GL_FRAMEBUFFER_SRGB);glDisable(GL_SCISSOR_TEST);glDisable(GL_CULL_FACE);glDisable(GL_BLEND);glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glDepthMask(true);glColorMask(true,true,true,true);glClearDepth(1);
         // shadows of the solid things in the key light
         shadow.bind();glClear(GL_DEPTH_BUFFER_BIT);glEnable(GL_POLYGON_OFFSET_FILL);glPolygonOffset(1.2f,2);
@@ -209,6 +223,9 @@ public final class GachaCinema implements AutoCloseable {
         glUseProgram(lit);matrix(lit,"ViewProjection",vp);matrix(lit,"LightMatrix",light);glUniform1f(uniform(lit,"Time"),f.time);
         glUniform3f(uniform(lit,"Camera"),f.eye[0],f.eye[1],f.eye[2]);glUniform1i(uniform(lit,"Atlas"),0);glUniform1i(uniform(lit,"ShadowMap"),1);texture(1,shadow.depth);
         glUniform3f(uniform(lit,"KeyDir"),kd.x,kd.y,kd.z);vec3(lit,"Key",f.key);vec3(lit,"Ambient",f.ambient);
+        vec3(lit,"SpotPos",f.spotPos);var sd=new Vector3f(f.spotDir[0],f.spotDir[1],f.spotDir[2]).normalize();glUniform3f(uniform(lit,"SpotDir"),sd.x,sd.y,sd.z);
+        glUniform2f(uniform(lit,"SpotCone"),f.spotCone[0],f.spotCone[1]);vec3(lit,"SpotColor",f.spotColor);
+        glUniform3f(uniform(lit,"SparkCenter"),f.sparkCenter[0],f.sparkCenter[1],f.sparkCenter[2]);glUniform1f(uniform(lit,"SparkRadius"),f.sparkRadius);glUniform1f(uniform(lit,"SparkHeight"),f.sparkHeight);
         int lights=Math.min(MAX_LIGHTS,f.lights);glUniform1i(uniform(lit,"Lights"),lights);
         for(int i=0;i<lights;i++){vec3(lit,"LightPos["+i+"]",f.lightPos[i]);vec3(lit,"LightColor["+i+"]",f.lightColor[i]);}
         solids(lit,f,false);
@@ -219,6 +236,15 @@ public final class GachaCinema implements AutoCloseable {
         Arrays.sort(order,Comparator.comparingDouble(i->-distance(f,i)));
         for(int i:order){bones(lit,f.bones,f.held&&i==0?null:f.place[i]);look(lit,f.accent[i],f.glow[i],f.hold[i]);meshes.get("glass").draw();}
         if(f.motes>0){glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);bones(lit,f.bones,null);look(lit,NONE,0,0);meshes.get("motes").draw();}
+        // light drawn as light (2.40.0): the floor's magic circle, the spotlight's beam, sparks about the hourglass
+        glBlendFuncSeparate(GL_SRC_ALPHA,GL_ONE,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+        if(f.circle>0){float r=f.circleRadius;bones(lit,null,new float[]{r,0,0,f.circleAt[0],0,1,0,.004f,0,0,r,f.circleAt[1]});look(lit,f.circleColor,f.circle,0);meshes.get("circle").draw();}
+        if(f.beam>0){
+            // the cone from the lamp to the floor: scaled to the floor radius, its height the lamp's
+            float r=f.beamRadius,hgt=f.spotPos[1];
+            bones(lit,null,new float[]{r,0,0,f.spotPos[0],0,hgt,0,0,0,0,r,f.spotPos[2]});look(lit,f.spotColor,f.beam,0);meshes.get("beam").draw();
+        }
+        if(f.sparks>0){bones(lit,f.bones,null);look(lit,f.sparkColor,f.sparks,0);meshes.get("sparks").draw();}
         glDepthMask(true);glDisable(GL_BLEND);glDisable(GL_DEPTH_TEST);
         // bloom, then into Minecraft's framebuffer
         glUseProgram(blur);glUniform1i(uniform(blur,"Source"),0);glBindVertexArray(screenVao);
@@ -274,10 +300,10 @@ public final class GachaCinema implements AutoCloseable {
     static CinemaAssets.Mesh floor(){var b=new Builder();float s=9;b.quad(new float[]{-s,0,-s},new float[]{-s,0,s},new float[]{s,0,s},new float[]{s,0,-s},rgb(0x2a2d3c),8);return b.mesh();}
     /** The wall the cupboard stands against (the 10-pull's room). */
     static CinemaAssets.Mesh wall(){
-        var b=new Builder();float z=2.62f;
-        b.quad(new float[]{4,0,z},new float[]{-4,0,z},new float[]{-4,3.4f,z},new float[]{4,3.4f,z},rgb(0x272a44),0);
-        b.box(-4,0,z-.03f,4,.16f,z,rgb(0x2b1d17),0);b.box(-4,1.02f,z-.025f,4,1.06f,z,rgb(0x3a281e),0);
-        for(int i=-5;i<=5;i++)b.box(i*.72f-.006f,0,z-.004f,i*.72f+.006f,1.02f,z,rgb(0x1f2236),0);
+        var b=new Builder();float z=CUPBOARD_Z+CUPBOARD_DEPTH+.06f;
+        b.quad(new float[]{6,0,z},new float[]{-6,0,z},new float[]{-6,5.2f,z},new float[]{6,5.2f,z},rgb(0x272a44),0);
+        b.box(-6,0,z-.04f,6,.22f,z,rgb(0x2b1d17),0);b.box(-6,1.5f,z-.03f,6,1.56f,z,rgb(0x3a281e),0);
+        for(int i=-8;i<=8;i++)b.box(i*.8f-.008f,0,z-.005f,i*.8f+.008f,1.5f,z,rgb(0x1f2236),0);
         return b.mesh();
     }
     /** A wooden chair with a pale blue cushion, its seat at the origin's height {@link #SEAT}, facing +Z. */
@@ -294,32 +320,69 @@ public final class GachaCinema implements AutoCloseable {
         b.box(-s,.12f,-s+.005f,s,.15f,-s+t-.005f,dark,0);b.box(-s,.12f,s-t+.005f,s,.15f,s-.005f,dark,0);
         return b.mesh();
     }
-    /** The cupboard (찬장): a closed cabinet below, two open shelves above for the ten hourglasses, facing -Z toward Bomi. */
-    public static final float CUPBOARD_Z=2.15f,SHELF_LOW=.9f,SHELF_HIGH=1.45f,SHELF_X=.34f;
+    /**
+     * The cupboard (찬장), built large (user request, 2.40.0: a bigger cupboard for bigger hourglasses): a closed cabinet
+     * below, two open shelves above for the ten hourglasses, facing -Z toward Bomi; every measure the 2.39.0 one's times
+     * {@link #CUPBOARD_SCALE}.
+     */
+    public static final float CUPBOARD_SCALE=1.55f,CUPBOARD_Z=3.0f,CUPBOARD_DEPTH=.46f*CUPBOARD_SCALE,
+        SHELF_LOW=.9f*CUPBOARD_SCALE,SHELF_HIGH=1.45f*CUPBOARD_SCALE,SHELF_X=.34f*CUPBOARD_SCALE,CUPBOARD_TOP=2.0f*CUPBOARD_SCALE;
     static CinemaAssets.Mesh cupboard(){
         var b=new Builder();float[] wood=rgb(0x4b2f21),dark=rgb(0x2a1a12),back=rgb(0x1e1416),gold=rgb(0xd7b26a),panel=rgb(0x3d2619);
-        float x0=-.98f,x1=.98f,z0=CUPBOARD_Z,z1=CUPBOARD_Z+.46f;
+        float k=CUPBOARD_SCALE,x0=-.98f*k,x1=.98f*k,z0=CUPBOARD_Z,z1=CUPBOARD_Z+CUPBOARD_DEPTH,low=SHELF_LOW,high=SHELF_HIGH,top=CUPBOARD_TOP;
         // lower cabinet with two panelled doors and gold knobs
-        b.box(x0,0,z0+.02f,x1,.08f,z1,dark,0);
-        b.box(x0,.08f,z0,x1,SHELF_LOW-.04f,z1,wood,0);
-        for(int d=0;d<2;d++){float a=d==0?x0+.06f:.02f,c=d==0?-.02f:x1-.06f;
-            b.box(a,.14f,z0-.012f,c,SHELF_LOW-.1f,z0,panel,0);b.box(a+.06f,.2f,z0-.022f,c-.06f,SHELF_LOW-.16f,z0-.012f,wood,0);
-            float kx=d==0?c-.07f:a+.07f;b.box(kx-.018f,.5f,z0-.05f,kx+.018f,.536f,z0-.022f,gold,2);}
+        b.box(x0,0,z0+.02f*k,x1,.08f*k,z1,dark,0);
+        b.box(x0,.08f*k,z0,x1,low-.04f*k,z1,wood,0);
+        for(int d=0;d<2;d++){float a=d==0?x0+.06f*k:.02f*k,c=d==0?-.02f*k:x1-.06f*k;
+            b.box(a,.14f*k,z0-.012f*k,c,low-.1f*k,z0,panel,0);b.box(a+.06f*k,.2f*k,z0-.022f*k,c-.06f*k,low-.16f*k,z0-.012f*k,wood,0);
+            float kx=d==0?c-.07f*k:a+.07f*k;b.box(kx-.018f*k,.5f*k,z0-.05f*k,kx+.018f*k,.536f*k,z0-.022f*k,gold,2);}
         // counter top (the lower shelf)
-        b.box(x0-.03f,SHELF_LOW-.04f,z0-.04f,x1+.03f,SHELF_LOW,z1+.01f,wood,0);
+        b.box(x0-.03f*k,low-.04f*k,z0-.04f*k,x1+.03f*k,low,z1+.01f*k,wood,0);
         // hutch: sides, back, middle shelf, top and crown
-        float top=2.0f;
-        b.box(x0,SHELF_LOW,z0+.06f,x0+.05f,top,z1,wood,0);b.box(x1-.05f,SHELF_LOW,z0+.06f,x1,top,z1,wood,0);
-        b.box(x0+.05f,SHELF_LOW,z1-.03f,x1-.05f,top,z1,back,0);
-        b.box(x0+.05f,SHELF_HIGH-.035f,z0+.08f,x1-.05f,SHELF_HIGH,z1-.03f,wood,0);
-        b.box(x0+.05f,SHELF_HIGH-.05f,z0+.075f,x1-.05f,SHELF_HIGH-.035f,z0+.09f,gold,2);
-        b.box(x0-.02f,top,z0+.04f,x1+.02f,top+.05f,z1+.01f,wood,0);
-        b.box(x0-.06f,top+.05f,z0+.0f,x1+.06f,top+.09f,z1+.03f,dark,0);
-        b.box(x0-.04f,top+.09f,z0+.02f,x1+.04f,top+.16f,z1+.02f,wood,0);
-        b.box(x0-.06f,top+.16f,z0+.0f,x1+.06f,top+.19f,z1+.03f,dark,0);
+        b.box(x0,low,z0+.06f*k,x0+.05f*k,top,z1,wood,0);b.box(x1-.05f*k,low,z0+.06f*k,x1,top,z1,wood,0);
+        b.box(x0+.05f*k,low,z1-.03f*k,x1-.05f*k,top,z1,back,0);
+        b.box(x0+.05f*k,high-.035f*k,z0+.08f*k,x1-.05f*k,high,z1-.03f*k,wood,0);
+        b.box(x0+.05f*k,high-.05f*k,z0+.075f*k,x1-.05f*k,high-.035f*k,z0+.09f*k,gold,2);
+        b.box(x0-.02f*k,top,z0+.04f*k,x1+.02f*k,top+.05f*k,z1+.01f*k,wood,0);
+        b.box(x0-.06f*k,top+.05f*k,z0,x1+.06f*k,top+.09f*k,z1+.03f*k,dark,0);
+        b.box(x0-.04f*k,top+.09f*k,z0+.02f*k,x1+.04f*k,top+.16f*k,z1+.02f*k,wood,0);
+        b.box(x0-.06f*k,top+.16f*k,z0,x1+.06f*k,top+.19f*k,z1+.03f*k,dark,0);
+        // a gold trim along the crown and a round medallion at its middle
+        b.box(x0-.065f*k,top+.12f*k,z0-.004f*k,x1+.065f*k,top+.135f*k,z0+.004f*k,gold,2);
+        b.box(-.09f*k,top+.19f*k,z0+.03f*k,.09f*k,top+.33f*k,z0+.06f*k,dark,0);b.box(-.06f*k,top+.215f*k,z0+.02f*k,.06f*k,top+.305f*k,z0+.03f*k,gold,2);
         // pilasters with gold capitals at the hutch's front edges
-        for(float x:new float[]{x0,x1-.07f}){b.box(x,SHELF_LOW,z0+.03f,x+.07f,top,z0+.07f,dark,0);b.box(x-.005f,top-.06f,z0+.025f,x+.075f,top-.035f,z0+.075f,gold,2);}
+        for(float x:new float[]{x0,x1-.07f*k}){b.box(x,low,z0+.03f*k,x+.07f*k,top,z0+.07f*k,dark,0);b.box(x-.005f*k,top-.06f*k,z0+.025f*k,x+.075f*k,top-.035f*k,z0+.075f*k,gold,2);}
         return b.mesh();
+    }
+    /** The spotlight's beam: an open cone, its apex at (0, 1, 0) over its unit circle on the floor (bone 1 sets its size). */
+    static CinemaAssets.Mesh beam(){
+        int n=48;var v=new float[n*6*14];int k=0;
+        for(int i=0;i<n;i++){
+            double a0=i*Math.PI*2/n,a1=(i+1)*Math.PI*2/n;
+            float[][] p={{(float)Math.cos(a0),0,(float)Math.sin(a0),0},{(float)Math.cos(a1),0,(float)Math.sin(a1),0},{0,1,0,1}};
+            // a thin sliver of a sleeve near the apex rather than a point, so the top end has some width to fade over
+            float[][] q={p[0],p[1],{(float)Math.cos(a1)*.06f,1,(float)Math.sin(a1)*.06f,1},p[0],{(float)Math.cos(a1)*.06f,1,(float)Math.sin(a1)*.06f,1},{(float)Math.cos(a0)*.06f,1,(float)Math.sin(a0)*.06f,1}};
+            for(float[] c:q){float nx=c[0],nz=c[2],l=(float)Math.max(1e-4,Math.hypot(nx,nz));
+                for(float val:new float[]{c[0],c[1],c[2],nx/l,.5f,nz/l,(float)(i/(double)n),c[3],1,1,1,1,1,9})v[k++]=val;}
+        }
+        return new CinemaAssets.Mesh(v);
+    }
+    /** The floor's magic circle: a unit square in x and z (bone 1 places and sizes it), its pattern drawn by the shader. */
+    static CinemaAssets.Mesh circle(){
+        float[][] c={{-1,0,-1,0,0},{1,0,-1,1,0},{1,0,1,1,1},{-1,0,-1,0,0},{1,0,1,1,1},{-1,0,1,0,1}};
+        var v=new float[6*14];int k=0;
+        for(float[] p:c)for(float val:new float[]{p[0],p[1],p[2],0,1,0,p[3],p[4],1,1,1,1,1,10})v[k++]=val;
+        return new CinemaAssets.Mesh(v);
+    }
+    /** Sparks to circle the held hourglass (material 11; the vertex shader moves them). */
+    static CinemaAssets.Mesh sparks(int n){
+        var v=new float[n*6*14];int k=0;var r=new Random(23);
+        for(int i=0;i<n;i++){
+            float angle=r.nextFloat()*6.2832f,radius=.55f+r.nextFloat()*.6f,phase=r.nextFloat(),speed=(.5f+r.nextFloat()*.9f)*(r.nextBoolean()?1:-1),rise=.08f+r.nextFloat()*.22f,size=.004f+r.nextFloat()*.008f;
+            float[][] corner={{0,0},{1,0},{1,1},{0,0},{1,1},{0,1}};
+            for(float[] c:corner)for(float val:new float[]{angle,radius,phase,speed,rise,size,c[0],c[1],1,1,1,.4f+.6f*r.nextFloat(),-1,11})v[k++]=val;
+        }
+        return new CinemaAssets.Mesh(v);
     }
     /** Motes of dust or light drifting up through the scene (material 6; the vertex shader moves and turns them). */
     static CinemaAssets.Mesh motes(int n){

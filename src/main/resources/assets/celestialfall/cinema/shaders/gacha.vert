@@ -1,5 +1,6 @@
 #version 150
-// The gacha's pull scenes (2.39.0): the title cinema's vertex stage, plus motes of light that drift up through the dark.
+// The gacha's pull scenes (2.39.0): the title cinema's vertex stage, plus motes of light that drift up through the dark
+// and (2.40.0) sparks circling the hourglass.
 in vec3 Position;
 in vec3 Normal;
 in vec2 UV;
@@ -11,6 +12,9 @@ uniform mat4 LightMatrix;
 uniform mat4 Bones[32];
 uniform float Time;
 uniform vec3 Camera;
+uniform vec3 SparkCenter;
+uniform float SparkRadius;
+uniform float SparkHeight;
 out vec3 world;
 out vec3 normal;
 out vec2 uv;
@@ -31,6 +35,17 @@ void main() {
         vec3 f=normalize(Camera-c),r=normalize(cross(vec3(0,1,0),f)),u=cross(f,r);
         float size=.005+.009*h;
         p=vec4(c+(r*(UV.x-.5)+u*(UV.y-.5))*size*2.,1.);
+        n=f;
+    }
+    if(Material>10.5 && Material<11.5) {
+        // a spark circling the held hourglass (2.40.0): Position holds its angle, its share of the radius and where in
+        // its rise it starts; Normal its turning speed, rise speed and size. Light, so it faces the eye like the motes.
+        float a=Position.x+Time*Normal.x;
+        float r=SparkRadius*Position.y*(1.+.18*sin(Time*1.3+Position.x*3.));
+        float y=SparkHeight*(fract(Position.z+Time*Normal.y)-.5);
+        vec3 c=SparkCenter+vec3(cos(a)*r,y,sin(a)*r);
+        vec3 f=normalize(Camera-c),rr=normalize(cross(vec3(0,1,0),f)),u=cross(f,rr);
+        p=vec4(c+(rr*(UV.x-.5)+u*(UV.y-.5))*Normal.z*2.,1.);
         n=f;
     }
     rigged=Bone>=0.0&&Bone<6.5?1.0:0.0;

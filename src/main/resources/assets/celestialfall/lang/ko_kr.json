@@ -97,5 +97,6 @@
   "entity.celestialfall.item_seller": "아이템 판매원",
   "entity.celestialfall.item_buyer": "아이템 매입원",
   "item.celestialfall.chest_key": "상자 키",
-  "entity.celestialfall.field_loot": "필드 보급품"
+  "entity.celestialfall.field_loot": "필드 보급품",
+  "subtitles.celestialfall.gacha": "뽑기 효과음"
 }

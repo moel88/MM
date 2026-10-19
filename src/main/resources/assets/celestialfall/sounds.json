@@ -338,5 +338,221 @@
         "stream": true
       }
     ]
+  },
+  "gacha_open": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/open",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_hover": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/hover",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_click": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/click",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_panel": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/panel",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_back": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/back",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_denied": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/denied",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_pull": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/pull",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_one_start": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/one_start",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_gather": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/gather",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_reveal_r": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/reveal_r",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_reveal_sr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/reveal_sr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_reveal_ssr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/reveal_ssr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_ten_start": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/ten_start",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_rise": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/rise",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_light_r": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/light_r",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_light_sr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/light_sr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_light_ssr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/light_ssr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_whiteout": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/whiteout",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_card": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/card",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_card_sr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/card_sr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_card_ssr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/card_ssr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_fanfare": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/fanfare",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_star": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/star",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_result": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/result",
+        "preload": true
+      }
+    ]
   }
 }

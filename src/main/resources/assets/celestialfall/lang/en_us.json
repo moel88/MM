@@ -97,5 +97,6 @@
   "entity.celestialfall.item_seller": "Item Seller",
   "entity.celestialfall.item_buyer": "Item Buyer",
   "item.celestialfall.chest_key": "Chest Key",
-  "entity.celestialfall.field_loot": "Field Loot"
+  "entity.celestialfall.field_loot": "Field Loot",
+  "subtitles.celestialfall.gacha": "Gacha chimes"
 }
