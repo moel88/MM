@@ -25,4 +25,8 @@ The Git repository keeps the binary in `libs/` but does not commit the source ar
 
 Official Maven SHA-1 was verified: `85a91a10ee1595dbbb70e089d837e3bc52c0df56`. The local SHA-512 is recorded in the lock file.
 
-The gacha screen's backdrop and logo (`textures/gui/gacha/background.png`, `logo.png`) are taken from the screen draft the mod's owner supplied, and the SSR card's Kageno illustration (`textures/gui/gacha/kageno.png`) is the owner's supplied artwork, resized (2.39.0, `tools/gacha/build_textures.py`).
+The gacha banner (`textures/gui/gacha/banner.png`) and the layers lifted off it (`title.png`, `title_core.png`, `title_sub.png`, `logo.png`, `eyes.png`) come from the banner mockup the mod's owner supplied (2.40.0, `tools/gacha/build_banner.py`); `spark.png` and `glint.png` are drawn by the same script. They replace the 2.39.0 draft backdrop and illustration.
+
+The gacha screens' type, Botand Gacha Sans (`assets/celestialfall/gacha/font/gacha_*.ttf`), is Pretendard 1.3.9 (Copyright 2021 Kil Hyung-jin, with Reserved Font Names Pretendard, Source, Inter and M PLUS 1), cut down to ASCII, Latin-1, common symbols and the KS X 1001 Hangul and renamed as the SIL Open Font License 1.1 requires of a modified version (`tools/gacha/build_font.py`). The licence is in `third_party/pretendard/OFL.txt`. Source: https://github.com/orioncactus/pretendard (packages/pretendard/dist/public/static/alternative).
+
+The gacha's sounds (`sounds/gacha/*.ogg`) are synthesised from first principles by `tools/gacha/make_sounds.py`; no recordings or samples are used.
