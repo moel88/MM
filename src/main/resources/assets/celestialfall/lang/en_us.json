@@ -82,6 +82,8 @@
   "message.botand.rebirth_button": "[Rebirth]",
   "message.botand.transcend_button": "[Transcend]",
   "message.botand.progress_updated": "Updated progression for %s player(s).",
+  "message.botand.gacha_info": "%s: SSR certain in %s pulls, SR or better in %s, %s pulls so far.",
+  "message.botand.gacha_set": "Set the gacha count of %s player(s): SSR certain in %s pulls, SR or better in %s.",
   "message.botand.progress_busy": "Finish combat actions and cutscenes before changing progression; you must be alive.",
   "message.botand.rebirth_locked": "Reach level 50 to rebirth. At 15 rebirths, transcend first.",
   "message.botand.transcend_locked": "Transcendence requires 15 rebirths and an available transcendence counter.",

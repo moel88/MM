@@ -32,7 +32,7 @@ public final class BotandMenuScreen extends Screen {
     private void rebuild(boolean focusSearch){
         clearChildren();search=null;
         if(page==null){for(var d:MenuLayout.dock(width,height,true)){
-            var v=new MenuLayout.View(0,0,1);var b=new ArtButton(d.rect(),"",d.enabled(),false,false,()->{if(d.id().equals("menu"))exit();else select(d.id());},v,d.id());
+            var v=new MenuLayout.View(0,0,1);var b=new ArtButton(d.rect(),"",d.enabled(),false,false,()->{if(d.id().equals("menu"))exit();else if(d.id().equals("draw"))dev.sangwoo.celestialfall.client.gacha.GachaClient.open();else select(d.id());},v,d.id());
             b.setMessage(Text.literal(MenuLayout.name(d.id())));addDrawableChild(b);
         }return;}
         if(confirmation!=0){

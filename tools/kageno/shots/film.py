@@ -19,6 +19,10 @@ FONT = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
 big, small = ImageFont.truetype(FONT, 26), ImageFont.truetype(FONT, 22)
 W = int(os.environ.get('FILM_WIDTH', '960'))
 SKILL, SPEED, FPS = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FILM_SPEED', '1')), int(os.environ.get('FILM_FPS', '60'))
+# FILM_STAGES="UNTIL:NAME|UNTIL:NAME|..." gives the captions directly (seconds of the shot's clock) and FILM_CLOCK the
+# words before the time (default "시전 후"): the gacha's shots (tools/gacha/shots) run on the screen's own clock.
+CLOCK = os.environ.get('FILM_CLOCK', '시전 후')
+if os.environ.get('FILM_STAGES'): SKILL = 'CUSTOM'
 
 frames = []
 for f in glob.glob(os.path.join(shots, '*.png')):
@@ -88,6 +92,9 @@ STAGES = {
           (2.6, '큰 보라 검격 · 공기 굴절 · 바닥이 갈라지고 들썩임 (1.9초 마지막 큰 베기 1타, 총 5히트)'), (3.9, '바닥 흔적 · 파편 · 흙먼지 · 연기')],
 }
 
+if SKILL == 'CUSTOM':
+    STAGES['CUSTOM'] = [(float(a), b) for a, b in (x.split(':', 1) for x in os.environ['FILM_STAGES'].split('|'))]
+
 def stage(t):
     if SKILL == 'E':
         if t < .48: return '네온 점화 · 찌르기 자세'
@@ -154,7 +161,7 @@ def caption(img, t):
     d = ImageDraw.Draw(img, 'RGBA')
     speed = '' if SPEED == 1 else f' · {SPEED:g}배속'
     name = stage(t)
-    lines = [(title, big, (255, 255, 255)), (f'시전 후 {max(0, t):.{2 if SKILL == "E" else 1}f}초{" · " + name if name else ""}{speed}', small, (255, 230, 120))]
+    lines = [(title, big, (255, 255, 255)), (f'{CLOCK} {max(0, t):.{2 if SKILL == "E" else 1}f}초{" · " + name if name else ""}{speed}', small, (255, 230, 120))]
     text, color = actor_line(t)
     y = 10
     for s, font, col in lines:

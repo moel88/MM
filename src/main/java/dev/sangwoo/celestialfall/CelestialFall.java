@@ -58,6 +58,7 @@ public final class CelestialFall implements ModInitializer {
         dev.sangwoo.celestialfall.progression.ProgressManager.initialize();
         dev.sangwoo.celestialfall.stand.StandManager.initialize();
         dev.sangwoo.celestialfall.menu.MenuServer.initialize();
+        dev.sangwoo.celestialfall.gacha.GachaServer.initialize();
         dev.sangwoo.celestialfall.commerce.CommerceRegistry.initialize();
         dev.sangwoo.celestialfall.loot.LootRegistry.initialize();
         dev.sangwoo.celestialfall.terrain.TerrainRestoration.initialize();
@@ -138,6 +139,7 @@ public final class CelestialFall implements ModInitializer {
             }
             dev.sangwoo.celestialfall.progression.ProgressCommands.add(botand);
             dev.sangwoo.celestialfall.commerce.CommerceCommands.add(botand);
+            dev.sangwoo.celestialfall.gacha.GachaServer.add(botand);
             dispatcher.register(botand);
         });
         LOGGER.info("Botand {} initialized",net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("celestialfall").map(m->m.getMetadata().getVersion().getFriendlyString()).orElse("?"));

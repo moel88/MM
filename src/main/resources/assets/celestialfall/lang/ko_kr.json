@@ -82,6 +82,8 @@
   "message.botand.rebirth_button": "[환생]",
   "message.botand.transcend_button": "[초월]",
   "message.botand.progress_updated": "%s명의 성장 정보를 변경했습니다.",
+  "message.botand.gacha_info": "%s: SSR 확정까지 %s회, SR 이상 확정까지 %s회, 지금까지 %s회 뽑았습니다.",
+  "message.botand.gacha_set": "%s명의 뽑기 횟수를 바꿨습니다. SSR 확정까지 %s회, SR 이상 확정까지 %s회입니다.",
   "message.botand.progress_busy": "생존 상태에서 전투 동작과 컷씬이 끝난 후 사용할 수 있습니다.",
   "message.botand.rebirth_locked": "레벨 50에서 환생할 수 있습니다. 환생 15회이면 먼저 초월하세요.",
   "message.botand.transcend_locked": "환생 15회가 필요합니다. 초월 횟수가 상한에 도달한 경우에는 더 초월할 수 없습니다.",
