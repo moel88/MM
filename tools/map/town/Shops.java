@@ -48,7 +48,7 @@ final class Shops {
         new Kind("souvenir","みやげ","おみやげ 浜風","干物・海産物",Blocks.CYAN_WOOL,Blocks.WHITE_WOOL,DyeColor.CYAN,s(Blocks.SMOOTH_SANDSTONE)),
         new Kind("tea","お茶","お茶の 青葉園","日本茶・海苔",Blocks.GREEN_WOOL,Blocks.GREEN_WOOL,DyeColor.GREEN,s(Blocks.SPRUCE_PLANKS)),
         new Kind("toys","おもちゃ","おもちゃの まるや","駄菓子",Blocks.YELLOW_WOOL,Blocks.RED_WOOL,DyeColor.RED,s(Blocks.WHITE_TERRACOTTA)),
-        new Kind("photo","写真","カメラのキタムラヤ","",Blocks.BLACK_WOOL,Blocks.BLACK_WOOL,DyeColor.WHITE,s(Blocks.LIGHT_GRAY_CONCRETE)));
+        new Kind("photo","写真","浜写真館","写真・現像",Blocks.BLACK_WOOL,Blocks.BLACK_WOOL,DyeColor.WHITE,s(Blocks.LIGHT_GRAY_CONCRETE)));
     static final Set<String> FOOD=Set.of("ramen","izakaya","sushi","soba","cafe","snack");
 
     /** Builds the shops on their plots: the main street's, some of the station street's, the special buildings. */

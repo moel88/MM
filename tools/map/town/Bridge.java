@@ -40,7 +40,7 @@ final class Bridge {
         fans();
         entrance();
         island();
-        t.places.put("bridge",new int[]{0,deckY(PZ)+1,PZ});
+        t.places.put("bridge",new int[]{0,(deckHalf(PZ)+3)>>1,PZ}); // standing on the deck, half a block up where a slab tops it
         Town.log("bridge: "+cables+" cable blocks, "+lights+" lights");
     }
 
@@ -64,7 +64,9 @@ final class Bridge {
                     continue;
                 }
                 if(ax>=4){
-                    if(ax==6){c.set(x,y-1,z,s(Blocks.SEA_LANTERN));lights++;}
+                    // the blue line's light, behind two panes of glass so that its blue is deep enough to read at night
+                    if(ax==6)c.set(x,y-1,z,s(Blocks.LIGHT_BLUE_STAINED_GLASS));
+                    if(ax==5){c.set(x,y-1,z,s(Blocks.SEA_LANTERN));lights++;}
                     if(halfS){c.set(x,yS,z,s(Blocks.STONE));c.set(x,yS+1,z,Pal.pavers(x,z));}else c.set(x,yS,z,Pal.paverBlock(x,z));
                     if(yS>y)c.set(x,y,z,s(Blocks.STONE));
                     c.ground(x,z,halfS?yS+1:yS);
@@ -72,7 +74,8 @@ final class Bridge {
                 }
                 BlockState full,slab;
                 if(x==0&&Math.floorMod(z,8)<4){full=s(Blocks.WHITE_CONCRETE);slab=Canvas.slab(Blocks.SMOOTH_QUARTZ_SLAB,false);}
-                else{full=Pal.asphalt(x,z);slab=Pal.asphaltSlab(x,z);}
+                // the deck's newer, darker asphalt is one material in whole and half blocks, so the arch reads as one smooth rise
+                else{full=Pal.ramp(false);slab=Pal.ramp(true);}
                 if(half){c.set(x,y,z,Pal.asphaltBase());c.set(x,y+1,z,slab);}else c.set(x,y,z,full);
                 c.ground(x,z,half?y+1:y);
             }
@@ -110,8 +113,8 @@ final class Bridge {
                     boolean outer=x==xc+side||(side>0?x==xc+1:x==xc-1);
                     boolean face=z==PZ-depth||z==PZ+depth;
                     BlockState b=s(Blocks.WHITE_CONCRETE);
-                    // Botand's blue line up the outer face, lit from inside
-                    if(outer&&z==PZ&&y>deck)b=s(Blocks.LIGHT_BLUE_STAINED_GLASS);
+                    // Botand's blue lines up the outer face and up the faces towards the town and the island, lit from inside
+                    if(outer&&z==PZ&&y>deck||x==xc&&face&&depth==1&&y>deck)b=s(Blocks.LIGHT_BLUE_STAINED_GLASS);
                     else if(x==xc&&z==PZ&&y>deck)b=s(Blocks.SEA_LANTERN);
                     else if(face&&y%9==0)b=s(Blocks.LIGHT_BLUE_CONCRETE);
                     if(Math.abs(x)<=6&&y>=deck-3&&y<=deck+6)continue;

@@ -36,7 +36,7 @@ final class Ground {
             // old asphalt over most of it, worn through to the concrete under it in soft-edged patches
             double n=Pal.smooth(x,z,13,11)*0.75+Pal.smooth(x,z,5,12)*0.25,h=Pal.hash(x,11,z);
             BlockState top;
-            if(n<0.6)top=h<0.12?s(Blocks.GRAY_CONCRETE):h<0.16?s(Blocks.COBBLED_DEEPSLATE):s(Blocks.GRAY_CONCRETE_POWDER);
+            if(n<0.6)top=h<0.03?s(Blocks.GRAY_CONCRETE):h<0.06?s(Blocks.COBBLED_DEEPSLATE):s(Blocks.GRAY_CONCRETE_POWDER);
             else if(n<0.72)top=h<0.5?s(Blocks.ANDESITE):s(Blocks.GRAY_CONCRETE_POWDER);
             else top=h<0.25?s(Blocks.ANDESITE):h<0.35?s(Blocks.STONE):s(Blocks.LIGHT_GRAY_CONCRETE);
             // cracks: dark lines wandering across, weeds growing out of them
@@ -44,6 +44,11 @@ final class Ground {
             if(crack)top=s(Blocks.COBBLESTONE);
             c.set(x,Y,z,top);c.clear(x,Y+1,z,x,Y+8,z);c.ground(x,z,Y);
             if(crack&&rnd.nextInt(5)==0)c.set(x,Y+1,z,s(Blocks.GRASS));
+        }
+        // squares where the asphalt was dug up and laid again, darker than the old surface round them
+        for(int k=0;k<16;k++){
+            int px=X0+4+rnd.nextInt(X1-X0-12),pz=Z0+4+rnd.nextInt(Z1-Z0-12),pw=2+rnd.nextInt(5),pd=2+rnd.nextInt(4);
+            for(int x=px;x<px+pw;x++)for(int z=pz;z<pz+pd;z++)if(c.get(x,Y,z).isOf(Blocks.GRAY_CONCRETE_POWDER)||c.get(x,Y,z).isOf(Blocks.COBBLED_DEEPSLATE))c.set(x,Y,z,s(Blocks.GRAY_CONCRETE));
         }
         // faded lines of an old car park and a court, the paint worn through in places
         BlockState paint=s(Blocks.WHITE_CONCRETE_POWDER);

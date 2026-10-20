@@ -175,6 +175,7 @@ final class Houses {
         }
         for(int x=bx0+1;x<=Math.min(bx1-1,bx0+2);x++){f.set(x,5,bz1,pane);f.set(x,6,bz1,pane);}
         Kit.airCon(f,bx1-1,5,bz1+1,Direction.WEST);
+        if(rnd.nextInt(3)==0)futons(f,bx0+1,Math.min(bx1-2,bx0+3),5,bz1+2);
         Block door2=Pal.pick(rnd,Blocks.DARK_OAK_DOOR,Blocks.SPRUCE_DOOR,Blocks.BIRCH_DOOR,Blocks.MANGROVE_DOOR,Blocks.IRON_DOOR);
         Kit.entrance(f,door,bz0,door2,Kit.SLATE,name(),true);
         Kit.roof(f,bx0,bz0,bx1,bz1,4*stories,type,rnd.nextBoolean()||hw>=hd,roof,wall,floor);
@@ -226,6 +227,7 @@ final class Houses {
                     }
                     if(u>0){f.set(ux,fy+1,bz1+1,wall);f.set(ux,fy+2,bz1+1,wall);}
                     Kit.airCon(f,Math.min(bx1-1,ux+uw-1),fy+1,bz1+1,Direction.WEST);
+                    if(rnd.nextInt(4)==0)futons(f,ux+1,Math.min(bx1-2,ux+uw-2),fy+1,bz1+3);
                 }
             }
             // the open corridor along the front, with a railing
@@ -344,6 +346,16 @@ final class Houses {
             case 1->f.set(x,1,z,Canvas.leaves(Blocks.OAK_LEAVES));
             case 2->{f.set(x,1,z,s(Blocks.DARK_OAK_PLANKS));if(f.air(x,2,z))f.set(x,2,z,Canvas.slab(Blocks.DARK_OAK_SLAB,false));}
             default->{f.set(x,1,z,Pal.blockWall(f.wx(x,z),f.y0+1,f.wz(x,z)));if(f.air(x,2,z))f.set(x,2,z,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));}
+        }
+    }
+
+    /** Bedding put out to air over a balcony's rail: one or two futons hanging down the outside from (x, y, z) on. */
+    private void futons(Frame f,int x0,int x1,int y,int z){
+        Block[] cloth={Blocks.WHITE_WALL_BANNER,Blocks.WHITE_WALL_BANNER,Blocks.LIGHT_BLUE_WALL_BANNER,Blocks.PINK_WALL_BANNER,Blocks.YELLOW_WALL_BANNER,Blocks.LIGHT_GRAY_WALL_BANNER};
+        int n=1+rnd.nextInt(2);
+        for(int k=0;k<n&&x0+k<=x1;k++){
+            int x=x0+k;
+            if(f.air(x,y,z)&&f.air(x,y-1,z))f.set(x,y,z,s(cloth[rnd.nextInt(cloth.length)]).with(Properties.HORIZONTAL_FACING,Direction.SOUTH));
         }
     }
 }

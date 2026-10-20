@@ -125,9 +125,10 @@ final class Nature {
             if(t.roads.any(px,pz)||nearBuilt(px,pz,g))continue;
             boolean shore=pz>Terrain.shoreZ(px)-14||pz>150;
             boolean ridge=pz<-200;
-            boolean valley=Math.abs(px-Plan.riverX(pz))<46&&pz>Plan.RIVER_HEAD_Z;
-            double p=valley?0.07:shore?0.32:ridge?0.62:0.42;
-            undergrowth(px,g+1,pz,shore);
+            double fromRiver=Math.abs(px-Plan.riverX(pz));
+            boolean valley=fromRiver<46&&pz>Plan.RIVER_HEAD_Z;
+            // the valley floor stays open for the paddies and the path; its sides are wooded like the other hills
+            double p=valley?(fromRiver<26?0.05:0.3):shore?0.32:ridge?0.62:0.42;
             if(rnd.nextDouble()>p)continue;
             int r=rnd.nextInt(100);
             if(shore)pine(px,g+1,pz,5+rnd.nextInt(4));
@@ -137,6 +138,18 @@ final class Nature {
             trees++;
         }
         Town.log("woods: "+trees+" trees");
+        // grass, ferns and wildflowers over all the open ground, thickest in front of the little rises of a slope
+        int plants=0;
+        for(int x=Plan.X0+1;x<Plan.X0+Plan.W-1;x++)for(int z=Plan.Z0+1;z<Plan.Z0+Plan.D-1;z++){
+            int i=Canvas.idx(x,z);
+            if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.plat[i]!=Terrain.NONE||t.roads.any(x,z))continue;
+            int g=c.ground(x,z);
+            if(g<=Plan.SEA+1||!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK)||!c.air(x,g+1,z))continue;
+            boolean rise=c.ground(x+1,z)>g||c.ground(x-1,z)>g||c.ground(x,z+1)>g||c.ground(x,z-1)>g;
+            boolean shore=z>Terrain.shoreZ(x)-14||z>150;
+            if(rnd.nextDouble()<(rise?0.6:0.2)*(shore?0.7:1)&&undergrowth(x,g+1,z,shore))plants++;
+        }
+        Town.log("undergrowth: "+plants+" plants");
     }
     private boolean nearBuilt(int x,int z,int g){
         for(int dx=-3;dx<=3;dx++)for(int dz=-3;dz<=3;dz++){
@@ -146,13 +159,15 @@ final class Nature {
         }
         return false;
     }
-    void undergrowth(int x,int y,int z,boolean shore){
+    boolean undergrowth(int x,int y,int z,boolean shore){
+        if(!c.air(x,y,z))return false;
         int r=rnd.nextInt(100);
-        if(!c.air(x,y,z))return;
-        if(r<30)c.set(x,y,z,Blocks.GRASS.getDefaultState());
-        else if(r<36)c.set(x,y,z,Blocks.FERN.getDefaultState());
-        else if(r<39&&c.air(x,y+1,z))c.tallPlant(x,y,z,shore?Blocks.TALL_GRASS:Blocks.LARGE_FERN);
-        else if(r<41)c.set(x,y,z,Pal.pick(rnd,Blocks.OXEYE_DAISY,Blocks.CORNFLOWER,Blocks.AZURE_BLUET,Blocks.DANDELION,Blocks.LILY_OF_THE_VALLEY).getDefaultState());
-        else if(r<43&&!shore)c.set(x,y,z,Canvas.leaves(Blocks.AZALEA_LEAVES));
+        if(r<58)c.set(x,y,z,Blocks.GRASS.getDefaultState());
+        else if(r<72&&c.air(x,y+1,z))c.tallPlant(x,y,z,shore||r<66?Blocks.TALL_GRASS:Blocks.LARGE_FERN);
+        else if(r<86)c.set(x,y,z,shore?Blocks.GRASS.getDefaultState():Blocks.FERN.getDefaultState());
+        else if(r<92)c.set(x,y,z,Pal.pick(rnd,Blocks.OXEYE_DAISY,Blocks.CORNFLOWER,Blocks.AZURE_BLUET,Blocks.DANDELION,Blocks.LILY_OF_THE_VALLEY).getDefaultState());
+        else if(!shore)c.set(x,y,z,Canvas.leaves(r<97?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES));
+        else c.set(x,y,z,Blocks.GRASS.getDefaultState());
+        return true;
     }
 }

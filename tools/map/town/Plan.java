@@ -107,20 +107,29 @@ final class Plan {
     /** The row (index into ROWS) a z lies in, or -1. */
     static int row(int z){for(int r=0;r<ROWS.length;r++)if(z>=ROWS[r][0]&&z<=ROWS[r][1])return r;return -1;}
     /**
-     * The level of a north-south street at z, in half blocks (2y, plus one where a slab tops it): level along each
-     * east-west street, rising evenly between them; the coast's level south of S1, S4's north of it.
+     * The level of a north-south street at z, in half blocks (2y, plus one where a slab tops it). The street rises in
+     * whole blocks, each step taken in two halves: a single row of slabs just below each new level, so the slope reads
+     * as one long road and not as bands of two pavings.
      */
     static int slopeHalf(int z){
-        if(z>=ST_N[0])return 2*ST_Y[0];
-        if(z<=ST_S[3])return 2*ST_Y[3];
+        int here=slopeLevel(z),up=slopeLevel(z-1);
+        return up>here?2*here+1:2*here;
+    }
+    /**
+     * The whole-block level of a north-south street at z: along each east-west street, rising evenly between them;
+     * the coast's level south of S1, S4's north of it.
+     */
+    static int slopeLevel(int z){
+        if(z>=ST_N[0])return ST_Y[0];
+        if(z<=ST_S[3])return ST_Y[3];
         for(int k=0;k<3;k++){
-            if(z>=ST_N[k]&&z<=ST_S[k])return 2*ST_Y[k];
+            if(z>=ST_N[k]&&z<=ST_S[k])return ST_Y[k];
             if(z<ST_N[k]&&z>ST_S[k+1]){
                 double t=(ST_N[k]-z)/(double)(ST_N[k]-ST_S[k+1]);
-                return (int)Math.round(2*(ST_Y[k]+t*(ST_Y[k+1]-ST_Y[k])));
+                return (int)Math.round(ST_Y[k]+t*(ST_Y[k+1]-ST_Y[k]));
             }
         }
-        return 2*ST_Y[3];
+        return ST_Y[3];
     }
     /** Whether x lies in the main street's corridor or a side street's. */
     static boolean mainStreet(int x){return x>=MAIN_X0&&x<=MAIN_X1;}

@@ -115,7 +115,7 @@ sys.path.insert(0, str(HERE))
 import level_dat
 level_dat.patch(server / WORLD, os.environ.get('TOWN_NAME', 'BOTAND | 보탠드 해안 마을'), 2)
 # the world folder zipped for the saves folder (or a server's world folder)
-pack = out / f'Botand_Seaside_1.20.1-v{VERSION}.zip'
+pack = out / f'Botand-Seaside-1.20.1-v{VERSION}.zip'
 with zipfile.ZipFile(pack, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for f in sorted((server / WORLD).rglob('*')):
         if f.is_file(): z.write(f, str(f.relative_to(server)))

@@ -185,7 +185,13 @@ final class Terrain {
     private BlockState surface(int x,int z,int top,int i,int[] F){
         if(kind[i]==BEACH)return Blocks.SAND.getDefaultState();
         // cliffs and steep hillsides show their rock, the shore its sand and stones
-        if(plat[i]==NONE&&steep(F,i,top))return Pal.hash(x,5,z)<0.5?Blocks.STONE.getDefaultState():Blocks.ANDESITE.getDefaultState();
+        if(plat[i]==NONE&&steep(F,i,top)){
+            // grass and moss cling to the ledges here and there
+            double g=Pal.hash(x,5,z);
+            if(g<0.10)return Blocks.GRASS_BLOCK.getDefaultState();
+            if(g<0.14)return Blocks.MOSS_BLOCK.getDefaultState();
+            return rock(x,top,z);
+        }
         if(plat[i]==NONE&&top<=Plan.SEA+1)return Pal.hash(x,6,z)<0.7?Blocks.SAND.getDefaultState():Blocks.GRAVEL.getDefaultState();
         return Pal.hash(x,7,z)<0.025?Blocks.COARSE_DIRT.getDefaultState():Blocks.GRASS_BLOCK.getDefaultState();
     }
@@ -198,10 +204,20 @@ final class Terrain {
         }
         return d;
     }
-    /** Bare rock of the hillsides, where a slope shows its side. */
+    /**
+     * Bare rock of the hillsides, where a slope shows its side: beds of stone, andesite and tuff a few blocks thick
+     * that wander up and down across the face, broken and grown over in places.
+     */
     BlockState rock(int x,int y,int z){
         double h=Pal.hash(x,y,z);
-        return h<0.5?Blocks.STONE.getDefaultState():h<0.8?Blocks.ANDESITE.getDefaultState():h<0.92?Blocks.COBBLESTONE.getDefaultState():Blocks.MOSSY_COBBLESTONE.getDefaultState();
+        if(h<0.05)return Blocks.MOSSY_COBBLESTONE.getDefaultState();
+        if(h<0.10)return Blocks.COBBLESTONE.getDefaultState();
+        int bed=Math.floorMod((int)Math.floor((y+Pal.smooth(x,z,29,31)*7)/2.5),6);
+        return switch(bed){
+            case 0,3->h<0.78?Blocks.STONE.getDefaultState():Blocks.ANDESITE.getDefaultState();
+            case 1,4->h<0.72?Blocks.ANDESITE.getDefaultState():Blocks.STONE.getDefaultState();
+            default->h<0.70?Blocks.TUFF.getDefaultState():Blocks.STONE.getDefaultState();
+        };
     }
     private boolean steep(int[] F,int i,int top){
         int x=i/Plan.D,z=i%Plan.D;
