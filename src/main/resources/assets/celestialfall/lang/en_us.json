@@ -98,5 +98,7 @@
   "entity.celestialfall.item_buyer": "Item Buyer",
   "item.celestialfall.chest_key": "Chest Key",
   "entity.celestialfall.field_loot": "Field Loot",
-  "subtitles.celestialfall.gacha": "Gacha chimes"
+  "subtitles.celestialfall.gacha": "Gacha chimes",
+  "death.attack.celestialfall.reset": "%1$s reset their character",
+  "death.attack.celestialfall.reset.player": "%1$s reset their character while trying to escape %2$s"
 }

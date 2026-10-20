@@ -30,7 +30,8 @@
     "AtomicSkyMixin",
     "AtomicFogMixin",
     "AtomicLightMixin",
-    "ImmersiveNetworkClientMixin"
+    "ImmersiveNetworkClientMixin",
+    "PlayerListHudMixin"
   ],
   "injectors": {
     "defaultRequire": 1

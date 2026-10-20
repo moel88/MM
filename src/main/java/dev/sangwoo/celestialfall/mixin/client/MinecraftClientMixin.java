@@ -38,6 +38,20 @@ public abstract class MinecraftClientMixin {
         for(var key:new net.minecraft.client.option.KeyBinding[]{mc.options.attackKey,mc.options.useKey,mc.options.pickItemKey,mc.options.dropKey,mc.options.swapHandsKey,mc.options.inventoryKey})while(key.wasPressed()){}
         for(var key:mc.options.hotbarKeys)while(key.wasPressed()){}
     }
+    /**
+     * On the Botand map Esc opens the sky-blue pause menu instead of Minecraft's (2.45.0). F3+Esc in a world of your own
+     * keeps Minecraft's bare pause; the game pauses and its sounds stop as they would for Minecraft's menu.
+     */
+    @Inject(method="openPauseMenu",at=@At("HEAD"),cancellable=true)
+    private void botand$pauseMenu(boolean pauseOnly,CallbackInfo ci) {
+        var mc=(MinecraftClient)(Object)this;
+        if(mc.currentScreen!=null||!dev.sangwoo.celestialfall.client.ui.BotandPauseScreen.replaces())return;
+        boolean local=mc.isIntegratedServerRunning()&&mc.getServer()!=null&&!mc.getServer().isRemote();
+        if(pauseOnly&&local)return;
+        mc.setScreen(new dev.sangwoo.celestialfall.client.ui.BotandPauseScreen());
+        if(local)mc.getSoundManager().pauseAll();
+        ci.cancel();
+    }
     @Inject(method="setScreen",at=@At("HEAD"),cancellable=true)
     private void celestialfall$blockInventory(Screen screen,CallbackInfo ci) {
         if(screen instanceof HandledScreen<?> && (CinematicDirector.isActive()||CombatClient.actionLocked())) {

@@ -8,7 +8,9 @@ dummy=0, len, then=SKILL@age, view=CHUNKS, far=ex/ey/ez/tx/ty/tz[/fov] (fixed ca
 act=NAME:DIST:YAW:SPEED:START+... (running husks for G), track=NAME:MODE:DIST:UP:SIDE[:FOV] (camera following one) and
 shake=1 (those cameras get the Atomic camera shake a player there would; G's frames logged to NAME/shake.csv),
 hud=1 (the game's HUD shown: the cooldown list and the danger banner), cool=1 (real cooldowns). The entry "HUD" casts
-only its then= steps, e.g. "HUD;hud=1;cool=1;len=300;then=E@5/T@80/RUSH@81".
+only its then= steps, e.g. "HUD;hud=1;cool=1;len=300;then=E@5/T@80/RUSH@81". The entry "UI" films the interface on
+its own clock with keys and the mouse, e.g. "UI;hud=1;len=200;then=KEY_TAB@30/KEY_ESCAPE@90/MOVE_B2@110/CLICK@130"
+(SkillShots.java); SHOTS_LANG=ko_kr switches the game's language first.
 """
 from pathlib import Path
 import json, os, shutil, subprocess, sys, zipfile, time, socket
@@ -41,7 +43,8 @@ init = build / 'shots.gradle'
 # A roomy heap so a full collection does not stall a slowed shot (its pauses are logged to OUT_DIR/gc.log).
 init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient") { jvmArgs "-Xmx6G", "-Xms2G", '
                 f'"-Xlog:gc:file={out}/gc.log", '
-                f'"-Dbotand.shots.out={out}", "-Dbotand.shots.slow={slow}", "-Dbotand.shots.list={skills}", "-Dfabric.addMods={jar}"; '
+                f'"-Dbotand.shots.out={out}", "-Dbotand.shots.slow={slow}", "-Dbotand.shots.list={skills}", "-Dfabric.addMods={jar}"'
+                + (f', "-Dbotand.shots.lang={os.environ["SHOTS_LANG"]}"' if os.environ.get('SHOTS_LANG') else '') + '; '
                 f'args "--username", "ShotsQA", "--width", "{w}", "--height", "{h}" }} }}')
 # Sound goes nowhere unless SHOTS_AUDIO names an OpenAL Soft driver: "wave" with ALSOFT_CONF pointing at a config whose
 # [wave] section names a file records what the game plays (in real time, so use SLOW 1 for timing).

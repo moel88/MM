@@ -66,6 +66,16 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * the dash key (C) for a tick. Every cast of the player's (with its combo hit), every dash and every change of the
  * cooldown list's boxes ("list [newest, ...] at TICK") go to the log.
  *
+ * <p>"UI" (2.45.0) films the interface on its own clock (client ticks from the shot's start, which run on while the
+ * pause menu pauses the game) and casts nothing; its "then=" steps are keys and the mouse: "KEY_TAB@n" (also ESCAPE,
+ * R, ENTER, UP, DOWN) taps a key through the real keyboard path, "MOVE_B0@n" glides the pointer over 9 ticks to the
+ * pause menu's first button (B0-B3; D0 and D1 the reset question's buttons, RESPAWN the death screen's first button,
+ * DONE the options screen's done button, OFF clear of them all) and "CLICK@n" clicks the left button where it is,
+ * through Minecraft's own mouse handlers. The screenshots do not hold the system pointer, so while a screen is up the
+ * shot draws one (an arrow, with a ring as it clicks) where the game's mouse is; it is the capture's mark, not the
+ * game's. The log gets every screen opened, the reset question, the player list sent away or back, deaths, respawns
+ * and chat lines. -Dbotand.shots.lang=ko_kr switches the game's language first.
+ *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
  * shot's own (seconds from the start).
@@ -74,6 +84,12 @@ public final class SkillShots implements ClientModInitializer {
     static SkillShots instance;
     static final Path OUT=Path.of(System.getProperty("botand.shots.out","shots"));
     static final int SLOW=Integer.getInteger("botand.shots.slow",1);
+    static final String LANG=System.getProperty("botand.shots.lang");
+    /** The UI shot's pointer: where it glides from and to (window pixels) and when, and when it last clicked (shot ticks). */
+    private double[] glideFrom,glideTo;private double glideAt=-1e9,clickAt=-1e9;
+    static final double GLIDE=9;
+    private final Set<net.minecraft.client.gui.screen.Screen> hooked=Collections.newSetFromMap(new WeakHashMap<>());
+    private String screenLogged="";private int chatLogged=-1;private boolean aliveLogged=true,hiddenLogged,askingLogged,pausedLogged,worldClosed;
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"shot-writer");t.setDaemon(true);return t;});
     private final List<Future<?>> jobs=new ArrayList<>();
     private MinecraftClient mc;private int phase,age,shotIndex;private long started=System.nanoTime();
@@ -151,6 +167,7 @@ public final class SkillShots implements ClientModInitializer {
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
     private float clock(){
         float delta=mc.getTickDelta();
+        if("UI".equals(current))return age+delta;
         if("Q".equals(current)||"M1".equals(current)||"BASE".equals(current)||"HUD".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
         else if("GDUMMY".equals(current)){for(var c:AtomicClient.CASTS.values())return c.age(delta);}
@@ -158,10 +175,13 @@ public final class SkillShots implements ClientModInitializer {
         return (mc.world.getTime()-castTick)+delta;
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
-    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "HUD"->400;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
+        if("UI".equals(current))logInterface();
+        // the UI shot may leave the world ("나가기"): nothing below has a player then
+        if(mc.player==null||mc.world==null)return;
         // every cast of the player's (with its combo hit) and every dash, as the client hears of them (the HUD shots' captions)
         for(var c:StandClient.CASTS.values())if(c.caster().equals(mc.player.getUuid())&&castsLogged.add(c.id()))
             log.append("  cast ").append(c.skill()).append(" combo ").append(c.combo()).append(" at ").append(c.start()).append('\n');
@@ -179,6 +199,75 @@ public final class SkillShots implements ClientModInitializer {
         }
     }
 
+    private boolean ui(){return "UI".equals(current)&&phase==4;}
+    /** A UI step's target in GUI units (see the class notes). */
+    private double[] target(String name){
+        int w=mc.getWindow().getScaledWidth(),h=mc.getWindow().getScaledHeight();
+        if(name.matches("B[0-3]")){var b=dev.sangwoo.celestialfall.client.ui.PauseLayout.menu(w,h,4).buttons().get(name.charAt(1)-'0');return new double[]{b.x()+b.w()*.42,b.y()+b.h()*.55};}
+        if(name.equals("D0")||name.equals("D1")){var d=dev.sangwoo.celestialfall.client.ui.PauseLayout.dialog(w,h);var b=name.equals("D0")?d.confirm():d.cancel();return new double[]{b.x()+b.w()*.5,b.y()+b.h()*.55};}
+        if(name.equals("RESPAWN")||name.equals("DONE")){
+            var s=mc.currentScreen;if(s==null)throw new IllegalStateException("no screen for "+name);
+            for(var c:s.children())if(c instanceof net.minecraft.client.gui.widget.ButtonWidget b&&(name.equals("RESPAWN")||b.getMessage().getString().equals(net.minecraft.screen.ScreenTexts.DONE.getString())))
+                return new double[]{b.getX()+b.getWidth()*.5,b.getY()+b.getHeight()*.55};
+            throw new IllegalStateException("no button for "+name+" on "+s.getClass().getSimpleName());
+        }
+        if(name.equals("OFF"))return new double[]{w*.2,h*.8};
+        throw new IllegalArgumentException(name);
+    }
+    /** Moves the game's mouse along the current glide for this frame (only while a screen is up: in play it would turn the camera). */
+    private void glide(){
+        if(!ui()||glideTo==null||mc.currentScreen==null)return;
+        double k=Math.max(0,Math.min(1,(clock()-glideAt)/GLIDE));k=k*k*(3-2*k);
+        double x=glideFrom[0]+(glideTo[0]-glideFrom[0])*k,y=glideFrom[1]+(glideTo[1]-glideFrom[1])*k;
+        if(Math.abs(x-mc.mouse.getX())>1e-6||Math.abs(y-mc.mouse.getY())>1e-6){
+            glfwSetCursorPos(mc.getWindow().getHandle(),x,y);
+            try{var m=net.minecraft.client.Mouse.class.getDeclaredMethod("onCursorPos",long.class,double.class,double.class);m.setAccessible(true);m.invoke(mc.mouse,mc.getWindow().getHandle(),x,y);}
+            catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+        }
+        if(k>=1)glideTo=null;
+    }
+    private void button(boolean down){
+        try{var m=net.minecraft.client.Mouse.class.getDeclaredMethod("onMouseButton",long.class,int.class,int.class,int.class);m.setAccessible(true);
+            m.invoke(mc.mouse,mc.getWindow().getHandle(),GLFW_MOUSE_BUTTON_LEFT,down?GLFW_PRESS:GLFW_RELEASE,0);}
+        catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+    }
+    /** The capture's pointer mark: an arrow about 20 pixels tall where the game's mouse is, and a ring spreading as it clicks. */
+    private void pointer(net.minecraft.client.gui.DrawContext d){
+        if(!ui())return;
+        double scale=mc.getWindow().getScaleFactor();float x=(float)(mc.mouse.getX()/scale),y=(float)(mc.mouse.getY()/scale),u=(float)(20/scale/17);
+        float[] base={0,0,10.8f,10.8f,5.8f,10.8f,8.4f,16,6.2f,17,3.6f,11.6f,0,15};
+        float[] arrow=new float[base.length];for(int i=0;i<base.length;i+=2){arrow[i]=x+base[i]*u;arrow[i+1]=y+base[i+1]*u;}
+        d.getMatrices().push();d.getMatrices().translate(0,0,400);
+        var m=d.getMatrices().peek().getPositionMatrix();
+        double since=clock()-clickAt;
+        if(since>=0&&since<7){float k=(float)(since/7);var b=dev.sangwoo.celestialfall.client.gacha.GachaArt.begin(d,false);
+            dev.sangwoo.celestialfall.client.gacha.GachaArt.stroke(b,m,dev.sangwoo.celestialfall.client.gacha.GachaArt.circle(x,y,(3+11*k)*u*1.6f,32),1.2f*u*1.6f,dev.sangwoo.celestialfall.client.gacha.GachaArt.alpha(0xffffff,200*(1-k)));
+            dev.sangwoo.celestialfall.client.gacha.GachaArt.end(b);}
+        var b=dev.sangwoo.celestialfall.client.gacha.GachaArt.begin(d,false);
+        dev.sangwoo.celestialfall.client.gacha.GachaArt.smooth(b,m,arrow,0xffffffff,0xffffffff);
+        dev.sangwoo.celestialfall.client.gacha.GachaArt.stroke(b,m,arrow,1.1f*u,0xff000000);
+        dev.sangwoo.celestialfall.client.gacha.GachaArt.end(b);
+        d.getMatrices().pop();
+    }
+    /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
+    private void logInterface()throws Exception{
+        String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
+        if(!screen.equals(screenLogged)){log.append("  screen ").append(screen).append(" at ").append(age).append('\n');screenLogged=screen;}
+        if(mc.player==null||mc.world==null){if(!worldClosed){log.append("  world closed at ").append(age).append('\n');worldClosed=true;}return;}
+        boolean paused=mc.isPaused();if(paused!=pausedLogged){log.append("  paused ").append(paused).append(" at ").append(age).append('\n');pausedLogged=paused;}
+        boolean asking=mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen s&&s.asking();
+        if(asking!=askingLogged){log.append("  question ").append(asking?"up":"down").append(" at ").append(age).append('\n');askingLogged=asking;}
+        boolean hidden=dev.sangwoo.celestialfall.client.ui.PlayerPanel.hidden();
+        if(hidden!=hiddenLogged){log.append("  player list ").append(hidden?"sent away":"back").append(" at ").append(age).append('\n');hiddenLogged=hidden;}
+        boolean alive=mc.player.isAlive();
+        if(alive!=aliveLogged){log.append("  player ").append(alive?"respawned":"died").append(" at ").append(age).append(String.format(Locale.ROOT," (health %.1f)",mc.player.getHealth())).append('\n');aliveLogged=alive;}
+        var f=net.minecraft.client.gui.hud.ChatHud.class.getDeclaredField("messages");f.setAccessible(true);
+        var lines=(List<net.minecraft.client.gui.hud.ChatHudLine>)f.get(mc.inGameHud.getChatHud());
+        if(chatLogged<0)chatLogged=lines.size();
+        // newest first
+        for(int i=lines.size()-chatLogged-1;i>=0;i--)log.append("  chat \"").append(lines.get(i).content().getString()).append("\" at ").append(age).append('\n');
+        chatLogged=lines.size();
+    }
     private void frame()throws Exception{
         if(phase!=4||current==null)return;
         float t=clock();if(t<-2||t>length(current))return;
@@ -292,6 +381,12 @@ public final class SkillShots implements ClientModInitializer {
     @Override public void onInitializeClient(){
         instance=this;
         ClientTickEvents.END_CLIENT_TICK.register(client->{mc=client;try{tick();}catch(Throwable t){fail(t);}});
+        // the UI shot's pointer: moved before a screen draws, drawn after it
+        net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client,screen,w,h)->{
+            if(!hooked.add(screen))return;
+            net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.beforeRender(screen).register((s,d,x,y,delta)->{try{glide();}catch(Throwable t){fail(t);}});
+            net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterRender(screen).register((s,d,x,y,delta)->pointer(d));
+        });
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server->{try{actorTick(server);}catch(Throwable t){if(mc!=null)mc.execute(()->fail(t));}});
     }
     private void tick()throws Exception{
@@ -301,6 +396,7 @@ public final class SkillShots implements ClientModInitializer {
         if(SLOW>1&&!slowed&&phase>=3){var f=MinecraftClient.class.getDeclaredField("renderTickCounter");f.setAccessible(true);var counter=f.get(mc);var t=counter.getClass().getDeclaredField("tickTime");t.setAccessible(true);t.setFloat(counter,50f*SLOW);slowed=true;}
         switch(phase){
             case 0->{if(mc.currentScreen!=null&&mc.getOverlay()==null&&age>100){
+                if(LANG!=null&&!LANG.equals(mc.options.language)){mc.options.language=LANG;mc.getLanguageManager().setLanguage(LANG);mc.reloadResources();age=0;return;}
                 Files.createDirectories(OUT);var o=mc.options;o.getViewDistance().setValue(6);o.getMaxFps().setValue(260);o.getGuiScale().setValue(2);mc.onResolutionChanged();o.hudHidden=true;o.getBobView().setValue(false);
                 mc.getTutorialManager().setStep(net.minecraft.client.tutorial.TutorialStep.NONE);
                 var info=new LevelInfo("ShotsFlat"+System.nanoTime(),GameMode.CREATIVE,false,Difficulty.EASY,true,new GameRules(),DataConfiguration.SAFE_MODE);
@@ -342,6 +438,11 @@ public final class SkillShots implements ClientModInitializer {
                 if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length!=2)continue;int at=Integer.parseInt(sa[1].trim());String what=sa[0].trim();
                     // "DASH@n": the dash key (C) is pressed for a tick, through the client's own input
                     if(what.equals("DASH")){if(age==at)key(GLFW_KEY_C,true);if(age==at+1)key(GLFW_KEY_C,false);continue;}
+                    // the UI shot's keys and mouse
+                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;default->throw new IllegalArgumentException(what);};
+                        if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);}if(age==at+1)key(code,false);continue;}
+                    if(what.startsWith("MOVE_")){if(age==at){glideTo=null;double[] g=target(what.substring(5));double k=mc.getWindow().getScaleFactor();glideFrom=new double[]{mc.mouse.getX(),mc.mouse.getY()};glideTo=new double[]{g[0]*k,g[1]*k};glideAt=age;log.append("  move ").append(what.substring(5)).append(" at ").append(age).append('\n');}continue;}
+                    if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
                     if(age==at){int id=skill(what);server(p->{boolean ok=KagenoManager.input(p,id);log.append("  ").append(what).append(ok?" at ":" refused at ").append(p.getWorld().getTime()).append('\n');});}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
@@ -360,7 +461,7 @@ public final class SkillShots implements ClientModInitializer {
             case "RUSH"->server(p->KagenoManager.input(p,T_DOWN));
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
-            case "BASE","HUD"->{}
+            case "BASE","HUD","UI"->{}
             case "GDUMMY"->server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand dummy atomic "+(int)opt("adist",60));if(n<=0)log.append("  rejected GDUMMY\n");});
             default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
                 if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});

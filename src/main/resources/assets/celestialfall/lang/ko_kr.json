@@ -98,5 +98,7 @@
   "entity.celestialfall.item_buyer": "아이템 매입원",
   "item.celestialfall.chest_key": "상자 키",
   "entity.celestialfall.field_loot": "필드 보급품",
-  "subtitles.celestialfall.gacha": "뽑기 효과음"
+  "subtitles.celestialfall.gacha": "뽑기 효과음",
+  "death.attack.celestialfall.reset": "%1$s님이 캐릭터를 재설정했습니다",
+  "death.attack.celestialfall.reset.player": "%1$s님이 %2$s에게서 벗어나려고 캐릭터를 재설정했습니다"
 }

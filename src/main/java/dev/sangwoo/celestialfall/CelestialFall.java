@@ -58,6 +58,7 @@ public final class CelestialFall implements ModInitializer {
         dev.sangwoo.celestialfall.progression.ProgressManager.initialize();
         dev.sangwoo.celestialfall.stand.StandManager.initialize();
         dev.sangwoo.celestialfall.menu.MenuServer.initialize();
+        dev.sangwoo.celestialfall.menu.CharacterReset.initialize();
         dev.sangwoo.celestialfall.gacha.GachaServer.initialize();
         dev.sangwoo.celestialfall.commerce.CommerceRegistry.initialize();
         dev.sangwoo.celestialfall.loot.LootRegistry.initialize();

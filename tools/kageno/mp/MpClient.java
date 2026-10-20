@@ -31,7 +31,9 @@ public final class MpClient implements ClientModInitializer {
      * is walked away from the watcher through it and after it ends (its slowdown must end with it), T held's camera
      * turns 39 degrees right after the first slash, and "DUMMY" runs /botand dummy atomic 30 (an Atomic with no player
      * caster, 30 blocks ahead). Since 2.43.0 the caster dashes (C) after the lone M1 at 2420, whose combo then breaks: the
-     * log shows both in the cooldown list.
+     * log shows both in the cooldown list. Since 2.45.0 the caster sends the player list away with Tab and back, opens
+     * the pause menu (Esc), asks for a reset (R) and confirms it (Enter): the server kills it and both clients log the
+     * death message; then it respawns. Both log the player list's names and whether it is away.
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -45,12 +47,14 @@ public final class MpClient implements ClientModInitializer {
         "2000 P","2420 M1",
         "2445 C",
         "2460 DUMMY",
-        "3060 END"};
+        "3070 TAB","3100 TAB","3120 ESC","3135 R","3150 ENTER","3185 RESPAWN",
+        "3240 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360}},LENS={{126,142},{312,340}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
+    private int chatSeen=-1;
     private MinecraftClient mc;private int phase,age,frames;private boolean caster;private final Set<Integer> held=new HashSet<>();
     private float quakePeak,overwhelmPeak,lightPeak,wallPeak;private net.minecraft.util.math.Vec3d walkLast;private long walkStart=-1;
     private final List<Double> steps=new ArrayList<>();
@@ -90,7 +94,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ready){note("ready players="+mc.world.getPlayers().size()+" kageno="+StandClient.visible(mc.player));face();phase=2;age=0;}}
             case 2->{
                 mc.onWindowFocusChanged(true);
-                if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());mc.setScreen(null);}
+                if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());if(!interfaceStep())mc.setScreen(null);}
                 observe();
                 if(age%4==0)shot();
                 if(caster){
@@ -140,9 +144,12 @@ public final class MpClient implements ClientModInitializer {
             if(age==w[1]){note(String.format(Locale.ROOT,"lens FOV multiplier %.3f to %.3f from script tick %d to %d",lensMin,lensMax,w[0],w[1]));lensMin=9;lensMax=0;}
         }
     }
+    /** The 2.45.0 steps keep the pause menu and the death screen up (the rest of the script closes every screen). */
+    private boolean interfaceStep(){return caster&&age>=3060&&(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen||mc.currentScreen instanceof net.minecraft.client.gui.screen.DeathScreen);}
     private void act(String step,boolean down){
         if(step.equals("END")){if(down){note("script end");try{Files.writeString(OUT.resolve("done"),"done");}catch(Exception ignored){}phase=3;age=0;}return;}
         if(step.startsWith("TURN")){if(down){BotandCamera.STATE.yaw=(caster?0:180)+Float.parseFloat(step.substring(4));note("camera turned to "+BotandCamera.STATE.yaw);}return;}
+        if(step.equals("RESPAWN")){if(down){note("respawn requested (alive="+mc.player.isAlive()+")");mc.player.requestRespawn();}return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
         if(down&&press&&!k.equals("W"))face();
@@ -153,6 +160,7 @@ public final class MpClient implements ClientModInitializer {
             case "E"->key(GLFW_KEY_E,press);case "R"->key(GLFW_KEY_R,press);case "T"->key(GLFW_KEY_T,press);case "Y"->key(GLFW_KEY_Y,press);
             case "Q"->key(GLFW_KEY_Q,press);case "G"->key(GLFW_KEY_G,press);case "H"->key(GLFW_KEY_H,press);case "P"->key(GLFW_KEY_P,press);
             case "W"->key(GLFW_KEY_W,press);case "C"->key(GLFW_KEY_C,press);
+            case "TAB"->key(GLFW_KEY_TAB,press);case "ESC"->key(GLFW_KEY_ESCAPE,press);case "ENTER"->key(GLFW_KEY_ENTER,press);
             default->note("ERROR unknown step "+step);
         }
     }
@@ -189,6 +197,19 @@ public final class MpClient implements ClientModInitializer {
         }
         flag("atomic",AtomicClient.CASTS.size());flag("overdrive",StandClient.OVERDRIVE.size());flag("hits",StandClient.hitCount);
         flag("health",Math.round(mc.player.getHealth()));
+        // 2.45.0: the player list (its names, and whether Tab sent it away), the pause menu and its reset question, deaths and chat
+        flag("player_list",mc.player.networkHandler.getListedPlayerListEntries().stream().map(e->e.getProfile().getName()).sorted().toList());
+        flag("player_list_away",dev.sangwoo.celestialfall.client.ui.PlayerPanel.hidden());
+        flag("pause_menu",mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen);
+        flag("reset_question",mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen s&&s.asking());
+        flag("alive",mc.player.isAlive());
+        try{
+            var f=net.minecraft.client.gui.hud.ChatHud.class.getDeclaredField("messages");f.setAccessible(true);
+            var lines=(List<net.minecraft.client.gui.hud.ChatHudLine>)f.get(mc.inGameHud.getChatHud());
+            if(chatSeen<0)chatSeen=lines.size();
+            for(int i=lines.size()-chatSeen-1;i>=0;i--)note("chat \""+lines.get(i).content().getString()+"\"");
+            chatSeen=lines.size();
+        }catch(ReflectiveOperationException e){flag("chat","n/a "+e);}
         // G's hold on this player: its speed against its base, and that the slowdown is not taken for an optical zoom.
         var speed=mc.player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
         flag("atomic_hold",AtomicClient.held(mc.player)?String.format(Locale.ROOT,"speed x%.2f fov x%.2f",speed.getValue()/speed.getBaseValue(),mc.player.getFovMultiplier()):"off");
