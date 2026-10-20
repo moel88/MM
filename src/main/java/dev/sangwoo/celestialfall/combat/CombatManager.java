@@ -91,7 +91,7 @@ public final class CombatManager {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.interruptCombat();return;}
         if(!(target instanceof ServerPlayerEntity p))return;
-        var s=state(p);s.cancel();s.combatUntil=p.getWorld().getTime()+100;sync(p,s);
+        long now=p.getWorld().getTime();var s=state(p);s.cancel(now);s.combatUntil=now+100;sync(p,s);
     }
     private static void input(ServerPlayerEntity p,int action,int a,int b) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){leave(p);return;}
@@ -109,7 +109,7 @@ public final class CombatManager {
             if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){leave(p);continue;}
             var s=state(p);long now=p.getWorld().getTime();
             boolean dirty=false;
-            if(!valid(p)) { if(s.attack>0||s.guarding||s.dashing(now)) {s.cancel();dirty=true;} }
+            if(!valid(p)) { if(s.attack>0||s.guarding||s.dashing(now)) {s.cancel(now);dirty=true;} }
             if(s.attack>0&&!bare(p)) { s.attack=0;s.queued=false;dirty=true; }
             boolean wasBroken=s.broken(now-1);
             if(wasBroken&&!s.broken(now)) {s.pressure=0;dirty=true;}
@@ -121,8 +121,9 @@ public final class CombatManager {
             if(s.attack>0 && s.hitDue(now))hit(p,s);
             if(s.dashing(now)) {
                 // Horizontal impulse also works over a step/gap and during creative flight.
-                // Vertical velocity, flight permission and the existing cooldown are preserved.
-                if(p.horizontalCollision||p.isTouchingWater()) {s.dashStart=-1000;dirty=true;}
+                // Vertical velocity and flight permission are preserved; a wall or water ends the dash, and its cooldown
+                // runs from there (2.44.0).
+                if(p.horizontalCollision||p.isTouchingWater()) {s.stopDash(now);dirty=true;}
                 else {
                     double yaw=Math.toRadians(s.dashYaw),v=CombatState.dashSpeed((int)(now-s.dashStart));
                     Vec3d direction=new Vec3d(-Math.sin(yaw)*s.dashForward+Math.cos(yaw)*s.dashSide,0,Math.cos(yaw)*s.dashForward+Math.sin(yaw)*s.dashSide);

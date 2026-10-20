@@ -69,9 +69,9 @@ public final class AtomicManager {
         if(!player.getServerWorld().isSkyVisible(player.getBlockPos().up(2))) {
             player.sendMessage(Text.translatable("message.celestialfall.outdoors"),true);return false;
         }
-        var c=CelestialFall.CONFIG;
-        if(!free) { COOLDOWNS.put(player.getUuid(),now+c.atomicCooldownSeconds*20L);
-            player.getItemCooldownManager().set(CelestialFall.ATOMIC_SWORD,c.atomicCooldownSeconds*20); }
+        // The cooldown runs once the Atomic is over (user request, 2.44.0, see cooldown); until then the ledger holds the
+        // cast's whole length and the cooldown after it.
+        if(!free)COOLDOWNS.put(player.getUuid(),now+AtomicTimeline.END+CelestialFall.CONFIG.atomicCooldownSeconds*20L);
         begin(player,player.getServerWorld(),now);
         player.sendMessage(Text.translatable("message.celestialfall.atomic_cast"),true);return true;
     }
@@ -110,12 +110,12 @@ public final class AtomicManager {
         var it=ACTIVE.iterator();
         while(it.hasNext()) {
             Cast s=it.next();long a=s.world.getTime()-s.start;
-            if(a>=AtomicTimeline.END || a<0 || !dev.sangwoo.celestialfall.map.MapGate.enabled(s.world)) { cancel(s);it.remove();continue; }
+            if(a>=AtomicTimeline.END || a<0 || !dev.sangwoo.celestialfall.map.MapGate.enabled(s.world)) { cancel(s);cooldown(s);it.remove();continue; }
             LivingEntity caster=server.getPlayerManager().getPlayer(s.caster);
             if(caster==null&&s.world.getEntity(s.caster) instanceof LivingEntity e&&!(e instanceof ServerPlayerEntity))caster=e;
             // Once the caster is released the crater plays out on its own.
             if(AtomicTimeline.locked(a)&&(caster==null||!caster.isAlive()||caster.isSpectator()||caster.getWorld()!=s.world||caster instanceof ServerPlayerEntity p&&!dev.sangwoo.celestialfall.progression.ProgressManager.canUseKageno(p))){
-                cancel(s);it.remove();continue;
+                cancel(s);cooldown(s);it.remove();continue;
             }
             if(AtomicTimeline.locked(a)){
                 dev.sangwoo.celestialfall.stand.KagenoManager.freeze(caster);
@@ -127,6 +127,17 @@ public final class AtomicManager {
             hold(s,a);
         }
         if(server.getTicks()%1200==0)COOLDOWNS.entrySet().removeIf(e->e.getValue()<=server.getOverworld().getTime());
+    }
+    /**
+     * The caster's cooldown begins as the cast ends, however it ends (user request, 2.44.0: a cooldown runs once its skill
+     * is over, not from when it is used), with the sword's cooldown that shows it; not when it was waived (no-cooldown
+     * mode, the Atomic dummy) or reset meanwhile.
+     */
+    private static void cooldown(Cast s) {
+        long now=s.world.getTime();Long held=COOLDOWNS.get(s.caster);if(held==null||held<=now)return;
+        int ticks=CelestialFall.CONFIG.atomicCooldownSeconds*20;COOLDOWNS.put(s.caster,now+ticks);
+        var player=s.world.getServer().getPlayerManager().getPlayer(s.caster);
+        if(player!=null)player.getItemCooldownManager().set(CelestialFall.ATOMIC_SWORD,ticks);
     }
     private static void damage(Cast s) {
         if(s.damage<=0)return;

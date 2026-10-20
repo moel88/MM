@@ -115,9 +115,10 @@ public final class KagenoManager {
         if(!valid(p)||busy(p)||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
         if(action==T_DOWN){if(s.press<0&&ready(p,s,T,now)){s.press=s.pulse=now;return true;}return false;}
         if(action==G)return AtomicManager.cast(p);
+        // Q's cooldown runs once the overdrive is over (user request, 2.44.0), put off with it by the hits that lengthen it.
         if(action==Q){
             if(s.overUntil>now||!ready(p,s,Q,now))return false;
-            s.overUntil=now+600;s.boost=.05f;s.ready[Q]=now+COOLDOWN[Q];status(p,s);return true;
+            s.overUntil=now+600;s.boost=.05f;s.ready[Q]=s.overUntil+COOLDOWN[Q];status(p,s);return true;
         }
         if(action<0||action>H)return false;
         s.press=-1;return begin(p,action);
@@ -144,7 +145,7 @@ public final class KagenoManager {
                 c.targets.put(e,e.getPos());CombatManager.interrupt(e);if(e instanceof PlayerEntity target)cancelCaster(target);
             }
         }
-        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=skill==M1?m1Ready(s.combo,now):now+COOLDOWN[skill];
+        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=readyAfter(skill,s.combo,now);
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
         sync(c);status(p,s);
         return true;
@@ -279,7 +280,7 @@ public final class KagenoManager {
             if((c.skill==T||c.skill==RUSH&&age<RUSH_FINISH)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
             // Overdrive: +0.01 damage multiplier per skill hit, a little more time, and the shadow mark
             // (lasting as long as the overdrive itself).
-            if(over){long now=c.world.getTime();s.boost=Math.min(1,s.boost+.01f*KagenoRules.hits(c.skill,age));s.overUntil=Math.min(now+1800,s.overUntil+4);MARKS.put(e.getUuid(),new Mark(c.player,e,Math.max(now+200,s.overUntil)));}
+            if(over){long now=c.world.getTime();s.boost=Math.min(1,s.boost+.01f*KagenoRules.hits(c.skill,age));s.overUntil=Math.min(now+1800,s.overUntil+4);if(s.ready[Q]>now)s.ready[Q]=s.overUntil+COOLDOWN[Q];MARKS.put(e.getUuid(),new Mark(c.player,e,Math.max(now+200,s.overUntil)));}
             if(c.skill==Y&&(age==Y_STOMP||age==Y_FLASH)&&!frozen(e))c.targets.putIfAbsent(e,e.getPos());
             // M1 hit 4: the thrust sends whoever it strikes flying along it (2.37.0: no hold and no rising cut).
             if(c.skill==M1&&c.combo==4&&!frozen(e)){
@@ -336,6 +337,11 @@ public final class KagenoManager {
     }
     private static void stop(Cast c){
         CASTS.remove(c.id);if(c.skill==R)rSlow(c.player,rWalking(c.player));
+        // A cooldown runs from when its skill is over (user request, 2.44.0): one stopped short starts it now. The status
+        // goes before the stop, so the client still knows which of T and T held it was.
+        var s=STATES.get(c.player);int slot=c.skill==RUSH?T:c.skill;
+        long planned=readyAfter(c.skill,c.combo,c.start),due=readyAt(c.skill,c.combo,c.start,c.world.getTime());
+        if(s!=null&&slot<s.ready.length&&due<planned&&s.ready[slot]==planned){s.ready[slot]=due;status(c.player,s);}
         for(var id:c.viewers){var p=c.world.getServer().getPlayerManager().getPlayer(id);if(p!=null&&ServerPlayNetworking.canSend(p,STOP)){var b=PacketByteBufs.create();b.writeUuid(c.id);ServerPlayNetworking.send(p,STOP,b);}}
         if(c.player.isAlive())c.player.setVelocity(0,0,0);
     }

@@ -99,8 +99,23 @@ final class KagenoRulesTest {
     }
     /** User request (2.43.1): the rest after a full combo runs once the fourth hit is over, not from its start. */
     @Test void theRestAfterTheFourthHitBeginsWhenTheHitIsOver(){
-        for(int combo=1;combo<=3;combo++)assertEquals(100+M1_STEP,m1Ready(combo,100),"the next hit may follow after the step");
-        assertEquals(100+DURATION[M1]+M1_REST,m1Ready(4,100),"the fourth hit plays out, then the attack rests");
-        assertEquals(DURATION[M1],M1_HIT4,"the fourth hit is over when its cast ends");
+        for(int combo=1;combo<=3;combo++)assertEquals(100+M1_STEP,readyAfter(M1,combo,100),"the next hit may follow after the step");
+        assertEquals(100+DURATION[M1]+M1_REST,readyAfter(M1,4,100),"the fourth hit plays out, then the attack rests");
+        assertEquals(110+M1_REST,readyAt(M1,4,100,110),"a fourth hit stopped short rests from there");
+        assertEquals(100+M1_STEP,readyAt(M1,2,100,104),"the step between hits counts from the hit's start");
+        assertEquals(M1_REST,cooling(M1),"the list shows the rest");
+    }
+    /**
+     * User request (2.44.0): every skill's cooldown runs once the skill is over (its cast's whole length), not from when it
+     * is used; one stopped short starts its cooldown there. T and T held share one cooldown.
+     */
+    @Test void everyCooldownRunsOnceItsSkillIsOver(){
+        for(int skill:new int[]{E,R,T,RUSH,Y,H}){
+            assertEquals(100+DURATION[skill]+COOLDOWN[skill],readyAfter(skill,0,100),"skill "+skill+" plays out, then cools");
+            assertEquals(130+COOLDOWN[skill],readyAt(skill,0,100,130),"skill "+skill+" stopped at 130 cools from there");
+            assertEquals(COOLDOWN[skill],cooling(skill),"the list shows skill "+skill+"'s whole cooldown");
+        }
+        assertEquals(COOLDOWN[T],COOLDOWN[RUSH],"T and T held share their cooldown");
+        assertTrue(readyAfter(E,0,0)-COOLDOWN[E]>=inputEnd(E),"E's cooldown does not start while it still holds the caster");
     }
 }

@@ -27,7 +27,11 @@ public final class KagenoRules {
     public static final double STOP_RADIUS=7,HIGHEST_RADIUS=5;
     /** P: the pose lets go of the body at 18.68 s; the cast runs on to 19.45 s so the fading effects and a crescent in flight finish. */
     public static final int P_RELEASE=374;
-    public static final int[] DURATION={24,78,80,124,58,92,600,116,468,389};
+    /**
+     * How long each skill's cast runs (ticks), its effects included; its cooldown runs from the end (2.44.0). T's ends as its
+     * last wisps die out (user request, 2.44.0: it ran on to 6.2 s with nothing left to see, so its cooldown began late).
+     */
+    public static final int[] DURATION={24,78,80,98,58,92,600,116,468,389};
     /** E: barrage ticks 0.262 s apart from 0.8 s, finisher (guard break) with the crescent at 2.9 s. */
     static final int[] E_TICKS={16,21,26,32,37,42,47};
     public static final int E_FINISH=58;
@@ -56,16 +60,22 @@ public final class KagenoRules {
     public static final double M1_FLY=1.4,M1_FLY_UP=.45;
     /**
      * M1's combo (user request, 2.43.0): each hit must start within {@link #M1_WINDOW} ticks of the one before, or the combo
-     * breaks. A finished combo rests {@link #M1_REST} ticks once its fourth hit is over ({@link #M1_HIT4} ticks after it
-     * starts; user request, 2.43.1: the rest used to run from the fourth hit's start, so it showed while the blow was still
-     * coming), a broken one as long from the break, and either starts again from the first hit; within a combo the hits
-     * are {@link #M1_STEP} ticks apart at the least.
+     * breaks. A finished combo rests {@link #M1_REST} ticks once its fourth hit is over (user request, 2.43.1: the rest used
+     * to run from the fourth hit's start, so it showed while the blow was still coming), a broken one as long from the
+     * break, and either starts again from the first hit; within a combo the hits are {@link #M1_STEP} ticks apart at the
+     * least.
      */
     public static final int M1_WINDOW=36,M1_REST=24,M1_STEP=8;
-    /** How long the fourth hit takes, its cast's whole length (the thrust, the hold and the flick back to the stance). */
-    public static final int M1_HIT4=DURATION[M1];
-    /** When the attack is ready again after hit {@code combo} started at {@code start}: the step to the next hit, or after the fourth the hit itself and then the rest. */
-    public static long m1Ready(int combo,long start){return start+(combo>=4?M1_HIT4+M1_REST:M1_STEP);}
+    /**
+     * When a skill is ready again, its cast having begun at {@code start} and ended at {@code end} (its whole length, unless
+     * it was stopped short). Every cooldown runs once its skill is over, not from when it was used (user request, 2.44.0;
+     * M1's rest after the fourth hit since 2.43.1); M1's hits only keep {@link #M1_STEP} ticks between their starts.
+     */
+    public static long readyAt(int skill,int combo,long start,long end){return skill==M1?combo>=4?end+M1_REST:start+M1_STEP:end+COOLDOWN[skill];}
+    /** When a skill is ready again if its cast runs its whole length. */
+    public static long readyAfter(int skill,int combo,long start){return readyAt(skill,combo,start,start+DURATION[skill]);}
+    /** How long the cooldown shown for a slot runs, the end of the wait for it: M1's rest after a combo, else the skill's cooldown. */
+    public static int cooling(int slot){return slot==M1?M1_REST:COOLDOWN[slot];}
     /**
      * When the attack is ready again after a combo whose hit {@code combo} started at {@code last} broke, or -1 while it
      * still holds at {@code now} (or has none to break: no hit yet, or the fourth hit already ended it).

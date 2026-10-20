@@ -46,9 +46,20 @@ class CombatStateTest {
     }
     @Test void diagonalDashIsNormalizedHasCooldownAndDoesNotCancelAnAttack() {
         CombatState s=new CombatState();assertTrue(s.dash(0,1,1));assertEquals(1,Math.hypot(s.dashForward,s.dashSide),1e-6);
-        assertFalse(s.dash(7,1,0));assertFalse(s.requestAttack(3));assertTrue(s.dash(24,0,0));assertEquals(1,s.dashForward);
-        s.requestAttack(32);assertFalse(s.dash(40,1,0));
+        // its cooldown runs once the dash is over (user request, 2.44.0)
+        assertFalse(s.dash(7,1,0));assertFalse(s.requestAttack(3));assertFalse(s.dash(30,0,0));assertTrue(s.dash(31,0,0));assertEquals(1,s.dashForward);
+        assertTrue(s.requestAttack(60));assertFalse(s.dash(65,1,0));
         double distance=0;for(int t=0;t<CombatState.DASH_TICKS;t++)distance+=CombatState.dashSpeed(t);
         assertTrue(distance>4&&distance<6);assertEquals(0,CombatState.dashSpeed(7));
+    }
+    /** User request (2.44.0): a dash's cooldown runs once the dash is over, from where it stopped when something cut it short. */
+    @Test void theDashCooldownRunsOnceTheDashIsOver() {
+        CombatState s=new CombatState();assertTrue(s.dash(0,1,0));
+        assertEquals(CombatState.DASH_TICKS+CombatState.DASH_COOLDOWN,s.dashReady,"a whole dash, then its cooldown");
+        s=new CombatState();assertTrue(s.dash(0,1,0));s.stopDash(3);
+        assertFalse(s.dashing(4));assertEquals(3+CombatState.DASH_COOLDOWN,s.dashReady,"stopped at 3 by a wall: the cooldown runs from there");
+        assertFalse(s.dash(2+CombatState.DASH_COOLDOWN,1,0));assertTrue(s.dash(3+CombatState.DASH_COOLDOWN,1,0));
+        long ready=s.dashReady;s.cancel(100);assertEquals(ready,s.dashReady,"a blow once the dash is over changes nothing");
+        s=new CombatState();assertTrue(s.dash(0,1,0));s.cancel(5);assertEquals(5+CombatState.DASH_COOLDOWN,s.dashReady,"a blow mid-dash ends it there");
     }
 }

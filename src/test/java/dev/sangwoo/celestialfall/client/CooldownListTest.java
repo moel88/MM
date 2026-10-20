@@ -58,13 +58,58 @@ class CooldownListTest {
     }
     /** Busy fighting: casts close together, some ending while others arrive, the top one finishing, a reset. */
     @Test void nothingJumpsBetweenFrames(){
+        assertSmooth(new double[][]{ // slot, cast at, cooldown
+            {1,10,140},{3,90,260},{5,120,180},{6,165,1800},{2,180,180},{0,299,24},{7,330,600},{1,331,140},{8,333,1200},{0,336,24},{0,338,24}});
+    }
+    /** The same with every cooldown beginning once its skill is over (user request, 2.44.0): boxes come in while others play. */
+    @Test void nothingJumpsWhenCooldownsBeginAfterTheirSkills(){
+        assertSmooth(new double[][]{ // slot, used at, cooldown, the skill's length
+            {1,10,140,78},{3,40,260,124},{5,60,180,92},{10,100,24,7},{2,120,180,80},{0,130,24,24},{7,140,600,116},{10,150,24,7},{6,160,1800,600},{4,400,260,58}});
+    }
+    /** User request (2.44.0): a cooldown runs once its skill is over, so its box comes in then, not as the skill is used. */
+    @Test void aCooldownThatBeginsLaterComesInAsItBegins(){
         var list=new CooldownList();
-        double[][] script={ // slot, cast at, cooldown
-            {1,10,140},{3,90,260},{5,120,180},{6,165,1800},{2,180,180},{0,299,24},{7,330,600},{1,331,140},{8,333,1200},{0,336,24},{0,338,24}};
+        list.add(3,"T",0,260,0);
+        list.schedule(1,"E",78,218,0);
+        list.update(77.9);assertEquals(List.of("T"),names(list),"nothing for E while it is being used");
+        list.update(78);assertEquals(List.of("E","T"),names(list),"E comes in on top as its cooldown begins");
+        var e=list.entries().get(0);assertEquals(1,e.remaining(78),1e-9,"with a full bar");assertEquals(0,e.presence(78),1e-9,"unfolding from then");
+        assertEquals(1,e.big(78+CooldownList.RESIZE),1e-9);
+    }
+    @Test void aSkillStoppedShortStartsItsCooldownThere(){
+        var list=new CooldownList();
+        list.schedule(1,"E",78,218,0);
+        list.schedule(1,"E",30,170,30);
+        assertEquals(List.of("E"),names(list),"E was stopped at 30: its cooldown runs from there");
+        assertEquals(170,list.entries().get(0).end,1e-9);
+        list.update(200);assertEquals(List.of(),names(list),"and only once");
+    }
+    @Test void aResetWhileTheSkillIsUsedDropsItsCooldown(){
+        var list=new CooldownList();
+        list.schedule(1,"E",78,218,0);list.schedule(1,"E",10,10,10);
+        list.update(100);assertTrue(list.entries().isEmpty(),"the cooldown never comes in");
+    }
+    @Test void waitingCooldownsComeInTheSameHoweverOftenTheListIsUpdated(){
+        var a=new CooldownList();var b=new CooldownList();
+        for(var l:List.of(a,b)){l.schedule(1,"E",40,180,0);l.schedule(5,"Y",40,220,0);l.add(3,"T",10,70,10);l.schedule(2,"R",65,245,20);}
+        for(double t=20;t<=120;t+=FRAME)a.update(t);
+        b.update(120);
+        var la=a.layout(120,M);var lb=b.layout(120,M);
+        assertEquals(List.of("R","Y","E"),names(a),"newest first; Y and E began together, in slot order");
+        assertEquals(names(a),names(b));assertEquals(la.size(),lb.size());
+        for(int i=0;i<la.size();i++){assertEquals(la.get(i).y(),lb.get(i).y(),1e-9);assertEquals(la.get(i).big(),lb.get(i).big(),1e-9);}
+    }
+    private static List<String> names(CooldownList list){return list.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
+    /** Steps the list frame by frame through the script (rows: slot, used at, cooldown, and the skill's length when its cooldown waits for it). */
+    private static void assertSmooth(double[][] script){
+        var list=new CooldownList();
         int next=0;Map<CooldownList.Entry,double[]> last=new HashMap<>();
         double maxStep=0;
         for(double t=0;t<1000;t+=FRAME){
-            while(next<script.length&&script[next][1]<=t){var s=script[next++];list.add((int)s[0],"s"+(int)s[0],s[1],s[1]+s[2],s[1]);}
+            while(next<script.length&&script[next][1]<=t){
+                var s=script[next++];double begins=s[1]+(s.length>3?s[3]:0);
+                if(s.length>3)list.schedule((int)s[0],"s"+(int)s[0],begins,begins+s[2],s[1]);else list.add((int)s[0],"s"+(int)s[0],s[1],s[1]+s[2],s[1]);
+            }
             list.update(t);
             Map<CooldownList.Entry,double[]> now=new HashMap<>();
             for(var b:list.layout(t,M)){

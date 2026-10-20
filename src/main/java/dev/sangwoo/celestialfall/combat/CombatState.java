@@ -63,8 +63,15 @@ public final class CombatState {
         if(now<dashReady||broken(now)||attacking(now)||guarding||dashing(now))return false;
         float length=(float)Math.hypot(forward,side);
         dashForward=length<.1f?1:forward/length;dashSide=length<.1f?0:side/length;
-        dashStart=now;dashReady=now+DASH_COOLDOWN;combatUntil=now+100;combo=0;serial++;return true;
+        dashStart=now;dashReady=now+DASH_TICKS+DASH_COOLDOWN;combatUntil=now+100;combo=0;serial++;return true;
     }
+    /**
+     * The dash ends short (a wall, water, a blow): its cooldown runs from now. Every cooldown runs once its move is over,
+     * not from when it began (user request, 2.44.0); a whole dash's runs from its end.
+     */
+    public void stopDash(long now) { if(dashing(now))dashReady=Math.min(dashReady,now+DASH_COOLDOWN);dashStart=-1000; }
+    /** A player's moves are cut off (a blow, a skill of their own): a dash ends there, its cooldown running from now. */
+    public void cancel(long now) { stopDash(now);cancel(); }
     public void cancel() { attack=combo=0;queued=guarding=false;dashStart=-1000; }
     public static double dashSpeed(int age) {
         return age<0||age>=DASH_TICKS?0:new double[]{.78,1.04,1.06,.94,.76,.52,.28}[age];

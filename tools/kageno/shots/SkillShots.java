@@ -63,7 +63,8 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * nothing itself: its "then=" steps cast one skill after another (T as "T@n/RUSH@n+1", a press and a release) and its
  * clock is the shot's own; every step that the game refuses is logged. T held needs the key's pulses as the client sends
  * them while it is down ("T@n/PULSE@n+3/PULSE@n+6/PULSE@n+9": T held begins 8 ticks after the press). "DASH@n" presses
- * the dash key (C) for a tick. Every cast of the player's (with its combo hit) and every dash goes to the log.
+ * the dash key (C) for a tick. Every cast of the player's (with its combo hit), every dash and every change of the
+ * cooldown list's boxes ("list [newest, ...] at TICK") go to the log.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -158,7 +159,7 @@ public final class SkillShots implements ClientModInitializer {
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "HUD"->400;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
-    private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;
+    private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
         // every cast of the player's (with its combo hit) and every dash, as the client hears of them (the HUD shots' captions)
@@ -166,6 +167,7 @@ public final class SkillShots implements ClientModInitializer {
             log.append("  cast ").append(c.skill()).append(" combo ").append(c.combo()).append(" at ").append(c.start()).append('\n');
         long dash=CombatClient.snapshot(mc.player.getUuid()).dashStart();
         if(dash!=dashLogged&&dash>0){if(dashLogged!=-1000||mc.world.getTime()-dash<40)log.append("  dash at ").append(dash).append('\n');dashLogged=dash;}
+        var shown=CooldownHud.shown();if(!shown.equals(listLogged)){log.append("  list ").append(shown).append(" at ").append(mc.world.getTime()).append('\n');listLogged=shown;}
         var gr=mc.gameRenderer;var f=net.minecraft.client.render.GameRenderer.class.getDeclaredField("fovMultiplier");f.setAccessible(true);
         var p=mc.player;motionLog.append(String.format(Locale.ROOT,"%.3f,%.4f,%.4f,%.4f,%.2f,%.4f,%.4f%n",clock()-mc.getTickDelta(),p.getX(),p.getY(),p.getZ(),p.getYaw(),p.getFovMultiplier(),f.getFloat(gr)));
         if(!"M1".equals(current))return;
