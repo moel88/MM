@@ -1,29 +1,27 @@
 package dev.sangwoo.botandtown;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.Direction;
 
 /**
  * The ways up the hill: the main stairway straight up the middle from the end of the main street to the shrine (the
- * view back down it ends in the sea), and four ramps for cars, one between each pair of levels, cut into the slope
- * between stone walls.
+ * view back down it runs along the main street and the bridge out to the island), and four ramps for cars, one
+ * between each pair of levels, cut into the slope between stone walls.
  */
 final class Hill {
     private final Townscape t;private final Canvas c;
     Hill(Townscape t){this.t=t;c=t.c;}
 
     /** Level (top block y) below terrace i's wall, i=0 the hill foot. */
-    static int below(int i){return i==0?Plan.GROUND:Plan.TERRACE_Y[i-1];}
+    static int below(int i){return i==0?Plan.ST_Y[3]:Plan.TERRACE_Y[i-1];}
 
-    /** Marks the stairway's landings and paths in the street plan (before the streets are laid). */
+    /** Marks the stairway's paths and the ramps in the street plan (before the streets are laid). */
     void plan(Roads roads){
         int b=Plan.bend(0);
         for(int i=0;i<4;i++){
-            int wall=Plan.TERRACE_Z0[i]+b,top=wall-5;
-            int next=i<3?Plan.TERRACE_Z0[i+1]+b:Plan.TERRACE_Z1[3]+b;
-            // the flight itself is laid by stairs(); the path runs on to the next wall
-            roads.markIfFree(Plan.STAIR_X0+1,next+1,Plan.STAIR_X1-1,top-1,Roads.PATH);
+            int wall=Plan.TERRACE_Z0[i]+b,top=wall-(Plan.TERRACE_Y[i]-below(i));
+            int next=i<3?Plan.TERRACE_Z0[i+1]+b:Plan.TERRACE_Z1[3]+b-1;
+            roads.markIfFree(Plan.STAIR_X0+1,next+1,Plan.STAIR_X1-1,top,Roads.PATH);
         }
         for(int[] r:Plan.RAMPS)roads.mark(r[0],rampEnd(r),r[1],rampStart(r),Roads.RAMP);
     }
@@ -31,37 +29,41 @@ final class Hill {
     void build(){
         int b=Plan.bend(0);
         for(int i=0;i<4;i++)flight(Plan.TERRACE_Z0[i]+b,below(i),Plan.TERRACE_Y[i],Plan.STAIR_X0+1,Plan.STAIR_X1-1);
-        // the shrine's stone steps from the top terrace
+        // the shrine's stone steps from the top terrace, and the approach on to the shrine's square
         int start=Plan.TERRACE_Z1[3]+b-1;
         flight(start,Plan.TERRACE_Y[3],Plan.SHRINE_Y,Plan.STAIR_X0+1,Plan.STAIR_X1-1);
-        for(int z=start-(Plan.SHRINE_Y-Plan.TERRACE_Y[3]);z>Plan.SHRINE_Z0;z--)for(int x=Plan.STAIR_X0+1;x<=Plan.STAIR_X1-1;x++){
-            c.set(x,Plan.SHRINE_Y,z,Blocks.STONE_BRICKS.getDefaultState());c.clear(x,Plan.SHRINE_Y+1,z,x,Plan.SHRINE_Y+6,z);c.ground(x,z,Plan.SHRINE_Y);
+        for(int z=start-(Plan.SHRINE_Y-Plan.TERRACE_Y[3])-1;z>Plan.SHRINE_Z0;z--)for(int x=Plan.STAIR_X0;x<=Plan.STAIR_X1;x++){
+            c.fill(x,Plan.SHRINE_Y-4,z,x,Plan.SHRINE_Y-1,z,Blocks.STONE.getDefaultState());
+            c.set(x,Plan.SHRINE_Y,z,x==Plan.STAIR_X0||x==Plan.STAIR_X1?t.terrain.masonry(x,Plan.SHRINE_Y,z):Blocks.STONE_BRICKS.getDefaultState());
+            c.clear(x,Plan.SHRINE_Y+1,z,x,Plan.SHRINE_Y+8,z);c.ground(x,z,Plan.SHRINE_Y);
         }
         for(int[] r:Plan.RAMPS)ramp(r);
     }
 
     /**
-     * A flight of stone steps rising one block a block from {@code low} at the wall line into the terrace, with
-     * stone walls on both sides topped by a low parapet, and a handrail down the middle of the wider flights.
+     * A flight of stone steps rising one block a block from {@code low} at the wall line into the terrace, between
+     * stone walls topped by a low parapet; a landing at the top.
      */
     void flight(int wall,int low,int high,int x0,int x1){
         int n=high-low;
         for(int k=0;k<n;k++){
             int z=wall-k,y=low+1+k;
             for(int x=x0;x<=x1;x++){
-                c.fill(x,low-2,z,x,y-1,z,Blocks.STONE.getDefaultState());
+                c.fill(x,low-3,z,x,y-1,z,Blocks.STONE.getDefaultState());
                 c.set(x,y,z,Canvas.stairs(Blocks.STONE_BRICK_STAIRS,Direction.NORTH,false));
-                c.clear(x,y+1,z,x,high+6,z);
+                c.clear(x,y+1,z,x,high+8,z);
                 c.ground(x,z,y);
             }
             for(int x:new int[]{x0-1,x1+1}){
-                for(int y=low+1;y<=high;y++)c.set(x,y,z,t.terrain.masonry(x,y,z));
+                for(int yy=low+1;yy<=high;yy++)c.set(x,yy,z,t.terrain.masonry(x,yy,z));
                 c.set(x,high+1,z,Blocks.ANDESITE_WALL.getDefaultState());
+                c.clear(x,high+2,z,x,high+8,z);
                 c.ground(x,z,high);
             }
         }
         // the landing at the top: flat stone the width of the flight
-        for(int x=x0-1;x<=x1+1;x++){int z=wall-n;c.set(x,high,z,Blocks.STONE_BRICKS.getDefaultState());c.clear(x,high+1,z,x,high+6,z);}
+        int z=wall-n;
+        for(int x=x0-1;x<=x1+1;x++){c.set(x,high,z,Blocks.STONE_BRICKS.getDefaultState());c.clear(x,high+1,z,x,high+8,z);c.ground(x,z,high);}
     }
 
     static int rampStart(int[] r){
@@ -76,18 +78,17 @@ final class Hill {
      */
     void ramp(int[] r){
         int z0=rampStart(r),z1=rampEnd(r),len=z0-z1;
-        int lowY=r[2]<0?Plan.GROUND:Plan.TERRACE_Y[r[2]],highY=Plan.TERRACE_Y[r[3]];
+        int lowY=r[2]<0?Plan.ST_Y[3]:Plan.TERRACE_Y[r[2]],highY=Plan.TERRACE_Y[r[3]];
         for(int k=0;k<=len;k++){
             int z=z0-k;
-            double s=lowY+1+(highY-lowY)*(k/(double)len);
-            int half=(int)Math.round(s*2);
-            boolean slab=(half&1)==1;int y=slab?(half-1)/2:half/2-1;
+            int lv=(int)Math.round(2*lowY+2.0*(highY-lowY)*k/len);
+            boolean slab=(lv&1)==1;int y=lv>>1;
             for(int x=r[0];x<=r[1];x++){
                 boolean edge=x==r[0]||x==r[1];
                 c.fill(x,Math.min(lowY,y)-3,z,x,y-1,z,Blocks.STONE.getDefaultState());
-                if(slab){c.set(x,y,z,Blocks.STONE.getDefaultState());c.set(x,y+1,z,edge?Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false):Pal.ramp(true));}
+                if(slab){c.set(x,y,z,Pal.ramp(false));c.set(x,y+1,z,edge?Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false):Pal.ramp(true));}
                 else c.set(x,y,z,edge?Blocks.SMOOTH_STONE.getDefaultState():Pal.ramp(false));
-                c.clear(x,y+(slab?2:1),z,x,highY+6,z);
+                c.clear(x,y+(slab?2:1),z,x,highY+8,z);
                 c.ground(x,z,slab?y+1:y);
             }
             // the sides

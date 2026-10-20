@@ -13,20 +13,23 @@ final class Pal {
         long h=x*341873128712L+y*132897987541L+z*6971L;h^=h>>>13;h*=0x5bd1e995L;h^=h>>>15;
         return (h&0xffffff)/(double)0x1000000;
     }
+    /** Patchy value noise: repaired squares of asphalt, mossy corners of walls. */
     static double blot(int x,int z,double scale){
-        // patchy value noise: repaired squares of asphalt, mossy corners of walls
         int gx=Math.floorDiv(x,(int)scale),gz=Math.floorDiv(z,(int)scale);
         return hash(gx,7,gz);
     }
-    /** Worn asphalt: grey with darker repaired patches and the odd crack. */
+    /** Worn asphalt: dark grey, with lighter repaired patches and the odd rough spot. */
     static BlockState asphalt(int x,int z){
         double h=hash(x,1,z);
-        if(blot(x,z,7)>0.86)return h<0.7?Blocks.POLISHED_DEEPSLATE.getDefaultState():Blocks.DEEPSLATE_TILES.getDefaultState();
-        if(h<0.035)return Blocks.COBBLED_DEEPSLATE.getDefaultState();
-        if(h<0.09)return Blocks.TUFF.getDefaultState();
-        if(h<0.16)return Blocks.GRAY_CONCRETE_POWDER.getDefaultState();
-        return Blocks.GRAY_CONCRETE.getDefaultState();
+        if(blot(x,z,6)>0.9)return Blocks.GRAY_CONCRETE.getDefaultState();
+        if(h<0.05)return Blocks.COBBLED_DEEPSLATE.getDefaultState();
+        if(h<0.08)return Blocks.DEEPSLATE.getDefaultState();
+        return Blocks.POLISHED_DEEPSLATE.getDefaultState();
     }
+    static BlockState asphaltSlab(int x,int z){
+        return hash(x,1,z)<0.06?Canvas.slab(Blocks.COBBLED_DEEPSLATE_SLAB,false):Canvas.slab(Blocks.POLISHED_DEEPSLATE_SLAB,false);
+    }
+    static BlockState asphaltBase(){return Blocks.POLISHED_DEEPSLATE.getDefaultState();}
     static BlockState ramp(boolean slab){return slab?Canvas.slab(Blocks.POLISHED_DEEPSLATE_SLAB,false):Blocks.POLISHED_DEEPSLATE.getDefaultState();}
     /** Concrete paving of alleys, yards and the quay. */
     static BlockState concrete(int x,int z){
@@ -36,14 +39,21 @@ final class Pal {
         return Blocks.LIGHT_GRAY_CONCRETE.getDefaultState();
     }
     static BlockState gutter(int x,int z){return hash(x,3,z)<0.12?Blocks.STONE.getDefaultState():Blocks.SMOOTH_STONE.getDefaultState();}
-    /** Sidewalk pavers, laid as half slabs so the kerb stands half a block above the road. */
+    /** Sidewalk pavers in a two-tone pattern. */
     static BlockState pavers(int x,int z){
         return ((x>>1)+(z>>1)&1)==0?Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false):Canvas.slab(Blocks.POLISHED_ANDESITE_SLAB,false);
+    }
+    static BlockState paverBlock(int x,int z){
+        return ((x>>1)+(z>>1)&1)==0?Blocks.SMOOTH_STONE.getDefaultState():Blocks.POLISHED_ANDESITE.getDefaultState();
     }
     /** The seaside promenade: red-brown and sand-coloured pavers. */
     static BlockState promenade(int x,int z){
         double h=hash(x,4,z);
         return h<0.55?Canvas.slab(Blocks.POLISHED_GRANITE_SLAB,false):h<0.85?Canvas.slab(Blocks.SMOOTH_SANDSTONE_SLAB,false):Canvas.slab(Blocks.GRANITE_SLAB,false);
+    }
+    static BlockState promenadeBlock(int x,int z){
+        double h=hash(x,4,z);
+        return h<0.55?Blocks.POLISHED_GRANITE.getDefaultState():h<0.85?Blocks.SMOOTH_SANDSTONE.getDefaultState():Blocks.GRANITE.getDefaultState();
     }
     /** Old block walls (ブロック塀): grey blocks, some darker or mossy with age. */
     static BlockState blockWall(int x,int y,int z){
@@ -53,5 +63,14 @@ final class Pal {
         if(h<0.22)return Blocks.CRACKED_STONE_BRICKS.getDefaultState();
         return Blocks.STONE_BRICKS.getDefaultState();
     }
+    /** Weathered concrete of sea walls and quays. */
+    static BlockState seawall(int x,int y,int z){
+        double h=hash(x,y,z);
+        if(h<0.12)return Blocks.ANDESITE.getDefaultState();
+        if(h<0.20)return Blocks.STONE.getDefaultState();
+        if(h<0.26&&y<=Plan.SEA+1)return Blocks.MOSSY_COBBLESTONE.getDefaultState();
+        return Blocks.LIGHT_GRAY_CONCRETE.getDefaultState();
+    }
     static Block pick(Random r,Block... options){return options[r.nextInt(options.length)];}
+    static <T> T pick(Random r,T[] options){return options[r.nextInt(options.length)];}
 }

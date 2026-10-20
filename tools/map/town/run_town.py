@@ -37,7 +37,8 @@ if not cp_file.exists():
     subprocess.run(['./gradlew', '--offline', '-q', 'writeCombatClasspath'], cwd=ROOT, check=True)
 dev_cp = cp_file.read_text().strip()
 sources = sorted(str(p) for p in HERE.glob('*.java'))
-subprocess.run(['javac', '-proc:none', '-encoding', 'UTF-8', '-nowarn', '-cp', dev_cp, '-d', str(work / 'classes')] + sources, check=True, env=env)
+if subprocess.run(['javac', '-proc:none', '-encoding', 'UTF-8', '-nowarn', '-cp', dev_cp, '-d', str(work / 'classes')] + sources, env=env).returncode:
+    sys.exit('the builder does not compile')
 named = work / 'botand-town-named.jar'
 with zipfile.ZipFile(named, 'w') as z:
     z.writestr('fabric.mod.json', json.dumps({'schemaVersion': 1, 'id': 'botand_town', 'version': '1.0.0', 'environment': '*',
@@ -103,7 +104,7 @@ text = (out / 'server.out').read_text(errors='replace')
 lines = [l for l in text.splitlines() if '[town]' in l]
 (out / 'build.log').write_text('\n'.join(lines) + '\n')
 print('\n'.join(lines[-30:]))
-if (server / 'town_error.txt').exists() or not (server / WORLD / 'level.dat').exists():
+if (server / 'town_error.txt').exists() or not any('[town] saved' in l for l in lines):
     sys.exit('build failed after %d s, see %s' % (time.time() - start, out / 'server.out'))
 for name in ('town_preview.png', 'town_build.log'):
     if (server / WORLD / name).exists(): shutil.move(str(server / WORLD / name), out / name)
