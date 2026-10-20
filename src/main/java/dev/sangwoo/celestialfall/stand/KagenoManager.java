@@ -122,12 +122,21 @@ public final class KagenoManager {
         if(action<0||action>H)return false;
         s.press=-1;return begin(p,action);
     }
+    /**
+     * An M1 combo whose next hit came too late breaks (user request, 2.43.0): the attack rests as after a fourth hit
+     * ({@link KagenoRules#m1Broken}; the client shows the rest in its cooldown list) and starts again from the first hit.
+     */
+    private static void breakCombo(ServerPlayerEntity p,State s,long now){
+        long rest=m1Broken(s.combo,s.lastCombo,now);if(rest<0)return;
+        s.combo=0;s.ready[M1]=Math.max(s.ready[M1],rest);status(p,s);
+    }
     private static boolean ready(ServerPlayerEntity p,State s,int skill,long now){return NoCooldownState.enabled(p)||now>=s.ready[skill==RUSH?T:skill];}
     private static boolean begin(ServerPlayerEntity p,int skill){
         if(!valid(p)||busy(p)||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
         var s=STATES.computeIfAbsent(p,k->new State(k));long now=p.getWorld().getTime();
+        if(skill==M1)breakCombo(p,s,now);
         if(!ready(p,s,skill,now))return false;
-        if(skill==M1){s.combo=now-s.lastCombo>36||s.combo>=4?1:s.combo+1;s.lastCombo=now;}
+        if(skill==M1){s.combo=now-s.lastCombo>M1_WINDOW||s.combo>=4?1:s.combo+1;s.lastCombo=now;}
         var c=new Cast(p,skill,s.combo);
         if(skill==R||skill==H){
             double radius=skill==R?STOP_RADIUS:HIGHEST_RADIUS;
@@ -135,7 +144,7 @@ public final class KagenoManager {
                 c.targets.put(e,e.getPos());CombatManager.interrupt(e);if(e instanceof PlayerEntity target)cancelCaster(target);
             }
         }
-        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=now+(skill==M1?(s.combo==4?24:8):COOLDOWN[skill]);
+        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=now+(skill==M1?(s.combo==4?M1_REST:M1_STEP):COOLDOWN[skill]);
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
         sync(c);status(p,s);
         return true;
@@ -181,6 +190,7 @@ public final class KagenoManager {
         for(var entry:new ArrayList<>(STATES.entrySet())){
             var p=entry.getKey();var s=entry.getValue();long now=p.getWorld().getTime();
             if(s.press>=0){if(now-s.pulse>6||busy(p)){s.press=-1;}else if(now-s.press>=HOLD){s.press=-1;begin(p,RUSH);}}
+            breakCombo(p,s,now);
             if(s.overUntil>0&&now>=s.overUntil){s.overUntil=0;s.boost=0;status(p,s);}
             // Passive 1 (초재생): 1 HP per second, applied as 0.5 every half second like the review's counter.
             if(now%10==0&&!frozen(p))p.heal(.5f);

@@ -85,4 +85,16 @@ final class KagenoRulesTest {
         do{x+=vx;y+=vy;vx*=ground?.546:.91;vy=(vy-.08)*.98;ground=false;ticks++;}while(y>0&&ticks<100);
         assertTrue(x>6&&x<8,"flies "+x+" blocks");assertTrue(ticks>=10&&ticks<=16,"lands after "+ticks+" ticks");
     }
+    /**
+     * User request (2.43.0): a combo whose next hit does not start in time breaks, rests as long as after a fourth hit
+     * (shown in the cooldown list) and starts again from the first hit.
+     */
+    @Test void aLateHitBreaksTheComboWhichRestsAsAfterTheFourth(){
+        assertEquals(-1,m1Broken(1,100,100+M1_WINDOW),"the next hit may still start at the end of the window");
+        assertEquals(100+M1_WINDOW+1+M1_REST,m1Broken(1,100,100+M1_WINDOW+1),"broken once the window is past: it rests from there");
+        assertEquals(m1Broken(3,100,137),m1Broken(3,100,400),"the rest is the same whenever the break is noticed");
+        assertEquals(-1,m1Broken(4,100,1000),"the fourth hit ends the combo with its own rest");
+        assertEquals(-1,m1Broken(0,100,1000),"nothing to break before a first hit");
+        assertTrue(M1_REST>M1_STEP&&M1_STEP<M1_WINDOW,"hits follow closer than the rest, and in time");
+    }
 }

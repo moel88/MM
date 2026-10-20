@@ -30,7 +30,8 @@ public final class MpClient implements ClientModInitializer {
      * Since 2.38.2: E is walked and aimed (the camera turns 50 degrees right as it starts, W held through its thrusts), R
      * is walked away from the watcher through it and after it ends (its slowdown must end with it), T held's camera
      * turns 39 degrees right after the first slash, and "DUMMY" runs /botand dummy atomic 30 (an Atomic with no player
-     * caster, 30 blocks ahead).
+     * caster, 30 blocks ahead). Since 2.43.0 the caster dashes (C) after the lone M1 at 2420, whose combo then breaks: the
+     * log shows both in the cooldown list.
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -42,6 +43,7 @@ public final class MpClient implements ClientModInitializer {
         "1480 P","1700 P",
         "1760 P","1900 E",
         "2000 P","2420 M1",
+        "2445 C",
         "2460 DUMMY",
         "3060 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
@@ -150,7 +152,7 @@ public final class MpClient implements ClientModInitializer {
             case "F"->key(GLFW_KEY_F,press);
             case "E"->key(GLFW_KEY_E,press);case "R"->key(GLFW_KEY_R,press);case "T"->key(GLFW_KEY_T,press);case "Y"->key(GLFW_KEY_Y,press);
             case "Q"->key(GLFW_KEY_Q,press);case "G"->key(GLFW_KEY_G,press);case "H"->key(GLFW_KEY_H,press);case "P"->key(GLFW_KEY_P,press);
-            case "W"->key(GLFW_KEY_W,press);
+            case "W"->key(GLFW_KEY_W,press);case "C"->key(GLFW_KEY_C,press);
             default->note("ERROR unknown step "+step);
         }
     }

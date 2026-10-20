@@ -189,7 +189,8 @@ public final class CombatClient {
     public static void hud(DrawContext c,float delta) {
         var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||mc.world==null||mc.options.hudHidden||CinematicDirector.isActive()||mc.player.isSpectator())return;
         Snapshot s=snapshot(mc.player.getUuid());double now=mc.world.getTime()+delta;
-        if(!s.guard&&s.pressure<=0&&now>=s.combatUntil&&now>=s.dashReady)return;
+        // The dash's cooldown is in CooldownHud's list (2.43.0); its bar by the hotbar is gone.
+        if(!s.guard&&s.pressure<=0&&now>=s.combatUntil)return;
         int x=c.getScaledWindowWidth()/2,y=c.getScaledWindowHeight()-72;boolean broken=s.broken(now);
         int color=broken?0xffff566b:s.pressure>70?0xffffb454:0xff7cdce8;
         var m=MOVEMENT.get(mc.player.getUuid());float value=m==null?s.pressure:m.smoothPressure;
@@ -199,9 +200,6 @@ public final class CombatClient {
         for(int i=1;i<4;i++)c.fill(x-60+i*30,y,x-59+i*30,y+6,0xaa111722);
         c.drawCenteredTextWithShadow(mc.textRenderer,Text.translatable(broken?"hud.botand.break":"hud.botand.guard"),x,y-13,color);
         }
-        int dash=(int)(100*MathHelper.clamp(1-(s.dashReady-now)/CombatState.DASH_COOLDOWN,0,1));
-        c.fill(x+71,y-2,x+104,y+10,0xb0111722);c.fill(x+73,y+6,x+73+dash*29/100,y+8,0xffa99aff);
-        c.drawTextWithShadow(mc.textRenderer,Text.literal("C"),x+84,y-2,0xffdcd5ff);
         if(s.attack>0&&s.attack<=4) {
             for(int i=1;i<=4;i++)c.fill(x-22+(i-1)*13,y+15,x-14+(i-1)*13,y+18,i<=s.attack?0xffffd890:0xff3e4654);
         }

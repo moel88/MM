@@ -54,6 +54,17 @@ public final class KagenoRules {
      * and 1.4 blocks up, landing ≈0.6 s later.
      */
     public static final double M1_FLY=1.4,M1_FLY_UP=.45;
+    /**
+     * M1's combo (user request, 2.43.0): each hit must start within {@link #M1_WINDOW} ticks of the one before, or the combo
+     * breaks. A finished combo rests {@link #M1_REST} ticks from its fourth hit, a broken one as long from the break, and
+     * either starts again from the first hit; within a combo the hits are {@link #M1_STEP} ticks apart at the least.
+     */
+    public static final int M1_WINDOW=36,M1_REST=24,M1_STEP=8;
+    /**
+     * When the attack is ready again after a combo whose hit {@code combo} started at {@code last} broke, or -1 while it
+     * still holds at {@code now} (or has none to break: no hit yet, or the fourth hit already ended it).
+     */
+    public static long m1Broken(int combo,long last,long now){return combo>0&&combo<4&&now-last>M1_WINDOW?last+M1_WINDOW+1+M1_REST:-1;}
     public static final int[] COOLDOWN={0,140,180,260,260,180,1800,600,0,20};
     public static final String[] NAMES={"검술의 대가","신속한 맹공","시간을 걷는 자","어둠 속의 불꽃","어둠을 가로지르다","어둠 속으로 빠지다","오버드라이브","최강","I am Atomic","포즈"};
     private KagenoRules(){}
