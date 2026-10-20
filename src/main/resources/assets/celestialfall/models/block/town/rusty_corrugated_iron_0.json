@@ -1,0 +1,6 @@
+{
+ "parent": "minecraft:block/cube_all",
+ "textures": {
+  "all": "celestialfall:block/town/rusty_corrugated_iron_0"
+ }
+}

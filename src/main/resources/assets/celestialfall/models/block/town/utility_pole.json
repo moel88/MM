@@ -1,0 +1,75 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/concrete_pole"
+ },
+ "elements": [
+  {
+   "from": [
+    5,
+    0,
+    5
+   ],
+   "to": [
+    11,
+    16,
+    11
+   ],
+   "faces": {
+    "north": {
+     "texture": "celestialfall:block/town/concrete_pole",
+     "uv": [
+      5,
+      0,
+      11,
+      16
+     ]
+    },
+    "south": {
+     "texture": "celestialfall:block/town/concrete_pole",
+     "uv": [
+      5,
+      0,
+      11,
+      16
+     ]
+    },
+    "west": {
+     "texture": "celestialfall:block/town/concrete_pole",
+     "uv": [
+      5,
+      0,
+      11,
+      16
+     ]
+    },
+    "east": {
+     "texture": "celestialfall:block/town/concrete_pole",
+     "uv": [
+      5,
+      0,
+      11,
+      16
+     ]
+    },
+    "up": {
+     "texture": "celestialfall:block/town/concrete_pole",
+     "uv": [
+      5,
+      5,
+      11,
+      11
+     ]
+    },
+    "down": {
+     "texture": "celestialfall:block/town/concrete_pole",
+     "uv": [
+      5,
+      5,
+      11,
+      11
+     ]
+    }
+   }
+  }
+ ]
+}

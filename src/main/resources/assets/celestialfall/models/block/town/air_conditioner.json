@@ -1,0 +1,75 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/ac_side"
+ },
+ "elements": [
+  {
+   "from": [
+    1,
+    0,
+    5
+   ],
+   "to": [
+    15,
+    10,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "celestialfall:block/town/ac_front",
+     "uv": [
+      1,
+      3,
+      15,
+      13
+     ]
+    },
+    "south": {
+     "texture": "celestialfall:block/town/ac_side",
+     "uv": [
+      1,
+      6,
+      15,
+      16
+     ]
+    },
+    "west": {
+     "texture": "celestialfall:block/town/ac_side",
+     "uv": [
+      5,
+      6,
+      16,
+      16
+     ]
+    },
+    "east": {
+     "texture": "celestialfall:block/town/ac_side",
+     "uv": [
+      0,
+      6,
+      11,
+      16
+     ]
+    },
+    "up": {
+     "texture": "celestialfall:block/town/ac_side",
+     "uv": [
+      1,
+      5,
+      15,
+      16
+     ]
+    },
+    "down": {
+     "texture": "celestialfall:block/town/ac_side",
+     "uv": [
+      1,
+      0,
+      15,
+      11
+     ]
+    }
+   }
+  }
+ ]
+}

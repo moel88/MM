@@ -18,21 +18,21 @@ final class Harbor {
     private final Townscape t;private final Canvas c;private final Random rnd;
     static final int Y=Plan.COAST;
     /** The breakwaters: east (along x=EX, then west along the arm) and west (from the headland). */
-    static final int EX=-98,ARM_Z=133,ARM_X=-140,WEST_Z=128,WEST_X=-162;
+    static final int EX=-97,ARM_Z=112,ARM_X=-136,WEST_Z=106,WEST_X=-156;
     Harbor(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
 
     void build(){
         quay();
         breakwaters();
-        market(-190,-158);
-        office(-210,-200);
-        store(-150,-132);
-        int[] spots={-202,-186,-171,-156,-140,-124,-110};
+        market(-174,-150);
+        office(-146,-137);
+        store(-132,-115);
+        int[] spots={-168,-155,-142,-129,-116,-104};
         for(int i=0;i<spots.length;i++)boat(spots[i],Plan.QUAY_Z1+4,i%2==0?1:-1,10+rnd.nextInt(5),i%3==1);
-        boat(-128,100,1,13,true);boat(-188,104,-1,12,false);
+        boat(-124,92,1,13,true);boat(-160,94,-1,12,false);
         slipway();
         lighthouse(ARM_X+2,ARM_Z,true);lighthouse(WEST_X-2,WEST_Z,false);
-        t.places.put("harbor",new int[]{-150,Y+1,62});
+        t.places.put("harbor",new int[]{-140,Y+1,62});
         Town.log("harbour: "+c.placed);
     }
 
@@ -66,11 +66,11 @@ final class Harbor {
         for(int z=Plan.SEAWARD_Z;z<=ARM_Z+2;z++)for(int x=EX-2;x<=EX+2;x++)wall(x,z,x==EX+2);
         for(int x=ARM_X;x<EX-2;x++)for(int z=ARM_Z-2;z<=ARM_Z+2;z++)wall(x,z,z==ARM_Z+2);
         // the west breakwater: from the headland's shore out east
-        for(int x=-245;x<=WEST_X;x++)for(int z=WEST_Z-2;z<=WEST_Z+2;z++)if(t.terrain.kind[Canvas.idx(x,z)]==Terrain.SEA)wall(x,z,z==WEST_Z+2);
+        for(int x=Plan.X0+8;x<=WEST_X;x++)for(int z=WEST_Z-2;z<=WEST_Z+2;z++)if(t.terrain.kind[Canvas.idx(x,z)]==Terrain.SEA)wall(x,z,z==WEST_Z+2);
         var coast=t.coast;
         for(int z=Plan.SEAWARD_Z+26;z<=ARM_Z+5;z++)for(int x=EX+3;x<=EX+5;x++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
         for(int x=ARM_X;x<=EX+5;x++)for(int z=ARM_Z+3;z<=ARM_Z+5;z++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
-        for(int x=-245;x<=WEST_X;x++)for(int z=WEST_Z+3;z<=WEST_Z+5;z++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
+        for(int x=Plan.X0+8;x<=WEST_X;x++)for(int z=WEST_Z+3;z<=WEST_Z+5;z++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
     }
     private void wall(int x,int z,boolean parapet){
         for(int y=Canvas.Y0;y<=Y;y++)c.set(x,y,z,Pal.seawall(x,y,z));

@@ -1,0 +1,11 @@
+{
+ "variants": {
+  "axis=x": {
+   "model": "celestialfall:block/town/corrugated_roof"
+  },
+  "axis=z": {
+   "model": "celestialfall:block/town/corrugated_roof",
+   "y": 90
+  }
+ }
+}

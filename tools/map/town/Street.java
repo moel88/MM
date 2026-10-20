@@ -8,44 +8,59 @@ import net.minecraft.util.math.Direction;
 import java.util.*;
 
 /**
- * What stands along the streets: concrete power poles with crossarms, insulators and transformers, their wires
- * sagging from pole to pole and dropping to the houses, small street lamps on the poles, the main street's lamps
- * with their flags and its arch, the coastal road's tall sodium lamps; vending machines glowing in twos and threes,
- * red post boxes, rubbish points, bus stops and traffic mirrors.
+ * What stands along the streets: tall concrete power poles with a yellow-and-black sleeve at their foot, crossarms with
+ * insulators, transformers and a street lamp reaching out over the road (Botand's own town blocks), the wires hung
+ * from pole to pole (drawn by the mod as thin sagging lines, so they are written into the map's definition, not built
+ * of blocks), the main street's lamps with their flags and its arch, the coastal road's tall sodium lamps; vending
+ * machines glowing in twos and threes, red post boxes, rubbish points, bus stops and traffic mirrors.
  */
 final class Street {
     private final Townscape t;private final Canvas c;private final Random rnd;
-    /** Every pole's top (x, y, z), in order along each run, for wiring. */
+    /** Every pole, in order along each run, for wiring: its x, top y, z and the axis its crossarm lies along. */
     private final List<int[][]> runs=new ArrayList<>();
-    int poles,wires,lamps,machines;
+    int poles,lamps,machines;
     Street(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
 
     void build(){
-        // poles along the north edge of each east-west street, and the west edge of each side street
+        // poles along the north edge of each east-west street, and the west edge of each alley
         for(int k=0;k<4;k++){
             List<int[]> run=new ArrayList<>();
             for(int x=Plan.TOWN_X0+8;x<=Plan.TOWN_X1-6;x+=17+rnd.nextInt(4)){
                 int px=clearOfCrossings(x);if(px==Integer.MIN_VALUE)continue;
-                int[] top=pole(px,Plan.ST_N[k],Direction.SOUTH,run.size()%2==0);if(top!=null)run.add(top);
+                int[] top=pole(px,Plan.ST_N[k],Direction.SOUTH,run.size()%2==0?1:0,rnd.nextInt(3)>0);if(top!=null)run.add(top);
             }
             runs.add(run.toArray(new int[0][]));
         }
         for(int[] s:Plan.SIDE_STREETS){
             List<int[]> run=new ArrayList<>();
-            int end=s[0]==Plan.CROSSING_X0?Plan.RAIL_Z0-2:Plan.ST_S[0];
-            for(int z=Plan.ST_N[3]+8;z<=end;z+=16+rnd.nextInt(4)){
+            for(int z=Plan.ST_N[3]+8;z<=Plan.ST_S[0];z+=16+rnd.nextInt(4)){
                 if(Plan.street(z)>=0||Plan.street(z-2)>=0||Plan.street(z+2)>=0)continue;
-                int[] top=pole(s[0],z,Direction.EAST,run.size()%2==1);if(top!=null)run.add(top);
+                int[] top=pole(s[0],z,Direction.EAST,run.size()%2==1?1:0,rnd.nextInt(3)>0);if(top!=null)run.add(top);
             }
             runs.add(run.toArray(new int[0][]));
         }
+        // the photo street: poles along its east kerb about twenty metres apart, the first just ahead of the photo's
+        // camera with its lamp out over the road, and a few on the west kerb
+        List<int[]> photo=new ArrayList<>();
+        for(int z=(int)Plan.PHOTO1_Z+4;z<=Plan.RAIL_Z0-3;z+=19+rnd.nextInt(3)){
+            if(Plan.street(z)>=0||Plan.street(z-2)>=0||Plan.street(z+2)>=0)z+=5;
+            int[] top=pole(Plan.PHOTO_ROAD_X1+1,z,Direction.WEST,photo.size()%3==1?2:photo.size()%3==2?1:0,photo.isEmpty()||rnd.nextBoolean());
+            if(top!=null)photo.add(top);
+        }
+        runs.add(photo.toArray(new int[0][]));
+        List<int[]> photoWest=new ArrayList<>();
+        for(int z=(int)Plan.PHOTO1_Z+38;z<=Plan.RAIL_Z0-3;z+=24){
+            if(Plan.street(z)>=0||Plan.street(z-2)>=0||Plan.street(z+2)>=0)z+=5;
+            int[] top=pole(Plan.PHOTO_ROAD_X0-1,z,Direction.EAST,1,false);if(top!=null)photoWest.add(top);
+        }
+        runs.add(photoWest.toArray(new int[0][]));
         // terrace streets: poles on the street's south edge, following its curve
-        for(int i=0;i<4;i++){
+        for(int i=0;i<Plan.TERRACE_Y.length;i++){
             List<int[]> run=new ArrayList<>();
             for(int x=Plan.TERRACE_XW[i]+6;x<=Plan.TERRACE_XE[i]-6;x+=16+rnd.nextInt(4)){
                 if(Math.abs(x)<=7)continue;
                 boolean ramp=false;for(int[] r:Plan.RAMPS)if(x>=r[0]-2&&x<=r[1]+2)ramp=true;if(ramp)continue;
-                int[] top=pole(x,Plan.terraceStreetZ0(i,x),Direction.NORTH,run.size()%2==0);if(top!=null)run.add(top);
+                int[] top=pole(x,Plan.terraceStreetZ0(i,x),Direction.NORTH,run.size()%2==0?1:0,rnd.nextInt(3)>0);if(top!=null)run.add(top);
             }
             runs.add(run.toArray(new int[0][]));
         }
@@ -53,83 +68,91 @@ final class Street {
         List<int[]> main=new ArrayList<>();
         for(int z=Plan.ST_N[3]+6;z<=Plan.RAIL_Z0-3;z+=14){
             if(Plan.street(z)>=0||Plan.street(z-2)>=0||Plan.street(z+2)>=0)continue;
-            int[] top=pole(Plan.MAIN_X1,z,Direction.WEST,false);if(top!=null)main.add(top);
+            int[] top=pole(Plan.MAIN_X1,z,Direction.WEST,0,false);if(top!=null)main.add(top);
             mainLamp(Plan.MAIN_X0,z+7);
         }
         runs.add(main.toArray(new int[0][]));
         // the coastal road: poles along the railway fence, tall sodium lamps along the promenade
         List<int[]> coast=new ArrayList<>();
-        for(int x=Plan.TUNNEL_W+12;x<=Plan.TUNNEL_E-12;x+=18){
-            if(Plan.river(x,Plan.RAIL_FENCE_Z)||Math.abs(x)<=8||x>=Plan.CROSSING_X0-3&&x<=Plan.CROSSING_X1+3)continue;
-            int[] top=pole(x,Plan.RAIL_FENCE_Z-1,Direction.SOUTH,coast.size()%3==0);if(top!=null)coast.add(top);
+        for(int x=Plan.TUNNEL_W+12;x<=Plan.TUNNEL_E-8;x+=18){
+            boolean crossing=false;for(int[] xs:Plan.CROSSINGS)if(x>=xs[0]-3&&x<=xs[1]+3)crossing=true;
+            if(crossing||Math.abs(x)<=8)continue;
+            int[] top=pole(x,Plan.RAIL_FENCE_Z-1,Direction.SOUTH,coast.size()%3==0?1:0,false);if(top!=null)coast.add(top);
         }
         runs.add(coast.toArray(new int[0][]));
-        for(int x=Plan.HARBOR_X0+6;x<=Plan.TOWN_X1+16;x+=22)if(Math.abs(x)>9)sodium(x,Plan.PROM_Z0);
-        for(int[][] run:runs)for(int i=0;i+1<run.length;i++)span(run[i],run[i+1]);
-        Town.log("street: "+poles+" poles, "+wires+" wire blocks, "+lamps+" lamps");
+        for(int x=Plan.HARBOR_X0+6;x<Plan.LOT_X0;x+=22)if(Math.abs(x)>9&&(x<Plan.PHOTO_X0-2||x>Plan.PHOTO_X1+2))sodium(x,Plan.PROM_Z0);
+        Town.log("street: "+poles+" poles, "+lamps+" lamps");
     }
-    /** A pole position along an east-west street clear of the side streets' crossings, or MIN_VALUE. */
+    /** Hangs the wires along every run (after the lot and the hillside have added theirs). */
+    void wireRuns(){
+        for(int[][] run:runs)for(int i=0;i+1<run.length;i++)span(run[i],run[i+1]);
+        Town.log("wires: "+t.wires.size()+" spans");
+    }
+    void addRun(List<int[]> run){runs.add(run.toArray(new int[0][]));}
+    /** A pole position along an east-west street clear of the corridors' crossings, or MIN_VALUE. */
     private int clearOfCrossings(int x){
         for(int[] s:Layout.CORRIDORS)if(x>=s[0]-3&&x<=s[1]+3)return x+(s[1]+4-x)<=Plan.TOWN_X1-6?s[1]+4:Integer.MIN_VALUE;
         return x;
     }
 
     /**
-     * A concrete power pole at the street's edge: a crossarm across the street direction with insulators on it,
-     * a transformer on every other one, and on some a small lamp leaning out over the road ({@code road} is the
-     * side the road lies on). Returns the top (x, y, z), or null where there is no room.
+     * A concrete power pole at the street's edge, eleven blocks tall: the yellow-and-black sleeve at its foot, a
+     * crossarm with insulators at the top lying across the street (square to the wires that run along it), a second
+     * one lower down on some, {@code transformers} transformers on the side away from the road, and on {@code lamp}
+     * poles a street lamp reaching out over the road ({@code road} is the side the road lies on). Returns the pole
+     * (x, top y, z, crossarm axis 0 x / 1 z), or null where there is no room.
      */
-    int[] pole(int x,int z,Direction road,boolean transformer){
+    int[] pole(int x,int z,Direction road,int transformers,boolean lamp){
         if(!Canvas.inPlan(x,z))return null;
-        int g=c.ground(x,z);
-        for(int y=g+1;y<=g+10;y++)if(!c.air(x,y,z))return null;
-        for(int y=g+1;y<=g+10;y++)c.set(x,y,z,Blocks.ANDESITE_WALL.getDefaultState());
-        int top=g+10;
-        // the crossarm lies across the street, square to the wires that run along it
+        int g=c.ground(x,z),top=g+11;
+        for(int y=g+1;y<=top;y++)if(!c.air(x,y,z))return null;
+        for(int y=g+1;y<=top;y++)c.set(x,y,z,y<=g+2?TB.SLEEVE:TB.POLE);
+        Direction.Axis across=road.getAxis();
+        c.set(x,top-1,z,TB.crossarm(true,across));
         for(int d=-1;d<=1;d+=2){
             int ax=x+road.getOffsetX()*d,az=z+road.getOffsetZ()*d;
-            if(c.air(ax,top-1,az)){c.set(ax,top-1,az,Blocks.IRON_BARS.getDefaultState());if(c.air(ax,top,az))c.set(ax,top,az,Blocks.WHITE_CANDLE.getDefaultState());}
+            if(c.air(ax,top-1,az))c.set(ax,top-1,az,TB.crossarm(false,across));
         }
-        if(transformer){
-            int bx=x-road.getOffsetX(),bz=z-road.getOffsetZ();
-            if(c.air(bx,top-3,bz)&&c.air(bx,top-2,bz)){c.set(bx,top-3,bz,Blocks.CAULDRON.getDefaultState());c.set(bx,top-2,bz,Blocks.LIGHT_GRAY_CONCRETE.getDefaultState());}
+        boolean second=Pal.hash(x,17,z)<0.5;
+        if(second){c.set(x,top-3,z,TB.crossarm(true,across));int ax=x+road.getOffsetX(),az=z+road.getOffsetZ();if(c.air(ax,top-3,az))c.set(ax,top-3,az,TB.crossarm(false,across));}
+        Direction back=road.getOpposite();
+        if(transformers>0){
+            int bx=x+back.getOffsetX(),bz=z+back.getOffsetZ();
+            if(c.air(bx,top-5,bz))c.set(bx,top-5,bz,TB.facing("pole_transformer",back));
+            if(transformers>1){
+                Direction side=road.rotateYClockwise();int sx=x+side.getOffsetX(),sz=z+side.getOffsetZ();
+                if(c.air(sx,top-5,sz))c.set(sx,top-5,sz,TB.facing("pole_transformer",side));
+            }
         }
-        if(rnd.nextInt(3)>0){
-            // the street lamp: an arm out over the road and a white tube under it
-            int ax=x+road.getOffsetX(),az=z+road.getOffsetZ();
-            if(c.air(ax,g+5,az)&&c.air(ax,g+4,az)){c.set(ax,g+5,az,Blocks.IRON_BARS.getDefaultState());c.set(ax,g+4,az,Canvas.rod(Blocks.END_ROD,Direction.DOWN));lamps++;}
+        if(lamp){
+            // the street lamp: an arm reaching a metre and a half out over the road, the lamp at its end
+            int ax=x+road.getOffsetX(),az=z+road.getOffsetZ(),hx=ax+road.getOffsetX(),hz=az+road.getOffsetZ();
+            if(c.air(ax,g+8,az)&&c.air(hx,g+8,hz)){c.set(ax,g+8,az,TB.facing("street_lamp_arm",road));c.set(hx,g+8,hz,TB.facing("street_lamp",road));lamps++;}
         }
         poles++;
-        return new int[]{x,top,z};
+        return new int[]{x,top,z,across==Direction.Axis.X?0:1};
     }
 
-    /** Wires from one pole to the next: two from the crossarm ends, one lower down the pole, each sagging. */
+    /**
+     * Wires from one pole to the next: the three power lines from the insulators along the top crossarm, a fourth
+     * from the lower crossarm, and a telephone cable lower down the pole, each sagging a little more than the last.
+     */
     private void span(int[] a,int[] b){
         double dx=b[0]-a[0],dz=b[2]-a[2],len=Math.hypot(dx,dz);
-        if(len<4||len>30)return;
-        double nx=-dz/len,nz=dx/len;
-        // power lines from the crossarm, a telephone cable lower down; all well above the street
-        double sag=0.45+rnd.nextDouble()*0.5;
-        wire(a[0]+nx,a[1]-1,a[2]+nz,b[0]+nx,b[1]-1,b[2]+nz,sag);
-        wire(a[0]-nx,a[1]-1,a[2]-nz,b[0]-nx,b[1]-1,b[2]-nz,sag*1.1);
-        wire(a[0],a[1]-3,a[2],b[0],b[1]-3,b[2],sag*1.3);
-        if(rnd.nextBoolean())wire(a[0],a[1]-4,a[2],b[0],b[1]-4,b[2],sag*1.2);
-    }
-    /** A wire from point to point hanging in a curve {@code sag} blocks deep at its middle, drawn in chains. */
-    void wire(double x0,double y0,double z0,double x1,double y1,double z1,double sag){
-        double len=Math.max(Math.abs(x1-x0),Math.abs(z1-z0));
-        int steps=(int)Math.ceil(len*2);
-        int lx=Integer.MIN_VALUE,ly=0,lz=0;
-        for(int i=1;i<steps;i++){
-            double s=i/(double)steps;
-            double x=x0+(x1-x0)*s,z=z0+(z1-z0)*s,y=y0+(y1-y0)*s-sag*4*s*(1-s);
-            int bx=(int)Math.round(x),by=(int)Math.round(y),bz=(int)Math.round(z);
-            if(bx==lx&&by==ly&&bz==lz)continue;
-            lx=bx;ly=by;lz=bz;
-            if(!c.air(bx,by,bz))continue;
-            Direction.Axis axis=Math.abs(x1-x0)>=Math.abs(z1-z0)?Direction.Axis.X:Direction.Axis.Z;
-            c.set(bx,by,bz,Canvas.chain(axis));wires++;
+        if(len<4||len>34)return;
+        double sag=0.35+rnd.nextDouble()*0.25+len*0.012;
+        for(int k=-1;k<=1;k++){
+            double[] p=arm(a,k*1.35),q=arm(b,k*1.35);
+            t.wire(p[0],a[1]-0.05,p[1],q[0],b[1]-0.05,q[1],sag*(1+0.08*k));
         }
+        double[] p=arm(a,0.9),q=arm(b,0.9);
+        t.wire(p[0],a[1]-2.05,p[1],q[0],b[1]-2.05,q[1],sag*1.25);
+        t.wire(a[0]+0.5,a[1]-5.6,a[2]+0.5,b[0]+0.5,b[1]-5.6,b[2]+0.5,sag*1.6+0.2);
+        if(Pal.hash(a[0],5,a[2])<0.5)t.wire(a[0]+0.5,a[1]-6.4,a[2]+0.5,b[0]+0.5,b[1]-6.4,b[2]+0.5,sag*1.9+0.3);
+    }
+    /** A point along a pole's crossarm, {@code off} blocks out from the pole's middle. */
+    private static double[] arm(int[] p,double off){
+        return p[3]==0?new double[]{p[0]+0.5+off,p[2]+0.5}:new double[]{p[0]+0.5,p[2]+0.5+off};
     }
 
     /** The main street's lamps: a dark post, a white globe under a little cap, flags in Botand's blue. */

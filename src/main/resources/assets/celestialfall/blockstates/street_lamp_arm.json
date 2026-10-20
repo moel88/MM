@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "celestialfall:block/town/street_lamp_arm"
+  },
+  "facing=east": {
+   "model": "celestialfall:block/town/street_lamp_arm",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "celestialfall:block/town/street_lamp_arm",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "celestialfall:block/town/street_lamp_arm",
+   "y": 270
+  }
+ }
+}

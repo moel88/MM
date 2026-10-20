@@ -5,7 +5,8 @@ Results: OUT_DIR/server/Botand_Seaside_1.20.1 (the world), OUT_DIR/Botand-Seasid
 OUT_DIR/town_preview.png (a top-down picture in map colours), OUT_DIR/build.log.
 
 The builder (Town.java and friends) is compiled against the dev (named) classpath and remapped to intermediary like a
-release mod; the server runs from the offline Gradle/Loom caches with Fabric API only (the town is vanilla blocks).
+release mod; the server runs from the offline Gradle/Loom caches with Fabric API and the Botand jar (build/libs, or
+TOWN_MOD) with its pinned libraries, since the town uses the mod's own town blocks.
 The world starts as a flat ocean (the old Azure Garden map's layers); the builder raises the town out of it.
 """
 from pathlib import Path
@@ -42,7 +43,7 @@ if subprocess.run(['javac', '-proc:none', '-encoding', 'UTF-8', '-nowarn', '-cp'
 named = work / 'botand-town-named.jar'
 with zipfile.ZipFile(named, 'w') as z:
     z.writestr('fabric.mod.json', json.dumps({'schemaVersion': 1, 'id': 'botand_town', 'version': '1.0.0', 'environment': '*',
-        'entrypoints': {'main': ['dev.sangwoo.botandtown.Town']}}))
+        'entrypoints': {'main': ['dev.sangwoo.botandtown.Town']}, 'depends': {'celestialfall': '*'}}))
     for p in (work / 'classes').rglob('*.class'):
         z.write(p, str(p.relative_to(work / 'classes')))
 asm = [one(f'org.ow2.asm/{a}/9.*/*/{a}-9.*[0-9].jar') for a in ('asm', 'asm-analysis', 'asm-commons', 'asm-tree', 'asm-util')]
@@ -73,8 +74,12 @@ loader = [one(f"net.fabricmc/fabric-loader/{props['loader_version']}/*/fabric-lo
 cp = ':'.join(loader + [str(inter)] + libs)
 fabric_api = one(f"net.fabricmc.fabric-api/fabric-api/{props['fabric_version']}/*/fabric-api-{props['fabric_version']}.jar")
 
+# the town is built of Botand's own town blocks too, so the server runs the mod (and the libraries it needs) as released
+mod = Path(os.environ['TOWN_MOD']) if os.environ.get('TOWN_MOD') else ROOT / f"build/libs/botand-{props['mod_version']}.jar"
+if not mod.exists(): sys.exit(f'build the mod first (bash gradlew build --offline): {mod}')
+deps = [ROOT / 'libs' / d['filename'] for d in json.loads((ROOT / 'DEPENDENCIES.lock.json').read_text())]
 server = out / 'server'; (server / 'mods').mkdir(parents=True)
-for jar in (fabric_api, bot): shutil.copy(jar, server / 'mods')
+for jar in (fabric_api, bot, mod, *deps): shutil.copy(jar, server / 'mods')
 (server / 'eula.txt').write_text('eula=true\n')
 # a flat ocean (water to y 62 over a sand and gravel floor at 50), as the Azure Garden map
 layers = [{'block': 'minecraft:bedrock', 'height': 1}, {'block': 'minecraft:stone', 'height': 110}, {'block': 'minecraft:gravel', 'height': 2},

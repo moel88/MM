@@ -1,0 +1,60 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/vending_side"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    2
+   ],
+   "to": [
+    16,
+    16,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "celestialfall:block/town/vending_front_lower",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "south": {
+     "texture": "celestialfall:block/town/vending_side",
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ]
+    },
+    "west": {
+     "texture": "celestialfall:block/town/vending_side",
+     "uv": [
+      2,
+      0,
+      16,
+      16
+     ]
+    },
+    "east": {
+     "texture": "celestialfall:block/town/vending_side",
+     "uv": [
+      0,
+      0,
+      14,
+      16
+     ]
+    },
+    "down": {
+     "texture": "celestialfall:block/town/vending_top"
+    }
+   }
+  }
+ ]
+}

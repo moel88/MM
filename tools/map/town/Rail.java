@@ -12,8 +12,8 @@ import static dev.sangwoo.botandtown.Kit.s;
  * The single-track coast line and everything on it: ballast and rails from tunnel to tunnel, low fences, the town's
  * little station (a wooden station house, a platform with its canopy, benches and name board, the square in front
  * with a police box), a two-car local train waiting at the platform, level crossings with their striped posts,
- * warning lights and raised barriers, girder bridges over the river for the line and the coastal road, and tunnels
- * into both headlands closed off inside for works.
+ * warning lights and raised barriers where the photo street and the main street cross, and tunnels into the west
+ * headland and the east hill closed off inside for works.
  */
 final class Rail {
     private final Townscape t;private final Canvas c;private final Random rnd;
@@ -22,21 +22,19 @@ final class Rail {
 
     void build(){
         track();
-        bridges();
-        crossing(Plan.MAIN_X0,Plan.MAIN_X1);crossing(Plan.CROSSING_X0,Plan.CROSSING_X1);
+        for(int[] xs:Plan.CROSSINGS)crossing(xs[0],xs[1]);
         platform();
         station();
         train();
-        tunnel(Plan.TUNNEL_W,-1);tunnel(Plan.TUNNEL_E,1);
+        tunnel(Plan.TUNNEL_W,-1,6);tunnel(Plan.TUNNEL_E,1,30);
         Town.log("railway: "+c.placed);
     }
-    boolean crossingX(int x){return x>=Plan.MAIN_X0&&x<=Plan.MAIN_X1||x>=Plan.CROSSING_X0&&x<=Plan.CROSSING_X1;}
+    boolean crossingX(int x){for(int[] xs:Plan.CROSSINGS)if(x>=xs[0]&&x<=xs[1])return true;return false;}
 
     /** Ballast, rails and the fences along the line. */
     private void track(){
-        for(int x=Plan.TUNNEL_W-30;x<=Plan.TUNNEL_E+30;x++){
-            boolean river=Plan.river(x,Plan.TRACK_Z);
-            if(river)continue;
+        for(int x=Plan.TUNNEL_W-10;x<=Plan.TUNNEL_E+30;x++){
+            if(!Canvas.inPlan(x,Plan.TRACK_Z))continue;
             for(int z=Plan.TRACK_Z-1;z<=Plan.TRACK_Z+1;z++){
                 if(crossingX(x))continue;
                 double h=Pal.hash(x,3,z);
@@ -49,43 +47,13 @@ final class Rail {
             for(int z:new int[]{Plan.TRACK_Z+2,Plan.TRACK_Z+3})if(c.ground(x,z)==Y)c.set(x,Y,z,Pal.hash(x,4,z)<0.5?s(Blocks.GRAVEL):s(Blocks.COARSE_DIRT));
             fence(x,Plan.RAIL_FENCE_Z);
             boolean platform=x>=Plan.PLATFORM_X0&&x<=Plan.PLATFORM_X1;
-            if(!platform&&!(x>=Plan.MAIN_X0-1&&x<=Plan.MAIN_X1+1))fence(x,Plan.RAIL_Z0);
+            if(!platform&&!crossingX(x-1)&&!crossingX(x+1))fence(x,Plan.RAIL_Z0);
             if(!platform)for(int z=Plan.RAIL_Z0+1;z<Plan.TRACK_Z-1;z++)if(c.ground(x,z)==Y&&c.air(x,Y+1,z)){c.set(x,Y,z,s(Blocks.GRASS_BLOCK));if(rnd.nextInt(4)==0)c.set(x,Y+1,z,s(Blocks.GRASS));}
         }
     }
     private void fence(int x,int z){
-        if(Plan.river(x,z)||!c.air(x,Y+1,z))return;
+        if(!c.air(x,Y+1,z))return;
         c.set(x,Y+1,z,x%4==0?s(Blocks.ANDESITE_WALL):s(Blocks.IRON_BARS));
-    }
-
-    /** Girder bridges over the river: the line on steel, the coastal road on a concrete deck with railings and lamps. */
-    private void bridges(){
-        for(int x=Plan.TOWN_X1;x<=Plan.TUNNEL_E;x++){
-            boolean any=false;for(int z=Plan.TRACK_Z-1;z<=Plan.PROM_Z1+1;z++)if(Plan.river(x,z))any=true;
-            if(!any)continue;
-            // the line: a dark steel girder deck with rails on it
-            for(int z=Plan.TRACK_Z-1;z<=Plan.TRACK_Z+1;z++){
-                c.set(x,Y-1,z,s(Blocks.POLISHED_DEEPSLATE));c.set(x,Y,z,z==Plan.TRACK_Z?s(Blocks.SPRUCE_PLANKS):s(Blocks.POLISHED_DEEPSLATE));
-            }
-            c.set(x,Y+1,Plan.TRACK_Z,Blocks.RAIL.getDefaultState().with(RailBlock.SHAPE,RailShape.EAST_WEST));
-            c.set(x,Y+1,Plan.TRACK_Z-1,s(Blocks.IRON_BARS));c.set(x,Y+1,Plan.TRACK_Z+1,s(Blocks.IRON_BARS));
-            // the road: asphalt on a concrete deck, sidewalks, white railings
-            for(int z=Plan.COAST_Z0-1;z<=Plan.PROM_Z1;z++){
-                c.set(x,Y-1,z,s(Blocks.LIGHT_GRAY_CONCRETE));
-                boolean road=z>=Plan.COAST_Z0&&z<=Plan.COAST_Z1;
-                c.set(x,Y,z,road?(z==Plan.CENTRE_Z&&Math.floorMod(x,8)<4?s(Blocks.WHITE_CONCRETE):Pal.asphalt(x,z)):s(Blocks.SMOOTH_STONE));
-                if(!road)c.set(x,Y+1,z,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
-                c.ground(x,z,Y);
-            }
-            for(int z:new int[]{Plan.COAST_Z0-2,Plan.PROM_Z1+1}){c.set(x,Y-1,z,s(Blocks.LIGHT_GRAY_CONCRETE));c.set(x,Y,z,s(Blocks.LIGHT_GRAY_CONCRETE));c.set(x,Y+1,z,s(Blocks.LIGHT_GRAY_CONCRETE));c.set(x,Y+2,z,s(Blocks.IRON_BARS));}
-            // piers in the water
-            if(Math.floorMod(x,10)==0)for(int z=Plan.TRACK_Z-1;z<=Plan.PROM_Z1;z++)if(Plan.river(x,z)&&z!=Plan.COAST_Z0-1)
-                for(int y=c.ground(x,z)+1;y<Y-1;y++)c.set(x,y,z,s(Blocks.LIGHT_GRAY_CONCRETE));
-            if(Math.floorMod(x,16)==8){
-                c.set(x,Y+2,Plan.PROM_Z1+1,s(Blocks.ANDESITE_WALL));c.set(x,Y+3,Plan.PROM_Z1+1,s(Blocks.ANDESITE_WALL));c.set(x,Y+4,Plan.PROM_Z1+1,s(Blocks.ANDESITE_WALL));
-                c.set(x,Y+5,Plan.PROM_Z1+1,s(Blocks.IRON_BARS));c.set(x,Y+5,Plan.PROM_Z1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));c.set(x,Y+4,Plan.PROM_Z1,s(Blocks.OCHRE_FROGLIGHT));
-            }
-        }
     }
 
     /**
@@ -95,7 +63,7 @@ final class Rail {
     private void crossing(int x0,int x1){
         for(int x=x0;x<=x1;x++)for(int z=Plan.RAIL_Z0;z<=Plan.RAIL_FENCE_Z;z++){
             boolean panel=z>=Plan.TRACK_Z-1&&z<=Plan.TRACK_Z+1;
-            c.set(x,Y,z,panel?s(Blocks.BLACK_CONCRETE):z==Plan.RAIL_Z0||z==Plan.RAIL_FENCE_Z?s(Blocks.WHITE_CONCRETE):Pal.asphalt(x,z));
+            c.set(x,Y,z,panel?s(Blocks.BLACK_CONCRETE):z==Plan.RAIL_Z0||z==Plan.RAIL_FENCE_Z?TB.painted("asphalt_stop_line",Direction.Axis.X):TB.ASPHALT);
             c.clear(x,Y+1,z,x,Y+6,z);c.ground(x,z,Y);
         }
         for(int x=x0;x<=x1;x++)c.set(x,Y+1,Plan.TRACK_Z,Blocks.RAIL.getDefaultState().with(RailBlock.SHAPE,RailShape.EAST_WEST));
@@ -253,8 +221,7 @@ final class Rail {
      * A tunnel into a headland for the line and the road: concrete portals with their names, lined tubes lit with
      * sodium lamps, closed some way in by works barriers ({@code dir} -1 west, 1 east).
      */
-    private void tunnel(int x0,int dir){
-        int len=30;
+    private void tunnel(int x0,int dir,int len){
         for(int k=1;k<=len;k++){
             int x=x0+dir*k;
             // the road tube: z 45..53, 7 high; the rail tube: z 39..43, 6 high
@@ -280,12 +247,12 @@ final class Rail {
                 boolean wall=z==z0||z==z1||y==Y+h+1||y<=Y;
                 boolean arch=(z==z0+1||z==z1-1)&&y==Y+h;
                 if(closed)c.set(x,y,z,s(Blocks.LIGHT_GRAY_CONCRETE));
-                else if(wall||arch)c.set(x,y,z,y==Y?Pal.asphalt(x,z):y<Y?s(Blocks.STONE):s(Blocks.LIGHT_GRAY_CONCRETE));
+                else if(wall||arch)c.set(x,y,z,y==Y?TB.ASPHALT:y<Y?s(Blocks.STONE):s(Blocks.LIGHT_GRAY_CONCRETE));
                 else c.set(x,y,z,s(Blocks.AIR));
             }
         }
         if(!closed&&z1-z0==8){
-            for(int z=z0+1;z<z1;z++){c.set(x,Y,z,z==Plan.CENTRE_Z&&Math.floorMod(x,8)<4?s(Blocks.WHITE_CONCRETE):Pal.asphalt(x,z));}
+            for(int z=z0+1;z<z1;z++){c.set(x,Y,z,z==Plan.CENTRE_Z&&Math.floorMod(x,10)<5?TB.painted("asphalt_center_line",Direction.Axis.X):TB.ASPHALT);}
         }
         if(!closed&&z1-z0==4){
             for(int z=z0+1;z<z1;z++)c.set(x,Y,z,s(Blocks.GRAVEL));

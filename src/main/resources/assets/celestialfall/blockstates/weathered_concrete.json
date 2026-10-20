@@ -1,0 +1,15 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/weathered_concrete_0"
+   },
+   {
+    "model": "celestialfall:block/town/weathered_concrete_1"
+   },
+   {
+    "model": "celestialfall:block/town/weathered_concrete_2"
+   }
+  ]
+ }
+}

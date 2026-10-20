@@ -5,8 +5,8 @@ import net.minecraft.util.math.Direction;
 
 /**
  * The ways up the hill: the main stairway straight up the middle from the end of the main street to the shrine (the
- * view back down it runs along the main street and the bridge out to the island), and four ramps for cars, one
- * between each pair of levels, cut into the slope between stone walls.
+ * view back down it runs along the main street and the bridge out to the island), and a ramp for cars between each
+ * pair of levels, cut into the slope between stone walls.
  */
 final class Hill {
     private final Townscape t;private final Canvas c;
@@ -17,22 +17,22 @@ final class Hill {
 
     /** Marks the stairway's paths and the ramps in the street plan (before the streets are laid). */
     void plan(Roads roads){
-        int b=Plan.bend(0);
-        for(int i=0;i<4;i++){
+        int b=Plan.bend(0),n=Plan.TERRACE_Y.length;
+        for(int i=0;i<n;i++){
             int wall=Plan.TERRACE_Z0[i]+b,top=wall-(Plan.TERRACE_Y[i]-below(i));
-            int next=i<3?Plan.TERRACE_Z0[i+1]+b:Plan.TERRACE_Z1[3]+b-1;
+            int next=i<n-1?Plan.TERRACE_Z0[i+1]+b:Plan.TERRACE_Z1[n-1]+b-1;
             roads.markIfFree(Plan.STAIR_X0+1,next+1,Plan.STAIR_X1-1,top,Roads.PATH);
         }
         for(int[] r:Plan.RAMPS)roads.mark(r[0],rampEnd(r),r[1],rampStart(r),Roads.RAMP);
     }
 
     void build(){
-        int b=Plan.bend(0);
-        for(int i=0;i<4;i++)flight(Plan.TERRACE_Z0[i]+b,below(i),Plan.TERRACE_Y[i],Plan.STAIR_X0+1,Plan.STAIR_X1-1);
+        int b=Plan.bend(0),n=Plan.TERRACE_Y.length;
+        for(int i=0;i<n;i++)flight(Plan.TERRACE_Z0[i]+b,below(i),Plan.TERRACE_Y[i],Plan.STAIR_X0+1,Plan.STAIR_X1-1);
         // the shrine's stone steps from the top terrace, and the approach on to the shrine's square
-        int start=Plan.TERRACE_Z1[3]+b-1;
-        flight(start,Plan.TERRACE_Y[3],Plan.SHRINE_Y,Plan.STAIR_X0+1,Plan.STAIR_X1-1);
-        for(int z=start-(Plan.SHRINE_Y-Plan.TERRACE_Y[3])-1;z>Plan.SHRINE_Z0;z--)for(int x=Plan.STAIR_X0;x<=Plan.STAIR_X1;x++){
+        int start=Plan.TERRACE_Z1[n-1]+b-1,topY=Plan.TERRACE_Y[n-1];
+        flight(start,topY,Plan.SHRINE_Y,Plan.STAIR_X0+1,Plan.STAIR_X1-1);
+        for(int z=start-(Plan.SHRINE_Y-topY)-1;z>Plan.SHRINE_Z0;z--)for(int x=Plan.STAIR_X0;x<=Plan.STAIR_X1;x++){
             c.fill(x,Plan.SHRINE_Y-4,z,x,Plan.SHRINE_Y-1,z,Blocks.STONE.getDefaultState());
             c.set(x,Plan.SHRINE_Y,z,x==Plan.STAIR_X0||x==Plan.STAIR_X1?t.terrain.masonry(x,Plan.SHRINE_Y,z):Blocks.STONE_BRICKS.getDefaultState());
             c.clear(x,Plan.SHRINE_Y+1,z,x,Plan.SHRINE_Y+8,z);c.ground(x,z,Plan.SHRINE_Y);
@@ -46,10 +46,10 @@ final class Hill {
      * trees on the last terrace below the shrine.
      */
     void decorate(){
-        int b=Plan.bend(0);
-        for(int i=0;i<4;i++){
+        int b=Plan.bend(0),n=Plan.TERRACE_Y.length;
+        for(int i=0;i<n;i++){
             int wall=Plan.TERRACE_Z0[i]+b,top=wall-(Plan.TERRACE_Y[i]-below(i));
-            int next=i<3?Plan.TERRACE_Z0[i+1]+b:Plan.TERRACE_Z1[3]+b-1;
+            int next=i<n-1?Plan.TERRACE_Z0[i+1]+b:Plan.TERRACE_Z1[n-1]+b-1;
             int y=Plan.TERRACE_Y[i];
             int k=0;
             for(int z=top-2;z>next+2;z-=6,k++)for(int side=-1;side<=1;side+=2){
@@ -57,7 +57,7 @@ final class Hill {
                 if(c.ground(x,z)!=y||!c.air(x,y+1,z))continue;
                 if(k%2==0){c.set(x,y+1,z,Blocks.STONE_BRICKS.getDefaultState());c.set(x,y+2,z,Blocks.STONE_BRICK_WALL.getDefaultState());
                     c.set(x,y+3,z,Blocks.LANTERN.getDefaultState());c.set(x,y+4,z,Canvas.slab(Blocks.STONE_BRICK_SLAB,false));}
-                else if(i==3&&k==1)t.nature.cherry(side*6,y+1,z,5);
+                else if(i==n-1&&k==1)t.nature.cherry(side*6,y+1,z,5);
                 else t.nature.pine(side*6,y+1,z,4);
             }
         }
@@ -109,8 +109,8 @@ final class Hill {
             for(int x=r[0];x<=r[1];x++){
                 boolean edge=x==r[0]||x==r[1];
                 c.fill(x,Math.min(lowY,y)-3,z,x,y-1,z,Blocks.STONE.getDefaultState());
-                if(slab){c.set(x,y,z,Pal.ramp(false));c.set(x,y+1,z,edge?Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false):Pal.ramp(true));}
-                else c.set(x,y,z,edge?Blocks.SMOOTH_STONE.getDefaultState():Pal.ramp(false));
+                if(slab){c.set(x,y,z,TB.ASPHALT);c.set(x,y+1,z,edge?Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false):TB.asphaltSlab());}
+                else c.set(x,y,z,edge?Blocks.SMOOTH_STONE.getDefaultState():TB.ASPHALT);
                 c.clear(x,y+(slab?2:1),z,x,highY+8,z);
                 c.ground(x,z,slab?y+1:y);
             }

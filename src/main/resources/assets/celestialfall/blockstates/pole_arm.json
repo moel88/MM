@@ -1,0 +1,11 @@
+{
+ "variants": {
+  "axis=x": {
+   "model": "celestialfall:block/town/pole_arm"
+  },
+  "axis=z": {
+   "model": "celestialfall:block/town/pole_arm",
+   "y": 90
+  }
+ }
+}

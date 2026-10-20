@@ -63,6 +63,7 @@ public final class CelestialFall implements ModInitializer {
         dev.sangwoo.celestialfall.commerce.CommerceRegistry.initialize();
         dev.sangwoo.celestialfall.loot.LootRegistry.initialize();
         dev.sangwoo.celestialfall.terrain.TerrainRestoration.initialize();
+        dev.sangwoo.celestialfall.town.TownBlocks.initialize();
         Registry.register(Registries.ITEM,id("heaven_sword"),HEAVEN_SWORD);
         Registry.register(Registries.SOUND_EVENT,HEAVEN_CHARGE.getId(),HEAVEN_CHARGE);
         Registry.register(Registries.SOUND_EVENT,HEAVEN_IMPACT.getId(),HEAVEN_IMPACT);

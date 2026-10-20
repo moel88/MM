@@ -31,6 +31,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.integration.IntegrationCommands.initialize();
         dev.sangwoo.celestialfall.client.title.TitlePortal.initialize();
         MapClient.initialize();
+        dev.sangwoo.celestialfall.client.town.TownBlocksClient.initialize();
         TrainingDummyRenderer.initialize();
         CombatClient.initialize();
         StandClient.initialize();

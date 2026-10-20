@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "celestialfall:block/town/pole_transformer"
+  },
+  "facing=east": {
+   "model": "celestialfall:block/town/pole_transformer",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "celestialfall:block/town/pole_transformer",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "celestialfall:block/town/pole_transformer",
+   "y": 270
+  }
+ }
+}

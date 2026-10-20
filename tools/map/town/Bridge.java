@@ -19,7 +19,7 @@ import static dev.sangwoo.botandtown.Kit.s;
 final class Bridge {
     private final Townscape t;private final Canvas c;private final Random rnd;
     static final int Z0=Plan.BRIDGE_Z0,Z1=Plan.BRIDGE_Z1,PZ=Plan.PYLON_Z;
-    static final int APEX=124,BASE=56,SPREAD=12;
+    static final int APEX=114,BASE=56,SPREAD=11;
     int cables,lights;
     Bridge(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
 
@@ -71,16 +71,15 @@ final class Bridge {
                     // the blue line's light, behind two panes of glass so that its blue is deep enough to read at night
                     if(ax==6)c.set(x,y-1,z,s(Blocks.LIGHT_BLUE_STAINED_GLASS));
                     if(ax==5){c.set(x,y-1,z,s(Blocks.SEA_LANTERN));lights++;}
-                    if(halfS){c.set(x,yS,z,s(Blocks.STONE));c.set(x,yS+1,z,Pal.pavers(x,z));}else c.set(x,yS,z,Pal.paverBlock(x,z));
+                    if(halfS){c.set(x,yS,z,s(Blocks.STONE));c.set(x,yS+1,z,TB.pavingSlab());}else c.set(x,yS,z,TB.PAVING);
                     if(yS>y)c.set(x,y,z,s(Blocks.STONE));
                     c.ground(x,z,halfS?yS+1:yS);
                     continue;
                 }
-                BlockState full,slab;
-                if(x==0&&Math.floorMod(z,8)<4){full=s(Blocks.WHITE_CONCRETE);slab=Canvas.slab(Blocks.SMOOTH_QUARTZ_SLAB,false);}
-                // the deck's newer, darker asphalt is one material in whole and half blocks, so the arch reads as one smooth rise
-                else{full=Pal.ramp(false);slab=Pal.ramp(true);}
-                if(half){c.set(x,y,z,Pal.asphaltBase());c.set(x,y+1,z,slab);}else c.set(x,y,z,full);
+                // the town's asphalt, a dashed centre line, thin edge lines along the kerbs
+                BlockState full=x==0&&Math.floorMod(z,10)<5?TB.painted("asphalt_center_line",Direction.Axis.Z):ax==3?TB.edgeLine(x<0?Direction.WEST:Direction.EAST,false):TB.ASPHALT;
+                BlockState slab=ax==3?TB.edgeLine(x<0?Direction.WEST:Direction.EAST,true):TB.asphaltSlab();
+                if(half){c.set(x,y,z,TB.ASPHALT);c.set(x,y+1,z,slab);}else c.set(x,y,z,full);
                 c.ground(x,z,half?y+1:y);
             }
             // white lamps on both edges every sixteen blocks
@@ -94,7 +93,7 @@ final class Bridge {
 
     /** Concrete piers under the deck, and the great footing of the pylon. */
     private void piers(){
-        for(int z:new int[]{68,84,100,162,178,194}){
+        for(int z:new int[]{Z0+(PZ-Z0)/3,Z0+2*(PZ-Z0)/3,PZ+(Z1-PZ)/3,PZ+2*(Z1-PZ)/3}){
             int y=deckY(z)-3;
             for(int x:new int[]{-4,-3,3,4})for(int zz=z;zz<=z+1;zz++)for(int yy=c.ground(x,zz)+1;yy<=y;yy++)c.set(x,yy,zz,s(Blocks.LIGHT_GRAY_CONCRETE));
             for(int x=-5;x<=5;x++)for(int zz=z;zz<=z+1;zz++)c.set(x,y,zz,s(Blocks.LIGHT_GRAY_CONCRETE));
@@ -146,7 +145,7 @@ final class Bridge {
         for(int side=-1;side<=1;side+=2)for(int way=-1;way<=1;way+=2)for(int i=0;i<n;i++){
             int ay=APEX-4-i*2;
             double ax=side*legX(ay);
-            int dz=10+i*7;
+            int dz=6+(int)Math.round(i*((Math.min(PZ-Z0,Z1-PZ)-8)/(double)(n-1)));
             int z=PZ+way*dz;
             int dy=deckY(z)+2;
             cable(ax,ay,PZ+way*1.5,side*6.0,dy,z);
@@ -185,25 +184,35 @@ final class Bridge {
     private void island(){
         int y=66;
         for(int x=-14;x<=14;x++)for(int z=Z1;z<=Z1+12;z++){
-            c.set(x,y,z,Math.abs(x)<=2||z==Z1+6?s(Blocks.STONE_BRICKS):Pal.paverBlock(x,z));
+            c.set(x,y,z,Math.abs(x)<=2||z==Z1+6?s(Blocks.STONE_BRICKS):TB.PAVING);
             c.clear(x,y+1,z,x,y+8,z);c.ground(x,z,y);
         }
         for(int x=-12;x<=12;x+=6)if(x!=0){c.set(x,y+1,Z1+2,Canvas.stairs(Blocks.SPRUCE_STAIRS,Direction.SOUTH,false));}
         c.wallSign(0,y+1,Z1+11,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLUE,false,"ぼたんど島","BOTAND ISLAND","보탠드섬");
         c.set(0,y+1,Z1+12,s(Blocks.STONE_BRICKS));c.set(0,y+2,Z1+12,s(Blocks.LANTERN));
         t.places.put("island",new int[]{0,y+1,Z1+6});
-        // the torii at the square's far side, then stone steps climbing to the top
+        // the torii at the square's far side, then a long flight of stone steps up the island's steep north face to
+        // the little shrine on top, between stone walls where it cuts into the hill
         torii(0,y,Z1+14);
-        int topZ=Plan.ISLAND_Z,peak=c.ground(0,topZ);
-        for(int z=Z1+13;z<=topZ;z++){
-            int g=Math.max(y,Math.min(peak,y+(z-Z1-13)/2));
-            for(int x=-1;x<=1;x++){
-                for(int yy=c.ground(x,z)+1;yy<g;yy++)c.set(x,yy,z,s(Blocks.STONE));
-                c.set(x,g,z,s(Blocks.STONE_BRICKS));c.clear(x,g+1,z,x,g+6,z);c.ground(x,z,g);
+        int z=Z1+15,g=y;
+        while(true){
+            int ground=Math.max(c.ground(-1,z+1),Math.max(c.ground(0,z+1),c.ground(1,z+1)));
+            if(ground<=g||z>=Plan.ISLAND_Z+4)break;
+            g++;z++;
+            for(int x=-2;x<=2;x++){
+                boolean side=Math.abs(x)==2;
+                for(int yy=Math.min(c.ground(x,z),g)-3;yy<g;yy++)c.set(x,yy,z,s(Blocks.STONE));
+                if(side){for(int yy=g;yy<=Math.max(g,c.ground(x,z));yy++)c.set(x,yy,z,t.terrain.masonry(x,yy,z));c.set(x,Math.max(g,c.ground(x,z))+1,z,s(Blocks.STONE_BRICK_WALL));}
+                else{c.set(x,g,z,Canvas.stairs(Blocks.STONE_BRICK_STAIRS,Direction.SOUTH,false));c.clear(x,g+1,z,x,g+6,z);c.ground(x,z,g);}
             }
         }
-        shrine(0,c.ground(0,topZ),topZ+2);
-        lighthouse(6,Plan.ISLAND_Z+Plan.ISLAND_RZ-8);
+        // the top: a little paved square with the shrine, and the lighthouse looking out to sea
+        for(int x=-6;x<=6;x++)for(int zz=z+1;zz<=z+9;zz++){
+            for(int yy=c.ground(x,zz)+1;yy<g;yy++)c.set(x,yy,zz,s(Blocks.STONE));
+            c.set(x,g,zz,Math.abs(x)<=1?s(Blocks.STONE_BRICKS):s(Blocks.GRAVEL));c.clear(x,g+1,zz,x,g+8,zz);c.ground(x,zz,g);
+        }
+        shrine(0,g,z+4);
+        lighthouse(9,Math.min(Plan.ISLAND_Z+Plan.ISLAND_RZ-9,z+16));
     }
     /** A red torii facing north. */
     void torii(int x,int g,int z){

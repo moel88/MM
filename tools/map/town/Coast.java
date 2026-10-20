@@ -6,9 +6,10 @@ import net.minecraft.util.math.Direction;
 import java.util.*;
 
 /**
- * The sea front: the concrete sea wall under the promenade with its parapet, the broad stepped revetment down to the
- * beach (階段護岸), wave-breaking tetrapods heaped along the walls, the beach itself (a rowboat drawn up, driftwood,
- * sea grass in the shallows) and benches facing the sea.
+ * The sea front: the concrete sea wall under the promenade with a white pipe guardrail along its kerb (the rail at the
+ * end of the photo street), the broad stepped revetment down to the beach (階段護岸), wave-breaking tetrapods heaped
+ * along the walls, the beach itself (a rowboat drawn up, driftwood, sea grass in the shallows) and benches facing the
+ * sea.
  */
 final class Coast {
     private final Townscape t;private final Canvas c;private final Random rnd;
@@ -22,14 +23,15 @@ final class Coast {
 
     void build(){
         int z=Plan.PARAPET_Z;
-        for(int x=Plan.HARBOR_X0;x<=Plan.TOWN_X1+18;x++){
-            if(Plan.river(x,z)||harborX(x))continue;
+        for(int x=Plan.HARBOR_X0;x<Plan.LOT_X0;x++){
+            if(harborX(x))continue;
             // the sea wall: concrete from the sea floor up under the promenade's edge
             for(int y=Canvas.Y0;y<=Plan.COAST;y++)c.set(x,y,z,Pal.seawall(x,y,z));
             if(beachX(x)){steps(x);continue;}
             if(lotX(x)||bridgeX(x))continue;
+            // a low concrete kerb and the guardrail on it, a white pipe post every few metres
             c.set(x,Plan.COAST+1,z,Blocks.LIGHT_GRAY_CONCRETE.getDefaultState());
-            c.set(x,Plan.COAST+2,z,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
+            c.set(x,Plan.COAST+2,z,Math.floorMod(x,3)==0?TB.PIPE:TB.GUARDRAIL);
             c.ground(x,z,Plan.COAST+1);
             if(c.water(x,Plan.SEA,z+1))heap(x,z+1,3);
         }
@@ -75,7 +77,7 @@ final class Coast {
 
     /** Benches along the promenade, facing the sea, a vending machine pair near the beach steps. */
     private void benches(){
-        for(int x=Plan.HARBOR_X1+10;x<=Plan.TOWN_X1;x+=13){
+        for(int x=Plan.HARBOR_X1+10;x<Plan.LOT_X0-4;x+=13){
             if(bridgeX(x)||bridgeX(x+1))continue;
             int z=Plan.PROM_Z1,g=c.ground(x,z);
             if(!c.air(x,g+1,z)||!c.air(x+1,g+1,z))continue;

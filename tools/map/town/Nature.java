@@ -7,7 +7,7 @@ import java.util.Random;
 
 /**
  * Trees and plants: wind-bent black pines with cloud-shaped pads of needles (the coast, gardens), cherry trees
- * (along the river and at the shrine and station, not everywhere), round evergreen broadleaf trees (the hills),
+ * (along the photo street and at the shrine and station, not everywhere), round evergreen broadleaf trees (the hills),
  * tall cedars round the shrine, bamboo, and the grass and wildflowers under them. Leaves only grow into air.
  */
 final class Nature {
@@ -123,12 +123,9 @@ final class Nature {
             int g=c.ground(px,pz);
             if(g<=Plan.SEA+1||!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz))continue;
             if(t.roads.any(px,pz)||nearBuilt(px,pz,g))continue;
-            boolean shore=pz>Terrain.shoreZ(px)-14||pz>150;
-            boolean ridge=pz<-200;
-            double fromRiver=Math.abs(px-Plan.riverX(pz));
-            boolean valley=fromRiver<46&&pz>Plan.RIVER_HEAD_Z;
-            // the valley floor stays open for the paddies and the path; its sides are wooded like the other hills
-            double p=valley?(fromRiver<26?0.05:0.3):shore?0.32:ridge?0.62:0.42;
+            boolean shore=pz>Terrain.shoreZ(px)-14||pz>Plan.BRIDGE_Z1;
+            boolean ridge=pz<Plan.SHRINE_Z1;
+            double p=shore?0.32:ridge?0.62:0.42;
             if(rnd.nextDouble()>p)continue;
             int r=rnd.nextInt(100);
             if(shore)pine(px,g+1,pz,5+rnd.nextInt(4));
@@ -146,7 +143,7 @@ final class Nature {
             int g=c.ground(x,z);
             if(g<=Plan.SEA+1||!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK)||!c.air(x,g+1,z))continue;
             boolean rise=c.ground(x+1,z)>g||c.ground(x-1,z)>g||c.ground(x,z+1)>g||c.ground(x,z-1)>g;
-            boolean shore=z>Terrain.shoreZ(x)-14||z>150;
+            boolean shore=z>Terrain.shoreZ(x)-14||z>Plan.BRIDGE_Z1;
             if(rnd.nextDouble()<(rise?0.6:0.2)*(shore?0.7:1)&&undergrowth(x,g+1,z,shore))plants++;
         }
         Town.log("undergrowth: "+plants+" plants");

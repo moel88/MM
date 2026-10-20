@@ -1,0 +1,46 @@
+{
+ "variants": {
+  "type=bottom": [
+   {
+    "model": "celestialfall:block/town/asphalt_slab_0"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_slab_1"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_slab_2"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_slab_3"
+   }
+  ],
+  "type=top": [
+   {
+    "model": "celestialfall:block/town/asphalt_slab_0_top"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_slab_1_top"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_slab_2_top"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_slab_3_top"
+   }
+  ],
+  "type=double": [
+   {
+    "model": "celestialfall:block/town/asphalt_0"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_1"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_2"
+   },
+   {
+    "model": "celestialfall:block/town/asphalt_3"
+   }
+  ]
+ }
+}

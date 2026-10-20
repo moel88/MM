@@ -1,0 +1,11 @@
+{
+ "variants": {
+  "axis=x": {
+   "model": "celestialfall:block/town/kawara"
+  },
+  "axis=z": {
+   "model": "celestialfall:block/town/kawara",
+   "y": 90
+  }
+ }
+}
