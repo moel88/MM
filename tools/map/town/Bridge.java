@@ -23,10 +23,14 @@ final class Bridge {
     int cables,lights;
     Bridge(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
 
-    /** The deck's surface at z, in half blocks: level with the coast, arching ten blocks up over the pylon, level with the island's square. */
+    /**
+     * The deck's surface at z, in half blocks: level with the coast, rising ten blocks to its crest over the pylon and
+     * down to the island's square. Like a real deck's vertical curve it leaves each end gently and is steepest midway
+     * up, so from the street the approach does not rise like a flight of steps.
+     */
     static int deckHalf(int z){
         double u=Math.max(0,Math.min(1,(z-Z0)/(double)(Z1-Z0)));
-        double y=64+2*u+10.5*Math.sin(Math.PI*u);
+        double y=64+2*u+10.5*(1-Math.cos(2*Math.PI*u))/2;
         return (int)Math.round(2*y);
     }
     static int deckY(int z){return deckHalf(z)>>1;}
