@@ -93,8 +93,8 @@ def asphalt(seed):
 def worn_asphalt(seed, cracked=False):
     """The lot's old asphalt: light, coarse and brownish, its stones standing out, cracks with weeds in some."""
     g = rng(seed)
-    img = shade(flat((124, 118, 108)), 9 * g.normal(size=(S, S)) + 7 * field(seed + 1, 2.5) + 6 * field(seed + 2, 12))
-    img = stones(img, seed + 3, 0.11, [(158, 152, 142), (98, 94, 88), (176, 166, 150), (86, 84, 82), (140, 128, 112)], big=0.5)
+    img = shade(flat((110, 104, 96)), 9 * g.normal(size=(S, S)) + 7 * field(seed + 1, 2.5) + 7 * field(seed + 2, 12))
+    img = stones(img, seed + 3, 0.11, [(146, 140, 130), (88, 84, 79), (162, 153, 138), (76, 74, 72), (128, 117, 102)], big=0.5)
     img[g.random((S, S)) < 0.04] -= 22
     if cracked:
         for k in range(3):
