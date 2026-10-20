@@ -12,7 +12,7 @@
 ## 설치
 
 **싱글플레이**
-1. `Botand-Seaside-1.20.1-v1.0.zip`을 풀어 `Botand_Seaside_1.20.1` 폴더를 `.minecraft/saves` 안에 넣습니다. `saves/Botand_Seaside_1.20.1/level.dat` 구조여야 합니다.
+1. 저장소의 `dist/Botand-Seaside-1.20.1-v1.0.zip`을 받아 풀고, `Botand_Seaside_1.20.1` 폴더를 `.minecraft/saves` 안에 넣습니다. `saves/Botand_Seaside_1.20.1/level.dat` 구조여야 합니다.
 2. 월드 목록에서 **BOTAND | 보탠드 해안 마을**을 엽니다. 기본 게임 모드는 모험 모드입니다(블록을 부수지 못함).
 
 **서버**

@@ -31,7 +31,7 @@ Minecraft Java 1.20.1 / Fabric Loader 0.16.14 / Fabric API 0.92.2+1.20.1 / Java 
 ## 적용 방법
 
 1. `mods` 폴더의 보탠드 JAR를 `botand-2.46.0.jar`로 바꿉니다(서버와 접속자 모두).
-2. 싱글: `Botand-Seaside-1.20.1-v1.0.zip`의 `Botand_Seaside_1.20.1` 폴더를 `saves`에 넣고, 월드 목록의 **BOTAND | 보탠드 해안 마을**을 엽니다.
+2. 싱글: 저장소의 `dist/Botand-Seaside-1.20.1-v1.0.zip`(SHA-256 `0d5009168215f555e5f5307ec4cd303a4e2b8120ae973ebd29d2b084b89ac2c2`)을 풀어 `Botand_Seaside_1.20.1` 폴더를 `saves`에 넣고, 월드 목록의 **BOTAND | 보탠드 해안 마을**을 엽니다.
 3. 서버: 같은 폴더를 서버 폴더에 넣고 `server.properties`에서 `level-name=Botand_Seaside_1.20.1`, `gamemode=adventure`로 바꿉니다.
 4. 셰이더(선택, 권장): [SHADERS_KO.md](SHADERS_KO.md)대로 Sodium 0.5.8, Iris 1.6.17, 셰이더 팩을 접속자에게 넣습니다.
 
