@@ -32,8 +32,8 @@ public final class MpClient implements ClientModInitializer {
      * turns 39 degrees right after the first slash, and "DUMMY" runs /botand dummy atomic 30 (an Atomic with no player
      * caster, 30 blocks ahead). Since 2.43.0 the caster dashes (C) after the lone M1 at 2420, whose combo then breaks: the
      * log shows both in the cooldown list. Since 2.45.0 the caster sends the player list away with Tab and back, opens
-     * the pause menu (Esc), asks for a reset (R) and confirms it (Enter): the server kills it and both clients log the
-     * death message; then it respawns. Both log the player list's names and whether it is away.
+     * the pause menu (Esc), asks for a reset (R) and confirms it (Enter): the server kills it and both clients' own logs
+     * show the death message in chat; then it respawns. Both log the player list's names and whether it is away.
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -54,7 +54,6 @@ public final class MpClient implements ClientModInitializer {
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
-    private int chatSeen=-1;
     private MinecraftClient mc;private int phase,age,frames;private boolean caster;private final Set<Integer> held=new HashSet<>();
     private float quakePeak,overwhelmPeak,lightPeak,wallPeak;private net.minecraft.util.math.Vec3d walkLast;private long walkStart=-1;
     private final List<Double> steps=new ArrayList<>();
@@ -203,13 +202,7 @@ public final class MpClient implements ClientModInitializer {
         flag("pause_menu",mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen);
         flag("reset_question",mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen s&&s.asking());
         flag("alive",mc.player.isAlive());
-        try{
-            var f=net.minecraft.client.gui.hud.ChatHud.class.getDeclaredField("messages");f.setAccessible(true);
-            var lines=(List<net.minecraft.client.gui.hud.ChatHudLine>)f.get(mc.inGameHud.getChatHud());
-            if(chatSeen<0)chatSeen=lines.size();
-            for(int i=lines.size()-chatSeen-1;i>=0;i--)note("chat \""+lines.get(i).content().getString()+"\"");
-            chatSeen=lines.size();
-        }catch(ReflectiveOperationException e){flag("chat","n/a "+e);}
+        // the death message itself is in each client's own log as a [CHAT] line (logs/ROLE-latest.log)
         // G's hold on this player: its speed against its base, and that the slowdown is not taken for an optical zoom.
         var speed=mc.player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
         flag("atomic_hold",AtomicClient.held(mc.player)?String.format(Locale.ROOT,"speed x%.2f fov x%.2f",speed.getValue()/speed.getBaseValue(),mc.player.getFovMultiplier()):"off");
