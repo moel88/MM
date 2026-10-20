@@ -88,7 +88,6 @@ public final class SkillShots implements ClientModInitializer {
     /** The UI shot's pointer: where it glides from and to (window pixels) and when, and when it last clicked (shot ticks). */
     private double[] glideFrom,glideTo;private double glideAt=-1e9,clickAt=-1e9;
     static final double GLIDE=9;
-    private final Set<net.minecraft.client.gui.screen.Screen> hooked=Collections.newSetFromMap(new WeakHashMap<>());
     private String screenLogged="";private int chatLogged=-1;private boolean aliveLogged=true,hiddenLogged,askingLogged,pausedLogged,worldClosed;
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"shot-writer");t.setDaemon(true);return t;});
     private final List<Future<?>> jobs=new ArrayList<>();
@@ -381,9 +380,9 @@ public final class SkillShots implements ClientModInitializer {
     @Override public void onInitializeClient(){
         instance=this;
         ClientTickEvents.END_CLIENT_TICK.register(client->{mc=client;try{tick();}catch(Throwable t){fail(t);}});
-        // the UI shot's pointer: moved before a screen draws, drawn after it
+        // the UI shot's pointer: moved before a screen draws, drawn after it (Fabric makes a screen's events anew each
+        // time it is set up, coming back from the options screen included, so they are registered every time)
         net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client,screen,w,h)->{
-            if(!hooked.add(screen))return;
             net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.beforeRender(screen).register((s,d,x,y,delta)->{try{glide();}catch(Throwable t){fail(t);}});
             net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterRender(screen).register((s,d,x,y,delta)->pointer(d));
         });
