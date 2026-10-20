@@ -225,7 +225,7 @@ final class Shops {
     void clinic(Lot lot){
         Frame f=Frame.of(c,lot);int W=f.W,D=f.D,depth=Math.min(D-2,11);
         t.houses.yard(f,false);
-        Kit.shell(f,0,0,W-1,depth-1,2,s(Blocks.SMOOTH_QUARTZ),s(Blocks.SMOOTH_QUARTZ),s(Blocks.LIGHT_BLUE_TERRACOTTA),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
+        Kit.shell(f,0,0,W-1,depth-1,2,s(Blocks.SMOOTH_QUARTZ),s(Blocks.SMOOTH_QUARTZ),s(Blocks.LIGHT_BLUE_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
         for(int s=0;s<2;s++)Kit.windows(f,rnd,0,0,W-1,depth-1,'f',s,s(Blocks.WHITE_STAINED_GLASS_PANE),s(Blocks.GLASS_PANE),s==0?W/2:-99,true);
         f.door(W/2,1,0,Blocks.BIRCH_DOOR,Direction.NORTH,false);
         f.wallSign(W/2-1,2,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.GREEN,false,"浜田医院","内科・小児科","9:00-18:00","休診 日・祝");

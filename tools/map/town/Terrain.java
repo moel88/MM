@@ -186,10 +186,10 @@ final class Terrain {
         if(kind[i]==BEACH)return Blocks.SAND.getDefaultState();
         // cliffs and steep hillsides show their rock, the shore its sand and stones
         if(plat[i]==NONE&&steep(F,i,top)){
-            // grass and moss cling to the ledges here and there
-            double g=Pal.hash(x,5,z);
-            if(g<0.10)return Blocks.GRASS_BLOCK.getDefaultState();
-            if(g<0.14)return Blocks.MOSS_BLOCK.getDefaultState();
+            // the foot of a sea cliff is bare rock; higher up grass and moss take hold on half the ledges, and trees on some
+            double g=Pal.hash(x,5,z),green=top<Plan.SEA+8?0.10:0.45;
+            if(g<green)return Blocks.GRASS_BLOCK.getDefaultState();
+            if(g<green+0.06)return Blocks.MOSS_BLOCK.getDefaultState();
             return rock(x,top,z);
         }
         if(plat[i]==NONE&&top<=Plan.SEA+1)return Pal.hash(x,6,z)<0.7?Blocks.SAND.getDefaultState():Blocks.GRAVEL.getDefaultState();

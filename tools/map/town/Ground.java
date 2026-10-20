@@ -123,7 +123,7 @@ final class Ground {
             int x=rnd.nextBoolean()?X0+2+rnd.nextInt(4):X1-14+rnd.nextInt(4),z=Z0+3+rnd.nextInt(Z1-Z0-6);
             if(!c.air(x,Y+1,z))continue;
             switch(rnd.nextInt(3)){
-                case 0->c.set(x,Y+1,z,rnd.nextBoolean()?s(Blocks.BLUE_TERRACOTTA):s(Blocks.CAULDRON));
+                case 0->c.set(x,Y+1,z,rnd.nextBoolean()?s(Blocks.BLUE_CONCRETE):s(Blocks.CAULDRON)); // a blue plastic drum or an old iron one
                 case 1->{c.set(x,Y+1,z,Canvas.slab(Blocks.OAK_SLAB,false));}
                 default->c.set(x,Y+1,z,s(Blocks.BARREL));
             }
