@@ -56,7 +56,7 @@ final class Plan {
     /** The station: building and platform. */
     static final int STATION_X0=12,STATION_X1=34,PLATFORM_X0=8,PLATFORM_X1=58;
     /** Where the coastal road and the railway go into the headlands. */
-    static final int TUNNEL_W=-222,TUNNEL_E=232;
+    static final int TUNNEL_W=-222,TUNNEL_E=245;
 
     /** Terraces: surface y, south edge z (the wall line) and north edge, before the curve; west and east ends. */
     static final int[] TERRACE_Y={78,84,90,96};

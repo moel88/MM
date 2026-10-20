@@ -18,13 +18,20 @@ final class Pal {
         int gx=Math.floorDiv(x,(int)scale),gz=Math.floorDiv(z,(int)scale);
         return hash(gx,7,gz);
     }
+    /** Smooth value noise (0..1): the hash at grid points of the given spacing, blended between them. */
+    static double smooth(int x,int z,double scale,int seed){
+        double fx=x/scale,fz=z/scale;int gx=(int)Math.floor(fx),gz=(int)Math.floor(fz);
+        double tx=fx-gx,tz=fz-gz;tx=tx*tx*(3-2*tx);tz=tz*tz*(3-2*tz);
+        double a=hash(gx,seed,gz),b=hash(gx+1,seed,gz),c=hash(gx,seed,gz+1),d=hash(gx+1,seed,gz+1);
+        return (a*(1-tx)+b*tx)*(1-tz)+(c*(1-tx)+d*tx)*tz;
+    }
     /** Worn asphalt: dark grey, with lighter repaired patches and the odd rough spot. */
     static BlockState asphalt(int x,int z){
         double h=hash(x,1,z);
-        if(blot(x,z,6)>0.9)return Blocks.GRAY_CONCRETE.getDefaultState();
-        if(h<0.05)return Blocks.COBBLED_DEEPSLATE.getDefaultState();
-        if(h<0.08)return Blocks.DEEPSLATE.getDefaultState();
-        return Blocks.POLISHED_DEEPSLATE.getDefaultState();
+        if(blot(x,z,6)>0.88)return Blocks.GRAY_CONCRETE.getDefaultState();
+        if(h<0.03)return Blocks.COBBLED_DEEPSLATE.getDefaultState();
+        if(h<0.10)return Blocks.GRAY_CONCRETE.getDefaultState();
+        return Blocks.GRAY_CONCRETE_POWDER.getDefaultState();
     }
     static BlockState asphaltSlab(int x,int z){
         return hash(x,1,z)<0.06?Canvas.slab(Blocks.COBBLED_DEEPSLATE_SLAB,false):Canvas.slab(Blocks.POLISHED_DEEPSLATE_SLAB,false);

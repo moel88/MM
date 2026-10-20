@@ -29,7 +29,7 @@ public final class FieldLootEntity extends Entity {
             if(!LootWorld.enabled(w)||!LootPositions.valid(slot())){discard();return;}
             var state=LootState.get(w).slot(slot());
             if(state==null||!getUuid().equals(LootPositions.id(slot()))||state.cycle()!=cycle()){discard();return;}
-            configure(slot(),state);setPosition(Vec3d.ofBottomCenter(LootPositions.ALL.get(slot())));
+            configure(slot(),state);setPosition(Vec3d.ofBottomCenter(LootPositions.current().get(slot())));
             if(opened()&&w.getTime()-openedAt()>=LootRules.OPEN_TICKS)discard();
         }
     }

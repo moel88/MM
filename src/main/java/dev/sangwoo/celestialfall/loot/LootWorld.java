@@ -11,7 +11,7 @@ import net.minecraft.world.World;
 import java.util.*;
 public final class LootWorld {
     private static final Map<ServerWorld,int[]> LOADED=new IdentityHashMap<>();
-    public static boolean enabled(ServerWorld w){return w.getRegistryKey().equals(World.OVERWORLD)&&MapGate.isCity(w.getServer())&&MapGate.enabled(w);}
+    public static boolean enabled(ServerWorld w){return w.getRegistryKey().equals(World.OVERWORLD)&&MapGate.isBotandMap(w.getServer())&&MapGate.enabled(w);}
     public static void initialize(){
         ServerTickEvents.END_WORLD_TICK.register(LootWorld::tick);
         ServerLifecycleEvents.SERVER_STOPPED.register(s->LOADED.keySet().removeIf(w->w.getServer()==s));
@@ -22,9 +22,11 @@ public final class LootWorld {
     }
     public static void tick(ServerWorld w){
         if(!enabled(w))return;
-        var state=LootState.get(w);int[] loaded=LOADED.computeIfAbsent(w,k->new int[LootPositions.ALL.size()]);
+        var spots=LootPositions.current();
+        var state=LootState.get(w);int[] loaded=LOADED.computeIfAbsent(w,k->new int[spots.size()]);
+        if(loaded.length!=spots.size()){loaded=new int[spots.size()];LOADED.put(w,loaded);}
         for(int i=0;i<loaded.length;i++){
-            var pos=LootPositions.ALL.get(i);
+            var pos=spots.get(i);
             if(!w.isChunkLoaded(pos)){loaded[i]=0;continue;}
             if(++loaded[i]<40||loaded[i]%10!=0)continue;
             var slot=state.slot(i);

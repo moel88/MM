@@ -110,4 +110,13 @@ for name in ('town_preview.png', 'town_build.log'):
     if (server / WORLD / name).exists(): shutil.move(str(server / WORLD / name), out / name)
 for junk in ('session.lock',):
     (server / WORLD / junk).unlink(missing_ok=True)
-print(json.dumps({'seconds': round(time.time() - start), 'world': str(server / WORLD)}))
+# the name players see in the world list, adventure mode so the town is not broken by hand in single player
+sys.path.insert(0, str(HERE))
+import level_dat
+level_dat.patch(server / WORLD, os.environ.get('TOWN_NAME', 'BOTAND | 보탠드 해안 마을'), 2)
+# the world folder zipped for the saves folder (or a server's world folder)
+pack = out / f'Botand_Seaside_1.20.1-v{VERSION}.zip'
+with zipfile.ZipFile(pack, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for f in sorted((server / WORLD).rglob('*')):
+        if f.is_file(): z.write(f, str(f.relative_to(server)))
+print(json.dumps({'seconds': round(time.time() - start), 'world': str(server / WORLD), 'zip': str(pack), 'mb': round(pack.stat().st_size / 1e6, 1)}))

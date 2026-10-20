@@ -146,7 +146,7 @@ final class Terrain {
                 if(riverBank&&y>=55&&y<top)s=masonry(x,y,z);
                 else if(wall&&y>low&&y<top)s=masonry(x,y,z);
                 else if(y==top)s=surface(x,z,top,i,F);
-                else if(y>=top-3)s=kind[i]==BEACH||kind[i]==LAND&&top<=Plan.SEA+1?Blocks.SAND.getDefaultState():Blocks.DIRT.getDefaultState();
+                else if(y>=top-3)s=kind[i]==BEACH||kind[i]==LAND&&top<=Plan.SEA+1?Blocks.SAND.getDefaultState():plat[i]==NONE&&slope(F,i,top)>=2?rock(x,y,z):Blocks.DIRT.getDefaultState();
                 else s=Blocks.STONE.getDefaultState();
                 c.set(x,y,z,s);
             }
@@ -188,6 +188,20 @@ final class Terrain {
         if(plat[i]==NONE&&steep(F,i,top))return Pal.hash(x,5,z)<0.5?Blocks.STONE.getDefaultState():Blocks.ANDESITE.getDefaultState();
         if(plat[i]==NONE&&top<=Plan.SEA+1)return Pal.hash(x,6,z)<0.7?Blocks.SAND.getDefaultState():Blocks.GRAVEL.getDefaultState();
         return Pal.hash(x,7,z)<0.025?Blocks.COARSE_DIRT.getDefaultState():Blocks.GRASS_BLOCK.getDefaultState();
+    }
+    /** The greatest drop from a column to its neighbours. */
+    private int slope(int[] F,int i,int top){
+        int x=i/Plan.D,z=i%Plan.D,d=0;
+        for(int[] o:new int[][]{{1,0},{-1,0},{0,1},{0,-1}}){
+            int xx=x+o[0],zz=z+o[1];if(xx<0||zz<0||xx>=Plan.W||zz>=Plan.D)continue;
+            d=Math.max(d,top-lvl(F,xx*Plan.D+zz));
+        }
+        return d;
+    }
+    /** Bare rock of the hillsides, where a slope shows its side. */
+    BlockState rock(int x,int y,int z){
+        double h=Pal.hash(x,y,z);
+        return h<0.5?Blocks.STONE.getDefaultState():h<0.8?Blocks.ANDESITE.getDefaultState():h<0.92?Blocks.COBBLESTONE.getDefaultState():Blocks.MOSSY_COBBLESTONE.getDefaultState();
     }
     private boolean steep(int[] F,int i,int top){
         int x=i/Plan.D,z=i%Plan.D;

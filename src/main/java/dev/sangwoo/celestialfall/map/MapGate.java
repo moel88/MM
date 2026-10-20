@@ -24,6 +24,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 public final class MapGate {
     public static final Identifier STATE=CelestialFall.id("map_state_v1");
     private static final Map<MinecraftServer,Boolean> CITY=new IdentityHashMap<>();
+    private static final Map<MinecraftServer,MapDefinition> DEFINED=new IdentityHashMap<>();
     private record Sent(Identifier dimension,boolean enabled,int entityId) {}
     private static final Map<UUID,Sent> SENT=new HashMap<>();
     private static Predicate<World> client=w->false;
@@ -32,11 +33,15 @@ public final class MapGate {
     public static boolean enabled(World world) {
         if(world instanceof ServerWorld w) {
             Boolean choice=MapState.get(w.getServer()).override(w.getRegistryKey().getValue().toString());
-            return choice!=null?choice:w.getRegistryKey().equals(World.OVERWORLD)&&CITY.getOrDefault(w.getServer(),false);
+            return choice!=null?choice:w.getRegistryKey().equals(World.OVERWORLD)&&isBotandMap(w.getServer());
         }
         return world!=null&&world.isClient&&client.test(world);
     }
+    /** The delivered one-third city, recognised by its bundled functions (its own fixes apply only to it). */
     public static boolean isCity(MinecraftServer server){return CITY.getOrDefault(server,false);}
+    /** A Botand map: the delivered city, or a world whose data pack describes it (map/definition.json). */
+    public static boolean isBotandMap(MinecraftServer server){return isCity(server)||DEFINED.containsKey(server);}
+    public static Optional<MapDefinition> definition(MinecraftServer server){return Optional.ofNullable(DEFINED.get(server));}
     public static boolean require(PlayerEntity p) {
         if(enabled(p.getWorld()))return true;
         if(!p.getWorld().isClient)p.sendMessage(Text.translatable("message.botand.map_only"),true);return false;
@@ -56,10 +61,14 @@ public final class MapGate {
         ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((p,origin,destination)->{sync(p,true);CombatManager.leave(p);ProgressManager.joined(p);});
         ServerPlayerEvents.AFTER_RESPAWN.register((old,p,alive)->sync(p,true));
         ServerTickEvents.START_SERVER_TICK.register(server->{for(var p:server.getPlayerManager().getPlayerList())sync(p,false);});
-        ServerLifecycleEvents.SERVER_STOPPED.register(server->{CITY.remove(server);SENT.clear();});
+        ServerLifecycleEvents.SERVER_STOPPED.register(server->{CITY.remove(server);DEFINED.remove(server);SENT.clear();dev.sangwoo.celestialfall.loot.LootPositions.use(null);});
     }
     public static void refresh(MinecraftServer server) {
         CITY.put(server,recognizeCity(server));
+        var defined=CITY.get(server)?Optional.<MapDefinition>empty():MapDefinition.load(server);
+        if(defined.isPresent()){DEFINED.put(server,defined.get());CelestialFall.LOGGER.info("Botand map: {} ({})",defined.get().name(),defined.get().id());}
+        else DEFINED.remove(server);
+        dev.sangwoo.celestialfall.loot.LootPositions.use(defined.map(MapDefinition::loot).orElse(null));
         if(CITY.get(server)){FloorRepair.offer(server);VenueRenovation.offer(server);}
         for(var p:server.getPlayerManager().getPlayerList()){sync(p,true);ProgressManager.joined(p);if(!enabled(p.getWorld()))CombatManager.leave(p);}
     }

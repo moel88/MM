@@ -38,6 +38,29 @@ final class Hill {
             c.clear(x,Plan.SHRINE_Y+1,z,x,Plan.SHRINE_Y+8,z);c.ground(x,z,Plan.SHRINE_Y);
         }
         for(int[] r:Plan.RAMPS)ramp(r);
+        decorate();
+    }
+
+    /**
+     * Beside the stairway's paths across each terrace: stone lanterns in pairs and pines between them, a pair of cherry
+     * trees on the last terrace below the shrine.
+     */
+    void decorate(){
+        int b=Plan.bend(0);
+        for(int i=0;i<4;i++){
+            int wall=Plan.TERRACE_Z0[i]+b,top=wall-(Plan.TERRACE_Y[i]-below(i));
+            int next=i<3?Plan.TERRACE_Z0[i+1]+b:Plan.TERRACE_Z1[3]+b-1;
+            int y=Plan.TERRACE_Y[i];
+            int k=0;
+            for(int z=top-2;z>next+2;z-=6,k++)for(int side=-1;side<=1;side+=2){
+                int x=side*5;
+                if(c.ground(x,z)!=y||!c.air(x,y+1,z))continue;
+                if(k%2==0){c.set(x,y+1,z,Blocks.STONE_BRICKS.getDefaultState());c.set(x,y+2,z,Blocks.STONE_BRICK_WALL.getDefaultState());
+                    c.set(x,y+3,z,Blocks.LANTERN.getDefaultState());c.set(x,y+4,z,Canvas.slab(Blocks.STONE_BRICK_SLAB,false));}
+                else if(i==3&&k==1)t.nature.cherry(side*6,y+1,z,5);
+                else t.nature.pine(side*6,y+1,z,4);
+            }
+        }
     }
 
     /**

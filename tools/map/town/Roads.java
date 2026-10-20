@@ -66,7 +66,7 @@ final class Roads {
     int level(int x,int z){
         int p=t.terrain.plat[Canvas.idx(x,z)];
         if(p==Terrain.NONE)p=2*c.ground(x,z);
-        return at(x,z)==WALK?p+1:p;
+        return at(x,z)==WALK||at(x,z)==PROM?p+1:p;
     }
 
     /** Lays the planned streets on the ground (ramps, stairways, crossings and bridges are laid by their own code). */

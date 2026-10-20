@@ -108,6 +108,16 @@ public final class MapShots implements ClientModInitializer {
         }
         return out;
     }
+    /** Whether every chunk within the view distance (less one) of the camera has arrived. */
+    private boolean chunksLoaded(){
+        int r=mc.options.getViewDistance().getValue()-1,cx=(int)Math.floor(pose[0])>>4,cz=(int)Math.floor(pose[2])>>4;
+        var cm=mc.world.getChunkManager();
+        for(int dx=-r;dx<=r;dx++)for(int dz=-r;dz<=r;dz++){
+            if(dx*dx+dz*dz>r*r)continue;
+            if(!cm.isChunkLoaded(cx+dx,cz+dz))return false;
+        }
+        return true;
+    }
     private static double wrap(double d){while(d>180)d-=360;while(d<-180)d+=360;return d;}
 
     /** Before each frame is drawn: the camera exactly at this frame's pose (no interpolation from the last tick). */
@@ -122,11 +132,15 @@ public final class MapShots implements ClientModInitializer {
 
     /** After each frame is drawn: keep it once the terrain in view is complete, then move on. */
     public static void afterFrame(){if(instance!=null&&instance.phase==3)try{instance.capture();}catch(Throwable t){instance.fail(t);}}
+    private int built=-1;
     private void capture()throws Exception{
-        boolean complete=mc.worldRenderer.isTerrainRenderComplete();
-        // a still waits for the chunks round the camera to arrive and be built; a flight frame only for its build
-        int need=frame==0?Integer.getInteger("botand.map.settle",40):2;
-        if(age<(frame==0?60:0)||!complete){settle=0;return;}
+        // a still waits for the chunks round the camera to arrive and be built and for the count of built chunks to
+        // stop changing; a flight frame only for its build
+        int count=mc.worldRenderer.getCompletedChunkCount();
+        boolean complete=mc.worldRenderer.isTerrainRenderComplete()&&chunksLoaded()&&count==built;
+        built=count;
+        int need=frame==0?Integer.getInteger("botand.map.settle",120):2;
+        if(age<(frame==0?100:0)||!complete){settle=0;return;}
         if(++settle<need)return;
         var image=ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());
         Path p=frames==1?OUT.resolve(name+".png"):OUT.resolve(name).resolve(String.format("%05d.png",frame));

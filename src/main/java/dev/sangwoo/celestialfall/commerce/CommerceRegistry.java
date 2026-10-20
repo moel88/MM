@@ -25,16 +25,17 @@ public final class CommerceRegistry {
         Registry.register(Registries.ITEM,CelestialFall.id("rokakaka"),ROKAKAKA);
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS).register(e->e.add(ROKAKAKA));
         ServerTickEvents.END_WORLD_TICK.register(w->{
-            if(!w.getRegistryKey().equals(World.OVERWORLD)||!MapGate.isCity(w.getServer())||!MapGate.enabled(w))return;
+            if(!w.getRegistryKey().equals(World.OVERWORLD)||!MapGate.isBotandMap(w.getServer())||!MapGate.enabled(w))return;
             int[] loaded=LOADED.computeIfAbsent(w,k->new int[2]);
             for(int i=0;i<2;i++){
-                boolean seller=i==0;var pos=seller?new BlockPos(-7,81,-119):new BlockPos(55,81,-125);
+                boolean seller=i==0;var pos=BlockPos.ofFloored(MerchantEntity.homeOf(w.getServer(),seller));
                 if(!w.isChunkLoaded(pos)){loaded[i]=0;continue;}
                 if(++loaded[i]<40||loaded[i]%40!=0)continue;
                 if(w.getEntity(id(seller))!=null)continue;
                 // Stable UUID + a loaded-chunk grace period prevents duplicates across saves/reloads.
                 var mob=(seller?SELLER:BUYER).create(w);if(mob==null)continue;
-                mob.setUuid(id(seller));mob.refreshPositionAndAngles(mob.home().x,mob.home().y,mob.home().z,0,0);
+                float yaw=MerchantEntity.yawOf(w.getServer(),seller);
+                mob.setUuid(id(seller));mob.refreshPositionAndAngles(mob.home().x,mob.home().y,mob.home().z,yaw,0);mob.setHeadYaw(yaw);mob.setBodyYaw(yaw);
                 w.spawnEntity(mob);
             }
         });

@@ -22,9 +22,9 @@ final class Houses {
         "田村","和田","石田","森田","上田","内田","柴田","酒井","宮崎","横山","安藤","宮本","大野","谷口","工藤","丸山","杉山","野口",
         "浜田","磯部","網元","汐見","海野","灘","浦田","岬","渚"};
     static final String[] APARTMENTS={"メゾン潮風","コーポ浜木綿","ハイツ松風","コーポ汐見","メゾン岬","ハイツ浜通り","コーポ凪","グリーンハイツ"};
-    static final BlockState[] SIDING={s(Blocks.SMOOTH_QUARTZ),s(Blocks.WHITE_TERRACOTTA),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.LIGHT_GRAY_CONCRETE),
+    static final BlockState[] SIDING={s(Blocks.SMOOTH_QUARTZ),s(Blocks.WHITE_CONCRETE),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.LIGHT_GRAY_CONCRETE),
         s(Blocks.LIGHT_GRAY_TERRACOTTA),s(Blocks.BIRCH_PLANKS),s(Blocks.MUSHROOM_STEM),s(Blocks.CALCITE),s(Blocks.WHITE_TERRACOTTA),s(Blocks.SMOOTH_QUARTZ),
-        s(Blocks.CYAN_TERRACOTTA),s(Blocks.GRAY_CONCRETE),s(Blocks.BROWN_TERRACOTTA)};
+        s(Blocks.CYAN_TERRACOTTA),s(Blocks.GRAY_CONCRETE),s(Blocks.BROWN_TERRACOTTA),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.CALCITE)};
     static final Kit.Roof[] MODERN_ROOFS={Kit.BLACK,Kit.BLACK,Kit.KAWARA,Kit.SLATE,Kit.BLUE,Kit.BROWN,Kit.TEAL,Kit.KAWARA};
     static final Kit.Roof[] OLD_ROOFS={Kit.KAWARA,Kit.KAWARA,Kit.KAWARA,Kit.KAWARA,Kit.BLUE,Kit.BLACK,Kit.RED};
 
@@ -143,8 +143,9 @@ final class Houses {
         int bx0=carLeft?W-1-hw:1,bx1=bx0+hw-1,bz0=front,bz1=bz0+hd-1;
         int stories=three&&hw>=7?3:2;
         BlockState wall=SIDING[rnd.nextInt(SIDING.length)];
-        BlockState trim=rnd.nextInt(3)==0?s(Blocks.GRAY_CONCRETE):s(Blocks.SMOOTH_QUARTZ);
-        if(trim.getBlock()==wall.getBlock())trim=s(Blocks.LIGHT_GRAY_CONCRETE);
+        // most houses are one colour all round; some have a pale band at the floor line
+        BlockState trim=rnd.nextInt(3)==0?s(Blocks.SMOOTH_QUARTZ):wall;
+        if(trim.getBlock()==wall.getBlock()&&rnd.nextInt(4)==0)trim=s(Blocks.LIGHT_GRAY_CONCRETE);
         BlockState floor=s(Pal.pick(rnd,Blocks.OAK_PLANKS,Blocks.BIRCH_PLANKS,Blocks.SPRUCE_PLANKS,Blocks.BAMBOO_PLANKS));
         Kit.Roof roof=MODERN_ROOFS[rnd.nextInt(MODERN_ROOFS.length)];
         int type=stories==3||rnd.nextInt(10)==0?Kit.FLAT:Pal.pick(rnd,new Integer[]{Kit.GABLE,Kit.GABLE,Kit.SHED,Kit.SHED,Kit.HIP});
@@ -156,7 +157,7 @@ final class Houses {
             f.fill(pa,0,0,pa+1,0,front+3,s(Blocks.SMOOTH_STONE));
             if(rnd.nextInt(5)>0)Kit.car(f,pa,1,rnd);
         }
-        Kit.shell(f,bx0,bz0,bx1,bz1,stories,wall,trim,trim,floor,s(Blocks.SMOOTH_STONE));
+        Kit.shell(f,bx0,bz0,bx1,bz1,stories,wall,wall,trim,floor,s(Blocks.SMOOTH_STONE));
         BlockState pane=s(Blocks.GLASS_PANE),frost=s(Blocks.WHITE_STAINED_GLASS_PANE);
         int door=carLeft?bx0+1:bx1-1;
         for(int s=0;s<stories;s++){
@@ -198,7 +199,7 @@ final class Houses {
         if(hw<10||hd<6){modern(f,false);return;}
         int bx0=1,bx1=bx0+hw-1,bz0=3,bz1=bz0+hd-1;
         int stories=rnd.nextInt(3)==0?3:2;
-        BlockState wall=Pal.pick(rnd,new BlockState[]{s(Blocks.WHITE_TERRACOTTA),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.CALCITE),s(Blocks.LIGHT_GRAY_TERRACOTTA)});
+        BlockState wall=Pal.pick(rnd,new BlockState[]{s(Blocks.WHITE_CONCRETE),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.CALCITE),s(Blocks.LIGHT_GRAY_TERRACOTTA)});
         BlockState trim=s(Blocks.SMOOTH_STONE),floor=s(Blocks.BIRCH_PLANKS);
         yard(f,false);
         f.fill(0,0,0,W-1,0,bz0-1,s(Blocks.SMOOTH_STONE));

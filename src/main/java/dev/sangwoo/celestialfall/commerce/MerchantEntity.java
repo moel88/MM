@@ -18,7 +18,16 @@ public final class MerchantEntity extends VillagerEntity {
         setCustomName(Text.literal(seller?"아이템 판매 · 로카":"아이템 매입 · 카카"));setCustomNameVisible(true);
         setVillagerData(getVillagerData().withType(VillagerType.PLAINS).withProfession(seller?VillagerProfession.CLERIC:VillagerProfession.LIBRARIAN).withLevel(5));
     }
-    public Vec3d home(){return seller?new Vec3d(-6.5,81.0625,-118.5):new Vec3d(55.5,81,-124.5);}
+    /** Where a merchant stands: on a described map where its definition says, else its place in the delivered city. */
+    public static Vec3d homeOf(net.minecraft.server.MinecraftServer server,boolean seller){
+        var defined=server==null?java.util.Optional.<dev.sangwoo.celestialfall.map.MapDefinition>empty():dev.sangwoo.celestialfall.map.MapGate.definition(server);
+        if(defined.isPresent())return seller?defined.get().seller():defined.get().buyer();
+        return seller?new Vec3d(-6.5,81.0625,-118.5):new Vec3d(55.5,81,-124.5);
+    }
+    public static float yawOf(net.minecraft.server.MinecraftServer server,boolean seller){
+        return server==null?0:dev.sangwoo.celestialfall.map.MapGate.definition(server).map(d->seller?d.sellerYaw():d.buyerYaw()).orElse(0f);
+    }
+    public Vec3d home(){return homeOf(getWorld().getServer(),seller);}
     @Override public void tick(){
         super.tick();if(!getWorld().isClient){setVelocity(Vec3d.ZERO);setPosition(home());
             var p=getWorld().getClosestPlayer(this,5);if(p!=null)getLookControl().lookAt(p,25,25);
