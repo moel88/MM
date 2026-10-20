@@ -11,6 +11,8 @@ import net.minecraft.registry.*;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
+import net.minecraft.util.BlockMirror;
+import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.*;
 import net.minecraft.util.shape.*;
 import net.minecraft.world.*;
@@ -120,18 +122,27 @@ public final class TownBlocks {
         public Axis(Settings s){super(s);setDefaultState(getDefaultState().with(Properties.HORIZONTAL_AXIS,Direction.Axis.X));}
         @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(Properties.HORIZONTAL_AXIS);}
         @Override public BlockState getPlacementState(ItemPlacementContext c){return getDefaultState().with(Properties.HORIZONTAL_AXIS,c.getHorizontalPlayerFacing().getAxis());}
+        @Override public BlockState rotate(BlockState s,BlockRotation r){return turnAxis(s,r);}
+    }
+    /** A quarter turn swaps a horizontal axis; a half turn keeps it. */
+    static BlockState turnAxis(BlockState s,BlockRotation r){
+        if(r!=BlockRotation.CLOCKWISE_90&&r!=BlockRotation.COUNTERCLOCKWISE_90)return s;
+        return s.with(Properties.HORIZONTAL_AXIS,s.get(Properties.HORIZONTAL_AXIS)==Direction.Axis.X?Direction.Axis.Z:Direction.Axis.X);
     }
     /** A slab lying along a horizontal axis: a roof's half steps keep their tiles running down the slope. */
     public static class AxisSlab extends SlabBlock {
         public AxisSlab(Settings s){super(s);setDefaultState(getDefaultState().with(Properties.HORIZONTAL_AXIS,Direction.Axis.X));}
         @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){super.appendProperties(b);b.add(Properties.HORIZONTAL_AXIS);}
         @Override public BlockState getPlacementState(ItemPlacementContext c){var s=super.getPlacementState(c);return s==null?null:s.with(Properties.HORIZONTAL_AXIS,c.getHorizontalPlayerFacing().getAxis());}
+        @Override public BlockState rotate(BlockState s,BlockRotation r){return turnAxis(s,r);}
     }
     /** A slab with a horizontal facing: an edge line on a street's half step. */
     public static class FacingSlab extends SlabBlock {
         public FacingSlab(Settings s){super(s);setDefaultState(getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.NORTH));}
         @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){super.appendProperties(b);b.add(Properties.HORIZONTAL_FACING);}
         @Override public BlockState getPlacementState(ItemPlacementContext c){var s=super.getPlacementState(c);return s==null?null:s.with(Properties.HORIZONTAL_FACING,c.getHorizontalPlayerFacing());}
+        @Override public BlockState rotate(BlockState s,BlockRotation r){return s.with(Properties.HORIZONTAL_FACING,r.rotate(s.get(Properties.HORIZONTAL_FACING)));}
+        @Override public BlockState mirror(BlockState s,BlockMirror m){return s.rotate(m.getRotation(s.get(Properties.HORIZONTAL_FACING)));}
     }
     /** A thin panel that joins its neighbours like a glass pane, and the posts it is hung between. */
     public static class Pane extends PaneBlock {

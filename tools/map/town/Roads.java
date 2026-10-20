@@ -65,20 +65,21 @@ final class Roads {
             for(int k=0;k<4;k++){edge(x,Plan.ST_N[k],Direction.NORTH);edge(x,Plan.ST_S[k],Direction.SOUTH);}
             edge(x,Plan.COAST_Z0,Direction.NORTH);edge(x,Plan.COAST_Z1,Direction.SOUTH);
         }
-        // dashed centre lines: the coastal road, the main street, the photo street (where the road is wide enough to
-        // have two lanes, its centre between x -70 and -69, painted as an edge line on the east side of x -70)
+        // dashed centre lines: the coastal road, the main street, the photo street (from a little past the photo's
+        // zebra crossing; its centre lies between x -70 and -69, painted as an edge line on the east side of x -70)
         for(int x=Plan.TUNNEL_W;x<=Plan.TUNNEL_E;x++)if(Math.floorMod(x,10)<5)paint(x,Plan.CENTRE_Z,CENTRE,0);
         for(int z=Plan.ST_N[3];z<Plan.COAST_Z0;z++)if(Math.floorMod(z,10)<5)paint(0,z,CENTRE,1);
         for(int z=(int)Plan.PHOTO1_Z+12;z<Plan.RAIL_Z0;z++)if(Math.floorMod(z,10)<5)paint(-70,z,EDGE,Direction.EAST.getHorizontal());
         // zebra crossings: on the photo street just in front of photo 1's camera, across the main street south of each
         // cross street, across the coastal road west of the bridge and across the bridge's entrance for the promenade
-        for(int x=Plan.PHOTO_ROAD_X0;x<=Plan.PHOTO_ROAD_X1;x++)for(int z=(int)Plan.PHOTO1_Z+3;z<=(int)Plan.PHOTO1_Z+6;z++)paint(x,z,ZEBRA,1);
+        int zebra=(int)Math.floor(Plan.PHOTO1_Z)+6;
+        for(int x=Plan.PHOTO_ROAD_X0;x<=Plan.PHOTO_ROAD_X1;x++)for(int z=zebra;z<=zebra+2;z++)paint(x,z,ZEBRA,1);
         for(int k=0;k<3;k++)for(int x=-3;x<=3;x++)for(int z=Plan.ST_S[k]+1;z<Plan.ST_S[k]+4;z++)paint(x,z,ZEBRA,1);
         for(int z=Plan.COAST_Z0;z<=Plan.COAST_Z1;z++)for(int x=-11;x<=-8;x++)paint(x,z,ZEBRA,0);
         for(int x=-3;x<=3;x++)for(int z=Plan.PROM_Z0;z<=Plan.PROM_Z1;z++)paint(x,z,ZEBRA,1);
-        // stop lines where the photo street and the main street meet the coastal road and the cross streets
-        for(int x=Plan.PHOTO_ROAD_X0;x<=-70;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
-        for(int x=-3;x<=0;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
+        // stop lines before the level crossings, across the lanes coming down to them (traffic keeps left: the east lanes)
+        for(int x=-69;x<=Plan.PHOTO_ROAD_X1;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
+        for(int x=1;x<=3;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
         // gutters wherever the asphalt meets something that is not street
         byte[] copy=map.clone();
         for(int x=Plan.X0+1;x<Plan.X0+Plan.W-1;x++)for(int z=Plan.Z0+1;z<Plan.Z0+Plan.D-1;z++){

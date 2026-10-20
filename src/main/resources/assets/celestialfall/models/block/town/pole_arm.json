@@ -1,6 +1,8 @@
 {
  "textures": {
-  "particle": "celestialfall:block/town/steel"
+  "particle": "celestialfall:block/town/steel",
+  "t0": "celestialfall:block/town/steel",
+  "t1": "celestialfall:block/town/porcelain"
  },
  "elements": [
   {
@@ -16,7 +18,7 @@
    ],
    "faces": {
     "north": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       0,
       2.5,
@@ -25,7 +27,7 @@
      ]
     },
     "south": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       0,
       2.5,
@@ -34,7 +36,7 @@
      ]
     },
     "west": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       7,
       2.5,
@@ -43,7 +45,7 @@
      ]
     },
     "east": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       7,
       2.5,
@@ -52,7 +54,7 @@
      ]
     },
     "up": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       0,
       7,
@@ -61,7 +63,7 @@
      ]
     },
     "down": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       0,
       7,
@@ -84,7 +86,7 @@
    ],
    "faces": {
     "north": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       12.5,
       0,
@@ -93,7 +95,7 @@
      ]
     },
     "south": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       1.5,
       0,
@@ -102,7 +104,7 @@
      ]
     },
     "west": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7.25,
       0,
@@ -111,7 +113,7 @@
      ]
     },
     "east": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7.25,
       0,
@@ -120,7 +122,7 @@
      ]
     },
     "up": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       1.5,
       7.25,
@@ -129,7 +131,7 @@
      ]
     },
     "down": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       1.5,
       7.25,
@@ -152,7 +154,7 @@
    ],
    "faces": {
     "north": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7,
       0,
@@ -161,7 +163,7 @@
      ]
     },
     "south": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7,
       0,
@@ -170,7 +172,7 @@
      ]
     },
     "west": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7.25,
       0,
@@ -179,7 +181,7 @@
      ]
     },
     "east": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7.25,
       0,
@@ -188,7 +190,7 @@
      ]
     },
     "up": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7,
       7.25,
@@ -197,7 +199,7 @@
      ]
     },
     "down": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7,
       7.25,
@@ -220,7 +222,7 @@
    ],
    "faces": {
     "north": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       1.5,
       0,
@@ -229,7 +231,7 @@
      ]
     },
     "south": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       12.5,
       0,
@@ -238,7 +240,7 @@
      ]
     },
     "west": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7.25,
       0,
@@ -247,7 +249,7 @@
      ]
     },
     "east": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       7.25,
       0,
@@ -256,7 +258,7 @@
      ]
     },
     "up": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       12.5,
       7.25,
@@ -265,7 +267,7 @@
      ]
     },
     "down": {
-     "texture": "celestialfall:block/town/porcelain",
+     "texture": "#t1",
      "uv": [
       12.5,
       7.25,

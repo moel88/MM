@@ -332,7 +332,7 @@ final class Houses {
             e.at(x,z,(x==bx0||x==bx1)&&(z==bz0||z==bz1));
         }
     }
-    /** The plot's boundary: a block wall, a hedge or a board fence on the sides and back, open at the gate. */
+    /** The plot's boundary: a block wall, a hedge or a block wall under a slat fence on the sides and back, open at the gate. */
     void lotFence(Frame f,int gate,int kind){
         int W=f.W,D=f.D;
         for(int z=0;z<D;z++)for(int x:new int[]{0,W-1})edgePiece(f,x,z,kind);
@@ -344,8 +344,8 @@ final class Houses {
         if(!f.air(x,1,z)&&!(f.get(x,1,z).getBlock() instanceof PlantBlock))return;
         switch(kind){
             case 1->f.set(x,1,z,Canvas.leaves(Blocks.OAK_LEAVES));
-            case 2->{f.set(x,1,z,s(Blocks.DARK_OAK_PLANKS));if(f.air(x,2,z))f.set(x,2,z,Canvas.slab(Blocks.DARK_OAK_SLAB,false));}
-            default->{f.set(x,1,z,Pal.blockWall(f.wx(x,z),f.y0+1,f.wz(x,z)));if(f.air(x,2,z))f.set(x,2,z,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));}
+            case 2->{f.set(x,1,z,TB.BLOCK_WALL);if(f.air(x,2,z))f.set(x,2,z,TB.SLAT_FENCE);}
+            default->{f.set(x,1,z,TB.BLOCK_WALL);if(f.air(x,2,z))f.set(x,2,z,TB.wallCap());}
         }
     }
 

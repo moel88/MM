@@ -25,13 +25,12 @@ final class Pal {
         double a=hash(gx,seed,gz),b=hash(gx+1,seed,gz),c=hash(gx,seed,gz+1),d=hash(gx+1,seed,gz+1);
         return (a*(1-tx)+b*tx)*(1-tz)+(c*(1-tx)+d*tx)*tz;
     }
-    /** Worn asphalt: dark grey, with lighter repaired patches and the odd rough spot. */
+    /** Worn asphalt of car parks and yards, with repaired patches and the odd crack. */
     static BlockState asphalt(int x,int z){
         double h=hash(x,1,z);
-        if(blot(x,z,6)>0.88)return Blocks.GRAY_CONCRETE.getDefaultState();
-        if(h<0.03)return Blocks.COBBLED_DEEPSLATE.getDefaultState();
-        if(h<0.10)return Blocks.GRAY_CONCRETE.getDefaultState();
-        return Blocks.GRAY_CONCRETE_POWDER.getDefaultState();
+        if(blot(x,z,6)>0.88)return TB.PATCHED;
+        if(h<0.06)return TB.WORN_CRACKED;
+        return TB.WORN_ASPHALT;
     }
     static BlockState asphaltSlab(int x,int z){
         return hash(x,1,z)<0.06?Canvas.slab(Blocks.COBBLED_DEEPSLATE_SLAB,false):Canvas.slab(Blocks.POLISHED_DEEPSLATE_SLAB,false);
@@ -62,14 +61,8 @@ final class Pal {
         double h=hash(x,4,z);
         return h<0.55?Blocks.POLISHED_GRANITE.getDefaultState():h<0.85?Blocks.SMOOTH_SANDSTONE.getDefaultState():Blocks.GRANITE.getDefaultState();
     }
-    /** Old block walls (ブロック塀): grey blocks, some darker or mossy with age. */
-    static BlockState blockWall(int x,int y,int z){
-        double h=hash(x,y,z);
-        if(h<0.10)return Blocks.ANDESITE.getDefaultState();
-        if(h<0.16)return Blocks.MOSSY_STONE_BRICKS.getDefaultState();
-        if(h<0.22)return Blocks.CRACKED_STONE_BRICKS.getDefaultState();
-        return Blocks.STONE_BRICKS.getDefaultState();
-    }
+    /** Old block walls (ブロック塀): Botand's split-face concrete blocks, the photos' grey walls. */
+    static BlockState blockWall(int x,int y,int z){return TB.BLOCK_WALL;}
     /** Weathered concrete of sea walls and quays. */
     static BlockState seawall(int x,int y,int z){
         double h=hash(x,y,z);

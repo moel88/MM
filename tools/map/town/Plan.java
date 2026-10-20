@@ -5,7 +5,7 @@ package dev.sangwoo.botandtown;
  * places in it look like the two photos the user sent (tools/map/town/PHOTO_SCENES.md). The low town climbs gently from
  * the coast (y 64) to the hill foot (y 72) in rows held by low stone walls; two terraces climb behind it to a small
  * shrine under a wooded ridge. A two-lane street (photo 1) runs straight down from the hill foot, over the railway and
- * on to a guardrail above the sea, with the bridge's high island across the water to its left. The main street of
+ * on to a guardrail above the sea, with a steep islet across the water at its end. The main street of
  * shops runs down the middle and on over the sea as the landmark bridge. A fishing harbour lies to the west, a beach
  * between the two streets, and the old lot by the sea (photo 2, the battle ground) to the east at the foot of a steep
  * hill whose west face is covered in houses. The whole is an island in the flat ocean of the world.
@@ -17,7 +17,7 @@ package dev.sangwoo.botandtown;
  *  z -116..-87   terrace T1 (y 78)        ┘ ramps for cars
  *  z  -86..-81   street S4 (y 72)
  *  z  -80..-47   two rows of houses (y 72 / 69)
- *  z  -46..-41   street S3 (y 69)                main street x -5..5 (shops), the photo street x -75..-64,
+ *  z  -46..-41   street S3 (y 69)                main street x -5..5 (shops), the photo street x -73..-66,
  *  z  -40..-7    two rows (y 69 / 66)             alleys between, all sloping evenly between the streets
  *  z   -6..-1    street S2 (y 66)
  *  z    0..17    one row (y 64)
@@ -27,12 +27,13 @@ package dev.sangwoo.botandtown;
  *  z   46..52    coastal road (a dashed centre line at 49)
  *  z   53..55    seaside promenade; parapet at 56
  *  z   57+       sea: harbour (x -176..-100), beach (x -58..-12), the bridge (x -6..6) to the island (z 130..186),
- *                the lot (x 20..100) under the east hill (x 100+)
+ *                the islet (x -83..-49, z 135..165), the lot (x 20..100, z 53..118) under the east hill (x 101+),
+ *                behind the lot's sea wall two strips of shore with old houses and a run-down block of flats
  * </pre>
  */
 final class Plan {
     private Plan(){}
-    /** The planned area (x X0..X0+W-1, z Z0..Z0+D-1, whole chunks); outside it the flat ocean of the world goes on. */
+    /** The planned area (x X0..X0+W-1, z Z0..Z0+D-1); outside it the flat ocean of the world goes on. */
     static final int X0=-200,W=400,Z0=-200,D=400;
     /** Water surface (top water block), the coast's ground (top solid block), and the sea floor. */
     static final int SEA=62,COAST=64,FLOOR=50;
@@ -46,18 +47,23 @@ final class Plan {
     /** Main street: asphalt x -3..3, sidewalks to ±5. */
     static final int MAIN_X0=-5,MAIN_X1=5;
     /**
-     * The photo street (photo 1): pavers x -75..-74, a two-lane road x -73..-66 with an edge line along each kerb and
-     * a dashed centre line, pavers x -65..-64. It runs from S4 down across the railway to the coastal road.
+     * The photo street (photo 1), as narrow as the photo's: a one-paver sidewalk x -73, a two-lane road x -72..-67
+     * with an edge line along each kerb and a dashed centre line, a sidewalk x -66 with the poles on it. It runs from
+     * S4 down across the railway to the coastal road.
      */
-    static final int PHOTO_X0=-75,PHOTO_X1=-64,PHOTO_ROAD_X0=-73,PHOTO_ROAD_X1=-66;
+    static final int PHOTO_X0=-73,PHOTO_X1=-66,PHOTO_ROAD_X0=-72,PHOTO_ROAD_X1=-67;
     /** Alleys (x0..x1, 5 wide) from S4 to S1. */
     static final int[][] SIDE_STREETS={{-152,-148},{-114,-110},{-38,-34},{38,42},{72,76}};
     /** Level crossings over the railway: the photo street and the main street. */
     static final int[][] CROSSINGS={{PHOTO_ROAD_X0,PHOTO_ROAD_X1},{-3,3}};
-    /** Where photo 1 is taken from: standing at the west edge line between S4 and S3, looking down to the sea... */
-    static final double PHOTO1_X=-72.3,PHOTO1_Z=-70.5;
-    /** ...and photo 2, in the lot, looking south. */
-    static final double PHOTO2_X=56.5,PHOTO2_Z=61.5;
+    /**
+     * Where photo 1 is taken from (measured from the photo): standing in the road's west lane two metres in from its
+     * edge line between S4 and S3, turned eight degrees east of south and looking a little up, the zebra crossing
+     * six to nine metres ahead...
+     */
+    static final double PHOTO1_X=-69.8,PHOTO1_Z=-70.5,PHOTO1_YAW=-8,PHOTO1_PITCH=-1.7;
+    /** ...and photo 2: in the lot, eighteen metres short of its sea wall, the shed ahead on the left, looking south and down. */
+    static final double PHOTO2_X=84.5,PHOTO2_Z=100.5,PHOTO2_YAW=0,PHOTO2_PITCH=6;
 
     // the railway and the coast
     static final int RAIL_Z0=37,PLATFORM_Z1=39,TRACK_Z=41,RAIL_FENCE_Z=45;
@@ -83,10 +89,15 @@ final class Plan {
     // the sea front
     static final int HARBOR_X0=-176,HARBOR_X1=-100,QUAY_Z1=68;
     static final int BEACH_X0=-58,BEACH_X1=-12;
-    static final int LOT_X0=20,LOT_X1=100,LOT_Z1=118;
+    static final int LOT_X0=20,LOT_X1=100,LOT_Z0=PROM_Z0,LOT_Z1=118;
+    /** Behind the lot's sea wall, a step down: the strips of shore with the old houses (east) and the block of flats (west). */
+    static final int[] BACK_E={78,119,100,140},BACK_W={36,119,67,134};
+    static final int BACK_Y=63;
     /** The landmark bridge: its deck (x), the ends of the span (z), the pylon, the island beyond it. */
     static final int BRIDGE_X0=-6,BRIDGE_X1=6,BRIDGE_Z0=53,BRIDGE_Z1=128,PYLON_Z=90;
     static final int ISLAND_X=0,ISLAND_Z=158,ISLAND_RX=34,ISLAND_RZ=28;
+    /** The islet out at sea at the end of the photo street, the hill across the water in photo 1. */
+    static final int ISLET_X=-66,ISLET_Z=150,ISLET_RX=17,ISLET_RZ=15;
     /** The foot of the east hill, whose west face carries the hillside houses above the lot. */
     static final int EAST_FOOT_X=101;
 
@@ -146,4 +157,10 @@ final class Plan {
         double wob=0.08*Math.sin(Math.atan2(dz,dx)*3+1.1)+0.05*Math.sin(Math.atan2(dz,dx)*7);
         return 1+wob-Math.sqrt(dx*dx+dz*dz);
     }
+    static double islet(int x,int z){
+        double dx=(x-ISLET_X)/(double)ISLET_RX,dz=(z-ISLET_Z)/(double)ISLET_RZ;
+        double wob=0.07*Math.sin(Math.atan2(dz,dx)*4+0.4)+0.04*Math.sin(Math.atan2(dz,dx)*9+2);
+        return 1+wob-Math.sqrt(dx*dx+dz*dz);
+    }
+    static boolean in(int[] r,int x,int z){return x>=r[0]&&x<=r[2]&&z>=r[1]&&z<=r[3];}
 }

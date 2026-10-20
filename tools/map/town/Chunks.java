@@ -28,7 +28,8 @@ final class Chunks {
     static int write(ServerWorld w,Canvas c,Biomes biomes){
         var reg=w.getRegistryManager().get(RegistryKeys.BIOME);
         var storage=w.getChunkManager().threadedAnvilChunkStorage;
-        BlockState bedrock=Blocks.BEDROCK.getDefaultState(),stone=Blocks.STONE.getDefaultState(),gravel=Blocks.GRAVEL.getDefaultState(),sand=Blocks.SAND.getDefaultState();
+        BlockState bedrock=Blocks.BEDROCK.getDefaultState(),stone=Blocks.STONE.getDefaultState(),gravel=Blocks.GRAVEL.getDefaultState(),sand=Blocks.SAND.getDefaultState(),
+            water=Blocks.WATER.getDefaultState();
         int bottom=w.getBottomY(),n=0,entities=0,marked=0;
         var pos=new BlockPos.Mutable();
         var heightmaps=EnumSet.of(Heightmap.Type.WORLD_SURFACE_WG,Heightmap.Type.OCEAN_FLOOR_WG,Heightmap.Type.WORLD_SURFACE,Heightmap.Type.OCEAN_FLOOR,
@@ -41,6 +42,8 @@ final class Chunks {
                 int x=(cx<<4)+lx,z=(cz<<4)+lz;
                 // the flat world's layers under the sea: bedrock, stone, gravel, sand
                 for(int y=bottom;y<=Plan.FLOOR;y++)sections[w.getSectionIndex(y)].setBlockState(lx,y&15,lz,y==bottom?bedrock:y<=46?stone:y<=48?gravel:sand,false);
+                // the edge chunks reach past the plan (400 blocks is not a whole number of chunks): open sea there
+                if(!Canvas.inPlan(x,z)){for(int y=Canvas.Y0;y<=Plan.SEA;y++)sections[w.getSectionIndex(y)].setBlockState(lx,y&15,lz,water,false);continue;}
                 for(int y=Canvas.Y0;y<=Canvas.YMAX;y++){
                     char id=c.raw(x,y,z);if(id==Canvas.AIR)continue;
                     BlockState s=Canvas.state(id);Block b=s.getBlock();

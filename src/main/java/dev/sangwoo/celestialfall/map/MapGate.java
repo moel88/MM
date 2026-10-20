@@ -51,6 +51,7 @@ public final class MapGate {
             ||item==dev.sangwoo.celestialfall.loot.LootRegistry.CHEST_KEY||item==dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA||dev.sangwoo.celestialfall.training.TrainingDummies.EGGS.containsValue(item);
     }
     public static void initialize() {
+        MapWires.initialize();
         MapDecoration.initialize();
         FloorRepair.initialize();
         VenueRenovation.initialize();
@@ -71,6 +72,7 @@ public final class MapGate {
         dev.sangwoo.celestialfall.loot.LootPositions.use(defined.map(MapDefinition::loot).orElse(null));
         if(CITY.get(server)){FloorRepair.offer(server);VenueRenovation.offer(server);}
         for(var p:server.getPlayerManager().getPlayerList()){sync(p,true);ProgressManager.joined(p);if(!enabled(p.getWorld()))CombatManager.leave(p);}
+        MapWires.sendAll(server);
     }
     /** Exact bundled teleport functions identify the previously delivered one-third city, regardless of folder name. */
     static boolean recognizeCity(MinecraftServer server) {

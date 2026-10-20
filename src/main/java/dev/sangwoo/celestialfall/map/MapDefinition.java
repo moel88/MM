@@ -12,20 +12,27 @@ import java.util.*;
 
 /**
  * A Botand map that describes itself: data/botand/map/definition.json in its world's data pack names the map and
- * where the mod's things stand on it (the two merchants, the field supply spots) and its named places. A world with
- * one is a Botand map like the delivered city (recognised by its bundled functions); the city keeps its own built-in
+ * where the mod's things stand on it (the two merchants, the field supply spots), its named places and the wires
+ * hung between its poles (drawn by the mod as thin sagging lines, being too thin for blocks). A world with one is a
+ * Botand map like the delivered city (recognised by its bundled functions); the city keeps its own built-in
  * positions and fixes.
  *
  * <pre>
  * {"format":1,"id":"botand:seaside","name":"...","spawn":[0,65,29,0],
  *  "merchants":{"seller":{"pos":[x,y,z],"yaw":90},"buyer":{"pos":[x,y,z],"yaw":90}},
- *  "loot":[[x,y,z],...],"places":{"station":[x,y,z],...}}
+ *  "loot":[[x,y,z],...],"places":{"station":[x,y,z],...},
+ *  "wires":[[x0,y0,z0,x1,y1,z1,sag],...]}
  * </pre>
  */
-public record MapDefinition(String id,String name,BlockPos spawn,Vec3d seller,float sellerYaw,Vec3d buyer,float buyerYaw,List<BlockPos> loot,Map<String,BlockPos> places) {
+public record MapDefinition(String id,String name,BlockPos spawn,Vec3d seller,float sellerYaw,Vec3d buyer,float buyerYaw,List<BlockPos> loot,Map<String,BlockPos> places,List<Wire> wires) {
     public static final Identifier FILE=new Identifier("botand","map/definition.json");
     /** The most field supply spots a map may have. */
     public static final int MAX_LOOT=64;
+    /** The most wires a map may have, the longest span and the deepest sag (blocks). */
+    public static final int MAX_WIRES=4096;
+    public static final float MAX_SPAN=64,MAX_SAG=8;
+    /** A wire from one point to another, hanging {@code sag} blocks below the straight line at its middle. */
+    public record Wire(float x0,float y0,float z0,float x1,float y1,float z1,float sag) {}
 
     /** The definition in the server's data packs, if there is one and it reads cleanly. */
     public static Optional<MapDefinition> load(MinecraftServer server){
@@ -56,7 +63,19 @@ public record MapDefinition(String id,String name,BlockPos spawn,Vec3d seller,fl
         if(new HashSet<>(loot).size()!=loot.size())throw new IllegalArgumentException("duplicate loot spots");
         Map<String,BlockPos> places=new LinkedHashMap<>();
         if(o.has("places")&&o.get("places").isJsonObject())for(var e:o.getAsJsonObject("places").entrySet())places.put(e.getKey(),block(e.getValue().getAsJsonArray()));
-        return new MapDefinition(id,name,spawn,(Vec3d)seller[0],(float)seller[1],(Vec3d)buyer[0],(float)buyer[1],List.copyOf(loot),Collections.unmodifiableMap(places));
+        List<Wire> wires=new ArrayList<>();
+        if(o.has("wires"))for(var e:array(o,"wires"))wires.add(wire(e));
+        if(wires.size()>MAX_WIRES)throw new IllegalArgumentException("too many wires");
+        return new MapDefinition(id,name,spawn,(Vec3d)seller[0],(float)seller[1],(Vec3d)buyer[0],(float)buyer[1],List.copyOf(loot),Collections.unmodifiableMap(places),List.copyOf(wires));
+    }
+    private static Wire wire(JsonElement e){
+        if(!e.isJsonArray()||e.getAsJsonArray().size()!=7)throw new IllegalArgumentException("a wire needs x0, y0, z0, x1, y1, z1, sag");
+        var a=e.getAsJsonArray();float[] v=new float[7];
+        for(int i=0;i<7;i++){v[i]=a.get(i).getAsFloat();if(!Float.isFinite(v[i]))throw new IllegalArgumentException("a wire is not finite");}
+        double span=Math.sqrt((v[3]-v[0])*(v[3]-v[0])+(v[4]-v[1])*(v[4]-v[1])+(v[5]-v[2])*(v[5]-v[2]));
+        if(span>MAX_SPAN)throw new IllegalArgumentException("a wire is longer than "+MAX_SPAN);
+        if(v[6]<0||v[6]>MAX_SAG)throw new IllegalArgumentException("a wire sags too far");
+        return new Wire(v[0],v[1],v[2],v[3],v[4],v[5],v[6]);
     }
     private static Object[] merchant(JsonObject merchants,String key){
         if(!merchants.has(key)||!merchants.get(key).isJsonObject())throw new IllegalArgumentException("no "+key);

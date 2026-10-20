@@ -1,6 +1,9 @@
 {
  "textures": {
-  "particle": "celestialfall:block/town/lamp_housing"
+  "particle": "celestialfall:block/town/lamp_housing",
+  "t0": "celestialfall:block/town/steel",
+  "t1": "celestialfall:block/town/lamp_housing",
+  "t2": "celestialfall:block/town/lamp_led"
  },
  "elements": [
   {
@@ -16,7 +19,7 @@
    ],
    "faces": {
     "north": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       7,
       4,
@@ -25,7 +28,7 @@
      ]
     },
     "south": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       7,
       4,
@@ -34,7 +37,7 @@
      ]
     },
     "west": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       10,
       4,
@@ -43,7 +46,7 @@
      ]
     },
     "east": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       0,
       4,
@@ -52,7 +55,7 @@
      ]
     },
     "up": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       7,
       10,
@@ -61,7 +64,7 @@
      ]
     },
     "down": {
-     "texture": "celestialfall:block/town/steel",
+     "texture": "#t0",
      "uv": [
       7,
       0,
@@ -84,7 +87,7 @@
    ],
    "faces": {
     "north": {
-     "texture": "celestialfall:block/town/lamp_housing",
+     "texture": "#t1",
      "uv": [
       4,
       4,
@@ -93,7 +96,7 @@
      ]
     },
     "south": {
-     "texture": "celestialfall:block/town/lamp_housing",
+     "texture": "#t1",
      "uv": [
       4,
       4,
@@ -102,7 +105,7 @@
      ]
     },
     "west": {
-     "texture": "celestialfall:block/town/lamp_housing",
+     "texture": "#t1",
      "uv": [
       2,
       4,
@@ -111,7 +114,7 @@
      ]
     },
     "east": {
-     "texture": "celestialfall:block/town/lamp_housing",
+     "texture": "#t1",
      "uv": [
       5,
       4,
@@ -120,7 +123,7 @@
      ]
     },
     "up": {
-     "texture": "celestialfall:block/town/lamp_housing",
+     "texture": "#t1",
      "uv": [
       4,
       2,
@@ -129,7 +132,7 @@
      ]
     },
     "down": {
-     "texture": "celestialfall:block/town/lamp_led",
+     "texture": "#t2",
      "uv": [
       4,
       5,

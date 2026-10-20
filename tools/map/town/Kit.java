@@ -2,6 +2,7 @@ package dev.sangwoo.botandtown;
 
 import net.minecraft.block.*;
 import net.minecraft.block.enums.WallMountLocation;
+import net.minecraft.state.property.Properties;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.Direction;
 import java.util.Random;
@@ -15,7 +16,10 @@ final class Kit {
     private Kit(){}
     /** A roof covering: its slab and its full block (the ridge). */
     record Roof(Block slab,BlockState full){}
-    static final Roof KAWARA=new Roof(Blocks.DEEPSLATE_TILE_SLAB,Blocks.DEEPSLATE_TILES.getDefaultState());
+    /** Kawara (Botand's own tiles, their channels laid down the slope), the photos' dark grey roofs. */
+    static final Roof KAWARA=new Roof(TB.of("kawara_slab").getBlock(),TB.of("kawara"));
+    /** Corrugated iron sheet roofing: sheds, the old houses behind the lot. */
+    static final Roof SHEET=new Roof(TB.of("corrugated_roof_slab").getBlock(),TB.of("corrugated_roof"));
     static final Roof BLACK=new Roof(Blocks.POLISHED_BLACKSTONE_SLAB,Blocks.POLISHED_BLACKSTONE.getDefaultState());
     static final Roof BLUE=new Roof(Blocks.DARK_PRISMARINE_SLAB,Blocks.DARK_PRISMARINE.getDefaultState());
     static final Roof SLATE=new Roof(Blocks.STONE_BRICK_SLAB,Blocks.STONE_BRICKS.getDefaultState());
@@ -26,6 +30,8 @@ final class Kit {
     static final Roof TEAL=new Roof(Blocks.WAXED_WEATHERED_CUT_COPPER_SLAB,Blocks.WAXED_WEATHERED_CUT_COPPER.getDefaultState());
     static final int GABLE=0,HIP=1,SHED=2,FLAT=3;
     static BlockState s(Block b){return b.getDefaultState();}
+    /** A roofing state laid along an axis (the town's tiles and sheets run down the slope); others as they are. */
+    static BlockState along(BlockState s,Direction.Axis a){return s.contains(Properties.HORIZONTAL_AXIS)?s.with(Properties.HORIZONTAL_AXIS,a):s;}
 
     /**
      * A roof over the walls bx0..bx1 × bz0..bz1, its eaves at by=b sticking out one block (none for a flat roof).
@@ -49,20 +55,24 @@ final class Kit {
             int d=switch(type){case GABLE->alongX?dz:dx;case HIP->Math.min(dx,dz);default->alongX?oz1-z:z-oz0;};
             dd[x-ox0][z-oz0]=d;dmax=Math.max(dmax,d);
         }
+        Direction.Axis ridge=type==GABLE&&!alongX?Direction.Axis.Z:Direction.Axis.X;
         for(int x=ox0;x<=ox1;x++)for(int z=oz0;z<=oz1;z++){
             int d=dd[x-ox0][z-oz0],S=2*b+d,y=S>>1;boolean top=(S&1)==1;
             boolean inside=x>=bx0&&x<=bx1&&z>=bz0&&z<=bz1;
+            // which way the slope falls here, for coverings whose tiles run down it
+            int dx=Math.min(x-ox0,ox1-x),dz=Math.min(z-oz0,oz1-z);
+            Direction.Axis slope=switch(type){case GABLE->alongX?Direction.Axis.Z:Direction.Axis.X;case HIP->dz<=dx?Direction.Axis.Z:Direction.Axis.X;default->Direction.Axis.Z;};
             if(inside){
                 boolean end=switch(type){case GABLE->alongX?x==bx0||x==bx1:z==bz0||z==bz1;case SHED->x==bx0||x==bx1||(alongX?z==bz0:z==bz1);default->false;};
                 for(int yy=b;yy<y;yy++)f.set(x,yy,z,end?wall:yy==b?ceiling:s(Blocks.AIR));
-                if(end&&top)f.set(x,y,z,Canvas.slab(m.slab(),true));
+                if(end&&top)f.set(x,y,z,along(Canvas.slab(m.slab(),true),slope));
             }
             if(type!=SHED&&d==dmax){
                 // the ridge: a full row of the covering, standing proud of the slopes
-                f.set(x,y,z,m.full());if(!top)continue;
-                f.set(x,y+1,z,Canvas.slab(m.slab(),false));continue;
+                f.set(x,y,z,along(m.full(),ridge));if(!top)continue;
+                f.set(x,y+1,z,along(Canvas.slab(m.slab(),false),ridge));continue;
             }
-            f.set(x,y,z,Canvas.slab(m.slab(),top));
+            f.set(x,y,z,along(Canvas.slab(m.slab(),top),slope));
         }
     }
 
@@ -118,11 +128,9 @@ final class Kit {
         else f.set(bx,fy+3,bz,Canvas.rod(Blocks.END_ROD,Direction.DOWN));
     }
 
-    /** An air conditioner's outdoor unit against a wall: a pale box with a fan grille. */
+    /** An air conditioner's outdoor unit against a wall, its fan toward {@code out}. */
     static void airCon(Frame f,int bx,int by,int bz,Direction out){
-        f.set(bx,by,bz,Blocks.WHITE_TERRACOTTA);
-        int fx=bx+out.getOffsetX(),fz=bz+out.getOffsetZ();
-        if(f.air(fx,by,fz))f.set(fx,by,fz,Canvas.trapdoor(Blocks.IRON_TRAPDOOR,out,true,false));
+        if(f.air(bx,by,bz))f.set(bx,by,bz,TB.facing("air_conditioner",out));
     }
 
     /** A potted plant. */
@@ -138,7 +146,7 @@ final class Kit {
         for(int x=Math.min(bx0,bx1);x<=Math.max(bx0,bx1);x++)for(int z=Math.min(bz0,bz1);z<=Math.max(bz0,bz1);z++){
             int g=f.ground(x,z);
             for(int y=g+1;y<h;y++)f.set(x,y,z,Pal.blockWall(f.wx(x,z),f.y0+y,f.wz(x,z)));
-            f.set(x,Math.max(h,g+1),z,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
+            f.set(x,Math.max(h,g+1),z,TB.wallCap());
         }
     }
     static void hedge(Frame f,int bx0,int bz0,int bx1,int bz1,int h,Block leaves){

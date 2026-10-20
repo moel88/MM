@@ -393,7 +393,7 @@ TEXTURES['asphalt_edge_line'] = (lambda s: paint(asphalt(s), s, wobble(rows(4, 1
 TEXTURES['asphalt_center_line'] = (lambda s: paint(asphalt(s), s, wobble(rows(27, 37), s + 9)), (131,))
 TEXTURES['asphalt_zebra'] = (lambda s: paint(asphalt(s), s, wobble(rows(18, 46), s + 9)), (132,))
 TEXTURES['asphalt_stop_line'] = (lambda s: paint(asphalt(s), s, wobble(rows(22, 42), s + 9)), (133,))
-TEXTURES['worn_asphalt_line'] = (lambda s: paint(worn_asphalt(s), s, wobble(rows(28, 35), s + 9, 1), (214, 210, 198), 0.45), (250,))
+TEXTURES['worn_asphalt_line'] = (lambda s: paint(worn_asphalt(s), s, wobble(rows(26, 37), s + 9, 1), (222, 219, 208), 0.25), (250,))
 PAV = [tex(f'paving_{k}', pavers, 300 + k) for k in range(2)]
 BW = [tex(f'block_wall_{k}', blocks, 400 + k, (140, 138, 132), 32, 16, (110, 108, 102), 10, True, 6 + 4 * k) for k in range(3)]
 CAP = tex('block_wall_cap', steel, 430, (150, 148, 142))
@@ -503,7 +503,17 @@ def box_faces(t, frm, to, skip=()):
     return out
 
 def custom(name, elements, particle, ao=True):
-    d = {'textures': {'particle': particle}, 'elements': elements}
+    """A model of its own elements. A face names a texture by a variable ('#t0'), never by its path: the game reads
+    a face's texture as the name of an entry in the model's textures, so each path used gets an entry."""
+    textures = {'particle': particle}; names = {}
+    for e in elements:
+        for f in e['faces'].values():
+            t = f['texture']
+            if t.startswith('#'): continue
+            if t not in names:
+                names[t] = f't{len(names)}'; textures[names[t]] = t
+            f['texture'] = '#' + names[t]
+    d = {'textures': textures, 'elements': elements}
     if not ao: d['ambientocclusion'] = False
     return model(name, d)
 

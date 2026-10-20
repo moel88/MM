@@ -106,7 +106,7 @@ final class Harbor {
         f.wallSign(f.W/2,3,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLUE,false,"ぼたんど漁協","Botand","Fishery Co-op");
         Kit.roof(f,0,0,f.W-1,f.D-1,8,Kit.FLAT,true,Kit.SLATE,s(Blocks.WHITE_TERRACOTTA),s(Blocks.SMOOTH_STONE));
         Kit.roomLight(f,f.W/2,0,f.D/2,false);Kit.roomLight(f,f.W/2,4,f.D/2,false);
-        t.street.vending(x1+2,Plan.SEAWARD_Z+1,Direction.SOUTH,2);
+        t.street.vending(x1+2,Plan.SEAWARD_Z+2,Direction.NORTH,2);
     }
     /** 製氷・冷蔵: a plain warehouse with a wide shutter. */
     private void store(int x0,int x1){

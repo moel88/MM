@@ -84,7 +84,6 @@ final class Coast {
             c.set(x,g+1,z,Canvas.stairs(Blocks.SPRUCE_STAIRS,Direction.NORTH,false));c.set(x+1,g+1,z,Canvas.stairs(Blocks.SPRUCE_STAIRS,Direction.NORTH,false));
         }
         t.street.vending(Plan.BEACH_X0+8,Plan.PROM_Z0,Direction.EAST,2);
-        t.street.vending(Plan.LOT_X0+4,Plan.PROM_Z0,Direction.EAST,3);
     }
 
     /** The beach: a rowboat drawn up on the sand, driftwood, sea grass and the odd rock in the shallows. */

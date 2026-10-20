@@ -57,8 +57,8 @@ final class Layout {
                 if(xb==Plan.MAIN_X0-1){shopStrip(xb-SHOP_D+1,xb,zN,zS,Direction.EAST,"main");xb-=SHOP_D;}
                 if(xa==Plan.MAIN_X1+1){shopStrip(xa,xa+SHOP_D-1,zN,zS,Direction.WEST,"main");xa+=SHOP_D;}
                 // houses facing the photo street, behind their walls and gates
-                if(xb==Plan.PHOTO_X0-1){shopStrip(xb-PHOTO_D+1,xb,zN,zS,Direction.EAST,"photo");xb-=PHOTO_D;}
-                if(xa==Plan.PHOTO_X1+1){shopStrip(xa,xa+PHOTO_D-1,zN,zS,Direction.WEST,"photo");xa+=PHOTO_D;}
+                if(xb==Plan.PHOTO_X0-1){photoStrip(xb-PHOTO_D+1,xb,zN,zS,Direction.EAST,r);xb-=PHOTO_D;}
+                if(xa==Plan.PHOTO_X1+1){photoStrip(xa,xa+PHOTO_D-1,zN,zS,Direction.WEST,r);xa+=PHOTO_D;}
                 if(xb-xa+1<9){if(xb>=xa)lots.add(new Lot(xa,zN,xb,zS,y,front,"strip"));continue;}
                 // the convenience store, on the station street just east of the main street
                 if(r==1&&b[0]==Plan.MAIN_X1+1){lots.add(new Lot(xa,zN,xb,zS,y,front,"konbini"));continue;}
@@ -73,11 +73,25 @@ final class Layout {
         while(z<=zS){
             int w=Math.min(zS-z+1,8+rnd.nextInt(4));
             if(zS-(z+w-1)<7)w=zS-z+1;
-            int zc=z+w/2,lv=Plan.slopeHalf(zc)+1,y=(lv+1)>>1;
-            var lot=new Lot(x0,z,x1,z+w-1,y,front,zone);lots.add(lot);
-            for(int x=x0;x<=x1;x++)for(int zz=z;zz<z+w;zz++)level[Canvas.idx(x,zz)]=2*y;
+            levelled(x0,x1,z,z+w-1,front,zone);
             z+=w;
         }
+    }
+    private void levelled(int x0,int x1,int z0,int z1,Direction front,String zone){
+        int zc=z0+(z1-z0+1)/2,lv=Plan.slopeHalf(zc)+1,y=(lv+1)>>1;
+        lots.add(new Lot(x0,z0,x1,z1,y,front,zone));
+        for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++)level[Canvas.idx(x,z)]=2*y;
+    }
+    /**
+     * The plots in front of photo 1's camera, cut to the photo's own houses across both rows between S4 and S3:
+     * east side the gate house round the camera and the Yamada house after it, west side the house behind the long
+     * fence, the corner with the stone pillar and the vending machine, and the next house.
+     */
+    static final int[][] PHOTO_EAST={{-80,-75},{-74,-59},{-58,-47}},PHOTO_WEST={{-80,-64},{-63,-56},{-55,-47}};
+    private void photoStrip(int x0,int x1,int zN,int zS,Direction front,int r){
+        if(r==4)return;
+        if(r==5){for(int[] p:front==Direction.WEST?PHOTO_EAST:PHOTO_WEST)levelled(x0,x1,p[0],p[1],front,"photo");return;}
+        shopStrip(x0,x1,zN,zS,front,"photo");
     }
     interface Cut{void lot(int a,int b);}
     /** Cuts [a..b] into pieces min..max long (the last takes what is left, or joins the one before). */

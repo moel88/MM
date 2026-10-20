@@ -39,18 +39,17 @@ final class Street {
             }
             runs.add(run.toArray(new int[0][]));
         }
-        // the photo street: poles along its east kerb about twenty metres apart, the first just ahead of the photo's
-        // camera with its lamp out over the road, and a few on the west kerb
+        // the photo street: poles on its east sidewalk where the photo has them (the first just ahead of the camera
+        // with its lamp out over the road, the next ten metres on, then every fifteen or so), a few on the west one
         List<int[]> photo=new ArrayList<>();
-        for(int z=(int)Plan.PHOTO1_Z+4;z<=Plan.RAIL_Z0-3;z+=19+rnd.nextInt(3)){
-            if(Plan.street(z)>=0||Plan.street(z-2)>=0||Plan.street(z+2)>=0)z+=5;
-            int[] top=pole(Plan.PHOTO_ROAD_X1+1,z,Direction.WEST,photo.size()%3==1?2:photo.size()%3==2?1:0,photo.isEmpty()||rnd.nextBoolean());
+        int[] eastZ={-65,-54,-38,-24,-10,8,26},eastT={1,2,0,1,0,2,1};
+        for(int i=0;i<eastZ.length;i++){
+            int[] top=pole(Plan.PHOTO_ROAD_X1+1,eastZ[i],Direction.WEST,eastT[i],i<2||i%2==0);
             if(top!=null)photo.add(top);
         }
         runs.add(photo.toArray(new int[0][]));
         List<int[]> photoWest=new ArrayList<>();
-        for(int z=(int)Plan.PHOTO1_Z+38;z<=Plan.RAIL_Z0-3;z+=24){
-            if(Plan.street(z)>=0||Plan.street(z-2)>=0||Plan.street(z+2)>=0)z+=5;
+        for(int z:new int[]{-52,-30,-12,10,30}){
             int[] top=pole(Plan.PHOTO_ROAD_X0-1,z,Direction.EAST,1,false);if(top!=null)photoWest.add(top);
         }
         runs.add(photoWest.toArray(new int[0][]));
@@ -175,17 +174,17 @@ final class Street {
         lamps++;
     }
 
-    /** A row of vending machines against something: glowing panels over coloured cabinets, a bin beside them. */
+    /**
+     * A row of drinks vending machines (Botand's own, two blocks tall and lit), their fronts turned away from what
+     * they stand against (the row runs {@code alongRow}, their backs to its left), a bin beside them.
+     */
     void vending(int x,int z,Direction alongRow,int count){
-        BlockState[] bodies={Blocks.RED_CONCRETE.getDefaultState(),Blocks.BLUE_CONCRETE.getDefaultState(),Blocks.WHITE_CONCRETE.getDefaultState(),
-            Blocks.LIGHT_BLUE_CONCRETE.getDefaultState(),Blocks.GREEN_CONCRETE.getDefaultState(),Blocks.RED_CONCRETE.getDefaultState()};
-        int g=c.ground(x,z);
+        Direction front=alongRow.rotateYClockwise();
         for(int i=0;i<count;i++){
             int vx=x+alongRow.getOffsetX()*i,vz=z+alongRow.getOffsetZ()*i;
             int vg=c.ground(vx,vz);
             if(!c.air(vx,vg+1,vz)||!c.air(vx,vg+2,vz))return;
-            c.set(vx,vg+1,vz,bodies[rnd.nextInt(bodies.length)]);c.set(vx,vg+2,vz,Blocks.SEA_LANTERN.getDefaultState());
-            if(c.air(vx,vg+3,vz))c.set(vx,vg+3,vz,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
+            c.set(vx,vg+1,vz,TB.vending(front,false));c.set(vx,vg+2,vz,TB.vending(front,true));
             machines++;
         }
         int bx=x+alongRow.getOffsetX()*count,bz=z+alongRow.getOffsetZ()*count;

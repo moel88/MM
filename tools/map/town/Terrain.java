@@ -6,7 +6,7 @@ import java.util.Random;
 
 /**
  * The ground. Natural land (the hill rising north behind the town to a wooded ridge, a small headland in the west,
- * the steep east hill running on south as a long headland, the island) shelves off into the sea, and flat platforms
+ * the steep east hill running on south-east as a headland, the island, the islet) shelves off into the sea, and flat platforms
  * are cut into it for the town:
  * where a platform is cut into higher ground, or one platform stands above the next, the step is a stone retaining
  * wall; where it stands above natural ground, the fill slopes away as a grassy bank. Levels are kept in half blocks
@@ -34,8 +34,8 @@ final class Terrain {
             double t=Math.min(1,(-178-x)/22.0);
             return 57+30*Math.pow(Math.sin(Math.PI*Math.min(1,t*0.8+0.2)),0.65)+4*Math.sin(x/5.0)+2*Math.sin(x/2.7+1);
         }
-        // the east hill runs on south into the sea as a long headland
-        if(x>Plan.EAST_FOOT_X)return 57+Math.min(135,(x-Plan.EAST_FOOT_X)*2.2)+5*Math.sin(x/9.0)+3*Math.sin(x/4.1+2);
+        // the east hill comes down to the sea just past the lot's sea wall and runs on south-east as a headland
+        if(x>=Plan.EAST_FOOT_X)return 152+Math.min(40,(x-Plan.EAST_FOOT_X)*1.1)+4*Math.sin(x/9.0)+2.5*Math.sin(x/4.1+2);
         return Plan.SEAWARD_Z-1;
     }
     /** The plan's edge (west, north and east): natural ground falls away into the sea near it, the coast wandering. */
@@ -44,8 +44,11 @@ final class Terrain {
         d+=8*noise2(x*0.7+300,z*0.7-200)+3*noise(x*1.9,z*1.9);
         return Math.max(0,Math.min(1,(d-2)/12.0));
     }
-    /** The natural height of the mainland (before platforms), or the island's. */
+    /** The natural height of the mainland (before platforms), or the island's or the islet's. */
     double natural(int x,int z){
+        // the islet: a small steep hill of rock and pines out at sea, seen at the end of the photo street
+        double q=Plan.islet(x,z);
+        if(q>0)return 61+31*Math.pow(q,0.7)+1.5*noise2(x*2.1,z*2.1)*Math.min(1,q*3);
         // the island: a steep green hill standing out of the sea beyond the bridge
         if(z>Plan.BRIDGE_Z1-8&&Math.abs(x-Plan.ISLAND_X)<Plan.ISLAND_RX+12){
             double k=Plan.island(x,z);
@@ -62,10 +65,10 @@ final class Terrain {
         h+=amp*noise(x,z);
         // the west headland, and the steep east hill rising from the lot and the town's east end
         if(x<-178)h=Math.max(h,64+Math.min(40,(-178-x)*1.8)+4*noise2(x,z));
-        if(x>=Plan.EAST_FOOT_X)h=Math.max(h,64+Math.min(66,(x-Plan.EAST_FOOT_X+1)*1.05)+5*noise2(x+90,z));
+        if(x>=Plan.EAST_FOOT_X)h=Math.max(h,64+Math.min(33,(x-Plan.EAST_FOOT_X+1)*1.05)+5*noise2(x+90,z));
         // the headlands fall to the sea as cliffs
         double shore=shoreZ(x);
-        if(x<-178||x>Plan.EAST_FOOT_X)h=Math.min(h,62+(shore-z)*2.2);
+        if(x<-178||x>=Plan.EAST_FOOT_X)h=Math.min(h,62+(shore-z)*2.2);
         // and everything falls into the sea toward the plan's edge
         double e=edge(x,z);
         return Plan.FLOOR+(h-Plan.FLOOR)*(e*e*(3-2*e));
@@ -73,12 +76,13 @@ final class Terrain {
     /** How deep the sea is here: shelving off the shore, a dredged basin in the harbour. */
     int seaFloor(int x,int z,double nat){
         if(x>=Plan.HARBOR_X0&&x<=Plan.HARBOR_X1+8&&z>Plan.QUAY_Z1&&z<=118)return 54+(int)Math.round(noise2(x*3,z*3));
-        double k=Plan.island(x,z);
-        if(k>0&&nat>0)return (int)Math.min(61,Math.round(nat));
+        double k=Plan.island(x,z),q=Plan.islet(x,z);
+        if((k>0||q>0)&&nat>0)return (int)Math.min(61,Math.round(nat));
         double d=z-shoreZ(x);
         if(x>=Plan.BEACH_X0-6&&x<=Plan.BEACH_X1+6&&z<100)d=Math.max(0,d-6)*0.6;
         double floor=61-d*0.32+0.8*noise(x*2,z*2);
         if(k>-0.6)floor=Math.max(floor,52+(k+0.6)*14);
+        if(q>-0.5)floor=Math.max(floor,53+(q+0.5)*14);
         return (int)Math.round(Math.max(Plan.FLOOR,Math.min(61,floor)));
     }
     /** The beach: dry sand at the water's level under the sea wall, shelving into the shallows. */
@@ -91,13 +95,14 @@ final class Terrain {
         int t=Plan.terrace(x,z);if(t>=0)return 2*Plan.TERRACE_Y[t];
         if(x>=Plan.TOWN_X0&&x<=Plan.TOWN_X1&&z>Plan.TERRACE_Z0[0]+Plan.bend(x)&&z<=Plan.PARAPET_Z){
             if(z>Plan.ST_S[0])return 2*Plan.COAST;
-            if(Plan.mainStreet(x)||Plan.sideStreet(x)!=null)return Plan.slopeHalf(z);
+            if(Plan.mainStreet(x)||Plan.photoStreet(x)||Plan.sideStreet(x)!=null)return Plan.slopeHalf(z);
             int k=Plan.street(z);if(k>=0)return 2*Plan.ST_Y[k];
             int r=Plan.row(z);if(r>=0)return 2*Plan.ROWS[r][2];
             return z<Plan.ST_N[3]?2*Plan.ST_Y[3]:2*Plan.COAST;
         }
         if(x>=Plan.HARBOR_X0&&x<=Plan.HARBOR_X1&&z>=Plan.SEAWARD_Z&&z<=Plan.QUAY_Z1)return 2*Plan.COAST;
-        if(x>=Plan.LOT_X0&&x<=Plan.LOT_X1&&z>=Plan.SEAWARD_Z&&z<=Plan.LOT_Z1)return 2*Plan.COAST;
+        if(x>=Plan.LOT_X0&&x<=Plan.LOT_X1&&z>=Plan.LOT_Z0&&z<=Plan.LOT_Z1)return 2*Plan.COAST;
+        if(Plan.in(Plan.BACK_E,x,z)||Plan.in(Plan.BACK_W,x,z))return 2*Plan.BACK_Y;
         // the railway, the coastal road and the promenade go on past the town both ways, to the tunnels
         if(z>=Plan.RAIL_Z0&&z<=Plan.PARAPET_Z&&x>=Plan.TUNNEL_W&&x<=Plan.TUNNEL_E)return 2*Plan.COAST;
         // the little terraces of houses up the east hill's face
@@ -114,7 +119,7 @@ final class Terrain {
             int p=platformAt(x,z);plat[i]=p;
             nat[i]=natural(x,z);
             boolean beach=x>=Plan.BEACH_X0&&x<=Plan.BEACH_X1&&z>=Plan.SEAWARD_Z&&beach(z)>=0&&p==NONE;
-            boolean coast=z>shoreZ(x)&&Plan.island(x,z)<=0;
+            boolean coast=z>shoreZ(x)&&Plan.island(x,z)<=0&&Plan.islet(x,z)<=0;
             boolean sea=p==NONE&&!beach&&(coast||nat[i]<62.5);
             kind[i]=beach?BEACH:sea?SEA:LAND;
             F[i]=p!=NONE?p>>1:beach?beach(z):sea?seaFloor(x,z,nat[i]):(int)Math.round(nat[i]);

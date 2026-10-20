@@ -27,6 +27,18 @@ class MapDefinitionTest {
         assertEquals(List.of(new BlockPos(-150,65,62),new BlockPos(40,65,80),new BlockPos(0,105,-222)),d.loot());
         assertEquals(new BlockPos(0,76,131),d.places().get("bridge"));
         assertEquals(List.of("station","bridge"),List.copyOf(d.places().keySet()));
+        assertTrue(d.wires().isEmpty());
+    }
+    @Test void readsTheWiresBetweenThePoles(){
+        var d=parse(SEASIDE.replace("\"places\"","\"wires\":[[100.5,80.95,-36.5,100.5,80.95,-17.5,0.61],[-66,82,-65,-66,82,-54,0.4]],\"places\""));
+        assertEquals(List.of(new MapDefinition.Wire(100.5f,80.95f,-36.5f,100.5f,80.95f,-17.5f,0.61f),new MapDefinition.Wire(-66,82,-65,-66,82,-54,0.4f)),d.wires());
+        assertEquals(new BlockPos(23,65,26),d.places().get("station"));
+    }
+    @Test void refusesWiresItCannotDraw(){
+        String[] bad={"[[0,80,0,0,80,10]]","[[0,80,0,0,80,100,0.5]]","[[0,80,0,0,80,10,-1]]","[[0,80,0,0,80,10,9]]","[[0,80,0,\"x\",80,10,0.5]]","[5]"};
+        for(String w:bad)assertThrows(RuntimeException.class,()->parse(SEASIDE.replace("\"places\"","\"wires\":"+w+",\"places\"")),w);
+        var many=new StringBuilder();for(int i=0;i<=MapDefinition.MAX_WIRES;i++)many.append(i>0?",":"").append("[0,80,").append(i).append(",1,80,").append(i).append(",0.1]");
+        assertThrows(IllegalArgumentException.class,()->parse(SEASIDE.replace("\"places\"","\"wires\":["+many+"],\"places\"")));
     }
     @Test void refusesWhatItCannotTrust(){
         assertThrows(IllegalArgumentException.class,()->parse("[]"));

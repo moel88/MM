@@ -1,6 +1,9 @@
 {
  "textures": {
-  "particle": "celestialfall:block/town/vending_side"
+  "particle": "celestialfall:block/town/vending_side",
+  "t0": "celestialfall:block/town/vending_front_upper",
+  "t1": "celestialfall:block/town/vending_side",
+  "t2": "celestialfall:block/town/vending_top"
  },
  "elements": [
   {
@@ -16,7 +19,7 @@
    ],
    "faces": {
     "north": {
-     "texture": "celestialfall:block/town/vending_front_upper",
+     "texture": "#t0",
      "uv": [
       0,
       0,
@@ -25,7 +28,7 @@
      ]
     },
     "south": {
-     "texture": "celestialfall:block/town/vending_side",
+     "texture": "#t1",
      "uv": [
       0,
       3,
@@ -34,7 +37,7 @@
      ]
     },
     "west": {
-     "texture": "celestialfall:block/town/vending_side",
+     "texture": "#t1",
      "uv": [
       2,
       3,
@@ -43,7 +46,7 @@
      ]
     },
     "east": {
-     "texture": "celestialfall:block/town/vending_side",
+     "texture": "#t1",
      "uv": [
       0,
       3,
@@ -52,7 +55,7 @@
      ]
     },
     "up": {
-     "texture": "celestialfall:block/town/vending_top"
+     "texture": "#t2"
     }
    }
   }

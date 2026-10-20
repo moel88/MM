@@ -164,7 +164,7 @@ final class Shops {
             case "tobacco"->{f.set(door,2,0,s(Blocks.GLASS_PANE));t.street.vending(f.wx(W-2,-1),f.wz(W-2,-1),f.dir(Direction.WEST),2);}
             default->{for(int x=1;x<W-1;x++)f.set(x,1,c1,s(Blocks.BARREL));if(f.air(1,1,-1))f.set(1,1,-1,Kit.pot(rnd));}
         }
-        if(rnd.nextInt(4)==0&&!k.id().equals("tobacco"))t.street.vending(f.wx(0,-1),f.wz(0,-1),f.dir(Direction.EAST),1);
+        if(rnd.nextInt(4)==0&&!k.id().equals("tobacco"))t.street.vending(f.wx(1,-1),f.wz(1,-1),f.dir(Direction.WEST),1);
     }
     static BlockState bannerOf(DyeColor c){
         return switch(c){case RED->s(Blocks.RED_WALL_BANNER);case WHITE->s(Blocks.WHITE_WALL_BANNER);default->s(Blocks.BLUE_WALL_BANNER);};
@@ -198,7 +198,7 @@ final class Shops {
         Kit.car(f,4,b0-6,rnd);if(rnd.nextBoolean())Kit.car(f,10,b0-6,rnd);
         for(int y=1;y<=7;y++)f.set(0,y,0,s(Blocks.ANDESITE_WALL));
         for(int dx=0;dx<=1;dx++)for(int y=8;y<=9;y++){f.set(dx,y,0,s(Blocks.SEA_LANTERN));f.set(dx,y,-1,s(Blocks.LIGHT_BLUE_STAINED_GLASS));f.set(dx,y,1,s(Blocks.LIGHT_BLUE_STAINED_GLASS));}
-        t.street.vending(f.wx(door+3,b0-1),f.wz(door+3,b0-1),f.dir(Direction.EAST),2);
+        t.street.vending(f.wx(door+4,b0-1),f.wz(door+4,b0-1),f.dir(Direction.WEST),2);
         f.set(door-1,1,b0-1,s(Blocks.CAULDRON));f.set(door-2,1,b0-1,s(Blocks.CAULDRON));
         t.places.put("konbini",new int[]{f.wx(door,b0-2),Plan.COAST+1,f.wz(door,b0-2)});
         shops++;

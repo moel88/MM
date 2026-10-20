@@ -11,14 +11,22 @@ import java.util.*;
 final class Townscape {
     final Canvas c;final Terrain terrain;final Layout layout;final Random rnd;
     final Roads roads;final Hill hill;final Nature nature;final Houses houses;final Street street;final Coast coast;
-    final Rail rail;final Harbor harbor;final Bridge bridge;final Ground ground;final Shrine shrine;final River river;final Shops shops;
+    final Rail rail;final Harbor harbor;final Bridge bridge;final Ground ground;final Shrine shrine;final Shops shops;
+    final PhotoStreet photo;final Hillside hillside;
     /** Places the mod uses: merchants (seller, buyer) and the field supply spots. */
     final List<int[]> merchants=new ArrayList<>();final List<int[]> loot=new ArrayList<>();
     final Map<String,int[]> places=new LinkedHashMap<>();
+    /** The power and telephone lines, drawn by the mod as thin sagging lines: x0 y0 z0 x1 y1 z1 sag, in blocks. */
+    final List<float[]> wires=new ArrayList<>();
     Townscape(Canvas c,Terrain terrain,Layout layout,Random rnd){
         this.c=c;this.terrain=terrain;this.layout=layout;this.rnd=rnd;
         roads=new Roads(this);hill=new Hill(this);nature=new Nature(this);houses=new Houses(this);street=new Street(this);coast=new Coast(this);
-        rail=new Rail(this);harbor=new Harbor(this);bridge=new Bridge(this);ground=new Ground(this);shrine=new Shrine(this);river=new River(this);shops=new Shops(this);
+        rail=new Rail(this);harbor=new Harbor(this);bridge=new Bridge(this);ground=new Ground(this);shrine=new Shrine(this);shops=new Shops(this);
+        photo=new PhotoStreet(this);hillside=new Hillside(this);
+    }
+    /** A wire from one point to another, hanging {@code sag} blocks below the straight line at its middle. */
+    void wire(double x0,double y0,double z0,double x1,double y1,double z1,double sag){
+        wires.add(new float[]{(float)x0,(float)y0,(float)z0,(float)x1,(float)y1,(float)z1,(float)sag});
     }
 
     void build(){
@@ -26,7 +34,9 @@ final class Townscape {
         roads.lay();Town.log("streets laid: "+c.placed);
         hill.build();Town.log("stairway and ramps: "+c.placed);
         // the sea front and the line first (the shops and houses keep clear of them), then the plots
-        coast.build();harbor.build();ground.build();rail.build();river.build();bridge.build();shrine.build();
+        coast.build();harbor.build();ground.build();rail.build();bridge.build();shrine.build();
+        // the hillside after the lot (its stair climbs out of the lot's corner)
+        hillside.build();
         assignUses();
         shops.build();
         Map<String,Integer> counts=new TreeMap<>();
@@ -35,9 +45,11 @@ final class Townscape {
             houses.build(l);counts.merge(l.use,1,Integer::sum);
         }
         Town.log("plots built: "+counts+", "+c.placed);
+        photo.build();
         street.build();
         details();
         nature.woods();Town.log("woods: "+c.placed);
+        street.wireRuns();
     }
 
     /** Everyday things along the streets: rubbish points, post boxes, mirrors at blind corners, a few bus stops. */
@@ -48,9 +60,9 @@ final class Townscape {
             if(r.nextInt(3)==0)street.rubbish(s[1]+1,z,Direction.SOUTH);
             if(r.nextInt(3)==0)street.mirror(s[0]-1,Plan.ST_S[k]+1);
         }
-        for(int i=0;i<4;i++){int x=-150+i*95;street.postBox(x,Plan.ST_S[1]+1);}
-        street.busStop(-60,Plan.PROM_Z0,Direction.NORTH,"ぼたんど海岸");
-        street.busStop(70,Plan.PROM_Z0,Direction.NORTH,"大橋入口");
+        for(int x:new int[]{-160,-100,-20,60})street.postBox(x,Plan.ST_S[1]+1);
+        street.busStop(-45,Plan.PROM_Z0,Direction.NORTH,"ぼたんど海岸");
+        street.busStop(12,Plan.PROM_Z0,Direction.NORTH,"大橋入口");
         street.busStop(-150,Plan.PROM_Z0,Direction.NORTH,"ぼたんど漁港");
     }
 
@@ -75,10 +87,20 @@ final class Townscape {
     /** Where players appear: the station square, looking down the main street to the bridge. */
     int[] spawn(){return new int[]{0,Plan.COAST+1,Plan.ST_S[0]+6,0};}
 
+    /** The two photos' views: where to stand and which way to look (x, z, yaw, pitch); y is the ground's. */
+    static final double[][] VIEWS={{Plan.PHOTO1_X,Plan.PHOTO1_Z,Plan.PHOTO1_YAW,Plan.PHOTO1_PITCH},{Plan.PHOTO2_X,Plan.PHOTO2_Z,Plan.PHOTO2_YAW,Plan.PHOTO2_PITCH}};
+    static final String[] VIEW_NAMES={"photo_street","photo_lot"};
+    /** A view's standing height: on top of the ground (or the half slab) under it. */
+    double viewY(double[] v){
+        int x=(int)Math.floor(v[0]),z=(int)Math.floor(v[1]),g=c.ground(x,z);
+        var s=c.get(x,g,z);
+        return s.getBlock() instanceof net.minecraft.block.SlabBlock&&s.get(net.minecraft.block.SlabBlock.TYPE)==net.minecraft.block.enums.SlabType.BOTTOM?g+0.5:g+1;
+    }
+
     /**
      * The map's definition for the mod (data/botand/map/definition.json in the world's data pack: the spawn, the two
-     * merchants' places, the field supply spots, the named places) and a teleport function per place for operators
-     * (/function botand:goto/bridge).
+     * merchants' places, the field supply spots, the named places, the photos' views, the wires) and a teleport
+     * function per place and view for operators (/function botand:goto/bridge, /function botand:goto/photo_street).
      */
     void definition(Path pack)throws Exception{
         var loot=lootSpots();
@@ -94,18 +116,27 @@ final class Townscape {
         j.append("],\n  \"places\": {");
         int k=0;
         for(var e:places.entrySet()){int[] p=e.getValue();j.append(k++>0?",":"").append("\n    \"").append(e.getKey()).append("\": [").append(p[0]).append(", ").append(p[1]).append(", ").append(p[2]).append("]");}
-        j.append("\n  }\n}\n");
+        j.append("\n  },\n  \"views\": {");
+        for(int i=0;i<VIEWS.length;i++){double[] v=VIEWS[i];j.append(i>0?",":"").append("\n    \"").append(VIEW_NAMES[i]).append("\": [").append(v[0]).append(", ").append(viewY(v)).append(", ").append(v[1]).append(", ").append(v[2]).append(", ").append(v[3]).append("]");}
+        j.append("\n  },\n  \"wires\": [");
+        for(int i=0;i<wires.size();i++){
+            float[] w=wires.get(i);j.append(i>0?",":"").append(i%4==0?"\n    ":" ").append("[");
+            for(int q=0;q<7;q++)j.append(q>0?", ":"").append(String.format(Locale.ROOT,"%.2f",w[q]));
+            j.append("]");
+        }
+        j.append("\n  ]\n}\n");
         Files.createDirectories(pack.resolve("data/botand/map"));
         Files.writeString(pack.resolve("data/botand/map/definition.json"),j.toString());
         var fn=pack.resolve("data/botand/functions/goto");Files.createDirectories(fn);
         for(var e:places.entrySet()){int[] p=e.getValue();Files.writeString(fn.resolve(e.getKey()+".mcfunction"),"tp @s "+p[0]+".5 "+p[1]+" "+p[2]+".5\n");}
         Files.writeString(fn.resolve("spawn.mcfunction"),"tp @s "+sp[0]+".5 "+sp[1]+" "+sp[2]+".5 "+sp[3]+" 0\n");
-        Town.log("definition: "+loot.size()+" supply spots, "+places.size()+" places");
+        for(int i=0;i<VIEWS.length;i++){double[] v=VIEWS[i];Files.writeString(fn.resolve(VIEW_NAMES[i]+".mcfunction"),String.format(Locale.ROOT,"tp @s %.2f %.2f %.2f %.1f %.1f%n",v[0],viewY(v),v[1],v[2],v[3]));}
+        Town.log("definition: "+loot.size()+" supply spots, "+places.size()+" places, "+wires.size()+" wires");
     }
     /** The field supply spots: open ground in public places all over the town, checked to be clear. */
     List<int[]> lootSpots(){
-        int[][] want={{-160,66},{-120,60},{-50,62},{-75,64},{30,70},{60,100},{88,112},{8,216},{12,-222},{50,38},
-            {River.pathX(-60)+1,-60},{60,Plan.terraceStreetZ0(1,60)-1},{-120,Plan.terraceStreetZ0(2,-120)-1},{-100,-44},{110,-3},{-170,21},{230,50},{-212,50}};
+        int[][] want={{-160,66},{-120,60},{-50,62},{-80,30},{30,70},{60,100},{40,112},{-6,146},{10,-170},{50,38},
+            {-100,-20},{60,Plan.terraceStreetZ0(1,60)-1},{-120,Plan.terraceStreetZ0(0,-120)-1},{-100,-44},{102,-10},{-170,21},{96,49},{-180,49}};
         List<int[]> out=new ArrayList<>();
         for(int[] w:want){
             // the open ground at the spot, or the nearest clear ground round it
