@@ -21,7 +21,7 @@ M2 = Path.home() / '.gradle/caches/modules-2/files-2.1'
 LOOM = Path.home() / '.gradle/caches/fabric-loom'
 MC = props['minecraft_version']
 WORLD = 'Botand_Seaside_1.20.1'
-VERSION = os.environ.get('TOWN_VERSION', '1.0')
+VERSION = os.environ.get('TOWN_VERSION', '1.1')
 env = os.environ.copy(); env['JAVA_TOOL_OPTIONS'] = ''
 
 def one(pattern):

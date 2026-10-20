@@ -87,7 +87,7 @@ final class PhotoStreet {
         body(f,true,false,true,2);
         // the tiled porch reaching out over the path to the gate, on a dark post
         int door=f.W/2;
-        for(int bx=door-2;bx<=door+2;bx++)for(int bz=-2;bz<=-1;bz++)if(f.air(bx,3,bz))f.set(bx,3,bz,Kit.along(Canvas.slab(Kit.KAWARA.slab(),true),Direction.Axis.Z));
+        Kit.canopy(f,door-2,door+2,-1,2,3,Kit.KAWARA);
         f.set(door+2,1,-2,Canvas.axis(Blocks.STRIPPED_DARK_OAK_LOG,Direction.Axis.Y));f.set(door+2,2,-2,Canvas.axis(Blocks.STRIPPED_DARK_OAK_LOG,Direction.Axis.Y));
         f.set(door+1,2,-1,Blocks.LANTERN.getDefaultState().with(LanternBlock.HANGING,true));
         f.wallSign(door-1,2,-1,Blocks.DARK_OAK_WALL_SIGN,Direction.NORTH,DyeColor.WHITE,false,"","汐見");
@@ -121,7 +121,7 @@ final class PhotoStreet {
         for(int z=l.z0;z<=l.z1;z++)slatWall(fx,y,z);
         Frame f=s.frame(c,4,13,l.z0+1,l.z1-1);
         body(f,false,true,true,2);
-        t.nature.cherry(s.x(1),y+1,-66,7,1.55);
+        t.nature.cherry(s.x(3),y+1,-64,5,1.4);
         for(int k=1;k<=3;k++)if(rnd.nextBoolean())c.set(s.x(k),y+1,l.z1-1,Canvas.leaves(Blocks.AZALEA_LEAVES));
     }
 
@@ -202,7 +202,7 @@ final class PhotoStreet {
         for(int z=2;z<D-2;z+=3)for(int side:new int[]{0,W-1})for(int st=0;st<stories;st++)f.set(side,4*st+2,z,s(Blocks.WHITE_STAINED_GLASS_PANE));
         for(int x=2;x<W-2;x+=3){f.set(x,2,D-1,s(Blocks.WHITE_STAINED_GLASS_PANE));if(stories>1)f.set(x,6,D-1,TB.WINDOW);}
         f.door(door,1,0,Pal.pick(rnd,Blocks.DARK_OAK_DOOR,Blocks.SPRUCE_DOOR),Direction.NORTH,false);
-        if(eave)for(int x=0;x<W;x++)if(f.air(x,3,-1))f.set(x,3,-1,Kit.along(Canvas.slab(Kit.KAWARA.slab(),true),Direction.Axis.Z));
+        if(eave)Kit.canopy(f,0,W-1,-1,1,3,Kit.KAWARA);
         if(balcony&&stories>1){
             for(int x=0;x<W;x++){f.set(x,4,-1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));f.set(x,4,-2,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));f.set(x,5,-2,TB.BALCONY);}
             for(int z=-1;z>=-2;z--){f.set(0,5,z,TB.BALCONY);f.set(W-1,5,z,TB.BALCONY);}

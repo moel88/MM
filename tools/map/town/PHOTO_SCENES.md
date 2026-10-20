@@ -5,6 +5,12 @@ builder writes into the map definition (`photo_street`, `photo_lot`). Both photo
 ground on the left (east). The photos are rendered with shaders; with the Botand map blocks and a shader pack the
 in-game views come close, but blocks keep their grid, so they will never be the same picture.
 
+What a resource pack cannot do is done by the mod (2.47.0, at the user's request): roofs laid at their true pitch
+instead of half steps (RoofBlock), round poles with climbing bolts (PoleModel), petals that lie on paving and asphalt
+(fallen_petals), the mountain across the water beyond the map (the definition's backdrop, drawn by BackdropRenderer),
+and the wires (2.46.0). Both photos were taken on the same morning: the views' teleports set time 1300, a low sun from
+the east-south-east (with the shader pack's sun path tilted 40 degrees south, Complementary's Unbound default).
+
 ## Photo 1: a street down to the sea
 
 Camera (measured in perspective at the game's field of view 70): standing in the right-hand (west) lane two metres in
@@ -29,9 +35,11 @@ the first pole stands on the left sidewalk 5.7 m ahead, the next about 10 m furt
   fence on top (about 1.5 m), a stone pillar, a thin sign post, a red drinks vending machine against a block wall, a
   two-storey house with a dark balcony rail and kawara roof, a cherry tree leaning over the fence.
 - Right, further: more houses and walls, a pole with a sleeve, a round red sign.
-- End: a T junction with the coast road, a white pipe guardrail, the sea, a big hill rising out of the sea across the
-  water straight down the road (in the town: a small steep islet out at sea at the end of the photo street; the
-  bridge's island lies too far left to be seen past the houses), low hills far off on the right.
+- End: a T junction with the coast road, a white pipe guardrail, the sea, a big hazy blue mountain rising out of the
+  sea across the water straight down the road: its left foot 3.7 degrees east of south, its summit 3.5 degrees west of
+  south and 4.3 degrees above the horizon, its right side hidden by the houses from 6.3 degrees west (in the town: the
+  mod's backdrop, a summit and a long east shoulder three kilometres south, so it hardly moves as you walk and stays
+  behind the shore houses seen from the lot; the 2.46.0 islet is gone).
 
 ## Photo 2: the lot by the sea
 
@@ -45,12 +53,19 @@ camera.
 
 - Ground: old, light, coarse asphalt with cracks and patches, weeds along the edges and in the cracks, faded white
   court lines (a long side line on the right, a line across the middle).
-- Left: a shed of white and grey corrugated iron streaked with rust, a dark low-pitched corrugated roof, a pair of big
-  brown sliding doors right of centre; a chain-link fence on posts to its left with a small box at its foot; a cherry
-  tree at the far left; a wooden barrel and a crate near the camera.
-- Behind on the left: a steep green hillside with houses stacked up it to the skyline.
+- Left: a shed of white and grey corrugated iron streaked with rust, a dark low-pitched corrugated roof (a quarter
+  pitch in the town), a pair of big brown sliding doors right of centre; a chain-link fence on posts in front of its
+  left end and on to the picture's left edge, 11.5 m ahead, with a small box at its foot; a big cherry tree at the far
+  left behind the fence, its crown filling the top left corner; a wooden barrel and a crate near the camera.
+- Behind on the left: a steep green hillside with houses stacked up it to the skyline, behind the shed: the skyline
+  25 degrees up at 43 degrees left, about 20 at 35 to 40 left, falling to 6 at 14 left; the houses 18 to 22 degrees up
+  between 37 and 42 left (in the town: the hillside's steps only from z 126 south, 30 to 90 blocks off, with gardens
+  of trees between the houses; beside the lot the hill's foot is trees and the big cherry).
 - Back: a long low wall of concrete blocks along the sea with a pipe rail over it and a gap with a rail in the middle,
   a chain-link fence above the right half, the sea beyond; two run-down two-storey concrete houses behind the left of
   the wall.
-- Right: a run-down two-storey concrete building with balconies behind the wall, a small white football goal with a
-  net in front of it, poles with two transformers each and wires sagging across the whole view.
+- Right: a run-down two-storey concrete building with balconies behind the wall, a small white football goal (about a
+  metre high and two wide) with a net in front of it, poles with two transformers each and wires sagging across the
+  whole view.
+- Ground colour: the photo's lot is a cool grey, (111, 99, 109) on average with its long shadows, (155, 131, 130) in
+  the sun; the town's worn asphalt was made cooler and greyer to match (2.47.0).

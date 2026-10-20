@@ -63,12 +63,10 @@ public final class BackdropRenderer {
             double[] sa=new double[7],sp=new double[7],ra=new double[10],rp=new double[10];
             for(int k=1;k<7;k++){sa[k]=r.nextGaussian()*0.10/k;sp[k]=r.nextDouble()*Math.PI*2;}
             for(int k=2;k<10;k++){ra[k]=r.nextGaussian()*0.55/Math.sqrt(k);rp[k]=r.nextDouble()*Math.PI*2;}
-            // the summit sits off the middle, so one side climbs steeper than the other
-            double ox=r.nextGaussian()*0.18,oz=r.nextGaussian()*0.12;
             int n=1+RINGS*SEGMENTS;
             pos=new double[n*3];normal=new float[n*3];base=new float[n*3];
             double height=p.top()-SEA;
-            pos[0]=cx+ox*p.rx();pos[1]=p.top();pos[2]=cz+oz*p.rz();
+            pos[0]=cx;pos[1]=p.top();pos[2]=cz;
             for(int i=1;i<=RINGS;i++){
                 double rho=i/(double)RINGS;
                 for(int j=0;j<SEGMENTS;j++){
@@ -76,9 +74,7 @@ public final class BackdropRenderer {
                     for(int k=1;k<7;k++)shore+=sa[k]*Math.sin(k*t+sp[k]);
                     for(int k=2;k<10;k++)ridge+=ra[k]*Math.sin(k*t+rp[k]+rho*1.7);
                     double fall=Math.pow(1-rho*rho,1.6)*(1+0.32*ridge*4*rho*(1-rho));
-                    // pulled toward the summit near the top, out to the wandering shore near the water
-                    double w=rho*rho;
-                    double x=cx+p.rx()*((1-w)*ox+rho*shore*Math.cos(t)),z=cz+p.rz()*((1-w)*oz+rho*shore*Math.sin(t));
+                    double x=cx+p.rx()*rho*shore*Math.cos(t),z=cz+p.rz()*rho*shore*Math.sin(t);
                     int v=1+(i-1)*SEGMENTS+j;
                     pos[v*3]=x;pos[v*3+1]=i==RINGS?SEA-1.5:SEA+height*Math.max(0,fall);pos[v*3+2]=z;
                 }

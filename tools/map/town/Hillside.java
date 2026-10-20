@@ -78,6 +78,18 @@ final class Hillside {
         }
         t.street.addRun(poles);
         for(int zz=z0;zz<=z1;zz++)if(c.ground(x0-1,zz)<y-1&&c.air(x0,y+1,zz))c.set(x0,y+1,zz,Math.floorMod(zz,3)==0?TB.PIPE:TB.GUARDRAIL);
+        // ivy hanging down the step's wall in streaks and shrubs at its foot, so the hill reads green between the
+        // houses as in photo 2 rather than as walls of stone
+        int fx=x0-1;
+        for(int zz=z0;zz<=z1;zz++){
+            int g=c.ground(fx,zz);
+            if(g>=y-1)continue;
+            if(Pal.hash(fx,77,zz)<0.7){
+                int len=2+(int)(Pal.hash(fx,78,zz)*(y-1-g));
+                for(int yy=y-1;yy>=Math.max(g+1,y-len);yy--)if(c.air(fx,yy,zz))c.set(fx,yy,zz,Blocks.VINE.getDefaultState().with(VineBlock.EAST,true));
+            }
+            if(Pal.hash(fx,79,zz)<0.5&&c.air(fx,g+1,zz))c.set(fx,g+1,zz,Canvas.leaves(Pal.hash(fx,80,zz)<0.5?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES));
+        }
     }
 
     /** A stair up the lowest step's wall from the shore strip behind the lot, along the wall's face, onto the step's path. */
@@ -143,7 +155,7 @@ final class Hillside {
             Kit.windows(f,rnd,0,1,W-1,hd,'r',st,frost,pane,-99,false);
         }
         f.door(door,1,1,Pal.pick(rnd,Blocks.SPRUCE_DOOR,Blocks.DARK_OAK_DOOR,Blocks.BIRCH_DOOR),Direction.NORTH,false);
-        if(f.air(door,3,0))f.set(door,3,0,Canvas.slab(Kit.KAWARA.slab(),false));
+        Kit.canopy(f,door,door,0,1,3,Kit.KAWARA);
         // a balcony across the upper floor's front on some, the bedding out over its rail
         if(rnd.nextInt(3)==0)for(int x=0;x<W;x++){f.set(x,4,0,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));if(f.air(x,5,0))f.set(x,5,0,TB.BALCONY);}
         Kit.roof(f,0,1,W-1,hd,8,rnd.nextInt(3)==0?Kit.HIP:Kit.GABLE,true,rnd.nextInt(4)==0?Kit.SHEET:Kit.KAWARA,wall,floor);

@@ -1,6 +1,7 @@
 package dev.sangwoo.botandtown;
 
 import net.minecraft.block.*;
+import dev.sangwoo.celestialfall.town.RoofShape;
 import net.minecraft.block.enums.SlabType;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.DyeColor;
@@ -111,20 +112,26 @@ final class Houses {
         if(rnd.nextBoolean())Kit.airCon(f,bx1+1,1,bz1-1,Direction.EAST);
     }
 
-    /** A small tiled eave over every ground-floor window of the front and sides. */
+    /** A small tiled eave over every ground-floor window of the front and sides, falling away from the wall. */
     private void hisashi(Frame f,int bx0,int bz0,int bx1,int bz1,Kit.Roof roof){
-        for(int x=bx0+1;x<bx1;x++)if(isPane(f.get(x,2,bz0))&&f.air(x,3,bz0-1))f.set(x,3,bz0-1,Canvas.slab(roof.slab(),false));
+        for(int x=bx0+1;x<bx1;x++)if(isPane(f.get(x,2,bz0)))Kit.cell(f,x,3,bz0-1,RoofShape.SLOPE,Direction.NORTH,0,roof);
         for(int z=bz0+1;z<bz1;z++){
-            if(isPane(f.get(bx0,2,z))&&f.air(bx0-1,3,z))f.set(bx0-1,3,z,Canvas.slab(roof.slab(),false));
-            if(isPane(f.get(bx1,2,z))&&f.air(bx1+1,3,z))f.set(bx1+1,3,z,Canvas.slab(roof.slab(),false));
+            if(isPane(f.get(bx0,2,z)))Kit.cell(f,bx0-1,3,z,RoofShape.SLOPE,Direction.WEST,0,roof);
+            if(isPane(f.get(bx1,2,z)))Kit.cell(f,bx1+1,3,z,RoofShape.SLOPE,Direction.EAST,0,roof);
         }
     }
     private static boolean isPane(BlockState s){return s.getBlock() instanceof PaneBlock;}
-    /** A one-block skirt of roof round the house at a floor line (the lower tier of a two-tier roof). */
+    /**
+     * A one-block skirt of roof round the house at a floor line (the lower tier of a two-tier roof): each side falls
+     * away from the wall, and the corners are hips.
+     */
     private void skirt(Frame f,int bx0,int bz0,int bx1,int bz1,int by,Kit.Roof roof){
         for(int x=bx0-1;x<=bx1+1;x++)for(int z=bz0-1;z<=bz1+1;z++){
-            boolean ring=x==bx0-1||x==bx1+1||z==bz0-1||z==bz1+1;
-            if(ring&&f.air(x,by,z))f.set(x,by,z,Canvas.slab(roof.slab(),false));
+            boolean w=x==bx0-1,e=x==bx1+1,n=z==bz0-1,s=z==bz1+1;
+            if(!(w||e||n||s))continue;
+            // a corner falls both ways: a hip named by the first of its two falls going clockwise (north then east...)
+            Direction falls=n&&e?Direction.NORTH:e&&s?Direction.EAST:s&&w?Direction.SOUTH:w&&n?Direction.WEST:n?Direction.NORTH:s?Direction.SOUTH:w?Direction.WEST:Direction.EAST;
+            Kit.cell(f,x,by,z,(n||s)&&(w||e)?RoofShape.HIP:RoofShape.SLOPE,falls,0,roof);
         }
     }
     void stoneLantern(Frame f,int bx,int by,int bz){

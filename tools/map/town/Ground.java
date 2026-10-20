@@ -151,7 +151,7 @@ final class Ground {
         for(int zz=z+1;zz<SHED_Z0;zz++){c.set(from,Y+1,zz,TB.CHAIN_LINK);c.set(from,Y+2,zz,TB.CHAIN_LINK);}
         c.set(from+2,Y+1,z-1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
         int tx=X1+1,tz=SHED_Z0+1;
-        t.nature.cherry(tx,c.ground(tx,tz)+1,tz,7,1.45);
+        t.nature.cherry(tx,c.ground(tx,tz)+1,tz,5,1.45);
     }
 
     /** A small white goal (photo 2: about a metre high, two wide), its mouth to the east: pipe posts, a bar, the net behind. */
@@ -203,6 +203,10 @@ final class Ground {
         runDownHouse(new Frame(c,90,128,97,135,Direction.NORTH,y),false);
         flats(new Frame(c,42,122,62,131,Direction.NORTH,y));
         for(int[] b:new int[][]{{86,121},{98,123},{79,134}})t.nature.broadleaf(b[0],y+1,b[1],4+rnd.nextInt(2));
+        // trees and bushes along the hill's foot behind the shed, hiding the hillside's lowest wall (photo 2: green
+        // under the houses on the hill)
+        for(int[] b:new int[][]{{99,129},{100,136},{97,139}})t.nature.broadleaf(b[0],y+1,b[1],5+rnd.nextInt(2));
+        for(int z=Plan.BACK_E[1]+6;z<=Plan.BACK_E[3];z++)if(rnd.nextInt(3)>0&&c.air(Plan.BACK_E[2],y+1,z))t.nature.blob(Plan.BACK_E[2]+0.5,y+1.5,z+0.5,1.2,1.4,1.2,rnd.nextBoolean()?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES,null);
         List<int[]> run=new ArrayList<>();
         for(int[] p:new int[][]{{40,120,0},{63,120,0},{66,132,1},{92,135,1},{104,133,1}}){
             int[] top=t.street.pole(p[0],p[1],p[2]==0?Direction.EAST:Direction.NORTH,2,false);

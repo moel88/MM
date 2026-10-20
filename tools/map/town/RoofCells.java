@@ -1,6 +1,6 @@
 package dev.sangwoo.botandtown;
 
-import dev.sangwoo.celestialfall.town.RoofBlock;
+import dev.sangwoo.celestialfall.town.RoofShape;
 import net.minecraft.util.math.Direction;
 
 /**
@@ -10,15 +10,15 @@ import net.minecraft.util.math.Direction;
  */
 final class RoofCells {
     private RoofCells(){}
-    record Fit(RoofBlock.Shape shape,Direction facing){}
+    record Fit(RoofShape shape,Direction facing){}
     static Fit match(double[][] h,double lo,float pitch){
-        for(var shape:RoofBlock.Shape.values())for(var f:Direction.Type.HORIZONTAL){
+        for(var shape:RoofShape.values())for(var f:Direction.Type.HORIZONTAL){
             boolean ok=true;
             for(int i=0;i<3&&ok;i++)for(int j=0;j<3&&ok;j++)
-                ok=Math.abs((h[i][j]-lo)-RoofBlock.height(shape,f,0,pitch,i*0.5,j*0.5))<1e-6;
+                ok=Math.abs((h[i][j]-lo)-RoofShape.height(shape,f,0,pitch,i*0.5,j*0.5))<1e-6;
             if(ok)return new Fit(shape,f);
         }
         Town.log("roof cell with no shape: "+java.util.Arrays.deepToString(h));
-        return new Fit(RoofBlock.Shape.SLOPE,Direction.NORTH);
+        return new Fit(RoofShape.SLOPE,Direction.NORTH);
     }
 }

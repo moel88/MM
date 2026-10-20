@@ -2,6 +2,7 @@ package dev.sangwoo.botandtown;
 
 import net.minecraft.block.*;
 import dev.sangwoo.celestialfall.town.RoofBlock;
+import dev.sangwoo.celestialfall.town.RoofShape;
 import net.minecraft.block.enums.WallMountLocation;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.DyeColor;
@@ -76,10 +77,30 @@ final class Kit {
                 for(int yy=b;yy<y;yy++)f.set(x,yy,z,end?wall:yy==b?ceiling:s(Blocks.AIR));
             }
             // a ridge along a cell's edge: the two slopes meeting there each carry half its cap
-            boolean cap=type!=SHED&&shape.shape()==RoofBlock.Shape.SLOPE&&Math.abs(hi-top)<1e-6;
+            boolean cap=type!=SHED&&shape.shape()==RoofShape.SLOPE&&Math.abs(hi-top)<1e-6;
             f.set(x,y,z,m.patch().getDefaultState().with(RoofBlock.SHAPE,shape.shape()).with(RoofBlock.FACING,shape.facing())
                 .with(RoofBlock.BASE,base).with(RoofBlock.FILLED,inside).with(RoofBlock.CAP,cap));
         }
+    }
+
+    /**
+     * A lean-to canopy (a porch roof, a tiled eave over a window row) out from a front wall at bz = wall + 1 toward the
+     * street (-bz), across bx0..bx1: it meets the wall at by + 1 and falls outward at the covering's pitch for
+     * {@code depth} blocks, laid with the roof blocks like the roofs (only into air).
+     */
+    static void canopy(Frame f,int bx0,int bx1,int wall,int depth,int by,Roof m){
+        float p=m.pitch();
+        for(int r=0;r<depth;r++){
+            double lo=by+1-(r+1)*p;
+            int y=(int)Math.floor(lo+1e-6),base=(int)Math.round((lo-y)*4),bz=wall-r;
+            for(int x=bx0;x<=bx1;x++)if(f.air(x,y,bz))
+                f.set(x,y,bz,m.patch().getDefaultState().with(RoofBlock.SHAPE,RoofShape.SLOPE).with(RoofBlock.FACING,Direction.NORTH).with(RoofBlock.BASE,base));
+        }
+    }
+
+    /** One roof cell falling toward {@code falls} from {@code base} quarters up its block (only into air). */
+    static void cell(Frame f,int bx,int by,int bz,RoofShape shape,Direction falls,int base,Roof m){
+        if(f.air(bx,by,bz))f.set(bx,by,bz,m.patch().getDefaultState().with(RoofBlock.SHAPE,shape).with(RoofBlock.FACING,falls).with(RoofBlock.BASE,base));
     }
 
     /** The walls, floors and band courses of a box of {@code stories} stories (four blocks each). */
@@ -123,7 +144,7 @@ final class Kit {
     /** A front door with a little canopy over it, a lamp beside it and the family's name plate. */
     static void entrance(Frame f,int bx,int bz,Block door,Roof canopy,String name,boolean light){
         f.door(bx,1,bz,door,Direction.NORTH,false);
-        for(int x=bx-1;x<=bx+1;x++)if(f.air(x,3,bz-1))f.set(x,3,bz-1,Canvas.slab(canopy.slab(),false));
+        canopy(f,bx-1,bx+1,bz-1,1,3,canopy);
         if(light)f.set(bx+1,2,bz-1,Canvas.rod(Blocks.END_ROD,Direction.NORTH));
         if(name!=null)f.wallSign(bx-1,2,bz-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLACK,false,"",name);
     }

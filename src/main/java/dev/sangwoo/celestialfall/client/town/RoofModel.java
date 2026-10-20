@@ -1,6 +1,7 @@
 package dev.sangwoo.celestialfall.client.town;
 
 import dev.sangwoo.celestialfall.town.RoofBlock;
+import dev.sangwoo.celestialfall.town.RoofShape;
 import dev.sangwoo.celestialfall.town.TownBlocks;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.minecraft.block.BlockState;
