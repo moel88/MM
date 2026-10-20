@@ -144,7 +144,7 @@ public final class KagenoManager {
                 c.targets.put(e,e.getPos());CombatManager.interrupt(e);if(e instanceof PlayerEntity target)cancelCaster(target);
             }
         }
-        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=now+(skill==M1?(s.combo==4?M1_REST:M1_STEP):COOLDOWN[skill]);
+        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=skill==M1?m1Ready(s.combo,now):now+COOLDOWN[skill];
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
         sync(c);status(p,s);
         return true;

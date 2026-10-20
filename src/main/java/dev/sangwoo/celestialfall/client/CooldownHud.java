@@ -21,9 +21,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * others still cooling in small boxes below it ({@link CooldownList}); each box's bar runs out to the left with its
  * cooldown. Kageno's cooldowns come from the stand's status (the tick each skill is ready again; T and T held share one,
  * named after the one used), Atomic's from its sword's item cooldown. The attack (M1) shows only the rest after a combo,
- * whether its four hits ended it or a late hit broke it (user request, 2.43.0), and the dash (C) its cooldown from the
- * combat state (2.43.0; the bar by the hotbar is gone). The list keeps its own clock, the client's ticks while the game
- * runs plus the frame's partial tick: the world's time is set again by the server every second and can step by a tick.
+ * whether its four hits ended it (from when the fourth hit is over, 2.43.1) or a late hit broke it (user request,
+ * 2.43.0), and the dash (C) its cooldown from the combat state (2.43.0; the bar by the hotbar is gone). The list keeps
+ * its own clock, the client's ticks while the game runs plus the frame's partial tick: the world's time is set again by
+ * the server every second and can step by a tick.
  */
 public final class CooldownHud {
     /** The reference's measures, as shares of the screen's height (its left edge as a share of the width). */
@@ -42,6 +43,8 @@ public final class CooldownHud {
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
     private static long ticks,dashSeen;
+    /** The attack's rest, due once its fourth hit is over (list clock; NaN: none due). */
+    private static double restAt=Double.NaN,restEnd;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     private static CooldownList.Metrics metrics;private static long metricsKey;
@@ -53,7 +56,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=0;restAt=Double.NaN;atomic=false;owner=null;world=null;}
     /** The names the list shows now, top first (for the QA tools). */
     public static java.util.List<String> shown(){return LIST.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
 
@@ -70,12 +73,18 @@ public final class CooldownHud {
                 long r=ready[slot],was=SEEN[slot];SEEN[slot]=r;
                 if(slot==G)continue;
                 long left=r-time;
-                if(r>was&&left>=(slot==M1?COMBO_END:2)){
-                    double total=Math.max(left,slot==M1?M1_REST:COOLDOWN[slot]);
-                    LIST.add(slot,name(slot,p.getUuid()),now-(total-left),now+left,now);
-                }else if(r<was&&left<=0)LIST.finish(slot,now);
+                if(slot==M1){
+                    // the attack's rest is the last M1_REST ticks of its cooldown: after a fourth hit it begins once the
+                    // hit is over (2.43.1), after a broken combo at once
+                    if(r>was&&left>=COMBO_END){long rest=Math.min(left,M1_REST);restAt=now+(left-rest);restEnd=now+left;}
+                    else if(r<was&&left<=0){restAt=Double.NaN;LIST.finish(M1,now);}
+                    continue;
+                }
+                if(r>was&&left>=2)LIST.add(slot,name(slot,p.getUuid()),now-(Math.max(left,COOLDOWN[slot])-left),now+left,now);
+                else if(r<was&&left<=0)LIST.finish(slot,now);
             }
         }
+        if(!Double.isNaN(restAt)&&now>=restAt){LIST.add(M1,NAMES[M1],restAt,restEnd,now);restAt=Double.NaN;}
         // Atomic: the sword's cooldown share at this tick and one tick on gives its length
         var cooldowns=p.getItemCooldownManager();
         float p0=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,0),p1=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,1);

@@ -97,4 +97,10 @@ final class KagenoRulesTest {
         assertEquals(-1,m1Broken(0,100,1000),"nothing to break before a first hit");
         assertTrue(M1_REST>M1_STEP&&M1_STEP<M1_WINDOW,"hits follow closer than the rest, and in time");
     }
+    /** User request (2.43.1): the rest after a full combo runs once the fourth hit is over, not from its start. */
+    @Test void theRestAfterTheFourthHitBeginsWhenTheHitIsOver(){
+        for(int combo=1;combo<=3;combo++)assertEquals(100+M1_STEP,m1Ready(combo,100),"the next hit may follow after the step");
+        assertEquals(100+DURATION[M1]+M1_REST,m1Ready(4,100),"the fourth hit plays out, then the attack rests");
+        assertEquals(DURATION[M1],M1_HIT4,"the fourth hit is over when its cast ends");
+    }
 }

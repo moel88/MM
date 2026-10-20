@@ -56,10 +56,16 @@ public final class KagenoRules {
     public static final double M1_FLY=1.4,M1_FLY_UP=.45;
     /**
      * M1's combo (user request, 2.43.0): each hit must start within {@link #M1_WINDOW} ticks of the one before, or the combo
-     * breaks. A finished combo rests {@link #M1_REST} ticks from its fourth hit, a broken one as long from the break, and
-     * either starts again from the first hit; within a combo the hits are {@link #M1_STEP} ticks apart at the least.
+     * breaks. A finished combo rests {@link #M1_REST} ticks once its fourth hit is over ({@link #M1_HIT4} ticks after it
+     * starts; user request, 2.43.1: the rest used to run from the fourth hit's start, so it showed while the blow was still
+     * coming), a broken one as long from the break, and either starts again from the first hit; within a combo the hits
+     * are {@link #M1_STEP} ticks apart at the least.
      */
     public static final int M1_WINDOW=36,M1_REST=24,M1_STEP=8;
+    /** How long the fourth hit takes, its cast's whole length (the thrust, the hold and the flick back to the stance). */
+    public static final int M1_HIT4=DURATION[M1];
+    /** When the attack is ready again after hit {@code combo} started at {@code start}: the step to the next hit, or after the fourth the hit itself and then the rest. */
+    public static long m1Ready(int combo,long start){return start+(combo>=4?M1_HIT4+M1_REST:M1_STEP);}
     /**
      * When the attack is ready again after a combo whose hit {@code combo} started at {@code last} broke, or -1 while it
      * still holds at {@code now} (or has none to break: no hit yet, or the fourth hit already ended it).
