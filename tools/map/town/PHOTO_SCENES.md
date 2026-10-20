@@ -7,9 +7,13 @@ in-game views come close, but blocks keep their grid, so they will never be the 
 
 ## Photo 1: a street down to the sea
 
-Camera: standing at the right-hand edge line of a two-lane road, eyes about 1.6 m up, looking down the road towards the
-sea, a few degrees up; the road falls gently to a guardrail at the coast about 90 m away. Afternoon sun from the left
-and behind.
+Camera (measured in perspective at the game's field of view 70): standing in the right-hand (west) lane two metres in
+from its edge line, eyes 1.6 m up, turned eight degrees left of the road (east of south) and looking 1.7 degrees up;
+the road falls gently to a guardrail at the coast. The street is narrow: the edge lines 4.6 m apart, the kerbs about
+6 m apart, a sidewalk barely a metre wide each side, the walls right behind it (in the town: one-block sidewalks
+x -73 and -66, a six-block road x -72..-67, the camera at x -69.8, z -70.5). The zebra crossing lies 6 to 9 m ahead;
+the first pole stands on the left sidewalk 5.7 m ahead, the next about 10 m further, a third on the right about
+18 m ahead. Morning sun from the left (east).
 
 - Road: dark fine asphalt, two lanes, a solid white edge line on each side about half a metre from the kerb, a dashed
   centre line further down, a zebra crossing of four bars right in front of the camera, a level-crossing warning sign
@@ -26,12 +30,18 @@ and behind.
   two-storey house with a dark balcony rail and kawara roof, a cherry tree leaning over the fence.
 - Right, further: more houses and walls, a pole with a sleeve, a round red sign.
 - End: a T junction with the coast road, a white pipe guardrail, the sea, a big hill rising out of the sea across the
-  water on the left (in the town: the bridge's island), low hills far off on the right.
+  water straight down the road (in the town: a small steep islet out at sea at the end of the photo street; the
+  bridge's island lies too far left to be seen past the houses), low hills far off on the right.
 
 ## Photo 2: the lot by the sea
 
-Camera: standing in a wide paved lot, eyes about 1.6 m up, looking south to the sea a few degrees down; low sun ahead
-and to the left, long shadows towards the camera.
+Camera (measured the same way): standing in a wide paved lot near its east side, eyes about 1.6 m up, looking south
+to the sea six degrees down. Things are nearer than they look: the barrel 4 m ahead and 5 m left, the white goal
+(about 1.2 m tall) 9.5 m ahead and 10 m right, the chain-link fence 11.5 m ahead on the left, the shed's front 13.6 m
+ahead from 5 to 12.5 m left (walls two metres high, its doors two metres wide just right of its middle), the low sea
+wall 18 m ahead, the poles behind it 20 to 35 m away, the houses behind its left part 30 to 50 m away (in the town:
+the camera at x 84.5, z 100.5, the sea wall along z 118). Low sun ahead and to the left, long shadows towards the
+camera.
 
 - Ground: old, light, coarse asphalt with cracks and patches, weeds along the edges and in the cracks, faded white
   court lines (a long side line on the right, a line across the middle).

@@ -10,7 +10,9 @@ shake=1 (those cameras get the Atomic camera shake a player there would; G's fra
 hud=1 (the game's HUD shown: the cooldown list and the danger banner), cool=1 (real cooldowns). The entry "HUD" casts
 only its then= steps, e.g. "HUD;hud=1;cool=1;len=300;then=E@5/T@80/RUSH@81". The entry "UI" films the interface on
 its own clock with keys and the mouse, e.g. "UI;hud=1;len=200;then=KEY_TAB@30/KEY_ESCAPE@90/MOVE_B2@110/CLICK@130"
-(SkillShots.java); SHOTS_LANG=ko_kr switches the game's language first.
+(SkillShots.java); SHOTS_LANG=ko_kr switches the game's language first. SHOTS_MODS (jar paths joined by ':') adds
+mods such as Sodium and Iris; SHOTS_SHADER names a shader pack zip for Iris to use for the run, SHOTS_SHADER_OPTIONS
+its options ("SUN_ANGLE=-40;...").
 """
 from pathlib import Path
 import json, os, shutil, subprocess, sys, zipfile, time, socket
@@ -39,11 +41,25 @@ with zipfile.ZipFile(jar, 'w') as z:
     for p in (build / 'classes').rglob('*.class'):
         z.write(p, str(p.relative_to(build / 'classes')))
 shutil.rmtree(out, ignore_errors=True); out.mkdir(parents=True)
+mods = ':'.join([str(jar)] + [m for m in os.environ.get('SHOTS_MODS', '').split(':') if m])
+# a shader pack for Iris: copied in for this run, Iris's own settings kept aside and put back afterwards
+shader = os.environ.get('SHOTS_SHADER')
+iris_props = ROOT / 'run/config/iris.properties'
+iris_saved = iris_props.read_text() if iris_props.exists() else None
+packs = ROOT / 'run/shaderpacks'
+if shader:
+    packs.mkdir(parents=True, exist_ok=True)
+    shutil.copy(shader, packs / Path(shader).name)
+    iris_props.parent.mkdir(parents=True, exist_ok=True)
+    iris_props.write_text(f'enableShaders=true\nshaderPack={Path(shader).name}\ndisableUpdateMessage=true\n')
+    # the pack's own options ("SUN_ANGLE=-40;..."), kept by Iris in a file beside the pack
+    options = os.environ.get('SHOTS_SHADER_OPTIONS', '')
+    (packs / (Path(shader).name + '.txt')).write_text(''.join(o.strip() + '\n' for o in options.split(';') if o.strip()))
 init = build / 'shots.gradle'
 # A roomy heap so a full collection does not stall a slowed shot (its pauses are logged to OUT_DIR/gc.log).
 init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient") { jvmArgs "-Xmx6G", "-Xms2G", '
                 f'"-Xlog:gc:file={out}/gc.log", '
-                f'"-Dbotand.shots.out={out}", "-Dbotand.shots.slow={slow}", "-Dbotand.shots.list={skills}", "-Dfabric.addMods={jar}"'
+                f'"-Dbotand.shots.out={out}", "-Dbotand.shots.slow={slow}", "-Dbotand.shots.list={skills}", "-Dfabric.addMods={mods}"'
                 + (f', "-Dbotand.shots.lang={os.environ["SHOTS_LANG"]}"' if os.environ.get('SHOTS_LANG') else '') + '; '
                 f'args "--username", "ShotsQA", "--width", "{w}", "--height", "{h}" }} }}')
 # Sound goes nowhere unless SHOTS_AUDIO names an OpenAL Soft driver: "wave" with ALSOFT_CONF pointing at a config whose
@@ -61,3 +77,8 @@ try:
                       'log': (out / 'log.txt').read_text() if (out / 'log.txt').exists() else None}))
 finally:
     x.terminate(); x.wait(timeout=10)
+    if shader:
+        (packs / Path(shader).name).unlink(missing_ok=True)
+        (packs / (Path(shader).name + '.txt')).unlink(missing_ok=True)
+        if iris_saved is None: iris_props.unlink(missing_ok=True)
+        else: iris_props.write_text(iris_saved)

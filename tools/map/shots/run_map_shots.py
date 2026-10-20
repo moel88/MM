@@ -5,6 +5,9 @@ A shot is NAME;time=T;at=x/y/z/yaw/pitch[;fov=F] (a still, OUT_DIR/NAME.png) or
 NAME;time=T;path=x/y/z/yaw/pitch|...;secs=S[;fov=F] (a flight, OUT_DIR/NAME/00000.png... at 60 frames a second of its
 own clock). The world is copied into the dev client's saves and opened there with the mod loaded (MapShots.java);
 SLOW slows the game's clock for flights so water and leaves move at their own pace in the 60 fps film.
+MAP_MODS (jar paths joined by ':') adds mods to the client, such as Sodium and Iris; MAP_SHADER names a shader pack
+zip for Iris to use (copied into the dev client's shaderpacks for the run and its Iris settings put back afterwards),
+MAP_SHADER_OPTIONS the pack's options ("SUN_ANGLE=-40;...").
 """
 from pathlib import Path
 import json, os, shutil, subprocess, sys, time, zipfile
@@ -38,10 +41,24 @@ saves = ROOT / 'run/saves'; saves.mkdir(parents=True, exist_ok=True)
 target = saves / ('MapShots_' + world.name)
 shutil.rmtree(target, ignore_errors=True); shutil.copytree(world, target)
 (target / 'session.lock').unlink(missing_ok=True)
+mods = ':'.join([str(jar)] + [m for m in os.environ.get('MAP_MODS', '').split(':') if m])
+# a shader pack for Iris: copied in for this run, Iris's own settings kept aside and put back afterwards
+shader = os.environ.get('MAP_SHADER')
+iris_props = ROOT / 'run/config/iris.properties'
+iris_saved = iris_props.read_text() if iris_props.exists() else None
+packs = ROOT / 'run/shaderpacks'
+if shader:
+    packs.mkdir(parents=True, exist_ok=True)
+    shutil.copy(shader, packs / Path(shader).name)
+    iris_props.parent.mkdir(parents=True, exist_ok=True)
+    iris_props.write_text(f'enableShaders=true\nshaderPack={Path(shader).name}\ndisableUpdateMessage=true\n')
+    # the pack's own options ("SUN_ANGLE=-40;..."), kept by Iris in a file beside the pack
+    options = os.environ.get('MAP_SHADER_OPTIONS', '')
+    (packs / (Path(shader).name + '.txt')).write_text(''.join(o.strip() + '\n' for o in options.split(';') if o.strip()))
 init = build / 'map.gradle'
 init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient") { jvmArgs "-Xmx6G", "-Xms2G", '
                 f'"-Dbotand.map.out={out}", "-Dbotand.map.world={target.name}", "-Dbotand.map.list={shots}", "-Dbotand.map.slow={slow}", '
-                f'"-Dbotand.map.view={os.environ.get("MAP_VIEW", "12")}", "-Dfabric.addMods={jar}"; '
+                f'"-Dbotand.map.view={os.environ.get("MAP_VIEW", "12")}", "-Dfabric.addMods={mods}"; '
                 f'args "--username", "MapQA", "--width", "{w}", "--height", "{h}" }} }}')
 env = os.environ.copy(); env['LIBGL_ALWAYS_SOFTWARE'] = 'true'; env['ALSOFT_DRIVERS'] = 'null'; env['GALLIUM_DRIVER'] = 'llvmpipe'
 display = next(i for i in range(151, 190) if not Path(f'/tmp/.X{i}-lock').exists())
@@ -58,4 +75,9 @@ try:
                       'log': (out / 'log.txt').read_text() if (out / 'log.txt').exists() else None}))
 finally:
     x.terminate(); x.wait(timeout=10)
+    if shader:
+        (packs / Path(shader).name).unlink(missing_ok=True)
+        (packs / (Path(shader).name + '.txt')).unlink(missing_ok=True)
+        if iris_saved is None: iris_props.unlink(missing_ok=True)
+        else: iris_props.write_text(iris_saved)
     shutil.rmtree(target, ignore_errors=True)

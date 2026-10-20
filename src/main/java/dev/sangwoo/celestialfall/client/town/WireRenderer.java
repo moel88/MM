@@ -44,6 +44,11 @@ public final class WireRenderer {
         WorldRenderEvents.AFTER_ENTITIES.register(WireRenderer::render);
     }
 
+    /** How many wires the server has sent for the dimension the player is in now. */
+    public static int count(){
+        var mc=MinecraftClient.getInstance();
+        return mc.world!=null&&dimension!=null&&mc.world.getRegistryKey().getValue().equals(dimension)?data.length/7:0;
+    }
     /** A point on a wire at t (0..1): the straight line between its ends, let down by its sag in a parabola. */
     static double[] at(float[] d,int o,double t){
         return new double[]{d[o]+(d[o+3]-d[o])*t,d[o+1]+(d[o+4]-d[o+1])*t-4*d[o+6]*t*(1-t),d[o+2]+(d[o+5]-d[o+2])*t};
