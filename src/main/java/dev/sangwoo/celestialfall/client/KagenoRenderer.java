@@ -163,19 +163,9 @@ public final class KagenoRenderer {
             mat.push();mat.translate(width*.042f,height*.31f+scale*9,0);mat.scale(scale*.55f,scale*.55f,1);
             draw.drawText(mc.textRenderer,mc.player.getName().getString()+" : "+String.format(java.util.Locale.ROOT,"%.2f",Math.max(0,combo)),0,0,(a<<24)|0x9156e0,true);mat.pop();
         }
+        // The skill cooldowns are CooldownHud's list (2.42.0); the old panel of keys and seconds left is gone.
         if(!StandClient.visible(mc.player)||mc.currentScreen!=null||CinematicDirector.isActive())return;
         var state=StandClient.STATES.get(mc.player.getUuid());long now=mc.world.getTime();
-        var panel=draw.getMatrices();panel.push();float ui=.72f;panel.translate(width-106,Math.max(68,height/2-40),0);panel.scale(ui,ui,1);
-        int x=7,y=17;draw.fill(x-7,y-17,145,y+110,0xbe100e1c);
-        draw.drawTextWithShadow(mc.textRenderer,"CID KAGENOU",x,y-12,0xffd2a7ff);
-        int[] order={Q,E,R,T,Y,H,G};String[] keys={"Q","E","R","T","Y","H","G"};
-        for(int i=0;i<order.length;i++){
-            int skill=order[i];long wait=state==null?0:Math.max(0,state.ready()[skill]-now);String suffix=wait>0?" "+String.format(java.util.Locale.ROOT,"%.1f",wait/20.):"";
-            String text=keys[i]+"  "+NAMES[skill]+suffix;float scale=Math.min(1,126f/Math.max(1,mc.textRenderer.getWidth(text)));
-            var matrix=draw.getMatrices();matrix.push();matrix.translate(x,y+i*13,0);matrix.scale(scale,scale,1);draw.drawTextWithShadow(mc.textRenderer,text,0,0,wait>0?0xff887a9c:0xffe6ddf5);matrix.pop();
-        }
-        draw.drawTextWithShadow(mc.textRenderer,"P  "+NAMES[P]+" · T 길게: 돌진 · I: 가방",x,y+94,0xffa99bc0);
-        panel.pop();
         if(state!=null&&state.until()>now)draw.drawCenteredTextWithShadow(mc.textRenderer,String.format(java.util.Locale.ROOT,"OVERDRIVE  %.1fs  ×%.2f",(state.until()-now)/20.,1+state.boost()),width/2,height-72,0xffdc9cff);
     }
 }

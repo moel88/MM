@@ -22,17 +22,26 @@ import static org.lwjgl.stb.STBTruetype.*;
  * Open Font License 1.1, tools/gacha/build_font.py). Each line is drawn by stb_truetype at the screen's own pixel size
  * into a texture of its own, filtered smoothly, with a blurred copy for glow and shadow; lines are kept until they have
  * gone unused for a while. Sizes are the font's em in GUI units; {@code y} is the middle of the capitals.
+ *
+ * <p>The HUD draws with it too (2.42.0): the cooldown list in Botand Gacha Sans and the danger banner in Botand Hud
+ * Serif ({@link Weight#SERIF}, cut from Nanum Myeongjo ExtraBold, SIL Open Font License 1.1, tools/hud/build_font.py).
  */
-final class GachaFont {
+public final class GachaFont {
     private GachaFont(){}
-    enum Weight {MEDIUM("medium"),BOLD("bold"),HEAVY("heavy");final String file;Weight(String f){file=f;}}
+    public enum Weight {
+        MEDIUM("gacha/font/gacha_medium.ttf"),BOLD("gacha/font/gacha_bold.ttf"),HEAVY("gacha/font/gacha_heavy.ttf"),
+        /** The danger banner's serif: only printable ASCII and the banner's own Hangul (tools/hud/build_font.py). */
+        SERIF("hud/font/hud_serif.ttf");
+        final String file;Weight(String f){file=f;}
+    }
 
     private static final class Face {
         final ByteBuffer data;final STBTTFontinfo info;final int ascent,descent;final float cap;
         Face(ByteBuffer data,STBTTFontinfo info,int ascent,int descent,float cap){this.data=data;this.info=info;this.ascent=ascent;this.descent=descent;this.cap=cap;}
     }
     private static final Face[] FACES=new Face[Weight.values().length];
-    private static boolean broken;
+    /** Faces that failed to load (each falls back to Minecraft's font on its own). */
+    private static final boolean[] BROKEN=new boolean[Weight.values().length];
 
     private record Key(String text,Weight weight,int pixels,int blur){}
     /** A line's texture: its size in pixels, where its pen starts and its baseline lie in it, and how far the pen moved. */
@@ -45,8 +54,8 @@ final class GachaFont {
     private static int draws;
 
     private static Face face(Weight w){
-        Face f=FACES[w.ordinal()];if(f!=null||broken)return f;
-        try(var in=GachaFont.class.getResourceAsStream("/assets/celestialfall/gacha/font/gacha_"+w.file+".ttf")){
+        Face f=FACES[w.ordinal()];if(f!=null||BROKEN[w.ordinal()])return f;
+        try(var in=GachaFont.class.getResourceAsStream("/assets/celestialfall/"+w.file)){
             if(in==null)throw new IOException("missing gacha font "+w.file);
             byte[] bytes=in.readAllBytes();ByteBuffer data=MemoryUtil.memAlloc(bytes.length).put(bytes).flip();
             STBTTFontinfo info=STBTTFontinfo.malloc();
@@ -61,7 +70,7 @@ final class GachaFont {
             }
             FACES[w.ordinal()]=f;return f;
         }catch(IOException|RuntimeException e){
-            broken=true;org.slf4j.LoggerFactory.getLogger("Botand/GachaFont").warn("Gacha font unavailable; using Minecraft's",e);return null;
+            BROKEN[w.ordinal()]=true;org.slf4j.LoggerFactory.getLogger("Botand/GachaFont").warn("Font "+w.file+" unavailable; using Minecraft's",e);return null;
         }
     }
     private static int unitsPerEm(STBTTFontinfo info){
@@ -71,29 +80,29 @@ final class GachaFont {
     private static float guiScale(){return (float)MinecraftClient.getInstance().getWindow().getScaleFactor();}
 
     /** Draws a line of text; the builder sets how. */
-    static Text text(String s,float x,float y,float size,Weight w){return new Text(s,x,y,size,w);}
+    public static Text text(String s,float x,float y,float size,Weight w){return new Text(s,x,y,size,w);}
 
-    static final class Text {
+    public static final class Text {
         final String s;final float x,y,size;final Weight w;
         int top=0xffffffff,bottom=0xffffffff,glow,shadow;float align,alpha=1,glowRadius,glowStrength,shadowBlur,shadowX,shadowY,spacing;
         Text(String s,float x,float y,float size,Weight w){this.s=s;this.x=x;this.y=y;this.size=size;this.w=w;}
-        Text color(int c){top=bottom=c;return this;}
-        Text gradient(int t,int b){top=t;bottom=b;return this;}
+        public Text color(int c){top=bottom=c;return this;}
+        public Text gradient(int t,int b){top=t;bottom=b;return this;}
         /** 0 left, .5 centred, 1 right. */
-        Text align(float a){align=a;return this;}
-        Text alpha(float a){alpha=a;return this;}
+        public Text align(float a){align=a;return this;}
+        public Text alpha(float a){alpha=a;return this;}
         /** A soft glow {@code radius} GUI units wide, added as light. */
-        Text glow(int color,float radius,float strength){glow=color;glowRadius=radius;glowStrength=strength;return this;}
-        Text shadow(int color,float blur,float dx,float dy){shadow=color;shadowBlur=blur;shadowX=dx;shadowY=dy;return this;}
+        public Text glow(int color,float radius,float strength){glow=color;glowRadius=radius;glowStrength=strength;return this;}
+        public Text shadow(int color,float blur,float dx,float dy){shadow=color;shadowBlur=blur;shadowX=dx;shadowY=dy;return this;}
         /** Extra space between letters, in ems. */
-        Text spacing(float em){spacing=em;return this;}
-        float width(){return GachaFont.width(s,size,w,spacing);}
-        void draw(DrawContext d){GachaFont.draw(d,this);}
+        public Text spacing(float em){spacing=em;return this;}
+        public float width(){return GachaFont.width(s,size,w,spacing);}
+        public void draw(DrawContext d){GachaFont.draw(d,this);}
     }
 
     /** The width of {@code s} in GUI units. */
-    static float width(String s,float size,Weight w){return width(s,size,w,0);}
-    static float width(String s,float size,Weight w,float spacing){
+    public static float width(String s,float size,Weight w){return width(s,size,w,0);}
+    public static float width(String s,float size,Weight w,float spacing){
         Face f=face(w);
         if(f==null)return GachaArt.width(s,size*.72f,w!=Weight.MEDIUM);
         float k=guiScale();Line l=line(s,w,Math.max(1,Math.round(size*k)),0,spacing);

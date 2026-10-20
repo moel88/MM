@@ -34,6 +34,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         TrainingDummyRenderer.initialize();
         CombatClient.initialize();
         StandClient.initialize();
+        CooldownHud.initialize();
         ProgressClient.initialize();
         dev.sangwoo.celestialfall.client.commerce.CommerceClient.initialize();
         dev.sangwoo.celestialfall.client.loot.FieldLootClient.initialize();

@@ -1,4 +1,12 @@
-> **현재 통합본: Botand 2.41.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+> **현재 통합본: Botand 2.42.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 전용 맵은 Botand-Azure-Garden-1.20.1-v1.3입니다.
+
+# 보탠드 2.42.0 — 인컴뱃 배너를 가운데로 · 새 쿨타임 표시
+
+요청하신 두 가지를 바꿨습니다.
+- **인컴뱃 배너:** G(아토믹)를 쓰면 시전자에게 뜨던 빨간 알림을 화면 가운데 위로 옮겼습니다. 문구는 보내 주신 화면의 "IN DANGER / Your life is at risk! / (Stand Storage disabled.)"를 한국어로 옮긴 **"위험 / 목숨이 위태롭습니다! / (스탠드 보관 불가)"**입니다. 화면처럼 굵은 빨간 명조 글씨에 어두운 테두리와 오른쪽 아래로 떨어진 검은 그림자를 넣었습니다.
+- **쿨타임 표시:** 오른쪽의 예전 패널(CID KAGENOU, 키와 남은 초)을 지우고 보내 주신 영상처럼 새로 만들었습니다. 왼쪽 HP 아래에 마지막으로 쓴 스킬이 큰 칸으로 맨 위에, 아직 쿨타임인 스킬이 작은 칸으로 그 아래 최신순으로 쌓입니다. 칸 아래 막대는 영상의 분홍 대신 **하늘색**이고, 쿨타임이 줄면서 왼쪽으로 줄어듭니다. 끝난 스킬은 접히며 사라지고 아래 칸들이 올라옵니다.
+
+[RELEASE_2.42.0_KO.md](RELEASE_2.42.0_KO.md)를 확인하세요.
 
 # 보탠드 2.41.0 — 10회 연출 새 시작 · 조용한 효과음 · 한 장씩 결과 · 로카카카 3D
 

@@ -58,6 +58,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * target and shown FOV multipliers), and an M1 shot logs to NAME/sound.csv the cast clock at which each hit's sound
  * starts playing in the game's sound system.
  *
+ * <p>"hud=1" films with the game's HUD shown (2.42.0: the cooldown list and the danger banner); "cool=1" gives the
+ * shot real cooldowns (the capture otherwise casts without them, so the list would show nothing for Atomic). "HUD" casts
+ * nothing itself: its "then=" steps cast one skill after another (T as "T@n/RUSH@n+1", a press and a release) and its
+ * clock is the shot's own; every step that the game refuses is logged. T held needs the key's pulses as the client sends
+ * them while it is down ("T@n/PULSE@n+3/PULSE@n+6/PULSE@n+9": T held begins 8 ticks after the press).
+ *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
  * shot's own (seconds from the start).
@@ -143,14 +149,14 @@ public final class SkillShots implements ClientModInitializer {
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
     private float clock(){
         float delta=mc.getTickDelta();
-        if("Q".equals(current)||"M1".equals(current)||"BASE".equals(current))return (mc.world.getTime()-castTick)+delta;
+        if("Q".equals(current)||"M1".equals(current)||"BASE".equals(current)||"HUD".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
         else if("GDUMMY".equals(current)){for(var c:AtomicClient.CASTS.values())return c.age(delta);}
         else{StandClient.Cast best=null;for(var c:StandClient.CASTS.values())if(c.caster().equals(mc.player.getUuid())&&(best==null||c.start()>best.start()))best=c;if(best!=null&&mc.world.getTime()-castTick<400)return best.age(delta);}
         return (mc.world.getTime()-castTick)+delta;
     }
-    private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;default->-1;};}
-    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
+    private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "HUD"->400;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
         var gr=mc.gameRenderer;var f=net.minecraft.client.render.GameRenderer.class.getDeclaredField("fovMultiplier");f.setAccessible(true);
@@ -198,6 +204,8 @@ public final class SkillShots implements ClientModInitializer {
     }
     private void reset(ServerPlayerEntity p){
         KagenoManager.clear(p.getServer());AtomicManager.clear(p.getServer());
+        NoCooldownState.get(p.getServer()).set(p.getUuid(),!opts.containsKey("cool"));
+        p.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
         int y=p.getServerWorld().getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,0,0);
         float yaw=facing(opt("face",0));
         p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
@@ -284,7 +292,7 @@ public final class SkillShots implements ClientModInitializer {
         if(SLOW>1&&!slowed&&phase>=3){var f=MinecraftClient.class.getDeclaredField("renderTickCounter");f.setAccessible(true);var counter=f.get(mc);var t=counter.getClass().getDeclaredField("tickTime");t.setAccessible(true);t.setFloat(counter,50f*SLOW);slowed=true;}
         switch(phase){
             case 0->{if(mc.currentScreen!=null&&mc.getOverlay()==null&&age>100){
-                Files.createDirectories(OUT);var o=mc.options;o.getViewDistance().setValue(6);o.getMaxFps().setValue(260);o.getGuiScale().setValue(2);o.hudHidden=true;o.getBobView().setValue(false);
+                Files.createDirectories(OUT);var o=mc.options;o.getViewDistance().setValue(6);o.getMaxFps().setValue(260);o.getGuiScale().setValue(2);mc.onResolutionChanged();o.hudHidden=true;o.getBobView().setValue(false);
                 mc.getTutorialManager().setStep(net.minecraft.client.tutorial.TutorialStep.NONE);
                 var info=new LevelInfo("ShotsFlat"+System.nanoTime(),GameMode.CREATIVE,false,Difficulty.EASY,true,new GameRules(),DataConfiguration.SAFE_MODE);
                 mc.createIntegratedServerLoader().createAndStart(info.getLevelName(),info,new GeneratorOptions(1,false,false),r->r.get(RegistryKeys.WORLD_PRESET).entryOf(WorldPresets.FLAT).value().createDimensionsRegistryHolder());
@@ -299,6 +307,7 @@ public final class SkillShots implements ClientModInitializer {
                     orbit=null;if(opts.containsKey("orbit")){String[] v=opts.get("orbit").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());orbit=f;}
                     actors.clear();if(opts.containsKey("act"))for(String spec:opts.get("act").split("\\+")){String[] v=spec.split(":");actors.add(new Actor(v[0],Double.parseDouble(v[1]),Float.parseFloat(v[2]),Double.parseDouble(v[3]),v[4]));}
                     track=opts.containsKey("track")?opts.get("track").split(":"):null;shake=opts.containsKey("shake")&&!"0".equals(opts.get("shake"));
+                    mc.options.hudHidden=!opts.containsKey("hud")||"0".equals(opts.get("hud"));
                     server(this::reset);
                     int view=(int)opt("view",Integer.getInteger("botand.shots.view",6));if(mc.options.getViewDistance().getValue()!=view){mc.options.getViewDistance().setValue(view);mc.worldRenderer.reload();}}
                 if(age==2)camera();
@@ -321,7 +330,7 @@ public final class SkillShots implements ClientModInitializer {
                     if(age==100)server(p->KagenoManager.input(p,M1));
                 }
                 // Follow-up inputs during the shot, "then=M1@60/E@90".
-                if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length==2&&age==Integer.parseInt(sa[1].trim())){int id=skill(sa[0].trim());server(p->KagenoManager.input(p,id));}}
+                if(opts.containsKey("then"))for(String step:opts.get("then").split("/")){String[] sa=step.split("@");if(sa.length==2&&age==Integer.parseInt(sa[1].trim())){int id=skill(sa[0].trim());String what=sa[0].trim();server(p->{boolean ok=KagenoManager.input(p,id);log.append("  ").append(what).append(ok?" at ":" refused at ").append(p.getWorld().getTime()).append('\n');});}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
                 if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');
@@ -339,7 +348,7 @@ public final class SkillShots implements ClientModInitializer {
             case "RUSH"->server(p->KagenoManager.input(p,T_DOWN));
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
-            case "BASE"->{}
+            case "BASE","HUD"->{}
             case "GDUMMY"->server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand dummy atomic "+(int)opt("adist",60));if(n<=0)log.append("  rejected GDUMMY\n");});
             default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
                 if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});

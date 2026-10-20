@@ -6,7 +6,9 @@ makes 60 fps clips from them).
 SKILLS is a comma list of entries "NAME;opt=value;...". Options: face, dist, pitch, camyaw, hits, faces, dfw, drt,
 dummy=0, len, then=SKILL@age, view=CHUNKS, far=ex/ey/ez/tx/ty/tz[/fov] (fixed camera in blocks from the cast spot),
 act=NAME:DIST:YAW:SPEED:START+... (running husks for G), track=NAME:MODE:DIST:UP:SIDE[:FOV] (camera following one) and
-shake=1 (those cameras get the Atomic camera shake a player there would; G's frames logged to NAME/shake.csv).
+shake=1 (those cameras get the Atomic camera shake a player there would; G's frames logged to NAME/shake.csv),
+hud=1 (the game's HUD shown: the cooldown list and the danger banner), cool=1 (real cooldowns). The entry "HUD" casts
+only its then= steps, e.g. "HUD;hud=1;cool=1;len=300;then=E@5/T@80/RUSH@81".
 """
 from pathlib import Path
 import json, os, shutil, subprocess, sys, zipfile, time, socket

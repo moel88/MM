@@ -11,6 +11,17 @@ public final class BotandHudLayout {
     public record Frame(List<Quad> quads,List<Label> labels) {}
     private BotandHudLayout() {}
     public static double width(int screenWidth){return Math.max(1,Math.min(screenWidth-16,Math.min(360,Math.max(240,screenWidth*.44))));}
+    /** Where the art sits (GUI units; BotandHud draws it at 8, 8, {@link #width} wide), for HUD pieces placed around it. */
+    public static double right(int screenWidth){return 8+width(screenWidth);}
+    /** The bottom of the money and XP line under the art. */
+    public static double bottom(int screenWidth){return 12+(int)(width(screenWidth)*HEIGHT/WIDTH)+11;}
+    /**
+     * Above this line the art holds only its portrait, at the left up to {@link #portraitRight}: the bars, the bow and the
+     * lantern begin here (row 253 of the 724 of botand_hud.png, drawn 683 high).
+     */
+    public static double clearAbove(int screenWidth){return 8+width(screenWidth)*238.7/WIDTH;}
+    /** The portrait's right edge (column 914 of the art's 2172, drawn 2048 wide). */
+    public static double portraitRight(int screenWidth){return 8+width(screenWidth)*861.8/WIDTH;}
     public static float guard(float pressure,boolean broken){return broken?0:Math.max(0,Math.min(100,100-pressure));}
     private static int mix(int a,int b,double t) {
         int result=0;for(int shift:new int[]{0,8,16,24})result|=((int)(((a>>>shift)&255)*(1-t)+((b>>>shift)&255)*t))<<shift;return result;

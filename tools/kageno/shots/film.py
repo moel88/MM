@@ -1,5 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
-FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate, FILM_CAPTION=center centres the captions at the top.
+FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate, FILM_CAPTION=center centres the captions at the top, FILM_CAPTION=below puts them in a band under the picture (the HUD's shots, 2.42.0: nothing of the game's screen covered).
 MODE motion with the shot's motion.csv (ACTOR -) shows the player's walking speed and the lens's FOV multiplier each tick.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
@@ -22,6 +22,7 @@ SKILL, SPEED, FPS = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FIL
 # FILM_STAGES="UNTIL:NAME|UNTIL:NAME|..." gives the captions directly (seconds of the shot's clock) and FILM_CLOCK the
 # words before the time (default "시전 후"): the gacha's shots (tools/gacha/shots) run on the screen's own clock.
 CLOCK = os.environ.get('FILM_CLOCK', '시전 후')
+BELOW = 76 if os.environ.get('FILM_CAPTION') == 'below' else 0
 if os.environ.get('FILM_STAGES'): SKILL = 'CUSTOM'
 
 frames = []
@@ -164,6 +165,11 @@ def caption(img, t):
     lines = [(title, big, (255, 255, 255)), (f'{CLOCK} {max(0, t):.{2 if SKILL == "E" else 1}f}초{" · " + name if name else ""}{speed}', small, (255, 230, 120))]
     text, color = actor_line(t)
     y = 10
+    if BELOW:
+        # the band under the picture: the title, and under it the time and the stage
+        y = img.height - BELOW + 6
+        d.text((12, y), lines[0][0], font=big, fill=lines[0][2]); d.text((12, y + 36), lines[1][0], font=small, fill=lines[1][2])
+        lines = []
     for s, font, col in lines:
         w = d.textlength(s, font=font); h = font.size + 10
         # FILM_CAPTION=center puts the captions at the top's middle (the gacha keeps its logo at the top left)
@@ -179,6 +185,8 @@ try:
     while t <= end:
         i = bisect.bisect_left(times, t); i = min(range(max(0, i - 1), min(len(times), i + 1)), key=lambda j: abs(times[j] - t)); used.append(i)
         img = Image.open(frames[i][1]).convert('RGB'); img = img.resize((W, round(img.height * W / img.width / 2) * 2), Image.LANCZOS)
+        if BELOW:
+            band = Image.new('RGB', (img.width, img.height + BELOW), (12, 12, 16)); band.paste(img, (0, 0)); img = band
         caption(img, t); img.save(os.path.join(tmp, f'{n:05d}.png')); n += 1; t = start + n * SPEED / FPS
     subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', str(FPS), '-i', os.path.join(tmp, '%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
                     '-crf', '23', '-preset', 'slow', '-movflags', '+faststart', out], check=True)

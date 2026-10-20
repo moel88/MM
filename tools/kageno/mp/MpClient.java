@@ -162,6 +162,9 @@ public final class MpClient implements ClientModInitializer {
         }
         for(var it=casts.entrySet().iterator();it.hasNext();){var e=it.next();if(!StandClient.CASTS.containsKey(e.getKey())){note("end "+SKILLS[(int)e.getValue()[0]]+" age~"+(now-e.getValue()[1]));it.remove();}}
         flag("cinematic",StandClient.cinematic()!=null);flag("mono",StandClient.monochrome());flag("frozen",StandClient.frozen(mc.player));flag("locked",StandClient.locked());
+        // 2.42.0: the cooldown list (top first) and whether the danger banner is up for this player
+        flag("cooldowns",CooldownHud.shown());
+        flag("danger_banner",AtomicClient.CASTS.values().stream().anyMatch(c->c.caster.equals(mc.player.getUuid())&&c.age(0)<dev.sangwoo.celestialfall.AtomicTimeline.END));
         // G seen from here: the strongest camera quake and Veil screen treatment while it lasts, logged when it ends.
         if(!AtomicClient.CASTS.isEmpty()){
             var s=dev.sangwoo.celestialfall.client.AtomicImmersion.at(mc.gameRenderer.getCamera().getPos(),0);

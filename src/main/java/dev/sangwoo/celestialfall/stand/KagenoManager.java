@@ -330,7 +330,12 @@ public final class KagenoManager {
         if(c.player.isAlive())c.player.setVelocity(0,0,0);
     }
     private static void cancelCaster(PlayerEntity p){for(var c:new ArrayList<>(CASTS.values()))if(c.player==p)stop(c);}
-    public static void leave(ServerPlayerEntity p){cancelCaster(p);rSlow(p,false);var s=STATES.remove(p);if(s!=null){s.overUntil=0;s.boost=0;status(p,s);}MARKS.values().removeIf(m->m.owner==p||m.target==p);for(var c:CASTS.values())c.targets.remove(p);}
+    /**
+     * Drops the player's stand state. Its last status tells them its cooldowns are gone too (a fresh state starts ready, and
+     * no further status comes for this one).
+     */
+    public static void leave(ServerPlayerEntity p){cancelCaster(p);rSlow(p,false);var s=STATES.remove(p);if(s!=null){s.overUntil=0;s.boost=0;Arrays.fill(s.ready,0);status(p,s);}MARKS.values().removeIf(m->m.owner==p||m.target==p);for(var c:CASTS.values())c.targets.remove(p);}
     public static void clear(MinecraftServer server){for(var c:new ArrayList<>(CASTS.values()))stop(c);for(var p:new ArrayList<>(STATES.keySet()))leave(p);}
+    /** Clears the player's cooldowns (no-cooldown mode calls this every tick); the status sent twice a second tells their client. */
     public static void resetCooldown(ServerPlayerEntity p){var s=STATES.get(p);if(s!=null)Arrays.fill(s.ready,0);}
 }
