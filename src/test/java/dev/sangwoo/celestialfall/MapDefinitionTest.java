@@ -28,6 +28,7 @@ class MapDefinitionTest {
         assertEquals(new BlockPos(0,76,131),d.places().get("bridge"));
         assertEquals(List.of("station","bridge"),List.copyOf(d.places().keySet()));
         assertTrue(d.wires().isEmpty());
+        assertTrue(d.backdrop().isEmpty());
     }
     @Test void readsTheWiresBetweenThePoles(){
         var d=parse(SEASIDE.replace("\"places\"","\"wires\":[[100.5,80.95,-36.5,100.5,80.95,-17.5,0.61],[-66,82,-65,-66,82,-54,0.4]],\"places\""));
@@ -39,6 +40,18 @@ class MapDefinitionTest {
         for(String w:bad)assertThrows(RuntimeException.class,()->parse(SEASIDE.replace("\"places\"","\"wires\":"+w+",\"places\"")),w);
         var many=new StringBuilder();for(int i=0;i<=MapDefinition.MAX_WIRES;i++)many.append(i>0?",":"").append("[0,80,").append(i).append(",1,80,").append(i).append(",0.1]");
         assertThrows(IllegalArgumentException.class,()->parse(SEASIDE.replace("\"places\"","\"wires\":["+many+"],\"places\"")));
+    }
+    @Test void readsTheFarCoast(){
+        var d=parse(SEASIDE.replace("\"places\"","\"backdrop\":[[-253,2924,420,300,299,1],[1700.5,2400,1100,320,150,-3]],\"places\""));
+        assertEquals(List.of(new MapDefinition.Peak(-253,2924,420,300,299,1),new MapDefinition.Peak(1700.5f,2400,1100,320,150,-3)),d.backdrop());
+        assertEquals(new BlockPos(23,65,26),d.places().get("station"));
+    }
+    @Test void refusesMountainsItCannotDraw(){
+        String[] bad={"[[0,3000,400,300,299]]","[[0,40000,400,300,299,1]]","[[0,3000,0,300,299,1]]","[[0,3000,400,9000,299,1]]",
+            "[[0,3000,400,300,-5,1]]","[[0,3000,400,300,2000,1]]","[[0,3000,\"x\",300,299,1]]","[7]"};
+        for(String m:bad)assertThrows(RuntimeException.class,()->parse(SEASIDE.replace("\"places\"","\"backdrop\":"+m+",\"places\"")),m);
+        var many=new StringBuilder();for(int i=0;i<=MapDefinition.MAX_PEAKS;i++)many.append(i>0?",":"").append("[").append(i*100).append(",3000,400,300,299,").append(i).append("]");
+        assertThrows(IllegalArgumentException.class,()->parse(SEASIDE.replace("\"places\"","\"backdrop\":["+many+"],\"places\"")));
     }
     @Test void refusesWhatItCannotTrust(){
         assertThrows(IllegalArgumentException.class,()->parse("[]"));

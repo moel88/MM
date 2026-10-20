@@ -22,9 +22,10 @@ import java.util.*;
  * The seaside town's own blocks (2.46.0): the materials of the two photos the map follows (fresh and worn asphalt with
  * road paint, pavers, concrete block walls, rough stone pillars, plaster, kawara, corrugated iron, weathered concrete)
  * and its street furniture (poles with sleeves, crossarms and transformers, street lamps, vending machines, air
- * conditioners, letterboxes, slat and chain-link fences, gates, guardrails, balcony rails, curtained windows, a net).
- * Their 64x textures and models are drawn by tools/map/blocks/make_blocks.py from the same list of names; vanilla
- * blocks are not touched. Every block drops itself.
+ * conditioners, letterboxes, slat and chain-link fences, gates, guardrails, balcony rails, curtained windows, a net),
+ * and roofs laid at their true pitch (2.47.0, RoofBlock, drawn in code by client/town/RoofModel). Their 64x textures and
+ * models are drawn by tools/map/blocks/make_blocks.py from the same list of names; vanilla blocks are not touched.
+ * Every block drops itself.
  */
 public final class TownBlocks {
     private TownBlocks() {}
@@ -74,8 +75,8 @@ public final class TownBlocks {
     public static final Block CURTAIN_WINDOW=translucent(add("curtain_window",new Pane(FabricBlockSettings.copyOf(Blocks.GLASS_PANE))));
     // the poles and what hangs on them, the street's furniture; a shape is given for the thing facing north, its back
     // against whatever it hangs on to the south
-    public static final Block UTILITY_POLE=add("utility_pole",new Post(5,11,stone()));
-    public static final Block POLE_SLEEVE=add("pole_sleeve",new Post(4.5,11.5,stone()));
+    public static final Block UTILITY_POLE=add("utility_pole",new Post(3.8,12.2,stone()));
+    public static final Block POLE_SLEEVE=add("pole_sleeve",new Post(3.3,12.7,stone()));
     public static final Block PIPE_POST=add("pipe_post",new Post(7,9,metal()));
     public static final Block POLE_CROSSARM=add("pole_crossarm",new Crossarm(true,metal()));
     public static final Block POLE_ARM=add("pole_arm",new Crossarm(false,metal().noCollision()));
@@ -84,9 +85,31 @@ public final class TownBlocks {
     public static final Block STREET_LAMP=add("street_lamp",new Shaped(metal().noCollision().luminance(15),Block.createCuboidShape(4,8,2,12,13,16)));
     public static final Block AIR_CONDITIONER=add("air_conditioner",new Shaped(metal(),Block.createCuboidShape(1,0,5,15,10,16)));
     public static final Block LETTERBOX=add("letterbox",new Shaped(metal(),Block.createCuboidShape(4,5,12,12,11,16)));
+    public static final Block FALLEN_PETALS=cutout(add("fallen_petals",new Litter(FabricBlockSettings.copyOf(Blocks.PINK_PETALS).noCollision().nonOpaque())));
     public static final Block VENDING_MACHINE=add("vending_machine",new VendingMachine(metal().luminance(s->s.get(Properties.DOUBLE_BLOCK_HALF)==DoubleBlockHalf.UPPER?11:6)));
+    // roofs at their true pitch (2.47.0): Botand's kawara and corrugated sheet, and the town's painted, slate and copper
+    // roofs; each names its top, its edge, its underside (and the wall closing the attic) and its ridge cap
+    public static final Map<RoofBlock,String[]> ROOFS=new LinkedHashMap<>();
+    public static final RoofBlock ROOF_KAWARA=roof("roof_kawara",0.5f,3/16f,stone(),"town/kawara","town/kawara_side","town/plaster_0","town/kawara_ridge");
+    public static final RoofBlock ROOF_SHEET=roof("roof_sheet",0.25f,1.5f/16,sheet(),"town/corrugated_roof","town/corrugated_roof","town/corrugated_iron_0","town/roof_flashing");
+    public static final RoofBlock ROOF_BLACK=roof("roof_black",0.5f,2.5f/16,stone(),"minecraft:polished_blackstone","minecraft:polished_blackstone","town/plaster_0","minecraft:polished_blackstone_bricks");
+    public static final RoofBlock ROOF_BLUE=roof("roof_blue",0.5f,2f/16,stone(),"minecraft:dark_prismarine","minecraft:dark_prismarine","town/plaster_1","minecraft:dark_prismarine");
+    public static final RoofBlock ROOF_SLATE=roof("roof_slate",0.5f,2.5f/16,stone(),"minecraft:stone_bricks","minecraft:stone_bricks","town/plaster_2","minecraft:stone_bricks");
+    public static final RoofBlock ROOF_RED=roof("roof_red",0.5f,2f/16,stone(),"minecraft:bricks","minecraft:bricks","town/plaster_0","minecraft:bricks");
+    public static final RoofBlock ROOF_BROWN=roof("roof_brown",0.5f,2f/16,stone(),"minecraft:mud_bricks","minecraft:mud_bricks","town/plaster_1","minecraft:mud_bricks");
+    public static final RoofBlock ROOF_COPPER=roof("roof_copper",0.5f,1.5f/16,sheet(),"minecraft:oxidized_cut_copper","minecraft:oxidized_cut_copper","town/plaster_0","minecraft:oxidized_copper");
+    public static final RoofBlock ROOF_RUST=roof("roof_rust",0.5f,1.5f/16,sheet(),"minecraft:exposed_cut_copper","minecraft:exposed_cut_copper","town/plaster_2","minecraft:exposed_copper");
+    public static final RoofBlock ROOF_TEAL=roof("roof_teal",0.5f,1.5f/16,sheet(),"minecraft:weathered_cut_copper","minecraft:weathered_cut_copper","town/plaster_1","minecraft:weathered_copper");
 
     private static <B extends Block> B add(String name,B block){ALL.put(name,block);return block;}
+    /** A roof block and its textures: names under the town's own textures, or minecraft: blocks' (block/ is added). */
+    private static RoofBlock roof(String name,float pitch,float thickness,FabricBlockSettings settings,String... look){
+        var b=add(name,new RoofBlock(pitch,thickness,settings));
+        String[] ids=new String[look.length];
+        for(int i=0;i<look.length;i++)ids[i]=look[i].startsWith("minecraft:")?"minecraft:block/"+look[i].substring(10):CelestialFall.ID+":block/"+look[i];
+        ROOFS.put(b,ids);
+        return b;
+    }
     private static Block cutout(Block b){CUTOUT.add(b);return b;}
     private static Block translucent(Block b){TRANSLUCENT.add(b);return b;}
 
@@ -157,7 +180,7 @@ public final class TownBlocks {
             return d.getAxis().isHorizontal()&&n.getBlock() instanceof Post?out.with(FACING_PROPERTIES.get(d),true):out;
         }
     }
-    /** A round post standing in the middle of its block: concrete poles, their sleeves, thin pipes. */
+    /** A round post standing in the middle of its block: concrete poles, their sleeves, thin pipes (drawn round by client/town/PoleModel). */
     public static class Post extends Block {
         private final VoxelShape shape;
         public Post(double from,double to,Settings s){super(s.nonOpaque());shape=Block.createCuboidShape(from,0,from,to,16,to);}
@@ -168,7 +191,7 @@ public final class TownBlocks {
         private final VoxelShape x,z;
         public Crossarm(boolean pole,Settings s){
             super(s.nonOpaque());
-            VoxelShape px=Block.createCuboidShape(0,11,7,16,13.5,9),pz=Block.createCuboidShape(7,11,0,9,13.5,16),post=Block.createCuboidShape(5,0,5,11,16,11);
+            VoxelShape px=Block.createCuboidShape(0,11,7,16,13.5,9),pz=Block.createCuboidShape(7,11,0,9,13.5,16),post=Block.createCuboidShape(3.8,0,3.8,12.2,16,12.2);
             x=pole?VoxelShapes.union(px,post):px;z=pole?VoxelShapes.union(pz,post):pz;
         }
         @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){return s.get(Properties.HORIZONTAL_AXIS)==Direction.Axis.X?x:z;}
@@ -183,6 +206,19 @@ public final class TownBlocks {
         @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(FACING);}
         @Override public BlockState getPlacementState(ItemPlacementContext c){return getDefaultState().with(FACING,c.getHorizontalPlayerFacing().getOpposite());}
         @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){return shapes[s.get(FACING).getHorizontal()];}
+    }
+    /**
+     * Litter lying flat on whatever is under it: cherry petals on the sidewalk and the road (2.47.0; the game's pink
+     * petals grow only on soil). No collision; it goes when what holds it goes.
+     */
+    public static class Litter extends Block {
+        private static final VoxelShape SHAPE=Block.createCuboidShape(0,0,0,16,0.5,16);
+        public Litter(Settings s){super(s);}
+        @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){return SHAPE;}
+        @Override public boolean canPlaceAt(BlockState s,WorldView w,BlockPos p){return w.getBlockState(p.down()).isSideSolidFullSquare(w,p.down(),Direction.UP);}
+        @Override public BlockState getStateForNeighborUpdate(BlockState s,Direction d,BlockState n,WorldAccess w,BlockPos p,BlockPos np){
+            return d==Direction.DOWN&&!canPlaceAt(s,w,p)?Blocks.AIR.getDefaultState():s;
+        }
     }
     /** A drinks vending machine two blocks tall, its display lit; placing one sets both halves, breaking one clears both. */
     public static class VendingMachine extends HorizontalFacingBlock {

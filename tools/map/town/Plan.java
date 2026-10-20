@@ -64,6 +64,11 @@ final class Plan {
     static final double PHOTO1_X=-69.8,PHOTO1_Z=-70.5,PHOTO1_YAW=-8,PHOTO1_PITCH=-1.7;
     /** ...and photo 2: in the lot, eighteen metres short of its sea wall, the shed ahead on the left, looking south and down. */
     static final double PHOTO2_X=84.5,PHOTO2_Z=100.5,PHOTO2_YAW=0,PHOTO2_PITCH=6;
+    /**
+     * The time of day both photos were taken at: a low morning sun from the east-south-east (with the shader pack's
+     * tilted sun path), long shadows reaching toward the camera in the lot and across the photo street.
+     */
+    static final int PHOTO_TIME=1300;
 
     // the railway and the coast
     static final int RAIL_Z0=37,PLATFORM_Z1=39,TRACK_Z=41,RAIL_FENCE_Z=45;
@@ -91,7 +96,7 @@ final class Plan {
     static final int BEACH_X0=-58,BEACH_X1=-12;
     static final int LOT_X0=20,LOT_X1=100,LOT_Z0=PROM_Z0,LOT_Z1=118;
     /** Behind the lot's sea wall, a step down: the strips of shore with the old houses (east) and the block of flats (west). */
-    static final int[] BACK_E={78,119,100,140},BACK_W={36,119,67,134};
+    static final int[] BACK_E={78,119,103,140},BACK_W={36,119,67,134};
     static final int BACK_Y=63;
     /** The landmark bridge: its deck (x), the ends of the span (z), the pylon, the island beyond it. */
     static final int BRIDGE_X0=-6,BRIDGE_X1=6,BRIDGE_Z0=53,BRIDGE_Z1=128,PYLON_Z=90;
@@ -100,6 +105,18 @@ final class Plan {
     static final int ISLET_X=-66,ISLET_Z=150,ISLET_RX=17,ISLET_RZ=15;
     /** The foot of the east hill, whose west face carries the hillside houses above the lot. */
     static final int EAST_FOOT_X=101;
+    /**
+     * The far coast across the water, drawn by the mod behind everything (too far off for blocks): x, z, the radii of
+     * its foot east-west and north-south, its top, a seed for its ridges. First the mountain island straight down the
+     * photo street (photo 1: a hazy blue mountain rising out of the sea behind the guardrail, its summit a little right
+     * of the road, 4.3 degrees above the horizon), measured from the photo and put three kilometres off so it barely
+     * moves as you walk; then its lower western shoulder, and long low coasts far to the south-east and south-west and
+     * beyond the harbour to the west. Seen from the lot (photo 2) the island hides behind the houses on the shore,
+     * leaving the photo's open sea.
+     */
+    static final float[][] BACKDROP={
+        {-253,2924,420,300,299,1},{-700,2860,480,280,205,2},
+        {1700,2400,1100,320,150,3},{-2300,2100,1000,380,170,4},{-2600,-200,500,900,230,5}};
 
     /** How far north (0..-5) the terraces bend at this x: the hill is not a ruler, and never crowds street S4. */
     static int bend(int x){
@@ -157,7 +174,10 @@ final class Plan {
         double wob=0.08*Math.sin(Math.atan2(dz,dx)*3+1.1)+0.05*Math.sin(Math.atan2(dz,dx)*7);
         return 1+wob-Math.sqrt(dx*dx+dz*dz);
     }
+    /** The islet is gone (2.47.0): the hill across the water in photo 1 is the mod's far mountain now. */
+    static final boolean ISLET=false;
     static double islet(int x,int z){
+        if(!ISLET)return -1;
         double dx=(x-ISLET_X)/(double)ISLET_RX,dz=(z-ISLET_Z)/(double)ISLET_RZ;
         double wob=0.07*Math.sin(Math.atan2(dz,dx)*4+0.4)+0.04*Math.sin(Math.atan2(dz,dx)*9+2);
         return 1+wob-Math.sqrt(dx*dx+dz*dz);

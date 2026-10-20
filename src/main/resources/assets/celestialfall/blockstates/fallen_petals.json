@@ -1,0 +1,21 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/fallen_petals"
+   },
+   {
+    "model": "celestialfall:block/town/fallen_petals",
+    "y": 90
+   },
+   {
+    "model": "celestialfall:block/town/fallen_petals",
+    "y": 180
+   },
+   {
+    "model": "celestialfall:block/town/fallen_petals",
+    "y": 270
+   }
+  ]
+ }
+}

@@ -16,8 +16,11 @@ import static dev.sangwoo.botandtown.Kit.s;
 final class Hillside {
     /** The steps: west edge x, east edge x, level y (each eight blocks above the one below). */
     static final int[][] STEPS={{101,109,70},{110,118,78},{119,127,86},{128,136,94}};
-    /** Where the steps run along z: above the low town, and above the lot (clear of the railway's tunnel). */
-    static final int[][] SPANS={{-40,30},{58,168}};
+    /**
+     * Where the steps run along z: above the low town, and behind the lot's shed (photo 2: the houses climb the hill
+     * beyond the shed, 30 to 90 blocks off; beside the lot the hill's foot is left to trees and the cherry).
+     */
+    static final int[][] SPANS={{-40,30},{126,172}};
     /** How deep a house is (along x), behind the two-block path. */
     static final int PATH=2;
 
@@ -64,7 +67,8 @@ final class Hillside {
             if(!top&&k%3==0&&z+2<=z1){stairs(i,z);z+=4;continue;}
             int w=Math.min(z1-z,6+rnd.nextInt(4));
             if(w<5)break;
-            house(x0+PATH,z,x1,z+w-1,y);
+            // a garden now and then between the houses, so the hillside is green between its roofs as in photo 2
+            if(rnd.nextInt(3)==0)garden(x0+PATH,z,x1,z+w-1,y);else house(x0+PATH,z,x1,z+w-1,y);
             z+=w+1;
         }
         List<int[]> poles=new ArrayList<>();
@@ -76,19 +80,28 @@ final class Hillside {
         for(int zz=z0;zz<=z1;zz++)if(c.ground(x0-1,zz)<y-1&&c.air(x0,y+1,zz))c.set(x0,y+1,zz,Math.floorMod(zz,3)==0?TB.PIPE:TB.GUARDRAIL);
     }
 
-    /** A stair up the lowest step's wall from the lot, along the wall's face, coming out on the step's path. */
+    /** A stair up the lowest step's wall from the shore strip behind the lot, along the wall's face, onto the step's path. */
     private void lotStairs(){
-        int y=STEPS[0][2],x0=STEPS[0][0];
-        for(int k=0;k<=y-Plan.COAST-1;k++){
-            int z=62+k,sy=Plan.COAST+1+k;
+        int y=STEPS[0][2],x0=STEPS[0][0],from=Plan.BACK_Y,z0=SPANS[1][0]-(y-from);
+        for(int k=0;k<y-from;k++){
+            int z=z0+k,sy=from+1+k;
             for(int x=x0-2;x<=x0-1;x++){
-                c.fill(x,Plan.COAST+1,z,x,sy-1,z,Blocks.STONE.getDefaultState());
+                c.fill(x,from+1,z,x,sy-1,z,Blocks.STONE.getDefaultState());
                 c.set(x,sy,z,Canvas.stairs(Blocks.POLISHED_ANDESITE_STAIRS,Direction.SOUTH,false));
                 c.clear(x,sy+1,z,x,sy+4,z);
             }
-            c.fill(x0-3,Plan.COAST+1,z,x0-3,sy,z,TB.BLOCK_WALL);
-            if(c.air(x0-3,sy+1,z))c.set(x0-3,sy+1,z,TB.wallCap());
         }
+    }
+    /** A garden plot on a step: grass, a tree (a camphor, a cedar, now and then a cherry), shrubs and flowers. */
+    private void garden(int x0,int z0,int x1,int z1,int y){
+        for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++){c.set(x,y,z,s(Blocks.GRASS_BLOCK));c.clear(x,y+1,z,x,y+9,z);}
+        int tx=(x0+x1)/2,tz=(z0+z1)/2;
+        switch(rnd.nextInt(5)){
+            case 0->t.nature.cherry(tx,y+1,tz,5);
+            case 1->t.nature.cedar(tx,y+1,tz,7+rnd.nextInt(3));
+            default->t.nature.broadleaf(tx,y+1,tz,4+rnd.nextInt(2));
+        }
+        for(int i=0;i<4;i++){int x=x0+rnd.nextInt(x1-x0+1),z=z0+rnd.nextInt(z1-z0+1);if(c.air(x,y+1,z))c.set(x,y+1,z,Canvas.leaves(rnd.nextBoolean()?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES));}
     }
 
     /** A flight of stairs, two wide, from this step's path straight up the next step's wall, walled on both sides. */

@@ -143,5 +143,16 @@
   "block.celestialfall.air_conditioner": "Air Conditioner",
   "block.celestialfall.letterbox": "Letterbox",
   "block.celestialfall.vending_machine": "Vending Machine",
-  "itemGroup.celestialfall.town": "Botand Town"
+  "itemGroup.celestialfall.town": "Botand Town",
+  "block.celestialfall.roof_kawara": "Kawara Roof",
+  "block.celestialfall.roof_sheet": "Sheet Roof",
+  "block.celestialfall.roof_black": "Black Roof",
+  "block.celestialfall.roof_blue": "Blue Roof",
+  "block.celestialfall.roof_slate": "Slate Roof",
+  "block.celestialfall.roof_red": "Red Roof",
+  "block.celestialfall.roof_brown": "Brown Roof",
+  "block.celestialfall.roof_copper": "Copper Roof",
+  "block.celestialfall.roof_rust": "Rusty Copper Roof",
+  "block.celestialfall.roof_teal": "Teal Copper Roof",
+  "block.celestialfall.fallen_petals": "Fallen Petals"
 }

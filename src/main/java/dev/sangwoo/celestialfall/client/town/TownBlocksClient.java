@@ -4,11 +4,14 @@ import dev.sangwoo.celestialfall.town.TownBlocks;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.minecraft.client.render.RenderLayer;
 
-/** The town blocks' render layers (panels with holes are cut out, the curtained window is see-through) and the map's wires. */
+/** The town blocks' render layers (panels with holes are cut out, the curtained window is see-through), the map's wires and its far coast. */
 public final class TownBlocksClient {
     private TownBlocksClient() {}
     public static void initialize(){
         WireRenderer.initialize();
+        BackdropRenderer.initialize();
+        RoofModel.register();
+        PoleModel.register();
         for(var b:TownBlocks.CUTOUT)BlockRenderLayerMap.INSTANCE.putBlock(b,RenderLayer.getCutout());
         for(var b:TownBlocks.TRANSLUCENT)BlockRenderLayerMap.INSTANCE.putBlock(b,RenderLayer.getTranslucent());
         // the street furniture has thin parts and see-through details too

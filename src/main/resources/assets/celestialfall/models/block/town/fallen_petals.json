@@ -1,0 +1,29 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/fallen_petals",
+  "t0": "celestialfall:block/town/fallen_petals"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0.25,
+    0
+   ],
+   "to": [
+    16,
+    0.25,
+    16
+   ],
+   "faces": {
+    "up": {
+     "texture": "#t0"
+    },
+    "down": {
+     "texture": "#t0"
+    }
+   }
+  }
+ ],
+ "ambientocclusion": false
+}

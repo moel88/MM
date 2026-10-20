@@ -99,7 +99,7 @@ final class Townscape {
 
     /**
      * The map's definition for the mod (data/botand/map/definition.json in the world's data pack: the spawn, the two
-     * merchants' places, the field supply spots, the named places, the photos' views, the wires) and a teleport
+     * merchants' places, the field supply spots, the named places, the photos' views, the wires, the far coast) and a teleport
      * function per place and view for operators (/function botand:goto/bridge, /function botand:goto/photo_street).
      */
     void definition(Path pack)throws Exception{
@@ -124,13 +124,20 @@ final class Townscape {
             for(int q=0;q<7;q++)j.append(q>0?", ":"").append(String.format(Locale.ROOT,"%.2f",w[q]));
             j.append("]");
         }
+        j.append("\n  ],\n  \"backdrop\": [");
+        for(int i=0;i<Plan.BACKDROP.length;i++){
+            float[] m=Plan.BACKDROP[i];j.append(i>0?",":"").append("\n    [");
+            for(int q=0;q<5;q++)j.append(q>0?", ":"").append(String.format(Locale.ROOT,"%.1f",m[q]));
+            j.append(", ").append((int)m[5]).append("]");
+        }
         j.append("\n  ]\n}\n");
         Files.createDirectories(pack.resolve("data/botand/map"));
         Files.writeString(pack.resolve("data/botand/map/definition.json"),j.toString());
         var fn=pack.resolve("data/botand/functions/goto");Files.createDirectories(fn);
         for(var e:places.entrySet()){int[] p=e.getValue();Files.writeString(fn.resolve(e.getKey()+".mcfunction"),"tp @s "+p[0]+".5 "+p[1]+" "+p[2]+".5\n");}
         Files.writeString(fn.resolve("spawn.mcfunction"),"tp @s "+sp[0]+".5 "+sp[1]+" "+sp[2]+".5 "+sp[3]+" 0\n");
-        for(int i=0;i<VIEWS.length;i++){double[] v=VIEWS[i];Files.writeString(fn.resolve(VIEW_NAMES[i]+".mcfunction"),String.format(Locale.ROOT,"tp @s %.2f %.2f %.2f %.1f %.1f%n",v[0],viewY(v),v[1],v[2],v[3]));}
+        // the photos' spots also set the morning the photos were taken in (a low sun from the east-south-east)
+        for(int i=0;i<VIEWS.length;i++){double[] v=VIEWS[i];Files.writeString(fn.resolve(VIEW_NAMES[i]+".mcfunction"),String.format(Locale.ROOT,"time set %d%ntp @s %.2f %.2f %.2f %.1f %.1f%n",Plan.PHOTO_TIME,v[0],viewY(v),v[1],v[2],v[3]));}
         Town.log("definition: "+loot.size()+" supply spots, "+places.size()+" places, "+wires.size()+" wires");
     }
     /** The field supply spots: open ground in public places all over the town, checked to be clear. */

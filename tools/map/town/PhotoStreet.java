@@ -112,7 +112,7 @@ final class PhotoStreet {
         c.wallSign(bx,y+6,-58,Blocks.DARK_OAK_WALL_SIGN,Direction.NORTH,DyeColor.WHITE,false,"や","ま","だ");
         c.wallSign(bx,y+5,-58,Blocks.DARK_OAK_WALL_SIGN,Direction.NORTH,DyeColor.WHITE,false,"","山田","","");
         c.wallSign(bx,y+6,-56,Blocks.DARK_OAK_WALL_SIGN,Direction.SOUTH,DyeColor.WHITE,false,"や","ま","だ");
-        t.nature.cherry(s.x(1),y+1,-50,6);
+        t.nature.cherry(s.x(1),y+1,-50,7,1.3);
     }
 
     /** Right, round the camera: the long wall and slat fence, a cherry tree over it, the balconied house behind. */
@@ -121,7 +121,7 @@ final class PhotoStreet {
         for(int z=l.z0;z<=l.z1;z++)slatWall(fx,y,z);
         Frame f=s.frame(c,4,13,l.z0+1,l.z1-1);
         body(f,false,true,true,2);
-        t.nature.cherry(s.x(1),y+1,-66,6);
+        t.nature.cherry(s.x(1),y+1,-66,7,1.55);
         for(int k=1;k<=3;k++)if(rnd.nextBoolean())c.set(s.x(k),y+1,l.z1-1,Canvas.leaves(Blocks.AZALEA_LEAVES));
     }
 

@@ -52,6 +52,7 @@ public final class MapGate {
     }
     public static void initialize() {
         MapWires.initialize();
+        MapBackdrop.initialize();
         MapDecoration.initialize();
         FloorRepair.initialize();
         VenueRenovation.initialize();
@@ -73,6 +74,7 @@ public final class MapGate {
         if(CITY.get(server)){FloorRepair.offer(server);VenueRenovation.offer(server);}
         for(var p:server.getPlayerManager().getPlayerList()){sync(p,true);ProgressManager.joined(p);if(!enabled(p.getWorld()))CombatManager.leave(p);}
         MapWires.sendAll(server);
+        MapBackdrop.sendAll(server);
     }
     /** Exact bundled teleport functions identify the previously delivered one-third city, regardless of folder name. */
     static boolean recognizeCity(MinecraftServer server) {

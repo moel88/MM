@@ -143,5 +143,16 @@
   "block.celestialfall.air_conditioner": "에어컨 실외기",
   "block.celestialfall.letterbox": "우편함",
   "block.celestialfall.vending_machine": "자판기",
-  "itemGroup.celestialfall.town": "보탠드 마을"
+  "itemGroup.celestialfall.town": "보탠드 마을",
+  "block.celestialfall.roof_kawara": "기와 지붕",
+  "block.celestialfall.roof_sheet": "함석 지붕",
+  "block.celestialfall.roof_black": "검은 지붕",
+  "block.celestialfall.roof_blue": "파란 지붕",
+  "block.celestialfall.roof_slate": "석판 지붕",
+  "block.celestialfall.roof_red": "붉은 지붕",
+  "block.celestialfall.roof_brown": "갈색 지붕",
+  "block.celestialfall.roof_copper": "청동 지붕",
+  "block.celestialfall.roof_rust": "구리 지붕",
+  "block.celestialfall.roof_teal": "녹청 지붕",
+  "block.celestialfall.fallen_petals": "떨어진 꽃잎"
 }

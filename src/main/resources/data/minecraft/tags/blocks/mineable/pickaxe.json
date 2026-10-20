@@ -39,6 +39,16 @@
   "celestialfall:street_lamp",
   "celestialfall:air_conditioner",
   "celestialfall:letterbox",
-  "celestialfall:vending_machine"
+  "celestialfall:vending_machine",
+  "celestialfall:roof_kawara",
+  "celestialfall:roof_sheet",
+  "celestialfall:roof_black",
+  "celestialfall:roof_blue",
+  "celestialfall:roof_slate",
+  "celestialfall:roof_red",
+  "celestialfall:roof_brown",
+  "celestialfall:roof_copper",
+  "celestialfall:roof_rust",
+  "celestialfall:roof_teal"
  ]
 }

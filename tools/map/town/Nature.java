@@ -58,26 +58,45 @@ final class Nature {
     }
 
     /** サクラ: a short trunk dividing into spreading limbs under a wide, light crown of blossom; petals beneath. */
-    void cherry(int x,int y,int z,int h){
+    void cherry(int x,int y,int z,int h){cherry(x,y,z,h,1);}
+    /**
+     * A cherry tree {@code size} times the usual: the photos' big old trees spread their limbs wider and carry a
+     * deeper crown. Fallen petals lie on the grass under it (the game's pink petals) and on paving, asphalt and walls
+     * round it (Botand's fallen petals, which lie on anything solid).
+     */
+    void cherry(int x,int y,int z,int h,double size){
         for(int k=0;k<h-2;k++)log(x,y+k,z,Blocks.CHERRY_LOG,Direction.Axis.Y);
-        int top=y+h-2;
-        for(int i=0;i<3;i++){
+        int top=y+h-2,reach=(int)Math.round(3*size);
+        for(int i=0;i<3+(size>1.2?1:0);i++){
             double a=i*2.1+rnd.nextDouble();
-            for(int k=1;k<=3;k++){
+            for(int k=1;k<=reach;k++){
                 int bx=x+(int)Math.round(Math.cos(a)*k),bz=z+(int)Math.round(Math.sin(a)*k);
                 log(bx,top+k/2,bz,Blocks.CHERRY_LOG,Math.abs(Math.cos(a))>0.7?Direction.Axis.X:Direction.Axis.Z);
             }
         }
-        double r=3.6+rnd.nextDouble()*1.2;
-        blob(x+0.5,top+2.5,z+0.5,r,2.3,r,Blocks.CHERRY_LEAVES,null);
-        blob(x+0.5+(rnd.nextDouble()-0.5)*2,top+3.5,z+0.5+(rnd.nextDouble()-0.5)*2,r*0.7,1.8,r*0.7,Blocks.CHERRY_LEAVES,null);
-        // fallen petals on the ground under the crown
-        for(int i=0;i<18;i++){
-            int px=x+(int)Math.round((rnd.nextDouble()*2-1)*r),pz=z+(int)Math.round((rnd.nextDouble()*2-1)*r);
-            int g=c.ground(px,pz);
-            if(c.air(px,g+1,pz)&&c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK))
-                c.set(px,g+1,pz,Blocks.PINK_PETALS.getDefaultState().with(Properties.FLOWER_AMOUNT,1+rnd.nextInt(4)).with(Properties.HORIZONTAL_FACING,Direction.fromHorizontal(rnd.nextInt(4))));
+        double r=(3.6+rnd.nextDouble()*1.2)*size;
+        blob(x+0.5,top+2.5*Math.sqrt(size),z+0.5,r,2.3*size,r,Blocks.CHERRY_LEAVES,null);
+        blob(x+0.5+(rnd.nextDouble()-0.5)*2*size,top+3.5*size,z+0.5+(rnd.nextDouble()-0.5)*2*size,r*0.7,1.8*size,r*0.7,Blocks.CHERRY_LEAVES,null);
+        if(size>1.2)for(int i=0;i<3;i++){
+            double a=rnd.nextDouble()*Math.PI*2;
+            blob(x+0.5+Math.cos(a)*r*0.6,top+1.5*size+rnd.nextDouble()*size,z+0.5+Math.sin(a)*r*0.6,r*0.5,1.5*size,r*0.5,Blocks.CHERRY_LEAVES,null);
         }
+        // fallen petals on the ground under the crown and a little beyond it
+        int n=(int)Math.round(18*size*size*1.6);
+        for(int i=0;i<n;i++){
+            double a=rnd.nextDouble()*Math.PI*2,d=Math.sqrt(rnd.nextDouble())*r*1.25;
+            int px=x+(int)Math.round(Math.cos(a)*d),pz=z+(int)Math.round(Math.sin(a)*d);
+            petals(px,c.ground(px,pz),pz);
+        }
+    }
+    /** A few fallen petals on top of the block at y, if anything solid is there to hold them and nothing stands on it. */
+    void petals(int x,int y,int z){
+        if(!c.air(x,y+1,z))return;
+        BlockState g=c.get(x,y,z);
+        if(g.isOf(Blocks.GRASS_BLOCK))
+            c.set(x,y+1,z,Blocks.PINK_PETALS.getDefaultState().with(Properties.FLOWER_AMOUNT,1+rnd.nextInt(4)).with(Properties.HORIZONTAL_FACING,Direction.fromHorizontal(rnd.nextInt(4))));
+        else if(g.isOpaqueFullCube(null,null)||g.getBlock() instanceof SlabBlock&&g.get(SlabBlock.TYPE)!=net.minecraft.block.enums.SlabType.BOTTOM)
+            c.set(x,y+1,z,TB.of("fallen_petals"));
     }
 
     /** A round evergreen broadleaf tree (camphor, oak): a straight trunk under a dense dark crown. */

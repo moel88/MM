@@ -137,24 +137,29 @@ final class Ground {
         f.wallSign(W/2+1,2,-1,Blocks.SPRUCE_WALL_SIGN,Direction.NORTH,DyeColor.WHITE,false,"","第二倉庫","");
     }
 
-    /** The chain-link fence on white posts east of the shed, a small box at its foot, the cherry tree beyond it. */
+    /**
+     * The chain-link fence on white posts across the shed's left end and on to the lot's east edge (photo 2: from the
+     * left edge of the picture to the shed, 11.5 blocks ahead), a small box at its foot, and the big cherry tree behind
+     * it at the foot of the hill, its crown filling the photo's top left corner.
+     */
     private void fence(){
-        int z=SHED_Z0-2;
-        for(int x=SHED_X1;x<=X1;x++){
-            boolean post=x==SHED_X1||x==X1||x==SHED_X1+2;
+        int z=SHED_Z0-2,from=SHED_X1-3;
+        for(int x=from;x<=X1;x++){
+            boolean post=x==from||x==X1||(x-from)%3==0;
             c.set(x,Y+1,z,post?TB.PIPE:TB.CHAIN_LINK);c.set(x,Y+2,z,post?TB.PIPE:TB.CHAIN_LINK);
         }
-        for(int zz=z+1;zz<SHED_Z0;zz++){c.set(SHED_X1,Y+1,zz,TB.CHAIN_LINK);c.set(SHED_X1,Y+2,zz,TB.CHAIN_LINK);}
-        c.set(SHED_X1+2,Y+1,z-1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
-        t.nature.cherry(X1-4,Y+1,z-3,6);
+        for(int zz=z+1;zz<SHED_Z0;zz++){c.set(from,Y+1,zz,TB.CHAIN_LINK);c.set(from,Y+2,zz,TB.CHAIN_LINK);}
+        c.set(from+2,Y+1,z-1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
+        int tx=X1+1,tz=SHED_Z0+1;
+        t.nature.cherry(tx,c.ground(tx,tz)+1,tz,7,1.45);
     }
 
-    /** A small white goal, its mouth to the east: pipe posts, a pipe bar, the net behind and at its sides. */
+    /** A small white goal (photo 2: about a metre high, two wide), its mouth to the east: pipe posts, a bar, the net behind. */
     private void goal(int x,int zc){
-        for(int z=zc-2;z<=zc+2;z++){
-            boolean post=z==zc-2||z==zc+2;
-            c.set(x,Y+1,z,post?TB.PIPE:s(Blocks.AIR));c.set(x,Y+2,z,post?TB.PIPE:TB.GUARDRAIL);
-            c.set(x-1,Y+1,z,TB.NET);c.set(x-1,Y+2,z,TB.NET);
+        for(int z=zc-1;z<=zc+1;z++){
+            boolean post=z==zc-1||z==zc+1;
+            c.set(x,Y+1,z,post?TB.PIPE:TB.GUARDRAIL);
+            c.set(x-1,Y+1,z,TB.NET);
         }
     }
 

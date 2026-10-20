@@ -91,10 +91,11 @@ def asphalt(seed):
     return img
 
 def worn_asphalt(seed, cracked=False):
-    """The lot's old asphalt: light, coarse and brownish, its stones standing out, cracks with weeds in some."""
+    """The lot's old asphalt: coarse and grey (photo 2's, cool rather than brown in the sun), its stones standing
+    out, cracks with weeds in some."""
     g = rng(seed)
-    img = shade(flat((110, 104, 96)), 9 * g.normal(size=(S, S)) + 7 * field(seed + 1, 2.5) + 7 * field(seed + 2, 12))
-    img = stones(img, seed + 3, 0.11, [(146, 140, 130), (88, 84, 79), (162, 153, 138), (76, 74, 72), (128, 117, 102)], big=0.5)
+    img = shade(flat((101, 98, 97)), 9 * g.normal(size=(S, S)) + 7 * field(seed + 1, 2.5) + 7 * field(seed + 2, 12))
+    img = stones(img, seed + 3, 0.11, [(140, 136, 132), (84, 82, 80), (152, 147, 141), (72, 71, 70), (120, 114, 108)], big=0.5)
     img[g.random((S, S)) < 0.04] -= 22
     if cracked:
         for k in range(3):
@@ -202,6 +203,22 @@ def corrugated(seed, base, rust):
     hue = field(seed + 4, 3)
     rc = np.dstack([118 + 26 * hue, 64 + 14 * hue, 36 + 6 * hue]) + (rib[None, :] * 0.7)[..., None] + (4 * g.normal(size=(S, S)))[..., None]
     return img * (1 - a[..., None]) + rc * a[..., None]
+
+def kawara_ridge(seed):
+    """The ridge's cap of kawara: round tiles laid end to end along the picture's width, a little darker than the slopes."""
+    g = rng(seed)
+    v = np.arange(S)
+    c = np.cos((v % 32 - 15.5) / 15.5 * np.pi / 2)
+    img = shade(flat((58, 61, 68)), (30 * c ** 1.2 - 12)[:, None] + np.zeros((S, S)))
+    u = np.arange(S) % 21
+    img = shade(img, np.where(u == 20, -14, np.where(u == 0, 6, 0))[None, :] + 0 * img[..., 0])
+    return shade(img, 2.5 * g.normal(size=(S, S)) + 3 * field(seed + 1, 3))
+
+def flashing(seed):
+    """The bent sheet over a metal roof's ridge: plain grey steel with a crease along it."""
+    img = steel(seed, (92, 94, 98))
+    img[30:34] += 18; img[34:36] -= 14
+    return img
 
 def roof_sheet(seed):
     g = rng(seed)
@@ -369,6 +386,22 @@ def pane_window(seed):
     img[frame] = (66, 48, 36); alpha[frame] = 255
     return img, alpha
 
+def petals(seed):
+    """Fallen cherry petals: small pale pink ovals scattered over nothing, a few still in twos and threes."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    y, x = np.mgrid[0:S, 0:S]
+    cols = [(246, 196, 212), (250, 214, 226), (252, 232, 238), (232, 168, 192), (240, 186, 204)]
+    for k in range(34):
+        cx, cy = g.uniform(0, S, 2); a = g.uniform(0, np.pi); rl = g.uniform(1.6, 2.6); rs = rl * g.uniform(0.45, 0.65)
+        dx = (x - cx + S / 2) % S - S / 2; dy = (y - cy + S / 2) % S - S / 2
+        u = dx * np.cos(a) + dy * np.sin(a); v = -dx * np.sin(a) + dy * np.cos(a)
+        m = (u / rl) ** 2 + (v / rs) ** 2 <= 1
+        c = np.array(cols[g.integers(0, len(cols))], float)
+        img[m] = c - 14 * ((u[m] / rl) > 0.4)[:, None]
+        alpha[m] = 255
+    return img, alpha
+
 def edge(color):
     img = flat(color); return img
 
@@ -468,7 +501,20 @@ block('street_lamp_arm', 'shaped', {}, '가로등 팔', 'Street Lamp Arm')
 block('street_lamp', 'shaped', {}, '가로등', 'Street Lamp')
 block('air_conditioner', 'shaped', {}, '에어컨 실외기', 'Air Conditioner')
 block('letterbox', 'shaped', {}, '우편함', 'Letterbox')
+block('fallen_petals', 'litter', {}, '떨어진 꽃잎', 'Fallen Petals', None)
 block('vending_machine', 'vending', {}, '자판기', 'Vending Machine')
+# roofs at their true pitch: drawn in code (RoofModel), so they get an item model and no block state file here
+def mc(name): return f'minecraft:block/{name}'
+block('roof_kawara', 'roof', {'top': KW, 'side': KWS, 'under': PL[0]}, '기와 지붕', 'Kawara Roof')
+block('roof_sheet', 'roof', {'top': CR, 'side': CR, 'under': CI[0]}, '함석 지붕', 'Sheet Roof')
+block('roof_black', 'roof', {'top': mc('polished_blackstone'), 'side': mc('polished_blackstone'), 'under': PL[0]}, '검은 지붕', 'Black Roof')
+block('roof_blue', 'roof', {'top': mc('dark_prismarine'), 'side': mc('dark_prismarine'), 'under': PL[1]}, '파란 지붕', 'Blue Roof')
+block('roof_slate', 'roof', {'top': mc('stone_bricks'), 'side': mc('stone_bricks'), 'under': PL[2]}, '석판 지붕', 'Slate Roof')
+block('roof_red', 'roof', {'top': mc('bricks'), 'side': mc('bricks'), 'under': PL[0]}, '붉은 지붕', 'Red Roof')
+block('roof_brown', 'roof', {'top': mc('mud_bricks'), 'side': mc('mud_bricks'), 'under': PL[1]}, '갈색 지붕', 'Brown Roof')
+block('roof_copper', 'roof', {'top': mc('oxidized_cut_copper'), 'side': mc('oxidized_cut_copper'), 'under': PL[0]}, '청동 지붕', 'Copper Roof')
+block('roof_rust', 'roof', {'top': mc('exposed_cut_copper'), 'side': mc('exposed_cut_copper'), 'under': PL[2]}, '구리 지붕', 'Rusty Copper Roof')
+block('roof_teal', 'roof', {'top': mc('weathered_cut_copper'), 'side': mc('weathered_cut_copper'), 'under': PL[1]}, '녹청 지붕', 'Teal Copper Roof')
 
 # ---------------------------------------------------------------- models
 
@@ -572,9 +618,9 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
         STATES[i] = {'multipart': mp}
         ITEMS[i] = ('generated', tl(i))
     elif kind == 'post':
+        # drawn round in code (client/town/PoleModel); this square one is only the item's
         a, b = d['from'], d['to']
         m = custom(i, [element([a, 0, a], [b, 16, b], box_faces(d['tex'], [a, 0, a], [b, 16, b]))], d['tex'])
-        STATES[i] = {'variants': {'': {'model': m}}}
         ITEMS[i] = m
     elif kind == 'crossarm':
         els = []
@@ -583,7 +629,8 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
         for x0 in ((1.5, 12.5) if d['pole'] else (1.5, 7, 12.5)):
             els.append(element([x0, 13.5, 7.25], [x0 + 2, 16, 8.75], box_faces(POR, [x0, 13.5, 7.25], [x0 + 2, 16, 8.75])))
         m = custom(i, els, STEEL)
-        STATES[i] = {'variants': {'axis=x': {'model': m}, 'axis=z': {'model': m, 'y': 90}}}
+        # the arm through a pole is drawn in code with the pole round (PoleModel); the arm's end keeps this model
+        if not d['pole']: STATES[i] = {'variants': {'axis=x': {'model': m}, 'axis=z': {'model': m, 'y': 90}}}
         ITEMS[i] = m
     elif kind == 'shaped':
         if i == 'pole_transformer':
@@ -608,6 +655,16 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
         m = custom(i, els, p)
         STATES[i] = {'variants': {f'facing={f}': v for f, v in rotations(m).items()}}
         ITEMS[i] = m
+    elif kind == 'litter':
+        f = {'up': face(tl(i)), 'down': face(tl(i))}
+        m = custom(i, [element([0, 0.25, 0], [16, 0.25, 16], f)], tl(i), ao=False)
+        STATES[i] = {'variants': {'': [dict({'model': m}, **({'y': y} if y else {})) for y in (0, 90, 180, 270)]}}
+        ITEMS[i] = ('generated', tl(i))
+    elif kind == 'roof':
+        # in the hand and the inventory, a plate tipped at the roof's slope
+        f = box_faces(d['top'], [0, 4, 0], [16, 7, 16]); f['up'] = face(d['top']); f['down'] = face(d['under'])
+        for k in ('north', 'south', 'east', 'west'): f[k] = face(d['side'], [0, 9, 16, 12])
+        ITEMS[i] = custom(i + '_item', [element([0, 4, 0], [16, 7, 16], f, {'angle': -22.5, 'axis': 'x', 'origin': [8, 6, 8], 'rescale': True})], d['top'])
     elif kind == 'vending':
         lf = box_faces(VS, [0, 0, 2], [16, 16, 16]); lf['north'] = face(VFL, [0, 0, 16, 16]); lf['down'] = face(VT)
         lf.pop('up')
@@ -619,6 +676,11 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
             for f, r in rotations(m).items(): v[f'facing={f},half={half}'] = r
         STATES[i] = {'variants': v}
         ITEMS[i] = lo
+
+# the roofs' ridge caps (named by TownBlocks) and the fallen petals, added after the panes so their seeds stay as they were
+KWR = tex('kawara_ridge', kawara_ridge, 802)
+FLS = tex('roof_flashing', flashing, 941)
+PET = tex('fallen_petals', petals, 1500)
 
 # ---------------------------------------------------------------- write everything
 
@@ -633,6 +695,9 @@ def main():
         else: save(name, out)
     for name, data in MODELS.items(): write(ASSETS / 'models/block/town' / f'{name}.json', data)
     for i, data in STATES.items(): write(ASSETS / 'blockstates' / f'{i}.json', data)
+    # blocks whose models are built in code have no block state file
+    for (i, kind, d, ko, en, tool) in BLOCKS:
+        if i not in STATES: (ASSETS / 'blockstates' / f'{i}.json').unlink(missing_ok=True)
     for i, m in ITEMS.items():
         data = {'parent': 'minecraft:item/generated', 'textures': {'layer0': m[1]}} if isinstance(m, tuple) else {'parent': m}
         write(ASSETS / 'models/item' / f'{i}.json', data)
