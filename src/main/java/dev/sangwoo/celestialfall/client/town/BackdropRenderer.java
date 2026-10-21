@@ -32,8 +32,12 @@ public final class BackdropRenderer {
     static final float SEA=62.4f;
     /** Haze takes half a hill's colour at this distance (blocks). */
     static final double HAZE_HALF=1500;
-    /** The blue of distance added to the backdrop's colour under a shader pack, which hazes it itself. */
-    static final double[] SHADER_BLUE={0.04,0.10,0.22};
+    /**
+     * The backdrop's colour under a shader pack, which hazes it itself: the blue of a far mountain, before the pack's
+     * lift. Measured on photo 1, whose mountain is the sky's colour times about 0.52, 0.71 and 0.89; the pack makes of
+     * a colour c about 0.5 + 0.55 c, so the hills are given no red and much blue, and the sun shades their slopes.
+     */
+    static final double[] SHADER_TINT={0.0,0.18,0.53};
     private static Identifier dimension;
     private static Hill[] hills=new Hill[0];
     private BackdropRenderer(){}
@@ -156,9 +160,9 @@ public final class BackdropRenderer {
                 double lit=0.62+0.55*Math.max(0,h.normal[v*3]*sx+h.normal[v*3+1]*sy);
                 double haze=1-Math.pow(0.5,Math.sqrt(dx*dx+dz*dz)/HAZE_HALF);
                 for(int a=0;a<3;a++){
-                    // a shader pack takes the backdrop for sky and lifts it toward its own haze (measured: about
-                    // 0.45 + 0.55 x the colour given), so it is given a darker colour with the blue of distance in it
-                    double c=packs?h.base[v*3+a]*lit*0.55+SHADER_BLUE[a]:h.base[v*3+a]*lit*(1-haze)+fog[a]*haze;
+                    // a shader pack takes the backdrop for sky and lifts it toward its own haze, so it is given the
+                    // deep blue that comes out as the photo's mountain
+                    double c=packs?SHADER_TINT[a]*lit:h.base[v*3+a]*lit*(1-haze)+fog[a]*haze;
                     col[v*3+a]=(float)MathHelper.clamp(c,0,1);
                 }
             }

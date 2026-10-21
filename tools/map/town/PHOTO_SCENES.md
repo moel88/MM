@@ -8,8 +8,9 @@ in-game views come close, but blocks keep their grid, so they will never be the 
 What a resource pack cannot do is done by the mod (2.47.0, at the user's request): roofs laid at their true pitch
 instead of half steps (RoofBlock), round poles with climbing bolts (PoleModel), petals that lie on paving and asphalt
 (fallen_petals), the mountain across the water beyond the map (the definition's backdrop, drawn by BackdropRenderer),
-and the wires (2.46.0). Both photos were taken on the same morning: the views' teleports set time 1300, a low sun from
-the east-south-east (with the shader pack's sun path tilted 40 degrees south, Complementary's Unbound default).
+and the wires (2.46.0). Both photos were taken on the same morning: the views' teleports set time 3000, a sun 39
+degrees up in the south-east (with the shader pack's sun path tilted 40 degrees south, Complementary's Unbound default).
+At 1300 the lot lay wholly in the shadow of the hill to its east, so 2.47.0 moved the time to 3000.
 
 ## Photo 1: a street down to the sea
 
