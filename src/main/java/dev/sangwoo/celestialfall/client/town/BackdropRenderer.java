@@ -20,8 +20,11 @@ import java.util.*;
  * definition), too far off to be blocks and beyond any view distance. Each is a hill of rings around its summit, its
  * shore and ridges shaped by its seed, lit by the sun and hazed toward the colour of the fog by its distance, the way
  * far land fades over the sea. It goes down right after the sky and before anything else, shrunk toward the camera so
- * it keeps its place and size in view, without depth: everything in the world draws over it, and shader packs take it
- * for sky. Far hills go first, and each hill from its summit out to its shore, so nearer slopes cover farther ones.
+ * it keeps its place and size in view, without depth: everything in the world draws over it. A shader pack (Iris)
+ * redraws the sky over whatever came before the world, so with one the backdrop goes down after the world instead, at
+ * the far end of the view's depth where only the sky is left, still without depth of its own: the pack takes it for
+ * sky (its low clouds can pass in front). Far hills go first, and each hill from its summit out to its shore, so
+ * nearer slopes cover farther ones.
  */
 public final class BackdropRenderer {
     static final int RINGS=22,SEGMENTS=96;
@@ -29,6 +32,8 @@ public final class BackdropRenderer {
     static final float SEA=62.4f;
     /** Haze takes half a hill's colour at this distance (blocks). */
     static final double HAZE_HALF=1500;
+    /** The blue of distance added to the backdrop's colour under a shader pack, which hazes it itself. */
+    static final double[] SHADER_BLUE={0.04,0.10,0.22};
     private static Identifier dimension;
     private static Hill[] hills=new Hill[0];
     private BackdropRenderer(){}
@@ -41,7 +46,8 @@ public final class BackdropRenderer {
             mc.execute(()->{dimension=dim;hills=peaks.stream().map(Hill::new).toArray(Hill[]::new);});
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{dimension=null;hills=new Hill[0];}));
-        WorldRenderEvents.AFTER_SETUP.register(BackdropRenderer::render);
+        WorldRenderEvents.AFTER_SETUP.register(ctx->render(ctx,false));
+        WorldRenderEvents.AFTER_ENTITIES.register(ctx->render(ctx,true));
     }
 
     /** How many mountains the server has sent for the dimension the player is in now. */
@@ -110,15 +116,30 @@ public final class BackdropRenderer {
         double distance(Vec3d cam){return Math.hypot(cx-cam.x,cz-cam.z);}
     }
 
-    private static void render(WorldRenderContext ctx){
+    private static Object iris;private static java.lang.reflect.Method irisInUse;private static boolean irisLooked;
+    /** Whether a shader pack is drawing the world (Iris's own answer when it is there). */
+    static boolean shaders(){
+        if(!irisLooked){
+            irisLooked=true;
+            try{var c=Class.forName("net.irisshaders.iris.api.v0.IrisApi");iris=c.getMethod("getInstance").invoke(null);irisInUse=c.getMethod("isShaderPackInUse");}
+            catch(ReflectiveOperationException|LinkageError e){iris=null;}
+        }
+        try{return iris!=null&&(Boolean)irisInUse.invoke(iris);}catch(ReflectiveOperationException e){return false;}
+    }
+
+    private static void render(WorldRenderContext ctx,boolean late){
         var mc=MinecraftClient.getInstance();
         if(hills.length==0||mc.world==null||dimension==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
+        // a shader pack redraws what was under the world before it, so with one the backdrop goes down after the world
+        boolean packs=shaders();
+        if(late!=packs)return;
         Vec3d cam=ctx.camera().getPos();
         // shrink the whole backdrop toward the camera (which keeps every point where it is in view) until its farthest
-        // point is well inside the fog, so neither the view's depth nor the fog cuts it off
+        // point is well inside the fog, so neither the view's depth nor the fog cuts it off; drawn after the world, it
+        // goes out near the far end of the view's depth instead, so it only shows where nothing else was drawn
         double farthest=1;
         for(var h:hills)farthest=Math.max(farthest,h.distance(cam)+h.reach);
-        double draw=MathHelper.clamp(mc.gameRenderer.getViewDistance()*0.4,12,56),s=draw/farthest;
+        double draw=late?mc.gameRenderer.getFarPlaneDistance()*0.9:MathHelper.clamp(mc.gameRenderer.getViewDistance()*0.4,12,56),s=draw/farthest;
         float[] fog=RenderSystem.getShaderFogColor();
         double angle=mc.world.getSkyAngle(ctx.tickDelta())*Math.PI*2;
         double sx=-Math.sin(angle),sy=Math.cos(angle);
@@ -134,7 +155,12 @@ public final class BackdropRenderer {
                 double dx=h.pos[v*3]-cam.x,dz=h.pos[v*3+2]-cam.z;
                 double lit=0.62+0.55*Math.max(0,h.normal[v*3]*sx+h.normal[v*3+1]*sy);
                 double haze=1-Math.pow(0.5,Math.sqrt(dx*dx+dz*dz)/HAZE_HALF);
-                for(int a=0;a<3;a++)col[v*3+a]=(float)MathHelper.clamp(h.base[v*3+a]*lit*(1-haze)+fog[a]*haze,0,1);
+                for(int a=0;a<3;a++){
+                    // a shader pack takes the backdrop for sky and lifts it toward its own haze (measured: about
+                    // 0.45 + 0.55 x the colour given), so it is given a darker colour with the blue of distance in it
+                    double c=packs?h.base[v*3+a]*lit*0.55+SHADER_BLUE[a]:h.base[v*3+a]*lit*(1-haze)+fog[a]*haze;
+                    col[v*3+a]=(float)MathHelper.clamp(c,0,1);
+                }
             }
             for(int k=0;k<h.tris.length;k++){
                 int v=h.tris[k];
@@ -145,7 +171,8 @@ public final class BackdropRenderer {
         var lightmap=mc.gameRenderer.getLightmapTextureManager();
         lightmap.enable();
         RenderSystem.setShader(GameRenderer::getRenderTypeLeashProgram);
-        RenderSystem.disableDepthTest();
+        if(late){RenderSystem.enableDepthTest();RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);}
+        else RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();

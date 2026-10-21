@@ -7,7 +7,7 @@ own clock). The world is copied into the dev client's saves and opened there wit
 SLOW slows the game's clock for flights so water and leaves move at their own pace in the 60 fps film.
 MAP_MODS (jar paths joined by ':') adds mods to the client, such as Sodium and Iris; MAP_SHADER names a shader pack
 zip for Iris to use (copied into the dev client's shaderpacks for the run and its Iris settings put back afterwards),
-MAP_SHADER_OPTIONS the pack's options ("SUN_ANGLE=-40;...").
+MAP_SHADER_OPTIONS the pack's options ("SUN_ANGLE=-40;..."), MAP_JVM more JVM options for the client ("-Dname=value ...").
 """
 from pathlib import Path
 import json, os, shutil, subprocess, sys, time, zipfile
@@ -58,7 +58,8 @@ if shader:
 init = build / 'map.gradle'
 init.write_text('gradle.projectsEvaluated { rootProject.tasks.named("runClient") { jvmArgs "-Xmx6G", "-Xms2G", '
                 f'"-Dbotand.map.out={out}", "-Dbotand.map.world={target.name}", "-Dbotand.map.list={shots}", "-Dbotand.map.slow={slow}", '
-                f'"-Dbotand.map.view={os.environ.get("MAP_VIEW", "12")}", "-Dfabric.addMods={mods}"; '
+                f'"-Dbotand.map.view={os.environ.get("MAP_VIEW", "12")}", "-Dfabric.addMods={mods}"'
+                + ''.join(f', "{a}"' for a in os.environ.get('MAP_JVM', '').split() if a) + '; '
                 f'args "--username", "MapQA", "--width", "{w}", "--height", "{h}" }} }}')
 env = os.environ.copy(); env['LIBGL_ALWAYS_SOFTWARE'] = 'true'; env['ALSOFT_DRIVERS'] = 'null'; env['GALLIUM_DRIVER'] = 'llvmpipe'
 display = next(i for i in range(151, 190) if not Path(f'/tmp/.X{i}-lock').exists())
