@@ -44,11 +44,12 @@ public final class BackdropRenderer {
     static final int SEA_RINGS=12,SEA_SEGMENTS=96;
     static final double[] SEA_COLOUR={0.30,0.52,0.72};
     /**
-     * The far sea under a shader pack, before its lift: at the view's edge the pack's pale horizon, which its own
-     * water fades into there, and further out photo 1's water under the mountain (the sky's colour times about 0.54,
-     * 0.81 and 0.98), lighter and greener than the hills.
+     * The far sea under a shader pack, before its lift: at the view's edge the grey blue the pack's own water fades to
+     * there (the pack also lights the strip by the horizon, so a paler start shows as a bright band), and further out
+     * photo 1's water under the mountain (the sky's colour times about 0.54, 0.81 and 0.98), lighter and greener than
+     * the hills.
      */
-    static final double[] SHADER_EDGE={0.62,0.62,0.71},SHADER_SEA={0.0,0.33,0.67};
+    static final double[] SHADER_EDGE={0.27,0.33,0.45},SHADER_SEA={0.0,0.33,0.67};
     private static Identifier dimension;
     private static Hill[] hills=new Hill[0];
     private BackdropRenderer(){}
