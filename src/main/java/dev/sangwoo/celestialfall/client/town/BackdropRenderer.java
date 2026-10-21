@@ -24,7 +24,9 @@ import java.util.*;
  * redraws the sky over whatever came before the world, so with one the backdrop goes down after the world instead, at
  * the far end of the view's depth where only the sky is left, still without depth of its own: the pack takes it for
  * sky (its low clouds can pass in front). Far hills go first, and each hill from its summit out to its shore, so
- * nearer slopes cover farther ones.
+ * nearer slopes cover farther ones. Under them lies the far sea (2.47.1): the water's surface from the edge of the view,
+ * where the world's own water ends in fog, out past the hills, so they stand in water instead of floating over a strip
+ * of fog. Nothing is drawn under water or in lava, where the world's own fog closes in.
  */
 public final class BackdropRenderer {
     static final int RINGS=22,SEGMENTS=96;
@@ -38,6 +40,15 @@ public final class BackdropRenderer {
      * a colour c about 0.5 + 0.55 c, so the hills are given no red and much blue, and the sun shades their slopes.
      */
     static final double[] SHADER_TINT={0.0,0.18,0.53};
+    /** The far sea's rings, from the view's edge out past the hills, and its colour by day before the haze. */
+    static final int SEA_RINGS=12,SEA_SEGMENTS=96;
+    static final double[] SEA_COLOUR={0.30,0.52,0.72};
+    /**
+     * The far sea under a shader pack, before its lift: at the view's edge the pack's pale horizon, which its own
+     * water fades into there, and further out photo 1's water under the mountain (the sky's colour times about 0.54,
+     * 0.81 and 0.98), lighter and greener than the hills.
+     */
+    static final double[] SHADER_EDGE={0.62,0.62,0.71},SHADER_SEA={0.0,0.33,0.67};
     private static Identifier dimension;
     private static Hill[] hills=new Hill[0];
     private BackdropRenderer(){}
@@ -136,7 +147,7 @@ public final class BackdropRenderer {
         if(hills.length==0||mc.world==null||dimension==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
         // a shader pack redraws what was under the world before it, so with one the backdrop goes down after the world
         boolean packs=shaders();
-        if(late!=packs)return;
+        if(late!=packs||ctx.camera().getSubmersionType()!=CameraSubmersionType.NONE)return;
         Vec3d cam=ctx.camera().getPos();
         // shrink the whole backdrop toward the camera (which keeps every point where it is in view) until its farthest
         // point is well inside the fog, so neither the view's depth nor the fog cuts it off; drawn after the world, it
@@ -152,6 +163,11 @@ public final class BackdropRenderer {
         Matrix4f mat=ctx.matrixStack().peek().getPositionMatrix();
         BufferBuilder buf=Tessellator.getInstance().getBuffer();
         buf.begin(VertexFormat.DrawMode.TRIANGLES,VertexFormats.POSITION_COLOR_LIGHT);
+        // the far sea first, so the hills stand in water instead of floating over the fog the world's water ends in
+        if(cam.y>SEA+1){
+            double day=MathHelper.clamp((mc.world.getSkyBrightness(ctx.tickDelta())-0.2)/0.8,0.1,1);
+            sea(buf,mat,cam,mc.gameRenderer.getViewDistance(),farthest*1.6,s,late?mc.gameRenderer.getFarPlaneDistance():0,fog,day,packs);
+        }
         for(var h:order){
             int n=h.pos.length/3;
             float[] col=new float[n*3];
@@ -184,5 +200,43 @@ public final class BackdropRenderer {
         RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
         lightmap.disable();
+    }
+
+    /**
+     * The water's surface beyond the view, in rings from just inside the view's edge out to {@code out}: below the
+     * horizon, where nothing else is drawn, and covered by everything drawn after it. Each point keeps its line of
+     * sight and is brought in like the hills; drawn after the world ({@code far} above 0), no point comes nearer than
+     * the view's edge, so the world in front of it always wins the depth test. It starts as the fog the world's water
+     * ends in at the view's edge and opens out into far water, hazed like the hills.
+     */
+    private static void sea(BufferBuilder buf,Matrix4f mat,Vec3d cam,double view,double out,double s,double far,float[] fog,double day,boolean packs){
+        double in=view*0.9,dy=SEA-cam.y;
+        if(out<=in)return;
+        float[][] p=new float[SEA_RINGS+1][SEA_SEGMENTS*3],col=new float[SEA_RINGS+1][3];
+        for(int i=0;i<=SEA_RINGS;i++){
+            double r=in*Math.pow(out/in,i/(double)SEA_RINGS),len=Math.sqrt(r*r+dy*dy);
+            double open=MathHelper.clamp((r-view)/(view*2),0,1);open=open*open*(3-2*open);
+            double haze=1-Math.pow(0.5,r/HAZE_HALF);
+            for(int a=0;a<3;a++){
+                double c=packs?SHADER_EDGE[a]+(SHADER_SEA[a]-SHADER_EDGE[a])*open
+                    :fog[a]+(SEA_COLOUR[a]*day*(1-haze)+fog[a]*haze-fog[a])*open;
+                col[i][a]=(float)MathHelper.clamp(c,0,1);
+            }
+            double d=len*s;
+            if(far>0)d=MathHelper.clamp(d,view*1.1,far*0.95);
+            for(int j=0;j<SEA_SEGMENTS;j++){
+                double t=j*Math.PI*2/SEA_SEGMENTS;
+                p[i][j*3]=(float)(r*Math.cos(t)*d/len);p[i][j*3+1]=(float)(dy*d/len);p[i][j*3+2]=(float)(r*Math.sin(t)*d/len);
+            }
+        }
+        for(int i=0;i<SEA_RINGS;i++)for(int j=0;j<SEA_SEGMENTS;j++){
+            int k=(j+1)%SEA_SEGMENTS;
+            // two triangles facing up: inner j, outer j+1, outer j; inner j, inner j+1, outer j+1
+            seaPoint(buf,mat,p[i],col[i],j);seaPoint(buf,mat,p[i+1],col[i+1],k);seaPoint(buf,mat,p[i+1],col[i+1],j);
+            seaPoint(buf,mat,p[i],col[i],j);seaPoint(buf,mat,p[i],col[i],k);seaPoint(buf,mat,p[i+1],col[i+1],k);
+        }
+    }
+    private static void seaPoint(BufferBuilder buf,Matrix4f mat,float[] ring,float[] c,int j){
+        buf.vertex(mat,ring[j*3],ring[j*3+1],ring[j*3+2]).color(c[0],c[1],c[2],1f).light(LightmapTextureManager.MAX_LIGHT_COORDINATE).next();
     }
 }

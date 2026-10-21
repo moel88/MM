@@ -1,4 +1,10 @@
-> **현재 통합본: Botand 2.47.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 새 해안 마을 Botand-Seaside-1.20.1-v1.1입니다([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md)). 이전 맵 Botand-Azure-Garden-1.20.1-v1.3도 그대로 쓸 수 있습니다.
+> **현재 통합본: Botand 2.47.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 새 해안 마을 Botand-Seaside-1.20.1-v1.1입니다([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md)). 이전 맵 Botand-Azure-Garden-1.20.1-v1.3도 그대로 쓸 수 있습니다.
+
+# 보탠드 2.47.1 — 바다 건너 산 아래의 먼 바다
+
+바다 건너 산 아래에 시야 거리 밖이라 비어 있던 바다를 모드가 그립니다. 전에는 산 아래에 안개색 띠가 남아 산이 바다 위에 떠 보였는데, 이제 사진 1처럼 산이 바다에서 솟아 있습니다(셰이더와 기본 그래픽 모두). 맵은 2.47.0과 같은 v1.1입니다.
+
+[RELEASE_2.47.1_KO.md](RELEASE_2.47.1_KO.md)를 확인하세요.
 
 # 보탠드 2.47.0 — 리소스팩으로 안 되는 것은 모드로 (해안 마을 v1.1)
 
