@@ -1,8 +1,0 @@
-{
- "parent": "minecraft:block/cube_bottom_top",
- "textures": {
-  "top": "celestialfall:block/town/sign_frame",
-  "side": "celestialfall:block/town/sign_store_1",
-  "bottom": "celestialfall:block/town/sign_store_1"
- }
-}

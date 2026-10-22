@@ -32,9 +32,6 @@ import java.util.*;
  * leaves as clusters on cards (hedges, crowns, blossom, ivy, a cherry's limbs), windows with real sash frames that
  * join into one, the houses' stucco, siding, tiles and trim, dark block walls and their grimy feet, the green
  * walking strip, drinks machines with a display behind glass, air conditioners with a fan guard, traffic mirrors.
- * 2.49.0 adds the world tree of the hourglass island's rift: neon sky-blue leaves that give light, silver bark, the
- * rift's white ground and its glowing cracks; and the cyber city's neon, glass curtain walls, LED walls, light bands,
- * holograms and Hangul neon signs.
  */
 public final class TownBlocks {
     private TownBlocks() {}
@@ -53,11 +50,6 @@ public final class TownBlocks {
             .suffocates((s,w,p)->false).blockVision((s,w,p)->false).burnable().pistonBehavior(PistonBehavior.DESTROY).solidBlock((s,w,p)->false);
     }
     private static FabricBlockSettings glass(){return FabricBlockSettings.copyOf(Blocks.GLASS);}
-    /** A hologram's light: glowing, see-through, walked through, nothing spawns on it or suffocates in it. */
-    private static FabricBlockSettings hologram(MapColor colour){
-        return FabricBlockSettings.copyOf(Blocks.GLASS).mapColor(colour).luminance(15).noCollision().nonOpaque().allowsSpawning((s,w,p,t)->false)
-            .solidBlock((s,w,p)->false).suffocates((s,w,p)->false).blockVision((s,w,p)->false);
-    }
 
     // the ground: asphalt and its paint, the worn asphalt of the lot by the sea, pavers
     public static final Block ASPHALT=add("asphalt",new Block(stone()));
@@ -158,55 +150,6 @@ public final class TownBlocks {
     public static final Block VENDING_MACHINE_WHITE=add("vending_machine_white",new VendingMachine(metal().luminance(s->s.get(Properties.DOUBLE_BLOCK_HALF)==DoubleBlockHalf.UPPER?11:6)));
     public static final Block MIRROR_POST=add("mirror_post",new Post(7.1,8.9,metal()));
     public static final Block TRAFFIC_MIRROR=add("traffic_mirror",new Shaped(metal(),Block.createCuboidShape(1,2,5.5,15,16,8.5)));
-    // the world tree in the rift of the hourglass island (2.49.0, map v3.0): its leaves glowing a neon sky blue on cards
-    // (client/town/FoliageModel), its silver bark (some of it threaded with light), the rift's white ground and its cracks of light
-    public static final Block WORLD_TREE_LEAVES=cutoutMipped(add("world_tree_leaves",new GlowFoliage(leaves(MapColor.LIGHT_BLUE).luminance(15))));
-    public static final Block WORLD_TREE_BARK=add("world_tree_bark",new PillarBlock(FabricBlockSettings.copyOf(Blocks.BIRCH_LOG).mapColor(MapColor.WHITE_GRAY)));
-    public static final Block WORLD_TREE_BARK_GLOW=add("world_tree_bark_glow",new PillarBlock(FabricBlockSettings.copyOf(Blocks.BIRCH_LOG).mapColor(MapColor.WHITE_GRAY).luminance(10)));
-    public static final Block RIFT_GROUND=add("rift_ground",new Block(stone().mapColor(MapColor.WHITE)));
-    public static final Block RIFT_CRACK=add("rift_crack",new Crack(stone().mapColor(MapColor.LIGHT_BLUE).luminance(12)));
-    // the fantasy capital's blue roofs (2.49.0): fish-scale slates as a block, a slab, stairs for the towers' cones,
-    // and a roof at its true pitch
-    public static final Block BLUE_SHINGLES=add("blue_shingles",new Block(stone().mapColor(MapColor.BLUE)));
-    public static final Block BLUE_SHINGLES_SLAB=add("blue_shingles_slab",new SlabBlock(stone().mapColor(MapColor.BLUE)));
-    public static final Block BLUE_SHINGLES_STAIRS=add("blue_shingles_stairs",new StairsBlock(BLUE_SHINGLES.getDefaultState(),stone().mapColor(MapColor.BLUE)));
-    public static final RoofBlock ROOF_NAVY=roof("roof_navy",0.5f,2f/16,stone(),"town/blue_shingles","town/blue_shingles","town/plaster_0","town/blue_shingles");
-    // the cyber city of the hourglass island (2.49.0, map v3.0, the user's photo): neon tubes, glass curtain walls (lit
-    // ones glow from inside), dark metal cladding, LED walls playing their loops (animated textures), wet asphalt and dark paving
-    public static final Block NEON_PINK=add("neon_pink",new Block(stone().mapColor(MapColor.PINK).luminance(15)));
-    public static final Block NEON_PURPLE=add("neon_purple",new Block(stone().mapColor(MapColor.PURPLE).luminance(15)));
-    public static final Block NEON_CYAN=add("neon_cyan",new Block(stone().mapColor(MapColor.CYAN).luminance(15)));
-    public static final Block GLASS_CURTAIN=add("glass_curtain",new Block(stone().mapColor(MapColor.BLACK)));
-    public static final Block GLASS_CURTAIN_LIT=add("glass_curtain_lit",new Block(stone().mapColor(MapColor.YELLOW).luminance(9)));
-    public static final Block CYBER_PANEL=add("cyber_panel",new Block(stone().mapColor(MapColor.GRAY)));
-    public static final Block LED_SCREEN_PINK=add("led_screen_pink",new Block(stone().mapColor(MapColor.PINK).luminance(13)));
-    public static final Block LED_SCREEN_CYAN=add("led_screen_cyan",new Block(stone().mapColor(MapColor.CYAN).luminance(13)));
-    public static final Block LED_SCREEN_MIX=add("led_screen_mix",new Block(stone().mapColor(MapColor.MAGENTA).luminance(13)));
-    public static final Block WET_ASPHALT=add("wet_asphalt",new Block(stone().mapColor(MapColor.BLACK)));
-    public static final Block CYBER_PAVING=add("cyber_paving",new Block(stone().mapColor(MapColor.GRAY)));
-    // the cyber city rebuilt from the user's five photos (2.49.0): neon in more colours, light bands (a storey's lit
-    // windows in one colour), holograms (coloured light that shows through itself and lets the daylight and players
-    // through), and neon signs in Hangul, one letter a block, the letter on all four sides so a sign hung out over a
-    // street reads from either way
-    public static final Block NEON_YELLOW=add("neon_yellow",new Block(stone().mapColor(MapColor.YELLOW).luminance(15)));
-    public static final Block NEON_GREEN=add("neon_green",new Block(stone().mapColor(MapColor.LIME).luminance(15)));
-    public static final Block NEON_ORANGE=add("neon_orange",new Block(stone().mapColor(MapColor.ORANGE).luminance(15)));
-    public static final Block NEON_WHITE=add("neon_white",new Block(stone().mapColor(MapColor.WHITE).luminance(15)));
-    public static final Block NEON_RED=add("neon_red",new Block(stone().mapColor(MapColor.RED).luminance(15)));
-    public static final Block BAND_YELLOW=add("light_band_yellow",new Block(stone().mapColor(MapColor.YELLOW).luminance(13)));
-    public static final Block BAND_BLUE=add("light_band_blue",new Block(stone().mapColor(MapColor.BLUE).luminance(13)));
-    public static final Block BAND_GREEN=add("light_band_green",new Block(stone().mapColor(MapColor.LIME).luminance(13)));
-    public static final Block BAND_PINK=add("light_band_pink",new Block(stone().mapColor(MapColor.PINK).luminance(13)));
-    public static final Block BAND_WHITE=add("light_band_white",new Block(stone().mapColor(MapColor.WHITE).luminance(13)));
-    public static final Block HOLOGRAM_PINK=translucent(add("hologram_pink",new Hologram(hologram(MapColor.PINK))));
-    public static final Block HOLOGRAM_CYAN=translucent(add("hologram_cyan",new Hologram(hologram(MapColor.CYAN))));
-    /** The neon signs' words: a key and the word. Each letter is a block sign_KEY_N, N the letter's first place in the word (tools/map/blocks/make_blocks.py draws the same list). */
-    public static final String[][] SIGN_WORDS={{"ramen","라멘"},{"karaoke","노래방"},{"hotel","호텔"},{"botand","보탠드"},{"store","편의점"},
-        {"pc","PC방"},{"rokakaka","로카카카"},{"arcade","오락실"},{"allday","24시"},{"sauna","사우나"}};
-    static{
-        for(String[] w:SIGN_WORDS)for(int i=0;i<w[1].length();i++)
-            if(w[1].indexOf(w[1].charAt(i))==i)add("sign_"+w[0]+"_"+i,new Block(stone().mapColor(MapColor.BLACK).luminance(14)));
-    }
 
     private static <B extends Block> B add(String name,B block){ALL.put(name,block);return block;}
     /** A roof block and its textures: names under the town's own textures, or minecraft: blocks' (block/ is added). */
@@ -261,15 +204,6 @@ public final class TownBlocks {
         @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(Properties.HORIZONTAL_AXIS);}
         @Override public BlockState getPlacementState(ItemPlacementContext c){return getDefaultState().with(Properties.HORIZONTAL_AXIS,c.getHorizontalPlayerFacing().getAxis());}
         @Override public BlockState rotate(BlockState s,BlockRotation r){return turnAxis(s,r);}
-    }
-    /**
-     * A hologram's block: like glass it hides its faces against more of itself, so a hologram built of many reads as one
-     * shape of light; it takes no shade and lets the daylight through.
-     */
-    public static class Hologram extends TransparentBlock {
-        public Hologram(Settings s){super(s);}
-        @Override public float getAmbientOcclusionLightLevel(BlockState s,BlockView w,BlockPos p){return 1f;}
-        @Override public boolean isTransparent(BlockState s,BlockView w,BlockPos p){return true;}
     }
     /** A quarter turn swaps a horizontal axis; a half turn keeps it. */
     static BlockState turnAxis(BlockState s,BlockRotation r){
@@ -373,14 +307,6 @@ public final class TownBlocks {
         public Foliage(Settings s){super(s);}
         @Override public boolean isSideInvisible(BlockState s,BlockState from,Direction d){return from.isOf(this);}
     }
-    /**
-     * The world tree's leaves (2.49.0): leaves that give light and let all the daylight through, so the white ground
-     * under the great crown is not dappled with the shade of its uneven layers.
-     */
-    public static class GlowFoliage extends Foliage {
-        public GlowFoliage(Settings s){super(s);}
-        @Override public boolean isTransparent(BlockState s,BlockView w,BlockPos p){return true;}
-    }
     /** Ivy on a wall (2.48.0): cards of leaves lying against the wall behind, which it falls with; nothing to walk into. */
     public static class Ivy extends HorizontalFacingBlock {
         private final VoxelShape[] shapes=new VoxelShape[4];
@@ -416,40 +342,6 @@ public final class TownBlocks {
         @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){
             boolean t=s.get(THICK);
             return switch(s.get(AXIS)){case X->t?TX:X;case Y->t?TY:Y;case Z->t?TZ:Z;};
-        }
-    }
-    /**
-     * A crack of light in the rift's ground (2.49.0): a full block whose glowing seam runs from its middle to the middle
-     * of each side where another crack lies, so a line of them, however it turns, is one crack; with one neighbour it
-     * is the crack's tip.
-     */
-    public static class Crack extends Block {
-        private static final BooleanProperty[] SIDES={Properties.NORTH,Properties.EAST,Properties.SOUTH,Properties.WEST};
-        public Crack(Settings s){super(s);var d=getDefaultState();for(var p:SIDES)d=d.with(p,false);setDefaultState(d);}
-        @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(SIDES);}
-        /** The side's property: Properties.NORTH for north, and so on. */
-        public static BooleanProperty side(Direction d){
-            return switch(d){
-                case NORTH->Properties.NORTH; case EAST->Properties.EAST; case SOUTH->Properties.SOUTH; case WEST->Properties.WEST;
-                default->throw new IllegalArgumentException("not a side: "+d);
-            };
-        }
-        /** The state with its seams joined to the cracks round it. */
-        public static BlockState joined(BlockState s,BlockView w,BlockPos p){
-            for(var d:Direction.Type.HORIZONTAL)s=s.with(side(d),w.getBlockState(p.offset(d)).getBlock() instanceof Crack);
-            return s;
-        }
-        @Override public BlockState getPlacementState(ItemPlacementContext c){return joined(getDefaultState(),c.getWorld(),c.getBlockPos());}
-        @Override public BlockState getStateForNeighborUpdate(BlockState s,Direction d,BlockState n,WorldAccess w,BlockPos p,BlockPos np){
-            return d.getAxis().isHorizontal()?s.with(side(d),n.getBlock() instanceof Crack):s;
-        }
-        @Override public BlockState rotate(BlockState s,BlockRotation r){
-            var out=s;for(var d:Direction.Type.HORIZONTAL)out=out.with(side(r.rotate(d)),s.get(side(d)));
-            return out;
-        }
-        @Override public BlockState mirror(BlockState s,BlockMirror m){
-            var out=s;for(var d:Direction.Type.HORIZONTAL)out=out.with(side(m.apply(d)),s.get(side(d)));
-            return out;
         }
     }
     /**

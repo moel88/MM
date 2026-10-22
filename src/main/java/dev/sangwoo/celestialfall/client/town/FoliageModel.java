@@ -18,13 +18,11 @@ import java.util.function.Function;
  * faces or outline, its depth showing through its gaps. The cards are seen from both sides and take the light evenly
  * (not darkened by the way they look), as the game's own plants are. Three arrangements are made and the game picks
  * one by position, so a hedge does not repeat. Ivy is cards of leaves lying against the wall behind it; a cherry's limb
- * is a thin round branch, its trunk a thick one. The world tree's leaves (2.49.0) are a hedge's: the crown's outer
- * faces carry its packed glowing leaves and larger cards reach out of it, in their own neon sky blue, so the great
- * crown glows evenly from afar.
+ * is a thin round branch, its trunk a thick one.
  */
 final class FoliageModel {
     static final int VARIANTS=3;
-    private static final String[] LEAF={"leaf_cards_0","leaf_cards_1","leaf_cards_2"},BLOSSOM={"blossom_cards_0","blossom_cards_1","blossom_cards_2"},IVY={"ivy_cards_0","ivy_cards_1"},PINE={"pine_cards_0","pine_cards_1"},WORLD={"world_leaf_cards_0","world_leaf_cards_1","world_leaf_cards_2"};
+    private static final String[] LEAF={"leaf_cards_0","leaf_cards_1","leaf_cards_2"},BLOSSOM={"blossom_cards_0","blossom_cards_1","blossom_cards_2"},IVY={"ivy_cards_0","ivy_cards_1"},PINE={"pine_cards_0","pine_cards_1"};
 
     static void register(){
         ModelLoadingPlugin.register(plugin->{
@@ -32,7 +30,6 @@ final class FoliageModel {
             CodeModel.resolve(plugin,TownBlocks.CANOPY,s->sp->mass(sp,"leaf_mass",LEAF,false,16,15,24,0x5a11fL));
             CodeModel.resolve(plugin,TownBlocks.CHERRY_BLOSSOM,s->sp->mass(sp,"blossom_mass",BLOSSOM,false,16,16,26,0x7b10c4L));
             CodeModel.resolve(plugin,TownBlocks.PINE_NEEDLES,s->sp->mass(sp,"pine_cards_0",PINE,false,14,14,22,0x9e3779L));
-            CodeModel.resolve(plugin,TownBlocks.WORLD_TREE_LEAVES,s->sp->mass(sp,"world_leaf_mass",WORLD,true,10,18,28,0x2c0ffeeL));
             CodeModel.resolve(plugin,TownBlocks.IVY,s->sp->ivy(sp,s.get(Properties.HORIZONTAL_FACING)));
             CodeModel.resolve(plugin,TownBlocks.CHERRY_BRANCH,s->sp->branch(sp,s.get(Properties.AXIS),s.get(TownBlocks.Branch.THICK)));
         });

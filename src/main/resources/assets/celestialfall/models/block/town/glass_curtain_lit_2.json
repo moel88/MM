@@ -1,6 +1,0 @@
-{
- "parent": "minecraft:block/cube_all",
- "textures": {
-  "all": "celestialfall:block/town/glass_curtain_lit_2"
- }
-}
