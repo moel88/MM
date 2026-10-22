@@ -27,7 +27,7 @@ final class Forest {
         paths();
         trees();
         shore();
-        t.places.put("forest",new int[]{-200,c.ground(-200,700)+1,700});
+        t.places.put("forest",new int[]{-100,c.ground(-100,350)+1,350});
         Town.log("forest: "+trees+" trees, "+c.placed);
     }
 
@@ -68,8 +68,8 @@ final class Forest {
         for(int x:new int[]{lx-2,lx+2})for(int z=z0;z<=z1;z+=4){c.set(x,py,z,s(Blocks.SPRUCE_FENCE));c.set(x,py+1,z,s(Blocks.SPRUCE_FENCE));c.set(x,py+2,z,s(Blocks.LANTERN));}
         c.set(lx,py+1,z0,s(Blocks.BARREL));
         // a rowing boat's worth of crates at the pier's end and boulders round the banks
-        for(int k=0;k<26;k++){
-            double a=rnd.nextDouble()*2*Math.PI,d=Plan.LAKE_R+5+rnd.nextDouble()*14;
+        for(int k=0;k<16;k++){
+            double a=rnd.nextDouble()*2*Math.PI,d=Plan.LAKE_R+5+rnd.nextDouble()*10;
             int bx=lx+(int)Math.round(Math.cos(a)*d),bz=lz+(int)Math.round(Math.sin(a)*d);
             if(Math.abs(bx-lx)<4&&bz>lz)continue;
             boulder(bx,bz,1.2+rnd.nextDouble()*1.3);
@@ -170,10 +170,10 @@ final class Forest {
     /** Earth paths: from the loop road to the ruins' gate, from the axis road to the lake, round the lake's south. */
     private void paths(){
         // from the axis road to the lake, round to the ruins, down to the beach in the south
-        path(-6,Plan.LAKE_Z-60,Plan.LAKE_X+Plan.LAKE_R+18,Plan.LAKE_Z-16,-30);
-        path(Plan.LAKE_X-Plan.LAKE_R-16,Plan.LAKE_Z+8,Plan.RUINS_X+26,Plan.RUINS_Z-22,40);
-        path(Plan.LAKE_X,Plan.LAKE_Z+Plan.LAKE_R+12,Plan.LAKE_X-30,Plan.LAKE_Z+Plan.LAKE_R+200,20);
-        path(-6,Plan.RUINS_Z-60,Plan.RUINS_X+40,Plan.RUINS_Z+10,-40);
+        path(-6,Plan.LAKE_Z-40,Plan.LAKE_X+Plan.LAKE_R+14,Plan.LAKE_Z-12,-20);
+        path(Plan.LAKE_X-Plan.LAKE_R-14,Plan.LAKE_Z+8,Plan.RUINS_X+24,Plan.RUINS_Z-20,26);
+        path(Plan.LAKE_X,Plan.LAKE_Z+Plan.LAKE_R+12,Plan.LAKE_X-20,Plan.LAKE_Z+Plan.LAKE_R+100,14);
+        path(-6,Plan.RUINS_Z-40,Plan.RUINS_X+36,Plan.RUINS_Z+10,-26);
         for(int x=Plan.X0;x<Plan.X0+Plan.W;x++)for(int z=Plan.Z0;z<Plan.Z0+Plan.D;z++){
             int i=Canvas.idx(x,z);
             if(!path[i]||t.roads.on(x,z)||t.terrain.water[i]!=0)continue;

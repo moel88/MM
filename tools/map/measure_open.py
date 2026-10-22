@@ -13,8 +13,9 @@ room. OUT.png shows it: water blue, obstacles dark, open ground from orange (tig
 
 Botand's first map (Botand_Azure_Garden_1.20.1, box -256,-256,255,255) measures open 78.0 %, median room 4.2, room>=8
 23.4 %, largest room>=6 area 11,948 (before map v3.0's overhead rule: 76.9 %, 4.1, 23.0 %, 10,752); a new map (box
--200,-200,199,199) must not fall below it. The seaside town v2.0 measures 80.0 %, 5.0, 26.3 %, 42,052 and the hourglass
-island v3.0 89.9 %, 5.0, 25.4 %, 32,458.
+-200,-200,199,199) must not fall below it. The seaside town v2.0 measures 80.0 %, 5.0, 26.3 %, 42,052; the hourglass
+island v3.0 at 400 x 400 measured 89.9 %, 5.0, 25.4 %, 32,458 and at 1000 x 1000 (box -500,-500,499,499) 89.1 %, 6.0,
+36.6 %, 240,551.
 """
 import sys, struct, zlib, glob, os, json, re
 import numpy as np

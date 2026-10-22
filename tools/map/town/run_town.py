@@ -98,7 +98,7 @@ pack = server / WORLD / 'datapacks' / 'botand_hourglass'
 
 log = (out / 'server.out').open('w')
 start = time.time()
-srv = subprocess.Popen(['java', '-Xmx11G', '-Xms4G', '-Dbotand.town.build=true', f'-Dbotand.town.seed={seed}',
+srv = subprocess.Popen(['java', '-Xmx8G', '-Xms3G', '-Dbotand.town.build=true', f'-Dbotand.town.seed={seed}',
                         f'-Dfabric.gameJarPath={LOOM / MC / "minecraft-extracted_server.jar"}', '-cp', cp,
                         'net.fabricmc.loader.impl.launch.knot.KnotServer', 'nogui'],
                        cwd=server, env=env, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True)

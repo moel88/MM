@@ -62,7 +62,7 @@ final class Chunks {
             chunk.setStatus(ChunkStatus.FEATURES);
             Heightmap.populateHeightmaps(chunk,heightmaps);
             storage.setNbt(cp,ChunkSerializer.serialize(w,chunk));
-            // let the writer catch up now and then (2000 x 2000 is sixteen thousand chunks)
+            // let the writer catch up now and then (a big map is thousands of chunks)
             if(++n%1024==0)storage.completeAll();
         }
         storage.completeAll();

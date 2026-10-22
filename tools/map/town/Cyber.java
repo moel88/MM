@@ -23,9 +23,11 @@ final class Cyber {
     static final BlockState[] LED={TB.of("led_screen_pink"),TB.of("led_screen_cyan"),TB.of("led_screen_mix")};
     static final BlockState GLASS=TB.of("glass_curtain"),LIT=TB.of("glass_curtain_lit"),PANEL=TB.of("cyber_panel"),PAVING=TB.of("cyber_paving");
     /** Where the avenues run (as Roads lays them): north-south at x X0+k*STEP, east-west at z Z0+k*STEP. */
-    static final int STEP=104,AX0=56,AZ0=Plan.RIFT+60;
+    static final int STEP=84,AX0=56,AZ0=Plan.RIFT+60;
     /** The city's middle, where the towers stand tallest. */
-    static final int MID_X=470,MID_Z=600;
+    static final int MID_X=235,MID_Z=300;
+    /** No roof higher than ROOF_Y and no mast higher than MAST_Y: the towers stay under the clouds (y 192). */
+    static final int ROOF_Y=186,MAST_Y=189;
     int towers,plazas,cars,lamps;
     Cyber(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
     private static BlockState s(net.minecraft.block.Block b){return b.getDefaultState();}
@@ -76,7 +78,7 @@ final class Cyber {
         if(paved<200)return;
         int w=x1-x0+1,d=z1-z0+1;
         double dm=Math.hypot((x0+x1)/2.0-MID_X,(z0+z1)/2.0-MID_Z);
-        double tall=Math.exp(-(dm/300)*(dm/300));
+        double tall=Math.exp(-(dm/150)*(dm/150));
         int pick=rnd.nextInt(10);
         if(w<50||d<50){
             // a narrow strip: slim towers along it
@@ -89,7 +91,7 @@ final class Cyber {
             }
             return;
         }
-        if(pick==0&&dm>120){plaza(x0,z0,x1,z1,y);return;}
+        if(pick==0&&dm>60){plaza(x0,z0,x1,z1,y);return;}
         if(pick<=3){
             // one great tower in the middle of its plaza
             tryTower(x0+12,z0+12,x1-12,z1-12,y,(int)(height(tall)*1.25));
@@ -108,12 +110,12 @@ final class Cyber {
             tryTower(x0+4,mz+5,x1-4,z1-4,y,height(tall));
         }
     }
-    private int height(double tall){return (int)Math.round(34+150*tall*(0.55+0.45*rnd.nextDouble())+rnd.nextInt(16));}
+    private int height(double tall){return (int)Math.round(28+70*tall*(0.55+0.45*rnd.nextDouble())+rnd.nextInt(10));}
 
     private boolean tryTower(int x0,int z0,int x1,int z1,int y,int h){
         if(x1-x0<12||z1-z0<12||!land(x0,z0,x1,z1,6))return false;
-        // the tower must stay below the world's ceiling
-        h=Math.min(h,Canvas.YMAX-y-12);
+        // the tower must stay under the clouds
+        h=Math.min(h,ROOF_Y-y);
         tower(x0,z0,x1,z1,y,h);
         c.claim(x0-1,z0-1,x1+1,z1+1,CODE);
         towers++;
@@ -168,8 +170,8 @@ final class Cyber {
         int in=h>setback?inset:0;
         for(int x=x0+in;x<=x1-in;x++)for(int z=z0+in;z<=z1-in;z++)c.set(x,top,z,x==x0+in||x==x1-in||z==z0+in||z==z1-in?neon:PANEL);
         int mx=(x0+x1)/2,mz=(z0+z1)/2;
-        if(h>90){
-            int mh=10+rnd.nextInt(16);
+        int mh=Math.min(10+rnd.nextInt(16),MAST_Y-1-top);
+        if(h>80&&mh>=6){
             for(int k=1;k<=mh;k++)c.set(mx,top+k,mz,s(Blocks.IRON_BARS));
             c.set(mx,top+mh+1,mz,NEON[0]);
             for(int k=1;k<=3;k++)c.set(mx,top+k,mz,PANEL);

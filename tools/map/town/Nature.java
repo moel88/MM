@@ -191,7 +191,7 @@ final class Nature {
             if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.pale[i]||t.roads.near(px,pz,4)||Plan.shore(px,pz)>-5)continue;
             if(nearOwned(px,pz,4))continue;
             int g=c.ground(px,pz);
-            if(!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz)||g>130||rnd.nextDouble()>0.14)continue;
+            if(!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz)||g>Plan.mountLevel(0.33)||rnd.nextDouble()>0.14)continue;
             if(Plan.zone(px,pz)==Plan.TOWN)broadleaf(px,g+1,pz,5+rnd.nextInt(3));else townTree(px,g+1,pz,5+rnd.nextInt(3));
             shade++;
         }

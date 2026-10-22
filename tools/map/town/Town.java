@@ -31,7 +31,7 @@ public final class Town implements ModInitializer {
     static final String PACK="botand_hourglass";
     private int phase=-1,wait;private long started;
     private boolean failed;
-    /** What the build leaves for after the world has lit it (the model itself is let go first: 2000 x 2000 is big). */
+    /** What the build leaves for after the world has lit it (the model itself is let go first). */
     private Map<String,String> definition;private int[] spawn;
     static final StringBuilder LOG=new StringBuilder();
 
@@ -116,7 +116,7 @@ public final class Town implements ModInitializer {
             byte k=t.kind[Canvas.idx(x,z)];
             if(k==Terrain.SEA)return shallow;
             if(k==Terrain.BEACH)return beach;
-            if(Plan.zone(x,z)==Plan.TOWN&&Math.hypot(x-Plan.MOUNT_X,z-Plan.MOUNT_Z)<Plan.MOUNT_R*0.55&&y>150)return snowy;
+            if(Plan.zone(x,z)==Plan.TOWN&&Math.hypot(x-Plan.MOUNT_X,z-Plan.MOUNT_Z)<Plan.MOUNT_R*0.55&&y>Plan.mountLevel(0.46))return snowy;
             return switch(Plan.zone(x,z)){case Plan.RIFT_ZONE->meadow;case Plan.CAPITAL,Plan.CYBER->plains;default->forest;};
         };
     }

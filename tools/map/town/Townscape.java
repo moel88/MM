@@ -7,7 +7,7 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Puts the hourglass island together (map v3.0, 2000 x 2000), in the order the pieces depend on each other: the roads,
+ * Puts the hourglass island together (map v3.0, 1000 x 1000), in the order the pieces depend on each other: the roads,
  * the rift and its world tree, the old town with its canal and the shrine on the great mountain, the capital in its
  * walls with the great castle and the cathedral, the cyber city, the forest with its lake and ruins, the meadows, the
  * wires; then writes the map's definition.
@@ -84,15 +84,17 @@ final class Townscape {
     }
     /**
      * The field supply spots: open ground in every zone of the island, checked to be clear: six round the world tree,
-     * then one about every hundred and fifty blocks over the land (none high on the mountain, none in the sea).
+     * then one about every hundred and ten blocks over the land (none high on the mountain, none in the sea); never
+     * more than the mod takes (MapDefinition.MAX_LOOT, 64).
      */
+    static final int MAX_LOOT=64;
     List<int[]> lootSpots(){
         List<int[]> wantList=new ArrayList<>();
-        for(int k=0;k<6;k++){double a=k*Math.PI/3+0.3;wantList.add(new int[]{(int)(Math.cos(a)*150),(int)(Math.sin(a)*150)});}
-        for(int x=-900;x<=900;x+=150)for(int z=-900;z<=900;z+=150){
+        for(int k=0;k<6;k++){double a=k*Math.PI/3+0.3;wantList.add(new int[]{(int)(Math.cos(a)*95),(int)(Math.sin(a)*95)});}
+        for(int x=-440;x<=440;x+=110)for(int z=-440;z<=440;z+=110){
             if(Plan.shore(x,z)>-12||Math.hypot(x,z)<Plan.RIFT)continue;
             if(Math.hypot(x-Plan.MOUNT_X,z-Plan.MOUNT_Z)<Plan.MOUNT_R*0.6)continue;
-            wantList.add(new int[]{x+((x/150+z/150)&1)*37,z});
+            wantList.add(new int[]{x+((x/110+z/110)&1)*27,z});
         }
         int[][] want=wantList.toArray(new int[0][]);
         List<int[]> out=new ArrayList<>();
@@ -107,6 +109,7 @@ final class Townscape {
                 found=new int[]{x,y,z};break search;
             }
             if(found==null){Town.log("supply spot skipped at "+w[0]+","+w[1]);continue;}
+            if(out.size()>=MAX_LOOT){Town.log("supply spot dropped at "+w[0]+","+w[1]+": the mod takes "+MAX_LOOT);continue;}
             out.add(found);
         }
         return out;

@@ -11,7 +11,7 @@ import java.util.*;
 
 /**
  * The fantasy capital in the upper glass's east half (map v3.0, the user's request: '판타지 왕도는 거대한 성과 외벽으로'):
- * a whole city inside high stone walls twenty-two blocks tall, round towers along them every fifty blocks under blue
+ * a whole city inside high stone walls eighteen blocks tall, round towers along them every forty blocks under blue
  * cones, two gatehouses (west on the axis road, south-west toward the rift); its streets paved in stone, the main
  * avenue from the west gate to the great castle; houses of stone below and plaster with dark timbers above under steep
  * blue, slate and green-copper roofs, some with a round turret at a corner; the cathedral north of the avenue across
@@ -39,7 +39,7 @@ final class Capital {
         for(int x=Plan.WALL_X-Plan.WALL_R-40;x<=Plan.WALL_X+Plan.WALL_R+40;x++)for(int z=Plan.WALL_Z-Plan.WALL_R-40;z<=Plan.WALL_Z+Plan.WALL_R+40;z++)
             if(Canvas.inPlan(x,z)&&Plan.zone(x,z)==Plan.CAPITAL&&Plan.insideWalls(x,z)<12&&c.owner(x,z)==0)c.own(x,z,OUTSIDE);
         for(var s:streets)for(int side=-1;side<=1;side+=2)lots.addAll(t.lots.along(s,side,t.roads.half(s)+3,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
-        lots.addAll(t.lots.fill(Plan.CAPITAL,13,13,21,2,5,2,"capital",CODE,140,rnd.nextLong()));
+        lots.addAll(t.lots.fill(Plan.CAPITAL,13,13,21,2,5,2,"capital",CODE,70,rnd.nextLong()));
         int turrets=0;
         for(Lot l:lots){if(house(l))turrets++;}
         Town.log("capital: "+lots.size()+" houses ("+turrets+" with turrets), "+c.placed);
@@ -54,12 +54,12 @@ final class Capital {
     // ---------------------------------------------------------------- the walls
 
     /**
-     * The city walls: five blocks thick and twenty-two tall from the ground along their line (a little uneven, as walls
-     * built round a city), a walk on top behind battlements, arrow slits; a round tower every fifty blocks or so, eight
-     * across and thirty-two tall under a blue cone; the two gates left open for their gatehouses.
+     * The city walls: five blocks thick and eighteen tall from the ground along their line (a little uneven, as walls
+     * built round a city), a walk on top behind battlements, arrow slits; a round tower every forty blocks or so, eight
+     * across and twenty-eight tall under a blue cone; the two gates left open for their gatehouses.
      */
     private void walls(){
-        int H=22,cx=Plan.WALL_X,cz=Plan.WALL_Z,R=Plan.WALL_R+20;
+        int H=18,cx=Plan.WALL_X,cz=Plan.WALL_Z,R=Plan.WALL_R+20;
         BlockState wall=s(Blocks.STONE_BRICKS);
         for(int x=cx-R;x<=cx+R;x++)for(int z=cz-R;z<=cz+R;z++){
             if(!Canvas.inPlan(x,z))continue;
@@ -80,15 +80,15 @@ final class Capital {
             c.own(x,z,CODE);
         }
         int towers=0;
-        int n=(int)Math.round(2*Math.PI*Plan.WALL_R/50);
+        int n=(int)Math.round(2*Math.PI*Plan.WALL_R/40);
         for(int k=0;k<n;k++){
             double a=k*2*Math.PI/n+0.05;
             if(gateAt(a,26))continue;
             double[] p=Plan.wallAt(a);
             if(Plan.shore(p[0],p[1])>-6)continue;
             int g=c.ground((int)Math.floor(p[0]),(int)Math.floor(p[1]));
-            tower(p[0],p[1],g-1,g+H+10,4.4,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-            coneRoof(p[0],p[1],g+H+11,4.4);
+            tower(p[0],p[1],g-1,g+H+10,4.0,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(p[0],p[1],g+H+11,4.0);
             towers++;
         }
         gatehouse(Plan.GATE_W,true);gatehouse(Plan.GATE_SW,false);
@@ -107,7 +107,7 @@ final class Capital {
         double[] p=Plan.wallAt(a);
         double tx=-Math.sin(a),tz=Math.cos(a),nx=Math.cos(a),nz=Math.sin(a);
         int g=c.ground((int)Math.floor(p[0]),(int)Math.floor(p[1]));
-        double r=main?7.4:6.0;int H=main?36:32,span=main?11:9;
+        double r=main?6.2:5.2;int H=main?30:26,span=main?11:9;
         BlockState wall=s(Blocks.STONE_BRICKS);
         for(int side=-1;side<=1;side+=2){
             double gx=p[0]+tx*side*(span/2.0+r),gz=p[1]+tz*side*(span/2.0+r);
@@ -116,10 +116,10 @@ final class Capital {
             coneRoof(gx,gz,g+H+1,r);
             int bx=(int)Math.floor(gx-nx*(r+1)),bz=(int)Math.floor(gz-nz*(r+1));
             Direction out=Direction.getFacing(-nx,0,-nz);
-            if(c.air(bx,g+14,bz))c.set(bx,g+14,bz,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,out));
+            if(c.air(bx,g+12,bz))c.set(bx,g+12,bz,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,out));
         }
         // the arch: a block of wall over the road between the towers, the road clear under it, the portcullis's bars at its top
-        int clear=main?14:12;
+        int clear=main?12:11;
         for(double u=-(span/2.0+r*0.6);u<=span/2.0+r*0.6;u+=0.5)for(double v=-3;v<=3;v+=0.5){
             int x=(int)Math.floor(p[0]+tx*u+nx*v),z=(int)Math.floor(p[1]+tz*u+nz*v);
             boolean road=Math.abs(u)<=span/2.0;
@@ -176,25 +176,25 @@ final class Capital {
     // ---------------------------------------------------------------- the great castle
 
     /**
-     * The great castle on its plateau at the main avenue's end, facing west down it: an octagon of curtain walls sixty
-     * blocks out, twenty high with a walk of battlements, a round tower under a blue cone at each corner; the gatehouse
-     * in the west wall; a courtyard of cobbles and paths with a well; the palace in the middle, seven storeys of stone
-     * under a great blue roof with a round tower at each corner and two before its door; the great tower rising from
-     * the palace's back high over the island under its cone; wide steps from the gate down the plateau's cliff to the
-     * avenue.
+     * The great castle on its plateau at the main avenue's end, facing west down it: an octagon of curtain walls
+     * forty-two blocks out, sixteen high with a walk of battlements, a round tower under a blue cone at each corner;
+     * the gatehouse in the west wall; a courtyard of cobbles and paths with a well; the palace in the middle, six
+     * storeys of stone under a great blue roof with a round tower at each corner and two before its door; the great
+     * tower rising from the palace's back over the island under its cone (its banner about y 180, under the clouds);
+     * wide steps from the gate down the plateau's cliff to the avenue.
      */
     private void castle(){
         int cx=Plan.CASTLE_X,cz=Plan.CASTLE_Z,y=Plan.CASTLE_Y;
         for(int x=cx-Plan.PLATEAU_R-8;x<=cx+Plan.PLATEAU_R+8;x++)for(int z=cz-Plan.PLATEAU_R-8;z<=cz+Plan.PLATEAU_R+8;z++)
             if(Canvas.inPlan(x,z)&&Math.hypot(x-cx,z-cz)<Plan.PLATEAU_R+8)c.own(x,z,CODE);
-        int R=60,wallH=20;
+        int R=Plan.CASTLE_R,wallH=16;
         BlockState wall=s(Blocks.STONE_BRICKS);
         // the courtyard
         for(int x=cx-R;x<=cx+R;x++)for(int z=cz-R;z<=cz+R;z++){
             if(!octagon(x+0.5-cx,z+0.5-cz,R-1.5))continue;
             if(c.ground(x,z)<y-2)continue;
             t.lots.setGround(x,z,y);
-            boolean path=Math.abs(z-cz)<=3||Math.abs(x-cx+30)<=2;
+            boolean path=Math.abs(z-cz)<=3||Math.abs(x-cx+R/2)<=2;
             c.set(x,y,z,path?(((x+z)&1)==0?s(Blocks.STONE_BRICKS):s(Blocks.POLISHED_ANDESITE)):Pal.hash(x,3,z)<0.7?s(Blocks.COBBLESTONE):s(Blocks.GRAVEL));
             c.clear(x,y+1,z,x,y+30,z);
         }
@@ -209,26 +209,26 @@ final class Capital {
         }
         // the gate in the west wall
         for(int z=cz-4;z<=cz+4;z++)for(int x=cx-R-3;x<=cx-R+3;x++){
-            for(int yy=y+1;yy<=y+12;yy++)c.set(x,yy,z,s(Blocks.AIR));
+            for(int yy=y+1;yy<=y+10;yy++)c.set(x,yy,z,s(Blocks.AIR));
             c.set(x,y,z,s(Blocks.STONE_BRICKS));
         }
-        for(int z=cz-3;z<=cz+3;z++)c.set(cx-R,y+12,z,s(Blocks.IRON_BARS));
+        for(int z=cz-3;z<=cz+3;z++)c.set(cx-R,y+10,z,s(Blocks.IRON_BARS));
         for(int side=-1;side<=1;side+=2){
-            tower(cx-R-0.5,cz+side*8.5,y-1,y+wallH+12,5.0,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-            coneRoof(cx-R-0.5,cz+side*8.5,y+wallH+13,5.0);
-            c.set(cx-R-6,y+16,cz+side*8,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.WEST));
+            tower(cx-R-0.5,cz+side*7.5,y-1,y+wallH+10,4.2,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(cx-R-0.5,cz+side*7.5,y+wallH+11,4.2);
+            c.set(cx-R-5,y+13,cz+side*7,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.WEST));
         }
         // corner towers
         for(int k=0;k<8;k++){
             double a=Math.PI/8+k*Math.PI/4,tr=(R+0.5)/Math.cos(Math.PI/8);
             double tx=cx+Math.cos(a)*tr,tz=cz+Math.sin(a)*tr;
             int g=Math.min(y,c.ground((int)Math.floor(tx),(int)Math.floor(tz)));
-            tower(tx,tz,g-1,y+wallH+14,6.4,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-            coneRoof(tx,tz,y+wallH+15,6.4);
+            tower(tx,tz,g-1,y+wallH+12,5.2,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(tx,tz,y+wallH+13,5.2);
         }
-        palace(cx-6,cz,y);
+        palace(cx-4,cz,y);
         // a well in the courtyard
-        int wx=cx-32,wz=cz+20;
+        int wx=cx-24,wz=cz+15;
         for(int dx=-1;dx<=1;dx++)for(int dz=-1;dz<=1;dz++){c.set(wx+dx,y,wz+dz,dx==0&&dz==0?s(Blocks.WATER):s(Blocks.STONE_BRICKS));c.set(wx+dx,y-1,wz+dz,s(Blocks.STONE_BRICKS));
             if(dx!=0||dz!=0)c.set(wx+dx,y+1,wz+dz,s(Blocks.STONE_BRICK_WALL));}
         for(int dx:new int[]{-1,1})for(int dz:new int[]{-1,1})for(int k=2;k<=3;k++)c.set(wx+dx,y+k,wz+dz,s(Blocks.SPRUCE_FENCE));
@@ -257,12 +257,12 @@ final class Capital {
         c.set((int)Math.floor(cx),y+H+1,(int)Math.floor(cz),Blocks.LIGHT_BLUE_BANNER.getDefaultState());
     }
     /**
-     * The palace: x0 at its front (west), across z cz-30..cz+30, seven storeys of stone with dark bands, tall windows,
+     * The palace: x0 at its front (west), across z cz-21..cz+21, six storeys of stone with dark bands, tall windows,
      * a great blue hip roof; a round tower at each corner rising past the roof; two before the door; the great tower
      * behind, its cone high over the island.
      */
     private void palace(int x0,int cz,int y){
-        int x1=x0+46,z0=cz-30,z1=cz+30,stories=7,top=y+4*stories;
+        int x1=x0+32,z0=cz-21,z1=cz+21,stories=6,top=y+4*stories;
         var f=new Frame(c,x0,z0,x1,z1,Direction.WEST,y);
         Kit.shell(f,0,0,f.W-1,f.D-1,stories,s(Blocks.STONE_BRICKS),s(Blocks.DEEPSLATE_BRICKS),s(Blocks.POLISHED_DEEPSLATE),s(Blocks.SPRUCE_PLANKS),s(Blocks.DEEPSLATE_BRICKS));
         for(int st=0;st<stories;st++)for(int k=2;k<f.W-2;k+=3){
@@ -281,18 +281,18 @@ final class Capital {
         BlockState wall=s(Blocks.STONE_BRICKS);
         // corner towers past the roof
         for(int dx:new int[]{x0,x1})for(int dz:new int[]{z0,z1}){
-            tower(dx+0.5,dz+0.5,y,top+14,4.6,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-            coneRoof(dx+0.5,dz+0.5,top+15,4.6);
+            tower(dx+0.5,dz+0.5,y,top+12,3.8,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(dx+0.5,dz+0.5,top+13,3.8);
         }
         // two towers before the door
         for(int side=-1;side<=1;side+=2){
-            tower(x0-3.5,cz+side*9.5,y,top+6,3.6,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-            coneRoof(x0-3.5,cz+side*9.5,top+7,3.6);
-            c.set(x0-8,y+12,cz+side*9,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.WEST));
+            tower(x0-3.5,cz+side*8.5,y,top+5,3.2,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(x0-3.5,cz+side*8.5,top+6,3.2);
+            c.set(x0-7,y+12,cz+side*8,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.WEST));
         }
         // the great tower behind
-        tower(x1-12.5,cz+0.5,y,top+44,10.5,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-        coneRoof(x1-12.5,cz+0.5,top+45,10.5);
+        tower(x1-9.5,cz+0.5,y,top+36,8.0,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+        coneRoof(x1-9.5,cz+0.5,top+37,8.0);
     }
     /** Wide steps from the castle's gate down the plateau's cliff westward to the avenue's end. Returns the foot's x. */
     private int gateSteps(int x,int cz,int y){

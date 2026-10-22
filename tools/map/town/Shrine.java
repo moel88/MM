@@ -42,13 +42,14 @@ final class Shrine {
         sacredTree(X+8,Z+5);
         // cedars on the mountain's wooded flanks, thinning out where the rock and snow begin; none on the stairway
         int cedars=0;
-        for(int i=0;i<9000&&cedars<900;i++){
+        for(int i=0;i<3000&&cedars<300;i++){
             double a=rnd.nextDouble()*2*Math.PI,r=Plan.MOUNT_SUMMIT+8+Math.sqrt(rnd.nextDouble())*(Plan.MOUNT_R*1.05-Plan.MOUNT_SUMMIT);
             int x=X+(int)Math.round(Math.cos(a)*r),z=Z+(int)Math.round(Math.sin(a)*r);
             if(Math.abs(x-X)<=9&&z>Z)continue;
             if(!Canvas.inPlan(x,z)||Plan.shore(x,z)>-4||t.roads.near(x,z,4))continue;
             int g=c.ground(x,z);
-            if(g>165||g>140&&rnd.nextDouble()<(g-140)/25.0)continue;
+            int thin=Plan.mountLevel(0.39),bare=Plan.mountLevel(0.56);
+            if(g>bare||g>thin&&rnd.nextDouble()<(g-thin)/(double)(bare-thin))continue;
             if(!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK)||!c.air(x,g+1,z))continue;
             if(Pal.smooth(x,z,23,61)<0.3)continue;
             t.nature.cedar(x,g+1,z,12+rnd.nextInt(10));cedars++;
@@ -75,7 +76,8 @@ final class Shrine {
             boolean down=g<y;
             if(down)y--;
             step(x0,x1,z,y,down);
-            if(z-lastGate>=20&&!down){stairGate(X,y,z);lastGate=z;gates++;}
+            // a gate on a landing every twenty rows or so, or on a step where the face is too steep for landings
+            if(z-lastGate>=20&&(!down||z-lastGate>=24)){stairGate(X,y,z);lastGate=z;gates++;}
             else if((z-Z)%9==0)for(int x:new int[]{x0-1,x1+1}){int top=c.ground(x,z);if(c.air(x,top+2,z))c.set(x,top+2,z,s(Blocks.LANTERN));}
             // the foot: down from the heights to the town's level, where the ground no longer falls
             if(z>Z+Plan.MOUNT_SUMMIT+30&&next>=y&&y<=90)break;

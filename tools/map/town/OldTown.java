@@ -30,7 +30,7 @@ final class OldTown {
         for(var s:streets)for(int side=-1;side<=1;side+=2)lots.addAll(t.lots.along(s,side,Plan.STREET_HALF+3,15,17,7,2,7,Plan.TOWN,"house",CODE));
         lots.addAll(t.lots.along(axis,1,Plan.ROAD_HALF+3,15,17,6,2,7,Plan.TOWN,"house",CODE));
         // then the open ground between: houses wherever they fit, each turned to its nearest road or the canal
-        lots.addAll(t.lots.fill(Plan.TOWN,12,14,21,2,5,2,"house",CODE,120,rnd.nextLong()));
+        lots.addAll(t.lots.fill(Plan.TOWN,12,14,21,2,5,2,"house",CODE,60,rnd.nextLong()));
         String[] pool={"old","old","old","old","old","old","modern","modern","modern","modern3","apartment","garden","field"};
         Map<String,Integer> counts=new TreeMap<>();
         for(Lot l:lots){
@@ -45,7 +45,7 @@ final class OldTown {
         for(var s:streets)poles(s,1,Plan.STREET_HALF);
         poles(axis,1,Plan.ROAD_HALF);
         for(int k=0;k<6;k++){
-            int[] p=t.lots.freeNear(axis,1,Plan.ROAD_HALF+2,-420-k*90,Plan.TOWN);
+            int[] p=t.lots.freeNear(axis,1,Plan.ROAD_HALF+2,-200-k*45,Plan.TOWN);
             if(p!=null)switch(k%3){case 0->t.street.vending(p[0],p[1],Direction.NORTH,2);case 1->t.street.busStop(p[0],p[1],Direction.EAST,"運河通り");default->t.street.postBox(p[0],p[1]);}
         }
         t.places.put("canal",new int[]{(int)Math.round(Plan.canalX(Plan.POOL_Z))+9,c.ground((int)Math.round(Plan.canalX(Plan.POOL_Z))+9,Plan.POOL_Z)+1,Plan.POOL_Z});

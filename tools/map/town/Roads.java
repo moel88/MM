@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The hourglass island's roads (map v3.0, 2000 x 2000): the axis road north and south through both glasses, stopping
+ * The hourglass island's roads (map v3.0, 1000 x 1000): the axis road north and south through both glasses, stopping
  * where the rift's white ground begins, twelve blocks across (a two-block sidewalk half a block up on either side of
  * eight blocks of asphalt with its edge lines and a dashed centre line). No loop roads (the user's request). Each zone
  * has its own straight streets off it: ten across in the old town at the mountain's foot, the capital's paved in
@@ -58,9 +58,9 @@ final class Roads {
         add(avenue,Plan.MAIN_HALF,Plan.CAPITAL,STONE);
         gateRoad=straight(sw[0]+4*Math.cos(Plan.GATE_SW),sw[1]+4*Math.sin(Plan.GATE_SW),Plan.ROAD_HALF-1,-Plan.AXIS_START-60);
         add(gateRoad,Plan.STREET_HALF,Plan.CAPITAL,STONE);
-        grid(Plan.TOWN,-1,-1,0,0,74,70,Plan.STREET_HALF,ASPHALT);
-        grid(Plan.CAPITAL,1,-1,Plan.WALL_X,Plan.WALL_Z,72,68,Plan.STREET_HALF,STONE);
-        grid(Plan.CYBER,1,1,0,0,104,104,Plan.AVENUE_HALF,WET);
+        grid(Plan.TOWN,-1,-1,0,0,64,60,Plan.STREET_HALF,ASPHALT);
+        grid(Plan.CAPITAL,1,-1,Plan.WALL_X,Plan.WALL_Z,60,56,Plan.STREET_HALF,STONE);
+        grid(Plan.CYBER,1,1,0,0,Cyber.STEP,Cyber.STEP,Plan.AVENUE_HALF,WET);
         for(int r=0;r<lines.size();r++)mark(r+1,lines.get(r),halfs.get(r),styles.get(r));
         Town.log("roads: "+lines.size()+" ("+streets(Plan.TOWN).size()+" town streets, "+streets(Plan.CAPITAL).size()+" capital, "+streets(Plan.CYBER).size()+" cyber)");
     }
@@ -75,10 +75,10 @@ final class Roads {
     /**
      * A zone's own streets: lines running north-south {@code sx} blocks apart and east-west {@code sz} apart, counted
      * from (ox, oz) outward on the zone's side of the axis road and the rift ({@code ex}, {@code ez}), each kept where
-     * it runs through open land of the zone, in stretches at least sixty blocks long.
+     * it runs through open land of the zone, in stretches at least forty-five blocks long.
      */
     private void grid(int zone,int ex,int ez,double ox,double oz,int sx,int sz,int half,int style){
-        double xa=ox==0?ex*56:ox-sx*(int)(Plan.WALL_R/sx),za=oz==0?ez*(Plan.RIFT+60):oz-sz*(int)(Plan.WALL_R/sz);
+        double xa=ox==0?ex*Cyber.AX0:ox-sx*(int)(Plan.WALL_R/sx),za=oz==0?ez*Cyber.AZ0:oz-sz*(int)(Plan.WALL_R/sz);
         for(int k=0;k<60;k++){
             double x=ox==0?xa+ex*k*sx:xa+k*sx;
             if(Math.abs(x)>Plan.WIDE)break;
@@ -99,7 +99,7 @@ final class Roads {
             if(ok&&start<0)start=s;
             if(!ok&&start>=0){
                 double end=s-1;
-                if(end-start>=60)add(straight(x0+dx*start,z0+dz*start,x0+dx*end,z0+dz*end),half,zone,style);
+                if(end-start>=45)add(straight(x0+dx*start,z0+dz*start,x0+dx*end,z0+dz*end),half,zone,style);
                 start=-1;
             }
         }
