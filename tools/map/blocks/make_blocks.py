@@ -1027,6 +1027,76 @@ def cyber_paving(seed, inlay):
         img[30:34, :] = (90, 230, 255); img[29, :] = (60, 130, 160); img[34, :] = (60, 130, 160)
     return img
 
+# the cyber city rebuilt from the user's five photos (2.49.0): light bands, holograms, Hangul neon signs
+
+def light_band(seed, color):
+    """A storey's lit windows in one colour (the fifth photo's towers): a band of glowing glass, dark mullions every
+    quarter block, a dark sill and head, the light strongest at its middle and here and there a blind half drawn."""
+    r = rng(seed)
+    y, x = np.mgrid[0:S, 0:S]
+    c = np.array(color, float)
+    v = 0.78 + 0.22 * np.sin(np.pi * np.clip((y - 6) / (S - 12), 0, 1))
+    img = c[None, None, :] * v[..., None] + (255 - c)[None, None, :] * 0.18 * (v ** 4)[..., None] + field(seed, 10)[..., None] * 4
+    img[(x % 16) < 2] *= 0.42
+    img[0:6] = (28, 30, 38); img[S - 6:] = (28, 30, 38)
+    img[6:7] *= 0.7; img[S - 7:S - 6] *= 0.7
+    for k in range(4):
+        if r.random() < 0.3:
+            x0 = k * 16 + 2; h = int(r.integers(8, 26))
+            img[6:6 + h, x0:x0 + 14] *= 0.55
+    return img
+
+HOLO_FRAMES = 8
+def hologram(seed, color):
+    """A hologram's light (the fifth photo): its colour thin and see-through, brighter scan lines drifting down through
+    it (the same on every block, so they run unbroken across a whole figure), a faint rim, sparks of light; eight
+    frames of a loop."""
+    r = rng(seed)
+    y, x = np.mgrid[0:S, 0:S]
+    c = np.array(color, float)
+    spark = r.random((S, S))
+    frames, alphas = [], []
+    for f in range(HOLO_FRAMES):
+        scan = ((y + f * 2) % 8) < 2
+        img = np.broadcast_to(c * 0.85, (S, S, 3)).copy()
+        img[scan] = np.minimum(255, c + 70)
+        a = np.full((S, S), 96.0)
+        a[scan] = 160
+        rim = (x < 1) | (x >= S - 1) | (y < 1) | (y >= S - 1)
+        a[rim] = 132
+        sp = spark > 0.994
+        a[sp] = 230; img[sp] = (255, 255, 255)
+        frames.append(img); alphas.append(a)
+    return np.concatenate(frames, axis=0), np.concatenate(alphas, axis=0)
+
+SIGN_FONT = ASSETS / 'gacha/font/gacha_heavy.ttf'
+def sign_letter(seed, ch, color):
+    """A neon sign's letter (the second and fourth photos): the letter lit in its word's colour, whiter at its core and
+    glowing out over a dark panel in a thin metal frame. Drawn the same on all four sides of its block, so a sign of
+    stacked letters reads from every side."""
+    from PIL import ImageDraw, ImageFont, ImageFilter
+    big = 4; W = S * big
+    font = ImageFont.truetype(str(SIGN_FONT), int(W * (0.64 if ord(ch) > 0x3000 else 0.74)))
+    mask = Image.new('L', (W, W), 0); d = ImageDraw.Draw(mask)
+    bb = d.textbbox((0, 0), ch, font=font)
+    d.text(((W - (bb[2] - bb[0])) / 2 - bb[0], (W - (bb[3] - bb[1])) / 2 - bb[1]), ch, fill=255, font=font)
+    m = np.asarray(mask.resize((S, S), Image.LANCZOS), float) / 255
+    glow = np.asarray(mask.resize((S, S), Image.LANCZOS).filter(ImageFilter.GaussianBlur(3.2)), float) / 255
+    c = np.array(color, float)
+    img = flat((16, 15, 24)) + field(seed, 8)[..., None] * 3
+    img += c[None, None, :] * np.clip(glow * 1.6, 0, 1)[..., None] * 0.75
+    core = c * 0.45 + 255 * 0.55
+    img = img * (1 - m[..., None]) + core[None, None, :] * m[..., None]
+    img[0:3, :] = (58, 60, 68); img[S - 3:, :] = (58, 60, 68); img[:, 0:3] = (58, 60, 68); img[:, S - 3:] = (58, 60, 68)
+    img[3, 3:S - 3] = (30, 30, 38); img[3:S - 3, 3] = (30, 30, 38)
+    return img
+
+def sign_frame(seed):
+    """A neon sign's top and bottom: dark metal in its frame."""
+    img = flat((40, 42, 50)) + field(seed, 8)[..., None] * 3
+    img[0:3, :] = (58, 60, 68); img[S - 3:, :] = (58, 60, 68); img[:, 0:3] = (58, 60, 68); img[:, S - 3:] = (58, 60, 68)
+    return img
+
 # ---------------------------------------------------------------- the block list (same order as TownBlocks)
 
 TEXTURES = {}
@@ -1257,6 +1327,28 @@ WET = [tex(f'wet_asphalt_{k}', wet_asphalt, 2750 + k) for k in range(4)]
 block('wet_asphalt', 'cube', {'tex': WET, 'spin': True}, '젖은 아스팔트', 'Wet Asphalt')
 CPV = [tex(f'cyber_paving_{k}', cyber_paving, 2760 + k, k == 2) for k in range(3)]
 block('cyber_paving', 'cube', {'tex': CPV, 'spin': False}, '어두운 보도블록', 'Dark Paving')
+# the cyber city rebuilt from the user's five photos (2.49.0): more neon colours, light bands of lit windows,
+# holograms, and neon signs in Hangul (one letter a block; TownBlocks.SIGN_WORDS keeps the same words)
+for k, (c, col, ko, en) in enumerate((('yellow', (255, 214, 60), '노란 네온', 'Yellow Neon'), ('green', (80, 255, 130), '초록 네온', 'Green Neon'),
+                                      ('orange', (255, 140, 40), '주황 네온', 'Orange Neon'), ('white', (225, 238, 255), '흰 네온', 'White Neon'),
+                                      ('red', (255, 50, 70), '빨간 네온', 'Red Neon'))):
+    block(f'neon_{c}', 'cube', {'tex': [tex(f'neon_{c}', neon, 2770 + k, col)], 'spin': False}, ko, en)
+for k, (c, col, ko, en) in enumerate((('yellow', (255, 196, 84), '노란 불빛 창', 'Yellow Light Band'), ('blue', (84, 140, 255), '파란 불빛 창', 'Blue Light Band'),
+                                      ('green', (96, 236, 150), '초록 불빛 창', 'Green Light Band'), ('pink', (255, 96, 196), '분홍 불빛 창', 'Pink Light Band'),
+                                      ('white', (214, 232, 255), '흰 불빛 창', 'White Light Band'))):
+    block(f'light_band_{c}', 'cube', {'tex': [tex(f'light_band_{c}_{v}', light_band, 2780 + 2 * k + v, col) for v in range(2)], 'spin': False}, ko, en)
+for k, (c, col, ko, en) in enumerate((('pink', (255, 80, 200), '분홍 홀로그램', 'Pink Hologram'), ('cyan', (70, 220, 255), '하늘색 홀로그램', 'Cyan Hologram'))):
+    ANIM[f'hologram_{c}'] = 2
+    block(f'hologram_{c}', 'cube', {'tex': [tex(f'hologram_{c}', hologram, 2790 + k, col)], 'spin': False}, ko, en)
+SIGN_WORDS = (('ramen', '라멘', (255, 150, 50)), ('karaoke', '노래방', (255, 80, 200)), ('hotel', '호텔', (170, 100, 255)), ('botand', '보탠드', (70, 220, 255)),
+              ('store', '편의점', (90, 255, 140)), ('pc', 'PC방', (80, 150, 255)), ('rokakaka', '로카카카', (255, 220, 70)), ('arcade', '오락실', (255, 60, 80)),
+              ('allday', '24시', (230, 240, 255)), ('sauna', '사우나', (120, 255, 230)))
+SIGN_TOP = tex('sign_frame', sign_frame, 2800)
+for wk, (key, word, col) in enumerate(SIGN_WORDS):
+    for i, ch in enumerate(word):
+        if word.index(ch) != i: continue
+        block(f'sign_{key}_{i}', 'sides', {'top': SIGN_TOP, 'side': tex(f'sign_{key}_{i}', sign_letter, 2810 + wk * 8 + i, ch, col)},
+              f'네온 간판 「{ch}」', f'Neon Sign "{ch}"')
 
 # ---------------------------------------------------------------- models
 
@@ -1314,6 +1406,10 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
         ys = (0, 90, 180, 270) if d['spin'] else (0,)
         STATES[i] = {'variants': {'': [dict({'model': m}, **({'y': y} if y else {})) for m in ms for y in ys]}}
         ITEMS[i] = ms[0]
+    elif kind == 'sides':
+        m = top_cube(i, d['top'], d['side'])
+        STATES[i] = {'variants': {'': {'model': m}}}
+        ITEMS[i] = m
     elif kind == 'slab':
         top = d.get('top')
         pairs = [slab(f'{i}_{k}', top or t, t) for k, t in enumerate(d['tex'])]

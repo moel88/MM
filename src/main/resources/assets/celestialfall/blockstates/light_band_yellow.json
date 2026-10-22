@@ -1,0 +1,12 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/light_band_yellow_0"
+   },
+   {
+    "model": "celestialfall:block/town/light_band_yellow_1"
+   }
+  ]
+ }
+}

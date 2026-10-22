@@ -33,7 +33,8 @@ import java.util.*;
  * join into one, the houses' stucco, siding, tiles and trim, dark block walls and their grimy feet, the green
  * walking strip, drinks machines with a display behind glass, air conditioners with a fan guard, traffic mirrors.
  * 2.49.0 adds the world tree of the hourglass island's rift: neon sky-blue leaves that give light, silver bark, the
- * rift's white ground and its glowing cracks.
+ * rift's white ground and its glowing cracks; and the cyber city's neon, glass curtain walls, LED walls, light bands,
+ * holograms and Hangul neon signs.
  */
 public final class TownBlocks {
     private TownBlocks() {}
@@ -52,6 +53,11 @@ public final class TownBlocks {
             .suffocates((s,w,p)->false).blockVision((s,w,p)->false).burnable().pistonBehavior(PistonBehavior.DESTROY).solidBlock((s,w,p)->false);
     }
     private static FabricBlockSettings glass(){return FabricBlockSettings.copyOf(Blocks.GLASS);}
+    /** A hologram's light: glowing, see-through, walked through, nothing spawns on it or suffocates in it. */
+    private static FabricBlockSettings hologram(MapColor colour){
+        return FabricBlockSettings.copyOf(Blocks.GLASS).mapColor(colour).luminance(15).noCollision().nonOpaque().allowsSpawning((s,w,p,t)->false)
+            .solidBlock((s,w,p)->false).suffocates((s,w,p)->false).blockVision((s,w,p)->false);
+    }
 
     // the ground: asphalt and its paint, the worn asphalt of the lot by the sea, pavers
     public static final Block ASPHALT=add("asphalt",new Block(stone()));
@@ -178,6 +184,29 @@ public final class TownBlocks {
     public static final Block LED_SCREEN_MIX=add("led_screen_mix",new Block(stone().mapColor(MapColor.MAGENTA).luminance(13)));
     public static final Block WET_ASPHALT=add("wet_asphalt",new Block(stone().mapColor(MapColor.BLACK)));
     public static final Block CYBER_PAVING=add("cyber_paving",new Block(stone().mapColor(MapColor.GRAY)));
+    // the cyber city rebuilt from the user's five photos (2.49.0): neon in more colours, light bands (a storey's lit
+    // windows in one colour), holograms (coloured light that shows through itself and lets the daylight and players
+    // through), and neon signs in Hangul, one letter a block, the letter on all four sides so a sign hung out over a
+    // street reads from either way
+    public static final Block NEON_YELLOW=add("neon_yellow",new Block(stone().mapColor(MapColor.YELLOW).luminance(15)));
+    public static final Block NEON_GREEN=add("neon_green",new Block(stone().mapColor(MapColor.LIME).luminance(15)));
+    public static final Block NEON_ORANGE=add("neon_orange",new Block(stone().mapColor(MapColor.ORANGE).luminance(15)));
+    public static final Block NEON_WHITE=add("neon_white",new Block(stone().mapColor(MapColor.WHITE).luminance(15)));
+    public static final Block NEON_RED=add("neon_red",new Block(stone().mapColor(MapColor.RED).luminance(15)));
+    public static final Block BAND_YELLOW=add("light_band_yellow",new Block(stone().mapColor(MapColor.YELLOW).luminance(13)));
+    public static final Block BAND_BLUE=add("light_band_blue",new Block(stone().mapColor(MapColor.BLUE).luminance(13)));
+    public static final Block BAND_GREEN=add("light_band_green",new Block(stone().mapColor(MapColor.LIME).luminance(13)));
+    public static final Block BAND_PINK=add("light_band_pink",new Block(stone().mapColor(MapColor.PINK).luminance(13)));
+    public static final Block BAND_WHITE=add("light_band_white",new Block(stone().mapColor(MapColor.WHITE).luminance(13)));
+    public static final Block HOLOGRAM_PINK=translucent(add("hologram_pink",new Hologram(hologram(MapColor.PINK))));
+    public static final Block HOLOGRAM_CYAN=translucent(add("hologram_cyan",new Hologram(hologram(MapColor.CYAN))));
+    /** The neon signs' words: a key and the word. Each letter is a block sign_KEY_N, N the letter's first place in the word (tools/map/blocks/make_blocks.py draws the same list). */
+    public static final String[][] SIGN_WORDS={{"ramen","라멘"},{"karaoke","노래방"},{"hotel","호텔"},{"botand","보탠드"},{"store","편의점"},
+        {"pc","PC방"},{"rokakaka","로카카카"},{"arcade","오락실"},{"allday","24시"},{"sauna","사우나"}};
+    static{
+        for(String[] w:SIGN_WORDS)for(int i=0;i<w[1].length();i++)
+            if(w[1].indexOf(w[1].charAt(i))==i)add("sign_"+w[0]+"_"+i,new Block(stone().mapColor(MapColor.BLACK).luminance(14)));
+    }
 
     private static <B extends Block> B add(String name,B block){ALL.put(name,block);return block;}
     /** A roof block and its textures: names under the town's own textures, or minecraft: blocks' (block/ is added). */
@@ -232,6 +261,15 @@ public final class TownBlocks {
         @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(Properties.HORIZONTAL_AXIS);}
         @Override public BlockState getPlacementState(ItemPlacementContext c){return getDefaultState().with(Properties.HORIZONTAL_AXIS,c.getHorizontalPlayerFacing().getAxis());}
         @Override public BlockState rotate(BlockState s,BlockRotation r){return turnAxis(s,r);}
+    }
+    /**
+     * A hologram's block: like glass it hides its faces against more of itself, so a hologram built of many reads as one
+     * shape of light; it takes no shade and lets the daylight through.
+     */
+    public static class Hologram extends TransparentBlock {
+        public Hologram(Settings s){super(s);}
+        @Override public float getAmbientOcclusionLightLevel(BlockState s,BlockView w,BlockPos p){return 1f;}
+        @Override public boolean isTransparent(BlockState s,BlockView w,BlockPos p){return true;}
     }
     /** A quarter turn swaps a horizontal axis; a half turn keeps it. */
     static BlockState turnAxis(BlockState s,BlockRotation r){

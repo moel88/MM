@@ -75,8 +75,8 @@ final class Plan {
     // ---- roads ----
     /** The axis road: its half width with its sidewalks and how far it runs; it begins on either side of the rift (where the white ends). */
     static final int ROAD_HALF=6,AXIS_END=k(172),AXIS_START=RIFT+20;
-    /** The towns' own streets: their half width with the sidewalks, the capital's main avenue, and the cyber city's avenues. */
-    static final int STREET_HALF=5,MAIN_HALF=7,AVENUE_HALF=10;
+    /** The towns' own streets: their half width with the sidewalks, and the capital's main avenue (the cyber city's own are in Cyber). */
+    static final int STREET_HALF=5,MAIN_HALF=7;
 
     // ---- the rift ----
     /** The world tree's foot in the rift's middle; where players appear, looking at it; the two merchants between. */

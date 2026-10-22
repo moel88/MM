@@ -12,7 +12,7 @@ import java.util.List;
  * eight blocks of asphalt with its edge lines and a dashed centre line). No loop roads (the user's request). Each zone
  * has its own straight streets off it: ten across in the old town at the mountain's foot, the capital's paved in
  * stone inside its walls (a main avenue from the axis road through the west gate to the castle, a road from the
- * south-west gate toward the rift, streets between), and twenty across (avenues) in the cyber city; they stop short of
+ * south-west gate toward the rift, streets between), and the cyber city's avenues and streets (Cyber.plan); they stop short of
  * the shore, the rift's white, the canal, the mountain and the castle's plateau. The roads follow the ground, smoothed
  * along their length and stepped in half blocks, so they ease up and down the slopes.
  */
@@ -60,11 +60,11 @@ final class Roads {
         add(gateRoad,Plan.STREET_HALF,Plan.CAPITAL,STONE);
         grid(Plan.TOWN,-1,-1,0,0,64,60,Plan.STREET_HALF,ASPHALT);
         grid(Plan.CAPITAL,1,-1,Plan.WALL_X,Plan.WALL_Z,60,56,Plan.STREET_HALF,STONE);
-        grid(Plan.CYBER,1,1,0,0,Cyber.STEP,Cyber.STEP,Plan.AVENUE_HALF,WET);
+        Cyber.plan(this);
         for(int r=0;r<lines.size();r++)mark(r+1,lines.get(r),halfs.get(r),styles.get(r));
         Town.log("roads: "+lines.size()+" ("+streets(Plan.TOWN).size()+" town streets, "+streets(Plan.CAPITAL).size()+" capital, "+streets(Plan.CYBER).size()+" cyber)");
     }
-    private void add(double[][] line,int half,int zone,int style){lines.add(line);halfs.add(half);zones.add(zone);styles.add(style);}
+    void add(double[][] line,int half,int zone,int style){lines.add(line);halfs.add(half);zones.add(zone);styles.add(style);}
 
     static double[][] straight(double x0,double z0,double x1,double z1){
         double len=Math.hypot(x1-x0,z1-z0);int n=(int)(len*2);double[][] p=new double[n+1][];
@@ -78,7 +78,7 @@ final class Roads {
      * it runs through open land of the zone, in stretches at least forty-five blocks long.
      */
     private void grid(int zone,int ex,int ez,double ox,double oz,int sx,int sz,int half,int style){
-        double xa=ox==0?ex*Cyber.AX0:ox-sx*(int)(Plan.WALL_R/sx),za=oz==0?ez*Cyber.AZ0:oz-sz*(int)(Plan.WALL_R/sz);
+        double xa=ox==0?ex*56:ox-sx*(int)(Plan.WALL_R/sx),za=oz==0?ez*(Plan.RIFT+60):oz-sz*(int)(Plan.WALL_R/sz);
         for(int k=0;k<60;k++){
             double x=ox==0?xa+ex*k*sx:xa+k*sx;
             if(Math.abs(x)>Plan.WIDE)break;
