@@ -26,7 +26,7 @@ final class Shrine {
 
     void build(){
         // the whole hill is the shrine's: no houses on it
-        for(int x=X-44;x<=X+44;x++)for(int z=Z-44;z<=Z+44;z++)if(Math.hypot(x-X,z-Z)<42&&Canvas.inPlan(x,z)&&c.owner(x,z)==0)c.own(x,z,CODE);
+        for(int x=X-32;x<=X+32;x++)for(int z=Z-32;z<=Z+32;z++)if(Math.hypot(x-X,z-Z)<Plan.SHRINE_R+12&&Canvas.inPlan(x,z)&&c.owner(x,z)==0)c.own(x,z,CODE);
         for(int x=X-HALF;x<=X+HALF;x++)for(int z=Z-HALF;z<=Z+HALF;z++){
             boolean path=Math.abs(x-X)<=2&&z>Z-1;
             c.set(x,Y,z,path?(((x+z)&1)==0?s(Blocks.STONE_BRICKS):s(Blocks.POLISHED_ANDESITE)):s(Blocks.GRAVEL));
@@ -41,7 +41,7 @@ final class Shrine {
         // cedars on the hill round the precinct, none on the stairway's line
         int cedars=0;
         for(int i=0;i<160&&cedars<38;i++){
-            double a=rnd.nextDouble()*2*Math.PI,r=17+rnd.nextDouble()*22;
+            double a=rnd.nextDouble()*2*Math.PI,r=17+rnd.nextDouble()*12;
             int x=X+(int)Math.round(Math.cos(a)*r),z=Z+(int)Math.round(Math.sin(a)*r);
             if(Math.abs(x-X)<=6&&z>Z)continue;
             if(Math.abs(x-X)<=HALF+1&&Math.abs(z-Z)<=HALF+1)continue;

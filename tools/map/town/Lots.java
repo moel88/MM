@@ -16,17 +16,31 @@ final class Lots {
     Lots(Townscape t){this.t=t;c=t.c;}
 
     /** Whether a rectangle is buildable: land of the zone, inside the shore by {@code shore}, off the roads by {@code road}, dry, not white, unclaimed. */
+    /** Why plots were turned down, for the build's log. */
+    final Map<String,Integer> refused=new TreeMap<>();
+    private boolean no(String why){refused.merge(why,1,Integer::sum);last=why;return false;}
+    private String last="";
+    int failX,failZ;
+    /** Logs why a plot centred at (x, z) would be turned down (a check while tuning the layout). */
+    void probe(int x,int z,int w,int d,int road,int shore,int zone){
+        boolean ok=fits(x-w/2,z-d/2,x-w/2+w-1,z-d/2+d-1,road,shore,zone);
+        Town.log("probe "+x+","+z+": "+(ok?"fits":last+" at "+failX+","+failZ+" owner "+c.owner(failX,failZ)));
+    }
+    /** Every plot tried (x0, z0, x1, z1) and why it was turned down ("" if taken), for the debug picture. */
+    final List<Object[]> tried=new ArrayList<>();
     boolean fits(int x0,int z0,int x1,int z1,int road,int shore,int zone){
         for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++){
-            if(!Canvas.inPlan(x,z))return false;
+            if(!Canvas.inPlan(x,z))return no("outside");
             int i=Canvas.idx(x,z);
-            if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.pale[i]||c.owner[i]!=0)return false;
-            if(zone>=0&&Plan.zone(x,z)!=zone)return false;
-            if(Plan.shore(x,z)>-shore)return false;
+            if(t.terrain.kind[i]!=Terrain.LAND)return no("not land");
+            if(t.terrain.pale[i])return no("rift");
+            if(c.owner[i]!=0){failX=x;failZ=z;return no("taken");}
+            if(zone>=0&&Plan.zone(x,z)!=zone)return no("zone");
+            if(Plan.shore(x,z)>-shore){failX=x;failZ=z;return no("shore");}
         }
         for(int x=x0-road;x<=x1+road;x++)for(int z=z0-road;z<=z1+road;z++){
-            if(t.roads.on(x,z))return false;
-            if(Canvas.inPlan(x,z)&&t.terrain.water[Canvas.idx(x,z)]!=0)return false;
+            if(t.roads.on(x,z)){failX=x;failZ=z;return no("road");}
+            if(Canvas.inPlan(x,z)&&t.terrain.water[Canvas.idx(x,z)]!=0)return no("water");
         }
         return true;
     }
@@ -49,6 +63,7 @@ final class Lots {
     /** As above, taking at most {@code max} plots. */
     List<Lot> along(double[][] line,int side,double back,int w,int d,int gap,int road,int shore,int zone,String kind,int code,int max){
         List<Lot> out=new ArrayList<>();
+        var before=new TreeMap<>(refused);
         int k=0;
         while(k<line.length&&out.size()<max){
             double[] p=line[k];
@@ -63,8 +78,12 @@ final class Lots {
                 case WEST->{z0=cz-w/2;z1=z0+w-1;x0=cx;x1=cx+d-1;}
                 default->{z0=cz-w/2;z1=z0+w-1;x1=cx;x0=cx-d+1;}
             }
-            if(fits(x0,z0,x1,z1,road,shore,zone)){
+            boolean fit=fits(x0,z0,x1,z1,road,shore,zone);
+            if(!last.equals("zone"))tried.add(new Object[]{x0,z0,x1,z1,fit?"":last});
+            last="";
+            if(fit){
                 int[] r=range(x0,z0,x1,z1);
+                if(r[1]-r[0]>4)no("steep");
                 if(r[1]-r[0]<=4){
                     int y=c.ground(cx-(int)Math.round(nx*2),cz-(int)Math.round(nz*2));
                     y=Math.max(r[0],Math.min(r[1],y));
@@ -77,7 +96,73 @@ final class Lots {
             }
             k+=4;
         }
+        if(max>1){
+            var delta=new TreeMap<String,Integer>();
+            for(var e:refused.entrySet()){int dd=e.getValue()-before.getOrDefault(e.getKey(),0);if(dd>0)delta.put(e.getKey(),dd);}
+            Town.log("plots along a line ("+kind+", side "+side+", zone "+zone+"): "+out.size()+", turned down "+delta);
+        }
         return out;
+    }
+
+    /**
+     * Plots anywhere in a zone where they fit, after the roadside ones: every position three blocks apart is tried, in
+     * an order shuffled by the seed, each plot facing the nearest road or the canal within forty blocks (south if
+     * none), {@code w} wide and {@code d} deep, levelled to its ground and claimed with {@code margin} blocks of open
+     * ground kept round it; at most {@code max}.
+     */
+    List<Lot> fill(int zone,int w,int d,int step,int road,int shore,int margin,String kind,int code,int max,long seed){
+        List<Lot> out=new ArrayList<>();
+        var before=new TreeMap<>(refused);
+        List<int[]> spots=new ArrayList<>();
+        for(int x=Plan.X0;x<Plan.X0+Plan.W;x+=3)for(int z=Plan.Z0;z<Plan.Z0+Plan.D;z+=3)
+            if(Plan.zone(x,z)==zone&&t.terrain.kind[Canvas.idx(x,z)]==Terrain.LAND&&c.owner(x,z)==0&&!t.roads.on(x,z))spots.add(new int[]{x,z});
+        Collections.shuffle(spots,new Random(seed));
+        int tries=0;
+        for(int[] p:spots){
+            if(out.size()>=max)break;
+            int cx=p[0],cz=p[1];
+            if(c.owner(cx,cz)!=0)continue;
+            tries++;
+            // facing the nearest road or water if it fits that way, else turned a quarter either way, else about
+            Direction want=facing(cx,cz),front=null;
+            int x0=0,z0=0,x1=0,z1=0;
+            for(Direction f:new Direction[]{want,want.rotateYClockwise(),want.rotateYCounterclockwise(),want.getOpposite()}){
+                if(f.getAxis()==Direction.Axis.Z){x0=cx-w/2;x1=x0+w-1;z0=cz-d/2;z1=z0+d-1;}
+                else{z0=cz-w/2;z1=z0+w-1;x0=cx-d/2;x1=x0+d-1;}
+                if(fits(x0,z0,x1,z1,road,shore,zone)&&clear(x0-margin,z0-margin,x1+margin,z1+margin)){front=f;break;}
+                if(w==d&&f==want.rotateYClockwise())break;
+            }
+            if(front==null)continue;
+            int[] rg=range(x0,z0,x1,z1);
+            if(rg[1]-rg[0]>4){no("steep");continue;}
+            var l=new Lot(x0,z0,x1,z1,c.ground(cx,cz),front,kind);
+            level(l);c.claim(x0-1,z0-1,x1+1,z1+1,code);
+            tried.add(new Object[]{x0,z0,x1,z1,""});
+            out.add(l);
+        }
+        var delta=new TreeMap<String,Integer>();
+        for(var e:refused.entrySet()){int dd=e.getValue()-before.getOrDefault(e.getKey(),0);if(dd>0)delta.put(e.getKey(),dd);}
+        Town.log("plots filled in ("+kind+", zone "+zone+"): "+out.size()+" of "+tries+" tried, turned down "+delta);
+        return out;
+    }
+    /** Whether nothing in a rectangle is claimed (the open ground kept round a plot). */
+    private boolean clear(int x0,int z0,int x1,int z1){
+        for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++)if(c.owner(x,z)>0)return no("crowded");
+        return true;
+    }
+    /** The plain direction from a point to the nearest road or canal water within forty blocks, or south. */
+    Direction facing(int x,int z){
+        for(int rr=1;rr<=40;rr++)for(int k=-rr;k<=rr;k++){
+            int[][] pts={{x+k,z-rr},{x+k,z+rr},{x-rr,z+k},{x+rr,z+k}};
+            for(int[] p:pts){
+                if(!Canvas.inPlan(p[0],p[1]))continue;
+                if(t.roads.on(p[0],p[1])||t.terrain.water[Canvas.idx(p[0],p[1])]!=0&&Math.abs(p[1])<180){
+                    int dx=p[0]-x,dz=p[1]-z;
+                    return Math.abs(dx)>Math.abs(dz)?(dx>0?Direction.EAST:Direction.WEST):(dz>0?Direction.SOUTH:Direction.NORTH);
+                }
+            }
+        }
+        return Direction.SOUTH;
     }
 
     /**

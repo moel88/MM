@@ -30,6 +30,8 @@ final class OldTown {
         lots.addAll(t.lots.along(loop,-1,back,15,17,6,2,7,Plan.TOWN,"house",CODE));
         lots.addAll(t.lots.along(loop,1,back,15,17,6,2,7,Plan.TOWN,"house",CODE));
         lots.addAll(t.lots.along(axis,1,back,15,17,6,2,7,Plan.TOWN,"house",CODE));
+        // then the open ground between: houses wherever they fit, each turned to its nearest road or the canal
+        lots.addAll(t.lots.fill(Plan.TOWN,12,14,21,2,5,2,"house",CODE,40,rnd.nextLong()));
         String[] pool={"old","old","old","old","old","old","modern","modern","modern","modern3","apartment","garden","field"};
         Map<String,Integer> counts=new TreeMap<>();
         for(Lot l:lots){

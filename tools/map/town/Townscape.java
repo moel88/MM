@@ -40,6 +40,7 @@ final class Townscape {
         forest.build();
         nature.meadows();
         street.wireRuns();
+        Town.log("plots turned down: "+lots.refused);
     }
 
     /** Where players appear: on the rift's white south of the world tree, looking at it. */
@@ -119,5 +120,19 @@ final class Townscape {
         }
         ImageIO.write(img,"png",out.toFile());
         Town.log("preview written to "+out);
+        // the plots tried, outlined by why they were turned down (green: built), for tuning the layout
+        var g=img.createGraphics();
+        Map<String,java.awt.Color> col=Map.of("",java.awt.Color.GREEN,"road",java.awt.Color.RED,"taken",java.awt.Color.ORANGE,"shore",java.awt.Color.CYAN,
+            "not land",java.awt.Color.BLUE,"rift",java.awt.Color.MAGENTA,"steep",java.awt.Color.YELLOW,"water",java.awt.Color.PINK,"outside",java.awt.Color.GRAY);
+        for(Object[] r:lots.tried){
+            g.setColor(col.getOrDefault((String)r[4],java.awt.Color.WHITE));
+            g.drawRect((int)r[0]-Plan.X0,(int)r[1]-Plan.Z0,(int)r[2]-(int)r[0],(int)r[3]-(int)r[1]);
+        }
+        g.dispose();
+        ImageIO.write(img,"png",out.resolveSibling("town_lots.png").toFile());
+        var own=new BufferedImage(Plan.W,Plan.D,BufferedImage.TYPE_INT_RGB);
+        int[] pal={0x202020,0xff4040,0x40ff40,0x4040ff,0xffff40,0xff40ff,0x40ffff,0xffffff,0x808080,0xff8000};
+        for(int x=Plan.X0;x<Plan.X0+Plan.W;x++)for(int z=Plan.Z0;z<Plan.Z0+Plan.D;z++){int o=c.owner(x,z);own.setRGB(x-Plan.X0,z-Plan.Z0,o<0?0:pal[o%pal.length]);}
+        ImageIO.write(own,"png",out.resolveSibling("town_owner.png").toFile());
     }
 }

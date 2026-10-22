@@ -34,6 +34,7 @@ final class Capital {
         lots.addAll(t.lots.along(loop,1,back,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
         lots.addAll(t.lots.along(loop,-1,back,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
         lots.addAll(t.lots.along(axis,-1,back,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
+        lots.addAll(t.lots.fill(Plan.CAPITAL,13,13,21,2,5,2,"capital",CODE,40,rnd.nextLong()));
         int turrets=0;
         for(Lot l:lots){if(house(l))turrets++;}
         Town.log("capital: "+lots.size()+" houses ("+turrets+" with turrets), "+c.placed);

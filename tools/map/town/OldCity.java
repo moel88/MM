@@ -43,6 +43,7 @@ final class OldCity {
                 got=t.lots.along(line,way[1],Plan.ROAD_HALF+2,p.frontage(),p.depth(),4,1,5,Plan.CITY,name,CODE,1);
                 if(!got.isEmpty())break;
             }
+            if(got.isEmpty())got=t.lots.fill(Plan.CITY,p.frontage(),p.depth(),9,2,5,3,name,CODE,1,rnd.nextLong());
             if(got.isEmpty()){Town.log("old city: no room for "+name);continue;}
             Lot l=got.get(0);
             // the plot is the city's flat ground: the building stands on it at the city's level

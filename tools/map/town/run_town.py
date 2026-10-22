@@ -112,7 +112,7 @@ lines = [l for l in text.splitlines() if '[town]' in l]
 print('\n'.join(lines[-30:]))
 if (server / 'town_error.txt').exists() or not any('[town] saved' in l for l in lines):
     sys.exit('build failed after %d s, see %s' % (time.time() - start, out / 'server.out'))
-for name in ('town_preview.png', 'town_build.log'):
+for name in ('town_preview.png', 'town_lots.png', 'town_owner.png', 'town_build.log'):
     if (server / WORLD / name).exists(): shutil.move(str(server / WORLD / name), out / name)
 for junk in ('session.lock',):
     (server / WORLD / junk).unlink(missing_ok=True)
