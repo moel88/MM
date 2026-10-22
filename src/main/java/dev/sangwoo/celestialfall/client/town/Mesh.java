@@ -57,8 +57,10 @@ final class Mesh {
     /** A bend applied to every point added from now on (in sixteenths, before the turn to the facing), or none. */
     Mesh warp(UnaryOperator<double[]> f){warp=f;return this;}
 
-    private double[] turn(double[] p){
-        if(warp!=null)p=warp.apply(p);
+    private double[] turn(double[] p){return turn(facing,warp!=null?warp.apply(p):p);}
+    private Direction turn(Direction d){return turn(facing,d);}
+    /** A point in sixteenths of a block facing north, in blocks of the block turned to {@code facing} about its middle. */
+    static double[] turn(Direction facing,double[] p){
         double x=p[0]/16,y=p[1]/16,z=p[2]/16;
         return switch(facing){
             case EAST->new double[]{1-z,y,x};
@@ -67,7 +69,8 @@ final class Mesh {
             default->new double[]{x,y,z};
         };
     }
-    private Direction turn(Direction d){
+    /** The way a side of a block facing north looks once the block is turned to {@code facing}. */
+    static Direction turn(Direction facing,Direction d){
         if(d.getAxis()==Direction.Axis.Y)return d;
         return switch(facing){case EAST->d.rotateYClockwise();case SOUTH->d.getOpposite();case WEST->d.rotateYCounterclockwise();default->d;};
     }
