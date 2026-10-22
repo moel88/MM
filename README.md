@@ -1,4 +1,15 @@
-> **현재 통합본: Botand 2.48.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 다시 원래 보탠드 맵 Botand-Azure-Garden-1.20.1-v1.3입니다. 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.48.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Botand-Azure-Cliffside-1.20.1-v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md))입니다. 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 맵 v1.4 — Cliffside: 로블록스 보탠드 지도처럼 (모드는 2.48.0 그대로)
+
+보내 주신 로블록스 지도를 보고 원래 맵을 리워크했습니다. 길·건물·상점·카페·전투장·공원·숲 자리는 원래 맵과 같고, 모습을 지도처럼 바꿨습니다.
+- **갈색 바위 절벽:** 섬 둘레의 풀밭과 회색 성벽이 갈색 바위가 됐습니다. 성벽 자리(바다 쪽 4칸)만 9~16칸 절벽으로 솟고, 안쪽은 시내와 같은 높이의 평평한 바위 바닥이라 예전처럼 뛰고 싸울 수 있습니다.
+- **회색 시내, 짙은 녹색 공원과 숲:** 건물 사이 풀밭은 회색 바닥, 두 공원은 정육면체 잎 나무 숲(잎 아래를 걸어 다님), 분홍 꽃잎은 모두 짙은 녹색.
+- **전투장:** 빨간 테두리와 문양 없이 무늬 없는 밝은 회색 바닥.
+- **새 자리:** 지도의 아누비스 퀘스트(스폰 남쪽 매점 + 검은 자칼 석상)와 스킨 제거소(서쪽 길 끝 가게). 지금은 자리만 있고 기능은 없습니다.
+- **그대로:** 모드가 맵을 알아보는 데이터팩, 필드 보급 11곳, 스폰, 상인, 텔레포트. 트인 정도도 원래 맵과 거의 같습니다(트인 땅 76.5%, 장애물까지 거리 중앙값 4.2칸으로 같음).
+
+[MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)를 확인하세요.
 
 # 보탠드 해안 마을 v2.0 — 넓고 단순하게, 맵 전체를 새로 (모드는 2.48.0 그대로)
 
