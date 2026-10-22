@@ -29,8 +29,10 @@ public final class Town implements ModInitializer {
     static final long SEED=Long.getLong("botand.town.seed",20261020L);
     /** The map's data pack (the mod finds the map's definition in it). */
     static final String PACK="botand_hourglass";
-    private int phase,wait;private long started;
-    private Townscape town;private boolean failed;
+    private int phase=-1,wait;private long started;
+    private boolean failed;
+    /** What the build leaves for after the world has lit it (the model itself is let go first: 2000 x 2000 is big). */
+    private Map<String,String> definition;private int[] spawn;
     static final StringBuilder LOG=new StringBuilder();
 
     @Override public void onInitialize(){
@@ -48,12 +50,14 @@ public final class Town implements ModInitializer {
             log(String.format("model ready (%d x %d x %d) in %.1f s",Plan.W,Canvas.H,Plan.D,secs()));
             var terrain=new Terrain(canvas,SEED);terrain.build();
             log(String.format("terrain: %,d blocks, %.1f s",canvas.placed,secs()));
-            town=new Townscape(canvas,terrain,new Random(SEED),Path.of(System.getProperty("botand.town.pieces","pieces/azure_city.txt.gz")));
+            var town=new Townscape(canvas,terrain,new Random(SEED));
             town.build();
             log(String.format("town: %,d blocks in all, %.1f s",canvas.placed,secs()));
             Chunks.write(w,canvas,biomes(w,terrain));
             log(String.format("chunks written, %.1f s",secs()));
             town.preview(server.getSavePath(WorldSavePath.ROOT).resolve("town_preview.png"));
+            definition=town.definition();spawn=town.spawn();
+            phase=0;
         }catch(Throwable t){fail(server,t);}
     }
     private double secs(){return (System.nanoTime()-started)/1e9;}
@@ -65,7 +69,7 @@ public final class Town implements ModInitializer {
     }
 
     private void tick(MinecraftServer server){
-        if(failed||town==null)return;
+        if(failed||phase<0)return;
         var w=server.getOverworld();
         try{
             switch(phase){
@@ -82,11 +86,12 @@ public final class Town implements ModInitializer {
                         if(!w.getChunkManager().isTickingFutureReady(ChunkPos.toLong(cx,cz)))pending++;
                     boolean light=w.getChunkManager().getLightingProvider().hasUpdates();
                     if(wait%200==0)log("waiting: "+pending+" chunks not ready, light "+(light?"busy":"settled")+", "+wait+" ticks");
-                    if(pending==0&&!light&&wait>=100||wait>24000){log("all chunks ready after "+wait+" ticks ("+(int)secs()+" s)");phase=2;}
+                    if(pending==0&&!light&&wait>=100||wait>72000){log("all chunks ready after "+wait+" ticks ("+(int)secs()+" s)");phase=2;}
                 }
                 case 2->{
                     rules(server,w);
-                    town.definition(server.getSavePath(WorldSavePath.DATAPACKS).resolve(PACK));
+                    var pack=server.getSavePath(WorldSavePath.DATAPACKS).resolve(PACK);
+                    for(var e:definition.entrySet()){var f=pack.resolve(e.getKey());Files.createDirectories(f.getParent());Files.writeString(f,e.getValue());}
                     for(int cx=Plan.X0>>4;cx<=(Plan.X0+Plan.W-1)>>4;cx++)for(int cz=Plan.Z0>>4;cz<=(Plan.Z0+Plan.D-1)>>4;cz++)w.setChunkForced(cx,cz,false);
                     server.saveAll(true,true,true);
                     Files.writeString(server.getSavePath(WorldSavePath.ROOT).resolve("town_build.log"),LOG.toString());
@@ -105,13 +110,14 @@ public final class Town implements ModInitializer {
     private Chunks.Biomes biomes(ServerWorld w,Terrain t){
         var reg=w.getRegistryManager().get(RegistryKeys.BIOME);
         RegistryEntry<Biome> forest=reg.entryOf(BiomeKeys.FOREST),plains=reg.entryOf(BiomeKeys.PLAINS),meadow=reg.entryOf(BiomeKeys.MEADOW),
-            beach=reg.entryOf(BiomeKeys.BEACH),shallow=reg.entryOf(BiomeKeys.LUKEWARM_OCEAN),sea=reg.entryOf(BiomeKeys.OCEAN);
+            beach=reg.entryOf(BiomeKeys.BEACH),shallow=reg.entryOf(BiomeKeys.LUKEWARM_OCEAN),sea=reg.entryOf(BiomeKeys.OCEAN),snowy=reg.entryOf(BiomeKeys.SNOWY_SLOPES);
         return (x,y,z)->{
             if(!Canvas.inPlan(x,z))return sea;
             byte k=t.kind[Canvas.idx(x,z)];
             if(k==Terrain.SEA)return shallow;
             if(k==Terrain.BEACH)return beach;
-            return switch(Plan.zone(x,z)){case Plan.RIFT_ZONE->meadow;case Plan.CAPITAL,Plan.CITY->plains;default->forest;};
+            if(Plan.zone(x,z)==Plan.TOWN&&Math.hypot(x-Plan.MOUNT_X,z-Plan.MOUNT_Z)<Plan.MOUNT_R*0.55&&y>150)return snowy;
+            return switch(Plan.zone(x,z)){case Plan.RIFT_ZONE->meadow;case Plan.CAPITAL,Plan.CYBER->plains;default->forest;};
         };
     }
 
@@ -131,7 +137,6 @@ public final class Town implements ModInitializer {
         r.get(GameRules.COMMAND_BLOCK_OUTPUT).set(false,s);
         w.setWeather(999999,0,false,false);
         w.setTimeOfDay(1000);
-        var spawn=town.spawn();
         w.setSpawnPos(new BlockPos(spawn[0],spawn[1],spawn[2]),spawn[3]);
         log("spawn at "+Arrays.toString(spawn));
     }

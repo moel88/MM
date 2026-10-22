@@ -165,6 +165,19 @@ public final class TownBlocks {
     public static final Block BLUE_SHINGLES_SLAB=add("blue_shingles_slab",new SlabBlock(stone().mapColor(MapColor.BLUE)));
     public static final Block BLUE_SHINGLES_STAIRS=add("blue_shingles_stairs",new StairsBlock(BLUE_SHINGLES.getDefaultState(),stone().mapColor(MapColor.BLUE)));
     public static final RoofBlock ROOF_NAVY=roof("roof_navy",0.5f,2f/16,stone(),"town/blue_shingles","town/blue_shingles","town/plaster_0","town/blue_shingles");
+    // the cyber city of the hourglass island (2.49.0, map v3.0, the user's photo): neon tubes, glass curtain walls (lit
+    // ones glow from inside), dark metal cladding, LED walls playing their loops (animated textures), wet asphalt and dark paving
+    public static final Block NEON_PINK=add("neon_pink",new Block(stone().mapColor(MapColor.PINK).luminance(15)));
+    public static final Block NEON_PURPLE=add("neon_purple",new Block(stone().mapColor(MapColor.PURPLE).luminance(15)));
+    public static final Block NEON_CYAN=add("neon_cyan",new Block(stone().mapColor(MapColor.CYAN).luminance(15)));
+    public static final Block GLASS_CURTAIN=add("glass_curtain",new Block(stone().mapColor(MapColor.BLACK)));
+    public static final Block GLASS_CURTAIN_LIT=add("glass_curtain_lit",new Block(stone().mapColor(MapColor.YELLOW).luminance(9)));
+    public static final Block CYBER_PANEL=add("cyber_panel",new Block(stone().mapColor(MapColor.GRAY)));
+    public static final Block LED_SCREEN_PINK=add("led_screen_pink",new Block(stone().mapColor(MapColor.PINK).luminance(13)));
+    public static final Block LED_SCREEN_CYAN=add("led_screen_cyan",new Block(stone().mapColor(MapColor.CYAN).luminance(13)));
+    public static final Block LED_SCREEN_MIX=add("led_screen_mix",new Block(stone().mapColor(MapColor.MAGENTA).luminance(13)));
+    public static final Block WET_ASPHALT=add("wet_asphalt",new Block(stone().mapColor(MapColor.BLACK)));
+    public static final Block CYBER_PAVING=add("cyber_paving",new Block(stone().mapColor(MapColor.GRAY)));
 
     private static <B extends Block> B add(String name,B block){ALL.put(name,block);return block;}
     /** A roof block and its textures: names under the town's own textures, or minecraft: blocks' (block/ is added). */

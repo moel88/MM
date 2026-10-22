@@ -6,13 +6,13 @@ import java.util.ArrayDeque;
 import java.util.Random;
 
 /**
- * The hourglass island's ground (map v3.0). The rift at the waist is level white ground (y 70) falling to the sea in
- * white cliffs. The upper glass rises gently away from it (the town and the capital from y 72 to 76), the shrine's hill
- * standing up in the town's far corner (its precinct at y 88) and the castle's plateau in the capital's (y 84, on sheer
- * cliffs). The lower glass is lower: the forest rolls over low hills and comes down to sand all along its shore; the
- * old city is level (y 70) on low cliffs, as Botand's first map stood on its cliffs. Where two zones meet on the axis
- * the ground blends from one to the other; round the rift it eases down to the rift's level. The town's canal runs in
- * a stone channel two blocks below the ground; the forest's lake lies in a hollow.
+ * The hourglass island's ground (map v3.0, 2000 x 2000). The rift at the waist is level white ground (y 70) falling to
+ * the sea in white cliffs. The upper glass rises gently away from it (the town and the capital from y 72 to 80, rolling
+ * a little), the shrine's hill standing up in the town's far corner (its precinct at y 104) and the castle's plateau in
+ * the capital's (y 98, on sheer cliffs). The lower glass is lower: the forest rolls over hills and comes down to sand
+ * all along its shore; the cyber city is level (y 70) on low cliffs. Where two zones meet on the axis the ground blends
+ * from one to the other; round the rift it eases down to the rift's level. The town's canal runs in a stone channel two
+ * blocks below the ground; the forest's lake lies in a hollow.
  */
 final class Terrain {
     static final byte SEA=1,LAND=2,BEACH=4;
@@ -32,40 +32,54 @@ final class Terrain {
 
     /** A zone's own ground height at a point (before the blends round the rift and across the axis). */
     double zoneHeight(int zone,double x,double z){
-        double u=Math.abs(z)/Plan.END;
+        double u=Math.abs(z)/Plan.END,K=Plan.K;
         switch(zone){
             case Plan.TOWN->{
-                double h=72+4*Plan.ss(.35,.75,u);
-                double ds=Math.hypot(x-Plan.SHRINE_X,z-Plan.SHRINE_Z);
-                // the shrine's hill: a level precinct on top, wooded slopes down to the town
-                int r=Plan.SHRINE_R;
-                double hill=ds<r?Plan.SHRINE_Y:Plan.SHRINE_Y-(Plan.SHRINE_Y-h)*Plan.ss(r,r+26,ds);
-                return Math.max(h,hill+(ds<r?0:1.2*noise(x*1.5,z*1.5)*Plan.ss(r,r+10,ds)*(1-Plan.ss(r+18,r+26,ds))));
+                double h=72+8*Plan.ss(.35,.75,u)+1.6*noise(x/K,z/K)*Plan.ss(.3,.5,u);
+                return Math.max(h,mountain(x,z,h));
             }
             case Plan.CAPITAL->{
-                double h=72+4*Plan.ss(.35,.75,u);
+                double h=72+8*Plan.ss(.35,.75,u)+1.2*noise2(x/K,z/K)*Plan.ss(.3,.5,u);
                 // the castle's plateau: level ground on cliffs
-                return Math.hypot(x-Plan.CASTLE_X,z-Plan.CASTLE_Z)<Plan.PLATEAU_R+1.5*noise2(x*2,z*2)?Plan.CASTLE_Y:h;
+                return Math.hypot(x-Plan.CASTLE_X,z-Plan.CASTLE_Z)<Plan.PLATEAU_R+3*noise2(x,z)?Plan.CASTLE_Y:h;
             }
             case Plan.FOREST->{
-                return 70+2.6*noise(x,z)+1.6*noise2(x*1.4,z*1.4)+2.5*Plan.ss(.45,.85,u)*(1-Plan.ss(.9,1,u));
+                return 70+6*noise(x/2.5,z/2.5)+3*noise2(x/1.3,z/1.3)+1.2*noise(x,z)+4*Plan.ss(.45,.85,u)*(1-Plan.ss(.9,1,u));
             }
-            case Plan.CITY->{return Plan.BASE;}
+            case Plan.CYBER->{return Plan.BASE;}
             default->{return Plan.BASE;}
         }
+    }
+    /**
+     * The great mountain (the town's far corner, the island's landmark): a level summit for the shrine, then slopes
+     * steep near the top and easing out to the foot, its face cut into ridges and gullies that wander round it, rough
+     * underfoot; {@code below} is the ground it rises from.
+     */
+    double mountain(double x,double z,double below){
+        double dx=x-Plan.MOUNT_X,dz=z-Plan.MOUNT_Z,d=Math.hypot(dx,dz);
+        if(d>Plan.MOUNT_R*1.3)return below;
+        double a=Math.atan2(dz,dx);
+        double rr=d*(1+0.10*Math.sin(7*a+2.5*noise(x/40.0,z/40.0))+0.05*Math.sin(13*a+1.7)+0.03*Math.sin(23*a+0.3));
+        double sr=Plan.MOUNT_SUMMIT,R=Plan.MOUNT_R;
+        if(d<sr*0.8)return Plan.MOUNT_TOP;
+        double s=Math.max(0,Math.min(1,(rr-sr)/(R-sr)));
+        double h=below+(Plan.MOUNT_TOP-below)*Math.pow(1-s,1.75);
+        // rough slopes, rougher high up, smooth toward the foot and the summit's edge
+        h+=(2.0+5.0*(1-s))*noise(x/6.0,z/6.0)*Plan.ss(0,0.08,s)*(1-Plan.ss(0.8,1,s));
+        return h;
     }
     /** The ground's height at a point, every blend applied (the shore aside). */
     double height(double x,double z){
         double R=Math.hypot(x,z);
-        if(R<Plan.RIFT-6)return Plan.BASE;
+        if(R<Plan.RIFT-30)return Plan.BASE;
         boolean upper=z<0;
-        int left=upper?Plan.TOWN:Plan.FOREST,right=upper?Plan.CAPITAL:Plan.CITY;
-        double w=Plan.ss(-18,18,x);
+        int left=upper?Plan.TOWN:Plan.FOREST,right=upper?Plan.CAPITAL:Plan.CYBER;
+        double w=Plan.ss(-90,90,x);
         double h=zoneHeight(left,x,z)*(1-w)+zoneHeight(right,x,z)*w;
         // the shrine's hill and the castle's plateau keep their own heights wherever they are
-        if(upper&&x<-20)h=zoneHeight(Plan.TOWN,x,z);
-        if(upper&&x>20)h=zoneHeight(Plan.CAPITAL,x,z);
-        return Plan.BASE+(h-Plan.BASE)*Plan.ss(Plan.RIFT-6,Plan.RIFT+24,R);
+        if(upper&&x<-100)h=zoneHeight(Plan.TOWN,x,z);
+        if(upper&&x>100)h=zoneHeight(Plan.CAPITAL,x,z);
+        return Plan.BASE+(h-Plan.BASE)*Plan.ss(Plan.RIFT-30,Plan.RIFT+120,R);
     }
     /** The canal's pools: level stretches of sixteen blocks, each two below the lowest bank along it, held by weirs (OldTown). */
     static final int POOL=16;
@@ -80,7 +94,7 @@ final class Terrain {
         return lo-2;
     }
     /** Whether a shore comes down to sand (the forest's) or ends in a cliff (everywhere else). */
-    static boolean sandy(double x,double z){return z>0&&x<-12;}
+    static boolean sandy(double x,double z){return z>0&&x<-60;}
 
     void build(){
         int n=Plan.W*Plan.D;int[] F=new int[n];
@@ -91,7 +105,7 @@ final class Terrain {
             double h=height(x,z);
             if(sandy(x,z)){
                 // the forest's shore: the ground eases down to a strip of sand at the water
-                h=63+(h-63)*Plan.ss(0,16,-s);
+                h=63+(h-63)*Plan.ss(0,30,-s);
                 kind[i]=h<64.6?BEACH:LAND;
             }else kind[i]=LAND;
             F[i]=(int)Math.round(h);
@@ -101,9 +115,9 @@ final class Terrain {
             if(kind[i]==SEA)continue;
             int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D;
             if(z>=Plan.CANAL_Z0&&z<=Plan.CANAL_Z1&&Math.abs(x+0.5-Plan.canalX(z+0.5))<Plan.canalHalf(z+0.5)){water[i]=canalLevel(F,z);F[i]=water[i]-2;}
-            double dl=Math.hypot(x-Plan.LAKE_X,z-Plan.LAKE_Z)+1.5*noise(x*3,z*3);
-            if(dl<Plan.LAKE_R){water[i]=68;F[i]=Math.min(F[i],(int)Math.round(68-1-3*Plan.ss(Plan.LAKE_R,4,dl)));}
-            else if(dl<Plan.LAKE_R+8)F[i]=(int)Math.round(Math.min(F[i],68+(F[i]-68)*Plan.ss(Plan.LAKE_R,Plan.LAKE_R+8,dl)));
+            double dl=Math.hypot(x-Plan.LAKE_X,z-Plan.LAKE_Z)+7*noise(x/1.5,z/1.5);int ly=Plan.LAKE_Y;
+            if(dl<Plan.LAKE_R){water[i]=ly;F[i]=Math.min(F[i],(int)Math.round(ly-1-6*Plan.ss(Plan.LAKE_R,Plan.LAKE_R*0.4,dl)));}
+            else if(dl<Plan.LAKE_R+24)F[i]=(int)Math.round(Math.min(F[i],ly+(F[i]-ly)*Plan.ss(Plan.LAKE_R,Plan.LAKE_R+24,dl)));
         }
         // the sea floor: shelving off the sandy shores, falling away quickly under the cliffs
         int[] dist=shoreDistance();
@@ -124,13 +138,14 @@ final class Terrain {
             int zone=Plan.zone(x,z);
             // the white, and round its edge white patches bleeding into the land
             double over=Math.hypot(x,z)-Plan.riftEdge(x,z);
-            boolean rift=over<0||over<7&&Pal.smooth(x,z,4,77)>0.42+over*0.07;
+            boolean rift=over<0||over<20&&Pal.smooth(x,z,7,77)>0.42+over*0.025;
             pale[i]=rift;
             for(int y=Canvas.Y0;y<=top;y++){
                 BlockState st;
                 if(y==top)st=surface(x,z,top,i,F,zone,rift);
                 else if(rift)st=white(x,y,z,y>=top-3);
-                else if(y>=top-3&&!steep(F,i,top))st=kind[i]==BEACH||top<=Plan.SEA+2?Blocks.SAND.getDefaultState():Blocks.DIRT.getDefaultState();
+                else if(y>=top-3&&!steep(F,i,top)&&top<=140)st=kind[i]==BEACH||top<=Plan.SEA+2?Blocks.SAND.getDefaultState():Blocks.DIRT.getDefaultState();
+                else if(top>140&&y>=top-24)st=rock(x,y,z);
                 else st=y>=top-12&&cliffSide(F,i,top)?rock(x,y,z):Blocks.STONE.getDefaultState();
                 c.set(x,y,z,st);
             }
@@ -151,6 +166,15 @@ final class Terrain {
         if(rift)return Pal.smooth(x,z,5,43)>0.86?Blocks.CALCITE.getDefaultState():RIFT_GROUND;
         if(kind[i]==BEACH||top<=Plan.SEA+2&&sandy(x,z))return Pal.hash(x,6,z)<0.9?Blocks.SAND.getDefaultState():Blocks.GRAVEL.getDefaultState();
         if(water[i]!=0)return Pal.hash(x,8,z)<0.5?Blocks.GRAVEL.getDefaultState():Blocks.DIRT.getDefaultState();
+        if(zone==Plan.TOWN&&top>132){
+            // the mountain's heights: snow over its top, scree and bare rock below it, the last grass giving out
+            double sn=Plan.SNOW+7*noise(x/9.0,z/9.0);
+            if(top>=sn||top>=sn-16&&Pal.hash(x,4,z)<(top-(sn-16))/16.0)return Blocks.SNOW_BLOCK.getDefaultState();
+            double g=Pal.hash(x,5,z),grass=Plan.ss(170,135,top);
+            if(!steep(F,i,top)&&g<grass*0.8)return Blocks.GRASS_BLOCK.getDefaultState();
+            if(g>0.9)return Blocks.GRAVEL.getDefaultState();
+            return rock(x,top,z);
+        }
         if(steep(F,i,top)){
             double g=Pal.hash(x,5,z);
             if(g<0.30)return Blocks.GRASS_BLOCK.getDefaultState();

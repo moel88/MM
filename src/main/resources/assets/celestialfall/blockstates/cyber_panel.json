@@ -1,0 +1,12 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/cyber_panel_0"
+   },
+   {
+    "model": "celestialfall:block/town/cyber_panel_1"
+   }
+  ]
+ }
+}

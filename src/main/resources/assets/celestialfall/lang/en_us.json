@@ -195,5 +195,16 @@
   "block.celestialfall.blue_shingles": "Blue Fish-Scale Shingles",
   "block.celestialfall.blue_shingles_slab": "Blue Fish-Scale Shingle Slab",
   "block.celestialfall.blue_shingles_stairs": "Blue Fish-Scale Shingle Stairs",
-  "block.celestialfall.roof_navy": "Blue Fish-Scale Roof"
+  "block.celestialfall.roof_navy": "Blue Fish-Scale Roof",
+  "block.celestialfall.neon_pink": "Pink Neon",
+  "block.celestialfall.neon_purple": "Purple Neon",
+  "block.celestialfall.neon_cyan": "Cyan Neon",
+  "block.celestialfall.glass_curtain": "Glass Curtain Wall",
+  "block.celestialfall.glass_curtain_lit": "Lit Glass Curtain Wall",
+  "block.celestialfall.cyber_panel": "Dark Metal Panel",
+  "block.celestialfall.led_screen_pink": "Pink LED Screen",
+  "block.celestialfall.led_screen_cyan": "Cyan LED Screen",
+  "block.celestialfall.led_screen_mix": "Neon LED Screen",
+  "block.celestialfall.wet_asphalt": "Wet Asphalt",
+  "block.celestialfall.cyber_paving": "Dark Paving"
 }

@@ -7,23 +7,24 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Puts the hourglass island together (map v3.0), in the order the pieces depend on each other: the roads, the rift and
- * its world tree, the old town with its canal and shrine, the capital with its castle and cathedral, the old city of
- * the first map, the forest with its lake and ruins, the meadows, the wires; then writes the map's definition.
+ * Puts the hourglass island together (map v3.0, 2000 x 2000), in the order the pieces depend on each other: the roads,
+ * the rift and its world tree, the old town with its canal and the shrine on the great mountain, the capital in its
+ * walls with the great castle and the cathedral, the cyber city, the forest with its lake and ruins, the meadows, the
+ * wires; then writes the map's definition.
  */
 final class Townscape {
     final Canvas c;final Terrain terrain;final Random rnd;
     final Roads roads;final Lots lots;final Nature nature;final Houses houses;final Street street;
-    final Rift rift;final Shrine shrine;final OldTown town;final Capital capital;final OldCity city;final Forest forest;
+    final Rift rift;final Shrine shrine;final OldTown town;final Capital capital;final Cyber cyber;final Forest forest;
     /** Places the mod uses: merchants (seller, buyer) and the field supply spots. */
     final List<int[]> merchants=new ArrayList<>();
     final Map<String,int[]> places=new LinkedHashMap<>();
     /** The power and telephone lines, drawn by the mod as thin sagging lines: x0 y0 z0 x1 y1 z1 sag, in blocks. */
     final List<float[]> wires=new ArrayList<>();
-    Townscape(Canvas c,Terrain terrain,Random rnd,Path pieces)throws Exception{
+    Townscape(Canvas c,Terrain terrain,Random rnd){
         this.c=c;this.terrain=terrain;this.rnd=rnd;
         roads=new Roads(this);lots=new Lots(this);nature=new Nature(this);houses=new Houses(this);street=new Street(this);
-        rift=new Rift(this);shrine=new Shrine(this);town=new OldTown(this);capital=new Capital(this);city=new OldCity(this,pieces);forest=new Forest(this);
+        rift=new Rift(this);shrine=new Shrine(this);town=new OldTown(this);capital=new Capital(this);cyber=new Cyber(this);forest=new Forest(this);
     }
     /** A wire from one point to another, hanging {@code sag} blocks below the straight line at its middle. */
     void wire(double x0,double y0,double z0,double x1,double y1,double z1,double sag){
@@ -36,7 +37,7 @@ final class Townscape {
         rift.build();
         town.build();
         capital.build();
-        city.build();
+        cyber.build();
         forest.build();
         nature.meadows();
         street.wireRuns();
@@ -51,7 +52,9 @@ final class Townscape {
      * merchants' places, the field supply spots, the named places, the wires, the open sea's level) and a teleport
      * function per place for operators (/function botand:goto/tree).
      */
-    void definition(Path pack)throws Exception{
+    /** The map's definition and its teleport functions, by their path in the data pack (made while the model is in memory, written after). */
+    Map<String,String> definition(){
+        var files=new LinkedHashMap<String,String>();
         var loot=lootSpots();
         var j=new StringBuilder();
         int[] sp=spawn();
@@ -73,24 +76,29 @@ final class Townscape {
         }
         j.append("\n  ],\n  \"backdrop\": [],\n");
         j.append("  \"sea\": ").append(String.format(Locale.ROOT,"%.1f",Plan.FAR_SEA)).append("\n}\n");
-        Files.createDirectories(pack.resolve("data/botand/map"));
-        Files.writeString(pack.resolve("data/botand/map/definition.json"),j.toString());
-        var fn=pack.resolve("data/botand/functions/goto");Files.createDirectories(fn);
-        for(var e:places.entrySet()){int[] p=e.getValue();Files.writeString(fn.resolve(e.getKey()+".mcfunction"),"tp @s "+p[0]+".5 "+p[1]+" "+p[2]+".5\n");}
-        Files.writeString(fn.resolve("spawn.mcfunction"),"tp @s "+sp[0]+".5 "+sp[1]+" "+sp[2]+".5 "+sp[3]+" 0\n");
+        files.put("data/botand/map/definition.json",j.toString());
+        for(var e:places.entrySet()){int[] p=e.getValue();files.put("data/botand/functions/goto/"+e.getKey()+".mcfunction","tp @s "+p[0]+".5 "+p[1]+" "+p[2]+".5\n");}
+        files.put("data/botand/functions/goto/spawn.mcfunction","tp @s "+sp[0]+".5 "+sp[1]+" "+sp[2]+".5 "+sp[3]+" 0\n");
         Town.log("definition: "+loot.size()+" supply spots, "+places.size()+" places, "+wires.size()+" wires");
+        return files;
     }
-    /** The field supply spots: open ground in every zone of the island, checked to be clear. */
+    /**
+     * The field supply spots: open ground in every zone of the island, checked to be clear: six round the world tree,
+     * then one about every hundred and fifty blocks over the land (none high on the mountain, none in the sea).
+     */
     List<int[]> lootSpots(){
-        int[][] want={{-30,22},{30,22},{-28,-24},{28,-24},{0,-42},                      // the rift, round the tree
-            {-40,-90},{-95,-105},{-60,-140},{-120,-150},{-30,-160},{-100,-75},           // the old town, the canal, the shrine's foot
-            {40,-80},{95,-105},{100,-140},{30,-150},{130,-120},{150,-128},                // the capital, the cathedral's square, the castle
-            {-40,90},{-100,100},{-110,140},{-40,150},{-150,130},{-170,100},               // the forest, the lake, the ruins, the shore
-            {20,80},{110,90},{150,170},{100,170},{20,165},{120,130}};                     // the old city
+        List<int[]> wantList=new ArrayList<>();
+        for(int k=0;k<6;k++){double a=k*Math.PI/3+0.3;wantList.add(new int[]{(int)(Math.cos(a)*150),(int)(Math.sin(a)*150)});}
+        for(int x=-900;x<=900;x+=150)for(int z=-900;z<=900;z+=150){
+            if(Plan.shore(x,z)>-12||Math.hypot(x,z)<Plan.RIFT)continue;
+            if(Math.hypot(x-Plan.MOUNT_X,z-Plan.MOUNT_Z)<Plan.MOUNT_R*0.6)continue;
+            wantList.add(new int[]{x+((x/150+z/150)&1)*37,z});
+        }
+        int[][] want=wantList.toArray(new int[0][]);
         List<int[]> out=new ArrayList<>();
         for(int[] w:want){
             int[] found=null;
-            search:for(int r=0;r<=8;r++)for(int dx=-r;dx<=r;dx++)for(int dz=-r;dz<=r;dz++){
+            search:for(int r=0;r<=24;r++)for(int dx=-r;dx<=r;dx++)for(int dz=-r;dz<=r;dz++){
                 if(Math.max(Math.abs(dx),Math.abs(dz))!=r)continue;
                 int x=w[0]+dx,z=w[1]+dz;
                 if(!Canvas.inPlan(x,z)||terrain.kind[Canvas.idx(x,z)]==Terrain.SEA)continue;

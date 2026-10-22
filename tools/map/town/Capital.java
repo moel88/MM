@@ -10,13 +10,14 @@ import net.minecraft.util.math.Direction;
 import java.util.*;
 
 /**
- * The fantasy capital in the upper glass's east half (map v3.0: '판타지 왕도·왕성'): houses of stone below and plaster
- * with dark timbers above under steep blue, slate and green-copper roofs, some with a round turret at a corner, along
- * the loop road and the axis road with open ground between them; the cathedral inside the loop facing the rift across
- * its square and fountain, twin spired towers at its front, an apse behind; and the castle on its plateau at the far
- * corner: a ring of walls with round towers under blue cones, the gatehouse to the south, the keep with its turrets in
- * the middle, steps down the plateau's cliff toward the loop road. Lanterns on black posts with Botand's sky-blue
- * banners light the roads.
+ * The fantasy capital in the upper glass's east half (map v3.0, the user's request: '판타지 왕도는 거대한 성과 외벽으로'):
+ * a whole city inside high stone walls twenty-two blocks tall, round towers along them every fifty blocks under blue
+ * cones, two gatehouses (west on the axis road, south-west toward the rift); its streets paved in stone, the main
+ * avenue from the west gate to the great castle; houses of stone below and plaster with dark timbers above under steep
+ * blue, slate and green-copper roofs, some with a round turret at a corner; the cathedral north of the avenue across
+ * its square and fountain; and the great castle on its plateau at the avenue's end: an octagon of curtain walls with
+ * eight round towers, a gatehouse to the west, the palace with its corner towers and the great tower rising over all,
+ * the island's second landmark. Lanterns on black posts with Botand's sky-blue banners light the streets.
  */
 final class Capital {
     private final Townscape t;private final Canvas c;private final Random rnd;
@@ -30,18 +31,106 @@ final class Capital {
     private static BlockState s(Block b){return b.getDefaultState();}
 
     void build(){
+        walls();
         castle();
         cathedral();
-        double[][] loop=t.roads.lines.get(0),axis=t.roads.lines.get(2);
-        int back=Plan.ROAD_HALF+3;
-        lots.addAll(t.lots.along(loop,1,back,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
-        lots.addAll(t.lots.along(loop,-1,back,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
-        lots.addAll(t.lots.along(axis,-1,back,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
-        lots.addAll(t.lots.fill(Plan.CAPITAL,13,13,21,2,5,2,"capital",CODE,40,rnd.nextLong()));
+        // the houses: inside the walls only, along both sides of every street, then wherever they fit between
+        var streets=t.roads.streets(Plan.CAPITAL);
+        for(int x=Plan.WALL_X-Plan.WALL_R-40;x<=Plan.WALL_X+Plan.WALL_R+40;x++)for(int z=Plan.WALL_Z-Plan.WALL_R-40;z<=Plan.WALL_Z+Plan.WALL_R+40;z++)
+            if(Canvas.inPlan(x,z)&&Plan.zone(x,z)==Plan.CAPITAL&&Plan.insideWalls(x,z)<12&&c.owner(x,z)==0)c.own(x,z,OUTSIDE);
+        for(var s:streets)for(int side=-1;side<=1;side+=2)lots.addAll(t.lots.along(s,side,t.roads.half(s)+3,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
+        lots.addAll(t.lots.fill(Plan.CAPITAL,13,13,21,2,5,2,"capital",CODE,140,rnd.nextLong()));
         int turrets=0;
         for(Lot l:lots){if(house(l))turrets++;}
         Town.log("capital: "+lots.size()+" houses ("+turrets+" with turrets), "+c.placed);
-        lamps(loop,1);lamps(axis,-1);
+        for(var s:streets)lamps(s,1,t.roads.half(s));
+        // outside the walls the land is the city's: open fields, free of houses
+        for(int x=Plan.WALL_X-Plan.WALL_R-40;x<=Plan.WALL_X+Plan.WALL_R+40;x++)for(int z=Plan.WALL_Z-Plan.WALL_R-40;z<=Plan.WALL_Z+Plan.WALL_R+40;z++)
+            if(Canvas.inPlan(x,z)&&c.owner(x,z)==OUTSIDE)c.own(x,z,0);
+    }
+    /** What the land outside the walls is held by while the houses are placed (so none stand outside them). */
+    static final int OUTSIDE=12;
+
+    // ---------------------------------------------------------------- the walls
+
+    /**
+     * The city walls: five blocks thick and twenty-two tall from the ground along their line (a little uneven, as walls
+     * built round a city), a walk on top behind battlements, arrow slits; a round tower every fifty blocks or so, eight
+     * across and thirty-two tall under a blue cone; the two gates left open for their gatehouses.
+     */
+    private void walls(){
+        int H=22,cx=Plan.WALL_X,cz=Plan.WALL_Z,R=Plan.WALL_R+20;
+        BlockState wall=s(Blocks.STONE_BRICKS);
+        for(int x=cx-R;x<=cx+R;x++)for(int z=cz-R;z<=cz+R;z++){
+            if(!Canvas.inPlan(x,z))continue;
+            double in=Plan.insideWalls(x+0.5,z+0.5);
+            if(in<-2.5||in>2.5)continue;
+            double a=Math.atan2(z+0.5-cz,x+0.5-cx);
+            if(gateAt(a,9))continue;
+            if(Plan.shore(x,z)>-1||t.terrain.kind[Canvas.idx(x,z)]==Terrain.SEA)continue;
+            int g=c.ground(x,z),top=g+H;
+            for(int y=g-2;y<=top;y++){
+                double h=Pal.hash(x,y,z);
+                boolean slit=in<-1.5&&(y-g)%7==4&&((int)Math.floor(a*Plan.WALL_R/3))%3==0;
+                c.set(x,y,z,slit?s(Blocks.AIR):h<0.10?s(Blocks.CRACKED_STONE_BRICKS):h<0.18?s(Blocks.MOSSY_STONE_BRICKS):h<0.24?s(Blocks.ANDESITE):wall);
+            }
+            // the walk on top, battlements on the outer edge
+            if(in<-1.5&&(((x+z)&1)==0))c.set(x,top+1,z,wall);
+            c.clear(x,top+2,z,x,top+6,z);
+            c.own(x,z,CODE);
+        }
+        int towers=0;
+        int n=(int)Math.round(2*Math.PI*Plan.WALL_R/50);
+        for(int k=0;k<n;k++){
+            double a=k*2*Math.PI/n+0.05;
+            if(gateAt(a,26))continue;
+            double[] p=Plan.wallAt(a);
+            if(Plan.shore(p[0],p[1])>-6)continue;
+            int g=c.ground((int)Math.floor(p[0]),(int)Math.floor(p[1]));
+            tower(p[0],p[1],g-1,g+H+10,4.4,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(p[0],p[1],g+H+11,4.4);
+            towers++;
+        }
+        gatehouse(Plan.GATE_W,true);gatehouse(Plan.GATE_SW,false);
+        Town.log("capital: walls with "+towers+" towers and two gatehouses, "+c.placed);
+    }
+    /** Whether a bearing from the walls' middle falls within {@code w} blocks (along the wall) of a gate. */
+    private static boolean gateAt(double a,double w){
+        for(double g:new double[]{Plan.GATE_W,Plan.GATE_SW}){double d=Math.abs(Math.atan2(Math.sin(a-g),Math.cos(a-g)))*Plan.WALL_R;if(d<w)return true;}
+        return false;
+    }
+    /**
+     * A gatehouse at a bearing: two great round towers either side of the road through the walls under blue cones, an
+     * arch over the road joining them, the portcullis drawn up under it, Botand's sky-blue banners on the towers.
+     */
+    private void gatehouse(double a,boolean main){
+        double[] p=Plan.wallAt(a);
+        double tx=-Math.sin(a),tz=Math.cos(a),nx=Math.cos(a),nz=Math.sin(a);
+        int g=c.ground((int)Math.floor(p[0]),(int)Math.floor(p[1]));
+        double r=main?7.4:6.0;int H=main?36:32,span=main?11:9;
+        BlockState wall=s(Blocks.STONE_BRICKS);
+        for(int side=-1;side<=1;side+=2){
+            double gx=p[0]+tx*side*(span/2.0+r),gz=p[1]+tz*side*(span/2.0+r);
+            int gg=c.ground((int)Math.floor(gx),(int)Math.floor(gz));
+            tower(gx,gz,Math.min(gg,g)-1,g+H,r,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(gx,gz,g+H+1,r);
+            int bx=(int)Math.floor(gx-nx*(r+1)),bz=(int)Math.floor(gz-nz*(r+1));
+            Direction out=Direction.getFacing(-nx,0,-nz);
+            if(c.air(bx,g+14,bz))c.set(bx,g+14,bz,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,out));
+        }
+        // the arch: a block of wall over the road between the towers, the road clear under it, the portcullis's bars at its top
+        int clear=main?14:12;
+        for(double u=-(span/2.0+r*0.6);u<=span/2.0+r*0.6;u+=0.5)for(double v=-3;v<=3;v+=0.5){
+            int x=(int)Math.floor(p[0]+tx*u+nx*v),z=(int)Math.floor(p[1]+tz*u+nz*v);
+            boolean road=Math.abs(u)<=span/2.0;
+            for(int y=g+1;y<=g+H-6;y++){
+                if(road&&y<=g+clear){if(y>c.ground(x,z))c.set(x,y,z,s(Blocks.AIR));continue;}
+                c.set(x,y,z,y==g+clear+1&&road?s(Blocks.CHISELED_STONE_BRICKS):wall);
+            }
+            if(road&&Math.abs(v)<0.6)c.set(x,g+clear,z,s(Blocks.IRON_BARS));
+            if(((x+z)&1)==0)c.set(x,g+H-5,z,wall);
+            c.own(x,z,CODE);
+        }
     }
 
     // ---------------------------------------------------------------- towers
@@ -84,64 +173,69 @@ final class Capital {
         c.set((int)Math.floor(cx),y1+2+H,(int)Math.floor(cz),Canvas.rod(Blocks.LIGHTNING_ROD,Direction.UP));
     }
 
-    // ---------------------------------------------------------------- the castle
+    // ---------------------------------------------------------------- the great castle
 
     /**
-     * The castle on its plateau: an octagon of curtain walls twenty blocks out with a walk of battlements, a round
-     * tower at each corner (blue cones on four, battlements on four), the gatehouse in the south wall, the keep in the
-     * middle with four turrets, a courtyard of cobbles with a well, and steps down the cliff from the gate.
+     * The great castle on its plateau at the main avenue's end, facing west down it: an octagon of curtain walls sixty
+     * blocks out, twenty high with a walk of battlements, a round tower under a blue cone at each corner; the gatehouse
+     * in the west wall; a courtyard of cobbles and paths with a well; the palace in the middle, seven storeys of stone
+     * under a great blue roof with a round tower at each corner and two before its door; the great tower rising from
+     * the palace's back high over the island under its cone; wide steps from the gate down the plateau's cliff to the
+     * avenue.
      */
     private void castle(){
         int cx=Plan.CASTLE_X,cz=Plan.CASTLE_Z,y=Plan.CASTLE_Y;
-        for(int x=cx-Plan.PLATEAU_R-4;x<=cx+Plan.PLATEAU_R+4;x++)for(int z=cz-Plan.PLATEAU_R-4;z<=cz+Plan.PLATEAU_R+4;z++)
-            if(Canvas.inPlan(x,z)&&Math.hypot(x-cx,z-cz)<Plan.PLATEAU_R+4)c.own(x,z,CODE);
-        int R=19,wallH=9;
-        BlockState wall=s(Blocks.STONE_BRICKS),dark=s(Blocks.DEEPSLATE_BRICKS);
+        for(int x=cx-Plan.PLATEAU_R-8;x<=cx+Plan.PLATEAU_R+8;x++)for(int z=cz-Plan.PLATEAU_R-8;z<=cz+Plan.PLATEAU_R+8;z++)
+            if(Canvas.inPlan(x,z)&&Math.hypot(x-cx,z-cz)<Plan.PLATEAU_R+8)c.own(x,z,CODE);
+        int R=60,wallH=20;
+        BlockState wall=s(Blocks.STONE_BRICKS);
         // the courtyard
         for(int x=cx-R;x<=cx+R;x++)for(int z=cz-R;z<=cz+R;z++){
             if(!octagon(x+0.5-cx,z+0.5-cz,R-1.5))continue;
-            if(c.ground(x,z)!=y)continue;
-            c.set(x,y,z,Pal.hash(x,3,z)<0.7?s(Blocks.COBBLESTONE):s(Blocks.GRAVEL));
-            c.clear(x,y+1,z,x,y+20,z);
+            if(c.ground(x,z)<y-2)continue;
+            t.lots.setGround(x,z,y);
+            boolean path=Math.abs(z-cz)<=3||Math.abs(x-cx+30)<=2;
+            c.set(x,y,z,path?(((x+z)&1)==0?s(Blocks.STONE_BRICKS):s(Blocks.POLISHED_ANDESITE)):Pal.hash(x,3,z)<0.7?s(Blocks.COBBLESTONE):s(Blocks.GRAVEL));
+            c.clear(x,y+1,z,x,y+30,z);
         }
-        // the curtain walls: two thick, a walk of battlements on top
+        // the curtain walls: three thick, a walk of battlements on top
         for(int x=cx-R-2;x<=cx+R+2;x++)for(int z=cz-R-2;z<=cz+R+2;z++){
             double dx=x+0.5-cx,dz=z+0.5-cz;
-            if(!octagon(dx,dz,R+0.5)||octagon(dx,dz,R-1.5))continue;
+            if(!octagon(dx,dz,R+1.5)||octagon(dx,dz,R-1.5))continue;
             int g=c.ground(x,z);
-            for(int yy=Math.min(g,y);yy<=y+wallH;yy++)c.set(x,yy,z,Pal.hash(x,yy,z)<0.12?s(Blocks.CRACKED_STONE_BRICKS):Pal.hash(x,yy,z)<0.2?s(Blocks.MOSSY_STONE_BRICKS):wall);
-            boolean outer=!octagon(dx,dz,R-0.5);
+            for(int yy=Math.min(g,y)-1;yy<=y+wallH;yy++)c.set(x,yy,z,Pal.hash(x,yy,z)<0.12?s(Blocks.CRACKED_STONE_BRICKS):Pal.hash(x,yy,z)<0.2?s(Blocks.MOSSY_STONE_BRICKS):wall);
+            boolean outer=!octagon(dx,dz,R+0.5);
             if(outer&&((x+z)&1)==0)c.set(x,y+wallH+1,z,wall);
         }
-        // the gate in the south wall
-        for(int x=cx-2;x<=cx+2;x++)for(int z=cz+R-3;z<=cz+R+2;z++){
-            for(int yy=y+1;yy<=y+6;yy++)c.set(x,yy,z,s(Blocks.AIR));
-            c.set(x,y,z,s(Blocks.COBBLESTONE));
-            if(Math.abs(x-cx)==2)c.set(x,y+6,z,Canvas.stairs(Blocks.STONE_BRICK_STAIRS,x<cx?Direction.EAST:Direction.WEST,true));
+        // the gate in the west wall
+        for(int z=cz-4;z<=cz+4;z++)for(int x=cx-R-3;x<=cx-R+3;x++){
+            for(int yy=y+1;yy<=y+12;yy++)c.set(x,yy,z,s(Blocks.AIR));
+            c.set(x,y,z,s(Blocks.STONE_BRICKS));
         }
-        for(int x=cx-1;x<=cx+1;x++)c.set(x,y+6,cz+R,s(Blocks.IRON_BARS));
+        for(int z=cz-3;z<=cz+3;z++)c.set(cx-R,y+12,z,s(Blocks.IRON_BARS));
+        for(int side=-1;side<=1;side+=2){
+            tower(cx-R-0.5,cz+side*8.5,y-1,y+wallH+12,5.0,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(cx-R-0.5,cz+side*8.5,y+wallH+13,5.0);
+            c.set(cx-R-6,y+16,cz+side*8,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.WEST));
+        }
         // corner towers
         for(int k=0;k<8;k++){
             double a=Math.PI/8+k*Math.PI/4,tr=(R+0.5)/Math.cos(Math.PI/8);
             double tx=cx+Math.cos(a)*tr,tz=cz+Math.sin(a)*tr;
             int g=Math.min(y,c.ground((int)Math.floor(tx),(int)Math.floor(tz)));
-            tower(tx,tz,g,y+wallH+4,3.4,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-            if(k%2==0)coneRoof(tx,tz,y+wallH+5,3.4);
+            tower(tx,tz,g-1,y+wallH+14,6.4,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(tx,tz,y+wallH+15,6.4);
         }
-        // banners of sky blue on the gate
-        for(int x:new int[]{cx-3,cx+3})c.set(x,y+7,cz+R+1,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.SOUTH));
-        keep(cx,cz,y);
+        palace(cx-6,cz,y);
         // a well in the courtyard
-        int wx=cx-9,wz=cz+6;
+        int wx=cx-32,wz=cz+20;
         for(int dx=-1;dx<=1;dx++)for(int dz=-1;dz<=1;dz++){c.set(wx+dx,y,wz+dz,dx==0&&dz==0?s(Blocks.WATER):s(Blocks.STONE_BRICKS));c.set(wx+dx,y-1,wz+dz,s(Blocks.STONE_BRICKS));
             if(dx!=0||dz!=0)c.set(wx+dx,y+1,wz+dz,s(Blocks.STONE_BRICK_WALL));}
         for(int dx:new int[]{-1,1})for(int dz:new int[]{-1,1})for(int k=2;k<=3;k++)c.set(wx+dx,y+k,wz+dz,s(Blocks.SPRUCE_FENCE));
         for(int dx=-1;dx<=1;dx++)for(int dz=-1;dz<=1;dz++)c.set(wx+dx,y+4,wz+dz,Canvas.slab(Blocks.SPRUCE_SLAB,false));
-        c.set(cx+9,y+1,cz+8,s(Blocks.HAY_BLOCK));c.set(cx+10,y+1,cz+8,s(Blocks.BARREL));c.set(cx+9,y+1,cz+9,s(Blocks.BARREL));
-        // the steps down from the gate and the path to the loop road
-        int foot=cliffSteps(cx,cz+R+3,y);
-        t.places.put("castle",new int[]{cx,y+1,cz+R-5});
-        Town.log("castle: walls, 8 towers, keep, steps to z "+foot+", "+c.placed);
+        int foot=gateSteps(cx-R-4,cz,y);
+        t.places.put("castle",new int[]{cx-R+8,y+1,cz});
+        Town.log("castle: walls, 8 towers, palace and the great tower, steps down to x "+foot+", "+c.placed);
     }
     private static boolean octagon(double dx,double dz,double r){
         double ax=Math.abs(dx),az=Math.abs(dz);
@@ -162,59 +256,63 @@ final class Capital {
         }
         c.set((int)Math.floor(cx),y+H+1,(int)Math.floor(cz),Blocks.LIGHT_BLUE_BANNER.getDefaultState());
     }
-    /** The keep: a square tower of four floors, battlements on top, a turret with a blue cone at each corner, sky-blue banners. */
-    private void keep(int cx,int cz,int y){
-        int h=6,x0=cx-7,x1=cx+7,z0=cz-7,z1=cz+7,top=y+4*5;
-        var f=new Frame(c,x0,z0,x1,z1,Direction.SOUTH,y);
-        Kit.shell(f,0,0,f.W-1,f.D-1,5,s(Blocks.STONE_BRICKS),s(Blocks.DEEPSLATE_BRICKS),s(Blocks.POLISHED_DEEPSLATE),s(Blocks.SPRUCE_PLANKS),s(Blocks.DEEPSLATE_BRICKS));
-        for(int s=0;s<5;s++)for(int k=2;k<f.W-2;k+=3){
-            f.set(k,4*s+2,0,s(Blocks.GLASS_PANE));f.set(k,4*s+3,0,s(Blocks.GLASS_PANE));
-            f.set(k,4*s+2,f.D-1,s(Blocks.GLASS_PANE));f.set(k,4*s+3,f.D-1,s(Blocks.GLASS_PANE));
-            f.set(0,4*s+2,k,s(Blocks.GLASS_PANE));f.set(f.W-1,4*s+2,k,s(Blocks.GLASS_PANE));
-        }
-        f.door(f.W/2,1,0,Blocks.DARK_OAK_DOOR,Direction.NORTH,false);f.door(f.W/2+1,1,0,Blocks.DARK_OAK_DOOR,Direction.NORTH,true);
-        for(int x=0;x<f.W;x++)for(int z=0;z<f.D;z++)if(x==0||z==0||x==f.W-1||z==f.D-1)if(((x+z)&1)==0)f.set(x,21,z,s(Blocks.STONE_BRICKS));
-        for(int k=1;k<=3;k++)f.hangingLantern(f.W/2,4*k+3,f.D/2,false);
-        Kit.roof(f,1,1,f.W-2,f.D-2,20,Kit.HIP,true,Kit.NAVY,s(Blocks.STONE_BRICKS),s(Blocks.SPRUCE_PLANKS));
-        for(int dx:new int[]{x0,x1})for(int dz:new int[]{z0,z1}){
-            tower(dx+0.5,dz+0.5,top-3,top+5,2.2,s(Blocks.STONE_BRICKS),Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
-            coneRoof(dx+0.5,dz+0.5,top+6,2.2);
-        }
-        for(int x:new int[]{cx-3,cx+3})c.set(x,y+12,z1+1,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.SOUTH));
-    }
     /**
-     * Steps down the plateau's cliff from the gate going south, five wide, the earth made up under them, then a path
-     * of cobbles west to the loop road. Returns the foot's z.
+     * The palace: x0 at its front (west), across z cz-30..cz+30, seven storeys of stone with dark bands, tall windows,
+     * a great blue hip roof; a round tower at each corner rising past the roof; two before the door; the great tower
+     * behind, its cone high over the island.
      */
-    private int cliffSteps(int cx,int z,int y){
-        int z0=z;
-        for(;z<z0+40;z++){
-            int g=Integer.MAX_VALUE;for(int x=cx-2;x<=cx+2;x++)g=Math.min(g,c.ground(x,z));
+    private void palace(int x0,int cz,int y){
+        int x1=x0+46,z0=cz-30,z1=cz+30,stories=7,top=y+4*stories;
+        var f=new Frame(c,x0,z0,x1,z1,Direction.WEST,y);
+        Kit.shell(f,0,0,f.W-1,f.D-1,stories,s(Blocks.STONE_BRICKS),s(Blocks.DEEPSLATE_BRICKS),s(Blocks.POLISHED_DEEPSLATE),s(Blocks.SPRUCE_PLANKS),s(Blocks.DEEPSLATE_BRICKS));
+        for(int st=0;st<stories;st++)for(int k=2;k<f.W-2;k+=3){
+            f.set(k,4*st+2,0,s(Blocks.GLASS_PANE));f.set(k,4*st+3,0,s(Blocks.GLASS_PANE));
+            f.set(k,4*st+2,f.D-1,s(Blocks.GLASS_PANE));f.set(k,4*st+3,f.D-1,s(Blocks.GLASS_PANE));
+        }
+        for(int st=0;st<stories;st++)for(int k=2;k<f.D-2;k+=3){
+            f.set(0,4*st+2,k,s(Blocks.GLASS_PANE));f.set(0,4*st+3,k,s(Blocks.GLASS_PANE));
+            f.set(f.W-1,4*st+2,k,s(Blocks.GLASS_PANE));f.set(f.W-1,4*st+3,k,s(Blocks.GLASS_PANE));
+        }
+        // the great door and its steps
+        for(int k=f.W/2-2;k<=f.W/2+2;k++)for(int yy=1;yy<=6;yy++)f.set(k,yy,0,s(Blocks.AIR));
+        for(int k=f.W/2-3;k<=f.W/2+3;k++){f.set(k,7,0,s(Blocks.CHISELED_STONE_BRICKS));f.set(k,0,-1,Canvas.stairs(Blocks.STONE_BRICK_STAIRS,Direction.SOUTH,false));}
+        for(int k=1;k<=3;k++)f.hangingLantern(f.W/2,4*k+3,f.D/2,false);
+        Kit.roof(f,0,0,f.W-1,f.D-1,4*stories,Kit.HIP,true,Kit.NAVY,s(Blocks.STONE_BRICKS),s(Blocks.SPRUCE_PLANKS));
+        BlockState wall=s(Blocks.STONE_BRICKS);
+        // corner towers past the roof
+        for(int dx:new int[]{x0,x1})for(int dz:new int[]{z0,z1}){
+            tower(dx+0.5,dz+0.5,y,top+14,4.6,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(dx+0.5,dz+0.5,top+15,4.6);
+        }
+        // two towers before the door
+        for(int side=-1;side<=1;side+=2){
+            tower(x0-3.5,cz+side*9.5,y,top+6,3.6,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+            coneRoof(x0-3.5,cz+side*9.5,top+7,3.6);
+            c.set(x0-8,y+12,cz+side*9,Blocks.LIGHT_BLUE_WALL_BANNER.getDefaultState().with(Properties.HORIZONTAL_FACING,Direction.WEST));
+        }
+        // the great tower behind
+        tower(x1-12.5,cz+0.5,y,top+44,10.5,wall,Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
+        coneRoof(x1-12.5,cz+0.5,top+45,10.5);
+    }
+    /** Wide steps from the castle's gate down the plateau's cliff westward to the avenue's end. Returns the foot's x. */
+    private int gateSteps(int x,int cz,int y){
+        int x0=x;
+        for(;x>x0-60;x--){
+            int g=Integer.MAX_VALUE;for(int z=cz-4;z<=cz+4;z++)g=Math.min(g,c.ground(x,z));
             boolean down=g<y;
             if(down)y--;
-            for(int x=cx-2;x<=cx+2;x++){
+            for(int z=cz-4;z<=cz+4;z++){
                 for(int yy=Math.min(c.ground(x,z),y)-2;yy<y;yy++)c.set(x,yy,z,s(Blocks.STONE));
-                c.set(x,y,z,down?Canvas.stairs(Blocks.STONE_BRICK_STAIRS,Direction.NORTH,false):s(Blocks.STONE_BRICKS));
-                c.clear(x,y+1,z,x,y+6,z);c.ground(x,z,y);
+                c.set(x,y,z,down?Canvas.stairs(Blocks.STONE_BRICK_STAIRS,Direction.EAST,false):s(Blocks.STONE_BRICKS));
+                c.clear(x,y+1,z,x,y+8,z);c.ground(x,z,y);
             }
-            for(int x:new int[]{cx-3,cx+3}){int top=Math.max(y,c.ground(x,z));for(int yy=Math.min(y,c.ground(x,z))-1;yy<=top;yy++)c.set(x,yy,z,t.terrain.masonry(x,yy,z));c.set(x,top+1,z,s(Blocks.STONE_BRICK_WALL));c.clear(x,top+2,z,x,top+6,z);c.ground(x,z,top);}
-            int next=Integer.MAX_VALUE;for(int x=cx-2;x<=cx+2;x++)next=Math.min(next,c.ground(x,z+1));
-            if(next>=y&&!down&&g<=y)break;
+            for(int z:new int[]{cz-5,cz+5}){int top=Math.max(y,c.ground(x,z));for(int yy=Math.min(y,c.ground(x,z))-1;yy<=top;yy++)c.set(x,yy,z,t.terrain.masonry(x,yy,z));c.set(x,top+1,z,s(Blocks.STONE_BRICK_WALL));if((x&7)==0)c.set(x,top+2,z,s(Blocks.LANTERN));c.clear(x,top+3,z,x,top+8,z);c.ground(x,z,top);}
+            if(t.roads.on(x-1,cz)&&!down)break;
+            int next=Integer.MAX_VALUE;for(int z=cz-4;z<=cz+4;z++)next=Math.min(next,c.ground(x-1,z));
+            if(next>=y&&!down&&g<=y&&x<x0-12)break;
         }
-        int foot=z;
-        for(int px=cx+1;px>cx-60;px--){
-            boolean reached=false;
-            for(int dz=0;dz<=2;dz++){
-                int pz=foot+1+dz;
-                if(t.roads.on(px,pz)){reached=true;continue;}
-                int g=c.ground(px,pz);c.clear(px,g+1,pz,px,g+3,pz);
-                c.set(px,g,pz,Pal.hash(px,4,pz)<0.75?s(Blocks.COBBLESTONE):s(Blocks.MOSSY_COBBLESTONE));c.own(px,pz,CODE);
-            }
-            if(reached)break;
-        }
-        return foot;
+        return x;
     }
-
     // ---------------------------------------------------------------- the cathedral
 
     /**
@@ -399,11 +497,11 @@ final class Capital {
     }
 
     /** Lamps along a road: lanterns on black posts at the sidewalk's outer edge, a sky-blue banner on every other. */
-    private void lamps(double[][] line,int side){
+    private void lamps(double[][] line,int side,int half){
         int n=0;
         for(int k=0;k<line.length;k+=36){
             double[] p=line[k];double nx=-p[3]*side,nz=p[2]*side;
-            int x=(int)Math.floor(p[0]+nx*(Plan.ROAD_HALF-0.6)),z=(int)Math.floor(p[1]+nz*(Plan.ROAD_HALF-0.6));
+            int x=(int)Math.floor(p[0]+nx*(half-0.6)),z=(int)Math.floor(p[1]+nz*(half-0.6));
             if(Plan.zone(x,z)!=Plan.CAPITAL||!t.roads.on(x,z)||t.roads.map[Canvas.idx(x,z)]!=Roads.WALK)continue;
             Direction road=Math.abs(nx)>=Math.abs(nz)?(nx>0?Direction.WEST:Direction.EAST):(nz>0?Direction.NORTH:Direction.SOUTH);
             if(lamp(x,z,(n&1)==0?road:null))n++;

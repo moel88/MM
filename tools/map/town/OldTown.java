@@ -6,11 +6,11 @@ import net.minecraft.util.math.Direction;
 import java.util.*;
 
 /**
- * The old Japanese town in the upper glass's west half (map v3.0: '일본 마을·신사'): old wooden houses with tiled roofs
- * and a few newer ones along the loop road and the axis road, set back with open ground between them; a canal inside
- * the loop in level pools held by little weirs, stone banks with a paved walk on either side, houses facing it, red
- * bridges across it and a wider pool halfway with the town's red arched bridge; cherry trees along it (only there and
- * at the shrine); power poles and their wires along the roads; the shrine on its hill at the far corner.
+ * The old Japanese town in the upper glass's west half (map v3.0: '일본 마을·신사'), at the foot of the great mountain:
+ * old wooden houses with tiled roofs and a few newer ones along its streets and the axis road, set back with open
+ * ground between them; a canal in level pools held by little weirs, stone banks with a paved walk on either side,
+ * houses facing it, red bridges across it and a wider pool halfway with the town's red arched bridge; cherry trees
+ * along it; power poles and their wires along the streets; the shrine on the mountain's summit.
  */
 final class OldTown {
     private final Townscape t;private final Canvas c;private final Random rnd;
@@ -22,16 +22,15 @@ final class OldTown {
     void build(){
         canal();
         t.shrine.build();
-        double[][] loop=t.roads.lines.get(0),axis=t.roads.lines.get(2),canal=canalLine();
-        int back=Plan.ROAD_HALF+3;
-        // houses facing the canal first (it is the town's heart), then along the loop's inner and outer sides and the axis road
+        double[][] axis=t.roads.lines.get(0),canal=canalLine();
+        var streets=t.roads.streets(Plan.TOWN);
+        // houses facing the canal first (it is the town's heart), then along both sides of every street and the axis road
         lots.addAll(t.lots.along(canal,1,Plan.canalHalf(Plan.POOL_Z)+5,14,15,5,2,6,Plan.TOWN,"house",CODE));
         lots.addAll(t.lots.along(canal,-1,Plan.canalHalf(Plan.POOL_Z)+5,14,15,5,2,6,Plan.TOWN,"house",CODE));
-        lots.addAll(t.lots.along(loop,-1,back,15,17,6,2,7,Plan.TOWN,"house",CODE));
-        lots.addAll(t.lots.along(loop,1,back,15,17,6,2,7,Plan.TOWN,"house",CODE));
-        lots.addAll(t.lots.along(axis,1,back,15,17,6,2,7,Plan.TOWN,"house",CODE));
+        for(var s:streets)for(int side=-1;side<=1;side+=2)lots.addAll(t.lots.along(s,side,Plan.STREET_HALF+3,15,17,7,2,7,Plan.TOWN,"house",CODE));
+        lots.addAll(t.lots.along(axis,1,Plan.ROAD_HALF+3,15,17,6,2,7,Plan.TOWN,"house",CODE));
         // then the open ground between: houses wherever they fit, each turned to its nearest road or the canal
-        lots.addAll(t.lots.fill(Plan.TOWN,12,14,21,2,5,2,"house",CODE,40,rnd.nextLong()));
+        lots.addAll(t.lots.fill(Plan.TOWN,12,14,21,2,5,2,"house",CODE,120,rnd.nextLong()));
         String[] pool={"old","old","old","old","old","old","modern","modern","modern","modern3","apartment","garden","field"};
         Map<String,Integer> counts=new TreeMap<>();
         for(Lot l:lots){
@@ -43,13 +42,12 @@ final class OldTown {
         }
         Town.log("old town: "+lots.size()+" plots "+counts+", "+c.placed);
         cherries();
-        poles(loop,-1);poles(axis,1);
-        int[] p=t.lots.freeNear(axis,1,Plan.ROAD_HALF+2,-150,Plan.TOWN);
-        if(p!=null)t.street.vending(p[0],p[1],Direction.NORTH,2);
-        p=t.lots.freeNear(loop,-1,Plan.ROAD_HALF+2,-60,Plan.TOWN);
-        if(p!=null)t.street.busStop(p[0],p[1],Direction.EAST,"運河通り");
-        p=t.lots.freeNear(axis,1,Plan.ROAD_HALF+2,-100,Plan.TOWN);
-        if(p!=null)t.street.postBox(p[0],p[1]);
+        for(var s:streets)poles(s,1,Plan.STREET_HALF);
+        poles(axis,1,Plan.ROAD_HALF);
+        for(int k=0;k<6;k++){
+            int[] p=t.lots.freeNear(axis,1,Plan.ROAD_HALF+2,-420-k*90,Plan.TOWN);
+            if(p!=null)switch(k%3){case 0->t.street.vending(p[0],p[1],Direction.NORTH,2);case 1->t.street.busStop(p[0],p[1],Direction.EAST,"運河通り");default->t.street.postBox(p[0],p[1]);}
+        }
         t.places.put("canal",new int[]{(int)Math.round(Plan.canalX(Plan.POOL_Z))+9,c.ground((int)Math.round(Plan.canalX(Plan.POOL_Z))+9,Plan.POOL_Z)+1,Plan.POOL_Z});
     }
 
@@ -97,7 +95,7 @@ final class OldTown {
                 for(int y=t.terrain.water[i]-2;y<=top;y++)c.set(x,y,zb,t.terrain.masonry(x,y,zb));
             }
         }
-        for(int z:new int[]{-141,-104,-93})bridge(z,false);
+        for(int z=Plan.CANAL_Z0+23;z<Plan.CANAL_Z1-8;z+=46)if(Math.abs(z-Plan.POOL_Z)>20&&(z-Plan.CANAL_Z0)%Terrain.POOL>2&&(z-Plan.CANAL_Z0)%Terrain.POOL<Terrain.POOL-4)bridge(z,false);
         bridge(Plan.POOL_Z-3,true);
     }
     private int nearestWater(int x,int z){
@@ -157,12 +155,12 @@ final class OldTown {
      * Power poles along a road on the given side, about every twenty-two blocks on the sidewalk's outer edge, their
      * lamps reaching over the road; a run of wires from pole to pole (none across the rift or other zones).
      */
-    private void poles(double[][] line,int side){
+    private void poles(double[][] line,int side,int half){
         List<int[]> run=new ArrayList<>();
         for(int k=0;k<line.length;k+=44){
             double[] p=line[k];
             double nx=-p[3]*side,nz=p[2]*side;
-            int x=(int)Math.floor(p[0]+nx*(Plan.ROAD_HALF-0.6)),z=(int)Math.floor(p[1]+nz*(Plan.ROAD_HALF-0.6));
+            int x=(int)Math.floor(p[0]+nx*(half-0.6)),z=(int)Math.floor(p[1]+nz*(half-0.6));
             if(Plan.zone(x,z)!=Plan.TOWN||!t.roads.on(x,z)||t.roads.map[Canvas.idx(x,z)]!=Roads.WALK){if(!run.isEmpty()){t.street.addRun(run);run=new ArrayList<>();}continue;}
             Direction road=Math.abs(nx)>=Math.abs(nz)?(nx>0?Direction.WEST:Direction.EAST):(nz>0?Direction.NORTH:Direction.SOUTH);
             int[] top=t.street.pole(x,z,road,run.size()%3==0?1:0,run.size()%2==0);

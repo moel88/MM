@@ -1,0 +1,15 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/glass_curtain_0"
+   },
+   {
+    "model": "celestialfall:block/town/glass_curtain_1"
+   },
+   {
+    "model": "celestialfall:block/town/glass_curtain_2"
+   }
+  ]
+ }
+}

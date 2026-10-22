@@ -23,8 +23,10 @@ final class Rift {
     static final int Y=Plan.BASE,TX=Plan.TREE_X,TZ=Plan.TREE_Z;
     static final BlockState BARK=TB.of("world_tree_bark"),GLOW=TB.of("world_tree_bark_glow"),LEAVES=TB.of("world_tree_leaves"),
         GROUND=TB.of("rift_ground"),CRACK=TB.of("rift_crack");
+    /** How many times the first tree (on the 400 x 400 island) this one is grown (2000 x 2000: the island five times). */
+    static final double T=2.5;
     /** The trunk's height above the ground before it parts into its limbs. */
-    static final int TRUNK_H=37;
+    static final int TRUNK_H=(int)Math.round(37*T);
     int leaves,bark,cracks;
     Rift(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
 
@@ -37,14 +39,14 @@ final class Rift {
         hovering();
         stall(-17,true);stall(14,false);
         t.places.put("rift",new int[]{Plan.SPAWN_X,Y+1,Plan.SPAWN_Z});
-        t.places.put("tree",new int[]{TX+18,c.ground(TX+18,TZ+30)+1,TZ+30});
+        t.places.put("tree",new int[]{TX+30,c.ground(TX+30,TZ+100)+1,TZ+100});
         Town.log("rift: tree of "+bark+" bark and "+leaves+" leaves, "+cracks+" crack blocks, "+c.placed);
     }
 
     /** The trunk's radius h blocks above the ground (flaring at its foot), and its middle's gentle wander. */
-    static double trunkR(double h){return 4.3+3.1*Math.exp(-Math.max(0,h)/4.5);}
-    static double driftX(double h){return TX+0.5+1.3*Math.sin(h/15.0);}
-    static double driftZ(double h){return TZ+0.5+0.9*Math.sin(h/12.0+1.0);}
+    static double trunkR(double h){return T*(4.3+3.1*Math.exp(-Math.max(0,h)/(4.5*T)));}
+    static double driftX(double h){return TX+0.5+1.3*T*Math.sin(h/(15.0*T));}
+    static double driftZ(double h){return TZ+0.5+0.9*T*Math.sin(h/(12.0*T)+1.0);}
 
     /** Whether the tree may grow through a block: air, plants, the ground's top at the foot. */
     private boolean free(int x,int y,int z){
@@ -63,14 +65,14 @@ final class Rift {
      */
     private void trunk(){
         for(int h=-2;h<=TRUNK_H+2;h++){
-            double r0=trunkR(h)*(h>TRUNK_H-4?1-0.08*(h-TRUNK_H+4):1),mx=driftX(h),mz=driftZ(h);
+            double r0=trunkR(h)*(h>TRUNK_H-4*T?1-0.08*(h-TRUNK_H+4*T)/T:1),mx=driftX(h),mz=driftZ(h);
             int R=(int)Math.ceil(r0*1.2)+1;
             for(int x=(int)Math.floor(mx)-R;x<=mx+R;x++)for(int z=(int)Math.floor(mz)-R;z<=mz+R;z++){
                 double px=x+0.5-mx,pz=z+0.5-mz,d=Math.hypot(px,pz),a=Math.atan2(pz,px);
-                double rr=r0*(1+0.10*Math.sin(5*a+h*0.09)+0.05*Math.sin(11*a-h*0.13));
+                double rr=r0*(1+0.10*Math.sin(5*a+h*0.09/T)+0.05*Math.sin(11*a-h*0.13/T));
                 if(d>rr)continue;
                 boolean face=d>rr-1.4;
-                boolean vein=face&&(Math.sin(3*a+h*0.11)>0.985||Pal.hash(x,h,z)<0.015);
+                boolean vein=face&&(Math.sin(3*a+h*0.11/T)>0.99||Pal.hash(x,h,z)<0.012);
                 wood(x,Y+h,z,Direction.Axis.Y,vein);
             }
         }
@@ -104,16 +106,16 @@ final class Rift {
      * over the white, wandering a little; low enough to step over at their ends, cover nearer the trunk.
      */
     private void roots(){
-        int n=11;
+        int n=15;
         for(int i=0;i<n;i++){
-            double a=i*2*Math.PI/n+(rnd.nextDouble()-0.5)*0.35,len=14+rnd.nextDouble()*12,wig=rnd.nextDouble()*6,lift=1.6+rnd.nextDouble()*1.6;
+            double a=i*2*Math.PI/n+(rnd.nextDouble()-0.5)*0.35,len=(14+rnd.nextDouble()*12)*T,wig=rnd.nextDouble()*6,lift=(1.6+rnd.nextDouble()*1.6)*T;
             int steps=(int)(len*3);
             for(int k=0;k<=steps;k++){
                 double s=k/(double)steps,ang=a+0.25*Math.sin(s*4+wig);
-                double d=3.4+len*s,x=TX+0.5+Math.cos(ang)*d,z=TZ+0.5+Math.sin(ang)*d;
+                double d=3.4*T+len*s,x=TX+0.5+Math.cos(ang)*d,z=TZ+0.5+Math.sin(ang)*d;
                 // out of the trunk's flare, an arch clear of the ground, then down into it at the tip
-                double y=Y+0.6+2.6*(1-s)*(1-s)+lift*Math.sin(Math.PI*Math.min(1,s*1.25))-1.4*s;
-                double r=1.6*(1-s)+0.6;
+                double y=Y+0.6+2.6*T*(1-s)*(1-s)+lift*Math.sin(Math.PI*Math.min(1,s*1.25))-1.4*T*s;
+                double r=(1.6*(1-s)+0.6)*T;
                 Direction.Axis ax=Math.abs(Math.cos(ang))>Math.abs(Math.sin(ang))?Direction.Axis.X:Direction.Axis.Z;
                 int R=(int)Math.ceil(r);
                 for(int dx=-R;dx<=R;dx++)for(int dy=-R;dy<=R;dy++)for(int dz=-R;dz<=R;dz++){
@@ -135,34 +137,34 @@ final class Rift {
     private void crown(){
         List<double[]> clumps=new ArrayList<>();
         double topX=driftX(TRUNK_H),topZ=driftZ(TRUNK_H);
-        int limbs=5;
+        int limbs=6;
         for(int i=0;i<limbs;i++){
-            double a=i*2*Math.PI/limbs+0.5+(rnd.nextDouble()-0.5)*0.4,L=25+rnd.nextDouble()*8;
-            double[] from={topX+Math.cos(a)*1.5,Y+TRUNK_H-3-(i%2)*4,topZ+Math.sin(a)*1.5};
-            double[] ctrl={topX+Math.cos(a)*L*0.35,Y+TRUNK_H+9,topZ+Math.sin(a)*L*0.35};
-            double[] to={topX+Math.cos(a)*L,Y+51+rnd.nextDouble()*6,topZ+Math.sin(a)*L};
-            limb(from,ctrl,to,2.9,1.3);
-            clumps.add(new double[]{to[0],to[1]+3,to[2],9,5.5});
-            for(int j=0;j<3;j++){
-                if(j==2&&rnd.nextBoolean())continue;
-                double s=0.5+0.15*j+rnd.nextDouble()*0.1,u=1-s;
+            double a=i*2*Math.PI/limbs+0.5+(rnd.nextDouble()-0.5)*0.4,L=(25+rnd.nextDouble()*8)*T;
+            double[] from={topX+Math.cos(a)*1.5*T,Y+TRUNK_H-3*T-(i%2)*4*T,topZ+Math.sin(a)*1.5*T};
+            double[] ctrl={topX+Math.cos(a)*L*0.35,Y+TRUNK_H+9*T,topZ+Math.sin(a)*L*0.35};
+            double[] to={topX+Math.cos(a)*L,Y+(51+rnd.nextDouble()*6)*T,topZ+Math.sin(a)*L};
+            limb(from,ctrl,to,2.9*T,1.3*T);
+            clumps.add(new double[]{to[0],to[1]+3*T,to[2],9*T,5.5*T});
+            for(int j=0;j<4;j++){
+                if(j>=2&&rnd.nextBoolean())continue;
+                double s=0.45+0.13*j+rnd.nextDouble()*0.1,u=1-s;
                 double[] p={u*u*from[0]+2*u*s*ctrl[0]+s*s*to[0],u*u*from[1]+2*u*s*ctrl[1]+s*s*to[1],u*u*from[2]+2*u*s*ctrl[2]+s*s*to[2]};
-                double b=a+(j%2==0?1:-1)*(0.45+rnd.nextDouble()*0.25),bl=L*0.55+rnd.nextDouble()*8,bd=Math.hypot(p[0]-TX,p[2]-TZ)+bl;
-                bd=Math.min(bd,40);
-                double[] end={TX+Math.cos(b)*bd,Y+57+rnd.nextDouble()*7,TZ+Math.sin(b)*bd};
-                double[] mid={(p[0]+end[0])/2,Math.max(p[1],end[1])+2,(p[2]+end[2])/2};
-                limb(p,mid,end,1.5,0.6);
-                clumps.add(new double[]{end[0],end[1]+2,end[2],7.5,5});
+                double b=a+(j%2==0?1:-1)*(0.45+rnd.nextDouble()*0.25),bl=(L*0.55/T+rnd.nextDouble()*8)*T,bd=Math.hypot(p[0]-TX,p[2]-TZ)+bl;
+                bd=Math.min(bd,40*T);
+                double[] end={TX+Math.cos(b)*bd,Y+(57+rnd.nextDouble()*7)*T,TZ+Math.sin(b)*bd};
+                double[] mid={(p[0]+end[0])/2,Math.max(p[1],end[1])+2*T,(p[2]+end[2])/2};
+                limb(p,mid,end,1.5*T,0.6*T);
+                clumps.add(new double[]{end[0],end[1]+2*T,end[2],7.5*T,5*T});
             }
         }
         // the dome between and over the branches
-        for(int k=0;k<58;k++){
+        for(int k=0;k<(int)(58*T*T);k++){
             double a=rnd.nextDouble()*2*Math.PI,q=Math.sqrt(rnd.nextDouble());
-            double d=q*38,h=Y+53+15*Math.sqrt(Math.max(0,1-q*q))+rnd.nextDouble()*3;
-            clumps.add(new double[]{TX+Math.cos(a)*d,h,TZ+Math.sin(a)*d,6+rnd.nextDouble()*3,4+rnd.nextDouble()*1.5});
+            double d=q*38*T,h=Y+(53+15*Math.sqrt(Math.max(0,1-q*q))+rnd.nextDouble()*3)*T;
+            clumps.add(new double[]{TX+Math.cos(a)*d,h,TZ+Math.sin(a)*d,(6+rnd.nextDouble()*3)*T,(4+rnd.nextDouble()*1.5)*T});
         }
         // the crown as a solid, then only its outer two blocks kept
-        int R=52,y0=Y+38,y1=Y+82,W=2*R+1,H=y1-y0+1;
+        int R=(int)(52*T),y0=Y+(int)(38*T),y1=Y+(int)(82*T),W=2*R+1,H=y1-y0+1;
         boolean[] in=new boolean[W*W*H];
         for(double[] k:clumps){
             for(int x=(int)Math.floor(k[0]-k[3]);x<=Math.ceil(k[0]+k[3]);x++)for(int y=(int)Math.floor(k[1]-k[4]);y<=Math.ceil(k[1]+k[4]);y++)
@@ -193,14 +195,14 @@ final class Rift {
             if(c.air(x,y,z)){c.set(x,y,z,LEAVES);leaves++;}
         }
         // strands hanging under the crown
-        for(int k=0;k<90;k++){
-            double a=rnd.nextDouble()*2*Math.PI,d=8+Math.sqrt(rnd.nextDouble())*32;
+        for(int k=0;k<(int)(90*T*T);k++){
+            double a=rnd.nextDouble()*2*Math.PI,d=(8+Math.sqrt(rnd.nextDouble())*32)*T;
             int x=(int)Math.floor(TX+Math.cos(a)*d),z=(int)Math.floor(TZ+Math.sin(a)*d);
             int low=-1;
             for(int y=y0;y<=y1;y++)if(c.get(x,y,z).isOf(LEAVES.getBlock())){low=y;break;}
             if(low<0)continue;
-            int len=2+rnd.nextInt(7);
-            for(int y=low-1;y>=low-len&&y>Y+12;y--){if(!c.air(x,y,z))break;c.set(x,y,z,LEAVES);leaves++;}
+            int len=(int)((2+rnd.nextInt(7))*T);
+            for(int y=low-1;y>=low-len&&y>Y+30;y--){if(!c.air(x,y,z))break;c.set(x,y,z,LEAVES);leaves++;}
         }
     }
 
@@ -210,10 +212,10 @@ final class Rift {
      */
     private void cracks(){
         boolean[] on=new boolean[Plan.W*Plan.D];
-        int n=14;
+        int n=30;
         for(int i=0;i<n;i++){
             double a=i*2*Math.PI/n+(rnd.nextDouble()-0.5)*0.3;
-            walk(on,TX+Math.cos(a)*9,TZ+Math.sin(a)*9,a,70,true);
+            walk(on,TX+Math.cos(a)*9*T,TZ+Math.sin(a)*9*T,a,70*Plan.K,true);
         }
         for(int x=Plan.X0;x<Plan.X0+Plan.W;x++)for(int z=Plan.Z0;z<Plan.Z0+Plan.D;z++){
             int i=Canvas.idx(x,z);
@@ -238,7 +240,7 @@ final class Rift {
             if(!Plan.inRift(nx,nz)||Math.hypot(nx,nz)>Plan.riftEdge(nx,nz)-2)return;
             if(nx!=px&&nz!=pz)mark(on,nx,pz);
             mark(on,nx,nz);px=nx;pz=nz;
-            if(fork&&k>4&&rnd.nextDouble()<0.07)walk(on,x,z,a+(rnd.nextBoolean()?1:-1)*(0.6+rnd.nextDouble()*0.4),6+rnd.nextInt(10),false);
+            if(fork&&k>4&&rnd.nextDouble()<0.05)walk(on,x,z,a+(rnd.nextBoolean()?1:-1)*(0.6+rnd.nextDouble()*0.4),18+rnd.nextInt(40),false);
         }
     }
     private static void mark(boolean[] on,int x,int z){if(Canvas.inPlan(x,z))on[Canvas.idx(x,z)]=true;}
@@ -249,15 +251,15 @@ final class Rift {
      */
     private void fragments(){
         int made=0;
-        for(int k=0;k<80&&made<15;k++){
-            // round the rift's edge and out over the water, clear of the crown so the tree stands alone
-            double a=rnd.nextDouble()*2*Math.PI,r=46+rnd.nextDouble()*22;
+        for(int k=0;k<600&&made<60;k++){
+            // round the rift's outer part and out over the water, clear of the crown so the tree stands alone
+            double a=rnd.nextDouble()*2*Math.PI,r=135+rnd.nextDouble()*200;
             double fx=TX+Math.cos(a)*r,fz=TZ+Math.sin(a)*r;
-            int fy=Y+12+rnd.nextInt(30);
-            int size=2+rnd.nextInt(5);
-            if(!clearAround(fx,fy,fz,size+4))continue;
+            int fy=Y+20+rnd.nextInt(90);
+            int size=3+rnd.nextInt(9);
+            if(!clearAround(fx,fy,fz,size+6))continue;
             // none hanging over the spawn and the stalls, where they would fill the first view of the tree
-            if(Math.abs(fx-Plan.SPAWN_X)<24&&fz>Plan.MERCHANT_Z-14)continue;
+            if(Math.abs(fx-Plan.SPAWN_X)<70&&fz>Plan.MERCHANT_Z-50)continue;
             fragment(fx,fy,fz,size,made%4==1);made++;
         }
         Town.log("rift: "+made+" floating fragments");
@@ -295,10 +297,10 @@ final class Rift {
     /** Blocks of the white hanging still a little over the ground in loose clusters near the rift's edge. */
     private void hovering(){
         int made=0;
-        for(int k=0;k<30&&made<8;k++){
-            double a=rnd.nextDouble()*2*Math.PI,r=26+rnd.nextDouble()*20;
+        for(int k=0;k<160&&made<36;k++){
+            double a=rnd.nextDouble()*2*Math.PI,r=120+rnd.nextDouble()*130;
             int cx=(int)Math.floor(TX+Math.cos(a)*r),cz=(int)Math.floor(TZ+Math.sin(a)*r);
-            if(Math.hypot(cx-Plan.SPAWN_X,cz-Plan.SPAWN_Z)<12||!Plan.inRift(cx,cz)||Math.abs(cx)<8&&cz>0)continue;
+            if(Math.hypot(cx-Plan.SPAWN_X,cz-Plan.SPAWN_Z)<40||!Plan.inRift(cx,cz)||Math.abs(cx)<30&&cz>0)continue;
             for(int j=0;j<4+rnd.nextInt(4);j++){
                 int x=cx+rnd.nextInt(7)-3,z=cz+rnd.nextInt(7)-3,y=Y+2+rnd.nextInt(4);
                 if(c.air(x,y,z)&&c.air(x,y-1,z)&&c.air(x,y+1,z))c.set(x,y,z,rnd.nextInt(4)==0?Blocks.CALCITE.getDefaultState():GROUND);

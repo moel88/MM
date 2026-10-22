@@ -185,13 +185,13 @@ final class Nature {
             boolean rise=c.ground(x+1,z)>g||c.ground(x-1,z)>g||c.ground(x,z+1)>g||c.ground(x,z-1)>g;
             if(rnd.nextDouble()<(rise?0.45:0.16)&&undergrowth(x,g+1,z,false))plants++;
         }
-        for(int x=Plan.X0+4;x<Plan.X0+Plan.W-4;x+=9)for(int z=Plan.Z0+4;z<-50;z+=9){
+        for(int x=Plan.X0+4;x<Plan.X0+Plan.W-4;x+=13)for(int z=Plan.Z0+4;z<-50;z+=13){
             int px=x+rnd.nextInt(5)-2,pz=z+rnd.nextInt(5)-2;
             int i=Canvas.idx(px,pz);
             if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.pale[i]||t.roads.near(px,pz,4)||Plan.shore(px,pz)>-5)continue;
             if(nearOwned(px,pz,4))continue;
             int g=c.ground(px,pz);
-            if(!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz)||rnd.nextDouble()>0.22)continue;
+            if(!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz)||g>130||rnd.nextDouble()>0.14)continue;
             if(Plan.zone(px,pz)==Plan.TOWN)broadleaf(px,g+1,pz,5+rnd.nextInt(3));else townTree(px,g+1,pz,5+rnd.nextInt(3));
             shade++;
         }

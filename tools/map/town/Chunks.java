@@ -62,7 +62,8 @@ final class Chunks {
             chunk.setStatus(ChunkStatus.FEATURES);
             Heightmap.populateHeightmaps(chunk,heightmaps);
             storage.setNbt(cp,ChunkSerializer.serialize(w,chunk));
-            n++;
+            // let the writer catch up now and then (2000 x 2000 is sixteen thousand chunks)
+            if(++n%1024==0)storage.completeAll();
         }
         storage.completeAll();
         Town.log(String.format("wrote %d chunks (%d block entities, %d blocks to shape)",n,entities,marked));

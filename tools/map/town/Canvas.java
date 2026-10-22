@@ -24,7 +24,7 @@ import java.util.function.Consumer;
  */
 final class Canvas {
     /** The model covers y Y0..YMAX; below it the flat world's layers stay as they are. */
-    static final int Y0=Plan.FLOOR+1,H=200,YMAX=Y0+H-1;
+    static final int Y0=Plan.FLOOR+1,H=260,YMAX=Y0+H-1;
     static final char AIR=id(Blocks.AIR.getDefaultState()),WATER=id(Blocks.WATER.getDefaultState());
     private final char[] ids=new char[Plan.W*Plan.D*H];
     /** Block entity settings (sign text and the like) by position. */

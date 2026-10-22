@@ -27,7 +27,7 @@ final class Forest {
         paths();
         trees();
         shore();
-        t.places.put("forest",new int[]{-40,c.ground(-40,140)+1,140});
+        t.places.put("forest",new int[]{-200,c.ground(-200,700)+1,700});
         Town.log("forest: "+trees+" trees, "+c.placed);
     }
 
@@ -35,7 +35,7 @@ final class Forest {
 
     /** The lake: its shore claimed, a pier out from its south shore, reeds at its edge, lily pads, boulders on its banks. */
     private void lake(){
-        int lx=Plan.LAKE_X,lz=Plan.LAKE_Z,R=Plan.LAKE_R+9;
+        int lx=Plan.LAKE_X,lz=Plan.LAKE_Z,R=Plan.LAKE_R+30;
         for(int x=lx-R;x<=lx+R;x++)for(int z=lz-R;z<=lz+R;z++){
             if(!Canvas.inPlan(x,z)||Math.hypot(x-lx,z-lz)>R)continue;
             int i=Canvas.idx(x,z);
@@ -58,18 +58,18 @@ final class Forest {
             }
         }
         // the pier: from the south shore toward the middle, three wide, on log posts
-        int py=68+1;
-        int z1=lz+Plan.LAKE_R+2,z0=lz+5;
+        int py=Plan.LAKE_Y+1;
+        int z1=lz+Plan.LAKE_R+4,z0=lz+Plan.LAKE_R/2;
         for(int z=z0;z<=z1;z++)for(int x=lx-1;x<=lx+1;x++){
             c.set(x,py,z,Canvas.slab(Blocks.SPRUCE_SLAB,false));
             c.clear(x,py+1,z,x,py+3,z);
-            if(Math.abs(x-lx)==1&&(z-z0)%3==0)for(int y=60;y<py;y++)if(c.open(x,y,z))c.set(x,y,z,Canvas.axis(Blocks.SPRUCE_LOG,Direction.Axis.Y));
+            if(Math.abs(x-lx)==1&&(z-z0)%3==0)for(int y=Plan.LAKE_Y-9;y<py;y++)if(c.open(x,y,z))c.set(x,y,z,Canvas.axis(Blocks.SPRUCE_LOG,Direction.Axis.Y));
         }
         for(int x:new int[]{lx-2,lx+2})for(int z=z0;z<=z1;z+=4){c.set(x,py,z,s(Blocks.SPRUCE_FENCE));c.set(x,py+1,z,s(Blocks.SPRUCE_FENCE));c.set(x,py+2,z,s(Blocks.LANTERN));}
         c.set(lx,py+1,z0,s(Blocks.BARREL));
         // a rowing boat's worth of crates at the pier's end and boulders round the banks
-        for(int k=0;k<7;k++){
-            double a=rnd.nextDouble()*2*Math.PI,d=Plan.LAKE_R+3+rnd.nextDouble()*4;
+        for(int k=0;k<26;k++){
+            double a=rnd.nextDouble()*2*Math.PI,d=Plan.LAKE_R+5+rnd.nextDouble()*14;
             int bx=lx+(int)Math.round(Math.cos(a)*d),bz=lz+(int)Math.round(Math.sin(a)*d);
             if(Math.abs(bx-lx)<4&&bz>lz)continue;
             boulder(bx,bz,1.2+rnd.nextDouble()*1.3);
@@ -169,9 +169,11 @@ final class Forest {
 
     /** Earth paths: from the loop road to the ruins' gate, from the axis road to the lake, round the lake's south. */
     private void paths(){
-        path(-130,124,Plan.RUINS_X,Plan.RUINS_Z+15,8);
-        path(-7,110,Plan.LAKE_X+Plan.LAKE_R+4,Plan.LAKE_Z-4,-6);
-        path(Plan.LAKE_X,Plan.LAKE_Z+Plan.LAKE_R+3,Plan.LAKE_X-4,Plan.LAKE_Z+44,4);
+        // from the axis road to the lake, round to the ruins, down to the beach in the south
+        path(-6,Plan.LAKE_Z-60,Plan.LAKE_X+Plan.LAKE_R+18,Plan.LAKE_Z-16,-30);
+        path(Plan.LAKE_X-Plan.LAKE_R-16,Plan.LAKE_Z+8,Plan.RUINS_X+26,Plan.RUINS_Z-22,40);
+        path(Plan.LAKE_X,Plan.LAKE_Z+Plan.LAKE_R+12,Plan.LAKE_X-30,Plan.LAKE_Z+Plan.LAKE_R+200,20);
+        path(-6,Plan.RUINS_Z-60,Plan.RUINS_X+40,Plan.RUINS_Z+10,-40);
         for(int x=Plan.X0;x<Plan.X0+Plan.W;x++)for(int z=Plan.Z0;z<Plan.Z0+Plan.D;z++){
             int i=Canvas.idx(x,z);
             if(!path[i]||t.roads.on(x,z)||t.terrain.water[i]!=0)continue;
@@ -213,7 +215,7 @@ final class Forest {
             int g=c.ground(px,pz);
             var top=c.get(px,g,pz);
             if(!(top.isOf(Blocks.GRASS_BLOCK)||top.isOf(Blocks.PODZOL)||top.isOf(Blocks.MOSS_BLOCK)||top.isOf(Blocks.COARSE_DIRT))||!c.air(px,g+1,pz))continue;
-            double grove=Pal.smooth(px,pz,26,71);
+            double grove=Pal.smooth(px,pz,64,71);
             double p=grove<0.36?0:grove>0.62?0.62:0.32;
             if(rnd.nextDouble()>p)continue;
             int r=rnd.nextInt(100);

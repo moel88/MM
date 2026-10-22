@@ -195,5 +195,16 @@
   "block.celestialfall.blue_shingles": "파란 비늘 지붕널",
   "block.celestialfall.blue_shingles_slab": "파란 비늘 지붕널 반 블록",
   "block.celestialfall.blue_shingles_stairs": "파란 비늘 지붕널 계단",
-  "block.celestialfall.roof_navy": "파란 비늘 지붕"
+  "block.celestialfall.roof_navy": "파란 비늘 지붕",
+  "block.celestialfall.neon_pink": "분홍 네온",
+  "block.celestialfall.neon_purple": "보라 네온",
+  "block.celestialfall.neon_cyan": "하늘색 네온",
+  "block.celestialfall.glass_curtain": "유리 외벽",
+  "block.celestialfall.glass_curtain_lit": "불 켜진 유리 외벽",
+  "block.celestialfall.cyber_panel": "어두운 금속 패널",
+  "block.celestialfall.led_screen_pink": "분홍 전광판",
+  "block.celestialfall.led_screen_cyan": "하늘색 전광판",
+  "block.celestialfall.led_screen_mix": "네온 전광판",
+  "block.celestialfall.wet_asphalt": "젖은 아스팔트",
+  "block.celestialfall.cyber_paving": "어두운 보도블록"
 }

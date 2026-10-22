@@ -923,6 +923,110 @@ def rift_crack(seed, mask):
     return np.clip(img, 0, 255)
 
 
+# ---------------------------------------------------------------- the cyber city (2.49.0, map v3.0, the user's photo)
+
+def neon(seed, color):
+    """A neon tube's glow: the colour bright and saturated, whiter toward the middle of the face, a faint shimmer."""
+    y, x = np.mgrid[0:S, 0:S] / (S - 1)
+    c = np.array(color, float)
+    core = np.clip(1 - np.hypot(x - 0.5, y - 0.5) / 0.7071, 0, 1) ** 1.4
+    img = c[None, None, :] * (0.80 + 0.20 * core[..., None]) + (255 - c)[None, None, :] * (0.50 * core[..., None] ** 2)
+    return img + field(seed, 6)[..., None] * 5
+
+def curtain_glass(seed, lit):
+    """A tower's glass curtain wall, one pane a block: thin dark mullions round it, the panes dark blue-black with the
+    sky's sheen sliding across them; lit, the room behind shows warm office light or the cool light of screens, a
+    ceiling lamp's bar along its top and the dark shapes of desks and partitions low down."""
+    r = rng(seed)
+    y, x = np.mgrid[0:S, 0:S]
+    if lit:
+        warm = r.random() < 0.6
+        col = np.array((255, 208, 140) if warm else (150, 205, 255), float)
+        glow = 0.62 + 0.18 * (1 - y / S)
+        img = col[None, None, :] * glow[..., None] + field(seed, 9)[..., None] * 7
+        img[4:7, 6:58] = (255, 250, 236)
+        for k in range(2):
+            x0 = int(r.integers(4, 40)); w = int(r.integers(8, 20)); h = int(r.integers(10, 22))
+            img[S - 2 - h:S - 2, x0:x0 + w] *= 0.35
+        if r.random() < 0.5:
+            px = int(r.integers(18, 46)); img[10:S - 2, px:px + 2] *= 0.45
+    else:
+        sheen = (x + 0.6 * y) / (1.6 * S)
+        img = np.array((14, 20, 34), float)[None, None, :] + np.array((34, 48, 74), float)[None, None, :] * (0.25 + 0.75 * sheen[..., None])
+        img += field(seed, 14)[..., None] * 5
+        b = (np.abs(((x - y * 0.7 + seed % 37) % 64) - 32) < 3)
+        img[b] += (18, 22, 30)
+    img[0:2, :] = (58, 62, 72); img[:, 0:2] = (58, 62, 72); img[S - 1:, :] = (40, 44, 52); img[:, S - 1:] = (40, 44, 52)
+    return img
+
+def cyber_panel(seed):
+    """Dark metal cladding: four panels a block with thin seams, a little sheen, a bolt at each panel's corners."""
+    img = flat((44, 46, 54)) + field(seed, 10)[..., None] * 3
+    y, x = np.mgrid[0:S, 0:S]
+    img += ((y % 32) / 32.0)[..., None] * 8
+    img[(y % 32) == 0] = (24, 25, 30); img[:, (np.arange(S) % 32) == 0] = (24, 25, 30)
+    for by in (4, 27, 36, 59):
+        for bx in (4, 27, 36, 59):
+            img[by, bx] = (96, 100, 110)
+    return img
+
+LED_FRAMES = 8
+def led_screen(seed, kind):
+    """An LED wall's panel, eight frames of a loop: a grid of lit cells with dark gaps between, playing scrolling bands of
+    pink and violet, sweeping bars of cyan, or a neon level meter rising and falling."""
+    y, x = np.mgrid[0:S, 0:S]
+    frames = []
+    pink, violet, cyan, blue, white = (np.array(c, float) for c in ((255, 60, 190), (140, 60, 255), (60, 230, 255), (40, 90, 255), (255, 255, 255)))
+    for f in range(LED_FRAMES):
+        ph = f / LED_FRAMES * 2 * np.pi
+        if kind == 'pink':
+            v = 0.5 + 0.5 * np.sin(y / S * 4 * np.pi - ph)
+            img = pink * v[..., None] + violet * (1 - v[..., None])
+            img *= (0.55 + 0.45 * (0.5 + 0.5 * np.sin(x / S * 2 * np.pi + ph * 2)))[..., None]
+        elif kind == 'cyan':
+            v = ((x + y) / S * 2 - f / LED_FRAMES * 2) % 1.0
+            band = (v < 0.35).astype(float)
+            img = cyan * band[..., None] + blue * (1 - band[..., None]) * 0.7
+            img += white * ((np.abs(v - 0.17) < 0.03).astype(float))[..., None] * 0.6
+        else:
+            col = x // 8
+            h = (0.5 + 0.45 * np.sin(col * 1.7 + ph * (1 + col % 3))) * S
+            on = (S - y) < h
+            mix = (S - y) / S
+            img = (pink * (1 - mix[..., None]) + cyan * mix[..., None]) * on[..., None] + np.array((20, 10, 40), float) * (~on)[..., None]
+        # the cells: four pixels each with a dark gap
+        cell = ((x % 4) == 3) | ((y % 4) == 3)
+        img = np.where(cell[..., None], img * 0.18, img)
+        frames.append(img)
+    return np.concatenate(frames, axis=0)
+
+def wet_asphalt(seed):
+    """Asphalt after the rain at night: dark, glossy, smudges of sheen running along it and the faint colours of neon
+    caught in its wet."""
+    r = rng(seed)
+    img = flat((24, 26, 32)) + field(seed, 2)[..., None] * 4 + field(seed + 1, 12)[..., None] * 4
+    gloss = np.clip(field(seed + 2, 18, 4), 0, None)
+    img += gloss[..., None] * np.array((16, 20, 30))
+    for k, col in enumerate(((130, 50, 120), (40, 110, 130))):
+        m = np.clip(field(seed + 3 + k, 16, 5) - 1.0, 0, None)
+        img += m[..., None] * np.array(col) * 0.35
+    spark = r.random((S, S)) < 0.004
+    img[spark] += 40
+    return img
+
+def cyber_paving(seed, inlay):
+    """Dark granite tiles, four a block with fine joints; on some a thin line of cyan light set in the stone."""
+    r = rng(seed)
+    img = flat((52, 54, 60)) + field(seed, 3)[..., None] * 4
+    y, x = np.mgrid[0:S, 0:S]
+    for ty in range(2):
+        for tx in range(2):
+            img[ty * 32:(ty + 1) * 32, tx * 32:(tx + 1) * 32] += (r.random() - 0.5) * 10
+    img[(y % 32) == 0] = (32, 33, 38); img[:, (np.arange(S) % 32) == 0] = (32, 33, 38)
+    if inlay:
+        img[30:34, :] = (90, 230, 255); img[29, :] = (60, 130, 160); img[34, :] = (60, 130, 160)
+    return img
+
 # ---------------------------------------------------------------- the block list (same order as TownBlocks)
 
 TEXTURES = {}
@@ -1134,6 +1238,25 @@ block('blue_shingles', 'cube', {'tex': [BSH], 'spin': False}, '파란 비늘 지
 block('blue_shingles_slab', 'slab', {'tex': [BSH], 'full': 'blue_shingles'}, '파란 비늘 지붕널 반 블록', 'Blue Fish-Scale Shingle Slab')
 block('blue_shingles_stairs', 'stairs', {'tex': BSH}, '파란 비늘 지붕널 계단', 'Blue Fish-Scale Shingle Stairs')
 block('roof_navy', 'roof', {'top': BSH, 'side': BSH, 'under': PL[0]}, '파란 비늘 지붕', 'Blue Fish-Scale Roof')
+# the cyber city (2.49.0, map v3.0, from the user's photo): neon tubes, glass curtain walls dark and lit, dark metal
+# cladding, LED walls playing their loops, wet asphalt and dark paving
+ANIM = {}
+NEON = {c: tex(f'neon_{c}', neon, 2700 + k, col) for k, (c, col) in enumerate((('pink', (255, 70, 200)), ('purple', (165, 80, 255)), ('cyan', (60, 220, 255))))}
+for c, ko, en in (('pink', '분홍 네온', 'Pink Neon'), ('purple', '보라 네온', 'Purple Neon'), ('cyan', '하늘색 네온', 'Cyan Neon')):
+    block(f'neon_{c}', 'cube', {'tex': [NEON[c]], 'spin': False}, ko, en)
+GC = [tex(f'glass_curtain_{k}', curtain_glass, 2710 + k, False) for k in range(3)]
+GCL = [tex(f'glass_curtain_lit_{k}', curtain_glass, 2720 + k, True) for k in range(5)]
+block('glass_curtain', 'cube', {'tex': GC, 'spin': False}, '유리 외벽', 'Glass Curtain Wall')
+block('glass_curtain_lit', 'cube', {'tex': GCL, 'spin': False}, '불 켜진 유리 외벽', 'Lit Glass Curtain Wall')
+CPN = [tex(f'cyber_panel_{k}', cyber_panel, 2730 + k) for k in range(2)]
+block('cyber_panel', 'cube', {'tex': CPN, 'spin': False}, '어두운 금속 패널', 'Dark Metal Panel')
+for k, (n, ko, en) in enumerate((('pink', '분홍 전광판', 'Pink LED Screen'), ('cyan', '하늘색 전광판', 'Cyan LED Screen'), ('mix', '네온 전광판', 'Neon LED Screen'))):
+    name = f'led_{n}'; ANIM[name] = 3
+    block(f'led_screen_{n}', 'cube', {'tex': [tex(name, led_screen, 2740 + k, n)], 'spin': False}, ko, en)
+WET = [tex(f'wet_asphalt_{k}', wet_asphalt, 2750 + k) for k in range(4)]
+block('wet_asphalt', 'cube', {'tex': WET, 'spin': True}, '젖은 아스팔트', 'Wet Asphalt')
+CPV = [tex(f'cyber_paving_{k}', cyber_paving, 2760 + k, k == 2) for k in range(3)]
+block('cyber_paving', 'cube', {'tex': CPV, 'spin': False}, '어두운 보도블록', 'Dark Paving')
 
 # ---------------------------------------------------------------- models
 
@@ -1358,6 +1481,9 @@ def main():
         out = fn(*args)
         if isinstance(out, tuple): save(name, out[0], out[1])
         else: save(name, out)
+        mcmeta = TEX / f'{name}.png.mcmeta'
+        if name in ANIM: write(mcmeta, {'animation': {'frametime': ANIM[name], 'interpolate': False}})
+        else: mcmeta.unlink(missing_ok=True)
     for name, data in MODELS.items(): write(ASSETS / 'models/block/town' / f'{name}.json', data)
     for i, data in STATES.items(): write(ASSETS / 'blockstates' / f'{i}.json', data)
     # blocks whose models are built in code have no block state file
