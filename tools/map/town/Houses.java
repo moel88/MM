@@ -305,8 +305,6 @@ final class Houses {
         }
         for(int z=2;z<D-2;z+=3)if(rnd.nextBoolean())f.set(W-2,1,z,s(Blocks.BAMBOO));
         if(W>=7&&D>=6){f.fill(W-3,1,D-3,W-2,2,D-2,s(Blocks.SPRUCE_PLANKS));f.fill(W-4,3,D-4,W-1,3,D-1,Canvas.slab(Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB,false));}
-        Kit.fence(f,0,0,W-1,0,Blocks.SPRUCE_FENCE);
-        f.set(1+rnd.nextInt(Math.max(1,W-2)),1,0,s(Blocks.AIR));
     }
 
     /** 庭: a garden with a big tree, shrubs, stepping stones and a bench. */
@@ -351,28 +349,62 @@ final class Houses {
             e.at(x,z,(x==bx0||x==bx1)&&(z==bz0||z==bz1));
         }
     }
-    /** The plot's boundary: a block wall, a hedge or a block wall under a slat fence on the sides and back, open at the gate. */
+    /**
+     * The plot's front (map v2.0, open plots for fighting through): a knee-high block wall or a clipped hedge along the
+     * street, open at the gate and the drive, or nothing at all; nothing along the sides and the back, where a strip
+     * of lawn runs between the houses.
+     */
     void lotFence(Frame f,int gate,int kind){
-        int W=f.W,D=f.D;
-        for(int z=0;z<D;z++)for(int x:new int[]{0,W-1})edgePiece(f,x,z,kind);
-        for(int x=0;x<W;x++)edgePiece(f,x,D-1,kind);
-        // the front: a low wall either side of the gate, the drive left open
-        if(gate>=0)for(int x=0;x<W;x++)if(Math.abs(x-gate)>1&&f.air(x,1,0)&&f.get(x,0,0).getBlock()!=Blocks.SMOOTH_STONE)edgePiece(f,x,0,kind);
-        // behind a block wall, now and then a hedge a little taller than it, spilling over its top as in the photos (2.48.0)
-        if(kind==0&&gate>=0&&rnd.nextInt(5)<2)for(int x=1;x<W-1;x++){
-            if(Math.abs(x-gate)<=1||!f.air(x,1,1)||f.get(x,0,1).getBlock()==Blocks.SMOOTH_STONE||!(f.get(x,1,0).getBlock()!=Blocks.AIR))continue;
-            for(int y=1;y<=3;y++)if(f.air(x,y,1))f.set(x,y,1,TB.HEDGE);
-        }
+        if(gate<0)return;
+        for(int x=0;x<f.W;x++)if(Math.abs(x-gate)>1&&f.get(x,0,0).getBlock()!=Blocks.SMOOTH_STONE)edgePiece(f,x,0,kind);
     }
     private void edgePiece(Frame f,int x,int z,int kind){
         if(!f.air(x,1,z)&&!(f.get(x,1,z).getBlock() instanceof PlantBlock))return;
-        boolean dark=Pal.darkWall(f.wx(0,0),f.wz(0,0)),light=Pal.hash(f.wx(0,0),58,f.wz(0,0))<0.4;
-        BlockState wall=dark?TB.WALL_DARK:TB.BLOCK_WALL,foot=dark?TB.WALL_DARK:TB.WALL_FOOT,cap=dark?TB.darkCap():TB.wallCap();
+        boolean dark=Pal.darkWall(f.wx(0,0),f.wz(0,0));
         switch(kind){
-            case 1->{f.set(x,1,z,TB.HEDGE);if(f.air(x,2,z))f.set(x,2,z,TB.HEDGE);}
-            case 2->{f.set(x,1,z,foot);if(f.air(x,2,z))f.set(x,2,z,light?TB.SLAT_LIGHT:TB.SLAT_DARK);}
-            default->{f.set(x,1,z,foot);if(f.air(x,2,z)){f.set(x,2,z,wall);if(f.air(x,3,z))f.set(x,3,z,cap);}}
+            case 1->f.set(x,1,z,TB.HEDGE);
+            case 2->{}
+            default->f.set(x,1,z,dark?TB.WALL_DARK:TB.WALL_FOOT);
         }
+    }
+
+    /**
+     * 畑: the common fields in the middle of a residential block, worked by the families round it: beds of vegetables
+     * in rows between paths of bare earth, a plastic greenhouse, a tool shed of corrugated iron, a persimmon tree and a
+     * scarecrow; open to walk through from every side.
+     */
+    void commons(Frame f){
+        int W=f.W,D=f.D;
+        Block[] crops={Blocks.WHEAT,Blocks.CARROTS,Blocks.POTATOES,Blocks.BEETROOTS};
+        for(int x=0;x<W;x++)for(int z=0;z<D;z++){f.clear(x,1,z,x,8,z);f.set(x,0,z,s(Blocks.GRASS_BLOCK));}
+        // beds of 9 by 7 between paths two wide
+        for(int x=2;x+9<=W-2;x+=11)for(int z=2;z+7<=D-2;z+=9){
+            if(rnd.nextInt(6)==0)continue;
+            Block crop=crops[rnd.nextInt(crops.length)];
+            for(int bx=x;bx<x+9;bx++)for(int bz=z;bz<z+7;bz++){
+                if((bz-z)%2==1){f.set(bx,0,bz,s(Blocks.COARSE_DIRT));continue;}
+                f.set(bx,0,bz,Blocks.FARMLAND.getDefaultState().with(FarmlandBlock.MOISTURE,7));
+                BlockState cs=crop==Blocks.BEETROOTS?crop.getDefaultState().with(BeetrootsBlock.AGE,2+rnd.nextInt(2)):crop.getDefaultState().with(CropBlock.AGE,3+rnd.nextInt(5));
+                f.set(bx,1,bz,cs);
+            }
+        }
+        for(int x=0;x<W;x++)for(int z=0;z<D;z++)if(f.get(x,0,z).isOf(Blocks.GRASS_BLOCK)&&((x-2)%11>=9||(z-2)%9>=7))f.set(x,0,z,rnd.nextInt(4)==0?s(Blocks.COARSE_DIRT):s(Blocks.DIRT_PATH));
+        // a plastic greenhouse: hoops of white over a bed
+        int gx=W-12,gz=D-9;
+        if(gx>2&&gz>2)for(int x=gx;x<gx+9;x++){
+            f.set(x,1,gz,s(Blocks.WHITE_STAINED_GLASS));f.set(x,2,gz,s(Blocks.WHITE_STAINED_GLASS));
+            f.set(x,1,gz+6,s(Blocks.WHITE_STAINED_GLASS));f.set(x,2,gz+6,s(Blocks.WHITE_STAINED_GLASS));
+            for(int z=gz;z<=gz+6;z++)f.set(x,z==gz||z==gz+6?2:3,z,s(Blocks.WHITE_STAINED_GLASS));
+            if(x==gx||x==gx+8)for(int z=gz+1;z<gz+6;z++){f.set(x,1,z,s(Blocks.WHITE_STAINED_GLASS));f.set(x,2,z,s(Blocks.WHITE_STAINED_GLASS));}
+        }
+        if(gx>2&&gz>2){f.set(gx,1,gz+3,s(Blocks.AIR));f.set(gx,2,gz+3,s(Blocks.AIR));}
+        // the tool shed, a persimmon tree, a scarecrow
+        int sx=1,sz=D-5;
+        for(int x=sx;x<sx+4;x++)for(int z=sz;z<sz+3;z++)for(int y=1;y<=2;y++)f.set(x,y,z,x==sx+1&&z==sz&&y<=2?s(Blocks.AIR):TB.CORRUGATED);
+        for(int x=sx-1;x<=sx+4;x++)for(int z=sz-1;z<=sz+3;z++)f.set(x,3,z,Canvas.slab(Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB,false));
+        t.nature.townTree(f.wx(W/2,D/2),f.y0+1,f.wz(W/2,D/2),5);
+        int cx=W/3,cz=D/3;
+        if(f.air(cx,1,cz)){f.set(cx,1,cz,s(Blocks.SPRUCE_FENCE));f.set(cx,2,cz,s(Blocks.HAY_BLOCK));f.set(cx,3,cz,s(Blocks.CARVED_PUMPKIN));}
     }
 
     /** Bedding put out to air over a balcony's rail: one or two futons hanging down the outside from (x, y, z) on. */

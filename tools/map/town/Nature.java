@@ -6,9 +6,10 @@ import net.minecraft.util.math.Direction;
 import java.util.Random;
 
 /**
- * Trees and plants: wind-bent black pines with cloud-shaped pads of needles (the coast, gardens), cherry trees
- * (along the photo street and at the shrine and station, not everywhere), round evergreen broadleaf trees (the hills),
- * tall cedars round the shrine, bamboo, and the grass and wildflowers under them. Leaves only grow into air.
+ * Trees and plants: wind-bent black pines with cloud-shaped pads of needles (the coast, gardens, the pine grove),
+ * cherry trees (round the park's pond, at the square, the school's gate and the shrine, not everywhere), round
+ * evergreen broadleaf trees (the hill, the town's shade trees), tall cedars round the shrine, bamboo, and the grass and
+ * wildflowers under them. Leaves only grow into air.
  */
 final class Nature {
     private final Townscape t;private final Canvas c;private final Random rnd;
@@ -157,9 +158,9 @@ final class Nature {
     }
 
     /**
-     * Woods on the natural land outside the town: cedars and broadleaf trees on the ridge, broadleaf trees and
-     * pines on the headlands, black pines along the shores and on the island, bamboo in hollows; grass, ferns
-     * and wildflowers under them.
+     * Woods on the natural land outside the town (map v2.0): cedars and broadleaf trees on the hill behind the town,
+     * thinning to meadows here and there, black pines along the shores and on the island; grass, ferns and
+     * wildflowers under them.
      */
     void woods(){
         int trees=0;
@@ -170,19 +171,18 @@ final class Nature {
             int g=c.ground(px,pz);
             if(g<=Plan.SEA+1||!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz))continue;
             if(t.roads.any(px,pz)||nearBuilt(px,pz,g))continue;
-            boolean shore=pz>Terrain.shoreZ(px)-14||pz>Plan.BRIDGE_Z1;
-            boolean ridge=pz<Plan.SHRINE_Z1;
-            double p=shore?0.32:ridge?0.62:0.42;
+            boolean hill=pz<Plan.TOWN_Z0;
+            // the hill: a meadow along its foot, then woods in groves with clearings between them
+            int up=Plan.TOWN_Z0-pz;
+            double p=hill?(up<7?0.03:Pal.smooth(px,pz,23,97)<0.35?0.06:0.5):0.30;
             if(rnd.nextDouble()>p)continue;
             int r=rnd.nextInt(100);
-            if(shore)pine(px,g+1,pz,5+rnd.nextInt(4),false);
-            else if(ridge)if(r<45)cedar(px,g+1,pz,11+rnd.nextInt(7));else if(r<92)broadleaf(px,g+1,pz,5+rnd.nextInt(4));else pine(px,g+1,pz,6+rnd.nextInt(3),false);
-            else if(r<70)broadleaf(px,g+1,pz,4+rnd.nextInt(4));else if(r<85)pine(px,g+1,pz,5+rnd.nextInt(3),false);else if(r<93)cedar(px,g+1,pz,9+rnd.nextInt(5));
-            else for(int k=0;k<9;k++)bamboo(px+rnd.nextInt(5)-2,c.ground(px,pz)+1,pz+rnd.nextInt(5)-2,7+rnd.nextInt(6));
+            if(!hill)pine(px,g+1,pz,5+rnd.nextInt(4),false);
+            else if(r<40)cedar(px,g+1,pz,11+rnd.nextInt(7));else if(r<90)broadleaf(px,g+1,pz,5+rnd.nextInt(4));else pine(px,g+1,pz,6+rnd.nextInt(3),false);
             trees++;
         }
         Town.log("woods: "+trees+" trees");
-        // grass, ferns and wildflowers over all the open ground, thickest in front of the little rises of a slope
+        // grass, ferns and wildflowers over all the open natural ground, thickest in front of the little rises of a slope
         int plants=0;
         for(int x=Plan.X0+1;x<Plan.X0+Plan.W-1;x++)for(int z=Plan.Z0+1;z<Plan.Z0+Plan.D-1;z++){
             int i=Canvas.idx(x,z);
@@ -190,7 +190,7 @@ final class Nature {
             int g=c.ground(x,z);
             if(g<=Plan.SEA+1||!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK)||!c.air(x,g+1,z))continue;
             boolean rise=c.ground(x+1,z)>g||c.ground(x-1,z)>g||c.ground(x,z+1)>g||c.ground(x,z-1)>g;
-            boolean shore=z>Terrain.shoreZ(x)-14||z>Plan.BRIDGE_Z1;
+            boolean shore=z>=Plan.TOWN_Z0;
             if(rnd.nextDouble()<(rise?0.6:0.2)*(shore?0.7:1)&&undergrowth(x,g+1,z,shore))plants++;
         }
         Town.log("undergrowth: "+plants+" plants");

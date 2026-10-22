@@ -9,36 +9,34 @@ import java.util.*;
 import static dev.sangwoo.botandtown.Kit.s;
 
 /**
- * The fishing harbour under the west headland: a concrete quay with bollards and rubber fenders, the fish market's
- * open shed with its white boxes and ice, the fishing co-op and an ice store, boats moored along the quay (some of
- * them squid boats strung with lamps), a slipway, and breakwaters heaped with tetrapods closing the basin, a red
- * lighthouse and a white one at its mouth.
+ * The fishing harbour in the south-west (map v2.0): a concrete quay along the coastal road with bollards and rubber
+ * fenders, the fish market's open shed with its white boxes and ice, boats moored along the quay (some of them squid
+ * boats strung with lamps), a slipway, breakwaters heaped with tetrapods closing the basin with a red light and a white
+ * one at its mouth; across the road the fishing co-op, the ice plant and the fishermen's gear sheds.
  */
 final class Harbor {
     private final Townscape t;private final Canvas c;private final Random rnd;
     static final int Y=Plan.COAST;
-    /** The breakwaters: east (along x=EX, then west along the arm) and west (from the headland). */
-    static final int EX=-97,ARM_Z=112,ARM_X=-136,WEST_Z=106,WEST_X=-156;
+    /** The breakwaters: east (along x=EX south from the quay, then west along the arm at ARM_Z) and west (from the shore at WEST_Z). */
+    static final int EX=-68,ARM_Z=162,ARM_X=-125,WEST_Z=150,WEST_X=-152;
     Harbor(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
 
     void build(){
         quay();
         breakwaters();
-        market(-174,-150);
-        office(-146,-137);
-        store(-132,-115);
-        int[] spots={-168,-155,-142,-129,-116,-104};
+        market(-150,-122);
+        int[] spots={-176,-160,-114,-100,-86};
         for(int i=0;i<spots.length;i++)boat(spots[i],Plan.QUAY_Z1+4,i%2==0?1:-1,10+rnd.nextInt(5),i%3==1);
-        boat(-124,92,1,13,true);boat(-160,94,-1,12,false);
+        boat(-110,140,1,13,true);boat(-160,132,-1,12,false);
         slipway();
         lighthouse(ARM_X+2,ARM_Z,true);lighthouse(WEST_X-2,WEST_Z,false);
-        t.places.put("harbor",new int[]{-140,Y+1,62});
+        t.places.put("harbor",new int[]{-130,Y+1,Plan.QUAY_Z1-3});
         Town.log("harbour: "+c.placed);
     }
 
     /** The quay: concrete paving, the edge face, bollards and fenders, lamps. */
     private void quay(){
-        for(int x=Plan.HARBOR_X0;x<=Plan.HARBOR_X1;x++)for(int z=Plan.SEAWARD_Z;z<=Plan.QUAY_Z1;z++){
+        for(int x=Plan.HARBOR_X0;x<=Plan.HARBOR_X1;x++)for(int z=Plan.PROM_Z0;z<=Plan.QUAY_Z1;z++){
             c.set(x,Y,z,Pal.concrete(x,z));c.clear(x,Y+1,z,x,Y+8,z);c.ground(x,z,Y);
             if(z==Plan.QUAY_Z1){
                 for(int y=Canvas.Y0;y<Y;y++)c.set(x,y,z,Pal.seawall(x,y,z));
@@ -46,7 +44,7 @@ final class Harbor {
             }
         }
         // the promenade's line along the back of the quay, and lamps
-        for(int x=Plan.HARBOR_X0+4;x<=Plan.HARBOR_X1;x+=20)t.street.sodium(x,Plan.SEAWARD_Z+1);
+        for(int x=Plan.HARBOR_X0+8;x<=Plan.HARBOR_X1;x+=22)t.street.sodium(x,Plan.PROM_Z0+3);
         // gear on the quay: nets, floats, crates
         for(int i=0;i<14;i++){
             int x=Plan.HARBOR_X0+8+rnd.nextInt(Plan.HARBOR_X1-Plan.HARBOR_X0-16),z=Plan.QUAY_Z1-1-rnd.nextInt(3);
@@ -66,11 +64,11 @@ final class Harbor {
         for(int z=Plan.SEAWARD_Z;z<=ARM_Z+2;z++)for(int x=EX-2;x<=EX+2;x++)wall(x,z,x==EX+2);
         for(int x=ARM_X;x<EX-2;x++)for(int z=ARM_Z-2;z<=ARM_Z+2;z++)wall(x,z,z==ARM_Z+2);
         // the west breakwater: from the headland's shore out east
-        for(int x=Plan.X0+8;x<=WEST_X;x++)for(int z=WEST_Z-2;z<=WEST_Z+2;z++)if(t.terrain.kind[Canvas.idx(x,z)]==Terrain.SEA)wall(x,z,z==WEST_Z+2);
+        for(int x=Plan.X0+4;x<=WEST_X;x++)for(int z=WEST_Z-2;z<=WEST_Z+2;z++)if(t.terrain.kind[Canvas.idx(x,z)]==Terrain.SEA)wall(x,z,z==WEST_Z+2);
         var coast=t.coast;
-        for(int z=Plan.SEAWARD_Z+26;z<=ARM_Z+5;z++)for(int x=EX+3;x<=EX+5;x++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
+        for(int z=Plan.QUAY_Z1+8;z<=ARM_Z+5;z++)for(int x=EX+3;x<=EX+5;x++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
         for(int x=ARM_X;x<=EX+5;x++)for(int z=ARM_Z+3;z<=ARM_Z+5;z++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
-        for(int x=Plan.X0+8;x<=WEST_X;x++)for(int z=WEST_Z+3;z<=WEST_Z+5;z++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
+        for(int x=Plan.X0+4;x<=WEST_X;x++)for(int z=WEST_Z+3;z<=WEST_Z+5;z++)if(c.water(x,Plan.SEA,z)&&rnd.nextInt(3)==0)coast.tetrapod(x,c.ground(x,z)+1+rnd.nextInt(Math.max(1,Plan.SEA-c.ground(x,z))),z);
     }
     private void wall(int x,int z,boolean parapet){
         for(int y=Canvas.Y0;y<=Y;y++)c.set(x,y,z,Pal.seawall(x,y,z));
@@ -80,7 +78,7 @@ final class Harbor {
 
     /** 魚市場: a long open shed on posts under a low metal roof, boxes and ice on its floor, its name on the end. */
     private void market(int x0,int x1){
-        int z0=Plan.SEAWARD_Z+1,z1=Plan.QUAY_Z1-3;
+        int z0=Plan.SEAWARD_Z,z1=Plan.QUAY_Z1-3;
         for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++){
             c.set(x,Y,z,s(Blocks.SMOOTH_STONE));
             boolean post=(x-x0)%6==0&&(z==z0||z==z1);
@@ -97,24 +95,52 @@ final class Harbor {
         }
         c.wallSign(x1+1,Y+4,(z0+z1)/2,Blocks.SPRUCE_WALL_SIGN,Direction.EAST,DyeColor.WHITE,false,"ぼたんど漁港","魚市場","FISH MARKET");
     }
+    /** The harbour's buildings on their plots across the coastal road. */
+    void building(Lot l){
+        switch(l.zone){
+            case "coop"->office(Frame.of(c,l));
+            case "ice"->store(Frame.of(c,l));
+            default->gearShed(Frame.of(c,l));
+        }
+        l.use=l.zone;
+    }
     /** 漁協: the fishing co-op's two-storey office. */
-    private void office(int x0,int x1){
-        var f=new Frame(c,x0,Plan.SEAWARD_Z,x1,Plan.SEAWARD_Z+8,Direction.SOUTH,Y);
-        Kit.shell(f,0,0,f.W-1,f.D-1,2,s(Blocks.WHITE_TERRACOTTA),s(Blocks.WHITE_TERRACOTTA),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
-        for(int s=0;s<2;s++)Kit.windows(f,rnd,0,0,f.W-1,f.D-1,'f',s,TB.WIN,TB.WIN_FROSTED,f.W/2,true);
-        f.door(f.W/2,1,0,Blocks.IRON_DOOR,Direction.NORTH,false);
-        f.wallSign(f.W/2,3,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLUE,false,"ぼたんど漁協","Botand","Fishery Co-op");
-        Kit.roof(f,0,0,f.W-1,f.D-1,8,Kit.FLAT,true,Kit.SLATE,s(Blocks.WHITE_TERRACOTTA),s(Blocks.SMOOTH_STONE));
-        Kit.roomLight(f,f.W/2,0,f.D/2,false);Kit.roomLight(f,f.W/2,4,f.D/2,false);
-        t.street.vending(x1+2,Plan.SEAWARD_Z+2,Direction.NORTH,2);
+    private void office(Frame f){
+        int W=f.W,D=f.D,bx0=1,bx1=W-2,bz0=3,bz1=Math.min(D-1,bz0+8);
+        for(int x=0;x<W;x++)for(int z=0;z<D;z++){f.set(x,0,z,Pal.concrete(f.wx(x,z),f.wz(x,z)));f.clear(x,1,z,x,10,z);}
+        Kit.shell(f,bx0,bz0,bx1,bz1,2,TB.STUCCO_WHITE,TB.CONCRETE,TB.TRIM_WHITE,s(Blocks.SMOOTH_STONE),TB.CONCRETE);
+        int m=(bx0+bx1)/2;
+        for(int s=0;s<2;s++)Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'f',s,TB.WIN,TB.WIN_FROSTED,m,true);
+        f.door(m,1,bz0,Blocks.IRON_DOOR,Direction.NORTH,false);
+        f.wallSign(m,3,bz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLUE,false,"ぼたんど漁協","Botand","Fishery Co-op");
+        Kit.roof(f,bx0,bz0,bx1,bz1,8,Kit.FLAT,true,Kit.SLATE,TB.STUCCO_WHITE,s(Blocks.SMOOTH_STONE));
+        Kit.roomLight(f,m,0,(bz0+bz1)/2,false);Kit.roomLight(f,m,4,(bz0+bz1)/2,false);
+        t.street.vending(f.wx(bx1+1,bz0),f.wz(bx1+1,bz0),f.dir(Direction.SOUTH),2);
     }
     /** 製氷・冷蔵: a plain warehouse with a wide shutter. */
-    private void store(int x0,int x1){
-        var f=new Frame(c,x0,Plan.SEAWARD_Z,x1,Plan.SEAWARD_Z+7,Direction.SOUTH,Y);
-        Kit.shell(f,0,0,f.W-1,f.D-1,2,s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
-        for(int x=f.W/2-2;x<=f.W/2+2;x++)for(int y=1;y<=3;y++)f.set(x,y,0,Canvas.trapdoor(Blocks.IRON_TRAPDOOR,Direction.NORTH,true,false));
-        f.wallSign(f.W/2,5,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLACK,false,"製氷・冷蔵","ICE");
-        Kit.roof(f,0,0,f.W-1,f.D-1,8,Kit.GABLE,true,Kit.SLATE,s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_STONE));
+    private void store(Frame f){
+        int W=f.W,D=f.D,bx0=1,bx1=W-2,bz0=3,bz1=Math.min(D-1,bz0+9);
+        for(int x=0;x<W;x++)for(int z=0;z<D;z++){f.set(x,0,z,Pal.concrete(f.wx(x,z),f.wz(x,z)));f.clear(x,1,z,x,12,z);}
+        Kit.shell(f,bx0,bz0,bx1,bz1,2,s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
+        int m=(bx0+bx1)/2;
+        for(int x=m-2;x<=m+2;x++)for(int y=1;y<=3;y++)f.set(x,y,bz0,Canvas.trapdoor(Blocks.IRON_TRAPDOOR,Direction.NORTH,true,false));
+        f.wallSign(m,5,bz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLACK,false,"製氷・冷蔵","ICE");
+        Kit.roof(f,bx0,bz0,bx1,bz1,8,Kit.GABLE,true,Kit.SLATE,s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_STONE));
+    }
+    /** 作業小屋: a fisherman's gear shed of corrugated iron, its front open, nets and floats piled in front. */
+    private void gearShed(Frame f){
+        int W=f.W,D=f.D,bx0=1,bx1=W-2,bz0=4,bz1=Math.min(D-1,bz0+6);
+        for(int x=0;x<W;x++)for(int z=0;z<D;z++){f.set(x,0,z,Pal.concrete(f.wx(x,z),f.wz(x,z)));f.clear(x,1,z,x,8,z);}
+        Houses.perimeter(f,bx0,bz0,bx1,bz1,(x,z,corner)->{
+            boolean front=z==bz0&&!corner&&x>bx0+1&&x<bx1-1;
+            for(int y=1;y<=3;y++)f.set(x,y,z,front?s(Blocks.AIR):Pal.hash(f.wx(x,z),y,f.wz(x,z))<0.3?TB.RUSTY:TB.CORRUGATED);
+        });
+        Kit.roof(f,bx0,bz0,bx1,bz1,4,Kit.SHED,false,Kit.SHEET,TB.CORRUGATED,s(Blocks.AIR));
+        for(int x=bx0+1;x<bx1;x++){
+            if(rnd.nextInt(3)==0)continue;
+            f.set(x,1,bz0-1,switch(rnd.nextInt(4)){case 0->s(Blocks.BLACK_WOOL);case 1->s(Blocks.ORANGE_TERRACOTTA);case 2->s(Blocks.BARREL);default->s(Blocks.WHITE_CONCRETE);});
+        }
+        f.hangingLantern((bx0+bx1)/2,3,(bz0+bz1)/2,false);
     }
 
     /**

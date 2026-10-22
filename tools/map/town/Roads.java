@@ -36,61 +36,68 @@ final class Roads {
     }
 
     void plan(){
-        // the coastal road from the west tunnel to the east one
-        mark(Plan.TUNNEL_W,Plan.COAST_Z0,Plan.TUNNEL_E,Plan.COAST_Z1,ROAD);
-        // the seaside promenade from the harbour to the lot
-        mark(Plan.HARBOR_X0,Plan.PROM_Z0,Plan.LOT_X0-2,Plan.PROM_Z1,PROM);
-        // the east-west streets of the low town
-        for(int k=0;k<4;k++)mark(Plan.TOWN_X0+4,Plan.ST_N[k],Plan.TOWN_X1-2,Plan.ST_S[k],ROAD);
-        // alleys from S4 to S1
-        for(int[] s:Plan.SIDE_STREETS)mark(s[0],Plan.ST_N[3],s[1],Plan.ST_S[0],ROAD);
-        // the main street, from the hill foot to the coast and on across the promenade onto the bridge
-        mark(-3,Plan.ST_N[3],3,Plan.PROM_Z1,ROAD);
-        markIfFree(Plan.MAIN_X0,Plan.ST_S[3]+1,-4,Plan.RAIL_Z0-1,WALK);markIfFree(4,Plan.ST_S[3]+1,Plan.MAIN_X1,Plan.RAIL_Z0-1,WALK);
-        // the photo street: two lanes from the hill foot across the railway to the coastal road, pavers either side
-        mark(Plan.PHOTO_ROAD_X0,Plan.ST_N[3],Plan.PHOTO_ROAD_X1,Plan.COAST_Z0,ROAD);
-        markIfFree(Plan.PHOTO_X0,Plan.ST_S[3]+1,Plan.PHOTO_ROAD_X0-1,Plan.RAIL_Z0-1,WALK);markIfFree(Plan.PHOTO_ROAD_X1+1,Plan.ST_S[3]+1,Plan.PHOTO_X1,Plan.RAIL_Z0-1,WALK);
-        // terrace streets, each following its terrace's bend
-        for(int i=0;i<Plan.TERRACE_Y.length;i++)for(int x=Plan.TERRACE_XW[i]+3;x<=Plan.TERRACE_XE[i]-3;x++)
-            mark(x,Plan.terraceStreetZ1(i,x),x,Plan.terraceStreetZ0(i,x),ROAD);
-        // the level crossings are laid by the railway
-        for(int[] xs:Plan.CROSSINGS)mark(xs[0],Plan.RAIL_Z0,xs[1],Plan.RAIL_FENCE_Z,CROSS);
-        // road paint: edge lines along the kerbs of the photo street, the main street, the streets of the low town
-        // and the coastal road, broken where streets join
-        for(int z=Plan.ST_N[3];z<=Plan.COAST_Z1;z++){
-            edge(Plan.PHOTO_ROAD_X0,z,Direction.WEST);edge(Plan.PHOTO_ROAD_X1,z,Direction.EAST);
-            edge(-3,z,Direction.WEST);edge(3,z,Direction.EAST);
+        // sidewalks first, the seaside promenade, then every road over them: where streets meet, the roads run on
+        // across the other street's sidewalks and the corners keep theirs
+        for(Plan.Street s:Plan.STREETS){
+            if(s.walkLo()>0)markStreet(s,s.a0(),s.a0()+s.walkLo()-1,WALK);
+            if(s.walkHi()>0)markStreet(s,s.a1()-s.walkHi()+1,s.a1(),WALK);
         }
-        for(int x=Plan.TUNNEL_W;x<=Plan.TUNNEL_E;x++){
-            for(int k=0;k<4;k++){edge(x,Plan.ST_N[k],Direction.NORTH);edge(x,Plan.ST_S[k],Direction.SOUTH);}
-            edge(x,Plan.COAST_Z0,Direction.NORTH);edge(x,Plan.COAST_Z1,Direction.SOUTH);
+        mark(Plan.HARBOR_X1+1,Plan.PROM_Z0,Plan.TOWN_X1,Plan.PROM_Z1,PROM);
+        for(Plan.Street s:Plan.STREETS)markStreet(s,s.roadA0(),s.roadA1(),ROAD);
+        // road paint: edge lines along every kerb, broken where streets join
+        for(Plan.Street s:Plan.STREETS)for(int b=s.b0();b<=s.b1();b++){
+            if(s.eastWest()){edge(b,s.roadA0(),Direction.NORTH);edge(b,s.roadA1(),Direction.SOUTH);}
+            else{edge(s.roadA0(),b,Direction.WEST);edge(s.roadA1(),b,Direction.EAST);}
         }
-        // dashed centre lines: the coastal road, the main street, the photo street (from a little past the photo's
-        // zebra crossing; its centre lies between x -70 and -69, painted as an edge line on the east side of x -70)
-        for(int x=Plan.TUNNEL_W;x<=Plan.TUNNEL_E;x++)if(Math.floorMod(x,10)<5)paint(x,Plan.CENTRE_Z,CENTRE,0);
-        for(int z=Plan.ST_N[3];z<Plan.COAST_Z0;z++)if(Math.floorMod(z,10)<5)paint(0,z,CENTRE,1);
-        for(int z=(int)Plan.PHOTO1_Z+12;z<Plan.RAIL_Z0;z++)if(Math.floorMod(z,10)<5)paint(-70,z,EDGE,Direction.EAST.getHorizontal());
-        // zebra crossings: on the photo street just in front of photo 1's camera, across the main street south of each
-        // cross street, across the coastal road west of the bridge and across the bridge's entrance for the promenade
-        int zebra=(int)Math.floor(Plan.PHOTO1_Z)+6;
-        for(int x=Plan.PHOTO_ROAD_X0;x<=Plan.PHOTO_ROAD_X1;x++)for(int z=zebra;z<=zebra+2;z++)paint(x,z,ZEBRA,1);
-        for(int k=0;k<3;k++)for(int x=-3;x<=3;x++)for(int z=Plan.ST_S[k]+1;z<Plan.ST_S[k]+4;z++)paint(x,z,ZEBRA,1);
-        for(int z=Plan.COAST_Z0;z<=Plan.COAST_Z1;z++)for(int x=-11;x<=-8;x++)paint(x,z,ZEBRA,0);
-        for(int x=-3;x<=3;x++)for(int z=Plan.PROM_Z0;z<=Plan.PROM_Z1;z++)paint(x,z,ZEBRA,1);
-        // stop lines before the level crossings, across the lanes coming down to them (traffic keeps left: the east lanes)
-        for(int x=-69;x<=Plan.PHOTO_ROAD_X1;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
-        for(int x=1;x<=3;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
-        // the green walking strip (2.48.0, the photos' lanes) inside the east gutter of each alley, its white line on the
-        // road's side, broken where the streets cross
-        for(int[] s:Plan.SIDE_STREETS)for(int z=Plan.ST_N[3];z<=Plan.ST_S[0];z++)
-            if(Plan.street(z)<0&&Plan.street(z-1)<0&&Plan.street(z+1)<0)paint(s[1]-1,z,GREEN,Direction.WEST.getHorizontal());
+        // dashed centre lines: the main street's through the middle of its middle lane, the eight-wide roads' between
+        // their two lanes (a thin line along one side of the lanes' last blocks), not across junctions
+        for(Plan.Street s:Plan.STREETS){
+            int w=s.roadA1()-s.roadA0()+1;
+            for(int b=s.b0();b<=s.b1();b++){
+                if(Math.floorMod(b,10)>=5)continue;
+                int a=s.roadA0()+(w-1)/2;
+                int x=s.eastWest()?b:a,z=s.eastWest()?a:b;
+                if(junction(s,x,z))continue;
+                if(w%2==1)paint(x,z,CENTRE,s.eastWest()?0:1);
+                else paint(x,z,EDGE,(s.eastWest()?Direction.SOUTH:Direction.EAST).getHorizontal());
+            }
+        }
+        // zebra crossings across every arm of the grid's junctions, just outside them, and across the main street where
+        // the promenade crosses it onto the bridge
+        Plan.Street[] ns={Plan.WEST,Plan.MAIN_N,Plan.MAIN_S,Plan.EAST},ew={Plan.NORTH,Plan.MIDDLE,Plan.SOUTH,Plan.COASTAL};
+        for(Plan.Street v:ns)for(Plan.Street h:ew){
+            if(h.a0()>v.b1()||h.a1()<v.b0())continue;
+            for(int x=v.roadA0();x<=v.roadA1();x++){
+                for(int k=1;k<=3;k++){
+                    if(h.a0()-k>=v.b0())paint(x,h.a0()-k,ZEBRA,1);
+                    if(h.a1()+k<=v.b1())paint(x,h.a1()+k,ZEBRA,1);
+                }
+            }
+            for(int z=h.roadA0();z<=h.roadA1();z++)for(int k=1;k<=3;k++){
+                paint(v.a0()-k,z,ZEBRA,0);paint(v.a1()+k,z,ZEBRA,0);
+            }
+        }
+        for(int x=Plan.MAIN_S.roadA0();x<=Plan.MAIN_S.roadA1();x++)for(int z=Plan.PROM_Z0+1;z<=Plan.PROM_Z1-1;z++)paint(x,z,ZEBRA,1);
         // gutters wherever the asphalt meets something that is not street
         byte[] copy=map.clone();
         for(int x=Plan.X0+1;x<Plan.X0+Plan.W-1;x++)for(int z=Plan.Z0+1;z<Plan.Z0+Plan.D-1;z++){
             int i=Canvas.idx(x,z);if(copy[i]!=ROAD)continue;
-            if(z>=Plan.COAST_Z0&&z<=Plan.COAST_Z1&&(x<Plan.TOWN_X0||x>Plan.TOWN_X1))continue;
             for(var d:Direction.Type.HORIZONTAL){int nx=x+d.getOffsetX(),nz=z+d.getOffsetZ();if(copy[Canvas.idx(nx,nz)]==NONE){map[i]=GUTTER;break;}}
         }
+    }
+    /** Marks a band of a street, across from a to b, along its whole length. */
+    private void markStreet(Plan.Street s,int a,int b,byte type){
+        if(s.eastWest())mark(s.b0(),a,s.b1(),b,type);else mark(a,s.b0(),b,s.b1(),type);
+    }
+    /** Whether a road column of street s lies where another street's road crosses it. */
+    private boolean junction(Plan.Street s,int x,int z){
+        for(Plan.Street o:Plan.STREETS){
+            if(o==s||o.eastWest()==s.eastWest())continue;
+            int a=o.eastWest()?z:x;
+            int b=o.eastWest()?x:z;
+            if(a>=o.a0()-1&&a<=o.a1()+1&&b>=o.b0()&&b<=o.b1())return true;
+        }
+        return false;
     }
 
     /** The surface level of a planned column in half blocks: the ground's, a sidewalk half a block above it. */

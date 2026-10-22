@@ -97,7 +97,7 @@ public final class Town implements ModInitializer {
         }catch(Throwable t){fail(server,t);}
     }
 
-    /** Green forest on the land, sand-coloured shores, warm blue shallows round the coast. */
+    /** Green forest on the land, darker woods on the hill, sand-coloured shores, warm blue shallows round the coast. */
     private Chunks.Biomes biomes(ServerWorld w,Terrain t){
         var reg=w.getRegistryManager().get(RegistryKeys.BIOME);
         RegistryEntry<Biome> land=reg.entryOf(BiomeKeys.FOREST),beach=reg.entryOf(BiomeKeys.BEACH),shallow=reg.entryOf(BiomeKeys.LUKEWARM_OCEAN),
@@ -105,9 +105,9 @@ public final class Town implements ModInitializer {
         return (x,y,z)->{
             if(!Canvas.inPlan(x,z))return sea;
             byte k=t.kind[Canvas.idx(x,z)];
-            if(k==Terrain.SEA)return z<Plan.SEAWARD_Z+150||z>150?shallow:sea;
+            if(k==Terrain.SEA)return shallow;
             if(k==Terrain.BEACH)return beach;
-            return z<Plan.SHRINE_Z1&&t.plat[Canvas.idx(x,z)]==Terrain.NONE?ridge:land;
+            return z<Plan.TOWN_Z0-8&&t.plat[Canvas.idx(x,z)]==Terrain.NONE?ridge:land;
         };
     }
 

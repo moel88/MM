@@ -10,10 +10,11 @@ import java.util.*;
 import static dev.sangwoo.botandtown.Kit.s;
 
 /**
- * ぼたんど神社 at the top of the stairway: a great red torii, a gravel precinct with a stone-paved approach between
- * stone lanterns, the purification basin under its little roof, the worship hall on a raised floor under a green
- * copper roof with crossed finials, its straw rope and paper streamers, the offering box and the bell; a great
- * sacred tree bound with rope, and tall cedars all round.
+ * ぼたんど神社 on the hill north of the town (map v2.0), up a broad flight of stone steps from the end of the shopping
+ * street (three flights between stone walls, two landings, stone lanterns at the foot): a great red torii at the top,
+ * a gravel precinct with a stone-paved approach between stone lanterns, the purification basin under its little roof,
+ * the worship hall on a raised floor under a green copper roof with crossed finials, its straw rope and paper
+ * streamers, the offering box and the bell; a great sacred tree bound with rope, and tall cedars all round.
  */
 final class Shrine {
     private final Townscape t;private final Canvas c;private final Random rnd;
@@ -26,11 +27,12 @@ final class Shrine {
             c.set(x,Y,z,path?(((x+z)&1)==0?s(Blocks.STONE_BRICKS):s(Blocks.POLISHED_ANDESITE)):s(Blocks.GRAVEL));
             c.clear(x,Y+1,z,x,Y+14,z);c.ground(x,z,Y);
         }
+        stairway();
         torii(0,ZS-1);
         for(int z=ZS-5;z>=ZN+14;z-=4)for(int side=-1;side<=1;side+=2)lantern(side*4,z);
-        basin(-9,ZS-6);
+        basin(-16,ZS-5);
         hall(-9,ZN+1,9,ZN+11);
-        sacredTree(13,ZN+8);
+        sacredTree(19,ZN+9);
         // cedars round the precinct
         for(int i=0;i<40;i++){
             int x=X0-8+rnd.nextInt(X1-X0+16),z=ZN-14+rnd.nextInt(ZS-ZN+18);
@@ -42,6 +44,41 @@ final class Shrine {
         }
         t.places.put("shrine",new int[]{0,Y+1,ZS-3});
         Town.log("shrine: "+c.placed);
+    }
+
+    /**
+     * The stone steps from North Street up the hill's face to the precinct: three flights of six between walls of old
+     * masonry with a stone balustrade, a landing of two blocks between flights; a pair of stone lanterns at the foot.
+     */
+    private void stairway(){
+        int x0=Plan.STAIR_X0+1,x1=Plan.STAIR_X1-1,z=Plan.TOWN_Z0-1,y=Plan.COAST;
+        for(int flight=0;flight<3;flight++){
+            for(int k=0;k<6;k++){y++;step(x0,x1,z,y,true);z--;}
+            if(flight<2)for(int k=0;k<2;k++){step(x0,x1,z,y,false);z--;}
+        }
+        // from the last step to the precinct's edge, level
+        for(;z>ZS;z--)step(x0,x1,z,Y,false);
+        for(int side=-1;side<=1;side+=2){
+            int lx=side*7,lz=Plan.TOWN_Z0;
+            c.set(lx,Plan.COAST+1,lz,s(Blocks.STONE_BRICKS));c.set(lx,Plan.COAST+2,lz,s(Blocks.STONE_BRICK_WALL));c.set(lx,Plan.COAST+3,lz,s(Blocks.STONE_BRICK_WALL));
+            c.set(lx,Plan.COAST+4,lz,s(Blocks.LANTERN));c.set(lx,Plan.COAST+5,lz,Canvas.slab(Blocks.STONE_BRICK_SLAB,false));
+        }
+        c.wallSign(Plan.STAIR_X1+2,Plan.COAST+1,Plan.TOWN_Z0,Blocks.DARK_OAK_WALL_SIGN,Direction.SOUTH,DyeColor.WHITE,false,"ぼたんど神社","参道","BOTAND SHRINE");
+    }
+    /** One row of the stairway at z: a step (or landing) at y, the side walls retaining the hill, a balustrade on them. */
+    private void step(int x0,int x1,int z,int y,boolean stair){
+        for(int x=x0;x<=x1;x++){
+            c.fill(x,Plan.COAST-3,z,x,y-1,z,s(Blocks.STONE));
+            c.set(x,y,z,stair?Canvas.stairs(Blocks.STONE_BRICK_STAIRS,Direction.NORTH,false):s(Blocks.STONE_BRICKS));
+            c.clear(x,y+1,z,x,Y+10,z);c.ground(x,z,y);
+        }
+        for(int x:new int[]{x0-1,x1+1}){
+            int top=Math.max(y,c.ground(x,z));
+            for(int yy=Plan.COAST+1;yy<=top;yy++)c.set(x,yy,z,t.terrain.masonry(x,yy,z));
+            c.set(x,top+1,z,s(Blocks.ANDESITE_WALL));
+            c.clear(x,top+2,z,x,Y+10,z);
+            c.ground(x,z,top);
+        }
     }
 
     /** The great torii: vermilion pillars and tie beam, the black lintel with upturned ends, the name tablet. */

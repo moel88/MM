@@ -14,15 +14,16 @@ import java.util.*;
 /**
  * The map's multiplayer check, client half (only with -Dbotand.mapmp.role=NAME): joins the dedicated server, waits for
  * the town round the spawn to arrive and be built, logs whether the mod's map is on for it and which of the mod's
- * townspeople it can see, and saves a frame looking each way from the spawn (the station square and its stalls, the
- * street down to the crossing and the bridge), the game's HUD showing; then leaves.
+ * townspeople it can see, and saves a frame looking each way from the spawn in the middle of the town hall's square
+ * (south to the merchants' stalls and the bridge, west to the park, north up the shopping street to the shrine's hill),
+ * the game's HUD showing; then leaves.
  */
 public final class MapMpClient implements ClientModInitializer {
     static final String ROLE=System.getProperty("botand.mapmp.role");
     static final Path OUT=Path.of(System.getProperty("botand.mapmp.out","mapmp"));
     static final String ADDRESS=System.getProperty("botand.mapmp.address","127.0.0.1:25565");
     /** Where to look from the spawn: yaw, pitch, name. */
-    static final Object[][] VIEWS={{0f,2f,"south"},{-75f,4f,"station"},{180f,4f,"north"}};
+    static final Object[][] VIEWS={{0f,2f,"south"},{90f,4f,"west"},{180f,4f,"north"}};
     private MinecraftClient mc;private int phase,age,view,settle,built=-1;
     private final StringBuilder log=new StringBuilder();
 

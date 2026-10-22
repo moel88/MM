@@ -51,31 +51,27 @@ final class Shops {
         new Kind("photo","写真","浜写真館","写真・現像",Blocks.BLACK_WOOL,Blocks.BLACK_WOOL,DyeColor.WHITE,TB.STUCCO_GRAY));
     static final Set<String> FOOD=Set.of("ramen","izakaya","sushi","soba","cafe","snack");
 
-    /** Builds the shops on their plots: the main street's, some of the station street's, the special buildings. */
+    /**
+     * Builds the shops on their plots (map v2.0): the shopping street's shop-houses, the public bath, the post office,
+     * the clinic, the supermarket, the convenience store and the gas station; the arches over both ends of the
+     * shopping street.
+     */
     void build(){
         List<Kind> pool=new ArrayList<>(MAIN);Collections.shuffle(pool,rnd);
         int k=0;
-        List<Lot> main=new ArrayList<>();for(Lot l:t.layout.lots)if(l.zone.equals("main"))main.add(l);
-        main.sort(Comparator.comparingInt(l->l.z0));
-        for(int i=0;i<main.size();i++){
-            Lot l=main.get(i);
-            if(i==main.size()/2&&l.front==Direction.EAST){l.use="post";post(l);continue;}
-            if(i==main.size()/3&&l.front==Direction.WEST){l.use="clinic";clinic(l);continue;}
-            Kind kind=pool.get(k++%pool.size());
-            l.use="shop:"+kind.id;shop(l,kind);
-        }
         for(Lot l:t.layout.lots){
-            if(l.zone.equals("station-street")&&rnd.nextInt(5)<3){
-                Kind kind=pool.get(k++%pool.size());l.use="shop:"+kind.id;shop(l,kind);
+            switch(l.zone){
+                case "shop"->{Kind kind=pool.get(k++%pool.size());l.use="shop:"+kind.id();shop(l,kind);}
+                case "sento"->{l.use="sento";sento(l);}
+                case "post"->{l.use="post";post(l);}
+                case "clinic"->{l.use="clinic";clinic(l);}
+                case "supermarket"->{l.use="supermarket";supermarket(l);}
+                case "konbini"->{l.use="konbini";konbini(l);}
+                case "gas"->{l.use="gas";gasStation(l);}
+                default->{}
             }
-            if(l.zone.equals("konbini")){l.use="konbini";konbini(l);}
         }
-        // the public bath and the inn on chosen plots
-        Lot bath=pick(l->l.zone.equals("row")&&l.frontage()>=12&&l.cx()<-20&&l.cx()>-110&&l.cz()<-24&&l.cz()>-41);
-        if(bath!=null){bath.use="sento";sento(bath);}
-        Lot inn=pick(l->l.zone.equals("terrace")&&l.frontage()>=13&&l.y==Plan.TERRACE_Y[0]&&l.cx()>20);
-        if(inn!=null){inn.use="ryokan";ryokan(inn);}
-        arch(Plan.ST_N[0]-1,"ぼたんど銀座");arch(Plan.ST_S[3]+1,"ぼたんど銀座");
+        arch(Plan.ROW_N[0],"ぼたんど銀座");arch(Plan.ROW_N[1],"ぼたんど銀座");
         Town.log("shops: "+shops);
     }
     interface Test{boolean ok(Lot l);}
@@ -200,7 +196,7 @@ final class Shops {
         for(int dx=0;dx<=1;dx++)for(int y=8;y<=9;y++){f.set(dx,y,0,s(Blocks.SEA_LANTERN));f.set(dx,y,-1,s(Blocks.LIGHT_BLUE_STAINED_GLASS));f.set(dx,y,1,s(Blocks.LIGHT_BLUE_STAINED_GLASS));}
         t.street.vending(f.wx(door+4,b0-1),f.wz(door+4,b0-1),f.dir(Direction.WEST),2);
         f.set(door-1,1,b0-1,s(Blocks.CAULDRON));f.set(door-2,1,b0-1,s(Blocks.CAULDRON));
-        t.places.put("konbini",new int[]{f.wx(door,b0-2),Plan.COAST+1,f.wz(door,b0-2)});
+        t.places.put("konbini",new int[]{f.wx(door,b0-2),f.y0+1,f.wz(door,b0-2)});
         shops++;
     }
 
@@ -296,11 +292,101 @@ final class Shops {
         shops++;
     }
 
+    /**
+     * スーパー はまかぜ: a supermarket of one tall storey at the back of its plot, its glass front under a long canopy
+     * and the name along the top, its car park in front painted in bays with a few cars, a cart shelter and planted
+     * islands with a tree each, light poles.
+     */
+    void supermarket(Lot lot){
+        Frame f=Frame.of(c,lot);int W=f.W,D=f.D;
+        for(int x=0;x<W;x++)for(int z=0;z<D;z++){f.set(x,0,z,Pal.asphalt(f.wx(x,z),f.wz(x,z)));f.clear(x,1,z,x,10,z);}
+        int bx0=2,bx1=W-3,bz1=D-2,bz0=bz1-17;
+        Kit.shell(f,bx0,bz0,bx1,bz1,1,TB.STUCCO_WHITE,TB.CONCRETE,TB.TRIM_WHITE,s(Blocks.SMOOTH_STONE),TB.CONCRETE);
+        // one storey six high: raise the walls, glass along the front, the name band
+        for(int x=bx0;x<=bx1;x++)for(int z=bz0;z<=bz1;z++){
+            boolean edge=x==bx0||x==bx1||z==bz0||z==bz1;
+            for(int y=4;y<=6;y++)f.set(x,y,z,edge?(y==6?s(Blocks.LIGHT_BLUE_CONCRETE):TB.STUCCO_WHITE):s(Blocks.AIR));
+            if(!edge)f.set(x,6,z,(x+z)%4==0?s(Blocks.SEA_LANTERN):s(Blocks.SMOOTH_STONE));
+        }
+        for(int x=bx0+1;x<bx1;x++)for(int y=1;y<=3;y++)f.set(x,y,bz0,x%5==0?TB.CONCRETE:TB.WIN);
+        int door=(bx0+bx1)/2;
+        for(int x=door-1;x<=door+1;x++){f.set(x,1,bz0,s(Blocks.AIR));f.set(x,2,bz0,s(Blocks.AIR));}
+        for(int x=bx0;x<=bx1;x++){f.set(x,7,bz0,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));for(int z=bz0-3;z<bz0;z++)f.set(x,4,z,Canvas.slab(Blocks.SMOOTH_QUARTZ_SLAB,true));}
+        for(int x=bx0;x<=bx1;x+=8)for(int y=1;y<=3;y++)f.set(x,y,bz0-3,s(Blocks.QUARTZ_PILLAR));
+        for(int x=bx0+1;x<=bx1-1;x++)for(int z=bz0+1;z<bz1;z++)f.set(x,7,z,z==bz0+1||x==bx0+1||x==bx1-1||z==bz1-1?Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false):s(Blocks.AIR));
+        f.wallSign(door,5,bz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLUE,true,"","スーパー はまかぜ","SUPERMARKET");
+        f.wallSign(door-8,5,bz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.RED,true,"","本日特売","鮮魚・野菜");
+        // aisles of shelves and the fridges along the back
+        for(int z=bz0+4;z<bz1-3;z+=4)for(int x=bx0+3;x<bx1-3;x++)if(x%9!=0)f.set(x,1,z,s(Blocks.CHISELED_BOOKSHELF));
+        for(int x=bx0+1;x<bx1;x++){f.set(x,1,bz1-1,s(Blocks.LIGHT_BLUE_STAINED_GLASS));f.set(x,2,bz1-1,s(Blocks.LIGHT_BLUE_STAINED_GLASS));}
+        Kit.airCon(f,bx1+1,1,bz1-2,Direction.EAST);Kit.airCon(f,bx1+1,1,bz1-5,Direction.EAST);
+        // the car park: two double rows of bays, planted islands at the ends of the rows
+        int[] rows={6,22,38};
+        for(int r:rows){
+            for(int x=3;x<W-3;x+=3){
+                for(int dz=-5;dz<=5;dz++)if(dz!=0)f.set(x,0,r+dz,s(Blocks.WHITE_CONCRETE));
+                if(x+1<W-3&&rnd.nextInt(4)==0)Kit.car(f,x+1,r+(rnd.nextBoolean()?1:-4),rnd);
+            }
+            for(int x=3;x<W-3;x++)f.set(x,0,r,s(Blocks.WHITE_CONCRETE));
+            for(int side:new int[]{1,W-2}){
+                for(int dz=-4;dz<=4;dz++)f.set(side,0,r+dz,s(Blocks.GRASS_BLOCK));
+                t.nature.townTree(f.wx(side,r),f.y0+1,f.wz(side,r),5);
+            }
+        }
+        // the cart shelter by the door, light poles
+        for(int x=door+5;x<=door+8;x++){f.set(x,1,bz0-6,s(Blocks.IRON_BARS));f.set(x,3,bz0-6,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));}
+        for(int[] p:new int[][]{{W/3,14},{2*W/3,14},{W/3,30},{2*W/3,30},{W/3,46},{2*W/3,46}}){
+            if(p[1]>=bz0-4)continue;
+            for(int y=1;y<=8;y++)f.set(p[0],y,p[1],s(Blocks.ANDESITE_WALL));
+            f.set(p[0],9,p[1],s(Blocks.SEA_LANTERN));f.set(p[0],10,p[1],Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
+        }
+        t.street.vending(f.wx(bx0+2,bz0-1),f.wz(bx0+2,bz0-1),f.dir(Direction.EAST),3);
+        t.places.put("supermarket",new int[]{f.wx(door,bz0-6),f.y0+1,f.wz(door,bz0-6)});
+        shops++;
+    }
+
+    /**
+     * ぼたんど石油: a gas station on the coastal road, its wide flat canopy on four slim columns over two pump islands,
+     * lit from beneath, the small office behind with its glass front, the price sign standing at the corner.
+     */
+    void gasStation(Lot lot){
+        Frame f=Frame.of(c,lot);int W=f.W,D=f.D;
+        for(int x=0;x<W;x++)for(int z=0;z<D;z++){f.set(x,0,z,Pal.concrete(f.wx(x,z),f.wz(x,z)));f.clear(x,1,z,x,10,z);}
+        int cx0=3,cx1=W-4,cz0=2,cz1=11;
+        for(int x:new int[]{cx0+3,cx1-3})for(int z:new int[]{cz0+2,cz1-2})for(int y=1;y<=5;y++)f.set(x,y,z,s(Blocks.WHITE_CONCRETE));
+        for(int x=cx0;x<=cx1;x++)for(int z=cz0;z<=cz1;z++){
+            boolean edge=x==cx0||x==cx1||z==cz0||z==cz1;
+            f.set(x,6,z,edge?s(Blocks.RED_CONCRETE):(x+z)%3==0?s(Blocks.SEA_LANTERN):s(Blocks.SMOOTH_QUARTZ));
+            if(edge)f.set(x,7,z,s(Blocks.WHITE_CONCRETE));
+        }
+        f.wallSign((cx0+cx1)/2,6,cz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.RED,true,"","ぼたんど石油","SERVICE STATION");
+        // two pump islands across the canopy
+        for(int px:new int[]{cx0+7,cx1-7}){
+            for(int z=cz0+3;z<=cz1-3;z++)f.set(px,1,z,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
+            for(int z:new int[]{cz0+4,cz1-4}){f.set(px,1,z,s(Blocks.WHITE_CONCRETE));f.set(px,2,z,s(Blocks.LIGHT_GRAY_CONCRETE));f.set(px,3,z,Canvas.slab(Blocks.RED_NETHER_BRICK_SLAB,false));}
+        }
+        // the office at the back
+        int ox0=2,ox1=14,oz0=cz1+2,oz1=D-1;
+        if(oz1-oz0>=3){
+            Kit.shell(f,ox0,oz0,ox1,oz1,1,TB.STUCCO_WHITE,TB.CONCRETE,s(Blocks.RED_CONCRETE),s(Blocks.SMOOTH_STONE),TB.CONCRETE);
+            for(int x=ox0+1;x<ox1;x++)for(int y=1;y<=3;y++)f.set(x,y,oz0,TB.WIN);
+            f.set((ox0+ox1)/2,1,oz0,s(Blocks.AIR));f.set((ox0+ox1)/2,2,oz0,s(Blocks.AIR));
+            Kit.roof(f,ox0,oz0,ox1,oz1,4,Kit.FLAT,true,Kit.SLATE,TB.STUCCO_WHITE,s(Blocks.SMOOTH_STONE));
+            Kit.roomLight(f,(ox0+ox1)/2,0,(oz0+oz1)/2,false);
+        }
+        // the price sign at the street corner
+        for(int y=1;y<=6;y++)f.set(W-2,y,0,s(Blocks.ANDESITE_WALL));
+        for(int y=7;y<=9;y++){f.set(W-2,y,0,s(Blocks.WHITE_CONCRETE));f.set(W-3,y,0,s(Blocks.RED_CONCRETE));}
+        f.wallSign(W-2,8,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.RED,true,"レギュラー 168","ハイオク 179","軽油 148");
+        t.places.put("gas",new int[]{f.wx(W/2,6),f.y0+1,f.wz(W/2,6)});
+        shops++;
+    }
+
     /** An arch over the main street with the shopping street's name, lamps along its beam. */
     void arch(int z,String name){
-        int g=c.ground(Plan.MAIN_X0,z);
-        for(int x:new int[]{Plan.MAIN_X0-1,Plan.MAIN_X1+1}){int gg=c.ground(x,z);for(int y=gg+1;y<=g+7;y++)c.set(x,y,z,s(Blocks.POLISHED_ANDESITE));}
-        for(int x=Plan.MAIN_X0-1;x<=Plan.MAIN_X1+1;x++){c.set(x,g+8,z,s(Blocks.WHITE_CONCRETE));c.set(x,g+9,z,s(Blocks.LIGHT_BLUE_CONCRETE));if(Math.floorMod(x,3)==0)c.set(x,g+10,z,s(Blocks.SEA_LANTERN));}
+        int x0=Plan.MAIN_N.a0(),x1=Plan.MAIN_N.a1(),g=c.ground(x0,z);
+        for(int x:new int[]{x0-1,x1+1}){int gg=c.ground(x,z);for(int y=gg+1;y<=g+7;y++)c.set(x,y,z,s(Blocks.POLISHED_ANDESITE));}
+        for(int x=x0-1;x<=x1+1;x++){c.set(x,g+8,z,s(Blocks.WHITE_CONCRETE));c.set(x,g+9,z,s(Blocks.LIGHT_BLUE_CONCRETE));if(Math.floorMod(x,3)==0)c.set(x,g+10,z,s(Blocks.SEA_LANTERN));}
         for(Direction d:new Direction[]{Direction.NORTH,Direction.SOUTH}){
             c.wallSign(0,g+8,z+d.getOffsetZ(),Blocks.BIRCH_WALL_SIGN,d,DyeColor.BLUE,true,"",name,"BOTAND GINZA");
             c.wallSign(-3,g+8,z+d.getOffsetZ(),Blocks.BIRCH_WALL_SIGN,d,DyeColor.BLUE,true,"","商店街","");

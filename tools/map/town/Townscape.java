@@ -10,9 +10,9 @@ import java.util.*;
 /** Puts the town together, in the order the pieces depend on each other, and writes the map's definition. */
 final class Townscape {
     final Canvas c;final Terrain terrain;final Layout layout;final Random rnd;
-    final Roads roads;final Hill hill;final Nature nature;final Houses houses;final Street street;final Coast coast;
-    final Rail rail;final Harbor harbor;final Bridge bridge;final Ground ground;final Shrine shrine;final Shops shops;
-    final PhotoStreet photo;final Hillside hillside;
+    final Roads roads;final Nature nature;final Houses houses;final Street street;final Coast coast;
+    final Harbor harbor;final Bridge bridge;final Shrine shrine;final Shops shops;
+    final Plaza plaza;final Park park;final School school;final SeaLot lot;final Waterfront waterfront;
     /** Places the mod uses: merchants (seller, buyer) and the field supply spots. */
     final List<int[]> merchants=new ArrayList<>();final List<int[]> loot=new ArrayList<>();
     final Map<String,int[]> places=new LinkedHashMap<>();
@@ -20,9 +20,9 @@ final class Townscape {
     final List<float[]> wires=new ArrayList<>();
     Townscape(Canvas c,Terrain terrain,Layout layout,Random rnd){
         this.c=c;this.terrain=terrain;this.layout=layout;this.rnd=rnd;
-        roads=new Roads(this);hill=new Hill(this);nature=new Nature(this);houses=new Houses(this);street=new Street(this);coast=new Coast(this);
-        rail=new Rail(this);harbor=new Harbor(this);bridge=new Bridge(this);ground=new Ground(this);shrine=new Shrine(this);shops=new Shops(this);
-        photo=new PhotoStreet(this);hillside=new Hillside(this);
+        roads=new Roads(this);nature=new Nature(this);houses=new Houses(this);street=new Street(this);coast=new Coast(this);
+        harbor=new Harbor(this);bridge=new Bridge(this);shrine=new Shrine(this);shops=new Shops(this);
+        plaza=new Plaza(this);park=new Park(this);school=new School(this);lot=new SeaLot(this);waterfront=new Waterfront(this);
     }
     /** A wire from one point to another, hanging {@code sag} blocks below the straight line at its middle. */
     void wire(double x0,double y0,double z0,double x1,double y1,double z1,double sag){
@@ -30,79 +30,57 @@ final class Townscape {
     }
 
     void build(){
-        roads.plan();hill.plan(roads);
+        roads.plan();
         roads.lay();Town.log("streets laid: "+c.placed);
-        hill.build();Town.log("stairway and ramps: "+c.placed);
-        // the sea front and the line first (the shops and houses keep clear of them), then the plots
-        coast.build();harbor.build();ground.build();rail.build();bridge.build();shrine.build();
-        // the hillside after the lot (its stair climbs out of the lot's corner)
-        hillside.build();
-        assignUses();
+        // the sea front first, then the blocks of the town, the plots, the street furniture and the woods last
+        coast.build();harbor.build();lot.build();bridge.build();shrine.build();
+        plaza.build();park.build();school.build();waterfront.build();
         shops.build();
+        assignUses();
         Map<String,Integer> counts=new TreeMap<>();
         for(Lot l:layout.lots){
-            if(l.use.isEmpty()||l.use.contains(":")||Set.of("konbini","post","clinic","sento","ryokan").contains(l.use))continue;
-            houses.build(l);counts.merge(l.use,1,Integer::sum);
+            switch(l.zone){
+                case "house"->houses.build(l);
+                case "commons"->{l.use="commons";houses.commons(Frame.of(c,l));}
+                case "coop","ice","gear"->harbor.building(l);
+                default->{}
+            }
+            if(!l.use.isEmpty())counts.merge(l.use.contains(":")?"shop":l.use,1,Integer::sum);
         }
         Town.log("plots built: "+counts+", "+c.placed);
-        photo.build();
         street.build();
         details();
         nature.woods();Town.log("woods: "+c.placed);
         street.wireRuns();
     }
 
-    /** Everyday things along the streets: rubbish points, post boxes, mirrors at blind corners, a few bus stops. */
+    /** Everyday things along the streets: post boxes, bus stops. */
     void details(){
-        var r=new Random(rnd.nextLong());
-        for(int k=0;k<4;k++)for(int[] s:Plan.SIDE_STREETS){
-            int z=Plan.ST_N[k]-1;
-            if(r.nextInt(3)==0)street.rubbish(s[1]+1,z,Direction.SOUTH);
-            // a traffic mirror on the alley's west gutter where it meets the street, turned to the cars coming up it
-            // (2.48.0: the plots' walls now take the corner it stood on)
-            if(k>0&&r.nextInt(2)==0)street.mirror(s[0],Plan.ST_S[k]+2,Direction.SOUTH);
-        }
-        for(int x:new int[]{-160,-100,-20,60})street.postBox(x,Plan.ST_S[1]+1);
-        street.busStop(-45,Plan.PROM_Z0,Direction.NORTH,"ぼたんど海岸");
-        street.busStop(12,Plan.PROM_Z0,Direction.NORTH,"大橋入口");
-        street.busStop(-150,Plan.PROM_Z0,Direction.NORTH,"ぼたんど漁港");
+        street.postBox(Plan.WEST.a1()+2,Plan.MIDDLE.a1()+3);street.postBox(Plan.EAST.a0()-2,Plan.SOUTH.a0()-3);
+        street.busStop(14,Plan.NORTH.a1(),Direction.NORTH,"神社前");
+        street.busStop(Plan.WEST.a1(),Plan.SOUTH.a1()+6,Direction.WEST,"ぼたんど漁港");
+        street.busStop(Plan.EAST.a0(),Plan.MIDDLE.a0()-6,Direction.EAST,"ぼたんど小学校前");
     }
 
-    /** What each plot becomes, by where it lies. */
+    /** What each house plot becomes: old and new houses, now and then a block of flats, a garden or an empty plot. */
     void assignUses(){
         var r=new Random(rnd.nextLong());
+        String[] pool={"old","old","old","modern","modern","modern","modern","modern3","apartment","garden","old","modern"};
         for(Lot l:layout.lots){
-            String[] pool=switch(l.zone){
-                case "row","station-street"->new String[]{"old","old","old","modern","modern","modern","modern","modern3","apartment","apartment","parking","field","garden","vacant"};
-                case "terrace"->new String[]{"old","old","old","old","modern","modern","modern","modern3","apartment","field","field","garden","vacant","parking"};
-                case "terrace-back"->new String[]{"old","old","modern","modern","field","field","field","garden","vacant"};
-                case "strip"->new String[]{"garden","field"};
-                default->null;
-            };
-            if(pool==null)continue;
+            if(!l.zone.equals("house"))continue;
             String use=pool[r.nextInt(pool.length)];
             if(use.equals("apartment")&&l.frontage()<13)use="modern";
             l.use=use;
         }
     }
 
-    /** Where players appear: the station square, looking down the main street to the bridge. */
-    int[] spawn(){return new int[]{0,Plan.COAST+1,Plan.ST_S[0]+6,0};}
-
-    /** The two photos' views: where to stand and which way to look (x, z, yaw, pitch); y is the ground's. */
-    static final double[][] VIEWS={{Plan.PHOTO1_X,Plan.PHOTO1_Z,Plan.PHOTO1_YAW,Plan.PHOTO1_PITCH},{Plan.PHOTO2_X,Plan.PHOTO2_Z,Plan.PHOTO2_YAW,Plan.PHOTO2_PITCH}};
-    static final String[] VIEW_NAMES={"photo_street","photo_lot"};
-    /** A view's standing height: on top of the ground (or the half slab) under it. */
-    double viewY(double[] v){
-        int x=(int)Math.floor(v[0]),z=(int)Math.floor(v[1]),g=c.ground(x,z);
-        var s=c.get(x,g,z);
-        return s.getBlock() instanceof net.minecraft.block.SlabBlock&&s.get(net.minecraft.block.SlabBlock.TYPE)==net.minecraft.block.enums.SlabType.BOTTOM?g+0.5:g+1;
-    }
+    /** Where players appear: the middle of the square, looking south down the main street to the bridge. */
+    int[] spawn(){return new int[]{Plan.SPAWN_X,Plan.COAST+1,Plan.SPAWN_Z,0};}
 
     /**
      * The map's definition for the mod (data/botand/map/definition.json in the world's data pack: the spawn, the two
-     * merchants' places, the field supply spots, the named places, the photos' views, the wires, the far coast) and a teleport
-     * function per place and view for operators (/function botand:goto/bridge, /function botand:goto/photo_street).
+     * merchants' places, the field supply spots, the named places, the wires, the open sea's level) and a teleport
+     * function per place for operators (/function botand:goto/bridge).
      */
     void definition(Path pack)throws Exception{
         var loot=lootSpots();
@@ -118,8 +96,6 @@ final class Townscape {
         j.append("],\n  \"places\": {");
         int k=0;
         for(var e:places.entrySet()){int[] p=e.getValue();j.append(k++>0?",":"").append("\n    \"").append(e.getKey()).append("\": [").append(p[0]).append(", ").append(p[1]).append(", ").append(p[2]).append("]");}
-        j.append("\n  },\n  \"views\": {");
-        for(int i=0;i<VIEWS.length;i++){double[] v=VIEWS[i];j.append(i>0?",":"").append("\n    \"").append(VIEW_NAMES[i]).append("\": [").append(v[0]).append(", ").append(viewY(v)).append(", ").append(v[1]).append(", ").append(v[2]).append(", ").append(v[3]).append("]");}
         j.append("\n  },\n  \"wires\": [");
         for(int i=0;i<wires.size();i++){
             float[] w=wires.get(i);j.append(i>0?",":"").append(i%4==0?"\n    ":" ").append("[");
@@ -138,19 +114,22 @@ final class Townscape {
         var fn=pack.resolve("data/botand/functions/goto");Files.createDirectories(fn);
         for(var e:places.entrySet()){int[] p=e.getValue();Files.writeString(fn.resolve(e.getKey()+".mcfunction"),"tp @s "+p[0]+".5 "+p[1]+" "+p[2]+".5\n");}
         Files.writeString(fn.resolve("spawn.mcfunction"),"tp @s "+sp[0]+".5 "+sp[1]+" "+sp[2]+".5 "+sp[3]+" 0\n");
-        // the photos' spots also set the morning the photos were taken in (a low sun from the east-south-east)
-        for(int i=0;i<VIEWS.length;i++){double[] v=VIEWS[i];Files.writeString(fn.resolve(VIEW_NAMES[i]+".mcfunction"),String.format(Locale.ROOT,"time set %d%ntp @s %.2f %.2f %.2f %.1f %.1f%n",Plan.PHOTO_TIME,v[0],viewY(v),v[1],v[2],v[3]));}
         Town.log("definition: "+loot.size()+" supply spots, "+places.size()+" places, "+wires.size()+" wires");
     }
     /** The field supply spots: open ground in public places all over the town, checked to be clear. */
     List<int[]> lootSpots(){
-        int[][] want={{-160,66},{-120,60},{-50,62},{-80,30},{30,70},{60,100},{40,112},{-6,146},{10,-170},{50,38},
-            {-100,-20},{60,Plan.terraceStreetZ0(1,60)-1},{-120,Plan.terraceStreetZ0(0,-120)-1},{-100,-44},{102,-10},{-170,21},{96,49},{-180,49}};
+        int[][] want={{-30,-20},{30,-20},{-30,20},{30,20},{0,-46},                     // the square
+            {-100,-30},{-100,15},{-160,0},{-125,-45},                                  // the park
+            {95,-15},{150,-15},{95,20},{150,20},                                       // the sports ground
+            {60,120},{120,120},{90,140},{45,140},                                      // the battle ground by the sea
+            {-120,104},{-160,100},{-36,110},{-30,70},{30,78},                          // the harbour, the beach, the pines, the sea station
+            {40,-90},{40,-75},{-120,-100},{120,-100},                                  // the supermarket's car park, the fields
+            {0,-184},{0,166},{-64,-100},{64,10},{-179,-40},{179,40}};                  // the shrine, the island, the avenues, the ring roads
         List<int[]> out=new ArrayList<>();
         for(int[] w:want){
             // the open ground at the spot, or the nearest clear ground round it
             int[] found=null;
-            search:for(int r=0;r<=4;r++)for(int dx=-r;dx<=r;dx++)for(int dz=-r;dz<=r;dz++){
+            search:for(int r=0;r<=5;r++)for(int dx=-r;dx<=r;dx++)for(int dz=-r;dz<=r;dz++){
                 if(Math.max(Math.abs(dx),Math.abs(dz))!=r)continue;
                 int x=w[0]+dx,z=w[1]+dz,y=c.ground(x,z)+1;
                 if(!c.air(x,y,z)||!c.air(x,y+1,z)||!c.air(x,y+2,z)||c.water(x,y-1,z)||c.open(x,y-1,z))continue;

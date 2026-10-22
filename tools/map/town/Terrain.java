@@ -2,15 +2,17 @@ package dev.sangwoo.botandtown;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import java.util.ArrayDeque;
 import java.util.Random;
 
 /**
- * The ground. Natural land (the hill rising north behind the town to a wooded ridge, a small headland in the west,
- * the steep east hill running on south-east as a headland, the island, the islet) shelves off into the sea, and flat platforms
- * are cut into it for the town:
- * where a platform is cut into higher ground, or one platform stands above the next, the step is a stone retaining
- * wall; where it stands above natural ground, the fill slopes away as a grassy bank. Levels are kept in half blocks
- * (2y, plus one where a slab tops the column) so streets can slope evenly between the rows of houses.
+ * The ground (map v2.0). The town stands on one flat platform (y 64) from the foot of the hill to the sea wall, with the
+ * harbour's quay and the open lot by the sea reaching out into the water at the same level; past the ring roads the
+ * land falls in a short grassy bank to rocks and the sea. North of the town a wooded hill rises to the shrine's square
+ * (a platform cut into it) and falls behind it to the sea in cliffs; the island beyond the bridge is a green hill of
+ * its own. Where a platform is cut into higher ground the step is a stone retaining wall; where it stands above the
+ * natural ground the fill slopes away as a grassy bank. Levels are kept in half blocks (2y, plus one where a slab
+ * tops the column).
  */
 final class Terrain {
     static final byte SEA=1,LAND=2,BEACH=4;
@@ -27,86 +29,44 @@ final class Terrain {
     }
     double noise2(double x,double z){return (Math.sin(x/29+ph[6])*Math.cos(z/31+ph[7])+0.5*Math.sin(x/13.1-z/15.7+ph[8])+0.25*Math.cos(x/6.3+z/7.1+ph[9]))/1.75;}
 
-    /** The shore of the mainland: land at z up to this (the headlands reach further south). */
-    static double shoreZ(int x){
-        if(x<-178){
-            // the west headland's cape, a rounded point broken by coves
-            double t=Math.min(1,(-178-x)/22.0);
-            return 57+30*Math.pow(Math.sin(Math.PI*Math.min(1,t*0.8+0.2)),0.65)+4*Math.sin(x/5.0)+2*Math.sin(x/2.7+1);
-        }
-        // the east hill comes down to the sea just past the lot's sea wall and runs on south-east as a headland
-        if(x>=Plan.EAST_FOOT_X)return 152+Math.min(40,(x-Plan.EAST_FOOT_X)*1.1)+4*Math.sin(x/9.0)+2.5*Math.sin(x/4.1+2);
-        return Plan.SEAWARD_Z-1;
-    }
-    /** The plan's edge (west, north and east): natural ground falls away into the sea near it, the coast wandering. */
+    /** How far in from the plan's west, east and north edges a point lies (0 at the sea, 1 well inland), the coast wandering. */
     double edge(int x,int z){
-        double d=Math.min(Math.min(x-Plan.X0,Plan.X0+Plan.W-1-x),z-Plan.Z0);
-        d+=8*noise2(x*0.7+300,z*0.7-200)+3*noise(x*1.9,z*1.9);
-        return Math.max(0,Math.min(1,(d-2)/12.0));
+        double d=Math.min(Math.min(x-Plan.X0,Plan.X0+Plan.W-1-x),z-Plan.Z0+2);
+        d+=3*noise2(x*0.9+300,z*0.9-200)+1.5*noise(x*2.3,z*2.3);
+        return Math.max(0,Math.min(1,(d-3)/10.0));
     }
-    /** The natural height of the mainland (before platforms), or the island's or the islet's. */
+    /** The natural height of the land (before platforms): the town's level, the hill to the north, the island. */
     double natural(int x,int z){
-        // the islet: a small steep hill of rock and pines out at sea, seen at the end of the photo street
-        double q=Plan.islet(x,z);
-        if(q>0)return 61+31*Math.pow(q,0.7)+1.5*noise2(x*2.1,z*2.1)*Math.min(1,q*3);
-        // the island: a steep green hill standing out of the sea beyond the bridge
-        if(z>Plan.BRIDGE_Z1-8&&Math.abs(x-Plan.ISLAND_X)<Plan.ISLAND_RX+12){
+        // the island beyond the bridge: a green hill standing out of the sea
+        if(z>Plan.BRIDGE_Z1-12&&Math.abs(x-Plan.ISLAND_X)<Plan.ISLAND_RX+14){
             double k=Plan.island(x,z);
-            if(k>0)return 61+42*Math.pow(k,0.85)+2*noise2(x*1.7,z*1.7)*Math.min(1,k*3);
-            if(z>Plan.SEAWARD_Z+20)return 0;
+            if(k>0)return 61+18*Math.pow(k,0.9)+2*noise2(x*1.7,z*1.7)*Math.min(1,k*3);
         }
-        double t=-z,h;
-        if(t<=60)h=64;
-        else if(t<=86)h=64+(t-60)*0.31;
-        else if(t<=146)h=72+(t-86)*0.2;
-        else if(t<=166)h=84+(t-146)*0.45;
-        else h=93+(t-166)*0.9;
-        double amp=Math.max(0,Math.min(1,(t-70)/40))*4+(t>160?6:0);
-        h+=amp*noise(x,z);
-        // the west headland, and the steep east hill rising from the lot and the town's east end
-        if(x<-178)h=Math.max(h,64+Math.min(40,(-178-x)*1.8)+4*noise2(x,z));
-        if(x>=Plan.EAST_FOOT_X)h=Math.max(h,64+Math.min(33,(x-Plan.EAST_FOOT_X+1)*1.05)+5*noise2(x+90,z));
-        // the headlands fall to the sea as cliffs
-        double shore=shoreZ(x);
-        if(x<-178||x>=Plan.EAST_FOOT_X)h=Math.min(h,62+(shore-z)*2.2);
-        // and everything falls into the sea toward the plan's edge
+        // south of the sea wall the sea (the quay, the lot and the beach are laid on it)
+        if(z>Plan.PARAPET_Z)return 0;
+        double h=Plan.COAST;
+        int t=Plan.TOWN_Z0-z;
+        if(t>0){
+            // the hill: a gentle rise from the street, its face up to the shrine's level, a ridge behind
+            double u=Math.min(1,Math.max(0,(t-2)/22.0)),face=u*u*(3-2*u);
+            h=Plan.COAST+0.4*Math.min(t,2)+18*face+Math.max(0,t-24)*0.45;
+            h+=Math.min(1,t/10.0)*(3*noise(x,z)+1.5*noise2(x*1.3,z*1.3));
+        }
+        // the shores: past the ring roads and behind the hill the land falls to rocks and the sea
         double e=edge(x,z);
         return Plan.FLOOR+(h-Plan.FLOOR)*(e*e*(3-2*e));
     }
-    /** How deep the sea is here: shelving off the shore, a dredged basin in the harbour. */
-    int seaFloor(int x,int z,double nat){
-        if(x>=Plan.HARBOR_X0&&x<=Plan.HARBOR_X1+8&&z>Plan.QUAY_Z1&&z<=118)return 54+(int)Math.round(noise2(x*3,z*3));
-        double k=Plan.island(x,z),q=Plan.islet(x,z);
-        if((k>0||q>0)&&nat>0)return (int)Math.min(61,Math.round(nat));
-        double d=z-shoreZ(x);
-        if(x>=Plan.BEACH_X0-6&&x<=Plan.BEACH_X1+6&&z<100)d=Math.max(0,d-6)*0.6;
-        double floor=61-d*0.32+0.8*noise(x*2,z*2);
-        if(k>-0.6)floor=Math.max(floor,52+(k+0.6)*14);
-        if(q>-0.5)floor=Math.max(floor,53+(q+0.5)*14);
-        return (int)Math.round(Math.max(Plan.FLOOR,Math.min(61,floor)));
-    }
     /** The beach: dry sand at the water's level under the sea wall, shelving into the shallows. */
     static int beach(int z){int d=z-Plan.SEAWARD_Z;return d<10?62:d<14?61:d<18?60:d<22?59:-1;}
+    static boolean beachX(int x){return x>=Plan.BEACH_X0&&x<=Plan.BEACH_X1;}
 
     /** The platform level of a column, in half blocks, or NONE. */
     int platformAt(int x,int z){
         int own=layout.level[Canvas.idx(x,z)];if(own!=NONE)return own;
         if(x>=Plan.SHRINE_X0&&x<=Plan.SHRINE_X1&&z<=Plan.SHRINE_Z0&&z>=Plan.SHRINE_Z1)return 2*Plan.SHRINE_Y;
-        int t=Plan.terrace(x,z);if(t>=0)return 2*Plan.TERRACE_Y[t];
-        if(x>=Plan.TOWN_X0&&x<=Plan.TOWN_X1&&z>Plan.TERRACE_Z0[0]+Plan.bend(x)&&z<=Plan.PARAPET_Z){
-            if(z>Plan.ST_S[0])return 2*Plan.COAST;
-            if(Plan.mainStreet(x)||Plan.photoStreet(x)||Plan.sideStreet(x)!=null)return Plan.slopeHalf(z);
-            int k=Plan.street(z);if(k>=0)return 2*Plan.ST_Y[k];
-            int r=Plan.row(z);if(r>=0)return 2*Plan.ROWS[r][2];
-            return z<Plan.ST_N[3]?2*Plan.ST_Y[3]:2*Plan.COAST;
-        }
+        if(x>=Plan.TOWN_X0&&x<=Plan.TOWN_X1&&z>=Plan.TOWN_Z0&&z<=Plan.PARAPET_Z)return 2*Plan.COAST;
         if(x>=Plan.HARBOR_X0&&x<=Plan.HARBOR_X1&&z>=Plan.SEAWARD_Z&&z<=Plan.QUAY_Z1)return 2*Plan.COAST;
-        if(x>=Plan.LOT_X0&&x<=Plan.LOT_X1&&z>=Plan.LOT_Z0&&z<=Plan.LOT_Z1)return 2*Plan.COAST;
-        if(Plan.in(Plan.BACK_E,x,z)||Plan.in(Plan.BACK_W,x,z))return 2*Plan.BACK_Y;
-        // the railway, the coastal road and the promenade go on past the town both ways, to the tunnels
-        if(z>=Plan.RAIL_Z0&&z<=Plan.PARAPET_Z&&x>=Plan.TUNNEL_W&&x<=Plan.TUNNEL_E)return 2*Plan.COAST;
-        // the little terraces of houses up the east hill's face
-        int hill=Hillside.level(x,z);if(hill!=NONE)return hill;
+        if(x>=Plan.LOT_X0&&x<=Plan.LOT_X1&&z>=Plan.SEAWARD_Z&&z<=Plan.LOT_Z1)return 2*Plan.COAST;
         // the island's square where the bridge lands
         if(z>=Plan.BRIDGE_Z1-1&&z<=Plan.BRIDGE_Z1+12&&Math.abs(x)<=14)return 2*66;
         return NONE;
@@ -118,11 +78,23 @@ final class Terrain {
             int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D;
             int p=platformAt(x,z);plat[i]=p;
             nat[i]=natural(x,z);
-            boolean beach=x>=Plan.BEACH_X0&&x<=Plan.BEACH_X1&&z>=Plan.SEAWARD_Z&&beach(z)>=0&&p==NONE;
-            boolean coast=z>shoreZ(x)&&Plan.island(x,z)<=0&&Plan.islet(x,z)<=0;
-            boolean sea=p==NONE&&!beach&&(coast||nat[i]<62.5);
+            boolean beach=beachX(x)&&z>=Plan.SEAWARD_Z&&beach(z)>=0&&p==NONE;
+            boolean sea=p==NONE&&!beach&&nat[i]<62.5;
             kind[i]=beach?BEACH:sea?SEA:LAND;
-            F[i]=p!=NONE?p>>1:beach?beach(z):sea?seaFloor(x,z,nat[i]):(int)Math.round(nat[i]);
+            F[i]=p!=NONE?p>>1:beach?beach(z):(int)Math.round(nat[i]);
+        }
+        // the sea floor: shelving off every shore (a third of a block down per block out), a dredged basin in the harbour,
+        // the shallows off the beach
+        int[] dist=shoreDistance();
+        for(int i=0;i<n;i++){
+            if(kind[i]!=SEA)continue;
+            int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D;
+            double d=dist[i];
+            if(x>=Plan.BEACH_X0-6&&x<=Plan.BEACH_X1+6&&z<Plan.SEAWARD_Z+40)d=Math.max(0,d-6)*0.6;
+            double floor=61-d*0.33+0.8*noise(x*2,z*2);
+            if(nat[i]>0&&Plan.island(x,z)>0)floor=Math.max(floor,nat[i]);
+            if(x>=Plan.X0+4&&x<=-66&&z>Plan.QUAY_Z1&&z<=166)floor=Math.min(floor,54+noise2(x*3,z*3));
+            F[i]=(int)Math.round(Math.max(Plan.FLOOR,Math.min(61,floor)));
         }
         // banks: where a platform stands above the natural ground, the fill slopes away one block per block
         int[] E=new int[n];
@@ -140,9 +112,7 @@ final class Terrain {
             int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D,top=F[i];
             c.ground(x,z,top);
             if(kind[i]==SEA){
-                int floor=top;
-                c.ground(x,z,floor);
-                for(int y=Canvas.Y0;y<=floor;y++)c.set(x,y,z,y==floor&&rnd.nextInt(5)==0?Blocks.GRAVEL.getDefaultState():Blocks.SAND.getDefaultState());
+                for(int y=Canvas.Y0;y<=top;y++)c.set(x,y,z,y==top&&rnd.nextInt(5)==0?Blocks.GRAVEL.getDefaultState():Blocks.SAND.getDefaultState());
                 continue;
             }
             int low=lowestNeighbour(F,i);
@@ -155,8 +125,20 @@ final class Terrain {
                 else s=Blocks.STONE.getDefaultState();
                 c.set(x,y,z,s);
             }
-            // above the beach's wet sand the sea stays; the half block on top of sloping streets is laid by the streets
         }
+    }
+    /** How far each sea column lies from the nearest land, in blocks (4-way steps), up to 60. */
+    private int[] shoreDistance(){
+        int n=Plan.W*Plan.D;int[] d=new int[n];
+        ArrayDeque<Integer> q=new ArrayDeque<>();
+        for(int i=0;i<n;i++){if(kind[i]!=SEA){d[i]=0;q.add(i);}else d[i]=60;}
+        while(!q.isEmpty()){
+            int i=q.poll(),x=i/Plan.D,z=i%Plan.D;
+            if(d[i]>=60)continue;
+            int[] nb={x>0?i-Plan.D:-1,x<Plan.W-1?i+Plan.D:-1,z>0?i-1:-1,z<Plan.D-1?i+1:-1};
+            for(int j:nb)if(j>=0&&d[j]>d[i]+1){d[j]=d[i]+1;q.add(j);}
+        }
+        return d;
     }
     private int lowestNeighbour(int[] F,int i){
         int x=i/Plan.D,z=i%Plan.D,low=F[i];
@@ -183,7 +165,6 @@ final class Terrain {
         if(kind[i]==BEACH)return Blocks.SAND.getDefaultState();
         // cliffs and steep hillsides show their rock, the shore its sand and stones
         if(plat[i]==NONE&&steep(F,i,top)){
-            // the foot of a sea cliff is bare rock; higher up grass and moss take hold on half the ledges, and trees on some
             double g=Pal.hash(x,5,z),green=top<Plan.SEA+8?0.10:0.45;
             if(g<green)return Blocks.GRASS_BLOCK.getDefaultState();
             if(g<green+0.06)return Blocks.MOSS_BLOCK.getDefaultState();
@@ -202,8 +183,8 @@ final class Terrain {
         return d;
     }
     /**
-     * Bare rock of the hillsides, where a slope shows its side: beds of stone, andesite and tuff a few blocks thick
-     * that wander up and down across the face, broken and grown over in places.
+     * Bare rock of the cliffs and the shore: beds of stone, andesite and tuff a few blocks thick that wander up and
+     * down across the face, broken and grown over in places.
      */
     BlockState rock(int x,int y,int z){
         double h=Pal.hash(x,y,z);

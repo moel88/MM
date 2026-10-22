@@ -4,139 +4,117 @@ import net.minecraft.util.math.Direction;
 import java.util.*;
 
 /**
- * Cuts the town into plots before the ground is shaped: every row of the low town between its alleys, the shop
- * plots along the sloping main street and the house plots along the photo street (each levelled to the sidewalk at
- * its door), the plots on both sides of each terrace street, and the sites kept for the station and the convenience
- * store. Plots facing the main street get
- * their own ground level, which the terrain then cuts or fills to.
+ * Cuts the town's blocks into plots (map v2.0): the houses round the edges of the two residential blocks north of the
+ * park and the school, each plot well apart from the next with the common fields inside; the shops along both sides
+ * of the shopping street with a passage every few shops, the public bath, the post office and the clinic behind them,
+ * the supermarket and its car park; the convenience store, the gas station and two rows of houses by the sea in the
+ * south-east; the harbour's buildings and a row of old houses in the south-west. The town is flat, so every plot
+ * stands at the town's level.
  */
 final class Layout {
     final List<Lot> lots=new ArrayList<>();
-    /** Ground levels set by plots, in half blocks, or {@link Terrain#NONE}. */
+    /** Ground levels set by plots, in half blocks, or {@link Terrain#NONE} (none since v2.0: the town is one level). */
     final int[] level=new int[Plan.W*Plan.D];
     private final Random rnd;
-    /** How deep the shop plots along the main street are. */
-    static final int SHOP_D=13;
-    /** How deep the plots along the photo street are. */
-    static final int PHOTO_D=14;
-    /** The north-south corridors of the low town (alleys, the photo street and the main street), west to east. */
-    static final int[][] CORRIDORS;
-    static{
-        List<int[]> l=new ArrayList<>(List.of(Plan.SIDE_STREETS));
-        l.add(new int[]{Plan.MAIN_X0,Plan.MAIN_X1});l.add(new int[]{Plan.PHOTO_X0,Plan.PHOTO_X1});
-        l.sort(Comparator.comparingInt(a->a[0]));
-        CORRIDORS=l.toArray(new int[0][]);
-    }
+    static final int Y=Plan.COAST;
+    /** How deep the house plots are, and how deep the shops along the main street. */
+    static final int HOUSE_D=14,SHOP_D=14;
     Layout(Random rnd){this.rnd=rnd;Arrays.fill(level,Terrain.NONE);}
 
     void plan(){
-        lowTown();
-        terraces();
+        residential(Plan.COL_W,Plan.ROW_N);
+        residential(Plan.COL_E,Plan.ROW_N);
+        shoppingStreet();
+        southEast();
+        harbourRow();
         Town.log("plots: "+lots.size());
     }
 
-    /** The blocks of x between the corridors (west end to east end of the low town). */
-    static List<int[]> xBlocks(){
-        List<int[]> out=new ArrayList<>();
-        int x=Plan.TOWN_X0;
-        for(int[] c:CORRIDORS){if(c[0]-1>=x)out.add(new int[]{x,c[0]-1});x=c[1]+1;}
-        if(x<=Plan.TOWN_X1)out.add(new int[]{x,Plan.TOWN_X1});
-        return out;
-    }
-
-    private void lowTown(){
-        for(int r=0;r<Plan.ROWS.length;r++){
-            int zN=Plan.ROWS[r][0],zS=Plan.ROWS[r][1],y=Plan.ROWS[r][2];
-            Direction front=Plan.ROWS[r][3]==1?Direction.SOUTH:Direction.NORTH;
-            for(int[] b:xBlocks()){
-                int xa=b[0],xb=b[1];
-                if(xb-xa+1<9){lots.add(new Lot(xa,zN,xb,zS,y,front,"strip"));continue;}
-                // the station's block, south of the station street east of the main street
-                if(r==0&&xa==Plan.MAIN_X1+1){lots.add(new Lot(xa,zN,xb,zS,y,front,"station"));continue;}
-                // shop plots along the main street, levelled to the sidewalk at their doors
-                if(xb==Plan.MAIN_X0-1){shopStrip(xb-SHOP_D+1,xb,zN,zS,Direction.EAST,"main");xb-=SHOP_D;}
-                if(xa==Plan.MAIN_X1+1){shopStrip(xa,xa+SHOP_D-1,zN,zS,Direction.WEST,"main");xa+=SHOP_D;}
-                // houses facing the photo street, behind their walls and gates
-                if(xb==Plan.PHOTO_X0-1){photoStrip(xb-PHOTO_D+1,xb,zN,zS,Direction.EAST,r);xb-=PHOTO_D;}
-                if(xa==Plan.PHOTO_X1+1){photoStrip(xa,xa+PHOTO_D-1,zN,zS,Direction.WEST,r);xa+=PHOTO_D;}
-                if(xb-xa+1<9){if(xb>=xa)lots.add(new Lot(xa,zN,xb,zS,y,front,"strip"));continue;}
-                // the convenience store, on the station street just east of the main street
-                if(r==1&&b[0]==Plan.MAIN_X1+1){lots.add(new Lot(xa,zN,xb,zS,y,front,"konbini"));continue;}
-                String zone=r<=1&&xa>=-40&&xb<=60?"station-street":"row";
-                cut(xa,xb,9,14,(x0,x1)->lots.add(new Lot(x0,zN,x1,zS,y,front,zone)));
-            }
-        }
-    }
-    /** Plots along a sloping street, each levelled to the sidewalk at its door. */
-    private void shopStrip(int x0,int x1,int zN,int zS,Direction front,String zone){
-        int z=zN;
-        while(z<=zS){
-            int w=Math.min(zS-z+1,8+rnd.nextInt(4));
-            if(zS-(z+w-1)<7)w=zS-z+1;
-            levelled(x0,x1,z,z+w-1,front,zone);
-            z+=w;
-        }
-    }
-    private void levelled(int x0,int x1,int z0,int z1,Direction front,String zone){
-        int zc=z0+(z1-z0+1)/2,lv=Plan.slopeHalf(zc)+1,y=(lv+1)>>1;
-        lots.add(new Lot(x0,z0,x1,z1,y,front,zone));
-        for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++)level[Canvas.idx(x,z)]=2*y;
-    }
     /**
-     * The plots in front of photo 1's camera, cut to the photo's own houses across both rows between S4 and S3:
-     * east side the gate house round the camera and the Yamada house after it, west side the house behind the long
-     * fence, the corner with the stone pillar and the vending machine, and the next house.
+     * A residential block: houses along the streets on all four sides, their plots apart from each other by a strip of
+     * lawn (open to walk through), and the block's middle left as fields.
      */
-    static final int[][] PHOTO_EAST={{-80,-75},{-74,-59},{-58,-47}},PHOTO_WEST={{-80,-64},{-63,-56},{-55,-47}};
-    private void photoStrip(int x0,int x1,int zN,int zS,Direction front,int r){
-        if(r==4)return;
-        if(r==5){for(int[] p:front==Direction.WEST?PHOTO_EAST:PHOTO_WEST)levelled(x0,x1,p[0],p[1],front,"photo");return;}
-        shopStrip(x0,x1,zN,zS,front,"photo");
+    private void residential(int[] col,int[] row){
+        int x0=col[0],x1=col[1],z0=row[0],z1=row[1];
+        houses(x0+2,x1-2,z0,z0+HOUSE_D-1,Direction.NORTH);
+        houses(x0+2,x1-2,z1-HOUSE_D+1,z1,Direction.SOUTH);
+        // the east and west sides between the corners
+        int a=z0+HOUSE_D+6,b=z1-HOUSE_D-6;
+        housesAlongZ(x0,x0+HOUSE_D-1,a,b,Direction.WEST);
+        housesAlongZ(x1-HOUSE_D+1,x1,a,b,Direction.EAST);
+        lots.add(new Lot(x0+HOUSE_D+6,a,x1-HOUSE_D-6,b,Y,Direction.NORTH,"commons"));
     }
-    interface Cut{void lot(int a,int b);}
-    /** Cuts [a..b] into pieces min..max long (the last takes what is left, or joins the one before). */
-    void cut(int a,int b,int min,int max,Cut out){
-        int x=a;
-        while(x<=b){
-            int w=min+rnd.nextInt(max-min+1);
-            if(b-(x+w-1)<min)w=b-x+1;
-            out.lot(x,x+w-1);x+=w;
+    /** House plots facing north or south along x0..x1, 12..16 wide, with 6..8 blocks of open lawn between them. */
+    private void houses(int x0,int x1,int z0,int z1,Direction front){
+        int x=x0;
+        while(x<=x1){
+            int w=12+rnd.nextInt(5);
+            if(x1-(x+w-1)<12)w=x1-x+1;
+            if(w>18){int half=(w-6)/2;lots.add(new Lot(x,z0,x+half-1,z1,Y,front,"house"));x+=half+6;w=x1-x+1;}
+            lots.add(new Lot(x,z0,x+w-1,z1,Y,front,"house"));
+            x+=w+6+rnd.nextInt(3);
+        }
+    }
+    private void housesAlongZ(int x0,int x1,int z0,int z1,Direction front){
+        int z=z0;
+        while(z<=z1){
+            int w=12+rnd.nextInt(4);
+            if(z1-(z+w-1)<12)w=z1-z+1;
+            if(w>=12)lots.add(new Lot(x0,z,x1,z+w-1,Y,front,"house"));
+            z+=w+7;
         }
     }
 
-    private void terraces(){
-        for(int i=0;i<Plan.TERRACE_Y.length;i++){
-            int y=Plan.TERRACE_Y[i];
-            // stretches of the terrace clear of the stairway and of the ramps cut into its rows
-            List<int[]> spans=new ArrayList<>();spans.add(new int[]{Plan.TERRACE_XW[i]+3,Plan.TERRACE_XE[i]-3});
-            spans=minus(spans,Plan.STAIR_X0-3,Plan.STAIR_X1+3);
-            List<int[]> south=new ArrayList<>(spans),north=new ArrayList<>(spans);
-            for(int[] r:Plan.RAMPS){
-                if(r[3]==i)south=minus(south,r[0]-2,r[1]+2);
-                if(r[2]==i)north=minus(north,r[0]-2,r[1]+2);
-            }
-            final int ti=i;
-            for(int[] s:south)cut(s[0],s[1],10,15,(x0,x1)->{
-                int zN=Integer.MIN_VALUE,zS=Integer.MAX_VALUE;
-                for(int x=x0;x<=x1;x++){zN=Math.max(zN,Plan.terraceStreetZ0(ti,x)+1);zS=Math.min(zS,Plan.TERRACE_Z0[ti]+Plan.bend(x)-1);}
-                if(zS-zN>=7)lots.add(new Lot(x0,zN,x1,zS,y,Direction.NORTH,"terrace"));
-            });
-            for(int[] s:north)cut(s[0],s[1],8,13,(x0,x1)->{
-                int zN=Integer.MIN_VALUE,zS=Integer.MAX_VALUE;
-                for(int x=x0;x<=x1;x++){zN=Math.max(zN,Plan.TERRACE_Z1[ti]+Plan.bend(x)+1);zS=Math.min(zS,Plan.terraceStreetZ1(ti,x)-1);}
-                if(zS-zN>=6)lots.add(new Lot(x0,zN,x1,zS,y,Direction.SOUTH,"terrace-back"));
-            });
+    /**
+     * The shopping street: shops shoulder to shoulder along both sides of the main street in groups of two or three,
+     * a passage five blocks wide between the groups; behind the west side the public bath (on West Avenue), the post
+     * office (on North Street) and the clinic (on Middle Street); behind the east side the supermarket with its car
+     * park in front of it.
+     */
+    private void shoppingStreet(){
+        int z0=Plan.ROW_N[0]+2,z1=Plan.ROW_N[1]-2;
+        shops(-6-SHOP_D,-7,z0,z1,Direction.EAST);
+        shops(7,6+SHOP_D,z0,z1,Direction.WEST);
+        lots.add(new Lot(-58,-116,-40,-96,Y,Direction.WEST,"sento"));
+        lots.add(new Lot(-40,Plan.ROW_N[0],-25,Plan.ROW_N[0]+12,Y,Direction.NORTH,"post"));
+        lots.add(new Lot(-40,Plan.ROW_N[1]-12,-25,Plan.ROW_N[1],Y,Direction.SOUTH,"clinic"));
+        lots.add(new Lot(23,Plan.ROW_N[0],Plan.COL_C[1],Plan.ROW_N[1],Y,Direction.SOUTH,"supermarket"));
+    }
+    private void shops(int x0,int x1,int z0,int z1,Direction front){
+        int z=z0,inGroup=0,group=2+rnd.nextInt(2);
+        while(z<=z1){
+            int w=9+rnd.nextInt(4);
+            if(z1-(z+w-1)<9)w=z1-z+1;
+            if(w<9)break;
+            lots.add(new Lot(x0,z,x1,z+w-1,Y,front,"shop"));
+            z+=w;
+            if(++inGroup==group){z+=5;inGroup=0;group=2+rnd.nextInt(2);}
         }
     }
-    /** Intervals minus [a..b]. */
-    static List<int[]> minus(List<int[]> in,int a,int b){
-        List<int[]> out=new ArrayList<>();
-        for(int[] s:in){
-            if(b<s[0]||a>s[1]){out.add(s);continue;}
-            if(a-1>=s[0])out.add(new int[]{s[0],a-1});
-            if(b+1<=s[1])out.add(new int[]{b+1,s[1]});
-        }
-        return out;
+
+    /**
+     * The south-east: the convenience store on South Street at East Avenue, the gas station on the coastal road below
+     * it, houses facing South Street and the coastal road east of them, a strip of lawn between.
+     */
+    private void southEast(){
+        lots.add(new Lot(Plan.COL_E[0],Plan.ROW_S[0],Plan.COL_E[0]+21,Plan.ROW_S[0]+17,Y,Direction.NORTH,"konbini"));
+        lots.add(new Lot(Plan.COL_E[0],Plan.ROW_S[1]-17,Plan.COL_E[0]+27,Plan.ROW_S[1],Y,Direction.SOUTH,"gas"));
+        houses(Plan.COL_E[0]+30,Plan.COL_E[1]-2,Plan.ROW_S[0],Plan.ROW_S[0]+12,Direction.NORTH);
+        houses(Plan.COL_E[0]+34,Plan.COL_E[1]-2,Plan.ROW_S[1]-12,Plan.ROW_S[1],Direction.SOUTH);
     }
+
+    /**
+     * The harbour's side of the town, south-west: the fishing co-op, the ice plant and two gear sheds facing the
+     * coastal road and the quay across it, a row of old houses facing South Street.
+     */
+    private void harbourRow(){
+        int z1=Plan.ROW_S[1];
+        lots.add(new Lot(-170,z1-12,-154,z1,Y,Direction.SOUTH,"gear"));
+        lots.add(new Lot(-144,z1-13,-122,z1,Y,Direction.SOUTH,"ice"));
+        lots.add(new Lot(-112,z1-13,-92,z1,Y,Direction.SOUTH,"coop"));
+        lots.add(new Lot(-86,z1-11,-73,z1,Y,Direction.SOUTH,"gear"));
+        houses(Plan.COL_W[0]+2,Plan.COL_W[1]-2,Plan.ROW_S[0],Plan.ROW_S[0]+12,Direction.NORTH);
+    }
+
     Lot at(int x,int z){for(Lot l:lots)if(l.contains(x,z))return l;return null;}
 }

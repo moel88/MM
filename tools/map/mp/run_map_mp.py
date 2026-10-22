@@ -2,7 +2,7 @@
 dedicated server running the built world plus two clients that join it, each under its own Xvfb display.
 usage: python3 tools/map/mp/run_map_mp.py OUT_DIR WORLD_DIR [MOD_JAR]
 Results: OUT_DIR/server.txt (the map recognised from its definition, the merchants and field supplies where they stand,
-the players), OUT_DIR/visitor1|visitor2/{log.txt, south.png, station.png, north.png}, OUT_DIR/logs/.
+the players), OUT_DIR/visitor1|visitor2/{log.txt, south.png, west.png, north.png}, OUT_DIR/logs/.
 """
 from pathlib import Path
 import glob, json, os, shutil, subprocess, sys, time, zipfile
