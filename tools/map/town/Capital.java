@@ -21,7 +21,10 @@ import java.util.*;
 final class Capital {
     private final Townscape t;private final Canvas c;private final Random rnd;
     static final int CODE=2;
-    static final Kit.Roof[] ROOFS={Kit.BLUE,Kit.BLUE,Kit.SLATE,Kit.TEAL,Kit.COPPER,Kit.BLUE,Kit.SLATE};
+    static final Kit.Roof[] ROOFS={Kit.NAVY,Kit.NAVY,Kit.NAVY,Kit.SLATE,Kit.NAVY,Kit.TEAL,Kit.NAVY,Kit.SLATE};
+    /** The towers' cones: stairs of the blue slates (their tall side to the middle) over the full blocks. */
+    static final Block CONE_STAIRS=TB.of("blue_shingles_stairs").getBlock();
+    static final BlockState CONE=TB.of("blue_shingles");
     final List<Lot> lots=new ArrayList<>();
     Capital(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
     private static BlockState s(Block b){return b.getDefaultState();}
@@ -154,7 +157,7 @@ final class Capital {
             for(int x=(int)Math.floor(cx-R);x<=cx+R;x++)for(int z=(int)Math.floor(cz-R);z<=cz+R;z++){
                 double dx=x+0.5-cx,dz=z+0.5-cz,d=Math.hypot(dx,dz);
                 if(d>rk+0.5)continue;
-                c.set(x,y+k,z,d>rk-0.7&&rk>0.8?Canvas.stairs(Blocks.PRISMARINE_BRICK_STAIRS,Direction.getFacing(-dx,0,-dz),false):s(Blocks.DARK_PRISMARINE));
+                c.set(x,y+k,z,d>rk-0.7&&rk>0.8?Canvas.stairs(CONE_STAIRS,Direction.getFacing(-dx,0,-dz),false):CONE);
             }
         }
         c.set((int)Math.floor(cx),y+H+1,(int)Math.floor(cz),Blocks.LIGHT_BLUE_BANNER.getDefaultState());
@@ -172,7 +175,7 @@ final class Capital {
         f.door(f.W/2,1,0,Blocks.DARK_OAK_DOOR,Direction.NORTH,false);f.door(f.W/2+1,1,0,Blocks.DARK_OAK_DOOR,Direction.NORTH,true);
         for(int x=0;x<f.W;x++)for(int z=0;z<f.D;z++)if(x==0||z==0||x==f.W-1||z==f.D-1)if(((x+z)&1)==0)f.set(x,21,z,s(Blocks.STONE_BRICKS));
         for(int k=1;k<=3;k++)f.hangingLantern(f.W/2,4*k+3,f.D/2,false);
-        Kit.roof(f,1,1,f.W-2,f.D-2,20,Kit.HIP,true,Kit.BLUE,s(Blocks.STONE_BRICKS),s(Blocks.SPRUCE_PLANKS));
+        Kit.roof(f,1,1,f.W-2,f.D-2,20,Kit.HIP,true,Kit.NAVY,s(Blocks.STONE_BRICKS),s(Blocks.SPRUCE_PLANKS));
         for(int dx:new int[]{x0,x1})for(int dz:new int[]{z0,z1}){
             tower(dx+0.5,dz+0.5,top-3,top+5,2.2,s(Blocks.STONE_BRICKS),Blocks.DEEPSLATE_TILE_STAIRS,s(Blocks.DEEPSLATE_TILES),false);
             coneRoof(dx+0.5,dz+0.5,top+6,2.2);
@@ -252,7 +255,7 @@ final class Capital {
         for(int z=nz0;z<=nz1;z+=4)for(int x:new int[]{cx-12,cx+12}){for(int k=1;k<=7;k++)c.set(x,y+k,z,wall);c.set(x,y+8,z,Canvas.slab(Blocks.STONE_BRICK_SLAB,false));}
         // roofs: the nave's gable along z, the aisles' lean-tos
         var nave=new Frame(c,nx0,nz0,nx1,nz1,Direction.SOUTH,y);
-        Kit.roof(nave,0,0,nave.W-1,nave.D-1,14,Kit.GABLE,false,Kit.BLUE,wall,s(Blocks.SPRUCE_PLANKS));
+        Kit.roof(nave,0,0,nave.W-1,nave.D-1,14,Kit.GABLE,false,Kit.NAVY,wall,s(Blocks.SPRUCE_PLANKS));
         var west=new Frame(c,cx-11,nz0,nx0-1,nz1,Direction.EAST,y);
         Kit.roof(west,0,0,west.W-1,west.D-1,8,Kit.SHED,false,Kit.SLATE,wall,s(Blocks.SPRUCE_PLANKS));
         var east=new Frame(c,nx1+1,nz0,cx+11,nz1,Direction.WEST,y);
@@ -264,7 +267,7 @@ final class Capital {
             boolean shell=d>5.6;
             for(int k=1;k<=12;k++)c.set(x,y+k,z,shell?(k>=4&&k<=10&&((x+z)&1)==0?s(Blocks.LIGHT_BLUE_STAINED_GLASS):wall):s(Blocks.AIR));
             int rk=(int)Math.round((6.6-d)*0.9);
-            for(int k=0;k<=rk;k++)c.set(x,y+13+k,z,k==rk?Canvas.slab(Blocks.DARK_PRISMARINE_SLAB,false):s(Blocks.DARK_PRISMARINE));
+            for(int k=0;k<=rk;k++)c.set(x,y+13+k,z,k==rk?TB.slab("blue_shingles_slab",false):CONE);
         }
         for(int x=nx0+1;x<nx1;x++)c.set(x,y+1,nz0,s(Blocks.AIR));
         // the front: twin towers with spires, the great door, the rose window

@@ -35,6 +35,8 @@ final class Kit {
     static final Roof COPPER=new Roof(Blocks.WAXED_OXIDIZED_CUT_COPPER_SLAB,Blocks.WAXED_OXIDIZED_CUT_COPPER.getDefaultState(),TB.of("roof_copper").getBlock());
     static final Roof RUST=new Roof(Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB,Blocks.WAXED_EXPOSED_CUT_COPPER.getDefaultState(),TB.of("roof_rust").getBlock());
     static final Roof TEAL=new Roof(Blocks.WAXED_WEATHERED_CUT_COPPER_SLAB,Blocks.WAXED_WEATHERED_CUT_COPPER.getDefaultState(),TB.of("roof_teal").getBlock());
+    /** The fantasy capital's blue fish-scale slates (2.49.0, map v3.0). */
+    static final Roof NAVY=new Roof(TB.of("blue_shingles_slab").getBlock(),TB.of("blue_shingles"),TB.of("roof_navy").getBlock());
     static final int GABLE=0,HIP=1,SHED=2,FLAT=3;
     static BlockState s(Block b){return b.getDefaultState();}
     /** A roofing state laid along an axis (the town's tiles and sheets run down the slope); others as they are. */

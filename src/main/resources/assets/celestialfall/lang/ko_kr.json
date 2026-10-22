@@ -191,5 +191,9 @@
   "block.celestialfall.world_tree_bark": "세계수 줄기",
   "block.celestialfall.world_tree_bark_glow": "빛나는 세계수 줄기",
   "block.celestialfall.rift_ground": "시공간의 틈 바닥",
-  "block.celestialfall.rift_crack": "빛나는 균열"
+  "block.celestialfall.rift_crack": "빛나는 균열",
+  "block.celestialfall.blue_shingles": "파란 비늘 지붕널",
+  "block.celestialfall.blue_shingles_slab": "파란 비늘 지붕널 반 블록",
+  "block.celestialfall.blue_shingles_stairs": "파란 비늘 지붕널 계단",
+  "block.celestialfall.roof_navy": "파란 비늘 지붕"
 }

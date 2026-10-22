@@ -128,10 +128,11 @@ final class Forest {
         // the columns: two rows, some whole, some broken, some fallen
         for(int z=cz-H+4;z<=cz+H-4;z+=4)for(int x:new int[]{cx-5,cx+5}){
             double h=Pal.hash(x,34,z);
-            if(h<0.2){for(int k=1;k<=4;k++)if(c.air(x+(x<cx?-k:k),y+1,z))c.set(x+(x<cx?-k:k),y+1,z,Canvas.axis(Blocks.QUARTZ_PILLAR,Direction.Axis.X));continue;}
+            // a fallen column: its drums lying in a row
+            if(h<0.2){for(int k=1;k<=4;k++)if(c.air(x+(x<cx?-k:k),y+1,z))c.set(x+(x<cx?-k:k),y+1,z,Pal.hash(x+k,35,z)<0.5?s(Blocks.MOSSY_STONE_BRICKS):s(Blocks.CRACKED_STONE_BRICKS));continue;}
             int top=h<0.5?2+(int)(h*6):7;
             c.set(x,y+1,z,s(Blocks.CHISELED_STONE_BRICKS));
-            for(int k=2;k<=top;k++)c.set(x,y+k,z,Canvas.axis(Blocks.QUARTZ_PILLAR,Direction.Axis.Y));
+            for(int k=2;k<=top;k++)c.set(x,y+k,z,Pal.hash(x,y+k,z)<0.45?s(Blocks.MOSSY_STONE_BRICK_WALL):s(Blocks.STONE_BRICK_WALL));
             if(top==7)c.set(x,y+8,z,s(Blocks.CHISELED_STONE_BRICKS));
         }
         // the altar
@@ -213,7 +214,7 @@ final class Forest {
             var top=c.get(px,g,pz);
             if(!(top.isOf(Blocks.GRASS_BLOCK)||top.isOf(Blocks.PODZOL)||top.isOf(Blocks.MOSS_BLOCK)||top.isOf(Blocks.COARSE_DIRT))||!c.air(px,g+1,pz))continue;
             double grove=Pal.smooth(px,pz,26,71);
-            double p=grove<0.32?0:grove>0.62?0.75:0.4;
+            double p=grove<0.36?0:grove>0.62?0.62:0.32;
             if(rnd.nextDouble()>p)continue;
             int r=rnd.nextInt(100);
             if(r<42)t.nature.broadleaf(px,g+1,pz,5+rnd.nextInt(3));

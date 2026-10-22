@@ -43,7 +43,7 @@ final class OldCity {
                 got=t.lots.along(line,way[1],Plan.ROAD_HALF+2,p.frontage(),p.depth(),4,1,5,Plan.CITY,name,CODE,1);
                 if(!got.isEmpty())break;
             }
-            if(got.isEmpty())got=t.lots.fill(Plan.CITY,p.frontage(),p.depth(),9,2,5,3,name,CODE,1,rnd.nextLong());
+            if(got.isEmpty())got=t.lots.fill(Plan.CITY,p.frontage(),p.depth(),9,1,4,2,name,CODE,1,rnd.nextLong());
             if(got.isEmpty()){Town.log("old city: no room for "+name);continue;}
             Lot l=got.get(0);
             // the plot is the city's flat ground: the building stands on it at the city's level
@@ -81,14 +81,14 @@ final class OldCity {
     /** Azalea trees on the open grass between the buildings, as the first map's, and a few benches. */
     private void trees(){
         int n=0;
-        for(int x=4;x<Plan.X0+Plan.W-4;x+=8)for(int z=Plan.RIFT;z<Plan.Z0+Plan.D-4;z+=8){
+        for(int x=4;x<Plan.X0+Plan.W-4;x+=7)for(int z=Plan.RIFT;z<Plan.Z0+Plan.D-4;z+=7){
             int px=x+rnd.nextInt(5)-2,pz=z+rnd.nextInt(5)-2;
             if(!Canvas.inPlan(px,pz)||Plan.zone(px,pz)!=Plan.CITY)continue;
             int i=Canvas.idx(px,pz);
             if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.pale[i]||c.owner[i]!=0||t.roads.near(px,pz,3)||Plan.shore(px,pz)>-5)continue;
             if(nearOwned(px,pz,3))continue;
             int g=c.ground(px,pz);
-            if(!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz)||rnd.nextDouble()>0.35)continue;
+            if(!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz)||rnd.nextDouble()>0.5)continue;
             int h=4+rnd.nextInt(2);
             for(int k=1;k<=h;k++)c.set(px,g+k,pz,Canvas.axis(Blocks.OAK_LOG,Direction.Axis.Y));
             t.nature.blob(px+0.5,g+h+0.5,pz+0.5,2.6,1.9,2.6,Blocks.AZALEA_LEAVES,Blocks.FLOWERING_AZALEA_LEAVES);

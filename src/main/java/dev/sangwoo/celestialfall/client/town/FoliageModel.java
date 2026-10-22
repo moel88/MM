@@ -18,8 +18,9 @@ import java.util.function.Function;
  * faces or outline, its depth showing through its gaps. The cards are seen from both sides and take the light evenly
  * (not darkened by the way they look), as the game's own plants are. Three arrangements are made and the game picks
  * one by position, so a hedge does not repeat. Ivy is cards of leaves lying against the wall behind it; a cherry's limb
- * is a thin round branch, its trunk a thick one. The world tree's leaves (2.49.0) are a crown's cards, fewer and larger,
- * in their own neon sky blue.
+ * is a thin round branch, its trunk a thick one. The world tree's leaves (2.49.0) are a hedge's: the crown's outer
+ * faces carry its packed glowing leaves and larger cards reach out of it, in their own neon sky blue, so the great
+ * crown glows evenly from afar.
  */
 final class FoliageModel {
     static final int VARIANTS=3;
@@ -31,7 +32,7 @@ final class FoliageModel {
             CodeModel.resolve(plugin,TownBlocks.CANOPY,s->sp->mass(sp,"leaf_mass",LEAF,false,16,15,24,0x5a11fL));
             CodeModel.resolve(plugin,TownBlocks.CHERRY_BLOSSOM,s->sp->mass(sp,"blossom_mass",BLOSSOM,false,16,16,26,0x7b10c4L));
             CodeModel.resolve(plugin,TownBlocks.PINE_NEEDLES,s->sp->mass(sp,"pine_cards_0",PINE,false,14,14,22,0x9e3779L));
-            CodeModel.resolve(plugin,TownBlocks.WORLD_TREE_LEAVES,s->sp->mass(sp,"world_leaf_mass",WORLD,false,12,18,28,0x2c0ffeeL));
+            CodeModel.resolve(plugin,TownBlocks.WORLD_TREE_LEAVES,s->sp->mass(sp,"world_leaf_mass",WORLD,true,10,18,28,0x2c0ffeeL));
             CodeModel.resolve(plugin,TownBlocks.IVY,s->sp->ivy(sp,s.get(Properties.HORIZONTAL_FACING)));
             CodeModel.resolve(plugin,TownBlocks.CHERRY_BRANCH,s->sp->branch(sp,s.get(Properties.AXIS),s.get(TownBlocks.Branch.THICK)));
         });

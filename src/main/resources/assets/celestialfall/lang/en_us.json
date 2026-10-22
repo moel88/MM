@@ -191,5 +191,9 @@
   "block.celestialfall.world_tree_bark": "World Tree Bark",
   "block.celestialfall.world_tree_bark_glow": "Glowing World Tree Bark",
   "block.celestialfall.rift_ground": "Rift Ground",
-  "block.celestialfall.rift_crack": "Glowing Rift Crack"
+  "block.celestialfall.rift_crack": "Glowing Rift Crack",
+  "block.celestialfall.blue_shingles": "Blue Fish-Scale Shingles",
+  "block.celestialfall.blue_shingles_slab": "Blue Fish-Scale Shingle Slab",
+  "block.celestialfall.blue_shingles_stairs": "Blue Fish-Scale Shingle Stairs",
+  "block.celestialfall.roof_navy": "Blue Fish-Scale Roof"
 }

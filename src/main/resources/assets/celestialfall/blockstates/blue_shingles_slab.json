@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "type=bottom": [
+   {
+    "model": "celestialfall:block/town/blue_shingles_slab_0"
+   }
+  ],
+  "type=top": [
+   {
+    "model": "celestialfall:block/town/blue_shingles_slab_0_top"
+   }
+  ],
+  "type=double": [
+   {
+    "model": "celestialfall:block/town/blue_shingles_0"
+   }
+  ]
+ }
+}

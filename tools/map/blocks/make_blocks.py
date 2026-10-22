@@ -751,12 +751,12 @@ def blur(img, s):
     if img.ndim == 2: return np.real(np.fft.ifft2(np.fft.fft2(img) * k))
     return np.dstack([np.real(np.fft.ifft2(np.fft.fft2(img[..., c]) * k)) for c in range(img.shape[2])])
 
-NEON_HUES = [(70, 176, 246), (56, 196, 240), (92, 164, 252), (82, 188, 255), (64, 184, 236)]
+NEON_HUES = [(88, 204, 255), (70, 218, 250), (108, 192, 255), (96, 212, 255), (78, 200, 246)]
 
-def neon_leaf_cards(seed, count=58, spread=24, sizes=(12, 19), wrap=False):
-    """The world tree's leaves, lit from within like neon: pointed ovals of sky blue, each with a pale glowing band
-    inside a thin dark edge (so overlapping leaves part from one another) and a near-white midrib; the cluster thins
-    out toward the card's edge."""
+def neon_leaf_cards(seed, count=84, spread=24, sizes=(12, 20), wrap=False):
+    """The world tree's leaves, lit from within like neon: pointed ovals of bright sky blue packed close, each paler
+    toward its rim and its tip with a near-white midrib, no dark edge (so from afar the crown glows evenly instead
+    of speckling); the cluster thins out toward the card's edge."""
     g = rng(seed)
     img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
     y, x = np.mgrid[0:S, 0:S]
@@ -766,29 +766,28 @@ def neon_leaf_cards(seed, count=58, spread=24, sizes=(12, 19), wrap=False):
         else:
             rr = spread * np.sqrt(g.random()) * 1.05; aa = g.uniform(0, 2 * np.pi)
             cx = 32 + rr * np.cos(aa); cy = 32 + rr * np.sin(aa)
-        a = g.uniform(0, np.pi); length = g.uniform(*sizes); width = length * g.uniform(0.42, 0.58)
+        a = g.uniform(0, np.pi); length = g.uniform(*sizes); width = length * g.uniform(0.45, 0.62)
         xs, ys = x, y
         if wrap:
             xs = (x - cx + S / 2) % S + cx - S / 2; ys = (y - cy + S / 2) % S + cy - S / 2
         inside, t, v = leaf_shape(xs, ys, cx, cy, a, length, width)
-        base = np.array(NEON_HUES[g.integers(0, len(NEON_HUES))], float) * g.uniform(0.88, 1.08)
-        # brighter toward the rim and the tip, the deepest blue between rim and rib
-        band = np.clip((np.abs(v) - 0.38) / 0.44, 0, 1) ** 1.5
-        col = base[None, None, :] * (0.94 + 0.10 * np.clip(t, -1, 1))[..., None]
-        col = col + (np.array([170, 240, 255]) - col) * (0.75 * band)[..., None]
-        edge_ = inside & ((np.abs(v) > 0.86) | (np.abs(t) > 0.95))
-        rib = inside & (np.abs(v) < 0.1) & (np.abs(t) < 0.86)
+        base = np.array(NEON_HUES[g.integers(0, len(NEON_HUES))], float) * g.uniform(0.9, 1.06)
+        band = np.clip((np.abs(v) - 0.35) / 0.55, 0, 1) ** 1.4
+        col = base[None, None, :] * (0.95 + 0.08 * np.clip(t, -1, 1))[..., None]
+        col = col + (np.array([196, 246, 255]) - col) * (0.7 * band)[..., None]
+        rib = inside & (np.abs(v) < 0.09) & (np.abs(t) < 0.6)
         img[inside] = col[inside]
-        img[edge_] = (22, 70, 128)
-        img[rib] = (232, 252, 255)
+        img[rib] = (196, 242, 255)
         alpha[inside] = 255
     return np.clip(img, 0, 255), alpha
 
 def neon_leaf_mass(seed):
-    """The world tree's leaves packed over a deep glowing blue, tiling: the block's look in the hand."""
-    img, alpha = neon_leaf_cards(seed, 110, 0, (10, 15), True)
-    img[alpha == 0] = (34, 104, 178); alpha[:] = 255
-    return img, alpha
+    """The world tree's leaves packed over a glowing sky blue with no gaps, tiling: the crown's outer faces."""
+    img, alpha = neon_leaf_cards(seed, 130, 0, (10, 16), True)
+    fill = alpha == 0
+    img[fill] = (94, 196, 248) + 10 * field(seed + 3, 3)[fill][:, None]
+    alpha[:] = 255
+    return np.clip(img, 0, 255), alpha
 
 def silver_bark(seed, veins=False):
     """The world tree's bark: silver white in long ridges running up the trunk, cool grey grooves between them; the
@@ -826,6 +825,34 @@ def silver_rings(seed):
     img = shade(img, 7 * np.sin(r * 0.9) + 2 * g.normal(size=(S, S)))
     img[r < 4] = (236, 244, 252)
     img[r > 28] = (150, 158, 172)
+    return np.clip(img, 0, 255)
+
+def fish_scales(seed, base=(42, 72, 152)):
+    """The fantasy capital's blue roofs: fish-scale slates in rows, each row half a slate across from the last and
+    laid over the one below it, so each slate shows its rounded foot; darker where the slate above shades it, a sheen
+    on its face, a thin dark line under its foot, a few slates a shade off."""
+    g = rng(seed)
+    y, x = np.mgrid[0:S, 0:S].astype(float)
+    w, h = 8.0, 8.0
+    tone = g.uniform(0.88, 1.08, (8, 8))
+    img = np.zeros((S, S, 3)); done = np.zeros((S, S), bool)
+    r1 = np.floor(y / h)
+    for dr in (-1, 0):
+        r = r1 + dr
+        off = (np.mod(r, 2)) * w / 2
+        c = np.floor((x - off) / w)
+        cx = c * w + off + w / 2
+        bottom = r * h + h + np.sqrt(np.clip((w / 2) ** 2 - (x + 0.5 - cx) ** 2, 0, None)) - 0.5
+        inside = (y >= r * h) & (y < bottom) & ~done
+        f = np.clip((y - r * h) / (bottom - r * h + 1e-6), 0, 1)
+        t = tone[(np.mod(r, tone.shape[0])).astype(int), (np.mod(c, tone.shape[1])).astype(int)]
+        col = np.array(base, float)[None, None, :] * (0.68 + 0.42 * f)[..., None] * t[..., None]
+        sheen = np.exp(-((x + 0.5 - cx) ** 2 + (y - (r * h + h * 0.55)) ** 2) / 6.0) * 26
+        col = col + sheen[..., None] * np.array([0.6, 0.8, 1.0])
+        edge = inside & (bottom - y < 1.0)
+        col[edge] = np.array(base, float) * 0.42
+        img[inside] = col[inside]; done |= inside
+    img = shade(img, 3 * g.normal(size=(S, S)))
     return np.clip(img, 0, 255)
 
 def rift_ground(seed):
@@ -1100,6 +1127,13 @@ block('world_tree_bark', 'log', {'side': WBARK, 'end': WBTOP}, '세계수 줄기
 block('world_tree_bark_glow', 'log', {'side': WBARKG, 'end': WBTOP}, '빛나는 세계수 줄기', 'Glowing World Tree Bark', 'axe')
 block('rift_ground', 'cube', {'tex': RGR, 'spin': True}, '시공간의 틈 바닥', 'Rift Ground')
 block('rift_crack', 'crack', {'tex': RCR, 'side': RGR[0]}, '빛나는 균열', 'Glowing Rift Crack')
+# the fantasy capital's blue roofs (2.49.0): fish-scale slates as a block, a slab, stairs for the towers' cones and a
+# roof at its true pitch
+BSH = tex('blue_shingles', fish_scales, 2650)
+block('blue_shingles', 'cube', {'tex': [BSH], 'spin': False}, '파란 비늘 지붕널', 'Blue Fish-Scale Shingles')
+block('blue_shingles_slab', 'slab', {'tex': [BSH], 'full': 'blue_shingles'}, '파란 비늘 지붕널 반 블록', 'Blue Fish-Scale Shingle Slab')
+block('blue_shingles_stairs', 'stairs', {'tex': BSH}, '파란 비늘 지붕널 계단', 'Blue Fish-Scale Shingle Stairs')
+block('roof_navy', 'roof', {'top': BSH, 'side': BSH, 'under': PL[0]}, '파란 비늘 지붕', 'Blue Fish-Scale Roof')
 
 # ---------------------------------------------------------------- models
 
@@ -1261,6 +1295,28 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
     elif kind == 'foliage':
         # drawn in code (FoliageModel); in the hand, a block of the leaves' mass
         ITEMS[i] = cube(i + '_item', d['mass'])
+    elif kind == 'stairs':
+        t = d['tex']
+        ms = {k: model(i + suffix, {'parent': f'minecraft:block/{parent}', 'textures': {'bottom': t, 'top': t, 'side': t}})
+              for k, suffix, parent in (('s', '', 'stairs'), ('i', '_inner', 'inner_stairs'), ('o', '_outer', 'outer_stairs'))}
+        # the game's own table of stairs: which model and turn for each facing, half and shape
+        rot = {'east': 0, 'south': 90, 'west': 180, 'north': 270}
+        v = {}
+        for f in ('east', 'north', 'south', 'west'):
+            for half in ('bottom', 'top'):
+                for shape in ('straight', 'inner_left', 'inner_right', 'outer_left', 'outer_right'):
+                    m = ms['s' if shape == 'straight' else shape[0]]
+                    y = rot[f]
+                    if half == 'bottom' and shape.endswith('left'): y -= 90
+                    if half == 'top' and shape.endswith('right'): y += 90
+                    y %= 360
+                    e = {'model': m}
+                    if half == 'top': e['x'] = 180
+                    if y: e['y'] = y
+                    if half == 'top' or y: e['uvlock'] = True
+                    v[f'facing={f},half={half},shape={shape}'] = e
+        STATES[i] = {'variants': v}
+        ITEMS[i] = ms['s']
     elif kind == 'crack':
         v = {}
         for m, ts in d['tex'].items():

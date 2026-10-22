@@ -12,7 +12,7 @@ import java.util.*;
  * The rift at the island's waist (map v3.0, the user's design: '시공간이 이상한 흰색 구역', '세계수 하나, 네온으로 빛나는
  * 하늘색 잎사귀', '장식으로 둬'). No square and no paving: white ground broken by cracks of sky-blue light running out
  * from the world tree in its middle. The tree is for looking at, not for climbing: a silver trunk threaded with veins of
- * light on roots arching out of the ground, five limbs spreading up into a crown of neon sky-blue leaves some seventy
+ * light on roots arching out of the ground, five limbs spreading up into a crown of neon sky-blue leaves some eighty
  * blocks across that lights the rift by night, strands of leaves hanging under it. Pieces of the ground float in the air
  * round it, some upside down with their moss and roots hanging under them, and blocks of white hover a little over the
  * ground. Players appear on the white south of the tree looking at it, the two merchants' stalls between them and it.
@@ -24,7 +24,7 @@ final class Rift {
     static final BlockState BARK=TB.of("world_tree_bark"),GLOW=TB.of("world_tree_bark_glow"),LEAVES=TB.of("world_tree_leaves"),
         GROUND=TB.of("rift_ground"),CRACK=TB.of("rift_crack");
     /** The trunk's height above the ground before it parts into its limbs. */
-    static final int TRUNK_H=34;
+    static final int TRUNK_H=37;
     int leaves,bark,cracks;
     Rift(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
 
@@ -35,9 +35,9 @@ final class Rift {
         cracks();
         fragments();
         hovering();
-        stall(-10,true);stall(7,false);
+        stall(-17,true);stall(14,false);
         t.places.put("rift",new int[]{Plan.SPAWN_X,Y+1,Plan.SPAWN_Z});
-        t.places.put("tree",new int[]{TX+16,Y+1,TZ+4});
+        t.places.put("tree",new int[]{TX+18,c.ground(TX+18,TZ+30)+1,TZ+30});
         Town.log("rift: tree of "+bark+" bark and "+leaves+" leaves, "+cracks+" crack blocks, "+c.placed);
     }
 
@@ -104,15 +104,16 @@ final class Rift {
      * over the white, wandering a little; low enough to step over at their ends, cover nearer the trunk.
      */
     private void roots(){
-        int n=9;
+        int n=11;
         for(int i=0;i<n;i++){
-            double a=i*2*Math.PI/n+(rnd.nextDouble()-0.5)*0.35,len=11+rnd.nextDouble()*10,wig=rnd.nextDouble()*6;
+            double a=i*2*Math.PI/n+(rnd.nextDouble()-0.5)*0.35,len=14+rnd.nextDouble()*12,wig=rnd.nextDouble()*6,lift=1.6+rnd.nextDouble()*1.6;
             int steps=(int)(len*3);
             for(int k=0;k<=steps;k++){
-                double s=k/(double)steps,ang=a+0.22*Math.sin(s*4+wig);
-                double d=3.6+len*s,x=TX+0.5+Math.cos(ang)*d,z=TZ+0.5+Math.sin(ang)*d;
-                double y=Y+0.8+3.2*(1-s)*(1-s)+1.4*Math.sin(Math.PI*s)*(1-s)-1.6*s;
-                double r=2.1*(1-s)+0.75;
+                double s=k/(double)steps,ang=a+0.25*Math.sin(s*4+wig);
+                double d=3.4+len*s,x=TX+0.5+Math.cos(ang)*d,z=TZ+0.5+Math.sin(ang)*d;
+                // out of the trunk's flare, an arch clear of the ground, then down into it at the tip
+                double y=Y+0.6+2.6*(1-s)*(1-s)+lift*Math.sin(Math.PI*Math.min(1,s*1.25))-1.4*s;
+                double r=1.6*(1-s)+0.6;
                 Direction.Axis ax=Math.abs(Math.cos(ang))>Math.abs(Math.sin(ang))?Direction.Axis.X:Direction.Axis.Z;
                 int R=(int)Math.ceil(r);
                 for(int dx=-R;dx<=R;dx++)for(int dy=-R;dy<=R;dy++)for(int dz=-R;dz<=R;dz++){
@@ -127,8 +128,8 @@ final class Rift {
 
     /**
      * The limbs and the crown: five limbs leave the trunk's top and climb outward, each parting into two or three
-     * branches; clumps of the glowing leaves gather round the branches' ends and fill out a dome some seventy blocks
-     * across, from forty to seventy blocks up. Only a shell two blocks deep is leaves (the cards show through to the
+     * branches; clumps of the glowing leaves gather round the branches' ends and fill out a dome some eighty blocks
+     * across, from forty-five to seventy-five blocks up. Only a shell two blocks deep is leaves (the cards show through to the
      * shell behind, so the crown looks as full), and strands of leaves hang under it.
      */
     private void crown(){
@@ -136,10 +137,10 @@ final class Rift {
         double topX=driftX(TRUNK_H),topZ=driftZ(TRUNK_H);
         int limbs=5;
         for(int i=0;i<limbs;i++){
-            double a=i*2*Math.PI/limbs+0.5+(rnd.nextDouble()-0.5)*0.4,L=22+rnd.nextDouble()*7;
+            double a=i*2*Math.PI/limbs+0.5+(rnd.nextDouble()-0.5)*0.4,L=25+rnd.nextDouble()*8;
             double[] from={topX+Math.cos(a)*1.5,Y+TRUNK_H-3-(i%2)*4,topZ+Math.sin(a)*1.5};
             double[] ctrl={topX+Math.cos(a)*L*0.35,Y+TRUNK_H+9,topZ+Math.sin(a)*L*0.35};
-            double[] to={topX+Math.cos(a)*L,Y+48+rnd.nextDouble()*6,topZ+Math.sin(a)*L};
+            double[] to={topX+Math.cos(a)*L,Y+51+rnd.nextDouble()*6,topZ+Math.sin(a)*L};
             limb(from,ctrl,to,2.9,1.3);
             clumps.add(new double[]{to[0],to[1]+3,to[2],9,5.5});
             for(int j=0;j<3;j++){
@@ -147,21 +148,21 @@ final class Rift {
                 double s=0.5+0.15*j+rnd.nextDouble()*0.1,u=1-s;
                 double[] p={u*u*from[0]+2*u*s*ctrl[0]+s*s*to[0],u*u*from[1]+2*u*s*ctrl[1]+s*s*to[1],u*u*from[2]+2*u*s*ctrl[2]+s*s*to[2]};
                 double b=a+(j%2==0?1:-1)*(0.45+rnd.nextDouble()*0.25),bl=L*0.55+rnd.nextDouble()*8,bd=Math.hypot(p[0]-TX,p[2]-TZ)+bl;
-                bd=Math.min(bd,36);
-                double[] end={TX+Math.cos(b)*bd,Y+54+rnd.nextDouble()*7,TZ+Math.sin(b)*bd};
+                bd=Math.min(bd,40);
+                double[] end={TX+Math.cos(b)*bd,Y+57+rnd.nextDouble()*7,TZ+Math.sin(b)*bd};
                 double[] mid={(p[0]+end[0])/2,Math.max(p[1],end[1])+2,(p[2]+end[2])/2};
                 limb(p,mid,end,1.5,0.6);
                 clumps.add(new double[]{end[0],end[1]+2,end[2],7.5,5});
             }
         }
         // the dome between and over the branches
-        for(int k=0;k<46;k++){
+        for(int k=0;k<58;k++){
             double a=rnd.nextDouble()*2*Math.PI,q=Math.sqrt(rnd.nextDouble());
-            double d=q*33,h=Y+50+16*Math.sqrt(Math.max(0,1-q*q))*0.95+rnd.nextDouble()*3;
+            double d=q*38,h=Y+53+15*Math.sqrt(Math.max(0,1-q*q))+rnd.nextDouble()*3;
             clumps.add(new double[]{TX+Math.cos(a)*d,h,TZ+Math.sin(a)*d,6+rnd.nextDouble()*3,4+rnd.nextDouble()*1.5});
         }
         // the crown as a solid, then only its outer two blocks kept
-        int R=48,y0=Y+36,y1=Y+78,W=2*R+1,H=y1-y0+1;
+        int R=52,y0=Y+38,y1=Y+82,W=2*R+1,H=y1-y0+1;
         boolean[] in=new boolean[W*W*H];
         for(double[] k:clumps){
             for(int x=(int)Math.floor(k[0]-k[3]);x<=Math.ceil(k[0]+k[3]);x++)for(int y=(int)Math.floor(k[1]-k[4]);y<=Math.ceil(k[1]+k[4]);y++)
@@ -193,7 +194,7 @@ final class Rift {
         }
         // strands hanging under the crown
         for(int k=0;k<90;k++){
-            double a=rnd.nextDouble()*2*Math.PI,d=8+Math.sqrt(rnd.nextDouble())*28;
+            double a=rnd.nextDouble()*2*Math.PI,d=8+Math.sqrt(rnd.nextDouble())*32;
             int x=(int)Math.floor(TX+Math.cos(a)*d),z=(int)Math.floor(TZ+Math.sin(a)*d);
             int low=-1;
             for(int y=y0;y<=y1;y++)if(c.get(x,y,z).isOf(LEAVES.getBlock())){low=y;break;}
@@ -248,12 +249,15 @@ final class Rift {
      */
     private void fragments(){
         int made=0;
-        for(int k=0;k<40&&made<15;k++){
-            double a=rnd.nextDouble()*2*Math.PI,r=24+rnd.nextDouble()*40;
+        for(int k=0;k<80&&made<15;k++){
+            // round the rift's edge and out over the water, clear of the crown so the tree stands alone
+            double a=rnd.nextDouble()*2*Math.PI,r=46+rnd.nextDouble()*22;
             double fx=TX+Math.cos(a)*r,fz=TZ+Math.sin(a)*r;
-            int fy=r<40?Y+14+rnd.nextInt(14):Y+16+rnd.nextInt(30);
+            int fy=Y+12+rnd.nextInt(30);
             int size=2+rnd.nextInt(5);
             if(!clearAround(fx,fy,fz,size+4))continue;
+            // none hanging over the spawn and the stalls, where they would fill the first view of the tree
+            if(Math.abs(fx-Plan.SPAWN_X)<24&&fz>Plan.MERCHANT_Z-14)continue;
             fragment(fx,fy,fz,size,made%4==1);made++;
         }
         Town.log("rift: "+made+" floating fragments");
@@ -313,11 +317,15 @@ final class Rift {
         for(int x=x0-1;x<=x0+4;x++)for(int z=z0-2;z<=z0+2;z++){c.clear(x,y+1,z,x,y+5,z);if(c.get(x,y,z).isOf(CRACK.getBlock()))c.set(x,y,z,GROUND);}
         for(int x=x0;x<=x0+3;x++){
             c.set(x,y+1,z0+1,x==x0+1?Canvas.slab(Blocks.SMOOTH_QUARTZ_SLAB,true):Blocks.CALCITE.getDefaultState());
-            for(int z=z0-1;z<=z0+1;z++)c.set(x,y+4,z,((x+z)&1)==0?Blocks.LIGHT_BLUE_WOOL.getDefaultState():Blocks.WHITE_WOOL.getDefaultState());
+            // a thin awning: quartz slabs under carpets striped sky blue and white
+            for(int z=z0-1;z<=z0+1;z++){
+                c.set(x,y+4,z,Canvas.slab(Blocks.SMOOTH_QUARTZ_SLAB,true));
+                c.set(x,y+5,z,(x&1)==0?Blocks.LIGHT_BLUE_CARPET.getDefaultState():Blocks.WHITE_CARPET.getDefaultState());
+            }
         }
         for(int x:new int[]{x0,x0+3})for(int z:new int[]{z0-1,z0+1})for(int yy=y+1;yy<=y+3;yy++)if(!(z==z0+1&&yy==y+1))c.set(x,yy,z,Blocks.QUARTZ_PILLAR.getDefaultState());
         c.hangingLantern(x0+2,y+3,z0,false);
-        c.wallSign(x0+1,y+4,z0+2,Blocks.BIRCH_WALL_SIGN,Direction.SOUTH,DyeColor.BLUE,true,"",seller?"아이템 판매":"아이템 매입",seller?"로카":"카카");
+        c.wallSign(x0+1,y+3,z0+2,Blocks.BIRCH_WALL_SIGN,Direction.SOUTH,DyeColor.BLUE,true,"",seller?"아이템 판매":"아이템 매입",seller?"로카":"카카");
         t.merchants.add(new int[]{x0+1,y+1,z0,0});
     }
 }

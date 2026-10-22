@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:block/inner_stairs",
+ "textures": {
+  "bottom": "celestialfall:block/town/blue_shingles",
+  "top": "celestialfall:block/town/blue_shingles",
+  "side": "celestialfall:block/town/blue_shingles"
+ }
+}
