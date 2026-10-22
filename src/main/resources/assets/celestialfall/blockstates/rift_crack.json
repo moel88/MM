@@ -1,0 +1,132 @@
+{
+ "variants": {
+  "east=false,north=false,south=false,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_00_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_00_1"
+   }
+  ],
+  "east=false,north=true,south=false,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_01_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_01_1"
+   }
+  ],
+  "east=true,north=false,south=false,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_02_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_02_1"
+   }
+  ],
+  "east=true,north=true,south=false,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_03_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_03_1"
+   }
+  ],
+  "east=false,north=false,south=true,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_04_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_04_1"
+   }
+  ],
+  "east=false,north=true,south=true,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_05_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_05_1"
+   }
+  ],
+  "east=true,north=false,south=true,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_06_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_06_1"
+   }
+  ],
+  "east=true,north=true,south=true,west=false": [
+   {
+    "model": "celestialfall:block/town/rift_crack_07_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_07_1"
+   }
+  ],
+  "east=false,north=false,south=false,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_08_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_08_1"
+   }
+  ],
+  "east=false,north=true,south=false,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_09_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_09_1"
+   }
+  ],
+  "east=true,north=false,south=false,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_10_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_10_1"
+   }
+  ],
+  "east=true,north=true,south=false,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_11_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_11_1"
+   }
+  ],
+  "east=false,north=false,south=true,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_12_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_12_1"
+   }
+  ],
+  "east=false,north=true,south=true,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_13_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_13_1"
+   }
+  ],
+  "east=true,north=false,south=true,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_14_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_14_1"
+   }
+  ],
+  "east=true,north=true,south=true,west=true": [
+   {
+    "model": "celestialfall:block/town/rift_crack_15_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_crack_15_1"
+   }
+  ]
+ }
+}

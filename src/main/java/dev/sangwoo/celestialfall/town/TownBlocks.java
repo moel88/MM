@@ -32,6 +32,8 @@ import java.util.*;
  * leaves as clusters on cards (hedges, crowns, blossom, ivy, a cherry's limbs), windows with real sash frames that
  * join into one, the houses' stucco, siding, tiles and trim, dark block walls and their grimy feet, the green
  * walking strip, drinks machines with a display behind glass, air conditioners with a fan guard, traffic mirrors.
+ * 2.49.0 adds the world tree of the hourglass island's rift: neon sky-blue leaves that give light, silver bark, the
+ * rift's white ground and its glowing cracks.
  */
 public final class TownBlocks {
     private TownBlocks() {}
@@ -150,6 +152,13 @@ public final class TownBlocks {
     public static final Block VENDING_MACHINE_WHITE=add("vending_machine_white",new VendingMachine(metal().luminance(s->s.get(Properties.DOUBLE_BLOCK_HALF)==DoubleBlockHalf.UPPER?11:6)));
     public static final Block MIRROR_POST=add("mirror_post",new Post(7.1,8.9,metal()));
     public static final Block TRAFFIC_MIRROR=add("traffic_mirror",new Shaped(metal(),Block.createCuboidShape(1,2,5.5,15,16,8.5)));
+    // the world tree in the rift of the hourglass island (2.49.0, map v3.0): its leaves glowing a neon sky blue on cards
+    // (client/town/FoliageModel), its silver bark (some of it threaded with light), the rift's white ground and its cracks of light
+    public static final Block WORLD_TREE_LEAVES=cutoutMipped(add("world_tree_leaves",new Foliage(leaves(MapColor.LIGHT_BLUE).luminance(15))));
+    public static final Block WORLD_TREE_BARK=add("world_tree_bark",new PillarBlock(FabricBlockSettings.copyOf(Blocks.BIRCH_LOG).mapColor(MapColor.WHITE_GRAY)));
+    public static final Block WORLD_TREE_BARK_GLOW=add("world_tree_bark_glow",new PillarBlock(FabricBlockSettings.copyOf(Blocks.BIRCH_LOG).mapColor(MapColor.WHITE_GRAY).luminance(10)));
+    public static final Block RIFT_GROUND=add("rift_ground",new Block(stone().mapColor(MapColor.WHITE)));
+    public static final Block RIFT_CRACK=add("rift_crack",new Crack(stone().mapColor(MapColor.LIGHT_BLUE).luminance(12)));
 
     private static <B extends Block> B add(String name,B block){ALL.put(name,block);return block;}
     /** A roof block and its textures: names under the town's own textures, or minecraft: blocks' (block/ is added). */
@@ -342,6 +351,35 @@ public final class TownBlocks {
         @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){
             boolean t=s.get(THICK);
             return switch(s.get(AXIS)){case X->t?TX:X;case Y->t?TY:Y;case Z->t?TZ:Z;};
+        }
+    }
+    /**
+     * A crack of light in the rift's ground (2.49.0): a full block whose glowing seam runs from its middle to the middle
+     * of each side where another crack lies, so a line of them, however it turns, is one crack; with one neighbour it
+     * is the crack's tip.
+     */
+    public static class Crack extends Block {
+        private static final BooleanProperty[] SIDES={Properties.SOUTH,Properties.WEST,Properties.NORTH,Properties.EAST};
+        public Crack(Settings s){super(s);var d=getDefaultState();for(var p:SIDES)d=d.with(p,false);setDefaultState(d);}
+        @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(SIDES);}
+        /** The side's property: Properties.NORTH for north, and so on. */
+        public static BooleanProperty side(Direction d){return SIDES[d.getHorizontal()];}
+        /** The state with its seams joined to the cracks round it. */
+        public static BlockState joined(BlockState s,BlockView w,BlockPos p){
+            for(var d:Direction.Type.HORIZONTAL)s=s.with(side(d),w.getBlockState(p.offset(d)).getBlock() instanceof Crack);
+            return s;
+        }
+        @Override public BlockState getPlacementState(ItemPlacementContext c){return joined(getDefaultState(),c.getWorld(),c.getBlockPos());}
+        @Override public BlockState getStateForNeighborUpdate(BlockState s,Direction d,BlockState n,WorldAccess w,BlockPos p,BlockPos np){
+            return d.getAxis().isHorizontal()?s.with(side(d),n.getBlock() instanceof Crack):s;
+        }
+        @Override public BlockState rotate(BlockState s,BlockRotation r){
+            var out=s;for(var d:Direction.Type.HORIZONTAL)out=out.with(side(r.rotate(d)),s.get(side(d)));
+            return out;
+        }
+        @Override public BlockState mirror(BlockState s,BlockMirror m){
+            var out=s;for(var d:Direction.Type.HORIZONTAL)out=out.with(side(m.apply(d)),s.get(side(d)));
+            return out;
         }
     }
     /**

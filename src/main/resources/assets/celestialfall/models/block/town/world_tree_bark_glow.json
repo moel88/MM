@@ -1,0 +1,7 @@
+{
+ "parent": "minecraft:block/cube_column",
+ "textures": {
+  "end": "celestialfall:block/town/world_bark_top",
+  "side": "celestialfall:block/town/world_bark_glow"
+ }
+}

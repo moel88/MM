@@ -186,5 +186,10 @@
   "block.celestialfall.wood_boards_dark": "검은 판자벽",
   "block.celestialfall.wood_boards": "갈색 판자벽",
   "block.celestialfall.timber_dark": "짙은 목재 기둥",
-  "block.celestialfall.pine_needles": "솔잎"
+  "block.celestialfall.pine_needles": "솔잎",
+  "block.celestialfall.world_tree_leaves": "세계수 잎",
+  "block.celestialfall.world_tree_bark": "세계수 줄기",
+  "block.celestialfall.world_tree_bark_glow": "빛나는 세계수 줄기",
+  "block.celestialfall.rift_ground": "시공간의 틈 바닥",
+  "block.celestialfall.rift_crack": "빛나는 균열"
 }

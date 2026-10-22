@@ -1,82 +1,110 @@
 package dev.sangwoo.botandtown;
 
-import net.minecraft.block.*;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.enums.Attachment;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.Direction;
 import java.util.*;
 
-import static dev.sangwoo.botandtown.Kit.s;
-
 /**
- * ぼたんど神社 on the hill north of the town (map v2.0), up a broad flight of stone steps from the end of the shopping
- * street (three flights between stone walls, two landings, stone lanterns at the foot): a great red torii at the top,
- * a gravel precinct with a stone-paved approach between stone lanterns, the purification basin under its little roof,
- * the worship hall on a raised floor under a green copper roof with crossed finials, its straw rope and paper
- * streamers, the offering box and the bell; a great sacred tree bound with rope, and tall cedars all round.
+ * ぼたんど神社 on its hill at the old town's far corner (map v3.0: '신사랑 일본 마을이랑 통합'), facing the town to
+ * the south: a gravel precinct on the hilltop with a stone-paved approach between stone lanterns, a great red torii at
+ * its edge, the purification basin under its little roof, the worship hall on a raised floor under a green copper roof
+ * with crossed finials, its straw rope and paper streamers, the offering box and the bell, a great sacred tree bound
+ * with rope, and tall cedars on the hill round it. Stone steps come down the hill's face toward the town, following
+ * the slope (a step where the ground falls, a landing where it levels), between low walls of old masonry, and a path
+ * runs from their foot to the loop road.
  */
 final class Shrine {
     private final Townscape t;private final Canvas c;private final Random rnd;
-    static final int Y=Plan.SHRINE_Y,X0=Plan.SHRINE_X0,X1=Plan.SHRINE_X1,ZS=Plan.SHRINE_Z0,ZN=Plan.SHRINE_Z1;
+    static final int Y=Plan.SHRINE_Y,X=Plan.SHRINE_X,Z=Plan.SHRINE_Z,HALF=12;
+    static final int CODE=9;
     Shrine(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
+    private static BlockState s(net.minecraft.block.Block b){return b.getDefaultState();}
 
     void build(){
-        for(int x=X0;x<=X1;x++)for(int z=ZN;z<=ZS;z++){
-            boolean path=Math.abs(x)<=2;
+        // the whole hill is the shrine's: no houses on it
+        for(int x=X-44;x<=X+44;x++)for(int z=Z-44;z<=Z+44;z++)if(Math.hypot(x-X,z-Z)<42&&Canvas.inPlan(x,z)&&c.owner(x,z)==0)c.own(x,z,CODE);
+        for(int x=X-HALF;x<=X+HALF;x++)for(int z=Z-HALF;z<=Z+HALF;z++){
+            boolean path=Math.abs(x-X)<=2&&z>Z-1;
             c.set(x,Y,z,path?(((x+z)&1)==0?s(Blocks.STONE_BRICKS):s(Blocks.POLISHED_ANDESITE)):s(Blocks.GRAVEL));
             c.clear(x,Y+1,z,x,Y+14,z);c.ground(x,z,Y);
         }
-        stairway();
-        torii(0,ZS-1);
-        for(int z=ZS-5;z>=ZN+14;z-=4)for(int side=-1;side<=1;side+=2)lantern(side*4,z);
-        basin(-16,ZS-5);
-        hall(-9,ZN+1,9,ZN+11);
-        sacredTree(19,ZN+9);
-        // cedars round the precinct
-        for(int i=0;i<40;i++){
-            int x=X0-8+rnd.nextInt(X1-X0+16),z=ZN-14+rnd.nextInt(ZS-ZN+18);
-            if(x>=X0-1&&x<=X1+1&&z>=ZN-1&&z<=ZS+1)continue;
-            if(Math.abs(x)<=6&&z>ZS)continue;
+        int foot=stairway();
+        torii(X,Z+HALF-1);
+        for(int z=Z+HALF-4;z>=Z+1;z-=4)for(int side=-1;side<=1;side+=2)lantern(X+side*4,z);
+        basin(X-9,Z+6);
+        hall(X-9,Z-HALF+1,X+9,Z-HALF+11);
+        sacredTree(X+8,Z+5);
+        // cedars on the hill round the precinct, none on the stairway's line
+        int cedars=0;
+        for(int i=0;i<160&&cedars<38;i++){
+            double a=rnd.nextDouble()*2*Math.PI,r=17+rnd.nextDouble()*22;
+            int x=X+(int)Math.round(Math.cos(a)*r),z=Z+(int)Math.round(Math.sin(a)*r);
+            if(Math.abs(x-X)<=6&&z>Z)continue;
+            if(Math.abs(x-X)<=HALF+1&&Math.abs(z-Z)<=HALF+1)continue;
+            if(!Canvas.inPlan(x,z)||Plan.shore(x,z)>-3||t.roads.near(x,z,3))continue;
             int g=c.ground(x,z);
-            if(g<Y-6||!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK))continue;
-            t.nature.cedar(x,g+1,z,13+rnd.nextInt(8));
+            if(!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK)||!c.air(x,g+1,z))continue;
+            t.nature.cedar(x,g+1,z,12+rnd.nextInt(8));cedars++;
         }
-        t.places.put("shrine",new int[]{0,Y+1,ZS-3});
-        Town.log("shrine: "+c.placed);
+        t.places.put("shrine",new int[]{X,Y+1,Z+HALF-3});
+        Town.log("shrine: steps down to z "+foot+", "+cedars+" cedars, "+c.placed);
     }
 
     /**
-     * The stone steps from North Street up the hill's face to the precinct: three flights of six between walls of old
-     * masonry with a stone balustrade, a landing of two blocks between flights; a pair of stone lanterns at the foot.
+     * The stone steps down the hill's face from the precinct's edge: five wide, each row at the hill's own height there
+     * (a step where it falls, a landing where it levels, never more than one step a row), the earth under them made
+     * up with stone, low walls of old masonry either side with a stone rail; two stone lanterns at the foot, then a
+     * gravel path with stepping stones to the loop road. Returns the foot's z.
      */
-    private void stairway(){
-        int x0=Plan.STAIR_X0+1,x1=Plan.STAIR_X1-1,z=Plan.TOWN_Z0-1,y=Plan.COAST;
-        for(int flight=0;flight<3;flight++){
-            for(int k=0;k<6;k++){y++;step(x0,x1,z,y,true);z--;}
-            if(flight<2)for(int k=0;k<2;k++){step(x0,x1,z,y,false);z--;}
+    private int stairway(){
+        int x0=X-2,x1=X+2,y=Y,z=Z+HALF+1;
+        for(;z<Z+60;z++){
+            int g=Integer.MAX_VALUE,next=Integer.MAX_VALUE;
+            for(int x=x0;x<=x1;x++){g=Math.min(g,c.ground(x,z));next=Math.min(next,c.ground(x,z+1));}
+            boolean down=g<y;
+            if(down)y--;
+            step(x0,x1,z,y,down);
+            // the foot: past the hill's brow, where the ground no longer falls
+            if(z>Z+28&&next>=y)break;
         }
-        // from the last step to the precinct's edge, level
-        for(;z>ZS;z--)step(x0,x1,z,Y,false);
+        int foot=z;
         for(int side=-1;side<=1;side+=2){
-            int lx=side*7,lz=Plan.TOWN_Z0;
-            c.set(lx,Plan.COAST+1,lz,s(Blocks.STONE_BRICKS));c.set(lx,Plan.COAST+2,lz,s(Blocks.STONE_BRICK_WALL));c.set(lx,Plan.COAST+3,lz,s(Blocks.STONE_BRICK_WALL));
-            c.set(lx,Plan.COAST+4,lz,s(Blocks.LANTERN));c.set(lx,Plan.COAST+5,lz,Canvas.slab(Blocks.STONE_BRICK_SLAB,false));
+            int lx=X+side*4,lz=foot+1,g=c.ground(lx,lz);
+            c.set(lx,g+1,lz,s(Blocks.STONE_BRICKS));c.set(lx,g+2,lz,s(Blocks.STONE_BRICK_WALL));c.set(lx,g+3,lz,s(Blocks.STONE_BRICK_WALL));
+            c.set(lx,g+4,lz,s(Blocks.LANTERN));c.set(lx,g+5,lz,Canvas.slab(Blocks.STONE_BRICK_SLAB,false));
         }
-        c.wallSign(Plan.STAIR_X1+2,Plan.COAST+1,Plan.TOWN_Z0,Blocks.DARK_OAK_WALL_SIGN,Direction.SOUTH,DyeColor.WHITE,false,"ぼたんど神社","参道","BOTAND SHRINE");
+        c.wallSign(X+5,c.ground(X+5,foot+1)+1,foot+1,Blocks.DARK_OAK_WALL_SIGN,Direction.SOUTH,DyeColor.WHITE,false,"ぼたんど神社","参道","BOTAND SHRINE");
+        // the path east from the foot to the loop road
+        for(int px=X-1;px<=X+40;px++){
+            boolean reached=false;
+            for(int dz=-1;dz<=1;dz++){
+                int pz=foot+2+dz;
+                if(t.roads.on(px,pz)){reached=true;continue;}
+                int g=c.ground(px,pz);
+                if(!c.air(px,g+1,pz))c.clear(px,g+1,pz,px,g+3,pz);
+                c.set(px,g,pz,dz==0&&(px&1)==0?s(Blocks.SMOOTH_STONE):s(Blocks.GRAVEL));
+            }
+            if(reached)break;
+        }
+        return foot;
     }
-    /** One row of the stairway at z: a step (or landing) at y, the side walls retaining the hill, a balustrade on them. */
+    /** One row of the stairway at z: a step (or landing) at y, the earth under it made up, the side walls with their rail. */
     private void step(int x0,int x1,int z,int y,boolean stair){
         for(int x=x0;x<=x1;x++){
-            c.fill(x,Plan.COAST-3,z,x,y-1,z,s(Blocks.STONE));
+            int g=c.ground(x,z);
+            for(int yy=Math.min(g,y-1)-2;yy<y;yy++)c.set(x,yy,z,s(Blocks.STONE));
             c.set(x,y,z,stair?Canvas.stairs(Blocks.STONE_BRICK_STAIRS,Direction.NORTH,false):s(Blocks.STONE_BRICKS));
-            c.clear(x,y+1,z,x,Y+10,z);c.ground(x,z,y);
+            c.clear(x,y+1,z,x,y+8,z);c.ground(x,z,y);
         }
         for(int x:new int[]{x0-1,x1+1}){
             int top=Math.max(y,c.ground(x,z));
-            for(int yy=Plan.COAST+1;yy<=top;yy++)c.set(x,yy,z,t.terrain.masonry(x,yy,z));
+            for(int yy=Math.min(y,c.ground(x,z))-1;yy<=top;yy++)c.set(x,yy,z,t.terrain.masonry(x,yy,z));
             c.set(x,top+1,z,s(Blocks.ANDESITE_WALL));
-            c.clear(x,top+2,z,x,Y+10,z);
+            c.clear(x,top+2,z,x,top+8,z);
             c.ground(x,z,top);
         }
     }
@@ -138,7 +166,6 @@ final class Shrine {
         for(int x=1;x<W-1;x++)for(int z=1;z<D-1;z++)f.set(x,6,z,s(Blocks.SPRUCE_PLANKS));
         // the roof: green copper with a wide overhang, crossed finials at the gables, logs along the ridge
         Kit.roof(f,-1,-1,W,D,6,Kit.GABLE,true,Kit.COPPER,white,s(Blocks.SPRUCE_PLANKS));
-        // the ridge sits at 6 + (its half-block rise)/2 above the floor: the roof's overhang reaches two past the walls
         int ridge=6+(D+3)/4+1;
         for(int x:new int[]{-2,W+1})for(int k=0;k<3;k++){
             f.set(x,ridge+k,D/2-k,s(Blocks.DARK_OAK_FENCE));f.set(x,ridge+k,D/2+k,s(Blocks.DARK_OAK_FENCE));

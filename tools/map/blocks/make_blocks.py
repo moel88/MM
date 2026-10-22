@@ -741,6 +741,161 @@ def timber(seed, base):
 def edge(color):
     img = flat(color); return img
 
+# ---------------------------------------------------------------- the world tree and the rift (2.49.0, map v3.0)
+
+def blur(img, s):
+    """A Gaussian blur of a picture (or a mask) by s pixels, wrapping round at its edges (tileable)."""
+    n = img.shape[0]
+    fy = np.fft.fftfreq(n)[:, None]; fx = np.fft.fftfreq(img.shape[1])[None, :]
+    k = np.exp(-2 * np.pi ** 2 * s * s * (fx ** 2 + fy ** 2))
+    if img.ndim == 2: return np.real(np.fft.ifft2(np.fft.fft2(img) * k))
+    return np.dstack([np.real(np.fft.ifft2(np.fft.fft2(img[..., c]) * k)) for c in range(img.shape[2])])
+
+NEON_HUES = [(70, 176, 246), (56, 196, 240), (92, 164, 252), (82, 188, 255), (64, 184, 236)]
+
+def neon_leaf_cards(seed, count=58, spread=24, sizes=(12, 19), wrap=False):
+    """The world tree's leaves, lit from within like neon: pointed ovals of sky blue, each with a pale glowing band
+    inside a thin dark edge (so overlapping leaves part from one another) and a near-white midrib; the cluster thins
+    out toward the card's edge."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    y, x = np.mgrid[0:S, 0:S]
+    for k in range(count):
+        if wrap:
+            cx, cy = g.uniform(0, S, 2)
+        else:
+            rr = spread * np.sqrt(g.random()) * 1.05; aa = g.uniform(0, 2 * np.pi)
+            cx = 32 + rr * np.cos(aa); cy = 32 + rr * np.sin(aa)
+        a = g.uniform(0, np.pi); length = g.uniform(*sizes); width = length * g.uniform(0.42, 0.58)
+        xs, ys = x, y
+        if wrap:
+            xs = (x - cx + S / 2) % S + cx - S / 2; ys = (y - cy + S / 2) % S + cy - S / 2
+        inside, t, v = leaf_shape(xs, ys, cx, cy, a, length, width)
+        base = np.array(NEON_HUES[g.integers(0, len(NEON_HUES))], float) * g.uniform(0.88, 1.08)
+        # brighter toward the rim and the tip, the deepest blue between rim and rib
+        band = np.clip((np.abs(v) - 0.38) / 0.44, 0, 1) ** 1.5
+        col = base[None, None, :] * (0.94 + 0.10 * np.clip(t, -1, 1))[..., None]
+        col = col + (np.array([170, 240, 255]) - col) * (0.75 * band)[..., None]
+        edge_ = inside & ((np.abs(v) > 0.86) | (np.abs(t) > 0.95))
+        rib = inside & (np.abs(v) < 0.1) & (np.abs(t) < 0.86)
+        img[inside] = col[inside]
+        img[edge_] = (22, 70, 128)
+        img[rib] = (232, 252, 255)
+        alpha[inside] = 255
+    return np.clip(img, 0, 255), alpha
+
+def neon_leaf_mass(seed):
+    """The world tree's leaves packed over a deep glowing blue, tiling: the block's look in the hand."""
+    img, alpha = neon_leaf_cards(seed, 110, 0, (10, 15), True)
+    img[alpha == 0] = (34, 104, 178); alpha[:] = 255
+    return img, alpha
+
+def silver_bark(seed, veins=False):
+    """The world tree's bark: silver white in long ridges running up the trunk, cool grey grooves between them; the
+    glowing kind has threads of sky-blue light wandering up the grooves, a soft halo round them."""
+    g = rng(seed)
+    img = flat((208, 214, 222))
+    img = shade(img, 9 * field(seed, 1.4, 10) + 4 * field(seed + 1, 5, 3) + 1.5 * g.normal(size=(S, S)))
+    ridge = field(seed + 2, 2.2, 14)
+    groove = ridge > 0.85
+    img[groove] = img[groove] * 0.74 + np.array([4, 10, 22])
+    deep = ridge > 1.6
+    img[deep] = img[deep] * 0.82
+    # a sheen on the ridges' crowns
+    crown = (ridge < -1.1)
+    img[crown] = np.clip(img[crown] * 1.06 + 6, 0, 255)
+    if veins:
+        core = np.zeros((S, S))
+        yy = np.arange(S)
+        for k in range(3):
+            x0 = g.uniform(0, S); amp = g.uniform(2, 5); w = int(g.integers(1, 3)); ph = g.uniform(0, 2 * np.pi)
+            xs = x0 + amp * np.sin(2 * np.pi * w * yy / S + ph) + 1.2 * np.sin(2 * np.pi * 3 * yy / S + ph * 2)
+            for yv, xv in zip(yy, xs):
+                core[yv, int(round(xv)) % S] = 1
+        halo = blur(core, 2.2); halo = np.clip(halo / max(halo.max(), 1e-6), 0, 1) ** 0.8
+        img = img + (np.array([110, 214, 255]) - img) * (0.85 * halo)[..., None]
+        img[core > 0] = (232, 252, 255)
+    return np.clip(img, 0, 255)
+
+def silver_rings(seed):
+    """The end of a silver log: pale rings round a bright heart, the bark's dark rim at the edge."""
+    g = rng(seed)
+    y, x = np.mgrid[0:S, 0:S]
+    r = np.hypot(x - 31.5, y - 31.5) + 1.6 * field(seed, 6)
+    img = flat((214, 220, 228))
+    img = shade(img, 7 * np.sin(r * 0.9) + 2 * g.normal(size=(S, S)))
+    img[r < 4] = (236, 244, 252)
+    img[r > 28] = (150, 158, 172)
+    return np.clip(img, 0, 255)
+
+def rift_ground(seed):
+    """The rift's ground: a soft chalky white with a faint cool tint and the lightest drift of grey, as if dusted."""
+    img = flat((234, 237, 242))
+    img = shade(img, 5 * field(seed, 9) + 3 * field(seed + 1, 2.5) + 1.5 * rng(seed + 2).normal(size=(S, S)))
+    stones(img, seed + 3, 0.004, [(212, 216, 226), (248, 250, 253)])
+    return img
+
+def rift_crack(seed, mask):
+    """The white ground broken by a crack full of sky-blue light, its seam running from the block's middle to the
+    middle of each side named in mask (north 1, east 2, south 4, west 8; the picture's top is north): where two cracks
+    meet, their seams meet square to the shared side, halo and all, so a line of these is one crack. A crack with one
+    side is the crack's tip; hairline branches stay inside the block."""
+    g = rng(seed)
+    img = rift_ground(seed // 100)
+    P = 16; N = S + 2 * P
+    core = np.zeros((N, N)); hair = np.zeros((N, N))
+    c = np.array([31.5 + P, 31.5 + P])
+    ends = {1: (31.5, -0.5), 2: (63.5, 31.5), 4: (31.5, 63.5), 8: (-0.5, 31.5)}
+    def line(arr, a, b, jag, width, steps=200, extend=0):
+        a = np.array(a, float); b = np.array(b, float); d = b - a; L = np.hypot(*d); n = np.array([-d[1], d[0]]) / max(L, 1e-6)
+        ph = g.uniform(0, 2 * np.pi, 3); fr = g.uniform(1.5, 3.5, 3)
+        for k in range(steps + 1):
+            s_ = k / steps
+            env = np.sin(np.pi * min(s_ / 0.85, 1)) if s_ < 0.85 else 0
+            w = jag * env * (np.sin(fr[0] * np.pi * s_ + ph[0]) * 0.6 + np.sin(fr[1] * 2 * np.pi * s_ + ph[1]) * 0.3 + np.sin(fr[2] * 5 * np.pi * s_ + ph[2]) * 0.15)
+            p_ = a + d * s_ + n * w
+            for ox in range(-(width // 2), width - width // 2):
+                for oy in range(-(width // 2), width - width // 2):
+                    ix, iy = int(round(p_[0])) + ox, int(round(p_[1])) + oy
+                    if 0 <= ix < N and 0 <= iy < N: arr[iy, ix] = 1
+        if extend:
+            u = d / max(L, 1e-6)
+            for k in range(int(extend) + 1):
+                p_ = b + u * k
+                for ox in range(-(width // 2), width - width // 2):
+                    for oy in range(-(width // 2), width - width // 2):
+                        ix, iy = int(round(p_[0])) + ox, int(round(p_[1])) + oy
+                        if 0 <= ix < N and 0 <= iy < N: arr[iy, ix] = 1
+    sides = [b for b in (1, 2, 4, 8) if mask & b]
+    for b in sides:
+        e = np.array(ends[b]) + P
+        line(core, c, e, g.uniform(4, 7), 2, extend=P - 6)
+    if not sides:
+        for k in range(3):
+            a = g.uniform(0, 2 * np.pi); line(core, c, c + 9 * np.array([np.cos(a), np.sin(a)]), 2, 2)
+    if len(sides) == 1:
+        # a tip: the seam thins away past the middle
+        b = sides[0]; e = np.array(ends[b]) + P; u = (c - e) / np.hypot(*(c - e))
+        line(hair, c, c + u * 8, 1.5, 1)
+    # hairline branches off the seams, kept inside the block
+    for k in range(int(g.integers(2, 5))):
+        a = g.uniform(0, 2 * np.pi); r0 = g.uniform(4, 12)
+        st = c + r0 * np.array([np.cos(a), np.sin(a)]) * 0.5
+        en = st + g.uniform(6, 11) * np.array([np.cos(a + g.normal(0, 0.6)), np.sin(a + g.normal(0, 0.6))])
+        en = np.clip(en, P + 7, P + S - 8)
+        line(hair, st, en, 1.5, 1, 60)
+    # blurred on the padded picture (the seams run on past the sides they join), so nothing wraps round to the far side
+    halo = blur(core, 3.2) + 0.45 * blur(hair, 2.0); rim = blur(core, 0.8) > 0.10
+    halo = halo[P:P + S, P:P + S]; rim = rim[P:P + S, P:P + S]; core = core[P:P + S, P:P + S] > 0; hair = hair[P:P + S, P:P + S] > 0
+    halo = np.clip(halo / 0.32, 0, 1) ** 0.75
+    img = img + (np.array([96, 204, 255]) - img) * (0.88 * halo)[..., None]
+    rim &= ~core
+    img[rim] = (124, 222, 255)
+    img[hair] = (150, 230, 255)
+    img[core] = (236, 252, 255)
+    return np.clip(img, 0, 255)
+
+
 # ---------------------------------------------------------------- the block list (same order as TownBlocks)
 
 TEXTURES = {}
@@ -930,6 +1085,22 @@ block('vending_machine_white', 'vending', {'colour': 'white'}, '흰 자판기', 
 block('mirror_post', 'post', {'from': 7.1, 'to': 8.9, 'tex': MOR}, '반사경 기둥', 'Mirror Post')
 block('traffic_mirror', 'mirror', {}, '도로 반사경', 'Traffic Mirror')
 
+# 2.49.0: the world tree in the rift of the hourglass island (map v3.0), its neon leaves and silver bark, the rift's
+# white ground and its glowing cracks
+WLEAF = [tex(f'world_leaf_cards_{k}', neon_leaf_cards, 2600 + k) for k in range(3)]
+WLMASS = tex('world_leaf_mass', neon_leaf_mass, 2610)
+WBARK = tex('world_bark', silver_bark, 2620)
+WBARKG = tex('world_bark_glow', silver_bark, 2621, True)
+WBTOP = tex('world_bark_top', silver_rings, 2622)
+RGR = [tex(f'rift_ground_{k}', rift_ground, 2630 + k) for k in range(3)]
+# a crack's sixteen ways of joining its neighbours (north 1, east 2, south 4, west 8), two pictures of each
+RCR = {m: [tex(f'rift_crack_{m:02d}_{v}', rift_crack, 2640 * 100 + 2 * m + v, m) for v in range(2)] for m in range(16)}
+block('world_tree_leaves', 'foliage', {'mass': WLMASS}, '세계수 잎', 'World Tree Leaves', 'hoe')
+block('world_tree_bark', 'log', {'side': WBARK, 'end': WBTOP}, '세계수 줄기', 'World Tree Bark', 'axe')
+block('world_tree_bark_glow', 'log', {'side': WBARKG, 'end': WBTOP}, '빛나는 세계수 줄기', 'Glowing World Tree Bark', 'axe')
+block('rift_ground', 'cube', {'tex': RGR, 'spin': True}, '시공간의 틈 바닥', 'Rift Ground')
+block('rift_crack', 'crack', {'tex': RCR, 'side': RGR[0]}, '빛나는 균열', 'Glowing Rift Crack')
+
 # ---------------------------------------------------------------- models
 
 MODELS = {}; STATES = {}; ITEMS = {}
@@ -1090,6 +1261,18 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
     elif kind == 'foliage':
         # drawn in code (FoliageModel); in the hand, a block of the leaves' mass
         ITEMS[i] = cube(i + '_item', d['mass'])
+    elif kind == 'crack':
+        v = {}
+        for m, ts in d['tex'].items():
+            ms = [top_cube(f'{i}_{m:02d}_{k}', t, d['side']) for k, t in enumerate(ts)]
+            key = ','.join(f'{n}={"true" if m & b else "false"}' for n, b in (('east', 2), ('north', 1), ('south', 4), ('west', 8)))
+            v[key] = [{'model': x} for x in ms]
+        STATES[i] = {'variants': v}
+        ITEMS[i] = f'{NS}:block/town/{i}_10_0'
+    elif kind == 'log':
+        m = model(i, {'parent': 'minecraft:block/cube_column', 'textures': {'end': d['end'], 'side': d['side']}})
+        STATES[i] = {'variants': {'axis=y': {'model': m}, 'axis=z': {'model': m, 'x': 90}, 'axis=x': {'model': m, 'x': 90, 'y': 90}}}
+        ITEMS[i] = m
     elif kind == 'ivy':
         ITEMS[i] = ('generated', d['tex'])
     elif kind == 'branch':

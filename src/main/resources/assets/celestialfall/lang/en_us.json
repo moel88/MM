@@ -186,5 +186,10 @@
   "block.celestialfall.wood_boards_dark": "Charred Wood Boards",
   "block.celestialfall.wood_boards": "Wood Boards",
   "block.celestialfall.timber_dark": "Dark Timber",
-  "block.celestialfall.pine_needles": "Pine Needles"
+  "block.celestialfall.pine_needles": "Pine Needles",
+  "block.celestialfall.world_tree_leaves": "World Tree Leaves",
+  "block.celestialfall.world_tree_bark": "World Tree Bark",
+  "block.celestialfall.world_tree_bark_glow": "Glowing World Tree Bark",
+  "block.celestialfall.rift_ground": "Rift Ground",
+  "block.celestialfall.rift_crack": "Glowing Rift Crack"
 }

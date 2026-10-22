@@ -1,0 +1,51 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/rift_ground_0"
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_0",
+    "y": 90
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_0",
+    "y": 180
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_0",
+    "y": 270
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_1"
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_1",
+    "y": 90
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_1",
+    "y": 180
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_1",
+    "y": 270
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_2"
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_2",
+    "y": 90
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_2",
+    "y": 180
+   },
+   {
+    "model": "celestialfall:block/town/rift_ground_2",
+    "y": 270
+   }
+  ]
+ }
+}

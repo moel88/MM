@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:block/cube_bottom_top",
+ "textures": {
+  "top": "celestialfall:block/town/rift_crack_08_1",
+  "side": "celestialfall:block/town/rift_ground_0",
+  "bottom": "celestialfall:block/town/rift_ground_0"
+ }
+}

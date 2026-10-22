@@ -1,0 +1,16 @@
+{
+ "variants": {
+  "axis=y": {
+   "model": "celestialfall:block/town/world_tree_bark_glow"
+  },
+  "axis=z": {
+   "model": "celestialfall:block/town/world_tree_bark_glow",
+   "x": 90
+  },
+  "axis=x": {
+   "model": "celestialfall:block/town/world_tree_bark_glow",
+   "x": 90,
+   "y": 90
+  }
+ }
+}

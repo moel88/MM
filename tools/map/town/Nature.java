@@ -157,52 +157,48 @@ final class Nature {
         }
     }
 
-    /**
-     * Woods on the natural land outside the town (map v2.0): cedars and broadleaf trees on the hill behind the town,
-     * thinning to meadows here and there, black pines along the shores and on the island; grass, ferns and
-     * wildflowers under them.
-     */
-    void woods(){
-        int trees=0;
-        for(int x=Plan.X0+2;x<Plan.X0+Plan.W-2;x+=3)for(int z=Plan.Z0+2;z<Plan.Z0+Plan.D-2;z+=3){
-            int px=x+rnd.nextInt(3)-1,pz=z+rnd.nextInt(3)-1;
-            int i=Canvas.idx(px,pz);
-            if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.plat[i]!=Terrain.NONE)continue;
-            int g=c.ground(px,pz);
-            if(g<=Plan.SEA+1||!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz))continue;
-            if(t.roads.any(px,pz)||nearBuilt(px,pz,g))continue;
-            // the shrine's stairway keeps a clear strip either side, so the view down it stays open
-            if(pz<Plan.TOWN_Z0&&pz>=Plan.SHRINE_Z0&&Math.abs(px)<=Plan.STAIR_X1+5)continue;
-            boolean hill=pz<Plan.TOWN_Z0;
-            // the hill: a meadow along its foot, then woods in groves with clearings between them
-            int up=Plan.TOWN_Z0-pz;
-            double p=hill?(up<7?0.03:Pal.smooth(px,pz,23,97)<0.35?0.06:0.5):0.30;
-            if(rnd.nextDouble()>p)continue;
-            int r=rnd.nextInt(100);
-            if(!hill)pine(px,g+1,pz,5+rnd.nextInt(4),false);
-            else if(r<40)cedar(px,g+1,pz,11+rnd.nextInt(7));else if(r<90)broadleaf(px,g+1,pz,5+rnd.nextInt(4));else pine(px,g+1,pz,6+rnd.nextInt(3),false);
-            trees++;
-        }
-        Town.log("woods: "+trees+" trees");
-        // grass, ferns and wildflowers over all the open natural ground, thickest in front of the little rises of a slope
-        int plants=0;
-        for(int x=Plan.X0+1;x<Plan.X0+Plan.W-1;x++)for(int z=Plan.Z0+1;z<Plan.Z0+Plan.D-1;z++){
-            int i=Canvas.idx(x,z);
-            if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.plat[i]!=Terrain.NONE||t.roads.any(x,z))continue;
-            int g=c.ground(x,z);
-            if(g<=Plan.SEA+1||!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK)||!c.air(x,g+1,z))continue;
-            boolean rise=c.ground(x+1,z)>g||c.ground(x-1,z)>g||c.ground(x,z+1)>g||c.ground(x,z-1)>g;
-            boolean shore=z>=Plan.TOWN_Z0;
-            if(rnd.nextDouble()<(rise?0.6:0.2)*(shore?0.7:1)&&undergrowth(x,g+1,z,shore))plants++;
-        }
-        Town.log("undergrowth: "+plants+" plants");
+    /** A birch: a slim white trunk under a small round crown. */
+    void birch(int x,int y,int z,int h){
+        for(int k=0;k<h;k++)log(x,y+k,z,Blocks.BIRCH_LOG,Direction.Axis.Y);
+        double r=1.9+rnd.nextDouble()*0.8;
+        blob(x+0.5,y+h-1,z+0.5,r,r*1.25,r,Blocks.BIRCH_LEAVES,null);
     }
-    private boolean nearBuilt(int x,int z,int g){
-        for(int dx=-3;dx<=3;dx++)for(int dz=-3;dz<=3;dz++){
-            if(!Canvas.inPlan(x+dx,z+dz))continue;
-            int i=Canvas.idx(x+dx,z+dz);
-            if(t.terrain.plat[i]!=Terrain.NONE||t.roads.any(x+dx,z+dz))return true;
+    /** A dark oak: a thick trunk two by two under a broad, low crown. */
+    void darkOak(int x,int y,int z,int h){
+        for(int k=0;k<h;k++)for(int dx=0;dx<=1;dx++)for(int dz=0;dz<=1;dz++)log(x+dx,y+k,z+dz,Blocks.DARK_OAK_LOG,Direction.Axis.Y);
+        double r=3.4+rnd.nextDouble()*1.2;
+        blob(x+1,y+h,z+1,r,2.4,r,Blocks.DARK_OAK_LEAVES,Blocks.OAK_LEAVES);
+    }
+
+    /**
+     * The open land of the town and the capital between the plots (map v3.0; the forest and the old city see to their
+     * own): grass, ferns and wildflowers, thickest at the little rises, and now and then a shade tree well away from
+     * the roads and the plots.
+     */
+    void meadows(){
+        int plants=0,shade=0;
+        for(int x=Plan.X0+1;x<Plan.X0+Plan.W-1;x++)for(int z=Plan.Z0+1;z<0;z++){
+            int i=Canvas.idx(x,z);
+            if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.pale[i]||c.owner[i]!=0||t.roads.on(x,z))continue;
+            int g=c.ground(x,z);
+            if(!c.get(x,g,z).isOf(Blocks.GRASS_BLOCK)||!c.air(x,g+1,z))continue;
+            boolean rise=c.ground(x+1,z)>g||c.ground(x-1,z)>g||c.ground(x,z+1)>g||c.ground(x,z-1)>g;
+            if(rnd.nextDouble()<(rise?0.45:0.16)&&undergrowth(x,g+1,z,false))plants++;
         }
+        for(int x=Plan.X0+4;x<Plan.X0+Plan.W-4;x+=9)for(int z=Plan.Z0+4;z<-50;z+=9){
+            int px=x+rnd.nextInt(5)-2,pz=z+rnd.nextInt(5)-2;
+            int i=Canvas.idx(px,pz);
+            if(t.terrain.kind[i]!=Terrain.LAND||t.terrain.pale[i]||t.roads.near(px,pz,4)||Plan.shore(px,pz)>-5)continue;
+            if(nearOwned(px,pz,4))continue;
+            int g=c.ground(px,pz);
+            if(!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz)||rnd.nextDouble()>0.22)continue;
+            if(Plan.zone(px,pz)==Plan.TOWN)broadleaf(px,g+1,pz,5+rnd.nextInt(3));else townTree(px,g+1,pz,5+rnd.nextInt(3));
+            shade++;
+        }
+        Town.log("meadows: "+plants+" plants, "+shade+" shade trees");
+    }
+    private boolean nearOwned(int x,int z,int m){
+        for(int dx=-m;dx<=m;dx++)for(int dz=-m;dz<=m;dz++)if(c.owner(x+dx,z+dz)>0)return true;
         return false;
     }
     boolean undergrowth(int x,int y,int z,boolean shore){

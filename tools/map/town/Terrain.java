@@ -6,108 +6,114 @@ import java.util.ArrayDeque;
 import java.util.Random;
 
 /**
- * The ground (map v2.0). The town stands on one flat platform (y 64) from the foot of the hill to the sea wall, with the
- * harbour's quay and the open lot by the sea reaching out into the water at the same level; past the ring roads the
- * land falls in a short grassy bank to rocks and the sea. North of the town a wooded hill rises to the shrine's square
- * (a platform cut into it) and falls behind it to the sea in cliffs; the island beyond the bridge is a green hill of
- * its own. Where a platform is cut into higher ground the step is a stone retaining wall; where it stands above the
- * natural ground the fill slopes away as a grassy bank. Levels are kept in half blocks (2y, plus one where a slab
- * tops the column).
+ * The hourglass island's ground (map v3.0). The rift at the waist is level white ground (y 70) falling to the sea in
+ * white cliffs. The upper glass rises gently away from it (the town and the capital from y 72 to 76), the shrine's hill
+ * standing up in the town's far corner (its precinct at y 88) and the castle's plateau in the capital's (y 84, on sheer
+ * cliffs). The lower glass is lower: the forest rolls over low hills and comes down to sand all along its shore; the
+ * old city is level (y 70) on low cliffs, as Botand's first map stood on its cliffs. Where two zones meet on the axis
+ * the ground blends from one to the other; round the rift it eases down to the rift's level. The town's canal runs in
+ * a stone channel two blocks below the ground; the forest's lake lies in a hollow.
  */
 final class Terrain {
     static final byte SEA=1,LAND=2,BEACH=4;
-    static final int NONE=Integer.MIN_VALUE;
-    private final Canvas c;private final Random rnd;private final Layout layout;
+    private final Canvas c;private final Random rnd;
     final byte[] kind=new byte[Plan.W*Plan.D];
-    /** Platform level of a column in half blocks, or NONE where the ground is natural. */
-    final int[] plat=new int[Plan.W*Plan.D];
+    /** The water inside the land: the canal's and the lake's columns, with their surface's level. */
+    final int[] water=new int[Plan.W*Plan.D];
+    /** The columns whose ground is the rift's white. */
+    final boolean[] pale=new boolean[Plan.W*Plan.D];
     private final double[] ph=new double[12];
-    Terrain(Canvas c,Layout layout,long seed){this.c=c;this.layout=layout;rnd=new Random(seed);for(int i=0;i<ph.length;i++)ph[i]=rnd.nextDouble()*Math.PI*2;}
+    Terrain(Canvas c,long seed){this.c=c;rnd=new Random(seed);for(int i=0;i<ph.length;i++)ph[i]=rnd.nextDouble()*Math.PI*2;}
 
     double noise(double x,double z){
         return (Math.sin(x/37+ph[0])*Math.cos(z/41+ph[1])+0.6*Math.sin(x/17.3+z/23.1+ph[2])+0.35*Math.cos(x/9.7-z/11.3+ph[3])+0.2*Math.sin(x/5.1+ph[4])*Math.sin(z/4.7+ph[5]))/2.15;
     }
     double noise2(double x,double z){return (Math.sin(x/29+ph[6])*Math.cos(z/31+ph[7])+0.5*Math.sin(x/13.1-z/15.7+ph[8])+0.25*Math.cos(x/6.3+z/7.1+ph[9]))/1.75;}
 
-    /** How far in from the plan's west, east and north edges a point lies (0 at the sea, 1 well inland), the coast wandering. */
-    double edge(int x,int z){
-        double d=Math.min(Math.min(x-Plan.X0,Plan.X0+Plan.W-1-x),z-Plan.Z0+2);
-        d+=3*noise2(x*0.9+300,z*0.9-200)+1.5*noise(x*2.3,z*2.3);
-        return Math.max(0,Math.min(1,(d-3)/10.0));
-    }
-    /** The natural height of the land (before platforms): the town's level, the hill to the north, the island. */
-    double natural(int x,int z){
-        // the island beyond the bridge: a green hill standing out of the sea
-        if(z>Plan.BRIDGE_Z1-12&&Math.abs(x-Plan.ISLAND_X)<Plan.ISLAND_RX+14){
-            double k=Plan.island(x,z);
-            if(k>0)return 61+18*Math.pow(k,0.9)+2*noise2(x*1.7,z*1.7)*Math.min(1,k*3);
+    /** A zone's own ground height at a point (before the blends round the rift and across the axis). */
+    double zoneHeight(int zone,double x,double z){
+        double u=Math.abs(z)/Plan.END;
+        switch(zone){
+            case Plan.TOWN->{
+                double h=72+4*Plan.ss(.35,.75,u);
+                double ds=Math.hypot(x-Plan.SHRINE_X,z-Plan.SHRINE_Z);
+                // the shrine's hill: a level precinct on top, wooded slopes down to the town
+                int r=Plan.SHRINE_R;
+                double hill=ds<r?Plan.SHRINE_Y:Plan.SHRINE_Y-(Plan.SHRINE_Y-h)*Plan.ss(r,r+26,ds);
+                return Math.max(h,hill+(ds<r?0:1.2*noise(x*1.5,z*1.5)*Plan.ss(r,r+10,ds)*(1-Plan.ss(r+18,r+26,ds))));
+            }
+            case Plan.CAPITAL->{
+                double h=72+4*Plan.ss(.35,.75,u);
+                // the castle's plateau: level ground on cliffs
+                return Math.hypot(x-Plan.CASTLE_X,z-Plan.CASTLE_Z)<Plan.PLATEAU_R+1.5*noise2(x*2,z*2)?Plan.CASTLE_Y:h;
+            }
+            case Plan.FOREST->{
+                return 70+2.6*noise(x,z)+1.6*noise2(x*1.4,z*1.4)+2.5*Plan.ss(.45,.85,u)*(1-Plan.ss(.9,1,u));
+            }
+            case Plan.CITY->{return Plan.BASE;}
+            default->{return Plan.BASE;}
         }
-        // south of the sea wall the sea (the quay, the lot and the beach are laid on it)
-        if(z>Plan.PARAPET_Z)return 0;
-        double h=Plan.COAST;
-        int t=Plan.TOWN_Z0-z;
-        if(t>0){
-            // the hill: a gentle rise from the street, its face up to the shrine's level, a ridge behind
-            double u=Math.min(1,Math.max(0,(t-2)/22.0)),face=u*u*(3-2*u);
-            h=Plan.COAST+0.4*Math.min(t,2)+18*face+Math.max(0,t-24)*0.45;
-            h+=Math.min(1,t/10.0)*(3*noise(x,z)+1.5*noise2(x*1.3,z*1.3));
+    }
+    /** The ground's height at a point, every blend applied (the shore aside). */
+    double height(double x,double z){
+        double R=Math.hypot(x,z);
+        if(R<Plan.RIFT-6)return Plan.BASE;
+        boolean upper=z<0;
+        int left=upper?Plan.TOWN:Plan.FOREST,right=upper?Plan.CAPITAL:Plan.CITY;
+        double w=Plan.ss(-18,18,x);
+        double h=zoneHeight(left,x,z)*(1-w)+zoneHeight(right,x,z)*w;
+        // the shrine's hill and the castle's plateau keep their own heights wherever they are
+        if(upper&&x<-20)h=zoneHeight(Plan.TOWN,x,z);
+        if(upper&&x>20)h=zoneHeight(Plan.CAPITAL,x,z);
+        return Plan.BASE+(h-Plan.BASE)*Plan.ss(Plan.RIFT-6,Plan.RIFT+24,R);
+    }
+    /** The canal's pools: level stretches of sixteen blocks, each two below the lowest bank along it, held by weirs (OldTown). */
+    static final int POOL=16;
+    private int canalLevel(int[] F,int z){
+        int seg=Math.floorDiv(z-Plan.CANAL_Z0,POOL),lo=Integer.MAX_VALUE;
+        for(int zz=Plan.CANAL_Z0+seg*POOL;zz<Plan.CANAL_Z0+(seg+1)*POOL&&zz<=Plan.CANAL_Z1;zz++){
+            for(int side=-1;side<=1;side+=2){
+                int x=(int)Math.floor(Plan.canalX(zz+0.5)+side*(Plan.canalHalf(zz+0.5)+1));
+                lo=Math.min(lo,F[Canvas.idx(x,zz)]);
+            }
         }
-        // the shores: past the ring roads and behind the hill the land falls to rocks and the sea
-        double e=edge(x,z);
-        return Plan.FLOOR+(h-Plan.FLOOR)*(e*e*(3-2*e));
+        return lo-2;
     }
-    /** The beach: dry sand at the water's level under the sea wall, shelving into the shallows. */
-    static int beach(int z){int d=z-Plan.SEAWARD_Z;return d<10?62:d<14?61:d<18?60:d<22?59:-1;}
-    static boolean beachX(int x){return x>=Plan.BEACH_X0&&x<=Plan.BEACH_X1;}
-
-    /** The platform level of a column, in half blocks, or NONE. */
-    int platformAt(int x,int z){
-        int own=layout.level[Canvas.idx(x,z)];if(own!=NONE)return own;
-        if(x>=Plan.SHRINE_X0&&x<=Plan.SHRINE_X1&&z<=Plan.SHRINE_Z0&&z>=Plan.SHRINE_Z1)return 2*Plan.SHRINE_Y;
-        if(x>=Plan.TOWN_X0&&x<=Plan.TOWN_X1&&z>=Plan.TOWN_Z0&&z<=Plan.PARAPET_Z)return 2*Plan.COAST;
-        if(x>=Plan.HARBOR_X0&&x<=Plan.HARBOR_X1&&z>=Plan.SEAWARD_Z&&z<=Plan.QUAY_Z1)return 2*Plan.COAST;
-        if(x>=Plan.LOT_X0&&x<=Plan.LOT_X1&&z>=Plan.SEAWARD_Z&&z<=Plan.LOT_Z1)return 2*Plan.COAST;
-        // the island's square where the bridge lands
-        if(z>=Plan.BRIDGE_Z1-1&&z<=Plan.BRIDGE_Z1+12&&Math.abs(x)<=14)return 2*66;
-        return NONE;
-    }
+    /** Whether a shore comes down to sand (the forest's) or ends in a cliff (everywhere else). */
+    static boolean sandy(double x,double z){return z>0&&x<-12;}
 
     void build(){
-        int n=Plan.W*Plan.D;int[] F=new int[n];double[] nat=new double[n];
+        int n=Plan.W*Plan.D;int[] F=new int[n];
         for(int i=0;i<n;i++){
             int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D;
-            int p=platformAt(x,z);plat[i]=p;
-            nat[i]=natural(x,z);
-            boolean beach=beachX(x)&&z>=Plan.SEAWARD_Z&&beach(z)>=0&&p==NONE;
-            boolean sea=p==NONE&&!beach&&nat[i]<62.5;
-            kind[i]=beach?BEACH:sea?SEA:LAND;
-            F[i]=p!=NONE?p>>1:beach?beach(z):(int)Math.round(nat[i]);
+            double s=Plan.shore(x,z);
+            if(s>=0){kind[i]=SEA;continue;}
+            double h=height(x,z);
+            if(sandy(x,z)){
+                // the forest's shore: the ground eases down to a strip of sand at the water
+                h=63+(h-63)*Plan.ss(0,16,-s);
+                kind[i]=h<64.6?BEACH:LAND;
+            }else kind[i]=LAND;
+            F[i]=(int)Math.round(h);
         }
-        // the sea floor: shelving off every shore (a third of a block down per block out), a dredged basin in the harbour,
-        // the shallows off the beach
+        // the town's canal in its channel, the forest's lake in its hollow
+        for(int i=0;i<n;i++){
+            if(kind[i]==SEA)continue;
+            int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D;
+            if(z>=Plan.CANAL_Z0&&z<=Plan.CANAL_Z1&&Math.abs(x+0.5-Plan.canalX(z+0.5))<Plan.canalHalf(z+0.5)){water[i]=canalLevel(F,z);F[i]=water[i]-2;}
+            double dl=Math.hypot(x-Plan.LAKE_X,z-Plan.LAKE_Z)+1.5*noise(x*3,z*3);
+            if(dl<Plan.LAKE_R){water[i]=68;F[i]=Math.min(F[i],(int)Math.round(68-1-3*Plan.ss(Plan.LAKE_R,4,dl)));}
+            else if(dl<Plan.LAKE_R+8)F[i]=(int)Math.round(Math.min(F[i],68+(F[i]-68)*Plan.ss(Plan.LAKE_R,Plan.LAKE_R+8,dl)));
+        }
+        // the sea floor: shelving off the sandy shores, falling away quickly under the cliffs
         int[] dist=shoreDistance();
         for(int i=0;i<n;i++){
             if(kind[i]!=SEA)continue;
             int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D;
-            double d=dist[i];
-            if(x>=Plan.BEACH_X0-6&&x<=Plan.BEACH_X1+6&&z<Plan.SEAWARD_Z+40)d=Math.max(0,d-6)*0.6;
-            double floor=61-d*0.33+0.8*noise(x*2,z*2);
-            if(nat[i]>0&&Plan.island(x,z)>0)floor=Math.max(floor,nat[i]);
-            if(x>=Plan.X0+4&&x<=-66&&z>Plan.QUAY_Z1&&z<=166)floor=Math.min(floor,54+noise2(x*3,z*3));
-            F[i]=(int)Math.round(Math.max(Plan.FLOOR,Math.min(61,floor)));
+            double d=dist[i],floor=sandy(x,z)?61.2-d*0.3:58-d*0.32;
+            floor+=0.8*noise(x*2,z*2);
+            F[i]=(int)Math.round(Math.max(Plan.FLOOR+2,Math.min(61,floor)));
         }
-        // banks: where a platform stands above the natural ground, the fill slopes away one block per block
-        int[] E=new int[n];
-        for(int i=0;i<n;i++)E[i]=plat[i]!=NONE?plat[i]>>1:-1000;
-        for(int pass=0;pass<16;pass++)for(int i=0;i<n;i++){
-            if(plat[i]!=NONE||kind[i]!=LAND)continue;
-            int x=i/Plan.D,z=i%Plan.D,best=E[i];
-            if(x>0)best=Math.max(best,E[i-Plan.D]-1);if(x<Plan.W-1)best=Math.max(best,E[i+Plan.D]-1);
-            if(z>0)best=Math.max(best,E[i-1]-1);if(z<Plan.D-1)best=Math.max(best,E[i+1]-1);
-            E[i]=best;
-        }
-        for(int i=0;i<n;i++)if(plat[i]==NONE&&kind[i]==LAND&&E[i]>F[i])F[i]=E[i];
-        // fill the columns
         for(int i=0;i<n;i++){
             int x=Plan.X0+i/Plan.D,z=Plan.Z0+i%Plan.D,top=F[i];
             c.ground(x,z,top);
@@ -115,18 +121,53 @@ final class Terrain {
                 for(int y=Canvas.Y0;y<=top;y++)c.set(x,y,z,y==top&&rnd.nextInt(5)==0?Blocks.GRAVEL.getDefaultState():Blocks.SAND.getDefaultState());
                 continue;
             }
-            int low=lowestNeighbour(F,i);
-            boolean wall=plat[i]!=NONE&&low<top-1||plat[i]==NONE&&low<top-2&&hasPlatformNeighbour(i);
+            int zone=Plan.zone(x,z);
+            // the white, and round its edge white patches bleeding into the land
+            double over=Math.hypot(x,z)-Plan.riftEdge(x,z);
+            boolean rift=over<0||over<7&&Pal.smooth(x,z,4,77)>0.42+over*0.07;
+            pale[i]=rift;
             for(int y=Canvas.Y0;y<=top;y++){
-                BlockState s;
-                if(wall&&y>low&&y<top)s=masonry(x,y,z);
-                else if(y==top)s=surface(x,z,top,i,F);
-                else if(y>=top-3)s=kind[i]==BEACH||kind[i]==LAND&&top<=Plan.SEA+1?Blocks.SAND.getDefaultState():plat[i]==NONE&&slope(F,i,top)>=2?rock(x,y,z):Blocks.DIRT.getDefaultState();
-                else s=Blocks.STONE.getDefaultState();
-                c.set(x,y,z,s);
+                BlockState st;
+                if(y==top)st=surface(x,z,top,i,F,zone,rift);
+                else if(rift)st=white(x,y,z,y>=top-3);
+                else if(y>=top-3&&!steep(F,i,top))st=kind[i]==BEACH||top<=Plan.SEA+2?Blocks.SAND.getDefaultState():Blocks.DIRT.getDefaultState();
+                else st=y>=top-12&&cliffSide(F,i,top)?rock(x,y,z):Blocks.STONE.getDefaultState();
+                c.set(x,y,z,st);
             }
+            if(water[i]!=0)for(int y=top+1;y<=water[i];y++)c.set(x,y,z,Blocks.WATER.getDefaultState());
         }
     }
+
+    static final BlockState RIFT_GROUND=TB.of("rift_ground");
+    /** The rift's ground (Botand's white rift ground, 2.49.0) and what lies under it: calcite, quartz, white concrete, the odd vein of diorite. */
+    BlockState white(int x,int y,int z,boolean near){
+        double h=Pal.hash(x,y,z),s=Pal.smooth(x+y,z-y,7,41);
+        if(!near&&h<0.18)return Blocks.DIORITE.getDefaultState();
+        if(s<0.35)return Blocks.CALCITE.getDefaultState();
+        if(s<0.70)return Blocks.SMOOTH_QUARTZ.getDefaultState();
+        return Blocks.WHITE_CONCRETE.getDefaultState();
+    }
+    private BlockState surface(int x,int z,int top,int i,int[] F,int zone,boolean rift){
+        if(rift)return Pal.smooth(x,z,5,43)>0.86?Blocks.CALCITE.getDefaultState():RIFT_GROUND;
+        if(kind[i]==BEACH||top<=Plan.SEA+2&&sandy(x,z))return Pal.hash(x,6,z)<0.9?Blocks.SAND.getDefaultState():Blocks.GRAVEL.getDefaultState();
+        if(water[i]!=0)return Pal.hash(x,8,z)<0.5?Blocks.GRAVEL.getDefaultState():Blocks.DIRT.getDefaultState();
+        if(steep(F,i,top)){
+            double g=Pal.hash(x,5,z);
+            if(g<0.30)return Blocks.GRASS_BLOCK.getDefaultState();
+            if(g<0.36)return Blocks.MOSS_BLOCK.getDefaultState();
+            return rock(x,top,z);
+        }
+        if(zone==Plan.FOREST){
+            double g=Pal.smooth(x,z,9,23);
+            if(g<0.16)return Blocks.PODZOL.getDefaultState();
+            if(g<0.22)return Blocks.COARSE_DIRT.getDefaultState();
+            if(g>0.86)return Blocks.MOSS_BLOCK.getDefaultState();
+        }
+        return Pal.hash(x,7,z)<0.02?Blocks.COARSE_DIRT.getDefaultState():Blocks.GRASS_BLOCK.getDefaultState();
+    }
+    /** Whether a column stands at the sea or over a big drop, so its sides show rock rather than earth. */
+    private boolean cliffSide(int[] F,int i,int top){return slope(F,i,top)>=3;}
+
     /** How far each sea column lies from the nearest land, in blocks (4-way steps), up to 60. */
     private int[] shoreDistance(){
         int n=Plan.W*Plan.D;int[] d=new int[n];
@@ -140,17 +181,7 @@ final class Terrain {
         }
         return d;
     }
-    private int lowestNeighbour(int[] F,int i){
-        int x=i/Plan.D,z=i%Plan.D,low=F[i];
-        if(x>0)low=Math.min(low,lvl(F,i-Plan.D));if(x<Plan.W-1)low=Math.min(low,lvl(F,i+Plan.D));
-        if(z>0)low=Math.min(low,lvl(F,i-1));if(z<Plan.D-1)low=Math.min(low,lvl(F,i+1));
-        return low;
-    }
     private int lvl(int[] F,int j){return kind[j]==SEA?Plan.SEA-1:F[j];}
-    private boolean hasPlatformNeighbour(int i){
-        int x=i/Plan.D,z=i%Plan.D;
-        return x>0&&plat[i-Plan.D]!=NONE||x<Plan.W-1&&plat[i+Plan.D]!=NONE||z>0&&plat[i-1]!=NONE||z<Plan.D-1&&plat[i+1]!=NONE;
-    }
     /** A retaining wall's stones: weathered masonry, some of it mossy or cracked. */
     BlockState masonry(int x,int y,int z){
         double r=Pal.hash(x,y,z)*100;
@@ -160,18 +191,6 @@ final class Terrain {
         if(r<86)return Blocks.ANDESITE.getDefaultState();
         if(r<94)return Blocks.COBBLESTONE.getDefaultState();
         return Blocks.MOSSY_COBBLESTONE.getDefaultState();
-    }
-    private BlockState surface(int x,int z,int top,int i,int[] F){
-        if(kind[i]==BEACH)return Blocks.SAND.getDefaultState();
-        // cliffs and steep hillsides show their rock, the shore its sand and stones
-        if(plat[i]==NONE&&steep(F,i,top)){
-            double g=Pal.hash(x,5,z),green=top<Plan.SEA+8?0.10:0.45;
-            if(g<green)return Blocks.GRASS_BLOCK.getDefaultState();
-            if(g<green+0.06)return Blocks.MOSS_BLOCK.getDefaultState();
-            return rock(x,top,z);
-        }
-        if(plat[i]==NONE&&top<=Plan.SEA+1)return Pal.hash(x,6,z)<0.7?Blocks.SAND.getDefaultState():Blocks.GRAVEL.getDefaultState();
-        return Pal.hash(x,7,z)<0.025?Blocks.COARSE_DIRT.getDefaultState():Blocks.GRASS_BLOCK.getDefaultState();
     }
     /** The greatest drop from a column to its neighbours. */
     private int slope(int[] F,int i,int top){

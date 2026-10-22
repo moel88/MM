@@ -18,8 +18,8 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Builds Botand's seaside town into a fresh world on a dedicated server, then saves and stops it (tools/map/town/
- * run_town.py). The town is built in memory as soon as the overworld exists and written into its storage as
+ * Builds Botand's hourglass island (map v3.0; the seaside town before it) into a fresh world on a dedicated server,
+ * then saves and stops it (tools/map/town/run_town.py). The town is built in memory as soon as the overworld exists and written into its storage as
  * generated chunks before the world loads any of them; the server then loads every one of them (lighting them and
  * shaping their fences and stairs), sets the map's rules and spawn, saves and stops. Only with
  * -Dbotand.town.build=true: a normal server is left alone. Not part of the mod jar.
@@ -27,6 +27,8 @@ import java.util.*;
 public final class Town implements ModInitializer {
     static final boolean BUILD=Boolean.getBoolean("botand.town.build");
     static final long SEED=Long.getLong("botand.town.seed",20261020L);
+    /** The map's data pack (the mod finds the map's definition in it). */
+    static final String PACK="botand_hourglass";
     private int phase,wait;private long started;
     private Townscape town;private boolean failed;
     static final StringBuilder LOG=new StringBuilder();
@@ -44,10 +46,9 @@ public final class Town implements ModInitializer {
             started=System.nanoTime();
             var canvas=new Canvas();
             log(String.format("model ready (%d x %d x %d) in %.1f s",Plan.W,Canvas.H,Plan.D,secs()));
-            var layout=new Layout(new Random(SEED^0x5eed));layout.plan();
-            var terrain=new Terrain(canvas,layout,SEED);terrain.build();
+            var terrain=new Terrain(canvas,SEED);terrain.build();
             log(String.format("terrain: %,d blocks, %.1f s",canvas.placed,secs()));
-            town=new Townscape(canvas,terrain,layout,new Random(SEED));
+            town=new Townscape(canvas,terrain,new Random(SEED),Path.of(System.getProperty("botand.town.pieces","pieces/azure_city.txt.gz")));
             town.build();
             log(String.format("town: %,d blocks in all, %.1f s",canvas.placed,secs()));
             Chunks.write(w,canvas,biomes(w,terrain));
@@ -85,7 +86,7 @@ public final class Town implements ModInitializer {
                 }
                 case 2->{
                     rules(server,w);
-                    town.definition(server.getSavePath(WorldSavePath.DATAPACKS).resolve("botand_seaside"));
+                    town.definition(server.getSavePath(WorldSavePath.DATAPACKS).resolve(PACK));
                     for(int cx=Plan.X0>>4;cx<=(Plan.X0+Plan.W-1)>>4;cx++)for(int cz=Plan.Z0>>4;cz<=(Plan.Z0+Plan.D-1)>>4;cz++)w.setChunkForced(cx,cz,false);
                     server.saveAll(true,true,true);
                     Files.writeString(server.getSavePath(WorldSavePath.ROOT).resolve("town_build.log"),LOG.toString());
@@ -97,17 +98,20 @@ public final class Town implements ModInitializer {
         }catch(Throwable t){fail(server,t);}
     }
 
-    /** Green forest on the land, darker woods on the hill, sand-coloured shores, warm blue shallows round the coast. */
+    /**
+     * Biomes by zone (they tint the grass and leaves): meadow in the rift, forest in the old town and the forest, plains
+     * in the capital and the old city, beach on the sandy shores, warm shallows round the coast, ocean beyond.
+     */
     private Chunks.Biomes biomes(ServerWorld w,Terrain t){
         var reg=w.getRegistryManager().get(RegistryKeys.BIOME);
-        RegistryEntry<Biome> land=reg.entryOf(BiomeKeys.FOREST),beach=reg.entryOf(BiomeKeys.BEACH),shallow=reg.entryOf(BiomeKeys.LUKEWARM_OCEAN),
-            sea=reg.entryOf(BiomeKeys.OCEAN),ridge=reg.entryOf(BiomeKeys.DARK_FOREST);
+        RegistryEntry<Biome> forest=reg.entryOf(BiomeKeys.FOREST),plains=reg.entryOf(BiomeKeys.PLAINS),meadow=reg.entryOf(BiomeKeys.MEADOW),
+            beach=reg.entryOf(BiomeKeys.BEACH),shallow=reg.entryOf(BiomeKeys.LUKEWARM_OCEAN),sea=reg.entryOf(BiomeKeys.OCEAN);
         return (x,y,z)->{
             if(!Canvas.inPlan(x,z))return sea;
             byte k=t.kind[Canvas.idx(x,z)];
             if(k==Terrain.SEA)return shallow;
             if(k==Terrain.BEACH)return beach;
-            return z<Plan.TOWN_Z0-8&&t.plat[Canvas.idx(x,z)]==Terrain.NONE?ridge:land;
+            return switch(Plan.zone(x,z)){case Plan.RIFT_ZONE->meadow;case Plan.CAPITAL,Plan.CITY->plains;default->forest;};
         };
     }
 

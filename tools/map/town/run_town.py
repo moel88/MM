@@ -1,8 +1,9 @@
-"""Builds Botand's seaside town into a fresh world on a real Minecraft 1.20.1 dedicated server and packages it.
+"""Builds Botand's hourglass island (map v3.0) into a fresh world on a real Minecraft 1.20.1 dedicated server and packages it.
 
 usage: python3 tools/map/town/run_town.py OUT_DIR [SEED]
-Results: OUT_DIR/server/Botand_Seaside_1.20.1 (the world), OUT_DIR/Botand-Seaside-1.20.1-vX.zip (for the saves folder),
+Results: OUT_DIR/server/Botand_Hourglass_1.20.1 (the world), OUT_DIR/Botand-Hourglass-1.20.1-vX.zip (for the saves folder),
 OUT_DIR/town_preview.png (a top-down picture in map colours), OUT_DIR/build.log.
+The old city's pieces of the first map come from tools/map/town/pieces/azure_city.txt.gz (lift_azure.py).
 
 The builder (Town.java and friends) is compiled against the dev (named) classpath and remapped to intermediary like a
 release mod; the server runs from the offline Gradle/Loom caches with Fabric API and the Botand jar (build/libs, or
@@ -20,8 +21,8 @@ props = dict(l.split('=', 1) for l in (ROOT / 'gradle.properties').read_text().s
 M2 = Path.home() / '.gradle/caches/modules-2/files-2.1'
 LOOM = Path.home() / '.gradle/caches/fabric-loom'
 MC = props['minecraft_version']
-WORLD = 'Botand_Seaside_1.20.1'
-VERSION = os.environ.get('TOWN_VERSION', '2.0')
+WORLD = 'Botand_Hourglass_1.20.1'
+VERSION = os.environ.get('TOWN_VERSION', '3.0')
 env = os.environ.copy(); env['JAVA_TOOL_OPTIONS'] = ''
 
 def one(pattern):
@@ -91,13 +92,13 @@ gen = json.dumps({'layers': layers, 'biome': 'minecraft:ocean', 'lakes': False, 
     'spawn-npcs=false', 'view-distance=8', 'simulation-distance=6', 'server-port=25599', 'max-tick-time=-1', 'sync-chunk-writes=false',
     'motd=botand town builder']) + '\n')
 # the map's datapack goes in before the world is created, so it is enabled from the start
-pack = server / WORLD / 'datapacks' / 'botand_seaside'
+pack = server / WORLD / 'datapacks' / 'botand_hourglass'
 (pack / 'data' / 'botand').mkdir(parents=True)
-(pack / 'pack.mcmeta').write_text(json.dumps({'pack': {'pack_format': 15, 'description': 'Botand: 해안 마을 (보탠드 전용 맵)'}}, ensure_ascii=False, indent=2))
+(pack / 'pack.mcmeta').write_text(json.dumps({'pack': {'pack_format': 15, 'description': 'Botand: 모래시계 섬 (보탠드 전용 맵)'}}, ensure_ascii=False, indent=2))
 
 log = (out / 'server.out').open('w')
 start = time.time()
-srv = subprocess.Popen(['java', '-Xmx6G', '-Xms2G', '-Dbotand.town.build=true', f'-Dbotand.town.seed={seed}',
+srv = subprocess.Popen(['java', '-Xmx6G', '-Xms2G', '-Dbotand.town.build=true', f'-Dbotand.town.seed={seed}', f'-Dbotand.town.pieces={HERE / "pieces" / "azure_city.txt.gz"}',
                         f'-Dfabric.gameJarPath={LOOM / MC / "minecraft-extracted_server.jar"}', '-cp', cp,
                         'net.fabricmc.loader.impl.launch.knot.KnotServer', 'nogui'],
                        cwd=server, env=env, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True)
@@ -118,9 +119,9 @@ for junk in ('session.lock',):
 # the name players see in the world list, adventure mode so the town is not broken by hand in single player
 sys.path.insert(0, str(HERE))
 import level_dat
-level_dat.patch(server / WORLD, os.environ.get('TOWN_NAME', 'BOTAND | 보탠드 해안 마을'), 2)
+level_dat.patch(server / WORLD, os.environ.get('TOWN_NAME', 'BOTAND | 보탠드 모래시계 섬'), 2)
 # the world folder zipped for the saves folder (or a server's world folder)
-pack = out / f'Botand-Seaside-1.20.1-v{VERSION}.zip'
+pack = out / f'Botand-Hourglass-1.20.1-v{VERSION}.zip'
 with zipfile.ZipFile(pack, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for f in sorted((server / WORLD).rglob('*')):
         if f.is_file(): z.write(f, str(f.relative_to(server)))
