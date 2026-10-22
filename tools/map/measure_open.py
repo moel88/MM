@@ -4,13 +4,17 @@ than Botand's first map, and stays so).
 usage: python3 tools/map/measure_open.py WORLD_DIR NAME OUT.png X0,Z0,X1,Z1
 Reads the world's region files directly (no game needed) and prints a line of JSON: the share of the land that is open
 (nothing two or more blocks tall above the local ground: buildings, walls, fences, hedges, trunks and poles count;
-grass, flowers, crops, leaves overhead and knee-high walls do not), the median and mean distance from an open column
+grass, flowers, crops, leaves overhead and knee-high walls do not; nor, since map v3.0, anything more than REACH blocks
+over the local ground with open air under it, such as the world tree's limbs and the pieces of ground floating over the
+rift: they are over a walker's head, not in the way), the median and mean distance from an open column
 to the nearest obstacle ("room"), the share of open ground with at least 4, 8 and 12 blocks of room, how cut up the
 open ground is (open-to-obstacle edges per 100 open columns) and the largest connected area with at least 6 blocks of
 room. OUT.png shows it: water blue, obstacles dark, open ground from orange (tight) to green (wide).
 
-Botand's first map (Botand_Azure_Garden_1.20.1, box -256,-256,255,255) measures open 76.9 %, median room 4.1, room>=8
-23.0 %, largest room>=6 area 10,752; the seaside town (box -200,-200,199,199) must not fall below it.
+Botand's first map (Botand_Azure_Garden_1.20.1, box -256,-256,255,255) measures open 78.0 %, median room 4.2, room>=8
+23.4 %, largest room>=6 area 11,948 (before map v3.0's overhead rule: 76.9 %, 4.1, 23.0 %, 10,752); a new map (box
+-200,-200,199,199) must not fall below it. The seaside town v2.0 measures 80.0 %, 5.0, 26.3 %, 42,052 and the hourglass
+island v3.0 89.9 %, 5.0, 25.4 %, 32,458.
 """
 import sys, struct, zlib, glob, os, json, re
 import numpy as np
@@ -47,6 +51,8 @@ def nbt(buf, i, t):
 
 # blocks that do not stop a walker (or hang above one): air, water handled apart, plants, leaves and crowns, small things
 PASS = re.compile(r'(^|:)(air|cave_air|void_air|grass|tall_grass|fern|large_fern|dead_bush|.*_sapling|dandelion|poppy|blue_orchid|allium|azure_bluet|.*_tulip|oxeye_daisy|cornflower|lily_of_the_valley|sunflower|lilac|rose_bush|peony|pink_petals|fallen_petals|vine|ivy|glow_lichen|moss_carpet|.*_carpet|snow|torch|wall_torch|.*_torch|.*_wall_torch|lantern|soul_lantern|.*_sign|.*_wall_sign|.*_hanging_sign|.*_banner|.*_wall_banner|.*_button|lever|rail|.*_rail|redstone_wire|tripwire|.*_pressure_plate|cobweb|seagrass|tall_seagrass|kelp|kelp_plant|sugar_cane|bamboo_sapling|sweet_berry_bush|.*_mushroom|.*leaves|canopy|cherry_blossom|pine_needles|hedge_none|light|structure_void|flower_pot|potted_.*|candle|.*_candle|wheat|carrots|potatoes|beetroots|farmland_none|scaffolding_none|ladder|chain|end_rod|lightning_rod_none|item_frame)$')
+REACH = 8  # blocks over the local ground above which a block with air under it is overhead
+Y0, YN = -64, 384
 WATER = re.compile(r'(^|:)(water|bubble_column|lava)$')
 
 def column_tops(world):
@@ -64,6 +70,7 @@ def column_tops(world):
             if root.get('Status', 'minecraft:full') not in ('minecraft:full', 'full'): continue
             cx, cz = root['xPos'], root['zPos']
             top = np.full((16, 16), -999, np.int32); wet = np.zeros((16, 16), bool)
+            vol = np.zeros((YN, 16, 16), bool); wvol = np.zeros((YN, 16, 16), bool)
             for sec in sorted(root.get('sections', []), key=lambda s: -s['Y']):
                 bs = sec.get('block_states')
                 if not bs: continue
@@ -79,31 +86,48 @@ def column_tops(world):
                 idx = idx.reshape(16, 16, 16)  # y, z, x
                 h = hard[idx]; w = wetp[idx]
                 y0 = sec['Y'] * 16
+                if 0 <= y0 - Y0 <= YN - 16: vol[y0 - Y0:y0 - Y0 + 16] = h; wvol[y0 - Y0:y0 - Y0 + 16] = w
                 for ly in range(15, -1, -1):
                     m = (top == -999) & h[ly]
                     top[m] = y0 + ly
                     wet |= (top == -999) & w[ly]
-            tops[(cx, cz)] = top; water[(cx, cz)] = wet
+            tops[(cx, cz)] = (top, vol, wvol); water[(cx, cz)] = wet
     return tops, water
 
 def grid(tops, water, x0, z0, x1, z1):
     W, D = x1 - x0 + 1, z1 - z0 + 1
-    H = np.full((D, W), -999, np.int32); Wet = np.ones((D, W), bool)
-    for (cx, cz), t in tops.items():
+    H = np.full((D, W), -999, np.int32); Wet = np.ones((D, W), bool); V = np.zeros((YN, D, W), bool); WV = np.zeros((YN, D, W), bool)
+    for (cx, cz), (t, vol, wvol) in tops.items():
         for lz in range(16):
             for lx in range(16):
                 x, z = cx * 16 + lx, cz * 16 + lz
                 if x0 <= x <= x1 and z0 <= z <= z1:
                     H[z - z0, x - x0] = t[lz, lx]; Wet[z - z0, x - x0] = water[(cx, cz)][lz, lx]
-    return H, Wet
+                    V[:, z - z0, x - x0] = vol[:, lz, lx]; WV[:, z - z0, x - x0] = wvol[:, lz, lx]
+    return H, Wet, V, WV
+
+def below(V, cap):
+    """Each column's highest hard block at or under cap (-999 if none)."""
+    ys = np.arange(Y0, Y0 + YN)[:, None, None]
+    return np.where(V & (ys <= cap[None]), ys, -999).max(0)
 
 def measure(world, box, name, out_png):
     tops, water = column_tops(world)
-    H, Wet = grid(tops, water, *box)
-    land = (~Wet) & (H > -999)
-    Hf = np.where(land, H, -64).astype(float)
-    # the local ground: the surface with everything narrower than 25 blocks taken off (buildings, walls, trees, poles)
-    G = ndimage.grey_opening(Hf, size=(25, 25))
+    H, Wet, V, WV = grid(tops, water, *box)
+    top = np.full(H.shape, 10 ** 6, np.int32)
+    solid, wet = H, below(WV, top)
+    # the local ground: the surface (land or water) with everything narrower than 25 blocks taken off (buildings, walls,
+    # trees, poles); then what is in a walker's way: the column up to REACH over that ground (what floats higher with air
+    # under it is overhead, while a wall or a building reaching higher is still there below it), and the ground found
+    # again without the rest; water under something overhead is still water
+    for _ in range(3):
+        surf = np.maximum(solid, wet)
+        G = ndimage.grey_opening(np.where(surf > -999, surf, -64).astype(float), size=(25, 25))
+        cap = (G + REACH).astype(np.int32)
+        solid, wet = below(V, cap), below(WV, cap)
+    land = (solid > -999) & (solid > wet)
+    Wet = ~land
+    Hf = np.where(land, solid, -64).astype(float)
     obstacle = land & (Hf - G >= 2)
     open_ = land & ~obstacle
     clear = ndimage.distance_transform_edt(open_)

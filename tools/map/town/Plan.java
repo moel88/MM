@@ -62,8 +62,8 @@ final class Plan {
     // ---- the rift ----
     /** The world tree's foot in the rift's middle; where players appear, looking at it; the two merchants between. */
     static final int TREE_X=0,TREE_Z=0,SPAWN_X=0,SPAWN_Z=46,MERCHANT_Z=39;
-    /** The old city's arena (lifted from the first map), its middle. */
-    static final int ARENA_X=56,ARENA_Z=118;
+    /** The old city's arena (lifted from the first map), its middle: by the middle road, leaving the loop's east end for buildings. */
+    static final int ARENA_X=42,ARENA_Z=118;
     /** The old city's car park (lifted from the first map), its north-west corner. */
     static final int PARKING_X=133,PARKING_Z=103;
 

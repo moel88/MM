@@ -373,11 +373,16 @@ public final class TownBlocks {
      * is the crack's tip.
      */
     public static class Crack extends Block {
-        private static final BooleanProperty[] SIDES={Properties.SOUTH,Properties.WEST,Properties.NORTH,Properties.EAST};
+        private static final BooleanProperty[] SIDES={Properties.NORTH,Properties.EAST,Properties.SOUTH,Properties.WEST};
         public Crack(Settings s){super(s);var d=getDefaultState();for(var p:SIDES)d=d.with(p,false);setDefaultState(d);}
         @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(SIDES);}
         /** The side's property: Properties.NORTH for north, and so on. */
-        public static BooleanProperty side(Direction d){return SIDES[d.getHorizontal()];}
+        public static BooleanProperty side(Direction d){
+            return switch(d){
+                case NORTH->Properties.NORTH; case EAST->Properties.EAST; case SOUTH->Properties.SOUTH; case WEST->Properties.WEST;
+                default->throw new IllegalArgumentException("not a side: "+d);
+            };
+        }
         /** The state with its seams joined to the cracks round it. */
         public static BlockState joined(BlockState s,BlockView w,BlockPos p){
             for(var d:Direction.Type.HORIZONTAL)s=s.with(side(d),w.getBlockState(p.offset(d)).getBlock() instanceof Crack);
