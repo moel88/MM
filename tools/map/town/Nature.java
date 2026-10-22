@@ -16,8 +16,23 @@ final class Nature {
 
     private void leaf(int x,int y,int z,Block b){if(c.air(x,y,z))c.set(x,y,z,Canvas.leaves(b));}
     private void log(int x,int y,int z,Block b,Direction.Axis a){
+        if(free(x,y,z))c.set(x,y,z,Canvas.axis(b,a));
+    }
+    /** Whether wood may grow through here: air, leaves (the game's or Botand's), plants. */
+    private boolean free(int x,int y,int z){
         BlockState here=c.get(x,y,z);
-        if(here.isAir()||here.getBlock() instanceof LeavesBlock||here.getBlock() instanceof PlantBlock)c.set(x,y,z,Canvas.axis(b,a));
+        return here.isAir()||here.getBlock() instanceof LeavesBlock||here.getBlock() instanceof dev.sangwoo.celestialfall.town.TownBlocks.Foliage||here.getBlock() instanceof PlantBlock;
+    }
+    /** A cherry's limb (Botand's round branch, 2.48.0) where wood may grow. */
+    private void limb(int x,int y,int z,Direction.Axis a){if(free(x,y,z))c.set(x,y,z,TB.branch(a));}
+    /** An ellipsoid of Botand's leaves on cards (2.48.0: hedges, crowns, blossom), ragged at its edge, only into air. */
+    void blob(double cx,double cy,double cz,double rx,double ry,double rz,BlockState leaves){
+        for(int x=(int)Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++)for(int y=(int)Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(int z=(int)Math.floor(cz-rz);z<=Math.ceil(cz+rz);z++){
+            double dx=(x-cx)/rx,dy=(y-cy)/ry,dz=(z-cz)/rz,d=dx*dx+dy*dy+dz*dz;
+            if(d>1)continue;
+            if(d>0.62&&Pal.hash(x,y,z)<0.35)continue;
+            if(c.air(x,y,z))c.set(x,y,z,leaves);
+        }
     }
     /** An ellipsoid of leaves, ragged at its edge. */
     void blob(double cx,double cy,double cz,double rx,double ry,double rz,Block leaves,Block mix){
@@ -65,21 +80,26 @@ final class Nature {
      * round it (Botand's fallen petals, which lie on anything solid).
      */
     void cherry(int x,int y,int z,int h,double size){
-        for(int k=0;k<h-2;k++)log(x,y+k,z,Blocks.CHERRY_LOG,Direction.Axis.Y);
+        // a round trunk (Botand's thick branch, 2.48.0), dividing into limbs: thick where they leave it, then thin
+        // round branches spreading and rising
+        for(int k=0;k<h-2;k++)if(free(x,y+k,z))c.set(x,y+k,z,TB.trunk(Direction.Axis.Y));
         int top=y+h-2,reach=(int)Math.round(3*size);
         for(int i=0;i<3+(size>1.2?1:0);i++){
             double a=i*2.1+rnd.nextDouble();
+            Direction.Axis along=Math.abs(Math.cos(a))>0.7?Direction.Axis.X:Direction.Axis.Z;
             for(int k=1;k<=reach;k++){
-                int bx=x+(int)Math.round(Math.cos(a)*k),bz=z+(int)Math.round(Math.sin(a)*k);
-                log(bx,top+k/2,bz,Blocks.CHERRY_LOG,Math.abs(Math.cos(a))>0.7?Direction.Axis.X:Direction.Axis.Z);
+                int bx=x+(int)Math.round(Math.cos(a)*k),bz=z+(int)Math.round(Math.sin(a)*k),by=top+k/2;
+                if(k==1){if(free(bx,by,bz))c.set(bx,by,bz,TB.trunk(along));}
+                else{limb(bx,by,bz,along);if(k%2==0)limb(bx,by-1,bz,Direction.Axis.Y);}
             }
         }
+        // the crown: Botand's blossom on cards, wide and light, its underside open so the limbs show (2.48.0)
         double r=(3.6+rnd.nextDouble()*1.2)*size;
-        blob(x+0.5,top+2.5*Math.sqrt(size),z+0.5,r,2.3*size,r,Blocks.CHERRY_LEAVES,null);
-        blob(x+0.5+(rnd.nextDouble()-0.5)*2*size,top+3.5*size,z+0.5+(rnd.nextDouble()-0.5)*2*size,r*0.7,1.8*size,r*0.7,Blocks.CHERRY_LEAVES,null);
+        blob(x+0.5,top+2.5*Math.sqrt(size),z+0.5,r,2.3*size,r,TB.BLOSSOM);
+        blob(x+0.5+(rnd.nextDouble()-0.5)*2*size,top+3.5*size,z+0.5+(rnd.nextDouble()-0.5)*2*size,r*0.7,1.8*size,r*0.7,TB.BLOSSOM);
         if(size>1.2)for(int i=0;i<3;i++){
             double a=rnd.nextDouble()*Math.PI*2;
-            blob(x+0.5+Math.cos(a)*r*0.6,top+1.5*size+rnd.nextDouble()*size,z+0.5+Math.sin(a)*r*0.6,r*0.5,1.5*size,r*0.5,Blocks.CHERRY_LEAVES,null);
+            blob(x+0.5+Math.cos(a)*r*0.6,top+1.5*size+rnd.nextDouble()*size,z+0.5+Math.sin(a)*r*0.6,r*0.5,1.5*size,r*0.5,TB.BLOSSOM);
         }
         // fallen petals on the ground under the crown and a little beyond it
         int n=(int)Math.round(18*size*size*1.6);
@@ -99,6 +119,13 @@ final class Nature {
             c.set(x,y+1,z,TB.of("fallen_petals"));
     }
 
+    /** A broadleaf tree in the town (2.48.0): a straight trunk under a crown of Botand's leaves on cards. */
+    void townTree(int x,int y,int z,int h){
+        Block wood=rnd.nextInt(3)==0?Blocks.DARK_OAK_LOG:Blocks.OAK_LOG;
+        for(int k=0;k<h;k++)log(x,y+k,z,wood,Direction.Axis.Y);
+        double r=2.2+rnd.nextDouble()*1.2;
+        blob(x+0.5,y+h-0.5,z+0.5,r,r*0.8,r,TB.CANOPY);
+    }
     /** A round evergreen broadleaf tree (camphor, oak): a straight trunk under a dense dark crown. */
     void broadleaf(int x,int y,int z,int h){
         Block wood=rnd.nextInt(3)==0?Blocks.DARK_OAK_LOG:Blocks.OAK_LOG;
@@ -182,7 +209,7 @@ final class Nature {
         else if(r<72&&c.air(x,y+1,z))c.tallPlant(x,y,z,shore||r<66?Blocks.TALL_GRASS:Blocks.LARGE_FERN);
         else if(r<86)c.set(x,y,z,shore?Blocks.GRASS.getDefaultState():Blocks.FERN.getDefaultState());
         else if(r<92)c.set(x,y,z,Pal.pick(rnd,Blocks.OXEYE_DAISY,Blocks.CORNFLOWER,Blocks.AZURE_BLUET,Blocks.DANDELION,Blocks.LILY_OF_THE_VALLEY).getDefaultState());
-        else if(!shore)c.set(x,y,z,Canvas.leaves(r<97?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES));
+        else if(!shore)c.set(x,y,z,TB.HEDGE);
         else c.set(x,y,z,Blocks.GRASS.getDefaultState());
         return true;
     }

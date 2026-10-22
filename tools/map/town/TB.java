@@ -27,6 +27,26 @@ final class TB {
     static final BlockState SLAT_FENCE=of("slat_fence"),CHAIN_LINK=of("chain_link_fence"),GATE=of("metal_gate"),GUARDRAIL=of("guardrail"),
         BALCONY=of("balcony_rail"),NET=of("net"),WINDOW=of("curtain_window");
     static final BlockState POLE=of("utility_pole"),SLEEVE=of("pole_sleeve"),PIPE=of("pipe_post");
+    // 2.48.0: the photos' streets drawn by the mod: leaves on cards, sash windows, the houses' materials, furniture
+    static final BlockState HEDGE=of("hedge"),CANOPY=of("canopy"),BLOSSOM=of("cherry_blossom");
+    static final BlockState STUCCO_WHITE=of("stucco_white"),STUCCO_CREAM=of("stucco_cream"),STUCCO_PINK=of("stucco_pink"),STUCCO_GRAY=of("stucco_gray"),
+        SIDING=of("siding"),TILE=of("tile_wall"),TRIM_DARK=of("trim_dark"),TRIM_WHITE=of("trim_white"),CONCRETE=of("concrete_smooth");
+    static final BlockState BOARDS_DARK=of("wood_boards_dark"),BOARDS=of("wood_boards"),TIMBER=of("timber_dark");
+    static final BlockState WALL_FOOT=of("block_wall_foot"),WALL_DARK=of("block_wall_dark"),SLAT_DARK=of("slat_fence_dark"),SLAT_LIGHT=of("slat_fence_light"),MIRROR_POST=of("mirror_post");
+    /** Windows with sash frames, facing north (a frame turns them; Kit.windows faces them out of their wall). */
+    static final BlockState WIN=of("window"),WIN_CURTAIN=of("window_curtain"),WIN_FROSTED=of("window_frosted"),WIN_WHITE=of("window_white"),WIN_WHITE_CURTAIN=of("window_white_curtain");
+    static boolean isWindow(BlockState s){return s.getBlock() instanceof dev.sangwoo.celestialfall.town.TownBlocks.Window;}
+    /** A window (or anything with a facing) facing out the given way. */
+    static BlockState out(BlockState s,Direction d){return s.contains(Properties.HORIZONTAL_FACING)?s.with(Properties.HORIZONTAL_FACING,d):s;}
+    /** Ivy on the wall behind it, its leaves facing out the given way. */
+    static BlockState ivy(Direction out){return of("ivy").with(Properties.HORIZONTAL_FACING,out);}
+    static BlockState branch(Direction.Axis a){return of("cherry_branch").with(Properties.AXIS,a);}
+    /** A cherry's trunk, or a limb where it leaves the trunk: the round branch, thick. */
+    static BlockState trunk(Direction.Axis a){return branch(a).with(dev.sangwoo.celestialfall.town.TownBlocks.Branch.THICK,true);}
+    static BlockState darkCap(){return slab("block_wall_dark_slab",false);}
+    /** The green walking strip with its white line along the given side. */
+    static BlockState green(Direction line){return of("asphalt_green").with(Properties.HORIZONTAL_FACING,line);}
+    static BlockState mirror(Direction front){return facing("traffic_mirror",front);}
 
     static BlockState slab(String name,boolean top){return of(name).with(Properties.SLAB_TYPE,top?SlabType.TOP:SlabType.BOTTOM);}
     static BlockState asphaltSlab(){return slab("asphalt_slab",false);}
@@ -47,7 +67,9 @@ final class TB {
     static BlockState crossarm(boolean pole,Direction.Axis along){return of(pole?"pole_crossarm":"pole_arm").with(Properties.HORIZONTAL_AXIS,along);}
     /** A thing with a front, facing the given way, its back to what it hangs on. */
     static BlockState facing(String name,Direction front){return of(name).with(Properties.HORIZONTAL_FACING,front);}
-    static BlockState vending(Direction front,boolean upper){
-        return of("vending_machine").with(Properties.HORIZONTAL_FACING,front).with(Properties.DOUBLE_BLOCK_HALF,upper?DoubleBlockHalf.UPPER:DoubleBlockHalf.LOWER);
+    static BlockState vending(Direction front,boolean upper){return vending(front,upper,false);}
+    /** A drinks machine's half: red, or white (2.48.0). */
+    static BlockState vending(Direction front,boolean upper,boolean white){
+        return of(white?"vending_machine_white":"vending_machine").with(Properties.HORIZONTAL_FACING,front).with(Properties.DOUBLE_BLOCK_HALF,upper?DoubleBlockHalf.UPPER:DoubleBlockHalf.LOWER);
     }
 }

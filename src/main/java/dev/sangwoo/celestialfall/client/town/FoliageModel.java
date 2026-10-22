@@ -12,12 +12,13 @@ import java.util.*;
 import java.util.function.Function;
 
 /**
- * Leaves as the photos show them (2.48.0): a hedge, a tree's crown or a cherry's blossom is a block whose six faces
- * carry the dark mass of leaves inside, with a dozen cards of leaf clusters stuck through it every way, reaching past
- * its edges so neighbouring blocks grow into one another and the outline is ragged, not cubic. The cards are seen from
- * both sides and take the light evenly (not darkened by the way they look), as the game's own plants are. Three
- * arrangements are made and the game picks one by position, so a hedge does not repeat. Ivy is cards of leaves lying
- * against the wall behind it; a cherry's limb is a thin round branch.
+ * Leaves as the photos show them (2.48.0): a clipped hedge is a block whose six faces carry the dark mass of leaves,
+ * with a dozen cards of leaf clusters stuck through it every way; a tree's crown and a cherry's blossom are only cards,
+ * sixteen to a block, reaching past its edges so neighbouring blocks grow into one another and a crown has no cubic
+ * faces or outline, its depth showing through its gaps. The cards are seen from both sides and take the light evenly
+ * (not darkened by the way they look), as the game's own plants are. Three arrangements are made and the game picks
+ * one by position, so a hedge does not repeat. Ivy is cards of leaves lying against the wall behind it; a cherry's limb
+ * is a thin round branch, its trunk a thick one.
  */
 final class FoliageModel {
     static final int VARIANTS=3;
@@ -25,16 +26,16 @@ final class FoliageModel {
 
     static void register(){
         ModelLoadingPlugin.register(plugin->{
-            CodeModel.resolve(plugin,TownBlocks.HEDGE,s->sp->mass(sp,"leaf_mass",LEAF,12,14,20,0x48ed6eL));
-            CodeModel.resolve(plugin,TownBlocks.CANOPY,s->sp->mass(sp,"leaf_mass",LEAF,11,16,24,0x5a11fL));
-            CodeModel.resolve(plugin,TownBlocks.CHERRY_BLOSSOM,s->sp->mass(sp,"blossom_mass",BLOSSOM,12,15,23,0x7b10c4L));
+            CodeModel.resolve(plugin,TownBlocks.HEDGE,s->sp->mass(sp,"leaf_mass",LEAF,true,12,14,20,0x48ed6eL));
+            CodeModel.resolve(plugin,TownBlocks.CANOPY,s->sp->mass(sp,"leaf_mass",LEAF,false,16,15,24,0x5a11fL));
+            CodeModel.resolve(plugin,TownBlocks.CHERRY_BLOSSOM,s->sp->mass(sp,"blossom_mass",BLOSSOM,false,16,16,26,0x7b10c4L));
             CodeModel.resolve(plugin,TownBlocks.IVY,s->sp->ivy(sp,s.get(Properties.HORIZONTAL_FACING)));
-            CodeModel.resolve(plugin,TownBlocks.CHERRY_BRANCH,s->sp->branch(sp,s.get(Properties.AXIS)));
+            CodeModel.resolve(plugin,TownBlocks.CHERRY_BRANCH,s->sp->branch(sp,s.get(Properties.AXIS),s.get(TownBlocks.Branch.THICK)));
         });
     }
 
-    /** A full block of leaves: the mass on its faces and cards of clusters through it, in three arrangements. */
-    static BakedModel mass(Function<String,Sprite> sp,String massName,String[] cardNames,int cards,double sizeMin,double sizeMax,long seed){
+    /** A block of leaves: the mass on its faces where asked and cards of clusters through it, in three arrangements. */
+    static BakedModel mass(Function<String,Sprite> sp,String massName,String[] cardNames,boolean faces,int cards,double sizeMin,double sizeMax,long seed){
         Sprite mass=sp.apply(massName);
         Sprite[] card=new Sprite[cardNames.length];
         for(int i=0;i<card.length;i++)card[i]=sp.apply(cardNames[i]);
@@ -42,7 +43,7 @@ final class FoliageModel {
         List<Weighted.Present<BakedModel>> variants=new ArrayList<>();
         for(int v=0;v<VARIANTS;v++){
             Mesh m=new Mesh();
-            m.box(new Mesh.Box(0,0,0,16,16,16).all(mass));
+            if(faces)m.box(new Mesh.Box(0,0,0,16,16,16).all(mass));
             m.shade(false);
             for(int k=0;k<cards;k++){
                 double[] c={8+(r.nextDouble()-0.5)*9,8+(r.nextDouble()-0.5)*9,8+(r.nextDouble()-0.5)*9};
@@ -69,11 +70,11 @@ final class FoliageModel {
         }
         return new WeightedBakedModel(variants);
     }
-    /** A cherry's limb: a round branch five sixteenths across along its axis, in the cherry log's bark. */
-    static BakedModel branch(Function<String,Sprite> sp,Direction.Axis axis){
+    /** A cherry's limb: a round branch five sixteenths across along its axis (the trunk eleven), in the cherry log's bark. */
+    static BakedModel branch(Function<String,Sprite> sp,Direction.Axis axis,boolean thick){
         Mesh m=new Mesh();
         Sprite bark=sp.apply("minecraft:cherry_log");
-        m.cylinder(bark,sp.apply("minecraft:cherry_log_top"),axis,8,8,2.5,0,16,8,true,true);
+        m.cylinder(bark,sp.apply("minecraft:cherry_log_top"),axis,8,8,thick?5.5:2.5,0,16,thick?12:8,true,true);
         return m.bake(bark,true);
     }
     private static double[] unit(Random r){

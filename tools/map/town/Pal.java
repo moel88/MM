@@ -63,6 +63,16 @@ final class Pal {
     }
     /** Old block walls (ブロック塀): Botand's split-face concrete blocks, the photos' grey walls. */
     static BlockState blockWall(int x,int y,int z){return TB.BLOCK_WALL;}
+    /**
+     * A column of block wall standing on y (2.48.0, the photos' walls): its lowest course grimy from the road, or
+     * the whole of it dark, {@code h} blocks high, its coping on top where asked.
+     */
+    static void wall(Canvas c,int x,int y,int z,int h,boolean dark,boolean cap){
+        for(int k=1;k<=h;k++)c.set(x,y+k,z,dark?TB.WALL_DARK:k==1?TB.WALL_FOOT:TB.BLOCK_WALL);
+        if(cap)c.set(x,y+h+1,z,dark?TB.darkCap():TB.wallCap());
+    }
+    /** Whether the walls of a plot at (x, z) are of the dark blocks (about a third of them). */
+    static boolean darkWall(int x,int z){return hash(x,57,z)<0.33;}
     /** Weathered concrete of sea walls and quays. */
     static BlockState seawall(int x,int y,int z){
         double h=hash(x,y,z);

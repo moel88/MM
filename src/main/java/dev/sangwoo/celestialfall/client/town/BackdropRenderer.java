@@ -26,7 +26,8 @@ import java.util.*;
  * sky (its low clouds can pass in front). Far hills go first, and each hill from its summit out to its shore, so
  * nearer slopes cover farther ones. Under them lies the far sea (2.47.1): the water's surface from the edge of the view,
  * where the world's own water ends in fog, out past the hills, so they stand in water instead of floating over a strip
- * of fog. Nothing is drawn under water or in lava, where the world's own fog closes in.
+ * of fog. Nothing is drawn under water or in lava, where the world's own fog closes in. Since 2.48.0 the far sea is drawn
+ * at the level the map's definition names, also where there are no mountains: the open sea out to the horizon.
  */
 public final class BackdropRenderer {
     static final int RINGS=22,SEGMENTS=96;
@@ -42,6 +43,8 @@ public final class BackdropRenderer {
     static final double[] SHADER_TINT={0.0,0.18,0.53};
     /** The far sea's rings, from the view's edge out past the hills, and its colour by day before the haze. */
     static final int SEA_RINGS=12,SEA_SEGMENTS=96;
+    /** How far the open sea reaches where there are no mountains to go past (blocks): far enough to meet the horizon. */
+    static final double OPEN_SEA=6400;
     static final double[] SEA_COLOUR={0.30,0.52,0.72};
     /**
      * The far sea under a shader pack, before its lift: at the view's edge the grey blue the pack's own water fades to
@@ -52,16 +55,19 @@ public final class BackdropRenderer {
     static final double[] SHADER_EDGE={0.27,0.33,0.45},SHADER_SEA={0.0,0.33,0.67};
     private static Identifier dimension;
     private static Hill[] hills=new Hill[0];
+    /** The far sea's level, or NaN for none. */
+    private static float seaLevel=Float.NaN;
     private BackdropRenderer(){}
 
     public static void initialize(){
         ClientPlayNetworking.registerGlobalReceiver(MapBackdrop.CHANNEL,(mc,handler,b,response)->{
-            var dim=b.readIdentifier();int n=Math.min(b.readVarInt(),MapDefinition.MAX_PEAKS);
+            var dim=b.readIdentifier();float sea=b.readFloat();int n=Math.min(b.readVarInt(),MapDefinition.MAX_PEAKS);
             var peaks=new ArrayList<MapDefinition.Peak>();
             for(int i=0;i<n;i++)peaks.add(new MapDefinition.Peak(b.readFloat(),b.readFloat(),b.readFloat(),b.readFloat(),b.readFloat(),b.readInt()));
-            mc.execute(()->{dimension=dim;hills=peaks.stream().map(Hill::new).toArray(Hill[]::new);});
+            float level=Float.isFinite(sea)&&sea>=MapDefinition.MIN_SEA&&sea<=MapDefinition.MAX_SEA?sea:Float.NaN;
+            mc.execute(()->{dimension=dim;seaLevel=level;hills=peaks.stream().map(pk->new Hill(pk,Float.isNaN(level)?SEA:level)).toArray(Hill[]::new);});
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{dimension=null;hills=new Hill[0];}));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->{dimension=null;seaLevel=Float.NaN;hills=new Hill[0];}));
         WorldRenderEvents.AFTER_SETUP.register(ctx->render(ctx,false));
         WorldRenderEvents.AFTER_ENTITIES.register(ctx->render(ctx,true));
     }
@@ -71,6 +77,11 @@ public final class BackdropRenderer {
         var mc=MinecraftClient.getInstance();
         return mc.world!=null&&dimension!=null&&mc.world.getRegistryKey().getValue().equals(dimension)?hills.length:0;
     }
+    /** The far sea's level the server has sent for the dimension the player is in now, or NaN for none. */
+    public static float seaLevel(){
+        var mc=MinecraftClient.getInstance();
+        return mc.world!=null&&dimension!=null&&mc.world.getRegistryKey().getValue().equals(dimension)?seaLevel:Float.NaN;
+    }
 
     /** One mountain: its points (a summit, then ring after ring out to the shore), their normals and colours. */
     static final class Hill {
@@ -78,7 +89,7 @@ public final class BackdropRenderer {
         final double[] pos;final float[] normal,base;
         /** Triangles as point indices, from the summit outward. */
         final int[] tris;
-        Hill(MapDefinition.Peak p){
+        Hill(MapDefinition.Peak p,float sea){
             cx=p.x();cz=p.z();reach=Math.max(p.rx(),p.rz())*1.3;
             var r=new Random(p.seed()*341873128712L+132897987541L);
             // the shore wanders in and out, and ridges run down from the top between valleys
@@ -87,7 +98,7 @@ public final class BackdropRenderer {
             for(int k=2;k<10;k++){ra[k]=r.nextGaussian()*0.55/Math.sqrt(k);rp[k]=r.nextDouble()*Math.PI*2;}
             int n=1+RINGS*SEGMENTS;
             pos=new double[n*3];normal=new float[n*3];base=new float[n*3];
-            double height=p.top()-SEA;
+            double height=p.top()-sea;
             pos[0]=cx;pos[1]=p.top();pos[2]=cz;
             for(int i=1;i<=RINGS;i++){
                 double rho=i/(double)RINGS;
@@ -98,7 +109,7 @@ public final class BackdropRenderer {
                     double fall=Math.pow(1-rho*rho,1.6)*(1+0.32*ridge*4*rho*(1-rho));
                     double x=cx+p.rx()*rho*shore*Math.cos(t),z=cz+p.rz()*rho*shore*Math.sin(t);
                     int v=1+(i-1)*SEGMENTS+j;
-                    pos[v*3]=x;pos[v*3+1]=i==RINGS?SEA-1.5:SEA+height*Math.max(0,fall);pos[v*3+2]=z;
+                    pos[v*3]=x;pos[v*3+1]=i==RINGS?sea-1.5:sea+height*Math.max(0,fall);pos[v*3+2]=z;
                 }
             }
             List<int[]> list=new ArrayList<>();
@@ -119,7 +130,7 @@ public final class BackdropRenderer {
                 float l=(float)Math.sqrt(normal[v*3]*normal[v*3]+normal[v*3+1]*normal[v*3+1]+normal[v*3+2]*normal[v*3+2]);
                 if(l>0)for(int a=0;a<3;a++)normal[v*3+a]/=l;
                 // wooded lower slopes, greyer rock and grass toward the top, a little of each everywhere
-                double up=MathHelper.clamp((pos[v*3+1]-SEA)/Math.max(1,height),0,1),tint=r.nextGaussian()*0.04;
+                double up=MathHelper.clamp((pos[v*3+1]-sea)/Math.max(1,height),0,1),tint=r.nextGaussian()*0.04;
                 base[v*3]=(float)(0.20+0.10*up+tint);base[v*3+1]=(float)(0.28+0.07*up+tint);base[v*3+2]=(float)(0.25+0.12*up+tint);
             }
         }
@@ -145,7 +156,8 @@ public final class BackdropRenderer {
 
     private static void render(WorldRenderContext ctx,boolean late){
         var mc=MinecraftClient.getInstance();
-        if(hills.length==0||mc.world==null||dimension==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
+        float level=seaLevel;
+        if((hills.length==0&&Float.isNaN(level))||mc.world==null||dimension==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
         // a shader pack redraws what was under the world before it, so with one the backdrop goes down after the world
         boolean packs=shaders();
         if(late!=packs||ctx.camera().getSubmersionType()!=CameraSubmersionType.NONE)return;
@@ -153,7 +165,7 @@ public final class BackdropRenderer {
         // shrink the whole backdrop toward the camera (which keeps every point where it is in view) until its farthest
         // point is well inside the fog, so neither the view's depth nor the fog cuts it off; drawn after the world, it
         // goes out near the far end of the view's depth instead, so it only shows where nothing else was drawn
-        double farthest=1;
+        double farthest=hills.length==0?OPEN_SEA/1.6:1;
         for(var h:hills)farthest=Math.max(farthest,h.distance(cam)+h.reach);
         double draw=late?mc.gameRenderer.getFarPlaneDistance()*0.9:MathHelper.clamp(mc.gameRenderer.getViewDistance()*0.4,12,56),s=draw/farthest;
         float[] fog=RenderSystem.getShaderFogColor();
@@ -165,9 +177,9 @@ public final class BackdropRenderer {
         BufferBuilder buf=Tessellator.getInstance().getBuffer();
         buf.begin(VertexFormat.DrawMode.TRIANGLES,VertexFormats.POSITION_COLOR_LIGHT);
         // the far sea first, so the hills stand in water instead of floating over the fog the world's water ends in
-        if(cam.y>SEA+1){
+        if(!Float.isNaN(level)&&cam.y>level+1){
             double day=MathHelper.clamp((mc.world.getSkyBrightness(ctx.tickDelta())-0.2)/0.8,0.1,1);
-            sea(buf,mat,cam,mc.gameRenderer.getViewDistance(),farthest*1.6,s,late?mc.gameRenderer.getFarPlaneDistance():0,fog,day,packs);
+            sea(buf,mat,cam,level,mc.gameRenderer.getViewDistance(),farthest*1.6,s,late?mc.gameRenderer.getFarPlaneDistance():0,fog,day,packs);
         }
         for(var h:order){
             int n=h.pos.length/3;
@@ -210,8 +222,8 @@ public final class BackdropRenderer {
      * the view's edge, so the world in front of it always wins the depth test. It starts as the fog the world's water
      * ends in at the view's edge and opens out into far water, hazed like the hills.
      */
-    private static void sea(BufferBuilder buf,Matrix4f mat,Vec3d cam,double view,double out,double s,double far,float[] fog,double day,boolean packs){
-        double in=view*0.9,dy=SEA-cam.y;
+    private static void sea(BufferBuilder buf,Matrix4f mat,Vec3d cam,double level,double view,double out,double s,double far,float[] fog,double day,boolean packs){
+        double in=view*0.9,dy=level-cam.y;
         if(out<=in)return;
         float[][] p=new float[SEA_RINGS+1][SEA_SEGMENTS*3],col=new float[SEA_RINGS+1][3];
         for(int i=0;i<=SEA_RINGS;i++){

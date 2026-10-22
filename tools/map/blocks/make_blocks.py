@@ -404,53 +404,59 @@ def leaf_mass(seed):
     alpha[(alpha == 0) & ~holes] = 255; img[(img.sum(axis=2) == 0)] = (40, 70, 28)
     return img, alpha
 
-def blossom_cards(seed, count=54, spread=24, wrap=False, mass=False):
-    """Cherry blossom: five-petalled flowers in pinks over one another, a dark middle with stamens, and dark twigs behind."""
+def blossom_cards(seed, count=60, spread=24, wrap=False, mass=False):
+    """Cherry blossom: five-petalled flowers in pale pinks and near whites over one another, each with a darker rim
+    so the flowers part from one another, a deep pink eye with stamens, a few dark twigs behind."""
     g = rng(seed)
     img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
     y, x = np.mgrid[0:S, 0:S]
     # twigs first, behind the flowers
-    for k in range(5 if not mass else 9):
+    for k in range(3 if not mass else 6):
         px, py = (g.uniform(0, S, 2) if wrap else (32 + g.normal(0, spread * 0.5), 32 + g.normal(0, spread * 0.5)))
         a = g.uniform(0, 2 * np.pi)
         for step in range(int(g.uniform(14, 30))):
             a += g.normal(0, 0.25); px += np.cos(a); py += np.sin(a)
             ix, iy = int(px) % S, int(py) % S
             if not wrap and not (0 <= px < S and 0 <= py < S): break
-            img[iy, ix] = (58, 38, 36); alpha[iy, ix] = 255
-    pinks = [(246, 196, 214), (250, 212, 226), (242, 182, 204), (252, 228, 236), (236, 168, 196)]
+            img[iy, ix] = (70, 46, 44); alpha[iy, ix] = 255
+    pinks = [(250, 206, 222), (252, 222, 232), (246, 192, 214), (255, 238, 244), (242, 182, 206), (250, 214, 228)]
     for k in range(count):
         if wrap: cx, cy = g.uniform(0, S, 2)
         else:
             rr = spread * np.sqrt(g.random()) * 1.05; aa = g.uniform(0, 2 * np.pi)
             cx = 32 + rr * np.cos(aa); cy = 32 + rr * np.sin(aa)
-        r = g.uniform(4.4, 6.6); rot = g.uniform(0, 2 * np.pi)
+        r = g.uniform(4.2, 6.4); rot = g.uniform(0, 2 * np.pi)
         dx = x - cx; dy = y - cy
         if wrap: dx = (dx + S / 2) % S - S / 2; dy = (dy + S / 2) % S - S / 2
         d = np.hypot(dx, dy); ang = np.arctan2(dy, dx) - rot
-        petal = r * (0.72 + 0.28 * np.cos(5 * ang)) * (1 - 0.08 * np.cos(10 * ang + 1))
+        petal = r * (0.74 + 0.26 * np.cos(5 * ang)) * (1 - 0.08 * np.cos(10 * ang + 1))
         inside = d <= petal
-        c = np.array(pinks[g.integers(0, len(pinks))], float) * g.uniform(0.9, 1.06)
-        shade_ = 1 - 0.22 * np.clip(d / np.maximum(petal, 1e-6), 0, 1) ** 2
+        c = np.array(pinks[g.integers(0, len(pinks))], float) * g.uniform(0.93, 1.03)
+        # lit from above: the flower's upper side a little brighter
+        lit = 1 + 0.06 * np.clip(-dy / max(r, 1), -1, 1)
+        shade_ = (1 - 0.16 * np.clip(d / np.maximum(petal, 1e-6), 0, 1) ** 2) * lit
         col = c[None, None, :] * shade_[..., None]
-        notch = inside & (np.cos(5 * ang) < -0.85) & (d > petal * 0.82)
+        rim = inside & (d > petal * 0.86)
         img[inside] = col[inside]
-        img[notch] = img[notch] * 0.86
-        mid = d <= r * 0.22
-        img[mid] = (214, 96, 136)
+        img[rim] = img[rim] * 0.82
+        mid = d <= r * 0.24
+        img[mid] = (226, 104, 146)
         for st in range(6):
             sa = rot + st * np.pi / 3 + 0.3
-            sx, sy = int(cx + np.cos(sa) * r * 0.36) % S, int(cy + np.sin(sa) * r * 0.36) % S
-            img[sy, sx] = (236, 150, 60)
+            sx, sy = int(cx + np.cos(sa) * r * 0.38) % S, int(cy + np.sin(sa) * r * 0.38) % S
+            img[sy, sx] = (240, 168, 72)
         alpha[inside] = 255
-    return img, alpha
+    return np.clip(img, 0, 255), alpha
 
 def blossom_mass(seed):
-    img, alpha = blossom_cards(seed, 90, 0, True, True)
-    img = img * 0.9
-    holes = (field(seed + 6, 2.2) > 1.7)
-    alpha[holes] = 0
-    alpha[(alpha == 0) & ~holes] = 255; img[(img.sum(axis=2) == 0)] = (182, 120, 148)
+    """The blossom inside a crown, on the block's faces: flowers packed over a pink shade, with gaps of shadow and sky
+    so a crown's faces do not read as flat squares."""
+    img, alpha = blossom_cards(seed, 120, 0, True, True)
+    holes = (field(seed + 6, 2.4) > 0.85)
+    fill = (alpha == 0) & ~holes
+    img[fill] = (206, 146, 172)
+    alpha[fill] = 255
+    alpha[holes & (field(seed + 7, 1.2) > -0.3)] = 0
     return img, alpha
 
 def ivy_cards(seed):
@@ -685,6 +691,33 @@ def mirror_face(seed):
     img[d > 0.96] = (40, 40, 44)
     return img
 
+def boards(seed, base, battens=True):
+    """Vertical wooden boards of an old house: eight boards a block, a tone and grain each, dark joints, a batten
+    over every other joint (焼杉 when dark)."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3))
+    grain = 7 * field(seed + 1, 0.6, 10) + 4 * g.normal(size=(S, S))
+    for k in range(8):
+        x0 = k * 8
+        img[:, x0:x0 + 8] = np.array(base, float) + g.normal(0, 6)
+    img = shade(img, grain)
+    for k in range(8):
+        img[:, k * 8] -= 22
+        img[:, k * 8 + 7] -= 8
+    if battens:
+        for k in range(0, 8, 2):
+            x0 = k * 8
+            img[:, x0 - 1 if x0 else 63] = np.array(base, float) * 1.25
+            img[:, x0:x0 + 2] = np.array(base, float) * 1.18
+    return img
+
+def timber(seed, base):
+    """A squared post: a dark wood with its grain running up."""
+    g = rng(seed)
+    img = shade(flat(base), 8 * field(seed + 1, 0.5, 12) + 3 * g.normal(size=(S, S)))
+    img[:, 0:2] -= 14; img[:, 62:64] -= 14
+    return img
+
 def edge(color):
     img = flat(color); return img
 
@@ -865,6 +898,12 @@ block('block_wall_dark_slab', 'slab', {'tex': BWD, 'top': BWDC, 'full': 'block_w
 block('asphalt_green', 'facing_top', {'top': tl('asphalt_green'), 'side': A[2]}, '아스팔트 (녹색 보행로)', 'Asphalt with Green Strip')
 block('slat_fence_dark', 'pane', {}, '검은 가로살 울타리', 'Dark Slat Fence', 'axe')
 block('slat_fence_light', 'pane', {}, '밝은 가로살 울타리', 'Light Slat Fence', 'axe')
+WBD = [tex(f'wood_boards_dark_{k}', boards, 2500 + k, (46, 38, 34)) for k in range(2)]
+WBB = [tex(f'wood_boards_{k}', boards, 2510 + k, (112, 84, 60)) for k in range(2)]
+TMD = tex('timber_dark', timber, 2520, (70, 50, 38))
+block('wood_boards_dark', 'cube', {'tex': WBD, 'spin': False}, '검은 판자벽', 'Charred Wood Boards', 'axe')
+block('wood_boards', 'cube', {'tex': WBB, 'spin': False}, '갈색 판자벽', 'Wood Boards', 'axe')
+block('timber_dark', 'cube', {'tex': [TMD], 'spin': False}, '짙은 목재 기둥', 'Dark Timber', 'axe')
 block('vending_machine_white', 'vending', {'colour': 'white'}, '흰 자판기', 'White Vending Machine')
 block('mirror_post', 'post', {'from': 7.1, 'to': 8.9, 'tex': MOR}, '반사경 기둥', 'Mirror Post')
 block('traffic_mirror', 'mirror', {}, '도로 반사경', 'Traffic Mirror')

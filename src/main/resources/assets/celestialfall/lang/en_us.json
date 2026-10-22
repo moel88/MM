@@ -182,5 +182,8 @@
   "block.celestialfall.slat_fence_light": "Light Slat Fence",
   "block.celestialfall.vending_machine_white": "White Vending Machine",
   "block.celestialfall.mirror_post": "Mirror Post",
-  "block.celestialfall.traffic_mirror": "Traffic Mirror"
+  "block.celestialfall.traffic_mirror": "Traffic Mirror",
+  "block.celestialfall.wood_boards_dark": "Charred Wood Boards",
+  "block.celestialfall.wood_boards": "Wood Boards",
+  "block.celestialfall.timber_dark": "Dark Timber"
 }

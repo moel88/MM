@@ -142,6 +142,9 @@ public final class TownBlocks {
     public static final Block ASPHALT_GREEN=add("asphalt_green",new Facing(stone()));
     public static final Block SLAT_FENCE_DARK=cutout(add("slat_fence_dark",new Pane(wood().nonOpaque())));
     public static final Block SLAT_FENCE_LIGHT=cutout(add("slat_fence_light",new Pane(wood().nonOpaque())));
+    public static final Block WOOD_BOARDS_DARK=add("wood_boards_dark",new Block(wood()));
+    public static final Block WOOD_BOARDS=add("wood_boards",new Block(wood()));
+    public static final Block TIMBER_DARK=add("timber_dark",new Block(wood()));
     // more of the street's furniture (2.48.0, client/town/FurnitureModel): the white drinks machine, the traffic mirror on its post
     public static final Block VENDING_MACHINE_WHITE=add("vending_machine_white",new VendingMachine(metal().luminance(s->s.get(Properties.DOUBLE_BLOCK_HALF)==DoubleBlockHalf.UPPER?11:6)));
     public static final Block MIRROR_POST=add("mirror_post",new Post(7.1,8.9,metal()));
@@ -325,11 +328,20 @@ public final class TownBlocks {
             return d==s.get(FACING).getOpposite()&&!canPlaceAt(s,w,p)?Blocks.AIR.getDefaultState():s;
         }
     }
-    /** A cherry's limb along an axis (2.48.0): a round branch five sixteenths across, drawn in code. */
+    /**
+     * A cherry's limb along an axis (2.48.0): a round branch five sixteenths across, or where {@code thick} the trunk
+     * and the limbs where they leave it, eleven sixteenths across; drawn in code.
+     */
     public static class Branch extends PillarBlock {
+        public static final BooleanProperty THICK=BooleanProperty.of("thick");
         private static final VoxelShape X=Block.createCuboidShape(0,5.5,5.5,16,10.5,10.5),Y=Block.createCuboidShape(5.5,0,5.5,10.5,16,10.5),Z=Block.createCuboidShape(5.5,5.5,0,10.5,10.5,16);
-        public Branch(Settings s){super(s);}
-        @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){return switch(s.get(AXIS)){case X->X;case Y->Y;case Z->Z;};}
+        private static final VoxelShape TX=Block.createCuboidShape(0,2.5,2.5,16,13.5,13.5),TY=Block.createCuboidShape(2.5,0,2.5,13.5,16,13.5),TZ=Block.createCuboidShape(2.5,2.5,0,13.5,13.5,16);
+        public Branch(Settings s){super(s);setDefaultState(getDefaultState().with(THICK,false));}
+        @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){super.appendProperties(b);b.add(THICK);}
+        @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){
+            boolean t=s.get(THICK);
+            return switch(s.get(AXIS)){case X->t?TX:X;case Y->t?TY:Y;case Z->t?TZ:Z;};
+        }
     }
     /**
      * A window with a real sash frame (2.48.0, client/town/WindowModel), facing out of its wall. Sashes beside, above

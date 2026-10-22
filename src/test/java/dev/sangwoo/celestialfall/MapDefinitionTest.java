@@ -29,6 +29,15 @@ class MapDefinitionTest {
         assertEquals(List.of("station","bridge"),List.copyOf(d.places().keySet()));
         assertTrue(d.wires().isEmpty());
         assertTrue(d.backdrop().isEmpty());
+        assertFalse(d.hasSea());
+    }
+    @Test void readsTheOpenSea(){
+        var d=parse(SEASIDE.replace("\"places\"","\"sea\":62.4,\"places\""));
+        assertTrue(d.hasSea());assertEquals(62.4f,d.sea());assertTrue(d.backdrop().isEmpty());
+        // a backdrop's mountains without a level stand in the sea where 2.47.1 drew it
+        var old=parse(SEASIDE.replace("\"places\"","\"backdrop\":[[-253,2924,420,300,299,1]],\"places\""));
+        assertEquals(MapDefinition.BACKDROP_SEA,old.sea());
+        for(String bad:new String[]{"\"x\"","400","-100","[62]"})assertThrows(RuntimeException.class,()->parse(SEASIDE.replace("\"places\"","\"sea\":"+bad+",\"places\"")),bad);
     }
     @Test void readsTheWiresBetweenThePoles(){
         var d=parse(SEASIDE.replace("\"places\"","\"wires\":[[100.5,80.95,-36.5,100.5,80.95,-17.5,0.61],[-66,82,-65,-66,82,-54,0.4]],\"places\""));

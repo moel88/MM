@@ -58,7 +58,9 @@ final class Townscape {
         for(int k=0;k<4;k++)for(int[] s:Plan.SIDE_STREETS){
             int z=Plan.ST_N[k]-1;
             if(r.nextInt(3)==0)street.rubbish(s[1]+1,z,Direction.SOUTH);
-            if(r.nextInt(3)==0)street.mirror(s[0]-1,Plan.ST_S[k]+1);
+            // a traffic mirror on the alley's west gutter where it meets the street, turned to the cars coming up it
+            // (2.48.0: the plots' walls now take the corner it stood on)
+            if(k>0&&r.nextInt(2)==0)street.mirror(s[0],Plan.ST_S[k]+2,Direction.SOUTH);
         }
         for(int x:new int[]{-160,-100,-20,60})street.postBox(x,Plan.ST_S[1]+1);
         street.busStop(-45,Plan.PROM_Z0,Direction.NORTH,"ぼたんど海岸");
@@ -130,7 +132,7 @@ final class Townscape {
             for(int q=0;q<5;q++)j.append(q>0?", ":"").append(String.format(Locale.ROOT,"%.1f",m[q]));
             j.append(", ").append((int)m[5]).append("]");
         }
-        j.append("\n  ]\n}\n");
+        j.append(Plan.BACKDROP.length>0?"\n  ],\n":"],\n").append("  \"sea\": ").append(String.format(Locale.ROOT,"%.1f",Plan.FAR_SEA)).append("\n}\n");
         Files.createDirectories(pack.resolve("data/botand/map"));
         Files.writeString(pack.resolve("data/botand/map/definition.json"),j.toString());
         var fn=pack.resolve("data/botand/functions/goto");Files.createDirectories(fn);

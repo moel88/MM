@@ -62,7 +62,7 @@ final class PhotoStreet {
             int sg=c.ground(s.x(-1),z);
             for(int y=Math.min(sg,l.y);y<=l.y;y++)c.set(s.x(0),y,z,TB.BLOCK_WALL);
         }
-        for(int k=1;k<=l.x1-l.x0;k++){c.set(s.x(k),l.y+1,l.z0,TB.BLOCK_WALL);c.set(s.x(k),l.y+2,l.z0,TB.wallCap());}
+        for(int k=1;k<=l.x1-l.x0;k++){c.set(s.x(k),l.y+1,l.z0,TB.WALL_FOOT);c.set(s.x(k),l.y+2,l.z0,TB.wallCap());}
     }
 
     // ---------------------------------------------------------------- the photo's own houses
@@ -74,11 +74,12 @@ final class PhotoStreet {
         for(int z=l.z0+1;z<=-68;z++){c.set(fx,y+1,z,TB.GATE);c.set(fx,y+2,z,TB.GATE);}
         pillar(fx,y,-67,2);
         c.set(fx,y+2,-67,TB.facing("letterbox",l.front));
+        // the low wall with the hedge over it and the ivy down its street face (Botand's leaves on cards, 2.48.0)
         for(int z=-66;z<=-64;z++){
-            c.set(fx,y+1,z,TB.BLOCK_WALL);
-            for(int h=1;h<=2;h++)c.set(s.x(1),y+h,z,Canvas.leaves(Blocks.AZALEA_LEAVES));
-            if(z!=-65&&c.air(fx-s.in,y+1,z))c.vine(fx-s.in,y+1,z,s.east?Direction.EAST:Direction.WEST);
-            c.set(fx,y+2,z,Canvas.leaves(Blocks.OAK_LEAVES));
+            c.set(fx,y+1,z,TB.WALL_FOOT);
+            for(int h=1;h<=2;h++)c.set(s.x(1),y+h,z,TB.HEDGE);
+            if(z!=-65&&c.air(fx-s.in,y+1,z))c.set(fx-s.in,y+1,z,TB.ivy(s.east?Direction.WEST:Direction.EAST));
+            c.set(fx,y+2,z,TB.HEDGE);
         }
         railWall(fx,y,-63,l.z1);
         // a paved path from the gate to the door
@@ -93,7 +94,7 @@ final class PhotoStreet {
         f.wallSign(door-1,2,-1,Blocks.DARK_OAK_WALL_SIGN,Direction.NORTH,DyeColor.WHITE,false,"","汐見");
         Kit.airCon(f,f.W-3,6,-1,Direction.NORTH);
         Kit.airCon(f,-1,1,f.D-2,Direction.WEST);
-        for(int k=3;k<=12;k++)c.set(s.x(k),y+1,-74,TB.BLOCK_WALL);
+        for(int k=3;k<=12;k++)c.set(s.x(k),y+1,-74,TB.WALL_FOOT);
     }
 
     /** Left, after it: the Yamada house, its name board out from the corner, railings, flowers, a cherry tree. */
@@ -122,7 +123,7 @@ final class PhotoStreet {
         Frame f=s.frame(c,4,13,l.z0+1,l.z1-1);
         body(f,false,true,true,2);
         t.nature.cherry(s.x(3),y+1,-64,5,1.4);
-        for(int k=1;k<=3;k++)if(rnd.nextBoolean())c.set(s.x(k),y+1,l.z1-1,Canvas.leaves(Blocks.AZALEA_LEAVES));
+        for(int k=1;k<=3;k++)if(rnd.nextBoolean())c.set(s.x(k),y+1,l.z1-1,TB.HEDGE);
     }
 
     /** Right, after it: the tall stone pillar, the drive, the sign post, the vending machine against its wall. */
@@ -134,7 +135,7 @@ final class PhotoStreet {
         c.set(px,pg+1,pz,TB.PIPE);c.set(px,pg+2,pz,TB.PIPE);
         c.standingSign(px,pg+3,pz,Blocks.MANGROVE_SIGN,8,DyeColor.WHITE,true,"","止まれ","STOP","");
         // the vending machine in the wall line, its back to a taller block wall
-        for(int z=-60;z<=-58;z++){c.set(s.x(1),y+1,z,TB.BLOCK_WALL);c.set(s.x(1),y+2,z,TB.BLOCK_WALL);c.set(s.x(1),y+3,z,TB.wallCap());}
+        for(int z=-60;z<=-58;z++){c.set(s.x(1),y+1,z,TB.WALL_FOOT);c.set(s.x(1),y+2,z,TB.BLOCK_WALL);c.set(s.x(1),y+3,z,TB.wallCap());}
         c.set(fx,y+1,-59,TB.vending(l.front,false));c.set(fx,y+2,-59,TB.vending(l.front,true));
         t.street.machines++;
         for(int z=-58;z<=l.z1;z++)slatWall(fx,y,z);
@@ -159,9 +160,9 @@ final class PhotoStreet {
             if(z>=gate&&z<=gate+1)continue;
             switch(kind){
                 case 0->slatWall(fx,y,z);
-                case 1->{c.set(fx,y+1,z,TB.BLOCK_WALL);c.set(fx,y+2,z,TB.BALCONY);}
-                case 2->{c.set(fx,y+1,z,TB.BLOCK_WALL);c.set(fx,y+2,z,TB.wallCap());c.set(s.x(1),y+1,z,Canvas.leaves(Blocks.AZALEA_LEAVES));}
-                default->{c.set(fx,y+1,z,TB.BLOCK_WALL);c.set(fx,y+2,z,TB.wallCap());}
+                case 1->{c.set(fx,y+1,z,TB.WALL_FOOT);c.set(fx,y+2,z,TB.BALCONY);}
+                case 2->{c.set(fx,y+1,z,TB.WALL_FOOT);c.set(fx,y+2,z,TB.wallCap());c.set(s.x(1),y+1,z,TB.HEDGE);c.set(s.x(1),y+2,z,TB.HEDGE);}
+                default->{c.set(fx,y+1,z,TB.WALL_FOOT);c.set(fx,y+2,z,TB.BLOCK_WALL);c.set(fx,y+3,z,TB.wallCap());}
             }
         }
         if(gate-1>=l.z0){pillar(fx,y,gate-1,2);c.set(fx,y+2,gate-1,TB.facing("letterbox",l.front));}
@@ -174,7 +175,7 @@ final class PhotoStreet {
         body(f,rnd.nextInt(3)==0,!low&&rnd.nextInt(3)==0,rnd.nextBoolean(),low?1:2);
         if(!low&&rnd.nextInt(7)==0)t.nature.cherry(s.x(3),y+1,gate>l.z0+3?l.z0+1:l.z1-1,5+rnd.nextInt(2));
         if(rnd.nextInt(8)==0&&gate+3<=l.z1){
-            int vz=l.z1;c.set(fx,y+1,vz,TB.vending(l.front,false));c.set(fx,y+2,vz,TB.vending(l.front,true));t.street.machines++;
+            int vz=l.z1;boolean white=rnd.nextBoolean();c.set(fx,y+1,vz,TB.vending(l.front,false,white));c.set(fx,y+2,vz,TB.vending(l.front,true,white));t.street.machines++;
         }
     }
 
@@ -188,25 +189,27 @@ final class PhotoStreet {
     private void body(Frame f,boolean timber,boolean balcony,boolean eave,int stories){
         int W=f.W,D=f.D;
         if(W<5||D<5)return;
-        BlockState wall=TB.PLASTER,dark=s(Blocks.STRIPPED_DARK_OAK_WOOD),post=Canvas.axis(Blocks.STRIPPED_DARK_OAK_LOG,Direction.Axis.Y),floor=s(Blocks.SPRUCE_PLANKS);
-        Kit.shell(f,0,0,W-1,D-1,stories,wall,timber?post:wall,timber?dark:wall,floor,s(Blocks.STONE_BRICKS));
+        // white or cream stucco (2.48.0), dark timber on some, windows in dark sash frames with curtains
+        BlockState wall=rnd.nextInt(4)==0?TB.STUCCO_CREAM:TB.STUCCO_WHITE,dark=TB.TIMBER,post=TB.TIMBER,floor=s(Blocks.SPRUCE_PLANKS);
+        BlockState win=TB.WIN_CURTAIN,frost=TB.WIN_FROSTED;
+        Kit.shell(f,0,0,W-1,D-1,stories,wall,timber?post:wall,timber?dark:wall,floor,TB.CONCRETE);
         if(timber)for(int x=4;x<W-2;x+=4)for(int y=1;y<4*stories;y++)if(y%4!=0)f.set(x,y,0,post);
         int door=W/2;
         // the front: big windows in runs of three on the ground floor, pairs above
         for(int x=1;x<W-1;x++){
             if(timber&&x%4==0)continue;
             boolean nearDoor=Math.abs(x-door)<=1;
-            if(!nearDoor&&(x%4!=3||!timber)){f.set(x,1,0,TB.WINDOW);f.set(x,2,0,TB.WINDOW);}
-            if(stories>1&&x%3!=0){f.set(x,5,0,TB.WINDOW);f.set(x,6,0,TB.WINDOW);}
+            if(!nearDoor&&(x%4!=3||!timber)){f.set(x,1,0,win);f.set(x,2,0,win);}
+            if(stories>1&&x%3!=0){f.set(x,5,0,win);f.set(x,6,0,win);}
         }
-        for(int z=2;z<D-2;z+=3)for(int side:new int[]{0,W-1})for(int st=0;st<stories;st++)f.set(side,4*st+2,z,s(Blocks.WHITE_STAINED_GLASS_PANE));
-        for(int x=2;x<W-2;x+=3){f.set(x,2,D-1,s(Blocks.WHITE_STAINED_GLASS_PANE));if(stories>1)f.set(x,6,D-1,TB.WINDOW);}
+        for(int z=2;z<D-2;z+=3)for(int side:new int[]{0,W-1})for(int st=0;st<stories;st++)f.set(side,4*st+2,z,TB.out(frost,side==0?Direction.WEST:Direction.EAST));
+        for(int x=2;x<W-2;x+=3){f.set(x,2,D-1,TB.out(frost,Direction.SOUTH));if(stories>1)f.set(x,6,D-1,TB.out(win,Direction.SOUTH));}
         f.door(door,1,0,Pal.pick(rnd,Blocks.DARK_OAK_DOOR,Blocks.SPRUCE_DOOR),Direction.NORTH,false);
         if(eave)Kit.canopy(f,0,W-1,-1,1,3,Kit.KAWARA);
         if(balcony&&stories>1){
             for(int x=0;x<W;x++){f.set(x,4,-1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));f.set(x,4,-2,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));f.set(x,5,-2,TB.BALCONY);}
             for(int z=-1;z>=-2;z--){f.set(0,5,z,TB.BALCONY);f.set(W-1,5,z,TB.BALCONY);}
-            for(int x=1;x<W-1;x++)if(x%3!=0){f.set(x,5,0,TB.WINDOW);f.set(x,6,0,TB.WINDOW);}
+            for(int x=1;x<W-1;x++)if(x%3!=0){f.set(x,5,0,win);f.set(x,6,0,win);}
             Kit.airCon(f,W-2,5,-1,Direction.NORTH);
         }
         Kit.roof(f,0,0,W-1,D-1,4*stories,W>=D+3||rnd.nextBoolean()?Kit.HIP:Kit.GABLE,true,Kit.KAWARA,wall,floor);
@@ -217,7 +220,7 @@ final class PhotoStreet {
     /** A rough stone gatepost. */
     private void pillar(int x,int y,int z,int h){for(int k=1;k<=h;k++)c.set(x,y+k,z,TB.STONE_PILLAR);}
     /** The photo's wall: concrete blocks a metre high, a dark slat fence on top. */
-    private void slatWall(int x,int y,int z){c.set(x,y+1,z,TB.BLOCK_WALL);c.set(x,y+2,z,TB.SLAT_FENCE);}
+    private void slatWall(int x,int y,int z){c.set(x,y+1,z,TB.WALL_FOOT);c.set(x,y+2,z,TB.SLAT_FENCE);}
     /** A low block wall with a black railing on it, z0..z1. */
-    private void railWall(int x,int y,int z0,int z1){for(int z=z0;z<=z1;z++){c.set(x,y+1,z,TB.BLOCK_WALL);c.set(x,y+2,z,TB.BALCONY);}}
+    private void railWall(int x,int y,int z0,int z1){for(int z=z0;z<=z1;z++){c.set(x,y+1,z,TB.WALL_FOOT);c.set(x,y+2,z,TB.BALCONY);}}
 }

@@ -86,9 +86,9 @@ final class Hillside {
             if(g>=y-1)continue;
             if(Pal.hash(fx,77,zz)<0.7){
                 int len=2+(int)(Pal.hash(fx,78,zz)*(y-1-g));
-                for(int yy=y-1;yy>=Math.max(g+1,y-len);yy--)if(c.air(fx,yy,zz))c.set(fx,yy,zz,Blocks.VINE.getDefaultState().with(VineBlock.EAST,true));
+                for(int yy=y-1;yy>=Math.max(g+1,y-len);yy--)if(c.air(fx,yy,zz))c.set(fx,yy,zz,TB.ivy(Direction.WEST));
             }
-            if(Pal.hash(fx,79,zz)<0.5&&c.air(fx,g+1,zz))c.set(fx,g+1,zz,Canvas.leaves(Pal.hash(fx,80,zz)<0.5?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES));
+            if(Pal.hash(fx,79,zz)<0.5&&c.air(fx,g+1,zz))c.set(fx,g+1,zz,TB.HEDGE);
         }
     }
 
@@ -111,9 +111,9 @@ final class Hillside {
         switch(rnd.nextInt(5)){
             case 0->t.nature.cherry(tx,y+1,tz,5);
             case 1->t.nature.cedar(tx,y+1,tz,7+rnd.nextInt(3));
-            default->t.nature.broadleaf(tx,y+1,tz,4+rnd.nextInt(2));
+            default->t.nature.townTree(tx,y+1,tz,4+rnd.nextInt(2));
         }
-        for(int i=0;i<4;i++){int x=x0+rnd.nextInt(x1-x0+1),z=z0+rnd.nextInt(z1-z0+1);if(c.air(x,y+1,z))c.set(x,y+1,z,Canvas.leaves(rnd.nextBoolean()?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES));}
+        for(int i=0;i<4;i++){int x=x0+rnd.nextInt(x1-x0+1),z=z0+rnd.nextInt(z1-z0+1);if(c.air(x,y+1,z))c.set(x,y+1,z,TB.HEDGE);}
     }
 
     /** A flight of stairs, two wide, from this step's path straight up the next step's wall, walled on both sides. */
@@ -141,13 +141,13 @@ final class Hillside {
         var f=new Frame(c,x0,z0,x1,z1,Direction.WEST,y);
         int W=f.W,D=f.D;
         if(W<5||D<5)return;
-        BlockState[] walls={TB.PLASTER,TB.PLASTER,TB.WEATHERED,s(Blocks.SMOOTH_SANDSTONE),s(Blocks.CALCITE),s(Blocks.WHITE_TERRACOTTA),s(Blocks.LIGHT_GRAY_TERRACOTTA)};
+        BlockState[] walls={TB.STUCCO_WHITE,TB.STUCCO_WHITE,TB.PLASTER,TB.WEATHERED,TB.STUCCO_CREAM,TB.STUCCO_GRAY,TB.SIDING,TB.TILE};
         BlockState wall=walls[rnd.nextInt(walls.length)],floor=s(Blocks.SPRUCE_PLANKS);
-        BlockState band=rnd.nextBoolean()?s(Blocks.STRIPPED_DARK_OAK_WOOD):wall;
+        BlockState band=rnd.nextBoolean()?TB.TRIM_DARK:wall;
         int hd=Math.min(D-1,6);
         for(int x=0;x<W;x++)for(int z=0;z<D;z++){f.set(x,0,z,s(Blocks.GRASS_BLOCK));f.clear(x,1,z,x,9,z);}
-        Kit.shell(f,0,1,W-1,hd,2,wall,wall,band,floor,s(Blocks.STONE_BRICKS));
-        BlockState pane=rnd.nextInt(3)==0?TB.WINDOW:s(Blocks.GLASS_PANE),frost=s(Blocks.WHITE_STAINED_GLASS_PANE);
+        Kit.shell(f,0,1,W-1,hd,2,wall,wall,band,floor,TB.CONCRETE);
+        BlockState pane=rnd.nextInt(3)==0?TB.WIN_CURTAIN:rnd.nextBoolean()?TB.WIN:TB.WIN_WHITE,frost=TB.WIN_FROSTED;
         int door=1+rnd.nextInt(Math.max(1,W-3));
         for(int st=0;st<2;st++){
             Kit.windows(f,rnd,0,1,W-1,hd,'f',st,pane,frost,st==0?door:-99,st>0);

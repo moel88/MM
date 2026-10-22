@@ -46,7 +46,7 @@ public final class MapMpClient implements ClientModInitializer {
                 if(mc.world==null||mc.player==null)return;
                 if(mc.currentScreen!=null){note("screen "+mc.currentScreen.getClass().getSimpleName()+" closed");mc.setScreen(null);}
                 if(age<200)return;
-                note("in the world at "+fmt()+" map on="+MapClient.enabled()+" players="+mc.world.getPlayers().size()+" wires="+dev.sangwoo.celestialfall.client.town.WireRenderer.count()+" backdrop="+dev.sangwoo.celestialfall.client.town.BackdropRenderer.count());
+                note("in the world at "+fmt()+" map on="+MapClient.enabled()+" players="+mc.world.getPlayers().size()+" wires="+dev.sangwoo.celestialfall.client.town.WireRenderer.count()+" backdrop="+dev.sangwoo.celestialfall.client.town.BackdropRenderer.count()+" sea="+dev.sangwoo.celestialfall.client.town.BackdropRenderer.seaLevel());
                 List<String> people=new ArrayList<>();
                 for(var e:mc.world.getEntities())if(e.hasCustomName()&&!(e instanceof net.minecraft.entity.player.PlayerEntity))people.add(e.getCustomName().getString()+" @"+Math.round(e.getX())+","+Math.round(e.getY())+","+Math.round(e.getZ()));
                 note("townspeople in sight: "+people);

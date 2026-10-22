@@ -12,7 +12,7 @@ import net.minecraft.util.math.Direction;
  * time, the step taken in two halves, in the same asphalt (Botand's own town blocks) from end to end.
  */
 final class Roads {
-    static final byte NONE=0,ROAD=1,GUTTER=2,WALK=3,EDGE=4,ZEBRA=5,ALLEY=6,PROM=7,PATH=8,RAMP=9,STOP=10,CROSS=11,CENTRE=12;
+    static final byte NONE=0,ROAD=1,GUTTER=2,WALK=3,EDGE=4,ZEBRA=5,ALLEY=6,PROM=7,PATH=8,RAMP=9,STOP=10,CROSS=11,CENTRE=12,GREEN=13;
     final byte[] map=new byte[Plan.W*Plan.D];
     /** For an edge line the side it lies along (a horizontal Direction's id); for a centre line, zebra or stop line its axis (0 x, 1 z). */
     final byte[] dir=new byte[Plan.W*Plan.D];
@@ -20,7 +20,7 @@ final class Roads {
     Roads(Townscape t){this.t=t;c=t.c;}
 
     byte at(int x,int z){return Canvas.inPlan(x,z)?map[Canvas.idx(x,z)]:NONE;}
-    boolean isRoad(int x,int z){byte b=at(x,z);return b==ROAD||b==EDGE||b==CENTRE||b==ZEBRA||b==GUTTER||b==RAMP||b==STOP||b==CROSS;}
+    boolean isRoad(int x,int z){byte b=at(x,z);return b==ROAD||b==EDGE||b==CENTRE||b==ZEBRA||b==GUTTER||b==RAMP||b==STOP||b==CROSS||b==GREEN;}
     boolean any(int x,int z){return at(x,z)!=NONE;}
     void mark(int x0,int z0,int x1,int z1,byte type){
         for(int x=Math.min(x0,x1);x<=Math.max(x0,x1);x++)for(int z=Math.min(z0,z1);z<=Math.max(z0,z1);z++)if(Canvas.inPlan(x,z))map[Canvas.idx(x,z)]=type;
@@ -80,6 +80,10 @@ final class Roads {
         // stop lines before the level crossings, across the lanes coming down to them (traffic keeps left: the east lanes)
         for(int x=-69;x<=Plan.PHOTO_ROAD_X1;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
         for(int x=1;x<=3;x++)paint(x,Plan.RAIL_Z0-2,STOP,0);
+        // the green walking strip (2.48.0, the photos' lanes) inside the east gutter of each alley, its white line on the
+        // road's side, broken where the streets cross
+        for(int[] s:Plan.SIDE_STREETS)for(int z=Plan.ST_N[3];z<=Plan.ST_S[0];z++)
+            if(Plan.street(z)<0&&Plan.street(z-1)<0&&Plan.street(z+1)<0)paint(s[1]-1,z,GREEN,Direction.WEST.getHorizontal());
         // gutters wherever the asphalt meets something that is not street
         byte[] copy=map.clone();
         for(int x=Plan.X0+1;x<Plan.X0+Plan.W-1;x++)for(int z=Plan.Z0+1;z<Plan.Z0+Plan.D-1;z++){
@@ -108,6 +112,7 @@ final class Roads {
             switch(b){
                 case ROAD->{full=TB.ASPHALT;slab=TB.asphaltSlab();}
                 case EDGE->{full=TB.edgeLine(side,false);slab=TB.edgeLine(side,true);}
+                case GREEN->{full=TB.green(side);slab=TB.asphaltSlab();}
                 case CENTRE->{full=TB.painted("asphalt_center_line",axis);slab=TB.asphaltSlab();}
                 case ZEBRA->{full=TB.painted("asphalt_zebra",axis);slab=TB.asphaltSlab();}
                 case STOP->{full=TB.painted("asphalt_stop_line",axis);slab=TB.asphaltSlab();}

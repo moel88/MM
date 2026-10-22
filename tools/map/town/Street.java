@@ -184,7 +184,9 @@ final class Street {
             int vx=x+alongRow.getOffsetX()*i,vz=z+alongRow.getOffsetZ()*i;
             int vg=c.ground(vx,vz);
             if(!c.air(vx,vg+1,vz)||!c.air(vx,vg+2,vz))return;
-            c.set(vx,vg+1,vz,TB.vending(front,false));c.set(vx,vg+2,vz,TB.vending(front,true));
+            // the photos' machines are red and white (2.48.0: a white one in about three)
+            boolean white=Pal.hash(vx,61,vz)<0.35;
+            c.set(vx,vg+1,vz,TB.vending(front,false,white));c.set(vx,vg+2,vz,TB.vending(front,true,white));
             machines++;
         }
         int bx=x+alongRow.getOffsetX()*count,bz=z+alongRow.getOffsetZ()*count;
@@ -222,9 +224,12 @@ final class Street {
         if(c.air(bx+side.getOffsetX(),g+1,bz+side.getOffsetZ()))c.set(bx+side.getOffsetX(),g+1,bz+side.getOffsetZ(),Canvas.stairs(Blocks.SPRUCE_STAIRS,face.getOpposite(),false));
     }
     /** A traffic mirror at a blind corner: an orange post and the mirror on top. */
-    void mirror(int x,int z){
+    void mirror(int x,int z){mirror(x,z,Direction.SOUTH);}
+    /** A traffic mirror at a blind corner (2.48.0): Botand's orange post and the round mirror on it, facing the given way. */
+    void mirror(int x,int z,Direction face){
         int g=c.ground(x,z);for(int y=g+1;y<=g+4;y++)if(!c.air(x,y,z))return;
-        for(int y=g+1;y<=g+3;y++)c.set(x,y,z,Canvas.rod(Blocks.LIGHTNING_ROD,Direction.UP));
-        c.set(x,g+4,z,Blocks.LIGHT_BLUE_STAINED_GLASS.getDefaultState());
+        for(int y=g+1;y<=g+3;y++)c.set(x,y,z,TB.MIRROR_POST);
+        c.set(x,g+4,z,TB.mirror(face));
+        Town.log("traffic mirror at "+x+" "+(g+1)+" "+z+" facing "+face);
     }
 }

@@ -130,7 +130,7 @@ final class Rail {
         for(int x=0;x<W;x++)for(int z=0;z<D;z++)if(x>0&&x<W-1&&z>0&&z<D-1)f.set(x,4,z,s(Blocks.AIR));
         for(int x=0;x<W;x++)for(int z=0;z<D;z++)f.set(x,5,z,s(Blocks.SPRUCE_PLANKS));
         // windows, the wide entrance to the square, the gate to the platform
-        for(int x=2;x<W-2;x+=3){f.set(x,2,0,s(Blocks.GLASS_PANE));f.set(x,3,0,s(Blocks.GLASS_PANE));f.set(x,2,D-1,s(Blocks.GLASS_PANE));}
+        for(int x=2;x<W-2;x+=3){f.set(x,2,0,TB.WIN_WHITE);f.set(x,3,0,TB.WIN_WHITE);f.set(x,2,D-1,TB.out(TB.WIN_WHITE,Direction.SOUTH));}
         int mid=W/2;
         for(int x=mid-1;x<=mid+1;x++){f.set(x,1,0,s(Blocks.AIR));f.set(x,2,0,s(Blocks.AIR));f.set(x,3,0,s(Blocks.AIR));}
         for(int x=mid-1;x<=mid+1;x++){f.set(x,1,D-1,s(Blocks.AIR));f.set(x,2,D-1,s(Blocks.AIR));}
@@ -186,7 +186,7 @@ final class Rail {
         var f=new Frame(c,x0,z0,x0+6,z0+5,Direction.NORTH,Y);
         Kit.shell(f,0,0,6,5,1,s(Blocks.WHITE_CONCRETE),s(Blocks.WHITE_CONCRETE),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
         f.set(3,1,0,s(Blocks.AIR));f.set(3,2,0,s(Blocks.AIR));
-        f.set(1,2,0,s(Blocks.GLASS_PANE));f.set(5,2,0,s(Blocks.GLASS_PANE));
+        f.set(1,2,0,TB.WIN_FROSTED);f.set(5,2,0,TB.WIN_FROSTED);
         f.set(3,4,-1,s(Blocks.SHROOMLIGHT));
         f.wallSign(2,3,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLACK,false,"交番","KOBAN","파출소");
         f.hangingLantern(3,0,2,false);

@@ -101,7 +101,7 @@ final class Harbor {
     private void office(int x0,int x1){
         var f=new Frame(c,x0,Plan.SEAWARD_Z,x1,Plan.SEAWARD_Z+8,Direction.SOUTH,Y);
         Kit.shell(f,0,0,f.W-1,f.D-1,2,s(Blocks.WHITE_TERRACOTTA),s(Blocks.WHITE_TERRACOTTA),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
-        for(int s=0;s<2;s++)Kit.windows(f,rnd,0,0,f.W-1,f.D-1,'f',s,s(Blocks.GLASS_PANE),s(Blocks.WHITE_STAINED_GLASS_PANE),f.W/2,true);
+        for(int s=0;s<2;s++)Kit.windows(f,rnd,0,0,f.W-1,f.D-1,'f',s,TB.WIN,TB.WIN_FROSTED,f.W/2,true);
         f.door(f.W/2,1,0,Blocks.IRON_DOOR,Direction.NORTH,false);
         f.wallSign(f.W/2,3,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLUE,false,"ぼたんど漁協","Botand","Fishery Co-op");
         Kit.roof(f,0,0,f.W-1,f.D-1,8,Kit.FLAT,true,Kit.SLATE,s(Blocks.WHITE_TERRACOTTA),s(Blocks.SMOOTH_STONE));

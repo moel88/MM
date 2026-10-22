@@ -107,7 +107,8 @@ final class Plan {
     /** The foot of the east hill, whose west face carries the hillside houses above the lot. */
     static final int EAST_FOOT_X=101;
     /**
-     * The far coast across the water, drawn by the mod behind everything (too far off for blocks): x, z, the radii of
+     * The far coast across the water, drawn by the mod behind everything (too far off for blocks), none since 2.48.0
+     * (the user asked for the mountains to go; 2.47.0 had these, in git history): x, z, the radii of
      * its foot east-west and north-south, its top, a seed for its ridges. First the mountain island straight down the
      * photo street (photo 1: a hazy blue mountain rising out of the sea behind the guardrail, its summit a little right
      * of the road, 4.3 degrees above the horizon, its long east slope reaching down to the sea left of the road),
@@ -115,9 +116,13 @@ final class Plan {
      * shoulder east of it. Then long low coasts far to the south-east and south-west and beyond the harbour to the
      * west. Seen from the lot (photo 2) the island hides behind the houses on the shore, leaving the photo's open sea.
      */
-    static final float[][] BACKDROP={
-        {-253,2924,170,200,299,1},{-44,2929,270,230,215,2},
-        {1700,2400,1100,320,150,3},{-2300,2100,1000,380,170,4},{-2600,-200,500,900,230,5}};
+    static final float[][] BACKDROP={};
+    /**
+     * The open sea's surface the mod draws out to the horizon beyond the view (2.48.0, at the user's request the
+     * mountains are gone: the street ends in open sea). Water blocks fill to SEA; their surface stands a little below
+     * the next block.
+     */
+    static final float FAR_SEA=62.4f;
 
     /** How far north (0..-5) the terraces bend at this x: the hill is not a ruler, and never crowds street S4. */
     static int bend(int x){

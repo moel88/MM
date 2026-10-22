@@ -12,30 +12,32 @@ import net.minecraft.world.World;
 import java.util.List;
 
 /**
- * Hands a defined map's backdrop (the mountains of the far coast across the water) to each player who joins, and
- * again to everyone when the data packs are reloaded, for the client to draw behind everything over the map's own
- * dimension. A world without a definition sends none, which clears what a client was drawing.
+ * Hands a defined map's backdrop (the mountains of the far coast across the water, and since 2.48.0 the level of the
+ * open sea out to the horizon) to each player who joins, and again to everyone when the data packs are reloaded, for
+ * the client to draw behind everything over the map's own dimension. A world without a definition sends none, which
+ * clears what a client was drawing.
  */
 public final class MapBackdrop {
-    public static final Identifier CHANNEL=CelestialFall.id("map_backdrop_v1");
+    public static final Identifier CHANNEL=CelestialFall.id("map_backdrop_v2");
     private MapBackdrop(){}
 
     static void initialize(){
-        ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->send(handler.player,MapGate.definition(server).map(MapDefinition::backdrop).orElse(List.of())));
+        ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->send(handler.player,MapGate.definition(server).orElse(null)));
     }
     /** Sends the current backdrop to everyone on the server. */
     static void sendAll(MinecraftServer server){
-        var peaks=MapGate.definition(server).map(MapDefinition::backdrop).orElse(List.of());
-        for(var p:server.getPlayerManager().getPlayerList())send(p,peaks);
+        var d=MapGate.definition(server).orElse(null);
+        for(var p:server.getPlayerManager().getPlayerList())send(p,d);
     }
-    private static void send(ServerPlayerEntity p,List<MapDefinition.Peak> peaks){
+    private static void send(ServerPlayerEntity p,MapDefinition d){
         if(!ServerPlayNetworking.canSend(p,CHANNEL))return;
-        ServerPlayNetworking.send(p,CHANNEL,write(peaks));
+        ServerPlayNetworking.send(p,CHANNEL,d==null?write(List.of(),Float.NaN):write(d.backdrop(),d.sea()));
     }
-    /** The packet: the dimension the mountains stand around, their count, then five floats and a seed each. */
-    static PacketByteBuf write(List<MapDefinition.Peak> peaks){
+    /** The packet: the dimension the backdrop stands round, the far sea's level (NaN: none), the mountains' count, then five floats and a seed each. */
+    static PacketByteBuf write(List<MapDefinition.Peak> peaks,float sea){
         var b=PacketByteBufs.create();
         b.writeIdentifier(World.OVERWORLD.getValue());
+        b.writeFloat(sea);
         int n=Math.min(peaks.size(),MapDefinition.MAX_PEAKS);
         b.writeVarInt(n);
         for(int i=0;i<n;i++){var m=peaks.get(i);b.writeFloat(m.x());b.writeFloat(m.z());b.writeFloat(m.rx());b.writeFloat(m.rz());b.writeFloat(m.top());b.writeInt(m.seed());}

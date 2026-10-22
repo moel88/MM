@@ -131,7 +131,9 @@ final class Kit {
             boolean clash=skip>=k-1&&skip<=k+w;
             if(!clash){
                 boolean small=!tall||r.nextInt(4)==0;
-                BlockState p=small&&r.nextBoolean()?frosted:pane;
+                // a window block faces out of its wall (2.48.0)
+                Direction out=switch(side){case 'f'->Direction.NORTH;case 'b'->Direction.SOUTH;case 'l'->Direction.WEST;default->Direction.EAST;};
+                BlockState p=TB.out(small&&r.nextBoolean()?frosted:pane,out);
                 for(int i=0;i<w;i++){
                     int x=alongX?k+i:fixed,z=alongX?fixed:k+i;
                     f.set(x,fy+2,z,p);if(!small)f.set(x,fy+3,z,p);
@@ -172,13 +174,14 @@ final class Kit {
     static void blockWall(Frame f,int bx0,int bz0,int bx1,int bz1,int h){
         for(int x=Math.min(bx0,bx1);x<=Math.max(bx0,bx1);x++)for(int z=Math.min(bz0,bz1);z<=Math.max(bz0,bz1);z++){
             int g=f.ground(x,z);
-            for(int y=g+1;y<h;y++)f.set(x,y,z,Pal.blockWall(f.wx(x,z),f.y0+y,f.wz(x,z)));
+            for(int y=g+1;y<h;y++)f.set(x,y,z,y==g+1?TB.WALL_FOOT:Pal.blockWall(f.wx(x,z),f.y0+y,f.wz(x,z)));
             f.set(x,Math.max(h,g+1),z,TB.wallCap());
         }
     }
+    /** A clipped hedge (Botand's leaves on cards, 2.48.0), h blocks high. */
     static void hedge(Frame f,int bx0,int bz0,int bx1,int bz1,int h,Block leaves){
         for(int x=Math.min(bx0,bx1);x<=Math.max(bx0,bx1);x++)for(int z=Math.min(bz0,bz1);z<=Math.max(bz0,bz1);z++)
-            for(int y=1;y<=h;y++)f.set(x,y,z,Canvas.leaves(leaves));
+            for(int y=1;y<=h;y++)f.set(x,y,z,TB.HEDGE);
     }
     static void boardFence(Frame f,int bx0,int bz0,int bx1,int bz1,Block planks,Block slab){
         for(int x=Math.min(bx0,bx1);x<=Math.max(bx0,bx1);x++)for(int z=Math.min(bz0,bz1);z<=Math.max(bz0,bz1);z++){

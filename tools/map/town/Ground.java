@@ -202,11 +202,11 @@ final class Ground {
         runDownHouse(new Frame(c,80,125,88,132,Direction.NORTH,y),true);
         runDownHouse(new Frame(c,90,128,97,135,Direction.NORTH,y),false);
         flats(new Frame(c,42,122,62,131,Direction.NORTH,y));
-        for(int[] b:new int[][]{{86,121},{98,123},{79,134}})t.nature.broadleaf(b[0],y+1,b[1],4+rnd.nextInt(2));
+        for(int[] b:new int[][]{{86,121},{98,123},{79,134}})t.nature.townTree(b[0],y+1,b[1],4+rnd.nextInt(2));
         // trees and bushes along the hill's foot behind the shed, hiding the hillside's lowest wall (photo 2: green
         // under the houses on the hill)
-        for(int[] b:new int[][]{{99,129},{100,136},{97,139}})t.nature.broadleaf(b[0],y+1,b[1],5+rnd.nextInt(2));
-        for(int z=Plan.BACK_E[1]+6;z<=Plan.BACK_E[3];z++)if(rnd.nextInt(3)>0&&c.air(Plan.BACK_E[2],y+1,z))t.nature.blob(Plan.BACK_E[2]+0.5,y+1.5,z+0.5,1.2,1.4,1.2,rnd.nextBoolean()?Blocks.AZALEA_LEAVES:Blocks.OAK_LEAVES,null);
+        for(int[] b:new int[][]{{99,129},{100,136},{97,139}})t.nature.townTree(b[0],y+1,b[1],5+rnd.nextInt(2));
+        for(int z=Plan.BACK_E[1]+6;z<=Plan.BACK_E[3];z++)if(rnd.nextInt(3)>0&&c.air(Plan.BACK_E[2],y+1,z))t.nature.blob(Plan.BACK_E[2]+0.5,y+1.5,z+0.5,1.2,1.4,1.2,rnd.nextBoolean()?TB.HEDGE:TB.CANOPY);
         List<int[]> run=new ArrayList<>();
         for(int[] p:new int[][]{{40,120,0},{63,120,0},{66,132,1},{92,135,1},{104,133,1}}){
             int[] top=t.street.pole(p[0],p[1],p[2]==0?Direction.EAST:Direction.NORTH,2,false);
@@ -221,7 +221,7 @@ final class Ground {
         Kit.shell(f,0,0,W-1,D-1,2,wall,wall,TB.WEATHERED,floor,TB.WEATHERED);
         for(int st=0;st<2;st++)for(int x=1;x<W-1;x++){
             if(x%3==0)continue;
-            BlockState w=Pal.hash(f.wx(x,0),st,f.wz(x,0))<0.25?s(Blocks.AIR):s(Blocks.GRAY_STAINED_GLASS_PANE);
+            BlockState w=Pal.hash(f.wx(x,0),st,f.wz(x,0))<0.25?s(Blocks.AIR):TB.WIN;
             f.set(x,4*st+2,0,w);f.set(x,4*st+3,0,w);
         }
         f.door(W/2,1,0,Blocks.IRON_DOOR,Direction.NORTH,false);
@@ -241,7 +241,7 @@ final class Ground {
             for(int x=1;x<W-1;x++){
                 int u=x%5;
                 if(u==0)continue;
-                BlockState w=Pal.hash(f.wx(x,0),fy,f.wz(x,0))<0.2?s(Blocks.AIR):u==1&&st==0?s(Blocks.GRAY_STAINED_GLASS_PANE):s(Blocks.GLASS_PANE);
+                BlockState w=Pal.hash(f.wx(x,0),fy,f.wz(x,0))<0.2?s(Blocks.AIR):u==1&&st==0?TB.WIN_FROSTED:TB.WIN;
                 f.set(x,fy+2,0,w);f.set(x,fy+3,0,w);if(u>=2&&u<=3)f.set(x,fy+1,0,st==1?w:wall);
             }
             if(st==1)for(int x=0;x<W;x++){f.set(x,fy,-1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));f.set(x,fy,-2,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));f.set(x,fy+1,-2,x%5==0?wall:TB.BALCONY);}

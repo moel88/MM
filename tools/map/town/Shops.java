@@ -24,31 +24,31 @@ final class Shops {
     /** A kind of shop: its name read down the standing sign, the name board's two lines, colours and goods. */
     record Kind(String id,String vertical,String name,String sub,Block awning,Block awning2,DyeColor text,BlockState face){}
     static final List<Kind> MAIN=List.of(
-        new Kind("ramen","ラーメン","らーめん 浜屋","醤油・味噌・塩",Blocks.RED_WOOL,Blocks.RED_WOOL,DyeColor.RED,s(Blocks.WHITE_TERRACOTTA)),
+        new Kind("ramen","ラーメン","らーめん 浜屋","醤油・味噌・塩",Blocks.RED_WOOL,Blocks.RED_WOOL,DyeColor.RED,TB.STUCCO_CREAM),
         new Kind("cafe","喫茶","喫茶 しおさい","珈琲・軽食",Blocks.BROWN_WOOL,Blocks.WHITE_WOOL,DyeColor.BROWN,s(Blocks.BRICKS)),
         new Kind("izakaya","居酒屋","居酒屋 灯","地魚・地酒",Blocks.BLUE_WOOL,Blocks.BLUE_WOOL,DyeColor.WHITE,s(Blocks.DARK_OAK_PLANKS)),
-        new Kind("fish","鮮魚","鮮魚 丸浜","朝どれの魚",Blocks.BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.BLUE,s(Blocks.LIGHT_GRAY_CONCRETE)),
-        new Kind("grocer","八百屋","八百屋 みどり","野菜・果物",Blocks.GREEN_WOOL,Blocks.WHITE_WOOL,DyeColor.GREEN,s(Blocks.WHITE_TERRACOTTA)),
-        new Kind("pharmacy","くすり","海野薬局","処方せん受付",Blocks.LIME_WOOL,Blocks.WHITE_WOOL,DyeColor.GREEN,s(Blocks.SMOOTH_QUARTZ)),
-        new Kind("barber","理容","理容 ナギサ","カット・顔そり",Blocks.RED_WOOL,Blocks.BLUE_WOOL,DyeColor.BLUE,s(Blocks.WHITE_CONCRETE)),
-        new Kind("bakery","パン","パン工房 こむぎ","焼きたて",Blocks.ORANGE_WOOL,Blocks.WHITE_WOOL,DyeColor.ORANGE,s(Blocks.SMOOTH_SANDSTONE)),
-        new Kind("books","本","灯台堂書店","本・文具",Blocks.CYAN_WOOL,Blocks.CYAN_WOOL,DyeColor.CYAN,s(Blocks.LIGHT_GRAY_TERRACOTTA)),
+        new Kind("fish","鮮魚","鮮魚 丸浜","朝どれの魚",Blocks.BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.BLUE,TB.STUCCO_GRAY),
+        new Kind("grocer","八百屋","八百屋 みどり","野菜・果物",Blocks.GREEN_WOOL,Blocks.WHITE_WOOL,DyeColor.GREEN,TB.STUCCO_CREAM),
+        new Kind("pharmacy","くすり","海野薬局","処方せん受付",Blocks.LIME_WOOL,Blocks.WHITE_WOOL,DyeColor.GREEN,TB.STUCCO_WHITE),
+        new Kind("barber","理容","理容 ナギサ","カット・顔そり",Blocks.RED_WOOL,Blocks.BLUE_WOOL,DyeColor.BLUE,TB.STUCCO_WHITE),
+        new Kind("bakery","パン","パン工房 こむぎ","焼きたて",Blocks.ORANGE_WOOL,Blocks.WHITE_WOOL,DyeColor.ORANGE,TB.STUCCO_PINK),
+        new Kind("books","本","灯台堂書店","本・文具",Blocks.CYAN_WOOL,Blocks.CYAN_WOOL,DyeColor.CYAN,TB.TILE),
         new Kind("liquor","酒","浜田酒店","地酒・たばこ",Blocks.BLUE_WOOL,Blocks.BLUE_WOOL,DyeColor.BLUE,s(Blocks.SPRUCE_PLANKS)),
-        new Kind("florist","花","花 はなみずき","鉢植え・切り花",Blocks.PINK_WOOL,Blocks.WHITE_WOOL,DyeColor.MAGENTA,s(Blocks.WHITE_TERRACOTTA)),
-        new Kind("laundry","洗濯","コインランドリー","24時間",Blocks.LIGHT_BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.LIGHT_BLUE,s(Blocks.WHITE_CONCRETE)),
-        new Kind("electric","電器","マリン電器","家電・修理",Blocks.YELLOW_WOOL,Blocks.YELLOW_WOOL,DyeColor.BLUE,s(Blocks.LIGHT_GRAY_CONCRETE)),
+        new Kind("florist","花","花 はなみずき","鉢植え・切り花",Blocks.PINK_WOOL,Blocks.WHITE_WOOL,DyeColor.MAGENTA,TB.STUCCO_CREAM),
+        new Kind("laundry","洗濯","コインランドリー","24時間",Blocks.LIGHT_BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.LIGHT_BLUE,TB.STUCCO_WHITE),
+        new Kind("electric","電器","マリン電器","家電・修理",Blocks.YELLOW_WOOL,Blocks.YELLOW_WOOL,DyeColor.BLUE,TB.STUCCO_GRAY),
         new Kind("sushi","寿司","浜鮨","にぎり・ちらし",Blocks.BLUE_WOOL,Blocks.BLUE_WOOL,DyeColor.WHITE,s(Blocks.SPRUCE_PLANKS)),
         new Kind("soba","そば","岬庵","そば・うどん",Blocks.BROWN_WOOL,Blocks.BROWN_WOOL,DyeColor.WHITE,s(Blocks.DARK_OAK_PLANKS)),
         new Kind("snack","スナック","スナック 渚","カラオケ",Blocks.PURPLE_WOOL,Blocks.MAGENTA_WOOL,DyeColor.PINK,s(Blocks.GRAY_CONCRETE)),
-        new Kind("sweets","和菓子","月見堂","だんご・最中",Blocks.LIME_WOOL,Blocks.WHITE_WOOL,DyeColor.GREEN,s(Blocks.WHITE_TERRACOTTA)),
-        new Kind("realty","不動産","ボタンド不動産","賃貸・売買",Blocks.BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.BLUE,s(Blocks.LIGHT_GRAY_CONCRETE)),
-        new Kind("cleaning","クリーニング","クリーニング白波","",Blocks.LIGHT_BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.BLUE,s(Blocks.WHITE_CONCRETE)),
-        new Kind("bike","自転車","サイクル浜","修理・レンタル",Blocks.ORANGE_WOOL,Blocks.ORANGE_WOOL,DyeColor.ORANGE,s(Blocks.LIGHT_GRAY_CONCRETE)),
-        new Kind("tobacco","たばこ","たばこ","",Blocks.RED_WOOL,Blocks.RED_WOOL,DyeColor.RED,s(Blocks.WHITE_TERRACOTTA)),
-        new Kind("souvenir","みやげ","おみやげ 浜風","干物・海産物",Blocks.CYAN_WOOL,Blocks.WHITE_WOOL,DyeColor.CYAN,s(Blocks.SMOOTH_SANDSTONE)),
+        new Kind("sweets","和菓子","月見堂","だんご・最中",Blocks.LIME_WOOL,Blocks.WHITE_WOOL,DyeColor.GREEN,TB.STUCCO_CREAM),
+        new Kind("realty","不動産","ボタンド不動産","賃貸・売買",Blocks.BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.BLUE,TB.STUCCO_GRAY),
+        new Kind("cleaning","クリーニング","クリーニング白波","",Blocks.LIGHT_BLUE_WOOL,Blocks.WHITE_WOOL,DyeColor.BLUE,TB.STUCCO_WHITE),
+        new Kind("bike","自転車","サイクル浜","修理・レンタル",Blocks.ORANGE_WOOL,Blocks.ORANGE_WOOL,DyeColor.ORANGE,TB.STUCCO_GRAY),
+        new Kind("tobacco","たばこ","たばこ","",Blocks.RED_WOOL,Blocks.RED_WOOL,DyeColor.RED,TB.STUCCO_CREAM),
+        new Kind("souvenir","みやげ","おみやげ 浜風","干物・海産物",Blocks.CYAN_WOOL,Blocks.WHITE_WOOL,DyeColor.CYAN,TB.STUCCO_PINK),
         new Kind("tea","お茶","お茶の 青葉園","日本茶・海苔",Blocks.GREEN_WOOL,Blocks.GREEN_WOOL,DyeColor.GREEN,s(Blocks.SPRUCE_PLANKS)),
-        new Kind("toys","おもちゃ","おもちゃの まるや","駄菓子",Blocks.YELLOW_WOOL,Blocks.RED_WOOL,DyeColor.RED,s(Blocks.WHITE_TERRACOTTA)),
-        new Kind("photo","写真","浜写真館","写真・現像",Blocks.BLACK_WOOL,Blocks.BLACK_WOOL,DyeColor.WHITE,s(Blocks.LIGHT_GRAY_CONCRETE)));
+        new Kind("toys","おもちゃ","おもちゃの まるや","駄菓子",Blocks.YELLOW_WOOL,Blocks.RED_WOOL,DyeColor.RED,TB.STUCCO_CREAM),
+        new Kind("photo","写真","浜写真館","写真・現像",Blocks.BLACK_WOOL,Blocks.BLACK_WOOL,DyeColor.WHITE,TB.STUCCO_GRAY));
     static final Set<String> FOOD=Set.of("ramen","izakaya","sushi","soba","cafe","snack");
 
     /** Builds the shops on their plots: the main street's, some of the station street's, the special buildings. */
@@ -93,7 +93,7 @@ final class Shops {
         int depth=Math.min(D-2,11),stories=rnd.nextInt(10)<3?3:2;
         t.houses.yard(f,false);
         for(int x=0;x<W;x++)for(int z=0;z<D;z++)f.set(x,0,z,z<depth?s(Blocks.SMOOTH_STONE):s(Blocks.GRASS_BLOCK));
-        BlockState face=k.face(),side=s(Blocks.LIGHT_GRAY_CONCRETE),floor=s(Blocks.OAK_PLANKS);
+        BlockState face=k.face(),side=TB.STUCCO_GRAY,floor=s(Blocks.OAK_PLANKS);
         Kit.shell(f,0,0,W-1,depth-1,stories,side,side,side,floor,s(Blocks.SMOOTH_STONE));
         // the front wall in the shop's own facing, carried two blocks above the roof as a flat front
         int top=4*stories+1;
@@ -102,14 +102,14 @@ final class Shops {
         // the shop front: glass across, the door, an open front for those that sell in the street
         boolean open=Set.of("fish","grocer","florist","souvenir","toys").contains(k.id());
         int door=W/2;
-        for(int x=1;x<W-1;x++)for(int y=1;y<=3;y++)f.set(x,y,0,open&&y<=3?s(Blocks.AIR):x==door&&y<=2?s(Blocks.AIR):s(Blocks.GLASS_PANE));
+        for(int x=1;x<W-1;x++)for(int y=1;y<=3;y++)f.set(x,y,0,open&&y<=3?s(Blocks.AIR):x==door&&y<=2?s(Blocks.AIR):TB.WIN);
         // the name board over the shop front and the awning under it
-        for(int x=0;x<W;x++){f.set(x,4,0,s(Blocks.WHITE_CONCRETE));f.set(x,3,-1,s((x&1)==0?k.awning():k.awning2()));}
+        for(int x=0;x<W;x++){f.set(x,4,0,TB.TRIM_WHITE);f.set(x,3,-1,s((x&1)==0?k.awning():k.awning2()));}
         f.wallSign(W/2,4,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,k.text(),true,"",k.name(),k.sub());
         if(W>=9){f.wallSign(1,4,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,k.text(),true,"",k.vertical());f.wallSign(W-2,4,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,k.text(),true,"",k.vertical());}
         // the standing sign out from the front, its name read downward on both faces
         int sy=5;
-        for(int y=sy;y<=sy+3;y++)f.set(W-1,y,-1,s(Blocks.WHITE_CONCRETE));
+        for(int y=sy;y<=sy+3;y++)f.set(W-1,y,-1,TB.TRIM_WHITE);
         String[] v=verticalLines(k.vertical());
         f.wallSign(W-1,sy+2,-2,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,k.text(),true,v);
         f.wallSign(W-2,sy+2,-1,Blocks.BIRCH_WALL_SIGN,Direction.WEST,k.text(),true,v);
@@ -117,8 +117,8 @@ final class Shops {
         // upper floors: windows, a balcony rail now and then, plants
         for(int s=1;s<stories;s++){
             int fy=4*s;
-            for(int x=1;x<W-1;x++){if(x==W/2&&rnd.nextBoolean())continue;f.set(x,fy+2,0,s(Blocks.GLASS_PANE));if(rnd.nextInt(3)>0)f.set(x,fy+3,0,s(Blocks.GLASS_PANE));}
-            if(rnd.nextInt(3)==0)for(int x=1;x<W-1;x++)f.set(x,fy+1,-1,s(Blocks.IRON_BARS));
+            for(int x=1;x<W-1;x++){if(x==W/2&&rnd.nextBoolean())continue;f.set(x,fy+2,0,TB.WIN);if(rnd.nextInt(3)>0)f.set(x,fy+3,0,TB.WIN);}
+            if(rnd.nextInt(3)==0)for(int x=1;x<W-1;x++)f.set(x,fy+1,-1,TB.BALCONY);
             if(rnd.nextBoolean())f.set(2,fy+1,-1,Kit.pot(rnd));
             Kit.roomLight(f,W/2,fy,depth/2,rnd.nextBoolean());
         }
@@ -161,7 +161,7 @@ final class Shops {
                 for(int x=2;x<W-1;x+=3)f.set(x,1,3,Canvas.stairs(Blocks.QUARTZ_STAIRS,Direction.NORTH,false));}
             case "electric"->{for(int x=1;x<W-1;x++){f.set(x,1,1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));f.set(x,2,1,s(Blocks.BLACK_STAINED_GLASS));}}
             case "bike"->{for(int x=1;x<W-1;x+=2)if(f.air(x,1,-1))f.set(x,1,-1,s(Blocks.IRON_BARS));}
-            case "tobacco"->{f.set(door,2,0,s(Blocks.GLASS_PANE));t.street.vending(f.wx(W-2,-1),f.wz(W-2,-1),f.dir(Direction.WEST),2);}
+            case "tobacco"->{f.set(door,2,0,TB.WIN);t.street.vending(f.wx(W-2,-1),f.wz(W-2,-1),f.dir(Direction.WEST),2);}
             default->{for(int x=1;x<W-1;x++)f.set(x,1,c1,s(Blocks.BARREL));if(f.air(1,1,-1))f.set(1,1,-1,Kit.pot(rnd));}
         }
         if(rnd.nextInt(4)==0&&!k.id().equals("tobacco"))t.street.vending(f.wx(1,-1),f.wz(1,-1),f.dir(Direction.WEST),1);
@@ -179,9 +179,9 @@ final class Shops {
         t.houses.yard(f,false);
         for(int x=0;x<W;x++)for(int z=0;z<D;z++)f.set(x,0,z,Pal.asphalt(f.wx(x,z),f.wz(x,z)));
         int b0=Math.max(8,D-10),b1=D-1,x0=1,x1=W-2;
-        Kit.shell(f,x0,b0,x1,b1,1,s(Blocks.WHITE_CONCRETE),s(Blocks.WHITE_CONCRETE),s(Blocks.WHITE_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
+        Kit.shell(f,x0,b0,x1,b1,1,TB.STUCCO_WHITE,TB.STUCCO_WHITE,TB.TRIM_WHITE,s(Blocks.SMOOTH_STONE),TB.CONCRETE);
         // the front: glass all along, the door, Botand's blue band with the name
-        for(int x=x0+1;x<x1;x++)for(int y=1;y<=3;y++)f.set(x,y,b0,s(Blocks.GLASS_PANE));
+        for(int x=x0+1;x<x1;x++)for(int y=1;y<=3;y++)f.set(x,y,b0,TB.WIN);
         int door=x1-3;f.set(door,1,b0,s(Blocks.AIR));f.set(door,2,b0,s(Blocks.AIR));f.set(door+1,1,b0,s(Blocks.AIR));f.set(door+1,2,b0,s(Blocks.AIR));
         for(int x=x0;x<=x1;x++){f.set(x,4,b0,s(Blocks.LIGHT_BLUE_CONCRETE));f.set(x,5,b0,s(Blocks.BLUE_CONCRETE));f.set(x,6,b0,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));}
         for(int z=b0;z<=b1;z++)for(int x:new int[]{x0,x1}){f.set(x,4,z,s(Blocks.LIGHT_BLUE_CONCRETE));f.set(x,5,z,s(Blocks.BLUE_CONCRETE));}
@@ -208,13 +208,13 @@ final class Shops {
     void post(Lot lot){
         Frame f=Frame.of(c,lot);int W=f.W,D=f.D,depth=Math.min(D-2,11);
         t.houses.yard(f,false);
-        Kit.shell(f,0,0,W-1,depth-1,2,s(Blocks.WHITE_CONCRETE),s(Blocks.WHITE_CONCRETE),s(Blocks.RED_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
-        for(int x=1;x<W-1;x++)for(int y=1;y<=3;y++)f.set(x,y,0,s(Blocks.GLASS_PANE));
+        Kit.shell(f,0,0,W-1,depth-1,2,TB.STUCCO_WHITE,TB.STUCCO_WHITE,s(Blocks.RED_CONCRETE),s(Blocks.SMOOTH_STONE),TB.CONCRETE);
+        for(int x=1;x<W-1;x++)for(int y=1;y<=3;y++)f.set(x,y,0,TB.WIN);
         f.set(W/2,1,0,s(Blocks.AIR));f.set(W/2,2,0,s(Blocks.AIR));
         for(int x=0;x<W;x++)f.set(x,4,0,s(Blocks.RED_CONCRETE));
         f.wallSign(W/2,4,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.RED,true,"〒","ぼたんど郵便局","POST OFFICE");
-        Kit.windows(f,rnd,0,0,W-1,depth-1,'f',1,s(Blocks.GLASS_PANE),s(Blocks.GLASS_PANE),-99,true);
-        Kit.roof(f,0,0,W-1,depth-1,8,Kit.FLAT,true,Kit.SLATE,s(Blocks.WHITE_CONCRETE),s(Blocks.SMOOTH_STONE));
+        Kit.windows(f,rnd,0,0,W-1,depth-1,'f',1,TB.WIN,TB.WIN,-99,true);
+        Kit.roof(f,0,0,W-1,depth-1,8,Kit.FLAT,true,Kit.SLATE,TB.STUCCO_WHITE,s(Blocks.SMOOTH_STONE));
         f.set(2,4,2,s(Blocks.SEA_LANTERN));f.set(W-3,4,2,s(Blocks.SEA_LANTERN));
         for(int x=1;x<W-1;x++)f.set(x,1,depth-3,s(Blocks.SMOOTH_QUARTZ));
         t.street.postBox(f.wx(1,-1),f.wz(1,-1));
@@ -225,11 +225,11 @@ final class Shops {
     void clinic(Lot lot){
         Frame f=Frame.of(c,lot);int W=f.W,D=f.D,depth=Math.min(D-2,11);
         t.houses.yard(f,false);
-        Kit.shell(f,0,0,W-1,depth-1,2,s(Blocks.SMOOTH_QUARTZ),s(Blocks.SMOOTH_QUARTZ),s(Blocks.LIGHT_BLUE_CONCRETE),s(Blocks.SMOOTH_STONE),s(Blocks.SMOOTH_STONE));
-        for(int s=0;s<2;s++)Kit.windows(f,rnd,0,0,W-1,depth-1,'f',s,s(Blocks.WHITE_STAINED_GLASS_PANE),s(Blocks.GLASS_PANE),s==0?W/2:-99,true);
+        Kit.shell(f,0,0,W-1,depth-1,2,TB.STUCCO_WHITE,TB.STUCCO_WHITE,s(Blocks.LIGHT_BLUE_CONCRETE),s(Blocks.SMOOTH_STONE),TB.CONCRETE);
+        for(int s=0;s<2;s++)Kit.windows(f,rnd,0,0,W-1,depth-1,'f',s,TB.WIN_FROSTED,TB.WIN,s==0?W/2:-99,true);
         f.door(W/2,1,0,Blocks.BIRCH_DOOR,Direction.NORTH,false);
         f.wallSign(W/2-1,2,-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.GREEN,false,"浜田医院","内科・小児科","9:00-18:00","休診 日・祝");
-        Kit.roof(f,0,0,W-1,depth-1,8,Kit.GABLE,true,Kit.BLUE,s(Blocks.SMOOTH_QUARTZ),s(Blocks.SMOOTH_STONE));
+        Kit.roof(f,0,0,W-1,depth-1,8,Kit.GABLE,true,Kit.BLUE,TB.STUCCO_WHITE,s(Blocks.SMOOTH_STONE));
         Kit.roomLight(f,W/2,0,depth/2,false);
         shops++;
     }
@@ -239,8 +239,8 @@ final class Shops {
         Frame f=Frame.of(c,lot);int W=f.W,D=f.D;
         t.houses.yard(f,true);
         int x0=1,x1=W-2,z0=2,z1=D-2;
-        BlockState wood=s(Blocks.DARK_OAK_PLANKS),plaster=s(Blocks.CALCITE),post=Canvas.axis(Blocks.STRIPPED_DARK_OAK_LOG,Direction.Axis.Y);
-        Kit.shell(f,x0,z0,x1,z1,1,wood,post,s(Blocks.STRIPPED_DARK_OAK_WOOD),s(Blocks.SMOOTH_STONE),s(Blocks.STONE_BRICKS));
+        BlockState wood=TB.BOARDS_DARK,plaster=TB.PLASTER,post=TB.TIMBER;
+        Kit.shell(f,x0,z0,x1,z1,1,wood,post,TB.TIMBER,s(Blocks.SMOOTH_STONE),TB.CONCRETE);
         Houses.perimeter(f,x0,z0,x1,z1,(x,z,corner)->{for(int y=1;y<=5;y++)f.set(x,y,z,corner?post:y>=4?plaster:wood);});
         for(int x=x0+1;x<x1;x++)for(int z=z0+1;z<z1;z++){f.set(x,4,z,s(Blocks.AIR));f.set(x,5,z,s(Blocks.AIR));}
         // two entrances: blue noren for men, red for women, ゆ over both
@@ -275,13 +275,13 @@ final class Shops {
         Frame f=Frame.of(c,lot);int W=f.W,D=f.D;
         t.houses.yard(f,true);
         int x0=1,x1=W-2,z0=3,z1=D-2;
-        BlockState post=Canvas.axis(Blocks.STRIPPED_SPRUCE_LOG,Direction.Axis.Y),wood=s(Blocks.SPRUCE_PLANKS),plaster=s(Blocks.CALCITE);
-        Kit.shell(f,x0,z0,x1,z1,2,wood,post,s(Blocks.STRIPPED_DARK_OAK_WOOD),s(Blocks.STRIPPED_BAMBOO_BLOCK),s(Blocks.STONE_BRICKS));
+        BlockState post=TB.TIMBER,wood=TB.BOARDS,plaster=TB.PLASTER;
+        Kit.shell(f,x0,z0,x1,z1,2,wood,post,TB.TIMBER,s(Blocks.STRIPPED_BAMBOO_BLOCK),TB.CONCRETE);
         for(int s=0;s<2;s++){
             final int fy=4*s;
             Houses.perimeter(f,x0,z0,x1,z1,(x,z,corner)->{if(corner)return;boolean p=(x-x0)%3==0&&(z==z0||z==z1)||(z-z0)%3==0&&(x==x0||x==x1);
                 for(int y=fy+1;y<=fy+3;y++)f.set(x,y,z,p?post:y==fy+3?plaster:wood);});
-            for(int x=x0+1;x<x1;x++)if((x-x0)%3!=0){f.set(x,fy+2,z1,s(Blocks.WHITE_STAINED_GLASS_PANE));f.set(x,fy+2,z0,s(Blocks.WHITE_STAINED_GLASS_PANE));}
+            for(int x=x0+1;x<x1;x++)if((x-x0)%3!=0){f.set(x,fy+2,z1,TB.out(TB.WIN_FROSTED,Direction.SOUTH));f.set(x,fy+2,z0,TB.WIN_FROSTED);}
             for(int x=x0+2;x<x1;x+=4)f.hangingLantern(x,fy+3,(z0+z1)/2,false);
         }
         int m=(x0+x1)/2;

@@ -23,16 +23,27 @@ final class Houses {
         "田村","和田","石田","森田","上田","内田","柴田","酒井","宮崎","横山","安藤","宮本","大野","谷口","工藤","丸山","杉山","野口",
         "浜田","磯部","網元","汐見","海野","灘","浦田","岬","渚"};
     static final String[] APARTMENTS={"メゾン潮風","コーポ浜木綿","ハイツ松風","コーポ汐見","メゾン岬","ハイツ浜通り","コーポ凪","グリーンハイツ"};
-    static final BlockState[] SIDING={s(Blocks.SMOOTH_QUARTZ),s(Blocks.WHITE_CONCRETE),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.LIGHT_GRAY_CONCRETE),
-        s(Blocks.LIGHT_GRAY_TERRACOTTA),s(Blocks.BIRCH_PLANKS),s(Blocks.MUSHROOM_STEM),s(Blocks.CALCITE),s(Blocks.WHITE_TERRACOTTA),s(Blocks.SMOOTH_QUARTZ),
-        s(Blocks.CYAN_TERRACOTTA),s(Blocks.GRAY_CONCRETE),s(Blocks.BROWN_TERRACOTTA),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.CALCITE)};
+    /**
+     * The modern houses' looks (2.48.0, the photos' streets): the wall, the band at the floor line, the windows and
+     * the curtained ones. White stucco with dark frames and a dark band most often, cream or pink stucco with white
+     * frames, lap siding, wall tiles, grey stucco.
+     */
+    static final BlockState[][] SCHEMES={
+        {TB.STUCCO_WHITE,TB.TRIM_DARK,TB.WIN,TB.WIN_CURTAIN},{TB.STUCCO_WHITE,TB.STUCCO_WHITE,TB.WIN,TB.WIN_CURTAIN},
+        {TB.STUCCO_WHITE,TB.TRIM_DARK,TB.WIN,TB.WIN_CURTAIN},{TB.STUCCO_CREAM,TB.TRIM_WHITE,TB.WIN_WHITE,TB.WIN_WHITE_CURTAIN},
+        {TB.SIDING,TB.TRIM_WHITE,TB.WIN,TB.WIN_CURTAIN},{TB.STUCCO_GRAY,TB.TRIM_WHITE,TB.WIN_WHITE,TB.WIN_WHITE_CURTAIN},
+        {TB.TILE,TB.TRIM_DARK,TB.WIN,TB.WIN_CURTAIN},{TB.STUCCO_PINK,TB.TRIM_WHITE,TB.WIN_WHITE,TB.WIN_WHITE_CURTAIN},
+        {TB.SIDING,TB.SIDING,TB.WIN_WHITE,TB.WIN_WHITE_CURTAIN},{TB.STUCCO_CREAM,TB.STUCCO_CREAM,TB.WIN,TB.WIN_CURTAIN}};
     static final Kit.Roof[] MODERN_ROOFS={Kit.BLACK,Kit.BLACK,Kit.KAWARA,Kit.SLATE,Kit.BLUE,Kit.BROWN,Kit.TEAL,Kit.KAWARA};
     static final Kit.Roof[] OLD_ROOFS={Kit.KAWARA,Kit.KAWARA,Kit.KAWARA,Kit.KAWARA,Kit.BLUE,Kit.BLACK,Kit.RED};
 
     Houses(Townscape t){this.t=t;c=t.c;rnd=new Random(t.rnd.nextLong());}
     String name(){return NAMES[rnd.nextInt(NAMES.length)];}
 
+    private final Map<String,Integer> logged=new HashMap<>();
     void build(Lot lot){
+        // the first two plots of each kind go in the log, for filming them
+        if(logged.merge(lot.use,1,Integer::sum)<=2)Town.log(lot.use+" plot at x "+lot.x0+".."+lot.x1+", z "+lot.z0+".."+lot.z1+", y "+lot.y+", facing "+lot.front);
         Frame f=Frame.of(c,lot);
         switch(lot.use){
             case "old"->old(f);
@@ -55,13 +66,14 @@ final class Houses {
         if(hw<5||hd<5){garden(f);return;}
         int bx0=(W-hw)/2,bx1=bx0+hw-1,bz0=2,bz1=bz0+hd-1;
         int stories=rnd.nextInt(5)<2?1:2;
-        BlockState post=Canvas.axis(Blocks.STRIPPED_SPRUCE_LOG,Direction.Axis.Y),boards=s(rnd.nextBoolean()?Blocks.DARK_OAK_PLANKS:Blocks.SPRUCE_PLANKS);
-        BlockState plaster=s(rnd.nextInt(3)==0?Blocks.WHITE_TERRACOTTA:Blocks.CALCITE);
-        BlockState beam=s(Blocks.STRIPPED_DARK_OAK_WOOD),floor=s(Blocks.SPRUCE_PLANKS),tatami=s(Blocks.STRIPPED_BAMBOO_BLOCK);
+        // Botand's 64x boards (charred or brown), posts and plaster (2.48.0)
+        BlockState post=TB.TIMBER,boards=rnd.nextBoolean()?TB.BOARDS_DARK:TB.BOARDS;
+        BlockState plaster=TB.PLASTER;
+        BlockState beam=TB.TIMBER,floor=s(Blocks.SPRUCE_PLANKS),tatami=s(Blocks.STRIPPED_BAMBOO_BLOCK);
         Kit.Roof roof=OLD_ROOFS[rnd.nextInt(OLD_ROOFS.length)];
         // the ground: a front yard of gravel and stepping stones, a garden behind
         yard(f,true);
-        Kit.shell(f,bx0,bz0,bx1,bz1,stories,boards,post,beam,tatami,s(Blocks.STONE_BRICKS));
+        Kit.shell(f,bx0,bz0,bx1,bz1,stories,boards,post,beam,tatami,TB.CONCRETE);
         // plaster above the boards, posts every few blocks
         for(int s=0;s<stories;s++){
             final int fy=4*s,story=s;
@@ -71,8 +83,8 @@ final class Houses {
                 for(int y=fy+1;y<=fy+3;y++)f.set(x,y,z,postCol?post:y==fy+3||story>0&&y==fy+2?plaster:boards);
             });
         }
-        // windows: frosted panes (shoji behind), each ground-floor window under a little tiled eave
-        BlockState pane=s(Blocks.WHITE_STAINED_GLASS_PANE),glass=s(Blocks.GLASS_PANE);
+        // windows: frosted sashes (shoji behind), each ground-floor window under a little tiled eave
+        BlockState pane=TB.WIN_FROSTED,glass=TB.WIN;
         int door=bx0+1+rnd.nextInt(Math.max(1,hw-3));
         for(int s=0;s<stories;s++){
             Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'f',s,pane,glass,s==0?door:-99,s>0);
@@ -82,7 +94,7 @@ final class Houses {
         // the garden side: glass doors onto an engawa (veranda)
         for(int x=bx0+1;x<=bx1-1;x++){
             if((x-bx0)%3==0)continue;
-            f.set(x,1,bz1,pane);f.set(x,2,bz1,pane);
+            f.set(x,1,bz1,TB.out(pane,Direction.SOUTH));f.set(x,2,bz1,TB.out(pane,Direction.SOUTH));
             f.set(x,1,bz1+1,Canvas.slab(Blocks.SPRUCE_SLAB,false));
         }
         if(stories==2)Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'b',1,glass,pane,-99,true);
@@ -105,7 +117,7 @@ final class Houses {
         if(D-1-gz>=2){
             t.nature.pine(f.wx(bx0+1,Math.min(D-2,gz+1)),f.y0+1,f.wz(bx0+1,Math.min(D-2,gz+1)),3+rnd.nextInt(2));
             stoneLantern(f,bx1-1,1,Math.min(D-2,gz));
-            for(int x=bx0+3;x<bx1-1;x+=2)if(rnd.nextBoolean())f.set(x,1,D-2,Canvas.leaves(rnd.nextBoolean()?Blocks.AZALEA_LEAVES:Blocks.FLOWERING_AZALEA_LEAVES));
+            for(int x=bx0+3;x<bx1-1;x+=2)if(rnd.nextBoolean())f.set(x,1,D-2,TB.HEDGE);
         }
         for(int x=door+2;x<=Math.min(bx1,door+3);x++)if(rnd.nextBoolean())f.set(x,1,bz0-1,Kit.pot(rnd));
         lotFence(f,door,rnd.nextInt(3));
@@ -120,7 +132,7 @@ final class Houses {
             if(isPane(f.get(bx1,2,z)))Kit.cell(f,bx1+1,3,z,RoofShape.SLOPE,Direction.EAST,0,roof);
         }
     }
-    private static boolean isPane(BlockState s){return s.getBlock() instanceof PaneBlock;}
+    private static boolean isPane(BlockState s){return s.getBlock() instanceof PaneBlock||TB.isWindow(s);}
     /**
      * A one-block skirt of roof round the house at a floor line (the lower tier of a two-tier roof): each side falls
      * away from the wall, and the corners are hips.
@@ -149,10 +161,8 @@ final class Houses {
         boolean carLeft=rnd.nextBoolean();
         int bx0=carLeft?W-1-hw:1,bx1=bx0+hw-1,bz0=front,bz1=bz0+hd-1;
         int stories=three&&hw>=7?3:2;
-        BlockState wall=SIDING[rnd.nextInt(SIDING.length)];
-        // most houses are one colour all round; some have a pale band at the floor line
-        BlockState trim=rnd.nextInt(3)==0?s(Blocks.SMOOTH_QUARTZ):wall;
-        if(trim.getBlock()==wall.getBlock()&&rnd.nextInt(4)==0)trim=s(Blocks.LIGHT_GRAY_CONCRETE);
+        BlockState[] look=SCHEMES[rnd.nextInt(SCHEMES.length)];
+        BlockState wall=look[0],trim=look[1];
         BlockState floor=s(Pal.pick(rnd,Blocks.OAK_PLANKS,Blocks.BIRCH_PLANKS,Blocks.SPRUCE_PLANKS,Blocks.BAMBOO_PLANKS));
         Kit.Roof roof=MODERN_ROOFS[rnd.nextInt(MODERN_ROOFS.length)];
         int type=stories==3||rnd.nextInt(10)==0?Kit.FLAT:Pal.pick(rnd,new Integer[]{Kit.GABLE,Kit.GABLE,Kit.SHED,Kit.SHED,Kit.HIP});
@@ -164,23 +174,24 @@ final class Houses {
             f.fill(pa,0,0,pa+1,0,front+3,s(Blocks.SMOOTH_STONE));
             if(rnd.nextInt(5)>0)Kit.car(f,pa,1,rnd);
         }
-        Kit.shell(f,bx0,bz0,bx1,bz1,stories,wall,wall,trim,floor,s(Blocks.SMOOTH_STONE));
-        BlockState pane=s(Blocks.GLASS_PANE),frost=s(Blocks.WHITE_STAINED_GLASS_PANE);
+        Kit.shell(f,bx0,bz0,bx1,bz1,stories,wall,wall,trim,floor,TB.CONCRETE);
+        BlockState pane=look[2],frost=TB.WIN_FROSTED,curtain=look[3];
         int door=carLeft?bx0+1:bx1-1;
         for(int s=0;s<stories;s++){
-            Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'f',s,frost,pane,s==0?door:-99,false);
+            Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'f',s,s==0?frost:curtain,pane,s==0?door:-99,s>0);
             Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'l',s,pane,frost,-99,s>0);
             Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'r',s,pane,frost,-99,s>0);
             Kit.windows(f,rnd,bx0,bz0,bx1,bz1,'b',s,pane,frost,-99,true);
         }
         // big glass doors onto the garden, and a balcony with a solid parapet above them
-        for(int x=bx0+1;x<=Math.min(bx1-1,bx0+3);x++){f.set(x,1,bz1,pane);f.set(x,2,bz1,pane);f.set(x,3,bz1,pane);}
+        BlockState back=TB.out(curtain,Direction.SOUTH);
+        for(int x=bx0+1;x<=Math.min(bx1-1,bx0+3);x++){f.set(x,1,bz1,back);f.set(x,2,bz1,back);f.set(x,3,bz1,back);}
         for(int x=bx0;x<=bx1;x++){
-            f.set(x,4,bz1+1,s(Blocks.SMOOTH_STONE));
-            f.set(x,5,bz1+1,x==bx0||x==bx1?wall:rnd.nextInt(4)==0?s(Blocks.IRON_BARS):wall);
+            f.set(x,4,bz1+1,TB.CONCRETE);
+            f.set(x,5,bz1+1,x==bx0||x==bx1?wall:rnd.nextInt(4)==0?TB.BALCONY:wall);
             f.set(x,6,bz1+1,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
         }
-        for(int x=bx0+1;x<=Math.min(bx1-1,bx0+2);x++){f.set(x,5,bz1,pane);f.set(x,6,bz1,pane);}
+        for(int x=bx0+1;x<=Math.min(bx1-1,bx0+2);x++){f.set(x,5,bz1,back);f.set(x,6,bz1,back);}
         Kit.airCon(f,bx1-1,5,bz1+1,Direction.WEST);
         if(rnd.nextInt(3)==0)futons(f,bx0+1,Math.min(bx1-2,bx0+3),5,bz1+2);
         Block door2=Pal.pick(rnd,Blocks.DARK_OAK_DOOR,Blocks.SPRUCE_DOOR,Blocks.BIRCH_DOOR,Blocks.MANGROVE_DOOR,Blocks.IRON_DOOR);
@@ -191,11 +202,12 @@ final class Houses {
         for(int s=0;s<stories;s++){int fy=4*s;f.set(bx0+1,fy+1,bz1-1,Canvas.slab(Blocks.OAK_SLAB,true));if(s==1)f.bed(bx1-1,fy+1,bz0+1,Pal.pick(rnd,Blocks.WHITE_BED,Blocks.LIGHT_BLUE_BED,Blocks.GRAY_BED),Direction.SOUTH);}
         // around the house: an air conditioner, a water heater, plants by the door
         Kit.airCon(f,carLeft?bx0-1:bx1+1,1,bz1-1,carLeft?Direction.WEST:Direction.EAST);
-        if(rnd.nextInt(3)==0){int hx=carLeft?bx0-1:bx1+1;if(f.air(hx,1,bz1-3)){f.set(hx,1,bz1-3,Blocks.SMOOTH_QUARTZ);f.set(hx,2,bz1-3,Blocks.SMOOTH_QUARTZ);}}
+        if(rnd.nextInt(3)==0){int hx=carLeft?bx0-1:bx1+1;if(f.air(hx,1,bz1-3)){f.set(hx,1,bz1-3,TB.TRIM_WHITE);f.set(hx,2,bz1-3,TB.TRIM_WHITE);}}
         if(rnd.nextBoolean())f.set(door+(carLeft?1:-1),1,bz0-1,Kit.pot(rnd));
-        lotFence(f,-99,0);
+        // walls round the plot and along the street (open at the door and the parking pad), as the photos' houses have
+        lotFence(f,door,rnd.nextInt(4)==0?1:rnd.nextInt(3)==0?2:0);
         // garden at the back
-        for(int x=1;x<W-1;x++)if(rnd.nextInt(5)==0&&D-2>bz1+1)f.set(x,1,D-2,Canvas.leaves(Blocks.OAK_LEAVES));
+        for(int x=1;x<W-1;x++)if(rnd.nextInt(5)==0&&D-2>bz1+1)f.set(x,1,D-2,TB.HEDGE);
     }
 
     // ---------------------------------------------------------------- apartments
@@ -207,14 +219,14 @@ final class Houses {
         if(hw<10||hd<6){modern(f,false);return;}
         int bx0=1,bx1=bx0+hw-1,bz0=3,bz1=bz0+hd-1;
         int stories=rnd.nextInt(3)==0?3:2;
-        BlockState wall=Pal.pick(rnd,new BlockState[]{s(Blocks.WHITE_CONCRETE),s(Blocks.LIGHT_GRAY_CONCRETE),s(Blocks.SMOOTH_SANDSTONE),s(Blocks.CALCITE),s(Blocks.LIGHT_GRAY_TERRACOTTA)});
-        BlockState trim=s(Blocks.SMOOTH_STONE),floor=s(Blocks.BIRCH_PLANKS);
+        BlockState wall=Pal.pick(rnd,new BlockState[]{TB.STUCCO_GRAY,TB.TILE,TB.STUCCO_WHITE,TB.STUCCO_CREAM,TB.CONCRETE,TB.SIDING});
+        BlockState trim=rnd.nextBoolean()?TB.TRIM_WHITE:TB.CONCRETE,floor=s(Blocks.BIRCH_PLANKS);
         yard(f,false);
         f.fill(0,0,0,W-1,0,bz0-1,s(Blocks.SMOOTH_STONE));
-        Kit.shell(f,bx0,bz0,bx1,bz1,stories,wall,trim,trim,floor,s(Blocks.SMOOTH_STONE));
+        Kit.shell(f,bx0,bz0,bx1,bz1,stories,wall,trim,trim,floor,TB.CONCRETE);
         // flats: a door and a small frosted window each along the front, a dividing wall inside
         int units=Math.max(2,hw/4),uw=hw/units;
-        BlockState frost=s(Blocks.WHITE_STAINED_GLASS_PANE),pane=s(Blocks.GLASS_PANE);
+        BlockState frost=TB.WIN_FROSTED,pane=TB.out(rnd.nextBoolean()?TB.WIN_WHITE_CURTAIN:TB.WIN_CURTAIN,Direction.SOUTH);
         for(int s=0;s<stories;s++){
             int fy=4*s;
             for(int u=0;u<units;u++){
@@ -229,8 +241,8 @@ final class Houses {
                 if(s>0){
                     // a balcony two blocks deep, railed, a partition between flats, the air conditioner on it
                     for(int x=ux;x<=Math.min(bx1,ux+uw);x++){
-                        f.set(x,fy,bz1+1,s(Blocks.SMOOTH_STONE));f.set(x,fy,bz1+2,s(Blocks.SMOOTH_STONE));
-                        f.set(x,fy+1,bz1+2,s(Blocks.IRON_BARS));
+                        f.set(x,fy,bz1+1,TB.CONCRETE);f.set(x,fy,bz1+2,TB.CONCRETE);
+                        f.set(x,fy+1,bz1+2,TB.BALCONY);
                     }
                     if(u>0){f.set(ux,fy+1,bz1+1,wall);f.set(ux,fy+2,bz1+1,wall);}
                     Kit.airCon(f,Math.min(bx1-1,ux+uw-1),fy+1,bz1+1,Direction.WEST);
@@ -238,7 +250,7 @@ final class Houses {
                 }
             }
             // the open corridor along the front, with a railing
-            if(s>0)for(int x=bx0;x<=bx1+2;x++){f.set(x,fy,bz0-1,s(Blocks.SMOOTH_STONE));f.set(x,fy+1,bz0-2,s(Blocks.IRON_BARS));if(x>bx1)f.set(x,fy+1,bz0-1,s(Blocks.AIR));}
+            if(s>0)for(int x=bx0;x<=bx1+2;x++){f.set(x,fy,bz0-1,TB.CONCRETE);f.set(x,fy+1,bz0-2,TB.BALCONY);if(x>bx1)f.set(x,fy+1,bz0-1,s(Blocks.AIR));}
             if(s>0)for(int x=bx0;x<=bx1+2;x++)f.set(x,fy,bz0-2,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,true));
         }
         // the outside stair at the right end, up to each corridor
@@ -303,8 +315,8 @@ final class Houses {
         yard(f,true);
         int tx=W/2,tz=D/2;
         if(rnd.nextInt(3)==0)t.nature.cherry(f.wx(tx,tz),f.y0+1,f.wz(tx,tz),5+rnd.nextInt(2));
-        else t.nature.broadleaf(f.wx(tx,tz),f.y0+1,f.wz(tx,tz),5+rnd.nextInt(3));
-        for(int i=0;i<6;i++){int x=1+rnd.nextInt(Math.max(1,W-2)),z=1+rnd.nextInt(Math.max(1,D-2));if(f.air(x,1,z))f.set(x,1,z,Canvas.leaves(rnd.nextBoolean()?Blocks.AZALEA_LEAVES:Blocks.FLOWERING_AZALEA_LEAVES));}
+        else t.nature.townTree(f.wx(tx,tz),f.y0+1,f.wz(tx,tz),5+rnd.nextInt(3));
+        for(int i=0;i<6;i++){int x=1+rnd.nextInt(Math.max(1,W-2)),z=1+rnd.nextInt(Math.max(1,D-2));if(f.air(x,1,z))f.set(x,1,z,TB.HEDGE);}
         f.set(1,1,1,Canvas.stairs(Blocks.SPRUCE_STAIRS,Direction.SOUTH,false));
         Kit.hedge(f,0,0,W-1,0,1,Blocks.OAK_LEAVES);
         f.set(W/2,1,0,s(Blocks.AIR));
@@ -346,13 +358,20 @@ final class Houses {
         for(int x=0;x<W;x++)edgePiece(f,x,D-1,kind);
         // the front: a low wall either side of the gate, the drive left open
         if(gate>=0)for(int x=0;x<W;x++)if(Math.abs(x-gate)>1&&f.air(x,1,0)&&f.get(x,0,0).getBlock()!=Blocks.SMOOTH_STONE)edgePiece(f,x,0,kind);
+        // behind a block wall, now and then a hedge a little taller than it, spilling over its top as in the photos (2.48.0)
+        if(kind==0&&gate>=0&&rnd.nextInt(5)<2)for(int x=1;x<W-1;x++){
+            if(Math.abs(x-gate)<=1||!f.air(x,1,1)||f.get(x,0,1).getBlock()==Blocks.SMOOTH_STONE||!(f.get(x,1,0).getBlock()!=Blocks.AIR))continue;
+            for(int y=1;y<=3;y++)if(f.air(x,y,1))f.set(x,y,1,TB.HEDGE);
+        }
     }
     private void edgePiece(Frame f,int x,int z,int kind){
         if(!f.air(x,1,z)&&!(f.get(x,1,z).getBlock() instanceof PlantBlock))return;
+        boolean dark=Pal.darkWall(f.wx(0,0),f.wz(0,0)),light=Pal.hash(f.wx(0,0),58,f.wz(0,0))<0.4;
+        BlockState wall=dark?TB.WALL_DARK:TB.BLOCK_WALL,foot=dark?TB.WALL_DARK:TB.WALL_FOOT,cap=dark?TB.darkCap():TB.wallCap();
         switch(kind){
-            case 1->f.set(x,1,z,Canvas.leaves(Blocks.OAK_LEAVES));
-            case 2->{f.set(x,1,z,TB.BLOCK_WALL);if(f.air(x,2,z))f.set(x,2,z,TB.SLAT_FENCE);}
-            default->{f.set(x,1,z,TB.BLOCK_WALL);if(f.air(x,2,z))f.set(x,2,z,TB.wallCap());}
+            case 1->{f.set(x,1,z,TB.HEDGE);if(f.air(x,2,z))f.set(x,2,z,TB.HEDGE);}
+            case 2->{f.set(x,1,z,foot);if(f.air(x,2,z))f.set(x,2,z,light?TB.SLAT_LIGHT:TB.SLAT_DARK);}
+            default->{f.set(x,1,z,foot);if(f.air(x,2,z)){f.set(x,2,z,wall);if(f.air(x,3,z))f.set(x,3,z,cap);}}
         }
     }
 
