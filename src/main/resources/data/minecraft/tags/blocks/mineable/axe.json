@@ -1,6 +1,9 @@
 {
  "replace": false,
  "values": [
-  "celestialfall:slat_fence"
+  "celestialfall:slat_fence",
+  "celestialfall:cherry_branch",
+  "celestialfall:slat_fence_dark",
+  "celestialfall:slat_fence_light"
  ]
 }

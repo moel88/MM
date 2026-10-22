@@ -43,6 +43,7 @@ public final class PoleModel implements UnbakedModel {
             one(plugin,TownBlocks.UTILITY_POLE,s->new PoleModel(pole,4.2f,true,List.of(),false));
             one(plugin,TownBlocks.POLE_SLEEVE,s->new PoleModel(sleeve,4.7f,false,List.of(),false));
             one(plugin,TownBlocks.PIPE_POST,s->new PoleModel(white,1.15f,false,List.of(),false));
+            one(plugin,TownBlocks.MIRROR_POST,s->new PoleModel("celestialfall:block/town/mirror_orange",0.9f,false,List.of(),false));
             // the steel arm through the pole and its two insulators
             var arm=List.of(new Box(0,11,7,16,13.5f,9,steel),new Box(1.5f,13.5f,7.25f,3.5f,16,8.75f,porcelain),new Box(12.5f,13.5f,7.25f,14.5f,16,8.75f,porcelain));
             one(plugin,TownBlocks.POLE_CROSSARM,s->new PoleModel(pole,4.2f,false,arm,s.get(Properties.HORIZONTAL_AXIS)==Direction.Axis.Z));

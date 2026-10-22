@@ -262,56 +262,6 @@ def led(seed):
     img = flat((250, 248, 238)); img[::8] -= 10; img[:, ::8] -= 10
     return img
 
-def vending_front_lower(seed):
-    """The machine's lower front: the row of buttons under the display, coin and note slots, the dark tray."""
-    g = rng(seed)
-    img = shade(flat((186, 26, 32)), 4 * g.normal(size=(S, S)))
-    img[0:10, 4:60] = (220, 220, 216)
-    for k in range(8):
-        x = 6 + k * 7; img[3:7, x:x + 4] = (70, 150, 230)
-    img[14:34, 40:58] = (196, 198, 200); img[18:22, 44:54] = (40, 40, 42); img[26:29, 44:54] = (40, 40, 42)
-    img[40:58, 6:46] = (28, 28, 30); img[40:43, 6:46] = (60, 60, 62)
-    img[60:64] = (60, 16, 20)
-    return img
-
-def vending_front_upper(seed):
-    """The lit display: four shelves of cans and bottles of many colours, price tags, a bright header."""
-    g = rng(seed)
-    img = flat((244, 244, 240))
-    img[0:8] = (186, 26, 32)
-    cols = [(210, 40, 40), (40, 90, 200), (240, 200, 40), (60, 160, 70), (240, 240, 240), (230, 120, 40), (120, 60, 30), (30, 30, 30)]
-    for r in range(4):
-        y0 = 10 + r * 12
-        for k in range(7):
-            x0 = 4 + k * 8
-            c = cols[g.integers(0, len(cols))]
-            img[y0:y0 + 8, x0:x0 + 6] = c
-            img[y0 + 2:y0 + 4, x0:x0 + 6] = np.clip(np.array(c) + 40, 0, 255)
-            img[y0 + 9:y0 + 11, x0:x0 + 6] = (250, 250, 250)
-            img[y0 + 9:y0 + 11, x0 + 1:x0 + 4] = (40, 40, 40)
-    img[:, 0:3] = (186, 26, 32); img[:, 61:64] = (186, 26, 32)
-    return img
-
-def vending_side(seed):
-    g = rng(seed)
-    img = shade(flat((184, 26, 32)), 4 * g.normal(size=(S, S)) + 5 * field(seed + 1, 10))
-    img[:, 28:32] = (232, 232, 230)
-    return img
-
-def ac_front(seed):
-    """An outdoor unit's face: a round fan guard on the left, a louvred panel on the right."""
-    g = rng(seed)
-    img = shade(flat((214, 210, 200)), 2.5 * g.normal(size=(S, S)))
-    y, x = np.mgrid[0:S, 0:S]
-    d = np.hypot(x - 24, y - 32)
-    img[d < 20] = (70, 72, 74)
-    ring = (d < 20) & ((np.round(d) % 4) == 0)
-    img[ring] = (200, 200, 196)
-    spoke = (d < 20) & ((np.abs(x - 24) < 1) | (np.abs(y - 32) < 1))
-    img[spoke] = (190, 190, 186)
-    for yy in range(14, 52, 4): img[yy, 48:60] = (150, 148, 142)
-    return img
-
 def ac_side(seed):
     img = steel(seed, (210, 206, 196))
     img[::5, :] -= 14
@@ -322,14 +272,14 @@ def letterbox_front(seed):
     img[22:26, 14:50] = (40, 40, 42)
     return img
 
-def pane_slats(seed):
-    """Dark brown horizontal slats with a gap of sky between each."""
+def pane_slats(seed, base=(90, 60, 41)):
+    """Dark brown horizontal slats with a gap of sky between each (2.48.0: black or orange-brown too)."""
     g = rng(seed)
     img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
     grain = 9 * field(seed + 1, 10, 0.6) + 4 * g.normal(size=(S, S))
     for k in range(8):
         y0 = k * 8
-        img[y0:y0 + 7] = (90, 60, 41) + np.array([g.normal(0, 7)] * 3)
+        img[y0:y0 + 7] = base + np.array([g.normal(0, 7)] * 3)
         alpha[y0:y0 + 7] = 255
     img = shade(img, grain)
     for k in range(8): img[k * 8] += 10; img[k * 8 + 6] -= 12
@@ -402,6 +352,339 @@ def petals(seed):
         alpha[m] = 255
     return img, alpha
 
+# ---------------------------------------------------------------- leaves on cards, windows, the houses' materials (2.48.0)
+
+def leaf_shape(x, y, cx, cy, a, length, width):
+    """A leaf: a pointed ellipse of the given length and width, turned by a, round (cx, cy); and how far along it each point is."""
+    dx = x - cx; dy = y - cy
+    u = dx * np.cos(a) + dy * np.sin(a); v = -dx * np.sin(a) + dy * np.cos(a)
+    t = u / (length / 2)
+    half = (width / 2) * np.clip(1 - np.abs(t) ** 1.6, 0, 1) * (1.0 - 0.35 * np.clip(t, 0, 1))
+    inside = (np.abs(t) <= 1) & (np.abs(v) <= half)
+    return inside, t, v / np.maximum(half, 1e-6)
+
+def leaf_cards(seed, hue=(84, 136, 52), count=64, spread=24, sizes=(11, 17), wrap=False):
+    """A cluster of leaves on nothing: pointed ovals every way round, each a shade of its own, lit from above, a
+    darker edge and a pale midrib. The cluster thins out toward the card's edge, so the card's outline is ragged."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    y, x = np.mgrid[0:S, 0:S]
+    base = np.array(hue, float)
+    for k in range(count):
+        if wrap:
+            cx, cy = g.uniform(0, S, 2)
+        else:
+            # thick in the middle, thinning to the edge: the card's outline is a ragged round
+            rr = spread * np.sqrt(g.random()) * 1.05; aa = g.uniform(0, 2 * np.pi)
+            cx = 32 + rr * np.cos(aa); cy = 32 + rr * np.sin(aa)
+        a = g.uniform(0, np.pi); length = g.uniform(*sizes); width = length * g.uniform(0.42, 0.6)
+        xs, ys = x, y
+        if wrap:
+            xs = (x - cx + S / 2) % S + cx - S / 2; ys = (y - cy + S / 2) % S + cy - S / 2
+        inside, t, v = leaf_shape(xs, ys, cx, cy, a, length, width)
+        tone = g.uniform(0.62, 1.18)
+        lit = 1 + 0.18 * (-np.sin(a)) * t  # the tip toward the top is lit
+        col = base * tone * lit[..., None]
+        col = col + np.array([18, 22, 8]) * np.clip(-v, 0, 1)[..., None] * 0.35
+        rim = inside & ((np.abs(v) > 0.72) | (np.abs(t) > 0.86))
+        rib = inside & (np.abs(v) < 0.09) & (np.abs(t) < 0.9)
+        img[inside] = col[inside]
+        img[rim] = img[rim] * 0.62
+        img[rib] = np.clip(img[rib] * 1.25 + 12, 0, 255)
+        alpha[inside] = 255
+    return img, alpha
+
+def leaf_mass(seed):
+    """The dark mass inside a hedge or a crown, on the block's faces: leaves over leaves, tiling, a few gaps."""
+    img, alpha = leaf_cards(seed, (54, 96, 38), 110, 0, (9, 14), True)
+    img = img * 0.85
+    g = rng(seed + 5)
+    holes = (field(seed + 6, 2.2) > 1.55)
+    alpha[holes] = 0
+    alpha[(alpha == 0) & ~holes] = 255; img[(img.sum(axis=2) == 0)] = (40, 70, 28)
+    return img, alpha
+
+def blossom_cards(seed, count=54, spread=24, wrap=False, mass=False):
+    """Cherry blossom: five-petalled flowers in pinks over one another, a dark middle with stamens, and dark twigs behind."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    y, x = np.mgrid[0:S, 0:S]
+    # twigs first, behind the flowers
+    for k in range(5 if not mass else 9):
+        px, py = (g.uniform(0, S, 2) if wrap else (32 + g.normal(0, spread * 0.5), 32 + g.normal(0, spread * 0.5)))
+        a = g.uniform(0, 2 * np.pi)
+        for step in range(int(g.uniform(14, 30))):
+            a += g.normal(0, 0.25); px += np.cos(a); py += np.sin(a)
+            ix, iy = int(px) % S, int(py) % S
+            if not wrap and not (0 <= px < S and 0 <= py < S): break
+            img[iy, ix] = (58, 38, 36); alpha[iy, ix] = 255
+    pinks = [(246, 196, 214), (250, 212, 226), (242, 182, 204), (252, 228, 236), (236, 168, 196)]
+    for k in range(count):
+        if wrap: cx, cy = g.uniform(0, S, 2)
+        else:
+            rr = spread * np.sqrt(g.random()) * 1.05; aa = g.uniform(0, 2 * np.pi)
+            cx = 32 + rr * np.cos(aa); cy = 32 + rr * np.sin(aa)
+        r = g.uniform(4.4, 6.6); rot = g.uniform(0, 2 * np.pi)
+        dx = x - cx; dy = y - cy
+        if wrap: dx = (dx + S / 2) % S - S / 2; dy = (dy + S / 2) % S - S / 2
+        d = np.hypot(dx, dy); ang = np.arctan2(dy, dx) - rot
+        petal = r * (0.72 + 0.28 * np.cos(5 * ang)) * (1 - 0.08 * np.cos(10 * ang + 1))
+        inside = d <= petal
+        c = np.array(pinks[g.integers(0, len(pinks))], float) * g.uniform(0.9, 1.06)
+        shade_ = 1 - 0.22 * np.clip(d / np.maximum(petal, 1e-6), 0, 1) ** 2
+        col = c[None, None, :] * shade_[..., None]
+        notch = inside & (np.cos(5 * ang) < -0.85) & (d > petal * 0.82)
+        img[inside] = col[inside]
+        img[notch] = img[notch] * 0.86
+        mid = d <= r * 0.22
+        img[mid] = (214, 96, 136)
+        for st in range(6):
+            sa = rot + st * np.pi / 3 + 0.3
+            sx, sy = int(cx + np.cos(sa) * r * 0.36) % S, int(cy + np.sin(sa) * r * 0.36) % S
+            img[sy, sx] = (236, 150, 60)
+        alpha[inside] = 255
+    return img, alpha
+
+def blossom_mass(seed):
+    img, alpha = blossom_cards(seed, 90, 0, True, True)
+    img = img * 0.9
+    holes = (field(seed + 6, 2.2) > 1.7)
+    alpha[holes] = 0
+    alpha[(alpha == 0) & ~holes] = 255; img[(img.sum(axis=2) == 0)] = (182, 120, 148)
+    return img, alpha
+
+def ivy_cards(seed):
+    """Ivy hanging down a wall: three strands of thin stem with heart-shaped leaves along them, darker than a hedge's."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    y, x = np.mgrid[0:S, 0:S]
+    for strand in range(4):
+        px = g.uniform(6, 58); py = g.uniform(-6, 8); drift = g.normal(0, 0.12)
+        pts = []
+        for step in range(int(g.uniform(44, 64))):
+            px += drift + g.normal(0, 0.35); py += 1
+            if 0 <= px < S and 0 <= py < S:
+                img[int(py), int(px)] = (64, 72, 40); alpha[int(py), int(px)] = 255
+            pts.append((px, py))
+        for (lx, ly) in pts[3::7]:
+            r = g.uniform(4.4, 6.2); a = g.uniform(-0.9, 0.9) + (np.pi / 2 if g.random() < 0.5 else -np.pi / 2)
+            dx = x - lx; dy = y - ly
+            u = dx * np.cos(a) + dy * np.sin(a); v = -dx * np.sin(a) + dy * np.cos(a)
+            # a heart: two lobes at the stem end, a point at the tip
+            lobes = np.minimum(np.hypot(u + r * 0.2, v - r * 0.45), np.hypot(u + r * 0.2, v + r * 0.45)) <= r * 0.58
+            tip = (u > -r * 0.2) & (u <= r) & (np.abs(v) <= r * 0.95 * (1 - (u + r * 0.2) / (r * 1.2)))
+            inside = lobes | tip
+            tone = g.uniform(0.7, 1.15)
+            col = np.array((56, 104, 40), float) * tone
+            d = np.hypot(u, v) / r
+            img[inside] = (col[None, None, :] * (1.08 - 0.25 * d[..., None]))[inside]
+            vein = inside & (np.abs(v) < 0.6) & (u > -r * 0.2)
+            img[vein] = np.clip(img[vein] * 1.3 + 10, 0, 255)
+            rim = inside & ~np.roll(inside, 1, 0) | inside & ~np.roll(inside, -1, 1)
+            img[rim] = img[rim] * 0.6
+            alpha[inside] = 255
+    return img, alpha
+
+def frame_tex(seed, base):
+    """An aluminium window frame: a flat tone with the faintest brushing along it."""
+    g = rng(seed)
+    return shade(flat(base), 2 * g.normal(size=(S, S)) + 3 * field(seed + 1, 14, 1.2))
+
+def window_glass(seed):
+    """Glass seen from outside: a cool tint, mostly see-through, with a soft slanting streak of sky."""
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    img[:] = (148, 172, 192); alpha[:] = 110
+    y, x = np.mgrid[0:S, 0:S]
+    streak = np.clip(1 - np.abs((x - y) - 8) / 9.0, 0, 1)
+    img += (np.array((62, 54, 44), float)[None, None, :] * streak[..., None])
+    alpha += 50 * streak
+    img += (field(seed, 9) * 6)[..., None]
+    return img, alpha
+
+def window_frosted(seed):
+    g = rng(seed)
+    img = shade(flat((226, 230, 232)), 3 * g.normal(size=(S, S)) + 4 * field(seed + 1, 3))
+    return img, np.full((S, S), 215.0)
+
+def window_curtain(seed):
+    """Curtains drawn to the sides behind the glass: two cream panels in soft folds, the middle open."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    for x0, x1 in ((6, 26), (38, 58)):
+        xs = np.arange(x0, x1)
+        fold = 14 * np.sin((xs - x0) / 4.2 * 2 * np.pi) - 6 * np.cos((xs - x0) / 9.0 * 2 * np.pi)
+        img[:, x0:x1] = (238, 232, 220) + fold[None, :, None] * np.array([1, 1, 0.9])
+        alpha[:, x0:x1] = 255
+    img = shade(img, 2 * g.normal(size=(S, S)))
+    img[58:64] -= 16
+    return img, alpha
+
+def stucco(seed, base):
+    """Sprayed stucco: a fine stipple, a soft unevenness, the faintest run of grime."""
+    g = rng(seed)
+    img = shade(flat(base), 4.5 * g.normal(size=(S, S)) + 3 * field(seed + 1, 1.1) + 3 * field(seed + 2, 12))
+    return shade(img, -np.clip(field(seed + 3, 1.2, 20), 0.8, None) * 3)
+
+def siding(seed):
+    """Lap siding in a warm white: boards two sixteenths tall, a shadow under each board's lower edge."""
+    g = rng(seed)
+    img = shade(flat((222, 218, 208)), 2.5 * g.normal(size=(S, S)) + 2 * field(seed + 1, 10, 1.0))
+    for y0 in range(0, S, 8):
+        img[y0] += 10; img[y0 + 6] -= 10; img[y0 + 7] -= 26
+    return img
+
+def tile_wall(seed):
+    """Small wall tiles of a light grey in rows, each a tone of its own, in pale joints."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); tone = np.zeros((S, S))
+    for r in range(8):
+        off = 8 if r % 2 else 0
+        for c in range(5):
+            x0 = (c * 16 + off) % S
+            t = g.normal(0, 5)
+            for x in range(x0, x0 + 16): tone[r * 8:(r + 1) * 8, x % S] = t
+    img[:] = (198, 200, 198)
+    img = shade(img, tone + 2 * g.normal(size=(S, S)) + 2 * field(seed + 1, 6))
+    for r in range(8):
+        img[r * 8, :] = (160, 162, 160)
+        off = 8 if r % 2 else 0
+        for c in range(5): img[r * 8:(r + 1) * 8, (c * 16 + off) % S] = (160, 162, 160)
+    return img
+
+def trim(seed, base):
+    g = rng(seed)
+    return shade(flat(base), 2 * g.normal(size=(S, S)) + 3 * field(seed + 1, 14, 1.0))
+
+def concrete_smooth(seed):
+    g = rng(seed)
+    img = shade(flat((180, 178, 172)), 3 * g.normal(size=(S, S)) + 4 * field(seed + 1, 3) + 5 * field(seed + 2, 14))
+    img[31:33] -= 10
+    return img
+
+def block_wall_foot(seed, k):
+    """The lowest course of a block wall: the blocks with the splash of the road on them, grime and a little moss."""
+    img = blocks(seed, (140, 138, 132), 32, 16, (110, 108, 102), 10, True, 6 + 4 * k)
+    g = rng(seed + 9)
+    y = np.arange(S)[:, None]
+    grime = np.clip((y - 22) / 42.0, 0, 1) ** 1.4 * (26 + 10 * field(seed + 10, 3))
+    img = img - grime[..., None] * np.array([1, 0.95, 0.9])
+    moss = (field(seed + 11, 2.5) > 0.9) & (y > 34)
+    img[moss] = img[moss] * 0.7 + np.array((70, 92, 44)) * 0.3
+    return img
+
+def paint_green(seed):
+    """The green walking strip along a road's edge: green paint over the asphalt with its white line along one side."""
+    img = asphalt(seed)
+    all_ = np.ones((S, S), bool)
+    img = paint(img, seed + 3, all_, (74, 140, 112), 0.12)
+    return paint(img, seed, wobble(rows(4, 14), seed + 9), (232, 231, 224), 0.08)
+
+def vending_lower(seed, base, dark=(38, 38, 40)):
+    """A drinks machine's lower front round the tray: the row of lit buttons and the price labels under the display, the tray's dark recess."""
+    g = rng(seed)
+    img = shade(flat(base), 3 * g.normal(size=(S, S)))
+    img[20:36, 6:40] = (226, 226, 222)
+    for k in range(7):
+        x = 8 + k * 4
+        img[22:26, x:x + 3] = (60, 140, 230) if k % 3 else (230, 80, 70)
+        img[28:33, x:x + 3] = (40, 40, 40); img[29:32, x + 1:x + 2] = (250, 250, 250)
+    img[36:56, 8:56] = dark
+    img[36:38, 8:56] = (70, 70, 72)
+    img[56:64] = np.array(base) * 0.8
+    return img
+
+def vending_upper(seed, base):
+    """The upper front round the display: the header band over it, white, with a run of coloured marks (no brand)."""
+    g = rng(seed)
+    img = shade(flat(base), 3 * g.normal(size=(S, S)))
+    img[0:8, 6:58] = (240, 240, 236)
+    for k, c in enumerate(((230, 60, 60), (60, 120, 230), (250, 200, 40), (60, 170, 80))):
+        img[2:6, 10 + k * 6:13 + k * 6] = c
+    img[2:6, 40:54] = (90, 90, 94)
+    return img
+
+def vending_side_c(seed, base, stripe):
+    g = rng(seed)
+    img = shade(flat(base), 4 * g.normal(size=(S, S)) + 5 * field(seed + 1, 10))
+    img[:, 28:32] = stripe
+    return img
+
+def vending_display(seed):
+    """The lit display: four shelves of cans and bottles of many colours on a dark back, a white lip with price tags."""
+    g = rng(seed)
+    img = flat((26, 26, 30))
+    cols = [(210, 40, 40), (40, 90, 200), (240, 200, 40), (60, 160, 70), (240, 240, 240), (230, 120, 40), (120, 60, 30), (30, 160, 180), (200, 200, 90)]
+    for r in range(4):
+        y0 = r * 16 + 1
+        for k in range(7):
+            x0 = 7 + k * 7
+            c = np.array(cols[g.integers(0, len(cols))], float)
+            bottle = g.random() < 0.4
+            img[y0 + (2 if bottle else 0):y0 + 11, x0:x0 + 5] = c
+            if bottle: img[y0:y0 + 2, x0 + 1:x0 + 4] = c * 0.8
+            img[y0 + 3:y0 + 5, x0:x0 + 5] = np.clip(c + 45, 0, 255)
+            img[y0 + 5:y0 + 7, x0 + 1:x0 + 4] = np.clip(c * 0.7, 0, 255)
+        img[y0 + 11:y0 + 15, 6:58] = (236, 236, 232)
+        for k in range(7):
+            x0 = 8 + k * 7
+            img[y0 + 12:y0 + 14, x0:x0 + 3] = (40, 40, 40)
+    img[:, 0:6] = (26, 26, 30); img[:, 58:64] = (26, 26, 30)
+    return img
+
+def vending_glass(seed):
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    img[:] = (205, 218, 232); alpha[:] = 48
+    y, x = np.mgrid[0:S, 0:S]
+    streak = np.clip(1 - np.abs((x - y) - 14) / 7.0, 0, 1)
+    alpha += 70 * streak
+    return img, alpha
+
+def ac_front(seed):
+    """An outdoor unit's face, drawn where the unit's front sits on the block: the dark well of the fan at the left
+    (its guard stands proud of it), a louvred panel at the right, the maker's plate under it."""
+    g = rng(seed)
+    img = shade(flat((214, 212, 204)), 2.5 * g.normal(size=(S, S)))
+    y, x = np.mgrid[0:S, 0:S]
+    d = np.hypot(x - 22, y - 44)
+    img[d < 17] = (54, 56, 58)
+    img[d < 4] = (120, 122, 124)
+    img[(d >= 17) & (d < 18.5)] = (170, 170, 166)
+    for yy in range(28, 60, 3): img[yy, 42:58] = (150, 148, 142)
+    img[48:52, 44:56] = (236, 236, 232)
+    img[24:26, 4:60] -= 18
+    return img
+
+def ac_guard(seed):
+    """The fan guard: rings and spokes of pale steel on nothing."""
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    y, x = np.mgrid[0:S, 0:S]
+    d = np.hypot(x - 31.5, y - 31.5); a = np.arctan2(y - 31.5, x - 31.5)
+    ring = (d < 31) & ((d % 5) < 1.6)
+    spoke = (d < 31) & (np.abs(np.sin(4 * a)) < 0.07)
+    hub = d < 5
+    m = ring | spoke | hub
+    img[m] = (206, 206, 200); img[hub] = (160, 160, 156)
+    alpha[m] = 255
+    return img, alpha
+
+def mirror_orange(seed):
+    g = rng(seed)
+    return shade(flat((234, 112, 30)), 3 * g.normal(size=(S, S)) + 4 * field(seed + 1, 6))
+
+def mirror_face(seed):
+    """A convex traffic mirror: a sky-grey glass darkening to its rim, the sky's light caught high on the left."""
+    y, x = np.mgrid[0:S, 0:S]
+    d = np.hypot(x - 31.5, y - 31.5) / 31.5
+    img = np.zeros((S, S, 3))
+    sky = np.array((176, 196, 210), float); ground = np.array((96, 104, 100), float)
+    t = np.clip((y - 10) / 44.0, 0, 1)[..., None]
+    img[:] = sky * (1 - t) + ground * t
+    img = img * (1 - 0.5 * np.clip(d, 0, 1) ** 3)[..., None]
+    hi = np.exp(-(((x - 20) / 9.0) ** 2 + ((y - 18) / 6.0) ** 2))
+    img += (np.array((70, 60, 50), float)[None, None, :] * hi[..., None])
+    img[d > 0.96] = (40, 40, 44)
+    return img
+
 def edge(color):
     img = flat(color); return img
 
@@ -446,11 +729,7 @@ POR = tex('porcelain', porcelain, 1004)
 TRF = tex('transformer', transformer, 1005)
 LAMP = tex('lamp_housing', steel, 1006, (92, 94, 98))
 LED = tex('lamp_led', led, 1007)
-VFL = tex('vending_front_lower', vending_front_lower, 1100)
-VFU = tex('vending_front_upper', vending_front_upper, 1101)
-VS = tex('vending_side', vending_side, 1102)
 VT = tex('vending_top', steel, 1103, (70, 72, 74))
-ACF = tex('ac_front', ac_front, 1200)
 ACS = tex('ac_side', ac_side, 1201)
 LBF = tex('letterbox_front', letterbox_front, 1300)
 LBS = tex('letterbox_side', steel, 1301, (206, 206, 200))
@@ -502,7 +781,7 @@ block('street_lamp', 'shaped', {}, '가로등', 'Street Lamp')
 block('air_conditioner', 'shaped', {}, '에어컨 실외기', 'Air Conditioner')
 block('letterbox', 'shaped', {}, '우편함', 'Letterbox')
 block('fallen_petals', 'litter', {}, '떨어진 꽃잎', 'Fallen Petals', None)
-block('vending_machine', 'vending', {}, '자판기', 'Vending Machine')
+block('vending_machine', 'vending', {'colour': 'red'}, '자판기', 'Vending Machine')
 # roofs at their true pitch: drawn in code (RoofModel), so they get an item model and no block state file here
 def mc(name): return f'minecraft:block/{name}'
 block('roof_kawara', 'roof', {'top': KW, 'side': KWS, 'under': PL[0]}, '기와 지붕', 'Kawara Roof')
@@ -515,6 +794,80 @@ block('roof_brown', 'roof', {'top': mc('mud_bricks'), 'side': mc('mud_bricks'), 
 block('roof_copper', 'roof', {'top': mc('oxidized_cut_copper'), 'side': mc('oxidized_cut_copper'), 'under': PL[0]}, '청동 지붕', 'Copper Roof')
 block('roof_rust', 'roof', {'top': mc('exposed_cut_copper'), 'side': mc('exposed_cut_copper'), 'under': PL[2]}, '구리 지붕', 'Rusty Copper Roof')
 block('roof_teal', 'roof', {'top': mc('weathered_cut_copper'), 'side': mc('weathered_cut_copper'), 'under': PL[1]}, '녹청 지붕', 'Teal Copper Roof')
+
+# 2.48.0: leaves on cards, windows with sash frames, the houses' materials, the green strip, more fences and furniture.
+# (The textures above keep their seeds; these take seeds of their own.)
+LEAF = [tex(f'leaf_cards_{k}', leaf_cards, 2000 + k) for k in range(3)]
+LMASS = tex('leaf_mass', leaf_mass, 2010)
+BLOS = [tex(f'blossom_cards_{k}', blossom_cards, 2020 + k) for k in range(3)]
+BMASS = tex('blossom_mass', blossom_mass, 2030)
+IVY = [tex(f'ivy_cards_{k}', ivy_cards, 2040 + k) for k in range(2)]
+WFD = tex('window_frame_dark', frame_tex, 2100, (44, 46, 50))
+WFW = tex('window_frame_white', frame_tex, 2101, (232, 232, 228))
+WG = tex('window_glass', window_glass, 2102)
+WFR = tex('window_frosted', window_frosted, 2103)
+WCU = tex('window_curtain', window_curtain, 2104)
+STW = [tex(f'stucco_white_{k}', stucco, 2200 + k, (238, 236, 230)) for k in range(2)]
+STC = [tex(f'stucco_cream_{k}', stucco, 2210 + k, (228, 216, 192)) for k in range(2)]
+STP = [tex(f'stucco_pink_{k}', stucco, 2220 + k, (224, 198, 182)) for k in range(2)]
+STG = [tex(f'stucco_gray_{k}', stucco, 2230 + k, (186, 186, 182)) for k in range(2)]
+SID = [tex(f'siding_{k}', siding, 2240 + k) for k in range(2)]
+TIW = [tex(f'tile_wall_{k}', tile_wall, 2250 + k) for k in range(2)]
+TRD = tex('trim_dark', trim, 2260, (48, 50, 54))
+TRW = tex('trim_white', trim, 2261, (236, 236, 232))
+CSM = [tex(f'concrete_smooth_{k}', concrete_smooth, 2270 + k) for k in range(2)]
+BWF = [tex(f'block_wall_foot_{k}', block_wall_foot, 400 + k, k) for k in range(3)]
+BWD = [tex(f'block_wall_dark_{k}', blocks, 2300 + k, (74, 74, 76), 32, 16, (118, 118, 116), 9, True, 5 + 3 * k) for k in range(2)]
+BWDC = tex('block_wall_dark_cap', steel, 2310, (70, 70, 72))
+TEXTURES['asphalt_green'] = (paint_green, (2320,))
+VLR = tex('vending_lower_red', vending_lower, 2400, (186, 26, 32))
+VLW = tex('vending_lower_white', vending_lower, 2401, (236, 236, 232))
+VUR = tex('vending_upper_red', vending_upper, 2402, (186, 26, 32))
+VUW = tex('vending_upper_white', vending_upper, 2403, (236, 236, 232))
+VSR = tex('vending_side_red', vending_side_c, 2404, (184, 26, 32), (232, 232, 230))
+VSW = tex('vending_side_white', vending_side_c, 2405, (232, 232, 228), (196, 196, 192))
+VDI = tex('vending_display', vending_display, 2406)
+VGL = tex('vending_glass', vending_glass, 2407)
+VDK = tex('vending_dark', steel, 2408, (38, 38, 40))
+ACF = tex('ac_front', ac_front, 1200)
+ACG = tex('ac_guard', ac_guard, 2420)
+MOR = tex('mirror_orange', mirror_orange, 2430)
+MFC = tex('mirror_face', mirror_face, 2431)
+PANES['slat_fence_dark'] = (lambda s: pane_slats(s, (40, 36, 34)), (40, 36, 34))
+PANES['slat_fence_light'] = (lambda s: pane_slats(s, (176, 112, 56)), (176, 112, 56))
+# the panes' seeds as they were when they were numbered by their place (2.46.0), so their pictures stay the same
+PANE_SEEDS = {'slat_fence': 1454, 'chain_link_fence': 1456, 'metal_gate': 1458, 'guardrail': 1460, 'balcony_rail': 1462, 'net': 1464,
+              'curtain_window': 1466, 'slat_fence_dark': 1470, 'slat_fence_light': 1472}
+for _old in ('vending_front_lower', 'vending_front_upper', 'vending_side'): (TEX / f'{_old}.png').unlink(missing_ok=True)
+
+block('hedge', 'foliage', {'mass': LMASS}, '생울타리', 'Hedge', 'hoe')
+block('canopy', 'foliage', {'mass': LMASS}, '나뭇잎 (수관)', 'Tree Canopy', 'hoe')
+block('cherry_blossom', 'foliage', {'mass': BMASS}, '벚꽃 무리', 'Cherry Blossom', 'hoe')
+block('ivy', 'ivy', {'tex': IVY[0]}, '담쟁이', 'Ivy', 'hoe')
+block('cherry_branch', 'branch', {}, '벚나무 가지', 'Cherry Branch', 'axe')
+block('window', 'window', {'frame': WFD, 'glass': WG}, '창문 (검은 틀)', 'Window (Dark Frame)', None)
+block('window_curtain', 'window', {'frame': WFD, 'glass': WG}, '커튼 창문 (검은 틀)', 'Curtained Window (Dark Frame)', None)
+block('window_frosted', 'window', {'frame': WFD, 'glass': WFR}, '불투명 창문 (검은 틀)', 'Frosted Window (Dark Frame)', None)
+block('window_white', 'window', {'frame': WFW, 'glass': WG}, '창문 (흰 틀)', 'Window (White Frame)', None)
+block('window_white_curtain', 'window', {'frame': WFW, 'glass': WG}, '커튼 창문 (흰 틀)', 'Curtained Window (White Frame)', None)
+block('stucco_white', 'cube', {'tex': STW, 'spin': False}, '흰 스터코 벽', 'White Stucco')
+block('stucco_cream', 'cube', {'tex': STC, 'spin': False}, '크림색 스터코 벽', 'Cream Stucco')
+block('stucco_pink', 'cube', {'tex': STP, 'spin': False}, '분홍빛 스터코 벽', 'Pink Stucco')
+block('stucco_gray', 'cube', {'tex': STG, 'spin': False}, '회색 스터코 벽', 'Grey Stucco')
+block('siding', 'cube', {'tex': SID, 'spin': False}, '사이딩 벽', 'Lap Siding')
+block('tile_wall', 'cube', {'tex': TIW, 'spin': False}, '타일 벽', 'Tile Wall')
+block('trim_dark', 'cube', {'tex': [TRD], 'spin': False}, '검은 몰딩', 'Dark Trim')
+block('trim_white', 'cube', {'tex': [TRW], 'spin': False}, '흰 몰딩', 'White Trim')
+block('concrete_smooth', 'cube', {'tex': CSM, 'spin': False}, '매끈한 콘크리트', 'Smooth Concrete')
+block('block_wall_foot', 'cube', {'tex': BWF, 'spin': False}, '블록 담 아랫단', 'Block Wall Foot')
+block('block_wall_dark', 'cube', {'tex': BWD, 'spin': False}, '검은 블록 담', 'Dark Block Wall')
+block('block_wall_dark_slab', 'slab', {'tex': BWD, 'top': BWDC, 'full': 'block_wall_dark'}, '검은 블록 담 갓돌', 'Dark Block Wall Coping')
+block('asphalt_green', 'facing_top', {'top': tl('asphalt_green'), 'side': A[2]}, '아스팔트 (녹색 보행로)', 'Asphalt with Green Strip')
+block('slat_fence_dark', 'pane', {}, '검은 가로살 울타리', 'Dark Slat Fence', 'axe')
+block('slat_fence_light', 'pane', {}, '밝은 가로살 울타리', 'Light Slat Fence', 'axe')
+block('vending_machine_white', 'vending', {'colour': 'white'}, '흰 자판기', 'White Vending Machine')
+block('mirror_post', 'post', {'from': 7.1, 'to': 8.9, 'tex': MOR}, '반사경 기둥', 'Mirror Post')
+block('traffic_mirror', 'mirror', {}, '도로 반사경', 'Traffic Mirror')
 
 # ---------------------------------------------------------------- models
 
@@ -604,7 +957,7 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
         ITEMS[i] = b
     elif kind == 'pane':
         fn, ec = PANES[i]
-        TEXTURES[i] = (lambda s, fn=fn: fn(s), (1400 + len(TEXTURES),))
+        TEXTURES[i] = (lambda s, fn=fn: fn(s), (PANE_SEEDS[i],))
         TEXTURES[i + '_edge'] = (lambda s, c=ec: edge(c), (0,))
         t = {'pane': tl(i), 'edge': tl(i + '_edge')}
         names = {}
@@ -653,7 +1006,8 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
             f = box_faces(LBS, [4, 5, 12], [12, 11, 16]); f['north'] = face(LBF, [4, 5, 12, 11])
             els = [element([4, 5, 12], [12, 11, 16], f)]; p = LBS
         m = custom(i, els, p)
-        STATES[i] = {'variants': {f'facing={f}': v for f, v in rotations(m).items()}}
+        # the air conditioner is drawn in code since 2.48.0 (FurnitureModel); this model is only its item's
+        if i != 'air_conditioner': STATES[i] = {'variants': {f'facing={f}': v for f, v in rotations(m).items()}}
         ITEMS[i] = m
     elif kind == 'litter':
         f = {'up': face(tl(i)), 'down': face(tl(i))}
@@ -666,16 +1020,27 @@ for (i, kind, d, ko, en, tool) in BLOCKS:
         for k in ('north', 'south', 'east', 'west'): f[k] = face(d['side'], [0, 9, 16, 12])
         ITEMS[i] = custom(i + '_item', [element([0, 4, 0], [16, 7, 16], f, {'angle': -22.5, 'axis': 'x', 'origin': [8, 6, 8], 'rescale': True})], d['top'])
     elif kind == 'vending':
-        lf = box_faces(VS, [0, 0, 2], [16, 16, 16]); lf['north'] = face(VFL, [0, 0, 16, 16]); lf['down'] = face(VT)
-        lf.pop('up')
-        uf = box_faces(VS, [0, 0, 2], [16, 13, 16]); uf['north'] = face(VFU, [0, 0, 16, 13]); uf['up'] = face(VT); uf.pop('down')
-        lo = custom(i + '_lower', [element([0, 0, 2], [16, 16, 16], lf)], VS)
-        up = custom(i + '_upper', [element([0, 0, 2], [16, 13, 16], uf)], VS)
-        v = {}
-        for half, m in (('lower', lo), ('upper', up)):
-            for f, r in rotations(m).items(): v[f'facing={f},half={half}'] = r
-        STATES[i] = {'variants': v}
-        ITEMS[i] = lo
+        # drawn in code since 2.48.0 (FurnitureModel); the item is the machine's lower half as a box
+        vs, vl = tl('vending_side_' + d['colour']), tl('vending_lower_' + d['colour'])
+        lf = box_faces(vs, [0, 0, 2], [16, 16, 16]); lf['north'] = face(vl, [0, 0, 16, 16]); lf['down'] = face(VT); lf['up'] = face(VT)
+        ITEMS[i] = custom(i + '_item', [element([0, 0, 2], [16, 16, 16], lf)], vs)
+        for old_m in ('_lower', '_upper'):
+            (ASSETS / 'models/block/town' / f'{i}{old_m}.json').unlink(missing_ok=True)
+    elif kind == 'foliage':
+        # drawn in code (FoliageModel); in the hand, a block of the leaves' mass
+        ITEMS[i] = cube(i + '_item', d['mass'])
+    elif kind == 'ivy':
+        ITEMS[i] = ('generated', d['tex'])
+    elif kind == 'branch':
+        ITEMS[i] = custom(i + '_item', [element([5.5, 0, 5.5], [10.5, 16, 10.5], box_faces(mc('cherry_log'), [5.5, 0, 5.5], [10.5, 16, 10.5]))], mc('cherry_log'))
+    elif kind == 'window':
+        # drawn in code (WindowModel); in the hand, the frame with its glass
+        fr = box_faces(d['frame'], [0, 0, 0], [16, 16, 2.5])
+        gl = {'north': face(d['glass'], [1.5, 1.5, 14.5, 14.5]), 'south': face(d['glass'], [1.5, 1.5, 14.5, 14.5])}
+        ITEMS[i] = custom(i + '_item', [element([0, 0, 0], [16, 16, 2.5], fr), element([1.5, 1.5, 1.2], [14.5, 14.5, 1.2], gl)], d['frame'])
+    elif kind == 'mirror':
+        f = box_faces(MOR, [1, 2.5, 6], [15, 16, 7.5]); f['north'] = face(MFC, [1, 0, 15, 13.5])
+        ITEMS[i] = custom(i + '_item', [element([7.1, 0, 7.1], [8.9, 8, 8.9], box_faces(MOR, [7.1, 0, 7.1], [8.9, 8, 8.9])), element([1, 2.5, 6], [15, 16, 7.5], f)], MOR)
 
 # the roofs' ridge caps (named by TownBlocks) and the fallen petals, added after the panes so their seeds stay as they were
 KWR = tex('kawara_ridge', kawara_ridge, 802)
@@ -710,7 +1075,7 @@ def main():
         if kind == 'vending':
             pool['conditions'].append({'condition': 'minecraft:block_state_property', 'block': f'{NS}:{i}', 'properties': {'half': 'lower'}})
         write(data / 'loot_tables/blocks' / f'{i}.json', {'type': 'minecraft:block', 'pools': [pool]})
-    for tool in ('pickaxe', 'axe'):
+    for tool in ('pickaxe', 'axe', 'hoe'):
         write(RES / f'data/minecraft/tags/blocks/mineable/{tool}.json',
               {'replace': False, 'values': [f'{NS}:{i}' for (i, k, d, ko, en, t) in BLOCKS if t == tool]})
     for lang, col in (('ko_kr', 3), ('en_us', 4)):

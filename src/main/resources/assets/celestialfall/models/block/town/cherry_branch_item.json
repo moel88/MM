@@ -1,0 +1,76 @@
+{
+ "textures": {
+  "particle": "minecraft:block/cherry_log",
+  "t0": "minecraft:block/cherry_log"
+ },
+ "elements": [
+  {
+   "from": [
+    5.5,
+    0,
+    5.5
+   ],
+   "to": [
+    10.5,
+    16,
+    10.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t0",
+     "uv": [
+      5.5,
+      0,
+      10.5,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#t0",
+     "uv": [
+      5.5,
+      0,
+      10.5,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#t0",
+     "uv": [
+      5.5,
+      0,
+      10.5,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#t0",
+     "uv": [
+      5.5,
+      0,
+      10.5,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#t0",
+     "uv": [
+      5.5,
+      5.5,
+      10.5,
+      10.5
+     ]
+    },
+    "down": {
+     "texture": "#t0",
+     "uv": [
+      5.5,
+      5.5,
+      10.5,
+      10.5
+     ]
+    }
+   }
+  }
+ ]
+}

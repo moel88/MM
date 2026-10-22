@@ -1,0 +1,12 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/concrete_smooth_0"
+   },
+   {
+    "model": "celestialfall:block/town/concrete_smooth_1"
+   }
+  ]
+ }
+}

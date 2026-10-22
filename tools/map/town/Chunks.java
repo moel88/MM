@@ -48,7 +48,7 @@ final class Chunks {
                     char id=c.raw(x,y,z);if(id==Canvas.AIR)continue;
                     BlockState s=Canvas.state(id);Block b=s.getBlock();
                     sections[w.getSectionIndex(y)].setBlockState(lx,y&15,lz,s,false);
-                    if(b instanceof FenceBlock||b instanceof PaneBlock||b instanceof WallBlock||b instanceof StairsBlock||b instanceof FenceGateBlock){
+                    if(b instanceof FenceBlock||b instanceof PaneBlock||b instanceof WallBlock||b instanceof StairsBlock||b instanceof FenceGateBlock||b instanceof dev.sangwoo.celestialfall.town.TownBlocks.Window){
                         chunk.markBlockForPostProcessing(pos.set(x,y,z));marked++;
                     }
                     if(s.hasBlockEntity()&&b instanceof BlockEntityProvider provider){

@@ -1,0 +1,145 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/mirror_orange",
+  "t0": "celestialfall:block/town/mirror_orange",
+  "t1": "celestialfall:block/town/mirror_face"
+ },
+ "elements": [
+  {
+   "from": [
+    7.1,
+    0,
+    7.1
+   ],
+   "to": [
+    8.9,
+    8,
+    8.9
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      8,
+      8.9,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      8,
+      8.9,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      8,
+      8.9,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      8,
+      8.9,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      7.1,
+      8.9,
+      8.9
+     ]
+    },
+    "down": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      7.1,
+      8.9,
+      8.9
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    1,
+    2.5,
+    6
+   ],
+   "to": [
+    15,
+    16,
+    7.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t1",
+     "uv": [
+      1,
+      0,
+      15,
+      13.5
+     ]
+    },
+    "south": {
+     "texture": "#t0",
+     "uv": [
+      1,
+      0,
+      15,
+      13.5
+     ]
+    },
+    "west": {
+     "texture": "#t0",
+     "uv": [
+      6,
+      0,
+      7.5,
+      13.5
+     ]
+    },
+    "east": {
+     "texture": "#t0",
+     "uv": [
+      8.5,
+      0,
+      10,
+      13.5
+     ]
+    },
+    "up": {
+     "texture": "#t0",
+     "uv": [
+      1,
+      6,
+      15,
+      7.5
+     ]
+    },
+    "down": {
+     "texture": "#t0",
+     "uv": [
+      1,
+      8.5,
+      15,
+      10
+     ]
+    }
+   }
+  }
+ ]
+}

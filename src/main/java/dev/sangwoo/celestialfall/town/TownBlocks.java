@@ -5,6 +5,9 @@ import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
 import net.minecraft.block.*;
 import net.minecraft.block.enums.DoubleBlockHalf;
+import net.minecraft.block.piston.PistonBehavior;
+import net.minecraft.sound.BlockSoundGroup;
+import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.*;
 import net.minecraft.registry.*;
@@ -25,19 +28,28 @@ import java.util.*;
  * conditioners, letterboxes, slat and chain-link fences, gates, guardrails, balcony rails, curtained windows, a net),
  * and roofs laid at their true pitch (2.47.0, RoofBlock, drawn in code by client/town/RoofModel). Their 64x textures and
  * models are drawn by tools/map/blocks/make_blocks.py from the same list of names; vanilla blocks are not touched.
- * Every block drops itself.
+ * Every block drops itself. 2.48.0 adds what the photos' streets are made of and a block model file could not draw:
+ * leaves as clusters on cards (hedges, crowns, blossom, ivy, a cherry's limbs), windows with real sash frames that
+ * join into one, the houses' stucco, siding, tiles and trim, dark block walls and their grimy feet, the green
+ * walking strip, drinks machines with a display behind glass, air conditioners with a fan guard, traffic mirrors.
  */
 public final class TownBlocks {
     private TownBlocks() {}
     /** Every block in registration order, with the item that places it. */
     public static final Map<String,Block> ALL=new LinkedHashMap<>();
-    public static final List<Block> CUTOUT=new ArrayList<>(),TRANSLUCENT=new ArrayList<>();
+    public static final List<Block> CUTOUT=new ArrayList<>(),CUTOUT_MIPPED=new ArrayList<>(),TRANSLUCENT=new ArrayList<>();
 
     private static FabricBlockSettings stone(){return FabricBlockSettings.copyOf(Blocks.STONE);}
     private static FabricBlockSettings metal(){return FabricBlockSettings.copyOf(Blocks.IRON_BARS);}
     private static FabricBlockSettings wood(){return FabricBlockSettings.copyOf(Blocks.SPRUCE_PLANKS);}
     private static FabricBlockSettings thin(){return FabricBlockSettings.copyOf(Blocks.IRON_BARS).nonOpaque();}
     private static FabricBlockSettings sheet(){return FabricBlockSettings.copyOf(Blocks.IRON_BLOCK).strength(2f,6f);}
+    /** Leaves that neither decay nor tick: soft, see-through to light, burnable, nothing spawns on them. */
+    private static FabricBlockSettings leaves(MapColor colour){
+        return FabricBlockSettings.create().mapColor(colour).strength(0.2f).sounds(BlockSoundGroup.GRASS).nonOpaque().allowsSpawning((s,w,p,t)->false)
+            .suffocates((s,w,p)->false).blockVision((s,w,p)->false).burnable().pistonBehavior(PistonBehavior.DESTROY).solidBlock((s,w,p)->false);
+    }
+    private static FabricBlockSettings glass(){return FabricBlockSettings.copyOf(Blocks.GLASS);}
 
     // the ground: asphalt and its paint, the worn asphalt of the lot by the sea, pavers
     public static final Block ASPHALT=add("asphalt",new Block(stone()));
@@ -100,6 +112,40 @@ public final class TownBlocks {
     public static final RoofBlock ROOF_COPPER=roof("roof_copper",0.5f,1.5f/16,sheet(),"minecraft:oxidized_cut_copper","minecraft:oxidized_cut_copper","town/plaster_0","minecraft:oxidized_copper");
     public static final RoofBlock ROOF_RUST=roof("roof_rust",0.5f,1.5f/16,sheet(),"minecraft:exposed_cut_copper","minecraft:exposed_cut_copper","town/plaster_2","minecraft:exposed_copper");
     public static final RoofBlock ROOF_TEAL=roof("roof_teal",0.5f,1.5f/16,sheet(),"minecraft:weathered_cut_copper","minecraft:weathered_cut_copper","town/plaster_1","minecraft:weathered_copper");
+    // leaves as the photos show them (2.48.0): clusters on cards, drawn in code (client/town/FoliageModel)
+    public static final Block HEDGE=cutoutMipped(add("hedge",new Foliage(leaves(MapColor.DARK_GREEN))));
+    public static final Block CANOPY=cutoutMipped(add("canopy",new Foliage(leaves(MapColor.DARK_GREEN))));
+    public static final Block CHERRY_BLOSSOM=cutoutMipped(add("cherry_blossom",new Foliage(leaves(MapColor.PINK))));
+    public static final Block IVY=cutoutMipped(add("ivy",new Ivy(leaves(MapColor.DARK_GREEN).noCollision())));
+    public static final Block CHERRY_BRANCH=add("cherry_branch",new Branch(FabricBlockSettings.copyOf(Blocks.CHERRY_LOG).nonOpaque()));
+    // windows with real sash frames (2.48.0, client/town/WindowModel): dark or white, the glass clear, curtained or frosted
+    public static final Map<Window,String[]> WINDOWS=new LinkedHashMap<>();
+    public static final Window WINDOW=window("window","window_frame_dark","window_glass",null);
+    public static final Window WINDOW_CURTAIN=window("window_curtain","window_frame_dark","window_glass","window_curtain");
+    public static final Window WINDOW_FROSTED=window("window_frosted","window_frame_dark","window_frosted",null);
+    public static final Window WINDOW_WHITE=window("window_white","window_frame_white","window_glass",null);
+    public static final Window WINDOW_WHITE_CURTAIN=window("window_white_curtain","window_frame_white","window_glass","window_curtain");
+    // the houses' materials (2.48.0): stucco in the photos' colours, lap siding, tiles, the trim boards, smooth concrete,
+    // the grimy foot of a block wall and the dark block walls
+    public static final Block STUCCO_WHITE=add("stucco_white",new Block(stone()));
+    public static final Block STUCCO_CREAM=add("stucco_cream",new Block(stone()));
+    public static final Block STUCCO_PINK=add("stucco_pink",new Block(stone()));
+    public static final Block STUCCO_GRAY=add("stucco_gray",new Block(stone()));
+    public static final Block SIDING=add("siding",new Block(stone()));
+    public static final Block TILE_WALL=add("tile_wall",new Block(stone()));
+    public static final Block TRIM_DARK=add("trim_dark",new Block(stone()));
+    public static final Block TRIM_WHITE=add("trim_white",new Block(stone()));
+    public static final Block CONCRETE_SMOOTH=add("concrete_smooth",new Block(stone()));
+    public static final Block BLOCK_WALL_FOOT=add("block_wall_foot",new Block(stone()));
+    public static final Block BLOCK_WALL_DARK=add("block_wall_dark",new Block(stone()));
+    public static final Block BLOCK_WALL_DARK_SLAB=add("block_wall_dark_slab",new SlabBlock(stone()));
+    public static final Block ASPHALT_GREEN=add("asphalt_green",new Facing(stone()));
+    public static final Block SLAT_FENCE_DARK=cutout(add("slat_fence_dark",new Pane(wood().nonOpaque())));
+    public static final Block SLAT_FENCE_LIGHT=cutout(add("slat_fence_light",new Pane(wood().nonOpaque())));
+    // more of the street's furniture (2.48.0, client/town/FurnitureModel): the white drinks machine, the traffic mirror on its post
+    public static final Block VENDING_MACHINE_WHITE=add("vending_machine_white",new VendingMachine(metal().luminance(s->s.get(Properties.DOUBLE_BLOCK_HALF)==DoubleBlockHalf.UPPER?11:6)));
+    public static final Block MIRROR_POST=add("mirror_post",new Post(7.1,8.9,metal()));
+    public static final Block TRAFFIC_MIRROR=add("traffic_mirror",new Shaped(metal(),Block.createCuboidShape(1,2,5.5,15,16,8.5)));
 
     private static <B extends Block> B add(String name,B block){ALL.put(name,block);return block;}
     /** A roof block and its textures: names under the town's own textures, or minecraft: blocks' (block/ is added). */
@@ -110,7 +156,15 @@ public final class TownBlocks {
         ROOFS.put(b,ids);
         return b;
     }
+    /** A window block and its textures: the frame, the glass, and the curtain behind it or none. */
+    private static Window window(String name,String frame,String glass,String curtain){
+        var b=add(name,new Window(glass()));
+        WINDOWS.put(b,new String[]{frame,glass,curtain});
+        TRANSLUCENT.add(b);
+        return b;
+    }
     private static Block cutout(Block b){CUTOUT.add(b);return b;}
+    private static Block cutoutMipped(Block b){CUTOUT_MIPPED.add(b);return b;}
     private static Block translucent(Block b){TRANSLUCENT.add(b);return b;}
 
     public static void initialize(){
@@ -239,5 +293,72 @@ public final class TownBlocks {
             var box=s.get(Properties.DOUBLE_BLOCK_HALF)==DoubleBlockHalf.LOWER?new Box(0,0,2/16.0,1,1,1):new Box(0,0,2/16.0,1,13/16.0,1);
             return turn(box,s.get(FACING));
         }
+    }
+
+    /**
+     * Leaves as clusters on cards (2.48.0, client/town/FoliageModel): hedges, trees' crowns, cherry blossom. A full
+     * block that neither decays nor ticks; the face between two of them is not drawn (the cards fill it).
+     */
+    public static class Foliage extends Block {
+        public Foliage(Settings s){super(s);}
+        @Override public boolean isSideInvisible(BlockState s,BlockState from,Direction d){return from.isOf(this);}
+    }
+    /** Ivy on a wall (2.48.0): cards of leaves lying against the wall behind, which it falls with; nothing to walk into. */
+    public static class Ivy extends HorizontalFacingBlock {
+        private final VoxelShape[] shapes=new VoxelShape[4];
+        public Ivy(Settings s){
+            super(s);setDefaultState(getDefaultState().with(FACING,Direction.NORTH));
+            for(var d:Direction.Type.HORIZONTAL)shapes[d.getHorizontal()]=turn(new Box(0,0,10/16.0,1,1,1),d);
+        }
+        @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(FACING);}
+        @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){return shapes[s.get(FACING).getHorizontal()];}
+        @Override public BlockState getPlacementState(ItemPlacementContext c){
+            var side=c.getSide();
+            var s=getDefaultState().with(FACING,side.getAxis().isHorizontal()?side:c.getHorizontalPlayerFacing().getOpposite());
+            return s.canPlaceAt(c.getWorld(),c.getBlockPos())?s:null;
+        }
+        @Override public boolean canPlaceAt(BlockState s,WorldView w,BlockPos p){
+            var back=p.offset(s.get(FACING).getOpposite());
+            return w.getBlockState(back).isSideSolidFullSquare(w,back,s.get(FACING));
+        }
+        @Override public BlockState getStateForNeighborUpdate(BlockState s,Direction d,BlockState n,WorldAccess w,BlockPos p,BlockPos np){
+            return d==s.get(FACING).getOpposite()&&!canPlaceAt(s,w,p)?Blocks.AIR.getDefaultState():s;
+        }
+    }
+    /** A cherry's limb along an axis (2.48.0): a round branch five sixteenths across, drawn in code. */
+    public static class Branch extends PillarBlock {
+        private static final VoxelShape X=Block.createCuboidShape(0,5.5,5.5,16,10.5,10.5),Y=Block.createCuboidShape(5.5,0,5.5,10.5,16,10.5),Z=Block.createCuboidShape(5.5,5.5,0,10.5,10.5,16);
+        public Branch(Settings s){super(s);}
+        @Override public VoxelShape getOutlineShape(BlockState s,BlockView w,BlockPos p,ShapeContext c){return switch(s.get(AXIS)){case X->X;case Y->Y;case Z->Z;};}
+    }
+    /**
+     * A window with a real sash frame (2.48.0, client/town/WindowModel), facing out of its wall. Sashes beside, above
+     * and below it that face the same way join it into one window: {@code left} and {@code right} are seen from
+     * outside. Light passes; the glass is see-through.
+     */
+    public static class Window extends HorizontalFacingBlock {
+        public static final BooleanProperty UP=Properties.UP,DOWN=Properties.DOWN,LEFT=BooleanProperty.of("left"),RIGHT=BooleanProperty.of("right");
+        public Window(Settings s){super(s);setDefaultState(getDefaultState().with(FACING,Direction.NORTH).with(UP,false).with(DOWN,false).with(LEFT,false).with(RIGHT,false));}
+        @Override protected void appendProperties(StateManager.Builder<Block,BlockState> b){b.add(FACING,UP,DOWN,LEFT,RIGHT);}
+        /** The way to the sash on this one's left seen from outside (the model's west side turned to the facing). */
+        public static Direction left(Direction facing){return facing.rotateYCounterclockwise();}
+        private static boolean joins(BlockState s,BlockState n){return n.getBlock() instanceof Window&&n.get(FACING)==s.get(FACING);}
+        /** The state with its joins read from the sashes round it. */
+        public static BlockState joined(BlockState s,BlockView w,BlockPos p){
+            var f=s.get(FACING);
+            return s.with(UP,joins(s,w.getBlockState(p.up()))).with(DOWN,joins(s,w.getBlockState(p.down())))
+                .with(LEFT,joins(s,w.getBlockState(p.offset(left(f))))).with(RIGHT,joins(s,w.getBlockState(p.offset(left(f).getOpposite()))));
+        }
+        @Override public BlockState getPlacementState(ItemPlacementContext c){return joined(getDefaultState().with(FACING,c.getHorizontalPlayerFacing().getOpposite()),c.getWorld(),c.getBlockPos());}
+        @Override public BlockState getStateForNeighborUpdate(BlockState s,Direction d,BlockState n,WorldAccess w,BlockPos p,BlockPos np){
+            var f=s.get(FACING);
+            if(d==Direction.UP)return s.with(UP,joins(s,n));
+            if(d==Direction.DOWN)return s.with(DOWN,joins(s,n));
+            if(d==left(f))return s.with(LEFT,joins(s,n));
+            if(d==left(f).getOpposite())return s.with(RIGHT,joins(s,n));
+            return s;
+        }
+        @Override public boolean isSideInvisible(BlockState s,BlockState from,Direction d){return from.getBlock() instanceof Window;}
+        @Override public float getAmbientOcclusionLightLevel(BlockState s,BlockView w,BlockPos p){return 1;}
     }
 }

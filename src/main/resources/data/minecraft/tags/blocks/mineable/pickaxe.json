@@ -49,6 +49,22 @@
   "celestialfall:roof_brown",
   "celestialfall:roof_copper",
   "celestialfall:roof_rust",
-  "celestialfall:roof_teal"
+  "celestialfall:roof_teal",
+  "celestialfall:stucco_white",
+  "celestialfall:stucco_cream",
+  "celestialfall:stucco_pink",
+  "celestialfall:stucco_gray",
+  "celestialfall:siding",
+  "celestialfall:tile_wall",
+  "celestialfall:trim_dark",
+  "celestialfall:trim_white",
+  "celestialfall:concrete_smooth",
+  "celestialfall:block_wall_foot",
+  "celestialfall:block_wall_dark",
+  "celestialfall:block_wall_dark_slab",
+  "celestialfall:asphalt_green",
+  "celestialfall:vending_machine_white",
+  "celestialfall:mirror_post",
+  "celestialfall:traffic_mirror"
  ]
 }
