@@ -120,7 +120,7 @@
 
 ```
 bash gradlew build --offline
-TOWN_VERSION=2.0 python3 tools/map/town/run_town.py 출력폴더 [시드]
+python3 tools/map/town/run_town.py 출력폴더 [시드]
 python3 tools/map/measure_open.py 출력폴더/server/Botand_Seaside_1.20.1 "v2.0" 출력폴더/open.png -200,-200,199,199
 ```
 

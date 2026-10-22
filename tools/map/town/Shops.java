@@ -312,9 +312,14 @@ final class Shops {
         for(int x=bx0+1;x<bx1;x++)for(int y=1;y<=3;y++)f.set(x,y,bz0,x%5==0?TB.CONCRETE:TB.WIN);
         int door=(bx0+bx1)/2;
         for(int x=door-1;x<=door+1;x++){f.set(x,1,bz0,s(Blocks.AIR));f.set(x,2,bz0,s(Blocks.AIR));}
-        for(int x=bx0;x<=bx1;x++){f.set(x,7,bz0,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));for(int z=bz0-3;z<bz0;z++)f.set(x,4,z,Canvas.slab(Blocks.SMOOTH_QUARTZ_SLAB,true));}
+        for(int x=bx0;x<=bx1;x++)for(int z=bz0-3;z<bz0;z++)f.set(x,4,z,Canvas.slab(Blocks.SMOOTH_QUARTZ_SLAB,true));
         for(int x=bx0;x<=bx1;x+=8)for(int y=1;y<=3;y++)f.set(x,y,bz0-3,s(Blocks.QUARTZ_PILLAR));
-        for(int x=bx0+1;x<=bx1-1;x++)for(int z=bz0+1;z<bz1;z++)f.set(x,7,z,z==bz0+1||x==bx0+1||x==bx1-1||z==bz1-1?Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false):s(Blocks.AIR));
+        // the flat roof over the ceiling's lights, a low parapet round it
+        for(int x=bx0;x<=bx1;x++)for(int z=bz0;z<=bz1;z++){
+            boolean edge=x==bx0||x==bx1||z==bz0||z==bz1;
+            f.set(x,7,z,edge?TB.STUCCO_WHITE:s(Blocks.SMOOTH_STONE));
+            if(edge)f.set(x,8,z,Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
+        }
         f.wallSign(door,5,bz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.BLUE,true,"","スーパー はまかぜ","SUPERMARKET");
         f.wallSign(door-8,5,bz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.RED,true,"","本日特売","鮮魚・野菜");
         // aisles of shelves and the fridges along the back
@@ -358,7 +363,8 @@ final class Shops {
         for(int x=cx0;x<=cx1;x++)for(int z=cz0;z<=cz1;z++){
             boolean edge=x==cx0||x==cx1||z==cz0||z==cz1;
             f.set(x,6,z,edge?s(Blocks.RED_CONCRETE):(x+z)%3==0?s(Blocks.SEA_LANTERN):s(Blocks.SMOOTH_QUARTZ));
-            if(edge)f.set(x,7,z,s(Blocks.WHITE_CONCRETE));
+            // the canopy's top over its lights, the white fascia round it
+            f.set(x,7,z,edge?s(Blocks.WHITE_CONCRETE):Canvas.slab(Blocks.SMOOTH_STONE_SLAB,false));
         }
         f.wallSign((cx0+cx1)/2,6,cz0-1,Blocks.BIRCH_WALL_SIGN,Direction.NORTH,DyeColor.RED,true,"","ぼたんど石油","SERVICE STATION");
         // two pump islands across the canopy
