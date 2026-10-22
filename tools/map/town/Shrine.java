@@ -113,8 +113,8 @@ final class Shrine {
         int g=c.ground(x,z);
         for(int y=g+1;y<=g+9;y++)for(int dx=0;dx<=1;dx++)for(int dz=0;dz<=1;dz++)c.set(x+dx,y,z+dz,Canvas.axis(Blocks.DARK_OAK_LOG,Direction.Axis.Y));
         for(int dx=-1;dx<=2;dx++)for(int dz=-1;dz<=2;dz++)if((dx==-1||dx==2||dz==-1||dz==2)&&!(Math.abs(dx-0.5)>1&&Math.abs(dz-0.5)>1))c.set(x+dx,g+3,z+dz,Canvas.axis(Blocks.HAY_BLOCK,Direction.Axis.Y));
-        t.nature.blob(x+1,g+12,z+1,7,4.5,7,Blocks.DARK_OAK_LEAVES,Blocks.JUNGLE_LEAVES);
-        t.nature.blob(x-2,g+14,z+3,4,3,4,Blocks.DARK_OAK_LEAVES,Blocks.OAK_LEAVES);
+        t.nature.blob(x+1,g+12,z+1,7,4.5,7,TB.CANOPY);
+        t.nature.blob(x-2,g+14,z+3,4,3,4,TB.CANOPY);
         for(int i=0;i<4;i++){
             double a=i*Math.PI/2+0.4;
             for(int k=1;k<=4;k++)c.set(x+(int)Math.round(Math.cos(a)*k),g+9+k/2,z+(int)Math.round(Math.sin(a)*k),Canvas.axis(Blocks.DARK_OAK_LOG,Math.abs(Math.cos(a))>0.7?Direction.Axis.X:Direction.Axis.Z));

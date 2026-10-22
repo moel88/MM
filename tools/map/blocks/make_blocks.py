@@ -491,6 +491,25 @@ def ivy_cards(seed):
             alpha[inside] = 255
     return img, alpha
 
+def pine_cards(seed, count=46, spread=24):
+    """A black pine's pad of needles: tufts of fine dark needles fanning out from short twigs, thinning to the edge."""
+    g = rng(seed)
+    img = np.zeros((S, S, 3)); alpha = np.zeros((S, S))
+    for k in range(count):
+        rr = spread * np.sqrt(g.random()); aa = g.uniform(0, 2 * np.pi)
+        cx = 32 + rr * np.cos(aa); cy = 32 + rr * np.sin(aa)
+        base = np.array((44, 74, 40), float) * g.uniform(0.8, 1.25)
+        for n in range(int(g.uniform(10, 18))):
+            a = g.uniform(0, 2 * np.pi); length = g.uniform(4, 8)
+            for t in np.linspace(0, 1, int(length * 2)):
+                x = int(round(cx + np.cos(a) * length * t)); y = int(round(cy + np.sin(a) * length * t))
+                if 0 <= x < S and 0 <= y < S:
+                    img[y, x] = base * (0.85 + 0.35 * t) * (1.1 if np.sin(a) < 0 else 0.95)
+                    alpha[y, x] = 255
+        ix, iy = int(cx), int(cy)
+        if 0 <= ix < S and 0 <= iy < S: img[iy, ix] = (70, 52, 40); alpha[iy, ix] = 255
+    return np.clip(img, 0, 255), alpha
+
 def frame_tex(seed, base):
     """An aluminium window frame: a flat tone with the faintest brushing along it."""
     g = rng(seed)
@@ -835,6 +854,7 @@ LMASS = tex('leaf_mass', leaf_mass, 2010)
 BLOS = [tex(f'blossom_cards_{k}', blossom_cards, 2020 + k) for k in range(3)]
 BMASS = tex('blossom_mass', blossom_mass, 2030)
 IVY = [tex(f'ivy_cards_{k}', ivy_cards, 2040 + k) for k in range(2)]
+PINE = [tex(f'pine_cards_{k}', pine_cards, 2050 + k) for k in range(2)]
 WFD = tex('window_frame_dark', frame_tex, 2100, (44, 46, 50))
 WFW = tex('window_frame_white', frame_tex, 2101, (232, 232, 228))
 WG = tex('window_glass', window_glass, 2102)
@@ -878,6 +898,7 @@ block('canopy', 'foliage', {'mass': LMASS}, '나뭇잎 (수관)', 'Tree Canopy',
 block('cherry_blossom', 'foliage', {'mass': BMASS}, '벚꽃 무리', 'Cherry Blossom', 'hoe')
 block('ivy', 'ivy', {'tex': IVY[0]}, '담쟁이', 'Ivy', 'hoe')
 block('cherry_branch', 'branch', {}, '벚나무 가지', 'Cherry Branch', 'axe')
+block('pine_needles', 'foliage', {'mass': PINE[0]}, '솔잎', 'Pine Needles', 'hoe')
 block('window', 'window', {'frame': WFD, 'glass': WG}, '창문 (검은 틀)', 'Window (Dark Frame)', None)
 block('window_curtain', 'window', {'frame': WFD, 'glass': WG}, '커튼 창문 (검은 틀)', 'Curtained Window (Dark Frame)', None)
 block('window_frosted', 'window', {'frame': WFD, 'glass': WFR}, '불투명 창문 (검은 틀)', 'Frosted Window (Dark Frame)', None)

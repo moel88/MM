@@ -44,8 +44,11 @@ final class Nature {
         }
     }
 
-    /** クロマツ: a leaning, bending trunk with flat pads of dark needles on short branches. */
-    void pine(int x,int y,int z,int h){
+    /** クロマツ: a leaning, bending trunk with flat pads of dark needles on short branches (in the town, Botand's needles on cards). */
+    void pine(int x,int y,int z,int h){pine(x,y,z,h,true);}
+    private boolean townPine;
+    void pine(int x,int y,int z,int h,boolean town){townPine=town;pine0(x,y,z,h);townPine=false;}
+    private void pine0(int x,int y,int z,int h){
         double px=x,pz=z,lx=(rnd.nextDouble()-0.5)*0.6,lz=(rnd.nextDouble()-0.5)*0.6;
         int topY=y+h;
         for(int k=0;k<h;k++){
@@ -67,8 +70,8 @@ final class Nature {
     private void pad(int cx,int y,int cz,double r){
         for(int x=(int)(cx-r-1);x<=cx+r+1;x++)for(int z=(int)(cz-r-1);z<=cz+r+1;z++){
             double d=Math.hypot(x-cx,z-cz);
-            if(d<=r)leaf(x,y,z,Blocks.SPRUCE_LEAVES);
-            if(d<=r-1.1)leaf(x,y+1,z,Blocks.SPRUCE_LEAVES);
+            if(d<=r){if(townPine){if(c.air(x,y,z))c.set(x,y,z,TB.PINE);}else leaf(x,y,z,Blocks.SPRUCE_LEAVES);}
+            if(d<=r-1.1){if(townPine){if(c.air(x,y+1,z))c.set(x,y+1,z,TB.PINE);}else leaf(x,y+1,z,Blocks.SPRUCE_LEAVES);}
         }
     }
 
@@ -80,8 +83,7 @@ final class Nature {
      * round it (Botand's fallen petals, which lie on anything solid).
      */
     void cherry(int x,int y,int z,int h,double size){
-        // a round trunk (Botand's thick branch, 2.48.0), dividing into limbs: thick where they leave it, then thin
-        // round branches spreading and rising
+        // a round trunk (Botand's thick branch, 2.48.0) dividing into thin round limbs, spreading and rising
         for(int k=0;k<h-2;k++)if(free(x,y+k,z))c.set(x,y+k,z,TB.trunk(Direction.Axis.Y));
         int top=y+h-2,reach=(int)Math.round(3*size);
         for(int i=0;i<3+(size>1.2?1:0);i++){
@@ -89,17 +91,16 @@ final class Nature {
             Direction.Axis along=Math.abs(Math.cos(a))>0.7?Direction.Axis.X:Direction.Axis.Z;
             for(int k=1;k<=reach;k++){
                 int bx=x+(int)Math.round(Math.cos(a)*k),bz=z+(int)Math.round(Math.sin(a)*k),by=top+k/2;
-                if(k==1){if(free(bx,by,bz))c.set(bx,by,bz,TB.trunk(along));}
-                else{limb(bx,by,bz,along);if(k%2==0)limb(bx,by-1,bz,Direction.Axis.Y);}
+                limb(bx,by,bz,along);if(k%2==0)limb(bx,by-1,bz,Direction.Axis.Y);
             }
         }
-        // the crown: Botand's blossom on cards, wide and light, its underside open so the limbs show (2.48.0)
+        // the crown: Botand's blossom on cards, wide and light, low enough to hold the limbs (2.48.0)
         double r=(3.6+rnd.nextDouble()*1.2)*size;
-        blob(x+0.5,top+2.5*Math.sqrt(size),z+0.5,r,2.3*size,r,TB.BLOSSOM);
-        blob(x+0.5+(rnd.nextDouble()-0.5)*2*size,top+3.5*size,z+0.5+(rnd.nextDouble()-0.5)*2*size,r*0.7,1.8*size,r*0.7,TB.BLOSSOM);
+        blob(x+0.5,top+1.6*Math.sqrt(size),z+0.5,r,2.3*size,r,TB.BLOSSOM);
+        blob(x+0.5+(rnd.nextDouble()-0.5)*2*size,top+2.7*size,z+0.5+(rnd.nextDouble()-0.5)*2*size,r*0.7,1.8*size,r*0.7,TB.BLOSSOM);
         if(size>1.2)for(int i=0;i<3;i++){
             double a=rnd.nextDouble()*Math.PI*2;
-            blob(x+0.5+Math.cos(a)*r*0.6,top+1.5*size+rnd.nextDouble()*size,z+0.5+Math.sin(a)*r*0.6,r*0.5,1.5*size,r*0.5,TB.BLOSSOM);
+            blob(x+0.5+Math.cos(a)*r*0.6,top+0.9*size+rnd.nextDouble()*size,z+0.5+Math.sin(a)*r*0.6,r*0.5,1.5*size,r*0.5,TB.BLOSSOM);
         }
         // fallen petals on the ground under the crown and a little beyond it
         int n=(int)Math.round(18*size*size*1.6);
@@ -174,9 +175,9 @@ final class Nature {
             double p=shore?0.32:ridge?0.62:0.42;
             if(rnd.nextDouble()>p)continue;
             int r=rnd.nextInt(100);
-            if(shore)pine(px,g+1,pz,5+rnd.nextInt(4));
-            else if(ridge)if(r<45)cedar(px,g+1,pz,11+rnd.nextInt(7));else if(r<92)broadleaf(px,g+1,pz,5+rnd.nextInt(4));else pine(px,g+1,pz,6+rnd.nextInt(3));
-            else if(r<70)broadleaf(px,g+1,pz,4+rnd.nextInt(4));else if(r<85)pine(px,g+1,pz,5+rnd.nextInt(3));else if(r<93)cedar(px,g+1,pz,9+rnd.nextInt(5));
+            if(shore)pine(px,g+1,pz,5+rnd.nextInt(4),false);
+            else if(ridge)if(r<45)cedar(px,g+1,pz,11+rnd.nextInt(7));else if(r<92)broadleaf(px,g+1,pz,5+rnd.nextInt(4));else pine(px,g+1,pz,6+rnd.nextInt(3),false);
+            else if(r<70)broadleaf(px,g+1,pz,4+rnd.nextInt(4));else if(r<85)pine(px,g+1,pz,5+rnd.nextInt(3),false);else if(r<93)cedar(px,g+1,pz,9+rnd.nextInt(5));
             else for(int k=0;k<9;k++)bamboo(px+rnd.nextInt(5)-2,c.ground(px,pz)+1,pz+rnd.nextInt(5)-2,7+rnd.nextInt(6));
             trees++;
         }

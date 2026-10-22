@@ -118,6 +118,7 @@ public final class TownBlocks {
     public static final Block CHERRY_BLOSSOM=cutoutMipped(add("cherry_blossom",new Foliage(leaves(MapColor.PINK))));
     public static final Block IVY=cutoutMipped(add("ivy",new Ivy(leaves(MapColor.DARK_GREEN).noCollision())));
     public static final Block CHERRY_BRANCH=add("cherry_branch",new Branch(FabricBlockSettings.copyOf(Blocks.CHERRY_LOG).nonOpaque()));
+    public static final Block PINE_NEEDLES=cutoutMipped(add("pine_needles",new Foliage(leaves(MapColor.DARK_GREEN))));
     // windows with real sash frames (2.48.0, client/town/WindowModel): dark or white, the glass clear, curtained or frosted
     public static final Map<Window,String[]> WINDOWS=new LinkedHashMap<>();
     public static final Window WINDOW=window("window","window_frame_dark","window_glass",null);

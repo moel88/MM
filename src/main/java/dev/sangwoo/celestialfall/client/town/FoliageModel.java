@@ -22,13 +22,14 @@ import java.util.function.Function;
  */
 final class FoliageModel {
     static final int VARIANTS=3;
-    private static final String[] LEAF={"leaf_cards_0","leaf_cards_1","leaf_cards_2"},BLOSSOM={"blossom_cards_0","blossom_cards_1","blossom_cards_2"},IVY={"ivy_cards_0","ivy_cards_1"};
+    private static final String[] LEAF={"leaf_cards_0","leaf_cards_1","leaf_cards_2"},BLOSSOM={"blossom_cards_0","blossom_cards_1","blossom_cards_2"},IVY={"ivy_cards_0","ivy_cards_1"},PINE={"pine_cards_0","pine_cards_1"};
 
     static void register(){
         ModelLoadingPlugin.register(plugin->{
             CodeModel.resolve(plugin,TownBlocks.HEDGE,s->sp->mass(sp,"leaf_mass",LEAF,true,12,14,20,0x48ed6eL));
             CodeModel.resolve(plugin,TownBlocks.CANOPY,s->sp->mass(sp,"leaf_mass",LEAF,false,16,15,24,0x5a11fL));
             CodeModel.resolve(plugin,TownBlocks.CHERRY_BLOSSOM,s->sp->mass(sp,"blossom_mass",BLOSSOM,false,16,16,26,0x7b10c4L));
+            CodeModel.resolve(plugin,TownBlocks.PINE_NEEDLES,s->sp->mass(sp,"pine_cards_0",PINE,false,14,14,22,0x9e3779L));
             CodeModel.resolve(plugin,TownBlocks.IVY,s->sp->ivy(sp,s.get(Properties.HORIZONTAL_FACING)));
             CodeModel.resolve(plugin,TownBlocks.CHERRY_BRANCH,s->sp->branch(sp,s.get(Properties.AXIS),s.get(TownBlocks.Branch.THICK)));
         });
@@ -74,7 +75,8 @@ final class FoliageModel {
     static BakedModel branch(Function<String,Sprite> sp,Direction.Axis axis,boolean thick){
         Mesh m=new Mesh();
         Sprite bark=sp.apply("minecraft:cherry_log");
-        m.cylinder(bark,sp.apply("minecraft:cherry_log_top"),axis,8,8,thick?5.5:2.5,0,16,thick?12:8,true,true);
+        // the ends in bark too, so a limb's cut end does not show as a pale disc
+        m.cylinder(bark,bark,axis,8,8,thick?5.5:2.5,0,16,thick?12:8,true,true);
         return m.bake(bark,true);
     }
     private static double[] unit(Random r){

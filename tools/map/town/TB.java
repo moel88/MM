@@ -28,7 +28,7 @@ final class TB {
         BALCONY=of("balcony_rail"),NET=of("net"),WINDOW=of("curtain_window");
     static final BlockState POLE=of("utility_pole"),SLEEVE=of("pole_sleeve"),PIPE=of("pipe_post");
     // 2.48.0: the photos' streets drawn by the mod: leaves on cards, sash windows, the houses' materials, furniture
-    static final BlockState HEDGE=of("hedge"),CANOPY=of("canopy"),BLOSSOM=of("cherry_blossom");
+    static final BlockState HEDGE=of("hedge"),CANOPY=of("canopy"),BLOSSOM=of("cherry_blossom"),PINE=of("pine_needles");
     static final BlockState STUCCO_WHITE=of("stucco_white"),STUCCO_CREAM=of("stucco_cream"),STUCCO_PINK=of("stucco_pink"),STUCCO_GRAY=of("stucco_gray"),
         SIDING=of("siding"),TILE=of("tile_wall"),TRIM_DARK=of("trim_dark"),TRIM_WHITE=of("trim_white"),CONCRETE=of("concrete_smooth");
     static final BlockState BOARDS_DARK=of("wood_boards_dark"),BOARDS=of("wood_boards"),TIMBER=of("timber_dark");
