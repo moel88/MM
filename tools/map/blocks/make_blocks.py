@@ -4,7 +4,8 @@ tool tags and names: python3 tools/map/blocks/make_blocks.py
 
 The blocks are dev.sangwoo.celestialfall.town.TownBlocks; the list below names them in the same order. Every picture is
 drawn from seeded noise (no image is copied from anywhere), so a run always gives the same files. The materials follow
-the two photos the seaside map is built after (tools/map/town/PHOTO_SCENES.md): fine dark asphalt with thin paint,
+the two photos the seaside map was first built after (map v1.x; v2.0 rebuilt the town wide and simple with the same
+blocks): fine dark asphalt with thin paint,
 the light coarse old asphalt of the lot, pale pavers, split-face concrete blocks, dark rough stone, plaster, kawara,
 white corrugated iron streaked with rust, and the street's furniture.
 """

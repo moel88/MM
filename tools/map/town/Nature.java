@@ -171,6 +171,8 @@ final class Nature {
             int g=c.ground(px,pz);
             if(g<=Plan.SEA+1||!c.get(px,g,pz).isOf(Blocks.GRASS_BLOCK)||!c.air(px,g+1,pz))continue;
             if(t.roads.any(px,pz)||nearBuilt(px,pz,g))continue;
+            // the shrine's stairway keeps a clear strip either side, so the view down it stays open
+            if(pz<Plan.TOWN_Z0&&pz>=Plan.SHRINE_Z0&&Math.abs(px)<=Plan.STAIR_X1+5)continue;
             boolean hill=pz<Plan.TOWN_Z0;
             // the hill: a meadow along its foot, then woods in groves with clearings between them
             int up=Plan.TOWN_Z0-pz;

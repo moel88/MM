@@ -37,11 +37,11 @@ final class School {
         Town.log("school: "+c.placed);
     }
 
-    /** The sports ground: packed earth, a little darker where feet have worn it, the track's white lines. */
+    /** The sports ground: packed earth with a little grit, the track's white lines. */
     private void ground(){
         for(int x=GX0;x<=GX1;x++)for(int z=GZ0;z<=GZ1;z++){
-            double h=Pal.hash(x,81,z),wear=Pal.smooth(x,z,7,83);
-            c.set(x,Y,z,h<0.07?s(Blocks.COARSE_DIRT):wear>0.7&&h<0.35?s(Blocks.DIRT_PATH):s(Blocks.PACKED_MUD));
+            double h=Pal.hash(x,81,z);
+            c.set(x,Y,z,h<0.06?s(Blocks.COARSE_DIRT):s(Blocks.PACKED_MUD));
         }
         // the track: two lanes round a stadium of 36 blocks' straights and 14 blocks' bends, its lines in white
         for(int x=GX0;x<=GX1;x++)for(int z=GZ0;z<=GZ1;z++){

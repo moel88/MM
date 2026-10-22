@@ -118,7 +118,8 @@ final class Shops {
             if(rnd.nextBoolean())f.set(2,fy+1,-1,Kit.pot(rnd));
             Kit.roomLight(f,W/2,fy,depth/2,rnd.nextBoolean());
         }
-        Kit.roof(f,0,1,W-1,depth-1,4*stories,Kit.SHED,false,Kit.SLATE,side,floor);
+        // the roofs behind the flat fronts: slate, kawara, dark or blue sheet, so the street seen from the shrine is not one grey
+        Kit.roof(f,0,1,W-1,depth-1,4*stories,Kit.SHED,false,Pal.pick(rnd,new Kit.Roof[]{Kit.SLATE,Kit.KAWARA,Kit.BLACK,Kit.BLUE,Kit.KAWARA,Kit.BROWN}),side,floor);
         // bright lights in the shop
         f.set(W/2,4,depth/2,s(Blocks.SEA_LANTERN));f.set(2,4,2,s(Blocks.SEA_LANTERN));
         goods(f,k,W,depth,door);
