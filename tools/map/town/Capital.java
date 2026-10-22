@@ -36,8 +36,9 @@ final class Capital {
         cathedral();
         // the houses: inside the walls only, along both sides of every street, then wherever they fit between
         var streets=t.roads.streets(Plan.CAPITAL);
-        for(int x=Plan.WALL_X-Plan.WALL_R-40;x<=Plan.WALL_X+Plan.WALL_R+40;x++)for(int z=Plan.WALL_Z-Plan.WALL_R-40;z<=Plan.WALL_Z+Plan.WALL_R+40;z++)
-            if(Canvas.inPlan(x,z)&&Plan.zone(x,z)==Plan.CAPITAL&&Plan.insideWalls(x,z)<12&&c.owner(x,z)==0)c.own(x,z,OUTSIDE);
+        // the whole zone outside the walls (up to the axis road and the rift too), not just round them
+        for(int x=0;x<Plan.X0+Plan.W;x++)for(int z=Plan.Z0;z<0;z++)
+            if(Plan.zone(x,z)==Plan.CAPITAL&&Plan.insideWalls(x,z)<12&&c.owner(x,z)==0)c.own(x,z,OUTSIDE);
         for(var s:streets)for(int side=-1;side<=1;side+=2)lots.addAll(t.lots.along(s,side,t.roads.half(s)+3,15,16,6,2,7,Plan.CAPITAL,"capital",CODE));
         lots.addAll(t.lots.fill(Plan.CAPITAL,13,13,21,2,5,2,"capital",CODE,70,rnd.nextLong()));
         int turrets=0;
@@ -45,8 +46,7 @@ final class Capital {
         Town.log("capital: "+lots.size()+" houses ("+turrets+" with turrets), "+c.placed);
         for(var s:streets)lamps(s,1,t.roads.half(s));
         // outside the walls the land is the city's: open fields, free of houses
-        for(int x=Plan.WALL_X-Plan.WALL_R-40;x<=Plan.WALL_X+Plan.WALL_R+40;x++)for(int z=Plan.WALL_Z-Plan.WALL_R-40;z<=Plan.WALL_Z+Plan.WALL_R+40;z++)
-            if(Canvas.inPlan(x,z)&&c.owner(x,z)==OUTSIDE)c.own(x,z,0);
+        for(int x=0;x<Plan.X0+Plan.W;x++)for(int z=Plan.Z0;z<0;z++)if(c.owner(x,z)==OUTSIDE)c.own(x,z,0);
     }
     /** What the land outside the walls is held by while the houses are placed (so none stand outside them). */
     static final int OUTSIDE=12;
