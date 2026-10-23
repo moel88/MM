@@ -1,13 +1,18 @@
 """The brown rock rim of the Roblox map (map v1.4): the lawn round the town and the grey wall on its edge become
-rock, built of tilted cube-like boulders as the reference's are.
+brown rock, built of tilted cube-like boulders as the reference's are.
 
-The belt keeps the lawn's use: inside it lies a floor of rock at the town's level (y=80), big flush slabs of calm
-browns with broad plates a block up, as open to run and fight on as the lawn was. Only its last four blocks before the
-sea, where the grey wall stood, rise as a cliff of boulders stacking up to the edge (9 to 16 blocks high, higher where
-the belt is wider). A boulder is a rectangle turned by a random angle with a tilted top, one block kind each; a column
-is solid up to the highest top over it (no overhangs, nothing floating), its top takes the boulder's kind and a tall
-side is big piled blocks of mixed browns. Boulders also stand in the sea along the edge, from the sea floor up to the
-waterline or up the cliff, and the island's old grey face under the belt is clad the same way.
+A huge wall of rock keeps everyone in: it stands where the old wall stood, by the sea all round, and fills the belt
+behind the houses on the town's edge right up to their backs, as on the reference (zones.Zones.walls). It is 32 to 46
+blocks over the town (higher where it is thicker), its face to the town a sheer ledge at about three quarters of that
+and the crest a few blocks behind, so no step of it can be climbed (its lowest top is over twenty blocks above the
+street). Where no house backs onto the belt (round the forests and the open corners) the belt is a floor of rock at the
+town's level instead, big flush slabs of calm browns with broad plates a block up, open to run and fight on.
+
+A boulder is a rectangle turned by a random angle with a tilted top, one block kind each; a column is solid up to the
+highest top over it (no overhangs, nothing floating), its top takes the boulder's kind and a tall side is big piled
+blocks of mixed browns. Boulders also stand in the sea along the foot of the wall, from the sea floor up to the
+waterline or part way up, and the island's old grey face under the belt is clad the same way. Where the wall meets a
+house it fills only air and plants, so a balcony or a sill stays and the rock closes round it.
 """
 import math, random
 import numpy as np
@@ -17,7 +22,9 @@ from scipy import ndimage
 ROCK = [('terracotta', 34), ('red_terracotta', 13), ('brown_terracotta', 18), ('orange_terracotta', 3), ('packed_mud', 18),
         ('granite', 7), ('dripstone_block', 7)]
 BASE = 'terracotta'
-# the floor inside the cliff in calm browns (a flat floor in every colour reads busy)
+RISE = (32.0, 46.0)  # the wall's height over the town where it is thin .. thick
+FRONT = 0.72        # its face to the town stands at this share of the height (a ledge), the crest five blocks back
+# the floor round the forests in calm browns (a flat floor in every colour reads busy)
 FLOOR = [('terracotta', 56), ('packed_mud', 22), ('granite', 8), ('brown_terracotta', 8), ('red_terracotta', 4),
          ('dripstone_block', 2)]
 # a tall face in fewer dark and red blocks than the boulders' tops
@@ -25,7 +32,10 @@ FACE = [('terracotta', 40), ('packed_mud', 20), ('granite', 12), ('brown_terraco
         ('dripstone_block', 8)]
 SEA_FLOOR = 49   # the first water block over the sea's sand (46..48)
 GROUND = 80
-CLEAR_TO = 112   # the old wall reaches y=101; trees a little higher
+CLEAR_TO = 130   # over the old wall (y 101), the trees and the new wall's crest
+# what the wall may cover where it meets a house: air, leaves and flowers (the house itself, a balcony or a sill stays)
+BURIED = ('leaves', 'grass', 'fern', 'flower', 'tulip', 'daisy', 'orchid', 'valley', 'cornflower', 'poppy', 'dandelion',
+          'allium', 'bluet', 'petals')
 
 
 def smoothstep(a, b, t):
@@ -92,20 +102,16 @@ class Boulder:
 
 
 def rim(p, Z, seed=1931):
-    """Build the rock rim into plan p over the belt of Zones Z."""
+    """Build the rock wall and floor into plan p over the belt of Zones Z."""
     w = Z.w; rng = random.Random(seed)
-    band, land, sea = Z.band, Z.land, Z.sea
-    shape = band.shape
-    d_town, d_sea = Z.d_town, Z.d_sea
-    width = d_town + d_sea
-    # the cliff is the belt's last few blocks before the sea; inside it lies a floor of rock at the town's level, as
-    # open to run and fight on as the lawn it replaces
-    cw = np.full(shape, 4.0)                 # where the old wall stood: its four blocks next to the sea
-    cliff = band & (d_sea <= cw)
+    band, land, sea, cliff = Z.band, Z.land, Z.sea, Z.cliff
     floor_ = band & ~cliff
-    u = np.where(cliff, np.clip((cw - d_sea) / np.maximum(cw - 1.0, 1e-6), 0.0, 1.0), 0.0)   # 0 at its foot, 1 at the edge
-    height = np.clip(7.0 + 0.22 * width, 9.0, 16.0)
-    hb = np.where(cliff, GROUND + height * smoothstep(0.0, 0.85, u), GROUND)
+    shape = band.shape
+    d_sea = Z.d_sea
+    d_in = ndimage.distance_transform_edt(cliff | sea)             # wall columns: distance to the town or floor
+    rise = np.clip(30.0 + 0.35 * (d_in + d_sea), *RISE)
+    front = FRONT + (1.0 - FRONT) * smoothstep(1.0, 5.0, d_in)
+    hb = np.where(cliff, GROUND + rise * front, np.where(floor_, GROUND, -1.0))
     d_land = ndimage.distance_transform_edt(sea)                        # sea columns: distance to the island
     # the crest by each sea column (to size the boulders that stand in the water)
     near = ndimage.distance_transform_edt(~band, return_distances=False, return_indices=True)
@@ -113,11 +119,10 @@ def rim(p, Z, seed=1931):
     kind = np.full(shape, '', object)
     kind[band] = BASE
 
-    def offer(x, z, top, k, only=None):
+    def offer(x, z, top, k, only):
         zi, xi = z - w.z0, x - w.x0
         if not (0 <= zi < shape[0] and 0 <= xi < shape[1]): return
-        if not (band[zi, xi] or (sea[zi, xi] and d_land[zi, xi] <= 3.6)): return
-        if only is not None and not (only[zi, xi] or sea[zi, xi]): return
+        if not (only[zi, xi] or (sea[zi, xi] and d_land[zi, xi] <= 3.6)): return
         top = int(math.floor(top))
         if top > H[zi, xi]:
             H[zi, xi] = top; kind[zi, xi] = k
@@ -130,29 +135,29 @@ def rim(p, Z, seed=1931):
     def at(m, x, z):
         return m[int(z) - w.z0, int(x) - w.x0]
 
+    # the wall: boulders all over it make a ragged crest and a ragged ledge, never out onto the town or the floor
+    tz, tx = np.nonzero(cliff)
+    cells = [(x + w.x0 + rng.random(), z + w.z0 + rng.random()) for z, x in zip(tz.tolist(), tx.tolist())]
+    for x, z in poisson(cells, lambda x, z: 4.2, rng):
+        a, b = rng.uniform(2.2, 4.2), rng.uniform(2.2, 4.2)
+        tilt = math.radians(rng.uniform(0, 20)); dirn = rng.uniform(0, 2 * math.pi)
+        gu, gv = math.tan(tilt) * math.cos(dirn), math.tan(tilt) * math.sin(dirn)
+        b = Boulder(x, z, a, b, rng.uniform(0, math.pi / 2), gu, gv, float(at(hb, x, z)) + rng.uniform(0.5, 6.5), pick(rng))
+        for cx, cz, top in b.columns():
+            offer(cx, cz, top, b.kind, cliff)
+    # the floor: flush slabs of rock in calm browns, and broad plates a block up (a step, not a wall)
     fz, fx = np.nonzero(floor_)
     floor_cells = [(x + w.x0 + rng.random(), z + w.z0 + rng.random()) for z, x in zip(fz.tolist(), fx.tolist())]
-    # the floor: flush slabs of rock in calm browns ...
     for x, z in poisson(floor_cells, lambda x, z: 4.6, rng):
         b = Boulder(x, z, rng.uniform(2.2, 4.0), rng.uniform(2.2, 4.0), rng.uniform(0, math.pi / 2), 0, 0, GROUND, pick(rng, FLOOR))
         for cx, cz, _ in b.columns():
             paint(cx, cz, b.kind)
-    # ... and broad plates a block up: a step, not a wall, so the floor stays as open as the lawn was
     for x, z in poisson(floor_cells, lambda x, z: 11.0, rng):
-        if at(d_town, x, z) < 3 or rng.random() < 0.35: continue
-        offer_all(Boulder(x, z, rng.uniform(2.5, 4.6), rng.uniform(2.5, 4.6), rng.uniform(0, math.pi / 2), 0, 0, GROUND + 1.2,
-                          pick(rng, FLOOR)), offer)
-    # the cliff: boulders that stack up from its foot to the edge
-    cz_, cx_ = np.nonzero(cliff)
-    cells = [(x + w.x0 + rng.random(), z + w.z0 + rng.random()) for z, x in zip(cz_.tolist(), cx_.tolist())]
-    for x, z in poisson(cells, lambda x, z: 3.4 + 1.6 * float(at(u, x, z)), rng):
-        uv = float(at(u, x, z)); base = float(at(hb, x, z))
-        a = rng.uniform(1.8, 3.0) + 2.0 * uv; b = rng.uniform(1.8, 3.0) + 2.0 * uv
-        tilt = math.radians(rng.uniform(0, 10 + 14 * uv)); dirn = rng.uniform(0, 2 * math.pi)
-        gu, gv = math.tan(tilt) * math.cos(dirn), math.tan(tilt) * math.sin(dirn)
-        offer_all(Boulder(x, z, a, b, rng.uniform(0, math.pi / 2), gu, gv, base + rng.uniform(0.4, 1.2 + 3.0 * uv), pick(rng)),
-                  lambda x, z, top, k: offer(x, z, top, k, only=cliff))
-    # boulders in the sea along the edge: at the waterline, half way up, a few up to the crest
+        if at(Z.d_town, x, z) < 3 or rng.random() < 0.35: continue
+        b = Boulder(x, z, rng.uniform(2.5, 4.6), rng.uniform(2.5, 4.6), rng.uniform(0, math.pi / 2), 0, 0, GROUND + 1.2, pick(rng, FLOOR))
+        for cx, cz, top in b.columns():
+            offer(cx, cz, top, b.kind, floor_)
+    # boulders in the sea along the foot of the cliff: at the waterline, a little up, a few part way up
     sz, sx = np.nonzero(sea & (d_land >= 0.9) & (d_land <= 2.8))
     cells = [(x + w.x0 + rng.random(), z + w.z0 + rng.random()) for z, x in zip(sz.tolist(), sx.tolist())]
     for x, z in poisson(cells, lambda x, z: 3.8, rng):
@@ -160,11 +165,13 @@ def rim(p, Z, seed=1931):
         nzi, nxi = near[0][zi, xi], near[1][zi, xi]
         crest_here = max(H[nzi, nxi], 70)
         r = rng.random()
-        top = rng.uniform(62.5, 65.5) if r < 0.5 else rng.uniform(65, 74) if r < 0.85 else rng.uniform(73, crest_here - 0.5)
+        top = rng.uniform(62.5, 66) if r < 0.45 else rng.uniform(66, 82) if r < 0.8 else rng.uniform(82, crest_here - 8)
         a, b = rng.uniform(1.4, 2.8), rng.uniform(1.4, 2.8)
         tilt = math.radians(rng.uniform(0, 14)); dirn = rng.uniform(0, 2 * math.pi)
-        offer_all(Boulder(x, z, a, b, rng.uniform(0, math.pi / 2), math.tan(tilt) * math.cos(dirn), math.tan(tilt) * math.sin(dirn),
-                          top, pick(rng)), offer)
+        sb = Boulder(x, z, a, b, rng.uniform(0, math.pi / 2), math.tan(tilt) * math.cos(dirn), math.tan(tilt) * math.sin(dirn),
+                     top, pick(rng))
+        for cx, cz, t in sb.columns():
+            offer(cx, cz, t, sb.kind, cliff)
     # a few stray rocks a little way out
     far = sea & (d_land > 4.5) & (d_land < 9)
     fz, fx = np.nonzero(far)
@@ -190,7 +197,12 @@ def rim(p, Z, seed=1931):
         if band[zi, xi]:
             seen_from = max(GROUND, min(top, int(nb[zi, xi])) - 1)
             tall = top - seen_from >= 4
+            by_house = bool(Z.backfill[zi, xi])
             for y in range(GROUND, top + 1):
+                if by_house and y > GROUND:
+                    cur = p.state(x, y, z)
+                    if cur != 'minecraft:air' and not any(t in cur for t in BURIED):
+                        continue
                 p.put(x, y, z, BASE if y < seen_from else k if (y >= cap or not tall) else stacked(x, y, z, seed))
             # above the rock: the old wall, lamps and flowers go; the crowns of the town's trees may reach over it
             for y in range(top + 1, min(int(old_top[zi, xi]), CLEAR_TO) + 1):
@@ -212,7 +224,3 @@ def rim(p, Z, seed=1931):
             p.put(x, y, z, stacked(x, y, z, seed))
     return H
 
-
-def offer_all(b, offer):
-    for x, z, top in b.columns():
-        offer(x, z, top, b.kind)
