@@ -13,6 +13,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.render.*;
+import net.minecraft.client.sound.MovingSoundInstance;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.util.math.MatrixStack;
@@ -68,7 +69,12 @@ public final class MeteorFx {
         if(FALLS.stream().anyMatch(f->f.slot==slot&&f.cycle==cycle))return;
         var f=new Fall(slot,cycle,seed,from,to,ticks,MeteorClient.clock(0)-age);
         FALLS.add(f);
+        // the recording's loud roar ends as the rock lands only when it starts with the fall: someone who comes in
+        // while one is under way (the server tells them how far it is) sees it come down without it
+        if(age<=SOUND_LATE)MinecraftClient.getInstance().getSoundManager().play(new FallSound(f));
     }
+    /** How late (ticks) a fall may reach this client and still have its sound. */
+    private static final double SOUND_LATE=4;
     /** Whether the rock of this meteor is still in the air on this client (its rock on the ground waits for it). */
     static boolean falling(int slot,long cycle,float delta){
         for(var f:FALLS)if(f.slot==slot&&f.cycle==cycle)return f.t(delta)<f.ticks;
@@ -396,6 +402,23 @@ public final class MeteorFx {
     static void sounds(){
         double now=MeteorClient.clock(0);
         for(var f:FALLS){double ti=now-f.zero-f.ticks;if(ti>=0&&!f.boomed){f.boomed=true;if(ti<10)boom(f.to);}}
+    }
+    /** The sound of a fall (2.49.2: the recording the user sent, made fit by tools/meteor/user_fall_sound.py), heard
+     *  from the rock as it comes down and then from where it landed, while the recording fades out under the landing's
+     *  boom. It plays at its own pitch so that its loud roar ends as the rock lands (3.6 s), and stops early only if
+     *  the fall is gone (another world, or the same place falling anew). */
+    private static final class FallSound extends MovingSoundInstance {
+        private final Fall fall;
+        FallSound(Fall fall){
+            super(MeteorRegistry.FALL_SOUND,SoundCategory.BLOCKS,SoundInstance.createRandom());
+            this.fall=fall;volume=1f;pitch=1f;repeat=false;attenuationType=AttenuationType.LINEAR;
+            place();
+        }
+        private void place(){Vec3d p=fall.at(fall.travelled(Math.min(fall.t(0),fall.ticks)));x=p.x;y=p.y;z=p.z;}
+        @Override public void tick(){
+            if(!FALLS.contains(fall)){setDone();return;}
+            place();
+        }
     }
 
     // ---------------------------------------------------------------- mining

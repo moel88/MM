@@ -20,7 +20,8 @@ import java.util.*;
  * server drops a meteor, logs the fall as this client draws it (from its own fall list), the rock it then sees (with its
  * fragments and blows as they change) and every status the rock sends (a blow, a fragment off, mined out); holding the
  * meteor pickaxe beside a rock it mines it as a player would (aiming at it and clicking every seven ticks), and it logs
- * every swing it sees another player make and whether it shows them holding the pickaxe in both hands (2.49.1). It saves
+ * every swing it sees another player make and whether it shows them holding the pickaxe in both hands (2.49.1), and every
+ * meteor sound it plays (2.49.2: the fall's recording, the landing, the blows). It saves
  * a frame just after the landing and one after the rock is gone; then leaves.
  */
 public final class MapMpClient implements ClientModInitializer {
@@ -30,7 +31,7 @@ public final class MapMpClient implements ClientModInitializer {
     /** Where to look from the spawn: yaw, pitch, name. */
     static final Object[][] VIEWS={{0f,2f,"south"},{90f,4f,"west"},{180f,4f,"north"}};
     private MinecraftClient mc;private int phase,age,view,settle,built=-1;
-    private int fallsSeen=-1,rockAge=-1,goneAge=-1,lastSwing=-100;private String rockSeen="";private boolean wrapped,impactShot;
+    private int fallsSeen=-1,rockAge=-1,goneAge=-1,lastSwing=-100;private String rockSeen="";private boolean wrapped,impactShot,listening;
     private final StringBuilder log=new StringBuilder();
     private final java.util.Map<java.util.UUID,Boolean> swinging=new java.util.HashMap<>(),twoHanded=new java.util.HashMap<>();
 
@@ -52,6 +53,11 @@ public final class MapMpClient implements ClientModInitializer {
             case 1->{
                 if(age>3000){note("ERROR never in the world");phase=8;age=0;return;}
                 if(mc.world==null||mc.player==null)return;
+                if(!listening){listening=true;
+                    // 2.49.2: every meteor sound this client plays (the fall's recording and the landing among them), from
+                    // the moment it is in the world: a fall can reach it before its meteor check begins
+                    mc.getSoundManager().registerListener((sound,set)->{var id=sound.getId();if(id.getNamespace().equals("celestialfall")&&id.getPath().startsWith("meteor_"))
+                        note(String.format("plays %s from %.0f,%.0f,%.0f at %d of phase %d",id.getPath(),sound.getX(),sound.getY(),sound.getZ(),age,phase));});}
                 if(mc.currentScreen!=null){note("screen "+mc.currentScreen.getClass().getSimpleName()+" closed");mc.setScreen(null);}
                 if(age<200)return;
                 note("in the world at "+fmt()+" map on="+MapClient.enabled()+" players="+mc.world.getPlayers().size()+" wires="+dev.sangwoo.celestialfall.client.town.WireRenderer.count()+" backdrop="+dev.sangwoo.celestialfall.client.town.BackdropRenderer.count()+" sea="+dev.sangwoo.celestialfall.client.town.BackdropRenderer.seaLevel());

@@ -600,6 +600,15 @@
       }
     ]
   },
+  "meteor_fall": {
+    "subtitle": "subtitles.celestialfall.meteor_fall",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_fall",
+        "attenuation_distance": 240
+      }
+    ]
+  },
   "meteor_impact": {
     "subtitle": "subtitles.celestialfall.meteor_impact",
     "sounds": [

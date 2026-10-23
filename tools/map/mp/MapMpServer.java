@@ -53,8 +53,9 @@ public final class MapMpServer implements ModInitializer {
         ticks++;
         if(ticks==1)started(server);
         meteor(server);
-        // checked every tick: 700 ticks after the launch is seldom on one of the 200-tick reports below
-        if(!finished&&ticks>=2400&&(launched<0&&ready.size()<2||launched>=0&&ticks-launched>=700)){finished=true;note("done");}
+        // checked every tick (700 ticks after the launch is seldom on one of the 200-tick reports below); without both
+        // visitors ready it gives up after five minutes (a loaded machine can take over two to bring the second in)
+        if(!finished&&(launched<0?ready.size()<2&&ticks>=6000:ticks>=2400&&ticks-launched>=700)){finished=true;note("done");}
         if(ticks%200!=0||ticks>2400&&!(launched>=0&&ticks-launched<=700))return;
         var w=server.getOverworld();
         StringBuilder s=new StringBuilder("tick "+ticks+":");

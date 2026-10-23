@@ -1,6 +1,7 @@
 """Synthesises the meteors' sounds (2.49.0): its landing, a pickaxe hit on it, a fragment breaking off, the rock
-crumbling, and a stand arrow made at the crafter. A meteor comes in silently: its burning roar and the hiss of fire
-after the landing were taken out at the user's request (2.49.1, "불타는 소리는 빼자").
+crumbling, and a stand arrow made at the crafter. The synthesised burning roar of the fall and the hiss of fire after
+the landing were taken out at the user's request (2.49.1, "불타는 소리는 빼자"); since 2.49.2 the fall's sound is the
+recording the user sent, fitted to the game by user_fall_sound.py.
 
 usage: python3 -I tools/meteor/make_sounds.py [OUT_DIR]
 
