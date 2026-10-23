@@ -22,7 +22,8 @@ SR = 48000
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'src/main/resources/assets/celestialfall/sounds')
 
-LOUDNESS = {'meteor_impact': -12.5, 'meteor_hit': -17.0, 'meteor_break': -15.5,
+# the landing was -12.5 with its rattling stones; without them (2.49.3) the rest stays as loud as it was
+LOUDNESS = {'meteor_impact': -13.0, 'meteor_hit': -17.0, 'meteor_break': -15.5,
             'meteor_crumble': -17.0, 'meteor_craft': -18.0}
 CEILING_DB = -1.0
 
@@ -136,8 +137,9 @@ def finish(x, name, fade_out=.05):
 
 
 def impact():
-    """The landing: a hard crack, a deep boom falling in pitch, the blast's roar, stones raining down and rattling for
-    two seconds and a long rumble (no hiss of fire after it: 2.49.1)."""
+    """The landing: a hard crack, a deep boom falling in pitch, the blast's roar and a long rumble. No hiss of fire after
+    it (2.49.1) and no stones raining down and rattling for two seconds (2.49.3, the user: "돌 굴러가는 소리가 문제인듯";
+    the stones still fly and roll on screen)."""
     d = 4.2
     x = t(d)
     out = np.zeros_like(x)
@@ -150,11 +152,6 @@ def impact():
     out += thump / (np.abs(thump).max() + 1e-9) * 1.4
     blast = low(brown(len(x), 13) + .3 * noise(len(x), 14), 1600) * np.exp(-x / .45)
     out += blast / (np.abs(blast).max() + 1e-9) * 1.1
-    rng = np.random.default_rng(15)
-    times = np.sort(.12 + rng.gamma(1.6, .35, 140))
-    times = times[times < 2.6]
-    gains = [rng.uniform(.15, 1) * np.exp(-(a - .12) / .9) for a in times]
-    out += clicks(d, times, gains, 16, 900, 5200, .01) * 1.1
     rumble = low(brown(len(x), 17), 160, 3) * np.exp(-x / 1.4)
     out += rumble / (np.abs(rumble).max() + 1e-9) * .8
     return finish(out, 'meteor_impact', .3)
