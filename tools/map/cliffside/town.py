@@ -5,20 +5,22 @@
   cube-crowned trees on moss and grass, their trunks about nine blocks apart under crowns seven to nine wide that start
   four blocks up, so the groves look dense and dark from above and stay open to walk and fight in
 - forests: the north-west and south forests get the same trees in their gaps
+- a new tree stands seven blocks or more from a road (as roads.py leaves them), a house and the rock wall, so its crown
+  never hangs over the asphalt, into a house or into the wall
 - pavement: the town's lawns become grey pavement (polished andesite, as its sidewalks); a tree keeps a bed of grass
 - battle field: one plain light grey floor (smooth stone) inside its dark frame: no red border, stripes or emblem
 - the cave is clad in the rim's brown rock
 - Anubis quest (reference: blue): the kiosk south of the spawn turns sandstone, lapis and gold beside a black
   jackal-headed statue
-- skin remover (reference: grey): the little shop at the west road's end gets grey stripes, a washing cauldron,
-  a grindstone and two mannequins, one dressed and one not
+- skin remover (reference: grey): the little shop where the west road meets the middle road (roads.py bends the road
+  round it) gets grey stripes, a washing cauldron, a grindstone and two mannequins, one dressed and one not
 - bushes: square dark bushes at the battle field's corners, as on the reference
 """
 import random
 import numpy as np
 from scipy import ndimage
 from zones import PARK_W, GARDEN_S, RUINS, ARENA, short
-import cliffs
+import cliffs, roads
 
 DARK = 'minecraft:spruce_leaves[persistent=true]'
 MID = 'minecraft:azalea_leaves[persistent=true]'
@@ -26,10 +28,11 @@ PAVE = 'minecraft:polished_andesite'
 LOG = 'minecraft:dark_oak_log[axis=y]'
 PLANT = ('fern', 'grass', 'daisy', 'orchid', 'valley', 'cornflower', 'flower', 'tulip', 'poppy', 'dandelion', 'allium',
          'bluet', 'petals', 'bush', 'sapling', 'lilac', 'peony', 'rose')
+CROWN = 7                                    # a cube tree's crown reaches six blocks from its trunk
 CAVE = (-2, 24, 132, 164)                    # the forest's cave: a stone hill with a way in
 ANUBIS = (40, -6)                            # the statue's centre, east of the kiosk (reference: blue box)
 KIOSK = (23, 35, -11, -2)
-SKIN = (-130, -123, -30, -16)                # the little shop at the west road's end (reference: grey box)
+SKIN = (-130, -123, -30, -16)                # the little shop by the west road's bend (reference: grey box)
 
 
 def noise(x, y, z, k=1):
@@ -45,6 +48,11 @@ def is_plant(state):
 
 def rework(p, Z, forest, stats):
     rng = random.Random(4242)
+    # new trees keep their crowns off the roads (as they will be, roads.py), the houses and the rock wall
+    paved = Z.road.copy()
+    for x, z in roads.cells():
+        if Z.at(Z.land, x, z): paved[Z.idx(x, z)] = True
+    Z.roomy = ndimage.distance_transform_edt(~(paved | Z.cliff | Z.houses_mask)) >= CROWN
     stats['recoloured'] = recolour(p, forest)
     stats['grove_trees'] = grove(p, Z, PARK_W, rng) + grove(p, Z, GARDEN_S, rng)
     stats['forest_trees'] = infill(p, Z, forest, rng)
@@ -112,6 +120,7 @@ def grove(p, Z, rect, rng):
     for fx, fz in pts:
         x, z = int(fx), int(fz)
         if any((x + dx, 81, z + dz) in p.protect for dx in range(-2, 3) for dz in range(-2, 3)): continue
+        if not Z.at(Z.roomy, x, z): continue
         cube_tree(p, x, z, rng); n += 1
     return n
 
@@ -132,7 +141,7 @@ def infill(p, Z, forest, rng):
     n = 0
     for fx, fz in pts:
         x, z = int(fx), int(fz)
-        if not Z.at(ok, x, z): continue
+        if not Z.at(ok, x, z) or not Z.at(Z.roomy, x, z): continue
         if any((x + dx, 81, z + dz) in p.protect for dx in range(-2, 3) for dz in range(-2, 3)): continue
         if short(p.name(x, 80, z)) == 'dirt_path': continue
         cube_tree(p, x, z, rng); n += 1
@@ -284,6 +293,6 @@ def bushes(p, Z, rng):
             p.put(xx, yy, zz, MID if yy == 81 + h - 1 and noise(xx, yy, zz) < 0.45 else DARK)
         n += 1
         return True
-    for x, z in ((0, -78), (67, -78), (1, -20), (65, -20)):
+    for x, z in ((0, -78), (62, -78), (1, -20), (65, -20)):     # (the north-east one clear of the east road)
         bush(x, z)
     return n

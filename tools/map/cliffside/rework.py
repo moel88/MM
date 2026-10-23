@@ -12,12 +12,13 @@ from scipy import ndimage
 from world import World, read_patch
 from plan import Plan
 from zones import Zones
-import cliffs, town
+import cliffs, town, roads
 
 ROOT = HERE.parents[2]
 PATCHES = ROOT / 'src/main/resources/data/celestialfall/map'
 # the mod's own fixes to this map run whenever it loads (map/FloorRepair, map/VenueRenovation): keep clear of them
-VENUES = [(-15, 3, -128, -89), (-58, -41, 33, 58)]
+# (the cafe's renovation also moves the eave at x=-58, its back: the wall fills only the air under it, see cliffs.BURIED)
+VENUES = [(-15, 3, -128, -89), (-57, -41, 33, 58)]
 SPAWN = (33, 81, -19)
 MERCHANTS = [(-6.5, -118.5), (55.5, -124.5)]
 TELEPORTS = [(33, 81, -48), (38, 81, 45), (60, 81, 112)]
@@ -71,15 +72,18 @@ def trees(w, y0=81, y1=112):
 
 
 def clear_belt_trees(p, Z, forest):
-    """Trees standing on the belt go (a crown shared with a town tree is split by the nearest trunk)."""
+    """Trees standing on the belt go, and trees the wall would cut through (a crown over a column of the wall); a crown
+    shared by several trunks is split by the nearest trunk, and only the doomed trunks' parts go."""
     gone = 0
     for t in forest:
         if t['trunks']:
-            on_belt = [Z.at(Z.band, x, z) for x, z in t['trunks']]
-            if not any(on_belt): continue
-            for x, y, z in t['voxels']:
-                d = [(tx - x) ** 2 + (tz - z) ** 2 for tx, tz in t['trunks']]
-                if on_belt[int(np.argmin(d))]:
+            near = [int(np.argmin([(tx - x) ** 2 + (tz - z) ** 2 for tx, tz in t['trunks']])) for x, y, z in t['voxels']]
+            doomed = [Z.at(Z.band, x, z) for x, z in t['trunks']]
+            for (x, y, z), k in zip(t['voxels'], near):
+                if Z.at(Z.cliff, x, z): doomed[k] = True
+            if not any(doomed): continue
+            for (x, y, z), k in zip(t['voxels'], near):
+                if doomed[k]:
                     p.put(x, y, z, 'air'); gone += 1
         else:
             xs = [v[0] for v in t['voxels']]; zs = [v[2] for v in t['voxels']]
@@ -99,6 +103,7 @@ def build(w, stats=None):
     stats['belt_trees_cells'] = clear_belt_trees(p, Z, forest)
     cliffs.rim(p, Z)
     town.rework(p, Z, forest, stats)
+    roads.mend(p, Z, stats)
     return p
 
 
