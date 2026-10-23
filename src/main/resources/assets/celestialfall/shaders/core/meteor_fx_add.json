@@ -6,7 +6,11 @@
     "UV0",
     "Color"
   ],
-  "samplers": [],
+  "samplers": [
+    {
+      "name": "Sampler0"
+    }
+  ],
   "uniforms": [
     {
       "name": "ModelViewMat",
@@ -79,6 +83,31 @@
       "count": 1,
       "values": [
         0
+      ]
+    },
+    {
+      "name": "ScreenSize",
+      "type": "float",
+      "count": 2,
+      "values": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Soft",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0.0
+      ]
+    },
+    {
+      "name": "Ambient",
+      "type": "float",
+      "count": 1,
+      "values": [
+        1.0
       ]
     }
   ],

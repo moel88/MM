@@ -42,6 +42,16 @@ public final class MeteorManager {
             if(b.readableBytes()!=4)return;int target=b.readInt();
             server.execute(()->mine(p,target));
         });
+        // whoever comes in while one is falling (or has only just landed) sees the rest of it, once their client has
+        // said it takes the fall's packet (it says so just after joining)
+        S2CPlayChannelEvents.REGISTER.register((h,sender,server,channels)->{
+            if(!channels.contains(FALL))return;
+            server.execute(()->{
+                var w=h.player.getServerWorld();if(!enabled(w))return;
+                long now=w.getTime();
+                for(var m:MeteorState.get(w).all())if(now-m.start()<MeteorRules.FALL_TICKS+60)send(h.player,m);
+            });
+        });
         ServerPlayConnectionEvents.DISCONNECT.register((h,s)->LAST_HIT.remove(h.player.getUuid()));
         ServerLifecycleEvents.SERVER_STOPPED.register(s->LAST_HIT.clear());
     }
@@ -160,7 +170,8 @@ public final class MeteorManager {
     public static void mine(ServerPlayerEntity p,int target){
         var w=p.getServerWorld();if(!enabled(w)||!p.isAlive()||p.isSpectator()||p.hasVehicle())return;
         long now=w.getTime();
-        Long last=LAST_HIT.get(p.getUuid());if(last!=null&&now-last<MeteorRules.HIT_GAP&&now>=last)return;
+        // the client strikes once every HIT_GAP ticks; two of its blows can reach the server a little closer together
+        Long last=LAST_HIT.get(p.getUuid());if(last!=null&&now-last<MeteorRules.HIT_GAP-2&&now>=last)return;
         if(!(w.getEntityById(target) instanceof MeteorEntity rock)||!rock.isAlive())return;
         var state=MeteorState.get(w);var m=state.slot(rock.slot());
         if(m==null||m.cycle()!=rock.cycle()||!m.landed(now)||m.fragments()<=0)return;

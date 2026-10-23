@@ -108,7 +108,8 @@ public final class MeteorClient {
         if(mc.currentScreen!=null||CommerceClient.nearest()!=null||FieldLootClient.preferred()!=null)return;
         var rock=near(mc,MeteorRules.REACH+1);if(rock==null)return;
         boolean pick=pickaxe(mc);
-        int x=draw.getScaledWindowWidth()/2,y=draw.getScaledWindowHeight()-92,w=118;
+        // a little higher than the merchants' prompt: every fragment brings a message to the action bar under it
+        int x=draw.getScaledWindowWidth()/2,y=draw.getScaledWindowHeight()-106,w=118;
         draw.fill(x-w,y-9,x+w,y+26,0xdb10253d);draw.fill(x-w,y-9,x-w+2,y+26,0xffffa04a);
         String line=pick?"[ 좌클릭 ]  운석 캐기  ·  조각 "+rock.fragments()+"개 남음":"운석 곡괭이를 들면 캘 수 있어요";
         draw.drawCenteredTextWithShadow(mc.textRenderer,Text.literal(line),x,y-1,0xfffff3e4);

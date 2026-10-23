@@ -76,15 +76,17 @@ def rock():
     img[..., 3] = 255
     rgba(img).save(TEX / 'entity/meteor/rock.png')
     glow = np.zeros((n, n, 4))
-    line = np.where(edge < .9, 255, np.where(edge < 1.9, 80, 0))
+    # each crack with a soft light round it, falling off into the plates
+    line = np.where(edge < .9, 255, np.where(edge < 1.9, 110, np.where(edge < 3.0, 34, 0)))
     # embers here and there inside the cells
     line = np.maximum(line, np.where((rng.random((n, n)) < .012) & (edge > 4), 150, 0))
     glow[..., :3] = line[..., None]
     glow[..., 3] = 255
     rgba(glow).save(TEX / 'entity/meteor/rock_glow.png')
-    # the seams between the rock's plates are lit through this: mottled, never even
+    # the seams between the rock's plates (and the whole surface while it is fresh) are lit through this: broad soft
+    # swells of light, never even, and never a pixel-by-pixel speckle (that read as a checkerboard close by)
     seam = np.zeros((n, n, 4))
-    m = 120 + 135 * tileable_noise(n, 1.0, 16)
+    m = 150 + 105 * tileable_noise(n, 2.4, 16)
     seam[..., :3] = m[..., None]
     seam[..., 3] = 255
     rgba(seam).save(TEX / 'entity/meteor/rock_seam.png')

@@ -56,15 +56,16 @@ public final class MeteorRenderer extends EntityRenderer<MeteorEntity> {
         var e=ms.peek();Matrix4f pos=e.getPositionMatrix();Matrix3f nrm=e.getNormalMatrix();
         int overlay=OverlayTexture.DEFAULT_UV;
         MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEntitySolid(ROCK)),pos,nrm,mesh.rock,1,1,1,1,false,light,overlay);
-        double h=heat(age);float[] c=ember(h);
-        // the seams between its plates, brightest; the fine cracks; and while it is fresh the whole surface aglow
-        float s=(float)(h*1.15);
+        double h=heat(age);float[] c=ember(h*.94);
+        // the seams between its plates, brightest; the fine cracks; and while it is fresh the whole surface aglow, a
+        // crust darkening over it within a few seconds of landing
+        float s=(float)(.2+.85*h);
         MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEyes(SEAM)),pos,nrm,mesh.rock,c[0]*s,c[1]*s,c[2]*s,1,true,light,overlay);
-        float[] cc=ember(h*.9);float k=(float)(h*.8);
+        float[] cc=ember(h*.86);float k=(float)(h*.75);
         MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEyes(ROCK_GLOW)),pos,nrm,mesh.rock,cc[0]*k,cc[1]*k,cc[2]*k,1,false,light,overlay);
-        double surface=age<0?1:Math.exp(-age/50);
+        double surface=age<0?1:Math.exp(-age/30);
         if(surface>.01){
-            float[] sc=ember(.55+.45*surface);float g=(float)(surface*.8);
+            float[] sc=ember(.42+.5*surface);float g=(float)(surface*.75);
             MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEyes(SEAM)),pos,nrm,mesh.rock,sc[0]*g,sc[1]*g,sc[2]*g,1,false,light,overlay);
         }
         drawClusters(ms,consumers,mesh,fragments,age,light,1,sinceHit);

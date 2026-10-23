@@ -11,6 +11,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.ShaderProgram;
+import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.render.*;
 import net.minecraft.client.sound.MovingSoundInstance;
 import net.minecraft.client.sound.PositionedSoundInstance;
@@ -20,6 +21,8 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.*;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 import java.util.*;
 
 /**
@@ -128,6 +131,25 @@ public final class MeteorFx {
 
     // ---------------------------------------------------------------- drawing
 
+    private static SimpleFramebuffer depthCopy;
+    /**
+     * Copies the depth of the scene drawn so far and binds it as Sampler0, so the puffs and light melt where they meet
+     * the ground or the rock instead of being cut off along it. Returns 1 when it did, 0 when the frame is drawn
+     * somewhere other than the game's own framebuffer (a shader pack's): then nothing melts and the effects are drawn as
+     * they would be without it.
+     */
+    private static float captureDepth(){
+        var main=MinecraftClient.getInstance().getFramebuffer();
+        if(GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING)!=main.fbo)return 0;
+        int w=main.textureWidth,h=main.textureHeight;
+        if(depthCopy==null)depthCopy=new SimpleFramebuffer(w,h,true,MinecraftClient.IS_SYSTEM_MAC);
+        else if(depthCopy.textureWidth!=w||depthCopy.textureHeight!=h)depthCopy.resize(w,h,MinecraftClient.IS_SYSTEM_MAC);
+        depthCopy.copyDepthFrom(main);
+        main.beginWrite(true);
+        RenderSystem.setShaderTexture(0,depthCopy.getDepthAttachment());
+        return 1;
+    }
+
     /** Draws it all after the world (the rocks in the air and the pieces through the game's entity layers first). */
     static void render(WorldRenderContext c){
         var mc=MinecraftClient.getInstance();if(mc.world==null)return;
@@ -139,6 +161,8 @@ public final class MeteorFx {
         Vec3d cam=c.camera().getPos();
         var ms=c.matrixStack();ms.push();ms.translate(-cam.x,-cam.y,-cam.z);
         var f=new Frame(cam,(float)now,mc.gameRenderer.getViewDistance());
+        // the daylight on the smoke and dust (the sky's brightness runs from .2 at night to 1 at noon)
+        f.ambient=(float)(.3+.7*Math.max(0,Math.min(1,(mc.world.getSkyBrightness(delta)-.2)/.8)));
         var consumers=mc.getBufferBuilders().getEntityVertexConsumers();
         try{
             for(var fall:FALLS)fall.collect(f,now,ms,consumers,mc);
@@ -313,7 +337,7 @@ public final class MeteorFx {
                 double ang=rnd(seed,i,52)*Math.PI*2,out=.3+.3*rnd(seed,i,53);
                 Vec3d v=new Vec3d(Math.cos(ang)*out,.25+.4*rnd(seed,i,54),Math.sin(ang)*out);
                 Vec3d p=drag(to.add(0,.8,0),v,a,.14).add(0,.06*a,0);
-                f.fire(p,1.3+1.8*(1-Math.exp(-a/6)),(float)(1.15*Math.exp(-a/7)),(float)(.25+.5*rnd(seed,i,55)),(float)(smooth(0,1,a)*(1-smooth(life*.25,life*.75,a))),seed+i*11);
+                f.fire(p,1.3+1.8*(1-Math.exp(-a/6)),(float)(1.05*Math.exp(-a/6)),(float)(.25+.5*rnd(seed,i,55)),(float)(smooth(0,1,a)*(1-smooth(life*.25,life*.75,a))),seed+i*11);
             }
             // the dark column rising out of the hole
             for(int i=0;i<22;i++){
@@ -506,7 +530,7 @@ public final class MeteorFx {
         final Vec3d cam;final float age;final double horizon;
         final List<float[]> cells=new ArrayList<>(),rings=new ArrayList<>(),glows=new ArrayList<>(),pools=new ArrayList<>(),marks=new ArrayList<>(),sparks=new ArrayList<>(),glints=new ArrayList<>(),axials=new ArrayList<>(),trails=new ArrayList<>();
         final List<Object[]> blocks=new ArrayList<>();
-        float flash;
+        float flash,soft,ambient=1;
         Frame(Vec3d cam,float age,double horizon){this.cam=cam;this.age=age;this.horizon=Math.max(64,horizon);}
         /** Things on the ground far beyond the land that is drawn fade out (they would hang over nothing). */
         float groundFade(Vec3d p){return (float)(1-smooth(horizon*.85,horizon*1.05,Math.hypot(p.x-cam.x,p.z-cam.z)));}
@@ -536,6 +560,7 @@ public final class MeteorFx {
                 }
                 consumers.draw();
             }
+            soft=captureDepth();
             RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();
             Vec3d look=new Vec3d(camera.getHorizontalPlane().x(),camera.getHorizontalPlane().y(),camera.getHorizontalPlane().z());
             Vec3d upv=new Vec3d(camera.getVerticalPlane().x(),camera.getVerticalPlane().y(),camera.getVerticalPlane().z());
@@ -564,6 +589,8 @@ public final class MeteorFx {
         }
         private BufferBuilder begin(ShaderProgram shader,int mode){
             RenderSystem.setShader(()->shader);shader.getUniform("Age").set(age%100000f);shader.getUniform("Mode").set(mode);
+            var melt=shader.getUniform("Soft");if(melt!=null)melt.set(soft);
+            var day=shader.getUniform("Ambient");if(day!=null)day.set(ambient);
             // the program sets its blending only when it differs from the last one bound: set it here as well
             RenderSystem.enableBlend();
             if(shader==glow)RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
