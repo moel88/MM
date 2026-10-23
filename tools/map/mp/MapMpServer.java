@@ -24,7 +24,7 @@ import java.nio.file.*;
 public final class MapMpServer implements ModInitializer {
     static final Path OUT=Path.of(System.getProperty("botand.mapmp.out","mapmp"));
     private final StringBuilder log=new StringBuilder();
-    private int ticks,launched=-1;
+    private int ticks,launched=-1;private boolean finished;
     private final Set<String> ready=new HashSet<>();
     private MeteorState.Meteor meteor;
     private static final String[] ROLES={"seller","buyer","crafter"};
@@ -53,6 +53,8 @@ public final class MapMpServer implements ModInitializer {
         ticks++;
         if(ticks==1)started(server);
         meteor(server);
+        // checked every tick: 700 ticks after the launch is seldom on one of the 200-tick reports below
+        if(!finished&&ticks>=2400&&(launched<0&&ready.size()<2||launched>=0&&ticks-launched>=700)){finished=true;note("done");}
         if(ticks%200!=0||ticks>2400&&!(launched>=0&&ticks-launched<=700))return;
         var w=server.getOverworld();
         StringBuilder s=new StringBuilder("tick "+ticks+":");
@@ -63,7 +65,6 @@ public final class MapMpServer implements ModInitializer {
         for(var p:server.getPlayerManager().getPlayerList())s.append(" player[").append(p.getName().getString()).append(" ").append(fmt(p.getPos()))
             .append(" map=").append(MapGate.enabled(p.getWorld())).append(" hp=").append(Math.round(p.getMaxHealth())).append(" mode=").append(p.interactionManager.getGameMode().getName()).append("]");
         note(s.toString());
-        if(ticks>=2400&&(launched<0&&ready.size()<2||launched>=0&&ticks-launched>=700))note("done");
     }
     /** The meteor check (see the class notes). */
     private void meteor(MinecraftServer server){
