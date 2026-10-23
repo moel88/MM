@@ -227,7 +227,7 @@ public final class SkillShots implements ClientModInitializer {
     private void logMeteors()throws Exception{
         var rocks=new StringBuilder();
         for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m)
-            rocks.append(String.format(Locale.ROOT," #%d(%.0f,%.0f,%.0f) fragments %d blows %d",m.slot(),m.getX(),m.getY(),m.getZ(),m.fragments(),m.hits()));
+            rocks.append(String.format(Locale.ROOT," #%d(%.0f,%.0f,%.0f) crystals %d blows %d",m.slot(),m.getX(),m.getY(),m.getZ(),m.fragments(),m.hits()));
         if(!rocks.toString().equals(rocksLogged)){log.append("  rocks").append(rocks.length()==0?" none":rocks).append(" at ").append(age).append('\n');rocksLogged=rocks.toString();}
         var f=net.minecraft.client.gui.hud.InGameHud.class.getDeclaredField("overlayMessage");f.setAccessible(true);
         var t=(net.minecraft.text.Text)f.get(mc.inGameHud);String overlay=t==null?"":t.getString();

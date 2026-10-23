@@ -111,9 +111,10 @@ public final class MeteorClient {
         // a little higher than the merchants' prompt: every fragment brings a message to the action bar under it
         int x=draw.getScaledWindowWidth()/2,y=draw.getScaledWindowHeight()-106,w=118;
         draw.fill(x-w,y-9,x+w,y+26,0xdb10253d);draw.fill(x-w,y-9,x-w+2,y+26,0xffffa04a);
-        String line=pick?"[ 좌클릭 ]  운석 캐기  ·  조각 "+rock.fragments()+"개 남음":"운석 곡괭이를 들면 캘 수 있어요";
+        // no count of what is left (2.49.1): the rock may shatter after any crystal but the last
+        String line=pick?"[ 좌클릭 ]  운석 캐기":"운석 곡괭이를 들면 캘 수 있어요";
         draw.drawCenteredTextWithShadow(mc.textRenderer,Text.literal(line),x,y-1,0xfffff3e4);
-        // the blows into the next fragment
+        // the blows into the next crystal
         int segments=MeteorRules.HITS_PER_FRAGMENT,gap=3,width=(w*2-20-gap*(segments-1))/segments;
         for(int i=0;i<segments;i++){int sx=x-w+10+i*(width+gap);draw.fill(sx,y+16,sx+width,y+20,i<rock.hits()?0xffffb24d:0xff34384a);}
     }

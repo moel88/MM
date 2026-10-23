@@ -28,8 +28,9 @@ import static net.minecraft.server.command.CommandManager.literal;
  * another meteor) and a way in from the sky that no building or wall stands in, and tells every player in the world
  * of the fall: each client draws it coming in on its own clock (the streak is seen from far beyond the range the
  * rock itself is shown at). When it lands, its rock is put on the ground wherever its chunk is loaded; a hit with the
- * meteor pickaxe chips it, every fifth hit gives the miner a fragment, and the third fragment leaves nothing. Five
- * minutes after landing whatever is left crumbles away.
+ * meteor pickaxe chips it, every fifth hit breaks a crystal off and gives the miner a fragment, and after the first and
+ * the second the rock may shatter there and then ({@link MeteorRules#holds}); the third leaves nothing. Five minutes
+ * after landing whatever is left crumbles away.
  */
 public final class MeteorManager {
     public static final Identifier FALL=CelestialFall.id("meteor_fall_v1"),MINE=CelestialFall.id("meteor_mine_v1");
@@ -186,14 +187,16 @@ public final class MeteorManager {
         if(after.brokeFrom(before)){
             p.getInventory().offerOrDrop(new ItemStack(MeteorRegistry.FRAGMENT));
             p.currentScreenHandler.sendContentUpdates();
-            w.sendEntityStatus(rock,after.depleted()?MeteorEntity.MINED:MeteorEntity.BREAK);
-            w.playSound(null,rock.getX(),rock.getY()+.8,rock.getZ(),after.depleted()?MeteorRegistry.CRUMBLE_SOUND:MeteorRegistry.BREAK_SOUND,SoundCategory.BLOCKS,1f,.9f+w.random.nextFloat()*.2f);
-            p.sendMessage(Text.literal(after.depleted()?"운석 조각 +1 · 운석을 다 캤어요":"운석 조각 +1 · 남은 조각 "+after.fragments()+"개"),true);
+            // after the first and the second crystal the rock may shatter, and what is left in it is lost
+            boolean holds=MeteorRules.holds(after,w.random.nextInt(100));
+            w.sendEntityStatus(rock,holds?MeteorEntity.BREAK:MeteorEntity.MINED);
+            w.playSound(null,rock.getX(),rock.getY()+.8,rock.getZ(),holds?MeteorRegistry.BREAK_SOUND:MeteorRegistry.CRUMBLE_SOUND,SoundCategory.BLOCKS,1f,.9f+w.random.nextFloat()*.2f);
+            p.sendMessage(Text.literal(holds?"운석 조각 +1":after.depleted()?"운석 조각 +1 · 운석을 다 캤어요":"운석 조각 +1 · 운석이 부서졌어요"),true);
+            if(!holds){state.clear(m.slot());rock.discard();return;}
         }else{
             w.sendEntityStatus(rock,MeteorEntity.HIT);
             w.playSound(null,rock.getX(),rock.getY()+.8,rock.getZ(),MeteorRegistry.HIT_SOUND,SoundCategory.BLOCKS,.9f,.85f+w.random.nextFloat()*.3f);
         }
-        if(after.depleted()){state.clear(m.slot());rock.discard();return;}
         var mined=m.with(after);state.put(mined);rock.configure(mined);
     }
     /** A meteor goes: its place empties and its rock, if it is out, shows how it went (mined out or crumbled) and leaves. */
@@ -219,7 +222,7 @@ public final class MeteorManager {
             }))
             .then(literal("list").executes(c->{
                 var w=c.getSource().getWorld();long now=w.getTime();var all=MeteorState.get(w).all();
-                for(var m:all)c.getSource().sendFeedback(()->Text.literal(String.format(Locale.ROOT,"#%d (%d, %d, %d) %s · 조각 %d · %d초 남음",m.slot(),Math.round(m.x()),Math.round(m.y()),Math.round(m.z()),
+                for(var m:all)c.getSource().sendFeedback(()->Text.literal(String.format(Locale.ROOT,"#%d (%d, %d, %d) %s · 결정 %d개 · %d초 남음",m.slot(),Math.round(m.x()),Math.round(m.y()),Math.round(m.z()),
                     m.landed(now)?"떨어짐":"떨어지는 중",m.fragments(),Math.max(0,(m.expiry()-now)/20))),false);
                 c.getSource().sendFeedback(()->Text.literal("운석 "+all.size()+"/"+MeteorRules.SLOTS+"개"),false);return all.size();
             }));

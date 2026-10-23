@@ -82,7 +82,7 @@ public final class MapMpClient implements ClientModInitializer {
     private void meteor()throws Exception{
         if(mc.currentScreen!=null)mc.setScreen(null);
         if(!wrapped){wrapped=true;var mine=dev.sangwoo.celestialfall.meteor.MeteorEntity.EVENTS;
-            dev.sangwoo.celestialfall.meteor.MeteorEntity.EVENTS=(e,st)->{note("rock status "+switch(st){case 70->"blow";case 71->"fragment off";case 72->"mined out";default->"crumbled";}+" (fragments "+e.fragments()+" blows "+e.hits()+") at "+age);mine.accept(e,st);};}
+            dev.sangwoo.celestialfall.meteor.MeteorEntity.EVENTS=(e,st)->{note("rock status "+switch(st){case 70->"blow";case 71->"fragment off";case 72->"fragment off, rock gone (mined out or shattered)";default->"crumbled";}+" (crystals "+e.fragments()+" blows "+e.hits()+") at "+age);mine.accept(e,st);};}
         var f=Class.forName("dev.sangwoo.celestialfall.client.meteor.MeteorFx").getDeclaredField("FALLS");f.setAccessible(true);
         int falls=((List<?>)f.get(null)).size();
         if(falls!=fallsSeen){note("falls this client draws: "+falls+" at "+age);fallsSeen=falls;}

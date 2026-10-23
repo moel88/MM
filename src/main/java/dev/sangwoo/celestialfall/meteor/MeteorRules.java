@@ -4,8 +4,11 @@ package dev.sangwoo.celestialfall.meteor;
  * Meteors (2.49.0, user request): up to ten lie on the map at once. Every minute each empty one of the ten places rolls
  * 5% for a meteor to fall ("빈 자리 10개를 각각 굴리되 5% 낮추기"), so about one falls every two minutes while the map is
  * empty of them and two or so lie about on average. One lies five minutes after it lands and then crumbles. Its
- * pickaxe takes three fragments out of it, five hits each; three fragments and a stick make a stand arrow at the
- * crafter. Pure rules (no game state), so they are testable.
+ * pickaxe breaks its three crystals off one after another, five hits each, and every crystal broken off is a fragment;
+ * but after the first and after the second the rock may shatter there and then, one time in two, and whatever is left
+ * in it is lost (2.49.1, user request: "첫번째때 캐고 바로 부서지면 1개밖에 못 얻는거고 안 부서지면 2개 얻을 수 있고 또
+ * 안 부서지면 3개"). So a meteor gives one fragment one time in two, two one time in four and three one time in four.
+ * Three fragments and a stick make a stand arrow at the crafter. Pure rules (no game state), so they are testable.
  */
 public final class MeteorRules {
     public static final int SLOTS=10,ROLL_TICKS=1200,CHANCE=5,LIFE_TICKS=6000,FALL_TICKS=72,FRAGMENTS=3,HITS_PER_FRAGMENT=5;
@@ -22,7 +25,10 @@ public final class MeteorRules {
     /** Whether an empty place gets a meteor this minute, from a draw in 0..99. */
     public static boolean falls(int roll){range(roll,100);return roll<CHANCE;}
 
-    /** What is left of a rock: whole fragments still in it and hits into the next. */
+    /** The chance (percent) that the rock holds together after its first and after its second crystal breaks off. */
+    public static final int[] HOLD={50,50};
+
+    /** What is left of a rock: crystals still in it and hits into the next. */
     public record Rock(int fragments,int hits){
         public Rock{if(fragments<0||fragments>FRAGMENTS||hits<0||hits>=HITS_PER_FRAGMENT)throw new IllegalArgumentException("rock out of range");}
         public static Rock whole(){return new Rock(FRAGMENTS,0);}
@@ -32,10 +38,22 @@ public final class MeteorRules {
             if(depleted())throw new IllegalStateException("nothing left to mine");
             return hits+1>=HITS_PER_FRAGMENT?new Rock(fragments-1,0):new Rock(fragments,hits+1);
         }
-        /** Whether this hit (from {@code before}) broke a fragment off. */
+        /** Whether this hit (from {@code before}) broke a crystal off. */
         public boolean brokeFrom(Rock before){return fragments<before.fragments;}
+        /** Which crystal broke off to leave this rock: 1 for the first, up to {@link MeteorRules#FRAGMENTS} for the last. */
+        public int crystalsOff(){return FRAGMENTS-fragments;}
         /** Share of the whole rock mined so far, 0..1. */
         public double mined(){return ((FRAGMENTS-fragments)*HITS_PER_FRAGMENT+hits)/(double)(FRAGMENTS*HITS_PER_FRAGMENT);}
+    }
+
+    /**
+     * Whether the rock holds together after the crystal that broke off to leave {@code after}, from a draw in 0..99;
+     * otherwise it shatters at once. A rock with no crystal left is mined out and never holds.
+     */
+    public static boolean holds(Rock after,int roll){
+        range(roll,100);int crystal=after.crystalsOff();
+        if(crystal<1)throw new IllegalArgumentException("no crystal has broken off");
+        return !after.depleted()&&roll<HOLD[crystal-1];
     }
 
     /** When it lands, and when it crumbles away (world ticks), for a fall that starts at {@code start}. */

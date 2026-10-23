@@ -1,5 +1,6 @@
-"""Synthesises the meteors' sounds (2.49.0): the rush of one coming in, its landing, a pickaxe hit on it, a fragment
-breaking off, the rock crumbling, and a stand arrow made at the crafter.
+"""Synthesises the meteors' sounds (2.49.0): its landing, a pickaxe hit on it, a fragment breaking off, the rock
+crumbling, and a stand arrow made at the crafter. A meteor comes in silently: its burning roar and the hiss of fire
+after the landing were taken out at the user's request (2.49.1, "불타는 소리는 빼자").
 
 usage: python3 -I tools/meteor/make_sounds.py [OUT_DIR]
 
@@ -20,7 +21,7 @@ SR = 48000
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'src/main/resources/assets/celestialfall/sounds')
 
-LOUDNESS = {'meteor_fall': -15.0, 'meteor_impact': -12.5, 'meteor_hit': -17.0, 'meteor_break': -15.5,
+LOUDNESS = {'meteor_impact': -12.5, 'meteor_hit': -17.0, 'meteor_break': -15.5,
             'meteor_crumble': -17.0, 'meteor_craft': -18.0}
 CEILING_DB = -1.0
 
@@ -133,37 +134,9 @@ def finish(x, name, fade_out=.05):
     return x
 
 
-def fall():
-    """3.6 s of a meteor coming in, loudest at the end (the landing takes over there): a roar opening up as it nears,
-    a crackle of burning growing denser, a whoosh sweeping down and a rumble under it all."""
-    d = 3.75
-    x = t(d)
-    k = np.clip(x / 3.6, 0, 1)
-    near = (0.08 + 0.92 * k ** 2.2)
-    roar = swept_low(brown(len(x), 1) * .6 + noise(len(x), 2) * .25, 380, 2600, 1.6)
-    flutter = 1 + .35 * low(noise(len(x), 3), 14) / .05
-    roar *= near * np.clip(flutter, .4, 1.8)
-    rng = np.random.default_rng(4)
-    times, at = [], 0.05
-    while at < 3.6:
-        times.append(at)
-        at += rng.exponential(1 / (8 + 70 * (at / 3.6) ** 2))
-    crackle = clicks(d, times, [rng.uniform(.2, 1) * (.2 + .8 * (a / 3.6) ** 1.5) for a in times], 5, 2000, 9000, .003)
-    whoosh = np.zeros_like(x)
-    src = noise(len(x), 6)
-    for i in range(0, len(x), 1024):
-        c = 1900 * (650 / 1900) ** (i / len(x))
-        whoosh[i:i + 1024] = band(src[max(0, i - 2048):i + 1024], c * .8, c * 1.25)[-len(src[i:i + 1024]):]
-    whoosh *= near * .5
-    rumble = low(brown(len(x), 7), 90, 3) * (0.1 + 0.9 * k ** 3) * 1.4
-    out = roar * .9 + crackle * .5 + whoosh + rumble
-    out[x > 3.6] *= np.exp(-(x[x > 3.6] - 3.6) / .03)
-    return finish(out, 'meteor_fall', .02)
-
-
 def impact():
     """The landing: a hard crack, a deep boom falling in pitch, the blast's roar, stones raining down and rattling for
-    two seconds, a long rumble and the hiss of the fire."""
+    two seconds and a long rumble (no hiss of fire after it: 2.49.1)."""
     d = 4.2
     x = t(d)
     out = np.zeros_like(x)
@@ -183,8 +156,6 @@ def impact():
     out += clicks(d, times, gains, 16, 900, 5200, .01) * 1.1
     rumble = low(brown(len(x), 17), 160, 3) * np.exp(-x / 1.4)
     out += rumble / (np.abs(rumble).max() + 1e-9) * .8
-    hiss = high(noise(len(x), 18), 3500) * (1 - np.exp(-x / .2)) * np.exp(-x / 1.6) * .12
-    out += hiss
     return finish(out, 'meteor_impact', .3)
 
 
@@ -249,7 +220,7 @@ def craft():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    made = {'meteor_fall': fall(), 'meteor_impact': impact(), 'meteor_hit': hit(), 'meteor_break': brk(),
+    made = {'meteor_impact': impact(), 'meteor_hit': hit(), 'meteor_break': brk(),
             'meteor_crumble': crumble(), 'meteor_craft': craft()}
     with tempfile.TemporaryDirectory() as tmp:
         for name, x in made.items():

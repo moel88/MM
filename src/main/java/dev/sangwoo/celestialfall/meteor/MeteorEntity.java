@@ -18,7 +18,10 @@ import java.util.function.BiConsumer;
  * {@link MeteorManager} whenever its chunk is loaded. Solid like a boat, never pushed or hurt.
  */
 public final class MeteorEntity extends Entity {
-    /** Statuses the server sends for the client's effects: a hit, a fragment breaking off, mined out, crumbled with age. */
+    /**
+     * Statuses the server sends for the client's effects: a hit, a crystal (a fragment) breaking off, a crystal breaking
+     * off as the rock goes (mined out, or shattered with crystals still in it), crumbled with age.
+     */
     public static final byte HIT=70,BREAK=71,MINED=72,EXPIRED=73;
     /** The client's effects for those statuses (set by the client; nothing on a dedicated server). */
     public static BiConsumer<MeteorEntity,Byte> EVENTS=(e,s)->{};

@@ -13,7 +13,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.render.*;
-import net.minecraft.client.sound.MovingSoundInstance;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.client.util.math.MatrixStack;
@@ -69,15 +68,13 @@ public final class MeteorFx {
         if(FALLS.stream().anyMatch(f->f.slot==slot&&f.cycle==cycle))return;
         var f=new Fall(slot,cycle,seed,from,to,ticks,MeteorClient.clock(0)-age);
         FALLS.add(f);
-        var mc=MinecraftClient.getInstance();
-        if(age<ticks-6)mc.getSoundManager().play(new FallSound(f));
     }
     /** Whether the rock of this meteor is still in the air on this client (its rock on the ground waits for it). */
     static boolean falling(int slot,long cycle,float delta){
         for(var f:FALLS)if(f.slot==slot&&f.cycle==cycle)return f.t(delta)<f.ticks;
         return false;
     }
-    /** A status the server sent for a rock: a hit, a fragment off, mined out or crumbled. */
+    /** A status the server sent for a rock: a hit, a fragment off, the rock going with one (mined out or shattered) or crumbled. */
     static void event(MeteorEntity rock,byte status){
         double now=MeteorClient.clock(0);
         var mesh=MeteorMesh.of(rock.seed());
@@ -88,7 +85,8 @@ public final class MeteorFx {
         else if(status==MeteorEntity.BREAK){JOLTS.put(rock.getId(),now);BURSTS.add(new Burst(at,cluster,rock.seed()*31+rock.fragments()*13,now,true));}
         else{
             if(status==MeteorEntity.MINED)BURSTS.add(new Burst(at,cluster,rock.seed()*29+5,now,true));
-            ENDINGS.add(new Ending(at,rock.seed(),landedAt(rock,0),now,status==MeteorEntity.MINED,status==MeteorEntity.MINED?0:rock.fragments()));
+            // a rock that shatters early still holds the crystals before the one that came off
+            ENDINGS.add(new Ending(at,rock.seed(),landedAt(rock,0),now,status==MeteorEntity.MINED,status==MeteorEntity.MINED?before-1:rock.fragments()));
         }
     }
     static void tick(MinecraftClient mc){
@@ -460,7 +458,22 @@ public final class MeteorFx {
                 MeteorRenderer.drawPiece(ms,consumers,piece.tris(),age+a,light);
                 ms.pop();
             }
-            if(fragments>0&&a<12){
+            if(fragments>0&&mined){
+                // shattered early: the crystals still in it fly apart with its pieces and crumble away, lost
+                for(int k=0;k<Math.min(fragments,mesh.clusters.length);k++){
+                    var cl=mesh.clusters[k];double scale=1-smooth(3,16,a);if(scale<=0)continue;
+                    double len=Math.max(.05,Math.hypot(cl.x(),cl.z()));
+                    double up=.14*a-.5*.03*a*a;
+                    Vec3d off=new Vec3d(cl.x()/len,0,cl.z()/len).multiply(.08*a/(1+a*.03)).add(0,Math.max(-.4,up),0);
+                    ms.push();ms.translate(at.x+off.x,at.y+off.y,at.z+off.z);
+                    ms.translate(cl.x(),cl.y(),cl.z());
+                    ms.multiply(new Quaternionf().rotateAxis((float)((rnd(seed,k,61)-.5)*.3*a),(float)-cl.z(),0,(float)cl.x()));
+                    ms.scale((float)scale,(float)scale,(float)scale);
+                    ms.translate(-cl.x(),-cl.y(),-cl.z());
+                    MeteorRenderer.drawCluster(ms,consumers,mesh,k,age,light,(float)scale);
+                    ms.pop();
+                }
+            }else if(fragments>0&&a<12){
                 // the crystals still in it crack off with it
                 ms.push();ms.translate(at.x,at.y-a*.03,at.z);
                 MeteorRenderer.drawClusters(ms,consumers,mesh,fragments,age,light,(float)(1-a/12));
@@ -668,21 +681,6 @@ public final class MeteorFx {
                     v(b,m,p1.x+a1.x,p1.y+a1.y,p1.z+a1.z,(float)k1,1,code,t[10],0,t[11]);v(b,m,p1.x-a1.x,p1.y-a1.y,p1.z-a1.z,(float)k1,0,code,t[10],0,t[11]);
                 }
             }
-        }
-    }
-
-    /** The roar of a fall, following the rock down (stopped as it lands; the landing has its own sound). */
-    private static final class FallSound extends MovingSoundInstance {
-        private final Fall fall;
-        FallSound(Fall fall){
-            super(MeteorRegistry.FALL_SOUND,SoundCategory.BLOCKS,SoundInstance.createRandom());
-            this.fall=fall;volume=1f;pitch=.94f+(float)rnd(fall.seed,0,99)*.12f;repeat=false;attenuationType=AttenuationType.LINEAR;
-            place();
-        }
-        private void place(){double t=fall.t(0);Vec3d p=fall.at(fall.travelled(Math.min(t,fall.ticks)));x=p.x;y=p.y;z=p.z;}
-        @Override public void tick(){
-            if(!FALLS.contains(fall)||fall.t(0)>=fall.ticks+1){setDone();return;}
-            place();
         }
     }
 }

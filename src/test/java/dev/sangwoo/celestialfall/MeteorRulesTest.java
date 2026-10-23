@@ -16,14 +16,38 @@ class MeteorRulesTest {
         var m=new MeteorState.Meteor(3,7,1,2,3,4,5,6,1000,42,3,0);
         assertFalse(m.landed(1071));assertTrue(m.landed(1072));assertFalse(m.expired(7071));assertTrue(m.expired(7072));
     }
-    @Test void threeFragmentsOfFiveBlowsEach(){
-        var rock=MeteorRules.Rock.whole();int blows=0,fragments=0;
-        while(!rock.depleted()){var next=rock.hit();blows++;if(next.brokeFrom(rock))fragments++;rock=next;}
-        assertEquals(15,blows);assertEquals(3,fragments);assertEquals(1.0,rock.mined(),1e-9);
+    @Test void threeCrystalsOfFiveBlowsEach(){
+        var rock=MeteorRules.Rock.whole();int blows=0,crystals=0;
+        while(!rock.depleted()){var next=rock.hit();blows++;if(next.brokeFrom(rock)){crystals++;assertEquals(crystals,next.crystalsOff());}rock=next;}
+        assertEquals(15,blows);assertEquals(3,crystals);assertEquals(1.0,rock.mined(),1e-9);
         assertThrows(IllegalStateException.class,rock::hit);
         var r=MeteorRules.Rock.whole();for(int i=0;i<4;i++){var n=r.hit();assertFalse(n.brokeFrom(r));r=n;}
         assertEquals(4,r.hits());var off=r.hit();assertTrue(off.brokeFrom(r));assertEquals(2,off.fragments());assertEquals(0,off.hits());
         assertThrows(IllegalArgumentException.class,()->new MeteorRules.Rock(4,0));assertThrows(IllegalArgumentException.class,()->new MeteorRules.Rock(2,5));
+    }
+    @Test void everyCrystalIsAFragmentButTheRockMayShatterAfterTheFirstAndTheSecond(){
+        // 2.49.1: after the first and after the second crystal the rock holds one time in two, else it shatters at once
+        int[] held=new int[2];
+        for(int crystal=1;crystal<=2;crystal++){
+            var after=new MeteorRules.Rock(MeteorRules.FRAGMENTS-crystal,0);
+            for(int roll=0;roll<100;roll++)if(MeteorRules.holds(after,roll))held[crystal-1]++;
+        }
+        assertArrayEquals(new int[]{50,50},held);
+        for(int roll=0;roll<100;roll++)assertFalse(MeteorRules.holds(new MeteorRules.Rock(0,0),roll));
+        assertThrows(IllegalArgumentException.class,()->MeteorRules.holds(MeteorRules.Rock.whole(),0));
+        assertThrows(IllegalArgumentException.class,()->MeteorRules.holds(new MeteorRules.Rock(2,0),100));
+        // mined to the end over every pair of draws: one fragment half the time, two a quarter, three a quarter
+        int[] outcomes=new int[MeteorRules.FRAGMENTS+1];
+        for(int a=0;a<100;a++)for(int b=0;b<100;b++){
+            int[] draws={a,b};int next=0,fragments=0;var rock=MeteorRules.Rock.whole();
+            while(true){
+                var after=rock.hit();
+                if(after.brokeFrom(rock)){fragments++;if(after.depleted()||!MeteorRules.holds(after,draws[next++]))break;}
+                rock=after;
+            }
+            outcomes[fragments]++;
+        }
+        assertArrayEquals(new int[]{0,5000,2500,2500},outcomes);
     }
     @Test void theFallComesDownAtItsAngleFromItsSide(){
         double[] s=MeteorRules.start(10,80,20,0,45);

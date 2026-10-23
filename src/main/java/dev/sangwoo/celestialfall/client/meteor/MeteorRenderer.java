@@ -74,7 +74,6 @@ public final class MeteorRenderer extends EntityRenderer<MeteorEntity> {
     static void drawClusters(MatrixStack ms,VertexConsumerProvider consumers,MeteorMesh mesh,int count,double age,int light,float alpha){drawClusters(ms,consumers,mesh,count,age,light,alpha,1e9);}
     /** The gold crystals still in it (the one being mined, the last, shudders when struck), with their soft inner glow. */
     static void drawClusters(MatrixStack ms,VertexConsumerProvider consumers,MeteorMesh mesh,int count,double age,int light,float alpha,double sinceHit){
-        int overlay=OverlayTexture.DEFAULT_UV;
         for(int k=0;k<Math.min(count,mesh.clusters.length);k++){
             var cl=mesh.clusters[k];
             ms.push();
@@ -82,12 +81,16 @@ public final class MeteorRenderer extends EntityRenderer<MeteorEntity> {
                 float bump=(float)(1+.12*Math.exp(-sinceHit/2.5)*Math.cos(sinceHit*2.2));
                 ms.translate(cl.x(),cl.y(),cl.z());ms.scale(bump,bump,bump);ms.translate(-cl.x(),-cl.y(),-cl.z());
             }
-            var e=ms.peek();
-            MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEntitySolid(NODULE)),e.getPositionMatrix(),e.getNormalMatrix(),cl.tris(),alpha,alpha,alpha,1,false,light,overlay);
-            float pulse=(float)((.34+.14*Math.sin(age*.07+k*2.1))*alpha);
-            MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEyes(NODULE_GLOW)),e.getPositionMatrix(),e.getNormalMatrix(),cl.tris(),pulse,pulse*.74f,pulse*.3f,1,false,light,overlay);
+            drawCluster(ms,consumers,mesh,k,age,light,alpha);
             ms.pop();
         }
+    }
+    /** One gold crystal ({@code k}), with its soft inner glow. */
+    static void drawCluster(MatrixStack ms,VertexConsumerProvider consumers,MeteorMesh mesh,int k,double age,int light,float alpha){
+        var cl=mesh.clusters[k];var e=ms.peek();int overlay=OverlayTexture.DEFAULT_UV;
+        MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEntitySolid(NODULE)),e.getPositionMatrix(),e.getNormalMatrix(),cl.tris(),alpha,alpha,alpha,1,false,light,overlay);
+        float pulse=(float)((.34+.14*Math.sin(age*.07+k*2.1))*alpha);
+        MeteorMesh.emit(consumers.getBuffer(RenderLayer.getEyes(NODULE_GLOW)),e.getPositionMatrix(),e.getNormalMatrix(),cl.tris(),pulse,pulse*.74f,pulse*.3f,1,false,light,overlay);
     }
     /** One of the pieces it breaks into, drawn from inside too (its broken faces open), still glowing as hot as it was. */
     static void drawPiece(MatrixStack ms,VertexConsumerProvider consumers,float[] tris,double age,int light){
