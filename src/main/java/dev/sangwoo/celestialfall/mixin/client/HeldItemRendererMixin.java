@@ -14,6 +14,13 @@ public abstract class HeldItemRendererMixin {
 
     @Inject(method="renderItem(FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;Lnet/minecraft/client/network/ClientPlayerEntity;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$hands(float delta,MatrixStack matrices,VertexConsumerProvider.Immediate vertices,ClientPlayerEntity player,int light,CallbackInfo ci) {
+        if(dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(player)){
+            // the meteor pickaxe: in both hands, or as the game holds it while the hold cannot show (a stand user too)
+            if(!dev.sangwoo.celestialfall.client.meteor.MiningPose.active(player,delta))return;
+            dev.sangwoo.celestialfall.client.meteor.MiningPose.renderFirstPerson(player,delta,matrices,vertices,light);
+            vertices.draw();
+            ci.cancel();return;
+        }
         if(dev.sangwoo.celestialfall.client.StandClient.visible(player)){
             float swing=player.getHandSwingProgress(delta);
             var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());

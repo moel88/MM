@@ -13,6 +13,12 @@ import org.spongepowered.asm.mixin.injection.*;
 public abstract class StandHeldItemFeatureMixin {
     @Inject(method="renderItem",at=@At(value="INVOKE",target="Lnet/minecraft/client/render/item/HeldItemRenderer;renderItem(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/item/ItemStack;Lnet/minecraft/client/render/model/json/ModelTransformationMode;ZLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"))
     private void botand$thrustGrip(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
+        if(entity instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&arm==holder.getMainArm()&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder)){
+            // the meteor pickaxe (any player): onto the handle both hands hold, or as the game holds it in one
+            float delta=net.minecraft.client.MinecraftClient.getInstance().getTickDelta();
+            if(dev.sangwoo.celestialfall.client.meteor.MiningPose.active(holder,delta))dev.sangwoo.celestialfall.client.meteor.MiningPose.applyGrip(matrices,holder,delta);
+            return;
+        }
         if(!(entity instanceof PlayerEntity player)||!StandClient.visible(player)||arm!=player.getMainArm())return;
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=dev.sangwoo.celestialfall.client.AtomicClient.poseCast(player.getUuid());
@@ -28,6 +34,8 @@ public abstract class StandHeldItemFeatureMixin {
     @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",
         at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;getMainHandStack()Lnet/minecraft/item/ItemStack;"))
     private ItemStack botand$standSword(LivingEntity entity){
-        return entity instanceof PlayerEntity player&&StandClient.visible(player)?StandClient.sword():entity.getMainHandStack();
+        // a stand user holding the meteor pickaxe holds the pickaxe, not the sword
+        return entity instanceof PlayerEntity player&&StandClient.visible(player)
+            &&!(player instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder))?StandClient.sword():entity.getMainHandStack();
     }
 }

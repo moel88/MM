@@ -13,7 +13,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.*;
 import net.minecraft.world.Heightmap;
@@ -167,7 +166,10 @@ public final class MeteorManager {
         return true;
     }
 
-    /** A hit on a rock from a player's attack (the client sends it when its attack lands on one with the pickaxe). */
+    /**
+     * A hit on a rock with the pickaxe: the client sends it as its swing (the two-handed chop every client sees, from the
+     * swing it sent) lands on the rock.
+     */
     public static void mine(ServerPlayerEntity p,int target){
         var w=p.getServerWorld();if(!enabled(w)||!p.isAlive()||p.isSpectator()||p.hasVehicle())return;
         long now=w.getTime();
@@ -182,8 +184,6 @@ public final class MeteorManager {
         }
         LAST_HIT.put(p.getUuid(),now);
         var before=m.rock();var after=before.hit();
-        // the miner swings on their own client at once; everyone else sees it from here
-        p.swingHand(Hand.MAIN_HAND,false);
         if(after.brokeFrom(before)){
             p.getInventory().offerOrDrop(new ItemStack(MeteorRegistry.FRAGMENT));
             p.currentScreenHandler.sendContentUpdates();

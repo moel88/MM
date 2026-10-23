@@ -22,12 +22,14 @@ import net.minecraft.util.math.Vec3d;
 
 /**
  * The meteors on the client (2.49.0): their falls as the server announces them, their rocks, the effects, mining with
- * the pickaxe (a left click strikes the rock aimed at; holding the button keeps striking, one blow every
- * {@link MeteorRules#HIT_GAP} ticks; the pickaxe never breaks the map's blocks and never throws the stand's attack), the
- * prompt by a rock and a short notice of where one is falling.
+ * the pickaxe (a left click swings at the rock aimed at, and the blow goes to the server as the pickaxe lands, 2.49.1;
+ * holding the button keeps striking, one blow every {@link MeteorRules#HIT_GAP} ticks; the pickaxe never breaks the
+ * map's blocks and never throws the stand's attack), the prompt by a rock and a short notice of where one is falling.
  */
 public final class MeteorClient {
     private static long ticks,lastBlow=-100,lastHint=-100;
+    /** The rock the last swing went for, sent to the server as the pickaxe comes down ({@link MiningPose#STRIKE_TICKS}). */
+    private static int blowRock=-1;private static long blowAt;
     private static Vec3d noticeAt;private static long noticeTick=-1000;
     private static final long NOTICE_TICKS=110;
     private MeteorClient(){}
@@ -47,8 +49,8 @@ public final class MeteorClient {
                 noticeAt=to;noticeTick=ticks;
             });
         });
-        ClientTickEvents.END_CLIENT_TICK.register(mc->{if(!mc.isPaused())ticks++;MeteorFx.tick(mc);MeteorFx.sounds();});
-        ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->{MeteorFx.clear();noticeAt=null;});
+        ClientTickEvents.END_CLIENT_TICK.register(mc->{if(!mc.isPaused())ticks++;strike(mc);MeteorFx.tick(mc);MeteorFx.sounds();});
+        ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->{MeteorFx.clear();noticeAt=null;blowRock=-1;});
         WorldRenderEvents.LAST.register(MeteorFx::render);
         HudRenderCallback.EVENT.register(MeteorClient::hud);
     }
@@ -78,9 +80,18 @@ public final class MeteorClient {
     }
     private static void blow(MinecraftClient mc){
         if(ticks-lastBlow<MeteorRules.HIT_GAP)return;
+        // the swing (every client sees it) is the two-handed chop; the blow reaches the rock as the pickaxe lands on it
         lastBlow=ticks;mc.player.swingHand(Hand.MAIN_HAND);
         var rock=aimed(mc);
-        if(rock!=null&&ClientPlayNetworking.canSend(MeteorManager.MINE)){var b=PacketByteBufs.create();b.writeInt(rock.getId());ClientPlayNetworking.send(MeteorManager.MINE,b);}
+        blowRock=rock==null?-1:rock.getId();blowAt=ticks+MiningPose.STRIKE_TICKS;
+    }
+    /** Sends the swing's blow when the pickaxe comes down, if the player still holds it and the rock is still there. */
+    private static void strike(MinecraftClient mc){
+        if(blowRock<0||ticks<blowAt)return;
+        int id=blowRock;blowRock=-1;
+        if(mc.world==null||!pickaxe(mc)||!ClientPlayNetworking.canSend(MeteorManager.MINE))return;
+        if(!(mc.world.getEntityById(id) instanceof MeteorEntity rock)||!rock.isAlive())return;
+        var b=PacketByteBufs.create();b.writeInt(id);ClientPlayNetworking.send(MeteorManager.MINE,b);
     }
     /** The rock under the crosshair, or the nearest one along the player's look, within reach. */
     static MeteorEntity aimed(MinecraftClient mc){

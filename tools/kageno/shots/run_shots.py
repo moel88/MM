@@ -33,12 +33,12 @@ if not cp_file.exists():
 cp = cp_file.read_text().strip()
 subprocess.run(['javac', '-proc:none', '-encoding', 'UTF-8', '-cp', cp, '-d', str(build / 'classes'),
                 str(HERE / 'SkillShots.java'), str(HERE / 'SkillShotsMixins.java'), str(HERE / 'SkillShotsCameraMixin.java'), str(HERE / 'SkillShotsObserverMixin.java'),
-                str(HERE / 'SkillShotsServerMixin.java')], check=True)
+                str(HERE / 'SkillShotsServerMixin.java'), str(HERE / 'SkillShotsMeteorMixin.java')], check=True)
 jar = build / 'shots.jar'
 with zipfile.ZipFile(jar, 'w') as z:
     z.writestr('fabric.mod.json', json.dumps({'schemaVersion': 1, 'id': 'botand_shots', 'version': '1.0.0', 'environment': 'client',
         'entrypoints': {'client': ['dev.sangwoo.botandshots.SkillShots']}, 'mixins': ['botand-shots.mixins.json']}))
-    z.writestr('botand-shots.mixins.json', json.dumps({'required': True, 'package': 'dev.sangwoo.botandshots.mixin', 'compatibilityLevel': 'JAVA_17', 'client': ['SkillShotsMixins', 'SkillShotsCameraMixin', 'SkillShotsObserverMixin'], 'mixins': ['SkillShotsServerMixin'], 'injectors': {'defaultRequire': 1}}))
+    z.writestr('botand-shots.mixins.json', json.dumps({'required': True, 'package': 'dev.sangwoo.botandshots.mixin', 'compatibilityLevel': 'JAVA_17', 'client': ['SkillShotsMixins', 'SkillShotsCameraMixin', 'SkillShotsObserverMixin'], 'mixins': ['SkillShotsServerMixin', 'SkillShotsMeteorMixin'], 'injectors': {'defaultRequire': 1}}))
     for p in (build / 'classes').rglob('*.class'):
         z.write(p, str(p.relative_to(build / 'classes')))
 shutil.rmtree(out, ignore_errors=True); out.mkdir(parents=True)

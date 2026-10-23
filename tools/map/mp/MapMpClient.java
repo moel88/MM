@@ -19,8 +19,9 @@ import java.util.*;
  * the game's HUD showing. Then the meteor check (2.49.0): it says "meteor-ready" in the chat, turns east to where the
  * server drops a meteor, logs the fall as this client draws it (from its own fall list), the rock it then sees (with its
  * fragments and blows as they change) and every status the rock sends (a blow, a fragment off, mined out); holding the
- * meteor pickaxe beside a rock it mines it as a player would (aiming at it and clicking every seven ticks). It saves a
- * frame just after the landing and one after the rock is gone; then leaves.
+ * meteor pickaxe beside a rock it mines it as a player would (aiming at it and clicking every seven ticks), and it logs
+ * every swing it sees another player make and whether it shows them holding the pickaxe in both hands (2.49.1). It saves
+ * a frame just after the landing and one after the rock is gone; then leaves.
  */
 public final class MapMpClient implements ClientModInitializer {
     static final String ROLE=System.getProperty("botand.mapmp.role");
@@ -31,6 +32,7 @@ public final class MapMpClient implements ClientModInitializer {
     private MinecraftClient mc;private int phase,age,view,settle,built=-1;
     private int fallsSeen=-1,rockAge=-1,goneAge=-1,lastSwing=-100;private String rockSeen="";private boolean wrapped,impactShot;
     private final StringBuilder log=new StringBuilder();
+    private final java.util.Map<java.util.UUID,Boolean> swinging=new java.util.HashMap<>(),twoHanded=new java.util.HashMap<>();
 
     @Override public void onInitializeClient(){
         if(ROLE==null)return;
@@ -91,6 +93,14 @@ public final class MapMpClient implements ClientModInitializer {
         for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m&&(rock==null||m.squaredDistanceTo(mc.player)<rock.squaredDistanceTo(mc.player)))rock=m;
         String seen=rock==null?"none":String.format("rock at %.1f,%.1f,%.1f fragments %d blows %d",rock.getX(),rock.getY(),rock.getZ(),rock.fragments(),rock.hits());
         if(!seen.equals(rockSeen)){note("sees "+seen+" at "+age);rockSeen=seen;}
+        // 2.49.1: the other players' swings as this client sees them, and whether it shows them in the two-handed hold
+        for(var other:mc.world.getPlayers()){
+            if(other==mc.player)continue;
+            boolean two=dev.sangwoo.celestialfall.client.meteor.MiningPose.active(other,0);
+            if(!Boolean.valueOf(two).equals(twoHanded.get(other.getUuid()))){twoHanded.put(other.getUuid(),two);note("sees "+other.getName().getString()+(two?" holding the pickaxe in both hands":" without the two-handed hold")+" at "+age);}
+            if(other.handSwinging&&!Boolean.TRUE.equals(swinging.get(other.getUuid())))note("sees "+other.getName().getString()+" swing at "+age);
+            swinging.put(other.getUuid(),other.handSwinging);
+        }
         if(rock!=null&&rockAge<0)rockAge=age;
         if(rock==null&&rockAge>=0&&goneAge<0)goneAge=age;
         // look east to where it comes down until it is there, then at the rock

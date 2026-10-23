@@ -85,7 +85,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * "CLEARMETEOR@n" crumbles every meteor, "GIVE_PICKAXE@n", "GIVE_FRAGMENTS@n" (three) and "GIVE_STICK@n" put things in
  * the inventory, "KEYDOWN_E@n" and "KEYUP_E@n" hold E (talking to a merchant takes a second), "MOVE_C1@n" glides the
  * pointer to the open screen's second button (C0 is its first) and "CLICK@n" clicks. "aimrock=1" keeps the player
- * looking at the nearest rock (mining with the pickaxe: a click strikes the rock aimed at), and "farfrom=A;farto=B"
+ * looking at the nearest rock (mining with the pickaxe: a click strikes the rock aimed at), "holds=1/0/..." scripts the
+ * meteors' shatter rolls in order (2.49.1: 1 holds together after a crystal, 0 shatters; real rolls after the script, so
+ * a film run and its sound run break the same way), and "farfrom=A;farto=B"
  * shows the fixed camera ("far=") only from shot tick A to B (the game's own camera before and after). The log gets each rock's
  * fragments and blows as they change, the action bar's messages, the screens and chat, and what the inventory holds.
  * -Dbotand.shots.audio=true (run_shots.py with SHOTS_RECORD=1) plays a marker tone before each entry and logs every
@@ -124,6 +126,9 @@ public final class SkillShots implements ClientModInitializer {
     private final List<Actor> actors=new ArrayList<>();
     private static final Map<String,Integer> ACTOR_IDS=new ConcurrentHashMap<>();private static final Map<String,Actor> ACTORS=new ConcurrentHashMap<>();
     private static volatile String[] track;private static volatile boolean shake;private final StringBuilder shakeLog=new StringBuilder();
+    /** "holds=1/0/..." (2.49.1): the entry's meteor shatter rolls in order, 1 holds together and 0 shatters (SkillShotsMeteorMixin). */
+    private static final Deque<Boolean> HOLDS=new ConcurrentLinkedDeque<>();
+    public static Boolean nextHold(){return HOLDS.poll();}
     private volatile boolean filming;private volatile long serverStart=-1;private volatile net.minecraft.util.math.Vec3d spot=net.minecraft.util.math.Vec3d.ZERO;
     private final Set<String> moving=new HashSet<>();private final StringBuilder actorLog=new StringBuilder();
     private final StringBuilder motionLog=new StringBuilder(),soundLog=new StringBuilder();private final Set<UUID> sounded=new HashSet<>();
@@ -509,6 +514,7 @@ public final class SkillShots implements ClientModInitializer {
                     orbit=null;if(opts.containsKey("orbit")){String[] v=opts.get("orbit").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());orbit=f;}
                     actors.clear();if(opts.containsKey("act"))for(String spec:opts.get("act").split("\\+")){String[] v=spec.split(":");actors.add(new Actor(v[0],Double.parseDouble(v[1]),Float.parseFloat(v[2]),Double.parseDouble(v[3]),v[4]));}
                     track=opts.containsKey("track")?opts.get("track").split(":"):null;shake=opts.containsKey("shake")&&!"0".equals(opts.get("shake"));
+                    HOLDS.clear();if(opts.containsKey("holds"))for(String v:opts.get("holds").split("/"))HOLDS.add(!"0".equals(v.trim()));
                     mc.options.hudHidden=!opts.containsKey("hud")||"0".equals(opts.get("hud"));
                     server(this::reset);
                     // and none of the last entry's falls, smoke or debris on this client
