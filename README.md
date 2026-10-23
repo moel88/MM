@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.48.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Botand-Azure-Cliffside-1.20.1-v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md))입니다. 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.48.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 맵 v1.5 — Expanse: 벽만 남기고 1000×1000으로 (모드는 2.48.0 그대로)
+
+"이제 벽 빼고 모든 구조물을 날리고 맵 크기를 5배 정도 확장하자 그리고 벽 색깔도 갈색 말고 돌 같은걸로 바꿔주고"라는 말씀대로 새 맵을 만들었습니다.
+- **1000×1000:** 원래 섬의 해안선을 2.5배로 키운 섬(약 834×949칸, 넓이 6.25배)이 1000×1000 맵에 들어 있습니다.
+- **벽 말고는 아무것도 없음:** 건물·길·나무·가로등·공원·전투장이 모두 없고, 벽 안쪽은 y=80의 평평한 풀밭(461,701칸)입니다.
+- **회색 자연석 벽:** Cliffside의 얇은 벽(약 10칸 두께, 풀밭에서 32~46칸 높이, 뒤는 바다로 내려가는 바위 비탈)이 섬 둘레 전체를 두릅니다. 돌·안산암·조약돌·응회암·이끼 낀 조약돌로 쌓았습니다.
+- **모드:** 맵 정의 파일로 알아봅니다. 스폰은 풀밭 한가운데, 상인 둘은 스폰 바로 북쪽, 필드 보급 31곳은 풀밭 위 110칸 간격입니다. 원래 맵 v1.3·Cliffside v1.4 월드는 덮어쓰지 않았습니다.
+
+[MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md)를 확인하세요.
 
 # 보탠드 맵 v1.4 — Cliffside: 로블록스 보탠드 지도처럼 (모드는 2.48.0 그대로)
 

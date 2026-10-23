@@ -141,6 +141,10 @@ public final class MapShots implements ClientModInitializer {
         built=count;
         int need=frame==0?Integer.getInteger("botand.map.settle",120):2;
         if(age<(frame==0?100:0)||!complete){settle=0;return;}
+        // the search that picks which built sections to draw stops at sections not built when it runs, and with the
+        // camera still it need not run again, so far sections could stay missing (holes in a wall 300 blocks off):
+        // while the first frame settles it is run afresh every 40 frames, and anything it adds starts the wait again
+        if(frame==0&&settle%40==0)mc.worldRenderer.scheduleTerrainUpdate();
         if(++settle<need)return;
         var image=ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());
         Path p=frames==1?OUT.resolve(name+".png"):OUT.resolve(name).resolve(String.format("%05d.png",frame));
