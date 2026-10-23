@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.48.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.49.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.49.0 — 운석 · 운석 곡괭이 · 제작소 · 스탠드 화살
+
+말씀하신 시스템을 만들었습니다.
+- **운석:** 보탠드 맵 곳곳에 떨어집니다. 동시에 최대 10개, 1분마다 빈 자리 10개를 각각 5%로 굴리고(고르신 대로), 떨어진 뒤 5분이 지나면 무너져 사라집니다. 하늘 150블록 위에서 3.6초 동안 불꽃과 연기 꼬리를 끌며 떨어지고, 착지하면 번쩍임·충격파 먼지 고리·튀는 흙과 돌·연기 기둥·화면 흔들림·늦게 들리는 쾅 소리가 납니다. 바위는 운석마다 모양이 다른 깎인 바위에 빛나는 이음매와 금빛 결정 3개가 박힌 모델이고, 땅에서 1~2분에 걸쳐 식습니다.
+- **운석 곡괭이:** 아이템 판매 · 로카가 5,000원에 팝니다. 들고 운석을 좌클릭하면 캡니다(5번에 조각 1개, 한 운석에 3개). 맵 블록은 캐지 못하고, 든 동안은 스탠드 평타가 나가지 않습니다.
+- **제작소 · 장인 (새 NPC):** 운석 조각 3개 + 막대기 1개로 스탠드 화살을 만들어 줍니다.
+- **박스·보물상자:** 막대기 박스 20%·보물상자 50%, 스탠드 화살 보물상자 5%·박스 0.1%. 스탠드 화살은 아직 쓰임이 없습니다.
+
+[METEOR_KO.md](METEOR_KO.md)를 확인하세요.
 
 # 보탠드 맵 v1.5 — Expanse: 벽만 남기고 1000×1000으로 (모드는 2.48.0 그대로)
 

@@ -18,7 +18,8 @@ public final class LootWorld {
     }
     public static LootState.Slot next(ServerWorld w,long cycle){
         boolean chest=LootRules.treasure(w.random.nextInt(100));
-        return new LootState.Slot(chest,LootRules.drops(chest,w.random.nextInt(100),w.random.nextInt(100)),cycle,-1,-1);
+        int drops=LootRules.drops(chest,w.random.nextInt(100),w.random.nextInt(100))|LootRules.extras(chest,w.random.nextInt(1000),w.random.nextInt(100));
+        return new LootState.Slot(chest,drops,cycle,-1,-1);
     }
     public static void tick(ServerWorld w){
         if(!enabled(w))return;

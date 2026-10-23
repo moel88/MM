@@ -599,5 +599,59 @@
         "preload": true
       }
     ]
+  },
+  "meteor_fall": {
+    "subtitle": "subtitles.celestialfall.meteor_fall",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_fall",
+        "attenuation_distance": 240
+      }
+    ]
+  },
+  "meteor_impact": {
+    "subtitle": "subtitles.celestialfall.meteor_impact",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_impact",
+        "attenuation_distance": 320
+      }
+    ]
+  },
+  "meteor_hit": {
+    "subtitle": "subtitles.celestialfall.meteor_hit",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_hit",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "meteor_break": {
+    "subtitle": "subtitles.celestialfall.meteor_break",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_break",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "meteor_crumble": {
+    "subtitle": "subtitles.celestialfall.meteor_crumble",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_crumble",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "meteor_craft": {
+    "subtitle": "subtitles.celestialfall.meteor_craft",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_craft",
+        "attenuation_distance": 16
+      }
+    ]
   }
 }

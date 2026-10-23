@@ -23,7 +23,8 @@ public final class LootState extends PersistentState {
         for(int i=0;i<list.size();i++){
             var n=list.getCompound(i);int id=n.getInt("Id");if(!LootPositions.valid(id))continue;
             boolean chest=n.getBoolean("Treasure");long opened=n.contains("Opened")?n.getLong("Opened"):-1;
-            state.slots.put(id,new Slot(chest,chest?LootRules.FRUIT:n.getInt("Drops")&3,Math.max(0,n.getLong("Cycle")),n.getLong("Respawn"),opened));
+            int drops=n.getInt("Drops"),extras=drops&(LootRules.ARROW|LootRules.STICK);
+            state.slots.put(id,new Slot(chest,(chest?LootRules.FRUIT:drops&(LootRules.FRUIT|LootRules.KEY))|extras,Math.max(0,n.getLong("Cycle")),n.getLong("Respawn"),opened));
         }return state;
     }
     @Override public NbtCompound writeNbt(NbtCompound tag){

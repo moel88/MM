@@ -186,5 +186,16 @@
   "block.celestialfall.wood_boards_dark": "검은 판자벽",
   "block.celestialfall.wood_boards": "갈색 판자벽",
   "block.celestialfall.timber_dark": "짙은 목재 기둥",
-  "block.celestialfall.pine_needles": "솔잎"
+  "block.celestialfall.pine_needles": "솔잎",
+  "item.celestialfall.stand_arrow": "스탠드 화살",
+  "item.celestialfall.meteor_fragment": "운석 조각",
+  "item.celestialfall.meteor_pickaxe": "운석 곡괭이",
+  "entity.celestialfall.item_crafter": "제작소 장인",
+  "entity.celestialfall.meteor": "운석",
+  "subtitles.celestialfall.meteor_fall": "운석이 떨어지는 소리",
+  "subtitles.celestialfall.meteor_impact": "운석이 떨어짐",
+  "subtitles.celestialfall.meteor_hit": "운석을 캠",
+  "subtitles.celestialfall.meteor_break": "운석 조각이 떨어져 나옴",
+  "subtitles.celestialfall.meteor_crumble": "운석이 부서짐",
+  "subtitles.celestialfall.meteor_craft": "스탠드 화살을 만듦"
 }

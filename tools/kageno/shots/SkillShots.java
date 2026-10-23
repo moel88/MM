@@ -76,6 +76,21 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * game's. The log gets every screen opened, the reset question, the player list sent away or back, deaths, respawns
  * and chat lines. -Dbotand.shots.lang=ko_kr switches the game's language first.
  *
+ * <p>"METEOR" and "SHOP" (2.49.0) film the meteors and the merchants on a real map: -Dbotand.shots.world=FOLDER opens
+ * that world from the saves (run_shots.py copies SHOTS_WORLD there) instead of making a flat one, and nothing is built
+ * into it. "at=x/y/z/yaw/pitch" puts the player there (world coordinates; the spawn if left out) and "time=T" sets the
+ * time of day. Their clock is the shot's own (client ticks from its start). Steps: "FALL@n" drops a meteor on
+ * "fall=x/z" (the ground there) coming in from "from=YAW" (the way a player would face to look back up its way),
+ * "FALLB@n" another on "fallb=x/z", "TP@n" moves the player to "tp=x/y/z/yaw/pitch" ("TPB@n" to "tpb=..."),
+ * "CLEARMETEOR@n" crumbles every meteor, "GIVE_PICKAXE@n", "GIVE_FRAGMENTS@n" (three) and "GIVE_STICK@n" put things in
+ * the inventory, "KEYDOWN_E@n" and "KEYUP_E@n" hold E (talking to a merchant takes a second), "MOVE_C1@n" glides the
+ * pointer to the open screen's second button (C0 is its first) and "CLICK@n" clicks. "aimrock=1" keeps the player
+ * looking at the nearest rock (mining with the pickaxe: a click strikes the rock aimed at), and "farfrom=A;farto=B"
+ * shows the fixed camera ("far=") only from shot tick A to B (the game's own camera before and after). The log gets each rock's
+ * fragments and blows as they change, the action bar's messages, the screens and chat, and what the inventory holds.
+ * -Dbotand.shots.audio=true (run_shots.py with SHOTS_RECORD=1) plays a marker tone before each entry and logs every
+ * sound the game starts and each tick's time to NAME/sounds.csv and NAME/ticks.csv, for tools/meteor/shots/mux.py.
+ *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
  * shot's own (seconds from the start).
@@ -85,6 +100,11 @@ public final class SkillShots implements ClientModInitializer {
     static final Path OUT=Path.of(System.getProperty("botand.shots.out","shots"));
     static final int SLOW=Integer.getInteger("botand.shots.slow",1);
     static final String LANG=System.getProperty("botand.shots.lang");
+    /** A world in the saves to open instead of a new flat one (the meteor and shop shots). */
+    static final String WORLD=System.getProperty("botand.shots.world");
+    static final boolean AUDIO=Boolean.getBoolean("botand.shots.audio");
+    private final StringBuilder soundRows=new StringBuilder(),tickRows=new StringBuilder();private long markerNanos=-1;
+    private String overlayLogged="",rocksLogged="",itemsLogged="";
     /** The UI shot's pointer: where it glides from and to (window pixels) and when, and when it last clicked (shot ticks). */
     private double[] glideFrom,glideTo;private double glideAt=-1e9,clickAt=-1e9;
     static final double GLIDE=9;
@@ -95,7 +115,7 @@ public final class SkillShots implements ClientModInitializer {
     private final Deque<String> queue=new ArrayDeque<>(Arrays.asList(System.getProperty("botand.shots.list","F,M1,E,R,T,RUSH,Y,Q,H,G").split(",")));
     private String current,folder;private Map<String,String> opts=new HashMap<>();private long castTick;private int dummyId=-1;private final StringBuilder log=new StringBuilder();
     private final Map<String,Integer> repeats=new HashMap<>();
-    private boolean slowed;
+    private boolean slowed,listening;
     private float camYaw=Float.parseFloat(System.getProperty("botand.shots.yaw","145")),camPitch=12,camDist=Float.parseFloat(System.getProperty("botand.shots.dist","6.5"));
     private net.minecraft.util.math.Vec3d castPos=net.minecraft.util.math.Vec3d.ZERO;private static volatile double[] far,orbit;private float castYaw;
     private record Actor(String name,double dist,float yaw,double speed,String start){
@@ -113,6 +133,8 @@ public final class SkillShots implements ClientModInitializer {
         var tracked=trackPose();if(tracked!=null)return tracked;
         var circling=orbitPose();if(circling!=null)return circling;
         double[] f=far;var self=instance;if(f==null||f.length<6||self==null||self.phase<3)return null;
+        // "farfrom=A;farto=B": the fixed camera only for those shot ticks (the game's camera before and after)
+        if(self.opts.containsKey("farfrom")&&(self.phase<4||self.age<self.opt("farfrom",0)||self.age>=self.opt("farto",1e9f)))return null;
         var o=self.castPos;var eye=o.add(f[0],f[1],f[2]);var d=o.add(f[3],f[4],f[5]).subtract(eye).normalize();
         return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-d.x,d.z)),(float)-Math.toDegrees(Math.asin(d.y)),0);
     }
@@ -166,7 +188,7 @@ public final class SkillShots implements ClientModInitializer {
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
     private float clock(){
         float delta=mc.getTickDelta();
-        if("UI".equals(current))return age+delta;
+        if("UI".equals(current)||mapShot())return age+delta;
         if("Q".equals(current)||"M1".equals(current)||"BASE".equals(current)||"HUD".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
         else if("GDUMMY".equals(current)){for(var c:AtomicClient.CASTS.values())return c.age(delta);}
@@ -174,11 +196,14 @@ public final class SkillShots implements ClientModInitializer {
         return (mc.world.getTime()-castTick)+delta;
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
-    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
+    private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
-        if("UI".equals(current))logInterface();
+        if("UI".equals(current)||mapShot())logInterface();
+        if(mapShot()&&mc.player!=null&&mc.world!=null)logMeteors();
+        if(AUDIO&&phase==4)tickRows.append(String.format(Locale.ROOT,"%.3f,%d%n",clock()-mc.getTickDelta(),System.nanoTime()));
         // the UI shot may leave the world ("나가기"): nothing below has a player then
         if(mc.player==null||mc.world==null)return;
         // every cast of the player's (with its combo hit) and every dash, as the client hears of them (the HUD shots' captions)
@@ -198,7 +223,35 @@ public final class SkillShots implements ClientModInitializer {
         }
     }
 
-    private boolean ui(){return "UI".equals(current)&&phase==4;}
+    /** The meteor and shop shots' log: each rock's fragments and blows, the action bar, what the inventory holds. */
+    private void logMeteors()throws Exception{
+        var rocks=new StringBuilder();
+        for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m)
+            rocks.append(String.format(Locale.ROOT," #%d(%.0f,%.0f,%.0f) fragments %d blows %d",m.slot(),m.getX(),m.getY(),m.getZ(),m.fragments(),m.hits()));
+        if(!rocks.toString().equals(rocksLogged)){log.append("  rocks").append(rocks.length()==0?" none":rocks).append(" at ").append(age).append('\n');rocksLogged=rocks.toString();}
+        var f=net.minecraft.client.gui.hud.InGameHud.class.getDeclaredField("overlayMessage");f.setAccessible(true);
+        var t=(net.minecraft.text.Text)f.get(mc.inGameHud);String overlay=t==null?"":t.getString();
+        if(!overlay.equals(overlayLogged)){if(!overlay.isEmpty())log.append("  action bar \"").append(overlay).append("\" at ").append(age).append('\n');overlayLogged=overlay;}
+        var inv=mc.player.getInventory();int pick=0,frag=0,arrow=0,stick=0,fruit=0;
+        for(int i=0;i<inv.size();i++){var st=inv.getStack(i);
+            if(st.isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.PICKAXE))pick+=st.getCount();if(st.isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.FRAGMENT))frag+=st.getCount();
+            if(st.isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))arrow+=st.getCount();if(st.isOf(net.minecraft.item.Items.STICK))stick+=st.getCount();
+            if(st.isOf(dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA))fruit+=st.getCount();}
+        String items=String.format(Locale.ROOT,"pickaxe %d, fragments %d, sticks %d, stand arrows %d, rokakaka %d, money %d",pick,frag,stick,arrow,fruit,ProgressClient.profile.money());
+        if(!items.equals(itemsLogged)){log.append("  holds ").append(items).append(" at ").append(age).append('\n');itemsLogged=items;}
+        if(opts.containsKey("aimrock"))aimRock();
+    }
+    /** Turns the player to the middle of the nearest rock (and tells the server), as a player aiming at it would. */
+    private void aimRock(){
+        dev.sangwoo.celestialfall.meteor.MeteorEntity best=null;double bestD=1e9;
+        for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m){double d=m.squaredDistanceTo(mc.player);if(d<bestD){bestD=d;best=m;}}
+        if(best==null)return;
+        var d=best.getPos().add(0,.55,0).subtract(mc.player.getEyePos());
+        float yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z)),pitch=(float)-Math.toDegrees(Math.atan2(d.y,d.horizontalLength()));
+        mc.player.setYaw(yaw);mc.player.setPitch(pitch);mc.player.setHeadYaw(yaw);mc.player.setBodyYaw(yaw);
+        mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(yaw,pitch,mc.player.isOnGround()));
+    }
+    private boolean ui(){return ("UI".equals(current)||mapShot())&&phase==4;}
     /** A UI step's target in GUI units (see the class notes). */
     private double[] target(String name){
         int w=mc.getWindow().getScaledWidth(),h=mc.getWindow().getScaledHeight();
@@ -209,6 +262,12 @@ public final class SkillShots implements ClientModInitializer {
             for(var c:s.children())if(c instanceof net.minecraft.client.gui.widget.ButtonWidget b&&(name.equals("RESPAWN")||b.getMessage().getString().equals(net.minecraft.screen.ScreenTexts.DONE.getString())))
                 return new double[]{b.getX()+b.getWidth()*.5,b.getY()+b.getHeight()*.55};
             throw new IllegalStateException("no button for "+name+" on "+s.getClass().getSimpleName());
+        }
+        if(name.matches("C[0-9]+")){
+            var sc=mc.currentScreen;if(sc==null)throw new IllegalStateException("no screen for "+name);
+            int want=Integer.parseInt(name.substring(1)),n=0;
+            for(var c:sc.children())if(c instanceof net.minecraft.client.gui.widget.ClickableWidget b&&n++==want)return new double[]{b.getX()+b.getWidth()*.5,b.getY()+b.getHeight()*.55};
+            throw new IllegalStateException("no widget "+name+" on "+sc.getClass().getSimpleName());
         }
         if(name.equals("OFF"))return new double[]{w*.2,h*.8};
         throw new IllegalArgumentException(name);
@@ -289,6 +348,15 @@ public final class SkillShots implements ClientModInitializer {
     }
     private void setup(ServerPlayerEntity p){
         var w=p.getServerWorld();MapGate.designate(w,true);
+        if(WORLD!=null){
+            // a real map: nothing is built into it; noon, clear, survival, money enough for the pickaxe
+            w.setTimeOfDay(6000);w.getGameRules().get(GameRules.DO_DAYLIGHT_CYCLE).set(false,w.getServer());w.getGameRules().get(GameRules.DO_MOB_SPAWNING).set(false,w.getServer());
+            w.setWeather(999999,0,false,false);p.getServer().setPvpEnabled(true);p.changeGameMode(GameMode.SURVIVAL);
+            ProgressManager.set(p,new ProgressProfile(1,0,0,"kageno",6000,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),true);
+            p.getInventory().clear();p.currentScreenHandler.syncState();dummyId=-1;
+            log.append("map ").append(WORLD).append(" spawn ").append(w.getSpawnPos().toShortString()).append('\n');
+            return;
+        }
         w.setTimeOfDay(6000);w.getGameRules().get(GameRules.DO_DAYLIGHT_CYCLE).set(false,w.getServer());w.getGameRules().get(GameRules.DO_MOB_SPAWNING).set(false,w.getServer());
         w.setWeather(999999,0,false,false);p.getServer().setPvpEnabled(true);p.changeGameMode(GameMode.SURVIVAL);
         int y=p.getBlockY()-1;
@@ -301,6 +369,21 @@ public final class SkillShots implements ClientModInitializer {
     }
     private void reset(ServerPlayerEntity p){
         KagenoManager.clear(p.getServer());AtomicManager.clear(p.getServer());
+        if(WORLD!=null){
+            var w=p.getServerWorld();
+            // each entry starts with no meteors: the last one's rocks go without a sound or a crumble
+            var meteors=dev.sangwoo.celestialfall.meteor.MeteorState.get(w);
+            for(var m:meteors.all()){meteors.clear(m.slot());var rock=w.getEntity(m.uuid());if(rock!=null)rock.discard();}
+            // and the map's own minute roll a full minute away (no meteor of its own drops into an entry)
+            meteors.nextRoll(w.getTime()+dev.sangwoo.celestialfall.meteor.MeteorRules.ROLL_TICKS);
+            if(opts.containsKey("time"))w.setTimeOfDay((long)opt("time",6000));
+            double[] at;var sp=w.getSpawnPos();
+            if(opts.containsKey("at")){String[] v=opts.get("at").split("[/,]");at=new double[5];for(int i=0;i<v.length;i++)at[i]=Double.parseDouble(v[i].trim());}
+            else at=new double[]{sp.getX()+.5,sp.getY(),sp.getZ()+.5,180,0};
+            p.networkHandler.requestTeleport(at[0],at[1],at[2],(float)at[3],(float)at[4]);p.setYaw((float)at[3]);p.setHeadYaw((float)at[3]);p.setBodyYaw((float)at[3]);p.setPitch((float)at[4]);
+            p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
+            return;
+        }
         NoCooldownState.get(p.getServer()).set(p.getUuid(),!opts.containsKey("cool"));
         p.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
         int y=p.getServerWorld().getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,0,0);
@@ -374,7 +457,12 @@ public final class SkillShots implements ClientModInitializer {
         }
         return prev;
     }
-    private void camera(){float d=opt("dist",camDist);BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;}
+    private void camera(){float d=opt("dist",camDist);BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;
+        // "aimrock=1": with a rock within reach the camera looks at it from over the player's shoulder (a click aims where the camera looks)
+        if(opts.containsKey("aimrock")&&phase==4&&mc.player!=null)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m&&m.squaredDistanceTo(mc.player)<49){
+            var v=m.getPos().add(0,.55,0).subtract(mc.player.getEyePos());
+            BotandCamera.STATE.yaw=(float)Math.toDegrees(Math.atan2(-v.x,v.z))+opt("rockyaw",0);BotandCamera.STATE.pitch=(float)-Math.toDegrees(Math.atan2(v.y,v.horizontalLength()))+opt("rockpitch",6);break;}
+    }
     private void face(ServerPlayerEntity p,float face){float y=facing(face);p.setYaw(y);p.setHeadYaw(y);p.setBodyYaw(y);p.networkHandler.requestTeleport(p.getX(),p.getY(),p.getZ(),y,0);}
 
     @Override public void onInitializeClient(){
@@ -387,6 +475,9 @@ public final class SkillShots implements ClientModInitializer {
             net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterRender(screen).register((s,d,x,y,delta)->pointer(d));
         });
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server->{try{actorTick(server);}catch(Throwable t){if(mc!=null)mc.execute(()->fail(t));}});
+        // every sound the game starts, with the shot's clock and the time (to lay the recording under the film)
+        if(AUDIO)ClientTickEvents.START_CLIENT_TICK.register(client->{if(client.getSoundManager()!=null&&!listening){listening=true;client.getSoundManager().registerListener((sound,set)->{
+            if(phase==4)soundRows.append(String.format(Locale.ROOT,"%.3f,%d,%s%n",clock(),System.nanoTime(),sound.getId()));});}});
     }
     private void tick()throws Exception{
         age++;if((System.nanoTime()-started)/1e9>1500*SLOW)throw new IllegalStateException("timeout");
@@ -396,15 +487,22 @@ public final class SkillShots implements ClientModInitializer {
         switch(phase){
             case 0->{if(mc.currentScreen!=null&&mc.getOverlay()==null&&age>100){
                 if(LANG!=null&&!LANG.equals(mc.options.language)){mc.options.language=LANG;mc.getLanguageManager().setLanguage(LANG);mc.reloadResources();age=0;return;}
-                Files.createDirectories(OUT);var o=mc.options;o.getViewDistance().setValue(6);o.getMaxFps().setValue(260);o.getGuiScale().setValue(2);mc.onResolutionChanged();o.hudHidden=true;o.getBobView().setValue(false);
+                Files.createDirectories(OUT);var o=mc.options;
+                // the recording run: no music over the game's own sounds
+                if(AUDIO){o.getSoundVolumeOption(net.minecraft.sound.SoundCategory.MUSIC).setValue(0.0);o.getSoundVolumeOption(net.minecraft.sound.SoundCategory.RECORDS).setValue(0.0);}
+                o.getViewDistance().setValue(6);o.getMaxFps().setValue(260);o.getGuiScale().setValue(2);mc.onResolutionChanged();o.hudHidden=true;o.getBobView().setValue(false);
                 mc.getTutorialManager().setStep(net.minecraft.client.tutorial.TutorialStep.NONE);
+                if(WORLD!=null)mc.createIntegratedServerLoader().start(new net.minecraft.client.gui.screen.TitleScreen(),WORLD);
+                else{
                 var info=new LevelInfo("ShotsFlat"+System.nanoTime(),GameMode.CREATIVE,false,Difficulty.EASY,true,new GameRules(),DataConfiguration.SAFE_MODE);
                 mc.createIntegratedServerLoader().createAndStart(info.getLevelName(),info,new GeneratorOptions(1,false,false),r->r.get(RegistryKeys.WORLD_PRESET).entryOf(WorldPresets.FLAT).value().createDimensionsRegistryHolder());
+                }
                 phase=1;age=0;}}
             case 1->{
                 if(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.title.BotandTitleScreen title){var r=title.layout().screen(title.layout().actions().get(0).rect());title.mouseClicked(r.x()+8,r.y()+8,0);}
                 if(mc.player!=null&&mc.world!=null&&mc.currentScreen==null&&age>60){server(this::setup);phase=2;age=0;}}
-            case 2->{if(age>60&&StandClient.visible(mc.player)){phase=3;age=0;}else if(age>400)throw new IllegalStateException("stand never visible, map="+MapClient.enabled());}
+            case 2->{if(WORLD!=null&&!mc.isWindowFocused()){log.append("window focus given (was ").append(mc.isWindowFocused()).append(")\n");mc.onWindowFocusChanged(true);}
+                if(age>60&&StandClient.visible(mc.player)){phase=3;age=0;}else if(age>400)throw new IllegalStateException("stand never visible, map="+MapClient.enabled());}
             case 3->{ // next skill
                 if(age==1){if(queue.isEmpty()){for(var j:jobs)j.get();Files.writeString(OUT.resolve("log.txt"),log);mc.scheduleStop();phase=99;return;}String entry=queue.poll();String[] parts=entry.split(";");current=parts[0];int n=repeats.merge(current,1,Integer::sum);folder=n==1?current:current+"."+n;opts.clear();for(int i=1;i<parts.length;i++){String[] kv=parts[i].split("=",2);opts.put(kv[0],kv.length>1?kv[1]:"1");}
                     far=null;if(opts.containsKey("far")){String[] v=opts.get("far").split("[/,]");double[] f=new double[v.length];for(int i=0;i<v.length;i++)f[i]=Double.parseDouble(v[i].trim());far=f;}
@@ -413,6 +511,8 @@ public final class SkillShots implements ClientModInitializer {
                     track=opts.containsKey("track")?opts.get("track").split(":"):null;shake=opts.containsKey("shake")&&!"0".equals(opts.get("shake"));
                     mc.options.hudHidden=!opts.containsKey("hud")||"0".equals(opts.get("hud"));
                     server(this::reset);
+                    // and none of the last entry's falls, smoke or debris on this client
+                    if(WORLD!=null){var clear=Class.forName("dev.sangwoo.celestialfall.client.meteor.MeteorFx").getDeclaredMethod("clear");clear.setAccessible(true);clear.invoke(null);}
                     int view=(int)opt("view",Integer.getInteger("botand.shots.view",6));if(mc.options.getViewDistance().getValue()!=view){mc.options.getViewDistance().setValue(view);mc.worldRenderer.reload();}}
                 if(age==2)camera();
                 if(age==2&&(opts.containsKey("far")||opts.containsKey("orbit"))){castPos=mc.player.getPos();castYaw=mc.player.getYaw();}
@@ -420,6 +520,7 @@ public final class SkillShots implements ClientModInitializer {
                 // "walk=N": the player walks (W held, camera-relative) from N ticks before the cast to the end of the shot.
                 int lead=opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")?90:30;
                 if(opts.containsKey("walk")&&age==Math.max(3,lead-(int)opt("walk",10)))key(GLFW_KEY_W,true);
+                if(AUDIO&&age==Math.max(3,lead-20)){markerNanos=System.nanoTime();mc.getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(),2f,1f));soundRows.setLength(0);tickRows.setLength(0);}
                 if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);motionLog.setLength(0);soundLog.setLength(0);sounded.clear();filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
                 logTick();
@@ -441,6 +542,19 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);}if(age==at+1)key(code,false);continue;}
                     if(what.startsWith("MOVE_")){if(age==at){glideTo=null;double[] g=target(what.substring(5));double k=mc.getWindow().getScaleFactor();glideFrom=new double[]{mc.mouse.getX(),mc.mouse.getY()};glideTo=new double[]{g[0]*k,g[1]*k};glideAt=age;log.append("  move ").append(what.substring(5)).append(" at ").append(age).append('\n');}continue;}
+                    if(what.equals("TP")||what.equals("TPB")){if(age==at)server(p->{String[] v=opts.get(what.equals("TP")?"tp":"tpb").split("[/,]");double[] d=new double[5];for(int i=0;i<v.length;i++)d[i]=Double.parseDouble(v[i].trim());
+                            p.networkHandler.requestTeleport(d[0],d[1],d[2],(float)d[3],(float)d[4]);p.setYaw((float)d[3]);p.setHeadYaw((float)d[3]);p.setBodyYaw((float)d[3]);log.append("  teleported at ").append(age).append('\n');});continue;}
+                    if(what.equals("FALL")||what.equals("FALLB")){if(age==at)server(p->{
+                            String[] v=opts.get(what.equals("FALL")?"fall":"fallb").split("[/,]");var w=p.getServerWorld();
+                            int slot=dev.sangwoo.celestialfall.meteor.MeteorState.get(w).firstEmpty();
+                            var m=slot<0?null:dev.sangwoo.celestialfall.meteor.MeteorManager.launch(w,slot,new net.minecraft.util.math.Vec3d(Double.parseDouble(v[0]),w.getTopY(),Double.parseDouble(v[1])),opts.containsKey("from")?opt("from",0):Double.NaN);
+                            log.append("  fall ").append(m==null?"refused":String.format(Locale.ROOT,"#%d to (%.1f, %.1f, %.1f) from (%.0f, %.0f, %.0f) at tick %d",m.slot(),m.x(),m.y(),m.z(),m.fromX(),m.fromY(),m.fromZ(),age)).append('\n');});continue;}
+                    if(what.equals("CLEARMETEOR")){if(age==at)server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getServer().getCommandSource(),"botand meteor clear");log.append("  meteors cleared (").append(n).append(") at ").append(age).append('\n');});continue;}
+                    if(what.startsWith("GIVE_")){if(age==at)server(p->{
+                            var stack=switch(what.substring(5)){case "PICKAXE"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.PICKAXE);case "FRAGMENTS"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.FRAGMENT,3);case "STICK"->new net.minecraft.item.ItemStack(net.minecraft.item.Items.STICK);default->throw new IllegalArgumentException(what);};
+                            p.getInventory().offerOrDrop(stack);p.currentScreenHandler.sendContentUpdates();log.append("  given ").append(what.substring(5)).append(" at ").append(age).append('\n');});continue;}
+                    if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;default->throw new IllegalArgumentException(what);};
+                        if(age==at){log.append("  key ").append(what).append(" at ").append(age).append('\n');key(code,down);}continue;}
                     if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
                     if(age==at){int id=skill(what);server(p->{boolean ok=KagenoManager.input(p,id);log.append("  ").append(what).append(ok?" at ":" refused at ").append(p.getWorld().getTime()).append('\n');});}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
@@ -450,6 +564,7 @@ public final class SkillShots implements ClientModInitializer {
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
+                    if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }
     }
@@ -460,7 +575,7 @@ public final class SkillShots implements ClientModInitializer {
             case "RUSH"->server(p->KagenoManager.input(p,T_DOWN));
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
-            case "BASE","HUD","UI"->{}
+            case "BASE","HUD","UI","METEOR","SHOP"->{}
             case "GDUMMY"->server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand dummy atomic "+(int)opt("adist",60));if(n<=0)log.append("  rejected GDUMMY\n");});
             default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
                 if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});

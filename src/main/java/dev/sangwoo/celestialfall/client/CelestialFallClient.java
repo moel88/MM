@@ -40,6 +40,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         ProgressClient.initialize();
         dev.sangwoo.celestialfall.client.commerce.CommerceClient.initialize();
         dev.sangwoo.celestialfall.client.loot.FieldLootClient.initialize();
+        dev.sangwoo.celestialfall.client.meteor.MeteorClient.initialize();
         dev.sangwoo.celestialfall.client.menu.MenuClient.initialize();
         dev.sangwoo.celestialfall.client.gacha.GachaClient.initialize();
         RecoveryRenderer.initialize();

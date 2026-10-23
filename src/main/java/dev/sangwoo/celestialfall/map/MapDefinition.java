@@ -22,12 +22,12 @@ import java.util.*;
  *
  * <pre>
  * {"format":1,"id":"botand:seaside","name":"...","spawn":[0,65,29,0],
- *  "merchants":{"seller":{"pos":[x,y,z],"yaw":90},"buyer":{"pos":[x,y,z],"yaw":90}},
+ *  "merchants":{"seller":{"pos":[x,y,z],"yaw":90},"buyer":{"pos":[x,y,z],"yaw":90},"crafter":{"pos":[x,y,z],"yaw":90}},
  *  "loot":[[x,y,z],...],"places":{"station":[x,y,z],...},
  *  "wires":[[x0,y0,z0,x1,y1,z1,sag],...],"backdrop":[[x,z,rx,rz,top,seed],...],"sea":62.4}
  * </pre>
  */
-public record MapDefinition(String id,String name,BlockPos spawn,Vec3d seller,float sellerYaw,Vec3d buyer,float buyerYaw,List<BlockPos> loot,Map<String,BlockPos> places,List<Wire> wires,List<Peak> backdrop,float sea) {
+public record MapDefinition(String id,String name,BlockPos spawn,Vec3d seller,float sellerYaw,Vec3d buyer,float buyerYaw,Vec3d crafter,float crafterYaw,List<BlockPos> loot,Map<String,BlockPos> places,List<Wire> wires,List<Peak> backdrop,float sea) {
     public static final Identifier FILE=new Identifier("botand","map/definition.json");
     /** The most field supply spots a map may have. */
     public static final int MAX_LOOT=64;
@@ -72,6 +72,8 @@ public record MapDefinition(String id,String name,BlockPos spawn,Vec3d seller,fl
         var merchants=o.has("merchants")&&o.get("merchants").isJsonObject()?o.getAsJsonObject("merchants"):null;
         if(merchants==null)throw new IllegalArgumentException("no merchants");
         Object[] seller=merchant(merchants,"seller"),buyer=merchant(merchants,"buyer");
+        // the crafter (2.49.0) is optional: without one the mod puts it beside the seller (MerchantEntity.homeOf)
+        Object[] crafter=merchants.has("crafter")?merchant(merchants,"crafter"):new Object[]{null,0f};
         List<BlockPos> loot=new ArrayList<>();
         for(var e:array(o,"loot"))loot.add(block(e.getAsJsonArray()));
         if(loot.size()>MAX_LOOT)throw new IllegalArgumentException("too many loot spots");
@@ -91,7 +93,7 @@ public record MapDefinition(String id,String name,BlockPos spawn,Vec3d seller,fl
             sea=v.getAsFloat();
             if(!Float.isFinite(sea)||sea<MIN_SEA||sea>MAX_SEA)throw new IllegalArgumentException("the sea is out of the world");
         }
-        return new MapDefinition(id,name,spawn,(Vec3d)seller[0],(float)seller[1],(Vec3d)buyer[0],(float)buyer[1],List.copyOf(loot),Collections.unmodifiableMap(places),List.copyOf(wires),List.copyOf(backdrop),sea);
+        return new MapDefinition(id,name,spawn,(Vec3d)seller[0],(float)seller[1],(Vec3d)buyer[0],(float)buyer[1],(Vec3d)crafter[0],(float)crafter[1],List.copyOf(loot),Collections.unmodifiableMap(places),List.copyOf(wires),List.copyOf(backdrop),sea);
     }
     private static Peak peak(JsonElement e){
         if(!e.isJsonArray()||e.getAsJsonArray().size()!=6)throw new IllegalArgumentException("a mountain needs x, z, rx, rz, top, seed");

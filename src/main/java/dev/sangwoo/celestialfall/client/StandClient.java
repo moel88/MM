@@ -103,7 +103,7 @@ public final class StandClient {
         // H: the gameplay camera comes back with the last cutscene shot's orientation (hard cut, no blend).
         var cine=cinematic();
         if(cine!=null&&cine.skill==H&&cine.age(0)>=KagenoRules.H_CUT&&!cine.id.equals(handedOff)){handedOff=cine.id;dev.sangwoo.celestialfall.client.kageno.KagenoCamera.handoff(cine);}
-        if(StandManager.kageno(mc.player)&&mc.options.attackKey.isPressed()&&!dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand())punch();
+        if(StandManager.kageno(mc.player)&&mc.options.attackKey.isPressed()&&!dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand()&&!dev.sangwoo.celestialfall.client.meteor.MeteorClient.pickaxeInHand())punch();
         var state=STATES.get(mc.player.getUuid());long until=state!=null&&visible(mc.player)?state.until:0;
         if(until>now&&lastThemeUntil==0){
             theme=new PositionedSoundInstance(CelestialFall.KAGENO_THEME.getId(),SoundCategory.RECORDS,(float)CelestialFall.CONFIG.effectVolume,1,net.minecraft.util.math.random.Random.create(),false,0,SoundInstance.AttenuationType.NONE,0,0,0,true);

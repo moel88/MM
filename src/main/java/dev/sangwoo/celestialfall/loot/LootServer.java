@@ -1,6 +1,7 @@
 package dev.sangwoo.celestialfall.loot;
 import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.commerce.*;
+import dev.sangwoo.celestialfall.meteor.MeteorRegistry;
 import dev.sangwoo.celestialfall.progression.*;
 import net.fabricmc.fabric.api.networking.v1.*;
 import net.fabricmc.fabric.api.event.lifecycle.v1.*;
@@ -72,12 +73,15 @@ public final class LootServer {
     public static List<ItemStack> inventoryPlan(ServerPlayerEntity p,LootState.Slot slot){
         var inv=p.getInventory();var plan=new ArrayList<ItemStack>();for(int i=0;i<inv.size();i++)plan.add(inv.getStack(i).copy());
         if(slot.treasure()){int key=keySlot(p);if(key<0)return null;plan.get(key).decrement(1);}
-        for(int flag:new int[]{LootRules.FRUIT,LootRules.KEY})if((slot.drops()&flag)!=0){
-            var reward=new ItemStack(flag==LootRules.FRUIT?CommerceRegistry.ROKAKAKA:LootRegistry.CHEST_KEY);boolean placed=false;
+        for(int flag:new int[]{LootRules.FRUIT,LootRules.KEY,LootRules.ARROW,LootRules.STICK})if((slot.drops()&flag)!=0){
+            var reward=new ItemStack(reward(flag));boolean placed=false;
             for(int i=0;i<36;i++){var at=plan.get(i);if(!at.isEmpty()&&ItemStack.canCombine(at,reward)&&at.getCount()<at.getMaxCount()){at.increment(1);placed=true;break;}}
             if(!placed)for(int i=0;i<36;i++)if(plan.get(i).isEmpty()){plan.set(i,reward);placed=true;break;}
             if(!placed)return null;
         }return plan;
+    }
+    private static Item reward(int flag){
+        return flag==LootRules.FRUIT?CommerceRegistry.ROKAKAKA:flag==LootRules.KEY?LootRegistry.CHEST_KEY:flag==LootRules.ARROW?MeteorRegistry.STAND_ARROW:Items.STICK;
     }
     /** Called only after a server-timed hold. Public for integrated-server acceptance verification. */
     public static boolean claim(ServerPlayerEntity p,FieldLootEntity loot){
@@ -97,7 +101,8 @@ public final class LootServer {
         w.playSound(null,loot.getBlockPos(),SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP,SoundCategory.PLAYERS,.65f,1.25f);
         if(slot.treasure())w.spawnParticles(new net.minecraft.particle.DustParticleEffect(new org.joml.Vector3f(1f,.76f,.3f),.55f),loot.getX(),loot.getY()+.75,loot.getZ(),10,.35,.2,.3,.01);
         else w.spawnParticles(ParticleTypes.HAPPY_VILLAGER,loot.getX(),loot.getY()+.8,loot.getZ(),8,.45,.35,.35,.025);
-        String items=((slot.drops()&LootRules.FRUIT)!=0?" · 로카카카 ×1":"")+((slot.drops()&LootRules.KEY)!=0?" · 상자 키 ×1":"");
+        String items=((slot.drops()&LootRules.FRUIT)!=0?" · 로카카카 ×1":"")+((slot.drops()&LootRules.KEY)!=0?" · 상자 키 ×1":"")
+            +((slot.drops()&LootRules.ARROW)!=0?" · 스탠드 화살 ×1":"")+((slot.drops()&LootRules.STICK)!=0?" · 막대기 ×1":"");
         reply(p,true,(slot.treasure()?"보물상자":"박스")+" 획득! +"+money+"원"+(before.level()==50?" · 최고 레벨":" · 경험치 +"+xp)+items+(after.level()>before.level()?" · 레벨 UP! "+after.level():""));
         return true;
     }

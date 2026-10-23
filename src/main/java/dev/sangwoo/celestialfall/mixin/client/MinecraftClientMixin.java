@@ -18,6 +18,8 @@ public abstract class MinecraftClientMixin {
     private void botand$punch(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> cir) {
         if(CombatClient.actionLocked()){cir.setReturnValue(false);return;}
         if(dev.sangwoo.celestialfall.client.commerce.CommerceClient.clickFruit()){cir.setReturnValue(false);return;}
+        // the meteor pickaxe strikes meteors (2.49.0) and does nothing else, the stand's attack included
+        if(dev.sangwoo.celestialfall.client.meteor.MeteorClient.attack()){cir.setReturnValue(false);return;}
         BotandCamera.prepareInteraction();
         if(dev.sangwoo.celestialfall.client.StandClient.punch()||CombatClient.punch())cir.setReturnValue(false);
     }
@@ -27,6 +29,7 @@ public abstract class MinecraftClientMixin {
     private void botand$pick(CallbackInfo ci){if(CombatClient.actionLocked())ci.cancel();}
     @Inject(method="handleBlockBreaking",at=@At("HEAD"),cancellable=true)
     private void botand$break(boolean breaking,CallbackInfo ci) {
+        if(dev.sangwoo.celestialfall.client.meteor.MeteorClient.breaking(breaking)){var mc=(MinecraftClient)(Object)this;if(mc.interactionManager!=null)mc.interactionManager.cancelBlockBreaking();ci.cancel();return;}
         if(CombatClient.actionLocked()||dev.sangwoo.celestialfall.client.StandClient.visible(((MinecraftClient)(Object)this).player)||dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand()) {var mc=(MinecraftClient)(Object)this;if(mc.interactionManager!=null)mc.interactionManager.cancelBlockBreaking();ci.cancel();}
     }
     @Redirect(method="handleInputEvents",at=@At(value="INVOKE",target="Lnet/minecraft/client/Mouse;isCursorLocked()Z"))

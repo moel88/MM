@@ -26,6 +26,25 @@ class LootRulesTest {
         for(int i=0;i<100;i++)for(int j=0;j<100;j++)assertEquals(LootRules.FRUIT,LootRules.drops(true,i,j));
         assertEquals(10,LootRules.money(false));assertEquals(15,LootRules.money(true));assertEquals(10,LootRules.xp(false));assertEquals(15,LootRules.xp(true));
     }
+    @Test void StandArrowAndStickRatesForChestsAndBoxes(){
+        int boxArrow=0,boxStick=0,chestArrow=0,chestStick=0;
+        for(int a=0;a<1000;a++)for(int s=0;s<100;s++){
+            int box=LootRules.extras(false,a,s),chest=LootRules.extras(true,a,s);
+            if((box&LootRules.ARROW)!=0)boxArrow++;if((box&LootRules.STICK)!=0)boxStick++;
+            if((chest&LootRules.ARROW)!=0)chestArrow++;if((chest&LootRules.STICK)!=0)chestStick++;
+            assertEquals(0,box&(LootRules.FRUIT|LootRules.KEY));assertEquals(0,chest&(LootRules.FRUIT|LootRules.KEY));
+        }
+        // box 0.1% and 20%, treasure chest 5% and 50% (2.49.0)
+        assertEquals(100,boxArrow);assertEquals(20000,boxStick);assertEquals(5000,chestArrow);assertEquals(50000,chestStick);
+        assertThrows(IllegalArgumentException.class,()->LootRules.extras(true,1000,0));assertThrows(IllegalArgumentException.class,()->LootRules.extras(false,0,100));
+    }
+    @Test void SavedSlotsKeepTheirArrowAndStick(){
+        var s=new LootState();
+        s.put(1,new LootState.Slot(false,LootRules.FRUIT|LootRules.ARROW|LootRules.STICK,3,-1,-1));
+        s.put(2,new LootState.Slot(true,LootRules.FRUIT|LootRules.STICK,4,-1,-1));
+        var loaded=LootState.read(s.writeNbt(new NbtCompound()));
+        assertEquals(s.slot(1),loaded.slot(1));assertEquals(s.slot(2),loaded.slot(2));
+    }
     @Test void ClaimIsExclusiveAndCycleRejectsOldRequests(){
         var state=new LootState();state.put(0,new LootState.Slot(false,3,7,-1,-1));
         assertFalse(state.claim(0,6,100,1200));assertTrue(state.claim(0,7,100,1200));assertFalse(state.claim(0,7,101,1200));
