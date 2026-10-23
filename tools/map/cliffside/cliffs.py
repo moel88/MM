@@ -1,12 +1,14 @@
 """The brown rock rim of the Roblox map (map v1.4): the lawn round the town and the grey wall on its edge become
 brown rock, built of tilted cube-like boulders as the reference's are.
 
-A huge wall of rock keeps everyone in: it stands where the old wall stood, by the sea all round, and fills the belt
-behind the houses on the town's edge right up to their backs, as on the reference (zones.Zones.walls). It is 32 to 46
-blocks over the town (higher where it is thicker), its face to the town a sheer ledge at about three quarters of that
-and the crest a few blocks behind, so no step of it can be climbed (its lowest top is over twenty blocks above the
-street). Where no house backs onto the belt (round the forests and the open corners) the belt is a floor of rock at the
-town's level instead, big flush slabs of calm browns with broad plates a block up, open to run and fight on.
+A huge wall of rock keeps everyone in: it stands where the old wall stood, by the sea all round, and right up against
+the backs of the houses on the town's edge, as on the reference (zones.Zones.walls). Like the reference's rim it is a
+thin wall, not a block of rock: it stands about ten blocks thick from the town, 32 to 46 blocks over it, its face to the
+town a sheer ledge at about three quarters of that and the crest a few blocks behind, so no step of it can be climbed
+(its lowest top is over twenty blocks above the street). Behind it the rock steps down in a few blocks to a slope of
+boulders that runs down to the waterline. Where no house backs onto the belt (round the forests and an open corner) the
+belt is a floor of rock at the town's level instead, big flush slabs of calm browns with broad plates a block up, open to
+run and fight on, and the wall stands by the sea.
 
 A boulder is a rectangle turned by a random angle with a tilted top, one block kind each; a column is solid up to the
 highest top over it (no overhangs, nothing floating), its top takes the boulder's kind and a tall side is big piled
@@ -24,6 +26,9 @@ ROCK = [('terracotta', 34), ('red_terracotta', 13), ('brown_terracotta', 18), ('
 BASE = 'terracotta'
 RISE = (32.0, 46.0)  # the wall's height over the town where it is thin .. thick
 FRONT = 0.72        # its face to the town stands at this share of the height (a ledge), the crest five blocks back
+THICK = 10.0        # how thick the wall stands from the town (two blocks more or less along it), as the reference's rim
+DROP = 6.0          # behind it the rock steps down over this many blocks ...
+SLOPE = (1.0, 80.0)  # ... to a slope rising this much a block from the waterline, up to the town's height
 # the floor round the forests in calm browns (a flat floor in every colour reads busy)
 FLOOR = [('terracotta', 56), ('packed_mud', 22), ('granite', 8), ('brown_terracotta', 8), ('red_terracotta', 4),
          ('dripstone_block', 2)]
@@ -111,7 +116,15 @@ def rim(p, Z, seed=1931):
     d_in = ndimage.distance_transform_edt(cliff | sea)             # wall columns: distance to the town or floor
     rise = np.clip(30.0 + 0.35 * (d_in + d_sea), *RISE)
     front = FRONT + (1.0 - FRONT) * smoothstep(1.0, 5.0, d_in)
-    hb = np.where(cliff, GROUND + rise * front, np.where(floor_, GROUND, -1.0))
+    # a thin wall: the crest only so far from the town, then down to the slope of rock by the sea
+    wob = ndimage.gaussian_filter(np.random.default_rng(seed).standard_normal(shape), 6.0)
+    thick = THICK + 2.0 * np.clip(wob / max(float(wob.std()), 1e-9), -1.0, 1.0)    # never so thin the crest dips
+    slope = np.minimum(SLOPE[1], 62.5 + SLOPE[0] * d_sea)
+    crest = GROUND + rise * front
+    drop = smoothstep(thick, thick + DROP, d_in)
+    hb = np.where(cliff, crest + (slope - crest) * drop, np.where(floor_, GROUND, -1.0))
+    wall = cliff & (d_in <= thick + DROP / 2)                       # the wall itself
+    scree = cliff & ~wall                                            # the slope behind it
     d_land = ndimage.distance_transform_edt(sea)                        # sea columns: distance to the island
     # the crest by each sea column (to size the boulders that stand in the water)
     near = ndimage.distance_transform_edt(~band, return_distances=False, return_indices=True)
@@ -136,7 +149,7 @@ def rim(p, Z, seed=1931):
         return m[int(z) - w.z0, int(x) - w.x0]
 
     # the wall: boulders all over it make a ragged crest and a ragged ledge, never out onto the town or the floor
-    tz, tx = np.nonzero(cliff)
+    tz, tx = np.nonzero(wall)
     cells = [(x + w.x0 + rng.random(), z + w.z0 + rng.random()) for z, x in zip(tz.tolist(), tx.tolist())]
     for x, z in poisson(cells, lambda x, z: 4.2, rng):
         a, b = rng.uniform(2.2, 4.2), rng.uniform(2.2, 4.2)
@@ -144,7 +157,17 @@ def rim(p, Z, seed=1931):
         gu, gv = math.tan(tilt) * math.cos(dirn), math.tan(tilt) * math.sin(dirn)
         b = Boulder(x, z, a, b, rng.uniform(0, math.pi / 2), gu, gv, float(at(hb, x, z)) + rng.uniform(0.5, 6.5), pick(rng))
         for cx, cz, top in b.columns():
-            offer(cx, cz, top, b.kind, cliff)
+            offer(cx, cz, top, b.kind, wall)
+    # the slope behind it: boulders a little over it, lower and lower down to the waterline
+    tz, tx = np.nonzero(scree)
+    cells = [(x + w.x0 + rng.random(), z + w.z0 + rng.random()) for z, x in zip(tz.tolist(), tx.tolist())]
+    for x, z in poisson(cells, lambda x, z: 3.6, rng):
+        a, b = rng.uniform(1.8, 3.6), rng.uniform(1.8, 3.6)
+        tilt = math.radians(rng.uniform(0, 16)); dirn = rng.uniform(0, 2 * math.pi)
+        gu, gv = math.tan(tilt) * math.cos(dirn), math.tan(tilt) * math.sin(dirn)
+        b = Boulder(x, z, a, b, rng.uniform(0, math.pi / 2), gu, gv, float(at(hb, x, z)) + rng.uniform(-0.5, 3.5), pick(rng))
+        for cx, cz, top in b.columns():
+            offer(cx, cz, top, b.kind, scree)
     # the floor: flush slabs of rock in calm browns, and broad plates a block up (a step, not a wall)
     fz, fx = np.nonzero(floor_)
     floor_cells = [(x + w.x0 + rng.random(), z + w.z0 + rng.random()) for z, x in zip(fz.tolist(), fx.tolist())]
@@ -166,6 +189,7 @@ def rim(p, Z, seed=1931):
         crest_here = max(H[nzi, nxi], 70)
         r = rng.random()
         top = rng.uniform(62.5, 66) if r < 0.45 else rng.uniform(66, 82) if r < 0.8 else rng.uniform(82, crest_here - 8)
+        top = min(top, max(H[nzi, nxi], 63) + 1.5)      # never over the rock behind it
         a, b = rng.uniform(1.4, 2.8), rng.uniform(1.4, 2.8)
         tilt = math.radians(rng.uniform(0, 14)); dirn = rng.uniform(0, 2 * math.pi)
         sb = Boulder(x, z, a, b, rng.uniform(0, math.pi / 2), math.tan(tilt) * math.cos(dirn), math.tan(tilt) * math.sin(dirn),
@@ -195,16 +219,19 @@ def rim(p, Z, seed=1931):
         top = int(H[zi, xi]); k = kind[zi, xi]
         cap = top - (x * 5 + z * 11) % 2              # the boulder's own kind on its top block or two
         if band[zi, xi]:
-            seen_from = max(GROUND, min(top, int(nb[zi, xi])) - 1)
+            low = min(top, int(nb[zi, xi])) - 1               # its side shows from the lowest neighbour up
+            start = GROUND if low >= GROUND - 1 else max(SEA_FLOOR, low)
+            seen_from = max(start, low)
             tall = top - seen_from >= 4
             by_house = bool(Z.backfill[zi, xi])
-            for y in range(GROUND, top + 1):
+            for y in range(start, top + 1):
                 if by_house and y > GROUND:
                     cur = p.state(x, y, z)
                     if cur != 'minecraft:air' and not any(t in cur for t in BURIED):
                         continue
                 p.put(x, y, z, BASE if y < seen_from else k if (y >= cap or not tall) else stacked(x, y, z, seed))
-            # above the rock: the old wall, lamps and flowers go; the crowns of the town's trees may reach over it
+            # above the rock: the old wall, the island's top, lamps and flowers go; the crowns of the town's trees may
+            # reach over it
             for y in range(top + 1, min(int(old_top[zi, xi]), CLEAR_TO) + 1):
                 cur = p.cells.get((x, y, z))
                 if cur is None:
@@ -220,7 +247,7 @@ def rim(p, Z, seed=1931):
     zs, xs = np.nonzero(face)
     for zi, xi in zip(zs.tolist(), xs.tolist()):
         x, z = xi + w.x0, zi + w.z0
-        for y in range(SEA_FLOOR + 5, GROUND):
+        for y in range(SEA_FLOOR + 5, min(GROUND, int(H[zi, xi]))):
             p.put(x, y, z, stacked(x, y, z, seed))
     return H
 

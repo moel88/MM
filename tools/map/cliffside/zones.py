@@ -2,9 +2,10 @@
 
 The island is a plateau at y=80 on a sea floor at 48 (sea level 62). Round the town lay a lawn and, on the edge, a grey
 stone wall up to y~100; the rework turns that outer belt into brown rock (cliffs.py). This module decides what is
-town (kept and paved), what is a park or a forest (replanted), what is the belt, and which of the belt is the huge wall
-(`cliff`): the old wall's ring by the sea, and everything behind the houses on the town's edge, right up against their
-backs. The rest of the belt (round the forests and the open corners) stays a floor of rock to run on.
+town (kept and paved), what is a park or a forest (replanted), what is the belt, and which of the belt is rock (`cliff`):
+the old wall's ring by the sea, and everything behind the houses on the town's edge, right up against their backs (the
+wall stands there, and behind it the rock slopes down to the sea, cliffs.py). The rest of the belt (round the forests and
+an open corner) stays a floor of rock to run on.
 """
 import numpy as np
 from scipy import ndimage
