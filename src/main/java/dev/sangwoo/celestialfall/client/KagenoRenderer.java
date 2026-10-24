@@ -59,7 +59,6 @@ public final class KagenoRenderer {
             float flash=0;int color=0xffffff;
             for(var x:casts)if(Math.min(x.origin.squaredDistanceTo(camera),x.pos.squaredDistanceTo(camera))<28*28){float v=KagenoSkills.of(x.cast.skill()).flash(x);if(v>flash){flash=v;color=KagenoSkills.of(x.cast.skill()).flashColor(x);}}
             float glow=KagenoStatusFx.flash(mc,delta,camera);if(glow>flash){flash=glow;color=0xfffcff;}
-            float punch=dev.sangwoo.celestialfall.client.stand.StandPunchFx.flash(camera);if(punch>flash){flash=punch;color=0xf4f0ff;}
             if(flash>0){
                 RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.disableDepthTest();
                 buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
@@ -139,7 +138,7 @@ public final class KagenoRenderer {
         var d=dev.sangwoo.celestialfall.client.vfx.FxLayer.begin(view,matrix,camera);
         if(d==null){effects(mc,casts,status,view,matrix,camera,delta,false);return;}
         for(var x:casts)KagenoSkills.of(x.cast.skill()).distort(x,d);
-        if(status){KagenoStatusFx.distort(mc,d,delta,camera);dev.sangwoo.celestialfall.client.stand.StandPunchFx.distort(d);}
+        if(status)KagenoStatusFx.distort(mc,d,delta,camera);
         dev.sangwoo.celestialfall.client.vfx.FxLayer.scene(frame);
         effects(mc,casts,status,view,matrix,camera,delta,true);
         dev.sangwoo.celestialfall.client.vfx.FxLayer.finish(frame,(mc.world.getTime()+delta)/20.0);

@@ -9,24 +9,34 @@ import java.util.Arrays;
  * follows its user its lean (degrees forward), its roll (degrees, to its right) and its speed (blocks a second). The
  * colour multiplies its texture (an afterimage is drawn bluer), the shadow is how dark its shadow is (none for an
  * afterimage) at full solidity, and the glow how strongly its aura shines round it (2.52.0: 1 for a stand out at rest,
- * more as it bursts into its pose, none for the figure or an afterimage).
+ * more as it bursts into its pose, none for the figure or an afterimage). A look can be taking over from another pose
+ * (2.56.0: a punch from the one before it): {@code under} is that pose's stances (adding up to 1 too) and the body is
+ * drawn {@code over} of the way from that pose to this one's stances, turn by turn (1, the default: none under).
  */
 public final class StarPlatinumLook {
-    public final float[] weights=new float[StarPlatinumStance.NAMES.size()];
-    public float wind,gust,out=1,alpha=1,scale=1,lean,roll,speed;
+    public final float[] weights=new float[StarPlatinumStance.NAMES.size()],under=new float[StarPlatinumStance.NAMES.size()];
+    public float wind,gust,out=1,alpha=1,scale=1,lean,roll,speed,over=1;
     public float red=1,green=1,blue=1,shadow=1,glow;
     public StarPlatinumLook(){weights[StarPlatinumStance.IDLE]=1;}
     /** Wholly in one stance, standing still, nothing else on. */
     public StarPlatinumLook only(int stance){
-        Arrays.fill(weights,0);weights[stance]=1;wind=stance==StarPlatinumStance.HERO?1:0;gust=lean=roll=speed=glow=0;out=alpha=scale=1;red=green=blue=shadow=1;return this;
+        Arrays.fill(weights,0);weights[stance]=1;Arrays.fill(under,0);over=1;wind=stance==StarPlatinumStance.HERO?1:0;gust=lean=roll=speed=glow=0;out=alpha=scale=1;red=green=blue=shadow=1;return this;
     }
     public StarPlatinumLook set(StarPlatinumLook o){
-        System.arraycopy(o.weights,0,weights,0,weights.length);
+        System.arraycopy(o.weights,0,weights,0,weights.length);System.arraycopy(o.under,0,under,0,under.length);over=o.over;
         wind=o.wind;gust=o.gust;out=o.out;alpha=o.alpha;scale=o.scale;lean=o.lean;roll=o.roll;speed=o.speed;red=o.red;green=o.green;blue=o.blue;shadow=o.shadow;glow=o.glow;return this;
     }
-    /** This look becomes {@code a} taken {@code k} of the way (0 to 1) to {@code b}; either may be this one. */
+    /** How much of stance {@code i} the look has, its pose under and its own taken together. */
+    public float share(int i){return over>=1?weights[i]:weights[i]*over+under[i]*(1-over);}
+    /** The pose under taken into the look's own stances (weighed together, not turned from one pose to the other). */
+    public StarPlatinumLook flatten(){
+        if(over<1){for(int i=0;i<weights.length;i++)weights[i]=share(i);Arrays.fill(under,0);over=1;}
+        return this;
+    }
+    /** This look becomes {@code a} taken {@code k} of the way (0 to 1) to {@code b}; either may be this one (any pose under either is taken into its stances). */
     public StarPlatinumLook mix(StarPlatinumLook a,StarPlatinumLook b,float k){
-        for(int i=0;i<weights.length;i++)weights[i]=a.weights[i]+(b.weights[i]-a.weights[i])*k;
+        for(int i=0;i<weights.length;i++){float wa=a.share(i),wb=b.share(i);weights[i]=wa+(wb-wa)*k;}
+        Arrays.fill(under,0);over=1;
         wind=a.wind+(b.wind-a.wind)*k;gust=a.gust+(b.gust-a.gust)*k;out=a.out+(b.out-a.out)*k;alpha=a.alpha+(b.alpha-a.alpha)*k;
         scale=a.scale+(b.scale-a.scale)*k;lean=a.lean+(b.lean-a.lean)*k;roll=a.roll+(b.roll-a.roll)*k;speed=a.speed+(b.speed-a.speed)*k;
         red=a.red+(b.red-a.red)*k;green=a.green+(b.green-a.green)*k;blue=a.blue+(b.blue-a.blue)*k;shadow=a.shadow+(b.shadow-a.shadow)*k;glow=a.glow+(b.glow-a.glow)*k;

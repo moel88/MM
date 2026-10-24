@@ -46,13 +46,6 @@ public abstract class CameraMixin {
                 var q=getRotation().rotateZ((float)Math.toRadians(kick[2]));
                 getHorizontalPlane().set(0,0,1).rotate(q);getVerticalPlane().set(0,1,0).rotate(q);getDiagonalPlane().set(1,0,0).rotate(q);
             }
-            // Star Platinum's punches landing (2.54.0)
-            var punch=dev.sangwoo.celestialfall.client.stand.StandPunchFx.shake(getPos(),delta);
-            if(punch!=null){
-                setRotation(getYaw()+punch[0],getPitch()+punch[1]);
-                var q=getRotation().rotateZ((float)Math.toRadians(punch[2]));
-                getHorizontalPlane().set(0,0,1).rotate(q);getVerticalPlane().set(0,1,0).rotate(q);getDiagonalPlane().set(1,0,0).rotate(q);
-            }
             // a meteor landing near (2.49.0)
             var meteor=dev.sangwoo.celestialfall.client.meteor.MeteorFx.shake(getPos(),delta);
             if(meteor!=null){

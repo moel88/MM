@@ -1,11 +1,9 @@
 package dev.sangwoo.celestialfall.client.stand;
 
-import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.KagenoFire;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.client.kageno.FxLib;
-import dev.sangwoo.celestialfall.client.vfx.FxDistort;
 import dev.sangwoo.celestialfall.client.vfx.FxFrame;
 import dev.sangwoo.celestialfall.client.vfx.FxLayer;
 import dev.sangwoo.celestialfall.client.vfx.FxSolids;
@@ -28,7 +26,9 @@ import org.joml.Matrix4f;
  * pressure shoot on ahead of it to whoever stands there, and sparks fly; whom it struck burst with light and a spray
  * of it out of their backs. The finisher lands far bigger: light gathers into the fist all through its load, a dome of
  * shock rings and five more racing on, a lance of light through its target, the ground rippling out and dust, chunks
- * and a scuff on the floor, its target trailing light as it flies, and close by the screen takes an impact frame.
+ * and a scuff on the floor, and its target trailing light as it flies. Since 2.56.0 (user request: "평타에 화면 효과는
+ * 없애줘") none of it is over the whole screen: the punches shake no camera and the finisher takes no impact frame,
+ * flash, colour split, light shaft or warp of the air; all of their light is in the world, where the blows land.
  * Every effect is a function of its punch's clock; whatever happens after the contact stays where the blow landed.
  */
 public final class StandPunchFx {
@@ -401,8 +401,9 @@ public final class StandPunchFx {
     }
     static Vec3d ground(Vec3d p,double feet){return new Vec3d(p.x,feet,p.z);}
     /**
-     * The effect layer: each blow lights the world round it; the finisher's lance lights the way ahead, a scuff is blown
-     * along the floor under it, and close by a light shaft, a colour split and an impact frame.
+     * The effect layer: each blow lights the world round it, and the finisher's targets as they fly; a scuff is blown
+     * along the floor under the finisher. Nothing over the whole screen (2.56.0, user request: "평타에 화면 효과는
+     * 없애줘"): no light shaft, colour split, impact frame, white flash, warp of the air or shake of the camera.
      */
     public static void frame(FxFrame f,Vec3d camera){
         for(var s:FRAME){
@@ -413,54 +414,14 @@ public final class StandPunchFx {
             f.light(s.blow.fist,0xc8b8ff,big?14:8,(big?4.5f:2.4f)*k);
             for(var c:struck(s))f.light(c,0xe0d4ff,big?11:6,(big?3.4f:1.8f)*k);
             if(!big)continue;
-            float near=(float)Math.max(0,Math.min(1,(26-camera.distanceTo(s.blow.fist))/10));
-            if(near>0){f.shaft(s.blow.fist,0xe8dcff,.7f*near*kick(t,hit,.22f));f.chroma(near*.013f*kick(t,hit,.12f));f.impact(near*impact(t,hit),impactMode(t,hit));}
             float heat=1-Ease.smooth(t,hit+.05f,hit+.55f),al=Ease.smooth(t,hit,hit+.04f)*(1-Ease.smooth(t,hit+.8f,hit+1.05f));
             f.decal(ground(s.blow.fist,s.blow.feet.y).add(s.blow.way.multiply(1.1)),s.blow.way,2.4*Ease.out(t,hit,hit+.14f)+.2,.55,heat,al,23.7f);
             for(var fl:flying(s))f.light(fl[1],0x9c86ff,7,1.6f*(1-Ease.smooth(t,hit+.6f,hit+.95f)));
-        }
-    }
-    /** The finisher's impact frame: in over two frames as it lands, held about four, out over two (white shapes on dark, then dark on white). */
-    static float impact(float t,float at){return t<at-.01f||t>=at+.145f?0:Ease.smooth(t,at-.01f,at+.02f)*(1-Ease.smooth(t,at+.105f,at+.145f));}
-    static float impactMode(float t,float at){return Ease.smooth(t,at+.05f,at+.085f);}
-    /** The air bends round each blow, and the finisher's in a dome and rings racing on past its target. */
-    public static void distort(FxDistort d){
-        for(var s:FRAME){
-            float t=s.t,hit=s.hit();if(s.blow==null||t<hit-.01f||t>=hit+.5f)continue;
-            float in=Ease.smooth(t,hit-.01f,hit+.015f),size=SIZE[s.combo()];Vec3d up=up(s.blow.way,s.blow.right);
-            d.ring(s.blow.fist,s.blow.right,up,.3+2.0*size*Ease.out(t,hit,hit+.26f),.8*size,.8f*in*(1-Ease.unit(t,hit,hit+.26f)));
-            if(s.combo()!=4)continue;
-            d.ring(s.blow.fist.add(s.blow.way.multiply(.6)),s.blow.way,s.blow.right,.5+3.2*Ease.out(t,hit,hit+.36f),.9,.6f*in*(1-Ease.unit(t,hit,hit+.38f)));
-            for(int k=1;k<4;k++){float at=hit+.035f*k;if(t>=at&&t<at+.32f)d.ring(s.blow.fist.add(s.blow.way.multiply(.4+1.3*k+2.0*Ease.out(t,at,at+.34f))),s.blow.right,up,.45+(1.4+.6*k)*Ease.out(t,at,at+.28f),.7,.55f*(1-Ease.unit(t,at,at+.32f)));}
         }
     }
     /** Chunks of the floor kicked up under the finisher's blow. */
     public static void solids(FxSolids solids){
         for(var s:FRAME)if(s.combo()==4&&s.blow!=null&&s.t>=s.hit()&&s.t<s.hit()+1.0f&&s.seen.landed&&s.seen.struck.length>0)
             FxLib.chunks(solids,ground(s.blow.fist,s.blow.feet.y).add(s.blow.way.multiply(.7)),s.t-s.hit(),14,977,1.8,6.5,.16,.45f);
-    }
-    /** A white flash over the whole screen for the finisher's user and whoever stands close as it lands. */
-    public static float flash(Vec3d camera){
-        float best=0;
-        for(var s:FRAME)if(s.combo()==4&&s.blow!=null){float near=(float)Math.max(0,Math.min(1,(16-camera.distanceTo(s.blow.fist))/8));best=Math.max(best,.32f*near*kick(s.t,s.hit(),.06f));}
-        return best;
-    }
-    /** The camera shakes as each blow lands (the finisher hardest), for its user, whom it struck and those close by: {yaw, pitch, roll} degrees. */
-    public static float[] shake(Vec3d camera,float tickDelta){
-        var mc=MinecraftClient.getInstance();if(mc.world==null||mc.player==null)return null;
-        float amount=0;double time=mc.world.getTime()+tickDelta;
-        for(var e:StandAttack.all().entrySet())for(var seen:e.getValue()){
-            int combo=seen.punch.combo();float t=seen.age(tickDelta),hit=StandPunch.HIT[combo];
-            if(t<hit-.03f||t>hit+.7f||!Float.isNaN(seen.punch.stopped())&&seen.punch.stopped()<hit)continue;
-            boolean mine=e.getKey().equals(mc.player.getUuid()),struck=false;
-            for(int id:seen.struck)if(id==mc.player.getId())struck=true;
-            var user=mc.world.getPlayerByUuid(e.getKey());if(user==null)continue;
-            float reach=mine||struck?1:(float)Math.max(0,1-user.getPos().distanceTo(camera)/20);if(reach<=0)continue;
-            float strength=(combo==4?2.4f:combo==3?1.0f:.7f)*(struck?1.4f:1);
-            amount=Math.max(amount,strength*reach*kick(t,hit,combo==4?.15f:.09f));
-        }
-        if(amount<=.001f)return null;
-        amount*=(float)CelestialFall.CONFIG.screenShakeStrength;
-        return new float[]{amount*(float)(Math.sin(time*2.9)*.7+Math.sin(time*5.3)*.3),amount*(float)(Math.cos(time*3.7)*.7+Math.sin(time*6.1)*.3),amount*.35f*(float)Math.sin(time*4.4)};
     }
 }

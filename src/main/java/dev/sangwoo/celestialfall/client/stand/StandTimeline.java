@@ -49,8 +49,9 @@ public final class StandTimeline {
     /** The look {@code t} seconds after it was sent back, from {@code from}, the look it had then. */
     public static StarPlatinumLook dismiss(float t,StarPlatinumLook from,StarPlatinumLook into){
         float u=clamp(t/GONE),curl=smooth(t/.22f);
-        into.set(from);
-        for(int i=0;i<into.weights.length;i++)into.weights[i]=from.weights[i]*(1-curl)+(i==StarPlatinumStance.SUMMON?curl:0);
+        // (a punch it was taking over from is weighed into its stances: it curls up from the whole of its look)
+        into.set(from).flatten();
+        for(int i=0;i<into.weights.length;i++)into.weights[i]=into.weights[i]*(1-curl)+(i==StarPlatinumStance.SUMMON?curl:0);
         into.out=from.out*(1-u*u*u);
         into.alpha=from.alpha*(1-smooth((t-.05f)/.25f));
         into.glow=from.glow*(1-smooth((t-.05f)/.25f));

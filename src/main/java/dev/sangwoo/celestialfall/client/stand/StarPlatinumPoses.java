@@ -17,9 +17,10 @@ import java.util.Objects;
  * Star Platinum's stances as the poses file gives them (tools/stand/make_star_platinum.py writes it with the model), and
  * a bone's pose in a frame: the stances weighed as the look says, its own movement (StarPlatinumMotion) on top. The
  * stances' turns are weighed as turns (2.54.0): each bone's whole turn in each stance (its own turn in the model and the
- * stance's on top) as a quaternion, the weighted ones added and normalised, so a blend goes the short way from one
- * stance to the next. Weighing the angles themselves went wrong for the punches' limbs, whose turns written as angles
- * can lie far apart for poses close together (a forearm twisted a quarter turn reads as nearly opposite angles).
+ * stance's on top) as a quaternion, and their weighted mean along the shortest ways between them, so a blend goes the
+ * short way from one stance to the next. Weighing the angles themselves went wrong for the punches' limbs, whose turns
+ * written as angles can lie far apart for poses close together (a forearm twisted a quarter turn reads as nearly
+ * opposite angles). A look taking over from a pose under it (2.56.0) turns from that pose to its own.
  */
 final class StarPlatinumPoses {
     private static final float[] REST=new float[6];
@@ -30,43 +31,100 @@ final class StarPlatinumPoses {
     /** Per stance: each bone's whole turn (its own and the stance's) as a quaternion {w, x, y, z}. */
     private static List<Map<String,double[]>> turns;
     private final Map<String,StarPlatinumMotion> motions=new HashMap<>();
-    private final double[] q=new double[4],e=new double[3];
+    private final double[] q=new double[4],qb=new double[4],e=new double[3],d=new double[4];
+    private final float[] below=new float[6];
+    private double[][] taken=new double[8][];private double[] share=new double[8];
 
-    /** The bone's turn x, y, z (degrees, Blockbench's way) and offset x, y, z (units) at {@code seconds} on the clock. */
+    /**
+     * The bone's turn x, y, z (degrees, Blockbench's way) and offset x, y, z (units) at {@code seconds} on the clock. A
+     * look taking over from a pose under it (2.56.0, a punch from the one before) turns from that pose's turn the share
+     * {@code over} of the short way to its own, each pose its own stances' mean: two poses far apart (an arm thrown out
+     * and the next punch's guard) then go straight from one to the other, where all their stances weighed together at
+     * once could be weighed two ways and leap between them.
+     */
     void pose(String bone,StarPlatinumLook look,double seconds,float[] out){
-        Arrays.fill(out,0);
-        var all=stances();
-        int top=-1,count=0;float best=0;
-        for(int s=0;s<look.weights.length&&s<all.size();s++){
-            float w=look.weights[s];if(w==0)continue;
-            float[] v=all.get(s).getOrDefault(bone,REST);for(int i=0;i<6;i++)out[i]+=w*v[i];
-            if(Math.abs(w)>1e-6){count++;if(w>best){best=w;top=s;}}
-        }
-        if(count>1&&top>=0)blend(bone,look.weights,top,out);
+        int count=stances(bone,look.weights,out,q);
+        if(look.over<1){
+            stances(bone,look.under,below,qb);
+            float k=Math.max(0,look.over);
+            for(int i=0;i<6;i++)out[i]=below[i]+(out[i]-below[i])*k;
+            slerp(qb,q,k);
+            write(bone,qb,out);
+        }else if(count>1)write(bone,q,out);
         motions.computeIfAbsent(bone,StarPlatinumMotion::of).add(out,seconds,look);
     }
     /**
-     * The blended turn, weighed as turns: the stances taken in, strongest first, each turned towards by its share of the
-     * weight taken so far along the shortest way (so two stances blend at an even speed of turning), written back as
-     * angles on the branch nearest the angles weighed directly (a blend that is mostly one stance reads as that stance's
-     * angles), less the bone's own turn.
+     * The stances' angles and offsets weighed directly into {@code out}, and their turns' mean into {@code q} (a unit
+     * quaternion; one stance's own turn if there is one, the bone's own turn in the model if none). Returns how many
+     * stances there are.
      */
-    private void blend(String bone,float[] weights,int top,float[] out){
-        var rest=rests().getOrDefault(bone,REST);var quats=turns();
-        double[] own=null;
-        double[] first=quats.get(top).get(bone);if(first==null)first=own=quat(rest[0],rest[1],rest[2],new double[4]);
-        System.arraycopy(first,0,q,0,4);double taken=weights[top];
-        for(int s=0;s<weights.length&&s<quats.size();s++){
-            float w=weights[s];if(s==top||w<=0)continue;
-            double[] t=quats.get(s).get(bone);if(t==null)t=own!=null?own:(own=quat(rest[0],rest[1],rest[2],new double[4]));
-            taken+=w;slerp(q,t,w/taken);
+    private int stances(String bone,float[] weights,float[] out,double[] q){
+        Arrays.fill(out,0);
+        var all=stances();
+        int top=-1,count=0;float best=0;
+        for(int s=0;s<weights.length&&s<all.size();s++){
+            float w=weights[s];if(w==0)continue;
+            float[] v=all.get(s).getOrDefault(bone,REST);for(int i=0;i<6;i++)out[i]+=w*v[i];
+            if(Math.abs(w)>1e-6){count++;if(w>best){best=w;top=s;}}
         }
+        var rest=rests().getOrDefault(bone,REST);var quats=turns();
+        if(top<0){quat(rest[0],rest[1],rest[2],q);return 0;}
+        double[] own=null;double total=0;int n=0;
+        for(int s=0;s<weights.length&&s<quats.size();s++){
+            float w=weights[s];if(w<=0)continue;
+            double[] t=quats.get(s).get(bone);if(t==null)t=own!=null?own:(own=quat(rest[0],rest[1],rest[2],new double[4]));
+            if(n==taken.length){taken=Arrays.copyOf(taken,n*2);share=Arrays.copyOf(share,n*2);}
+            taken[n]=t;share[n]=w;n++;total+=w;
+        }
+        double[] first=quats.get(top).get(bone);if(first==null)first=own!=null?own:quat(rest[0],rest[1],rest[2],new double[4]);
+        System.arraycopy(first,0,q,0,4);
+        if(count>1)mean(q,taken,share,n,total);
+        return count;
+    }
+    /**
+     * The turn {@code q} written into {@code out} as angles on the branch nearest the angles weighed directly (which
+     * {@code out} holds: a blend that is mostly one stance reads as that stance's angles), less the bone's own turn.
+     * Several stances' turns are weighed as turns: their weighted mean along the shortest ways between them (the turn
+     * from which the weighted turns to every stance cancel out); two stances blend exactly as one turned towards the
+     * other by its share (at an even speed of turning). Since 2.56.0 three or more blend as a true mean, found in a few
+     * steps from the strongest (before, each was turned towards in turn by its share of the weight taken so far, and
+     * when the shortest way from the turn so far to the next changed side the blend jumped in that frame).
+     */
+    private void write(String bone,double[] q,float[] out){
+        var rest=rests().getOrDefault(bone,REST);
         euler(q,e);
-        // the branch nearest the angles weighed directly (out holds them, less the bone's own turn)
         double[] near={out[0]+rest[0],out[1]+rest[1],out[2]+rest[2]};
         double[] other={e[0]+180,180-e[1],e[2]+180};
         double[] pick=distance(e,near)<=distance(other,near)?e:other;
         for(int i=0;i<3;i++)out[i]=(float)(near[i]+wrap(pick[i]-near[i])-rest[i]);
+    }
+    /**
+     * Moves {@code q} (a unit quaternion, the start) to the weighted mean of {@code n} unit quaternions: at each step,
+     * the weighted mean of the shortest turns from {@code q} to each is taken and {@code q} turned by it, until it
+     * hardly turns (Gauss-Newton on the turns; two quaternions take one step to the turn a slerp gives).
+     */
+    void mean(double[] q,double[][] qs,double[] w,int n,double total){
+        for(int step=0;step<16;step++){
+            double vx=0,vy=0,vz=0;
+            for(int i=0;i<n;i++){
+                double[] t=qs[i];
+                // d = conj(q) t, the turn from q to t, the short way round
+                d[0]=q[0]*t[0]+q[1]*t[1]+q[2]*t[2]+q[3]*t[3];
+                d[1]=q[0]*t[1]-q[1]*t[0]-q[2]*t[3]+q[3]*t[2];
+                d[2]=q[0]*t[2]+q[1]*t[3]-q[2]*t[0]-q[3]*t[1];
+                d[3]=q[0]*t[3]-q[1]*t[2]+q[2]*t[1]-q[3]*t[0];
+                if(d[0]<0)for(int k=0;k<4;k++)d[k]=-d[k];
+                double sn=Math.sqrt(d[1]*d[1]+d[2]*d[2]+d[3]*d[3]);if(sn<1e-12)continue;
+                double angle=2*Math.atan2(sn,d[0]),k=w[i]/total*angle/sn;
+                vx+=k*d[1];vy+=k*d[2];vz+=k*d[3];
+            }
+            double angle=Math.sqrt(vx*vx+vy*vy+vz*vz);if(angle<1e-9)break;
+            double h=angle/2,c=Math.cos(h),sh=Math.sin(h)/angle,ex=vx*sh,ey=vy*sh,ez=vz*sh;
+            // q = q exp(v)
+            double w0=q[0]*c-q[1]*ex-q[2]*ey-q[3]*ez,x0=q[0]*ex+q[1]*c+q[2]*ez-q[3]*ey,y0=q[0]*ey-q[1]*ez+q[2]*c+q[3]*ex,z0=q[0]*ez+q[1]*ey-q[2]*ex+q[3]*c;
+            double norm=Math.sqrt(w0*w0+x0*x0+y0*y0+z0*z0);q[0]=w0/norm;q[1]=x0/norm;q[2]=y0/norm;q[3]=z0/norm;
+            if(angle<1e-7)break;
+        }
     }
     /** Turns {@code q} the share {@code k} of the shortest way to {@code to} (both unit quaternions). */
     static void slerp(double[] q,double[] to,double k){

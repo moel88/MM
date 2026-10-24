@@ -11,10 +11,12 @@ seconds (as given to film.py).
 The two runs are the same shot, but a punch reaches the client a tick sooner or later in one than in the other (the
 server's and the client's ticks are not in step), and in the game each punch's shout runs on that punch's own clock:
 it starts StandAttack.LEAD (1) tick after the punch did, its "RA" on the punch's contact. So the recording is laid
-punch by punch: each shout is found in the recording by its own waveform (the clip in the mod's sounds), and the
-recording from there to the next shout (the shout and the blow's sound with it, as the game played them) goes where
-that punch's shout starts in the film run. The script checks the rule in the sound run too: for every shout, the tick
-it started on against its punch's start there (+1). The recording is tied to the run's clock by the marker tones: every
+punch by punch: each punch's stretch of it starts a tick after the punch did and runs to the next punch's (its shout
+and its blow's sound, as the game played them) and goes where that punch started (+1 tick) in the film run. A punch
+that shouts (since 2.56.0 only the hook and the finisher, StarPlatinumRules.shouts) is found in the recording by its
+shout's own waveform (the clip in the mod's sounds), so its "RA" lands exactly; one that does not (the jab and the
+cross) is placed by the time its tick began, less how early the found shouts came against theirs. The script checks
+the rule in the sound run too: for every shout, the tick it started on against its punch's start there (+1). The recording is tied to the run's clock by the marker tones: every
 entry plays the same one, so the first entry's is the earliest in the recording (not merely the best match). The sound
 written is exactly as long as the film, so films joined end to end keep their sound in step.
 """
@@ -131,39 +133,54 @@ def main():
         near = sample(int(r['nanos'])) + first_sound
         pos, score = find(wav, ref_clip, int(near - .15 * SR), int(near + .15 * SR + len(ref_clip)))
         shouts.append((k, pos - first_sound, score, float(r['clock'])))
-    # the rule, checked in the sound run: a shout starts a tick after its punch (on the client's tick grid)
+    # each punch of the sound run, where its stretch of the recording begins: its shout where it shouts, the time its
+    # tick began otherwise (less how far the shouts came from theirs); and the rule, checked: a shout a tick in
     rec = starts(rows(os.path.join(folder, 'stand.csv')))
-    for (k, pos, score, clock), (kk, st) in zip(shouts, rec):
-        if k != kk:
-            continue
+    anchors, found, early = [], [], []
+    for combo, st in rec:
         nanos = tick_nanos.get(st + LEAD)
-        if nanos is not None:
-            print(f'  sound run: shout {k} found at {pos / SR:.3f} s (match {score:.2f}); its punch started on tick {st}, '
-                  f'tick {st + LEAD} began {(pos - sample(nanos)) / SR * 1000:+.0f} ms from it')
+        tick = sample(nanos) if nanos is not None else None
+        mine = [sh for sh in shouts if sh[0] == combo and (tick is None or abs(sh[1] - tick) < .15 * SR)]
+        if mine:
+            k, pos, score, clock = min(mine, key=lambda sh: abs(sh[1] - tick) if tick is not None else 0)
+            anchors.append(pos)
+            found.append(True)
+            if tick is not None:
+                early.append(pos - tick)
+                print(f'  sound run: shout {k} found at {pos / SR:.3f} s (match {score:.2f}); its punch started on tick {st}, '
+                      f'tick {st + LEAD} began {(pos - tick) / SR * 1000:+.0f} ms from it')
+        else:
+            anchors.append(tick)
+            found.append(False)
+            print(f'  sound run: punch {combo} (tick {st}) shouts nothing' + ('' if tick is not None else ', and its tick has no time'))
+    shift = float(np.median(early)) if early else 0.0
+    anchors = [a if a is None or f else a + shift for a, f in zip(anchors, found)]
     films = starts(rows(os.path.join(film_dir, entry, 'stand.csv')))
-    print('  film run punches start on ticks', films, '; sound run on', rec)
+    print('  film run punches start on ticks', films, '; sound run on', rec, f'; unshouted punches moved {shift / SR * 1000:+.0f} ms')
     # the sound runs exactly as long as the film (its last frame shown for its full 1/60 s), so films joined end to end
     # keep their sound in step
     duration = float(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'csv=p=0', film],
                                     capture_output=True, check=True, text=True).stdout.strip())
     length = int(round(duration * SR))
     track = np.zeros(length + SR)
-    for i, (k, pos, score, clock) in enumerate(shouts):
-        if i >= len(films) or films[i][0] != k:
-            print(f'  shout {k}: no punch {k} in the film run at that place, left out')
+    for i, ((combo, st), pos) in enumerate(zip(rec, anchors)):
+        if pos is None:
             continue
-        st = films[i][1]
-        stop = shouts[i + 1][1] if i + 1 < len(shouts) else pos + int(1.6 * SR)
+        if i >= len(films) or films[i][0] != combo:
+            print(f'  punch {combo}: no punch {combo} in the film run at that place, left out')
+            continue
+        nxt = next((a for a in anchors[i + 1:] if a is not None), None)
+        stop = nxt if nxt is not None else pos + int(1.6 * SR)
         piece = wav[int(pos):int(stop)].copy()
         fade = int(.008 * SR)
         piece[:fade] *= np.linspace(0, 1, fade)
         piece[-fade:] *= np.linspace(1, 0, fade)
-        place = int(round(((st + LEAD) / 20 - start) * SR))
+        place = int(round(((films[i][1] + LEAD) / 20 - start) * SR))
         if place >= length:
             continue
         a, b = max(0, place), min(len(track), place + len(piece))
         track[a:b] += piece[a - place:b - place]
-        print(f'  shout {k}: from the recording at {pos / SR:.3f} s, under the film at {place / SR:.3f} s (punch on tick {st})')
+        print(f'  punch {combo}: from the recording at {pos / SR:.3f} s, under the film at {place / SR:.3f} s (punch on tick {films[i][1]})')
     track = track[:length]
     peak = np.abs(track).max()
     if peak > .99:

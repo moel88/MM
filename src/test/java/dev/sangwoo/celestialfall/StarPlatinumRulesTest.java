@@ -5,27 +5,38 @@ import org.junit.jupiter.api.Test;
 import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Star Platinum's basic attack (2.54.0): four punches on the beat of the user's recording, the fourth throwing. */
+/**
+ * Star Platinum's basic attack (2.54.0): four punches, the fourth throwing. 2.56.0: quicker, and only the hook and the
+ * finisher shout, each on the "RA" of its own from the user's recording.
+ */
 class StarPlatinumRulesTest {
-    /** Where each shout's "RA" begins in the user's recording (seconds; tools/stand/cut_ora.py). */
-    static final double[] RA={.250,1.030,1.930,3.145};
-    /** Each clip has its RA this far in (cut_ora.py RA_AT) and starts StandAttack.LEAD (1) tick into its punch. */
-    static final double[] RA_AT={.25,.25,.40,.45};
+    /** Each clip of the hook's and the finisher's shouts has its RA this far in (cut_ora.py RA_AT) and starts StandAttack.LEAD (1) tick into its punch. */
+    static final double[] RA_AT={0,0,0,.40,.45};
+    /** The "O" of the long shouts starts this long before their RA (the recording, read off its loudness). */
+    static final double O=.40;
 
-    @Test void eachShoutsRaFallsOnItsPunch(){
-        for(int k=1;k<=4;k++)assertEquals(RA_AT[k-1],(CONTACT[k]-1)/20.0,1e-9,"punch "+k);
-        for(int k=1;k<=4;k++)assertNotNull(getClass().getResourceAsStream("/assets/celestialfall/sounds/star_platinum_ora_"+k+".ogg"),"shout "+k);
-    }
-    @Test void mashedThePunchesKeepTheRecordingsBeat(){
-        long start=0;double first=CONTACT[1]/20.0;
+    @Test void onlyTheHookAndTheFinisherShoutEachOnItsPunch(){
         for(int k=1;k<=4;k++){
-            double contact=(start+CONTACT[k])/20.0;
-            assertEquals(RA[k-1]-RA[0],contact-first,.025,"punch "+k+" lands with its RA");
-            if(k<4)start=nextAt(k,start);
+            var clip=getClass().getResourceAsStream("/assets/celestialfall/sounds/star_platinum_ora_"+k+".ogg");
+            if(shouts(k)){
+                assertEquals(RA_AT[k],(CONTACT[k]-1)/20.0,1e-9,"punch "+k+"'s RA on its contact");
+                assertTrue(RA_AT[k]>=O-.005,"punch "+k+" leaves its shout's whole O before the blow");
+                assertNotNull(clip,"shout "+k);
+            }else assertNull(clip,"punch "+k+" has no shout (2.56.0)");
         }
-        // no shout runs into the next: each clip starts a tick into its punch and is this long (cut_ora.py prints it)
-        double[] length={.72,.72,1.15};
-        for(int k=1;k<4;k++)assertTrue(STEP[k]/20.0>=length[k-1]-1e-9,"shout "+k+" is over before the next starts");
+        assertFalse(shouts(1));assertFalse(shouts(2));assertTrue(shouts(3));assertTrue(shouts(4));
+    }
+    @Test void mashedTheyComeQuickAndTheFinishersShoutTakesOverFromTheHooks(){
+        long start=0;double[] contact=new double[5];
+        for(int k=1;k<=4;k++){contact[k]=(start+CONTACT[k])/20.0;if(k<4)start=nextAt(k,start);}
+        // the jab and the cross three tenths of a second apart, the four landing well inside two seconds (2.54.0: 3.2 s)
+        assertTrue(STEP[1]<=6&&STEP[2]<=6,"the jab and the cross come quick");
+        assertTrue(contact[4]<1.8,"the finisher lands at "+contact[4]+" s");
+        assertTrue(contact[1]<=.2+1e-9&&contact[2]-contact[1]<=.3+1e-9,"the first two snap in");
+        // the hook's RA is heard a good while before the finisher's shout begins (its O starts a tick into its punch
+        // and its clip's start is O short of its RA): the hook's shout then fades out under it
+        double finisherShout=(nextAt(3,0)+1)/20.0+RA_AT[4]-O,hookRa=CONTACT[3]/20.0;
+        assertTrue(finisherShout-hookRa>=.25,"the hook's RA rings "+(finisherShout-hookRa)+" s");
     }
     @Test void aLatePunchBreaksTheComboAndTheFourthRests(){
         assertEquals(-1,broken(0,0,500));

@@ -1,6 +1,8 @@
-"""Star Platinum's four basic-attack voices, cut from the user's recording (2.54.0, user request: "평타 소리는 내가 보낸
+"""Star Platinum's basic-attack voices, cut from the user's recording (2.54.0, user request: "평타 소리는 내가 보낸
 파일이랑 싱크 맞게 해줘"). The recording holds four shouts of "ORA!" (the first two the same short one, the last two
-long, "Ooo-RAAA"); each punch of the four-hit combo plays its own, so that the "RA" of its shout falls on the punch.
+long, "Ooo-RAAA"); each punch of the four-hit combo played its own, so that the "RA" of its shout fell on the punch.
+Since 2.56.0 (user request: "1 2타는 오라 소리를 없애고 3 4타부터 생기게") only the hook and the finisher shout, the last
+two shouts: only those two clips are written (the gain is still the one over all four shouts, so they are as before).
 
 usage: python3 -I tools/stand/cut_ora.py RECORDING.mp3 [OUT_DIR]
 
@@ -20,8 +22,11 @@ import numpy as np
 RATE = 48000
 # where each shout's "RA" begins in the recording (seconds)
 RA = (0.250, 1.030, 1.930, 3.145)
-# the contact of each hit (ticks after it begins, StarPlatinumRules.CONTACT) and the tick the clip starts on
+# the contact of each hit (ticks after it begins, StarPlatinumRules.CONTACT, as it was for the first two) and the tick
+# the clip starts on
 CONTACT = (6, 6, 9, 10)
+# the punches that shout (StarPlatinumRules.shouts)
+SHOUTS = (3, 4)
 LEAD = 1
 RA_AT = tuple((c - LEAD) / 20 for c in CONTACT)
 # each clip may reach back to here and no further (the tail of the shout before, or a click before the second shout,
@@ -59,6 +64,8 @@ def main():
     gain = 10 ** (PEAK_DB / 20) / max(np.abs(c).max() for c in clips)
     out.mkdir(parents=True, exist_ok=True)
     for k, clip in enumerate(clips):
+        if k + 1 not in SHOUTS:
+            continue
         pcm = (clip * gain).astype(np.float32).tobytes()
         name = out / f'star_platinum_ora_{k + 1}.ogg'
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(RATE), '-ac', '1', '-i', '-',

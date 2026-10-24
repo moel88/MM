@@ -3,19 +3,22 @@ package dev.sangwoo.celestialfall.stand;
 /**
  * Star Platinum's basic attack, four punches (2.54.0, user request: "이제 평타 만들자 4타에 날아가야해 평타 소리는 내가
  * 보낸 파일이랑 싱크 맞게 해줘"): a left jab, a right cross, a left hook and a lunging right that sends whoever it strikes
- * flying. Each punch plays its own shout from the user's recording of four "ORA!"s, and lands on the "RA" of it
- * (tools/stand/cut_ora.py: a clip starts one tick after its punch and has its RA (CONTACT - 1) / 20 s in). Mashed, the
- * punches start as far apart as the shouts are in the recording, so the four of them sound as it does: the RAs come
- * 0.78, 0.90 and 1.215 s apart there, and here the contacts 0.80, 0.90 and 1.20 s. Pure timing and reach, shared by the
- * server and the client; ticks of 1/20 s.
+ * flying. 2.56.0 (user request: "평타 속도를 더 빠르게 하자 그대신 1 2타는 오라 소리를 없애고 3 4타부터 생기게"): the
+ * jab and the cross are quick and silent, three tenths of a second apart; the hook and the finisher shout the last two
+ * "ORA!"s of the user's recording, each landing on the "RA" of its own (tools/stand/cut_ora.py: a clip starts one tick
+ * after its punch and has its RA (CONTACT - 1) / 20 s in). Those two are long shouts, "Ooo-RAAA", their "O" 0.4 s, so
+ * the hook and the finisher still take 0.45 and 0.5 s to land; the finisher comes 0.65 s after the hook (in the
+ * recording the two are 1.2 s apart), and its shout takes over from the hook's (StandAttack fades the one before out).
+ * The four land 0.20, 0.50, 1.05 and 1.75 s into a mashed combo (2.54.0: 0.30, 1.10, 2.00, 3.20). Pure timing and
+ * reach, shared by the server and the client; ticks of 1/20 s.
  */
 public final class StarPlatinumRules {
-    /** Each punch's contact, ticks after it starts (by the punch, 1 to 4): the short shouts' "O" is 0.2 s, the long ones' 0.4 s. */
-    public static final int[] CONTACT={0,6,6,9,10};
-    /** Ticks from a punch's start before the next may start: the shouts' spacing in the recording. */
-    public static final int[] STEP={0,16,15,23,0};
+    /** Each punch's contact, ticks after it starts (by the punch, 1 to 4): the jab and the cross snap in, the hook and the finisher take the "O" of their shouts (0.4 s). */
+    public static final int[] CONTACT={0,4,4,9,10};
+    /** Ticks from a punch's start before the next may start (2.56.0: three tenths of a second, the hook's 0.65 s). */
+    public static final int[] STEP={0,6,6,13,0};
     /** How long each punch runs (ticks) when no next one cuts it short: the strike, the follow-through and the guard again. */
-    public static final int[] LENGTH={0,22,22,30,26};
+    public static final int[] LENGTH={0,10,10,17,23};
     public static final float[] DAMAGE={0,5,5,6,10};
     /** A press this many ticks or fewer before the next punch may start is kept, and starts it then. */
     public static final int BUFFER=8;
@@ -30,6 +33,9 @@ public final class StarPlatinumRules {
     /** Ticks a punch's contact holds whoever it strikes for, past the next punch's contact if that comes as soon as it may. */
     public static final int HOLD_PAST=3;
     private StarPlatinumRules(){}
+
+    /** Whether the punch {@code combo} shouts (2.56.0: the hook and the finisher; the jab and the cross have none). */
+    public static boolean shouts(int combo){return combo==3||combo==4;}
 
     /** The punch after {@code combo}: 1 again after the fourth (or none yet). */
     public static int next(int combo){return combo>=1&&combo<4?combo+1:1;}

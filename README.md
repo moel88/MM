@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.55.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.56.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.56.0 — 스타플래티나 평타: 더 빠르게, 3·4타만 '오라!', 화면 효과 없음
+
+- **더 빠르게:** 연타하면 네 주먹이 0.20·0.50·1.05·1.75초에 닿습니다(2.55.0은 0.30·1.10·2.00·3.20초). 1·2타는 0.3초 간격으로 치고, 다음 주먹이 앞 주먹을 거두기 전에 이어받습니다.
+- **소리는 3·4타만:** 1·2타(잽·스트레이트)는 '오라!'를 외치지 않습니다. 3·4타는 보내 주신 녹음의 셋째·넷째 '오라!'를 그대로 쓰고, 'RA'가 주먹이 닿는 프레임에 맞습니다. 4타 소리가 시작되면 3타 소리가 0.15초에 걸쳐 부드럽게 줄어듭니다.
+- **더 격하게:** 가드는 더 낮고 앞으로 나와 있고, 준비는 더 깊이 비틉니다. 타격은 허리와 몸이 더 멀리 나가고, 닿을 때마다 스탠드가 대상을 뚫고 한 번 더 밀려 나갑니다.
+- **화면 효과 없음:** 평타는 화면을 흔들지 않고, 4타의 임팩트 프레임·화면 번쩍임·색 갈라짐·빛줄기·공기 일렁임도 없습니다. 이펙트는 모두 주먹이 닿는 자리에만 남습니다.
+
+[RELEASE_2.56.0_KO.md](RELEASE_2.56.0_KO.md)를 확인하세요.
 
 # 보탠드 2.55.0 — 스타플래티나 평타: 바로 앞에서 더 격하게, 이펙트 대폭 강화
 

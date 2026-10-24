@@ -217,7 +217,7 @@ public final class StandPresence {
             var shape=StandAttack.shape(p.getUuid(),delta,back,into);if(shape==null)return null;
             float e=shape.engage;
             if(out&&e>0){
-                for(int i=0;i<look.weights.length;i++)look.weights[i]=look.weights[i]*(1-e)+shape.weights[i]*e;
+                shape.onto(look);
                 look.wind=Math.max(look.wind,.35f*e);
             }
             look.gust=Math.max(look.gust,shape.gust);

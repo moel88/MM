@@ -5,6 +5,7 @@ import dev.sangwoo.celestialfall.client.BotandCamera;
 import dev.sangwoo.celestialfall.client.CombatClient;
 import dev.sangwoo.celestialfall.client.MapClient;
 import dev.sangwoo.celestialfall.stand.StarPlatinumAttack;
+import dev.sangwoo.celestialfall.stand.StarPlatinumRules;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,7 +17,6 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.sound.SoundCategory;
@@ -37,17 +37,41 @@ public final class StandAttack {
     public static final int LEAD=1;
     /** The shouts are a little louder than the game's other attack sounds (about -9 LUFS against -11 to -15). */
     static final float VOICE=.8f;
+    /** Ticks a shout takes to fade out when the next one comes, or when its punch stops before it lands. */
+    static final int FADE=3;
+    /**
+     * A shout: played like any other sound until it is told to fade, then quieter tick by tick to nothing (the game
+     * sets a playing sound's loudness once a tick, so a fade has no click where a stop would).
+     */
+    public static final class Shout extends net.minecraft.client.sound.AbstractSoundInstance implements net.minecraft.client.sound.TickableSoundInstance {
+        private final float full;private int fading=-1;private boolean done;
+        Shout(Identifier id,float volume){
+            super(id,SoundCategory.PLAYERS,net.minecraft.util.math.random.Random.create());
+            this.volume=full=volume;pitch=1;attenuationType=SoundInstance.AttenuationType.NONE;relative=true;x=y=z=0;
+        }
+        /** Fades it out over FADE ticks (if it is not already fading). */
+        void fade(){if(fading<0)fading=0;}
+        /** How loud it is now (before the game's own volume settings). */
+        float loudness(){return volume;}
+        public boolean fading(){return fading>=0;}
+        @Override public boolean isDone(){return done;}
+        @Override public void tick(){
+            if(fading<0)return;
+            fading++;volume=full*Math.max(0,1-fading/(float)FADE);
+            if(fading>=FADE)done=true;
+        }
+    }
     /** A punch as heard: the server's age of it when it was sent and this client's tick then, whom it struck (entity ids and where they stood) once it landed. */
     public static final class Seen {
         public final long start;public final StandPunch.Punch punch;final long serverAge,received;
         public int[] struck=new int[0];public Vec3d[] struckAt=new Vec3d[0];public boolean landed;
-        SoundInstance voice;
+        Shout voice;
         Seen(long start,StandPunch.Punch punch,long serverAge,long received){this.start=start;this.punch=punch;this.serverAge=serverAge;this.received=received;}
         /** Seconds on the punch's clock this frame. */
         public float age(float delta){return (ticksIn()+Math.max(0,Math.min(1,delta)))/20f;}
         /** Whole ticks on the punch's clock since it started (the frames after this tick show this much and the frame's part of a tick). */
         public long ticksIn(){return Math.max(0,serverAge+ticks-received);}
-        /** Its shout, once asked for (null if it has none here: too far, or heard too late). */
+        /** Its shout, once asked for (null if it has none: the jab's and the cross's, or too far, or heard too late). */
         public SoundInstance voice(){return voice;}
     }
     static final class User {final ArrayDeque<Seen> punches=new ArrayDeque<>();long ready;Seen stopped;}
@@ -76,8 +100,8 @@ public final class StandAttack {
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(StandAttack::clear));
     }
     static void clear(){
-        var mc=MinecraftClient.getInstance();
-        for(var u:USERS.values())for(var s:u.punches)if(s.voice!=null)mc.getSoundManager().stop(s.voice);
+        var mc=MinecraftClient.getInstance();FADING.clear();
+        for(var u:USERS.values())for(var s:u.punches)if(s.voice!=null&&!s.voice.isDone())mc.getSoundManager().stop(s.voice);
         USERS.clear();world=null;
     }
     private static void event(MinecraftClient mc,UUID id,int type,int combo,long start,long serverNow,float yaw,float aim,long ready,int[] ids,Vec3d[] at){
@@ -86,8 +110,9 @@ public final class StandAttack {
             case StarPlatinumAttack.PUNCH->{
                 if(combo<1)return;
                 var seen=new Seen(start,new StandPunch.Punch(combo,yaw,Float.isFinite(aim)?aim:Float.NaN,Float.NaN),Math.max(0,serverNow-start),ticks);
+                var before=user.punches.peekLast();
                 user.punches.addLast(seen);while(user.punches.size()>3)user.punches.removeFirst();
-                shout(mc,id,seen);
+                shout(mc,id,seen,before);
             }
             case StarPlatinumAttack.LANDED->{
                 var seen=find(user,start);if(seen==null)return;
@@ -100,29 +125,37 @@ public final class StandAttack {
                 stopped.struck=seen.struck;stopped.struckAt=seen.struckAt;stopped.landed=seen.landed;stopped.voice=seen.voice;
                 replace(user,seen,stopped);
                 // a punch stopped before it landed takes its shout with it
-                if(!seen.landed&&seen.voice!=null)mc.getSoundManager().stop(seen.voice);
+                if(!seen.landed&&seen.voice!=null)seen.voice.fade();
             }
             default->{}
         }
     }
     private static Seen find(User u,long start){for(var s:u.punches)if(s.start==start)return s;return null;}
     private static void replace(User u,Seen old,Seen now){var list=new ArrayList<>(u.punches);list.set(list.indexOf(old),now);u.punches.clear();u.punches.addAll(list);}
-    /** The punch's shout, LEAD ticks into it: loud for its user and those near, fading out to 40 blocks. */
-    private static void shout(MinecraftClient mc,UUID id,Seen seen){
-        if(mc.player==null||seen.serverAge>LEAD)return;
+    /**
+     * The punch's shout, LEAD ticks into it (the hook's and the finisher's; 2.56.0: the jab and the cross have none):
+     * loud for its user and those near, fading out to 40 blocks. The one its user shouted before fades out as it starts.
+     */
+    private static void shout(MinecraftClient mc,UUID id,Seen seen,Seen before){
+        if(!StarPlatinumRules.shouts(seen.punch.combo())||mc.player==null||seen.serverAge>LEAD)return;
         var user=mc.world.getPlayerByUuid(id);
         double far=user==null||user==mc.player?0:user.getPos().distanceTo(mc.player.getPos());
         float volume=(float)(CelestialFall.CONFIG.effectVolume*VOICE*Math.max(0,1-far/40));if(volume<=.01f)return;
-        var sound=new PositionedSoundInstance(CelestialFall.id("star_platinum_ora_"+seen.punch.combo()),SoundCategory.PLAYERS,volume,1,net.minecraft.util.math.random.Random.create(),false,0,SoundInstance.AttenuationType.NONE,0,0,0,true);
+        var sound=new Shout(CelestialFall.id("star_platinum_ora_"+seen.punch.combo()),volume);
         seen.voice=sound;
         int delay=(int)(LEAD-seen.serverAge);
         if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
+        if(before!=null&&before.voice!=null)FADING.add(new Object[]{before.voice,ticks+Math.max(0,delay)});
     }
+    /** Shouts to fade out once the next one starts: {the shout, the tick it fades from}. */
+    private static final java.util.List<Object[]> FADING=new java.util.ArrayList<>();
     private static void tick(MinecraftClient mc){
         if(mc.world==null||!MapClient.enabled()){if(!USERS.isEmpty()||world!=null)clear();return;}
         if(world!=mc.world){clear();world=mc.world;}
         if(mc.isPaused())return;
         ticks++;
+        // the shout before fades as the next one starts (the next starts this tick or later, held back to its punch's tick)
+        FADING.removeIf(f->{if(ticks<(long)f[1])return false;((Shout)f[0]).fade();return true;});
         // a punch long over is let go (its user gone from sight, or simply done)
         USERS.entrySet().removeIf(e->{
             e.getValue().punches.removeIf(s->s.age(0)>StandPunch.length(s.punch)+1);

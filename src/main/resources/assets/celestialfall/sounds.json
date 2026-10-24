@@ -654,24 +654,6 @@
       }
     ]
   },
-  "star_platinum_ora_1": {
-    "sounds": [
-      {
-        "name": "celestialfall:star_platinum_ora_1",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
-  "star_platinum_ora_2": {
-    "sounds": [
-      {
-        "name": "celestialfall:star_platinum_ora_2",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
   "star_platinum_ora_3": {
     "sounds": [
       {

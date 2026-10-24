@@ -40,7 +40,8 @@ public final class MpClient implements ClientModInitializer {
      * Since 2.54.0 the caster holds the attack with the stand out (3315 to 3378), so Star Platinum punches the watcher
      * standing in front through a whole combo, the fourth throwing it: both log each punch they hear (who, which,
      * whether it landed and on whom, its age on their clock then), when its shout starts on their clock (it should start
-     * a tick in, StandAttack.LEAD) and the cooldown list's rest.
+     * a tick in, StandAttack.LEAD) and the cooldown list's rest. Since 2.56.0 only the hook and the finisher shout: the
+     * jab and the cross are logged as shouting nothing, and the hook's shout as fading when the finisher's comes.
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -236,11 +237,14 @@ public final class MpClient implements ClientModInitializer {
         for(var p:mc.world.getPlayers())for(var seen:dev.sangwoo.celestialfall.client.stand.StandAttack.punches(p.getUuid())){
             String key=p.getUuid()+"/"+seen.start;int[] state=heard.get(key);
             String who=p.getGameProfile().getName()+"'s punch "+seen.punch.combo();
-            if(state==null){heard.put(key,state=new int[3]);note(String.format(Locale.ROOT,"%s heard (server tick %d, its tick here %d)",who,seen.start,seen.ticksIn()));}
+            if(state==null){heard.put(key,state=new int[5]);note(String.format(Locale.ROOT,"%s heard (server tick %d, its tick here %d)",who,seen.start,seen.ticksIn()));}
             if(state[0]==0&&seen.landed){state[0]=1;var names=new ArrayList<String>();
                 for(int id:seen.struck){var e=mc.world.getEntityById(id);names.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
                 note(String.format(Locale.ROOT,"%s landed on %s at its tick %d here",who,names,seen.ticksIn()));}
             if(state[1]==0&&seen.voice()!=null&&mc.getSoundManager().isPlaying(seen.voice())){state[1]=1;note(String.format(Locale.ROOT,"%s: its shout started at its tick %d here",who,seen.ticksIn()));}
+            // 2.56.0: the jab and the cross shout nothing; the hook's shout fades as the finisher's comes
+            if(state[3]==0&&seen.ticksIn()>=4&&!dev.sangwoo.celestialfall.stand.StarPlatinumRules.shouts(seen.punch.combo())){state[3]=1;note(who+(seen.voice()==null?": no shout (by the rule)":": a shout, against the rule"));}
+            if(state[4]==0&&seen.voice() instanceof dev.sangwoo.celestialfall.client.stand.StandAttack.Shout shout&&shout.fading()){state[4]=1;note(String.format(Locale.ROOT,"%s: its shout fading out at its tick %d here",who,seen.ticksIn()));}
             if(state[2]==0&&!Float.isNaN(seen.punch.stopped())){state[2]=1;note(who+" stopped short");}
         }
     }

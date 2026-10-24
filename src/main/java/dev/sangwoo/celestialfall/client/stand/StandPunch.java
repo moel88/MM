@@ -21,21 +21,41 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * jumps. Since 2.55.0 (user request: "스타플래티나 평타 모션을 더 격하게 만들어주고 스타플래티나가 플레이어 바로 앞에서
  * 때리게 바꿔줘") it punches from right in front of its user, on the line of the punch, dashing on into each blow as
  * far as it takes to meet the target (within bounds) and back; the loads are deeper, the strikes snappier (a tenth of
- * a second), the hit-stops longer, and five afterimages follow each strike.
+ * a second), the hit-stops longer, and five afterimages follow each strike. Since 2.56.0 (user request: "평타 속도를 더
+ * 빠르게 하자 ... 더 격하게 때리게 모션을") the jab and the cross come three tenths of a second apart and land a fifth of
+ * a second in, each punch takes over from the last before it is back in its guard (a combination, not four punches),
+ * the stand comes round to the front faster, every blow drives the stand on through its target a little further
+ * than the dash (a shove as it lands), the dashes are longer, and the stances fiercer still.
  */
 public final class StandPunch {
     /** A punch as a client saw it: its number (1 to 4), the way it goes (degrees), how far ahead its target stands (blocks, NaN for none), and the time on its own clock (seconds) it was stopped short (NaN if it was not). */
     public record Punch(int combo,float yaw,float aim,float stopped){
         public Punch stop(float at){return new Punch(combo,yaw,aim,at);}
     }
-    /** What a frame takes from the punches: the stances' shares (adding up to 1), how far out in front of its user the stand is (0 at its shoulder, 1 in front), the way it faces, how far ahead and to the right of its user it stands, how far it lunges on (blocks), the gust and the afterimages' strength. */
+    /** What a frame takes from the punches: the stances' shares (adding up to 1), how far out in front of its user the stand is (0 at its shoulder, 1 in front), the way it faces, how far ahead and to the right of its user it stands, how far it lunges on (blocks, the shove of the blow with it), the gust and the afterimages' strength. */
     public static final class Shape {
-        public final float[] weights=new float[NAMES.size()];
-        public float engage,yaw,ahead,side,lunge,gust,ghost;
-        void clear(){Arrays.fill(weights,0);engage=yaw=ahead=side=lunge=gust=ghost=0;}
+        /** The newest punch's stances, and while it takes over from the one before (2.56.0) that one's, and how far it has taken over (1 once it has). */
+        public final float[] weights=new float[NAMES.size()],under=new float[NAMES.size()];
+        public float engage,yaw,ahead,side,lunge,gust,ghost,over=1;
+        void clear(){Arrays.fill(weights,0);Arrays.fill(under,0);engage=yaw=ahead=side=lunge=gust=ghost=0;over=1;}
+        /**
+         * The punches on a look, as far as the stand has come out in front ({@code engage}): in front, the punch drawn
+         * as it is, turning from the punch before as it takes over; on its way round, the look's stances and the
+         * punches' weighed together.
+         */
+        public void onto(dev.sangwoo.celestialfall.stand.StarPlatinumLook look){
+            float e=engage;
+            if(e>=1){
+                System.arraycopy(weights,0,look.weights,0,weights.length);
+                System.arraycopy(under,0,look.under,0,under.length);look.over=over;
+                return;
+            }
+            look.flatten();
+            for(int i=0;i<look.weights.length;i++){float mine=over>=1?weights[i]:weights[i]*over+under[i]*(1-over);look.weights[i]=look.weights[i]*(1-e)+mine*e;}
+        }
     }
     /** When each punch lands (seconds after it starts) and how long it then stands still (the hit-stop: longer for the heavy ones). */
-    public static final float[] HIT=new float[5],FREEZE={0,.06f,.06f,.08f,.14f};
+    public static final float[] HIT=new float[5],FREEZE={0,.05f,.05f,.08f,.13f};
     static{for(int k=1;k<=4;k++)HIT[k]=StarPlatinumRules.CONTACT[k]/20f;}
     /** Ease into a key: smoothly, holding the stance, or striking (faster and faster, at full speed as it lands). */
     static final int SMOOTH=0,HOLD=1,STRIKE=2;
@@ -43,14 +63,16 @@ public final class StandPunch {
     static Key k(float at,int stance,int ease){return new Key(at,stance,ease);}
     /**
      * Each punch's keys on its own clock with the hit-stop taken out: 1 the jab, 2 the cross, 3 the hook, 4 the
-     * finisher, which holds the blow out while its target flies. Since 2.55.0 each loads a little longer and holds the
-     * load a moment (the coil before the blow), and strikes in a tenth of a second (the hook and the finisher in 0.12).
+     * finisher, which holds the blow out while its target flies. Each loads, holds the load a moment (the coil before
+     * the blow) and strikes in a tenth of a second (the hook and the finisher in 0.12). Since 2.56.0 the jab and the
+     * cross load in 0.08 s and land at 0.2 s (StarPlatinumRules.CONTACT), and the next punch comes before they are back
+     * in their guard; the hook and the finisher load all through the "O" of their shouts.
      */
     static final Key[][] KEYS={null,
-        {k(0,GUARD,SMOOTH),k(.12f,WIND_L,SMOOTH),k(.2f,WIND_L,HOLD),k(.3f,PUNCH_L,STRIKE),k(.36f,PUNCH_L,HOLD),k(.6f,GUARD,SMOOTH)},
-        {k(0,GUARD,SMOOTH),k(.12f,WIND_R,SMOOTH),k(.2f,WIND_R,HOLD),k(.3f,PUNCH_R,STRIKE),k(.37f,PUNCH_R,HOLD),k(.62f,GUARD,SMOOTH)},
-        {k(0,GUARD,SMOOTH),k(.22f,WIND_HOOK,SMOOTH),k(.33f,WIND_HOOK,HOLD),k(.45f,HOOK,STRIKE),k(.52f,HOOK,HOLD),k(.84f,GUARD,SMOOTH)},
-        {k(0,GUARD,SMOOTH),k(.24f,WIND_BIG,SMOOTH),k(.38f,WIND_BIG,HOLD),k(.5f,PUNCH_BIG,STRIKE),k(.8f,PUNCH_BIG,HOLD),k(1.15f,GUARD,SMOOTH)}};
+        {k(0,GUARD,SMOOTH),k(.08f,WIND_L,SMOOTH),k(.1f,WIND_L,HOLD),k(.2f,PUNCH_L,STRIKE),k(.24f,PUNCH_L,HOLD),k(.44f,GUARD,SMOOTH)},
+        {k(0,GUARD,SMOOTH),k(.08f,WIND_R,SMOOTH),k(.1f,WIND_R,HOLD),k(.2f,PUNCH_R,STRIKE),k(.24f,PUNCH_R,HOLD),k(.44f,GUARD,SMOOTH)},
+        {k(0,GUARD,SMOOTH),k(.24f,WIND_HOOK,SMOOTH),k(.34f,WIND_HOOK,HOLD),k(.45f,HOOK,STRIKE),k(.5f,HOOK,HOLD),k(.76f,GUARD,SMOOTH)},
+        {k(0,GUARD,SMOOTH),k(.26f,WIND_BIG,SMOOTH),k(.38f,WIND_BIG,HOLD),k(.5f,PUNCH_BIG,STRIKE),k(.72f,PUNCH_BIG,HOLD),k(1f,GUARD,SMOOTH)}};
     /** The stance each punch loads in, the one it strikes in, and the fist it strikes with (true: the right). */
     static final int[] WINDS={0,WIND_L,WIND_R,WIND_HOOK,WIND_BIG},STRIKES={0,PUNCH_L,PUNCH_R,HOOK,PUNCH_BIG};
     static final boolean[] RIGHT={false,false,true,false,true};
@@ -58,17 +80,25 @@ public final class StandPunch {
      * How far the stand dashes on into each punch as it lands (blocks): as far as it takes for the fist to sink BITE
      * into its target, but never less than the first nor more than the second (it stays right in front of its user).
      */
-    static final float[] LUNGE_MIN={0,.2f,.25f,.3f,.55f},LUNGE_MAX={0,.7f,.75f,.8f,1.3f};
+    static final float[] LUNGE_MIN={0,.3f,.35f,.4f,.6f},LUNGE_MAX={0,.85f,.9f,.95f,1.3f};
+    /** How far each blow shoves the stand on through its target as it lands (blocks, in over two frames and soon gone, 2.56.0). */
+    static final float[] DRIVE={0,.12f,.12f,.18f,.3f};
     /** Gust through the hair as each punch lands. */
-    static final float[] GUST={0,.8f,.85f,1.1f,1.6f};
+    static final float[] GUST={0,1f,1.05f,1.3f,1.8f};
     /**
      * Where the stand stands to punch (2.55.0): right in front of its user, AHEAD blocks on along the punch and on its
      * line (SIDE 0), facing straight down it, higher than at rest (RAISE) so its shoulders and fists show over its
      * user's head from the game's camera behind them.
      */
     static final float AHEAD=.95f,SIDE=0,BITE=.15f,RAISE=.3f;
-    /** Seconds: the first punch brings it round to the front (off fast, settling in); a new punch takes over from the last; it turns to a new way. */
-    static final float RISE=.2f,BLEND=.1f,TURN=.12f;
+    /** Seconds: the first punch brings it round to the front (off fast, settling in, there before the jab lands); it turns to a new way. */
+    static final float RISE=.18f,TURN=.12f;
+    /**
+     * Seconds a new punch takes to take over from the last, by the new one (2.56.0): the jab and the cross snap in over
+     * the last blow, the hook and the finisher take longer (their arms come right round from the blow before, all
+     * through the first of their loads).
+     */
+    static final float[] BLEND={0,.1f,.12f,.2f,.2f};
     /** It stays in front this long once a punch is over (seconds; less once one is stopped short), then goes back over RETURN. */
     static final float LINGER=.45f,LINGER_STOPPED=.15f,RETURN=.4f;
     /** The stand's size, for the fists' places (StarPlatinumRenderer.SCALE: model units of 1/16 block). */
@@ -141,17 +171,23 @@ public final class StandPunch {
      */
     public static Shape at(Punch now,float t,Punch before,float tb,Shape into){
         into.clear();
-        float take=before==null?1:smooth(t/BLEND);
-        stances(now,t,into.weights,take);
-        if(take<1)stances(before,tb,into.weights,1-take);
+        float take=before==null?1:smooth(t/BLEND[now.combo]);
+        // the newest punch's stances, and the last one's under them while it takes over (turned from, not weighed in)
+        stances(now,t,into.weights,1);
+        if(take<1){stances(before,tb,into.under,1);into.over=take;}
         into.engage=Math.max(envelope(now,t),before==null?0:envelope(before,tb));
         float turn=before==null?1:smooth(t/TURN);
         into.yaw=before==null?now.yaw:before.yaw+wrap(now.yaw-before.yaw)*turn;
         into.ahead=AHEAD;into.side=SIDE;
-        into.lunge=lunge(now)*striking(now,t)*take+(before==null?0:lunge(before)*striking(before,tb)*(1-take));
+        into.lunge=lunge(now)*striking(now,t)*take+(before==null?0:lunge(before)*striking(before,tb)*(1-take))+drive(now,t)+(before==null?0:drive(before,tb));
         into.gust=GUST[now.combo]*kick(t,HIT[now.combo],.25f)+(before==null?0:GUST[before.combo]*kick(tb,HIT[before.combo],.25f));
         into.ghost=ghost(now,t);
         return into;
+    }
+    /** The shove of a blow as it lands (blocks): in over two frames, gone in a few more (none for a punch stopped before it landed). */
+    static float drive(Punch p,float t){
+        if(!Float.isNaN(p.stopped)&&p.stopped<HIT[p.combo])return 0;
+        return DRIVE[p.combo]*kick(t,HIT[p.combo],.07f);
     }
     /** The afterimages: from the moment the strike starts, through the blow and its hit-stop, gone soon after (not for a punch stopped before it landed). */
     static float ghost(Punch p,float t){
