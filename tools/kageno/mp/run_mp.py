@@ -1,6 +1,7 @@
 """Multiplayer smoke test of the release jar in a production Fabric setup (no dev mappings):
 a dedicated server plus two clients ("Caster" plays every Kageno key, "Watcher" stands in front),
-each client under its own Xvfb display. Everything comes from the offline Gradle/Loom caches.
+each client under its own Xvfb display. Everything comes from the offline Gradle/Loom caches. The clients play their
+sound to OpenAL Soft's null device (2.54.0: at full volume, so each Star Platinum shout is seen to start).
 usage: python3 tools/kageno/mp/run_mp.py OUT_DIR [MOD_JAR]
 Results: OUT_DIR/{server.txt, caster/log.txt, watcher/log.txt, caster/*.png, watcher/*.png, logs/}.
 """

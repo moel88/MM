@@ -14,7 +14,9 @@ it starts StandAttack.LEAD (1) tick after the punch did, its "RA" on the punch's
 punch by punch: each shout is found in the recording by its own waveform (the clip in the mod's sounds), and the
 recording from there to the next shout (the shout and the blow's sound with it, as the game played them) goes where
 that punch's shout starts in the film run. The script checks the rule in the sound run too: for every shout, the tick
-it started on against its punch's start there (+1).
+it started on against its punch's start there (+1). The recording is tied to the run's clock by the marker tones: every
+entry plays the same one, so the first entry's is the earliest in the recording (not merely the best match). The sound
+written is exactly as long as the film, so films joined end to end keep their sound in step.
 """
 import csv
 import json
@@ -43,17 +45,30 @@ def pling():
     return x / (np.abs(x).max() + 1e-9)
 
 
-def find(wav, ref, lo, hi):
-    """Where ref starts in wav[lo:hi] (samples), by normalised cross-correlation, and how well it matches."""
-    lo, hi = max(0, lo), min(len(wav), hi)
-    seg = wav[lo:hi]
+def scores(seg, ref):
+    """How well ref matches seg starting at each sample: normalised cross-correlation."""
     c = signal.fftconvolve(seg, ref[::-1], 'valid')
     run = np.concatenate([[0.0], np.cumsum(seg ** 2)])
     # (silence is floored at an RMS of 0.001, so a match in it cannot blow up)
     energy = np.sqrt(np.maximum(run[len(ref):] - run[:-len(ref)], len(ref) * 1e-6)) * np.sqrt(np.sum(ref ** 2))
-    score = c / energy
+    return c / energy
+
+
+def find(wav, ref, lo, hi):
+    """Where ref starts in wav[lo:hi] (samples), by normalised cross-correlation, and how well it matches."""
+    lo, hi = max(0, lo), min(len(wav), hi)
+    score = scores(wav[lo:hi], ref)
     k = int(np.argmax(score))
     return lo + k, float(score[k])
+
+
+def earliest(wav, ref):
+    """Where ref first starts in wav: the earliest match nearly as good as the best (every entry plays the same marker,
+    so the best one need not be the first)."""
+    score = scores(wav, ref)
+    k = int(np.argmax(score > .9 * score.max()))
+    k += int(np.argmax(score[k:k + SR // 10]))
+    return k, float(score[k])
 
 
 def rows(path):
@@ -95,7 +110,7 @@ def main():
             with open(path) as fh:
                 markers.append(int(list(csv.reader(fh))[1][1]))
     first_marker = min(markers)
-    at0, s0 = find(wav, ref, 0, len(wav))
+    at0, s0 = earliest(wav, ref)
     guess = at0 + (marker - first_marker) * SR / 1e9
     at, s = find(wav, ref, int(guess - .5 * SR), int(guess + .5 * SR + len(ref)))
     print(f'marker of {entry} at {at / SR:.3f} s in the recording (match {s:.2f}; the first at {at0 / SR:.3f}, match {s0:.2f})')
@@ -127,7 +142,11 @@ def main():
                   f'tick {st + LEAD} began {(pos - sample(nanos)) / SR * 1000:+.0f} ms from it')
     films = starts(rows(os.path.join(film_dir, entry, 'stand.csv')))
     print('  film run punches start on ticks', films, '; sound run on', rec)
-    length = int(round((end - start) * SR))
+    # the sound runs exactly as long as the film (its last frame shown for its full 1/60 s), so films joined end to end
+    # keep their sound in step
+    duration = float(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'csv=p=0', film],
+                                    capture_output=True, check=True, text=True).stdout.strip())
+    length = int(round(duration * SR))
     track = np.zeros(length + SR)
     for i, (k, pos, score, clock) in enumerate(shouts):
         if i >= len(films) or films[i][0] != k:
@@ -151,7 +170,7 @@ def main():
         track *= .99 / peak
     tmp = out + '.wav'
     wavfile.write(tmp, SR, (track * 32767).astype(np.int16))
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', film, '-i', tmp, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', out], check=True)
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', film, '-i', tmp, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', out], check=True)
     os.remove(tmp)
     print(f'{out}: {len(track) / SR:.2f} s of sound')
 
