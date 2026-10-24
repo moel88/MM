@@ -1,4 +1,12 @@
-> **현재 통합본: Botand 2.51.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.52.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.52.0 — 스타플래티나의 빛 · 떠오르는 빛 알갱이 · 크기 조금 줄이기
+
+- **빛:** 나와 있는 스타플래티나가 은은한 보랏빛 파랑으로 빛납니다. 같은 몸을 조금 크게 두 번 더 빛으로 겹쳐 그려 몸이 은은하게 밝아지고 윤곽에 부드러운 빛 테두리가 생기며, 숨에 맞춰 조금씩 밝아졌다 어두워집니다. 원화 자세로 펼칠 때 잠깐 더 밝게 번쩍입니다. 밤에 특히 잘 보입니다.
+- **떠오르는 빛 알갱이:** 가슴·어깨·팔·머리·뒤로 날리는 머리카락·다리에서 빛 알갱이와 가는 빛줄기가 계속 생겨 천천히 떠오르며 흔들리고 반짝이다 사라집니다(초당 30개, 펼칠 때는 더 많이). 움직이면 지나온 자리에 남아 꼬리처럼 따라옵니다. 들어갈 때는 빛도 함께 사그라들고, 이미 떠오른 알갱이는 다 사라질 때까지 남습니다.
+- **크기:** 0.8에서 0.72로 10% 줄었습니다.
+
+[RELEASE_2.52.0_KO.md](RELEASE_2.52.0_KO.md)를 확인하세요.
 
 # 보탠드 2.51.0 — 스타플래티나 스탠드 (Q로 소환)
 

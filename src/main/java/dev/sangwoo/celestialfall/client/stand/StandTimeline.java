@@ -41,6 +41,9 @@ public final class StandTimeline {
         into.weights[StarPlatinumStance.IDLE]=b*settle;
         into.wind=b*(1-settle);
         into.gust=smooth((t-BURST)/.18f)*(1-smooth((t-.5f)/.5f));
+        // its aura (2.52.0): comes in with the body and flares as it bursts into the pose
+        float flare=smooth((t-BURST)/.15f)*(1-smooth((t-.42f)/.4f));
+        into.glow=into.alpha*(1+.9f*flare);
         return into;
     }
     /** The look {@code t} seconds after it was sent back, from {@code from}, the look it had then. */
@@ -50,6 +53,7 @@ public final class StandTimeline {
         for(int i=0;i<into.weights.length;i++)into.weights[i]=from.weights[i]*(1-curl)+(i==StarPlatinumStance.SUMMON?curl:0);
         into.out=from.out*(1-u*u*u);
         into.alpha=from.alpha*(1-smooth((t-.05f)/.25f));
+        into.glow=from.glow*(1-smooth((t-.05f)/.25f));
         into.scale=from.scale*(1-.14f*u*u);
         into.wind=from.wind*(1-smooth(u));
         into.gust=from.gust*(1-u)+.6f*(float)Math.sin(Math.PI*u);

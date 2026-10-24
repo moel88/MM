@@ -217,8 +217,8 @@ public final class MpClient implements ClientModInitializer {
         // follows its user (how far it leans into the walk and how fast it goes)
         flag("own_stand",stand(mc.player));if(other!=null)flag("other_stand",stand(other));
         if(age%10==0)for(var p:mc.world.getPlayers()){var look=dev.sangwoo.celestialfall.client.stand.StandPresence.shown(p.getUuid());
-            if(look!=null)note(String.format(Locale.ROOT,"stand of %s drawn: out %.2f, solid %.2f, lean %.1f deg, speed %.2f blocks/s (%s)",p.getGameProfile().getName(),look.out,look.alpha,look.lean,look.speed,
-                dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
+            if(look!=null)note(String.format(Locale.ROOT,"stand of %s drawn: out %.2f, solid %.2f, glow %.2f, %d sparks, lean %.1f deg, speed %.2f blocks/s (%s)",p.getGameProfile().getName(),look.out,look.alpha,look.glow,
+                dev.sangwoo.celestialfall.client.stand.StandPresence.sparks(p.getUuid()),look.lean,look.speed,dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
     }
     /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */
