@@ -84,11 +84,6 @@ final class StarPlatinumPoses {
     /**
      * The turn {@code q} written into {@code out} as angles on the branch nearest the angles weighed directly (which
      * {@code out} holds: a blend that is mostly one stance reads as that stance's angles), less the bone's own turn.
-     * Several stances' turns are weighed as turns: their weighted mean along the shortest ways between them (the turn
-     * from which the weighted turns to every stance cancel out); two stances blend exactly as one turned towards the
-     * other by its share (at an even speed of turning). Since 2.56.0 three or more blend as a true mean, found in a few
-     * steps from the strongest (before, each was turned towards in turn by its share of the weight taken so far, and
-     * when the shortest way from the turn so far to the next changed side the blend jumped in that frame).
      */
     private void write(String bone,double[] q,float[] out){
         var rest=rests().getOrDefault(bone,REST);
@@ -99,9 +94,12 @@ final class StarPlatinumPoses {
         for(int i=0;i<3;i++)out[i]=(float)(near[i]+wrap(pick[i]-near[i])-rest[i]);
     }
     /**
-     * Moves {@code q} (a unit quaternion, the start) to the weighted mean of {@code n} unit quaternions: at each step,
-     * the weighted mean of the shortest turns from {@code q} to each is taken and {@code q} turned by it, until it
-     * hardly turns (Gauss-Newton on the turns; two quaternions take one step to the turn a slerp gives).
+     * Moves {@code q} (a unit quaternion, the start: the strongest stance's turn) to the weighted mean of {@code n} unit
+     * quaternions, the turn from which the weighted shortest turns to every one cancel out: at each step, the weighted
+     * mean of the shortest turns from {@code q} to each is taken and {@code q} turned by it, until it hardly turns
+     * (Gauss-Newton on the turns). Two stances take one step to the turn a slerp gives, at an even speed of turning.
+     * Since 2.56.0 three or more blend so (before, each was turned towards in turn by its share of the weight taken so
+     * far, and when the shortest way from the turn so far to the next changed side the blend jumped in that frame).
      */
     void mean(double[] q,double[][] qs,double[] w,int n,double total){
         for(int step=0;step<16;step++){
