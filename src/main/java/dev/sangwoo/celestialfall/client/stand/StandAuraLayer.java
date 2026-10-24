@@ -48,7 +48,8 @@ public final class StandAuraLayer {
     static final float USER_GAIN=.8f;
     /** How far the glow reaches beyond a body (blocks), and how high its tongues of flame can lick above it. */
     static final float REACH=.17f,LICK=.45f;
-    /** How fast the three layers of flame flow upwards (texture units a second; a unit is about three blocks). */
+    /** How fast the three layers of flame flow upwards, in texture units a second: their patterns are about 3, 1.4 and
+     * 0.6 blocks a unit (aura.frag), so each rises at about a block a second, the finer ones flickering faster. */
     static final double[] FLOW={.32,.85,1.9};
     private static boolean failed;
     private static int packProg,blurProg,auraProg,vao,noiseTex,width,height;
