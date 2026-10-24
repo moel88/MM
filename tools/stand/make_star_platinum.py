@@ -334,7 +334,7 @@ for i, (root, d0, d1, length, width, thick, nrm, wave, phase) in enumerate(MANE)
 # scarf: wound thick round the neck in two rolls, the upper one high in front over the chin (as in the user's second
 # round of pictures), knotted at the back on the right with its end flying out behind
 rounded(NECK, (-3.15, 31.85, -3.15), (6.3, 1.95, 6.3), 'scarf', .6, part='wrap', roll=0)
-rounded(NECK, (-2.9, 33.5, -3.7), (5.8, 2.35, 6.4), 'scarf', .55, part='wrap', roll=1)
+rounded(NECK, (-2.9, 33.5, -3.72), (5.8, 2.35, 6.42), 'scarf', .55, part='wrap', roll=1)
 rounded(NECK, (-2.3, 33.1, -4.05), (4.6, 2.2, 1.1), 'scarf', (.4, .2), part='wrap', roll=2)
 box(NECK, (-3.45, 32.55, 1.45), (1.75, 1.9, 1.95), 'scarf', part='knot')
 strand('scarf_tail', NECK, [(-2.9, 33.4, 2.6), (-3.8, 32.6, 5.5), (-4.6, 31.4, 8.2), (-5.0, 30.0, 10.6), (-5.2, 28.7, 12.4)],
@@ -1022,6 +1022,27 @@ POSES = {
         'cloth_front': {'rot': (-12, 0, -14)}, 'cloth_front_1': {'rot': (-6, 0, -8)}, 'cloth_front_2': {'rot': (-8, 0, -10)},
         'cloth_left': {'rot': (0, 0, -10)}, 'cloth_left_1': {'rot': (0, 0, -8)},
         'cloth_right': {'rot': (8, 0, -4)},
+    },
+    # coming out of its user (2.51.0): curled up behind crossed forearms, knees drawn up, head down; it bursts open from
+    # here into the hero stance (client/stand/StandSummonTimeline)
+    'summon': {
+        'root': {'pos': (0, 2.5, 0)},
+        'hips': {'rot': (6, 0, 0)},
+        'torso': {'rot': (9, 0, 0)},
+        'chest': {'rot': (8, 0, 0)},
+        'neck': {'rot': (6, 0, 0)},
+        'head': {'rot': (14, 0, 0)},
+        'left_arm': {'aim': ((-.22, -.5, -.84), (0, .85, -.5))},
+        'left_forearm': {'aim': ((-.82, .52, -.24), (0, -.2, -1))},
+        'left_hand': {'rot': (0, 0, 10)},
+        'right_arm': {'aim': ((.24, -.56, -.79), (0, .85, -.5))},
+        'right_forearm': {'aim': ((.84, .5, -.12), (0, -.2, -1))},
+        'right_hand': {'rot': (0, 0, -10)},
+        'left_pad': {'rot': (0, 0, 9)}, 'right_pad': {'rot': (0, 0, -9)},
+        'right_leg': {'rot': (-58, 0, 5)}, 'right_shin': {'rot': (80, 0, 0)}, 'right_foot': {'rot': (26, 0, 0)},
+        'left_leg': {'rot': (-42, 0, -5)}, 'left_shin': {'rot': (70, 0, 0)}, 'left_foot': {'rot': (22, 0, 0)},
+        'cloth_front': {'rot': (-24, 0, 0)}, 'cloth_front_1': {'rot': (-10, 0, 0)}, 'cloth_front_2': {'rot': (-6, 0, 0)},
+        'cloth_back': {'rot': (6, 0, 0)},
     },
 }
 

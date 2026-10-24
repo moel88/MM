@@ -78,6 +78,7 @@
   "subtitles.celestialfall.atomic_full": "I Am Atomic",
   "stand.botand.none": "Unassigned",
   "stand.botand.kageno": "Kageno",
+  "stand.botand.star_platinum": "Star Platinum",
   "message.botand.status": "Level %s/50 · Rebirths %s/15 · Transcendence %s · Stand %s · HP %s/%s",
   "message.botand.rebirth_button": "[Rebirth]",
   "message.botand.transcend_button": "[Transcend]",

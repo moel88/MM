@@ -13,6 +13,7 @@ public abstract class KeyboardMixin {
     private void botand$dash(long window,int key,int scanCode,int action,int modifiers,CallbackInfo ci) {
         if(dev.sangwoo.celestialfall.client.loot.FieldLootClient.key(window,key,action)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.commerce.CommerceClient.key(window,key,action)){ci.cancel();return;}
+        if(dev.sangwoo.celestialfall.client.stand.StandPresence.key(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.StandClient.key(window,key,action,modifiers)){ci.cancel();return;}
         CombatClient.dashKey(window,key,scanCode,action);
     }

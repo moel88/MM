@@ -11,7 +11,8 @@ hud=1 (the game's HUD shown: the cooldown list and the danger banner), cool=1 (r
 only its then= steps, e.g. "HUD;hud=1;cool=1;len=300;then=E@5/T@80/RUSH@81". The entry "UI" films the interface on
 its own clock with keys and the mouse, e.g. "UI;hud=1;len=200;then=KEY_TAB@30/KEY_ESCAPE@90/MOVE_B2@110/CLICK@130"
 (SkillShots.java); "STAND;stance=idle|hero;orbit=..." films Star Platinum's figure (2.50.0, slow 8 for every
-frame its own); SHOTS_LANG=ko_kr switches the game's language first. SHOTS_MODS (jar paths joined by ':') adds
+frame its own) and "SUMMON;then=KEY_Q@20/KEYDOWN_W@60/KEYUP_W@120/KEY_Q@170" the player bringing it out as a stand with
+Q, walking with it and sending it back (2.51.0); SHOTS_LANG=ko_kr switches the game's language first. SHOTS_MODS (jar paths joined by ':') adds
 mods such as Sodium and Iris; SHOTS_SHADER names a shader pack zip for Iris to use for the run, SHOTS_SHADER_OPTIONS
 its options ("SUN_ANGLE=-40;..."). SHOTS_WORLD names a world folder to film in (the meteor and shop shots) and
 SHOTS_RECORD=1 records the game's sound to OUT_DIR/game.wav (SkillShots.java).

@@ -54,23 +54,42 @@ class StarPlatinumModelTest {
     }
     @Test void everyBoneMovesSmoothlyFrameToFrame()throws Exception{
         int moving=0;
+        // at rest; in the art's wind; following a running user; in the gust of coming out (2.51.0)
+        var looks=new dev.sangwoo.celestialfall.stand.StarPlatinumLook[4];float[] limits={1.5f,2f,2f,3f};
+        for(int i=0;i<4;i++)looks[i]=new dev.sangwoo.celestialfall.stand.StarPlatinumLook().only(i==1||i==3?StarPlatinumStance.HERO:StarPlatinumStance.IDLE);
+        looks[2].speed=6;looks[2].lean=13;looks[3].gust=1;
         for(var name:bones().keySet()){
             var m=StarPlatinumMotion.of(name);if(m.kind()!=StarPlatinumMotion.STILL)moving++;
-            if(name.startsWith("hair_")||name.startsWith("cloth_")||name.startsWith("scarf_b")||name.startsWith("scarf_t"))assertNotEquals(StarPlatinumMotion.STILL,m.kind(),name);
-            for(float wind:new float[]{0,.5f,1}){
+            if(name.startsWith("hair_")||name.startsWith("cloth_")||name.startsWith("scarf_t")||name.endsWith("_leg")||name.endsWith("_foot")||name.equals("root"))assertNotEquals(StarPlatinumMotion.STILL,m.kind(),name);
+            for(int l=0;l<looks.length;l++){
                 float[] last=null;
                 for(int frame=0;frame<=60*20;frame++){
-                    float[] p=new float[6];m.add(p,frame/60.0,wind);
-                    // a sway may turn a scarf tip fast in the art's wind, but never more than 1.5 degrees between two frames
-                    if(last!=null)for(int i=0;i<6;i++)assertTrue(Math.abs(p[i]-last[i])<(i<3?1.5:.05),name+" jumps "+(p[i]-last[i])+" in a 60 fps frame");
+                    float[] p=new float[6];m.add(p,frame/60.0,looks[l]);
+                    // a hair tip may whip fast in a gust, but no bone jumps between two frames
+                    if(last!=null)for(int i=0;i<6;i++)assertTrue(Math.abs(p[i]-last[i])<(i<3?limits[l]:.1f),name+" jumps "+(p[i]-last[i])+" in a 60 fps frame (look "+l+")");
                     last=p;
                 }
             }
         }
-        assertTrue(moving>60,"moving bones "+moving);
+        assertTrue(moving>100,"moving bones "+moving);
         // a change of stance eases in and out over CROSSFADE ticks: never more than half a tick's worth of a linear blend a frame
         float last=StarPlatinumStance.crossfade(0);assertEquals(0,last);
         for(int frame=1;frame<=60;frame++){float k=StarPlatinumStance.crossfade(frame*20f/60);assertTrue(k-last>=0&&k-last<1.5f/StarPlatinumStance.CROSSFADE/3+1e-6);last=k;}
         assertEquals(1,last,1e-6);
+    }
+    @Test void atRestTheHairStreamsAndTheBodyFloatsSlowly(){
+        // the user asked for hair that moves a lot and a slow rise and sink (2.51.0)
+        var look=new dev.sangwoo.celestialfall.stand.StarPlatinumLook().only(StarPlatinumStance.IDLE);
+        var tip=StarPlatinumMotion.of("hair_07_3");var root=StarPlatinumMotion.of("root");
+        float lo=1e9f,hi=-1e9f,yLo=1e9f,yHi=-1e9f;int turns=0;float lastY=0,lastDy=0;
+        for(int frame=0;frame<=60*12;frame++){
+            float[] p=new float[6];tip.add(p,frame/60.0,look);lo=Math.min(lo,p[0]);hi=Math.max(hi,p[0]);
+            float[] r=new float[6];root.add(r,frame/60.0,look);yLo=Math.min(yLo,r[4]);yHi=Math.max(yHi,r[4]);
+            float dy=r[4]-lastY;if(frame>1&&Math.signum(dy)!=Math.signum(lastDy)&&dy!=0)turns++;lastDy=dy;lastY=r[4];
+        }
+        assertTrue(hi-lo>30,"a hair tip sways "+(hi-lo)+" degrees");
+        // about 0.12 of a block up and down (units of 0.05 blocks at its size), turning back about every 1.8 seconds
+        assertEquals(2*StarPlatinumMotion.BOB,yHi-yLo,.15);
+        assertTrue(turns>=5&&turns<=8,"turns "+turns);
     }
 }

@@ -28,7 +28,7 @@ public final class ProgressCommands {
         admin.then(edit("setrebirths",0,15,(p,n)->p.withRebirths(n)));
         admin.then(edit("settranscendence",0,ProgressProfile.MAX_TRANSCENDENCE,(p,n)->p.withTranscendence(n)));
         var stand=literal("stand");var targets=argument("targets",EntityArgumentType.players());
-        for(String id:new String[]{"none","kageno"})targets.then(literal(id).executes(c->editPlayers(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),p->p.withStand(id))));
+        for(String id:StandStats.ids())targets.then(literal(id).executes(c->editPlayers(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),p->p.withStand(id))));
         root.then(admin.then(stand.then(targets)));
     }
     private interface Edit {ProgressProfile apply(ProgressProfile p,int value);}

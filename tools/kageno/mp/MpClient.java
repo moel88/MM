@@ -34,6 +34,9 @@ public final class MpClient implements ClientModInitializer {
      * log shows both in the cooldown list. Since 2.45.0 the caster sends the player list away with Tab and back, opens
      * the pause menu (Esc), asks for a reset (R) and confirms it (Enter): the server kills it and both clients' own logs
      * show the death message in chat; then it respawns. Both log the player list's names and whether it is away.
+     * Since 2.51.0 the caster then takes Star Platinum as its stand ("/botand progress stand @s star_platinum"), brings it
+     * out with Q, walks away with it for two seconds and sends it back with Q: both log how they see each player's stand
+     * (out or not as the server tracks it, coming out, at rest or going back, and whether this client drew it).
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -48,7 +51,7 @@ public final class MpClient implements ClientModInitializer {
         "2445 C",
         "2460 DUMMY",
         "3070 TAB","3100 TAB","3120 ESC","3135 R","3150 ENTER","3185 RESPAWN",
-        "3240 END"};
+        "3230 STAND","3270 Q","3338 TURN180","3340 W+","3380 W-","3440 Q","3490 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360}},LENS={{126,142},{312,340}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -150,6 +153,7 @@ public final class MpClient implements ClientModInitializer {
         if(step.startsWith("TURN")){if(down){BotandCamera.STATE.yaw=(caster?0:180)+Float.parseFloat(step.substring(4));note("camera turned to "+BotandCamera.STATE.yaw);}return;}
         if(step.equals("RESPAWN")){if(down){note("respawn requested (alive="+mc.player.isAlive()+")");mc.player.requestRespawn();}return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
+        if(step.equals("STAND")){if(down){note("command botand progress stand @s star_platinum");mc.player.networkHandler.sendChatCommand("botand progress stand @s star_platinum");}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
         if(down&&press&&!k.equals("W"))face();
         if(down||!step.endsWith("+"))note((press?"press ":"release ")+k);
@@ -209,7 +213,19 @@ public final class MpClient implements ClientModInitializer {
         if(lastPos==null||lastPos.squaredDistanceTo(mc.player.getPos())>1){lastPos=mc.player.getPos();note(String.format(Locale.ROOT,"selfpos %.2f %.2f %.2f",lastPos.x,lastPos.y,lastPos.z));}
         var other=mc.world.getPlayers().stream().filter(p->p!=mc.player).findFirst().orElse(null);
         if(other!=null){flag("other_marked",StandClient.shadowMarked(other));flag("other_outlined",StandClient.shadowOutlined(other));}
+        // 2.51.0: each player's Star Platinum as this client sees it, and every half second while one is drawn how it
+        // follows its user (how far it leans into the walk and how fast it goes)
+        flag("own_stand",stand(mc.player));if(other!=null)flag("other_stand",stand(other));
+        if(age%10==0)for(var p:mc.world.getPlayers()){var look=dev.sangwoo.celestialfall.client.stand.StandPresence.shown(p.getUuid());
+            if(look!=null)note(String.format(Locale.ROOT,"stand of %s drawn: out %.2f, solid %.2f, lean %.1f deg, speed %.2f blocks/s (%s)",p.getGameProfile().getName(),look.out,look.alpha,look.lean,look.speed,
+                dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
+    }
+    /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */
+    private String stand(net.minecraft.entity.player.PlayerEntity p){
+        var h=(dev.sangwoo.celestialfall.stand.StandHolder)p;var st=dev.sangwoo.celestialfall.client.stand.StandPresence.state(p.getUuid());
+        String shown=st==null?"none":st[1]==0?"going back":st[0]<dev.sangwoo.celestialfall.client.stand.StandTimeline.SETTLED?"coming out":"at rest";
+        return h.botand$getStand()+(h.botand$isStandOut()?" out":" in")+", here "+shown+(dev.sangwoo.celestialfall.client.stand.StandPresence.shown(p.getUuid())!=null?" (drawn)":"");
     }
     private void shot(){
         var image=ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());frames++;

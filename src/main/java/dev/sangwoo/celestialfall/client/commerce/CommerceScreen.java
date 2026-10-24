@@ -138,7 +138,7 @@ public final class CommerceScreen extends Screen {
         var p=ProgressClient.profile;
         c.circle(320,113,25,0xffe0d7f5);c.star(320,113,17,0xffa376c1);
         c.center("정말 사용하시겠습니까?",320,156,25,0xff254c73,580);
-        c.center("현재 스탠드 · "+(p.stand().equals("kageno")?"카게노":"없음"),320,201,16,0xff704798,565);
+        c.center("현재 스탠드 · "+dev.sangwoo.celestialfall.progression.StandStats.get(p.stand()).korean(),320,201,16,0xff704798,565);
         c.center("로카카카 1개를 사용하여 스탠드를 초기화합니다.",320,234,13,0xff446784,565);
         c.center("레벨 · 환생 · 초월 · 보유 금액은 유지됩니다.",320,257,12,0xff668398,565);
     }

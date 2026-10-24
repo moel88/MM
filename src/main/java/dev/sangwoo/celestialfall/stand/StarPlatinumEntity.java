@@ -19,11 +19,12 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 /**
  * Star Platinum's body (2.50.0, user request: "일단 스타플래티나 모델링만 뽑자 신경써서", after the official art they sent).
- * For now a figure that stands where it is summoned ("/botand platinum [idle|hero|clear]", OP) and holds a stance; its
- * model, texture and stances come from tools/stand/make_star_platinum.py and its motion from StarPlatinumModel. The
- * stand that comes out of its user is later work.
+ * As an entity it is a figure that stands where it is summoned ("/botand platinum [idle|hero|summon|clear]", OP) and
+ * holds a stance; its model, texture and stances come from tools/stand/make_star_platinum.py and its motion from
+ * StarPlatinumModel. The stand that comes out of its user (2.51.0) is the same body drawn by each client beside the user
+ * (client/stand/StandPuppet), never spawned in the world.
  */
-public final class StarPlatinumEntity extends MobEntity implements GeoEntity {
+public class StarPlatinumEntity extends MobEntity implements GeoEntity {
     private static final TrackedData<Integer> STANCE=DataTracker.registerData(StarPlatinumEntity.class,TrackedDataHandlerRegistry.INTEGER);
     private final AnimatableInstanceCache cache=GeckoLibUtil.createInstanceCache(this);
     /** The client's crossfade: the stance last drawn, the one before it and when (its age in ticks) the change came. */
@@ -47,6 +48,14 @@ public final class StarPlatinumEntity extends MobEntity implements GeoEntity {
         return StarPlatinumStance.crossfade(clock-changedAt);
     }
     public int previousStance(){return previousStance;}
+    private final StarPlatinumLook look=new StarPlatinumLook();
+    /** What the model draws this frame: the figure's stance, crossfaded from the one before (the art's stance blows in its wind). */
+    public StarPlatinumLook look(float delta){
+        float k=blend(delta);look.only(stance());
+        if(previousStance!=stance()){look.weights[previousStance]=1-k;look.weights[stance()]=k;}
+        look.wind=look.weights[StarPlatinumStance.HERO];
+        return look;
+    }
     @Override public void writeCustomDataToNbt(NbtCompound nbt){super.writeCustomDataToNbt(nbt);nbt.putString("Stance",StarPlatinumStance.NAMES.get(stance()));}
     @Override public void readCustomDataFromNbt(NbtCompound nbt){super.readCustomDataFromNbt(nbt);setStance(Math.max(0,StarPlatinumStance.NAMES.indexOf(nbt.getString("Stance"))));}
     /** Only what gets past invulnerability (/kill, the void) removes it; "/botand platinum clear" is the usual way. */

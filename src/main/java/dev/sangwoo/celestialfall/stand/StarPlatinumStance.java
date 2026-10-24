@@ -4,9 +4,9 @@ import java.util.List;
 
 /** Star Platinum's stances (2.50.0): their names in the poses file and how the figure goes over from one to another. */
 public final class StarPlatinumStance {
-    /** Floating at rest, and the pose of the official art the user sent. */
-    public static final List<String> NAMES=List.of("idle","hero");
-    public static final int IDLE=0,HERO=1;
+    /** Floating at rest, the pose of the official art the user sent, and curled up as it comes out of its user (2.51.0). */
+    public static final List<String> NAMES=List.of("idle","hero","summon");
+    public static final int IDLE=0,HERO=1,SUMMON=2;
     /** How long the figure takes to go over from one stance to another (ticks). */
     public static final float CROSSFADE=12;
     private StarPlatinumStance(){}

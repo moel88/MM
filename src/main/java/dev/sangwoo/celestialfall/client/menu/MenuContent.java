@@ -23,7 +23,7 @@ public final class MenuContent {
     public static void growth(UiCanvas c,dev.sangwoo.celestialfall.progression.ProgressProfile p,int maxHealth,String title){
         c.text("지금까지의 성장",44,100,20,MenuArt.INK,420);
         String[] left={"레벨","최대 체력","최대 가드","현재 스탠드","환생 횟수","초월 횟수","적용 중인 칭호"};
-        String[] right={p.level()+" / 50",maxHealth+" HP","100",p.stand().equals("kageno")?"카게노":"없음",p.rebirths()+" / 15",""+p.transcendence(),title};
+        String[] right={p.level()+" / 50",maxHealth+" HP","100",dev.sangwoo.celestialfall.progression.StandStats.get(p.stand()).korean(),p.rebirths()+" / 15",""+p.transcendence(),title};
         for(int i=0;i<7;i++){int y=137+i*39;c.panel(38,y,575,33,6,i%2==0?0xfffbfeff:0xffe3f3fc,i%2==0?0xfff0faff:0xffdcedfa);c.flower(55,y+16,7);c.text(left[i],76,y+9,13,MenuArt.INK,250);c.text(right[i],379,y+8,14,i==4?0xffc48514:MenuArt.INK,220);}
     }
 }

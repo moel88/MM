@@ -12,15 +12,18 @@ public final class StandManager {
     public static final Identifier SKILL=CelestialFall.id("stand_skill_v1");
     private static final java.util.Map<ServerPlayerEntity,Integer> NEXT_REQUEST=new java.util.WeakHashMap<>();
     private StandManager(){}
-    public static boolean kageno(PlayerEntity p){
+    public static boolean kageno(PlayerEntity p){return has(p,"kageno");}
+    /** Star Platinum's user on the map (2.51.0): Q brings it out beside its user and sends it back (StandSummon). */
+    public static boolean starPlatinum(PlayerEntity p){return has(p,"star_platinum");}
+    private static boolean has(PlayerEntity p,String stand){
         return p!=null&&MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()
-            &&p instanceof StandHolder holder&&"kageno".equals(holder.botand$getStand());
+            &&p instanceof StandHolder holder&&stand.equals(holder.botand$getStand());
     }
     public static void refresh(ServerPlayerEntity p){
         ((StandHolder)p).botand$setStand(MapGate.enabled(p.getWorld())?ProgressManager.profile(p).stand():"none");
     }
     public static void initialize(){
-        KagenoManager.initialize();
+        KagenoManager.initialize();StandSummon.initialize();
         ServerPlayNetworking.registerGlobalReceiver(SKILL,(server,player,handler,buf,response)->{
             if(buf.readableBytes()!=0)return;
             server.execute(()->{

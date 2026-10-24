@@ -252,6 +252,7 @@ public final class MpServer implements ModInitializer {
     }
     private void restore(MinecraftServer server){
         if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0)return;
-        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(p.isOnGround()&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+        // a player with Star Platinum out walks with it (2.51.0): left where they are
+        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
 }

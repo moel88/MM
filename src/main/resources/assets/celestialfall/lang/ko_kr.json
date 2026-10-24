@@ -78,6 +78,7 @@
   "subtitles.celestialfall.atomic_full": "아이 엠 아토믹",
   "stand.botand.none": "미지정",
   "stand.botand.kageno": "카게노",
+  "stand.botand.star_platinum": "스타플래티나",
   "message.botand.status": "레벨 %s/50 · 환생 %s/15 · 초월 %s · 스탠드 %s · 체력 %s/%s",
   "message.botand.rebirth_button": "[환생]",
   "message.botand.transcend_button": "[초월]",
