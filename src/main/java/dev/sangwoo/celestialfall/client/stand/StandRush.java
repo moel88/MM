@@ -293,12 +293,15 @@ public final class StandRush {
     public static long ready(UUID id){var r=RUSHES.get(id);return r==null||r.on()?0:r.ready;}
     /**
      * Whether this body's cry of pain is held back now: the local player in a rush's blows (the first blow cries out, the
-     * rest come with the rush's own sound; the server holds back the cry others would hear).
+     * rest come with the rush's own sound; the server holds back the cry others would hear). It is held back for as long
+     * as the rush that struck them is on, however long ago its last blow was heard: a client that draws a few frames a
+     * second takes in several ticks' packets at once, so a blow's damage can come more than STRUCK ticks after the word
+     * of the blow before it (the multiplayer check of 2.57.0 heard two more cries in a rush that way).
      */
     public static boolean quietHurt(LivingEntity e){
         var mc=MinecraftClient.getInstance();if(e!=mc.player||mc.player==null)return false;
         // the server's word of a blow comes after the damage it did: the first blow on them is not yet in the set
-        for(var r:RUSHES.values())if(r.on()&&ticks-r.struckAt<=STRUCK&&r.struck.contains(e.getId()))return true;
+        for(var r:RUSHES.values())if(r.on()&&r.struck.contains(e.getId()))return true;
         return false;
     }
     /** Who stands in this user's rush's way now (as the server picks them, StarPlatinumRules.rushLane, in sight). */
