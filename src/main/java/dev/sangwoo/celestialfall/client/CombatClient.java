@@ -68,7 +68,7 @@ public final class CombatClient {
         return speed!=null&&speed.getModifier(CombatManager.SLOW)!=null;
     }
     public static boolean connected(){return MapClient.enabled()&&ClientPlayNetworking.canSend(CombatManager.INPUT);}
-    public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(StandClient.locked()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).broken(mc.world.getTime()));}
+    public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(StandClient.locked()||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).broken(mc.world.getTime()));}
     /** The articulated rig drives this player (on the ground and in a jump or fall; not for sneaking, swimming, gliding, sleeping or riding). */
     public static boolean animate(AbstractClientPlayerEntity p) {
         return MapClient.enabled()&&p.isAlive()&&!p.isSpectator()&&!p.isSneaking()&&!p.isInSneakingPose()&&!p.isSwimming()&&!p.isFallFlying()&&!p.isSleeping()&&!p.hasVehicle()

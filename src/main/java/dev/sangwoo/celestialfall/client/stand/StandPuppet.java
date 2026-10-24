@@ -16,4 +16,10 @@ final class StandPuppet extends StarPlatinumEntity {
     StandPuppet(World world){super(StarPlatinum.TYPE,world);setId(next--);}
     @Override public StarPlatinumLook look(float delta){return look;}
     @Override public boolean canHit(){return false;}
+    /** Puts it where it is drawn this frame, facing {@code yaw} (no motion between ticks: it is placed every frame). */
+    void place(net.minecraft.util.math.Vec3d where,float yaw){
+        // setPosition moves its box too (the frustum test and the light go by it)
+        setPosition(where.x,where.y,where.z);prevX=lastRenderX=where.x;prevY=lastRenderY=where.y;prevZ=lastRenderZ=where.z;
+        setYaw(yaw);prevYaw=yaw;setBodyYaw(yaw);prevBodyYaw=yaw;setHeadYaw(yaw);prevHeadYaw=yaw;setPitch(0);prevPitch=0;
+    }
 }

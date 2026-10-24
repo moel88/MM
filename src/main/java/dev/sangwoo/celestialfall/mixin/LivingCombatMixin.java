@@ -19,6 +19,10 @@ public abstract class LivingCombatMixin {
     private void botand$noJumpDuringBreak(CallbackInfo ci) {
         if(HitStun.stunned((LivingEntity)(Object)this)||(Object)this instanceof net.minecraft.entity.player.PlayerEntity p&&CombatManager.actionLocked(p))ci.cancel();
     }
+    @Inject(method="playHurtSound",at=@At("HEAD"),cancellable=true)
+    private void botand$quietBlow(DamageSource source,CallbackInfo ci) {
+        if(CombatManager.quiet((LivingEntity)(Object)this))ci.cancel();
+    }
     @Inject(method="takeKnockback",at=@At("HEAD"),cancellable=true)
     private void botand$noEarlyKnockback(double strength,double x,double z,CallbackInfo ci) {
         if(CombatManager.suppressKnockback((LivingEntity)(Object)this))ci.cancel();

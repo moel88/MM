@@ -52,8 +52,8 @@ public final class StarPlatinumAttack {
         int combo;long start=-1000;float yaw;
         /** A press kept for the next punch; the punch in flight has landed. */
         boolean queued,landed;
-        /** The tick the attack is ready again after a rest (0 for none). */
-        long ready;
+        /** The tick the attack is ready again after a rest (0 for none), and the tick a punch in flight last stopped short. */
+        long ready,stoppedAt=-1000;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -95,6 +95,9 @@ public final class StarPlatinumAttack {
             if(nextAt(s.combo,s.start)-now<=BUFFER)s.queued=true;
             return s.queued;
         }
+        // the rush just over: its fists are going back to the guard, and the punch starts once they are there (2.57.0)
+        long free=StarPlatinumRush.freeAt(p);
+        if(now<free){if(free-now<=BUFFER)s.queued=true;return s.queued;}
         begin(p,s,now);
         return true;
     }
@@ -103,6 +106,10 @@ public final class StarPlatinumAttack {
         HitStun.releaseStand(p.getUuid());
         var s=STATES.get(p.getUuid());if(s!=null)stop(p,s,p.getWorld().getTime());
     }
+    /** The rush starts (2.57.0): the punch in flight, if one is, stops short (and the combo starts again after its rest). */
+    public static void yieldTo(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)stop(p,s,p.getWorld().getTime());}
+    /** The tick the stand is back in its guard after the punch it last stopped short (StarPlatinumRules.STOP_RETURN; 0 if none has stopped). */
+    public static long guardAt(ServerPlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.stoppedAt+STOP_RETURN;}
     /** The combo broke (the next punch is late): the attack rests and starts again from the first punch. */
     private static void settle(ServerPlayerEntity p,State s,long now){
         long rest=broken(s.combo,s.start,now);
@@ -121,7 +128,7 @@ public final class StarPlatinumAttack {
             long now=p.getWorld().getTime();
             if(!punches(p)||HitStun.stunned(p)||CombatManager.actionLocked(p)){stop(p,s,now);continue;}
             settle(p,s,now);
-            if(s.queued&&now>=nextAt(s.combo,s.start)){if(able(p))begin(p,s,now);else s.queued=false;}
+            if(s.queued&&now>=nextAt(s.combo,s.start)&&now>=StarPlatinumRush.freeAt(p)){if(able(p))begin(p,s,now);else s.queued=false;}
             if(s.combo>=1&&!s.landed&&now>=s.start+CONTACT[s.combo])strike(p,s,now);
         }
     }
@@ -129,6 +136,7 @@ public final class StarPlatinumAttack {
     private static void stop(ServerPlayerEntity p,State s,long now){
         boolean flying=s.combo>=1&&now-s.start<LENGTH[s.combo],open=s.combo>=1&&s.combo<4&&broken(s.combo,s.start,now)<0;
         if(!flying&&!open&&!s.queued)return;
+        if(flying)s.stoppedAt=now;
         s.queued=false;s.ready=Math.max(s.ready,now+REST);s.combo=0;
         send(p,s,STOPPED,null);
     }

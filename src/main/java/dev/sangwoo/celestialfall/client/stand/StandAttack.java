@@ -186,6 +186,8 @@ public final class StandAttack {
     }
     /** This player's punches heard, oldest first (none if none). */
     public static List<Seen> punches(UUID id){var u=USERS.get(id);return u==null?List.of():List.copyOf(u.punches);}
+    /** This player's newest punch heard (null if none shows). */
+    public static Seen newest(UUID id){var u=USERS.get(id);return u==null?null:u.punches.peekLast();}
     /** The world tick this player's attack is ready again after its rest (0 if it has not rested). */
     public static long ready(UUID id){var u=USERS.get(id);return u==null?0:u.ready;}
     /** Everyone whose punches still show, with theirs. */

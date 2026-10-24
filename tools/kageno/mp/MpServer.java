@@ -257,7 +257,7 @@ public final class MpServer implements ModInitializer {
         // punches threw (2.54.0) is left where it came down
         for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
-    private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();
+    private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
     /**
      * Star Platinum's punches (2.54.0) on the watcher while the caster has it out: every hit (the damage, how fast it
@@ -271,6 +271,10 @@ public final class MpServer implements ModInitializer {
             if(caster(p))continue;
             if(hurtNow(p)){
                 double speed=p.getVelocity().horizontalLength();
+                // 2.57.0: a blow of the rush (counted; every tenth logged), or a punch
+                if(dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(caster)){rushBlows++;rushDamage+=p.getMaxHealth()-p.getHealth();
+                    if(rushBlows==1||rushBlows%10==0)note(server,String.format(java.util.Locale.ROOT,"watcher struck by the rush: blow %d, %.1f damage so far, leaving at %.2f blocks a tick, %.2f blocks from the caster",rushBlows,rushDamage,speed,p.distanceTo(caster)));
+                    continue;}
                 note(server,String.format(java.util.Locale.ROOT,"watcher punched by Star Platinum: %.1f damage, leaving at %.2f blocks a tick, %.2f blocks from the caster",p.getMaxHealth()-p.getHealth(),speed,p.distanceTo(caster)));
                 if(speed>.8){thrown.put(p.getUuid(),now);flying.put(p.getUuid(),now);}
             }

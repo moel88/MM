@@ -59,6 +59,8 @@ public final class KagenoManager {
     private static final Map<UUID,Mark> MARKS=new HashMap<>();
     /** R's half walking speed (the client keeps its lens still while it is on). */
     public static final UUID R_SLOW=UUID.fromString("126f3481-4544-4737-ae86-94f61a1e6230");
+    /** E's slow walk through its thrusts (2.57.0, KagenoRules.E_SLOW; the client keeps its lens still while it is on too). */
+    public static final UUID E_SLOW=UUID.fromString("5be6a8a0-0f62-4c2b-9d6d-2f0e8f6b7a31");
     private static Predicate<LivingEntity> clientFrozen=e->false;
     private KagenoManager(){}
     public static Collection<Cast> casts(){return Collections.unmodifiableCollection(CASTS.values());}
@@ -145,7 +147,7 @@ public final class KagenoManager {
                 c.targets.put(e,e.getPos());CombatManager.interrupt(e);if(e instanceof PlayerEntity target)cancelCaster(target);
             }
         }
-        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);s.ready[skill==RUSH?T:skill]=readyAfter(skill,s.combo,now);
+        CASTS.put(c.id,c);if(skill==R)rSlow(p,true);if(skill==E)eSlow(p,true);s.ready[skill==RUSH?T:skill]=readyAfter(skill,s.combo,now);
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
         sync(c);status(p,s);
         return true;
@@ -206,6 +208,7 @@ public final class KagenoManager {
             // T+'s mark stays first among the targets, alive or not: the caster's client dashes to where it was held.
             c.targets.keySet().removeIf(e->e!=c.mark&&(!e.isAlive()||e.isRemoved()||e.getWorld()!=c.world||e instanceof ServerPlayerEntity p&&server.getPlayerManager().getPlayer(p.getUuid())!=p));
             int age=c.age();if(c.skill==R){boolean walk=rWalking(c.player);rSlow(c.player,walk);if(walk)c.player.setSprinting(false);}
+            if(c.skill==E)eSlow(c.player,eWalking(c.player));
             // E: the caster walks and aims through the thrusts (user request, 2.38.2); as they end the finisher is
             // planted the way he faces.
             if(c.skill==E&&age>=E_PLANT&&Float.isNaN(c.aims[0])){c.aims[0]=MathHelper.wrapDegrees(c.player.getYaw());sync(c);}
@@ -330,13 +333,20 @@ public final class KagenoManager {
     }
     /** Whether one of the player's R casts still holds his actions ({@link KagenoRules#rWalking}): the slowdown lasts that long, not as long as R's effects. */
     private static boolean rWalking(ServerPlayerEntity p){for(var c:CASTS.values())if(c.player==p&&c.skill==R&&KagenoRules.rWalking(c.age()))return true;return false;}
+    private static boolean eWalking(ServerPlayerEntity p){for(var c:CASTS.values())if(c.player==p&&c.skill==E&&KagenoRules.eWalking(c.age()))return true;return false;}
+    /** E's caster walks at a twentieth of his speed while its thrusts go (2.57.0), the way R's walks at half. */
+    private static void eSlow(ServerPlayerEntity p,boolean active){
+        var attr=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null)return;
+        if(!active){attr.removeModifier(E_SLOW);return;}
+        if(attr.getModifier(E_SLOW)==null)attr.addTemporaryModifier(new net.minecraft.entity.attribute.EntityAttributeModifier(E_SLOW,"Kageno E slow walk",-KagenoRules.E_SLOW,net.minecraft.entity.attribute.EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
     private static void rSlow(ServerPlayerEntity p,boolean active){
         var attr=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null)return;
         if(!active){attr.removeModifier(R_SLOW);return;}
         if(attr.getModifier(R_SLOW)==null)attr.addTemporaryModifier(new net.minecraft.entity.attribute.EntityAttributeModifier(R_SLOW,"Kageno R half walk speed",-.5,net.minecraft.entity.attribute.EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
     }
     private static void stop(Cast c){
-        CASTS.remove(c.id);if(c.skill==R)rSlow(c.player,rWalking(c.player));
+        CASTS.remove(c.id);if(c.skill==R)rSlow(c.player,rWalking(c.player));if(c.skill==E)eSlow(c.player,eWalking(c.player));
         // A cooldown runs from when its skill is over (user request, 2.44.0): one stopped short starts it now. The status
         // goes before the stop, so the client still knows which of T and T held it was.
         var s=STATES.get(c.player);int slot=c.skill==RUSH?T:c.skill;
@@ -350,7 +360,7 @@ public final class KagenoManager {
      * Drops the player's stand state. Its last status tells them its cooldowns are gone too (a fresh state starts ready, and
      * no further status comes for this one).
      */
-    public static void leave(ServerPlayerEntity p){cancelCaster(p);rSlow(p,false);var s=STATES.remove(p);if(s!=null){s.overUntil=0;s.boost=0;Arrays.fill(s.ready,0);status(p,s);}MARKS.values().removeIf(m->m.owner==p||m.target==p);for(var c:CASTS.values())c.targets.remove(p);}
+    public static void leave(ServerPlayerEntity p){cancelCaster(p);rSlow(p,false);eSlow(p,false);var s=STATES.remove(p);if(s!=null){s.overUntil=0;s.boost=0;Arrays.fill(s.ready,0);status(p,s);}MARKS.values().removeIf(m->m.owner==p||m.target==p);for(var c:CASTS.values())c.targets.remove(p);}
     public static void clear(MinecraftServer server){for(var c:new ArrayList<>(CASTS.values()))stop(c);for(var p:new ArrayList<>(STATES.keySet()))leave(p);}
     /** Clears the player's cooldowns (no-cooldown mode calls this every tick); the status sent twice a second tells their client. */
     public static void resetCooldown(ServerPlayerEntity p){var s=STATES.get(p);if(s!=null)Arrays.fill(s.ready,0);}

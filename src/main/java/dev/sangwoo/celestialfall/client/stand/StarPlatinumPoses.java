@@ -31,8 +31,8 @@ final class StarPlatinumPoses {
     /** Per stance: each bone's whole turn (its own and the stance's) as a quaternion {w, x, y, z}. */
     private static List<Map<String,double[]>> turns;
     private final Map<String,StarPlatinumMotion> motions=new HashMap<>();
-    private final double[] q=new double[4],qb=new double[4],e=new double[3],d=new double[4];
-    private final float[] below=new float[6];
+    private final double[] q=new double[4],qb=new double[4],qc=new double[4],e=new double[3],d=new double[4];
+    private final float[] below=new float[6],below2=new float[6];
     private double[][] taken=new double[8][];private double[] share=new double[8];
 
     /**
@@ -40,12 +40,19 @@ final class StarPlatinumPoses {
      * look taking over from a pose under it (2.56.0, a punch from the one before) turns from that pose's turn the share
      * {@code over} of the short way to its own, each pose its own stances' mean: two poses far apart (an arm thrown out
      * and the next punch's guard) then go straight from one to the other, where all their stances weighed together at
-     * once could be weighed two ways and leap between them.
+     * once could be weighed two ways and leap between them. The pose under can itself be turning from one under it
+     * (2.57.0, {@code under2} and {@code over2}): that turn is taken first.
      */
     void pose(String bone,StarPlatinumLook look,double seconds,float[] out){
         int count=stances(bone,look.weights,out,q);
         if(look.over<1){
             stances(bone,look.under,below,qb);
+            if(look.over2<1){
+                stances(bone,look.under2,below2,qc);
+                float k2=Math.max(0,look.over2);
+                for(int i=0;i<6;i++)below[i]=below2[i]+(below[i]-below2[i])*k2;
+                slerp(qc,qb,k2);System.arraycopy(qc,0,qb,0,4);
+            }
             float k=Math.max(0,look.over);
             for(int i=0;i<6;i++)out[i]=below[i]+(out[i]-below[i])*k;
             slerp(qb,q,k);

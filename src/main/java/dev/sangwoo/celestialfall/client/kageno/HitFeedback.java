@@ -25,10 +25,13 @@ public final class HitFeedback {
     private static final List<Blood> BLOOD=new ArrayList<>();
     /** Seconds without a hit before the number fades and the next hit starts a new total. */
     private static final float COMBO=1.6f;
-    public static void hit(MinecraftClient mc,int entity,float amount,float yaw){
+    public static void hit(MinecraftClient mc,int entity,float amount,float yaw){hit(mc,entity,amount,yaw,true);}
+    /** A hit, with a blood streak or without (a rush's many blows bleed only now and then). */
+    public static void hit(MinecraftClient mc,int entity,float amount,float yaw,boolean blood){
         if(mc.world==null)return;long now=mc.world.getTime();var e=mc.world.getEntityById(entity);if(e==null)return;
         var n=NUMBERS.computeIfAbsent(entity,k->new Number());if((now-n.last)/20f>COMBO)n.total=0;
         n.total+=amount;n.last=now;n.pop++;
+        if(!blood)return;
         if(BLOOD.size()>64)BLOOD.remove(0);
         BLOOD.add(new Blood(entity,e.getPos().add(0,e.getHeight()*.62,0),Vec3d.fromPolar(0,yaw),now,(int)(now*31+entity)));
     }

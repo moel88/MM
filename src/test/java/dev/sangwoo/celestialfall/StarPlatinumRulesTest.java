@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Star Platinum's basic attack (2.54.0): four punches, the fourth throwing. 2.56.0: quicker, and only the hook and the
- * finisher shout, each on the "RA" of its own from the user's recording.
+ * finisher shout, each on the "RA" of its own from the user's recording. 2.57.0: its E, the rush.
  */
 class StarPlatinumRulesTest {
     /** Each clip of the hook's and the finisher's shouts has its RA this far in (cut_ora.py RA_AT) and starts StandAttack.LEAD (1) tick into its punch. */
@@ -50,6 +50,53 @@ class StarPlatinumRulesTest {
         for(int k=1;k<4;k++)assertTrue(hold(k)>=STEP[k]-CONTACT[k]+CONTACT[k+1],"punch "+k+" holds them until the next lands");
         assertEquals(0,hold(4),"the fourth throws them");
         assertTrue(FLY>1.4&&FLY_UP>0,"the fourth sends them flying");
+    }
+    // ---- E, the rush (2.57.0) ----
+
+    @Test void heldToTheEndTheRushLandsFortyBlowsForFortyDamage(){
+        assertEquals(40,RUSH_HITS);assertEquals(40,RUSH_TOTAL,1e-6);
+        assertEquals(RUSH_TOTAL,RUSH_DAMAGE*RUSH_HITS,1e-4,"its damage split evenly among its blows");
+        int n=0;float total=0;
+        for(long age=-5;age<=RUSH_LENGTH+20;age++)if(rushBlow(age)){n++;total+=RUSH_DAMAGE;assertEquals(n,rushBlows(age),"blow "+n);}
+        assertEquals(RUSH_HITS,n);assertEquals(RUSH_TOTAL,total,1e-3,"all of them together");
+        assertTrue(rushBlow(RUSH_FIRST)&&!rushBlow(RUSH_FIRST+1)&&rushBlow(RUSH_FIRST+RUSH_EVERY),"a blow every "+RUSH_EVERY+" ticks");
+        assertTrue(rushBlow(RUSH_LAST)&&!rushBlow(RUSH_LAST+RUSH_EVERY),"none past the last");
+        assertEquals(10,20/RUSH_EVERY,"ten blows a second");
+        assertEquals(4.2,RUSH_LENGTH/20.0,1e-9,"it runs 4.2 s held to the end");assertTrue(RUSH_LENGTH>RUSH_LAST);
+    }
+    @Test void letGoItStopsAtOnceAndItsCooldownRunsOnceItIsOver(){
+        // let go early, only the blows so far land (the server stops it then: StarPlatinumRush.release)
+        assertEquals(0,rushBlows(RUSH_FIRST-1));assertEquals(1,rushBlows(RUSH_FIRST));assertEquals(5,rushBlows(RUSH_FIRST+4*RUSH_EVERY));
+        assertEquals(RUSH_HITS,rushBlows(RUSH_LENGTH+100));
+        assertEquals(500+RUSH_COOLDOWN,rushReady(500),"from its end (2.44.0's rule)");
+        assertTrue(RUSH_HOLD>RUSH_EVERY,"each blow holds whom it strikes past the next");
+        assertEquals(.9,RUSH_SLOW,1e-9,"its user walks 90% slower (user request)");
+    }
+    @Test void theRushStrikesWhateverIsInFrontOfItsUser(){
+        assertTrue(rushLane(2,0,1,.3));assertTrue(rushLane(RUSH_REACH,1.2,0,.3),"all over the front");
+        assertFalse(rushLane(-1,0,1,.3),"not behind");assertFalse(rushLane(RUSH_REACH+.5,0,1,.3),"not out of reach");
+        assertFalse(rushLane(2,2,1,.3),"not far to the side");assertFalse(rushLane(2,0,3.5,.3),"not far above");
+    }
+    @Test void itsTwoSoundsAreAsLongAsTheRush()throws Exception{
+        // the voice from its start (a tick in) to its last ORA; the blows on it, ringing out a little after
+        double voice=seconds("star_platinum_rush"),blows=seconds("star_platinum_rush_hits");
+        assertEquals(RUSH_LENGTH/20.0,voice,.1,"the voice runs as long as the rush");
+        assertTrue(blows>=voice,"the blows ring out after it: "+blows+" s");
+    }
+    /** How long an Ogg Vorbis sound of the mod's is (seconds): its last page's sample count at its rate. */
+    static double seconds(String name)throws Exception{
+        byte[] b;try(var in=StarPlatinumRulesTest.class.getResourceAsStream("/assets/celestialfall/sounds/"+name+".ogg")){assertNotNull(in,name);b=in.readAllBytes();}
+        int rate=-1;long samples=-1;
+        for(int i=0;i+27<b.length;i++){
+            if(b[i]!='O'||b[i+1]!='g'||b[i+2]!='g'||b[i+3]!='S')continue;
+            long granule=0;for(int k=7;k>=0;k--)granule=granule<<8|(b[i+6+k]&255);
+            if(granule!=-1)samples=Math.max(samples,granule);
+            int segments=b[i+26]&255,body=i+27+segments;
+            // the identification header: 1 'vorbis', a version, the channels, then the rate
+            if(rate<0&&body+16<b.length&&b[body]==1&&b[body+1]=='v')rate=(b[body+12]&255)|(b[body+13]&255)<<8|(b[body+14]&255)<<16|(b[body+15]&255)<<24;
+        }
+        assertTrue(rate>0&&samples>0,name);
+        return samples/(double)rate;
     }
     @Test void thePunchGoesWhereItsUserFaces(){
         assertTrue(lane(1,2.5,0,1,.3));assertTrue(lane(1,1,.9,0,.3));

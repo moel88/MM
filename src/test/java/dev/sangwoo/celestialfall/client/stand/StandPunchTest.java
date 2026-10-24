@@ -89,6 +89,27 @@ class StandPunchTest {
             }
         }
     }
+    @Test void aPunchStoppedShortAtAnyMomentGoesBackToItsGuardWithoutAJump()throws Exception{
+        // its user struck, or E asking for the rush (2.57.0): at any moment of any punch, the one before it taking over too
+        var poses=new StarPlatinumPoses();var names=bones();var look=new StarPlatinumLook();var shape=new StandPunch.Shape();
+        for(int combo=1;combo<=4;combo++)for(int stop=1;stop<=StarPlatinumRules.LENGTH[combo];stop++)for(boolean after:new boolean[]{false,true}){
+            float at=stop/20f;var now=punch(combo).stop(at);
+            // with the one before it still taking over (the next punch came as soon as it might), or none before it
+            var before=after&&combo>1?punch(combo-1):null;float lead=before==null?0:StarPlatinumRules.STEP[combo-1]/20f;
+            float[][] last=new float[names.size()][];float[] p=new float[6];
+            for(int f=0;f<=(int)((at+.6f)/FRAME);f++){
+                float t=f*FRAME;
+                var s=StandPunch.at(t<at?punch(combo):now,t,before,t+lead,shape);look(s,look);
+                for(int b=0;b<names.size();b++){
+                    poses.pose(names.get(b),look,t,p);
+                    if(last[b]!=null){float d=turn(names.get(b),last[b],p);assertTrue(d<40,names.get(b)+" turns "+d+" degrees in a frame at "+t+" (punch "+combo+" stopped at "+at+(before==null?"":", after punch "+(combo-1))+")");}
+                    last[b]=p.clone();
+                }
+            }
+            StandPunch.at(now,at+StarPlatinumRules.STOP_RETURN/20f,before,at+StarPlatinumRules.STOP_RETURN/20f+lead,shape);
+            assertEquals(1,shape.weights[StarPlatinumStance.GUARD],1e-6);assertEquals(1,shape.over,1e-6,"back in its guard "+StarPlatinumRules.STOP_RETURN+" ticks after it stopped");
+        }
+    }
     @Test void aShoutFadesOutWhenTheNextComes(){
         var shout=new StandAttack.Shout(new net.minecraft.util.Identifier("celestialfall","star_platinum_ora_3"),.8f);
         shout.tick();assertEquals(.8f,shout.loudness(),1e-6,"full until told to fade");assertFalse(shout.isDone());

@@ -129,10 +129,15 @@ public final class StandClient {
     public static boolean locked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;return action(mc.player.getUuid())!=null;}
     public static boolean movementLocked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;var cast=action(mc.player.getUuid());return cast!=null&&cast.skill()!=R&&!dev.sangwoo.celestialfall.client.kageno.KagenoAim.aimingThrust(cast);}
     public static boolean rWalking(UUID id){var cast=action(id);return cast!=null&&cast.skill()==R;}
-    /** The server's R slowdown is on this player's speed (it leaves a tick or two after his client's R ends). */
-    public static boolean rSlowed(net.minecraft.entity.player.PlayerEntity p){
+    /** Whether this player walks through E's thrusts (2.57.0: at a twentieth of their speed, KagenoRules.E_SLOW). */
+    public static boolean eWalking(UUID id){var cast=action(id);return cast!=null&&cast.skill()==E&&KagenoRules.eWalking(cast.age(0));}
+    /**
+     * A skill's slowdown from the server is on this player's speed: R's, E's (2.57.0) or Star Platinum's rush's
+     * (2.57.0). It leaves a tick or two after the client's own skill ends.
+     */
+    public static boolean skillSlowed(net.minecraft.entity.player.PlayerEntity p){
         var speed=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
-        return speed!=null&&speed.getModifier(KagenoManager.R_SLOW)!=null;
+        return speed!=null&&(speed.getModifier(KagenoManager.R_SLOW)!=null||speed.getModifier(KagenoManager.E_SLOW)!=null||speed.getModifier(dev.sangwoo.celestialfall.stand.StarPlatinumRush.SLOW)!=null);
     }
     /** Q shadow mark: some stand user's live mark sits on this entity (drawn as a black silhouette). */
     public static boolean shadowMarked(net.minecraft.entity.Entity e){

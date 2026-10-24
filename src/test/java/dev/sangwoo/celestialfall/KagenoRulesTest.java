@@ -18,6 +18,11 @@ final class KagenoRulesTest {
         assertTrue(rWalking(0));assertTrue(rWalking(inputEnd(R)-1));assertFalse(rWalking(inputEnd(R)));assertFalse(rWalking(DURATION[R]-1));
         assertTrue(inputEnd(R)<DURATION[R],"the effects still play on after the caster is free");
     }
+    /** User request (2.57.0): E's caster walks through its thrusts at a twentieth of his speed, and only then. */
+    @Test void eWalksSlowlyThroughItsThrusts(){
+        assertEquals(.95,E_SLOW,1e-9);
+        assertTrue(eWalking(0));assertTrue(eWalking(E_PLANT-1));assertFalse(eWalking(E_PLANT));assertFalse(eWalking(-1));
+    }
     @Test void freezeEndsBeforeDamageAndAlwaysReleases(){assertFalse(frozen(R,R_GRAY-.01f));assertTrue(frozen(R,R_GRAY));assertTrue(frozen(R,R_COLOR-.01f));assertFalse(frozen(R,R_COLOR));for(int a=0;a<R_COLOR;a++)assertEquals(0,damage(R,a,0));assertEquals(4,hits(R,R_STORED));assertEquals(R_CUTS,hits(R,R_STORED));assertTrue(damage(R,R_RELEASE,0)>0);assertTrue(frozen(H,115));assertFalse(frozen(H,116));}
     /** R, buffed: a 7-block time stop, four stored cuts (24) and the big final cut (14), which also strikes the band ahead; 9 s cooldown. */
     @Test void timeWalkerStopsWiderCutsHarderAndReleasesAlongTheBand(){

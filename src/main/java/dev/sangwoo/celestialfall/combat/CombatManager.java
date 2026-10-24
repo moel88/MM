@@ -34,7 +34,7 @@ public final class CombatManager {
     private static final Set<UUID> RUN_AFTER=new HashSet<>();
     private record Entry(CombatState state,Identifier dimension,int entityId) {}
     private static final Map<UUID,Entry> STATES=new HashMap<>();
-    private static final ThreadLocal<LivingEntity> NO_KNOCKBACK=new ThreadLocal<>();
+    private static final ThreadLocal<LivingEntity> NO_KNOCKBACK=new ThreadLocal<>(),QUIET=new ThreadLocal<>();
     private CombatManager() {}
     public static void initialize() {
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,player,handler,buf,response)->{
@@ -84,13 +84,13 @@ public final class CombatManager {
     }
     public static boolean busy(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
-        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p))return true;
+        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
         long n=p.getWorld().getTime();return e.state.broken(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.guarding;
     }
     public static boolean actionLocked(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
-        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p))return true;
+        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.broken(p.getWorld().getTime());
     }
     public static void interrupt(LivingEntity target) {
@@ -187,6 +187,16 @@ public final class CombatManager {
         finally{if(previous==null)NO_KNOCKBACK.remove();else NO_KNOCKBACK.set(previous);}
     }
     public static boolean suppressKnockback(LivingEntity entity) {return NO_KNOCKBACK.get()==entity;}
+    /** As {@link #damageWithoutKnockback}, and the target does not cry out (a barrage's blow, 2.57.0: its own sound carries it). */
+    public static boolean damageQuietly(LivingEntity target,DamageSource source,float amount) {
+        LivingEntity previous=QUIET.get();QUIET.set(target);
+        try{return damageWithoutKnockback(target,source,amount);}
+        finally{if(previous==null)QUIET.remove();else QUIET.set(previous);}
+    }
+    /** Whether this entity's cry of pain is held back now ({@link #damageQuietly}). */
+    public static boolean quiet(LivingEntity entity) {return QUIET.get()==entity;}
+    /** Whether this player holds their guard up now (and it is not broken). */
+    public static boolean guarding(ServerPlayerEntity p) {var e=STATES.get(p.getUuid());return e!=null&&e.state.guarding&&!e.state.broken(p.getWorld().getTime());}
     public static boolean block(ServerPlayerEntity p,DamageSource source,float amount) {
         if(!Float.isFinite(amount)||amount<=0||p.isInvulnerableTo(source)||!valid(p))return false;
         var e=STATES.get(p.getUuid());long now=p.getWorld().getTime();

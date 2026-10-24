@@ -34,10 +34,56 @@ public final class StandPunch {
     }
     /** What a frame takes from the punches: the stances' shares (adding up to 1), how far out in front of its user the stand is (0 at its shoulder, 1 in front), the way it faces, how far ahead and to the right of its user it stands, how far it lunges on (blocks, the shove of the blow with it), the gust and the afterimages' strength. */
     public static final class Shape {
-        /** The newest punch's stances, and while it takes over from the one before (2.56.0) that one's, and how far it has taken over (1 once it has). */
-        public final float[] weights=new float[NAMES.size()],under=new float[NAMES.size()];
-        public float engage,yaw,ahead,side,lunge,gust,ghost,over=1;
-        void clear(){Arrays.fill(weights,0);Arrays.fill(under,0);engage=yaw=ahead=side=lunge=gust=ghost=0;over=1;}
+        /**
+         * The newest punch's stances, and while it takes over from the one before (2.56.0) that one's, and how far it
+         * has taken over (1 once it has); that pose can itself be turning from one under it (2.57.0: a punch stopped
+         * short turns from where it was back to the guard, the rush and a punch take over from each other).
+         */
+        public final float[] weights=new float[NAMES.size()],under=new float[NAMES.size()],under2=new float[NAMES.size()];
+        /** How much higher than at rest it floats in front (blocks): RAISE for the punches, less for the rush (2.57.0). */
+        public float engage,yaw,ahead,side,lunge,gust,ghost,over=1,over2=1,raise=RAISE;
+        void clear(){Arrays.fill(weights,0);Arrays.fill(under,0);Arrays.fill(under2,0);engage=yaw=ahead=side=lunge=gust=ghost=0;over=over2=1;raise=RAISE;}
+        Shape set(Shape o){
+            System.arraycopy(o.weights,0,weights,0,weights.length);System.arraycopy(o.under,0,under,0,under.length);System.arraycopy(o.under2,0,under2,0,under2.length);
+            engage=o.engage;yaw=o.yaw;ahead=o.ahead;side=o.side;lunge=o.lunge;gust=o.gust;ghost=o.ghost;over=o.over;over2=o.over2;raise=o.raise;return this;
+        }
+        /** How much of stance {@code i} the shape has, its poses under and its own taken together. */
+        float share(int i){return over>=1?weights[i]:weights[i]*over+(over2>=1?under[i]:under[i]*over2+under2[i]*(1-over2))*(1-over);}
+        /**
+         * This shape taking over from {@code from} (2.57.0: the rush from a punch, or a punch from the rush), {@code k}
+         * of the way (0 to 1): turning from the other's pose as it is now, the other turning from its own pose under if
+         * it is (in place of a pose this one was turning from), on a way, a place and a dash between the two, out in
+         * front as far as either is, in the stronger gust.
+         */
+        void takeOver(Shape from,float k){
+            if(k<1){
+                System.arraycopy(from.weights,0,under,0,under.length);
+                if(from.over<1){
+                    // the other's pose under, with the one under that weighed into it (there is no room for a third)
+                    for(int i=0;i<under2.length;i++)under2[i]=from.over2>=1?from.under[i]:from.under[i]*from.over2+from.under2[i]*(1-from.over2);
+                    over2=from.over;
+                }else{Arrays.fill(under2,0);over2=1;}
+                over=Math.max(0,k);
+            }
+            between(from,k);
+        }
+        /**
+         * This shape, itself turning from its pose under to its own (the rush let go: its fists going back to the guard),
+         * taking over from {@code from} {@code k} of the way: the other's pose, weighed into one, goes under its pose
+         * under. Not quite turning from the one to the other, but as it began, and as it ends, the same; and smooth.
+         */
+        void underneath(Shape from,float k){
+            if(k<1){for(int i=0;i<under2.length;i++)under2[i]=from.share(i);over2=Math.max(0,k);}
+            between(from,k);
+        }
+        /** The way, place and dash {@code k} of the way from the other's to this one's, out in front as far as either is, in the stronger gust. */
+        private void between(Shape from,float k){
+            if(k<1){
+                yaw=from.yaw+wrap(yaw-from.yaw)*k;raise+=(from.raise-raise)*(1-k);
+                ahead+=(from.ahead-ahead)*(1-k);side+=(from.side-side)*(1-k);lunge+=(from.lunge-lunge)*(1-k);ghost+=(from.ghost-ghost)*(1-k);
+            }
+            engage=Math.max(engage,from.engage);gust=Math.max(gust,from.gust);
+        }
         /**
          * The punches on a look, as far as the stand has come out in front ({@code engage}): in front, the punch drawn
          * as it is, turning from the punch before as it takes over; on its way round, the look's stances and the
@@ -48,10 +94,11 @@ public final class StandPunch {
             if(e>=1){
                 System.arraycopy(weights,0,look.weights,0,weights.length);
                 System.arraycopy(under,0,look.under,0,under.length);look.over=over;
+                System.arraycopy(under2,0,look.under2,0,under2.length);look.over2=over2;
                 return;
             }
             look.flatten();
-            for(int i=0;i<look.weights.length;i++){float mine=over>=1?weights[i]:weights[i]*over+under[i]*(1-over);look.weights[i]=look.weights[i]*(1-e)+mine*e;}
+            for(int i=0;i<look.weights.length;i++)look.weights[i]=look.weights[i]*(1-e)+share(i)*e;
         }
     }
     /** When each punch lands (seconds after it starts) and how long it then stands still (the hit-stop: longer for the heavy ones). */
@@ -116,6 +163,8 @@ public final class StandPunch {
     /** A kick that comes in at {@code at} over two frames and dies away with time constant {@code tau} (seconds). */
     static float kick(float t,float at,float tau){return t<at-.03f?0:smooth((t-at+.03f)/.045f)*(float)Math.exp(-Math.max(0,t-at-.015f)/tau);}
 
+    /** How far back to its guard a punch stopped short is {@code since} seconds after it stopped (StarPlatinumRules.STOP_RETURN). */
+    static float back(float since){return smooth(since/(StarPlatinumRules.STOP_RETURN/20f));}
     /** The punch's own clock as its body moves on it: time stands still for the hit-stop. */
     public static float warp(int combo,float t){float hit=HIT[combo];return t<hit?t:t<hit+FREEZE[combo]?hit:t-FREEZE[combo];}
     /** How long a punch shows (seconds): its keys and its stand in front, then its way back. */
@@ -125,7 +174,7 @@ public final class StandPunch {
     static void stances(Punch p,float t,float[] w,float share){
         if(!Float.isNaN(p.stopped)&&t>p.stopped){
             // stopped short: from where it was back to the guard
-            float back=smooth((t-p.stopped)/.2f);
+            float back=back(t-p.stopped);
             stances(p.combo,warp(p.combo,p.stopped),w,share*(1-back));w[GUARD]+=share*back;return;
         }
         stances(p.combo,warp(p.combo,t),w,share);
@@ -172,9 +221,18 @@ public final class StandPunch {
     public static Shape at(Punch now,float t,Punch before,float tb,Shape into){
         into.clear();
         float take=before==null?1:smooth(t/BLEND[now.combo]);
-        // the newest punch's stances, and the last one's under them while it takes over (turned from, not weighed in)
-        stances(now,t,into.weights,1);
-        if(take<1){stances(before,tb,into.under,1);into.over=take;}
+        if(!Float.isNaN(now.stopped)&&t>now.stopped){
+            // stopped short (2.57.0: turned, not weighed in): from where it was then, turning from the punch before if it
+            // still was, back to the guard. Weighed in, three stances far apart could be weighed two ways and leap.
+            float since=t-now.stopped,then=before==null?1:smooth(now.stopped/BLEND[now.combo]);
+            into.weights[GUARD]=1;
+            stances(now.combo,warp(now.combo,now.stopped),into.under,1);into.over=back(since);
+            if(then<1){stances(before,tb-since,into.under2,1);into.over2=then;}
+        }else{
+            // the newest punch's stances, and the last one's under them while it takes over (turned from, not weighed in)
+            stances(now,t,into.weights,1);
+            if(take<1){stances(before,tb,into.under,1);into.over=take;}
+        }
         into.engage=Math.max(envelope(now,t),before==null?0:envelope(before,tb));
         float turn=before==null?1:smooth(t/TURN);
         into.yaw=before==null?now.yaw:before.yaw+wrap(now.yaw-before.yaw)*turn;

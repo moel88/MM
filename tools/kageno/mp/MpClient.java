@@ -42,6 +42,11 @@ public final class MpClient implements ClientModInitializer {
      * whether it landed and on whom, its age on their clock then), when its shout starts on their clock (it should start
      * a tick in, StandAttack.LEAD) and the cooldown list's rest. Since 2.56.0 only the hook and the finisher shout: the
      * jab and the cross are logged as shouting nothing, and the hook's shout as fading when the finisher's comes.
+     * Since 2.57.0 the caster first holds E with the stand out (3315 to 3405), so Star Platinum rushes the watcher in
+     * front through all its forty blows, walking forward through it (3330 to 3380, 90% slower; the speed window is
+     * logged); both log the rush they hear (its start, its voice starting on their clock, every tenth blow and whom it
+     * struck, how loud its blows sound, its end), the watcher how many cries of pain it heard from itself, and the
+     * cooldown list. The punches follow (3440 to 3503).
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -56,9 +61,9 @@ public final class MpClient implements ClientModInitializer {
         "2445 C",
         "2460 DUMMY",
         "3070 TAB","3100 TAB","3120 ESC","3135 R","3150 ENTER","3185 RESPAWN",
-        "3230 STAND","3270 Q","3315 M1+","3378 M1-","3400 TURN180","3402 W+","3442 W-","3502 Q","3552 END"};
+        "3230 STAND","3270 Q","3315 E+","3330 W+","3380 W-","3405 E-","3440 M1+","3503 M1-","3525 TURN180","3527 W+","3567 W-","3627 Q","3677 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
-    private static final int[][] SPEED={{282,312},{330,360}},LENS={{126,142},{312,340}};
+    private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
     private final Map<String,Object> flags=new HashMap<>();
     private final Map<UUID,long[]> casts=new HashMap<>();private net.minecraft.util.math.Vec3d lastPos;
@@ -223,6 +228,8 @@ public final class MpClient implements ClientModInitializer {
         flag("own_stand",stand(mc.player));if(other!=null)flag("other_stand",stand(other));
         // 2.54.0: Star Platinum's punches heard here, whether each landed and on whom, and when its shout started
         punches();
+        // 2.57.0: its rush heard here, and this player's own cries of pain (only the first blow on them cries out)
+        rushes();flag("hurt_cries",hurtCries);
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
         if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
         flag("thrown",fast);
@@ -231,7 +238,25 @@ public final class MpClient implements ClientModInitializer {
                 dev.sangwoo.celestialfall.client.stand.StandPresence.aura(p.getUuid()),dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast(),look.lean,look.speed,dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
     }
-    private final Map<String,int[]> heard=new HashMap<>();
+    private final Map<String,int[]> heard=new HashMap<>(),rushHeard=new HashMap<>();private int hurtCries;private boolean listening;
+    /** Each player's rush heard here (2.57.0): as it starts, its voice starting, every tenth blow (whom it struck, how loud its blows sound) and its end. */
+    private void rushes(){
+        if(!listening&&mc.getSoundManager()!=null){listening=true;mc.getSoundManager().registerListener((sound,set)->{if(sound.getId().getPath().equals("entity.player.hurt"))hurtCries++;});}
+        for(var p:mc.world.getPlayers()){
+            var r=dev.sangwoo.celestialfall.client.stand.StandRush.of(p.getUuid());if(r==null)continue;
+            String key=p.getUuid()+"/"+r.start;int[] st=rushHeard.get(key);String who=p.getGameProfile().getName()+"'s rush";
+            if(st==null){rushHeard.put(key,st=new int[3]);note(String.format(Locale.ROOT,"%s heard (server tick %d, its tick here %d)",who,r.start,r.ticksIn()));}
+            if(st[0]==0&&r.voice()!=null&&mc.getSoundManager().isPlaying(r.voice())){st[0]=1;note(String.format(Locale.ROOT,"%s: its voice started at its tick %d here",who,r.ticksIn()));}
+            if(r.blows>st[1]){
+                var all=r.blowsHeard();var last=all.isEmpty()?null:all.get(all.size()-1);
+                if(last!=null&&(r.blows==1||r.blows%10==0)){var names=new ArrayList<String>();
+                    for(int id:last.ids()){var e=mc.world.getEntityById(id);names.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
+                    note(String.format(Locale.ROOT,"%s: blow %d heard at its tick %d here, struck %s, its blows sounding at %.2f",who,r.blows,r.ticksIn(),names,r.striking()));}
+                st[1]=r.blows;
+            }
+            if(st[2]==0&&!r.on()){st[2]=1;note(String.format(Locale.ROOT,"%s ended at %.2f s on its clock here, %d blows heard",who,r.ends(),r.blows));}
+        }
+    }
     /** Each punch of every player heard here, as it is heard, as it lands, and as its shout starts (its tick on the punch's clock). */
     private void punches(){
         for(var p:mc.world.getPlayers())for(var seen:dev.sangwoo.celestialfall.client.stand.StandAttack.punches(p.getUuid())){

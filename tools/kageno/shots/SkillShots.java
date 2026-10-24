@@ -109,7 +109,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * (with "dfw"/"drt") puts the training dummy in front to punch and "DUMMYBACK@n" brings it back in front, whole, after
  * the finisher threw it. stand.csv gets the last punch (its number, its age in seconds, whether it landed and on how
  * many, its whole ticks in: the shot clock t less those is when it started), how far round in front the stand is and
- * each punch stance's share; the log gets each punch seen and landed.
+ * each punch stance's share; the log gets each punch seen and landed. Its rush (2.57.0): "KEYDOWN_E@n" and "KEYUP_E@n"
+ * hold E through the real keyboard path; stand.csv gets the rush (its age in seconds, the blows heard, how many the last
+ * struck, whether it is on, how loud its blows sound), the training dummy's health, the player's speed and each rush
+ * stance's share, and the log each time it comes on and goes off and each blow heard.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -348,7 +351,22 @@ public final class SkillShots implements ClientModInitializer {
         var shape=dev.sangwoo.celestialfall.client.stand.StandAttack.shape(mc.player.getUuid(),mc.getTickDelta(),0,new dev.sangwoo.celestialfall.client.stand.StandPunch.Shape());
         standLog.append(',').append(punch==null?",,,,":punch).append(',').append(shape==null?"":String.format(Locale.ROOT,"%.4f",shape.engage));
         for(int i=3;i<12;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        // 2.57.0: the rush: its age (seconds), the blows heard, how many the last struck, whether it is on and how loud its
+        // blows sound; the training dummy's health and the player's speed; and the share of each rush stance in the look
+        var rush=dev.sangwoo.celestialfall.client.stand.StandRush.describe(mc.player,mc.getTickDelta());
+        standLog.append(',').append(rush==null?",,,,":rush);
+        var dummy=mc.world.getEntityById(dummyId);
+        standLog.append(',').append(dummy instanceof net.minecraft.entity.LivingEntity le?String.format(Locale.ROOT,"%.2f",le.getHealth()):"");
+        standLog.append(',').append(String.format(Locale.ROOT,"%.5f",mc.player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
+        for(int i=12;i<18;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
         standLog.append('\n');
+        if(rush!=null){
+            String[] v=rush.split(",");boolean on=v[3].equals("1");int blows=Integer.parseInt(v[1]);
+            if(on&&!rushOn)log.append("  rush on at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
+            if(blows>rushBlows)log.append("  rush blow ").append(blows).append(" struck ").append(v[2]).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
+            if(!on&&rushOn)log.append("  rush off at ").append(age).append(String.format(Locale.ROOT," (its age %s s, %d blows heard)%n",v[0],blows));
+            rushOn=on;rushBlows=blows;
+        }else{rushOn=false;rushBlows=0;}
         if(punch!=null){
             String[] v=punch.split(",");String key=v[0]+"/"+v[2];
             if(!key.equals(punchLogged)){
@@ -358,7 +376,7 @@ public final class SkillShots implements ClientModInitializer {
             }
         }
     }
-    private String punchLogged="";
+    private String punchLogged="";private boolean rushOn;private int rushBlows;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
     private void logInterface()throws Exception{
         String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
@@ -635,7 +653,8 @@ public final class SkillShots implements ClientModInitializer {
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
-                    if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big\n"+standLog);standLog.setLength(0);punchLogged="";}
+                    if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big,"
+                        +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo\n"+standLog);standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

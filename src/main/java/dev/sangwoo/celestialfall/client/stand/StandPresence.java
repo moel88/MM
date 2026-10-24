@@ -31,7 +31,8 @@ import org.lwjgl.glfw.GLFW;
  * (swinging round as they turn, trailing a little as they move, never inside them) and is drawn between ticks from the
  * tick before and the tick after, with its look worked out for the frame's own moment, so it moves at the frame rate.
  * Coming out and going back, faint blue afterimages trail it. While it is out it and its user are wrapped in its aura
- * (StandAuraLayer, 2.53.0), which comes and goes with its glow.
+ * (StandAuraLayer, 2.53.0), which comes and goes with its glow. Rushing (2.57.0, StandRush), afterimages of its flying
+ * arms alone, see-through and violet, throw their own fists beside it.
  */
 public final class StandPresence {
     /** Its place by its user (blocks): to their right, behind them, above their feet. */
@@ -128,6 +129,18 @@ public final class StandPresence {
             if(look.alpha<.003f)continue;
             if(c.frustum()!=null&&!c.frustum().isVisible(s.puppet.getBoundingBox().expand(1.2)))continue;
             s.drawn=true;
+            // rushing: the afterimages of its flying arms first (each a body of its own: GeckoLib poses a body once a
+            // frame, so the afterimages of the main body below keep its pose)
+            for(int i=0;i<StandRush.phantoms();i++){
+                var ph=s.phantom(i,mc);var pl=ph.look;pl.set(look);
+                float a=StandRush.phantom(p.getUuid(),i,delta,pl.weights)*look.alpha;
+                if(a<.02f)continue;
+                java.util.Arrays.fill(pl.under,0);pl.over=1;
+                pl.armsOnly=true;pl.alpha=a;pl.red=.66f;pl.green=.54f;pl.blue=1;pl.shadow=0;pl.glow=0;
+                var b=StandRush.phantomBody(s.body,i);
+                ph.age=s.puppet.age;ph.place(b.at(),b.yaw());
+                dispatcher.render(ph,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(ph,delta));
+            }
             var at=s.puppet.getPos();float yaw=s.puppet.getYaw();
             dispatcher.render(s.puppet,at.x-cam.x,at.y-cam.y,at.z-cam.z,yaw,delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
             // coming out or going back: faint blue afterimages where it was a moment ago (the same pose, GeckoLib keeps it for the frame)
@@ -173,12 +186,15 @@ public final class StandPresence {
 
     private static final class Presence {
         final int entity;final StandPuppet puppet;
+        /** The afterimages of its flying arms as it rushes (made when first needed). */
+        final StandPuppet[] phantoms=new StandPuppet[StandRush.phantoms()];
         boolean out=true,hasFrom,drawn;long since,bodyFrame=-1;Body body;
         /** The look when the last change came, which the next one starts from. */
         final StarPlatinumLook from=new StarPlatinumLook();
         /** Where it floats and faces (followed once a tick), and how fast it goes (blocks a second): now and a tick ago. */
         Vec3d pos,prevPos,vel=Vec3d.ZERO,prevVel=Vec3d.ZERO;float yaw,prevYaw;
         Presence(PlayerEntity p,MinecraftClient mc){entity=p.getId();puppet=new StandPuppet(mc.world);}
+        StandPuppet phantom(int i,MinecraftClient mc){if(phantoms[i]==null)phantoms[i]=new StandPuppet(mc.world);return phantoms[i];}
 
         /** Its look at the client clock {@code clock} (ticks): coming out, at rest, or going back. */
         StarPlatinumLook look(double clock,StarPlatinumLook into){return StandTimeline.at(out,(float)((clock-since)/20),hasFrom?from:null,into);}
@@ -209,12 +225,12 @@ public final class StandPresence {
             return p.getPos().add(-fz*RIGHT-fx*BACK,UP,fx*RIGHT-fz*BACK);
         }
         /**
-         * The punches on top of the look (2.54.0), {@code back} seconds before this frame: their stances while it is out
-         * (going back, it curls up from the look it had), the gust of each blow, and what wind it fights in. Returns
-         * their shape, for where it stands (null if no punch shows).
+         * The punches on top of the look (2.54.0), and the rush (2.57.0), {@code back} seconds before this frame: their
+         * stances while it is out (going back, it curls up from the look it had), the gust of each blow, and what wind it
+         * fights in. Returns their shape, for where it stands (null if neither shows).
          */
         StandPunch.Shape punch(PlayerEntity p,float delta,float back,StarPlatinumLook look,StandPunch.Shape into){
-            var shape=StandAttack.shape(p.getUuid(),delta,back,into);if(shape==null)return null;
+            var shape=StandRush.shape(p,delta,back,into);if(shape==null)return null;
             float e=shape.engage;
             if(out&&e>0){
                 shape.onto(look);
@@ -254,15 +270,11 @@ public final class StandPresence {
                 double ahead=shape.ahead+shape.lunge,toAngle=Math.atan2(shape.side,ahead),toDist=Math.hypot(ahead,shape.side);
                 double ang=fromAngle+wrapRad(toAngle-fromAngle)*e,dist=fromDist+(toDist-fromDist)*e;
                 double ux=Math.cos(ang),us=Math.sin(ang);
-                at=new Vec3d(home.x+fx*ux*dist-fz*us*dist,at.y+(home.y+UP+StandPunch.RAISE-at.y)*e,home.z+fz*ux*dist+fx*us*dist);
+                at=new Vec3d(home.x+fx*ux*dist-fz*us*dist,at.y+(home.y+UP+shape.raise-at.y)*e,home.z+fz*ux*dist+fx*us*dist);
                 // it turns to face straight down the punch
                 y=y+MathHelper.wrapDegrees(shape.yaw-y)*e;
             }
-            var where=home.lerp(at,look.out);
-            var b=puppet;
-            // setPosition moves its box too (the frustum test and the light go by it)
-            b.setPosition(where.x,where.y,where.z);b.prevX=b.lastRenderX=where.x;b.prevY=b.lastRenderY=where.y;b.prevZ=b.lastRenderZ=where.z;
-            b.setYaw(y);b.prevYaw=y;b.setBodyYaw(y);b.prevBodyYaw=y;b.setHeadYaw(y);b.prevHeadYaw=y;b.setPitch(0);b.prevPitch=0;
+            puppet.place(home.lerp(at,look.out),y);
         }
         static double wrapRad(double a){a%=Math.PI*2;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;return a;}
     }
