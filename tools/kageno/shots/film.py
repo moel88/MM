@@ -1,6 +1,8 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
 FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate, FILM_CAPTION=center centres the captions at the top, FILM_CAPTION=below puts them in a band under the picture (the HUD's shots, 2.42.0: nothing of the game's screen covered).
 MODE motion with the shot's motion.csv (ACTOR -) shows the player's walking speed and the lens's FOV multiplier each tick.
+MODE rush with a SUMMON shot's stand.csv (ACTOR -, 2.57.0) shows Star Platinum's rush: the blows heard, the training
+dummy's health and, from the motion.csv beside it, the player's walking speed while they walk.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -43,8 +45,16 @@ for k in range(1, len(frames)):
     if frames[k][1] < frames[k - 1][1] - .05: first = k
 frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in frames]
 
-rows, wall, motion = {}, [], []
-if csv_path and mode == 'motion':
+rows, wall, motion, rush = {}, [], [], []
+if csv_path and mode == 'rush':
+    # a row the stand did not show in can be a field short (SkillShots before 2.57.0): its last field is then missing
+    with open(csv_path) as fh:
+        rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
+    beside = os.path.join(os.path.dirname(csv_path), 'motion.csv')
+    if os.path.exists(beside):
+        with open(beside) as fh:
+            motion = sorted((float(r['t']), float(r['x']), float(r['z']), float(r['fov'])) for r in csv.DictReader(fh))
+elif csv_path and mode == 'motion':
     with open(csv_path) as fh:
         motion = sorted((float(r['t']), float(r['x']), float(r['z']), float(r['fov'])) for r in csv.DictReader(fh))
 elif csv_path and mode == 'wall':
@@ -135,7 +145,30 @@ def motion_line(t):
     zoom = '' if abs(fov - 1) < .005 else (' (확대됨)' if fov < 1 else ' (넓어짐)')
     return f'이동 속도 초당 {speed:.1f}블록 · 시야 배율 {fov:.3f}{zoom}', ((255, 120, 120) if abs(fov - 1) >= .005 else (255, 255, 255))
 
+def walking(t, ticks=4):
+    """The player's speed over the last few ticks before t (blocks a second), None without a motion.csv."""
+    if not motion: return None
+    i = bisect.bisect_right(motion, (t * 20 + 1e-6, 1e9)) - 1
+    j = bisect.bisect_left(motion, (t * 20 - ticks - 1e-6,))
+    if i < 1 or j >= i: return None
+    (t0, x0, z0, _), (t1, x1, z1, _) = motion[j], motion[i]
+    return ((x1 - x0) ** 2 + (z1 - z0) ** 2) ** .5 * 20 / max(1e-3, t1 - t0)
+
+def rush_line(t):
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    blows, on = int(r['rush_blows'] or 0), r['rush_on'] == '1'
+    if blows or on: parts.append(f'러시 {blows}타' + ('' if on else ' (끝)'))
+    full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
+    if r['dummy_health'] and full: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f} / {full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
+    speed = walking(t)
+    if speed is not None and speed > .05: parts.append(f'걷는 속도 초당 {speed:.2f}블록')
+    return (' · '.join(parts), (255, 255, 255)) if parts else (None, None)
+
 def actor_line(t):
+    if mode == 'rush': return rush_line(t)
     if mode == 'motion': return motion_line(t)
     if mode == 'wall': return wall_line(t)
     if not rows: return None, None

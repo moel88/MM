@@ -343,7 +343,7 @@ public final class SkillShots implements ClientModInitializer {
         var l=dev.sangwoo.celestialfall.client.stand.StandPresence.shown(mc.player.getUuid());
         standLog.append(String.format(Locale.ROOT,"%.3f,%d,%.3f,%d",clock()-mc.getTickDelta(),out?1:0,state==null?-1:state[0],state==null?-1:(int)state[1]));
         int aura=dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast();
-        if(l==null)standLog.append(",,,,,,,,,,,").append(aura);
+        if(l==null)standLog.append(",,,,,,,,,,,,").append(aura);
         else standLog.append(String.format(Locale.ROOT,",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.3f,%.3f,%.4f,%d",l.out,l.alpha,l.scale,l.weights[0],l.weights[1],l.weights[2],l.wind,l.gust,l.lean,l.speed,l.glow,aura));
         // 2.54.0: the punches: the last one's number, its age (seconds), whether it landed and on how many, how far the
         // stand is round in front, and the share of each punch stance in the look drawn (guard, then each punch loaded and thrown)
