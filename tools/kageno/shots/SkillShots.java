@@ -104,7 +104,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * out, the seconds since it last came out or went back, and the look it was drawn with (how far out, how solid, its
  * size, the stances, the wind, the gust, the lean, the speed and, since 2.52.0, its glow; since 2.53.0 how many bodies
  * the last frame wrapped in the aura); the log gets each time it comes out or goes back.
- * "time=T" sets the time of day for the entry (2.52.0: a glow shows best at night).
+ * "time=T" sets the time of day for the entry (2.52.0: a glow shows best at night). Its punches (2.54.0): "ATTACKDOWN@n"
+ * and "ATTACKUP@n" hold the attack (the left button) down and let it go through Minecraft's own mouse handler, "dummy=1"
+ * (with "dfw"/"drt") puts the training dummy in front to punch and "DUMMYBACK@n" brings it back in front, whole, after
+ * the finisher threw it. stand.csv gets the last punch (its number, its age in seconds, whether it landed and on how
+ * many, its whole ticks in: the shot clock t less those is when it started), how far round in front the stand is and
+ * each punch stance's share; the log gets each punch seen and landed.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -335,9 +340,25 @@ public final class SkillShots implements ClientModInitializer {
         var l=dev.sangwoo.celestialfall.client.stand.StandPresence.shown(mc.player.getUuid());
         standLog.append(String.format(Locale.ROOT,"%.3f,%d,%.3f,%d",clock()-mc.getTickDelta(),out?1:0,state==null?-1:state[0],state==null?-1:(int)state[1]));
         int aura=dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast();
-        if(l==null)standLog.append(",,,,,,,,,,,").append(aura).append('\n');
-        else standLog.append(String.format(Locale.ROOT,",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.3f,%.3f,%.4f,%d%n",l.out,l.alpha,l.scale,l.weights[0],l.weights[1],l.weights[2],l.wind,l.gust,l.lean,l.speed,l.glow,aura));
+        if(l==null)standLog.append(",,,,,,,,,,,").append(aura);
+        else standLog.append(String.format(Locale.ROOT,",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.3f,%.3f,%.4f,%d",l.out,l.alpha,l.scale,l.weights[0],l.weights[1],l.weights[2],l.wind,l.gust,l.lean,l.speed,l.glow,aura));
+        // 2.54.0: the punches: the last one's number, its age (seconds), whether it landed and on how many, how far the
+        // stand is round in front, and the share of each punch stance in the look drawn (guard, then each punch loaded and thrown)
+        var punch=dev.sangwoo.celestialfall.client.stand.StandAttack.describe(mc.player,mc.getTickDelta());
+        var shape=dev.sangwoo.celestialfall.client.stand.StandAttack.shape(mc.player.getUuid(),mc.getTickDelta(),0,new dev.sangwoo.celestialfall.client.stand.StandPunch.Shape());
+        standLog.append(',').append(punch==null?",,,,":punch).append(',').append(shape==null?"":String.format(Locale.ROOT,"%.4f",shape.engage));
+        for(int i=3;i<12;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        standLog.append('\n');
+        if(punch!=null){
+            String[] v=punch.split(",");String key=v[0]+"/"+v[2];
+            if(!key.equals(punchLogged)){
+                if(!v[0].equals(punchLogged.split("/")[0])||punchLogged.isEmpty()||v[2].equals("0"))log.append("  punch ").append(v[0]).append(" seen at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[1]));
+                if(v[2].equals("1"))log.append("  punch ").append(v[0]).append(" landed on ").append(v[3]).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[1]));
+                punchLogged=key;
+            }
+        }
     }
+    private String punchLogged="";
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
     private void logInterface()throws Exception{
         String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
@@ -600,6 +621,12 @@ public final class SkillShots implements ClientModInitializer {
                             for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(stance);
                             log.append("  stance ").append(what.substring(7)).append(" at ").append(age).append('\n');});continue;}
                     if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
+                    // 2.54.0: the attack (the left button) held down and let go, through Minecraft's own mouse handler
+                    if(what.equals("ATTACKDOWN")||what.equals("ATTACKUP")){if(age==at){log.append("  attack ").append(what.equals("ATTACKDOWN")?"down":"up").append(" at ").append(age).append('\n');button(what.equals("ATTACKDOWN"));}continue;}
+                    // the training dummy back in front of the player (after the finisher threw it), whole again
+                    if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
+                            var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
+                            l.setHealth(l.getMaxHealth());l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);log.append("  dummy back at ").append(age).append('\n');}});continue;}
                     if(age==at){int id=skill(what);server(p->{boolean ok=KagenoManager.input(p,id);log.append("  ").append(what).append(ok?" at ":" refused at ").append(p.getWorld().getTime()).append('\n');});}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
@@ -608,7 +635,7 @@ public final class SkillShots implements ClientModInitializer {
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
-                    if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura\n"+standLog);standLog.setLength(0);}
+                    if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big\n"+standLog);standLog.setLength(0);punchLogged="";}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

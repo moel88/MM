@@ -41,8 +41,10 @@ class StandTimelineTest {
             prev.set(look);flare=Math.max(flare,look.glow);
             for(int b=0;b<names.size();b++){
                 poses.pose(names.get(b),look,t,p);
-                if(last[b]!=null)for(int i=0;i<3;i++){
-                    float d=Math.abs(p[i]-last[b][i]);fastest=Math.max(fastest,d);
+                if(last[b]!=null){
+                    // how far the bone really turns (2.54.0: the stances are weighed as turns, so their angles alone
+                    // no longer tell it)
+                    float d=StandPunchTest.turn(names.get(b),last[b],p);fastest=Math.max(fastest,d);
                     // the burst is quick (a limb crosses the body in a quarter of a second) but never a jump
                     assertTrue(d<20,names.get(b)+" turns "+d+" degrees in a frame at "+t);
                 }

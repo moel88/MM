@@ -6,14 +6,14 @@ import net.minecraft.util.math.Vec3d;
 import java.util.List;
 
 /** Shared effect primitives for the Kageno skills: rings, flashes, converging motes, embers, columns, sword trails, bolts, glows. */
-final class FxLib {
+public final class FxLib {
     private FxLib(){}
     static final Vec3d UP=new Vec3d(0,1,0);
 
     /** Flat horizontal ring: a bright thin rim at {@code r} with a soft falloff {@code width} deep inside it. */
-    static void ring(EffectMesh m,Vec3d c,double r,double width,int rgb,float alpha){ringPlane(m,c,new Vec3d(1,0,0),new Vec3d(0,0,1),r,width,rgb,alpha);}
+    public static void ring(EffectMesh m,Vec3d c,double r,double width,int rgb,float alpha){ringPlane(m,c,new Vec3d(1,0,0),new Vec3d(0,0,1),r,width,rgb,alpha);}
     /** The same ring in the plane spanned by {@code u} and {@code v}. */
-    static void ringPlane(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,double r,double width,int rgb,float alpha){
+    public static void ringPlane(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,double r,double width,int rgb,float alpha){
         if(alpha<=0||r<=0)return;int n=Math.max(24,Math.min(96,(int)(r*10)));double ri=Math.max(0,r-width),ro=r+width*.18;
         for(int i=0;i<n;i++){
             double a0=i*Math.PI*2/n,a1=(i+1)*Math.PI*2/n;
@@ -32,7 +32,7 @@ final class FxLib {
         }
     }
     /** Camera-facing flash: white core, coloured halo and a four-point glint. */
-    static void flash(EffectMesh m,Vec3d p,double r,int rgb,float alpha){
+    public static void flash(EffectMesh m,Vec3d p,double r,int rgb,float alpha){
         if(alpha<=0||r<=0)return;
         m.softDisc(p,r,rgb,alpha*.45f);m.softDisc(p,r*.55,rgb,alpha*.7f);m.softDisc(p,r*.3,0xffffff,alpha);m.star(p,r*.9,0xffffff,alpha*.8f);
     }
@@ -60,7 +60,7 @@ final class FxLib {
         }
     }
     /** Radial spark needles out of {@code p}. */
-    static void sparks(EffectMesh m,Vec3d p,int n,double len,double width,int rgb,float alpha,int seed,float grow){
+    public static void sparks(EffectMesh m,Vec3d p,int n,double len,double width,int rgb,float alpha,int seed,float grow){
         if(alpha<=0||grow<=0)return;
         for(int k=0;k<n;k++){
             double az=Ease.hash(seed+k*3)*Math.PI*2,el=(Ease.hash(seed+k*5)-.5)*2.6,l=len*(.5+.5*Ease.hash(seed+k*7))*grow;
@@ -122,7 +122,7 @@ final class FxLib {
     // ───────────────────────────── effect layer helpers ─────────────────────────────
 
     /** A pulse that comes in over a frame at {@code at} and dies away with time constant {@code tau}. */
-    static float kick(float t,float at,float tau){return t<at-.01f?0:Ease.smooth(t,at-.01f,at+.015f)*(float)Math.exp(-Math.max(0,t-at-.015f)/tau);}
+    public static float kick(float t,float at,float tau){return t<at-.01f?0:Ease.smooth(t,at-.01f,at+.015f)*(float)Math.exp(-Math.max(0,t-at-.015f)/tau);}
     /**
      * A big finisher's impact frame: in over two frames as the blow lands at {@code at}, held about three frames (white
      * shapes on dark, then over a frame and a half dark shapes on white, {@link #impactMode}), out over two frames.
@@ -139,7 +139,7 @@ final class FxLib {
      * ({@code out} blocks a second sideways, {@code up} upward), spinning, bouncing and settling, shrinking away from
      * {@code shrink} seconds. Only a picture: the world's blocks do not change.
      */
-    static void chunks(dev.sangwoo.celestialfall.client.vfx.FxSolids s,Vec3d o,float since,int n,int seed,double out,double up,double size,float shrink){
+    public static void chunks(dev.sangwoo.celestialfall.client.vfx.FxSolids s,Vec3d o,float since,int n,int seed,double out,double up,double size,float shrink){
         double floor=s.groundY(o.add(0,.3,0));Vec3d at=new Vec3d(o.x,floor,o.z);
         var block=s.ground(at.add(0,-.5,0));if(block==null)return;
         for(int k=0;k<n;k++){
@@ -165,7 +165,7 @@ final class FxLib {
         }
     }
     /** A ring of anime dust puffs thrown out over the floor from {@code o} at {@code at}, from radius r0 out to r1 (cells for {@code KagenoFire.dust}). */
-    static void dustRing(Vec3d o,float t,float at,double r0,double r1,int n,double size,List<Vec3d> dust,List<float[]> puffs,int seed){
+    public static void dustRing(Vec3d o,float t,float at,double r0,double r1,int n,double size,List<Vec3d> dust,List<float[]> puffs,int seed){
         for(int i=0;i<n;i++){
             float s=t-at-.03f*(float)Ease.hash(seed+i),life=.6f+.35f*(float)Ease.hash(seed+i*3);if(s<0||s>=life)continue;float u=s/life;
             double az=(i+Ease.hash(seed+i*5)*.6)*Math.PI*2/n,rad=r0+(r1-r0)*Ease.out(u,0,.7f);

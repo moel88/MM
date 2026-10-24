@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.53.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.54.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.54.0 — 스타플래티나 평타 (오라 4타, 4타에 날아감)
+
+- **평타:** 스탠드가 나와 있을 때 공격 키(좌클릭)를 누르면 스타플래티나가 앞으로 나와 주먹을 칩니다. 1타 왼 잽, 2타 오른 스트레이트, 3타 왼 훅, 4타 몸을 실은 오른 주먹이고, **4타에 맞은 대상은 주먹 방향으로 날아갑니다.** 1~3타에 맞은 대상은 다음 주먹까지 붙잡히고, 넉백은 없습니다. 주먹을 치는 동안에도 걷고 달릴 수 있습니다.
+- **소리:** 보내 주신 '오라!' 녹음을 고치지 않고 네 조각으로 잘라, 주먹마다 그 조각의 'RA'가 주먹이 닿는 순간에 들리게 맞췄습니다. 연타하면 주먹이 녹음의 간격대로 나가서 네 소리가 녹음처럼 이어집니다.
+- **이어치기와 쉼:** 다음 주먹은 낼 수 있게 된 뒤 1초 안에 눌러야 이어지고, 늦으면 콤보가 끊깁니다(조금 일찍 누른 것은 기억했다가 그때 나갑니다). 4타가 끝난 뒤와 끊긴 뒤에는 1.2초 쉬고, 그 쉼이 쿨타임 목록에 '오라!'로 보입니다.
+- **이펙트:** 주먹이 닿을 때 보랏빛 파랑의 번쩍임, 충격 고리, 앞으로 터지는 공기, 화면 흔들림이 나고, 4타는 더 크게 터집니다(임팩트 프레임, 빛기둥, 먼지, 튀는 돌, 날아가는 대상의 빛 꼬리).
+
+[RELEASE_2.54.0_KO.md](RELEASE_2.54.0_KO.md)를 확인하세요.
 
 # 보탠드 2.53.0 — 스타플래티나의 화난 얼굴과 솟는 머리카락 · 몸 전체를 두르는 아우라
 

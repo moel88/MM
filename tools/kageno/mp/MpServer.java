@@ -104,6 +104,7 @@ public final class MpServer implements ModInitializer {
             note(server,"atomic dummies left after the cast: "+left);dummyGone=0;dummy=null;
         }
         busy|=atomic;
+        punched(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -252,7 +253,30 @@ public final class MpServer implements ModInitializer {
     }
     private void restore(MinecraftServer server){
         if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0)return;
-        // a player with Star Platinum out walks with it (2.51.0): left where they are
-        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+        // a player with Star Platinum out walks with it (2.51.0): left where they are; and a player Star Platinum's
+        // punches threw (2.54.0) is left where it came down
+        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+    }
+    private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();
+    private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
+    /**
+     * Star Platinum's punches (2.54.0) on the watcher while the caster has it out: every hit (the damage, how fast it
+     * leaves, how far from the caster) and, for one that throws it, where it comes down.
+     */
+    private void punched(MinecraftServer server){
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        if(caster==null||!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(caster))return;
+        long now=server.getOverworld().getTime();
+        for(var p:server.getPlayerManager().getPlayerList()){
+            if(caster(p))continue;
+            if(hurtNow(p)){
+                double speed=p.getVelocity().horizontalLength();
+                note(server,String.format(java.util.Locale.ROOT,"watcher punched by Star Platinum: %.1f damage, leaving at %.2f blocks a tick, %.2f blocks from the caster",p.getMaxHealth()-p.getHealth(),speed,p.distanceTo(caster)));
+                if(speed>.8){thrown.put(p.getUuid(),now);flying.put(p.getUuid(),now);}
+            }
+            Long since=flying.get(p.getUuid());
+            if(since!=null&&now-since>2&&p.isOnGround()){flying.remove(p.getUuid());
+                note(server,String.format(java.util.Locale.ROOT,"watcher came down %d ticks after the throw, %.2f blocks from the caster",now-since,p.distanceTo(caster)));}
+        }
     }
 }

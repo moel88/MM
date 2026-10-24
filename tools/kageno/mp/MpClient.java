@@ -37,6 +37,10 @@ public final class MpClient implements ClientModInitializer {
      * Since 2.51.0 the caster then takes Star Platinum as its stand ("/botand progress stand @s star_platinum"), brings it
      * out with Q, walks away with it for two seconds and sends it back with Q: both log how they see each player's stand
      * (out or not as the server tracks it, coming out, at rest or going back, and whether this client drew it).
+     * Since 2.54.0 the caster holds the attack with the stand out (3315 to 3378), so Star Platinum punches the watcher
+     * standing in front through a whole combo, the fourth throwing it: both log each punch they hear (who, which,
+     * whether it landed and on whom, its age on their clock then), when its shout starts on their clock (it should start
+     * a tick in, StandAttack.LEAD) and the cooldown list's rest.
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -51,7 +55,7 @@ public final class MpClient implements ClientModInitializer {
         "2445 C",
         "2460 DUMMY",
         "3070 TAB","3100 TAB","3120 ESC","3135 R","3150 ENTER","3185 RESPAWN",
-        "3230 STAND","3270 Q","3338 TURN180","3340 W+","3380 W-","3440 Q","3490 END"};
+        "3230 STAND","3270 Q","3315 M1+","3378 M1-","3400 TURN180","3402 W+","3442 W-","3502 Q","3552 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360}},LENS={{126,142},{312,340}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -216,10 +220,29 @@ public final class MpClient implements ClientModInitializer {
         // 2.51.0: each player's Star Platinum as this client sees it, and every half second while one is drawn how it
         // follows its user (how far it leans into the walk and how fast it goes)
         flag("own_stand",stand(mc.player));if(other!=null)flag("other_stand",stand(other));
+        // 2.54.0: Star Platinum's punches heard here, whether each landed and on whom, and when its shout started
+        punches();
+        boolean fast=mc.player.getVelocity().horizontalLength()>.6;
+        if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
+        flag("thrown",fast);
         if(age%10==0)for(var p:mc.world.getPlayers()){var look=dev.sangwoo.celestialfall.client.stand.StandPresence.shown(p.getUuid());
             if(look!=null)note(String.format(Locale.ROOT,"stand of %s drawn: out %.2f, solid %.2f, glow %.2f, aura %.2f on %d bodies, lean %.1f deg, speed %.2f blocks/s (%s)",p.getGameProfile().getName(),look.out,look.alpha,look.glow,
                 dev.sangwoo.celestialfall.client.stand.StandPresence.aura(p.getUuid()),dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast(),look.lean,look.speed,dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
+    }
+    private final Map<String,int[]> heard=new HashMap<>();
+    /** Each punch of every player heard here, as it is heard, as it lands, and as its shout starts (its tick on the punch's clock). */
+    private void punches(){
+        for(var p:mc.world.getPlayers())for(var seen:dev.sangwoo.celestialfall.client.stand.StandAttack.punches(p.getUuid())){
+            String key=p.getUuid()+"/"+seen.start;int[] state=heard.get(key);
+            String who=p.getGameProfile().getName()+"'s punch "+seen.punch.combo();
+            if(state==null){heard.put(key,state=new int[3]);note(String.format(Locale.ROOT,"%s heard (server tick %d, its tick here %d)",who,seen.start,seen.ticksIn()));}
+            if(state[0]==0&&seen.landed){state[0]=1;var names=new ArrayList<String>();
+                for(int id:seen.struck){var e=mc.world.getEntityById(id);names.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
+                note(String.format(Locale.ROOT,"%s landed on %s at its tick %d here",who,names,seen.ticksIn()));}
+            if(state[1]==0&&seen.voice()!=null&&mc.getSoundManager().isPlaying(seen.voice())){state[1]=1;note(String.format(Locale.ROOT,"%s: its shout started at its tick %d here",who,seen.ticksIn()));}
+            if(state[2]==0&&!Float.isNaN(seen.punch.stopped())){state[2]=1;note(who+" stopped short");}
+        }
     }
     /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */
     private String stand(net.minecraft.entity.player.PlayerEntity p){

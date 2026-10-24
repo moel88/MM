@@ -101,7 +101,7 @@ try:
     for role, name in (('watcher', 'Watcher'), ('caster', 'Caster')):
         d = game_dir(role)
         (d / 'options.txt').write_text('onboardAccessibility:false\npauseOnLostFocus:false\njoinedFirstServer:true\nskipMultiplayerWarning:true\n'
-                                       'soundCategory_master:0.0\nnarrator:0\ntutorialStep:none\nrenderDistance:5\nmaxFps:30\nlang:ko_kr\n')
+                                       'soundCategory_master:1.0\nnarrator:0\ntutorialStep:none\nrenderDistance:5\nmaxFps:30\nlang:ko_kr\n')
         display = next(i for i in range(151, 199) if not Path(f'/tmp/.X{i}-lock').exists() and i not in displays)
         displays.append(display)
         procs.append(subprocess.Popen(['Xvfb', f':{display}', '-screen', '0', '854x480x24', '-nolisten', 'tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))

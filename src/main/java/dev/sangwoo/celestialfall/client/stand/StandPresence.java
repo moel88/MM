@@ -45,8 +45,13 @@ public final class StandPresence {
     private static final Map<UUID,Presence> ALL=new HashMap<>();
     /** The bodies (entity ids) in sight last tick: a stand that comes out on one of them comes out with its pose. */
     private static Set<Integer> seen=new HashSet<>(),seenNow=new HashSet<>();
-    private static long ticks;private static Object world;private static boolean held;
+    private static long ticks,frames;private static Object world;private static boolean held;
+    /** Where a stand stands this frame and which way it faces, at its size (for the light of its punches). */
+    public record Body(Vec3d at,float yaw,float scale){}
     private static final StarPlatinumLook ghost=new StarPlatinumLook(),trail=new StarPlatinumLook();
+    private static final StandPunch.Shape punchShape=new StandPunch.Shape(),ghostShape=new StandPunch.Shape();
+    /** The punches' afterimages (2.54.0): how far back each is (seconds) and how bright. */
+    static final float[][] PUNCH_GHOSTS={{.028f,.36f},{.056f,.24f},{.084f,.14f}};
     private StandPresence(){}
 
     public static void initialize(){
@@ -67,6 +72,8 @@ public final class StandPresence {
 
     /** Whether this player's stand is out, as far as this client can tell. */
     static boolean out(PlayerEntity p){return MapClient.enabled()&&StandManager.starPlatinum(p)&&!p.isSleeping()&&((StandHolder)p).botand$isStandOut();}
+    /** Where this player's stand stands this frame (null if it has none, or it was not placed this frame). */
+    public static Body body(UUID owner){var s=ALL.get(owner);return s==null||s.bodyFrame!=frames?null:s.body;}
     /** The look this player's stand was last drawn with (null when none is drawn): for the capture tools' logs. */
     public static StarPlatinumLook shown(UUID owner){var s=ALL.get(owner);return s==null||!s.drawn?null:s.puppet.look;}
     /** For the capture tools' logs: its user's facing, the stand's own facing (degrees) and its velocity (blocks a second). */
@@ -100,8 +107,8 @@ public final class StandPresence {
                 ALL.put(p.getUuid(),s);
             }else if(out!=s.out){
                 // the frames to come show the tick before this one to this one (ticks-1 to ticks): the change starts
-                // where they start, from the look the last one had got to there, so nothing jumps
-                s.look(ticks-1,trail);s.from.set(trail);s.hasFrom=true;s.out=out;s.since=ticks-1;
+                // where they start, from the look the last one had got to there (its punches' stances too), so nothing jumps
+                s.look(ticks-1,trail);s.punch(p,0,0,trail,punchShape);s.from.set(trail);s.hasFrom=true;s.out=out;s.since=ticks-1;
             }
             s.follow(p);s.puppet.age++;
         }
@@ -112,11 +119,12 @@ public final class StandPresence {
     private static void render(WorldRenderContext c){
         if(ALL.isEmpty())return;
         var mc=MinecraftClient.getInstance();if(mc.world==null||c.consumers()==null)return;
-        float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();
+        float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();frames++;
         for(var s:ALL.values()){
             s.drawn=false;
             if(!(mc.world.getEntityById(s.entity) instanceof PlayerEntity p)||p.isInvisible())continue;
-            var look=s.puppet.look;s.place(p,delta,look);
+            var look=s.puppet.look;var shape=s.place(p,delta,look);
+            s.body=new Body(s.puppet.getPos(),s.puppet.getYaw(),look.scale);s.bodyFrame=frames;
             if(look.alpha<.003f)continue;
             if(c.frustum()!=null&&!c.frustum().isVisible(s.puppet.getBoundingBox().expand(1.2)))continue;
             s.drawn=true;
@@ -129,11 +137,24 @@ public final class StandPresence {
                 float a=ghost.alpha*Math.min(1,Math.abs(main-trail.out)*6)*(.42f-.11f*i);
                 if(a<.02f)continue;
                 look.set(ghost);look.out=trail.out;look.alpha=a;look.red=.62f;look.green=.78f;look.blue=1;look.shadow=0;look.glow=0;
-                s.put(p,delta,look);
+                s.put(p,delta,look,shape);
                 var g=s.puppet.getPos();
                 dispatcher.render(s.puppet,g.x-cam.x,g.y-cam.y,g.z-cam.z,yaw,delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
             }
-            look.set(ghost);s.put(p,delta,look);
+            // punching: afterimages of the body a moment ago, faint violet blue, as each punch speeds in
+            float flash=shape==null?0:shape.ghost;
+            for(int i=0;i<PUNCH_GHOSTS.length&&flash>.02f;i++){
+                // the body as it was that moment ago: its look then, its punches then
+                s.look(ticks-1d+delta-PUNCH_GHOSTS[i][0]*20,look);
+                var back=s.punch(p,delta,PUNCH_GHOSTS[i][0],look,ghostShape);if(back==null)break;
+                look.lean=ghost.lean;look.roll=ghost.roll;look.speed=ghost.speed;
+                look.alpha=ghost.alpha*flash*PUNCH_GHOSTS[i][1];look.red=.7f;look.green=.72f;look.blue=1;look.shadow=0;look.glow=0;
+                if(look.alpha<.02f)continue;
+                s.put(p,delta,look,back);
+                var g=s.puppet.getPos();
+                dispatcher.render(s.puppet,g.x-cam.x,g.y-cam.y,g.z-cam.z,s.puppet.getYaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
+            }
+            look.set(ghost);s.put(p,delta,look,shape);
         }
         // the aura round each stand that shows and round its user, as strong as its glow (not the user the camera looks
         // out of: their body is not drawn)
@@ -152,7 +173,7 @@ public final class StandPresence {
 
     private static final class Presence {
         final int entity;final StandPuppet puppet;
-        boolean out=true,hasFrom,drawn;long since;
+        boolean out=true,hasFrom,drawn;long since,bodyFrame=-1;Body body;
         /** The look when the last change came, which the next one starts from. */
         final StarPlatinumLook from=new StarPlatinumLook();
         /** Where it floats and faces (followed once a tick), and how fast it goes (blocks a second): now and a tick ago. */
@@ -187,25 +208,62 @@ public final class StandPresence {
             // Minecraft's yaw: 0 faces south (+z); the right hand is then west (-x)
             return p.getPos().add(-fz*RIGHT-fx*BACK,UP,fx*RIGHT-fz*BACK);
         }
-        /** This frame: the look for the frame's moment, how it leans as it follows, and the body put where it floats. */
-        void place(PlayerEntity p,float delta,StarPlatinumLook look){
+        /**
+         * The punches on top of the look (2.54.0), {@code back} seconds before this frame: their stances while it is out
+         * (going back, it curls up from the look it had), the gust of each blow, and what wind it fights in. Returns
+         * their shape, for where it stands (null if no punch shows).
+         */
+        StandPunch.Shape punch(PlayerEntity p,float delta,float back,StarPlatinumLook look,StandPunch.Shape into){
+            var shape=StandAttack.shape(p.getUuid(),delta,back,into);if(shape==null)return null;
+            float e=shape.engage;
+            if(out&&e>0){
+                for(int i=0;i<look.weights.length;i++)look.weights[i]=look.weights[i]*(1-e)+shape.weights[i]*e;
+                look.wind=Math.max(look.wind,.35f*e);
+            }
+            look.gust=Math.max(look.gust,shape.gust);
+            return shape;
+        }
+        /** This frame: the look for the frame's moment with its punches, how it leans as it follows, and the body put where it floats. */
+        StandPunch.Shape place(PlayerEntity p,float delta,StarPlatinumLook look){
             look(ticks-1d+delta,look);
+            var shape=punch(p,delta,0,look,punchShape);
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
             double forward=v.x*fx+v.z*fz,side=-v.x*fz+v.z*fx;
-            look.lean=MathHelper.clamp((float)forward*2.4f,-8,16);
-            look.roll=MathHelper.clamp((float)side*-2f,-10,10);
+            float calm=shape==null?1:1-shape.engage;
+            look.lean=MathHelper.clamp((float)forward*2.4f,-8,16)*calm;
+            look.roll=MathHelper.clamp((float)side*-2f,-10,10)*calm;
             look.speed=(float)Math.hypot(v.x,v.z);
-            put(p,delta,look);
+            put(p,delta,look,shape);
+            return shape;
         }
-        /** The body where the look puts it: {@code out} of the way from its user's feet to its place, facing as it follows. */
-        void put(PlayerEntity p,float delta,StarPlatinumLook look){
-            var home=p.getLerpedPos(delta);var at=prevPos.lerp(pos,delta);
-            var where=home.lerp(at,look.out);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
+        /**
+         * The body where the look puts it: {@code out} of the way from its user's feet to its place, facing as it follows;
+         * while it punches ({@code shape}), round to the front of its user on an arc past their shoulder (never through
+         * them), lunging on with each blow and facing what it punches.
+         */
+        void put(PlayerEntity p,float delta,StarPlatinumLook look,StandPunch.Shape shape){
+            var home=p.getLerpedPos(delta);var at=prevPos.lerp(pos,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
+            if(shape!=null&&shape.engage>0){
+                float e=shape.engage;
+                double r=Math.toRadians(shape.yaw),fx=-Math.sin(r),fz=Math.cos(r);
+                // where it is now and where it punches from, as a turn round its user and a distance from them
+                double ax=at.x-home.x,az=at.z-home.z;
+                double fromAngle=Math.atan2(ax*-fz+az*fx,ax*fx+az*fz),fromDist=Math.hypot(ax,az);
+                double ahead=shape.ahead+shape.lunge,toAngle=Math.atan2(shape.side,ahead),toDist=Math.hypot(ahead,shape.side);
+                double ang=fromAngle+wrapRad(toAngle-fromAngle)*e,dist=fromDist+(toDist-fromDist)*e;
+                double ux=Math.cos(ang),us=Math.sin(ang);
+                at=new Vec3d(home.x+fx*ux*dist-fz*us*dist,at.y+(home.y+UP-at.y)*e,home.z+fz*ux*dist+fx*us*dist);
+                // it turns to face what it punches (just inside its user's line, as it stands to their right)
+                float face=shape.yaw-(float)Math.toDegrees(Math.atan2(shape.side,Math.max(.4f,shape.toward-ahead)));
+                y=y+MathHelper.wrapDegrees(face-y)*e;
+            }
+            var where=home.lerp(at,look.out);
             var b=puppet;
             // setPosition moves its box too (the frustum test and the light go by it)
             b.setPosition(where.x,where.y,where.z);b.prevX=b.lastRenderX=where.x;b.prevY=b.lastRenderY=where.y;b.prevZ=b.lastRenderZ=where.z;
             b.setYaw(y);b.prevYaw=y;b.setBodyYaw(y);b.prevBodyYaw=y;b.setHeadYaw(y);b.prevHeadYaw=y;b.setPitch(0);b.prevPitch=0;
         }
+        static double wrapRad(double a){a%=Math.PI*2;if(a>Math.PI)a-=Math.PI*2;if(a<-Math.PI)a+=Math.PI*2;return a;}
     }
 }

@@ -46,6 +46,11 @@ public final class CombatManager {
         AttackEntityCallback.EVENT.register((player,world,hand,entity,hit)->{
             if(!dev.sangwoo.celestialfall.map.MapGate.enabled(world))return dev.sangwoo.celestialfall.map.MapGate.botandItem(player.getStackInHand(hand))?ActionResult.FAIL:ActionResult.PASS;
             if(dev.sangwoo.celestialfall.stand.StandManager.kageno(player))return ActionResult.FAIL;
+            // Star Platinum out: its punches are the attack (2.54.0), whatever the hand holds
+            if(dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(player)){
+                if(player instanceof ServerPlayerEntity p)dev.sangwoo.celestialfall.stand.StarPlatinumAttack.request(p);
+                return ActionResult.FAIL;
+            }
             if(hand==Hand.MAIN_HAND&&bare(player)&&!player.isSpectator()) {
                 if(player instanceof ServerPlayerEntity p)input(p,0,0,0);
                 return ActionResult.FAIL;
@@ -62,7 +67,8 @@ public final class CombatManager {
         HitStun.disconnect(p.getUuid());STATES.remove(p.getUuid());RUN_AFTER.remove(p.getUuid());
         var attr=p.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr!=null)attr.removeModifier(SLOW);
     }
-    public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
+    /** The player fights with their own fists: no Kageno, Star Platinum not out (its punches are the attack then, 2.54.0), hands empty. */
+    public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
     public static boolean cinematic(PlayerEntity p) { return dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||SpellManager.isCasting(p.getUuid())||AtomicManager.isCasting(p.getUuid())||HeavenManager.isCasting(p.getUuid()); }
     private static boolean valid(ServerPlayerEntity p) {
         return dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()&&!p.hasVehicle()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()&&!cinematic(p)&&!HitStun.stunned(p);

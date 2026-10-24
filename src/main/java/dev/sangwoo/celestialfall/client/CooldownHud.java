@@ -39,11 +39,11 @@ public final class CooldownHud {
      * the status arrives (late by the ping) marks a rest; the combo's own rhythm stays off the list.
      */
     private static final int COMBO_END=14;
-    /** The dash's place in the list (after the stand's skill slots). */
-    static final int DASH=10;
+    /** The dash's place in the list (after the stand's skill slots), then Star Platinum's punches' rest (2.54.0). */
+    static final int DASH=10,PUNCHES=11;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen;
+    private static long ticks,dashSeen,punchesSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     private static CooldownList.Metrics metrics;private static long metricsKey;
@@ -55,7 +55,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=0;atomic=false;owner=null;world=null;}
     /** The names the list shows now, top first (for the QA tools). */
     public static java.util.List<String> shown(){return LIST.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
 
@@ -87,6 +87,9 @@ public final class CooldownHud {
         // the dash (C): the combat state's tick it is ready again
         long dash=CombatClient.snapshot(p.getUuid()).dashReady();
         if(dash!=dashSeen){show(DASH,dashName(),dash-time,CombatState.DASH_COOLDOWN,now);dashSeen=dash;}
+        // Star Platinum's punches (2.54.0): only their rest after a combo, as Kageno's attack (the server's ready tick)
+        long punches=dev.sangwoo.celestialfall.client.stand.StandAttack.ready(p.getUuid());
+        if(punches!=punchesSeen){show(PUNCHES,punchesName(),punches-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.REST,now);punchesSeen=punches;}
         LIST.update(now);
     }
     /**
@@ -99,6 +102,8 @@ public final class CooldownHud {
     }
     /** The dash's name in the list: Korean like the stand's skill names beside it (KagenoRules.NAMES), whatever the game's language. */
     private static String dashName(){return "대시";}
+    /** Star Platinum's punches' name in the list: its shout. */
+    private static String punchesName(){return "오라!";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */
     private static String name(int slot,UUID me){
         if(slot!=T)return NAMES[slot];
@@ -159,8 +164,8 @@ public final class CooldownHud {
         // under the HP art and its money line when they reach this far down
         if(BotandHud.enabled())top=Math.max(top,BotandHudLayout.bottom(w)+6);
         double bigW=h*BIG_W,smallW=h*SMALL_W;
-        for(int s=M1;s<=G+1;s++){
-            String name=s>G?dashName():NAMES[s];
+        for(int s=M1;s<=G+2;s++){
+            String name=s==G+1?dashName():s==G+2?punchesName():NAMES[s];
             bigW=Math.max(bigW,GachaFont.width(name,(float)(h*BIG_TEXT),GachaFont.Weight.MEDIUM)+h*BIG_PAD*2.4);
             smallW=Math.max(smallW,GachaFont.width(name,(float)(h*SMALL_TEXT),GachaFont.Weight.MEDIUM)+h*SMALL_PAD*2.4);
         }

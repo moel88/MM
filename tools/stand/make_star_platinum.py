@@ -1074,6 +1074,130 @@ POSES = {
         'cloth_front': {'rot': (-24, 0, 0)}, 'cloth_front_1': {'rot': (-10, 0, 0)}, 'cloth_front_2': {'rot': (-6, 0, 0)},
         'cloth_back': {'rot': (6, 0, 0)},
     },
+    # ---- the basic attack (2.54.0): four punches thrown from a boxer's stance, the left side forward (an orthodox
+    # guard) -- a left jab, a right cross, a left hook and a lunging right that throws whoever it strikes. Each punch
+    # has its loading pose and its strike; client/stand/StandPunch moves through them. The arms are aimed in the
+    # model's own space (front -z, its right -x), so they meet the target in front of it whatever the body's turn.
+    # floating in the guard between punches: turned to its right so the left shoulder leads, the head back to the
+    # front, the left fist out at chin height, the right one by the chin, the left knee forward
+    'guard': {
+        'root': {'pos': (0, 2.0, 0)},
+        'hips': {'rot': (8, 22, 0)}, 'torso': {'rot': (4, 4, 0)}, 'chest': {'rot': (2, 4, 0)},
+        'neck': {'rot': (-2, -12, 0)}, 'head': {'rot': (-4, -18, 0)},
+        'left_arm': {'reach': ((4.0, 37.0, -16.0), (0.6, -1, 0.2))},
+        'right_arm': {'reach': ((-2.5, 36.5, -6.0), (-0.4, -1, 0.1))},
+        'left_pad': {'rot': (0, 0, -6)}, 'right_pad': {'rot': (0, 0, 4)},
+        'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (38, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+        'right_leg': {'rot': (16, 0, 6)}, 'right_shin': {'rot': (42, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-8, 0, 0)},
+    },
+    # 1, the jab: loaded (a little lower, turned a little further, the left fist drawn back to the chin) ...
+    'wind_l': {
+        'root': {'pos': (0, 1.6, .4)},
+        'hips': {'rot': (9, 28, 0)}, 'torso': {'rot': (5, 6, 0)}, 'chest': {'rot': (3, 6, 0)},
+        'neck': {'rot': (-2, -15, 0)}, 'head': {'rot': (-5, -23, 0)},
+        'left_arm': {'reach': ((3.0, 36.5, -13.0), (0.6, -1, 0.3))},
+        'right_arm': {'reach': ((-2.5, 36.5, -6.0), (-0.4, -1, 0.1))},
+        'left_pad': {'rot': (0, 0, -6)}, 'right_pad': {'rot': (0, 0, 4)},
+        'left_leg': {'rot': (-28, 0, -4)}, 'left_shin': {'rot': (44, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+        'right_leg': {'rot': (18, 0, 6)}, 'right_shin': {'rot': (46, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-8, 0, 0)},
+    },
+    # ... and thrown: the left arm straight out at the target, the lead shoulder driven forward, the body following
+    'punch_l': {
+        'root': {'pos': (0, 1.9, -1.4)},
+        'hips': {'rot': (11, 30, 0)}, 'torso': {'rot': (6, 9, 0)}, 'chest': {'rot': (4, 11, 0)},
+        'neck': {'rot': (-4, -18, 0)}, 'head': {'rot': (-6, -30, 0)},
+        'left_arm': {'reach': ((0.5, 34.5, -26.0), (0.5, -1, 0))},
+        'left_pad': {'rot': (-12, 0, -18)},
+        'right_arm': {'reach': ((-2.3, 36.5, -6.5), (-0.4, -1, 0.1))},
+        'right_pad': {'rot': (0, 0, 4)},
+        'left_leg': {'rot': (-34, 0, -4)}, 'left_shin': {'rot': (34, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
+        'right_leg': {'rot': (22, 0, 6)}, 'right_shin': {'rot': (38, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
+        'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (10, 0, 0)},
+    },
+    # 2, the cross: loaded (coiled further to the right, low, the right fist drawn back by the chin, the left reaching out) ...
+    'wind_r': {
+        'root': {'pos': (0, 1.4, .6)},
+        'hips': {'rot': (9, 34, 0)}, 'torso': {'rot': (5, 8, 0)}, 'chest': {'rot': (3, 8, 0)},
+        'neck': {'rot': (-2, -18, 0)}, 'head': {'rot': (-5, -30, 0)},
+        'left_arm': {'reach': ((2.5, 36.5, -15.5), (0.6, -1, 0.1))},
+        'right_arm': {'reach': ((-3.0, 36.0, -4.0), (-0.6, -1, 0.4))},
+        'left_pad': {'rot': (0, 0, -8)}, 'right_pad': {'rot': (0, 0, 6)},
+        'left_leg': {'rot': (-28, 0, -4)}, 'left_shin': {'rot': (46, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+        'right_leg': {'rot': (20, 0, 7)}, 'right_shin': {'rot': (50, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-8, 0, 0)},
+    },
+    # ... and thrown: the hips and shoulders wheel round to the left, the right arm straight out at the target, the
+    # left fist back at the chin, the right leg driving
+    'punch_r': {
+        'root': {'pos': (0, 1.8, -1.8)},
+        'hips': {'rot': (12, -16, 0)}, 'torso': {'rot': (6, -8, 0)}, 'chest': {'rot': (4, -9, 0)},
+        'neck': {'rot': (-4, 14, 0)}, 'head': {'rot': (-6, 19, 0)},
+        'right_arm': {'reach': ((-1.5, 34.5, -25.5), (-0.5, -1, 0))},
+        'right_pad': {'rot': (-12, 0, 18)},
+        'left_arm': {'reach': ((2.5, 36.5, -4.0), (0.6, -1, 0.3))},
+        'left_pad': {'rot': (0, 0, -6)},
+        'left_leg': {'rot': (-32, 0, -4)}, 'left_shin': {'rot': (30, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
+        'right_leg': {'rot': (28, 0, 6)}, 'right_shin': {'rot': (30, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
+        'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (12, 0, 0)},
+    },
+    # 3, the left hook: loaded (low, the weight on the left leg, the body opened to the left, the left elbow out at
+    # the side and the fist ahead of it) ...
+    'wind_hook': {
+        'root': {'pos': (0, .9, .8)},
+        'hips': {'rot': (10, -8, 4)}, 'torso': {'rot': (8, -8, 4)}, 'chest': {'rot': (6, -6, 2)},
+        'neck': {'rot': (-4, 10, -4)}, 'head': {'rot': (-8, 12, -4)},
+        'left_arm': {'reach': ((15.0, 32.0, -9.0), (1, 0.1, 0.5))},
+        'left_pad': {'rot': (0, 0, -20)},
+        'right_arm': {'reach': ((-2.5, 36.5, -6.0), (-0.4, -1, 0.1))},
+        'right_pad': {'rot': (0, 0, 4)},
+        'left_leg': {'rot': (-22, 0, -8)}, 'left_shin': {'rot': (52, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+        'right_leg': {'rot': (18, 0, 9)}, 'right_shin': {'rot': (44, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
+        'cloth_front': {'rot': (-10, 0, 6)}, 'cloth_left': {'rot': (0, 0, -8)},
+    },
+    # ... and thrown: the body wheels hard round to the right, the left arm comes round level with the elbow bent
+    # square, the fist arriving across the front at the target
+    'hook': {
+        'root': {'pos': (0, 1.6, -1.4)},
+        'hips': {'rot': (10, 38, -2)}, 'torso': {'rot': (6, 14, -2)}, 'chest': {'rot': (4, 14, 0)},
+        'neck': {'rot': (-4, -24, 0)}, 'head': {'rot': (-6, -40, 0)},
+        'left_arm': {'reach': ((-4.0, 34.5, -18.0), (1, 0.15, -0.2))},
+        'left_pad': {'rot': (-6, 0, -26)},
+        'right_arm': {'reach': ((-3.0, 36.5, -3.0), (-0.4, -1, 0))},
+        'right_pad': {'rot': (0, 0, 4)},
+        'left_leg': {'rot': (-26, 0, -4)}, 'left_shin': {'rot': (30, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
+        'right_leg': {'rot': (22, 0, 10)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
+        'cloth_front': {'rot': (-6, 0, -12)}, 'cloth_right': {'rot': (6, 0, 10)},
+    },
+    # 4, the finisher: coiled (turned far round to the right and leaning back, the right fist drawn back past the
+    # ear, the left arm out at the target taking aim, the knees drawn up to spring) ...
+    'wind_big': {
+        'root': {'pos': (0, 2.6, 1.6)},
+        'hips': {'rot': (-4, 40, 0)}, 'torso': {'rot': (-6, 12, 0)}, 'chest': {'rot': (-4, 10, 0)},
+        'neck': {'rot': (2, -24, 0)}, 'head': {'rot': (6, -36, 0)},
+        'right_arm': {'reach': ((-2.0, 38.0, 7.0), (-1, -0.3, 0.6))},
+        'right_pad': {'rot': (0, 0, 14)},
+        'left_arm': {'reach': ((3.0, 35.5, -21.0), (0.6, -1, 0))},
+        'left_pad': {'rot': (-12, 0, -18)},
+        'left_leg': {'rot': (-38, 0, -6)}, 'left_shin': {'rot': (60, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+        'right_leg': {'rot': (22, 0, 8)}, 'right_shin': {'rot': (62, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
+        'cloth_front': {'rot': (-16, 0, 0)}, 'cloth_back': {'rot': (-6, 0, 0)},
+    },
+    # ... and thrown: the whole body lunges, wheeling round to the left and over the front leg, the right arm driven
+    # straight through the target, the left fist pulled back to the ribs, the back leg flung out straight
+    'punch_big': {
+        'root': {'pos': (0, 1.8, -4.0)},
+        'hips': {'rot': (18, -22, 0)}, 'torso': {'rot': (10, -14, 0)}, 'chest': {'rot': (6, -12, 0)},
+        'neck': {'rot': (-8, 22, 0)}, 'head': {'rot': (-16, 26, 0)},
+        'right_arm': {'reach': ((0.0, 33.5, -30.5), (-0.5, -1, 0))},
+        'right_pad': {'rot': (-14, 0, 20)},
+        'left_arm': {'reach': ((6.0, 27.0, 2.0), (1, -0.5, 1))},
+        'left_pad': {'rot': (0, 0, -6)},
+        'left_leg': {'rot': (-46, 0, -4)}, 'left_shin': {'rot': (42, 0, 0)}, 'left_foot': {'rot': (2, 0, 0)},
+        'right_leg': {'rot': (42, 0, 6)}, 'right_shin': {'rot': (8, 0, 0)}, 'right_foot': {'rot': (44, 0, 0)},
+        'cloth_front': {'rot': (-20, 0, 0)}, 'cloth_back': {'rot': (24, 0, 0)}, 'cloth_back_1': {'rot': (10, 0, 0)},
+    },
 }
 
 
@@ -1087,12 +1211,58 @@ def frame(down, front):
     return np.column_stack([x, y, z])
 
 
+# the middle of each fist's four gold knuckles in the rest pose (model units, before LIFT): what a punch strikes with
+KNUCKLES = {'right': (-7.62, 14.87, -0.32), 'left': (7.62, 14.87, -0.32)}
+
+
+def bone_matrix(b, entry):
+    """A bone's own move in a stance (4x4): its offset, then its turn about its pivot."""
+    turn = np.eye(4)
+    turn[:3, :3] = rot_matrix([r + d for r, d in zip(b.rot, entry.get('rot', (0, 0, 0)))])
+    move, to, back = np.eye(4), np.eye(4), np.eye(4)
+    move[:3, 3] = entry.get('pos', (0, 0, 0))
+    to[:3, 3] = b.pivot
+    back[:3, 3] = -np.array(b.pivot, dtype=np.float64)
+    return move @ to @ turn @ back
+
+
+def reach(spec, side, placed, target, pole):
+    """An arm reaching its fist's knuckles to target (model units, soles at 0) with its elbow out towards pole: the upper
+    arm aimed at the elbow, folding towards the fist, and the forearm bent at the elbow as a hinge (no twist), so that
+    two stances' arms differ by how the shoulder turns and how far the elbow bends, never by a forearm spun round."""
+    arm, fore, hand = BONES[side + '_arm'], BONES[side + '_forearm'], BONES[side + '_hand']
+    parent = placed[arm.parent]
+    shoulder = (parent @ np.array([*arm.pivot, 1.0]))[:3]
+    upper = float(np.linalg.norm(np.subtract(fore.pivot, arm.pivot)))
+    lower = float(np.linalg.norm(np.subtract(KNUCKLES[side], fore.pivot)))
+    goal = np.array(target, dtype=np.float64) - np.array([0, LIFT, 0])
+    d = goal - shoulder
+    dist = float(np.clip(np.linalg.norm(d), abs(upper - lower) + 1e-3, upper + lower - 1e-3))
+    u = norm(d)
+    side_way = np.array(pole, dtype=np.float64) - (np.array(pole, dtype=np.float64) @ u) * u
+    v = norm(side_way) if np.linalg.norm(side_way) > 1e-6 else norm(np.cross(u, (1, 0, 0)))
+    a = (upper * upper - lower * lower + dist * dist) / (2 * dist)
+    h = math.sqrt(max(0.0, upper * upper - a * a))
+    elbow = shoulder + u * a + v * h
+    down = norm(elbow - shoulder)
+    to_fist = shoulder + u * dist - elbow
+    fold = to_fist - (to_fist @ down) * down
+    front = norm(fold) if np.linalg.norm(fold) > 1e-6 else v
+    bend = math.degrees(math.acos(float(np.clip(norm(to_fist) @ down, -1, 1))))
+    spec[side + '_arm'] = {**{k: v2 for k, v2 in spec.get(side + '_arm', {}).items() if k not in ('reach',)}, 'aim': (tuple(down), tuple(front))}
+    spec[side + '_forearm'] = {'rot': (-bend, 0, 0)}
+
+
 def pose_table(spec):
-    """The stance as each bone's turn (degrees, Blockbench's way) and offset, aims worked out down the rig."""
+    """The stance as each bone's turn (degrees, Blockbench's way) and offset, aims and reaches worked out down the rig."""
+    spec = dict(spec)
     world = {}
+    placed = {}
     out = {}
     for name, b in BONES.items():
         parent = world[b.parent] if b.parent else np.eye(3)
+        if name.endswith('_arm') and 'reach' in spec.get(name, {}):
+            reach(spec, name[:-4], placed, *spec[name]['reach'])
         entry = spec.get(name, {})
         if 'aim' in entry:
             Rrel = parent.T @ frame(*entry['aim'])
@@ -1101,10 +1271,25 @@ def pose_table(spec):
         else:
             delta = list(entry.get('rot', (0, 0, 0)))
         world[name] = parent @ rot_matrix([r + d for r, d in zip(b.rot, delta)])
+        placed[name] = (placed[b.parent] if b.parent else np.eye(4)) @ bone_matrix(b, {**entry, 'rot': delta})
         if any(abs(d) > 1e-6 for d in delta) or 'pos' in entry:
             out[name] = {'rot': [round(float(d), 3) for d in delta]}
             if 'pos' in entry:
                 out[name]['pos'] = [float(v) for v in entry['pos']]
+    return out
+
+
+def stance_points(spec):
+    """Where each fist's knuckles are in a stance (model units, soles at 0): every bone moved as the game's model moves
+    it, by its offset, then turned about its pivot, down from the root."""
+    table = pose_table(spec)
+    world = {}
+    for name, b in BONES.items():
+        world[name] = (world[b.parent] if b.parent else np.eye(4)) @ bone_matrix(b, table.get(name, {}))
+    out = {}
+    for side, p in KNUCKLES.items():
+        q = world[side + '_hand'] @ np.array([*p, 1.0])
+        out[side] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
     return out
 
 
@@ -1119,6 +1304,8 @@ def main():
     Image.fromarray(img, 'RGBA').save(ROOT / 'textures/entity/star_platinum.png', optimize=True)
     (ROOT / 'stands').mkdir(parents=True, exist_ok=True)
     (ROOT / 'stands/star_platinum_poses.json').write_text(json.dumps({k: pose_table(v) for k, v in POSES.items()}, indent=1))
+    # where the fists are in every stance, for the effects of the punches (client/stand/StandPunch)
+    (ROOT / 'stands/star_platinum_fists.json').write_text(json.dumps({k: stance_points(v) for k, v in POSES.items()}, indent=1))
     print(f'{len(BONES)} bones, {len(CUBES)} cubes, texture {ATLAS_W}x{height}')
 
 

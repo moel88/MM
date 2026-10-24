@@ -35,6 +35,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         TrainingDummyRenderer.initialize();
         dev.sangwoo.celestialfall.client.stand.StarPlatinumRenderer.initialize();
         dev.sangwoo.celestialfall.client.stand.StandPresence.initialize();
+        dev.sangwoo.celestialfall.client.stand.StandAttack.initialize();
         CombatClient.initialize();
         StandClient.initialize();
         CooldownHud.initialize();
