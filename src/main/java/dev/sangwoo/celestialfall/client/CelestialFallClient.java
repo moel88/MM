@@ -33,6 +33,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         MapClient.initialize();
         dev.sangwoo.celestialfall.client.town.TownBlocksClient.initialize();
         TrainingDummyRenderer.initialize();
+        dev.sangwoo.celestialfall.client.stand.StarPlatinumRenderer.initialize();
         CombatClient.initialize();
         StandClient.initialize();
         CooldownHud.initialize();

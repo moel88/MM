@@ -197,5 +197,8 @@
   "subtitles.celestialfall.meteor_hit": "Pickaxe strikes meteor",
   "subtitles.celestialfall.meteor_break": "Meteor fragment breaks off",
   "subtitles.celestialfall.meteor_crumble": "Meteor crumbles",
-  "subtitles.celestialfall.meteor_craft": "Stand arrow crafted"
+  "subtitles.celestialfall.meteor_craft": "Stand arrow crafted",
+  "entity.celestialfall.star_platinum": "Star Platinum",
+  "message.botand.platinum_spawned": "Summoned %s",
+  "message.botand.platinum_cleared": "Removed %s Star Platinum figure(s)"
 }

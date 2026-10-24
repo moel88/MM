@@ -93,6 +93,11 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * -Dbotand.shots.audio=true (run_shots.py with SHOTS_RECORD=1) plays a marker tone before each entry and logs every
  * sound the game starts and each tick's time to NAME/sounds.csv and NAME/ticks.csv, for tools/meteor/shots/mux.py.
  *
+ * <p>"STAND" (2.50.0) films Star Platinum's figure: the player goes invisible and stand-less, the training dummy away, and
+ * the figure stands "sfw" blocks (3) ahead of where the player faces, facing back ("syaw" turns it that many degrees
+ * more), in "stance=idle" or "stance=hero". Its clock is the shot's own (client ticks from its start); film it with
+ * "orbit=" centred on it (FW = sfw) and "fov=" for that camera. "STANCE_HERO@n" and "STANCE_IDLE@n" change its stance.
+ *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
  * shot's own (seconds from the start).
@@ -147,7 +152,7 @@ public final class SkillShots implements ClientModInitializer {
     public static boolean shake(){var self=instance;return shake&&self!=null&&self.phase>=3;}
     public static double farFov(){
         String[] t=track;if(t!=null&&instance!=null&&instance.phase>=3)return t.length>5?Double.parseDouble(t[5]):70;
-        if(orbit!=null&&instance!=null&&instance.phase>=3)return 70;
+        if(orbit!=null&&instance!=null&&instance.phase>=3)return instance.opt("fov",70);
         double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;
     }
     /**
@@ -193,7 +198,7 @@ public final class SkillShots implements ClientModInitializer {
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
     private float clock(){
         float delta=mc.getTickDelta();
-        if("UI".equals(current)||mapShot())return age+delta;
+        if("UI".equals(current)||mapShot()||"STAND".equals(current))return age+delta;
         if("Q".equals(current)||"M1".equals(current)||"BASE".equals(current)||"HUD".equals(current))return (mc.world.getTime()-castTick)+delta;
         if("G".equals(current)){for(var c:AtomicClient.CASTS.values())if(c.caster.equals(mc.player.getUuid()))return c.age(delta);}
         else if("GDUMMY".equals(current)){for(var c:AtomicClient.CASTS.values())return c.age(delta);}
@@ -202,7 +207,7 @@ public final class SkillShots implements ClientModInitializer {
     }
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
-    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;default->DURATION[skill(name)]+20;};}
+    private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;default->DURATION[skill(name)]+20;};}
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
@@ -391,6 +396,10 @@ public final class SkillShots implements ClientModInitializer {
         }
         NoCooldownState.get(p.getServer()).set(p.getUuid(),!opts.containsKey("cool"));
         p.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
+        // the figure shots: no player in the picture (and no stand of theirs), last entry's figures gone
+        for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.discard();
+        boolean figure="STAND".equals(current);p.setInvisible(figure);
+        if(figure!=!"kageno".equals(ProgressManager.profile(p).stand()))ProgressManager.set(p,ProgressManager.profile(p).withStand(figure?"none":"kageno"));
         int y=p.getServerWorld().getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,0,0);
         float yaw=facing(opt("face",0));
         p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
@@ -401,7 +410,7 @@ public final class SkillShots implements ClientModInitializer {
         actors(p.getServerWorld(),y);
         if(d instanceof net.minecraft.entity.LivingEntity l){
             var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
-            boolean show=opt("dummy",1)>0;var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
+            boolean show=opt("dummy","STAND".equals(current)?0:1)>0;var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
             // Hidden dummies wait far to the side (below the floor they would fall out of the world).
             l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(show?at.x:at.x+70,y,at.z,yaw+180,0);l.setVelocity(0,0,0);
         }
@@ -561,6 +570,9 @@ public final class SkillShots implements ClientModInitializer {
                             p.getInventory().offerOrDrop(stack);p.currentScreenHandler.sendContentUpdates();log.append("  given ").append(what.substring(5)).append(" at ").append(age).append('\n');});continue;}
                     if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what).append(" at ").append(age).append('\n');key(code,down);}continue;}
+                    if(what.startsWith("STANCE_")){if(age==at)server(p->{int stance=dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(what.substring(7).toLowerCase(Locale.ROOT));
+                            for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(stance);
+                            log.append("  stance ").append(what.substring(7)).append(" at ").append(age).append('\n');});continue;}
                     if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
                     if(age==at){int id=skill(what);server(p->{boolean ok=KagenoManager.input(p,id);log.append("  ").append(what).append(ok?" at ":" refused at ").append(p.getWorld().getTime()).append('\n');});}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
@@ -582,6 +594,12 @@ public final class SkillShots implements ClientModInitializer {
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
             case "BASE","HUD","UI","METEOR","SHOP"->{}
+            case "STAND"->server(p->{
+                var w=p.getServerWorld();var figure=dev.sangwoo.celestialfall.stand.StarPlatinum.TYPE.create(w);
+                var at=p.getPos().add(net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()).multiply(opt("sfw",3)));float yaw=p.getYaw()+180+opt("syaw",0);
+                figure.refreshPositionAndAngles(at.x,at.y,at.z,yaw,0);figure.setHeadYaw(yaw);figure.setBodyYaw(yaw);
+                figure.setStance(Math.max(0,dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(opts.getOrDefault("stance","idle"))));
+                log.append("  figure ").append(w.spawnEntity(figure)?"stands":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f%n",at.x,at.y,at.z,yaw));});
             case "GDUMMY"->server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand dummy atomic "+(int)opt("adist",60));if(n<=0)log.append("  rejected GDUMMY\n");});
             default->server(p->{long now=p.getWorld().getTime();var at=p.getPos();
                 if(!KagenoManager.input(p,skill(name)))log.append("  rejected ").append(name).append('\n');else{spot=at;serverStart=now;}});

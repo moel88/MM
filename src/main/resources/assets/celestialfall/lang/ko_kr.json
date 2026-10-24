@@ -197,5 +197,8 @@
   "subtitles.celestialfall.meteor_hit": "운석을 캠",
   "subtitles.celestialfall.meteor_break": "운석 조각이 떨어져 나옴",
   "subtitles.celestialfall.meteor_crumble": "운석이 부서짐",
-  "subtitles.celestialfall.meteor_craft": "스탠드 화살을 만듦"
+  "subtitles.celestialfall.meteor_craft": "스탠드 화살을 만듦",
+  "entity.celestialfall.star_platinum": "스타 플래티나",
+  "message.botand.platinum_spawned": "%s 소환 완료",
+  "message.botand.platinum_cleared": "스타 플래티나 %s개를 치움"
 }
