@@ -122,6 +122,8 @@ final class StandAura {
                 float age=(float)((clock-s.born)/20),a=brightness(age,s.life,s.seed);
                 if(a<=.003f)continue;
                 var p=s.at(age).subtract(cam);
+                a*=near(p.length());
+                if(a<=.003f)continue;
                 if(s.streak){
                     // a thin line of light along its way up, turned about it to face the camera
                     var axis=new Vector3f(s.vx,s.vy,s.vz).normalize();
@@ -139,6 +141,11 @@ final class StandAura {
             }
         }
     }
+    /**
+     * How much of a spark shows {@code distance} blocks from the camera: none right by it, all from 1.25 blocks on. A
+     * camera following its user walks into the trail a stand leaves, and a spark it passed through would fill the screen.
+     */
+    static float near(double distance){return StandTimeline.smooth((float)((distance-.35)/.9));}
     /** The hearts' violet (a little deeper than the aura's light, so it shows on a bright sky). */
     static final float HEART_R=.58f,HEART_G=.46f,HEART_B=1f;
     static final float AURA_R=StarPlatinumRenderer.AURA_R,AURA_G=StarPlatinumRenderer.AURA_G,AURA_B=StarPlatinumRenderer.AURA_B;

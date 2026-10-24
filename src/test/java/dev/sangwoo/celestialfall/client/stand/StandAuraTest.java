@@ -25,6 +25,12 @@ class StandAuraTest {
         }
     }
 
+    @Test void aSparkByTheCameraFadesRatherThanFillTheScreen(){
+        assertEquals(0,StandAura.near(0),1e-6);assertEquals(0,StandAura.near(.3),1e-6);
+        assertEquals(1,StandAura.near(1.25),1e-6);assertEquals(1,StandAura.near(6),1e-6);
+        for(double d=0;d<2;d+=.01)assertTrue(StandAura.near(d+.01)>=StandAura.near(d),"brighter as it goes away");
+    }
+
     @Test void sparksLeaveTheBodyWhereItIsAndRise(){
         var aura=new StandAura(Random.create(7));var feet=new Vec3d(10,64,20);
         // facing south (+z): the hair streams north of it, behind
