@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.56.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.57.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.57.0 — 스타플래티나 E: 오라 러시 · 카게노 E 95% 감속
+
+- **러시(E를 누르고 있기):** 스탠드를 꺼낸 상태에서 E를 누르고 있으면 스타플래티나가 앞으로 나와 주먹을 연달아 꽂습니다. 0.1초마다 한 대씩 모두 40대이고, 한 대에 피해 1이라 끝까지 맞으면 총 40입니다. E를 떼면 그 자리에서 바로 멈춥니다. 쿨타임은 10초이고, 러시가 끝난 뒤부터 돕니다(쿨타임 목록에 '러시').
+- **러시 중 이동:** 방향을 바꾸며 걸을 수 있고, 이동 속도는 90% 느려집니다(시야는 줌되지 않습니다). 달리기·점프·평타·가드·대시는 막힙니다. 맵에서 스타플래티나 사용자의 인벤토리는 I로 엽니다.
+- **소리:** 보내 주신 두 녹음 그대로입니다. 아무도 맞지 않으면 그냥 쓸 때 버전, 누군가를 치는 동안은 사람 맞을 때 버전이 들립니다(맞을 때 버전은 목소리와 타격음 두 층으로 나눠 두어, 둘을 함께 틀면 원래 녹음이 됩니다). 도중에 떼면 소리도 0.15초에 걸쳐 줄어 사라집니다.
+- **모션·이펙트:** 왼·오른 주먹을 번갈아 얼굴·가슴 높이로 곧게 내지르고, 보라색 잔상 팔 4개가 함께 주먹을 내질러 앞이 주먹으로 가득 찹니다. 주먹마다 빛 줄기와 충격 별이 나고, 평타처럼 화면 효과는 없습니다.
+- **카게노 E:** 연속 찌르기(0~2.4초) 동안 걷는 속도가 95% 느려집니다.
+
+[RELEASE_2.57.0_KO.md](RELEASE_2.57.0_KO.md)를 확인하세요.
 
 # 보탠드 2.56.0 — 스타플래티나 평타: 더 빠르게, 3·4타만 '오라!', 화면 효과 없음
 
