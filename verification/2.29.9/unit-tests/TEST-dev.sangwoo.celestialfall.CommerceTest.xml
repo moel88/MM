@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.CommerceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:06" hostname="b667a55f97cd" time="0.399">
+  <properties/>
+  <testcase name="resettingOnlyStandPreservesProgressAndMoney()" classname="dev.sangwoo.celestialfall.CommerceTest" time="0.01"/>
+  <testcase name="exactPricesAndSuccessRewards()" classname="dev.sangwoo.celestialfall.CommerceTest" time="0.0"/>
+  <testcase name="intentionalResetCannotReequipFromAnOldSwordAfterRejoin()" classname="dev.sangwoo.celestialfall.CommerceTest" time="0.384"/>
+  <testcase name="corruptAndExtremeStateStaysBounded()" classname="dev.sangwoo.celestialfall.CommerceTest" time="0.0"/>
+  <testcase name="rejectedTransactionsNeverChangeMoneyXpOrLevel()" classname="dev.sangwoo.celestialfall.CommerceTest" time="0.001"/>
+  <testcase name="walletAndXpSurviveNbtAndOldSavesUpgradeWithoutInventingMoney()" classname="dev.sangwoo.celestialfall.CommerceTest" time="0.0"/>
+  <testcase name="growthOverflowCapsAtFiftyAndRebirthKeepsWallet()" classname="dev.sangwoo.celestialfall.CommerceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

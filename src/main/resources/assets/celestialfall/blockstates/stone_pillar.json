@@ -1,0 +1,12 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/stone_pillar_0"
+   },
+   {
+    "model": "celestialfall:block/town/stone_pillar_1"
+   }
+  ]
+ }
+}

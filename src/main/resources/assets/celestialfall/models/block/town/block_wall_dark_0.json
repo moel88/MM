@@ -1,0 +1,6 @@
+{
+ "parent": "minecraft:block/cube_all",
+ "textures": {
+  "all": "celestialfall:block/town/block_wall_dark_0"
+ }
+}

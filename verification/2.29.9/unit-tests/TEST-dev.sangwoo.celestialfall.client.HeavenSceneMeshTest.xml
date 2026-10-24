@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:08" hostname="b667a55f97cd" time="0.846">
+  <properties/>
+  <testcase name="cloudBanksHaveDepthOpenCentreAndBoundedCachedGeometry()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.058"/>
+  <testcase name="camerasAndCloudTransformsStayFiniteAtAllCastRanges()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.038"/>
+  <testcase name="exportActualMeshesAndCameraShotsForVisualInspection()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.671"/>
+  <testcase name="boundedCameraFollowsOnlyPartOfTheFallAndKeepsContactContinuous()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.005"/>
+  <testcase name="impactEmittersAndWaveClocksMatchContactAndFinalPressure()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.005"/>
+  <testcase name="swordTipTravelsDownTheScreenWithGroundVisibleInsideTheLetterbox()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.003"/>
+  <testcase name="bladeIsLongParallelAndHasGuardGripAndPommel()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.052"/>
+  <testcase name="wideTerrainSeedStaysInLoadedAreaWithoutMovingTheRealView()" classname="dev.sangwoo.celestialfall.client.HeavenSceneMeshTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

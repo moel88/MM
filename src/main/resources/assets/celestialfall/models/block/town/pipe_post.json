@@ -1,0 +1,76 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/white_steel",
+  "t0": "celestialfall:block/town/white_steel"
+ },
+ "elements": [
+  {
+   "from": [
+    7,
+    0,
+    7
+   ],
+   "to": [
+    9,
+    16,
+    9
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      0,
+      9,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      0,
+      9,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      0,
+      9,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      0,
+      9,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      7,
+      9,
+      9
+     ]
+    },
+    "down": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      7,
+      9,
+      9
+     ]
+    }
+   }
+  }
+ ]
+}

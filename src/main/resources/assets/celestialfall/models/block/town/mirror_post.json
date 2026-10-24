@@ -1,0 +1,76 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/mirror_orange",
+  "t0": "celestialfall:block/town/mirror_orange"
+ },
+ "elements": [
+  {
+   "from": [
+    7.1,
+    0,
+    7.1
+   ],
+   "to": [
+    8.9,
+    16,
+    8.9
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      0,
+      8.9,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      0,
+      8.9,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      0,
+      8.9,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      0,
+      8.9,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      7.1,
+      8.9,
+      8.9
+     ]
+    },
+    "down": {
+     "texture": "#t0",
+     "uv": [
+      7.1,
+      7.1,
+      8.9,
+      8.9
+     ]
+    }
+   }
+  }
+ ]
+}

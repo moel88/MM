@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:block/cube_bottom_top",
+ "textures": {
+  "top": "celestialfall:block/town/asphalt_stop_line",
+  "side": "celestialfall:block/town/asphalt_3",
+  "bottom": "celestialfall:block/town/asphalt_3"
+ }
+}

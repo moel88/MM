@@ -1,0 +1,11 @@
+{
+ "variants": {
+  "axis=x": {
+   "model": "celestialfall:block/town/asphalt_center_line"
+  },
+  "axis=z": {
+   "model": "celestialfall:block/town/asphalt_center_line",
+   "y": 90
+  }
+ }
+}

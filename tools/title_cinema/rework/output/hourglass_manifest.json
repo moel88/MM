@@ -1,0 +1,16 @@
+{
+  "height_m": 0.546,
+  "triangles": {
+    "frame": 6184,
+    "glass": 2996,
+    "sand": 1448,
+    "jewels": 368
+  },
+  "reusable": true,
+  "material_groups": [
+    "frame",
+    "glass",
+    "sand",
+    "jewels"
+  ]
+}

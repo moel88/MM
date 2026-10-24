@@ -1,0 +1,42 @@
+{
+  "version": "2.29.9",
+  "base_version": "2.29.8",
+  "instruction": "Lower the sword before Atomic explodes; also show distant actual gameplay.",
+  "spin_end_seconds": 5.3,
+  "lowering_end_seconds": 5.5,
+  "visual_impact_seconds": 5.59,
+  "server_impact_seconds": 5.6,
+  "production_source_changes": [
+    "dev/sangwoo/celestialfall/client/kageno/AtomicPose.java"
+  ],
+  "production_binary_changes": [
+    "dev/sangwoo/celestialfall/client/AtomicClient.class",
+    "dev/sangwoo/celestialfall/client/kageno/AtomicPose.class",
+    "fabric.mod.json"
+  ],
+  "atomic_client_change": "Inlined pose END only. Full cast and damage timing unchanged.",
+  "other_production_entries_byte_identical": true,
+  "tests": {
+    "tests": 189,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "far_camera": {
+    "horizontal_distance_blocks": 200.098,
+    "offset": [
+      125,
+      90,
+      -156.25
+    ],
+    "target_offset": [
+      0,
+      65,
+      0
+    ],
+    "fov": 60,
+    "verification_mod_only": true
+  },
+  "preview": "Actual gameplay. Near view includes 0.25x replay; far view is 1x. Both videos muted.",
+  "jar_sha256": "28712f0c16d9abff211dd1c2a973a693ec7e6bfdaa67134b100a1fe60952d63a"
+}

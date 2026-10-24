@@ -1,0 +1,25 @@
+{
+ "variants": {
+  "axis=x,type=bottom": {
+   "model": "celestialfall:block/town/corrugated_roof_slab"
+  },
+  "axis=z,type=bottom": {
+   "model": "celestialfall:block/town/corrugated_roof_slab",
+   "y": 90
+  },
+  "axis=x,type=top": {
+   "model": "celestialfall:block/town/corrugated_roof_slab_top"
+  },
+  "axis=z,type=top": {
+   "model": "celestialfall:block/town/corrugated_roof_slab_top",
+   "y": 90
+  },
+  "axis=x,type=double": {
+   "model": "celestialfall:block/town/corrugated_roof"
+  },
+  "axis=z,type=double": {
+   "model": "celestialfall:block/town/corrugated_roof",
+   "y": 90
+  }
+ }
+}

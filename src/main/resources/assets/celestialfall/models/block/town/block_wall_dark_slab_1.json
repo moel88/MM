@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:block/slab",
+ "textures": {
+  "top": "celestialfall:block/town/block_wall_dark_cap",
+  "side": "celestialfall:block/town/block_wall_dark_1",
+  "bottom": "celestialfall:block/town/block_wall_dark_cap"
+ }
+}

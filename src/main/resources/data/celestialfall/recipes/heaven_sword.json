@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " G ",
+    "GSG",
+    " N "
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "S": {
+      "item": "minecraft:netherite_sword"
+    },
+    "N": {
+      "item": "minecraft:nether_star"
+    }
+  },
+  "result": {
+    "item": "celestialfall:heaven_sword"
+  }
+}

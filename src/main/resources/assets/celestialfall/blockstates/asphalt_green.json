@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "celestialfall:block/town/asphalt_green"
+  },
+  "facing=east": {
+   "model": "celestialfall:block/town/asphalt_green",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "celestialfall:block/town/asphalt_green",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "celestialfall:block/town/asphalt_green",
+   "y": 270
+  }
+ }
+}

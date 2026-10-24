@@ -1,0 +1,8 @@
+{
+  "vertex": "celestialfall:atomic_overwhelm",
+  "fragment": "celestialfall:atomic_overwhelm",
+  "textures": {
+    "GlowSampler": {"type": "framebuffer", "name": "glow"},
+    "RaysSampler": {"type": "framebuffer", "name": "rays"}
+  }
+}

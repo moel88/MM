@@ -1,0 +1,7 @@
+{
+ "parent": "minecraft:block/template_glass_pane_post",
+ "textures": {
+  "pane": "celestialfall:block/town/balcony_rail",
+  "edge": "celestialfall:block/town/balcony_rail_edge"
+ }
+}

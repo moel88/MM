@@ -1,0 +1,74 @@
+{
+  "source": "01-1000022644.mp4",
+  "source_fps": 30,
+  "source_start_seconds": 121.03,
+  "hard_cut_seconds": [
+    121.766667,
+    122.633333,
+    123.8
+  ],
+  "hard_cut_ticks": [
+    14.733333,
+    32.066667,
+    55.4
+  ],
+  "shots": [
+    {
+      "name": "launch",
+      "purpose": "wide camera follows small airborne silhouette"
+    },
+    {
+      "name": "inverted close-up",
+      "purpose": "roll, asymmetric open legs, folded arms; camera eases back after the entry"
+    },
+    {
+      "name": "sky",
+      "purpose": "large four-point glint followed by magenta zigzag"
+    },
+    {
+      "name": "landing",
+      "purpose": "one knee and left palm planted; right knee raised, sword swept behind"
+    },
+    {
+      "name": "hand insert",
+      "purpose": "close camera at right side as the sword crosses above forehead"
+    },
+    {
+      "name": "final",
+      "purpose": "fixed side camera, dense rear slash field; body turns after sword lowers"
+    }
+  ],
+  "audio": "Original H music and effects preserved continuously at 1x",
+  "limitations": "Minecraft skin, limb proportions, lighting and the current world differ from the reference game. Not a pixel-identical reproduction.",
+  "landing_root_motion": {
+    "units": "Minecraft blocks along cast forward",
+    "keyframes": [
+      {
+        "tick": 56,
+        "offset": 0
+      },
+      {
+        "tick": 63,
+        "offset": -2.35
+      },
+      {
+        "tick": 66,
+        "offset": -2.35
+      },
+      {
+        "tick": 72,
+        "offset": 0.35
+      },
+      {
+        "tick": 74,
+        "offset": 0.35
+      },
+      {
+        "tick": 78,
+        "offset": 0
+      }
+    ],
+    "interpolation": "smoothstep; visual root only, shared by caster and victim",
+    "camera_tracking_fraction": 0.45
+  }
+}

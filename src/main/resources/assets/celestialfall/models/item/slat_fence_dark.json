@@ -1,0 +1,6 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "celestialfall:block/town/slat_fence_dark"
+ }
+}

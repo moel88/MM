@@ -1,0 +1,22 @@
+package dev.sangwoo.celestialfall.stand;
+
+import java.util.List;
+
+/** Star Platinum's stances (2.50.0): their names in the poses file and how the figure goes over from one to another. */
+public final class StarPlatinumStance {
+    /**
+     * Floating at rest, the pose of the official art the user sent, and curled up as it comes out of its user (2.51.0);
+     * the basic attack's (2.54.0): the guard, and each punch loaded and thrown (a left jab, a right cross, a left hook,
+     * a lunging right); the rush's (2.57.0): the barrage with the left or the right fist thrown out straight, at the
+     * middle, high or low, the other torn back to the chest.
+     */
+    public static final List<String> NAMES=List.of("idle","hero","summon","guard","wind_l","punch_l","wind_r","punch_r","wind_hook","hook","wind_big","punch_big",
+        "rush_l","rush_l_hi","rush_l_lo","rush_r","rush_r_hi","rush_r_lo");
+    public static final int IDLE=0,HERO=1,SUMMON=2,GUARD=3,WIND_L=4,PUNCH_L=5,WIND_R=6,PUNCH_R=7,WIND_HOOK=8,HOOK=9,WIND_BIG=10,PUNCH_BIG=11,
+        RUSH_L=12,RUSH_L_HI=13,RUSH_L_LO=14,RUSH_R=15,RUSH_R_HI=16,RUSH_R_LO=17;
+    /** How long the figure takes to go over from one stance to another (ticks). */
+    public static final float CROSSFADE=12;
+    private StarPlatinumStance(){}
+    /** How far (0 to 1) a change made {@code ticks} ago has gone: eased in and out, so no joint starts or stops with a jolt. */
+    public static float crossfade(float ticks){float k=Math.max(0,Math.min(1,ticks/CROSSFADE));return k*k*(3-2*k);}
+}

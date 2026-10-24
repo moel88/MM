@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "package": "dev.sangwoo.celestialfall.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "celestialfall.refmap.json",
+  "mixins": [
+    "LivingCombatMixin",
+    "GuardBreakNetworkMixin",
+    "GuardBreakInteractionMixin",
+    "MobHitStunMixin",
+    "HealthAttributeAccess",
+    "HungerManagerMixin",
+    "RecoveryWorldMixin",
+    "PlayerStandMixin",
+    "KagenoFreezeMixin",
+    "ImmersiveNetworkServerMixin",
+    "ImmersiveDisconnectMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

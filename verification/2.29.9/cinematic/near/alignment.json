@@ -1,0 +1,32 @@
+[
+  {
+    "cast_requested": 5.3,
+    "cast_actual": "5.314000",
+    "video_seconds": 46.998396158218384
+  },
+  {
+    "cast_requested": 5.4,
+    "cast_actual": "5.394000",
+    "video_seconds": 47.07439613342285
+  },
+  {
+    "cast_requested": 5.5,
+    "cast_actual": "5.511000",
+    "video_seconds": 47.190396308898926
+  },
+  {
+    "cast_requested": 5.55,
+    "cast_actual": "5.547000",
+    "video_seconds": 47.23439621925354
+  },
+  {
+    "cast_requested": 5.6,
+    "cast_actual": "5.590000",
+    "video_seconds": 47.27239632606506
+  },
+  {
+    "cast_requested": 6.2,
+    "cast_actual": "6.192000",
+    "video_seconds": 47.867396116256714
+  }
+]

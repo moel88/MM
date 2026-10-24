@@ -1,0 +1,36 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_0"
+   },
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_0",
+    "y": 90
+   },
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_0",
+    "y": 180
+   },
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_0",
+    "y": 270
+   },
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_1"
+   },
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_1",
+    "y": 90
+   },
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_1",
+    "y": 180
+   },
+   {
+    "model": "celestialfall:block/town/worn_asphalt_cracked_1",
+    "y": 270
+   }
+  ]
+ }
+}

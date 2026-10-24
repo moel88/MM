@@ -1,0 +1,19 @@
+{
+ "type": "minecraft:block",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "celestialfall:block_wall_foot"
+    }
+   ],
+   "conditions": [
+    {
+     "condition": "minecraft:survives_explosion"
+    }
+   ]
+  }
+ ]
+}

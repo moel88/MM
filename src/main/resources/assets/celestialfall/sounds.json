@@ -1,0 +1,693 @@
+{
+  "charge": {
+    "subtitle": "subtitles.celestialfall.charge",
+    "sounds": [
+      {
+        "name": "celestialfall:charge",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "fall": {
+    "subtitle": "subtitles.celestialfall.fall",
+    "sounds": [
+      {
+        "name": "celestialfall:fall",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "impact": {
+    "subtitle": "subtitles.celestialfall.impact",
+    "sounds": [
+      {
+        "name": "celestialfall:impact",
+        "attenuation_distance": 64
+      }
+    ]
+  },
+  "clash": {
+    "subtitle": "subtitles.celestialfall.clash",
+    "sounds": [
+      {
+        "name": "celestialfall:clash",
+        "attenuation_distance": 640
+      }
+    ]
+  },
+  "reveal": {
+    "subtitle": "subtitles.celestialfall.reveal",
+    "sounds": [
+      {
+        "name": "celestialfall:reveal",
+        "attenuation_distance": 640
+      }
+    ]
+  },
+  "aftershock": {
+    "subtitle": "subtitles.celestialfall.aftershock",
+    "sounds": [
+      {
+        "name": "celestialfall:aftershock",
+        "attenuation_distance": 640
+      }
+    ]
+  },
+  "atomic_charge": {
+    "subtitle": "subtitles.celestialfall.atomic_charge",
+    "sounds": [
+      {
+        "name": "celestialfall:atomic_charge",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "atomic_impact": {
+    "subtitle": "subtitles.celestialfall.atomic_impact",
+    "sounds": [
+      {
+        "name": "celestialfall:atomic_impact",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "atomic_clip": {
+    "subtitle": "subtitles.celestialfall.atomic_clip",
+    "sounds": [
+      {
+        "name": "celestialfall:atomic_clip",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "heaven_charge": {
+    "subtitle": "subtitles.celestialfall.heaven_charge",
+    "sounds": [
+      {
+        "name": "celestialfall:heaven_charge",
+        "stream": true
+      }
+    ]
+  },
+  "heaven_impact": {
+    "subtitle": "subtitles.celestialfall.heaven_impact",
+    "sounds": [
+      {
+        "name": "celestialfall:heaven_impact",
+        "stream": true
+      }
+    ]
+  },
+  "heaven_release": {
+    "subtitle": "subtitles.celestialfall.heaven_release",
+    "sounds": [
+      {
+        "name": "celestialfall:heaven_release",
+        "stream": true
+      }
+    ]
+  },
+  "heaven_full": {
+    "subtitle": "subtitles.celestialfall.heaven_full",
+    "sounds": [
+      {
+        "name": "celestialfall:heaven_full",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "atomic_full": {
+    "subtitle": "subtitles.celestialfall.atomic_full",
+    "sounds": [
+      {
+        "name": "celestialfall:atomic_full",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_step_1": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_1",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_step_2": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_2",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_step_3": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_cloth": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/cloth",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_chime": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/chime",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_sand": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/sand",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_ambience": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/ambience",
+        "stream": true,
+        "preload": false
+      }
+    ]
+  },
+  "cinema_step_4": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_4",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_step_5": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_5",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_step_6": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_6",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_step_7": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_7",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_step_8": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/step_8",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "cinema_title_satellites": {
+    "sounds": [
+      {
+        "name": "celestialfall:cinema/title_satellites",
+        "stream": true,
+        "preload": false
+      }
+    ]
+  },
+  "kageno_theme": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_theme",
+        "stream": true
+      }
+    ]
+  },
+  "kageno_m1_1": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_m1_1",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "kageno_m1_2": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_m1_2",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "kageno_m1_3": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_m1_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "kageno_m1_4": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_m1_4",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "kageno_e": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_e",
+        "stream": true
+      }
+    ]
+  },
+  "kageno_r": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_r",
+        "stream": true
+      }
+    ]
+  },
+  "kageno_t": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_t",
+        "stream": true
+      }
+    ]
+  },
+  "kageno_rush": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_rush",
+        "stream": true
+      }
+    ]
+  },
+  "kageno_y": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_y",
+        "stream": true
+      }
+    ]
+  },
+  "kageno_h": {
+    "sounds": [
+      {
+        "name": "celestialfall:kageno_h",
+        "stream": true
+      }
+    ]
+  },
+  "gacha_open": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/open",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_hover": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/hover",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_click": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/click",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_panel": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/panel",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_back": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/back",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_denied": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/denied",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_pull": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/pull",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_one_start": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/one_start",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_gather": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/gather",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_reveal_r": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/reveal_r",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_reveal_sr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/reveal_sr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_reveal_ssr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/reveal_ssr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_ten_start": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/ten_start",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_rise": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/rise",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_light_r": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/light_r",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_light_sr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/light_sr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_light_ssr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/light_ssr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_whiteout": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/whiteout",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_card": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/card",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_card_sr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/card_sr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_card_ssr": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/card_ssr",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_fanfare": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/fanfare",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_star": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/star",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_result": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/result",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_place": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/place",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_step": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/step",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_foot": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/foot",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_phew": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/phew",
+        "preload": true
+      }
+    ]
+  },
+  "gacha_sit": {
+    "subtitle": "subtitles.celestialfall.gacha",
+    "sounds": [
+      {
+        "name": "celestialfall:gacha/sit",
+        "preload": true
+      }
+    ]
+  },
+  "meteor_fall": {
+    "subtitle": "subtitles.celestialfall.meteor_fall",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_fall",
+        "attenuation_distance": 240
+      }
+    ]
+  },
+  "meteor_impact": {
+    "subtitle": "subtitles.celestialfall.meteor_impact",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_impact",
+        "attenuation_distance": 320
+      }
+    ]
+  },
+  "meteor_hit": {
+    "subtitle": "subtitles.celestialfall.meteor_hit",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_hit",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "meteor_break": {
+    "subtitle": "subtitles.celestialfall.meteor_break",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_break",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "meteor_crumble": {
+    "subtitle": "subtitles.celestialfall.meteor_crumble",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_crumble",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "meteor_craft": {
+    "subtitle": "subtitles.celestialfall.meteor_craft",
+    "sounds": [
+      {
+        "name": "celestialfall:meteor_craft",
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "star_platinum_ora_3": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_ora_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "star_platinum_ora_4": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_ora_4",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "star_platinum_rush": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_rush",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "star_platinum_rush_hits": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_rush_hits",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  }
+}
