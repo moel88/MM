@@ -1,4 +1,12 @@
-> **현재 통합본: Botand 2.54.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.55.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.55.0 — 스타플래티나 평타: 바로 앞에서 더 격하게, 이펙트 대폭 강화
+
+- **바로 앞에서:** 스타플래티나가 이제 플레이어 바로 앞(주먹 방향 선 위, 0.95블록 앞)에 서서 칩니다. 주먹마다 대상 쪽으로 짧게 돌진했다가 돌아오고, 대상 쪽 오른편으로 멀리 나가지 않습니다. 치는 동안에는 조금 더 높이 떠서 뒤쪽 게임 카메라에서도 어깨와 주먹이 플레이어 머리 위로 보입니다.
+- **더 격하게:** 가드는 웅크려 앞으로 기울고, 준비 동작은 주먹을 턱·귀·머리 뒤까지 깊게 당기며, 타격은 0.1초 만에 팔을 끝까지 뻗고 허리와 어깨, 다리까지 몸 전체가 따라 나갑니다. 닿는 순간의 멈춤(히트스톱)이 길어지고, 잔상이 5개로 늘고, 화면 흔들림도 커졌습니다. 주먹이 닿는 시각은 그대로라 '오라!' 소리 싱크는 2.54.0과 같습니다.
+- **이펙트 대폭 강화:** 준비하는 주먹에 빛이 모이고, 타격하는 주먹을 따라 빛 줄기가 남으며, 닿을 때 어두운 테두리의 뾰족한 보라 충격 별, 충격 고리 둘, 앞으로 쏘는 공기 폭풍과 압력 고리, 불티, 맞은 대상 등 뒤로 뿜는 파편이 터집니다. 4타는 충격 돔, 고리 다섯, 긴 빛 창, 땅을 따라 퍼지는 충격파, 먼지와 튀는 돌, 임팩트 프레임까지 훨씬 크게 터집니다.
+
+[RELEASE_2.55.0_KO.md](RELEASE_2.55.0_KO.md)를 확인하세요.
 
 # 보탠드 2.54.0 — 스타플래티나 평타 (오라 4타, 4타에 날아감)
 

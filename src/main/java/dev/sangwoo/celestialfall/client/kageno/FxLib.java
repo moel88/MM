@@ -37,7 +37,7 @@ public final class FxLib {
         m.softDisc(p,r,rgb,alpha*.45f);m.softDisc(p,r*.55,rgb,alpha*.7f);m.softDisc(p,r*.3,0xffffff,alpha);m.star(p,r*.9,0xffffff,alpha*.8f);
     }
     /** Motes spiralling into {@code target} from {@code r0} blocks out; each is born somewhere in [t0,t1] and takes 0.25 s. */
-    static void converge(EffectMesh m,Vec3d target,double r0,int n,float t,float t0,float t1,int rgb,int seed){
+    public static void converge(EffectMesh m,Vec3d target,double r0,int n,float t,float t0,float t1,int rgb,int seed){
         if(t<t0||t>=t1+.05f)return;
         for(int k=0;k<n;k++){
             float born=t0+Math.max(0,t1-t0-.25f)*(float)Ease.hash(seed+k*3),u=(t-born)/.25f;if(u<0||u>=1)continue;

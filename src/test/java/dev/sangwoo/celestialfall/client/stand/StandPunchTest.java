@@ -61,14 +61,14 @@ class StandPunchTest {
                 if(last[b]!=null){
                     float d=turn(names.get(b),last[b],p);
                     if(d>fastest){fastest=d;where=names.get(b)+" at "+t;}
-                    // a punch is fast (an arm swung through 60-100 degrees in a tenth of a second, at its fastest as it
-                    // lands, which the afterimages smear), but nothing ever jumps
-                    assertTrue(d<30,names.get(b)+" turns "+d+" degrees in a frame at "+t);
+                    // a punch is fast (2.55.0: an elbow snapping straight through some 140 degrees in a tenth of a
+                    // second, at its fastest in the frame it lands, which five afterimages smear), but nothing ever jumps
+                    assertTrue(d<40,names.get(b)+" turns "+d+" degrees in a frame at "+t);
                 }
                 last[b]=p.clone();
             }
         }
-        assertTrue(fastest>12,"the punches are fast: "+fastest+" ("+where+")");
+        assertTrue(fastest>25,"the punches are fast: "+fastest+" ("+where+")");
     }
     @Test void everyPunchLandsOnItsContactAndHoldsStillThere(){
         var shape=new StandPunch.Shape();
@@ -100,21 +100,29 @@ class StandPunchTest {
         assertEquals(0,StandPunch.at(stopped,StandPunch.length(stopped)-.2f,null,0,shape).engage,1e-3);
         assertEquals(0,StandPunch.ghost(stopped,StandPunch.HIT[2]),1e-6,"no afterimages for a punch that never landed");
     }
-    @Test void itStandsWhereItsFistReachesTheTarget(){
-        // nothing in its way: a little ahead of its user
-        assertEquals(StandPunch.AHEAD,StandPunch.ahead(punch(1)),1e-6);
+    @Test void itPunchesFromRightInFrontOfItsUser(){
+        var shape=new StandPunch.Shape();
         for(int k=1;k<=4;k++){
-            var p=new StandPunch.Punch(k,0,2.6f,Float.NaN);
+            // on the punch's line, right in front of its user, as each blow lands
+            StandPunch.at(punch(k),StandPunch.HIT[k],null,0,shape);
+            assertEquals(0,shape.side,1e-6,"punch "+k+" on its user's line");
+            assertEquals(StandPunch.AHEAD,shape.ahead,1e-6);
+            // nobody there: it still dashes on into the blow, the least way
+            assertEquals(StandPunch.LUNGE_MIN[k],shape.lunge,1e-4,"punch "+k+" dashes on as it lands");
             float[] fist=StandPunch.fist(k);
-            // standing to the right of the line, the fist (with the lunge) reaches the target's middle less its
-            // half width, sinking a little into it
-            float ahead=StandPunch.ahead(p),reach=fist[0]+StandPunch.LUNGE[k];
-            double toMiddle=Math.hypot(2.6f+StandPunch.HALF-ahead,StandPunch.SIDE);
-            assertEquals(toMiddle,reach+StandPunch.HALF-StandPunch.BITE,1e-4,"punch "+k);
             assertTrue(fist[0]>.7f&&fist[2]>1.2f&&fist[2]<1.9f,"punch "+k+" reaches ahead at head height: "+java.util.Arrays.toString(fist));
+            // somebody a little way off: it dashes on until its fist sinks into them, never less nor more than its bounds
+            for(float aim:new float[]{.8f,1.6f,2.2f,2.7f,3.3f,4f}){
+                float lunge=StandPunch.lunge(new StandPunch.Punch(k,0,aim,Float.NaN));
+                assertTrue(lunge>=StandPunch.LUNGE_MIN[k]-1e-6&&lunge<=StandPunch.LUNGE_MAX[k]+1e-6,"punch "+k+" dashes "+lunge);
+                if(lunge>StandPunch.LUNGE_MIN[k]+1e-6&&lunge<StandPunch.LUNGE_MAX[k]-1e-6)
+                    assertEquals(aim+StandPunch.BITE,StandPunch.AHEAD+lunge+fist[0],1e-4,"punch "+k+" meets a target "+aim+" off");
+            }
+            // it stays right in front of its user: never more than a couple of blocks on, even at its farthest dash
+            assertTrue(StandPunch.AHEAD+StandPunch.LUNGE_MAX[k]<2.3f);
         }
-        // too near or too far: it stays within reach of its user
-        assertEquals(StandPunch.AHEAD_MIN,StandPunch.ahead(new StandPunch.Punch(1,0,.2f,Float.NaN)),1e-6);
-        assertEquals(StandPunch.AHEAD_MAX,StandPunch.ahead(new StandPunch.Punch(1,0,9,Float.NaN)),1e-6);
+        // back in place between punches
+        StandPunch.at(punch(1),StarPlatinumRules.STEP[1]/20f,null,0,shape);
+        assertEquals(0,shape.lunge,1e-4);
     }
 }

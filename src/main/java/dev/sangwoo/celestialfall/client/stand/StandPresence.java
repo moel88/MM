@@ -50,8 +50,8 @@ public final class StandPresence {
     public record Body(Vec3d at,float yaw,float scale){}
     private static final StarPlatinumLook ghost=new StarPlatinumLook(),trail=new StarPlatinumLook();
     private static final StandPunch.Shape punchShape=new StandPunch.Shape(),ghostShape=new StandPunch.Shape();
-    /** The punches' afterimages (2.54.0): how far back each is (seconds) and how bright. */
-    static final float[][] PUNCH_GHOSTS={{.028f,.36f},{.056f,.24f},{.084f,.14f}};
+    /** The punches' afterimages (2.54.0; five since 2.55.0): how far back each is (seconds) and how bright. */
+    static final float[][] PUNCH_GHOSTS={{.016f,.42f},{.032f,.32f},{.048f,.23f},{.064f,.16f},{.08f,.1f}};
     private StandPresence(){}
 
     public static void initialize(){
@@ -240,7 +240,8 @@ public final class StandPresence {
         /**
          * The body where the look puts it: {@code out} of the way from its user's feet to its place, facing as it follows;
          * while it punches ({@code shape}), round to the front of its user on an arc past their shoulder (never through
-         * them), lunging on with each blow and facing what it punches.
+         * them), to stand right in front of them on the punch's line (2.55.0), dashing on with each blow and facing
+         * straight down the punch.
          */
         void put(PlayerEntity p,float delta,StarPlatinumLook look,StandPunch.Shape shape){
             var home=p.getLerpedPos(delta);var at=prevPos.lerp(pos,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
@@ -253,10 +254,9 @@ public final class StandPresence {
                 double ahead=shape.ahead+shape.lunge,toAngle=Math.atan2(shape.side,ahead),toDist=Math.hypot(ahead,shape.side);
                 double ang=fromAngle+wrapRad(toAngle-fromAngle)*e,dist=fromDist+(toDist-fromDist)*e;
                 double ux=Math.cos(ang),us=Math.sin(ang);
-                at=new Vec3d(home.x+fx*ux*dist-fz*us*dist,at.y+(home.y+UP-at.y)*e,home.z+fz*ux*dist+fx*us*dist);
-                // it turns to face what it punches (just inside its user's line, as it stands to their right)
-                float face=shape.yaw-(float)Math.toDegrees(Math.atan2(shape.side,Math.max(.4f,shape.toward-ahead)));
-                y=y+MathHelper.wrapDegrees(face-y)*e;
+                at=new Vec3d(home.x+fx*ux*dist-fz*us*dist,at.y+(home.y+UP+StandPunch.RAISE-at.y)*e,home.z+fz*ux*dist+fx*us*dist);
+                // it turns to face straight down the punch
+                y=y+MathHelper.wrapDegrees(shape.yaw-y)*e;
             }
             var where=home.lerp(at,look.out);
             var b=puppet;

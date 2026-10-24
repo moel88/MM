@@ -1074,129 +1074,135 @@ POSES = {
         'cloth_front': {'rot': (-24, 0, 0)}, 'cloth_front_1': {'rot': (-10, 0, 0)}, 'cloth_front_2': {'rot': (-6, 0, 0)},
         'cloth_back': {'rot': (6, 0, 0)},
     },
-    # ---- the basic attack (2.54.0): four punches thrown from a boxer's stance, the left side forward (an orthodox
-    # guard) -- a left jab, a right cross, a left hook and a lunging right that throws whoever it strikes. Each punch
-    # has its loading pose and its strike; client/stand/StandPunch moves through them. The arms are aimed in the
-    # model's own space (front -z, its right -x), so they meet the target in front of it whatever the body's turn.
-    # floating in the guard between punches: turned to its right so the left shoulder leads, the head back to the
-    # front, the left fist out at chin height, the right one by the chin, the left knee forward
+    # ---- the basic attack (2.54.0; 2.55.0 made fiercer, user request: "스타플래티나 평타 모션을 더 격하게 만들어주고"):
+    # four punches thrown from a boxer's stance, the left side forward (an orthodox guard) -- a left jab, a right
+    # cross, a left hook and a lunging right that throws whoever it strikes. Each punch has its loading pose and its
+    # strike; client/stand/StandPunch moves through them. The arms are aimed in the model's own space (front -z, its
+    # right -x), so they meet the target in front of it whatever the body's turn. Since 2.55.0 every load is deeper
+    # (coiled further, the fist drawn further back, the body lower) and every strike drives the whole body after the
+    # fist (the hips and shoulders wheeled through, leaning far over the front leg, the back leg kicked out straight),
+    # the arm thrown out straight.
+    # floating in the guard between punches: crouched and leaning in, turned to its right so the left shoulder leads,
+    # the head back up to the front, both fists up at the eyes, the left knee forward
     'guard': {
-        'root': {'pos': (0, 2.0, 0)},
-        'hips': {'rot': (8, 22, 0)}, 'torso': {'rot': (4, 4, 0)}, 'chest': {'rot': (2, 4, 0)},
-        'neck': {'rot': (-2, -12, 0)}, 'head': {'rot': (-4, -18, 0)},
-        'left_arm': {'reach': ((4.0, 37.0, -16.0), (0.6, -1, 0.2))},
-        'right_arm': {'reach': ((-2.5, 36.5, -6.0), (-0.4, -1, 0.1))},
-        'left_pad': {'rot': (0, 0, -6)}, 'right_pad': {'rot': (0, 0, 4)},
-        'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (38, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
-        'right_leg': {'rot': (16, 0, 6)}, 'right_shin': {'rot': (42, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
-        'cloth_front': {'rot': (-8, 0, 0)},
-    },
-    # 1, the jab: loaded (a little lower, turned a little further, the left fist drawn back to the chin) ...
-    'wind_l': {
-        'root': {'pos': (0, 1.6, .4)},
-        'hips': {'rot': (9, 28, 0)}, 'torso': {'rot': (5, 6, 0)}, 'chest': {'rot': (3, 6, 0)},
-        'neck': {'rot': (-2, -15, 0)}, 'head': {'rot': (-5, -23, 0)},
-        'left_arm': {'reach': ((3.0, 36.5, -13.0), (0.6, -1, 0.3))},
-        'right_arm': {'reach': ((-2.5, 36.5, -6.0), (-0.4, -1, 0.1))},
-        'left_pad': {'rot': (0, 0, -6)}, 'right_pad': {'rot': (0, 0, 4)},
-        'left_leg': {'rot': (-28, 0, -4)}, 'left_shin': {'rot': (44, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
-        'right_leg': {'rot': (18, 0, 6)}, 'right_shin': {'rot': (46, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
-        'cloth_front': {'rot': (-8, 0, 0)},
-    },
-    # ... and thrown: the left arm straight out at the target, the lead shoulder driven forward, the body following
-    'punch_l': {
-        'root': {'pos': (0, 1.9, -1.4)},
-        'hips': {'rot': (11, 30, 0)}, 'torso': {'rot': (6, 9, 0)}, 'chest': {'rot': (4, 11, 0)},
-        'neck': {'rot': (-4, -18, 0)}, 'head': {'rot': (-6, -30, 0)},
-        'left_arm': {'reach': ((0.5, 34.5, -26.0), (0.5, -1, 0))},
-        'left_pad': {'rot': (-12, 0, -18)},
-        'right_arm': {'reach': ((-2.3, 36.5, -6.5), (-0.4, -1, 0.1))},
-        'right_pad': {'rot': (0, 0, 4)},
-        'left_leg': {'rot': (-34, 0, -4)}, 'left_shin': {'rot': (34, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
-        'right_leg': {'rot': (22, 0, 6)}, 'right_shin': {'rot': (38, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
-        'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (10, 0, 0)},
-    },
-    # 2, the cross: loaded (coiled further to the right, low, the right fist drawn back by the chin, the left reaching out) ...
-    'wind_r': {
-        'root': {'pos': (0, 1.4, .6)},
-        'hips': {'rot': (9, 34, 0)}, 'torso': {'rot': (5, 8, 0)}, 'chest': {'rot': (3, 8, 0)},
-        'neck': {'rot': (-2, -18, 0)}, 'head': {'rot': (-5, -30, 0)},
-        'left_arm': {'reach': ((2.5, 36.5, -15.5), (0.6, -1, 0.1))},
-        'right_arm': {'reach': ((-3.0, 36.0, -4.0), (-0.6, -1, 0.4))},
+        'root': {'pos': (0, 1.0, -.5)},
+        'hips': {'rot': (12, 24, 0)}, 'torso': {'rot': (8, 4, 0)}, 'chest': {'rot': (6, 4, 0)},
+        'neck': {'rot': (-8, -12, 0)}, 'head': {'rot': (-10, -18, 0)},
+        'left_arm': {'reach': ((4.5, 38.5, -15.0), (0.6, -1, 0.2))},
+        'right_arm': {'reach': ((-2.5, 38.0, -6.0), (-0.4, -1, 0.1))},
         'left_pad': {'rot': (0, 0, -8)}, 'right_pad': {'rot': (0, 0, 6)},
-        'left_leg': {'rot': (-28, 0, -4)}, 'left_shin': {'rot': (46, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
-        'right_leg': {'rot': (20, 0, 7)}, 'right_shin': {'rot': (50, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
-        'cloth_front': {'rot': (-8, 0, 0)},
+        'left_leg': {'rot': (-34, 0, -4)}, 'left_shin': {'rot': (42, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+        'right_leg': {'rot': (20, 0, 6)}, 'right_shin': {'rot': (46, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-10, 0, 0)},
     },
-    # ... and thrown: the hips and shoulders wheel round to the left, the right arm straight out at the target, the
-    # left fist back at the chin, the right leg driving
+    # 1, the jab: loaded (lower and back, turned further, the left fist drawn right back to the chin) ...
+    'wind_l': {
+        'root': {'pos': (0, .4, .9)},
+        'hips': {'rot': (12, 34, 0)}, 'torso': {'rot': (8, 8, 0)}, 'chest': {'rot': (6, 9, 0)},
+        'neck': {'rot': (-8, -18, 0)}, 'head': {'rot': (-11, -27, 0)},
+        'left_arm': {'reach': ((3.0, 37.5, -9.5), (0.6, -1, 0.3))},
+        'right_arm': {'reach': ((-2.5, 38.0, -5.5), (-0.4, -1, 0.1))},
+        'left_pad': {'rot': (0, 0, -8)}, 'right_pad': {'rot': (0, 0, 6)},
+        'left_leg': {'rot': (-32, 0, -4)}, 'left_shin': {'rot': (50, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+        'right_leg': {'rot': (22, 0, 6)}, 'right_shin': {'rot': (52, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-10, 0, 0)},
+    },
+    # ... and thrown: the left arm shot out straight at the target, the lead shoulder driven far forward, the body
+    # leaning in over the front leg after it
+    'punch_l': {
+        'root': {'pos': (0, 1.2, -3.2)},
+        'hips': {'rot': (16, 38, 0)}, 'torso': {'rot': (10, 12, 0)}, 'chest': {'rot': (6, 14, 0)},
+        'neck': {'rot': (-9, -22, 0)}, 'head': {'rot': (-13, -34, 0)},
+        'left_arm': {'reach': ((0.2, 34.8, -31.0), (0.5, -1, 0))},
+        'left_pad': {'rot': (-16, 0, -22)},
+        'right_arm': {'reach': ((-2.0, 37.5, -7.0), (-0.4, -1, 0.1))},
+        'right_pad': {'rot': (0, 0, 6)},
+        'left_leg': {'rot': (-40, 0, -4)}, 'left_shin': {'rot': (32, 0, 0)}, 'left_foot': {'rot': (12, 0, 0)},
+        'right_leg': {'rot': (30, 0, 6)}, 'right_shin': {'rot': (30, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
+        'cloth_front': {'rot': (-2, 0, 0)}, 'cloth_back': {'rot': (14, 0, 0)},
+    },
+    # 2, the cross: loaded (wound far round to the right and low, the right fist cocked back by the ear, the left
+    # reaching out at the target) ...
+    'wind_r': {
+        'root': {'pos': (0, .4, 1.4)},
+        'hips': {'rot': (12, 42, 0)}, 'torso': {'rot': (8, 12, 0)}, 'chest': {'rot': (6, 10, 0)},
+        'neck': {'rot': (-8, -22, 0)}, 'head': {'rot': (-11, -34, 0)},
+        'left_arm': {'reach': ((3.0, 37.0, -18.5), (0.6, -1, 0.1))},
+        'right_arm': {'reach': ((-4.0, 38.5, 1.5), (-0.7, -1, 0.5))},
+        'left_pad': {'rot': (0, 0, -10)}, 'right_pad': {'rot': (0, 0, 10)},
+        'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (50, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+        'right_leg': {'rot': (22, 0, 8)}, 'right_shin': {'rot': (54, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-10, 0, 0)},
+    },
+    # ... and thrown: the hips and shoulders wheel hard round to the left, the right arm shot out straight at the
+    # target, the left fist pulled back to the chest, the back leg driving out straight
     'punch_r': {
-        'root': {'pos': (0, 1.8, -1.8)},
-        'hips': {'rot': (12, -16, 0)}, 'torso': {'rot': (6, -8, 0)}, 'chest': {'rot': (4, -9, 0)},
-        'neck': {'rot': (-4, 14, 0)}, 'head': {'rot': (-6, 19, 0)},
-        'right_arm': {'reach': ((-1.5, 34.5, -25.5), (-0.5, -1, 0))},
-        'right_pad': {'rot': (-12, 0, 18)},
-        'left_arm': {'reach': ((2.5, 36.5, -4.0), (0.6, -1, 0.3))},
-        'left_pad': {'rot': (0, 0, -6)},
-        'left_leg': {'rot': (-32, 0, -4)}, 'left_shin': {'rot': (30, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
-        'right_leg': {'rot': (28, 0, 6)}, 'right_shin': {'rot': (30, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
-        'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (12, 0, 0)},
+        'root': {'pos': (0, 1.0, -3.6)},
+        'hips': {'rot': (16, -24, 0)}, 'torso': {'rot': (10, -12, 0)}, 'chest': {'rot': (6, -12, 0)},
+        'neck': {'rot': (-9, 18, 0)}, 'head': {'rot': (-13, 26, 0)},
+        'right_arm': {'reach': ((-0.5, 34.5, -31.5), (-0.5, -1, 0))},
+        'right_pad': {'rot': (-16, 0, 22)},
+        'left_arm': {'reach': ((3.0, 36.5, -3.5), (0.6, -1, 0.3))},
+        'left_pad': {'rot': (0, 0, -8)},
+        'left_leg': {'rot': (-38, 0, -4)}, 'left_shin': {'rot': (28, 0, 0)}, 'left_foot': {'rot': (12, 0, 0)},
+        'right_leg': {'rot': (36, 0, 6)}, 'right_shin': {'rot': (26, 0, 0)}, 'right_foot': {'rot': (44, 0, 0)},
+        'cloth_front': {'rot': (-2, 0, 0)}, 'cloth_back': {'rot': (16, 0, 0)},
     },
-    # 3, the left hook: loaded (low, the weight on the left leg, the body opened to the left, the left elbow out at
-    # the side and the fist ahead of it) ...
+    # 3, the left hook: loaded (low and back, the weight on the left leg, the body opened wide to the left, the left
+    # elbow flung out at the side and the fist out wide behind it) ...
     'wind_hook': {
-        'root': {'pos': (0, .9, .8)},
-        'hips': {'rot': (10, -8, 4)}, 'torso': {'rot': (8, -8, 4)}, 'chest': {'rot': (6, -6, 2)},
-        'neck': {'rot': (-4, 10, -4)}, 'head': {'rot': (-8, 12, -4)},
-        'left_arm': {'reach': ((15.0, 32.0, -9.0), (1, 0.1, 0.5))},
-        'left_pad': {'rot': (0, 0, -20)},
-        'right_arm': {'reach': ((-2.5, 36.5, -6.0), (-0.4, -1, 0.1))},
-        'right_pad': {'rot': (0, 0, 4)},
-        'left_leg': {'rot': (-22, 0, -8)}, 'left_shin': {'rot': (52, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
-        'right_leg': {'rot': (18, 0, 9)}, 'right_shin': {'rot': (44, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
-        'cloth_front': {'rot': (-10, 0, 6)}, 'cloth_left': {'rot': (0, 0, -8)},
+        'root': {'pos': (0, -.2, 1.4)},
+        'hips': {'rot': (14, -16, 6)}, 'torso': {'rot': (10, -12, 6)}, 'chest': {'rot': (8, -8, 4)},
+        'neck': {'rot': (-7, 14, -6)}, 'head': {'rot': (-12, 16, -6)},
+        'left_arm': {'reach': ((18.0, 32.5, -4.0), (1, 0.1, 0.6))},
+        'left_pad': {'rot': (0, 0, -24)},
+        'right_arm': {'reach': ((-2.5, 37.5, -6.0), (-0.4, -1, 0.1))},
+        'right_pad': {'rot': (0, 0, 6)},
+        'left_leg': {'rot': (-26, 0, -10)}, 'left_shin': {'rot': (58, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+        'right_leg': {'rot': (20, 0, 10)}, 'right_shin': {'rot': (50, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
+        'cloth_front': {'rot': (-10, 0, 8)}, 'cloth_left': {'rot': (0, 0, -12)},
     },
-    # ... and thrown: the body wheels hard round to the right, the left arm comes round level with the elbow bent
-    # square, the fist arriving across the front at the target
+    # ... and thrown: the body wheels violently round to the right, the left arm sweeping round level with the elbow
+    # bent square, the fist arriving across the front at the target
     'hook': {
-        'root': {'pos': (0, 1.6, -1.4)},
-        'hips': {'rot': (10, 38, -2)}, 'torso': {'rot': (6, 14, -2)}, 'chest': {'rot': (4, 14, 0)},
-        'neck': {'rot': (-4, -24, 0)}, 'head': {'rot': (-6, -40, 0)},
-        'left_arm': {'reach': ((-4.0, 34.5, -18.0), (1, 0.15, -0.2))},
-        'left_pad': {'rot': (-6, 0, -26)},
-        'right_arm': {'reach': ((-3.0, 36.5, -3.0), (-0.4, -1, 0))},
-        'right_pad': {'rot': (0, 0, 4)},
-        'left_leg': {'rot': (-26, 0, -4)}, 'left_shin': {'rot': (30, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
-        'right_leg': {'rot': (22, 0, 10)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
-        'cloth_front': {'rot': (-6, 0, -12)}, 'cloth_right': {'rot': (6, 0, 10)},
+        'root': {'pos': (0, 1.0, -2.6)},
+        'hips': {'rot': (14, 48, -4)}, 'torso': {'rot': (8, 18, -4)}, 'chest': {'rot': (6, 18, 0)},
+        'neck': {'rot': (-7, -30, 0)}, 'head': {'rot': (-10, -46, 0)},
+        'left_arm': {'reach': ((-6.5, 34.5, -19.0), (1, 0.2, -0.3))},
+        'left_pad': {'rot': (-8, 0, -30)},
+        'right_arm': {'reach': ((-3.0, 37.5, -2.5), (-0.4, -1, 0))},
+        'right_pad': {'rot': (0, 0, 6)},
+        'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (30, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
+        'right_leg': {'rot': (26, 0, 12)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
+        'cloth_front': {'rot': (-6, 0, -16)}, 'cloth_right': {'rot': (8, 0, 14)},
     },
-    # 4, the finisher: coiled (turned far round to the right and leaning back, the right fist drawn back past the
-    # ear, the left arm out at the target taking aim, the knees drawn up to spring) ...
+    # 4, the finisher: coiled (rising and leaning back, wound far round to the right, the right fist drawn back
+    # behind the head, the left arm out at the target taking aim, the knees drawn up to spring) ...
     'wind_big': {
-        'root': {'pos': (0, 2.6, 1.6)},
-        'hips': {'rot': (-4, 40, 0)}, 'torso': {'rot': (-6, 12, 0)}, 'chest': {'rot': (-4, 10, 0)},
-        'neck': {'rot': (2, -24, 0)}, 'head': {'rot': (6, -36, 0)},
-        'right_arm': {'reach': ((-2.0, 38.0, 7.0), (-1, -0.3, 0.6))},
-        'right_pad': {'rot': (0, 0, 14)},
-        'left_arm': {'reach': ((3.0, 35.5, -21.0), (0.6, -1, 0))},
-        'left_pad': {'rot': (-12, 0, -18)},
-        'left_leg': {'rot': (-38, 0, -6)}, 'left_shin': {'rot': (60, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
-        'right_leg': {'rot': (22, 0, 8)}, 'right_shin': {'rot': (62, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
-        'cloth_front': {'rot': (-16, 0, 0)}, 'cloth_back': {'rot': (-6, 0, 0)},
+        'root': {'pos': (0, 3.4, 2.6)},
+        'hips': {'rot': (-8, 52, 0)}, 'torso': {'rot': (-8, 16, 0)}, 'chest': {'rot': (-6, 12, 0)},
+        'neck': {'rot': (4, -30, 0)}, 'head': {'rot': (8, -42, 0)},
+        'right_arm': {'reach': ((-3.0, 40.0, 10.0), (-1, -0.2, 0.6))},
+        'right_pad': {'rot': (0, 0, 18)},
+        'left_arm': {'reach': ((3.0, 36.0, -23.0), (0.6, -1, 0))},
+        'left_pad': {'rot': (-14, 0, -20)},
+        'left_leg': {'rot': (-50, 0, -6)}, 'left_shin': {'rot': (70, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+        'right_leg': {'rot': (12, 0, 8)}, 'right_shin': {'rot': (72, 0, 0)}, 'right_foot': {'rot': (36, 0, 0)},
+        'cloth_front': {'rot': (-20, 0, 0)}, 'cloth_back': {'rot': (-8, 0, 0)},
     },
-    # ... and thrown: the whole body lunges, wheeling round to the left and over the front leg, the right arm driven
-    # straight through the target, the left fist pulled back to the ribs, the back leg flung out straight
+    # ... and thrown: the whole body explodes forward, wheeling round to the left and far over the front leg, the
+    # right arm driven straight through the target, the left fist pulled back to the hip, the back leg flung out straight
     'punch_big': {
-        'root': {'pos': (0, 1.8, -4.0)},
-        'hips': {'rot': (18, -22, 0)}, 'torso': {'rot': (10, -14, 0)}, 'chest': {'rot': (6, -12, 0)},
-        'neck': {'rot': (-8, 22, 0)}, 'head': {'rot': (-16, 26, 0)},
-        'right_arm': {'reach': ((0.0, 33.5, -30.5), (-0.5, -1, 0))},
-        'right_pad': {'rot': (-14, 0, 20)},
-        'left_arm': {'reach': ((6.0, 27.0, 2.0), (1, -0.5, 1))},
-        'left_pad': {'rot': (0, 0, -6)},
-        'left_leg': {'rot': (-46, 0, -4)}, 'left_shin': {'rot': (42, 0, 0)}, 'left_foot': {'rot': (2, 0, 0)},
-        'right_leg': {'rot': (42, 0, 6)}, 'right_shin': {'rot': (8, 0, 0)}, 'right_foot': {'rot': (44, 0, 0)},
-        'cloth_front': {'rot': (-20, 0, 0)}, 'cloth_back': {'rot': (24, 0, 0)}, 'cloth_back_1': {'rot': (10, 0, 0)},
+        'root': {'pos': (0, .8, -6.5)},
+        'hips': {'rot': (24, -30, 0)}, 'torso': {'rot': (12, -16, 0)}, 'chest': {'rot': (8, -14, 0)},
+        'neck': {'rot': (-12, 26, 0)}, 'head': {'rot': (-18, 32, 0)},
+        'right_arm': {'reach': ((0.0, 33.0, -38.0), (-0.5, -1, 0))},
+        'right_pad': {'rot': (-18, 0, 24)},
+        'left_arm': {'reach': ((6.5, 27.0, 3.0), (1, -0.5, 1))},
+        'left_pad': {'rot': (0, 0, -8)},
+        'left_leg': {'rot': (-52, 0, -4)}, 'left_shin': {'rot': (46, 0, 0)}, 'left_foot': {'rot': (2, 0, 0)},
+        'right_leg': {'rot': (52, 0, 6)}, 'right_shin': {'rot': (6, 0, 0)}, 'right_foot': {'rot': (46, 0, 0)},
+        'cloth_front': {'rot': (-24, 0, 0)}, 'cloth_back': {'rot': (30, 0, 0)}, 'cloth_back_1': {'rot': (14, 0, 0)},
     },
 }
 
