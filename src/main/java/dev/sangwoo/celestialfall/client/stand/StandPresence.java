@@ -6,6 +6,7 @@ import dev.sangwoo.celestialfall.stand.StandHolder;
 import dev.sangwoo.celestialfall.stand.StandManager;
 import dev.sangwoo.celestialfall.stand.StandSummon;
 import dev.sangwoo.celestialfall.stand.StarPlatinumLook;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,8 +30,8 @@ import org.lwjgl.glfw.GLFW;
  * (StandTimeline). A stand already out when its user comes into sight is simply there. It follows its user once a tick
  * (swinging round as they turn, trailing a little as they move, never inside them) and is drawn between ticks from the
  * tick before and the tick after, with its look worked out for the frame's own moment, so it moves at the frame rate.
- * Coming out and going back, faint blue afterimages trail it. While it is out its aura shines round it
- * (StarPlatinumRenderer) and light rises off it (StandAura, 2.52.0); the sparks outlive a stand sent back until they fade.
+ * Coming out and going back, faint blue afterimages trail it. While it is out it and its user are wrapped in its aura
+ * (StandAuraLayer, 2.53.0), which comes and goes with its glow.
  */
 public final class StandPresence {
     /** Its place by its user (blocks): to their right, behind them, above their feet. */
@@ -74,8 +75,10 @@ public final class StandPresence {
         var p=w.getEntityById(s.entity);
         return String.format(java.util.Locale.ROOT,"user yaw %.1f head %.1f, stand yaw %.1f, velocity x %.2f z %.2f",p==null?Float.NaN:p.getYaw(),p==null?Float.NaN:p.getHeadYaw(),s.yaw,s.vel.x,s.vel.z);
     }
-    /** How many sparks are rising off this player's stand here (2.52.0, for the capture tools' logs). */
-    public static int sparks(UUID owner){var s=ALL.get(owner);return s==null?0:s.aura.size();}
+    /** How strongly this player's stand and the player are wrapped in its aura (0 to 1; for the capture tools' logs). */
+    public static float aura(UUID owner){var s=ALL.get(owner);return s==null||!s.drawn&&s.puppet.look.alpha<.003f?0:auraOf(s.puppet.look);}
+    /** The aura's strength for a look: its glow, up to full (the flare past it burns brighter instead, StandAuraLayer). */
+    static float auraOf(StarPlatinumLook look){return MathHelper.clamp(look.glow,0,1);}
     /** Seconds since this player's stand last came out or went back, and whether it is out (null when there is none). */
     public static float[] state(UUID owner){var s=ALL.get(owner);return s==null?null:new float[]{(ticks-1-s.since)/20f,s.out?1:0};}
 
@@ -101,12 +104,8 @@ public final class StandPresence {
                 s.look(ticks-1,trail);s.from.set(trail);s.hasFrom=true;s.out=out;s.since=ticks-1;
             }
             s.follow(p);s.puppet.age++;
-            // light rising off it over the tick the frames to come show: from where its feet were to where they are
-            double start=ticks-1;s.look(start+.5,trail);
-            float rate=s.out&&!p.isInvisible()&&trail.alpha>.4f?StandAura.RATE+StandAura.BURST*trail.gust:0;
-            s.aura.tick(start,new Vec3d(p.prevX,p.prevY,p.prevZ).lerp(s.prevPos,trail.out),p.getPos().lerp(s.pos,trail.out),s.yaw,trail.scale,rate);
         }
-        ALL.values().removeIf(s->!seenNow.contains(s.entity)||!s.out&&StandTimeline.gone((ticks-1-s.since)/20f)&&s.aura.isEmpty());
+        ALL.values().removeIf(s->!seenNow.contains(s.entity)||!s.out&&StandTimeline.gone((ticks-1-s.since)/20f));
         var swap=seen;seen=seenNow;seenNow=swap;
     }
 
@@ -136,13 +135,23 @@ public final class StandPresence {
             }
             look.set(ghost);s.put(p,delta,look);
         }
-        // the sparks after every body, so the bodies hide those behind them
-        var m=c.matrixStack().peek().getPositionMatrix();
-        for(var s:ALL.values())if(mc.world.getEntityById(s.entity) instanceof PlayerEntity p&&!p.isInvisible())s.aura.render(ticks-1d+delta,c.camera(),m,c.consumers());
+        // the aura round each stand that shows and round its user, as strong as its glow (not the user the camera looks
+        // out of: their body is not drawn)
+        var bearers=new ArrayList<StandAuraLayer.Bearer>();float flare=0;
+        for(var s:ALL.values()){
+            if(!(mc.world.getEntityById(s.entity) instanceof PlayerEntity p)||p.isInvisible())continue;
+            var look=s.puppet.look;float k=auraOf(look);
+            if(k<.01f)continue;
+            if(s.drawn)bearers.add(new StandAuraLayer.Bearer(s.puppet,true,k));
+            boolean eyes=p==c.camera().getFocusedEntity()&&!c.camera().isThirdPerson();
+            if(!eyes&&(c.frustum()==null||c.frustum().isVisible(p.getBoundingBox().expand(1))))bearers.add(new StandAuraLayer.Bearer(p,false,k));
+            flare=Math.max(flare,look.glow-1);
+        }
+        StandAuraLayer.draw(c,bearers,(ticks-1d+delta)/20,flare);
     }
 
     private static final class Presence {
-        final int entity;final StandPuppet puppet;final StandAura aura=new StandAura();
+        final int entity;final StandPuppet puppet;
         boolean out=true,hasFrom,drawn;long since;
         /** The look when the last change came, which the next one starts from. */
         final StarPlatinumLook from=new StarPlatinumLook();

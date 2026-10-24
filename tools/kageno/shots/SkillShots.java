@@ -102,9 +102,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * away, and it starts in. Its clock is the shot's own; "KEY_Q@n" taps Q through the real keyboard path (out, and back),
  * "KEYDOWN_W@n"/"KEYUP_W@n" (also A, S, D) walk. Each tick goes to NAME/stand.csv: the shot clock, whether the server has it
  * out, the seconds since it last came out or went back, and the look it was drawn with (how far out, how solid, its
- * size, the stances, the wind, the gust, the lean, the speed and, since 2.52.0, its aura's glow and how many sparks rise
- * off it); the log gets each time it comes out or goes back.
- * "time=T" sets the time of day for the entry (2.52.0: its aura shows best at night).
+ * size, the stances, the wind, the gust, the lean, the speed and, since 2.52.0, its glow; since 2.53.0 how many bodies
+ * the last frame wrapped in the aura); the log gets each time it comes out or goes back.
+ * "time=T" sets the time of day for the entry (2.52.0: a glow shows best at night).
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -334,9 +334,9 @@ public final class SkillShots implements ClientModInitializer {
         var state=dev.sangwoo.celestialfall.client.stand.StandPresence.state(mc.player.getUuid());
         var l=dev.sangwoo.celestialfall.client.stand.StandPresence.shown(mc.player.getUuid());
         standLog.append(String.format(Locale.ROOT,"%.3f,%d,%.3f,%d",clock()-mc.getTickDelta(),out?1:0,state==null?-1:state[0],state==null?-1:(int)state[1]));
-        int sparks=dev.sangwoo.celestialfall.client.stand.StandPresence.sparks(mc.player.getUuid());
-        if(l==null)standLog.append(",,,,,,,,,,,").append(sparks).append('\n');
-        else standLog.append(String.format(Locale.ROOT,",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.3f,%.3f,%.4f,%d%n",l.out,l.alpha,l.scale,l.weights[0],l.weights[1],l.weights[2],l.wind,l.gust,l.lean,l.speed,l.glow,sparks));
+        int aura=dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast();
+        if(l==null)standLog.append(",,,,,,,,,,,").append(aura).append('\n');
+        else standLog.append(String.format(Locale.ROOT,",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.3f,%.3f,%.4f,%d%n",l.out,l.alpha,l.scale,l.weights[0],l.weights[1],l.weights[2],l.wind,l.gust,l.lean,l.speed,l.glow,aura));
     }
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
     private void logInterface()throws Exception{
@@ -608,7 +608,7 @@ public final class SkillShots implements ClientModInitializer {
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
-                    if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,sparks\n"+standLog);standLog.setLength(0);}
+                    if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura\n"+standLog);standLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

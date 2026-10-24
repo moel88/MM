@@ -55,6 +55,7 @@ EYE_WHITE, EYE_IRIS, EYE_DARK = hexc('#e2f8fb'), hexc('#57c6d8'), hexc('#123440'
 EYE_PALE = hexc('#cde4ec')             # the white of the eye, a little dimmed
 LINE = hexc('#1a1838')                 # the ink line of the face
 GEM = [hexc(c) for c in ('#4f8790', '#9fd6dc', '#e6fbff')]
+TIARA_LIGHT, TIARA_DARK = hexc('#f2d8ca'), hexc('#141019')      # the tiara's cream wedges and its dark cut-outs
 BUCKLE_FACE = [hexc(c) for c in ('#a9b9a0', '#d3e0cc', '#eef5ea')]
 
 
@@ -264,58 +265,60 @@ for row, (y0, y1, w, z0, z1) in enumerate(ABS):
         box(TORSO if row < 3 else CHEST, (x0, y0, z0), (w, y1 - y0, z1 - z0), 'skin', part='ab', side=side, row=row)
 rounded(NECK, (-1.75, 32.0, -1.75), (3.5, 3.5, 3.75), 'skin', .45, part='neck')
 
-# head: a long face with a strong jaw and heavy brows, the headband and its medallion (painted at FACE_DENS)
+# head: a long face with a strong jaw and its nose, painted at FACE_DENS. After the user's third picture
+# ("스타플래티나 얼굴과 머리카락을 이걸 참고해서", 2.53.0): no brows standing out of it, and a tiara over the eyes: a gold
+# band whose lower edge sits right on them, its oval stone hanging a little lower in the middle between them. The nose
+# is the one from before it ("코는 롤백해": a drawn line between two pale diamonds was tried first).
 rounded(HEAD, (-2.75, 35.0, -3.0), (5.5, 6.25, 5.75), 'skin', .45, part='head', dens=FACE_DENS)
 box(HEAD, (-2.25, 34.25, -3.25), (4.5, 1.75, 4.0), 'skin', part='jaw', dens=FACE_DENS)
 box(HEAD, (-0.5, 36.6, -3.5), (1.0, 1.6, 0.5), 'skin', part='nose', dens=FACE_DENS)
-box(HEAD, (-2.5, 38.6, -3.3), (5.0, 0.6, 0.3), 'skin', part='brow', dens=FACE_DENS, faces=('north', 'up', 'down', 'east', 'west'))
 for side in (-1, 1):
     box(HEAD, (2.75 if side > 0 else -3.2, 36.75, -0.6), (0.45, 1.75, 1.25), 'skin', part='ear', side=side, dens=FACE_DENS)
-box(HEAD, (-3.15, 39.4, -3.3), (6.3, 1.3, 6.95), 'gold', part='headband')
-box(HEAD, (-0.9, 39.15, -3.65), (1.8, 1.8, 0.4), 'gem', part='medallion', dens=FACE_DENS)
-box(HEAD, (-0.65, 38.9, -3.6), (1.3, 2.3, 0.32), 'gem', part='medallion', dens=FACE_DENS)
+BAND_Y0, BAND_Y1 = 39.0, 40.45
+box(HEAD, (-3.15, BAND_Y0, -3.3), (6.3, BAND_Y1 - BAND_Y0, 6.95), 'gold', part='headband', dens=FACE_DENS)
+box(HEAD, (-0.95, 38.55, -3.62), (1.9, 2.4, 0.36), 'gem', part='medallion', dens=FACE_DENS)
 
-# hair: a cap over the top, back and sides of the head, then a wild mane thrown up and back, swept to the left as in
-# the art, and a few locks falling down the right side past the ear
-box(HEAD, (-3.05, 40.6, -3.1), (6.1, 1.95, 6.45), 'hair', part='cap')
+# hair: a cap over the top, back and sides of the head, and on it a great mane rising straight up off the band and
+# fanning out (the user's third picture): thick wavy locks in three rows, front, middle and back, the outer ones leaning
+# further out the higher they go, their pointed tips curling outwards, and a lock puffing out over each temple. It
+# replaces the mane streaming back of 2.50.0 to 2.52.0.
+box(HEAD, (-3.05, BAND_Y1 - .05, -3.1), (6.1, 1.95, 6.45), 'hair', part='cap')
 box(HEAD, (-3.0, 35.4, 2.45), (6.0, 5.25, 1.0), 'hair', part='capback')
 for side in (-1, 1):
     box(HEAD, (2.7 if side > 0 else -3.1, 38.0, -1.6), (0.4, 2.9, 4.2), 'hair', part='capside', side=side)
 
+FRONT, BACK = (0, 0, -1), (0, 0, 1)
 MANE = [
-    # root, first direction, last direction, length, width, thickness, flat side faces (normal), wave (deg), phase.
-    # As in the user's pictures (round 2: "머리카락도 지금 너무 이상해"): long black hair swept back off the forehead
-    # and streaming out behind in the wind, waving up and down along its length, the tips flicking; locks fall beside
-    # the face. Nothing stands up off the head.
-    # the top, rising a little off the head and then back
-    ((-1.8, 42.3, -1.8), (-.2, .3, 1), (-.3, .25, 1), 12.5, 3.4, 1.6, (0, 1, -.2), 9, 0.0),
-    ((0.1, 42.5, -1.9), (0, .32, 1), (.05, .3, 1), 13.5, 3.6, 1.7, (0, 1, -.2), 10, 1.3),
-    ((1.9, 42.3, -1.7), (.2, .3, 1), (.35, .25, 1), 12.5, 3.4, 1.6, (0, 1, -.2), 9, 2.4),
-    ((-1.2, 42.6, 0.4), (-.15, .5, 1), (-.25, .35, 1), 13.0, 3.4, 1.6, (0, 1, -.1), 10, .7),
-    ((1.2, 42.6, 0.5), (.15, .5, 1), (.3, .35, 1), 13.0, 3.4, 1.6, (0, 1, -.1), 10, 3.0),
-    # the back of the head, streaming out behind
-    ((-2.2, 41.4, 2.9), (-.3, .5, 1), (-.4, .25, 1), 12.0, 3.3, 1.5, (0, 1, 0), 10, .4),
-    ((0.0, 41.7, 3.1), (0, .55, 1), (.05, .3, 1), 12.5, 3.5, 1.6, (0, 1, 0), 11, 2.0),
-    ((2.2, 41.4, 2.9), (.3, .5, 1), (.45, .25, 1), 12.0, 3.3, 1.5, (0, 1, 0), 10, 1.1),
-    ((-2.0, 39.4, 3.3), (-.3, .1, 1), (-.4, -.15, 1), 11.0, 3.2, 1.5, (0, 1, 0), 10, 2.7),
-    ((0.1, 39.6, 3.4), (0, .15, 1), (.05, -.1, 1), 11.5, 3.4, 1.5, (0, 1, 0), 11, .2),
-    ((2.1, 39.4, 3.3), (.3, .1, 1), (.45, -.15, 1), 11.0, 3.2, 1.5, (0, 1, 0), 10, 1.6),
-    ((-1.6, 37.2, 3.1), (-.25, -.45, 1), (-.3, -.75, .7), 9.0, 2.9, 1.3, (0, 1, 0), 9, 1.0),
-    ((0.3, 37.0, 3.2), (0, -.5, 1), (.05, -.8, .65), 9.5, 3.0, 1.3, (0, 1, 0), 9, 2.9),
-    ((2.0, 37.2, 3.0), (.25, -.45, 1), (.35, -.75, .7), 9.0, 2.9, 1.3, (0, 1, 0), 9, .5),
-    # the sides, swept back past the ears
-    ((-3.0, 40.4, -0.8), (-.9, .2, .45), (-.55, .1, 1), 11.0, 3.0, 1.4, (-1, .4, 0), 10, 1.8),
-    ((3.0, 40.4, -0.8), (.9, .2, .45), (.6, .1, 1), 11.0, 3.0, 1.4, (1, .4, 0), 10, 2.3),
-    ((-3.0, 38.6, 0.6), (-.8, -.2, .6), (-.4, -.45, 1), 9.5, 2.7, 1.3, (-1, .3, 0), 9, .9),
-    ((3.0, 38.6, 0.6), (.8, -.2, .6), (.45, -.45, 1), 9.5, 2.7, 1.3, (1, .3, 0), 9, 2.6),
-    # locks falling beside the face
-    ((-3.0, 39.0, -1.5), (-.3, -1, -.15), (-.35, -1, .3), 6.5, 1.9, 1.0, (-1, 0, -.3), 8, 2.0),
-    ((3.0, 39.0, -1.4), (.3, -1, -.1), (.35, -1, .35), 5.5, 1.7, 1.0, (1, 0, -.3), 8, .5),
+    # root, first direction, last direction, length, width, thickness, flat side faces (normal), wave (deg), phase
+    # the front row, rising off the band
+    ((0.0, 41.4, -2.1), (0, 1, .05), (0, .75, .65), 7.8, 3.8, 2.0, FRONT, 7, 0.0),
+    ((-1.9, 41.3, -2.0), (-.3, 1, .05), (-.75, .7, .4), 8.0, 3.9, 1.9, FRONT, 7, 1.1),
+    ((1.9, 41.3, -2.0), (.3, 1, .05), (.75, .7, .4), 8.0, 3.9, 1.9, FRONT, 7, 2.3),
+    ((-3.0, 40.9, -1.6), (-.8, 1, 0), (-1, .35, .2), 7.6, 3.6, 1.8, FRONT, 8, .6),
+    ((3.0, 40.9, -1.6), (.8, 1, 0), (1, .35, .2), 7.6, 3.6, 1.8, FRONT, 8, 1.9),
+    # the middle row
+    ((0.0, 42.4, 0.2), (0, 1, .25), (0, .6, .8), 8.6, 4.2, 2.2, FRONT, 8, 2.8),
+    ((-2.3, 42.2, 0.3), (-.4, 1, .2), (-.85, .6, .55), 8.8, 4.1, 2.0, FRONT, 8, .4),
+    ((2.3, 42.2, 0.3), (.4, 1, .2), (.85, .6, .55), 8.8, 4.1, 2.0, FRONT, 8, 1.6),
+    ((-3.4, 41.4, 0.4), (-.9, .9, .15), (-1, .25, .45), 8.6, 3.8, 1.9, FRONT, 9, 2.1),
+    ((3.4, 41.4, 0.4), (.9, .9, .15), (1, .25, .45), 8.6, 3.8, 1.9, FRONT, 9, .9),
+    # the back row, rising and leaning back
+    ((0.0, 41.8, 2.6), (0, .85, .55), (0, .55, .95), 8.6, 4.2, 2.1, BACK, 8, 1.4),
+    ((-2.2, 41.5, 2.5), (-.4, .85, .5), (-.75, .45, .85), 8.4, 3.8, 2.0, BACK, 8, 2.6),
+    ((2.2, 41.5, 2.5), (.4, .85, .5), (.75, .45, .85), 8.4, 3.8, 2.0, BACK, 8, .2),
+    ((-3.3, 40.6, 2.1), (-.85, .7, .45), (-.9, .25, .8), 7.6, 3.2, 1.8, BACK, 9, 1.2),
+    ((3.3, 40.6, 2.1), (.85, .7, .45), (.9, .25, .8), 7.6, 3.2, 1.8, BACK, 9, 2.4),
+    # a lock puffing out over each temple and up
+    ((-3.0, 39.9, -0.6), (-1, .4, 0), (-.5, 1, .1), 6.4, 2.8, 1.6, FRONT, 6, .3),
+    ((3.0, 39.9, -0.6), (1, .4, 0), (.5, 1, .1), 6.4, 2.8, 1.6, FRONT, 6, 1.7),
+    # the back of the head, below the mane
+    ((-1.5, 38.6, 3.2), (-.25, -.3, 1), (-.35, -.7, .7), 6.0, 3.2, 1.4, (0, 1, 0), 7, 2.2),
+    ((1.5, 38.6, 3.2), (.25, -.3, 1), (.35, -.7, .7), 6.0, 3.2, 1.4, (0, 1, 0), 7, .8),
 ]
-# two thick cores along the flow fill the mane, so the locks read as the ragged edge of one mass of hair
+# two thick cores fill the mane, so the locks read as the ragged edge of one mass of hair
 MANE_CORES = [
-    ((0.0, 41.7, 0.8), (0, .4, 1), (0, .25, 1), 10.5, 6.2, 3.4, (0, 1, 0), 0, 0),
-    ((0.0, 39.5, 2.7), (0, .1, 1), (0, -.2, 1), 8.5, 6.0, 3.2, (0, 1, 0), 0, 0),
+    ((0.0, 41.5, -0.8), (0, 1, .2), (0, .8, .55), 7.5, 8.4, 4.6, FRONT, 0, 0),
+    ((0.0, 41.3, 1.6), (0, .9, .5), (0, .65, .8), 7.2, 8.0, 4.2, BACK, 0, 0),
 ]
 MANE = MANE_CORES + MANE
 SPLIT = (.3, .27, .24, .19)
@@ -328,7 +331,7 @@ for i, (root, d0, d1, length, width, thick, nrm, wave, phase) in enumerate(MANE)
         if np.linalg.norm(across) > 1e-6:
             d = rotate_about(d, across, wave * math.sin(k * 2.1 + phase))
         pts.append(pts[-1] + d * length * part)
-    strand(f'hair_{i:02d}', HEAD, pts, [width * f for f in (1, .85, .62, .32)], [thick * f for f in (1, .85, .65, .45)],
+    strand(f'hair_{i:02d}', HEAD, pts, [width * f for f in (1, .9, .72, .45)], [thick * f for f in (1, .88, .7, .5)],
            nrm, 'hair', part='lock', lock=i)
 
 # scarf: wound thick round the neck in two rolls, the upper one high in front over the chin (as in the user's second
@@ -627,7 +630,7 @@ def skin(c, face, u, v, p, n):
         g = gold_line_arm(z, y, side)
     if g:
         col = GOLD[4] if g == 2 else GOLD[2]
-    if part in ('head', 'jaw', 'nose', 'brow', 'ear'):
+    if part in ('head', 'jaw', 'nose', 'ear'):
         col = face_paint(c, face, u, v, p, n, col)
     if part == 'toes' and face == 'north' and (u * 4) % 1 < .12:
         col = mix(col, SKIN[0], .7)
@@ -656,9 +659,49 @@ def fist_paint(c, face, u, v, p, col):
     return col
 
 
+EYE_IN, EYE_OUT = (.55, 37.97), (2.27, 38.88)   # each eye's inner corner (low, by the nose) and outer corner (high)
+EYE_LOOK = .4                                     # where along the eye the iris sits: a little in, glaring ahead
+
+
+def eye_paint(ax, y, base):
+    """One eye at (|x|, y) on the face, or None off it: glaring as in the user's third picture ("사진에는 얼굴이
+    화났는데 너꺼는 왜 화가 안 남?"). It slants steeply down to the nose under a heavy dark lid that fills up to the tiara's
+    band and meets the other one's over the bridge in a frown; the opening is a wide crescent under the lid's straight
+    edge, the big iris pressed up under it, its top cut off, with white below it. Not a thin slit (round 2 of the user's
+    pictures: "눈이 너무 작다고", "눈알이 너무 작아")."""
+    (x0, y0), (x1, y1) = EYE_IN, EYE_OUT
+    if y >= BAND_Y0:
+        return None
+    a = (ax - x0) / (x1 - x0)                      # along the eye: 0 at its inner corner, 1 at its outer corner
+    if a < 0:
+        return LINE if y > 38.2 else None           # the frown over the bridge, above the nose
+    if a > 1:
+        return None
+    s = math.sin(math.pi * a)
+    chord = y0 + (y1 - y0) * a
+    top = chord + .1 * s                           # the lid's edge, almost straight
+    bottom = chord - .64 * s ** .8 * (1 - .25 * a)  # the lower lid, sagging most on the inner side
+    if y >= top:
+        return LINE                                # the heavy lid, dark up to the band
+    if y >= bottom:
+        cx = x0 + (x1 - x0) * EYE_LOOK
+        cy = y0 + (y1 - y0) * EYE_LOOK + .1 * math.sin(math.pi * EYE_LOOK) - .14
+        r = math.hypot(ax - cx, (y - cy) * 1.05)
+        if r < .15:
+            return EYE_DARK
+        if r < .37:
+            return EYE_IRIS if r < .31 else mix(EYE_IRIS, EYE_DARK, .55)
+        return EYE_PALE if y > top - .09 else EYE_WHITE   # the lid's shadow on the white under it
+    if y >= bottom - .09:
+        return mix(LINE, base, .35)                # the lower lid
+    if y >= bottom - .3 and .08 < a < .92:
+        return mix(base, SKIN[1], .4)              # shade under the eye
+    return None
+
+
 def face_paint(c, face, u, v, p, n, col):
-    """The face, after the user's second round of pictures: no mouth at all ("입은 아예 없애줘"); almond eyes of a good
-    size ("눈이 너무 작다고": not the thin slits tried first), a little angry, under heavy brows drawn down to the nose."""
+    """The face: no mouth (the scarf is over it), the nose standing out as before 2.53.0, and under the tiara's band the
+    eyes glaring out from under heavy lids (eye_paint)."""
     x, y, z = p
     part = c.opts['part']
     ax = abs(x)
@@ -670,43 +713,14 @@ def face_paint(c, face, u, v, p, n, col):
         return col
     if part == 'head':
         base = ramp(SKIN[2:], .6 - .25 * (ax / 2.75) ** 2)
-        # the eyes: almond shaped and of a good size, as in the pictures, pale with a small cyan iris under a heavy lid,
-        # the brow low over them and a little shade round them
-        if .3 < ax < 2.35 and 37.45 < y < 38.62:
-            a = (ax - .4) / 1.75                     # along the eye: 0 at its inner corner, 1 at its outer corner
-            if 0 <= a <= 1:
-                k = math.sin(math.pi * a)
-                centre = 37.93 + .16 * a
-                # a little angry ("눈이 조금 화나있어야함"): the upper lid comes down towards the nose over the iris
-                top, bottom = centre + .3 * k ** .4 - .17 * (1 - a) * k ** .3, centre - .2 * k ** .7
-                if top <= y < top + .13:
-                    return LINE                      # the heavy upper lid
-                if bottom - .07 <= y < bottom:
-                    return mix(LINE, base, .45)      # the lower lid, lighter
-                if bottom <= y < top:
-                    # a big iris and pupil ("눈알이 너무 작아"), cut by the lids like the art's glare
-                    ix, iy = (a - .47) * 1.75, y - (centre + .03)
-                    r = math.hypot(ix, iy * 1.1)
-                    if r < .14:
-                        return EYE_WHITE if -.1 < ix < -.03 and .03 < iy < .1 else EYE_DARK
-                    if r < .29:
-                        return EYE_IRIS
-                    return EYE_PALE
-            return mix(base, SKIN[0], .3)            # a little shade round the eyes, under the brow
-        if ax < .32 and y > 38.1:
-            return mix(base, SKIN[0], .35)           # the frown between the brows
+        eye = eye_paint(ax, y, base)
+        if eye is not None:
+            return eye
         if ax > 2.1 and y < 38.4:
             return mix(base, SKIN[1], .5)            # the side of the face turns away into shade
         if 1.3 < ax < 2.1 and 35.9 < y < 37.2:
             return mix(base, SKIN[1], .4)            # cheek hollows under the cheekbones
         return base
-    if part == 'brow':
-        # heavy brows coming down low over the nose, rising outwards: a hard look
-        if .2 < ax < 2.4:
-            low = 38.56 + .2 * (ax - .2)            # brows drawn down to the nose: a frown
-            if low - .02 < y < low + .34 + .08 * max(0, 1 - ax):
-                return LINE
-        return mix(ramp(SKIN[2:], .5), SKIN[0], .25)
     if part == 'nose':
         if v > .8:
             return ramp(SKIN[2:], .5)                # no dark nostrils: nothing under the nose may read as a mouth
@@ -742,8 +756,19 @@ def hair(c, face, u, v, p, n):
 
 
 def gold(c, face, u, v, p, n):
-    """Gold: a bright band high on each ring, dark at its lower edge, outlined."""
+    """Gold: a bright band high on each ring, dark at its lower edge, outlined. The headband's front is a tiara (2.53.0,
+    the user's third picture): on each side of the stone a cream wedge pointing in at it and a dark cut-out pointing out."""
     part = c.opts.get('part')
+    if part == 'headband' and face == 'north':
+        x, y = p[0], p[1]
+        yc, hh = (BAND_Y0 + BAND_Y1) / 2, (BAND_Y1 - BAND_Y0) / 2 - .2
+        a = (abs(x) - 1.0) / 2.15
+        if 0 <= a <= 1:
+            dy = abs(y - yc)
+            if .03 <= a <= .5 and dy < (hh + .08) * (a - .03) / .47:
+                return mix(TIARA_LIGHT, GOLD[5], .3) if y > yc else TIARA_LIGHT
+            if .58 <= a <= .93 and dy < hh * (.93 - a) / .35:
+                return TIARA_DARK
     if face in ('up', 'down'):
         col = GOLD[3] if face == 'up' else GOLD[1]
     else:
@@ -758,19 +783,24 @@ def gold(c, face, u, v, p, n):
 
 
 def gem(c, face, u, v, p, n):
-    """The headband's medallion: a gold ring round a pale cyan stone."""
+    """The tiara's stone (2.53.0, after the user's third picture): an upright oval of pale blue-white with a dark crescent
+    of reflection across its upper half, in an oval gold setting that hangs a little below the band between the eyes.
+    Outside the setting the plate is see-through."""
     x, y, z = p
-    r = math.hypot(x / .9, (y - 40.05) / 1.05)
-    if face == 'north':
-        if r < .46:
-            return GEM[2] if (x + .15) ** 2 + (y - 40.3) ** 2 < .03 else GEM[1]
-        if r < .58:
-            return GEM[0]
-        if r < .66:
-            return GOLD[1]
-        col = ramp(GOLD[2:], .85 - .5 * (y - 39.0) / 2.25)
-        return outline(c, face, u, v, col, .7, ink=GOLD[0])
-    return outline(c, face, u, v, GOLD[2], .7, ink=GOLD[0])
+    if face != 'north':
+        return None
+    cy = 39.75
+    r = math.hypot(x / .55, (y - cy) / .82)
+    if r < 1:
+        cr = math.hypot(x / .44, (y - cy - .16) / .58)
+        if .76 < cr < 1.0 and y > cy + .02:
+            return GEM[0]                            # the crescent
+        return GEM[2] if (x - .16) ** 2 + (y - cy + .28) ** 2 < .05 else GEM[1]
+    if r < 1.1:
+        return GOLD[1]
+    if r < 1.3:
+        return GOLD[4] if y > cy else GOLD[3]
+    return None
 
 
 def cream(c, face, u, v, p, n):
