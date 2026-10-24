@@ -16,6 +16,7 @@ the cries) comes with it as the sound run played it, a tick either way. The scri
 too: the voice against the tick a tick after its rush began there. The recording is tied to the run's clock by the
 marker tones (as tools/stand/shots/mux_punches.py). The sound written is exactly as long as the film.
 """
+import math
 import os
 import subprocess
 import sys
@@ -29,10 +30,14 @@ LEAD = 1
 
 
 def start_tick(stand):
-    """The tick of the shot's clock the rush started on (t less its age), from the first row where it shows on."""
+    """
+    The tick of the shot's clock the rush started on, from the first row where it shows on: the row's t is a whole tick
+    and its age that many ticks in plus the frame's part of a tick (0 to 1), so t less the age is the start less that
+    part, and the start is the whole tick at or just above it (rounding was a tick early when the part was over half).
+    """
     for r in stand:
         if r.get('rush_on') == '1' and r.get('rush_age'):
-            return round(float(r['t']) - float(r['rush_age']) * 20)
+            return math.ceil(float(r['t']) - float(r['rush_age']) * 20 - 1e-3)
     return None
 
 

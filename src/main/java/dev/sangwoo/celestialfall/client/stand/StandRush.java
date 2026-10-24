@@ -133,6 +133,11 @@ public final class StandRush {
         float loudness(){return volume;}
         /** One told to fade before it began (the rush let go before it started) never plays. */
         @Override public boolean canPlay(){return fading<0&&!done;}
+        /**
+         * The blows start silent when nobody is in the rush's way and come up once it strikes someone: the game skips
+         * a sound that starts at no loudness unless it says it must play.
+         */
+        @Override public boolean shouldAlwaysPlay(){return blows;}
         @Override public boolean isDone(){return done;}
         @Override public void tick(){
             float level=blows?rush.strike:1;

@@ -173,6 +173,8 @@ class StandRushTest {
         var voice=new StandRush.Sound(new net.minecraft.util.Identifier("celestialfall","star_platinum_rush"),r,false,.9f);
         var blows=new StandRush.Sound(new net.minecraft.util.Identifier("celestialfall","star_platinum_rush_hits"),r,true,.9f);
         assertEquals(0,blows.loudness(),1e-6,"the blows silent until it strikes someone");
+        // started silent (nobody in its way yet), they must still start, to come up once it strikes someone
+        assertTrue(blows.shouldAlwaysPlay(),"the blows play from the start even silent");assertFalse(voice.shouldAlwaysPlay());
         r.strike=1;voice.tick();blows.tick();assertEquals(.9f,voice.loudness(),1e-6);assertEquals(.9f,blows.loudness(),1e-6);
         r.strike=0;voice.tick();blows.tick();assertEquals(.9f,voice.loudness(),1e-6,"the voice whoever it strikes");assertEquals(0,blows.loudness(),1e-6);
         r.strike=1;voice.tick();voice.fade();blows.fade();

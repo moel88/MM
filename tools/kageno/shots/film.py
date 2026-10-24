@@ -24,7 +24,8 @@ SKILL, SPEED, FPS = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FIL
 # FILM_STAGES="UNTIL:NAME|UNTIL:NAME|..." gives the captions directly (seconds of the shot's clock) and FILM_CLOCK the
 # words before the time (default "시전 후"): the gacha's shots (tools/gacha/shots) run on the screen's own clock.
 CLOCK = os.environ.get('FILM_CLOCK', '시전 후')
-BELOW = 76 if os.environ.get('FILM_CAPTION') == 'below' else 0
+# the band is a row taller when a CSV line goes with it (2.57.0: the rush's blows and the dummy's health under the HUD's shots)
+BELOW = (76 + (34 if mode else 0)) if os.environ.get('FILM_CAPTION') == 'below' else 0
 if os.environ.get('FILM_STAGES'): SKILL = 'CUSTOM'
 
 frames = []
@@ -202,7 +203,8 @@ def caption(img, t):
         # the band under the picture: the title, and under it the time and the stage
         y = img.height - BELOW + 6
         d.text((12, y), lines[0][0], font=big, fill=lines[0][2]); d.text((12, y + 36), lines[1][0], font=small, fill=lines[1][2])
-        lines = []
+        if text: d.text((12, y + 68), text, font=small, fill=color)
+        lines, text = [], None
     for s, font, col in lines:
         w = d.textlength(s, font=font); h = font.size + 10
         # FILM_CAPTION=center puts the captions at the top's middle (the gacha keeps its logo at the top left)
