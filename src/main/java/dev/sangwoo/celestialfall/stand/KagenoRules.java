@@ -42,8 +42,11 @@ public final class KagenoRules {
     public static final int E_PLANT=48;
     /** Whether E's caster still walks and aims at {@code age} (ticks). */
     public static boolean eWalking(float age){return age>=0&&age<E_PLANT;}
-    /** How much slower E's caster walks through the thrusts (user request, 2.57.0: "카게노 E는 95% 느려지게": at a twentieth of his speed). */
-    public static final double E_SLOW=.95;
+    /**
+     * How much slower E's caster walks through the thrusts (user request, 2.57.0: "카게노 E는 95% 느려지게"; 2.58.0:
+     * "카게노 속도 감소를 80%로 바꾸고": at a fifth of his speed).
+     */
+    public static final double E_SLOW=.8;
     /** E's barrage ticks (a copy). */
     public static int[] eTicks(){return E_TICKS.clone();}
     /** R: the world is gray from 0.5 s; the four stored cuts land together as colour returns, then the big final cut (the release). */

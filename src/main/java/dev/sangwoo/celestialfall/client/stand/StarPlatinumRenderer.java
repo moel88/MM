@@ -8,6 +8,7 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
+import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.core.object.Color;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
@@ -53,6 +54,15 @@ public final class StarPlatinumRenderer extends GeoEntityRenderer<StarPlatinumEn
             shell=-1;
         }
         matrices.pop();
+    }
+    /**
+     * An afterimage of the rush's arms (2.58.0) draws each arm, from its shoulder down, as strongly as its look shows it:
+     * the arm striking out, not the one drawn back, so the afterimages are a storm of fists rather than a wall of arms.
+     */
+    @Override public void renderRecursively(MatrixStack matrices,StarPlatinumEntity e,GeoBone bone,RenderLayer layer,VertexConsumerProvider buffers,net.minecraft.client.render.VertexConsumer buffer,boolean reRender,float delta,int light,int overlay,float red,float green,float blue,float alpha){
+        String name=bone.getName();
+        if(name.equals("left_arm")||name.equals("right_arm")){var look=e.look(delta);if(look.armsOnly)alpha*=name.equals("left_arm")?look.showL:look.showR;}
+        super.renderRecursively(matrices,e,bone,layer,buffers,buffer,reRender,delta,light,overlay,red,green,blue,alpha);
     }
     @Override public RenderLayer getRenderType(StarPlatinumEntity e,Identifier texture,VertexConsumerProvider buffers,float delta){
         if(shell>=0)return RenderLayer.getEyes(texture);

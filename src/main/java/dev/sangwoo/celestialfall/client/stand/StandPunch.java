@@ -42,10 +42,12 @@ public final class StandPunch {
         public final float[] weights=new float[NAMES.size()],under=new float[NAMES.size()],under2=new float[NAMES.size()];
         /** How much higher than at rest it floats in front (blocks): RAISE for the punches, less for the rush (2.57.0). */
         public float engage,yaw,ahead,side,lunge,gust,ghost,over=1,over2=1,raise=RAISE;
-        void clear(){Arrays.fill(weights,0);Arrays.fill(under,0);Arrays.fill(under2,0);engage=yaw=ahead=side=lunge=gust=ghost=0;over=over2=1;raise=RAISE;}
+        /** How big its left and right arms are (1 their size: the punches; bigger through the rush, 2.58.0). */
+        public float armL=1,armR=1;
+        void clear(){Arrays.fill(weights,0);Arrays.fill(under,0);Arrays.fill(under2,0);engage=yaw=ahead=side=lunge=gust=ghost=0;over=over2=1;raise=RAISE;armL=armR=1;}
         Shape set(Shape o){
             System.arraycopy(o.weights,0,weights,0,weights.length);System.arraycopy(o.under,0,under,0,under.length);System.arraycopy(o.under2,0,under2,0,under2.length);
-            engage=o.engage;yaw=o.yaw;ahead=o.ahead;side=o.side;lunge=o.lunge;gust=o.gust;ghost=o.ghost;over=o.over;over2=o.over2;raise=o.raise;return this;
+            engage=o.engage;yaw=o.yaw;ahead=o.ahead;side=o.side;lunge=o.lunge;gust=o.gust;ghost=o.ghost;over=o.over;over2=o.over2;raise=o.raise;armL=o.armL;armR=o.armR;return this;
         }
         /** How much of stance {@code i} the shape has, its poses under and its own taken together. */
         float share(int i){return over>=1?weights[i]:weights[i]*over+(over2>=1?under[i]:under[i]*over2+under2[i]*(1-over2))*(1-over);}
@@ -76,11 +78,12 @@ public final class StandPunch {
             if(k<1){for(int i=0;i<under2.length;i++)under2[i]=from.share(i);over2=Math.max(0,k);}
             between(from,k);
         }
-        /** The way, place and dash {@code k} of the way from the other's to this one's, out in front as far as either is, in the stronger gust. */
+        /** The way, place, dash and arms {@code k} of the way from the other's to this one's, out in front as far as either is, in the stronger gust. */
         private void between(Shape from,float k){
             if(k<1){
                 yaw=from.yaw+wrap(yaw-from.yaw)*k;raise+=(from.raise-raise)*(1-k);
                 ahead+=(from.ahead-ahead)*(1-k);side+=(from.side-side)*(1-k);lunge+=(from.lunge-lunge)*(1-k);ghost+=(from.ghost-ghost)*(1-k);
+                armL+=(from.armL-armL)*(1-k);armR+=(from.armR-armR)*(1-k);
             }
             engage=Math.max(engage,from.engage);gust=Math.max(gust,from.gust);
         }
@@ -95,10 +98,12 @@ public final class StandPunch {
                 System.arraycopy(weights,0,look.weights,0,weights.length);
                 System.arraycopy(under,0,look.under,0,under.length);look.over=over;
                 System.arraycopy(under2,0,look.under2,0,under2.length);look.over2=over2;
+                look.armL=armL;look.armR=armR;
                 return;
             }
             look.flatten();
             for(int i=0;i<look.weights.length;i++)look.weights[i]=look.weights[i]*(1-e)+share(i)*e;
+            look.armL+=(armL-look.armL)*e;look.armR+=(armR-look.armR)*e;
         }
     }
     /** When each punch lands (seconds after it starts) and how long it then stands still (the hit-stop: longer for the heavy ones). */
@@ -151,7 +156,7 @@ public final class StandPunch {
     /** The stand's size, for the fists' places (StarPlatinumRenderer.SCALE: model units of 1/16 block). */
     static final float SCALE=StarPlatinumRenderer.SCALE/16f;
     /** The striking fist's knuckles in each stance (blocks from the stand's feet: ahead, to its right, up), by stance and fist (0 left, 1 right). */
-    static final float[][][] FISTS=fists();
+    static final float[][][] FISTS=fists(""),SHOULDERS=fists("_shoulder");
     private StandPunch(){}
 
     static float clamp(float v){return v<0?0:v>1?1:v;}
@@ -256,14 +261,23 @@ public final class StandPunch {
     static float wrap(float degrees){degrees%=360;if(degrees>=180)degrees-=360;if(degrees<-180)degrees+=360;return degrees;}
 
     /** Reads where the fists are in every stance (tools/stand/make_star_platinum.py writes it with the poses). */
-    private static float[][][] fists(){
+    /**
+     * Where fist {@code side} (0 left, 1 right) is in stance {@code stance} with its arm drawn {@code size} times its size
+     * (2.58.0: the rush's bigger arms), out from its shoulder that much further (blocks from the stand's feet, as FISTS).
+     */
+    static float[] grown(int stance,int side,float size){
+        float[] f=FISTS[stance][side],s=SHOULDERS[stance][side];
+        return new float[]{s[0]+(f[0]-s[0])*size,s[1]+(f[1]-s[1])*size,s[2]+(f[2]-s[2])*size};
+    }
+    /** The fists' knuckles in every stance, or (with {@code "_shoulder"}) their shoulders' joints, from the file the generator writes with the poses. */
+    private static float[][][] fists(String what){
         float[][][] out=new float[NAMES.size()][2][3];
         try(var in=StandPunch.class.getResourceAsStream("/assets/celestialfall/stands/star_platinum_fists.json")){
             var root=JsonParser.parseReader(new InputStreamReader(Objects.requireNonNull(in,"fists"),StandardCharsets.UTF_8)).getAsJsonObject();
             for(int s=0;s<NAMES.size();s++){
                 var stance=root.getAsJsonObject(NAMES.get(s));if(stance==null)continue;
                 for(int side=0;side<2;side++){
-                    var p=stance.getAsJsonArray(side==0?"left":"right");
+                    var p=stance.getAsJsonArray((side==0?"left":"right")+what);
                     // model units (front -z, its right -x, up +y) to blocks ahead, to its right and up
                     out[s][side][0]=-p.get(2).getAsFloat()*SCALE;out[s][side][1]=-p.get(0).getAsFloat()*SCALE;out[s][side][2]=p.get(1).getAsFloat()*SCALE;
                 }

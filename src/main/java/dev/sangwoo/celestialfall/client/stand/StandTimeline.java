@@ -58,6 +58,8 @@ public final class StandTimeline {
         into.scale=from.scale*(1-.14f*u*u);
         into.wind=from.wind*(1-smooth(u));
         into.gust=from.gust*(1-u)+.6f*(float)Math.sin(Math.PI*u);
+        // (sent back while it rushed: its arms come back to their size as it curls up)
+        into.armL=1+(from.armL-1)*(1-curl);into.armR=1+(from.armR-1)*(1-curl);
         return into;
     }
     /**

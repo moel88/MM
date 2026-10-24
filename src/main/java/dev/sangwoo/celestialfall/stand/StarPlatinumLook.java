@@ -15,21 +15,24 @@ import java.util.Arrays;
  * pose can itself be turning from one under it (2.57.0: a punch stopped short turns from where it was back to the
  * guard, and it may have been taking over from the punch before; the rush and a punch take over from each other):
  * {@code under2} and {@code over2}. An afterimage of the rush's flying arms (2.57.0) is drawn {@code armsOnly}: its
- * arms and fists, nothing else.
+ * arms and fists, nothing else, each arm as strongly as {@code showL} and {@code showR} say (2.58.0: the arm that
+ * strikes out shows, the one drawn back fades). Each arm is drawn {@code armL} and {@code armR} times its size, from
+ * its shoulder (2.58.0: bigger through the rush, and bigger still as it stretches out to its fist).
  */
 public final class StarPlatinumLook {
     public final float[] weights=new float[StarPlatinumStance.NAMES.size()],under=new float[StarPlatinumStance.NAMES.size()],under2=new float[StarPlatinumStance.NAMES.size()];
     public float wind,gust,out=1,alpha=1,scale=1,lean,roll,speed,over=1,over2=1;
     public float red=1,green=1,blue=1,shadow=1,glow;
     public boolean armsOnly;
+    public float armL=1,armR=1,showL=1,showR=1;
     public StarPlatinumLook(){weights[StarPlatinumStance.IDLE]=1;}
     /** Wholly in one stance, standing still, nothing else on. */
     public StarPlatinumLook only(int stance){
-        Arrays.fill(weights,0);weights[stance]=1;Arrays.fill(under,0);Arrays.fill(under2,0);over=over2=1;wind=stance==StarPlatinumStance.HERO?1:0;gust=lean=roll=speed=glow=0;out=alpha=scale=1;red=green=blue=shadow=1;armsOnly=false;return this;
+        Arrays.fill(weights,0);weights[stance]=1;Arrays.fill(under,0);Arrays.fill(under2,0);over=over2=1;wind=stance==StarPlatinumStance.HERO?1:0;gust=lean=roll=speed=glow=0;out=alpha=scale=1;red=green=blue=shadow=1;armsOnly=false;armL=armR=showL=showR=1;return this;
     }
     public StarPlatinumLook set(StarPlatinumLook o){
         System.arraycopy(o.weights,0,weights,0,weights.length);System.arraycopy(o.under,0,under,0,under.length);System.arraycopy(o.under2,0,under2,0,under2.length);over=o.over;over2=o.over2;
-        wind=o.wind;gust=o.gust;out=o.out;alpha=o.alpha;scale=o.scale;lean=o.lean;roll=o.roll;speed=o.speed;red=o.red;green=o.green;blue=o.blue;shadow=o.shadow;glow=o.glow;armsOnly=o.armsOnly;return this;
+        wind=o.wind;gust=o.gust;out=o.out;alpha=o.alpha;scale=o.scale;lean=o.lean;roll=o.roll;speed=o.speed;red=o.red;green=o.green;blue=o.blue;shadow=o.shadow;glow=o.glow;armsOnly=o.armsOnly;armL=o.armL;armR=o.armR;showL=o.showL;showR=o.showR;return this;
     }
     /** How much of stance {@code i} the look has, its poses under and its own taken together. */
     public float share(int i){return over>=1?weights[i]:weights[i]*over+below(i)*(1-over);}
@@ -48,6 +51,7 @@ public final class StarPlatinumLook {
         wind=a.wind+(b.wind-a.wind)*k;gust=a.gust+(b.gust-a.gust)*k;out=a.out+(b.out-a.out)*k;alpha=a.alpha+(b.alpha-a.alpha)*k;
         scale=a.scale+(b.scale-a.scale)*k;lean=a.lean+(b.lean-a.lean)*k;roll=a.roll+(b.roll-a.roll)*k;speed=a.speed+(b.speed-a.speed)*k;
         red=a.red+(b.red-a.red)*k;green=a.green+(b.green-a.green)*k;blue=a.blue+(b.blue-a.blue)*k;shadow=a.shadow+(b.shadow-a.shadow)*k;glow=a.glow+(b.glow-a.glow)*k;
+        armL=a.armL+(b.armL-a.armL)*k;armR=a.armR+(b.armR-a.armR)*k;showL=a.showL+(b.showL-a.showL)*k;showR=a.showR+(b.showR-a.showR)*k;
         return this;
     }
 }

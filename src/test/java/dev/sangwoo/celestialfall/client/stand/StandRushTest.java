@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Star Platinum's rush (2.57.0): its barrage smooth at 60 fps held to the end and let go at any moment, its afterimages
  * too, taking over from a punch and a punch taking over from it, its fists left and right in turn at every height, its
- * place on whoever is in its way, and its two sounds.
+ * place on whoever is in its way, and its two sounds. Since 2.58.0 its arms are bigger through the rush only and
+ * stretch out further to each fist, growing and coming back without a jump, and it holds its place through the barrage.
  */
 class StandRushTest {
     static final float FRAME=1/60f;
@@ -65,11 +66,15 @@ class StandRushTest {
             if(s!=null){
                 assertTrue(Math.abs(s.engage-lastEngage)<.25f,"comes round in a jump at "+t);lastEngage=s.engage;
                 if(t>=StarPlatinumRules.RUSH_FIRST/20f&&t<=r.ends())front|=s.engage>.95f;
+                // (2.58.0) it holds its place: no fist drives it on and back
+                assertEquals(StandRush.LUNGE,s.lunge,1e-5,"it holds its place at "+t);
             }
             body.see(look,t,"held");
         }
         assertTrue(front,"in front as its blows land");
         assertTrue(body.fastest>15,"its fists are fast: "+body.fastest+" ("+body.where+")");
+        System.out.println("the rush's fastest turn in a frame: "+body.fastest+" ("+body.where+")");
+        assertEquals(10,StandRush.phantoms(),"ten afterimages of its arms (2.58.0)");
         // the afterimages' fists, each on its own clock and in its own order
         for(int i=0;i<StandRush.phantoms();i++){
             var w=new Watch(names);var ghost=new StarPlatinumLook();
@@ -158,9 +163,44 @@ class StandRushTest {
         }
         java.util.Arrays.fill(w,0);StandRush.barrage(0,7177,w,1);assertEquals(1,w[GUARD],1e-6,"from the guard");
     }
+    @Test void itsArmsAreBiggerThroughTheRushOnlyAndStretchOutFurtherToEachFist(){
+        // user request (2.58.0): "오라 러시 한정으로 팔들이 조금 더 커져도 좋을듯", "러시할때 팔을 더 멀리 뻗으면 동작이 커보여서"
+        var r=new StandRush.Rush(0,0,0,48611);var shape=new StandPunch.Shape();var look=new StarPlatinumLook();
+        float lastL=1,lastR=1,most=0,jump=0;
+        for(int f=0;f<=(int)((r.ends()+StandRush.LINGER+StandRush.RETURN)/FRAME);f++){
+            float t=f*FRAME,delta=clock(t);
+            var s=StandRush.rush(r,delta,0,shape);look(s,look);
+            jump=Math.max(jump,Math.max(Math.abs(look.armL-lastL),Math.abs(look.armR-lastR)));
+            lastL=look.armL;lastR=look.armR;most=Math.max(most,Math.max(look.armL,look.armR));
+            if(t>StandRush.RISE+.05f&&t<r.ends())
+                assertTrue(look.armL>=StandRush.ARMS-1e-3f&&look.armR>=StandRush.ARMS-1e-3f,"its arms bigger through the rush at "+t);
+        }
+        assertTrue(jump<.1f,"its arms grow and come back without a jump: "+jump+" in a frame");
+        assertEquals(StandRush.ARMS*(1+StandRush.STRETCH),most,.01f,"at their biggest as a fist lands");
+        assertEquals(1,lastL,1e-4,"back to their size once it is over");assertEquals(1,lastR,1e-4);
+        // as each fist lands its arm is stretched out at its biggest, and the other back at the rush's size
+        for(int k=2;k<20;k++){
+            var s=StandRush.rush(r,clock((k+1)*StandRush.HALF-1e-4f),0,shape);
+            float out=(k&1)==0?s.armL:s.armR,back=(k&1)==0?s.armR:s.armL;
+            assertEquals(StandRush.ARMS*(1+StandRush.STRETCH),out,3e-3,"fist "+k+" stretched out");
+            assertEquals(StandRush.ARMS,back,3e-3,"the other drawn back as fist "+k+" lands");
+        }
+        // the punches keep their arms' size
+        for(int combo=1;combo<=4;combo++)for(float t=0;t<1;t+=.05f){
+            var p=StandPunch.at(new StandPunch.Punch(combo,0,Float.NaN,Float.NaN),t,null,0,new StandPunch.Shape());
+            if(p!=null){assertEquals(1,p.armL,1e-6,"punch "+combo);assertEquals(1,p.armR,1e-6,"punch "+combo);}
+        }
+        // an afterimage shows the arm striking out and fades the one drawn back, smoothly
+        assertEquals(0,StandRush.phantomShow(0),1e-6);assertEquals(1,StandRush.phantomShow(1),1e-6);
+        for(float o=0;o<1;o+=.01f)assertTrue(StandRush.phantomShow(o+.01f)>=StandRush.phantomShow(o),"fades in as it goes out");
+        for(float[] p:StandRush.PHANTOMS)assertTrue(p[2]<=.12f,"no afterimage above its shoulders (they hid its head)");
+        // and its fists go out further than its arms at their size would take them
+        float size1=StandPunch.FISTS[StarPlatinumStance.RUSH_L][0][0];
+        assertTrue(StandRush.fistReach()>size1+.2f,"its fists reach "+StandRush.fistReach()+" blocks ahead of it, not "+size1);
+    }
     @Test void itStandsWhereItsFistsSinkIntoWhoeverIsInItsWay(){
         float reach=StandRush.fistReach();
-        assertTrue(reach>1&&reach<1.4f,"its fists reach "+reach+" blocks ahead of it");
+        assertTrue(reach>1.2f&&reach<1.7f,"its fists reach "+reach+" blocks ahead of it");
         // someone whose near side is 2.2 blocks ahead: the fists, at full stretch, sink BITE into them
         float place=Math.max(StandRush.NEAR,Math.min(StandRush.FAR,2.2f+StandRush.BITE-reach));
         assertEquals(2.2f+StandRush.BITE,place+reach,1e-5);

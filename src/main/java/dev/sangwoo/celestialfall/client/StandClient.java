@@ -129,7 +129,7 @@ public final class StandClient {
     public static boolean locked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;return action(mc.player.getUuid())!=null;}
     public static boolean movementLocked(){var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return false;if(frozen(mc.player))return true;var cast=action(mc.player.getUuid());return cast!=null&&cast.skill()!=R&&!dev.sangwoo.celestialfall.client.kageno.KagenoAim.aimingThrust(cast);}
     public static boolean rWalking(UUID id){var cast=action(id);return cast!=null&&cast.skill()==R;}
-    /** Whether this player walks through E's thrusts (2.57.0: at a twentieth of their speed, KagenoRules.E_SLOW). */
+    /** Whether this player walks through E's thrusts (2.57.0; at a fifth of their speed since 2.58.0, KagenoRules.E_SLOW). */
     public static boolean eWalking(UUID id){var cast=action(id);return cast!=null&&cast.skill()==E&&KagenoRules.eWalking(cast.age(0));}
     /**
      * A skill's slowdown from the server is on this player's speed: R's, E's (2.57.0) or Star Platinum's rush's

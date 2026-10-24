@@ -1,4 +1,15 @@
-> **현재 통합본: Botand 2.57.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.58.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.58.0 — 오라 러시를 더 격하게 · 카게노 E 80% 감속
+
+- **팔을 더 멀리:** 러시하는 동안만 스타플래티나의 팔이 1.2배로 커집니다. 끝까지 뻗는 팔은 더 커져서(1.34배) 주먹이 발에서 약 1.4블록까지 나갑니다(2.57.0은 1.15블록). 당기면 다른 팔 크기로 돌아옵니다. 평타의 팔은 원래 크기입니다.
+- **팔이 더 많이:** 보라색 잔상 팔이 4개에서 10개로 늘었고, 스탠드 둘레에 고루 퍼져 제 순서대로 주먹을 내지릅니다. 잔상은 뻗는 팔만 보이고 당기는 팔은 흐려져, 스탠드를 가리지 않고 주먹이 앞으로 쏟아지듯 보입니다.
+- **더 격한 자세:** 주먹마다 허리·몸통·가슴을 더 비틀고 더 앞으로 기웁니다. 위 주먹은 더 높이, 아래 주먹은 더 낮게 몸이 따라 오르내리고, 당기는 주먹은 더 뒤로 옵니다.
+- **몸은 제자리:** 주먹마다 몸이 앞뒤로 조금씩 밀리던 움직임은 없앴습니다.
+- **판정은 그대로:** 맞는 범위(앞 3.6블록, 옆 1.3블록), 40타·총 피해 40, 쿨타임 10초 모두 2.57.0과 같습니다. 바뀐 것은 보이는 팔뿐입니다.
+- **카게노 E:** 연속 찌르기(0~2.4초) 동안 걷는 속도가 80% 느려집니다(2.57.0은 95%).
+
+[RELEASE_2.58.0_KO.md](RELEASE_2.58.0_KO.md)를 확인하세요.
 
 # 보탠드 2.57.0 — 스타플래티나 E: 오라 러시 · 카게노 E 95% 감속
 

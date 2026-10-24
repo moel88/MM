@@ -12,6 +12,8 @@ import software.bernie.geckolib.model.GeoModel;
  * stance, crossfaded when it changes; a stand's coming out, floating and going back, StandTimeline) from the poses file
  * that tools/stand/make_star_platinum.py writes with the model, and its own movement on top (StarPlatinumMotion). For an
  * afterimage of the rush's flying arms (2.57.0) every bone but the arms' is hidden (their children still follow them).
+ * Each upper arm is drawn at its arm's size in the look (2.58.0: bigger through the rush), the forearm and the fist
+ * growing with it from the shoulder.
  */
 public final class StarPlatinumModel extends GeoModel<StarPlatinumEntity> {
     static final Identifier MODEL=CelestialFall.id("geo/entity/star_platinum.geo.json"),
@@ -22,6 +24,7 @@ public final class StarPlatinumModel extends GeoModel<StarPlatinumEntity> {
     /** The arms' bones, all that an afterimage of the rush's flying arms shows. */
     static final java.util.Set<String> ARMS=java.util.Set.of("left_arm","left_forearm","left_hand","right_arm","right_forearm","right_hand");
 
+    private static void size(CoreGeoBone bone,float size){bone.setScaleX(size);bone.setScaleY(size);bone.setScaleZ(size);}
     @Override public Identifier getModelResource(StarPlatinumEntity e){return MODEL;}
     @Override public Identifier getTextureResource(StarPlatinumEntity e){return TEXTURE;}
     @Override public Identifier getAnimationResource(StarPlatinumEntity e){return ANIMATION;}
@@ -41,6 +44,9 @@ public final class StarPlatinumModel extends GeoModel<StarPlatinumEntity> {
             bone.setRotY(rest.getRotY()-(float)Math.toRadians(pose[1]));
             bone.setRotZ(rest.getRotZ()+(float)Math.toRadians(pose[2]));
             bone.setPosX(pose[3]);bone.setPosY(pose[4]);bone.setPosZ(pose[5]);
+            // (set every frame too: another body drawn after this one may have its arms at another size)
+            if(bone.getName().equals("left_arm"))size(bone,look.armL);
+            else if(bone.getName().equals("right_arm"))size(bone,look.armR);
         }
     }
 }

@@ -1212,15 +1212,20 @@ POSES = {
 
 
 # ---- E, the rush (2.57.0, user request: "이번에는 e스킬 만들자 e홀드로 사용 할 수 있고 도중에 끊으면 바로 끊겨 러시고
-# 연타를 빠르게 꽂는거야"): the barrage. Squared up to the front, upright with the chest thrust forward and the head up
-# to the target, floating in a fighting stance, it drives its fists out straight one after the other, the shoulder
-# behind each, while the other comes back to the guard. Each stance has one fist out -- at the middle, high or low, so
-# that the blows land all over whoever stands in front -- and client/stand/StandRush goes from one to the next, left and
-# right in turn, a dozen times a second. Only the punching arm, the shoulders' turn and how far the body dips change
-# from one stance to the next: the legs and the lean stay, so the body holds still behind the flurry. The arm that
-# comes back is held where the guard holds it (and bent the same way), so that the rush and the guard are close.
-RUSH_OUT = {'mid': ((1.5, 32.0, -30.0), 0.0), 'hi': ((2.5, 36.0, -30.0), -3.0), 'lo': ((0.5, 27.5, -29.0), 5.0)}
-RUSH_BACK = {'left': ((4.0, 36.5, -13.5), (0.6, -1, 0.2)), 'right': ((-4.0, 36.5, -13.5), (-0.6, -1, 0.2))}
+# 연타를 빠르게 꽂는거야"): the barrage. Squared up to the front, the chest thrust forward and the head up to the target,
+# floating in a fighting stance, it drives its fists out straight one after the other, the shoulder behind each, while
+# the other comes back to the guard. Each stance has one fist out -- at the middle, high or low, so that the blows land
+# all over whoever stands in front -- and client/stand/StandRush goes from one to the next, left and right in turn, a
+# dozen times a second. The punching arm, the shoulders' turn and how far the body dips change from one stance to the
+# next; the legs stay, so the body holds its stance behind the flurry. The arm that comes back is held where the guard
+# holds it (and bent the same way), so that the rush and the guard are close. Since 2.58.0 (user request: "오라 러시가
+# 더 격했으면 좋겠어") it is fiercer: it leans further in, the hips, waist and shoulders wrench round further behind
+# every fist (the chest swings some 64 degrees from a left to a right), the head drives in behind the fists, the high
+# fists go higher and the low ones lower with the body rising and dropping after them, and the drawn fist comes back
+# further.
+RUSH_OUT = {'mid': ((1.5, 32.0, -30.0), 0.0), 'hi': ((2.5, 38.0, -30.0), -5.0), 'lo': ((0.5, 25.5, -29.0), 8.0)}
+RUSH_BACK = {'left': ((4.5, 37.0, -11.5), (0.6, -1, 0.2)), 'right': ((-4.5, 37.0, -11.5), (-0.6, -1, 0.2))}
+RUSH_RISE = {'mid': 0.0, 'hi': 0.4, 'lo': -1.0}
 
 
 def rush_stance(side, where):
@@ -1229,15 +1234,15 @@ def rush_stance(side, where):
     s = 1 if side == 'left' else -1          # the left side is +x, and turning +y brings the left shoulder forward
     other = 'right' if side == 'left' else 'left'
     return {
-        'root': {'pos': (0, .6 - (.4 if where == 'lo' else 0), -1.6)},
-        'hips': {'rot': (7, 3 * s, 0)}, 'torso': {'rot': (6 + .3 * dip, 6 * s, 0)}, 'chest': {'rot': (5 + .6 * dip, 11 * s, 0)},
-        'neck': {'rot': (-7 - .3 * dip, -8 * s, 0)}, 'head': {'rot': (-9 - .5 * dip, -11 * s, 0)},
+        'root': {'pos': (0, .6 + RUSH_RISE[where], -1.6)},
+        'hips': {'rot': (11, 6 * s, 0)}, 'torso': {'rot': (8 + .3 * dip, 10 * s, 0)}, 'chest': {'rot': (6 + .6 * dip, 16 * s, 0)},
+        'neck': {'rot': (-9 - .3 * dip, -12 * s, 0)}, 'head': {'rot': (-12 - .5 * dip, -16 * s, 0)},
         side + '_arm': {'reach': ((target[0] * s, target[1], target[2]), (.5 * s, -1, 0))},
         other + '_arm': {'reach': RUSH_BACK[other]},
-        side + '_pad': {'rot': (-10, 0, -16 * s)}, other + '_pad': {'rot': (0, 0, 6 * s)},
+        side + '_pad': {'rot': (-14, 0, -20 * s)}, other + '_pad': {'rot': (0, 0, 8 * s)},
         'left_leg': {'rot': (-24, 0, -4)}, 'left_shin': {'rot': (34, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
         'right_leg': {'rot': (16, 0, 6)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (30, 0, 0)},
-        'cloth_front': {'rot': (-10, 0, 0)}, 'cloth_back': {'rot': (14, 0, 0)},
+        'cloth_front': {'rot': (-14, 0, 0)}, 'cloth_back': {'rot': (18, 0, 0)},
     }
 
 
@@ -1326,7 +1331,8 @@ def pose_table(spec):
 
 def stance_points(spec):
     """Where each fist's knuckles are in a stance (model units, soles at 0): every bone moved as the game's model moves
-    it, by its offset, then turned about its pivot, down from the root."""
+    it, by its offset, then turned about its pivot, down from the root. And where each shoulder is (the upper arm's
+    pivot, 2.58.0): what the rush's bigger arms grow from (client/stand/StandRush)."""
     table = pose_table(spec)
     world = {}
     for name, b in BONES.items():
@@ -1335,6 +1341,8 @@ def stance_points(spec):
     for side, p in KNUCKLES.items():
         q = world[side + '_hand'] @ np.array([*p, 1.0])
         out[side] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
+        q = world[side + '_arm'] @ np.array([*BONES[side + '_arm'].pivot, 1.0])
+        out[side + '_shoulder'] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
     return out
 
 

@@ -40,11 +40,17 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * <p>
  * The stand comes round to the front of its user (as for the punches) and drives its fists out left and right in turn,
  * each at the middle, high or low (the generator's rush stances), a fist every HALF seconds, each snapping out and
- * stopping dead at full stretch while the other is torn back; four afterimages of its arms alone, see-through and
- * violet, fly with it a little out of step and a little to either side, so the front is full of fists. It faces where
- * its user faces (eased a little, so a quick turn swings it round rather than jumping) and its user walks at a tenth
- * of their speed (the server's modifier) facing where the camera looks. Let go, its fists go back to the guard at once
- * and it goes back to its place soon after.
+ * stopping dead at full stretch while the other is torn back; afterimages of its arms alone, see-through and violet,
+ * fly with it a little out of step and to every side, so the front is full of fists. It faces where its user faces
+ * (eased a little, so a quick turn swings it round rather than jumping) and its user walks at a tenth of their speed
+ * (the server's modifier) facing where the camera looks. Let go, its fists go back to the guard at once and it goes
+ * back to its place soon after.
+ * <p>
+ * Since 2.58.0 (user request: "오라 러시가 더 격했으면 좋겠어 팔도 더 많아지고 오라 러시 한정으로 팔들이 조금 더 커져도
+ * 좋을듯", "러시할때 팔을 더 멀리 뻗으면 동작이 커보여서 좋을 거 같다") it is fiercer: ten afterimages instead of four, its
+ * arms (and theirs) a fifth bigger through the rush, each arm bigger still as it stretches out to its fist so that the
+ * fist goes out further every time and comes back to the size of the other, and the generator's stances wrench the
+ * body round further behind every fist and draw the other further back.
  * <p>
  * Its sound is the user's two recordings (tools/stand/cut_rush.py): the voice from the rush's start, and the blows on
  * it as loud as the rush strikes someone now, so that striking someone it is the recording with blows and striking no
@@ -58,13 +64,20 @@ public final class StandRush {
     /** Seconds: it comes round to the front; once the rush ends its fists go back to the guard, it stays a moment and goes back. */
     static final float RISE=.18f,SETTLE=.12f,LINGER=.15f,RETURN=.4f;
     /**
-     * Where it stands in front of its user (blocks along the way they face) with nobody in its way, and how far each
-     * fist drives it on. With someone in its way it stands where its fists, at full stretch, sink BITE into their near
-     * side, but never nearer its user than NEAR nor further than FAR; it closes in on that place over PLACE seconds.
+     * Where it stands in front of its user (blocks along the way they face) with nobody in its way. With someone in its
+     * way it stands where its fists, at full stretch, sink BITE into their near side, but never nearer its user than NEAR
+     * nor further than FAR; it closes in on that place over PLACE seconds. It holds that place through the barrage
+     * (2.58.0, user request: in 2.57.0 every fist drove it on 0.05 blocks and back).
      */
-    static final float AHEAD=1.05f,LUNGE=.18f,DRIVE=.05f,BITE=.15f,NEAR=.95f,FAR=2.8f;
+    static final float AHEAD=1.05f,LUNGE=.18f,BITE=.15f,NEAR=.95f,FAR=2.8f;
     /** How much higher than at rest it floats in front (blocks): less than for the punches, so its fists land on a body, not over its head. */
     static final float RAISE=.1f;
+    /**
+     * How big its arms are through the rush (2.58.0, only the rush: the punches' are their size), and how much bigger
+     * still an arm grows as it stretches out to its fist, from its shoulder: at full stretch its fist is out ARMS times
+     * (1+STRETCH) as far from the shoulder as at its size.
+     */
+    static final float ARMS=1.2f,STRETCH=.12f;
     static final double PLACE=.08;
     /** How quickly (seconds to close two thirds of the way) it turns to where its user faces. */
     static final double AIM=.06;
@@ -72,9 +85,14 @@ public final class StandRush {
     static final int[] LEFT={RUSH_L,RUSH_L_HI,RUSH_L_LO},RIGHT={RUSH_R,RUSH_R_HI,RUSH_R_LO};
     /**
      * The afterimages of its flying arms: each a little out of step with the body (seconds behind), its fists thrown
-     * in their own order, a little to its right and up (blocks) and turned (degrees), and how strongly it shows.
+     * in their own order, a little to its right and up (blocks) and turned (degrees), and how strongly it shows. Ten
+     * since 2.58.0 (four in 2.57.0), round it on every side, none above its shoulders (they hid its head), spread over
+     * a fist's time; each shows the arm striking out and fades the one drawn back (phantomShow).
      */
-    static final float[][] PHANTOMS={{.031f,.36f,.1f,9,.55f},{.057f,-.38f,.04f,-10,.5f},{.019f,-.2f,.24f,-5,.42f},{.068f,.24f,-.14f,6,.36f}};
+    static final float[][] PHANTOMS={
+        {.031f,.36f,.06f,9,.5f},{.057f,-.38f,.02f,-10,.46f},{.019f,-.22f,.12f,-5,.42f},{.068f,.24f,-.16f,6,.38f},
+        {.044f,.6f,.1f,15,.36f},{.082f,-.6f,.08f,-15,.34f},{.012f,.12f,-.3f,2,.32f},{.075f,-.14f,-.34f,-3,.3f},
+        {.05f,.52f,-.22f,13,.3f},{.025f,-.5f,-.18f,-13,.3f}};
     /** The sounds' loudness at their source (the recordings' own level, the blows' peak at -1 dB) and how far they carry. */
     static final float VOLUME=1f,CARRY=40;
     /** Ticks the sound takes to fade out once the rush stops short, and the blows to come or go as the rush strikes or stops striking. */
@@ -319,8 +337,8 @@ public final class StandRush {
         for(var e:inWay(mc,user)){float d=(float)(e.getPos().subtract(at).dotProduct(f)-e.getWidth()*.5);if(Float.isNaN(best)||d<best)best=d;}
         return best;
     }
-    /** How far ahead of the stand's feet its fists reach at full stretch (blocks, at its size 1). */
-    static float fistReach(){return StandPunch.FISTS[RUSH_L][0][0];}
+    /** How far ahead of the stand's feet its fists reach at full stretch through the rush (blocks, at its size 1): its arms at their biggest. */
+    static float fistReach(){return StandPunch.grown(RUSH_L,0,ARMS*(1+STRETCH))[0];}
 
     // ───────────────────────────── how it moves ─────────────────────────────
 
@@ -340,7 +358,14 @@ public final class StandRush {
         int from=k==0?GUARD:fist(k-1,seed),to=fist(k,seed);
         w[from]+=share*(1-s);w[to]+=share*s;
     }
-    /** How hard the fist that is going out now drives the body on (0 to 1): most as it lands. */
+    /**
+     * How big its arms are {@code t} seconds into rush {@code r} before either stretches out (1 their size): growing as
+     * it comes round to the front, back to their size as its fists go back to the guard.
+     */
+    static float armSize(Rush r,float t){return 1+(ARMS-1)*smooth(t/RISE)*(1-smooth((t-r.end())/(SETTLE+LINGER)));}
+    /** How far out arm {@code side} (the stances that throw its fist) is in these stances (0 to 1). */
+    static float out(float[] w,int[] side){float s=0;for(int i:side)s+=w[i];return s;}
+    /** How hard the fist that is going out now drives through the air (0 to 1, most as it lands): the gust through its hair. */
     static float drive(float t){if(t<=0)return 0;float u=t/HALF,f=u-(float)Math.floor(u);return (float)Math.sin(Math.PI*f*.5)*(1-smooth((f-.85f)/.15f));}
     /**
      * Seconds the rush takes to take over from a punch that shows as it starts, and a punch after it to take over from
@@ -380,7 +405,7 @@ public final class StandRush {
     }
     /**
      * The stand's shape through rush {@code r}, {@code back} seconds before this frame (null if it does not show): its
-     * stances, how far it has come round to the front, the way it faces, how far in front it stands and how it drives on.
+     * stances, how far it has come round to the front, the way it faces, how far in front it stands and how big its arms are.
      */
     static StandPunch.Shape rush(Rush r,float delta,float back,StandPunch.Shape into){
         float t=r.age(delta)-back;if(t<0)return null;
@@ -397,22 +422,32 @@ public final class StandRush {
         into.yaw=MathHelper.lerpAngleDegrees(MathHelper.clamp(delta,0,1),r.prevAim,r.aim);
         into.ahead=AHEAD;into.side=0;into.raise=RAISE;
         float on=1-smooth((t-end)/SETTLE);
-        into.lunge=r.prevPlace+(r.place-r.prevPlace)*MathHelper.clamp(delta,0,1)-AHEAD+DRIVE*drive(t)*on;
-        into.gust=(.75f+.25f*drive(t))*on;
+        into.lunge=r.prevPlace+(r.place-r.prevPlace)*MathHelper.clamp(delta,0,1)-AHEAD;
+        into.gust=(.95f+.25f*drive(t))*on;
         into.ghost=0;
+        // its arms bigger, each bigger still as far as it is out (let go: as far as it still is, turning back)
+        float size=armSize(r,t),left=0,right=0;
+        for(int i:LEFT)left+=into.share(i);for(int i:RIGHT)right+=into.share(i);
+        into.armL=size*(1+STRETCH*left);into.armR=size*(1+STRETCH*right);
         return into;
     }
     /**
-     * Afterimage {@code i} of the stand's flying arms this frame: its stances into {@code w}, and how strongly it shows
-     * (0 when it does not). It throws its own fists a little behind the body's, while the rush is on and the stand in front.
+     * Afterimage {@code i} of the stand's flying arms this frame: its stances and its arms' sizes into {@code into}, and
+     * how strongly it shows (0 when it does not). It throws its own fists a little behind the body's, while the rush is
+     * on and the stand in front, its arms as big as the body's and as much bigger as each is out.
      */
-    public static float phantom(UUID id,int i,float delta,float[] w){
+    public static float phantom(UUID id,int i,float delta,dev.sangwoo.celestialfall.stand.StarPlatinumLook into){
         var r=RUSHES.get(id);if(r==null||i>=PHANTOMS.length)return 0;
         float t=r.age(delta),show=phantomAlpha(r,i,t);if(show<=0)return 0;
-        java.util.Arrays.fill(w,0);
+        var w=into.weights;java.util.Arrays.fill(w,0);
         barrage(t-PHANTOMS[i][0],phantomSeed(r,i),w,1);
+        float size=armSize(r,t),left=out(w,LEFT),right=out(w,RIGHT);
+        into.armL=size*(1+STRETCH*left);into.armR=size*(1+STRETCH*right);
+        into.showL=phantomShow(left);into.showR=phantomShow(right);
         return show;
     }
+    /** How strongly an afterimage's arm shows as far out as it is (0 drawn back, 1 at full stretch): it strikes out and fades as it is drawn back. */
+    static float phantomShow(float out){return smooth(out);}
     /** How strongly afterimage {@code i} shows {@code t} seconds into rush {@code r}: once the stand has come round, until the rush ends. */
     static float phantomAlpha(Rush r,int i,float t){return smooth((t-RISE)/.08f)*(1-smooth((t-r.end())/.08f))*PHANTOMS[i][4];}
     /** Afterimage {@code i}'s place this frame: beside the body where it stands (to its right and up, blocks) and turned a little. */

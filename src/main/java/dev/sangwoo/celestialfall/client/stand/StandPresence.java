@@ -133,8 +133,9 @@ public final class StandPresence {
             // frame, so the afterimages of the main body below keep its pose)
             for(int i=0;i<StandRush.phantoms();i++){
                 var ph=s.phantom(i,mc);var pl=ph.look;pl.set(look);
-                float a=StandRush.phantom(p.getUuid(),i,delta,pl.weights)*look.alpha;
+                float a=StandRush.phantom(p.getUuid(),i,delta,pl)*look.alpha;
                 if(a<.02f)continue;
+                // (its stances, its arms' sizes and how strongly each arm shows: StandRush.phantom)
                 java.util.Arrays.fill(pl.under,0);pl.over=1;
                 pl.armsOnly=true;pl.alpha=a;pl.red=.66f;pl.green=.54f;pl.blue=1;pl.shadow=0;pl.glow=0;
                 var b=StandRush.phantomBody(s.body,i);

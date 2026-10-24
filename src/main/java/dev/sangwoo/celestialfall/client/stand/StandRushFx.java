@@ -24,20 +24,24 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.GUARD;
  * lands in a small spiky burst; the front of the barrage is a flickering haze of violet light, with streaks of air
  * shooting on ahead out of it and rings of pressure running out along it; whoever a blow strikes bursts with light where
  * it lands (a little elsewhere on them each time), sprays light out of their back and lights the world round them, and
- * a blow on a guard throws its sparks aside. Every effect is a function of the rush's clock.
+ * a blow on a guard throws its sparks aside. Every effect is a function of the rush's clock. Since 2.58.0 the fists
+ * are where the rush's bigger arms put them (StandRush.ARMS: out further, stretching further still to each blow), with
+ * light as much bigger, and ten afterimages throw theirs.
  */
 public final class StandRushFx {
     /** A fist's burst lasts this long after it lands, and a blow's light on whom it struck (seconds). */
     static final float FIST=.1f,BLOW=.22f;
     /** How big the body's fists' light is, and its afterimages' (a share of that). */
     static final float SIZE=.55f,PHANTOM=.6f;
-    /** Where the barrage's front is, from the stand's feet (blocks ahead and up, at its size 1): where its fists stop. */
-    static final float FRONT_AHEAD=1.1f,FRONT_UP=1.45f;
+    /** Where the barrage's front is, from the stand's feet (blocks ahead and up, at its size 1): where its fists stop (further out since 2.58.0, its arms bigger). */
+    static final float FRONT_AHEAD=1.35f,FRONT_UP=1.45f;
     /** This frame's rushes near the camera: the rush, its clock, where the stand stands (null if it is not drawn) and the way it faces. */
     record Shown(UUID user,StandRush.Rush rush,float t,StandPresence.Body body,float yaw){
         int seed(){return rush.seed();}
         /** How much the barrage is on now (0 to 1): in once the stand has come round, out as it ends. */
         float on(){return Ease.smooth(t,StandRush.RISE*.6f,StandRush.RISE)*(1-Ease.smooth(t,rush.ends(),rush.ends()+.08f));}
+        /** How big its arms are now before they stretch out (StandRush.armSize): the body's and its afterimages'. */
+        float arms(){return StandRush.armSize(rush,t);}
     }
     /** A fist where it is now (from where it was drawn back to where it stops), how far through its strike, and when it lands. */
     record Fist(Vec3d from,Vec3d at,Vec3d stop,float strike,float lands,int k){}
@@ -65,14 +69,17 @@ public final class StandRushFx {
 
     /** The barrage's front, where the stand stands now. */
     static Vec3d front(StandPresence.Body b){return b.at().add(way(b.yaw()).multiply(FRONT_AHEAD*b.scale())).add(0,FRONT_UP*b.scale(),0);}
-    /** Fist {@code k}'s knuckles (from 0: left and right in turn) at full stretch, and drawn back as the one before it lands. */
-    static float[] stretched(int k,int seed){return StandPunch.FISTS[StandRush.fist(k,seed)][k&1];}
-    static float[] drawn(int k,int seed){return StandPunch.FISTS[k==0?GUARD:StandRush.fist(k-1,seed)][k&1];}
-    /** The fist striking {@code u} seconds into a barrage (the body's, or an afterimage's on its own clock) on body {@code b}, null if none is. */
-    static Fist fist(StandPresence.Body b,float u,float end,int seed){
+    /**
+     * Fist {@code k}'s knuckles (from 0: left and right in turn) at full stretch, its arm {@code arms} times its size and
+     * stretched out further still (StandRush.STRETCH), and drawn back as the one before it lands.
+     */
+    static float[] stretched(int k,int seed,float arms){return StandPunch.grown(StandRush.fist(k,seed),k&1,arms*(1+StandRush.STRETCH));}
+    static float[] drawn(int k,int seed,float arms){return StandPunch.grown(k==0?GUARD:StandRush.fist(k-1,seed),k&1,arms);}
+    /** The fist striking {@code u} seconds into a barrage (the body's, or an afterimage's on its own clock) on body {@code b}, its arms {@code arms} times their size, null if none is. */
+    static Fist fist(StandPresence.Body b,float u,float end,int seed,float arms){
         if(u<=0||u>end)return null;
         int k=(int)Math.floor(u/StandRush.HALF);float s=StandRush.smooth(u/StandRush.HALF-k);
-        Vec3d from=on(drawn(k,seed),b),stop=on(stretched(k,seed),b);
+        Vec3d from=on(drawn(k,seed,arms),b),stop=on(stretched(k,seed,arms),b);
         return new Fist(from,from.lerp(stop,s),stop,s,(k+1)*StandRush.HALF,k);
     }
 
@@ -86,8 +93,8 @@ public final class StandRushFx {
                 float lands=landed(s.t,j);if(lands<0||lands>s.rush.ends())continue;
                 float u=(s.t-lands)/FIST;if(u<0||u>=1)continue;
                 int k=Math.round(lands/StandRush.HALF)-1;
-                var p=on(stretched(k,s.seed()),s.body);float a=(float)Math.pow(1-u,.7)*s.on();
-                burst(m,p,SIZE*.62*s.body.scale()*(.75+.25*Ease.out(u,0,.4f))*1.14,.36,8,s.seed()+k*7,INK,INK,.62f*a,.62f*a);
+                var p=on(stretched(k,s.seed(),s.arms()),s.body);float a=(float)Math.pow(1-u,.7)*s.on();
+                burst(m,p,SIZE*s.arms()*.62*s.body.scale()*(.75+.25*Ease.out(u,0,.4f))*1.14,.36,8,s.seed()+k*7,INK,INK,.62f*a,.62f*a);
             }
             for(var hit:hits(s)){
                 float a=hit.alpha();if(a<=0)continue;
@@ -115,8 +122,8 @@ public final class StandRushFx {
      * seconds burst where they stopped, a ring of air round each.
      */
     static void fists(EffectMesh m,Shown s,StandPresence.Body b,float u,int seed,float size,float alpha){
-        float end=s.rush.ends(),sz=SIZE*size*b.scale();
-        var f=fist(b,u,end,seed);
+        float end=s.rush.ends(),arms=s.arms(),sz=SIZE*size*arms*b.scale();
+        var f=fist(b,u,end,seed,arms);
         if(f!=null){
             float a=alpha*Ease.smooth(f.strike,.05f,.3f);
             Vec3d along=f.at.subtract(f.from);
@@ -133,7 +140,7 @@ public final class StandRushFx {
             float lands=landed(u,j);if(lands<0||lands>end)continue;
             float v=(u-lands)/FIST;if(v<0||v>=1)continue;
             int k=Math.round(lands/StandRush.HALF)-1;
-            var p=on(stretched(k,seed),b);float a=alpha*(float)Math.pow(1-v,.7)*Ease.smooth(u-lands,0,.012f);
+            var p=on(stretched(k,seed,arms),b);float a=alpha*(float)Math.pow(1-v,.7)*Ease.smooth(u-lands,0,.012f);
             double rad=sz*.62*(.75+.25*Ease.out(v,0,.4f));
             burst(m,p,rad,.36,8,seed+k*7,LILAC,VIOLET,.82f*a,.72f*a);
             m.softDisc(p,rad*.9,BLUE,.32f*a);m.softDisc(p,rad*.32+.02,WHITE,.6f*a*(1-v));

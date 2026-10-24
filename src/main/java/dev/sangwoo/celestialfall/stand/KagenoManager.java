@@ -334,7 +334,7 @@ public final class KagenoManager {
     /** Whether one of the player's R casts still holds his actions ({@link KagenoRules#rWalking}): the slowdown lasts that long, not as long as R's effects. */
     private static boolean rWalking(ServerPlayerEntity p){for(var c:CASTS.values())if(c.player==p&&c.skill==R&&KagenoRules.rWalking(c.age()))return true;return false;}
     private static boolean eWalking(ServerPlayerEntity p){for(var c:CASTS.values())if(c.player==p&&c.skill==E&&KagenoRules.eWalking(c.age()))return true;return false;}
-    /** E's caster walks at a twentieth of his speed while its thrusts go (2.57.0), the way R's walks at half. */
+    /** E's caster walks at a fifth of his speed while its thrusts go (2.57.0; a twentieth until 2.58.0), the way R's walks at half. */
     private static void eSlow(ServerPlayerEntity p,boolean active){
         var attr=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null)return;
         if(!active){attr.removeModifier(E_SLOW);return;}
