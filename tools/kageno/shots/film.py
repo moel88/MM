@@ -163,7 +163,8 @@ def rush_line(t):
     blows, on = int(r['rush_blows'] or 0), r['rush_on'] == '1'
     if blows or on: parts.append(f'러시 {blows}타' + ('' if on else ' (끝)'))
     full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
-    if r['dummy_health'] and full: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f} / {full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
+    # FILM_RUSH_DUMMY=0: the shot's dummy is put away (nobody in the rush's way), so its health is not shown
+    if r['dummy_health'] and full and os.environ.get('FILM_RUSH_DUMMY') != '0': parts.append(f'더미 체력 {float(r["dummy_health"]):.0f} / {full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
     speed = walking(t)
     if speed is not None and speed > .05: parts.append(f'걷는 속도 초당 {speed:.2f}블록')
     return (' · '.join(parts), (255, 255, 255)) if parts else (None, None)
