@@ -45,9 +45,11 @@ public abstract class GameRendererMixin {
         dev.sangwoo.celestialfall.client.StandClient.redrawOutlines();
         dev.sangwoo.celestialfall.client.atomic.AtomicAmbience.letterbox(delta);
         AnimePostProcessor.render(delta);
+        // Star Platinum's time stop (2.67.0): for whom it stopped, the frame of the moment it stopped, held
+        dev.sangwoo.celestialfall.client.stand.TimeStopView.post(delta);
     }
     @Inject(method="close",at=@At("HEAD"))
-    private void celestialfall$release(CallbackInfo ci) { AnimePostProcessor.release();dev.sangwoo.celestialfall.client.vfx.FxLayer.release(); }
+    private void celestialfall$release(CallbackInfo ci) { AnimePostProcessor.release();dev.sangwoo.celestialfall.client.vfx.FxLayer.release();dev.sangwoo.celestialfall.client.stand.TimeStopView.release(); }
     @Inject(method="getViewDistance",at=@At("RETURN"),cancellable=true)
     private void celestialfall$wideFog(CallbackInfoReturnable<Float> cir) {
         if(dev.sangwoo.celestialfall.client.HeavenClient.wideCinematic())

@@ -25,7 +25,9 @@ public abstract class LivingCombatMixin {
     }
     @Inject(method="takeKnockback",at=@At("HEAD"),cancellable=true)
     private void botand$noEarlyKnockback(double strength,double x,double z,CallbackInfo ci) {
-        if(CombatManager.suppressKnockback((LivingEntity)(Object)this))ci.cancel();
+        if(CombatManager.suppressKnockback((LivingEntity)(Object)this)){ci.cancel();return;}
+        // stopped in Star Platinum's stopped time (2.67.0): it comes to them as time moves again
+        if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferKnockback((LivingEntity)(Object)this,strength,x,z))ci.cancel();
     }
     @ModifyVariable(method="damage",at=@At("HEAD"),argsOnly=true)
     private float botand$shadowMark(float amount){return dev.sangwoo.celestialfall.stand.KagenoManager.incomingDamage((LivingEntity)(Object)this,amount);}
@@ -34,6 +36,9 @@ public abstract class LivingCombatMixin {
         if((Object)this instanceof ServerPlayerEntity p && dev.sangwoo.celestialfall.AtomicManager.invulnerable(p) && !source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)){cir.setReturnValue(false);return;}
         // Star Platinum's beatdown's cutscene (2.64.0): nothing but its own blows harms its user or the one struck
         if(dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
+        // stopped in Star Platinum's stopped time (2.67.0): the harm is kept and comes to them all at once as time moves
+        // again (the blow counts as landed now)
+        if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.defer((LivingEntity)(Object)this,source,amount)){cir.setReturnValue(true);return;}
         if((Object)this instanceof ServerPlayerEntity p && CombatManager.block(p,source,amount))cir.setReturnValue(false);
     }
     @Inject(method="damage",at=@At("RETURN"))

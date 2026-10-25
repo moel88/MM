@@ -36,7 +36,11 @@
     "AtomicFogMixin",
     "AtomicLightMixin",
     "ImmersiveNetworkClientMixin",
-    "PlayerListHudMixin"
+    "PlayerListHudMixin",
+    "SoundManagerAccess",
+    "SoundSystemAccess",
+    "TimeStopSoundMixin",
+    "TimeStopWorldMixin"
   ],
   "injectors": {
     "defaultRequire": 1

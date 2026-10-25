@@ -116,8 +116,8 @@ public final class HitStun {
     public static void attackerDamaged(LivingEntity entity) {
         if(entity.getWorld().isClient)return;
         // a stand user struck lets go of whom the punches hold, and the combo stops (2.54.0), and the rush (2.57.0), and
-        // the inhale lets go of whom it holds (2.61.0)
-        if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);}
+        // the inhale lets go of whom it holds (2.61.0), and the time stop's call is cut short (2.67.0)
+        if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);}
         if(!OWNED.containsKey(entity.getUuid()))return;
         releaseOwned(entity.getUuid());CombatManager.interrupt(entity);
     }

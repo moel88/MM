@@ -19,6 +19,7 @@ public abstract class KeyboardMixin {
         if(dev.sangwoo.celestialfall.client.stand.StandAttack.fingerKey(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownKey(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.stand.StandInhale.key(window,key,action,modifiers)){ci.cancel();return;}
+        if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.key(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.StandClient.key(window,key,action,modifiers)){ci.cancel();return;}
         CombatClient.dashKey(window,key,scanCode,action);
     }

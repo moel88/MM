@@ -91,6 +91,8 @@ public final class KagenoManager {
         if(e instanceof PlayerEntity p&&AtomicManager.immobilized(p))return true;
         // Star Platinum's beatdown's cutscene holds its user and the one struck where they are (2.64.0)
         if(StarPlatinumBeatdown.involved(e))return true;
+        // Star Platinum's time stop (2.67.0) holds its user as they call it, and whom it stopped until time moves again
+        if(StarPlatinumTimeStop.holds(e))return true;
         for(var c:CASTS.values())if(c.world==e.getWorld()&&(KagenoRules.frozen(c.skill,c.age())&&((c.player==e&&c.skill!=R)||c.targets.containsKey(e))||KagenoRules.trapped(c.skill,c.age())&&c.targets.containsKey(e)))return true;
         return false;
     }
@@ -281,7 +283,8 @@ public final class KagenoManager {
             if(s!=null){long now=c.world.getTime();int n=KagenoRules.hits(c.skill,age);s.hits=now-s.lastHit>50?n:s.hits+n;s.lastHit=now;
                 if(ServerPlayNetworking.canSend(c.player,HITS)){var b=PacketByteBufs.create();b.writeVarInt(s.hits);ServerPlayNetworking.send(c.player,HITS,b);}}
             // Attacker-side hit feedback (red cumulative number and blood), as in the review's dummy demos.
-            if(ServerPlayNetworking.canSend(c.player,DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat((float)(amount*multiplier));b.writeFloat(c.strikeYaw());ServerPlayNetworking.send(c.player,DAMAGE,b);}
+            // (one stopped in Star Platinum's stopped time: shown as time moves again, with all that came to them, 2.67.0)
+            if(!StarPlatinumTimeStop.deferFeedback(c.player,e,(float)(amount*multiplier),c.strikeYaw())&&ServerPlayNetworking.canSend(c.player,DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat((float)(amount*multiplier));b.writeFloat(c.strikeYaw());ServerPlayNetworking.send(c.player,DAMAGE,b);}
             if((c.skill==T||c.skill==RUSH&&age<RUSH_FINISH)&&c.targets.putIfAbsent(e,e.getPos())==null)CombatManager.interrupt(e);
             // Overdrive: +0.01 damage multiplier per skill hit, a little more time, and the shadow mark
             // (lasting as long as the overdrive itself).

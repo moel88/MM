@@ -265,6 +265,32 @@ public final class StarPlatinumRules {
     /** When the inhale is ready again once it ended at {@code end}. */
     public static long inhaleReady(long end){return end+INHALE_COOLDOWN;}
 
+    // ---- H, the time stop (2.67.0, user request: "이제 H시간 정지를 만들자 시간 정지 시간은 5초고 시간 정지를 하면 당한
+    // 사람은 시전자도 멈춰보이고 전부 멈춰보이고 풀려야 다시 보여 시간정지 상태일때 적을 때리면 시간 정지 상태가 끝나야
+    // 넣었던 데미지가 모두 들어가 소리 보내줄게 하나는 시전할때 소리 하나는 끝날때 소리"): with the stand out, H makes it
+    // shout "Star Platinum: The World!" (the user's first recording, its user held where they stand), and as the shout
+    // ends (TS_WIND) time stops for TS_LENGTH ticks for every living thing within TS_RANGE blocks but its user
+    // (StarPlatinumTimeStop): they stand stopped, and what befalls them comes to them all at once as time moves again,
+    // as "toki wa ugoki dasu" (the user's second recording) ends. Its cooldown runs from then (2.44.0's rule).
+
+    /**
+     * Ticks from H: its sound starts a tick on (as every skill's does), and time stops TS_WIND ticks in, where the shout
+     * ends and the sound of time stopping begins, 38 ticks into the sound (tools/stand/cut_timestop.py).
+     */
+    public static final int TS_SOUND=1,TS_WIND=TS_SOUND+38;
+    /** How long time stays stopped (ticks: five seconds, "시간 정지 시간은 5초"). */
+    public static final int TS_LENGTH=100;
+    /** Ticks before time moves again that "toki wa ugoki dasu" starts: it ends (1.275 s in) as time moves. */
+    public static final int TS_RESUME_LEAD=26;
+    /** How far from its user time stops (blocks). */
+    public static final double TS_RANGE=50;
+    /** Its cooldown once time moves again (ticks: a minute). */
+    public static final int TS_COOLDOWN=1200;
+    /** Seconds after time stops that the rush of its sound drops away into a low hum (2.880 s into the recording): the stopped world settles. */
+    public static final float TS_SETTLE=.935f;
+    /** When the time stop is ready again once time moved again (or its call was cut short) at {@code end}. */
+    public static long timeStopReady(long end){return end+TS_COOLDOWN;}
+
     /** Whether a blow of the rush lands {@code age} ticks into it. */
     public static boolean rushBlow(long age){return age>=RUSH_FIRST&&age<=RUSH_LAST&&(age-RUSH_FIRST)%RUSH_EVERY==0;}
     /** How many of the rush's blows have landed by {@code age} ticks into it (that one too). */

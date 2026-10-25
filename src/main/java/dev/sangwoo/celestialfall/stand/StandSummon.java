@@ -41,10 +41,11 @@ public final class StandSummon {
     /**
      * Q: out if it is in and the user may have it out, in if it is out. Returns whether it is out now. Not while its
      * user is incapacitated (2.60.0: their guard broken or struck by a Star Finger; their client sends no Q then either),
-     * nor while a beatdown's cutscene has them (2.64.0: its user's stand goes in and comes out as the cutscene has it).
+     * nor while a beatdown's cutscene has them (2.64.0: its user's stand goes in and comes out as the cutscene has it),
+     * nor while they call a time stop, stop time or stand stopped in it (2.67.0).
      */
     public static boolean toggle(ServerPlayerEntity p){
-        if(dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)||StarPlatinumBeatdown.involved(p))return out(p);
+        if(dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)||StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.active(p)||StarPlatinumTimeStop.holds(p))return out(p);
         boolean out=!out(p)&&canBeOut(p);
         ((StandHolder)p).botand$setStandOut(out);
         return out;

@@ -113,7 +113,8 @@ public final class StarPlatinumInhale {
 
     /** Y goes down: the inhale starts if it may. Returns whether it starts (now, or once the rush's fists are back). */
     public static boolean start(ServerPlayerEntity p){
-        if(!StarPlatinumAttack.able(p)||held(p))return false;
+        // (not in its user's own stopped time, 2.67.0: whom it would catch stand stopped where they are)
+        if(!StarPlatinumAttack.able(p)||held(p)||StarPlatinumTimeStop.stopping(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(s.on||now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         // the heavy punch and the Star Finger are not cut off: it waits for them to be over, and starts then if Y is still down
@@ -173,7 +174,7 @@ public final class StarPlatinumInhale {
             Vec3d d=e.getPos().subtract(at);
             if(!inhaleLane(d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&(!world.getServer().isPvpEnabled()||!p.shouldDamagePlayer(other)||other instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
-            if(held(e))continue;
+            if(held(e)||StarPlatinumTimeStop.stopped(e))continue;
             Long last=s.guards.get(e.getUuid());
             // a guard holds it off: heard and seen the first tick it does, seen again every so often while it goes on doing so
             if(CombatManager.guardTakes(e,at,last==null)){

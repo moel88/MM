@@ -39,11 +39,11 @@ public final class CooldownHud {
      * the status arrives (late by the ping) marks a rest; the combo's own rhythm stays off the list.
      */
     private static final int COMBO_END=14;
-    /** The dash's place in the list (after the stand's skill slots), then Star Platinum's punches' rest (2.54.0), its rush (2.57.0), its heavy punch (2.59.0), its Star Finger (2.60.0), its inhale (2.61.0) and its beatdown (2.64.0). */
-    static final int DASH=10,PUNCHES=11,BARRAGE=12,HEAVY=13,FINGER=14,INHALE=15,BEATDOWN=16;
+    /** The dash's place in the list (after the stand's skill slots), then Star Platinum's punches' rest (2.54.0), its rush (2.57.0), its heavy punch (2.59.0), its Star Finger (2.60.0), its inhale (2.61.0), its beatdown (2.64.0) and its time stop (2.67.0). */
+    static final int DASH=10,PUNCHES=11,BARRAGE=12,HEAVY=13,FINGER=14,INHALE=15,BEATDOWN=16,TIME_STOP=17;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     private static CooldownList.Metrics metrics;private static long metricsKey;
@@ -55,7 +55,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=0;atomic=false;owner=null;world=null;}
     /** The names the list shows now, top first (for the QA tools). */
     public static java.util.List<String> shown(){return LIST.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
 
@@ -105,6 +105,9 @@ public final class CooldownHud {
         // its beatdown (2.64.0): from when its blow is over, or its cutscene (the server's ready tick, told with its punches' news)
         long beatdown=dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
         if(beatdown!=beatdownSeen){show(BEATDOWN,beatdownName(),beatdown-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN_COOLDOWN,now);beatdownSeen=beatdown;}
+        // its time stop (2.67.0): from when time moves again, or its call was cut short (the server's ready tick, told as it ends)
+        long timeStop=dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
+        if(timeStop!=timeStopSeen){show(TIME_STOP,timeStopName(),timeStop-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.TS_COOLDOWN,now);timeStopSeen=timeStop;}
         LIST.update(now);
     }
     /**
@@ -129,6 +132,8 @@ public final class CooldownHud {
     private static String inhaleName(){return "흡입";}
     /** Its beatdown's name in the list (the user's word for it). */
     private static String beatdownName(){return "비트다운";}
+    /** Its time stop's name in the list (the user's word for it). */
+    private static String timeStopName(){return "시간 정지";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */
     private static String name(int slot,UUID me){
         if(slot!=T)return NAMES[slot];

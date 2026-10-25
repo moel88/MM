@@ -122,6 +122,8 @@ public final class CombatManager {
      */
     public static void incapacitate(LivingEntity target,int ticks,int slowTicks,double slow) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
+        // stopped in Star Platinum's stopped time (2.67.0): it comes to them as time moves again
+        if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferIncapacitate(target,ticks,slowTicks,slow))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.incapacitate(ticks,slowTicks,slow);return;}
         if(!(target instanceof ServerPlayerEntity p)) {
             var attr=target.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null||slowTicks<=0)return;
@@ -134,7 +136,7 @@ public final class CombatManager {
         s.incapacitate(now,ticks,slowTicks,slow);
         HitStun.releaseOwned(p.getUuid());
         dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
-        dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);
+        dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);
         dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);
         p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
         speed(p,s,now);sync(p,s);

@@ -191,7 +191,8 @@ public final class StarPlatinumAttack {
      * just after the rush it starts once the rush's fists are back in the guard. Returns whether it starts (now or then).
      */
     public static boolean beatdown(ServerPlayerEntity p){
-        if(!able(p))return false;
+        // (not in its user's own stopped time, 2.67.0: whom it would strike stand stopped, and its cutscene is not of stopped time)
+        if(!able(p)||StarPlatinumTimeStop.stopping(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(skill(s.combo)&&now<s.start+LENGTH[s.combo])return false;
         if(now<s.beatdownReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
@@ -301,7 +302,8 @@ public final class StarPlatinumAttack {
             if(!lane(combo,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&(!world.getServer().isPvpEnabled()||!p.shouldDamagePlayer(other)))continue;
             // (the beatdown's blow passes by whoever is in a cutscene already, its own or another's)
-            if(beat&&(StarPlatinumBeatdown.involved(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
+            // (nor by whoever stands stopped in a time stop, 2.67.0)
+            if(beat&&(StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
             way.add(e);
         }
         // the Star Finger's fingers end in the first body they meet: the nearest one in their way (to its near side); the
@@ -339,14 +341,19 @@ public final class StarPlatinumAttack {
                 HitStun.release(e.getUuid());
             }else if(big){
                 HitStun.release(e.getUuid());
-                e.setVelocity(f.multiply(heavy?FLY_HEAVY:FLY).add(0,heavy?FLY_HEAVY_UP:FLY_UP,0));e.velocityModified=true;
-                // the heavy punch tells a struck player's client of it once, through the tracker (velocityModified):
-                // the finisher sends it here as well, a tick before the tracker does, and a client that moves between
-                // the two is thrown twice (2.56.0's check: 11 or 20 blocks)
-                if(!heavy&&e instanceof ServerPlayerEntity other)other.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(other));
+                Vec3d fly=f.multiply(heavy?FLY_HEAVY:FLY).add(0,heavy?FLY_HEAVY_UP:FLY_UP,0);
+                // one stopped in a time stop (2.67.0) is thrown as time moves again, with whatever else came to them
+                if(!StarPlatinumTimeStop.deferLaunch(e,fly)){
+                    e.setVelocity(fly);e.velocityModified=true;
+                    // the heavy punch tells a struck player's client of it once, through the tracker (velocityModified):
+                    // the finisher sends it here as well, a tick before the tracker does, and a client that moves between
+                    // the two is thrown twice (2.56.0's check: 11 or 20 blocks)
+                    if(!heavy&&e instanceof ServerPlayerEntity other)other.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(other));
+                }
             }else HitStun.standHold(p,e,combo,now+hold(combo));
-            // the user's own hit feedback (the damage number and the blood), as Kageno's
-            if(ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(DAMAGE[combo]);b.writeFloat(s.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);}
+            // the user's own hit feedback (the damage number and the blood), as Kageno's (on one stopped in a time stop,
+            // as time moves again with all that came to them, 2.67.0)
+            if(!StarPlatinumTimeStop.deferFeedback(p,e,DAMAGE[combo],s.yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(DAMAGE[combo]);b.writeFloat(s.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);}
         }
         // (the heavy punch's and the Star Finger's own sounds carry their blows: StandAttack plays them on every client)
         if(!struck.isEmpty()){

@@ -1399,6 +1399,34 @@ POSES = {
         'right_leg': {'rot': (66, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (54, 0, 0)},
         'cloth_front': {'rot': (-30, 0, 0)}, 'cloth_back': {'rot': (38, 0, 0)}, 'cloth_back_1': {'rot': (20, 0, 0)},
     },
+    # ---- H, the time stop (2.67.0, user request: "이제 H시간 정지를 만들자 시간 정지 시간은 5초고"): as its user shouts
+    # "Star Platinum: The World!" the stand comes round in front of them and gathers itself, hunched, the fists clenched
+    # together in front of its belly and the elbows flared out wide, the shoulders hunched up, the head down, the knees
+    # drawn up ('world_gather'); as the shout ends it flings itself open, the arms out wide to either side and down from
+    # the shoulders, the fists clenched, the chest thrown out and the head up, the legs apart, and holds it as time stops
+    # round it ('world'), client/stand/StandTimeStop. Both read from behind, where the game's camera is.
+    'world_gather': {
+        'root': {'pos': (0, 2.4, 0.6)},
+        'hips': {'rot': (6, 0, 0)}, 'torso': {'rot': (10, 0, 0)}, 'chest': {'rot': (9, 0, 0)},
+        'neck': {'rot': (3, 0, 0)}, 'head': {'rot': (11, 0, 0)},
+        'left_arm': {'reach': ((4.5, 27.0, -9.0), (1, -.25, .1))},
+        'right_arm': {'reach': ((-4.5, 27.0, -9.0), (-1, -.25, .1))},
+        'left_pad': {'rot': (0, 0, -18)}, 'right_pad': {'rot': (0, 0, 18)},
+        'left_leg': {'rot': (-22, 0, -8)}, 'left_shin': {'rot': (44, 0, 0)}, 'left_foot': {'rot': (26, 0, 0)},
+        'right_leg': {'rot': (-8, 0, 8)}, 'right_shin': {'rot': (36, 0, 0)}, 'right_foot': {'rot': (24, 0, 0)},
+        'cloth_front': {'rot': (-8, 0, 0)}, 'cloth_back': {'rot': (10, 0, 0)},
+    },
+    'world': {
+        'root': {'pos': (0, 3.2, 0.4)},
+        'hips': {'rot': (-5, 0, 0)}, 'torso': {'rot': (-7, 0, 0)}, 'chest': {'rot': (-12, 0, 0)},
+        'neck': {'rot': (-5, 0, 0)}, 'head': {'rot': (-12, 0, 0)},
+        'left_arm': {'reach': ((21.5, 28.5, -5.5), (0, -1, .45))},
+        'right_arm': {'reach': ((-21.5, 28.5, -5.5), (0, -1, .45))},
+        'left_pad': {'rot': (6, 0, -26)}, 'right_pad': {'rot': (6, 0, 26)},
+        'left_leg': {'rot': (-12, 0, -20)}, 'left_shin': {'rot': (26, 0, 0)}, 'left_foot': {'rot': (22, 0, 0)},
+        'right_leg': {'rot': (6, 0, 20)}, 'right_shin': {'rot': (30, 0, 0)}, 'right_foot': {'rot': (24, 0, 0)},
+        'cloth_front': {'rot': (-22, 0, 0)}, 'cloth_back': {'rot': (24, 0, 0)},
+    },
 }
 
 

@@ -20,6 +20,8 @@ public final class KagenoRenderer {
     public static void render(WorldRenderContext c){
         // R's gray world goes on before the effects are drawn, so the cuts and the caster's outline keep their colour.
         AnimePostProcessor.renderMonochromeWorld(c.tickDelta());
+        // Star Platinum's stopped world too (2.67.0): its punches keep their colour in it
+        dev.sangwoo.celestialfall.client.stand.TimeStopView.world(c);
         var mc=MinecraftClient.getInstance();if(mc.world==null||!MapClient.enabled())return;
         var matrices=c.matrixStack();var camera=c.camera().getPos();float delta=c.tickDelta();
         var view=new org.joml.Matrix4f(matrices.peek().getPositionMatrix());

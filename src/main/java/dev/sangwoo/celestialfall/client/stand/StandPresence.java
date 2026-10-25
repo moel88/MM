@@ -117,6 +117,8 @@ public final class StandPresence {
                 // where they start, from the look the last one had got to there (its punches' stances too), so nothing jumps
                 s.look(ticks-1,trail);s.punch(p,0,0,trail,punchShape);s.from.set(trail);s.hasFrom=true;s.out=out;s.since=ticks-1;
             }
+            // its user stopped in a time stop (2.67.0): it stands as it stood, neither following nor stirring
+            if(StandTimeStop.stopped(p))continue;
             s.follow(p);s.puppet.age++;
         }
         ALL.values().removeIf(s->!seenNow.contains(s.entity)||!s.out&&StandTimeline.gone((ticks-1-s.since)/20f));
@@ -131,7 +133,18 @@ public final class StandPresence {
         for(var s:ALL.values()){
             s.drawn=false;
             if(!(mc.world.getEntityById(s.entity) instanceof PlayerEntity p)||p.isInvisible())continue;
+            // its user stopped in a time stop (2.67.0): it stands as it stood on the last frame drawn before, nothing of
+            // it stirring (its look, its place, and that frame's moment)
+            if(StandTimeStop.stopped(p)&&s.heldAt!=null){
+                var look=s.puppet.look;look.set(s.held);s.puppet.place(s.heldAt,s.heldYaw);
+                s.body=new Body(s.heldAt,s.heldYaw,look.scale);s.bodyFrame=frames;
+                if(look.alpha<.003f||c.frustum()!=null&&!c.frustum().isVisible(s.puppet.getBoundingBox().expand(1.2)))continue;
+                s.drawn=true;
+                dispatcher.render(s.puppet,s.heldAt.x-cam.x,s.heldAt.y-cam.y,s.heldAt.z-cam.z,s.heldYaw,s.heldDelta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,s.heldDelta));
+                continue;
+            }
             var look=s.puppet.look;var shape=s.place(p,delta,look);
+            s.held.set(look);s.heldAt=s.puppet.getPos();s.heldYaw=s.puppet.getYaw();s.heldDelta=delta;
             s.body=new Body(s.puppet.getPos(),s.puppet.getYaw(),look.scale);s.bodyFrame=frames;
             if(look.alpha<.003f)continue;
             if(c.frustum()!=null&&!c.frustum().isVisible(s.puppet.getBoundingBox().expand(1.2)))continue;
@@ -185,6 +198,8 @@ public final class StandPresence {
         var bearers=new ArrayList<StandAuraLayer.Bearer>();float flare=0;
         for(var s:ALL.values()){
             if(!(mc.world.getEntityById(s.entity) instanceof PlayerEntity p)||p.isInvisible())continue;
+            // (none round one stopped in a time stop, 2.67.0: its flames would stir)
+            if(StandTimeStop.stopped(p))continue;
             var look=s.puppet.look;float k=auraOf(look);
             if(k<.01f)continue;
             if(s.drawn)bearers.add(new StandAuraLayer.Bearer(s.puppet,StandAuraLayer.STAND,k));
@@ -218,6 +233,8 @@ public final class StandPresence {
         /** The look its blow left it in as its user's beatdown sent it back in (2.64.0), and for which cutscene. */
         final StarPlatinumLook beatFrom=new StarPlatinumLook();Object beatFor;
         final StandPunch.Shape beatShape=new StandPunch.Shape();
+        /** Its look, place and facing on the last frame drawn and that frame's moment: how it stands while its user is stopped in a time stop (2.67.0). */
+        final StarPlatinumLook held=new StarPlatinumLook();Vec3d heldAt;float heldYaw,heldDelta=1;
         Presence(PlayerEntity p,MinecraftClient mc){entity=p.getId();owner=p.getUuid();puppet=new StandPuppet(mc.world);}
         StandPuppet phantom(int i,MinecraftClient mc){if(phantoms[i]==null)phantoms[i]=new StandPuppet(mc.world);return phantoms[i];}
 
@@ -287,7 +304,8 @@ public final class StandPresence {
         StandPunch.Shape punch(PlayerEntity p,float delta,float back,StarPlatinumLook look,StandPunch.Shape into){
             // its user's beatdown leads from the grab (2.64.0); before it, its blow (a punch)
             var shape=StandBeatdown.shape(owner,delta,back,into);
-            if(shape==null)shape=StandInhale.shape(p,delta,back,into);
+            // (the time stop's call, 2.67.0, over the punches, the rush and the inhale)
+            if(shape==null)shape=StandTimeStop.shape(p,delta,back,into);
             if(shape==null)return null;
             float e=shape.engage;
             if(shownOut(ticks-1d+delta-back*20)&&e>0){
@@ -302,6 +320,9 @@ public final class StandPresence {
             beatFrom(p,delta);
             look(ticks-1d+delta,look);
             var shape=punch(p,delta,0,look,punchShape);
+            // its aura flares as it flings itself open and time stops (2.67.0)
+            float flare=StandTimeStop.flare(owner,delta);
+            if(flare>0&&look.out>0)look.glow=Math.max(look.glow,look.out*(1+.85f*flare));
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);
             double r=Math.toRadians(y),fx=-Math.sin(r),fz=Math.cos(r);
             double forward=v.x*fx+v.z*fz,side=-v.x*fz+v.z*fx;

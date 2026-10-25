@@ -48,12 +48,16 @@ public abstract class MouseMixin implements MouseCapture {
     }
     @Inject(method="onMouseScroll",at=@At("HEAD"),cancellable=true)
     private void botand$wheel(long window,double horizontal,double vertical,CallbackInfo ci) {
+        // stopped in Star Platinum's stopped time (2.67.0): the camera stays as it was
+        if(window==client.getWindow().getHandle()&&client.currentScreen==null&&dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView()){ci.cancel();return;}
         if(window==client.getWindow().getHandle()&&BotandCamera.gameplay()) {
             BotandCamera.scroll(vertical*client.options.getMouseWheelSensitivity().getValue());ci.cancel();
         }
     }
     @Redirect(method="updateMouse",at=@At(value="INVOKE",target="Lnet/minecraft/client/network/ClientPlayerEntity;changeLookDirection(DD)V"))
     private void botand$look(ClientPlayerEntity player,double x,double y) {
+        // stopped in Star Platinum's stopped time (2.67.0): no looking about until time moves again
+        if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView())return;
         if(BotandCamera.enabled())BotandCamera.look(x,y);else player.changeLookDirection(x,y);
     }
 }
