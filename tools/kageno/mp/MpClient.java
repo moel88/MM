@@ -487,9 +487,9 @@ public final class MpClient implements ClientModInitializer {
                 note(String.format(Locale.ROOT,"%s: time stopped at its tick %d here, stopping %s",who,s.ticksHere(),names));
                 if(!caster&&s.whom().contains(mc.player.getId())){tries.put(age+5,"M1");tries.put(age+12,"C");tries.put(age+20,"W+");tries.put(age+40,"W-");tries.put(age+50,"F+");tries.put(age+60,"F-");stoppedAt=mc.player.getPos();}}
             if(st[3]==0&&s.endSound()!=null&&mc.getSoundManager().isPlaying(s.endSound())){st[3]=1;note(String.format(Locale.ROOT,"%s: its end's sound started at its tick %d here",who,s.ticksHere()));}
-            if(st[4]==0&&!Float.isNaN(s.endedAt())){st[4]=1;var paid=new ArrayList<String>();
-                for(var e:s.paidHarm().entrySet()){var x=mc.world.getEntityById(e.getKey());paid.add(String.format(Locale.ROOT,"%s %.1f",x instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(e.getKey()),e.getValue()));}
-                note(String.format(Locale.ROOT,"%s %s at %.2f s on its clock here (its tick %d); the harm that came: %s",who,s.wasCut()?"cut short":"over, time moves again",s.endedAt(),s.ticksHere(),paid));stoppedAt=null;}
+            if(st[4]==0&&!Float.isNaN(s.endedAt())){st[4]=1;var owed=new ArrayList<String>();
+                for(var e:s.owedHarm().entrySet()){var x=mc.world.getEntityById(e.getKey());owed.add(String.format(Locale.ROOT,"%s %.1f",x instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(e.getKey()),e.getValue()));}
+                note(String.format(Locale.ROOT,"%s %s at %.2f s on its clock here (its tick %d); the harm owed: %s",who,s.wasCut()?"cut short":"over, time moves again",s.endedAt(),s.ticksHere(),owed));stoppedAt=null;}
         }
         var other=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
         if(other!=null)flag("other_held_still",dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(other));

@@ -73,8 +73,8 @@ public final class StandTimeStop {
         Vec3d center;boolean stopped;final Set<Integer> held=new HashSet<>();
         /** When time moved again (seconds on its clock; NaN until the server says), whether its call was cut short, when it is ready again. */
         float ended=Float.NaN;boolean cut;long ready;
-        /** What came to each one it stopped as time moved again (entity id, harm), and when (seconds on its clock). */
-        final Map<Integer,Float> paid=new HashMap<>();
+        /** The harm each one it stopped was owed as time moved again (entity id, harm), as the server said. */
+        final Map<Integer,Float> owed=new HashMap<>();
         /** Its two sounds, once played. */
         StandAttack.Shout voice,end;
         Stop(UUID user,long start,long serverAge,long received){this.user=user;this.start=start;this.serverAge=serverAge;this.received=received;}
@@ -95,7 +95,7 @@ public final class StandTimeStop {
         public float endedAt(){return ended;}
         public boolean wasCut(){return cut;}
         public Set<Integer> whom(){return held;}
-        public Map<Integer,Float> paidHarm(){return paid;}
+        public Map<Integer,Float> owedHarm(){return owed;}
         public SoundInstance voiceSound(){return voice;}
         public SoundInstance endSound(){return end;}
     }
@@ -161,7 +161,7 @@ public final class StandTimeStop {
             if(mc.player!=null&&s.held.contains(mc.player.getId()))freeze(mc);
         }else if(type==StarPlatinumTimeStop.END&&Float.isNaN(s.ended)){
             s.ended=Math.max(0,now-start)/20f;s.cut=cut;
-            for(int i=0;i<ids.length;i++)s.paid.put(ids[i],harm[i]);
+            for(int i=0;i<ids.length;i++)s.owed.put(ids[i],harm[i]);
             for(int id:s.held)STILL.remove(id);
             // cut short as its user called it: the shout dies away; time moved early (its user gone): so does its end
             if(cut&&s.voice!=null)s.voice.fade();

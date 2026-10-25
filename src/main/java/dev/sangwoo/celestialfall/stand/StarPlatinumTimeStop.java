@@ -53,7 +53,7 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  * Atomic's (or one of the old items') cast, stopped in another's stopped time, or stopping time themselves (time
  * stoppers move in stopped time), and Kageno's users (its passive, from before Star Platinum: no other stand's time
  * stop holds them). Every viewer within 128 blocks (and whom it stopped) is told when it is called, whom
- * it stopped and when time moves again, and how much harm came to each then (stand_timestop_event_v1); the clients do
+ * it stopped and when time moves again, and the harm each was owed then (stand_timestop_event_v1, sent before it comes to them); the clients do
  * the rest (client/stand/StandTimeStop): the stand's shout, the wave, the stopped world and, for whom it stopped, a still
  * screen and no sound but its own until time moves again.
  */
@@ -215,22 +215,22 @@ public final class StarPlatinumTimeStop {
     private static void end(Stop s,long now,boolean cut){
         BY_USER.remove(s.user.getUuid());
         for(var e:s.held.keySet())BY_HELD.remove(e.getUuid(),s);
-        List<LivingEntity> paid=new ArrayList<>();List<Float> harm=new ArrayList<>();
-        for(var e:s.held.entrySet()){
-            float dealt=settle(s,e.getKey(),e.getValue());
-            if(dealt>0||e.getValue().fly.lengthSquared()>0){paid.add(e.getKey());harm.add(dealt);}
-        }
         READY.put(s.user.getUuid(),dev.sangwoo.celestialfall.NoCooldownState.enabled(s.user)?now:timeStopReady(now));
-        send(s,END,now,cut,paid,harm);
+        // the word that time moves goes out first: whom it stopped are let go (their screens, their sound) before what
+        // they are owed comes to them, so their cries of pain are heard (sent after, they were hushed with the rest)
+        List<LivingEntity> owed=new ArrayList<>();List<Float> harm=new ArrayList<>();
+        for(var e:s.held.entrySet()){var d=e.getValue();if(d.damage>0||d.fly.lengthSquared()>0){owed.add(e.getKey());harm.add(d.damage);}}
+        send(s,END,now,cut,owed,harm);
+        for(var e:s.held.entrySet())settle(s,e.getKey(),e.getValue());
     }
     /**
      * What one it stopped is owed comes to them now: all the harm dealt them in one blow (quietly if every blow of it
      * was a quiet one), then the knocks, the throws added up and the incapacitation; then whoever dealt the harm sees it
-     * (their damage number). Returns the harm that came to them.
+     * (their damage number).
      */
-    private static float settle(Stop s,LivingEntity e,Debt d){
-        if(!e.isAlive()||e.isRemoved()||e.getWorld()!=s.world)return 0;
-        float before=e.getHealth();boolean landed=false;
+    private static void settle(Stop s,LivingEntity e,Debt d){
+        if(!e.isAlive()||e.isRemoved()||e.getWorld()!=s.world)return;
+        boolean landed=false;
         settling=true;
         try{
             if(d.damage>0&&d.source!=null){
@@ -253,7 +253,6 @@ public final class StarPlatinumTimeStop {
             if(p.isRemoved()||!ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE))continue;
             var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(f.getValue()[0]);b.writeFloat(f.getValue()[1]);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);
         }
-        return landed?Math.max(d.damage,before-e.getHealth()):0;
     }
 
     // ---- what befalls the stopped waits for time to move again
