@@ -51,7 +51,8 @@ public final class CinematicDirector {
     public static boolean isActive() {
         var mc=MinecraftClient.getInstance();
         return MapClient.enabled() && mc.world!=null && mc.player!=null && (HeavenClient.cinematic()!=null
-            || StandClient.cinematic()!=null || AtomicClient.cinematic()!=null || active()!=null);
+            || StandClient.cinematic()!=null || AtomicClient.cinematic()!=null || active()!=null
+            || dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null);
     }
     public static void closeInventory() {
         var mc=MinecraftClient.getInstance();
@@ -59,6 +60,8 @@ public final class CinematicDirector {
             mc.player.closeHandledScreen();
     }
     public static float blend(float delta) {
+        // Star Platinum's beatdown (2.64.0): its shots cut in hard and hand back over a moment (StandBeatdown.camera)
+        if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return 1;
         if(StandClient.cinematic()!=null)return StandClient.cameraBlend(delta);
         if(HeavenClient.cinematic()!=null)return HeavenClient.blend(delta);
         if(AtomicClient.cinematic()!=null)return AtomicClient.blend(delta);
@@ -66,6 +69,7 @@ public final class CinematicDirector {
         return s==null?0:CinematicPath.blend(s.age(MinecraftClient.getInstance().world.getTime(),delta));
     }
     public static double fov(double vanilla,float delta) {
+        if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.StandBeatdown.fov(vanilla,delta);
         if(StandClient.cinematic()!=null)return vanilla+(StandClient.cameraFov(delta)-vanilla)*StandClient.cameraBlend(delta);
         if(HeavenClient.cinematic()!=null)return HeavenClient.fov(vanilla,delta);
         if(AtomicClient.cinematic()!=null)return AtomicClient.fov(vanilla,delta);
@@ -76,6 +80,7 @@ public final class CinematicDirector {
         return vanilla+(CinematicPath.sample(age).fov()-vanilla)*CinematicPath.blend(age);
     }
     public static float roll(float delta) {
+        if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.StandBeatdown.roll(delta);
         if(StandClient.cinematic()!=null)return StandClient.camera(delta).roll()*StandClient.cameraBlend(delta);
         if(HeavenClient.cinematic()!=null)return HeavenClient.roll(delta);
         if(AtomicClient.cinematic()!=null)return AtomicClient.roll(delta);
@@ -85,6 +90,7 @@ public final class CinematicDirector {
         return (float)CinematicPath.sample(age).roll()*CinematicPath.blend(age);
     }
     public static Pose pose(Vec3d vanilla,float yaw,float pitch,float delta) {
+        if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)return dev.sangwoo.celestialfall.client.stand.StandBeatdown.camera(vanilla,yaw,pitch,delta);
         if(StandClient.cinematic()!=null){var target=StandClient.camera(delta);float blend=StandClient.cameraBlend(delta);return new Pose(vanilla.lerp(target.position(),blend),yaw+net.minecraft.util.math.MathHelper.wrapDegrees(target.yaw()-yaw)*blend,pitch+(target.pitch()-pitch)*blend,target.roll()*blend);}
         if(HeavenClient.cinematic()!=null)return HeavenClient.camera(vanilla,yaw,pitch,delta);
         if(AtomicClient.cinematic()!=null)return AtomicClient.camera(vanilla,yaw,pitch,delta);

@@ -32,6 +32,8 @@ public abstract class LivingCombatMixin {
     @Inject(method="damage",at=@At("HEAD"),cancellable=true)
     private void botand$guard(DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir) {
         if((Object)this instanceof ServerPlayerEntity p && dev.sangwoo.celestialfall.AtomicManager.invulnerable(p) && !source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)){cir.setReturnValue(false);return;}
+        // Star Platinum's beatdown's cutscene (2.64.0): nothing but its own blows harms its user or the one struck
+        if(dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
         if((Object)this instanceof ServerPlayerEntity p && CombatManager.block(p,source,amount))cir.setReturnValue(false);
     }
     @Inject(method="damage",at=@At("RETURN"))

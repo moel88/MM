@@ -81,6 +81,8 @@ public final class StandClient {
         Cast cast=old==null?incoming:new Cast(old.id,old.caster,old.dimension,old.skill,old.combo,old.start,old.serverNow,old.received,old.origin,old.yaw,incoming.targets,incoming.aims);
         if(cast.age(0)<DURATION[cast.skill]){
             if(old==null){dev.sangwoo.celestialfall.client.kageno.KagenoClips.begin(cast);
+                // a skill with a cutscene (2.64.0, user request: "컷씬 나오는 스킬 사용할때는 시전자의 몸이 0.2초 동안 하늘색으로 변해")
+                if(cast.skill==H&&cast.age(0)<4)CutsceneFlash.flash(cast.caster);
                 if(cast.skill==H&&MinecraftClient.getInstance().player!=null&&cast.includes(MinecraftClient.getInstance().player.getUuid()))dev.sangwoo.celestialfall.client.integration.CinematicsBridge.nativeCutscene();}
             CASTS.put(cast.id,cast);if(old==null)KagenoAudio.begin(cast);
         }
@@ -121,7 +123,7 @@ public final class StandClient {
         var c=action(mc.player.getUuid());if(c==null||c.skill!=P)return;
         cancelledPose=c.id;send(POSE_CANCEL);CASTS.remove(c.id);KagenoAudio.stop(c.id);
     }
-    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0)+(c.skill==RUSH?TRAP_LEAD:0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
+    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||dev.sangwoo.celestialfall.client.stand.StandBeatdown.holds(e)||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0)+(c.skill==RUSH?TRAP_LEAD:0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
     /**
      * Ticks by which a T+ target's own client lets go before the server's spin cut: this clock runs behind the
      * server's by the packet's way here, and a target still held when the cut's throw arrives would lose it.

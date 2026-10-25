@@ -89,6 +89,8 @@ public final class KagenoManager {
         if(!MapGate.enabled(e.getWorld())||!e.isAlive()||e.isRemoved())return false;
         if(e.getWorld().isClient)return clientFrozen.test(e);
         if(e instanceof PlayerEntity p&&AtomicManager.immobilized(p))return true;
+        // Star Platinum's beatdown's cutscene holds its user and the one struck where they are (2.64.0)
+        if(StarPlatinumBeatdown.involved(e))return true;
         for(var c:CASTS.values())if(c.world==e.getWorld()&&(KagenoRules.frozen(c.skill,c.age())&&((c.player==e&&c.skill!=R)||c.targets.containsKey(e))||KagenoRules.trapped(c.skill,c.age())&&c.targets.containsKey(e)))return true;
         return false;
     }

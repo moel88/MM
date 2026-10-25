@@ -44,6 +44,11 @@ import net.minecraft.util.math.Vec3d;
  * sound is the user's recording (tools/stand/cut_finger.py), started FINGER_LEAD ticks into it so the crack in it comes
  * as the fingers strike. Whoever its fingers go to is the server's word once it lands, and until then whoever this
  * client sees first in its way ({@link #fingerTip}).
+ * <p>
+ * G is the beatdown (2.64.0, user request: "이제 G 비트다운을 만들어야해 이건 컷씬이 나와야하고"), its blow a seventh
+ * punch: G asks the server for it (stand_beatdown_v1) and it comes back as a punch like the others, its "ORA!" from the
+ * user's recording (tools/stand/cut_beatdown.py) LEAD ticks in, as a shout, so that its "RA" comes as the fist lands.
+ * If it strikes someone with no guard up, its cutscene follows (StandBeatdown).
  */
 public final class StandAttack {
     /** Ticks into a punch its shout starts: a sound held back a tick starts on a client tick, the grid this clock counts on. */
@@ -134,7 +139,7 @@ public final class StandAttack {
         public Heavy heavyVoice(){return heavyVoice;}
         public Heavy heavyBlow(){return heavyBlow;}
     }
-    static final class User {final ArrayDeque<Seen> punches=new ArrayDeque<>();long ready,heavyReady,fingerReady;Seen stopped;}
+    static final class User {final ArrayDeque<Seen> punches=new ArrayDeque<>();long ready,heavyReady,fingerReady,beatdownReady;Seen stopped;}
     private static final Map<UUID,User> USERS=new HashMap<>();
     /** This client's ticks while the game runs (counted as each tick begins). */
     static long ticks;
@@ -152,13 +157,13 @@ public final class StandAttack {
             // 2.59.0: when the heavy punch is ready again, and whose guard it broke as it landed
             long heavyReady=b.readLong();int m=b.readVarInt();if(m<0||m>256)return;
             int[] broke=new int[m];for(int i=0;i<m;i++)broke[i]=b.readInt();
-            // 2.60.0: when the Star Finger is ready again
-            long fingerReady=b.readableBytes()>=8?b.readLong():0;
-            if(!Float.isFinite(yaw)||combo>StarPlatinumRules.FINGER)return;
+            // 2.60.0: when the Star Finger is ready again; 2.64.0: when the beatdown is
+            long fingerReady=b.readableBytes()>=8?b.readLong():0,beatdownReady=b.readableBytes()>=8?b.readLong():0;
+            if(!Float.isFinite(yaw)||combo>StarPlatinumRules.BEATDOWN)return;
             mc.execute(()->{
                 if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
                 if(world!=mc.world){USERS.clear();world=mc.world;}
-                USERS.computeIfAbsent(user,k->new User()).fingerReady=fingerReady;
+                var u=USERS.computeIfAbsent(user,k->new User());u.fingerReady=fingerReady;u.beatdownReady=beatdownReady;
                 event(mc,user,type,combo,start,serverNow,yaw,aim,ready,ids,at,heavyReady,broke);
             });
         });
@@ -185,6 +190,7 @@ public final class StandAttack {
                 user.punches.addLast(seen);while(user.punches.size()>3)user.punches.removeFirst();
                 if(combo==StarPlatinumRules.HEAVY)heavySound(mc,id,seen,before);
                 else if(combo==StarPlatinumRules.FINGER)fingerSound(mc,id,seen,before);
+                else if(combo==StarPlatinumRules.BEATDOWN){beatdownSound(mc,id,seen,before);StandBeatdown.used(id);}
                 else shout(mc,id,seen,before);
             }
             case StarPlatinumAttack.LANDED->{
@@ -254,6 +260,22 @@ public final class StandAttack {
         var sound=new Shout(CelestialFall.id("star_platinum_finger"),volume);
         seen.voice=sound;
         int delay=(int)(FINGER_LEAD-seen.serverAge);
+        if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
+        if(before!=null&&before.voice!=null)FADING.add(new Object[]{before.voice,ticks+Math.max(0,delay)});
+    }
+    /**
+     * The beatdown's "ORA!" (2.64.0), LEAD ticks into its blow: the user's recording as it is, loud for its user and those
+     * near, fading out to 40 blocks; none if it was heard too late. The shout its user shouted before fades out as it
+     * starts; it fades itself if the blow is stopped before it lands.
+     */
+    private static void beatdownSound(MinecraftClient mc,UUID id,Seen seen,Seen before){
+        if(mc.player==null||seen.serverAge>LEAD)return;
+        var user=mc.world.getPlayerByUuid(id);
+        double far=user==null||user==mc.player?0:user.getPos().distanceTo(mc.player.getPos());
+        float volume=(float)(CelestialFall.CONFIG.effectVolume*FINGER_VOLUME*Math.max(0,1-far/40));if(volume<=.01f)return;
+        var sound=new Shout(CelestialFall.id("star_platinum_beatdown_ora"),volume);
+        seen.voice=sound;
+        int delay=(int)(LEAD-seen.serverAge);
         if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
         if(before!=null&&before.voice!=null)FADING.add(new Object[]{before.voice,ticks+Math.max(0,delay)});
     }
@@ -372,6 +394,8 @@ public final class StandAttack {
     public static long heavyReady(UUID id){var u=USERS.get(id);return u==null?0:u.heavyReady;}
     /** The world tick this player's Star Finger is ready again (2.60.0; 0 if they have not used it). */
     public static long fingerReady(UUID id){var u=USERS.get(id);return u==null?0:u.fingerReady;}
+    /** The world tick this player's beatdown is ready again (2.64.0; 0 if they have not used it). */
+    public static long beatdownReady(UUID id){var u=USERS.get(id);return u==null?0:u.beatdownReady;}
     private static boolean heldR;
     /**
      * R for Star Platinum's user on the map (2.59.0): asks for the heavy punch if the stand is out. R is the map's use
@@ -413,6 +437,25 @@ public final class StandAttack {
             // the way it goes is the way the player faces now: the turn goes to the server before the press
             mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));
             ClientPlayNetworking.send(StarPlatinumAttack.FINGER_INPUT,PacketByteBufs.empty());
+        }
+        return true;
+    }
+    private static boolean heldG;
+    /**
+     * G for Star Platinum's user on the map (2.64.0): asks for the beatdown if the stand is out. G is always the
+     * beatdown's for Star Platinum's user there, as it is a skill's for Kageno's. Returns whether it took the key.
+     */
+    public static boolean beatdownKey(long window,int key,int action,int modifiers){
+        var mc=MinecraftClient.getInstance();if(key!=org.lwjgl.glfw.GLFW.GLFW_KEY_G||window!=mc.getWindow().getHandle())return false;
+        if(action==org.lwjgl.glfw.GLFW.GLFW_RELEASE){if(!heldG)return false;heldG=false;return true;}
+        if(heldG)return true;
+        if(action!=org.lwjgl.glfw.GLFW.GLFW_PRESS||mc.currentScreen!=null||!MapClient.enabled()||!dev.sangwoo.celestialfall.stand.StandManager.starPlatinum(mc.player))return false;
+        heldG=true;
+        if(mine(mc)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(StarPlatinumAttack.BEATDOWN_INPUT)){
+            BotandCamera.prepareInteraction();
+            // the way it goes is the way the player faces now: the turn goes to the server before the press
+            mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));
+            ClientPlayNetworking.send(StarPlatinumAttack.BEATDOWN_INPUT,PacketByteBufs.empty());
         }
         return true;
     }

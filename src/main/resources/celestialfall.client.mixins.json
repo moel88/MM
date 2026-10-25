@@ -22,6 +22,8 @@
     "MapKeyBindingMixin",
     "TitleMusicMixin",
     "StandHeldItemFeatureMixin",
+    "BeatdownRenderMixin",
+    "CutsceneFlashMixin",
     "KagenoCullingMixin",
     "StandFovMixin",
     "RushHurtSoundMixin",

@@ -743,5 +743,23 @@
         "preload": true
       }
     ]
+  },
+  "star_platinum_beatdown_ora": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_beatdown_ora",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "star_platinum_beatdown": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_beatdown",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

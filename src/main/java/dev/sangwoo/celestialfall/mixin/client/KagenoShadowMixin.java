@@ -18,8 +18,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class KagenoShadowMixin {
     @Inject(method="renderShadow",at=@At("HEAD"),cancellable=true)
     private static void botand$slideShadow(MatrixStack m,VertexConsumerProvider v,Entity entity,float opacity,float delta,WorldView world,float radius,CallbackInfo ci){
-        // H targets kept out of the cutscene leave no shadow behind either.
-        if(StandClient.cutsceneHidden(entity)){ci.cancel();return;}
+        // H targets kept out of the cutscene leave no shadow behind either, nor does whoever Star Platinum's beatdown
+        // shows away from where they are (2.64.0).
+        if(StandClient.cutsceneHidden(entity)||dev.sangwoo.celestialfall.client.stand.StandBeatdown.offset(entity,delta)!=null){ci.cancel();return;}
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(entity.getUuid());
         if(cast==null)return;
         m.push();var offset=dev.sangwoo.celestialfall.client.kageno.KagenoClips.groundOffset(cast,delta);

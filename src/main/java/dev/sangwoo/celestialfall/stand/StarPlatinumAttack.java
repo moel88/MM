@@ -53,10 +53,16 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  * (from a punch in flight, after the rush), that strikes whoever stands first in its long, narrow way, slows them and
  * incapacitates them (CombatManager.incapacitate), and is ready again FINGER_COOLDOWN ticks after it is over. Every
  * event tells the clients when it is ready again too.
+ * <p>
+ * G is its beatdown (2.64.0, user request: "이제 G 비트다운을 만들어야해 이건 컷씬이 나와야하고"; stand_beatdown_v1, no
+ * payload): a seventh punch out of the combo (StarPlatinumRules.BEATDOWN), taken like the heavy punch, whose blow lands
+ * on whoever stands first in its way: their guard up, it breaks it (and nothing more); none up, it begins the cutscene
+ * (StarPlatinumBeatdown). It is ready again BEATDOWN_COOLDOWN ticks after its blow is over, or, if it began the
+ * cutscene, after that is. Every event tells the clients when it is ready again too.
  */
 public final class StarPlatinumAttack {
     public static final Identifier INPUT=CelestialFall.id("stand_attack_v1"),EVENT=CelestialFall.id("stand_attack_event_v1"),HEAVY_INPUT=CelestialFall.id("stand_heavy_v1"),
-        FINGER_INPUT=CelestialFall.id("stand_finger_v1");
+        FINGER_INPUT=CelestialFall.id("stand_finger_v1"),BEATDOWN_INPUT=CelestialFall.id("stand_beatdown_v1");
     /** A punch starts; it lands (whom it struck); the attack rests until it is ready again; the punch in flight stops short. */
     public static final int PUNCH=0,LANDED=1,RESTS=2,STOPPED=3;
     /** At most this many presses a second are heard. */
@@ -73,7 +79,9 @@ public final class StarPlatinumAttack {
         long heavyReady;boolean heavyQueued;
         /** The same for the Star Finger (2.60.0) and its T. */
         long fingerReady;boolean fingerQueued;
-        int window,presses,heavyWindow,heavyPresses,fingerWindow,fingerPresses;
+        /** The same for the beatdown (2.64.0) and its G. */
+        long beatdownReady;boolean beatdownQueued;
+        int window,presses,heavyWindow,heavyPresses,fingerWindow,fingerPresses,beatdownWindow,beatdownPresses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
     private StarPlatinumAttack(){}
@@ -104,6 +112,15 @@ public final class StarPlatinumAttack {
                 if(s.fingerWindow!=second){s.fingerWindow=second;s.fingerPresses=0;}
                 if(++s.fingerPresses>RATE)return;
                 finger(player);
+            });
+        });
+        ServerPlayNetworking.registerGlobalReceiver(BEATDOWN_INPUT,(server,player,handler,buf,response)->{
+            if(buf.readableBytes()!=0)return;
+            server.execute(()->{
+                var s=state(player);int second=server.getTicks()/20;
+                if(s.beatdownWindow!=second){s.beatdownWindow=second;s.beatdownPresses=0;}
+                if(++s.beatdownPresses>RATE)return;
+                beatdown(player);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(StarPlatinumAttack::tick);
@@ -168,6 +185,28 @@ public final class StarPlatinumAttack {
         beginSkill(p,s,now,FINGER);
         return true;
     }
+    /**
+     * G: the beatdown starts now if it may (2.64.0), as the heavy punch does: the stand out and its user free, it ready
+     * again and no other of the stand's skills in flight; a punch in flight stops short and its blow takes over, and
+     * just after the rush it starts once the rush's fists are back in the guard. Returns whether it starts (now or then).
+     */
+    public static boolean beatdown(ServerPlayerEntity p){
+        if(!able(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        if(skill(s.combo)&&now<s.start+LENGTH[s.combo])return false;
+        if(now<s.beatdownReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        if(now<StarPlatinumRush.freeAt(p)){s.beatdownQueued=true;return true;}
+        beginSkill(p,s,now,BEATDOWN);
+        return true;
+    }
+    /** The beatdown's cutscene is over (or cut short) at {@code end}: it is ready again a cooldown from then. */
+    static void beatdownOver(ServerPlayerEntity p,long end){
+        var s=state(p);
+        s.beatdownReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?end:StarPlatinumRules.beatdownReady(end);
+        send(p,s,RESTS,null,null);
+    }
+    /** The tick this player's beatdown is ready again (2.64.0; 0 if they have not used it). */
+    public static long beatdownReady(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.beatdownReady;}
     /** The tick this player's heavy punch is ready again (0 if they have not thrown one). */
     public static long heavyReady(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.heavyReady;}
     /** The tick this player's Star Finger is ready again (2.60.0; 0 if they have not used it). */
@@ -181,13 +220,15 @@ public final class StarPlatinumAttack {
         // a punch in flight (or a combo still open) stops short: the heavy punch or the Star Finger starts once the
         // stand has turned back to its guard from it (StarPlatinumRules.STOP_RETURN, as the rush does), so the clients'
         // stand goes from its guard into the coil or the aim
-        s.heavyQueued=s.fingerQueued=false;stop(p,s,now);
-        s.combo=skill;s.start=Math.max(now,s.stoppedAt+STOP_RETURN);s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=s.landed=s.heavyQueued=s.fingerQueued=false;
+        s.heavyQueued=s.fingerQueued=s.beatdownQueued=false;stop(p,s,now);
+        s.combo=skill;s.start=Math.max(now,s.stoppedAt+STOP_RETURN);s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=s.landed=s.heavyQueued=s.fingerQueued=s.beatdownQueued=false;
         // its cooldown runs once it is over (none for a player the cooldowns are off for, /botand nocooldown: ready from
         // now, so the cooldown list shows nothing for it, as for the rush)
         long end=s.start+LENGTH[skill];boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(skill==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(end);
-        else s.fingerReady=free?now:StarPlatinumRules.fingerReady(end);
+        else if(skill==FINGER)s.fingerReady=free?now:StarPlatinumRules.fingerReady(end);
+        // (the beatdown's from the end of its blow; if the blow begins the cutscene, from the cutscene's end instead)
+        else s.beatdownReady=free?now:StarPlatinumRules.beatdownReady(end);
         send(p,s,PUNCH,null,null);
     }
     /** The user was struck: whom the punches hold go, and the punch in flight stops short. */
@@ -215,24 +256,29 @@ public final class StarPlatinumAttack {
             var p=server.getPlayerManager().getPlayer(e.getKey());var s=e.getValue();
             if(p==null||p.getServerWorld()!=s.world){STATES.remove(e.getKey());continue;}
             long now=p.getWorld().getTime();
+            // its beatdown's cutscene holds the user (2.64.0): its blow has landed, and nothing more comes of the punches until it is over
+            if(StarPlatinumBeatdown.casting(p))continue;
             if(!punches(p)||HitStun.stunned(p)||CombatManager.actionLocked(p)){stop(p,s,now);continue;}
             settle(p,s,now);
             if(s.queued&&now>=nextAt(s.combo,s.start)&&now>=StarPlatinumRush.freeAt(p)){if(able(p))begin(p,s,now);else s.queued=false;}
             if(s.heavyQueued&&now>=StarPlatinumRush.freeAt(p)){s.heavyQueued=false;if(able(p)&&(now>=s.heavyReady||dev.sangwoo.celestialfall.NoCooldownState.enabled(p)))beginSkill(p,s,now,HEAVY);}
             if(s.fingerQueued&&now>=StarPlatinumRush.freeAt(p)){s.fingerQueued=false;if(able(p)&&(now>=s.fingerReady||dev.sangwoo.celestialfall.NoCooldownState.enabled(p)))beginSkill(p,s,now,FINGER);}
+            if(s.beatdownQueued&&now>=StarPlatinumRush.freeAt(p)){s.beatdownQueued=false;if(able(p)&&(now>=s.beatdownReady||dev.sangwoo.celestialfall.NoCooldownState.enabled(p)))beginSkill(p,s,now,BEATDOWN);}
             if(s.combo>=1&&!s.landed&&now>=s.start+CONTACT[s.combo])strike(p,s,now);
         }
     }
     /** The punch in flight stops short (or the combo is cut off between punches): the attack rests from now. */
     private static void stop(ServerPlayerEntity p,State s,long now){
         boolean flying=s.combo>=1&&now-s.start<LENGTH[s.combo],open=s.combo>=1&&s.combo<4&&broken(s.combo,s.start,now)<0;
-        if(!flying&&!open&&!s.queued&&!s.heavyQueued&&!s.fingerQueued)return;
+        if(!flying&&!open&&!s.queued&&!s.heavyQueued&&!s.fingerQueued&&!s.beatdownQueued)return;
         if(flying)s.stoppedAt=now;
         // a heavy punch or a Star Finger stopped short: its cooldown runs from now (2.44.0's rule for a move cut off)
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(flying&&s.combo==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(now);
         if(flying&&s.combo==FINGER)s.fingerReady=free?now:StarPlatinumRules.fingerReady(now);
-        s.queued=s.heavyQueued=s.fingerQueued=false;s.ready=Math.max(s.ready,now+REST);s.combo=0;
+        // (a beatdown whose blow began the cutscene is not stopped here: the cutscene holds its user, StarPlatinumBeatdown)
+        if(flying&&s.combo==BEATDOWN&&!StarPlatinumBeatdown.casting(p))s.beatdownReady=free?now:StarPlatinumRules.beatdownReady(now);
+        s.queued=s.heavyQueued=s.fingerQueued=s.beatdownQueued=false;s.ready=Math.max(s.ready,now+REST);s.combo=0;
         send(p,s,STOPPED,null,null);
     }
     /**
@@ -244,7 +290,7 @@ public final class StarPlatinumAttack {
      */
     private static void strike(ServerPlayerEntity p,State s,long now){
         s.landed=true;
-        var world=p.getServerWorld();int combo=s.combo;boolean big=combo==4||combo==HEAVY,heavy=combo==HEAVY,finger=combo==FINGER;
+        var world=p.getServerWorld();int combo=s.combo;boolean big=combo==4||combo==HEAVY,heavy=combo==HEAVY,finger=combo==FINGER,beat=combo==BEATDOWN;
         Vec3d at=p.getPos(),f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x);
         var source=world.getDamageSources().playerAttack(p);
         List<LivingEntity> struck=new ArrayList<>(),broke=new ArrayList<>();
@@ -254,13 +300,28 @@ public final class StarPlatinumAttack {
             Vec3d d=e.getPos().subtract(at);
             if(!lane(combo,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&(!world.getServer().isPvpEnabled()||!p.shouldDamagePlayer(other)))continue;
+            // (the beatdown's blow passes by whoever is in a cutscene already, its own or another's)
+            if(beat&&(StarPlatinumBeatdown.involved(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
             way.add(e);
         }
-        // the Star Finger's fingers end in the first body they meet: the nearest one in their way (to its near side)
-        if(finger&&way.size()>1){
+        // the Star Finger's fingers end in the first body they meet: the nearest one in their way (to its near side); the
+        // beatdown's blow lands on the first one too
+        if((finger||beat)&&way.size()>1){
             LivingEntity first=null;double best=Double.MAX_VALUE;
             for(var e:way){double near=e.getPos().subtract(at).dotProduct(f)-e.getWidth()*.5;if(near<best){best=near;first=e;}}
             way=List.of(first);
+        }
+        if(beat){
+            // the beatdown's blow (2.64.0): a guard up breaks (and nothing more comes of it); none up, the cutscene begins
+            for(var e:way){
+                if(CombatManager.breakGuard(e,HEAVY_BREAK))broke.add(e);
+                else if(!e.isInvulnerableTo(source)&&StarPlatinumBeatdown.begin(p,e,s.start,s.yaw)){
+                    struck.add(e);p.onAttacking(e);
+                    world.playSound(null,e.getX(),e.getY(),e.getZ(),SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK,SoundCategory.PLAYERS,.9f,.8f);
+                }
+            }
+            send(p,s,LANDED,struck,broke);
+            return;
         }
         for(var e:way){
             // the heavy punch breaks a guard held up against it, and lands all the same
@@ -296,8 +357,8 @@ public final class StarPlatinumAttack {
     }
     /**
      * Tells every player near the user (and the user, and whoever was struck) of the event; since 2.59.0 every event
-     * also carries when the heavy punch is ready again and, as it lands, whose guard it broke, and since 2.60.0 when the
-     * Star Finger is ready again.
+     * also carries when the heavy punch is ready again and, as it lands, whose guard it broke, since 2.60.0 when the
+     * Star Finger is ready again, and since 2.64.0 when the beatdown is.
      */
     private static void send(ServerPlayerEntity p,State s,int type,List<LivingEntity> struck,List<LivingEntity> broke){
         var world=p.getServerWorld();long now=world.getTime();
@@ -314,6 +375,8 @@ public final class StarPlatinumAttack {
             int m=broke==null?0:broke.size();b.writeVarInt(m);
             for(int i=0;i<m;i++)b.writeInt(broke.get(i).getId());
             b.writeLong(s.fingerReady);
+            // 2.64.0: when the beatdown is ready again
+            b.writeLong(s.beatdownReady);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

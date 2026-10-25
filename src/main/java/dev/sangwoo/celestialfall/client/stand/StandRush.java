@@ -451,8 +451,10 @@ public final class StandRush {
      * on and the stand in front, its arms as big as the body's and as much bigger as each is out.
      */
     public static float phantom(UUID id,int i,float delta,dev.sangwoo.celestialfall.stand.StarPlatinumLook into){
-        var r=RUSHES.get(id);if(r==null||i>=PHANTOMS.length)return 0;
-        float t=r.age(delta),show=phantomAlpha(r,i,t);if(show<=0)return 0;
+        var r=RUSHES.get(id);if(i>=PHANTOMS.length)return 0;
+        // (the beatdown's rush throws them as well, 2.64.0)
+        if(r==null)return StandBeatdown.phantom(id,i,delta,into);
+        float t=r.age(delta),show=phantomAlpha(r,i,t);if(show<=0)return StandBeatdown.phantom(id,i,delta,into);
         var w=into.weights;java.util.Arrays.fill(w,0);
         barrage(t-PHANTOMS[i][0],phantomSeed(r,i),w,1);
         float size=armSize(r,t),left=out(w,LEFT),right=out(w,RIGHT);
@@ -474,6 +476,8 @@ public final class StandRush {
     public static float phantomLag(int i){return PHANTOMS[i][0];}
     public static int phantomSeed(Rush r,int i){return r.seed+101*(i+1);}
     public static int phantoms(){return PHANTOMS.length;}
+    /** How strongly afterimage {@code i} shows at its fullest (2.64.0: the beatdown's rush throws the same afterimages). */
+    static float phantomStrength(int i){return PHANTOMS[i][4];}
     /** For the capture tools: this player's rush (its age in seconds, blows heard, how many the last struck, whether it is on, how loud its blows sound), or null. */
     public static String describe(PlayerEntity p,float delta){
         var r=RUSHES.get(p.getUuid());if(r==null)return null;var last=r.recent.peekLast();

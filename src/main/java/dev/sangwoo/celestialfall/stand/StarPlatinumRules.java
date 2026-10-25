@@ -11,21 +11,25 @@ package dev.sangwoo.celestialfall.stand;
  * recording the two are 1.2 s apart), and its shout takes over from the hook's (StandAttack fades the one before out).
  * The four land 0.20, 0.50, 1.05 and 1.75 s into a mashed combo (2.54.0: 0.30, 1.10, 2.00, 3.20). Since 2.57.0 its E
  * too, the rush (below), since 2.59.0 its R, the heavy punch: a fifth punch, HEAVY, out of the combo (below), and since
- * 2.60.0 its T, the Star Finger: a sixth, FINGER (below), and since 2.61.0 its Y, the inhale (below, held down since
- * 2.62.0). Pure timing and reach, shared by the server and the client; ticks of 1/20 s.
+ * 2.60.0 its T, the Star Finger: a sixth, FINGER (below), since 2.61.0 its Y, the inhale (below, held down since
+ * 2.62.0), and since 2.64.0 its G, the beatdown: a seventh, BEATDOWN, whose blow begins a cutscene (below). Pure timing
+ * and reach, shared by the server and the client; ticks of 1/20 s.
  */
 public final class StarPlatinumRules {
     /**
-     * Each punch's contact, ticks after it starts (by the punch, 1 to 4, the heavy punch, 5, and the Star Finger, 6): the
-     * jab and the cross snap in, the hook and the finisher take the "O" of their shouts (0.4 s), the heavy punch its
-     * long coil (0.6 s), the Star Finger its aim and its fingers' flight out (0.45 s, the crack in the user's recording).
+     * Each punch's contact, ticks after it starts (by the punch, 1 to 4, the heavy punch, 5, the Star Finger, 6, and the
+     * beatdown's blow, 7): the jab and the cross snap in, the hook and the finisher take the "O" of their shouts (0.4 s),
+     * the heavy punch its long coil (0.6 s), the Star Finger its aim and its fingers' flight out (0.45 s, the crack in
+     * the user's recording), the beatdown's the short "O" of its "ORA!" (0.2 s: its "RA" 0.15 s into its sound, which
+     * starts a tick in, tools/stand/cut_beatdown.py).
      */
-    public static final int[] CONTACT={0,4,4,9,10,12,9};
-    /** Ticks from a punch's start before the next may start (2.56.0: three tenths of a second, the hook's 0.65 s; after the heavy punch and the Star Finger, once they are over). */
-    public static final int[] STEP={0,6,6,13,0,28,25};
+    public static final int[] CONTACT={0,4,4,9,10,12,9,4};
+    /** Ticks from a punch's start before the next may start (2.56.0: three tenths of a second, the hook's 0.65 s; after the heavy punch, the Star Finger and the beatdown's blow, once they are over). */
+    public static final int[] STEP={0,6,6,13,0,28,25,18};
     /** How long each punch runs (ticks) when no next one cuts it short: the strike, the follow-through and the guard again. */
-    public static final int[] LENGTH={0,10,10,17,23,28,25};
-    public static final float[] DAMAGE={0,5,5,6,10,15,10};
+    public static final int[] LENGTH={0,10,10,17,23,28,25,18};
+    /** (The beatdown's blow deals nothing itself: the cutscene it begins deals the beatdown's damage, BEAT_DAMAGE.) */
+    public static final float[] DAMAGE={0,5,5,6,10,15,10,0};
     /** A press this many ticks or fewer before the next punch may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next punch must start within this many ticks of when it may, or the combo breaks. */
@@ -115,8 +119,85 @@ public final class StarPlatinumRules {
     public static final int FINGER_SLOW_TICKS=40,FINGER_DISABLE=60;
     /** When the Star Finger is ready again once it ended (over, or stopped short) at {@code end}. */
     public static long fingerReady(long end){return end+FINGER_COOLDOWN;}
-    /** Whether the punch {@code combo} is one of the stand's own skills out of the combo (the heavy punch, the Star Finger). */
-    public static boolean skill(int combo){return combo==HEAVY||combo==FINGER;}
+    /** Whether the punch {@code combo} is one of the stand's own skills out of the combo (the heavy punch, the Star Finger, the beatdown's blow). */
+    public static boolean skill(int combo){return combo==HEAVY||combo==FINGER||combo==BEATDOWN;}
+    // ---- G, the beatdown (2.64.0, user request: "이제 G 비트다운을 만들어야해 이건 컷씬이 나와야하고 소리대로 설명을 해줄게
+    // 처음 G스킬을 사용할때 오라! 를 외치고 주먹을 꽂아 맞추면 둘 다컷씬이 들어가고 못 맞추면 그대로 쿨타임 기다려야하고
+    // 맞추면 야레야레 라고 할거거든? 야레야레라고 할때 플레이어가 손으로 머리를 잡고 머리를 흔들어 그리고 스타플래티나 라고
+    // 외칠거거든 그때 스타플래티나 보여주고 오라오라 러쉬 엄청 꽂을꺼야 그걸 컷씬으로 만들어줘야해 이건 상대 피가 낮을수록
+    // 위력이 더 강해져 기본 데미지는 60이고 낮을수록 더 강해져 가드 브레이커고 가드를 부수면 컷씬에는 안 들어가", "비트다운
+    // 꽂을때는 플레이어의 멱살을 잡고 올려치고 그대로 오라러쉬를 꽂아줘 찰지게 때리고 날려야해"): with the stand out, G makes
+    // it shout "ORA!" and drive its fist in, a seventh punch out of the combo, at whoever stands first in its way (the
+    // finisher's reach). A guard held up against it breaks (HEAVY_BREAK: incapacitated while it is broken) and nothing
+    // more comes of it; nobody there, nothing comes of it either; either way its cooldown runs once the blow is over.
+    // Striking someone with no guard up, it begins a cutscene for its user and for them (StarPlatinumBeatdown): both held
+    // where they are and harmed by nothing else all through it, on the user's recording's own time from its "ORA!"
+    // (tools/stand/cut_beatdown.py, the ticks below: a tick on for every 20th of a second of it): "yare yare daze"
+    // (its user grabs their head and shakes it), "Star Platinum!" (the stand bursts out of them), the collar grabbed, the
+    // uppercut, the ORA rush, five big ORAs, and the last "Ooo-RAAA", whose blow sends them flying to where they come
+    // down. Its blows deal BEAT_DAMAGE between them, more the lower their health was as it began (beatdownDamage), and
+    // none but the last can kill. Its cooldown runs once it is over (2.44.0's rule).
+
+    /** The beatdown's blow's number among the punches (its contact, length and damage are at this index). */
+    public static final int BEATDOWN=7;
+    /**
+     * Ticks into the beatdown (from G) its two sounds start: the opener's "ORA!" (its "RA" on the contact) and, if it
+     * struck, the cutscene's: 1.1 s further into the user's recording, so 22 ticks after the first.
+     */
+    public static final int BEAT_OPENER_SOUND=1,BEAT_SOUND=23;
+    /** The cutscene begins as the blow lands. */
+    public static final int BEAT_CUT=4;
+    /** "yare yare daze" (1.15 to 2.5 s into the recording): its user's hand on their head as it is said. */
+    public static final int BEAT_YARE=24,BEAT_YARE_END=51;
+    /** "Star Platinum!" (2.6 s): the stand bursts out of its user. */
+    public static final int BEAT_REVEAL=53;
+    /** The collar grabbed (the thud 3.8 s in), and the uppercut (the deep thump 4.36 s in). */
+    public static final int BEAT_GRAB=77,BEAT_UPPERCUT=88;
+    /** The rush, as long as its voice (4.45 to 8.28 s): a blow every BEAT_RUSH_EVERY ticks from BEAT_RUSH_FIRST, BEAT_RUSH_HITS in all. */
+    public static final int BEAT_RUSH_FIRST=91,BEAT_RUSH_EVERY=2,BEAT_RUSH_HITS=38,BEAT_RUSH_LAST=BEAT_RUSH_FIRST+BEAT_RUSH_EVERY*(BEAT_RUSH_HITS-1);
+    /** The five big ORAs after it (the cracks 8.49 and 10.32 s in, and the "RA"s of the ORAs between). */
+    public static final int[] BEAT_BIG={171,176,183,202,207};
+    /** The last blow (the deep thump of the last "Ooo-RAAA", 10.8 s), where they come down, and the cutscene's end. */
+    public static final int BEAT_FINAL=217,BEAT_LAND=234,BEAT_END=250;
+    /** The beatdown's damage at full health, more the lower it is (beatdownDamage), dealt by its blows between them. */
+    public static final float BEAT_DAMAGE=60;
+    /** Each blow's share of it: the uppercut's, the rush's (all its blows together), each big ORA's, and the last blow's (the rest). */
+    public static final float BEAT_UPPERCUT_SHARE=.08f,BEAT_RUSH_SHARE=.4f,BEAT_BIG_SHARE=.05f,BEAT_FINAL_SHARE=1-BEAT_UPPERCUT_SHARE-BEAT_RUSH_SHARE-5*BEAT_BIG_SHARE;
+    /** Its cooldown once it is over (ticks: thirty seconds, as Kageno's H, the other cutscene). */
+    public static final int BEATDOWN_COOLDOWN=600;
+    /**
+     * Where the cutscene holds the one struck: this far ahead of its user along the blow (blocks; where they stood and
+     * BEAT_BACK more, as the blow knocks them back, within BEAT_HOLD_MIN and BEAT_HOLD_MAX: room for the stand between).
+     */
+    public static final double BEAT_BACK=.4,BEAT_HOLD_MIN=2.8,BEAT_HOLD_MAX=4.4;
+    /**
+     * Where the last blow sends them from (blocks from where they are held: BEAT_DRIFT on along the blow, as the rush
+     * and the big ORAs drive them back, and BEAT_LIFT up, as the uppercut threw them) and how far (BEAT_FLY on along it,
+     * unless something stops them sooner).
+     */
+    public static final double BEAT_DRIFT=1.6,BEAT_LIFT=1.7,BEAT_FLY=13;
+    /**
+     * The beatdown's damage on whoever has {@code health} of {@code max}: BEAT_DAMAGE at full health, up to twice that
+     * the nearer they are to none (by the share of their health they have lost).
+     */
+    public static float beatdownDamage(float health,float max){
+        float lost=max<=0?0:1-health/max;lost=lost<0?0:lost>1?1:lost;
+        return BEAT_DAMAGE*(1+lost);
+    }
+    /** Whether a blow of the beatdown's cutscene lands {@code age} ticks into the beatdown: the uppercut, the rush's, the big ORAs, the last. */
+    public static boolean beatBlow(long age){return beatShare(age)>0;}
+    /** The share of the beatdown's damage the blow {@code age} ticks into it deals (0 if none lands then). */
+    public static float beatShare(long age){
+        if(age==BEAT_UPPERCUT)return BEAT_UPPERCUT_SHARE;
+        if(age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST&&(age-BEAT_RUSH_FIRST)%BEAT_RUSH_EVERY==0)return BEAT_RUSH_SHARE/BEAT_RUSH_HITS;
+        for(int big:BEAT_BIG)if(age==big)return BEAT_BIG_SHARE;
+        return age==BEAT_FINAL?BEAT_FINAL_SHARE:0;
+    }
+    /** How far ahead of its user the cutscene holds the one struck, who stood {@code ahead} blocks ahead along the blow. */
+    public static double beatHold(double ahead){return Math.max(BEAT_HOLD_MIN,Math.min(BEAT_HOLD_MAX,ahead+BEAT_BACK));}
+    /** When the beatdown is ready again once it ended (its blow over, or its cutscene) at {@code end}. */
+    public static long beatdownReady(long end){return end+BEATDOWN_COOLDOWN;}
+
     // ---- Y, the inhale (2.61.0, user request: "이번에는 Y스킬 만들자 스타플래티나가 최대 3블록까지 앞에 있는 플레이어를
     // 입으로 빨아들여서 5초동안 끌고오게 하는 스킬 가드 가능하고 데미지 없음 빨아들이는시간동안은 스타핑거 처럼 무력화
     // 효과음 자체제작"; 2.62.0: "Y는 아무도 안 맞아도 5초동안 지속되고 E처럼 중간에 손 떼면 바로 취소 흡입 무력화는 그냥

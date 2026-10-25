@@ -50,6 +50,11 @@ public final class StandPresence {
     /** Where a stand stands this frame and which way it faces, at its size (for the light of its punches). */
     public record Body(Vec3d at,float yaw,float scale){}
     private static final StarPlatinumLook ghost=new StarPlatinumLook(),trail=new StarPlatinumLook();
+    /** The look its beatdown's blow leaves it in, should the moment it went back in be past seeing (2.64.0): the blow held. */
+    private static final StarPlatinumLook BLOW=new StarPlatinumLook().only(dev.sangwoo.celestialfall.stand.StarPlatinumStance.PUNCH_BIG);
+    static{BLOW.glow=1;}
+    /** The beatdown's clock (seconds) at this class's client clock {@code clock} (ticks; the frame's is ticks-1+delta). */
+    static float beatAge(StandBeatdown.Beat b,double clock){return b.age(0)+(float)((clock-(ticks-1))/20);}
     private static final StandPunch.Shape punchShape=new StandPunch.Shape(),ghostShape=new StandPunch.Shape();
     /** The punches' afterimages (2.54.0; five since 2.55.0): how far back each is (seconds) and how bright. */
     static final float[][] PUNCH_GHOSTS={{.016f,.42f},{.032f,.32f},{.048f,.23f},{.064f,.16f},{.08f,.1f}};
@@ -190,7 +195,7 @@ public final class StandPresence {
     }
 
     private static final class Presence {
-        final int entity;final StandPuppet puppet;
+        final int entity;final UUID owner;final StandPuppet puppet;
         /** The afterimages of its flying arms as it rushes (made when first needed). */
         final StandPuppet[] phantoms=new StandPuppet[StandRush.phantoms()];
         boolean out=true,hasFrom,drawn;long since,bodyFrame=-1;Body body;
@@ -198,11 +203,44 @@ public final class StandPresence {
         final StarPlatinumLook from=new StarPlatinumLook();
         /** Where it floats and faces (followed once a tick), and how fast it goes (blocks a second): now and a tick ago. */
         Vec3d pos,prevPos,vel=Vec3d.ZERO,prevVel=Vec3d.ZERO;float yaw,prevYaw;
-        Presence(PlayerEntity p,MinecraftClient mc){entity=p.getId();puppet=new StandPuppet(mc.world);}
+        /** The look its blow left it in as its user's beatdown sent it back in (2.64.0), and for which cutscene. */
+        final StarPlatinumLook beatFrom=new StarPlatinumLook();Object beatFor;
+        final StandPunch.Shape beatShape=new StandPunch.Shape();
+        Presence(PlayerEntity p,MinecraftClient mc){entity=p.getId();owner=p.getUuid();puppet=new StandPuppet(mc.world);}
         StandPuppet phantom(int i,MinecraftClient mc){if(phantoms[i]==null)phantoms[i]=new StandPuppet(mc.world);return phantoms[i];}
 
-        /** Its look at the client clock {@code clock} (ticks): coming out, at rest, or going back. */
-        StarPlatinumLook look(double clock,StarPlatinumLook into){return StandTimeline.at(out,(float)((clock-since)/20),hasFrom?from:null,into);}
+        /**
+         * Its look at the client clock {@code clock} (ticks): coming out, at rest, or going back. Its user's beatdown
+         * (2.64.0) sends it back in once its blow has landed and brings it out again at "Star Platinum!"
+         * (StandBeatdown.standOut): going back from the look its blow left it in, coming out as from inside its user.
+         */
+        StarPlatinumLook look(double clock,StarPlatinumLook into){
+            var b=StandBeatdown.of(owner);
+            if(b!=null){
+                float t=beatAge(b,clock);float[] o=StandBeatdown.standOut(b,t);
+                if(o!=null)return o[0]>0?StandTimeline.at(true,t-o[1],null,into):StandTimeline.dismiss(t-o[1],beatFor==b?beatFrom:BLOW,into);
+            }
+            return StandTimeline.at(out,(float)((clock-since)/20),hasFrom?from:null,into);
+        }
+        /** Whether it is out at the client clock {@code clock} (its user's beatdown takes it in and brings it out, 2.64.0). */
+        boolean shownOut(double clock){
+            var b=StandBeatdown.of(owner);
+            if(b!=null){float[] o=StandBeatdown.standOut(b,beatAge(b,clock));if(o!=null)return o[0]>0;}
+            return out;
+        }
+        /**
+         * The look its blow left it in as its user's beatdown sent it back in (2.64.0), worked out once for each
+         * cutscene: at rest, the blow's stances on it as it held, when it was sent back (StandBeatdown.RETREAT).
+         */
+        void beatFrom(PlayerEntity p,float delta){
+            var b=StandBeatdown.of(owner);if(b==null||beatFor==b)return;
+            float back=b.age(delta)-StandBeatdown.RETREAT;if(back<0)return;
+            StandTimeline.at(out,(float)((ticks-1d+delta-back*20-since)/20),hasFrom?from:null,beatFrom);
+            var shape=StandInhale.shape(p,delta,back,beatShape);
+            if(shape!=null&&shape.engage>0){shape.onto(beatFrom);beatFrom.wind=Math.max(beatFrom.wind,.35f*shape.engage);}
+            if(shape!=null)beatFrom.gust=Math.max(beatFrom.gust,shape.gust);
+            beatFor=b;
+        }
         /**
          * Once a tick: swing round to its user's facing and close in on its place beside them. The facing is the head's:
          * the game sets a player's head to the body's facing every tick and sends it on its own, while another player's
@@ -235,9 +273,12 @@ public final class StandPresence {
          * each blow, and what wind it fights in. Returns their shape, for where it stands (null if none shows).
          */
         StandPunch.Shape punch(PlayerEntity p,float delta,float back,StarPlatinumLook look,StandPunch.Shape into){
-            var shape=StandInhale.shape(p,delta,back,into);if(shape==null)return null;
+            // its user's beatdown leads from the grab (2.64.0); before it, its blow (a punch)
+            var shape=StandBeatdown.shape(owner,delta,back,into);
+            if(shape==null)shape=StandInhale.shape(p,delta,back,into);
+            if(shape==null)return null;
             float e=shape.engage;
-            if(out&&e>0){
+            if(shownOut(ticks-1d+delta-back*20)&&e>0){
                 shape.onto(look);
                 look.wind=Math.max(look.wind,.35f*e);
             }
@@ -246,6 +287,7 @@ public final class StandPresence {
         }
         /** This frame: the look for the frame's moment with its punches, how it leans as it follows, and the body put where it floats. */
         StandPunch.Shape place(PlayerEntity p,float delta,StarPlatinumLook look){
+            beatFrom(p,delta);
             look(ticks-1d+delta,look);
             var shape=punch(p,delta,0,look,punchShape);
             var v=prevVel.lerp(vel,delta);float y=MathHelper.lerpAngleDegrees(delta,prevYaw,yaw);

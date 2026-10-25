@@ -53,9 +53,9 @@ public final class StandPunchFx {
     /** The guard's light, as it shatters (2.59.0): its blue and a paler blue. */
     static final int GUARD=0x5f8dff,GUARD_LIGHT=0xb4ccff;
     /** How big each punch's light is (the finisher's, and the heavy punch's most of all). */
-    static final float[] SIZE={0,1.1f,1.15f,1.3f,2.2f,2.6f,.9f};
+    static final float[] SIZE={0,1.1f,1.15f,1.3f,2.2f,2.6f,.9f,1.7f};
     /** How long each punch's burst lasts after its contact (seconds). */
-    static final float[] BURST={0,.17f,.17f,.2f,.32f,.38f,.2f};
+    static final float[] BURST={0,.17f,.17f,.2f,.32f,.38f,.2f,.26f};
     /** How much larger the heavy punch's finishing light is than the finisher's (its dome, rings, lance, ripple and dust). */
     static final double HEAVY_SCALE=1.3;
     /** A punch's effects are over this long after its contact (seconds): the heavy punch's target flies longer, and its dust where it comes down. */

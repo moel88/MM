@@ -23,5 +23,7 @@ public abstract class KagenoStaggerMixin {
     private void botand$stagger(LivingEntity entity,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
         // After setupTransforms local +Z points behind the body, so a positive X turn tips the head backwards.
         float lean=StandClient.stagger(entity,delta);if(lean>0)matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(lean));
+        // Star Platinum's beatdown (2.64.0): the one struck turned as its cutscene shows them
+        dev.sangwoo.celestialfall.client.stand.StandBeatdown.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
     }
 }

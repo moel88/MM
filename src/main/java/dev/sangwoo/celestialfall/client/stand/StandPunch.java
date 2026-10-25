@@ -119,8 +119,8 @@ public final class StandPunch {
         }
     }
     /** When each punch lands (seconds after it starts) and how long it then stands still (the hit-stop: longer for the heavy ones). */
-    public static final float[] HIT=new float[7],FREEZE={0,.05f,.05f,.08f,.13f,.16f,.1f};
-    static{for(int k=1;k<=6;k++)HIT[k]=StarPlatinumRules.CONTACT[k]/20f;}
+    public static final float[] HIT=new float[8],FREEZE={0,.05f,.05f,.08f,.13f,.16f,.1f,.15f};
+    static{for(int k=1;k<=7;k++)HIT[k]=StarPlatinumRules.CONTACT[k]/20f;}
     /** Ease into a key: smoothly, holding the stance, or striking (faster and faster, at full speed as it lands). */
     static final int SMOOTH=0,HOLD=1,STRIKE=2;
     record Key(float at,int stance,int ease){}
@@ -133,7 +133,9 @@ public final class StandPunch {
      * in their guard; the hook and the finisher load all through the "O" of their shouts. 5, the heavy punch (2.59.0),
      * coils for 0.3 s, holds the coil, strikes in 0.16 s to land at 0.6 s and holds the blow out while its target flies.
      * 6, the Star Finger (2.60.0), takes aim in 0.24 s, holds it, drives the hand out in 0.11 s to land at 0.45 s, holds
-     * it out while its fingers are in its target and goes back to the guard once they are back.
+     * it out while its fingers are in its target and goes back to the guard once they are back. 7, the beatdown's blow
+     * (2.64.0), is the cross's load and the finisher's lunging right thrown on the "RA" of its "ORA!" (0.2 s) and held out
+     * long (its cutscene takes the stand over from there if it struck: client/stand/StandBeatdown).
      */
     static final Key[][] KEYS={null,
         {k(0,GUARD,SMOOTH),k(.08f,WIND_L,SMOOTH),k(.1f,WIND_L,HOLD),k(.2f,PUNCH_L,STRIKE),k(.24f,PUNCH_L,HOLD),k(.44f,GUARD,SMOOTH)},
@@ -141,19 +143,20 @@ public final class StandPunch {
         {k(0,GUARD,SMOOTH),k(.24f,WIND_HOOK,SMOOTH),k(.34f,WIND_HOOK,HOLD),k(.45f,HOOK,STRIKE),k(.5f,HOOK,HOLD),k(.76f,GUARD,SMOOTH)},
         {k(0,GUARD,SMOOTH),k(.26f,WIND_BIG,SMOOTH),k(.38f,WIND_BIG,HOLD),k(.5f,PUNCH_BIG,STRIKE),k(.72f,PUNCH_BIG,HOLD),k(1f,GUARD,SMOOTH)},
         {k(0,GUARD,SMOOTH),k(.3f,WIND_HEAVY,SMOOTH),k(.44f,WIND_HEAVY,HOLD),k(.6f,PUNCH_HEAVY,STRIKE),k(.9f,PUNCH_HEAVY,HOLD),k(1.24f,GUARD,SMOOTH)},
-        {k(0,GUARD,SMOOTH),k(.24f,WIND_FINGER,SMOOTH),k(.34f,WIND_FINGER,HOLD),k(.45f,STAR_FINGER,STRIKE),k(.88f,STAR_FINGER,HOLD),k(1.1f,GUARD,SMOOTH)}};
+        {k(0,GUARD,SMOOTH),k(.24f,WIND_FINGER,SMOOTH),k(.34f,WIND_FINGER,HOLD),k(.45f,STAR_FINGER,STRIKE),k(.88f,STAR_FINGER,HOLD),k(1.1f,GUARD,SMOOTH)},
+        {k(0,GUARD,SMOOTH),k(.08f,WIND_R,SMOOTH),k(.1f,WIND_R,HOLD),k(.2f,PUNCH_BIG,STRIKE),k(.5f,PUNCH_BIG,HOLD),k(.82f,GUARD,SMOOTH)}};
     /** The stance each punch loads in, the one it strikes in, and the fist it strikes with (true: the right). */
-    static final int[] WINDS={0,WIND_L,WIND_R,WIND_HOOK,WIND_BIG,WIND_HEAVY,WIND_FINGER},STRIKES={0,PUNCH_L,PUNCH_R,HOOK,PUNCH_BIG,PUNCH_HEAVY,STAR_FINGER};
-    static final boolean[] RIGHT={false,false,true,false,true,true,true};
+    static final int[] WINDS={0,WIND_L,WIND_R,WIND_HOOK,WIND_BIG,WIND_HEAVY,WIND_FINGER,WIND_R},STRIKES={0,PUNCH_L,PUNCH_R,HOOK,PUNCH_BIG,PUNCH_HEAVY,STAR_FINGER,PUNCH_BIG};
+    static final boolean[] RIGHT={false,false,true,false,true,true,true,true};
     /**
      * How far the stand dashes on into each punch as it lands (blocks): as far as it takes for the fist to sink BITE
      * into its target, but never less than the first nor more than the second (it stays right in front of its user).
      */
-    static final float[] LUNGE_MIN={0,.3f,.35f,.4f,.6f,.7f,.1f},LUNGE_MAX={0,.85f,.9f,.95f,1.3f,1.3f,.1f};
+    static final float[] LUNGE_MIN={0,.3f,.35f,.4f,.6f,.7f,.1f,.5f},LUNGE_MAX={0,.85f,.9f,.95f,1.3f,1.3f,.1f,1.2f};
     /** How far each blow shoves the stand on through its target as it lands (blocks, in over two frames and soon gone, 2.56.0). */
-    static final float[] DRIVE={0,.12f,.12f,.18f,.3f,.4f,.08f};
+    static final float[] DRIVE={0,.12f,.12f,.18f,.3f,.4f,.08f,.3f};
     /** Gust through the hair as each punch lands. */
-    static final float[] GUST={0,1f,1.05f,1.3f,1.8f,2.2f,1.5f};
+    static final float[] GUST={0,1f,1.05f,1.3f,1.8f,2.2f,1.5f,1.8f};
     /**
      * Where the stand stands to punch (2.55.0): right in front of its user, AHEAD blocks on along the punch and on its
      * line (SIDE 0), facing straight down it, higher than at rest (RAISE) so its shoulders and fists show over its
@@ -167,7 +170,7 @@ public final class StandPunch {
      * the last blow, the hook and the finisher take longer (their arms come right round from the blow before, all
      * through the first of their loads).
      */
-    static final float[] BLEND={0,.1f,.12f,.2f,.2f,.2f,.2f};
+    static final float[] BLEND={0,.1f,.12f,.2f,.2f,.2f,.2f,.12f};
     /** It stays in front this long once a punch is over (seconds; less once one is stopped short), then goes back over RETURN. */
     static final float LINGER=.45f,LINGER_STOPPED=.15f,RETURN=.4f;
     /** The stand's size, for the fists' places (StarPlatinumRenderer.SCALE: model units of 1/16 block). */

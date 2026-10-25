@@ -1339,6 +1339,37 @@ POSES = {
         'right_leg': {'rot': (15, 0, 15)}, 'right_shin': {'rot': (58, 0, 0)}, 'right_foot': {'rot': (26, 0, 0)},
         'cloth_front': {'rot': (-19, 0, 0)}, 'cloth_back': {'rot': (21, 0, 0)},
     },
+    # ---- G, the beatdown (2.64.0, user request: "비트다운 꽂을때는 플레이어의 멱살을 잡고 올려치고 그대로 오라러쉬를
+    # 꽂아줘 찰지게 때리고 날려야해"): in its cutscene it grabs the one it struck by the collar ('beat_grab': the left arm
+    # out straight at their collar and gripping it, the body leaning in and wound round to the right, the right fist
+    # cocked low back by the hip, the weight sitting back on the rear leg) and throws the uppercut ('beat_upper': rising
+    # off the front leg as the hips wheel round to the left, the right fist driven straight up in front through their
+    # chin, the body arched a little back after it, the left hand let go and torn back to the chest, the head up after
+    # them), then rushes them (the rush's stances) and throws its big ORAs (the punches') and its last blow (the heavy
+    # punch's), client/stand/StandBeatdown.
+    'beat_grab': {
+        'root': {'pos': (0, -.8, -3.6)},
+        'hips': {'rot': (10, 30, 0)}, 'torso': {'rot': (7, 10, 0)}, 'chest': {'rot': (5, 8, 0)},
+        'neck': {'rot': (-9, -16, 0)}, 'head': {'rot': (-12, -24, 0)},
+        'left_arm': {'reach': ((2.0, 34.5, -27.0), (.6, -1, .1))},
+        'right_arm': {'reach': ((-7.0, 22.0, 4.5), (-1, -.3, .6))},
+        'left_pad': {'rot': (-12, 0, -18)}, 'right_pad': {'rot': (0, 0, 14)},
+        'left_leg': {'rot': (-30, 0, -4)}, 'left_shin': {'rot': (40, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
+        'right_leg': {'rot': (24, 0, 8)}, 'right_shin': {'rot': (58, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-14, 0, 0)}, 'cloth_back': {'rot': (8, 0, 0)},
+    },
+    'beat_upper': {
+        'root': {'pos': (0, 2.6, -4.2)},
+        'hips': {'rot': (2, -34, 0)}, 'torso': {'rot': (-6, -12, 0)}, 'chest': {'rot': (-11, -12, 0)},
+        'neck': {'rot': (-8, 18, 0)}, 'head': {'rot': (-17, 22, 0)},
+        'right_arm': {'reach': ((-1.5, 48.0, -19.0), (-.5, -.4, 1))},
+        'right_pad': {'rot': (-16, 0, 30)},
+        'left_arm': {'reach': ((6.0, 30.0, -2.0), (.8, -1, .4))},
+        'left_pad': {'rot': (0, 0, -10)},
+        'left_leg': {'rot': (-52, 0, -4)}, 'left_shin': {'rot': (36, 0, 0)}, 'left_foot': {'rot': (8, 0, 0)},
+        'right_leg': {'rot': (40, 0, 6)}, 'right_shin': {'rot': (16, 0, 0)}, 'right_foot': {'rot': (46, 0, 0)},
+        'cloth_front': {'rot': (-24, 0, 0)}, 'cloth_back': {'rot': (26, 0, 0)},
+    },
 }
 
 

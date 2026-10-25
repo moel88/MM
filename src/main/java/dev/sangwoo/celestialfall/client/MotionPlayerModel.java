@@ -21,10 +21,16 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         }
         var stand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=AtomicClient.poseCast(player.getUuid());
+        // Star Platinum's beatdown's cutscene (2.64.0): its user's body ("yare yare", a hand on the head) and the one struck's
+        var beat=dev.sangwoo.celestialfall.client.stand.BeatdownPose.of(player,animationProgress-player.age);
         // The meteor pickaxe in both hands (2.49.1): after a stand's own motion, before its idle arms.
         boolean mining=atomic==null&&stand==null&&dev.sangwoo.celestialfall.client.meteor.MiningPose.active(player,animationProgress-player.age);
         String arms="";
-        if(atomic!=null){
+        if(beat!=null){
+            articulated=true;
+            MotionRig.apply(this,beat,0,0);
+        }
+        else if(atomic!=null){
             articulated=true;
             dev.sangwoo.celestialfall.client.kageno.AtomicPose.apply(this,atomic.age(animationProgress-player.age)/20f);
         }
@@ -55,7 +61,8 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         float delta=animationProgress-player.age;
         if(delta>=0&&delta<=1.001f){
             Object source;float fade;
-            if(atomic!=null){source="atomic";fade=3;}
+            if(beat!=null){source="beatdown";fade=3;}
+            else if(atomic!=null){source="atomic";fade=3;}
             else if(stand!=null){source=stand.id();fade=1.6f;}
             else if(mining){source=dev.sangwoo.celestialfall.client.meteor.MiningPose.source(player);fade=3;}
             else if(rig){source=CombatClient.state(player,delta);fade=CombatClient.fade(source);}
