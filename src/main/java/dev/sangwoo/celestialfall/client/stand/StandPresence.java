@@ -118,6 +118,7 @@ public final class StandPresence {
     }
 
     private static void render(WorldRenderContext c){
+        StarPlatinumRenderer.frame();
         if(ALL.isEmpty())return;
         var mc=MinecraftClient.getInstance();if(mc.world==null||c.consumers()==null)return;
         float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();frames++;

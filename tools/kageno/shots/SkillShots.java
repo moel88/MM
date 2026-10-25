@@ -115,7 +115,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * stance's share, and the log each time it comes on and goes off and each blow heard. Its heavy punch (2.59.0):
  * "KEY_R@n" taps R through the real keyboard path, and "dguard=1" makes the training dummy one that holds its guard
  * up; stand.csv gets the heavy punch's two stances, the dummy's guard (up, broken) and where it is (its flight), and
- * the log the moment its guard breaks.
+ * the log the moment its guard breaks. Its Star Finger (2.60.0): "KEY_T@n" taps T through the real keyboard path,
+ * and "act=" husks walk off from their START (ticks of the shot clock, through the game's movement: the Star Finger
+ * slows them) and go to NAME/actors.csv;
+ * stand.csv gets its two stances, how far its fingers are open and out, how long they were drawn and how far ahead of
+ * the player's feet their tips reach, and whether the dummy is incapacitated and its speed; the log how far the
+ * fingers went each time and when the dummy is incapacitated and free again.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -370,6 +375,28 @@ public final class SkillShots implements ClientModInitializer {
             if(broken&&!dummyBroken)log.append("  dummy guard broken at ").append(age).append('\n');
             dummyBroken=broken;
         }else standLog.append(",,,,,");
+        // 2.60.0: the Star Finger's two stances, how far its fingers are open and out, how long they were drawn (blocks)
+        // and how far ahead of the player's feet their tips reach; the training dummy incapacitated, and its speed
+        for(int i=20;i<22;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        standLog.append(',').append(l==null?",":String.format(Locale.ROOT,"%.4f,%.4f",l.fingerOpen,l.fingerExt));
+        var finger=dev.sangwoo.celestialfall.client.stand.StarPlatinumRenderer.finger(mc.player.getUuid());
+        if(finger==null)standLog.append(",,");
+        else{
+            var ahead=finger.tip().subtract(mc.player.getLerpedPos(mc.getTickDelta()));var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());
+            double len=finger.root().distanceTo(finger.tip()),reach=ahead.x*f.x+ahead.z*f.z;
+            standLog.append(String.format(Locale.ROOT,",%.3f,%.3f",len,reach));
+            if(len>fingerLongest+.05){fingerLongest=len;fingerLogged=true;}
+            else if(fingerLogged&&len<fingerLongest-.3){log.append(String.format(Locale.ROOT,"  fingers out %.2f blocks (tips %.2f blocks ahead) by %d%n",fingerLongest,fingerReach,age));fingerLogged=false;}
+            if(len>=fingerLongest-.001)fingerReach=reach;
+        }
+        if(finger==null&&fingerLogged){log.append(String.format(Locale.ROOT,"  fingers out %.2f blocks (tips %.2f blocks ahead) by %d%n",fingerLongest,fingerReach,age));fingerLogged=false;}
+        if(finger==null)fingerLongest=0;
+        if(dummy instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){
+            boolean disabled=t.disabledUntil()>mc.world.getTime();
+            standLog.append(String.format(Locale.ROOT,",%d,%.5f",disabled?1:0,t.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
+            if(disabled!=dummyDisabled)log.append("  dummy ").append(disabled?"incapacitated":"free again").append(" at ").append(age).append('\n');
+            dummyDisabled=disabled;
+        }else standLog.append(",,");
         standLog.append('\n');
         if(rush!=null){
             String[] v=rush.split(",");boolean on=v[3].equals("1");int blows=Integer.parseInt(v[1]);
@@ -388,6 +415,7 @@ public final class SkillShots implements ClientModInitializer {
         }
     }
     private String punchLogged="";private boolean rushOn;private int rushBlows;
+    private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
     private void logInterface()throws Exception{
         String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
@@ -633,7 +661,7 @@ public final class SkillShots implements ClientModInitializer {
                     // "DASH@n": the dash key (C) is pressed for a tick, through the client's own input
                     if(what.equals("DASH")){if(age==at)key(GLFW_KEY_C,true);if(age==at+1)key(GLFW_KEY_C,false);continue;}
                     // the UI shot's keys and mouse
-                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);}if(age==at+1)key(code,false);continue;}
                     if(what.startsWith("MOVE_")){if(age==at){glideTo=null;double[] g=target(what.substring(5));double k=mc.getWindow().getScaleFactor();glideFrom=new double[]{mc.mouse.getX(),mc.mouse.getY()};glideTo=new double[]{g[0]*k,g[1]*k};glideAt=age;log.append("  move ").append(what.substring(5)).append(" at ").append(age).append('\n');}continue;}
                     if(what.equals("TP")||what.equals("TPB")){if(age==at)server(p->{String[] v=opts.get(what.equals("TP")?"tp":"tpb").split("[/,]");double[] d=new double[5];for(int i=0;i<v.length;i++)d[i]=Double.parseDouble(v[i].trim());
@@ -669,7 +697,8 @@ public final class SkillShots implements ClientModInitializer {
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
                     if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big,"
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
-                        +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z\n"+standLog);standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;}
+                        +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed\n"+standLog);
+                        standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }
@@ -681,7 +710,9 @@ public final class SkillShots implements ClientModInitializer {
             case "RUSH"->server(p->KagenoManager.input(p,T_DOWN));
             case "T"->server(p->{KagenoManager.input(p,T_DOWN);KagenoManager.input(p,T_UP);});
             case "P"->server(p->{if(!KagenoManager.input(p,POSE))log.append("  rejected P\n");});
-            case "BASE","HUD","UI","METEOR","SHOP","SUMMON"->{}
+            case "BASE","HUD","UI","METEOR","SHOP"->{}
+            // 2.60.0: a stand shot's actors walk from their START (shot ticks), for the Star Finger's slow
+            case "SUMMON"->{if(!actors.isEmpty())server(p->{spot=p.getPos();serverStart=p.getWorld().getTime();});}
             case "STAND"->server(p->{
                 var w=p.getServerWorld();var figure=dev.sangwoo.celestialfall.stand.StarPlatinum.TYPE.create(w);
                 var at=p.getPos().add(net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()).multiply(opt("sfw",3)));float yaw=p.getYaw()+180+opt("syaw",0);

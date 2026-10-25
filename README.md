@@ -1,4 +1,16 @@
-> **현재 통합본: Botand 2.59.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.60.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.60.0 — 스타플래티나 T: 스타 핑거 · 무력화 · R 가드 브레이크는 2초 무력화
+
+- **스타 핑거(T):** 스탠드를 꺼낸 상태에서 T를 누르면 스타플래티나가 오른손 두 손가락을 길게 늘여 앞을 찌릅니다. 사용자 발에서 5블록까지, 폭이 좁은 길(옆 ±0.6블록)에서 가장 가까운 한 명을 맞힙니다. 0.45초에 닿고 피해 10입니다.
+- **맞으면:** 2초 동안 95% 느려지고, 3초 동안 무력화됩니다.
+- **무력화:** 걷기만 할 수 있습니다. 대시·평타·가드·점프·달리기·모든 스킬·아이템 사용·스탠드 꺼내고 넣기(Q)가 막히고, 하던 것은 끊깁니다. 머리 위에 별이 돌고, 자기 화면의 가드 막대 위에 '무력화'가 뜹니다.
+- **R 가드 브레이크:** 가드를 올린 상대를 R로 치면 이제 날아가지 않고 그 자리에서 2초 동안 무력화됩니다(피해 15는 그대로). 가드를 올리지 않은 상대는 전처럼 날아갑니다.
+- **쿨타임:** 12초, 스타 핑거가 끝난 뒤부터 돕니다(쿨타임 목록에 '스타 핑거').
+- **소리:** 보내 주신 녹화의 소리 그대로이고, '딱' 하는 소리가 손가락이 닿는 프레임에 납니다.
+- **제가 정한 값:** T 키, 피해 10, 쿨타임 12초, 가장 가까운 한 명만 맞음, 가드로 막힘(막으면 무력화 없음), 스타플래티나 사용자의 채팅은 Enter. 바꾸고 싶은 값이 있으면 알려 주세요.
+
+[RELEASE_2.60.0_KO.md](RELEASE_2.60.0_KO.md)를 확인하세요.
 
 # 보탠드 2.59.0 — 스타플래티나 R: 강펀치 (날리기 · 가드 브레이크)
 

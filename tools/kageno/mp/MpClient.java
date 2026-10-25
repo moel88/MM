@@ -50,7 +50,14 @@ public final class MpClient implements ClientModInitializer {
      * the watcher, brought back 2.5 blocks in front of it each time ("HOME": /execute ... tp): first unguarded, then
      * with the watcher holding its guard up (F, from when it hears that second heavy punch start): both log each heavy
      * punch they hear, when its voice and its blow start on their clock, how loud its blow sounds once it lands, and
-     * whose guard it broke; the watcher logs its own guard (up, broken), the server how far it flew.
+     * whose guard it broke; the watcher logs its own guard (up, broken), the server how far it flew. Since 2.60.0 the
+     * second, breaking the watcher's guard, does not throw it but incapacitates it for 2 s: the watcher tries the attack
+     * 5 ticks after it lands (refused). Then the watcher takes Kageno ("KAGENO", for skills to try), the caster calls
+     * the watcher 4.5 blocks in front of it ("FAR") and uses the
+     * Star Finger (T) on it: both log the Star Finger they hear, when its sound starts on their clock and whom it struck;
+     * the watcher, struck, tries the attack, the dash (C) and E (all refused: incapacitated), walks forward for 25 ticks
+     * (95% slower; its speed is logged) and tries the attack again once the 3 s are over (it swings); it logs its own
+     * incapacitation and speed as its client knows them, the server as it keeps them.
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -66,7 +73,7 @@ public final class MpClient implements ClientModInitializer {
         "2460 DUMMY",
         "3070 TAB","3100 TAB","3120 ESC","3135 R","3150 ENTER","3185 RESPAWN",
         "3230 STAND","3270 Q","3315 E+","3330 W+","3380 W-","3405 E-","3440 M1+","3503 M1-",
-        "3560 HOME","3575 R","3650 HOME","3665 R","3740 TURN180","3742 W+","3782 W-","3842 Q","3892 END"};
+        "3560 HOME","3575 R","3650 HOME","3665 R","3730 KAGENO","3740 FAR","3755 T","3850 TURN180","3852 W+","3892 W-","3952 Q","4002 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -171,7 +178,9 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         if(step.equals("STAND")){if(down){note("command botand progress stand @s star_platinum");mc.player.networkHandler.sendChatCommand("botand progress stand @s star_platinum");}return;}
         // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
-        if(step.equals("HOME")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^2.5 facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // 2.60.0: the watcher takes Kageno (its skills, refused while the Star Finger has it incapacitated)
+        if(step.equals("KAGENO")){if(down){String c="botand progress stand Watcher kageno";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        if(step.equals("HOME")||step.equals("FAR")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^"+(step.equals("FAR")?"4.5":"2.5")+" facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
         if(down&&press&&!k.equals("W"))face();
         if(down||!step.endsWith("+"))note((press?"press ":"release ")+k);
@@ -276,7 +285,8 @@ public final class MpClient implements ClientModInitializer {
                 note(String.format(Locale.ROOT,"%s landed on %s at its tick %d here",who,names,seen.ticksIn()));}
             if(state[1]==0&&seen.voice()!=null&&mc.getSoundManager().isPlaying(seen.voice())){state[1]=1;note(String.format(Locale.ROOT,"%s: its shout started at its tick %d here",who,seen.ticksIn()));}
             // 2.56.0: the jab and the cross shout nothing; the hook's shout fades as the finisher's comes
-            if(state[3]==0&&seen.ticksIn()>=4&&!dev.sangwoo.celestialfall.stand.StarPlatinumRules.shouts(seen.punch.combo())){state[3]=1;note(who+(seen.voice()==null?": no shout (by the rule)":": a shout, against the rule"));}
+            // (the heavy punch and the Star Finger are no punches of the combo: they have sounds of their own, logged below)
+            if(state[3]==0&&seen.ticksIn()>=4&&!dev.sangwoo.celestialfall.stand.StarPlatinumRules.skill(seen.punch.combo())&&!dev.sangwoo.celestialfall.stand.StarPlatinumRules.shouts(seen.punch.combo())){state[3]=1;note(who+(seen.voice()==null?": no shout (by the rule)":": a shout, against the rule"));}
             if(state[4]==0&&seen.voice() instanceof dev.sangwoo.celestialfall.client.stand.StandAttack.Shout shout&&shout.fading()){state[4]=1;note(String.format(Locale.ROOT,"%s: its shout fading out at its tick %d here",who,seen.ticksIn()));}
             if(state[2]==0&&!Float.isNaN(seen.punch.stopped())){state[2]=1;note(who+" stopped short");}
             // 2.59.0: the heavy punch: its voice and its blow starting here, the blow's loudness once it lands, whose
@@ -288,13 +298,47 @@ public final class MpClient implements ClientModInitializer {
                 if(h[2]==0&&seen.heavyBlow()!=null&&mc.getSoundManager().isPlaying(seen.heavyBlow())){h[2]=1;note(String.format(Locale.ROOT,"%s: its blow started at its tick %d here",who,seen.ticksIn()));}
                 if(h[3]==0&&seen.landed&&seen.ticksIn()>=dev.sangwoo.celestialfall.stand.StarPlatinumRules.CONTACT[seen.punch.combo()]+2){h[3]=1;var broke=new ArrayList<String>();
                     for(int id:seen.broke){var e=mc.world.getEntityById(id);broke.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
-                    note(String.format(Locale.ROOT,"%s: its blow sounding at %.2f at its tick %d here, broke the guard of %s",who,seen.heavyBlow()==null?-1:seen.heavyBlow().loudness(),seen.ticksIn(),broke));}
+                    note(String.format(Locale.ROOT,"%s: its blow sounding at %.2f at its tick %d here, broke the guard of %s",who,seen.heavyBlow()==null?-1:seen.heavyBlow().loudness(),seen.ticksIn(),broke));
+                    // 2.60.0: its guard broken, the watcher is incapacitated: its attack is refused
+                    if(!caster&&seen.broke.length>0)tries.put(age+3,"M1");}
+            }
+            // 2.60.0: the Star Finger: its sound starting here and whom it struck; the watcher, struck, tries everything
+            if(seen.punch.combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER){
+                int[] h=fingerHeard.computeIfAbsent(key,k->new int[2]);
+                if(h[0]==0&&seen.voice()!=null&&mc.getSoundManager().isPlaying(seen.voice())){h[0]=1;note(String.format(Locale.ROOT,"%s: its sound started at its tick %d here",who,seen.ticksIn()));}
+                if(h[1]==0&&seen.landed){h[1]=1;
+                    boolean me=false;for(int id:seen.struck)me|=id==mc.player.getId();
+                    if(!caster&&me){tries.put(age+3,"M1");tries.put(age+10,"C");tries.put(age+17,"E");tries.put(age+20,"W+");tries.put(age+45,"W-");tries.put(age+68,"M1");
+                        fingerWalk=new int[]{age+20,age+45};}}
             }
         }
         // this player's own guard as its client knows it (2.59.0: broken by the heavy punch)
         var mine=CombatClient.snapshot(mc.player.getUuid());flag("guard",mine.broken(mc.world.getTime())?"broken":mine.guard()?"up":"down");
+        // 2.60.0: incapacitated as its client knows it, and its speed against its base
+        var speed=mc.player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
+        flag("incapacitated",mine.disabled(mc.world.getTime())||mine.broken(mc.world.getTime()));
+        flag("speed",String.format(Locale.ROOT,"x%.2f",speed.getValue()/speed.getBaseValue()));
+        // the watcher's tries while incapacitated (and once it is over), and how fast it walked
+        if(!caster){
+            String t=tries.remove(age);
+            if(t!=null){note("try "+t+(mine.locked(mc.world.getTime())?" (incapacitated)":" (free)"));
+                switch(t){case "M1"->{attack(true);release=age+1;}case "C"->{key(GLFW_KEY_C,true);releaseKey=GLFW_KEY_C;release=age+1;}case "E"->{key(GLFW_KEY_E,true);releaseKey=GLFW_KEY_E;release=age+1;}
+                    case "W+"->key(GLFW_KEY_W,true);case "W-"->key(GLFW_KEY_W,false);default->{}}}
+            if(age==release){attack(false);if(releaseKey!=0)key(releaseKey,false);releaseKey=0;}
+            if(fingerWalk!=null){
+                var p=mc.player.getPos();
+                if(age==fingerWalk[0]){walkFrom=p;walkSteps.clear();}
+                else if(age>fingerWalk[0]&&age<=fingerWalk[1]){if(age>fingerWalk[0]+4&&mc.player.isOnGround())walkSteps.add(Math.hypot(p.x-walkFrom.x,p.z-walkFrom.z));walkFrom=p;}
+                if(age==fingerWalk[1]){var sorted=new ArrayList<>(walkSteps);sorted.sort(null);double median=sorted.isEmpty()?0:sorted.get(sorted.size()/2);
+                    note(String.format(Locale.ROOT,"walking %.2f blocks/s while struck by the Star Finger (median of %d ticks)",median*20,sorted.size()));fingerWalk=null;}
+            }
+            boolean dashing=mine.dashStart()>mc.world.getTime()-8&&mine.dashStart()<=mc.world.getTime();
+            flag("dashing",dashing);
+        }
     }
-    private final Map<String,int[]> heavyHeard=new HashMap<>();private int heavies,guardUntil;
+    private final Map<String,int[]> heavyHeard=new HashMap<>(),fingerHeard=new HashMap<>();private int heavies,guardUntil;
+    private final Map<Integer,String> tries=new HashMap<>();private int release=-1,releaseKey;private int[] fingerWalk;
+    private net.minecraft.util.math.Vec3d walkFrom;private final List<Double> walkSteps=new ArrayList<>();
     /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */
     private String stand(net.minecraft.entity.player.PlayerEntity p){
         var h=(dev.sangwoo.celestialfall.stand.StandHolder)p;var st=dev.sangwoo.celestialfall.client.stand.StandPresence.state(p.getUuid());

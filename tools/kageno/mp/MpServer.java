@@ -255,7 +255,11 @@ public final class MpServer implements ModInitializer {
         if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0)return;
         // a player with Star Platinum out walks with it (2.51.0): left where they are; and a player Star Platinum's
         // punches threw (2.54.0) is left where it came down
-        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+        // (2.60.0: and while the caster has Star Platinum out, the watcher stays where the script puts it: 4.5 blocks
+        // in front of the caster for the Star Finger)
+        boolean standOut=server.getPlayerManager().getPlayerList().stream().anyMatch(q->caster(q)&&dev.sangwoo.celestialfall.stand.StandSummon.out(q));
+        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&standOut)continue;
+            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
@@ -284,7 +288,14 @@ public final class MpServer implements ModInitializer {
             // 2.59.0: the watcher's guard as the server keeps it (the heavy punch breaks it)
             boolean up=dev.sangwoo.celestialfall.combat.CombatManager.guarding(p);
             if(up!=Boolean.TRUE.equals(guardUp.put(p.getUuid(),up)))note(server,"watcher guard "+(up?"up":"down"));
+            // 2.60.0: the watcher incapacitated as the server keeps it (the broken guard, the Star Finger), its speed
+            boolean off=dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p);
+            var speed=p.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
+            if(off!=Boolean.TRUE.equals(disabled.put(p.getUuid(),off)))note(server,String.format(java.util.Locale.ROOT,"watcher %s (speed attribute x%.2f, %.2f blocks from the caster)",off?"incapacitated":"free again",speed.getValue()/speed.getBaseValue(),p.distanceTo(caster)));
+            String sp=String.format(java.util.Locale.ROOT,"x%.2f",speed.getValue()/speed.getBaseValue());
+            if(!sp.equals(speeds.put(p.getUuid(),sp)))note(server,"watcher speed attribute "+sp);
         }
     }
-    private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>();
+    private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>(),disabled=new HashMap<>();
+    private final Map<UUID,String> speeds=new HashMap<>();
 }

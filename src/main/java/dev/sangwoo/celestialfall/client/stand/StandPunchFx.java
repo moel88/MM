@@ -75,8 +75,11 @@ public final class StandPunchFx {
     record Shown(UUID user,StandAttack.Seen seen,float t,StandPresence.Body body,Blow blow){
         int combo(){return seen.punch.combo();}
         float hit(){return StandPunch.HIT[combo()];}
-        /** The finisher and the heavy punch: they throw whom they strike, and land with everything. */
-        boolean big(){return combo()>=4;}
+        /**
+         * The finisher and the heavy punch: they throw whom they strike, and land with everything (not the Star Finger,
+         * which comes after them: it lands with its own, StandPunchFx.finger).
+         */
+        boolean big(){return combo()==4||heavy();}
         boolean heavy(){return combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY;}
         /** The Star Finger (2.60.0). */
         boolean finger(){return combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER;}
@@ -209,6 +212,7 @@ public final class StandPunchFx {
 
     /** Dark ink under the light: every burst gets an ink edge (read against a bright sky), and the finisher's ring and lance too. */
     public static void alpha(EffectMesh m){
+        dazedInk(m);
         for(var s:FRAME){
             float t=s.t,hit=s.hit();
             // the guard the heavy punch breaks: each shard inked a little larger, for its dark edge (seen whole a moment before it lands)
@@ -220,7 +224,7 @@ public final class StandPunchFx {
                 burst(m,s.blow.fist,r*1.14,.36,10+s.combo(),s.seed(),INK,INK,.78f*a,.78f*a);
                 if(!s.finger())for(var c:struck(s))burst(m,c,r*.72*1.14,.36,9,s.seed()+17,INK,INK,.6f*a,.6f*a);
             }
-            if(s.finger()){float lance=lance(t,hit);if(lance>0)m.needle(s.blow.fist.subtract(s.blow.way.multiply(.3)),s.blow.fist.add(s.blow.way.multiply(FINGER_LANCE*Ease.out(t,hit-.02f,hit+.05f))),.36,.25,INK,.6f*lance);}
+            if(s.finger()&&fingerPierced(s)){float lance=lance(t,hit);if(lance>0)m.needle(s.blow.fist.subtract(s.blow.way.multiply(.3)),s.blow.fist.add(s.blow.way.multiply(FINGER_LANCE*Ease.out(t,hit-.02f,hit+.05f))),.36,.25,INK,.6f*lance);}
             if(!s.big())continue;
             double g=s.grand();
             float u=Ease.unit(t,hit,hit+.34f);
@@ -241,20 +245,22 @@ public final class StandPunchFx {
             // the impact burst: violet spikes round a lilac heart (the ink under it gives the edge), a small white core
             // and glint; violet is what it is, white only at its very heart
             float ba=burstAlpha(s),br=burstSize(s);
-            // (the heavy punch's is the biggest: its heart is violet and its white kept small, or it all burns white)
-            boolean heavy=s.heavy();
+            // (the heavy punch's is the biggest: its heart is violet and its white kept small, or it all burns white; a
+            // guard that took the Star Finger turns it blue, and nothing blasts on through it)
+            boolean heavy=s.heavy(),guarded=s.finger()&&fingerBlocked(s);
+            int heart=guarded?GUARD_LIGHT:heavy?VIOLET:LILAC,edge=guarded?GUARD:VIOLET;
             if(ba>0){
-                burst(m,p,br,.36,10+s.combo(),s.seed(),heavy?VIOLET:LILAC,VIOLET,.9f*ba,(heavy?.6f:.8f)*ba);
+                burst(m,p,br,.36,10+s.combo(),s.seed(),heart,edge,.9f*ba,(heavy?.6f:.8f)*ba);
                 m.star(p,br*(heavy?.45:.8),WHITE,(heavy?.3f:.5f)*ba);
             }
-            if(u<1){m.softDisc(p,(1.0+.6*u)*size,BLUE,(heavy?.24f:.42f)*a*(1-u));m.softDisc(p,(.5+.25*u)*size,VIOLET,(heavy?.55f:.7f)*a*(1-u));m.softDisc(p,(heavy?.12:.2)*size*(1-u)+.05,WHITE,.8f*a*(1-u));}
+            if(u<1){m.softDisc(p,(1.0+.6*u)*size,guarded?GUARD:BLUE,(heavy?.24f:.42f)*a*(1-u));m.softDisc(p,(.5+.25*u)*size,edge,(heavy?.55f:.7f)*a*(1-u));m.softDisc(p,(heavy?.12:.2)*size*(1-u)+.05,WHITE,.8f*a*(1-u));}
             // shock rings opening round the punch's line, one quick and bright, one wider after it
             float ur=Ease.unit(t,hit,hit+.17f);
-            if(ur<1)FxLib.ringPlane(m,p.add(go.multiply(.15)),side,up,.2+1.35*size*Ease.out(t,hit,hit+.16f),.24*size,VIOLET,.9f*a*(1-ur));
+            if(ur<1)FxLib.ringPlane(m,p.add(go.multiply(.15)),side,up,.2+1.35*size*Ease.out(t,hit,hit+.16f),.24*size,edge,.9f*a*(1-ur));
             float ur2=Ease.unit(t,hit+.03f,hit+.32f);
-            if(t>=hit+.03f&&ur2<1)FxLib.ringPlane(m,p.add(go.multiply(.35)),side,up,.3+2.3*size*Ease.out(t,hit+.03f,hit+.3f),.13*size,BLUE,.6f*(1-ur2)*Ease.smooth(t,hit+.03f,hit+.05f));
+            if(t>=hit+.03f&&ur2<1)FxLib.ringPlane(m,p.add(go.multiply(.35)),side,up,.3+2.3*size*Ease.out(t,hit+.03f,hit+.3f),.13*size,guarded?GUARD:BLUE,.6f*(1-ur2)*Ease.smooth(t,hit+.03f,hit+.05f));
             Vec3d ahead=s.blow.ahead,aside=right(ahead);
-            blast(m,s,p,ahead,aside,up(ahead,aside),t,hit,size);
+            if(!guarded)blast(m,s,p,ahead,aside,up(ahead,aside),t,hit,size);
             sparks(m,s,p,go,side,up,t,hit,size);
             // whom it struck: a burst of light on them and a spray of it out of their backs (the Star Finger's: its own, below)
             if(!s.finger())for(var c:struck(s)){
@@ -574,12 +580,29 @@ public final class StandPunchFx {
         Vec3d flat=new Vec3d(go.x,0,go.z);flat=flat.lengthSquared()<1e-6?way(s.seen.punch.yaw()):flat.normalize();
         return new Blow(line[1],go,right(flat),feet,go);
     }
-    /** Whether the Star Finger struck a guard (2.60.0): it landed on no one while whoever stood first in its way held a guard up. */
+    /** Whether each Star Finger struck a guard, as this client saw it as the fingers struck (held, so it does not change after). */
+    private static final Map<Long,Boolean> FINGER_GUARDED=new LinkedHashMap<>();
+    /**
+     * Whether the Star Finger struck a guard (2.60.0): whoever stood first in its way held a guard up as it struck, as this
+     * client saw it then; and once the server's word comes, it struck no one (a guard takes it whole).
+     */
     static boolean fingerBlocked(Shown s){
-        if(!s.seen.landed||s.seen.struck.length>0)return false;
-        var mc=MinecraftClient.getInstance();var user=mc.world==null?null:mc.world.getPlayerByUuid(s.user);if(user==null)return false;
-        var target=StandAttack.fingerAt(mc,user,s.seen,delta);
-        return target!=null&&guarding(target,mc.world.getTime());
+        if(s.seen.landed&&s.seen.struck.length>0)return false;
+        Boolean held=FINGER_GUARDED.get(s.key());
+        if(held==null){
+            var mc=MinecraftClient.getInstance();var user=mc.world==null?null:mc.world.getPlayerByUuid(s.user);if(user==null)return false;
+            var target=StandAttack.fingerAt(mc,user,s.seen,delta);
+            held=target!=null&&guarding(target,mc.world.getTime());
+            if(s.t>=s.hit()){FINGER_GUARDED.put(s.key(),held);while(FINGER_GUARDED.size()>48)FINGER_GUARDED.remove(FINGER_GUARDED.keySet().iterator().next());}
+        }
+        return held;
+    }
+    /** Whether the Star Finger pierced someone: the server says it struck someone, or (until its word comes) someone stands in its way unguarded. */
+    static boolean fingerPierced(Shown s){
+        if(fingerBlocked(s))return false;
+        if(s.seen.landed)return s.seen.struck.length>0;
+        var mc=MinecraftClient.getInstance();var user=mc.world==null?null:mc.world.getPlayerByUuid(s.user);
+        return user!=null&&StandAttack.fingerAt(mc,user,s.seen,delta)!=null;
     }
     /**
      * The Star Finger's light before and while it strikes: light gathering at the fingertips as it takes aim; as they
@@ -643,7 +666,7 @@ public final class StandPunchFx {
         if(s.blow==null)return;
         Vec3d p=s.blow.fist,go=s.blow.way,side=s.blow.right,up=up(go,side);
         float a=Ease.smooth(t,hit-.01f,hit+.01f);
-        boolean blocked=fingerBlocked(s),struck=!blocked&&(s.seen.landed?s.seen.struck.length>0:StandAttack.fingerAt(MinecraftClient.getInstance(),MinecraftClient.getInstance().world.getPlayerByUuid(s.user),s.seen,delta)!=null);
+        boolean blocked=fingerBlocked(s),struck=fingerPierced(s);
         if(blocked){
             float u=Ease.unit(t,hit,hit+.3f);if(u>=1)return;
             m.softDisc(p,.9+.5*u,GUARD,.45f*a*(1-u));m.softDisc(p,.25*(1-u)+.05,GUARD_LIGHT,.7f*a*(1-u));
@@ -705,22 +728,58 @@ public final class StandPunchFx {
             if(since==null||since[1]!=until&&clock>since[1]){since=new long[]{now,until};DAZED_SINCE.put(e.getId(),since);while(DAZED_SINCE.size()>64)DAZED_SINCE.remove(DAZED_SINCE.keySet().iterator().next());}
             since[1]=until;
             float in=Ease.smooth((float)(clock-since[0]),0,4),out=Ease.smooth((float)(until-clock),0,6);
-            DAZED.add(new Dazed(e.getLerpedPos(delta).add(0,e.getHeight()+.32,0),in*out,guard,e.getId()*7919,clock));
+            DAZED.add(new Dazed(e.getLerpedPos(delta).add(0,e.getHeight()+DAZED_UP,0),in*out,guard,e.getId()*7919,clock));
         }
     }
-    /** Three small stars of light turning over the head of whoever is incapacitated, a faint ring under them (blue over a broken guard). */
+    /**
+     * The stars over whoever is incapacitated: how high over their head they turn (blocks over its top: under their name,
+     * round the crown), how far out, and how big each star is (its points' reach).
+     */
+    static final double DAZED_UP=.14,DAZED_R=.5,DAZED_STAR=.17;
+    /** Where the dazed star {@code k} of three is now: turning round the head, bobbing a little. */
+    static Vec3d dazedStar(Dazed d,int k){
+        double a=d.clock/20*Math.PI*2*1.1+Ease.hash(d.seed)*Math.PI*2+k*Math.PI*2/3;
+        return d.head.add(Math.cos(a)*DAZED_R,.06*Math.sin(a*2+k),Math.sin(a)*DAZED_R);
+    }
+    static float dazedTwinkle(Dazed d,int k){return .8f+.2f*(float)Math.sin(d.clock*.9+k*2.1);}
+    /** The dazed stars' dark edges (each star in ink a little bigger, under its light: they read against a bright sky). */
+    static void dazedInk(EffectMesh m){
+        for(var d:DAZED){
+            if(d.alpha<.01f)continue;
+            for(int k=0;k<3;k++){float a=.75f*d.alpha*dazedTwinkle(d,k);star(m,dazedStar(d,k),DAZED_STAR*1.3,.5,d.clock*.08+k,INK,INK,a,a);}
+        }
+    }
+    /** Three five-pointed stars turning round the head of whoever is incapacitated, a faint ring under them (blue over a broken guard). */
     static void dazed(EffectMesh m){
         for(var d:DAZED){
             if(d.alpha<.01f)continue;
-            double spin=d.clock/20*Math.PI*2*1.1+Ease.hash(d.seed)*Math.PI*2;
             int rim=d.guard?GUARD:VIOLET,light=d.guard?GUARD_LIGHT:LILAC;
-            FxLib.ring(m,d.head,.36,.035,rim,.45f*d.alpha);
+            FxLib.ring(m,d.head,DAZED_R,.04,rim,.5f*d.alpha);
             for(int k=0;k<3;k++){
-                double a=spin+k*Math.PI*2/3;
-                Vec3d q=d.head.add(Math.cos(a)*.36,.05*Math.sin(a*2+k),Math.sin(a)*.36);
-                float tw=.75f+.25f*(float)Math.sin(d.clock*.9+k*2.1);
-                m.softDisc(q,.13,rim,.5f*d.alpha*tw);m.star(q,.13,light,.9f*d.alpha*tw);m.star(q,.05,WHITE,.8f*d.alpha*tw);
+                Vec3d q=dazedStar(d,k);float a=d.alpha*dazedTwinkle(d,k);
+                m.softDisc(q,DAZED_STAR*1.4,rim,.35f*a);
+                star(m,q,DAZED_STAR,.5,d.clock*.08+k,light,rim,a,a);
+                m.star(q,DAZED_STAR*.45,WHITE,.75f*a);
             }
+        }
+    }
+    /**
+     * An even five-pointed star facing the camera: its points out to {@code r}, the notches between them at {@code inner}
+     * of it, turned {@code turn} radians in its plane; {@code core} at its middle, {@code rim} out to its points.
+     */
+    static void star(EffectMesh m,Vec3d p,double r,double inner,double turn,int core,int rim,float alpha,float coreAlpha){
+        if(alpha<=0||r<=0)return;
+        Vec3d normal=m.camera().subtract(p);if(normal.lengthSquared()<1e-6)return;normal=normal.normalize();
+        Vec3d u=normal.crossProduct(UP);if(u.lengthSquared()<1e-4)u=new Vec3d(1,0,0);u=u.normalize();Vec3d v=u.crossProduct(normal).normalize();
+        double step=Math.PI*2/5;
+        for(int i=0;i<5;i++){
+            double am=turn+Math.PI/2+i*step,a0=am-step/2,a1=am+step/2;
+            Vec3d q0=p.add(u.multiply(Math.cos(a0)*r*inner)).add(v.multiply(Math.sin(a0)*r*inner));
+            Vec3d q1=p.add(u.multiply(Math.cos(a1)*r*inner)).add(v.multiply(Math.sin(a1)*r*inner));
+            Vec3d tp=p.add(u.multiply(Math.cos(am)*r)).add(v.multiply(Math.sin(am)*r));
+            // the middle out to the notches on either side of this point, then the point
+            m.vertex(p,core,coreAlpha);m.vertex(q0,rim,alpha);m.vertex(tp,rim,alpha);m.vertex(p,core,coreAlpha);
+            m.vertex(p,core,coreAlpha);m.vertex(tp,rim,alpha);m.vertex(q1,rim,alpha);m.vertex(p,core,coreAlpha);
         }
     }
     /** Dust kicked up under the finisher's (and the heavy punch's) lunge, where it struck and where its targets come down (the effect layer's anime dust). */

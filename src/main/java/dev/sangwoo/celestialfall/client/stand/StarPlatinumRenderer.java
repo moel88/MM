@@ -45,8 +45,10 @@ public final class StarPlatinumRenderer extends GeoEntityRenderer<StarPlatinumEn
     private static long frames;
     /** The natural length of the fingers (model units, tools/stand/make_star_platinum.py FINGER_LEN), stretched from there. */
     static final float FINGER_LEN=3f;
+    /** A new frame: the fingers drawn before it are no longer where they are (StandPresence, before it draws any stand). */
+    public static void frame(){frames++;}
     /** The body about to be drawn is {@code owner}'s stand itself (null: an afterimage, or none): its fingers are told. */
-    public static void record(java.util.UUID owner){if(owner!=null)frames++;recording=owner;}
+    public static void record(java.util.UUID owner){recording=owner;}
     /** Where {@code owner}'s stand's fingers were drawn this frame (null if they were not). */
     public static Finger finger(java.util.UUID owner){var f=FINGERS.get(owner);return f==null||f.frame!=frames?null:f;}
     public StarPlatinumRenderer(EntityRendererFactory.Context context){super(context,new StarPlatinumModel());withScale(SCALE);shadowRadius=.45f;}
