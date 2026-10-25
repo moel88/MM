@@ -225,11 +225,15 @@ class StandInhaleTest {
                 if(up==lift)System.out.printf(java.util.Locale.ROOT,"%s: its head %.3f clear of its user's, whom it holds %.3f clear of it (their head %.3f)%n",NAMES.get(s),clear,gap,gapHead);
             }
         }
-        // turned back to its guard once it ends, it has drawn back near its user, its fists clear of whom it held
+        // turned back to its guard once it ends, it is drawing back near its user, its fists clear of whom it held
         var g=reach(NAMES.get(GUARD));double fists=-Double.MAX_VALUE;
         for(int k=0;k<g.front().length;k++)if(!Double.isNaN(g.front()[k])&&lift+k*g.step()<1.9)fists=Math.max(fists,g.front()[k]);
-        double free=INHALE_AHEAD-.125-(StandInhale.GUARD_AHEAD+fists);
-        assertTrue(free>.1,"its fists in its guard clear of whom it held: "+free);
+        var i=inhale(0);var shape=new StandPunch.Shape();
+        for(float t=0;t<=3;t+=FRAME){clock(t);words(i,INHALE_CATCH,40);}
+        StandInhale.inhale(i,clock(i.ends()+StandInhale.SETTLE),0,shape);
+        assertEquals(1,shape.weights[GUARD],1e-4,"in its guard");
+        double free=INHALE_AHEAD-.125-(shape.ahead+fists);
+        assertTrue(free>.1,"its fists in its guard clear of whom it held: "+free+" (it stands "+shape.ahead+" ahead)");
     }
     @Test void itsSoundFadesOutAsItEndsAndOneOverBeforeItBeganNeverPlays(){
         var playing=new StandInhale.Sound(new Identifier("celestialfall","star_platinum_inhale"),.9f);

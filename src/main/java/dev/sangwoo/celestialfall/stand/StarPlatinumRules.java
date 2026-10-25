@@ -149,11 +149,13 @@ public final class StarPlatinumRules {
     /** How much slower its user walks while it inhales (0.5: at half their speed), dragging whom it holds. */
     public static final double INHALE_SLOW=.5;
     /**
-     * Where whoever it holds is held: this many blocks ahead of its user's feet along the way they face, their face just
-     * in front of the stand's mouth (the stand stands 0.7 blocks ahead and lunges on into the suction; 2.61.0 held them
-     * at 1.75, before it lunged so far).
+     * Where whoever it holds is held: this many blocks ahead of its user's feet along the way they face, just in front
+     * of the stand (since 2.63.0 it sucks reared back with its head flung to the sky, 1.75 blocks ahead of its user so
+     * that its head and mane stay clear of theirs, and whom it holds are just in front of its knees: client/stand/
+     * StandInhale.AHEAD, StandInhaleTest). 2.61.0 held them at 1.75 and 2.62.0 at 2.1, at the face of the stand lunging
+     * into the suction.
      */
-    public static final double INHALE_AHEAD=2.1;
+    public static final double INHALE_AHEAD=2.4;
     /** Whether a point (ahead along the way its user faces, to their right and up from their feet, blocks) is in the inhale's way, for a body {@code halfWidth} across. */
     public static boolean inhaleLane(double forward,double side,double height,double halfWidth){
         return forward>=NEAR-halfWidth&&forward<=INHALE_REACH+halfWidth&&Math.abs(side)<=INHALE_HALF_WIDTH+halfWidth&&height>=LOW&&height<=HIGH;

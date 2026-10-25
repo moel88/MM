@@ -84,10 +84,14 @@ public final class StandInhale {
      * Where it stands in front of its user (blocks along the way they face; whom it holds is a little further on,
      * StarPlatinumRules.INHALE_AHEAD): it comes round to GUARD_AHEAD and moves out to AHEAD as it rears back (from
      * OUT_FROM seconds to DRAW: its hips thrust on as its head goes back), far enough that its head flung back and its
-     * mane stay clear of their head (StandInhaleTest, from how far its stances reach behind it); once it ends it draws back
-     * to GUARD_AHEAD as it turns to its guard, its fists clear of whom it held. And how much higher than at rest it floats.
+     * mane stay a good way clear of their head (StandInhaleTest, from how far its stances reach behind it: at 1.5 blocks
+     * the first capture of 2.63.0 showed its mane all but in its user's face); once it ends it draws back to GUARD_AHEAD
+     * over SETTLE and LINGER as it turns to its guard, its fists clear of whom it held. And how much higher than at rest
+     * it floats: a little higher than its punches' first 0.05, so that from the game's camera behind its user more of its
+     * chest and arms flung out show over their head (the first capture of 2.63.0 had their head over most of it), but
+     * no higher: at 0.25 its knees came up to the face of whom it holds (StandInhaleTest).
      */
-    static final float AHEAD=1.5f,GUARD_AHEAD=.7f,OUT_FROM=.08f,RAISE=.05f;
+    static final float AHEAD=1.75f,GUARD_AHEAD=.9f,OUT_FROM=.08f,RAISE=.15f;
     /** How quickly (seconds to close two thirds of the way) it turns to where its user faces. */
     static final double AIM=.08;
     /** The sounds' loudness at their source and how far they carry, and ticks the suction takes to fade out once it ends. */
@@ -419,7 +423,7 @@ public final class StandInhale {
         float on=1-smooth((t-end)/SETTLE);
         // in front of its user: out further as it rears back, its head flung back clear of theirs, and back nearer them as
         // it turns to its guard once it ends
-        into.ahead=GUARD_AHEAD+(AHEAD-GUARD_AHEAD)*out(at)*on;into.side=0;
+        into.ahead=GUARD_AHEAD+(AHEAD-GUARD_AHEAD)*out(at)*(1-smooth((t-end)/(SETTLE+LINGER)));into.side=0;
         // it quivers with the strain, and a catch jerks it up as it gulps them down
         into.lunge=QUIVER*(shudder(at)/SHUDDER-.5f)*smooth((at-BEND_TO)/SHUDDER_IN)*on;
         into.raise=RAISE+JERK*g*on;
