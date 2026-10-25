@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.63.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.64.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.64.0 — 스타플래티나 G 비트다운: 컷씬 (야레야레다제 · 스타플래티나! · 멱살 · 올려치기 · 오라 러시)
+
+- **비트다운(G):** 스탠드를 꺼낸 상태에서 G를 누르면 스타플래티나가 '오라!'를 외치며 앞의 가장 가까운 한 명에게 주먹을 꽂습니다(0.2초, 4타와 같은 거리). 맞히면 둘 다 컷씬에 들어갑니다. 못 맞히면 그대로 쿨타임(30초)을 기다립니다.
+- **컷씬:** 위아래에서 검은 레터박스가 미끄러져 들어오고, 보내 주신 녹음의 박자대로 카메라가 바뀝니다. '야레야레다제'에 사용자가 손으로 머리(이마)를 잡고 고개를 흔들고, '스타플래티나!'에 스탠드가 몸에서 튀어나옵니다. 스탠드가 멱살을 잡아 올려치고, 공중에서 오라오라 러시 38타, 큰 오라 5번, 마지막 일격으로 날려 보냅니다.
+- **피해:** 기본 60, 상대 체력이 낮을수록 더 셉니다(60 × (1 + 잃은 체력 비율), 최대 120). 상대가 그만큼의 체력이 없으면 떨어지는 순간(착지)에 쓰러집니다.
+- **가드 브레이커:** 가드를 올린 상대는 가드가 깨지고(2초 무력화) 컷씬에는 들어가지 않습니다.
+- **하늘색 번쩍임:** 컷씬이 나오는 스킬(비트다운, 카게노 H)을 쓰면 시전자의 몸이 0.2초 동안 하늘색으로 변합니다.
+
+[RELEASE_2.64.0_KO.md](RELEASE_2.64.0_KO.md)를 확인하세요.
 
 # 보탠드 2.63.0 — 스타플래티나 Y 흡입: 숨을 들이쉬는 자세로 빨아들이기
 

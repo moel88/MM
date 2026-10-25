@@ -3,6 +3,7 @@ a dedicated server plus two clients ("Caster" plays every Kageno key, "Watcher" 
 each client under its own Xvfb display. Everything comes from the offline Gradle/Loom caches. The clients play their
 sound to OpenAL Soft's null device (2.54.0: at full volume, so each Star Platinum shout is seen to start).
 usage: python3 tools/kageno/mp/run_mp.py OUT_DIR [MOD_JAR]
+MP_ONLY=beatdown runs only Star Platinum's beatdown's own script (2.64.0, MpClient.BEATDOWN_SCRIPT).
 Results: OUT_DIR/{server.txt, caster/log.txt, watcher/log.txt, caster/*.png, watcher/*.png, logs/}.
 """
 from pathlib import Path
@@ -88,7 +89,8 @@ logs = out / 'logs'; logs.mkdir()
 procs, displays = [], []
 try:
     srv_log = (logs / 'server.out').open('w')
-    srv = subprocess.Popen(['java', '-Xmx2G', '-Dbotand.mp.server=true', f'-Dbotand.mp.out={out}',
+    only = [f"-Dbotand.mp.only={os.environ['MP_ONLY']}"] if os.environ.get('MP_ONLY') else []
+    srv = subprocess.Popen(['java', '-Xmx2G', '-Dbotand.mp.server=true', f'-Dbotand.mp.out={out}', *only,
                             f'-Dfabric.gameJarPath={LOOM / MC / "minecraft-extracted_server.jar"}', '-cp', cp,
                             'net.fabricmc.loader.impl.launch.knot.KnotServer', 'nogui'],
                            cwd=server, env=env, stdin=subprocess.PIPE, stdout=srv_log, stderr=subprocess.STDOUT, text=True)
@@ -108,7 +110,7 @@ try:
         procs.append(subprocess.Popen(['Xvfb', f':{display}', '-screen', '0', '854x480x24', '-nolisten', 'tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
         time.sleep(2)
         cenv = env.copy(); cenv.update({'DISPLAY': f':{display}', 'LIBGL_ALWAYS_SOFTWARE': 'true', 'GALLIUM_DRIVER': 'llvmpipe', 'ALSOFT_DRIVERS': 'null'})
-        c = subprocess.Popen(['java', '-Xmx2G', f'-Dbotand.mp.role={role}', f'-Dbotand.mp.out={out}',
+        c = subprocess.Popen(['java', '-Xmx2G', f'-Dbotand.mp.role={role}', f'-Dbotand.mp.out={out}', *only,
                               f'-Dfabric.gameJarPath={LOOM / MC / "minecraft-client.jar"}', '-cp', cp,
                               'net.fabricmc.loader.impl.launch.knot.KnotClient', '--username', name, '--version', MC, '--accessToken', '0',
                               '--gameDir', str(d), '--assetsDir', str(LOOM / 'assets'), '--assetIndex', f"{MC}-{info['assetIndex']['id']}",

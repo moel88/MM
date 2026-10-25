@@ -125,7 +125,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * stand.csv gets its stances (and the strain), the inhale (its age, whether it is on, whether it holds anyone now, how
  * many guards were seen holding it off lately, how hard it sucks) and where the dummy is from the player (ahead, to
  * their right), and the log when it comes on, when it catches someone and lets go, when a guard holds it off and when
- * it goes off.
+ * it goes off. Its beatdown (2.64.0): "KEY_G@n" taps G through the real keyboard path; with no "far=", "orbit=" or
+ * "track=" the game's own camera films it, so its cutscene's shots and black bars are the game's as its user sees them.
+ * stand.csv gets its cutscene (its age in seconds, whether it ended and was cut short, how high the bars are), whether
+ * its camera has the player, how strongly the player's body flashes sky blue, its two stances (the collar, the
+ * uppercut) and where the one struck is shown from the player (ahead, to the right, up); the log when its cutscene
+ * starts and ends, and each change of the dummy's health.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -412,7 +417,30 @@ public final class SkillShots implements ClientModInitializer {
             var d=dummy.getLerpedPos(mc.getTickDelta()).subtract(mc.player.getLerpedPos(mc.getTickDelta()));var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());
             standLog.append(String.format(Locale.ROOT,",%.3f,%.3f",d.x*f.x+d.z*f.z,-d.x*f.z+d.z*f.x));
         }else standLog.append(",,");
+        // 2.64.0: the beatdown: its cutscene (its age in seconds, whether it ended, whether it was cut short, how high the
+        // black bars are), whether its camera has the player, how strongly the player's body flashes sky blue, its two
+        // stances (gripping the collar, the uppercut), and where the one struck is shown from the player (ahead along the
+        // blow, to its right, up: the cutscene's body, not where it really is)
+        var beat=dev.sangwoo.celestialfall.client.stand.StandBeatdown.describe(mc.player,mc.getTickDelta());
+        standLog.append(',').append(beat==null?",,,":beat);
+        standLog.append(',').append(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null?1:0);
+        standLog.append(String.format(Locale.ROOT,",%.3f",dev.sangwoo.celestialfall.client.CutsceneFlash.local(mc.getTickDelta())));
+        for(int i=25;i<27;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        var shown=dummy==null?null:dev.sangwoo.celestialfall.client.stand.StandBeatdown.offset(dummy,mc.getTickDelta());
+        if(shown!=null){
+            var d=dummy.getLerpedPos(mc.getTickDelta()).add(shown).subtract(mc.player.getLerpedPos(mc.getTickDelta()));var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());
+            standLog.append(String.format(Locale.ROOT,",%.3f,%.3f,%.3f",d.x*f.x+d.z*f.z,-d.x*f.z+d.z*f.x,d.y));
+        }else standLog.append(",,,");
         standLog.append('\n');
+        if(beat!=null){
+            String[] v=beat.split(",");boolean ended=v[1].equals("1");
+            if(!beatOn){log.append("  beatdown cutscene from ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));beatOn=true;}
+            if(ended&&!beatEnded){log.append("  beatdown ").append(v[2].equals("1")?"cut short":"over").append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));beatEnded=true;}
+        }else{beatOn=false;beatEnded=false;}
+        if(dummy instanceof net.minecraft.entity.LivingEntity le&&Math.abs(le.getHealth()-dummyHealth)>.05f){
+            if(dummyHealth>=0)log.append(String.format(Locale.ROOT,"  dummy health %.1f -> %.1f at %d%n",dummyHealth,le.getHealth(),age));
+            dummyHealth=le.getHealth();
+        }
         if(inhale!=null){
             String[] v=inhale.split(",");boolean on=v[1].equals("1");String holds=v[2];int guards=Integer.parseInt(v[3]);
             if(on&&!inhaleOn)log.append("  inhale on at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
@@ -438,6 +466,7 @@ public final class SkillShots implements ClientModInitializer {
         }
     }
     private String punchLogged="";private boolean rushOn;private int rushBlows;
+    private boolean beatOn,beatEnded;private float dummyHealth=-1;
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
@@ -685,7 +714,7 @@ public final class SkillShots implements ClientModInitializer {
                     // "DASH@n": the dash key (C) is pressed for a tick, through the client's own input
                     if(what.equals("DASH")){if(age==at)key(GLFW_KEY_C,true);if(age==at+1)key(GLFW_KEY_C,false);continue;}
                     // the UI shot's keys and mouse
-                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);}if(age==at+1)key(code,false);continue;}
                     if(what.startsWith("MOVE_")){if(age==at){glideTo=null;double[] g=target(what.substring(5));double k=mc.getWindow().getScaleFactor();glideFrom=new double[]{mc.mouse.getX(),mc.mouse.getY()};glideTo=new double[]{g[0]*k,g[1]*k};glideAt=age;log.append("  move ").append(what.substring(5)).append(" at ").append(age).append('\n');}continue;}
                     if(what.equals("TP")||what.equals("TPB")){if(age==at)server(p->{String[] v=opts.get(what.equals("TP")?"tp":"tpb").split("[/,]");double[] d=new double[5];for(int i=0;i<v.length;i++)d[i]=Double.parseDouble(v[i].trim());
@@ -722,8 +751,9 @@ public final class SkillShots implements ClientModInitializer {
                     if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big,"
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
-                        +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side\n"+standLog);
-                        standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;}
+                        +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
+                        +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up\n"+standLog);
+                        standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

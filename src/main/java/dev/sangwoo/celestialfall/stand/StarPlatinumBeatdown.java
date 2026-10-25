@@ -143,13 +143,16 @@ public final class StarPlatinumBeatdown {
     /**
      * One of the cutscene's blows: its share of the damage (the last, all that is left of it), none taking the one
      * struck below one health: what is more than they had is the fall's (land). The rush's land quietly (its sound is
-     * in the recording), the others with a cry.
+     * in the recording), the others with a cry. A blow that finds them at one health still shows as one (they flash
+     * red as every blow before made them: in the multiplayer check, one struck at 50 health stopped flashing at the end
+     * of the rush, through the five big ORAs and the last blow).
      */
     private static void blow(Beat b,long age,float share){
         var v=b.victim;boolean last=age==BEAT_FINAL;
         float amount=Math.min(last?b.damage-b.dealt:b.damage*share,v.getHealth()-1);
         boolean rush=age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST;
         if(amount>0)deal(b,amount,rush||!last&&age!=BEAT_UPPERCUT);
+        else if(v.isAlive())b.world.sendEntityDamage(v,b.world.getDamageSources().playerAttack(b.user));
         if(last){
             b.user.onAttacking(v);
             // its user's own hit feedback: the whole beatdown's damage, once

@@ -68,7 +68,7 @@ public final class StandBeatdown {
     /** The camera comes back to its user over this long once it is over (or cut short). */
     static final float HANDBACK=.3f;
     /** The black bars: this high (share of the screen's height each), in over BARS_IN once the blow lands, out over BARS_OUT. */
-    static final float BAR=.12f,BARS_IN=.38f,BARS_OUT=.35f;
+    public static final float BAR=.12f;static final float BARS_IN=.38f,BARS_OUT=.35f;
 
     // ───────────────────────────── where the one struck is ─────────────────────────────
 
@@ -89,6 +89,8 @@ public final class StandBeatdown {
         public final Vec3d f,r;public final double reach;final int seed;
         /** When it ended (on its clock, seconds; NaN while it runs) and whether it was cut short. */
         float ended=Float.NaN;boolean cut;
+        /** Whether this client's player, the one struck, has cried out at its first blow (quietHurt). */
+        boolean cried;
         StandAttack.Shout voice;
         Beat(UUID user,int victim,UUID victimId,long start,long serverAge,float yaw,Vec3d from,Vec3d victimFrom,Vec3d hold,double drift,Vec3d land,float damage){
             this.user=user;this.victim=victim;this.victimId=victimId;this.serverAge=serverAge;received=ticks;this.yaw=yaw;
@@ -102,6 +104,10 @@ public final class StandBeatdown {
         public float over(){return Float.isNaN(ended)?END:Math.min(END,ended);}
         /** A point ahead along its way, up and to its right of {@code o}. */
         Vec3d at(Vec3d o,double fw,double up,double rt){return o.add(f.multiply(fw)).add(r.multiply(rt)).add(0,up,0);}
+        /** For the multiplayer check: whether the server said it ended, whether it was cut short, and its cutscene's sound here. */
+        public boolean ended(){return !Float.isNaN(ended);}
+        public boolean wasCut(){return cut;}
+        public net.minecraft.client.sound.SoundInstance voice(){return voice;}
     }
     /** Where the one struck is shown this moment: their feet, how far back their body leans (degrees), its roll, its spin about the up axis, what it turns about (blocks over the feet), and how wholly the cutscene has them (0 where they are, 1 where it shows them). */
     public record Body(Vec3d feet,float lean,float roll,float spin,float pivot,float hold){}
@@ -179,6 +185,24 @@ public final class StandBeatdown {
     static Beat struck(Entity e){
         for(var b:BEATS.values())if(b.victim==e.getId()&&b.victimId.equals(e.getUuid())){float t=b.age(0);if(t>=CUT-.05f&&t<=b.over()+2.5f)return b;}
         return null;
+    }
+    /**
+     * Whether this client's player holds back their cry of pain at a blow of a cutscene on them. Others hear the one
+     * struck cry out only at its uppercut, its last blow and the fall (StarPlatinumBeatdown.blow: the rush and the big
+     * ORAs land quietly, the recording carries them), but a player's own cry is played by their own client as each blow's
+     * damage comes (RushHurtSoundMixin): so here too, the first blow cries (the uppercut: nothing harms them before it),
+     * then none until halfway from the last big ORA to the last blow, when the last blow and the fall do. The damage comes
+     * at the server's age of the blow on this clock, give or take a tick, however late it comes (as the cutscene's word did).
+     */
+    public static boolean quietHurt(net.minecraft.entity.LivingEntity e){
+        var mc=MinecraftClient.getInstance();if(mc.player==null||e!=mc.player)return false;
+        for(var b:BEATS.values()){
+            if(b.victim!=e.getId()||!b.victimId.equals(e.getUuid()))continue;
+            float t=b.age(0);if(t<CUT||t>b.over()+.5f)continue;
+            if(!b.cried){b.cried=true;return false;}
+            return t<(BIG[BIG.length-1]+FINAL)*.5f;
+        }
+        return false;
     }
     /** The cutscene the local player is in (its user, or the one struck), while its camera has them. */
     public static Beat cinematic(){

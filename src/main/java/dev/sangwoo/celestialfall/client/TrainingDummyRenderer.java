@@ -27,6 +27,11 @@ public final class TrainingDummyRenderer extends software.bernie.geckolib.render
             net.minecraft.client.render.model.json.ModelTransformationMode.THIRD_PERSON_RIGHT_HAND,false,matrices,vertices,light);
         matrices.pop();
     }
+    /** Struck by Star Platinum's beatdown (2.64.0): its body turned as the cutscene shows it, as a player's (KagenoStaggerMixin). */
+    @Override protected void applyRotations(TrainingDummyEntity d,MatrixStack matrices,float age,float yaw,float delta){
+        super.applyRotations(d,matrices,age,yaw,delta);
+        dev.sangwoo.celestialfall.client.stand.StandBeatdown.turn(d,delta,yaw,matrices);
+    }
     @Override public boolean hasLabel(TrainingDummyEntity d){return dispatcher.getSquaredDistanceToCamera(d)<32*32;}
     @Override protected void renderLabelIfPresent(TrainingDummyEntity d,Text text,MatrixStack matrices,VertexConsumerProvider vertices,int light) {
         var label=d.getDisplayName().copy().append(String.format(java.util.Locale.ROOT,"  %.0f / %.0f",d.getHealth(),d.getMaxHealth()));

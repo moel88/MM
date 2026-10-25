@@ -239,9 +239,19 @@ class StandBeatdownTest {
             last=p;lastStruck=q;
         }
         System.out.printf(java.util.Locale.ROOT,"its user's fastest joint in a frame: %.1f degrees; the one struck's %.1f%n",fastest,fastestStruck);
-        // the hand up on the head through yare yare daze, the head shaking under it
-        var hand=BeatdownPose.user(1.6f);
-        assertTrue(hand.elbow[0]<-100,"the right forearm folded back onto the head: "+hand.elbow[0]);
+        // the hand up on the head through yare yare daze (on its forehead, as the rig puts it), the head shaking under it
+        var rig=new dev.sangwoo.celestialfall.client.MotionPlayerModel(false);float farthest=0;
+        for(float t=1.13f;t<=2.52f;t+=.01f){
+            var p=BeatdownPose.user(t);dev.sangwoo.celestialfall.client.MotionRig.reset(rig);dev.sangwoo.celestialfall.client.MotionRig.apply(rig,p,0,0);
+            var arm=new net.minecraft.client.util.math.MatrixStack();rig.rightArm.rotate(arm);rig.rightArm.getChild("elbow").rotate(arm);
+            var hand=arm.peek().getPositionMatrix().transformPosition(new org.joml.Vector3f(-1/16f,6.5f/16,0)).mul(16);
+            var head=new net.minecraft.client.util.math.MatrixStack();rig.head.rotate(head);
+            // (model pixels: x the left, y down, z back; the forehead's front a little right of the middle)
+            var brow=head.peek().getPositionMatrix().transformPosition(new org.joml.Vector3f(-1.2f/16,-6.3f/16,-4.6f/16)).mul(16);
+            farthest=Math.max(farthest,hand.distance(brow));
+            assertTrue(hand.distance(brow)<2.6f,"the hand off the forehead by "+hand.distance(brow)+" pixels at "+t);
+        }
+        System.out.printf(java.util.Locale.ROOT,"the hand at most %.2f pixels from the forehead while it holds it%n",farthest);
         float least=0,most=0;
         for(float t=1.17f;t<2.03f;t+=.01f){float s=BeatdownPose.shake(t);least=Math.min(least,s);most=Math.max(most,s);}
         assertTrue(most>12&&least<-12,"the head shakes from side to side: "+least+" to "+most);

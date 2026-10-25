@@ -14,7 +14,7 @@ import static dev.sangwoo.celestialfall.client.stand.StandBeatdown.*;
  * <ol>
  * <li>The blow lands (from CUT): low from the side, pushing in as the one struck is knocked back and the stand goes
  * back into its user.</li>
- * <li>"Yare yare daze" (1.12 s): close on its user's face, a hand on their head, shaking it; a slow push in.</li>
+ * <li>"Yare yare daze" (1.12 s): on its user from the chest up, a hand on their head, shaking it; a slow push in.</li>
  * <li>"Star Platinum!" (2.6 s): low in front of them to their right, looking up as the stand bursts out of them, the
  * lens closing in through the shout.</li>
  * <li>The grab (ENGAGE): from the side, the stand coming round and gripping the collar.</li>
@@ -47,9 +47,11 @@ public final class StandBeatdownCamera {
             return new Shot(b.at(o,mid,.95,-3.7+.7*k),b.at(o,mid+.15,1.25,0),62-6*k,0);
         }
         if(t<CUTS[2]){
-            // yare yare: close on its user's face, a little to their left, pushing in
+            // yare yare: on its user from the chest up, the hand on their head in the shot (the bars take a quarter of
+            // it), a little to their right, the side of the hand (from their left, the first capture showed the hand
+            // half behind their head), and a little low, pushing in slowly
             float k=u(t,CUTS[1],CUTS[2]);
-            return new Shot(b.at(o,1.55-.2*k,1.62,-.42+.05*k),b.at(o,0,1.6,0),42-4*k,0);
+            return new Shot(b.at(o,2.55-.35*k,1.5,.65-.08*k),b.at(o,0,1.72,0),44-4*k,0);
         }
         if(t<CUTS[3]){
             // Star Platinum!: low in front of them to their right, looking up at them and the stand bursting out
@@ -70,14 +72,16 @@ public final class StandBeatdownCamera {
         // the stand in front of the one struck, up in the air with them
         Vec3d stand=v.feet().subtract(b.f.multiply(1.5)).add(0,-.4,0);
         if(t<CUTS[6]){
-            // the rush: over the stand's right shoulder at them
+            // the rush: past the stand's right shoulder at them, high and wide enough to see past its mane
             float k=u(t,CUTS[5],CUTS[6]);
-            return new Shot(stand.add(b.f.multiply(-1.45+.2*k)).add(b.r.multiply(1.0)).add(0,2.25,0),chest,58-3*k,0);
+            Vec3d mid=chest.lerp(stand.add(0,1.6,0),.3);
+            return new Shot(stand.add(b.f.multiply(-1.2+.2*k)).add(b.r.multiply(2.3)).add(0,2.75,0),mid,56-3*k,0);
         }
         if(t<CUTS[7]){
-            // from behind them: the fists coming at the camera, the stand's face beyond
+            // from behind them, off to their side: the fists coming at the camera past them, the stand's face beyond
             float k=u(t,CUTS[6],CUTS[7]);
-            return new Shot(chest.add(b.f.multiply(1.85-.15*k)).add(b.r.multiply(-.85)).add(0,.35,0),stand.add(0,1.75,0),60-2*k,0);
+            Vec3d mid=chest.lerp(stand.add(0,1.6,0),.55);
+            return new Shot(chest.add(b.f.multiply(2.9-.2*k)).add(b.r.multiply(-1.9)).add(0,.55,0),mid,58-2*k,0);
         }
         if(t<CUTS[8]){
             // wide, turning slowly round the two from their left

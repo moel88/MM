@@ -9,6 +9,13 @@ public final class TrainingDummyModel extends BipedEntityModel<TrainingDummyEnti
     public TrainingDummyModel(){super(MotionRig.player(false));hat.visible=false;}
     @Override public void setAngles(TrainingDummyEntity d,float phase,float amount,float animation,float yaw,float pitch) {
         MotionRig.reset(this);float delta=animation-d.age,time=d.getWorld().getTime()+delta;
+        // Struck by Star Platinum's beatdown (2.64.0): its body as the cutscene has the one struck, as a player's would.
+        var beat=dev.sangwoo.celestialfall.client.stand.BeatdownPose.struckOf(d,delta);
+        if(beat!=null){
+            MotionRig.apply(this,beat,0,0);hat.visible=false;
+            if(delta>=0&&delta<=1.001f)PoseBlend.apply(d.getUuid(),this,"beatdown",3,animation);
+            return;
+        }
         // The Atomic dummy's body plays the caster's Atomic as a player's would (user request, 2.38.2), fading in and out.
         var atomic=AtomicClient.poseCast(d.getUuid());
         if(atomic!=null){

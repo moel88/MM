@@ -232,7 +232,7 @@ public final class StandBeatdownFx {
         if(t>=LAND-.01f){
             Vec3d at=flight(b,LAND+.02f).feet();Vec3d floor=new Vec3d(at.x,b.land.y+.06,at.z);
             float u=Ease.unit(t,LAND,LAND+.55f),la=Ease.smooth(t,LAND-.01f,LAND+.015f);
-            if(u<1){FxLib.ring(m,floor,.5+4.5*Ease.out(t,LAND,LAND+.5f),.5,LILAC,.65f*la*(1-u));
+            if(u<1){FxLib.ring(m,floor,.5+4.5*Ease.out(t,LAND,LAND+.5f),.5,LILAC,.45f*la*(1-u));
                 float u2=Ease.unit(t,LAND+.06f,LAND+.6f);if(t>=LAND+.06f&&u2<1)FxLib.ring(m,floor,.4+3.2*Ease.out(t,LAND+.06f,LAND+.55f),.36,BLUE,.5f*(1-u2));}
             float bd=burstAlpha(t,LAND,.3f);
             if(bd>0)burst(m,floor.add(0,.4,0),1.6,.36,11,b.seed+211,LILAC,VIOLET,.6f*bd,.45f*bd);
@@ -278,9 +278,10 @@ public final class StandBeatdownFx {
             if(t>=REVEAL&&t<REVEAL+.8f)f.light(b.from.add(0,1.2,0),0xb8a4ff,10,2.8f*FxLib.kick(t,REVEAL,.3f));
             float fly=Ease.smooth(t,FINAL,FINAL+.05f)*(1-Ease.smooth(t,LAND,LAND+.3f));
             if(fly>0)f.light(flight(b,Math.min(t,LAND)).feet().add(0,.9,0),0x9c86ff,7,1.6f*fly);
-            if(t>=LAND-.01f&&t<LAND+.8f){
-                f.light(b.land.add(0,.5,0),0xc8b8ff,10,2.6f*FxLib.kick(t,LAND,.2f));
-                float heat=1-Ease.smooth(t,LAND+.05f,LAND+.55f),al=Ease.smooth(t,LAND,LAND+.04f)*(1-Ease.smooth(t,LAND+.8f,LAND+1.1f));
+            if(t>=LAND-.01f&&t<LAND+1.1f){
+                // (kept small and quick: the first capture's 10 blocks at 2.6 turned the whole floor round it pink)
+                f.light(b.land.add(0,1,0),0xb8b4ff,6,1.3f*FxLib.kick(t,LAND,.16f));
+                float heat=.6f*(1-Ease.smooth(t,LAND+.05f,LAND+.55f)),al=Ease.smooth(t,LAND,LAND+.04f)*(1-Ease.smooth(t,LAND+.8f,LAND+1.1f));
                 Vec3d floor=new Vec3d(b.land.x,b.land.y,b.land.z).subtract(b.f.multiply(SLIDE*.5));
                 if(al>0)f.decal(floor,b.f,1.1+.8*Ease.out(t,LAND,LAND+.2f),.55,heat,al,31.3f);
             }

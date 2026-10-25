@@ -24,6 +24,8 @@ public final class MpClient implements ClientModInitializer {
     private static final String ROLE=System.getProperty("botand.mp.role");
     private static final Path OUT=Path.of(System.getProperty("botand.mp.out","mp"));
     private static final String ADDRESS=System.getProperty("botand.mp.address","127.0.0.1:25565");
+    /** "beatdown" (2.64.0, MP_ONLY=beatdown): only the beatdown's script, BEATDOWN_SCRIPT (the check that new rules and packets call for). */
+    static final String ONLY=System.getProperty("botand.mp.only","");
     private static final String[] SKILLS={"M1","E","R","T","T+","Y","Q","H","G","P"};
     /** Script tick, then a key: a bare name taps it, "+"/"-" hold and release. */
     /**
@@ -87,6 +89,23 @@ public final class MpClient implements ClientModInitializer {
         "3560 HOME","3575 R","3650 HOME","3665 R","3730 KAGENO","3740 FAR","3755 T","3850 TURN180","3852 W+","3892 W-",
         "3900 TURN0","3902 F+","3906 F-","3912 HOME","3922 Y+","3942 W+","3972 W-","4012 Y-","4045 HOME","4060 Y+","4130 Y-",
         "4145 HOME","4150 Y+","4152 Y-","4175 Q","4225 END"};
+    /**
+     * Star Platinum's beatdown (2.64.0), on its own (MP_ONLY=beatdown): the caster takes Star Platinum, brings it out and
+     * calls the watcher 2.5 blocks in front of it ("HOME"), at full health ("HEAL"), and uses G on it: the whole
+     * cutscene (both log the beatdown they hear, its cutscene's sound starting, the camera and the bars, where the one
+     * struck is shown; the server the watcher held, its health through it and where it is put down). Then G against the
+     * watcher's guard ("GUARD+": the watcher holds F while the file OUT/guard is there): the guard breaks, no cutscene.
+     * Then G on nobody (the watcher 8 blocks away, "AWAY"). Then G on the watcher brought down to a quarter of its
+     * health ("HURT": /damage, 150 of 200): its blows leave it at one health and the fall kills it as it comes down;
+     * the watcher respawns.
+     */
+    private static final String[] BEATDOWN_SCRIPT={
+        "5 STAND","40 Q","90 HOME","100 HEAL","110 G",
+        "400 HOME","405 HEAL","410 GUARD+","430 G","455 GUARD-",
+        "520 AWAY","535 G",
+        "600 HOME","605 HEAL","612 HURT","625 G",
+        "935 Q","980 END"};
+    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -137,13 +156,17 @@ public final class MpClient implements ClientModInitializer {
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
                     measure();
-                    for(String step:SCRIPT){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
+                    for(String step:STEPS){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
                     walk();
                     if(age%20==0&&Files.exists(OUT.resolve("done"))){note("caster done");phase=3;age=0;}
                     if(guardUntil>0&&age>=guardUntil){key(GLFW_KEY_F,false);note("release F (guard)");guardUntil=0;}
-                    if(age>4400){note("ERROR watcher timeout");phase=3;age=0;}
+                    // 2.64.0: the guard the caster's script asks for (the file OUT/guard), and a respawn once dead
+                    boolean guard=Files.exists(OUT.resolve("guard"));
+                    if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
+                    if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
+                    if(age>(ONLY.equals("beatdown")?1600:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -193,7 +216,10 @@ public final class MpClient implements ClientModInitializer {
         // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
         // 2.60.0: the watcher takes Kageno (its skills, refused while the Star Finger has it incapacitated)
         if(step.equals("KAGENO")){if(down){String c="botand progress stand Watcher kageno";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
-        if(step.equals("HOME")||step.equals("FAR")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^"+(step.equals("FAR")?"4.5":"2.5")+" facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        if(step.equals("HOME")||step.equals("FAR")||step.equals("AWAY")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^"+(step.equals("FAR")?"4.5":step.equals("AWAY")?"8":"2.5")+" facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // 2.64.0: the watcher at full health, or brought down to a quarter of it; its guard asked for
+        if(step.equals("HEAL")||step.equals("HURT")){if(down){String c=step.equals("HEAL")?"effect give Watcher minecraft:instant_health 1 20 true":"damage Watcher 150 minecraft:generic";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        if(step.startsWith("GUARD")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("guard"),"guard");else Files.deleteIfExists(OUT.resolve("guard"));}catch(Exception e){fail(e);}note("watcher's guard "+(step.endsWith("+")?"asked for":"let down"));}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
         if(down&&press&&!k.equals("W"))face();
         if(down||!step.endsWith("+"))note((press?"press ":"release ")+k);
@@ -262,6 +288,8 @@ public final class MpClient implements ClientModInitializer {
         rushes();flag("hurt_cries",hurtCries);
         // 2.61.0: its inhale heard here; held by it, the watcher tries everything and to walk away
         inhales();
+        // 2.64.0: its beatdown heard here: its cutscene, its camera and bars here, where its one struck is shown
+        beats();
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
         if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
         flag("thrown",fast);
@@ -388,6 +416,36 @@ public final class MpClient implements ClientModInitializer {
         }
     }
     private final Map<String,int[]> heavyHeard=new HashMap<>(),fingerHeard=new HashMap<>();private int heavies,guardUntil;
+    private boolean guardAsked;private int deadFor;private final Map<Object,int[]> beatHeard=new IdentityHashMap<>();
+    /** Per beatdown here: its one struck's hurt time last seen, how often their body flashed red and when it last did (its clock). */
+    private final Map<Object,float[]> beatFlash=new IdentityHashMap<>();
+    /**
+     * Each player's beatdown heard here (2.64.0): as it starts (its age here, whom it struck, its damage, where they come
+     * down), its cutscene's sound starting (its tick on its clock here: StarPlatinumRules.BEAT_SOUND), where its one
+     * struck is shown twice a second (ahead of its user along the blow and up, and where they really are), and its end
+     * with how often the one struck's body flashed red here (a blow's hurt time) and when last (its clock: every blow
+     * to the last, even those that find them at one health, StarPlatinumBeatdown.blow); and whether this client's
+     * camera is the cutscene's, its black bars, the sky-blue flash of this player's body.
+     */
+    private void beats(){
+        for(var p:mc.world.getPlayers()){
+            var b=dev.sangwoo.celestialfall.client.stand.StandBeatdown.of(p.getUuid());if(b==null)continue;
+            int[] st=beatHeard.computeIfAbsent(b,k->new int[3]);String who=p.getGameProfile().getName()+"'s beatdown";float t=b.age(0);
+            var v=mc.world.getEntityById(b.victim);
+            if(st[0]==0){st[0]=1;note(String.format(Locale.ROOT,"%s heard at %.2f s on its clock here, on %s, its damage %.1f, they come down %.2f blocks ahead of its user",who,t,
+                v instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(b.victim),b.damage,b.land.subtract(b.from).dotProduct(b.f)));}
+            if(st[1]==0&&b.voice()!=null&&mc.getSoundManager().isPlaying(b.voice())){st[1]=1;note(String.format(Locale.ROOT,"%s: its cutscene's sound started at its tick %.0f here",who,t*20));}
+            if(v!=null&&age%10==0&&!b.ended()){var off=dev.sangwoo.celestialfall.client.stand.StandBeatdown.offset(v,0);
+                if(off!=null){var d=v.getPos().add(off).subtract(b.from);note(String.format(Locale.ROOT,"%s at %.2f s: its one struck shown %.2f blocks ahead, %.2f up (really %.2f ahead)",who,t,d.dotProduct(b.f),d.y,v.getPos().subtract(b.from).dotProduct(b.f)));}}
+            float[] fl=beatFlash.computeIfAbsent(b,k->new float[]{0,0,Float.NaN});
+            if(v instanceof net.minecraft.entity.LivingEntity l){if(l.hurtTime>fl[0]){fl[1]++;fl[2]=t;}fl[0]=l.hurtTime;}
+            if(st[2]==0&&b.ended()){st[2]=1;note(String.format(Locale.ROOT,"%s %s at %.2f s on its clock here; its one struck flashed red %.0f times here, last at %.2f s",who,b.wasCut()?"cut short":"over",t,fl[1],fl[2]));}
+        }
+        flag("beat_camera",dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null);
+        float bars=dev.sangwoo.celestialfall.client.stand.StandBeatdown.bars(0);
+        flag("beat_bars",bars<=0?"none":bars>=dev.sangwoo.celestialfall.client.stand.StandBeatdown.BAR-1e-4f?"full":"sliding");
+        flag("flash",dev.sangwoo.celestialfall.client.CutsceneFlash.local(0)>0);
+    }
     private final Map<Integer,String> tries=new HashMap<>();private int release=-1,releaseKey;private int[] fingerWalk;
     private net.minecraft.util.math.Vec3d walkFrom;private final List<Double> walkSteps=new ArrayList<>();
     /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */

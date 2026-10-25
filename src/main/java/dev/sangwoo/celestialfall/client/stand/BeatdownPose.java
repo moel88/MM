@@ -12,7 +12,7 @@ import static dev.sangwoo.celestialfall.client.stand.StandBeatdown.*;
  * functions of the beatdown's clock (Anim's keyed poses, the elbows and knees eased between their own keys).
  * <p>
  * Its user (user request: "야레야레라고 할때 플레이어가 손으로 머리를 잡고 머리를 흔들어"): stands as the blow lands; as
- * "yare yare" begins the right hand goes up onto their head and holds it there while the head shakes from side to side,
+ * "yare yare" begins the right hand goes up onto their forehead and holds it there while the head shakes from side to side,
  * once for each "yare"; at "daze" the head drops a little under the hand; at "Star Platinum!" the hand comes down and
  * the right arm is flung out pointing at the one struck as the stand bursts out; then they stand and watch them up in
  * the air, and look on as they fly off.
@@ -25,10 +25,10 @@ import static dev.sangwoo.celestialfall.client.stand.StandBeatdown.*;
 public final class BeatdownPose {
     private BeatdownPose(){}
     static final R6.Pose STAND=R6.pose().rArm(-84,10).lArm(-84,-10);
-    /** The right hand up on the head, the left hanging; the head a little down under it. */
-    static final R6.Pose HAND=R6.pose().rArm(52,-26).lArm(-80,-12).head(0,10,0);
-    /** "daze": the head dropped further under the hand. */
-    static final R6.Pose DAZE=R6.pose().rArm(46,-20).lArm(-82,-12).head(0,17,0);
+    /** The right hand up on the head, on its forehead (pulling a cap's brim down), the left hanging; the head a little down under it. */
+    static final R6.Pose HAND=R6.pose().rArm(72,-18).lArm(-80,-12).head(0,10,0);
+    /** "daze": the head dropped further under the hand, the hand going down with it. */
+    static final R6.Pose DAZE=R6.pose().rArm(66,-15).lArm(-82,-12).head(0,17,0);
     /** "Star Platinum!": the right arm flung out pointing at the one struck, the chin up. */
     static final R6.Pose POINT=R6.pose().rArm(4,6).lArm(-70,-24).head(0,-7,0);
     /** Watching the one struck up in the air. */
@@ -36,8 +36,8 @@ public final class BeatdownPose {
     static final Anim USER=Anim.of(
         Anim.k(.3,STAND),Anim.k(.82,STAND),Anim.k(1.13,HAND),Anim.k(2.06,HAND),Anim.k(2.3,DAZE),Anim.k(2.52,DAZE),
         Anim.k(2.7,POINT,Anim.Ease.OUT),Anim.k(3.5,POINT),Anim.k(4.15,WATCH),Anim.k(10.8,WATCH),Anim.k(11.5,STAND.head(0,-6,0)),Anim.k(12.5,STAND));
-    /** The right elbow's bend (degrees) at the keys: the hand folded back onto the head. */
-    static final float[][] USER_ELBOW={{.82f,0},{1.13f,-118},{2.52f,-118},{2.7f,-8},{3.5f,-8},{4.15f,-12}};
+    /** The right elbow's bend (degrees) at the keys: the forearm bent in onto the forehead (the arm and the bend worked out on the rig: the hand 6.5 pixels down the forearm on the forehead's front). */
+    static final float[][] USER_ELBOW={{.82f,0},{1.13f,-40},{2.52f,-40},{2.7f,-8},{3.5f,-8},{4.15f,-12}};
 
     // the one struck
     static final R6.Pose STRUCK=R6.pose().rArm(-30,40).lArm(-30,-40).head(0,-12,0);
@@ -95,8 +95,13 @@ public final class BeatdownPose {
     public static MotionPose of(PlayerEntity player,float delta){
         var b=StandBeatdown.of(player.getUuid());
         if(b!=null){float t=b.age(delta);if(t>=.3f&&t<b.over()+.1f)return user(t);}
-        var s=StandBeatdown.struck(player);
-        if(s!=null){float t=s.age(delta);if(StandBeatdown.killed(player,t))return struck(s,Math.min(t,GETUP));if(t>=CUT&&t<s.over())return struck(s,t);}
-        return null;
+        return struckOf(player,delta);
+    }
+    /** The body of {@code e} this frame if a beatdown's cutscene has them as the one struck (null if none does): a player's, or the training dummy's, which has the same joints. */
+    public static MotionPose struckOf(net.minecraft.entity.Entity e,float delta){
+        var s=StandBeatdown.struck(e);if(s==null)return null;
+        float t=s.age(delta);
+        if(StandBeatdown.killed(e,t))return struck(s,Math.min(t,GETUP));
+        return t>=CUT&&t<s.over()?struck(s,t):null;
     }
 }

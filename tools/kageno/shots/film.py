@@ -9,6 +9,9 @@ struck no one, the training dummy's health, its guard (up, broken) and how far i
 MODE finger with a SUMMON shot's stand.csv (ACTOR -, 2.60.0) shows its Star Finger: coiling, the fingers going out (how
 long they are drawn), struck, blocked by the guard or struck no one, the training dummy's health, its guard,
 incapacitated and how fast it may move (FILM_FINGER_DUMMY=0 leaves the dummy out).
+MODE beatdown with a SUMMON shot's stand.csv (ACTOR -, 2.64.0) shows its beatdown: its blow, then its cutscene's part
+(by the cutscene's own clock), the training dummy's health and the damage dealt; struck no one or its guard broken
+(no cutscene).
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -54,7 +57,7 @@ frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in fr
 
 rows, wall, motion, rush = {}, [], [], []
 walkers = []
-if csv_path and mode in ('heavy', 'finger', 'inhale'):
+if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown'):
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
     # the finger mode: a husk walking off (act=) beside stand.csv, its speed attribute and how fast it walks
@@ -275,7 +278,36 @@ def inhale_line(t):
     color = (255, 150, 150) if (r.get('dummy_disabled') == '1' and os.environ.get('FILM_INHALE_DUMMY') != '0') or any('무력화' in p for p in parts) else (255, 255, 255)
     return (' · '.join(parts), color) if parts else (None, None)
 
+# The beatdown's cutscene (2.64.0): its parts by its own clock (seconds from G, StarPlatinumRules.BEAT_*)
+BEAT_PARTS = [(1.15, '적중 · 컷씬 시작 (레터박스)'), (2.6, '야레야레다제 · 머리를 잡고 흔듦'), (3.55, '스타플래티나! · 스탠드 등장'),
+              (4.4, '멱살을 잡음'), (4.55, '올려치기'), (8.3, '오라오라 러시 (38타)'), (10.85, '큰 오라 5번'), (11.7, '마지막 일격 · 날아감'),
+              (12.5, '착지 · 일어남'), (99, '컷씬 끝')]
+
+def beatdown_line(t):
+    """The beatdown (G): its blow, the part of its cutscene, the training dummy's health (the damage dealt), or its guard broken."""
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    if r.get('beat_age'):
+        age = float(r['beat_age'])
+        name = next(n for until, n in BEAT_PARTS if age < until)
+        if r.get('beat_cut') == '1' and r.get('beat_ended') == '1': name = '컷씬이 끊김'
+        parts.append(f'컷씬 {age:.1f}초 · {name}')
+    elif r.get('combo') == '7':
+        # (the dummy's guard is seen broken a tick after the blow lands: the shot's rows from then on tell)
+        broke = any(x.get('dummy_broken') == '1' for _, x in rush[i:i + 4])
+        if r['landed'] != '1': parts.append('G · 오라! · 주먹을 꽂음')
+        elif int(r['struck'] or 0) > 0: parts.append('적중')
+        elif broke: parts.append('가드 깨짐 (컷씬 없음) · 무력화')
+        else: parts.append('빗나감 (컷씬 없음) · 쿨타임 시작')
+    full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
+    if r['dummy_health'] and full and os.environ.get('FILM_BEAT_DUMMY') != '0': parts.append(f'더미 {float(r["dummy_health"]):.0f}/{full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
+    color = (255, 150, 150) if any('가드 깨짐' in p for p in parts) else (255, 255, 255)
+    return (' · '.join(parts), color) if parts else (None, None)
+
 def actor_line(t):
+    if mode == 'beatdown': return beatdown_line(t)
     if mode == 'inhale': return inhale_line(t)
     if mode == 'finger': return finger_line(t)
     if mode == 'heavy': return heavy_line(t)
