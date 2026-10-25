@@ -105,7 +105,20 @@ public final class MpClient implements ClientModInitializer {
         "520 AWAY","535 G",
         "600 HOME","605 HEAL","612 HURT","625 G",
         "935 Q","980 END"};
-    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:SCRIPT;
+    /**
+     * Star Platinum's time stop (2.67.0), on its own (MP_ONLY=timestop): the caster takes Star Platinum, brings it out,
+     * calls the watcher 2.5 blocks in front of it ("HOME") at full health ("HEAL") and stops time (H): while time is
+     * stopped it throws a whole combo at the watcher (the fourth throws) and a heavy punch; the watcher, stopped, tries
+     * the attack, the dash, to walk and its guard (all held), and logs whether its screen is held still and every sound
+     * that played meanwhile (only the time stop's own may). Time moves again: both log the harm that came to whom, the
+     * server the watcher's health (one blow of all of it) and how far it flew. Then H again (refused: its cooldown runs).
+     */
+    private static final String[] TIMESTOP_SCRIPT={
+        "5 STAND","40 Q","90 HOME","100 HEAL","110 H",
+        "165 M1+","205 M1-","215 R",
+        "330 HOME","340 H",
+        "400 Q","440 END"};
+    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -166,7 +179,7 @@ public final class MpClient implements ClientModInitializer {
                     boolean guard=Files.exists(OUT.resolve("guard"));
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
-                    if(age>(ONLY.equals("beatdown")?1600:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -290,6 +303,8 @@ public final class MpClient implements ClientModInitializer {
         inhales();
         // 2.64.0: its beatdown heard here: its cutscene, its camera and bars here, where its one struck is shown
         beats();
+        // 2.67.0: its time stop heard here; stopped, the watcher tries everything and its screen is held
+        stops();
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
         if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
         flag("thrown",fast);
@@ -400,9 +415,10 @@ public final class MpClient implements ClientModInitializer {
         // the watcher's tries while incapacitated (and once it is over), and how fast it walked
         if(!caster){
             String t=tries.remove(age);
-            if(t!=null){note("try "+t+(mine.locked(mc.world.getTime())?" (incapacitated)":" (free)"));
+            if(t!=null){note("try "+t+(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView()?" (stopped in time)":mine.locked(mc.world.getTime())?" (incapacitated)":" (free)"));
                 switch(t){case "M1"->{attack(true);release=age+1;}case "C"->{key(GLFW_KEY_C,true);releaseKey=GLFW_KEY_C;release=age+1;}case "E"->{key(GLFW_KEY_E,true);releaseKey=GLFW_KEY_E;release=age+1;}
-                    case "W+"->key(GLFW_KEY_W,true);case "W-"->key(GLFW_KEY_W,false);default->{}}}
+                    case "W+"->key(GLFW_KEY_W,true);case "W-"->key(GLFW_KEY_W,false);case "F+"->key(GLFW_KEY_F,true);case "F-"->key(GLFW_KEY_F,false);default->{}}
+                if(stoppedAt!=null&&(t.equals("W-")||t.equals("F-")))note(String.format(Locale.ROOT,"%.2f blocks from where time stopped it (its guard %s)",mc.player.getPos().distanceTo(stoppedAt),mine.guard()?"up":"down"));}
             if(age==release){attack(false);if(releaseKey!=0)key(releaseKey,false);releaseKey=0;}
             if(fingerWalk!=null){
                 var p=mc.player.getPos();
@@ -448,6 +464,39 @@ public final class MpClient implements ClientModInitializer {
         flag("flash",dev.sangwoo.celestialfall.client.CutsceneFlash.local(0)>0);
         // 2.65.0: whether this client drew any body glowing sky blue last frame (its own, or the other player's)
         flag("glowing",dev.sangwoo.celestialfall.client.stand.StandAuraLayer.glowedLast()>0);
+    }
+    private final Map<Object,int[]> stopHeard=new IdentityHashMap<>();private final Set<String> stillSounds=new LinkedHashSet<>();private boolean stillListening;private int stillTicks;
+    private net.minecraft.util.math.Vec3d stoppedAt;
+    /**
+     * Each player's time stop heard here (2.67.0): as it is called (its tick here), its call's sound starting (its tick
+     * on its clock: StarPlatinumRules.TS_SOUND), time stopping (whom it stopped), its end's sound starting, time moving
+     * again (the harm that came to each); whether this client draws the other player held still; for the one it
+     * stopped, whether its screen is held still and every sound that played meanwhile (only the time stop's own may).
+     * Stopped, the watcher tries the attack, the dash, walking and its guard, and logs how far it moved.
+     */
+    private void stops(){
+        if(!stillListening&&mc.getSoundManager()!=null){stillListening=true;
+            mc.getSoundManager().registerListener((sound,set)->{if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView())stillSounds.add(sound.getId().toString());});}
+        for(var p:mc.world.getPlayers()){
+            var s=dev.sangwoo.celestialfall.client.stand.StandTimeStop.of(p.getUuid());if(s==null)continue;
+            int[] st=stopHeard.computeIfAbsent(s,k->new int[5]);String who=p.getGameProfile().getName()+"'s time stop";
+            if(st[0]==0){st[0]=1;note(String.format(Locale.ROOT,"%s heard (server tick %d, its tick here %d)",who,s.start(),s.ticksHere()));}
+            if(st[1]==0&&s.voiceSound()!=null&&mc.getSoundManager().isPlaying(s.voiceSound())){st[1]=1;note(String.format(Locale.ROOT,"%s: its call's sound started at its tick %d here",who,s.ticksHere()));}
+            if(st[2]==0&&s.timeStopped()){st[2]=1;var names=new ArrayList<String>();
+                for(int id:s.whom()){var e=mc.world.getEntityById(id);names.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
+                note(String.format(Locale.ROOT,"%s: time stopped at its tick %d here, stopping %s",who,s.ticksHere(),names));
+                if(!caster&&s.whom().contains(mc.player.getId())){tries.put(age+5,"M1");tries.put(age+12,"C");tries.put(age+20,"W+");tries.put(age+40,"W-");tries.put(age+50,"F+");tries.put(age+60,"F-");stoppedAt=mc.player.getPos();}}
+            if(st[3]==0&&s.endSound()!=null&&mc.getSoundManager().isPlaying(s.endSound())){st[3]=1;note(String.format(Locale.ROOT,"%s: its end's sound started at its tick %d here",who,s.ticksHere()));}
+            if(st[4]==0&&!Float.isNaN(s.endedAt())){st[4]=1;var paid=new ArrayList<String>();
+                for(var e:s.paidHarm().entrySet()){var x=mc.world.getEntityById(e.getKey());paid.add(String.format(Locale.ROOT,"%s %.1f",x instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(e.getKey()),e.getValue()));}
+                note(String.format(Locale.ROOT,"%s %s at %.2f s on its clock here (its tick %d); the harm that came: %s",who,s.wasCut()?"cut short":"over, time moves again",s.endedAt(),s.ticksHere(),paid));stoppedAt=null;}
+        }
+        var other=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
+        if(other!=null)flag("other_held_still",dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(other));
+        boolean view=dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView();
+        flag("screen_held_still",view);
+        if(view)stillTicks++;
+        else if(stillTicks>0){note("while its screen was held ("+stillTicks+" ticks) the sounds that played: "+stillSounds);stillTicks=0;stillSounds.clear();}
     }
     private final Map<Integer,String> tries=new HashMap<>();private int release=-1,releaseKey;private int[] fingerWalk;
     private net.minecraft.util.math.Vec3d walkFrom;private final List<Double> walkSteps=new ArrayList<>();

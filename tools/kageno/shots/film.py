@@ -12,6 +12,10 @@ incapacitated and how fast it may move (FILM_FINGER_DUMMY=0 leaves the dummy out
 MODE beatdown with a SUMMON shot's stand.csv (ACTOR -, 2.64.0) shows its beatdown: its blow, then its cutscene's part
 (by the cutscene's own clock), the training dummy's health and the damage dealt; struck no one or its guard broken
 (no cutscene).
+MODE timestop with a SUMMON shot's stand.csv (ACTOR -, 2.67.0) shows its time stop: called ("The World!"), stopped (for
+how long of its 5 s), moving again; the training dummy's health through it (unchanged while time is stopped, then all
+it took at once; FILM_TS_DUMMY=0 leaves it out) and, with FILM_TS_PLAYER=1, the player's own: one it stopped, whose
+screen is held still (shown) while time is stopped.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -57,7 +61,7 @@ frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in fr
 
 rows, wall, motion, rush = {}, [], [], []
 walkers = []
-if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown'):
+if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown', 'timestop'):
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
     # the finger mode: a husk walking off (act=) beside stand.csv, its speed attribute and how fast it walks
@@ -316,7 +320,32 @@ def beatdown_line(t):
     color = (255, 150, 150) if any('가드 깨짐' in p for p in parts) else (255, 255, 255)
     return (' · '.join(parts), color) if parts else (None, None)
 
+def timestop_line(t):
+    """The time stop (H, 2.67.0): called, stopped (how long of its 5 s), moving again; the training dummy's health and,
+    with FILM_TS_PLAYER=1, the player's own (one it stopped: their screen held still while time is stopped)."""
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    if r.get('ts_age'):
+        age, ended = float(r['ts_age']), float(r.get('ts_ended') or -1)
+        if r.get('ts_cut') == '1': parts.append('시간 정지가 끊김')
+        elif r.get('ts_stopped') == '1': parts.append(f'시간 정지 {min(5.0, max(0.0, age - 1.95)):.1f}초 / 5초')
+        elif ended >= 0: parts.append('시간이 다시 흐름 · 쌓인 피해가 한꺼번에')
+        else: parts.append('H · "스타플래티나 더 월드!"')
+    if os.environ.get('FILM_TS_PLAYER') == '1' and r.get('player_health'):
+        full = max(float(x['player_health']) for _, x in rush if x.get('player_health'))
+        h = float(r['player_health'])
+        parts.append(f'내 체력 {h:.0f}/{full:.0f}' + (f' (피해 {full - h:.0f})' if full - h > .5 else ''))
+        if r.get('ts_still') == '1': parts.append('내 화면이 멈춤')
+    if os.environ.get('FILM_TS_DUMMY') != '0' and r.get('dummy_health'):
+        full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
+        if full: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f}/{full:.0f}' + (f' (피해 {full - float(r["dummy_health"]):.0f})' if full - float(r['dummy_health']) > .5 else ''))
+    color = (150, 190, 255) if r.get('ts_stopped') == '1' else (255, 255, 255)
+    return (' · '.join(parts), color) if parts else (None, None)
+
 def actor_line(t):
+    if mode == 'timestop': return timestop_line(t)
     if mode == 'beatdown': return beatdown_line(t)
     if mode == 'inhale': return inhale_line(t)
     if mode == 'finger': return finger_line(t)

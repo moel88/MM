@@ -112,13 +112,13 @@ class StandTimeStopTest {
         var s=stop(0);s.stopped=true;s.center=new Vec3d(0,64,0);
         for(Vec3d eye:new Vec3d[]{new Vec3d(3,66,-4),new Vec3d(30,66,10),new Vec3d(80,70,0)}){
             boolean in=eye.squaredDistanceTo(s.center.add(0,1.1,0))<StandTimeStop.REACH*StandTimeStop.REACH;
-            StandTimeStop.Wave last=null;float firstFlash=-1;
+            StandTimeStop.Wave last=null;float firstFlash=-1,firstRim=-1;
             for(int f=0;f<=(int)((MOVE()+StandTimeStop.FALL+.3f)/FRAME);f++){
                 float t=f*FRAME;var w=StandTimeStop.wave(s,t,eye);
                 if(t<StandTimeStop.STOP-1e-4){assertNull(w,"no wave before time stops ("+t+")");continue;}
                 if(t>=MOVE()+StandTimeStop.FALL){assertNull(w,"gone once it has fallen back ("+t+")");continue;}
                 assertNotNull(w,"a wave at "+t);
-                if(firstFlash<0)firstFlash=w.flash();
+                if(firstFlash<0){firstFlash=w.flash();firstRim=w.rim();}
                 if(last!=null){
                     String at=" at "+t+" (an eye "+(in?"in":"out of")+" the stopped world)";
                     assertTrue(Math.abs(w.radius()-last.radius())<2.6f,"the wave jumps"+at+": "+last.radius()+" to "+w.radius());
@@ -130,6 +130,8 @@ class StandTimeStopTest {
                 last=w;
             }
             assertTrue(firstFlash<.2f,"the flash comes in over frames: "+firstFlash);
+            // (its front starts on its user: its glow comes in over frames, or it lights their whole body up for one)
+            assertTrue(firstRim<.4f,"the front's glow comes in over frames: "+firstRim);
             var held=StandTimeStop.wave(s,StandTimeStop.STOP+StandTimeStop.SPREAD+1,eye);
             assertEquals(StandTimeStop.REACH,held.radius(),1e-4,"spread over all it stopped");
             assertEquals(0,held.negative(),1e-6,"no negative once it has spread");

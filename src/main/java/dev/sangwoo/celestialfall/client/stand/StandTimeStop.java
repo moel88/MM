@@ -88,7 +88,19 @@ public final class StandTimeStop {
         public boolean stopping(){return stopped&&Float.isNaN(ended);}
         /** Whether its user is calling it now (not cut short, time not stopped yet). */
         boolean calling(float delta){return !stopped&&Float.isNaN(ended)&&age(delta)<STOP+.5f;}
+        /** For the multiplayer check (tools/kageno/mp): when H was pressed (the server's tick), its clock here in whole ticks, whether time stopped, whom it stopped, and its sounds. */
+        public long start(){return start;}
+        public long ticksHere(){return ticksIn();}
+        public boolean timeStopped(){return stopped;}
+        public float endedAt(){return ended;}
+        public boolean wasCut(){return cut;}
+        public Set<Integer> whom(){return held;}
+        public Map<Integer,Float> paidHarm(){return paid;}
+        public SoundInstance voiceSound(){return voice;}
+        public SoundInstance endSound(){return end;}
     }
+    /** The time stop this client knows of for this user (null if none). */
+    public static Stop of(UUID user){return STOPS.get(user);}
     static final Map<UUID,Stop> STOPS=new HashMap<>();
     /** Whom the time stops hold stopped now (entity ids), and the tick's share of the frame each is held at. */
     static final Map<Integer,Float> STILL=new HashMap<>();
@@ -255,6 +267,18 @@ public final class StandTimeStop {
     }
     /** Whether this player stands stopped, as this client sees it (their stand stands still with them). */
     public static boolean stopped(PlayerEntity p){return STILL.containsKey(p.getId());}
+    /**
+     * For the capture tools' logs: the newest time stop this client knows of, as "age,stopped,ended,cut,still,radius,
+     * outer,flash,negative" (its age in seconds, whether time is stopped, when it moved again or was cut short (seconds,
+     * -1 if not yet), whether this client's screen is held still, and its wave for a camera at {@code eye}), or null.
+     */
+    public static String describe(float delta,Vec3d eye){
+        Stop s=null;for(var x:STOPS.values())if(s==null||x.start>s.start)s=x;
+        if(s==null)return null;
+        var w=s.stopped&&s.center!=null&&!s.cut?wave(s,s.age(delta),eye):null;
+        return String.format(java.util.Locale.ROOT,"%.3f,%d,%.3f,%d,%d,%.2f,%.3f,%.3f,%.3f",s.age(delta),s.stopping()?1:0,Float.isNaN(s.ended)?-1:s.ended,s.cut?1:0,frozen?1:0,
+            w==null?0:w.radius(),w==null?0:w.outer(),w==null?0:w.flash(),w==null?0:w.negative());
+    }
     /** The tick this player's time stop is ready again (0 if this client has not seen them use it). */
     public static long ready(UUID id){var s=STOPS.get(id);return s==null||s.calling(0)||s.stopping()?0:s.ready;}
 
@@ -376,7 +400,10 @@ public final class StandTimeStop {
             float u=e/SPREAD;
             float r=REACH*(1-(float)Math.pow(1-u,2.4));
             float flash=.45f*StandPunch.smooth(e/.06f)*(1-StandPunch.smooth(e/.25f))*(in?1:.4f);
-            return new Wave(c,r,4+14*u,1,1-StandPunch.smooth((u-.55f)/.45f),1.2f*(1-StandPunch.smooth((u-.75f)/.25f))+.22f,1,in?StandPunch.smooth((u-.72f)/.28f):0,flash);
+            // (its front's glow comes in as it leaves its user: at first the front is on them, and would light their
+            // whole body up for a frame)
+            float rim=(1.2f*(1-StandPunch.smooth((u-.75f)/.25f))+.22f)*StandPunch.smooth(e/.1f);
+            return new Wave(c,r,4+14*u,1,1-StandPunch.smooth((u-.55f)/.45f),rim,1,in?StandPunch.smooth((u-.72f)/.28f):0,flash);
         }
         // stopped: the stopped world, its edge a faint ring on the ground
         return new Wave(c,REACH,0,1,0,.22f,1,in?1:0,0);

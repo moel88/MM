@@ -131,7 +131,19 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * its camera has the player, how strongly the player's body flashes sky blue, its two stances (the collar, the
  * uppercut) and where the one struck is shown from the player (ahead, to the right, up), and since 2.65.0 its blow's
  * two stances (drawn back, striking), the heavy punch's two (its last blow) and how many bodies glow sky blue; the log
- * when its cutscene starts and ends, and each change of the dummy's health.
+ * when its cutscene starts and ends, and each change of the dummy's health. Its time stop (2.67.0): "KEY_H@n" taps H
+ * through the real keyboard path; to film the one it stops, "FAKE@n" brings in a second Star Platinum user (a fake
+ * player on the server, its stand out, "cfw" blocks ahead and "crt" to the right, facing the player), "FAKEH@n" has it
+ * stop time by the real rules (the player stands stopped in it, their screen held), "FAKEWALK@n" walks it up to "fto"
+ * blocks in front of the player over "fwt" ticks, "HURT@n" deals the player "hurt" damage from it through the game's
+ * own blow path and "FLING@n" throws the player "fly" blocks a tick away from it ("flyup" up) through the time stop's
+ * hold, as a punch's throw is (the fake has no stand attacks of its own: the server runs those for listed players
+ * only), and "UNFAKE@n" takes it away. stand.csv gets the time stop (its age, whether time is stopped, when it moved
+ * again, cut short, whether this client's screen is held still, its wave: how far it has spread, the far world's
+ * grade, the flash, the negative), the call's two stances, the player's health and whether the dummy and the player
+ * are held; camera.csv each frame's camera (where, its yaw and pitch, the game camera's distance and clear distance,
+ * the field of view); the log when it is called, stops time, moves again, the screen held and let go, and each
+ * change of the player's health.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -438,7 +450,25 @@ public final class SkillShots implements ClientModInitializer {
         standLog.append(',').append(dev.sangwoo.celestialfall.client.stand.StandAuraLayer.glowedLast());
         // 2.66.0: whether the one struck is left undrawn this frame (the cutscene's shots from their own eyes)
         standLog.append(',').append(dummy!=null&&dev.sangwoo.celestialfall.client.stand.StandBeatdown.hidden(dummy)?1:0);
+        // 2.67.0: the time stop (its age, whether time is stopped, when it moved again, cut short, whether this client's
+        // screen is held, its wave: how far it has spread, the far world's grade, the flash, the negative), the call's two
+        // stances, the player's health, whether this client holds the dummy stopped and the player stopped
+        var stop=dev.sangwoo.celestialfall.client.stand.StandTimeStop.describe(mc.getTickDelta(),mc.gameRenderer.getCamera().getPos());
+        standLog.append(',').append(stop==null?",,,,,,,,":stop);
+        for(int i=29;i<31;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        standLog.append(String.format(Locale.ROOT,",%.2f,%d,%d",mc.player.getHealth(),dummy!=null&&!Float.isNaN(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillDelta(dummy))?1:0,
+            dev.sangwoo.celestialfall.client.stand.StandTimeStop.holds(mc.player)?1:0));
         standLog.append('\n');
+        if(stop!=null){
+            String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
+            if(!phase.equals(stopLogged)){log.append("  time stop ").append(phase).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));stopLogged=phase;}
+            boolean still=v[4].equals("1");
+            if(still!=stillLogged){log.append("  screen ").append(still?"held still":"moving again").append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));stillLogged=still;}
+        }
+        if(Math.abs(mc.player.getHealth()-playerHealth)>.05f){
+            if(playerHealth>=0)log.append(String.format(Locale.ROOT,"  player health %.1f -> %.1f at %d%n",playerHealth,mc.player.getHealth(),age));
+            playerHealth=mc.player.getHealth();
+        }
         if(beat!=null){
             String[] v=beat.split(",");boolean ended=v[1].equals("1");
             if(!beatOn){log.append("  beatdown cutscene from ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));beatOn=true;}
@@ -472,8 +502,10 @@ public final class SkillShots implements ClientModInitializer {
             }
         }
     }
-    private String punchLogged="";private boolean rushOn;private int rushBlows;
+    private String punchLogged="";private boolean rushOn;private int rushBlows;private final StringBuilder cameraLog=new StringBuilder();private String worldPass=",,,,,,,";
     private boolean beatOn,beatEnded;private float dummyHealth=-1;
+    /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
+    private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private float playerHealth=-1;
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
@@ -499,6 +531,11 @@ public final class SkillShots implements ClientModInitializer {
         if(phase!=4||current==null)return;
         float t=clock();if(t<-2||t>length(current))return;
         if(shake&&"G".equals(current))logShake(t);
+        // 2.67.0: where the camera was for each frame of a stand shot (and its field of view), to camera.csv
+        if("SUMMON".equals(current)){var cam=mc.gameRenderer.getCamera();var pos=cam.getPos();
+            var m=net.minecraft.client.render.GameRenderer.class.getDeclaredMethod("getFov",net.minecraft.client.render.Camera.class,float.class,boolean.class);m.setAccessible(true);
+            cameraLog.append(String.format(Locale.ROOT,"%.2f,%.3f,%.3f,%.3f,%.2f,%.2f,%.3f,%.3f,%.2f,%s%n",t,pos.x,pos.y,pos.z,cam.getYaw(),cam.getPitch(),BotandCamera.STATE.distance,BotandCamera.STATE.collisionDistance,
+                (double)m.invoke(mc.gameRenderer,cam,mc.getTickDelta(),true),worldPass));}
         var image=ScreenshotRecorder.takeScreenshot(mc.getFramebuffer());
         String name=String.format(Locale.ROOT,"%s/%05d_%07.2f.png",folder,shotIndex++,t);
         jobs.add(writer.submit(()->{try(image){Path p=OUT.resolve(name);Files.createDirectories(p.getParent());image.writeTo(p);}catch(Exception e){throw new RuntimeException(e);}}));
@@ -649,6 +686,11 @@ public final class SkillShots implements ClientModInitializer {
     @Override public void onInitializeClient(){
         instance=this;
         ClientTickEvents.END_CLIENT_TICK.register(client->{mc=client;try{tick();}catch(Throwable t){fail(t);}});
+        // 2.67.0: the world pass's projection and view of each frame (camera.csv), and the viewport and framebuffer then
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(c->{var pr=c.projectionMatrix();var v=c.matrixStack().peek().getPositionMatrix();
+            int[] vp=new int[4];org.lwjgl.opengl.GL11.glGetIntegerv(org.lwjgl.opengl.GL11.GL_VIEWPORT,vp);
+            worldPass=String.format(Locale.ROOT,"%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d",pr.m00(),pr.m11(),v.m11(),v.m12(),v.m21(),vp[2],vp[3],
+                org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING)==MinecraftClient.getInstance().getFramebuffer().fbo?1:0);});
         // the UI shot's pointer: moved before a screen draws, drawn after it (Fabric makes a screen's events anew each
         // time it is set up, coming back from the options screen included, so they are registered every time)
         net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client,screen,w,h)->{
@@ -721,7 +763,7 @@ public final class SkillShots implements ClientModInitializer {
                     // "DASH@n": the dash key (C) is pressed for a tick, through the client's own input
                     if(what.equals("DASH")){if(age==at)key(GLFW_KEY_C,true);if(age==at+1)key(GLFW_KEY_C,false);continue;}
                     // the UI shot's keys and mouse
-                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);}if(age==at+1)key(code,false);continue;}
                     if(what.startsWith("MOVE_")){if(age==at){glideTo=null;double[] g=target(what.substring(5));double k=mc.getWindow().getScaleFactor();glideFrom=new double[]{mc.mouse.getX(),mc.mouse.getY()};glideTo=new double[]{g[0]*k,g[1]*k};glideAt=age;log.append("  move ").append(what.substring(5)).append(" at ").append(age).append('\n');}continue;}
                     if(what.equals("TP")||what.equals("TPB")){if(age==at)server(p->{String[] v=opts.get(what.equals("TP")?"tp":"tpb").split("[/,]");double[] d=new double[5];for(int i=0;i<v.length;i++)d[i]=Double.parseDouble(v[i].trim());
@@ -743,6 +785,39 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
                     // 2.54.0: the attack (the left button) held down and let go, through Minecraft's own mouse handler
                     if(what.equals("ATTACKDOWN")||what.equals("ATTACKUP")){if(age==at){log.append("  attack ").append(what.equals("ATTACKDOWN")?"down":"up").append(" at ").append(age).append('\n');button(what.equals("ATTACKDOWN"));}continue;}
+                    // 2.67.0: a second Star Platinum user (a server-side fake player, its stand out) "cfw" blocks ahead of the
+                    // player (and "crt" to their right), facing them: "FAKE@n" brings it in, "FAKEH@n" makes it stop time (H, its
+                    // real rules: the player stands stopped in it), "HURT@n" deals the player "hurt" (4) through the game's own
+                    // blow path from it (kept until time moves again), "UNFAKE@n" takes it away
+                    if(what.equals("FAKE")){if(age==at)server(p->{
+                            var w=p.getServerWorld();var profile=new com.mojang.authlib.GameProfile(UUID.randomUUID(),"SP_User");
+                            var fake=net.fabricmc.fabric.api.entity.FakePlayer.get(w,profile);
+                            var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                            var to=p.getPos().add(f.multiply(opt("cfw",6))).add(right.multiply(opt("crt",0)));float yaw=p.getYaw()+180;
+                            fake.refreshPositionAndAngles(to.x,p.getY(),to.z,yaw,0);fake.setHeadYaw(yaw);fake.setBodyYaw(yaw);
+                            ((StandHolder)fake).botand$setStand("star_platinum");((StandHolder)fake).botand$setStandOut(true);
+                            p.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(fake)));
+                            boolean in=w.spawnEntity(fake);fakePlayer=fake;
+                            log.append("  fake Star Platinum user ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f, tick %d%n",to.x,to.y,to.z,yaw,age));});continue;}
+                    if(what.equals("FAKEH")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.request(fakePlayer);log.append("  fake H ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
+                    // "FAKEWALK@n": the fake user walks up to "fto" blocks (1.6) in front of the player over "fwt" ticks (30), facing
+                    // them; "FAKER@n": it throws its heavy punch (R, its real rules)
+                    if(what.equals("FAKEWALK")){int n=(int)opt("fwt",30);if(age>=at&&age<at+n){int left=at+n-age;server(p->{var fake=fakePlayer;if(fake==null)return;
+                            var to=p.getPos().add(net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()).multiply(opt("fto",1.6f)));var next=fake.getPos().lerp(to,1.0/left);
+                            float yaw=(float)Math.toDegrees(Math.atan2(p.getZ()-next.z,p.getX()-next.x))-90;
+                            fake.refreshPositionAndAngles(next.x,p.getY(),next.z,yaw,0);fake.setHeadYaw(yaw);fake.setBodyYaw(yaw);
+                            if(left==1)log.append(String.format(Locale.ROOT,"  fake walked up to (%.2f, %.2f) by %d%n",next.x,next.z,age));});}continue;}
+                    if(what.equals("FAKER")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.stand.StarPlatinumAttack.heavy(fakePlayer);log.append("  fake R ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
+                    if(what.equals("HURT")){if(age==at)server(p->{float amount=(float)opt("hurt",4);
+                            boolean ok=dev.sangwoo.celestialfall.combat.CombatManager.damageWithoutKnockback(p,fakePlayer==null?p.getDamageSources().generic():p.getDamageSources().playerAttack(fakePlayer),amount);
+                            log.append(String.format(Locale.ROOT,"  hurt %.1f %s at %d (health %.1f)%n",amount,ok?"landed":"refused",age,p.getHealth()));});continue;}
+                    // "FLING@n": the player sent flying "fly" (2) blocks a tick away from the fake user and "flyup" (0.6) up, as a
+                    // punch's throw is (held by a time stop that holds the player until time moves again)
+                    if(what.equals("FLING")){if(age==at)server(p->{var from=fakePlayer==null?p.getPos().add(0,0,-1):fakePlayer.getPos();var away=p.getPos().subtract(from).multiply(1,0,1).normalize();
+                            var v=away.multiply(opt("fly",2)).add(0,opt("flyup",.6f),0);boolean kept=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferLaunch(p,v);
+                            if(!kept){p.setVelocity(v);p.velocityModified=true;}
+                            log.append(String.format(Locale.ROOT,"  fling (%.2f, %.2f, %.2f) %s at %d%n",v.x,v.y,v.z,kept?"kept for when time moves":"now",age));});continue;}
+                    if(what.equals("UNFAKE")){if(age==at)server(p->{if(fakePlayer!=null){p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(fakePlayer.getUuid())));fakePlayer.discard();fakePlayer=null;log.append("  fake gone at ").append(age).append('\n');}});continue;}
                     // the training dummy back in front of the player (after the finisher threw it), whole again
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
@@ -759,8 +834,11 @@ public final class SkillShots implements ClientModInitializer {
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
-                        +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden\n"+standLog);
-                        standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;}
+                        +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden,"
+                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,world_gather,world,player_health,dummy_stopped,player_held\n"+standLog);
+                        standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
+                        stopLogged="";stillLogged=false;playerHealth=-1;
+                        Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

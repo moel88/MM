@@ -63,7 +63,8 @@ public final class MpServer implements ModInitializer {
     private static boolean caster(ServerPlayerEntity p){return p.getGameProfile().getName().equals("Caster");}
     private void joined(ServerPlayerEntity p){
         p.changeGameMode(GameMode.SURVIVAL);
-        if(caster(p)){ProgressManager.set(p,new ProgressProfile(1,0,0,"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),true);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+        // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
+        if(caster(p)){ProgressManager.set(p,new ProgressProfile(1,0,0,"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
@@ -109,7 +110,7 @@ public final class MpServer implements ModInitializer {
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY)p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY)p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -307,13 +308,21 @@ public final class MpServer implements ModInitializer {
             boolean in=dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p);
             if(in!=Boolean.TRUE.equals(beaten.put(p.getUuid(),in)))note(server,String.format(java.util.Locale.ROOT,"watcher %s at tick %d, health %.1f %s",in?"in the beatdown's cutscene":"out of the beatdown's cutscene",now,p.getHealth(),where(p,caster)));
             Float before=healths.put(p.getUuid(),p.getHealth());
-            if(before!=null&&Math.abs(before-p.getHealth())>.01f&&(in||BEATDOWN_ONLY))note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at tick %d%s",before,p.getHealth(),now,in?" (in the cutscene)":""));
+            if(before!=null&&Math.abs(before-p.getHealth())>.01f&&(in||BEATDOWN_ONLY||TIMESTOP_ONLY))note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at tick %d%s",before,p.getHealth(),now,in?" (in the cutscene)":""));
+            // 2.67.0: the watcher stopped in the caster's stopped time as the server keeps it, and the caster's time stop
+            boolean stopped=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(p);
+            if(stopped!=Boolean.TRUE.equals(timeStopped.put(p.getUuid(),stopped)))note(server,String.format(java.util.Locale.ROOT,"watcher %s at tick %d, health %.1f %s",stopped?"stopped in time":"moving again",now,p.getHealth(),where(p,caster)));
+            boolean calling=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.active(caster);
+            if(calling!=Boolean.TRUE.equals(timeStopping.put(caster.getUuid(),calling)))note(server,"caster's time stop "+(calling?"called":"over")+" at tick "+now+", ready again at "+dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.ready(caster));
             boolean alive=p.isAlive();
             if(alive!=!Boolean.FALSE.equals(lives.put(p.getUuid(),alive)))note(server,"watcher "+(alive?"alive again":"died")+" at tick "+now+" "+where(p,caster));
         }
     }
     /** Only the beatdown's script (2.64.0, MP_ONLY=beatdown). */
     static final boolean BEATDOWN_ONLY="beatdown".equals(System.getProperty("botand.mp.only"));
+    /** Only the time stop's script (2.67.0, MP_ONLY=timestop). */
+    static final boolean TIMESTOP_ONLY="timestop".equals(System.getProperty("botand.mp.only"));
+    private final Map<UUID,Boolean> timeStopped=new HashMap<>(),timeStopping=new HashMap<>();
     private final Map<UUID,Boolean> beaten=new HashMap<>(),lives=new HashMap<>();private final Map<UUID,Float> healths=new HashMap<>();
     private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>(),disabled=new HashMap<>();
     private final Map<UUID,String> speeds=new HashMap<>();private final Map<UUID,Boolean> inhaled=new HashMap<>(),inhaling=new HashMap<>();private long heldAt;
