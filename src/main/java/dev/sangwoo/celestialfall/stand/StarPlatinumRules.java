@@ -10,20 +10,22 @@ package dev.sangwoo.celestialfall.stand;
  * the hook and the finisher still take 0.45 and 0.5 s to land; the finisher comes 0.65 s after the hook (in the
  * recording the two are 1.2 s apart), and its shout takes over from the hook's (StandAttack fades the one before out).
  * The four land 0.20, 0.50, 1.05 and 1.75 s into a mashed combo (2.54.0: 0.30, 1.10, 2.00, 3.20). Since 2.57.0 its E
- * too, the rush (below), and since 2.59.0 its R, the heavy punch: a fifth punch, HEAVY, out of the combo (below). Pure
- * timing and reach, shared by the server and the client; ticks of 1/20 s.
+ * too, the rush (below), since 2.59.0 its R, the heavy punch: a fifth punch, HEAVY, out of the combo (below), and since
+ * 2.60.0 its T, the Star Finger: a sixth, FINGER (below). Pure timing and reach, shared by the server and the client;
+ * ticks of 1/20 s.
  */
 public final class StarPlatinumRules {
     /**
-     * Each punch's contact, ticks after it starts (by the punch, 1 to 4, and the heavy punch, 5): the jab and the cross
-     * snap in, the hook and the finisher take the "O" of their shouts (0.4 s), the heavy punch its long coil (0.6 s).
+     * Each punch's contact, ticks after it starts (by the punch, 1 to 4, the heavy punch, 5, and the Star Finger, 6): the
+     * jab and the cross snap in, the hook and the finisher take the "O" of their shouts (0.4 s), the heavy punch its
+     * long coil (0.6 s), the Star Finger its aim and its fingers' flight out (0.45 s, the crack in the user's recording).
      */
-    public static final int[] CONTACT={0,4,4,9,10,12};
-    /** Ticks from a punch's start before the next may start (2.56.0: three tenths of a second, the hook's 0.65 s; after the heavy punch, once it is over). */
-    public static final int[] STEP={0,6,6,13,0,28};
+    public static final int[] CONTACT={0,4,4,9,10,12,9};
+    /** Ticks from a punch's start before the next may start (2.56.0: three tenths of a second, the hook's 0.65 s; after the heavy punch and the Star Finger, once they are over). */
+    public static final int[] STEP={0,6,6,13,0,28,25};
     /** How long each punch runs (ticks) when no next one cuts it short: the strike, the follow-through and the guard again. */
-    public static final int[] LENGTH={0,10,10,17,23,28};
-    public static final float[] DAMAGE={0,5,5,6,10,15};
+    public static final int[] LENGTH={0,10,10,17,23,28,25};
+    public static final float[] DAMAGE={0,5,5,6,10,15,10};
     /** A press this many ticks or fewer before the next punch may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next punch must start within this many ticks of when it may, or the combo breaks. */
@@ -71,22 +73,50 @@ public final class StarPlatinumRules {
     // coils for 0.6 s (CONTACT[HEAVY]) and lands on everyone in its way the way its user faced as it started, as the
     // finisher reaches (REACH_BIG). A guard cannot take it: it breaks the guard (for HEAVY_BREAK ticks, as blows that
     // wear a guard down break it) and lands all the same, and it sends whoever it strikes flying along it, further than
-    // the finisher. Its cooldown runs once it is over (2.44.0's rule), or from where it was stopped short.
+    // the finisher. Since 2.60.0 (user request: "R로 가드 부수면 날아가는 대신 2초 무력화 됨 그냥 가드 브레이커 개념이
+    // 2초 무력화로 알고 있으면 됨") whoever's guard it breaks does not fly: they stay where they stand, incapacitated
+    // while their guard is broken (two seconds: no skill, attack, dash or guard, CombatManager). Its cooldown runs once
+    // it is over (2.44.0's rule), or from where it was stopped short.
 
     /** The heavy punch's number among the punches (its contact, length and damage are at this index). */
     public static final int HEAVY=5;
     /** Its cooldown once it is over (ticks: eight seconds). */
     public static final int HEAVY_COOLDOWN=160;
-    /** How long a guard it breaks stays broken (ticks; one worn down by blows, CombatState.BREAK_TICKS, a second). */
+    /**
+     * How long a guard it breaks stays broken (ticks; one worn down by blows, CombatState.BREAK_TICKS, a second): its
+     * holder incapacitated all that while, where they stand (2.60.0: "가드 브레이커 개념이 2초 무력화").
+     */
     public static final int HEAVY_BREAK=40;
     /**
-     * It sends whoever it strikes flying along it (blocks a tick, out and up): further and higher than the finisher (FLY,
+     * It sends whoever it strikes with no guard up flying along it (blocks a tick, out and up): further and higher than the finisher (FLY,
      * FLY_UP), some 17 blocks against its 10 on flat ground. (The first tick of a throw is on the ground, so the ground's
      * friction takes nearly half of the speed out at once and the air the rest: 2.0 out went 11.5 blocks in the capture.)
      */
     public static final double FLY_HEAVY=2.8,FLY_HEAVY_UP=.75;
     /** When the heavy punch is ready again once it ended (over, or stopped short) at {@code end}. */
     public static long heavyReady(long end){return end+HEAVY_COOLDOWN;}
+    // ---- T, the Star Finger (2.60.0, user request: "이번에는 스타 핑거 손가락 2개를 엄청 늘려서 5블록까지 적을 찌를 수
+    // 있음 맞추면 2초 95% 슬로우 + 3초 동안 대쉬 평타 포함 아무 스킬도 사용 못함(무력화)"): with the stand out, T makes it
+    // take aim and drive its first two fingers out straight, stretching them out to whoever stands first in their way
+    // up to FINGER_REACH blocks ahead of its user, a sixth punch out of the combo. It strikes that one alone (the fingers
+    // end in the first body they meet), for DAMAGE[FINGER]; a guard held up against it takes it, as any blow but the
+    // heavy punch's. Whoever it strikes walks FINGER_SLOW slower for FINGER_SLOW_TICKS and is incapacitated for
+    // FINGER_DISABLE ticks: no skill, attack, dash or guard (CombatManager.incapacitate). Its cooldown runs once it is
+    // over (2.44.0's rule), or from where it was stopped short.
+
+    /** The Star Finger's number among the punches (its contact, length and damage are at this index). */
+    public static final int FINGER=6;
+    /** How far its fingers reach from its user's feet (blocks ahead) and how wide their way is (to either side; two fingers, not a fist). */
+    public static final double FINGER_REACH=5,FINGER_HALF_WIDTH=.6;
+    /** Its cooldown once it is over (ticks: twelve seconds). */
+    public static final int FINGER_COOLDOWN=240;
+    /** Whoever it strikes walks this much slower (0.95: at a twentieth of their speed) for FINGER_SLOW_TICKS, and is incapacitated for FINGER_DISABLE. */
+    public static final double FINGER_SLOW=.95;
+    public static final int FINGER_SLOW_TICKS=40,FINGER_DISABLE=60;
+    /** When the Star Finger is ready again once it ended (over, or stopped short) at {@code end}. */
+    public static long fingerReady(long end){return end+FINGER_COOLDOWN;}
+    /** Whether the punch {@code combo} is one of the stand's own skills out of the combo (the heavy punch, the Star Finger). */
+    public static boolean skill(int combo){return combo==HEAVY||combo==FINGER;}
 
     /** Whether a blow of the rush lands {@code age} ticks into it. */
     public static boolean rushBlow(long age){return age>=RUSH_FIRST&&age<=RUSH_LAST&&(age-RUSH_FIRST)%RUSH_EVERY==0;}
@@ -103,7 +133,7 @@ public final class StarPlatinumRules {
     /** Whether the punch {@code combo} shouts (2.56.0: the hook and the finisher; the jab and the cross have none; the heavy punch has its own two, StandAttack). */
     public static boolean shouts(int combo){return combo==3||combo==4;}
 
-    /** The punch after {@code combo}: 1 again after the fourth or the heavy punch (or none yet). */
+    /** The punch after {@code combo}: 1 again after the fourth, the heavy punch or the Star Finger (or none yet). */
     public static int next(int combo){return combo>=1&&combo<4?combo+1:1;}
     /** When the punch after {@code combo} (begun at {@code start}) may start. */
     public static long nextAt(int combo,long start){return start+STEP[combo];}
@@ -129,6 +159,8 @@ public final class StarPlatinumRules {
      * for a body {@code halfWidth} across.
      */
     public static boolean lane(int combo,double forward,double side,double height,double halfWidth){
+        // the Star Finger's way (2.60.0): longer and narrower, two fingers stretched out
+        if(combo==FINGER)return forward>=NEAR-halfWidth&&forward<=FINGER_REACH+halfWidth&&Math.abs(side)<=FINGER_HALF_WIDTH+halfWidth&&height>=LOW&&height<=HIGH;
         return forward>=NEAR-halfWidth&&forward<=(combo>=4?REACH_BIG:REACH)+halfWidth&&Math.abs(side)<=HALF_WIDTH+halfWidth&&height>=LOW&&height<=HIGH;
     }
 }

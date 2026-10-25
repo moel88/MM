@@ -9,7 +9,7 @@ public record ComboWindow(int strike,int serial,long hitAt,long attackEnd,long u
         return new ComboWindow(strike,state.serial,now,end,end+CombatState.WINDUP[strike+1]+2);
     }
     public boolean active(CombatState state,long now) {
-        if(now>=until||state.broken(now)||state.guarding||state.dashing(now))return false;
+        if(now>=until||state.locked(now)||state.guarding||state.dashing(now))return false;
         if(state.serial==serial&&state.attack==strike)
             return now<attackEnd||state.queued&&now<=attackEnd;
         return state.serial==serial+1&&state.attack==strike+1&&state.attacking(now);

@@ -32,6 +32,8 @@ public final class TrainingDummyRenderer extends software.bernie.geckolib.render
         var label=d.getDisplayName().copy().append(String.format(java.util.Locale.ROOT,"  %.0f / %.0f",d.getHealth(),d.getMaxHealth()));
         if(d.kind()==DummyKind.GUARD)label.append("  ").append(d.brokenUntil()>d.getWorld().getTime()
             ?Text.translatable("hud.botand.dummy_broken"):Text.translatable("hud.botand.dummy_guard",Math.round(d.guardPressure())));
+        // incapacitated (2.60.0: struck by the Star Finger)
+        if(d.disabledUntil()>d.getWorld().getTime())label.append("  ").append(Text.translatable("hud.botand.dummy_disabled"));
         super.renderLabelIfPresent(d,label,matrices,vertices,light);
     }
 }

@@ -237,6 +237,68 @@ class StandPunchTest {
             assertEquals(1,shape.weights[StarPlatinumStance.GUARD],1e-6);assertEquals(1,shape.over,1e-6,"back in its guard");
         }
     }
+    // ---- T, the Star Finger (2.60.0) ----
+
+    static final int FINGER=StarPlatinumRules.FINGER;
+    @Test void theStarFingerMovesWithoutAJumpAt60fps()throws Exception{
+        // alone, from the stand at rest beside its user; then a jab as soon as it may
+        float jab=StarPlatinumRules.STEP[FINGER]/20f;
+        float fastest=sweep(jab+2.2f,(t,into)->t<jab?StandPunch.at(punch(FINGER),t,null,0,into):StandPunch.at(punch(1),t-jab,punch(FINGER),t,into),"the Star Finger, then a jab");
+        assertTrue(fastest>15,"it drives the hand out fast: "+fastest);
+        var shape=new StandPunch.Shape();
+        StandPunch.at(punch(FINGER),.3f,null,0,shape);assertEquals(1,shape.weights[StarPlatinumStance.WIND_FINGER],1e-4,"taking aim");
+        StandPunch.at(punch(FINGER),StandPunch.HIT[FINGER],null,0,shape);assertEquals(1,shape.weights[StarPlatinumStance.STAR_FINGER],1e-4,"driven out as it strikes");
+        assertEquals(1,shape.fingerExt,1e-6,"its fingers in its target as it strikes");
+    }
+    @Test void itsFingersOpenShootOutAndComeBackWithoutAJump(){
+        var p=punch(FINGER);float hit=StandPunch.HIT[FINGER];
+        assertEquals(0,StandPunch.fingers(p,0,true),1e-6,"a fist as it starts");
+        assertEquals(1,StandPunch.fingers(p,.3f,true),1e-6,"open as it takes aim");
+        assertEquals(0,StandPunch.fingers(p,.3f,false),1e-6,"not stretched before they shoot");
+        assertEquals(1,StandPunch.fingers(p,hit,false),1e-6,"out in their target as it strikes");
+        assertTrue(StandPunch.fingers(p,hit-.03f,false)<.6f,"fastest as they land");
+        for(float t=hit;t<hit+StandPunch.FREEZE[FINGER]+.3f;t+=.05f)assertEquals(1,StandPunch.fingers(p,t,false),1e-6,"held out in their target at "+t);
+        float end=StarPlatinumRules.LENGTH[FINGER]/20f;
+        assertEquals(0,StandPunch.fingers(p,end,false),1e-6,"back once it is over");assertEquals(0,StandPunch.fingers(p,end,true),1e-6,"folded into the fist");
+        // nothing leaps: the shot is fast (their own length to their target in a tenth of a second, six frames)
+        float lastO=0,lastE=0;
+        for(int f=0;f<=(int)(end/FRAME)+2;f++){
+            float t=f*FRAME,o=StandPunch.fingers(p,t,true),e=StandPunch.fingers(p,t,false);
+            assertTrue(Math.abs(o-lastO)<.2f,"they open in a jump at "+t);
+            assertTrue(Math.abs(e-lastE)<.3f,"they shoot out or back in a jump at "+t+": "+lastE+" to "+e);
+            lastO=o;lastE=e;
+        }
+        // stopped short at any moment: they go back with the rest of it, over STOP_RETURN ticks
+        for(int stop=1;stop<=StarPlatinumRules.LENGTH[FINGER];stop++){
+            var cut=p.stop(stop/20f);
+            assertEquals(StandPunch.fingers(p,stop/20f,false),StandPunch.fingers(cut,stop/20f,false),1e-6);
+            assertEquals(0,StandPunch.fingers(cut,stop/20f+StarPlatinumRules.STOP_RETURN/20f,false),1e-6,"back "+StarPlatinumRules.STOP_RETURN+" ticks after it stopped");
+            assertEquals(0,StandPunch.fingers(cut,stop/20f+StarPlatinumRules.STOP_RETURN/20f,true),1e-6);
+        }
+        for(int k=1;k<=StarPlatinumRules.HEAVY;k++)assertEquals(0,StandPunch.fingers(punch(k),StandPunch.HIT[k],true),1e-6,"no fingers for punch "+k);
+    }
+    @Test void theStarFingerTakesOverFromAPunchStoppedShortAtAnyMoment()throws Exception{
+        // T in the middle of a mashed combo, as R: the punch in flight stops short, and the Star Finger starts once the
+        // stand is back in its guard from it (StarPlatinumAttack.beginSkill)
+        float ret=StarPlatinumRules.STOP_RETURN/20f;
+        for(int combo=1;combo<=4;combo++)for(int stop=1;stop<=StarPlatinumRules.LENGTH[combo];stop+=2){
+            final int k=combo;float sk=STARTS[k-1],at=sk+stop/20f,finger=at+ret;var stopped=punch(k).stop(stop/20f);
+            var before=k>1?punch(k-1):null;float sb=k>1?STARTS[k-2]:0;
+            sweep(finger+StarPlatinumRules.LENGTH[FINGER]/20f+.8f,(t,into)->{
+                if(t>=finger)return StandPunch.at(punch(FINGER),t-finger,stopped,t-sk,into);
+                if(t>=sk)return StandPunch.at(t<at?punch(k):stopped,t-sk,before,t-sb,into);
+                return at(t,STARTS,into);
+            },"punch "+k+" stopped "+stop+" ticks in for the Star Finger");
+        }
+    }
+    @Test void theStarFingerStoppedShortAtAnyMomentGoesBackToItsGuard()throws Exception{
+        for(int stop=1;stop<=StarPlatinumRules.LENGTH[FINGER];stop++){
+            float at=stop/20f;var now=punch(FINGER).stop(at);
+            sweep(at+.8f,(t,into)->StandPunch.at(t<at?punch(FINGER):now,t,null,0,into),"the Star Finger stopped "+stop+" ticks in");
+            var shape=StandPunch.at(now,at+StarPlatinumRules.STOP_RETURN/20f,null,0,new StandPunch.Shape());
+            assertEquals(1,shape.weights[StarPlatinumStance.GUARD],1e-6);assertEquals(1,shape.over,1e-6,"back in its guard");
+        }
+    }
     @Test void theHeavyPunchsBlowSoundsOnlyIfItStrikes(){
         var voice=new StandAttack.Heavy(new net.minecraft.util.Identifier("celestialfall","star_platinum_heavy"),false,1f);
         var blow=new StandAttack.Heavy(new net.minecraft.util.Identifier("celestialfall","star_platinum_heavy_hit"),true,1f);

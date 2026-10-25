@@ -25,8 +25,15 @@ import net.minecraft.world.RaycastContext;
 public final class CombatManager {
     public static final Identifier INPUT=CelestialFall.id("botand_input_v1"), STATE=CelestialFall.id("botand_state_v1");
     public static final RegistryKey<DamageType> UNARMED=RegistryKey.of(RegistryKeys.DAMAGE_TYPE,CelestialFall.id("unarmed"));
-    /** The guard's and the guard break's slowdown on the movement speed (the client keeps its lens still while it is on). */
+    /**
+     * The guard's, the guard break's and (2.60.0) an incapacitating blow's slowdown on the movement speed (the client
+     * keeps its lens still while it is on).
+     */
     public static final UUID SLOW=UUID.fromString("c00bcb8e-e904-4ebf-9f83-8cbb798783ed");
+    /** An incapacitating blow's slowdown on anything else that walks (2.60.0: mobs; players and training dummies keep theirs in their combat state). */
+    public static final UUID MOB_SLOW=UUID.fromString("5d0f6c2e-8a1b-4c3e-9f47-2b6e1d9a7c15");
+    /** Mobs slowed by an incapacitating blow, and the tick each slow ends. */
+    private static final Map<LivingEntity,Long> MOB_SLOWS=new WeakHashMap<>();
     /**
      * Players whose client started running while an action held them: the server drops that packet and the client
      * never sends it again, so they run once the action lets go.
@@ -59,7 +66,7 @@ public final class CombatManager {
         });
         ServerTickEvents.END_SERVER_TICK.register(CombatManager::tick);
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{HitStun.disconnect(handler.player.getUuid());STATES.remove(handler.player.getUuid());RUN_AFTER.remove(handler.player.getUuid());});
-        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();RUN_AFTER.clear();});
+        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();RUN_AFTER.clear();MOB_SLOWS.clear();});
     }
     /** A sprint packet the action lock dropped ({@code start}) or any stop: the latest wish to run is kept for when the lock ends. */
     public static void runRequest(ServerPlayerEntity p,boolean start){if(start)RUN_AFTER.add(p.getUuid());else RUN_AFTER.remove(p.getUuid());}
@@ -86,12 +93,47 @@ public final class CombatManager {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
-        long n=p.getWorld().getTime();return e.state.broken(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.guarding;
+        long n=p.getWorld().getTime();return e.state.locked(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.guarding;
     }
     public static boolean actionLocked(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p))return true;
-        var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.broken(p.getWorld().getTime());
+        var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
+    }
+    /**
+     * Whether this player can do nothing but walk now (2.60.0): incapacitated, or their guard broken (a broken guard is
+     * an incapacitation, "가드 브레이커 개념이 2초 무력화"). Every skill, attack, dash and guard asks this through
+     * {@link #busy} and {@link #actionLocked}; the stand's summoning too.
+     */
+    public static boolean incapacitated(PlayerEntity p) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
+        var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
+    }
+    /**
+     * Incapacitates whoever a blow struck (2.60.0: Star Platinum's Star Finger, user request: "맞추면 2초 95% 슬로우 +
+     * 3초 동안 대쉬 평타 포함 아무 스킬도 사용 못함(무력화)"): for {@code ticks} they can use no skill and neither attack,
+     * dash nor guard, and for {@code slowTicks} they walk {@code slow} slower (0.95: a twentieth of their speed), the
+     * game's lens kept still. Whatever they were doing is cut off: their attack, guard and dash, the combo they held
+     * someone in, their stand's punches and rush, a skill they were casting. A training dummy stops attacking and
+     * guarding as long; anything else is slowed.
+     */
+    public static void incapacitate(LivingEntity target,int ticks,int slowTicks,double slow) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
+        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.incapacitate(ticks,slowTicks,slow);return;}
+        if(!(target instanceof ServerPlayerEntity p)) {
+            var attr=target.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null||slowTicks<=0)return;
+            attr.removeModifier(MOB_SLOW);attr.addTemporaryModifier(new EntityAttributeModifier(MOB_SLOW,"Botand incapacitation",-slow,EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
+            MOB_SLOWS.put(target,target.getWorld().getTime()+slowTicks);
+            if(target instanceof net.minecraft.entity.mob.MobEntity mob)mob.getNavigation().stop();
+            return;
+        }
+        long now=p.getWorld().getTime();var s=state(p);
+        s.incapacitate(now,ticks,slowTicks,slow);
+        HitStun.releaseOwned(p.getUuid());
+        dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
+        dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);
+        p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
+        speed(p,s,now);sync(p,s);
     }
     public static void interrupt(LivingEntity target) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
@@ -138,16 +180,24 @@ public final class CombatManager {
                     if((now-s.dashStart)%2==0)p.getServerWorld().spawnParticles(ParticleTypes.CLOUD,p.getX(),p.getY()+.1,p.getZ(),2,.13,.02,.13,.005);
                 }
             }
-            if(s.broken(now)){p.clearActiveItem();p.setSprinting(false);}
+            // an incapacitation over (2.60.0): told at once, so the client lets its keys go on the tick it ends
+            if(s.disabled(now-1)&&!s.disabled(now))dirty=true;
+            if(s.locked(now)){p.clearActiveItem();p.setSprinting(false);}
             speed(p,s,now);
-            if(RUN_AFTER.contains(p.getUuid())&&!actionLocked(p)){RUN_AFTER.remove(p.getUuid());if(valid(p)&&!s.guarding&&!s.broken(now))p.setSprinting(true);}
-            if(dirty||now%4==0&&(s.pressure>0||s.combatUntil>now||s.broken(now)))sync(p,s);
+            if(RUN_AFTER.contains(p.getUuid())&&!actionLocked(p)){RUN_AFTER.remove(p.getUuid());if(valid(p)&&!s.guarding&&!s.locked(now))p.setSprinting(true);}
+            if(dirty||now%4==0&&(s.pressure>0||s.combatUntil>now||s.locked(now)))sync(p,s);
         }
         HitStun.tick();
+        // mobs' slows from incapacitating blows run out (2.60.0)
+        for(var it=MOB_SLOWS.entrySet().iterator();it.hasNext();){
+            var e=it.next();var mob=e.getKey();
+            if(mob.isRemoved()||!mob.isAlive()||mob.getWorld().getTime()>=e.getValue()){var attr=mob.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr!=null)attr.removeModifier(MOB_SLOW);it.remove();}
+        }
     }
     private static void speed(ServerPlayerEntity p,CombatState s,long now) {
         var attr=p.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null)return;
-        double slow=s.broken(now)?-.9:s.guarding?-.55:0;
+        // the strongest of what slows them: a broken guard, an incapacitating blow (2.60.0), the guard
+        double slow=Math.min(s.broken(now)?-.9:0,Math.min(s.slowed(now)?-s.slow:0,s.guarding?-.55:0));
         var old=attr.getModifier(SLOW);
         if(old!=null&&old.getValue()==slow)return;
         if(old!=null)attr.removeModifier(SLOW);
@@ -239,6 +289,8 @@ public final class CombatManager {
             var b=PacketByteBufs.create();b.writeUuid(p.getUuid());b.writeIdentifier(p.getWorld().getRegistryKey().getValue());
             b.writeInt(s.serial);b.writeByte(s.attack);b.writeLong(s.attackStart);b.writeBoolean(s.guarding);b.writeFloat(s.pressure);
             b.writeLong(s.brokenUntil);b.writeLong(s.dashStart);b.writeLong(s.dashReady);b.writeFloat(s.dashForward);b.writeFloat(s.dashSide);b.writeLong(s.combatUntil);
+            // 2.60.0: when the guard broke, and the incapacitation (until when, since when)
+            b.writeLong(s.brokenAt);b.writeLong(s.disabledUntil);b.writeLong(s.disabledAt);
             ServerPlayNetworking.send(viewer,STATE,b);
         }
     }

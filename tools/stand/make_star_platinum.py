@@ -377,8 +377,18 @@ def right_arm():
     box(hand, (-9.0, 15.4, -2.25), (2.2, 1.9, 0.45), 'skin', part='thumb')
     for k in range(4):
         box(hand, (-8.0, 14.72, -1.55 + k * 0.82), (0.75, 0.3, 0.62), 'gold', part='knuckle')
+    # the Star Finger (2.60.0): the first two fingers held straight out of the fist from their knuckles, side by side.
+    # Hidden but for the Star Finger, when the game stretches the bone along them (from the knuckles) out to whoever
+    # they strike and turns it to them (client/stand/StarPlatinumRenderer): no face across them but the tips, and
+    # nothing painted along them that a stretch would smear.
+    finger = bone('right_finger', hand, FINGER_ROOT)
+    for k in range(2):
+        box(finger, (FINGER_ROOT[0] - FINGER_W / 2, FINGER_ROOT[1] - FINGER_LEN, -1.62 + .82 * k), (FINGER_W, FINGER_LEN, .76),
+            'skin', part='finger', piece=k, faces=('north', 'south', 'east', 'west', 'down'))
 
 
+# where the Star Finger's fingers leave the fist (between the first two knuckles, on its face) and their size
+FINGER_ROOT, FINGER_LEN, FINGER_W = (-7.62, 15.0, -.85), 3.0, .86
 mirrored(right_arm)
 
 
@@ -541,6 +551,8 @@ def pillow(u, v, kx=1.0, ky=1.0):
 
 def skin(c, face, u, v, p, n):
     part = c.opts.get('part')
+    if part == 'finger':
+        return finger_paint(c, face, u, v, n)
     side = c.opts.get('side', -1)
     x, y, z = p
     lit = max(0.0, float(n @ LIGHT))
@@ -637,6 +649,19 @@ def skin(c, face, u, v, p, n):
     if part == 'fist':
         col = fist_paint(c, face, u, v, p, col)
     return col
+
+
+def finger_paint(c, face, u, v, n):
+    """The Star Finger's fingers (2.60.0): lit across them and the same all along them (the game stretches them out
+    along their length to whoever they strike), dark down their long edges like the art's line work; the tips a
+    little paler, rimmed dark."""
+    lit = max(0.0, float(n @ LIGHT))
+    if face == 'down':
+        col = ramp(SKIN[1:], .5 + .25 * lit + .12 * pillow(u, v))
+        return mix(col, SKIN[0], .45) if edge_texels(c, face, u, v) < .6 else col
+    col = ramp(SKIN[1:], .38 + .3 * lit + .18 * (1 - (2 * u - 1) ** 2))
+    w, _ = face_size(c, face)
+    return mix(col, SKIN[0], .4) if min(u, 1 - u) * w * dens(c) < .7 else col
 
 
 def fist_paint(c, face, u, v, p, col):
@@ -1238,6 +1263,36 @@ POSES = {
         'right_leg': {'rot': (64, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (52, 0, 0)},
         'cloth_front': {'rot': (-28, 0, 0)}, 'cloth_back': {'rot': (36, 0, 0)}, 'cloth_back_1': {'rot': (18, 0, 0)},
     },
+    # ---- T, the Star Finger (2.60.0, user request: "이번에는 스타 핑거 손가락 2개를 엄청 늘려서 5블록까지 적을 찌를 수
+    # 있음"): the first two fingers held out straight like a spear. It takes aim: wound round to the right, the right
+    # hand drawn back level beside the head with the elbow out behind it so the fingers point at the target, the left
+    # arm reaching out at the target as a sight, the weight sitting back; then it drives the hand out straight at the
+    # target, the hips and shoulders wheeling round to the left behind it, the left fist torn back to the chest, the
+    # body leaning in over the front leg, while the fingers shoot out (the game stretches them, client/stand).
+    'wind_finger': {
+        'root': {'pos': (0, -.4, 2.2)},
+        'hips': {'rot': (8, 40, 0)}, 'torso': {'rot': (6, 13, 0)}, 'chest': {'rot': (4, 11, 0)},
+        'neck': {'rot': (-8, -25, 0)}, 'head': {'rot': (-10, -36, 0)},
+        'right_arm': {'reach': ((-6.0, 31.5, -6.0), (-.3, -.2, 1))},
+        'right_pad': {'rot': (0, 0, 18)},
+        'left_arm': {'reach': ((5.5, 36.0, -21.0), (.7, -1, 0))},
+        'left_pad': {'rot': (-10, 0, -16)},
+        'left_leg': {'rot': (-36, 0, -6)}, 'left_shin': {'rot': (54, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+        'right_leg': {'rot': (18, 0, 8)}, 'right_shin': {'rot': (62, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-16, 0, 0)}, 'cloth_back': {'rot': (-6, 0, 0)},
+    },
+    'star_finger': {
+        'root': {'pos': (0, .4, -4.6)},
+        'hips': {'rot': (18, -30, 0)}, 'torso': {'rot': (10, -12, 0)}, 'chest': {'rot': (7, -12, 0)},
+        'neck': {'rot': (-12, 22, 0)}, 'head': {'rot': (-15, 30, 0)},
+        'right_arm': {'reach': ((-1.0, 29.0, -40.0), (-.5, -1, 0))},
+        'right_pad': {'rot': (-16, 0, 22)},
+        'left_arm': {'reach': ((5.5, 30.5, 1.5), (1, -.5, 1))},
+        'left_pad': {'rot': (0, 0, -8)},
+        'left_leg': {'rot': (-44, 0, -4)}, 'left_shin': {'rot': (32, 0, 0)}, 'left_foot': {'rot': (8, 0, 0)},
+        'right_leg': {'rot': (40, 0, 6)}, 'right_shin': {'rot': (12, 0, 0)}, 'right_foot': {'rot': (48, 0, 0)},
+        'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (24, 0, 0)},
+    },
 }
 
 
@@ -1373,6 +1428,10 @@ def stance_points(spec):
         out[side] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
         q = world[side + '_arm'] @ np.array([*BONES[side + '_arm'].pivot, 1.0])
         out[side + '_shoulder'] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
+    # where the Star Finger's fingers leave the right fist and the way they point out of it, along the hand (2.60.0)
+    q = world['right_hand'] @ np.array([*FINGER_ROOT, 1.0])
+    out['right_finger'] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
+    out['right_finger_way'] = [round(float(v), 4) for v in world['right_hand'][:3, :3] @ np.array([0, -1.0, 0])]
     return out
 
 

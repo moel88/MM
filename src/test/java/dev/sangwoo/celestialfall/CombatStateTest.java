@@ -62,4 +62,37 @@ class CombatStateTest {
         long ready=s.dashReady;s.cancel(100);assertEquals(ready,s.dashReady,"a blow once the dash is over changes nothing");
         s=new CombatState();assertTrue(s.dash(0,1,0));s.cancel(5);assertEquals(5+CombatState.DASH_COOLDOWN,s.dashReady,"a blow mid-dash ends it there");
     }
+    /**
+     * User request (2.60.0): struck by Star Platinum's Star Finger, "2초 95% 슬로우 + 3초 동안 대쉬 평타 포함 아무 스킬도 사용
+     * 못함(무력화)": three seconds of no attack, guard or dash (and no skill: CombatManager.busy), the legs 95% slower
+     * for the first two; whatever was going on is cut off.
+     */
+    @Test void anIncapacitatedOneCanOnlyWalk() {
+        CombatState s=new CombatState();assertTrue(s.requestAttack(100));assertTrue(s.attacking(101));
+        s.incapacitate(102,60,40,.95);
+        assertEquals(0,s.attack,"the attack it was throwing is cut off");assertFalse(s.attacking(103));
+        for(long t=102;t<162;t++){
+            assertTrue(s.disabled(t)&&s.locked(t),"incapacitated at "+t);
+            assertFalse(s.requestAttack(t),"no attack");assertFalse(s.dash(t,1,0),"no dash");
+            s.guard(true,t);assertFalse(s.guarding,"no guard");
+            assertEquals(t<142,s.slowed(t),"slowed for the first two seconds only");
+        }
+        assertEquals(.95,s.slow,1e-9);
+        assertFalse(s.locked(162));assertTrue(s.dash(162,1,0),"free again after three seconds");
+        assertEquals(102,s.disabledAt);
+    }
+    @Test void aLongerIncapacitationOrSlowStays() {
+        CombatState s=new CombatState();s.incapacitate(0,60,40,.95);s.incapacitate(10,20,10,.5);
+        assertEquals(60,s.disabledUntil,"the longer one stays");assertEquals(40,s.slowUntil);assertEquals(.95,s.slow,1e-9,"and the stronger slow");
+        assertEquals(0,s.disabledAt,"still the first");
+    }
+    /** User request (2.60.0): "그냥 가드 브레이커 개념이 2초 무력화로 알고 있으면 됨": a broken guard is an incapacitation, timed from when it broke. */
+    @Test void aBrokenGuardIsAnIncapacitation() {
+        CombatState s=new CombatState();assertTrue(s.guard(true,10));s.breakGuard(20,40);
+        assertEquals(20,s.brokenAt);
+        for(long t=20;t<60;t++){assertTrue(s.locked(t));assertFalse(s.disabled(t),"not the Star Finger's");assertFalse(s.requestAttack(t));assertFalse(s.dash(t,1,0));}
+        assertFalse(s.locked(60));
+        CombatState w=new CombatState();w.guard(true,0);for(int i=0;i<10&&!w.broken(i);i++)w.guardHit(10,i);
+        assertTrue(w.broken(w.brokenAt));assertEquals(w.brokenAt+CombatState.BREAK_TICKS,w.brokenUntil,"one worn down too, from when it broke");
+    }
 }

@@ -28,6 +28,8 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
     private static final TrackedData<Boolean> GUARD=DataTracker.registerData(TrainingDummyEntity.class,TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<Float> PRESSURE=DataTracker.registerData(TrainingDummyEntity.class,TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Long> BROKEN=DataTracker.registerData(TrainingDummyEntity.class,TrackedDataHandlerRegistry.LONG);
+    /** Until when it is incapacitated (2.60.0), for every client's view of it. */
+    private static final TrackedData<Long> DISABLED=DataTracker.registerData(TrainingDummyEntity.class,TrackedDataHandlerRegistry.LONG);
     private static final UUID SLOW=UUID.fromString("7718e5f8-f59a-4985-81d6-cdfd0fc00001");
     private final DummyKind kind;
     private final CombatState combat=new CombatState();
@@ -47,7 +49,7 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
     @Override protected void initGoals() {} // No wandering, retaliation goals or natural spawning.
     @Override protected void initDataTracker() {
         super.initDataTracker();dataTracker.startTracking(ATTACK,0);dataTracker.startTracking(ATTACK_START,-1000L);
-        dataTracker.startTracking(GUARD,false);dataTracker.startTracking(PRESSURE,0f);dataTracker.startTracking(BROKEN,0L);
+        dataTracker.startTracking(GUARD,false);dataTracker.startTracking(PRESSURE,0f);dataTracker.startTracking(BROKEN,0L);dataTracker.startTracking(DISABLED,0L);
     }
     public DummyKind kind(){return kind;}
     public CombatState combatState(){return combat;}
@@ -56,7 +58,9 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
     public boolean guarding(){return dataTracker.get(GUARD);}
     public float guardPressure(){return dataTracker.get(PRESSURE);}
     public long brokenUntil(){return dataTracker.get(BROKEN);}
-    public boolean canContinueCombo(){return dev.sangwoo.celestialfall.map.MapGate.enabled(getWorld())&&kind==DummyKind.ATTACK&&isAlive()&&!combat.broken(getWorld().getTime());}
+    /** Until when it is incapacitated (2.60.0: struck by the Star Finger; its guard broken counts as well, through {@link #brokenUntil}). */
+    public long disabledUntil(){return dataTracker.get(DISABLED);}
+    public boolean canContinueCombo(){return dev.sangwoo.celestialfall.map.MapGate.enabled(getWorld())&&kind==DummyKind.ATTACK&&isAlive()&&!combat.locked(getWorld().getTime());}
     @Override protected float getActiveEyeHeight(EntityPose pose,EntityDimensions dimensions){return 1.62f;}
     @Override public boolean cannotDespawn(){return true;}
     @Override public boolean canImmediatelyDespawn(double distance){return false;}
@@ -81,7 +85,8 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(getWorld())){combat.cancel();combat.pressure=0;combat.brokenUntil=0;getNavigation().stop();setTarget(null);HitStun.disconnect(getUuid());syncCombat();return;}
         long now=getWorld().getTime();
         if(combat.brokenUntil>0&&now>=combat.brokenUntil){combat.brokenUntil=0;combat.pressure=0;}
-        if(HitStun.stunned(this)||combat.broken(now)) {
+        // stunned, its guard broken or incapacitated (2.60.0): it does nothing
+        if(HitStun.stunned(this)||combat.locked(now)) {
             combat.cancel();getNavigation().stop();setForwardSpeed(0);syncCombat();return;
         }
         if(kind!=DummyKind.ATTACK) {
@@ -155,17 +160,22 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         ((ServerWorld)getWorld()).spawnParticles(ParticleTypes.CRIT,getX(),getY()+1.15,getZ(),24,.25,.22,.15,.07);
         return true;
     }
+    /** Incapacitated (2.60.0, CombatManager.incapacitate): no attack or guard for {@code ticks}, {@code slow} slower for {@code slowTicks}. */
+    public void incapacitate(int ticks,int slowTicks,double slow){
+        long now=getWorld().getTime();combat.incapacitate(now,ticks,slowTicks,slow);HitStun.releaseOwned(getUuid());getNavigation().stop();
+        nextCombo=Math.max(nextCombo,combat.disabledUntil+12);syncCombat();
+    }
     public void interruptCombat(){combat.cancel();getNavigation().stop();nextCombo=getWorld().getTime()+12;syncCombat();}
     public void resetTraining() {
-        HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;
+        HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;combat.disabledUntil=combat.slowUntil=0;
         nextCombo=getWorld().getTime()+20;getNavigation().stop();setTarget(null);setVelocity(Vec3d.ZERO);
         setHealth(getMaxHealth());clearStatusEffects();extinguish();timeUntilRegen=0;syncCombat();
     }
     private void syncCombat() {
         dataTracker.set(ATTACK,combat.attack);dataTracker.set(ATTACK_START,combat.attackStart);
-        dataTracker.set(GUARD,combat.guarding);dataTracker.set(PRESSURE,combat.pressure);dataTracker.set(BROKEN,combat.brokenUntil);
-        var speed=getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
-        double slow=combat.broken(getWorld().getTime())?-.9:combat.guarding?-.55:0;
+        dataTracker.set(GUARD,combat.guarding);dataTracker.set(PRESSURE,combat.pressure);dataTracker.set(BROKEN,combat.brokenUntil);dataTracker.set(DISABLED,combat.disabledUntil);
+        var speed=getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);long now=getWorld().getTime();
+        double slow=Math.min(combat.broken(now)?-.9:0,Math.min(combat.slowed(now)?-combat.slow:0,combat.guarding?-.55:0));
         var old=speed.getModifier(SLOW);if(old!=null&&old.getValue()==slow)return;
         if(old!=null)speed.removeModifier(SLOW);
         if(slow!=0)speed.addTemporaryModifier(new EntityAttributeModifier(SLOW,"Training guard",slow,EntityAttributeModifier.Operation.MULTIPLY_TOTAL));

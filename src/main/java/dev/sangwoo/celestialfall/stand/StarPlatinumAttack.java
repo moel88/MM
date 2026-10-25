@@ -45,10 +45,18 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  * from a punch in flight (that one stops short, and the heavy punch starts once the stand is back in its guard from
  * it, STOP_RETURN ticks on), breaks the guard of whoever it strikes and lands all the same, sends
  * them flying along it, and is ready again HEAVY_COOLDOWN ticks after it is over. Every event tells the clients when it
- * is ready again and whose guard it broke.
+ * is ready again and whose guard it broke. Since 2.60.0 whoever's guard it broke does not fly: they stay where they
+ * stand, incapacitated while their guard is broken (user request: "R로 가드 부수면 날아가는 대신 2초 무력화 됨").
+ * <p>
+ * T is its Star Finger (2.60.0, user request: "이번에는 스타 핑거 손가락 2개를 엄청 늘려서 5블록까지 적을 찌를 수 있음";
+ * stand_finger_v1, no payload): a sixth punch out of the combo (StarPlatinumRules.FINGER), taken like the heavy punch
+ * (from a punch in flight, after the rush), that strikes whoever stands first in its long, narrow way, slows them and
+ * incapacitates them (CombatManager.incapacitate), and is ready again FINGER_COOLDOWN ticks after it is over. Every
+ * event tells the clients when it is ready again too.
  */
 public final class StarPlatinumAttack {
-    public static final Identifier INPUT=CelestialFall.id("stand_attack_v1"),EVENT=CelestialFall.id("stand_attack_event_v1"),HEAVY_INPUT=CelestialFall.id("stand_heavy_v1");
+    public static final Identifier INPUT=CelestialFall.id("stand_attack_v1"),EVENT=CelestialFall.id("stand_attack_event_v1"),HEAVY_INPUT=CelestialFall.id("stand_heavy_v1"),
+        FINGER_INPUT=CelestialFall.id("stand_finger_v1");
     /** A punch starts; it lands (whom it struck); the attack rests until it is ready again; the punch in flight stops short. */
     public static final int PUNCH=0,LANDED=1,RESTS=2,STOPPED=3;
     /** At most this many presses a second are heard. */
@@ -63,7 +71,9 @@ public final class StarPlatinumAttack {
         long ready,stoppedAt=-1000;
         /** The tick the heavy punch is ready again (2.59.0), and an R kept for when the rush's fists are back in the guard. */
         long heavyReady;boolean heavyQueued;
-        int window,presses,heavyWindow,heavyPresses;
+        /** The same for the Star Finger (2.60.0) and its T. */
+        long fingerReady;boolean fingerQueued;
+        int window,presses,heavyWindow,heavyPresses,fingerWindow,fingerPresses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
     private StarPlatinumAttack(){}
@@ -85,6 +95,15 @@ public final class StarPlatinumAttack {
                 if(s.heavyWindow!=second){s.heavyWindow=second;s.heavyPresses=0;}
                 if(++s.heavyPresses>RATE)return;
                 heavy(player);
+            });
+        });
+        ServerPlayNetworking.registerGlobalReceiver(FINGER_INPUT,(server,player,handler,buf,response)->{
+            if(buf.readableBytes()!=0)return;
+            server.execute(()->{
+                var s=state(player);int second=server.getTicks()/20;
+                if(s.fingerWindow!=second){s.fingerWindow=second;s.fingerPresses=0;}
+                if(++s.fingerPresses>RATE)return;
+                finger(player);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(StarPlatinumAttack::tick);
@@ -128,26 +147,47 @@ public final class StarPlatinumAttack {
     public static boolean heavy(ServerPlayerEntity p){
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
-        if(s.combo==HEAVY&&now<s.start+LENGTH[HEAVY])return false;
+        // (one of the stand's skills in flight, the heavy punch or the Star Finger: no other starts over it)
+        if(skill(s.combo)&&now<s.start+LENGTH[s.combo])return false;
         if(now<s.heavyReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         if(now<StarPlatinumRush.freeAt(p)){s.heavyQueued=true;return true;}
-        beginHeavy(p,s,now);
+        beginSkill(p,s,now,HEAVY);
+        return true;
+    }
+    /**
+     * T: the Star Finger starts now if it may (2.60.0), as the heavy punch does: the stand out and its user free, it
+     * ready again and neither it nor the heavy punch in flight; a punch in flight stops short and it takes over, and
+     * just after the rush it starts once the rush's fists are back in the guard. Returns whether it starts (now or then).
+     */
+    public static boolean finger(ServerPlayerEntity p){
+        if(!able(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        if(skill(s.combo)&&now<s.start+LENGTH[s.combo])return false;
+        if(now<s.fingerReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        if(now<StarPlatinumRush.freeAt(p)){s.fingerQueued=true;return true;}
+        beginSkill(p,s,now,FINGER);
         return true;
     }
     /** The tick this player's heavy punch is ready again (0 if they have not thrown one). */
     public static long heavyReady(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.heavyReady;}
-    /** The tick this player's heavy punch in flight is over (0 if none is): the rush waits for it (StarPlatinumRush). */
-    public static long heavyOverAt(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null||s.combo!=HEAVY?0:nextAt(HEAVY,s.start);}
-    private static void beginHeavy(ServerPlayerEntity p,State s,long now){
-        // a punch in flight (or a combo still open) stops short: the heavy punch starts once the stand has turned back
-        // to its guard from it (StarPlatinumRules.STOP_RETURN, as the rush does), so the clients' stand goes from its
-        // guard into the coil
-        s.heavyQueued=false;stop(p,s,now);
-        s.combo=HEAVY;s.start=Math.max(now,s.stoppedAt+STOP_RETURN);s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=s.landed=s.heavyQueued=false;
+    /** The tick this player's Star Finger is ready again (2.60.0; 0 if they have not used it). */
+    public static long fingerReady(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.fingerReady;}
+    /**
+     * The tick this player's heavy punch or Star Finger in flight is over (0 if neither is): the rush waits for it
+     * (StarPlatinumRush).
+     */
+    public static long skillOverAt(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null||!skill(s.combo)?0:nextAt(s.combo,s.start);}
+    private static void beginSkill(ServerPlayerEntity p,State s,long now,int skill){
+        // a punch in flight (or a combo still open) stops short: the heavy punch or the Star Finger starts once the
+        // stand has turned back to its guard from it (StarPlatinumRules.STOP_RETURN, as the rush does), so the clients'
+        // stand goes from its guard into the coil or the aim
+        s.heavyQueued=s.fingerQueued=false;stop(p,s,now);
+        s.combo=skill;s.start=Math.max(now,s.stoppedAt+STOP_RETURN);s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=s.landed=s.heavyQueued=s.fingerQueued=false;
         // its cooldown runs once it is over (none for a player the cooldowns are off for, /botand nocooldown: ready from
         // now, so the cooldown list shows nothing for it, as for the rush)
-        long end=s.start+LENGTH[HEAVY];
-        s.heavyReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:StarPlatinumRules.heavyReady(end);
+        long end=s.start+LENGTH[skill];boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(skill==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(end);
+        else s.fingerReady=free?now:StarPlatinumRules.fingerReady(end);
         send(p,s,PUNCH,null,null);
     }
     /** The user was struck: whom the punches hold go, and the punch in flight stops short. */
@@ -178,43 +218,65 @@ public final class StarPlatinumAttack {
             if(!punches(p)||HitStun.stunned(p)||CombatManager.actionLocked(p)){stop(p,s,now);continue;}
             settle(p,s,now);
             if(s.queued&&now>=nextAt(s.combo,s.start)&&now>=StarPlatinumRush.freeAt(p)){if(able(p))begin(p,s,now);else s.queued=false;}
-            if(s.heavyQueued&&now>=StarPlatinumRush.freeAt(p)){s.heavyQueued=false;if(able(p)&&(now>=s.heavyReady||dev.sangwoo.celestialfall.NoCooldownState.enabled(p)))beginHeavy(p,s,now);}
+            if(s.heavyQueued&&now>=StarPlatinumRush.freeAt(p)){s.heavyQueued=false;if(able(p)&&(now>=s.heavyReady||dev.sangwoo.celestialfall.NoCooldownState.enabled(p)))beginSkill(p,s,now,HEAVY);}
+            if(s.fingerQueued&&now>=StarPlatinumRush.freeAt(p)){s.fingerQueued=false;if(able(p)&&(now>=s.fingerReady||dev.sangwoo.celestialfall.NoCooldownState.enabled(p)))beginSkill(p,s,now,FINGER);}
             if(s.combo>=1&&!s.landed&&now>=s.start+CONTACT[s.combo])strike(p,s,now);
         }
     }
     /** The punch in flight stops short (or the combo is cut off between punches): the attack rests from now. */
     private static void stop(ServerPlayerEntity p,State s,long now){
         boolean flying=s.combo>=1&&now-s.start<LENGTH[s.combo],open=s.combo>=1&&s.combo<4&&broken(s.combo,s.start,now)<0;
-        if(!flying&&!open&&!s.queued&&!s.heavyQueued)return;
+        if(!flying&&!open&&!s.queued&&!s.heavyQueued&&!s.fingerQueued)return;
         if(flying)s.stoppedAt=now;
-        // a heavy punch stopped short: its cooldown runs from now (2.44.0's rule for a move cut off)
-        if(flying&&s.combo==HEAVY)s.heavyReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:StarPlatinumRules.heavyReady(now);
-        s.queued=s.heavyQueued=false;s.ready=Math.max(s.ready,now+REST);s.combo=0;
+        // a heavy punch or a Star Finger stopped short: its cooldown runs from now (2.44.0's rule for a move cut off)
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(flying&&s.combo==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(now);
+        if(flying&&s.combo==FINGER)s.fingerReady=free?now:StarPlatinumRules.fingerReady(now);
+        s.queued=s.heavyQueued=s.fingerQueued=false;s.ready=Math.max(s.ready,now+REST);s.combo=0;
         send(p,s,STOPPED,null,null);
     }
     /**
      * The punch lands: everyone in its way in front of its user, in sight, is struck. The first three hold whom they
      * strike for the next punch; the fourth cannot be guarded and throws them along it; the heavy punch (2.59.0) breaks
-     * the guard of whoever holds one up and throws them further.
+     * the guard of whoever holds one up and throws them further (since 2.60.0 not those whose guard it broke: they stay,
+     * incapacitated while it is broken). The Star Finger (2.60.0) strikes only the first one in its way, the nearest, and
+     * incapacitates them if it lands (a guard takes it).
      */
     private static void strike(ServerPlayerEntity p,State s,long now){
         s.landed=true;
-        var world=p.getServerWorld();int combo=s.combo;boolean big=combo>=4,heavy=combo==HEAVY;
+        var world=p.getServerWorld();int combo=s.combo;boolean big=combo==4||combo==HEAVY,heavy=combo==HEAVY,finger=combo==FINGER;
         Vec3d at=p.getPos(),f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x);
         var source=world.getDamageSources().playerAttack(p);
         List<LivingEntity> struck=new ArrayList<>(),broke=new ArrayList<>();
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(REACH_BIG+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        List<LivingEntity> way=new ArrayList<>();
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(Math.max(REACH_BIG,FINGER_REACH)+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             Vec3d d=e.getPos().subtract(at);
             if(!lane(combo,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&(!world.getServer().isPvpEnabled()||!p.shouldDamagePlayer(other)))continue;
+            way.add(e);
+        }
+        // the Star Finger's fingers end in the first body they meet: the nearest one in their way (to its near side)
+        if(finger&&way.size()>1){
+            LivingEntity first=null;double best=Double.MAX_VALUE;
+            for(var e:way){double near=e.getPos().subtract(at).dotProduct(f)-e.getWidth()*.5;if(near<best){best=near;first=e;}}
+            way=List.of(first);
+        }
+        for(var e:way){
             // the heavy punch breaks a guard held up against it, and lands all the same
-            if(heavy&&CombatManager.breakGuard(e,HEAVY_BREAK))broke.add(e);
+            boolean broken=heavy&&CombatManager.breakGuard(e,HEAVY_BREAK);
+            if(broken)broke.add(e);
             if(big)CombatManager.interrupt(e);
             e.timeUntilRegen=0;
             if(!CombatManager.damageWithoutKnockback(e,source,DAMAGE[combo]))continue;
             struck.add(e);
-            if(big){
+            if(finger){
+                // slowed and incapacitated where it stands (2.60.0): no hold, no throw
+                CombatManager.incapacitate(e,FINGER_DISABLE,FINGER_SLOW_TICKS,FINGER_SLOW);
+            }else if(broken){
+                // its guard broken (2.60.0): it stays where it stands, incapacitated while the guard is broken (CombatManager)
+                HitStun.release(e.getUuid());
+            }else if(big){
                 HitStun.release(e.getUuid());
                 e.setVelocity(f.multiply(heavy?FLY_HEAVY:FLY).add(0,heavy?FLY_HEAVY_UP:FLY_UP,0));e.velocityModified=true;
                 // the heavy punch tells a struck player's client of it once, through the tracker (velocityModified):
@@ -225,16 +287,17 @@ public final class StarPlatinumAttack {
             // the user's own hit feedback (the damage number and the blood), as Kageno's
             if(ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(DAMAGE[combo]);b.writeFloat(s.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);}
         }
-        // (the heavy punch's own sound carries its blow: StandAttack plays it on every client)
+        // (the heavy punch's and the Star Finger's own sounds carry their blows: StandAttack plays them on every client)
         if(!struck.isEmpty()){
             p.onAttacking(struck.get(0));
-            if(!heavy)world.playSound(null,at.x,at.y,at.z,big?SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK:SoundEvents.ENTITY_PLAYER_ATTACK_STRONG,SoundCategory.PLAYERS,big?.8f:.55f,big?.7f:.9f);
+            if(!heavy&&!finger)world.playSound(null,at.x,at.y,at.z,big?SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK:SoundEvents.ENTITY_PLAYER_ATTACK_STRONG,SoundCategory.PLAYERS,big?.8f:.55f,big?.7f:.9f);
         }
         send(p,s,LANDED,struck,broke);
     }
     /**
      * Tells every player near the user (and the user, and whoever was struck) of the event; since 2.59.0 every event
-     * also carries when the heavy punch is ready again and, as it lands, whose guard it broke.
+     * also carries when the heavy punch is ready again and, as it lands, whose guard it broke, and since 2.60.0 when the
+     * Star Finger is ready again.
      */
     private static void send(ServerPlayerEntity p,State s,int type,List<LivingEntity> struck,List<LivingEntity> broke){
         var world=p.getServerWorld();long now=world.getTime();
@@ -250,6 +313,7 @@ public final class StarPlatinumAttack {
             b.writeLong(s.heavyReady);
             int m=broke==null?0:broke.size();b.writeVarInt(m);
             for(int i=0;i<m;i++)b.writeInt(broke.get(i).getId());
+            b.writeLong(s.fingerReady);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }
@@ -260,7 +324,7 @@ public final class StarPlatinumAttack {
     private static float aim(ServerPlayerEntity p,State s){
         var world=p.getServerWorld();Vec3d at=p.getPos(),f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x);
         double best=Double.NaN;
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(REACH_BIG+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(Math.max(REACH_BIG,FINGER_REACH)+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             Vec3d d=e.getPos().subtract(at);double ahead=d.dotProduct(f),half=e.getWidth()*.5;
             if(!lane(s.combo,ahead,d.dotProduct(right),d.y,half)||!p.canSee(e))continue;

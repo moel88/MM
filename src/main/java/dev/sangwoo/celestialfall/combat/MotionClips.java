@@ -171,6 +171,21 @@ public final class MotionClips {
         p.rot(RIGHT_ARM,-28,15,35*recoil+10).rot(LEFT_ARM,-22,-15,-35*recoil-10);
         p.elbow[0]=-35;p.elbow[1]=-50;p.lean=.5f*recoil;return p;
     }
+    /**
+     * Incapacitated (2.60.0, struck by Star Platinum's Star Finger): reeling back from the blow for a moment, then
+     * dazed, the head hanging, the arms loose at the sides and the body swaying, coming back to itself over its last
+     * few ticks ({@code left}: ticks still to go).
+     */
+    public static MotionPose dazed(float age,float left) {
+        MotionPose p=new MotionPose();
+        float reel=(float)Math.sin(Math.PI*Math.max(0,Math.min(1,age/12))),daze=smooth(age/10)*smooth(left/8);
+        float sway=(float)Math.sin(age*.3f),nod=(float)Math.sin(age*.21f+1.3f);
+        p.rot(BODY,-13*reel+9*daze,7*reel+5*sway*daze,4*reel+3*sway*daze).rot(HEAD,-10*reel+(18+5*nod)*daze,-6*sway*daze,5*sway*daze);
+        p.rot(RIGHT_ARM,-20*reel-4*daze,8*reel,22*reel+7*daze).rot(LEFT_ARM,-16*reel-4*daze,-8*reel,-22*reel-7*daze);
+        p.elbow[0]=p.elbow[1]=-30*reel-14*daze;p.lean=.35f*reel-.12f*daze;p.bob=.25f*daze;
+        leg(p,0,-.4f,11.4f,1.2f);leg(p,1,.4f,11.6f,-1f);
+        return p;
+    }
     public static MotionPose hitReaction(float age,int strike) {
         MotionPose p=ready(age);float side=strike==2?-1:1;
         float impact=(float)Math.exp(-Math.max(0,age)*.45),hold=.35f+.65f*impact;

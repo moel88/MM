@@ -143,7 +143,10 @@ public final class StandPresence {
                 dispatcher.render(ph,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(ph,delta));
             }
             var at=s.puppet.getPos();float yaw=s.puppet.getYaw();
+            // (the body itself tells where its Star Finger's fingers are, for their light: StandPunchFx)
+            StarPlatinumRenderer.record(p.getUuid());
             dispatcher.render(s.puppet,at.x-cam.x,at.y-cam.y,at.z-cam.z,yaw,delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
+            StarPlatinumRenderer.record(null);
             // coming out or going back: faint blue afterimages where it was a moment ago (the same pose, GeckoLib keeps it for the frame)
             float main=look.out;ghost.set(look);
             for(int i=1;i<=3;i++){
@@ -252,6 +255,12 @@ public final class StandPresence {
             look.roll=MathHelper.clamp((float)side*-2f,-10,10)*calm;
             look.speed=(float)Math.hypot(v.x,v.z);
             put(p,delta,look,shape);
+            // the Star Finger (2.60.0): where its fingers go this frame (StarPlatinumRenderer stretches them there)
+            look.hasTip=false;
+            if(look.fingerOpen>.001f){
+                var seen=StandAttack.finger(p.getUuid());
+                if(seen!=null){Vec3d tip=StandAttack.fingerTip(MinecraftClient.getInstance(),p,seen,delta);look.fingerX=tip.x;look.fingerY=tip.y;look.fingerZ=tip.z;look.hasTip=true;}
+            }
             return shape;
         }
         /**

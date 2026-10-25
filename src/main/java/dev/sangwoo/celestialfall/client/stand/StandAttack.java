@@ -38,6 +38,12 @@ import net.minecraft.util.math.Vec3d;
  * the voice, and the blow on it, in at once as the fist lands if it strikes someone (this client's own judgement a
  * tick before, the server's word after) and faded out if it struck no one, so that striking someone it is the
  * recording with the blow and striking no one the voice alone.
+ * <p>
+ * T is the Star Finger (2.60.0, user request: "이번에는 스타 핑거 손가락 2개를 엄청 늘려서 5블록까지 적을 찌를 수
+ * 있음"), a sixth punch: T asks the server for it (stand_finger_v1) and it comes back as a punch like the others. Its
+ * sound is the user's recording (tools/stand/cut_finger.py), started FINGER_LEAD ticks into it so the crack in it comes
+ * as the fingers strike. Whoever its fingers go to is the server's word once it lands, and until then whoever this
+ * client sees first in its way ({@link #fingerTip}).
  */
 public final class StandAttack {
     /** Ticks into a punch its shout starts: a sound held back a tick starts on a client tick, the grid this clock counts on. */
@@ -50,6 +56,13 @@ public final class StandAttack {
     public static final int HEAVY_LEAD=StarPlatinumRules.CONTACT[StarPlatinumRules.HEAVY]-2;
     /** The heavy punch's recordings are at their own level (the one with the blow peaks 1 dB under full scale), as the rush's. */
     static final float HEAVY_VOLUME=1f;
+    /**
+     * Ticks into the Star Finger its sound starts (2.60.0): the crack in the user's recording is eight ticks into the
+     * file (tools/stand/cut_finger.py), on its contact.
+     */
+    public static final int FINGER_LEAD=StarPlatinumRules.CONTACT[StarPlatinumRules.FINGER]-8;
+    /** The Star Finger's recording is at its own level too (it peaks 1 dB under full scale). */
+    static final float FINGER_VOLUME=1f;
     /**
      * The heavy punch's sound (2.59.0): its voice, or the blow on it, as loud as the punch strikes someone (in at once,
      * as the crack comes where the fist lands; out over FADE ticks once it is known to have struck no one). Told to fade
@@ -121,7 +134,7 @@ public final class StandAttack {
         public Heavy heavyVoice(){return heavyVoice;}
         public Heavy heavyBlow(){return heavyBlow;}
     }
-    static final class User {final ArrayDeque<Seen> punches=new ArrayDeque<>();long ready,heavyReady;Seen stopped;}
+    static final class User {final ArrayDeque<Seen> punches=new ArrayDeque<>();long ready,heavyReady,fingerReady;Seen stopped;}
     private static final Map<UUID,User> USERS=new HashMap<>();
     /** This client's ticks while the game runs (counted as each tick begins). */
     static long ticks;
@@ -139,10 +152,13 @@ public final class StandAttack {
             // 2.59.0: when the heavy punch is ready again, and whose guard it broke as it landed
             long heavyReady=b.readLong();int m=b.readVarInt();if(m<0||m>256)return;
             int[] broke=new int[m];for(int i=0;i<m;i++)broke[i]=b.readInt();
-            if(!Float.isFinite(yaw)||combo>StarPlatinumRules.HEAVY)return;
+            // 2.60.0: when the Star Finger is ready again
+            long fingerReady=b.readableBytes()>=8?b.readLong():0;
+            if(!Float.isFinite(yaw)||combo>StarPlatinumRules.FINGER)return;
             mc.execute(()->{
                 if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dimension))return;
                 if(world!=mc.world){USERS.clear();world=mc.world;}
+                USERS.computeIfAbsent(user,k->new User()).fingerReady=fingerReady;
                 event(mc,user,type,combo,start,serverNow,yaw,aim,ready,ids,at,heavyReady,broke);
             });
         });
@@ -167,7 +183,9 @@ public final class StandAttack {
                 var seen=new Seen(start,new StandPunch.Punch(combo,yaw,Float.isFinite(aim)?aim:Float.NaN,Float.NaN),serverNow-start,ticks);
                 var before=user.punches.peekLast();
                 user.punches.addLast(seen);while(user.punches.size()>3)user.punches.removeFirst();
-                if(combo==StarPlatinumRules.HEAVY)heavySound(mc,id,seen,before);else shout(mc,id,seen,before);
+                if(combo==StarPlatinumRules.HEAVY)heavySound(mc,id,seen,before);
+                else if(combo==StarPlatinumRules.FINGER)fingerSound(mc,id,seen,before);
+                else shout(mc,id,seen,before);
             }
             case StarPlatinumAttack.LANDED->{
                 var seen=find(user,start);if(seen==null)return;
@@ -222,6 +240,72 @@ public final class StandAttack {
         if(delay>0){mc.getSoundManager().play(seen.heavyVoice,delay);mc.getSoundManager().play(seen.heavyBlow,delay);}
         else{mc.getSoundManager().play(seen.heavyVoice);mc.getSoundManager().play(seen.heavyBlow);}
         if(before!=null&&before.voice!=null)FADING.add(new Object[]{before.voice,ticks+Math.max(0,delay)});
+    }
+    /**
+     * The Star Finger's sound, FINGER_LEAD ticks into it (2.60.0; loud for its user and those near, fading out to 40
+     * blocks; none if it was heard too late): the user's recording as it is. The shout its user shouted before fades
+     * out as it starts; it fades itself if the Star Finger is stopped before it strikes.
+     */
+    private static void fingerSound(MinecraftClient mc,UUID id,Seen seen,Seen before){
+        if(mc.player==null||seen.serverAge>FINGER_LEAD)return;
+        var user=mc.world.getPlayerByUuid(id);
+        double far=user==null||user==mc.player?0:user.getPos().distanceTo(mc.player.getPos());
+        float volume=(float)(CelestialFall.CONFIG.effectVolume*FINGER_VOLUME*Math.max(0,1-far/40));if(volume<=.01f)return;
+        var sound=new Shout(CelestialFall.id("star_platinum_finger"),volume);
+        seen.voice=sound;
+        int delay=(int)(FINGER_LEAD-seen.serverAge);
+        if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
+        if(before!=null&&before.voice!=null)FADING.add(new Object[]{before.voice,ticks+Math.max(0,delay)});
+    }
+    /**
+     * Whom the Star Finger {@code s} of {@code user} goes to (2.60.0): the one it struck once the server says (null if
+     * it struck no one), and until then the first one this client sees in its way now (the nearest, as the server picks).
+     */
+    public static net.minecraft.entity.LivingEntity fingerTarget(MinecraftClient mc,PlayerEntity user,Seen s,float delta){
+        if(mc.world==null||user==null)return null;
+        if(s.landed){
+            for(int id:s.struck)if(mc.world.getEntityById(id) instanceof net.minecraft.entity.LivingEntity l)return l;
+            // a guard took it: they end at the guard
+            var first=fingerAt(mc,user,s,delta);
+            return first!=null&&StandPunchFx.guarding(first,mc.world.getTime())?first:null;
+        }
+        return fingerAt(mc,user,s,delta);
+    }
+    /** Whoever this client sees first in the Star Finger's way now (the nearest to its near side, as the server picks), or null. */
+    public static net.minecraft.entity.LivingEntity fingerAt(MinecraftClient mc,PlayerEntity user,Seen s,float delta){
+        if(mc.world==null||user==null)return null;
+        Vec3d at=user.getLerpedPos(delta),f=Vec3d.fromPolar(0,s.punch.yaw()),r=new Vec3d(-f.z,0,f.x);
+        net.minecraft.entity.LivingEntity best=null;double near=Double.MAX_VALUE;
+        for(var e:mc.world.getEntitiesByClass(net.minecraft.entity.LivingEntity.class,new net.minecraft.util.math.Box(at,at).expand(StarPlatinumRules.FINGER_REACH+2),e->
+            e!=user&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+            Vec3d d=e.getLerpedPos(delta).subtract(at);double ahead=d.dotProduct(f),half=e.getWidth()*.5;
+            if(!StarPlatinumRules.lane(StarPlatinumRules.FINGER,ahead,d.dotProduct(r),d.y,half)||!user.canSee(e))continue;
+            if(ahead-half<near){near=ahead-half;best=e;}
+        }
+        return best;
+    }
+    /** How far into whoever it strikes the Star Finger's fingers sink (blocks past the near side of their body). */
+    static final double FINGER_BITE=.3;
+    /** How high over its user's feet its fingers go when they strike no one (blocks: about where a chest would be). */
+    static final double FINGER_HEIGHT=1.35;
+    /**
+     * Where the fingertips of the Star Finger {@code s} of {@code user} go this frame (2.60.0): into the chest of whoever
+     * it goes to, a little past the near side of their body, from the side its user stands; or, if no one, as far as
+     * they reach ahead of its user (StarPlatinumRules.FINGER_REACH) at a chest's height.
+     */
+    public static Vec3d fingerTip(MinecraftClient mc,PlayerEntity user,Seen s,float delta){
+        Vec3d home=user.getLerpedPos(delta),f=Vec3d.fromPolar(0,s.punch.yaw());
+        var target=fingerTarget(mc,user,s,delta);
+        if(target==null)return home.add(f.multiply(StarPlatinumRules.FINGER_REACH)).add(0,FINGER_HEIGHT,0);
+        Vec3d c=target.getLerpedPos(delta).add(0,target.getHeight()*.6,0);
+        Vec3d in=new Vec3d(c.x-home.x,0,c.z-home.z);in=in.lengthSquared()<1e-6?f:in.normalize();
+        return c.subtract(in.multiply(Math.max(0,target.getWidth()*.5-FINGER_BITE)));
+    }
+    /** This player's Star Finger that shows now (the newest one among their punches heard), or null. */
+    public static Seen finger(UUID id){
+        var u=USERS.get(id);if(u==null)return null;
+        Seen out=null;for(var s:u.punches)if(s.punch.combo()==StarPlatinumRules.FINGER)out=s;
+        return out;
     }
     /**
      * Whether whoever is in this punch's way now would be struck (as the server judges it as the punch lands,
@@ -286,6 +370,8 @@ public final class StandAttack {
     public static long ready(UUID id){var u=USERS.get(id);return u==null?0:u.ready;}
     /** The world tick this player's heavy punch is ready again (2.59.0; 0 if they have not thrown one). */
     public static long heavyReady(UUID id){var u=USERS.get(id);return u==null?0:u.heavyReady;}
+    /** The world tick this player's Star Finger is ready again (2.60.0; 0 if they have not used it). */
+    public static long fingerReady(UUID id){var u=USERS.get(id);return u==null?0:u.fingerReady;}
     private static boolean heldR;
     /**
      * R for Star Platinum's user on the map (2.59.0): asks for the heavy punch if the stand is out. R is the map's use
@@ -303,6 +389,30 @@ public final class StandAttack {
             // the way it goes is the way the player faces now: the turn goes to the server before the press
             mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));
             ClientPlayNetworking.send(StarPlatinumAttack.HEAVY_INPUT,PacketByteBufs.empty());
+        }
+        return true;
+    }
+    private static boolean heldT;
+    /**
+     * T for Star Platinum's user on the map (2.60.0): asks for the Star Finger if the stand is out. T is always the Star
+     * Finger's for Star Platinum's user there, as it is a skill's for Kageno's, so chat is on Enter for them as for
+     * Kageno's user (StandClient). Returns whether it took the key.
+     */
+    public static boolean fingerKey(long window,int key,int action,int modifiers){
+        var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&mc.currentScreen==null&&MapClient.enabled()&&dev.sangwoo.celestialfall.stand.StandManager.starPlatinum(mc.player)){
+            mc.setScreen(new net.minecraft.client.gui.screen.ChatScreen(""));return true;
+        }
+        if(key!=org.lwjgl.glfw.GLFW.GLFW_KEY_T)return false;
+        if(action==org.lwjgl.glfw.GLFW.GLFW_RELEASE){if(!heldT)return false;heldT=false;return true;}
+        if(heldT)return true;
+        if(action!=org.lwjgl.glfw.GLFW.GLFW_PRESS||mc.currentScreen!=null||!MapClient.enabled()||!dev.sangwoo.celestialfall.stand.StandManager.starPlatinum(mc.player))return false;
+        heldT=true;
+        if(mine(mc)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(StarPlatinumAttack.FINGER_INPUT)){
+            BotandCamera.prepareInteraction();
+            // the way it goes is the way the player faces now: the turn goes to the server before the press
+            mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));
+            ClientPlayNetworking.send(StarPlatinumAttack.FINGER_INPUT,PacketByteBufs.empty());
         }
         return true;
     }

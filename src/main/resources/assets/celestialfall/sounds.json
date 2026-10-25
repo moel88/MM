@@ -707,5 +707,14 @@
         "preload": true
       }
     ]
+  },
+  "star_platinum_finger": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_finger",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

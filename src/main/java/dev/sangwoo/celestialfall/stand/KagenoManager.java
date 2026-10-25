@@ -357,6 +357,11 @@ public final class KagenoManager {
     }
     private static void cancelCaster(PlayerEntity p){for(var c:new ArrayList<>(CASTS.values()))if(c.player==p)stop(c);}
     /**
+     * The caster is incapacitated (2.60.0: struck by Star Platinum's Star Finger, CombatManager.incapacitate): whatever
+     * they were casting stops there (its cooldown running from now, as for any cast cut short).
+     */
+    public static void disable(PlayerEntity p){cancelCaster(p);}
+    /**
      * Drops the player's stand state. Its last status tells them its cooldowns are gone too (a fresh state starts ready, and
      * no further status comes for this one).
      */

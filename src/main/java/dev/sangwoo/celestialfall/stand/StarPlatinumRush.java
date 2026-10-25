@@ -103,8 +103,8 @@ public final class StarPlatinumRush {
         if(!StarPlatinumAttack.punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(s.on||now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
-        // the heavy punch (R, 2.59.0) is not cut off: the rush waits for it to be over
-        if(now<StarPlatinumAttack.heavyOverAt(p)){s.waiting=true;return false;}
+        // the heavy punch (R, 2.59.0) and the Star Finger (T, 2.60.0) are not cut off: the rush waits for them to be over
+        if(now<StarPlatinumAttack.skillOverAt(p)){s.waiting=true;return false;}
         s.waiting=false;
         // a punch in flight gives way to it: it starts once the stand has turned back to its guard (StarPlatinumRules.STOP_RETURN)
         StarPlatinumAttack.yieldTo(p);
@@ -121,7 +121,7 @@ public final class StarPlatinumRush {
         for(var e:new ArrayList<>(STATES.entrySet())){
             var p=server.getPlayerManager().getPlayer(e.getKey());var s=e.getValue();
             if(p==null||p.getServerWorld()!=s.world){STATES.remove(e.getKey());continue;}
-            if(s.waiting&&!s.on&&p.getWorld().getTime()>=StarPlatinumAttack.heavyOverAt(p)){s.waiting=false;start(p);}
+            if(s.waiting&&!s.on&&p.getWorld().getTime()>=StarPlatinumAttack.skillOverAt(p)){s.waiting=false;start(p);}
             if(!s.on)continue;
             long now=p.getWorld().getTime(),age=now-s.start;
             if(!StarPlatinumAttack.punches(p)||HitStun.stunned(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);continue;}

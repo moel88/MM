@@ -18,12 +18,25 @@ import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
 
 public final class CombatClient {
-    public record Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil) {
+    /**
+     * A player's combat state as the server last told it. Since 2.60.0 also when their guard last broke and their
+     * incapacitation (until when and since when: Star Platinum's Star Finger).
+     */
+    public record Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil,
+                           long brokenAt,long disabledUntil,long disabledAt) {
+        /** As before 2.60.0: the guard broken for BREAK_TICKS, never incapacitated. */
+        public Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil){
+            this(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenUntil-CombatState.BREAK_TICKS,0,-1000);
+        }
         public boolean broken(double now){return now<brokenUntil;}
+        /** Incapacitated (2.60.0): no skill, attack, dash or guard. */
+        public boolean disabled(double now){return now<disabledUntil;}
+        /** Able to do nothing but walk: incapacitated, or the guard broken (2.60.0: "가드 브레이커 개념이 2초 무력화"). */
+        public boolean locked(double now){return broken(now)||disabled(now);}
         public float attackAge(double now){return (float)(now-attackStart);}
         public float dashAge(double now){return (float)(now-dashStart);}
     }
-    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0);
+    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0,-1000,0,-1000);
     private static final Map<UUID,Snapshot> STATES=new HashMap<>();
     private static final Map<UUID,Movement> MOVEMENT=new HashMap<>();
     private static final class Movement {
@@ -47,7 +60,12 @@ public final class CombatClient {
         GUARD=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.botand.guard",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_F,"category.botand"));
         ClientPlayNetworking.registerGlobalReceiver(CombatManager.STATE,(mc,handler,b,response)->{
             UUID id=b.readUuid();var dimension=b.readIdentifier();
-            Snapshot s=new Snapshot(b.readInt(),b.readUnsignedByte(),b.readLong(),b.readBoolean(),b.readFloat(),b.readLong(),b.readLong(),b.readLong(),b.readFloat(),b.readFloat(),b.readLong());
+            int serial=b.readInt(),attack=b.readUnsignedByte();long attackStart=b.readLong();boolean guard=b.readBoolean();float pressure=b.readFloat();
+            long brokenUntil=b.readLong(),dashStart=b.readLong(),dashReady=b.readLong();float forward=b.readFloat(),side=b.readFloat();long combatUntil=b.readLong();
+            // 2.60.0: when the guard broke and the incapacitation (a server before it sends none)
+            boolean more=b.readableBytes()>=24;
+            long brokenAt=more?b.readLong():brokenUntil-CombatState.BREAK_TICKS,disabledUntil=more?b.readLong():0,disabledAt=more?b.readLong():-1000;
+            Snapshot s=new Snapshot(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt);
             mc.execute(()->{if(MapClient.enabled()&&mc.world!=null&&mc.world.getRegistryKey().getValue().equals(dimension))STATES.put(id,s);});
         });
         ClientTickEvents.END_CLIENT_TICK.register(CombatClient::tick);
@@ -68,7 +86,7 @@ public final class CombatClient {
         return speed!=null&&speed.getModifier(CombatManager.SLOW)!=null;
     }
     public static boolean connected(){return MapClient.enabled()&&ClientPlayNetworking.canSend(CombatManager.INPUT);}
-    public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(StandClient.locked()||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).broken(mc.world.getTime()));}
+    public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(StandClient.locked()||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).locked(mc.world.getTime()));}
     /** The articulated rig drives this player (on the ground and in a jump or fall; not for sneaking, swimming, gliding, sleeping or riding). */
     public static boolean animate(AbstractClientPlayerEntity p) {
         return MapClient.enabled()&&p.isAlive()&&!p.isSpectator()&&!p.isSneaking()&&!p.isInSneakingPose()&&!p.isSwimming()&&!p.isFallFlying()&&!p.isSleeping()&&!p.hasVehicle()
@@ -145,6 +163,7 @@ public final class CombatClient {
         var reaction=HitStunClient.reaction(p);
         if(reaction!=null)return "hit"+reaction.hitAt();
         if(s.broken(now))return "broken";
+        if(s.disabled(now))return "dazed"+s.disabledAt();
         if(s.dashAge(now)>=0&&s.dashAge(now)<CombatState.DASH_TICKS)return "dash"+s.dashStart();
         if(s.attack>0&&s.attack<=4&&s.attackAge(now)>=0&&s.attackAge(now)<CombatState.DURATION[s.attack])return "attack"+s.attackStart();
         return "base";
@@ -167,11 +186,19 @@ public final class CombatClient {
         // Any blow makes the body flinch away from it for a moment.
         if(p.hurtTime>0&&p.maxHurtTime>0)MotionClips.flinch(base,MotionClips.recoil(p.maxHurtTime-p.hurtTime+delta),(float)Math.sin(Math.toRadians(p.getDamageTiltYaw()))*.7f);
         if(s.broken(now)) {
-            MotionPose broken=MotionClips.broken((float)(now-s.brokenUntil+20));
+            // (timed from when it broke, 2.60.0: the heavy punch's break is twice as long as one worn down)
+            MotionPose broken=MotionClips.broken((float)(now-s.brokenAt()));
             // The staggered upper body remains visible while the slowed feet still take steps.
             for(int i=4;i<6;i++)for(int j=0;j<3;j++)broken.joint[i][j]=MathHelper.lerp(m.amount,broken.joint[i][j],base.joint[i][j]);
             for(int i=0;i<2;i++)broken.knee[i]=MathHelper.lerp(m.amount,broken.knee[i],base.knee[i]);
             return broken;
+        }
+        if(s.disabled(now)) {
+            // incapacitated (2.60.0): dazed, the head and arms hanging, swaying, while the feet still walk
+            MotionPose dazed=MotionClips.dazed((float)(now-s.disabledAt()),(float)(s.disabledUntil()-now));
+            for(int i=4;i<6;i++)for(int j=0;j<3;j++)dazed.joint[i][j]=MathHelper.lerp(m.amount,dazed.joint[i][j],base.joint[i][j]);
+            for(int i=0;i<2;i++)dazed.knee[i]=MathHelper.lerp(m.amount,dazed.knee[i],base.knee[i]);
+            return dazed;
         }
         if(s.dashAge(now)>=0&&s.dashAge(now)<CombatState.DASH_TICKS)return MotionClips.dash(s.dashAge(now),s.forward,s.side);
         if(s.attack>0&&s.attack<=4&&s.attackAge(now)>=0&&s.attackAge(now)<CombatState.DURATION[s.attack]) {
@@ -190,8 +217,9 @@ public final class CombatClient {
         var mc=MinecraftClient.getInstance();if(!MapClient.enabled()||mc.player==null||mc.world==null||mc.options.hudHidden||CinematicDirector.isActive()||mc.player.isSpectator())return;
         Snapshot s=snapshot(mc.player.getUuid());double now=mc.world.getTime()+delta;
         // The dash's cooldown is in CooldownHud's list (2.43.0); its bar by the hotbar is gone.
-        if(!s.guard&&s.pressure<=0&&now>=s.combatUntil)return;
-        int x=c.getScaledWindowWidth()/2,y=c.getScaledWindowHeight()-72;boolean broken=s.broken(now);
+        if(!s.guard&&s.pressure<=0&&now>=s.combatUntil&&!s.disabled(now))return;
+        int x=c.getScaledWindowWidth()/2,y=c.getScaledWindowHeight()-72;boolean broken=s.broken(now),disabled=!broken&&s.disabled(now);
+        if(disabled&&!BotandHud.enabled()){c.drawCenteredTextWithShadow(mc.textRenderer,Text.translatable("hud.botand.disabled"),x,y-13,0xffc9b8ff);return;}
         int color=broken?0xffff566b:s.pressure>70?0xffffb454:0xff7cdce8;
         var m=MOVEMENT.get(mc.player.getUuid());float value=m==null?s.pressure:m.smoothPressure;
         if(!BotandHud.enabled()) {

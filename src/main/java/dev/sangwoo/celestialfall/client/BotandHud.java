@@ -16,7 +16,8 @@ public final class BotandHud {
         var mc=MinecraftClient.getInstance();if(!enabled()||mc.options.hudHidden||CinematicDirector.isActive()||mc.player.isSpectator())return;
         var state=CombatClient.snapshot(mc.player.getUuid());boolean broken=state.broken(mc.world.getTime()+delta);
         float guard=BotandHudLayout.guard(state.pressure(),broken);
-        var layout=BotandHudLayout.frame(mc.player.getHealth(),mc.player.getMaxHealth(),guard,ProgressClient.profile,broken);
+        // (incapacitated, 2.60.0: its word over the guard bar, as BREAK over a broken guard)
+        var layout=BotandHudLayout.frame(mc.player.getHealth(),mc.player.getMaxHealth(),guard,ProgressClient.profile,broken,state.disabled(mc.world.getTime()+delta));
         // Keep all artwork, bars and labels behind vanilla debug text in depth as well as order.
         var matrix=c.getMatrices();matrix.push();matrix.translate(8,8,-20);
         float scale=(float)(BotandHudLayout.width(c.getScaledWindowWidth())/BotandHudLayout.WIDTH);matrix.scale(scale,scale,1);

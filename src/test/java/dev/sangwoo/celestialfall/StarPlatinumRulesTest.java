@@ -158,6 +158,36 @@ class StarPlatinumRulesTest {
         assertTrue(voice>.8&&voice<2,"the voice: "+voice+" s");
         assertTrue(blow>=voice-.2&&blow<2.5,"the blow rings out about as long: "+blow+" s");
     }
+    // ---- T, the Star Finger (2.60.0) ----
+
+    @Test void theStarFingerStrikesOnTheCrackOfItsSound()throws Exception{
+        assertEquals(6,FINGER);
+        assertEquals(.45,CONTACT[FINGER]/20.0,1e-9,"its fingers strike 0.45 s in");
+        assertEquals(LENGTH[FINGER],STEP[FINGER],"the next punch may start once it is over");
+        assertEquals(1,next(FINGER),"a punch after it starts the combo again");
+        assertEquals(-1,broken(FINGER,100,900),"no combo to break");
+        assertEquals(0,hold(FINGER),"it holds no one: it slows and incapacitates them");
+        assertFalse(shouts(FINGER),"its sound is its own");
+        assertTrue(skill(FINGER)&&skill(HEAVY)&&!skill(4)&&!skill(1));
+        // its sound starts StandAttack.FINGER_LEAD ticks in, the crack eight ticks (cut_finger.LEAD_IN, 0.4 s) into it
+        assertEquals(CONTACT[FINGER],dev.sangwoo.celestialfall.client.stand.StandAttack.FINGER_LEAD+8,"the crack on the contact");
+        double sound=seconds("star_platinum_finger");
+        assertTrue(sound>1.2&&sound<2,"the user's recording, as it is: "+sound+" s");
+    }
+    @Test void itsFingersReachFiveBlocksAlongANarrowWay(){
+        assertTrue(lane(FINGER,5,0,1,.3),"five blocks ahead");assertFalse(lane(FINGER,5.5,0,1,.3),"not further");
+        assertTrue(lane(FINGER,4.5,.8,1,.3),"a body's breadth to either side");assertFalse(lane(FINGER,3,1.2,1,.3),"no wider: two fingers");
+        assertTrue(lane(1,3,1.2,1,.3),"(a punch's way is wider)");
+        assertFalse(lane(FINGER,-1,0,1,.3),"not behind");assertFalse(lane(FINGER,3,0,3.5,.3),"not far above");
+        assertTrue(FINGER_REACH>REACH_BIG,"further than any punch");
+    }
+    @Test void itSlowsAndIncapacitatesWhomItStrikes(){
+        assertEquals(.95,FINGER_SLOW,1e-9,"95% slower");
+        assertEquals(2,FINGER_SLOW_TICKS/20.0,1e-9,"for two seconds");
+        assertEquals(3,FINGER_DISABLE/20.0,1e-9,"and incapacitated for three");
+        assertEquals(500+FINGER_COOLDOWN,fingerReady(500),"its cooldown from its end (2.44.0's rule)");
+        assertTrue(DAMAGE[FINGER]>0&&DAMAGE[FINGER]<DAMAGE[HEAVY],"it strikes, not as hard as the heavy punch");
+    }
     @Test void thePunchGoesWhereItsUserFaces(){
         assertTrue(lane(1,2.5,0,1,.3));assertTrue(lane(1,1,.9,0,.3));
         assertFalse(lane(1,-1,0,1,.3),"not behind");assertFalse(lane(1,4.2,0,1,.3),"not out of reach");

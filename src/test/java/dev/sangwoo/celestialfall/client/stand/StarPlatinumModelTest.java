@@ -36,6 +36,28 @@ class StarPlatinumModelTest {
             }
         assertTrue(faces>1000,"faces "+faces);
     }
+    /**
+     * The Star Finger's fingers (2.60.0): the game stretches their bone along -y about its pivot (StarPlatinumRenderer),
+     * so they must lie wholly below it, as long as the renderer takes them to be, and the stances name where they leave
+     * the fist and which way they point.
+     */
+    @Test void theStarFingersFingersRunDownFromTheirPivotToBeStretched()throws Exception{
+        var finger=bones().get("right_finger");assertNotNull(finger,"the right hand's fingers");
+        assertEquals("right_hand",finger.get("parent").getAsString());
+        double pivot=finger.getAsJsonArray("pivot").get(1).getAsDouble();
+        var cubes=finger.getAsJsonArray("cubes");assertEquals(2,cubes.size(),"the first two fingers");
+        for(var c:cubes){
+            var o=c.getAsJsonObject().getAsJsonArray("origin");var z=c.getAsJsonObject().getAsJsonArray("size");
+            assertEquals(pivot,o.get(1).getAsDouble()+z.get(1).getAsDouble(),1e-3,"they start at the pivot");
+            assertEquals(StarPlatinumRenderer.FINGER_LEN,z.get(1).getAsDouble(),1e-3,"as long as the renderer takes them to be");
+            assertFalse(c.getAsJsonObject().getAsJsonObject("uv").has("up"),"no face across them inside the fist");
+        }
+        var fists=json("/assets/celestialfall/stands/star_platinum_fists.json");
+        for(String stance:new String[]{"wind_finger","star_finger"}){
+            var way=fists.getAsJsonObject(stance).getAsJsonArray("right_finger_way");
+            assertTrue(-way.get(2).getAsDouble()>.85,stance+": the fingers point ahead, "+way);
+        }
+    }
     @Test void everyBoneHangsFromTheRigAndTheStancesNameOnlyItsBones()throws Exception{
         var bones=bones();
         for(String name:new String[]{"root","hips","chest","head","right_arm","left_arm","right_forearm","left_hand","right_leg","left_foot","scarf_tail_2","cloth_front_2"})

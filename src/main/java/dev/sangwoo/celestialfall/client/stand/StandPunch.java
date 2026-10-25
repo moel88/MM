@@ -28,7 +28,11 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * than the dash (a shove as it lands), the dashes are longer, and the stances fiercer still. Since 2.59.0 its R, the
  * heavy punch (StarPlatinumRules.HEAVY), is a fifth punch here: a long coil with the right fist cocked back past the
  * hip, held a moment, then a right straight with the whole body behind it, the longest hit-stop and shove, a dash as
- * far as the finisher's, held out while its target flies.
+ * far as the finisher's, held out while its target flies. Since 2.60.0 its T, the Star Finger (StarPlatinumRules.FINGER),
+ * is a sixth: it takes aim with the right hand drawn back at the ribs, its first two fingers opening out straight, then
+ * drives the hand out at the target while the fingers shoot out to it (the shape's {@code fingerOpen} and
+ * {@code fingerExt}: StandPresence works out where they go, StarPlatinumRenderer stretches them there), holds them in
+ * its target a moment, snaps them back and goes back to the guard.
  */
 public final class StandPunch {
     /** A punch as a client saw it: its number (1 to 4), the way it goes (degrees), how far ahead its target stands (blocks, NaN for none), and the time on its own clock (seconds) it was stopped short (NaN if it was not). */
@@ -47,10 +51,13 @@ public final class StandPunch {
         public float engage,yaw,ahead,side,lunge,gust,ghost,over=1,over2=1,raise=RAISE;
         /** How big its left and right arms are (1 their size: the punches; bigger through the rush, 2.58.0). */
         public float armL=1,armR=1;
-        void clear(){Arrays.fill(weights,0);Arrays.fill(under,0);Arrays.fill(under2,0);engage=yaw=ahead=side=lunge=gust=ghost=0;over=over2=1;raise=RAISE;armL=armR=1;}
+        /** How far the right hand's first two fingers are held out straight (0 a fist, 1 open), and how far they are stretched out to their target (0 to 1; 2.60.0, the Star Finger). */
+        public float fingerOpen,fingerExt;
+        void clear(){Arrays.fill(weights,0);Arrays.fill(under,0);Arrays.fill(under2,0);engage=yaw=ahead=side=lunge=gust=ghost=0;over=over2=1;raise=RAISE;armL=armR=1;fingerOpen=fingerExt=0;}
         Shape set(Shape o){
             System.arraycopy(o.weights,0,weights,0,weights.length);System.arraycopy(o.under,0,under,0,under.length);System.arraycopy(o.under2,0,under2,0,under2.length);
-            engage=o.engage;yaw=o.yaw;ahead=o.ahead;side=o.side;lunge=o.lunge;gust=o.gust;ghost=o.ghost;over=o.over;over2=o.over2;raise=o.raise;armL=o.armL;armR=o.armR;return this;
+            engage=o.engage;yaw=o.yaw;ahead=o.ahead;side=o.side;lunge=o.lunge;gust=o.gust;ghost=o.ghost;over=o.over;over2=o.over2;raise=o.raise;armL=o.armL;armR=o.armR;
+            fingerOpen=o.fingerOpen;fingerExt=o.fingerExt;return this;
         }
         /** How much of stance {@code i} the shape has, its poses under and its own taken together. */
         float share(int i){return over>=1?weights[i]:weights[i]*over+(over2>=1?under[i]:under[i]*over2+under2[i]*(1-over2))*(1-over);}
@@ -87,6 +94,7 @@ public final class StandPunch {
                 yaw=from.yaw+wrap(yaw-from.yaw)*k;raise+=(from.raise-raise)*(1-k);
                 ahead+=(from.ahead-ahead)*(1-k);side+=(from.side-side)*(1-k);lunge+=(from.lunge-lunge)*(1-k);ghost+=(from.ghost-ghost)*(1-k);
                 armL+=(from.armL-armL)*(1-k);armR+=(from.armR-armR)*(1-k);
+                fingerOpen+=(from.fingerOpen-fingerOpen)*(1-k);fingerExt+=(from.fingerExt-fingerExt)*(1-k);
             }
             engage=Math.max(engage,from.engage);gust=Math.max(gust,from.gust);
         }
@@ -101,17 +109,18 @@ public final class StandPunch {
                 System.arraycopy(weights,0,look.weights,0,weights.length);
                 System.arraycopy(under,0,look.under,0,under.length);look.over=over;
                 System.arraycopy(under2,0,look.under2,0,under2.length);look.over2=over2;
-                look.armL=armL;look.armR=armR;
+                look.armL=armL;look.armR=armR;look.fingerOpen=fingerOpen;look.fingerExt=fingerExt;
                 return;
             }
             look.flatten();
             for(int i=0;i<look.weights.length;i++)look.weights[i]=look.weights[i]*(1-e)+share(i)*e;
             look.armL+=(armL-look.armL)*e;look.armR+=(armR-look.armR)*e;
+            look.fingerOpen=fingerOpen;look.fingerExt=fingerExt;
         }
     }
     /** When each punch lands (seconds after it starts) and how long it then stands still (the hit-stop: longer for the heavy ones). */
-    public static final float[] HIT=new float[6],FREEZE={0,.05f,.05f,.08f,.13f,.16f};
-    static{for(int k=1;k<=5;k++)HIT[k]=StarPlatinumRules.CONTACT[k]/20f;}
+    public static final float[] HIT=new float[7],FREEZE={0,.05f,.05f,.08f,.13f,.16f,.1f};
+    static{for(int k=1;k<=6;k++)HIT[k]=StarPlatinumRules.CONTACT[k]/20f;}
     /** Ease into a key: smoothly, holding the stance, or striking (faster and faster, at full speed as it lands). */
     static final int SMOOTH=0,HOLD=1,STRIKE=2;
     record Key(float at,int stance,int ease){}
@@ -123,25 +132,28 @@ public final class StandPunch {
      * cross load in 0.08 s and land at 0.2 s (StarPlatinumRules.CONTACT), and the next punch comes before they are back
      * in their guard; the hook and the finisher load all through the "O" of their shouts. 5, the heavy punch (2.59.0),
      * coils for 0.3 s, holds the coil, strikes in 0.16 s to land at 0.6 s and holds the blow out while its target flies.
+     * 6, the Star Finger (2.60.0), takes aim in 0.24 s, holds it, drives the hand out in 0.11 s to land at 0.45 s, holds
+     * it out while its fingers are in its target and goes back to the guard once they are back.
      */
     static final Key[][] KEYS={null,
         {k(0,GUARD,SMOOTH),k(.08f,WIND_L,SMOOTH),k(.1f,WIND_L,HOLD),k(.2f,PUNCH_L,STRIKE),k(.24f,PUNCH_L,HOLD),k(.44f,GUARD,SMOOTH)},
         {k(0,GUARD,SMOOTH),k(.08f,WIND_R,SMOOTH),k(.1f,WIND_R,HOLD),k(.2f,PUNCH_R,STRIKE),k(.24f,PUNCH_R,HOLD),k(.44f,GUARD,SMOOTH)},
         {k(0,GUARD,SMOOTH),k(.24f,WIND_HOOK,SMOOTH),k(.34f,WIND_HOOK,HOLD),k(.45f,HOOK,STRIKE),k(.5f,HOOK,HOLD),k(.76f,GUARD,SMOOTH)},
         {k(0,GUARD,SMOOTH),k(.26f,WIND_BIG,SMOOTH),k(.38f,WIND_BIG,HOLD),k(.5f,PUNCH_BIG,STRIKE),k(.72f,PUNCH_BIG,HOLD),k(1f,GUARD,SMOOTH)},
-        {k(0,GUARD,SMOOTH),k(.3f,WIND_HEAVY,SMOOTH),k(.44f,WIND_HEAVY,HOLD),k(.6f,PUNCH_HEAVY,STRIKE),k(.9f,PUNCH_HEAVY,HOLD),k(1.24f,GUARD,SMOOTH)}};
+        {k(0,GUARD,SMOOTH),k(.3f,WIND_HEAVY,SMOOTH),k(.44f,WIND_HEAVY,HOLD),k(.6f,PUNCH_HEAVY,STRIKE),k(.9f,PUNCH_HEAVY,HOLD),k(1.24f,GUARD,SMOOTH)},
+        {k(0,GUARD,SMOOTH),k(.24f,WIND_FINGER,SMOOTH),k(.34f,WIND_FINGER,HOLD),k(.45f,STAR_FINGER,STRIKE),k(.88f,STAR_FINGER,HOLD),k(1.1f,GUARD,SMOOTH)}};
     /** The stance each punch loads in, the one it strikes in, and the fist it strikes with (true: the right). */
-    static final int[] WINDS={0,WIND_L,WIND_R,WIND_HOOK,WIND_BIG,WIND_HEAVY},STRIKES={0,PUNCH_L,PUNCH_R,HOOK,PUNCH_BIG,PUNCH_HEAVY};
-    static final boolean[] RIGHT={false,false,true,false,true,true};
+    static final int[] WINDS={0,WIND_L,WIND_R,WIND_HOOK,WIND_BIG,WIND_HEAVY,WIND_FINGER},STRIKES={0,PUNCH_L,PUNCH_R,HOOK,PUNCH_BIG,PUNCH_HEAVY,STAR_FINGER};
+    static final boolean[] RIGHT={false,false,true,false,true,true,true};
     /**
      * How far the stand dashes on into each punch as it lands (blocks): as far as it takes for the fist to sink BITE
      * into its target, but never less than the first nor more than the second (it stays right in front of its user).
      */
-    static final float[] LUNGE_MIN={0,.3f,.35f,.4f,.6f,.7f},LUNGE_MAX={0,.85f,.9f,.95f,1.3f,1.3f};
+    static final float[] LUNGE_MIN={0,.3f,.35f,.4f,.6f,.7f,.1f},LUNGE_MAX={0,.85f,.9f,.95f,1.3f,1.3f,.1f};
     /** How far each blow shoves the stand on through its target as it lands (blocks, in over two frames and soon gone, 2.56.0). */
-    static final float[] DRIVE={0,.12f,.12f,.18f,.3f,.4f};
+    static final float[] DRIVE={0,.12f,.12f,.18f,.3f,.4f,.08f};
     /** Gust through the hair as each punch lands. */
-    static final float[] GUST={0,1f,1.05f,1.3f,1.8f,2.2f};
+    static final float[] GUST={0,1f,1.05f,1.3f,1.8f,2.2f,1.5f};
     /**
      * Where the stand stands to punch (2.55.0): right in front of its user, AHEAD blocks on along the punch and on its
      * line (SIDE 0), facing straight down it, higher than at rest (RAISE) so its shoulders and fists show over its
@@ -155,7 +167,7 @@ public final class StandPunch {
      * the last blow, the hook and the finisher take longer (their arms come right round from the blow before, all
      * through the first of their loads).
      */
-    static final float[] BLEND={0,.1f,.12f,.2f,.2f,.2f};
+    static final float[] BLEND={0,.1f,.12f,.2f,.2f,.2f,.2f};
     /** It stays in front this long once a punch is over (seconds; less once one is stopped short), then goes back over RETURN. */
     static final float LINGER=.45f,LINGER_STOPPED=.15f,RETURN=.4f;
     /** The stand's size, for the fists' places (StarPlatinumRenderer.SCALE: model units of 1/16 block). */
@@ -173,6 +185,32 @@ public final class StandPunch {
     /** A kick that comes in at {@code at} over two frames and dies away with time constant {@code tau} (seconds). */
     static float kick(float t,float at,float tau){return t<at-.03f?0:smooth((t-at+.03f)/.045f)*(float)Math.exp(-Math.max(0,t-at-.015f)/tau);}
 
+    /**
+     * The Star Finger's fingers on its clock with the hit-stop taken out (2.60.0, seconds): they open out straight as it
+     * takes aim (OPEN_FROM to OPEN_TO), shoot out over the strike's last tenth of a second faster and faster to land in
+     * its target at the contact, stay there (to HOLD_TO), snap back (by BACK_TO) and fold into the fist (by FOLD_TO).
+     */
+    static final float OPEN_FROM=.1f,OPEN_TO=.24f,SHOOT=.1f,HOLD_TO=.8f,BACK_TO=.92f,FOLD_TO=1.06f;
+    /** How far the Star Finger's fingers are open (0 to 1) {@code u} seconds into it on its clock with the hit-stop taken out. */
+    static float open(float u){return smooth((u-OPEN_FROM)/(OPEN_TO-OPEN_FROM))*(1-smooth((u-BACK_TO)/(FOLD_TO-BACK_TO)));}
+    /** How far they are stretched out to their target (0 to 1): out faster and faster (at full speed as they land), held, then back. */
+    static float stretch(float u){
+        float hit=HIT[StarPlatinumRules.FINGER];
+        if(u<hit-SHOOT)return 0;
+        if(u<hit)return (float)Math.pow((u-(hit-SHOOT))/SHOOT,1.6);
+        return 1-smooth((u-HOLD_TO)/(BACK_TO-HOLD_TO));
+    }
+    /**
+     * The Star Finger's fingers for punch {@code p} at {@code t} on its clock: how far open ({@code open}) or how far
+     * stretched; none for the other punches. One stopped short takes them back as it turns back to its guard
+     * (StarPlatinumRules.STOP_RETURN).
+     */
+    static float fingers(Punch p,float t,boolean open){
+        if(p.combo!=StarPlatinumRules.FINGER)return 0;
+        boolean cut=!Float.isNaN(p.stopped)&&t>p.stopped;
+        float u=warp(p.combo,cut?p.stopped:t),v=open?open(u):stretch(u);
+        return cut?v*(1-back(t-p.stopped)):v;
+    }
     /** How far back to its guard a punch stopped short is {@code since} seconds after it stopped (StarPlatinumRules.STOP_RETURN). */
     static float back(float since){return smooth(since/(StarPlatinumRules.STOP_RETURN/20f));}
     /** The punch's own clock as its body moves on it: time stands still for the hit-stop. */
@@ -258,6 +296,9 @@ public final class StandPunch {
         into.lunge=lunge(now)*striking(now,t)*take+(before==null?0:lunge(before)*striking(before,tb)*(1-take))+drive(now,t)+(before==null?0:drive(before,tb));
         into.gust=GUST[now.combo]*kick(t,HIT[now.combo],.25f)+(before==null?0:GUST[before.combo]*kick(tb,HIT[before.combo],.25f));
         into.ghost=ghost(now,t);
+        // the Star Finger's fingers (2.60.0), the last one's going as this one takes over
+        into.fingerOpen=Math.max(fingers(now,t,true),before==null?0:fingers(before,tb,true)*(1-take));
+        into.fingerExt=Math.max(fingers(now,t,false),before==null?0:fingers(before,tb,false)*(1-take));
         return into;
     }
     /** The shove of a blow as it lands (blocks): in over two frames, gone in a few more (none for a punch stopped before it landed). */

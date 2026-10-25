@@ -13,7 +13,8 @@ import software.bernie.geckolib.model.GeoModel;
  * that tools/stand/make_star_platinum.py writes with the model, and its own movement on top (StarPlatinumMotion). For an
  * afterimage of the rush's flying arms (2.57.0) every bone but the arms' is hidden (their children still follow them).
  * Each upper arm is drawn at its arm's size in the look (2.58.0: bigger through the rush), the forearm and the fist
- * growing with it from the shoulder.
+ * growing with it from the shoulder. The right hand's first two fingers (2.60.0, the Star Finger) show only while the
+ * look holds them out.
  */
 public final class StarPlatinumModel extends GeoModel<StarPlatinumEntity> {
     static final Identifier MODEL=CelestialFall.id("geo/entity/star_platinum.geo.json"),
@@ -37,7 +38,10 @@ public final class StarPlatinumModel extends GeoModel<StarPlatinumEntity> {
             var rest=bone.getInitialSnapshot();if(rest==null)continue;
             // set every frame: the bones are the model's, shared by every body it draws; a hidden bone hides only its own
             // cubes (GeckoLib's setHidden hides the children too: the arms hang from the chest)
-            bone.setHidden(look.armsOnly&&!ARMS.contains(bone.getName()));bone.setChildrenHidden(false);
+            // the Star Finger's fingers (2.60.0) only while they are held out (the left hand's never): StarPlatinumRenderer
+            // turns and stretches them as it draws them
+            String name=bone.getName();
+            bone.setHidden(name.endsWith("_finger")?!(name.equals("right_finger")&&look.fingerOpen>.001f&&!look.armsOnly):look.armsOnly&&!ARMS.contains(name));bone.setChildrenHidden(false);
             poses.pose(bone.getName(),look,t,pose);
             // the poses are written the way Blockbench writes a turn; GeckoLib keeps x and y turned the other way
             bone.setRotX(rest.getRotX()-(float)Math.toRadians(pose[0]));
