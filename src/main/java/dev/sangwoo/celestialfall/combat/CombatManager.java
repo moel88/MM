@@ -139,15 +139,20 @@ public final class CombatManager {
         speed(p,s,now);sync(p,s);
     }
     /**
-     * The incapacitation that was to last until {@code until} ends now (2.61.0: Star Platinum's inhale let go of
-     * {@code target} early, its user struck): one that lasts longer stays.
+     * The incapacitation (and the slow) that was to last until {@code until} ends at {@code to} instead (2.61.0: Star
+     * Platinum's inhale let go of {@code target} early, its user struck; 2.62.0: whom it held stay incapacitated a
+     * little after it lets go): one that lasts longer stays.
      */
-    public static void free(LivingEntity target,long until) {
+    public static void cut(LivingEntity target,long until,long to) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
-        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.free(until);return;}
-        if(!(target instanceof ServerPlayerEntity p))return;
+        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.cut(until,to);return;}
+        if(!(target instanceof ServerPlayerEntity p)) {
+            // a mob's slow (it is only slowed): the one put on until then ends at to instead
+            var left=MOB_SLOWS.get(target);if(left!=null&&left==until&&to<until)MOB_SLOWS.put(target,Math.max(to,target.getWorld().getTime()));
+            return;
+        }
         var e=STATES.get(p.getUuid());if(e==null)return;
-        long now=p.getWorld().getTime();e.state.free(now,until);sync(p,e.state);
+        long now=p.getWorld().getTime();if(e.state.cut(now,until,to)){speed(p,e.state,now);sync(p,e.state);}
     }
     /**
      * Whether {@code target} holds a guard up against something coming at it from {@code from} (2.61.0: Star Platinum's

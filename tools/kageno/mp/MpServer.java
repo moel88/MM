@@ -295,13 +295,16 @@ public final class MpServer implements ModInitializer {
             String sp=String.format(java.util.Locale.ROOT,"x%.2f",speed.getValue()/speed.getBaseValue());
             if(!sp.equals(speeds.put(p.getUuid(),sp)))note(server,"watcher speed attribute "+sp);
             // 2.61.0: the watcher held by the caster's inhale as the server keeps it, and where it is from the caster
+            // 2.62.0: the caster's inhale on and off as the server keeps it (held down: off the tick Y comes up)
+            boolean on=dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(caster);
+            if(on!=Boolean.TRUE.equals(inhaling.put(caster.getUuid(),on)))note(server,"caster's inhale "+(on?"on":"off")+" at tick "+now);
             boolean held=dev.sangwoo.celestialfall.stand.StarPlatinumInhale.held(p);
             if(held!=Boolean.TRUE.equals(inhaled.put(p.getUuid(),held))){note(server,"watcher "+(held?"caught by the inhale":"let go by the inhale")+" "+where(p,caster));if(held)heldAt=now;}
             if(held&&(now-heldAt)%20==0)note(server,"watcher held "+(now-heldAt)+" ticks: "+where(p,caster));
         }
     }
     private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>(),disabled=new HashMap<>();
-    private final Map<UUID,String> speeds=new HashMap<>();private final Map<UUID,Boolean> inhaled=new HashMap<>();private long heldAt;
+    private final Map<UUID,String> speeds=new HashMap<>();private final Map<UUID,Boolean> inhaled=new HashMap<>(),inhaling=new HashMap<>();private long heldAt;
     /** Where the watcher is from the caster: ahead along the way the caster faces, to its right, and how far. */
     private static String where(ServerPlayerEntity p,ServerPlayerEntity caster){
         var d=p.getPos().subtract(caster.getPos());var f=net.minecraft.util.math.Vec3d.fromPolar(0,caster.getYaw());

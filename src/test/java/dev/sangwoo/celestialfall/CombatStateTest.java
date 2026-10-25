@@ -86,6 +86,23 @@ class CombatStateTest {
         assertEquals(60,s.disabledUntil,"the longer one stays");assertEquals(40,s.slowUntil);assertEquals(.95,s.slow,1e-9,"and the stronger slow");
         assertEquals(0,s.disabledAt,"still the first");
     }
+    /**
+     * User request (2.62.0): Star Platinum's inhale holds them "95% 슬로우에 아무 스킬 + 대쉬 평타 사용 못하게", and "흡입
+     * 끝나도 0.5초 정도는 더 무력화": the incapacitation and the slow it put on for as long as it might run are cut short
+     * to half a second after it lets go; one that lasts longer stays, and none is drawn out.
+     */
+    @Test void theInhalesHoldIsCutShortToALittleAfterItLetsGo() {
+        CombatState s=new CombatState();s.incapacitate(100,118,118,.95);
+        assertTrue(s.cut(150,218,160),"let go at 150: until 160");assertEquals(160,s.disabledUntil);assertEquals(160,s.slowUntil);
+        assertTrue(s.locked(159)&&s.slowed(159),"still incapacitated and slow half a second on");assertFalse(s.locked(160));assertFalse(s.slowed(160));
+        assertTrue(s.dash(160,1,0),"free then");
+        s=new CombatState();s.incapacitate(100,118,118,.95);
+        assertFalse(s.cut(208,218,218),"run its full length: nothing to cut");assertEquals(218,s.disabledUntil);
+        s=new CombatState();s.incapacitate(100,118,118,.95);s.incapacitate(120,200,200,.95);
+        assertFalse(s.cut(150,218,160),"a longer one put on since stays");assertEquals(320,s.disabledUntil);assertEquals(320,s.slowUntil);
+        s=new CombatState();s.incapacitate(100,118,118,.95);
+        assertFalse(s.cut(150,218,300),"never drawn out");assertEquals(218,s.disabledUntil);
+    }
     /** User request (2.60.0): "그냥 가드 브레이커 개념이 2초 무력화로 알고 있으면 됨": a broken guard is an incapacitation, timed from when it broke. */
     @Test void aBrokenGuardIsAnIncapacitation() {
         CombatState s=new CombatState();assertTrue(s.guard(true,10));s.breakGuard(20,40);

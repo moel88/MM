@@ -11,8 +11,8 @@ package dev.sangwoo.celestialfall.stand;
  * recording the two are 1.2 s apart), and its shout takes over from the hook's (StandAttack fades the one before out).
  * The four land 0.20, 0.50, 1.05 and 1.75 s into a mashed combo (2.54.0: 0.30, 1.10, 2.00, 3.20). Since 2.57.0 its E
  * too, the rush (below), since 2.59.0 its R, the heavy punch: a fifth punch, HEAVY, out of the combo (below), and since
- * 2.60.0 its T, the Star Finger: a sixth, FINGER (below), and since 2.61.0 its Y, the inhale (below). Pure timing and
- * reach, shared by the server and the client; ticks of 1/20 s.
+ * 2.60.0 its T, the Star Finger: a sixth, FINGER (below), and since 2.61.0 its Y, the inhale (below, held down since
+ * 2.62.0). Pure timing and reach, shared by the server and the client; ticks of 1/20 s.
  */
 public final class StarPlatinumRules {
     /**
@@ -119,46 +119,49 @@ public final class StarPlatinumRules {
     public static boolean skill(int combo){return combo==HEAVY||combo==FINGER;}
     // ---- Y, the inhale (2.61.0, user request: "이번에는 Y스킬 만들자 스타플래티나가 최대 3블록까지 앞에 있는 플레이어를
     // 입으로 빨아들여서 5초동안 끌고오게 하는 스킬 가드 가능하고 데미지 없음 빨아들이는시간동안은 스타핑거 처럼 무력화
-    // 효과음 자체제작"): with the stand out, Y makes it draw a huge breath and then suck in the air in front of its user
-    // (StarPlatinumInhale). As it starts to suck, INHALE_CATCH ticks in, everyone within INHALE_REACH blocks in front of
-    // its user (INHALE_HALF_WIDTH to either side, in sight, the PvP rule; the nearest INHALE_MAX) with no guard held up
-    // against it is caught: dragged in over INHALE_PULL ticks to just in front of the stand (inhaleAnchor, side by side
-    // if several) and held there for INHALE_HOLD ticks from the catch, its user free to turn and to walk (INHALE_SLOW
-    // slower), dragging them along. All that while they are incapacitated, as the Star Finger's are (no skill, attack,
-    // dash or guard: CombatManager.incapacitate), and take no damage. A guard held up against it takes it whole: that one
-    // is not caught. Catching no one it stops INHALE_WHIFF ticks after it began to suck. Its cooldown runs once it is
-    // over (2.44.0's rule), or from where it was cut short (its user struck, the stand sent back).
+    // 효과음 자체제작"; 2.62.0: "Y는 아무도 안 맞아도 5초동안 지속되고 E처럼 중간에 손 떼면 바로 취소 흡입 무력화는 그냥
+    // 95% 슬로우에 아무 스킬 + 대쉬 평타 사용 못하게 그리고 흡입 끝나도 0.5초 정도는 더 무력화", "그리고 흡입은 최대
+    // 1명만"): with the stand out, Y held down makes it draw a huge breath and then suck in the air in front of its user
+    // (StarPlatinumInhale) for as long as Y stays down, INHALE_SUCK ticks at the most, whether it catches anyone or not;
+    // Y let go, it stops at once, as the rush does. From INHALE_CATCH ticks in, as it sucks, the nearest one within
+    // INHALE_REACH blocks in front of its user (INHALE_HALF_WIDTH to either side, in sight, the PvP rule) with no guard
+    // held up against it is caught, one at most: dragged in over INHALE_PULL ticks to just in front of the stand
+    // (inhaleAnchor) and held there until it ends, its user free to turn and to walk (INHALE_SLOW slower), dragging them
+    // along. All that while, and INHALE_AFTER ticks once it lets them go, they walk INHALE_HELD_SLOW slower and are
+    // incapacitated as the Star Finger's are (no skill, attack, dash or guard: CombatManager.incapacitate), and take no
+    // damage. A guard held up against it holds it off for as long as it is up. Its cooldown runs once it is over
+    // (2.44.0's rule): let go, run out, or cut short (its user struck, the stand sent back).
 
-    /** Ticks: it draws its breath and begins to suck (the catch); it holds whom it caught this long; caught no one, it stops this long after. */
-    public static final int INHALE_CATCH=8,INHALE_HOLD=100,INHALE_WHIFF=16;
+    /** Ticks: it draws its breath and begins to suck; it sucks this long at the most after (Y held down all the while). */
+    public static final int INHALE_CATCH=8,INHALE_SUCK=100;
     /** Ticks whoever it catches takes to be dragged in to just in front of the stand. */
     public static final int INHALE_PULL=12;
-    /** How long it runs having caught someone (ticks): its breath and its hold. */
-    public static final int INHALE_LENGTH=INHALE_CATCH+INHALE_HOLD;
-    /** How far it sucks from its user's feet (blocks ahead) and how wide (to either side); the most it catches. */
+    /** The longest it runs (ticks): its breath and its suction. */
+    public static final int INHALE_LENGTH=INHALE_CATCH+INHALE_SUCK;
+    /** Ticks whom it held stay incapacitated (and as slow) once it lets them go ("흡입 끝나도 0.5초 정도는 더 무력화"). */
+    public static final int INHALE_AFTER=10;
+    /** How much slower whom it holds walk (0.95: at a twentieth of their speed, "95% 슬로우"), until INHALE_AFTER after it lets them go. */
+    public static final double INHALE_HELD_SLOW=.95;
+    /** How far it sucks from its user's feet (blocks ahead) and how wide (to either side). */
     public static final double INHALE_REACH=3,INHALE_HALF_WIDTH=1.1;
-    public static final int INHALE_MAX=4;
     /** Its cooldown once it is over (ticks: fifteen seconds). */
     public static final int INHALE_COOLDOWN=300;
     /** How much slower its user walks while it inhales (0.5: at half their speed), dragging whom it holds. */
     public static final double INHALE_SLOW=.5;
     /**
-     * Where whoever it holds is held: INHALE_AHEAD blocks ahead of its user's feet along the way they face (just in
-     * front of the stand's mouth: the stand stands about a block ahead), and the others side by side, a little further
-     * (by slot: to the right, blocks, and on ahead).
+     * Where whoever it holds is held: this many blocks ahead of its user's feet along the way they face, their face just
+     * in front of the stand's mouth (the stand stands 0.7 blocks ahead and lunges on into the suction; 2.61.0 held them
+     * at 1.75, before it lunged so far).
      */
-    public static final double INHALE_AHEAD=1.75;
-    static final double[][] INHALE_SLOTS={{0,0},{.85,.2},{-.85,.2},{0,.75}};
+    public static final double INHALE_AHEAD=2.1;
     /** Whether a point (ahead along the way its user faces, to their right and up from their feet, blocks) is in the inhale's way, for a body {@code halfWidth} across. */
     public static boolean inhaleLane(double forward,double side,double height,double halfWidth){
         return forward>=NEAR-halfWidth&&forward<=INHALE_REACH+halfWidth&&Math.abs(side)<=INHALE_HALF_WIDTH+halfWidth&&height>=LOW&&height<=HIGH;
     }
-    /** Where the inhale holds the one in slot {@code slot}: x and z of the point that far ahead of a user standing at ({@code x}, {@code z}) facing {@code yaw} (degrees, Minecraft's: 0 south). */
-    public static double[] inhaleAnchor(double x,double z,float yaw,int slot){
-        double[] s=INHALE_SLOTS[Math.floorMod(slot,INHALE_SLOTS.length)];
-        double r=Math.toRadians(yaw),fx=-Math.sin(r),fz=Math.cos(r),ahead=INHALE_AHEAD+s[1];
-        // the user's right hand is (-fz, fx)
-        return new double[]{x+fx*ahead-fz*s[0],z+fz*ahead+fx*s[0]};
+    /** Where the inhale holds whom it caught: x and z of the point INHALE_AHEAD ahead of a user standing at ({@code x}, {@code z}) facing {@code yaw} (degrees, Minecraft's: 0 south). */
+    public static double[] inhaleAnchor(double x,double z,float yaw){
+        double r=Math.toRadians(yaw);
+        return new double[]{x-Math.sin(r)*INHALE_AHEAD,z+Math.cos(r)*INHALE_AHEAD};
     }
     /**
      * How far along its drag the one it caught is (0 where they were caught, 1 at the hold) a share {@code u} of the way

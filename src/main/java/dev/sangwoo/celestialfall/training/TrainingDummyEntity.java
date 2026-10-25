@@ -165,8 +165,8 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         long now=getWorld().getTime();combat.incapacitate(now,ticks,slowTicks,slow);HitStun.releaseOwned(getUuid());getNavigation().stop();
         nextCombo=Math.max(nextCombo,combat.disabledUntil+12);syncCombat();
     }
-    /** The incapacitation that was to last until {@code until} ends now (2.61.0, CombatManager.free). */
-    public void free(long until){if(!combat.free(getWorld().getTime(),until))return;nextCombo=Math.min(nextCombo,getWorld().getTime()+12);syncCombat();}
+    /** The incapacitation (and the slow) that was to last until {@code until} ends at {@code to} instead (2.61.0, CombatManager.cut). */
+    public void cut(long until,long to){if(!combat.cut(getWorld().getTime(),until,to))return;nextCombo=Math.min(nextCombo,combat.disabledUntil+12);syncCombat();}
     public void interruptCombat(){combat.cancel();getNavigation().stop();nextCombo=getWorld().getTime()+12;syncCombat();}
     public void resetTraining() {
         HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;combat.disabledUntil=combat.slowUntil=0;

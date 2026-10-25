@@ -51,7 +51,7 @@ public final class StandInhaleFx {
             if(t<0||t>end+1f)continue;
             var body=StandPresence.body(e.getKey());if(body==null)continue;
             Vec3d feet=user.getLerpedPos(tickDelta),way=way(i.yaw(tickDelta));
-            Vec3d mouth=on(StandInhale.mouth(t,end),body);
+            Vec3d mouth=on(StandInhale.mouth(i,t),body);
             Vec3d far=feet.add(way.multiply(FAR)).add(0,FAR_UP,0),in=mouth.subtract(far);
             double length=Math.max(.5,in.length());Vec3d axis=in.multiply(1/length);
             Vec3d across=right(way),up=across.crossProduct(axis).normalize();
@@ -78,12 +78,11 @@ public final class StandInhaleFx {
         return world.getEntityById(id) instanceof LivingEntity l?l.getLerpedPos(delta).add(0,l.getHeight()*.6,0):null;
     }
     static double width(int id){var world=MinecraftClient.getInstance().world;return world!=null&&world.getEntityById(id) instanceof LivingEntity l?l.getWidth()*.5:.3;}
-    /** How far through the catch's burst it is (0 to 1; outside it, below 0 or past 1). */
-    static float catchU(Shown s){return Float.isNaN(s.inhale.caughtAt)?-1:(s.t-s.inhale.caughtAt)/CATCH;}
-    /** How strongly the air swirls round and streams off whom it holds now (0 to 1): from its catch until it ends. */
-    static float holding(Shown s){
-        if(Float.isNaN(s.inhale.caughtAt))return 0;
-        return Ease.smooth(s.t-s.inhale.caughtAt,0,.12f)*(1-Ease.smooth(s.t-s.end,0,.12f));
+    /** How far through the burst of a catch (or a guard's flash) heard at {@code at} it is (0 to 1; outside it, below 0 or past 1). */
+    static float burstU(Shown s,float at){return (s.t-at)/CATCH;}
+    /** How strongly the air swirls round and streams off one it caught (0 to 1): from its catch until it lets them go or ends. */
+    static float holding(Shown s,StandInhale.Caught c){
+        return Ease.smooth(s.t-c.at,0,.12f)*(1-Ease.smooth(s.t-s.inhale.letAt(c),0,.12f));
     }
 
     // ───────────────────────────── the passes ─────────────────────────────
@@ -91,11 +90,11 @@ public final class StandInhaleFx {
     /** Dark ink under the light: the catch's bursts on whom it caught, and the ring of the air let go. */
     public static void alpha(EffectMesh m){
         for(var s:FRAME){
-            float u=catchU(s);
-            if(u>=0&&u<1)for(var c:s.inhale.caught){
-                var p=chest(c.id());if(p==null)continue;
+            for(var c:s.inhale.caught){
+                float u=burstU(s,c.at);if(u<0||u>=1)continue;
+                var p=chest(c.id);if(p==null)continue;
                 float a=(float)Math.pow(1-u,.8)*Ease.smooth(u,0,.06f);
-                burst(m,p,.42*(1-.25*u)*1.14,.36,9,s.seed+c.id()*7,INK,INK,.62f*a,.62f*a);
+                burst(m,p,.42*(1-.25*u)*1.14,.36,9,s.seed+c.id*7,INK,INK,.62f*a,.62f*a);
             }
             float r=(s.t-s.end)/RELEASE;
             if(r>=0&&r<1&&!s.inhale.on()){
@@ -162,10 +161,10 @@ public final class StandInhaleFx {
      * motes drawn into them), then swirls round them and streams off them into its mouth for as long as it holds them.
      */
     static void caught(EffectMesh m,Shown s){
-        float u=catchU(s),hold=holding(s);
         for(var c:s.inhale.caught){
-            var p=chest(c.id());if(p==null)continue;
-            int seed=s.seed+c.id()*7;
+            var p=chest(c.id);if(p==null)continue;
+            float u=burstU(s,c.at),hold=holding(s,c);
+            int seed=s.seed+c.id*7;
             if(u>=0&&u<1){
                 float a=(float)Math.pow(1-u,.8)*Ease.smooth(u,0,.06f);
                 burst(m,p,.42*(1-.25*u),.36,9,seed,LILAC,VIOLET,.85f*a,.75f*a);
@@ -174,10 +173,10 @@ public final class StandInhaleFx {
                 FxLib.ring(m,p.subtract(0,.25,0),.25+.95*(1-Ease.out(u,0,1)),.07,LILAC,.7f*a);
                 FxLib.ringPlane(m,p,s.across,s.up,.2+1.05*(1-Ease.out(u,0,1)),.08,VIOLET,.6f*a);
             }
-            FxLib.converge(m,p,1.4,12,s.t,s.inhale.caughtAt-.12f,s.inhale.caughtAt+.1f,LILAC,seed);
+            FxLib.converge(m,p,1.4,12,s.t,c.at-.12f,c.at+.1f,LILAC,seed);
             if(hold<=.01f)continue;
             float sh=hold*s.suck;
-            double w=width(c.id())+.22;
+            double w=width(c.id)+.22;
             // the air swirling round them, rising
             for(int k=0;k<6;k++){
                 float rise=(float)((s.t*.85+k/6.0+Ease.hash(seed+k))%1.0);
@@ -199,14 +198,15 @@ public final class StandInhaleFx {
             }
         }
     }
-    /** Whose guard took it: a flash of blue on their guard and its sparks thrown aside, as the rush's on a guard. */
+    /** Whose guard holds it off: a flash of blue on their guard and its sparks thrown aside, as the rush's on a guard, each time it is seen doing so. */
     static void blocked(EffectMesh m,Shown s){
-        float u=catchU(s);if(u<0||u>=1)return;
-        float a=(float)Math.pow(1-u,.8)*Ease.smooth(u,0,.06f);
-        for(int id:s.inhale.blocked){
+        for(var b:s.inhale.blocks){
+            float u=burstU(s,b.at());if(u<0||u>=1)continue;
+            float a=(float)Math.pow(1-u,.8)*Ease.smooth(u,0,.06f);
+            int id=b.id();
             var c=chest(id);if(c==null)continue;
             Vec3d go=c.subtract(s.feet).multiply(1,0,1);go=go.lengthSquared()<1e-6?s.way:go.normalize();
-            Vec3d at=c.subtract(go.multiply(width(id)*.9)),side=right(go),up=up(go,side);int seed=s.seed+id*11;
+            Vec3d at=c.subtract(go.multiply(width(id)*.9)),side=right(go),up=up(go,side);int seed=s.seed+id*11+Math.round(b.at()*20)*131;
             burst(m,at,.34,.4,9,seed,GUARD_LIGHT,GUARD,.75f*a,.6f*a);
             FxLib.ringPlane(m,at,side,up,.2+.7*Ease.out(u,0,1),.06,GUARD,.7f*a*(1-u));
             for(int k=0;k<8;k++){
@@ -253,13 +253,13 @@ public final class StandInhaleFx {
     public static void frame(FxFrame f,Vec3d camera){
         for(var s:FRAME){
             if(s.suck>.01f)f.light(s.mouth,0xc8b8ff,3.5,1.1f*s.suck);
-            float hold=holding(s)*s.suck,u=catchU(s);
             for(var c:s.inhale.caught){
-                var p=chest(c.id());if(p==null)continue;
+                var p=chest(c.id);if(p==null)continue;
+                float hold=holding(s,c)*s.suck,u=burstU(s,c.at);
                 if(hold>.01f)f.light(p,0xd8ccff,2.6,.6f*hold);
                 if(u>=0&&u<1)f.light(p,0xe0d4ff,4,1.6f*(1-u));
             }
-            if(u>=0&&u<1)for(int id:s.inhale.blocked){var p=chest(id);if(p!=null)f.light(p,0xb8c8ff,4,1.4f*(1-u));}
+            for(var b:s.inhale.blocks){float u=burstU(s,b.at());if(u<0||u>=1)continue;var p=chest(b.id());if(p!=null)f.light(p,0xb8c8ff,4,1.4f*(1-u));}
         }
     }
 }

@@ -18,7 +18,7 @@ Hangul (WenQuanYi Zen Hei, fonts-wqy-zenhei). Every output frame should be its o
 about 12 (run_shots.py) so the client renders more than FILM_FPS frames per second of the cast clock; the script
 reports how many output frames had to repeat a game frame.
 """
-import sys, os, glob, bisect, csv, subprocess, tempfile, shutil
+import sys, os, glob, bisect, csv, math, subprocess, tempfile, shutil
 from PIL import Image, ImageDraw, ImageFont
 
 shots, out, start, end, title = sys.argv[1], sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), sys.argv[5]
@@ -243,8 +243,9 @@ def finger_line(t):
     return (' · '.join(parts), color) if parts else (None, None)
 
 def inhale_line(t):
-    """2.61.0, the inhale (Y): what it does now, how many it holds, and the training dummy (where it is in front of the
-    player, its health: the inhale deals no damage, incapacitated) or how far the husks (act=) have been dragged."""
+    """The inhale (Y; 2.61.0, held down since 2.62.0): what it does now, whether it holds anyone, and the training dummy
+    (where it is in front of the player, its health: the inhale deals no damage, incapacitated) or the first husk (act=:
+    how far it has been dragged while held, and its speed once let go: 95% slower for half a second)."""
     if not rush: return None, None
     i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
     if i < 0: return None, None
@@ -252,24 +253,26 @@ def inhale_line(t):
     if r.get('inhale_age'):
         age, on = float(r['inhale_age']), r.get('inhale_on') == '1'
         caught, blocked = int(r.get('inhale_caught') or 0), int(r.get('inhale_blocked') or 0)
-        if on and age < .4: parts.append('숨을 크게 들이쉼')
-        elif on and caught: parts.append(f'흡입 · {caught}명을 붙잡아 끌어옴 ({min(5.0, age - .4):.1f}초 / 5초)')
-        elif on and blocked: parts.append('가드에 막힘 · 아무도 안 잡힘')
-        elif on: parts.append('흡입 · 아무도 안 잡힘')
-        else: parts.append('흡입 끝 · 놓아줌')
+        sucked = f'{min(5.0, max(0.0, age - .4)):.1f}초 / 최대 5초'
+        if on and age < .4: parts.append('Y 누름 · 숨을 크게 들이쉼')
+        elif on and caught: parts.append(f'흡입 {sucked} · 1명을 붙잡아 끌어옴')
+        elif on and blocked: parts.append(f'흡입 {sucked} · 가드가 버팀, 안 잡힘')
+        elif on: parts.append(f'흡입 {sucked} · 아무도 안 잡힘')
+        else: parts.append('흡입 끝')
     if walkers:
         k = bisect.bisect_right(walkers, (t * 20 + 1e-6, 1e9, 0, 0)) - 1
-        if k >= 0:
-            (_, x0, z0, _), (_, x1, z1, _) = walkers[0], walkers[k]
-            d = ((x1 - x0) ** 2 + (z1 - z0) ** 2) ** .5
-            if d > .2: parts.append(f'허스크가 끌려온 거리 {d:.1f}블록')
+        # (a husk standing still from the start has no speed of its own to measure: NaN)
+        if k >= 0 and not math.isnan(walkers[k][3]):
+            speed = walkers[k][3]
+            if speed < .5: parts.append(f'허스크 이동 속도 {100 * speed:.0f}% (무력화)')
+            elif k > 0 and ((walkers[k][1] - walkers[k - 1][1]) ** 2 + (walkers[k][2] - walkers[k - 1][2]) ** 2) ** .5 > .02: parts.append('허스크가 다시 걸어감')
     if os.environ.get('FILM_INHALE_DUMMY') != '0' and r.get('dummy_ahead'):
         parts.append(f'더미: 플레이어 앞 {float(r["dummy_ahead"]):.1f}블록')
         full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
         if r['dummy_health'] and full: parts.append(f'체력 {float(r["dummy_health"]):.0f}/{full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
         if r.get('dummy_disabled') == '1': parts.append('무력화')
         elif r.get('dummy_guard') == '1': parts.append('가드 중')
-    color = (255, 150, 150) if r.get('dummy_disabled') == '1' and os.environ.get('FILM_INHALE_DUMMY') != '0' else (255, 255, 255)
+    color = (255, 150, 150) if (r.get('dummy_disabled') == '1' and os.environ.get('FILM_INHALE_DUMMY') != '0') or any('무력화' in p for p in parts) else (255, 255, 255)
     return (' · '.join(parts), color) if parts else (None, None)
 
 def actor_line(t):

@@ -120,10 +120,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * slows them) and go to NAME/actors.csv;
  * stand.csv gets its two stances, how far its fingers are open and out, how long they were drawn and how far ahead of
  * the player's feet their tips reach, and whether the dummy is incapacitated and its speed; the log how far the
- * fingers went each time and when the dummy is incapacitated and free again. Its inhale (2.61.0): "KEY_Y@n" taps Y
- * through the real keyboard path; stand.csv gets its two stances, the inhale (its age, whether it is on, how many it
- * caught and whose guard took it, how hard it sucks) and where the dummy is from the player (ahead, to their right),
- * and the log when it comes on, whom it caught and when it goes off.
+ * fingers went each time and when the dummy is incapacitated and free again. Its inhale (2.61.0; held down since
+ * 2.62.0): "KEYDOWN_Y@n" and "KEYUP_Y@n" hold Y down and let it up through the real keyboard path ("KEY_Y@n" taps it);
+ * stand.csv gets its stances (and the strain), the inhale (its age, whether it is on, whether it holds anyone now, how
+ * many guards were seen holding it off lately, how hard it sucks) and where the dummy is from the player (ahead, to
+ * their right), and the log when it comes on, when it catches someone and lets go, when a guard holds it off and when
+ * it goes off.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -400,10 +402,10 @@ public final class SkillShots implements ClientModInitializer {
             if(disabled!=dummyDisabled)log.append("  dummy ").append(disabled?"incapacitated":"free again").append(" at ").append(age).append('\n');
             dummyDisabled=disabled;
         }else standLog.append(",,");
-        // 2.61.0: the inhale's two stances; the inhale (its age in seconds, whether it is on, how many it caught and whose
-        // guard took it, how hard it sucks); where the training dummy is from the player (ahead along their facing, to
-        // their right: its drag)
-        for(int i=22;i<24;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        // 2.61.0: the inhale's stances (2.62.0: and the strain it shudders with); the inhale (its age in seconds, whether
+        // it is on, whether it holds anyone now, how many guards were seen holding it off lately, how hard it sucks);
+        // where the training dummy is from the player (ahead along their facing, to their right: its drag)
+        for(int i=22;i<25;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
         var inhale=dev.sangwoo.celestialfall.client.stand.StandInhale.describe(mc.player,mc.getTickDelta());
         standLog.append(',').append(inhale==null?",,,,":inhale);
         if(dummy!=null){
@@ -412,12 +414,13 @@ public final class SkillShots implements ClientModInitializer {
         }else standLog.append(",,");
         standLog.append('\n');
         if(inhale!=null){
-            String[] v=inhale.split(",");boolean on=v[1].equals("1");String caught=v[2]+"/"+v[3];
+            String[] v=inhale.split(",");boolean on=v[1].equals("1");String holds=v[2];int guards=Integer.parseInt(v[3]);
             if(on&&!inhaleOn)log.append("  inhale on at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
-            if(!caught.equals(inhaleCaught)&&!caught.equals("0/0"))log.append("  inhale caught ").append(v[2]).append(", a guard took it on ").append(v[3]).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
+            if(!holds.equals(inhaleCaught))log.append(holds.equals("1")?"  inhale caught someone at ":"  inhale holds no one at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
+            if(guards>inhaleGuards)log.append("  a guard held the inhale off at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
             if(!on&&inhaleOn)log.append("  inhale off at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
-            inhaleOn=on;inhaleCaught=caught;
-        }else{inhaleOn=false;inhaleCaught="0/0";}
+            inhaleOn=on;inhaleCaught=holds;inhaleGuards=guards;
+        }else{inhaleOn=false;inhaleCaught="0";inhaleGuards=0;}
         if(rush!=null){
             String[] v=rush.split(",");boolean on=v[3].equals("1");int blows=Integer.parseInt(v[1]);
             if(on&&!rushOn)log.append("  rush on at ").append(age).append(String.format(Locale.ROOT," (its age %s s)%n",v[0]));
@@ -436,7 +439,7 @@ public final class SkillShots implements ClientModInitializer {
     }
     private String punchLogged="";private boolean rushOn;private int rushBlows;
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
-    private boolean inhaleOn;private String inhaleCaught="0/0";
+    private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
     private void logInterface()throws Exception{
         String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
@@ -696,7 +699,7 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.startsWith("GIVE_")){if(age==at)server(p->{
                             var stack=switch(what.substring(5)){case "PICKAXE"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.PICKAXE);case "FRAGMENTS"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.FRAGMENT,3);case "STICK"->new net.minecraft.item.ItemStack(net.minecraft.item.Items.STICK);default->throw new IllegalArgumentException(what);};
                             p.getInventory().offerOrDrop(stack);p.currentScreenHandler.sendContentUpdates();log.append("  given ").append(what.substring(5)).append(" at ").append(age).append('\n');});continue;}
-                    if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;case "A"->GLFW_KEY_A;case "S"->GLFW_KEY_S;case "D"->GLFW_KEY_D;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;case "A"->GLFW_KEY_A;case "S"->GLFW_KEY_S;case "D"->GLFW_KEY_D;case "Y"->GLFW_KEY_Y;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what).append(" at ").append(age).append('\n');key(code,down);}continue;}
                     if(what.startsWith("STANCE_")){if(age==at)server(p->{int stance=dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(what.substring(7).toLowerCase(Locale.ROOT));
                             for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(stance);
@@ -719,8 +722,8 @@ public final class SkillShots implements ClientModInitializer {
                     if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big,"
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
-                        +"inhale,suction,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side\n"+standLog);
-                        standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0/0";}
+                        +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side\n"+standLog);
+                        standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

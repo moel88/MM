@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.61.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.62.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.62.0 — 스타플래티나 Y 흡입: 누르고 있는 동안 · 한 명만 · 95% 감속 · 더 격한 모션
+
+- **누르고 있는 동안(E처럼):** Y를 누르고 있는 동안 흡입하고, 떼면 그 순간 끝납니다. 숨을 들이쉰 뒤(0.4초) 최대 5초 동안 빨아들이며, 아무도 못 잡아도 5초 동안 이어집니다.
+- **한 명만, 들어오는 대로:** 빨아들이는 동안 앞 3블록 안에 들어온 가장 가까운 한 명을 잡습니다(2.61.0은 4명). 다가가거나 몸을 돌려 3블록 안에 들어와도 잡힙니다.
+- **잡힌 대상:** 95% 느려지고 모든 스킬·대시·평타를 못 씁니다(무력화). 피해는 없습니다. 흡입이 끝나도(Y를 떼도) 0.5초 더 무력화입니다.
+- **가드:** 스탠드 쪽으로 가드를 올리고 있는 동안은 잡히지 않고, 내리면 바로 잡힙니다.
+- **모션:** 크게 뒤로 젖혀 숨을 들이쉰 뒤 앞으로 덮치듯 깊이 숙여 빨아들이고, 빨아들이는 동안 들썩이며 떨고, 잡을 때마다 삼키듯 젖혀집니다. 붙잡는 자리는 스탠드 얼굴 앞(사용자 앞 2.1블록)입니다.
+
+[RELEASE_2.62.0_KO.md](RELEASE_2.62.0_KO.md)를 확인하세요.
 
 # 보탠드 2.61.0 — 스타플래티나 Y: 흡입 (빨아들여 5초 동안 끌고 다니기)
 

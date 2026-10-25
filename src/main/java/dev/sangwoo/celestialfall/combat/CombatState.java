@@ -92,12 +92,17 @@ public final class CombatState {
         combatUntil=Math.max(combatUntil,now+100);cancel(now);serial++;
     }
     /**
-     * The incapacitation that was to last until {@code until} ends now (2.61.0: Star Platinum's inhale let go of them
-     * early). One that lasts longer (another incapacitated them for longer since) stays. Returns whether it ended.
+     * The incapacitation that was to last until {@code until} ends at {@code to} instead (not before now), and so does a
+     * slow that was to (2.61.0: Star Platinum's inhale let go of them early; 2.62.0: they stay incapacitated and slow a
+     * little after it lets go, "흡입 끝나도 0.5초 정도는 더 무력화"). One that lasts longer (another incapacitated or
+     * slowed them for longer since) stays, and none is drawn out. Returns whether either changed.
      */
-    public boolean free(long now,long until) {
-        if(disabledUntil!=until||!disabled(now))return false;
-        disabledUntil=now;serial++;return true;
+    public boolean cut(long now,long until,long to) {
+        to=Math.max(to,now);boolean changed=false;
+        if(disabledUntil==until&&disabled(now)&&to<until){disabledUntil=to;changed=true;}
+        if(slowUntil==until&&slowed(now)&&to<until){slowUntil=to;changed=true;}
+        if(changed)serial++;
+        return changed;
     }
     public boolean dash(long now,float forward,float side) {
         if(now<dashReady||locked(now)||attacking(now)||guarding||dashing(now))return false;

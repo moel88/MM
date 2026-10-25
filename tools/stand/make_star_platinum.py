@@ -1296,32 +1296,46 @@ POSES = {
         'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (24, 0, 0)},
     },
     # ---- Y, the inhale (2.61.0, user request: "스타플래티나가 최대 3블록까지 앞에 있는 플레이어를 입으로 빨아들여서 5초동안
-    # 끌고오게 하는 스킬"): it draws a huge breath -- rearing up and back, the chest thrown out, the arms flung wide and
-    # back, the head thrown back -- and then sucks the air in at whoever is in front: thrust forward over braced legs, the
-    # head driven at the target, the arms spread wide on either side as if hauling them in. It has no mouth (the scarf
-    # covers where it would be: "입은 아예 없애줘"), so the air rushes in under the scarf (client/stand/StandInhaleFx at
-    # the 'mouth' point stance_points writes). client/stand/StandInhale breathes between the two as it holds.
+    # 끌고오게 하는 스킬"; 2.62.0: "모션도 더 격하게"): it heaves a huge breath in -- reared right back and up, the back
+    # arched, the chest thrown out, the head flung back to the sky, the arms flung out wide and high, the knees drawn up --
+    # and then lunges into the suction at whoever is in front: a deep lurch forward over braced legs (the front leg thrust
+    # out, the back one driving), the head driven at the target, the arms thrown out wide in front to haul them in; and as
+    # it sucks it strains against it ('strain': hunched in tighter, the shoulders up and the head driven on, the hands
+    # clawing in, the knees giving), client/stand/StandInhale shuddering between the two and heaving back toward the
+    # breath. It has no mouth (the scarf covers where it would be: "입은 아예 없애줘"), so the air rushes in under the
+    # scarf (client/stand/StandInhaleFx at the 'mouth' point stance_points writes).
     'inhale': {
-        'root': {'pos': (0, 1.6, 2.2)},
-        'hips': {'rot': (-8, 0, 0)}, 'torso': {'rot': (-7, 0, 0)}, 'chest': {'rot': (-12, 0, 0)},
-        'neck': {'rot': (-8, 0, 0)}, 'head': {'rot': (-14, 0, 0)},
-        'left_arm': {'reach': ((14.0, 33.0, 5.0), (.6, -1, .4))},
-        'right_arm': {'reach': ((-14.0, 33.0, 5.0), (-.6, -1, .4))},
-        'left_pad': {'rot': (0, 0, -20)}, 'right_pad': {'rot': (0, 0, 20)},
-        'left_leg': {'rot': (-14, 0, -12)}, 'left_shin': {'rot': (36, 0, 0)}, 'left_foot': {'rot': (20, 0, 0)},
-        'right_leg': {'rot': (6, 0, 12)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (26, 0, 0)},
-        'cloth_front': {'rot': (-10, 0, 0)}, 'cloth_back': {'rot': (12, 0, 0)},
+        'root': {'pos': (0, 2.4, 1.6)},
+        'hips': {'rot': (-10, 0, 0)}, 'torso': {'rot': (-11, 0, 0)}, 'chest': {'rot': (-17, 0, 0)},
+        'neck': {'rot': (-10, 0, 0)}, 'head': {'rot': (-16, 0, 0)},
+        'left_arm': {'reach': ((21.0, 36.5, 12.0), (.3, -1, .8))},
+        'right_arm': {'reach': ((-21.0, 36.5, 12.0), (-.3, -1, .8))},
+        'left_pad': {'rot': (6, 0, -28)}, 'right_pad': {'rot': (6, 0, 28)},
+        'left_leg': {'rot': (-26, 0, -14)}, 'left_shin': {'rot': (56, 0, 0)}, 'left_foot': {'rot': (24, 0, 0)},
+        'right_leg': {'rot': (10, 0, 14)}, 'right_shin': {'rot': (50, 0, 0)}, 'right_foot': {'rot': (30, 0, 0)},
+        'cloth_front': {'rot': (-16, 0, 0)}, 'cloth_back': {'rot': (18, 0, 0)},
     },
     'suction': {
-        'root': {'pos': (0, .4, -2.4)},
-        'hips': {'rot': (16, 0, 0)}, 'torso': {'rot': (9, 0, 0)}, 'chest': {'rot': (4, 0, 0)},
-        'neck': {'rot': (-6, 0, 0)}, 'head': {'rot': (-4, 0, 0)},
-        'left_arm': {'reach': ((15.0, 31.0, -9.0), (.7, -1, -.2))},
-        'right_arm': {'reach': ((-15.0, 31.0, -9.0), (-.7, -1, -.2))},
-        'left_pad': {'rot': (0, 0, -18)}, 'right_pad': {'rot': (0, 0, 18)},
-        'left_leg': {'rot': (-30, 0, -14)}, 'left_shin': {'rot': (44, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
-        'right_leg': {'rot': (18, 0, 14)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (30, 0, 0)},
-        'cloth_front': {'rot': (-18, 0, 0)}, 'cloth_back': {'rot': (20, 0, 0)},
+        'root': {'pos': (0, -.8, -3.4)},
+        'hips': {'rot': (26, 0, 0)}, 'torso': {'rot': (15, 0, 0)}, 'chest': {'rot': (8, 0, 0)},
+        'neck': {'rot': (-16, 0, 0)}, 'head': {'rot': (-15, 0, 0)},
+        'left_arm': {'reach': ((19.0, 27.5, -22.5), (.8, -1, .2))},
+        'right_arm': {'reach': ((-19.0, 27.5, -22.5), (-.8, -1, .2))},
+        'left_pad': {'rot': (-12, 0, -16)}, 'right_pad': {'rot': (-12, 0, 16)},
+        'left_leg': {'rot': (-46, 0, -18)}, 'left_shin': {'rot': (58, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
+        'right_leg': {'rot': (34, 0, 16)}, 'right_shin': {'rot': (24, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
+        'cloth_front': {'rot': (-30, 0, 0)}, 'cloth_back': {'rot': (34, 0, 0)},
+    },
+    'strain': {
+        'root': {'pos': (0, -1.5, -4.0)},
+        'hips': {'rot': (30, 0, 0)}, 'torso': {'rot': (19, 0, 0)}, 'chest': {'rot': (13, 0, 0)},
+        'neck': {'rot': (-22, 0, 0)}, 'head': {'rot': (-18, 0, 0)},
+        'left_arm': {'reach': ((14.0, 25.0, -21.0), (1, -.6, .3))},
+        'right_arm': {'reach': ((-14.0, 25.0, -21.0), (-1, -.6, .3))},
+        'left_pad': {'rot': (-20, 0, -24)}, 'right_pad': {'rot': (-20, 0, 24)},
+        'left_leg': {'rot': (-50, 0, -20)}, 'left_shin': {'rot': (68, 0, 0)}, 'left_foot': {'rot': (12, 0, 0)},
+        'right_leg': {'rot': (38, 0, 18)}, 'right_shin': {'rot': (32, 0, 0)}, 'right_foot': {'rot': (42, 0, 0)},
+        'cloth_front': {'rot': (-34, 0, 0)}, 'cloth_back': {'rot': (40, 0, 0)},
     },
 }
 
