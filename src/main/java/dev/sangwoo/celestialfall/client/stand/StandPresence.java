@@ -196,7 +196,8 @@ public final class StandPresence {
     /** Whether this player's body shows to the camera (not the one it looks out of in the first person, and in view). */
     static boolean shows(WorldRenderContext c,PlayerEntity p){
         boolean eyes=p==c.camera().getFocusedEntity()&&!c.camera().isThirdPerson();
-        return !eyes&&(c.frustum()==null||c.frustum().isVisible(p.getBoundingBox().expand(1)));
+        // (2.66.1: nor round its user while a beatdown's camera leaves them undrawn)
+        return !eyes&&!StandBeatdown.hidden(p)&&(c.frustum()==null||c.frustum().isVisible(p.getBoundingBox().expand(1)));
     }
     /** The aura's bearers, and every body glowing sky blue as it uses a skill with a cutscene (CutsceneFlash), drawn round them. */
     private static void glow(MinecraftClient mc,WorldRenderContext c,List<StandAuraLayer.Bearer> bearers,float flare){

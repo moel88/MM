@@ -265,14 +265,25 @@ class StandBeatdownTest {
         assertTrue(inside[7]&&inside[8],"its fists into the lens from the one struck's eyes");
     }
     /**
-     * Its user is out of every frame from "裁くのは" through the last blow and the one struck sent flying (2.66.1, user
-     * request: "그냥 심판하는건 나의 스탠드다 할때도 플레이어 보여주지마셈"; 2.66.0's "裁くのは" shot had them in the near
-     * half of the frame, pointing up past the stand): no part of their body, nor of the arm they point with, nor of the
-     * glow a little round it (their aura), is between the black bars on a screen as wide as 21:9, however each blow
-     * jolts the camera, wherever the one struck stood.
+     * Its user is not shown through the rush, the line and the one struck sent flying (2.66.1, user request: "그냥
+     * 심판하는건 나의 스탠드다 할때도 플레이어 보여주지마셈"; 2.66.0's "裁くのは" shot had them in the near half of the
+     * frame pointing up past the stand, and the shots from the one struck's eyes showed them small on the ground behind
+     * it): the cutscene's camera leaves them undrawn from the uppercut's shot to the end of the launch shot (and draws
+     * them through "yare yare daze" and "Star Platinum!"), and from the side shot after "裁くのは" on the shots do
+     * not even look at where they stand (nothing of them shows even where they cannot be left undrawn, a shader pack's
+     * shadows): no part of their body, nor of the arm they point with, nor of the glow a little round it (their aura),
+     * is between the black bars of a screen as wide as 21:9, however each blow jolts the camera, wherever the one
+     * struck stood.
      */
-    @Test void itsUserIsOutOfTheFrameThroughTheLine(){
-        int n=StandBeatdown.CUTS.length;double[] most=new double[n];java.util.Arrays.fill(most,-99);String seen=null;
+    @Test void itsUserIsNotShownThroughTheLine(){
+        int n=StandBeatdown.CUTS.length;
+        for(float t=StandBeatdown.CUT;t<=StandBeatdown.END;t+=FRAME){
+            boolean rush=t>=StandBeatdown.CUTS[5]&&t<StandBeatdown.CUTS[n-1];
+            assertEquals(rush,StandBeatdown.hidesUser(t),"its user drawn or not at "+t);
+        }
+        assertTrue(StandBeatdown.hidesUser(StandBeatdown.JUDGE)&&StandBeatdown.hidesUser(StandBeatdown.FINAL),"through the line");
+        assertFalse(StandBeatdown.hidesUser(StandBeatdown.rec(1.5f))||StandBeatdown.hidesUser(StandBeatdown.REVEAL+.2f),"drawn through yare yare daze and Star Platinum!");
+        double[] most=new double[n];java.util.Arrays.fill(most,-99);String seen=null;
         for(double ahead:new double[]{1.2,2.6,4.1}){
             var b=beat(ahead,12);
             for(int f=(int)(StandBeatdown.CUTS[6]/FRAME)+1;f<=(int)(StandBeatdown.END/FRAME);f++){
@@ -280,11 +291,11 @@ class StandBeatdownTest {
                 double in=-99;
                 for(var p:user(b))in=Math.max(in,inFrame(b,t,p.at(),p.r()));
                 most[shot]=Math.max(most[shot],in);
-                if(seen==null&&in>=0&&t>=StandBeatdown.JUDGE&&t<StandBeatdown.CUTS[n-1])seen="at "+t+" (shot "+shot+", the one struck "+ahead+" blocks ahead): "+in;
+                if(seen==null&&in>=0&&t>=StandBeatdown.CUTS[12]&&t<StandBeatdown.CUTS[n-1])seen="at "+t+" (shot "+shot+", the one struck "+ahead+" blocks ahead): "+in;
             }
         }
-        for(int i=6;i<n;i++)System.out.printf(java.util.Locale.ROOT,"shot %d (from %.2f s): its user %s the frame (%.2f blocks)%n",i,StandBeatdown.CUTS[i],most[i]<0?"out of":"in",most[i]);
-        assertNull(seen,"its user in the frame");
+        for(int i=6;i<n;i++)System.out.printf(java.util.Locale.ROOT,"shot %d (from %.2f s): where its user stands %s the frame (%.2f blocks)%n",i,StandBeatdown.CUTS[i],most[i]<0?"out of":"in",most[i]);
+        assertNull(seen,"where its user stands in the frame");
     }
     record Ball(Vec3d at,double r){}
     /** Its user's body as the cutscene holds them (where they stood, facing the blow's way, their right arm up pointing through the line), as balls a little bigger than it (their aura). */

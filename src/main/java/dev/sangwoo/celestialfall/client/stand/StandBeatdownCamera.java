@@ -29,9 +29,9 @@ import static dev.sangwoo.celestialfall.client.stand.StandBeatdown.*;
  * eyes, the stand from its knees up rushing them, its fists flying at the camera from every side, tipped and rocking.</li>
  * <li>High over the stand's right shoulder, down onto its fists hammering them.</li>
  * <li>From beside the stand's head: their face, their head snapping with every fist.</li>
- * <li>"裁くのは" (JUDGE): from under the two of them on the stand's right, up past its fists at their faces against the
- * sky. From here to the end of their flight its user is out of every frame (2.66.1, user request: "그냥 심판하는건 나의
- * 스탠드다 할때도 플레이어 보여주지마셈").</li>
+ * <li>"裁くのは" (JUDGE): over the back of the one struck, at its face glaring over its fists as they come in on them.
+ * Through the rush and the line its user is not drawn for this camera, and the shots after this one do not even look
+ * at where they stand (2.66.1, user request: "그냥 심판하는건 나의 스탠드다 할때도 플레이어 보여주지마셈").</li>
  * <li>From the side, the two of them across the frame, tipped hard; "俺の" (MINE) closer on their two faces, tipped the other way.</li>
  * <li>"スタンド": close on the stand drawing back for its last blow, from in front of it to its left, low, tipped.</li>
  * <li>"DA!" (FINAL): its fist into their face, close from their side.</li>
@@ -139,12 +139,14 @@ public final class StandBeatdownCamera {
             return new Shot(crown.add(r.multiply(.62)).add(f.multiply(.2+.1*k)).add(0,.4,0),vh.add(0,-.15,0),54-6*k,10,false,1.4f);
         }
         if(t<CUTS[12]){
-            // "裁くのは": from under the two of them on the stand's right, up past its fists at their two faces against
-            // the sky, swinging slowly round toward the one struck (2.66.1, user request: "그냥 심판하는건 나의 스탠드다
-            // 할때도 플레이어 보여주지마셈": its user is out of the frame through the line; 2.66.0 showed them pointing up)
+            // "裁くのは": over the back of the one struck (their head in the near corner), down at its face beyond them,
+            // glaring over its fists as they all come in on them, pushing in slowly (2.66.1, user request: "그냥
+            // 심판하는건 나의 스탠드다 할때도 플레이어 보여주지마셈": its user, behind the stand, is not drawn
+            // (StandBeatdown.hidesUser); 2.66.0 showed them pointing up from beside them. First tries at the stand
+            // from its sides and from under it showed little but its afterimages' arms: they close in on the one
+            // struck, so from behind them its face is clear)
             float k=u(t,CUTS[11],CUTS[12]);
-            Vec3d mid=face.lerp(vh,.5);double a=Math.toRadians(-8+30*k);
-            return new Shot(mid.add(r.multiply(1.6*Math.cos(a))).add(f.multiply(1.6*Math.sin(a))).add(0,-2.25,0),mid.add(0,.15,0),62-4*k,8,false,1f);
+            return new Shot(vh.add(f.multiply(.95-.12*k)).add(r.multiply(.62)).add(0,.95,0),face.add(0,.05,0),50-4*k,6,false,1f);
         }
         if(t<CUTS[13]){
             // from the side, the two of them across the frame (the one struck on the left), the frame tipped hard; out

@@ -567,23 +567,36 @@ public final class StandBeatdown {
             sy+=(float)(jolt.right()*JOLT_TURN);sp-=(float)(jolt.up()*JOLT_TURN);
         }
         float roll=shot.roll()+jolt.roll(),k=handback(b,t);
-        if(k<=0)return new CinematicDirector.Pose(eye,sy,sp,roll);
-        return new CinematicDirector.Pose(eye.lerp(vanilla,k),sy+MathHelper.wrapDegrees(yaw-sy)*k,sp+(pitch-sp)*k,roll*(1-k));
+        if(k<=0){shotEye=eye;return new CinematicDirector.Pose(eye,sy,sp,roll);}
+        shotEye=eye.lerp(vanilla,k);
+        return new CinematicDirector.Pose(shotEye,sy+MathHelper.wrapDegrees(yaw-sy)*k,sp+(pitch-sp)*k,roll*(1-k));
     }
+    /** Where this client's camera was put for its cutscene this frame (hidden: only that camera hides anyone). */
+    private static Vec3d shotEye;
     /** How far a jolt turns the view as it shakes the eye (degrees for each block). */
     static final double JOLT_TURN=9;
     /**
-     * Whether {@code e} is not drawn this frame for this client's camera: the one struck while its cutscene's shot is
-     * from inside them (their own eyes, 2.66.0: its fists coming straight at the camera) and the camera is there, as
-     * one's own body is not drawn in the first person (a camera somewhere else, a capture's from outside, sees them).
+     * Whether {@code e} is not drawn this frame for this client's camera, while it is the cutscene's (a camera
+     * somewhere else, a capture's from outside, sees them): the one struck while its shot is from inside them (their
+     * own eyes, 2.66.0: its fists coming straight at the camera), as one's own body is not drawn in the first person;
+     * and its user through the rush, the line and the one struck sent flying (hidesUser).
      */
     public static boolean hidden(Entity e){
-        var b=cinematic();if(b==null||b.victim!=e.getId()||!b.victimId.equals(e.getUuid()))return false;
+        var b=cinematic();if(b==null||shotEye==null)return false;
+        boolean victim=b.victim==e.getId()&&b.victimId.equals(e.getUuid());
+        if(!victim&&!b.user.equals(e.getUuid()))return false;
         var mc=MinecraftClient.getInstance();float t=b.age(mc.getTickDelta());
-        if(t>=b.over())return false;
-        var shot=StandBeatdownCamera.at(b,t);
-        return shot.inside()&&mc.gameRenderer.getCamera().getPos().squaredDistanceTo(shot.eye())<.6*.6;
+        if(t>=b.over()||mc.gameRenderer.getCamera().getPos().squaredDistanceTo(shotEye)>.05*.05)return false;
+        return victim?StandBeatdownCamera.at(b,t).inside():hidesUser(t);
     }
+    /**
+     * Whether its cutscene's camera leaves its user undrawn at {@code t}: from the uppercut's shot until the one struck
+     * has been sent flying out of the launch shot (2.66.1, user request: "그냥 심판하는건 나의 스탠드다 할때도
+     * 플레이어 보여주지마셈": not in the shots of the line, nor small on the ground behind the stand in the shots from
+     * the one struck's eyes, nor at the edge of the uppercut's). Its user is the cutscene's through "yare yare daze" and
+     * "Star Platinum!".
+     */
+    static boolean hidesUser(float t){return t>=CUTS[5]&&t<CUTS[17];}
     /** How far the camera has come back to its user (0 the cutscene's, 1 the gameplay camera). */
     static float handback(Beat b,float t){return smooth((t-b.over())/HANDBACK);}
     public static double fov(double vanilla,float delta){
