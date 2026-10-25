@@ -202,14 +202,9 @@ class StandBeatdownTest {
             float t=f*FRAME;var s=StandBeatdownCamera.at(b,t);
             int shot=0;while(shot+1<StandBeatdown.CUTS.length&&t>=StandBeatdown.CUTS[shot+1])shot++;
             assertTrue(s.look().distanceTo(s.eye())>.8,"the eye too near what it looks at at "+t);
-            // never in among the rush's fists (2.65.0: the first capture's "俺の" shot sat right beside the one struck,
-            // where the fists fly, and showed nothing but a dark blur of them): clear of the line from the stand's chest
-            // to the one struck's while it rushes them
-            if(t>=StandBeatdown.RUSH_FROM&&t<=StandBeatdown.RUSH_TO){
-                var v=StandBeatdown.victim(b,t);
-                double clear=fromSegment(s.eye(),StandBeatdownCamera.stand(b,v).add(0,1.2,0),v.feet().add(0,1.15,0));
-                assertTrue(clear>1.2,"the eye "+clear+" blocks from the fists' way at "+t+" (shot "+shot+")");
-            }
+            // (2.66.0: never at a point in the floor under them as they lie: the eye, kept out of the walls along the
+            // way from what it looks at, was pulled right down onto it)
+            if(shot==StandBeatdown.CUTS.length-1)assertTrue(s.look().y>=b.land.y+.4,"looking into the floor at "+t);
             if(last!=null&&shot==lastShot){
                 double eye=s.eye().distanceTo(last.eye());
                 Vec3d a=s.look().subtract(s.eye()).normalize(),c=last.look().subtract(last.eye()).normalize();
@@ -230,6 +225,73 @@ class StandBeatdownTest {
             assertTrue(cut,"a cut at "+at);
         }
     }
+    /**
+     * The camera's eye keeps clear of the bodies and the fists from the rush on (2.66.0, the shots from the user's video
+     * close in among them): of every arm of the stand and of its afterimages as drawn (from the shoulder to the fist,
+     * 0.3 blocks: the fists come right up to the lens from the one struck's eyes but never cut through it), of the
+     * stand's body and head (its mane) and, where they are drawn, of the one struck's, however each blow shakes it.
+     * (2.65.0's first capture's "俺の" shot sat right beside the one struck, where the fists fly, and showed nothing but
+     * a dark blur of them.)
+     */
+    @Test void theCameraKeepsClearOfTheBodiesAndTheFists(){
+        var b=beat(2.6,12);
+        int n=StandBeatdown.CUTS.length;double[] arms=new double[n],stand=new double[n],victim=new double[n];
+        java.util.Arrays.fill(arms,99);java.util.Arrays.fill(stand,99);java.util.Arrays.fill(victim,99);
+        boolean[] inside=new boolean[n];
+        for(int f=(int)(StandBeatdown.CUTS[6]/FRAME)+1;f<=(int)(StandBeatdown.CUTS[n-1]/FRAME);f++){
+            float t=f*FRAME;var s=StandBeatdownCamera.at(b,t);var j=StandBeatdownCamera.jolt(b,t);
+            int shot=0;while(shot+1<n&&t>=StandBeatdown.CUTS[shot+1])shot++;
+            // (each blow shakes the eye this far from the shot's)
+            double shake=Math.hypot(j.right(),j.up()),eyeArms=99;
+            for(var a:arms(b,t))eyeArms=Math.min(eyeArms,fromSegment(s.eye(),a[0],a[1]));
+            arms[shot]=Math.min(arms[shot],eyeArms-shake);
+            Vec3d feet=StandBeatdown.standFeet(b,t);
+            stand[shot]=Math.min(stand[shot],fromSegment(s.eye(),feet.add(0,.4,0),StandBeatdownCamera.crown(b,feet).add(0,.2,0))-shake);
+            inside[shot]|=s.inside();
+            if(!s.inside()){
+                var v=t<StandBeatdown.FINAL?StandBeatdown.victim(b,t):StandBeatdown.flight(b,t);
+                victim[shot]=Math.min(victim[shot],fromSegment(s.eye(),v.feet().add(0,.2,0),StandBeatdownCamera.head(b,v))-shake);
+            }
+        }
+        for(int i=6;i<n-1;i++){
+            System.out.printf(java.util.Locale.ROOT,"shot %d (from %.2f s)%s: the eye at least %.2f blocks from an arm, %.2f from the stand, %.2f from the one struck%n",
+                i,StandBeatdown.CUTS[i],inside[i]?" from their eyes":"",arms[i],stand[i],victim[i]);
+            // (from their eyes the fists come right up to the lens; elsewhere an arm this near fills the frame: the
+            // first capture's close-up of its face, among its afterimages' arms, showed nothing but a purple blur)
+            assertTrue(arms[i]>=(inside[i]?.3:.4),"shot "+i+": the eye "+arms[i]+" blocks from an arm");
+            assertTrue(stand[i]>=.55,"shot "+i+": the eye "+stand[i]+" blocks from the stand's body");
+            assertTrue(inside[i]||victim[i]>=.5,"shot "+i+": the eye "+victim[i]+" blocks from the one struck");
+        }
+        assertTrue(inside[7]&&inside[8],"its fists into the lens from the one struck's eyes");
+    }
+    /** The stand's arms where they are drawn at {@code t} once it is round in front, and its afterimages' through the rush (each from its shoulder to its fist, world). */
+    static java.util.List<Vec3d[]> arms(StandBeatdown.Beat b,float t){
+        var out=new java.util.ArrayList<Vec3d[]>();float delta=clock(t);
+        var s=StandBeatdown.shape(b,delta,0,new StandPunch.Shape());if(s==null||s.engage<.98f)return out;
+        Vec3d feet=StandBeatdown.standFeet(b,t);
+        float[] w=new float[s.weights.length];for(int i=0;i<w.length;i++)w[i]=s.share(i);
+        arm(out,w,feet,b.f,s.armL,s.armR,1,1);
+        var look=new StarPlatinumLook();
+        for(int i=0;i<StandRush.phantoms();i++){
+            if(StandBeatdown.phantom(b,i,delta,look)<=.02f)continue;
+            Vec3d at=feet.add(b.r.multiply(StandRush.PHANTOMS[i][1])).add(0,StandRush.PHANTOMS[i][2],0);
+            arm(out,look.weights,at,Vec3d.fromPolar(0,b.yaw+StandRush.PHANTOMS[i][3]),look.armL,look.armR,look.showL,look.showR);
+        }
+        return out;
+    }
+    static void arm(java.util.List<Vec3d[]> out,float[] w,Vec3d feet,Vec3d f,float sizeL,float sizeR,float showL,float showR){
+        Vec3d r=new Vec3d(-f.z,0,f.x);
+        for(int side=0;side<2;side++){
+            if((side==0?showL:showR)<.05f)continue;
+            float[] fist=new float[3],shoulder=new float[3];
+            for(int i=0;i<w.length;i++){
+                if(w[i]==0)continue;float[] g=StandPunch.grown(i,side,side==0?sizeL:sizeR),q=StandPunch.SHOULDERS[i][side];
+                for(int k=0;k<3;k++){fist[k]+=w[i]*g[k];shoulder[k]+=w[i]*q[k];}
+            }
+            out.add(new Vec3d[]{on(feet,f,r,shoulder),on(feet,f,r,fist)});
+        }
+    }
+    static Vec3d on(Vec3d feet,Vec3d f,Vec3d r,float[] p){return feet.add(f.multiply(p[0])).add(r.multiply(p[1])).add(0,p[2],0);}
     /** How far {@code p} is from the segment from {@code a} to {@code c}. */
     static double fromSegment(Vec3d p,Vec3d a,Vec3d c){
         Vec3d d=c.subtract(a);double k=Math.max(0,Math.min(1,p.subtract(a).dotProduct(d)/Math.max(1e-9,d.lengthSquared())));

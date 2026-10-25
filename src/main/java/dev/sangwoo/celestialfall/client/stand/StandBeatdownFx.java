@@ -33,11 +33,13 @@ public final class StandBeatdownFx {
         int seed(){return b.seed;}
     }
     private static final List<Shown> FRAME=new ArrayList<>();
+    /** Where the camera is this frame: the rush's bursts right in front of it (its shots from the one struck's eyes) fade. */
+    private static Vec3d eye=Vec3d.ZERO;
     private StandBeatdownFx(){}
 
     /** Gathers this frame's cutscenes within 96 blocks of the camera; returns whether any show. */
     public static boolean prepare(MinecraftClient mc,float delta,Vec3d camera){
-        FRAME.clear();
+        FRAME.clear();eye=camera;
         if(mc.world==null)return false;
         for(var b:StandBeatdown.all()){
             float t=b.age(delta);
@@ -49,14 +51,22 @@ public final class StandBeatdownFx {
     }
     // ───────────────────────────── where ─────────────────────────────
 
-    /** Where the one struck is struck by the rush's blow {@code k}: a spot on their front, a different one each blow. */
+    /**
+     * Where the rush's fist {@code k} lands on the one struck (2.66.0: where the fist itself lands, at their face, chest
+     * or belly a little to the side it comes in on; 2.65.0 a random spot for each of the server's blows): on their
+     * front where they are as it lands (they are driven back with every one), leaning back as they are.
+     */
     static Vec3d spot(Shown s,int k){
-        var b=s.b;int seed=b.seed+k*7919;
-        double rt=(Ease.hash(seed+5)-.5)*.7,up=(Ease.hash(seed+6)-.55)*.9;
-        // where they are as that blow lands (they are driven back with every one)
-        Body v=victim(b,blowAt(k));
-        return v.feet().add(0,1.15+up,0).subtract(b.f.multiply(.32)).add(b.r.multiply(rt));
+        var b=s.b;int seed=b.seed+k*7919,stance=fistStance(b,k),side=fistSide(stance),h=fistHeight(stance);
+        double up=(h==1?1.6:h==0?1.3:.95)+(Ease.hash(seed+6)-.5)*.14,rt=side*.08+(Ease.hash(seed+5)-.5)*.16;
+        Body v=victim(b,fistAt(k));
+        double back=(up-MIDDLE)*Math.sin(Math.toRadians(v.lean()));
+        return v.feet().add(0,up,0).add(b.f.multiply(back-.3)).add(b.r.multiply(rt));
     }
+    /** How much a burst at {@code p} shows from where the camera is: none right in front of it (a shot from the one struck's eyes), all from a block on. */
+    static float near(Vec3d p){return Ease.smooth((float)p.distanceTo(eye),.45f,1.1f);}
+    /** How far above their chest the last blow lands (2.66.0: in their face). */
+    static final double FACE_UP=.4;
     /** The one struck's chest as each big blow lands: {@code at} on the clock. */
     static Vec3d chestAt(Beat b,float at){return victim(b,Math.min(at,FINAL-1e-4f)).feet().add(0,1.15,0);}
 
@@ -68,15 +78,16 @@ public final class StandBeatdownFx {
             // ink under each burst, a little bigger, for its dark edge
             for(int i=0;i<STRIKES.length;i++){
                 float at=STRIKES[i],a=burstAlpha(t,at,i==STRIKES.length-1?.38f:.24f);if(a<=0)continue;
-                Vec3d c=chestAt(b,at).subtract(b.f.multiply(.3)).add(0,i==0?.45:0,0);
+                Vec3d c=chestAt(b,at).subtract(b.f.multiply(.3)).add(0,i==0?.45:FACE_UP,0);
                 burst(m,c,size(i)*1.14,.36,12,b.seed+i*31,INK,INK,.78f*a,.78f*a);
             }
             float g=burstAlpha(t,GRAB,.2f);
             if(g>0)burst(m,chestAt(b,GRAB).add(0,.32,0).subtract(b.f.multiply(.3)),.9*1.14,.36,9,b.seed+7,INK,INK,.7f*g,.7f*g);
-            int n=blows(t);
+            int n=fists(t);
             for(int k=Math.max(0,n-3);k<n;k++){
-                float a=burstAlpha(t,blowAt(k),.1f);if(a<=0)continue;
-                burst(m,spot(s,k),.55*1.14,.36,8,b.seed+k*13,INK,INK,.6f*a,.6f*a);
+                float a=burstAlpha(t,fistAt(k),.1f);if(a<=0)continue;
+                Vec3d c=spot(s,k);a*=near(c);if(a<=0)continue;
+                burst(m,c,.55*1.14,.36,8,b.seed+k*13,INK,INK,.6f*a,.6f*a);
             }
         }
     }
@@ -132,22 +143,22 @@ public final class StandBeatdownFx {
         }
         sparks(m,c,UP,b.r,b.f.multiply(-1),t,UPPER,1.2,b.seed+70,24);
     }
-    /** The rush: a burst for each blow on the one struck, the air streaming at them from the stand, a pressure ring every few blows, a glow on them. */
+    /** The rush: a burst for each fist where it lands on the one struck, the air streaming at them from the stand, a pressure ring every few fists, a glow on them. */
     static void rush(EffectMesh m,Shown s,float t){
         var b=s.b;if(t<RUSH_FROM-.05f||t>RUSH_TO+.4f)return;
-        int n=blows(t);
+        int n=fists(t);
         for(int k=Math.max(0,n-3);k<n;k++){
-            float at=blowAt(k),a=burstAlpha(t,at,.1f);if(a<=0)continue;
-            Vec3d c=spot(s,k);
+            float at=fistAt(k),a=burstAlpha(t,at,.1f);if(a<=0)continue;
+            Vec3d c=spot(s,k);a*=near(c);if(a<=0)continue;
             burst(m,c,.55,.36,8,b.seed+k*13,k%4==0?LILAC:VIOLET,VIOLET,.85f*a,.7f*a);
             if(k%3==0)m.star(c,.3,WHITE,.4f*a);
             float u=Ease.unit(t,at,at+.1f);
             FxLib.ringPlane(m,c.subtract(b.f.multiply(.1)),b.r,UP,.15+.6*Ease.out(t,at,at+.09f),.08,BLUE,.7f*(1-u));
         }
-        // a pressure ring every fourth blow, racing on past them
+        // a pressure ring every fourth fist, racing on past them
         for(int k=Math.max(0,n-8);k<n;k++){
             if(k%4!=0)continue;
-            float at=blowAt(k),u=Ease.unit(t,at,at+.3f);if(u>=1)continue;
+            float at=fistAt(k),u=Ease.unit(t,at,at+.3f);if(u>=1)continue;
             Vec3d o=spot(s,k).add(b.f.multiply(.3+1.8*Ease.out(t,at,at+.3f)));
             FxLib.ringPlane(m,o,b.r,UP,.5+1.2*Ease.out(t,at,at+.25f),.14,LILAC,.6f*(1-u)*Ease.smooth(t,at,at+.02f));
         }
@@ -166,7 +177,7 @@ public final class StandBeatdownFx {
     /** The last blow: the heavy punch's finish (its dome, rings racing on, the lance, sparks), the trail after the one struck as they fly, and where they come down. */
     static void finish(EffectMesh m,Shown s,float t){
         var b=s.b;if(t<FINAL-.45f||t>LAND+1.2f)return;
-        Vec3d c=launch(b).feet().add(0,1.15,0).subtract(b.f.multiply(.3)),f=b.f,r=b.r;Vec3d up=UP;
+        Vec3d c=launch(b).feet().add(0,1.15+FACE_UP,0).subtract(b.f.multiply(.3)),f=b.f,r=b.r;Vec3d up=UP;
         // light gathering in its cocked fist as it coils
         if(t<FINAL&&s.stand!=null){
             Vec3d fist=StandPunchFx.on(StandPunch.windFist(5),s.stand);
@@ -253,8 +264,8 @@ public final class StandBeatdownFx {
                 boolean last=i==STRIKES.length-1;
                 f.light(chestAt(b,at),0xc8b8ff,last?15:i==0?12:10,(last?4.6f:i==0?3.6f:3.0f)*FxLib.kick(t,at,last?.2f:.14f));
             }
-            int n=blows(t);
-            if(n>0&&t<RUSH_TO+.3f)f.light(s.chest,0xd0c4ff,8,1.8f*FxLib.kick(t,blowAt(n-1),.08f)+.4f*(1-Ease.smooth(t,RUSH_TO,RUSH_TO+.3f))*Ease.smooth(t,RUSH_FROM,RUSH_FROM+.1f));
+            int n=fists(t);
+            if(n>0&&t<RUSH_TO+.3f)f.light(s.chest,0xd0c4ff,8,1.8f*FxLib.kick(t,fistAt(n-1),.08f)+.4f*(1-Ease.smooth(t,RUSH_TO,RUSH_TO+.3f))*Ease.smooth(t,RUSH_FROM,RUSH_FROM+.1f));
             if(t>=REVEAL&&t<REVEAL+.8f)f.light(b.from.add(0,1.2,0),0xb8a4ff,10,2.8f*FxLib.kick(t,REVEAL,.3f));
             float fly=Ease.smooth(t,FINAL+FINAL_STOP-.02f,FINAL+FINAL_STOP+.04f)*(1-Ease.smooth(t,LAND,LAND+.3f));
             if(fly>0)f.light(flight(b,Math.min(t,LAND)).feet().add(0,.9,0),0x9c86ff,7,1.6f*fly);

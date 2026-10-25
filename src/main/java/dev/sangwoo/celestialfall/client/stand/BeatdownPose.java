@@ -83,21 +83,33 @@ public final class BeatdownPose {
         p.joint[MotionPose.HEAD][1]+=s;p.joint[MotionPose.HEAD][2]+=.25f*s;
         return p;
     }
-    /** The one struck's limbs at {@code t}: their arms, legs and head jerked by each of the rush's blows (2.65.0: harder). */
+    /**
+     * The one struck's limbs at {@code t}: their arms, legs and head jerked by each of the rush's fists as it lands
+     * (2.65.0: harder; 2.66.0, from the user's video: the head snapped the way each fist drives it, round and back
+     * away from a fist to the face, whipped forward by one to the chest, dropped by one to the belly).
+     */
     public static MotionPose struck(Beat b,float t){
         var p=STRUCK_BODY.frame(t).joints();
         float e=keyed(STRUCK_ELBOW,t),k=keyed(STRUCK_KNEE,t);
         p.elbow[0]=p.elbow[1]=e;p.knee[0]=k;p.knee[1]=k*.8f;
-        // jerked by the blows: each arm and leg thrown its own way and back, the head snapped back
-        float jr=0,jl=0,lr=0,ll=0,head=0;
-        int n=blows(t);
+        // jerked by the fists: each arm and leg thrown its own way and back, the head snapped
+        float jr=0,jl=0,lr=0,ll=0,pitch=0,yaw=0,roll=0;
+        int n=fists(t);
         for(int i=Math.max(0,n-3);i<n;i++){
-            float j=kick(t,blowAt(i),.06f);int s=b.seed+i*131;
+            float j=kick(t,fistAt(i),.06f);int s=b.seed+i*131;
+            int stance=fistStance(b,i),side=fistSide(stance),h=fistHeight(stance);
             jr+=(float)(Ease.hash(s)-.5)*44*j;jl+=(float)(Ease.hash(s+1)-.5)*44*j;
-            lr+=(float)(Ease.hash(s+2)-.5)*24*j;ll+=(float)(Ease.hash(s+3)-.5)*24*j;head+=(float)(6+10*Ease.hash(s+4))*j;
+            lr+=(float)(Ease.hash(s+2)-.5)*24*j;ll+=(float)(Ease.hash(s+3)-.5)*24*j;
+            float x=(float)Ease.hash(s+4);
+            // (the head's yaw turns the face to their right, its roll tips its top to their left: a fist from the
+            // stand's right lands on their left cheek and turns the face to their right)
+            if(h==1){yaw+=side*(16+8*x)*j;pitch-=(7+5*x)*j;roll-=side*(5+4*x)*j;}
+            else if(h==0){pitch+=(6+5*x)*j;yaw+=side*5*j;}
+            else{pitch+=(11+6*x)*j;yaw+=side*4*j;}
         }
         p.joint[MotionPose.RIGHT_ARM][0]+=jr;p.joint[MotionPose.LEFT_ARM][0]+=jl;
-        p.joint[MotionPose.RIGHT_LEG][0]+=lr;p.joint[MotionPose.LEFT_LEG][0]+=ll;p.joint[MotionPose.HEAD][0]-=head;
+        p.joint[MotionPose.RIGHT_LEG][0]+=lr;p.joint[MotionPose.LEFT_LEG][0]+=ll;
+        p.joint[MotionPose.HEAD][0]+=pitch;p.joint[MotionPose.HEAD][1]+=yaw;p.joint[MotionPose.HEAD][2]+=roll;
         return p;
     }
     /**

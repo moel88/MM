@@ -436,6 +436,8 @@ public final class SkillShots implements ClientModInitializer {
         // how many bodies the last frame made glow sky blue (StandAuraLayer)
         for(int i:new int[]{27,28,18,19})standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
         standLog.append(',').append(dev.sangwoo.celestialfall.client.stand.StandAuraLayer.glowedLast());
+        // 2.66.0: whether the one struck is left undrawn this frame (the cutscene's shots from their own eyes)
+        standLog.append(',').append(dummy!=null&&dev.sangwoo.celestialfall.client.stand.StandBeatdown.hidden(dummy)?1:0);
         standLog.append('\n');
         if(beat!=null){
             String[] v=beat.split(",");boolean ended=v[1].equals("1");
@@ -757,7 +759,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
-                        +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed\n"+standLog);
+                        +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
