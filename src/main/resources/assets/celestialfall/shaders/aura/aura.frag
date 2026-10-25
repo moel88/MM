@@ -5,11 +5,12 @@
 // adds a little light, never so much that it burns to white.
 // And the sky-blue glow of a body using a skill with a cutscene (2.65.0, "몸 전체가 하늘색으로 빛이 나야하는 쪽에
 // 가까움 그러니까 몸 색깔을 바꾸는건 X"): sky-blue light spreading out round its whole outline, palest and brightest
-// right at it, mostly added light; nothing on the body itself.
+// right at it, mostly added light, and along the body's edges just inside its outline a little light (as a light behind
+// it would cast); the body's own colours are left as they are.
 uniform sampler2D MaskA;     // the stands (alpha: how solid)
 uniform sampler2D MaskB;     // their users
 uniform sampler2D MaskC;     // the bodies glowing sky blue
-uniform sampler2D Halo;      // all three, blurred: red the stands, green the users, blue the glowing (half size)
+uniform sampler2D Halo;      // all three, blurred: red the stands, green the users, the glowing blue (wide) and alpha (close) (half size)
 uniform sampler2D Noise;     // tiling noise: red smooth, green finer
 uniform vec2 Texel;          // one screen pixel
 uniform float Scale;         // screen pixels a block, where the bearers are
@@ -54,13 +55,18 @@ vec4 aura(vec2 px){
 vec4 sky(vec2 px){
     if(Glow<=0.0)return vec4(0.0);
     float cov=smoothstep(0.02,0.18,texture(MaskC,texCoord).a);
-    float h=texture(Halo,px*Texel).b*(1.0-cov);
-    if(h<=0.003)return vec4(0.0);
-    // how much light here (out to where the blur ends), and right at the outline, paler and brighter
-    float a=smoothstep(0.0,0.42,h);
-    float edge=smoothstep(0.24,0.5,h);
-    vec3 col=mix(vec3(0.5,0.86,1.0),vec3(0.86,0.97,1.0),0.7*edge)*(0.95*a+0.6*edge);
-    return vec4(col,0.3*a);
+    vec4 h=texture(Halo,px*Texel);
+    float wide=h.b,close=h.a;
+    if(wide<=0.003&&close<=0.003)return vec4(0.0);
+    vec3 sky=vec3(0.45,0.84,1.0),pale=vec3(0.84,0.97,1.0);
+    // outside the body: a broad soft light all round it, and a brighter, paler one close to its outline
+    float out1=smoothstep(0.0,0.32,wide)*(1.0-cov);
+    float out2=smoothstep(0.1,0.5,close)*(1.0-cov);
+    // on the body, only just inside its outline: light along its edges (as a light behind it would), its own colours
+    // left as they are everywhere else
+    float rim=cov*(1.0-smoothstep(0.55,0.92,close))*smoothstep(0.02,0.3,close);
+    vec3 col=sky*(1.15*out1+0.35*rim)+mix(sky,pale,0.65)*(0.95*out2);
+    return vec4(col,0.26*out1+0.2*out2);
 }
 void main(){
     vec2 px=gl_FragCoord.xy;

@@ -28,7 +28,8 @@ import org.joml.Vector3f;
  * sky blue for 0.2 seconds; 2.65.0 (user request: "몸이 하늘색으로 변하는게 아니고 정확히는 몸 전체가 하늘색으로 빛이
  * 나야하는 쪽에 가까움 그러니까 몸 색깔을 바꾸는건 X", "빛나는 걸 0.5로 늘리자") leaves the body as it is and makes the
  * whole of it shine: for DURATION seconds a sky-blue light spreads out round the whole body from its outline, brightest
- * and palest right at the outline, in over two frames and out over the last part. It is drawn with the stands' aura
+ * and palest right at the outline, with a little light along its edges just inside it (as a light behind it would
+ * cast), in over two frames and out over the last part. It is drawn with the stands' aura
  * (StandAuraLayer: the body into a mask of its own, blurred out round it, only outside it); without that layer (a shader
  * pack, or post-processing off) the body gets a glowing shell instead ({@link #hull}: boxes a little bigger than each of
  * its limbs whose sides facing the camera are left out, so they show only round the body's outline, adding sky-blue light).

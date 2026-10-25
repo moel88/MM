@@ -25,8 +25,8 @@ import static dev.sangwoo.celestialfall.client.stand.StandBeatdown.*;
  * <li>The rush, three shots: over the stand's shoulder, turning slowly, the frame tipped; from behind the one struck,
  * close, the fists coming at the camera past them; turning fast round the two from the one side to the other.</li>
  * <li>"裁くのは" (JUDGE): straight down its user's arm as they point at the one struck, at their face.</li>
- * <li>The pause after it: over its user's shoulder, down their pointing arm at the rush up in the air.</li>
- * <li>"俺の" (MINE): close on the stand's face as it rushes, the fists flying past the camera.</li>
+ * <li>The pause after it: over its user's right shoulder, past their pointing arm at the rush up in the air.</li>
+ * <li>"俺の" (MINE): close on the stand's face from its right as it rushes, its fists flying across the frame into the one struck.</li>
  * <li>"スタンド" (the rush's last blows past): from the side as it draws back for the last blow, pushing in.</li>
  * <li>"DA!" (FINAL): close in front of the one struck to their right, low, as the blow lands, holds and sends them
  * flying out of the frame.</li>
@@ -113,18 +113,19 @@ public final class StandBeatdownCamera {
         if(t<CUTS[10]){
             // "裁くのは": straight down its user's arm as they point at the one struck, at their face, pushing in
             float k=u(t,CUTS[9],CUTS[10]);
-            return new Shot(b.at(o,1.9-.25*k,1.95,.35),b.at(o,0,1.62,.05),46-5*k,0);
+            return new Shot(b.at(o,1.65-.2*k,1.8,.35),b.at(o,0,1.62,.05),46-5*k,0);
         }
         if(t<CUTS[11]){
-            // the pause after it: over its user's left shoulder, down their pointing arm at the rush up in the air
+            // the pause after it: over its user's right shoulder, past their pointing arm at the rush up in the air
             float k=u(t,CUTS[10],CUTS[11]);
-            return new Shot(b.at(o,-1.5+.3*k,2.05,-.8),chest.lerp(head,.4),48-4*k,0);
+            return new Shot(b.at(o,-1.6+.3*k,2.15,.85),chest.lerp(head,.4),48-4*k,0);
         }
         if(t<CUTS[12]){
-            // "俺の": close on the stand's face as it rushes, from in front of it to its right and a little low, its fists
-            // flying past the camera at the one struck behind it
+            // "俺の": close on the stand's face as it rushes, from its right and a little in front of it (out beside the one
+            // struck, not in them: the first capture's eye, in front of its face, was inside their body), looking between
+            // its face and them so its fists fly across the frame into them
             float k=u(t,CUTS[11],CUTS[12]);
-            return new Shot(head.add(f.multiply(1.3-.15*k)).add(r.multiply(.95)).add(0,-.35,0),head.add(0,-.05,0),48-6*k,0);
+            return new Shot(head.add(f.multiply(.8-.1*k)).add(r.multiply(2.0-.2*k)).add(0,.05,0),head.add(f.multiply(.5)).add(0,-.1,0),48-6*k,0);
         }
         if(t<CUTS[13]){
             // "スタンド": from its left side as it draws back for the last blow, pushing in, the lens closing as it strikes

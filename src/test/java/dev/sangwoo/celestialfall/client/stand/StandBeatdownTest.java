@@ -202,6 +202,14 @@ class StandBeatdownTest {
             float t=f*FRAME;var s=StandBeatdownCamera.at(b,t);
             int shot=0;while(shot+1<StandBeatdown.CUTS.length&&t>=StandBeatdown.CUTS[shot+1])shot++;
             assertTrue(s.look().distanceTo(s.eye())>.8,"the eye too near what it looks at at "+t);
+            // never in among the rush's fists (2.65.0: the first capture's "俺の" shot sat right beside the one struck,
+            // where the fists fly, and showed nothing but a dark blur of them): clear of the line from the stand's chest
+            // to the one struck's while it rushes them
+            if(t>=StandBeatdown.RUSH_FROM&&t<=StandBeatdown.RUSH_TO){
+                var v=StandBeatdown.victim(b,t);
+                double clear=fromSegment(s.eye(),StandBeatdownCamera.stand(b,v).add(0,1.2,0),v.feet().add(0,1.15,0));
+                assertTrue(clear>1.2,"the eye "+clear+" blocks from the fists' way at "+t+" (shot "+shot+")");
+            }
             if(last!=null&&shot==lastShot){
                 double eye=s.eye().distanceTo(last.eye());
                 Vec3d a=s.look().subtract(s.eye()).normalize(),c=last.look().subtract(last.eye()).normalize();
@@ -221,6 +229,11 @@ class StandBeatdownTest {
             boolean cut=false;for(float c:StandBeatdown.CUTS)cut|=Math.abs(c-at)<1e-4;
             assertTrue(cut,"a cut at "+at);
         }
+    }
+    /** How far {@code p} is from the segment from {@code a} to {@code c}. */
+    static double fromSegment(Vec3d p,Vec3d a,Vec3d c){
+        Vec3d d=c.subtract(a);double k=Math.max(0,Math.min(1,p.subtract(a).dotProduct(d)/Math.max(1e-9,d.lengthSquared())));
+        return p.distanceTo(a.add(d.multiply(k)));
     }
     @Test void everyBlowJoltsTheCameraComingInOverTwoFrames(){
         var b=beat(2.6,12);

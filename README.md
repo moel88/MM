@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.64.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.65.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.65.0 — 스타플래티나 G 비트다운 다듬기: 대사 끝 '다!'에 강펀치 한 방 · 새 카메라 · 하늘색 빛남
+
+- **여는 주먹:** G를 누르면 스탠드가 주먹을 머리 뒤까지 크게 당겼다가 0.8초에 꽂습니다(강펀치 R의 0.6초보다 느림, 2.64.0은 0.2초). 당기는 동안 주먹에 빛이 모여 보고 피할 수 있습니다.
+- **러시는 대사 끝까지, 강펀치는 한 방:** 오라오라 러시가 대사 '심판하는 건 나의 스탠드다(裁くのは俺のスタンドだ)'의 '나의'까지 쉬지 않고 이어지고(57타), '스탠드'에 마지막 주먹을 크게 당겨 대사 끝의 '다!'에 강펀치 한 방으로 날려 버립니다. 2.64.0의 큰 오라 5번은 없앴습니다.
+- **카메라:** 녹음의 박자와 대사에 맞춘 15개 샷으로 바꾸고, 타격마다 카메라가 흔들리고 기울고 렌즈가 조여 들어옵니다. 맞은 대상은 더 크게 꺾이고 튕깁니다.
+- **하늘색 빛남:** 컷씬이 나오는 스킬(비트다운, 카게노 H)을 쓰면 시전자의 몸 색은 그대로 두고 몸 전체가 0.5초 동안 하늘색으로 빛납니다(2.64.0은 0.2초 동안 몸을 하늘색으로 덮었습니다).
+
+[RELEASE_2.65.0_KO.md](RELEASE_2.65.0_KO.md)를 확인하세요.
 
 # 보탠드 2.64.0 — 스타플래티나 G 비트다운: 컷씬 (야레야레다제 · 스타플래티나! · 멱살 · 올려치기 · 오라 러시)
 

@@ -42,8 +42,9 @@ import org.lwjgl.opengl.GL30;
  * <p>
  * It also draws the sky-blue glow of a body using a skill with a cutscene (2.65.0, CutsceneFlash: "몸 전체가 하늘색으로
  * 빛이 나야하는 쪽에 가까움 그러니까 몸 색깔을 바꾸는건 X"): the body into a third mask of its own, blurred further out
- * (GLOW blocks), laid on the screen as sky-blue light spreading out round its whole outline, palest and brightest right
- * at it, never on the body.
+ * (GLOW_REACH blocks) and close, laid on the screen as sky-blue light spreading out round its whole outline, palest and
+ * brightest right at it, with a little light along the body's edges just inside its outline; its colours are left as
+ * they are.
  */
 public final class StandAuraLayer {
     private StandAuraLayer(){}
@@ -57,8 +58,8 @@ public final class StandAuraLayer {
     static final float USER_GAIN=.8f;
     /** How far the glow reaches beyond a body (blocks), and how high its tongues of flame can lick above it. */
     static final float REACH=.17f,LICK=.45f;
-    /** How far the sky-blue glow reaches beyond a body (blocks). */
-    static final float GLOW_REACH=.42f;
+    /** How far the sky-blue glow's wide light reaches beyond a body (blocks; its close light reaches as far as the aura). */
+    static final float GLOW_REACH=.8f;
     /** How fast the three layers of flame flow upwards, in texture units a second: their patterns are about 3, 1.4 and
      * 0.6 blocks a unit (aura.frag), so each rises at about a block a second, the finer ones flickering faster. */
     static final double[] FLOW={.32,.85,1.9};
@@ -157,7 +158,7 @@ public final class StandAuraLayer {
             triangle();
             // the blur's 13 taps reach 7.5 steps each way: the glow's reach at the stand's distance, in half-size pixels
             // (the sky-blue glow's further: GLOW_REACH)
-            float step=MathHelper.clamp(REACH*pixels*.5f/7.5f,.6f,4f),far=MathHelper.clamp(GLOW_REACH*pixels*.5f/7.5f,.6f,9f);
+            float step=MathHelper.clamp(REACH*pixels*.5f/7.5f,.6f,4f),far=MathHelper.clamp(GLOW_REACH*pixels*.5f/7.5f,.6f,12f);
             use(blurProg);i(blurProg,"Src",0);
             target(haloFbo[1],hw,hh);bind(0,haloTex[0]);f2(blurProg,"Step",step/hw,0);f2(blurProg,"StepB",far/hw,0);triangle();
             target(haloFbo[0],hw,hh);bind(0,haloTex[1]);f2(blurProg,"Step",0,step/hh);f2(blurProg,"StepB",0,far/hh);triangle();
