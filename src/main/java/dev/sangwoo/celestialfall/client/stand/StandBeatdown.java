@@ -574,13 +574,15 @@ public final class StandBeatdown {
     static final double JOLT_TURN=9;
     /**
      * Whether {@code e} is not drawn this frame for this client's camera: the one struck while its cutscene's shot is
-     * from inside them (their own eyes, 2.66.0: its fists coming straight at the camera), as one's own body is not drawn
-     * in the first person.
+     * from inside them (their own eyes, 2.66.0: its fists coming straight at the camera) and the camera is there, as
+     * one's own body is not drawn in the first person (a camera somewhere else, a capture's from outside, sees them).
      */
     public static boolean hidden(Entity e){
         var b=cinematic();if(b==null||b.victim!=e.getId()||!b.victimId.equals(e.getUuid()))return false;
-        float t=b.age(MinecraftClient.getInstance().getTickDelta());
-        return t<b.over()&&StandBeatdownCamera.at(b,t).inside();
+        var mc=MinecraftClient.getInstance();float t=b.age(mc.getTickDelta());
+        if(t>=b.over())return false;
+        var shot=StandBeatdownCamera.at(b,t);
+        return shot.inside()&&mc.gameRenderer.getCamera().getPos().squaredDistanceTo(shot.eye())<.6*.6;
     }
     /** How far the camera has come back to its user (0 the cutscene's, 1 the gameplay camera). */
     static float handback(Beat b,float t){return smooth((t-b.over())/HANDBACK);}

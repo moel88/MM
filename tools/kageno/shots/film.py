@@ -283,8 +283,13 @@ def inhale_line(t):
 BEAT_PARTS = [(1.8, '적중 · 컷씬 시작 (레터박스)'), (3.25, '야레야레다제 · 머리를 잡고 흔듦'), (4.4, '스타플래티나! · 스탠드 등장'),
               (4.98, '멱살을 잡음'), (5.3, '올려치기'), (5.55, '러시 · 스탠드 얼굴'), (5.8, '러시 · 주먹이 렌즈로 (상대 시점)'),
               (7.0, '러시 · 상대 시점'), (7.85, '러시 · 어깨 너머 위에서'), (9.0, '러시 · 스탠드 옆에서 상대 얼굴'),
-              (9.75, '"심판하는 건" · 가리키는 사용자'), (10.41, '러시 · 옆에서'), (10.85, '"나의" · 두 얼굴'),
+              (9.75, '"심판하는 건" · 가리키는 사용자'), (10.41, '러시 · 옆에서'), (10.89, '"나의" · 두 얼굴'),
               (11.45, '"스탠드" · 강펀치를 당김'), (11.75, '"다!" · 얼굴에 강펀치'), (12.3, '날아감'), (13.1, '착지 · 일어남'), (99, '컷씬 끝')]
+# (the same moments without the camera's shots, for a capture from outside: FILM_BEAT_SHOTS=0)
+BEAT_MOMENTS = [(1.8, '적중 · 컷씬 시작 (레터박스)'), (3.25, '야레야레다제 · 머리를 잡고 흔듦'), (4.4, '스타플래티나! · 스탠드 등장'),
+                (4.98, '멱살을 잡음'), (5.15, '올려치기'), (9.0, '러시 · 얼굴을 맞대고 주먹마다 꺾임'),
+                (10.89, '러시 · "심판하는 건 나의"'), (11.45, '"스탠드" · 강펀치를 당김'), (12.3, '"다!" · 얼굴에 강펀치'),
+                (13.1, '착지 · 일어남'), (99, '컷씬 끝')]
 
 def beatdown_line(t):
     """The beatdown (G): its blow, the part of its cutscene, the training dummy's health (the damage dealt), or its guard broken."""
@@ -294,7 +299,7 @@ def beatdown_line(t):
     r, parts = rush[i][1], []
     if r.get('beat_age'):
         age = float(r['beat_age'])
-        name = next(n for until, n in BEAT_PARTS if age < until)
+        name = next(n for until, n in (BEAT_MOMENTS if os.environ.get('FILM_BEAT_SHOTS') == '0' else BEAT_PARTS) if age < until)
         if r.get('beat_cut') == '1' and r.get('beat_ended') == '1': name = '컷씬이 끊김'
         parts.append(f'컷씬 {age:.1f}초 · {name}')
     elif r.get('combo') == '7':
