@@ -68,7 +68,7 @@ public final class HitStun {
         CombatManager.interrupt(target);
         if(state.attack>=4){release(target.getUuid());releaseOwned(p.getUuid());return;}
         releaseOwned(p.getUuid());release(target.getUuid());
-        if(!target.isAlive())return;
+        if(!target.isAlive()||stoppedInTime(target))return;
         var h=new Hold(p,target,state,ComboWindow.landed(state,target.getWorld().getTime()));
         HELD.put(target.getUuid(),h);OWNED.put(p.getUuid(),target.getUuid());
         hold(target);
@@ -82,12 +82,17 @@ public final class HitStun {
     public static void standHold(LivingEntity attacker,LivingEntity target,int strike,long until) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
         releaseOwned(target.getUuid());release(target.getUuid());
-        if(!target.isAlive())return;
+        if(!target.isAlive()||stoppedInTime(target))return;
         var h=new Hold(attacker,target,null,null,target.getWorld().getTime(),until,strike);
         HELD.put(target.getUuid(),h);
         hold(target);
         sync(h,h.until());
     }
+    /**
+     * Whether {@code target} stands stopped in Star Platinum's time stop (2.67.0): it is held by that, and no blow holds
+     * it besides (its own screen showed the hold's stagger, the others' its flinch, while time was stopped for it).
+     */
+    private static boolean stoppedInTime(LivingEntity target){return dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(target);}
     /** Lets go of everyone a stand's punches of {@code attacker} hold. */
     public static void releaseStand(UUID attacker) {
         for(var e:new ArrayList<>(HELD.entrySet()))if(e.getValue().stand()&&e.getValue().attacker.getUuid().equals(attacker))release(e.getKey());

@@ -130,7 +130,11 @@ public final class CombatClient {
         if(mc.isPaused())return;
         long now=mc.world.getTime();Set<UUID> alive=new HashSet<>();
         for(var p:mc.world.getPlayers()) {
-            alive.add(p.getUuid());Movement m=MOVEMENT.computeIfAbsent(p.getUuid(),id->new Movement());
+            alive.add(p.getUuid());
+            // stopped in Star Platinum's time stop (2.67.0): its stride, its landing and its guard's ease stay where they
+            // were, to go on as time moves again (the body holds its pose meanwhile, MotionPlayerModel)
+            if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(p))continue;
+            Movement m=MOVEMENT.computeIfAbsent(p.getUuid(),id->new Movement());
             double dx=m.ready?p.getX()-m.x:0,dz=m.ready?p.getZ()-m.z:0,dy=m.ready?p.getY()-m.y:0;
             m.x=p.getX();m.y=p.getY();m.z=p.getZ();m.ready=true;
             // Airborne look and landings: a landing after a real fall dips the body, harder for a faster fall.

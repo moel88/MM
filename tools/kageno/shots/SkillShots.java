@@ -135,7 +135,8 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * through the real keyboard path; to film the one it stops, "FAKE@n" brings in a second Star Platinum user (a fake
  * player on the server, its stand out, "cfw" blocks ahead and "crt" to the right, facing the player), "FAKEH@n" has it
  * stop time by the real rules (the player stands stopped in it, their screen held), "FAKEWALK@n" walks it up to "fto"
- * blocks in front of the player over "fwt" ticks, "HURT@n" deals the player "hurt" damage from it through the game's
+ * blocks in front of the player ("frt" to their right) over "fwt" ticks (to film a walking player the player's own time
+ * stop stops mid-stride, end the walk before time stops: the walk moves it whatever holds it), "HURT@n" deals the player "hurt" damage from it through the game's
  * own blow path and "FLING@n" throws the player "fly" blocks a tick away from it ("flyup" up) through the time stop's
  * hold, as a punch's throw is (the fake has no stand attacks of its own: the server runs those for listed players
  * only), and "UNFAKE@n" takes it away. stand.csv gets the time stop (its age, whether time is stopped, when it moved
@@ -800,11 +801,13 @@ public final class SkillShots implements ClientModInitializer {
                             boolean in=w.spawnEntity(fake);fakePlayer=fake;
                             log.append("  fake Star Platinum user ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f, tick %d%n",to.x,to.y,to.z,yaw,age));});continue;}
                     if(what.equals("FAKEH")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.request(fakePlayer);log.append("  fake H ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
-                    // "FAKEWALK@n": the fake user walks up to "fto" blocks (1.6) in front of the player over "fwt" ticks (30), facing
-                    // them; "FAKER@n": it throws its heavy punch (R, its real rules)
+                    // "FAKEWALK@n": the fake user walks up to "fto" blocks (1.6) in front of the player and "frt" (0) to their right
+                    // over "fwt" ticks (30), facing the way it walks; "FAKER@n": it throws its heavy punch (R, its real rules)
                     if(what.equals("FAKEWALK")){int n=(int)opt("fwt",30);if(age>=at&&age<at+n){int left=at+n-age;server(p->{var fake=fakePlayer;if(fake==null)return;
-                            var to=p.getPos().add(net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw()).multiply(opt("fto",1.6f)));var next=fake.getPos().lerp(to,1.0/left);
-                            float yaw=(float)Math.toDegrees(Math.atan2(p.getZ()-next.z,p.getX()-next.x))-90;
+                            var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                            var to=p.getPos().add(f.multiply(opt("fto",1.6f))).add(right.multiply(opt("frt",0)));var next=fake.getPos().lerp(to,1.0/left);
+                            var way=next.subtract(fake.getPos());if(way.horizontalLengthSquared()<1e-6)way=p.getPos().subtract(next);
+                            float yaw=(float)Math.toDegrees(Math.atan2(way.z,way.x))-90;
                             fake.refreshPositionAndAngles(next.x,p.getY(),next.z,yaw,0);fake.setHeadYaw(yaw);fake.setBodyYaw(yaw);
                             if(left==1)log.append(String.format(Locale.ROOT,"  fake walked up to (%.2f, %.2f) by %d%n",next.x,next.z,age));});}continue;}
                     if(what.equals("FAKER")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.stand.StarPlatinumAttack.heavy(fakePlayer);log.append("  fake R ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}

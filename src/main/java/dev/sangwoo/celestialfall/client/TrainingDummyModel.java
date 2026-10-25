@@ -9,6 +9,8 @@ public final class TrainingDummyModel extends BipedEntityModel<TrainingDummyEnti
     public TrainingDummyModel(){super(MotionRig.player(false));hat.visible=false;}
     @Override public void setAngles(TrainingDummyEntity d,float phase,float amount,float animation,float yaw,float pitch) {
         MotionRig.reset(this);float delta=animation-d.age,time=d.getWorld().getTime()+delta;
+        // Stopped in Star Platinum's time stop (2.67.0): it holds the pose it was drawn in as time stopped (MotionPlayerModel).
+        if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(d)&&PoseBlend.hold(d.getUuid(),this,animation))return;
         // Struck by Star Platinum's beatdown (2.64.0): its body as the cutscene has the one struck, as a player's would.
         var beat=dev.sangwoo.celestialfall.client.stand.BeatdownPose.struckOf(d,delta);
         if(beat!=null){

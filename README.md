@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.66.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.67.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.67.0 — 스타플래티나 H 시간 정지 (더 월드)
+
+- **시간 정지(H):** 스탠드를 꺼낸 상태에서 H를 누르면 '스타플래티나 더 월드!'를 외치고(보내 주신 첫 녹음), 외침이 끝나는 1.95초에 시간이 **5초** 멈춥니다. 사용자에게서 50블록 안의 모든 플레이어·몹·더미가 그 자리에 멈춰 아무것도 못 하고, 사용자만 움직이고 칠 수 있습니다.
+- **멈춘 사람의 화면:** 시간이 멈춘 순간의 화면이 그대로 멈춰 있어 시전자도, 다른 모든 것도 멈춰 보입니다. 시간이 다시 흘러야 보입니다(그동안 시점도 못 돌리고, 시간 정지의 두 소리 말고는 아무 소리도 안 들립니다).
+- **다른 사람의 화면:** 멈춘 사람·몹·더미는 그 순간의 자세 그대로 서 있습니다(걷던 사람은 걸음 중간에 멈추고, 맞아도 움찔하지 않습니다).
+- **피해는 끝날 때 한꺼번에:** 멈춘 동안 넣은 피해·날림·무력화는 시간이 다시 흐르는 순간 한꺼번에 들어갑니다.
+- **연출:** 스탠드가 사용자 앞에서 힘을 모았다가 두 팔을 활짝 펼치면 파동이 퍼지며 세상이 보랏빛 흑백으로 멈춥니다. 끝날 때는 두 번째 녹음('토키와 우고키다스')이 끝나는 순간 파동이 되돌아오며 색이 돌아옵니다.
+
+[RELEASE_2.67.0_KO.md](RELEASE_2.67.0_KO.md)를 확인하세요.
 
 # 보탠드 2.66.1 — 비트다운 컷씬: 러시와 '심판하는 건 나의 스탠드다' 동안 사용자를 보여 주지 않음
 

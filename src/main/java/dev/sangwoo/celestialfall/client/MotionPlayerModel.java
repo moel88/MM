@@ -10,6 +10,12 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
     public MotionPlayerModel(boolean slim) {super(MotionRig.player(slim),slim);}
     @Override public void setAngles(AbstractClientPlayerEntity player,float limbAngle,float limbDistance,float animationProgress,float headYaw,float headPitch) {
         MotionRig.reset(this);super.setAngles(player,limbAngle,limbDistance,animationProgress,headYaw,headPitch);
+        // Stopped in Star Platinum's time stop (2.67.0): the body holds the pose it was drawn in as time stopped. Its
+        // own clocks go on here (the world's time a flinch or a daze is timed by, a guard or a blow cut off as it was
+        // stopped), its body does not; as time moves again the pose it takes fades in from this one.
+        if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(player)&&PoseBlend.hold(player.getUuid(),this,animationProgress)){
+            articulated=true;overlays();return;
+        }
         var vanillaBody=body.getTransform();var vanillaHead=head.getTransform();
         var vanillaRight=rightArm.getTransform();var vanillaLeft=leftArm.getTransform();
         articulated=CombatClient.animate(player);boolean rig=articulated,using=player.isUsingItem()||player.handSwingProgress>0;

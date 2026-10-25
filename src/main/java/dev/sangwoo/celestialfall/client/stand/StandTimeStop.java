@@ -208,7 +208,10 @@ public final class StandTimeStop {
             // (the server's word that time moves again lost: it moves anyway, a little after it was due)
             if(s.stopping()&&s.age(0)>MOVE+2){s.ended=s.age(0);for(int id:s.held)STILL.remove(id);if(frozen&&mc.player!=null&&s.held.contains(mc.player.getId()))thaw();}
         }
-        STOPS.values().removeIf(s->Float.isNaN(s.ended)&&!s.stopped&&s.age(0)>STOP+3||!Float.isNaN(s.ended)&&s.age(0)>s.ended+3);
+        // (one that is over is kept until it is ready again: the cooldown list reads that from it, ready(); dropped 3 s
+        // after time moved, its box went with it, 57 s early, as the multiplayer check found)
+        long time=mc.world.getTime();
+        STOPS.values().removeIf(s->(Float.isNaN(s.ended)&&!s.stopped&&s.age(0)>STOP+3||!Float.isNaN(s.ended)&&s.age(0)>s.ended+3)&&s.ready<=time);
         // still hushed: every new sound but its own is kept out (TimeStopSoundMixin); one let back in by the game's own
         // pause menu is hushed again
         if(frozen)hush(mc);
@@ -265,8 +268,11 @@ public final class StandTimeStop {
         var mc=MinecraftClient.getInstance();if(e==mc.player)return Float.NaN;
         Float d=STILL.get(e.getId());return d==null?Float.NaN:d;
     }
-    /** Whether this player stands stopped, as this client sees it (their stand stands still with them). */
-    public static boolean stopped(PlayerEntity p){return STILL.containsKey(p.getId());}
+    /**
+     * Whether {@code e} stands stopped, as this client sees it: a player's stand stands still with them, and a body holds
+     * the pose it was drawn in (MotionPlayerModel, TrainingDummyModel).
+     */
+    public static boolean stopped(Entity e){return STILL.containsKey(e.getId());}
     /**
      * For the capture tools' logs: the newest time stop this client knows of, as "age,stopped,ended,cut,still,radius,
      * outer,flash,negative" (its age in seconds, whether time is stopped, when it moved again or was cut short (seconds,

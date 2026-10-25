@@ -41,6 +41,35 @@ class PoseBlendTest {
         var target=posed(punch());m=posed(punch());PoseBlend.apply(id,m,"attack",3,60);
         assertEquals(target.rightArm.pitch,m.rightArm.pitch,1e-5);
     }
+    @Test void aBodyStoppedInTimeHoldsItsPoseAndFadesOnAsTimeMovesAgain(){
+        // (2.67.0) while it stands stopped its clocks go on (another pose would be drawn), its body does not
+        UUID id=UUID.randomUUID();PoseBlend.forget(id);
+        var shown=posed(punch());PoseBlend.apply(id,shown,"attack",3,50.8f);
+        float arm=shown.rightArm.pitch,body=shown.body.yaw,leg=shown.leftLeg.pitch;
+        for(int i=0;i<100;i++){
+            var m=posed(MotionClips.ready(0));
+            assertTrue(PoseBlend.hold(id,m,50.8f));
+            assertEquals(arm,m.rightArm.pitch,1e-6);assertEquals(body,m.body.yaw,1e-6);assertEquals(leg,m.leftLeg.pitch,1e-6);
+        }
+        // time moves again: the next frame's share of the tick may be smaller than the one it was held at
+        var m=posed(MotionClips.ready(0));PoseBlend.apply(id,m,"base",3,50.3f);
+        assertEquals(arm,m.rightArm.pitch,.02,"no pop as time moves again");
+        float last=m.rightArm.pitch;
+        for(float now=50.3f;now<=53.3f;now+=1/3f){
+            m=posed(MotionClips.ready(0));PoseBlend.apply(id,m,"base",3,now);
+            assertTrue(Math.abs(m.rightArm.pitch-last)<.35,"jumps at "+now);last=m.rightArm.pitch;
+        }
+        m=posed(MotionClips.ready(0));PoseBlend.apply(id,m,"base",3,53.6f);
+        assertEquals(posed(MotionClips.ready(0)).rightArm.pitch,m.rightArm.pitch,1e-4,"its own pose after the fade");
+    }
+    @Test void withNoPoseShownAMomentBeforeNothingIsHeld(){
+        UUID id=UUID.randomUUID();PoseBlend.forget(id);
+        var m=posed(punch());float arm=m.rightArm.pitch;
+        assertFalse(PoseBlend.hold(id,m,10));
+        assertEquals(arm,m.rightArm.pitch,1e-6,"the model is left as it is");
+        PoseBlend.apply(id,posed(MotionClips.ready(0)),"base",3,10);
+        assertFalse(PoseBlend.hold(id,m,20),"a pose from long before is not held");
+    }
     @Test void landingDipAndFlinchRiseAndFadeWithoutJumps(){
         assertEquals(0,MotionClips.dip(0),1e-6);assertEquals(1,MotionClips.dip(1.6f),1e-6);assertEquals(0,MotionClips.dip(7.6f),1e-6);
         for(float s=0;s<8;s+=.05f)assertTrue(Math.abs(MotionClips.dip(s+.05f)-MotionClips.dip(s))<.06,"dip jumps at "+s);

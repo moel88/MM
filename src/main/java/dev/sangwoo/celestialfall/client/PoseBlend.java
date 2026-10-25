@@ -31,8 +31,10 @@ public final class PoseBlend {
         float[][] current=capture(m);
         State s=STATES.computeIfAbsent(id,k->new State());
         if(!Objects.equals(source,s.source)){
-            // Only fade from a pose that was on screen a moment ago (not one left over from long before).
-            s.from=s.last!=null&&now-s.lastAt>=0&&now-s.lastAt<5?s.last:null;
+            // Only fade from a pose that was on screen a moment ago (not one left over from long before). (A moment
+            // ago may be a little ahead on the entity's clock: one held still in a time stop was drawn at the frame's
+            // share of the tick it stopped at, and as time moves again the next frame's share may be smaller.)
+            s.from=s.last!=null&&now-s.lastAt>=-1&&now-s.lastAt<5?s.last:null;
             s.switched=now;s.source=source;s.duration=duration;
         }
         float[][] out=current;
@@ -42,6 +44,18 @@ public final class PoseBlend {
         }else s.from=null;
         s.last=out;s.lastAt=now;
     }
+    /**
+     * Shows again the pose shown last for {@code id} (true), as one stopped in Star Platinum's time stop is drawn
+     * (2.67.0): its body holds still whatever its own clocks say, and the pose it takes as time moves again fades in
+     * from this one. False if no pose was shown a moment before {@code now}: the model is left as it is.
+     */
+    public static boolean hold(UUID id,BipedEntityModel<?> m,float now){
+        State s=STATES.get(id);
+        if(s==null||s.last==null||now-s.lastAt<-1||now-s.lastAt>=5)return false;
+        write(m,s.last);s.source=HELD;s.from=null;
+        return true;
+    }
+    private static final Object HELD=new Object();
     private static ModelPart[] parts(BipedEntityModel<?> m){return new ModelPart[]{m.head,m.body,m.rightArm,m.leftArm,m.rightLeg,m.leftLeg};}
     private static ModelPart[] bends(BipedEntityModel<?> m){
         return new ModelPart[]{m.rightArm.getChild("elbow"),m.leftArm.getChild("elbow"),m.rightLeg.getChild("knee"),m.leftLeg.getChild("knee")};

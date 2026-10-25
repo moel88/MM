@@ -492,12 +492,19 @@ public final class MpClient implements ClientModInitializer {
                 note(String.format(Locale.ROOT,"%s %s at %.2f s on its clock here (its tick %d); the harm owed: %s",who,s.wasCut()?"cut short":"over, time moves again",s.endedAt(),s.ticksHere(),owed));stoppedAt=null;}
         }
         var other=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
-        if(other!=null)flag("other_held_still",dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(other));
+        if(other!=null){
+            boolean held=dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(other);
+            flag("other_held_still",held);
+            // (2.67.0) a blow on one stopped holds nothing besides: no flinch is drawn on it until time moves again
+            if(held){otherHeldTicks++;if(dev.sangwoo.celestialfall.client.HitStunClient.reaction(other)!=null)otherFlinched++;}
+            else if(otherHeldTicks>0){note("while the other player stood stopped ("+otherHeldTicks+" ticks) it was drawn flinching on "+otherFlinched);otherHeldTicks=0;otherFlinched=0;}
+        }
         boolean view=dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView();
         flag("screen_held_still",view);
-        if(view)stillTicks++;
-        else if(stillTicks>0){note("while its screen was held ("+stillTicks+" ticks) the sounds that played: "+stillSounds);stillTicks=0;stillSounds.clear();}
+        if(view){stillTicks++;if(dev.sangwoo.celestialfall.client.HitStunClient.localStunned())stillStunned++;}
+        else if(stillTicks>0){note("while its screen was held ("+stillTicks+" ticks) the sounds that played: "+stillSounds+"; held by a blow (its hit-stun notice) on "+stillStunned);stillTicks=0;stillStunned=0;stillSounds.clear();}
     }
+    private int otherHeldTicks,otherFlinched,stillStunned;
     private final Map<Integer,String> tries=new HashMap<>();private int release=-1,releaseKey;private int[] fingerWalk;
     private net.minecraft.util.math.Vec3d walkFrom;private final List<Double> walkSteps=new ArrayList<>();
     /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */
