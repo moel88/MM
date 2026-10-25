@@ -278,12 +278,12 @@ def inhale_line(t):
     color = (255, 150, 150) if (r.get('dummy_disabled') == '1' and os.environ.get('FILM_INHALE_DUMMY') != '0') or any('무력화' in p for p in parts) else (255, 255, 255)
     return (' · '.join(parts), color) if parts else (None, None)
 
-# The beatdown's cutscene (2.64.0; 2.65.0's timeline; 2.66.0's shots from the user's video): its parts by its own clock
+# The beatdown's cutscene (2.64.0; 2.65.0's timeline; 2.66.0's shots from the user's video; 2.66.1's "裁くのは"): its parts by its own clock
 # (seconds from G, StarPlatinumRules.BEAT_*)
 BEAT_PARTS = [(1.8, '적중 · 컷씬 시작 (레터박스)'), (3.25, '야레야레다제 · 머리를 잡고 흔듦'), (4.4, '스타플래티나! · 스탠드 등장'),
               (4.98, '멱살을 잡음'), (5.3, '올려치기'), (5.55, '러시 · 스탠드 얼굴'), (5.8, '러시 · 주먹이 렌즈로 (상대 시점)'),
               (7.0, '러시 · 상대 시점'), (7.85, '러시 · 어깨 너머 위에서'), (9.0, '러시 · 스탠드 옆에서 상대 얼굴'),
-              (9.75, '"심판하는 건" · 가리키는 사용자'), (10.41, '러시 · 옆에서'), (10.89, '"나의" · 두 얼굴'),
+              (9.75, '"심판하는 건" · 아래에서 올려다봄'), (10.41, '러시 · 옆에서'), (10.89, '"나의" · 두 얼굴'),
               (11.45, '"스탠드" · 강펀치를 당김'), (11.75, '"다!" · 얼굴에 강펀치'), (12.3, '날아감'), (13.1, '착지 · 일어남'), (99, '컷씬 끝')]
 # (the same moments without the camera's shots, for a capture from outside: FILM_BEAT_SHOTS=0)
 BEAT_MOMENTS = [(1.8, '적중 · 컷씬 시작 (레터박스)'), (3.25, '야레야레다제 · 머리를 잡고 흔듦'), (4.4, '스타플래티나! · 스탠드 등장'),

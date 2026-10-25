@@ -264,6 +264,61 @@ class StandBeatdownTest {
         }
         assertTrue(inside[7]&&inside[8],"its fists into the lens from the one struck's eyes");
     }
+    /**
+     * Its user is out of every frame from "裁くのは" through the last blow and the one struck sent flying (2.66.1, user
+     * request: "그냥 심판하는건 나의 스탠드다 할때도 플레이어 보여주지마셈"; 2.66.0's "裁くのは" shot had them in the near
+     * half of the frame, pointing up past the stand): no part of their body, nor of the arm they point with, nor of the
+     * glow a little round it (their aura), is between the black bars on a screen as wide as 21:9, however each blow
+     * jolts the camera, wherever the one struck stood.
+     */
+    @Test void itsUserIsOutOfTheFrameThroughTheLine(){
+        int n=StandBeatdown.CUTS.length;double[] most=new double[n];java.util.Arrays.fill(most,-99);String seen=null;
+        for(double ahead:new double[]{1.2,2.6,4.1}){
+            var b=beat(ahead,12);
+            for(int f=(int)(StandBeatdown.CUTS[6]/FRAME)+1;f<=(int)(StandBeatdown.END/FRAME);f++){
+                float t=f*FRAME;int shot=0;while(shot+1<n&&t>=StandBeatdown.CUTS[shot+1])shot++;
+                double in=-99;
+                for(var p:user(b))in=Math.max(in,inFrame(b,t,p.at(),p.r()));
+                most[shot]=Math.max(most[shot],in);
+                if(seen==null&&in>=0&&t>=StandBeatdown.JUDGE&&t<StandBeatdown.CUTS[n-1])seen="at "+t+" (shot "+shot+", the one struck "+ahead+" blocks ahead): "+in;
+            }
+        }
+        for(int i=6;i<n;i++)System.out.printf(java.util.Locale.ROOT,"shot %d (from %.2f s): its user %s the frame (%.2f blocks)%n",i,StandBeatdown.CUTS[i],most[i]<0?"out of":"in",most[i]);
+        assertNull(seen,"its user in the frame");
+    }
+    record Ball(Vec3d at,double r){}
+    /** Its user's body as the cutscene holds them (where they stood, facing the blow's way, their right arm up pointing through the line), as balls a little bigger than it (their aura). */
+    static java.util.List<Ball> user(StandBeatdown.Beat b){
+        var out=new java.util.ArrayList<Ball>();
+        for(double h:new double[]{.25,.65,1.05,1.45,1.75})for(double side:new double[]{-.25,.25})out.add(new Ball(b.from.add(b.r.multiply(side)).add(0,h,0),.3));
+        // the arm they point with, from the shoulder to the hand
+        for(double k:new double[]{0,.5,1})out.add(new Ball(b.from.add(b.f.multiply(.65*k)).add(b.r.multiply(.35)).add(0,1.4+.26*k,0),.18));
+        return out;
+    }
+    /**
+     * How far into the frame at {@code t} the ball at {@code c} reaches (blocks; less than 0 out of it): the camera as
+     * StandBeatdown.camera puts it (the shot jolted: its eye shaken and turned, rolled, its lens closed in), the picture
+     * between the black bars on a 21:9 screen.
+     */
+    static double inFrame(StandBeatdown.Beat b,float t,Vec3d c,double radius){
+        var shot=StandBeatdownCamera.at(b,t);var jolt=StandBeatdownCamera.jolt(b,t);
+        Vec3d eye=shot.eye(),d=shot.look().subtract(eye).normalize();
+        double yaw=Math.toDegrees(Math.atan2(-d.x,d.z)),pitch=-Math.toDegrees(Math.asin(d.y));
+        if(jolt!=StandBeatdownCamera.Jolt.NONE){
+            Vec3d right=d.crossProduct(new Vec3d(0,1,0)).normalize(),up=right.crossProduct(d);
+            eye=eye.add(right.multiply(jolt.right())).add(up.multiply(jolt.up()));
+            yaw+=jolt.right()*StandBeatdown.JOLT_TURN;pitch-=jolt.up()*StandBeatdown.JOLT_TURN;
+        }
+        double ry=Math.toRadians(yaw),rp=Math.toRadians(pitch);
+        Vec3d fw=new Vec3d(-Math.sin(ry)*Math.cos(rp),-Math.sin(rp),Math.cos(ry)*Math.cos(rp));
+        Vec3d right=fw.crossProduct(new Vec3d(0,1,0)).normalize(),up=right.crossProduct(fw);
+        Vec3d v=c.subtract(eye);double x=v.dotProduct(right),y=v.dotProduct(up),z=v.dotProduct(fw);
+        // (the roll turns the picture about the view, counterclockwise as it is positive: GameRendererMixin)
+        double roll=Math.toRadians(shot.roll()+jolt.roll()),xr=x*Math.cos(roll)-y*Math.sin(roll),yr=x*Math.sin(roll)+y*Math.cos(roll);
+        double ty=Math.tan(Math.toRadians((shot.fov()-jolt.lens())/2)),tx=ty*21/9.;ty*=1-2*StandBeatdown.BAR;
+        double out=Math.max(.05-z,Math.max((Math.abs(xr)-tx*z)/Math.sqrt(1+tx*tx),(Math.abs(yr)-ty*z)/Math.sqrt(1+ty*ty)));
+        return radius-out;
+    }
     /** The stand's arms where they are drawn at {@code t} once it is round in front, and its afterimages' through the rush (each from its shoulder to its fist, world). */
     static java.util.List<Vec3d[]> arms(StandBeatdown.Beat b,float t){
         var out=new java.util.ArrayList<Vec3d[]>();float delta=clock(t);
