@@ -1208,6 +1208,36 @@ POSES = {
         'right_leg': {'rot': (60, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (50, 0, 0)},
         'cloth_front': {'rot': (-26, 0, 0)}, 'cloth_back': {'rot': (34, 0, 0)}, 'cloth_back_1': {'rot': (16, 0, 0)},
     },
+    # ---- R, the heavy punch (2.59.0, user request: "이번에는 R 강펀치 맞으면 날아가고 가드 브레이커야"): one right
+    # straight thrown with everything behind it. It coils deeper than the finisher: dropped low and back on the rear
+    # leg, wound right round to the right with the right fist cocked back past the hip and the elbow out behind, the
+    # left arm reaching out at the target to take aim, the head held on the target; then the whole body explodes
+    # forward, wheeling round to the left and flung far out over the front leg, the right arm driven straight through
+    # the target and the left fist torn back to the hip, the back leg kicked out straight behind.
+    'wind_heavy': {
+        'root': {'pos': (0, -1.2, 3.6)},
+        'hips': {'rot': (6, 64, 0)}, 'torso': {'rot': (4, 21, 0)}, 'chest': {'rot': (2, 17, 0)},
+        'neck': {'rot': (-6, -38, 0)}, 'head': {'rot': (-9, -56, 0)},
+        'right_arm': {'reach': ((-5.5, 30.0, 13.0), (-1, -0.3, 0.5))},
+        'right_pad': {'rot': (0, 0, 22)},
+        'left_arm': {'reach': ((6.5, 37.0, -22.0), (0.7, -1, 0))},
+        'left_pad': {'rot': (-12, 0, -18)},
+        'left_leg': {'rot': (-52, 0, -8)}, 'left_shin': {'rot': (72, 0, 0)}, 'left_foot': {'rot': (14, 0, 0)},
+        'right_leg': {'rot': (14, 0, 10)}, 'right_shin': {'rot': (80, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-20, 0, 0)}, 'cloth_back': {'rot': (-12, 0, 0)},
+    },
+    'punch_heavy': {
+        'root': {'pos': (0, -0.4, -9.8)},
+        'hips': {'rot': (32, -42, 0)}, 'torso': {'rot': (15, -21, 0)}, 'chest': {'rot': (10, -19, 0)},
+        'neck': {'rot': (-16, 33, 0)}, 'head': {'rot': (-22, 41, 0)},
+        'right_arm': {'reach': ((0.0, 31.5, -44.0), (-0.5, -1, 0))},
+        'right_pad': {'rot': (-22, 0, 28)},
+        'left_arm': {'reach': ((7.0, 26.0, 4.0), (1, -0.5, 1))},
+        'left_pad': {'rot': (0, 0, -8)},
+        'left_leg': {'rot': (-62, 0, -4)}, 'left_shin': {'rot': (50, 0, 0)}, 'left_foot': {'rot': (0, 0, 0)},
+        'right_leg': {'rot': (64, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (52, 0, 0)},
+        'cloth_front': {'rot': (-28, 0, 0)}, 'cloth_back': {'rot': (36, 0, 0)}, 'cloth_back_1': {'rot': (18, 0, 0)},
+    },
 }
 
 

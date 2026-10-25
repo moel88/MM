@@ -689,5 +689,23 @@
         "preload": true
       }
     ]
+  },
+  "star_platinum_heavy": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_heavy",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "star_platinum_heavy_hit": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_heavy_hit",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

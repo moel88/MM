@@ -3,6 +3,9 @@ FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage
 MODE motion with the shot's motion.csv (ACTOR -) shows the player's walking speed and the lens's FOV multiplier each tick.
 MODE rush with a SUMMON shot's stand.csv (ACTOR -, 2.57.0) shows Star Platinum's rush: the blows heard, the training
 dummy's health and, from the motion.csv beside it, the player's walking speed while they walk.
+MODE heavy with a SUMMON shot's stand.csv (ACTOR -, 2.59.0) shows its heavy punch: coiling, landed (on how many) or
+struck no one, the training dummy's health, its guard (up, broken) and how far it has flown from where it was struck
+(FILM_HEAVY_DUMMY=0 leaves the dummy out: it was put away).
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -47,7 +50,10 @@ for k in range(1, len(frames)):
 frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in frames]
 
 rows, wall, motion, rush = {}, [], [], []
-if csv_path and mode == 'rush':
+if csv_path and mode == 'heavy':
+    with open(csv_path) as fh:
+        rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
+elif csv_path and mode == 'rush':
     # a row the stand did not show in can be a field short (SkillShots before 2.57.0): its last field is then missing
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
@@ -169,7 +175,32 @@ def rush_line(t):
     if speed is not None and speed > .05: parts.append(f'걷는 속도 초당 {speed:.2f}블록')
     return (' · '.join(parts), (255, 255, 255)) if parts else (None, None)
 
+def heavy_line(t):
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    if r['combo'] == '5':
+        if r['landed'] != '1': parts.append('강펀치 준비')
+        elif int(r['struck'] or 0) > 0: parts.append('강펀치 적중')
+        else: parts.append('강펀치 · 아무도 안 맞음')
+    # FILM_HEAVY_DUMMY=0: the shot's dummy is put away (nobody in the punch's way), so nothing of it is shown
+    if os.environ.get('FILM_HEAVY_DUMMY') == '0': return (' · '.join(parts), (255, 255, 255)) if parts else (None, None)
+    full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
+    if r['dummy_health'] and full: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f} / {full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
+    if r.get('dummy_broken') == '1': parts.append('가드 깨짐')
+    elif r.get('dummy_guard') == '1': parts.append('가드 중')
+    # how far the dummy has flown: from where it stood as the heavy punch landed (the row before the first that shows
+    # it landed: the dummy may already be on its way in that one)
+    j = next((k for k, (_, x) in enumerate(rush) if x['combo'] == '5' and x['landed'] == '1' and x.get('dummy_x')), None)
+    hit = rush[max(0, j - 1)][1] if j is not None else None
+    if hit and r.get('dummy_x') and hit.get('dummy_x') and i >= j:
+        d = ((float(r['dummy_x']) - float(hit['dummy_x'])) ** 2 + (float(r['dummy_z']) - float(hit['dummy_z'])) ** 2) ** .5
+        if d > .3: parts.append(f'날아간 거리 {d:.1f}블록')
+    return (' · '.join(parts), (255, 255, 255)) if parts else (None, None)
+
 def actor_line(t):
+    if mode == 'heavy': return heavy_line(t)
     if mode == 'rush': return rush_line(t)
     if mode == 'motion': return motion_line(t)
     if mode == 'wall': return wall_line(t)

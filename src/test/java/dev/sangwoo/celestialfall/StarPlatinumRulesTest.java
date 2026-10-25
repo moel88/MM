@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Star Platinum's basic attack (2.54.0): four punches, the fourth throwing. 2.56.0: quicker, and only the hook and the
- * finisher shout, each on the "RA" of its own from the user's recording. 2.57.0: its E, the rush.
+ * finisher shout, each on the "RA" of its own from the user's recording. 2.57.0: its E, the rush. 2.59.0: its R, the heavy
+ * punch.
  */
 class StarPlatinumRulesTest {
     /** Each clip of the hook's and the finisher's shouts has its RA this far in (cut_ora.py RA_AT) and starts StandAttack.LEAD (1) tick into its punch. */
@@ -97,6 +98,65 @@ class StarPlatinumRulesTest {
         }
         assertTrue(rate>0&&samples>0,name);
         return samples/(double)rate;
+    }
+    // ---- R, the heavy punch (2.59.0) ----
+
+    @Test void theHeavyPunchCoilsLongAndLandsHardest(){
+        assertEquals(5,HEAVY);
+        assertEquals(.6,CONTACT[HEAVY]/20.0,1e-9,"it lands 0.6 s in");
+        for(int k=1;k<=4;k++){
+            assertTrue(CONTACT[HEAVY]>CONTACT[k],"its coil is longer than punch "+k+"'s");
+            assertTrue(DAMAGE[HEAVY]>DAMAGE[k],"it strikes harder than punch "+k);
+        }
+        assertEquals(15,DAMAGE[HEAVY],1e-6);
+        assertTrue(LENGTH[HEAVY]>CONTACT[HEAVY]+10,"it holds its blow out a while once it lands");
+        assertEquals(LENGTH[HEAVY],STEP[HEAVY],"the next punch may start once it is over");
+        assertTrue(FLY_HEAVY>FLY&&FLY_HEAVY_UP>FLY_UP,"it throws them further than the finisher");
+    }
+    /**
+     * How far a throw of {@code out} and {@code up} blocks a tick carries a body on flat ground, as the game moves it:
+     * the first tick from the ground (the ground's friction then: 0.6 x 0.91), the air's drag (0.91, 0.98) and gravity
+     * (0.08) after, and a slide to a stop on landing (2.59.0: 2.0 out went 11.5 blocks in the capture, as this says).
+     */
+    static double thrown(double out,double up){
+        double x=0,y=0,vx=out,vy=up;boolean ground=true;
+        for(int t=0;t<400;t++){
+            double f=ground?.6*.91:.91;
+            x+=vx;y+=vy;ground=y<=0;if(ground)y=0;
+            vx*=f;vy=ground?0:(vy-.08)*.98;
+            if(ground&&vx<.003)break;
+        }
+        return x;
+    }
+    @Test void itThrowsThemFarFurtherThanTheFinisher(){
+        double heavy=thrown(FLY_HEAVY,FLY_HEAVY_UP),finisher=thrown(FLY,FLY_UP);
+        assertEquals(11.5,thrown(2.0,.55),.1,"the throw the capture measured");
+        assertTrue(heavy>15&&heavy<20,"the heavy punch throws them "+heavy+" blocks");
+        assertTrue(heavy>finisher*1.5,"far further than the finisher's "+finisher+" blocks");
+    }
+    @Test void itStandsApartFromTheCombo(){
+        assertEquals(1,next(HEAVY),"a punch after it starts the combo again");
+        assertEquals(-1,broken(HEAVY,100,900),"no combo to break");
+        assertEquals(0,hold(HEAVY),"it throws whom it strikes, it does not hold them");
+        assertFalse(shouts(HEAVY),"it has its own sound, not one of the combo's shouts");
+        assertEquals(100+STEP[HEAVY],nextAt(HEAVY,100));
+    }
+    @Test void itsCooldownRunsOnceItIsOverAndItBreaksAGuardForTwoSeconds(){
+        assertEquals(500+HEAVY_COOLDOWN,heavyReady(500),"from its end (2.44.0's rule)");
+        assertEquals(8,HEAVY_COOLDOWN/20.0,1e-9,"eight seconds");
+        assertTrue(HEAVY_BREAK>dev.sangwoo.celestialfall.combat.CombatState.BREAK_TICKS,"a guard it breaks stays broken longer than one worn down");
+        assertEquals(2,HEAVY_BREAK/20.0,1e-9);
+    }
+    @Test void itReachesAsFarAsTheFinisher(){
+        assertTrue(lane(HEAVY,4.2,0,1,.3),"as far as the finisher");assertFalse(lane(HEAVY,4.2+.5,0,1,.3),"not out of reach");
+        assertFalse(lane(HEAVY,-1,0,1,.3),"not behind");assertFalse(lane(HEAVY,2,2,1,.3),"not far to the side");
+    }
+    @Test void itsTwoSoundsCrackAsTheFistLands()throws Exception{
+        // both start StandAttack.HEAVY_LEAD ticks in, with the blow's crack cut_heavy.LEAD_IN (0.1 s) into them: on the contact
+        assertEquals(CONTACT[HEAVY],dev.sangwoo.celestialfall.client.stand.StandAttack.HEAVY_LEAD+2,"the crack two ticks into the files");
+        double voice=seconds("star_platinum_heavy"),blow=seconds("star_platinum_heavy_hit");
+        assertTrue(voice>.8&&voice<2,"the voice: "+voice+" s");
+        assertTrue(blow>=voice-.2&&blow<2.5,"the blow rings out about as long: "+blow+" s");
     }
     @Test void thePunchGoesWhereItsUserFaces(){
         assertTrue(lane(1,2.5,0,1,.3));assertTrue(lane(1,1,.9,0,.3));

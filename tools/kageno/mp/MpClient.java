@@ -46,7 +46,11 @@ public final class MpClient implements ClientModInitializer {
      * front through all its forty blows, walking forward through it (3330 to 3380, 90% slower; the speed window is
      * logged); both log the rush they hear (its start, its voice starting on their clock, every tenth blow and whom it
      * struck, how loud its blows sound, its end), the watcher how many cries of pain it heard from itself, and the
-     * cooldown list. The punches follow (3440 to 3503).
+     * cooldown list. The punches follow (3440 to 3503). Since 2.59.0 the caster then throws the heavy punch (R) twice at
+     * the watcher, brought back 2.5 blocks in front of it each time ("HOME": /execute ... tp): first unguarded, then
+     * with the watcher holding its guard up (F, from when it hears that second heavy punch start): both log each heavy
+     * punch they hear, when its voice and its blow start on their clock, how loud its blow sounds once it lands, and
+     * whose guard it broke; the watcher logs its own guard (up, broken), the server how far it flew.
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -61,7 +65,8 @@ public final class MpClient implements ClientModInitializer {
         "2445 C",
         "2460 DUMMY",
         "3070 TAB","3100 TAB","3120 ESC","3135 R","3150 ENTER","3185 RESPAWN",
-        "3230 STAND","3270 Q","3315 E+","3330 W+","3380 W-","3405 E-","3440 M1+","3503 M1-","3525 TURN180","3527 W+","3567 W-","3627 Q","3677 END"};
+        "3230 STAND","3270 Q","3315 E+","3330 W+","3380 W-","3405 E-","3440 M1+","3503 M1-",
+        "3560 HOME","3575 R","3650 HOME","3665 R","3740 TURN180","3742 W+","3782 W-","3842 Q","3892 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -117,7 +122,8 @@ public final class MpClient implements ClientModInitializer {
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
                     walk();
                     if(age%20==0&&Files.exists(OUT.resolve("done"))){note("caster done");phase=3;age=0;}
-                    if(age>4000){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(guardUntil>0&&age>=guardUntil){key(GLFW_KEY_F,false);note("release F (guard)");guardUntil=0;}
+                    if(age>4400){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -164,6 +170,8 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("RESPAWN")){if(down){note("respawn requested (alive="+mc.player.isAlive()+")");mc.player.requestRespawn();}return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         if(step.equals("STAND")){if(down){note("command botand progress stand @s star_platinum");mc.player.networkHandler.sendChatCommand("botand progress stand @s star_platinum");}return;}
+        // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
+        if(step.equals("HOME")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^2.5 facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
         if(down&&press&&!k.equals("W"))face();
         if(down||!step.endsWith("+"))note((press?"press ":"release ")+k);
@@ -271,8 +279,22 @@ public final class MpClient implements ClientModInitializer {
             if(state[3]==0&&seen.ticksIn()>=4&&!dev.sangwoo.celestialfall.stand.StarPlatinumRules.shouts(seen.punch.combo())){state[3]=1;note(who+(seen.voice()==null?": no shout (by the rule)":": a shout, against the rule"));}
             if(state[4]==0&&seen.voice() instanceof dev.sangwoo.celestialfall.client.stand.StandAttack.Shout shout&&shout.fading()){state[4]=1;note(String.format(Locale.ROOT,"%s: its shout fading out at its tick %d here",who,seen.ticksIn()));}
             if(state[2]==0&&!Float.isNaN(seen.punch.stopped())){state[2]=1;note(who+" stopped short");}
+            // 2.59.0: the heavy punch: its voice and its blow starting here, the blow's loudness once it lands, whose
+            // guard it broke; the watcher holds its guard up against the second it hears
+            if(seen.punch.combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY){
+                int[] h=heavyHeard.computeIfAbsent(key,k->new int[4]);
+                if(h[0]==0){h[0]=1;heavies++;if(!caster&&heavies==2){key(GLFW_KEY_F,true);guardUntil=age+40;note("press F (guard) against heavy punch "+heavies);}}
+                if(h[1]==0&&seen.heavyVoice()!=null&&mc.getSoundManager().isPlaying(seen.heavyVoice())){h[1]=1;note(String.format(Locale.ROOT,"%s: its voice started at its tick %d here",who,seen.ticksIn()));}
+                if(h[2]==0&&seen.heavyBlow()!=null&&mc.getSoundManager().isPlaying(seen.heavyBlow())){h[2]=1;note(String.format(Locale.ROOT,"%s: its blow started at its tick %d here",who,seen.ticksIn()));}
+                if(h[3]==0&&seen.landed&&seen.ticksIn()>=dev.sangwoo.celestialfall.stand.StarPlatinumRules.CONTACT[seen.punch.combo()]+2){h[3]=1;var broke=new ArrayList<String>();
+                    for(int id:seen.broke){var e=mc.world.getEntityById(id);broke.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
+                    note(String.format(Locale.ROOT,"%s: its blow sounding at %.2f at its tick %d here, broke the guard of %s",who,seen.heavyBlow()==null?-1:seen.heavyBlow().loudness(),seen.ticksIn(),broke));}
+            }
         }
+        // this player's own guard as its client knows it (2.59.0: broken by the heavy punch)
+        var mine=CombatClient.snapshot(mc.player.getUuid());flag("guard",mine.broken(mc.world.getTime())?"broken":mine.guard()?"up":"down");
     }
+    private final Map<String,int[]> heavyHeard=new HashMap<>();private int heavies,guardUntil;
     /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */
     private String stand(net.minecraft.entity.player.PlayerEntity p){
         var h=(dev.sangwoo.celestialfall.stand.StandHolder)p;var st=dev.sangwoo.celestialfall.client.stand.StandPresence.state(p.getUuid());

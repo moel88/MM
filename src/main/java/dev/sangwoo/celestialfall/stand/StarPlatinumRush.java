@@ -61,6 +61,8 @@ public final class StarPlatinumRush {
          * it starts, when the last one ended and the tick it is ready again after it.
          */
         boolean on;long start=-1000,ended=-1000,ready;
+        /** E is down while the heavy punch is in flight (2.59.0): the rush starts once it is over, if E is still down. */
+        boolean waiting;
         /** Whom it has struck so far (their first blow cries out, the rest are quiet). */
         final Set<UUID> struck=new HashSet<>();
         int window,presses;
@@ -101,6 +103,9 @@ public final class StarPlatinumRush {
         if(!StarPlatinumAttack.punches(p)||p.isSleeping()||p.hasVehicle()||CombatManager.busy(p)||CombatManager.cinematic(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(s.on||now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        // the heavy punch (R, 2.59.0) is not cut off: the rush waits for it to be over
+        if(now<StarPlatinumAttack.heavyOverAt(p)){s.waiting=true;return false;}
+        s.waiting=false;
         // a punch in flight gives way to it: it starts once the stand has turned back to its guard (StarPlatinumRules.STOP_RETURN)
         StarPlatinumAttack.yieldTo(p);
         s.on=true;s.start=Math.max(now,StarPlatinumAttack.guardAt(p));s.struck.clear();
@@ -109,13 +114,14 @@ public final class StarPlatinumRush {
         return true;
     }
     /** E comes up: the rush stops at once. */
-    public static void release(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null&&s.on)end(p,s,p.getWorld().getTime());}
+    public static void release(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s==null)return;s.waiting=false;if(s.on)end(p,s,p.getWorld().getTime());}
     /** Its user was struck: the rush stops. */
     public static void struck(ServerPlayerEntity p){release(p);}
     private static void tick(MinecraftServer server){
         for(var e:new ArrayList<>(STATES.entrySet())){
             var p=server.getPlayerManager().getPlayer(e.getKey());var s=e.getValue();
             if(p==null||p.getServerWorld()!=s.world){STATES.remove(e.getKey());continue;}
+            if(s.waiting&&!s.on&&p.getWorld().getTime()>=StarPlatinumAttack.heavyOverAt(p)){s.waiting=false;start(p);}
             if(!s.on)continue;
             long now=p.getWorld().getTime(),age=now-s.start;
             if(!StarPlatinumAttack.punches(p)||HitStun.stunned(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);continue;}

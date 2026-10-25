@@ -1,4 +1,16 @@
-> **현재 통합본: Botand 2.58.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.59.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.59.0 — 스타플래티나 R: 강펀치 (날리기 · 가드 브레이크)
+
+- **강펀치(R):** 스탠드를 꺼낸 상태에서 R을 누르면 스타플래티나가 오른 주먹을 허리 뒤까지 당겨 0.6초 동안 힘을 모은 뒤, 몸 전체를 실어 한 번 크게 내지릅니다. 피해 15, 닿는 거리는 평타 4타와 같습니다(앞 4.2블록).
+- **날아감:** 맞은 대상은 주먹 방향으로 크게 날아갑니다(평지에서 약 17블록, 평타 4타는 약 10블록).
+- **가드 브레이크:** 가드로 막을 수 없습니다. 가드를 올린 상대는 가드가 깨지고(2초 동안 가드·행동 불가) 그래도 맞고 날아갑니다. 깨질 때 상대 앞의 파란 가드 판이 금 가며 조각나 흩어집니다.
+- **쿨타임:** 8초, 강펀치가 끝난 뒤부터 돕니다(쿨타임 목록에 '강펀치'). 평타 콤보와는 따로입니다.
+- **소리:** 보내 주신 두 녹음 그대로입니다. 맞히면 'ORA (SFX)'(타격음 있는 버전), 빗나가면 'ORA'(목소리만)가 들리고, 타격음의 '딱'이 주먹이 닿는 프레임에 납니다.
+- **다른 스킬과:** 평타 도중에 R을 누르면 그 주먹을 거두고 바로 강펀치로 이어갑니다. 강펀치 도중에 누른 E(러시)는 강펀치를 끊지 않고, 강펀치가 끝난 뒤 E가 아직 눌려 있으면 시작합니다.
+- **고친 것:** 러시를 도중에 떼면 소리가 0.15초에 걸쳐 줄어들어야 했는데 실제로는 뚝 끊기고 있었습니다(2.57.0부터). 이제 줄어 사라집니다.
+
+[RELEASE_2.59.0_KO.md](RELEASE_2.59.0_KO.md)를 확인하세요.
 
 # 보탠드 2.58.0 — 오라 러시를 더 격하게 · 카게노 E 80% 감속
 

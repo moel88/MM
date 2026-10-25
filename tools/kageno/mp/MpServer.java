@@ -276,11 +276,15 @@ public final class MpServer implements ModInitializer {
                     if(rushBlows==1||rushBlows%10==0)note(server,String.format(java.util.Locale.ROOT,"watcher struck by the rush: blow %d, %.1f damage so far, leaving at %.2f blocks a tick, %.2f blocks from the caster",rushBlows,rushDamage,speed,p.distanceTo(caster)));
                     continue;}
                 note(server,String.format(java.util.Locale.ROOT,"watcher punched by Star Platinum: %.1f damage, leaving at %.2f blocks a tick, %.2f blocks from the caster",p.getMaxHealth()-p.getHealth(),speed,p.distanceTo(caster)));
-                if(speed>.8){thrown.put(p.getUuid(),now);flying.put(p.getUuid(),now);}
+                if(speed>.8){thrown.put(p.getUuid(),now);flying.put(p.getUuid(),now);from.put(p.getUuid(),p.getPos());}
             }
             Long since=flying.get(p.getUuid());
-            if(since!=null&&now-since>2&&p.isOnGround()){flying.remove(p.getUuid());
-                note(server,String.format(java.util.Locale.ROOT,"watcher came down %d ticks after the throw, %.2f blocks from the caster",now-since,p.distanceTo(caster)));}
+            if(since!=null&&now-since>2&&p.isOnGround()){flying.remove(p.getUuid());var start=from.remove(p.getUuid());
+                note(server,String.format(java.util.Locale.ROOT,"watcher came down %d ticks after the throw, %.2f blocks from the caster, %.2f blocks from where it was struck",now-since,p.distanceTo(caster),start==null?-1:Math.hypot(p.getX()-start.x,p.getZ()-start.z)));}
+            // 2.59.0: the watcher's guard as the server keeps it (the heavy punch breaks it)
+            boolean up=dev.sangwoo.celestialfall.combat.CombatManager.guarding(p);
+            if(up!=Boolean.TRUE.equals(guardUp.put(p.getUuid(),up)))note(server,"watcher guard "+(up?"up":"down"));
         }
     }
+    private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>();
 }

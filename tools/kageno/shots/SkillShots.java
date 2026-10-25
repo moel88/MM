@@ -112,7 +112,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * each punch stance's share; the log gets each punch seen and landed. Its rush (2.57.0): "KEYDOWN_E@n" and "KEYUP_E@n"
  * hold E through the real keyboard path; stand.csv gets the rush (its age in seconds, the blows heard, how many the last
  * struck, whether it is on, how loud its blows sound), the training dummy's health, the player's speed and each rush
- * stance's share, and the log each time it comes on and goes off and each blow heard.
+ * stance's share, and the log each time it comes on and goes off and each blow heard. Its heavy punch (2.59.0):
+ * "KEY_R@n" taps R through the real keyboard path, and "dguard=1" makes the training dummy one that holds its guard
+ * up; stand.csv gets the heavy punch's two stances, the dummy's guard (up, broken) and where it is (its flight), and
+ * the log the moment its guard breaks.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -334,7 +337,7 @@ public final class SkillShots implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.gacha.GachaArt.end(b);
         d.getMatrices().pop();
     }
-    private final StringBuilder standLog=new StringBuilder();private boolean standOutLogged;
+    private final StringBuilder standLog=new StringBuilder();private boolean standOutLogged,dummyBroken;
     /** SUMMON: this tick's row of stand.csv, and a line in the log each time the stand comes out or goes back. */
     private void logStand(){
         boolean out=((StandHolder)mc.player).botand$isStandOut();
@@ -359,6 +362,14 @@ public final class SkillShots implements ClientModInitializer {
         standLog.append(',').append(dummy instanceof net.minecraft.entity.LivingEntity le?String.format(Locale.ROOT,"%.2f",le.getHealth()):"");
         standLog.append(',').append(String.format(Locale.ROOT,"%.5f",mc.player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
         for(int i=12;i<18;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        // 2.59.0: the heavy punch's two stances; the training dummy's guard (up, broken) and where it is (its flight)
+        for(int i=18;i<20;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        if(dummy instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){
+            boolean broken=t.brokenUntil()>mc.world.getTime();
+            standLog.append(String.format(Locale.ROOT,",%d,%d,%.3f,%.3f,%.3f",t.guarding()?1:0,broken?1:0,t.getX(),t.getY(),t.getZ()));
+            if(broken&&!dummyBroken)log.append("  dummy guard broken at ").append(age).append('\n');
+            dummyBroken=broken;
+        }else standLog.append(",,,,,");
         standLog.append('\n');
         if(rush!=null){
             String[] v=rush.split(",");boolean on=v[3].equals("1");int blows=Integer.parseInt(v[1]);
@@ -469,8 +480,11 @@ public final class SkillShots implements ClientModInitializer {
         float yaw=facing(opt("face",0));
         p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
         var d=p.getServerWorld().getEntityById(dummyId);
+        // "dguard=1" (2.59.0): the training dummy that holds its guard up (for the heavy punch breaking it)
+        var kind=opt("dguard",0)>0?dev.sangwoo.celestialfall.training.DummyKind.GUARD:dev.sangwoo.celestialfall.training.DummyKind.IDLE;
+        if(d instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t&&t.kind()!=kind){d.discard();d=null;}
         if(!(d instanceof net.minecraft.entity.LivingEntity)||!d.isAlive()){
-            var dummy=TrainingDummies.TYPES.values().iterator().next().create(p.getServerWorld());dummy.refreshPositionAndAngles(.5,y,3.5,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
+            var dummy=TrainingDummies.TYPES.get(kind).create(p.getServerWorld());dummy.refreshPositionAndAngles(.5,y,3.5,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
         }
         actors(p.getServerWorld(),y);
         if(d instanceof net.minecraft.entity.LivingEntity l){
@@ -654,7 +668,8 @@ public final class SkillShots implements ClientModInitializer {
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
                     if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big,"
-                        +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo\n"+standLog);standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;}
+                        +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
+                        +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z\n"+standLog);standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }

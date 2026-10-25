@@ -59,6 +59,11 @@ public final class CombatState {
         guarding=false;brokenUntil=now+BREAK_TICKS;attack=combo=0;queued=false;serial++;
         return true;
     }
+    /** The guard broken outright by a blow no guard can take (2.59.0: Star Platinum's heavy punch), broken for {@code ticks}. */
+    public void breakGuard(long now,int ticks) {
+        lastGuardHit=now;combatUntil=now+100;pressure=100;
+        guarding=false;brokenUntil=now+ticks;attack=combo=0;queued=false;serial++;
+    }
     public boolean dash(long now,float forward,float side) {
         if(now<dashReady||broken(now)||attacking(now)||guarding||dashing(now))return false;
         float length=(float)Math.hypot(forward,side);

@@ -129,6 +129,24 @@ class StandRushTest {
             }
         }
     }
+    @Test void theHeavyPunchTakesOverFromTheRushWithoutAJump()throws Exception{
+        // R just after the rush is let go (2.59.0): the heavy punch starts once the rush's fists are back in the guard
+        // (RUSH_SETTLE) or a little later, and turns from the rush's shape as it takes over (StandRush.combine)
+        var names=bones();var look=new StarPlatinumLook();var into=new StandPunch.Shape();var rush=new StandPunch.Shape();
+        var heavy=new StandPunch.Punch(StarPlatinumRules.HEAVY,0,Float.NaN,Float.NaN);
+        for(int stop:new int[]{3,9,20,41,60,83})for(int late=0;late<=6;late+=2){
+            var r=new StandRush.Rush(0,0,0,311+stop);var body=new Watch(names);
+            float heavyAt=(stop+StarPlatinumRules.RUSH_SETTLE+late)/20f;String what="the rush let go "+stop+" ticks in, the heavy punch "+late+" ticks after its fists are back";
+            for(int f=0;f<=(int)((heavyAt+2.2f)/FRAME);f++){
+                float t=f*FRAME,delta=clock(t);
+                if(r.on()&&StandRush.ticks>=stop)r.ended=r.age(0);
+                StandPunch.Shape punch=null;float pt=Float.MAX_VALUE;
+                if(t>=heavyAt){pt=t-heavyAt;if(pt<=StandPunch.length(heavy))punch=StandPunch.at(heavy,pt,null,0,into);}
+                var s=StandRush.combine(punch,pt,StandRush.rush(r,delta,0,rush),r.age(delta),into);
+                look(s,look);body.see(look,t,what);
+            }
+        }
+    }
     @Test void heardLateTogetherItStillTakesOverFromThePunchWithoutAJump()throws Exception{
         // a lagging connection: the word that the punch stopped and the word that the rush started come in the same tick
         var names=bones();var look=new StarPlatinumLook();var into=new StandPunch.Shape();var rush=new StandPunch.Shape();
@@ -224,5 +242,15 @@ class StandRushTest {
             voice.tick();blows.tick();assertTrue(voice.loudness()<lv,"quieter every tick");lv=voice.loudness();
         }
         assertEquals(0,voice.loudness(),1e-6);assertTrue(voice.isDone()&&blows.isDone(),"gone once faded");
+    }
+    @Test void letGoAsItPlaysItFadesOutButLetGoBeforeItNeverPlays(){
+        // the game stops a playing sound at once on any tick it says it cannot play: a fade must leave it playable
+        var r=new StandRush.Rush(0,0,0,1);r.strike=1;
+        var playing=new StandRush.Sound(new net.minecraft.util.Identifier("celestialfall","star_platinum_rush"),r,false,.9f);
+        playing.tick();playing.fade();
+        for(int i=0;i<StandRush.FADE;i++){assertTrue(playing.canPlay(),"still fading out, not cut off ("+i+")");playing.tick();}
+        assertTrue(playing.isDone());
+        var early=new StandRush.Sound(new net.minecraft.util.Identifier("celestialfall","star_platinum_rush"),r,false,.9f);
+        early.fade();assertFalse(early.canPlay(),"let go before it began: it never plays");
     }
 }

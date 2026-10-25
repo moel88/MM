@@ -142,15 +142,19 @@ public final class StandRush {
      * the rush (the blows as loud as the rush strikes someone now) and, once the rush has stopped short, fades out.
      */
     static final class Sound extends AbstractSoundInstance implements TickableSoundInstance {
-        private final Rush rush;private final boolean blows;private final float full;private int fading=-1;private boolean done;
+        private final Rush rush;private final boolean blows;private final float full;private int fading=-1;private boolean done,begun;
         Sound(Identifier id,Rush rush,boolean blows,float volume){
             super(id,SoundCategory.PLAYERS,Random.create());
             this.rush=rush;this.blows=blows;full=volume;this.volume=blows?0:volume;pitch=1;attenuationType=SoundInstance.AttenuationType.NONE;relative=true;x=y=z=0;
         }
         void fade(){if(fading<0)fading=0;}
         float loudness(){return volume;}
-        /** One told to fade before it began (the rush let go before it started) never plays. */
-        @Override public boolean canPlay(){return fading<0&&!done;}
+        /**
+         * One told to fade before it began (the rush let go before it started) never plays. One playing fades out: the
+         * game stops a playing sound at once on the tick it says it cannot play (2.59.0: before, a rush let go was cut
+         * off there rather than faded).
+         */
+        @Override public boolean canPlay(){return !done&&(fading<0||begun);}
         /**
          * The blows start silent when nobody is in the rush's way and come up once it strikes someone: the game skips
          * a sound that starts at no loudness unless it says it must play.
@@ -158,6 +162,7 @@ public final class StandRush {
         @Override public boolean shouldAlwaysPlay(){return blows;}
         @Override public boolean isDone(){return done;}
         @Override public void tick(){
+            begun=true;
             float level=blows?rush.strike:1;
             if(fading>=0){fading++;level*=Math.max(0,1-fading/(float)FADE);if(fading>=FADE)done=true;}
             volume=full*level;

@@ -195,6 +195,25 @@ public final class CombatManager {
     }
     /** Whether this entity's cry of pain is held back now ({@link #damageQuietly}). */
     public static boolean quiet(LivingEntity entity) {return QUIET.get()==entity;}
+    /**
+     * A blow no guard can take breaks the guard of whoever it strikes, if they hold one up (2.59.0: Star Platinum's heavy
+     * punch, "가드 브레이커"): broken for {@code ticks}, slowed and unable to guard or act, as a guard worn down by blows
+     * is, with the same sound and sparks. Returns whether there was a guard up to break.
+     */
+    public static boolean breakGuard(LivingEntity target,int ticks) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return false;
+        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy)return dummy.breakGuard(ticks);
+        if(!(target instanceof ServerPlayerEntity p))return false;
+        var e=STATES.get(p.getUuid());long now=p.getWorld().getTime();
+        if(e==null||!e.state.guarding||e.state.broken(now))return false;
+        e.state.breakGuard(now,ticks);
+        p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
+        speed(p,e.state,now);sync(p,e.state);
+        sound(p,SoundEvents.ITEM_SHIELD_BREAK,.85f,.8f);
+        Vec3d effect=p.getPos().add(0,1.15,0).add(Vec3d.fromPolar(p.getPitch(),p.getYaw()).multiply(.6));
+        p.getServerWorld().spawnParticles(ParticleTypes.CRIT,effect.x,effect.y,effect.z,24,.25,.22,.15,.07);
+        return true;
+    }
     /** Whether this player holds their guard up now (and it is not broken). */
     public static boolean guarding(ServerPlayerEntity p) {var e=STATES.get(p.getUuid());return e!=null&&e.state.guarding&&!e.state.broken(p.getWorld().getTime());}
     public static boolean block(ServerPlayerEntity p,DamageSource source,float amount) {

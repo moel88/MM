@@ -146,6 +146,15 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         if(hit&&!getWorld().isClient)interruptCombat();
         return hit;
     }
+    /** Its guard broken outright by a blow no guard can take (2.59.0, CombatManager.breakGuard): whether it had one up. */
+    public boolean breakGuard(int ticks){
+        long now=getWorld().getTime();
+        if(!combat.guarding||combat.broken(now))return false;
+        combat.breakGuard(now,ticks);syncCombat();
+        getWorld().playSound(null,getX(),getY(),getZ(),SoundEvents.ITEM_SHIELD_BREAK,SoundCategory.HOSTILE,.85f,.8f);
+        ((ServerWorld)getWorld()).spawnParticles(ParticleTypes.CRIT,getX(),getY()+1.15,getZ(),24,.25,.22,.15,.07);
+        return true;
+    }
     public void interruptCombat(){combat.cancel();getNavigation().stop();nextCombo=getWorld().getTime()+12;syncCombat();}
     public void resetTraining() {
         HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;

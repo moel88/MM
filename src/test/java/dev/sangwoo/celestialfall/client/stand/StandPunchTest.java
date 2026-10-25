@@ -11,7 +11,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Star Platinum's punches (2.54.0): smooth at 60 fps through a mashed combo, landing on their contacts, the stand coming round and going back. */
+/**
+ * Star Platinum's punches (2.54.0): smooth at 60 fps through a mashed combo, landing on their contacts, the stand coming
+ * round and going back. 2.59.0: the heavy punch (R), alone, taking over from a punch stopped short at any moment, and
+ * stopped short itself.
+ */
 class StandPunchTest {
     static final float FRAME=1/60f;
     /** A mashed combo: each punch as soon as it may (seconds). */
@@ -124,7 +128,7 @@ class StandPunchTest {
     }
     @Test void everyPunchLandsOnItsContactAndHoldsStillThere(){
         var shape=new StandPunch.Shape();
-        for(int k=1;k<=4;k++){
+        for(int k=1;k<=StarPlatinumRules.HEAVY;k++){
             float hit=StandPunch.HIT[k];
             assertEquals(StarPlatinumRules.CONTACT[k]/20f,hit,1e-6);
             StandPunch.at(punch(k),hit,null,0,shape);
@@ -155,7 +159,7 @@ class StandPunchTest {
     }
     @Test void itPunchesFromRightInFrontOfItsUser(){
         var shape=new StandPunch.Shape();
-        for(int k=1;k<=4;k++){
+        for(int k=1;k<=StarPlatinumRules.HEAVY;k++){
             // on the punch's line, right in front of its user, as each blow lands
             StandPunch.at(punch(k),StandPunch.HIT[k],null,0,shape);
             assertEquals(0,shape.side,1e-6,"punch "+k+" on its user's line");
@@ -179,5 +183,77 @@ class StandPunchTest {
         // back in place once a punch is over (the last of its shove dying away)
         StandPunch.at(punch(1),StarPlatinumRules.LENGTH[1]/20f,null,0,shape);
         assertEquals(0,shape.lunge,5e-3);
+    }
+
+    // ---- R, the heavy punch (2.59.0) ----
+
+    static final int HEAVY=StarPlatinumRules.HEAVY;
+    /** Steps a look through {@code seconds} at 60 fps, the shape at each frame from {@code shapes}; returns the fastest turn of any bone in a frame, failing on any of 40 degrees or more. */
+    float sweep(float seconds,java.util.function.BiFunction<Float,StandPunch.Shape,StandPunch.Shape> shapes,String what)throws Exception{
+        var poses=new StarPlatinumPoses();var names=bones();var look=new StarPlatinumLook();var shape=new StandPunch.Shape();
+        float[][] last=new float[names.size()][];float[] p=new float[6];float fastest=0;
+        for(int f=0;f<=(int)(seconds/FRAME);f++){
+            float t=f*FRAME;look(shapes.apply(t,shape),look);
+            for(int b=0;b<names.size();b++){
+                poses.pose(names.get(b),look,t,p);
+                if(last[b]!=null){float d=turn(names.get(b),last[b],p);fastest=Math.max(fastest,d);assertTrue(d<40,names.get(b)+" turns "+d+" degrees in a frame at "+t+" ("+what+")");}
+                last[b]=p.clone();
+            }
+        }
+        return fastest;
+    }
+    @Test void theHeavyPunchMovesWithoutAJumpAt60fps()throws Exception{
+        // alone, from the stand at rest beside its user; then a jab as soon as it may (a punch after it starts the combo again)
+        float jab=StarPlatinumRules.STEP[HEAVY]/20f;
+        float fastest=sweep(jab+2.2f,(t,into)->t<jab?StandPunch.at(punch(HEAVY),t,null,0,into):StandPunch.at(punch(1),t-jab,punch(HEAVY),t,into),"the heavy punch, then a jab");
+        assertTrue(fastest>25,"it strikes fast: "+fastest);
+        // it coils long and holds the coil before it strikes
+        var shape=new StandPunch.Shape();
+        StandPunch.at(punch(HEAVY),.4f,null,0,shape);assertEquals(1,shape.weights[StarPlatinumStance.WIND_HEAVY],1e-4,"coiled");
+        StandPunch.at(punch(HEAVY),StandPunch.HIT[HEAVY],null,0,shape);assertEquals(1,shape.weights[StarPlatinumStance.PUNCH_HEAVY],1e-4,"thrown as it lands");
+        assertTrue(StandPunch.FREEZE[HEAVY]>StandPunch.FREEZE[4],"the longest hit-stop");
+        assertTrue(StandPunch.GUST[HEAVY]>StandPunch.GUST[4]&&StandPunch.DRIVE[HEAVY]>StandPunch.DRIVE[4],"the strongest gust and shove");
+    }
+    @Test void theHeavyPunchTakesOverFromAPunchStoppedShortAtAnyMoment()throws Exception{
+        // R in the middle of a mashed combo: the punch in flight stops short and turns back to its guard, and the heavy
+        // punch starts from there, STOP_RETURN ticks on (StarPlatinumAttack.beginHeavy); the client shows the newest punch
+        // begun and the one before it (StandAttack.shape)
+        float ret=StarPlatinumRules.STOP_RETURN/20f;
+        for(int combo=1;combo<=4;combo++)for(int stop=1;stop<=StarPlatinumRules.LENGTH[combo];stop++){
+            final int k=combo;float sk=STARTS[k-1],at=sk+stop/20f,heavy=at+ret;var stopped=punch(k).stop(stop/20f);
+            var before=k>1?punch(k-1):null;float sb=k>1?STARTS[k-2]:0;
+            sweep(heavy+StarPlatinumRules.LENGTH[HEAVY]/20f+.8f,(t,into)->{
+                if(t>=heavy)return StandPunch.at(punch(HEAVY),t-heavy,stopped,t-sk,into);
+                if(t>=sk)return StandPunch.at(t<at?punch(k):stopped,t-sk,before,t-sb,into);
+                return at(t,STARTS,into);
+            },"punch "+k+" stopped "+stop+" ticks in for the heavy punch");
+        }
+    }
+    @Test void theHeavyPunchStoppedShortAtAnyMomentGoesBackToItsGuard()throws Exception{
+        for(int stop=1;stop<=StarPlatinumRules.LENGTH[HEAVY];stop++){
+            float at=stop/20f;var now=punch(HEAVY).stop(at);
+            sweep(at+.8f,(t,into)->StandPunch.at(t<at?punch(HEAVY):now,t,null,0,into),"the heavy punch stopped "+stop+" ticks in");
+            var shape=StandPunch.at(now,at+StarPlatinumRules.STOP_RETURN/20f,null,0,new StandPunch.Shape());
+            assertEquals(1,shape.weights[StarPlatinumStance.GUARD],1e-6);assertEquals(1,shape.over,1e-6,"back in its guard");
+        }
+    }
+    @Test void theHeavyPunchsBlowSoundsOnlyIfItStrikes(){
+        var voice=new StandAttack.Heavy(new net.minecraft.util.Identifier("celestialfall","star_platinum_heavy"),false,1f);
+        var blow=new StandAttack.Heavy(new net.minecraft.util.Identifier("celestialfall","star_platinum_heavy_hit"),true,1f);
+        voice.tick();blow.tick();
+        assertEquals(1,voice.loudness(),1e-6,"the voice whoever it strikes");assertEquals(0,blow.loudness(),1e-6,"the blow silent until it is known to strike");
+        assertTrue(blow.shouldAlwaysPlay(),"the blow starts though silent, to come in as the fist lands");assertFalse(voice.shouldAlwaysPlay());
+        blow.strike(true);blow.tick();assertEquals(1,blow.loudness(),1e-6,"in at once as the fist lands");
+        // the server says it struck no one after all: out over FADE ticks, still playing as it goes
+        blow.strike(false);float last=blow.loudness();
+        for(int i=0;i<StandAttack.FADE;i++){blow.tick();assertTrue(blow.loudness()<last,"quieter every tick");last=blow.loudness();assertTrue(blow.canPlay());}
+        assertEquals(0,blow.loudness(),1e-6);
+        // stopped short as it plays: it fades out (the game would cut a sound off on a tick it cannot play)
+        voice.fade();
+        for(int i=0;i<StandAttack.FADE;i++){assertTrue(voice.canPlay(),"fading, not cut off");assertFalse(voice.isDone());voice.tick();}
+        assertTrue(voice.isDone(),"gone once faded");
+        // stopped short before its sound began: it never plays
+        var early=new StandAttack.Heavy(new net.minecraft.util.Identifier("celestialfall","star_platinum_heavy"),false,1f);
+        early.fade();assertFalse(early.canPlay(),"never begins");
     }
 }
