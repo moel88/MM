@@ -1345,8 +1345,7 @@ POSES = {
     # cocked low back by the hip, the weight sitting back on the rear leg) and throws the uppercut ('beat_upper': rising
     # off the front leg as the hips wheel round to the left, the right fist driven straight up in front through their
     # chin, the body arched a little back after it, the left hand let go and torn back to the chest, the head up after
-    # them), then rushes them (the rush's stances) and throws its big ORAs (the punches') and its last blow (the heavy
-    # punch's), client/stand/StandBeatdown.
+    # them), then rushes them (the rush's stances) and throws its last blow (the heavy punch's), client/stand/StandBeatdown.
     'beat_grab': {
         'root': {'pos': (0, -.8, -3.6)},
         'hips': {'rot': (10, 30, 0)}, 'torso': {'rot': (7, 10, 0)}, 'chest': {'rot': (5, 8, 0)},
@@ -1369,6 +1368,36 @@ POSES = {
         'left_leg': {'rot': (-52, 0, -4)}, 'left_shin': {'rot': (36, 0, 0)}, 'left_foot': {'rot': (8, 0, 0)},
         'right_leg': {'rot': (40, 0, 6)}, 'right_shin': {'rot': (16, 0, 0)}, 'right_foot': {'rot': (46, 0, 0)},
         'cloth_front': {'rot': (-24, 0, 0)}, 'cloth_back': {'rot': (26, 0, 0)},
+    },
+    # The beatdown's own blow, G (2.65.0, user request: "G 꽂을때 파훼 할 수 있게 모션이 더 크게 보여야하고"): one huge
+    # overhand right that whoever it comes at can see coming half a second off. It rears right up and back as if
+    # springing, wound round to the right, the right fist cocked high up behind its head with the elbow out, the left
+    # arm thrust out straight at the target to take aim, the knees drawn right up ('beat_wind'); then it smashes the fist
+    # down and on through the target with everything behind it, wheeling round to the left and flung out over the front
+    # leg, the left fist torn back to the hip, the back leg kicked out straight ('beat_strike').
+    'beat_wind': {
+        'root': {'pos': (0, 5.0, 4.0)},
+        'hips': {'rot': (-14, 66, 0)}, 'torso': {'rot': (-12, 22, 0)}, 'chest': {'rot': (-10, 16, 0)},
+        'neck': {'rot': (6, -38, 0)}, 'head': {'rot': (10, -54, 0)},
+        'right_arm': {'reach': ((-5.0, 46.0, 11.0), (-1, 0.3, 0.2))},
+        'right_pad': {'rot': (0, 0, 26)},
+        'left_arm': {'reach': ((4.0, 38.0, -25.0), (0.6, -1, 0))},
+        'left_pad': {'rot': (-14, 0, -20)},
+        'left_leg': {'rot': (-62, 0, -6)}, 'left_shin': {'rot': (82, 0, 0)}, 'left_foot': {'rot': (16, 0, 0)},
+        'right_leg': {'rot': (8, 0, 8)}, 'right_shin': {'rot': (84, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-24, 0, 0)}, 'cloth_back': {'rot': (-12, 0, 0)},
+    },
+    'beat_strike': {
+        'root': {'pos': (0, -0.8, -10.5)},
+        'hips': {'rot': (34, -46, 0)}, 'torso': {'rot': (17, -22, 0)}, 'chest': {'rot': (12, -20, 0)},
+        'neck': {'rot': (-17, 34, 0)}, 'head': {'rot': (-23, 43, 0)},
+        'right_arm': {'reach': ((0.0, 29.5, -45.0), (-0.5, -1, 0))},
+        'right_pad': {'rot': (-24, 0, 30)},
+        'left_arm': {'reach': ((7.5, 25.0, 5.0), (1, -0.5, 1))},
+        'left_pad': {'rot': (0, 0, -8)},
+        'left_leg': {'rot': (-64, 0, -4)}, 'left_shin': {'rot': (52, 0, 0)}, 'left_foot': {'rot': (0, 0, 0)},
+        'right_leg': {'rot': (66, 0, 6)}, 'right_shin': {'rot': (0, 0, 0)}, 'right_foot': {'rot': (54, 0, 0)},
+        'cloth_front': {'rot': (-30, 0, 0)}, 'cloth_back': {'rot': (38, 0, 0)}, 'cloth_back_1': {'rot': (20, 0, 0)},
     },
 }
 

@@ -21,10 +21,11 @@ import static dev.sangwoo.celestialfall.client.stand.StandPunchFx.*;
  * 2.56.0): as it bursts out of its user at "Star Platinum!" a ring of light runs out over the ground and light gathers
  * round it; a burst where it grips the collar; the uppercut's burst under the chin, rings racing up and light streaking
  * up after them; the rush's bursts all over the one struck, a blow every tenth of a second, the air streaming at them
- * and a pressure ring every few blows; each big ORA a bigger burst, its rings and its blast of air on through them; the
- * last blow the heavy punch's finish (the dome, rings racing on, a lance of light, sparks), a trail of light after the
- * one struck as they fly, and where they come down a burst of dust, a ring along the ground and the floor's chunks
- * thrown up. Each of them lights the world round it. All of it follows the bodies as the cutscene shows them.
+ * and a pressure ring every few blows, all through the line (2.65.0: no big ORAs between); the last blow, on its "DA!",
+ * the heavy punch's finish (the light gathered into the cocked fist, the dome, rings racing on, a lance of light,
+ * sparks), a trail of light after the one struck as they fly, and where they come down a burst of dust, a ring along
+ * the ground and the floor's chunks thrown up. Each of them lights the world round it. All of it follows the bodies as
+ * the cutscene shows them.
  */
 public final class StandBeatdownFx {
     /** A cutscene near the camera this frame: its clock, where the one struck's chest is shown, and the stand's body. */
@@ -89,13 +90,11 @@ public final class StandBeatdownFx {
                 float u=Ease.unit(t,GRAB,GRAB+.18f);if(u<1)FxLib.ringPlane(m,c,r,UP,.2+.9*Ease.out(t,GRAB,GRAB+.16f),.12,VIOLET,.8f*(1-u));}
             uppercut(m,s,t);
             rush(m,s,t);
-            // the big ORAs: each a bigger burst on the chest, its rings, its sparks and the air blasted on through them
-            for(int i=1;i<STRIKES.length-1;i++)big(m,s,t,i);
             finish(m,s,t);
         }
     }
-    /** How big the burst of strike {@code i} is (the uppercut, the five big ORAs, the last). */
-    static double size(int i){return i==0?1.9:i==STRIKES.length-1?2.6:i==4?2.0:1.5;}
+    /** How big the burst of strike {@code i} is (the uppercut, the last). */
+    static double size(int i){return i==0?1.9:2.6;}
     /** A burst's strength {@code t}: in over a frame as its blow lands at {@code at}, gone {@code life} seconds later. */
     static float burstAlpha(float t,float at,float life){
         if(t<at-.01f||t>at+life)return 0;
@@ -164,26 +163,6 @@ public final class StandBeatdownFx {
         }
         m.softDisc(chest,1.2,VIOLET,.16f*on);
     }
-    /** Big ORA {@code i} (1 to 5 of STRIKES): its burst on the chest, its rings, its sparks and its blast of air on through them. */
-    static void big(EffectMesh m,Shown s,float t,int i){
-        var b=s.b;float at=STRIKES[i];if(t<at-.01f||t>at+.5f)return;
-        Vec3d c=chestAt(b,at).subtract(b.f.multiply(.3)),f=b.f,r=b.r;
-        double size=size(i);float a=burstAlpha(t,at,.24f);
-        if(a>0){burst(m,c,size,.36,11,b.seed+i*31,LILAC,VIOLET,.9f*a,.75f*a);m.star(c,size*.45,WHITE,.4f*a);m.softDisc(c,size*.8,BLUE,.3f*a);}
-        float u=Ease.unit(t,at,at+.18f),in=Ease.smooth(t,at-.01f,at+.01f);
-        if(u<1)FxLib.ringPlane(m,c.add(f.multiply(.15)),r,UP,.2+1.4*size*Ease.out(t,at,at+.16f),.22*size,VIOLET,.9f*in*(1-u));
-        float u2=Ease.unit(t,at+.03f,at+.32f);
-        if(t>=at+.03f&&u2<1)FxLib.ringPlane(m,c.add(f.multiply(.5+1.2*Ease.out(t,at+.03f,at+.3f))),r,UP,.3+1.9*size*Ease.out(t,at+.03f,at+.3f),.12*size,BLUE,.6f*(1-u2));
-        // the air blasted on through them
-        float bl=in*(1-Ease.smooth(t,at+.07f,at+.3f));
-        if(bl>0)for(int k=0;k<20;k++){
-            double ang=Ease.hash(k*5+b.seed+i*41)*Math.PI*2,spread=.06+.3*Ease.hash(k*7+b.seed+i*43);
-            Vec3d d=f.add(r.multiply(Math.cos(ang)*spread)).add(UP.multiply(Math.sin(ang)*spread)).normalize();
-            double reach=(2.2+1.2*Ease.hash(k*11+b.seed))*Ease.out(t,at,at+.12f);
-            m.needle(c.add(d.multiply(.1+reach*.4)),c.add(d.multiply(.1+reach)),.07,.4,k%5==0?WHITE:k%2==0?VIOLET:BLUE,.8f*bl);
-        }
-        sparks(m,c,f,r,UP,t,at,1.0,b.seed+i*59,20);
-    }
     /** The last blow: the heavy punch's finish (its dome, rings racing on, the lance, sparks), the trail after the one struck as they fly, and where they come down. */
     static void finish(EffectMesh m,Shown s,float t){
         var b=s.b;if(t<FINAL-.45f||t>LAND+1.2f)return;
@@ -211,11 +190,11 @@ public final class StandBeatdownFx {
         if(lance>0){Vec3d a0=c.subtract(f.multiply(.5)),a1=c.add(f.multiply(8.5*Ease.out(t,FINAL-.02f,FINAL+.05f)));
             m.softLine(a0,a1,1.9*g,DEEP,.4f*lance);m.needle(a0,a1,.56*g,.25,VIOLET,lance);m.needle(a0,a1.subtract(f.multiply(.5)),.2,.25,WHITE,.6f*lance);}
         sparks(m,c,f,r,up,t,FINAL,2.0,b.seed+131,60);
-        // the trail of light after them as they fly
-        float fly=Ease.smooth(t,FINAL+.05f,FINAL+.1f)*(1-Ease.smooth(t,LAND-.05f,LAND+.25f));
+        // the trail of light after them as they fly (once the blow has held them)
+        float fly=Ease.smooth(t,FINAL+FINAL_STOP-.02f,FINAL+FINAL_STOP+.04f)*(1-Ease.smooth(t,LAND-.05f,LAND+.25f));
         if(fly>0){
             Vec3d q=flight(b,Math.min(t,LAND)).feet().add(0,.9,0);
-            Vec3d back=flight(b,Math.max(FINAL+.06f,Math.min(t,LAND)-.22f)).feet().add(0,.9,0);
+            Vec3d back=flight(b,Math.max(FINAL+FINAL_STOP,Math.min(t,LAND)-.22f)).feet().add(0,.9,0);
             Vec3d d=back.subtract(q);double l=d.length();
             if(l>.2){
                 Vec3d end=q.add(d.multiply(Math.min(1,7/l)));
@@ -257,7 +236,8 @@ public final class StandBeatdownFx {
         List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();
         for(var s:FRAME){
             var b=s.b;float t=s.t;
-            Vec3d under=new Vec3d(b.hold.x,b.hold.y,b.hold.z).add(b.f.multiply(b.drift*.5));
+            // under where the last blow lands (the rush drives them back all the way to it)
+            Vec3d l=launch(b).feet(),under=new Vec3d(l.x,b.hold.y,l.z);
             if(t>FINAL-.1f&&t<FINAL+1.6f)FxLib.dustRing(under,t,FINAL,.4,3.4,16,1.1,dust,puffs,b.seed+61);
             if(t>LAND-.1f)FxLib.dustRing(new Vec3d(b.land.x,b.land.y,b.land.z).subtract(b.f.multiply(SLIDE)),t,LAND,.35,2.6,14,1.0,dust,puffs,b.seed+71);
             if(t>UPPER-.1f&&t<UPPER+1.4f)FxLib.dustRing(b.hold,t,UPPER,.3,1.8,10,.75,dust,puffs,b.seed+81);
@@ -276,7 +256,7 @@ public final class StandBeatdownFx {
             int n=blows(t);
             if(n>0&&t<RUSH_TO+.3f)f.light(s.chest,0xd0c4ff,8,1.8f*FxLib.kick(t,blowAt(n-1),.08f)+.4f*(1-Ease.smooth(t,RUSH_TO,RUSH_TO+.3f))*Ease.smooth(t,RUSH_FROM,RUSH_FROM+.1f));
             if(t>=REVEAL&&t<REVEAL+.8f)f.light(b.from.add(0,1.2,0),0xb8a4ff,10,2.8f*FxLib.kick(t,REVEAL,.3f));
-            float fly=Ease.smooth(t,FINAL,FINAL+.05f)*(1-Ease.smooth(t,LAND,LAND+.3f));
+            float fly=Ease.smooth(t,FINAL+FINAL_STOP-.02f,FINAL+FINAL_STOP+.04f)*(1-Ease.smooth(t,LAND,LAND+.3f));
             if(fly>0)f.light(flight(b,Math.min(t,LAND)).feet().add(0,.9,0),0x9c86ff,7,1.6f*fly);
             if(t>=LAND-.01f&&t<LAND+1.1f){
                 // (kept small and quick: the first capture's 10 blocks at 2.6 turned the whole floor round it pink)

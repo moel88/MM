@@ -12,11 +12,12 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Star Platinum's beatdown (2.64.0): its blow, its cutscene's stand from its going back in to its going back to its
- * user's shoulder, the one struck as the cutscene shows them, its shots, its black bars and its two bodies, all smooth
- * at 60 fps but where it is meant to cut: no bone of the stand turns 40 degrees in a frame while it is seen, the one
- * struck never jumps but as the blows drive them, the camera moves within each shot and cuts on the beats, the bars
- * slide in and out.
+ * Star Platinum's beatdown (2.64.0; 2.65.0 its blow slower and bigger, the rush on through the line to one heavy blow
+ * on its "DA!", the camera's new shots and the blows' jolts): its blow, its cutscene's stand from its going back in to
+ * its going back to its user's shoulder, the one struck as the cutscene shows them, its shots, its black bars and its
+ * two bodies, all smooth at 60 fps but where it is meant to cut: no bone of the stand turns 40 degrees in a frame while
+ * it is seen, the one struck never jumps but as the blows drive them, the camera moves within each shot and cuts on the
+ * beats, every blow's jolt comes in over two frames, the bars slide in and out.
  */
 class StandBeatdownTest {
     static final UUID USER=new UUID(1,2),VICTIM=new UUID(3,4);
@@ -119,8 +120,8 @@ class StandBeatdownTest {
         // the look it goes back with is the blow's, as it held: nothing jumps as it goes
         var held=new Stand(b).at(StandBeatdown.RETREAT-.001f);var going=new Stand(b).at(StandBeatdown.RETREAT+.001f);
         for(int i=0;i<held.weights.length;i++)assertEquals(held.share(i),going.share(i),.02f,"stance "+NAMES.get(i)+" as it goes back");
-        // through the grab, the uppercut, the rush and the big ORAs it is in front of its user, out by the grab
-        for(float t:new float[]{StandBeatdown.GRAB,StandBeatdown.UPPER,StandBeatdown.RUSH_FROM+1,StandBeatdown.BIG[2],StandBeatdown.FINAL}){
+        // through the grab, the uppercut, the rush through the line and the last blow it is in front of its user, out by the grab
+        for(float t:new float[]{StandBeatdown.GRAB,StandBeatdown.UPPER,StandBeatdown.RUSH_FROM+1,StandBeatdown.JUDGE,StandBeatdown.MINE,StandBeatdown.FINAL}){
             var s=StandBeatdown.shape(b,clock(t),0,new StandPunch.Shape());
             assertNotNull(s,"its shape at "+t);assertTrue(s.engage>.98f,"round in front at "+t);
         }
@@ -150,7 +151,8 @@ class StandBeatdownTest {
         var ghost=new StarPlatinumLook();
         assertEquals(0,StandBeatdown.phantom(b,0,clock(StandBeatdown.UPPER),ghost),1e-6);
         assertTrue(StandBeatdown.phantom(b,0,clock(StandBeatdown.RUSH_FROM+1),ghost)>.1f,"its afterimage arms in the rush");
-        assertEquals(0,StandBeatdown.phantom(b,0,clock(StandBeatdown.BIG[1]),ghost),1e-6);
+        assertTrue(StandBeatdown.phantom(b,0,clock(StandBeatdown.MINE),ghost)>.1f,"on through the line");
+        assertEquals(0,StandBeatdown.phantom(b,0,clock(StandBeatdown.FINAL-.3f),ghost),1e-6,"none as it draws back for the last blow");
     }
     @Test void theOneStruckIsShownWithoutAJumpButAsTheBlowsDriveThem(){
         for(double ahead:new double[]{1.2,2.6,4.1})for(double fly:new double[]{0,4,12.7}){
@@ -162,8 +164,9 @@ class StandBeatdownTest {
                     double d=v.feet().distanceTo(last.feet());
                     // the fastest are the last blow sending them flying (some 25 blocks a second as they go) and the rush's jolts
                     assertTrue(d<.6,"moves "+d+" blocks in a frame at "+t+" ("+what+")");
+                    // (2.65.0: the uppercut snaps their head back harder, over two frames: under the stand's 40)
                     float turn=Math.max(Math.abs(v.lean()-last.lean()),Math.max(Math.abs(v.roll()-last.roll()),Math.abs(v.spin()-last.spin())));
-                    assertTrue(turn<30,"turns "+turn+" degrees in a frame at "+t+" ("+what+")");
+                    assertTrue(turn<40,"turns "+turn+" degrees in a frame at "+t+" ("+what+")");
                     assertTrue(Math.abs(v.hold()-last.hold())<.2f,"turned round to face its user in a jump at "+t);
                     if(d>fastest){fastest=d;fastAt=t;}turnFastest=Math.max(turnFastest,turn);
                 }
@@ -184,7 +187,7 @@ class StandBeatdownTest {
         double air=StandBeatdown.victim(b,StandBeatdown.UPPER+.4f).feet().y;
         assertTrue(air-ground>1.1,"up in the air: "+(air-ground));
         assertTrue(StandBeatdown.victim(b,StandBeatdown.RUSH_FROM+2).feet().y>1,"held up there through the rush");
-        // driven on by the rush and the big ORAs
+        // driven on by the rush
         double held=StandBeatdown.victim(b,StandBeatdown.RUSH_FROM).feet().z,last=StandBeatdown.launch(b).feet().z;
         assertTrue(last-held>BEAT_DRIFT*.8,"driven on "+(last-held)+" blocks before the last blow");
         // flying: high in the middle of the way
@@ -213,6 +216,28 @@ class StandBeatdownTest {
         assertEquals(StandBeatdown.CUTS.length-1,lastShot,"every shot shown");
         for(int i=1;i<StandBeatdown.CUTS.length;i++)assertTrue(StandBeatdown.CUTS[i]>StandBeatdown.CUTS[i-1],"the cuts in order");
         System.out.printf(java.util.Locale.ROOT,"the camera within its shots: fastest eye %.3f blocks, look %.2f degrees, lens %.2f degrees a frame%n",fastEye,fastLook,fastFov);
+        // the line's words each have a shot of their own, and the last blow cuts in as it lands
+        for(float at:new float[]{StandBeatdown.JUDGE,StandBeatdown.MINE,StandBeatdown.FINAL}){
+            boolean cut=false;for(float c:StandBeatdown.CUTS)cut|=Math.abs(c-at)<1e-4;
+            assertTrue(cut,"a cut at "+at);
+        }
+    }
+    @Test void everyBlowJoltsTheCameraComingInOverTwoFrames(){
+        var b=beat(2.6,12);
+        assertEquals(0,StandBeatdownCamera.jolt(b,StandBeatdown.FINAL-.02f).lens(),.05,"still just before the last blow");
+        assertTrue(StandBeatdownCamera.jolt(b,StandBeatdown.FINAL+.02f).lens()>8,"the lens punches in as it lands");
+        assertTrue(StandBeatdownCamera.jolt(b,StandBeatdown.UPPER+.02f).lens()>4,"and at the uppercut");
+        assertTrue(StandBeatdownCamera.jolt(b,StandBeatdown.blowAt(20)+.01f).lens()>.6,"a little at every blow of the rush");
+        double last=0,fastest=0,most=0;float roll=0;
+        for(int f=(int)(StandBeatdown.CUT/FRAME);f<=(int)(StandBeatdown.END/FRAME);f++){
+            float t=f*FRAME;var j=StandBeatdownCamera.jolt(b,t);
+            fastest=Math.max(fastest,Math.abs(j.lens()-last));last=j.lens();
+            most=Math.max(most,Math.hypot(j.right(),j.up()));roll=Math.max(roll,Math.abs(j.roll()));
+        }
+        assertTrue(fastest<10,"the lens comes in over two frames, never all in one: "+fastest);
+        assertTrue(most<.3,"shaken at most "+most+" blocks");assertTrue(roll<6,"rolled at most "+roll+" degrees");
+        assertEquals(0,StandBeatdownCamera.jolt(b,StandBeatdown.END).lens(),.1,"still again by the end");
+        System.out.printf(java.util.Locale.ROOT,"the jolts: the lens at most %.2f degrees a frame, the eye shaken %.3f blocks, rolled %.2f degrees%n",fastest,most,roll);
     }
     @Test void theBlackBarsSlideInAsTheBlowLandsAndOutAsItEnds(){
         var b=beat(2.6,12);
@@ -241,7 +266,7 @@ class StandBeatdownTest {
         System.out.printf(java.util.Locale.ROOT,"its user's fastest joint in a frame: %.1f degrees; the one struck's %.1f%n",fastest,fastestStruck);
         // the hand up on the head through yare yare daze (on its forehead, as the rig puts it), the head shaking under it
         var rig=new dev.sangwoo.celestialfall.client.MotionPlayerModel(false);float farthest=0;
-        for(float t=1.13f;t<=2.52f;t+=.01f){
+        for(float t=StandBeatdown.rec(1.08f);t<=StandBeatdown.rec(2.47f);t+=.01f){
             var p=BeatdownPose.user(t);dev.sangwoo.celestialfall.client.MotionRig.reset(rig);dev.sangwoo.celestialfall.client.MotionRig.apply(rig,p,0,0);
             var arm=new net.minecraft.client.util.math.MatrixStack();rig.rightArm.rotate(arm);rig.rightArm.getChild("elbow").rotate(arm);
             var hand=arm.peek().getPositionMatrix().transformPosition(new org.joml.Vector3f(-1/16f,6.5f/16,0)).mul(16);
@@ -253,11 +278,14 @@ class StandBeatdownTest {
         }
         System.out.printf(java.util.Locale.ROOT,"the hand at most %.2f pixels from the forehead while it holds it%n",farthest);
         float least=0,most=0;
-        for(float t=1.17f;t<2.03f;t+=.01f){float s=BeatdownPose.shake(t);least=Math.min(least,s);most=Math.max(most,s);}
+        for(float t=StandBeatdown.rec(1.12f);t<StandBeatdown.rec(1.98f);t+=.01f){float s=BeatdownPose.shake(t);least=Math.min(least,s);most=Math.max(most,s);}
         assertTrue(most>12&&least<-12,"the head shakes from side to side: "+least+" to "+most);
-        assertEquals(0,BeatdownPose.shake(1.0f),1e-6,"still before yare yare");assertEquals(0,BeatdownPose.shake(2.2f),1e-6,"and after it");
-        var point=BeatdownPose.user(3f);
+        assertEquals(0,BeatdownPose.shake(StandBeatdown.rec(.35f)),1e-6,"still before yare yare");assertEquals(0,BeatdownPose.shake(StandBeatdown.rec(2.2f)),1e-6,"and after it");
+        var point=BeatdownPose.user(StandBeatdown.rec(3f));
         assertTrue(point.elbow[0]>-20,"the arm flung out straight at Star Platinum!");
+        // 2.65.0: pointing at the one struck again through "裁くのは俺のスタンドだ"
+        var judge=BeatdownPose.user(StandBeatdown.MINE);
+        assertTrue(judge.elbow[0]>-10&&change(BeatdownPose.user(StandBeatdown.JUDGE-.15f),judge)>40,"its arm up pointing at them through the line");
     }
     /** The largest turn of any of a body's joints from one frame to the next (degrees: the angle between the two whole turns, as the model part turns, roll-yaw-pitch). */
     static float change(MotionPose a,MotionPose b){
@@ -272,12 +300,15 @@ class StandBeatdownTest {
     }
     @Test void itsBlowMovesWithoutAJumpAndLandsOnTheRaOfItsOra()throws Exception{
         var names=StandInhaleTest.bones();var seen=new Seen(names);var look=new StarPlatinumLook();var shape=new StandPunch.Shape();
-        for(int f=0;f<=(int)(1.4f/FRAME);f++){
+        for(int f=0;f<=(int)(1.6f/FRAME);f++){
             float t=f*FRAME;var s=StandPunch.at(blow(),t,null,0,shape);
             StandRushTest.look(s,look);seen.see(look,t,"the beatdown's blow");
         }
         assertEquals(StarPlatinumRules.CONTACT[BEATDOWN]/20f,StandPunch.HIT[BEATDOWN],1e-6,"it lands on its contact");
-        StandPunch.at(blow(),StandPunch.HIT[BEATDOWN],null,0,shape);assertTrue(shape.weights[PUNCH_BIG]>.97f,"thrown as it lands");
+        StandPunch.at(blow(),StandPunch.HIT[BEATDOWN],null,0,shape);assertTrue(shape.weights[BEAT_STRIKE]>.97f,"thrown as it lands");
+        // 2.65.0: drawn back far and held there a while before it strikes, slower than the heavy punch, so it can be seen coming
+        StandPunch.at(blow(),.55f,null,0,shape);assertTrue(shape.weights[BEAT_WIND]>.97f,"coiled before it strikes");
+        assertTrue(StandPunch.HIT[BEATDOWN]>StandPunch.HIT[HEAVY],"slower than the heavy punch");
         assertTrue(seen.fastest>15,"a fast blow: "+seen.fastest);
         System.out.println("the beatdown's blow's fastest turn in a frame: "+seen.fastest+" ("+seen.where+")");
     }

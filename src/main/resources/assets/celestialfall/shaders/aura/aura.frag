@@ -3,9 +3,13 @@
 // flow up out of it and flicker. It is violet all through, brightest along the body's edge, and nothing is drawn on the
 // body itself: no white rim ("몸에 흰색 테두리는 없애고"). Premultiplied: it lays its violet over what is behind it and
 // adds a little light, never so much that it burns to white.
+// And the sky-blue glow of a body using a skill with a cutscene (2.65.0, "몸 전체가 하늘색으로 빛이 나야하는 쪽에
+// 가까움 그러니까 몸 색깔을 바꾸는건 X"): sky-blue light spreading out round its whole outline, palest and brightest
+// right at it, mostly added light; nothing on the body itself.
 uniform sampler2D MaskA;     // the stands (alpha: how solid)
 uniform sampler2D MaskB;     // their users
-uniform sampler2D Halo;      // both, blurred: red the stands, green the users (half size)
+uniform sampler2D MaskC;     // the bodies glowing sky blue
+uniform sampler2D Halo;      // all three, blurred: red the stands, green the users, blue the glowing (half size)
 uniform sampler2D Noise;     // tiling noise: red smooth, green finer
 uniform vec2 Texel;          // one screen pixel
 uniform float Scale;         // screen pixels a block, where the bearers are
@@ -14,6 +18,7 @@ uniform vec3 Phase;          // the flow of the three layers of flame (texture u
 uniform vec2 Gain;           // the stands', their users'
 uniform float Flare;         // 0..1: bursting into its pose
 uniform float Front;         // 1 when the users are nearer the camera than the stands, 0 when the stands are
+uniform float Glow;          // 1 when any body glows sky blue
 in vec2 texCoord;
 out vec4 fragColor;
 
@@ -21,8 +26,7 @@ vec3 tone(float heat){
     // deep violet out in the tongues, a brighter violet close to the body
     return mix(vec3(0.34,0.13,0.78),vec3(0.58,0.32,1.0),heat);
 }
-void main(){
-    vec2 px=gl_FragCoord.xy;
+vec4 aura(vec2 px){
     // the flames' pattern in blocks round the bearers, flowing upwards
     vec2 q=(px-Anchor)/max(Scale,1.0);
     float n1=texture(Noise,q*vec2(0.55,0.32)+vec2(0.0,-Phase.x)).r;
@@ -42,8 +46,27 @@ void main(){
     vec2 glow=max(h*(0.55+0.9*f),h0*0.8)*(1.0-cov)*(1.0-overNear);
     vec2 amount=smoothstep(vec2(0.05),vec2(0.55),glow)*Gain*(1.0+0.6*Flare);
     float total=amount.x+amount.y;
-    if(total<=0.002)discard;
+    if(total<=0.002)return vec4(0.0);
     float heat=clamp(max(h0.x,h0.y)*1.4,0.0,1.0);
     float cover=min(total,1.0)*0.72;
-    fragColor=vec4(tone(heat)*cover*1.25,cover);
+    return vec4(tone(heat)*cover*1.25,cover);
+}
+vec4 sky(vec2 px){
+    if(Glow<=0.0)return vec4(0.0);
+    float cov=smoothstep(0.02,0.18,texture(MaskC,texCoord).a);
+    float h=texture(Halo,px*Texel).b*(1.0-cov);
+    if(h<=0.003)return vec4(0.0);
+    // how much light here (out to where the blur ends), and right at the outline, paler and brighter
+    float a=smoothstep(0.0,0.42,h);
+    float edge=smoothstep(0.24,0.5,h);
+    vec3 col=mix(vec3(0.5,0.86,1.0),vec3(0.86,0.97,1.0),0.7*edge)*(0.95*a+0.6*edge);
+    return vec4(col,0.3*a);
+}
+void main(){
+    vec2 px=gl_FragCoord.xy;
+    vec4 au=aura(px),gl=sky(px);
+    // the glow over the aura
+    vec4 o=vec4(gl.rgb+au.rgb*(1.0-gl.a),gl.a+au.a*(1.0-gl.a));
+    if(o.a<=0.002&&o.r+o.g+o.b<=0.006)discard;
+    fragColor=o;
 }

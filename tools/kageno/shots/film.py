@@ -278,10 +278,10 @@ def inhale_line(t):
     color = (255, 150, 150) if (r.get('dummy_disabled') == '1' and os.environ.get('FILM_INHALE_DUMMY') != '0') or any('무력화' in p for p in parts) else (255, 255, 255)
     return (' · '.join(parts), color) if parts else (None, None)
 
-# The beatdown's cutscene (2.64.0): its parts by its own clock (seconds from G, StarPlatinumRules.BEAT_*)
-BEAT_PARTS = [(1.15, '적중 · 컷씬 시작 (레터박스)'), (2.6, '야레야레다제 · 머리를 잡고 흔듦'), (3.55, '스타플래티나! · 스탠드 등장'),
-              (4.4, '멱살을 잡음'), (4.55, '올려치기'), (8.3, '오라오라 러시 (38타)'), (10.85, '큰 오라 5번'), (11.7, '마지막 일격 · 날아감'),
-              (12.5, '착지 · 일어남'), (99, '컷씬 끝')]
+# The beatdown's cutscene (2.64.0; 2.65.0's timeline): its parts by its own clock (seconds from G, StarPlatinumRules.BEAT_*)
+BEAT_PARTS = [(1.8, '적중 · 컷씬 시작 (레터박스)'), (3.25, '야레야레다제 · 머리를 잡고 흔듦'), (4.4, '스타플래티나! · 스탠드 등장'),
+              (4.98, '멱살을 잡음'), (5.15, '올려치기'), (9.0, '오라오라 러시'), (10.83, '오라오라 러시 · "심판하는 건 나의 스탠드다"'),
+              (11.45, '마지막 강펀치를 당김'), (12.3, '"다!" · 강펀치 · 날아감'), (13.1, '착지 · 일어남'), (99, '컷씬 끝')]
 
 def beatdown_line(t):
     """The beatdown (G): its blow, the part of its cutscene, the training dummy's health (the damage dealt), or its guard broken."""
@@ -297,10 +297,12 @@ def beatdown_line(t):
     elif r.get('combo') == '7':
         # (the dummy's guard is seen broken a tick after the blow lands: the shot's rows from then on tell)
         broke = any(x.get('dummy_broken') == '1' for _, x in rush[i:i + 4])
-        if r['landed'] != '1': parts.append('G · 오라! · 주먹을 꽂음')
+        if r['landed'] != '1': parts.append('G · 주먹을 크게 당김 · 0.8초에 꽂음 (오라!)')
         elif int(r['struck'] or 0) > 0: parts.append('적중')
         elif broke: parts.append('가드 깨짐 (컷씬 없음) · 무력화')
         else: parts.append('빗나감 (컷씬 없음) · 쿨타임 시작')
+    # (2.65.0: the user's body glowing sky blue as they use it)
+    if float(r.get('flash') or 0) > .02: parts.append('하늘색으로 빛남')
     full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
     if r['dummy_health'] and full and os.environ.get('FILM_BEAT_DUMMY') != '0': parts.append(f'더미 {float(r["dummy_health"]):.0f}/{full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
     color = (255, 150, 150) if any('가드 깨짐' in p for p in parts) else (255, 255, 255)

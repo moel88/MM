@@ -425,7 +425,8 @@ public final class MpClient implements ClientModInitializer {
      * struck is shown twice a second (ahead of its user along the blow and up, and where they really are), and its end
      * with how often the one struck's body flashed red here (a blow's hurt time) and when last (its clock: every blow
      * to the last, even those that find them at one health, StarPlatinumBeatdown.blow); and whether this client's
-     * camera is the cutscene's, its black bars, the sky-blue flash of this player's body.
+     * camera is the cutscene's, its black bars, the sky-blue glow of this player's body, and (2.65.0) whether this client
+     * drew a body glowing sky blue.
      */
     private void beats(){
         for(var p:mc.world.getPlayers()){
@@ -445,6 +446,8 @@ public final class MpClient implements ClientModInitializer {
         float bars=dev.sangwoo.celestialfall.client.stand.StandBeatdown.bars(0);
         flag("beat_bars",bars<=0?"none":bars>=dev.sangwoo.celestialfall.client.stand.StandBeatdown.BAR-1e-4f?"full":"sliding");
         flag("flash",dev.sangwoo.celestialfall.client.CutsceneFlash.local(0)>0);
+        // 2.65.0: whether this client drew any body glowing sky blue last frame (its own, or the other player's)
+        flag("glowing",dev.sangwoo.celestialfall.client.stand.StandAuraLayer.glowedLast()>0);
     }
     private final Map<Integer,String> tries=new HashMap<>();private int release=-1,releaseKey;private int[] fingerWalk;
     private net.minecraft.util.math.Vec3d walkFrom;private final List<Double> walkSteps=new ArrayList<>();

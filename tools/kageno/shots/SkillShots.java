@@ -129,8 +129,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * "track=" the game's own camera films it, so its cutscene's shots and black bars are the game's as its user sees them.
  * stand.csv gets its cutscene (its age in seconds, whether it ended and was cut short, how high the bars are), whether
  * its camera has the player, how strongly the player's body flashes sky blue, its two stances (the collar, the
- * uppercut) and where the one struck is shown from the player (ahead, to the right, up); the log when its cutscene
- * starts and ends, and each change of the dummy's health.
+ * uppercut) and where the one struck is shown from the player (ahead, to the right, up), and since 2.65.0 its blow's
+ * two stances (drawn back, striking), the heavy punch's two (its last blow) and how many bodies glow sky blue; the log
+ * when its cutscene starts and ends, and each change of the dummy's health.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -431,6 +432,10 @@ public final class SkillShots implements ClientModInitializer {
             var d=dummy.getLerpedPos(mc.getTickDelta()).add(shown).subtract(mc.player.getLerpedPos(mc.getTickDelta()));var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());
             standLog.append(String.format(Locale.ROOT,",%.3f,%.3f,%.3f",d.x*f.x+d.z*f.z,-d.x*f.z+d.z*f.x,d.y));
         }else standLog.append(",,,");
+        // 2.65.0: the beatdown's own blow's two stances (drawn back, striking), its heavy punch's (the last blow's), and
+        // how many bodies the last frame made glow sky blue (StandAuraLayer)
+        for(int i:new int[]{27,28,18,19})standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
+        standLog.append(',').append(dev.sangwoo.celestialfall.client.stand.StandAuraLayer.glowedLast());
         standLog.append('\n');
         if(beat!=null){
             String[] v=beat.split(",");boolean ended=v[1].equals("1");
@@ -752,7 +757,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
-                        +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up\n"+standLog);
+                        +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}

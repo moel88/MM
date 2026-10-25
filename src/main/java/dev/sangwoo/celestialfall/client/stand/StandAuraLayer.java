@@ -39,22 +39,33 @@ import org.lwjgl.opengl.GL30;
  * clock, so it moves at the frame rate. With a shader pack, or post-processing off, it is not drawn; the stand then
  * glows with its shells instead (StarPlatinumRenderer). Raw GL is used only for the full-screen passes, and the program,
  * vertex array and framebuffer they change are put back.
+ * <p>
+ * It also draws the sky-blue glow of a body using a skill with a cutscene (2.65.0, CutsceneFlash: "몸 전체가 하늘색으로
+ * 빛이 나야하는 쪽에 가까움 그러니까 몸 색깔을 바꾸는건 X"): the body into a third mask of its own, blurred further out
+ * (GLOW blocks), laid on the screen as sky-blue light spreading out round its whole outline, palest and brightest right
+ * at it, never on the body.
  */
 public final class StandAuraLayer {
     private StandAuraLayer(){}
-    /** Something wrapped in the aura this frame: a stand's body or its user's, and how strongly (0 to 1). */
-    record Bearer(Entity body,boolean stand,float strength){}
+    /** Something wrapped in the aura this frame (a stand's body or its user's) or glowing sky blue, and how strongly (0 to 1). */
+    record Bearer(Entity body,int kind,float strength){
+        boolean stand(){return kind==STAND;}
+    }
+    /** The kinds of bearer, each its own mask: a stand, its user, a body glowing sky blue (CutsceneFlash). */
+    static final int STAND=0,USER=1,GLOW=2;
     /** The users' aura beside the stands' (a little fainter). */
     static final float USER_GAIN=.8f;
     /** How far the glow reaches beyond a body (blocks), and how high its tongues of flame can lick above it. */
     static final float REACH=.17f,LICK=.45f;
+    /** How far the sky-blue glow reaches beyond a body (blocks). */
+    static final float GLOW_REACH=.42f;
     /** How fast the three layers of flame flow upwards, in texture units a second: their patterns are about 3, 1.4 and
      * 0.6 blocks a unit (aura.frag), so each rises at about a block a second, the finer ones flickering faster. */
     static final double[] FLOW={.32,.85,1.9};
     private static boolean failed;
     private static int packProg,blurProg,auraProg,vao,noiseTex,width,height;
-    private static final int[] maskTex=new int[2],maskFbo=new int[2],haloTex=new int[2],haloFbo=new int[2];
-    private static int drawnLast;
+    private static final int[] maskTex=new int[3],maskFbo=new int[3],haloTex=new int[2],haloFbo=new int[2];
+    private static int drawnLast,glowedLast;
     private static Masks masks;
 
     /** Whether the aura can be drawn: post-processing on and no shader pack (which draws the world its own way). */
@@ -63,8 +74,9 @@ public final class StandAuraLayer {
         var loader=FabricLoader.getInstance();
         return !loader.isModLoaded("iris")&&!loader.isModLoaded("oculus");
     }
-    /** How many bodies the last frame wrapped in the aura (for the capture tools' logs). */
+    /** How many bodies the last frame wrapped in the aura, and made glow sky blue (for the capture tools' logs). */
     public static int drawnLast(){return drawnLast;}
+    public static int glowedLast(){return glowedLast;}
 
     /** The three layers' flow at {@code seconds}: each wraps from 1 back to 0, which the tiling noise does not show. */
     static float[] flow(double seconds){
@@ -80,7 +92,7 @@ public final class StandAuraLayer {
      * {@code flare} how much brighter it burns (0 to 1, as a stand bursts into its pose).
      */
     static void draw(WorldRenderContext c,List<Bearer> bearers,double seconds,float flare){
-        drawnLast=0;
+        drawnLast=glowedLast=0;
         if(bearers.isEmpty()||!available())return;
         var mc=MinecraftClient.getInstance();var main=mc.getFramebuffer();
         int w=main.textureWidth,h=main.textureHeight;if(w<=0||h<=0)return;
@@ -88,9 +100,11 @@ public final class StandAuraLayer {
         Matrix4f viewProj=new Matrix4f(c.projectionMatrix()).mul(c.matrixStack().peek().getPositionMatrix());
         // where they are on screen: a box round them all with room for the glow and the flames, and the nearest stand
         float x0=Float.MAX_VALUE,y0=Float.MAX_VALUE,x1=-Float.MAX_VALUE,y1=-Float.MAX_VALUE;boolean whole=false;
-        Bearer nearest=null;double best=Double.MAX_VALUE,stands=0,users=0;int standCount=0,userCount=0;
+        Bearer nearest=null;double best=Double.MAX_VALUE,stands=0,users=0;int standCount=0,userCount=0;boolean glows=false;
         for(var b:bearers){
-            var e=b.body();var box=e.getBoundingBox().offset(e.getLerpedPos(delta).subtract(e.getPos())).expand(REACH+.2).stretch(0,LICK,0);
+            var e=b.body();var box=e.getBoundingBox().offset(e.getLerpedPos(delta).subtract(e.getPos()));
+            box=b.kind()==GLOW?box.expand(GLOW_REACH+.2):box.expand(REACH+.2).stretch(0,LICK,0);
+            glows|=b.kind()==GLOW;
             for(int k=0;k<8;k++){
                 var v=new Vector4f((float)(((k&1)==0?box.minX:box.maxX)-cam.x),(float)(((k&2)==0?box.minY:box.maxY)-cam.y),(float)(((k&4)==0?box.minZ:box.maxZ)-cam.z),1).mul(viewProj);
                 if(v.w<.05f){whole=true;continue;}
@@ -98,7 +112,7 @@ public final class StandAuraLayer {
                 x0=Math.min(x0,px);y0=Math.min(y0,py);x1=Math.max(x1,px);y1=Math.max(y1,py);
             }
             double away=e.getLerpedPos(delta).add(0,e.getHeight()*.5,0).distanceTo(cam);
-            if(b.stand()){stands+=away;standCount++;}else{users+=away;userCount++;}
+            if(b.kind()==STAND){stands+=away;standCount++;}else if(b.kind()==USER){users+=away;userCount++;}
             double d=away-(b.stand()?1000:0);
             if(d<best){best=d;nearest=b;}
         }
@@ -119,11 +133,11 @@ public final class StandAuraLayer {
             if(masks==null)masks=new Masks(VertexConsumerProvider.immediate(new BufferBuilder(4096)));
             int depth=main.getDepthAttachment();
             // the masks: each body drawn again as it is, tested against the scene's depth
-            for(int k=0;k<2;k++){
+            for(int k=0;k<3;k++){
                 if(!attachDepth(maskFbo[k],depth))throw new IllegalStateException("The screen's depth buffer cannot be shared");
                 GlStateManager._viewport(0,0,w,h);
                 RenderSystem.clearColor(0,0,0,0);RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT,MinecraftClient.IS_SYSTEM_MAC);
-                for(var b:bearers)if(b.stand()==(k==0)){body(mc,c,b,cam,delta);drawnLast++;}
+                for(var b:bearers)if(b.kind()==k){body(mc,c,b,cam,delta);if(k==GLOW)glowedLast++;else drawnLast++;}
                 masks.inner.draw();
             }
             RenderSystem.clearColor(clear[0],clear[1],clear[2],clear[3]);
@@ -139,19 +153,20 @@ public final class StandAuraLayer {
             RenderSystem.clearColor(clear[0],clear[1],clear[2],clear[3]);
             RenderSystem.enableScissor(sx/2,sy/2,Math.max(1,(ex-sx+3)/2),Math.max(1,(ey-sy+3)/2));
             use(packProg);target(haloFbo[0],hw,hh);
-            bind(0,maskTex[0]);bind(1,maskTex[1]);i(packProg,"MaskA",0);i(packProg,"MaskB",1);f2(packProg,"Texel",1f/w,1f/h);
+            bind(0,maskTex[0]);bind(1,maskTex[1]);bind(2,maskTex[2]);i(packProg,"MaskA",0);i(packProg,"MaskB",1);i(packProg,"MaskC",2);f2(packProg,"Texel",1f/w,1f/h);
             triangle();
             // the blur's 13 taps reach 7.5 steps each way: the glow's reach at the stand's distance, in half-size pixels
-            float step=MathHelper.clamp(REACH*pixels*.5f/7.5f,.6f,4f);
+            // (the sky-blue glow's further: GLOW_REACH)
+            float step=MathHelper.clamp(REACH*pixels*.5f/7.5f,.6f,4f),far=MathHelper.clamp(GLOW_REACH*pixels*.5f/7.5f,.6f,9f);
             use(blurProg);i(blurProg,"Src",0);
-            target(haloFbo[1],hw,hh);bind(0,haloTex[0]);f2(blurProg,"Step",step/hw,0);triangle();
-            target(haloFbo[0],hw,hh);bind(0,haloTex[1]);f2(blurProg,"Step",0,step/hh);triangle();
+            target(haloFbo[1],hw,hh);bind(0,haloTex[0]);f2(blurProg,"Step",step/hw,0);f2(blurProg,"StepB",far/hw,0);triangle();
+            target(haloFbo[0],hw,hh);bind(0,haloTex[1]);f2(blurProg,"Step",0,step/hh);f2(blurProg,"StepB",0,far/hh);triangle();
             RenderSystem.disableScissor();
             // the aura, on the screen
             RenderSystem.enableScissor(sx,sy,ex-sx,ey-sy);
             use(auraProg);target(main.fbo,w,h);
-            bind(0,maskTex[0]);bind(1,maskTex[1]);bind(2,haloTex[0]);bind(3,noiseTex);
-            i(auraProg,"MaskA",0);i(auraProg,"MaskB",1);i(auraProg,"Halo",2);i(auraProg,"Noise",3);
+            bind(0,maskTex[0]);bind(1,maskTex[1]);bind(2,haloTex[0]);bind(3,noiseTex);bind(4,maskTex[2]);
+            i(auraProg,"MaskA",0);i(auraProg,"MaskB",1);i(auraProg,"Halo",2);i(auraProg,"Noise",3);i(auraProg,"MaskC",4);f(auraProg,"Glow",glows?1f:0f);
             f2(auraProg,"Texel",1f/w,1f/h);f(auraProg,"Scale",pixels);f2(auraProg,"Anchor",px,py);
             float[] phase=flow(seconds);f3(auraProg,"Phase",phase[0],phase[1],phase[2]);
             f2(auraProg,"Gain",1f,USER_GAIN);f(auraProg,"Flare",MathHelper.clamp(flare,0,1));
@@ -161,7 +176,7 @@ public final class StandAuraLayer {
             triangle();
             GlStateManager._activeTexture(GL13.GL_TEXTURE0);
         }catch(Exception|LinkageError e){
-            failed=true;drawnLast=0;
+            failed=true;drawnLast=glowedLast=0;
             CelestialFall.LOGGER.error("The stand aura was switched off after a graphics error; stands glow without it",e);
         }finally{
             RenderSystem.disableScissor();
@@ -235,10 +250,8 @@ public final class StandAuraLayer {
         if(w==width&&h==height&&maskFbo[0]!=0)return;
         freeTargets();width=w;height=h;
         int hw=Math.max(1,w/2),hh=Math.max(1,h/2);
-        for(int k=0;k<2;k++){
-            maskTex[k]=texture(w,h);maskFbo[k]=framebuffer(maskTex[k],false);
-            haloTex[k]=texture(hw,hh);haloFbo[k]=framebuffer(haloTex[k],true);
-        }
+        for(int k=0;k<3;k++){maskTex[k]=texture(w,h);maskFbo[k]=framebuffer(maskTex[k],false);}
+        for(int k=0;k<2;k++){haloTex[k]=texture(hw,hh);haloFbo[k]=framebuffer(haloTex[k],true);}
     }
     private static int noise(){
         int[] px=VfxNoise.abgr();int n=VfxNoise.SIZE;
@@ -283,10 +296,13 @@ public final class StandAuraLayer {
         return GlStateManager.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER)==GL30.GL_FRAMEBUFFER_COMPLETE;
     }
     private static void freeTargets(){
+        for(int k=0;k<3;k++){
+            if(maskFbo[k]!=0)GlStateManager._glDeleteFramebuffers(maskFbo[k]);if(maskTex[k]!=0)TextureUtil.releaseTextureId(maskTex[k]);
+            maskFbo[k]=maskTex[k]=0;
+        }
         for(int k=0;k<2;k++){
-            if(maskFbo[k]!=0)GlStateManager._glDeleteFramebuffers(maskFbo[k]);if(haloFbo[k]!=0)GlStateManager._glDeleteFramebuffers(haloFbo[k]);
-            if(maskTex[k]!=0)TextureUtil.releaseTextureId(maskTex[k]);if(haloTex[k]!=0)TextureUtil.releaseTextureId(haloTex[k]);
-            maskFbo[k]=haloFbo[k]=maskTex[k]=haloTex[k]=0;
+            if(haloFbo[k]!=0)GlStateManager._glDeleteFramebuffers(haloFbo[k]);if(haloTex[k]!=0)TextureUtil.releaseTextureId(haloTex[k]);
+            haloFbo[k]=haloTex[k]=0;
         }
         width=height=0;
     }

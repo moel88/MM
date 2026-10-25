@@ -35,8 +35,11 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * server's age as it was sent, this client's ticks since and the frame's part of a tick), on the user's recording's
  * time (StarPlatinumRules.BEAT_*): the blow lands and holds a moment, the stand goes back into its user; its user says
  * "yare yare daze" with a hand on their head, shaking it; at "Star Platinum!" the stand bursts out of them; it comes
- * round, grabs the one struck by the collar, uppercuts them into the air, rushes them there, throws five big ORAs and
- * the last one sends them flying to where they come down.
+ * round, grabs the one struck by the collar, uppercuts them into the air and rushes them there, on and on through
+ * "裁くのは俺のスタンドだ" (its user pointing at them), until on its "DA!" one heavy punch sends them flying to where they
+ * come down (2.65.0, user request: "계속 오라오라 하다가 나의 스탠드다 끝날때 강펀치 한번만 꽂고 날려버려야해 그리고
+ * 컷씬을 더 찰지게 만들어야하고 카메라도 컷씬도 더 잘 써봐 때리는 모션도 더 격하게 때려야하고": 2.64.0 threw five big
+ * ORAs on the line's syllables).
  * <p>
  * Here: when it runs, where the one struck is shown and how their body turns ({@link #victim}, drawn there by the
  * renderers, which put the body there in place of where it is), how the stand moves through it ({@link #shape}, the
@@ -49,22 +52,26 @@ public final class StandBeatdown {
     // ───────────────────────────── its moments (seconds from G) ─────────────────────────────
 
     static final float CUT=BEAT_CUT/20f,SOUND=BEAT_SOUND/20f;
+    /** The moment of the user's recording {@code tau} seconds into it, on the beatdown's clock. */
+    static float rec(float tau){return BEAT_OPENER_SOUND/20f+tau;}
     /** The blow holds this long as it lands (the hit-stop), and the one struck is knocked back to where they are held by KNOCKED. */
-    static final float STOP=.15f,KNOCKED=.95f;
+    static final float STOP=.15f,KNOCKED=CUT+.75f;
     /** The stand goes back into its user once its blow has held (StandTimeline's going back). */
-    static final float RETREAT=.42f;
+    static final float RETREAT=CUT+.22f;
     static final float YARE=BEAT_YARE/20f,YARE_END=BEAT_YARE_END/20f,REVEAL=BEAT_REVEAL/20f;
-    /** The stand comes round from its user's shoulder to the front (as a punch's does) for the grab. */
-    static final float ENGAGE=3.55f,ENGAGED=3.8f;
     static final float GRAB=BEAT_GRAB/20f,UPPER=BEAT_UPPERCUT/20f;
+    /** The stand comes round from its user's shoulder to the front (as a punch's does) for the grab. */
+    static final float ENGAGE=GRAB-.3f,ENGAGED=GRAB-.05f;
     static final float RUSH_FROM=BEAT_RUSH_FIRST/20f,RUSH_TO=BEAT_RUSH_LAST/20f,RUSH_EVERY=BEAT_RUSH_EVERY/20f;
-    static final float[] BIG=new float[BEAT_BIG.length];
-    static{for(int i=0;i<BIG.length;i++)BIG[i]=BEAT_BIG[i]/20f;}
+    /** "裁くのは" (the line's first words, 8.35 to 9.27 s in), "俺の" (9.76 to 10.2 s) and "スタンド" (10.22 to 10.7 s). */
+    static final float JUDGE=rec(8.35f),MINE=rec(9.76f),STANDO=rec(10.22f);
     static final float FINAL=BEAT_FINAL/20f,LAND=BEAT_LAND/20f,END=BEAT_END/20f;
+    /** The last blow holds the one struck where it lands this long (its hit-stop) before they fly. */
+    static final float FINAL_STOP=.12f;
     /** The one struck lies where they came down until GETUP, and is up again at UP. */
-    static final float GETUP=12.0f,STOOD=12.42f;
+    static final float GETUP=LAND+.3f,STOOD=LAND+.72f;
     /** The stand goes back to its user's shoulder at the end: from LEAVE, over RETURN seconds. */
-    static final float LEAVE=12.0f,RETURN=.45f;
+    static final float LEAVE=LAND+.3f,RETURN=.45f;
     /** The camera comes back to its user over this long once it is over (or cut short). */
     static final float HANDBACK=.3f;
     /** The black bars: this high (share of the screen's height each), in over BARS_IN once the blow lands, out over BARS_OUT. */
@@ -188,10 +195,10 @@ public final class StandBeatdown {
     }
     /**
      * Whether this client's player holds back their cry of pain at a blow of a cutscene on them. Others hear the one
-     * struck cry out only at its uppercut, its last blow and the fall (StarPlatinumBeatdown.blow: the rush and the big
-     * ORAs land quietly, the recording carries them), but a player's own cry is played by their own client as each blow's
-     * damage comes (RushHurtSoundMixin): so here too, the first blow cries (the uppercut: nothing harms them before it),
-     * then none until halfway from the last big ORA to the last blow, when the last blow and the fall do. The damage comes
+     * struck cry out only at its uppercut, its last blow and the fall (StarPlatinumBeatdown.blow: the rush lands
+     * quietly, the recording carries it), but a player's own cry is played by their own client as each blow's damage
+     * comes (RushHurtSoundMixin): so here too, the first blow cries (the uppercut: nothing harms them before it), then
+     * none until halfway from the rush's last blow to the last blow, when the last blow and the fall do. The damage comes
      * at the server's age of the blow on this clock, give or take a tick, however late it comes (as the cutscene's word did).
      */
     public static boolean quietHurt(net.minecraft.entity.LivingEntity e){
@@ -200,7 +207,7 @@ public final class StandBeatdown {
             if(b.victim!=e.getId()||!b.victimId.equals(e.getUuid()))continue;
             float t=b.age(0);if(t<CUT||t>b.over()+.5f)continue;
             if(!b.cried){b.cried=true;return false;}
-            return t<(BIG[BIG.length-1]+FINAL)*.5f;
+            return t<(RUSH_TO+FINAL)*.5f;
         }
         return false;
     }
@@ -226,10 +233,11 @@ public final class StandBeatdown {
 
     /**
      * Where the one struck is shown at {@code t} (the beatdown's clock), before it is over: their feet and how their
-     * body turns, worked out along its beats. Knocked back from where they stood to where they are held, swaying dazed;
-     * yanked up by the collar; thrown up by the uppercut and held up in the air by the rush, every blow jolting them and
-     * the rush driving them slowly back; each big ORA knocking them further back; then sent flying in an arc, turning
-     * over once, to come down on their back short of where they end, slide on there and get up.
+     * body turns, worked out along its beats. Knocked hard back from where they stood to where they are held, twisted
+     * by the blow, swaying dazed; yanked up by the collar; thrown up by the uppercut and held up in the air by the rush,
+     * every blow wrenching them its own way (2.65.0: harder, "때리는 모션도 더 격하게") and the rush driving them back all
+     * the way to where the last blow sends them from; hanging there limp as the stand draws back for it; then sent
+     * flying in an arc, turning over once, to come down on their back short of where they end, slide on there and get up.
      */
     public static Body victim(Beat b,float t){
         // held still through the blow's hit-stop, turned round to face its user as it lands
@@ -237,43 +245,36 @@ public final class StandBeatdown {
         if(t<CUT+STOP-.02f)return new Body(b.victimFrom,0,0,0,MIDDLE,face);
         if(t>=FINAL)return flight(b,t);
         double fw=0,up=0,rt=0;float lean=0,roll=0,spin=0;
-        // knocked back from where they stood to where they are held, leaning back with it
-        float knock=Ease.out(t,CUT+STOP,KNOCKED);
-        lean+=26*kick(t,CUT+STOP,.32f);
+        // knocked hard back from where they stood to where they are held, bent back over the blow and twisted by it
+        float knock=Ease.out(t,CUT+STOP,KNOCKED),side=(b.seed&1)==0?1:-1;
+        lean+=34*kick(t,CUT+STOP,.32f);roll+=10*side*kick(t,CUT+STOP,.3f);spin+=12*side*kick(t,CUT+STOP,.4f);
         // dazed, swaying (from the knock until the grab)
-        float daze=smooth((t-.6f)/.6f)*(1-smooth((t-(GRAB-.06f))/.08f));
+        float daze=smooth((t-(CUT+.4f))/.6f)*(1-smooth((t-(GRAB-.06f))/.08f));
         lean+=daze*(6+4*(float)Math.sin(t*Math.PI*2/1.3));roll+=daze*5*(float)Math.sin(t*Math.PI*2/1.7+1);rt+=daze*.05*Math.sin(t*Math.PI*2/1.7);
         // yanked in and up by the collar, bent forward over the fist that has them; held there dangling
         float yank=Ease.out(t,GRAB-.03f,GRAB+.1f),held=yank*(1-smooth((t-UPPER)/.06f));
         fw-=.32*yank;up+=.38*yank-.08*smooth((t-(UPPER-.14f))/.1f)*yank;
-        lean-=14*held;lean+=held*3*(float)Math.sin((t-GRAB)*9);roll+=held*4*(float)Math.sin((t-GRAB)*7+.5);
-        // the uppercut: up into the air, arched right back, settling a little
+        lean-=14*held+8*kick(t,GRAB,.12f);lean+=held*3*(float)Math.sin((t-GRAB)*9);roll+=held*4*(float)Math.sin((t-GRAB)*7+.5);
+        // the uppercut: up into the air, the head snapped right back, settling a little
         float upper=Ease.out(t,UPPER,UPPER+.35f);
         up+=(BEAT_LIFT-.3)*upper;fw+=.42*upper;
-        lean+=38*kick(t,UPPER,.18f)+16*smooth((t-UPPER)/.2f);
-        // held up in the air by the rush: bobbing, driven slowly back, jolted by every blow (each its own way)
-        float rush=smooth((t-RUSH_FROM)/.1f);
+        lean+=48*kick(t,UPPER,.18f)+16*smooth((t-UPPER)/.2f);
+        // held up in the air by the rush: bobbing, driven back all the way to where the last blow sends them from,
+        // wrenched by every blow (each its own way: back, round and over), shuddering all through it
+        float rush=smooth((t-RUSH_FROM)/.1f),rushing=rush*(1-smooth((t-RUSH_TO)/.25f));
         up+=rush*.06*Math.sin((t-RUSH_FROM)*Math.PI*2/.9);
-        fw+=b.drift*.5*Ease.unit(t,RUSH_FROM,RUSH_TO+.1f);
+        fw+=b.drift*Ease.unit(t,RUSH_FROM,RUSH_TO+.1f);
         int n=blows(t);
         for(int k=Math.max(0,n-4);k<n;k++){
             float at=blowAt(k),j=kick(t,at,.05f);if(j<=0)continue;
             int s=b.seed+k*7919;
-            fw+=.07*j;lean+=(float)(5+6*Ease.hash(s))*j;roll+=(float)((Ease.hash(s+1)-.5)*18)*j;spin+=(float)((Ease.hash(s+2)-.5)*14)*j;up+=(Ease.hash(s+3)-.5)*.08*j;
+            fw+=.1*j;lean+=(float)(8+9*Ease.hash(s))*j;roll+=(float)((Ease.hash(s+1)-.5)*26)*j;spin+=(float)((Ease.hash(s+2)-.5)*22)*j;
+            up+=(Ease.hash(s+3)-.5)*.12*j;rt+=(Ease.hash(s+4)-.5)*.1*j;
         }
-        lean+=rush*(1-smooth((t-RUSH_TO)/.3f))*2*(float)Math.sin(t*61);
-        // the big ORAs: each knocks them back on, jolting the body round; between the third and the fourth they sag
-        double step=b.drift*.5/BIG.length;
-        for(int i=0;i<BIG.length;i++){
-            float at=BIG[i];
-            fw+=step*Ease.out(t,at,at+.12f);
-            float j=kick(t,at,.22f);
-            lean+=22*j;roll+=(i%2==0?14:-14)*j;spin+=(i%2==0?-9:9)*j;
-            up-=.05*Ease.out(t,at,at+.2f);
-        }
-        float sag=smooth((t-(BIG[2]+.15f))/.35f)*(1-smooth((t-(BIG[3]-.08f))/.08f));
-        up-=.15*sag;lean+=10*sag;
-        // the last blow coming: a breath held, still
+        lean+=rushing*3*(float)Math.sin(t*61);roll+=rushing*2*(float)Math.sin(t*47+1);
+        // the last blow coming: as the stand draws back they hang there limp, slumped a little forward, a breath held
+        float hang=smooth((t-(RUSH_TO+.05f))/.3f);
+        lean-=8*hang;up-=.1*hang;
         Vec3d o=b.victimFrom.lerp(b.hold,knock);
         return new Body(b.at(o,fw,up,rt),lean,roll,spin,MIDDLE,face);
     }
@@ -287,8 +288,8 @@ public final class StandBeatdown {
     static Body flight(Beat b,float t){
         Body from=launch(b);
         Vec3d down=b.land.subtract(b.f.multiply(SLIDE));
-        // the blow holds them a moment (its hit-stop), then they fly
-        float u=Ease.unit(t,FINAL+.06f,LAND),h=1-(float)Math.pow(1-u,1.6);
+        // the blow holds them a moment (its hit-stop, 2.65.0 longer: the last blow lands hard), then they fly
+        float u=Ease.unit(t,FINAL+FINAL_STOP,LAND),h=1-(float)Math.pow(1-u,1.6);
         double dist=Math.hypot(down.x-from.feet().x,down.z-from.feet().z);
         double apex=1.4+.08*dist;
         double x=from.feet().x+(down.x-from.feet().x)*h,z=from.feet().z+(down.z-from.feet().z)*h;
@@ -377,21 +378,19 @@ public final class StandBeatdown {
         if(over<REVEAL&&t<over+StandTimeline.SETTLED+.1f)return new float[]{1,over};
         return null;
     }
-    /** The keys of the stand's stances from the grab to its last blow: {time, stance, ease (0 smooth, 1 hold, 2 strike)}. */
+    /**
+     * The keys of the stand's stances from the grab to its last blow: {time, stance, ease (0 smooth, 1 hold, 2 strike)}.
+     * Past the rush it draws back as "スタンド" is said, holds the coil, and throws the one heavy punch on "DA!".
+     */
     static final float[][] KEYS={
-        {ENGAGE,GUARD,0},{3.74f,COLLAR,0},{GRAB,COLLAR,1},{UPPER-.12f,COLLAR,1},{UPPER,UPPERCUT,2},{UPPER+.1f,UPPERCUT,1},
+        {ENGAGE,GUARD,0},{GRAB-.11f,COLLAR,0},{GRAB,COLLAR,1},{UPPER-.12f,COLLAR,1},{UPPER,UPPERCUT,2},{UPPER+.1f,UPPERCUT,1},
         // (the rush between, RUSH_FROM to RUSH_TO: StandRush.barrage)
         // (each wind-up and each strike given time enough for its arm's turn: no bone 40 degrees in a frame at 60 fps)
-        {RUSH_TO+.05f,GUARD,0},{BIG[0]-.13f,WIND_R,0},{BIG[0]-.1f,WIND_R,1},{BIG[0],PUNCH_R,2},{BIG[0]+.02f,PUNCH_R,1},
-        {BIG[1]-.11f,WIND_HOOK,0},{BIG[1]-.1f,WIND_HOOK,1},{BIG[1],HOOK,2},{BIG[1]+.06f,HOOK,1},
-        {BIG[2]-.18f,WIND_L,0},{BIG[2]-.1f,WIND_L,1},{BIG[2],PUNCH_L,2},{BIG[2]+.1f,PUNCH_L,1},
-        {BIG[2]+.4f,GUARD,0},{BIG[3]-.22f,WIND_BIG,0},{BIG[3]-.12f,WIND_BIG,1},{BIG[3],PUNCH_BIG,2},{BIG[3]+.02f,PUNCH_BIG,1},
-        {BIG[4]-.11f,WIND_R,0},{BIG[4]-.1f,WIND_R,1},{BIG[4],PUNCH_R,2},{BIG[4]+.03f,PUNCH_R,1},
-        {FINAL-.3f,WIND_HEAVY,0},{FINAL-.16f,WIND_HEAVY,1},{FINAL,PUNCH_HEAVY,2},{FINAL+.75f,PUNCH_HEAVY,1},{LEAVE,GUARD,0}};
-    /** When each of its strikes lands, the stance it strikes in, and the fist (true: the right). */
-    static final float[] STRIKES={UPPER,BIG[0],BIG[1],BIG[2],BIG[3],BIG[4],FINAL};
-    static final int[] STRIKE_STANCE={UPPERCUT,PUNCH_R,HOOK,PUNCH_L,PUNCH_BIG,PUNCH_R,PUNCH_HEAVY};
-    static final boolean[] STRIKE_RIGHT={true,true,false,false,true,true,true};
+        {RUSH_TO+.08f,GUARD,0},{FINAL-.42f,WIND_HEAVY,0},{FINAL-.17f,WIND_HEAVY,1},{FINAL,PUNCH_HEAVY,2},{FINAL+.75f,PUNCH_HEAVY,1},{LEAVE,GUARD,0}};
+    /** When each of its strikes lands, the stance it strikes in, and the fist (true: the right): the uppercut and the last blow. */
+    static final float[] STRIKES={UPPER,FINAL};
+    static final int[] STRIKE_STANCE={UPPERCUT,PUNCH_HEAVY};
+    static final boolean[] STRIKE_RIGHT={true,true};
     /** The rush's moments: its fists out from RUSH_FROM (the first lands then), until RUSH_TO; the arms bigger as in the rush. */
     static final float BARRAGE_FROM=RUSH_FROM-StandRush.HALF;
     static float ease(int ease,float x){x=x<0?0:x>1?1:x;return ease==2?(float)Math.pow(x,1.6):smooth(x);}
@@ -412,8 +411,12 @@ public final class StandBeatdown {
      */
     static float barrage(float t){return smooth((t-(UPPER+.03f))/BARRAGE_IN)*(1-smooth((t-RUSH_TO-.02f)/BARRAGE_OUT));}
     static final float BARRAGE_IN=.15f,BARRAGE_OUT=.12f;
-    /** How big its arms are at {@code t} through the rush (1 their size), as the rush's, and how far each is out. */
-    static float armSize(float t){return 1+(StandRush.ARMS-1)*smooth((t-UPPER)/.2f)*(1-smooth((t-RUSH_TO)/.2f));}
+    /**
+     * How big its arms are at {@code t} through the rush (1 their size): bigger still than the rush's (2.65.0, ARMS:
+     * "때리는 모션도 더 격하게"), each bigger again as far as it is out, as the rush's.
+     */
+    static float armSize(float t){return 1+(ARMS-1)*smooth((t-UPPER)/.2f)*(1-smooth((t-RUSH_TO)/.2f));}
+    static final float ARMS=1.3f;
 
     /**
      * The stand's shape through this user's cutscene this frame, {@code back} seconds before it (null outside the part
@@ -437,7 +440,7 @@ public final class StandBeatdown {
         // bigger arms further out), rising with them into the air (its feet RISE_BELOW under theirs)
         Body v=victim(b,Math.min(t,FINAL-1e-4f));
         double ahead=v.feet().subtract(b.from).dotProduct(b.f);
-        double gap=GAP_GRAB+(GAP_RUSH-GAP_GRAB)*smooth((t-(UPPER+.1f))/.25f)+(GAP_BIG-GAP_RUSH)*smooth((t-RUSH_TO)/.25f)+(GAP_FINAL-GAP_BIG)*smooth((t-(FINAL-.45f))/.2f);
+        double gap=GAP_GRAB+(GAP_RUSH-GAP_GRAB)*smooth((t-(UPPER+.1f))/.25f)+(GAP_FINAL-GAP_RUSH)*smooth((t-(RUSH_TO+.05f))/.3f);
         double lifted=Math.max(0,v.feet().y-b.from.y-RISE_BELOW-StandPresence.UP);
         into.yaw=b.yaw;into.side=0;
         into.ahead=(float)(ahead-gap);
@@ -458,8 +461,8 @@ public final class StandBeatdown {
         into.armL=size*(1+StandRush.STRETCH*left);into.armR=size*(1+StandRush.STRETCH*right);
         return into;
     }
-    /** How far in front of the one struck the stand stands (blocks between its feet and theirs along the blow): grabbing, rushing (its arms bigger), throwing a big ORA, throwing its last. */
-    static final double GAP_GRAB=1.38,GAP_RUSH=1.55,GAP_BIG=1.35,GAP_FINAL=1.5;
+    /** How far in front of the one struck the stand stands (blocks between its feet and theirs along the blow): grabbing, rushing (its arms bigger), throwing its last. */
+    static final double GAP_GRAB=1.38,GAP_RUSH=1.65,GAP_FINAL=1.5;
     /** How far under the one struck the stand floats once they are up in the air (blocks, its feet below theirs). */
     static final double RISE_BELOW=.55;
     /** The rush's phantom arms in the cutscene: how strongly afterimage {@code i} shows (0 none) and its stances into {@code into}, as the rush's. */
@@ -476,36 +479,52 @@ public final class StandBeatdown {
 
     // ───────────────────────────── the camera ─────────────────────────────
 
-    /** The shots' cuts, on the beats (StandBeatdownCamera lays each one out). */
-    static final float[] CUTS={CUT,1.12f,2.6f,ENGAGE,UPPER,4.95f,6.2f,7.3f,8.4f,BIG[3]-.08f,FINAL-.3f,FINAL+.28f};
+    /**
+     * The shots' cuts, on the beats (StandBeatdownCamera lays each one out): the blow, pulled back, "yare yare daze",
+     * "Star Platinum!", the grab, the uppercut, the rush's three, "裁くのは", the pause after it, "俺の", "スタンド",
+     * "DA!" and the flight.
+     */
+    static final float[] CUTS={CUT,CUT+.45f,SOUND,REVEAL-.05f,ENGAGE,UPPER-.05f,rec(5.15f),rec(6.35f),rec(7.35f),JUDGE,JUDGE+.7f,MINE,RUSH_TO+.1f,FINAL,FINAL+.3f};
 
     /**
      * The camera of a cutscene's user and of the one struck this frame: shots cut on the beats of the recording
-     * (StandBeatdownCamera), coming back to the gameplay camera ({@code vanilla}) over HANDBACK once it is over. Every
-     * shot is kept out of the walls (its eye pulled in toward what it looks at).
+     * (StandBeatdownCamera), every blow jolting it (its shake moving the eye across the view and turning it the same way,
+     * its roll, its lens punching in: StandBeatdownCamera.jolt), coming back to the gameplay camera ({@code vanilla})
+     * over HANDBACK once it is over. Every shot is kept out of the walls (its eye pulled in toward what it looks at).
      */
     public static CinematicDirector.Pose camera(Vec3d vanilla,float yaw,float pitch,float delta){
         var b=cinematic();if(b==null)return null;
-        float t=b.age(delta);
-        var shot=StandBeatdownCamera.at(b,Math.min(t,b.over()));
+        float t=b.age(delta),at=Math.min(t,b.over());
+        var shot=StandBeatdownCamera.at(b,at);var jolt=StandBeatdownCamera.jolt(b,at);
         var mc=MinecraftClient.getInstance();
         Vec3d eye=clear(mc,shot.look(),shot.eye());
         Vec3d d=shot.look().subtract(eye);if(d.lengthSquared()<1e-6)d=b.f;d=d.normalize();
         float sy=(float)Math.toDegrees(Math.atan2(-d.x,d.z)),sp=(float)-Math.toDegrees(Math.asin(MathHelper.clamp(d.y,-1,1)));
-        float k=handback(b,t);
-        if(k<=0)return new CinematicDirector.Pose(eye,sy,sp,shot.roll());
-        return new CinematicDirector.Pose(eye.lerp(vanilla,k),sy+MathHelper.wrapDegrees(yaw-sy)*k,sp+(pitch-sp)*k,shot.roll()*(1-k));
+        // the jolt: the eye shaken across the view (to its right and up) and the view turned the same way
+        if(jolt!=StandBeatdownCamera.Jolt.NONE){
+            Vec3d right=d.crossProduct(new Vec3d(0,1,0));right=right.lengthSquared()<1e-6?b.r:right.normalize();
+            Vec3d up=right.crossProduct(d);
+            eye=eye.add(right.multiply(jolt.right())).add(up.multiply(jolt.up()));
+            sy+=(float)(jolt.right()*JOLT_TURN);sp-=(float)(jolt.up()*JOLT_TURN);
+        }
+        float roll=shot.roll()+jolt.roll(),k=handback(b,t);
+        if(k<=0)return new CinematicDirector.Pose(eye,sy,sp,roll);
+        return new CinematicDirector.Pose(eye.lerp(vanilla,k),sy+MathHelper.wrapDegrees(yaw-sy)*k,sp+(pitch-sp)*k,roll*(1-k));
     }
+    /** How far a jolt turns the view as it shakes the eye (degrees for each block). */
+    static final double JOLT_TURN=9;
     /** How far the camera has come back to its user (0 the cutscene's, 1 the gameplay camera). */
     static float handback(Beat b,float t){return smooth((t-b.over())/HANDBACK);}
     public static double fov(double vanilla,float delta){
         var b=cinematic();if(b==null)return vanilla;
-        float t=b.age(delta);double fov=StandBeatdownCamera.at(b,Math.min(t,b.over())).fov();
+        float t=b.age(delta),at=Math.min(t,b.over());
+        double fov=StandBeatdownCamera.at(b,at).fov()-StandBeatdownCamera.jolt(b,at).lens();
         return fov+(vanilla-fov)*handback(b,t);
     }
     public static float roll(float delta){
         var b=cinematic();if(b==null)return 0;
-        float t=b.age(delta);return StandBeatdownCamera.at(b,Math.min(t,b.over())).roll()*(1-handback(b,t));
+        float t=b.age(delta),at=Math.min(t,b.over());
+        return (StandBeatdownCamera.at(b,at).roll()+StandBeatdownCamera.jolt(b,at).roll())*(1-handback(b,t));
     }
     /** Keeps an eye out of the walls: pulled in along the way from what it looks at to where a block stands in it. */
     static Vec3d clear(MinecraftClient mc,Vec3d look,Vec3d eye){

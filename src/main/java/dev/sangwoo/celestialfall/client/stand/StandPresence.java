@@ -7,6 +7,7 @@ import dev.sangwoo.celestialfall.stand.StandManager;
 import dev.sangwoo.celestialfall.stand.StandSummon;
 import dev.sangwoo.celestialfall.stand.StarPlatinumLook;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -51,7 +52,7 @@ public final class StandPresence {
     public record Body(Vec3d at,float yaw,float scale){}
     private static final StarPlatinumLook ghost=new StarPlatinumLook(),trail=new StarPlatinumLook();
     /** The look its beatdown's blow leaves it in, should the moment it went back in be past seeing (2.64.0): the blow held. */
-    private static final StarPlatinumLook BLOW=new StarPlatinumLook().only(dev.sangwoo.celestialfall.stand.StarPlatinumStance.PUNCH_BIG);
+    private static final StarPlatinumLook BLOW=new StarPlatinumLook().only(dev.sangwoo.celestialfall.stand.StarPlatinumStance.BEAT_STRIKE);
     static{BLOW.glow=1;}
     /** The beatdown's clock (seconds) at this class's client clock {@code clock} (ticks; the frame's is ticks-1+delta). */
     static float beatAge(StandBeatdown.Beat b,double clock){return b.age(0)+(float)((clock-(ticks-1))/20);}
@@ -124,8 +125,8 @@ public final class StandPresence {
 
     private static void render(WorldRenderContext c){
         StarPlatinumRenderer.frame();
-        if(ALL.isEmpty())return;
         var mc=MinecraftClient.getInstance();if(mc.world==null||c.consumers()==null)return;
+        if(ALL.isEmpty()){glow(mc,c,new ArrayList<>(),0);return;}
         float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();frames++;
         for(var s:ALL.values()){
             s.drawn=false;
@@ -186,12 +187,22 @@ public final class StandPresence {
             if(!(mc.world.getEntityById(s.entity) instanceof PlayerEntity p)||p.isInvisible())continue;
             var look=s.puppet.look;float k=auraOf(look);
             if(k<.01f)continue;
-            if(s.drawn)bearers.add(new StandAuraLayer.Bearer(s.puppet,true,k));
-            boolean eyes=p==c.camera().getFocusedEntity()&&!c.camera().isThirdPerson();
-            if(!eyes&&(c.frustum()==null||c.frustum().isVisible(p.getBoundingBox().expand(1))))bearers.add(new StandAuraLayer.Bearer(p,false,k));
+            if(s.drawn)bearers.add(new StandAuraLayer.Bearer(s.puppet,StandAuraLayer.STAND,k));
+            if(shows(c,p))bearers.add(new StandAuraLayer.Bearer(p,StandAuraLayer.USER,k));
             flare=Math.max(flare,look.glow-1);
         }
-        StandAuraLayer.draw(c,bearers,(ticks-1d+delta)/20,flare);
+        glow(mc,c,bearers,flare);
+    }
+    /** Whether this player's body shows to the camera (not the one it looks out of in the first person, and in view). */
+    static boolean shows(WorldRenderContext c,PlayerEntity p){
+        boolean eyes=p==c.camera().getFocusedEntity()&&!c.camera().isThirdPerson();
+        return !eyes&&(c.frustum()==null||c.frustum().isVisible(p.getBoundingBox().expand(1)));
+    }
+    /** The aura's bearers, and every body glowing sky blue as it uses a skill with a cutscene (CutsceneFlash), drawn round them. */
+    private static void glow(MinecraftClient mc,WorldRenderContext c,List<StandAuraLayer.Bearer> bearers,float flare){
+        for(var g:dev.sangwoo.celestialfall.client.CutsceneFlash.glowing(mc,c.tickDelta()))
+            if(shows(c,g.player()))bearers.add(new StandAuraLayer.Bearer(g.player(),StandAuraLayer.GLOW,g.strength()));
+        StandAuraLayer.draw(c,bearers,(ticks-1d+c.tickDelta())/20,flare);
     }
 
     private static final class Presence {

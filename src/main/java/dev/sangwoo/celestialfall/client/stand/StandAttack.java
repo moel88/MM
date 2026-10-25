@@ -47,8 +47,9 @@ import net.minecraft.util.math.Vec3d;
  * <p>
  * G is the beatdown (2.64.0, user request: "이제 G 비트다운을 만들어야해 이건 컷씬이 나와야하고"), its blow a seventh
  * punch: G asks the server for it (stand_beatdown_v1) and it comes back as a punch like the others, its "ORA!" from the
- * user's recording (tools/stand/cut_beatdown.py) LEAD ticks in, as a shout, so that its "RA" comes as the fist lands.
- * If it strikes someone with no guard up, its cutscene follows (StandBeatdown).
+ * user's recording (tools/stand/cut_beatdown.py) StarPlatinumRules.BEAT_OPENER_SOUND ticks in (2.65.0: its big wind-up
+ * goes before), as a shout, so that its "RA" comes as the fist lands. If it strikes someone with no guard up, its
+ * cutscene follows (StandBeatdown).
  */
 public final class StandAttack {
     /** Ticks into a punch its shout starts: a sound held back a tick starts on a client tick, the grid this clock counts on. */
@@ -264,18 +265,19 @@ public final class StandAttack {
         if(before!=null&&before.voice!=null)FADING.add(new Object[]{before.voice,ticks+Math.max(0,delay)});
     }
     /**
-     * The beatdown's "ORA!" (2.64.0), LEAD ticks into its blow: the user's recording as it is, loud for its user and those
-     * near, fading out to 40 blocks; none if it was heard too late. The shout its user shouted before fades out as it
-     * starts; it fades itself if the blow is stopped before it lands.
+     * The beatdown's "ORA!" (2.64.0), StarPlatinumRules.BEAT_OPENER_SOUND ticks into its blow (2.65.0: after the first of
+     * its wind-up): the user's recording as it is, loud for its user and those near, fading out to 40 blocks; none if it
+     * was heard too late. The shout its user shouted before fades out as it starts; it fades itself if the blow is stopped
+     * before it lands.
      */
     private static void beatdownSound(MinecraftClient mc,UUID id,Seen seen,Seen before){
-        if(mc.player==null||seen.serverAge>LEAD)return;
+        if(mc.player==null||seen.serverAge>StarPlatinumRules.BEAT_OPENER_SOUND)return;
         var user=mc.world.getPlayerByUuid(id);
         double far=user==null||user==mc.player?0:user.getPos().distanceTo(mc.player.getPos());
         float volume=(float)(CelestialFall.CONFIG.effectVolume*FINGER_VOLUME*Math.max(0,1-far/40));if(volume<=.01f)return;
         var sound=new Shout(CelestialFall.id("star_platinum_beatdown_ora"),volume);
         seen.voice=sound;
-        int delay=(int)(LEAD-seen.serverAge);
+        int delay=(int)(StarPlatinumRules.BEAT_OPENER_SOUND-seen.serverAge);
         if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
         if(before!=null&&before.voice!=null)FADING.add(new Object[]{before.voice,ticks+Math.max(0,delay)});
     }

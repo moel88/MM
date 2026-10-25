@@ -20,14 +20,16 @@ public final class StarPlatinumRules {
      * Each punch's contact, ticks after it starts (by the punch, 1 to 4, the heavy punch, 5, the Star Finger, 6, and the
      * beatdown's blow, 7): the jab and the cross snap in, the hook and the finisher take the "O" of their shouts (0.4 s),
      * the heavy punch its long coil (0.6 s), the Star Finger its aim and its fingers' flight out (0.45 s, the crack in
-     * the user's recording), the beatdown's the short "O" of its "ORA!" (0.2 s: its "RA" 0.15 s into its sound, which
-     * starts a tick in, tools/stand/cut_beatdown.py).
+     * the user's recording), the beatdown's its big wind-up (0.8 s since 2.65.0, slower than even the heavy punch's,
+     * its user glowing for the first half second of it, so that whoever it comes at can see it coming and guard or get
+     * away: "G 꽂을때 파훼 할 수 있게 모션이 더 크게 보여야하고 빛나는 걸 0.5로 늘리자", "G시전 모션이 R강펀치보다도 더
+     * 느리게 만들어줘"; 0.2 s in 2.64.0), its "ORA!" shouted to land its "RA" on it (BEAT_OPENER_SOUND).
      */
-    public static final int[] CONTACT={0,4,4,9,10,12,9,4};
+    public static final int[] CONTACT={0,4,4,9,10,12,9,16};
     /** Ticks from a punch's start before the next may start (2.56.0: three tenths of a second, the hook's 0.65 s; after the heavy punch, the Star Finger and the beatdown's blow, once they are over). */
-    public static final int[] STEP={0,6,6,13,0,28,25,18};
+    public static final int[] STEP={0,6,6,13,0,28,25,30};
     /** How long each punch runs (ticks) when no next one cuts it short: the strike, the follow-through and the guard again. */
-    public static final int[] LENGTH={0,10,10,17,23,28,25,18};
+    public static final int[] LENGTH={0,10,10,17,23,28,25,30};
     /** (The beatdown's blow deals nothing itself: the cutscene it begins deals the beatdown's damage, BEAT_DAMAGE.) */
     public static final float[] DAMAGE={0,5,5,6,10,15,10,0};
     /** A press this many ticks or fewer before the next punch may start is kept, and starts it then. */
@@ -134,36 +136,45 @@ public final class StarPlatinumRules {
     // where they are and harmed by nothing else all through it, on the user's recording's own time from its "ORA!"
     // (tools/stand/cut_beatdown.py, the ticks below: a tick on for every 20th of a second of it): "yare yare daze"
     // (its user grabs their head and shakes it), "Star Platinum!" (the stand bursts out of them), the collar grabbed, the
-    // uppercut, the ORA rush, five big ORAs, and the last "Ooo-RAAA", whose blow sends them flying to where they come
-    // down. Its blows deal BEAT_DAMAGE between them, more the lower their health was as it began (beatdownDamage), none
-    // of them taking them below one health: what is more than they had, the fall deals as they come down, and it is the
-    // fall that kills them. Its cooldown runs once it is over (2.44.0's rule).
+    // uppercut, and the ORA rush, which goes on through "裁くのは俺のスタンドだ" ("the one who judges is my stand") until
+    // its "DA!", where one heavy punch sends them flying to where they come down (2.65.0, user request: "계속 오라오라
+    // 하다가 나의 스탠드다 끝날때 강펀치 한번만 꽂고 날려버려야해": 2.64.0 took the line's syllables for five big ORAs
+    // and threw one at each). Its blows deal BEAT_DAMAGE between them, more the lower their health was as it began
+    // (beatdownDamage), none of them taking them below one health: what is more than they had, the fall deals as they come
+    // down, and it is the fall that kills them. Its cooldown runs once it is over (2.44.0's rule).
 
     /** The beatdown's blow's number among the punches (its contact, length and damage are at this index). */
     public static final int BEATDOWN=7;
     /**
-     * Ticks into the beatdown (from G) its two sounds start: the opener's "ORA!" (its "RA" on the contact) and, if it
-     * struck, the cutscene's: 1.1 s further into the user's recording, so 22 ticks after the first.
+     * Ticks into the beatdown (from G) its two sounds start: the opener's "ORA!" (its "RA", 0.15 s into it, on the
+     * contact) and, if it struck, the cutscene's: 1.1 s further into the user's recording, so 22 ticks after the first.
+     * The recording's second tau is BEAT_OPENER_SOUND + 20 tau ticks in, and every moment of the cutscene below is one of
+     * its (since 2.65.0 twelve ticks later than in 2.64.0: the wind-up before the contact is that much longer).
      */
-    public static final int BEAT_OPENER_SOUND=1,BEAT_SOUND=23;
+    public static final int BEAT_OPENER_SOUND=13,BEAT_SOUND=35;
     /** The cutscene begins as the blow lands. */
-    public static final int BEAT_CUT=4;
+    public static final int BEAT_CUT=16;
     /** "yare yare daze" (1.15 to 2.5 s into the recording): its user's hand on their head as it is said. */
-    public static final int BEAT_YARE=24,BEAT_YARE_END=51;
+    public static final int BEAT_YARE=36,BEAT_YARE_END=63;
     /** "Star Platinum!" (2.6 s): the stand bursts out of its user. */
-    public static final int BEAT_REVEAL=53;
+    public static final int BEAT_REVEAL=65;
     /** The collar grabbed (the thud 3.8 s in), and the uppercut (the deep thump 4.36 s in). */
-    public static final int BEAT_GRAB=77,BEAT_UPPERCUT=88;
-    /** The rush, as long as its voice (4.45 to 8.28 s): a blow every BEAT_RUSH_EVERY ticks from BEAT_RUSH_FIRST, BEAT_RUSH_HITS in all. */
-    public static final int BEAT_RUSH_FIRST=91,BEAT_RUSH_EVERY=2,BEAT_RUSH_HITS=38,BEAT_RUSH_LAST=BEAT_RUSH_FIRST+BEAT_RUSH_EVERY*(BEAT_RUSH_HITS-1);
-    /** The five big ORAs after it (the cracks 8.49 and 10.32 s in, and the "RA"s of the ORAs between). */
-    public static final int[] BEAT_BIG={171,176,183,202,207};
-    /** The last blow (the deep thump of the last "Ooo-RAAA", 10.8 s), where they come down, and the cutscene's end. */
-    public static final int BEAT_FINAL=217,BEAT_LAND=234,BEAT_END=250;
+    public static final int BEAT_GRAB=89,BEAT_UPPERCUT=100;
+    /**
+     * The rush: a blow every BEAT_RUSH_EVERY ticks from BEAT_RUSH_FIRST (4.5 s in, as its voice begins), BEAT_RUSH_HITS in
+     * all, its voice (to 8.28 s) and on through "裁くのは俺のスタンドだ" (8.35 to 10.7 s) until the stand draws back for the
+     * last blow as "スタンド" is said (its last blow 10.1 s in).
+     */
+    public static final int BEAT_RUSH_FIRST=103,BEAT_RUSH_EVERY=2,BEAT_RUSH_HITS=57,BEAT_RUSH_LAST=BEAT_RUSH_FIRST+BEAT_RUSH_EVERY*(BEAT_RUSH_HITS-1);
+    /**
+     * The last blow, one heavy punch on the line's "DA!" (the blast on it, 10.8 s in: its "D" 10.71 s, its loudest
+     * 10.795 s), where they come down, and the cutscene's end.
+     */
+    public static final int BEAT_FINAL=229,BEAT_LAND=246,BEAT_END=262;
     /** The beatdown's damage at full health, more the lower it is (beatdownDamage), dealt by its blows between them. */
     public static final float BEAT_DAMAGE=60;
-    /** Each blow's share of it: the uppercut's, the rush's (all its blows together), each big ORA's, and the last blow's (the rest). */
-    public static final float BEAT_UPPERCUT_SHARE=.08f,BEAT_RUSH_SHARE=.4f,BEAT_BIG_SHARE=.05f,BEAT_FINAL_SHARE=1-BEAT_UPPERCUT_SHARE-BEAT_RUSH_SHARE-5*BEAT_BIG_SHARE;
+    /** Each blow's share of it: the uppercut's, the rush's (all its blows together), and the last blow's (the rest). */
+    public static final float BEAT_UPPERCUT_SHARE=.08f,BEAT_RUSH_SHARE=.6f,BEAT_FINAL_SHARE=1-BEAT_UPPERCUT_SHARE-BEAT_RUSH_SHARE;
     /** Its cooldown once it is over (ticks: thirty seconds, as Kageno's H, the other cutscene). */
     public static final int BEATDOWN_COOLDOWN=600;
     /**
@@ -173,7 +184,7 @@ public final class StarPlatinumRules {
     public static final double BEAT_BACK=.4,BEAT_HOLD_MIN=2.8,BEAT_HOLD_MAX=4.4;
     /**
      * Where the last blow sends them from (blocks from where they are held: BEAT_DRIFT on along the blow, as the rush
-     * and the big ORAs drive them back, and BEAT_LIFT up, as the uppercut threw them) and how far (BEAT_FLY on along it,
+     * drives them back, and BEAT_LIFT up, as the uppercut threw them) and how far (BEAT_FLY on along it,
      * unless something stops them sooner).
      */
     public static final double BEAT_DRIFT=1.6,BEAT_LIFT=1.7,BEAT_FLY=13;
@@ -185,13 +196,12 @@ public final class StarPlatinumRules {
         float lost=max<=0?0:1-health/max;lost=lost<0?0:lost>1?1:lost;
         return BEAT_DAMAGE*(1+lost);
     }
-    /** Whether a blow of the beatdown's cutscene lands {@code age} ticks into the beatdown: the uppercut, the rush's, the big ORAs, the last. */
+    /** Whether a blow of the beatdown's cutscene lands {@code age} ticks into the beatdown: the uppercut, the rush's, the last. */
     public static boolean beatBlow(long age){return beatShare(age)>0;}
     /** The share of the beatdown's damage the blow {@code age} ticks into it deals (0 if none lands then). */
     public static float beatShare(long age){
         if(age==BEAT_UPPERCUT)return BEAT_UPPERCUT_SHARE;
         if(age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST&&(age-BEAT_RUSH_FIRST)%BEAT_RUSH_EVERY==0)return BEAT_RUSH_SHARE/BEAT_RUSH_HITS;
-        for(int big:BEAT_BIG)if(age==big)return BEAT_BIG_SHARE;
         return age==BEAT_FINAL?BEAT_FINAL_SHARE:0;
     }
     /** How far ahead of its user the cutscene holds the one struck, who stood {@code ahead} blocks ahead along the blow. */

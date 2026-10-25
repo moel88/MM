@@ -83,6 +83,11 @@ public final class StandPunchFx {
         boolean heavy(){return combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY;}
         /** The Star Finger (2.60.0). */
         boolean finger(){return combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER;}
+        /**
+         * The beatdown's opening blow (2.65.0, user request: "G 꽂을때 파훼 할 수 있게 모션이 더 크게 보여야하고"): loaded
+         * slowly, its light gathering into the fist all through its load as the heavy punch's, bigger still.
+         */
+        boolean beatdown(){return combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN;}
         /** How much larger its finishing light is (the heavy punch's than the finisher's). */
         double grand(){return heavy()?HEAVY_SCALE:1;}
         long key(){return seen.start*31+user.getLeastSignificantBits();}
@@ -282,13 +287,13 @@ public final class StandPunchFx {
         }
         dazed(m);
     }
-    /** While the punch is loaded: light gathering into the drawn-back fist (the finisher's all through its load, and far more of it). */
+    /** While the punch is loaded: light gathering into the drawn-back fist (the finisher's, the heavy punch's and the beatdown's all through its load, and far more of it). */
     static void charge(EffectMesh m,Shown s,float t,float hit,float size){
         if(s.body==null||t>=hit+.01f)return;
         int combo=s.combo();float from=StandPunch.strikeFrom(combo);
         Vec3d p=windFist(combo,s.body).lerp(fist(combo,s.body),StandPunch.striking(s.seen.punch,t));
-        if(s.big()){
-            boolean heavy=s.heavy();double g=heavy?1.35:1;
+        if(s.big()||s.beatdown()){
+            boolean heavy=s.heavy()||s.beatdown();double g=s.beatdown()?1.55:heavy?1.35:1;
             float a=Ease.smooth(t,.1f,.2f)*(1-Ease.smooth(t,hit-.03f,hit+.01f));if(a<=0)return;
             FxLib.converge(m,p,2.3*g,heavy?36:26,t,.1f,hit-.03f,LILAC,s.seed()+5);
             float pulse=.5f+.5f*(float)Math.sin(t*(heavy?46:38));

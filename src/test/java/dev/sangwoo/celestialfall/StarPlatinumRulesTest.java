@@ -232,7 +232,7 @@ class StarPlatinumRulesTest {
         assertTrue(suction>=INHALE_LENGTH/20.0+.2,"the suction runs past the longest hold: "+suction+" s");
         assertTrue(seconds("star_platinum_inhale_catch")<1.2&&seconds("star_platinum_inhale_release")<1.2,"the catch and the air let go are short");
     }
-    // ---- G, the beatdown (2.64.0) ----
+    // ---- G, the beatdown (2.64.0; 2.65.0 its blow slower, the rush through the line, one heavy blow on its "DA!") ----
 
     @Test void theBeatdownsBlowLandsOnTheRaOfItsOraAndStandsApartFromTheCombo()throws Exception{
         assertEquals(7,BEATDOWN);
@@ -245,6 +245,8 @@ class StarPlatinumRulesTest {
         // its "ORA!" starts BEAT_OPENER_SOUND ticks in, its "RA" 0.15 s into it (cut_beatdown.py): on the contact
         assertEquals(CONTACT[BEATDOWN],BEAT_OPENER_SOUND+.15*20,1e-9,"the RA on the contact");
         assertEquals(BEAT_CUT,CONTACT[BEATDOWN],"the cutscene begins as the blow lands");
+        // 2.65.0: slower than the heavy punch, so that it can be seen coming ("G시전 모션이 R강펀치보다도 더 느리게")
+        assertTrue(CONTACT[BEATDOWN]>CONTACT[HEAVY],"slower than the heavy punch: "+CONTACT[BEATDOWN]+" ticks");
         assertTrue(LENGTH[BEATDOWN]>CONTACT[BEATDOWN]+8,"its fist held out a while once it lands");
         assertTrue(lane(BEATDOWN,4.2,0,1,.3),"it reaches as far as the finisher");assertFalse(lane(BEATDOWN,4.2+.5,0,1,.3));
         assertFalse(lane(BEATDOWN,-1,0,1,.3),"not behind");
@@ -252,12 +254,15 @@ class StarPlatinumRulesTest {
         assertTrue(ora>.4&&ora<.9,"the opener's ORA, as the user's recording has it: "+ora+" s");
     }
     @Test void itsCutsceneRunsOnTheRecordingsOwnTime()throws Exception{
-        // a tick on for every 20th of a second of the recording, from its start a tick in
-        int[] order={BEAT_CUT,BEAT_SOUND,BEAT_YARE,BEAT_YARE_END,BEAT_REVEAL,BEAT_GRAB,BEAT_UPPERCUT,BEAT_RUSH_FIRST,BEAT_RUSH_LAST,BEAT_BIG[0],BEAT_BIG[1],BEAT_BIG[2],BEAT_BIG[3],BEAT_BIG[4],BEAT_FINAL,BEAT_LAND,BEAT_END};
+        // a tick on for every 20th of a second of the recording, from its start BEAT_OPENER_SOUND ticks in
+        int[] order={BEAT_CUT,BEAT_SOUND,BEAT_YARE,BEAT_YARE_END,BEAT_REVEAL,BEAT_GRAB,BEAT_UPPERCUT,BEAT_RUSH_FIRST,BEAT_RUSH_LAST,BEAT_FINAL,BEAT_LAND,BEAT_END};
         for(int i=1;i<order.length;i++)assertTrue(order[i]>order[i-1],"in order: "+order[i-1]+" then "+order[i]);
-        assertEquals(1+1.10*20,BEAT_SOUND,1e-9,"the cutscene's sound starts 1.1 s into the recording");
-        assertEquals(1+2.6*20,BEAT_REVEAL,1e-9,"Star Platinum! 2.6 s in");
-        assertEquals(165,BEAT_RUSH_LAST,"the rush's last blow");
+        assertEquals(BEAT_OPENER_SOUND+1.10*20,BEAT_SOUND,1e-9,"the cutscene's sound starts 1.1 s into the recording");
+        assertEquals(BEAT_OPENER_SOUND+2.6*20,BEAT_REVEAL,1e-9,"Star Platinum! 2.6 s in");
+        // 2.65.0: the rush runs on through "裁くのは俺の" (8.35 to 10.2 s in), and the one heavy blow lands on the line's
+        // "DA!" (10.8 s in: "계속 오라오라 하다가 나의 스탠드다 끝날때 강펀치 한번만 꽂고 날려버려야해")
+        assertTrue(BEAT_RUSH_LAST>=BEAT_OPENER_SOUND+10.0*20&&BEAT_RUSH_LAST<BEAT_OPENER_SOUND+10.22*20,"the rush on until \"スタンド\": "+BEAT_RUSH_LAST);
+        assertEquals(BEAT_OPENER_SOUND+10.8*20,BEAT_FINAL,1e-9,"the last blow on \"DA!\"");
         // the rest of the recording runs to just before the cutscene's end
         double rest=seconds("star_platinum_beatdown");
         assertTrue(BEAT_SOUND/20.0+rest<=BEAT_END/20.0,"its sound is over by the end: "+(BEAT_SOUND/20.0+rest)+" s");
@@ -275,8 +280,8 @@ class StarPlatinumRulesTest {
         for(long age=0;age<=BEAT_END+5;age++){float s=beatShare(age);if(s>0){blows++;sum+=s;if(age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST)rush++;}assertEquals(s>0,beatBlow(age));}
         assertEquals(1,sum,1e-5,"the blows deal the whole damage between them");
         assertEquals(BEAT_RUSH_HITS,rush,"the rush's blows");
-        assertEquals(1+BEAT_RUSH_HITS+BEAT_BIG.length+1,blows,"the uppercut, the rush, five big ORAs and the last");
-        assertTrue(BEAT_FINAL_SHARE>BEAT_BIG_SHARE*3&&BEAT_FINAL_SHARE>BEAT_UPPERCUT_SHARE,"the last blow the hardest: "+BEAT_FINAL_SHARE);
+        assertEquals(1+BEAT_RUSH_HITS+1,blows,"the uppercut, the rush and the one heavy blow");
+        assertTrue(BEAT_FINAL_SHARE>BEAT_UPPERCUT_SHARE*3,"the last blow by far the hardest: "+BEAT_FINAL_SHARE);
         assertEquals(0,beatShare(BEAT_LAND),1e-9,"none as they come down: only what is left of it, the fall's");
     }
     @Test void itHoldsThemInFrontOfItsUserAndItsCooldownRunsOnceItIsOver(){
