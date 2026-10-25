@@ -294,8 +294,18 @@ public final class MpServer implements ModInitializer {
             if(off!=Boolean.TRUE.equals(disabled.put(p.getUuid(),off)))note(server,String.format(java.util.Locale.ROOT,"watcher %s (speed attribute x%.2f, %.2f blocks from the caster)",off?"incapacitated":"free again",speed.getValue()/speed.getBaseValue(),p.distanceTo(caster)));
             String sp=String.format(java.util.Locale.ROOT,"x%.2f",speed.getValue()/speed.getBaseValue());
             if(!sp.equals(speeds.put(p.getUuid(),sp)))note(server,"watcher speed attribute "+sp);
+            // 2.61.0: the watcher held by the caster's inhale as the server keeps it, and where it is from the caster
+            boolean held=dev.sangwoo.celestialfall.stand.StarPlatinumInhale.held(p);
+            if(held!=Boolean.TRUE.equals(inhaled.put(p.getUuid(),held))){note(server,"watcher "+(held?"caught by the inhale":"let go by the inhale")+" "+where(p,caster));if(held)heldAt=now;}
+            if(held&&(now-heldAt)%20==0)note(server,"watcher held "+(now-heldAt)+" ticks: "+where(p,caster));
         }
     }
     private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>(),disabled=new HashMap<>();
-    private final Map<UUID,String> speeds=new HashMap<>();
+    private final Map<UUID,String> speeds=new HashMap<>();private final Map<UUID,Boolean> inhaled=new HashMap<>();private long heldAt;
+    /** Where the watcher is from the caster: ahead along the way the caster faces, to its right, and how far. */
+    private static String where(ServerPlayerEntity p,ServerPlayerEntity caster){
+        var d=p.getPos().subtract(caster.getPos());var f=net.minecraft.util.math.Vec3d.fromPolar(0,caster.getYaw());
+        return String.format(java.util.Locale.ROOT,"(%.2f blocks ahead of the caster, %.2f to its right, %.2f from it; caster inhaling %s)",d.x*f.x+d.z*f.z,-d.x*f.z+d.z*f.x,p.distanceTo(caster),
+            dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(caster));
+    }
 }

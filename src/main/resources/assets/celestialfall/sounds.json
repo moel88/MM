@@ -716,5 +716,32 @@
         "preload": true
       }
     ]
+  },
+  "star_platinum_inhale": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_inhale",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "star_platinum_inhale_catch": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_inhale_catch",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "star_platinum_inhale_release": {
+    "sounds": [
+      {
+        "name": "celestialfall:star_platinum_inhale_release",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

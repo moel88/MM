@@ -115,8 +115,9 @@ public final class HitStun {
     public static void releaseOwned(UUID attacker){UUID id=OWNED.get(attacker);if(id!=null)release(id);}
     public static void attackerDamaged(LivingEntity entity) {
         if(entity.getWorld().isClient)return;
-        // a stand user struck lets go of whom the punches hold, and the combo stops (2.54.0), and the rush (2.57.0)
-        if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);}
+        // a stand user struck lets go of whom the punches hold, and the combo stops (2.54.0), and the rush (2.57.0), and
+        // the inhale lets go of whom it holds (2.61.0)
+        if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);}
         if(!OWNED.containsKey(entity.getUuid()))return;
         releaseOwned(entity.getUuid());CombatManager.interrupt(entity);
     }

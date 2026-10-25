@@ -54,14 +54,16 @@ frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in fr
 
 rows, wall, motion, rush = {}, [], [], []
 walkers = []
-if csv_path and mode in ('heavy', 'finger'):
+if csv_path and mode in ('heavy', 'finger', 'inhale'):
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
     # the finger mode: a husk walking off (act=) beside stand.csv, its speed attribute and how fast it walks
     beside = os.path.join(os.path.dirname(csv_path), 'actors.csv')
-    if mode == 'finger' and os.path.exists(beside):
+    if mode in ('finger', 'inhale') and os.path.exists(beside):
         with open(beside) as fh:
-            walkers = sorted((int(r['age']), float(r['x']), float(r['z']), float(r['speed_attr'])) for r in csv.DictReader(fh))
+            seen = list(csv.DictReader(fh))
+            # (the inhale's husks: the first one only, how far it has been dragged)
+            walkers = sorted((int(r['age']), float(r['x']), float(r['z']), float(r['speed_attr'])) for r in seen if mode == 'finger' or r['name'] == seen[0]['name'])
 elif csv_path and mode == 'rush':
     # a row the stand did not show in can be a field short (SkillShots before 2.57.0): its last field is then missing
     with open(csv_path) as fh:
@@ -240,7 +242,38 @@ def finger_line(t):
     color = (255, 150, 150) if r.get('dummy_disabled') == '1' or r.get('dummy_broken') == '1' else (255, 255, 255)
     return (' · '.join(parts), color) if parts else (None, None)
 
+def inhale_line(t):
+    """2.61.0, the inhale (Y): what it does now, how many it holds, and the training dummy (where it is in front of the
+    player, its health: the inhale deals no damage, incapacitated) or how far the husks (act=) have been dragged."""
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    if r.get('inhale_age'):
+        age, on = float(r['inhale_age']), r.get('inhale_on') == '1'
+        caught, blocked = int(r.get('inhale_caught') or 0), int(r.get('inhale_blocked') or 0)
+        if on and age < .4: parts.append('숨을 크게 들이쉼')
+        elif on and caught: parts.append(f'흡입 · {caught}명을 붙잡아 끌어옴 ({min(5.0, age - .4):.1f}초 / 5초)')
+        elif on and blocked: parts.append('가드에 막힘 · 아무도 안 잡힘')
+        elif on: parts.append('흡입 · 아무도 안 잡힘')
+        else: parts.append('흡입 끝 · 놓아줌')
+    if walkers:
+        k = bisect.bisect_right(walkers, (t * 20 + 1e-6, 1e9, 0, 0)) - 1
+        if k >= 0:
+            (_, x0, z0, _), (_, x1, z1, _) = walkers[0], walkers[k]
+            d = ((x1 - x0) ** 2 + (z1 - z0) ** 2) ** .5
+            if d > .2: parts.append(f'허스크가 끌려온 거리 {d:.1f}블록')
+    if os.environ.get('FILM_INHALE_DUMMY') != '0' and r.get('dummy_ahead'):
+        parts.append(f'더미: 플레이어 앞 {float(r["dummy_ahead"]):.1f}블록')
+        full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
+        if r['dummy_health'] and full: parts.append(f'체력 {float(r["dummy_health"]):.0f}/{full:.0f} (피해 {full - float(r["dummy_health"]):.0f})')
+        if r.get('dummy_disabled') == '1': parts.append('무력화')
+        elif r.get('dummy_guard') == '1': parts.append('가드 중')
+    color = (255, 150, 150) if r.get('dummy_disabled') == '1' and os.environ.get('FILM_INHALE_DUMMY') != '0' else (255, 255, 255)
+    return (' · '.join(parts), color) if parts else (None, None)
+
 def actor_line(t):
+    if mode == 'inhale': return inhale_line(t)
     if mode == 'finger': return finger_line(t)
     if mode == 'heavy': return heavy_line(t)
     if mode == 'rush': return rush_line(t)

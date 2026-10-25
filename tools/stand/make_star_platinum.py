@@ -389,6 +389,8 @@ def right_arm():
 
 # where the Star Finger's fingers leave the fist (between the first two knuckles, on its face) and their size
 FINGER_ROOT, FINGER_LEN, FINGER_W = (-7.62, 15.0, -.85), 3.0, .86
+# where its mouth would be, in the head's own space (model units): under the nose, just out from the jaw (2.61.0)
+MOUTH = (0.0, 35.6, -3.7)
 mirrored(right_arm)
 
 
@@ -1293,6 +1295,34 @@ POSES = {
         'right_leg': {'rot': (40, 0, 6)}, 'right_shin': {'rot': (12, 0, 0)}, 'right_foot': {'rot': (48, 0, 0)},
         'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (24, 0, 0)},
     },
+    # ---- Y, the inhale (2.61.0, user request: "스타플래티나가 최대 3블록까지 앞에 있는 플레이어를 입으로 빨아들여서 5초동안
+    # 끌고오게 하는 스킬"): it draws a huge breath -- rearing up and back, the chest thrown out, the arms flung wide and
+    # back, the head thrown back -- and then sucks the air in at whoever is in front: thrust forward over braced legs, the
+    # head driven at the target, the arms spread wide on either side as if hauling them in. It has no mouth (the scarf
+    # covers where it would be: "입은 아예 없애줘"), so the air rushes in under the scarf (client/stand/StandInhaleFx at
+    # the 'mouth' point stance_points writes). client/stand/StandInhale breathes between the two as it holds.
+    'inhale': {
+        'root': {'pos': (0, 1.6, 2.2)},
+        'hips': {'rot': (-8, 0, 0)}, 'torso': {'rot': (-7, 0, 0)}, 'chest': {'rot': (-12, 0, 0)},
+        'neck': {'rot': (-8, 0, 0)}, 'head': {'rot': (-14, 0, 0)},
+        'left_arm': {'reach': ((14.0, 33.0, 5.0), (.6, -1, .4))},
+        'right_arm': {'reach': ((-14.0, 33.0, 5.0), (-.6, -1, .4))},
+        'left_pad': {'rot': (0, 0, -20)}, 'right_pad': {'rot': (0, 0, 20)},
+        'left_leg': {'rot': (-14, 0, -12)}, 'left_shin': {'rot': (36, 0, 0)}, 'left_foot': {'rot': (20, 0, 0)},
+        'right_leg': {'rot': (6, 0, 12)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (26, 0, 0)},
+        'cloth_front': {'rot': (-10, 0, 0)}, 'cloth_back': {'rot': (12, 0, 0)},
+    },
+    'suction': {
+        'root': {'pos': (0, .4, -2.4)},
+        'hips': {'rot': (16, 0, 0)}, 'torso': {'rot': (9, 0, 0)}, 'chest': {'rot': (4, 0, 0)},
+        'neck': {'rot': (-6, 0, 0)}, 'head': {'rot': (-4, 0, 0)},
+        'left_arm': {'reach': ((15.0, 31.0, -9.0), (.7, -1, -.2))},
+        'right_arm': {'reach': ((-15.0, 31.0, -9.0), (-.7, -1, -.2))},
+        'left_pad': {'rot': (0, 0, -18)}, 'right_pad': {'rot': (0, 0, 18)},
+        'left_leg': {'rot': (-30, 0, -14)}, 'left_shin': {'rot': (44, 0, 0)}, 'left_foot': {'rot': (18, 0, 0)},
+        'right_leg': {'rot': (18, 0, 14)}, 'right_shin': {'rot': (40, 0, 0)}, 'right_foot': {'rot': (30, 0, 0)},
+        'cloth_front': {'rot': (-18, 0, 0)}, 'cloth_back': {'rot': (20, 0, 0)},
+    },
 }
 
 
@@ -1432,6 +1462,9 @@ def stance_points(spec):
     q = world['right_hand'] @ np.array([*FINGER_ROOT, 1.0])
     out['right_finger'] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
     out['right_finger_way'] = [round(float(v), 4) for v in world['right_hand'][:3, :3] @ np.array([0, -1.0, 0])]
+    # where its mouth would be (2.61.0, the inhale): under the nose, just in front of the jaw (the scarf covers it)
+    q = world['head'] @ np.array([*MOUTH, 1.0])
+    out['mouth'] = [round(float(q[0]), 3), round(float(q[1] + LIFT), 3), round(float(q[2]), 3)]
     return out
 
 

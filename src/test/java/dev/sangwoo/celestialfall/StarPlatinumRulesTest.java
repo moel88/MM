@@ -194,4 +194,39 @@ class StarPlatinumRulesTest {
         assertTrue(lane(4,4.2,0,1,.3),"the fourth lunges further");assertFalse(lane(1,2,2,1,.3),"not far to the side");
         assertFalse(lane(1,2,0,3.5,.3),"not far above");
     }
+
+    // ---- Y, the inhale (2.61.0) ----
+
+    @Test void theInhaleCatchesWhoeverIsWithinThreeBlocksInFront(){
+        assertTrue(inhaleLane(2,0,1,.3));assertTrue(inhaleLane(INHALE_REACH+.3,0,1,.3),"a body whose near side is three blocks ahead");
+        assertFalse(inhaleLane(INHALE_REACH+.5,0,1,.3),"not further");
+        assertTrue(inhaleLane(1.5,1.3,0,.3),"a little to either side");assertFalse(inhaleLane(1.5,1.6,0,.3),"not far to the side");
+        assertFalse(inhaleLane(-1,0,1,.3),"not behind");assertFalse(inhaleLane(2,0,3.5,.3),"not far above");
+        assertEquals(3,INHALE_REACH,1e-9,"three blocks (the user's word)");
+    }
+    @Test void itHoldsWhomItCaughtForFiveSecondsInFrontOfIt(){
+        assertEquals(5,INHALE_HOLD/20.0,1e-9,"five seconds");
+        assertEquals(.4,INHALE_CATCH/20.0,1e-9,"it sucks once its breath is drawn in");
+        assertEquals(INHALE_CATCH+INHALE_HOLD,INHALE_LENGTH);
+        assertTrue(INHALE_WHIFF<INHALE_HOLD,"catching no one it stops soon after");
+        assertEquals(700+INHALE_COOLDOWN,inhaleReady(700),"its cooldown from its end (2.44.0's rule)");
+        assertEquals(15,INHALE_COOLDOWN/20.0,1e-9);
+        assertEquals(.5,INHALE_SLOW,1e-9,"its user walks at half their speed");
+        // drawn in: still at both ends, never back, all the way
+        assertEquals(0,inhalePull(0),1e-12);assertEquals(1,inhalePull(1),1e-12);
+        for(double u=0;u<1;u+=.01)assertTrue(inhalePull(u+.01)>=inhalePull(u));
+        assertTrue(inhalePull(.05)<.01&&1-inhalePull(.95)<.02,"still at both ends");
+        // held side by side, a body's breadth apart, in front of its user wherever they face
+        for(int a=0;a<INHALE_MAX;a++)for(int b=a+1;b<INHALE_MAX;b++){
+            double[] p=inhaleAnchor(0,0,37,a),q=inhaleAnchor(0,0,37,b);
+            assertTrue(Math.hypot(p[0]-q[0],p[1]-q[1])>.7,"slots "+a+" and "+b+" apart");
+        }
+        double[] east=inhaleAnchor(10,10,-90,0);
+        assertEquals(10+INHALE_AHEAD,east[0],1e-9,"facing east (-90 degrees) it holds them to the east");assertEquals(10,east[1],1e-9);
+    }
+    @Test void theInhalesSoundsLastItsHold()throws Exception{
+        double suction=seconds("star_platinum_inhale");
+        assertTrue(suction>=INHALE_LENGTH/20.0+.2,"the suction runs past the longest hold: "+suction+" s");
+        assertTrue(seconds("star_platinum_inhale_catch")<1.2&&seconds("star_platinum_inhale_release")<1.2,"the catch and the air let go are short");
+    }
 }

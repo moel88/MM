@@ -57,7 +57,14 @@ public final class MpClient implements ClientModInitializer {
      * Star Finger (T) on it: both log the Star Finger they hear, when its sound starts on their clock and whom it struck;
      * the watcher, struck, tries the attack, the dash (C) and E (all refused: incapacitated), walks forward for 25 ticks
      * (95% slower; its speed is logged) and tries the attack again once the 3 s are over (it swings); it logs its own
-     * incapacitation and speed as its client knows them, the server as it keeps them.
+     * incapacitation and speed as its client knows them, the server as it keeps them. Since 2.61.0 the caster then turns
+     * back (a tap of its guard turns its body to the camera, so the watcher it calls is where it then inhales), calls the
+     * watcher 2.5 blocks in front of it again and inhales (Y): the watcher is caught, drawn in and held in front of the
+     * stand while the caster walks on (3942 to 3972), and, held, tries the attack, the dash (C) and E and
+     * to walk away (all of it refused: held and incapacitated); then the caster inhales again with the watcher holding
+     * its guard up (F, from when it hears that inhale start): the guard takes it. Both log each inhale they hear (its
+     * start, its sound starting on their clock, whom it caught and whose guard took it, its end), the watcher whether it
+     * is held and where it is from the caster, the server the same as it keeps them and every blow on the watcher (none).
      */
     private static final String[] SCRIPT={
         "5 M1","18 M1","31 M1","44 M1",
@@ -73,7 +80,8 @@ public final class MpClient implements ClientModInitializer {
         "2460 DUMMY",
         "3070 TAB","3100 TAB","3120 ESC","3135 R","3150 ENTER","3185 RESPAWN",
         "3230 STAND","3270 Q","3315 E+","3330 W+","3380 W-","3405 E-","3440 M1+","3503 M1-",
-        "3560 HOME","3575 R","3650 HOME","3665 R","3730 KAGENO","3740 FAR","3755 T","3850 TURN180","3852 W+","3892 W-","3952 Q","4002 END"};
+        "3560 HOME","3575 R","3650 HOME","3665 R","3730 KAGENO","3740 FAR","3755 T","3850 TURN180","3852 W+","3892 W-",
+        "3900 TURN0","3902 F+","3906 F-","3912 HOME","3922 Y","3942 W+","3972 W-","4045 HOME","4060 Y","4105 Q","4155 END"};
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -247,6 +255,8 @@ public final class MpClient implements ClientModInitializer {
         punches();
         // 2.57.0: its rush heard here, and this player's own cries of pain (only the first blow on them cries out)
         rushes();flag("hurt_cries",hurtCries);
+        // 2.61.0: its inhale heard here; held by it, the watcher tries everything and to walk away
+        inhales();
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
         if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
         flag("thrown",fast);
@@ -255,7 +265,35 @@ public final class MpClient implements ClientModInitializer {
                 dev.sangwoo.celestialfall.client.stand.StandPresence.aura(p.getUuid()),dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast(),look.lean,look.speed,dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
     }
-    private final Map<String,int[]> heard=new HashMap<>(),rushHeard=new HashMap<>();private int hurtCries;private boolean listening;
+    private final Map<String,int[]> heard=new HashMap<>(),rushHeard=new HashMap<>(),inhaleHeard=new HashMap<>();private int hurtCries,inhalesHeard;private boolean listening;
+    /**
+     * Each player's inhale heard here (2.61.0): as it starts, its sound starting (its tick on its clock), whom it caught
+     * and whose guard took it, its end. The watcher holds its guard up against the second it hears; held by the first,
+     * it tries the attack, the dash and E, and walks (W) for 25 ticks, and logs where it is from the caster while held.
+     */
+    private void inhales(){
+        for(var p:mc.world.getPlayers()){
+            var i=dev.sangwoo.celestialfall.client.stand.StandInhale.of(p.getUuid());if(i==null)continue;
+            String key=p.getUuid()+"/"+i.start;int[] st=inhaleHeard.get(key);String who=p.getGameProfile().getName()+"'s inhale";
+            if(st==null){inhaleHeard.put(key,st=new int[4]);inhalesHeard++;note(String.format(Locale.ROOT,"%s heard (server tick %d, its tick here %d)",who,i.start,i.ticksIn()));
+                if(!caster&&inhalesHeard==2){key(GLFW_KEY_F,true);guardUntil=age+40;note("press F (guard) against inhale "+inhalesHeard);}}
+            if(st[0]==0&&i.sound()!=null&&mc.getSoundManager().isPlaying(i.sound())){st[0]=1;note(String.format(Locale.ROOT,"%s: its sound started at its tick %d here",who,i.ticksIn()));}
+            if(st[1]==0&&!Float.isNaN(i.caughtAt)){st[1]=1;var names=new ArrayList<String>();var guards=new ArrayList<String>();
+                for(var c:i.caught){var e=mc.world.getEntityById(c.id());names.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(c.id()));}
+                for(int id:i.blocked){var e=mc.world.getEntityById(id);guards.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
+                note(String.format(Locale.ROOT,"%s caught %s, a guard took it on %s, heard at its tick %d here",who,names,guards,i.ticksIn()));
+                if(!caster&&i.caught(mc.player.getId())!=null){tries.put(age+3,"M1");tries.put(age+10,"C");tries.put(age+17,"E");tries.put(age+20,"W+");tries.put(age+45,"W-");heldSince=age;}}
+            if(st[2]==0&&!i.on()){st[2]=1;note(String.format(Locale.ROOT,"%s ended at %.2f s on its clock here",who,i.ends()));}
+        }
+        flag("held_by_inhale",dev.sangwoo.celestialfall.client.stand.StandInhale.localHeld());
+        // held: where this player is from the caster (ahead along the way it faces, to its right), every 10 ticks
+        if(!caster&&heldSince>=0&&(age-heldSince)%10==0&&age-heldSince<=120){
+            var c=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
+            if(c!=null){var d=mc.player.getPos().subtract(c.getPos());var f=net.minecraft.util.math.Vec3d.fromPolar(0,c.getHeadYaw());
+                note(String.format(Locale.ROOT,"%d ticks after the catch: %.2f blocks ahead of the caster, %.2f to its right, %.2f up; held %s",age-heldSince,d.x*f.x+d.z*f.z,-d.x*f.z+d.z*f.x,d.y,dev.sangwoo.celestialfall.client.stand.StandInhale.localHeld()));}
+        }
+    }
+    private int heldSince=-1;
     /** Each player's rush heard here (2.57.0): as it starts, its voice starting, every tenth blow (whom it struck, how loud its blows sound) and its end. */
     private void rushes(){
         if(!listening&&mc.getSoundManager()!=null){listening=true;mc.getSoundManager().registerListener((sound,set)->{if(sound.getId().getPath().equals("entity.player.hurt"))hurtCries++;});}

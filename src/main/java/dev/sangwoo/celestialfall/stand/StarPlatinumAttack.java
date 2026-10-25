@@ -114,8 +114,8 @@ public final class StarPlatinumAttack {
     public static boolean punches(PlayerEntity p){
         return p!=null&&MapGate.enabled(p.getWorld())&&StandManager.starPlatinum(p)&&((StandHolder)p).botand$isStandOut()&&p.isAlive()&&!p.isSpectator();
     }
-    /** Free to start a punch: nothing else holds the user (a blow, a guard, a dash, a skill, a cutscene). */
-    private static boolean able(ServerPlayerEntity p){return punches(p)&&!p.isSleeping()&&!p.hasVehicle()&&!CombatManager.busy(p)&&!CombatManager.cinematic(p);}
+    /** Free to start a punch (or the inhale, 2.61.0): nothing else holds the user (a blow, a guard, a dash, a skill, a cutscene). */
+    public static boolean able(ServerPlayerEntity p){return punches(p)&&!p.isSleeping()&&!p.hasVehicle()&&!CombatManager.busy(p)&&!CombatManager.cinematic(p);}
     private static State state(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());
         if(s==null||s.world!=p.getServerWorld()){s=new State(p);STATES.put(p.getUuid(),s);}

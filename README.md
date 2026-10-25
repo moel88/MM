@@ -1,4 +1,16 @@
-> **현재 통합본: Botand 2.60.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.61.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.61.0 — 스타플래티나 Y: 흡입 (빨아들여 5초 동안 끌고 다니기)
+
+- **흡입(Y):** 스탠드를 꺼낸 상태에서 Y를 누르면 스타플래티나가 앞으로 나와 숨을 크게 들이쉰 뒤 앞을 빨아들입니다. 0.4초에 사용자 앞 3블록 안의 대상을 가까운 순서로 4명까지 잡습니다.
+- **끌고 다니기:** 잡힌 대상은 0.6초 동안 스탠드 바로 앞으로 끌려오고, 잡힌 때부터 5초 동안 그 자리에 붙잡힙니다. 사용자는 절반 속도로 걷고 돌며 붙잡은 대상을 끌고 다닙니다.
+- **무력화, 피해 없음:** 붙잡힌 동안은 스타 핑거처럼 무력화되고(키로 움직일 수도 없음), 피해는 없습니다. 풀려나면 무력화도 함께 풀립니다.
+- **가드:** 스탠드 쪽으로 가드를 올리면 잡히지 않습니다. 아무도 못 잡으면 0.8초 뒤 끝납니다.
+- **쿨타임:** 15초, 흡입이 끝난 뒤부터 돕니다(쿨타임 목록에 '흡입'). 사용자가 맞거나 스탠드가 들어가면 바로 끝나고 붙잡힌 대상이 풀려납니다.
+- **효과음:** 직접 합성해 만들었습니다(숨 들이쉬기 → 바람이 빨려 드는 소리, 잡을 때의 쿵, 끝날 때 공기가 풀려나는 소리).
+- **제가 정한 값:** Y 키, 0.4초, 옆 폭 ±1.1블록, 최대 4명, 끌려오는 시간 0.6초, 사용자 걷기 50%, 쿨타임 15초. 바꾸고 싶은 값이 있으면 알려 주세요.
+
+[RELEASE_2.61.0_KO.md](RELEASE_2.61.0_KO.md)를 확인하세요.
 
 # 보탠드 2.60.0 — 스타플래티나 T: 스타 핑거 · 무력화 · R 가드 브레이크는 2초 무력화
 

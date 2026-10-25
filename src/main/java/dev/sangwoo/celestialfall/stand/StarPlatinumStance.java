@@ -11,12 +11,15 @@ public final class StarPlatinumStance {
      * middle, high or low, the other torn back to the chest; the heavy punch's (2.59.0): coiled deep with the right fist
      * cocked back past the hip, and the right straight thrown with the whole body behind it; the Star Finger's (2.60.0):
      * taking aim with the right hand drawn back level at the ribs, its first two fingers held out straight, and that hand
-     * driven out straight at the target.
+     * driven out straight at the target; the inhale's (2.61.0): rearing back with its breath drawn in, chest out, head
+     * back and arms flung wide, and bent forward into the suction, braced, arms reaching out low.
      */
     public static final List<String> NAMES=List.of("idle","hero","summon","guard","wind_l","punch_l","wind_r","punch_r","wind_hook","hook","wind_big","punch_big",
-        "rush_l","rush_l_hi","rush_l_lo","rush_r","rush_r_hi","rush_r_lo","wind_heavy","punch_heavy","wind_finger","star_finger");
+        "rush_l","rush_l_hi","rush_l_lo","rush_r","rush_r_hi","rush_r_lo","wind_heavy","punch_heavy","wind_finger","star_finger",
+        "inhale","suction");
     public static final int IDLE=0,HERO=1,SUMMON=2,GUARD=3,WIND_L=4,PUNCH_L=5,WIND_R=6,PUNCH_R=7,WIND_HOOK=8,HOOK=9,WIND_BIG=10,PUNCH_BIG=11,
-        RUSH_L=12,RUSH_L_HI=13,RUSH_L_LO=14,RUSH_R=15,RUSH_R_HI=16,RUSH_R_LO=17,WIND_HEAVY=18,PUNCH_HEAVY=19,WIND_FINGER=20,STAR_FINGER=21;
+        RUSH_L=12,RUSH_L_HI=13,RUSH_L_LO=14,RUSH_R=15,RUSH_R_HI=16,RUSH_R_LO=17,WIND_HEAVY=18,PUNCH_HEAVY=19,WIND_FINGER=20,STAR_FINGER=21,
+        INHALE=22,SUCTION=23;
     /** How long the figure takes to go over from one stance to another (ticks). */
     public static final float CROSSFADE=12;
     private StarPlatinumStance(){}

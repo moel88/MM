@@ -91,13 +91,15 @@ public final class CombatManager {
     }
     public static boolean busy(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
-        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p))return true;
+        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
         long n=p.getWorld().getTime();return e.state.locked(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.guarding;
     }
     public static boolean actionLocked(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
-        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p))return true;
+        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
     }
     /**
@@ -131,9 +133,44 @@ public final class CombatManager {
         s.incapacitate(now,ticks,slowTicks,slow);
         HitStun.releaseOwned(p.getUuid());
         dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
+        dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);
         dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);
         p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
         speed(p,s,now);sync(p,s);
+    }
+    /**
+     * The incapacitation that was to last until {@code until} ends now (2.61.0: Star Platinum's inhale let go of
+     * {@code target} early, its user struck): one that lasts longer stays.
+     */
+    public static void free(LivingEntity target,long until) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
+        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.free(until);return;}
+        if(!(target instanceof ServerPlayerEntity p))return;
+        var e=STATES.get(p.getUuid());if(e==null)return;
+        long now=p.getWorld().getTime();e.state.free(now,until);sync(p,e.state);
+    }
+    /**
+     * Whether {@code target} holds a guard up against something coming at it from {@code from} (2.61.0: Star Platinum's
+     * inhale, which deals no blow for a guard to take): its guard up and not broken, facing it as a guard takes a blow
+     * (CombatManager.block, TrainingDummyEntity.block). With {@code show} the guard is heard and seen taking it.
+     */
+    public static boolean guardTakes(LivingEntity target,Vec3d from,boolean show) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return false;
+        long now=target.getWorld().getTime();float yaw;
+        if(target instanceof ServerPlayerEntity p){
+            var e=STATES.get(p.getUuid());if(e==null||!e.state.guarding||e.state.broken(now)||!valid(p))return false;
+            yaw=p.getYaw();
+        }else if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){
+            if(!dummy.guarding()||dummy.brokenUntil()>now)return false;
+            yaw=dummy.getYaw();
+        }else return false;
+        Vec3d toward=from.subtract(target.getPos()).multiply(1,0,1);
+        if(toward.lengthSquared()<1e-6||Vec3d.fromPolar(0,yaw).dotProduct(toward.normalize())<.2)return false;
+        if(show&&target.getWorld() instanceof net.minecraft.server.world.ServerWorld world){
+            world.playSound(null,target.getX(),target.getY(),target.getZ(),SoundEvents.ITEM_SHIELD_BLOCK,target instanceof ServerPlayerEntity?SoundCategory.PLAYERS:SoundCategory.HOSTILE,.85f,1.15f);
+            world.spawnParticles(ParticleTypes.ELECTRIC_SPARK,target.getX(),target.getY()+1.15,target.getZ(),9,.25,.22,.15,.07);
+        }
+        return true;
     }
     public static void interrupt(LivingEntity target) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;

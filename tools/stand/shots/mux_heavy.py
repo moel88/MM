@@ -25,7 +25,8 @@ from mux_punches import SR, SOUNDS, decode, pling, find, earliest, rows  # noqa:
 
 HEAVY, LEAD = '5', 10
 # what is laid: the punch's number in stand.csv, the ticks into it its sound starts, its voice's file and its sound event
-# (tools/stand/shots/mux_finger.py lays the Star Finger with these)
+# (tools/stand/shots/mux_finger.py lays the Star Finger with these; tools/stand/shots/mux_inhale.py the inhale, with its
+# own 'start': the tick it started on, from stand.csv's rows)
 SKILL = {'combo': HEAVY, 'lead': LEAD, 'file': 'star_platinum_heavy.ogg', 'sound': 'celestialfall:star_platinum_heavy', 'name': 'heavy punch'}
 
 
@@ -42,7 +43,8 @@ def start_tick(stand, combo=HEAVY):
 
 
 def main(skill=SKILL):
-    HEAVY, LEAD, name = skill['combo'], skill['lead'], skill['name']
+    HEAVY, LEAD, name = skill.get('combo'), skill['lead'], skill['name']
+    started = skill.get('start') or (lambda stand: start_tick(stand, HEAVY))
     audio, film_dir, entry, start, end, film, out = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4]), float(sys.argv[5]), sys.argv[6], sys.argv[7]
     rate, raw = wavfile.read(os.path.join(audio, 'game.wav'))
     wav = (raw.astype(np.float64) / (32768.0 if raw.dtype == np.int16 else 1.0))
@@ -76,12 +78,12 @@ def main(skill=SKILL):
     near = sample(int(played[0]['nanos'])) + onset
     pos, score = find(wav, clip, int(near - .15 * SR), int(near + .15 * SR + len(clip)))
     pos -= onset
-    rec_start = start_tick(rows(os.path.join(folder, 'stand.csv')), HEAVY)
+    rec_start = started(rows(os.path.join(folder, 'stand.csv')))
     nanos = tick_nanos.get(rec_start + LEAD) if rec_start is not None else None
     if nanos is not None:
         print(f'  sound run: the voice at {pos / SR:.3f} s (match {score:.2f}); its punch started on tick {rec_start}, '
               f'tick {rec_start + LEAD} began {(pos - sample(nanos)) / SR * 1000:+.0f} ms from it')
-    film_start = start_tick(rows(os.path.join(film_dir, entry, 'stand.csv')), HEAVY)
+    film_start = started(rows(os.path.join(film_dir, entry, 'stand.csv')))
     if film_start is None:
         sys.exit(f'{entry}: the film run shows no {name}')
     # film time f is recording time f + offset

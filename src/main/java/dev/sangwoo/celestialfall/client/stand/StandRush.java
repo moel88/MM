@@ -391,6 +391,15 @@ public final class StandRush {
         return combine(punch,newest==null?Float.MAX_VALUE:newest.age(delta)-back,rush(r,delta,back,RUSH),r.age(delta)-back,into);
     }
     /**
+     * How old (seconds, {@code back} seconds before this frame) the newer of this user's newest punch and rush is
+     * (Float.MAX_VALUE if they have neither): what the inhale (2.61.0, StandInhale) takes over from, or what takes over
+     * from it once it is over.
+     */
+    static float newest(UUID id,float delta,float back){
+        var punch=StandAttack.newest(id);var r=RUSHES.get(id);
+        return Math.min(punch==null?Float.MAX_VALUE:punch.age(delta)-back,r==null?Float.MAX_VALUE:r.age(delta)-back);
+    }
+    /**
      * The punches' shape ({@code punch}, null if none shows, its newest punch {@code pt} seconds old) and the rush's
      * ({@code rush}, null if it does not show, {@code rt} seconds old) together, into {@code into} (which may be the
      * punches' shape; the rush's is changed): the newer leads, taking over from the other.

@@ -91,6 +91,14 @@ public final class CombatState {
         if(slowTicks>0&&slow>0){if(!slowed(now)||slow>=this.slow)this.slow=slow;slowUntil=Math.max(slowUntil,now+slowTicks);}
         combatUntil=Math.max(combatUntil,now+100);cancel(now);serial++;
     }
+    /**
+     * The incapacitation that was to last until {@code until} ends now (2.61.0: Star Platinum's inhale let go of them
+     * early). One that lasts longer (another incapacitated them for longer since) stays. Returns whether it ended.
+     */
+    public boolean free(long now,long until) {
+        if(disabledUntil!=until||!disabled(now))return false;
+        disabledUntil=now;serial++;return true;
+    }
     public boolean dash(long now,float forward,float side) {
         if(now<dashReady||locked(now)||attacking(now)||guarding||dashing(now))return false;
         float length=(float)Math.hypot(forward,side);

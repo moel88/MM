@@ -94,6 +94,8 @@ public final class StandClient {
         CASTS.values().removeIf(c->!c.dimension.equals(mc.world.getRegistryKey().getValue())||c.age(0)>=DURATION[c.skill]||c.age(0)<0||deadCaster(mc,c));
         KagenoAudio.retain(CASTS.keySet());
         dev.sangwoo.celestialfall.client.kageno.RushDash.drive(mc);
+        // held by Star Platinum's inhale (2.61.0): drawn in and kept before the stand by this client, as the dash is
+        dev.sangwoo.celestialfall.client.stand.StandInhale.drive(mc);
         STATES.entrySet().removeIf(e->mc.world.getPlayerByUuid(e.getKey())==null);
         if(holdingT){if(!StandManager.kageno(mc.player)||mc.currentScreen!=null||!mc.isWindowFocused()){send(CANCEL);holdingT=false;}else if(ticks%3==0)send(PULSE);}
         for(var c:CASTS.values())if(KagenoRules.frozen(c.skill,c.age(0))){

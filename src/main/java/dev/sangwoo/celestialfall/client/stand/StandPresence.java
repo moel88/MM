@@ -230,12 +230,12 @@ public final class StandPresence {
             return p.getPos().add(-fz*RIGHT-fx*BACK,UP,fx*RIGHT-fz*BACK);
         }
         /**
-         * The punches on top of the look (2.54.0), and the rush (2.57.0), {@code back} seconds before this frame: their
-         * stances while it is out (going back, it curls up from the look it had), the gust of each blow, and what wind it
-         * fights in. Returns their shape, for where it stands (null if neither shows).
+         * The punches on top of the look (2.54.0), and the rush (2.57.0) and the inhale (2.61.0), {@code back} seconds
+         * before this frame: their stances while it is out (going back, it curls up from the look it had), the gust of
+         * each blow, and what wind it fights in. Returns their shape, for where it stands (null if none shows).
          */
         StandPunch.Shape punch(PlayerEntity p,float delta,float back,StarPlatinumLook look,StandPunch.Shape into){
-            var shape=StandRush.shape(p,delta,back,into);if(shape==null)return null;
+            var shape=StandInhale.shape(p,delta,back,into);if(shape==null)return null;
             float e=shape.engage;
             if(out&&e>0){
                 shape.onto(look);

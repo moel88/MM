@@ -39,11 +39,11 @@ public final class CooldownHud {
      * the status arrives (late by the ping) marks a rest; the combo's own rhythm stays off the list.
      */
     private static final int COMBO_END=14;
-    /** The dash's place in the list (after the stand's skill slots), then Star Platinum's punches' rest (2.54.0), its rush (2.57.0), its heavy punch (2.59.0) and its Star Finger (2.60.0). */
-    static final int DASH=10,PUNCHES=11,BARRAGE=12,HEAVY=13,FINGER=14;
+    /** The dash's place in the list (after the stand's skill slots), then Star Platinum's punches' rest (2.54.0), its rush (2.57.0), its heavy punch (2.59.0), its Star Finger (2.60.0) and its inhale (2.61.0). */
+    static final int DASH=10,PUNCHES=11,BARRAGE=12,HEAVY=13,FINGER=14,INHALE=15;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     private static CooldownList.Metrics metrics;private static long metricsKey;
@@ -55,7 +55,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=0;atomic=false;owner=null;world=null;}
     /** The names the list shows now, top first (for the QA tools). */
     public static java.util.List<String> shown(){return LIST.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
 
@@ -99,6 +99,9 @@ public final class CooldownHud {
         // its Star Finger (2.60.0): the same, told with each of its punches' news
         long finger=dev.sangwoo.celestialfall.client.stand.StandAttack.fingerReady(p.getUuid());
         if(finger!=fingerSeen){show(FINGER,fingerName(),finger-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER_COOLDOWN,now);fingerSeen=finger;}
+        // its inhale (2.61.0): from when it is over (the server's ready tick, told as it ends)
+        long inhale=dev.sangwoo.celestialfall.client.stand.StandInhale.ready(p.getUuid());
+        if(inhale!=inhaleSeen){show(INHALE,inhaleName(),inhale-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.INHALE_COOLDOWN,now);inhaleSeen=inhale;}
         LIST.update(now);
     }
     /**
@@ -119,6 +122,8 @@ public final class CooldownHud {
     private static String heavyName(){return "강펀치";}
     /** Its Star Finger's name in the list (the user's word for it). */
     private static String fingerName(){return "스타 핑거";}
+    /** Its inhale's name in the list. */
+    private static String inhaleName(){return "흡입";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */
     private static String name(int slot,UUID me){
         if(slot!=T)return NAMES[slot];

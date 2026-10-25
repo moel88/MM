@@ -126,7 +126,8 @@ public final class BotandCamera {
     public static void input(Input input) {
         if(!enabled())return;
         var mc=MinecraftClient.getInstance();var p=mc.player;
-        if(StandClient.movementLocked()||HitStunClient.localStunned()) {
+        // held by Star Platinum's inhale (2.61.0): drawn in and kept before the stand, the keys move them nowhere
+        if(StandClient.movementLocked()||HitStunClient.localStunned()||dev.sangwoo.celestialfall.client.stand.StandInhale.localHeld()) {
             input.movementForward=input.movementSideways=0;input.jumping=input.sneaking=false;
             input.pressingForward=input.pressingBack=input.pressingLeft=input.pressingRight=false;
             // T held is aimed while its slashes are thrown (user request): the caster turns to where the camera looks.
@@ -140,9 +141,9 @@ public final class BotandCamera {
         float forward=input.movementForward,side=input.movementSideways;
         var s=CombatClient.snapshot(p.getUuid());
         // E's thrusts are aimed (user request): the caster faces where the camera looks and walks relative to it; so
-        // does Star Platinum's user while it rushes (2.57.0, user request: "방향전환 걷기는 다 되지만").
+        // does Star Platinum's user while it rushes (2.57.0, user request: "방향전환 걷기는 다 되지만") and inhales (2.61.0).
         boolean facing=locked()||s.guard()||s.attack()>0||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed()||StandClient.aimingThrust()
-            ||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing();
+            ||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||dev.sangwoo.celestialfall.client.stand.StandInhale.localInhaling();
         if(facing)aim();
         else if(Math.hypot(forward,side)>.01) {
             p.setYaw(OrbitCameraState.turn(p.getYaw(),OrbitCameraState.movementYaw(STATE.yaw,forward,side),36));
