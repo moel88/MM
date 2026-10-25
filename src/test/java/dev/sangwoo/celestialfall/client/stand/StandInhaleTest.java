@@ -12,10 +12,12 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Star Platinum's inhale (2.61.0; held down since 2.62.0, its catch whenever someone is in its way, one at a time, its
- * motion fiercer): smooth at 60 fps through its breath, its lunge, its suction with its heaving and shuddering, a catch
- * at any moment and its jerk, Y let up at any moment, taking over from a punch stopped short, from the rush and a punch
- * taking over from it; its stances in their order, its mouth where the air goes in, and its sound fading out as it ends.
+ * Star Platinum's inhale (2.61.0; held down since 2.62.0, its catch whenever someone is in its way, one at a time; since
+ * 2.63.0 it sucks with its breath drawn in, the pose in the user's picture, as in the original): smooth at 60 fps
+ * through its gasp, its suction with its heaving and trembling, a catch at any moment and its jerk, Y let up at any
+ * moment, taking over from a punch stopped short, from the rush and a punch taking over from it; its stances in their
+ * order, its mouth where the air goes in, its head flung back clear of its user's and whom it holds clear of it, and its
+ * sound fading out as it ends.
  */
 class StandInhaleTest {
     /** Sets this client's clock (the inhale's, the rush's) to {@code t} seconds; returns the frame's part of a tick. */
@@ -110,31 +112,42 @@ class StandInhaleTest {
             }
         }
     }
-    @Test void aCatchAtAnyMomentAndOneAfterAnotherJerkItBackWithoutAJump()throws Exception{
+    @Test void aCatchAtAnyMomentAndOneAfterAnotherJerkItWithoutAJump()throws Exception{
         // (2.62.0) whoever walks into its way is caught then; one let go (gone), it may catch another
         var names=bones();var look=new StarPlatinumLook();var shape=new StandPunch.Shape();
         for(int catchAt=INHALE_CATCH;catchAt<INHALE_LENGTH;catchAt+=7)for(int second:new int[]{-1,catchAt+5,catchAt+23}){
             var i=inhale(0);var body=new StandRushTest.Watch(names);String what="caught "+catchAt+" ticks in"+(second<0?"":", let go and another caught "+second+" ticks in");
-            float lastLunge=0;
+            float lastPlace=Float.NaN,lastRaise=0;
             for(int f=0;f<=(int)((INHALE_LENGTH/20f+StandInhale.SETTLE+StandInhale.LINGER+StandInhale.RETURN+.2f)/FRAME);f++){
                 float t=f*FRAME,delta=clock(t);
                 words(i,catchAt,Long.MAX_VALUE);
                 if(second>0&&second<INHALE_LENGTH&&i.ticksIn()>=second&&i.caught.size()==1&&i.on())caught(i,8);
                 var s2=StandInhale.inhale(i,delta,0,shape);StandRushTest.look(s2,look);
-                if(s2!=null){assertTrue(Math.abs(s2.lunge-lastLunge)<.06f,"lurches in a jump at "+t+" ("+what+")");lastLunge=s2.lunge;}
+                if(s2!=null){
+                    // where it stands in front of its user: out as it rears back and back as it ends (0.8 blocks over a
+                    // fifth of a second or so), quivering and jerked up by a catch, never in a jump
+                    float place=s2.ahead+s2.lunge;
+                    if(!Float.isNaN(lastPlace))assertTrue(Math.abs(place-lastPlace)<.1f,"moves in a jump at "+t+" ("+what+"): "+(place-lastPlace));
+                    // (a catch lifts it JERK over GULP_IN: quick, over a few frames)
+                    assertTrue(Math.abs(s2.raise-lastRaise)<.04f||lastRaise==0,"jerked up in a jump at "+t+" ("+what+")");
+                    lastPlace=place;lastRaise=s2.raise;
+                }
                 body.see(look,t,what);
             }
         }
     }
-    @Test void itHeavesItsBreathInThenLungesIntoTheSuctionHeavingAndShuddering(){
+    @Test void itRearsBackWithAGaspAndSucksWithItsBreathDrawnInHeavingAndTrembling(){
+        // (2.63.0, the user's picture: "빨아 들이는 모션을 이걸로", as in the original) it sucks with its breath drawn in,
+        // reared back with its head flung to the sky; it rears back into it with a gasp, and the gasp is where it heaves back to
         var w=new float[NAMES.size()];
         java.util.Arrays.fill(w,0);StandInhale.stances(0,0,w,1);assertEquals(1,w[GUARD],1e-6,"from the guard");
         java.util.Arrays.fill(w,0);StandInhale.stances(StandInhale.DRAW_FROM,0,w,1);assertEquals(1,w[GUARD],1e-6,"its guard until it is round in front");
         assertTrue(StandPunch.burst(StandInhale.DRAW_FROM/StandInhale.RISE)>.98f,"round in front before it draws its breath");
-        java.util.Arrays.fill(w,0);StandInhale.stances(StandInhale.DRAW,0,w,1);assertEquals(1,w[INHALE],1e-6,"its breath drawn in");
-        java.util.Arrays.fill(w,0);StandInhale.stances(StandInhale.BEND_TO,0,w,1);assertEquals(1,w[SUCTION],1e-6,"lunged into the suction");
-        assertTrue(StandInhale.BEND_FROM<INHALE_CATCH/20f&&StandInhale.BEND_TO>INHALE_CATCH/20f,"it lunges into the suction as it begins to suck");
-        assertTrue(StandInhale.BEND_TO-StandInhale.BEND_FROM<=.16f,"a lunge, not a lean (2.61.0 took a fifth of a second)");
+        java.util.Arrays.fill(w,0);StandInhale.stances(StandInhale.DRAW,0,w,1);assertEquals(1,w[INHALE],1e-6,"reared back with a gasp");
+        java.util.Arrays.fill(w,0);StandInhale.stances(StandInhale.BEND_TO,0,w,1);assertEquals(1,w[SUCTION],1e-6,"settled into its breath drawn in");
+        assertTrue(StandInhale.BEND_FROM<INHALE_CATCH/20f&&StandInhale.BEND_TO>INHALE_CATCH/20f,"it settles into it as it begins to suck");
+        assertTrue(StandInhale.BEND_TO-StandInhale.BEND_FROM<=.16f,"quickly");
+        assertTrue(StandInhale.DRAW-StandInhale.DRAW_FROM<=.16f,"it rears back hard");
         float least=1,most=0;double sum=0;int n=0;
         for(float t=StandInhale.BEND_TO;t<INHALE_LENGTH/20f;t+=.005f){
             java.util.Arrays.fill(w,0);StandInhale.stances(t,0,w,1);
@@ -143,29 +156,28 @@ class StandInhaleTest {
         }
         assertEquals(1-StandInhale.HEAVE,least,.01,"it heaves through the suction");
         assertTrue(most>.42f,"it shudders hard toward the strain: "+most);assertTrue(sum/n>.15,"all the while");
-        // a catch jerks it back toward its breath, quick in, slow out, from still
+        // a catch jerks it toward its gasp (it gulps them down), quick in, slow out, from still
         assertEquals(0,StandInhale.gulp(0),1e-9);assertEquals(1,StandInhale.gulp(StandInhale.GULP_IN),1e-6);
         assertTrue(StandInhale.gulp(.02f)<.2f,"from still");assertTrue(StandInhale.gulp(.6f)<.4f&&StandInhale.gulp(.6f)>0,"and slowly out");
-        java.util.Arrays.fill(w,0);StandInhale.stances(2,1,w,1);assertTrue(w[INHALE]>=StandInhale.GULP-1e-4,"jerked back toward its breath");
-        // how hard it sucks: a little as it draws its breath, full from the suction on until it ends, nothing after
+        java.util.Arrays.fill(w,0);StandInhale.stances(2,1,w,1);assertTrue(w[INHALE]>=StandInhale.GULP-1e-4,"jerked toward its gasp");
+        // how hard it sucks: a little as it rears back, full from the suction on until it ends, nothing after
         assertEquals(0,StandInhale.suction(0,5),1e-6);
         assertTrue(StandInhale.suction(.25f,5)>.1f&&StandInhale.suction(.25f,5)<.4f,"the air begins to move");
         assertEquals(1,StandInhale.suction(INHALE_CATCH/20f+.02f,5),1e-3,"full as it begins to suck");
         assertEquals(0,StandInhale.suction(5.2f,5),1e-6,"none once it ends");
     }
-    @Test void itsMouthIsInFrontOfItsHeadWhereTheAirGoesIn(){
-        // (under its scarf: it has no mouth; blocks ahead, to its right and up from its feet)
-        float[] breath=StandInhale.MOUTH[INHALE],suction=StandInhale.MOUTH[SUCTION],strain=StandInhale.MOUTH[STRAIN];
-        assertTrue(suction[2]>1.1f&&suction[2]<1.9f,"at a head's height: "+suction[2]);
-        assertTrue(suction[0]>.6f,"well in front of it as it lunges into the suction: "+suction[0]);
-        assertTrue(breath[0]<suction[0]-.8f,"thrown far back as it draws its breath: "+breath[0]+" against "+suction[0]);
-        assertTrue(breath[2]>suction[2],"and higher");
-        assertEquals(0,suction[1],.05,"in the middle");
-        // whom it holds are just in front of it: past its mouth however far it lunges and strains, not inside the stand
-        float most=StandInhale.AHEAD+StandInhale.LURCH+StandInhale.QUIVER*.5f+Math.max(suction[0],(1-StandInhale.SHUDDER)*suction[0]+StandInhale.SHUDDER*strain[0]);
-        assertTrue(INHALE_AHEAD-.3-most>.04,"room between its mouth and the face of whom it holds: "+(INHALE_AHEAD-.3-most));
-        assertTrue(INHALE_AHEAD-.3-(StandInhale.AHEAD+StandInhale.LURCH+suction[0])<.3,"but close: it sucks them right up to its mouth");
-        // its mouth moves with its head: fast as it lunges in, never in a jump
+    @Test void itSucksWithItsHeadFlungBackToTheSkyWhereTheAirGoesIn(){
+        // (2.63.0, the user's picture: its breath drawn in. Under its scarf: it has no mouth; blocks ahead, to its right
+        // and up from its feet) its mouth is up at its face flung back to the sky, back over its hips
+        float[] gasp=StandInhale.MOUTH[INHALE],suck=StandInhale.MOUTH[SUCTION],strain=StandInhale.MOUTH[STRAIN],guard=StandInhale.MOUTH[GUARD];
+        for(float[] m:new float[][]{gasp,suck,strain}){
+            assertTrue(m[2]>1.6f&&m[2]<2.1f,"up at its face flung back: "+m[2]);
+            assertTrue(m[0]<-.2f,"flung back over its hips: "+m[0]);
+            assertEquals(0,m[1],.05,"in the middle");
+        }
+        assertTrue(gasp[0]<suck[0],"further back still as it gasps: "+gasp[0]+" against "+suck[0]);
+        assertTrue(guard[0]-suck[0]>.6f,"flung far back from its guard: "+guard[0]+" against "+suck[0]);
+        // its mouth moves with its head: fast as it rears back, never in a jump
         var i=inhale(0);float[] last=null;double fastest=0;
         for(float t=0;t<6;t+=FRAME){
             clock(t);words(i,INHALE_CATCH,Long.MAX_VALUE);
@@ -175,6 +187,49 @@ class StandInhaleTest {
             last=m;
         }
         System.out.println("its mouth's fastest move in a frame: "+fastest+" blocks");
+    }
+    /** How far a stance reaches in front of where it stands and behind it (blocks, at the size it is drawn), in bands of height up from its feet, as the generator writes it (2.63.0). */
+    record Reach(double step,double[] front,double[] back){}
+    static Reach reach(String stance)throws Exception{
+        try(var in=StandInhaleTest.class.getResourceAsStream("/assets/celestialfall/stands/star_platinum_fists.json")){
+            var p=com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(in,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonObject(stance).getAsJsonObject("profile");
+            var f=p.getAsJsonArray("front");var b=p.getAsJsonArray("back");double[] front=new double[f.size()],back=new double[b.size()];
+            // model units (its front -z) to blocks ahead
+            for(int k=0;k<f.size();k++)front[k]=f.get(k).isJsonNull()?Double.NaN:-f.get(k).getAsDouble()*StandPunch.SCALE;
+            for(int k=0;k<b.size();k++)back[k]=b.get(k).isJsonNull()?Double.NaN:-b.get(k).getAsDouble()*StandPunch.SCALE;
+            return new Reach(p.get("step").getAsDouble()*StandPunch.SCALE,front,back);
+        }
+    }
+    @Test void itsHeadFlungBackClearsItsUsersAndWhomItHoldsAreClearOfItInFront()throws Exception{
+        // (2.63.0) it sucks reared back, its head flung to the sky and its mane spread out behind it: it stands out in front
+        // of its user (AHEAD) far enough that its head stays clear of theirs (their head from 1.4 to 1.9 blocks up, a
+        // quarter of a block in front of their middle with its outer layer) however it gasps, trembles, gulps and quivers;
+        // and whom it holds (INHALE_AHEAD in front of its user: their body an eighth of a block deep, their head a
+        // quarter, from 1.4 up) are clear of it, just in front of it. Heights from its user's feet: it floats UP and RAISE
+        // over them, and a gulp lifts it JERK more.
+        double lift=StandPresence.UP+StandInhale.RAISE;
+        for(int s:new int[]{INHALE,SUCTION,STRAIN}){
+            var r=reach(NAMES.get(s));
+            for(double up:new double[]{lift,lift+StandInhale.JERK}){
+                double behind=Double.MAX_VALUE,body=-Double.MAX_VALUE,head=-Double.MAX_VALUE;
+                for(int k=0;k<r.back().length;k++){
+                    double lo=up+k*r.step(),hi=lo+r.step();
+                    if(hi>1.4&&lo<1.9&&!Double.isNaN(r.back()[k]))behind=Math.min(behind,r.back()[k]);
+                    if(lo<1.9&&!Double.isNaN(r.front()[k])){if(lo<1.4)body=Math.max(body,r.front()[k]);if(hi>1.4)head=Math.max(head,r.front()[k]);}
+                }
+                double clear=StandInhale.AHEAD-StandInhale.QUIVER*.5+behind-.25;
+                assertTrue(clear>.04,NAMES.get(s)+": its head flung back clears its user's head by "+clear);
+                double gap=INHALE_AHEAD-.125-(StandInhale.AHEAD+StandInhale.QUIVER*.5+body),gapHead=INHALE_AHEAD-.25-(StandInhale.AHEAD+StandInhale.QUIVER*.5+head);
+                assertTrue(gap>.02,NAMES.get(s)+": whom it holds clear of it by "+gap);assertTrue(gapHead>.02,NAMES.get(s)+": their head clear of it by "+gapHead);
+                assertTrue(gap<.4,NAMES.get(s)+": but just in front of it: "+gap);
+                if(up==lift)System.out.printf(java.util.Locale.ROOT,"%s: its head %.3f clear of its user's, whom it holds %.3f clear of it (their head %.3f)%n",NAMES.get(s),clear,gap,gapHead);
+            }
+        }
+        // turned back to its guard once it ends, it has drawn back near its user, its fists clear of whom it held
+        var g=reach(NAMES.get(GUARD));double fists=-Double.MAX_VALUE;
+        for(int k=0;k<g.front().length;k++)if(!Double.isNaN(g.front()[k])&&lift+k*g.step()<1.9)fists=Math.max(fists,g.front()[k]);
+        double free=INHALE_AHEAD-.125-(StandInhale.GUARD_AHEAD+fists);
+        assertTrue(free>.1,"its fists in its guard clear of whom it held: "+free);
     }
     @Test void itsSoundFadesOutAsItEndsAndOneOverBeforeItBeganNeverPlays(){
         var playing=new StandInhale.Sound(new Identifier("celestialfall","star_platinum_inhale"),.9f);

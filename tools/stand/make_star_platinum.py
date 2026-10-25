@@ -1296,15 +1296,28 @@ POSES = {
         'cloth_front': {'rot': (-4, 0, 0)}, 'cloth_back': {'rot': (24, 0, 0)},
     },
     # ---- Y, the inhale (2.61.0, user request: "스타플래티나가 최대 3블록까지 앞에 있는 플레이어를 입으로 빨아들여서 5초동안
-    # 끌고오게 하는 스킬"; 2.62.0: "모션도 더 격하게"): it heaves a huge breath in -- reared right back and up, the back
-    # arched, the chest thrown out, the head flung back to the sky, the arms flung out wide and high, the knees drawn up --
-    # and then lunges into the suction at whoever is in front: a deep lurch forward over braced legs (the front leg thrust
-    # out, the back one driving), the head driven at the target, the arms thrown out wide in front to haul them in; and as
-    # it sucks it strains against it ('strain': hunched in tighter, the shoulders up and the head driven on, the hands
-    # clawing in, the knees giving), client/stand/StandInhale shuddering between the two and heaving back toward the
-    # breath. It has no mouth (the scarf covers where it would be: "입은 아예 없애줘"), so the air rushes in under the
-    # scarf (client/stand/StandInhaleFx at the 'mouth' point stance_points writes).
+    # 끌고오게 하는 스킬"; 2.62.0: "모션도 더 격하게"; 2.63.0, with the user's picture of its breath drawn in: "빨아 들이는
+    # 모션을 이걸로 하면 안되나?", "사실 원작에서도 들이쉬는거랑 비슷해서 빨아드리는 모션이 사실 저게 맞음"): it sucks as it
+    # breathes in, as in the original -- reared right back and up, the back arched, the chest thrown out, the head flung
+    # back to the sky, the arms flung out wide and high, the knees drawn up ('suction': the pose in the user's picture,
+    # the breath of 2.61.0 and 2.62.0 as it was, held now all the while it sucks; no lunge forward). It rears back into it
+    # with a gasp ('inhale': the arch deeper still, the chest higher, the arms up in a V, the knees drawn up tighter) that
+    # each heave and each catch's gulp go back toward, and as it sucks it trembles with the strain ('strain': the
+    # shoulders hunched up and the arms drawn in tight, the head a little forward against the pull, the knees drawn up),
+    # client/stand/StandInhale shuddering between the two. It has no mouth (the scarf covers where it would be: "입은 아예
+    # 없애줘"), so the air rushes in under the scarf (client/stand/StandInhaleFx at the 'mouth' point stance_points writes).
     'inhale': {
+        'root': {'pos': (0, 3.4, 1.6)},
+        'hips': {'rot': (-11, 0, 0)}, 'torso': {'rot': (-13, 0, 0)}, 'chest': {'rot': (-23, 0, 0)},
+        'neck': {'rot': (-11, 0, 0)}, 'head': {'rot': (-17, 0, 0)},
+        'left_arm': {'reach': ((22.5, 39.5, 13.0), (.3, -1, .8))},
+        'right_arm': {'reach': ((-22.5, 39.5, 13.0), (-.3, -1, .8))},
+        'left_pad': {'rot': (9, 0, -34)}, 'right_pad': {'rot': (9, 0, 34)},
+        'left_leg': {'rot': (-32, 0, -16)}, 'left_shin': {'rot': (64, 0, 0)}, 'left_foot': {'rot': (28, 0, 0)},
+        'right_leg': {'rot': (14, 0, 16)}, 'right_shin': {'rot': (58, 0, 0)}, 'right_foot': {'rot': (34, 0, 0)},
+        'cloth_front': {'rot': (-21, 0, 0)}, 'cloth_back': {'rot': (23, 0, 0)},
+    },
+    'suction': {
         'root': {'pos': (0, 2.4, 1.6)},
         'hips': {'rot': (-10, 0, 0)}, 'torso': {'rot': (-11, 0, 0)}, 'chest': {'rot': (-17, 0, 0)},
         'neck': {'rot': (-10, 0, 0)}, 'head': {'rot': (-16, 0, 0)},
@@ -1315,27 +1328,16 @@ POSES = {
         'right_leg': {'rot': (10, 0, 14)}, 'right_shin': {'rot': (50, 0, 0)}, 'right_foot': {'rot': (30, 0, 0)},
         'cloth_front': {'rot': (-16, 0, 0)}, 'cloth_back': {'rot': (18, 0, 0)},
     },
-    'suction': {
-        'root': {'pos': (0, -.8, -3.4)},
-        'hips': {'rot': (26, 0, 0)}, 'torso': {'rot': (15, 0, 0)}, 'chest': {'rot': (8, 0, 0)},
-        'neck': {'rot': (-16, 0, 0)}, 'head': {'rot': (-15, 0, 0)},
-        'left_arm': {'reach': ((19.0, 27.5, -22.5), (.8, -1, .2))},
-        'right_arm': {'reach': ((-19.0, 27.5, -22.5), (-.8, -1, .2))},
-        'left_pad': {'rot': (-12, 0, -16)}, 'right_pad': {'rot': (-12, 0, 16)},
-        'left_leg': {'rot': (-46, 0, -18)}, 'left_shin': {'rot': (58, 0, 0)}, 'left_foot': {'rot': (10, 0, 0)},
-        'right_leg': {'rot': (34, 0, 16)}, 'right_shin': {'rot': (24, 0, 0)}, 'right_foot': {'rot': (40, 0, 0)},
-        'cloth_front': {'rot': (-30, 0, 0)}, 'cloth_back': {'rot': (34, 0, 0)},
-    },
     'strain': {
-        'root': {'pos': (0, -1.5, -4.0)},
-        'hips': {'rot': (30, 0, 0)}, 'torso': {'rot': (19, 0, 0)}, 'chest': {'rot': (13, 0, 0)},
-        'neck': {'rot': (-22, 0, 0)}, 'head': {'rot': (-18, 0, 0)},
-        'left_arm': {'reach': ((14.0, 25.0, -21.0), (1, -.6, .3))},
-        'right_arm': {'reach': ((-14.0, 25.0, -21.0), (-1, -.6, .3))},
-        'left_pad': {'rot': (-20, 0, -24)}, 'right_pad': {'rot': (-20, 0, 24)},
-        'left_leg': {'rot': (-50, 0, -20)}, 'left_shin': {'rot': (68, 0, 0)}, 'left_foot': {'rot': (12, 0, 0)},
-        'right_leg': {'rot': (38, 0, 18)}, 'right_shin': {'rot': (32, 0, 0)}, 'right_foot': {'rot': (42, 0, 0)},
-        'cloth_front': {'rot': (-34, 0, 0)}, 'cloth_back': {'rot': (40, 0, 0)},
+        'root': {'pos': (0, 2.0, 1.4)},
+        'hips': {'rot': (-9, 0, 0)}, 'torso': {'rot': (-12, 0, 0)}, 'chest': {'rot': (-21, 0, 0)},
+        'neck': {'rot': (-7, 0, 0)}, 'head': {'rot': (-13, 0, 0)},
+        'left_arm': {'reach': ((19.0, 33.5, 15.5), (.5, -1, .6))},
+        'right_arm': {'reach': ((-19.0, 33.5, 15.5), (-.5, -1, .6))},
+        'left_pad': {'rot': (0, 0, -36)}, 'right_pad': {'rot': (0, 0, 36)},
+        'left_leg': {'rot': (-31, 0, -15)}, 'left_shin': {'rot': (64, 0, 0)}, 'left_foot': {'rot': (20, 0, 0)},
+        'right_leg': {'rot': (15, 0, 15)}, 'right_shin': {'rot': (58, 0, 0)}, 'right_foot': {'rot': (26, 0, 0)},
+        'cloth_front': {'rot': (-19, 0, 0)}, 'cloth_back': {'rot': (21, 0, 0)},
     },
 }
 
@@ -1482,6 +1484,44 @@ def stance_points(spec):
     return out
 
 
+# How far in front of it and behind it the stand reaches at each height near its middle (2.63.0, the inhale, held now in
+# the breath drawn in with its head flung back): its head flung back must stay clear of its user's head behind it, and
+# whom it holds clear of it in front (client/stand/StandInhaleTest). Model units, soles at 0, in bands PROFILE_STEP high:
+# 'front' the furthest forward any of it reaches (least z: its front is -z) within PROFILE_FRONT of its middle across (a
+# body's width with its arms, 0.47 blocks at the size the game draws it, StarPlatinumRenderer.SCALE .72), 'back' the
+# furthest back (most z) within PROFILE_BACK (a head's width, 0.3 blocks); None where nothing of it is.
+PROFILE_STANCES = ('guard', 'inhale', 'suction', 'strain')
+PROFILE_STEP, PROFILE_FRONT, PROFILE_BACK = 2.0, 10.5, 6.7
+
+
+def profile(spec):
+    table = pose_table(spec)
+    world = {}
+    for name, b in BONES.items():
+        world[name] = (world[b.parent] if b.parent else np.eye(4)) @ bone_matrix(b, table.get(name, {}))
+    g = np.linspace(0, 1, 5)
+    lattice = np.array([(a, b, d) for a in g for b in g for d in g])
+    pts = []
+    for c in CUBES:
+        if c.bone.endswith('_finger'):      # the Star Finger's fingers show only as it stabs (StarPlatinumModel)
+            continue
+        p = np.array(c.origin, dtype=np.float64) - c.inflate + lattice * (np.array(c.size, dtype=np.float64) + 2 * c.inflate)
+        if c.rot is not None:
+            pivot = np.array(c.pivot, dtype=np.float64)
+            p = (p - pivot) @ rot_matrix(c.rot).T + pivot
+        w = world[c.bone]
+        pts.append(p @ w[:3, :3].T + w[:3, 3])
+    pts = np.concatenate(pts)
+    pts[:, 1] += LIFT
+    front, back = [], []
+    for k in range(int(math.ceil(pts[:, 1].max() / PROFILE_STEP))):
+        band = pts[(pts[:, 1] >= k * PROFILE_STEP) & (pts[:, 1] < (k + 1) * PROFILE_STEP)]
+        f, b = band[np.abs(band[:, 0]) <= PROFILE_FRONT], band[np.abs(band[:, 0]) <= PROFILE_BACK]
+        front.append(round(float(f[:, 2].min()), 2) if len(f) else None)
+        back.append(round(float(b[:, 2].max()), 2) if len(b) else None)
+    return {'step': PROFILE_STEP, 'front': front, 'back': back}
+
+
 def main():
     for b in check_coplanar():
         print('coplanar overlap (would flicker):', b)
@@ -1493,8 +1533,12 @@ def main():
     Image.fromarray(img, 'RGBA').save(ROOT / 'textures/entity/star_platinum.png', optimize=True)
     (ROOT / 'stands').mkdir(parents=True, exist_ok=True)
     (ROOT / 'stands/star_platinum_poses.json').write_text(json.dumps({k: pose_table(v) for k, v in POSES.items()}, indent=1))
-    # where the fists are in every stance, for the effects of the punches (client/stand/StandPunch)
-    (ROOT / 'stands/star_platinum_fists.json').write_text(json.dumps({k: stance_points(v) for k, v in POSES.items()}, indent=1))
+    # where the fists are in every stance, for the effects of the punches (client/stand/StandPunch), and how far the
+    # inhale's stances reach in front and behind (2.63.0)
+    points = {k: stance_points(v) for k, v in POSES.items()}
+    for k in PROFILE_STANCES:
+        points[k]['profile'] = profile(POSES[k])
+    (ROOT / 'stands/star_platinum_fists.json').write_text(json.dumps(points, indent=1))
     print(f'{len(BONES)} bones, {len(CUBES)} cubes, texture {ATLAS_W}x{height}')
 
 

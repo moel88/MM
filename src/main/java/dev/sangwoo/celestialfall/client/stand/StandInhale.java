@@ -42,12 +42,16 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * off, whom it let go and when it ends. Each inhale runs on its own clock from when the client heard of it, as the rush
  * does: the server's age when it was sent, plus this client's ticks since, plus the frame's part of a tick.
  * <p>
- * The stand comes round to the front of its user, rears right back heaving its breath in (chest thrown out, head flung
- * back, arms flung wide and high: the generator's {@code inhale}) and lunges forward into the suction (a deep lurch over
- * braced legs, the head driven at the front, arms thrown out to haul in: {@code suction}), and through the suction it
- * heaves and shudders with the strain ({@code strain}), jerked back as it swallows whomever it catches, facing where its
- * user faces. It has no mouth (the user's word, 2.50.0): the air goes in under its scarf, at the mouth point the
- * generator writes with the poses. Whom it caught is drawn in to just in front of it and held there
+ * The stand comes round to the front of its user and sucks as it breathes in, as in the original (2.63.0, with the
+ * user's picture of its breath drawn in: "빨아 들이는 모션을 이걸로 하면 안되나?", "사실 원작에서도 들이쉬는거랑 비슷해서
+ * 빨아드리는 모션이 사실 저게 맞음"; 2.62.0 lunged forward into the suction instead): it rears right back with a gasp (the
+ * generator's {@code inhale}: the arch deepest, the arms up in a V) and settles into the breath drawn in that it holds
+ * all the while it sucks (its {@code suction}, the pose in the user's picture: the back arched, the chest thrown out, the
+ * head flung back to the sky, the arms flung out wide and high, the knees drawn up), heaving back toward the gasp and
+ * trembling with the strain ({@code strain}), jerked toward the gasp as it gulps down whomever it catches, facing where
+ * its user faces. It stands further in front of its user than its punches do, so that its head flung back stays clear of
+ * theirs. It has no mouth (the user's word, 2.50.0): the air goes in under its scarf, at the mouth point the generator
+ * writes with the poses. Whom it caught is drawn in to just in front of it and held there
  * (StarPlatinumRules.inhaleAnchor): the local player held is moved there by their own client at the start of each tick
  * ({@link #drive}, as T held's dash is), the same way the server moves anything else; their own legs, a twentieth of
  * their speed (the server's slow), are no match for the suction. Its user faces where the camera looks and walks at half
@@ -61,23 +65,29 @@ public final class StandInhale {
     public static final int LEAD=1;
     /**
      * Seconds: it comes round to the front; once it is round (its guard all the way: a pose flung wide weighed in with
-     * the one it had at rest beside its user turned an arm over in a frame) it heaves its breath in, from DRAW_FROM to
-     * DRAW; it lunges forward into the suction from BEND_FROM to BEND_TO (the suction's start, INHALE_CATCH, between);
-     * once it ends it turns back to the guard over SETTLE, stays a moment and goes back to its place.
+     * the one it had at rest beside its user turned an arm over in a frame) it rears back with a gasp, from DRAW_FROM to
+     * DRAW; it settles from the gasp into the breath it sucks with from BEND_FROM to BEND_TO (the suction's start,
+     * INHALE_CATCH, between); once it ends it turns back to the guard over SETTLE, stays a moment and goes back to its place.
      */
     static final float RISE=.18f,DRAW_FROM=.15f,DRAW=.31f,BEND_FROM=.32f,BEND_TO=.47f,SETTLE=.22f,LINGER=.2f,RETURN=.4f;
-    /** Through the suction it heaves, this often a second and this far back toward its breath drawn in. */
+    /** Through the suction it heaves, this often a second and this far back toward its gasp. */
     static final float PULSE=1.6f,HEAVE=.2f;
-    /** And it shudders with the strain: toward the strain this hard, at two beats a second (an uneven tremble), coming on over SHUDDER_IN once it has lunged in. */
+    /** And it trembles with the strain: toward the strain this hard, at two beats a second (an uneven tremble), coming on over SHUDDER_IN once it has settled in. */
     static final float SHUDDER=.5f,SHAKE=7.3f,SHAKE2=4.1f,SHUDDER_IN=.18f;
-    /** A catch jerks it back toward its breath (it swallows them): this far, quickly in (seconds) and slower out. */
+    /** A catch jerks it toward its gasp (it gulps them down): this far, quickly in (seconds) and slower out. */
     static final float GULP=.3f,GULP_IN=.08f,GULP_OUT=.3f;
-    /** It lurches this far on (blocks) as it lunges into the suction, quivers this much with the strain and is jerked back this far by a catch. */
-    static final float LURCH=.15f,QUIVER=.03f,JERK=.14f;
-    /** Afterimages of it as it lunges in, and as a catch jerks it back (how strongly at the most). */
-    static final float LUNGE_GHOST=.85f,GULP_GHOST=.5f;
-    /** Where it stands in front of its user (blocks along the way they face; whom it holds is a little further on) and how much higher than at rest it floats. */
-    static final float AHEAD=.7f,RAISE=.05f;
+    /** It quivers this much (blocks) with the strain, and a catch jerks it this far up as it gulps (never back: its head flung back is near its user's). */
+    static final float QUIVER=.03f,JERK=.08f;
+    /** Afterimages of it as it rears back, and as a catch jerks it (how strongly at the most). */
+    static final float REAR_GHOST=.85f,GULP_GHOST=.5f;
+    /**
+     * Where it stands in front of its user (blocks along the way they face; whom it holds is a little further on,
+     * StarPlatinumRules.INHALE_AHEAD): it comes round to GUARD_AHEAD and moves out to AHEAD as it rears back (from
+     * OUT_FROM seconds to DRAW: its hips thrust on as its head goes back), far enough that its head flung back and its
+     * mane stay clear of their head (StandInhaleTest, from how far its stances reach behind it); once it ends it draws back
+     * to GUARD_AHEAD as it turns to its guard, its fists clear of whom it held. And how much higher than at rest it floats.
+     */
+    static final float AHEAD=1.5f,GUARD_AHEAD=.7f,OUT_FROM=.08f,RAISE=.05f;
     /** How quickly (seconds to close two thirds of the way) it turns to where its user faces. */
     static final double AIM=.08;
     /** The sounds' loudness at their source and how far they carry, and ticks the suction takes to fade out once it ends. */
@@ -333,30 +343,32 @@ public final class StandInhale {
     // ───────────────────────────── how it moves ─────────────────────────────
 
     static float smooth(float v){v=v<0?0:v>1?1:v;return v*v*(3-2*v);}
-    /** How far it has lunged into the suction {@code t} seconds in (0 to 1). */
+    /** How far it has settled from its gasp into the breath it sucks with {@code t} seconds in (0 to 1). */
     static float bend(float t){return smooth((t-BEND_FROM)/(BEND_TO-BEND_FROM));}
-    /** How far back toward the breath drawn in it heaves {@code t} seconds in (0 until it has lunged into the suction; starting and turning still). */
+    /** How far it has moved out in front of its user as it rears back {@code t} seconds in (0 to 1). */
+    static float out(float t){return smooth((t-OUT_FROM)/(DRAW-OUT_FROM));}
+    /** How far back toward its gasp it heaves {@code t} seconds in (0 until it has settled into the suction; starting and turning still). */
     static float heave(float t){return t<=BEND_TO?0:HEAVE*(.5f-.5f*(float)Math.cos(2*Math.PI*PULSE*(t-BEND_TO)));}
-    /** How hard it shudders toward the strain {@code t} seconds in (0 to SHUDDER): an uneven tremble of two beats, from still, coming on once it has lunged in. */
+    /** How hard it trembles toward the strain {@code t} seconds in (0 to SHUDDER): an uneven tremble of two beats, from still, coming on once it has settled in. */
     static float shudder(float t){
         if(t<=BEND_TO)return 0;
         double u=t-BEND_TO,beat=.6*(.5-.5*Math.cos(2*Math.PI*SHAKE*u))+.4*(.5-.5*Math.cos(2*Math.PI*SHAKE2*u));
         return SHUDDER*smooth((float)u/SHUDDER_IN)*(float)beat;
     }
-    /** How far back toward its breath a catch {@code u} seconds ago jerks it (0 to 1): quickly in from still, slowly out. */
+    /** How far toward its gasp a catch {@code u} seconds ago jerks it (0 to 1): quickly in from still, slowly out. */
     static float gulp(float u){
         if(u<=0)return 0;
         return smooth(u/GULP_IN)*(float)Math.exp(-Math.max(0,u-GULP_IN)/GULP_OUT);
     }
-    /** How far back its catches jerk it {@code t} seconds into inhale {@code i} (0 to 1). */
+    /** How far its catches jerk it {@code t} seconds into inhale {@code i} (0 to 1). */
     static float gulps(Inhale i,float t){
         float g=0;for(var c:i.caught)g=Math.max(g,gulp(t-c.at));
         return g;
     }
     /**
      * Adds its stances {@code t} seconds into it into {@code w} ({@code share} of them), a catch's jerk {@code gulp} (0
-     * to 1) on them: from the guard it heaves its breath in, then lunges into the suction, heaving and shuddering with
-     * the strain through it, jerked back toward its breath by a catch.
+     * to 1) on them: from the guard it rears back with a gasp, then settles into the breath it sucks with (the user's
+     * picture), heaving back toward the gasp and trembling with the strain through it, jerked toward the gasp by a catch.
      */
     public static void stances(float t,float gulp,float[] w,float share){
         float draw=smooth((t-DRAW_FROM)/(DRAW-DRAW_FROM)),hold=bend(t);
@@ -387,8 +399,8 @@ public final class StandInhale {
     }
     /**
      * The stand's shape through inhale {@code i}, {@code back} seconds before this frame (null if it does not show): its
-     * stances, how far it has come round to the front, the way it faces, where in front it stands (lurching in, quivering
-     * and jerked back), the wind through it and its afterimages.
+     * stances, how far it has come round to the front, the way it faces, where in front it stands (quivering, and jerked
+     * up by a catch), the wind through it and its afterimages.
      */
     static StandPunch.Shape inhale(Inhale i,float delta,float back,StandPunch.Shape into){
         float t=i.age(delta)-back;if(t<0)return null;
@@ -405,17 +417,20 @@ public final class StandInhale {
         into.engage=StandPunch.burst(t/RISE)*(1-smooth((t-end-LINGER)/RETURN));
         into.yaw=i.yaw(delta);
         float on=1-smooth((t-end)/SETTLE);
-        into.ahead=AHEAD;into.side=0;into.raise=RAISE;
-        // it lurches on as it lunges in, quivers with the strain, and is jerked back by a catch
-        into.lunge=(LURCH*bend(at)+QUIVER*(shudder(at)/SHUDDER-.5f)*smooth((at-BEND_TO)/SHUDDER_IN)-JERK*g)*on;
+        // in front of its user: out further as it rears back, its head flung back clear of theirs, and back nearer them as
+        // it turns to its guard once it ends
+        into.ahead=GUARD_AHEAD+(AHEAD-GUARD_AHEAD)*out(at)*on;into.side=0;
+        // it quivers with the strain, and a catch jerks it up as it gulps them down
+        into.lunge=QUIVER*(shudder(at)/SHUDDER-.5f)*smooth((at-BEND_TO)/SHUDDER_IN)*on;
+        into.raise=RAISE+JERK*g*on;
         // the air it draws through its hair: a breeze as it breathes in, a gale through the suction
         into.gust=(.5f+.75f*suction(t,end))*on;
-        // afterimages as it lunges in, and as a catch jerks it back
-        float lunge=t<BEND_FROM||t>BEND_TO+.08f?0:(float)Math.sin(Math.PI*(t-BEND_FROM)/(BEND_TO+.08f-BEND_FROM));
-        into.ghost=Math.max(LUNGE_GHOST*lunge,GULP_GHOST*g)*on;
+        // afterimages as it rears back, and as a catch jerks it
+        float rear=t<DRAW_FROM||t>DRAW+.08f?0:(float)Math.sin(Math.PI*(t-DRAW_FROM)/(DRAW+.08f-DRAW_FROM));
+        into.ghost=Math.max(REAR_GHOST*rear,GULP_GHOST*g)*on;
         return into;
     }
-    /** How hard it sucks {@code t} seconds in (0 to 1): the air begins to move as it draws its breath, and rushes in once it lunges into the suction, until it ends. */
+    /** How hard it sucks {@code t} seconds in (0 to 1): the air begins to move as it rears back with its gasp, and rushes in once it begins to suck, until it ends. */
     public static float suction(float t,float end){
         if(t<0)return 0;
         return (.3f*smooth((t-.06f)/.28f)+.7f*smooth((t-BEND_FROM)/(INHALE_CATCH/20f+.02f-BEND_FROM)))*(1-smooth((t-end)/.14f));
