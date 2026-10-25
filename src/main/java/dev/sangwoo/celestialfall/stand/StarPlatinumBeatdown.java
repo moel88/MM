@@ -31,12 +31,14 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  * strikes someone with no guard up (StarPlatinumAttack). Its user and the one struck are held where they are all
  * through it (KagenoManager.frozen: neither moves, nor acts) and nothing harms them but its own blows; it deals its
  * damage (StarPlatinumRules.beatdownDamage, worked out from their health as it begins) at its blows' ticks, none of
- * which but the last may kill, and as it ends the one struck is put down where its last blow sent them (worked out as
- * it begins: as far along the blow as there is room, down to the ground there). Everything in between, where the one
- * struck is shown, the stand, the camera, the bars, the sound, is the clients' to draw from the beatdown's clock and
- * what the start told them (client/stand/StandBeatdown). Every viewer within 128 blocks (and the one struck) is told
- * when it starts and when it ends (stand_beatdown_event_v1); it ends early if its user or the one struck dies, leaves
- * or is gone, or its user can no longer have the stand out. Its cooldown runs from its end.
+ * which takes them below one health. As they come down (BEAT_LAND) they are put where its last blow sent them (worked
+ * out as it begins: as far along the blow as there is room, down to the ground there), and the fall deals what is
+ * left of its damage: if it was more than they had, it is the fall that kills them, where their body lies (the
+ * cutscene runs on to its end for its user). Everything in between, where the one struck is shown, the stand, the
+ * camera, the bars, the sound, is the clients' to draw from the beatdown's clock and what the start told them
+ * (client/stand/StandBeatdown). Every viewer within 128 blocks (and the one struck) is told when it starts and when
+ * it ends (stand_beatdown_event_v1); it ends early if its user or the one struck dies (but by its fall), leaves or is
+ * gone, or its user can no longer have the stand out. Its cooldown runs from its end.
  */
 public final class StarPlatinumBeatdown {
     public static final Identifier EVENT=CelestialFall.id("stand_beatdown_event_v1");
@@ -50,6 +52,8 @@ public final class StarPlatinumBeatdown {
     private static final class Beat {
         final ServerPlayerEntity user;final LivingEntity victim;final ServerWorld world;final long start;final float yaw;
         final Vec3d from,victimFrom,hold,land;final double drift;final float damage;float dealt;
+        /** Whether they have come down where they land, and whether the fall killed them. */
+        boolean down,killed;
         Beat(ServerPlayerEntity user,LivingEntity victim,long start,float yaw,Vec3d hold,double drift,Vec3d land,float damage){
             this.user=user;this.victim=victim;world=user.getServerWorld();this.start=start;this.yaw=yaw;from=user.getPos();victimFrom=victim.getPos();
             this.hold=hold;this.drift=drift;this.land=land;this.damage=damage;
@@ -127,47 +131,64 @@ public final class StarPlatinumBeatdown {
             long now=b.world.getTime(),age=now-b.start;
             var u=b.user;var v=b.victim;
             boolean userGone=u.isRemoved()||!u.isAlive()||u.getServerWorld()!=b.world||u.isSpectator()||!StarPlatinumAttack.punches(u);
-            boolean victimGone=v.isRemoved()||!v.isAlive()||v.getWorld()!=b.world||v.isSpectator();
+            boolean victimGone=!b.killed&&(v.isRemoved()||!v.isAlive()||v.getWorld()!=b.world||v.isSpectator());
             if(userGone||victimGone){end(b,now,true);continue;}
-            KagenoManager.freeze(u);KagenoManager.freeze(v);v.fallDistance=0;
+            KagenoManager.freeze(u);if(!b.killed){KagenoManager.freeze(v);v.fallDistance=0;}
             float share=beatShare(age);
             if(share>0)blow(b,age,share);
+            if(age>=BEAT_LAND&&!b.down)land(b);
             if(age>=BEAT_END)end(b,now,false);
         }
     }
     /**
-     * One of the cutscene's blows: its share of the damage, none but the last taking the one struck below one health
-     * (the last deals all that is left of it). The rush's land quietly (its sound is in the recording), the others
-     * with a cry.
+     * One of the cutscene's blows: its share of the damage (the last, all that is left of it), none taking the one
+     * struck below one health: what is more than they had is the fall's (land). The rush's land quietly (its sound is
+     * in the recording), the others with a cry.
      */
     private static void blow(Beat b,long age,float share){
         var v=b.victim;boolean last=age==BEAT_FINAL;
-        float amount=last?Math.max(0,b.damage-b.dealt):Math.min(b.damage*share,v.getHealth()-1);
-        if(amount<=0)return;
-        var source=b.world.getDamageSources().playerAttack(b.user);
+        float amount=Math.min(last?b.damage-b.dealt:b.damage*share,v.getHealth()-1);
         boolean rush=age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST;
-        LivingEntity previous=BLOW.get();BLOW.set(v);
-        try{
-            v.timeUntilRegen=0;
-            boolean landed=rush||!last&&age!=BEAT_UPPERCUT?CombatManager.damageQuietly(v,source,amount):CombatManager.damageWithoutKnockback(v,source,amount);
-            if(landed)b.dealt+=amount;
-        }finally{if(previous==null)BLOW.remove();else BLOW.set(previous);}
+        if(amount>0)deal(b,amount,rush||!last&&age!=BEAT_UPPERCUT);
         if(last){
             b.user.onAttacking(v);
             // its user's own hit feedback: the whole beatdown's damage, once
             if(ServerPlayNetworking.canSend(b.user,KagenoManager.DAMAGE)){var buf=PacketByteBufs.create();buf.writeVarInt(v.getId());buf.writeFloat(b.damage);buf.writeFloat(b.yaw);ServerPlayNetworking.send(b.user,KagenoManager.DAMAGE,buf);}
         }
     }
-    /** The cutscene ends: done (the one struck put down where they came down) or cut short. Its cooldown runs from now. */
+    /** Deals {@code amount} of the beatdown's damage to the one struck, past every guard but its own (quietly: no cry). */
+    private static void deal(Beat b,float amount,boolean quietly){
+        var v=b.victim;var source=b.world.getDamageSources().playerAttack(b.user);
+        LivingEntity previous=BLOW.get();BLOW.set(v);
+        try{
+            v.timeUntilRegen=0;
+            boolean landed=quietly?CombatManager.damageQuietly(v,source,amount):CombatManager.damageWithoutKnockback(v,source,amount);
+            if(landed)b.dealt+=amount;
+        }finally{if(previous==null)BLOW.remove();else BLOW.set(previous);}
+    }
+    /**
+     * The one struck comes down where the last blow sent them: they are put there (where every client shows them
+     * already), and the fall deals what is left of the beatdown's damage, killing them if it was more than they had
+     * (there, where their body lies). Killed, they are no longer held: its user's cutscene runs on to its end.
+     */
+    private static void land(Beat b){
+        b.down=true;put(b);
+        float rest=b.damage-b.dealt;
+        if(rest>.001f)deal(b,rest,false);
+        if(!b.victim.isAlive()){b.killed=true;BY_VICTIM.remove(b.victim.getUuid());}
+    }
+    /** Puts the one struck down where they land, facing its user. */
+    private static void put(Beat b){
+        var v=b.victim;float back=b.yaw+180;
+        if(v instanceof ServerPlayerEntity sp)sp.networkHandler.requestTeleport(b.land.x,b.land.y,b.land.z,back,0);
+        else{v.refreshPositionAndAngles(b.land.x,b.land.y,b.land.z,back,0);v.setHeadYaw(back);v.setBodyYaw(back);}
+        v.setVelocity(Vec3d.ZERO);v.fallDistance=0;v.velocityModified=true;
+    }
+    /** The cutscene ends: done (the one struck down where they came down) or cut short. Its cooldown runs from now. */
     private static void end(Beat b,long now,boolean cut){
-        BY_USER.remove(b.user.getUuid());BY_VICTIM.remove(b.victim.getUuid());
+        BY_USER.remove(b.user.getUuid());if(BY_VICTIM.get(b.victim.getUuid())==b)BY_VICTIM.remove(b.victim.getUuid());
         var v=b.victim;
-        if(!cut&&v.isAlive()&&!v.isRemoved()&&v.getWorld()==b.world){
-            float back=b.yaw+180;
-            if(v instanceof ServerPlayerEntity sp)sp.networkHandler.requestTeleport(b.land.x,b.land.y,b.land.z,back,0);
-            else{v.refreshPositionAndAngles(b.land.x,b.land.y,b.land.z,back,0);v.setHeadYaw(back);v.setBodyYaw(back);}
-            v.setVelocity(Vec3d.ZERO);v.fallDistance=0;v.velocityModified=true;
-        }
+        if(!cut&&!b.down&&v.isAlive()&&!v.isRemoved()&&v.getWorld()==b.world)put(b);
         StarPlatinumAttack.beatdownOver(b.user,now);
         send(b,END,now,cut);
     }

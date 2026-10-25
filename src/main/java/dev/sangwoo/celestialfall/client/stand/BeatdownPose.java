@@ -34,10 +34,10 @@ public final class BeatdownPose {
     /** Watching the one struck up in the air. */
     static final R6.Pose WATCH=R6.pose().rArm(-82,14).lArm(-82,-14).head(0,-17,0);
     static final Anim USER=Anim.of(
-        Anim.k(.3,STAND),Anim.k(.95,STAND),Anim.k(1.13,HAND,Anim.Ease.OUT),Anim.k(2.06,HAND),Anim.k(2.3,DAZE),Anim.k(2.52,DAZE),
+        Anim.k(.3,STAND),Anim.k(.82,STAND),Anim.k(1.13,HAND),Anim.k(2.06,HAND),Anim.k(2.3,DAZE),Anim.k(2.52,DAZE),
         Anim.k(2.7,POINT,Anim.Ease.OUT),Anim.k(3.5,POINT),Anim.k(4.15,WATCH),Anim.k(10.8,WATCH),Anim.k(11.5,STAND.head(0,-6,0)),Anim.k(12.5,STAND));
     /** The right elbow's bend (degrees) at the keys: the hand folded back onto the head. */
-    static final float[][] USER_ELBOW={{.95f,0},{1.13f,-118},{2.52f,-118},{2.7f,-8},{3.5f,-8},{4.15f,-12}};
+    static final float[][] USER_ELBOW={{.82f,0},{1.13f,-118},{2.52f,-118},{2.7f,-8},{3.5f,-8},{4.15f,-12}};
 
     // the one struck
     static final R6.Pose STRUCK=R6.pose().rArm(-30,40).lArm(-30,-40).head(0,-12,0);
@@ -48,12 +48,12 @@ public final class BeatdownPose {
     static final R6.Pose FLYING=R6.pose().rArm(38,150).lArm(38,-150).rLeg(-62,20).lLeg(-52,-20).head(0,-20,0);
     static final R6.Pose LYING=R6.pose().rArm(-80,28).lArm(-80,-28).head(0,-10,0);
     static final Anim STRUCK_BODY=Anim.of(
-        Anim.k(CUT,STAND),Anim.k(CUT+STOP+.08,STRUCK,Anim.Ease.OUT),Anim.k(.9,DAZED),Anim.k(GRAB-.05,DAZED),Anim.k(GRAB+.08,GRABBED,Anim.Ease.OUT),
-        Anim.k(UPPER,GRABBED),Anim.k(UPPER+.14,FLUNG,Anim.Ease.OUT),Anim.k(RUSH_FROM+.25,RUSHED),Anim.k(FINAL,RUSHED),
-        Anim.k(FINAL+.16,FLYING,Anim.Ease.OUT),Anim.k(LAND,FLYING),Anim.k(LAND+.18,LYING,Anim.Ease.OUT),Anim.k(GETUP,LYING),Anim.k(STOOD,STAND));
+        Anim.k(CUT,STAND),Anim.k(CUT+STOP+.08,STRUCK,Anim.Ease.OUT),Anim.k(.9,DAZED),Anim.k(GRAB-.07,DAZED),Anim.k(GRAB+.1,GRABBED),
+        Anim.k(UPPER,GRABBED),Anim.k(UPPER+.22,FLUNG),Anim.k(RUSH_FROM+.25,RUSHED),Anim.k(FINAL,RUSHED),
+        Anim.k(FINAL+.22,FLYING),Anim.k(LAND,FLYING),Anim.k(LAND+.25,LYING),Anim.k(GETUP,LYING),Anim.k(STOOD,STAND));
     /** Their elbows and knees (degrees) at the keys: bent up at the fist that has them, dangling, flung. */
-    static final float[][] STRUCK_ELBOW={{GRAB-.05f,0},{GRAB+.08f,-82},{UPPER,-82},{UPPER+.14f,-18},{FINAL,-24},{FINAL+.16f,-10},{LAND+.18f,0}};
-    static final float[][] STRUCK_KNEE={{GRAB-.05f,0},{GRAB+.08f,28},{UPPER,28},{UPPER+.14f,42},{RUSH_FROM+.25f,30},{FINAL,30},{FINAL+.16f,22},{LAND+.18f,0}};
+    static final float[][] STRUCK_ELBOW={{GRAB-.07f,0},{GRAB+.1f,-82},{UPPER,-82},{UPPER+.2f,-18},{FINAL,-24},{FINAL+.22f,-10},{LAND+.25f,0}};
+    static final float[][] STRUCK_KNEE={{GRAB-.07f,0},{GRAB+.1f,28},{UPPER,28},{UPPER+.2f,42},{RUSH_FROM+.25f,30},{FINAL,30},{FINAL+.22f,22},{LAND+.25f,0}};
 
     static float smooth(float v){v=v<0?0:v>1?1:v;return v*v*(3-2*v);}
     /** A value through keys {time, value}, eased between each two. */
@@ -96,7 +96,7 @@ public final class BeatdownPose {
         var b=StandBeatdown.of(player.getUuid());
         if(b!=null){float t=b.age(delta);if(t>=.3f&&t<b.over()+.1f)return user(t);}
         var s=StandBeatdown.struck(player);
-        if(s!=null){float t=s.age(delta);if(t>=CUT&&t<s.over())return struck(s,t);}
+        if(s!=null){float t=s.age(delta);if(StandBeatdown.killed(player,t))return struck(s,Math.min(t,GETUP));if(t>=CUT&&t<s.over())return struck(s,t);}
         return null;
     }
 }

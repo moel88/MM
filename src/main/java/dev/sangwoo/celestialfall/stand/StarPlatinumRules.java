@@ -135,8 +135,9 @@ public final class StarPlatinumRules {
     // (tools/stand/cut_beatdown.py, the ticks below: a tick on for every 20th of a second of it): "yare yare daze"
     // (its user grabs their head and shakes it), "Star Platinum!" (the stand bursts out of them), the collar grabbed, the
     // uppercut, the ORA rush, five big ORAs, and the last "Ooo-RAAA", whose blow sends them flying to where they come
-    // down. Its blows deal BEAT_DAMAGE between them, more the lower their health was as it began (beatdownDamage), and
-    // none but the last can kill. Its cooldown runs once it is over (2.44.0's rule).
+    // down. Its blows deal BEAT_DAMAGE between them, more the lower their health was as it began (beatdownDamage), none
+    // of them taking them below one health: what is more than they had, the fall deals as they come down, and it is the
+    // fall that kills them. Its cooldown runs once it is over (2.44.0's rule).
 
     /** The beatdown's blow's number among the punches (its contact, length and damage are at this index). */
     public static final int BEATDOWN=7;

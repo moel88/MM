@@ -78,6 +78,8 @@ public final class StandBeatdown {
     static final float LIE=.62f;
     /** How far they slide on once down (blocks along the blow): where they come down is this short of where they end. */
     static final double SLIDE=.35;
+    /** How long the one struck takes to be turned round to face its user as the blow lands (seconds). */
+    static final float FACE=.15f;
 
     /** A cutscene as this client heard of it. */
     public static final class Beat {
@@ -206,7 +208,9 @@ public final class StandBeatdown {
      * over once, to come down on their back short of where they end, slide on there and get up.
      */
     public static Body victim(Beat b,float t){
-        if(t<CUT+STOP)return new Body(b.victimFrom,0,0,0,MIDDLE,t<CUT?0:1);
+        // held still through the blow's hit-stop, turned round to face its user as it lands
+        float face=smooth((t-CUT)/FACE);
+        if(t<CUT+STOP-.02f)return new Body(b.victimFrom,0,0,0,MIDDLE,face);
         if(t>=FINAL)return flight(b,t);
         double fw=0,up=0,rt=0;float lean=0,roll=0,spin=0;
         // knocked back from where they stood to where they are held, leaning back with it
@@ -247,7 +251,7 @@ public final class StandBeatdown {
         up-=.15*sag;lean+=10*sag;
         // the last blow coming: a breath held, still
         Vec3d o=b.victimFrom.lerp(b.hold,knock);
-        return new Body(b.at(o,fw,up,rt),lean,roll,spin,MIDDLE,1);
+        return new Body(b.at(o,fw,up,rt),lean,roll,spin,MIDDLE,face);
     }
     /** Where the last blow sends them from: where they are shown just before it lands. */
     static Body launch(Beat b){return victim(b,FINAL-1e-4f);}
@@ -281,14 +285,18 @@ public final class StandBeatdown {
         y-=ground*(MIDDLE*(1-Math.cos(theta))-.25*Math.sin(theta));
         return new Body(new Vec3d(x,y,z),lean,roll,spin,MIDDLE,1);
     }
+    /** Whether the one struck lies dead where they came down (the fall killed them: the server deals what is left of its damage as they land). */
+    static boolean killed(Entity e,float t){return t>=LAND-.05f&&e instanceof net.minecraft.entity.LivingEntity l&&l.isDead();}
     /**
      * Where the one struck is shown this frame, if a cutscene has them ({@code null} if none does): during it, where it
      * puts them; once it is over, where it left them (where they end, standing) until the server has them there too, so
      * that the move to where they really are shows nothing; cut short, from where it had them back to where they are.
+     * Killed by the fall, they lie where they came down and do not get up.
      */
     public static Body shown(Entity e,float delta){
         var b=struck(e);if(b==null)return null;
         float t=b.age(delta),over=b.over();
+        if(killed(e,t))return flight(b,Math.min(t,GETUP));
         if(t<over)return victim(b,t);
         Vec3d real=e.getLerpedPos(delta);
         if(b.cut){
@@ -315,6 +323,11 @@ public final class StandBeatdown {
     public static void turn(Entity e,float delta,float bodyYaw,net.minecraft.client.util.math.MatrixStack m){
         var b=struck(e);if(b==null)return;
         var body=shown(e,delta);if(body==null)return;
+        // dead, they lie as the cutscene laid them: not tipped over on their side as well (the renderer's turn as one dies, undone)
+        if(e instanceof net.minecraft.entity.LivingEntity l&&l.deathTime>0){
+            float k=Math.min(1,MathHelper.sqrt((l.deathTime+delta-1)/20f*1.6f));
+            m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(-k*90));
+        }
         float face=MathHelper.wrapDegrees(bodyYaw-facing(b))*body.hold();
         if(face!=0)m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(face));
         if(body.lean()==0&&body.roll()==0&&body.spin()==0)return;
@@ -344,12 +357,13 @@ public final class StandBeatdown {
     static final float[][] KEYS={
         {ENGAGE,GUARD,0},{3.74f,COLLAR,0},{GRAB,COLLAR,1},{UPPER-.12f,COLLAR,1},{UPPER,UPPERCUT,2},{UPPER+.1f,UPPERCUT,1},
         // (the rush between, RUSH_FROM to RUSH_TO: StandRush.barrage)
-        {RUSH_TO+.05f,GUARD,0},{BIG[0]-.13f,WIND_R,0},{BIG[0]-.1f,WIND_R,1},{BIG[0],PUNCH_R,2},{BIG[0]+.05f,PUNCH_R,1},
-        {BIG[1]-.13f,WIND_HOOK,0},{BIG[1]-.1f,WIND_HOOK,1},{BIG[1],HOOK,2},{BIG[1]+.06f,HOOK,1},
+        // (each wind-up and each strike given time enough for its arm's turn: no bone 40 degrees in a frame at 60 fps)
+        {RUSH_TO+.05f,GUARD,0},{BIG[0]-.13f,WIND_R,0},{BIG[0]-.1f,WIND_R,1},{BIG[0],PUNCH_R,2},{BIG[0]+.02f,PUNCH_R,1},
+        {BIG[1]-.11f,WIND_HOOK,0},{BIG[1]-.1f,WIND_HOOK,1},{BIG[1],HOOK,2},{BIG[1]+.06f,HOOK,1},
         {BIG[2]-.18f,WIND_L,0},{BIG[2]-.1f,WIND_L,1},{BIG[2],PUNCH_L,2},{BIG[2]+.1f,PUNCH_L,1},
-        {BIG[2]+.45f,GUARD,0},{BIG[3]-.5f,WIND_BIG,0},{BIG[3]-.12f,WIND_BIG,1},{BIG[3],PUNCH_BIG,2},{BIG[3]+.06f,PUNCH_BIG,1},
-        {BIG[4]-.12f,WIND_R,0},{BIG[4]-.09f,WIND_R,1},{BIG[4],PUNCH_R,2},{BIG[4]+.06f,PUNCH_R,1},
-        {FINAL-.38f,WIND_HEAVY,0},{FINAL-.16f,WIND_HEAVY,1},{FINAL,PUNCH_HEAVY,2},{FINAL+.75f,PUNCH_HEAVY,1},{LEAVE,GUARD,0}};
+        {BIG[2]+.4f,GUARD,0},{BIG[3]-.22f,WIND_BIG,0},{BIG[3]-.12f,WIND_BIG,1},{BIG[3],PUNCH_BIG,2},{BIG[3]+.02f,PUNCH_BIG,1},
+        {BIG[4]-.11f,WIND_R,0},{BIG[4]-.1f,WIND_R,1},{BIG[4],PUNCH_R,2},{BIG[4]+.03f,PUNCH_R,1},
+        {FINAL-.3f,WIND_HEAVY,0},{FINAL-.16f,WIND_HEAVY,1},{FINAL,PUNCH_HEAVY,2},{FINAL+.75f,PUNCH_HEAVY,1},{LEAVE,GUARD,0}};
     /** When each of its strikes lands, the stance it strikes in, and the fist (true: the right). */
     static final float[] STRIKES={UPPER,BIG[0],BIG[1],BIG[2],BIG[3],BIG[4],FINAL};
     static final int[] STRIKE_STANCE={UPPERCUT,PUNCH_R,HOOK,PUNCH_L,PUNCH_BIG,PUNCH_R,PUNCH_HEAVY};
@@ -367,8 +381,13 @@ public final class StandBeatdown {
         }
         w[(int)KEYS[KEYS.length-1][1]]+=share;
     }
-    /** How far the stand is into the rush's barrage at {@code t} (0 to 1): in as the uppercut has landed, out once its last fist is back. */
-    static float barrage(float t){return smooth((t-(UPPER+.1f))/(BARRAGE_FROM-UPPER-.1f))*(1-smooth((t-RUSH_TO-.02f)/.06f));}
+    /**
+     * How far the stand is into the rush's barrage at {@code t} (0 to 1): in from just after the uppercut lands (its
+     * right fist up high comes down to the guard as the barrage's first fist, the left, goes out, BARRAGE_IN), out once
+     * its last fist has landed (its fists back to the guard over BARRAGE_OUT).
+     */
+    static float barrage(float t){return smooth((t-(UPPER+.03f))/BARRAGE_IN)*(1-smooth((t-RUSH_TO-.02f)/BARRAGE_OUT));}
+    static final float BARRAGE_IN=.15f,BARRAGE_OUT=.12f;
     /** How big its arms are at {@code t} through the rush (1 their size), as the rush's, and how far each is out. */
     static float armSize(float t){return 1+(StandRush.ARMS-1)*smooth((t-UPPER)/.2f)*(1-smooth((t-RUSH_TO)/.2f));}
 
@@ -379,8 +398,8 @@ public final class StandBeatdown {
      * struck, rising with them into the air), how far it dashes into each blow, its arms' size, the gust and its
      * afterimages.
      */
-    public static StandPunch.Shape shape(UUID user,float delta,float back,StandPunch.Shape into){
-        var b=of(user);if(b==null)return null;
+    public static StandPunch.Shape shape(UUID user,float delta,float back,StandPunch.Shape into){var b=of(user);return b==null?null:shape(b,delta,back,into);}
+    static StandPunch.Shape shape(Beat b,float delta,float back,StandPunch.Shape into){
         float t=b.age(delta)-back,over=b.over();
         if(t<ENGAGE||t>over+RETURN+.1f)return null;
         into.clear();
@@ -420,8 +439,8 @@ public final class StandBeatdown {
     /** How far under the one struck the stand floats once they are up in the air (blocks, its feet below theirs). */
     static final double RISE_BELOW=.55;
     /** The rush's phantom arms in the cutscene: how strongly afterimage {@code i} shows (0 none) and its stances into {@code into}, as the rush's. */
-    public static float phantom(UUID user,int i,float delta,StarPlatinumLook into){
-        var b=of(user);if(b==null)return 0;
+    public static float phantom(UUID user,int i,float delta,StarPlatinumLook into){var b=of(user);return b==null?0:phantom(b,i,delta,into);}
+    static float phantom(Beat b,int i,float delta,StarPlatinumLook into){
         float t=b.age(delta),bar=barrage(t)*smooth((t-RUSH_FROM)/.08f);if(bar<=0)return 0;
         var w=into.weights;java.util.Arrays.fill(w,0);
         StandRush.barrage(t-BARRAGE_FROM-StandRush.phantomLag(i),b.seed+101*(i+1),w,1);

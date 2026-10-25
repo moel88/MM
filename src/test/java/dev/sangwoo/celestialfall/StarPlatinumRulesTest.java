@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Star Platinum's basic attack (2.54.0): four punches, the fourth throwing. 2.56.0: quicker, and only the hook and the
  * finisher shout, each on the "RA" of its own from the user's recording. 2.57.0: its E, the rush. 2.59.0: its R, the heavy
- * punch.
+ * punch. 2.60.0: its T, the Star Finger. 2.61.0: its Y, the inhale. 2.64.0: its G, the beatdown.
  */
 class StarPlatinumRulesTest {
     /** Each clip of the hook's and the finisher's shouts has its RA this far in (cut_ora.py RA_AT) and starts StandAttack.LEAD (1) tick into its punch. */
@@ -231,5 +231,59 @@ class StarPlatinumRulesTest {
         double suction=seconds("star_platinum_inhale");
         assertTrue(suction>=INHALE_LENGTH/20.0+.2,"the suction runs past the longest hold: "+suction+" s");
         assertTrue(seconds("star_platinum_inhale_catch")<1.2&&seconds("star_platinum_inhale_release")<1.2,"the catch and the air let go are short");
+    }
+    // ---- G, the beatdown (2.64.0) ----
+
+    @Test void theBeatdownsBlowLandsOnTheRaOfItsOraAndStandsApartFromTheCombo()throws Exception{
+        assertEquals(7,BEATDOWN);
+        assertTrue(skill(BEATDOWN),"one of the stand's own skills, out of the combo");
+        assertEquals(1,next(BEATDOWN),"a punch after it starts the combo again");
+        assertEquals(-1,broken(BEATDOWN,100,900),"no combo to break");
+        assertEquals(0,hold(BEATDOWN),"it holds no one itself: its cutscene does");
+        assertFalse(shouts(BEATDOWN),"its ORA is its own, not one of the combo's shouts");
+        assertEquals(0,DAMAGE[BEATDOWN],1e-9,"the blow deals nothing itself: its cutscene deals the damage");
+        // its "ORA!" starts BEAT_OPENER_SOUND ticks in, its "RA" 0.15 s into it (cut_beatdown.py): on the contact
+        assertEquals(CONTACT[BEATDOWN],BEAT_OPENER_SOUND+.15*20,1e-9,"the RA on the contact");
+        assertEquals(BEAT_CUT,CONTACT[BEATDOWN],"the cutscene begins as the blow lands");
+        assertTrue(LENGTH[BEATDOWN]>CONTACT[BEATDOWN]+8,"its fist held out a while once it lands");
+        assertTrue(lane(BEATDOWN,4.2,0,1,.3),"it reaches as far as the finisher");assertFalse(lane(BEATDOWN,4.2+.5,0,1,.3));
+        assertFalse(lane(BEATDOWN,-1,0,1,.3),"not behind");
+        double ora=seconds("star_platinum_beatdown_ora");
+        assertTrue(ora>.4&&ora<.9,"the opener's ORA, as the user's recording has it: "+ora+" s");
+    }
+    @Test void itsCutsceneRunsOnTheRecordingsOwnTime()throws Exception{
+        // a tick on for every 20th of a second of the recording, from its start a tick in
+        int[] order={BEAT_CUT,BEAT_SOUND,BEAT_YARE,BEAT_YARE_END,BEAT_REVEAL,BEAT_GRAB,BEAT_UPPERCUT,BEAT_RUSH_FIRST,BEAT_RUSH_LAST,BEAT_BIG[0],BEAT_BIG[1],BEAT_BIG[2],BEAT_BIG[3],BEAT_BIG[4],BEAT_FINAL,BEAT_LAND,BEAT_END};
+        for(int i=1;i<order.length;i++)assertTrue(order[i]>order[i-1],"in order: "+order[i-1]+" then "+order[i]);
+        assertEquals(1+1.10*20,BEAT_SOUND,1e-9,"the cutscene's sound starts 1.1 s into the recording");
+        assertEquals(1+2.6*20,BEAT_REVEAL,1e-9,"Star Platinum! 2.6 s in");
+        assertEquals(165,BEAT_RUSH_LAST,"the rush's last blow");
+        // the rest of the recording runs to just before the cutscene's end
+        double rest=seconds("star_platinum_beatdown");
+        assertTrue(BEAT_SOUND/20.0+rest<=BEAT_END/20.0,"its sound is over by the end: "+(BEAT_SOUND/20.0+rest)+" s");
+        assertTrue(BEAT_SOUND/20.0+rest>BEAT_FINAL/20.0+1,"and rings on past the last blow: "+rest+" s");
+        assertEquals(20,BEAT_RUSH_EVERY*10,"ten blows a second");
+    }
+    @Test void itsBlowsDealItsDamageBetweenThemMoreTheLowerTheirHealth(){
+        assertEquals(60,beatdownDamage(200,200),1e-6,"60 at full health");
+        assertEquals(90,beatdownDamage(100,200),1e-6,"half more at half health");
+        assertEquals(120,beatdownDamage(0,200),1e-6,"twice at none");
+        assertEquals(60,beatdownDamage(250,200),1e-6,"never less than 60");
+        assertTrue(beatdownDamage(20,200)>beatdownDamage(150,200),"the lower their health, the harder it is");
+        // every blow's share, all of them together the whole of it
+        double sum=0;int blows=0,rush=0;
+        for(long age=0;age<=BEAT_END+5;age++){float s=beatShare(age);if(s>0){blows++;sum+=s;if(age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST)rush++;}assertEquals(s>0,beatBlow(age));}
+        assertEquals(1,sum,1e-5,"the blows deal the whole damage between them");
+        assertEquals(BEAT_RUSH_HITS,rush,"the rush's blows");
+        assertEquals(1+BEAT_RUSH_HITS+BEAT_BIG.length+1,blows,"the uppercut, the rush, five big ORAs and the last");
+        assertTrue(BEAT_FINAL_SHARE>BEAT_BIG_SHARE*3&&BEAT_FINAL_SHARE>BEAT_UPPERCUT_SHARE,"the last blow the hardest: "+BEAT_FINAL_SHARE);
+        assertEquals(0,beatShare(BEAT_LAND),1e-9,"none as they come down: only what is left of it, the fall's");
+    }
+    @Test void itHoldsThemInFrontOfItsUserAndItsCooldownRunsOnceItIsOver(){
+        assertEquals(BEAT_HOLD_MIN,beatHold(.5),1e-9,"room for the stand between");
+        assertEquals(3.4,beatHold(3.0),1e-9,"knocked back a little");
+        assertEquals(BEAT_HOLD_MAX,beatHold(4.6),1e-9,"not too far");
+        assertEquals(1000+BEATDOWN_COOLDOWN,beatdownReady(1000),"from its end (2.44.0's rule)");
+        assertEquals(30,BEATDOWN_COOLDOWN/20.0,1e-9,"thirty seconds, as the other cutscene, Kageno's H");
     }
 }
