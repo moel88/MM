@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.71.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.71.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.71.1 — 스탠드 화살: 목소리 없이, 꽂고 빛날 때 판타지풍 소리
+
+- **목소리를 모두 뺐습니다:** 2.71.0의 한숨·숨소리·헐떡임·내쉬는 숨·막힌 숨이 더는 나지 않습니다(파일과 녹음까지 지웠습니다). 옷·바람·심장·무릎·천둥·각성·쓰러짐 소리는 그대로입니다.
+- **꽂히는 소리를 새로 만들었습니다(판타지풍):** 부드러운 낮은 쿵과 유리 두드림 위에 작은 심벌의 맑은 '팅'과 티베트 심벌(팅샤)의 길게 일렁이는 울림, 뒤이어 반짝이는 풍경 소리. 과일에 칼이 들어가던 2.71.0의 소리는 버렸습니다.
+- **빛날 때 소리를 넣었습니다:** 두 무릎을 꿇고 화살이 빛나며 빨려 들어가는 동안 반짝이는 울림이 차오르다 정적에 맞춰 뚝 끝납니다(울림을 거꾸로 튼 소리).
+- 모두 실제로 녹음한 악기 소리(CC0)를 잘라 겹친 것이고, 합성하지 않았습니다. 동작·이펙트·규칙은 2.71.0 그대로입니다.
+
+[RELEASE_2.71.1_KO.md](RELEASE_2.71.1_KO.md)를 확인하세요.
 
 # 보탠드 2.71.0 — 스탠드 화살: 10초 연출, 채팅 없음, 실제 녹음 효과음
 
