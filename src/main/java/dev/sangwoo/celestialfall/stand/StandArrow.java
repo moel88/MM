@@ -22,7 +22,6 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import static dev.sangwoo.celestialfall.stand.StandArrowRules.*;
@@ -56,6 +55,9 @@ public final class StandArrow {
         long age(long now){return now-start;}
     }
     private static final Map<UUID,Stab> STABS=new HashMap<>();
+    /** Set while one the arrow killed is dying: their death message goes to their own death screen, not round the chat (StandArrowDeathMixin). */
+    public static final ThreadLocal<Boolean> QUIET=new ThreadLocal<>();
+    public static boolean quiet(){return Boolean.TRUE.equals(QUIET.get());}
     private StandArrow(){}
 
     public static void initialize(){
@@ -129,13 +131,10 @@ public final class StandArrow {
     private static void reveal(ServerPlayerEntity p,Stab s){
         s.revealed=true;
         var stack=p.getMainHandStack();stack.decrement(1);p.getInventory().markDirty();p.currentScreenHandler.sendContentUpdates();
+        // (no chat line: the user's "채팅은 아예 안 나오게", 2.71.0; the one stabbed has the words on their screen, StandArrowHud)
         if(!dies(s.outcome)){
             ProgressManager.set(p,ProgressManager.profile(p).withStand(s.outcome));
             if(StandManager.starPlatinum(p))((StandHolder)p).botand$setStandOut(true);
-            var name=dev.sangwoo.celestialfall.progression.StandStats.get(s.outcome).korean();
-            var line=Text.literal("[스탠드] ").formatted(Formatting.GOLD).append(Text.literal(p.getEntityName()+"님이 스탠드 화살에 선택받아 ").formatted(Formatting.YELLOW))
-                .append(Text.literal(name).formatted(Formatting.LIGHT_PURPLE,Formatting.BOLD)).append(Text.literal("에 각성했습니다!").formatted(Formatting.YELLOW));
-            for(var q:p.getServer().getPlayerManager().getPlayerList())if(MapGate.enabled(q.getWorld()))q.sendMessage(line,false);
         }
         send(p,s,REVEALED);
         CelestialFall.LOGGER.info("Stand arrow: {} {}",p.getEntityName(),dies(s.outcome)?"was rejected and falls":"awakened "+s.outcome);

@@ -18,6 +18,8 @@
     "PlayerManagerAccess",
     "BossPlayerManagerMixin",
     "BossPvpMixin",
+    "StandArrowDeathMixin",
+    "StandArrowQuietMixin",
     "BossChunkMixin",
     "BossSleepMixin"
   ],
