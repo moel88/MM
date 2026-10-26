@@ -70,7 +70,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * pause menu pauses the game) and casts nothing; its "then=" steps are keys and the mouse: "KEY_TAB@n" (also ESCAPE,
  * R, ENTER, UP, DOWN) taps a key through the real keyboard path, "MOVE_B0@n" glides the pointer over 9 ticks to the
  * pause menu's first button (B0-B3; D0 and D1 the reset question's buttons, RESPAWN the death screen's first button,
- * DONE the options screen's done button, OFF clear of them all) and "CLICK@n" clicks the left button where it is,
+ * DONE the options screen's done button, LIST the player list's rows (2.73.0; in play the cursor is free on the map, so
+ * the pointer glides and is drawn there too), OFF clear of them all), "WHEEL_DOWN@n"/"WHEEL_UP@n" (2.73.0) turn the
+ * mouse wheel a notch where the pointer is, "MATES@n" brings "mates" (9) more players onto the server with names of
+ * their own (out of sight behind the player) and "CLICK@n" clicks the left button where it is,
  * through Minecraft's own mouse handlers. The screenshots do not hold the system pointer, so while a screen is up the
  * shot draws one (an arrow, with a ring as it clicks) where the game's mouse is; it is the capture's mark, not the
  * game's. The log gets every screen opened, the reset question, the player list sent away or back, deaths, respawns
@@ -376,12 +379,15 @@ public final class SkillShots implements ClientModInitializer {
             for(var c:sc.children())if(c instanceof net.minecraft.client.gui.widget.ClickableWidget b&&n++==want)return new double[]{b.getX()+b.getWidth()*.5,b.getY()+b.getHeight()*.55};
             throw new IllegalStateException("no widget "+name+" on "+sc.getClass().getSimpleName());
         }
+        // 2.73.0: the player list's rows (where the wheel scrolls it), as drawn on the last frame
+        if(name.equals("LIST")){var a=dev.sangwoo.celestialfall.client.ui.PlayerPanel.area();if(a==null)throw new IllegalStateException("no player list to point at");return new double[]{a[0]+(a[2]-a[0])*.55,a[1]+(a[3]-a[1])*.62};}
         if(name.equals("OFF"))return new double[]{w*.2,h*.8};
         throw new IllegalArgumentException(name);
     }
     /** Moves the game's mouse along the current glide for this frame (only while a screen is up: in play it would turn the camera). */
     private void glide(){
-        if(!ui()||glideTo==null||mc.currentScreen==null)return;
+        // (2.73.0: in play too while the cursor is free, as it is on the map, to point at the player list)
+        if(!ui()||glideTo==null||mc.currentScreen==null&&mc.mouse.isCursorLocked())return;
         double k=Math.max(0,Math.min(1,(clock()-glideAt)/GLIDE));k=k*k*(3-2*k);
         double x=glideFrom[0]+(glideTo[0]-glideFrom[0])*k,y=glideFrom[1]+(glideTo[1]-glideFrom[1])*k;
         if(Math.abs(x-mc.mouse.getX())>1e-6||Math.abs(y-mc.mouse.getY())>1e-6){
@@ -430,7 +436,7 @@ public final class SkillShots implements ClientModInitializer {
         }
         @Override public void tick(){super.tick();if(!isRemoved()){playerTick();if(isAlive()&&getHealth()<floor)setHealth(floor);}}
     }
-    private volatile Mate mate;
+    private volatile Mate mate;private final List<Mate> mates=new java.util.concurrent.CopyOnWriteArrayList<>();
     /** SLEEP: the tick the player lay down in bed (-1: not in bed). */
     private volatile float inBedAt=-1;
     private final StringBuilder bossLog=new StringBuilder();private String bossDoing="";
@@ -644,6 +650,7 @@ public final class SkillShots implements ClientModInitializer {
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
+    private String panelLogged="";
     private void logInterface()throws Exception{
         String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
         if(!screen.equals(screenLogged)){log.append("  screen ").append(screen).append(" at ").append(age).append('\n');screenLogged=screen;}
@@ -651,6 +658,10 @@ public final class SkillShots implements ClientModInitializer {
         boolean paused=mc.isPaused();if(paused!=pausedLogged){log.append("  paused ").append(paused).append(" at ").append(age).append('\n');pausedLogged=paused;}
         boolean asking=mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen s&&s.asking();
         if(asking!=askingLogged){log.append("  question ").append(asking?"up":"down").append(" at ").append(age).append('\n');askingLogged=asking;}
+        // 2.73.0: the player list's names and the row it scrolls to
+        var listed=mc.player.networkHandler.getListedPlayerListEntries().size();int row=(int)dev.sangwoo.celestialfall.client.ui.PlayerPanel.scroll()[1];
+        String listNow=listed+" listed, from row "+row;
+        if(!listNow.equals(panelLogged)){log.append("  player list ").append(listNow).append(" at ").append(age).append('\n');panelLogged=listNow;}
         boolean hidden=dev.sangwoo.celestialfall.client.ui.PlayerPanel.hidden();
         if(hidden!=hiddenLogged){log.append("  player list ").append(hidden?"sent away":"back").append(" at ").append(age).append('\n');hiddenLogged=hidden;}
         boolean alive=mc.player.isAlive();
@@ -842,6 +853,8 @@ public final class SkillShots implements ClientModInitializer {
                 org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING)==MinecraftClient.getInstance().getFramebuffer().fbo?1:0);});
         // the UI shot's pointer: moved before a screen draws, drawn after it (Fabric makes a screen's events anew each
         // time it is set up, coming back from the options screen included, so they are registered every time)
+        // 2.73.0: in play (no screen up, the cursor free on the map) the pointer glides and is drawn over the HUD
+        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register((d,delta)->{if(mc!=null&&mc.currentScreen==null&&ui()&&!mc.mouse.isCursorLocked()){try{glide();}catch(Throwable t){fail(t);}pointer(d);}});
         net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client,screen,w,h)->{
             net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.beforeRender(screen).register((s,d,x,y,delta)->{try{glide();}catch(Throwable t){fail(t);}});
             net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterRender(screen).register((s,d,x,y,delta)->pointer(d));
@@ -965,6 +978,13 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.startsWith("STANCE_")){if(age==at)server(p->{int stance=dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(what.substring(7).toLowerCase(Locale.ROOT));
                             for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(stance);
                             log.append("  stance ").append(what.substring(7)).append(" at ").append(age).append('\n');});continue;}
+                    // "WHEEL_DOWN@n"/"WHEEL_UP@n" (2.73.0): a notch of the mouse wheel where the pointer is, through
+                    // Minecraft's own mouse handler (over the player list it scrolls the list)
+                    if(what.equals("WHEEL_DOWN")||what.equals("WHEEL_UP")){if(age==at){
+                            try{var m=net.minecraft.client.Mouse.class.getDeclaredMethod("onMouseScroll",long.class,double.class,double.class);m.setAccessible(true);
+                                m.invoke(mc.mouse,mc.getWindow().getHandle(),0d,what.equals("WHEEL_UP")?1d:-1d);}catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+                            var sc=dev.sangwoo.celestialfall.client.ui.PlayerPanel.scroll();
+                            log.append("  wheel ").append(what.equals("WHEEL_UP")?"up":"down").append(" at ").append(age).append(String.format(Locale.ROOT,": the list goes to row %d%n",(int)sc[1]));}continue;}
                     if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
                     // 2.54.0: the attack (the left button) held down and let go, through Minecraft's own mouse handler
                     if(what.equals("ATTACKDOWN")||what.equals("ATTACKUP")){if(age==at){log.append("  attack ").append(what.equals("ATTACKDOWN")?"down":"up").append(" at ").append(age).append('\n');button(what.equals("ATTACKDOWN"));}continue;}
@@ -1031,6 +1051,22 @@ public final class SkillShots implements ClientModInitializer {
                             for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(m)));
                             m.changeGameMode(GameMode.SURVIVAL);boolean in=w.spawnEntity(m);m.setHealth((float)opt("mhp",60));m.floor=(float)opt("mfloor",20);mate=m;
                             log.append("  mate ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f) health %.0f, tick %d%n",to.x,to.z,m.getHealth(),age));});continue;}
+                    // "MATES@n" (2.73.0): "mates" (9) more players on the server with names of their own, out of sight
+                    // 40 blocks behind the player, for the player list to fill past its five rows; "UNMATES@n" takes them off
+                    if(what.equals("MATES")){if(age==at)server(p->{
+                            String[] names={"Sakura_77","minsu","tow","Bomi","joshhhh","DarkBlue","Steve99","ORA_ORA","yare_yare","Hourglass","Kujo","Azure"};
+                            var w=p.getServerWorld();var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                            int n=(int)opt("mates",9);
+                            for(int i=0;i<n;i++){
+                                var m=new Mate(w,new com.mojang.authlib.GameProfile(UUID.randomUUID(),names[i%names.length]));
+                                var to=p.getPos().add(f.multiply(-40)).add(right.multiply((i-n/2.)*2));m.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw(),0);
+                                ProgressManager.set(m,ProgressManager.profile(m).withStand("none"));
+                                for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(m)));
+                                m.changeGameMode(GameMode.SURVIVAL);w.spawnEntity(m);m.floor=20;mates.add(m);
+                            }
+                            log.append("  ").append(n).append(" players in at ").append(age).append('\n');});continue;}
+                    if(what.equals("UNMATES")){if(age==at)server(p->{for(var m:mates){for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(m.getUuid())));m.discard();}
+                            log.append("  ").append(mates.size()).append(" players gone at ").append(age).append('\n');mates.clear();});continue;}
                     if(what.equals("MATEHP")){if(age==at)server(p->{if(mate!=null){mate.setHealth((float)opt("mhp2",30));log.append(String.format(Locale.ROOT,"  mate health set to %.0f at %d%n",mate.getHealth(),age));}});continue;}
                     // "TOBOX@n" (2.69.0): the player steps up to the nearest box a boss left (1.3 blocks from it, facing it), to
                     // open it with E held ("KEYDOWN_E@n"/"KEYUP_E@n")

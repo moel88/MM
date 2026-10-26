@@ -10,21 +10,22 @@ import org.joml.Matrix4f;
  * The player list's look since 2.73.0 (user request: "플레이창 UI는 사이즈도 줄이고 UI를 더 하늘색에 가깝게 바꿔주고 디자인도
  * 전체적으로 갈아엎어서 리메이크 해줘 모래시계와 관련 있게"; then, of a first look with an hourglass on a seal in the header and
  * a small one in every row: "모래시계가 너무 대놓고 들어나있어 은연중에 들어나있게 바꾸고", and with the Roblox list the panel came
- * from: "이거 처럼 색깔을 2개 쓰는 것도 좋을듯 메인은 화이트로 하되 테두리나 장식 같은걸 하늘색으로"): two colours, white panes
- * with sky-blue rims, lines and letters, and the hourglass only hinted at: a faint outline in the header's left part on a
- * faint dial, cut by the header's edges as the reference's emblem is, its sand running down slowly and the glass turning
- * over once it has run out, and a few grains of sand drifting down behind the title. The pause menu keeps its own navy
- * look (SkyUi). Everything moving is a function of the HUD's clock (ticks). Sizes are GUI units.
+ * from: "이거 처럼 색깔을 2개 쓰는 것도 좋을듯 메인은 화이트로 하되 테두리나 장식 같은걸 하늘색으로", and of white panes: "너무
+ * 하야니까 안 어울린다 어두은 파랑에 하늘색 조합으로 만들자"): two colours, dark-blue panes with sky-blue rims, lines and letters,
+ * and the hourglass only hinted at: a faint outline in the header's left part on a faint dial, cut by the header's edges
+ * as the reference's emblem is, its sand running down slowly and the glass turning over once it has run out, and a few
+ * grains of sand drifting down behind the title. The pause menu keeps its own navy glass (SkyUi). Everything moving is
+ * a function of the HUD's clock (ticks). Sizes are GUI units.
  */
 public final class HourglassUi {
     private HourglassUi(){}
-    /** The panes, top to bottom: white, the player's own row a breath of sky blue. */
-    public static final int PANE_TOP=0xf7ffffff,PANE_BOTTOM=0xf2f3faff,LIT_TOP=0xf7f0faff,LIT_BOTTOM=0xf2dcf1ff;
+    /** The panes, top to bottom: dark blue, the player's own row a little lighter. */
+    public static final int PANE_TOP=0xeb16375f,PANE_BOTTOM=0xeb0d2646,LIT_TOP=0xeb1e4a7c,LIT_BOTTOM=0xeb133962;
     /**
-     * The sky blue of the rims, lines and ornaments; the letters' (a little deeper, to read on white); quieter letters
-     * (spectators, the count of the rest); the light round the player's own row.
+     * The sky blue of the rims, lines and ornaments; the letters' (a little lighter, to read on the dark blue); quieter
+     * letters (spectators); the light round the player's own row.
      */
-    public static final int SKY=0xff5cc6f8,INK=0xff1e8ad6,INK_DIM=0xff86bde2,GLOW=0xff8fdcff;
+    public static final int SKY=0xff5cc6f8,INK=0xff8fdbff,INK_DIM=0xff5f97c2,GLOW=0xff8fdcff;
 
     /** Ticks the header's faint hourglass's sand takes to run down (half a minute, it is hardly seen moving), and to turn it over once it has. */
     public static final double FLOW=600,FLIP=30;
@@ -64,7 +65,7 @@ public final class HourglassUi {
 
     /** The width of the rims and lines. */
     public static float rim(){return Math.max(SkyUi.px(),.7f);}
-    /** A pane: white shaded down its height ({@code lit} 0..1 toward a breath of sky blue), with its sky-blue rim. */
+    /** A pane: dark blue shaded down its height ({@code lit} 0..1 a little lighter), with its sky-blue rim. */
     public static void pane(BufferBuilder b,Matrix4f m,float x,float y,float w,float h,float r,float lit,float alpha){
         float[] o=SkyUi.rounded(x,y,w,h,r);
         GachaArt.smooth(b,m,o,GachaArt.fade(GachaArt.mix(PANE_TOP,LIT_TOP,lit),alpha),GachaArt.fade(GachaArt.mix(PANE_BOTTOM,LIT_BOTTOM,lit),alpha));
@@ -107,7 +108,7 @@ public final class HourglassUi {
         }
     }
     /**
-     * The header: a white pane with its sky-blue rim, the faint hourglass on its dial in its left part (cut by its
+     * The header: a dark-blue pane with its sky-blue rim, the faint hourglass on its dial in its left part (cut by its
      * edges), a few grains of sand drifting down behind the title, and the title in the middle. {@code now} is in ticks.
      * The cut is in screen coordinates, so the matrix must not be moved or scaled here.
      */

@@ -50,6 +50,9 @@ public abstract class MouseMixin implements MouseCapture {
     private void botand$wheel(long window,double horizontal,double vertical,CallbackInfo ci) {
         // stopped in Star Platinum's stopped time (2.67.0): the camera stays as it was
         if(window==client.getWindow().getHandle()&&client.currentScreen==null&&dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView()){ci.cancel();return;}
+        // over the player list with the cursor free, in play or with the chat open (2.73.0): the wheel scrolls the list
+        if(window==client.getWindow().getHandle()&&(client.currentScreen==null||client.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen)
+            &&dev.sangwoo.celestialfall.client.ui.PlayerPanel.wheel(vertical)){ci.cancel();return;}
         if(window==client.getWindow().getHandle()&&BotandCamera.gameplay()) {
             BotandCamera.scroll(vertical*client.options.getMouseWheelSensitivity().getValue());ci.cancel();
         }

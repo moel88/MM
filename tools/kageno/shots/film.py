@@ -1,4 +1,5 @@
 """python3 tools/kageno/shots/film.py SHOT_DIR OUT.mp4 START END TITLE [CSV ACTOR MODE]   (FILM_WIDTH=960 by default)
+FILM_NOTES="a-b:text|..." (2.73.0) adds a line of its own for each stretch (seconds) of a film with no MODE.
 FILM_SKILL=G|GPOSE|GDUMMY|E|EAIM|T|RUSH|RUSHAIM|BASE|R|REND|M1|F picks the stage names in the caption (anything else: none), FILM_SPEED=0.5 plays it at half speed, FILM_FPS sets the frame rate, FILM_CAPTION=center centres the captions at the top, FILM_CAPTION=below puts them in a band under the picture (the HUD's shots, 2.42.0: nothing of the game's screen covered).
 MODE motion with the shot's motion.csv (ACTOR -) shows the player's walking speed and the lens's FOV multiplier each tick.
 MODE rush with a SUMMON shot's stand.csv (ACTOR -, 2.57.0) shows Star Platinum's rush: the blows heard, the training
@@ -38,7 +39,7 @@ Hangul (WenQuanYi Zen Hei, fonts-wqy-zenhei). Every output frame should be its o
 about 12 (run_shots.py) so the client renders more than FILM_FPS frames per second of the cast clock; the script
 reports how many output frames had to repeat a game frame.
 """
-import sys, os, glob, bisect, csv, math, subprocess, tempfile, shutil
+import sys, os, re, glob, bisect, csv, math, subprocess, tempfile, shutil
 from PIL import Image, ImageDraw, ImageFont
 
 shots, out, start, end, title = sys.argv[1], sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), sys.argv[5]
@@ -51,7 +52,10 @@ SKILL, SPEED, FPS = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FIL
 # words before the time (default "시전 후"): the gacha's shots (tools/gacha/shots) run on the screen's own clock.
 CLOCK = os.environ.get('FILM_CLOCK', '시전 후')
 # the band is a row taller when a CSV line goes with it (2.57.0: the rush's blows and the dummy's health under the HUD's shots)
-BELOW = (76 + (34 if mode else 0)) if os.environ.get('FILM_CAPTION') == 'below' else 0
+# FILM_NOTES="a-b:text|c-d:text" (2.73.0): a line of its own for each stretch of the film (seconds), for shots with no
+# mode to tell what happens (the interface's)
+NOTES = [(float(m.group(1)), float(m.group(2)), m.group(3)) for m in (re.match(r'\s*([\d.]+)-([\d.]+):(.*)', n) for n in os.environ.get('FILM_NOTES', '').split('|')) if m]
+BELOW = (76 + (34 if mode or NOTES else 0)) if os.environ.get('FILM_CAPTION') == 'below' else 0
 if os.environ.get('FILM_STAGES'): SKILL = 'CUSTOM'
 
 frames = []
@@ -507,6 +511,7 @@ def call_line(t):
     return ' · '.join(parts), color
 
 def actor_line(t):
+    if NOTES and not mode: return next(((n, (255, 255, 255)) for a, b, n in NOTES if a <= t < b), (None, None))
     if mode == 'arrow': return arrow_line(t)
     if mode == 'call': return call_line(t)
     if mode == 'boss': return boss_line(t)

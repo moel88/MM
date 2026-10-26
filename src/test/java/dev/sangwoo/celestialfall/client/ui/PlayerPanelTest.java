@@ -79,14 +79,53 @@ class PlayerPanelTest {
                 assertEquals(w-margin,l.x()+l.width(),1e-9,"right edge");
                 assertEquals(margin,l.y(),1e-9,"top edge");
                 assertTrue(l.x()>w*.5,"it keeps to the right half");
-                int boxes=l.rows()+(l.more()?1:0);
-                double bottom=l.rowTop(boxes-1)+l.row();
-                assertTrue(bottom<=h*(PlayerPanel.MARGIN+PlayerPanel.TALL)+1e-9,"not taller than its share: "+w+"x"+h+" "+players);
-                assertEquals(players>l.rows(),l.more(),"the rest are counted in a last row");
-                assertTrue(l.rows()>=1);
+                assertTrue(l.bottom()<=h*(PlayerPanel.MARGIN+PlayerPanel.TALL)+1e-9,"not taller than its share: "+w+"x"+h+" "+players);
+                assertTrue(l.rows()>=1&&l.rows()<=PlayerPanelScroll.SHOWN,"five rows at most (2.73.0)");
+                assertEquals(Math.min(players,PlayerPanelScroll.SHOWN),l.rows(),"as many as there are, up to five, on these screens");
+                assertEquals(players>l.rows(),l.scrolls(),"the rest are scrolled to");
             }
         }
         var wide=PlayerPanel.layout(640,365,3,1000);
         assertEquals(640*.45,wide.width(),1e-9,"a very long name cannot make it wider than 45% of the screen");
+        // 2.73.0: wider than it is high, row by row ("가로폭은 너무 작고 세로 폭이 너무 커")
+        var l=PlayerPanel.layout(960,540,3,40);
+        assertTrue(l.width()/l.row()>10,"a row is over ten times as wide as it is high");
+    }
+
+    // 2.73.0 (user request: "최대 5명만 보이고 나머지는 스크롤 내려야 보이게")
+    @Test void theWheelScrollsARowANotchOnlyWhenThereAreMoreThanFive(){
+        int shown=PlayerPanelScroll.SHOWN;var s=new PlayerPanelScroll();
+        assertFalse(s.wheel(-1,5,shown,0),"five or fewer: the wheel is the camera's");
+        assertFalse(s.wheel(-1,1,shown,0));
+        assertTrue(s.wheel(-1,8,shown,10),"down a notch");assertEquals(1,s.target());
+        assertTrue(s.wheel(-2,8,shown,20));assertEquals(3,s.target(),"two notches, two rows: the last three show");
+        assertTrue(s.wheel(-1,8,shown,30),"at the end it still takes the wheel (no zooming under the list)");assertEquals(3,s.target(),"never past the last row");
+        assertTrue(s.wheel(5,8,shown,40));assertEquals(0,s.target(),"never above the first");
+        // a trackpad's fractions add up to rows
+        assertTrue(s.wheel(-.4,8,shown,50));assertEquals(0,s.target());
+        assertTrue(s.wheel(-.4,8,shown,51));assertEquals(0,s.target());
+        assertTrue(s.wheel(-.4,8,shown,52));assertEquals(1,s.target());
+    }
+    @Test void itEasesToTheRowWithoutJumpsAndKeepsInTheListAsPlayersLeave(){
+        int shown=PlayerPanelScroll.SHOWN;var s=new PlayerPanelScroll();
+        // notches at awkward times: one after another before the last has eased
+        double[] notches={10,10.4,11.1,30,30.5,31,31.2};double[] dir={-1,-1,-1,1,-1,1,1};
+        int next=0;double last=s.first(0),most=0;
+        double step=1.5*3/PlayerPanelScroll.TICKS*FRAME+1e-9;
+        for(double t=0;t<60;t+=FRAME){
+            while(next<notches.length&&notches[next]<=t){s.wheel(dir[next],12,shown,notches[next]);next++;}
+            double f=s.first(t);
+            assertTrue(Math.abs(f-last)<=step,"no jump at "+t+": "+last+" -> "+f);
+            assertTrue(f>=-1e-9&&f<=PlayerPanelScroll.most(12,shown)+1e-9);
+            most=Math.max(most,f);last=f;
+        }
+        assertEquals(s.target(),s.first(60),1e-9,"it settles on the row");
+        assertTrue(most>2.5,"it went down");
+        // players leave: it keeps within the list, easing back
+        s.wheel(-9,12,shown,100);assertEquals(7,s.target());
+        s.fit(9,shown,200);assertEquals(4,s.target());
+        assertEquals(7,s.first(200),1e-9,"from where it was");
+        assertEquals(4,s.first(200+PlayerPanelScroll.TICKS),1e-9);
+        s.fit(3,shown,300);assertEquals(0,s.target(),"five or fewer: back to the top");
     }
 }
