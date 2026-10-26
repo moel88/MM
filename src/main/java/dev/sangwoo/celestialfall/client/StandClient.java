@@ -89,7 +89,10 @@ public final class StandClient {
     }
     private static Vec3d vec(net.minecraft.network.PacketByteBuf b){return new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());}
     private static void observe(MinecraftClient mc){if(world!=mc.world||player!=mc.player){clear(mc);world=mc.world;player=mc.player;}}
-    public static void clear(MinecraftClient mc){CooldownHud.clear();cancelledPose=handedOff=null;dev.sangwoo.celestialfall.client.kageno.KagenoClips.clear();KagenoAudio.clear();CASTS.clear();STATES.clear();OVERDRIVE.clear();dev.sangwoo.celestialfall.client.kageno.HitFeedback.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
+    // (2.74.0: not the cooldown list, which keeps its boxes over a respawn, a new body of the same player, and clears
+    // itself as the world or the player changes, CooldownHud.tick: long cooldowns begun again as one comes back to life
+    // drain away like an hourglass as the new ones come in, rather than all vanishing at once)
+    public static void clear(MinecraftClient mc){cancelledPose=handedOff=null;dev.sangwoo.celestialfall.client.kageno.KagenoClips.clear();KagenoAudio.clear();CASTS.clear();STATES.clear();OVERDRIVE.clear();dev.sangwoo.celestialfall.client.kageno.HitFeedback.clear();holdingT=false;captured.clear();nextPunch=lastThemeUntil=0;world=player=null;if(theme!=null)mc.getSoundManager().stop(theme);theme=null;}
     private static void tick(MinecraftClient mc){
         observe(mc);if(mc.world==null||mc.player==null||!MapClient.enabled()){clear(mc);return;}
         ticks++;long now=mc.world.getTime();
