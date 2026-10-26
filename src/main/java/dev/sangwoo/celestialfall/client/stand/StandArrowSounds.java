@@ -18,10 +18,13 @@ import static dev.sangwoo.celestialfall.client.stand.ArrowStabPose.*;
 /**
  * The stand arrow's sounds (2.71.0, user request: "효과음이 너무 AI같아"): recordings, not made-up tones, each laid on
  * the stab's clock where the body does what it is the sound of (the cue sheet, {@link #CUES}): the clothes as the arm
- * moves, the breaths (the sigh of the doubt, the deep breath, the breath caught before the blow), the blow going in,
- * the gasp, the knees on the ground (the sound of the very ground they kneel on), the heart beating faster and faster
- * as the arrow is taken in, the low rumble swelling under it and cut dead as everything goes still; then, as the
- * choice shows, the awakening's or the rejection's (the heart's last beats and the body falling onto the ground).
+ * moves, the blow going in, the knees on the ground (the sound of the very ground they kneel on), the heart beating
+ * faster and faster as the arrow is taken in, the low rumble swelling under it and cut dead as everything goes still;
+ * then, as the choice shows, the awakening's or the rejection's (the heart's last beats and the body falling onto the
+ * ground). 2.71.1 (user request: "목소리나 한숨은 다 빼고 화살 꽂는 소리만 새로 갈아엎어서 새로 만들어줘", "꽂고
+ * 빛날때 판타지스러운 소리로"): no voice any more (the sighs, breaths, gasps and the choke are gone); the blow is a magic
+ * one (metal and glass that ring and sparkle as it lights up), and as the arrow glows and is drawn in, the light is
+ * drawn in too (a shimmer swelling to the stillness).
  * <p>
  * Every client plays them from the stab's clock it keeps (StandArrowClient: so they stay on the body it draws however
  * late the word came), the choice's from when it shows there; a sound heard more than {@link #LATE} after its time is
@@ -49,40 +52,37 @@ final class StandArrowSounds {
     private static final float LANDS=Math.round(LANDS_AT*20)/20f;
     /** The cue sheet (by time within each track; the stages are ArrowStabPose's, the cut points tools/stand/cut_arrow_sounds.py's). */
     static final Cue[] CUES={
-        // brought up before the eyes; lowered to the chest with a long sigh (the doubt); the deep breath, both hands on it
+        // brought up before the eyes; lowered to the chest (the doubt)
         new Cue(STAB,.05f,"stand_arrow_cloth_1",.5f,1),
         new Cue(STAB,1.1f,"stand_arrow_cloth_2",.45f,1),
-        new Cue(STAB,1.1f,"stand_arrow_sigh",.85f,1),
-        new Cue(STAB,2f,"stand_arrow_breath",.8f,1),
-        // taken up and raised to the sky; turned point down and aimed, breathing short and shaky (hushed for the caught
-        // breath); the thunder rolling far off, swelling to the stillness and cut as it comes; the heart, faintly
+        // taken up and raised to the sky; turned point down and aimed; the thunder rolling far off, swelling to the
+        // stillness and cut as it comes; the heart, faintly
         new Cue(STAB,2.95f,"stand_arrow_cloth_3",.45f,1),
-        new Cue(STAB,3.75f,"stand_arrow_nervous",.6f,1,5f),
         new Cue(STAB,3.95f,"stand_arrow_cloth_2",.35f,.9f),
         new Cue(STAB,4f,"stand_arrow_rumble",.75f,1,8.75f),
         new Cue(STAB,4.2f,"stand_arrow_heart",.25f,1),
         new Cue(STAB,4.75f,"stand_arrow_heart",.32f,1),
-        // the breath caught for the blow; the arm driving it down; in
-        new Cue(STAB,5.05f,"stand_arrow_catch",.8f,1),
+        // the arm driving it down; in, and it lights up (the magic blow, ringing on)
         new Cue(STAB,5.25f,"stand_arrow_swing",.5f,1),
         new Cue(STAB,HIT,"stand_arrow_stab",1,1),
         // the heart from then on (BEATS), louder and faster (the last ones only their first sound: hushed before the
-        // second); the gasp as the body arches back and the shaky breaths after it; each knee coming down on the ground
+        // second); each knee coming down on the ground; from the second, as the arrow glows and is drawn in, the light
+        // drawn in with it (a shimmer swelling to the stillness, where it ends)
         new Cue(STAB,5.95f,"stand_arrow_heart",.55f,1),
-        new Cue(STAB,6.05f,"stand_arrow_gasp",.9f,1,8.8f),
         new Cue(STAB,6.7f,"stand_arrow_heart",.62f,1.02f),
         new Cue(STAB,KNEE,"stand_arrow_knee",.9f,1),
         new Cue(STAB,KNEE,GROUND,1,1),
         new Cue(STAB,7.3f,"stand_arrow_heart",.7f,1.04f),
         new Cue(STAB,KNEES,"stand_arrow_knee_2",.7f,1),
         new Cue(STAB,KNEES,GROUND,.8f,1),
+        new Cue(STAB,KNEES,"stand_arrow_glow",.9f,1),
         new Cue(STAB,7.8f,"stand_arrow_heart",.78f,1.06f),
         new Cue(STAB,8.15f,"stand_arrow_heart",.85f,1.08f,8.25f),
         new Cue(STAB,8.45f,"stand_arrow_heart",.9f,1.1f,8.55f),
         new Cue(STAB,8.65f,"stand_arrow_heart",.95f,1.11f,8.75f),
         new Cue(STAB,8.8f,"stand_arrow_heart",1,1.12f,8.9f),
         // chosen: one great beat and the thunderclap as the stand bursts out of them, the air of it, a singing bowl ringing
-        // on; getting up (the clothes, the left foot set down, then the right), and breathing out
+        // on; getting up (the clothes, the left foot set down, then the right)
         new Cue(CHOSEN,0,"stand_arrow_heart",1,.85f),
         new Cue(CHOSEN,0,"stand_arrow_awaken",1,1),
         new Cue(CHOSEN,.05f,"stand_arrow_burst",.6f,1),
@@ -90,10 +90,8 @@ final class StandArrowSounds {
         new Cue(CHOSEN,.95f,"stand_arrow_cloth_1",.5f,.9f),
         new Cue(CHOSEN,1.2f,STEP,1,1),
         new Cue(CHOSEN,1.65f,STEP,1,1),
-        new Cue(CHOSEN,1.7f,"stand_arrow_relief",.5f,1),
-        // rejected: a beat, the choked gasp, a last weaker beat, and the body falling on its face; then nothing
+        // rejected: a beat, a last weaker beat, and the body falling on its face; then nothing
         new Cue(REJECTED,0,"stand_arrow_heart",.7f,.9f),
-        new Cue(REJECTED,.05f,"stand_arrow_choke",.8f,1),
         new Cue(REJECTED,.55f,"stand_arrow_heart",.42f,.82f),
         new Cue(REJECTED,LANDS,"stand_arrow_bodyfall",1,1),
         new Cue(REJECTED,LANDS,GROUND,1,1),

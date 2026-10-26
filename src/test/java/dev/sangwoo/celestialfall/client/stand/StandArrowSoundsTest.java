@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * The stand arrow's sounds (2.71.0): recordings laid on the stab's clock where the body does what they are the sound
  * of; every one in the mod's sounds with its file there; on whole ticks; the blow on HIT, the heart on BEATS, the knees
- * on the knees, the body on the ground as it lands; nothing of the stab's own sounding into the stillness.
+ * on the knees, the body on the ground as it lands; nothing of the stab's own sounding into the stillness. 2.71.1: no
+ * voice at all, and the glow swelling from the second knee to end as everything goes still.
  */
 class StandArrowSoundsTest {
     static final Path ASSETS=Path.of("src/main/resources/assets/celestialfall");
@@ -74,7 +75,21 @@ class StandArrowSoundsTest {
             "each knee on the ground it comes down on");
         assertTrue(at(REJECTED,"stand_arrow_bodyfall",Math.round(LANDS_AT*20)/20f)&&at(REJECTED,GROUND,Math.round(LANDS_AT*20)/20f),
             "the body on the ground as it lands");
-        assertTrue(at(CHOSEN,"stand_arrow_awaken",0)&&at(REJECTED,"stand_arrow_choke",.05f),"each choice as it shows");
+        assertTrue(at(CHOSEN,"stand_arrow_awaken",0)&&at(REJECTED,"stand_arrow_heart",0),"each choice as it shows");
+        assertTrue(at(STAB,"stand_arrow_glow",KNEES),"the light drawn in from when both knees are down");
+    }
+    @Test void noVoice(){
+        // (2.71.1, user request: "목소리나 한숨은 다 빼고": none of 2.71.0's breaths, sighs, gasps or the choke)
+        for(var c:CUES)for(String voice:new String[]{"sigh","breath","nervous","catch","gasp","relief","choke"})
+            assertFalse(c.sound().contains(voice),c+" is no voice");
+    }
+    @Test void theGlowEndsAsEverythingGoesStill()throws Exception{
+        // it swells to its end (its rings' strikes, backwards) and that end comes as the stillness does: not before it by
+        // more than a tick, not into it
+        for(var c:track(STAB))if(c.sound().equals("stand_arrow_glow")){
+            float end=c.at()+seconds(ogg(c.sound()))/c.pitch();
+            assertTrue(end>STILL-.06f&&end<=STILL+.001f,"the glow ends at "+end+", the stillness at "+STILL);
+        }
     }
     @Test void nothingOfTheStabSoundsIntoTheStillness()throws Exception{
         for(Cue c:track(STAB)){
@@ -97,7 +112,8 @@ class StandArrowSoundsTest {
             assertEquals(1,b[id+11],name+" mono");
             assertTrue(seconds(ogg(name))<6,name+" short");
         }
-        assertEquals(.57f,seconds(ogg("stand_arrow_stab")),.02f,"the blow (cut_arrow_sounds.py)");
+        assertEquals(2.58f,seconds(ogg("stand_arrow_stab")),.02f,"the blow, ringing on (cut_arrow_sounds.py)");
+        assertEquals(1.35f,seconds(ogg("stand_arrow_glow")),.02f,"the glow (cut_arrow_sounds.py)");
         assertEquals(4.82f,seconds(ogg("stand_arrow_rumble")),.02f,"the rumble (cut_arrow_sounds.py)");
     }
 }

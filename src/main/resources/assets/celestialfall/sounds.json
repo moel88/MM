@@ -807,42 +807,6 @@
       }
     ]
   },
-  "stand_arrow_sigh": {
-    "sounds": [
-      {
-        "name": "celestialfall:stand_arrow_sigh",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
-  "stand_arrow_breath": {
-    "sounds": [
-      {
-        "name": "celestialfall:stand_arrow_breath",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
-  "stand_arrow_nervous": {
-    "sounds": [
-      {
-        "name": "celestialfall:stand_arrow_nervous",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
-  "stand_arrow_catch": {
-    "sounds": [
-      {
-        "name": "celestialfall:stand_arrow_catch",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
   "stand_arrow_swing": {
     "sounds": [
       {
@@ -856,15 +820,6 @@
     "sounds": [
       {
         "name": "celestialfall:stand_arrow_stab",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
-  "stand_arrow_gasp": {
-    "sounds": [
-      {
-        "name": "celestialfall:stand_arrow_gasp",
         "stream": false,
         "preload": true
       }
@@ -892,6 +847,15 @@
     "sounds": [
       {
         "name": "celestialfall:stand_arrow_knee_2",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "stand_arrow_glow": {
+    "sounds": [
+      {
+        "name": "celestialfall:stand_arrow_glow",
         "stream": false,
         "preload": true
       }
@@ -928,24 +892,6 @@
     "sounds": [
       {
         "name": "celestialfall:stand_arrow_bowl",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
-  "stand_arrow_relief": {
-    "sounds": [
-      {
-        "name": "celestialfall:stand_arrow_relief",
-        "stream": false,
-        "preload": true
-      }
-    ]
-  },
-  "stand_arrow_choke": {
-    "sounds": [
-      {
-        "name": "celestialfall:stand_arrow_choke",
         "stream": false,
         "preload": true
       }
