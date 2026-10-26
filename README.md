@@ -1,4 +1,12 @@
-> **현재 통합본: Botand 2.70.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.71.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.71.0 — 스탠드 화살: 10초 연출, 채팅 없음, 실제 녹음 효과음
+
+- **약 10초 동작 (컷씬 아님):** 화살을 눈앞에 들어 바라보고, 망설이며 내려 한숨 쉬고, 두 손으로 쥐고 깊이 숨을 들이쉰 뒤, 하늘로 치켜들었다가 가슴을 겨눠 떨고, 5.4초에 가슴에 꽂습니다. 헐떡이며 젖히고 비틀거리다 두 무릎을 꿇고, 화살이 몸속으로 빨려 들어가는 동안 심장이 점점 빨리 뛰다가 잠깐 정적. 9.0초에 결과가 보입니다(각성: 스탠드가 튀어나오고 일어서서 돌아섬 / 사망: 앞으로 엎어져 10.3초에 죽음). 카메라와 HUD는 플레이어 것 그대로이고, 찌르는 동안에도 마우스로 카메라를 돌릴 수 있습니다.
+- **채팅 없음:** 각성 알림을 맵 채팅으로 보내지 않고, 화살에 죽어도 사망 메시지가 채팅에 올라가지 않습니다(결과는 찌른 사람 화면 가운데 글자로만).
+- **효과음:** 2.70.0의 합성음을 모두 지우고, 실제 녹음(CC0 공개 저작물)을 잘라 몸의 움직임 하나하나에 맞춰 냅니다: 옷 스치는 소리, 한숨과 숨소리, 꽂히는 소리, 헐떡임, 무릎이 땅에 닿는 소리(밟고 선 블록의 소리 포함), 점점 빨라지는 심장 박동, 차오르다 끊기는 먼 천둥. 각성은 천둥 벼락과 큰북·싱잉볼, 사망은 막힌 숨과 몸이 엎어지는 소리 뒤의 정적(마인크래프트 사망 소리 없음).
+
+[RELEASE_2.71.0_KO.md](RELEASE_2.71.0_KO.md)를 확인하세요.
 
 # 보탠드 2.70.0 — 스탠드 화살 (몸에 꽂아 20% 사망 · 80% 스타플래티나)
 
