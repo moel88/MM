@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.68.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.69.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.69.0 — 첫 보스: 쿠죠 죠타로 (모든 보스의 기본 메커니즘)
+
+- **보스 기본 메커니즘(앞으로 모든 보스):** 처음엔 중립으로 가만히 서 있다가 맞으면 화가 나고, 30블록 안의 모든 플레이어를 체력이 낮은 순서로 공격합니다. 30블록 안에 아무도 없으면 3초 뒤 진정해 처음 자리로 돌아가 회복합니다. 체력바는 화면 가운데 아래(핫바 바로 위)에 이름과 막대만 나옵니다(숫자 없음).
+- **AI:** 플레이어의 공격을 보고(0.15초 반응) 위험한 기술은 대시로 피하고, 막을 수 있는 공격은 가드하고, 준비 동작이 긴 기술은 먼저 때려 끊습니다. 잽·스트레이트·훅에서 러시·강펀치로 잇고, 스타 핑거로 묶은 뒤 비트다운을 꽂는 등 콤보를 잘 넣습니다. 앞으로 나올 반격기를 세운 상대는 때리지 않고 기다립니다.
+- **쿠죠 죠타로:** 체력 5000, 스타플래티나의 모든 기술을 플레이어와 같은 규칙으로 씁니다. 체력 2500 이하에서만 시간 정지(쿨타임 2분), 비트다운 쿨타임 1분 30초. 처치하면 5000원, 쓰러진 자리 둘레에 박스 6개. 1시간 30분마다 `/botand boss jotaro setspawn`으로 정한 자리에 나옵니다(정하기 전엔 Expanse 임시 자리).
+- **모습:** 보내 주신 스킨 위에 입체 모자(챙·금 배지), 높은 깃, 금 사슬, 벨트, 다리를 따라 펄럭이는 긴 코트 자락을 입혔습니다.
+
+[RELEASE_2.69.0_KO.md](RELEASE_2.69.0_KO.md)를 확인하세요.
 
 # 보탠드 2.68.0 — 평타 경직(아주 짧은 무력화 + 90% 감속) · 더 월드 20블록 · 더 월드 이펙트 대폭 강화
 

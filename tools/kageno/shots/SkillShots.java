@@ -964,6 +964,16 @@ public final class SkillShots implements ClientModInitializer {
                             m.changeGameMode(GameMode.SURVIVAL);boolean in=w.spawnEntity(m);m.setHealth((float)opt("mhp",60));m.floor=(float)opt("mfloor",20);mate=m;
                             log.append("  mate ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f) health %.0f, tick %d%n",to.x,to.z,m.getHealth(),age));});continue;}
                     if(what.equals("MATEHP")){if(age==at)server(p->{if(mate!=null){mate.setHealth((float)opt("mhp2",30));log.append(String.format(Locale.ROOT,"  mate health set to %.0f at %d%n",mate.getHealth(),age));}});continue;}
+                    // "TOBOX@n" (2.69.0): the player steps up to the nearest box a boss left (1.3 blocks from it, facing it), to
+                    // open it with E held ("KEYDOWN_E@n"/"KEYUP_E@n")
+                    if(what.equals("TOBOX")){if(age==at)server(p->{
+                            var boxes=p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.loot.FieldLootEntity.class,p.getBoundingBox().expand(24),e->e.loose()&&!e.opened());
+                            var box=boxes.stream().min(java.util.Comparator.comparingDouble(e->e.squaredDistanceTo(p))).orElse(null);
+                            if(box==null){log.append("  no box to step up to at ").append(age).append('\n');return;}
+                            var away=p.getPos().subtract(box.getPos()).multiply(1,0,1);if(away.lengthSquared()<1e-4)away=new net.minecraft.util.math.Vec3d(0,0,1);away=away.normalize();
+                            var to=box.getPos().add(away.multiply(1.3));float yaw=(float)Math.toDegrees(Math.atan2(-(box.getX()-to.x),box.getZ()-to.z));
+                            p.networkHandler.requestTeleport(to.x,box.getY(),to.z,yaw,25);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);
+                            log.append(String.format(Locale.ROOT,"  stepped up to the box at (%.2f, %.2f) at %d%n",box.getX(),box.getZ(),age));});continue;}
                     if(what.equals("PHP")){if(age==at)server(p->{p.setHealth((float)opt("php",40));log.append(String.format(Locale.ROOT,"  player health set to %.0f at %d%n",p.getHealth(),age));});continue;}
                     if(what.equals("UNMATE")){if(age==at)server(p->{if(mate!=null){for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(mate.getUuid())));mate.discard();mate=null;log.append("  mate gone at ").append(age).append('\n');}});continue;}
                     if(what.equals("UNFAKE")){if(age==at)server(p->{if(fakePlayer!=null){p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(fakePlayer.getUuid())));fakePlayer.discard();fakePlayer=null;log.append("  fake gone at ").append(age).append('\n');}});continue;}

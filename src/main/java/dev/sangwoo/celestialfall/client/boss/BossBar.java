@@ -91,11 +91,12 @@ public final class BossBar {
         int top=GachaArt.mix(0xffd04a4a,0xffee5b4e,angry),bottom=GachaArt.mix(0xff8a1f26,0xffa8222b,angry);
         if(bar>1e-3f)fillTo(b,m,x,y,bw,bh,r,0,bar,GachaArt.fade(top,a),GachaArt.fade(bottom,a));
         if(bar>1e-3f)fillTo(b,m,x,y+.6f,bw,Math.max(.6f,bh*.28f),Math.max(.3f,r*.28f),.004f,Math.max(.004f,bar-.004f),GachaArt.fade(0x55ffffff,a),GachaArt.fade(0x10ffffff,a));
-        GachaArt.stroke(b,m,back,Math.max(SkyUi.px(),.7f),GachaArt.fade(0xb0c9a59a,a));
+        // its rim: pale while the boss stands neutral, red once it is angry
+        GachaArt.stroke(b,m,back,Math.max(SkyUi.px(),.7f+.3f*angry),GachaArt.fade(GachaArt.mix(0xb0c9a59a,0xfff0503f,angry),a));
         GachaArt.end(b);
-        // a soft red light round it while the boss is angry
-        if(angry>.01f){var g=GachaArt.begin(d,true);GachaArt.glow(g,m,back,4,GachaArt.fade(0xffe0443c,a),.32f*angry);GachaArt.end(g);}
-        if(!title.isEmpty())GachaFont.text(title,w/2f,h-TITLE_BASE,TITLE_SIZE,GachaFont.Weight.BOLD).align(.5f).color(0xfffaf6f2).alpha(a)
+        // a red light round it while the boss is angry, and its name warmed to red
+        if(angry>.01f){var g=GachaArt.begin(d,true);GachaArt.glow(g,m,back,6,GachaArt.fade(0xffe0443c,a),.6f*angry);GachaArt.end(g);}
+        if(!title.isEmpty())GachaFont.text(title,w/2f,h-TITLE_BASE,TITLE_SIZE,GachaFont.Weight.BOLD).align(.5f).color(GachaArt.mix(0xfffaf6f2,0xffffb4aa,angry)).alpha(a)
             .shadow(0xc8000000,1.1f,0,.6f).spacing(.04f).draw(d);
         RenderSystem.enableDepthTest();RenderSystem.defaultBlendFunc();RenderSystem.setShaderColor(1,1,1,1);
     }
