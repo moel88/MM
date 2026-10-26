@@ -29,7 +29,8 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * the frame's partial tick: the world's time is set again by the server every second and can step by a tick. 2.73.0
  * (user request: "쿨타임 UI도 지금 너무 크니까 줄여주고 쿨타임이 다 흘러서 UI가 사라질때 모래시계 처럼 흘러내려서 사라지게"):
  * about seven tenths of its size, tucked under the smaller HP art, and a finished box runs out like an hourglass, its
- * box draining through a funnel in its middle while its sand pours down out of its bottom and fades (CooldownList).
+ * box draining through a funnel in its middle while its sand pours down out of its bottom, behind the boxes below, and
+ * fades (CooldownList).
  */
 public final class CooldownHud {
     /**
@@ -175,6 +176,8 @@ public final class CooldownHud {
         d.draw();
         var window=mc.getWindow();double k=window.getScaleFactor();int frameHeight=window.getFramebufferHeight();
         Matrix4f matrix=d.getMatrices().peek().getPositionMatrix();
+        // the finished boxes' sand pours down out of their necks behind the boxes below (seen between and under them)
+        for(var b:boxes)if(b.entry().leaving())pour(d,b,now);
         // oldest first, so a box sliding over another stays under the newer one
         for(int i=boxes.size()-1;i>=0;i--){
             var b=boxes.get(i);double p=b.presence(),big=b.big(),bh=b.height(),bw=b.width();
@@ -219,8 +222,6 @@ public final class CooldownHud {
             }
             if(clip)RenderSystem.disableScissor();
         }
-        // the finished boxes' sand pours down out of their necks, over the boxes below
-        for(var b:boxes)if(b.entry().leaving())pour(d,b,now);
         RenderSystem.enableDepthTest();RenderSystem.enableCull();RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();RenderSystem.setShaderColor(1,1,1,1);
     }
     /** The part of a box ({@code x}, {@code boxTop}, {@code bw} by {@code bh}) still full at {@code q} and between {@code y0} and {@code y1}: column by column under its sand's surface. */

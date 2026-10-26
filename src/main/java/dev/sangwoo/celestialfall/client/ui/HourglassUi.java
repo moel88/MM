@@ -8,25 +8,26 @@ import org.joml.Matrix4f;
 
 /**
  * The player list's look since 2.73.0 (user request: "플레이창 UI는 사이즈도 줄이고 UI를 더 하늘색에 가깝게 바꿔주고 디자인도
- * 전체적으로 갈아엎어서 리메이크 해줘 모래시계와 관련 있게"): light sky-blue glass with a white rim and a thin dark outline
- * round it (so it stands out on a bright sky too), an hourglass in the header whose sand runs down and which turns over
- * once it has run out, grains of sand drifting down behind the title, and a small hourglass between each player's face
- * and name. The pause menu keeps its own navy look (SkyUi). Everything moving is a function of the HUD's clock (ticks).
- * Sizes are GUI units.
+ * 전체적으로 갈아엎어서 리메이크 해줘 모래시계와 관련 있게"; then, of a first look with an hourglass on a seal in the header and
+ * a small one in every row: "모래시계가 너무 대놓고 들어나있어 은연중에 들어나있게 바꾸고", and with the Roblox list the panel came
+ * from: "이거 처럼 색깔을 2개 쓰는 것도 좋을듯 메인은 화이트로 하되 테두리나 장식 같은걸 하늘색으로"): two colours, white panes
+ * with sky-blue rims, lines and letters, and the hourglass only hinted at: a faint outline in the header's left part on a
+ * faint dial, cut by the header's edges as the reference's emblem is, its sand running down slowly and the glass turning
+ * over once it has run out, and a few grains of sand drifting down behind the title. The pause menu keeps its own navy
+ * look (SkyUi). Everything moving is a function of the HUD's clock (ticks). Sizes are GUI units.
  */
 public final class HourglassUi {
     private HourglassUi(){}
-    /** The glass, top to bottom, and lit (the player's own row). */
-    public static final int TOP=0xe68fd9fb,BOTTOM=0xe63b9de0,LIT_TOP=0xf0c4f0ff,LIT_BOTTOM=0xf05cb9f1;
-    /** The white rim, the dark line round it, the faint line inside it. */
-    public static final int EDGE=0xfff4fcff,OUTLINE=0x8a0f4a7a,INNER=0x4dffffff;
-    /** Names, quiet names, the shadow under them, and the light round lit things. */
-    public static final int INK=0xffffffff,INK_DIM=0xffd7ecf8,SHADOW=0xa80b3a66,GLOW=0xff9fe4ff;
-    /** The sand (pale gold), the hourglass's glass and its plates. */
-    public static final int SAND=0xffffdc8f,SAND_DEEP=0xfff4b752,GLASS=0x38ffffff,GLASS_EDGE=0xebffffff,PLATE=0xfffbfdff,PLATE_DEEP=0xffb9dcf3;
+    /** The panes, top to bottom: white, the player's own row a breath of sky blue. */
+    public static final int PANE_TOP=0xf7ffffff,PANE_BOTTOM=0xf2f3faff,LIT_TOP=0xf7f0faff,LIT_BOTTOM=0xf2dcf1ff;
+    /**
+     * The sky blue of the rims, lines and ornaments; the letters' (a little deeper, to read on white); quieter letters
+     * (spectators, the count of the rest); the light round the player's own row.
+     */
+    public static final int SKY=0xff5cc6f8,INK=0xff1e8ad6,INK_DIM=0xff86bde2,GLOW=0xff8fdcff;
 
-    /** Ticks the sand takes to run down, and to turn the hourglass over once it has. */
-    public static final double FLOW=140,FLIP=14;
+    /** Ticks the header's faint hourglass's sand takes to run down (half a minute, it is hardly seen moving), and to turn it over once it has. */
+    public static final double FLOW=600,FLIP=30;
     /** The header's hourglass at a moment: the sand still above (0..1), the sand below (0..1), the stream between (0..1), its turn (radians). */
     public record Sand(float top,float bottom,float stream,float angle){}
     /**
@@ -61,104 +62,71 @@ public final class HourglassUi {
         return o;
     }
 
+    /** The width of the rims and lines. */
+    public static float rim(){return Math.max(SkyUi.px(),.7f);}
+    /** A pane: white shaded down its height ({@code lit} 0..1 toward a breath of sky blue), with its sky-blue rim. */
+    public static void pane(BufferBuilder b,Matrix4f m,float x,float y,float w,float h,float r,float lit,float alpha){
+        float[] o=SkyUi.rounded(x,y,w,h,r);
+        GachaArt.smooth(b,m,o,GachaArt.fade(GachaArt.mix(PANE_TOP,LIT_TOP,lit),alpha),GachaArt.fade(GachaArt.mix(PANE_BOTTOM,LIT_BOTTOM,lit),alpha));
+        GachaArt.stroke(b,m,o,rim(),GachaArt.fade(SKY,alpha));
+    }
     /**
-     * An hourglass {@code s} tall at ({@code cx},{@code cy}): its frame (a plate at either end and two slim posts), its
-     * two glass bulbs and the sand in them, {@code sand} saying how much is where and how it is turned.
+     * The header's faint hourglass, {@code s} across its dial, at ({@code cx},{@code cy}) leaning by {@code tilt}: a
+     * dial with its twelve marks, and in it the outline of the hourglass's bulbs and frame with the sand in it as
+     * {@code sand} says, all in lines of the one sky blue at {@code alpha} (the sand fainter still).
      */
-    public static void hourglass(BufferBuilder b,Matrix4f m,float cx,float cy,float s,Sand sand,float alpha){
-        float[] up=bulb(s),down=lower(up);
-        // the glass
-        GachaArt.smooth(b,m,place(up,cx,cy,sand.angle()),GachaArt.fade(GLASS,alpha),GachaArt.fade(GLASS,alpha*.6f));
-        GachaArt.smooth(b,m,place(down,cx,cy,sand.angle()),GachaArt.fade(GLASS,alpha*.6f),GachaArt.fade(GLASS,alpha));
-        // the sand above: what is left sits in the bulb's lower part, down to the neck
+    static void emblem(BufferBuilder b,Matrix4f m,float cx,float cy,float s,float tilt,Sand sand,float alpha){
+        float line=Math.max(SkyUi.px(),.026f*s),dial=.5f*s;int faint=GachaArt.fade(SKY,alpha*.7f),full=GachaArt.fade(SKY,alpha);
+        GachaArt.stroke(b,m,GachaArt.circle(cx,cy,dial,56),line*.8f,faint);
+        for(int i=0;i<12;i++){
+            double t=tilt+i*Math.PI/6;float c=(float)Math.cos(t),sn=(float)Math.sin(t),in=dial*(i%3==0?.84f:.9f);
+            GachaArt.line(b,m,cx+c*in,cy+sn*in,cx+c*dial,cy+sn*dial,line*(i%3==0?1:.7f),faint);
+        }
+        float g=.74f*s,turn=tilt+sand.angle();
+        float[] up=bulb(g),down=lower(up);
+        // the sand: what is left above sits in the upper bulb's lower part, a mound rises below, a thread between
+        int grain=GachaArt.fade(SKY,alpha*.45f);
         if(sand.top()>.002f){
-            float level=-.40f*s*(float)Math.pow(sand.top(),.7);
-            float[] cut=GachaArt.clipTo(up,GachaArt.rect(-s,level,2*s,-level+.001f*s));
-            if(cut.length>=6)GachaArt.smooth(b,m,place(cut,cx,cy,sand.angle()),GachaArt.fade(SAND,alpha),GachaArt.fade(SAND_DEEP,alpha));
+            float level=-.40f*g*(float)Math.pow(sand.top(),.7);
+            float[] cut=GachaArt.clipTo(up,GachaArt.rect(-g,level,2*g,-level+.001f*g));
+            if(cut.length>=6)GachaArt.fill(b,m,place(cut,cx,cy,turn),grain);
         }
-        // the sand below: a mound rising from the bottom, its peak under the stream
         if(sand.bottom()>.002f){
-            float base=.40f*s-.42f*s*sand.bottom(),peak=.035f*s*Math.min(1,sand.bottom()*8);
-            float[] mound={-.3f*s,base+peak, 0,base-peak, .3f*s,base+peak, .3f*s,.45f*s, -.3f*s,.45f*s};
-            float[] cut=GachaArt.clipTo(down,mound);
-            if(cut.length>=6)GachaArt.smooth(b,m,place(cut,cx,cy,sand.angle()),GachaArt.fade(SAND,alpha),GachaArt.fade(SAND_DEEP,alpha));
-            // the stream from the neck down to it
-            if(sand.stream()>.01f){
-                float[] line=place(new float[]{0,0,0,base-peak},cx,cy,sand.angle());
-                GachaArt.line(b,m,line[0],line[1],line[2],line[3],Math.max(SkyUi.px()*.8f,.022f*s),GachaArt.fade(SAND,alpha*sand.stream()));
-            }
+            float base=.40f*g-.42f*g*sand.bottom(),peak=.035f*g*Math.min(1,sand.bottom()*8);
+            float[] cut=GachaArt.clipTo(down,new float[]{-.3f*g,base+peak, 0,base-peak, .3f*g,base+peak, .3f*g,.45f*g, -.3f*g,.45f*g});
+            if(cut.length>=6)GachaArt.fill(b,m,place(cut,cx,cy,turn),grain);
+            if(sand.stream()>.01f){float[] l=place(new float[]{0,0,0,base-peak},cx,cy,turn);GachaArt.line(b,m,l[0],l[1],l[2],l[3],line*.6f,GachaArt.fade(SKY,alpha*.45f*sand.stream()));}
         }
-        float edge=Math.max(SkyUi.px()*.8f,.03f*s);
-        GachaArt.stroke(b,m,place(up,cx,cy,sand.angle()),edge,GachaArt.fade(GLASS_EDGE,alpha));
-        GachaArt.stroke(b,m,place(down,cx,cy,sand.angle()),edge,GachaArt.fade(GLASS_EDGE,alpha));
+        GachaArt.stroke(b,m,place(up,cx,cy,turn),line,full);
+        GachaArt.stroke(b,m,place(down,cx,cy,turn),line,full);
         // the frame: two slim posts and a plate at either end
         for(int k=-1;k<=1;k+=2){
-            float[] post=GachaArt.rect(k*.31f*s-.024f*s,-.42f*s,.048f*s,.84f*s);
-            GachaArt.smooth(b,m,place(post,cx,cy,sand.angle()),GachaArt.fade(PLATE,alpha),GachaArt.fade(PLATE_DEEP,alpha));
-            float[] plate=SkyUi.rounded(-.38f*s,k<0?-.5f*s:.41f*s,.76f*s,.09f*s,.03f*s);
-            GachaArt.smooth(b,m,place(plate,cx,cy,sand.angle()),GachaArt.fade(PLATE,alpha),GachaArt.fade(PLATE_DEEP,alpha));
+            float[] post=place(new float[]{k*.31f*g,-.42f*g,k*.31f*g,.42f*g},cx,cy,turn);
+            GachaArt.line(b,m,post[0],post[1],post[2],post[3],line,full);
+            GachaArt.stroke(b,m,place(SkyUi.rounded(-.38f*g,k<0?-.5f*g:.41f*g,.76f*g,.09f*g,.03f*g),cx,cy,turn),line,full);
         }
     }
-    /** A small still hourglass {@code s} tall (a row's divider): the upper bulb empty glass, the lower one full of sand. */
-    public static void glyph(BufferBuilder b,Matrix4f m,float cx,float cy,float s,float alpha){
-        float[] up=place(bulb(s),cx,cy,0),down=place(lower(bulb(s)),cx,cy,0);
-        GachaArt.smooth(b,m,up,GachaArt.fade(GLASS,alpha),GachaArt.fade(GLASS,alpha));
-        GachaArt.smooth(b,m,down,GachaArt.fade(SAND,alpha*.95f),GachaArt.fade(SAND_DEEP,alpha*.95f));
-        float edge=Math.max(SkyUi.px()*.7f,.05f*s);
-        GachaArt.stroke(b,m,up,edge,GachaArt.fade(GLASS_EDGE,alpha*.85f));
-        GachaArt.stroke(b,m,down,edge,GachaArt.fade(GLASS_EDGE,alpha*.85f));
-        for(int k=-1;k<=1;k+=2)GachaArt.line(b,m,cx-.32f*s,cy+k*.45f*s,cx+.32f*s,cy+k*.45f*s,Math.max(SkyUi.px(),.07f*s),GachaArt.fade(PLATE,alpha));
-    }
     /**
-     * A pane of the glass: shaded down its height ({@code lit} 0..1 lighter), a white rim, a thin dark line round the rim
-     * (it holds against a bright sky) and a faint line inside.
-     */
-    public static void glass(BufferBuilder b,Matrix4f m,float x,float y,float w,float h,float r,float lit,float alpha){
-        float px=SkyUi.px(),line=Math.max(px,.85f);
-        GachaArt.stroke(b,m,SkyUi.rounded(x-line,y-line,w+2*line,h+2*line,r+line),Math.max(px,line*.9f),GachaArt.fade(OUTLINE,alpha));
-        float[] o=SkyUi.rounded(x,y,w,h,r);
-        GachaArt.smooth(b,m,o,GachaArt.fade(GachaArt.mix(TOP,LIT_TOP,lit),alpha),GachaArt.fade(GachaArt.mix(BOTTOM,LIT_BOTTOM,lit),alpha));
-        // a sheen over the upper half
-        GachaArt.smooth(b,m,SkyUi.rounded(x+1.2f*line,y+1.2f*line,w-2.4f*line,h*.42f,Math.max(0,r-line)),GachaArt.fade(0x40ffffff,alpha),GachaArt.fade(0x00ffffff,alpha));
-        GachaArt.stroke(b,m,o,line,GachaArt.fade(EDGE,alpha*(.85f+.15f*lit)));
-        float in=Math.min(2f,Math.min(w,h)*.18f);
-        GachaArt.stroke(b,m,SkyUi.rounded(x+in,y+in,w-2*in,h-2*in,Math.max(0,r-in*.6f)),Math.max(px*.8f,.4f),GachaArt.fade(INNER,alpha));
-    }
-    /**
-     * The header: the glass, the hourglass on a round seal at its left, grains of sand drifting down behind the title,
-     * now and then a light running across it, and the title. {@code now} is in ticks. The cut is in screen coordinates,
-     * so the matrix must not be moved or scaled here.
+     * The header: a white pane with its sky-blue rim, the faint hourglass on its dial in its left part (cut by its
+     * edges), a few grains of sand drifting down behind the title, and the title in the middle. {@code now} is in ticks.
+     * The cut is in screen coordinates, so the matrix must not be moved or scaled here.
      */
     public static void header(DrawContext d,float x,float y,float w,float hh,float r,float a,double now,String title,float size){
         var m=d.getMatrices().peek().getPositionMatrix();
-        var b=GachaArt.begin(d,false);glass(b,m,x,y,w,hh,r,.25f,a);GachaArt.end(b);
-        SkyUi.clip(x+1,y+1,w-2,hh-2);
+        float[] o=SkyUi.rounded(x,y,w,hh,r);float rim=rim();
+        var b=GachaArt.begin(d,false);GachaArt.smooth(b,m,o,GachaArt.fade(PANE_TOP,a),GachaArt.fade(PANE_BOTTOM,a));GachaArt.end(b);
+        SkyUi.clip(x+rim,y+rim,w-2*rim,hh-2*rim);
+        b=GachaArt.begin(d,false);
+        emblem(b,m,x+hh*1.75f,y+hh*.62f,hh*2.5f,-.35f,sand(now),a*.3f);
         // grains of sand drifting down, each on its own time
-        b=GachaArt.begin(d,true);
-        float sx=x+hh*1.15f,sw=w-hh*1.15f-3;
-        for(int i=0;i<9;i++){
-            float period=70+50*GachaArt.hash(i*7+1),phase=GachaArt.hash(i*7+2);
-            double f=(now/period+phase)%1;float gx=sx+sw*GachaArt.hash(i*7+3)+(float)Math.sin(now*.05+i)*.6f,gy=y+1+(hh-2)*(float)f;
-            float g=(float)Math.sin(Math.PI*f)*.55f,rad=Math.max(SkyUi.px()*.9f,hh*.035f);
-            GachaArt.fill(b,m,GachaArt.circle(gx,gy,rad,8),GachaArt.fade(SAND,a*g));
-        }
-        double cycle=(now%160)/160;
-        if(cycle<.2){
-            float s=(float)(cycle/.2),bx=x-hh+(w+2*hh)*s;
-            GachaArt.fill(b,m,new float[]{bx,y,bx+hh*.45f,y,bx+hh*.05f,y+hh,bx-hh*.4f,y+hh},GachaArt.fade(0x36ffffff,a*(float)Math.sin(Math.PI*s)));
+        for(int i=0;i<6;i++){
+            float period=90+70*GachaArt.hash(i*7+1),phase=GachaArt.hash(i*7+2);
+            double f=(now/period+phase)%1;float gx=x+hh*.6f+(w-hh*1.2f)*GachaArt.hash(i*7+3)+(float)Math.sin(now*.04+i)*.6f,gy=y+(float)(hh*f);
+            GachaArt.fill(b,m,GachaArt.circle(gx,gy,Math.max(SkyUi.px()*.9f,hh*.04f),8),GachaArt.fade(SKY,a*.4f*(float)Math.sin(Math.PI*f)));
         }
         GachaArt.end(b);
         SkyUi.unclip();
-        // the seal and its hourglass
-        float cx=x+hh*.62f,cy=y+hh/2,seal=hh*.42f;
-        b=GachaArt.begin(d,true);GachaArt.glow(b,m,GachaArt.circle(cx,cy,seal,28),hh*.3f,GLOW,.32f*a);GachaArt.end(b);
-        b=GachaArt.begin(d,false);
-        GachaArt.smooth(b,m,GachaArt.circle(cx,cy,seal,28),GachaArt.fade(0xff3f9fe0,a),GachaArt.fade(0xff1f6fb6,a));
-        GachaArt.stroke(b,m,GachaArt.circle(cx,cy,seal,28),Math.max(SkyUi.px(),.8f),GachaArt.fade(EDGE,a));
-        hourglass(b,m,cx,cy,seal*1.55f,sand(now),a);
-        GachaArt.end(b);
-        float tx=x+hh*1.1f+(w-hh*1.1f)/2;
-        GachaFont.text(title,tx,y+hh/2,size,GachaFont.Weight.BOLD).align(.5f)
-            .color(INK).alpha(a).glow(GLOW,size*.4f,.4f).shadow(SHADOW,.7f,0,size*.08f).draw(d);
+        b=GachaArt.begin(d,false);GachaArt.stroke(b,m,o,rim,GachaArt.fade(SKY,a));GachaArt.end(b);
+        GachaFont.text(title,x+w/2,y+hh/2,size,GachaFont.Weight.BOLD).align(.5f).color(INK).alpha(a).draw(d);
     }
 }

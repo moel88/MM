@@ -43,14 +43,17 @@ public final class MeteorManager {
             server.execute(()->mine(p,target));
         });
         // whoever comes in while one is falling (or has only just landed) sees the rest of it, once their client has
-        // said it takes the fall's packet (it says so just after joining)
+        // said it takes the fall's packet (it says so just after joining). Queued, not run at once: on a world opened in
+        // the game the client says so while its connection is still being set up, and asking then whether it takes a
+        // packet fails (2.73.0: a world saved just as one fell could not be opened again)
         S2CPlayChannelEvents.REGISTER.register((h,sender,server,channels)->{
             if(!channels.contains(FALL))return;
-            server.execute(()->{
+            server.send(new net.minecraft.server.ServerTask(server.getTicks(),()->{
+                if(h.player.isDisconnected())return;
                 var w=h.player.getServerWorld();if(!enabled(w))return;
                 long now=w.getTime();
                 for(var m:MeteorState.get(w).all())if(now-m.start()<MeteorRules.FALL_TICKS+60)send(h.player,m);
-            });
+            }));
         });
         ServerPlayConnectionEvents.DISCONNECT.register((h,s)->LAST_HIT.remove(h.player.getUuid()));
         ServerLifecycleEvents.SERVER_STOPPED.register(s->LAST_HIT.clear());

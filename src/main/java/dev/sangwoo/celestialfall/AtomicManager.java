@@ -221,6 +221,8 @@ public final class AtomicManager {
         if(ready>now){COOLDOWNS.put(player.getUuid(),ready);cooldowns.set(CelestialFall.ATOMIC_SWORD,(int)Math.min(Integer.MAX_VALUE,ready-now));}
         else{COOLDOWNS.remove(player.getUuid());if(cooldowns.isCoolingDown(CelestialFall.ATOMIC_SWORD))cooldowns.remove(CelestialFall.ATOMIC_SWORD);}
     }
+    /** The tick the player's Atomic is ready again (0 for none kept). */
+    public static long ready(UUID player) { return COOLDOWNS.getOrDefault(player,0L); }
     public static void clear() { ACTIVE.clear();COOLDOWNS.clear(); }
     public static void clear(MinecraftServer server) {
         for(Cast s:ACTIVE)cancel(s);clear();

@@ -16,6 +16,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.ServerTask;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.PersistentState;
@@ -48,8 +49,12 @@ public final class LongCooldowns extends PersistentState {
         ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->begin(handler.player));
         // a new body after any death keeps what is running; the sword's cooldown has to be put on it again
         ServerPlayerEvents.AFTER_RESPAWN.register((old,p,alive)->respawned(p));
-        // a client that joins says which packets it takes just after joining: told then too
-        S2CPlayChannelEvents.REGISTER.register((handler,sender,server,channels)->{if(channels.contains(STATE))server.execute(()->send(handler.player));});
+        // a client that joins says which packets it takes just after joining: told then too. Queued, not run at once: on
+        // a world opened in the game the client says so while its connection is still being set up, and asking then
+        // whether it takes a packet fails (the game could not place the player)
+        S2CPlayChannelEvents.REGISTER.register((handler,sender,server,channels)->{
+            if(channels.contains(STATE))server.send(new ServerTask(server.getTicks(),()->{if(!handler.player.isDisconnected())send(handler.player);}));
+        });
     }
 
     /** The tick {@code id}'s {@code skill} is ready again (0 for none kept). */

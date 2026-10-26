@@ -77,7 +77,9 @@ public final class MpServer implements ModInitializer {
     private void joined(ServerPlayerEntity p){
         p.changeGameMode(GameMode.SURVIVAL);
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
-        if(caster(p)){ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+        // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had)
+        if(caster(p)){if(!COOLDOWNS_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
+            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
@@ -120,6 +122,7 @@ public final class MpServer implements ModInitializer {
         busy|=atomic;
         punched(server);
         called(server);
+        if(COOLDOWNS_ONLY)cooldowns(server);
         if(STAGGER_ONLY)staggers(server);
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
@@ -351,6 +354,30 @@ public final class MpServer implements ModInitializer {
         String standNow=ch.botand$getStand()+" "+(ch.botand$isStandOut()?"out":"in")+(ch.botand$standCalled()?" (called)":" (not called)");
         if(!standNow.equals(standStates.put(caster.getUuid(),standNow)))note(server,"caster's stand "+standNow+" at tick "+now);
     }
+    private int casterJoins;private String cooldownsLogged="";private Boolean casterAlive;
+    /**
+     * The long cooldowns (2.73.0, MP_ONLY=cooldowns): whenever any changes, the caster's as kept with the world
+     * (LongCooldowns) and as each skill keeps its own (the Atomic's with its sword's cooldown, the time stop's, the
+     * beatdown's), as the tick each is ready again and the seconds from now; and the caster dying and coming back.
+     */
+    private void cooldowns(MinecraftServer server){
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        if(!Boolean.valueOf(caster.isAlive()).equals(casterAlive)){casterAlive=caster.isAlive();note(server,"caster "+(casterAlive?"alive":"dead")+" at tick "+now);}
+        var ledger=dev.sangwoo.celestialfall.LongCooldowns.get(server);var id=caster.getUuid();
+        long[] kept={ledger.ready(id,dev.sangwoo.celestialfall.LongCooldowns.Skill.ATOMIC),ledger.ready(id,dev.sangwoo.celestialfall.LongCooldowns.Skill.TIME_STOP),ledger.ready(id,dev.sangwoo.celestialfall.LongCooldowns.Skill.BEATDOWN)};
+        long[] own={AtomicManager.ready(id),StarPlatinumTimeStop.ready(caster),StarPlatinumAttack.beatdownReady(caster)};
+        String key=Arrays.toString(kept)+Arrays.toString(own)+caster.getItemCooldownManager().isCoolingDown(dev.sangwoo.celestialfall.CelestialFall.ATOMIC_SWORD);
+        if(key.equals(cooldownsLogged))return;cooldownsLogged=key;
+        String[] names={"atomic","time stop","beatdown"};var line=new StringBuilder("caster's long cooldowns at tick "+now+":");
+        for(int i=0;i<3;i++)line.append(String.format(java.util.Locale.ROOT," %s kept %s, its own %s;",names[i],at(kept[i],now),at(own[i],now)));
+        line.append(String.format(java.util.Locale.ROOT," sword cooling %.3f",caster.getItemCooldownManager().getCooldownProgress(dev.sangwoo.celestialfall.CelestialFall.ATOMIC_SWORD,0)));
+        note(server,line.toString());
+    }
+    private static String at(long ready,long now){return ready<=0?"none":ready<=now?"over ("+ready+")":String.format(java.util.Locale.ROOT,"%d (%.1f s)",ready,(ready-now)/20.);}
+    /** Only the long cooldowns' script (2.73.0, MP_ONLY=cooldowns). */
+    static final boolean COOLDOWNS_ONLY="cooldowns".equals(System.getProperty("botand.mp.only"));
     /** Only the beatdown's script (2.64.0, MP_ONLY=beatdown). */
     static final boolean BEATDOWN_ONLY="beatdown".equals(System.getProperty("botand.mp.only"));
     /** Only the time stop's script (2.67.0, MP_ONLY=timestop). */

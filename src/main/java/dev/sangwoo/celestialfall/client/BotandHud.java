@@ -40,11 +40,14 @@ public final class BotandHud {
             c.drawText(mc.textRenderer,label.text(),x,0,label.color(),false);matrix.pop();
         }
         c.draw();matrix.pop();
+        // the money and XP line on its plate under the art (2.73.0: smaller with it, in the UI's font)
         var growth=ProgressClient.profile;matrix.push();matrix.translate(0,0,-20);
-        int infoY=12+(int)(BotandHudLayout.width(c.getScaledWindowWidth())*683/2048.);
+        double infoTop=BotandHudLayout.infoTop(c.getScaledWindowWidth()),plate=BotandHudLayout.INFO_HEIGHT;float size=(float)BotandHudLayout.INFO_SIZE;
         String info=String.format(java.util.Locale.ROOT,"%,d원",growth.money())+"  ·  "+(growth.level()==50?"Lv.50 MAX":"XP "+growth.xp()+" / "+dev.sangwoo.celestialfall.progression.ProgressProfile.requiredXp(growth.level()));
-        c.fill(13,infoY-3,22+mc.textRenderer.getWidth(info),infoY+11,0xcc153654);
-        c.drawText(mc.textRenderer,info,18,infoY,0xffdaf5ff,false);matrix.pop();
+        float pad=size*.55f,textWidth=dev.sangwoo.celestialfall.client.gacha.GachaFont.width(info,size,dev.sangwoo.celestialfall.client.gacha.GachaFont.Weight.MEDIUM);
+        c.fill(13,(int)infoTop,(int)Math.ceil(13+2*pad+textWidth),(int)Math.round(infoTop+plate),0xcc153654);
+        dev.sangwoo.celestialfall.client.gacha.GachaFont.text(info,13+pad,(float)(infoTop+plate/2),size,dev.sangwoo.celestialfall.client.gacha.GachaFont.Weight.MEDIUM).color(0xffdaf5ff).draw(c);
+        matrix.pop();
         RenderSystem.setShaderColor(1,1,1,1);RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();
     }
     /** Preserve armor and breathing information without drawing hearts or food icons. */

@@ -19,8 +19,16 @@ public final class BotandHudLayout {
     public static final double SIZE=.7;
     /** Where the art sits (GUI units; BotandHud draws it at 8, 8, {@link #width} wide), for HUD pieces placed around it. */
     public static double right(int screenWidth){return 8+width(screenWidth);}
+    /**
+     * The money and XP line under the art: its letters' size and its plate's height (GUI units). 2.73.0: smaller with
+     * the art, in the UI's own font (Botand Gacha Sans) that stays smooth at this size (until 2.72.0 Minecraft's, 9 high
+     * on a plate 14 high).
+     */
+    public static final double INFO_SIZE=7,INFO_HEIGHT=12;
+    /** The top of the money and XP line's plate, just under the art. */
+    public static double infoTop(int screenWidth){return 9+(int)(width(screenWidth)*HEIGHT/WIDTH);}
     /** The bottom of the money and XP line under the art. */
-    public static double bottom(int screenWidth){return 12+(int)(width(screenWidth)*HEIGHT/WIDTH)+11;}
+    public static double bottom(int screenWidth){return infoTop(screenWidth)+INFO_HEIGHT;}
     /**
      * Above this line the art holds only its portrait, at the left up to {@link #portraitRight}: the bars, the bow and the
      * lantern begin here (row 253 of the 724 of botand_hud.png, drawn 683 high).

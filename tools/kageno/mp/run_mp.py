@@ -8,7 +8,9 @@ only its time stop's (2.67.0, MpClient.TIMESTOP_SCRIPT), MP_ONLY=stagger only th
 stop's 20 blocks (2.68.0, MpClient.STAGGER_SCRIPT), MP_ONLY=boss only Kujo Jotaro's (2.69.0, MpClient.BOSS_SCRIPT; with
 MP_RESTART=1 the server is started once more afterwards on the same world to see a boss in play come back), MP_ONLY=arrow
 only the stand arrow's (2.70.0, MpClient.ARROW_SCRIPT), MP_ONLY=call only Star Platinum's call (Q out and back, its
-sounds) and its time stop for the awakened (2.72.0, MpClient.CALL_SCRIPT).
+sounds) and its time stop for the awakened (2.72.0, MpClient.CALL_SCRIPT), MP_ONLY=cooldowns only the long cooldowns
+(2.73.0, MpClient.COOLDOWNS_SCRIPT: the Atomic, the time stop and the beatdown begun again in full as the caster leaves
+and joins again or resets, and running on through another death).
 Results: OUT_DIR/{server.txt, caster/log.txt, watcher/log.txt, caster/*.png, watcher/*.png, logs/}.
 """
 from pathlib import Path

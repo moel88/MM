@@ -192,7 +192,27 @@ public final class MpClient implements ClientModInitializer {
         "5 STAND","40 Q","100 Q","140 Q","180 NOSTAND","200 STAND","230 Q",
         "250 HOME","260 H","300 AWAKEN","330 H",
         "520 UNAWAKEN","550 H","600 Q","650 END"};
-    private static final String[] STEPS=ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * The long cooldowns (2.73.0), on their own (MP_ONLY=cooldowns; the server keeps the caster's cooldowns and, as it
+     * comes back, the stand it had): the caster, Kageno, uses its Atomic (G) and waits it out (27.6 s), so its ten
+     * minutes run; it leaves the server ("LEAVE": the pause menu's 나가기, TitlePortal.leaveMap) and joins again 5 s later:
+     * the ten minutes begin again in full. It takes Star Platinum, is awakened, brings it out and stops time (H) with
+     * the watcher 2.5 blocks in front of it (the two and a half minutes run once time moves again), then uses its
+     * beatdown on nobody (the watcher 8 blocks away: its two minutes run once the opener is over). It resets its
+     * character (Esc, R, Enter) and respawns: all three begin again in full. It dies another way ("KILL": /kill) and
+     * respawns: they run on as they were (and the Atomic sword's cooldown is on the new body). It leaves and joins once
+     * more: all three in full again. Both log the long cooldowns their client is told (LongCooldownsClient: each one's
+     * ready tick, the seconds from now, its length) and the cooldown list (each entry's length and what is left of it);
+     * the server logs the caster's as kept with the world and as each skill keeps its own, and its deaths.
+     */
+    private static final String[] COOLDOWNS_SCRIPT={
+        "5 G","600 LEAVE",
+        "640 STAND","670 AWAKEN","680 Q","720 HOME","730 H",
+        "900 AWAY","915 G",
+        "990 ESC","1005 R","1020 ENTER","1060 RESPAWN",
+        "1120 KILL","1160 RESPAWN",
+        "1220 LEAVE","1280 END"};
+    private static final String[] STEPS=ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -256,11 +276,23 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?2600:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
-                if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
+                if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
             case 3->{if(age==20){writer.shutdown();writer.awaitTermination(60,TimeUnit.SECONDS);note("frames "+frames);mc.scheduleStop();}}
+            // 2.73.0 (LEAVE): away from the server, then joining it again
+            case 4->{
+                if(mc.world!=null)return;
+                if(age==1)note("left the server ("+(mc.currentScreen==null?"no screen":mc.currentScreen.getClass().getSimpleName())+")");
+                if(age>=100&&mc.currentScreen!=null){note("joining again");ConnectScreen.connect(mc.currentScreen,mc,ServerAddress.parse(ADDRESS),new ServerInfo("mp",ADDRESS,false),false);phase=5;age=0;}
+            }
+            case 5->{
+                if(age>2400){note("ERROR never back");phase=3;age=0;return;}
+                if(mc.world==null||mc.player==null)return;
+                if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());mc.setScreen(null);}
+                if(mc.world.getPlayers().size()>=2&&age>60){note("back in the game, the script at "+resumeAt);flags.clear();face();age=resumeAt;phase=2;}
+            }
         }
     }
     /**
@@ -296,11 +328,15 @@ public final class MpClient implements ClientModInitializer {
         }
     }
     /** The 2.45.0 steps keep the pause menu and the death screen up (the rest of the script closes every screen). */
-    private boolean interfaceStep(){return caster&&age>=3060&&(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen||mc.currentScreen instanceof net.minecraft.client.gui.screen.DeathScreen);}
+    private boolean interfaceStep(){return caster&&(age>=3060||ONLY.equals("cooldowns"))&&(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen||mc.currentScreen instanceof net.minecraft.client.gui.screen.DeathScreen);}
     private void act(String step,boolean down){
         if(step.equals("END")){if(down){note("script end");try{Files.writeString(OUT.resolve("done"),"done");}catch(Exception ignored){}phase=3;age=0;}return;}
         if(step.startsWith("TURN")){if(down){BotandCamera.STATE.yaw=(caster?0:180)+Float.parseFloat(step.substring(4));note("camera turned to "+BotandCamera.STATE.yaw);}return;}
         if(step.equals("RESPAWN")){if(down){note("respawn requested (alive="+mc.player.isAlive()+")");mc.player.requestRespawn();}return;}
+        // 2.73.0: leaving the server as the pause menu's 나가기 does (on the next frame, not in the middle of this tick),
+        // and dying another way than the reset
+        if(step.equals("LEAVE")){if(down){note("leave the server");resumeAt=age;phase=4;age=0;mc.send(()->dev.sangwoo.celestialfall.client.title.TitlePortal.leaveMap(mc,true));}return;}
+        if(step.equals("KILL")){if(down)command("kill @s");return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         if(step.equals("STAND")){if(down){note("command botand progress stand @s star_platinum");mc.player.networkHandler.sendChatCommand("botand progress stand @s star_platinum");}return;}
         // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
@@ -409,6 +445,8 @@ public final class MpClient implements ClientModInitializer {
         stops();
         // 2.72.0: each player's stand's call sound playing here, and whether this client's player is awakened
         calls();flag("awakened",dev.sangwoo.celestialfall.client.ProgressClient.awakened);
+        // 2.73.0: the long cooldowns this client is told, and the cooldown list's entries
+        if(ONLY.equals("cooldowns"))longCooldowns();
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
         if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
         flag("thrown",fast);
@@ -416,6 +454,31 @@ public final class MpClient implements ClientModInitializer {
             if(look!=null)note(String.format(Locale.ROOT,"stand of %s drawn: out %.2f, solid %.2f, glow %.2f, aura %.2f on %d bodies, lean %.1f deg, speed %.2f blocks/s (%s)",p.getGameProfile().getName(),look.out,look.alpha,look.glow,
                 dev.sangwoo.celestialfall.client.stand.StandPresence.aura(p.getUuid()),dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast(),look.lean,look.speed,dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
+    }
+    private int resumeAt;private String longLogged="";
+    /**
+     * The long cooldowns as this client is told them (2.73.0): whenever they change, each one's ready tick, the seconds
+     * from now and its length; and whenever the cooldown list changes, each entry with its length and what is left.
+     */
+    private void longCooldowns(){
+        var c=dev.sangwoo.celestialfall.client.LongCooldownsClient.class;long now=mc.world.getTime();
+        var line=new StringBuilder();
+        for(var skill:dev.sangwoo.celestialfall.LongCooldowns.Skill.values()){
+            long ready=dev.sangwoo.celestialfall.client.LongCooldownsClient.ready(skill);int length=dev.sangwoo.celestialfall.client.LongCooldownsClient.length(skill);
+            line.append(String.format(Locale.ROOT," %s ready %d (%s) of %.0f s;",skill.name().toLowerCase(Locale.ROOT),ready,ready>now?String.format(Locale.ROOT,"%.1f s from now",(ready-now)/20.):"none",length/20.));
+        }
+        String key=dev.sangwoo.celestialfall.client.LongCooldownsClient.known()+line.toString().replaceAll("\\([0-9.]+ s from now\\)","");
+        if(!key.equals(longLogged)){longLogged=key;note("long cooldowns told (known "+dev.sangwoo.celestialfall.client.LongCooldownsClient.known()+"):"+line);}
+        try{
+            var listField=CooldownHud.class.getDeclaredField("LIST");listField.setAccessible(true);var list=(CooldownList)listField.get(null);
+            var clock=CooldownHud.class.getDeclaredMethod("clock",float.class);clock.setAccessible(true);double t=(double)clock.invoke(null,0f);
+            var shown=new ArrayList<String>();
+            for(var e:list.entries())if(!e.leaving())shown.add(String.format(Locale.ROOT,"%s %.0f s, %.1f s left",e.name,(e.end-e.start)/20,(e.end-t)/20));
+            String names=list.entries().stream().filter(e->!e.leaving()).map(e->e.name+" "+Math.round((e.end-e.start)/20)).toList().toString();
+            if(!names.equals(flags.get("list_lengths"))){flags.put("list_lengths",names);note("cooldown list "+shown);}
+        }catch(ReflectiveOperationException e){flag("list_lengths","n/a "+e);}
+        var sword=mc.player.getItemCooldownManager();
+        flag("atomic_sword_cooling",sword.isCoolingDown(dev.sangwoo.celestialfall.CelestialFall.ATOMIC_SWORD));
     }
     private final Map<String,int[]> heard=new HashMap<>(),rushHeard=new HashMap<>(),inhaleHeard=new HashMap<>();private int hurtCries,inhalesHeard;private boolean listening;
     private final Map<UUID,net.minecraft.client.sound.SoundInstance> callsHeard=new HashMap<>();
