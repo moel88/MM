@@ -39,11 +39,16 @@ class DangerBannerTest {
         }
         assertTrue(above>0,"narrow screens put it above the art's bars");
     }
-    @Test void aboveTheBarsOnTheUsualNarrowScreens(){
-        // 1920×1080 at GUI scale 3 or 4, 1280×730 at 2: the art reaches the middle, there is room above its bars
+    @Test void theSmallerArtLeavesItItsPlaceOnTheUsualScreens(){
+        // 2.73.0: the HP art is seven tenths of its old size (user request: "HP창 UI 사이즈를 줄이고"). On 1920×1080 at GUI
+        // scale 3 or 4 and 1280×730 at 2 the banner keeps the screenshot's place beside it (until 2.72.0 the art reached
+        // the middle there and the banner went above its bars)
         for(int[] s:new int[][]{{640,360},{480,270},{640,365}}){
             var p=DangerBanner.place(s[0],s[1],widest(s[1]),true);
-            assertTrue(p.at()<p.top()&&p.scale()>.85f,"above the bars, nearly full size at "+s[0]+"x"+s[1]+": "+p);
+            assertEquals(1,p.scale(),1e-6);assertEquals(p.top(),p.at(),1e-6,"at its place at "+s[0]+"x"+s[1]+": "+p);
         }
+        // a very narrow screen still moves it off the art (320×240: 1280×960 at GUI scale 4)
+        var narrow=DangerBanner.place(320,240,widest(240),true);
+        assertNotEquals(narrow.top(),narrow.at(),1e-3,"moved on a very narrow screen: "+narrow);
     }
 }

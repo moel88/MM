@@ -99,6 +99,66 @@ class CooldownListTest {
         assertEquals(names(a),names(b));assertEquals(la.size(),lb.size());
         for(int i=0;i<la.size();i++){assertEquals(la.get(i).y(),lb.get(i).y(),1e-9);assertEquals(la.get(i).big(),lb.get(i).big(),1e-9);}
     }
+    /**
+     * 2.73.0 (user request: "쿨타임이 다 흘러서 UI가 사라질때 모래시계 처럼 흘러내려서 사라지게"): a finished box keeps its place
+     * while it drains, its place closes once it has mostly drained, and it is gone once its last grain of sand is.
+     */
+    @Test void aFinishedBoxDrainsLikeAnHourglassThenItsPlaceCloses(){
+        var list=new CooldownList();
+        list.add(3,"T",0,400,0);list.add(1,"E",20,160,20);
+        list.update(160);var e=list.entries().get(0);
+        assertTrue(e.leaving());assertEquals(0,e.drain(160),1e-9,"full as it finishes");
+        assertEquals(.5,e.drain(160+CooldownList.DRAIN/2),1e-9);assertEquals(1,e.drain(160+CooldownList.DRAIN),1e-9);
+        assertEquals(1,e.presence(160+CooldownList.HOLD-.01),1e-9,"its place is kept while most of it drains");
+        assertTrue(e.drain(160+CooldownList.HOLD)>.7,"most of it has gone by then");
+        assertEquals(0,e.presence(160+CooldownList.HOLD+CooldownList.COLLAPSE),1e-9,"then its place closes");
+        double after=160+CooldownList.HOLD+CooldownList.COLLAPSE+1;list.update(after);
+        var boxes=list.layout(after,M);
+        assertEquals(List.of("E","T"),boxes.stream().map(b->b.entry().name).toList(),"still there while its sand falls");
+        assertEquals(0,boxes.get(0).presence(),1e-9);assertEquals(M.top(),boxes.get(1).y(),1e-9,"T has moved up into its place");
+        list.update(160+CooldownList.LEAVE+.01);
+        assertEquals(List.of("T"),list.entries().stream().map(x->x.name).toList(),"gone once its last grain is");
+    }
+    @Test void itsSandGoesDownTheMiddleFirstNeverComesBackAndAllOfItGoes(){
+        for(double x=-1;x<=1.0001;x+=.05){
+            assertEquals(0,CooldownList.surface(0,x),1e-9,"full before it begins");
+            assertEquals(1,CooldownList.surface(1,x),1e-9,"empty at the end");
+        }
+        double steepest=0;
+        for(double q=0;q<=1.0001;q+=.01){
+            assertTrue(CooldownList.surface(q,0)>=CooldownList.surface(q,.5)-1e-12&&CooldownList.surface(q,.5)>=CooldownList.surface(q,.95)-1e-12,"the middle first at "+q);
+            for(double x=-1;x<=1.0001;x+=.025){
+                double a=CooldownList.surface(q,x),b=CooldownList.surface(Math.min(1,q+.01),x);
+                assertTrue(b>=a-1e-12,"it never comes back, at "+q+", "+x);
+                steepest=Math.max(steepest,b-a);
+            }
+        }
+        // at 60 fps a frame is FRAME/DRAIN of the drain: the surface moves less than a fifth of the box in one
+        assertTrue(steepest*100*FRAME/CooldownList.DRAIN<.2,"smooth: "+steepest);
+        assertTrue(CooldownList.surface(.3,0)-CooldownList.surface(.3,.9)>.3,"a funnel in the middle");
+    }
+    @Test void itsGrainsFallOutWhileItDrainsAndAreGoneByTheEnd(){
+        double[][] last=new double[CooldownList.GRAINS][];int seen=0;
+        for(double t=-1;t<CooldownList.LEAVE+2;t+=FRAME){
+            int showing=0;
+            for(int i=0;i<CooldownList.GRAINS;i++){
+                var g=CooldownList.grain(i,t);
+                assertTrue(g[2]>=0&&g[2]<=1);
+                if(t<0||t>=CooldownList.LEAVE)assertEquals(0,g[2],1e-12,"none before it finishes or once it is gone");
+                if(g[2]>0){showing++;assertTrue(g[1]>=0,"they fall down");}
+                if(last[i]!=null&&g[2]>0&&last[i][2]>0){
+                    assertTrue(Math.abs(g[1]-last[i][1])<.2&&Math.abs(g[0]-last[i][0])<.05,"grain "+i+" moves smoothly");
+                    assertTrue(Math.abs(g[2]-last[i][2])<.5,"and fades in and out over frames");
+                }
+                last[i]=g;
+            }
+            if(t>CooldownList.DRAIN*.3&&t<CooldownList.DRAIN*.8)assertTrue(showing>=CooldownList.GRAINS/4,"pouring at "+t+": "+showing);
+            seen=Math.max(seen,showing);
+        }
+        assertTrue(seen>8);
+        assertEquals(0,CooldownList.stream(0),1e-12);assertEquals(1,CooldownList.stream(CooldownList.DRAIN/2),1e-12,"a stream while it runs");
+        assertEquals(0,CooldownList.stream(CooldownList.DRAIN),1e-12,"none once it has run out");
+    }
     private static List<String> names(CooldownList list){return list.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
     /** Steps the list frame by frame through the script (rows: slot, used at, cooldown, and the skill's length when its cooldown waits for it). */
     private static void assertSmooth(double[][] script){

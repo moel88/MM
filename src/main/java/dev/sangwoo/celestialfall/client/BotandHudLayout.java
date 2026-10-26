@@ -10,7 +10,13 @@ public final class BotandHudLayout {
     public record Label(String text,double x,double y,double scale,double angle,double maxWidth,int color,int outline) {}
     public record Frame(List<Quad> quads,List<Label> labels) {}
     private BotandHudLayout() {}
-    public static double width(int screenWidth){return Math.max(1,Math.min(screenWidth-16,Math.min(360,Math.max(240,screenWidth*.44))));}
+    /**
+     * The art's width on a screen this wide (GUI units). 2.73.0 (user request: "HP창 UI 사이즈를 줄이고"): seven tenths of
+     * what it was (until 2.72.0: 44% of the width, 240 to 360).
+     */
+    public static double width(int screenWidth){return Math.max(1,Math.min(screenWidth-16,Math.min(SIZE*360,Math.max(SIZE*240,screenWidth*.44*SIZE))));}
+    /** How large the art is against its size until 2.72.0. */
+    public static final double SIZE=.7;
     /** Where the art sits (GUI units; BotandHud draws it at 8, 8, {@link #width} wide), for HUD pieces placed around it. */
     public static double right(int screenWidth){return 8+width(screenWidth);}
     /** The bottom of the money and XP line under the art. */

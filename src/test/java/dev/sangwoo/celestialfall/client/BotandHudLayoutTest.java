@@ -12,6 +12,8 @@ class BotandHudLayoutTest {
     }
     @Test void emptyBarsAndSmallScreensStayBounded() {
         for(int width:new int[]{320,390,720,960,1920})assertTrue(BotandHudLayout.width(width)>0&&BotandHudLayout.width(width)<=width-16);
+        // 2.73.0 (user request: "HP창 UI 사이즈를 줄이고"): seven tenths of its old size (44% of the width, 240 to 360)
+        assertEquals(168,BotandHudLayout.width(480),1e-9);assertEquals(.44*.7*640,BotandHudLayout.width(640),1e-9);assertEquals(252,BotandHudLayout.width(960),1e-9);
         var empty=BotandHudLayout.frame(0,200,0,ProgressProfile.NEW,true);
         assertEquals("0",empty.labels().get(0).text());assertEquals("0",empty.labels().get(1).text());
         assertTrue(empty.labels().stream().anyMatch(x->x.text().equals("BREAK")));

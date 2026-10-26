@@ -26,12 +26,21 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * 2.43.0), and the dash (C) its cooldown from the combat state (2.43.0; the bar by the hotbar is gone). Every cooldown
  * runs once its skill is over (user request, 2.44.0): the server's ready tick is the skill's end plus its cooldown, and
  * the box comes in when the cooldown begins. The list keeps its own clock, the client's ticks while the game runs plus
- * the frame's partial tick: the world's time is set again by the server every second and can step by a tick.
+ * the frame's partial tick: the world's time is set again by the server every second and can step by a tick. 2.73.0
+ * (user request: "쿨타임 UI도 지금 너무 크니까 줄여주고 쿨타임이 다 흘러서 UI가 사라질때 모래시계 처럼 흘러내려서 사라지게"):
+ * about seven tenths of its size, tucked under the smaller HP art, and a finished box runs out like an hourglass, its
+ * box draining through a funnel in its middle while its sand pours down out of its bottom and fades (CooldownList).
  */
 public final class CooldownHud {
-    /** The reference's measures, as shares of the screen's height (its left edge as a share of the width). */
-    private static final double LEFT=.036,TOP=.374,BIG_W=.406,BIG_H=.094,SMALL_W=.271,SMALL_H=.054,GAP=.0137,
-        BIG_TEXT=.0385,SMALL_TEXT=.027,BIG_PAD=.0208,SMALL_PAD=.0139,BIG_BAR=.0069,SMALL_BAR=.0028;
+    /**
+     * The reference's measures, as shares of the screen's height (its left edge as a share of the width); 2.73.0 about
+     * seven tenths of them (until 2.72.0: top .374, big .406 by .094, small .271 by .054, gap .0137, text .0385 and .027,
+     * padding .0208 and .0139, bars .0069 and .0028).
+     */
+    private static final double LEFT=.036,TOP=.3,BIG_W=.29,BIG_H=.066,SMALL_W=.195,SMALL_H=.04,GAP=.0105,
+        BIG_TEXT=.027,SMALL_TEXT=.0195,BIG_PAD=.015,SMALL_PAD=.01,BIG_BAR=.005,SMALL_BAR=.0022;
+    /** A finished box's sand: the light along its surface, and its grains (two colours). */
+    static final int RIM=0x8ca8e8ff,GRAIN=0xffa8e8ff,GRAIN_DEEP=0xff5fc6f5;
     /** The boxes' dark translucent violet (the reference's), the bars' sky blue (the gacha's R; the reference's are pink) and their glow. */
     static final int BOX=0xba0e0814,BAR=0xff74d8ff,BAR_TOP=0xffa8e8ff,GLOW=0x2fb4ff;
     /**
@@ -169,35 +178,102 @@ public final class CooldownHud {
         // oldest first, so a box sliding over another stays under the newer one
         for(int i=boxes.size()-1;i>=0;i--){
             var b=boxes.get(i);double p=b.presence(),big=b.big(),bh=b.height(),bw=b.width();
-            // the box unfolds downwards from its slot's top edge (and folds back up into it when it leaves)
+            boolean leaving=b.entry().leaving();
+            // the box unfolds downwards from its slot's top edge (and a finished one rides up into it as its place closes)
+            if(p<=0)continue;
             boolean clip=p<1;
             if(clip){
                 int x0=(int)Math.floor(b.x()*k)-2,y1=(int)Math.ceil((b.y()+bh*p)*k),y0=(int)Math.floor(b.y()*k);
                 if(y1<=y0)continue;
                 RenderSystem.enableScissor(x0,frameHeight-y1,(int)Math.ceil(bw*k)+4,y1-y0);
             }
-            double top=b.y()-bh*(1-p),x=b.x();float a=(float)Math.min(1,p*1.6);
+            double top=b.y()-bh*(1-p),x=b.x();float a=leaving?1:(float)Math.min(1,p*1.6);
             RenderSystem.enableBlend();RenderSystem.disableDepthTest();RenderSystem.disableCull();
             RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.setShaderColor(1,1,1,1);
             RenderSystem.defaultBlendFunc();
-            rect(matrix,x,top,x+bw,top+bh,fade(BOX,a),fade(BOX,a));
             double bar=Math.max(1/k,(SMALL_BAR+(BIG_BAR-SMALL_BAR)*big)*h),left=b.entry().remaining(now);
             double barRight=x+bw*left,barTop=top+bh-bar;
-            if(left>0){
-                // a soft sky-blue light over the bar, added, then the bar itself (lighter along its top edge)
-                RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA,GlStateManager.DstFactor.ONE);
-                rect(matrix,x,barTop-bar*2.2,barRight,barTop,(GLOW&0xffffff),fade(0xff000000|GLOW,a*.42f));
-                RenderSystem.defaultBlendFunc();
-                double edge=Math.min(bar*.45,1.2/k);
-                rect(matrix,x,barTop,barRight,barTop+edge,fade(BAR_TOP,a),fade(BAR_TOP,a));
-                rect(matrix,x,barTop+edge,barRight,top+bh,fade(BAR,a),fade(BAR,a));
-            }
             double size=(SMALL_TEXT+(BIG_TEXT-SMALL_TEXT)*big)*h,pad=(SMALL_PAD+(BIG_PAD-SMALL_PAD)*big)*h;
-            GachaFont.text(b.entry().name,(float)(x+pad),(float)(top+(bh-bar)/2),(float)size,GachaFont.Weight.MEDIUM)
-                .color(0xffffffff).alpha(a).shadow(0x8c000000,.7f,0,(float)(size*.05)).draw(d);
+            if(!leaving){
+                rect(matrix,x,top,x+bw,top+bh,fade(BOX,a),fade(BOX,a));
+                if(left>0){
+                    // a soft sky-blue light over the bar, added, then the bar itself (lighter along its top edge)
+                    RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA,GlStateManager.DstFactor.ONE);
+                    rect(matrix,x,barTop-bar*2.2,barRight,barTop,(GLOW&0xffffff),fade(0xff000000|GLOW,a*.42f));
+                    RenderSystem.defaultBlendFunc();
+                    double edge=Math.min(bar*.45,1.2/k);
+                    rect(matrix,x,barTop,barRight,barTop+edge,fade(BAR_TOP,a),fade(BAR_TOP,a));
+                    rect(matrix,x,barTop+edge,barRight,top+bh,fade(BAR,a),fade(BAR,a));
+                }
+                GachaFont.text(b.entry().name,(float)(x+pad),(float)(top+(bh-bar)/2),(float)size,GachaFont.Weight.MEDIUM)
+                    .color(0xffffffff).alpha(a).shadow(0x8c000000,.7f,0,(float)(size*.05)).draw(d);
+            }else{
+                // finished: it drains like an hourglass's upper bulb, down through a funnel in its middle
+                double q=b.drain();
+                drained(matrix,x,top,bw,bh,q,top,top+bh,BOX,k);
+                if(left>0)drained(matrix,x,top,bw,bh,q,barTop,top+bh,BAR,k,barRight);
+                rim(matrix,x,top,bw,bh,q,k);
+                float fadeText=(float)(1-CooldownList.smooth(q/.45));
+                if(fadeText>.01f)GachaFont.text(b.entry().name,(float)(x+pad),(float)(top+(bh-bar)/2+bh*.25*q),(float)size,GachaFont.Weight.MEDIUM)
+                    .color(0xffffffff).alpha(fadeText).shadow(0x8c000000,.7f,0,(float)(size*.05)).draw(d);
+            }
             if(clip)RenderSystem.disableScissor();
         }
+        // the finished boxes' sand pours down out of their necks, over the boxes below
+        for(var b:boxes)if(b.entry().leaving())pour(d,b,now);
         RenderSystem.enableDepthTest();RenderSystem.enableCull();RenderSystem.defaultBlendFunc();RenderSystem.disableBlend();RenderSystem.setShaderColor(1,1,1,1);
+    }
+    /** The part of a box ({@code x}, {@code boxTop}, {@code bw} by {@code bh}) still full at {@code q} and between {@code y0} and {@code y1}: column by column under its sand's surface. */
+    private static void drained(Matrix4f m,double x,double boxTop,double bw,double bh,double q,double y0,double y1,int color,double k){drained(m,x,boxTop,bw,bh,q,y0,y1,color,k,x+bw);}
+    private static void drained(Matrix4f m,double x,double boxTop,double bw,double bh,double q,double y0,double y1,int color,double k,double right){
+        if(right<=x||y1<=y0)return;
+        int cols=Math.max(12,(int)Math.ceil(bw*k/2.5));
+        var buf=Tessellator.getInstance().getBuffer();buf.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);
+        int r=color>>16&255,g=color>>8&255,bl=color&255,al=color>>>24;boolean any=false;
+        for(int c=0;c<cols;c++){
+            double xa=x+bw*c/cols,xb=Math.min(right,x+bw*(c+1)/cols);if(xb<=xa)break;
+            double sa=Math.max(y0,boxTop+bh*CooldownList.surface(q,2*(xa-x)/bw-1)),sb=Math.max(y0,boxTop+bh*CooldownList.surface(q,2*(xb-x)/bw-1));
+            if(sa>=y1&&sb>=y1)continue;
+            sa=Math.min(sa,y1);sb=Math.min(sb,y1);any=true;
+            buf.vertex(m,(float)xa,(float)sa,0).color(r,g,bl,al).next();buf.vertex(m,(float)xa,(float)y1,0).color(r,g,bl,al).next();
+            buf.vertex(m,(float)xb,(float)y1,0).color(r,g,bl,al).next();buf.vertex(m,(float)xb,(float)sb,0).color(r,g,bl,al).next();
+        }
+        var built=buf.end();if(any)BufferRenderer.drawWithGlobalProgram(built);
+    }
+    /** The light along a draining box's sand surface. */
+    private static void rim(Matrix4f m,double x,double top,double bw,double bh,double q,double k){
+        if(q<=0||q>=1)return;
+        int cols=Math.max(12,(int)Math.ceil(bw*k/2.5));double thick=Math.max(1/k,bh*.06);
+        var buf=Tessellator.getInstance().getBuffer();buf.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);
+        boolean any=false;double bottom=top+bh;
+        for(int c=0;c<cols;c++){
+            double xa=x+bw*c/cols,xb=x+bw*(c+1)/cols;
+            double sa=top+bh*CooldownList.surface(q,2.0*c/cols-1),sb=top+bh*CooldownList.surface(q,2.0*(c+1)/cols-1);
+            if(sa>=bottom-thick&&sb>=bottom-thick)continue;
+            float fa=(float)CooldownList.clamp((bottom-sa)/(bh*.3)),fb=(float)CooldownList.clamp((bottom-sb)/(bh*.3));any=true;
+            int ca=fade(RIM,fa),cb=fade(RIM,fb);
+            buf.vertex(m,(float)xa,(float)sa,0).color(ca>>16&255,ca>>8&255,ca&255,ca>>>24).next();buf.vertex(m,(float)xa,(float)Math.min(bottom,sa+thick),0).color(ca>>16&255,ca>>8&255,ca&255,0).next();
+            buf.vertex(m,(float)xb,(float)Math.min(bottom,sb+thick),0).color(cb>>16&255,cb>>8&255,cb&255,0).next();buf.vertex(m,(float)xb,(float)sb,0).color(cb>>16&255,cb>>8&255,cb&255,cb>>>24).next();
+        }
+        var built=buf.end();if(any)BufferRenderer.drawWithGlobalProgram(built);
+    }
+    /** A finished box's sand pouring out of its neck (the middle of its bottom edge): a thin stream while it runs, and grains falling and fading. */
+    private static void pour(DrawContext d,CooldownList.Box b,double now){
+        double since=b.entry().since(now);if(since<0||since>=CooldownList.LEAVE)return;
+        double bh=b.height(),neckX=b.x()+b.width()/2,neckY=b.y()+bh*b.presence();
+        var m=d.getMatrices().peek().getPositionMatrix();
+        var buf=dev.sangwoo.celestialfall.client.gacha.GachaArt.begin(d,false);
+        float px=dev.sangwoo.celestialfall.client.ui.SkyUi.px();
+        double stream=CooldownList.stream(since);
+        if(stream>.01)dev.sangwoo.celestialfall.client.gacha.GachaArt.line(buf,m,(float)neckX,(float)neckY,(float)neckX,(float)(neckY+bh*.9),Math.max(px,(float)(bh*.05)),
+            fade(GRAIN,(float)(.85*stream)),fade(GRAIN_DEEP,0));
+        for(int i=0;i<CooldownList.GRAINS;i++){
+            double[] g=CooldownList.grain(i,since);if(g[2]<=.01)continue;
+            float r=(float)Math.max(px*.75,bh*.05*(.7+.6*CooldownList.hash(i*3+3)));
+            dev.sangwoo.celestialfall.client.gacha.GachaArt.fill(buf,m,dev.sangwoo.celestialfall.client.gacha.GachaArt.circle((float)(neckX+g[0]*bh),(float)(neckY+g[1]*bh),r,6),
+                fade(i%3==0?GRAIN_DEEP:GRAIN,(float)g[2]));
+        }
+        dev.sangwoo.celestialfall.client.gacha.GachaArt.end(buf);
     }
     /** The list's measures for this screen, widened so every skill's name fits its box. */
     private static CooldownList.Metrics metrics(int w,int h){

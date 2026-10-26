@@ -21,11 +21,14 @@ import java.util.List;
  * off to the right and Tab again slides it back ({@link PlayerPanelMotion}). Your own row comes first and is lit; each
  * row has the player's face in its left cell. While it shows, the status effect icons sit just left of it. It is part
  * of the HUD, so it stays (dimmed) behind the pause menu and other screens like the hotbar does, and goes with F1 and
- * F3. Only on the Botand map; elsewhere Minecraft's list is left alone.
+ * F3. Only on the Botand map; elsewhere Minecraft's list is left alone. 2.73.0 (user request: "플레이창 UI는 사이즈도
+ * 줄이고 UI를 더 하늘색에 가깝게 바꿔주고 디자인도 전체적으로 갈아엎어서 리메이크 해줘 모래시계와 관련 있게"): smaller (about
+ * three quarters of its size), light sky-blue glass instead of the navy, an hourglass running in the header and a small
+ * one in every row (HourglassUi); its slide is the same.
  */
 public final class PlayerPanel {
-    /** The panel's measures, as shares of the screen's height. */
-    static final double MARGIN=.024,WIDTH=.4,HEADER=.078,ROW=.064,GAP=.008,TITLE=.04,NAME=.031,FACE=.04,TALL=.62;
+    /** The panel's measures, as shares of the screen's height (2.73.0: smaller; until 2.72.0 .024, .4, .078, .064, .008, .04, .031, .04). */
+    static final double MARGIN=.022,WIDTH=.31,HEADER=.062,ROW=.05,GAP=.007,TITLE=.031,NAME=.026,FACE=.034,TALL=.62;
     private static final PlayerPanelMotion MOTION=new PlayerPanelMotion();
     private static long ticks;
     /** Whether Tab was down at the last tick. */
@@ -109,13 +112,13 @@ public final class PlayerPanel {
         int boxes=1+l.rows()+(l.more()?1:0);
         // each box slides out past the screen's right edge
         double away=w-l.x()+4;
-        float r=(float)Math.max(2,l.row()*.14);
+        float r=(float)Math.max(2,l.row()*.24);
         for(int i=0;i<boxes;i++){
             double out=PlayerPanelMotion.box(progress,i,boxes);
             if(out>=1)continue;
             float a=(float)(1-Math.max(0,(out-.7)/.3));
             float x=(float)(l.x()+away*out);
-            if(i==0)SkyUi.header(d,x,(float)l.y(),(float)l.width(),(float)l.header(),r,a,now,"플레이어",(float)(TITLE*h));
+            if(i==0)HourglassUi.header(d,x,(float)l.y(),(float)l.width(),(float)l.header(),(float)l.header()*.3f,a,now,"플레이어",(float)(TITLE*h));
             else if(i<=l.rows())row(d,players.get(i-1),i==1,x,(float)l.rowTop(i-1),(float)l.width(),(float)l.row(),r,a,h);
             else more(d,players.size()-l.rows(),x,(float)l.rowTop(i-1),(float)l.width(),(float)l.row(),r,a,h);
         }
@@ -124,28 +127,34 @@ public final class PlayerPanel {
     private static void row(DrawContext d,PlayerListEntry e,boolean me,float x,float y,float w,float rh,float r,float a,int h){
         var m=d.getMatrices().peek().getPositionMatrix();
         boolean spectator=e.getGameMode()==GameMode.SPECTATOR;
-        float lit=me?.55f:0,cell=rh;
-        var b=GachaArt.begin(d,false);
-        SkyUi.panel(b,m,x,y,w,rh,r,lit,a);
-        // the divider after the face cell
-        GachaArt.line(b,m,x+cell,y+rh*.2f,x+cell,y+rh*.8f,Math.max(SkyUi.px(),.9f),GachaArt.fade(SkyUi.ACCENT,a*.85f));
-        GachaArt.end(b);
-        if(me){b=GachaArt.begin(d,true);SkyUi.halo(b,m,x,y,w,rh,r,rh*.35f,.28f*a);GachaArt.end(b);}
-        // the face (and hat layer), placed at the row's own fraction of a pixel so it slides with it
+        float cell=rh,dim=spectator?.7f:1;
         int face=Math.max(4,(int)Math.round(FACE*h));
-        d.getMatrices().push();d.getMatrices().translate(x+(cell-face)/2,y+(rh-face)/2,0);
+        float fx=x+(cell-face)/2,fy=y+(rh-face)/2,pad=Math.max(SkyUi.px(),face*.1f);
+        var b=GachaArt.begin(d,false);
+        HourglassUi.glass(b,m,x,y,w,rh,r,me?1:0,a*dim);
+        // the face's frame, a deeper blue
+        float[] frame=SkyUi.rounded(fx-pad,fy-pad,face+2*pad,face+2*pad,pad*1.3f);
+        GachaArt.smooth(b,m,frame,GachaArt.fade(0xff2b80c6,a*dim),GachaArt.fade(0xff1b5c9c,a*dim));
+        GachaArt.stroke(b,m,frame,Math.max(SkyUi.px(),.6f),GachaArt.fade(HourglassUi.EDGE,a*.85f*dim));
+        // a small hourglass between the face and the name
+        HourglassUi.glyph(b,m,x+cell+rh*.16f,y+rh/2,rh*.56f,a*dim);
+        GachaArt.end(b);
+        if(me){b=GachaArt.begin(d,true);GachaArt.glow(b,m,SkyUi.rounded(x,y,w,rh,r),rh*.4f,HourglassUi.GLOW,.34f*a);GachaArt.end(b);}
+        // the face (and hat layer), placed at the row's own fraction of a pixel so it slides with it
+        d.getMatrices().push();d.getMatrices().translate(fx,fy,0);
         RenderSystem.enableBlend();d.setShaderColor(1,1,1,a*(spectator?.6f:1));
         PlayerSkinDrawer.draw(d,e.getSkinTexture(),0,0,face);
         d.setShaderColor(1,1,1,1);d.getMatrices().pop();
         float size=(float)(NAME*h);
-        var t=GachaFont.text(e.getProfile().getName(),x+cell+rh*.38f,y+rh/2,size,GachaFont.Weight.BOLD)
-            .color(me?SkyUi.INK_LIT:spectator?SkyUi.INK_DIM:SkyUi.INK).alpha(a).shadow(0x80000000,.5f,0,size*.06f);
-        if(me)t.glow(0xff3fb8ff,size*.4f,.45f);
+        var t=GachaFont.text(e.getProfile().getName(),x+cell+rh*.42f,y+rh/2,size,GachaFont.Weight.BOLD)
+            .color(spectator?HourglassUi.INK_DIM:HourglassUi.INK).alpha(a*dim).shadow(HourglassUi.SHADOW,.6f,0,size*.08f);
+        if(me)t.glow(HourglassUi.GLOW,size*.4f,.45f);
         t.draw(d);
     }
     private static void more(DrawContext d,int count,float x,float y,float w,float rh,float r,float a,int h){
         var m=d.getMatrices().peek().getPositionMatrix();
-        var b=GachaArt.begin(d,false);SkyUi.panel(b,m,x,y,w,rh,r,0,a*.85f);GachaArt.end(b);
-        GachaFont.text("외 "+count+"명",x+w/2,y+rh/2,(float)(NAME*h),GachaFont.Weight.BOLD).align(.5f).color(SkyUi.INK_DIM).alpha(a).draw(d);
+        var b=GachaArt.begin(d,false);HourglassUi.glass(b,m,x,y,w,rh,r,0,a*.85f);GachaArt.end(b);
+        float size=(float)(NAME*h);
+        GachaFont.text("외 "+count+"명",x+w/2,y+rh/2,size,GachaFont.Weight.BOLD).align(.5f).color(HourglassUi.INK_DIM).alpha(a).shadow(HourglassUi.SHADOW,.6f,0,size*.08f).draw(d);
     }
 }

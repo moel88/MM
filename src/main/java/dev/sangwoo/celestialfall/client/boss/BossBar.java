@@ -70,10 +70,11 @@ public final class BossBar {
     /**
      * Where it lies: in the band just above the hotbar where a player's hearts and experience would be (the map's own
      * HUD has none there), below the chat's last line (40 above the bottom) and above the hotbar (22), as wide as the
-     * screen gives beside the key hints at the bottom left (to x 156, BotandCamera), 110 to 300 wide.
+     * screen gives beside a margin of 156 at either side, 110 to 300 wide (the key hints that stood there at the bottom
+     * left are gone since 2.73.0; the bar keeps its width).
      */
-    static float width(int w){return (float)Math.max(BAR_MIN,Math.min(BAR_MAX,Math.min(w*.42,w-2*(HINTS_RIGHT+8))));}
-    static final float BAR_MIN=110,BAR_MAX=300,HINTS_RIGHT=156,BAR_TOP=29.6f,BAR_HEIGHT=5,BACK=1.2f,TITLE_BASE=32,TITLE_SIZE=8.5f;
+    static float width(int w){return (float)Math.max(BAR_MIN,Math.min(BAR_MAX,Math.min(w*.42,w-2*(SIDE+8))));}
+    static final float BAR_MIN=110,BAR_MAX=300,SIDE=156,BAR_TOP=29.6f,BAR_HEIGHT=5,BACK=1.2f,TITLE_BASE=32,TITLE_SIZE=8.5f;
     /** How much of the bar shows now (0 to 1): the HUD's armour row steps up over it while it does. */
     public static float shown(){return alpha;}
     private static void draw(DrawContext d,String title,double now){

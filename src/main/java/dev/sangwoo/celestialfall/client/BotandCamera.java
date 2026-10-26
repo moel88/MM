@@ -10,7 +10,6 @@ import net.minecraft.client.input.Input;
 import net.minecraft.client.option.*;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.*;
 import net.minecraft.world.RaycastContext;
@@ -175,16 +174,16 @@ public final class BotandCamera {
         }
         return fraction;
     }
+    /**
+     * The shift lock's crosshair. The key hints that stood at the bottom left ("SHIFT 자유 시점", "CTRL 걷기") are gone
+     * (2.73.0, user request: "왼쪽 ui아래 뜨는 쉬프트 자유 시점 컨트롤 걷기 이거 UI를 아예 삭제해주셈").
+     */
     private static void hud(DrawContext draw,float delta) {
         var mc=MinecraftClient.getInstance();if(!enabled()||mc.options.hudHidden||CinematicDirector.isActive()||mc.currentScreen!=null)return;
-        int y=draw.getScaledWindowHeight()-35;
         if(STATE.shiftLock&&!STATE.firstPerson()) {
             int x=draw.getScaledWindowWidth()/2,cy=draw.getScaledWindowHeight()/2;
             draw.fill(x-2,cy-6,x+2,cy+6,0xaa111827);draw.fill(x-6,cy-2,x+6,cy+2,0xaa111827);
             draw.fill(x-1,cy-5,x+1,cy+5,0xffeee9ff);draw.fill(x-5,cy-1,x+5,cy+1,0xffeee9ff);
         }
-        draw.fill(8,y-3,156,y+25,0xa0121925);
-        draw.drawTextWithShadow(mc.textRenderer,Text.translatable(STATE.shiftLock?"hud.botand.lock_on":"hud.botand.lock_off"),14,y,STATE.shiftLock?0xffb5a2ff:0xffaebaca);
-        draw.drawTextWithShadow(mc.textRenderer,Text.translatable(STATE.run?"hud.botand.run_on":"hud.botand.run_off"),14,y+12,STATE.run?0xff91e5cd:0xffaebaca);
     }
 }
