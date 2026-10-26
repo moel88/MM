@@ -20,7 +20,7 @@ time is stopped: how far it is and whether it stands stopped or walks on (out of
 MODE boss with a SUMMON shot's boss.csv (ACTOR -, 2.69.0) shows Kujo Jotaro: neutral or angry, what he does (his own
 moves, or how he answers the player's: a guard, a dash, a blow first), whom he goes after, his health, the player's
 (and the second player's, MATE) health and the boxes he left.
-MODE arrow with a SUMMON shot's stand.csv (ACTOR -, 2.70.0) shows the stand arrow: raised, driven in, taken into the
+MODE arrow with a SUMMON shot's stand.csv (ACTOR -, 2.70.0; ten seconds since 2.71.0) shows the stand arrow: raised, driven in, taken into the
 body, then what it chose (the stand awakened, or the death: on the knees, fallen, dead) by the stab's own clock, the
 player's stand (the server's) and how many arrows are in their hand.
 MODE stagger with a SUMMON shot's stand.csv (ACTOR -, 2.68.0) shows the basic attack's stagger: the training dummy's
@@ -451,8 +451,9 @@ def boss_line(t):
 
 STANDS = {'star_platinum': '스타플래티나', 'kageno': '카게노', 'none': '없음'}
 def arrow_line(t):
-    """The stand arrow (2.70.0): its part by the stab's own clock (ArrowStabPose: raised, driven in at 1.1 s, taken into
-    the body, its choice at 2.2 s), what it chose, the player's stand and the arrows in their hand."""
+    """The stand arrow (2.70.0; ten seconds since 2.71.0): its part by the stab's own clock (ArrowStabPose: looked at,
+    doubted, the deep breath, raised to the sky, aimed and trembling, driven in at 5.4 s, the gasp, down on the knees,
+    taken into the body, still, its choice at 9.0 s), what it chose, the player's stand and the arrows in their hand."""
     if not rush: return None, None
     i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
     if i < 0: return None, None
@@ -461,16 +462,17 @@ def arrow_line(t):
     if r.get('arrow_age'):
         a, fate = float(r['arrow_age']), r.get('arrow_fate')
         if r.get('arrow_cut') == '1': parts.append('중간에 끊김 (화살은 그대로)')
-        elif fate == '0' or a < 2.2:
-            parts.append('화살을 들어 올림' if a < .62 else '가슴을 겨눔' if a < .96 else '가슴에 꽂음' if a < 1.24 else '화살이 몸속으로 들어감')
+        elif fate == '0' or a < 9.0:
+            stages = [(1.75, '화살을 들어 바라봄'), (2.6, '망설임'), (3.1, '숨을 깊이 들이쉼'), (4.35, '하늘로 치켜듦'), (5.18, '가슴을 겨눔 · 떨림'),
+                      (5.6, '가슴에 꽂음'), (7.0, '헐떡임'), (7.45, '무릎이 꺾임'), (8.82, '화살이 몸속으로 · 심장 박동'), (99, '정적')]
+            parts.append(next(name for until, name in stages if a < until))
             color = (255, 225, 140)
         elif fate == '1':
-            parts.append('선택받음 · 각성'); color = (200, 180, 255)
+            parts.append('선택받음 · 각성' + (' · 일어섬' if a > 10.2 else '')); color = (200, 180, 255)
         else:
-            fallen = float(r.get('arrow_fallen') or 0)
-            parts.append('선택받지 못함 · ' + ('무릎이 꺾임' if fallen < .05 and a < 3.0 else '쓰러짐' if a < 3.3 else '사망'))
+            parts.append('선택받지 못함 · ' + ('경련' if a < 9.75 else '쓰러짐' if a < 10.3 else '사망'))
             color = (255, 140, 140)
-        parts.append(f'찌른 뒤 {a:.2f}초')
+        parts.append(f'사용 후 {a:.1f}초')
     if r.get('server_stand') is not None and r.get('server_stand') != '': parts.append('스탠드 ' + STANDS.get(r['server_stand'], r['server_stand']))
     if r.get('arrows') not in (None, ''): parts.append(f'화살 {r["arrows"]}개')
     return ' · '.join(parts), color

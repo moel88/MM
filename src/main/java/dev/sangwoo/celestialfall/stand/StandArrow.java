@@ -141,9 +141,14 @@ public final class StandArrow {
     }
     private static void kill(ServerPlayerEntity p){
         var source=new DamageSource(p.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(DAMAGE));
-        p.damage(source,Float.MAX_VALUE);
+        // without the game's cry of death (2.71.0: the stab's own sounds end it, StandArrowSilentMixin)
+        DYING.set(p);
+        try{p.damage(source,Float.MAX_VALUE);}finally{DYING.remove();}
         CelestialFall.LOGGER.info("Stand arrow: {} {}",p.getEntityName(),p.isAlive()?"survived its death (?)":"died");
     }
+    private static final ThreadLocal<ServerPlayerEntity> DYING=new ThreadLocal<>();
+    /** Whether {@code e} is being killed by the arrow this moment (its cry of death held back). */
+    public static boolean dying(Object e){return e!=null&&DYING.get()==e;}
     /** Leaving: cut short before the choice (nothing happens); after a death was chosen, they die as they leave. */
     private static void left(ServerPlayerEntity p){
         var s=STABS.remove(p.getUuid());if(s==null)return;

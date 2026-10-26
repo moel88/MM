@@ -190,6 +190,16 @@ public final class StandArrowClient {
         float t=s.age(0);
         return t>=0&&!(s.fate==Fate.AWAKEN&&t>=ArrowStabPose.FREE)&&t<ArrowStabPose.DEATH+2;
     }
+    /**
+     * Whether {@code e} is dying of an arrow that rejected them (from just before the server's death): the game's cries
+     * (the blow's and the death's) are held back for them (StandArrowSilentClientMixin, RushHurtSoundMixin), the
+     * stab's own sounds ending it.
+     */
+    public static boolean silent(LivingEntity e){
+        if(!(e instanceof PlayerEntity p))return false;
+        var s=STABS.get(p.getUuid());
+        return s!=null&&s.entity==p.getId()&&s.fate==Fate.DIE&&!s.cutShort()&&s.age(0)>ArrowStabPose.DEATH-1;
+    }
     /** Whether {@code e} lies dead where an arrow that rejected them felled them (their body is not turned on its side as it dies). */
     public static boolean lying(LivingEntity e){
         if(!(e instanceof PlayerEntity p)||e.deathTime<=0)return false;

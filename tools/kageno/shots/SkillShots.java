@@ -301,7 +301,7 @@ public final class SkillShots implements ClientModInitializer {
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
-        if("UI".equals(current)||mapShot())logInterface();
+        if("UI".equals(current)||mapShot()||"SUMMON".equals(current)&&"none".equals(opts.get("stand")))logInterface();
         if(mapShot()&&mc.player!=null&&mc.world!=null)logMeteors();
         if(AUDIO&&phase==4)tickRows.append(String.format(Locale.ROOT,"%.3f,%d%n",clock()-mc.getTickDelta(),System.nanoTime()));
         // the UI shot may leave the world ("나가기"): nothing below has a player then
@@ -914,7 +914,7 @@ public final class SkillShots implements ClientModInitializer {
                             }else if(age>=at+120){tried.add(id);log.append("  try ").append(k).append(" gave up at ").append(age).append('\n');}
                         }
                         continue;}
-                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,

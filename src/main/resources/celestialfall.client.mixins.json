@@ -27,6 +27,7 @@
     "KagenoCullingMixin",
     "StandFovMixin",
     "RushHurtSoundMixin",
+    "StandArrowSilentClientMixin",
     "KagenoShadowMixin",
     "KagenoOutlineMixin",
     "KagenoOutlineColorMixin",

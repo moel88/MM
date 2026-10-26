@@ -164,7 +164,7 @@ public final class MpClient implements ClientModInitializer {
         "790 BOSSHERE","810 HITBOSS","825 BOSSDMG2000","835 FLEE","1010 RETURN",
         "1080 END"};
     /**
-     * The stand arrow (2.70.0), on its own (MP_ONLY=arrow): the caster starts with no stand and two arrows in its main
+     * The stand arrow (2.70.0; ten seconds since 2.71.0), on its own (MP_ONLY=arrow): the caster starts with no stand and two arrows in its main
      * hand; the server is told what the next arrow will do (the file OUT/rig, MpServer: Star Platinum, then the death).
      * The first stab (R) awakens Star Platinum, the caster trying to walk meanwhile (W, held by it); the arrow used again
      * with a stand ("USE": the item's use sent as R sends it, since a Star Platinum user's R is its heavy punch) is
@@ -175,9 +175,9 @@ public final class MpClient implements ClientModInitializer {
      * its hand, its death and any move while held (there should be none).
      */
     private static final String[] ARROW_SCRIPT={
-        "5 NOSTAND","10 ARROWS","20 RIGSTAR","30 R","40 W+","60 W-",
-        "130 USE","160 NOSTAND","180 RIGDIE","190 R","215 W+","235 W-",
-        "300 RESPAWN","360 END"};
+        "5 NOSTAND","10 ARROWS","20 RIGSTAR","30 R","60 W+","100 W-",
+        "270 USE","300 NOSTAND","320 RIGDIE","330 R","400 W+","440 W-",
+        "620 RESPAWN","700 END"};
     private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -242,7 +242,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?900:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }

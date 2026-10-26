@@ -24,7 +24,7 @@ import static dev.sangwoo.celestialfall.client.stand.StandPunchFx.*;
  * <p>
  * Looked at, raised to the sky and aimed, the arrow's golden head glints and motes of light circle it. Driven in, it
  * leaves a streak of light; as it goes in, a burst at the chest, a ring round the arrow and one running out round the
- * body, sparks thrown out. Each knee going down throws up a little dust. While it is drawn into the body on the knees,
+ * body, sparks thrown out. Each knee going down raises a little dust, low over the ground. While it is drawn into the body on the knees,
  * light leaks out of the wound in rays, motes of light are drawn into it, and a ring runs out round the body with every
  * beat of the heart, the wound and the arrow glowing brighter and brighter; as everything goes still the rays are drawn
  * back in. Chosen: a burst of gold and violet, a pillar of light from the feet, rings running out over the ground and
@@ -252,10 +252,16 @@ public final class StandArrowFx {
         var world=MinecraftClient.getInstance().world;if(world==null)return;
         List<Vec3d> smoke=new ArrayList<>(),dust=new ArrayList<>();List<float[]> smokeCells=new ArrayList<>(),dustCells=new ArrayList<>();
         for(var s:FRAME){
-            // each knee going down onto the ground (where it rests, kneeling)
+            // each knee going down onto the ground (where it rests, kneeling): a little dust, low over the ground
             for(int i=0;i<2;i++){
-                float at=i==0?ArrowStabPose.KNEE:ArrowStabPose.KNEES;
-                if(s.t>at-.02f&&s.t<at+1.1f)FxLib.dustRing(s.knees[i],s.t,at,.06,.5,7,.32,dust,dustCells,s.seed+17+i*7);
+                float at=i==0?ArrowStabPose.KNEE:ArrowStabPose.KNEES,big=i==0?1:.75f;
+                for(int k=0;k<5;k++){
+                    float since=s.t-at-.02f*(float)Ease.hash(s.seed+i*31+k),life=.45f+.2f*(float)Ease.hash(s.seed+i*37+k);
+                    if(since<0||since>=life)continue;float u=since/life;
+                    double az=(k+Ease.hash(s.seed+i*41+k)*.7)*Math.PI*2/5,rad=.05+.2*Ease.out(u,0,.6f);
+                    dust.add(s.knees[i].add(Math.cos(az)*rad,.03+.1*u,Math.sin(az)*rad));
+                    dustCells.add(new float[]{(float)(big*(.05+.06*Ease.out(u,0,.5f))),.55f*Ease.smooth(since,0,.03f)*(1-Ease.smooth(u,.4f,1)),0,u,s.seed+i*43+k*7});
+                }
             }
             if(s.fate()!=Fate.DIE)continue;
             float u=s.since();if(u<0||u>3)continue;

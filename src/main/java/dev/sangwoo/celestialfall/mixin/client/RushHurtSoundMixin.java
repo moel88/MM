@@ -18,6 +18,7 @@ public abstract class RushHurtSoundMixin {
     @Redirect(method="onDamaged",at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;playSound(Lnet/minecraft/sound/SoundEvent;FF)V"))
     private void botand$quietRushBlow(LivingEntity self,SoundEvent sound,float volume,float pitch){
         // (the beatdown's first, so that it counts its first blow even if a rush holds that one back)
-        if(!dev.sangwoo.celestialfall.client.stand.StandBeatdown.quietHurt(self)&!StandRush.quietHurt(self))self.playSound(sound,volume,pitch);
+        // (2.71.0: nor one the stand arrow kills, whose stab's own sounds end it)
+        if(!dev.sangwoo.celestialfall.client.stand.StandBeatdown.quietHurt(self)&!StandRush.quietHurt(self)&&!dev.sangwoo.celestialfall.client.stand.StandArrowClient.silent(self))self.playSound(sound,volume,pitch);
     }
 }
