@@ -379,8 +379,9 @@ def stagger_line(t):
     k = int(r.get('dummy_strike') or 0)
     if 1 <= k <= 4: parts.append(f'더미 평타 {k}타')
     # the player's own Star Platinum punches (their combo's punch)
+    # (while it lasts: StarPlatinumRules.LENGTH, 10, 10, 17 and 23 ticks; the column keeps the last punch's age on)
     c = int(float(r.get('combo') or 0))
-    if 1 <= c <= 4 and r.get('punch_age'): parts.append(f'스타플래티나 평타 {c}타')
+    if 1 <= c <= 4 and r.get('punch_age') and float(r['punch_age']) <= (.5, .5, .85, 1.15)[c - 1]: parts.append(f'스타플래티나 평타 {c}타')
     base = max(float(x['speed_attr']) for _, x in rush if x.get('speed_attr'))
     sp = float(r['speed_attr']) if r.get('speed_attr') else base
     if r.get('player_staggered') == '1': parts.append(f'내가 경직 · 행동 불가 · 이동 속도 {100 * sp / base:.0f}%')

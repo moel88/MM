@@ -126,8 +126,10 @@ public final class MpClient implements ClientModInitializer {
      * and staggers the caster, cutting its M1 short); then Star Platinum out, its punches at full speed while the
      * watcher walks into them ("WALK+": 90% slower while staggered); then its bare fists (Star Platinum in) at full
      * speed. Then H with the watcher 25 blocks away (it walks on: not stopped) and again 15 blocks away (stopped: its
-     * walk held). Both log whether they are staggered as their clients know it, the watcher its tries, its strikes and
-     * how fast it walked while staggered and while free; the server both players' staggers, strikes, blows and speed.
+     * walk held), and a third time 2.5 blocks away, throwing Star Platinum's punches at the stopped watcher (their
+     * staggers kept until time moves again, StarPlatinumTimeStop.deferStagger). Both log whether they are staggered as
+     * their clients know it, the watcher its tries, its strikes and how fast it walked while staggered and while free;
+     * the server both players' staggers, strikes, blows and speed.
      */
     private static final String[] STAGGER_SCRIPT={
         "5 HOME","10 HEAL","30 M1+","70 M1-",
@@ -136,7 +138,8 @@ public final class MpClient implements ClientModInitializer {
         "420 Q","460 HOME","465 HEAL","470 M1+","520 M1-",
         "560 Q","600 DIST25","610 H","655 WALK+","690 WALK-",
         "780 DIST15","790 H","835 WALK+","870 WALK-",
-        "960 Q","1000 END"};
+        "950 HOME","960 H","1005 M1+","1040 M1-",
+        "1150 Q","1190 END"};
     private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
