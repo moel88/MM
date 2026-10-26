@@ -564,6 +564,8 @@ public final class ArrowStabPose {
         p.knee[i]=(float)Math.toDegrees(2*bend);
     }
 
+    /** Where the knees rest on the ground kneeling (model px: under the hips, on the ground's line), right and left. */
+    public static final Vector3f[] KNEELING_KNEES={new Vector3f(-1.9f,24,0),new Vector3f(1.9f,24,0)};
     /** Torso px to model px for the pose's torso (as MotionRig places it: its pivot at the neck, the hips at (shift, 12 + bob, lean)). */
     public static Vector3f toModel(MotionPose p,Vector3f torso){
         float[] b=p.joint[MotionPose.BODY];

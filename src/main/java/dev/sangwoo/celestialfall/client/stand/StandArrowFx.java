@@ -17,17 +17,20 @@ import org.joml.Vector3f;
 import static dev.sangwoo.celestialfall.client.stand.StandPunchFx.*;
 
 /**
- * The stand arrow's light (2.70.0), on the effect layer with the stand's punches (KagenoRenderer), in their way:
- * light that adds up and blooms, crisp bursts inked dark round their edges, smoke and dust on fixed planes, nothing
- * over the whole screen. Gold is the arrow's, violet the stand's, crimson death's.
+ * The stand arrow's light (2.70.0; on the ten-second stab since 2.71.0), on the effect layer with the stand's punches
+ * (KagenoRenderer), in their way: light that adds up and blooms, crisp bursts inked dark round their edges, smoke and
+ * dust on fixed planes, nothing over the whole screen (no cutscene: the player's camera and screen are theirs). Gold is
+ * the arrow's, violet the stand's, crimson death's.
  * <p>
- * Raised, the arrow's golden head glints and motes of light circle it. Driven in, it leaves a streak of light; as it
- * goes in, a burst at the chest, a ring round the arrow and one running out round the body, sparks thrown out. While it
- * is drawn into the body, light leaks out of the wound in rays, motes of light are drawn into it, and a ring runs out
- * round the body with every beat of the heart, the wound and the arrow glowing brighter and brighter. Chosen: a burst
- * of gold and violet, a pillar of light from the feet, rings running out over the ground and round the body, sparks
- * of both rising. Rejected: the wound's light turns crimson and gutters out with its rays falling in, black smoke rises
- * from the chest, and dust is thrown up where the body lands. Every effect is a function of the stab's clock.
+ * Looked at, raised to the sky and aimed, the arrow's golden head glints and motes of light circle it. Driven in, it
+ * leaves a streak of light; as it goes in, a burst at the chest, a ring round the arrow and one running out round the
+ * body, sparks thrown out. Each knee going down throws up a little dust. While it is drawn into the body on the knees,
+ * light leaks out of the wound in rays, motes of light are drawn into it, and a ring runs out round the body with every
+ * beat of the heart, the wound and the arrow glowing brighter and brighter; as everything goes still the rays are drawn
+ * back in. Chosen: a burst of gold and violet, a pillar of light from the feet, rings running out over the ground and
+ * round the body, sparks of both rising. Rejected: the wound's light turns crimson and gutters out with its rays falling
+ * in, black smoke rises from the chest, and dust is thrown up where the body lands. Every effect is a function of the
+ * stab's clock.
  */
 public final class StandArrowFx {
     /** Crimson for one the arrow rejects, and its dark. */
@@ -35,11 +38,12 @@ public final class StandArrowFx {
     /**
      * This frame's stabs near the camera: the stab, its clock, the body (as the stab poses it), where the arrow went or
      * will go in (the chest), which way it points into the body, the arrow (its tip, nock and head's base in the world,
-     * null once gone), its glow, the feet, which way the body faces, and the chest as the one rejected falls; and
+     * null once gone), its glow, the feet, which way the body faces, and the chest as the one rejected falls;
      * {@link #near}: 1 for a camera well away from the chest, down to 0 for one at it (the one stabbed seeing from their
-     * own eyes): the light that bursts from the chest would fill their screen, so it fades there (no screen effects).
+     * own eyes): the light that bursts from the chest would fill their screen, so it fades there (no screen effects);
+     * and where the knees come down on the ground (right, left: as they rest kneeling).
      */
-    record Shown(StandArrowClient.Stab stab,float t,ArrowStabPose.Frame frame,Vec3d chest,Vec3d in,Vec3d tip,Vec3d nock,Vec3d head,Vec3d prevTip,float glow,Vec3d feet,Vec3d way,int seed,float near){
+    record Shown(StandArrowClient.Stab stab,float t,ArrowStabPose.Frame frame,Vec3d chest,Vec3d in,Vec3d tip,Vec3d nock,Vec3d head,Vec3d prevTip,float glow,Vec3d feet,Vec3d way,int seed,float near,Vec3d[] knees){
         Fate fate(){return stab.fate;}
         /** Seconds since its choice showed (below 0 before). */
         float since(){return t-stab.shows();}
@@ -76,7 +80,10 @@ public final class StandArrowFx {
             }
             float yaw=net.minecraft.util.math.MathHelper.lerpAngleDegrees(tickDelta,p.prevBodyYaw,p.bodyYaw);
             float near=Ease.smooth((float)camera.distanceTo(chest),.45f,1.3f);
-            FRAME.add(new Shown(s,t,f,chest,in,tip,nock,head,prevTip,f.glow(),p.getLerpedPos(tickDelta),way(yaw),(int)(s.start*37+s.user.getLeastSignificantBits()),near));
+            Vec3d feet=p.getLerpedPos(tickDelta);
+            Vec3d[] knees=new Vec3d[2];
+            for(int i=0;i<2;i++){Vec3d k=StandArrowClient.model(p,tickDelta,ArrowStabPose.KNEELING_KNEES[i]);knees[i]=new Vec3d(k.x,feet.y+.02,k.z);}
+            FRAME.add(new Shown(s,t,f,chest,in,tip,nock,head,prevTip,f.glow(),feet,way(yaw),(int)(s.start*37+s.user.getLeastSignificantBits()),near,knees));
         }
         return !FRAME.isEmpty();
     }
@@ -109,10 +116,10 @@ public final class StandArrowFx {
             else if(s.fate()==Fate.DIE)rejected(m,s);
         }
     }
-    /** Held up: its golden head glints and motes of light circle it. */
+    /** Looked at, raised and aimed: its golden head glints and motes of light circle it. */
     static void raised(EffectMesh m,Shown s){
         if(s.head==null||s.t>ArrowStabPose.HIT)return;
-        float g=s.glow*(1-Ease.smooth(s.t,.9f,1.05f))*s.near;if(g<.01f)return;
+        float g=s.glow*(1-Ease.smooth(s.t,ArrowStabPose.LOAD-.02f,ArrowStabPose.LOAD+.12f))*s.near;if(g<.01f)return;
         float tw=.65f+.35f*(float)Math.sin(s.t*11+s.seed);
         m.softDisc(s.head,.26,GOLD,.32f*g);m.softDisc(s.head,.09,WHITE,.4f*g*tw);
         star(m,s.head,.22*(.8+.4*tw),GOLD,.75f*g*tw);
@@ -130,7 +137,7 @@ public final class StandArrowFx {
     }
     /** Driven in: a streak of light behind its tip, brighter the faster it goes. */
     static void plunge(EffectMesh m,Shown s){
-        if(s.prevTip==null||s.t<.9f||s.t>ArrowStabPose.HIT+.02f)return;
+        if(s.prevTip==null||s.t<ArrowStabPose.LOAD||s.t>ArrowStabPose.HIT+.02f)return;
         double speed=s.tip.distanceTo(s.prevTip)/.04;if(speed<1.5)return;
         float a=(float)Math.min(1,(speed-1.5)/6)*s.near;if(a<.01f)return;
         m.softTaper(s.prevTip,s.tip,.02,.1,GOLD,.55f*a);m.needle(s.prevTip,s.tip,.035,.85,WHITE,.6f*a);
@@ -148,13 +155,14 @@ public final class StandArrowFx {
     }
     /**
      * Being drawn in: light leaking out of the wound in rays, motes drawn into it, a ring running out round the body
-     * with every beat of the heart, the wound and the arrow standing out of it glowing brighter and brighter.
+     * with every beat of the heart, the wound and the arrow standing out of it glowing brighter and brighter (on the
+     * knees); as everything goes still, the rays drawn back in.
      */
     static void drawnIn(EffectMesh m,Shown s){
         float t=s.t,end=Math.min(s.stab.shows(),ArrowStabPose.REVEAL+.05f);
         if(t<ArrowStabPose.HIT||t>s.stab.shows()+.3f)return;
         float rings=Ease.smooth(t,ArrowStabPose.HIT+.1f,ArrowStabPose.HIT+.35f)*(1-Ease.smooth(t,end,end+.25f)),on=rings*s.near;
-        float build=Ease.smooth(t,1.3f,2.15f);
+        float build=Ease.smooth(t,ArrowStabPose.KNEES-.3f,ArrowStabPose.STILL-.05f),hush=Ease.smooth(t,ArrowStabPose.STILL-.06f,ArrowStabPose.STILL+.06f);
         if(rings<=.01f)return;
         Vec3d out=s.in.negate();Vec3d[] q=square(out);
         // the wound
@@ -166,11 +174,11 @@ public final class StandArrowFx {
             double ang=Ease.hash(s.seed+k*13)*Math.PI*2,spread=.35+.6*Ease.hash(s.seed+k*17);
             Vec3d d=out.add(q[0].multiply(Math.cos(ang)*spread)).add(q[1].multiply(Math.sin(ang)*spread)).normalize();
             float flick=.55f+.45f*(float)Math.sin(t*(13+7*Ease.hash(s.seed+k*19))+k*2.1);
-            double len=(.25+.45*Ease.hash(s.seed+k*23))*(.5+.5*build+.35*pulse);
-            m.needle(s.chest.add(d.multiply(.04)),s.chest.add(d.multiply(len)),.05+.03*build,.15,k%3==0?WHITE:GOLD,.75f*on*flick*(.4f+.6f*build));
+            double len=(.25+.45*Ease.hash(s.seed+k*23))*(.5+.5*build+.35*pulse)*(1-.8*hush);
+            m.needle(s.chest.add(d.multiply(.04)),s.chest.add(d.multiply(len)),.05+.03*build,.15,k%3==0?WHITE:GOLD,.75f*on*flick*(.4f+.6f*build)*(1-.6f*hush));
         }
         // motes drawn into the wound
-        if(s.near>.5f){FxLib.converge(m,s.chest,1.25,16,t,1.3f,2.12f,GOLD,s.seed+5);FxLib.converge(m,s.chest,.9,10,t,1.55f,2.15f,GOLD,s.seed+9);}
+        if(s.near>.5f){FxLib.converge(m,s.chest,1.25,26,t,ArrowStabPose.KNEES,ArrowStabPose.STILL-.08f,GOLD,s.seed+5);FxLib.converge(m,s.chest,.9,16,t,ArrowStabPose.ABSORB-.4f,ArrowStabPose.STILL,GOLD,s.seed+9);}
         // the heart's beats: a ring running out round the body
         for(float b:ArrowStabPose.BEATS){
             float u=(t-b)/.4f;if(u<0||u>=1)continue;
@@ -244,6 +252,11 @@ public final class StandArrowFx {
         var world=MinecraftClient.getInstance().world;if(world==null)return;
         List<Vec3d> smoke=new ArrayList<>(),dust=new ArrayList<>();List<float[]> smokeCells=new ArrayList<>(),dustCells=new ArrayList<>();
         for(var s:FRAME){
+            // each knee going down onto the ground (where it rests, kneeling)
+            for(int i=0;i<2;i++){
+                float at=i==0?ArrowStabPose.KNEE:ArrowStabPose.KNEES;
+                if(s.t>at-.02f&&s.t<at+1.1f)FxLib.dustRing(s.knees[i],s.t,at,.06,.5,7,.32,dust,dustCells,s.seed+17+i*7);
+            }
             if(s.fate()!=Fate.DIE)continue;
             float u=s.since();if(u<0||u>3)continue;
             for(int k=0;k<9;k++){
@@ -272,7 +285,7 @@ public final class StandArrowFx {
             float b=fade(s.t,ArrowStabPose.HIT,.35f);if(b>0)f.light(s.chest,0xffe2a0,5,2.2f*b);
             if(s.t>ArrowStabPose.HIT&&s.t<s.stab.shows()+.2f){
                 float pulse=0;for(float beat:ArrowStabPose.BEATS)pulse+=ArrowStabPose.kick(s.t,beat,.12f);
-                f.light(s.chest,0xffd889,3.5,(.4f+.8f*Ease.smooth(s.t,1.3f,2.15f)+.6f*pulse)*(1-Ease.smooth(s.t,s.stab.shows(),s.stab.shows()+.2f)));
+                f.light(s.chest,0xffd889,3.5,(.4f+.8f*Ease.smooth(s.t,ArrowStabPose.KNEES-.3f,ArrowStabPose.STILL)+.6f*pulse)*(1-Ease.smooth(s.t,s.stab.shows(),s.stab.shows()+.2f)));
             }
             float u=s.since();
             if(s.fate()==Fate.AWAKEN&&u>=0&&u<1.2f)f.light(s.chest,0xb89cff,7,2.6f*fade(u,0,1.1f));

@@ -28,14 +28,11 @@ import org.joml.Vector3f;
  * the arrow drawn in their hands and chest (StandArrowFeature, and HeldItemRendererMixin from their own eyes), the
  * light (StandArrowFx), the sounds and, for the one stabbed, the words of what it chose (StandArrowHud) all follow it.
  * <p>
- * Its sounds: the stab's (the arrow lifted, the breath, the blow, the heart beating faster and the swell to its
- * choice) a tick into it, then, as the choice is heard, the awakening's or the rejection's (the knees and the body on
- * the ground in it, as ArrowStabPose has them fall from the choice); cut short, the stab's fades out. Loud for the one
- * stabbed and those near, fading out to CARRY blocks.
+ * Its sounds (StandArrowSounds, 2.71.0: recordings laid on its clock where the body does what they are the sound of)
+ * play from its clock here, the choice's from when it shows; cut short, they fade out. Loud for the one stabbed and
+ * those near, fading out to CARRY blocks.
  */
 public final class StandArrowClient {
-    /** The stab's sound starts a tick into it (the files are cut so). */
-    public static final int LEAD=1;
     static final double CARRY=40;
     static final float VOLUME=1;
     /** A stab as heard. */
@@ -45,7 +42,9 @@ public final class StandArrowClient {
         public Fate fate=Fate.UNKNOWN;public String outcome="";public float known=Float.NaN;
         /** When it was cut short (its clock), NaN if it was not. */
         public float cut=Float.NaN;
-        StandInhale.Sound sound,after;
+        /** Its sounds: the cues played (or let go), and those playing (StandArrowSounds). */
+        final java.util.BitSet played=new java.util.BitSet();
+        final java.util.List<StandArrowSounds.Playing> playing=new java.util.ArrayList<>();
         Stab(UUID user,int entity,long start,long serverAge,long received){this.user=user;this.entity=entity;this.start=start;this.serverAge=serverAge;this.received=received;}
         /** Seconds on its clock this frame. */
         public float age(float delta){return (serverAge+ticks-received+Math.max(0,Math.min(1,delta)))/20f;}
@@ -74,7 +73,7 @@ public final class StandArrowClient {
     }
     static void clear(){
         var mc=MinecraftClient.getInstance();
-        for(var s:STABS.values())for(var sound:new StandInhale.Sound[]{s.sound,s.after})if(sound!=null&&!sound.isDone())mc.getSoundManager().stop(sound);
+        for(var s:STABS.values())StandArrowSounds.stop(mc,s);
         STABS.clear();world=null;
     }
     private static void event(MinecraftClient mc,UUID user,int entity,int type,long start,long now,String outcome){
@@ -82,26 +81,25 @@ public final class StandArrowClient {
         if(type!=StandArrow.START&&(s==null||s.start!=start))return;
         switch(type){
             case StandArrow.START->{
-                if(s!=null)for(var sound:new StandInhale.Sound[]{s.sound,s.after})if(sound!=null&&!sound.isDone())mc.getSoundManager().stop(sound);
+                if(s!=null)StandArrowSounds.stop(mc,s);
                 s=new Stab(user,entity,start,now-start,ticks);
                 STABS.put(user,s);
-                if(s.serverAge<=LEAD)s.sound=play(mc,user,"stand_arrow_stab",(int)(LEAD-s.serverAge));
+                StandArrowSounds.tick(mc,s,s.age(0),volume(mc,user));
             }
             case StandArrow.REVEALED->{
                 if(s.cutShort()||!Float.isNaN(s.known))return;
                 s.outcome=outcome;s.fate=StandArrowRules.dies(outcome)?Fate.DIE:Fate.AWAKEN;
-                // on this client's clock as the word comes (so nothing jumps), never before its choice shows
+                // on this client's clock as the word comes (so nothing jumps), never before its choice shows; its
+                // sounds go from then (heard early on this client's clock, one whose ticks fall behind the server's,
+                // they wait for the clock to reach the choice, as the body does)
                 s.known=Math.max(ArrowStabPose.REVEAL,s.age(0));
-                // the choice's sound, unless heard far too late to go with the body; heard early on this client's clock
-                // (one whose ticks fall behind the server's), it waits for the clock to reach the choice, as the body does
-                int wait=Math.max(0,Math.round((ArrowStabPose.REVEAL-s.age(0))*20));
-                if(s.known-ArrowStabPose.REVEAL<.6f)s.after=play(mc,user,s.fate==Fate.DIE?"stand_arrow_reject":"stand_arrow_awaken",wait);
+                StandArrowSounds.tick(mc,s,s.age(0),volume(mc,user));
                 if(mc.player!=null&&user.equals(mc.player.getUuid()))StandArrowHud.chosen(s);
             }
             case StandArrow.CUT->{
                 if(s.cutShort())return;
                 s.cut=s.age(0);
-                if(s.sound!=null)s.sound.fade();
+                StandArrowSounds.cut(s);
             }
             default->{}
         }
@@ -113,17 +111,12 @@ public final class StandArrowClient {
         double far=user==null||user==mc.player?0:user.getPos().distanceTo(mc.player.getPos());
         return (float)(CelestialFall.CONFIG.effectVolume*VOLUME*Math.max(0,1-far/CARRY));
     }
-    private static StandInhale.Sound play(MinecraftClient mc,UUID id,String name,int delay){
-        float volume=volume(mc,id);if(volume<=.01f)return null;
-        var sound=new StandInhale.Sound(CelestialFall.id(name),volume);
-        if(delay>0)mc.getSoundManager().play(sound,delay);else mc.getSoundManager().play(sound);
-        return sound;
-    }
     private static void tick(MinecraftClient mc){
         if(mc.world==null||!MapClient.enabled()){if(!STABS.isEmpty()||world!=null)clear();return;}
         if(world!=mc.world){clear();world=mc.world;}
         if(mc.isPaused())return;
         ticks++;
+        for(var s:STABS.values())StandArrowSounds.tick(mc,s,s.age(0),volume(mc,s.user));
         STABS.values().removeIf(s->{
             float t=s.age(0);
             if(s.cutShort())return t>s.cut+1;
@@ -209,9 +202,12 @@ public final class StandArrowClient {
      * as the player renderer draws the body (at their feet, turned to their body's yaw, the model 15/16 of its size).
      */
     public static Vec3d world(PlayerEntity p,float delta,MotionPose pose,Vector3f torso){
-        Vector3f m=ArrowStabPose.toModel(pose,torso);
-        float yaw=MathHelper.lerpAngleDegrees(delta,p.prevBodyYaw,p.bodyYaw);
         // the model's pixels to the body's blocks: y down from 1.501 blocks over the feet, x to the body's left, scaled
+        return model(p,delta,ArrowStabPose.toModel(pose,torso));
+    }
+    /** Where a point of {@code p}'s body in model px (from the neck, +y down, as the legs are posed) is in the world this frame. */
+    public static Vec3d model(PlayerEntity p,float delta,Vector3f m){
+        float yaw=MathHelper.lerpAngleDegrees(delta,p.prevBodyYaw,p.bodyYaw);
         Vector3f local=new Vector3f(-m.x/16f,1.501f-m.y/16f,m.z/16f).mul(.9375f);
         new Quaternionf().rotationY((180-yaw)*(float)Math.PI/180).transform(local);
         return p.getLerpedPos(delta).add(local.x,local.y,local.z);
