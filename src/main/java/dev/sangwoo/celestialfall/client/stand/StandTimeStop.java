@@ -293,12 +293,18 @@ public final class StandTimeStop {
 
     // ───────────────────────────── H ─────────────────────────────
 
-    /** H for Star Platinum's user: calls the time stop (the server decides whether it may). */
+    /**
+     * H for Star Platinum's user: calls the time stop (the server decides whether it may). Since 2.72.0 only for the
+     * awakened (ProgressClient.awakened; user request: "플레이어들은 기본 스타플래티나 H 시간 정지를 사용못해 H는 없는 키로
+     * 만들어놔 추후에 각성 퀘스트 넣으면 사용하게 할거야", "일단은 명령어 입력하면 H 쓸 수 있게 해놓자"): to anyone else H
+     * is no key at all.
+     */
     public static boolean key(long window,int key,int action,int modifiers){
         var mc=MinecraftClient.getInstance();if(key!=GLFW.GLFW_KEY_H||window!=mc.getWindow().getHandle())return false;
         if(action==GLFW.GLFW_RELEASE){if(!heldH)return false;heldH=false;return true;}
         if(heldH)return true;
-        if(action!=GLFW.GLFW_PRESS||mc.currentScreen!=null||!MapClient.enabled()||!StandManager.starPlatinum(mc.player))return false;
+        // (2.72.0: not awakened, H is no key at all: the press goes on wherever else it would)
+        if(action!=GLFW.GLFW_PRESS||mc.currentScreen!=null||!MapClient.enabled()||!StandManager.starPlatinum(mc.player)||!dev.sangwoo.celestialfall.client.ProgressClient.awakened)return false;
         heldH=true;
         if(StandAttack.mine(mc)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(StarPlatinumTimeStop.INPUT)){
             BotandCamera.prepareInteraction();

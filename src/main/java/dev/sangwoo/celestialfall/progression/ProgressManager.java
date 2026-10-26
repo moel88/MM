@@ -21,6 +21,10 @@ public final class ProgressManager {
         });
     }
     public static ProgressProfile profile(ServerPlayerEntity p){return ProgressState.get(p.getServer()).profile(p.getUuid());}
+    /** Whether this player is awakened (2.72.0): Star Platinum's time stop is theirs (ProgressState.awakened). */
+    public static boolean awakened(ServerPlayerEntity p){return ProgressState.get(p.getServer()).awakened(p.getUuid());}
+    /** Awakens this player or takes it back (an operator's command for now, the awakening quest later); their client is told. */
+    public static void awaken(ServerPlayerEntity p,boolean value){ProgressState.get(p.getServer()).awaken(p.getUuid(),value);sync(p);}
     public static void joined(ServerPlayerEntity p){
         applyHealth(p);dev.sangwoo.celestialfall.menu.MenuServer.observe(p);sync(p);
     }
@@ -57,6 +61,8 @@ public final class ProgressManager {
         var value=profile(p);var b=PacketByteBufs.create();
         b.writeVarInt(value.level());b.writeVarInt(value.rebirths());b.writeVarInt(value.transcendence());b.writeString(value.stand(),32);
         b.writeLong(value.money());b.writeVarInt(value.xp());
+        // (2.72.0: whether they are awakened, so their client knows whether H is a key for them)
+        b.writeBoolean(awakened(p));
         ServerPlayNetworking.send(p,STATE,b);
     }
 }

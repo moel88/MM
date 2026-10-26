@@ -29,6 +29,22 @@ class ProgressionTest {
         assertEquals(p,restored.profile(a));assertEquals(17,restored.profile(b).level());
         assertEquals(ProgressProfile.NEW,new ProgressState().profile(a));
     }
+    @Test void theAwakeningIsKeptApartAndSurvivesASave() {
+        // (2.72.0) Star Platinum's time stop is the awakened's: none awakened at first, an old save has none, the
+        // awakening survives a save and a new stand, and taking it back is saved too
+        var a=UUID.randomUUID();var b=UUID.randomUUID();var state=new ProgressState();
+        assertFalse(state.awakened(a));
+        assertFalse(ProgressState.read(new ProgressState().writeNbt(new NbtCompound())).awakened(a));
+        var old=new NbtCompound();old.putInt("Version",2);old.put("Players",new NbtList());assertFalse(ProgressState.read(old).awakened(a));
+        state.set(a,new ProgressProfile(10,0,0,"star_platinum"));state.awaken(a,true);
+        assertTrue(state.isDirty());
+        var restored=ProgressState.read(state.writeNbt(new NbtCompound()));
+        assertTrue(restored.awakened(a));assertFalse(restored.awakened(b));
+        restored.set(a,restored.profile(a).withStand("none"));assertTrue(restored.awakened(a),"a new stand keeps it");
+        restored.awaken(a,false);assertFalse(ProgressState.read(restored.writeNbt(new NbtCompound())).awakened(a));
+        // never in the profile's rows: an awakened player with no profile yet is saved as well
+        var lone=new ProgressState();lone.awaken(b,true);assertTrue(ProgressState.read(lone.writeNbt(new NbtCompound())).awakened(b));
+    }
     @Test void corruptCountersCannotCreateNegativeOrOverCapState() {
         var id=UUID.randomUUID();var nbt=new NbtCompound();var list=new NbtList();list.add(new NbtCompound());
         var row=new NbtCompound();row.putUuid("Id",id);row.putInt("Level",999);row.putInt("Rebirths",-2);row.putInt("Transcendence",Integer.MAX_VALUE);row.putString("Stand","not_a_stand");list.add(row);nbt.put("Players",list);

@@ -100,6 +100,9 @@ public final class StarPlatinumTimeStop {
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,player,handler,buf,response)->{
             if(buf.readableBytes()!=0)return;
             server.execute(()->{
+                // (2.72.0) the time stop is the awakened's (ProgressManager.awakened: an operator's command until the
+                // awakening quest); to anyone else H is no key at all (their client sends nothing either)
+                if(!dev.sangwoo.celestialfall.progression.ProgressManager.awakened(player))return;
                 var c=PRESSES.computeIfAbsent(player.getUuid(),k->new Presses());int second=server.getTicks()/20;
                 if(c.window!=second){c.window=second;c.count=0;}
                 if(++c.count>RATE)return;

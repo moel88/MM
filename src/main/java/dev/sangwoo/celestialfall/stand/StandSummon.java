@@ -12,7 +12,9 @@ import net.minecraft.util.Identifier;
  * 잡으면서 계속 나와있고"). Q on the user's client asks for it (stand_summon_v1, no payload) and the server decides: it keeps
  * the answer on the player as tracked data, so every client that sees the player sees the stand come out, stay beside its user
  * and go back (client/stand/StandPresence). The stand goes back by itself once its user cannot have it out: dead, asleep, a
- * spectator, off the map, or with another stand. A new body (a respawn, the next login) starts with it in.
+ * spectator, off the map, or with another stand. A new body (a respawn, the next login) starts with it in. Called out
+ * or back (Q), it says so too (2.72.0, StandHolder.botand$callStand): every client in sight hears its call as it comes
+ * out and the sound of it going as it goes back (client/stand/StandCall); gone back or out otherwise, it is silent.
  */
 public final class StandSummon {
     public static final Identifier TOGGLE=CelestialFall.id("stand_summon_v1");
@@ -47,7 +49,8 @@ public final class StandSummon {
     public static boolean toggle(ServerPlayerEntity p){
         if(dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)||StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.active(p)||StarPlatinumTimeStop.holds(p))return out(p);
         boolean out=!out(p)&&canBeOut(p);
-        ((StandHolder)p).botand$setStandOut(out);
+        // (at its user's call: it is heard coming out or going back, 2.72.0)
+        if(out!=out(p))((StandHolder)p).botand$callStand(out);
         return out;
     }
 }

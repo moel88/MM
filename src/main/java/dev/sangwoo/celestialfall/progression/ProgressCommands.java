@@ -29,7 +29,18 @@ public final class ProgressCommands {
         admin.then(edit("settranscendence",0,ProgressProfile.MAX_TRANSCENDENCE,(p,n)->p.withTranscendence(n)));
         var stand=literal("stand");var targets=argument("targets",EntityArgumentType.players());
         for(String id:StandStats.ids())targets.then(literal(id).executes(c->editPlayers(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),p->p.withStand(id))));
-        root.then(admin.then(stand.then(targets)));
+        // (2.72.0) the awakening: Star Platinum's time stop (H) is the awakened's; an operator awakens them ("off" takes
+        // it back) until the awakening quest to come does
+        var awaken=literal("awaken");var awakened=argument("targets",EntityArgumentType.players());
+        awakened.executes(c->awaken(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),true))
+            .then(literal("on").executes(c->awaken(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),true)))
+            .then(literal("off").executes(c->awaken(c.getSource(),EntityArgumentType.getPlayers(c,"targets"),false)));
+        root.then(admin.then(stand.then(targets)).then(awaken.then(awakened)));
+    }
+    private static int awaken(ServerCommandSource source,java.util.Collection<net.minecraft.server.network.ServerPlayerEntity> players,boolean value) {
+        for(var p:players)if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){source.sendError(Text.translatable("message.botand.map_only"));return 0;}
+        for(var p:players)ProgressManager.awaken(p,value);
+        source.sendFeedback(()->Text.translatable(value?"message.botand.awakened":"message.botand.unawakened",players.size()),false);return players.size();
     }
     private interface Edit {ProgressProfile apply(ProgressProfile p,int value);}
     private static LiteralArgumentBuilder<ServerCommandSource> edit(String name,int min,int max,Edit edit) {

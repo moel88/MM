@@ -33,7 +33,8 @@ import org.lwjgl.glfw.GLFW;
  * tick before and the tick after, with its look worked out for the frame's own moment, so it moves at the frame rate.
  * Coming out and going back, faint blue afterimages trail it. While it is out it and its user are wrapped in its aura
  * (StandAuraLayer, 2.53.0), which comes and goes with its glow. Rushing (2.57.0, StandRush), afterimages of its flying
- * arms alone, see-through and violet, throw their own fists beside it.
+ * arms alone, see-through and violet, throw their own fists beside it. Called out or back (Q, 2.72.0), it is heard as
+ * it starts to (StandCall).
  */
 public final class StandPresence {
     /** Its place by its user (blocks): to their right, behind them, above their feet. */
@@ -97,7 +98,7 @@ public final class StandPresence {
     public static float[] state(UUID owner){var s=ALL.get(owner);return s==null?null:new float[]{(ticks-1-s.since)/20f,s.out?1:0};}
 
     private static void tick(MinecraftClient mc){
-        if(mc.world!=world){ALL.clear();seen.clear();world=mc.world;}
+        if(mc.world!=world){ALL.clear();seen.clear();world=mc.world;StandCall.clear(mc);}
         if(mc.world==null||mc.isPaused())return;
         ticks++;
         seenNow.clear();
@@ -112,10 +113,14 @@ public final class StandPresence {
                 // out before this body came into sight (a respawned or newly seen player): already at rest
                 s.since=seen.contains(p.getId())?ticks-1:Long.MIN_VALUE/4;
                 ALL.put(p.getUuid(),s);
+                // coming out in sight: its call heard as it starts (2.72.0, if its user called it)
+                if(seen.contains(p.getId()))StandCall.changed(mc,p,true);
             }else if(out!=s.out){
                 // the frames to come show the tick before this one to this one (ticks-1 to ticks): the change starts
                 // where they start, from the look the last one had got to there (its punches' stances too), so nothing jumps
                 s.look(ticks-1,trail);s.punch(p,0,0,trail,punchShape);s.from.set(trail);s.hasFrom=true;s.out=out;s.since=ticks-1;
+                // and so does its sound (2.72.0: the call, or the sound of it going, if its user called it so)
+                StandCall.changed(mc,p,out);
             }
             // its user stopped in a time stop (2.67.0): it stands as it stood, neither following nor stirring
             if(StandTimeStop.stopped(p))continue;
