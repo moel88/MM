@@ -216,12 +216,12 @@ public final class MiningPose {
 
     /**
      * Keyed channels on monotone cubic curves: smooth through every key, never overshooting, at rest at the ends and
-     * where a channel turns back. Into the {@code impact} key every channel speeds up all the way and leaves it at rest.
+     * where a channel turns back. Into an {@code impact} key every channel speeds up all the way and leaves it at rest.
      */
     public static final class Track {
         private final float[] times;private final float[][] keys,in,out;
-        /** {@code impact} below 1: no key is struck (every key smooth, as the others). */
-        public Track(float[] times,float[][] keys,int impact){
+        /** {@code impacts} below 1 (or none): no key is struck (every key smooth, as the others). */
+        public Track(float[] times,float[][] keys,int... impacts){
             this.times=times;this.keys=keys;int n=times.length,c=keys[0].length;
             in=new float[n][c];out=new float[n][c];
             for(int j=0;j<c;j++)for(int i=1;i+1<n;i++){
@@ -231,7 +231,7 @@ public final class MiningPose {
                 in[i][j]=out[i][j]=m;
             }
             // the strike: from rest, arriving at twice the segment's mean speed (an even acceleration), leaving from rest
-            if(impact>=1)for(int j=0;j<c;j++){
+            for(int impact:impacts)if(impact>=1)for(int j=0;j<c;j++){
                 float h=times[impact]-times[impact-1];
                 out[impact-1][j]=0;in[impact][j]=2*(keys[impact][j]-keys[impact-1][j])/h;out[impact][j]=0;
             }

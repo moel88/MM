@@ -30,10 +30,12 @@ class StandArrowRulesTest {
         assertTrue(canUse("none"));
         assertFalse(canUse("kageno"));assertFalse(canUse("star_platinum"));
     }
+    /** About ten seconds from the use to what the arrow does (2.71.0, user request: "화살 꽂는 모션이 10초는 됐으면 좋겠어"). */
     @Test void theArrowGoesInThenItsChoiceShowsThenItIsMade(){
-        assertTrue(HIT>=20,"raised and held a moment first (a second or more)");
-        assertTrue(REVEAL-HIT>=20,"a second or more taken into the body before its choice shows");
-        assertTrue(FREE>REVEAL+15,"one it chose stands a moment as the stand comes out");
-        assertTrue(DEATH_AT>REVEAL+18,"one it rejects falls before dying");
+        assertTrue(HIT>=100,"looked at, doubted and raised high for five seconds first");
+        assertTrue(REVEAL-HIT>=60,"three seconds and more on the knees as it is taken in before its choice shows");
+        assertTrue(REVEAL>=170&&REVEAL<=200,"its choice shows at about nine seconds");
+        assertTrue(FREE>=REVEAL+30&&FREE<=240,"one it chose gets up as the stand comes out, free at about eleven seconds");
+        assertTrue(DEATH_AT>REVEAL+18&&DEATH_AT<FREE,"one it rejects falls before dying, at about ten seconds");
     }
 }

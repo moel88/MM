@@ -25,11 +25,13 @@ public final class StandArrowRules {
     public static final String DIE="death";
 
     /**
-     * Ticks from the use: the arrow is raised high over the head and held there a moment, then driven into the chest
-     * at HIT; it is taken into the body until REVEAL, when its choice shows; one it rejects falls and dies at
-     * DEATH_AT; one it chose is free to move again at FREE, its stand out beside them.
+     * Ticks from the use (2.71.0: about ten seconds, user request "화살 꽂는 모션이 10초는 됐으면 좋겠어 지금 너무 짧고
+     * 감동이 없어"; 2.70.0 had the choice at 2.2 s): the arrow is looked at, raised to the sky, doubted, breathed for,
+     * raised high over the face and held there trembling, then driven into the chest at HIT; they fall to their knees
+     * and it is taken into the body until REVEAL, when its choice shows; one it rejects falls and dies at DEATH_AT; one
+     * it chose gets up and is free to move again at FREE, its stand out beside them.
      */
-    public static final int HIT=22,REVEAL=44,DEATH_AT=66,FREE=62;
+    public static final int HIT=108,REVEAL=180,DEATH_AT=206,FREE=220;
 
     /** Whether one with {@code stand} equipped may use the arrow: only one with none. */
     public static boolean canUse(String stand){return "none".equals(stand);}

@@ -10,24 +10,31 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
- * The stand arrow driven into one's own chest (2.70.0, StandArrowRules for the user's words), as a smooth function of
- * the stab's clock (seconds), on the articulated rig: the right hand lifts the arrow high in front of the right
- * shoulder, turning it point down on the way up (its line never crosses the face), and holds it there a moment,
- * trembling, its tip on the chest; the left hand comes up to it and both fists bring it in front of the face, draw it
- * up a little (the load), then drive it down into the chest, faster and faster, stopping dead as it goes in (HIT). The body folds over it, then arches back gasping as the hands are thrown
- * off it; the arrow, standing out of the chest, glows and is drawn into the body while they stand hunched over it,
- * shaking, the heart beating faster and faster (BEATS). As it is gone its choice shows (REVEAL): one it chose arches
- * back with the arms flung wide as the stand bursts out of them, then stands and turns to it; one it rejects
- * convulses, clutches the chest, drops to the knees and falls on their face (the server's death comes as they land).
+ * The stand arrow driven into one's own chest (2.70.0; 2.71.0 made it about ten seconds long, user request: "화살 꽂는
+ * 모션이 10초는 됐으면 좋겠어 지금 너무 짧고 감동이 없어", StandArrowRules for the rest), as a smooth function of the
+ * stab's clock (seconds), on the articulated rig. The right hand brings the arrow up before the eyes, its point to the
+ * sky, turns it slowly in the fingers and raises it to the sky (its golden head catching the light); lowers it to the
+ * chest, the head bowed, the shoulders sagging (the doubt), the left hand coming to it; both hands on it, a deep
+ * breath; breathing out, it is turned over across the chest and its point set at the chest; raised high over the face
+ * in both hands, point down, arched back, the eyes on it, held there trembling; one last lift (the load) and it is
+ * driven down into the chest, faster and faster, stopping dead as it goes in (HIT). The body folds over it and is
+ * frozen so a moment, shaking; arches back gasping as the hands are thrown off it; sways, and drops onto the right knee
+ * (the body falling onto it), then both, hunched over it, the hands about it, while the arrow, glowing, is drawn into
+ * the body and the heart beats faster and faster (BEATS); the head comes up, and for a moment everything is still
+ * (STILL). Then its choice shows (REVEAL): one it chose throws the arms up and wide and the head back as the stand
+ * bursts out of them, still on the knees, then gets up on the left foot, stands and turns to it; one it rejects
+ * convulses, clutches the chest, sways and falls on their face (the server's death comes as they lie there).
  * <p>
- * Keyed channels on monotone cubic curves (MiningPose.Track), the plunge's key struck (it speeds up all the way into
- * it); the body's joints come from where the fists go (a two-bone solve, MiningPose.reach) and the legs from where the
- * feet stay (or, falling, from the knees on the ground). The arrow rides in the fists until it goes in, then stays
- * where it went in (it moves with the chest), and is drawn into it. Torso space throughout: model pixels from the
- * neck, +x the body's left, +y down, -z ahead (the shoulders at (∓5, 2, 0), the chest's front at z = -2).
+ * Keyed channels on monotone cubic curves (MiningPose.Track), the plunge's key and the right knee's struck (they speed
+ * up all the way into them); the body's joints come from where the fists go (a two-bone solve, {@link #reach}) and the
+ * legs from where the feet stay or the knees go down ({@link #legs}). The arrow rides in the fists until it goes in
+ * (aimed at where it goes in as it is driven down), then stays where it went in (it moves with the chest), and is drawn
+ * into it. Torso space throughout: model pixels from the neck, +x the body's left, +y down, -z ahead (the shoulders at
+ * (∓5, 2, 0), the chest's front at z = -2).
  * <p>
  * Whatever the arrow chose follows from the pose it holds as the choice shows: a choice heard late (the server's word
- * is on its way) starts from that pose then, so nothing jumps.
+ * is on its way) starts from that pose then, so nothing jumps. No camera of its own: the player's camera stays theirs
+ * (user request, 2.71.0: "컷씬이 나오면 안돼").
  */
 public final class ArrowStabPose {
     private ArrowStabPose(){}
@@ -36,6 +43,15 @@ public final class ArrowStabPose {
     public static final float HIT=StandArrowRules.HIT/20f,REVEAL=StandArrowRules.REVEAL/20f,FREE=StandArrowRules.FREE/20f,DEATH=StandArrowRules.DEATH_AT/20f;
     /** What the arrow did, as far as this client has heard. */
     public enum Fate{UNKNOWN,AWAKEN,DIE}
+    /**
+     * The stages (seconds on the stab's clock; the light and the sounds go by them): brought up before the eyes; turned
+     * in the fingers; lowered (the doubt) and dwelt on; the deep breath, both hands on it; taken up and out in the right
+     * hand (the left going to the heart) and raised to the sky; turned point down up there; aimed at the chest;
+     * trembling; the load (the blow
+     * from there into HIT); folded over it; frozen; the gasp; swaying; the right knee down; both; drawn in; still.
+     */
+    public static final float LIFT=.5f,STUDY=1.1f,DOUBT=1.75f,DWELL=2.2f,BREATH=2.8f,UP=3.1f,RAISE=3.45f,TURN=3.95f,AIM=4.35f,TREMBLE=4.85f,
+        LOAD=5.18f,CRUNCH=5.6f,FROZEN=6f,GASP=6.35f,SWAY=6.8f,KNEE=7.05f,KNEES=7.45f,ABSORB=8.3f,STILL=8.82f;
 
     // ---------------------------------------------------------------- the arrow
 
@@ -52,18 +68,18 @@ public final class ArrowStabPose {
     /** Where the tip goes into the chest (torso px: its front, the breastbone), and how far in it goes (px along the arrow). */
     static final Vector3f ENTRY=new Vector3f(0,4.3f,-2f);
     static final float DEPTH=2.4f;
-    /** The arrow is drawn into the body over these seconds (gone before its choice shows, as the server spends it). */
-    static final float SINK_FROM=1.78f,SINK_TO=2.16f;
+    /** The arrow is drawn into the body over these seconds, on the knees (gone before the stillness, as the server spends it at REVEAL). */
+    static final float SINK_FROM=7.75f,SINK_TO=8.55f;
     /** As it is drawn in it slides this far further in (px) while it shrinks to nothing where it went in. */
     static final float SINK_SLIDE=1.6f;
-    /** The heart beating, faster and faster, from the arrow's going in until its choice shows (seconds). */
-    public static final float[] BEATS={1.40f,1.68f,1.90f,2.06f,2.16f};
+    /** The heart beating, faster and faster, from the arrow's going in until the stillness (seconds). */
+    public static final float[] BEATS={5.95f,6.7f,7.3f,7.8f,8.17f,8.45f,8.65f,8.79f};
 
     // ---------------------------------------------------------------- the keys
 
     /** One key's channels (see {@link #row}). */
     private static final class K {
-        float pitch,yaw,roll,bob,shift,lean,hp,hy,hr,join,liftR,liftL;
+        float pitch,yaw,roll,bob,shift,lean,hp,hy,hr,join,liftR,liftL,kneelR,kneelL;
         float[] r={-5.6f,10.3f,-1},l={5.6f,10.3f,-.6f},a={0,.25f,-1},f={1,0,0},pr={-.6f,1,.4f},pl={.6f,1,.4f};
         K body(float p,float y,float r){pitch=p;yaw=y;roll=r;return this;}
         K hips(float b,float s,float l){bob=b;shift=s;lean=l;return this;}
@@ -74,63 +90,92 @@ public final class ArrowStabPose {
         K face(float x,float y,float z){f=new float[]{x,y,z};return this;}
         K join(float j){join=j;return this;}
         K lift(float r,float l){liftR=r;liftL=l;return this;}
+        K knees(float r,float l){kneelR=r;kneelL=l;return this;}
         K poles(float rx,float ry,float rz,float lx,float ly,float lz){pr=new float[]{rx,ry,rz};pl=new float[]{lx,ly,lz};return this;}
         K copy(){var k=new K();k.pitch=pitch;k.yaw=yaw;k.roll=roll;k.bob=bob;k.shift=shift;k.lean=lean;k.hp=hp;k.hy=hy;k.hr=hr;k.join=join;k.liftR=liftR;k.liftL=liftL;
-            k.r=r.clone();k.l=l.clone();k.a=a.clone();k.f=f.clone();k.pr=pr.clone();k.pl=pl.clone();return k;}
-        /** 0-5 the torso's pitch, yaw, roll and the hips' bob, shift, lean; 6-8 the head's (model space); 9-14 the fists; 15-20 the arrow's way and face; 21 join; 22-23 the shoulders' lift; 24-29 the elbows' poles. */
-        float[] row(){return new float[]{pitch,yaw,roll,bob,shift,lean,hp,hy,hr,r[0],r[1],r[2],l[0],l[1],l[2],a[0],a[1],a[2],f[0],f[1],f[2],join,liftR,liftL,pr[0],pr[1],pr[2],pl[0],pl[1],pl[2]};}
+            k.kneelR=kneelR;k.kneelL=kneelL;k.r=r.clone();k.l=l.clone();k.a=a.clone();k.f=f.clone();k.pr=pr.clone();k.pl=pl.clone();return k;}
+        /**
+         * 0-5 the torso's pitch, yaw, roll and the hips' bob, shift, lean; 6-8 the head's (model space); 9-14 the fists;
+         * 15-20 the arrow's way and face; 21 join; 22-23 the shoulders' lift; 24-29 the elbows' poles; 30-31 how far
+         * down each knee is (the right's, the left's).
+         */
+        float[] row(){return new float[]{pitch,yaw,roll,bob,shift,lean,hp,hy,hr,r[0],r[1],r[2],l[0],l[1],l[2],a[0],a[1],a[2],f[0],f[1],f[2],join,liftR,liftL,pr[0],pr[1],pr[2],pl[0],pl[1],pl[2],kneelR,kneelL};}
     }
     /** The arrow's way and the fists as it goes in: from the grip, ENTRY + DEPTH along WAY_IN is the tip. */
     static final Vector3f WAY_IN=new Vector3f(0,.62f,.78f).normalize();
     static final Vector3f GRIP_IN=new Vector3f(WAY_IN).mul(DEPTH-GRIP_TO_TIP).add(ENTRY);
     /** The fists close on either side of the shaft once both hold it (px between their middles). */
     static final float CLASP=3.6f;
+    /** Where the right fist holds it high before the right of the face, aimed (its way toward where it goes in), and lifted for the blow (the load). */
+    private static final Vector3f AIM_GRIP=new Vector3f(-5.6f,-4.6f,-6.2f),AIM_WAY=new Vector3f(ENTRY).sub(AIM_GRIP).normalize();
+    private static final Vector3f LOAD_GRIP=new Vector3f(-5.7f,-5f,-6f),LOAD_WAY=new Vector3f(ENTRY).sub(LOAD_GRIP).normalize();
 
     /** Standing, the arrow in the right hand pointing ahead. */
-    private static final K REST=new K();
-    /** On the way up in front of the right shoulder, the arrow turned point down (its nock up in front of the face, never in it). */
-    private static final K RISE=new K().body(-3,-2,1).hips(-.1f,0,-.1f).head(4,6,0).right(-5f,2f,-5.4f).arrow(.05f,1,-.05f).face(1,0,0)
-        .left(4.6f,7.6f,-3f).lift(.5f,0).poles(-1,.7f,.4f,.8f,1,.3f);
-    /**
-     * Lifted high in front of the right shoulder, the tip already turned down at the chest (held so, it never passes
-     * the face: the arrow's line runs in front of the chin); the left hand at the chest, bracing; leaning back, the
-     * eyes on it.
-     */
-    private static final K RAISED=new K().body(-8,-4,3).hips(-.3f,0,-.3f).head(-8,16,0).right(-6.5f,-3f,-6f).arrow(.61f,.69f,.38f).face(1,0,-.9f)
-        .left(3.8f,5f,-4.6f).lift(1.1f,0).poles(-1,.5f,.4f,1,.6f,.2f);
-    /** Held there a moment, the hesitation (it trembles: {@link #shake}), the eyes going down to where it will go in. */
-    private static final K HELD=RAISED.copy().body(-9,-3,2).head(10,8,0).right(-6.4f,-3.5f,-6.2f).arrow(.58f,.72f,.38f);
-    /** The left hand coming up to it. */
-    private static final K JOIN=new K().body(-5,-1,1).hips(-.25f,0,-.25f).head(14,2,0).right(-2.4f,-2.4f,-6.2f).left(1.4f,-2.2f,-6.2f)
-        .arrow(.18f,.86f,.45f).face(1,0,-.2f).join(.7f).lift(.8f,.5f).poles(-.9f,.8f,.2f,.9f,1,.1f);
-    /** Both fists in front of the face, the arrow tip down at the chest. */
-    private static final Vector3f AIM_WAY=new Vector3f(0,.88f,.47f).normalize();
-    private static final K AIM=new K().body(-3,0,0).hips(-.2f,0,-.2f).head(22,0,0).right(-CLASP/2,-1.6f,-6f).left(CLASP/2,-1.6f,-6f)
-        .arrow(AIM_WAY.x,AIM_WAY.y,AIM_WAY.z).face(1,0,0).join(1).lift(.6f,.6f).poles(-.9f,1,.1f,.9f,1,.1f);
-    /** Drawn up a little, the body leaning back: the load before the blow. */
-    private static final K LOAD=AIM.copy().body(-8,0,0).hips(-.4f,0,-.6f).head(16,0,0).right(-CLASP/2,-3f,-6.3f).left(CLASP/2,-3f,-6.3f).arrow(0,.93f,.37f).lift(1,1);
+    private static final K AT_REST=new K();
+    /** Brought up before the eyes in the right hand, its point to the sky, close; the left hand rising to the chest; looking at it. */
+    private static final K LIFTING=new K().body(2,3,0).head(5,13,-3).right(-2.8f,.2f,-6.6f).arrow(.12f,-1,-.15f).face(1,0,.2f)
+        .left(4.4f,6.8f,-3.8f).lift(.3f,0).poles(-1,1,.2f,.9f,1,.3f);
+    /** Turned slowly in the fingers (its golden head catching the light), held a little higher, the head tilted. */
+    private static final K STUDYING=new K().body(1,4,0).head(3,12,7).right(-2.5f,-.8f,-6.5f).arrow(.04f,-1,-.22f).face(.25f,0,1)
+        .left(3.6f,4.8f,-4.6f).lift(.45f,.1f).poles(-1,.9f,.1f,.9f,1,.2f);
+    /** Lowered to the chest, the head bowed, the shoulders sagging (the doubt); the left hand coming to it; dwelt on, lower still. */
+    private static final K DOUBTING=new K().body(7,0,0).hips(.3f,0,.2f).head(30,4,-3).right(-2.2f,3f,-5.8f).arrow(.05f,-.8f,-.6f).face(1,0,-.3f)
+        .left(1.2f,3.2f,-5.6f).join(.45f).lift(-.2f,-.2f).poles(-1,1,.3f,1,1,.3f);
+    private static final K DWELLING=DOUBTING.copy().body(9,0,1).hips(.4f,0,.25f).head(36,2,-5).right(-2.1f,3.6f,-5.6f).left(1.2f,3.8f,-5.4f).arrow(.05f,-.75f,-.66f).lift(-.35f,-.35f);
+    /** Both hands on it, upright before the chest: the deep breath, the chest rising, the head coming up. */
+    private static final K INHALING=new K().body(-5,0,0).hips(-.2f,0,-.3f).head(-6,0,0).right(-CLASP/2,1.2f,-6.6f).left(CLASP/2,1.2f,-6.6f)
+        .arrow(0,-1,-.12f).face(1,0,0).join(1).lift(.95f,.95f).poles(-.9f,1,.1f,.9f,1,.1f);
+    /** Taken up and out before the right shoulder in the right hand (clear of the face), the left hand going to the heart. */
+    private static final K TAKEN_UP=new K().body(-4,-2,0).hips(-.2f,0,-.3f).head(-16,10,0).right(-6f,-1.6f,-5.2f).arrow(.05f,-1,-.1f).face(1,0,.3f)
+        .left(2.6f,3.4f,-4.6f).lift(1.3f,.5f).poles(-1,.8f,.3f,.9f,1,.3f);
+    /** Raised to the sky in the right hand, high over the right shoulder, the left hand pressed to the heart; arched back, the eyes on it. */
+    private static final K RAISED=new K().body(-5,-3,0).hips(-.3f,0,-.4f).head(-30,14,0).right(-6.2f,-5.2f,-2.4f).arrow(.1f,-1,-.05f).face(1,0,.4f)
+        .left(2.4f,4.4f,-4f).lift(1.8f,.3f).poles(-1,.2f,.6f,.9f,1,.3f);
+    /** Turned point down up there, its tip sweeping forward and down beside the head. */
+    private static final K TURNING=RAISED.copy().head(-26,12,0).right(-6.2f,-5f,-4.2f).arrow(-.05f,-.15f,-1).face(1,0,0).poles(-1,.3f,.4f,.9f,1,.3f);
+    /** Aimed at the chest from high before the right of the face, the head thrown back with the eyes on it (the arrow's line clear of the chin). */
+    private static final K AIMED=TURNING.copy().body(-9,-2,0).hips(-.4f,0,-.6f).head(-39,10,0).right(AIM_GRIP.x,AIM_GRIP.y,AIM_GRIP.z).arrow(AIM_WAY.x,AIM_WAY.y,AIM_WAY.z).poles(-1,.4f,.2f,.9f,1,.3f);
+    /** Held there, trembling, the arm tiring, the left hand pressing the heart. */
+    private static final K TREMBLING=AIMED.copy().body(-10,-2,0).head(-40,9,0).right(AIM_GRIP.x,AIM_GRIP.y+.3f,AIM_GRIP.z+.1f).left(2.3f,4.6f,-3.9f);
+    /** The last lift before the blow (the load), the breath caught: aimed at where it goes in. */
+    private static final K LOADED=AIMED.copy().body(-12,-3,0).hips(-.5f,0,-.8f).head(-42,8,0).right(LOAD_GRIP.x,LOAD_GRIP.y,LOAD_GRIP.z).arrow(LOAD_WAY.x,LOAD_WAY.y,LOAD_WAY.z).lift(2f,.3f);
     /** Driven in (struck: it speeds up all the way into this key and stops dead). */
-    private static final K IN=AIM.copy().body(8,0,0).hips(1,0,.4f).head(38,0,0).right(GRIP_IN.x-CLASP/2,GRIP_IN.y,GRIP_IN.z).left(GRIP_IN.x+CLASP/2,GRIP_IN.y,GRIP_IN.z)
+    private static final K DRIVEN=INHALING.copy().body(8,0,0).hips(.8f,0,.3f).head(-14,0,0).right(GRIP_IN.x-CLASP/2,GRIP_IN.y,GRIP_IN.z).left(GRIP_IN.x+CLASP/2,GRIP_IN.y,GRIP_IN.z)
         .arrow(WAY_IN.x,WAY_IN.y,WAY_IN.z).lift(-.3f,-.3f).poles(-.9f,.8f,.5f,.9f,.8f,.5f);
-    /** Folded over it, the hands still on it. */
-    private static final K CRUNCH=IN.copy().body(24,0,0).hips(2,0,1).head(52,0,0).lift(.5f,.5f);
+    /** Folded over it, the hands still on it (the head, thrown back as it went in, coming down over it); frozen so a moment, shaking. */
+    private static final K FOLDED=DRIVEN.copy().body(24,0,0).hips(1.2f,0,.5f).head(37,0,0).lift(.5f,.5f);
+    private static final K STUNNED=FOLDED.copy().body(21,0,0).head(33,0,0).lift(.6f,.6f);
     /** Arched back, gasping, the hands thrown off it. */
-    private static final K GASP=IN.copy().body(-16,0,0).hips(.4f,0,-.6f).head(-30,0,0).right(-6.5f,4f,-4.8f).left(6.5f,4f,-4.8f).lift(.8f,.8f).poles(-1,.6f,.3f,1,.6f,.3f);
-    /** Hunched over it as it is drawn in, the hands hovering by the chest. */
-    private static final K ABSORB=GASP.copy().body(7,0,0).hips(1,0,.3f).head(34,0,0).right(-5.2f,6.4f,-4.2f).left(5.2f,6.4f,-4.2f).lift(.2f,.2f).poles(-.8f,1,.3f,.8f,1,.3f);
-    /** Still so as its choice shows (and as long as the word of it is on its way). */
-    private static final K WAITING=ABSORB.copy().body(9,0,0).hips(1.2f,0,.3f).head(38,0,0).right(-5.4f,7f,-3.8f).left(5.4f,7f,-3.8f).lift(0,0);
-    /** The common keys' times (seconds), and the struck one. */
-    static final float[] TIMES={0,.16f,.34f,.62f,.76f,.86f,.96f,HIT,1.24f,1.48f,1.86f,REVEAL};
-    private static final int STRUCK=7;
-    private static final MiningPose.Track COMMON=new MiningPose.Track(TIMES,rows(REST,RISE,RAISED,HELD,JOIN,AIM,LOAD,IN,CRUNCH,GASP,ABSORB,WAITING),STRUCK);
+    private static final K GASPING=DRIVEN.copy().body(-16,0,0).hips(.4f,0,-.6f).head(-30,0,0).right(-6.5f,4f,-4.8f).left(6.5f,4f,-4.8f).lift(.8f,.8f).poles(-1,.6f,.3f,1,.6f,.3f);
+    /** Swaying, the knees giving. */
+    private static final K SWAYING=GASPING.copy().body(-6,0,4).hips(.9f,-.3f,-.2f).head(-8,-6,6).right(-5.8f,5.6f,-4.4f).left(5.6f,5.2f,-4.6f).lift(.3f,.3f);
+    /** Down on the right knee (struck: the body drops onto it), the hands going to the chest. */
+    private static final K ONE_KNEE=SWAYING.copy().body(10,0,-3).hips(1.5f,0,0).head(30,4,-4).right(-2.6f,5.6f,-3.6f).left(2.8f,5.2f,-3.7f).knees(1,0).lift(.2f,.1f).poles(-.9f,1,.3f,.9f,1,.3f);
+    /** On both knees, hunched over it, the hands about it. */
+    private static final K KNEELING=ONE_KNEE.copy().body(16,0,0).head(40,0,0).right(-1.9f,5.4f,-3.3f).left(1.9f,5.4f,-3.3f).knees(1,1).lift(.3f,.3f);
+    /** Being drawn in: the head coming up, the hands trembling apart. */
+    private static final K ABSORBING=KNEELING.copy().body(8,0,0).head(18,0,0).right(-3.4f,6.2f,-3.8f).left(3.4f,6.2f,-3.8f).lift(.15f,.15f);
+    /** Upright on the knees, still, the arms a little out: the moment before its choice. */
+    private static final K STILLED=ABSORBING.copy().body(2,0,0).head(2,0,0).right(-4.6f,7.6f,-3.2f).left(4.6f,7.6f,-3.2f).lift(0,0);
+    /** So as its choice shows (and as long as the word of it is on its way). */
+    private static final K WAITING=STILLED.copy().body(1,0,0).head(0,0,0);
+    /** The common keys' times (seconds), and the struck ones (the blow, the knee). */
+    static final float[] TIMES={0,LIFT,STUDY,DOUBT,DWELL,BREATH,UP,RAISE,TURN,AIM,TREMBLE,LOAD,HIT,CRUNCH,FROZEN,GASP,SWAY,KNEE,KNEES,ABSORB,STILL,REVEAL};
+    private static final int[] STRUCK={12,17};
+    private static final MiningPose.Track COMMON=new MiningPose.Track(TIMES,rows(AT_REST,LIFTING,STUDYING,DOUBTING,DWELLING,INHALING,TAKEN_UP,RAISED,TURNING,AIMED,TREMBLING,
+        LOADED,DRIVEN,FOLDED,STUNNED,GASPING,SWAYING,ONE_KNEE,KNEELING,ABSORBING,STILLED,WAITING),STRUCK);
 
-    /** Chosen: arched back with the arms flung wide as the stand bursts out; held; then standing, turned to it (on their right). */
-    private static final K BURST=WAITING.copy().body(-24,0,0).hips(-.6f,0,-1.2f).head(-48,0,0).right(-11f,5.5f,2.4f).left(11f,5.5f,2.4f).lift(-.5f,-.5f).poles(-.3f,1,1,.3f,1,1);
-    private static final K GLORY=BURST.copy().body(-19,0,0).hips(-.4f,0,-.9f).head(-38,0,0).right(-10.5f,6.5f,2f).left(10.5f,6.5f,2f);
+    /**
+     * Chosen: the arms flung up and wide and the head thrown back as the stand bursts out, still on the knees; held;
+     * then up on the left foot, the hands by the knees; standing; turned to it (on their right).
+     */
+    private static final K BURST=WAITING.copy().body(-24,0,0).head(-48,0,0).right(-9.5f,-3.5f,1.2f).left(9.5f,-3.5f,1.2f).lift(.6f,.6f).poles(-.2f,1,.6f,.2f,1,.6f);
+    private static final K GLORY=BURST.copy().body(-18,0,0).head(-36,0,0).right(-9.8f,-2.6f,1f).left(9.8f,-2.6f,1f).lift(.4f,.4f);
+    private static final K RISING=GLORY.copy().body(8,0,0).head(6,0,0).right(-5.8f,7.6f,-3f).left(5.8f,7.6f,-3f).knees(1,0).lift(0,0).poles(-.9f,1,.2f,.9f,1,.2f);
+    private static final K STANDING=new K().body(2,4,0).head(0,18,0).right(-5.6f,10.2f,-.8f).left(5.6f,10.2f,-.6f).arrow(WAY_IN.x,WAY_IN.y,WAY_IN.z).face(1,0,0);
     private static final K TURNED=new K().body(0,8,0).head(-4,38,0).right(-5.6f,10.2f,-.8f).left(5.6f,10.2f,-.6f).arrow(WAY_IN.x,WAY_IN.y,WAY_IN.z).face(1,0,0);
-    static final float[] AWAKEN_TIMES={0,.14f,.42f,.95f};
-    private static final MiningPose.Track AWAKENED=new MiningPose.Track(AWAKEN_TIMES,rows(WAITING,BURST,GLORY,TURNED),1);
+    static final float[] AWAKEN_TIMES={0,.28f,.7f,1.22f,1.66f,2f};
+    private static final MiningPose.Track AWAKENED=new MiningPose.Track(AWAKEN_TIMES,rows(WAITING,BURST,GLORY,RISING,STANDING,TURNED),1);
 
     /**
      * Rejected, on its own channels: 0 how far down on the knees, 1 how far fallen forward from them (degrees), 2 the
@@ -140,25 +185,27 @@ public final class ArrowStabPose {
     private static float[] down(float kneel,float fall,float hunch,float roll,float bob,float headUp,float headRoll,float[] r,float[] l,float lift,float[] pr,float[] pl){
         return new float[]{kneel,fall,hunch,0,roll,bob,0,WAITING.lean,headUp,0,headRoll,r[0],r[1],r[2],l[0],l[1],l[2],lift,lift,pr[0],pr[1],pr[2],pl[0],pl[1],pl[2]};
     }
-    static final float[] DIE_TIMES={0,.12f,.42f,.72f,1.05f,1.15f,1.32f};
+    static final float[] DIE_TIMES={0,.12f,.45f,.75f,1.1f,1.2f,1.4f};
     /** The one it rejects lands at this key (the fall speeds up all the way into it). */
     private static final int LANDS=4;
     /** When the one it rejects lands on their face (seconds after its choice shows). */
     public static final float LANDS_AT=DIE_TIMES[LANDS];
     private static final MiningPose.Track REJECTED=new MiningPose.Track(DIE_TIMES,new float[][]{
-        down(0,0,WAITING.pitch,0,WAITING.bob,WAITING.hp-WAITING.pitch,0,WAITING.r,WAITING.l,0,WAITING.pr,WAITING.pl),
-        // the convulsion: the hands clutch the chest, the knees give
-        down(.2f,0,32,-3,2,22,0,new float[]{-1.6f,4.6f,-3.4f},new float[]{1.6f,4.6f,-3.4f},.6f,new float[]{-.9f,1,.3f},new float[]{.9f,1,.3f}),
-        // on the knees, hunched over it
-        down(1,0,24,2,2,26,0,new float[]{-1.9f,5.2f,-3.3f},new float[]{1.9f,5.2f,-3.3f},.4f,new float[]{-.9f,1,.3f},new float[]{.9f,1,.3f}),
+        down(1,0,WAITING.pitch,0,WAITING.bob,WAITING.hp-WAITING.pitch,0,WAITING.r,WAITING.l,0,WAITING.pr,WAITING.pl),
+        // the convulsion: the hands clutch the chest
+        down(1,0,26,-3,WAITING.bob,20,0,new float[]{-1.6f,4.6f,-3.4f},new float[]{1.6f,4.6f,-3.4f},.6f,new float[]{-.9f,1,.3f},new float[]{.9f,1,.3f}),
+        // hunched over it
+        down(1,0,30,2,WAITING.bob,26,0,new float[]{-1.9f,5.2f,-3.3f},new float[]{1.9f,5.2f,-3.3f},.4f,new float[]{-.9f,1,.3f},new float[]{.9f,1,.3f}),
         // swaying, the hands slipping off the chest
-        down(1,0,36,-4,2,30,8,new float[]{-3f,8.8f,-3.4f},new float[]{3.4f,8.4f,-3.2f},0,new float[]{-.8f,1,.4f},new float[]{.8f,1,.4f}),
+        down(1,0,38,-4,WAITING.bob,30,8,new float[]{-3f,8.8f,-3.4f},new float[]{3.4f,8.4f,-3.2f},0,new float[]{-.8f,1,.4f},new float[]{.8f,1,.4f}),
         // face down, the arms along the body, the head lifted a little, the chin on the ground
-        down(1,90,36,0,2,-66,4,new float[]{-5.6f,10.6f,.3f},new float[]{5.6f,10.6f,.3f},0,new float[]{0,1,1},new float[]{0,1,1}),
-        down(1,85,36,0,2,-58,5,new float[]{-5.6f,10.6f,.1f},new float[]{5.6f,10.6f,.1f},0,new float[]{0,1,1},new float[]{0,1,1}),
-        down(1,90,36,0,2,-64,4,new float[]{-5.6f,10.6f,.3f},new float[]{5.6f,10.6f,.3f},0,new float[]{0,1,1},new float[]{0,1,1})},LANDS);
+        down(1,90,36,0,WAITING.bob,-66,4,new float[]{-5.6f,10.6f,.3f},new float[]{5.6f,10.6f,.3f},0,new float[]{0,1,1},new float[]{0,1,1}),
+        down(1,85,36,0,WAITING.bob,-58,5,new float[]{-5.6f,10.6f,.1f},new float[]{5.6f,10.6f,.1f},0,new float[]{0,1,1},new float[]{0,1,1}),
+        down(1,90,36,0,WAITING.bob,-64,4,new float[]{-5.6f,10.6f,.3f},new float[]{5.6f,10.6f,.3f},0,new float[]{0,1,1},new float[]{0,1,1})},LANDS);
 
     private static float[][] rows(K... keys){var out=new float[keys.length][];for(int i=0;i<keys.length;i++)out[i]=keys[i].row();return out;}
+    /** The common keys' channels at {@code t} (as {@link K#row}), before what shakes the body (the tests: where the fists are meant to go). */
+    static float[] keys(float t){return COMMON.at(t);}
 
     // ---------------------------------------------------------------- the frame
 
@@ -222,10 +269,10 @@ public final class ArrowStabPose {
         MotionPose p=new MotionPose();
         float pitch,yaw,roll,bob,shift,lean,hp,hy,hr,liftR,liftL;
         Vector3f right,left,poleR,poleL;
-        float kneel=0,fall=0;
+        float kneelR,kneelL,fall=0;
         if(fate==Fate.DIE&&t>start){
             float[] d=REJECTED.at(t-start);
-            kneel=clamp(d[0]);fall=d[1];
+            kneelR=kneelL=clamp(d[0]);fall=d[1];
             pitch=fall+d[2]*(1-fall/90);yaw=d[3];roll=d[4];bob=d[5];shift=d[6];lean=d[7];
             hp=pitch+d[8];hy=d[9];hr=d[10];
             right=new Vector3f(d[11],d[12],d[13]);left=new Vector3f(d[14],d[15],d[16]);liftR=d[17];liftL=d[18];
@@ -236,6 +283,7 @@ public final class ArrowStabPose {
             pitch=k[0];yaw=k[1];roll=k[2];bob=k[3];shift=k[4];lean=k[5];hp=k[6];hy=k[7];hr=k[8];
             right=new Vector3f(k[9],k[10],k[11]);left=new Vector3f(k[12],k[13],k[14]);liftR=k[22];liftL=k[23];
             poleR=new Vector3f(k[24],k[25],k[26]);poleL=new Vector3f(k[27],k[28],k[29]);
+            kneelR=clamp(k[30]);kneelL=clamp(k[31]);
         }
         // the trembling, the jolt as it goes in and the heart's beats, on top
         float[] s=shake(t,fate,start);
@@ -244,7 +292,7 @@ public final class ArrowStabPose {
         if(fate==Fate.DIE&&t>start)fall=Math.min(90,fall);
         p.rot(MotionPose.BODY,pitch,yaw,roll).rot(MotionPose.HEAD,hp,hy,hr);
         // the legs: the feet where they stand, or the knees on the ground and the body tipping forward over them
-        legs(p,kneel,fall,bob,shift,lean);
+        legs(p,kneelR,kneelL,fall,bob,shift,lean);
         Vector3f rs=new Vector3f(-5,2-liftR,0),ls=new Vector3f(5,2-liftL,0);
         float[] ra=reach(rs,right,poleR,-1),la=reach(ls,left,poleL,1);
         p.rot(MotionPose.RIGHT_ARM,ra[0],ra[1],ra[2]).rot(MotionPose.LEFT_ARM,la[0],la[1],la[2]);
@@ -258,6 +306,9 @@ public final class ArrowStabPose {
         if(t<HIT){
             Vector3f grip=new Vector3f(rf).lerp(new Vector3f(rf).add(lf).mul(.5f),clamp(c[21]));
             Vector3f way=new Vector3f(c[15],c[16],c[17]).normalize();
+            // driven down from the load, it is aimed at where it goes in all the way (its line through ENTRY)
+            float aimed=Ease.smooth(t,LOAD-.08f,LOAD);
+            if(aimed>0)way.lerp(new Vector3f(ENTRY).sub(grip).normalize(),aimed).normalize();
             Vector3f face=orth(new Vector3f(c[18],c[19],c[20]),way);
             return new Arrow(new Vector3f(way).mul(GRIP_TO_TIP).add(grip),way,face,0,false);
         }
@@ -285,26 +336,45 @@ public final class ArrowStabPose {
     }
 
     /**
-     * What shakes the body on top of the keys (degrees and px): the arm trembling as it holds the arrow up (the
-     * hesitation); the jolt through the body as the arrow goes in; the heart's beats as it is drawn in; the whole body
-     * shaking harder and harder until its choice shows; and the convulsions of one it rejects, dying down as they
-     * fall. Returns the torso's pitch and roll, the head's pitch and roll, and each fist's move.
+     * What moves the body on top of the keys (degrees and px): the slow breaths while the arrow is looked at; the hand
+     * trembling as it is lowered (the doubt); the arms trembling harder and harder as it is held high; the jolt through
+     * the body as it goes in, and the shaking as they are frozen over it; the heavy panting after the gasp; the heart's
+     * beats; the whole body shaking harder and harder on the knees as it is drawn in, stopping dead as everything goes
+     * still; and the convulsions of one it rejects, dying down as they fall. Returns the torso's pitch and roll, the
+     * head's pitch and roll, and each fist's move.
      */
     static float[] shake(float t,Fate fate,float start){
         float[] s=new float[10];
-        // the hesitation: the raised arm trembling
-        float hold=Ease.smooth(t,.34f,.5f)*(1-Ease.smooth(t,.62f,.72f));
-        float tremor=hold*.32f;
+        // the slow breaths while it is looked at (the chest rising, the arms with it)
+        float calm=1-Ease.smooth(t,DOUBT,BREATH);
+        float breath=calm*(float)Math.sin(t*2*Math.PI*.32f);
+        s[0]-=.9f*breath;s[2]-=.6f*breath;s[5]-=.15f*breath;s[8]-=.15f*breath;
+        // the doubt: the lowered hand trembling a little
+        float doubt=.16f*Ease.smooth(t,DOUBT-.35f,DOUBT)*(1-Ease.smooth(t,BREATH-.25f,BREATH));
+        s[4]+=doubt*wave(t,8.7f,0);s[5]+=doubt*wave(t,10.9f,1.3f);s[6]+=doubt*.6f*wave(t,7.9f,2.1f);
+        // raised and aimed: the arm trembling, harder and harder until the load (the hand on the heart a little)
+        float hold=Ease.smooth(t,RAISE,AIM)*(1-Ease.smooth(t,LOAD,LOAD+.06f));
+        float tremor=hold*(.14f+.36f*Ease.smooth(t,AIM,LOAD));
         s[4]+=tremor*wave(t,9.3f,0);s[5]+=tremor*wave(t,11.1f,1.3f);s[6]+=tremor*.6f*wave(t,8.2f,2.1f);
-        // the jolt as it goes in
+        s[7]+=.3f*tremor*wave(t,9.9f,.7f);s[8]+=.3f*tremor*wave(t,10.4f,2.6f);s[9]+=.2f*tremor*wave(t,8.8f,1.4f);
+        s[1]+=hold*.5f*wave(t,7.1f,.3f);s[3]+=hold*.7f*wave(t,6.3f,1.9f);
+        // the jolt as it goes in, and the shaking as they are frozen over it
         float jolt=kick(t,HIT,.12f);
         s[0]+=7*jolt;s[2]+=9*jolt;
-        // the heart's beats, and the shaking growing until its choice shows (and after, for one it rejects, until they fall)
+        float shock=Ease.smooth(t,CRUNCH-.1f,CRUNCH+.1f)*(1-Ease.smooth(t,GASP-.12f,GASP+.04f));
+        s[1]+=shock*1.1f*wave(t,15.3f,.4f);s[3]+=shock*1.3f*wave(t,13.7f,2.2f);
+        s[4]+=shock*.25f*wave(t,16.1f,.9f);s[5]+=shock*.25f*wave(t,14.3f,2.8f);s[7]+=shock*.25f*wave(t,15.1f,1.7f);s[8]+=shock*.25f*wave(t,13.9f,.2f);
+        // the heavy panting after the gasp, dying down on the knees
+        float pant=Ease.smooth(t,GASP,GASP+.15f)*(1-Ease.smooth(t,KNEES,ABSORB))*(float)Math.sin((t-GASP)*2*Math.PI*1.35f);
+        s[0]-=2.2f*pant;s[2]-=1.5f*pant;
+        // the heart's beats
         float beat=0;for(float b:BEATS)beat+=kick(t,b,.09f);
         s[0]+=2.4f*beat;s[2]+=1.6f*beat;s[5]+=.35f*beat;s[8]+=.35f*beat;
-        float quake=Ease.smooth(t,1.25f,2.15f);
-        if(t>start)quake*=fate==Fate.AWAKEN?1-Ease.smooth(t-start,0,.12f):fate==Fate.DIE?1-Ease.smooth(t-start,.6f,1f):1;
-        float q=.9f*quake;
+        // the shaking growing on the knees as it is drawn in, stopping dead as everything goes still; for one it
+        // rejects, again as its choice shows, dying down as they fall
+        float quake=Ease.smooth(t,KNEES,STILL-.05f)*(1-Ease.smooth(t,STILL-.06f,STILL+.02f));
+        if(fate==Fate.DIE&&t>start)quake=Math.max(quake,Ease.smooth(t-start,0,.05f)*(1-Ease.smooth(t-start,.6f,1f)));
+        float q=1.05f*quake;
         s[1]+=q*1.2f*wave(t,13.7f,.4f);s[3]+=q*1.5f*wave(t,12.3f,2.2f);
         s[4]+=q*.4f*wave(t,14.9f,.9f);s[5]+=q*.4f*wave(t,16.3f,2.8f);s[6]+=q*.25f*wave(t,12.9f,1.1f);
         s[7]+=q*.4f*wave(t,15.7f,1.7f);s[8]+=q*.4f*wave(t,13.1f,.2f);s[9]+=q*.25f*wave(t,17.2f,2.4f);
@@ -321,16 +391,20 @@ public final class ArrowStabPose {
     static float kick(float t,float at,float tau){return t<at-.01f?0:Ease.smooth(t,at-.01f,at+.015f)*(float)Math.exp(-Math.max(0,t-at-.015f)/tau);}
 
     /**
-     * How brightly the arrow shines (0 to 1): a glint as it is held up to the sky, out as it is turned, flaring as it
-     * goes in, then with the heart's beats, brighter and brighter as it is drawn in; one it chose flares out with it as
-     * the choice shows, for one it rejects it gutters out.
+     * How brightly the arrow shines (0 to 1): its head glints as it is turned before the eyes, and goes dull as it is
+     * lowered; it shines brightest raised to the sky, and again aimed at the chest; flares as it goes in; then the wound
+     * glows, beating with the heart, brighter and brighter as it is drawn in on the knees, held in a little as everything
+     * goes still; one it chose flares out with it as the choice shows, for one it rejects it gutters out.
      */
     public static float glow(float t,Fate fate,float start){
-        float raised=Ease.smooth(t,.22f,.4f)*(1-Ease.smooth(t,.62f,.76f))*.55f;
+        float looked=Ease.smooth(t,LIFT-.25f,LIFT+.15f)*(1-Ease.smooth(t,DOUBT-.3f,DOUBT+.1f))*(.42f+.25f*(1-Ease.smooth(Math.abs(t-STUDY),0,.4f)));
+        float sky=Ease.smooth(t,BREATH+.1f,RAISE)*(1-Ease.smooth(t,TURN-.1f,AIM))*.82f;
+        float raised=Ease.smooth(t,TURN,AIM)*(1-Ease.smooth(t,LOAD+.04f,HIT))*.5f;
         float flare=kick(t,HIT,.2f);
         float beat=0;for(float b:BEATS)beat+=kick(t,b,.11f);
-        float drawn=Ease.smooth(t,1.3f,2.16f);
-        float g=Math.max(raised,Math.max(flare,.25f*drawn+.35f*beat*drawn+.55f*Ease.smooth(t,SINK_FROM,SINK_TO)));
+        float wound=Ease.smooth(t,HIT+.1f,HIT+.4f),drawn=Ease.smooth(t,KNEES-.3f,SINK_TO);
+        float g=Math.max(Math.max(looked,Math.max(sky,raised)),Math.max(flare,wound*(.18f+.2f*beat)+.25f*drawn+.3f*beat*drawn+.4f*Ease.smooth(t,SINK_FROM,SINK_TO)));
+        g*=1-.3f*Ease.smooth(t,STILL-.04f,STILL+.06f);
         if(t>start)g*=1-Ease.smooth(t-start,0,fate==Fate.DIE?.35f:.2f);
         return clamp(g);
     }
@@ -375,36 +449,51 @@ public final class ArrowStabPose {
 
     /**
      * From one's own eyes (HeldItemRendererMixin), its own keys, framed to be seen: the right hand brings the arrow up
-     * into the top right of the picture, its golden head turned down toward the eyes (at the chest under them); the
-     * left hand comes up to it in the middle; both draw it up, then drive it down out of the bottom of the picture; the
-     * hands come back up into sight, shaking, empty, and hang there while it is drawn in; then are flung out of the
-     * picture (chosen) or drop out of it (rejected). Per key: each fist (neck px: the eye 2.16 px above and 1 px ahead
-     * of it; +x the picture's left, +y down, -z ahead), the arrow's way and face, and join. The forearms come up to the
-     * fists from below the picture (VIEW_SHOULDER).
+     * before the eyes, point up, turns it (its broad side to the eyes), raises it into the top of the picture and lowers
+     * it, the left hand coming to it; both hands hold it upright, turn it over across the picture and set its point at
+     * the chest (toward the eyes, under them); raise it high, trembling, its golden head down toward the eyes; drive it
+     * down out of the bottom of the picture; the hands come back up into sight, shaking, empty, and go to the chest as
+     * the knees go down; come up before the eyes, trembling, and hang there still; then are flung out of the picture
+     * (chosen) or drop out of it (rejected). Per key: each fist (neck px: the eye 2.16 px above and 1 px ahead of it;
+     * +x the picture's left, +y down, -z ahead), the arrow's way and face, and join. The forearms come up to the fists
+     * from below the picture (VIEW_SHOULDER). The view does not kneel: the camera is the player's own (no cutscene).
      */
     private static float[] view(float rx,float ry,float rz,float lx,float ly,float lz,float ax,float ay,float az,float fx,float fy,float fz,float join){
         return new float[]{rx,ry,rz,lx,ly,lz,ax,ay,az,fx,fy,fz,join};
     }
     private static final MiningPose.Track VIEW=new MiningPose.Track(TIMES,new float[][]{
-        view(-5.5f,6.5f,-9,  6,10,-8,        0,.3f,-1,  1,0,0, 0),
-        view(-5.2f,1.8f,-9.5f, 6,10,-8,      .1f,.95f,-.1f, 1,0,0, 0),
-        view(-4.4f,-3.4f,-9.6f, 5.6f,9.5f,-8, .35f,.8f,.5f, 1,0,-.6f, 0),
-        view(-4.2f,-3.8f,-9.4f, 5.6f,9.5f,-8, .32f,.82f,.48f, 1,0,-.6f, 0),
-        view(-2.6f,-2f,-9.4f, 1.6f,-1.6f,-9.4f, .15f,.85f,.5f, 1,0,-.2f, .7f),
-        view(-CLASP/2,-1.2f,-9, CLASP/2,-1.2f,-9, 0,.86f,.5f, 1,0,0, 1),
-        view(-CLASP/2,-3.4f,-9.4f, CLASP/2,-3.4f,-9.4f, 0,.9f,.42f, 1,0,0, 1),
+        view(-5.5f,6.5f,-9,  6,10,-8,  0,.3f,-1,  1,0,0, 0),
+        view(-3.2f,.5f,-8.8f, 5.2f,8,-8, .08f,-1,-.1f, 1,0,.2f, 0),
+        view(-2.6f,-.4f,-8.4f, 4.2f,5.8f,-8.6f, .03f,-1,-.2f, .25f,0,1, 0),
+        view(-2.8f,4.2f,-8.2f, 1.4f,4.4f,-8.4f, .05f,-.8f,-.6f, 1,0,-.3f, .45f),
+        view(-2.6f,4.8f,-8f, 1.2f,5f,-8.2f, .05f,-.75f,-.66f, 1,0,-.3f, .45f),
+        view(-CLASP/2,3.2f,-8.8f, CLASP/2,3.2f,-8.8f, 0,-1,-.15f, 1,0,0, 1),
+        view(-6.5f,-1.4f,-8.6f, 4.5f,8.5f,-6, .05f,-1,-.1f, 1,0,.3f, 0),
+        view(-5f,-4.2f,-9.4f, 4.5f,8.5f,-6, .05f,-1,-.2f, 1,0,.4f, 0),
+        view(-5.2f,-4.6f,-9f, 4.5f,8.5f,-6, .3f,-.3f,-.9f, 1,0,0, 0),
+        view(-4.6f,-3.6f,-9.2f, 4.5f,8.5f,-6, .4f,.8f,.45f, 1,0,0, 0),
+        view(-4.4f,-3.2f,-9.2f, 4.4f,8.4f,-6, .4f,.8f,.45f, 1,0,0, 0),
+        view(-4.6f,-4.2f,-9f, 4.4f,8.4f,-6, .42f,.82f,.38f, 1,0,0, 0),
         view(-CLASP/2,9.5f,-3.5f, CLASP/2,9.5f,-3.5f, 0,.62f,.78f, 1,0,0, 1),
         view(-CLASP/2,9.8f,-3.2f, CLASP/2,9.8f,-3.2f, 0,.62f,.78f, 1,0,0, 1),
+        view(-CLASP/2,9.6f,-3.4f, CLASP/2,9.6f,-3.4f, 0,.62f,.78f, 1,0,0, 1),
         view(-7.5f,3.5f,-8, 7.5f,3.5f,-8, 0,.62f,.78f, 1,0,0, 1),
-        view(-3.6f,1.2f,-8.6f, 3.6f,1.4f,-8.6f, 0,.62f,.78f, 1,0,0, 1),
-        view(-3.9f,2.4f,-8.3f, 3.9f,2.6f,-8.3f, 0,.62f,.78f, 1,0,0, 1)},STRUCK);
+        view(-6.2f,4.5f,-8.2f, 6f,4.2f,-8.4f, 0,.62f,.78f, 1,0,0, 1),
+        view(-3.2f,6.8f,-6.5f, 3.4f,6.4f,-6.6f, 0,.62f,.78f, 1,0,0, 1),
+        view(-2.4f,7.6f,-5.2f, 2.4f,7.6f,-5.2f, 0,.62f,.78f, 1,0,0, 1),
+        view(-3.6f,3.6f,-8.4f, 3.6f,3.8f,-8.4f, 0,.62f,.78f, 1,0,0, 1),
+        view(-4.2f,4.6f,-8.2f, 4.2f,4.8f,-8.2f, 0,.62f,.78f, 1,0,0, 1),
+        view(-4.2f,4.6f,-8.2f, 4.2f,4.8f,-8.2f, 0,.62f,.78f, 1,0,0, 1)},STRUCK);
     private static final MiningPose.Track VIEW_AWAKEN=new MiningPose.Track(AWAKEN_TIMES,new float[][]{
-        view(-3.9f,2.4f,-8.3f, 3.9f,2.6f,-8.3f, 0,.62f,.78f, 1,0,0, 1),
-        view(-12f,3f,-5, 12f,3f,-5, 0,.62f,.78f, 1,0,0, 1),
-        view(-12f,4f,-5, 12f,4f,-5, 0,.62f,.78f, 1,0,0, 1),
+        view(-4.2f,4.6f,-8.2f, 4.2f,4.8f,-8.2f, 0,.62f,.78f, 1,0,0, 1),
+        view(-12f,1f,-5, 12f,1f,-5, 0,.62f,.78f, 1,0,0, 1),
+        view(-12f,2f,-5, 12f,2f,-5, 0,.62f,.78f, 1,0,0, 1),
+        view(-6f,11f,-6, 6f,11f,-6, 0,.62f,.78f, 1,0,0, 1),
+        view(-6f,11f,-6, 6f,11f,-6, 0,.62f,.78f, 1,0,0, 1),
         view(-6f,11f,-6, 6f,11f,-6, 0,.62f,.78f, 1,0,0, 1)},1);
-    private static final MiningPose.Track VIEW_DIE=new MiningPose.Track(new float[]{0,.12f,.42f},new float[][]{
-        view(-3.9f,2.4f,-8.3f, 3.9f,2.6f,-8.3f, 0,.62f,.78f, 1,0,0, 1),
+    private static final float[] VIEW_DIE_TIMES={0,.12f,.45f};
+    private static final MiningPose.Track VIEW_DIE=new MiningPose.Track(VIEW_DIE_TIMES,new float[][]{
+        view(-4.2f,4.6f,-8.2f, 4.2f,4.8f,-8.2f, 0,.62f,.78f, 1,0,0, 1),
         view(-1.8f,10f,-3.5f, 1.8f,10f,-3.5f, 0,.62f,.78f, 1,0,0, 1),
         view(-2f,11f,-3, 2f,11f,-3, 0,.62f,.78f, 1,0,0, 1)},1);
     /** Each forearm comes up to its fist from here (px from the fist): from below the picture, the right from the right. */
@@ -415,7 +504,7 @@ public final class ArrowStabPose {
         t=Math.max(0,t);
         float start=Math.max(REVEAL,known);
         float[] k=fate==Fate.AWAKEN&&t>start?VIEW_AWAKEN.at(Math.min(t-start,AWAKEN_TIMES[AWAKEN_TIMES.length-1]))
-            :fate==Fate.DIE&&t>start?VIEW_DIE.at(Math.min(t-start,.42f)):VIEW.at(Math.min(t,REVEAL));
+            :fate==Fate.DIE&&t>start?VIEW_DIE.at(Math.min(t-start,VIEW_DIE_TIMES[2])):VIEW.at(Math.min(t,REVEAL));
         float[] s=shake(t,fate,start);
         Vector3f right=new Vector3f(k[0]+s[4],k[1]+s[5],k[2]+s[6]),left=new Vector3f(k[3]+s[7],k[4]+s[8],k[5]+s[9]);
         Vector3f rs=new Vector3f(right).add(VIEW_RIGHT_SHOULDER),ls=new Vector3f(left).add(VIEW_LEFT_SHOULDER);
@@ -438,23 +527,26 @@ public final class ArrowStabPose {
     private static final float KNEEL_BOB=4;
     /** The thigh's and the shin's length (px). */
     private static final float BONE=6;
+    /** Where the foot's line ends standing, and where the shin lies kneeling (model px below the neck: the ground is at 24). */
+    private static final float SOLE=23.75f,SHIN=22;
+    /** A foot still planted as the other knee goes down steps this far forward (px), lifting this much on the way: down on one knee. */
+    private static final float STEP=5,STEP_LIFT=1.2f;
     /**
-     * The legs: the feet planted where they stand; going down on the knees, the hips sink until the knees are on the
-     * ground and the shins lie behind them; falling forward ({@code fall} degrees), the body tips over the knees until
-     * it lies face down, the legs straight out behind.
+     * The legs: the feet planted where they stand; going down on a knee ({@code kneelR}, {@code kneelL} from 0 to 1),
+     * the hips sink with the lower one and each knee going down comes down onto the ground, its shin swinging back along
+     * it, while a foot still planted steps forward under the knee it keeps up (down on one knee, as one gets down and
+     * up), the rest of the way back as its own knee goes down; falling forward ({@code fall} degrees, on both knees),
+     * the body tips over the knees until it lies face down, the legs straight out behind.
      */
-    static void legs(MotionPose p,float kneel,float fall,float bob,float shift,float lean){
-        if(kneel<=0&&fall<=0){
-            p.bob=bob;p.shift=shift;p.lean=lean;
-            for(int i=0;i<2;i++)leg(p,i,FEET[i][0]-shift,11.75f-bob,FEET[i][1]-lean);
-            return;
-        }
+    static void legs(MotionPose p,float kneelR,float kneelL,float fall,float bob,float shift,float lean){
         if(fall<=0){
-            // sinking: from the planted feet to the kneel, the hips coming down
-            p.bob=bob+(KNEEL_BOB-bob)*kneel;p.shift=shift*(1-kneel);p.lean=lean*(1-kneel);
+            float drop=Math.max(kneelR,kneelL);
+            p.bob=bob+(KNEEL_BOB-bob)*drop;p.shift=shift*(1-drop);p.lean=lean*(1-drop);
+            float hip=12+p.bob;
             for(int i=0;i<2;i++){
-                float x=(FEET[i][0]-shift)*(1-kneel),y=(11.75f-bob)+(BONE-(11.75f-bob))*kneel,z=(FEET[i][1]-lean)+(BONE-(FEET[i][1]-lean))*kneel;
-                leg(p,i,x,y,z);
+                float k=i==0?kneelR:kneelL,step=Math.max(0,drop-k);
+                float x=FEET[i][0]-p.shift,y=SOLE-hip-STEP_LIFT*(float)Math.sin(Math.PI*step),z=FEET[i][1]-p.lean-STEP*step;
+                leg(p,i,x*(1-k),y+(SHIN-hip-y)*k,z+(BONE-z)*k);
             }
             return;
         }
