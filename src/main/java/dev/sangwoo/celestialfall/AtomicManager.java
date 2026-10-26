@@ -213,8 +213,9 @@ public final class AtomicManager {
         LongCooldowns.note(player.getServer(),player.getUuid(),LongCooldowns.Skill.ATOMIC,0);
     }
     /**
-     * The player's Atomic is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they came back or
-     * reset, or what is left of it on a new body after a death), with the sword's cooldown showing what is left of it.
+     * The player's Atomic is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they come back, come
+     * back to life (2.74.0) or are given a stand, or what is left of it on a new body back from the End), with the sword's
+     * cooldown showing what is left of it.
      */
     public static void restore(ServerPlayerEntity player,long ready,long now) {
         var cooldowns=player.getItemCooldownManager();

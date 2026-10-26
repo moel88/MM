@@ -8,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * The long cooldowns (2.73.0, user request: "카게노 아토믹 쿨타임은 10분으로 하고 게임 나갔다 오거나 재설정하면 쿨타임 다시
- * 10분부터 흐르게 시간정지도 똑같이 바꿔줘 ... 비트다운도 ... 아토믹이랑 똑같은 메커니즘 적용"): one still running as its player
- * comes back or resets begins again in full, one over stays over, and they are kept with the world.
+ * 10분부터 흐르게 시간정지도 똑같이 바꿔줘 ... 비트다운도 ... 아토믹이랑 똑같은 메커니즘 적용"; 2.74.0: "그냥 죽어서 부활하기만
+ * 하면 처음부터 돌게", and as the stand arrow gives a stand): one still running as its player comes back, comes back to
+ * life or is given a stand begins again in full, one over stays over, one whose skill is still going keeps its tick, and
+ * they are kept with the world.
  */
 class LongCooldownsTest {
     private static final int ATOMIC=600*20;
@@ -26,6 +28,11 @@ class LongCooldownsTest {
         assertEquals(0,LongCooldowns.restart(now,now,ATOMIC),"ready this very tick: over");
         assertEquals(0,LongCooldowns.restart(now-3000,now,ATOMIC),"ran out while they were away");
         assertEquals(0,LongCooldowns.restart(0,now,ATOMIC),"never used");
+    }
+    @Test void oneWhoseSkillIsStillGoingKeepsItsTick(){
+        long now=50_000,end=now+300;
+        assertEquals(end+ATOMIC,LongCooldowns.restart(end+ATOMIC,now,ATOMIC),"an Atomic still playing out: its ten minutes still begin as it ends");
+        assertEquals(now+ATOMIC,LongCooldowns.restart(now+ATOMIC,now,ATOMIC),"one a whole length away is the same either way");
     }
     @Test void theLedgerKeepsEachPlayersSkillsApart(){
         var a=UUID.randomUUID();var b=UUID.randomUUID();var state=new LongCooldowns();

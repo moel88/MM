@@ -89,7 +89,7 @@ public final class CooldownHud {
             }
         }
         // Atomic: from the server's ledger once it has told it (2.73.0, LongCooldowns: ten minutes, begun again in full on
-        // coming back or a reset; a new body's sword shows only what is left of it); else the sword's cooldown share at
+        // coming back, and since 2.74.0 on coming back to life or being given a stand); else the sword's cooldown share at
         // this tick and one tick on gives its length
         boolean ledger=LongCooldownsClient.known();
         if(ledger){
@@ -122,7 +122,7 @@ public final class CooldownHud {
         long inhale=dev.sangwoo.celestialfall.client.stand.StandInhale.ready(p.getUuid());
         if(inhale!=inhaleSeen){show(INHALE,inhaleName(),inhale-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.INHALE_COOLDOWN,now);inhaleSeen=inhale;}
         // its beatdown (2.64.0): from when its blow is over, or its cutscene (the server's ready tick, told with its punches'
-        // news; 2.73.0: from its ledger, which keeps it as they leave or reset, once the server has told it)
+        // news; 2.73.0: from its ledger, which keeps it as they leave or die, once the server has told it)
         long beatdown=ledger?LongCooldownsClient.ready(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
         int beatdownLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN_COOLDOWN;
         if(beatdown!=beatdownSeen){show(BEATDOWN,beatdownName(),beatdown-time,beatdownLength,now);beatdownSeen=beatdown;}

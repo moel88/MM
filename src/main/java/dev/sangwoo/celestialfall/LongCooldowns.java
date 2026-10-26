@@ -27,11 +27,14 @@ import net.minecraft.world.PersistentState;
  * 적용"): Kageno's Atomic (ten minutes), Star Platinum's time stop (two and a half) and its beatdown (two). Each skill's
  * own ledger (AtomicManager, StarPlatinumTimeStop, StarPlatinumAttack) writes here the tick it is ready again as it sets
  * it, and this keeps them per player with the world: leaving, a server's restart or a world reopened keep them too. One
- * still running when its player comes back into the game (joins: back on a server, or the world reopened) or resets
- * their character (the pause menu's 캐릭터 재설정하기, CharacterReset) begins again in full from then; one that ran out
- * meanwhile stays over, and dying any other way leaves them running as they were. The player's client is told each
- * one's ready tick and length (the cooldown list draws them from it), and the Atomic sword's cooldown, which Minecraft
- * keeps on the body, is set again on every new one. Bosses keep none: they never come back.
+ * still running when its player comes back into the game (joins: back on a server, or the world reopened) begins again
+ * in full from then; one that ran out meanwhile stays over. Since 2.74.0 (user request: "그냥 플레이어한테 죽어도 처음부터
+ * 쿨타임 돌게 하고 보스한테 죽어도 처음부터 쿨타임 돌게 그냥 화살로 뽑아도 처음으로 쿨타임 돌게 그냥 죽어서 부활하기만 하면
+ * 처음부터 돌게") the same happens whenever they come back to life after a death, whatever killed them (a player, a boss,
+ * the stand arrow, their own character reset, a fall: 2.73.0 kept them running through every death but the reset, which
+ * began them again as it killed), and when the stand arrow gives them a stand (StandArrow). The player's client is told
+ * each one's ready tick and length (the cooldown list draws them from it), and the Atomic sword's cooldown, which
+ * Minecraft keeps on the body, is set again on every new one. Bosses keep none: they never come back.
  */
 public final class LongCooldowns extends PersistentState {
     /** The long cooldowns, in the packet's and the save's order. */
@@ -47,8 +50,9 @@ public final class LongCooldowns extends PersistentState {
     }
     public static void initialize(){
         ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->begin(handler.player));
-        // a new body after any death keeps what is running; the sword's cooldown has to be put on it again
-        ServerPlayerEvents.AFTER_RESPAWN.register((old,p,alive)->respawned(p));
+        // back to life after a death, whatever killed them: what is running begins again in full (2.74.0); a new body back
+        // from the End (alive) only has the sword's cooldown put on it again
+        ServerPlayerEvents.AFTER_RESPAWN.register((old,p,alive)->{if(alive)respawned(p);else begin(p);});
         // a client that joins says which packets it takes just after joining: told then too. Queued, not run at once: on
         // a world opened in the game the client says so while its connection is still being set up, and asking then
         // whether it takes a packet fails (the game could not place the player)
@@ -72,10 +76,12 @@ public final class LongCooldowns extends PersistentState {
     Set<UUID> players(){return players.keySet();}
 
     /**
-     * When a cooldown ready at {@code ready} is ready once its player came back or reset at {@code now}: one still running
-     * begins again in full ({@code length} ticks from now); one over (or none, 0) stays over.
+     * When a cooldown ready at {@code ready} is ready once it begins again at {@code now} (its player came back, came back
+     * to life, or was given a stand): one still running begins again in full ({@code length} ticks from now); one over
+     * (or none, 0) stays over; one whose skill is still going on (an Atomic playing out after its caster died or left:
+     * ready more than a whole length away) keeps its tick, to run in full once the skill is over.
      */
-    public static long restart(long ready,long now,int length){return ready>now?now+length:0;}
+    public static long restart(long ready,long now,int length){return ready>now?Math.max(ready,now+length):0;}
     /** The length of {@code p}'s {@code skill}'s cooldown (ticks): Atomic's from the config, a boss's own where it has one. */
     public static int length(ServerPlayerEntity p,Skill skill){
         return switch(skill){
@@ -101,13 +107,12 @@ public final class LongCooldowns extends PersistentState {
         var state=get(server);
         for(var id:new ArrayList<>(state.players()))if(state.put(id,skill,0)){var p=server.getPlayerManager().getPlayer(id);if(p!=null)send(p);}
     }
-    /** {@code p} reset their character (CharacterReset, as they die of it): what is running begins again in full. */
-    public static void reset(ServerPlayerEntity p){begin(p);}
     /**
-     * {@code p} comes back into the game (joins) or resets: each long cooldown still running begins again in full now,
-     * the skills' own ledgers and the sword's cooldown set to it; one over is forgotten. Their client is told.
+     * {@code p} comes back into the game (joins), comes back to life after a death (respawns), or is given a stand by the
+     * stand arrow: each long cooldown still running begins again in full now, the skills' own ledgers and the sword's
+     * cooldown set to it; one over is forgotten. Their client is told.
      */
-    static void begin(ServerPlayerEntity p){
+    public static void begin(ServerPlayerEntity p){
         if(p instanceof BossPlayer||p.getServer()==null)return;
         var state=get(p.getServer());long now=p.getWorld().getTime();
         boolean free=NoCooldownState.enabled(p);
@@ -118,7 +123,7 @@ public final class LongCooldowns extends PersistentState {
         }
         send(p);
     }
-    /** A new body after a death: the sword's cooldown on it again, for what is left of Atomic's; their client told. */
+    /** A new body that did not die (back from the End): the sword's cooldown on it again, for what is left of Atomic's; their client told. */
     static void respawned(ServerPlayerEntity p){
         if(p instanceof BossPlayer||p.getServer()==null)return;
         long now=p.getWorld().getTime();

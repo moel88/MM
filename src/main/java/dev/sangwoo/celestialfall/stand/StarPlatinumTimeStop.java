@@ -134,7 +134,7 @@ public final class StarPlatinumTimeStop {
     public static long calledAt(PlayerEntity p){var s=p==null||p.getWorld().isClient?null:BY_USER.get(p.getUuid());return s==null?Long.MIN_VALUE:s.start;}
     /** The tick this player's time stop is ready again (0 if they have not used it). */
     public static long ready(PlayerEntity p){return READY.getOrDefault(p.getUuid(),0L);}
-    /** This player's time stop is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they came back or reset; 0 for now). */
+    /** This player's time stop is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they come back, come back to life or are given a stand; 0 for now). */
     public static void restore(ServerPlayerEntity p,long ready){if(ready>0)READY.put(p.getUuid(),ready);else READY.remove(p.getUuid());}
 
     /**
@@ -226,7 +226,7 @@ public final class StarPlatinumTimeStop {
         for(var e:s.held.keySet())BY_HELD.remove(e.getUuid(),s);
         long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(s.user)?now:now+dev.sangwoo.celestialfall.boss.Bosses.cooldown(s.user,dev.sangwoo.celestialfall.boss.BossRules.TIME_STOP,TS_COOLDOWN);
         READY.put(s.user.getUuid(),ready);
-        // (kept with the world too, 2.73.0: begun again in full if its user comes back or resets while it runs)
+        // (kept with the world too, 2.73.0: begun again in full if its user comes back, or comes back to life (2.74.0), while it runs)
         dev.sangwoo.celestialfall.LongCooldowns.note(s.world.getServer(),s.user.getUuid(),dev.sangwoo.celestialfall.LongCooldowns.Skill.TIME_STOP,ready);
         // the word that time moves goes out first: whom it stopped are let go (their screens, their sound) before what
         // they are owed comes to them, so their cries of pain are heard (sent after, they were hushed with the rest)

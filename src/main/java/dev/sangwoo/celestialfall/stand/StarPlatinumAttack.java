@@ -213,7 +213,7 @@ public final class StarPlatinumAttack {
         s.beatdownReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?end:beatdownReady(p,end);kept(p,s);
         send(p,s,RESTS,null,null);
     }
-    /** This player's beatdown is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they came back or reset). */
+    /** This player's beatdown is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they come back, come back to life or are given a stand). */
     public static void restoreBeatdown(ServerPlayerEntity p,long ready){var s=STATES.get(p.getUuid());if(s!=null)s.beatdownReady=ready;}
     /** The beatdown's cooldown as just set, kept with the world (2.73.0, LongCooldowns). */
     private static void kept(ServerPlayerEntity p,State s){
