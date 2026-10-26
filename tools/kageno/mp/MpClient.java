@@ -581,7 +581,8 @@ public final class MpClient implements ClientModInitializer {
      */
     private void arrowWatch(){
         if(!arrowListening&&mc.getSoundManager()!=null){arrowListening=true;mc.getSoundManager().registerListener((sound,set)->{
-            String id=sound.getId().getPath();if(!id.startsWith("stand_arrow"))return;
+            // (2.71.0: the ground's own sounds it plays for the knees and the fall, and any cry: none at the arrow's death)
+            String id=sound.getId().getPath();if(!id.startsWith("stand_arrow")&&!id.endsWith(".fall")&&!id.endsWith(".step")&&!id.contains("player.death")&&!id.contains("player.hurt"))return;
             var s=dev.sangwoo.celestialfall.client.stand.StandArrowClient.all().values().stream().findFirst().orElse(null);
             note(String.format(Locale.ROOT,"sound %s at stab age %.2f (volume %.2f)",id,s==null?-1:s.age(0),sound.getVolume()));});}
         for(var s:dev.sangwoo.celestialfall.client.stand.StandArrowClient.all().values()){
