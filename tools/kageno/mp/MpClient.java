@@ -200,13 +200,17 @@ public final class MpClient implements ClientModInitializer {
      * the watcher 2.5 blocks in front of it (the two and a half minutes run once time moves again), then uses its
      * beatdown on nobody (the watcher 8 blocks away: its two minutes run once the opener is over). It resets its
      * character (Esc, R, Enter) and respawns 4 s later; it dies another way ("KILL": /kill) and respawns 4 s later; the
-     * watcher kills it ("SLAIN": /damage by the watcher) and it respawns 4 s later: since 2.74.0 all three begin again in
+     * watcher kills it ("SLAIN": /damage by the watcher) and it respawns 4 s later: since 2.74.0 they begin again in
      * full as it comes back to life each time (they run on while it is dead; the Atomic sword's cooldown is on the new
-     * body). It loses its stand ("NOSTAND") and the stand arrow gives it Star Platinum (R with the arrow in hand, the
-     * server told to awaken it): all three in full again as the arrow chooses it. It leaves and joins once more: all
-     * three in full again. Both log the long cooldowns their client is told (LongCooldownsClient: each one's
-     * ready tick, the seconds from now, its length) and the cooldown list (each entry's length and what is left of it);
-     * the server logs the caster's as kept with the world and as each skill keeps its own, and its deaths.
+     * body), since 2.74.1 only those of the stand it uses (Star Platinum's time stop and beatdown: Kageno's Atomic runs
+     * on). It loses its stand ("NOSTAND") and the stand arrow gives it Star Platinum (R with the arrow in hand, the
+     * server told to awaken it): its two in full again as the arrow chooses it, Atomic running on. It loses its stand
+     * again, its next gacha pull is made an SSR ("PITY": the operator's count of 99 pulls since one) and it pulls once
+     * ("PULL", as the gacha screen's 1회 asks; 2.74.1): Kageno, and Atomic in full again, the other two running on. It
+     * leaves and joins once more, Kageno: Atomic in full again, the other two running on. Both log the long cooldowns
+     * their client is told (LongCooldownsClient: each one's ready tick, the seconds from now, its length) and the
+     * cooldown list (each entry's length and what is left of it); the server logs the caster's as kept with the world
+     * and as each skill keeps its own, its deaths and its pull.
      */
     private static final String[] COOLDOWNS_SCRIPT={
         "5 G","600 LEAVE",
@@ -216,7 +220,8 @@ public final class MpClient implements ClientModInitializer {
         "1220 KILL","1300 RESPAWN",
         "1420 SLAIN","1500 RESPAWN",
         "1560 NOSTAND","1570 ARROWS","1580 RIGSTAR","1600 R",
-        "1900 LEAVE","1960 END"};
+        "1840 NOSTAND","1850 PITY","1870 PULL","1900 PULLED",
+        "1960 LEAVE","2020 END"};
     private static final String[] STEPS=ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -360,6 +365,10 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("AWAKEN")||step.equals("UNAWAKEN")){if(down)command("botand progress awaken @s"+(step.equals("AWAKEN")?"":" off"));return;}
         if(step.equals("ARROWS")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:stand_arrow 2");return;}
         if(step.equals("USE")){if(down){note("use the item in the main hand ("+mc.player.getMainHandStack().getItem()+")");mc.interactionManager.interactItem(mc.player,net.minecraft.util.Hand.MAIN_HAND);}return;}
+        // 2.74.1: the gacha, its next pull made an SSR by the operator's count, asked as the screen's 1회 does
+        if(step.equals("PITY")){if(down)command("botand gacha set @s 99 0");return;}
+        if(step.equals("PULL")){if(down){note("gacha: one pull asked");dev.sangwoo.celestialfall.client.gacha.GachaClient.request(1);}return;}
+        if(step.equals("PULLED")){if(down)note("gacha answered: \""+dev.sangwoo.celestialfall.client.gacha.GachaClient.notice+"\", own stand "+stand(mc.player));return;}
         if(step.equals("RIGSTAR")||step.equals("RIGDIE")){if(down){try{Files.writeString(OUT.resolve("rig"),step.equals("RIGDIE")?"death":"star_platinum");}catch(Exception e){fail(e);}note("next arrow asked to "+(step.equals("RIGDIE")?"kill":"awaken Star Platinum"));}return;}
         // 2.69.0: the boss's steps (BOSS_SCRIPT)
         if(step.equals("WLOW")){if(down)command("damage Watcher 120 minecraft:generic");return;}

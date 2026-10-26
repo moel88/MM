@@ -168,7 +168,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * none): the server's own ledgers and the packet its client is told, as a use long ago leaves them; "NOSTAND@n" takes the
  * player's stand off them ("/botand progress stand @s none" as the player). The log gets each time the client is told
  * them (each one's seconds left and length) and each death and respawn. "pointer=1" lets MOVE_ and CLICK work (and the
- * pointer show) in a shot other than UI while a screen is up, such as the death screen's 부활 ("MOVE_RESPAWN@n").
+ * pointer show) in a shot other than UI while a screen is up, such as the death screen's 부활 ("MOVE_RESPAWN@n"), and
+ * since 2.74.1 in play too while the cursor is free. The gacha (2.74.1): "SSRNEXT@n" makes the player's next pull an SSR
+ * (their count at 99 since one, as "/botand gacha set" does); "MOVE_DOCK@n" points at the HUD's menu button (≡),
+ * "MOVE_DRAW@n" at the open menu's 뽑기, and on the gacha screen "MOVE_G1@n" at 1회 뽑기, "MOVE_GSKIP@n" at 건너뛰기,
+ * "MOVE_GOK@n" at the results' 확인 and "MOVE_GX@n" at its X; "KEY_M@n" is the menu key. The log gets the gacha's
+ * answers (its notice) and the stand the client knows the player has.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -367,8 +372,11 @@ public final class SkillShots implements ClientModInitializer {
         mc.player.setYaw(yaw);mc.player.setPitch(pitch);mc.player.setHeadYaw(yaw);mc.player.setBodyYaw(yaw);
         mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(yaw,pitch,mc.player.isOnGround()));
     }
-    /** Whether the pointer moves and is drawn: UI and map shots; "pointer=1" (2.74.0) in another while a screen is up (the death screen's 부활). */
-    private boolean ui(){return ("UI".equals(current)||mapShot()||opts.containsKey("pointer")&&mc!=null&&mc.currentScreen!=null)&&phase==4;}
+    /**
+     * Whether the pointer moves and is drawn: UI and map shots; "pointer=1" (2.74.0) in another while a screen is up (the
+     * death screen's 부활), and since 2.74.1 in play too while the cursor is free (the HUD's menu button).
+     */
+    private boolean ui(){return ("UI".equals(current)||mapShot()||opts.containsKey("pointer")&&mc!=null&&(mc.currentScreen!=null||!mc.mouse.isCursorLocked()))&&phase==4;}
     /** A UI step's target in GUI units (see the class notes). */
     private double[] target(String name){
         int w=mc.getWindow().getScaledWidth(),h=mc.getWindow().getScaledHeight();
@@ -388,6 +396,22 @@ public final class SkillShots implements ClientModInitializer {
         }
         // 2.73.0: the player list's rows (where the wheel scrolls it), as drawn on the last frame
         if(name.equals("LIST")){var a=dev.sangwoo.celestialfall.client.ui.PlayerPanel.area();if(a==null)throw new IllegalStateException("no player list to point at");return new double[]{a[0]+(a[2]-a[0])*.55,a[1]+(a[3]-a[1])*.62};}
+        // 2.74.1: the HUD's menu button (≡), the open menu's 뽑기, and the gacha screen's 1회 뽑기, 건너뛰기, 확인 and X
+        if(name.equals("DOCK")||name.equals("DRAW")){
+            for(var dk:dev.sangwoo.celestialfall.client.menu.MenuLayout.dock(w,h,name.equals("DRAW")))
+                if(name.equals("DOCK")||dk.id().equals("draw")){var r=dk.rect();return new double[]{r.x()+r.w()*.5,r.y()+r.h()*.55};}
+            throw new IllegalStateException("no "+name+" in the dock");
+        }
+        if(name.matches("G1|GSKIP|GOK|GX")){
+            if(!(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.gacha.GachaScreen s))throw new IllegalStateException("no gacha screen for "+name);
+            float[] q;
+            try{
+                if(name.equals("GOK")){var m=Class.forName("dev.sangwoo.celestialfall.client.gacha.GachaResults").getDeclaredMethod("okButton",dev.sangwoo.celestialfall.client.gacha.GachaScreen.class);m.setAccessible(true);q=(float[])m.invoke(null,s);}
+                else{var m=dev.sangwoo.celestialfall.client.gacha.GachaScreen.class.getDeclaredMethod(name.equals("G1")?"pullOne":name.equals("GSKIP")?"skipButton":"closeBox");m.setAccessible(true);q=(float[])m.invoke(s);}
+            }catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+            double x=0,y=0;for(int i=0;i<q.length;i+=2){x+=q[i];y+=q[i+1];}
+            return new double[]{x/(q.length/2),y/(q.length/2)};
+        }
         if(name.equals("OFF"))return new double[]{w*.2,h*.8};
         throw new IllegalArgumentException(name);
     }
@@ -657,7 +681,7 @@ public final class SkillShots implements ClientModInitializer {
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
-    private String panelLogged="",longLogged="";
+    private String panelLogged="",longLogged="",gachaLogged="";
     private void logInterface()throws Exception{
         String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
         if(!screen.equals(screenLogged)){log.append("  screen ").append(screen).append(" at ").append(age).append('\n');screenLogged=screen;}
@@ -679,6 +703,10 @@ public final class SkillShots implements ClientModInitializer {
             for(var sk:dev.sangwoo.celestialfall.LongCooldowns.Skill.values()){long r=dev.sangwoo.celestialfall.client.LongCooldownsClient.ready(sk);key.append(r).append(',');
                 line.append(String.format(Locale.ROOT," %s %s of %.0f s;",sk.name().toLowerCase(Locale.ROOT),r>now?String.format(Locale.ROOT,"%.1f s left",(r-now)/20.):"none",dev.sangwoo.celestialfall.client.LongCooldownsClient.length(sk)/20.));}
             if(!key.toString().equals(longLogged)){log.append("  long cooldowns told:").append(line).append(" at ").append(age).append('\n');longLogged=key.toString();}
+        }
+        // 2.74.1: the gacha's answers (its notice) and the stand the player's client knows they have
+        {String notice=dev.sangwoo.celestialfall.client.gacha.GachaClient.notice,stand=dev.sangwoo.celestialfall.client.ProgressClient.profile.stand();
+            if(!(notice+"|"+stand).equals(gachaLogged)){log.append("  gacha notice \"").append(notice).append("\", stand ").append(stand).append(" at ").append(age).append('\n');gachaLogged=notice+"|"+stand;}
         }
         var f=net.minecraft.client.gui.hud.ChatHud.class.getDeclaredField("messages");f.setAccessible(true);
         var lines=(List<net.minecraft.client.gui.hud.ChatHudLine>)f.get(mc.inGameHud.getChatHud());
@@ -957,7 +985,7 @@ public final class SkillShots implements ClientModInitializer {
                             }else if(age>=at+120){tried.add(id);log.append("  try ").append(k).append(" gave up at ").append(age).append('\n');}
                         }
                         continue;}
-                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;case "M"->GLFW_KEY_M;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);if(what.equals("KEY_H"))lastH=age;
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,
@@ -988,6 +1016,12 @@ public final class SkillShots implements ClientModInitializer {
                                 switch(skills[i]){case ATOMIC->dev.sangwoo.celestialfall.AtomicManager.restore(p,ready,now);case TIME_STOP->dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.restore(p,ready);case BEATDOWN->dev.sangwoo.celestialfall.stand.StarPlatinumAttack.restoreBeatdown(p,ready);}
                                 dev.sangwoo.celestialfall.LongCooldowns.note(server,p.getUuid(),skills[i],ready);}
                             log.append("  long cooldowns put on at ").append(age).append(" (").append(opts.getOrDefault("lcd","240/60/40")).append(" s left)\n");});continue;}
+                    // 2.74.1: the player's next gacha pull made an SSR (their count at 99 pulls since one, as the operator's
+                    // "/botand gacha set" makes it: the banner then says SSR 확정까지 1회)
+                    if(what.equals("SSRNEXT")){if(age==at)server(p->{
+                            var g=dev.sangwoo.celestialfall.gacha.GachaState.get(p.getServer());var c=g.get(p.getUuid());
+                            g.set(p.getUuid(),new dev.sangwoo.celestialfall.gacha.GachaRules.Count(dev.sangwoo.celestialfall.gacha.GachaRules.SSR_PITY-1,c.sinceSr(),c.pulls()));
+                            log.append("  next gacha pull made an SSR at ").append(age).append('\n');});continue;}
                     if(what.equals("NOSTAND")){if(age==at)server(p->{
                             int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand progress stand @s none");
                             log.append("  stand taken off at ").append(age).append(n>0?"":" (refused)").append(" (server: ").append(ProgressManager.profile(p).stand()).append(")\n");});continue;}
