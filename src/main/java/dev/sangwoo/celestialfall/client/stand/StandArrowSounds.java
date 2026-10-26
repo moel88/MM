@@ -32,8 +32,12 @@ final class StandArrowSounds {
     private StandArrowSounds(){}
     /** The tracks: the stab itself (from its start), and its choice's (from when it shows), chosen or rejected. */
     static final int STAB=0,CHOSEN=1,REJECTED=2;
-    /** The sound of the ground under the body (the block's own fall sound), for a knee or the body coming down on it. */
-    static final String GROUND="ground";
+    /**
+     * The sound of the ground under the body, the block's own: its fall sound (a knee or the body coming down on it) or
+     * its step sound (a foot set down on it); as loud and pitched as the game's own (fall: the block's volume x .5 and
+     * pitch x .75; step: x .15) at a cue's volume and pitch of 1.
+     */
+    static final String GROUND="ground",STEP="step";
     /**
      * One sound: its track, when (seconds on the stab's clock, or after its choice shows), the sound (an id in this
      * mod's sounds, or GROUND), how loud, its pitch, and when it is hushed (fades out; NaN: it plays out).
@@ -41,8 +45,59 @@ final class StandArrowSounds {
     record Cue(int track,float at,String sound,float volume,float pitch,float until){
         Cue(int track,float at,String sound,float volume,float pitch){this(track,at,sound,volume,pitch,Float.NaN);}
     }
-    /** The cue sheet (by time within each track). */
-    static final Cue[] CUES={};
+    /** When the one it rejects lands, on a tick. */
+    private static final float LANDS=Math.round(LANDS_AT*20)/20f;
+    /** The cue sheet (by time within each track; the stages are ArrowStabPose's, the cut points tools/stand/cut_arrow_sounds.py's). */
+    static final Cue[] CUES={
+        // brought up before the eyes; lowered to the chest with a long sigh (the doubt); the deep breath, both hands on it
+        new Cue(STAB,.05f,"stand_arrow_cloth_1",.5f,1),
+        new Cue(STAB,1.1f,"stand_arrow_cloth_2",.45f,1),
+        new Cue(STAB,1.1f,"stand_arrow_sigh",.85f,1),
+        new Cue(STAB,2f,"stand_arrow_breath",.8f,1),
+        // taken up and raised to the sky; turned point down and aimed, breathing short and shaky (hushed for the caught
+        // breath); the thunder rolling far off, swelling to the stillness and cut as it comes; the heart, faintly
+        new Cue(STAB,2.95f,"stand_arrow_cloth_3",.45f,1),
+        new Cue(STAB,3.75f,"stand_arrow_nervous",.6f,1,5f),
+        new Cue(STAB,3.95f,"stand_arrow_cloth_2",.35f,.9f),
+        new Cue(STAB,4f,"stand_arrow_rumble",.75f,1,8.75f),
+        new Cue(STAB,4.2f,"stand_arrow_heart",.25f,1),
+        new Cue(STAB,4.75f,"stand_arrow_heart",.32f,1),
+        // the breath caught for the blow; the arm driving it down; in
+        new Cue(STAB,5.05f,"stand_arrow_catch",.8f,1),
+        new Cue(STAB,5.25f,"stand_arrow_swing",.5f,1),
+        new Cue(STAB,HIT,"stand_arrow_stab",1,1),
+        // the heart from then on (BEATS), louder and faster (the last ones only their first sound: hushed before the
+        // second); the gasp as the body arches back and the shaky breaths after it; each knee coming down on the ground
+        new Cue(STAB,5.95f,"stand_arrow_heart",.55f,1),
+        new Cue(STAB,6.05f,"stand_arrow_gasp",.9f,1,8.8f),
+        new Cue(STAB,6.7f,"stand_arrow_heart",.62f,1.02f),
+        new Cue(STAB,KNEE,"stand_arrow_knee",.9f,1),
+        new Cue(STAB,KNEE,GROUND,1,1),
+        new Cue(STAB,7.3f,"stand_arrow_heart",.7f,1.04f),
+        new Cue(STAB,KNEES,"stand_arrow_knee_2",.7f,1),
+        new Cue(STAB,KNEES,GROUND,.8f,1),
+        new Cue(STAB,7.8f,"stand_arrow_heart",.78f,1.06f),
+        new Cue(STAB,8.15f,"stand_arrow_heart",.85f,1.08f,8.25f),
+        new Cue(STAB,8.45f,"stand_arrow_heart",.9f,1.1f,8.55f),
+        new Cue(STAB,8.65f,"stand_arrow_heart",.95f,1.11f,8.75f),
+        new Cue(STAB,8.8f,"stand_arrow_heart",1,1.12f,8.9f),
+        // chosen: one great beat and the thunderclap as the stand bursts out of them, the air of it, a singing bowl ringing
+        // on; getting up (the clothes, the left foot set down, then the right), and breathing out
+        new Cue(CHOSEN,0,"stand_arrow_heart",1,.85f),
+        new Cue(CHOSEN,0,"stand_arrow_awaken",1,1),
+        new Cue(CHOSEN,.05f,"stand_arrow_burst",.6f,1),
+        new Cue(CHOSEN,.15f,"stand_arrow_bowl",.4f,1),
+        new Cue(CHOSEN,.95f,"stand_arrow_cloth_1",.5f,.9f),
+        new Cue(CHOSEN,1.2f,STEP,1,1),
+        new Cue(CHOSEN,1.65f,STEP,1,1),
+        new Cue(CHOSEN,1.7f,"stand_arrow_relief",.5f,1),
+        // rejected: a beat, the choked gasp, a last weaker beat, and the body falling on its face; then nothing
+        new Cue(REJECTED,0,"stand_arrow_heart",.7f,.9f),
+        new Cue(REJECTED,.05f,"stand_arrow_choke",.8f,1),
+        new Cue(REJECTED,.55f,"stand_arrow_heart",.42f,.82f),
+        new Cue(REJECTED,LANDS,"stand_arrow_bodyfall",1,1),
+        new Cue(REJECTED,LANDS,GROUND,1,1),
+    };
     /** A cue heard this long after its time (seconds) still plays; later it is let go (it would not go with the body). */
     static final float LATE=.3f;
     /** Fading out (ticks). */
@@ -104,16 +159,18 @@ final class StandArrowSounds {
             return false;
         });
     }
-    /** The sound for cue {@code c}: this mod's, or the fall sound of the ground under the body. */
+    /** The sound for cue {@code c}: this mod's, or the ground's under the body (its fall or step sound). */
     private static Sound sound(MinecraftClient mc,StandArrowClient.Stab s,Cue c,float volume){
-        if(!GROUND.equals(c.sound()))return new Sound(CelestialFall.id(c.sound()),volume*c.volume(),c.pitch());
+        boolean fall=GROUND.equals(c.sound());
+        if(!fall&&!STEP.equals(c.sound()))return new Sound(CelestialFall.id(c.sound()),volume*c.volume(),c.pitch());
         if(mc.world==null||!(mc.world.getEntityById(s.entity) instanceof PlayerEntity p))return null;
         BlockPos at=p.getBlockPos();
         var state=mc.world.getBlockState(at);
         if(state.isAir()){at=at.down();state=mc.world.getBlockState(at);}
         if(state.isAir())return null;
         var group=state.getSoundGroup();
-        return new Sound(group.getFallSound().getId(),volume*c.volume()*group.getVolume(),c.pitch()*group.getPitch());
+        return fall?new Sound(group.getFallSound().getId(),volume*c.volume()*group.getVolume()*.5f,c.pitch()*group.getPitch()*.75f)
+            :new Sound(group.getStepSound().getId(),volume*c.volume()*group.getVolume()*.15f,c.pitch()*group.getPitch());
     }
     /** Cut short: the stab's sounds fade out (and no more come). */
     static void cut(StandArrowClient.Stab s){for(var p:s.playing)p.sound().fade();}
