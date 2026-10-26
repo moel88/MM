@@ -163,7 +163,21 @@ public final class MpClient implements ClientModInitializer {
         "700 BOSSKILL","740 OPENBOX",
         "790 BOSSHERE","810 HITBOSS","825 BOSSDMG2000","835 FLEE","1010 RETURN",
         "1080 END"};
-    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:SCRIPT;
+    /**
+     * The stand arrow (2.70.0), on its own (MP_ONLY=arrow): the caster starts with no stand and two arrows in its main
+     * hand; the server is told what the next arrow will do (the file OUT/rig, MpServer: Star Platinum, then the death).
+     * The first stab (R) awakens Star Platinum, the caster trying to walk meanwhile (W, held by it); R again with a stand
+     * is refused (nothing starts, the arrow kept); the caster's stand is taken off again and the second stab kills it,
+     * then it respawns. Both log every stab they hear (when, what it chose and when they heard it, cut short), the
+     * caster's body as they draw it (the stab's pose on and off, how far down it went, lying where it fell as it dies),
+     * the stab's sounds as they start and each player's stand; the server logs the caster held, its stand, the arrows in
+     * its hand, its death and any move while held (there should be none).
+     */
+    private static final String[] ARROW_SCRIPT={
+        "5 NOSTAND","10 ARROWS","20 RIGSTAR","30 R","40 W+","60 W-",
+        "130 R","160 NOSTAND","180 RIGDIE","190 R","215 W+","235 W-",
+        "300 RESPAWN","360 END"};
+    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -204,13 +218,14 @@ public final class MpClient implements ClientModInitializer {
                 if(age>2400){note("ERROR never ready");phase=3;age=0;return;}
                 if(mc.world==null||mc.player==null)return;
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());mc.setScreen(null);}
-                boolean ready=mc.world.getPlayers().size()>=2&&age>100&&(!caster||StandClient.visible(mc.player));
+                boolean ready=mc.world.getPlayers().size()>=2&&age>100&&(!caster||ONLY.equals("arrow")||StandClient.visible(mc.player));
                 if(ready){note("ready players="+mc.world.getPlayers().size()+" kageno="+StandClient.visible(mc.player));face();phase=2;age=0;}}
             case 2->{
                 mc.onWindowFocusChanged(true);
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());if(!interfaceStep())mc.setScreen(null);}
                 observe();
                 if(ONLY.equals("boss"))bossWatch();
+                if(ONLY.equals("arrow"))arrowWatch();
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -226,7 +241,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?900:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -282,6 +297,10 @@ public final class MpClient implements ClientModInitializer {
         if(step.startsWith("WALK")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("walk"),"walk");else Files.deleteIfExists(OUT.resolve("walk"));}catch(Exception e){fail(e);}note("watcher's walk "+(step.endsWith("+")?"asked for":"stopped"));}return;}
         // 2.64.0: the watcher at full health, or brought down to a quarter of it; its guard asked for
         if(step.equals("HEAL")||step.equals("HURT")){if(down){String c=step.equals("HEAL")?"effect give Watcher minecraft:instant_health 1 20 true":"damage Watcher 150 minecraft:generic";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // 2.70.0: the stand arrow's steps (ARROW_SCRIPT)
+        if(step.equals("NOSTAND")){if(down)command("botand progress stand @s none");return;}
+        if(step.equals("ARROWS")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:stand_arrow 2");return;}
+        if(step.equals("RIGSTAR")||step.equals("RIGDIE")){if(down){try{Files.writeString(OUT.resolve("rig"),step.equals("RIGDIE")?"death":"star_platinum");}catch(Exception e){fail(e);}note("next arrow asked to "+(step.equals("RIGDIE")?"kill":"awaken Star Platinum"));}return;}
         // 2.69.0: the boss's steps (BOSS_SCRIPT)
         if(step.equals("WLOW")){if(down)command("damage Watcher 120 minecraft:generic");return;}
         if(step.equals("BOSSHERE")){if(down)command("execute at Caster rotated 90 0 positioned ^ ^ ^3 rotated 270 0 run botand boss jotaro spawn here");return;}
@@ -553,6 +572,33 @@ public final class MpClient implements ClientModInitializer {
                     a.isEmpty()?0:a.get(a.size()/2)*20,a.size(),b.isEmpty()?0:b.get(b.size()/2)*20,b.size(),dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView()?" (stopped in time)":""));}}
         if(walking){var p=mc.player.getPos();if(mc.player.isOnGround())(mine.staggered(now)?walkStaggered:walkFree).add(Math.hypot(p.x-walkAt.x,p.z-walkAt.z));walkAt=p;}
     }
+    /**
+     * The stand arrow as this client knows it (2.70.0): every stab heard (when, what it chose and when this client heard
+     * it, cut short), the caster's body as drawn here (the stab's pose on and off, at what age; how far down it went;
+     * lying where it fell as it dies), and the stab's sounds as they start (at what age of the stab).
+     */
+    private void arrowWatch(){
+        if(!arrowListening&&mc.getSoundManager()!=null){arrowListening=true;mc.getSoundManager().registerListener((sound,set)->{
+            String id=sound.getId().getPath();if(!id.startsWith("stand_arrow"))return;
+            var s=dev.sangwoo.celestialfall.client.stand.StandArrowClient.all().values().stream().findFirst().orElse(null);
+            note(String.format(Locale.ROOT,"sound %s at stab age %.2f (volume %.2f)",id,s==null?-1:s.age(0),sound.getVolume()));});}
+        for(var s:dev.sangwoo.celestialfall.client.stand.StandArrowClient.all().values()){
+            String key=s.user+"@"+s.start;
+            var seen=arrowSeen.get(key);
+            if(seen==null){arrowSeen.put(key,seen=new String[]{"","",""});note(String.format(Locale.ROOT,"stab heard: %s from tick %d, heard at its age %.2f",name(s.user),s.start,s.age(0)));}
+            String fate=s.cutShort()?"cut short at "+String.format(Locale.ROOT,"%.2f",s.cut):s.fate.name()+(Float.isNaN(s.known)?"":String.format(Locale.ROOT," (%s, heard at %.2f)",s.outcome,s.known));
+            if(!fate.equals(seen[0])){seen[0]=fate;note("stab of "+name(s.user)+": "+fate);}
+            var body=mc.world.getPlayerByUuid(s.user);
+            var f=body==null?null:dev.sangwoo.celestialfall.client.stand.StandArrowClient.frame(body,0);
+            String pose=f==null?"off":"on";
+            if(!pose.equals(seen[1])){seen[1]=pose;note(String.format(Locale.ROOT,"stab pose of %s %s at its age %.2f",name(s.user),pose,s.age(0)));}
+            if(f!=null&&f.fallen()>arrowFallen+.2f){arrowFallen=f.fallen();note(String.format(Locale.ROOT,"%s fallen %.2f at its age %.2f",name(s.user),f.fallen(),s.age(0)));}
+            String lying=body!=null&&dev.sangwoo.celestialfall.client.stand.StandArrowClient.lying(body)?"lying (death time "+body.deathTime+")":"";
+            if(!lying.isEmpty()&&seen[2].isEmpty()){seen[2]=lying;note(name(s.user)+" "+lying+" at its age "+String.format(Locale.ROOT,"%.2f",s.age(0)));}
+        }
+        if(dev.sangwoo.celestialfall.client.stand.StandArrowClient.all().isEmpty())arrowFallen=0;
+    }
+    private boolean arrowListening;private float arrowFallen;private final Map<String,String[]> arrowSeen=new HashMap<>();
     private boolean guardAsked;private int deadFor;private final Map<Object,int[]> beatHeard=new IdentityHashMap<>();
     /** Per beatdown here: its one struck's hurt time last seen, how often their body flashed red and when it last did (its clock). */
     private final Map<Object,float[]> beatFlash=new IdentityHashMap<>();

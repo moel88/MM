@@ -77,7 +77,7 @@ public final class MpServer implements ModInitializer {
     private void joined(ServerPlayerEntity p){
         p.changeGameMode(GameMode.SURVIVAL);
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
-        if(caster(p)){ProgressManager.set(p,new ProgressProfile(1,0,0,"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+        if(caster(p)){ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
@@ -122,11 +122,12 @@ public final class MpServer implements ModInitializer {
         if(STAGGER_ONLY)staggers(server);
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
+        if(ARROW_ONLY)arrow(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&!ARROW_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -270,7 +271,7 @@ public final class MpServer implements ModInitializer {
         targets.clear();
     }
     private void restore(MinecraftServer server){
-        if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0||BOSS_ONLY)return;
+        if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0||BOSS_ONLY||ARROW_ONLY)return;
         // a player with Star Platinum out walks with it (2.51.0): left where they are; and a player Star Platinum's
         // punches threw (2.54.0) is left where it came down
         // (2.60.0: and while the caster has Star Platinum out, the watcher stays where the script puts it: 4.5 blocks
@@ -342,6 +343,29 @@ public final class MpServer implements ModInitializer {
     static final boolean STAGGER_ONLY="stagger".equals(System.getProperty("botand.mp.only"));
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
+    /** Only the stand arrow's script (2.70.0, MP_ONLY=arrow). */
+    static final boolean ARROW_ONLY="arrow".equals(System.getProperty("botand.mp.only"));
+    private boolean arrowHeld,arrowAlive=true;private String arrowStand="";private int arrowCount=-1;private boolean arrowOut;private net.minecraft.util.math.Vec3d arrowFrom;
+    /**
+     * The stand arrow (2.70.0): the next arrow's choice as the caster's script asks for it (the file OUT/rig), and the
+     * caster: held by an arrow, its stand (and whether it is out), the arrows in its main hand, alive or dead, and any
+     * move while held (there should be none: the server holds them where they stand).
+     */
+    private void arrow(MinecraftServer server){
+        try{var rig=OUT.resolve("rig");if(Files.exists(rig)){String v=Files.readString(rig).trim();Files.delete(rig);dev.sangwoo.celestialfall.stand.StandArrow.rigged=v;note(server,"next arrow rigged to "+v);}}
+        catch(Exception e){note(server,"ERROR rig "+e);}
+        for(var p:server.getPlayerManager().getPlayerList()){
+            if(!caster(p))continue;
+            boolean held=dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p);
+            if(held!=arrowHeld){arrowHeld=held;note(server,String.format(java.util.Locale.ROOT,"caster %s at %.2f %.2f %.2f",held?"held by the arrow":"free of the arrow",p.getX(),p.getY(),p.getZ()));arrowFrom=held?p.getPos():null;}
+            if(held&&arrowFrom!=null&&p.getPos().distanceTo(arrowFrom)>.05){note(server,String.format(java.util.Locale.ROOT,"ERROR caster moved %.2f blocks while held",p.getPos().distanceTo(arrowFrom)));arrowFrom=p.getPos();}
+            String stand=ProgressManager.profile(p).stand();boolean out=((dev.sangwoo.celestialfall.stand.StandHolder)p).botand$isStandOut();
+            if(!stand.equals(arrowStand)||out!=arrowOut){arrowStand=stand;arrowOut=out;note(server,"caster stand "+stand+(out?" (out)":""));}
+            int count=p.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW)?p.getMainHandStack().getCount():0;
+            if(count!=arrowCount){arrowCount=count;note(server,"caster holds "+count+" stand arrows");}
+            if(p.isAlive()!=arrowAlive){arrowAlive=p.isAlive();note(server,"caster "+(arrowAlive?"alive":"dead"));}
+        }
+    }
     private String bossSeen="";private float bossHealth=-1;private final Map<UUID,Float> lastHealth=new HashMap<>();private final Map<UUID,Long> money=new HashMap<>();
     private int boxesSeen=-1;private net.minecraft.util.math.Vec3d bossFell;private boolean bossStopping;private final Map<UUID,Boolean> bossStopped=new HashMap<>();
     /**

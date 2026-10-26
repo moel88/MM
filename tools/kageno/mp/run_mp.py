@@ -6,7 +6,8 @@ usage: python3 tools/kageno/mp/run_mp.py OUT_DIR [MOD_JAR]
 MP_ONLY=beatdown runs only Star Platinum's beatdown's own script (2.64.0, MpClient.BEATDOWN_SCRIPT), MP_ONLY=timestop
 only its time stop's (2.67.0, MpClient.TIMESTOP_SCRIPT), MP_ONLY=stagger only the basic attack's stagger and the time
 stop's 20 blocks (2.68.0, MpClient.STAGGER_SCRIPT), MP_ONLY=boss only Kujo Jotaro's (2.69.0, MpClient.BOSS_SCRIPT; with
-MP_RESTART=1 the server is started once more afterwards on the same world to see a boss in play come back).
+MP_RESTART=1 the server is started once more afterwards on the same world to see a boss in play come back), MP_ONLY=arrow
+only the stand arrow's (2.70.0, MpClient.ARROW_SCRIPT).
 Results: OUT_DIR/{server.txt, caster/log.txt, watcher/log.txt, caster/*.png, watcher/*.png, logs/}.
 """
 from pathlib import Path
