@@ -66,6 +66,18 @@ class ModConfigTest {
         c.atomicVisualRadius=18;c.applyArenaUpgrade();assertEquals(18,c.atomicVisualRadius);
         c.atomicVisualRadius=2;c.normalize();assertEquals(8,c.atomicVisualRadius);
     }
+    /** 2.73.0 (user request: "카게노 아토믹 쿨타임은 10분으로"): ten minutes, also for a config saved with the old default. */
+    @Test void atomicCooldownIsTenMinutesAndTheOldDefaultMigrates() {
+        assertEquals(600,new ModConfig().atomicCooldownSeconds,"ten minutes for a new config");
+        ModConfig old=new Gson().fromJson("{\"configVersion\":7,\"atomicCooldownSeconds\":60,\"effectVolume\":0.3}",ModConfig.class);
+        old.applyAtomicCooldownUpgrade();old.normalize();
+        assertEquals(600,old.atomicCooldownSeconds,"the old default becomes ten minutes");assertEquals(8,old.configVersion);assertEquals(.3,old.effectVolume);
+        ModConfig custom=new Gson().fromJson("{\"configVersion\":7,\"atomicCooldownSeconds\":90}",ModConfig.class);
+        custom.applyAtomicCooldownUpgrade();custom.normalize();assertEquals(90,custom.atomicCooldownSeconds,"one an operator chose stays");
+        ModConfig now=new Gson().fromJson("{\"configVersion\":8,\"atomicCooldownSeconds\":60}",ModConfig.class);
+        now.applyAtomicCooldownUpgrade();assertEquals(60,now.atomicCooldownSeconds,"set to 60 after the upgrade, it stays 60");
+        ModConfig c=new ModConfig();c.atomicCooldownSeconds=99999;c.normalize();assertEquals(3600,c.atomicCooldownSeconds,"an hour at most");
+    }
     @Test void zeroDamageAndZeroVolumeRemainValidOptions() {
         ModConfig c=new ModConfig();c.damage=0;c.effectVolume=0;c.normalize();
         assertEquals(0,c.damage);assertEquals(0,c.effectVolume);assertTrue(c.terrainDamage);assertFalse(c.damagePlayers);

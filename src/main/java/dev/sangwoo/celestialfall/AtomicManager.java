@@ -79,8 +79,8 @@ public final class AtomicManager {
             player.sendMessage(Text.translatable("message.celestialfall.outdoors"),true);return false;
         }
         // The cooldown runs once the Atomic is over (user request, 2.44.0, see cooldown); until then the ledger holds the
-        // cast's whole length and the cooldown after it.
-        if(!free)COOLDOWNS.put(player.getUuid(),now+AtomicTimeline.END+CelestialFall.CONFIG.atomicCooldownSeconds*20L);
+        // cast's whole length and the cooldown after it (kept with the world too, 2.73.0: LongCooldowns).
+        if(!free){long ready=now+AtomicTimeline.END+CelestialFall.CONFIG.atomicCooldownSeconds*20L;COOLDOWNS.put(player.getUuid(),ready);LongCooldowns.note(player.getServer(),player.getUuid(),LongCooldowns.Skill.ATOMIC,ready);}
         begin(player,player.getServerWorld(),now);
         player.sendMessage(Text.translatable("message.celestialfall.atomic_cast"),true);return true;
     }
@@ -145,6 +145,7 @@ public final class AtomicManager {
     private static void cooldown(Cast s) {
         long now=s.world.getTime();Long held=COOLDOWNS.get(s.caster);if(held==null||held<=now)return;
         int ticks=CelestialFall.CONFIG.atomicCooldownSeconds*20;COOLDOWNS.put(s.caster,now+ticks);
+        LongCooldowns.note(s.world.getServer(),s.caster,LongCooldowns.Skill.ATOMIC,now+ticks);
         var player=s.world.getServer().getPlayerManager().getPlayer(s.caster);
         if(player!=null)player.getItemCooldownManager().set(CelestialFall.ATOMIC_SWORD,ticks);
     }
@@ -205,14 +206,25 @@ public final class AtomicManager {
             "Botand Atomic hit",AtomicTimeline.holdModifier(e instanceof net.minecraft.entity.player.PlayerEntity),EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
     }
 
-    /** Remove both cooldown ledgers without touching active casts or their viewers. */
+    /** Remove both cooldown ledgers without touching active casts or their viewers (and the one kept with the world, LongCooldowns). */
     public static void resetCooldown(ServerPlayerEntity player) {
         COOLDOWNS.remove(player.getUuid());
         if(player.getItemCooldownManager().isCoolingDown(CelestialFall.ATOMIC_SWORD))player.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
+        LongCooldowns.note(player.getServer(),player.getUuid(),LongCooldowns.Skill.ATOMIC,0);
+    }
+    /**
+     * The player's Atomic is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they came back or
+     * reset, or what is left of it on a new body after a death), with the sword's cooldown showing what is left of it.
+     */
+    public static void restore(ServerPlayerEntity player,long ready,long now) {
+        var cooldowns=player.getItemCooldownManager();
+        if(ready>now){COOLDOWNS.put(player.getUuid(),ready);cooldowns.set(CelestialFall.ATOMIC_SWORD,(int)Math.min(Integer.MAX_VALUE,ready-now));}
+        else{COOLDOWNS.remove(player.getUuid());if(cooldowns.isCoolingDown(CelestialFall.ATOMIC_SWORD))cooldowns.remove(CelestialFall.ATOMIC_SWORD);}
     }
     public static void clear() { ACTIVE.clear();COOLDOWNS.clear(); }
     public static void clear(MinecraftServer server) {
         for(Cast s:ACTIVE)cancel(s);clear();
         for(var p:server.getPlayerManager().getPlayerList())p.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
+        LongCooldowns.forget(server,LongCooldowns.Skill.ATOMIC);
     }
 }

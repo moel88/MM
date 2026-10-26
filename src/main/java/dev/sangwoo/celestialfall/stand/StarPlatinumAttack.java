@@ -136,7 +136,13 @@ public final class StarPlatinumAttack {
     public static boolean able(ServerPlayerEntity p){return punches(p)&&!p.isSleeping()&&!p.hasVehicle()&&!CombatManager.busy(p)&&!CombatManager.cinematic(p);}
     private static State state(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());
-        if(s==null||s.world!=p.getServerWorld()){s=new State(p);STATES.put(p.getUuid(),s);}
+        if(s==null||s.world!=p.getServerWorld()){
+            s=new State(p);STATES.put(p.getUuid(),s);
+            // (2.73.0) the beatdown's cooldown is kept with the world (LongCooldowns): a new state, after the player left
+            // and came back or went to another world, has it still
+            if(p.getServer()!=null&&!(p instanceof dev.sangwoo.celestialfall.boss.BossPlayer))
+                s.beatdownReady=dev.sangwoo.celestialfall.LongCooldowns.get(p.getServer()).ready(p.getUuid(),dev.sangwoo.celestialfall.LongCooldowns.Skill.BEATDOWN);
+        }
         return s;
     }
 
@@ -204,8 +210,14 @@ public final class StarPlatinumAttack {
     /** The beatdown's cutscene is over (or cut short) at {@code end}: it is ready again a cooldown from then. */
     static void beatdownOver(ServerPlayerEntity p,long end){
         var s=state(p);
-        s.beatdownReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?end:beatdownReady(p,end);
+        s.beatdownReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?end:beatdownReady(p,end);kept(p,s);
         send(p,s,RESTS,null,null);
+    }
+    /** This player's beatdown is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they came back or reset). */
+    public static void restoreBeatdown(ServerPlayerEntity p,long ready){var s=STATES.get(p.getUuid());if(s!=null)s.beatdownReady=ready;}
+    /** The beatdown's cooldown as just set, kept with the world (2.73.0, LongCooldowns). */
+    private static void kept(ServerPlayerEntity p,State s){
+        dev.sangwoo.celestialfall.LongCooldowns.note(p.getServer(),p.getUuid(),dev.sangwoo.celestialfall.LongCooldowns.Skill.BEATDOWN,s.beatdownReady);
     }
     /**
      * What this player's stand is punching now, as a boss reads it (2.69.0, BossThreats): the punch (1 to 7, 0 for none),
@@ -240,7 +252,7 @@ public final class StarPlatinumAttack {
         if(skill==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(end);
         else if(skill==FINGER)s.fingerReady=free?now:StarPlatinumRules.fingerReady(end);
         // (the beatdown's from the end of its blow; if the blow begins the cutscene, from the cutscene's end instead)
-        else s.beatdownReady=free?now:beatdownReady(p,end);
+        else{s.beatdownReady=free?now:beatdownReady(p,end);kept(p,s);}
         send(p,s,PUNCH,null,null);
     }
     /** The user was struck: whom the punches hold go, and the punch in flight stops short. */
@@ -289,7 +301,7 @@ public final class StarPlatinumAttack {
         if(flying&&s.combo==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(now);
         if(flying&&s.combo==FINGER)s.fingerReady=free?now:StarPlatinumRules.fingerReady(now);
         // (a beatdown whose blow began the cutscene is not stopped here: the cutscene holds its user, StarPlatinumBeatdown)
-        if(flying&&s.combo==BEATDOWN&&!StarPlatinumBeatdown.casting(p))s.beatdownReady=free?now:beatdownReady(p,now);
+        if(flying&&s.combo==BEATDOWN&&!StarPlatinumBeatdown.casting(p)){s.beatdownReady=free?now:beatdownReady(p,now);kept(p,s);}
         s.queued=s.heavyQueued=s.fingerQueued=s.beatdownQueued=false;s.ready=Math.max(s.ready,now+REST);s.combo=0;
         send(p,s,STOPPED,null,null);
     }

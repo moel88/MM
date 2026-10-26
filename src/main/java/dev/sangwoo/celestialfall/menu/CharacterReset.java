@@ -19,7 +19,8 @@ import java.util.UUID;
  * "캐릭터 재설정하기" from the pause menu (2.45.0, user request: the character dies at once, as Roblox's reset does). The
  * client asks with an empty packet; on the Botand map a living player who is not spectating dies of the reset damage
  * type, which nothing stops (armour, resistance, a shield, the guard, invulnerability, a totem), the way /kill kills.
- * The death message says the player reset. One reset a second, so a double click or a held Enter kills once.
+ * The death message says the player reset. One reset a second, so a double click or a held Enter kills once. A long
+ * cooldown still running (Atomic, the time stop, the beatdown) begins again in full (2.73.0, LongCooldowns).
  */
 public final class CharacterReset {
     public static final Identifier REQUEST=CelestialFall.id("character_reset_v1");
@@ -51,5 +52,7 @@ public final class CharacterReset {
         var source=new DamageSource(p.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(DAMAGE));
         p.damage(source,Float.MAX_VALUE);
         CelestialFall.LOGGER.info("Character reset: {} ({})",p.getEntityName(),p.isAlive()?"survived":"died");
+        // (2.73.0, user request: "재설정하면 쿨타임 다시 10분부터 흐르게") the long cooldowns still running begin again in full
+        if(!p.isAlive())dev.sangwoo.celestialfall.LongCooldowns.reset(p);
     }
 }

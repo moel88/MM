@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall.client;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.sangwoo.celestialfall.CelestialFall;
+import dev.sangwoo.celestialfall.LongCooldowns;
 import dev.sangwoo.celestialfall.client.gacha.GachaFont;
 import dev.sangwoo.celestialfall.combat.CombatState;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -43,7 +44,7 @@ public final class CooldownHud {
     static final int DASH=10,PUNCHES=11,BARRAGE=12,HEAVY=13,FINGER=14,INHALE=15,BEATDOWN=16,TIME_STOP=17;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     private static CooldownList.Metrics metrics;private static long metricsKey;
@@ -55,7 +56,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=0;atomic=false;owner=null;world=null;}
     /** The names the list shows now, top first (for the QA tools). */
     public static java.util.List<String> shown(){return LIST.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
 
@@ -77,13 +78,21 @@ public final class CooldownHud {
                 show(slot,name(slot,p.getUuid()),left,cooling(slot),now);
             }
         }
-        // Atomic: the sword's cooldown share at this tick and one tick on gives its length
-        var cooldowns=p.getItemCooldownManager();
-        float p0=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,0),p1=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,1);
-        boolean running=p0>0;
-        if(running&&!atomic&&p0>p1){double total=1/(double)(p0-p1),left=p0*total;LIST.add(G,NAMES[G],now-(total-left),now+left,now);}
-        else if(!running&&atomic)LIST.finish(G,now);
-        atomic=running;
+        // Atomic: from the server's ledger once it has told it (2.73.0, LongCooldowns: ten minutes, begun again in full on
+        // coming back or a reset; a new body's sword shows only what is left of it); else the sword's cooldown share at
+        // this tick and one tick on gives its length
+        boolean ledger=LongCooldownsClient.known();
+        if(ledger){
+            long atomicReady=LongCooldownsClient.ready(LongCooldowns.Skill.ATOMIC);
+            if(atomicReady!=atomicSeen){show(G,NAMES[G],atomicReady-time,LongCooldownsClient.length(LongCooldowns.Skill.ATOMIC),now);atomicSeen=atomicReady;}
+        }else{
+            var cooldowns=p.getItemCooldownManager();
+            float p0=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,0),p1=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,1);
+            boolean running=p0>0;
+            if(running&&!atomic&&p0>p1){double total=1/(double)(p0-p1),left=p0*total;LIST.add(G,NAMES[G],now-(total-left),now+left,now);}
+            else if(!running&&atomic)LIST.finish(G,now);
+            atomic=running;
+        }
         // the dash (C): the combat state's tick it is ready again
         long dash=CombatClient.snapshot(p.getUuid()).dashReady();
         if(dash!=dashSeen){show(DASH,dashName(),dash-time,CombatState.DASH_COOLDOWN,now);dashSeen=dash;}
@@ -102,12 +111,16 @@ public final class CooldownHud {
         // its inhale (2.61.0): from when it is over (the server's ready tick, told as it ends)
         long inhale=dev.sangwoo.celestialfall.client.stand.StandInhale.ready(p.getUuid());
         if(inhale!=inhaleSeen){show(INHALE,inhaleName(),inhale-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.INHALE_COOLDOWN,now);inhaleSeen=inhale;}
-        // its beatdown (2.64.0): from when its blow is over, or its cutscene (the server's ready tick, told with its punches' news)
-        long beatdown=dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
-        if(beatdown!=beatdownSeen){show(BEATDOWN,beatdownName(),beatdown-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN_COOLDOWN,now);beatdownSeen=beatdown;}
-        // its time stop (2.67.0): from when time moves again, or its call was cut short (the server's ready tick, told as it ends)
-        long timeStop=dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
-        if(timeStop!=timeStopSeen){show(TIME_STOP,timeStopName(),timeStop-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.TS_COOLDOWN,now);timeStopSeen=timeStop;}
+        // its beatdown (2.64.0): from when its blow is over, or its cutscene (the server's ready tick, told with its punches'
+        // news; 2.73.0: from its ledger, which keeps it as they leave or reset, once the server has told it)
+        long beatdown=ledger?LongCooldownsClient.ready(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
+        int beatdownLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN_COOLDOWN;
+        if(beatdown!=beatdownSeen){show(BEATDOWN,beatdownName(),beatdown-time,beatdownLength,now);beatdownSeen=beatdown;}
+        // its time stop (2.67.0): from when time moves again, or its call was cut short (the server's ready tick, told as it
+        // ends; 2.73.0: from its ledger once the server has told it, as the beatdown's)
+        long timeStop=ledger?LongCooldownsClient.ready(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
+        int timeStopLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.stand.StarPlatinumRules.TS_COOLDOWN;
+        if(timeStop!=timeStopSeen){show(TIME_STOP,timeStopName(),timeStop-time,timeStopLength,now);timeStopSeen=timeStop;}
         LIST.update(now);
     }
     /**

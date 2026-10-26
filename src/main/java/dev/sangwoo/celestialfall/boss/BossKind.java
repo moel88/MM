@@ -15,7 +15,9 @@ public enum BossKind {
      * 죠타로가 죽은 자리 기준으로 원형으로 6개의 박스가 나오게", "죠타로는 1시간 30분마다 나중에 지정한 위치에 나오는데"):
      * Star Platinum's user, 5000 health, his time stop only at 2500 or less, it ready two minutes after it is over and
      * his beatdown a minute and a half after (a player's: a minute and half a minute), the rest as a player's; 5000 won to
-     * whoever fells him and six boxes in a ring where he fell; back every hour and a half.
+     * whoever fells him and six boxes in a ring where he fell; back every hour and a half. 2.73.0 (user request: "쿨타임은
+     * 현재 2분에서 2분30초로 올리자(죠타로 보스도 적용) 비트다운도 쿨타임 2분(죠타로 보스도 적용)으로"): his time stop two
+     * and a half minutes and his beatdown two minutes, as a player's now.
      */
     JOTARO("jotaro","쿠죠 죠타로","Kujo_Jotaro","star_platinum",5000,2500,5000,6,90*60*20);
 
@@ -35,8 +37,8 @@ public enum BossKind {
     /** Its cooldown for {@code skill} (BossRules.TIME_STOP, BEATDOWN, ...) where it differs from a player's {@code base}. */
     public int cooldown(String skill,int base){
         if(this==JOTARO){
-            if(BossRules.TIME_STOP.equals(skill))return 2*60*20;
-            if(BossRules.BEATDOWN.equals(skill))return 90*20;
+            if(BossRules.TIME_STOP.equals(skill))return 150*20;
+            if(BossRules.BEATDOWN.equals(skill))return 120*20;
         }
         return base;
     }

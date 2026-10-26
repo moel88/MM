@@ -291,6 +291,11 @@ class StarPlatinumRulesTest {
         assertEquals(3.4,beatHold(3.0),1e-9,"knocked back a little");
         assertEquals(BEAT_HOLD_MAX,beatHold(4.6),1e-9,"not too far");
         assertEquals(1000+BEATDOWN_COOLDOWN,beatdownReady(1000),"from its end (2.44.0's rule)");
-        assertEquals(30,BEATDOWN_COOLDOWN/20.0,1e-9,"thirty seconds, as the other cutscene, Kageno's H");
+        assertEquals(120,BEATDOWN_COOLDOWN/20.0,1e-9,"two minutes (2.73.0)");
+    }
+    /** 2.73.0 (user request: "쿨타임은 현재 2분에서 2분30초로 올리자"): the time stop is ready two and a half minutes after time moves again. */
+    @Test void theTimeStopIsReadyTwoAndAHalfMinutesAfterTimeMovesAgain(){
+        assertEquals(150,TS_COOLDOWN/20.0,1e-9);
+        assertEquals(1000+TS_COOLDOWN,timeStopReady(1000),"from when time moves again (2.44.0's rule)");
     }
 }

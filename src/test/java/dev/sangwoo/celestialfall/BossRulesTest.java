@@ -75,12 +75,12 @@ class BossRulesTest {
         assertFalse(j.mayStopTime(2500.5f),"no time stop above 2500");
         assertTrue(j.mayStopTime(2500),"his time stop at 2500");
         assertTrue(j.mayStopTime(40));
-        assertEquals(2*60*20,j.cooldown(BossRules.TIME_STOP,StarPlatinumRules.TS_COOLDOWN),"time stop: two minutes");
-        assertEquals(90*20,j.cooldown(BossRules.BEATDOWN,StarPlatinumRules.BEATDOWN_COOLDOWN),"beatdown: a minute and a half");
+        assertEquals(150*20,j.cooldown(BossRules.TIME_STOP,StarPlatinumRules.TS_COOLDOWN),"time stop: two and a half minutes (2.73.0)");
+        assertEquals(120*20,j.cooldown(BossRules.BEATDOWN,StarPlatinumRules.BEATDOWN_COOLDOWN),"beatdown: two minutes (2.73.0)");
         assertEquals(StarPlatinumRules.HEAVY_COOLDOWN,j.cooldown("heavy",StarPlatinumRules.HEAVY_COOLDOWN),"the rest as a player's");
         assertEquals(StarPlatinumRules.RUSH_COOLDOWN,j.cooldown("rush",StarPlatinumRules.RUSH_COOLDOWN));
-        assertTrue(j.cooldown(BossRules.TIME_STOP,StarPlatinumRules.TS_COOLDOWN)>StarPlatinumRules.TS_COOLDOWN,"longer than a player's");
-        assertTrue(j.cooldown(BossRules.BEATDOWN,StarPlatinumRules.BEATDOWN_COOLDOWN)>StarPlatinumRules.BEATDOWN_COOLDOWN,"longer than a player's");
+        assertEquals(StarPlatinumRules.TS_COOLDOWN,j.cooldown(BossRules.TIME_STOP,StarPlatinumRules.TS_COOLDOWN),"as a player's now (2.73.0)");
+        assertEquals(StarPlatinumRules.BEATDOWN_COOLDOWN,j.cooldown(BossRules.BEATDOWN,StarPlatinumRules.BEATDOWN_COOLDOWN),"as a player's now (2.73.0)");
         assertEquals(5000,j.reward,"5000 won to whoever fells him");
         assertEquals("star_platinum",j.stand);
         assertTrue(j.profile.length()<=16&&j.profile.chars().allMatch(ch->ch<128),"a player name the game takes");

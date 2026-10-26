@@ -14,7 +14,8 @@ public final class ModConfig {
     public int heavenCooldownSeconds = 45;
     public double atomicVisualRadius = 28;
     public double atomicDamagePerSecond = 50;
-    public int atomicCooldownSeconds = 60;
+    /** Atomic's cooldown (2.73.0, user request: "카게노 아토믹 쿨타임은 10분으로"; 60 until 2.72.0, raised by applyAtomicCooldownUpgrade). */
+    public int atomicCooldownSeconds = 600;
     public boolean atomicCostume = true;
     public int cooldownSeconds = 40;
     public double damage = 200;
@@ -27,7 +28,7 @@ public final class ModConfig {
     public boolean damagePlayers = false;
     public boolean hurtCaster = false;
     public int maxActiveCasts = 1;
-    public int configVersion = 7;
+    public int configVersion = 8;
     public boolean postProcessing = true;
     public boolean screenDistortion = true;
     public boolean animeImpactFrames = true;
@@ -51,7 +52,7 @@ public final class ModConfig {
         heavenCooldownSeconds = Math.max(11,Math.min(300,heavenCooldownSeconds));
         atomicVisualRadius = finiteClamp(atomicVisualRadius,8,768,28);
         atomicDamagePerSecond = finiteClamp(atomicDamagePerSecond,0,1000,50);
-        atomicCooldownSeconds = Math.max(10,Math.min(300,atomicCooldownSeconds));
+        atomicCooldownSeconds = Math.max(10,Math.min(3600,atomicCooldownSeconds));
         cooldownSeconds = Math.max(5, Math.min(300, cooldownSeconds));
         damage = finiteClamp(damage, 0, 1000, 200);
         impactRadius = finiteClamp(impactRadius, 2, 160, 96);
@@ -85,6 +86,14 @@ public final class ModConfig {
         if(configVersion<7)terrainDamage=true;
         configVersion=Math.max(7,configVersion);
     }
+    /**
+     * Version 8 (2.73.0, user request: "카게노 아토믹 쿨타임은 10분으로"): Atomic's cooldown of the old default (60 seconds)
+     * becomes ten minutes; one an operator set otherwise is kept.
+     */
+    public void applyAtomicCooldownUpgrade() {
+        if(configVersion<8 && atomicCooldownSeconds==60)atomicCooldownSeconds=600;
+        configVersion=Math.max(8,configVersion);
+    }
     public static ModConfig load() {
         Path path = FabricLoader.getInstance().getConfigDir().resolve("celestialfall.json");
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -102,9 +111,16 @@ public final class ModConfig {
                     config.applyHeavenUpgrade();
                     config.applyArenaUpgrade();
                     config.applyTerrainUpgrade();
+                    config.applyAtomicCooldownUpgrade();
                     config.normalize();
                     Files.writeString(path,gson.toJson(config),StandardCharsets.UTF_8);
                     CelestialFall.LOGGER.info("Enabled reversible terrain; retained rendering and combat preferences. Previous config: {}",backup.getFileName());
+                }
+                else if(config.configVersion<8) {
+                    config.applyAtomicCooldownUpgrade();
+                    config.normalize();
+                    Files.writeString(path,gson.toJson(config),StandardCharsets.UTF_8);
+                    CelestialFall.LOGGER.info("Atomic's cooldown is now {} seconds",config.atomicCooldownSeconds);
                 }
                 config.normalize();
                 if(!json.has("heavenDamage") || !json.has("heavenImpactRadius") || !json.has("heavenCooldownSeconds") || !json.has("atomicVisualRadius") || !json.has("atomicDamagePerSecond")

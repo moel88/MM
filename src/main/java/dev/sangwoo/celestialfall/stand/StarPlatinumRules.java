@@ -173,8 +173,12 @@ public final class StarPlatinumRules {
     public static final float BEAT_DAMAGE=60;
     /** Each blow's share of it: the uppercut's, the rush's (all its blows together), and the last blow's (the rest). */
     public static final float BEAT_UPPERCUT_SHARE=.08f,BEAT_RUSH_SHARE=.6f,BEAT_FINAL_SHARE=1-BEAT_UPPERCUT_SHARE-BEAT_RUSH_SHARE;
-    /** Its cooldown once it is over (ticks: thirty seconds, as Kageno's H, the other cutscene). */
-    public static final int BEATDOWN_COOLDOWN=600;
+    /**
+     * Its cooldown once it is over (ticks: two minutes, 2.73.0, user request: "비트다운도 쿨타임 2분(죠타로 보스도 적용)으로
+     * 올리고 아토믹이랑 똑같은 메커니즘 적용"; thirty seconds until 2.72.0). Running when its user leaves the game and comes
+     * back, or resets their character, it begins again in full (LongCooldowns).
+     */
+    public static final int BEATDOWN_COOLDOWN=2400;
     /**
      * Where the cutscene holds the one struck: this far ahead of its user along the blow (blocks; where they stood and
      * BEAT_BACK more, as the blow knocks them back, within BEAT_HOLD_MIN and BEAT_HOLD_MAX: room for the stand between).
@@ -282,8 +286,12 @@ public final class StarPlatinumRules {
     public static final int TS_RESUME_LEAD=26;
     /** How far from its user time stops (blocks; 2.68.0, user request: "더 월드 20블록으로 줄여주고", it was 50). */
     public static final double TS_RANGE=20;
-    /** Its cooldown once time moves again (ticks: a minute). */
-    public static final int TS_COOLDOWN=1200;
+    /**
+     * Its cooldown once time moves again (ticks: two and a half minutes, 2.73.0, user request: "시간정지도 똑같이 바꿔줘
+     * 쿨타임은 현재 2분에서 2분30초로 올리자(죠타로 보스도 적용)"; a minute until 2.72.0). Running when its user leaves the
+     * game and comes back, or resets their character, it begins again in full (LongCooldowns).
+     */
+    public static final int TS_COOLDOWN=3000;
     /** Seconds after time stops that the rush of its sound drops away into a low hum (2.880 s into the recording): the stopped world settles. */
     public static final float TS_SETTLE=.935f;
     /** When the time stop is ready again once time moved again (or its call was cut short) at {@code end}. */
