@@ -73,7 +73,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * DONE the options screen's done button, LIST the player list's rows (2.73.0; in play the cursor is free on the map, so
  * the pointer glides and is drawn there too), OFF clear of them all), "WHEEL_DOWN@n"/"WHEEL_UP@n" (2.73.0) turn the
  * mouse wheel a notch where the pointer is, "MATES@n" brings "mates" (9) more players onto the server with names of
- * their own (out of sight behind the player) and "CLICK@n" clicks the left button where it is,
+ * their own (in a row 40 blocks behind the player) and "CLICK@n" clicks the left button where it is,
  * through Minecraft's own mouse handlers. The screenshots do not hold the system pointer, so while a screen is up the
  * shot draws one (an arrow, with a ring as it clicks) where the game's mouse is; it is the capture's mark, not the
  * game's. The log gets every screen opened, the reset question, the player list sent away or back, deaths, respawns
@@ -1051,8 +1051,9 @@ public final class SkillShots implements ClientModInitializer {
                             for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(m)));
                             m.changeGameMode(GameMode.SURVIVAL);boolean in=w.spawnEntity(m);m.setHealth((float)opt("mhp",60));m.floor=(float)opt("mfloor",20);mate=m;
                             log.append("  mate ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f) health %.0f, tick %d%n",to.x,to.z,m.getHealth(),age));});continue;}
-                    // "MATES@n" (2.73.0): "mates" (9) more players on the server with names of their own, out of sight
-                    // 40 blocks behind the player, for the player list to fill past its five rows; "UNMATES@n" takes them off
+                    // "MATES@n" (2.73.0): "mates" (9) more players on the server with names of their own, in a row 40
+                    // blocks behind the player (small in the distance), for the player list to fill past its five rows;
+                    // "UNMATES@n" takes them off
                     if(what.equals("MATES")){if(age==at)server(p->{
                             String[] names={"Sakura_77","minsu","tow","Bomi","joshhhh","DarkBlue","Steve99","ORA_ORA","yare_yare","Hourglass","Kujo","Azure"};
                             var w=p.getServerWorld();var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);

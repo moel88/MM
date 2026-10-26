@@ -1,4 +1,12 @@
-> **현재 통합본: Botand 2.72.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.73.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.73.0 — 긴 쿨타임(아토믹 10분 등), UI 정리와 플레이어 목록 리메이크
+
+- **긴 쿨타임:** 카게노 아토믹 10분, 스타플래티나 시간 정지 2분 30초, 비트다운 2분(보스 죠타로도 같음). 쿨타임이 도는 중에 게임을 나갔다 오거나 캐릭터를 재설정하면 그때부터 처음 길이로 다시 돕니다(월드에 저장, 서버를 껐다 켜도 남음). 아토믹도 쿨타임 목록에 보입니다.
+- **UI:** 왼쪽 아래 'SHIFT 자유 시점 / CTRL 걷기' 안내 삭제, HP 창 70% 크기, 쿨타임 목록 약 70% 크기에 다 흐른 칸은 모래시계처럼 흘러내려 사라짐.
+- **플레이어 목록 리메이크:** 어두운 파랑 + 하늘색 두 가지 색, 모래시계는 머리글에 옅게만, 가로는 넓고 세로는 낮게, 최대 5명 표시와 마우스 휠 스크롤.
+
+[RELEASE_2.73.0_KO.md](RELEASE_2.73.0_KO.md)를 확인하세요.
 
 # 보탠드 2.72.0 — 스타플래티나 완성: Q 소리, 시간 정지는 각성한 사람만
 
