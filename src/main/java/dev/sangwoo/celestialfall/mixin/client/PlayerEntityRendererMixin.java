@@ -32,6 +32,13 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
         botand$animated=new MotionPlayerModel(slim);botand$mapFeatures=new ArrayList<>(this.features);
         botand$mapFeatures.removeIf(feature->feature instanceof ArmorFeatureRenderer);
         botand$mapFeatures.add(new ArmorFeatureRenderer<>(this,new MotionArmorModel(.5f),new MotionArmorModel(1),context.getModelManager()));
+        // a boss's outfit (2.69.0): bosses are only ever on the map
+        botand$mapFeatures.add(new dev.sangwoo.celestialfall.client.boss.BossOutfitFeature((net.minecraft.client.render.entity.PlayerEntityRenderer)(Object)this));
+    }
+    /** No name over a boss (2.69.0): its bar at the bottom of the screen has it. */
+    @Inject(method="renderLabelIfPresent(Lnet/minecraft/client/network/AbstractClientPlayerEntity;Lnet/minecraft/text/Text;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
+    private void botand$noBossName(AbstractClientPlayerEntity player,net.minecraft.text.Text text,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
+        if(dev.sangwoo.celestialfall.client.boss.BossClient.isBoss(player))ci.cancel();
     }
     @Unique private void botand$selectModel() {
         boolean enabled=dev.sangwoo.celestialfall.client.MapClient.enabled();

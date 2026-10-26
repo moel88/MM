@@ -33,6 +33,9 @@ public final class LootServer {
         ServerLifecycleEvents.SERVER_STOPPED.register(s->{HOLDS.clear();LAST.clear();});
     }
     public static boolean near(ServerPlayerEntity p,Entity e){
+        // a box a boss left (2.69.0): anyone may open it, once, on the map
+        if(e instanceof FieldLootEntity box&&box.loose())return box.isAlive()&&!box.opened()&&e.getWorld()==p.getWorld()&&dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())&&CommerceServer.eligible(p)
+            &&p.squaredDistanceTo(e)<=LootRules.REACH*LootRules.REACH&&p.canSee(e);
         if(!(e instanceof FieldLootEntity loot)||!loot.isAlive()||loot.opened()||!LootPositions.valid(loot.slot())||e.getWorld()!=p.getWorld()||!LootWorld.enabled(p.getServerWorld())||!CommerceServer.eligible(p))return false;
         if(!e.getUuid().equals(LootPositions.id(loot.slot()))||p.squaredDistanceTo(e)>LootRules.REACH*LootRules.REACH||!p.canSee(e))return false;
         var slot=LootState.get(p.getServerWorld()).slot(loot.slot());return slot!=null&&slot.available()&&slot.cycle()==loot.cycle();
@@ -86,17 +89,21 @@ public final class LootServer {
     /** Called only after a server-timed hold. Public for integrated-server acceptance verification. */
     public static boolean claim(ServerPlayerEntity p,FieldLootEntity loot){
         if(!near(p,loot))return false;
-        var w=p.getServerWorld();var state=LootState.get(w);var slot=state.slot(loot.slot());
+        var w=p.getServerWorld();boolean loose=loot.loose();var state=loose?null:LootState.get(w);
+        var slot=loose?new LootState.Slot(false,loot.looseDrops(),0,-1,-1):state.slot(loot.slot());
         if(slot.treasure()&&keySlot(p)<0){reply(p,false,"상자 키가 1개 필요해요.");return false;}
         var plan=inventoryPlan(p,slot);if(plan==null){reply(p,false,"인벤토리 공간이 부족해요. 비운 뒤 다시 열어 주세요.");return false;}
         var before=ProgressManager.profile(p);int money=LootRules.money(slot.treasure()),xp=LootRules.xp(slot.treasure());
         if(before.money()>ProgressProfile.MAX_MONEY-money){reply(p,false,"보유 금액 한도에 도달했어요.");return false;}
-        int delay=LootRules.respawnTicks(w.random.nextInt(100),w.random.nextInt(60));
-        if(!state.claim(loot.slot(),slot.cycle(),w.getTime(),delay))return false;
+        if(loose){if(loot.opened())return false;loot.openLoose(w.getTime());}
+        else{
+            int delay=LootRules.respawnTicks(w.random.nextInt(100),w.random.nextInt(60));
+            if(!state.claim(loot.slot(),slot.cycle(),w.getTime(),delay))return false;
+        }
         for(int i=0;i<plan.size();i++)p.getInventory().setStack(i,plan.get(i));
         p.getInventory().markDirty();p.currentScreenHandler.sendContentUpdates();
         var after=before.withMoney(before.money()+money).grantXp(xp);ProgressManager.set(p,after);
-        loot.configure(loot.slot(),state.slot(loot.slot()));
+        if(!loose)loot.configure(loot.slot(),state.slot(loot.slot()));
         w.playSound(null,loot.getBlockPos(),slot.treasure()?SoundEvents.BLOCK_CHEST_OPEN:SoundEvents.BLOCK_BARREL_OPEN,SoundCategory.BLOCKS,.85f,slot.treasure()?.8f:1.2f);
         w.playSound(null,loot.getBlockPos(),SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP,SoundCategory.PLAYERS,.65f,1.25f);
         if(slot.treasure())w.spawnParticles(new net.minecraft.particle.DustParticleEffect(new org.joml.Vector3f(1f,.76f,.3f),.55f),loot.getX(),loot.getY()+.75,loot.getZ(),10,.35,.2,.3,.01);

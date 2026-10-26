@@ -132,6 +132,8 @@ public final class GachaArt {
         for(int i=0;i<3;i++)band(b,m,offset(xy,at[i]*reach),(at[i+1]-at[i])*reach,alpha(color,a*share[i]),alpha(color,a*share[i+1]));
     }
     /** {@code poly} cut to the inside of the convex, clockwise {@code clip} (Sutherland-Hodgman); empty when nothing is left. */
+    /** {@code poly} cut to the inside of the convex, clockwise {@code clip} (2.69.0: the boss bar's fill, rounded only at the bar's own ends). */
+    public static float[] clipTo(float[] poly,float[] clip){return clip(poly,clip);}
     static float[] clip(float[] poly,float[] clip){
         List<float[]> out=new ArrayList<>();for(int i=0;i<poly.length;i+=2)out.add(new float[]{poly[i],poly[i+1]});
         int n=clip.length/2;

@@ -40,7 +40,8 @@
     "SoundManagerAccess",
     "SoundSystemAccess",
     "TimeStopSoundMixin",
-    "TimeStopWorldMixin"
+    "TimeStopWorldMixin",
+    "BossSkinMixin"
   ],
   "injectors": {
     "defaultRequire": 1

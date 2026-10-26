@@ -33,6 +33,15 @@ public final class AtomicManager {
     /** The caster takes no damage while casting. */
     public static boolean invulnerable(net.minecraft.entity.player.PlayerEntity p){return immobilized(p);}
     public static boolean hasActive() { return !ACTIVE.isEmpty(); }
+    /**
+     * The Atomics going on in {@code world}, for a boss to keep out of (2.69.0): each one's spot, x, y, z, the radius its
+     * column has opened to by now and the radius it opens to.
+     */
+    public static List<double[]> columns(ServerWorld world){
+        var out=new ArrayList<double[]>();
+        for(var c:ACTIVE)if(c.world==world)out.add(new double[]{c.origin.x,c.origin.y,c.origin.z,AtomicTimeline.damageRadius(world.getTime()-c.start,c.visualRadius),c.visualRadius});
+        return out;
+    }
     /** Whether a cast of this caster is playing (any part of it, the crater's tail included). */
     public static boolean active(UUID caster) { return ACTIVE.stream().anyMatch(c->c.caster.equals(caster)); }
     /**
@@ -80,7 +89,7 @@ public final class AtomicManager {
         var world=(ServerWorld)caster.getWorld();var box=caster.getBoundingBox().expand(radius,radius*.5,radius);
         for(var e:world.getEntitiesByClass(LivingEntity.class,box,e->e.isAlive()&&e!=caster&&!e.isSpectator())){
             if(e.squaredDistanceTo(caster)>radius*radius)continue;
-            if(!(e instanceof Monster)&&!(e instanceof net.minecraft.entity.player.PlayerEntity target&&caster instanceof net.minecraft.entity.player.PlayerEntity owner&&world.getServer().isPvpEnabled()&&owner.shouldDamagePlayer(target)))continue;
+            if(!(e instanceof Monster)&&!(e instanceof net.minecraft.entity.player.PlayerEntity target&&caster instanceof net.minecraft.entity.player.PlayerEntity owner&&owner.shouldDamagePlayer(target)))continue;
             e.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(net.minecraft.entity.effect.StatusEffects.SLOWNESS,80,6,false,false,true),caster);
         }
     }
@@ -156,7 +165,7 @@ public final class AtomicManager {
         var caught=new ArrayList<LivingEntity>();
         // Query loaded entities only. The bright cylinder and damage cylinder share their dimensions.
         for(var e:s.world.getEntitiesByClass(LivingEntity.class,bounds,e->e.isAlive()&&!e.getUuid().equals(s.caster) && (e instanceof Monster||e instanceof net.minecraft.entity.player.PlayerEntity&&e!=owner))) {
-            if(e instanceof net.minecraft.entity.player.PlayerEntity target&&(owner==null||!s.world.getServer().isPvpEnabled()||!owner.shouldDamagePlayer(target)))continue;
+            if(e instanceof net.minecraft.entity.player.PlayerEntity target&&(owner==null||!owner.shouldDamagePlayer(target)))continue;
             Vec3d d=e.getPos().subtract(s.origin);
             if(e.isSpectator() || !AtomicTimeline.insideColumn(d.x,d.y,d.z,r,height))continue;
             caught.add(e);

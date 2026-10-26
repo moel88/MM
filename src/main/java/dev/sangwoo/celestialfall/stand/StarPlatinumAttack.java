@@ -204,11 +204,21 @@ public final class StarPlatinumAttack {
     /** The beatdown's cutscene is over (or cut short) at {@code end}: it is ready again a cooldown from then. */
     static void beatdownOver(ServerPlayerEntity p,long end){
         var s=state(p);
-        s.beatdownReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?end:StarPlatinumRules.beatdownReady(end);
+        s.beatdownReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?end:beatdownReady(p,end);
         send(p,s,RESTS,null,null);
     }
+    /**
+     * What this player's stand is punching now, as a boss reads it (2.69.0, BossThreats): the punch (1 to 7, 0 for none),
+     * when it began (it may be a few ticks ahead, as a stopped punch turns back to the guard), the way it goes, whether it
+     * has landed, and the tick the attack is ready again after a rest.
+     */
+    public record Punch(int combo,long start,float yaw,boolean landed,long ready){}
+    /** This player's punch now (null if they have thrown none). */
+    public static Punch punch(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?null:new Punch(s.combo,s.start,s.yaw,s.landed,s.ready);}
     /** The tick this player's beatdown is ready again (2.64.0; 0 if they have not used it). */
     public static long beatdownReady(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.beatdownReady;}
+    /** When this player's beatdown is ready again once it ended at {@code end}: a boss's may be its own (2.69.0, BossKind.cooldown). */
+    private static long beatdownReady(ServerPlayerEntity p,long end){return end+dev.sangwoo.celestialfall.boss.Bosses.cooldown(p,dev.sangwoo.celestialfall.boss.BossRules.BEATDOWN,BEATDOWN_COOLDOWN);}
     /** The tick this player's heavy punch is ready again (0 if they have not thrown one). */
     public static long heavyReady(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.heavyReady;}
     /** The tick this player's Star Finger is ready again (2.60.0; 0 if they have not used it). */
@@ -230,7 +240,7 @@ public final class StarPlatinumAttack {
         if(skill==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(end);
         else if(skill==FINGER)s.fingerReady=free?now:StarPlatinumRules.fingerReady(end);
         // (the beatdown's from the end of its blow; if the blow begins the cutscene, from the cutscene's end instead)
-        else s.beatdownReady=free?now:StarPlatinumRules.beatdownReady(end);
+        else s.beatdownReady=free?now:beatdownReady(p,end);
         send(p,s,PUNCH,null,null);
     }
     /** The user was struck: whom the punches hold go, and the punch in flight stops short. */
@@ -279,7 +289,7 @@ public final class StarPlatinumAttack {
         if(flying&&s.combo==HEAVY)s.heavyReady=free?now:StarPlatinumRules.heavyReady(now);
         if(flying&&s.combo==FINGER)s.fingerReady=free?now:StarPlatinumRules.fingerReady(now);
         // (a beatdown whose blow began the cutscene is not stopped here: the cutscene holds its user, StarPlatinumBeatdown)
-        if(flying&&s.combo==BEATDOWN&&!StarPlatinumBeatdown.casting(p))s.beatdownReady=free?now:StarPlatinumRules.beatdownReady(now);
+        if(flying&&s.combo==BEATDOWN&&!StarPlatinumBeatdown.casting(p))s.beatdownReady=free?now:beatdownReady(p,now);
         s.queued=s.heavyQueued=s.fingerQueued=s.beatdownQueued=false;s.ready=Math.max(s.ready,now+REST);s.combo=0;
         send(p,s,STOPPED,null,null);
     }
@@ -301,7 +311,7 @@ public final class StarPlatinumAttack {
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             Vec3d d=e.getPos().subtract(at);
             if(!lane(combo,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
-            if(e instanceof PlayerEntity other&&(!world.getServer().isPvpEnabled()||!p.shouldDamagePlayer(other)))continue;
+            if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
             // (the beatdown's blow passes by whoever is in a cutscene already, its own or another's)
             // (nor by whoever stands stopped in a time stop, 2.67.0)
             if(beat&&(StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||e instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;

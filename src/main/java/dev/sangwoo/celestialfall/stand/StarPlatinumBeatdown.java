@@ -87,6 +87,8 @@ public final class StarPlatinumBeatdown {
      */
     public static boolean begin(ServerPlayerEntity user,LivingEntity victim,long start,float yaw){
         if(involved(user)||involved(victim))return false;
+        // a boss in it is a boss struck (2.69.0)
+        dev.sangwoo.celestialfall.boss.Bosses.provoke(victim,user);
         var world=user.getServerWorld();long now=world.getTime();
         Vec3d f=Vec3d.fromPolar(0,yaw),at=user.getPos();
         // held on the blow's line, knocked back a little from where they stood (room for the stand between): as far

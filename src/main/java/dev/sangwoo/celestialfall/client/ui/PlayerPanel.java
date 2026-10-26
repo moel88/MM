@@ -87,6 +87,8 @@ public final class PlayerPanel {
     static List<PlayerListEntry> entries(MinecraftClient mc){
         var me=mc.player.getUuid();
         return mc.player.networkHandler.getListedPlayerListEntries().stream()
+            // (no boss: nobody plays it, 2.69.0)
+            .filter(e->!dev.sangwoo.celestialfall.client.boss.BossClient.isBoss(e.getProfile().getId()))
             .sorted(Comparator.<PlayerListEntry>comparingInt(e->e.getProfile().getId().equals(me)?0:1)
                 .thenComparingInt(e->e.getGameMode()==GameMode.SPECTATOR?1:0)
                 .thenComparing(e->e.getProfile().getName(),String::compareToIgnoreCase))

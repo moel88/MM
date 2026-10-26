@@ -14,7 +14,11 @@
     "PlayerStandMixin",
     "KagenoFreezeMixin",
     "ImmersiveNetworkServerMixin",
-    "ImmersiveDisconnectMixin"
+    "ImmersiveDisconnectMixin",
+    "PlayerManagerAccess",
+    "BossPlayerManagerMixin",
+    "BossPvpMixin",
+    "BossChunkMixin"
   ],
   "injectors": {
     "defaultRequire": 1

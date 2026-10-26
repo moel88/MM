@@ -92,6 +92,34 @@ public final class CombatManager {
         }
         return e.state;
     }
+    /**
+     * This player's combat state as it stands, for a boss to read (2.69.0: whether they swing, guard, dash, how long
+     * they are held; null if they have none yet). Read it only: it is the server's own.
+     */
+    public static CombatState peek(PlayerEntity p) {
+        var e=p==null?null:STATES.get(p.getUuid());
+        return e==null||e.entityId!=p.getId()||!e.dimension.equals(p.getWorld().getRegistryKey().getValue())?null:e.state;
+    }
+    /** A boss's guard key (2.69.0, BossBrain): up while {@code hold} is sent at least every 16 ticks, down when it is not. */
+    public static boolean guardInput(ServerPlayerEntity p,boolean hold) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        if(!hold){if(s.guard(false,now))sync(p,s);return false;}
+        if(!valid(p)||p.isUsingItem())return false;
+        if(s.guard(true,now))sync(p,s);
+        return s.guarding;
+    }
+    /**
+     * A boss's dash (2.69.0, BossBrain): {@code forward} along the way it faces and {@code side} to its left (a client's
+     * dash keys give -1, 0 or 1 of each; any mix of the two goes, as the dash makes it one way).
+     */
+    public static boolean dashInput(ServerPlayerEntity p,float forward,float side) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        if(!valid(p)||p.isUsingItem()||p.isTouchingWater()||!s.dash(now,forward,side))return false;
+        s.dashYaw=p.getYaw();p.setSprinting(false);sound(p,SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,.35f,1.25f);sync(p,s);
+        return true;
+    }
     public static boolean busy(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
@@ -151,6 +179,8 @@ public final class CombatManager {
     public static void stagger(LivingEntity target,long until) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
         long now=target.getWorld().getTime();if(until<=now)return;
+        // a boss held down long enough lately shrugs it off for a moment (2.69.0, BossRules.Poise)
+        if(dev.sangwoo.celestialfall.boss.Bosses.shrugsStagger(target))return;
         // stopped in Star Platinum's stopped time (2.67.0): it comes to them as time moves again
         if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferStagger(target,(int)(until-now)))return;
         if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.stagger(until,Stagger.SLOW);return;}
@@ -236,7 +266,8 @@ public final class CombatManager {
         }
     }
     private static void tick(MinecraftServer server) {
-        for(var p:server.getPlayerManager().getPlayerList()) {
+        // (the bosses too, 2.69.0: their guard, dash and what holds them run as a player's)
+        for(var p:dev.sangwoo.celestialfall.boss.Bosses.withBosses(server.getPlayerManager().getPlayerList())) {
             if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())){leave(p);continue;}
             var s=state(p);long now=p.getWorld().getTime();
             boolean dirty=false;

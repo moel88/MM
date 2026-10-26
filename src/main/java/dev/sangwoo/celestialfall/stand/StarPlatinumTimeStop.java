@@ -127,6 +127,8 @@ public final class StarPlatinumTimeStop {
     public static boolean stopping(PlayerEntity p){var s=p==null||p.getWorld().isClient?null:BY_USER.get(p.getUuid());return s!=null&&s.stopped;}
     /** Whether this player is calling a time stop or stopping time now. */
     public static boolean active(PlayerEntity p){return p!=null&&!p.getWorld().isClient&&BY_USER.containsKey(p.getUuid());}
+    /** The tick this player called the time stop going on now, for a boss to read (2.69.0, BossThreats; MIN_VALUE for none). */
+    public static long calledAt(PlayerEntity p){var s=p==null||p.getWorld().isClient?null:BY_USER.get(p.getUuid());return s==null?Long.MIN_VALUE:s.start;}
     /** The tick this player's time stop is ready again (0 if they have not used it). */
     public static long ready(PlayerEntity p){return READY.getOrDefault(p.getUuid(),0L);}
 
@@ -191,6 +193,8 @@ public final class StarPlatinumTimeStop {
             }
             if(e instanceof MobEntity mob)mob.getNavigation().stop();
             KagenoManager.freeze(e);
+            // a boss stopped in it is a boss struck (2.69.0)
+            dev.sangwoo.celestialfall.boss.Bosses.provoke(e,s.user);
         }
         send(s,STOP,now,false,List.copyOf(s.held.keySet()));
     }
@@ -215,7 +219,7 @@ public final class StarPlatinumTimeStop {
     private static void end(Stop s,long now,boolean cut){
         BY_USER.remove(s.user.getUuid());
         for(var e:s.held.keySet())BY_HELD.remove(e.getUuid(),s);
-        READY.put(s.user.getUuid(),dev.sangwoo.celestialfall.NoCooldownState.enabled(s.user)?now:timeStopReady(now));
+        READY.put(s.user.getUuid(),dev.sangwoo.celestialfall.NoCooldownState.enabled(s.user)?now:now+dev.sangwoo.celestialfall.boss.Bosses.cooldown(s.user,dev.sangwoo.celestialfall.boss.BossRules.TIME_STOP,TS_COOLDOWN));
         // the word that time moves goes out first: whom it stopped are let go (their screens, their sound) before what
         // they are owed comes to them, so their cries of pain are heard (sent after, they were hushed with the rest)
         List<LivingEntity> owed=new ArrayList<>();List<Float> harm=new ArrayList<>();

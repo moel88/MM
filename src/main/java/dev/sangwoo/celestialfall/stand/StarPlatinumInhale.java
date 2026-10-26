@@ -108,6 +108,10 @@ public final class StarPlatinumInhale {
     public static boolean inhaling(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on;}
     /** Whether an inhale holds this one now. */
     public static boolean held(LivingEntity e){return e!=null&&HOLDERS.containsKey(e.getUuid());}
+    /** The tick this player's inhale (on now) began, for a boss to read (2.69.0, BossThreats; MIN_VALUE if it is not on). */
+    public static long startedAt(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!s.on?Long.MIN_VALUE:s.start;}
+    /** Whom this player's inhale holds now (null for nobody). */
+    public static LivingEntity holding(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!s.on||s.held==null?null:s.held.entity();}
     /** The tick this player's inhale is ready again (0 if they have not inhaled). */
     public static long ready(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.ready;}
 
@@ -173,7 +177,7 @@ public final class StarPlatinumInhale {
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             Vec3d d=e.getPos().subtract(at);
             if(!inhaleLane(d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
-            if(e instanceof PlayerEntity other&&(!world.getServer().isPvpEnabled()||!p.shouldDamagePlayer(other)||other instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
+            if(e instanceof PlayerEntity other&&(!p.shouldDamagePlayer(other)||other instanceof ServerPlayerEntity sp&&CombatManager.cinematic(sp)))continue;
             if(held(e)||StarPlatinumTimeStop.stopped(e))continue;
             Long last=s.guards.get(e.getUuid());
             // a guard holds it off: heard and seen the first tick it does, seen again every so often while it goes on doing so
@@ -194,6 +198,8 @@ public final class StarPlatinumInhale {
         CombatManager.incapacitate(nearest,(int)(until-now),(int)(until-now),INHALE_HELD_SLOW);
         HitStun.freeze(nearest);
         if(nearest instanceof MobEntity mob){mob.getNavigation().stop();mob.setTarget(null);}
+        // a boss caught is a boss struck (2.69.0): it is angry with whoever caught it
+        dev.sangwoo.celestialfall.boss.Bosses.provoke(nearest,p);
         send(p,s,CATCH,List.of(nearest));
     }
     /** The one it holds gone (dead, removed, away to another world, a spectator, riding) is let go: it sucks on. */

@@ -276,6 +276,7 @@ public final class SkillShots implements ClientModInitializer {
         var shown=CooldownHud.shown();if(!shown.equals(listLogged)){log.append("  list ").append(shown).append(" at ").append(mc.world.getTime()).append('\n');listLogged=shown;}
         var gr=mc.gameRenderer;var f=net.minecraft.client.render.GameRenderer.class.getDeclaredField("fovMultiplier");f.setAccessible(true);
         if("SUMMON".equals(current))logStand();
+        if("SUMMON".equals(current))logBoss();
         var p=mc.player;motionLog.append(String.format(Locale.ROOT,"%.3f,%.4f,%.4f,%.4f,%.2f,%.4f,%.4f%n",clock()-mc.getTickDelta(),p.getX(),p.getY(),p.getZ(),p.getYaw(),p.getFovMultiplier(),f.getFloat(gr)));
         if(!"M1".equals(current))return;
         var field=Class.forName("dev.sangwoo.celestialfall.client.KagenoAudio").getDeclaredField("PLAYING");field.setAccessible(true);
@@ -369,6 +370,27 @@ public final class SkillShots implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.gacha.GachaArt.stroke(b,m,arrow,1.1f*u,0xff000000);
         dev.sangwoo.celestialfall.client.gacha.GachaArt.end(b);
         d.getMatrices().pop();
+    }
+    private final StringBuilder bossLog=new StringBuilder();private String bossDoing="";
+    /**
+     * SUMMON with a boss (2.69.0): this tick's row of boss.csv, read on the server: his health, his anger, what he does,
+     * whom he fights, how far from the player, where, which way he faces, whether his stand is out, his guard and dash,
+     * the player's health and whether they are held, and the boxes he left; the log gets what he does each time it changes.
+     */
+    private void logBoss(){
+        float t=clock()-mc.getTickDelta();
+        server(p->{
+            var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+            if(opt("pfull",0)>0&&p.getHealth()<70)p.setHealth(p.getMaxHealth());
+            int boxes=p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.loot.FieldLootEntity.class,p.getBoundingBox().expand(40),e->e.loose()).size();
+            if(b==null){if(bossLog.length()>0||boxes>0)bossLog.append(String.format(Locale.ROOT,"%.3f,,,,,,,,,,,,%.1f,%d,%d%n",t,p.getHealth(),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)?1:0,boxes));return;}
+            var br=b.brain();var s=dev.sangwoo.celestialfall.combat.CombatManager.peek(b);long now=b.getWorld().getTime();
+            String doing=br.doing();var target=br.target();
+            if(!doing.equals(bossDoing)){log.append("  boss ").append(doing.isEmpty()?"-":doing).append(" at ").append(String.format(Locale.ROOT,"%.1f",t)).append('\n');bossDoing=doing;}
+            bossLog.append(String.format(Locale.ROOT,"%.3f,%.1f,%d,%s,%s,%.2f,%.2f,%.2f,%.1f,%d,%d,%d,%.1f,%d,%d%n",t,b.getHealth(),br.angry()?1:0,doing.replace(',',' '),target==null?"":target.getName().getString(),
+                Math.sqrt(b.squaredDistanceTo(p)),b.getX(),b.getZ(),b.getYaw(),((StandHolder)(Object)b).botand$isStandOut()?1:0,s!=null&&s.guarding?1:0,s!=null&&s.dashing(now)?1:0,
+                p.getHealth(),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)?1:0,boxes));
+        });
     }
     private final StringBuilder standLog=new StringBuilder();private boolean standOutLogged,dummyBroken;
     /** SUMMON: this tick's row of stand.csv, and a line in the log each time the stand comes out or goes back. */
@@ -837,6 +859,20 @@ public final class SkillShots implements ClientModInitializer {
                             var v=away.multiply(opt("fly",2)).add(0,opt("flyup",.6f),0);boolean kept=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferLaunch(p,v);
                             if(!kept){p.setVelocity(v);p.velocityModified=true;}
                             log.append(String.format(Locale.ROOT,"  fling (%.2f, %.2f, %.2f) %s at %d%n",v.x,v.y,v.z,kept?"kept for when time moves":"now",age));});continue;}
+                    // 2.69.0: the boss. "BOSS@n" brings Kujo Jotaro in "bfw" blocks (7) ahead of the player ("brt" to their right),
+                    // facing them, neutral, with "bhp" health (his whole); "BOSSANGRY@n" angers him with the player as a blow of
+                    // theirs would; "BOSSHP@n" sets his health to "bhp2"; "BOSSKILL@n" fells him with a blow of the player's (his
+                    // reward, his boxes); "UNBOSS@n" takes him off. "pfull=1" keeps the player's health up (whole again under 70).
+                    if(what.equals("BOSS")){if(age==at)server(p->{
+                            var w=p.getServerWorld();var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                            var to=p.getPos().add(f.multiply(opt("bfw",7))).add(right.multiply(opt("brt",0)));
+                            var b=dev.sangwoo.celestialfall.boss.Bosses.spawn(w,dev.sangwoo.celestialfall.boss.BossKind.JOTARO,new net.minecraft.util.math.Vec3d(to.x,p.getY(),to.z),p.getYaw()+180,(float)opt("bhp",0));
+                            log.append(String.format(Locale.ROOT,"  boss %s at (%.2f, %.2f) tick %d, health %.0f%n",b==null?"refused":"in",to.x,to.z,age,b==null?0:b.getHealth()));});continue;}
+                    if(what.equals("BOSSANGRY")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);if(b!=null)dev.sangwoo.celestialfall.boss.Bosses.provoke(b,p);log.append("  boss angered at ").append(age).append('\n');});continue;}
+                    if(what.equals("BOSSHP")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);if(b!=null)b.setHealth((float)opt("bhp2",2400));log.append("  boss health set at ").append(age).append('\n');});continue;}
+                    if(what.equals("BOSSKILL")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+                            if(b!=null){b.timeUntilRegen=0;boolean ok=b.damage(p.getDamageSources().playerAttack(p),b.getHealth()+50);log.append("  boss felled ").append(ok?"":"(refused) ").append("at ").append(age).append(String.format(Locale.ROOT," (player money %d)%n",ProgressManager.profile(p).money()));}});continue;}
+                    if(what.equals("UNBOSS")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);if(b!=null)dev.sangwoo.celestialfall.boss.Bosses.remove(b);log.append("  boss off at ").append(age).append('\n');});continue;}
                     if(what.equals("UNFAKE")){if(age==at)server(p->{if(fakePlayer!=null){p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(fakePlayer.getUuid())));fakePlayer.discard();fakePlayer=null;log.append("  fake gone at ").append(age).append('\n');}});continue;}
                     // the training dummy back in front of the player (after the finisher threw it), whole again
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
@@ -853,6 +889,7 @@ public final class SkillShots implements ClientModInitializer {
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
+                    if(bossLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("boss.csv"),"t,health,angry,doing,target,distance,x,z,yaw,stand_out,guard,dash,player_health,player_held,boxes\n"+bossLog);bossLog.setLength(0);bossDoing="";}
                     if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big,"
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"

@@ -1,2 +1,3 @@
 accessWidener v2 named
 accessible field net/minecraft/client/model/ModelPart$Cuboid sides [Lnet/minecraft/client/model/ModelPart$Quad;
+accessible field net/minecraft/server/network/ServerPlayerEntity joinInvulnerabilityTicks I

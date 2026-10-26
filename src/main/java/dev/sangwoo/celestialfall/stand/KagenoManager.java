@@ -272,7 +272,7 @@ public final class KagenoManager {
     }
     private static void hit(Cast c,LivingEntity e,float amount,int age){
         if(!e.isAlive()||e.getWorld()!=c.world||e.isSpectator())return;
-        if(e instanceof PlayerEntity other&&(!c.world.getServer().isPvpEnabled()||!c.player.shouldDamagePlayer(other)))return;
+        if(e instanceof PlayerEntity other&&!c.player.shouldDamagePlayer(other))return;
         var s=STATES.get(c.player);boolean over=s!=null&&s.overUntil>c.world.getTime();
         double multiplier=multiplier(c.world.isNight(),over?s.boost:0,false);
         var source=c.world.getDamageSources().playerAttack(c.player);

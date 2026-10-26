@@ -93,6 +93,8 @@ public final class StarPlatinumRush {
     }
     /** Whether this player's stand is rushing now. */
     public static boolean rushing(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.on;}
+    /** The tick this player's rush (on now) began its blows' clock, for a boss to read (2.69.0, BossThreats; MIN_VALUE if it is not on). */
+    public static long startedAt(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!s.on?Long.MIN_VALUE:s.start;}
     /** The tick this player's rush is ready again (0 if they have not rushed). */
     public static long ready(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** The tick this player's stand is back in its guard after their last rush, and may punch (StarPlatinumRules.RUSH_SETTLE). */
@@ -151,7 +153,7 @@ public final class StarPlatinumRush {
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             Vec3d d=e.getPos().subtract(at);
             if(!rushLane(d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
-            if(e instanceof PlayerEntity other&&(!world.getServer().isPvpEnabled()||!p.shouldDamagePlayer(other)))continue;
+            if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
             e.timeUntilRegen=0;
             boolean first=!s.struck.contains(e.getUuid());
             boolean hurt=first?CombatManager.damageWithoutKnockback(e,source,RUSH_DAMAGE):CombatManager.damageQuietly(e,source,RUSH_DAMAGE);
