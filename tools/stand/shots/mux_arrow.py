@@ -20,10 +20,16 @@ HIT = 108
 
 
 def start(stand):
-    """The tick the stab started on: the first row with its age (t a whole tick, the age that many ticks in plus the frame's part of one)."""
+    """
+    The tick the entry's stab started on: the first row with its age (t a whole tick, the age that many ticks in plus
+    the frame's part of one) that started in this entry (a client keeps a stab a while after it: an entry right after
+    another's awakening starts with that one's rows, its age 12 s and more).
+    """
     for r in stand:
         if r.get('arrow_age'):
-            return math.ceil(float(r['t']) - float(r['arrow_age']) * 20 - 1e-3)
+            tick = math.ceil(float(r['t']) - float(r['arrow_age']) * 20 - 1e-3)
+            if tick >= 0:
+                return tick
     return None
 
 

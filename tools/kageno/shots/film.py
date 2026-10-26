@@ -459,7 +459,8 @@ def arrow_line(t):
     if i < 0: return None, None
     r, parts = rush[i][1], []
     color = (255, 255, 255)
-    if r.get('arrow_age'):
+    # (a stab of the entry before, still kept by the client a while after it: not this one)
+    if r.get('arrow_age') and float(r['arrow_age']) * 20 <= float(r['t']) + 1:
         a, fate = float(r['arrow_age']), r.get('arrow_fate')
         if r.get('arrow_cut') == '1': parts.append('중간에 끊김 (화살은 그대로)')
         elif fate == '0' or a < 9.0:
