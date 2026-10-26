@@ -114,7 +114,7 @@ public final class MpClient implements ClientModInitializer {
      * server the watcher's health (one blow of all of it) and how far it flew. Then H again (refused: its cooldown runs).
      */
     private static final String[] TIMESTOP_SCRIPT={
-        "5 STAND","40 Q","90 HOME","100 HEAL","110 H",
+        "5 STAND","20 AWAKEN","40 Q","90 HOME","100 HEAL","110 H",
         "165 M1+","205 M1-","215 R",
         "330 HOME","340 H",
         "400 Q","440 END"};
@@ -136,7 +136,7 @@ public final class MpClient implements ClientModInitializer {
         "130 HOME","135 HEAL","140 M1","160 M1","180 M1",
         "240 STAND","270 Q","310 HOME","315 HEAL","318 WALK+","320 M1+","365 M1-","372 WALK-",
         "420 Q","460 HOME","465 HEAL","470 M1+","520 M1-",
-        "560 Q","600 DIST25","610 H","655 WALK+","690 WALK-",
+        "550 AWAKEN","560 Q","600 DIST25","610 H","655 WALK+","690 WALK-",
         "780 DIST15","790 H","835 WALK+","870 WALK-",
         "950 HOME","960 H","1005 M1+","1040 M1-",
         "1150 Q","1190 END"};
@@ -178,7 +178,21 @@ public final class MpClient implements ClientModInitializer {
         "5 NOSTAND","10 ARROWS","20 RIGSTAR","30 R","60 W+","100 W-",
         "270 USE","300 NOSTAND","320 RIGDIE","330 R","400 W+","440 W-",
         "620 RESPAWN","700 END"};
-    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * Star Platinum called out and back, and its time stop for the awakened (2.72.0), on their own (MP_ONLY=call): the
+     * caster takes Star Platinum and brings it out (Q) and back (Q) and out again: both log the call sound they play
+     * for it (the call coming out, the sound of it going back) and how far into its coming out or going back it started
+     * on their clock (it should start as it does). Its stand is then taken off it ("NOSTAND": it goes back by itself:
+     * no sound) and given back and brought out (Q). Then H, not awakened: nothing at all (the server hears nothing);
+     * awakened by the command ("AWAKEN": /botand progress awaken @s) H stops time, the watcher 2.5 blocks in front of
+     * it stopped; the awakening taken back ("UNAWAKEN"), H is nothing again. Both log whether this client's player is
+     * awakened, the time stop they hear; the server the caster's awakening and its time stop as it keeps them.
+     */
+    private static final String[] CALL_SCRIPT={
+        "5 STAND","40 Q","100 Q","140 Q","180 NOSTAND","200 STAND","230 Q",
+        "250 HOME","260 H","300 AWAKEN","330 H",
+        "520 UNAWAKEN","550 H","600 Q","650 END"};
+    private static final String[] STEPS=ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -242,7 +256,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -300,6 +314,8 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("HEAL")||step.equals("HURT")){if(down){String c=step.equals("HEAL")?"effect give Watcher minecraft:instant_health 1 20 true":"damage Watcher 150 minecraft:generic";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
         // 2.70.0: the stand arrow's steps (ARROW_SCRIPT)
         if(step.equals("NOSTAND")){if(down)command("botand progress stand @s none");return;}
+        // 2.72.0: the awakening (Star Platinum's time stop is the awakened's), by the operator's command
+        if(step.equals("AWAKEN")||step.equals("UNAWAKEN")){if(down)command("botand progress awaken @s"+(step.equals("AWAKEN")?"":" off"));return;}
         if(step.equals("ARROWS")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:stand_arrow 2");return;}
         if(step.equals("USE")){if(down){note("use the item in the main hand ("+mc.player.getMainHandStack().getItem()+")");mc.interactionManager.interactItem(mc.player,net.minecraft.util.Hand.MAIN_HAND);}return;}
         if(step.equals("RIGSTAR")||step.equals("RIGDIE")){if(down){try{Files.writeString(OUT.resolve("rig"),step.equals("RIGDIE")?"death":"star_platinum");}catch(Exception e){fail(e);}note("next arrow asked to "+(step.equals("RIGDIE")?"kill":"awaken Star Platinum"));}return;}
@@ -391,6 +407,8 @@ public final class MpClient implements ClientModInitializer {
         beats();
         // 2.67.0: its time stop heard here; stopped, the watcher tries everything and its screen is held
         stops();
+        // 2.72.0: each player's stand's call sound playing here, and whether this client's player is awakened
+        calls();flag("awakened",dev.sangwoo.celestialfall.client.ProgressClient.awakened);
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
         if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
         flag("thrown",fast);
@@ -400,6 +418,22 @@ public final class MpClient implements ClientModInitializer {
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
     }
     private final Map<String,int[]> heard=new HashMap<>(),rushHeard=new HashMap<>(),inhaleHeard=new HashMap<>();private int hurtCries,inhalesHeard;private boolean listening;
+    private final Map<UUID,net.minecraft.client.sound.SoundInstance> callsHeard=new HashMap<>();
+    /**
+     * Each player's stand's call sound as it starts here (2.72.0, StandCall): which (the call as it comes out, the
+     * sound of it going as it goes back), how loud, and how far into its coming out or going back the stand was on this
+     * client's clock then (it starts as the stand does: 0.00 s), whether the server has it out and called.
+     */
+    private void calls(){
+        for(var p:mc.world.getPlayers()){
+            var s=dev.sangwoo.celestialfall.client.stand.StandCall.playing(p.getUuid());
+            if(s==null||callsHeard.get(p.getUuid())==s)continue;
+            callsHeard.put(p.getUuid(),s);
+            var st=dev.sangwoo.celestialfall.client.stand.StandPresence.state(p.getUuid());var h=(dev.sangwoo.celestialfall.stand.StandHolder)p;
+            note(String.format(Locale.ROOT,"call sound %s for %s: volume %.2f, its stand %s %.2f s on this client's clock, server: out %s, called %s",s.getId().getPath(),p.getGameProfile().getName(),
+                s.getVolume(),st==null?"none":st[1]>0?"coming out":"going back",st==null?-1f:st[0],h.botand$isStandOut(),h.botand$standCalled()));
+        }
+    }
     /**
      * Each player's inhale heard here (2.61.0; held down since 2.62.0): as it starts, its sound starting (its tick on its
      * clock), each catch (whom), each guard seen holding it off, its end. The watcher holds its guard up for 40 ticks

@@ -23,6 +23,9 @@ moves, or how he answers the player's: a guard, a dash, a blow first), whom he g
 MODE arrow with a SUMMON shot's stand.csv (ACTOR -, 2.70.0; ten seconds since 2.71.0) shows the stand arrow: raised, driven in, taken into the
 body, then what it chose (the stand awakened, or the death: on the knees, fallen, dead) by the stab's own clock, the
 player's stand (the server's) and how many arrows are in their hand.
+MODE call with a SUMMON shot's stand.csv (ACTOR -, 2.72.0) shows Star Platinum called out and back with Q: the sound
+playing (the call as it comes out, the sound of it going as it goes back), else whether it is out; FILM_CALL_AWAKE=1
+adds its time stop, the awakened's: whether the player is awakened, H tapped before (nothing at all) and after.
 MODE stagger with a SUMMON shot's stand.csv (ACTOR -, 2.68.0) shows the basic attack's stagger: the training dummy's
 blows (its combo) and whether it is staggered, whether the player is staggered (walking only, at a tenth of their speed),
 their speed attribute against its base and, from the motion.csv beside it, how fast they walk.
@@ -71,7 +74,7 @@ frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in fr
 
 rows, wall, motion, rush, stops = {}, [], [], [], []
 walkers, husks = [], {}
-if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown', 'timestop', 'arrow'):
+if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown', 'timestop', 'arrow', 'call'):
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
     # the finger mode: a husk walking off (act=) beside stand.csv, its speed attribute and how fast it walks
@@ -478,8 +481,34 @@ def arrow_line(t):
     if r.get('arrows') not in (None, ''): parts.append(f'화살 {r["arrows"]}개')
     return ' · '.join(parts), color
 
+def call_line(t):
+    """Star Platinum called out and back (Q, 2.72.0): the sound playing as it comes out (the call, "Star Platinum!") or
+    goes back (the sound of it going), else whether it is out. With FILM_CALL_AWAKE=1 also its time stop, the
+    awakened's: whether the player is awakened, H tapped before (nothing at all) and after (the time stop)."""
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    call, out = r.get('call') or '', r.get('server_out') == '1'
+    color = (255, 255, 255)
+    if call == 'star_platinum_summon': parts.append('Q · 스탠드 나옴 · 소리: 부르는 소리 "스타플래티나!"'); color = (200, 180, 255)
+    elif call == 'star_platinum_dismiss': parts.append('Q · 스탠드 들어감 · 소리: 사라지는 소리'); color = (170, 200, 255)
+    else: parts.append('스탠드 나와 있음' if out else '스탠드 들어가 있음')
+    if os.environ.get('FILM_CALL_AWAKE') == '1' and r.get('awake') not in (None, ''):
+        awake, h = r['awake'] == '1', int(float(r.get('h_ago') or -1))
+        if r.get('ts_age'):
+            age, ended = float(r['ts_age']), float(r.get('ts_ended') or -1)
+            if r.get('ts_cut') == '1': parts.append('시간 정지가 끊김')
+            elif r.get('ts_stopped') == '1': parts.append(f'H · 시간 정지 {min(5.0, max(0.0, age - 1.95)):.1f}초 / 5초'); color = (150, 190, 255)
+            elif ended >= 0: parts.append('시간이 다시 흐름')
+            else: parts.append('H · "스타플래티나 더 월드!"')
+        elif 0 <= h < 40 and not awake: parts.append('H 누름 → 아무 일도 없음 (각성 전에는 H가 없는 키)'); color = (255, 200, 150)
+        parts.append('각성함 (명령어 /botand progress awaken)' if awake else '각성 전')
+    return ' · '.join(parts), color
+
 def actor_line(t):
     if mode == 'arrow': return arrow_line(t)
+    if mode == 'call': return call_line(t)
     if mode == 'boss': return boss_line(t)
     if mode == 'stagger': return stagger_line(t)
     if mode == 'timestop': return timestop_line(t)

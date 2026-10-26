@@ -155,6 +155,11 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * far the arrow has been drawn in, whether it was cut short), the player's stand and how many arrows they hold, and
  * the log when the stab starts, what it chose and when, when the player dies and when their stand comes out.
  * "clearchat=1" empties the chat as the entry starts (the last entries' lines, such as a warm-up's awakening, gone).
+ * Star Platinum's call (2.72.0): "AWAKEN@n" runs "/botand progress awaken @s" as the player (its answer in their chat;
+ * Star Platinum's time stop is the awakened's) and "UNAWAKEN@n" takes it back; stand.csv gets whether the player is
+ * awakened (their client's word, the server's), the call sound playing ("star_platinum_summon" as the stand comes out at
+ * Q, "star_platinum_dismiss" as it goes back) and the ticks since H was tapped; the log when each call sound starts, when
+ * the awakening comes and goes, and the command's answer.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -456,6 +461,8 @@ public final class SkillShots implements ClientModInitializer {
         });
     }
     private final StringBuilder standLog=new StringBuilder();private boolean standOutLogged,dummyBroken;
+    /** 2.72.0: the call sound last logged, whether the client was last logged awakened, the tick H was last tapped. */
+    private String callLogged="";private boolean awakeLogged;private long lastH=-1;
     /** SUMMON: this tick's row of stand.csv, and a line in the log each time the stand comes out or goes back. */
     private void logStand(){
         boolean out=((StandHolder)mc.player).botand$isStandOut();
@@ -573,6 +580,15 @@ public final class SkillShots implements ClientModInitializer {
         if(mc.getServer()!=null){var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());if(sp!=null)serverStand=dev.sangwoo.celestialfall.progression.ProgressManager.profile(sp).stand();}
         int arrows=mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW)?mc.player.getMainHandStack().getCount():0;
         standLog.append(',').append(serverStand).append(',').append(arrows);
+        // 2.72.0: whether the player is awakened (their client's word, the server's), the call sound playing (the call
+        // as it comes out, the sound of it going as it goes back) and ticks since H was tapped (-1: not yet)
+        boolean awake=dev.sangwoo.celestialfall.client.ProgressClient.awakened;String serverAwake="";
+        if(mc.getServer()!=null){var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());if(sp!=null)serverAwake=ProgressManager.awakened(sp)?"1":"0";}
+        var call=dev.sangwoo.celestialfall.client.stand.StandCall.playing(mc.player.getUuid());
+        String callName=call==null?"":call.getId().getPath();
+        standLog.append(',').append(awake?1:0).append(',').append(serverAwake).append(',').append(callName).append(',').append(lastH<0?-1:age-lastH);
+        if(!callName.equals(callLogged)){if(!callName.isEmpty())log.append("  call sound ").append(callName).append(" at ").append(age).append('\n');callLogged=callName;}
+        if(awake!=awakeLogged){log.append("  ").append(awake?"awakened":"not awakened").append(" (client) at ").append(age).append('\n');awakeLogged=awake;}
         if(!mc.player.isAlive()&&!playerDeadLogged){log.append("  player died at ").append(age).append('\n');playerDeadLogged=true;}
         if(mc.player.isAlive())playerDeadLogged=false;
         standLog.append('\n');
@@ -915,7 +931,7 @@ public final class SkillShots implements ClientModInitializer {
                         }
                         continue;}
                     if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;default->throw new IllegalArgumentException(what);};
-                        if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);
+                        if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);if(what.equals("KEY_H"))lastH=age;
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,
                                 "  arrow use at %d: stand %s, can change %s, on ground %s (client %s), map %s, use key %s%n",age,ProgressManager.profile(p).stand(),ProgressManager.canChange(p),p.isOnGround(),mc.player.isOnGround(),
@@ -933,6 +949,11 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("GIVE_ARROW")){if(age==at)server(p->{
                             p.getInventory().setStack(p.getInventory().selectedSlot,new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW));
                             p.currentScreenHandler.sendContentUpdates();log.append("  given ARROW (main hand) at ").append(age).append('\n');});continue;}
+                    if(what.equals("AWAKEN")||what.equals("UNAWAKEN")){if(age==at)server(p->{
+                            // 2.72.0: the operator's command, as the player (its answer goes to their chat)
+                            int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand progress awaken @s"+(what.equals("AWAKEN")?"":" off"));
+                            log.append("  ").append(what.equals("AWAKEN")?"awakened":"awakening taken back").append(" by the command at ").append(age).append(n>0?"":" (refused)").append(" (server: ")
+                                .append(ProgressManager.awakened(p)).append(")\n");});continue;}
                     if(what.equals("RIG_DEATH")||what.equals("RIG_STAR")){if(age==at)server(p->{
                             dev.sangwoo.celestialfall.stand.StandArrow.rigged=what.equals("RIG_DEATH")?dev.sangwoo.celestialfall.stand.StandArrowRules.DIE:"star_platinum";
                             log.append("  next arrow rigged to ").append(dev.sangwoo.celestialfall.stand.StandArrow.rigged).append(" at ").append(age).append('\n');});continue;}
@@ -1059,9 +1080,9 @@ public final class SkillShots implements ClientModInitializer {
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
                         +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden,"
-                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows\n"+standLog);
+                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        stopLogged="";stillLogged=false;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;
+                        stopLogged="";stillLogged=false;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}

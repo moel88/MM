@@ -331,6 +331,12 @@ public final class MpServer implements ModInitializer {
             if(stopped!=Boolean.TRUE.equals(timeStopped.put(p.getUuid(),stopped)))note(server,String.format(java.util.Locale.ROOT,"watcher %s at tick %d, health %.1f %s",stopped?"stopped in time":"moving again",now,p.getHealth(),where(p,caster)));
             boolean calling=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.active(caster);
             if(calling!=Boolean.TRUE.equals(timeStopping.put(caster.getUuid(),calling)))note(server,"caster's time stop "+(calling?"called":"over")+" at tick "+now+", ready again at "+dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.ready(caster));
+            // 2.72.0: the caster's awakening as the server keeps it (the time stop is the awakened's), and its stand out
+            // or in and whether at its call
+            boolean awake=ProgressManager.awakened(caster);
+            if(awake!=Boolean.TRUE.equals(awakenings.put(caster.getUuid(),awake)))note(server,"caster "+(awake?"awakened":"not awakened")+" at tick "+now);
+            var ch=(dev.sangwoo.celestialfall.stand.StandHolder)caster;String standNow=(ch.botand$isStandOut()?"out":"in")+(ch.botand$standCalled()?" (called)":" (not called)");
+            if(!standNow.equals(standStates.put(caster.getUuid(),standNow)))note(server,"caster's stand "+standNow+" at tick "+now);
             boolean alive=p.isAlive();
             if(alive!=!Boolean.FALSE.equals(lives.put(p.getUuid(),alive)))note(server,"watcher "+(alive?"alive again":"died")+" at tick "+now+" "+where(p,caster));
         }
@@ -451,7 +457,8 @@ public final class MpServer implements ModInitializer {
                 if(calling!=Boolean.TRUE.equals(timeStopping.put(p.getUuid(),calling)))note(server,"caster's time stop "+(calling?"called":"over")+" at tick "+now);}
         }
     }
-    private final Map<UUID,Boolean> timeStopped=new HashMap<>(),timeStopping=new HashMap<>();
+    private final Map<UUID,Boolean> timeStopped=new HashMap<>(),timeStopping=new HashMap<>(),awakenings=new HashMap<>();
+    private final Map<UUID,String> standStates=new HashMap<>();
     private final Map<UUID,Boolean> beaten=new HashMap<>(),lives=new HashMap<>();private final Map<UUID,Float> healths=new HashMap<>();
     private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>(),disabled=new HashMap<>();
     private final Map<UUID,String> speeds=new HashMap<>();private final Map<UUID,Boolean> inhaled=new HashMap<>(),inhaling=new HashMap<>();private long heldAt;
