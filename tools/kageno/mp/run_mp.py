@@ -10,7 +10,8 @@ MP_RESTART=1 the server is started once more afterwards on the same world to see
 only the stand arrow's (2.70.0, MpClient.ARROW_SCRIPT), MP_ONLY=call only Star Platinum's call (Q out and back, its
 sounds) and its time stop for the awakened (2.72.0, MpClient.CALL_SCRIPT), MP_ONLY=cooldowns only the long cooldowns
 (2.73.0, MpClient.COOLDOWNS_SCRIPT: the Atomic, the time stop and the beatdown begun again in full as the caster leaves
-and joins again or resets, and running on through another death).
+and joins again, and since 2.74.0 as it comes back to life after any death (its reset, /kill, killed by the watcher) and
+as the stand arrow gives it a stand).
 Results: OUT_DIR/{server.txt, caster/log.txt, watcher/log.txt, caster/*.png, watcher/*.png, logs/}.
 """
 from pathlib import Path

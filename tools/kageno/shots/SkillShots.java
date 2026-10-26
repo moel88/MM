@@ -163,6 +163,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * awakened (their client's word, the server's), the call sound playing ("star_platinum_summon" as the stand comes out at
  * Q, "star_platinum_dismiss" as it goes back) and the ticks since H was tapped; the log when each call sound starts, when
  * the awakening comes and goes, and the command's answer.
+ * The long cooldowns begun again (2.74.0): "LONGCD@n" puts on the player, with "cool=1", the Atomic's, the time stop's
+ * and the beatdown's cooldowns as if each had been running a while, "lcd=A/T/B" seconds still to run (240/60/40; 0 for
+ * none): the server's own ledgers and the packet its client is told, as a use long ago leaves them; "NOSTAND@n" takes the
+ * player's stand off them ("/botand progress stand @s none" as the player). The log gets each time the client is told
+ * them (each one's seconds left and length) and each death and respawn. "pointer=1" lets MOVE_ and CLICK work (and the
+ * pointer show) in a shot other than UI while a screen is up, such as the death screen's 부활 ("MOVE_RESPAWN@n").
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -309,7 +315,7 @@ public final class SkillShots implements ClientModInitializer {
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
-        if("UI".equals(current)||mapShot()||"SUMMON".equals(current)&&"none".equals(opts.get("stand")))logInterface();
+        if("UI".equals(current)||mapShot()||"SUMMON".equals(current)&&("none".equals(opts.get("stand"))||opts.containsKey("cool")))logInterface();
         if(mapShot()&&mc.player!=null&&mc.world!=null)logMeteors();
         if(AUDIO&&phase==4)tickRows.append(String.format(Locale.ROOT,"%.3f,%d%n",clock()-mc.getTickDelta(),System.nanoTime()));
         // the UI shot may leave the world ("나가기"): nothing below has a player then
@@ -361,7 +367,8 @@ public final class SkillShots implements ClientModInitializer {
         mc.player.setYaw(yaw);mc.player.setPitch(pitch);mc.player.setHeadYaw(yaw);mc.player.setBodyYaw(yaw);
         mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(yaw,pitch,mc.player.isOnGround()));
     }
-    private boolean ui(){return ("UI".equals(current)||mapShot())&&phase==4;}
+    /** Whether the pointer moves and is drawn: UI and map shots; "pointer=1" (2.74.0) in another while a screen is up (the death screen's 부활). */
+    private boolean ui(){return ("UI".equals(current)||mapShot()||opts.containsKey("pointer")&&mc!=null&&mc.currentScreen!=null)&&phase==4;}
     /** A UI step's target in GUI units (see the class notes). */
     private double[] target(String name){
         int w=mc.getWindow().getScaledWidth(),h=mc.getWindow().getScaledHeight();
@@ -650,7 +657,7 @@ public final class SkillShots implements ClientModInitializer {
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
-    private String panelLogged="";
+    private String panelLogged="",longLogged="";
     private void logInterface()throws Exception{
         String screen=mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName();
         if(!screen.equals(screenLogged)){log.append("  screen ").append(screen).append(" at ").append(age).append('\n');screenLogged=screen;}
@@ -666,6 +673,13 @@ public final class SkillShots implements ClientModInitializer {
         if(hidden!=hiddenLogged){log.append("  player list ").append(hidden?"sent away":"back").append(" at ").append(age).append('\n');hiddenLogged=hidden;}
         boolean alive=mc.player.isAlive();
         if(alive!=aliveLogged){log.append("  player ").append(alive?"respawned":"died").append(" at ").append(age).append(String.format(Locale.ROOT," (health %.1f)",mc.player.getHealth())).append('\n');aliveLogged=alive;}
+        // 2.74.0: the long cooldowns this client is told, whenever any ready tick changes (seconds left of its length)
+        if(dev.sangwoo.celestialfall.client.LongCooldownsClient.known()){
+            long now=mc.world.getTime();var key=new StringBuilder();var line=new StringBuilder();
+            for(var sk:dev.sangwoo.celestialfall.LongCooldowns.Skill.values()){long r=dev.sangwoo.celestialfall.client.LongCooldownsClient.ready(sk);key.append(r).append(',');
+                line.append(String.format(Locale.ROOT," %s %s of %.0f s;",sk.name().toLowerCase(Locale.ROOT),r>now?String.format(Locale.ROOT,"%.1f s left",(r-now)/20.):"none",dev.sangwoo.celestialfall.client.LongCooldownsClient.length(sk)/20.));}
+            if(!key.toString().equals(longLogged)){log.append("  long cooldowns told:").append(line).append(" at ").append(age).append('\n');longLogged=key.toString();}
+        }
         var f=net.minecraft.client.gui.hud.ChatHud.class.getDeclaredField("messages");f.setAccessible(true);
         var lines=(List<net.minecraft.client.gui.hud.ChatHudLine>)f.get(mc.inGameHud.getChatHud());
         if(chatLogged<0)chatLogged=lines.size();
@@ -967,6 +981,16 @@ public final class SkillShots implements ClientModInitializer {
                             int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand progress awaken @s"+(what.equals("AWAKEN")?"":" off"));
                             log.append("  ").append(what.equals("AWAKEN")?"awakened":"awakening taken back").append(" by the command at ").append(age).append(n>0?"":" (refused)").append(" (server: ")
                                 .append(ProgressManager.awakened(p)).append(")\n");});continue;}
+                    if(what.equals("LONGCD")){if(age==at)server(p->{
+                            String[] v=opts.getOrDefault("lcd","240/60/40").split("/");long now=p.getWorld().getTime();var server=p.getServer();
+                            var skills=dev.sangwoo.celestialfall.LongCooldowns.Skill.values();
+                            for(int i=0;i<skills.length;i++){long ready=Math.round(Double.parseDouble(v[i].trim())*20);ready=ready>0?now+ready:0;
+                                switch(skills[i]){case ATOMIC->dev.sangwoo.celestialfall.AtomicManager.restore(p,ready,now);case TIME_STOP->dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.restore(p,ready);case BEATDOWN->dev.sangwoo.celestialfall.stand.StarPlatinumAttack.restoreBeatdown(p,ready);}
+                                dev.sangwoo.celestialfall.LongCooldowns.note(server,p.getUuid(),skills[i],ready);}
+                            log.append("  long cooldowns put on at ").append(age).append(" (").append(opts.getOrDefault("lcd","240/60/40")).append(" s left)\n");});continue;}
+                    if(what.equals("NOSTAND")){if(age==at)server(p->{
+                            int n=p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource(),"botand progress stand @s none");
+                            log.append("  stand taken off at ").append(age).append(n>0?"":" (refused)").append(" (server: ").append(ProgressManager.profile(p).stand()).append(")\n");});continue;}
                     if(what.equals("RIG_DEATH")||what.equals("RIG_STAR")){if(age==at)server(p->{
                             dev.sangwoo.celestialfall.stand.StandArrow.rigged=what.equals("RIG_DEATH")?dev.sangwoo.celestialfall.stand.StandArrowRules.DIE:"star_platinum";
                             log.append("  next arrow rigged to ").append(dev.sangwoo.celestialfall.stand.StandArrow.rigged).append(" at ").append(age).append('\n');});continue;}

@@ -126,7 +126,7 @@ public final class MpServer implements ModInitializer {
         if(STAGGER_ONLY)staggers(server);
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
-        if(ARROW_ONLY)arrow(server);
+        if(ARROW_ONLY||COOLDOWNS_ONLY)arrow(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}

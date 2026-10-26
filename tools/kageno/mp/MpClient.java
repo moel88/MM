@@ -199,9 +199,12 @@ public final class MpClient implements ClientModInitializer {
      * the ten minutes begin again in full. It takes Star Platinum, is awakened, brings it out and stops time (H) with
      * the watcher 2.5 blocks in front of it (the two and a half minutes run once time moves again), then uses its
      * beatdown on nobody (the watcher 8 blocks away: its two minutes run once the opener is over). It resets its
-     * character (Esc, R, Enter) and respawns: all three begin again in full. It dies another way ("KILL": /kill) and
-     * respawns: they run on as they were (and the Atomic sword's cooldown is on the new body). It leaves and joins once
-     * more: all three in full again. Both log the long cooldowns their client is told (LongCooldownsClient: each one's
+     * character (Esc, R, Enter) and respawns 4 s later; it dies another way ("KILL": /kill) and respawns 4 s later; the
+     * watcher kills it ("SLAIN": /damage by the watcher) and it respawns 4 s later: since 2.74.0 all three begin again in
+     * full as it comes back to life each time (they run on while it is dead; the Atomic sword's cooldown is on the new
+     * body). It loses its stand ("NOSTAND") and the stand arrow gives it Star Platinum (R with the arrow in hand, the
+     * server told to awaken it): all three in full again as the arrow chooses it. It leaves and joins once more: all
+     * three in full again. Both log the long cooldowns their client is told (LongCooldownsClient: each one's
      * ready tick, the seconds from now, its length) and the cooldown list (each entry's length and what is left of it);
      * the server logs the caster's as kept with the world and as each skill keeps its own, and its deaths.
      */
@@ -209,9 +212,11 @@ public final class MpClient implements ClientModInitializer {
         "5 G","600 LEAVE",
         "640 STAND","670 AWAKEN","680 Q","720 HOME","730 H",
         "900 AWAY","915 G",
-        "990 ESC","1005 R","1020 ENTER","1060 RESPAWN",
-        "1120 KILL","1160 RESPAWN",
-        "1220 LEAVE","1280 END"};
+        "990 ESC","1005 R","1020 ENTER","1100 RESPAWN",
+        "1220 KILL","1300 RESPAWN",
+        "1420 SLAIN","1500 RESPAWN",
+        "1560 NOSTAND","1570 ARROWS","1580 RIGSTAR","1600 R",
+        "1900 LEAVE","1960 END"};
     private static final String[] STEPS=ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -276,7 +281,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?2600:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -337,6 +342,7 @@ public final class MpClient implements ClientModInitializer {
         // and dying another way than the reset
         if(step.equals("LEAVE")){if(down){note("leave the server");resumeAt=age;phase=4;age=0;mc.send(()->dev.sangwoo.celestialfall.client.title.TitlePortal.leaveMap(mc,true));}return;}
         if(step.equals("KILL")){if(down)command("kill @s");return;}
+        if(step.equals("SLAIN")){if(down)command("damage @s 1000 minecraft:player_attack by Watcher");return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         if(step.equals("STAND")){if(down){note("command botand progress stand @s star_platinum");mc.player.networkHandler.sendChatCommand("botand progress stand @s star_platinum");}return;}
         // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
