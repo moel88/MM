@@ -60,9 +60,12 @@ public final class BossPlayer extends ServerPlayerEntity {
         Bosses.defeated(this,source);
         getDamageTracker().update();
     }
-    /** Its name wherever the server writes it (a death message, a chat line): the boss's own, not its body's profile. */
-    @Override public Text getDisplayName(){return Text.literal(kind.title);}
-    @Override public Text getName(){return Text.literal(kind.title);}
+    /**
+     * Its name wherever the server writes it (a death message, a chat line): the boss's own, not its body's profile
+     * (the profile's while the player's own constructor asks, before its kind is set).
+     */
+    @Override public Text getDisplayName(){return kind==null?super.getDisplayName():Text.literal(kind.title);}
+    @Override public Text getName(){return kind==null?super.getName():Text.literal(kind.title);}
     @Override public AbstractTeam getScoreboardTeam(){return null;}
     @Override public void increaseStat(Stat<?> stat,int amount){}
     @Override public void resetStat(Stat<?> stat){}

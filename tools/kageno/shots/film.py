@@ -17,6 +17,9 @@ how long of its 5 s), moving again; the training dummy's health through it (unch
 it took at once; FILM_TS_DUMMY=0 leaves it out) and, with FILM_TS_PLAYER=1, the player's own: one it stopped, whose
 screen is held still (shown) while time is stopped. Since 2.68.0, with an actors.csv beside it (act=), each husk while
 time is stopped: how far it is and whether it stands stopped or walks on (out of its reach).
+MODE boss with a SUMMON shot's boss.csv (ACTOR -, 2.69.0) shows Kujo Jotaro: neutral or angry, what he does (his own
+moves, or how he answers the player's: a guard, a dash, a blow first), whom he goes after, his health, the player's
+(and the second player's, MATE) health and the boxes he left.
 MODE stagger with a SUMMON shot's stand.csv (ACTOR -, 2.68.0) shows the basic attack's stagger: the training dummy's
 blows (its combo) and whether it is staggered, whether the player is staggered (walking only, at a tenth of their speed),
 their speed attribute against its base and, from the motion.csv beside it, how fast they walk.
@@ -80,6 +83,9 @@ if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown', 'timestop'):
             seen = list(csv.DictReader(fh))
             # (the inhale's husks: the first one only, how far it has been dragged)
             walkers = sorted((int(r['age']), float(r['x']), float(r['z']), float(r['speed_attr'])) for r in seen if mode == 'finger' or r['name'] == seen[0]['name'])
+elif csv_path and mode == 'boss':
+    with open(csv_path) as fh:
+        rush = sorted((float(r['t']), r) for r in csv.DictReader(fh))
 elif csv_path and mode == 'stagger':
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r.get('player_staggered') not in (None, ''))
@@ -397,7 +403,39 @@ def stagger_line(t):
     color = (255, 190, 150) if r.get('player_staggered') == '1' else (150, 255, 190) if r.get('dummy_staggered') == '1' else (255, 255, 255)
     return ' · '.join(parts), color
 
+# the boss's words for the moves it reads (BossThreats) and its own (JotaroBrain)
+MOVES = {'punch1': '평타', 'punch2': '평타', 'punch3': '평타', 'punch4': '평타 4타', 'punch5': '강펀치', 'punch6': '스타 핑거',
+         'punch7': '비트다운', 'rush': '러시', 'inhale': '흡입', 'time_stop': '시간 정지', 'atomic': '아토믹'}
+def boss_doing(d):
+    """What the boss does, from boss.csv's words: its own plan, or how it answers a player's move (in brackets)."""
+    if not d or d == '-': return ''
+    w = d.split(' ')
+    if len(w) >= 2 and w[-1] in MOVES: return ' '.join(w[:-1]) + f' ({MOVES[w[-1]]})'
+    if len(w) >= 2 and (w[-1].startswith('kageno') or w[-1].startswith('bare')): return ' '.join(w[:-1]) + (' (맨손 평타)' if w[-1].startswith('bare') else ' (카게노)')
+    if w[0] == '콤보' and len(w) == 2: return '콤보' + (f' {w[1]}타' if w[1] != '0' else '')
+    return d
+def boss_line(t):
+    """Kujo Jotaro (2.69.0): neutral or angry, what he does (his own plan, or how he answers the player's move), whom he
+    goes after, his health, the player's (and the second player's) health, the boxes he left."""
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    if r.get('health'):
+        parts.append(('죠타로 화남' if r.get('angry') == '1' else '죠타로 중립(가만히 서 있음)'))
+        doing = boss_doing(r.get('doing', ''))
+        if doing and r.get('angry') == '1': parts.append(doing)
+        who = r.get('target') or ''
+        if who and r.get('angry') == '1': parts.append('대상 ' + ('나' if who == 'ShotsQA' else '동료'))
+        parts.append(f'보스 체력 {float(r["health"]):,.0f}/5,000')
+    elif r.get('boxes') and int(r['boxes']) > 0: parts.append(f'죠타로 처치 · 박스 {int(r["boxes"])}개')
+    if r.get('player_health'): parts.append(f'내 체력 {float(r["player_health"]):.0f}')
+    if r.get('mate_health'): parts.append(f'동료 체력 {float(r["mate_health"]):.0f}')
+    color = (255, 170, 160) if r.get('angry') == '1' else (255, 255, 255)
+    return ' · '.join(parts), color
+
 def actor_line(t):
+    if mode == 'boss': return boss_line(t)
     if mode == 'stagger': return stagger_line(t)
     if mode == 'timestop': return timestop_line(t)
     if mode == 'beatdown': return beatdown_line(t)

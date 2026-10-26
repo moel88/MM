@@ -42,6 +42,20 @@ public enum BossKind {
     }
     /** Whether it may call its time stop with {@code health} left. */
     public boolean mayStopTime(float health){return timeStopBelow>0&&health<=timeStopBelow;}
+    /** Its name with the subject particle (쿠죠 죠타로가) and with the object particle (쿠죠 죠타로를), as Korean takes them. */
+    public String subject(){return particle(title,"이","가");}
+    public String object(){return particle(title,"을","를");}
+    public String topic(){return particle(title,"은","는");}
+    /**
+     * {@code word} with the particle Korean puts after it: {@code consonant} after a syllable that ends in a consonant
+     * (받침), {@code vowel} after one that ends in a vowel; both, as "이(가)", after anything that is not Hangul.
+     */
+    public static String particle(String word,String consonant,String vowel){
+        if(word==null||word.isEmpty())return word;
+        char last=word.charAt(word.length()-1);
+        if(last<0xac00||last>0xd7a3)return word+consonant+"("+vowel+")";
+        return word+((last-0xac00)%28!=0?consonant:vowel);
+    }
     public static BossKind byId(String id){
         if(id==null)return null;
         for(var k:values())if(k.id.equals(id.toLowerCase(Locale.ROOT)))return k;

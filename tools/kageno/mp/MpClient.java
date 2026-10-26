@@ -140,7 +140,30 @@ public final class MpClient implements ClientModInitializer {
         "780 DIST15","790 H","835 WALK+","870 WALK-",
         "950 HOME","960 H","1005 M1+","1040 M1-",
         "1150 Q","1190 END"};
-    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:SCRIPT;
+    /**
+     * Kujo Jotaro, the boss (2.69.0), on his own (MP_ONLY=boss): the server brings him in 8 blocks behind the caster's
+     * mark before either client joins (both must be shown him as they come in). The caster takes Star Platinum and
+     * brings it out; the watcher is brought down to 80 of its 200 ("WLOW"); a new Jotaro is called 3 blocks to the
+     * caster's west ("BOSSHERE": the first is taken off the clients), and the caster strikes him once ("HITBOSS"): he
+     * turns on the watcher first (the least health), the caster kept whole. At 420 he is brought down to 2300 health
+     * ("BOSSDMG2700"): under 2500 his time stop is his to call (both players stopped in it, the watcher's screen held).
+     * At 700 the caster fells him ("BOSSKILL": /damage by the caster): 5000 won to the caster and six boxes in a ring
+     * where he fell; the watcher opens one ("OPENBOX", the server claims it for it, and once only). Then another
+     * Jotaro, struck and brought down to 3000 ("BOSSDMG2000"), and both players go 40 blocks away ("FLEE"): with nobody
+     * within his 30 blocks he lets his anger go, walks back and is whole again in 5 s; both come back ("RETURN") and
+     * the script ends with him there (the server stops with him in play; MP_RESTART=1 starts it again to see him back).
+     * Both log what their client knows of him (in its list, his body, his skin, his outfit, the boss bar, his anger, his
+     * stand, his health in tenths), their screen held by a time stop, the boxes they see, and the player list (he is
+     * not in it); the server logs him (whom he goes after, what he does, each blow on him), both players' health and
+     * money and the boxes.
+     */
+    private static final String[] BOSS_SCRIPT={
+        "5 STAND","40 Q","60 WLOW","80 BOSSHERE","100 HITBOSS",
+        "420 BOSSDMG2700",
+        "700 BOSSKILL","740 OPENBOX",
+        "790 BOSSHERE","810 HITBOSS","825 BOSSDMG2000","835 FLEE","1010 RETURN",
+        "1080 END"};
+    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -187,6 +210,7 @@ public final class MpClient implements ClientModInitializer {
                 mc.onWindowFocusChanged(true);
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());if(!interfaceStep())mc.setScreen(null);}
                 observe();
+                if(ONLY.equals("boss"))bossWatch();
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -202,7 +226,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -258,6 +282,21 @@ public final class MpClient implements ClientModInitializer {
         if(step.startsWith("WALK")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("walk"),"walk");else Files.deleteIfExists(OUT.resolve("walk"));}catch(Exception e){fail(e);}note("watcher's walk "+(step.endsWith("+")?"asked for":"stopped"));}return;}
         // 2.64.0: the watcher at full health, or brought down to a quarter of it; its guard asked for
         if(step.equals("HEAL")||step.equals("HURT")){if(down){String c=step.equals("HEAL")?"effect give Watcher minecraft:instant_health 1 20 true":"damage Watcher 150 minecraft:generic";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // 2.69.0: the boss's steps (BOSS_SCRIPT)
+        if(step.equals("WLOW")){if(down)command("damage Watcher 120 minecraft:generic");return;}
+        if(step.equals("BOSSHERE")){if(down)command("execute at Caster rotated 90 0 positioned ^ ^ ^3 rotated 270 0 run botand boss jotaro spawn here");return;}
+        if(step.equals("HITBOSS")){
+            // the camera (and so the punch) on him, then the attack for a tick
+            if(down){var b=boss();if(b==null){note("ERROR no boss to strike");return;}
+                var v=b.getPos().add(0,1,0).subtract(mc.player.getEyePos());BotandCamera.STATE.yaw=(float)Math.toDegrees(Math.atan2(-v.x,v.z));BotandCamera.STATE.pitch=(float)-Math.toDegrees(Math.atan2(v.y,v.horizontalLength()));
+                note(String.format(Locale.ROOT,"strike the boss %.1f blocks away (camera yaw %.0f)",b.distanceTo(mc.player),BotandCamera.STATE.yaw));attack(true);}
+            else attack(false);
+            return;}
+        if(step.startsWith("BOSSDMG")){if(down){var b=boss();if(b==null)note("ERROR no boss");else command("damage "+b.getUuid()+" "+step.substring(7)+" minecraft:generic");}return;}
+        if(step.equals("BOSSKILL")){if(down){var b=boss();if(b==null)note("ERROR no boss");else command("damage "+b.getUuid()+" 9999 minecraft:out_of_world by Caster");}return;}
+        if(step.equals("OPENBOX")){if(down){try{Files.writeString(OUT.resolve("openbox"),"open");}catch(Exception e){fail(e);}note("the watcher is to open a box");}return;}
+        if(step.equals("FLEE")){if(down){command("execute at Caster run tp Watcher ~42 ~ ~2");command("execute at Caster run tp Caster ~40 ~ ~");}return;}
+        if(step.equals("RETURN")){if(down){var b=boss();if(b==null)note("ERROR no boss");else{command("execute at "+b.getUuid()+" run tp Caster ~ ~ ~6");command("execute at "+b.getUuid()+" run tp Watcher ~2 ~ ~7");}}return;}
         if(step.startsWith("GUARD")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("guard"),"guard");else Files.deleteIfExists(OUT.resolve("guard"));}catch(Exception e){fail(e);}note("watcher's guard "+(step.endsWith("+")?"asked for":"let down"));}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
         if(down&&press&&!k.equals("W"))face();
@@ -469,6 +508,34 @@ public final class MpClient implements ClientModInitializer {
      * logs each strike of its own its client starts; while the caster asks it to walk (the file OUT/walk) it holds W and
      * measures its speed on the ground, staggered and free apart.
      */
+    private void command(String c){note("command "+c);mc.player.networkHandler.sendChatCommand(c);}
+    /** The boss's body as this client has it (2.69.0), if any. */
+    private net.minecraft.entity.player.PlayerEntity boss(){
+        for(var info:dev.sangwoo.celestialfall.client.boss.BossClient.all()){var e=mc.world.getPlayerByUuid(info.id());if(e!=null)return e;}
+        return null;
+    }
+    /**
+     * Kujo Jotaro (2.69.0) as this client knows him: in its list of bosses and whether it has his body, the skin it draws
+     * him with, his outfit, the boss bar showing, his anger, his stand out, his health in tenths, whether this client's
+     * screen is held by a time stop, and the boxes within 32 blocks (and how many of them opened).
+     */
+    private void bossWatch(){
+        var list=dev.sangwoo.celestialfall.client.boss.BossClient.all();
+        flag("boss_known",list.stream().map(i->i.title()+(mc.world.getPlayerByUuid(i.id())!=null?" (body)":" (no body)")).toList());
+        var b=boss();
+        if(b instanceof net.minecraft.client.network.AbstractClientPlayerEntity c){
+            flag("boss_skin",c.getSkinTexture().toString());
+            flag("boss_outfit",dev.sangwoo.celestialfall.client.boss.BossOutfit.model("jotaro")!=null);
+            flag("boss_angry",list.stream().anyMatch(i->i.id().equals(c.getUuid())&&i.angry()));
+            flag("boss_stand_out",((dev.sangwoo.celestialfall.stand.StandHolder)c).botand$isStandOut());
+            flag("boss_health_tenths",Math.round(c.getHealth()/c.getMaxHealth()*10));
+            flag("boss_alive",c.isAlive());
+        }else flag("boss_skin","-");
+        flag("boss_bar",dev.sangwoo.celestialfall.client.boss.BossBar.shown()>.5f);
+        flag("screen_held",dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(mc.player));
+        var boxes=mc.world.getEntitiesByClass(dev.sangwoo.celestialfall.loot.FieldLootEntity.class,mc.player.getBoundingBox().expand(32),e->e.loose());
+        flag("boxes_seen",boxes.size()+" ("+boxes.stream().filter(e->e.opened()).count()+" opened)");
+    }
     private void staggerWatch(){
         long now=mc.world.getTime();var mine=CombatClient.snapshot(mc.player.getUuid());
         // struck: its hurt time comes back up (its health may be healed back before this client hears of it)

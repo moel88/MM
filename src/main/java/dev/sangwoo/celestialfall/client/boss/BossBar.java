@@ -67,15 +67,24 @@ public final class BossBar {
     }
     private static float health(PlayerEntity e){return e.isAlive()?Math.max(0,Math.min(1,e.getHealth()/Math.max(1,e.getMaxHealth()))):0;}
 
+    /**
+     * Where it lies: in the band just above the hotbar where a player's hearts and experience would be (the map's own
+     * HUD has none there), below the chat's last line (40 above the bottom) and above the hotbar (22), as wide as the
+     * screen gives beside the key hints at the bottom left (to x 156, BotandCamera), 110 to 300 wide.
+     */
+    static float width(int w){return (float)Math.max(BAR_MIN,Math.min(BAR_MAX,Math.min(w*.42,w-2*(HINTS_RIGHT+8))));}
+    static final float BAR_MIN=110,BAR_MAX=300,HINTS_RIGHT=156,BAR_TOP=29.6f,BAR_HEIGHT=5,BACK=1.2f,TITLE_BASE=32,TITLE_SIZE=8.5f;
+    /** How much of the bar shows now (0 to 1): the HUD's armour row steps up over it while it does. */
+    public static float shown(){return alpha;}
     private static void draw(DrawContext d,String title,double now){
         int w=d.getScaledWindowWidth(),h=d.getScaledWindowHeight();
-        float bw=(float)Math.max(150,Math.min(300,w*.42)),bh=5.5f,x=(w-bw)/2f,y=h-34f;
+        float bw=width(w),bh=BAR_HEIGHT,x=(w-bw)/2f,y=h-BAR_TOP;
         float a=(float)(alpha*alpha*(3-2*alpha));
         var m=d.getMatrices().peek().getPositionMatrix();
         float r=bh/2;
         var b=GachaArt.begin(d,false);
         // the backing, a little larger than the bar
-        float[] back=SkyUi.rounded(x-1.6f,y-1.6f,bw+3.2f,bh+3.2f,r+1.6f);
+        float[] back=SkyUi.rounded(x-BACK,y-BACK,bw+2*BACK,bh+2*BACK,r+BACK);
         GachaArt.smooth(b,m,back,GachaArt.fade(0xd80b0d14,a),GachaArt.fade(0xd8191b26,a));
         // what a blow took, pale, draining; then the health, deep red, lighter along its top
         if(trail>bar+1e-3f)fillTo(b,m,x,y,bw,bh,r,bar,trail,GachaArt.fade(0xfff6d2c8,a*.95f),GachaArt.fade(0xffe8a99c,a*.95f));
@@ -85,8 +94,8 @@ public final class BossBar {
         GachaArt.stroke(b,m,back,Math.max(SkyUi.px(),.7f),GachaArt.fade(0xb0c9a59a,a));
         GachaArt.end(b);
         // a soft red light round it while the boss is angry
-        if(angry>.01f){var g=GachaArt.begin(d,true);GachaArt.glow(g,m,back,5,GachaArt.fade(0xffe0443c,a),.32f*angry);GachaArt.end(g);}
-        if(!title.isEmpty())GachaFont.text(title,w/2f,y-7.6f,9.5f,GachaFont.Weight.BOLD).align(.5f).color(0xfffaf6f2).alpha(a)
+        if(angry>.01f){var g=GachaArt.begin(d,true);GachaArt.glow(g,m,back,4,GachaArt.fade(0xffe0443c,a),.32f*angry);GachaArt.end(g);}
+        if(!title.isEmpty())GachaFont.text(title,w/2f,h-TITLE_BASE,TITLE_SIZE,GachaFont.Weight.BOLD).align(.5f).color(0xfffaf6f2).alpha(a)
             .shadow(0xc8000000,1.1f,0,.6f).spacing(.04f).draw(d);
         RenderSystem.enableDepthTest();RenderSystem.defaultBlendFunc();RenderSystem.setShaderColor(1,1,1,1);
     }

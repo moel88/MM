@@ -5,7 +5,8 @@ sound to OpenAL Soft's null device (2.54.0: at full volume, so each Star Platinu
 usage: python3 tools/kageno/mp/run_mp.py OUT_DIR [MOD_JAR]
 MP_ONLY=beatdown runs only Star Platinum's beatdown's own script (2.64.0, MpClient.BEATDOWN_SCRIPT), MP_ONLY=timestop
 only its time stop's (2.67.0, MpClient.TIMESTOP_SCRIPT), MP_ONLY=stagger only the basic attack's stagger and the time
-stop's 20 blocks (2.68.0, MpClient.STAGGER_SCRIPT).
+stop's 20 blocks (2.68.0, MpClient.STAGGER_SCRIPT), MP_ONLY=boss only Kujo Jotaro's (2.69.0, MpClient.BOSS_SCRIPT; with
+MP_RESTART=1 the server is started once more afterwards on the same world to see a boss in play come back).
 Results: OUT_DIR/{server.txt, caster/log.txt, watcher/log.txt, caster/*.png, watcher/*.png, logs/}.
 """
 from pathlib import Path
@@ -126,6 +127,23 @@ try:
     print(json.dumps({role: c.poll() for role, c in clients}), flush=True)
     srv.stdin.write('stop\n'); srv.stdin.flush()
     srv.wait(timeout=120)
+    # MP_RESTART=1 (2.69.0): the server started once more on the same world, nobody joining, and stopped: a boss in play
+    # as it stopped comes back where it was (server.txt gets its line again), and nothing fails on the way
+    if os.environ.get('MP_RESTART'):
+        srv_log2 = (logs / 'server-restart.out').open('w')
+        srv = subprocess.Popen(['java', '-Xmx2G', '-Dbotand.mp.server=true', f'-Dbotand.mp.out={out}', *only,
+                                f'-Dfabric.gameJarPath={LOOM / MC / "minecraft-extracted_server.jar"}', '-cp', cp,
+                                'net.fabricmc.loader.impl.launch.knot.KnotServer', 'nogui'],
+                               cwd=server, env=env, stdin=subprocess.PIPE, stdout=srv_log2, stderr=subprocess.STDOUT, text=True)
+        procs.append(srv)
+        start = time.time()
+        while 'Done (' not in (logs / 'server-restart.out').read_text(errors='replace'):
+            if srv.poll() is not None or time.time() - start > 600: sys.exit('server did not start again, see ' + str(logs / 'server-restart.out'))
+            time.sleep(2)
+        print('server up again after', round(time.time() - start), 's', flush=True)
+        time.sleep(15)
+        srv.stdin.write('stop\n'); srv.stdin.flush()
+        srv.wait(timeout=120)
 finally:
     for p in procs:
         if p.poll() is None: p.terminate()

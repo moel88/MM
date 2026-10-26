@@ -50,7 +50,8 @@ public final class BotandHud {
     /** Preserve armor and breathing information without drawing hearts or food icons. */
     public static void survivalIndicators(DrawContext c) {
         var mc=MinecraftClient.getInstance();if(mc.player==null)return;var p=mc.player;
-        int y=c.getScaledWindowHeight()-39,left=c.getScaledWindowWidth()/2-91,right=c.getScaledWindowWidth()/2+91;
+        // (2.69.0: a step up over the boss bar while it shows, boss/BossBar)
+        int y=c.getScaledWindowHeight()-39-Math.round(10*dev.sangwoo.celestialfall.client.boss.BossBar.shown()),left=c.getScaledWindowWidth()/2-91,right=c.getScaledWindowWidth()/2+91;
         int armor=p.getArmor();if(armor>0)for(int i=0;i<10;i++)c.drawTexture(ICONS,left+i*8,y,i*2+1<armor?34:i*2+1==armor?25:16,9,9,9);
         if(p.isSubmergedIn(net.minecraft.registry.tag.FluidTags.WATER)||p.getAir()<p.getMaxAir()) {
             int air=Math.max(0,p.getAir()),max=Math.max(1,p.getMaxAir());

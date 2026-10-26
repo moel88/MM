@@ -113,9 +113,9 @@ public final class Bosses {
         server.getPlayerManager().sendToAll(entry(List.of(boss)));
         LIVE.put(boss.getUuid(),boss);
         if(!world.spawnEntity(boss)){LIVE.remove(boss.getUuid());server.getPlayerManager().sendToAll(new PlayerRemoveS2CPacket(List.of(boss.getUuid())));return null;}
-        var state=BossState.get(server);var e=state.entry(kind);e.up=true;e.health=boss.getHealth();state.changed();
+        var state=BossState.get(server);var e=state.entry(kind);e.up=true;e.health=boss.getHealth();e.hx=at.x;e.hy=at.y;e.hz=at.z;e.hyaw=yaw;state.changed();
         sendListAll(server);
-        announce(world,Text.literal("[보스] ").formatted(Formatting.RED,Formatting.BOLD).append(Text.literal(kind.title+"이(가) 나타났습니다! ").formatted(Formatting.GOLD))
+        announce(world,Text.literal("[보스] ").formatted(Formatting.RED,Formatting.BOLD).append(Text.literal(kind.subject()+" 나타났습니다! ").formatted(Formatting.GOLD))
             .append(Text.literal(String.format(Locale.ROOT,"(%d, %d, %d)",Math.round(at.x),Math.round(at.y),Math.round(at.z))).formatted(Formatting.GRAY)));
         CelestialFall.LOGGER.info("Boss {} came at ({}, {}, {}) with {} health",kind.id,at.x,at.y,at.z,boss.getHealth());
         return boss;
@@ -149,12 +149,12 @@ public final class Bosses {
             var before=ProgressManager.profile(killer);
             ProgressManager.set(killer,before.withMoney(Math.min(ProgressProfile.MAX_MONEY,before.money()+kind.reward)));
             killer.sendMessage(Text.literal(kind.title+" 처치! +"+String.format(Locale.ROOT,"%,d",kind.reward)+"원").formatted(Formatting.GOLD,Formatting.BOLD),true);
-            announce(world,Text.literal("[보스] ").formatted(Formatting.RED,Formatting.BOLD).append(Text.literal(killer.getName().getString()+"님이 "+kind.title+"을(를) 쓰러뜨렸습니다! ").formatted(Formatting.GOLD))
+            announce(world,Text.literal("[보스] ").formatted(Formatting.RED,Formatting.BOLD).append(Text.literal(killer.getName().getString()+"님이 "+kind.object()+" 쓰러뜨렸습니다! ").formatted(Formatting.GOLD))
                 .append(Text.literal("+"+String.format(Locale.ROOT,"%,d",kind.reward)+"원").formatted(Formatting.YELLOW)));
-        }else announce(world,Text.literal("[보스] ").formatted(Formatting.RED,Formatting.BOLD).append(Text.literal(kind.title+"이(가) 쓰러졌습니다!").formatted(Formatting.GOLD)));
+        }else announce(world,Text.literal("[보스] ").formatted(Formatting.RED,Formatting.BOLD).append(Text.literal(kind.subject()+" 쓰러졌습니다!").formatted(Formatting.GOLD)));
         int boxes=dropBoxes(boss);
         CelestialFall.LOGGER.info("Boss {} fell at ({}, {}, {}), felled by {}, {} boxes",kind.id,boss.getX(),boss.getY(),boss.getZ(),killer==null?"nobody":killer.getName().getString(),boxes);
-        var state=BossState.get(server);var e=state.entry(kind);e.up=false;e.health=kind.health;state.changed();
+        var state=BossState.get(server);var e=state.entry(kind);e.up=false;e.health=kind.health;e.hx=Double.NaN;state.changed();
         sendListAll(server);
     }
     /** Its boxes, evenly on a ring round where it fell, each on the ground there (nearer in if there is no room out there). */
@@ -238,14 +238,14 @@ public final class Bosses {
             spawn(world,kind,new Vec3d(spot[0],spot[1],spot[2]),(float)spot[3],kind.health);
         }
     }
-    /** Back up as it was, if it was up when the server stopped. */
+    /** Back up as it was, if it was up when the server stopped: where it stood (or else at its spot), with its health. */
     private static void started(MinecraftServer server){
         var world=server.getOverworld();if(!MapGate.enabled(world))return;
         var state=BossState.get(server);
         for(var kind:BossKind.values()){
-            var e=state.entry(kind);if(!e.up)continue;
-            var spot=spot(server,kind);if(spot==null)continue;
-            spawn(world,kind,new Vec3d(spot[0],spot[1],spot[2]),(float)spot[3],e.health);
+            var e=state.entry(kind);if(!e.up||live(kind)!=null)continue;
+            double[] at=e.standing()?new double[]{e.hx,e.hy,e.hz,e.hyaw}:spot(server,kind);if(at==null)continue;
+            spawn(world,kind,new Vec3d(at[0],at[1],at[2]),(float)at[3],e.health);
         }
     }
     /** The server stops: every boss is kept as it is (up, with its health) and taken off before the players are sent away. */
@@ -287,9 +287,9 @@ public final class Bosses {
                     s.sendFeedback(()->Text.literal(String.format(Locale.ROOT,"%s의 위치를 (%.1f, %.1f, %.1f)로 정했어요.",kind.title,pos.x,pos.y,pos.z)),true);return 1;
                 }))
                 .then(literal("remove").executes(c->{
-                    var b=live(kind);if(b==null){c.getSource().sendError(Text.literal(kind.title+"은(는) 지금 없어요."));return 0;}
-                    var state=BossState.get(c.getSource().getServer());state.entry(kind).up=false;state.changed();
-                    remove(b);c.getSource().sendFeedback(()->Text.literal(kind.title+"을(를) 없앴어요."),true);return 1;
+                    var b=live(kind);if(b==null){c.getSource().sendError(Text.literal(kind.topic()+" 지금 없어요."));return 0;}
+                    var state=BossState.get(c.getSource().getServer());state.entry(kind).up=false;state.entry(kind).hx=Double.NaN;state.changed();
+                    remove(b);c.getSource().sendFeedback(()->Text.literal(kind.object()+" 없앴어요."),true);return 1;
                 }))
                 .then(literal("timer").executes(c->{
                     var s=c.getSource();long left=BossState.get(s.getServer()).entry(kind).next-s.getServer().getOverworld().getTime();
@@ -309,7 +309,7 @@ public final class Bosses {
         Vec3d at=spot!=null?new Vec3d(spot[0],spot[1],spot[2]):source.getPosition();float yaw=spot!=null?(float)spot[3]:source.getRotation().y;
         if(spot==null&&source.getWorld()!=world){source.sendError(Text.literal("보스는 오버월드 맵에만 나와요."));return 0;}
         var b=spawn(world,kind,at,yaw,kind.health);
-        if(b==null){source.sendError(Text.literal(kind.title+"을(를) 불러오지 못했어요."));return 0;}
+        if(b==null){source.sendError(Text.literal(kind.object()+" 불러오지 못했어요."));return 0;}
         source.sendFeedback(()->Text.literal(String.format(Locale.ROOT,"%s 등장 (%.1f, %.1f, %.1f)",kind.title,at.x,at.y,at.z)),true);
         return 1;
     }

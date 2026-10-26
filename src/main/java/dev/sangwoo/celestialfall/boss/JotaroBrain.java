@@ -41,6 +41,9 @@ final class JotaroBrain extends BossBrain {
     private boolean pressed;private long pressedAt,caught=-1,inWay;
     /** The combo's ender is chosen (after the hook). */
     private boolean ender;
+    /** Making room to call his time stop: since when (-1: not), and until when he gives that up; how far, how long at most. */
+    private long gapSince=-1,gapRest=Long.MIN_VALUE;
+    private static final double GAP=8.5;private static final int GAP_TICKS=60;
     JotaroBrain(BossPlayer boss){super(boss);}
 
     @Override protected boolean committed(long now){return plan!=Plan.NONE&&plan!=Plan.TIMESTOP;}
@@ -69,8 +72,19 @@ final class JotaroBrain extends BossBrain {
         boolean guard=guarding(t),able=StarPlatinumAttack.able(boss);
         float health=t.getHealth()/Math.max(1,t.getMaxHealth());
         if(!able){face(t,30);if(d>WAIT)goTo(t.getPos(),now,true);doing="대기";return;}
-        // his time stop, his health low enough: when nobody free stands near enough to strike him as he calls it
-        if(boss.kind.mayStopTime(boss.getHealth())&&ready(StarPlatinumTimeStop.ready(boss),now)&&d<=14&&(held>=30||!threatened(6))){start(Plan.TIMESTOP,t,now);return;}
+        // his time stop, his health low enough: when nobody free stands near enough to strike him as he calls it. With
+        // someone free that near he first makes room: the Star Finger on them (it holds them long enough), or he backs
+        // off out of their reach (giving it up for 5 s if it takes 3 s)
+        if(boss.kind.mayStopTime(boss.getHealth())&&ready(StarPlatinumTimeStop.ready(boss),now)&&d<=14){
+            if(held>=30||!threatened(6)){gapSince=-1;start(Plan.TIMESTOP,t,now);return;}
+            boolean fingerFirst=ready(StarPlatinumAttack.fingerReady(boss),now)&&d>=FINGER_NEAR&&d<=FINGER_FAR&&!guard&&held<10;
+            if(fingerFirst){gapSince=-1;start(Plan.FINGER,t,now);return;}
+            if(now>=gapRest){
+                if(gapSince<0)gapSince=now;
+                if(now-gapSince<GAP_TICKS){keepAway(t,GAP,now);doing="거리 벌리기";return;}
+                gapSince=-1;gapRest=now+100;
+            }
+        }else gapSince=-1;
         if(held>=4&&d<=PUNCH+.3){
             if(ready(StarPlatinumAttack.beatdownReady(boss),now)&&held>=CONTACT[BEATDOWN]+2&&d<=BEAT_REACH&&(health<=.6f||random.nextFloat()<.45f)){start(Plan.BEATDOWN,t,now);return;}
             if(ready(StarPlatinumRush.ready(boss),now)){start(Plan.RUSH,t,now);return;}
@@ -127,7 +141,8 @@ final class JotaroBrain extends BossBrain {
 
     private void combo(long now){
         var t=mark;double d=flat(t.getPos());var pu=StarPlatinumAttack.punch(boss);
-        int c=pu==null?0:pu.combo();
+        // (only this combo's punches: the last of an earlier one, or a skill's, is no punch of it)
+        int c=pu==null||pu.start()<planStart?0:pu.combo();
         boolean flying=pu!=null&&c>=1&&now<pu.start()+LENGTH[c];
         if(!flying&&(d>PUNCH+.9||pu!=null&&now<pu.ready())){end();return;}
         if(CounterStance.active(t)){end();return;}
@@ -248,6 +263,13 @@ final class JotaroBrain extends BossBrain {
      */
     @Override protected boolean strikeFirst(BossThreats.Threat t,int left,long now){
         var from=t.from();if(from==null||t.timeStop()||CounterStance.active(from))return false;
+        // answered already: while its own blow is on its way (it lands first) it keeps to it, and does not dash away
+        // from its own jab; once that blow has landed and the threat is still coming, it is answered otherwise
+        if(from==answeredFrom&&t.seen()==answeredSeen){
+            var mine=StarPlatinumAttack.punch(boss);
+            if(mine!=null&&mine.combo()>=1&&mine.combo()<CONTACT.length&&now<mine.start()+CONTACT[mine.combo()])return true;
+            return false;
+        }
         String w=t.what();
         boolean slow=w.equals("punch"+HEAVY)||w.equals("punch"+FINGER)||w.equals("punch"+BEATDOWN)||w.equals("inhale")||w.startsWith("kageno")||w.startsWith("bare");
         if(!slow||left<CONTACT[1]+1||plan!=Plan.NONE&&plan!=Plan.COMBO)return false;
@@ -255,9 +277,11 @@ final class JotaroBrain extends BossBrain {
         releaseKeys();if(guarding())guard(false,now);
         aim(from);
         if(!StarPlatinumAttack.request(boss))return false;
-        start(Plan.COMBO,from,now);
+        start(Plan.COMBO,from,now);answeredFrom=from;answeredSeen=t.seen();
         return true;
     }
+    /** The threat it last answered with a blow of its own first (whose, and when it was begun). */
+    private net.minecraft.server.network.ServerPlayerEntity answeredFrom;private long answeredSeen=Long.MIN_VALUE;
     /**
      * A player calls a time stop: struck before it stops, the call is cut short. Within the Star Finger's reach, it; within
      * a punch's, a jab; a dash and a jab away, the dash first. Otherwise he gets out of its reach.

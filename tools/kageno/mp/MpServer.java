@@ -60,6 +60,19 @@ public final class MpServer implements ModInitializer {
         for(int x=-30;x<=30;x++)for(int z=-30;z<=30;z++)w.setBlockState(new BlockPos(x,ground-1,z),((x>>2)+(z>>2)&1)==0?Blocks.LIGHT_GRAY_CONCRETE.getDefaultState():Blocks.POLISHED_ANDESITE.getDefaultState());
         note(server,"started ground="+ground+" map="+MapGate.enabled(w)+" dedicated="+server.isDedicated());
     }
+    private boolean bossPlaced;
+    /**
+     * 2.69.0, on the first tick (once the mod's own start has brought back a boss that was in play): Kujo Jotaro stands
+     * 8 blocks behind the caster's mark before either client joins (each must be shown him as they come in), neutral;
+     * a server started again finds him where the last one left him, with the health he had (MP_RESTART).
+     */
+    private void placeBoss(MinecraftServer server){
+        bossPlaced=true;var w=server.getOverworld();
+        var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+        String how="brought back by the mod";
+        if(b==null){how="new";b=dev.sangwoo.celestialfall.boss.Bosses.spawn(w,dev.sangwoo.celestialfall.boss.BossKind.JOTARO,new net.minecraft.util.math.Vec3d(.5,ground,-7.5),0,dev.sangwoo.celestialfall.boss.BossKind.JOTARO.health);}
+        note(server,b==null?"ERROR no boss":String.format(java.util.Locale.ROOT,"boss %s (%s) at %.1f %.1f %.1f health %.0f (in the player list: %s)",b.getUuid(),how,b.getX(),b.getY(),b.getZ(),b.getHealth(),server.getPlayerManager().getPlayerList().contains(b)));
+    }
     private static boolean caster(ServerPlayerEntity p){return p.getGameProfile().getName().equals("Caster");}
     private void joined(ServerPlayerEntity p){
         p.changeGameMode(GameMode.SURVIVAL);
@@ -107,11 +120,13 @@ public final class MpServer implements ModInitializer {
         busy|=atomic;
         punched(server);
         if(STAGGER_ONLY)staggers(server);
+        if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
+        if(BOSS_ONLY)boss(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY)p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -255,7 +270,7 @@ public final class MpServer implements ModInitializer {
         targets.clear();
     }
     private void restore(MinecraftServer server){
-        if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0)return;
+        if(!idle||ground==Integer.MIN_VALUE||server.getTicks()%10!=0||BOSS_ONLY)return;
         // a player with Star Platinum out walks with it (2.51.0): left where they are; and a player Star Platinum's
         // punches threw (2.54.0) is left where it came down
         // (2.60.0: and while the caster has Star Platinum out, the watcher stays where the script puts it: 4.5 blocks
@@ -325,6 +340,60 @@ public final class MpServer implements ModInitializer {
     static final boolean TIMESTOP_ONLY="timestop".equals(System.getProperty("botand.mp.only"));
     /** Only the stagger's script (2.68.0, MP_ONLY=stagger). */
     static final boolean STAGGER_ONLY="stagger".equals(System.getProperty("botand.mp.only"));
+    /** Only the boss's script (2.69.0, MP_ONLY=boss). */
+    static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
+    private String bossSeen="";private float bossHealth=-1;private final Map<UUID,Float> lastHealth=new HashMap<>();private final Map<UUID,Long> money=new HashMap<>();
+    private int boxesSeen=-1;private net.minecraft.util.math.Vec3d bossFell;private boolean bossStopping;private final Map<UUID,Boolean> bossStopped=new HashMap<>();
+    /**
+     * Kujo Jotaro (2.69.0) as the server keeps him: in play or not and where, angry or not, whom he goes after and what
+     * he does (each change), his health (each blow), his time stop, both players' health (each change: whom he struck),
+     * stopped in his time or not, alive, their money (the reward), the boxes he left (how many, how far from where he
+     * fell) and the watcher opening one (the caster's script asks with the file OUT/openbox).
+     */
+    private void boss(MinecraftServer server){
+        long now=server.getOverworld().getTime();var w=server.getOverworld();
+        var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+        String seen;
+        if(b==null)seen="none";
+        else{var t=b.brain().target();seen=String.format(java.util.Locale.ROOT,"%s angry=%s target=%s doing=%s",b.getUuid().toString().substring(0,8),b.brain().angry(),t==null?"-":t.getName().getString(),b.brain().doing().isEmpty()?"-":b.brain().doing());}
+        if(!seen.equals(bossSeen)){
+            String at="";
+            if(b!=null){var sb=new StringBuilder();for(var p:server.getPlayerManager().getPlayerList())sb.append(String.format(java.util.Locale.ROOT,", %s %.1f blocks (health %.1f)",p.getGameProfile().getName(),p.distanceTo(b),p.getHealth()));at=String.format(java.util.Locale.ROOT," at %.1f %.1f, health %.0f",b.getX(),b.getZ(),b.getHealth())+sb;}
+            note(server,"boss "+seen+at);bossSeen=seen;
+        }
+        if(b!=null){
+            if(Math.abs(b.getHealth()-bossHealth)>=.5f){note(server,String.format(java.util.Locale.ROOT,"boss health %.1f -> %.1f",bossHealth,b.getHealth()));bossHealth=b.getHealth();}
+            bossFell=b.getPos();
+            boolean calling=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.active(b);
+            if(calling!=bossStopping){note(server,"boss's time stop "+(calling?"called":"over")+" at tick "+now+" (health "+b.getHealth()+")");bossStopping=calling;}
+        }else bossHealth=-1;
+        for(var p:server.getPlayerManager().getPlayerList()){
+            String who=p.getGameProfile().getName();
+            Float was=lastHealth.put(p.getUuid(),p.getHealth());
+            if(was!=null&&Math.abs(was-p.getHealth())>.01f)note(server,String.format(java.util.Locale.ROOT,"%s health %.1f -> %.1f%s",who,was,p.getHealth(),b!=null&&p.getRecentDamageSource()!=null&&p.getRecentDamageSource().getAttacker()==b?" (the boss)":""));
+            boolean stopped=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(p);
+            if(stopped!=Boolean.TRUE.equals(bossStopped.put(p.getUuid(),stopped)))note(server,who+(stopped?" stopped in time":" moving again")+" at tick "+now);
+            long m=ProgressManager.profile(p).money();Long before=money.put(p.getUuid(),m);
+            if(before!=null&&before!=m)note(server,who+" money "+before+" -> "+m);
+        }
+        var boxes=w.getEntitiesByClass(dev.sangwoo.celestialfall.loot.FieldLootEntity.class,new net.minecraft.util.math.Box(-64,ground-16,-64,64,ground+16,64),e->e.loose());
+        if(boxes.size()!=boxesSeen){
+            var sb=new StringBuilder();for(var e:boxes)sb.append(String.format(java.util.Locale.ROOT," (%.2f, %.2f) %.2f from where he fell%s",e.getX(),e.getZ(),bossFell==null?-1:Math.hypot(e.getX()-bossFell.x,e.getZ()-bossFell.z),e.opened()?" opened":""));
+            note(server,"boxes left by the boss: "+boxes.size()+sb);boxesSeen=boxes.size();
+        }
+        if(Files.exists(OUT.resolve("openbox"))){
+            try{Files.delete(OUT.resolve("openbox"));}catch(Exception ignored){}
+            var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+            if(watcher!=null&&!boxes.isEmpty()){
+                var box=boxes.stream().min(java.util.Comparator.comparingDouble(e->e.squaredDistanceTo(watcher))).get();
+                watcher.networkHandler.requestTeleport(box.getX()+1.2,box.getY(),box.getZ(),90,20);
+                var items=new StringBuilder();int before=0;for(int i=0;i<watcher.getInventory().size();i++)before+=watcher.getInventory().getStack(i).getCount();
+                boolean near=dev.sangwoo.celestialfall.loot.LootServer.near(watcher,box);boolean ok=near&&dev.sangwoo.celestialfall.loot.LootServer.claim(watcher,box);
+                for(int i=0;i<watcher.getInventory().size();i++){var st=watcher.getInventory().getStack(i);if(!st.isEmpty())items.append(' ').append(st.getCount()).append('x').append(net.minecraft.registry.Registries.ITEM.getId(st.getItem()));}
+                note(server,"watcher opens a box: near="+near+" claimed="+ok+" opened="+box.opened()+" inventory:"+items+" (a second claim: "+dev.sangwoo.celestialfall.loot.LootServer.claim(watcher,box)+")");
+            }else note(server,"watcher opens a box: none to open");
+        }
+    }
     private final Map<UUID,Long> staggeredUntil=new HashMap<>(),strikeStarts=new HashMap<>();private final Map<UUID,String> slowSeen=new HashMap<>();
     private final Map<UUID,Integer> hurtStagger=new HashMap<>();private static java.lang.reflect.Method stateOf;
     /**

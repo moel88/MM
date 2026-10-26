@@ -192,6 +192,7 @@ public final class SkillShots implements ClientModInitializer {
 
     /** Fixed far camera of the current entry ("far=ex/ey/ez/tx/ty/tz[/fov]" in blocks from the cast spot), or null. */
     public static dev.sangwoo.celestialfall.client.CinematicDirector.Pose farPose(){
+        var fight=bossPose();if(fight!=null)return fight;
         var tracked=trackPose();if(tracked!=null)return tracked;
         var circling=orbitPose();if(circling!=null)return circling;
         double[] f=far;var self=instance;if(f==null||f.length<6||self==null||self.phase<3)return null;
@@ -203,6 +204,7 @@ public final class SkillShots implements ClientModInitializer {
     /** Whether the onlooker camera of this entry shakes like a player standing there ("shake=1"). */
     public static boolean shake(){var self=instance;return shake&&self!=null&&self.phase>=3;}
     public static double farFov(){
+        if(instance!=null&&instance.phase>=3&&instance.opts.containsKey("bcam")){String[] v=instance.opts.get("bcam").split("[/,]");return v.length>2?Double.parseDouble(v[2]):60;}
         String[] t=track;if(t!=null&&instance!=null&&instance.phase>=3)return t.length>5?Double.parseDouble(t[5]):70;
         if(orbit!=null&&instance!=null&&instance.phase>=3)return instance.opt("fov",70);
         double[] f=far;return f==null||instance==null||instance.phase<3?0:f.length>6?f[6]:60;
@@ -227,6 +229,36 @@ public final class SkillShots implements ClientModInitializer {
         var eye=centre.add(f.multiply(-Math.cos(a)*r)).add(right.multiply(Math.sin(a)*r)).add(0,up-cy,0);
         var v=centre.subtract(eye).normalize();
         return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(eye,(float)Math.toDegrees(Math.atan2(-v.x,v.z)),(float)-Math.toDegrees(Math.asin(v.y)),0);
+    }
+    private static net.minecraft.util.math.Vec3d bossEye,bossLook,bossSide;private static double bossClock=-1;
+    /**
+     * "bcam=D/UP/FOV" (2.69.0): a camera beside the fight, following the player and the boss together: from the side
+     * of the line between them, D blocks out (more as they part), UP blocks up, looking at the middle; it follows
+     * smoothly (a fifth of a second) on the shot's own clock and keeps to the side it began on. Once the boss is gone it
+     * stays where it was, looking where it looked.
+     */
+    private static dev.sangwoo.celestialfall.client.CinematicDirector.Pose bossPose(){
+        var self=instance;if(self==null||self.phase<3||!self.opts.containsKey("bcam"))return null;
+        var mc=MinecraftClient.getInstance();if(mc.player==null||mc.world==null)return null;
+        String[] v=self.opts.get("bcam").split("[/,]");double d=Double.parseDouble(v[0]),up=v.length>1?Double.parseDouble(v[1]):2,dt;
+        double t=self.phase==4?self.clock():0;
+        if(bossClock<0||t<bossClock){dt=-1;bossEye=null;bossSide=null;}else dt=t-bossClock;
+        bossClock=t;
+        float delta=mc.getTickDelta();var me=mc.player.getLerpedPos(delta);net.minecraft.util.math.Vec3d boss=null;
+        for(var info:dev.sangwoo.celestialfall.client.boss.BossClient.all()){var e=mc.world.getPlayerByUuid(info.id());if(e!=null){boss=e.getLerpedPos(delta);break;}}
+        if(boss!=null){
+            var mid=me.add(boss).multiply(.5);var line=boss.subtract(me).multiply(1,0,1);double apart=line.length();
+            var side=apart<1e-3?(bossSide==null?new net.minecraft.util.math.Vec3d(1,0,0):bossSide):new net.minecraft.util.math.Vec3d(-line.z,0,line.x).normalize();
+            if(bossSide==null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,self.castYaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);if(side.dotProduct(right)<0)side=side.multiply(-1);}
+            else if(side.dotProduct(bossSide)<0)side=side.multiply(-1);
+            bossSide=side;
+            var eye=mid.add(side.multiply(d+apart*.55)).add(0,up,0);var look=mid.add(0,1,0);
+            if(bossEye==null||dt<0){bossEye=eye;bossLook=look;}
+            else{double k=1-Math.exp(-dt*.25);bossEye=bossEye.lerp(eye,k);bossLook=bossLook.lerp(look,k);}
+        }
+        if(bossEye==null)return null;
+        var w=bossLook.subtract(bossEye).normalize();
+        return new dev.sangwoo.celestialfall.client.CinematicDirector.Pose(bossEye,(float)Math.toDegrees(Math.atan2(-w.x,w.z)),(float)-Math.toDegrees(Math.asin(w.y)),0);
     }
     /** The camera following an actor ("track=..."), from its interpolated position on this frame. */
     private static dev.sangwoo.celestialfall.client.CinematicDirector.Pose trackPose(){
@@ -371,7 +403,25 @@ public final class SkillShots implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.gacha.GachaArt.end(b);
         d.getMatrices().pop();
     }
+    /**
+     * A second player for the boss's shots (2.69.0, "MATE@n"): a server player nobody plays, with a handler that sends
+     * nothing; its body moves, falls and is thrown as a player's does (its own player tick, as the boss's), and it is
+     * kept from dying under "mfloor" health.
+     */
+    static final class Mate extends ServerPlayerEntity {
+        float floor;
+        Mate(net.minecraft.server.world.ServerWorld w,com.mojang.authlib.GameProfile profile){
+            super(w.getServer(),w,profile);
+            new net.minecraft.server.network.ServerPlayNetworkHandler(w.getServer(),new net.minecraft.network.ClientConnection(net.minecraft.network.NetworkSide.SERVERBOUND),this){
+                @Override public void sendPacket(net.minecraft.network.packet.Packet<?> packet,net.minecraft.network.PacketCallbacks callbacks){}
+                @Override public void disconnect(net.minecraft.text.Text reason){}
+            };
+        }
+        @Override public void tick(){super.tick();if(!isRemoved()){playerTick();if(isAlive()&&getHealth()<floor)setHealth(floor);}}
+    }
+    private volatile Mate mate;
     private final StringBuilder bossLog=new StringBuilder();private String bossDoing="";
+    private final Set<String> tried=new HashSet<>();private final Map<Integer,Integer> tryRelease=new HashMap<>();
     /**
      * SUMMON with a boss (2.69.0): this tick's row of boss.csv, read on the server: his health, his anger, what he does,
      * whom he fights, how far from the player, where, which way he faces, whether his stand is out, his guard and dash,
@@ -383,13 +433,13 @@ public final class SkillShots implements ClientModInitializer {
             var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
             if(opt("pfull",0)>0&&p.getHealth()<70)p.setHealth(p.getMaxHealth());
             int boxes=p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.loot.FieldLootEntity.class,p.getBoundingBox().expand(40),e->e.loose()).size();
-            if(b==null){if(bossLog.length()>0||boxes>0)bossLog.append(String.format(Locale.ROOT,"%.3f,,,,,,,,,,,,%.1f,%d,%d%n",t,p.getHealth(),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)?1:0,boxes));return;}
+            if(b==null){if(bossLog.length()>0||boxes>0)bossLog.append(String.format(Locale.ROOT,"%.3f,,,,,,,,,,,,%.1f,%d,%d,%s%n",t,p.getHealth(),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)?1:0,boxes,mate==null?"":String.format(Locale.ROOT,"%.1f",mate.getHealth())));return;}
             var br=b.brain();var s=dev.sangwoo.celestialfall.combat.CombatManager.peek(b);long now=b.getWorld().getTime();
             String doing=br.doing();var target=br.target();
             if(!doing.equals(bossDoing)){log.append("  boss ").append(doing.isEmpty()?"-":doing).append(" at ").append(String.format(Locale.ROOT,"%.1f",t)).append('\n');bossDoing=doing;}
-            bossLog.append(String.format(Locale.ROOT,"%.3f,%.1f,%d,%s,%s,%.2f,%.2f,%.2f,%.1f,%d,%d,%d,%.1f,%d,%d%n",t,b.getHealth(),br.angry()?1:0,doing.replace(',',' '),target==null?"":target.getName().getString(),
+            bossLog.append(String.format(Locale.ROOT,"%.3f,%.1f,%d,%s,%s,%.2f,%.2f,%.2f,%.1f,%d,%d,%d,%.1f,%d,%d,%s%n",t,b.getHealth(),br.angry()?1:0,doing.replace(',',' '),target==null?"":target.getName().getString(),
                 Math.sqrt(b.squaredDistanceTo(p)),b.getX(),b.getZ(),b.getYaw(),((StandHolder)(Object)b).botand$isStandOut()?1:0,s!=null&&s.guarding?1:0,s!=null&&s.dashing(now)?1:0,
-                p.getHealth(),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)?1:0,boxes));
+                p.getHealth(),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)?1:0,boxes,mate==null?"":String.format(Locale.ROOT,"%.1f",mate.getHealth())));
         });
     }
     private final StringBuilder standLog=new StringBuilder();private boolean standOutLogged,dummyBroken;
@@ -720,6 +770,17 @@ public final class SkillShots implements ClientModInitializer {
         if(opts.containsKey("aimrock")&&phase==4&&mc.player!=null)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m&&m.squaredDistanceTo(mc.player)<49){
             var v=m.getPos().add(0,.55,0).subtract(mc.player.getEyePos());
             BotandCamera.STATE.yaw=(float)Math.toDegrees(Math.atan2(-v.x,v.z))+opt("rockyaw",0);BotandCamera.STATE.pitch=(float)-Math.toDegrees(Math.atan2(v.y,v.horizontalLength()))+opt("rockpitch",6);break;}
+        // "bface=1" (2.69.0): the player keeps their camera (and so their blows) on the boss, as a player fighting it does,
+        // from tick "bfrom" (0); "bchase=D" walks them at it while it is further than D blocks. Film it with a far= camera.
+        if(opts.containsKey("bface")&&phase==4&&mc.player!=null&&age>=opt("bfrom",0)){
+            net.minecraft.entity.player.PlayerEntity boss=null;
+            for(var info:dev.sangwoo.celestialfall.client.boss.BossClient.all()){var e=mc.world.getPlayerByUuid(info.id());if(e!=null&&e.isAlive()){boss=e;break;}}
+            if(boss!=null){
+                var v=boss.getPos().add(0,1.2,0).subtract(mc.player.getEyePos());
+                BotandCamera.STATE.yaw=(float)Math.toDegrees(Math.atan2(-v.x,v.z));BotandCamera.STATE.pitch=(float)-Math.toDegrees(Math.atan2(v.y,v.horizontalLength()));
+                if(opts.containsKey("bchase"))mc.options.forwardKey.setPressed(v.horizontalLength()>opt("bchase",3));
+            }else if(opts.containsKey("bchase"))mc.options.forwardKey.setPressed(false);
+        }
     }
     private void face(ServerPlayerEntity p,float face){float y=facing(face);p.setYaw(y);p.setHeadYaw(y);p.setBodyYaw(y);p.networkHandler.requestTeleport(p.getX(),p.getY(),p.getZ(),y,0);}
 
@@ -779,13 +840,13 @@ public final class SkillShots implements ClientModInitializer {
                     if(WORLD!=null){var clear=Class.forName("dev.sangwoo.celestialfall.client.meteor.MeteorFx").getDeclaredMethod("clear");clear.setAccessible(true);clear.invoke(null);}
                     int view=(int)opt("view",Integer.getInteger("botand.shots.view",6));if(mc.options.getViewDistance().getValue()!=view){mc.options.getViewDistance().setValue(view);mc.worldRenderer.reload();}}
                 if(age==2)camera();
-                if(age==2&&(opts.containsKey("far")||opts.containsKey("orbit"))){castPos=mc.player.getPos();castYaw=mc.player.getYaw();}
+                if(age==2&&(opts.containsKey("far")||opts.containsKey("orbit")||opts.containsKey("bcam"))){castPos=mc.player.getPos();castYaw=mc.player.getYaw();}
                 if(age==2)camera();
                 // "walk=N": the player walks (W held, camera-relative) from N ticks before the cast to the end of the shot.
-                int lead=opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")?90:30;
+                int lead=opts.containsKey("far")||opts.containsKey("track")||opts.containsKey("orbit")||opts.containsKey("bcam")?90:30;
                 if(opts.containsKey("walk")&&age==Math.max(3,lead-(int)opt("walk",10)))key(GLFW_KEY_W,true);
                 if(AUDIO&&age==Math.max(3,lead-20)){markerNanos=System.nanoTime();mc.getSoundManager().play(net.minecraft.client.sound.PositionedSoundInstance.master(net.minecraft.sound.SoundEvents.BLOCK_NOTE_BLOCK_PLING.value(),2f,1f));soundRows.setLength(0);tickRows.setLength(0);}
-                if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);motionLog.setLength(0);soundLog.setLength(0);sounded.clear();filming=true;trigger(current);phase=4;age=0;}}
+                if(age>=lead){camera();castPos=mc.player.getPos();castYaw=mc.player.getYaw();castTick=mc.world.getTime()+1;shotIndex=0;serverStart=-1;actorLog.setLength(0);shakeLog.setLength(0);motionLog.setLength(0);soundLog.setLength(0);sounded.clear();tried.clear();tryRelease.clear();filming=true;trigger(current);phase=4;age=0;}}
             case 4->{
                 logTick();
                 if(current.equals("M1")){
@@ -803,6 +864,22 @@ public final class SkillShots implements ClientModInitializer {
                     // "DASH@n": the dash key (C) is pressed for a tick, through the client's own input
                     if(what.equals("DASH")){if(age==at)key(GLFW_KEY_C,true);if(age==at+1)key(GLFW_KEY_C,false);continue;}
                     // the UI shot's keys and mouse
+                    // "TRY_R@n" (also T, E, M1; 2.69.0): from tick n, the key at the first tick the player is free to act
+                    // (CombatClient.actionLocked) with the boss within its reach (R 3.8, T 2.4 to 4.8, E 3, M1 3.2 blocks),
+                    // as a player waits for an opening; E is held "tryhold" ticks (40), the attack 6; it gives up after 120
+                    if(what.startsWith("TRY_")){String k=what.substring(4),id=what+"@"+at;
+                        if(age>=at&&!tried.contains(id)){
+                            net.minecraft.entity.player.PlayerEntity b=null;
+                            for(var info:dev.sangwoo.celestialfall.client.boss.BossClient.all()){var e=mc.world.getPlayerByUuid(info.id());if(e!=null&&e.isAlive()){b=e;break;}}
+                            double d=b==null?99:b.distanceTo(mc.player),near=k.equals("T")?2.4:0,reach=switch(k){case "R"->3.8;case "T"->4.8;case "E"->3.0;default->3.2;};
+                            if(b!=null&&!CombatClient.actionLocked()&&d>=near&&d<=reach){
+                                tried.add(id);log.append(String.format(Locale.ROOT,"  try %s pressed at %d (asked from %d, the boss %.2f blocks away)%n",k,age,at,d));
+                                switch(k){case "R"->{key(GLFW_KEY_R,true);key(GLFW_KEY_R,false);}case "T"->{key(GLFW_KEY_T,true);key(GLFW_KEY_T,false);}
+                                    case "E"->{key(GLFW_KEY_E,true);tryRelease.put(GLFW_KEY_E,age+(int)opt("tryhold",40));}
+                                    default->{button(true);tryRelease.put(-1,age+6);}}
+                            }else if(age>=at+120){tried.add(id);log.append("  try ").append(k).append(" gave up at ").append(age).append('\n');}
+                        }
+                        continue;}
                     if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);}if(age==at+1)key(code,false);continue;}
                     if(what.startsWith("MOVE_")){if(age==at){glideTo=null;double[] g=target(what.substring(5));double k=mc.getWindow().getScaleFactor();glideFrom=new double[]{mc.mouse.getX(),mc.mouse.getY()};glideTo=new double[]{g[0]*k,g[1]*k};glideAt=age;log.append("  move ").append(what.substring(5)).append(" at ").append(age).append('\n');}continue;}
@@ -873,6 +950,22 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("BOSSKILL")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
                             if(b!=null){b.timeUntilRegen=0;boolean ok=b.damage(p.getDamageSources().playerAttack(p),b.getHealth()+50);log.append("  boss felled ").append(ok?"":"(refused) ").append("at ").append(age).append(String.format(Locale.ROOT," (player money %d)%n",ProgressManager.profile(p).money()));}});continue;}
                     if(what.equals("UNBOSS")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);if(b!=null)dev.sangwoo.celestialfall.boss.Bosses.remove(b);log.append("  boss off at ").append(age).append('\n');});continue;}
+                    // "MATE@n" (2.69.0): a second player on the server, "mfw" blocks (5) ahead of the player and "mrt" (3) to their
+                    // right, facing the boss, with "mhp" health (60): a body hurt, staggered and thrown as a player's is, that
+                    // plays nothing (its client is nobody's); never under "mfloor" (20). "MATEHP@n" sets its health to "mhp2",
+                    // "PHP@n" the player's to "php"; "UNMATE@n" takes it off.
+                    if(what.equals("MATE")){if(age==at)server(p->{
+                            var w=p.getServerWorld();var m=new Mate(w,new com.mojang.authlib.GameProfile(UUID.randomUUID(),"Partner"));
+                            var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                            var to=p.getPos().add(f.multiply(opt("mfw",5))).add(right.multiply(opt("mrt",3)));float yaw=p.getYaw()+180;
+                            m.refreshPositionAndAngles(to.x,p.getY(),to.z,yaw,0);m.setHeadYaw(yaw);m.setBodyYaw(yaw);
+                            ProgressManager.set(m,ProgressManager.profile(m).withStand("none"));
+                            for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(m)));
+                            m.changeGameMode(GameMode.SURVIVAL);boolean in=w.spawnEntity(m);m.setHealth((float)opt("mhp",60));m.floor=(float)opt("mfloor",20);mate=m;
+                            log.append("  mate ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f) health %.0f, tick %d%n",to.x,to.z,m.getHealth(),age));});continue;}
+                    if(what.equals("MATEHP")){if(age==at)server(p->{if(mate!=null){mate.setHealth((float)opt("mhp2",30));log.append(String.format(Locale.ROOT,"  mate health set to %.0f at %d%n",mate.getHealth(),age));}});continue;}
+                    if(what.equals("PHP")){if(age==at)server(p->{p.setHealth((float)opt("php",40));log.append(String.format(Locale.ROOT,"  player health set to %.0f at %d%n",p.getHealth(),age));});continue;}
+                    if(what.equals("UNMATE")){if(age==at)server(p->{if(mate!=null){for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(mate.getUuid())));mate.discard();mate=null;log.append("  mate gone at ").append(age).append('\n');}});continue;}
                     if(what.equals("UNFAKE")){if(age==at)server(p->{if(fakePlayer!=null){p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(fakePlayer.getUuid())));fakePlayer.discard();fakePlayer=null;log.append("  fake gone at ").append(age).append('\n');}});continue;}
                     // the training dummy back in front of the player (after the finisher threw it), whole again
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
@@ -883,13 +976,14 @@ public final class SkillShots implements ClientModInitializer {
                             log.append("  dummy back at ").append(age).append('\n');}});continue;}
                     if(age==at){int id=skill(what);server(p->{boolean ok=KagenoManager.input(p,id);log.append("  ").append(what).append(ok?" at ":" refused at ").append(p.getWorld().getTime()).append('\n');});}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
+                for(var it=tryRelease.entrySet().iterator();it.hasNext();){var e=it.next();if(age>=e.getValue()){if(e.getKey()<0)button(false);else key(e.getKey(),false);it.remove();}}
                 if(!current.equals("H"))camera();
                 if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');
                     if(opts.containsKey("walk"))key(GLFW_KEY_W,false);
                     filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
-                    if(bossLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("boss.csv"),"t,health,angry,doing,target,distance,x,z,yaw,stand_out,guard,dash,player_health,player_held,boxes\n"+bossLog);bossLog.setLength(0);bossDoing="";}
+                    if(bossLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("boss.csv"),"t,health,angry,doing,target,distance,x,z,yaw,stand_out,guard,dash,player_health,player_held,boxes,mate_health\n"+bossLog);bossLog.setLength(0);bossDoing="";}
                     if(standLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("stand.csv"),"t,server_out,since,out_flag,out,alpha,scale,idle,hero,summon,wind,gust,lean,speed,glow,aura,combo,punch_age,landed,struck,punch_ticks,engage,guard,wind_l,punch_l,wind_r,punch_r,wind_hook,hook,wind_big,punch_big,"
                         +"rush_age,rush_blows,rush_struck,rush_on,rush_strike,dummy_health,speed_attr,rush_l,rush_l_hi,rush_l_lo,rush_r,rush_r_hi,rush_r_lo,"
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
