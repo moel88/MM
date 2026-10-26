@@ -387,8 +387,13 @@ def stagger_line(t):
     if r.get('player_staggered') == '1': parts.append(f'내가 경직 · 행동 불가 · 이동 속도 {100 * sp / base:.0f}%')
     else: parts.append('나: 행동 가능')
     speed = walking(t)
-    if speed is not None and speed > .05: parts.append(f'걷는 속도 초당 {speed:.2f}블록')
+    # (faster than a sprint, or than a tenth of a walk while staggered, is the fourth blow's knockback, not a walk)
+    if speed is not None and (speed > 5.7 or r.get('player_staggered') == '1' and speed > 1.2): parts.append('4타에 밀려남')
+    elif speed is not None and speed > .05: parts.append(f'걷는 속도 초당 {speed:.2f}블록')
     if r.get('dummy_staggered') == '1': parts.append('더미 경직 · 행동 불가')
+    # the training dummy's health once it has been struck (the answer landing)
+    full = next((float(x['dummy_health']) for _, x in rush if x.get('dummy_health')), None)
+    if full and r.get('dummy_health') and full - float(r['dummy_health']) > .5: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f}/{full:.0f}')
     color = (255, 190, 150) if r.get('player_staggered') == '1' else (150, 255, 190) if r.get('dummy_staggered') == '1' else (255, 255, 255)
     return ' · '.join(parts), color
 
