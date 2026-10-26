@@ -166,8 +166,9 @@ public final class MpClient implements ClientModInitializer {
     /**
      * The stand arrow (2.70.0), on its own (MP_ONLY=arrow): the caster starts with no stand and two arrows in its main
      * hand; the server is told what the next arrow will do (the file OUT/rig, MpServer: Star Platinum, then the death).
-     * The first stab (R) awakens Star Platinum, the caster trying to walk meanwhile (W, held by it); R again with a stand
-     * is refused (nothing starts, the arrow kept); the caster's stand is taken off again and the second stab kills it,
+     * The first stab (R) awakens Star Platinum, the caster trying to walk meanwhile (W, held by it); the arrow used again
+     * with a stand ("USE": the item's use sent as R sends it, since a Star Platinum user's R is its heavy punch) is
+     * refused (nothing starts, the arrow kept); the caster's stand is taken off again and the second stab kills it,
      * then it respawns. Both log every stab they hear (when, what it chose and when they heard it, cut short), the
      * caster's body as they draw it (the stab's pose on and off, how far down it went, lying where it fell as it dies),
      * the stab's sounds as they start and each player's stand; the server logs the caster held, its stand, the arrows in
@@ -175,7 +176,7 @@ public final class MpClient implements ClientModInitializer {
      */
     private static final String[] ARROW_SCRIPT={
         "5 NOSTAND","10 ARROWS","20 RIGSTAR","30 R","40 W+","60 W-",
-        "130 R","160 NOSTAND","180 RIGDIE","190 R","215 W+","235 W-",
+        "130 USE","160 NOSTAND","180 RIGDIE","190 R","215 W+","235 W-",
         "300 RESPAWN","360 END"};
     private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
@@ -300,6 +301,7 @@ public final class MpClient implements ClientModInitializer {
         // 2.70.0: the stand arrow's steps (ARROW_SCRIPT)
         if(step.equals("NOSTAND")){if(down)command("botand progress stand @s none");return;}
         if(step.equals("ARROWS")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:stand_arrow 2");return;}
+        if(step.equals("USE")){if(down){note("use the item in the main hand ("+mc.player.getMainHandStack().getItem()+")");mc.interactionManager.interactItem(mc.player,net.minecraft.util.Hand.MAIN_HAND);}return;}
         if(step.equals("RIGSTAR")||step.equals("RIGDIE")){if(down){try{Files.writeString(OUT.resolve("rig"),step.equals("RIGDIE")?"death":"star_platinum");}catch(Exception e){fail(e);}note("next arrow asked to "+(step.equals("RIGDIE")?"kill":"awaken Star Platinum"));}return;}
         // 2.69.0: the boss's steps (BOSS_SCRIPT)
         if(step.equals("WLOW")){if(down)command("damage Watcher 120 minecraft:generic");return;}

@@ -154,6 +154,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * in seconds, what it chose: 0 not yet, 1 a stand, 2 death, how brightly the arrow shines, how far down the body is, how
  * far the arrow has been drawn in, whether it was cut short), the player's stand and how many arrows they hold, and
  * the log when the stab starts, what it chose and when, when the player dies and when their stand comes out.
+ * "clearchat=1" empties the chat as the entry starts (the last entries' lines, such as a warm-up's awakening, gone).
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -866,6 +867,8 @@ public final class SkillShots implements ClientModInitializer {
                     track=opts.containsKey("track")?opts.get("track").split(":"):null;shake=opts.containsKey("shake")&&!"0".equals(opts.get("shake"));
                     HOLDS.clear();if(opts.containsKey("holds"))for(String v:opts.get("holds").split("/"))HOLDS.add(!"0".equals(v.trim()));
                     mc.options.hudHidden=!opts.containsKey("hud")||"0".equals(opts.get("hud"));
+                    // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
+                    if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);
                     // and none of the last entry's falls, smoke or debris on this client
                     if(WORLD!=null){var clear=Class.forName("dev.sangwoo.celestialfall.client.meteor.MeteorFx").getDeclaredMethod("clear");clear.setAccessible(true);clear.invoke(null);}

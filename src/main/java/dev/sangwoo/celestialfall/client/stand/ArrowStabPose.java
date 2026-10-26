@@ -11,10 +11,10 @@ import org.joml.Vector3f;
 
 /**
  * The stand arrow driven into one's own chest (2.70.0, StandArrowRules for the user's words), as a smooth function of
- * the stab's clock (seconds), on the articulated rig: the right hand lifts the arrow high beside the head, tip to the
- * sky, and holds it there a moment, trembling; it turns the arrow over, tip forward and then down at the chest, as the
- * left hand comes up to it; both fists draw it up a little (the load), then drive it down into the chest, faster and
- * faster, stopping dead as it goes in (HIT). The body folds over it, then arches back gasping as the hands are thrown
+ * the stab's clock (seconds), on the articulated rig: the right hand lifts the arrow high in front of the right
+ * shoulder, turning it point down on the way up (its line never crosses the face), and holds it there a moment,
+ * trembling, its tip on the chest; the left hand comes up to it and both fists bring it in front of the face, draw it
+ * up a little (the load), then drive it down into the chest, faster and faster, stopping dead as it goes in (HIT). The body folds over it, then arches back gasping as the hands are thrown
  * off it; the arrow, standing out of the chest, glows and is drawn into the body while they stand hunched over it,
  * shaking, the heart beating faster and faster (BEATS). As it is gone its choice shows (REVEAL): one it chose arches
  * back with the arms flung wide as the stand bursts out of them, then stands and turns to it; one it rejects
