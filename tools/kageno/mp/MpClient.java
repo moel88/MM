@@ -118,7 +118,26 @@ public final class MpClient implements ClientModInitializer {
         "165 M1+","205 M1-","215 R",
         "330 HOME","340 H",
         "400 Q","440 END"};
-    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:SCRIPT;
+    /**
+     * The basic attack's stagger and the time stop's 20 blocks (2.68.0), on their own (MP_ONLY=stagger): the caster
+     * (Kageno at first) calls the watcher 2.5 blocks in front of it and holds its attack down: M1's four hits at full
+     * speed (the watcher, struck, mashes its own attack every 3 ticks: refused while it is staggered, the whole combo);
+     * then three taps 20 ticks apart (each 12 ticks later than it could be: the watcher, free between them, strikes back
+     * and staggers the caster, cutting its M1 short); then Star Platinum out, its punches at full speed while the
+     * watcher walks into them ("WALK+": 90% slower while staggered); then its bare fists (Star Platinum in) at full
+     * speed. Then H with the watcher 25 blocks away (it walks on: not stopped) and again 15 blocks away (stopped: its
+     * walk held). Both log whether they are staggered as their clients know it, the watcher its tries, its strikes and
+     * how fast it walked while staggered and while free; the server both players' staggers, strikes, blows and speed.
+     */
+    private static final String[] STAGGER_SCRIPT={
+        "5 HOME","10 HEAL","30 M1+","70 M1-",
+        "130 HOME","135 HEAL","140 M1","160 M1","180 M1",
+        "240 STAND","270 Q","310 HOME","315 HEAL","318 WALK+","320 M1+","365 M1-","372 WALK-",
+        "420 Q","460 HOME","465 HEAL","470 M1+","520 M1-",
+        "560 Q","600 DIST25","610 H","655 WALK+","690 WALK-",
+        "780 DIST15","790 H","835 WALK+","870 WALK-",
+        "960 Q","1000 END"};
+    private static final String[] STEPS=ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -179,7 +198,8 @@ public final class MpClient implements ClientModInitializer {
                     boolean guard=Files.exists(OUT.resolve("guard"));
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(ONLY.equals("stagger"))staggerWatch();
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(mc.world==null||mc.player==null){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -229,7 +249,10 @@ public final class MpClient implements ClientModInitializer {
         // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
         // 2.60.0: the watcher takes Kageno (its skills, refused while the Star Finger has it incapacitated)
         if(step.equals("KAGENO")){if(down){String c="botand progress stand Watcher kageno";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
-        if(step.equals("HOME")||step.equals("FAR")||step.equals("AWAY")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^"+(step.equals("FAR")?"4.5":step.equals("AWAY")?"8":"2.5")+" facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // (2.68.0: "DISTn", n blocks in front: the time stop's 20 blocks)
+        if(step.equals("HOME")||step.equals("FAR")||step.equals("AWAY")||step.startsWith("DIST")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^"+(step.equals("FAR")?"4.5":step.equals("AWAY")?"8":step.startsWith("DIST")?step.substring(4):"2.5")+" facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // 2.68.0: the watcher's walk asked for (the file OUT/walk), as its guard is
+        if(step.startsWith("WALK")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("walk"),"walk");else Files.deleteIfExists(OUT.resolve("walk"));}catch(Exception e){fail(e);}note("watcher's walk "+(step.endsWith("+")?"asked for":"stopped"));}return;}
         // 2.64.0: the watcher at full health, or brought down to a quarter of it; its guard asked for
         if(step.equals("HEAL")||step.equals("HURT")){if(down){String c=step.equals("HEAL")?"effect give Watcher minecraft:instant_health 1 20 true":"damage Watcher 150 minecraft:generic";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
         if(step.startsWith("GUARD")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("guard"),"guard");else Files.deleteIfExists(OUT.resolve("guard"));}catch(Exception e){fail(e);}note("watcher's guard "+(step.endsWith("+")?"asked for":"let down"));}return;}
@@ -408,6 +431,8 @@ public final class MpClient implements ClientModInitializer {
         }
         // this player's own guard as its client knows it (2.59.0: broken by the heavy punch)
         var mine=CombatClient.snapshot(mc.player.getUuid());flag("guard",mine.broken(mc.world.getTime())?"broken":mine.guard()?"up":"down");
+        // 2.68.0: staggered by a basic attack's blow as its client knows it (until when), and whether its client lets it act
+        flag("staggered",mine.staggered(mc.world.getTime())?"until "+mine.staggerUntil():"no");flag("action_locked",CombatClient.actionLocked());
         // 2.60.0: incapacitated as its client knows it, and its speed against its base
         var speed=mc.player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
         flag("incapacitated",mine.disabled(mc.world.getTime())||mine.broken(mc.world.getTime()));
@@ -432,6 +457,32 @@ public final class MpClient implements ClientModInitializer {
         }
     }
     private final Map<String,int[]> heavyHeard=new HashMap<>(),fingerHeard=new HashMap<>();private int heavies,guardUntil;
+    /** The stagger's check (2.68.0): until when the watcher mashes its attack, its last health and strike, its walk. */
+    private int mashUntil,mashRelease=-1,lastHurt;private long lastStrike=-1000;private boolean walking;
+    private net.minecraft.util.math.Vec3d walkAt;private final List<Double> walkStaggered=new ArrayList<>(),walkFree=new ArrayList<>();
+    /**
+     * The watcher in the stagger's check (2.68.0): struck, it mashes its own attack every 3 ticks for 36 ticks (each try
+     * logged as its client sees it: staggered or free; a free one starts a strike, which strikes the caster back); it
+     * logs each strike of its own its client starts; while the caster asks it to walk (the file OUT/walk) it holds W and
+     * measures its speed on the ground, staggered and free apart.
+     */
+    private void staggerWatch(){
+        long now=mc.world.getTime();var mine=CombatClient.snapshot(mc.player.getUuid());
+        // struck: its hurt time comes back up (its health may be healed back before this client hears of it)
+        int hurt=mc.player.hurtTime;
+        if(hurt>lastHurt){note(String.format(Locale.ROOT,"struck (health %.1f)",mc.player.getHealth()));if(mashUntil<age)note("mashing its attack");mashUntil=age+36;}
+        lastHurt=hurt;
+        if(age<mashUntil&&age%3==0){note("try M1 ("+(mine.staggered(now)?"staggered":"free")+(CombatClient.actionLocked()?", its client holds it":", its client lets it")+")");attack(true);mashRelease=age+1;}
+        if(age==mashRelease)attack(false);
+        if(mine.attack()>0&&mine.attackStart()!=lastStrike){lastStrike=mine.attackStart();note("its own strike "+mine.attack()+" started at "+lastStrike);}
+        boolean walk=Files.exists(OUT.resolve("walk"));
+        if(walk!=walking){walking=walk;key(GLFW_KEY_W,walk);note((walk?"press":"release")+" W (walk, asked by the caster)");
+            if(walk){walkAt=mc.player.getPos();walkStaggered.clear();walkFree.clear();}
+            else{var a=new ArrayList<>(walkStaggered);var b=new ArrayList<>(walkFree);a.sort(null);b.sort(null);
+                note(String.format(Locale.ROOT,"walked %.2f blocks/s while staggered (median of %d ticks), %.2f blocks/s while free (median of %d ticks)%s",
+                    a.isEmpty()?0:a.get(a.size()/2)*20,a.size(),b.isEmpty()?0:b.get(b.size()/2)*20,b.size(),dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView()?" (stopped in time)":""));}}
+        if(walking){var p=mc.player.getPos();if(mc.player.isOnGround())(mine.staggered(now)?walkStaggered:walkFree).add(Math.hypot(p.x-walkAt.x,p.z-walkAt.z));walkAt=p;}
+    }
     private boolean guardAsked;private int deadFor;private final Map<Object,int[]> beatHeard=new IdentityHashMap<>();
     /** Per beatdown here: its one struck's hurt time last seen, how often their body flashed red and when it last did (its clock). */
     private final Map<Object,float[]> beatFlash=new IdentityHashMap<>();

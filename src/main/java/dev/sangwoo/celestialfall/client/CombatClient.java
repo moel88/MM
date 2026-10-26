@@ -20,23 +20,26 @@ import org.lwjgl.glfw.GLFW;
 public final class CombatClient {
     /**
      * A player's combat state as the server last told it. Since 2.60.0 also when their guard last broke and their
-     * incapacitation (until when and since when: Star Platinum's Star Finger).
+     * incapacitation (until when and since when: Star Platinum's Star Finger), since 2.68.0 until when a basic attack's
+     * blow staggers them (Stagger).
      */
     public record Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil,
-                           long brokenAt,long disabledUntil,long disabledAt) {
+                           long brokenAt,long disabledUntil,long disabledAt,long staggerUntil) {
         /** As before 2.60.0: the guard broken for BREAK_TICKS, never incapacitated. */
         public Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil){
-            this(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenUntil-CombatState.BREAK_TICKS,0,-1000);
+            this(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenUntil-CombatState.BREAK_TICKS,0,-1000,0);
         }
         public boolean broken(double now){return now<brokenUntil;}
         /** Incapacitated (2.60.0): no skill, attack, dash or guard. */
         public boolean disabled(double now){return now<disabledUntil;}
-        /** Able to do nothing but walk: incapacitated, or the guard broken (2.60.0: "가드 브레이커 개념이 2초 무력화"). */
-        public boolean locked(double now){return broken(now)||disabled(now);}
+        /** Staggered by a basic attack's blow (2.68.0): a moment as incapacitated, without the dazed look. */
+        public boolean staggered(double now){return now<staggerUntil;}
+        /** Able to do nothing but walk: incapacitated, staggered, or the guard broken (2.60.0: "가드 브레이커 개념이 2초 무력화"). */
+        public boolean locked(double now){return broken(now)||disabled(now)||staggered(now);}
         public float attackAge(double now){return (float)(now-attackStart);}
         public float dashAge(double now){return (float)(now-dashStart);}
     }
-    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0,-1000,0,-1000);
+    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0,-1000,0,-1000,0);
     private static final Map<UUID,Snapshot> STATES=new HashMap<>();
     private static final Map<UUID,Movement> MOVEMENT=new HashMap<>();
     private static final class Movement {
@@ -65,7 +68,9 @@ public final class CombatClient {
             // 2.60.0: when the guard broke and the incapacitation (a server before it sends none)
             boolean more=b.readableBytes()>=24;
             long brokenAt=more?b.readLong():brokenUntil-CombatState.BREAK_TICKS,disabledUntil=more?b.readLong():0,disabledAt=more?b.readLong():-1000;
-            Snapshot s=new Snapshot(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt);
+            // 2.68.0: the stagger of a basic attack's blow (a server before it sends none)
+            long staggerUntil=b.readableBytes()>=8?b.readLong():0;
+            Snapshot s=new Snapshot(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt,staggerUntil);
             mc.execute(()->{if(MapClient.enabled()&&mc.world!=null&&mc.world.getRegistryKey().getValue().equals(dimension))STATES.put(id,s);});
         });
         ClientTickEvents.END_CLIENT_TICK.register(CombatClient::tick);

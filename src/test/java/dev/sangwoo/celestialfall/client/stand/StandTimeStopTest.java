@@ -110,34 +110,122 @@ class StandTimeStopTest {
     }
     @Test void theWaveSpreadsOverTheStoppedWorldAndFallsBackWithoutAJump(){
         var s=stop(0);s.stopped=true;s.center=new Vec3d(0,64,0);
-        for(Vec3d eye:new Vec3d[]{new Vec3d(3,66,-4),new Vec3d(30,66,10),new Vec3d(80,70,0)}){
+        for(Vec3d eye:new Vec3d[]{new Vec3d(3,66,-4),new Vec3d(15,66,6),new Vec3d(30,66,10),new Vec3d(80,70,0)}){
             boolean in=eye.squaredDistanceTo(s.center.add(0,1.1,0))<StandTimeStop.REACH*StandTimeStop.REACH;
-            StandTimeStop.Wave last=null;float firstFlash=-1,firstRim=-1;
+            StandTimeStop.Wave last=null;float firstFlash=-1,firstRim=-1,firstImpact=-1,mostImpact=0,mostCrack=0;
             for(int f=0;f<=(int)((MOVE()+StandTimeStop.FALL+.3f)/FRAME);f++){
-                float t=f*FRAME;var w=StandTimeStop.wave(s,t,eye);
-                if(t<StandTimeStop.STOP-1e-4){assertNull(w,"no wave before time stops ("+t+")");continue;}
+                float t=f*FRAME;var w=StandTimeStop.wave(s,s.center,t,eye);
+                if(t<StandTimeStop.STOP-StandTimeStop.IMPLODE-1e-4){assertNull(w,"no wave before space is drawn in ("+t+")");continue;}
                 if(t>=MOVE()+StandTimeStop.FALL){assertNull(w,"gone once it has fallen back ("+t+")");continue;}
                 assertNotNull(w,"a wave at "+t);
-                if(firstFlash<0){firstFlash=w.flash();firstRim=w.rim();}
+                if(t>=StandTimeStop.STOP&&firstFlash<0){firstFlash=w.flash();firstRim=w.rim();firstImpact=w.impact();}
+                mostImpact=Math.max(mostImpact,w.impact());mostCrack=Math.max(mostCrack,w.crack());
                 if(last!=null){
                     String at=" at "+t+" (an eye "+(in?"in":"out of")+" the stopped world)";
-                    assertTrue(Math.abs(w.radius()-last.radius())<2.6f,"the wave jumps"+at+": "+last.radius()+" to "+w.radius());
+                    assertTrue(Math.abs(w.radius()-last.radius())<1.2f,"the wave jumps"+at+": "+last.radius()+" to "+w.radius());
                     assertTrue(Math.abs(w.flash()-last.flash())<.2f,"the flash jumps"+at);
                     assertTrue(Math.abs(w.outer()-last.outer())<.2f,"the far world jumps"+at);
                     assertTrue(Math.abs(w.negative()-last.negative())<.4f,"the negative jumps"+at);
                     assertTrue(Math.abs(w.rim()-last.rim())<.4f,"the rim jumps"+at);
+                    assertTrue(Math.abs(w.shell()-last.shell())<.3f,"the bubble jumps"+at+": "+last.shell()+" to "+w.shell());
+                    assertTrue(Math.abs(w.crack()-last.crack())<.35f,"its cracks jump"+at);
+                    assertTrue(Math.abs(w.impact()-last.impact())<.55f,"the impact frame jumps"+at);
+                    assertTrue(Math.abs(w.refract()-last.refract())<.4f,"the bend jumps"+at);
+                    assertTrue(Math.abs(w.vignette()-last.vignette())<.1f,"the vignette jumps"+at);
                 }
                 last=w;
             }
             assertTrue(firstFlash<.2f,"the flash comes in over frames: "+firstFlash);
             // (its front starts on its user: its glow comes in over frames, or it lights their whole body up for one)
             assertTrue(firstRim<.4f,"the front's glow comes in over frames: "+firstRim);
-            var held=StandTimeStop.wave(s,StandTimeStop.STOP+StandTimeStop.SPREAD+1,eye);
+            assertTrue(firstImpact<.55f,"the impact frame comes in over frames: "+firstImpact);
+            double far=eye.distanceTo(s.center.add(0,1.1,0));
+            if(far<StandTimeStop.REACH*1.5)assertTrue(mostImpact>.5f,"an impact frame as time stops ("+far+" blocks away)");
+            if(far>=StandTimeStop.REACH*3)assertEquals(0,mostImpact,1e-6,"no impact frame three times its reach away");
+            assertEquals(1,mostCrack,1e-4,"cracked all over as it breaks");
+            var held=StandTimeStop.wave(s,s.center,StandTimeStop.STOP+StandTimeStop.SPREAD+1,eye);
             assertEquals(StandTimeStop.REACH,held.radius(),1e-4,"spread over all it stopped");
             assertEquals(0,held.negative(),1e-6,"no negative once it has spread");
-            assertEquals(in?1:0,held.outer(),1e-6,"the whole world stopped for an eye in it, only what is in it for one out of it");
+            assertEquals(0,held.crack(),1e-6,"no cracks while time is stopped");
+            assertEquals(0,held.impact(),1e-6,"no impact frame while time is stopped");
+            assertEquals(StandTimeStop.GLASS,held.outer(),1e-6,"what is seen through the bubble half stopped, from in it or out of it");
+            assertEquals(StandTimeStop.SHELL,held.shell(),1e-6,"the bubble shows, fainter, while time is stopped");assertTrue(StandTimeStop.SHELL<.8f);
+            assertEquals(in?.35f:0,held.vignette(),1e-6,"a vignette for an eye in it only");
+            var cracking=StandTimeStop.wave(s,s.center,MOVE()-.1f,eye);
+            assertTrue(cracking.crack()>.8f&&cracking.shell()>held.shell(),"cracked and brighter just before time moves");
+            assertEquals(0,StandTimeStop.wave(s,s.center,MOVE()-StandTimeStop.CRACK-.05f,eye).crack(),1e-6,"its cracks start as \"toki wa ugoki dasu\" does");
         }
         assertNull(StandTimeStop.wave(1.5f,Vec3d.ZERO),"no time stop known, no wave");
+    }
+    @Test void spaceIsDrawnInToItsUserJustBeforeTimeStops(){
+        // (before time stops: the server has not yet said so, its user's feet where they stand)
+        var s=stop(0);Vec3d feet=new Vec3d(0,64,0),eye=new Vec3d(4,66,0);
+        var first=StandTimeStop.wave(s,feet,StandTimeStop.STOP-StandTimeStop.IMPLODE+1e-3f,eye);
+        assertNotNull(first);assertTrue(first.radius()>StandTimeStop.IMPLODE_R-.2f,"it starts wide: "+first.radius());
+        assertTrue(first.shell()<.1f&&first.rim()<.1f&&first.negative()<.1f,"coming in over frames");
+        float last=first.radius();
+        for(float t=StandTimeStop.STOP-StandTimeStop.IMPLODE+FRAME;t<StandTimeStop.STOP;t+=FRAME){
+            var w=StandTimeStop.wave(s,feet,t,eye);if(w==null)continue;
+            assertTrue(w.radius()<=last+1e-4,"it closes in at "+t);last=w.radius();
+            assertTrue(w.refract()<=0,"the world bends in as it closes");assertEquals(0,w.grade(),1e-6,"nothing stopped yet");
+        }
+        assertTrue(last<.3f,"closed on its user as time stops: "+last);
+        var closed=StandTimeStop.wave(s,feet,StandTimeStop.STOP-1e-3f,eye);
+        assertTrue(closed.rim()<.05f&&closed.shell()<.05f,"its glow gone as it closes on its user (it would light them up)");
+        // the server's word late: held closed, then the wave spreads; cut short as it was called: nothing
+        assertTrue(StandTimeStop.wave(s,feet,StandTimeStop.STOP+.1f,eye).radius()<.3f,"held closed until the server says time stopped");
+        assertNull(StandTimeStop.wave(s,feet,StandTimeStop.STOP+.7f,eye),"none if it never says so");
+        assertNull(StandTimeStop.wave(s,null,StandTimeStop.STOP-.1f,eye),"none where its user is not seen");
+    }
+    @Test void theClockSpinsFasterAndFasterAndStopsDeadAsTimeStops(){
+        var s=stop(0);s.stopped=true;s.center=Vec3d.ZERO;
+        var shown=new StandTimeStopFx.Shown(s,0,Vec3d.ZERO,null,7,StandTimeStop.MOVE,0);
+        double last=StandTimeStopFx.minute(shown,0),lastSpeed=0;
+        for(float t=FRAME;t<=StandTimeStop.STOP;t+=FRAME){
+            double a=StandTimeStopFx.minute(shown,t),speed=(a-last)/FRAME;
+            assertTrue(speed>=lastSpeed-1e-6,"faster and faster at "+t);lastSpeed=speed;last=a;
+        }
+        assertTrue(lastSpeed/(2*Math.PI)>3,"spinning fast as time stops: "+lastSpeed/(2*Math.PI)+" turns a second");
+        double stopped=StandTimeStopFx.minute(shown,StandTimeStop.STOP);
+        for(float t=StandTimeStop.STOP+.25f;t<StandTimeStop.MOVE-StandTimeStop.CRACK;t+=.1f)
+            assertEquals(stopped,StandTimeStopFx.minute(shown,t),1e-3,"still while time is stopped ("+t+")");
+        assertNotEquals(stopped,StandTimeStopFx.minute(shown,StandTimeStop.MOVE-.2f),"trembling as time is about to move");
+        assertTrue(StandTimeStopFx.minute(shown,StandTimeStop.MOVE+.5f)>stopped+1,"running on once it moves");
+        // never a jump between frames (only as fast as it turns)
+        last=StandTimeStopFx.minute(shown,0);
+        for(float t=FRAME;t<StandTimeStop.MOVE+1.5f;t+=FRAME){double a=StandTimeStopFx.minute(shown,t);assertTrue(Math.abs(a-last)<Math.toRadians(30),"the hand jumps at "+t);last=a;}
+    }
+    @Test void whatTheWavePassesOverHangsWhereItWasUntilTimeMoves(){
+        // a mote is lit as the front reaches it: when the wave's radius reaches its distance
+        for(double d=0;d<=StandTimeStop.REACH;d+=.5){
+            float at=StandTimeStopFx.reaches(d);
+            assertEquals(d,StandTimeStopFx.spread(at),.05,"the front reaches "+d+" blocks at "+at);
+        }
+        assertEquals(StandTimeStop.STOP,StandTimeStopFx.reaches(0),1e-6);assertEquals(StandTimeStop.STOP+StandTimeStop.SPREAD,StandTimeStopFx.reaches(StandTimeStop.REACH),1e-4);
+        var s=stop(0);s.stopped=true;s.center=Vec3d.ZERO;
+        var shown=new StandTimeStopFx.Shown(s,0,Vec3d.ZERO,null,7,StandTimeStop.MOVE,0);
+        int in=0;
+        for(int k=0;k<StandTimeStopFx.MOTES;k++){var p=StandTimeStopFx.mote(shown,k);if(p==null)continue;in++;
+            assertTrue(p.y>.2&&p.distanceTo(new Vec3d(0,1.1,0))<StandTimeStop.REACH,"in the stopped world, above the ground");}
+        assertTrue(in>StandTimeStopFx.MOTES*.8,"most of the motes in it: "+in);
+    }
+    @Test void itsBubbleBreaksIntoShardsFlungOutWithoutAJump(){
+        var s=stop(0);s.stopped=true;s.center=Vec3d.ZERO;
+        var shown=new StandTimeStopFx.Shown(s,0,Vec3d.ZERO,null,7,StandTimeStop.MOVE,0);Vec3d c=new Vec3d(0,1.1,0);
+        for(int k=0;k<StandTimeStopFx.SHARDS;k++){
+            Vec3d[] home=StandTimeStopFx.shard(shown,k,0,false);
+            Vec3d mid=home[0].add(home[1]).add(home[2]).multiply(1/3.0);
+            assertEquals(StandTimeStop.REACH,mid.distanceTo(c),.6,"shard "+k+" begins on the bubble");
+            assertTrue(mid.y>-.2,"above the ground");
+            Vec3d last=mid,early=null;
+            for(float age=FRAME;age<1.3f;age+=FRAME){
+                Vec3d[] q=StandTimeStopFx.shard(shown,k,age,false);Vec3d m=q[0].add(q[1]).add(q[2]).multiply(1/3.0);
+                assertTrue(m.distanceTo(last)<.25,"shard "+k+" jumps at "+age);last=m;
+                if(early==null&&age>=.3f)early=m;
+            }
+            assertTrue(early.distanceTo(c)>StandTimeStop.REACH+.3,"flung out ("+k+")");
+            assertTrue(last.y<early.y,"and falling ("+k+")");
+        }
     }
     @Test void timeStopsAsTheShoutEndsAndMovesAsTheEndEnds()throws Exception{
         // the shout's sound starts a tick on, its boom 38 ticks into it (tools/stand/cut_timestop.py): time stops there

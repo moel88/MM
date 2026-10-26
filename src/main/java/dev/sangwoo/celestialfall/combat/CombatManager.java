@@ -34,6 +34,8 @@ public final class CombatManager {
     public static final UUID MOB_SLOW=UUID.fromString("5d0f6c2e-8a1b-4c3e-9f47-2b6e1d9a7c15");
     /** Mobs slowed by an incapacitating blow, and the tick each slow ends. */
     private static final Map<LivingEntity,Long> MOB_SLOWS=new WeakHashMap<>();
+    /** Mobs staggered by a basic attack's blow (2.68.0), and the tick each stagger ends: they do nothing meanwhile. */
+    private static final Map<LivingEntity,Long> MOB_STAGGERS=new WeakHashMap<>();
     /**
      * Players whose client started running while an action held them: the server drops that packet and the client
      * never sends it again, so they run once the action lets go.
@@ -66,7 +68,7 @@ public final class CombatManager {
         });
         ServerTickEvents.END_SERVER_TICK.register(CombatManager::tick);
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{HitStun.disconnect(handler.player.getUuid());STATES.remove(handler.player.getUuid());RUN_AFTER.remove(handler.player.getUuid());});
-        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();RUN_AFTER.clear();MOB_SLOWS.clear();});
+        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STATES.clear();HitStun.clear();RUN_AFTER.clear();MOB_SLOWS.clear();MOB_STAGGERS.clear();});
     }
     /** A sprint packet the action lock dropped ({@code start}) or any stop: the latest wish to run is kept for when the lock ends. */
     public static void runRequest(ServerPlayerEntity p,boolean start){if(start)RUN_AFTER.add(p.getUuid());else RUN_AFTER.remove(p.getUuid());}
@@ -134,12 +136,48 @@ public final class CombatManager {
         }
         long now=p.getWorld().getTime();var s=state(p);
         s.incapacitate(now,ticks,slowTicks,slow);
-        HitStun.releaseOwned(p.getUuid());
         dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
         dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);
         dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);
         p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
         speed(p,s,now);sync(p,s);
+    }
+    /**
+     * Staggers whoever a basic attack's blow struck until {@code until} (2.68.0, {@link Stagger}): as an incapacitation,
+     * only for that moment and with their legs {@link Stagger#SLOW} slower, without the dazed look. Whatever they were
+     * doing is cut off as an incapacitation cuts it off. A training dummy stands still as long; a mob does nothing and
+     * walks as slowly.
+     */
+    public static void stagger(LivingEntity target,long until) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
+        long now=target.getWorld().getTime();if(until<=now)return;
+        // stopped in Star Platinum's stopped time (2.67.0): it comes to them as time moves again
+        if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.deferStagger(target,(int)(until-now)))return;
+        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.stagger(until,Stagger.SLOW);return;}
+        if(!(target instanceof ServerPlayerEntity p)) {
+            MOB_STAGGERS.merge(target,until,Math::max);
+            var attr=target.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
+            if(attr!=null){
+                var held=MOB_SLOWS.get(target);
+                if(held==null||held<until){attr.removeModifier(MOB_SLOW);attr.addTemporaryModifier(new EntityAttributeModifier(MOB_SLOW,"Botand incapacitation",-Stagger.SLOW,EntityAttributeModifier.Operation.MULTIPLY_TOTAL));MOB_SLOWS.put(target,until);}
+            }
+            if(target instanceof net.minecraft.entity.mob.MobEntity mob)mob.getNavigation().stop();
+            return;
+        }
+        var s=state(p);
+        s.stagger(now,until,Stagger.SLOW);
+        dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
+        dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);
+        dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);
+        p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
+        speed(p,s,now);sync(p,s);
+    }
+    /** Whether a basic attack's blow staggers this mob or player now (2.68.0). */
+    public static boolean staggered(LivingEntity e) {
+        if(e.getWorld().isClient||!dev.sangwoo.celestialfall.map.MapGate.enabled(e.getWorld()))return false;
+        long now=e.getWorld().getTime();
+        if(e instanceof ServerPlayerEntity p){var x=STATES.get(p.getUuid());return x!=null&&x.entityId==p.getId()&&x.state.staggered(now);}
+        var until=MOB_STAGGERS.get(e);return until!=null&&until>now;
     }
     /**
      * The incapacitation (and the slow) that was to last until {@code until} ends at {@code to} instead (2.61.0: Star
@@ -225,15 +263,17 @@ public final class CombatManager {
                     if((now-s.dashStart)%2==0)p.getServerWorld().spawnParticles(ParticleTypes.CLOUD,p.getX(),p.getY()+.1,p.getZ(),2,.13,.02,.13,.005);
                 }
             }
-            // an incapacitation over (2.60.0): told at once, so the client lets its keys go on the tick it ends
-            if(s.disabled(now-1)&&!s.disabled(now))dirty=true;
+            // an incapacitation over (2.60.0), or a stagger (2.68.0): told at once, so the client lets its keys go on the
+            // tick it ends
+            if(s.disabled(now-1)&&!s.disabled(now)||s.staggered(now-1)&&!s.staggered(now))dirty=true;
             if(s.locked(now)){p.clearActiveItem();p.setSprinting(false);}
             speed(p,s,now);
             if(RUN_AFTER.contains(p.getUuid())&&!actionLocked(p)){RUN_AFTER.remove(p.getUuid());if(valid(p)&&!s.guarding&&!s.locked(now))p.setSprinting(true);}
             if(dirty||now%4==0&&(s.pressure>0||s.combatUntil>now||s.locked(now)))sync(p,s);
         }
         HitStun.tick();
-        // mobs' slows from incapacitating blows run out (2.60.0)
+        // mobs' slows from incapacitating blows run out (2.60.0), and their staggers (2.68.0)
+        MOB_STAGGERS.entrySet().removeIf(e->e.getKey().isRemoved()||!e.getKey().isAlive()||e.getKey().getWorld().getTime()>=e.getValue());
         for(var it=MOB_SLOWS.entrySet().iterator();it.hasNext();){
             var e=it.next();var mob=e.getKey();
             if(mob.isRemoved()||!mob.isAlive()||mob.getWorld().getTime()>=e.getValue()){var attr=mob.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr!=null)attr.removeModifier(MOB_SLOW);it.remove();}
@@ -255,17 +295,18 @@ public final class CombatManager {
         var world=p.getServerWorld();Vec3d eye=p.getEyePos(),end=eye.add(Vec3d.fromPolar(p.getPitch(),p.getYaw()).multiply(3.15));
         var wall=world.raycast(new RaycastContext(eye,end,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
         if(wall.getType()!=HitResult.Type.MISS)end=wall.getPos();
-        LivingEntity target=strike>1?HitStun.followup(p,s):null;double distance=eye.squaredDistanceTo(end);
-        if(target==null)for(var e:world.getEntitiesByClass(LivingEntity.class,p.getBoundingBox().stretch(end.subtract(eye)).expand(1),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit())) {
+        LivingEntity target=null;double distance=eye.squaredDistanceTo(end);
+        for(var e:world.getEntitiesByClass(LivingEntity.class,p.getBoundingBox().stretch(end.subtract(eye)).expand(1),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit())) {
             if(e instanceof PlayerEntity other && !p.shouldDamagePlayer(other)||!p.canSee(e))continue;
             var intersection=e.getBoundingBox().expand(.14).raycast(eye,end);
             if(intersection.isPresent()&&eye.squaredDistanceTo(intersection.get())<=distance) {target=e;distance=eye.squaredDistanceTo(intersection.get());}
         }
-        if(target==null){HitStun.releaseOwned(p.getUuid());return;}
+        if(target==null)return;
         var source=new DamageSource(world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(UNARMED),p);
         boolean damaged=damageWithoutKnockback(target,source,CombatState.DAMAGE[strike]);
-        if(!damaged){HitStun.releaseOwned(p.getUuid());return;}
-        if(s.attack==strike&&p.isAlive())HitStun.landed(p,s,target);else HitStun.releaseOwned(p.getUuid());
+        if(!damaged)return;
+        // the blow staggers them a moment (2.68.0, Stagger: until the next strike would land at full speed)
+        if(s.attack==strike&&p.isAlive())HitStun.landed(p,s,target);
         if(strike==4) {
             double yaw=Math.toRadians(p.getYaw());target.takeKnockback(.95,Math.sin(yaw),-Math.cos(yaw));
             target.velocityModified=true;
@@ -334,8 +375,8 @@ public final class CombatManager {
             var b=PacketByteBufs.create();b.writeUuid(p.getUuid());b.writeIdentifier(p.getWorld().getRegistryKey().getValue());
             b.writeInt(s.serial);b.writeByte(s.attack);b.writeLong(s.attackStart);b.writeBoolean(s.guarding);b.writeFloat(s.pressure);
             b.writeLong(s.brokenUntil);b.writeLong(s.dashStart);b.writeLong(s.dashReady);b.writeFloat(s.dashForward);b.writeFloat(s.dashSide);b.writeLong(s.combatUntil);
-            // 2.60.0: when the guard broke, and the incapacitation (until when, since when)
-            b.writeLong(s.brokenAt);b.writeLong(s.disabledUntil);b.writeLong(s.disabledAt);
+            // 2.60.0: when the guard broke, and the incapacitation (until when, since when); 2.68.0: the stagger's end
+            b.writeLong(s.brokenAt);b.writeLong(s.disabledUntil);b.writeLong(s.disabledAt);b.writeLong(s.staggerUntil);
             ServerPlayNetworking.send(viewer,STATE,b);
         }
     }

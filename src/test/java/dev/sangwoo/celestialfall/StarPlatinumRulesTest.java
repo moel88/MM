@@ -47,9 +47,14 @@ class StarPlatinumRulesTest {
         assertEquals(100+LENGTH[4]+REST,rested(100),"rests once the fourth is over");
         assertEquals(1,next(0));assertEquals(2,next(1));assertEquals(4,next(3));assertEquals(1,next(4));
     }
-    @Test void eachPunchHoldsItsTargetForTheNext(){
-        for(int k=1;k<4;k++)assertTrue(hold(k)>=STEP[k]-CONTACT[k]+CONTACT[k+1],"punch "+k+" holds them until the next lands");
-        assertEquals(0,hold(4),"the fourth throws them");
+    @Test void eachPunchStaggersItsTargetUntilTheNextLands(){
+        // (2.68.0, Stagger: until the next punch's contact if it comes as soon as it may, and a little past; not longer)
+        for(int k=1;k<4;k++){
+            long start=100,hit=start+CONTACT[k],next=start+STEP[k]+CONTACT[k+1];
+            long until=dev.sangwoo.celestialfall.combat.Stagger.stand(k,start,hit);
+            assertTrue(until>next&&until<=next+3,"punch "+k+" staggers them past the next one's contact only a little");
+        }
+        assertEquals(100+dev.sangwoo.celestialfall.combat.Stagger.LAST,dev.sangwoo.celestialfall.combat.Stagger.stand(4,90,100),"the fourth throws them, a short stagger with it");
         assertTrue(FLY>1.4&&FLY_UP>0,"the fourth sends them flying");
     }
     // ---- E, the rush (2.57.0) ----
@@ -137,7 +142,6 @@ class StarPlatinumRulesTest {
     @Test void itStandsApartFromTheCombo(){
         assertEquals(1,next(HEAVY),"a punch after it starts the combo again");
         assertEquals(-1,broken(HEAVY,100,900),"no combo to break");
-        assertEquals(0,hold(HEAVY),"it throws whom it strikes, it does not hold them");
         assertFalse(shouts(HEAVY),"it has its own sound, not one of the combo's shouts");
         assertEquals(100+STEP[HEAVY],nextAt(HEAVY,100));
     }
@@ -166,7 +170,6 @@ class StarPlatinumRulesTest {
         assertEquals(LENGTH[FINGER],STEP[FINGER],"the next punch may start once it is over");
         assertEquals(1,next(FINGER),"a punch after it starts the combo again");
         assertEquals(-1,broken(FINGER,100,900),"no combo to break");
-        assertEquals(0,hold(FINGER),"it holds no one: it slows and incapacitates them");
         assertFalse(shouts(FINGER),"its sound is its own");
         assertTrue(skill(FINGER)&&skill(HEAVY)&&!skill(4)&&!skill(1));
         // its sound starts StandAttack.FINGER_LEAD ticks in, the crack eight ticks (cut_finger.LEAD_IN, 0.4 s) into it
@@ -239,7 +242,6 @@ class StarPlatinumRulesTest {
         assertTrue(skill(BEATDOWN),"one of the stand's own skills, out of the combo");
         assertEquals(1,next(BEATDOWN),"a punch after it starts the combo again");
         assertEquals(-1,broken(BEATDOWN,100,900),"no combo to break");
-        assertEquals(0,hold(BEATDOWN),"it holds no one itself: its cutscene does");
         assertFalse(shouts(BEATDOWN),"its ORA is its own, not one of the combo's shouts");
         assertEquals(0,DAMAGE[BEATDOWN],1e-9,"the blow deals nothing itself: its cutscene deals the damage");
         // its "ORA!" starts BEAT_OPENER_SOUND ticks in, its "RA" 0.15 s into it (cut_beatdown.py): on the contact

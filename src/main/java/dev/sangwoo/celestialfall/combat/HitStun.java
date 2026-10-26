@@ -14,35 +14,30 @@ import net.minecraft.util.math.*;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.RaycastContext;
 
-/** Server-owned capture: no status-effect removal, permanent AI flag, or player teleport leash. */
+/**
+ * Server-owned hit reactions: no status-effect removal, permanent AI flag, or player teleport leash.
+ * <p>
+ * A basic attack's blow (bare hands, Kageno's sword, Star Platinum's punches) staggers whom it strikes ({@link #stagger},
+ * 2.68.0, {@link Stagger}): for a moment they are incapacitated and slowed in their combat state, and every viewer draws
+ * their flinch. Until 2.68.0 such a blow held them where they stood until the next one had time to land. Star
+ * Platinum's rush (2.57.0) still holds whom it strikes that way, frozen in place until its next blow ({@link #standHold}).
+ * Neither shows a notice on the struck one's screen (2.68.0, user request: "피격 경직 연속 타격 이거 뜨는거 없애줘").
+ */
 public final class HitStun {
     public static final Identifier PACKET=CelestialFall.id("botand_hitstun_v1");
-    /**
-     * A target held by a bare-hand blow until its combo window closes, or by a stand's punch (Star Platinum's attack,
-     * 2.54.0: no window or combat state, {@code until} the tick it lets go) until its next punch has had time to land.
-     */
-    private record Hold(LivingEntity attacker,LivingEntity target,CombatState state,ComboWindow window,long hitAt,long standUntil,int standStrike) {
-        Hold(LivingEntity attacker,LivingEntity target,CombatState state,ComboWindow window){this(attacker,target,state,window,window.hitAt(),0,0);}
-        boolean stand(){return window==null;}
-        long until(){return stand()?standUntil:window.until();}
-        int strike(){return stand()?standStrike:window.strike();}
-    }
+    /** A target held by a stand's barrage (Star Platinum's rush) where it stands until {@code until}. */
+    private record Hold(LivingEntity attacker,LivingEntity target,long hitAt,long until,int strike) {}
     private static final Map<UUID,Hold> HELD=new HashMap<>();
-    private static final Map<UUID,UUID> OWNED=new HashMap<>();
     private static Predicate<LivingEntity> clientCheck=e->false;
     private HitStun() {}
     public static void setClientCheck(Predicate<LivingEntity> check){clientCheck=check;}
     private static boolean valid(Hold h) {
         if(!(dev.sangwoo.celestialfall.map.MapGate.enabled(h.target.getWorld())&&h.target.isAlive()&&!h.target.isRemoved()&&!h.target.isSpectator()&&h.attacker.isAlive()&&!h.attacker.isRemoved()&&!h.attacker.isSpectator()
             &&h.target.getWorld()==h.attacker.getWorld()))return false;
-        // a stand's punch holds them for its own time, while its user still has it out
-        if(h.stand())return h.target.getWorld().getTime()<h.standUntil&&h.attacker instanceof PlayerEntity p&&dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p);
-        return attackerReady(h.attacker)&&h.window.active(h.state,h.attacker.getWorld().getTime())&&inReach(h.attacker,h.target);
+        // a barrage holds them for its own time, while its user still has their stand out
+        return h.target.getWorld().getTime()<h.until&&h.attacker instanceof PlayerEntity p&&dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p);
     }
-    private static boolean attackerReady(LivingEntity entity) {
-        if(entity instanceof PlayerEntity p)return CombatManager.bare(p)&&!CombatManager.cinematic(p);
-        return entity instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity d&&d.canContinueCombo();
-    }
+    /** Whether a barrage holds this entity where it stands now (a stagger is in its combat state instead, CombatManager). */
     public static boolean stunned(LivingEntity entity) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(entity.getWorld()))return false;
         if(entity.getWorld().isClient)return clientCheck.test(entity);
@@ -56,46 +51,44 @@ public final class HitStun {
         if(eye.squaredDistanceTo(closest)>3.15*3.15)return false;
         return p.getWorld().raycast(new RaycastContext(eye,closest,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()==HitResult.Type.MISS;
     }
-    public static LivingEntity followup(LivingEntity p,CombatState state) {
-        UUID id=OWNED.get(p.getUuid());Hold h=id==null?null:HELD.get(id);
-        if(h==null||h.stand())return null;
-        if(!valid(h)||!h.window.nextContact(state,p.getWorld().getTime())){release(id);return null;}
-        return h.target;
+    /**
+     * A basic attack's blow {@code strike} (1 to 4) of {@code attacker} landed on {@code target}: it staggers them until
+     * {@code until} (2.68.0, {@link Stagger}, CombatManager.stagger), and every viewer draws their flinch until then. One
+     * stopped in a time stop is staggered as time moves again (and flinches then with all that comes to them); one a
+     * barrage holds keeps that hold's flinch.
+     */
+    public static void stagger(LivingEntity attacker,LivingEntity target,int strike,long until) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
+        CombatManager.stagger(target,until);
+        if(!stoppedInTime(target)&&!HELD.containsKey(target.getUuid()))react(attacker,target,strike,target.getWorld().getTime(),until,false);
     }
+    /** Bare hands' strike (its holder's combat state: which strike, since when) landed on {@code target}: it staggers them. */
     public static void landed(LivingEntity p,CombatState state,LivingEntity target) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return;
-        releaseOwned(target.getUuid()); // Being hit cancels the victim's own buffered combo.
-        CombatManager.interrupt(target);
-        if(state.attack>=4){release(target.getUuid());releaseOwned(p.getUuid());return;}
-        releaseOwned(p.getUuid());release(target.getUuid());
-        if(!target.isAlive()||stoppedInTime(target))return;
-        var h=new Hold(p,target,state,ComboWindow.landed(state,target.getWorld().getTime()));
-        HELD.put(target.getUuid(),h);OWNED.put(p.getUuid(),target.getUuid());
-        hold(target);
-        sync(h,h.until());
+        stagger(p,target,state.attack,Stagger.bare(state.attack,state.attackStart,target.getWorld().getTime()));
     }
     /**
-     * A stand's punch (Star Platinum's attack, 2.54.0) struck {@code target}: it is held where it stands, its own moves
-     * cut off, until {@code until} (the next punch's contact if that comes as soon as it may, StarPlatinumRules.hold).
-     * One punch can strike several; each is held on its own. The fourth punch throws them instead.
+     * A blow of a stand's barrage (Star Platinum's rush, 2.57.0) struck {@code target}: it is held where it stands, its
+     * own moves cut off, until {@code until} (past the barrage's next blow). One blow can strike several; each is held
+     * on its own.
      */
     public static void standHold(LivingEntity attacker,LivingEntity target,int strike,long until) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld()))return;
-        releaseOwned(target.getUuid());release(target.getUuid());
+        release(target.getUuid());
         if(!target.isAlive()||stoppedInTime(target))return;
-        var h=new Hold(attacker,target,null,null,target.getWorld().getTime(),until,strike);
+        var h=new Hold(attacker,target,target.getWorld().getTime(),until,strike);
         HELD.put(target.getUuid(),h);
         hold(target);
         sync(h,h.until());
     }
     /**
      * Whether {@code target} stands stopped in Star Platinum's time stop (2.67.0): it is held by that, and no blow holds
-     * it besides (its own screen showed the hold's stagger, the others' its flinch, while time was stopped for it).
+     * it besides (its own screen showed the hold's notice, the others' its flinch, while time was stopped for it).
      */
     private static boolean stoppedInTime(LivingEntity target){return dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(target);}
-    /** Lets go of everyone a stand's punches of {@code attacker} hold. */
+    /** Lets go of everyone a stand's barrage of {@code attacker} holds. */
     public static void releaseStand(UUID attacker) {
-        for(var e:new ArrayList<>(HELD.entrySet()))if(e.getValue().stand()&&e.getValue().attacker.getUuid().equals(attacker))release(e.getKey());
+        for(var e:new ArrayList<>(HELD.entrySet()))if(e.getValue().attacker.getUuid().equals(attacker))release(e.getKey());
     }
     private static void hold(LivingEntity target) {
         target.clearActiveItem();target.setSprinting(false);target.setJumping(false);
@@ -117,29 +110,33 @@ public final class HitStun {
             if(h.target.getWorld().getTime()%4==0)sync(h,h.until());
         }
     }
-    public static void releaseOwned(UUID attacker){UUID id=OWNED.get(attacker);if(id!=null)release(id);}
     public static void attackerDamaged(LivingEntity entity) {
         if(entity.getWorld().isClient)return;
         // a stand user struck lets go of whom the punches hold, and the combo stops (2.54.0), and the rush (2.57.0), and
         // the inhale lets go of whom it holds (2.61.0), and the time stop's call is cut short (2.67.0)
         if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);}
-        if(!OWNED.containsKey(entity.getUuid()))return;
-        releaseOwned(entity.getUuid());CombatManager.interrupt(entity);
     }
     public static void release(UUID victim) {
         Hold h=HELD.remove(victim);if(h==null)return;
-        if(!h.stand())OWNED.remove(h.attacker.getUuid(),victim);sync(h,0);
+        sync(h,0);
     }
-    public static void disconnect(UUID id){releaseOwned(id);releaseStand(id);release(id);}
-    public static void clear(){HELD.clear();OWNED.clear();}
-    private static void sync(Hold h,long until) {
-        if(!(h.target.getWorld() instanceof net.minecraft.server.world.ServerWorld world))return;
-        Set<ServerPlayerEntity> viewers=new HashSet<>(world.getPlayers());if(h.attacker instanceof ServerPlayerEntity attacker)viewers.add(attacker);
-        if(h.target instanceof ServerPlayerEntity p)viewers.add(p);
+    public static void disconnect(UUID id){releaseStand(id);release(id);}
+    public static void clear(){HELD.clear();}
+    private static void sync(Hold h,long until){react(h.attacker,h.target,h.strike,h.hitAt,until,true);}
+    /**
+     * Tells every viewer near {@code target} (and the attacker and the target themselves) how it reacts: struck by
+     * {@code attacker}'s blow {@code strike} at {@code hitAt}, until {@code until} (0: no more), held where it stands by a
+     * barrage ({@code held}) or staggered by a basic attack (2.68.0: the flinch only; the stagger's lock and slow come
+     * with its combat state).
+     */
+    private static void react(LivingEntity attacker,LivingEntity target,int strike,long hitAt,long until,boolean held) {
+        if(!(target.getWorld() instanceof net.minecraft.server.world.ServerWorld world))return;
+        Set<ServerPlayerEntity> viewers=new HashSet<>(world.getPlayers());if(attacker instanceof ServerPlayerEntity a)viewers.add(a);
+        if(target instanceof ServerPlayerEntity p)viewers.add(p);
         for(var viewer:viewers) {
-            if(viewer!=h.attacker&&viewer!=h.target&&viewer.squaredDistanceTo(h.target)>128*128||!ServerPlayNetworking.canSend(viewer,PACKET))continue;
-            var b=PacketByteBufs.create();b.writeIdentifier(world.getRegistryKey().getValue());b.writeUuid(h.target.getUuid());b.writeInt(h.target.getId());
-            b.writeUuid(h.attacker.getUuid());b.writeLong(until);b.writeLong(h.hitAt());b.writeByte(h.strike());ServerPlayNetworking.send(viewer,PACKET,b);
+            if(viewer!=attacker&&viewer!=target&&viewer.squaredDistanceTo(target)>128*128||!ServerPlayNetworking.canSend(viewer,PACKET))continue;
+            var b=PacketByteBufs.create();b.writeIdentifier(world.getRegistryKey().getValue());b.writeUuid(target.getUuid());b.writeInt(target.getId());
+            b.writeUuid(attacker.getUuid());b.writeLong(until);b.writeLong(hitAt);b.writeByte(strike);b.writeBoolean(held);ServerPlayNetworking.send(viewer,PACKET,b);
         }
     }
 }

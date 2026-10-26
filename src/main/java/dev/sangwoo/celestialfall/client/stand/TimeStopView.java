@@ -20,11 +20,12 @@ import org.lwjgl.system.MemoryStack;
 
 /**
  * Star Platinum's time stop drawn over the frame (2.67.0): the wave and the stopped world (StandTimeStop.wave) through
- * shaders/timestop/timestop.frag. For whom it did not stop it is drawn at the end of the world pass, before the effects
+ * shaders/timestop/timestop.frag (2.68.0: the bubble of the stopped world seen whole, its cracks, the impact frame, the
+ * world bending at the front). For whom it did not stop it is drawn at the end of the world pass, before the effects
  * (KagenoRenderer: the stand's punches keep their colour in the stopped world, as R's cuts do in its gray one), where
  * the scene's depth is copied to tell how far from the middle of the stopped time each pixel is. For whom it stopped the
- * frame of the moment it stopped is kept (its colour, and its depth from that frame's world pass) and drawn in place of
- * every frame after, the wave spreading over it, until time moves again (holdStill, letGo): the world they see stands
+ * frame of the moment it stopped is kept (its colour and its depth from that frame's world pass, before the effects:
+ * 2.68.0) and drawn in place of every frame after, the wave spreading over it, until time moves again (holdStill, letGo): the world they see stands
  * still, its user too ("당한 사람은 시전자도 멈춰보이고 전부 멈춰보이고 풀려야 다시 보여"). When the frame is a shader
  * pack's (Iris, Oculus: the world pass does not draw into the game's own framebuffer), there is no depth to read: the
  * wave is drawn over the finished frame as a circle on the screen round where its middle shows.
@@ -36,6 +37,8 @@ public final class TimeStopView {
     /** The world pass's camera this frame (its view and projection, inverted) and where it was; the still's. */
     private static final Matrix4f projView=new Matrix4f(),inverse=new Matrix4f(),stillProjView=new Matrix4f(),stillInverse=new Matrix4f();
     private static Vec3d eye=Vec3d.ZERO,stillEye=Vec3d.ZERO;
+    /** How wide a pixel is seen there (radians, 2.68.0: the bubble's lines and cracks stay sharp at any distance); the still's. */
+    private static float pixel=.0015f,stillPixel=.0015f;
     /** This frame: whether the world pass saw the camera, copied the depth, drew the wave. */
     private static boolean seen,depthNow,drawn;
     /** The still: wanted (this client's player stopped), taken, and whether it has its depth. */
@@ -59,6 +62,7 @@ public final class TimeStopView {
         if(failed||mc.world==null||StandTimeStop.STOPS.isEmpty())return;
         projView.set(c.projectionMatrix()).mul(c.matrixStack().peek().getPositionMatrix());
         projView.invert(inverse);eye=c.camera().getPos();seen=true;
+        pixel=2f/Math.max(.01f,c.projectionMatrix().m11()*Math.max(1,mc.getFramebuffer().textureHeight));
         boolean keep=wanted&&!taken;
         var wave=wanted?null:StandTimeStop.wave(c.tickDelta(),eye);
         if(!keep&&wave==null)return;
@@ -69,36 +73,47 @@ public final class TimeStopView {
         try(State state=new State()){
             buffers(mc,w,h);
             depth.copyDepthFrom(main);depthNow=true;
-            if(wave!=null){draw(main,true,scene,depth.getDepthAttachment(),true,wave,eye,inverse,projView);drawn=true;}
+            // the still taken here, before the effects (2.68.0: taken from the finished frame, the burst of the stop
+            // itself stood frozen on it for all five seconds)
+            if(keep){
+                blit(main,still,GL11.GL_COLOR_BUFFER_BIT);blit(depth,still,GL11.GL_DEPTH_BUFFER_BIT);stillDepth=true;
+                stillProjView.set(projView);stillInverse.set(inverse);stillEye=eye;stillPixel=pixel;taken=true;
+            }
+            // (the impact frame goes over the finished frame instead, post: over the effects too, or their light washes it out)
+            if(wave!=null){draw(main,true,scene,depth.getDepthAttachment(),true,wave.impact(0),eye,inverse,projView,pixel);drawn=true;}
         }catch(Exception|LinkageError e){fail(e);}
     }
     /**
      * After the world and its post-processing, before the HUD: for whom it stopped, the still (taken now if it is not
      * yet: this frame, the moment it stopped) with the wave over it; for the rest, the wave over the finished frame if the
-     * world pass could not draw it (a shader pack's frame).
+     * world pass could not draw it (a shader pack's frame), and the impact frame as time stops and moves (2.68.0: over
+     * the effects as well, as an impact frame is).
      */
     public static void post(float delta){
         var mc=MinecraftClient.getInstance();
         if(failed||mc.world==null)return;
-        if(!wanted&&(drawn||StandTimeStop.STOPS.isEmpty()))return;
+        if(!wanted&&StandTimeStop.STOPS.isEmpty())return;
         var main=mc.getFramebuffer();int w=main.textureWidth,h=main.textureHeight;if(w<=0||h<=0)return;
         try(State state=new State()){
             buffers(mc,w,h);
             if(wanted){
+                // (a shader pack's frame: no world pass to take it from, the finished frame instead)
                 if(!taken){
                     blit(main,still,GL11.GL_COLOR_BUFFER_BIT);
                     stillDepth=depthNow;
                     if(depthNow)blit(depth,still,GL11.GL_DEPTH_BUFFER_BIT);
-                    stillProjView.set(projView);stillInverse.set(inverse);stillEye=seen?eye:mc.gameRenderer.getCamera().getPos();
+                    stillProjView.set(projView);stillInverse.set(inverse);stillEye=seen?eye:mc.gameRenderer.getCamera().getPos();stillPixel=pixel;
                     taken=true;
                 }
                 var wave=StandTimeStop.wave(delta,stillEye);
-                draw(main,false,still,still.getDepthAttachment(),stillDepth,wave,stillEye,stillInverse,stillProjView);
+                draw(main,false,still,still.getDepthAttachment(),stillDepth,wave,stillEye,stillInverse,stillProjView,stillPixel);
                 return;
             }
             var wave=StandTimeStop.wave(delta,seen?eye:mc.gameRenderer.getCamera().getPos());
             if(wave==null||!seen)return;
-            draw(main,true,scene,0,false,wave,eye,inverse,projView);
+            // the world pass drew the wave: the impact frame alone over the finished frame (2.68.0); else all of it
+            if(drawn){if(wave.impact()>0)draw(main,true,scene,0,false,wave.impactOnly(),eye,inverse,projView,pixel);return;}
+            draw(main,true,scene,0,false,wave,eye,inverse,projView,pixel);
         }catch(Exception|LinkageError e){fail(e);}
     }
 
@@ -106,7 +121,7 @@ public final class TimeStopView {
      * Draws {@code from} (the frame copied first if {@code copy}, else the still) through the shader into the game's
      * framebuffer, with the wave's uniforms ({@code wave} null: drawn as it is).
      */
-    private static void draw(Framebuffer main,boolean copy,Framebuffer from,int depthTex,boolean hasDepth,StandTimeStop.Wave wave,Vec3d cam,Matrix4f inv,Matrix4f pv){
+    private static void draw(Framebuffer main,boolean copy,Framebuffer from,int depthTex,boolean hasDepth,StandTimeStop.Wave wave,Vec3d cam,Matrix4f inv,Matrix4f pv,float px){
         int w=main.textureWidth,h=main.textureHeight;
         if(copy)blit(main,from,GL11.GL_COLOR_BUFFER_BIT);
         GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,main.fbo);GL11.glViewport(0,0,w,h);
@@ -122,8 +137,10 @@ public final class TimeStopView {
             FloatBuffer m=stack.mallocFloat(16);inv.get(m);
             GL20.glUniformMatrix4fv(GL20.glGetUniformLocation(program,"InvProjView"),false,m);
         }
+        f("Pixel",px);
         if(wave==null){
             f("Radius",0);f("Band",1);f("BandSide",1);f("Negative",0);f("Rim",0);f("Grade",0);f("Outer",0);f("Flash",0);f("HasDepth",0);
+            f("Shell",0);f("Crack",0);f("Impact",0);f("Refract",0);f("Time",0);f("Vignette",0);
             GL20.glUniform3f(GL20.glGetUniformLocation(program,"Center"),0,0,0);GL20.glUniform2f(GL20.glGetUniformLocation(program,"CenterScreen"),.5f,.5f);
             f("ScreenRadius",0);f("Aspect",w/(float)h);
         }else{
@@ -131,6 +148,7 @@ public final class TimeStopView {
             GL20.glUniform3f(GL20.glGetUniformLocation(program,"Center"),(float)c.x,(float)c.y,(float)c.z);
             f("Radius",wave.radius());f("Band",wave.band());f("BandSide",wave.side());f("Negative",wave.negative());f("Rim",wave.rim());
             f("Grade",wave.grade());f("Outer",wave.outer());f("Flash",wave.flash());f("HasDepth",hasDepth?1:0);
+            f("Shell",wave.shell());f("Crack",wave.crack());f("Impact",wave.impact());f("Refract",wave.refract());f("Time",wave.time());f("Vignette",wave.vignette());
             // without the depth: the wave as a circle on the screen round where its middle shows (off to one side, or
             // the middle of the screen if it is behind)
             var p=new Vector4f((float)c.x,(float)c.y,(float)c.z,1).mul(pv);

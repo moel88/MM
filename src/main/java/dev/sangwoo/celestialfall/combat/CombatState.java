@@ -15,16 +15,21 @@ public final class CombatState {
      */
     public long brokenAt=-1000, disabledUntil, disabledAt=-1000, slowUntil;
     public double slow;
+    /** Until when a basic attack's blow staggers it (2.68.0, {@link Stagger}): an incapacitation without the dazed look. */
+    public long staggerUntil;
     public boolean guarding, queued, hitDone;
     public float pressure, dashForward=1, dashSide,dashYaw;
     public boolean broken(long now) { return now<brokenUntil; }
     /** Incapacitated (2.60.0, "무력화"): no skill, attack, dash or guard; walking only. */
     public boolean disabled(long now) { return now<disabledUntil; }
+    /** Staggered by a basic attack's blow (2.68.0): walking only, slowly, for a moment. */
+    public boolean staggered(long now) { return now<staggerUntil; }
     /**
      * Whether its holder can do nothing but walk: incapacitated, or its guard broken (2.60.0: "그냥 가드 브레이커 개념이
-     * 2초 무력화로 알고 있으면 됨", a broken guard is an incapacitation for as long as it is broken).
+     * 2초 무력화로 알고 있으면 됨", a broken guard is an incapacitation for as long as it is broken), or staggered by a
+     * basic attack's blow (2.68.0).
      */
-    public boolean locked(long now) { return broken(now)||disabled(now); }
+    public boolean locked(long now) { return broken(now)||disabled(now)||staggered(now); }
     /** Whether a slow is on its legs now ({@link #slow} of their speed taken away). */
     public boolean slowed(long now) { return now<slowUntil&&slow>0; }
     public boolean dashing(long now) { return now>=dashStart && now<dashStart+DASH_TICKS; }
@@ -89,6 +94,15 @@ public final class CombatState {
         if(!disabled(now))disabledAt=now;
         disabledUntil=Math.max(disabledUntil,now+ticks);
         if(slowTicks>0&&slow>0){if(!slowed(now)||slow>=this.slow)this.slow=slow;slowUntil=Math.max(slowUntil,now+slowTicks);}
+        combatUntil=Math.max(combatUntil,now+100);cancel(now);serial++;
+    }
+    /**
+     * Staggered by a basic attack's blow until {@code until} (2.68.0, {@link Stagger}): incapacitated that long, its legs
+     * {@code slow} slower as long, what it was doing cut off. A longer stagger, incapacitation or slow already on stays.
+     */
+    public void stagger(long now,long until,double slow) {
+        staggerUntil=Math.max(staggerUntil,until);
+        if(slow>0&&until>now){if(!slowed(now)||slow>=this.slow)this.slow=slow;slowUntil=Math.max(slowUntil,until);}
         combatUntil=Math.max(combatUntil,now+100);cancel(now);serial++;
     }
     /**

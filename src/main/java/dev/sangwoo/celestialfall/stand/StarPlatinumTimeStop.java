@@ -74,8 +74,8 @@ public final class StarPlatinumTimeStop {
         DamageSource source;float damage;boolean loud;
         /** The throws added up, the strongest of them (blocks a tick), and the knocks (takeKnockback's strength, x, z). */
         Vec3d fly=Vec3d.ZERO;double strongest;final List<double[]> knocks=new ArrayList<>();
-        /** The longest incapacitation, and the strongest slow (and the longest at that strength). */
-        int disable,slowTicks;double slow;
+        /** The longest incapacitation, and the strongest slow (and the longest at that strength); the longest stagger (2.68.0). */
+        int disable,slowTicks,stagger;double slow;
         /** Each attacker's own feedback for their blows: the damage they dealt, the way their last blow went. */
         final Map<ServerPlayerEntity,float[]> shown=new LinkedHashMap<>();
     }
@@ -184,7 +184,7 @@ public final class StarPlatinumTimeStop {
             if(e.squaredDistanceTo(s.center)>r2||passedBy(e))continue;
             s.held.put(e,new Debt());BY_HELD.put(e.getUuid(),s);
             // whatever they were doing stops where it is (they show it as it was, stopped: their clients draw them so)
-            CombatManager.interrupt(e);HitStun.releaseOwned(e.getUuid());
+            CombatManager.interrupt(e);
             if(e instanceof ServerPlayerEntity sp){
                 StarPlatinumAttack.struck(sp);StarPlatinumRush.struck(sp);StarPlatinumInhale.struck(sp);KagenoManager.disable(sp);
                 sp.clearActiveItem();sp.setSprinting(false);if(sp.currentScreenHandler!=sp.playerScreenHandler)sp.closeHandledScreen();
@@ -246,6 +246,7 @@ public final class StarPlatinumTimeStop {
                 }
                 if(d.fly.lengthSquared()>0||!d.knocks.isEmpty())e.velocityModified=true;
                 if(d.disable>0||d.slowTicks>0)CombatManager.incapacitate(e,d.disable,d.slowTicks,d.slow);
+                if(d.stagger>0)CombatManager.stagger(e,e.getWorld().getTime()+d.stagger);
             }
         }finally{settling=false;}
         if(landed)for(var f:d.shown.entrySet()){
@@ -291,6 +292,12 @@ public final class StarPlatinumTimeStop {
         var d=debt(e);if(d==null)return false;
         d.disable=Math.max(d.disable,ticks);
         if(slowTicks>0&&(slow>d.slow||slow==d.slow&&slowTicks>d.slowTicks)){d.slow=slow;d.slowTicks=slowTicks;}
+        return true;
+    }
+    /** A basic attack's stagger about to come to {@code e} for {@code ticks} (CombatManager.stagger, 2.68.0): kept if it is stopped (the longest). */
+    public static boolean deferStagger(LivingEntity e,int ticks){
+        var d=debt(e);if(d==null)return false;
+        d.stagger=Math.max(d.stagger,ticks);
         return true;
     }
     /**

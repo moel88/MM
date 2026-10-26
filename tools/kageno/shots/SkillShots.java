@@ -141,10 +141,14 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * hold, as a punch's throw is (the fake has no stand attacks of its own: the server runs those for listed players
  * only), and "UNFAKE@n" takes it away. stand.csv gets the time stop (its age, whether time is stopped, when it moved
  * again, cut short, whether this client's screen is held still, its wave: how far it has spread, the far world's
- * grade, the flash, the negative), the call's two stances, the player's health and whether the dummy and the player
- * are held; camera.csv each frame's camera (where, its yaw and pitch, the game camera's distance and clear distance,
- * the field of view); the log when it is called, stops time, moves again, the screen held and let go, and each
- * change of the player's health.
+ * grade, the flash, the negative, since 2.68.0 how brightly its bubble shows, its cracks and the impact frame), the
+ * call's two stances, the player's health and whether the dummy and the player are held; camera.csv each frame's camera
+ * (where, its yaw and pitch, the game camera's distance and clear distance, the field of view); the log when it is
+ * called, stops time, moves again, the screen held and let go, and each change of the player's health. The basic
+ * attack's stagger (2.68.0): "dattack=1" makes the training dummy one that throws basic-attack combos at the player;
+ * stand.csv gets whether the player can only walk (their combat state locked), whether they are staggered, whether the
+ * dummy is staggered (the server's own state) and its blow, and the log each time the player or the dummy is staggered
+ * and free again.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -452,13 +456,24 @@ public final class SkillShots implements ClientModInitializer {
         // 2.66.0: whether the one struck is left undrawn this frame (the cutscene's shots from their own eyes)
         standLog.append(',').append(dummy!=null&&dev.sangwoo.celestialfall.client.stand.StandBeatdown.hidden(dummy)?1:0);
         // 2.67.0: the time stop (its age, whether time is stopped, when it moved again, cut short, whether this client's
-        // screen is held, its wave: how far it has spread, the far world's grade, the flash, the negative), the call's two
+        // screen is held, its wave: how far it has spread, the far world's grade, the flash, the negative, since 2.68.0
+        // how brightly its bubble shows, its cracks and the impact frame), the call's two
         // stances, the player's health, whether this client holds the dummy stopped and the player stopped
         var stop=dev.sangwoo.celestialfall.client.stand.StandTimeStop.describe(mc.getTickDelta(),mc.gameRenderer.getCamera().getPos());
-        standLog.append(',').append(stop==null?",,,,,,,,":stop);
+        standLog.append(',').append(stop==null?",,,,,,,,,,,":stop);
         for(int i=29;i<31;i++)standLog.append(',').append(l==null?"":String.format(Locale.ROOT,"%.4f",l.weights[i]));
         standLog.append(String.format(Locale.ROOT,",%.2f,%d,%d",mc.player.getHealth(),dummy!=null&&!Float.isNaN(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillDelta(dummy))?1:0,
             dev.sangwoo.celestialfall.client.stand.StandTimeStop.holds(mc.player)?1:0));
+        // 2.68.0: whether the player can only walk (their combat state locked: staggered by a basic attack's blow, among
+        // others), staggered as the server last said, and the training dummy staggered (the server's own state) and its blow
+        var snap=dev.sangwoo.celestialfall.client.CombatClient.snapshot(mc.player.getUuid());double clock=mc.world.getTime()+mc.getTickDelta();
+        boolean staggered=snap.staggered(clock);
+        boolean dummyStaggered=false;int dummyStrike=0;
+        if(dummy!=null&&mc.getServer()!=null){var sd=mc.getServer().getOverworld().getEntity(dummy.getUuid());
+            if(sd instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t){dummyStaggered=t.combatState().staggered(mc.getServer().getOverworld().getTime());dummyStrike=t.combatState().attack;}}
+        standLog.append(String.format(Locale.ROOT,",%d,%d,%d,%d",dev.sangwoo.celestialfall.client.CombatClient.actionLocked()?1:0,staggered?1:0,dummyStaggered?1:0,dummyStrike));
+        if(staggered!=playerStaggered){log.append("  player ").append(staggered?"staggered":"free again").append(" at ").append(age).append(String.format(Locale.ROOT," (until %d)%n",snap.staggerUntil()));playerStaggered=staggered;}
+        if(dummyStaggered!=dummyStaggeredLogged){log.append("  dummy ").append(dummyStaggered?"staggered":"free of its stagger").append(" at ").append(age).append('\n');dummyStaggeredLogged=dummyStaggered;}
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -507,6 +522,7 @@ public final class SkillShots implements ClientModInitializer {
     private boolean beatOn,beatEnded;private float dummyHealth=-1;
     /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
     private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private float playerHealth=-1;
+    private boolean playerStaggered,dummyStaggeredLogged;
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
@@ -607,7 +623,8 @@ public final class SkillShots implements ClientModInitializer {
         p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
         var d=p.getServerWorld().getEntityById(dummyId);
         // "dguard=1" (2.59.0): the training dummy that holds its guard up (for the heavy punch breaking it)
-        var kind=opt("dguard",0)>0?dev.sangwoo.celestialfall.training.DummyKind.GUARD:dev.sangwoo.celestialfall.training.DummyKind.IDLE;
+        // "dattack=1" (2.68.0): the training dummy that throws basic-attack combos at the player (its blows stagger them)
+        var kind=opt("dguard",0)>0?dev.sangwoo.celestialfall.training.DummyKind.GUARD:opt("dattack",0)>0?dev.sangwoo.celestialfall.training.DummyKind.ATTACK:dev.sangwoo.celestialfall.training.DummyKind.IDLE;
         if(d instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t&&t.kind()!=kind){d.discard();d=null;}
         if(!(d instanceof net.minecraft.entity.LivingEntity)||!d.isAlive()){
             var dummy=TrainingDummies.TYPES.get(kind).create(p.getServerWorld());dummy.refreshPositionAndAngles(.5,y,3.5,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
@@ -824,7 +841,10 @@ public final class SkillShots implements ClientModInitializer {
                     // the training dummy back in front of the player (after the finisher threw it), whole again
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
-                            l.setHealth(l.getMaxHealth());l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);log.append("  dummy back at ").append(age).append('\n');}});continue;}
+                            l.setHealth(l.getMaxHealth());l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);
+                            // (2.68.0: an attacking dummy starts its first combo 20 ticks after it is back, not before)
+                            if(l instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t&&t.kind()==dev.sangwoo.celestialfall.training.DummyKind.ATTACK)t.resetTraining();
+                            log.append("  dummy back at ").append(age).append('\n');}});continue;}
                     if(age==at){int id=skill(what);server(p->{boolean ok=KagenoManager.input(p,id);log.append("  ").append(what).append(ok?" at ":" refused at ").append(p.getWorld().getTime()).append('\n');});}}
                 if(current.equals("F")&&age==40)key(GLFW_KEY_F,false);
                 if(!current.equals("H"))camera();
@@ -838,9 +858,9 @@ public final class SkillShots implements ClientModInitializer {
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
                         +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden,"
-                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,world_gather,world,player_health,dummy_stopped,player_held\n"+standLog);
+                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        stopLogged="";stillLogged=false;playerHealth=-1;
+                        stopLogged="";stillLogged=false;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}

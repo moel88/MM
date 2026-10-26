@@ -290,6 +290,10 @@ public final class KagenoManager {
             // (lasting as long as the overdrive itself).
             if(over){long now=c.world.getTime();s.boost=Math.min(1,s.boost+.01f*KagenoRules.hits(c.skill,age));s.overUntil=Math.min(now+1800,s.overUntil+4);if(s.ready[Q]>now)s.ready[Q]=s.overUntil+COOLDOWN[Q];MARKS.put(e.getUuid(),new Mark(c.player,e,Math.max(now+200,s.overUntil)));}
             if(c.skill==Y&&(age==Y_STOMP||age==Y_FLASH)&&!frozen(e))c.targets.putIfAbsent(e,e.getPos());
+            // every M1 hit staggers whom it strikes a moment (2.68.0, user request: "평타 맞으면 아주 조금 무력화에 90%
+            // 슬로우 ... 모든 스탠드나 기본 평타에도 적용"): until the next hit could land, a little past (Stagger); one
+            // stopped in Star Platinum's stopped time is staggered as time moves again
+            if(c.skill==M1&&(!frozen(e)||StarPlatinumTimeStop.stopped(e)))dev.sangwoo.celestialfall.combat.HitStun.stagger(c.player,e,c.combo,dev.sangwoo.celestialfall.combat.Stagger.kageno(c.combo,c.start,c.world.getTime()));
             // M1 hit 4: the thrust sends whoever it strikes flying along it (2.37.0: no hold and no rising cut).
             if(c.skill==M1&&c.combo==4&&!frozen(e)){
                 c.targets.put(e,e.getPos());

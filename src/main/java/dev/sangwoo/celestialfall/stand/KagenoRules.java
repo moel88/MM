@@ -71,6 +71,8 @@ public final class KagenoRules {
      * least.
      */
     public static final int M1_WINDOW=36,M1_REST=24,M1_STEP=8;
+    /** The tick into each M1 hit its blow lands on (0.3 s, the swing's strike frame). */
+    public static final int M1_HIT=6;
     /**
      * When a skill is ready again, its cast having begun at {@code start} and ended at {@code end} (its whole length, unless
      * it was stopped short). Every cooldown runs once its skill is over, not from when it was used (user request, 2.44.0;
@@ -111,7 +113,7 @@ public final class KagenoRules {
     public static boolean rBand(double forward,double side,double height){return forward>=0&&forward<=7&&Math.abs(side)<=10&&height>=-2&&height<=5;}
     public static float damage(int skill,int age,int combo){
         return switch(skill){
-            case M1 -> age==6?(combo==4?10:6):0;
+            case M1 -> age==M1_HIT?(combo==4?10:6):0;
             case E -> age==E_FINISH?5:java.util.Arrays.binarySearch(E_TICKS,age)>=0?3:0;
             case R -> age==R_STORED?24:age==R_RELEASE?14:0;
             case T -> age==T_STRIKE?15:java.util.Arrays.binarySearch(T_TICKS,age-T_STRIKE)>=0?3:0;

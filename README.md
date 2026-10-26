@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.67.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.68.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.68.0 — 평타 경직(아주 짧은 무력화 + 90% 감속) · 더 월드 20블록 · 더 월드 이펙트 대폭 강화
+
+- **평타 경직:** 맨손·카게노 검·스타플래티나 주먹·훈련 더미의 평타에 맞으면 아주 잠깐 무력화되고 90% 느려집니다(10% 속도로 걷기만 가능). 길이는 다음 타가 가장 빨리 나왔을 때 닿는 순간 + 0.1초라, 빠르게 이어 친 콤보는 끝까지 들어가고 느리게 치거나 빗나가면 그 사이에 풀려 가드하거나 반격할 수 있습니다(1~3타 0.4~0.8초, 4타 0.3초).
+- **'피격 경직 · 연속 타격' 알림을 없앴습니다.** 전처럼 그 자리에 완전히 붙잡히지 않습니다.
+- **더 월드 범위:** 50블록 → 20블록.
+- **더 월드 이펙트 대폭 강화:** 외칠 때 발밑에 빛의 시계판이 그려지고 바늘이 점점 빨라지며, 주먹에 빛이 모이고 바닥 조각이 떠오릅니다. 멈추는 순간 세상이 반전되는 임팩트 프레임과 빛줄기, 멈춘 세계의 경계가 시계 선이 그려진 빛나는 거품으로 퍼지고, 멈춘 동안 빛 알갱이·먼지·조각이 공중에 멈춰 있습니다. 시간이 흐르기 직전 거품에 금이 가고, 흐를 때 거품이 빛 조각으로 깨져 흩어집니다.
+
+[RELEASE_2.68.0_KO.md](RELEASE_2.68.0_KO.md)를 확인하세요.
 
 # 보탠드 2.67.0 — 스타플래티나 H 시간 정지 (더 월드)
 

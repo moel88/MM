@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall.stand;
 import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.combat.CombatManager;
 import dev.sangwoo.celestialfall.combat.HitStun;
+import dev.sangwoo.celestialfall.combat.Stagger;
 import dev.sangwoo.celestialfall.map.MapGate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -341,6 +342,8 @@ public final class StarPlatinumAttack {
                 HitStun.release(e.getUuid());
             }else if(big){
                 HitStun.release(e.getUuid());
+                // the fourth punch staggers them a moment as it throws them (2.68.0, the basic attack's Stagger)
+                if(!heavy)HitStun.stagger(p,e,combo,Stagger.stand(combo,s.start,now));
                 Vec3d fly=f.multiply(heavy?FLY_HEAVY:FLY).add(0,heavy?FLY_HEAVY_UP:FLY_UP,0);
                 // one stopped in a time stop (2.67.0) is thrown as time moves again, with whatever else came to them
                 if(!StarPlatinumTimeStop.deferLaunch(e,fly)){
@@ -350,7 +353,9 @@ public final class StarPlatinumAttack {
                     // the two is thrown twice (2.56.0's check: 11 or 20 blocks)
                     if(!heavy&&e instanceof ServerPlayerEntity other)other.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(other));
                 }
-            }else HitStun.standHold(p,e,combo,now+hold(combo));
+            }else HitStun.stagger(p,e,combo,Stagger.stand(combo,s.start,now));
+            // (until 2.68.0 the first three held them where they stood until the next punch had time to land: they are
+            // staggered now, a tenth of their speed and nothing else for as long, Stagger)
             // the user's own hit feedback (the damage number and the blood), as Kageno's (on one stopped in a time stop,
             // as time moves again with all that came to them, 2.67.0)
             if(!StarPlatinumTimeStop.deferFeedback(p,e,DAMAGE[combo],s.yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(DAMAGE[combo]);b.writeFloat(s.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);}

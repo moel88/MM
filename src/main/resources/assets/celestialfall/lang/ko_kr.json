@@ -55,7 +55,6 @@
   "hud.botand.lock_off": "SHIFT  자유 시점",
   "hud.botand.run_on": "CTRL  달리기 ON",
   "hud.botand.run_off": "CTRL  걷기",
-  "hud.botand.hitstun": "피격 경직 · 연속 타격",
   "subtitles.celestialfall.heaven_release": "천문검 · 황금 폭발과 잔향",
   "entity.celestialfall.idle_dummy": "가만히 있는 더미",
   "item.celestialfall.idle_dummy_spawn_egg": "가만히 있는 더미 생성 알",

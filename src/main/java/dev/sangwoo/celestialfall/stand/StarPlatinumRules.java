@@ -42,8 +42,6 @@ public final class StarPlatinumRules {
     public static final double FLY=1.75,FLY_UP=.5;
     /** Where a punch reaches from its user's feet (blocks): ahead (the fourth and the heavy punch lunge further), to either side, up and down. */
     public static final double NEAR=.2,REACH=3.6,REACH_BIG=4.2,HALF_WIDTH=1.15,LOW=-1.2,HIGH=2.8;
-    /** Ticks a punch's contact holds whoever it strikes for, past the next punch's contact if that comes as soon as it may. */
-    public static final int HOLD_PAST=3;
     /** Ticks a punch stopped short takes to turn back to the guard (2.57.0: three; 0.2 s before). */
     public static final int STOP_RETURN=3;
 
@@ -282,8 +280,8 @@ public final class StarPlatinumRules {
     public static final int TS_LENGTH=100;
     /** Ticks before time moves again that "toki wa ugoki dasu" starts: it ends (1.275 s in) as time moves. */
     public static final int TS_RESUME_LEAD=26;
-    /** How far from its user time stops (blocks). */
-    public static final double TS_RANGE=50;
+    /** How far from its user time stops (blocks; 2.68.0, user request: "더 월드 20블록으로 줄여주고", it was 50). */
+    public static final double TS_RANGE=20;
     /** Its cooldown once time moves again (ticks: a minute). */
     public static final int TS_COOLDOWN=1200;
     /** Seconds after time stops that the rush of its sound drops away into a low hum (2.880 s into the recording): the stopped world settles. */
@@ -322,11 +320,6 @@ public final class StarPlatinumRules {
     }
     /** When the attack is ready again after the fourth punch, begun at {@code start}: its rest runs once it is over (2.43.1, 2.44.0). */
     public static long rested(long start){return start+LENGTH[4]+REST;}
-    /**
-     * How long the punch {@code combo} holds whoever it strikes (ticks from its contact): until the next punch's contact
-     * if it starts as soon as it may, and a little past. The fourth punch holds no one (it throws them).
-     */
-    public static int hold(int combo){return combo>=1&&combo<4?STEP[combo]-CONTACT[combo]+CONTACT[combo+1]+HOLD_PAST:0;}
     /**
      * Whether a point (ahead along the punch, to its right and up from its user's feet, blocks) is in the punch's way,
      * for a body {@code halfWidth} across.

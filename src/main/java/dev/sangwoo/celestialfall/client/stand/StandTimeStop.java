@@ -77,6 +77,8 @@ public final class StandTimeStop {
         final Map<Integer,Float> owed=new HashMap<>();
         /** Its two sounds, once played. */
         StandAttack.Shout voice,end;
+        /** The way its user faced as they called it (its clock's 12 o'clock, StandTimeStopFx; NaN until it is drawn). */
+        float clockYaw=Float.NaN;
         Stop(UUID user,long start,long serverAge,long received){this.user=user;this.start=start;this.serverAge=serverAge;this.received=received;}
         /** Whole ticks on its clock since H (this client's tick counts it in as it begins). */
         long ticksIn(){return Math.max(0,serverAge+ticks-received);}
@@ -275,15 +277,16 @@ public final class StandTimeStop {
     public static boolean stopped(Entity e){return STILL.containsKey(e.getId());}
     /**
      * For the capture tools' logs: the newest time stop this client knows of, as "age,stopped,ended,cut,still,radius,
-     * outer,flash,negative" (its age in seconds, whether time is stopped, when it moved again or was cut short (seconds,
-     * -1 if not yet), whether this client's screen is held still, and its wave for a camera at {@code eye}), or null.
+     * outer,flash,negative,shell,crack,impact" (its age in seconds, whether time is stopped, when it moved again or was
+     * cut short (seconds, -1 if not yet), whether this client's screen is held still, and its wave for a camera at
+     * {@code eye}), or null.
      */
     public static String describe(float delta,Vec3d eye){
         Stop s=null;for(var x:STOPS.values())if(s==null||x.start>s.start)s=x;
         if(s==null)return null;
-        var w=s.stopped&&s.center!=null&&!s.cut?wave(s,s.age(delta),eye):null;
-        return String.format(java.util.Locale.ROOT,"%.3f,%d,%.3f,%d,%d,%.2f,%.3f,%.3f,%.3f",s.age(delta),s.stopping()?1:0,Float.isNaN(s.ended)?-1:s.ended,s.cut?1:0,frozen?1:0,
-            w==null?0:w.radius(),w==null?0:w.outer(),w==null?0:w.flash(),w==null?0:w.negative());
+        var w=s.cut?null:wave(s,feet(MinecraftClient.getInstance(),s,delta),s.age(delta),eye);
+        return String.format(java.util.Locale.ROOT,"%.3f,%d,%.3f,%d,%d,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f",s.age(delta),s.stopping()?1:0,Float.isNaN(s.ended)?-1:s.ended,s.cut?1:0,frozen?1:0,
+            w==null?0:w.radius(),w==null?0:w.outer(),w==null?0:w.flash(),w==null?0:w.negative(),w==null?0:w.shell(),w==null?0:w.crack(),w==null?0:w.impact());
     }
     /** The tick this player's time stop is ready again (0 if this client has not seen them use it). */
     public static long ready(UUID id){var s=STOPS.get(id);return s==null||s.calling(0)||s.stopping()?0:s.ready;}
@@ -370,48 +373,112 @@ public final class StandTimeStop {
 
     // ───────────────────────────── the wave ─────────────────────────────
 
+    /** Seconds before time stops that space is drawn in to its user (a bubble closing on them), and how far out it starts (blocks). */
+    static final float IMPLODE=.32f,IMPLODE_R=7f;
+    /** How long the stopped world's cracks spread before it breaks as time moves (seconds: "toki wa ugoki dasu" until it ends). */
+    static final float CRACK=TS_RESUME_LEAD/20f;
+    /** How far the world seen through the bubble of the stopped world takes on its look (0 to 1). */
+    static final float GLASS=.55f;
+    /** How brightly the bubble's surface shows while time is stopped (it shows in full as the wave spreads). */
+    static final float SHELL=.6f;
+
     /**
-     * The wave and the stopped world this frame, for a camera at {@code eye}: the time stop it shows (the nearest that
-     * shows), where its middle is, how far the wave has spread, the negative at its front, its glow, how far the world is
-     * graded inside it and out, the flash (null if none shows).
+     * The wave and the stopped world this frame, for a camera at {@code eye} (TimeStopView, shaders/timestop): the time
+     * stop it shows (the nearest that shows), where its middle is, how far the wave has spread (the radius of the bubble
+     * of the stopped world), the negative behind its front (how deep, which way, how strong), the glow of its front on
+     * the world, how far the world in it and the world seen through it are graded, the flash, and since 2.68.0 how
+     * brightly the bubble's surface shows, its cracks as time is about to move, the impact frame as time stops, how much
+     * the world bends at its front (out as it spreads, in as it closes), its clock (seconds) and the vignette of an eye in
+     * it (null if none shows).
      */
-    public record Wave(Vec3d center,float radius,float band,float side,float negative,float rim,float grade,float outer,float flash){}
+    public record Wave(Vec3d center,float radius,float band,float side,float negative,float rim,float grade,float outer,float flash,
+                       float shell,float crack,float impact,float refract,float time,float vignette){
+        /** The same wave with this impact frame (TimeStopView draws the impact over the finished frame, the rest under the effects). */
+        public Wave impact(float to){return new Wave(center,radius,band,side,negative,rim,grade,outer,flash,shell,crack,to,refract,time,vignette);}
+        /** The impact frame alone: nothing of the wave but it. */
+        public Wave impactOnly(){return new Wave(center,0,1,1,0,0,0,0,0,0,0,impact,0,time,0);}
+    }
     public static Wave wave(float delta,Vec3d eye){
         Wave best=null;double near=Double.MAX_VALUE;
+        var mc=MinecraftClient.getInstance();
         for(var s:STOPS.values()){
-            if(!s.stopped||s.center==null||s.cut)continue;
-            var w=wave(s,s.age(delta),eye);if(w==null)continue;
+            if(s.cut)continue;
+            Vec3d feet=feet(mc,s,delta);
+            var w=wave(s,feet,s.age(delta),eye);if(w==null)continue;
             double d=w.center.squaredDistanceTo(eye);
             if(d<near){near=d;best=w;}
         }
         return best;
     }
-    /** Time stop {@code s}'s wave {@code t} seconds on its clock, for a camera at {@code eye} (null if none shows). */
-    static Wave wave(Stop s,float t,Vec3d eye){
-        Vec3d c=s.center.add(0,1.1,0);
-        boolean in=eye.squaredDistanceTo(c)<REACH*REACH;
+    /**
+     * Where time stop {@code s} began: where its user stood as time stopped (the server's word), or before it has
+     * stopped, where its user stands now (held there as they call it; null if this client does not see them).
+     */
+    static Vec3d feet(MinecraftClient mc,Stop s,float delta){
+        if(s.center!=null)return s.center;
+        if(mc==null||mc.world==null)return null;
+        var user=mc.world.getPlayerByUuid(s.user);return user==null?null:user.getLerpedPos(delta);
+    }
+    /**
+     * Time stop {@code s}'s wave {@code t} seconds on its clock, its middle over {@code feet}, for a camera at {@code eye}
+     * (null if none shows). Before time stops (2.68.0) space is drawn in to its user: a bubble closes on them from
+     * IMPLODE_R blocks, the world bending in at its front, its inside turning negative. As time stops, an impact frame
+     * (the world in negative, its shapes dark on light) for a few frames, and the wave spreads from its user fast and then
+     * slower, the bubble's surface bright, the whole of the world it has passed over negative at first, the negative
+     * narrowing to its front, the world bending out at its front. Stopped: the stopped world, the bubble's surface faint
+     * and the world seen through it half graded. As "toki wa ugoki dasu" runs, cracks spread over the bubble; as time
+     * moves it breaks (its shards, StandTimeStopFx) and the colour returns from its edge in, the negative falling back
+     * with it.
+     */
+    static Wave wave(Stop s,Vec3d feet,float t,Vec3d eye){
+        if(feet==null)return null;
+        Vec3d c=feet.add(0,1.1,0);
+        double far=eye.distanceTo(c);boolean in=far<REACH;
+        // (the impact frame and the flash for an eye out of the stopped world: weaker, none from three times its reach)
+        float outside=in?1:.6f*(float)MathHelper.clamp(1-(far-REACH)/(2*REACH),0,1);
         float e=t-STOP,moves=s.moves();
-        if(e<0)return null;
+        if(e<-IMPLODE)return null;
+        if(!s.stopped||e<0){
+            // space drawn in to its user (or, the server's word that time stopped not here yet, held closed)
+            if(!s.stopped&&e>.6f||!Float.isNaN(s.ended))return null;
+            float u=Math.min(1,(e+IMPLODE)/IMPLODE);
+            float r=IMPLODE_R*(1-(float)Math.pow(u,1.7))+.05f;
+            float on=StandPunch.smooth(u/.3f);
+            // (its front's glow and its surface go out as it closes on its user: it would light their body up)
+            float close=1-StandPunch.smooth((u-.7f)/.3f);
+            return new Wave(c,r,2.5f,1,.85f*on,.9f*on*close,0,0,0,.6f*on*close,0,0,-.9f*on*close,t,in?.25f*u:0);
+        }
         if(t>=moves){
-            // time moves again: the wave falls back to where it began, the world's colour returning behind it, the far world first
+            // time moves again: the bubble breaks and the colour returns from its edge in, the negative falling back
             float u=(t-moves)/FALL;if(u>=1)return null;
             float r=REACH*(1-(float)Math.pow(u,1.5));
-            // (the negative and the flash come in over a couple of frames, as every flash does)
-            float in2=StandPunch.smooth(u/.15f);
-            return new Wave(c,r,6,-1,.8f*(1-u)*in2,.22f+(1.1f*(1-u*u)-.22f)*in2,1,in?1-StandPunch.smooth(u/.35f):0,.3f*in2*(1-StandPunch.smooth(u/.3f)));
+            // (the negative and the flash come in over a couple of frames, as every flash does; the bubble's surface
+            // goes out over five, as its shards fly)
+            float in2=StandPunch.smooth(u/.15f),broke=1-StandPunch.smooth(u/.18f);
+            return new Wave(c,r,6,-1,.8f*(1-u)*in2,.22f+(1.1f*(1-u*u)-.22f)*in2,1,GLASS*(1-StandPunch.smooth(u/.35f)),.3f*in2*(1-StandPunch.smooth(u/.3f)),
+                (SHELL+.35f)*broke,broke,.55f*in2*(1-StandPunch.smooth((u-.1f)/.25f))*outside,-.7f*(1-u)*in2,t,in?.35f*(1-StandPunch.smooth(u/.6f)):0);
         }
         if(e<SPREAD){
-            // time stops: the wave spreads from its user, fast and then slower, the negative at its front; the world
-            // beyond it and the sky join the stopped world as it reaches its edge; a flash as it starts
+            // time stops: the wave spreads from its user, fast and then slower; the world it has passed over negative
+            // at first, the negative narrowing to its front; the world seen through the bubble taking on its look as
+            // it reaches its edge; a flash and an impact frame as it starts
             float u=e/SPREAD;
             float r=REACH*(1-(float)Math.pow(1-u,2.4));
-            float flash=.45f*StandPunch.smooth(e/.06f)*(1-StandPunch.smooth(e/.25f))*(in?1:.4f);
+            float flash=.35f*StandPunch.smooth(e/.05f)*(1-StandPunch.smooth(e/.22f))*(in?1:.65f*outside);
+            float impact=StandPunch.smooth(e/.035f)*(1-StandPunch.smooth((e-.05f)/.09f))*outside;
             // (its front's glow comes in as it leaves its user: at first the front is on them, and would light their
             // whole body up for a frame)
-            float rim=(1.2f*(1-StandPunch.smooth((u-.75f)/.25f))+.22f)*StandPunch.smooth(e/.1f);
-            return new Wave(c,r,4+14*u,1,1-StandPunch.smooth((u-.55f)/.45f),rim,1,in?StandPunch.smooth((u-.72f)/.28f):0,flash);
+            float rim=(1.3f*(1-StandPunch.smooth((u-.75f)/.25f))+.22f)*StandPunch.smooth(e/.1f);
+            float band=Math.max(1.5f,r*(.95f-.75f*u));
+            // (the bubble comes in over five frames as it leaves its user)
+            float shell=(SHELL+(1-SHELL)*(1-StandPunch.smooth((u-.6f)/.4f)))*StandPunch.smooth(e/.09f);
+            float refract=StandPunch.smooth(e/.08f)*(1-StandPunch.smooth((u-.3f)/.6f))+.15f*StandPunch.smooth((u-.3f)/.6f);
+            return new Wave(c,r,band,1,1-StandPunch.smooth((u-.55f)/.45f),rim,1,GLASS*StandPunch.smooth((u-.6f)/.4f),flash,
+                shell,0,impact,refract,t,in?.25f+.1f*StandPunch.smooth(u/.5f):0);
         }
-        // stopped: the stopped world, its edge a faint ring on the ground
-        return new Wave(c,REACH,0,1,0,.22f,1,in?1:0,0);
+        // stopped: the stopped world, the bubble's surface faint, the world seen through it half graded; its cracks
+        // spreading as time is about to move
+        float lead=moves-t,crack=lead<CRACK?(float)Math.pow(1-lead/CRACK,1.5):0;
+        return new Wave(c,REACH,0,1,0,.22f+.3f*crack,1,GLASS,0,SHELL+.35f*crack,crack,0,.15f,t,in?.35f:0);
     }
 }

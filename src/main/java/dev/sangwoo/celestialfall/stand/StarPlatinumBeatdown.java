@@ -109,7 +109,7 @@ public final class StarPlatinumBeatdown {
         var b=new Beat(user,victim,start,yaw,hold,drift,land,damage);
         BY_USER.put(user.getUuid(),b);BY_VICTIM.put(victim.getUuid(),b);
         // whatever either was doing stops: they are held (KagenoManager.frozen) and the one struck faces its user
-        CombatManager.interrupt(victim);HitStun.release(victim.getUuid());HitStun.releaseOwned(user.getUuid());
+        CombatManager.interrupt(victim);HitStun.release(victim.getUuid());
         StarPlatinumRush.struck(user);StarPlatinumInhale.struck(user);
         if(victim instanceof ServerPlayerEntity sp){StarPlatinumAttack.struck(sp);StarPlatinumRush.struck(sp);StarPlatinumInhale.struck(sp);StarPlatinumTimeStop.struck(sp);KagenoManager.disable(sp);sp.clearActiveItem();sp.setSprinting(false);if(sp.currentScreenHandler!=sp.playerScreenHandler)sp.closeHandledScreen();}
         if(victim instanceof MobEntity mob){mob.getNavigation().stop();mob.setTarget(null);}

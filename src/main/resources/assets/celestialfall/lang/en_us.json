@@ -55,7 +55,6 @@
   "hud.botand.lock_off": "SHIFT  FREE LOOK",
   "hud.botand.run_on": "CTRL  RUN ON",
   "hud.botand.run_off": "CTRL  WALK",
-  "hud.botand.hitstun": "HITSTUN / COMBO",
   "subtitles.celestialfall.heaven_release": "Heaven Sword bursts with a golden shockwave",
   "entity.celestialfall.idle_dummy": "Idle Dummy",
   "item.celestialfall.idle_dummy_spawn_egg": "Idle Dummy Spawn Egg",

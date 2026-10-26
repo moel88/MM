@@ -106,6 +106,7 @@ public final class MpServer implements ModInitializer {
         }
         busy|=atomic;
         punched(server);
+        if(STAGGER_ONLY)staggers(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -322,6 +323,41 @@ public final class MpServer implements ModInitializer {
     static final boolean BEATDOWN_ONLY="beatdown".equals(System.getProperty("botand.mp.only"));
     /** Only the time stop's script (2.67.0, MP_ONLY=timestop). */
     static final boolean TIMESTOP_ONLY="timestop".equals(System.getProperty("botand.mp.only"));
+    /** Only the stagger's script (2.68.0, MP_ONLY=stagger). */
+    static final boolean STAGGER_ONLY="stagger".equals(System.getProperty("botand.mp.only"));
+    private final Map<UUID,Long> staggeredUntil=new HashMap<>(),strikeStarts=new HashMap<>();private final Map<UUID,String> slowSeen=new HashMap<>();
+    private final Map<UUID,Integer> hurtStagger=new HashMap<>();private static java.lang.reflect.Method stateOf;
+    /**
+     * The basic attack's stagger (2.68.0) as the server keeps it, for both players: each stagger (until when, its speed
+     * then, where the watcher is), each bare-hand strike started, each blow taken, each change of speed, and the
+     * watcher stopped in time or not.
+     */
+    private void staggers(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        for(var p:server.getPlayerManager().getPlayerList()){
+            String who=p.getGameProfile().getName();
+            dev.sangwoo.celestialfall.combat.CombatState s;
+            try{
+                if(stateOf==null){stateOf=dev.sangwoo.celestialfall.combat.CombatManager.class.getDeclaredMethod("state",ServerPlayerEntity.class);stateOf.setAccessible(true);}
+                s=(dev.sangwoo.celestialfall.combat.CombatState)stateOf.invoke(null,p);
+            }catch(ReflectiveOperationException e){note(server,"ERROR "+e);return;}
+            var speed=p.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);String sp=String.format(java.util.Locale.ROOT,"x%.2f",speed.getValue()/speed.getBaseValue());
+            boolean on=s.staggered(now);Long was=staggeredUntil.get(p.getUuid());
+            if(on&&(was==null||was!=s.staggerUntil)){
+                note(server,String.format(java.util.Locale.ROOT,"%s staggered until %d (%d ticks on; speed attribute %s%s)",who,s.staggerUntil,s.staggerUntil-now,sp,caster==null||caster==p?"":", "+where(p,caster)));
+                staggeredUntil.put(p.getUuid(),s.staggerUntil);
+            }else if(!on&&was!=null){note(server,who+" free of its stagger");staggeredUntil.remove(p.getUuid());}
+            if(s.attack>0&&!Long.valueOf(s.attackStart).equals(strikeStarts.put(p.getUuid(),s.attackStart)))note(server,String.format(java.util.Locale.ROOT,"%s's bare-hand strike %d started at %d",who,s.attack,s.attackStart));
+            if(!sp.equals(slowSeen.put(p.getUuid(),sp)))note(server,who+" speed attribute "+sp);
+            Integer before=hurtStagger.put(p.getUuid(),p.hurtTime);
+            if(p.hurtTime>=9&&(before==null||p.hurtTime>before))note(server,String.format(java.util.Locale.ROOT,"%s struck (health %.1f of %.1f)",who,p.getHealth(),p.getMaxHealth()));
+            if(!caster(p)){boolean stopped=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(p);
+                if(stopped!=Boolean.TRUE.equals(timeStopped.put(p.getUuid(),stopped)))note(server,String.format(java.util.Locale.ROOT,"watcher %s at tick %d %s",stopped?"stopped in time":"not stopped (moving)",now,caster==null?"":where(p,caster)));}
+            if(caster(p)){boolean calling=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.active(p);
+                if(calling!=Boolean.TRUE.equals(timeStopping.put(p.getUuid(),calling)))note(server,"caster's time stop "+(calling?"called":"over")+" at tick "+now);}
+        }
+    }
     private final Map<UUID,Boolean> timeStopped=new HashMap<>(),timeStopping=new HashMap<>();
     private final Map<UUID,Boolean> beaten=new HashMap<>(),lives=new HashMap<>();private final Map<UUID,Float> healths=new HashMap<>();
     private final Map<UUID,net.minecraft.util.math.Vec3d> from=new HashMap<>();private final Map<UUID,Boolean> guardUp=new HashMap<>(),disabled=new HashMap<>();

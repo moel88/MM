@@ -15,7 +15,11 @@ MODE beatdown with a SUMMON shot's stand.csv (ACTOR -, 2.64.0) shows its beatdow
 MODE timestop with a SUMMON shot's stand.csv (ACTOR -, 2.67.0) shows its time stop: called ("The World!"), stopped (for
 how long of its 5 s), moving again; the training dummy's health through it (unchanged while time is stopped, then all
 it took at once; FILM_TS_DUMMY=0 leaves it out) and, with FILM_TS_PLAYER=1, the player's own: one it stopped, whose
-screen is held still (shown) while time is stopped.
+screen is held still (shown) while time is stopped. Since 2.68.0, with an actors.csv beside it (act=), each husk while
+time is stopped: how far it is and whether it stands stopped or walks on (out of its reach).
+MODE stagger with a SUMMON shot's stand.csv (ACTOR -, 2.68.0) shows the basic attack's stagger: the training dummy's
+blows (its combo) and whether it is staggered, whether the player is staggered (walking only, at a tenth of their speed),
+their speed attribute against its base and, from the motion.csv beside it, how fast they walk.
 Real-time 60 fps clip from game frames named INDEX_TICKS.png (cast clock in ticks), with Korean captions:
 the title, the cast time and the stage of G; with an actors.csv, the actor's state each tick
 (MODE run: how far ahead of the pillar's edge; MODE hit: held at 25 % / out at full speed); with a shake.csv
@@ -60,17 +64,29 @@ for k in range(1, len(frames)):
 frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in frames]
 
 rows, wall, motion, rush = {}, [], [], []
-walkers = []
+walkers, husks = [], {}
 if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown', 'timestop'):
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r[list(r)[-1]] is not None)
     # the finger mode: a husk walking off (act=) beside stand.csv, its speed attribute and how fast it walks
     beside = os.path.join(os.path.dirname(csv_path), 'actors.csv')
+    # the time stop's husks (act=, 2.68.0): where each is, to tell those it stopped from those out of its reach
+    husks = {}
+    if mode == 'timestop' and os.path.exists(beside):
+        with open(beside) as fh:
+            for r in csv.DictReader(fh): husks.setdefault(r['name'], {})[int(r['age'])] = (float(r['x']), float(r['z']), float(r['out']))
     if mode in ('finger', 'inhale') and os.path.exists(beside):
         with open(beside) as fh:
             seen = list(csv.DictReader(fh))
             # (the inhale's husks: the first one only, how far it has been dragged)
             walkers = sorted((int(r['age']), float(r['x']), float(r['z']), float(r['speed_attr'])) for r in seen if mode == 'finger' or r['name'] == seen[0]['name'])
+elif csv_path and mode == 'stagger':
+    with open(csv_path) as fh:
+        rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r.get('player_staggered') not in (None, ''))
+    beside = os.path.join(os.path.dirname(csv_path), 'motion.csv')
+    if os.path.exists(beside):
+        with open(beside) as fh:
+            motion = sorted((float(r['t']), float(r['x']), float(r['z']), float(r['fov'])) for r in csv.DictReader(fh))
 elif csv_path and mode == 'rush':
     # a row the stand did not show in can be a field short (SkillShots before 2.57.0): its last field is then missing
     with open(csv_path) as fh:
@@ -341,10 +357,42 @@ def timestop_line(t):
     if os.environ.get('FILM_TS_DUMMY') != '0' and r.get('dummy_health'):
         full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
         if full: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f}/{full:.0f}' + (f' (피해 {full - float(r["dummy_health"]):.0f})' if full - float(r['dummy_health']) > .5 else ''))
+    # (2.68.0) while time is stopped: each husk, how far from where time stopped and whether it stands stopped or walks on
+    if r.get('ts_stopped') == '1' and husks:
+        age, seen = int(t * 20), []
+        for name, at in husks.items():
+            now, before = at.get(age), at.get(age - 2)
+            if now and before:
+                moved = math.hypot(now[0] - before[0], now[1] - before[1])
+                seen.append((now[2], f'{now[2]:.0f}블록 ' + ('멈춤' if moved < .01 else '걸어감')))
+        if seen: parts.append('허스크 ' + ', '.join(w for _, w in sorted(seen)))
     color = (150, 190, 255) if r.get('ts_stopped') == '1' else (255, 255, 255)
     return (' · '.join(parts), color) if parts else (None, None)
 
+def stagger_line(t):
+    """The basic attack's stagger (2.68.0): the dummy's blows, the player staggered (walking only, a tenth of their
+    speed) or free, their speed and how fast they walk, the dummy staggered."""
+    if not rush: return None, None
+    i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
+    if i < 0: return None, None
+    r, parts = rush[i][1], []
+    k = int(r.get('dummy_strike') or 0)
+    if 1 <= k <= 4: parts.append(f'더미 평타 {k}타')
+    # the player's own Star Platinum punches (their combo's punch)
+    c = int(float(r.get('combo') or 0))
+    if 1 <= c <= 4 and r.get('punch_age'): parts.append(f'스타플래티나 평타 {c}타')
+    base = max(float(x['speed_attr']) for _, x in rush if x.get('speed_attr'))
+    sp = float(r['speed_attr']) if r.get('speed_attr') else base
+    if r.get('player_staggered') == '1': parts.append(f'내가 경직 · 행동 불가 · 이동 속도 {100 * sp / base:.0f}%')
+    else: parts.append('나: 행동 가능')
+    speed = walking(t)
+    if speed is not None and speed > .05: parts.append(f'걷는 속도 초당 {speed:.2f}블록')
+    if r.get('dummy_staggered') == '1': parts.append('더미 경직 · 행동 불가')
+    color = (255, 190, 150) if r.get('player_staggered') == '1' else (150, 255, 190) if r.get('dummy_staggered') == '1' else (255, 255, 255)
+    return ' · '.join(parts), color
+
 def actor_line(t):
+    if mode == 'stagger': return stagger_line(t)
     if mode == 'timestop': return timestop_line(t)
     if mode == 'beatdown': return beatdown_line(t)
     if mode == 'inhale': return inhale_line(t)

@@ -96,7 +96,7 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         PlayerEntity target=getWorld().getClosestPlayer(getX(),getY(),getZ(),8,
             e->e instanceof PlayerEntity p&&p.isAlive()&&!p.isSpectator());
         if(target==null||!canSee(target)) {
-            setTarget(null);combat.cancel();HitStun.releaseOwned(getUuid());getNavigation().stop();setForwardSpeed(0);syncCombat();return;
+            setTarget(null);combat.cancel();getNavigation().stop();setForwardSpeed(0);syncCombat();return;
         }
         setTarget(target);
         Vec3d toward=target.getEyePos().subtract(getEyePos());
@@ -107,24 +107,21 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         // This is a stationary sparring partner, not a pursuing mob.
         getNavigation().stop();setForwardSpeed(0);setSidewaysSpeed(0);
         int previous=combat.attack;combat.tick(now);
-        if(previous==4&&combat.attack==0){nextCombo=now+20;HitStun.releaseOwned(getUuid());}
+        if(previous==4&&combat.attack==0)nextCombo=now+20;
         if(close&&now>=nextCombo)combat.requestAttack(now);
         if(combat.hitDue(now))strikeTarget(target);
         syncCombat();
     }
     private void strikeTarget(LivingEntity selected) {
         int strike=combat.attack;
-        LivingEntity target=strike>1?HitStun.followup(this,combat):null;
-        if(target==null)target=selected;
+        LivingEntity target=selected;
         Vec3d toward=target.getPos().subtract(getPos()).multiply(1,0,1);
         if(!HitStun.inReach(this,target)||toward.lengthSquared()<1e-6
-            ||Vec3d.fromPolar(0,getYaw()).dotProduct(toward.normalize())<.65) {
-            HitStun.releaseOwned(getUuid());return;
-        }
+            ||Vec3d.fromPolar(0,getYaw()).dotProduct(toward.normalize())<.65)return;
         var source=new DamageSource(getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(CombatManager.UNARMED),this);
         boolean damaged=CombatManager.damageWithoutKnockback(target,source,CombatState.DAMAGE[strike]);
-        if(!damaged){HitStun.releaseOwned(getUuid());return;}
-        if(combat.attack==strike&&isAlive())HitStun.landed(this,combat,target);else HitStun.releaseOwned(getUuid());
+        if(!damaged)return;
+        if(combat.attack==strike&&isAlive())HitStun.landed(this,combat,target);
         if(strike==4) {
             double yaw=Math.toRadians(getYaw());target.takeKnockback(.95,Math.sin(yaw),-Math.cos(yaw));target.velocityModified=true;
             if(target instanceof ServerPlayerEntity p)p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket(p));
@@ -162,14 +159,19 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
     }
     /** Incapacitated (2.60.0, CombatManager.incapacitate): no attack or guard for {@code ticks}, {@code slow} slower for {@code slowTicks}. */
     public void incapacitate(int ticks,int slowTicks,double slow){
-        long now=getWorld().getTime();combat.incapacitate(now,ticks,slowTicks,slow);HitStun.releaseOwned(getUuid());getNavigation().stop();
+        long now=getWorld().getTime();combat.incapacitate(now,ticks,slowTicks,slow);getNavigation().stop();
         nextCombo=Math.max(nextCombo,combat.disabledUntil+12);syncCombat();
+    }
+    /** Staggered by a basic attack's blow until {@code until} (2.68.0, CombatManager.stagger): it does nothing as long, {@code slow} slower. */
+    public void stagger(long until,double slow){
+        long now=getWorld().getTime();combat.stagger(now,until,slow);getNavigation().stop();
+        nextCombo=Math.max(nextCombo,combat.staggerUntil);syncCombat();
     }
     /** The incapacitation (and the slow) that was to last until {@code until} ends at {@code to} instead (2.61.0, CombatManager.cut). */
     public void cut(long until,long to){if(!combat.cut(getWorld().getTime(),until,to))return;nextCombo=Math.min(nextCombo,combat.disabledUntil+12);syncCombat();}
     public void interruptCombat(){combat.cancel();getNavigation().stop();nextCombo=getWorld().getTime()+12;syncCombat();}
     public void resetTraining() {
-        HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;combat.disabledUntil=combat.slowUntil=0;
+        HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;combat.disabledUntil=combat.slowUntil=combat.staggerUntil=0;
         nextCombo=getWorld().getTime()+20;getNavigation().stop();setTarget(null);setVelocity(Vec3d.ZERO);
         setHealth(getMaxHealth());clearStatusEffects();extinguish();timeUntilRegen=0;syncCombat();
     }
