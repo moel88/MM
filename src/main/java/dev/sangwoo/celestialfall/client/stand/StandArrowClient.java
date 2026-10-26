@@ -26,7 +26,7 @@ import org.joml.Vector3f;
  * server's age of it when heard, then this client's ticks and the frame between them, as the stand's other clocks),
  * what the arrow chose once heard and when, or that it was cut short. Their body (ArrowStabPose: MotionPlayerModel),
  * the arrow drawn in their hands and chest (StandArrowFeature, and HeldItemRendererMixin from their own eyes), the
- * light (StandArrowFx), the sounds and, for the one stabbed, the words of what it chose (StandArrowHud) all follow it.
+ * light (StandArrowFx), the sounds and, for the one it rejects, the words of it (StandArrowHud) all follow it.
  * <p>
  * Its sounds (StandArrowSounds, 2.71.0: recordings laid on its clock where the body does what they are the sound of)
  * play from its clock here, the choice's from when it shows; cut short, they fade out. Loud for the one stabbed and

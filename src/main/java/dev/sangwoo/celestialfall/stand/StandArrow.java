@@ -131,7 +131,8 @@ public final class StandArrow {
     private static void reveal(ServerPlayerEntity p,Stab s){
         s.revealed=true;
         var stack=p.getMainHandStack();stack.decrement(1);p.getInventory().markDirty();p.currentScreenHandler.sendContentUpdates();
-        // (no chat line: the user's "채팅은 아예 안 나오게", 2.71.0; the one stabbed has the words on their screen, StandArrowHud)
+        // (no chat line: the user's "채팅은 아예 안 나오게", 2.71.0; the one rejected has the words on their screen, StandArrowHud,
+        // the one chosen none since 2.71.2: the stand bursting out of them says it)
         if(!dies(s.outcome)){
             ProgressManager.set(p,ProgressManager.profile(p).withStand(s.outcome));
             if(StandManager.starPlatinum(p))((StandHolder)p).botand$setStandOut(true);
