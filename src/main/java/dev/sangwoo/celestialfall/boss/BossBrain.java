@@ -121,7 +121,7 @@ public class BossBrain {
         lonely=-1;
         target=BossRules.choose(candidates,target,committed(now),12f);
         if(target!=null&&!StandSummon.out(boss)&&StandSummon.canBeOut(boss)&&!CombatManager.incapacitated(boss))StandSummon.toggle(boss);
-        if(!free()){if(target!=null)face(target,30);doing="묶임";return;}
+        if(!free()){if(target!=null)face(target,30);doing=bound();return;}
         if(defend(now))return;
         if(guarding()&&now>=guardUntil)guard(false,now);
         if(target==null)return;
@@ -194,6 +194,8 @@ public class BossBrain {
     }
     /** A blow of its own that lands before {@code threat} does and stops it (a boss with a stand of its own knows of one). */
     protected boolean strikeFirst(BossThreats.Threat threat,int left,long now){return false;}
+    /** What holds it where it stands, in its words (the status and the captures): its own call of a move, or a blow. */
+    protected String bound(){return "묶임";}
     /** A player calls a time stop near it: whether it struck (or went to strike) them before time stops. */
     protected boolean answerTimeStop(BossThreats.Threat threat,long now){return false;}
     /**

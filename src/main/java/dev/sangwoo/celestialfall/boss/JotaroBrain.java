@@ -264,10 +264,11 @@ final class JotaroBrain extends BossBrain {
     @Override protected boolean strikeFirst(BossThreats.Threat t,int left,long now){
         var from=t.from();if(from==null||t.timeStop()||CounterStance.active(from))return false;
         // answered already: while its own blow is on its way (it lands first) it keeps to it, and does not dash away
-        // from its own jab; once that blow has landed and the threat is still coming, it is answered otherwise
+        // from its own jab; once that blow has landed and the threat is still coming, it is answered otherwise. (Its
+        // brain thinks before the blows of the tick land: on the contact tick its jab has not landed yet.)
         if(from==answeredFrom&&t.seen()==answeredSeen){
             var mine=StarPlatinumAttack.punch(boss);
-            if(mine!=null&&mine.combo()>=1&&mine.combo()<CONTACT.length&&now<mine.start()+CONTACT[mine.combo()])return true;
+            if(mine!=null&&mine.combo()>=1&&mine.combo()<CONTACT.length&&now<=mine.start()+CONTACT[mine.combo()])return true;
             return false;
         }
         String w=t.what();
@@ -279,6 +280,11 @@ final class JotaroBrain extends BossBrain {
         if(!StarPlatinumAttack.request(boss))return false;
         start(Plan.COMBO,from,now);answeredFrom=from;answeredSeen=t.seen();
         return true;
+    }
+    /** Held where he stands calling his time stop (it roots its caller), in his beatdown's cutscene, or else by a blow. */
+    @Override protected String bound(){
+        if(StarPlatinumTimeStop.active(boss)&&!StarPlatinumTimeStop.stopping(boss))return "시간 정지 외침";
+        return dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.casting(boss)?"비트다운 컷씬":"묶임";
     }
     /** The threat it last answered with a blow of its own first (whose, and when it was begun). */
     private net.minecraft.server.network.ServerPlayerEntity answeredFrom;private long answeredSeen=Long.MIN_VALUE;

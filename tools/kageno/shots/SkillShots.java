@@ -420,6 +420,8 @@ public final class SkillShots implements ClientModInitializer {
         @Override public void tick(){super.tick();if(!isRemoved()){playerTick();if(isAlive()&&getHealth()<floor)setHealth(floor);}}
     }
     private volatile Mate mate;
+    /** SLEEP: the tick the player lay down in bed (-1: not in bed). */
+    private volatile float inBedAt=-1;
     private final StringBuilder bossLog=new StringBuilder();private String bossDoing="";
     private final Set<String> tried=new HashSet<>();private final Map<Integer,Integer> tryRelease=new HashMap<>();
     /**
@@ -432,7 +434,12 @@ public final class SkillShots implements ClientModInitializer {
         server(p->{
             var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
             if(opt("pfull",0)>0&&p.getHealth()<70)p.setHealth(p.getMaxHealth());
+            // "pfloor=N": the player's health kept at N or more (a low-health player the boss goes after, not killed)
+            if(opt("pfloor",0)>0&&p.isAlive()&&p.getHealth()<opt("pfloor",0))p.setHealth((float)opt("pfloor",0));
             int boxes=p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.loot.FieldLootEntity.class,p.getBoundingBox().expand(40),e->e.loose()).size();
+            if(inBedAt>=0&&!p.isSleeping()){
+                log.append(String.format(Locale.ROOT,"  woken at %.1f (%.0f ticks in bed): the night slept through, time of day %d%n",t,t-inBedAt,p.getServerWorld().getTimeOfDay()));inBedAt=-1;
+            }
             if(b==null){if(bossLog.length()>0||boxes>0)bossLog.append(String.format(Locale.ROOT,"%.3f,,,,,,,,,,,,%.1f,%d,%d,%s%n",t,p.getHealth(),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)?1:0,boxes,mate==null?"":String.format(Locale.ROOT,"%.1f",mate.getHealth())));return;}
             var br=b.brain();var s=dev.sangwoo.celestialfall.combat.CombatManager.peek(b);long now=b.getWorld().getTime();
             String doing=br.doing();var target=br.target();
@@ -938,8 +945,10 @@ public final class SkillShots implements ClientModInitializer {
                             log.append(String.format(Locale.ROOT,"  fling (%.2f, %.2f, %.2f) %s at %d%n",v.x,v.y,v.z,kept?"kept for when time moves":"now",age));});continue;}
                     // 2.69.0: the boss. "BOSS@n" brings Kujo Jotaro in "bfw" blocks (7) ahead of the player ("brt" to their right),
                     // facing them, neutral, with "bhp" health (his whole); "BOSSANGRY@n" angers him with the player as a blow of
-                    // theirs would; "BOSSHP@n" sets his health to "bhp2"; "BOSSKILL@n" fells him with a blow of the player's (his
-                    // reward, his boxes); "UNBOSS@n" takes him off. "pfull=1" keeps the player's health up (whole again under 70).
+                    // theirs would; "BOSSHP@n" sets his health to "bhp2" (after "BOSSANGRY": a calm boss heals where he stands, 50
+                    // a tick, so "bhp" under his whole only lasts until he is angered); "BOSSKILL@n" fells him with a blow of the
+                    // player's (his reward, his boxes); "UNBOSS@n" takes him off. "pfull=1" keeps the player's health up (whole
+                    // again under 70).
                     if(what.equals("BOSS")){if(age==at)server(p->{
                             var w=p.getServerWorld();var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
                             var to=p.getPos().add(f.multiply(opt("bfw",7))).add(right.multiply(opt("brt",0)));
@@ -974,6 +983,19 @@ public final class SkillShots implements ClientModInitializer {
                             var to=box.getPos().add(away.multiply(1.3));float yaw=(float)Math.toDegrees(Math.atan2(-(box.getX()-to.x),box.getZ()-to.z));
                             p.networkHandler.requestTeleport(to.x,box.getY(),to.z,yaw,25);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);
                             log.append(String.format(Locale.ROOT,"  stepped up to the box at (%.2f, %.2f) at %d%n",box.getX(),box.getZ(),age));});continue;}
+                    // "SLEEP@n" (2.69.0): night, the day's cycle on, a bed under the player and the player in it; the log tells
+                    // how many players the world counts (the boss among them) and when the night is slept through (the game
+                    // wakes everyone in bed then): a boss must not keep it from being slept through (BossSleepMixin)
+                    if(what.equals("SLEEP")){if(age==at)server(p->{
+                            var w=p.getServerWorld();w.setTimeOfDay(18000);w.getGameRules().get(GameRules.DO_DAYLIGHT_CYCLE).set(true,w.getServer());
+                            var dir=p.getHorizontalFacing();var foot=p.getBlockPos();
+                            var bed=net.minecraft.block.Blocks.RED_BED.getDefaultState().with(net.minecraft.block.BedBlock.FACING,dir);
+                            w.setBlockState(foot.offset(dir),bed.with(net.minecraft.block.BedBlock.PART,net.minecraft.block.enums.BedPart.HEAD));
+                            w.setBlockState(foot,bed.with(net.minecraft.block.BedBlock.PART,net.minecraft.block.enums.BedPart.FOOT));
+                            var r=p.trySleep(foot);if(r.right().isPresent())inBedAt=age;
+                            log.append("  in bed at ").append(age).append(": ").append(r.left().map(Object::toString).orElse("asleep"))
+                                .append(", the world counts ").append(w.getPlayers().size()).append(" players (")
+                                .append(w.getPlayers().stream().filter(q->q instanceof dev.sangwoo.celestialfall.boss.BossPlayer).count()).append(" a boss)\n");});continue;}
                     if(what.equals("PHP")){if(age==at)server(p->{p.setHealth((float)opt("php",40));log.append(String.format(Locale.ROOT,"  player health set to %.0f at %d%n",p.getHealth(),age));});continue;}
                     if(what.equals("UNMATE")){if(age==at)server(p->{if(mate!=null){for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(mate.getUuid())));mate.discard();mate=null;log.append("  mate gone at ").append(age).append('\n');}});continue;}
                     if(what.equals("UNFAKE")){if(age==at)server(p->{if(fakePlayer!=null){p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(fakePlayer.getUuid())));fakePlayer.discard();fakePlayer=null;log.append("  fake gone at ").append(age).append('\n');}});continue;}

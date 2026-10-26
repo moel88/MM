@@ -18,7 +18,8 @@
     "PlayerManagerAccess",
     "BossPlayerManagerMixin",
     "BossPvpMixin",
-    "BossChunkMixin"
+    "BossChunkMixin",
+    "BossSleepMixin"
   ],
   "injectors": {
     "defaultRequire": 1

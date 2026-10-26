@@ -66,7 +66,7 @@ for k in range(1, len(frames)):
     if frames[k][1] < frames[k - 1][1] - .05: first = k
 frames = sorted((t, f) for _, t, f in frames[first:]); times = [t for t, _ in frames]
 
-rows, wall, motion, rush = {}, [], [], []
+rows, wall, motion, rush, stops = {}, [], [], [], []
 walkers, husks = [], {}
 if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown', 'timestop'):
     with open(csv_path) as fh:
@@ -86,6 +86,12 @@ if csv_path and mode in ('heavy', 'finger', 'inhale', 'beatdown', 'timestop'):
 elif csv_path and mode == 'boss':
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh))
+    # what the player's client saw (stand.csv beside boss.csv): his time stop's call and his beatdown's cutscene, both
+    # holding him where he stands
+    beside = os.path.join(os.path.dirname(csv_path), 'stand.csv')
+    if os.path.exists(beside):
+        with open(beside) as fh:
+            stops = sorted((float(r['t']), r) for r in csv.DictReader(fh))
 elif csv_path and mode == 'stagger':
     with open(csv_path) as fh:
         rush = sorted((float(r['t']), r) for r in csv.DictReader(fh) if r.get('player_staggered') not in (None, ''))
@@ -424,6 +430,12 @@ def boss_line(t):
     if r.get('health'):
         parts.append(('죠타로 화남' if r.get('angry') == '1' else '죠타로 중립(가만히 서 있음)'))
         doing = boss_doing(r.get('doing', ''))
+        # held where he stands calling his time stop or in his beatdown's cutscene (the brain before 2.69.0's release
+        # said only "묶임")
+        j = bisect.bisect_right([a for a, _ in stops], t * 20 + 1e-6) - 1
+        seen = stops[j][1] if j >= 0 and t * 20 - stops[j][0] < 1.5 else {}
+        if doing == '묶임' and seen.get('ts_age') and seen.get('ts_stopped') != '1' and float(seen.get('ts_ended') or -1) < 0: doing = '시간 정지 외침'
+        elif doing == '묶임' and (seen.get('beat_camera') == '1' or seen.get('beat_age') and seen.get('beat_ended') != '1'): doing = '비트다운 컷씬'
         if doing and r.get('angry') == '1': parts.append(doing)
         who = r.get('target') or ''
         if who and r.get('angry') == '1': parts.append('대상 ' + ('나' if who == 'ShotsQA' else '동료'))
