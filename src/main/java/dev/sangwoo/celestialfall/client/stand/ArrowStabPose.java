@@ -44,7 +44,7 @@ public final class ArrowStabPose {
      * TIP_U from the corner, the golden head begins at HEAD_U, the hands close at GRIP_U (the bare shaft just under the
      * head) and the nock is at NOCK_U; the sprite's middle is at z = 8. Drawn SCALE model pixels to an item pixel.
      */
-    public static final float TIP_U=21.57f,HEAD_U=12f,GRIP_U=10.2f,NOCK_U=1.77f,SCALE=.5f;
+    public static final float TIP_U=21.57f,HEAD_U=12f,GRIP_U=10.2f,NOCK_U=1.77f,SCALE=.6f;
     private static final float R2=(float)Math.sqrt(.5);
     static final Vector3f ALONG=new Vector3f(R2,R2,0),ACROSS=new Vector3f(-R2,R2,0),FACE=new Vector3f(0,0,1);
     /** From the grip to the tip (model px). */
@@ -96,10 +96,10 @@ public final class ArrowStabPose {
      * the face: the arrow's line runs in front of the chin); the left hand at the chest, bracing; leaning back, the
      * eyes on it.
      */
-    private static final K RAISED=new K().body(-8,-4,3).hips(-.3f,0,-.3f).head(-10,10,0).right(-3.8f,-3.6f,-6.4f).arrow(.41f,.81f,.42f).face(1,0,-.5f)
+    private static final K RAISED=new K().body(-8,-4,3).hips(-.3f,0,-.3f).head(-8,16,0).right(-6.5f,-3f,-6f).arrow(.61f,.69f,.38f).face(1,0,-.9f)
         .left(3.8f,5f,-4.6f).lift(1.1f,0).poles(-1,.5f,.4f,1,.6f,.2f);
     /** Held there a moment, the hesitation (it trembles: {@link #shake}), the eyes going down to where it will go in. */
-    private static final K HELD=RAISED.copy().body(-9,-3,2).head(8,6,0).right(-3.6f,-4.2f,-6.2f).arrow(.38f,.84f,.39f);
+    private static final K HELD=RAISED.copy().body(-9,-3,2).head(10,8,0).right(-6.4f,-3.5f,-6.2f).arrow(.58f,.72f,.38f);
     /** The left hand coming up to it. */
     private static final K JOIN=new K().body(-5,-1,1).hips(-.25f,0,-.25f).head(14,2,0).right(-2.4f,-2.4f,-6.2f).left(1.4f,-2.2f,-6.2f)
         .arrow(.18f,.86f,.45f).face(1,0,-.2f).join(.7f).lift(.8f,.5f).poles(-.9f,.8f,.2f,.9f,1,.1f);

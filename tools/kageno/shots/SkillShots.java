@@ -912,7 +912,12 @@ public final class SkillShots implements ClientModInitializer {
                         }
                         continue;}
                     if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;default->throw new IllegalArgumentException(what);};
-                        if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);}if(age==at+1)key(code,false);continue;}
+                        if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);
+                            // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
+                            if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,
+                                "  arrow use at %d: stand %s, can change %s, on ground %s (client %s), map %s, use key %s%n",age,ProgressManager.profile(p).stand(),ProgressManager.canChange(p),p.isOnGround(),mc.player.isOnGround(),
+                                dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()),mc.options.useKey.getBoundKeyTranslationKey())));}
+                        if(age==at+1)key(code,false);continue;}
                     if(what.startsWith("MOVE_")){if(age==at){glideTo=null;double[] g=target(what.substring(5));double k=mc.getWindow().getScaleFactor();glideFrom=new double[]{mc.mouse.getX(),mc.mouse.getY()};glideTo=new double[]{g[0]*k,g[1]*k};glideAt=age;log.append("  move ").append(what.substring(5)).append(" at ").append(age).append('\n');}continue;}
                     if(what.equals("TP")||what.equals("TPB")){if(age==at)server(p->{String[] v=opts.get(what.equals("TP")?"tp":"tpb").split("[/,]");double[] d=new double[5];for(int i=0;i<v.length;i++)d[i]=Double.parseDouble(v[i].trim());
                             p.networkHandler.requestTeleport(d[0],d[1],d[2],(float)d[3],(float)d[4]);p.setYaw((float)d[3]);p.setHeadYaw((float)d[3]);p.setBodyYaw((float)d[3]);log.append("  teleported at ").append(age).append('\n');});continue;}

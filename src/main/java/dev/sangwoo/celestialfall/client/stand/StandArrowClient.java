@@ -134,6 +134,29 @@ public final class StandArrowClient {
         });
     }
 
+    private static boolean heldR;
+    /**
+     * R with the stand arrow in the main hand, for one with no stand on the map (KeyboardMixin): used at once, as the
+     * item's use would be. R is the map's use key, but another mod's key on R can take R from it (Immersive Cinematics'
+     * editor flight mode does in the Botand modpack), so the arrow does not wait for the use key. A stand's own R
+     * (Kageno's skill, Star Platinum's heavy punch) comes first; with any other stand the server says why it cannot.
+     */
+    public static boolean key(long window,int key,int action,int modifiers){
+        var mc=MinecraftClient.getInstance();
+        if(key!=org.lwjgl.glfw.GLFW.GLFW_KEY_R||window!=mc.getWindow().getHandle())return false;
+        if(action==org.lwjgl.glfw.GLFW.GLFW_RELEASE){if(!heldR)return false;heldR=false;return true;}
+        if(heldR)return true;
+        if(action!=org.lwjgl.glfw.GLFW.GLFW_PRESS||mc.currentScreen!=null||!MapClient.enabled()||mc.player==null||mc.interactionManager==null)return false;
+        if(!mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))return false;
+        if(dev.sangwoo.celestialfall.stand.StandManager.kageno(mc.player)||dev.sangwoo.celestialfall.stand.StandManager.starPlatinum(mc.player))return false;
+        heldR=true;
+        if(dev.sangwoo.celestialfall.client.CombatClient.combatInput()){
+            dev.sangwoo.celestialfall.client.BotandCamera.prepareInteraction();
+            mc.interactionManager.interactItem(mc.player,net.minecraft.util.Hand.MAIN_HAND);
+        }
+        return true;
+    }
+
     /** The stab {@code user} is in (null if none heard). */
     public static Stab of(UUID user){return STABS.get(user);}
     public static Map<UUID,Stab> all(){return Map.copyOf(STABS);}

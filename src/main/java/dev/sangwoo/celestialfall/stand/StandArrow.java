@@ -83,7 +83,7 @@ public final class StandArrow {
         if(hand!=Hand.MAIN_HAND||!p.getMainHandStack().isOf(MeteorRegistry.STAND_ARROW)){p.sendMessage(Text.literal("스탠드 화살은 주로 쓰는 손에 들고 써 주세요."),true);return false;}
         if(!canUse(ProgressManager.profile(p).stand())){p.sendMessage(Text.literal("이미 스탠드가 있어요. 로카카카로 스탠드를 초기화한 뒤 쓸 수 있어요."),true);return false;}
         if(!ProgressManager.canChange(p)||p.hasVehicle()||p.isSleeping()){p.sendMessage(Text.literal("전투나 컷씬이 끝난 뒤 쓸 수 있어요."),true);return false;}
-        if(!p.isOnGround()){p.sendMessage(Text.literal("땅에 선 채로 쓸 수 있어요."),true);return false;}
+        if(!standing(p)){p.sendMessage(Text.literal("땅에 선 채로 쓸 수 있어요."),true);return false;}
         String outcome=rigged!=null?rigged:roll(()->RANDOM.nextInt(ODDS));rigged=null;
         long now=p.getServerWorld().getTime();
         var s=new Stab(now,p.getInventory().selectedSlot,outcome);STABS.put(p.getUuid(),s);
@@ -93,6 +93,13 @@ public final class StandArrow {
         return true;
     }
 
+    /**
+     * Whether {@code p} stands on something: their own word for it, or ground right under their feet (the word comes
+     * with their movement: one teleported a moment ago may not have sent it yet).
+     */
+    static boolean standing(ServerPlayerEntity p){
+        return p.isOnGround()||Math.abs(p.getVelocity().y)<.1&&!p.getWorld().isSpaceEmpty(p,p.getBoundingBox().offset(0,-.06,0));
+    }
     private static void tick(MinecraftServer server){
         if(STABS.isEmpty())return;
         for(var it=STABS.entrySet().iterator();it.hasNext();){
