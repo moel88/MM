@@ -92,8 +92,10 @@ public final class StandArrowClient {
                 s.outcome=outcome;s.fate=StandArrowRules.dies(outcome)?Fate.DIE:Fate.AWAKEN;
                 // on this client's clock as the word comes (so nothing jumps), never before its choice shows
                 s.known=Math.max(ArrowStabPose.REVEAL,s.age(0));
-                // the choice's sound, unless heard far too late to go with the body
-                if(s.known-ArrowStabPose.REVEAL<.6f)s.after=play(mc,user,s.fate==Fate.DIE?"stand_arrow_reject":"stand_arrow_awaken",0);
+                // the choice's sound, unless heard far too late to go with the body; heard early on this client's clock
+                // (one whose ticks fall behind the server's), it waits for the clock to reach the choice, as the body does
+                int wait=Math.max(0,Math.round((ArrowStabPose.REVEAL-s.age(0))*20));
+                if(s.known-ArrowStabPose.REVEAL<.6f)s.after=play(mc,user,s.fate==Fate.DIE?"stand_arrow_reject":"stand_arrow_awaken",wait);
                 if(mc.player!=null&&user.equals(mc.player.getUuid()))StandArrowHud.chosen(s);
             }
             case StandArrow.CUT->{

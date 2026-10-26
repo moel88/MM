@@ -465,14 +465,14 @@ def arrow_line(t):
             parts.append('화살을 들어 올림' if a < .62 else '가슴을 겨눔' if a < .96 else '가슴에 꽂음' if a < 1.24 else '화살이 몸속으로 들어감')
             color = (255, 225, 140)
         elif fate == '1':
-            parts.append(f'화살에 선택받음 · {STANDS.get(r.get("server_stand"), r.get("server_stand"))} 각성'); color = (200, 180, 255)
+            parts.append('선택받음 · 각성'); color = (200, 180, 255)
         else:
             fallen = float(r.get('arrow_fallen') or 0)
-            parts.append('화살에 선택받지 못함 · ' + ('무릎이 꺾임' if fallen < .05 and a < 3.0 else '쓰러짐' if a < 3.3 else '사망'))
+            parts.append('선택받지 못함 · ' + ('무릎이 꺾임' if fallen < .05 and a < 3.0 else '쓰러짐' if a < 3.3 else '사망'))
             color = (255, 140, 140)
         parts.append(f'찌른 뒤 {a:.2f}초')
     if r.get('server_stand') is not None and r.get('server_stand') != '': parts.append('스탠드 ' + STANDS.get(r['server_stand'], r['server_stand']))
-    if r.get('arrows') not in (None, ''): parts.append(f'손에 든 스탠드 화살 {r["arrows"]}개')
+    if r.get('arrows') not in (None, ''): parts.append(f'화살 {r["arrows"]}개')
     return ' · '.join(parts), color
 
 def actor_line(t):

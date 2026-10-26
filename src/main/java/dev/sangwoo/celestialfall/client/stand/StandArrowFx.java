@@ -35,9 +35,11 @@ public final class StandArrowFx {
     /**
      * This frame's stabs near the camera: the stab, its clock, the body (as the stab poses it), where the arrow went or
      * will go in (the chest), which way it points into the body, the arrow (its tip, nock and head's base in the world,
-     * null once gone), its glow, the feet, which way the body faces, and the chest as the one rejected falls.
+     * null once gone), its glow, the feet, which way the body faces, and the chest as the one rejected falls; and
+     * {@link #near}: 1 for a camera well away from the chest, down to 0 for one at it (the one stabbed seeing from their
+     * own eyes): the light that bursts from the chest would fill their screen, so it fades there (no screen effects).
      */
-    record Shown(StandArrowClient.Stab stab,float t,ArrowStabPose.Frame frame,Vec3d chest,Vec3d in,Vec3d tip,Vec3d nock,Vec3d head,Vec3d prevTip,float glow,Vec3d feet,Vec3d way,int seed){
+    record Shown(StandArrowClient.Stab stab,float t,ArrowStabPose.Frame frame,Vec3d chest,Vec3d in,Vec3d tip,Vec3d nock,Vec3d head,Vec3d prevTip,float glow,Vec3d feet,Vec3d way,int seed,float near){
         Fate fate(){return stab.fate;}
         /** Seconds since its choice showed (below 0 before). */
         float since(){return t-stab.shows();}
@@ -73,7 +75,8 @@ public final class StandArrowFx {
                 }
             }
             float yaw=net.minecraft.util.math.MathHelper.lerpAngleDegrees(tickDelta,p.prevBodyYaw,p.bodyYaw);
-            FRAME.add(new Shown(s,t,f,chest,in,tip,nock,head,prevTip,f.glow(),p.getLerpedPos(tickDelta),way(yaw),(int)(s.start*37+s.user.getLeastSignificantBits())));
+            float near=Ease.smooth((float)camera.distanceTo(chest),.45f,1.3f);
+            FRAME.add(new Shown(s,t,f,chest,in,tip,nock,head,prevTip,f.glow(),p.getLerpedPos(tickDelta),way(yaw),(int)(s.start*37+s.user.getLeastSignificantBits()),near));
         }
         return !FRAME.isEmpty();
     }
@@ -92,10 +95,10 @@ public final class StandArrowFx {
     /** Dark ink under the light: the blow's burst, the choice's burst. */
     public static void alpha(EffectMesh m){
         for(var s:FRAME){
-            float a=fade(s.t,ArrowStabPose.HIT,.32f);
+            float a=fade(s.t,ArrowStabPose.HIT,.32f)*s.near;
             if(a>0)burst(m,s.chest,.46*(1+.4*Ease.out(s.t,ArrowStabPose.HIT,ArrowStabPose.HIT+.2f)),.34,10,s.seed,INK,INK,.6f*a,.6f*a);
             if(s.fate()==Fate.UNKNOWN)continue;
-            float c=fade(s.since(),0,s.fate()==Fate.AWAKEN?.45f:.38f);
+            float c=fade(s.since(),0,s.fate()==Fate.AWAKEN?.45f:.38f)*s.near;
             if(c>0)burst(m,s.chest,(s.fate()==Fate.AWAKEN?.78:.5)*(1+.35*Ease.out(s.since(),0,.25f)),.32,12,s.seed+7,s.fate()==Fate.DIE?BLOOD:INK,INK,.62f*c,.62f*c);
         }
     }
@@ -109,7 +112,7 @@ public final class StandArrowFx {
     /** Held up: its golden head glints and motes of light circle it. */
     static void raised(EffectMesh m,Shown s){
         if(s.head==null||s.t>ArrowStabPose.HIT)return;
-        float g=s.glow*(1-Ease.smooth(s.t,.9f,1.05f));if(g<.01f)return;
+        float g=s.glow*(1-Ease.smooth(s.t,.9f,1.05f))*s.near;if(g<.01f)return;
         float tw=.65f+.35f*(float)Math.sin(s.t*11+s.seed);
         m.softDisc(s.head,.26,GOLD,.32f*g);m.softDisc(s.head,.09,WHITE,.4f*g*tw);
         star(m,s.head,.22*(.8+.4*tw),GOLD,.75f*g*tw);
@@ -129,19 +132,19 @@ public final class StandArrowFx {
     static void plunge(EffectMesh m,Shown s){
         if(s.prevTip==null||s.t<.9f||s.t>ArrowStabPose.HIT+.02f)return;
         double speed=s.tip.distanceTo(s.prevTip)/.04;if(speed<1.5)return;
-        float a=(float)Math.min(1,(speed-1.5)/6);
+        float a=(float)Math.min(1,(speed-1.5)/6)*s.near;if(a<.01f)return;
         m.softTaper(s.prevTip,s.tip,.02,.1,GOLD,.55f*a);m.needle(s.prevTip,s.tip,.035,.85,WHITE,.6f*a);
     }
     /** It goes in: a burst at the chest, a ring round the arrow, one running out round the body, sparks thrown out. */
     static void blow(EffectMesh m,Shown s){
         float a=fade(s.t,ArrowStabPose.HIT,.32f);if(a<=0)return;
-        float u=Ease.out(s.t,ArrowStabPose.HIT,ArrowStabPose.HIT+.3f);
-        burst(m,s.chest,.46*(1+.4*Ease.out(s.t,ArrowStabPose.HIT,ArrowStabPose.HIT+.2f)),.34,10,s.seed,GOLD,VIOLET,.95f*a,.85f*a);
-        m.softDisc(s.chest,.7,GOLD,.35f*a);FxLib.flash(m,s.chest,.42,GOLD,.9f*fade(s.t,ArrowStabPose.HIT,.16f));
+        float u=Ease.out(s.t,ArrowStabPose.HIT,ArrowStabPose.HIT+.3f),n=s.near,out=n+(1-n)*u;
+        burst(m,s.chest,.46*(1+.4*Ease.out(s.t,ArrowStabPose.HIT,ArrowStabPose.HIT+.2f)),.34,10,s.seed,GOLD,VIOLET,.95f*a*n,.85f*a*n);
+        m.softDisc(s.chest,.7,GOLD,.35f*a*n);FxLib.flash(m,s.chest,.42,GOLD,.9f*fade(s.t,ArrowStabPose.HIT,.16f)*n);
         Vec3d[] q=square(s.in);
-        FxLib.ringPlane(m,s.chest.subtract(s.in.multiply(.05+.25*u)),q[0],q[1],.1+.85*u,.07,GOLD,.8f*a);
-        FxLib.ring(m,s.chest,.35+1.9*u,.12,VIOLET,.6f*a);
-        FxLib.sparks(m,s.chest,16,.85,.06,GOLD,.85f*a,s.seed+3,.25f+.75f*u);
+        FxLib.ringPlane(m,s.chest.subtract(s.in.multiply(.05+.25*u)),q[0],q[1],.1+.85*u,.07,GOLD,.8f*a*n);
+        FxLib.ring(m,s.chest,.35+1.9*u,.12,VIOLET,.6f*a*out);
+        FxLib.sparks(m,s.chest,16,.85,.06,GOLD,.85f*a*n,s.seed+3,.25f+.75f*u);
     }
     /**
      * Being drawn in: light leaking out of the wound in rays, motes drawn into it, a ring running out round the body
@@ -150,9 +153,9 @@ public final class StandArrowFx {
     static void drawnIn(EffectMesh m,Shown s){
         float t=s.t,end=Math.min(s.stab.shows(),ArrowStabPose.REVEAL+.05f);
         if(t<ArrowStabPose.HIT||t>s.stab.shows()+.3f)return;
-        float on=Ease.smooth(t,ArrowStabPose.HIT+.1f,ArrowStabPose.HIT+.35f)*(1-Ease.smooth(t,end,end+.25f));
+        float rings=Ease.smooth(t,ArrowStabPose.HIT+.1f,ArrowStabPose.HIT+.35f)*(1-Ease.smooth(t,end,end+.25f)),on=rings*s.near;
         float build=Ease.smooth(t,1.3f,2.15f);
-        if(on<=.01f)return;
+        if(rings<=.01f)return;
         Vec3d out=s.in.negate();Vec3d[] q=square(out);
         // the wound
         float pulse=0;for(float b:ArrowStabPose.BEATS)pulse+=ArrowStabPose.kick(t,b,.12f);
@@ -167,12 +170,11 @@ public final class StandArrowFx {
             m.needle(s.chest.add(d.multiply(.04)),s.chest.add(d.multiply(len)),.05+.03*build,.15,k%3==0?WHITE:GOLD,.75f*on*flick*(.4f+.6f*build));
         }
         // motes drawn into the wound
-        FxLib.converge(m,s.chest,1.25,16,t,1.3f,2.12f,GOLD,s.seed+5);
-        FxLib.converge(m,s.chest,.9,10,t,1.55f,2.15f,GOLD,s.seed+9);
+        if(s.near>.5f){FxLib.converge(m,s.chest,1.25,16,t,1.3f,2.12f,GOLD,s.seed+5);FxLib.converge(m,s.chest,.9,10,t,1.55f,2.15f,GOLD,s.seed+9);}
         // the heart's beats: a ring running out round the body
         for(float b:ArrowStabPose.BEATS){
             float u=(t-b)/.4f;if(u<0||u>=1)continue;
-            float a=(float)Math.pow(1-u,.9)*Ease.smooth(u,0,.06f)*on;
+            float a=(float)Math.pow(1-u,.9)*Ease.smooth(u,0,.06f)*rings*(s.near+(1-s.near)*Ease.out(u,0,1));
             FxLib.ring(m,s.chest.add(0,-.1,0),.32+1.25*Ease.out(u,0,1),.08,u<.3f?GOLD:VIOLET,.55f*a*(.6f+.4f*build));
         }
         // the arrow itself, standing out of the chest, glowing as it is drawn in
@@ -184,15 +186,15 @@ public final class StandArrowFx {
     /** Chosen: a burst of gold and violet, a pillar of light, rings over the ground and round the body, sparks rising. */
     static void chosen(EffectMesh m,Shown s){
         float u=s.since();if(u<0||u>2.4f)return;
-        float a=fade(u,0,.45f),o=Ease.out(u,0,.4f);
+        float a=fade(u,0,.45f)*s.near,o=Ease.out(u,0,.4f);
         if(a>0){
             burst(m,s.chest,.78*(1+.35*Ease.out(u,0,.25f)),.32,12,s.seed+7,WHITE,VIOLET,.95f*a,.9f*a);
             m.softDisc(s.chest,1.1,VIOLET,.4f*a);m.softDisc(s.chest,.5,GOLD,.5f*a);
-            FxLib.flash(m,s.chest,.65,GOLD,fade(u,0,.2f));
+            FxLib.flash(m,s.chest,.65,GOLD,fade(u,0,.2f)*s.near);
             FxLib.sparks(m,s.chest,22,1.4,.07,GOLD,.8f*a,s.seed+11,.3f+.7f*o);
         }
         // the pillar of light from the feet, rising and fading
-        float p=fade(u,0,.9f);
+        float p=fade(u,0,.9f)*s.near;
         if(p>0){
             double top=1.2+3.6*Ease.out(u,0,.35f),w=.55*(1-.4*Ease.smooth(u,.2f,.9f));
             Vec3d base=s.feet.add(0,.05,0),up=base.add(0,top,0);
@@ -203,7 +205,7 @@ public final class StandArrowFx {
         if(r>0){
             FxLib.ring(m,s.feet.add(0,.06,0),.4+3.4*Ease.out(u,0,.55f),.2,GOLD,.7f*r);
             FxLib.ring(m,s.feet.add(0,.06,0),.3+2.2*Ease.out(u,.06f,.6f),.12,VIOLET,.6f*r);
-            FxLib.ring(m,s.chest,.4+2.6*Ease.out(u,0,.45f),.12,LILAC,.55f*r);
+            FxLib.ring(m,s.chest,.4+2.6*Ease.out(u,0,.45f),.12,LILAC,.55f*r*(s.near+(1-s.near)*Ease.out(u,0,.45f)));
         }
         // sparks of gold and violet rising off the body
         for(int k=0;k<26;k++){
@@ -217,13 +219,13 @@ public final class StandArrowFx {
     }
     /** Rejected: the wound's light turns crimson and gutters out, its rays falling back in. */
     static void rejected(EffectMesh m,Shown s){
-        float u=s.since();if(u<0||u>1.2f)return;
-        float a=fade(u,0,.38f);
+        float u=s.since();if(u<0||u>1.2f||s.near<.01f)return;
+        float a=fade(u,0,.38f)*s.near;
         if(a>0){
             burst(m,s.chest,.5*(1+.35*Ease.out(u,0,.25f)),.32,12,s.seed+7,CRIMSON,BLOOD,.8f*a,.7f*a);
             m.softDisc(s.chest,.55,CRIMSON,.35f*a);
         }
-        float g=1-Ease.smooth(u,0,.7f);
+        float g=(1-Ease.smooth(u,0,.7f))*s.near;
         if(g>0){
             Vec3d out=s.in.negate();Vec3d[] q=square(out);
             for(int k=0;k<9;k++){
@@ -249,7 +251,7 @@ public final class StandArrowFx {
                 if(v<0||v>=1)continue;
                 double drift=(Ease.hash(s.seed+k*61)-.5)*.5;
                 smoke.add(s.chest.add(drift*v,.1+.95*v+.05*(k%3),(Ease.hash(s.seed+k*67)-.5)*.5*v));
-                smokeCells.add(new float[]{(float)(.13+.3*v),.55f*(float)Math.sin(Math.PI*Math.min(1,v*1.4))*(1-v),0,.2f+.5f*v,s.seed+k*71});
+                smokeCells.add(new float[]{(float)(.13+.3*v),.55f*(float)Math.sin(Math.PI*Math.min(1,v*1.4))*(1-v)*s.near,0,.2f+.5f*v,s.seed+k*71});
             }
             // where the body lands (the chest, as it lies): a ring of dust over the ground
             float landed=ArrowStabPose.LANDS_AT;

@@ -1,4 +1,12 @@
-> **현재 통합본: Botand 2.69.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.70.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.70.0 — 스탠드 화살 (몸에 꽂아 20% 사망 · 80% 스타플래티나)
+
+- **스탠드 화살 사용:** 스탠드가 없을 때 스탠드 화살을 들고 R(맵의 아이템 사용 키)을 누르면, 화살을 들어 올려 자기 가슴에 꽂습니다. 2.2초 뒤 화살이 고릅니다: **20%는 사망, 80%는 스타플래티나 각성**(바로 옆에 나옵니다). 확률은 표로 되어 있어 새 스탠드가 생기면 스타플래티나의 몫을 나눠 줄 수 있습니다.
+- **모션:** 화살을 오른손으로 높이 들어 촉을 가슴에 겨누고 떨며 망설이다가, 왼손이 와서 함께 쥐고 끌어올렸다가 가슴에 내리꽂습니다. 웅크렸다 헐떡이며 젖히고, 박힌 화살이 빛나며 몸속으로 빨려 들어가는 동안 심장이 점점 빨리 뜁니다. 선택받으면 두 팔을 펼치며 스탠드가 튀어나오고 그쪽으로 돌아섭니다. 선택받지 못하면 가슴을 움켜쥐고 무릎을 꿇은 뒤 앞으로 엎어져 죽습니다.
+- **이펙트·소리:** 금빛 화살 빛, 꽂힐 때의 충격, 상처에서 새는 빛과 심장 박동 고리, 각성의 금빛·보라 폭발과 빛기둥, 거절의 진홍 빛·검은 연기·먼지. 소리는 모두 새로 합성했습니다. 찌른 사람 화면에 '스탠드 각성 / 스타플래티나' 또는 '화살에게 선택받지 못했다'가 뜨고, 각성하면 맵 전체 채팅으로 알립니다.
+
+[RELEASE_2.70.0_KO.md](RELEASE_2.70.0_KO.md)를 확인하세요.
 
 # 보탠드 2.69.0 — 첫 보스: 쿠죠 죠타로 (모든 보스의 기본 메커니즘)
 
