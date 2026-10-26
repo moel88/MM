@@ -103,6 +103,8 @@
   "subtitles.celestialfall.gacha": "뽑기 효과음",
   "death.attack.celestialfall.reset": "%1$s님이 캐릭터를 재설정했습니다",
   "death.attack.celestialfall.reset.player": "%1$s님이 %2$s에게서 벗어나려고 캐릭터를 재설정했습니다",
+  "death.attack.celestialfall.stand_arrow": "%1$s님이 스탠드 화살에 선택받지 못했습니다",
+  "death.attack.celestialfall.stand_arrow.player": "%1$s님이 스탠드 화살에 선택받지 못했습니다",
   "block.celestialfall.asphalt": "아스팔트",
   "block.celestialfall.asphalt_slab": "아스팔트 반 블록",
   "block.celestialfall.asphalt_edge_line": "아스팔트 (가장자리 선)",

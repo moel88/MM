@@ -23,7 +23,7 @@ public final class StandManager {
         ((StandHolder)p).botand$setStand(MapGate.enabled(p.getWorld())?ProgressManager.profile(p).stand():"none");
     }
     public static void initialize(){
-        KagenoManager.initialize();StandSummon.initialize();StarPlatinumAttack.initialize();StarPlatinumRush.initialize();StarPlatinumInhale.initialize();StarPlatinumBeatdown.initialize();StarPlatinumTimeStop.initialize();
+        KagenoManager.initialize();StandSummon.initialize();StarPlatinumAttack.initialize();StarPlatinumRush.initialize();StarPlatinumInhale.initialize();StarPlatinumBeatdown.initialize();StarPlatinumTimeStop.initialize();StandArrow.initialize();
         ServerPlayNetworking.registerGlobalReceiver(SKILL,(server,player,handler,buf,response)->{
             if(buf.readableBytes()!=0)return;
             server.execute(()->{

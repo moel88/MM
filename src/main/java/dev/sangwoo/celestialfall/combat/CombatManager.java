@@ -123,14 +123,14 @@ public final class CombatManager {
     public static boolean busy(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
-            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p))return true;
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
         long n=p.getWorld().getTime();return e.state.locked(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.guarding;
     }
     public static boolean actionLocked(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
-            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p))return true;
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
     }
     /**

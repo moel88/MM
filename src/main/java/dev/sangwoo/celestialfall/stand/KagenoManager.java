@@ -93,6 +93,8 @@ public final class KagenoManager {
         if(StarPlatinumBeatdown.involved(e))return true;
         // Star Platinum's time stop (2.67.0) holds its user as they call it, and whom it stopped until time moves again
         if(StarPlatinumTimeStop.holds(e))return true;
+        // a stand arrow in their chest (2.70.0) holds them until its choice is made (and for one it rejects, until they die)
+        if(StandArrow.holds(e))return true;
         for(var c:CASTS.values())if(c.world==e.getWorld()&&(KagenoRules.frozen(c.skill,c.age())&&((c.player==e&&c.skill!=R)||c.targets.containsKey(e))||KagenoRules.trapped(c.skill,c.age())&&c.targets.containsKey(e)))return true;
         return false;
     }

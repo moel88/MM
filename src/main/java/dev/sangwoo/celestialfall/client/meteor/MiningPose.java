@@ -178,7 +178,7 @@ public final class MiningPose {
      * on {@code target} from {@code shoulder}, the elbow toward {@code pole}; {@code side} is -1 for the right arm and 1
      * for the left (each fist sits 1 px off its pivot, in the arm's middle). Out of reach, the arm points at it straight.
      */
-    static float[] reach(Vector3f shoulder,Vector3f target,Vector3f pole,float side){
+    public static float[] reach(Vector3f shoulder,Vector3f target,Vector3f pole,float side){
         Vector3f d=new Vector3f(target).sub(shoulder);float dist=d.length();
         float c=(dist*dist-side*side-ELBOW*ELBOW-FIST*FIST)/(2*ELBOW*FIST);
         float bend=-(float)Math.acos(Math.max(-1,Math.min(1,c)));
@@ -201,7 +201,7 @@ public final class MiningPose {
         return p.normalize();
     }
     /** Where an arm posed by {@link #reach} closes its fist (torso px): for checking the solve. */
-    static Vector3f fist(Vector3f shoulder,float[] arm,float side){
+    public static Vector3f fist(Vector3f shoulder,float[] arm,float side){
         Vector3f lower=new Vector3f(side,FIST,0).rotateX(arm[3]*RAD).add(0,ELBOW,0);
         return new Quaternionf().rotationZYX(arm[2]*RAD,arm[1]*RAD,arm[0]*RAD).transform(lower).add(shoulder);
     }
@@ -218,9 +218,10 @@ public final class MiningPose {
      * Keyed channels on monotone cubic curves: smooth through every key, never overshooting, at rest at the ends and
      * where a channel turns back. Into the {@code impact} key every channel speeds up all the way and leaves it at rest.
      */
-    static final class Track {
+    public static final class Track {
         private final float[] times;private final float[][] keys,in,out;
-        Track(float[] times,float[][] keys,int impact){
+        /** {@code impact} below 1: no key is struck (every key smooth, as the others). */
+        public Track(float[] times,float[][] keys,int impact){
             this.times=times;this.keys=keys;int n=times.length,c=keys[0].length;
             in=new float[n][c];out=new float[n][c];
             for(int j=0;j<c;j++)for(int i=1;i+1<n;i++){
@@ -230,12 +231,12 @@ public final class MiningPose {
                 in[i][j]=out[i][j]=m;
             }
             // the strike: from rest, arriving at twice the segment's mean speed (an even acceleration), leaving from rest
-            for(int j=0;j<c;j++){
+            if(impact>=1)for(int j=0;j<c;j++){
                 float h=times[impact]-times[impact-1];
                 out[impact-1][j]=0;in[impact][j]=2*(keys[impact][j]-keys[impact-1][j])/h;out[impact][j]=0;
             }
         }
-        float[] at(float t){
+        public float[] at(float t){
             int n=times.length,i=1;while(i<n-1&&t>times[i])i++;
             float h=times[i]-times[i-1],u=Math.max(0,Math.min(1,(t-times[i-1])/h));
             float u2=u*u,u3=u2*u,h00=2*u3-3*u2+1,h10=u3-2*u2+u,h01=-2*u3+3*u2,h11=u3-u2;

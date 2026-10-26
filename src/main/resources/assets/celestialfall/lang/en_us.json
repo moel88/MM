@@ -103,6 +103,8 @@
   "subtitles.celestialfall.gacha": "Gacha chimes",
   "death.attack.celestialfall.reset": "%1$s reset their character",
   "death.attack.celestialfall.reset.player": "%1$s reset their character while trying to escape %2$s",
+  "death.attack.celestialfall.stand_arrow": "%1$s was not chosen by the Stand Arrow",
+  "death.attack.celestialfall.stand_arrow.player": "%1$s was not chosen by the Stand Arrow",
   "block.celestialfall.asphalt": "Asphalt",
   "block.celestialfall.asphalt_slab": "Asphalt Slab",
   "block.celestialfall.asphalt_edge_line": "Asphalt with Edge Line",
