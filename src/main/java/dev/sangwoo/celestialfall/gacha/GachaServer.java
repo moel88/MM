@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall.gacha;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.sangwoo.celestialfall.CelestialFall;
+import dev.sangwoo.celestialfall.LongCooldowns;
 import dev.sangwoo.celestialfall.commerce.CommerceRegistry;
 import dev.sangwoo.celestialfall.map.MapGate;
 import dev.sangwoo.celestialfall.progression.ProgressManager;
@@ -21,8 +22,9 @@ import static net.minecraft.server.command.CommandManager.*;
 /**
  * The stand gacha on the server (user request, 2.39.0). A client asks for its count (0 pulls) or for 1 or 10 pulls; the
  * server checks the player may pull (on the dedicated map, out of combat and cutscenes, no stand equipped, room for the
- * Rokakaka that could come), rolls, keeps the new count, equips Kageno on an SSR, gives a Rokakaka for every R (2.41.0)
- * and answers with what was rolled. Pulls are free for now.
+ * Rokakaka that could come), rolls, keeps the new count, equips Kageno on an SSR (its long cooldown still running begins
+ * again in full, 2.74.1: LongCooldowns), gives a Rokakaka for every R (2.41.0) and answers with what was rolled. Pulls
+ * are free for now.
  */
 public final class GachaServer {
     public static final Identifier REQUEST=CelestialFall.id("gacha_request_v1"),RESULT=CelestialFall.id("gacha_result_v1");
@@ -55,7 +57,12 @@ public final class GachaServer {
         var result=GachaRules.pulls(count,n,()->RANDOM.nextInt(GachaRules.ODDS));
         state.set(p.getUuid(),result.after());
         boolean granted=result.any(GachaRules.Grade.SSR);
-        if(granted)ProgressManager.set(p,profile.withStand(GachaRules.SSR_STAND));
+        if(granted){
+            ProgressManager.set(p,profile.withStand(GachaRules.SSR_STAND));
+            // (2.74.1, user request: "뽑기로 얻어도 처음부터 다시 흐르게") its long cooldown still running begins again in
+            // full, as the stand arrow's does (only the new stand's: another stand's runs on)
+            LongCooldowns.begin(p);
+        }
         int fruits=GachaRules.fruits(result.grades());
         if(fruits>0)p.getInventory().offerOrDrop(new ItemStack(CommerceRegistry.ROKAKAKA,fruits));
         CelestialFall.LOGGER.info("Gacha: {} ({}) pulled {}: {}; SSR certain in {}, SR in {}, {} pulls in all{}{}",p.getName().getString(),p.getUuid(),n,

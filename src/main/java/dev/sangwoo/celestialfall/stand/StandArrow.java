@@ -137,7 +137,8 @@ public final class StandArrow {
         if(!dies(s.outcome)){
             ProgressManager.set(p,ProgressManager.profile(p).withStand(s.outcome));
             if(StandManager.starPlatinum(p))((StandHolder)p).botand$setStandOut(true);
-            // (2.74.0, user request: "화살로 뽑아도 처음으로 쿨타임 돌게") the long cooldowns still running begin again in full
+            // (2.74.0, user request: "화살로 뽑아도 처음으로 쿨타임 돌게") the long cooldowns still running begin again in full;
+            // since 2.74.1 only the new stand's ("그냥 사용하는 스탠드의 긴 쿨타임 애들만"): another stand's run on
             dev.sangwoo.celestialfall.LongCooldowns.begin(p);
         }
         send(p,s,REVEALED);

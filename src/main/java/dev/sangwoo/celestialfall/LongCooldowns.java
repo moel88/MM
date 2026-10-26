@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall;
 import dev.sangwoo.celestialfall.boss.BossPlayer;
 import dev.sangwoo.celestialfall.boss.BossRules;
 import dev.sangwoo.celestialfall.boss.Bosses;
+import dev.sangwoo.celestialfall.progression.ProgressManager;
 import dev.sangwoo.celestialfall.stand.StarPlatinumAttack;
 import dev.sangwoo.celestialfall.stand.StarPlatinumRules;
 import dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop;
@@ -32,13 +33,22 @@ import net.minecraft.world.PersistentState;
  * 쿨타임 돌게 하고 보스한테 죽어도 처음부터 쿨타임 돌게 그냥 화살로 뽑아도 처음으로 쿨타임 돌게 그냥 죽어서 부활하기만 하면
  * 처음부터 돌게") the same happens whenever they come back to life after a death, whatever killed them (a player, a boss,
  * the stand arrow, their own character reset, a fall: 2.73.0 kept them running through every death but the reset, which
- * began them again as it killed), and when the stand arrow gives them a stand (StandArrow). The player's client is told
- * each one's ready tick and length (the cooldown list draws them from it), and the Atomic sword's cooldown, which
- * Minecraft keeps on the body, is set again on every new one. Bosses keep none: they never come back.
+ * began them again as it killed), and when the stand arrow gives them a stand (StandArrow). Since 2.74.1 (user request:
+ * "화살을 뽑아서 스타플래티나를 뽑은건데 아토믹은 왜 초기화 됨 그리고 뽑기로 얻어도 처음부터 다시 흐르게 그냥 사용하는 스탠드의
+ * 긴 쿨타임 애들만 처음부터 다시 흐르게 하면 돼") only those of the stand they use now begin again (Atomic for Kageno, the
+ * time stop and the beatdown for Star Platinum); another stand's run on as they were. The gacha giving them a stand
+ * (GachaServer) begins them again too. The player's client is told each one's ready tick and length (the cooldown list
+ * draws them from it), and the Atomic sword's cooldown, which Minecraft keeps on the body, is set again on every new
+ * one. Bosses keep none: they never come back.
  */
 public final class LongCooldowns extends PersistentState {
-    /** The long cooldowns, in the packet's and the save's order. */
-    public enum Skill{ATOMIC,TIME_STOP,BEATDOWN}
+    /** The long cooldowns, in the packet's and the save's order, each with the stand whose skill it is. */
+    public enum Skill{
+        ATOMIC("kageno"),TIME_STOP("star_platinum"),BEATDOWN("star_platinum");
+        /** The id of the stand whose skill it is (StandStats). */
+        public final String stand;
+        Skill(String stand){this.stand=stand;}
+    }
     /** To a player's client: for each skill in turn, the tick it is ready again (world time, 0 for none) and its length in ticks. */
     public static final Identifier STATE=new Identifier("celestialfall","long_cooldowns_v1");
     private static final int N=Skill.values().length;
@@ -82,6 +92,14 @@ public final class LongCooldowns extends PersistentState {
      * ready more than a whole length away) keeps its tick, to run in full once the skill is over.
      */
     public static long restart(long ready,long now,int length){return ready>now?Math.max(ready,now+length):0;}
+    /**
+     * When a cooldown ready at {@code ready} is ready once its player comes back at {@code now} with {@code stand} (a
+     * stand's id, "none" for none): the stand's own begin again ({@link #restart}); another stand's run on as they were,
+     * forgotten once over (2.74.1).
+     */
+    public static long restart(Skill skill,String stand,long ready,long now,int length){
+        return skill.stand.equals(stand)?restart(ready,now,length):ready>now?ready:0;
+    }
     /** The length of {@code p}'s {@code skill}'s cooldown (ticks): Atomic's from the config, a boss's own where it has one. */
     public static int length(ServerPlayerEntity p,Skill skill){
         return switch(skill){
@@ -109,15 +127,16 @@ public final class LongCooldowns extends PersistentState {
     }
     /**
      * {@code p} comes back into the game (joins), comes back to life after a death (respawns), or is given a stand by the
-     * stand arrow: each long cooldown still running begins again in full now, the skills' own ledgers and the sword's
-     * cooldown set to it; one over is forgotten. Their client is told.
+     * stand arrow or the gacha: each long cooldown of the stand they have now still running begins again in full now
+     * (another stand's runs on), the skills' own ledgers and the sword's cooldown set to it; one over is forgotten. Their
+     * client is told.
      */
     public static void begin(ServerPlayerEntity p){
         if(p instanceof BossPlayer||p.getServer()==null)return;
         var state=get(p.getServer());long now=p.getWorld().getTime();
-        boolean free=NoCooldownState.enabled(p);
+        boolean free=NoCooldownState.enabled(p);String stand=ProgressManager.profile(p).stand();
         for(var skill:Skill.values()){
-            long ready=free?0:restart(state.ready(p.getUuid(),skill),now,length(p,skill));
+            long ready=free?0:restart(skill,stand,state.ready(p.getUuid(),skill),now,length(p,skill));
             state.put(p.getUuid(),skill,ready);
             apply(p,skill,ready,now);
         }
