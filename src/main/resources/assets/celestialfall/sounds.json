@@ -779,5 +779,32 @@
         "preload": true
       }
     ]
+  },
+  "stand_arrow_stab": {
+    "sounds": [
+      {
+        "name": "celestialfall:stand_arrow_stab",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "stand_arrow_awaken": {
+    "sounds": [
+      {
+        "name": "celestialfall:stand_arrow_awaken",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "stand_arrow_reject": {
+    "sounds": [
+      {
+        "name": "celestialfall:stand_arrow_reject",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

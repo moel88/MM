@@ -100,9 +100,11 @@ public final class StandArrow {
             if(p==null){it.remove();continue;}
             long age=s.age(p.getServerWorld().getTime());
             if(!s.revealed){
-                // cut short: dead, gone elsewhere, off the map, the arrow no longer in the hand it was raised in
+                // cut short: dead, gone elsewhere, off the map, the arrow no longer in the hand it was raised in, or
+                // caught in another's cutscene or time stop (which hold them their own way)
                 boolean holding=p.getInventory().selectedSlot==s.slot&&p.getMainHandStack().isOf(MeteorRegistry.STAND_ARROW);
-                if(!p.isAlive()||p.isSpectator()||!MapGate.enabled(p.getWorld())||!holding||age<0||age>REVEAL+40){
+                boolean caught=StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.holds(p)||dev.sangwoo.celestialfall.AtomicManager.immobilized(p);
+                if(!p.isAlive()||p.isSpectator()||!MapGate.enabled(p.getWorld())||!holding||caught||age<0||age>REVEAL+40){
                     it.remove();send(p,s,CUT);
                     CelestialFall.LOGGER.info("Stand arrow: {} was cut short at {} ticks (the arrow kept)",p.getEntityName(),age);
                     continue;
@@ -142,14 +144,14 @@ public final class StandArrow {
         if(s.revealed&&dies(s.outcome)&&p.isAlive())kill(p);
     }
 
-    /** To everyone within 128 blocks of the user (and the user): what happened, the stab's start and the world's tick now, what the arrow chose once shown. */
+    /** To everyone within 128 blocks of the user (and the user): who (and their body's entity id), what happened, the stab's start and the world's tick now, what the arrow chose once shown. */
     private static void send(ServerPlayerEntity p,Stab s,int type){
         var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:new ArrayList<>(world.getPlayers())){
             if(viewer!=p&&viewer.squaredDistanceTo(p)>128*128)continue;
             if(!ServerPlayNetworking.canSend(viewer,EVENT))continue;
             var b=PacketByteBufs.create();
-            b.writeUuid(p.getUuid());b.writeIdentifier(world.getRegistryKey().getValue());b.writeByte(type);
+            b.writeUuid(p.getUuid());b.writeVarInt(p.getId());b.writeIdentifier(world.getRegistryKey().getValue());b.writeByte(type);
             b.writeLong(s.start);b.writeLong(now);b.writeString(type==REVEALED?s.outcome:"",32);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }

@@ -148,7 +148,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * attack's stagger (2.68.0): "dattack=1" makes the training dummy one that throws basic-attack combos at the player;
  * stand.csv gets whether the player can only walk (their combat state locked), whether they are staggered, whether the
  * dummy is staggered (the server's own state) and its blow, and the log each time the player or the dummy is staggered
- * and free again.
+ * and free again. The stand arrow (2.70.0): "stand=none" starts the entry with no stand, "GIVE_ARROW@n" puts a stand
+ * arrow in the player's main hand, "RIG_DEATH@n" and "RIG_STAR@n" decide what the next arrow will do (StandArrow.rigged:
+ * the death, or Star Platinum), and "KEY_R@n" uses it (R is the use key on the map); stand.csv gets the stab (its age
+ * in seconds, what it chose: 0 not yet, 1 a stand, 2 death, how brightly the arrow shines, how far down the body is, how
+ * far the arrow has been drawn in, whether it was cut short), the player's stand and how many arrows they hold, and
+ * the log when the stab starts, what it chose and when, when the player dies and when their stand comes out.
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -553,6 +558,22 @@ public final class SkillShots implements ClientModInitializer {
         standLog.append(String.format(Locale.ROOT,",%d,%d,%d,%d",dev.sangwoo.celestialfall.client.CombatClient.actionLocked()?1:0,staggered?1:0,dummyStaggered?1:0,dummyStrike));
         if(staggered!=playerStaggered){log.append("  player ").append(staggered?"staggered":"free again").append(" at ").append(age).append(String.format(Locale.ROOT," (until %d)%n",snap.staggerUntil()));playerStaggered=staggered;}
         if(dummyStaggered!=dummyStaggeredLogged){log.append("  dummy ").append(dummyStaggered?"staggered":"free of its stagger").append(" at ").append(age).append('\n');dummyStaggeredLogged=dummyStaggered;}
+        // 2.70.0: the stand arrow: the stab (its age, what it chose, the arrow's glow, how far down the body is, how far the
+        // arrow has been drawn in, cut short), the player's stand (the server's) and how many arrows the main hand holds
+        var stab=dev.sangwoo.celestialfall.client.stand.StandArrowClient.of(mc.player.getUuid());
+        if(stab==null)standLog.append(",,,,,,");
+        else{
+            float st=stab.age(mc.getTickDelta());var sf=dev.sangwoo.celestialfall.client.stand.ArrowStabPose.frame(st,stab.fate,stab.shows());
+            standLog.append(String.format(Locale.ROOT,",%.3f,%d,%.3f,%.3f,%.3f,%d",st,stab.fate.ordinal(),sf.glow(),sf.fallen(),sf.arrow()==null?1f:sf.arrow().sink(),stab.cutShort()?1:0));
+            String phase=stab.cutShort()?"cut short":stab.fate==dev.sangwoo.celestialfall.client.stand.ArrowStabPose.Fate.UNKNOWN?"driven in":"chose "+stab.outcome;
+            if(!phase.equals(arrowLogged)){log.append("  stand arrow ").append(phase).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %.2f s)%n",st));arrowLogged=phase;}
+        }
+        String serverStand="";
+        if(mc.getServer()!=null){var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());if(sp!=null)serverStand=dev.sangwoo.celestialfall.progression.ProgressManager.profile(sp).stand();}
+        int arrows=mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW)?mc.player.getMainHandStack().getCount():0;
+        standLog.append(',').append(serverStand).append(',').append(arrows);
+        if(!mc.player.isAlive()&&!playerDeadLogged){log.append("  player died at ").append(age).append('\n');playerDeadLogged=true;}
+        if(mc.player.isAlive())playerDeadLogged=false;
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -601,7 +622,8 @@ public final class SkillShots implements ClientModInitializer {
     private boolean beatOn,beatEnded;private float dummyHealth=-1;
     /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
     private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private float playerHealth=-1;
-    private boolean playerStaggered,dummyStaggeredLogged;
+    private boolean playerStaggered,dummyStaggeredLogged,playerDeadLogged;
+    private String arrowLogged="";
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
     /** The UI shot's log: screens opened, the reset question, the player list, deaths and respawns, chat lines. */
@@ -693,6 +715,8 @@ public final class SkillShots implements ClientModInitializer {
         boolean figure="STAND".equals(current);p.setInvisible(figure);
         // the stand of the entry: none for the figure, Star Platinum (in) for SUMMON, Kageno for the rest
         String stand=figure?"none":"SUMMON".equals(current)?"star_platinum":"kageno";
+        // "stand=none" (2.70.0): no stand (the stand arrow is only for one without)
+        if(opts.containsKey("stand"))stand=opts.get("stand");
         if(!stand.equals(ProgressManager.profile(p).stand()))ProgressManager.set(p,ProgressManager.profile(p).withStand(stand));
         ((StandHolder)p).botand$setStandOut(false);
         // "time=T" (2.52.0): the time of day for this entry on the flat world too (the stand's aura at night)
@@ -898,6 +922,12 @@ public final class SkillShots implements ClientModInitializer {
                             var m=slot<0?null:dev.sangwoo.celestialfall.meteor.MeteorManager.launch(w,slot,new net.minecraft.util.math.Vec3d(Double.parseDouble(v[0]),w.getTopY(),Double.parseDouble(v[1])),opts.containsKey("from")?opt("from",0):Double.NaN);
                             log.append("  fall ").append(m==null?"refused":String.format(Locale.ROOT,"#%d to (%.1f, %.1f, %.1f) from (%.0f, %.0f, %.0f) at tick %d",m.slot(),m.x(),m.y(),m.z(),m.fromX(),m.fromY(),m.fromZ(),age)).append('\n');});continue;}
                     if(what.equals("CLEARMETEOR")){if(age==at)server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getServer().getCommandSource(),"botand meteor clear");log.append("  meteors cleared (").append(n).append(") at ").append(age).append('\n');});continue;}
+                    if(what.equals("GIVE_ARROW")){if(age==at)server(p->{
+                            p.getInventory().setStack(p.getInventory().selectedSlot,new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW));
+                            p.currentScreenHandler.sendContentUpdates();log.append("  given ARROW (main hand) at ").append(age).append('\n');});continue;}
+                    if(what.equals("RIG_DEATH")||what.equals("RIG_STAR")){if(age==at)server(p->{
+                            dev.sangwoo.celestialfall.stand.StandArrow.rigged=what.equals("RIG_DEATH")?dev.sangwoo.celestialfall.stand.StandArrowRules.DIE:"star_platinum";
+                            log.append("  next arrow rigged to ").append(dev.sangwoo.celestialfall.stand.StandArrow.rigged).append(" at ").append(age).append('\n');});continue;}
                     if(what.startsWith("GIVE_")){if(age==at)server(p->{
                             var stack=switch(what.substring(5)){case "PICKAXE"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.PICKAXE);case "FRAGMENTS"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.FRAGMENT,3);case "STICK"->new net.minecraft.item.ItemStack(net.minecraft.item.Items.STICK);default->throw new IllegalArgumentException(what);};
                             p.getInventory().offerOrDrop(stack);p.currentScreenHandler.sendContentUpdates();log.append("  given ").append(what.substring(5)).append(" at ").append(age).append('\n');});continue;}
@@ -1021,9 +1051,9 @@ public final class SkillShots implements ClientModInitializer {
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
                         +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden,"
-                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike\n"+standLog);
+                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        stopLogged="";stillLogged=false;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;
+                        stopLogged="";stillLogged=false;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}

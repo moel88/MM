@@ -123,7 +123,7 @@ public final class StandClient {
         var c=action(mc.player.getUuid());if(c==null||c.skill!=P)return;
         cancelledPose=c.id;send(POSE_CANCEL);CASTS.remove(c.id);KagenoAudio.stop(c.id);
     }
-    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||dev.sangwoo.celestialfall.client.stand.StandBeatdown.holds(e)||dev.sangwoo.celestialfall.client.stand.StandTimeStop.holds(e)||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0)+(c.skill==RUSH?TRAP_LEAD:0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
+    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||dev.sangwoo.celestialfall.client.stand.StandArrowClient.holds(e)||dev.sangwoo.celestialfall.client.stand.StandBeatdown.holds(e)||dev.sangwoo.celestialfall.client.stand.StandTimeStop.holds(e)||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0)+(c.skill==RUSH?TRAP_LEAD:0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
     /**
      * Ticks by which a T+ target's own client lets go before the server's spin cut: this clock runs behind the
      * server's by the packet's way here, and a target still held when the cut's throw arrives would lose it.

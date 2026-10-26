@@ -14,6 +14,12 @@ public abstract class HeldItemRendererMixin {
 
     @Inject(method="renderItem(FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;Lnet/minecraft/client/network/ClientPlayerEntity;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$hands(float delta,MatrixStack matrices,VertexConsumerProvider.Immediate vertices,ClientPlayerEntity player,int light,CallbackInfo ci) {
+        if(dev.sangwoo.celestialfall.client.stand.StandArrowClient.frame(player,delta)!=null){
+            // the stand arrow driven into the chest (2.70.0): the forearms and the arrow from one's own eyes
+            dev.sangwoo.celestialfall.client.stand.StandArrowFeature.renderFirstPerson(player,delta,matrices,vertices,light);
+            vertices.draw();
+            ci.cancel();return;
+        }
         if(dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(player)){
             // the meteor pickaxe: in both hands, or as the game holds it while the hold cannot show (a stand user too)
             if(!dev.sangwoo.celestialfall.client.meteor.MiningPose.active(player,delta))return;

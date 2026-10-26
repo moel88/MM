@@ -11,6 +11,11 @@ import org.spongepowered.asm.mixin.injection.*;
 /** Only substitutes the rendered stack, never the inventory or equipment packet. */
 @Mixin(HeldItemFeatureRenderer.class)
 public abstract class StandHeldItemFeatureMixin {
+    /** One driving the stand arrow into themselves (2.70.0) holds nothing else: the arrow is drawn on its own (StandArrowFeature). */
+    @Inject(method="renderItem",at=@At("HEAD"),cancellable=true)
+    private void botand$stabbing(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
+        if(entity instanceof PlayerEntity player&&dev.sangwoo.celestialfall.client.stand.StandArrowClient.frame(player,net.minecraft.client.MinecraftClient.getInstance().getTickDelta())!=null)ci.cancel();
+    }
     @Inject(method="renderItem",at=@At(value="INVOKE",target="Lnet/minecraft/client/render/item/HeldItemRenderer;renderItem(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/item/ItemStack;Lnet/minecraft/client/render/model/json/ModelTransformationMode;ZLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"))
     private void botand$thrustGrip(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
         if(entity instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&arm==holder.getMainArm()&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder)){
