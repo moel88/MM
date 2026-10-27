@@ -1,0 +1,76 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/pole_sleeve",
+  "t0": "celestialfall:block/town/pole_sleeve"
+ },
+ "elements": [
+  {
+   "from": [
+    4.5,
+    0,
+    4.5
+   ],
+   "to": [
+    11.5,
+    16,
+    11.5
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t0",
+     "uv": [
+      4.5,
+      0,
+      11.5,
+      16
+     ]
+    },
+    "south": {
+     "texture": "#t0",
+     "uv": [
+      4.5,
+      0,
+      11.5,
+      16
+     ]
+    },
+    "west": {
+     "texture": "#t0",
+     "uv": [
+      4.5,
+      0,
+      11.5,
+      16
+     ]
+    },
+    "east": {
+     "texture": "#t0",
+     "uv": [
+      4.5,
+      0,
+      11.5,
+      16
+     ]
+    },
+    "up": {
+     "texture": "#t0",
+     "uv": [
+      4.5,
+      4.5,
+      11.5,
+      11.5
+     ]
+    },
+    "down": {
+     "texture": "#t0",
+     "uv": [
+      4.5,
+      4.5,
+      11.5,
+      11.5
+     ]
+    }
+   }
+  }
+ ]
+}

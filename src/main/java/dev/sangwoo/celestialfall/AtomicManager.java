@@ -1,0 +1,233 @@
+package dev.sangwoo.celestialfall;
+
+import java.util.*;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.mob.Monster;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageType;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.util.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
+import net.minecraft.util.math.*;
+
+/** Stationary world-space attack. Terrain geometry is client-only; server blocks never change. */
+public final class AtomicManager {
+    private record Cast(UUID id,UUID caster,ServerWorld world,Vec3d origin,float yaw,long start,
+                        double visualRadius,double damage,Set<UUID> viewers,Set<UUID> held) {}
+    private static final RegistryKey<DamageType> ATOMIC_DAMAGE=RegistryKey.of(RegistryKeys.DAMAGE_TYPE,new Identifier("celestialfall","atomic"));
+    private static final List<Cast> ACTIVE=new ArrayList<>();
+    private static final Map<UUID,Long> COOLDOWNS=new HashMap<>();
+    private AtomicManager() {}
+    private static long age(Cast c) { return c.world.getTime()-c.start; }
+    /** The caster is rooted (and cannot act) from the first frame until the colour grade has faded. */
+    public static boolean isCasting(UUID player) { return ACTIVE.stream().anyMatch(c -> c.caster.equals(player)&&AtomicTimeline.locked(age(c))); }
+    public static boolean immobilized(net.minecraft.entity.player.PlayerEntity p){return ACTIVE.stream().anyMatch(c->c.caster.equals(p.getUuid())&&c.world==p.getWorld()&&AtomicTimeline.locked(age(c)));}
+    /** The caster takes no damage while casting. */
+    public static boolean invulnerable(net.minecraft.entity.player.PlayerEntity p){return immobilized(p);}
+    public static boolean hasActive() { return !ACTIVE.isEmpty(); }
+    /**
+     * The Atomics going on in {@code world}, for a boss to keep out of (2.69.0): each one's spot, x, y, z, the radius its
+     * column has opened to by now and the radius it opens to.
+     */
+    public static List<double[]> columns(ServerWorld world){
+        var out=new ArrayList<double[]>();
+        for(var c:ACTIVE)if(c.world==world)out.add(new double[]{c.origin.x,c.origin.y,c.origin.z,AtomicTimeline.damageRadius(world.getTime()-c.start,c.visualRadius),c.visualRadius});
+        return out;
+    }
+    /** Whether a cast of this caster is playing (any part of it, the crater's tail included). */
+    public static boolean active(UUID caster) { return ACTIVE.stream().anyMatch(c->c.caster.equals(caster)); }
+    /**
+     * A cast by something that is not a player (the Atomic dummy, user request 2.38.2: to watch it from far away). It
+     * keeps only the rules every cast has: the Botand map, one Atomic, Heaven or Spell at a time. Its owner is nobody,
+     * so it never hurts or holds a player; monsters in the column take its damage as from any cast.
+     */
+    public static boolean castBy(LivingEntity caster) {
+        if(caster instanceof ServerPlayerEntity||!(caster.getWorld() instanceof ServerWorld world)||!caster.isAlive())return false;
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(world)||hasActive()||SpellManager.hasActive()||HeavenManager.hasActive())return false;
+        begin(caster,world,world.getTime());return true;
+    }
+    private static Cast begin(LivingEntity caster,ServerWorld world,long now) {
+        var c=CelestialFall.CONFIG;
+        Cast cast=new Cast(UUID.randomUUID(),caster.getUuid(),world,caster.getPos(),caster.getYaw(),now,
+            c.atomicVisualRadius,c.atomicDamagePerSecond,new HashSet<>(),new HashSet<>());
+        ACTIVE.add(cast);slowNearby(caster,c.atomicVisualRadius);sync(cast);
+        return cast;
+    }
+    public static boolean cast(ServerPlayerEntity player) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.require(player))return false;
+        if(!dev.sangwoo.celestialfall.progression.ProgressManager.canUseKageno(player)){
+            player.sendMessage(Text.literal("카게노 스탠드가 없습니다. 스탠드를 다시 획득해야 아토믹을 사용할 수 있어요."),true);return false;
+        }
+        if(dev.sangwoo.celestialfall.combat.CombatManager.busy(player))return false;
+        if(!player.isAlive()||player.isSpectator()||player.isSleeping())return false;
+        long now=player.getWorld().getTime(),next=COOLDOWNS.getOrDefault(player.getUuid(),0L);
+        boolean free=NoCooldownState.enabled(player);
+        if(!free && next>now) { player.sendMessage(Text.translatable("message.celestialfall.cooldown",(next-now+19)/20),true);return false; }
+        if(hasActive() || SpellManager.hasActive() || HeavenManager.hasActive()) { player.sendMessage(Text.translatable("message.celestialfall.busy"),true);return false; }
+        if(!player.isOnGround() || player.hasVehicle() || player.isSubmergedInWater()) {
+            player.sendMessage(Text.translatable("message.celestialfall.atomic_ground"),true);return false;
+        }
+        if(!player.getServerWorld().isSkyVisible(player.getBlockPos().up(2))) {
+            player.sendMessage(Text.translatable("message.celestialfall.outdoors"),true);return false;
+        }
+        // The cooldown runs once the Atomic is over (user request, 2.44.0, see cooldown); until then the ledger holds the
+        // cast's whole length and the cooldown after it (kept with the world too, 2.73.0: LongCooldowns).
+        if(!free){long ready=now+AtomicTimeline.END+CelestialFall.CONFIG.atomicCooldownSeconds*20L;COOLDOWNS.put(player.getUuid(),ready);LongCooldowns.note(player.getServer(),player.getUuid(),LongCooldowns.Skill.ATOMIC,ready);}
+        begin(player,player.getServerWorld(),now);
+        player.sendMessage(Text.translatable("message.celestialfall.atomic_cast"),true);return true;
+    }
+    /** On cast, enemies around the caster are slowed by 99 % for 4 seconds (players only by a player caster, with PvP). */
+    private static void slowNearby(LivingEntity caster,double radius) {
+        var world=(ServerWorld)caster.getWorld();var box=caster.getBoundingBox().expand(radius,radius*.5,radius);
+        for(var e:world.getEntitiesByClass(LivingEntity.class,box,e->e.isAlive()&&e!=caster&&!e.isSpectator())){
+            if(e.squaredDistanceTo(caster)>radius*radius)continue;
+            if(!(e instanceof Monster)&&!(e instanceof net.minecraft.entity.player.PlayerEntity target&&caster instanceof net.minecraft.entity.player.PlayerEntity owner&&owner.shouldDamagePlayer(target)))continue;
+            e.addStatusEffect(new net.minecraft.entity.effect.StatusEffectInstance(net.minecraft.entity.effect.StatusEffects.SLOWNESS,80,6,false,false,true),caster);
+        }
+    }
+    private static void sync(Cast s) {
+        Set<UUID> present=new HashSet<>();
+        for(ServerPlayerEntity p:s.world.getPlayers()) {
+            if(p.squaredDistanceTo(s.origin)>1600*1600)continue;
+            present.add(p.getUuid());
+            if(s.viewers.add(p.getUuid()) && ServerPlayNetworking.canSend(p,CelestialFall.ATOMIC_PACKET)) {
+                var b=PacketByteBufs.create();b.writeUuid(s.id);b.writeUuid(s.caster);b.writeIdentifier(s.world.getRegistryKey().getValue());
+                b.writeDouble(s.origin.x);b.writeDouble(s.origin.y);b.writeDouble(s.origin.z);
+                b.writeFloat(s.yaw);b.writeLong(s.start);b.writeDouble(s.visualRadius);
+                ServerPlayNetworking.send(p,CelestialFall.ATOMIC_PACKET,b);
+            }
+        }
+        s.viewers.retainAll(present);
+    }
+    private static void cancel(Cast s) {
+        release(s);
+        // The Atomic dummy goes with its cast.
+        if(s.world.getEntity(s.caster) instanceof LivingEntity e&&e.getCommandTags().contains(dev.sangwoo.celestialfall.training.TrainingDummies.ATOMIC_TAG))e.discard();
+        for(ServerPlayerEntity p:s.world.getPlayers())if(ServerPlayNetworking.canSend(p,CelestialFall.ATOMIC_STOP_PACKET)) {
+            var b=PacketByteBufs.create();b.writeUuid(s.id);ServerPlayNetworking.send(p,CelestialFall.ATOMIC_STOP_PACKET,b);
+        }
+    }
+    public static void tick(MinecraftServer server) {
+        var it=ACTIVE.iterator();
+        while(it.hasNext()) {
+            Cast s=it.next();long a=s.world.getTime()-s.start;
+            if(a>=AtomicTimeline.END || a<0 || !dev.sangwoo.celestialfall.map.MapGate.enabled(s.world)) { cancel(s);cooldown(s);it.remove();continue; }
+            LivingEntity caster=server.getPlayerManager().getPlayer(s.caster);
+            if(caster==null&&s.world.getEntity(s.caster) instanceof LivingEntity e&&!(e instanceof ServerPlayerEntity))caster=e;
+            // Once the caster is released the crater plays out on its own.
+            if(AtomicTimeline.locked(a)&&(caster==null||!caster.isAlive()||caster.isSpectator()||caster.getWorld()!=s.world||caster instanceof ServerPlayerEntity p&&!dev.sangwoo.celestialfall.progression.ProgressManager.canUseKageno(p))){
+                cancel(s);cooldown(s);it.remove();continue;
+            }
+            if(AtomicTimeline.locked(a)){
+                dev.sangwoo.celestialfall.stand.KagenoManager.freeze(caster);
+                caster.setPosition(s.origin);caster.prevX=s.origin.x;caster.prevY=s.origin.y;caster.prevZ=s.origin.z;
+            }
+            if(a%10==0)sync(s);
+            // No terrain mutation, explosion block collection, or restoration ledger for G.
+            if(AtomicTimeline.damageDue(a))damage(s);
+            hold(s,a);
+        }
+        if(server.getTicks()%1200==0)COOLDOWNS.entrySet().removeIf(e->e.getValue()<=server.getOverworld().getTime());
+    }
+    /**
+     * The caster's cooldown begins as the cast ends, however it ends (user request, 2.44.0: a cooldown runs once its skill
+     * is over, not from when it is used), with the sword's cooldown that shows it; not when it was waived (no-cooldown
+     * mode, the Atomic dummy) or reset meanwhile.
+     */
+    private static void cooldown(Cast s) {
+        long now=s.world.getTime();Long held=COOLDOWNS.get(s.caster);if(held==null||held<=now)return;
+        int ticks=CelestialFall.CONFIG.atomicCooldownSeconds*20;COOLDOWNS.put(s.caster,now+ticks);
+        LongCooldowns.note(s.world.getServer(),s.caster,LongCooldowns.Skill.ATOMIC,now+ticks);
+        var player=s.world.getServer().getPlayerManager().getPlayer(s.caster);
+        if(player!=null)player.getItemCooldownManager().set(CelestialFall.ATOMIC_SWORD,ticks);
+    }
+    private static void damage(Cast s) {
+        if(s.damage<=0)return;
+        var owner=s.world.getPlayerByUuid(s.caster);
+        var source=new DamageSource(s.world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(ATOMIC_DAMAGE),owner);
+        // The column opens with the pillar: only what its edge has reached is hit, so running ahead of it escapes.
+        double r=AtomicTimeline.damageRadius(s.world.getTime()-s.start,s.visualRadius);if(r<=0)return;
+        // Once a second from the impact frames to the end of the eruption beam; fixed damage.
+        for(var e:caught(s,owner,r))
+            e.damage(source,owner instanceof ServerPlayerEntity caster?dev.sangwoo.celestialfall.stand.KagenoManager.outgoingDamage(caster,(float)s.damage):(float)s.damage);
+    }
+    /** What the column catches at radius r: monsters and other players the caster may hurt (PvP), never the caster or spectators. */
+    private static List<LivingEntity> caught(Cast s,net.minecraft.entity.player.PlayerEntity owner,double r) {
+        double height=AtomicTimeline.damageHeight(s.visualRadius);
+        Box bounds=new Box(s.origin.x-r,s.origin.y-2,s.origin.z-r,s.origin.x+r,s.origin.y+height,s.origin.z+r);
+        var caught=new ArrayList<LivingEntity>();
+        // Query loaded entities only. The bright cylinder and damage cylinder share their dimensions.
+        for(var e:s.world.getEntitiesByClass(LivingEntity.class,bounds,e->e.isAlive()&&!e.getUuid().equals(s.caster) && (e instanceof Monster||e instanceof net.minecraft.entity.player.PlayerEntity&&e!=owner))) {
+            if(e instanceof net.minecraft.entity.player.PlayerEntity target&&(owner==null||!owner.shouldDamagePlayer(target)))continue;
+            Vec3d d=e.getPos().subtract(s.origin);
+            if(e.isSpectator() || !AtomicTimeline.insideColumn(d.x,d.y,d.z,r,height))continue;
+            caught.add(e);
+        }
+        return caught;
+    }
+    /**
+     * Everything the opened column has caught moves 75 % slower while it is in it, players and mobs alike
+     * ({@link AtomicTimeline#holdModifier}; same targets as the damage; players who cannot be hurt, in creative, are left alone). The tick it is out of the column, or the beam ends, it moves at
+     * its own speed again. The modifier is transient, so it is never saved with the entity.
+     */
+    private static void hold(Cast s,long age) {
+        double r=AtomicTimeline.holdRadius(age,s.visualRadius);
+        Set<UUID> inside=new HashSet<>();
+        if(r>0)for(var e:caught(s,s.world.getPlayerByUuid(s.caster),r)) {
+            if(e instanceof net.minecraft.entity.player.PlayerEntity p&&p.getAbilities().invulnerable)continue;
+            inside.add(e.getUuid());slow(e,true);
+        }
+        for(var id:s.held)if(!inside.contains(id)&&!heldElsewhere(s,id))slow(find(s,id),false);
+        s.held.clear();s.held.addAll(inside);
+    }
+    /** Lets go of everything the cast holds (it ended, was cancelled or the server is clearing it). */
+    private static void release(Cast s) {
+        for(var id:s.held)if(!heldElsewhere(s,id))slow(find(s,id),false);
+        s.held.clear();
+    }
+    private static boolean heldElsewhere(Cast s,UUID id){return ACTIVE.stream().anyMatch(c->c!=s&&c.held.contains(id));}
+    /** A held entity wherever it is now: players are looked up across dimensions (they keep their modifiers when they travel). */
+    private static LivingEntity find(Cast s,UUID id) {
+        var player=s.world.getServer().getPlayerManager().getPlayer(id);
+        return player!=null?player:s.world.getEntity(id) instanceof LivingEntity e?e:null;
+    }
+    private static void slow(LivingEntity e,boolean on) {
+        var speed=e==null?null:e.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(speed==null)return;
+        if(!on)speed.removeModifier(AtomicTimeline.HIT_SLOW_ID);
+        else if(speed.getModifier(AtomicTimeline.HIT_SLOW_ID)==null)speed.addTemporaryModifier(new EntityAttributeModifier(AtomicTimeline.HIT_SLOW_ID,
+            "Botand Atomic hit",AtomicTimeline.holdModifier(e instanceof net.minecraft.entity.player.PlayerEntity),EntityAttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+
+    /** Remove both cooldown ledgers without touching active casts or their viewers (and the one kept with the world, LongCooldowns). */
+    public static void resetCooldown(ServerPlayerEntity player) {
+        COOLDOWNS.remove(player.getUuid());
+        if(player.getItemCooldownManager().isCoolingDown(CelestialFall.ATOMIC_SWORD))player.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
+        LongCooldowns.note(player.getServer(),player.getUuid(),LongCooldowns.Skill.ATOMIC,0);
+    }
+    /**
+     * The player's Atomic is ready at {@code ready} (2.73.0, LongCooldowns: begun again in full as they come back, come
+     * back to life (2.74.0) or are given a stand, or what is left of it on a new body back from the End), with the sword's
+     * cooldown showing what is left of it.
+     */
+    public static void restore(ServerPlayerEntity player,long ready,long now) {
+        var cooldowns=player.getItemCooldownManager();
+        if(ready>now){COOLDOWNS.put(player.getUuid(),ready);cooldowns.set(CelestialFall.ATOMIC_SWORD,(int)Math.min(Integer.MAX_VALUE,ready-now));}
+        else{COOLDOWNS.remove(player.getUuid());if(cooldowns.isCoolingDown(CelestialFall.ATOMIC_SWORD))cooldowns.remove(CelestialFall.ATOMIC_SWORD);}
+    }
+    /** The tick the player's Atomic is ready again (0 for none kept). */
+    public static long ready(UUID player) { return COOLDOWNS.getOrDefault(player,0L); }
+    public static void clear() { ACTIVE.clear();COOLDOWNS.clear(); }
+    public static void clear(MinecraftServer server) {
+        for(Cast s:ACTIVE)cancel(s);clear();
+        for(var p:server.getPlayerManager().getPlayerList())p.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
+        LongCooldowns.forget(server,LongCooldowns.Skill.ATOMIC);
+    }
+}

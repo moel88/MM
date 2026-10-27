@@ -1,0 +1,1 @@
+gradle.projectsEvaluated { rootProject.tasks.named("runClient") { jvmArgs "-Dfabric.addMods=/workspace/scratch/8ca227cf5f68/celestial-fall/build/client-smoke/botand-client-verification.jar" } }

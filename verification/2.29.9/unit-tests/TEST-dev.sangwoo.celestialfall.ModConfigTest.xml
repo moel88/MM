@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.ModConfigTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:08" hostname="b667a55f97cd" time="0.011">
+  <properties/>
+  <testcase name="heavenUpgradeRaisesOnlyTheOldDefaultAndKeepsExplicitOverrides()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.005"/>
+  <testcase name="arenaMigrationBacksOffOldGiantRadiusWithoutChangingUserRenderingChoices()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.001"/>
+  <testcase name="temporaryTerrainUpgradeIsOptOutAndKeepsRenderingPreferences()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.001"/>
+  <testcase name="heavenDefaultsExtendExistingConfigWithoutChangingAtomic()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.0"/>
+  <testcase name="oldAtomicBurstMigratesTo50PerSecondWithVisualRadiusShared()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.001"/>
+  <testcase name="destructiveOldConfigMigratesWithoutLosingUserPreferences()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.001"/>
+  <testcase name="intensitySettingsRejectNonfiniteValuesAndSupportOff()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.0"/>
+  <testcase name="nonfiniteNumbersAndResourceLimitsAreSanitized()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.001"/>
+  <testcase name="zeroDamageAndZeroVolumeRemainValidOptions()" classname="dev.sangwoo.celestialfall.ModConfigTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

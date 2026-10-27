@@ -1,0 +1,17 @@
+{
+  "title": "Satellites",
+  "artist_as_supplied": "Tsukasa",
+  "source": "User-uploaded MP3",
+  "source_filename": "[Cytus IIDEEMO II] Satellites - Tsukasa (HQ) - Music Game Garden (320k).mp3",
+  "source_sha256": "e0730bd697bf883a4a4cab14065c09dd9cddd7efe721cbd6dc8a5a1d45ab0216",
+  "asset_sha256": "404282f22827a2316e9afdbdd1f7514355559eb8273c17ae721f476297fabe44",
+  "source_trim_start_seconds": 1.42,
+  "source_trim_end_seconds": 130.82,
+  "duration_seconds": 129.4,
+  "gain_db": -4,
+  "speed": 1,
+  "pitch_unchanged": true,
+  "streamed": true,
+  "loop_full_track": true,
+  "ownership": "User supplied music; no authorship or ownership of this recording is claimed."
+}

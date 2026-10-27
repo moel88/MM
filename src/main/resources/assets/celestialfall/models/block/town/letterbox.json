@@ -1,0 +1,77 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/letterbox_side",
+  "t0": "celestialfall:block/town/letterbox_front",
+  "t1": "celestialfall:block/town/letterbox_side"
+ },
+ "elements": [
+  {
+   "from": [
+    4,
+    5,
+    12
+   ],
+   "to": [
+    12,
+    11,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t0",
+     "uv": [
+      4,
+      5,
+      12,
+      11
+     ]
+    },
+    "south": {
+     "texture": "#t1",
+     "uv": [
+      4,
+      5,
+      12,
+      11
+     ]
+    },
+    "west": {
+     "texture": "#t1",
+     "uv": [
+      12,
+      5,
+      16,
+      11
+     ]
+    },
+    "east": {
+     "texture": "#t1",
+     "uv": [
+      0,
+      5,
+      4,
+      11
+     ]
+    },
+    "up": {
+     "texture": "#t1",
+     "uv": [
+      4,
+      12,
+      12,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#t1",
+     "uv": [
+      4,
+      0,
+      12,
+      4
+     ]
+    }
+   }
+  }
+ ]
+}

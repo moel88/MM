@@ -1,0 +1,7 @@
+{
+ "parent": "minecraft:block/template_glass_pane_noside_alt",
+ "textures": {
+  "pane": "celestialfall:block/town/slat_fence_dark",
+  "edge": "celestialfall:block/town/slat_fence_dark_edge"
+ }
+}

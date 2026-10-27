@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "id": "botand_camera_demo",
+    "name": "Botand camera integration preview",
+    "author": "Botand",
+    "version": 3,
+    "block_keyboard": true,
+    "block_mouse": true,
+    "hide_hud": true,
+    "hide_arm": true,
+    "render_player_model": true,
+    "skippable": true,
+    "interruptible": true,
+    "hold_at_end": false,
+    "pause_when_game_paused": true
+  },
+  "timeline": {
+    "total_duration": 6,
+    "tracks": [
+      {
+        "type": "camera",
+        "clips": [
+          {
+            "start_time": 0,
+            "duration": 6,
+            "interpolation": "smooth",
+            "keyframes": [
+              {
+                "time": 0,
+                "position": {
+                  "dx": 5,
+                  "dy": 2,
+                  "dz": 0
+                },
+                "position_mode": "relative",
+                "look_at": "entity",
+                "look_at_selector": "@s",
+                "roll": 0,
+                "fov": 55
+              },
+              {
+                "time": 2,
+                "position": {
+                  "dx": 4,
+                  "dy": 3,
+                  "dz": 4
+                },
+                "position_mode": "relative",
+                "look_at": "entity",
+                "look_at_selector": "@s",
+                "roll": -3,
+                "fov": 60
+              },
+              {
+                "time": 4,
+                "position": {
+                  "dx": 0,
+                  "dy": 5,
+                  "dz": 7
+                },
+                "position_mode": "relative",
+                "look_at": "entity",
+                "look_at_selector": "@s",
+                "roll": 3,
+                "fov": 65
+              },
+              {
+                "time": 6,
+                "position": {
+                  "dx": -5,
+                  "dy": 2,
+                  "dz": 0
+                },
+                "position_mode": "relative",
+                "look_at": "entity",
+                "look_at_selector": "@s",
+                "roll": 0,
+                "fov": 55
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

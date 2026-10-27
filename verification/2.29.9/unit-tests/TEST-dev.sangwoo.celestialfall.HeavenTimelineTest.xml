@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.HeavenTimelineTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:07" hostname="b667a55f97cd" time="0.011">
+  <properties/>
+  <testcase name="fiveShotsHaveFiniteCoordinatesAndPreserveImpactFraming()" classname="dev.sangwoo.celestialfall.HeavenTimelineTest" time="0.002"/>
+  <testcase name="broadTaperedBladeAndPortalHaveBoundedScale()" classname="dev.sangwoo.celestialfall.HeavenTimelineTest" time="0.002"/>
+  <testcase name="sealPoseHasBentElbowAndReturnsWithoutLeaking()" classname="dev.sangwoo.celestialfall.HeavenTimelineTest" time="0.001"/>
+  <testcase name="gifOrderHasFourSecondInsertionTwoSecondHoldAndGentleReturn()" classname="dev.sangwoo.celestialfall.HeavenTimelineTest" time="0.0"/>
+  <testcase name="noEarlyImpactAndEffectsFinishCleanly()" classname="dev.sangwoo.celestialfall.HeavenTimelineTest" time="0.002"/>
+  <testcase name="swordContinuouslySlowsIntoTheGroundAndThenSettles()" classname="dev.sangwoo.celestialfall.HeavenTimelineTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

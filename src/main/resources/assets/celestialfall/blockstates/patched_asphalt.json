@@ -1,0 +1,21 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/patched_asphalt_0"
+   },
+   {
+    "model": "celestialfall:block/town/patched_asphalt_0",
+    "y": 90
+   },
+   {
+    "model": "celestialfall:block/town/patched_asphalt_0",
+    "y": 180
+   },
+   {
+    "model": "celestialfall:block/town/patched_asphalt_0",
+    "y": 270
+   }
+  ]
+ }
+}

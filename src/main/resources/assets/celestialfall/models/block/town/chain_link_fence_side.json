@@ -1,0 +1,7 @@
+{
+ "parent": "minecraft:block/template_glass_pane_side",
+ "textures": {
+  "pane": "celestialfall:block/town/chain_link_fence",
+  "edge": "celestialfall:block/town/chain_link_fence_edge"
+ }
+}

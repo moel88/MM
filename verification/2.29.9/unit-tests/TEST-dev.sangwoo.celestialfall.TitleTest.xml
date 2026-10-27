@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.TitleTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:08" hostname="b667a55f97cd" time="0.013">
+  <properties/>
+  <testcase name="allDrawCommandsAreFiniteAndMissingMultiplayerHasHonestCopy()" classname="dev.sangwoo.celestialfall.TitleTest" time="0.004"/>
+  <testcase name="titlePreferencesMergeUnknownFieldsAndNeverTouchWorldGraphics(Path)" classname="dev.sangwoo.celestialfall.TitleTest" time="0.003"/>
+  <testcase name="transitionsAreSingleShotBoundedAndFrameRateIndependent()" classname="dev.sangwoo.celestialfall.TitleTest" time="0.002"/>
+  <testcase name="allHitTargetsFitAndDoNotOverlapAcrossMobileDesktopAndPortrait()" classname="dev.sangwoo.celestialfall.TitleTest" time="0.001"/>
+  <testcase name="menuLeavesTheWorldVisibleAndUsesOnlyATransparentLogo()" classname="dev.sangwoo.celestialfall.TitleTest" time="0.001"/>
+  <testcase name="normalAndReducedMotionNeverChangeHitAreas()" classname="dev.sangwoo.celestialfall.TitleTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.LootRulesTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:07" hostname="b667a55f97cd" time="0.037">
+  <properties/>
+  <testcase name="OnlyElevenOriginalFieldMarkersAreRegistered()" classname="dev.sangwoo.celestialfall.LootRulesTest" time="0.027"/>
+  <testcase name="ClaimIsExclusiveAndCycleRejectsOldRequests()" classname="dev.sangwoo.celestialfall.LootRulesTest" time="0.001"/>
+  <testcase name="cumulativeRespawnIsExactlyThirtySixtyOneHundred()" classname="dev.sangwoo.celestialfall.LootRulesTest" time="0.001"/>
+  <testcase name="IndependentItemRollsHaveExactMarginalRates()" classname="dev.sangwoo.celestialfall.LootRulesTest" time="0.002"/>
+  <testcase name="SaveRetainsCountdownOpeningDropsAndCycle()" classname="dev.sangwoo.celestialfall.LootRulesTest" time="0.004"/>
+  <testcase name="TreasureHasOneGuaranteedFruitAndFiftyPercentMoreBaseRewards()" classname="dev.sangwoo.celestialfall.LootRulesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

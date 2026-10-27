@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_star": {"trigger": "minecraft:inventory_changed", "conditions": {"items": [{"items": ["minecraft:nether_star"]}]}},
+    "has_the_recipe": {"trigger": "minecraft:recipe_unlocked", "conditions": {"recipe": "celestialfall:astral_sigil"}}
+  },
+  "requirements": [["has_star", "has_the_recipe"]],
+  "rewards": {"recipes": ["celestialfall:astral_sigil"]}
+}

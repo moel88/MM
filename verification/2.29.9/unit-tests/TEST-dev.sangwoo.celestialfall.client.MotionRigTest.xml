@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.client.MotionRigTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:09" hostname="b667a55f97cd" time="0.298">
+  <properties/>
+  <testcase name="firstPersonFistsStayInFrontOfCameraAndVisibleAtContact()" classname="dev.sangwoo.celestialfall.client.MotionRigTest" time="0.025"/>
+  <testcase name="exportActualSkinGeometryForMotionReview()" classname="dev.sangwoo.celestialfall.client.MotionRigTest" time="0.183"/>
+  <testcase name="waistShouldersAndSkinLayersStayAttachedThroughoutEveryPunch()" classname="dev.sangwoo.celestialfall.client.MotionRigTest" time="0.062"/>
+  <testcase name="shoulderRotationPreservesTheAuthoredContactAngles()" classname="dev.sangwoo.celestialfall.client.MotionRigTest" time="0.001"/>
+  <testcase name="supportFeetArePlantedAndSwingFeetLiftInEightDirections()" classname="dev.sangwoo.celestialfall.client.MotionRigTest" time="0.027"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

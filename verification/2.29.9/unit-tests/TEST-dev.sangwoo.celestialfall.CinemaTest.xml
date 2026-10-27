@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.sangwoo.celestialfall.CinemaTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-16T05:38:05" hostname="b667a55f97cd" time="0.111">
+  <properties/>
+  <testcase name="turnedHeadFacesScreenLeftThroughoutIdle()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.005"/>
+  <testcase name="introSettlesIntoIdleAndLoopSeamIsContinuous()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.005"/>
+  <testcase name="introFootstepsPlayOnceAndIdleCuesRepeat()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.006"/>
+  <testcase name="allShippedMeshesHaveValidBonesAndCameraRemainsFinite()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.072"/>
+  <testcase name="musicStartsAtTheTurnAndDoesNotResetWithTheIdleLoop()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.004"/>
+  <testcase name="bomiUsesOnlyNativeCuboidsAndTheExactSuppliedSkin()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.005"/>
+  <testcase name="motionDisabledShowsTheTurnedPoseWithoutReplayingTheWalk()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.003"/>
+  <testcase name="aLongStallCannotSkipTheIntroOrBurstFootsteps()" classname="dev.sangwoo.celestialfall.CinemaTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

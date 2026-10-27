@@ -1,0 +1,15 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/corrugated_iron_0"
+   },
+   {
+    "model": "celestialfall:block/town/corrugated_iron_1"
+   },
+   {
+    "model": "celestialfall:block/town/corrugated_iron_2"
+   }
+  ]
+ }
+}

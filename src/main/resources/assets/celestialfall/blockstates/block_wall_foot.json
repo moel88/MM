@@ -1,0 +1,15 @@
+{
+ "variants": {
+  "": [
+   {
+    "model": "celestialfall:block/town/block_wall_foot_0"
+   },
+   {
+    "model": "celestialfall:block/town/block_wall_foot_1"
+   },
+   {
+    "model": "celestialfall:block/town/block_wall_foot_2"
+   }
+  ]
+ }
+}

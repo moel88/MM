@@ -1,0 +1,7 @@
+{
+ "parent": "minecraft:block/template_glass_pane_post",
+ "textures": {
+  "pane": "celestialfall:block/town/metal_gate",
+  "edge": "celestialfall:block/town/metal_gate_edge"
+ }
+}

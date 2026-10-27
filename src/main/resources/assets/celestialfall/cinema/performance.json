@@ -1,0 +1,106 @@
+{
+  "fps": 30,
+  "intro_seconds": 7.0,
+  "loop_seconds": 12.0,
+  "frames": 571,
+  "stride_floats": 93,
+  "events": [
+    {
+      "time": 0.12,
+      "sound": "cinema_step_1",
+      "volume": 0.48
+    },
+    {
+      "time": 0.67,
+      "sound": "cinema_step_2",
+      "volume": 0.46
+    },
+    {
+      "time": 1.22,
+      "sound": "cinema_step_3",
+      "volume": 0.5
+    },
+    {
+      "time": 1.77,
+      "sound": "cinema_step_4",
+      "volume": 0.47
+    },
+    {
+      "time": 2.32,
+      "sound": "cinema_step_5",
+      "volume": 0.49
+    },
+    {
+      "time": 2.87,
+      "sound": "cinema_step_6",
+      "volume": 0.46
+    },
+    {
+      "time": 3.42,
+      "sound": "cinema_step_7",
+      "volume": 0.42
+    },
+    {
+      "time": 3.97,
+      "sound": "cinema_step_8",
+      "volume": 0.34
+    },
+    {
+      "time": 4.1,
+      "sound": "cinema_cloth",
+      "volume": 0.32
+    },
+    {
+      "time": 5.2,
+      "sound": "cinema_chime",
+      "volume": 0.15
+    }
+  ],
+  "loop_events": [
+    {
+      "time": 3.7,
+      "sound": "cinema_sand",
+      "volume": 0.26
+    },
+    {
+      "time": 8.3,
+      "sound": "cinema_chime",
+      "volume": 0.15
+    }
+  ],
+  "music": {
+    "sound": "cinema_title_satellites",
+    "start_seconds": 3.8,
+    "gain": 0.68,
+    "loop": true,
+    "category": "music"
+  },
+  "final_facing": "screen_left",
+  "ambience_gain": 0.14,
+  "carry_pose": {
+    "right_arm": [
+      -62.9490861143278,
+      0,
+      37.449994013311816
+    ],
+    "left_arm": [
+      -46.985466077067024,
+      0,
+      -24.476166674925683
+    ]
+  },
+  "hand_contacts": {
+    "right": [
+      -0.15419263484838786,
+      1.0304016708535892,
+      0.5218375486612337
+    ],
+    "left": [
+      0.15402415506165423,
+      0.8838314960163478,
+      0.42842617916478587
+    ]
+  },
+  "model": "native Minecraft slim; six rigid body parts",
+  "clock": "bounded monotonic visible-frame time; no reset on resize; no audio catch-up burst"
+}

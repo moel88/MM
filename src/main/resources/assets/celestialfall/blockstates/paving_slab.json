@@ -1,0 +1,28 @@
+{
+ "variants": {
+  "type=bottom": [
+   {
+    "model": "celestialfall:block/town/paving_slab_0"
+   },
+   {
+    "model": "celestialfall:block/town/paving_slab_1"
+   }
+  ],
+  "type=top": [
+   {
+    "model": "celestialfall:block/town/paving_slab_0_top"
+   },
+   {
+    "model": "celestialfall:block/town/paving_slab_1_top"
+   }
+  ],
+  "type=double": [
+   {
+    "model": "celestialfall:block/town/paving_0"
+   },
+   {
+    "model": "celestialfall:block/town/paving_1"
+   }
+  ]
+ }
+}

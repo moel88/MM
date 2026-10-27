@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:block/slab",
+ "textures": {
+  "top": "celestialfall:block/town/paving_0",
+  "side": "celestialfall:block/town/paving_0",
+  "bottom": "celestialfall:block/town/paving_0"
+ }
+}

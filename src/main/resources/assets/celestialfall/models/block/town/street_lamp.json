@@ -1,0 +1,146 @@
+{
+ "textures": {
+  "particle": "celestialfall:block/town/lamp_housing",
+  "t0": "celestialfall:block/town/steel",
+  "t1": "celestialfall:block/town/lamp_housing",
+  "t2": "celestialfall:block/town/lamp_led"
+ },
+ "elements": [
+  {
+   "from": [
+    7,
+    10,
+    10
+   ],
+   "to": [
+    9,
+    12,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      4,
+      9,
+      6
+     ]
+    },
+    "south": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      4,
+      9,
+      6
+     ]
+    },
+    "west": {
+     "texture": "#t0",
+     "uv": [
+      10,
+      4,
+      16,
+      6
+     ]
+    },
+    "east": {
+     "texture": "#t0",
+     "uv": [
+      0,
+      4,
+      6,
+      6
+     ]
+    },
+    "up": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      10,
+      9,
+      16
+     ]
+    },
+    "down": {
+     "texture": "#t0",
+     "uv": [
+      7,
+      0,
+      9,
+      6
+     ]
+    }
+   }
+  },
+  {
+   "from": [
+    4,
+    9,
+    2
+   ],
+   "to": [
+    12,
+    12,
+    11
+   ],
+   "faces": {
+    "north": {
+     "texture": "#t1",
+     "uv": [
+      4,
+      4,
+      12,
+      7
+     ]
+    },
+    "south": {
+     "texture": "#t1",
+     "uv": [
+      4,
+      4,
+      12,
+      7
+     ]
+    },
+    "west": {
+     "texture": "#t1",
+     "uv": [
+      2,
+      4,
+      11,
+      7
+     ]
+    },
+    "east": {
+     "texture": "#t1",
+     "uv": [
+      5,
+      4,
+      14,
+      7
+     ]
+    },
+    "up": {
+     "texture": "#t1",
+     "uv": [
+      4,
+      2,
+      12,
+      11
+     ]
+    },
+    "down": {
+     "texture": "#t2",
+     "uv": [
+      4,
+      5,
+      12,
+      14
+     ]
+    }
+   }
+  }
+ ]
+}

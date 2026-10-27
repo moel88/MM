@@ -1,0 +1,139 @@
+{
+  "source": "Minecraft 1.20.1 PlayerEntityModel.getTexturedModelData(Dilation.NONE, true)",
+  "arm_model": "slim",
+  "skin_size": [
+    64,
+    64
+  ],
+  "player_renderer_scale": 0.9375,
+  "bones": [
+    {
+      "name": "root",
+      "parent": null,
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "body",
+      "parent": "root",
+      "pivot": [
+        0.0,
+        22.5,
+        -0.0
+      ]
+    },
+    {
+      "name": "head",
+      "parent": "body",
+      "pivot": [
+        0.0,
+        22.5,
+        -0.0
+      ]
+    },
+    {
+      "name": "right_arm",
+      "parent": "body",
+      "pivot": [
+        -4.6875,
+        20.15625,
+        -0.0
+      ]
+    },
+    {
+      "name": "left_arm",
+      "parent": "body",
+      "pivot": [
+        4.6875,
+        20.15625,
+        -0.0
+      ]
+    },
+    {
+      "name": "right_leg",
+      "parent": "root",
+      "pivot": [
+        -1.78125,
+        11.25,
+        -0.0
+      ]
+    },
+    {
+      "name": "left_leg",
+      "parent": "root",
+      "pivot": [
+        1.78125,
+        11.25,
+        -0.0
+      ]
+    }
+  ],
+  "parts": [
+    {
+      "name": "body",
+      "bone": "body",
+      "vertices": 36
+    },
+    {
+      "name": "jacket",
+      "bone": "body",
+      "vertices": 36
+    },
+    {
+      "name": "head",
+      "bone": "head",
+      "vertices": 36
+    },
+    {
+      "name": "hat",
+      "bone": "head",
+      "vertices": 36
+    },
+    {
+      "name": "right_arm",
+      "bone": "right_arm",
+      "vertices": 36
+    },
+    {
+      "name": "right_sleeve",
+      "bone": "right_arm",
+      "vertices": 36
+    },
+    {
+      "name": "left_arm",
+      "bone": "left_arm",
+      "vertices": 36
+    },
+    {
+      "name": "left_sleeve",
+      "bone": "left_arm",
+      "vertices": 36
+    },
+    {
+      "name": "right_leg",
+      "bone": "right_leg",
+      "vertices": 36
+    },
+    {
+      "name": "right_pants",
+      "bone": "right_leg",
+      "vertices": 36
+    },
+    {
+      "name": "left_leg",
+      "bone": "left_leg",
+      "vertices": 36
+    },
+    {
+      "name": "left_pants",
+      "bone": "left_leg",
+      "vertices": 36
+    }
+  ],
+  "custom_geometry": false,
+  "skin_layers": true,
+  "skin_sha256": "b1b9d06472e7dd15e448e0c58c174d453940d98ba648b9ce3ebf91e63ac382ad"
+}
