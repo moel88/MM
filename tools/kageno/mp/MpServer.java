@@ -77,9 +77,9 @@ public final class MpServer implements ModInitializer {
     private void joined(ServerPlayerEntity p){
         p.changeGameMode(GameMode.SURVIVAL);
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
-        // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had)
-        if(caster(p)){if(!COOLDOWNS_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
-            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+        // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had; 2.74.3 the same for MP_ONLY=fresh)
+        if(caster(p)){if(!COOLDOWNS_ONLY&&!FRESH_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
+            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
@@ -122,11 +122,11 @@ public final class MpServer implements ModInitializer {
         busy|=atomic;
         punched(server);
         called(server);
-        if(COOLDOWNS_ONLY||SWAP_ONLY)cooldowns(server);
+        if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY)staggers(server);
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
-        if(ARROW_ONLY||COOLDOWNS_ONLY||SWAP_ONLY)arrow(server);
+        if(ARROW_ONLY||COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)arrow(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -396,6 +396,8 @@ public final class MpServer implements ModInitializer {
         }catch(ReflectiveOperationException e){return -1;}
     }
     private static String at(long ready,long now){return ready<=0?"none":ready<=now?"over ("+ready+")":String.format(java.util.Locale.ROOT,"%d (%.1f s)",ready,(ready-now)/20.);}
+    /** Only the script of the long cooldowns begun in full whatever they were (2.74.3, MP_ONLY=fresh). */
+    static final boolean FRESH_ONLY="fresh".equals(System.getProperty("botand.mp.only"));
     /** Only the script of another stand's cooldowns gone (2.74.2, MP_ONLY=swap). */
     static final boolean SWAP_ONLY="swap".equals(System.getProperty("botand.mp.only"));
     /** Only the long cooldowns' script (2.73.0, MP_ONLY=cooldowns). */

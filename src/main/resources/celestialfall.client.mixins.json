@@ -42,7 +42,8 @@
     "SoundSystemAccess",
     "TimeStopSoundMixin",
     "TimeStopWorldMixin",
-    "BossSkinMixin"
+    "BossSkinMixin",
+    "WorldTimeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

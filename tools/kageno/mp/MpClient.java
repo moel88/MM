@@ -243,7 +243,26 @@ public final class MpClient implements ClientModInitializer {
         "490 STAND","500 Q","520 HOME","530 T","570 E+","585 E-","600 Y+","615 Y-",
         "640 STANDK","660 E","760 FRUIT","770 EAT","790 CONFIRM",
         "820 STAND","880 END"};
-    private static final String[] STEPS=ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * The long cooldowns begun in full whatever they were (2.74.3, user request: "그냥 단순하게 스탠드를 새로 얻거나
+     * 죽으면 쿨타임 다시 처음부터 돌게하면 되는데"), on their own (MP_ONLY=fresh; the server keeps the caster's cooldowns and,
+     * as it comes back, the stand it had). The caster, Kageno, loses its stand (its Atomic is forgotten at once) and is
+     * given Kageno back by the command (which begins nothing: Atomic is ready), then leaves and joins again: Atomic, never
+     * used, ten minutes from then. Star Platinum by the command (Atomic forgotten, nothing begun); /kill and back to life:
+     * the beatdown in full, no time stop (not awakened); awakened by the command (still no time stop), /kill and back:
+     * both in full. Not awakened any more (the time stop forgotten), no stand (the beatdown forgotten), and the stand
+     * arrow gives it Star Platinum: the beatdown in full, no time stop. No stand again, its next gacha pull made an SSR:
+     * Kageno, Atomic in full, nothing of Star Platinum's. Both log the long cooldowns their client is told and the
+     * cooldown list; the server logs the caster's as kept with the world and as each skill keeps its own, its deaths, its
+     * stand and its awakening.
+     */
+    private static final String[] FRESH_SCRIPT={
+        "10 NOSTAND","30 STANDK","50 LEAVE",
+        "70 STAND","90 KILL","170 RESPAWN",
+        "200 AWAKEN","220 KILL","300 RESPAWN",
+        "320 UNAWAKEN","330 NOSTAND","340 ARROWS","350 RIGSTAR","370 R",
+        "620 NOSTAND","630 PITY","650 PULL","680 PULLED","720 END"};
+    private static final String[] STEPS=ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -290,6 +309,7 @@ public final class MpClient implements ClientModInitializer {
                 mc.onWindowFocusChanged(true);
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());if(!interfaceStep())mc.setScreen(null);}
                 observe();
+                if(traceUntil>0&&age<=traceUntil)trace();
                 if(ONLY.equals("boss"))bossWatch();
                 if(ONLY.equals("arrow"))arrowWatch();
                 if(age%4==0)shot();
@@ -307,7 +327,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -320,9 +340,10 @@ public final class MpClient implements ClientModInitializer {
             }
             case 5->{
                 if(age>2400){note("ERROR never back");phase=3;age=0;return;}
+                if(mc.world!=null)trace();
                 if(mc.world==null||mc.player==null)return;
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());mc.setScreen(null);}
-                if(mc.world.getPlayers().size()>=2&&age>60){note("back in the game, the script at "+resumeAt);flags.clear();face();age=resumeAt;phase=2;}
+                if(mc.world.getPlayers().size()>=2&&age>60){note("back in the game, the script at "+resumeAt);flags.clear();face();age=resumeAt;phase=2;traceUntil=resumeAt+100;}
             }
         }
     }
@@ -359,7 +380,7 @@ public final class MpClient implements ClientModInitializer {
         }
     }
     /** The 2.45.0 steps keep the pause menu and the death screen up (the rest of the script closes every screen). */
-    private boolean interfaceStep(){return caster&&(age>=3060||ONLY.equals("cooldowns"))&&(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen||mc.currentScreen instanceof net.minecraft.client.gui.screen.DeathScreen)
+    private boolean interfaceStep(){return caster&&(age>=3060||ONLY.equals("cooldowns")||ONLY.equals("fresh"))&&(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen||mc.currentScreen instanceof net.minecraft.client.gui.screen.DeathScreen)
         // (2.74.2: the Rokakaka's confirmation stays up for its 사용하고 초기화)
         ||caster&&ONLY.equals("swap")&&mc.currentScreen instanceof dev.sangwoo.celestialfall.client.commerce.CommerceScreen;}
     private void act(String step,boolean down){
@@ -493,7 +514,7 @@ public final class MpClient implements ClientModInitializer {
         // 2.72.0: each player's stand's call sound playing here, and whether this client's player is awakened
         calls();flag("awakened",dev.sangwoo.celestialfall.client.ProgressClient.awakened);
         // 2.73.0: the long cooldowns this client is told, and the cooldown list's entries
-        if(ONLY.equals("cooldowns")||ONLY.equals("swap"))longCooldowns();
+        if(ONLY.equals("cooldowns")||ONLY.equals("swap")||ONLY.equals("fresh"))longCooldowns();
         // 2.74.2: the stand this client is told the player has (whose cooldowns its list shows)
         flag("profile_stand",dev.sangwoo.celestialfall.client.ProgressClient.profile.stand());
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
@@ -504,7 +525,30 @@ public final class MpClient implements ClientModInitializer {
                 dev.sangwoo.celestialfall.client.stand.StandPresence.aura(p.getUuid()),dev.sangwoo.celestialfall.client.stand.StandAuraLayer.drawnLast(),look.lean,look.speed,dev.sangwoo.celestialfall.client.stand.StandPresence.describe(p.getUuid())));}
         try{var f=dev.sangwoo.celestialfall.client.kageno.HitFeedback.class.getDeclaredField("NUMBERS");f.setAccessible(true);flag("damage_numbers",((Map<?,?>)f.get(null)).size());}catch(ReflectiveOperationException e){flag("damage_numbers","n/a");}
     }
-    private int resumeAt;private String longLogged="";
+    private int resumeAt;private String longLogged="";private int traceUntil;private String traced="";
+    /**
+     * 2.74.3: from joining again until 100 ticks into the resumed script, whenever any changes: the world's time (each
+     * line's first number), whether the server has set it yet (CooldownHud.timed: the list reads nothing before), the map
+     * on or off here, the long cooldowns told (Atomic's ready tick and length), the stand this client is told, the
+     * Atomic sword's cooldown share, and the cooldown list's entries and the ones waiting to come in.
+     */
+    private void trace(){
+        try{
+            var listField=CooldownHud.class.getDeclaredField("LIST");listField.setAccessible(true);var list=listField.get(null);
+            var waitingField=list.getClass().getDeclaredField("waiting");waitingField.setAccessible(true);
+            var clock=CooldownHud.class.getDeclaredMethod("clock",float.class);clock.setAccessible(true);double t=(double)clock.invoke(null,0f);
+            var timedField=CooldownHud.class.getDeclaredField("timed");timedField.setAccessible(true);boolean timed=timedField.get(null)==mc.world;
+            var entries=new ArrayList<String>();
+            for(var e:((CooldownList)list).entries())entries.add(String.format(Locale.ROOT,"%s %.0f..%.0f%s",e.name,e.start-t,e.end-t,e.leaving()?" leaving":""));
+            String line=String.format(Locale.ROOT,"clock %s, map=%s known=%s atomic=%d len=%d stand=%s sword=%.4f list=%s waiting=%s",timed?"set":"not set yet",
+                dev.sangwoo.celestialfall.client.MapClient.enabled(),dev.sangwoo.celestialfall.client.LongCooldownsClient.known(),
+                dev.sangwoo.celestialfall.client.LongCooldownsClient.ready(dev.sangwoo.celestialfall.LongCooldowns.Skill.ATOMIC),
+                dev.sangwoo.celestialfall.client.LongCooldownsClient.length(dev.sangwoo.celestialfall.LongCooldowns.Skill.ATOMIC),
+                dev.sangwoo.celestialfall.client.ProgressClient.profile.stand(),
+                mc.player==null?-1:mc.player.getItemCooldownManager().getCooldownProgress(dev.sangwoo.celestialfall.CelestialFall.ATOMIC_SWORD,0),entries,waitingField.get(list));
+            if(!line.equals(traced)){traced=line;note("trace (list clock "+String.format(Locale.ROOT,"%.0f",t)+"): "+line);}
+        }catch(ReflectiveOperationException e){note("ERROR trace "+e);}
+    }
     /**
      * The long cooldowns as this client is told them (2.73.0): whenever they change, each one's ready tick, the seconds
      * from now and its length; and whenever the cooldown list changes, each entry with its length and what is left.

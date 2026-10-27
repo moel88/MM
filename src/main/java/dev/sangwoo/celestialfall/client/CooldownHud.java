@@ -33,7 +33,8 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * fades (CooldownList). 2.74.2 (user request: "걍 다른 스탠드를 끼면 다른 스탠드 쿨타임은 사라진다 이게 힘든가? 서로 스탠드가
  * 다른데 왜 흐르는건데"): only the stand they have now has cooldowns in it ({@link #shows}); another stand's run out at
  * once as the stand changes (a Rokakaka, an arrow, the gacha, an operator's command), and come back no more. 2.74.3:
- * the server forgets another stand's long ones too (LongCooldowns.forgetOthers), and begins the new stand's in full.
+ * the server forgets another stand's long ones too (LongCooldowns.forgetOthers), and begins the new stand's in full;
+ * and the list reads no ready tick before the server has set the world's clock ({@link #timed}).
  */
 public final class CooldownHud {
     /**
@@ -60,6 +61,8 @@ public final class CooldownHud {
     private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
+    /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
+    private static Object timed;
     private static CooldownList.Metrics metrics;private static long metricsKey;
     private CooldownHud(){}
 
@@ -70,6 +73,13 @@ public final class CooldownHud {
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
     public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=0;atomic=false;owner=null;world=null;}
+    /**
+     * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
+     * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
+     * runs the join as the game starts the connection, before it sends the world's time) would put its box far ahead
+     * (2.74.3: in the multiplayer check, joining again with Atomic's ten minutes running, the box was some 80 s away).
+     */
+    public static void timed(Object world){timed=world;}
     /** The names the list shows now, top first (for the QA tools). */
     public static java.util.List<String> shown(){return LIST.entries().stream().filter(e->!e.leaving()).map(e->e.name).toList();}
 
@@ -77,6 +87,8 @@ public final class CooldownHud {
         var p=mc.player;
         if(mc.world==null||p==null||!MapClient.enabled()){if(owner!=null)clear();return;}
         if(!p.getUuid().equals(owner)||mc.world!=world){clear();owner=p.getUuid();world=mc.world;}
+        // (2.74.3) nothing told is read before the server has set this world's clock: the ready ticks are its ticks
+        if(timed!=mc.world)return;
         if(mc.isPaused())return;
         ticks++;double now=ticks;long time=mc.world.getTime();
         // the stand they have (2.74.2): the server's word of it (ProgressClient), which stays as they die and come back to
