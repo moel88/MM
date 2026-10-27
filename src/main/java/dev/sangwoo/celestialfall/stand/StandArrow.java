@@ -32,9 +32,9 @@ import static dev.sangwoo.celestialfall.stand.StandArrowRules.*;
  * the server rolls what the arrow will do and tells nobody, holds them where they stand ({@link #holds}: they raise
  * the arrow and drive it into their chest, every client drawing it from the start it is told of) and at REVEAL makes
  * the arrow's choice: the arrow (still in the hand it was raised in) is spent, and either the stand is theirs and
- * comes out beside them, everyone on the map hearing of it, its user's long cooldowns still running beginning again in
- * full (2.74.0, LongCooldowns), or they fall, dying at DEATH_AT of the arrow's damage type, which nothing stops (as the
- * character reset's).
+ * comes out beside them, everyone on the map hearing of it, its long cooldowns beginning in full (2.74.0, the new
+ * stand's only since 2.74.1, whatever they were since 2.74.3: LongCooldowns), or they fall, dying at DEATH_AT of the
+ * arrow's damage type, which nothing stops (as the character reset's).
  * <p>
  * Cut short before REVEAL (they died, left, went elsewhere, put the arrow away) nothing happens and the arrow is
  * still theirs: the choice is made only as it is shown, so nothing can be learnt from cutting it short. Once made it
@@ -137,8 +137,9 @@ public final class StandArrow {
         if(!dies(s.outcome)){
             ProgressManager.set(p,ProgressManager.profile(p).withStand(s.outcome));
             if(StandManager.starPlatinum(p))((StandHolder)p).botand$setStandOut(true);
-            // (2.74.0, user request: "화살로 뽑아도 처음으로 쿨타임 돌게") the long cooldowns still running begin again in full;
-            // since 2.74.1 only the new stand's ("그냥 사용하는 스탠드의 긴 쿨타임 애들만"): another stand's run on
+            // (2.74.0, user request: "화살로 뽑아도 처음으로 쿨타임 돌게") the long cooldowns begin in full: since 2.74.1 only
+            // the new stand's ("그냥 사용하는 스탠드의 긴 쿨타임 애들만"), since 2.74.3 whatever they were, even never used
+            // ("그냥 단순하게 스탠드를 새로 얻거나 죽으면 쿨타임 다시 처음부터 돌게"; the time stop only for the awakened)
             dev.sangwoo.celestialfall.LongCooldowns.begin(p);
         }
         send(p,s,REVEALED);

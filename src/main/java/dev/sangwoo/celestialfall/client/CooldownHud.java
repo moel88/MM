@@ -32,7 +32,8 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * box draining through a funnel in its middle while its sand pours down out of its bottom, behind the boxes below, and
  * fades (CooldownList). 2.74.2 (user request: "걍 다른 스탠드를 끼면 다른 스탠드 쿨타임은 사라진다 이게 힘든가? 서로 스탠드가
  * 다른데 왜 흐르는건데"): only the stand they have now has cooldowns in it ({@link #shows}); another stand's run out at
- * once as the stand changes (a Rokakaka, an arrow, the gacha, an operator's command), and come back no more.
+ * once as the stand changes (a Rokakaka, an arrow, the gacha, an operator's command), and come back no more. 2.74.3:
+ * the server forgets another stand's long ones too (LongCooldowns.forgetOthers), and begins the new stand's in full.
  */
 public final class CooldownHud {
     /**
@@ -146,8 +147,8 @@ public final class CooldownHud {
     /**
      * Whether the list shows this slot's cooldown to a player whose stand is {@code stand} (2.74.2): Kageno's skills and
      * Atomic to Kageno's user, Star Platinum's to its, and the dash to everyone; none of a stand's to one who has none
-     * (after a Rokakaka). A long cooldown of another stand is still kept by the server (LongCooldowns) and, if that stand
-     * comes back while it would still run, it begins again in full then (2.74.1).
+     * (after a Rokakaka). Since 2.74.3 the server keeps no long cooldown of another stand either (LongCooldowns): getting
+     * the stand again (the arrow, the gacha) begins its long ones in full.
      */
     static boolean shows(int slot,String stand){
         if(slot==DASH)return true;

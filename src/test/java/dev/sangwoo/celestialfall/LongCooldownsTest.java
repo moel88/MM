@@ -12,48 +12,52 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * The long cooldowns (2.73.0, user request: "카게노 아토믹 쿨타임은 10분으로 하고 게임 나갔다 오거나 재설정하면 쿨타임 다시
  * 10분부터 흐르게 시간정지도 똑같이 바꿔줘 ... 비트다운도 ... 아토믹이랑 똑같은 메커니즘 적용"; 2.74.0: "그냥 죽어서 부활하기만
- * 하면 처음부터 돌게", and as the stand arrow gives a stand): one still running as its player comes back, comes back to
- * life or is given a stand begins again in full, one over stays over, one whose skill is still going keeps its tick, and
- * they are kept with the world. Since 2.74.1 ("그냥 사용하는 스탠드의 긴 쿨타임 애들만 처음부터 다시 흐르게 하면 돼") only
- * those of the stand they use begin again; another stand's run on.
+ * 하면 처음부터 돌게", and as the stand arrow gives a stand; 2.74.1: "그냥 사용하는 스탠드의 긴 쿨타임 애들만 처음부터 다시
+ * 흐르게 하면 돼"). Since 2.74.3 ("그냥 단순하게 스탠드를 새로 얻거나 죽으면 쿨타임 다시 처음부터 돌게하면 되는데"): as a
+ * player comes back, comes back to life or is given a stand, every long cooldown of the stand they have begins in full,
+ * whatever it was (running, over, never used), but for one whose skill is still going (it keeps its later tick); one
+ * of a skill they do not have (another stand's, or the time stop before they are awakened) is gone. They are kept with
+ * the world.
  */
 class LongCooldownsTest {
-    private static final int ATOMIC=600*20;
+    private static final int ATOMIC=600*20,TS=StarPlatinumRules.TS_COOLDOWN,BD=StarPlatinumRules.BEATDOWN_COOLDOWN;
 
-    @Test void oneStillRunningBeginsAgainInFull(){
+    @Test void theirsBeginInFullWhateverTheyWere(){
         long now=50_000;
-        assertEquals(now+ATOMIC,LongCooldowns.restart(now+1,now,ATOMIC),"a tick left: ten minutes again");
-        assertEquals(now+ATOMIC,LongCooldowns.restart(now+ATOMIC-5,now,ATOMIC),"just begun: ten minutes from now");
-        assertEquals(now+StarPlatinumRules.TS_COOLDOWN,LongCooldowns.restart(now+20,now,StarPlatinumRules.TS_COOLDOWN),"the time stop's two and a half minutes");
-        assertEquals(now+StarPlatinumRules.BEATDOWN_COOLDOWN,LongCooldowns.restart(now+999,now,StarPlatinumRules.BEATDOWN_COOLDOWN),"the beatdown's two");
-    }
-    @Test void oneOverStaysOver(){
-        long now=50_000;
-        assertEquals(0,LongCooldowns.restart(now,now,ATOMIC),"ready this very tick: over");
-        assertEquals(0,LongCooldowns.restart(now-3000,now,ATOMIC),"ran out while they were away");
-        assertEquals(0,LongCooldowns.restart(0,now,ATOMIC),"never used");
+        for(int length:new int[]{ATOMIC,TS,BD}){
+            assertEquals(now+length,LongCooldowns.restart(now+1,now,length,true),length+": a tick left");
+            assertEquals(now+length,LongCooldowns.restart(now+length-5,now,length,true),length+": just begun");
+            assertEquals(now+length,LongCooldowns.restart(now,now,length,true),length+": ready this very tick");
+            assertEquals(now+length,LongCooldowns.restart(now-3000,now,length,true),length+": ran out while they were away");
+            assertEquals(now+length,LongCooldowns.restart(0,now,length,true),length+": never used");
+        }
+        assertEquals(now+ATOMIC,LongCooldowns.restart(0,now,ATOMIC,true),"Atomic: ten minutes");
+        assertEquals(now+3000,LongCooldowns.restart(0,now,TS,true),"the time stop: two and a half minutes");
+        assertEquals(now+2400,LongCooldowns.restart(0,now,BD,true),"the beatdown: two");
     }
     @Test void oneWhoseSkillIsStillGoingKeepsItsTick(){
         long now=50_000,end=now+300;
-        assertEquals(end+ATOMIC,LongCooldowns.restart(end+ATOMIC,now,ATOMIC),"an Atomic still playing out: its ten minutes still begin as it ends");
-        assertEquals(now+ATOMIC,LongCooldowns.restart(now+ATOMIC,now,ATOMIC),"one a whole length away is the same either way");
+        assertEquals(end+ATOMIC,LongCooldowns.restart(end+ATOMIC,now,ATOMIC,true),"an Atomic still playing out: its ten minutes still begin as it ends");
+        assertEquals(now+ATOMIC,LongCooldowns.restart(now+ATOMIC,now,ATOMIC,true),"one a whole length away is the same either way");
     }
-    @Test void onlyTheStandTheyUseBeginsAgain(){
-        long now=50_000;int ts=StarPlatinumRules.TS_COOLDOWN,bd=StarPlatinumRules.BEATDOWN_COOLDOWN;
+    @Test void oneNotTheirsIsGone(){
+        long now=50_000;
+        for(long ready:new long[]{0,now-5,now,now+1,now+ATOMIC-5,now+300+ATOMIC})
+            assertEquals(0,LongCooldowns.restart(ready,now,ATOMIC,false),"ready at "+ready+": gone");
+    }
+    @Test void whatEachStandHas(){
         var atomic=LongCooldowns.Skill.ATOMIC;var timeStop=LongCooldowns.Skill.TIME_STOP;var beatdown=LongCooldowns.Skill.BEATDOWN;
-        // Star Platinum from the arrow (or back to life with it): its two in full, Kageno's Atomic runs on
-        assertEquals(now+4000,LongCooldowns.restart(atomic,"star_platinum",now+4000,now,ATOMIC),"another stand's Atomic runs on as it was");
-        assertEquals(now+ts,LongCooldowns.restart(timeStop,"star_platinum",now+1200,now,ts),"its time stop in full");
-        assertEquals(now+bd,LongCooldowns.restart(beatdown,"star_platinum",now+800,now,bd),"its beatdown in full");
-        // Kageno from the gacha (or back to life with it): the other way round
-        assertEquals(now+ATOMIC,LongCooldowns.restart(atomic,"kageno",now+4000,now,ATOMIC),"its Atomic in full");
-        assertEquals(now+1200,LongCooldowns.restart(timeStop,"kageno",now+1200,now,ts),"another stand's time stop runs on");
-        assertEquals(now+800,LongCooldowns.restart(beatdown,"kageno",now+800,now,bd),"another stand's beatdown runs on");
-        for(var s:LongCooldowns.Skill.values())assertEquals(now+77,LongCooldowns.restart(s,"none",now+77,now,ATOMIC),s+" runs on without a stand");
-        assertEquals(0,LongCooldowns.restart(atomic,"star_platinum",now-5,now,ATOMIC),"another stand's run out is forgotten");
-        assertEquals(0,LongCooldowns.restart(atomic,"star_platinum",now,now,ATOMIC),"ready this very tick: over");
-        assertEquals(0,LongCooldowns.restart(timeStop,"star_platinum",0,now,ts),"its own never used stays none");
-        assertEquals(now+300+ATOMIC,LongCooldowns.restart(atomic,"kageno",now+300+ATOMIC,now,ATOMIC),"its own still going keeps its later tick");
+        for(boolean awake:new boolean[]{false,true}){
+            assertTrue(LongCooldowns.has(atomic,"kageno",awake),"Kageno's Atomic");
+            assertFalse(LongCooldowns.has(timeStop,"kageno",awake),"not Kageno's: the time stop");
+            assertFalse(LongCooldowns.has(beatdown,"kageno",awake),"not Kageno's: the beatdown");
+            assertFalse(LongCooldowns.has(atomic,"star_platinum",awake),"not Star Platinum's: Atomic");
+            assertTrue(LongCooldowns.has(beatdown,"star_platinum",awake),"Star Platinum's beatdown, awakened or not");
+            for(var s:LongCooldowns.Skill.values())assertFalse(LongCooldowns.has(s,"none",awake),s+": none without a stand");
+        }
+        assertTrue(LongCooldowns.has(timeStop,"star_platinum",true),"the awakened's time stop");
+        assertFalse(LongCooldowns.has(timeStop,"star_platinum",false),"no time stop before the awakening (H is no key, 2.72.0)");
+        for(var s:LongCooldowns.Skill.values())assertTrue(LongCooldowns.has(s,s.stand,true),s+": its stand's, awakened");
     }
     @Test void eachIsItsStands(){
         assertEquals("kageno",LongCooldowns.Skill.ATOMIC.stand);

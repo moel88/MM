@@ -22,9 +22,9 @@ import static net.minecraft.server.command.CommandManager.*;
 /**
  * The stand gacha on the server (user request, 2.39.0). A client asks for its count (0 pulls) or for 1 or 10 pulls; the
  * server checks the player may pull (on the dedicated map, out of combat and cutscenes, no stand equipped, room for the
- * Rokakaka that could come), rolls, keeps the new count, equips Kageno on an SSR (its long cooldown still running begins
- * again in full, 2.74.1: LongCooldowns), gives a Rokakaka for every R (2.41.0) and answers with what was rolled. Pulls
- * are free for now.
+ * Rokakaka that could come), rolls, keeps the new count, equips Kageno on an SSR (its long cooldown, Atomic, begins in
+ * full then, 2.74.1, whatever it was since 2.74.3: LongCooldowns), gives a Rokakaka for every R (2.41.0) and answers with
+ * what was rolled. Pulls are free for now.
  */
 public final class GachaServer {
     public static final Identifier REQUEST=CelestialFall.id("gacha_request_v1"),RESULT=CelestialFall.id("gacha_result_v1");
@@ -59,8 +59,9 @@ public final class GachaServer {
         boolean granted=result.any(GachaRules.Grade.SSR);
         if(granted){
             ProgressManager.set(p,profile.withStand(GachaRules.SSR_STAND));
-            // (2.74.1, user request: "뽑기로 얻어도 처음부터 다시 흐르게") its long cooldown still running begins again in
-            // full, as the stand arrow's does (only the new stand's: another stand's runs on)
+            // (2.74.1, user request: "뽑기로 얻어도 처음부터 다시 흐르게") its long cooldown begins in full, as the stand
+            // arrow's does; since 2.74.3 ("그냥 단순하게 스탠드를 새로 얻거나 죽으면 쿨타임 다시 처음부터 돌게") whatever it was,
+            // even never used
             LongCooldowns.begin(p);
         }
         int fruits=GachaRules.fruits(result.grades());

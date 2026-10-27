@@ -37,9 +37,13 @@ import net.minecraft.world.PersistentState;
  * "화살을 뽑아서 스타플래티나를 뽑은건데 아토믹은 왜 초기화 됨 그리고 뽑기로 얻어도 처음부터 다시 흐르게 그냥 사용하는 스탠드의
  * 긴 쿨타임 애들만 처음부터 다시 흐르게 하면 돼") only those of the stand they use now begin again (Atomic for Kageno, the
  * time stop and the beatdown for Star Platinum); another stand's run on as they were. The gacha giving them a stand
- * (GachaServer) begins them again too. The player's client is told each one's ready tick and length (the cooldown list
- * draws them from it), and the Atomic sword's cooldown, which Minecraft keeps on the body, is set again on every new
- * one. Bosses keep none: they never come back.
+ * (GachaServer) begins them again too. Since 2.74.3 (user request: "그냥 단순하게 스탠드를 새로 얻거나 죽으면 쿨타임 다시
+ * 처음부터 돌게하면 되는데") they begin in full every time, whether they were running, over or never used: coming back into
+ * the game, coming back to life, or being given a stand by the arrow or the gacha starts every long cooldown of the stand
+ * they have then from its whole length (the time stop only for the awakened: it is theirs alone, 2.72.0); and a stand
+ * they no longer have takes its long cooldowns with it at once (forgetOthers: 2.74.2 kept them, unseen). The player's
+ * client is told each one's ready tick and length (the cooldown list draws them from it), and the Atomic sword's
+ * cooldown, which Minecraft keeps on the body, is set again on every new one. Bosses keep none: they never come back.
  */
 public final class LongCooldowns extends PersistentState {
     /** The long cooldowns, in the packet's and the save's order, each with the stand whose skill it is. */
@@ -86,20 +90,20 @@ public final class LongCooldowns extends PersistentState {
     Set<UUID> players(){return players.keySet();}
 
     /**
-     * When a cooldown ready at {@code ready} is ready once it begins again at {@code now} (its player came back, came back
-     * to life, or was given a stand): one still running begins again in full ({@code length} ticks from now); one over
-     * (or none, 0) stays over; one whose skill is still going on (an Atomic playing out after its caster died or left:
-     * ready more than a whole length away) keeps its tick, to run in full once the skill is over.
+     * Whether a player with {@code stand} (a stand's id, "none" for none) has {@code skill} (2.74.3): their stand's own,
+     * the time stop only once they are awakened (H is no key for the others, 2.72.0).
      */
-    public static long restart(long ready,long now,int length){return ready>now?Math.max(ready,now+length):0;}
-    /**
-     * When a cooldown ready at {@code ready} is ready once its player comes back at {@code now} with {@code stand} (a
-     * stand's id, "none" for none): the stand's own begin again ({@link #restart}); another stand's run on as they were,
-     * forgotten once over (2.74.1).
-     */
-    public static long restart(Skill skill,String stand,long ready,long now,int length){
-        return skill.stand.equals(stand)?restart(ready,now,length):ready>now?ready:0;
+    public static boolean has(Skill skill,String stand,boolean awakened){
+        return skill.stand.equals(stand)&&(skill!=Skill.TIME_STOP||awakened);
     }
+    /**
+     * When a cooldown ready at {@code ready} is ready once it begins again at {@code now} (its player came back, came back
+     * to life, or was given a stand). 2.74.3: one of a skill they have begins in full ({@code length} ticks from now)
+     * whether it was running, over or never used, but one whose skill is still going on (an Atomic playing out after its
+     * caster died or left: ready more than a whole length away) keeps its later tick, to run in full once the skill is
+     * over. One of a skill they do not have (another stand's) is gone.
+     */
+    public static long restart(long ready,long now,int length,boolean has){return has?Math.max(ready,now+length):0;}
     /** The length of {@code p}'s {@code skill}'s cooldown (ticks): Atomic's from the config, a boss's own where it has one. */
     public static int length(ServerPlayerEntity p,Skill skill){
         return switch(skill){
@@ -127,20 +131,34 @@ public final class LongCooldowns extends PersistentState {
     }
     /**
      * {@code p} comes back into the game (joins), comes back to life after a death (respawns), or is given a stand by the
-     * stand arrow or the gacha: each long cooldown of the stand they have now still running begins again in full now
-     * (another stand's runs on), the skills' own ledgers and the sword's cooldown set to it; one over is forgotten. Their
-     * client is told.
+     * stand arrow or the gacha: each long cooldown of the stand they have now begins in full now, whatever it was (2.74.3),
+     * the skills' own ledgers and the sword's cooldown set to it; another stand's is gone. Their client is told.
      */
     public static void begin(ServerPlayerEntity p){
         if(p instanceof BossPlayer||p.getServer()==null)return;
         var state=get(p.getServer());long now=p.getWorld().getTime();
-        boolean free=NoCooldownState.enabled(p);String stand=ProgressManager.profile(p).stand();
+        boolean free=NoCooldownState.enabled(p),awake=ProgressManager.awakened(p);String stand=ProgressManager.profile(p).stand();
         for(var skill:Skill.values()){
-            long ready=free?0:restart(skill,stand,state.ready(p.getUuid(),skill),now,length(p,skill));
+            long ready=free?0:restart(state.ready(p.getUuid(),skill),now,length(p,skill),has(skill,stand,awake));
             state.put(p.getUuid(),skill,ready);
             apply(p,skill,ready,now);
         }
         send(p);
+    }
+    /**
+     * Those of {@code p}'s long cooldowns that are no longer theirs are gone (2.74.3, after 2.74.2's user request "걍
+     * 다른 스탠드를 끼면 다른 스탠드 쿨타임은 사라진다"): another stand's (a Rokakaka, an operator's command), or the time
+     * stop once they are not awakened. Kept no more, their skills' own ledgers cleared, their client told. Run each tick
+     * for every player (StandManager), after the skills' own ticks.
+     */
+    public static void forgetOthers(ServerPlayerEntity p){
+        if(p instanceof BossPlayer||p.getServer()==null)return;
+        var state=get(p.getServer());
+        if(!state.players.containsKey(p.getUuid()))return;
+        long now=p.getWorld().getTime();boolean awake=ProgressManager.awakened(p),changed=false;String stand=ProgressManager.profile(p).stand();
+        for(var skill:Skill.values())
+            if(!has(skill,stand,awake)&&state.put(p.getUuid(),skill,0)){apply(p,skill,0,now);changed=true;}
+        if(changed)send(p);
     }
     /** A new body that did not die (back from the End): the sword's cooldown on it again, for what is left of Atomic's; their client told. */
     static void respawned(ServerPlayerEntity p){
