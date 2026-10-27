@@ -222,7 +222,28 @@ public final class MpClient implements ClientModInitializer {
         "1560 NOSTAND","1570 ARROWS","1580 RIGSTAR","1600 R",
         "1840 NOSTAND","1850 PITY","1870 PULL","1900 PULLED",
         "1960 LEAVE","2020 END"};
-    private static final String[] STEPS=ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * Another stand's cooldowns gone (2.74.2, user request: "걍 다른 스탠드를 끼면 다른 스탠드 쿨타임은 사라진다"), on their
+     * own (MP_ONLY=swap; the server keeps the caster's cooldowns): the caster takes Star Platinum, is awakened and brings
+     * it out, uses its beatdown on nobody (the watcher 8 blocks away) and stops time with the watcher 2.5 blocks in front
+     * (two long cooldowns), then its heavy punch, its Star Finger, a short rush and a short inhale (four short ones). It
+     * eats a Rokakaka (in its main hand, the left click's ask and the confirmation's 사용하고 초기화): its stand is none,
+     * every box leaves the list and the server forgets the short ones. Star Platinum is given back by the command at once
+     * (it begins nothing again): the two long ones are in the list again as they were, the short ones are not, and its
+     * Star Finger, rush and inhale are used straight away (each would still have been cooling). It takes Kageno by the
+     * command: Star Platinum's boxes leave the list; it uses Kageno's E, eats a Rokakaka again (its box leaves), and is
+     * given Star Platinum back once more: only the two long ones. Both log the cooldown list (each entry's length and what
+     * is left of it) and this client's stand; the server logs the caster's stand and its cooldowns, the long ones as kept
+     * with the world and the short ones as Star Platinum's punches, rush and inhale and Kageno keep them.
+     */
+    private static final String[] SWAP_SCRIPT={
+        "5 STAND","20 AWAKEN","40 Q","60 AWAY","70 G","110 HOME","120 H",
+        "280 R","320 T","355 E+","375 E-","385 Y+","400 Y-",
+        "420 FRUIT","430 EAT","450 CONFIRM",
+        "490 STAND","500 Q","520 HOME","530 T","570 E+","585 E-","600 Y+","615 Y-",
+        "640 STANDK","660 E","760 FRUIT","770 EAT","790 CONFIRM",
+        "820 STAND","880 END"};
+    private static final String[] STEPS=ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -286,7 +307,7 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -338,7 +359,9 @@ public final class MpClient implements ClientModInitializer {
         }
     }
     /** The 2.45.0 steps keep the pause menu and the death screen up (the rest of the script closes every screen). */
-    private boolean interfaceStep(){return caster&&(age>=3060||ONLY.equals("cooldowns"))&&(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen||mc.currentScreen instanceof net.minecraft.client.gui.screen.DeathScreen);}
+    private boolean interfaceStep(){return caster&&(age>=3060||ONLY.equals("cooldowns"))&&(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.ui.BotandPauseScreen||mc.currentScreen instanceof net.minecraft.client.gui.screen.DeathScreen)
+        // (2.74.2: the Rokakaka's confirmation stays up for its 사용하고 초기화)
+        ||caster&&ONLY.equals("swap")&&mc.currentScreen instanceof dev.sangwoo.celestialfall.client.commerce.CommerceScreen;}
     private void act(String step,boolean down){
         if(step.equals("END")){if(down){note("script end");try{Files.writeString(OUT.resolve("done"),"done");}catch(Exception ignored){}phase=3;age=0;}return;}
         if(step.startsWith("TURN")){if(down){BotandCamera.STATE.yaw=(caster?0:180)+Float.parseFloat(step.substring(4));note("camera turned to "+BotandCamera.STATE.yaw);}return;}
@@ -350,6 +373,15 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("SLAIN")){if(down)command("damage @s 1000 minecraft:player_attack by Watcher");return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         if(step.equals("STAND")){if(down){note("command botand progress stand @s star_platinum");mc.player.networkHandler.sendChatCommand("botand progress stand @s star_platinum");}return;}
+        // 2.74.2: the caster takes Kageno; a Rokakaka in its main hand, eaten as a left click with it asks and as the
+        // confirmation's 사용하고 초기화 is pressed
+        if(step.equals("STANDK")){if(down)command("botand progress stand @s kageno");return;}
+        if(step.equals("FRUIT")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:rokakaka");return;}
+        if(step.equals("EAT")){if(down){note("left click with "+mc.player.getMainHandStack().getItem()+" (the Rokakaka's ask)");dev.sangwoo.celestialfall.client.commerce.CommerceClient.clickFruit();}return;}
+        if(step.equals("CONFIRM")){if(down){
+            if(!(mc.currentScreen instanceof dev.sangwoo.celestialfall.client.commerce.CommerceScreen cs)||!cs.confirmation){note("ERROR no Rokakaka confirmation up ("+(mc.currentScreen==null?"no screen":mc.currentScreen.getClass().getSimpleName())+")");return;}
+            for(var c:cs.children())if(c instanceof net.minecraft.client.gui.widget.PressableWidget b&&b.getMessage().getString().equals("사용하고 초기화")){note("press 사용하고 초기화 (active "+b.active+")");b.onPress();return;}
+            note("ERROR no 사용하고 초기화 on the confirmation");}return;}
         // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
         // 2.60.0: the watcher takes Kageno (its skills, refused while the Star Finger has it incapacitated)
         if(step.equals("KAGENO")){if(down){String c="botand progress stand Watcher kageno";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
@@ -461,7 +493,9 @@ public final class MpClient implements ClientModInitializer {
         // 2.72.0: each player's stand's call sound playing here, and whether this client's player is awakened
         calls();flag("awakened",dev.sangwoo.celestialfall.client.ProgressClient.awakened);
         // 2.73.0: the long cooldowns this client is told, and the cooldown list's entries
-        if(ONLY.equals("cooldowns"))longCooldowns();
+        if(ONLY.equals("cooldowns")||ONLY.equals("swap"))longCooldowns();
+        // 2.74.2: the stand this client is told the player has (whose cooldowns its list shows)
+        flag("profile_stand",dev.sangwoo.celestialfall.client.ProgressClient.profile.stand());
         boolean fast=mc.player.getVelocity().horizontalLength()>.6;
         if(fast&&!Boolean.TRUE.equals(flags.get("thrown")))note(String.format(Locale.ROOT,"thrown at %.2f blocks a tick",mc.player.getVelocity().horizontalLength()));
         flag("thrown",fast);

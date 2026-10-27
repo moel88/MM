@@ -30,7 +30,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * (user request: "쿨타임 UI도 지금 너무 크니까 줄여주고 쿨타임이 다 흘러서 UI가 사라질때 모래시계 처럼 흘러내려서 사라지게"):
  * about seven tenths of its size, tucked under the smaller HP art, and a finished box runs out like an hourglass, its
  * box draining through a funnel in its middle while its sand pours down out of its bottom, behind the boxes below, and
- * fades (CooldownList).
+ * fades (CooldownList). 2.74.2 (user request: "걍 다른 스탠드를 끼면 다른 스탠드 쿨타임은 사라진다 이게 힘든가? 서로 스탠드가
+ * 다른데 왜 흐르는건데"): only the stand they have now has cooldowns in it ({@link #shows}); another stand's run out at
+ * once as the stand changes (a Rokakaka, an arrow, the gacha, an operator's command), and come back no more.
  */
 public final class CooldownHud {
     /**
@@ -76,11 +78,19 @@ public final class CooldownHud {
         if(!p.getUuid().equals(owner)||mc.world!=world){clear();owner=p.getUuid();world=mc.world;}
         if(mc.isPaused())return;
         ticks++;double now=ticks;long time=mc.world.getTime();
+        // the stand they have (2.74.2): the server's word of it (ProgressClient), which stays as they die and come back to
+        // life; another stand's cooldowns count as over (their boxes drain away), and Star Platinum's short ones are
+        // forgotten here as the server forgets them (StandManager), so none comes back with the stand
+        String stand=ProgressClient.profile.stand();boolean kageno=shows(G,stand),star=shows(PUNCHES,stand);
+        if(!star){
+            dev.sangwoo.celestialfall.client.stand.StandAttack.forget(p.getUuid());dev.sangwoo.celestialfall.client.stand.StandRush.forget(p.getUuid());
+            dev.sangwoo.celestialfall.client.stand.StandInhale.forget(p.getUuid());
+        }
         var status=StandClient.STATES.get(p.getUuid());
         if(status!=null){
             long[] ready=status.ready();
             for(int slot=0;slot<Math.min(ready.length,SEEN.length);slot++){
-                long r=ready[slot],was=SEEN[slot];SEEN[slot]=r;
+                long r=kageno?ready[slot]:0,was=SEEN[slot];SEEN[slot]=r;
                 if(slot==G||r==was)continue;
                 long left=r-time;
                 // the attack's steps between hits stay off the list: only its rest after a combo shows
@@ -93,12 +103,12 @@ public final class CooldownHud {
         // this tick and one tick on gives its length
         boolean ledger=LongCooldownsClient.known();
         if(ledger){
-            long atomicReady=LongCooldownsClient.ready(LongCooldowns.Skill.ATOMIC);
+            long atomicReady=kageno?LongCooldownsClient.ready(LongCooldowns.Skill.ATOMIC):0;
             if(atomicReady!=atomicSeen){show(G,NAMES[G],atomicReady-time,LongCooldownsClient.length(LongCooldowns.Skill.ATOMIC),now);atomicSeen=atomicReady;}
         }else{
             var cooldowns=p.getItemCooldownManager();
             float p0=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,0),p1=cooldowns.getCooldownProgress(CelestialFall.ATOMIC_SWORD,1);
-            boolean running=p0>0;
+            boolean running=kageno&&p0>0;
             if(running&&!atomic&&p0>p1){double total=1/(double)(p0-p1),left=p0*total;LIST.add(G,NAMES[G],now-(total-left),now+left,now);}
             else if(!running&&atomic)LIST.finish(G,now);
             atomic=running;
@@ -107,31 +117,41 @@ public final class CooldownHud {
         long dash=CombatClient.snapshot(p.getUuid()).dashReady();
         if(dash!=dashSeen){show(DASH,dashName(),dash-time,CombatState.DASH_COOLDOWN,now);dashSeen=dash;}
         // Star Platinum's punches (2.54.0): only their rest after a combo, as Kageno's attack (the server's ready tick)
-        long punches=dev.sangwoo.celestialfall.client.stand.StandAttack.ready(p.getUuid());
+        long punches=star?dev.sangwoo.celestialfall.client.stand.StandAttack.ready(p.getUuid()):0;
         if(punches!=punchesSeen){show(PUNCHES,punchesName(),punches-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.REST,now);punchesSeen=punches;}
         // its rush (2.57.0): from when it is over (the server's ready tick, told as it ends)
-        long barrage=dev.sangwoo.celestialfall.client.stand.StandRush.ready(p.getUuid());
+        long barrage=star?dev.sangwoo.celestialfall.client.stand.StandRush.ready(p.getUuid()):0;
         if(barrage!=barrageSeen){show(BARRAGE,barrageName(),barrage-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.RUSH_COOLDOWN,now);barrageSeen=barrage;}
         // its heavy punch (2.59.0): from when it is over, or stopped short (the server's ready tick, told with each of its punches' news)
-        long heavy=dev.sangwoo.celestialfall.client.stand.StandAttack.heavyReady(p.getUuid());
+        long heavy=star?dev.sangwoo.celestialfall.client.stand.StandAttack.heavyReady(p.getUuid()):0;
         if(heavy!=heavySeen){show(HEAVY,heavyName(),heavy-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.HEAVY_COOLDOWN,now);heavySeen=heavy;}
         // its Star Finger (2.60.0): the same, told with each of its punches' news
-        long finger=dev.sangwoo.celestialfall.client.stand.StandAttack.fingerReady(p.getUuid());
+        long finger=star?dev.sangwoo.celestialfall.client.stand.StandAttack.fingerReady(p.getUuid()):0;
         if(finger!=fingerSeen){show(FINGER,fingerName(),finger-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.FINGER_COOLDOWN,now);fingerSeen=finger;}
         // its inhale (2.61.0): from when it is over (the server's ready tick, told as it ends)
-        long inhale=dev.sangwoo.celestialfall.client.stand.StandInhale.ready(p.getUuid());
+        long inhale=star?dev.sangwoo.celestialfall.client.stand.StandInhale.ready(p.getUuid()):0;
         if(inhale!=inhaleSeen){show(INHALE,inhaleName(),inhale-time,dev.sangwoo.celestialfall.stand.StarPlatinumRules.INHALE_COOLDOWN,now);inhaleSeen=inhale;}
         // its beatdown (2.64.0): from when its blow is over, or its cutscene (the server's ready tick, told with its punches'
         // news; 2.73.0: from its ledger, which keeps it as they leave or die, once the server has told it)
-        long beatdown=ledger?LongCooldownsClient.ready(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
+        long beatdown=!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.client.stand.StandAttack.beatdownReady(p.getUuid());
         int beatdownLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.BEATDOWN):dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN_COOLDOWN;
         if(beatdown!=beatdownSeen){show(BEATDOWN,beatdownName(),beatdown-time,beatdownLength,now);beatdownSeen=beatdown;}
         // its time stop (2.67.0): from when time moves again, or its call was cut short (the server's ready tick, told as it
         // ends; 2.73.0: from its ledger once the server has told it, as the beatdown's)
-        long timeStop=ledger?LongCooldownsClient.ready(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
+        long timeStop=!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
         int timeStopLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.stand.StarPlatinumRules.TS_COOLDOWN;
         if(timeStop!=timeStopSeen){show(TIME_STOP,timeStopName(),timeStop-time,timeStopLength,now);timeStopSeen=timeStop;}
         LIST.update(now);
+    }
+    /**
+     * Whether the list shows this slot's cooldown to a player whose stand is {@code stand} (2.74.2): Kageno's skills and
+     * Atomic to Kageno's user, Star Platinum's to its, and the dash to everyone; none of a stand's to one who has none
+     * (after a Rokakaka). A long cooldown of another stand is still kept by the server (LongCooldowns) and, if that stand
+     * comes back while it would still run, it begins again in full then (2.74.1).
+     */
+    static boolean shows(int slot,String stand){
+        if(slot==DASH)return true;
+        return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
      * A cooldown that runs out {@code left} ticks from now, the last {@code length} ticks of that wait: until then its skill

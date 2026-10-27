@@ -343,6 +343,8 @@ public final class StandInhale {
     public static boolean localInhaling(){var p=MinecraftClient.getInstance().player;return p!=null&&inhaling(p.getUuid());}
     /** The world tick this player's inhale is ready again (0 while it is on or if it has not run). */
     public static long ready(UUID id){var i=INHALES.get(id);return i==null||i.on()?0:i.ready;}
+    /** This player's stand is not Star Platinum (2.74.2): the inhale's cooldown is gone, as the server forgets it (StandManager). */
+    public static void forget(UUID id){var i=INHALES.get(id);if(i!=null)i.ready=0;}
 
     // ───────────────────────────── how it moves ─────────────────────────────
 

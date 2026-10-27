@@ -236,6 +236,11 @@ public final class StarPlatinumAttack {
     /** The tick this player's Star Finger is ready again (2.60.0; 0 if they have not used it). */
     public static long fingerReady(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.fingerReady;}
     /**
+     * This player's stand is not Star Platinum (2.74.2, StandManager): the punches' rest and the heavy punch's and the
+     * Star Finger's cooldowns are gone. The beatdown's is a long one, kept with the world (LongCooldowns).
+     */
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)s.ready=s.heavyReady=s.fingerReady=0;}
+    /**
      * The tick this player's heavy punch or Star Finger in flight is over (0 if neither is): the rush waits for it
      * (StarPlatinumRush).
      */

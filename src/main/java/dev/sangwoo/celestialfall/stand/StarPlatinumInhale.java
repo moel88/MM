@@ -114,6 +114,8 @@ public final class StarPlatinumInhale {
     public static LivingEntity holding(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!s.on||s.held==null?null:s.held.entity();}
     /** The tick this player's inhale is ready again (0 if they have not inhaled). */
     public static long ready(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.ready;}
+    /** This player's stand is not Star Platinum (2.74.2, StandManager): the inhale's cooldown is gone. */
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)s.ready=0;}
 
     /** Y goes down: the inhale starts if it may. Returns whether it starts (now, or once the rush's fists are back). */
     public static boolean start(ServerPlayerEntity p){

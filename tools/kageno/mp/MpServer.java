@@ -79,7 +79,7 @@ public final class MpServer implements ModInitializer {
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
         // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had)
         if(caster(p)){if(!COOLDOWNS_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
-            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
@@ -122,11 +122,11 @@ public final class MpServer implements ModInitializer {
         busy|=atomic;
         punched(server);
         called(server);
-        if(COOLDOWNS_ONLY)cooldowns(server);
+        if(COOLDOWNS_ONLY||SWAP_ONLY)cooldowns(server);
         if(STAGGER_ONLY)staggers(server);
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
-        if(ARROW_ONLY||COOLDOWNS_ONLY)arrow(server);
+        if(ARROW_ONLY||COOLDOWNS_ONLY||SWAP_ONLY)arrow(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -368,14 +368,36 @@ public final class MpServer implements ModInitializer {
         var ledger=dev.sangwoo.celestialfall.LongCooldowns.get(server);var id=caster.getUuid();
         long[] kept={ledger.ready(id,dev.sangwoo.celestialfall.LongCooldowns.Skill.ATOMIC),ledger.ready(id,dev.sangwoo.celestialfall.LongCooldowns.Skill.TIME_STOP),ledger.ready(id,dev.sangwoo.celestialfall.LongCooldowns.Skill.BEATDOWN)};
         long[] own={AtomicManager.ready(id),StarPlatinumTimeStop.ready(caster),StarPlatinumAttack.beatdownReady(caster)};
-        String key=Arrays.toString(kept)+Arrays.toString(own)+caster.getItemCooldownManager().isCoolingDown(dev.sangwoo.celestialfall.CelestialFall.ATOMIC_SWORD);
+        // 2.74.2 (MP_ONLY=swap): the short ones too, as Star Platinum's punches (their rest, the heavy punch, the Star
+        // Finger), its rush and its inhale keep them, and as Kageno keeps its E's; and the stand of the caster's profile
+        var punch=StarPlatinumAttack.punch(caster);
+        long[] quick={punch==null?0:punch.ready(),StarPlatinumAttack.heavyReady(caster),StarPlatinumAttack.fingerReady(caster),
+            dev.sangwoo.celestialfall.stand.StarPlatinumRush.ready(caster),dev.sangwoo.celestialfall.stand.StarPlatinumInhale.ready(caster),kagenoReady(caster,KagenoRules.E)};
+        String stand=ProgressManager.profile(caster).stand();
+        // (a cooldown over counts as none, so the line is logged as one starts or goes, not as one runs out)
+        long[] live=new long[quick.length];for(int i=0;i<quick.length;i++)live[i]=quick[i]>now?quick[i]:0;
+        String key=Arrays.toString(kept)+Arrays.toString(own)+caster.getItemCooldownManager().isCoolingDown(dev.sangwoo.celestialfall.CelestialFall.ATOMIC_SWORD)+(SWAP_ONLY?Arrays.toString(live)+stand:"");
         if(key.equals(cooldownsLogged))return;cooldownsLogged=key;
         String[] names={"atomic","time stop","beatdown"};var line=new StringBuilder("caster's long cooldowns at tick "+now+":");
         for(int i=0;i<3;i++)line.append(String.format(java.util.Locale.ROOT," %s kept %s, its own %s;",names[i],at(kept[i],now),at(own[i],now)));
         line.append(String.format(java.util.Locale.ROOT," sword cooling %.3f",caster.getItemCooldownManager().getCooldownProgress(dev.sangwoo.celestialfall.CelestialFall.ATOMIC_SWORD,0)));
+        if(SWAP_ONLY){
+            String[] quickNames={"punches' rest","heavy punch","Star Finger","rush","inhale","Kageno E"};
+            line.append("; stand ").append(stand).append("; short ones:");
+            for(int i=0;i<quick.length;i++)line.append(String.format(java.util.Locale.ROOT," %s %s;",quickNames[i],at(quick[i],now)));
+        }
         note(server,line.toString());
     }
+    /** The tick Kageno's skill is ready again for this player (0 if it keeps no state for them), read from KagenoManager's states. */
+    private static long kagenoReady(ServerPlayerEntity p,int skill){
+        try{
+            var f=KagenoManager.class.getDeclaredField("STATES");f.setAccessible(true);var state=((Map<?,?>)f.get(null)).get(p);if(state==null)return 0;
+            var r=state.getClass().getDeclaredField("ready");r.setAccessible(true);return ((long[])r.get(state))[skill];
+        }catch(ReflectiveOperationException e){return -1;}
+    }
     private static String at(long ready,long now){return ready<=0?"none":ready<=now?"over ("+ready+")":String.format(java.util.Locale.ROOT,"%d (%.1f s)",ready,(ready-now)/20.);}
+    /** Only the script of another stand's cooldowns gone (2.74.2, MP_ONLY=swap). */
+    static final boolean SWAP_ONLY="swap".equals(System.getProperty("botand.mp.only"));
     /** Only the long cooldowns' script (2.73.0, MP_ONLY=cooldowns). */
     static final boolean COOLDOWNS_ONLY="cooldowns".equals(System.getProperty("botand.mp.only"));
     /** Only the beatdown's script (2.64.0, MP_ONLY=beatdown). */

@@ -97,6 +97,8 @@ public final class StarPlatinumRush {
     public static long startedAt(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!s.on?Long.MIN_VALUE:s.start;}
     /** The tick this player's rush is ready again (0 if they have not rushed). */
     public static long ready(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.ready;}
+    /** This player's stand is not Star Platinum (2.74.2, StandManager): the rush's cooldown is gone. */
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)s.ready=0;}
     /** The tick this player's stand is back in its guard after their last rush, and may punch (StarPlatinumRules.RUSH_SETTLE). */
     public static long freeAt(PlayerEntity p){var s=STATES.get(p.getUuid());return s==null?0:s.ended+RUSH_SETTLE;}
 

@@ -173,7 +173,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * (their count at 99 since one, as "/botand gacha set" does); "MOVE_DOCK@n" points at the HUD's menu button (≡),
  * "MOVE_DRAW@n" at the open menu's 뽑기, and on the gacha screen "MOVE_G1@n" at 1회 뽑기, "MOVE_GSKIP@n" at 건너뛰기,
  * "MOVE_GOK@n" at the results' 확인 and "MOVE_GX@n" at its X; "KEY_M@n" is the menu key. The log gets the gacha's
- * answers (its notice) and the stand the client knows the player has.
+ * answers (its notice) and the stand the client knows the player has. A Rokakaka (2.74.2): "GIVE_FRUIT@n" puts one in
+ * the main hand, "ATTACKDOWN@n"/"ATTACKUP@n" click with it (its ask opens the confirmation), "MOVE_C2@n" points at the
+ * confirmation's 사용하고 초기화 and "CLICK@n" eats it ("stand=kageno" starts a SUMMON entry as Kageno).
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -1001,6 +1003,11 @@ public final class SkillShots implements ClientModInitializer {
                             var m=slot<0?null:dev.sangwoo.celestialfall.meteor.MeteorManager.launch(w,slot,new net.minecraft.util.math.Vec3d(Double.parseDouble(v[0]),w.getTopY(),Double.parseDouble(v[1])),opts.containsKey("from")?opt("from",0):Double.NaN);
                             log.append("  fall ").append(m==null?"refused":String.format(Locale.ROOT,"#%d to (%.1f, %.1f, %.1f) from (%.0f, %.0f, %.0f) at tick %d",m.slot(),m.x(),m.y(),m.z(),m.fromX(),m.fromY(),m.fromZ(),age)).append('\n');});continue;}
                     if(what.equals("CLEARMETEOR")){if(age==at)server(p->{int n=p.getServer().getCommandManager().executeWithPrefix(p.getServer().getCommandSource(),"botand meteor clear");log.append("  meteors cleared (").append(n).append(") at ").append(age).append('\n');});continue;}
+                    // 2.74.2: a Rokakaka in the main hand (a left click with it asks to reset the stand: MOVE_C2 is the
+                    // confirmation's 사용하고 초기화)
+                    if(what.equals("GIVE_FRUIT")){if(age==at)server(p->{
+                            p.getInventory().setStack(p.getInventory().selectedSlot,new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA));
+                            p.currentScreenHandler.sendContentUpdates();log.append("  given FRUIT (main hand) at ").append(age).append('\n');});continue;}
                     if(what.equals("GIVE_ARROW")){if(age==at)server(p->{
                             p.getInventory().setStack(p.getInventory().selectedSlot,new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW));
                             p.currentScreenHandler.sendContentUpdates();log.append("  given ARROW (main hand) at ").append(age).append('\n');});continue;}

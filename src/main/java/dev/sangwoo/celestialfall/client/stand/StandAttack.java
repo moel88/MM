@@ -398,6 +398,12 @@ public final class StandAttack {
     public static long fingerReady(UUID id){var u=USERS.get(id);return u==null?0:u.fingerReady;}
     /** The world tick this player's beatdown is ready again (2.64.0; 0 if they have not used it). */
     public static long beatdownReady(UUID id){var u=USERS.get(id);return u==null?0:u.beatdownReady;}
+    /**
+     * This player's stand is not Star Platinum (2.74.2): the punches' rest, the heavy punch's and the Star Finger's
+     * cooldowns are gone, as the server forgets them (StandManager); the beatdown's, a long one, is the server's to keep
+     * (LongCooldowns).
+     */
+    public static void forget(UUID id){var u=USERS.get(id);if(u!=null)u.ready=u.heavyReady=u.fingerReady=0;}
     private static boolean heldR;
     /**
      * R for Star Platinum's user on the map (2.59.0): asks for the heavy punch if the stand is out. R is the map's use

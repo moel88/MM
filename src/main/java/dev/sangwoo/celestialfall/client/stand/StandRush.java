@@ -314,6 +314,8 @@ public final class StandRush {
     public static boolean localRushing(){var p=MinecraftClient.getInstance().player;return p!=null&&rushing(p.getUuid());}
     /** The world tick this player's rush is ready again (0 if it has not run). */
     public static long ready(UUID id){var r=RUSHES.get(id);return r==null||r.on()?0:r.ready;}
+    /** This player's stand is not Star Platinum (2.74.2): the rush's cooldown is gone, as the server forgets it (StandManager). */
+    public static void forget(UUID id){var r=RUSHES.get(id);if(r!=null)r.ready=0;}
     /**
      * Whether this body's cry of pain is held back now: the local player in a rush's blows (the first blow cries out, the
      * rest come with the rush's own sound; the server holds back the cry others would hear). It is held back for as long
