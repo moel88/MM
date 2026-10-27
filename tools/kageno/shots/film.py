@@ -544,6 +544,24 @@ def actor_line(t):
         return f'허스크: 기둥 중심에서 {out_:.1f}블록 · 가장자리 {edge:.1f}블록', (255, 255, 255)
     return None, None
 
+# FILM_ZOOM (2.74.1): a part of the same game frame shown larger at the right middle ("x0,y0,x1,y1,scale": fractions of
+# the frame and the enlargement; FILM_ZOOM_LABEL its label), FILM_ZOOM_AT the seconds it is shown ("a-b|c-d"; always without)
+ZOOM = [float(v) for v in os.environ['FILM_ZOOM'].split(',')] if os.environ.get('FILM_ZOOM') else None
+ZOOM_AT = [tuple(float(x) for x in p.split('-')) for p in os.environ.get('FILM_ZOOM_AT', '').split('|') if '-' in p]
+def zoom(img, src, t):
+    if not ZOOM or ZOOM_AT and not any(a <= t <= b for a, b in ZOOM_AT): return
+    x0, y0, x1, y1, k = ZOOM
+    part = src.crop((round(x0 * src.width), round(y0 * src.height), round(x1 * src.width), round(y1 * src.height)))
+    s = img.width / src.width * k
+    part = part.resize((round(part.width * s), round(part.height * s)), Image.LANCZOS)
+    x, y = img.width - part.width - 16, round((img.height - BELOW) * .3)
+    d = ImageDraw.Draw(img, 'RGBA')
+    label = os.environ.get('FILM_ZOOM_LABEL', f'확대 ×{k:g} (같은 게임 화면)')
+    w = d.textlength(label, font=small)
+    d.rectangle((x - 2, y - small.size - 14, x + w + 14, y - 2), fill=(0, 0, 0, 170)); d.text((x + 6, y - small.size - 10), label, font=small, fill=(170, 220, 255))
+    d.rectangle((x - 3, y - 3, x + part.width + 2, y + part.height + 2), outline=(135, 206, 250), width=3)
+    img.paste(part, (x, y))
+
 def caption(img, t):
     d = ImageDraw.Draw(img, 'RGBA')
     speed = '' if SPEED == 1 else f' · {SPEED:g}배속'
@@ -571,10 +589,10 @@ try:
     n, t, used = 0, start, []
     while t <= end:
         i = bisect.bisect_left(times, t); i = min(range(max(0, i - 1), min(len(times), i + 1)), key=lambda j: abs(times[j] - t)); used.append(i)
-        img = Image.open(frames[i][1]).convert('RGB'); img = img.resize((W, round(img.height * W / img.width / 2) * 2), Image.LANCZOS)
+        src = Image.open(frames[i][1]).convert('RGB'); img = src.resize((W, round(src.height * W / src.width / 2) * 2), Image.LANCZOS)
         if BELOW:
             band = Image.new('RGB', (img.width, img.height + BELOW), (12, 12, 16)); band.paste(img, (0, 0)); img = band
-        caption(img, t); img.save(os.path.join(tmp, f'{n:05d}.png')); n += 1; t = start + n * SPEED / FPS
+        zoom(img, src, t); caption(img, t); img.save(os.path.join(tmp, f'{n:05d}.png')); n += 1; t = start + n * SPEED / FPS
     subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-framerate', str(FPS), '-i', os.path.join(tmp, '%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
                     '-crf', '23', '-preset', 'slow', '-movflags', '+faststart', out], check=True)
 finally:
