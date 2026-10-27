@@ -252,9 +252,12 @@ public final class MpClient implements ClientModInitializer {
      * the beatdown in full, no time stop (not awakened); awakened by the command (still no time stop), /kill and back:
      * both in full. Not awakened any more (the time stop forgotten), no stand (the beatdown forgotten), and the stand
      * arrow gives it Star Platinum: the beatdown in full, no time stop. No stand again, its next gacha pull made an SSR:
-     * Kageno, Atomic in full, nothing of Star Platinum's. Both log the long cooldowns their client is told and the
-     * cooldown list; the server logs the caster's as kept with the world and as each skill keeps its own, its deaths, its
-     * stand and its awakening.
+     * Kageno, Atomic in full, nothing of Star Platinum's. Joining again, the caster's client drops the world's time packets
+     * for 30 ticks (as if the server's time came late, MpLateTimeMixin): told Atomic's ten minutes as it joins, its
+     * cooldown list must wait for the server's clock (CooldownHud.timed) and then show them, not put them 80 s ahead.
+     * Both log the long cooldowns their client is told and the cooldown list (the caster also each change from joining
+     * again until 100 ticks into the script: trace); the server logs the caster's as kept with the world and as each
+     * skill keeps its own, its deaths, its stand and its awakening.
      */
     private static final String[] FRESH_SCRIPT={
         "10 NOSTAND","30 STANDK","50 LEAVE",
@@ -340,6 +343,7 @@ public final class MpClient implements ClientModInitializer {
             }
             case 5->{
                 if(age>2400){note("ERROR never back");phase=3;age=0;return;}
+                if(mc.world!=null&&late&&++lateFor>30){late=false;note("the world's time let through again ("+dropped.get()+" time packets dropped since joining)");}
                 if(mc.world!=null)trace();
                 if(mc.world==null||mc.player==null)return;
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());mc.setScreen(null);}
@@ -389,7 +393,7 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("RESPAWN")){if(down){note("respawn requested (alive="+mc.player.isAlive()+")");mc.player.requestRespawn();}return;}
         // 2.73.0: leaving the server as the pause menu's 나가기 does (on the next frame, not in the middle of this tick),
         // and dying another way than the reset
-        if(step.equals("LEAVE")){if(down){note("leave the server");resumeAt=age;phase=4;age=0;mc.send(()->dev.sangwoo.celestialfall.client.title.TitlePortal.leaveMap(mc,true));}return;}
+        if(step.equals("LEAVE")){if(down){note("leave the server");resumeAt=age;phase=4;age=0;if(ONLY.equals("fresh")){late=true;lateFor=0;dropped.set(0);}mc.send(()->dev.sangwoo.celestialfall.client.title.TitlePortal.leaveMap(mc,true));}return;}
         if(step.equals("KILL")){if(down)command("kill @s");return;}
         if(step.equals("SLAIN")){if(down)command("damage @s 1000 minecraft:player_attack by Watcher");return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
@@ -527,6 +531,12 @@ public final class MpClient implements ClientModInitializer {
     }
     private int resumeAt;private String longLogged="";private int traceUntil;private String traced="";
     /**
+     * 2.74.3 (MP_ONLY=fresh): from leaving until 30 ticks after the world is back, the world's time packets are dropped
+     * (MpLateTimeMixin), as if the server's time came late; how many were.
+     */
+    private static volatile boolean late;private static final java.util.concurrent.atomic.AtomicInteger dropped=new java.util.concurrent.atomic.AtomicInteger();private int lateFor;
+    public static boolean lateTime(){if(late)dropped.incrementAndGet();return late;}
+    /**
      * 2.74.3: from joining again until 100 ticks into the resumed script, whenever any changes: the world's time (each
      * line's first number), whether the server has set it yet (CooldownHud.timed: the list reads nothing before), the map
      * on or off here, the long cooldowns told (Atomic's ready tick and length), the stand this client is told, the
@@ -537,10 +547,11 @@ public final class MpClient implements ClientModInitializer {
             var listField=CooldownHud.class.getDeclaredField("LIST");listField.setAccessible(true);var list=listField.get(null);
             var waitingField=list.getClass().getDeclaredField("waiting");waitingField.setAccessible(true);
             var clock=CooldownHud.class.getDeclaredMethod("clock",float.class);clock.setAccessible(true);double t=(double)clock.invoke(null,0f);
-            var timedField=CooldownHud.class.getDeclaredField("timed");timedField.setAccessible(true);boolean timed=timedField.get(null)==mc.world;
+            // (a jar from before 2.74.3 has no such field: the list then reads at once)
+            String timed;try{var timedField=CooldownHud.class.getDeclaredField("timed");timedField.setAccessible(true);timed=timedField.get(null)==mc.world?"set":"not set yet";}catch(NoSuchFieldException e){timed="not waited for (no CooldownHud.timed)";}
             var entries=new ArrayList<String>();
             for(var e:((CooldownList)list).entries())entries.add(String.format(Locale.ROOT,"%s %.0f..%.0f%s",e.name,e.start-t,e.end-t,e.leaving()?" leaving":""));
-            String line=String.format(Locale.ROOT,"clock %s, map=%s known=%s atomic=%d len=%d stand=%s sword=%.4f list=%s waiting=%s",timed?"set":"not set yet",
+            String line=String.format(Locale.ROOT,"clock %s, map=%s known=%s atomic=%d len=%d stand=%s sword=%.4f list=%s waiting=%s",timed,
                 dev.sangwoo.celestialfall.client.MapClient.enabled(),dev.sangwoo.celestialfall.client.LongCooldownsClient.known(),
                 dev.sangwoo.celestialfall.client.LongCooldownsClient.ready(dev.sangwoo.celestialfall.LongCooldowns.Skill.ATOMIC),
                 dev.sangwoo.celestialfall.client.LongCooldownsClient.length(dev.sangwoo.celestialfall.LongCooldowns.Skill.ATOMIC),

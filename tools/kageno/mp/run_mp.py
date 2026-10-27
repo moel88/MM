@@ -15,7 +15,9 @@ as the stand arrow gives it a stand; since 2.74.1 only those of the stand it use
 MP_ONLY=swap only another stand's cooldowns gone (2.74.2, MpClient.SWAP_SCRIPT: Star Platinum's skills used, a Rokakaka
 eaten and the stand given back at once; Kageno's E, a Rokakaka again), MP_ONLY=fresh only the long cooldowns begun in
 full whatever they were (2.74.3, MpClient.FRESH_SCRIPT: joining again with Atomic never used, back to life with Star
-Platinum before and after its awakening, the stand arrow and the gacha giving a stand; another stand's forgotten).
+Platinum before and after its awakening, the stand arrow and the gacha giving a stand; another stand's forgotten; the
+caster's client drops the world's time packets for 30 ticks after joining again, mixin/MpLateTimeMixin, so its cooldown
+list must wait for the server's clock).
 Results: OUT_DIR/{server.txt, caster/log.txt, watcher/log.txt, caster/*.png, watcher/*.png, logs/}.
 """
 from pathlib import Path
@@ -45,12 +47,15 @@ if not cp_file.exists():
     subprocess.run(['./gradlew', '--offline', '-q', 'writeCombatClasspath'], cwd=ROOT, check=True)
 dev_cp = cp_file.read_text().strip()
 subprocess.run(['javac', '-proc:none', '-encoding', 'UTF-8', '-cp', dev_cp, '-d', str(work / 'classes'),
-                str(HERE / 'MpServer.java'), str(HERE / 'MpClient.java')], check=True, env=env)
+                str(HERE / 'MpServer.java'), str(HERE / 'MpClient.java'), str(HERE / 'mixin/MpLateTimeMixin.java')], check=True, env=env)
 named = work / 'botand-mp-named.jar'
 with zipfile.ZipFile(named, 'w') as z:
     z.writestr('fabric.mod.json', json.dumps({'schemaVersion': 1, 'id': 'botand_mp', 'version': '1.0.0', 'environment': '*',
         'entrypoints': {'main': ['dev.sangwoo.botandmp.MpServer'], 'client': ['dev.sangwoo.botandmp.MpClient']},
-        'depends': {'celestialfall': '*'}}))
+        'mixins': ['botand_mp.mixins.json'], 'depends': {'celestialfall': '*'}}))
+    # (2.74.3: the world's time held back for a moment after joining again, MP_ONLY=fresh; intermediary names, no refmap)
+    z.writestr('botand_mp.mixins.json', json.dumps({'required': True, 'package': 'dev.sangwoo.botandmp.mixin', 'compatibilityLevel': 'JAVA_17',
+        'client': ['MpLateTimeMixin'], 'injectors': {'defaultRequire': 1}}))
     for p in (work / 'classes').rglob('*.class'):
         z.write(p, str(p.relative_to(work / 'classes')))
 asm = [one(f'org.ow2.asm/{a}/9.*/*/{a}-9.*[0-9].jar') for a in ('asm', 'asm-analysis', 'asm-commons', 'asm-tree', 'asm-util')]

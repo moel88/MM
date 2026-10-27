@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.74.2** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.74.3** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.74.3 — 스탠드를 새로 얻거나 죽으면 긴 쿨타임은 무조건 처음부터
+
+- **규칙은 하나입니다:** 스탠드를 새로 얻거나(스탠드 화살, 뽑기 SSR), 죽었다가 부활하거나, 게임에 다시 들어오면 그때 가진 스탠드의 긴 쿨타임이 처음 길이로 돕니다. 카게노는 아토믹 10분, 스타플래티나는 비트다운 2분과 시간 정지 2분 30초(각성한 사람만)입니다.
+- **전에 어땠는지는 상관없습니다:** 돌고 있었든, 끝났든, 한 번도 안 썼든 처음 길이로 돕니다. 2.74.2까지는 돌고 있던 것만 다시 돌았습니다.
+- **다른 스탠드의 긴 쿨타임은 서버에서도 바로 지워집니다.** 2.74.2의 '서버가 기억했다가 다시 얻을 때 아직 돌 시간이면 다시 돈다'는 규칙은 없앴습니다.
+- **고친 것:** 서버에 다시 들어온 직후 쿨타임 목록에 아토믹 칸이 안 보일 때가 있었습니다(서버 시계가 맞춰지기 전에 값을 읽어 칸이 약 80초 뒤로 밀림). 이제 목록은 서버가 월드 시계를 맞춘 뒤부터 읽습니다.
+- 들어올 때도 처음부터 도는 것, 관리자 명령어로 스탠드를 바꾸거나 각성시킬 때는 돌지 않는 것은 제가 정했습니다(바꿀 수 있습니다).
+
+[RELEASE_2.74.3_KO.md](RELEASE_2.74.3_KO.md)를 확인하세요.
 
 # 보탠드 2.74.2 — 스탠드를 바꾸면 다른 스탠드의 쿨타임은 사라집니다
 
