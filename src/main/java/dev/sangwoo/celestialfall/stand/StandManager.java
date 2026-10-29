@@ -15,6 +15,8 @@ public final class StandManager {
     public static boolean kageno(PlayerEntity p){return has(p,"kageno");}
     /** Star Platinum's user on the map (2.51.0): Q brings it out beside its user and sends it back (StandSummon). */
     public static boolean starPlatinum(PlayerEntity p){return has(p,"star_platinum");}
+    /** Lee So-sang's player on the map (2.76.0): a character who fights in person; no skills yet. */
+    public static boolean isosang(PlayerEntity p){return has(p,"isosang");}
     private static boolean has(PlayerEntity p,String stand){
         return p!=null&&MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()
             &&p instanceof StandHolder holder&&stand.equals(holder.botand$getStand());

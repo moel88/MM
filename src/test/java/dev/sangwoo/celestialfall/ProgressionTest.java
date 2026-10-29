@@ -10,6 +10,13 @@ class ProgressionTest {
         assertEquals(200,StandStats.get("none").health());assertEquals(200,StandStats.get("kageno").health());
         assertTrue(StandStats.known("kageno"));assertEquals("none",new ProgressProfile(1,0,0,null).stand());
     }
+    @Test void leeSoSangIsACharacterTheAdminCommandGives() {
+        // (2.76.0) given by /botand progress stand <targets> isosang, which offers every id
+        assertTrue(StandStats.known("isosang"));assertEquals("이소상",StandStats.get("isosang").korean());
+        assertEquals("stand.botand.isosang",StandStats.get("isosang").translation());assertEquals(200,StandStats.get("isosang").health());
+        assertTrue(java.util.Arrays.asList(StandStats.ids()).contains("isosang"));
+        assertEquals("isosang",new ProgressProfile(1,0,0,"isosang").stand());
+    }
     @Test void rebirthIsAtomicAndRequiresLevelFifty() {
         var p=new ProgressProfile(49,5,2,"kageno");assertSame(p,p.rebirth());
         var next=p.withLevel(50).rebirth();assertEquals(new ProgressProfile(1,6,2,"kageno"),next);
