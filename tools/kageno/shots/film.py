@@ -19,7 +19,8 @@ it took at once; FILM_TS_DUMMY=0 leaves it out) and, with FILM_TS_PLAYER=1, the 
 screen is held still (shown) while time is stopped (FILM_TS_HEALTH=0 leaves their health out). Since 2.68.0, with an
 actors.csv beside it (act=), each husk while time is stopped: how far it is and whether it stands stopped or walks on
 (out of its reach). Since 2.75.0 the player and the fake user (FAKE) when they are Star Platinum's users resisting it:
-moving on in its first two seconds (how long until it stops them), then stopped.
+moving on in its first two seconds (how long until it stops them), then stopped; FILM_TS_OWED=0 leaves "쌓인 피해가
+한꺼번에" out of the line as time moves again (a film where nothing was owed).
 MODE boss with a SUMMON shot's boss.csv (ACTOR -, 2.69.0) shows Kujo Jotaro: neutral or angry, what he does (his own
 moves, or how he answers the player's: a guard, a dash, a blow first), whom he goes after, his health, the player's
 (and the second player's, MATE) health and the boxes he left.
@@ -367,11 +368,13 @@ def timestop_line(t):
     i = bisect.bisect_right([a for a, _ in rush], t * 20 + 1e-6) - 1
     if i < 0: return None, None
     r, parts = rush[i][1], []
+    # (2.75.0) a time stop older than the shot is the last entry's, kept by the client until it is ready again: none here
+    if r.get('ts_age') and float(r['ts_age']) > float(r['t']) / 20 + .2: r = {k: ('' if k.startswith('ts_') or k.endswith(('_resisting', '_stopped')) else v) for k, v in r.items()}
     if r.get('ts_age'):
         age, ended = float(r['ts_age']), float(r.get('ts_ended') or -1)
         if r.get('ts_cut') == '1': parts.append('시간 정지가 끊김')
         elif r.get('ts_stopped') == '1': parts.append(f'시간 정지 {min(5.0, max(0.0, age - 1.95)):.1f}초 / 5초')
-        elif ended >= 0: parts.append('시간이 다시 흐름 · 쌓인 피해가 한꺼번에')
+        elif ended >= 0: parts.append('시간이 다시 흐름' + ('' if os.environ.get('FILM_TS_OWED') == '0' else ' · 쌓인 피해가 한꺼번에'))
         else: parts.append('H · "스타플래티나 더 월드!"')
     if os.environ.get('FILM_TS_PLAYER') == '1' and r.get('player_health'):
         full = max(float(x['player_health']) for _, x in rush if x.get('player_health'))
