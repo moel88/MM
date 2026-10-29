@@ -16,8 +16,10 @@ MODE beatdown with a SUMMON shot's stand.csv (ACTOR -, 2.64.0) shows its beatdow
 MODE timestop with a SUMMON shot's stand.csv (ACTOR -, 2.67.0) shows its time stop: called ("The World!"), stopped (for
 how long of its 5 s), moving again; the training dummy's health through it (unchanged while time is stopped, then all
 it took at once; FILM_TS_DUMMY=0 leaves it out) and, with FILM_TS_PLAYER=1, the player's own: one it stopped, whose
-screen is held still (shown) while time is stopped. Since 2.68.0, with an actors.csv beside it (act=), each husk while
-time is stopped: how far it is and whether it stands stopped or walks on (out of its reach).
+screen is held still (shown) while time is stopped (FILM_TS_HEALTH=0 leaves their health out). Since 2.68.0, with an
+actors.csv beside it (act=), each husk while time is stopped: how far it is and whether it stands stopped or walks on
+(out of its reach). Since 2.75.0 the player and the fake user (FAKE) when they are Star Platinum's users resisting it:
+moving on in its first two seconds (how long until it stops them), then stopped.
 MODE boss with a SUMMON shot's boss.csv (ACTOR -, 2.69.0) shows Kujo Jotaro: neutral or angry, what he does (his own
 moves, or how he answers the player's: a guard, a dash, a blow first), whom he goes after, his health, the player's
 (and the second player's, MATE) health and the boxes he left.
@@ -374,8 +376,15 @@ def timestop_line(t):
     if os.environ.get('FILM_TS_PLAYER') == '1' and r.get('player_health'):
         full = max(float(x['player_health']) for _, x in rush if x.get('player_health'))
         h = float(r['player_health'])
-        parts.append(f'내 체력 {h:.0f}/{full:.0f}' + (f' (피해 {full - h:.0f})' if full - h > .5 else ''))
+        if os.environ.get('FILM_TS_HEALTH') != '0': parts.append(f'내 체력 {h:.0f}/{full:.0f}' + (f' (피해 {full - h:.0f})' if full - h > .5 else ''))
         if r.get('ts_still') == '1': parts.append('내 화면이 멈춤')
+    # (2.75.0) Star Platinum's users caught in it resist it for its first two seconds (the server's state): the player and
+    # the fake user, moving on (how long they have left) or stopped once those are up
+    if r.get('ts_stopped') == '1' and r.get('ts_age'):
+        left = max(0.0, 2.0 - (float(r['ts_age']) - 1.95))
+        for who, key in (('나', 'player'), ('상대 스타플래티나 사용자', 'fake')):
+            if r.get(key + '_resisting') == '1': parts.append(f'{who}: 아직 움직임 (멈추기까지 {left:.1f}초)')
+            elif r.get(key + '_stopped') == '1' and any(x.get(key + '_resisting') == '1' for _, x in rush): parts.append(f'{who}: 2초가 지나 멈춤')
     if os.environ.get('FILM_TS_DUMMY') != '0' and r.get('dummy_health'):
         full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
         if full: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f}/{full:.0f}' + (f' (피해 {full - float(r["dummy_health"]):.0f})' if full - float(r['dummy_health']) > .5 else ''))

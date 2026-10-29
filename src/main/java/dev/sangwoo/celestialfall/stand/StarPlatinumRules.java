@@ -287,6 +287,13 @@ public final class StarPlatinumRules {
     /** How far from its user time stops (blocks; 2.68.0, user request: "더 월드 20블록으로 줄여주고", it was 50). */
     public static final double TS_RANGE=20;
     /**
+     * How long Star Platinum's users move on in another's stopped time before it stops them too (ticks: two seconds,
+     * 2.75.0, user request: "스타플래티나는 시간정지 면역이 2초 있게 만들어줘"; StarPlatinumTimeStop.resists).
+     */
+    public static final int TS_RESIST=40;
+    /** The tick one who resists a time stop that stopped time at {@code stopped} stops in it too. */
+    public static long timeStopResistedUntil(long stopped){return stopped+TS_RESIST;}
+    /**
      * Its cooldown once time moves again (ticks: two and a half minutes, 2.73.0, user request: "시간정지도 똑같이 바꿔줘
      * 쿨타임은 현재 2분에서 2분30초로 올리자(죠타로 보스도 적용)"; a minute until 2.72.0). Running when its user leaves the
      * game and comes back, or resets their character, it begins again in full (LongCooldowns).

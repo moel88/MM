@@ -124,6 +124,7 @@ public final class MpServer implements ModInitializer {
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
         if(STAGGER_ONLY)staggers(server);
+        if(RESIST_ONLY)resist(server);
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
         if(ARROW_ONLY||COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)arrow(server);
@@ -131,7 +132,7 @@ public final class MpServer implements ModInitializer {
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&!ARROW_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -329,7 +330,7 @@ public final class MpServer implements ModInitializer {
             boolean in=dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p);
             if(in!=Boolean.TRUE.equals(beaten.put(p.getUuid(),in)))note(server,String.format(java.util.Locale.ROOT,"watcher %s at tick %d, health %.1f %s",in?"in the beatdown's cutscene":"out of the beatdown's cutscene",now,p.getHealth(),where(p,caster)));
             Float before=healths.put(p.getUuid(),p.getHealth());
-            if(before!=null&&Math.abs(before-p.getHealth())>.01f&&(in||BEATDOWN_ONLY||TIMESTOP_ONLY))note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at tick %d%s",before,p.getHealth(),now,in?" (in the cutscene)":""));
+            if(before!=null&&Math.abs(before-p.getHealth())>.01f&&(in||BEATDOWN_ONLY||TIMESTOP_ONLY||RESIST_ONLY))note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at tick %d%s",before,p.getHealth(),now,in?" (in the cutscene)":""));
             // 2.67.0: the watcher stopped in the caster's stopped time as the server keeps it, and the caster's time stop
             boolean stopped=dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(p);
             if(stopped!=Boolean.TRUE.equals(timeStopped.put(p.getUuid(),stopped)))note(server,String.format(java.util.Locale.ROOT,"watcher %s at tick %d, health %.1f %s",stopped?"stopped in time":"moving again",now,p.getHealth(),where(p,caster)));
@@ -355,6 +356,51 @@ public final class MpServer implements ModInitializer {
         if(!standNow.equals(standStates.put(caster.getUuid(),standNow)))note(server,"caster's stand "+standNow+" at tick "+now);
     }
     private int casterJoins;private String cooldownsLogged="";private Boolean casterAlive;
+    /** 2.75.0 (MP_ONLY=resist): the watcher's state in the caster's stopped time last logged, where it was last tick, the caster's health. */
+    private String resistLogged="";private net.minecraft.util.math.Vec3d resistLast;private float casterHealth=-1;private long resistSince=-1,stoppedSince=-1;
+    /** A blow of 4 on the watcher from the caster through the game's own blow path (as the capture tool's HURT), and the watcher's health right after. */
+    private void strike(MinecraftServer server,ServerPlayerEntity w,ServerPlayerEntity caster,String when){
+        float before=w.getHealth();boolean ok=dev.sangwoo.celestialfall.combat.CombatManager.damageWithoutKnockback(w,w.getDamageSources().playerAttack(caster),4);
+        note(server,String.format(java.util.Locale.ROOT,"a blow of 4 on the watcher %s at tick %d: %s, health %.1f -> %.1f",when,server.getOverworld().getTime(),ok?"landed":"refused",before,w.getHealth()));
+    }
+    /**
+     * Star Platinum's users resisting another's stopped time (2.75.0, MP_ONLY=resist): whenever it changes, the watcher
+     * resisting the caster's time stop, stopped in it, or neither (where, and its health), its own time stop called, its
+     * inhale on, its beatdown's blow begun (none may while it resists); while the caster's time stop is on, every tick
+     * the watcher moved (how far); and every change of the caster's health (the watcher's jab lands at once).
+     */
+    private void resist(MinecraftServer server){
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var w=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||w==null)return;
+        long now=server.getOverworld().getTime();
+        var punch=dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punch(w);
+        String state=(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.resisting(w)?"resisting the caster's stopped time":dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(w)?"stopped in time":"free")
+            +(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.active(w)?", calling its own time stop":"")
+            +(dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(w)?", inhaling":"")
+            +(punch!=null&&punch.combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN&&now<punch.start()+dev.sangwoo.celestialfall.stand.StarPlatinumRules.LENGTH[dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN]?", its beatdown's blow":"");
+        if(!state.equals(resistLogged)){note(server,String.format(java.util.Locale.ROOT,"watcher %s at tick %d (at %.2f %.2f, health %.1f)",state,now,w.getX(),w.getZ(),w.getHealth()));resistLogged=state;
+            if(state.startsWith("resisting"))resistSince=now;if(state.startsWith("stopped"))stoppedSince=now;}
+        // the server's own checks, its clients' lag aside (a slow software-rendered client can be 50 ticks behind): 5 ticks
+        // into resisting, its own time stop, inhale and beatdown asked for straight (all refused while it resists); 8 ticks
+        // in, a blow of 4 through the game's own blow path (it lands at once); 10 ticks after it stopped, another (kept
+        // until time moves, then dealt)
+        if(resistSince>=0&&now==resistSince+5){
+            note(server,String.format(java.util.Locale.ROOT,"asked straight while resisting: its own time stop %s, its inhale %s, its beatdown %s",
+                dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.request(w)?"STARTED":"refused",dev.sangwoo.celestialfall.stand.StarPlatinumInhale.start(w)?"STARTED":"refused",
+                dev.sangwoo.celestialfall.stand.StarPlatinumAttack.beatdown(w)?"STARTED":"refused"));
+            dev.sangwoo.celestialfall.stand.StarPlatinumInhale.release(w);
+        }
+        if(resistSince>=0&&now==resistSince+8)strike(server,w,caster,"while it resists");
+        if(stoppedSince>=0&&now==stoppedSince+10)strike(server,w,caster,"stopped two seconds in");
+        if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopping(caster)&&resistLast!=null){
+            double step=w.getPos().distanceTo(resistLast);
+            if(step>1e-4)note(server,String.format(java.util.Locale.ROOT,"watcher moved %.3f blocks at tick %d (%s)",step,now,state));
+        }
+        resistLast=w.getPos();
+        if(casterHealth>=0&&Math.abs(casterHealth-caster.getHealth())>.01f)note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at tick %d",casterHealth,caster.getHealth(),now));
+        casterHealth=caster.getHealth();
+    }
     /**
      * The long cooldowns (2.73.0, MP_ONLY=cooldowns): whenever any changes, the caster's as kept with the world
      * (LongCooldowns) and as each skill keeps its own (the Atomic's with its sword's cooldown, the time stop's, the
@@ -406,6 +452,8 @@ public final class MpServer implements ModInitializer {
     static final boolean BEATDOWN_ONLY="beatdown".equals(System.getProperty("botand.mp.only"));
     /** Only the time stop's script (2.67.0, MP_ONLY=timestop). */
     static final boolean TIMESTOP_ONLY="timestop".equals(System.getProperty("botand.mp.only"));
+    /** Only the script of Star Platinum's users resisting another's stopped time for two seconds (2.75.0, MP_ONLY=resist). */
+    static final boolean RESIST_ONLY="resist".equals(System.getProperty("botand.mp.only"));
     /** Only the stagger's script (2.68.0, MP_ONLY=stagger). */
     static final boolean STAGGER_ONLY="stagger".equals(System.getProperty("botand.mp.only"));
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */

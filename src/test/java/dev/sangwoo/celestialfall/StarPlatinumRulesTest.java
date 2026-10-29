@@ -298,4 +298,11 @@ class StarPlatinumRulesTest {
         assertEquals(150,TS_COOLDOWN/20.0,1e-9);
         assertEquals(1000+TS_COOLDOWN,timeStopReady(1000),"from when time moves again (2.44.0's rule)");
     }
+    /** 2.75.0 (user request: "스타플래티나는 시간정지 면역이 2초 있게 만들어줘"): Star Platinum's users move the first two seconds of another's stopped time. */
+    @Test void starPlatinumsUsersMoveTheFirstTwoSecondsOfAnothersStoppedTime(){
+        assertEquals(2,TS_RESIST/20.0,1e-9,"two seconds");
+        assertEquals(1000+TS_RESIST,timeStopResistedUntil(1000),"from when time stops");
+        assertTrue(TS_RESIST<TS_LENGTH,"and then they stand stopped for the rest of it: "+(TS_LENGTH-TS_RESIST)/20.0+" s");
+        assertTrue(TS_RESIST<TS_LENGTH-TS_RESUME_LEAD,"stopped before \"toki wa ugoki dasu\" begins");
+    }
 }

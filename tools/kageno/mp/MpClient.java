@@ -265,7 +265,25 @@ public final class MpClient implements ClientModInitializer {
         "200 AWAKEN","220 KILL","300 RESPAWN",
         "320 UNAWAKEN","330 NOSTAND","340 ARROWS","350 RIGSTAR","370 R",
         "620 NOSTAND","630 PITY","650 PULL","680 PULLED","720 END"};
-    private static final String[] STEPS=ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * Star Platinum's users resist another's stopped time for two seconds (2.75.0, user request: "스타플래티나는 시간정지
+     * 면역이 2초 있게 만들어줘"), on their own (MP_ONLY=resist; nobody is healed). The caster takes Star Platinum, is
+     * awakened and brings it out; the watcher is given Star Platinum and the awakening too ("WSTAR", "WAWAKEN") and
+     * brings its own out (Q, as it sees it has it), and is called 2.5 blocks in front of the caster. The caster stops
+     * time (H): the watcher, not stopped, tries its own time stop (H), the inhale (Y) and the beatdown (G) (all refused
+     * while it resists), jabs the caster (it lands at once: the caster moves in its own stopped time) and walks back (S
+     * held from 16 ticks in to 64): it walks on until its two seconds are up and stands stopped from there, its screen
+     * held, until time moves. The watcher logs each tick of it how far it moved, whether its screen is held and whether
+     * its client holds it; both log whom the time stop held when (the watcher appears in it two seconds in); the server
+     * the watcher resisting and then stopped (and where), its own skills refused, and both players' health through it;
+     * and on its own clock (a slow client lags far behind it) asks the watcher's own time stop, inhale and beatdown
+     * straight while it resists (refused), and strikes it through the game's own blow path while it resists (landing at
+     * once) and once it stands stopped (kept until time moves).
+     */
+    private static final String[] RESIST_SCRIPT={
+        "5 STAND","20 AWAKEN","40 Q","60 WSTAR","65 WAWAKEN","90 HOME","100 HEAL","110 H",
+        "330 Q","360 END"};
+    private static final String[] STEPS=ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -330,7 +348,8 @@ public final class MpClient implements ClientModInitializer {
                     if(guard!=guardAsked){guardAsked=guard;key(GLFW_KEY_F,guard);note((guard?"press":"release")+" F (guard, asked by the caster)");}
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
-                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(ONLY.equals("resist"))resistWatch();
+                    if(age>(ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -410,6 +429,9 @@ public final class MpClient implements ClientModInitializer {
         // 2.59.0: the watcher back 2.5 blocks in front of the caster, facing it, for the heavy punch
         // 2.60.0: the watcher takes Kageno (its skills, refused while the Star Finger has it incapacitated)
         if(step.equals("KAGENO")){if(down){String c="botand progress stand Watcher kageno";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // 2.75.0: the watcher given Star Platinum and the awakening (MP_ONLY=resist)
+        if(step.equals("WSTAR")){if(down)command("botand progress stand Watcher star_platinum");return;}
+        if(step.equals("WAWAKEN")){if(down)command("botand progress awaken Watcher");return;}
         // (2.68.0: "DISTn", n blocks in front: the time stop's 20 blocks)
         if(step.equals("HOME")||step.equals("FAR")||step.equals("AWAY")||step.startsWith("DIST")){if(down){String c="execute as Caster at @s rotated ~ 0 run tp Watcher ^ ^ ^"+(step.equals("FAR")?"4.5":step.equals("AWAY")?"8":step.startsWith("DIST")?step.substring(4):"2.5")+" facing entity Caster feet";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
         // 2.68.0: the watcher's walk asked for (the file OUT/walk), as its guard is
@@ -706,6 +728,10 @@ public final class MpClient implements ClientModInitializer {
             String t=tries.remove(age);
             if(t!=null){note("try "+t+(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView()?" (stopped in time)":mine.locked(mc.world.getTime())?" (incapacitated)":" (free)"));
                 switch(t){case "M1"->{attack(true);release=age+1;}case "C"->{key(GLFW_KEY_C,true);releaseKey=GLFW_KEY_C;release=age+1;}case "E"->{key(GLFW_KEY_E,true);releaseKey=GLFW_KEY_E;release=age+1;}
+                    // (2.75.0: its own Q, H, Y and G tapped, and walking back)
+                    case "Q"->{key(GLFW_KEY_Q,true);releaseKey=GLFW_KEY_Q;release=age+1;}case "H"->{key(GLFW_KEY_H,true);releaseKey=GLFW_KEY_H;release=age+1;}
+                    case "Y"->{key(GLFW_KEY_Y,true);releaseKey=GLFW_KEY_Y;release=age+1;}case "G"->{key(GLFW_KEY_G,true);releaseKey=GLFW_KEY_G;release=age+1;}
+                    case "S+"->key(GLFW_KEY_S,true);case "S-"->key(GLFW_KEY_S,false);
                     case "W+"->key(GLFW_KEY_W,true);case "W-"->key(GLFW_KEY_W,false);case "F+"->key(GLFW_KEY_F,true);case "F-"->key(GLFW_KEY_F,false);default->{}}
                 if(stoppedAt!=null&&(t.equals("W-")||t.equals("F-")))note(String.format(Locale.ROOT,"%.2f blocks from where time stopped it (its guard %s)",mc.player.getPos().distanceTo(stoppedAt),mine.guard()?"up":"down"));}
             if(age==release){attack(false);if(releaseKey!=0)key(releaseKey,false);releaseKey=0;}
@@ -850,13 +876,23 @@ public final class MpClient implements ClientModInitializer {
             mc.getSoundManager().registerListener((sound,set)->{if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView())stillSounds.add(sound.getId().toString());});}
         for(var p:mc.world.getPlayers()){
             var s=dev.sangwoo.celestialfall.client.stand.StandTimeStop.of(p.getUuid());if(s==null)continue;
-            int[] st=stopHeard.computeIfAbsent(s,k->new int[5]);String who=p.getGameProfile().getName()+"'s time stop";
+            int[] st=stopHeard.computeIfAbsent(s,k->new int[6]);String who=p.getGameProfile().getName()+"'s time stop";
             if(st[0]==0){st[0]=1;note(String.format(Locale.ROOT,"%s heard (server tick %d, its tick here %d)",who,s.start(),s.ticksHere()));}
             if(st[1]==0&&s.voiceSound()!=null&&mc.getSoundManager().isPlaying(s.voiceSound())){st[1]=1;note(String.format(Locale.ROOT,"%s: its call's sound started at its tick %d here",who,s.ticksHere()));}
             if(st[2]==0&&s.timeStopped()){st[2]=1;var names=new ArrayList<String>();
                 for(int id:s.whom()){var e=mc.world.getEntityById(id);names.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
                 note(String.format(Locale.ROOT,"%s: time stopped at its tick %d here, stopping %s",who,s.ticksHere(),names));
-                if(!caster&&s.whom().contains(mc.player.getId())){tries.put(age+5,"M1");tries.put(age+12,"C");tries.put(age+20,"W+");tries.put(age+40,"W-");tries.put(age+50,"F+");tries.put(age+60,"F-");stoppedAt=mc.player.getPos();}}
+                if(!caster&&s.whom().contains(mc.player.getId())){tries.put(age+5,"M1");tries.put(age+12,"C");tries.put(age+20,"W+");tries.put(age+40,"W-");tries.put(age+50,"F+");tries.put(age+60,"F-");stoppedAt=mc.player.getPos();}
+                // 2.75.0 (MP_ONLY=resist): not stopped, a Star Platinum user resisting it: its own skills tried, a jab at the
+                // caster, then a walk back through its two seconds and on
+                else if(!caster&&ONLY.equals("resist")&&p!=mc.player){
+                    tries.put(age+2,"H");tries.put(age+4,"Y");tries.put(age+6,"G");tries.put(age+8,"M1");tries.put(age+16,"S+");tries.put(age+64,"S-");
+                    resistFrom=age;resistAt=mc.player.getPos();resistStart=mc.player.getPos();note(String.format(Locale.ROOT,"not stopped by it: resisting (at %.2f %.2f)",resistAt.x,resistAt.z));}}
+            // (2.75.0) whom it holds grown after time stopped: Star Platinum's users stopped as their two seconds ran out (LATE)
+            if(st[2]==1&&st[5]==0)st[5]=s.whom().size()+1;
+            if(st[2]==1&&Float.isNaN(s.endedAt())&&s.whom().size()+1!=st[5]){var names=new ArrayList<String>();
+                for(int id:s.whom()){var e=mc.world.getEntityById(id);names.add(e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(id));}
+                note(String.format(Locale.ROOT,"%s: now holds %s, at its tick %d here",who,names,s.ticksHere()));st[5]=s.whom().size()+1;}
             if(st[3]==0&&s.endSound()!=null&&mc.getSoundManager().isPlaying(s.endSound())){st[3]=1;note(String.format(Locale.ROOT,"%s: its end's sound started at its tick %d here",who,s.ticksHere()));}
             if(st[4]==0&&!Float.isNaN(s.endedAt())){st[4]=1;var owed=new ArrayList<String>();
                 for(var e:s.owedHarm().entrySet()){var x=mc.world.getEntityById(e.getKey());owed.add(String.format(Locale.ROOT,"%s %.1f",x instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():String.valueOf(e.getKey()),e.getValue()));}
@@ -876,6 +912,24 @@ public final class MpClient implements ClientModInitializer {
         else if(stillTicks>0){note("while its screen was held ("+stillTicks+" ticks) the sounds that played: "+stillSounds+"; held by a blow (its hit-stun notice) on "+stillStunned);stillTicks=0;stillStunned=0;stillSounds.clear();}
     }
     private int otherHeldTicks,otherFlinched,stillStunned;
+    /** 2.75.0 (MP_ONLY=resist): when the watcher heard time stop without stopping it, where it was then and last tick, whether it brought its stand out. */
+    private int resistFrom=-1;private net.minecraft.util.math.Vec3d resistAt,resistStart;private boolean resistQ;
+    /**
+     * The watcher in the resisting check (2.75.0): brings its Star Platinum out once it has it; from hearing time stop
+     * without being stopped until 75 ticks on, each tick it moved (how far, how far from where time stopped), and each
+     * tick its screen held or its client holding it changed.
+     */
+    private void resistWatch(){
+        if(!resistQ&&dev.sangwoo.celestialfall.stand.StandManager.starPlatinum(mc.player)&&!((dev.sangwoo.celestialfall.stand.StandHolder)mc.player).botand$isStandOut()&&age>20){resistQ=true;tries.put(age+2,"Q");note("bring my own Star Platinum out");}
+        if(resistFrom<0||resistAt==null)return;
+        int in=age-resistFrom;
+        if(in>75){note(String.format(Locale.ROOT,"resisting check over: %.2f blocks from where time stopped",mc.player.getPos().distanceTo(resistStart)));resistFrom=-1;return;}
+        var p=mc.player.getPos();double step=p.distanceTo(resistAt);resistAt=p;
+        String state=String.format(Locale.ROOT,"screen %s, %s",dev.sangwoo.celestialfall.client.stand.StandTimeStop.stillView()?"held":"moving",StandClient.frozen(mc.player)?"held by its client":"free");
+        if(step>1e-4||!state.equals(resistState))note(String.format(Locale.ROOT,"resisting %d ticks in: moved %.3f blocks (%.2f from where time stopped), %s",in,step,p.distanceTo(resistStart),state));
+        resistState=state;
+    }
+    private String resistState="";
     private final Map<Integer,String> tries=new HashMap<>();private int release=-1,releaseKey;private int[] fingerWalk;
     private net.minecraft.util.math.Vec3d walkFrom;private final List<Double> walkSteps=new ArrayList<>();
     /** A player's stand as this client sees it: its id, out or in as the server tracks it, and the stand drawn here. */

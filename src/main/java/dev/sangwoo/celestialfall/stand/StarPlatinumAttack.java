@@ -198,8 +198,9 @@ public final class StarPlatinumAttack {
      * just after the rush it starts once the rush's fists are back in the guard. Returns whether it starts (now or then).
      */
     public static boolean beatdown(ServerPlayerEntity p){
-        // (not in its user's own stopped time, 2.67.0: whom it would strike stand stopped, and its cutscene is not of stopped time)
-        if(!able(p)||StarPlatinumTimeStop.stopping(p))return false;
+        // (not in its user's own stopped time, 2.67.0: whom it would strike stand stopped, and its cutscene is not of stopped
+        // time; nor in another's that its user resists yet, 2.75.0)
+        if(!able(p)||StarPlatinumTimeStop.stopping(p)||StarPlatinumTimeStop.resisting(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(skill(s.combo)&&now<s.start+LENGTH[s.combo])return false;
         if(now<s.beatdownReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;

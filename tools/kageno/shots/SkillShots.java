@@ -630,6 +630,27 @@ public final class SkillShots implements ClientModInitializer {
         if(awake!=awakeLogged){log.append("  ").append(awake?"awakened":"not awakened").append(" (client) at ").append(age).append('\n');awakeLogged=awake;}
         if(!mc.player.isAlive()&&!playerDeadLogged){log.append("  player died at ").append(age).append('\n');playerDeadLogged=true;}
         if(mc.player.isAlive())playerDeadLogged=false;
+        // 2.75.0: Star Platinum's users resisting another's stopped time (the server's own state): whether the player and
+        // the fake user resist one now or stand stopped in one, and where the fake user is
+        String playerTs=",",fakeTs=",,,";
+        if(mc.getServer()!=null){
+            var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());var fake=fakePlayer;
+            if(sp!=null){
+                boolean resisting=StarPlatinumTimeStop.resisting(sp),stopped=StarPlatinumTimeStop.stopped(sp);
+                playerTs=(resisting?1:0)+","+(stopped?1:0);
+                if(resisting&&!resistLogged[0])log.append("  player resists the time stop at ").append(age).append(String.format(Locale.ROOT," (at %.2f, %.2f)%n",sp.getX(),sp.getZ()));
+                if(stopped&&!resistLogged[1])log.append("  player stopped in it at ").append(age).append(String.format(Locale.ROOT," (at %.2f, %.2f)%n",sp.getX(),sp.getZ()));
+                resistLogged[0]=resisting;resistLogged[1]=stopped;
+            }
+            if(fake!=null&&!fake.isRemoved()){
+                boolean resisting=StarPlatinumTimeStop.resisting(fake),stopped=StarPlatinumTimeStop.stopped(fake);
+                fakeTs=(resisting?1:0)+","+(stopped?1:0)+String.format(Locale.ROOT,",%.3f,%.3f",fake.getX(),fake.getZ());
+                if(resisting&&!resistLogged[2])log.append("  fake user resists the time stop at ").append(age).append(String.format(Locale.ROOT," (at %.2f, %.2f)%n",fake.getX(),fake.getZ()));
+                if(stopped&&!resistLogged[3])log.append("  fake user stopped in it at ").append(age).append(String.format(Locale.ROOT," (at %.2f, %.2f)%n",fake.getX(),fake.getZ()));
+                resistLogged[2]=resisting;resistLogged[3]=stopped;
+            }
+        }
+        standLog.append(',').append(playerTs).append(',').append(fakeTs);
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -677,8 +698,10 @@ public final class SkillShots implements ClientModInitializer {
     private String punchLogged="";private boolean rushOn;private int rushBlows;private final StringBuilder cameraLog=new StringBuilder();private String worldPass=",,,,,,,";
     private boolean beatOn,beatEnded;private float dummyHealth=-1;
     /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
-    private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private float playerHealth=-1;
+    private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private float playerHealth=-1;private float fakeRunYaw;
     private boolean playerStaggered,dummyStaggeredLogged,playerDeadLogged;
+    /** (2.75.0) last logged: the player resisting a time stop, stopped in one; the fake user the same. */
+    private final boolean[] resistLogged=new boolean[4];
     private String arrowLogged="";
     private double fingerLongest,fingerReach;private boolean fingerLogged,dummyDisabled;
     private boolean inhaleOn;private String inhaleCaught="0";private int inhaleGuards;
@@ -1078,6 +1101,16 @@ public final class SkillShots implements ClientModInitializer {
                             fake.refreshPositionAndAngles(next.x,p.getY(),next.z,yaw,0);fake.setHeadYaw(yaw);fake.setBodyYaw(yaw);
                             if(left==1)log.append(String.format(Locale.ROOT,"  fake walked up to (%.2f, %.2f) by %d%n",next.x,next.z,age));});}continue;}
                     if(what.equals("FAKER")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.stand.StarPlatinumAttack.heavy(fakePlayer);log.append("  fake R ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
+                    // "FAKERUN@n" (2.75.0): from shot tick n for "frn" ticks (60) the fake user walks at a player's pace, "fspd"
+                    // (4.317) blocks a second, the way "fdir" degrees (90) round from the player's facing as it starts (90:
+                    // across in front of them, to their right), facing that way: a step a tick, and none while a time stop
+                    // holds it (KagenoManager.frozen, as a player's own client is held), so it walks on through the two
+                    // seconds it resists another's stopped time and stops as they run out, as a player would
+                    if(what.equals("FAKERUN")){int n=(int)opt("frn",60);if(age>=at&&age<at+n){boolean first=age==at;server(p->{var fake=fakePlayer;if(fake==null)return;
+                            if(first){fakeRunYaw=p.getYaw()+(float)opt("fdir",90);log.append("  fake user walks off at ").append(age).append('\n');}
+                            if(KagenoManager.frozen(fake))return;
+                            var stride=net.minecraft.util.math.Vec3d.fromPolar(0,fakeRunYaw).multiply(opt("fspd",4.317f)/20);
+                            fake.refreshPositionAndAngles(fake.getX()+stride.x,fake.getY(),fake.getZ()+stride.z,fakeRunYaw,0);fake.setHeadYaw(fakeRunYaw);fake.setBodyYaw(fakeRunYaw);});}continue;}
                     if(what.equals("HURT")){if(age==at)server(p->{float amount=(float)opt("hurt",4);
                             boolean ok=dev.sangwoo.celestialfall.combat.CombatManager.damageWithoutKnockback(p,fakePlayer==null?p.getDamageSources().generic():p.getDamageSources().playerAttack(fakePlayer),amount);
                             log.append(String.format(Locale.ROOT,"  hurt %.1f %s at %d (health %.1f)%n",amount,ok?"landed":"refused",age,p.getHealth()));});continue;}
@@ -1182,7 +1215,8 @@ public final class SkillShots implements ClientModInitializer {
                         +"wind_heavy,punch_heavy,dummy_guard,dummy_broken,dummy_x,dummy_y,dummy_z,wind_finger,star_finger,finger_open,finger_ext,finger_len,finger_reach,dummy_disabled,dummy_speed,"
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
                         +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden,"
-                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago\n"+standLog);
+                        +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
+                        +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
                         stopLogged="";stillLogged=false;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}

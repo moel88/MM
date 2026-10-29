@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.74.3** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.75.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.75.0 — 스타플래티나는 남의 시간 정지를 2초 버팁니다
+
+- **2초 동안 움직입니다:** 다른 사람이 시간을 멈춰도, 범위 안의 스타플래티나 사용자는 처음 2초 동안 멈추지 않습니다. 걷고, 치고, 스킬을 쓸 수 있고, 화면도 멈추지 않습니다.
+- **2초가 지나면 멈춥니다:** 그때 서 있는 자리에서 다른 사람처럼 멈추고(화면도 멈춤), 시간이 다시 흐를 때까지 멈춰 있습니다. 시간 정지는 5초라서 2초 움직이고 3초 멈춥니다.
+- **피해:** 움직이는 2초 동안 맞은 피해는 바로 들어가고, 멈춘 뒤 맞은 피해는 쌓였다가 시간이 흐를 때 한꺼번에 들어갑니다.
+- 보스 죠타로도 똑같이 2초를 버팁니다. 죠타로가 시간을 멈추면 2초 동안 움직이는 스타플래티나 플레이어도 쫓아가 칩니다.
+- 각성과 상관없이 모든 스타플래티나 사용자가 버티는 것, 2초 동안 범위 밖으로 나가도 2초가 되면 멈추는 것, 버티는 동안 H·Y·G를 못 쓰는 것은 제가 정했습니다(바꿀 수 있습니다).
+
+[RELEASE_2.75.0_KO.md](RELEASE_2.75.0_KO.md)를 확인하세요.
 
 # 보탠드 2.74.3 — 스탠드를 새로 얻거나 죽으면 긴 쿨타임은 무조건 처음부터
 

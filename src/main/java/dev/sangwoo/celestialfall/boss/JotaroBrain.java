@@ -229,6 +229,8 @@ final class JotaroBrain extends BossBrain {
             }
         }else if(now-pressedAt>28){StarPlatinumInhale.release(boss);end();}
     }
+    /** Whether {@code e} is caught in a stopped time: stopped in it, or resisting it yet (2.75.0). */
+    private static boolean caught(LivingEntity e){return StarPlatinumTimeStop.stopped(e)||StarPlatinumTimeStop.resisting(e);}
     private void timeStop(long now){
         if(!pressed){
             if(StarPlatinumTimeStop.request(boss)){pressed=true;pressedAt=now;doing="시간 정지";}
@@ -238,9 +240,11 @@ final class JotaroBrain extends BossBrain {
         if(!StarPlatinumTimeStop.active(boss)){end();return;}
         if(!StarPlatinumTimeStop.stopping(boss)){doing="더 월드!";return;}
         // stopped time: up to the one he fights (another stopped one if they were not caught), the rush, then the heavy punch
+        // (2.75.0: one who resists it, a Star Platinum user moving on in its first two seconds, is fought as well: it is
+        // about to stop them where they stand)
         long moves=StarPlatinumTimeStop.calledAt(boss)+TS_WIND+TS_LENGTH,left=moves-now;
-        LivingEntity v=mark!=null&&StarPlatinumTimeStop.stopped(mark)?mark:null;
-        if(v==null)for(var p:boss.getServerWorld().getPlayers())if(fightable(p)&&StarPlatinumTimeStop.stopped(p)&&(v==null||p.getHealth()<v.getHealth()))v=p;
+        LivingEntity v=mark!=null&&caught(mark)?mark:null;
+        if(v==null)for(var p:boss.getServerWorld().getPlayers())if(fightable(p)&&caught(p)&&(v==null||p.getHealth()<v.getHealth()))v=p;
         if(v==null){if(StarPlatinumRush.rushing(boss))StarPlatinumRush.release(boss);doing="정지된 시간";return;}
         double d=flat(v.getPos());face(v,45);doing="정지된 시간 공격";
         if(StarPlatinumRush.rushing(boss)){

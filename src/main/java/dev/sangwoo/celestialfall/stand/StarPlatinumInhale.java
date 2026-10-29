@@ -119,8 +119,9 @@ public final class StarPlatinumInhale {
 
     /** Y goes down: the inhale starts if it may. Returns whether it starts (now, or once the rush's fists are back). */
     public static boolean start(ServerPlayerEntity p){
-        // (not in its user's own stopped time, 2.67.0: whom it would catch stand stopped where they are)
-        if(!StarPlatinumAttack.able(p)||held(p)||StarPlatinumTimeStop.stopping(p))return false;
+        // (not in its user's own stopped time, 2.67.0: whom it would catch stand stopped where they are; nor in another's
+        // that its user resists yet, 2.75.0)
+        if(!StarPlatinumAttack.able(p)||held(p)||StarPlatinumTimeStop.stopping(p)||StarPlatinumTimeStop.resisting(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(s.on||now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         // the heavy punch and the Star Finger are not cut off: it waits for them to be over, and starts then if Y is still down

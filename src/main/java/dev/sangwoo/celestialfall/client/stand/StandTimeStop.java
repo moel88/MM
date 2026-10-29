@@ -46,7 +46,9 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * their screen holds the frame of the moment it stopped, the wave spreading over it, their look held, and they hear
  * nothing but its own sound until time moves again. Then "toki wa ugoki dasu" (the user's second recording) ends as
  * time moves (TS_RESUME_LEAD), the wave falls back to where it began and the colour returns (and all that befell the
- * stopped comes to them at once: the server's to deal).
+ * stopped comes to them at once: the server's to deal). Star Platinum's users caught in it (2.75.0) move on in the
+ * stopped world for its first two seconds, seen and seeing as its user is; as the server says those are up (LATE) they
+ * stand still from that frame on, and their screens are held from there.
  */
 public final class StandTimeStop {
     /** Seconds from H: time stops (the boom of its sound); time moves again (unless the server says it did sooner). */
@@ -160,6 +162,13 @@ public final class StandTimeStop {
             for(int id:ids)s.held.add(id);
             // whom it stopped stand still from now: as the last frame drew them
             for(int id:ids)STILL.put(id,lastDelta);
+            if(mc.player!=null&&s.held.contains(mc.player.getId()))freeze(mc);
+        }else if(type==StarPlatinumTimeStop.LATE&&Float.isNaN(s.ended)){
+            // (2.75.0) Star Platinum's users caught in it, their two seconds of moving on in it up: they stand still from
+            // now, as the last frame drew them, and this client's own player's screen is held from here (the server
+            // names all it holds now: one who heard of it only now hears of the rest too)
+            if(!s.stopped){s.stopped=true;s.center=center;}
+            for(int id:ids)if(s.held.add(id))STILL.putIfAbsent(id,lastDelta);
             if(mc.player!=null&&s.held.contains(mc.player.getId()))freeze(mc);
         }else if(type==StarPlatinumTimeStop.END&&Float.isNaN(s.ended)){
             s.ended=Math.max(0,now-start)/20f;s.cut=cut;

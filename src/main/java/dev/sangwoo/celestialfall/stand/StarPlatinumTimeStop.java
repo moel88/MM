@@ -47,6 +47,13 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  * incapacitation and the strongest slow; and the feedback of those blows for whoever dealt them (the damage number) waits
  * for it too ("시간 정지 상태가 끝나야 넣었던 데미지가 모두 들어가").
  *
+ * <p>Star Platinum's users (2.75.0, user request: "스타플래티나는 시간정지 면역이 2초 있게 만들어줘"; a boss of it too) resist
+ * another's stopped time for TS_RESIST ticks: caught in it as it stops, they move on, untouched by it (nothing they are
+ * doing stops, the blows on them land as they come), and only as their two seconds run out does it stop them, where they
+ * stand then, as it stopped the rest (stand_timestop_event_v1 LATE: their screens held then, and so on); passed by
+ * then if something else has them by that time (as it would pass them by as it stops). While they resist it they may
+ * not call a time stop of their own, nor use the beatdown or the inhale (as its user may not in it).
+ *
  * <p>The call is cut short, before time stops, if its user is struck, stunned, incapacitated, put into a cutscene, stopped
  * by another's stopped time, dies or leaves, or the stand goes in; time moves again early only if its user dies or leaves.
  * Its cooldown runs from its end (2.44.0's rule). Passed by as it stops time: whoever is in a beatdown's cutscene, an
@@ -59,8 +66,11 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumRules.*;
  */
 public final class StarPlatinumTimeStop {
     public static final Identifier INPUT=CelestialFall.id("stand_timestop_v1"),EVENT=CelestialFall.id("stand_timestop_event_v1");
-    /** It is called (H); time stops (whom it stopped); time moves again, or its call was cut short. */
-    public static final int CALL=0,STOP=1,END=2;
+    /**
+     * It is called (H); time stops (whom it stopped); time moves again, or its call was cut short; and (2.75.0) it stops
+     * those who resisted it as their two seconds run out (whom it stops now, with all it stopped before).
+     */
+    public static final int CALL=0,STOP=1,END=2,LATE=3;
     /** At most this many presses a second are heard. */
     static final int RATE=20;
     /** The throws one stopped took, added up, go no faster than this many times the strongest of them. */
@@ -79,17 +89,21 @@ public final class StarPlatinumTimeStop {
         /** Each attacker's own feedback for their blows: the damage they dealt, the way their last blow went. */
         final Map<ServerPlayerEntity,float[]> shown=new LinkedHashMap<>();
     }
-    /** A time stop: its user, when it was called, and once time stopped, where its user stood then and whom it stopped. */
+    /**
+     * A time stop: its user, when it was called, and once time stopped, where its user stood then, whom it stopped and
+     * whom it caught that resist it yet (2.75.0: the tick it stops each).
+     */
     private static final class Stop {
         final ServerPlayerEntity user;final ServerWorld world;final long start;
         boolean stopped;Vec3d center;
         final Map<LivingEntity,Debt> held=new LinkedHashMap<>();
+        final Map<LivingEntity,Long> resisting=new LinkedHashMap<>();
         Stop(ServerPlayerEntity user,long start){this.user=user;world=user.getServerWorld();this.start=start;}
         long stopsAt(){return start+TS_WIND;}
         long movesAt(){return start+TS_WIND+TS_LENGTH;}
     }
     private static final class Presses{int window,count;}
-    private static final Map<UUID,Stop> BY_USER=new HashMap<>(),BY_HELD=new HashMap<>();
+    private static final Map<UUID,Stop> BY_USER=new HashMap<>(),BY_HELD=new HashMap<>(),BY_RESISTING=new HashMap<>();
     private static final Map<UUID,Long> READY=new HashMap<>();
     private static final Map<UUID,Presses> PRESSES=new HashMap<>();
     /** Set while what the stopped are owed comes to them: those blows go through. */
@@ -115,7 +129,7 @@ public final class StarPlatinumTimeStop {
             if(s!=null)end(s,s.world.getTime(),!s.stopped);
             PRESSES.remove(p.getUuid());
         });
-        ServerLifecycleEvents.SERVER_STOPPED.register(server->{BY_USER.clear();BY_HELD.clear();READY.clear();PRESSES.clear();settling=false;});
+        ServerLifecycleEvents.SERVER_STOPPED.register(server->{BY_USER.clear();BY_HELD.clear();BY_RESISTING.clear();READY.clear();PRESSES.clear();settling=false;});
     }
 
     /** Whether {@code e} is held where it stands by a time stop: calling it (until time stops), or stopped in it. */
@@ -126,6 +140,13 @@ public final class StarPlatinumTimeStop {
     }
     /** Whether {@code e} is stopped in someone's stopped time now. */
     public static boolean stopped(LivingEntity e){return e!=null&&!e.getWorld().isClient&&BY_HELD.containsKey(e.getUuid());}
+    /**
+     * Whether {@code e} resists a time stop (2.75.0, user request: "스타플래티나는 시간정지 면역이 2초 있게 만들어줘"): Star
+     * Platinum's users (a boss of it too), whose first TS_RESIST ticks of another's stopped time it does not stop them.
+     */
+    public static boolean resists(LivingEntity e){return e instanceof PlayerEntity p&&StandManager.starPlatinum(p);}
+    /** Whether {@code e} is caught in someone's stopped time and resists it now: moving on in it, its two seconds not yet up (2.75.0). */
+    public static boolean resisting(LivingEntity e){return e!=null&&!e.getWorld().isClient&&BY_RESISTING.containsKey(e.getUuid());}
     /** Whether this player has stopped time and it has not moved again yet (they move in it). */
     public static boolean stopping(PlayerEntity p){var s=p==null||p.getWorld().isClient?null:BY_USER.get(p.getUuid());return s!=null&&s.stopped;}
     /** Whether this player is calling a time stop or stopping time now. */
@@ -139,10 +160,11 @@ public final class StarPlatinumTimeStop {
 
     /**
      * H: the time stop is called now if it may: the stand out, its user free (no punch's skill in flight, no rush, no
-     * inhale; a punch in flight stops short), none of theirs going on, and it ready again. Returns whether it was.
+     * inhale; a punch in flight stops short), none of theirs going on, not caught in another's (stopped, or resisting it:
+     * 2.75.0), and it ready again. Returns whether it was.
      */
     public static boolean request(ServerPlayerEntity p){
-        if(!StarPlatinumAttack.able(p)||BY_USER.containsKey(p.getUuid())||BY_HELD.containsKey(p.getUuid()))return false;
+        if(!StarPlatinumAttack.able(p)||BY_USER.containsKey(p.getUuid())||BY_HELD.containsKey(p.getUuid())||BY_RESISTING.containsKey(p.getUuid()))return false;
         long now=p.getWorld().getTime();
         if(now<ready(p)&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         // the heavy punch, the Star Finger and the beatdown's blow are not cut off, nor the rush's fists on their way back
@@ -180,6 +202,7 @@ public final class StarPlatinumTimeStop {
                 if(!e.isAlive()||e.isRemoved()||e.getWorld()!=s.world||e.isSpectator()){it.remove();BY_HELD.remove(e.getUuid(),s);continue;}
                 KagenoManager.freeze(e);
             }
+            if(!s.resisting.isEmpty())late(s,now);
             if(now>=s.movesAt())end(s,now,false);
         }
     }
@@ -189,27 +212,49 @@ public final class StarPlatinumTimeStop {
         double r2=TS_RANGE*TS_RANGE;
         for(var e:s.world.getEntitiesByClass(LivingEntity.class,new Box(s.center,s.center).expand(TS_RANGE),e->e!=s.user&&e.isAlive()&&!e.isSpectator())){
             if(e.squaredDistanceTo(s.center)>r2||passedBy(e))continue;
-            s.held.put(e,new Debt());BY_HELD.put(e.getUuid(),s);
-            // whatever they were doing stops where it is (they show it as it was, stopped: their clients draw them so)
-            CombatManager.interrupt(e);
-            if(e instanceof ServerPlayerEntity sp){
-                StarPlatinumAttack.struck(sp);StarPlatinumRush.struck(sp);StarPlatinumInhale.struck(sp);KagenoManager.disable(sp);
-                sp.clearActiveItem();sp.setSprinting(false);if(sp.currentScreenHandler!=sp.playerScreenHandler)sp.closeHandledScreen();
-            }
-            if(e instanceof MobEntity mob)mob.getNavigation().stop();
-            KagenoManager.freeze(e);
-            // a boss stopped in it is a boss struck (2.69.0)
-            dev.sangwoo.celestialfall.boss.Bosses.provoke(e,s.user);
+            // (2.75.0) one who resists it moves on for their two seconds, untouched; it stops them as those run out (late)
+            if(resists(e)){s.resisting.put(e,timeStopResistedUntil(now));BY_RESISTING.put(e.getUuid(),s);dev.sangwoo.celestialfall.boss.Bosses.provoke(e,s.user);continue;}
+            hold(s,e);
         }
         send(s,STOP,now,false,List.copyOf(s.held.keySet()));
     }
+    /** It stops {@code e} where it stands now: from here it stands stopped until time moves again. */
+    private static void hold(Stop s,LivingEntity e){
+        s.held.put(e,new Debt());BY_HELD.put(e.getUuid(),s);
+        // whatever they were doing stops where it is (they show it as it was, stopped: their clients draw them so)
+        CombatManager.interrupt(e);
+        if(e instanceof ServerPlayerEntity sp){
+            StarPlatinumAttack.struck(sp);StarPlatinumRush.struck(sp);StarPlatinumInhale.struck(sp);KagenoManager.disable(sp);
+            sp.clearActiveItem();sp.setSprinting(false);if(sp.currentScreenHandler!=sp.playerScreenHandler)sp.closeHandledScreen();
+        }
+        if(e instanceof MobEntity mob)mob.getNavigation().stop();
+        KagenoManager.freeze(e);
+        // a boss stopped in it is a boss struck (2.69.0)
+        dev.sangwoo.celestialfall.boss.Bosses.provoke(e,s.user);
+    }
+    /**
+     * Those who resist it (2.75.0) whose two seconds are up: it stops them where they stand now, as it stopped the rest,
+     * unless something else has them by now (passedBy: a beatdown's cutscene, a cast, a time stop of their own...); one
+     * gone (dead, away, a spectator) is let go. Every viewer hears whom it holds now.
+     */
+    private static void late(Stop s,long now){
+        boolean more=false;
+        for(var it=s.resisting.entrySet().iterator();it.hasNext();){
+            var r=it.next();var e=r.getKey();
+            boolean gone=!e.isAlive()||e.isRemoved()||e.getWorld()!=s.world||e.isSpectator();
+            if(!gone&&now<r.getValue())continue;
+            it.remove();BY_RESISTING.remove(e.getUuid(),s);
+            if(!gone&&!passedBy(e)){hold(s,e);more=true;}
+        }
+        if(more)send(s,LATE,now,false,List.copyOf(s.held.keySet()));
+    }
     /**
      * Whom a time stop passes by: those in a beatdown's cutscene or an Atomic's (or an old item's) cast, time stoppers
-     * (stopped already, or stopping time), and Kageno's users (its passive: no other stand's time stop holds them,
-     * KagenoManager.ignoresTimeStop).
+     * (stopped already, or stopping time), those caught in another's that resist it yet (2.75.0), and Kageno's users (its
+     * passive: no other stand's time stop holds them, KagenoManager.ignoresTimeStop).
      */
     private static boolean passedBy(LivingEntity e){
-        if(StarPlatinumBeatdown.involved(e)||BY_HELD.containsKey(e.getUuid()))return true;
+        if(StarPlatinumBeatdown.involved(e)||BY_HELD.containsKey(e.getUuid())||BY_RESISTING.containsKey(e.getUuid()))return true;
         if(e instanceof ServerPlayerEntity p){
             var own=BY_USER.get(p.getUuid());if(own!=null&&own.stopped)return true;
             if(KagenoManager.ignoresTimeStop(p,SOURCE))return true;
@@ -224,6 +269,8 @@ public final class StarPlatinumTimeStop {
     private static void end(Stop s,long now,boolean cut){
         BY_USER.remove(s.user.getUuid());
         for(var e:s.held.keySet())BY_HELD.remove(e.getUuid(),s);
+        for(var e:s.resisting.keySet())BY_RESISTING.remove(e.getUuid(),s);
+        s.resisting.clear();
         long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(s.user)?now:now+dev.sangwoo.celestialfall.boss.Bosses.cooldown(s.user,dev.sangwoo.celestialfall.boss.BossRules.TIME_STOP,TS_COOLDOWN);
         READY.put(s.user.getUuid(),ready);
         // (kept with the world too, 2.73.0: begun again in full if its user comes back, or comes back to life (2.74.0), while it runs)
@@ -322,12 +369,12 @@ public final class StarPlatinumTimeStop {
         return true;
     }
 
-    /** Tells every player near its user (and its user, and whom it stopped) of the event. */
+    /** Tells every player near its user (and its user, and whom it stopped or caught) of the event. */
     private static void send(Stop s,int type,long now,boolean cut,List<LivingEntity> who){send(s,type,now,cut,who,null);}
     private static void send(Stop s,int type,long now,boolean cut,List<LivingEntity> who,List<Float> harm){
         var u=s.user;
         for(var viewer:s.world.getPlayers()){
-            if(viewer!=u&&viewer.squaredDistanceTo(u)>128*128&&!s.held.containsKey(viewer))continue;
+            if(viewer!=u&&viewer.squaredDistanceTo(u)>128*128&&!s.held.containsKey(viewer)&&!s.resisting.containsKey(viewer))continue;
             if(!ServerPlayNetworking.canSend(viewer,EVENT))continue;
             var b=PacketByteBufs.create();
             b.writeUuid(u.getUuid());b.writeIdentifier(s.world.getRegistryKey().getValue());b.writeByte(type);
