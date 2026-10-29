@@ -48,7 +48,9 @@ import static dev.sangwoo.celestialfall.stand.StarPlatinumStance.*;
  * time moves (TS_RESUME_LEAD), the wave falls back to where it began and the colour returns (and all that befell the
  * stopped comes to them at once: the server's to deal). Star Platinum's users caught in it (2.75.0) move on in the
  * stopped world for its first two seconds, seen and seeing as its user is; as the server says those are up (LATE) they
- * stand still from that frame on, and their screens are held from there.
+ * stand still from that frame on, and their screens are held from there. What moves in the stopped time keeps its
+ * colours (2.75.1, colour): its user and their stand all through it, and whom it did not stop with theirs, until they
+ * stop.
  */
 public final class StandTimeStop {
     /** Seconds from H: time stops (the boom of its sound); time moves again (unless the server says it did sooner). */
@@ -108,10 +110,17 @@ public final class StandTimeStop {
     static final Map<UUID,Stop> STOPS=new HashMap<>();
     /** Whom the time stops hold stopped now (entity ids), and the tick's share of the frame each is held at. */
     static final Map<Integer,Float> STILL=new HashMap<>();
+    /**
+     * Whom the time stops held only late (2.75.1: Star Platinum's users as their two seconds ran out): the moment, on this
+     * client's clock (ticks and the frame's share), their colours began to go.
+     */
+    static final Map<Integer,Double> DRAINING=new HashMap<>();
+    /** How long the colours of one stopped late take to go (seconds: as they stop, over a few frames). */
+    static final float DRAIN=.1f;
     static long ticks;
     private static Object world;private static boolean heldH;
     /** The tick's share the last frame was drawn at: one stopped from now on is held there. */
-    private static float lastDelta=1;
+    static float lastDelta=1;
     /** Whether this client's player stands stopped (its screen held, its sound hushed), and the sounds it hushed. */
     private static boolean frozen;
     private static final List<SoundInstance> HUSHED=new ArrayList<>();
@@ -142,7 +151,7 @@ public final class StandTimeStop {
             if(s.voice!=null&&!s.voice.isDone())mc.getSoundManager().stop(s.voice);
             if(s.end!=null&&!s.end.isDone())mc.getSoundManager().stop(s.end);
         }
-        STOPS.clear();STILL.clear();world=null;
+        STOPS.clear();STILL.clear();DRAINING.clear();world=null;
         thaw();
     }
 
@@ -168,12 +177,12 @@ public final class StandTimeStop {
             // now, as the last frame drew them, and this client's own player's screen is held from here (the server
             // names all it holds now: one who heard of it only now hears of the rest too)
             if(!s.stopped){s.stopped=true;s.center=center;}
-            for(int id:ids)if(s.held.add(id))STILL.putIfAbsent(id,lastDelta);
+            for(int id:ids)holdLate(s,id);
             if(mc.player!=null&&s.held.contains(mc.player.getId()))freeze(mc);
         }else if(type==StarPlatinumTimeStop.END&&Float.isNaN(s.ended)){
             s.ended=Math.max(0,now-start)/20f;s.cut=cut;
             for(int i=0;i<ids.length;i++)s.owed.put(ids[i],harm[i]);
-            for(int id:s.held)STILL.remove(id);
+            release(s);
             // cut short as its user called it: the shout dies away; time moved early (its user gone): so does its end
             if(cut&&s.voice!=null)s.voice.fade();
             if(!cut&&s.end!=null&&s.ended<MOVE-.1f)s.end.fade();
@@ -203,8 +212,12 @@ public final class StandTimeStop {
     private static void quiet(MinecraftClient mc,Stop s){
         if(s.voice!=null)s.voice.fade();
         if(s.end!=null)s.end.fade();
-        for(int id:s.held)STILL.remove(id);
+        release(s);
     }
+    /** {@code id} held by {@code s} late (2.75.0): it stands still as the last frame drew it, and its colours go from there (2.75.1). */
+    static void holdLate(Stop s,int id){if(s.held.add(id)){STILL.putIfAbsent(id,lastDelta);DRAINING.putIfAbsent(id,ticks+(double)lastDelta);}}
+    /** Whom {@code s} held go on. */
+    static void release(Stop s){for(int id:s.held){STILL.remove(id);DRAINING.remove(id);}}
     private static void tick(MinecraftClient mc){
         if(mc.world==null||!MapClient.enabled()){if(!STOPS.isEmpty()||world!=null||frozen)clear();return;}
         if(world!=mc.world){clear();world=mc.world;}
@@ -217,7 +230,7 @@ public final class StandTimeStop {
                 if(volume>.01f){s.end=new StandAttack.Shout(CelestialFall.id("star_platinum_timestop_end"),volume);mc.getSoundManager().play(s.end);}
             }
             // (the server's word that time moves again lost: it moves anyway, a little after it was due)
-            if(s.stopping()&&s.age(0)>MOVE+2){s.ended=s.age(0);for(int id:s.held)STILL.remove(id);if(frozen&&mc.player!=null&&s.held.contains(mc.player.getId()))thaw();}
+            if(s.stopping()&&s.age(0)>MOVE+2){s.ended=s.age(0);release(s);if(frozen&&mc.player!=null&&s.held.contains(mc.player.getId()))thaw();}
         }
         // (one that is over is kept until it is ready again: the cooldown list reads that from it, ready(); dropped 3 s
         // after time moved, its box went with it, 57 s early, as the multiplayer check found)
@@ -296,6 +309,38 @@ public final class StandTimeStop {
         var w=s.cut?null:wave(s,feet(MinecraftClient.getInstance(),s,delta),s.age(delta),eye);
         return String.format(java.util.Locale.ROOT,"%.3f,%d,%.3f,%d,%d,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f",s.age(delta),s.stopping()?1:0,Float.isNaN(s.ended)?-1:s.ended,s.cut?1:0,frozen?1:0,
             w==null?0:w.radius(),w==null?0:w.outer(),w==null?0:w.flash(),w==null?0:w.negative(),w==null?0:w.shell(),w==null?0:w.crack(),w==null?0:w.impact());
+    }
+    /**
+     * How fully the stopped world keeps the colours of {@code p} and their stand this frame (0 to 1; TimeStopView). 2.75.1,
+     * user request: "시간 정지 시전자는 몸 색과 스탠드는 흑백으로 안 변하고 면역 있는 사람과 스탠드는 2초뒤에 멈춘 시점에
+     * 흑백으로 변하게": what moves in the stopped time keeps its colours. A time stop's user keeps theirs all through it,
+     * from the moment space is drawn in to them until the colour has come back; once time has stopped, so does everyone
+     * it did not stop (Star Platinum's users for their two seconds, Kageno's, those beyond its reach). As Star Platinum's
+     * users' two seconds run out their colours go over DRAIN, at once on the still of the moment ({@code still}: this
+     * client's own player stopped there too). Whom it stopped take its look, and keep it until the colour comes back to
+     * where they stand.
+     */
+    public static float colour(PlayerEntity p,float delta,boolean still){return colour(p.getUuid(),p.getId(),delta,still);}
+    static float colour(UUID uuid,int id,float delta,boolean still){
+        if(STILL.containsKey(id)){
+            Double since=DRAINING.get(id);
+            if(since==null||still)return 0;
+            return 1-StandPunch.smooth((float)((ticks+delta-since)/20/DRAIN));
+        }
+        for(var s:STOPS.values()){
+            if(s.cut||s.age(delta)>=s.moves()+FALL)continue;
+            if(s.user.equals(uuid)||s.stopped&&!s.held.contains(id))return 1;
+        }
+        return 0;
+    }
+    /** Whether a time stop's wave may show this frame: from the moment space is drawn in to its user until the colour has come back. */
+    public static boolean showing(float delta){
+        for(var s:STOPS.values()){
+            if(s.cut)continue;
+            float t=s.age(delta);
+            if(t>=STOP-IMPLODE&&t<s.moves()+FALL)return true;
+        }
+        return false;
     }
     /** The tick this player's time stop is ready again (0 if this client has not seen them use it). */
     public static long ready(UUID id){var s=STOPS.get(id);return s==null||s.calling(0)||s.stopping()?0:s.ready;}

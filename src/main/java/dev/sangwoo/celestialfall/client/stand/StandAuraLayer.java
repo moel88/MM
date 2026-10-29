@@ -18,7 +18,6 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL11;
@@ -45,6 +44,10 @@ import org.lwjgl.opengl.GL30;
  * (GLOW_REACH blocks) and close, laid on the screen as sky-blue light spreading out round its whole outline, palest and
  * brightest right at it, with a little light along the body's edges just inside its outline; its colours are left as
  * they are.
+ * <p>
+ * While a time stop shows (2.75.1) the auras are drawn once more on their own, into a texture of their own: the
+ * stopped world takes its look under them and lays them back over it in their own colours (TimeStopView), as it keeps
+ * the colours of the bodies they wrap, which move in it (none wraps one stopped).
  */
 public final class StandAuraLayer {
     private StandAuraLayer(){}
@@ -68,6 +71,8 @@ public final class StandAuraLayer {
     private static final int[] maskTex=new int[3],maskFbo=new int[3],haloTex=new int[2],haloFbo=new int[2];
     private static int drawnLast,glowedLast;
     private static Masks masks;
+    /** The auras alone (premultiplied), and whether they were drawn there this frame (2.75.1, TimeStopView). */
+    private static int layerTex,layerFbo;private static boolean layered;
 
     /** Whether the aura can be drawn: post-processing on and no shader pack (which draws the world its own way). */
     public static boolean available(){
@@ -75,6 +80,12 @@ public final class StandAuraLayer {
         var loader=FabricLoader.getInstance();
         return !loader.isModLoaded("iris")&&!loader.isModLoaded("oculus");
     }
+    /**
+     * This frame's auras alone (premultiplied: a texture, and the framebuffer drawing into it), or 0 if they were not drawn
+     * there; taken once (TimeStopView, as it lays them back over the stopped world).
+     */
+    static int takeLayer(){boolean was=layered;layered=false;return was?layerTex:0;}
+    static int layerFbo(){return layerFbo;}
     /** How many bodies the last frame wrapped in the aura, and made glow sky blue (for the capture tools' logs). */
     public static int drawnLast(){return drawnLast;}
     public static int glowedLast(){return glowedLast;}
@@ -93,7 +104,7 @@ public final class StandAuraLayer {
      * {@code flare} how much brighter it burns (0 to 1, as a stand bursts into its pose).
      */
     static void draw(WorldRenderContext c,List<Bearer> bearers,double seconds,float flare){
-        drawnLast=glowedLast=0;
+        drawnLast=glowedLast=0;layered=false;
         if(bearers.isEmpty()||!available())return;
         var mc=MinecraftClient.getInstance();var main=mc.getFramebuffer();
         int w=main.textureWidth,h=main.textureHeight;if(w<=0||h<=0)return;
@@ -138,7 +149,7 @@ public final class StandAuraLayer {
                 if(!attachDepth(maskFbo[k],depth))throw new IllegalStateException("The screen's depth buffer cannot be shared");
                 GlStateManager._viewport(0,0,w,h);
                 RenderSystem.clearColor(0,0,0,0);RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT,MinecraftClient.IS_SYSTEM_MAC);
-                for(var b:bearers)if(b.kind()==k){body(mc,c,b,cam,delta);if(k==GLOW)glowedLast++;else drawnLast++;}
+                for(var b:bearers)if(b.kind()==k){body(mc,c,b.body(),b.strength(),delta,masks);if(k==GLOW)glowedLast++;else drawnLast++;}
                 masks.inner.draw();
             }
             RenderSystem.clearColor(clear[0],clear[1],clear[2],clear[3]);
@@ -175,9 +186,17 @@ public final class StandAuraLayer {
             f(auraProg,"Front",userCount>0&&standCount>0&&users/userCount<stands/standCount?1f:0f);
             RenderSystem.enableBlend();RenderSystem.blendFunc(GlStateManager.SrcFactor.ONE,GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
             triangle();
+            // (2.75.1) and alone, while a time stop shows: the stopped world lays it back over itself in its own colours
+            if(StandTimeStop.showing(delta)){
+                RenderSystem.disableScissor();target(layerFbo,w,h);
+                RenderSystem.clearColor(0,0,0,0);RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT,MinecraftClient.IS_SYSTEM_MAC);
+                RenderSystem.clearColor(clear[0],clear[1],clear[2],clear[3]);
+                RenderSystem.enableScissor(sx,sy,ex-sx,ey-sy);
+                triangle();layered=true;
+            }
             GlStateManager._activeTexture(GL13.GL_TEXTURE0);
         }catch(Exception|LinkageError e){
-            failed=true;drawnLast=glowedLast=0;
+            failed=true;drawnLast=glowedLast=0;layered=false;
             CelestialFall.LOGGER.error("The stand aura was switched off after a graphics error; stands glow without it",e);
         }finally{
             RenderSystem.disableScissor();
@@ -188,21 +207,24 @@ public final class StandAuraLayer {
             RenderSystem.enableDepthTest();RenderSystem.depthMask(true);RenderSystem.enableCull();
         }
     }
-    /** One body into the mask bound now: drawn as the game draws it (no shadow, no name tag), as solid as its strength. */
-    private static void body(MinecraftClient mc,WorldRenderContext c,Bearer b,Vec3d cam,float delta){
-        Entity e=b.body();var dispatcher=mc.getEntityRenderDispatcher();var renderer=dispatcher.getRenderer(e);
-        double x=MathHelper.lerp(delta,e.prevX,e.getX()),y=MathHelper.lerp(delta,e.prevY,e.getY()),z=MathHelper.lerp(delta,e.prevZ,e.getZ());
+    /**
+     * One body into the mask bound now, {@code into}'s buffers: drawn as the game draws it at the moment {@code delta} (where
+     * the world draws it, WorldRenderer.renderEntity; no shadow, no fire, no name tag), as solid as {@code strength}.
+     */
+    static void body(MinecraftClient mc,WorldRenderContext c,Entity e,float strength,float delta,Masks into){
+        var dispatcher=mc.getEntityRenderDispatcher();var renderer=dispatcher.getRenderer(e);var cam=c.camera().getPos();
+        double x=MathHelper.lerp(delta,e.lastRenderX,e.getX()),y=MathHelper.lerp(delta,e.lastRenderY,e.getY()),z=MathHelper.lerp(delta,e.lastRenderZ,e.getZ());
         float yaw=MathHelper.lerp(delta,e.prevYaw,e.getYaw());
         var off=renderer.getPositionOffset(e,delta);
         var m=c.matrixStack();m.push();
         m.translate(x-cam.x+off.x,y-cam.y+off.y,z-cam.z+off.z);
-        masks.alpha=MathHelper.clamp(b.strength(),0,1);
-        renderer.render(e,yaw,delta,m,masks,dispatcher.getLight(e,delta));
+        into.alpha=MathHelper.clamp(strength,0,1);
+        renderer.render(e,yaw,delta,m,into,dispatcher.getLight(e,delta));
         m.pop();
     }
 
     /** The masks' buffers: every layer as the game draws it, but faded by the bearer's strength, and no name tags. */
-    private static final class Masks implements VertexConsumerProvider {
+    static final class Masks implements VertexConsumerProvider {
         final VertexConsumerProvider.Immediate inner;float alpha=1;
         Masks(VertexConsumerProvider.Immediate inner){this.inner=inner;}
         @Override public VertexConsumer getBuffer(RenderLayer layer){
@@ -253,6 +275,7 @@ public final class StandAuraLayer {
         int hw=Math.max(1,w/2),hh=Math.max(1,h/2);
         for(int k=0;k<3;k++){maskTex[k]=texture(w,h);maskFbo[k]=framebuffer(maskTex[k],false);}
         for(int k=0;k<2;k++){haloTex[k]=texture(hw,hh);haloFbo[k]=framebuffer(haloTex[k],true);}
+        layerTex=texture(w,h);layerFbo=framebuffer(layerTex,true);
     }
     private static int noise(){
         int[] px=VfxNoise.abgr();int n=VfxNoise.SIZE;
@@ -305,6 +328,8 @@ public final class StandAuraLayer {
             if(haloFbo[k]!=0)GlStateManager._glDeleteFramebuffers(haloFbo[k]);if(haloTex[k]!=0)TextureUtil.releaseTextureId(haloTex[k]);
             haloFbo[k]=haloTex[k]=0;
         }
+        if(layerFbo!=0)GlStateManager._glDeleteFramebuffers(layerFbo);if(layerTex!=0)TextureUtil.releaseTextureId(layerTex);
+        layerFbo=layerTex=0;layered=false;
         width=height=0;
     }
 

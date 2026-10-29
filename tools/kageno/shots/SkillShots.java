@@ -651,6 +651,16 @@ public final class SkillShots implements ClientModInitializer {
             }
         }
         standLog.append(',').append(playerTs).append(',').append(fakeTs);
+        // 2.75.1: what the stopped world keeps in colour, as this client draws it: how many bodies the last frame kept
+        // (players and the stands drawn with them), whether it laid the auras back, and how fully the player's colours
+        // and the fake user's are kept
+        int kept=dev.sangwoo.celestialfall.client.stand.TimeStopView.keptLast();
+        var fakeHere=fakePlayer==null?null:mc.world.getPlayerByUuid(fakePlayer.getUuid());
+        float tsDelta=mc.getTickDelta();
+        standLog.append(String.format(Locale.ROOT,",%d,%d,%.3f,%s",kept,dev.sangwoo.celestialfall.client.stand.TimeStopView.aurasLast()?1:0,
+            dev.sangwoo.celestialfall.client.stand.StandTimeStop.colour(mc.player,tsDelta,false),
+            fakeHere==null?"":String.format(Locale.ROOT,"%.3f",dev.sangwoo.celestialfall.client.stand.StandTimeStop.colour(fakeHere,tsDelta,false))));
+        if(kept!=keptLogged){log.append("  stopped world keeps ").append(kept).append(" bodies in colour at ").append(age).append('\n');keptLogged=kept;}
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -698,7 +708,7 @@ public final class SkillShots implements ClientModInitializer {
     private String punchLogged="";private boolean rushOn;private int rushBlows;private final StringBuilder cameraLog=new StringBuilder();private String worldPass=",,,,,,,";
     private boolean beatOn,beatEnded;private float dummyHealth=-1;
     /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
-    private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private float playerHealth=-1;private float fakeRunYaw;
+    private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private int keptLogged;private float playerHealth=-1;private float fakeRunYaw;
     private boolean playerStaggered,dummyStaggeredLogged,playerDeadLogged;
     /** (2.75.0) last logged: the player resisting a time stop, stopped in one; the fake user the same. */
     private final boolean[] resistLogged=new boolean[4];
@@ -1216,9 +1226,9 @@ public final class SkillShots implements ClientModInitializer {
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
                         +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden,"
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
-                        +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z\n"+standLog);
+                        +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        stopLogged="";stillLogged=false;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;
+                        stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}

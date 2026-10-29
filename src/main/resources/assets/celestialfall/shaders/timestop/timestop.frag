@@ -11,8 +11,15 @@
 // it closes (Refract, its colours split there); an impact frame, the world in negative, as time stops (Impact); a
 // vignette for an eye in it (Vignette). Without the scene's depth (a shader pack draws the frame)
 // the wave is a circle on the screen round where Center shows (CenterScreen, ScreenRadius) and there is no bubble.
+// What moves in the stopped time keeps its colours (2.75.1): the bodies in KeepTex take neither its look nor its
+// negative, and the auras round them (AuraTex) are lifted off the world behind them, which takes the look, and laid
+// back over it as they were.
 uniform sampler2D SceneTex;
 uniform sampler2D DepthTex;
+uniform sampler2D KeepTex;   // the bodies whose colours are kept, drawn again as they are (alpha: how fully)
+uniform sampler2D AuraTex;   // the auras round them, alone (premultiplied)
+uniform float KeepOn;
+uniform float AuraOn;
 uniform mat4 InvProjView;
 uniform vec3 Center;
 uniform float Radius;
@@ -125,16 +132,23 @@ void main(){
     float bend=Refract*(front+.8*pow(edge,5.)*step(0.,t1));
     vec2 off=away*bend*.02;
     vec3 c=vec3(texture(SceneTex,uv+off*1.3).r,texture(SceneTex,uv+off).g,texture(SceneTex,uv+off*.7).b);
+    // what keeps its colours here, and the world behind the auras (the frame is theirs laid over it)
+    float keep=KeepOn>.5?clamp(texture(KeepTex,uv+off).a,0.,1.):0.;
+    vec4 au=AuraOn>.5?texture(AuraTex,uv+off):vec4(0.);
+    float ua=clamp(au.a,0.,.95);
+    vec3 base=ua>.001?clamp((c-au.rgb)/(1.-ua),0.,1.):c;
     // in the stopped world, or seen through its bubble (a little of its look), or (no depth) the whole frame for an eye in it
     float inside=1.-smoothstep(r-1.2*width,r+.4*width,dist);
     float w=inside*Grade;
     if(HasDepth>.5)w=max(w,through*Outer*(1.-inside));
     else w=max(w,Outer*step(length(Center),Radius));
-    vec3 col=mix(c,stopped(c),clamp(w,0.,1.));
+    vec3 col=mix(base,stopped(base),clamp(w,0.,1.)*(1.-keep));
     // the negative behind the front (or just outside it as it falls back)
     float behind=(r-dist)*BandSide;
     float band=Negative*step(0.,behind)*(1.-smoothstep(Band*.6*width,Band*width,behind));
-    col=mix(col,negative(c),clamp(band,0.,1.));
+    col=mix(col,negative(base),clamp(band,0.,1.)*(1.-keep));
+    // the auras laid back over it as they were
+    col=au.rgb+col*(1.-ua);
     // the front glows where it meets the world
     float rim=Rim*exp(-pow((dist-r)/(.7*width),2.));
     col+=rim*vec3(.78,.62,1.);

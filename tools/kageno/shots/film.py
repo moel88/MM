@@ -19,7 +19,8 @@ it took at once; FILM_TS_DUMMY=0 leaves it out) and, with FILM_TS_PLAYER=1, the 
 screen is held still (shown) while time is stopped (FILM_TS_HEALTH=0 leaves their health out). Since 2.68.0, with an
 actors.csv beside it (act=), each husk while time is stopped: how far it is and whether it stands stopped or walks on
 (out of its reach). Since 2.75.0 the player and the fake user (FAKE) when they are Star Platinum's users resisting it:
-moving on in its first two seconds (how long until it stops them), then stopped; FILM_TS_OWED=0 leaves "쌓인 피해가
+moving on in its first two seconds (how long until it stops them; since 2.75.1 in colour), then stopped (since
+2.75.1 in its look); FILM_TS_OWED=0 leaves "쌓인 피해가
 한꺼번에" out of the line as time moves again (a film where nothing was owed).
 MODE boss with a SUMMON shot's boss.csv (ACTOR -, 2.69.0) shows Kujo Jotaro: neutral or angry, what he does (his own
 moves, or how he answers the player's: a guard, a dash, a blow first), whom he goes after, his health, the player's
@@ -369,7 +370,7 @@ def timestop_line(t):
     if i < 0: return None, None
     r, parts = rush[i][1], []
     # (2.75.0) a time stop older than the shot is the last entry's, kept by the client until it is ready again: none here
-    if r.get('ts_age') and float(r['ts_age']) > float(r['t']) / 20 + .2: r = {k: ('' if k.startswith('ts_') or k.endswith(('_resisting', '_stopped')) else v) for k, v in r.items()}
+    if r.get('ts_age') and float(r['ts_age']) > float(r['t']) / 20 + .2: r = {k: ('' if k.startswith('ts_') or k.endswith(('_resisting', '_stopped', '_colour')) else v) for k, v in r.items()}
     if r.get('ts_age'):
         age, ended = float(r['ts_age']), float(r.get('ts_ended') or -1)
         if r.get('ts_cut') == '1': parts.append('시간 정지가 끊김')
@@ -383,11 +384,15 @@ def timestop_line(t):
         if r.get('ts_still') == '1': parts.append('내 화면이 멈춤')
     # (2.75.0) Star Platinum's users caught in it resist it for its first two seconds (the server's state): the player and
     # the fake user, moving on (how long they have left) or stopped once those are up
+    # (2.75.1) whether the stopped world keeps their colours, as this client draws it (stand.csv's *_colour): in colour
+    # while they resist, in its look once they stand stopped
+    def coloured(key): return r.get(key + '_colour') not in (None, '') and float(r[key + '_colour']) > .99
+    def grey(key): return r.get(key + '_colour') not in (None, '') and float(r[key + '_colour']) < .01
     if r.get('ts_stopped') == '1' and r.get('ts_age'):
         left = max(0.0, 2.0 - (float(r['ts_age']) - 1.95))
         for who, key in (('나', 'player'), ('상대 스타플래티나 사용자', 'fake')):
-            if r.get(key + '_resisting') == '1': parts.append(f'{who}: 아직 움직임 (멈추기까지 {left:.1f}초)')
-            elif r.get(key + '_stopped') == '1' and any(x.get(key + '_resisting') == '1' for _, x in rush): parts.append(f'{who}: 2초가 지나 멈춤')
+            if r.get(key + '_resisting') == '1': parts.append(f'{who}: 움직임 · 색 그대로 ({left:.1f}초 뒤 멈춤)' if coloured(key) else f'{who}: 아직 움직임 (멈추기까지 {left:.1f}초)')
+            elif r.get(key + '_stopped') == '1' and any(x.get(key + '_resisting') == '1' for _, x in rush): parts.append(f'{who}: 2초가 지나 멈춤' + (' · 흑백' if grey(key) else ''))
     if os.environ.get('FILM_TS_DUMMY') != '0' and r.get('dummy_health'):
         full = next((float(x['dummy_health']) for _, x in rush if x['dummy_health']), None)
         if full: parts.append(f'더미 체력 {float(r["dummy_health"]):.0f}/{full:.0f}' + (f' (피해 {full - float(r["dummy_health"]):.0f})' if full - float(r['dummy_health']) > .5 else ''))

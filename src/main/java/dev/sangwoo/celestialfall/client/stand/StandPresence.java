@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -130,8 +131,15 @@ public final class StandPresence {
         var swap=seen;seen=seenNow;seenNow=swap;
     }
 
+    /**
+     * A stand's body drawn this frame (its main body, or an arm of its rush's), its user and the moment it was drawn at:
+     * the stopped world keeps its colours as it keeps its user's (TimeStopView, 2.75.1).
+     */
+    record Drawn(Entity body,PlayerEntity user,float delta){}
+    static final List<Drawn> DRAWN=new ArrayList<>();
+
     private static void render(WorldRenderContext c){
-        StarPlatinumRenderer.frame();
+        StarPlatinumRenderer.frame();DRAWN.clear();
         var mc=MinecraftClient.getInstance();if(mc.world==null||c.consumers()==null)return;
         if(ALL.isEmpty()){glow(mc,c,new ArrayList<>(),0);return;}
         float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();frames++;
@@ -146,6 +154,7 @@ public final class StandPresence {
                 if(look.alpha<.003f||c.frustum()!=null&&!c.frustum().isVisible(s.puppet.getBoundingBox().expand(1.2)))continue;
                 s.drawn=true;
                 dispatcher.render(s.puppet,s.heldAt.x-cam.x,s.heldAt.y-cam.y,s.heldAt.z-cam.z,s.heldYaw,s.heldDelta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,s.heldDelta));
+                DRAWN.add(new Drawn(s.puppet,p,s.heldDelta));
                 continue;
             }
             var look=s.puppet.look;var shape=s.place(p,delta,look);
@@ -166,12 +175,14 @@ public final class StandPresence {
                 var b=StandRush.phantomBody(s.body,i);
                 ph.age=s.puppet.age;ph.place(b.at(),b.yaw());
                 dispatcher.render(ph,b.at().x-cam.x,b.at().y-cam.y,b.at().z-cam.z,b.yaw(),delta,c.matrixStack(),c.consumers(),dispatcher.getLight(ph,delta));
+                DRAWN.add(new Drawn(ph,p,delta));
             }
             var at=s.puppet.getPos();float yaw=s.puppet.getYaw();
             // (the body itself tells where its Star Finger's fingers are, for their light: StandPunchFx)
             StarPlatinumRenderer.record(p.getUuid());
             dispatcher.render(s.puppet,at.x-cam.x,at.y-cam.y,at.z-cam.z,yaw,delta,c.matrixStack(),c.consumers(),dispatcher.getLight(s.puppet,delta));
             StarPlatinumRenderer.record(null);
+            DRAWN.add(new Drawn(s.puppet,p,delta));
             // coming out or going back: faint blue afterimages where it was a moment ago (the same pose, GeckoLib keeps it for the frame)
             float main=look.out;ghost.set(look);
             for(int i=1;i<=3;i++){

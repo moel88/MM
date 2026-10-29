@@ -243,6 +243,47 @@ class StandTimeStopTest {
         // the wave spreads over the rush of its sound: as long as the rush lasts (it drops away 0.935 s on)
         assertEquals(TS_SETTLE,StandTimeStop.SPREAD,1e-6);
     }
+    @Test void whatMovesInTheStoppedTimeKeepsItsColoursUntilItStops(){
+        // (2.75.1) its user all through it; once time has stopped, whom it did not stop: a Star Platinum's user until their
+        // two seconds run out (then theirs go over a few frames, at once on their own still), anyone it passed by until
+        // the colour has come back; whom it stopped never, nor as time moves again (theirs come back with the world's)
+        StandTimeStop.STOPS.clear();StandTimeStop.STILL.clear();StandTimeStop.DRAINING.clear();
+        var s=stop(0);StandTimeStop.STOPS.put(s.user,s);
+        UUID nobody=UUID.randomUUID();int user=1,stopped=2,late=3,free=4;
+        float lateAt=(TS_WIND+TS_RESIST)/20f,end=StandTimeStop.MOVE+StandTimeStop.FALL;
+        float last=1;boolean drained=false,released=false,shown=false;
+        try{
+            for(int f=0;f<=(int)((end+.3f)/FRAME);f++){
+                float t=f*FRAME;
+                // the server's word that the two seconds are up, heard before the frame's ticks (as the client runs its tasks)
+                if(t>=lateAt&&!s.held.contains(late)){StandTimeStop.lastDelta=clock(t-FRAME);StandTimeStop.holdLate(s,late);}
+                float delta=clock(t);
+                boolean was=s.stopped;words(s,TS_WIND+TS_LENGTH,false);
+                if(s.stopped&&!was){s.held.add(stopped);StandTimeStop.STILL.put(stopped,delta);}
+                if(!Float.isNaN(s.ended)&&!released){StandTimeStop.release(s);released=true;}
+                float u=StandTimeStop.colour(s.user,user,delta,false),st=StandTimeStop.colour(nobody,stopped,delta,false);
+                float l=StandTimeStop.colour(nobody,late,delta,false),fr=StandTimeStop.colour(nobody,free,delta,false);
+                boolean wave=StandTimeStop.showing(delta);shown|=wave;
+                // (not on the very frame a boundary falls on: which side it is is rounding's)
+                boolean edge=Math.abs(t-end)<.002f||Math.abs(t-(StandTimeStop.STOP-StandTimeStop.IMPLODE))<.002f;
+                if(!edge){
+                    assertEquals(t>=StandTimeStop.STOP-StandTimeStop.IMPLODE&&t<end,wave,"the wave shows at "+t);
+                    assertEquals(t<end?1:0,u,"its user keeps theirs while it shows, at "+t);
+                }
+                assertEquals(0,st,"whom it stopped take its look at "+t);
+                if(t<StandTimeStop.STOP-1e-4){assertEquals(0,l,"time not stopped yet at "+t);assertEquals(0,fr,"time not stopped yet at "+t);continue;}
+                if(!edge)assertEquals(t<end?1:0,fr,"whom it passed by keep theirs until the colour comes back, at "+t);
+                if(t<lateAt-1e-4){assertEquals(1,l,"a Star Platinum's user keeps theirs for their two seconds, at "+t);continue;}
+                // stopped late: theirs go over a few frames, without a jump, and at once on their own still
+                if(Float.isNaN(s.ended))assertEquals(0,StandTimeStop.colour(nobody,late,delta,true),"gone on the still at "+t);
+                assertTrue(l<=last+1e-6&&last-l<.3f,"theirs go without a jump at "+t+": "+last+" to "+l);last=l;
+                if(t>=lateAt+StandTimeStop.DRAIN+FRAME)assertEquals(0,l,"and are gone at "+t);
+                drained|=l==0;
+            }
+        }finally{StandTimeStop.STOPS.clear();StandTimeStop.STILL.clear();StandTimeStop.DRAINING.clear();}
+        assertTrue(drained&&released&&shown);
+        assertEquals(TS_RESIST,40,"two seconds");
+    }
     private static float MOVE(){return StandTimeStop.MOVE;}
     /** How long an Ogg Vorbis sound of the mod's is (seconds): its last page's sample count at its rate (as StarPlatinumRulesTest reads them). */
     static double seconds(String name)throws Exception{
