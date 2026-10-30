@@ -1,6 +1,7 @@
 package dev.sangwoo.celestialfall.client.isosang;
 
 import dev.sangwoo.celestialfall.client.kageno.Anim;
+import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.client.kageno.R6;
 import dev.sangwoo.celestialfall.isosang.IsosangRules;
 import net.minecraft.util.math.MathHelper;
@@ -260,6 +261,32 @@ class IsosangSlashTest {
         assertEquals(.35,IsosangSlash.shown(sw,o.add(9,0,0)),1e-6,"edge on");
         assertEquals(1,IsosangSlash.shown(sw,o.add(5*Math.cos(Math.toRadians(9)),5*Math.sin(Math.toRadians(9)),0)),1e-6,"9° out of its plane");
         assertEquals(1,IsosangSlash.shown(sw,o.add(0,5,0)),1e-6,"from above");
+    }
+    @Test void theStarsShineOnTheSlashesWhereTheirLightAndInkAre(){
+        for(int combo=1;combo<=4;combo++)for(var s:IsosangSlash.arcs(combo)){
+            assertTrue(IsosangSlash.stars(s,s.t0()-.01f).isEmpty(),"none before it sweeps");
+            assertTrue(IsosangSlash.stars(s,s.eat1()).isEmpty(),"none once it is eaten away");
+            int light=0,night=0;
+            for(float t=s.t0();t<s.eat1();t+=1/120f){
+                float h=IsosangSlash.head(s,t);
+                for(var st:IsosangSlash.stars(s,t)){
+                    double f=(st.deg()-s.from())/(s.to()-s.from());
+                    assertTrue(f>=0&&f<=h,"hit "+combo+": a star only where the blade has passed");
+                    assertTrue(st.radius()>=s.inner()-1e-9&&st.radius()<=s.outer()+1e-9,"hit "+combo+": within the band");
+                    assertTrue(st.alpha()>0&&st.alpha()<=1);
+                    // the light's stars outward of the shader's ink front there, the night's inward of it
+                    float swept=s.t0()+(s.t1()-s.t0())*(float)f,ink=Ease.smooth(t,swept+s.ink0()-s.t0(),swept+s.ink1()-s.t0());
+                    double inkAt=.8-.63*(1-(1-ink)*(1-ink)),d=(1-(st.radius()-s.inner())/(s.outer()-s.inner()))/IsosangSlash.profile(s.style(),f/h);
+                    if(st.night()){night++;assertTrue(d>inkAt+.05,"hit "+combo+": a night star in the ink");}
+                    else{light++;assertTrue(d<inkAt-.05,"hit "+combo+": a star in the light");}
+                }
+            }
+            assertTrue(light>0&&night>0,"hit "+combo+" has stars in its light and in its ink: "+light+", "+night);
+        }
+        for(int seed=0;seed<50;seed++)for(float t=0;t<2;t+=1/60f){
+            float w=IsosangSlash.twinkle(t,seed);assertTrue(w>=.3f-1e-6&&w<=1+1e-6);
+            assertTrue(Math.abs(IsosangSlash.twinkle(t+1/60f,seed)-w)<.5f,"twinkling, not flashing on and off from frame to frame");
+        }
     }
     @Test void theFinishersCameraDrawsBackAndComesInSmoothly(){
         for(int combo=1;combo<=3;combo++)for(float t=0;t<2;t+=.05f)assertEquals(0,IsosangSlash.pull(combo,t),1e-9);

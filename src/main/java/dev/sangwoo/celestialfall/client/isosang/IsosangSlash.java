@@ -49,12 +49,16 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * 검정이야"): a white-hot cutting edge outermost in bright blue light, the band deepening inward through royal blue to
  * black brush ink; as they dry the ink spreads out to a thin bright rim, blots open and they break up into flakes and
  * drops of ink that fly off and fall, staining the ground softly for a moment, and motes of light. On the effect layer
- * the light burns past white and blooms. Every effect is a function of the swing's clock, so it moves at the render
- * frame rate.
+ * the light burns past white and blooms. Since 2.77.5 they are decorated with the moon's light and its stars, as the
+ * sword is and as the hits are named: starlight on the slashes (over the ink, {@link #overlay}), a glint racing at each
+ * one's head, a crescent moon at the heart of every blow's burst, moon dust as they break up, a gleam on the ink, and a
+ * moon riding the thrown slash. Every effect is a function of the swing's clock, so it moves at the render frame rate.
  */
 public final class IsosangSlash implements Fx.Skill {
     /** Ink, navy, deep blue, blue, azure, pale blue, white; the twirl's pale cyan. */
     static final int INK=0x04060f,NAVY=0x0b1446,DEEP=0x1530b0,BLUE=0x2a5cff,AZURE=0x58a0ff,PALE=0xbfe2ff,WHITE=0xffffff,CYAN=0x9fe8ff;
+    /** The starlight's lilac (the sword's lightning), moonlight, and the gleam of it on a drop of ink (2.77.5). */
+    static final int LILAC=0xd6caff,MOON=0xf4f1ff,SHEEN=0x22409a;
     /** The blade's aura while it cuts (haze, glow, body, core). */
     static final int[] AURA={0x10308c,0x3a78ff,0x9fd0ff,0xf4fbff};
     /** Blocks along the blade from the hand: the guard and the point (the sword as drawn in the hand, 0.9 of its model). */
@@ -715,7 +719,6 @@ public final class IsosangSlash implements Fx.Skill {
         aura(c,m,t,combo);
         for(var s:arcs(combo)){var sw=band(feet,yaw,s,t);if(sw!=null&&t<s.eat1())edgeGlow(m,sw,s.style(),edgeLit(s,t));}
         sparks(c,m,t,combo,feet,yaw);
-        twinkles(m,t,combo,feet,yaw);
         spray(m,t,combo,feet,yaw);
         impacts(c,m,t,combo);
         if(combo==1)glint(c,m,t);
@@ -727,6 +730,23 @@ public final class IsosangSlash implements Fx.Skill {
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         inkBursts(c,m,t,combo);
         airInk(c,m,t,combo,feet,yaw);
+    }
+    /**
+     * Over the ink ribbons (2.77.5, user request "마지막으로 이펙트 더 예쁘게 꾸며줘": the moon's light and its stars, as the
+     * sword has them and as the hits are named): the starlight on each slash, a glint racing at each one's head, the ring's
+     * burst of stars, the stars along the thrust, and the moon riding the thrown slash with its trail of stardust.
+     */
+    @Override public void overlay(Fx c,EffectMesh m){
+        float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
+        for(var s:arcs(combo))for(var st:stars(s,t)){
+            Vec3d p=world(feet,yaw,point(s,st.deg(),st.radius()));
+            int col=st.night()?(st.seed()%3==0?LILAC:PALE):(st.seed()%3==0?WHITE:st.seed()%3==1?PALE:LILAC);
+            if(st.night())m.star(p,st.size(),col,st.alpha());else glint8(m,p,st.size(),col,st.alpha());
+        }
+        heads(m,t,combo,feet,yaw);
+        if(combo==2)ringStars(m,t,feet,yaw);
+        if(combo==3)beamStars(m,t,feet,yaw);
+        if(combo==4)waveStars(m,t,feet,yaw);
     }
     /**
      * The blade's blue aura while it cuts, brightest as it strikes: kept close round the blade (2.77.4, user request "지금
@@ -787,43 +807,144 @@ public final class IsosangSlash implements Fx.Skill {
         return flare*(1-.55f*Ease.smooth(t,s.ink0(),s.ink1()))*(1-Ease.smooth(t,s.eat0(),s.eat1()));
     }
     /**
-     * Stars twinkling along each slash's bright edge while it shines (the sword's starlight, as its glint): small four
-     * pointed stars, pale and white, each lit for a tenth of a second.
+     * A star on slash {@code s} (2.77.5): at angle {@code deg} and {@code radius} out (the hit's frame), {@code size}
+     * across, shining {@code alpha}; in the band's ink ({@code night}) or in its light.
      */
-    static void twinkles(EffectMesh m,float t,int combo,Vec3d feet,float yaw){
-        int k0=0;
+    record Star(double deg,double radius,double size,float alpha,boolean night,int seed){}
+    /**
+     * The starlight on slash {@code s} at {@code t} (the sword's stars; its name is the moon's trace): small glints in the
+     * band's light right behind the blade, gone as the ink spreads over them, and once the ink has turned, a few faint
+     * stars in it, like stars in a night sky. Each is fixed on the band where the blade passed (where the shader has its
+     * light or its ink: {@link #inks}' clock, the shader's ink front and white edge), twinkling, and eaten away with it.
+     */
+    static List<Star> stars(Arc s,float t){
+        List<Star> out=new ArrayList<>();
+        if(t<s.t0()||t>=s.eat1())return out;
+        float h=head(s,t),delay=s.ink0()-s.t0(),dur=s.ink1()-s.ink0();double eaten=Ease.smooth(t,s.eat0(),s.eat1())*1.1-.05;
+        int n=s.style()==1?24:16;
+        for(int k=0;k<n;k++){
+            int seed=k*61+s.seed()*977;double f=.04+.92*Ease.hash(seed);
+            if(f>h-.02)continue;
+            double x=f/h,prof=profile(s.style(),x);if(x<eaten+.1||prof<.15)continue;
+            float swept=s.t0()+(s.t1()-s.t0())*(float)f,ink=Ease.smooth(t,swept+delay,swept+delay+dur);
+            double spread=1-(1-ink)*(1-ink),inkAt=.8-.63*spread,whiteEnd=.15-.1*ink,d;float a;
+            boolean night=k%2==1;
+            if(night){if(ink<.4f)continue;d=inkAt+.1+(.86-inkAt-.1)*Ease.hash(seed+1);if(d>.86)continue;a=.5f*Ease.smooth(ink,.4f,.75f);}
+            else{double room=inkAt-whiteEnd-.15;if(room<.02)continue;d=whiteEnd+.06+room*Ease.hash(seed+1);a=1-Ease.smooth(ink,.55f,.85f);}
+            a*=twinkle(t,seed)*Ease.smooth((float)x,(float)eaten+.1f,(float)eaten+.2f)*Ease.smooth(t,swept,swept+.03f);
+            if(a<=.01f)continue;
+            out.add(new Star(s.from()+(s.to()-s.from())*f,s.inner()+(s.outer()-s.inner())*(1-d*prof),night?.05+.035*Ease.hash(seed+2):.07+.06*Ease.hash(seed+2),a,night,seed));
+        }
+        return out;
+    }
+    /** A star's twinkle at {@code t} (0.3..1): two to four times a second, each its own way. */
+    static float twinkle(float t,int seed){
+        float w=(float)Math.sin(2*Math.PI*(t*(2+2*Ease.hash(seed+5))+Ease.hash(seed+6)));return .3f+.7f*w*w;
+    }
+    /** The head of each slash while it sweeps (where the blade is): a bright glint racing along its cutting edge, gone as it stops. */
+    static void heads(EffectMesh m,float t,int combo,Vec3d feet,float yaw){
         for(var s:arcs(combo)){
-            k0+=41;float until=s.eat0()+(s.eat1()-s.eat0())*.4f;if(t<s.t0()||t>=until+.12f)continue;
-            int n=s.style()==1?8:5;
-            for(int k=0;k<n;k++){
-                int seed=k*61+k0;float born=s.t0()+(until-s.t0())*(float)Ease.hash(seed),age=t-born;
-                if(age<0||age>=.12f)continue;
-                double x=.08+.88*Ease.hash(seed+1);if(x>head(s,t))continue;
-                Vec3d p=world(feet,yaw,point(s,s.from()+(s.to()-s.from())*x,s.outer()-(s.outer()-s.inner())*.04));
-                float a=(float)Math.sin(Math.PI*age/.12f);double r=.12+.12*Ease.hash(seed+2);
-                m.star(p,r*a+.03,k%2==0?WHITE:PALE,a);m.softDisc(p,r*.6,AZURE,.3f*a);
-            }
+            if(t<s.t0()||t>=s.t1()+.08f)continue;
+            float a=Ease.smooth(t,s.t0(),s.t0()+.015f)*(1-Ease.smooth(t,s.t1()+.01f,s.t1()+.08f));
+            Vec3d p=world(feet,yaw,point(s,s.from()+(s.to()-s.from())*head(s,t),s.outer()));
+            glint8(m,p,.24,WHITE,a);m.softDisc(p,.2,AZURE,.3f*a);
+        }
+    }
+    /** Hit 2's burst: stars riding out on its white ring, twinkling, gone with it (in place of streaks of light). */
+    static void ringStars(EffectMesh m,float t,Vec3d feet,float yaw){
+        float at=blow(2,1);if(t<at||t>=at+.36f)return;
+        Vec3d o=world(feet,yaw,v(.35,.5,0));double r=3.3+1.2*Ease.out(t,at,at+.22f);float fade=1-Ease.unit(t,at,at+.36f);
+        for(int k=0;k<12;k++){
+            int seed=k*53+211;double az=Math.PI*2*(k+.4*Ease.hash(seed))/12;
+            Vec3d p=o.add(dir(yaw,v(Math.cos(az)*r,.15*(Ease.hash(seed+1)-.5),Math.sin(az)*r)));
+            float a=fade*twinkle(t,seed)*Ease.smooth(t,at+.008f*(k%4),at+.008f*(k%4)+.02f);
+            glint8(m,p,.1+.07*Ease.hash(seed+2),k%3==2?LILAC:k%3==1?PALE:WHITE,a);
+        }
+    }
+    /** Hit 3's thrust: stars lighting one after another along the beam as it pierces, twinkling while it shines. */
+    static void beamStars(EffectMesh m,float t,Vec3d feet,float yaw){
+        float lit=beamLit(t);if(lit<=0)return;
+        var b=beam(feet,yaw,t);
+        for(int k=0;k<6;k++){
+            int seed=k*37+409;float on=BEAM_ON+.012f+.022f*k;if(t<on)continue;
+            Vec3d p=b[0].add(b[1].subtract(b[0]).multiply(.22+.13*k)).add(0,.1*(Ease.hash(seed)-.5),0);
+            glint8(m,p,.09+.05*Ease.hash(seed+1),k%2==0?WHITE:LILAC,lit*Ease.smooth(t,on,on+.02f)*twinkle(t,seed));
         }
     }
     /**
+     * Hit 4's thrown slash (落月, the falling moon): a crescent moon riding its front as it flies, and stardust left behind
+     * along its path, drifting up and twinkling as it fades.
+     */
+    static void waveStars(EffectMesh m,float t,Vec3d feet,float yaw){
+        float at=blow(4,0),fly=IsosangRules.WAVE_TICKS/20f;
+        var sw=wave(feet,yaw,t);
+        if(sw!=null&&t<at+fly+.1f){
+            float a=Ease.smooth(t,at,at+.03f)*(1-Ease.smooth(t,at+fly-.05f,at+fly+.1f));
+            Vec3d front=sw.outer()[sw.n()/2].add(0,.3,0);
+            crescentMoon(m,front,.3,Math.PI*.62,MOON,.85f*a);glint8(m,front,.2,WHITE,.6f*a);m.softDisc(front,.45,AZURE,.25f*a);
+        }
+        for(int k=0;k<28;k++){
+            int seed=k*41+1307;float born=at+.03f+(fly-.04f)*(k+(float)Ease.hash(seed))/28,age=t-born,life=.35f+.25f*(float)Ease.hash(seed+1);
+            if(age<0||age>=life)continue;
+            var swb=wave(feet,yaw,born);if(swb==null)continue;
+            double x=(.08+.84*Ease.hash(seed+2))*(swb.n()-1);int i=Math.min(swb.n()-2,(int)x);double fr=x-i;
+            Vec3d p=swb.outer()[i].add(swb.outer()[i+1].subtract(swb.outer()[i]).multiply(fr)).add(0,.05+.35*Ease.hash(seed+3)+.25*age,0);
+            float u=age/life;
+            m.star(p,.06+.05*Ease.hash(seed+4),k%3==0?WHITE:k%3==1?PALE:LILAC,(1-u)*Ease.smooth(age,0,.03f)*twinkle(t,seed));
+        }
+    }
+    /** An eight-pointed glint at {@code p}, facing the camera (a glint, so it may turn to it): a four-pointed star and a shorter one turned 45°. */
+    static void glint8(EffectMesh m,Vec3d p,double r,int rgb,float alpha){
+        if(alpha<=.01f||r<=.005)return;
+        m.star(p,r,rgb,alpha);
+        Vec3d[] uv=cameraPlane(m,p);if(uv==null)return;
+        Vec3d d1=uv[0].add(uv[1]).multiply(.3536*r),d2=uv[0].subtract(uv[1]).multiply(.3536*r);
+        m.line(p.subtract(d1),p.add(d1),r*.09,rgb,.8f*alpha);m.line(p.subtract(d2),p.add(d2),r*.09,rgb,.8f*alpha);
+        m.softDisc(p,r*.3,rgb,.5f*alpha);
+    }
+    /**
+     * A crescent moon of light at {@code p}, facing the camera (a glint): its outer edge a circle {@code r} round, its
+     * inner edge bulging in to leave a lune widest (0.55 of {@code r}) at its back, its horns opening toward {@code turn}
+     * (radians in the camera's plane, 0 its right).
+     */
+    static void crescentMoon(EffectMesh m,Vec3d p,double r,double turn,int rgb,float alpha){
+        if(alpha<=.01f||r<=.005)return;
+        Vec3d[] uv=cameraPlane(m,p);if(uv==null)return;
+        int n=16;double span=Math.toRadians(125);Vec3d po=null,pi=null;
+        for(int i=0;i<=n;i++){
+            double th=-span+2*span*i/n,w=.55*r*Math.cos(Math.PI/2*th/span),ang=turn+Math.PI+th;
+            Vec3d d=uv[0].multiply(Math.cos(ang)).add(uv[1].multiply(Math.sin(ang))),o=p.add(d.multiply(r)),in=p.add(d.multiply(r-w));
+            if(po!=null){m.triangle(po,o,in,rgb,alpha);m.triangle(po,in,pi,rgb,alpha);}
+            po=o;pi=in;
+        }
+    }
+    /** The camera's right and up at {@code p} (a plane facing it), or null at the camera itself. */
+    static Vec3d[] cameraPlane(EffectMesh m,Vec3d p){
+        Vec3d normal=m.camera().subtract(p);if(normal.lengthSquared()<1e-6)return null;normal=normal.normalize();
+        Vec3d u=normal.crossProduct(UP);if(u.lengthSquared()<1e-4)u=new Vec3d(1,0,0);u=u.normalize();
+        return new Vec3d[]{u,u.crossProduct(normal).normalize()};
+    }
+    /**
      * Motes of light sprayed off each slash's bright edge as it breaks up (the videos': the edge going to pale spray as it
-     * goes): pale and white, from where the edge is being eaten (its tail on), drifting outward and up, fading.
+     * goes), from where the edge is being eaten (its tail on): since 2.77.5 moon dust, white, pale and lilac, half of them
+     * little stars, drifting out and up and then settling slowly, swaying, twinkling as they fade.
      */
     static void spray(EffectMesh m,float t,int combo,Vec3d feet,float yaw){
         int k0=0;
         for(var s:arcs(combo)){
-            k0+=67;if(t<s.eat0()||t>=s.eat1()+.4f)continue;
+            k0+=67;if(t<s.eat0()||t>=s.eat1()+.8f)continue;
             Vec3d centre=world(feet,yaw,s.centre());int n=s.style()==1?18:12;
             for(int k=0;k<n;k++){
-                int seed=k*71+k0;float born=s.eat0()+(s.eat1()-s.eat0())*(float)Ease.hash(seed),age=t-born,life=.25f+.2f*(float)Ease.hash(seed+1);
+                int seed=k*71+k0;float born=s.eat0()+(s.eat1()-s.eat0())*(float)Ease.hash(seed),age=t-born,life=.5f+.3f*(float)Ease.hash(seed+1);
                 if(age<0||age>=life)continue;
                 double x=Math.max(0,Math.min(1,Ease.smooth(born,s.eat0(),s.eat1())*1.05+.08*(Ease.hash(seed+2)-.5)));
                 Vec3d at=world(feet,yaw,point(s,s.from()+(s.to()-s.from())*x,s.outer()-(s.outer()-s.inner())*.1*Ease.hash(seed+3)));
                 Vec3d out=at.subtract(centre);out=out.lengthSquared()<1e-8?UP:out.normalize();
-                Vec3d vel=out.multiply(.7+1.5*Ease.hash(seed+4)).add(0,.3+.6*Ease.hash(seed+5),0);
-                Vec3d q=at.add(vel.multiply((1-Math.exp(-age*3))/3));
-                float u=age/life,a=(float)(1-u)*Ease.smooth(age,0,.03f);int col=k%3==0?WHITE:k%3==1?PALE:AZURE;
-                m.softDisc(q,.05+.04*(1-u),col,.75f*a);if(k%4==0)m.star(q,.09*(1-u)+.03,WHITE,a);
+                Vec3d vel=out.multiply(.4+.8*Ease.hash(seed+4)).add(0,.4+.4*Ease.hash(seed+5),0),side=out.crossProduct(UP);
+                side=side.lengthSquared()<1e-8?Vec3d.ZERO:side.normalize();
+                Vec3d q=at.add(vel.multiply((1-Math.exp(-age*3.5))/3.5)).add(0,-.3*age*age,0).add(side.multiply(.06*Math.sin(age*9+seed)));
+                float u=age/life,a=(float)(1-u)*Ease.smooth(age,0,.04f)*twinkle(t,seed);int col=k%3==0?WHITE:k%3==1?PALE:LILAC;
+                if(k%2==0)m.star(q,.06+.05*(1-u),col,a);else m.softDisc(q,.035+.03*(1-u),col,.8f*a);
             }
         }
     }
@@ -899,8 +1020,8 @@ public final class IsosangSlash implements Fx.Skill {
     static float seen(Vec3d p,Vec3d camera){return (float)Math.max(0,Math.min(1,(camera.distanceTo(p)-.7)/.7));}
     /**
      * Every struck target, at every blow (the thrown slash: as it reaches them): a small sharp burst, blue spikes round a
-     * pale heart with an ink edge (drawn under it, {@link #inkBursts}), a white glint, a thin quick ring across the cut and
-     * a few short sparks the way it went through. Small and crisp (2.77.4, user request "지금 평타 너무 가시성이 안 좋은데":
+     * pale heart with an ink edge (drawn under it, {@link #inkBursts}), a crescent moon at its heart (2.77.5), a thin quick
+     * ring across the cut and a few short sparks the way it went through. Small and crisp (2.77.4, user request "지금 평타 너무 가시성이 안 좋은데":
      * the big white flashes, the cross of light and the wide rings hid whom they struck, and the slashes behind them).
      */
     static void impacts(Fx c,EffectMesh m,float t,int combo){
@@ -911,7 +1032,7 @@ public final class IsosangSlash implements Fx.Skill {
             float u=Ease.unit(t,at,at+.16f),a=Ease.smooth(t,at-.01f,at+.01f);boolean big=combo==4;double s=big?1.35:1;
             float vis=seen(p,c.camera),ba=burstAlpha(w,t)*vis,flash=a*(1-u)*vis;double br=burstSize(combo,w,t);
             Vec3d near=facing(p,c.camera);
-            if(ba>0){StandPunchFx.burst(m,near,br,.36,9,combo*31+i*7+w.nth()*13,AZURE,BLUE,.85f*ba,.55f*ba);m.star(near,br*.6,WHITE,.5f*ba);}
+            if(ba>0){StandPunchFx.burst(m,near,br,.36,9,combo*31+i*7+w.nth()*13,AZURE,BLUE,.85f*ba,.55f*ba);crescentMoon(m,near,br*.4,Math.PI*2*Ease.hash(combo*31+i*7+w.nth()*13+19)+.8*(t-at),MOON,.75f*ba);}
             if(flash>0){m.softDisc(near,.7*s,BLUE,.28f*flash);m.softDisc(near,.16*s*(1-u)+.04,WHITE,.7f*flash);}
             // a thin quick ring across the cut
             FxLib.ringPlane(m,p,side,up,.15+.85*s*Ease.out(t,at,at+.15f),.07,WHITE,.7f*a*(1-Ease.unit(t,at,at+.15f)));
@@ -921,7 +1042,7 @@ public final class IsosangSlash implements Fx.Skill {
                 Vec3d dir=way.multiply(Math.cos(ang)).add(side.multiply(Math.sin(ang))).add(up.multiply(rise)).normalize();
                 double len=(.35+.6*Ease.hash(k*7+combo+i*3))*s*Ease.out(t,at,at+.12f);
                 Vec3d q=p.add(dir.multiply(br*.8+len*.3));
-                m.needle(q,q.add(dir.multiply(len*.6)),.05,.3,k%3==0?WHITE:k%3==1?PALE:AZURE,sp);
+                m.needle(q,q.add(dir.multiply(len*.6)),.05,.3,k%4==0?WHITE:k%4==1?PALE:k%4==2?LILAC:AZURE,sp);
             }
         }
     }
@@ -942,20 +1063,14 @@ public final class IsosangSlash implements Fx.Skill {
     }
     /**
      * Hit 2's burst at its second blow (as the ring cracks into ink): a thin white ring and a narrow blue one running out
-     * over the ground from the ring, and light thrown off it in a few streaks (2.77.4: no wide flash round the ring, and
-     * the rings narrow, so the ring cracking into ink shows through).
+     * over the ground from the ring (2.77.4: no wide flash round the ring, and the rings narrow, so the ring cracking into
+     * ink shows through), with stars riding out on the white one ({@link #ringStars}, 2.77.5, in place of streaks of light).
      */
     static void flare(Fx c,EffectMesh m,float t,Vec3d feet,float yaw){
         float at=blow(2,1);if(t<at-.02f||t>=at+.4f)return;
         Vec3d o=world(feet,yaw,v(.35,.5,0));float a=Ease.smooth(t,at-.02f,at+.01f);
         FxLib.ring(m,o,3.3+1.2*Ease.out(t,at,at+.22f),.09,WHITE,.85f*a*(1-Ease.unit(t,at,at+.22f)));
         FxLib.ring(m,o,3.1+2.2*Ease.out(t,at,at+.36f),.2,AZURE,.3f*a*(1-Ease.unit(t,at,at+.36f)));
-        for(int k=0;k<16;k++){
-            double az=Math.PI*2*(k+.5*Ease.hash(k*7+5))/16;Vec3d r=dir(yaw,v(Math.cos(az),0,Math.sin(az)));
-            float s0=at+.03f*(float)Ease.hash(k*11+3),u=Ease.unit(t,s0,s0+.24f);if(t<s0||u>=1)continue;
-            Vec3d q=o.add(r.multiply(3.2+1.5*Ease.out(t,s0,s0+.24f))).add(0,.3*(Ease.hash(k*13)-.5),0);
-            m.needle(q.subtract(r.multiply(.4+.4*Ease.hash(k*17))),q,.05,.4,k%2==0?WHITE:PALE,.6f*(1-u));
-        }
     }
     /** Hit 3's beam: its light along the whole line, a glint at its far end, rings at the point running on ahead. */
     static void beamLight(Fx c,EffectMesh m,float t,Vec3d feet,float yaw){
@@ -1133,6 +1248,22 @@ public final class IsosangSlash implements Fx.Skill {
             p[i]=q.add(along.multiply(Math.cos(a)*r*stretch)).add(across.multiply(Math.sin(a)*r));
         }
         for(int i=1;i+1<sides;i++)m.triangle(p[0],p[i],p[i+1],rgb,alpha);
+        gleam(m,q,along,across,size,stretch,alpha);
+    }
+    /**
+     * Moonlight gleaming on a drop of ink (2.77.5): a dark blue sheen over one side of it and a speck of light in that,
+     * so the ink reads as wet (drawn in its plane, over it).
+     */
+    static void gleam(EffectMesh m,Vec3d q,Vec3d along,Vec3d across,double size,double stretch,float alpha){
+        if(size<.03||alpha<=.02f)return;
+        Vec3d c=q.add(across.multiply(size*.3)).add(along.multiply(size*.15*stretch));
+        oval(m,c,along,across,size*.38*Math.min(1.8,stretch),size*.3,SHEEN,.55f*alpha);
+        oval(m,c.add(across.multiply(size*.06)),along,across,size*.12,size*.1,WHITE,.45f*alpha);
+    }
+    /** A filled oval at {@code c}, {@code ra} along {@code along} and {@code rb} along {@code across} (unit vectors). */
+    static void oval(EffectMesh m,Vec3d c,Vec3d along,Vec3d across,double ra,double rb,int rgb,float alpha){
+        int n=8;Vec3d prev=c.add(along.multiply(ra));
+        for(int i=1;i<=n;i++){double a=Math.PI*2*i/n;Vec3d p=c.add(along.multiply(Math.cos(a)*ra)).add(across.multiply(Math.sin(a)*rb));m.triangle(c,prev,p,rgb,alpha);prev=p;}
     }
     /**
      * A flake of ink at {@code q}: a pointed petal {@code size} long, turning over about its own length ({@code spin}
@@ -1164,6 +1295,7 @@ public final class IsosangSlash implements Fx.Skill {
             p[i]=q.add(along.multiply(Math.cos(a)*r*stretch)).add(across.multiply(Math.sin(a)*r));
         }
         for(int i=0;i<sides;i++)m.triangle(q,p[i],p[(i+1)%sides],rgb,alpha);
+        gleam(m,q,along,across,size,stretch,alpha);
     }
 
     // ───────────────────────────── the effect layer ─────────────────────────────

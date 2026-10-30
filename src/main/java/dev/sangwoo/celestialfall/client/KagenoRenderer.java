@@ -97,7 +97,7 @@ public final class KagenoRenderer {
     static final float LAYER_SOFT=.35f;
     /**
      * The passes of every skill in order: blended geometry, body afterimages, additive light, fire and smoke cells,
-     * brush strokes, brush crescents (plus their additive glow) and real blocks. {@code status} adds the guard and
+     * brush strokes, brush crescents (plus their additive glow), ink ribbons (likewise), light over them and real blocks. {@code status} adds the guard and
      * overdrive visuals and the blood; on the effect layer ({@code layered}) the geometry passes get soft edges and
      * the light runs hotter.
      */
@@ -134,7 +134,14 @@ public final class KagenoRenderer {
         RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
         KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
         if(KagenoFire.beginInk(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).ink(x);KagenoFire.endInk();}
-        KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
+        KagenoFire.crescentGain=1;KagenoFire.hot(0);
+        // Light over the ink ribbons (2.77.5: the starlight on Lee So-sang's slashes, which the ribbons would cover).
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
+        buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
+        for(var x:casts)KagenoSkills.of(x.cast.skill()).overlay(x,m);
+        if(layered)dev.sangwoo.celestialfall.client.vfx.FxLayer.draw(buffer.end(),true,LAYER_GAIN,LAYER_SOFT);else BufferRenderer.drawWithGlobalProgram(buffer.end());
+        RenderSystem.defaultBlendFunc();
         // Real blocks: on the effect layer they were drawn on the screen before it, with the solids.
         if(!layered)for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);
     }

@@ -55,6 +55,8 @@ public final class Fx {
         default void crescents(Fx c){}
         /** Ink ribbons ({@link dev.sangwoo.celestialfall.client.KagenoFire#inkRibbon}: Lee So-sang's slashes, 2.77.0). */
         default void ink(Fx c){}
+        /** Light added over the ink ribbons, which cover what the additive pass drew on them (Lee So-sang's starlight, 2.77.5). */
+        default void overlay(Fx c,EffectMesh m){}
         default void shaders(Fx c){}
         default void blocks(Fx c){}
         /** Full-screen flash strength 0..1 and colour. */
