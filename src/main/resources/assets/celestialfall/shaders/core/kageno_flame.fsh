@@ -340,8 +340,8 @@ void main(){
    field-=erase*.16;
    float aa=max(fwidth(field),.002)*1.2;
    float body=smoothstep(-aa,aa,field)*(1.0-smoothstep(.9,1.0,r));
-   rgb=mix(navy*.6,inkc,smoothstep(0.0,.05,field));
-   alpha=body*tint.a*.93;
+   rgb=mix(navy*.5,inkc,smoothstep(0.0,.025,field));
+   alpha=body*tint.a;
   }else{
    float w=style<.5?pow(max(sin(3.14159*pow(x,1.45)),0.0),.6)
           :style<1.5?.9+.1*sin(x*31.0+sd)
@@ -363,8 +363,8 @@ void main(){
    float body,lit;
    if(style<.5||style>5.5){
     // a cut: brush ink outside, the white line, the blue glowing in and fading out
-    float inkW=(style>5.5?.2:.27)+.3*ink+.07*(strand-.5);
-    float rag=.07*smoothstep(.5,.9,strand)+.03*hair;
+    float inkW=(style>5.5?.25:.35)+.3*ink+.09*(strand-.5);
+    float rag=.12*smoothstep(.45,.9,strand)+.04*hair;
     float inBand=smoothstep(-rag-aa,-rag+aa,d);
     float inkMask=1.0-smoothstep(inkW-aa,inkW+aa,d);
     float glow=(1.0-smoothstep(.5,1.0,d))*(1.0-ink*.8);

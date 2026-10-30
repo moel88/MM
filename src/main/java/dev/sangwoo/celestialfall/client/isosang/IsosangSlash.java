@@ -368,16 +368,17 @@ public final class IsosangSlash implements Fx.Skill {
     /**
      * Every hit's slashes. 1: the great cut (its plane rising to the front-right, wrapping round the left) and the long
      * cut rising back. 2: the ring (low over the ground, the spin's even speed). 3: the cut down from overhead, the cut
-     * rising back, the low sweep and the wide sweep at the head (the thrust's beam: {@link #beam}). 4: the low cut that
-     * throws the slash (the slash itself: {@link #wave}).
+     * rising back (both bowed across the way they face, as the video shows them: a cut whose plane held the way they face
+     * would be a line from behind), the low sweep and the wide sweep at the head (the thrust's beam: {@link #beam}). 4:
+     * the low cut that throws the slash (the slash itself: {@link #wave}).
      */
     static final Arc[] H1_ARCS={
         arc(v(.35,1.55,.05),22,-135,2.9,4.2,72,-200,.265f,.35f,.42f,.64f,.38f,.6f,0,1,true),
         chord(v(-1.2,.45,-1.9),v(2.6,3.5,2.2),v(.6,.5,-1),.8,1.0,.345f,.39f,.5f,.74f,.46f,.7f,6,2)};
     static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.6,3.9,214,-146,.1f,.185f,.52f,.86f,.3f,.64f,1,3,true)};
     static final Arc[] H3_ARCS={
-        chord(v(1.2,3.7,1.5),v(2.4,.25,-2.5),v(1,.2,.2),1.2,1.3,.445f,.505f,.62f,.86f,.56f,.8f,0,5),
-        chord(v(1.8,.3,-2.6),v(3.0,3.5,1.9),v(1,.3,-.3),.9,1.15,.655f,.705f,.78f,.98f,.74f,.95f,0,9),
+        chord(v(1.2,3.7,1.5),v(2.4,.25,-2.5),v(.15,.74,-.64),1.4,1.3,.445f,.505f,.62f,.86f,.56f,.8f,0,5),
+        chord(v(1.8,.3,-2.6),v(3.0,3.5,1.9),v(.15,-.8,.57),.7,1.15,.655f,.705f,.78f,.98f,.74f,.95f,0,9),
         arc(v(1.0,.62,0),6,180,2.4,3.7,118,-122,.765f,.815f,.92f,1.15f,.86f,1.1f,0,11,false),
         arc(v(.8,1.55,0),9,-90,2.9,4.4,-132,128,.855f,.92f,1.02f,1.26f,.96f,1.2f,0,13,false)};
     static final Arc[] H4_ARCS={arc(v(1.0,.72,0),0,0,1.5,2.9,125,-115,.675f,.715f,.76f,.92f,.72f,.88f,0,7,false)};
@@ -425,7 +426,7 @@ public final class IsosangSlash implements Fx.Skill {
     }
 
     /** The thrown slash's height over the ground (its back edge; the leading edge a little higher) and when it is gone. */
-    static final double WAVE_HEIGHT=.95,WAVE_LIFT=.14;
+    static final double WAVE_HEIGHT=.85,WAVE_LIFT=.5,WAVE_LOOK_DEPTH=1.35;
     static final float WAVE_INK0=1.0f,WAVE_INK1=1.32f,WAVE_EAT0=1.16f,WAVE_EAT1=1.48f;
     /** Ticks the thrown slash has flown at hit 4's second {@code t} (it stops where its flight ends). */
     static double flown(float t){return Math.max(0,Math.min(IsosangRules.WAVE_TICKS,(t-blow(4,0))*20));}
@@ -440,7 +441,7 @@ public final class IsosangSlash implements Fx.Skill {
         double front=IsosangRules.waveFront(ticks),half=IsosangRules.waveHalf(ticks)*(.6+.4*grow),curve=IsosangRules.waveCurve(ticks);
         int n=41;Vec3d[] in=new Vec3d[n],out=new Vec3d[n];float[] along=new float[n];
         for(int i=0;i<n;i++){
-            double u=-1+2.0*i/(n-1),side=half*u,edge=front-curve*u*u,back=edge-IsosangRules.WAVE_DEPTH*(.7+.3*grow);
+            double u=-1+2.0*i/(n-1),side=half*u,edge=front-curve*u*u,back=edge-IsosangRules.WAVE_DEPTH*WAVE_LOOK_DEPTH*(.7+.3*grow);
             out[i]=world(feet,yaw,v(edge,WAVE_HEIGHT+WAVE_LIFT,side));in[i]=world(feet,yaw,v(back,WAVE_HEIGHT,side));along[i]=i/(float)(n-1);
         }
         return new Swept(in,out,along,n);
@@ -718,7 +719,7 @@ public final class IsosangSlash implements Fx.Skill {
         for(int k=0;k<5;k++){
             float s=BEAM_ON+.02f*k,u=Ease.unit(t,s,s+.26f);if(t<s||u>=1)continue;
             Vec3d o=tip.add(axis.multiply(.5+1.4*k+1.4*Ease.out(t,s,s+.26f)));
-            FxLib.ringPlane(m,o,side,side.crossProduct(axis).normalize(),.3+(.9+.4*k)*Ease.out(t,s,s+.22f),.18,k==0?WHITE:PALE,.85f*(1-u)*Ease.smooth(t,s,s+.015f));
+            FxLib.ringPlane(m,o,side,side.crossProduct(axis).normalize(),.2+(.45+.18*k)*Ease.out(t,s,s+.22f),.12,k==0?WHITE:PALE,.5f*(1-u)*Ease.smooth(t,s,s+.015f));
         }
     }
     /** The finisher's twirl: a ring of pale light over the head along the point's path, gone as the aim begins. */
@@ -780,8 +781,8 @@ public final class IsosangSlash implements Fx.Skill {
                 double speed=.8+1.6*Ease.hash(k*19+k0);
                 Vec3d vel=radial.multiply(speed).add(way.multiply(speed*.7*(Ease.hash(k*23+k0)-.2))).add(0,.2+.6*Ease.hash(k*29+k0),0);
                 double drag=1-Math.exp(-age*3.2);Vec3d q=at.add(vel.multiply(drag/3.2)).add(0,-3.4*age*age,0);
-                if(q.y<floor)q=new Vec3d(q.x,floor,q.z);
-                float u=age/life;double size=(.06+.12*Ease.hash(k*31+k0))*(1-.55*u)*Ease.out(age,0,.06f);
+                if(q.y<floor)continue;
+                float u=age/life;double size=(.05+.1*Ease.hash(k*31+k0))*(1-.55*u)*Ease.out(age,0,.06f);
                 Vec3d moving=vel.multiply(Math.exp(-age*3.2)).add(0,-6.8*age,0);
                 drop(m,q,moving,size,k*37+k0,INK,.92f*(1-Ease.smooth(u,.55f,1)));
             }
@@ -804,6 +805,7 @@ public final class IsosangSlash implements Fx.Skill {
                     Vec3d dir=way.multiply(Math.cos(ang)).add(side.multiply(Math.sin(ang))).add(0,rise,0).normalize();
                     double speed=1.5+2.4*Ease.hash(seed+3),drag=1-Math.exp(-age*4);
                     Vec3d q=p.add(dir.multiply(speed*drag/4)).add(0,-2.8*age*age,0);float u=age/life;
+                    if(q.y<anchor(c).y+.03)continue;
                     drop(m,q,dir.multiply(speed*Math.exp(-age*4)).add(0,-5.6*age,0),(.07+.11*Ease.hash(seed+4))*(1-.5*u),seed,INK,.92f*(1-Ease.smooth(u,.5f,1)));
                 }
             }
@@ -821,7 +823,7 @@ public final class IsosangSlash implements Fx.Skill {
             Vec3d back=sw.inner()[i].add(sw.inner()[i+1].subtract(sw.inner()[i]).multiply(f)),edge=sw.outer()[i].add(sw.outer()[i+1].subtract(sw.outer()[i]).multiply(f));
             Vec3d start=back.add(edge.subtract(back).multiply(.15*Ease.hash(seed+3)));
             Vec3d fly=Vec3d.fromPolar(0,yaw).multiply(1.6*(1-flown(born)/IsosangRules.WAVE_TICKS));
-            Vec3d q=start.add(fly.multiply(age)).add(0,-4.6*age*age,0);if(q.y<floor)q=new Vec3d(q.x,floor,q.z);
+            Vec3d q=start.add(fly.multiply(age)).add(0,-4.6*age*age,0);if(q.y<floor)continue;
             float u=age/life;
             drop(m,q,fly.add(0,-9.2*age,0),(.07+.12*Ease.hash(seed+4))*(1-.4*u),seed,INK,.92f*(1-Ease.smooth(u,.6f,1)));
         }
@@ -850,31 +852,31 @@ public final class IsosangSlash implements Fx.Skill {
     @Override public void frame(Fx c,FxFrame f){
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         float g=Math.min(1.5f,glow(t,combo));
-        if(g>.02f){var hb=bladeNow(c);f.light(hb[0].add(hb[1].multiply(.9)),AURA[1],6,1.2f*g);}
-        if(combo==4){for(var e:struck(c,0,feet)){float at=strikeAt(c,0,e),k=FxLib.kick(t,at,.1f);if(k>.01f)f.light(reachedAt(c,e,at),0xcfe4ff,9,3f*k);}}
+        if(g>.02f){var hb=bladeNow(c);f.light(hb[0].add(hb[1].multiply(.9)),AURA[1],5,.75f*g);}
+        if(combo==4){for(var e:struck(c,0,feet)){float at=strikeAt(c,0,e),k=FxLib.kick(t,at,.1f);if(k>.01f)f.light(reachedAt(c,e,at),0xcfe4ff,8,2f*k);}}
         else for(int i=0;i<IsosangRules.blows(combo);i++){
             float at=blow(combo,i),hit=FxLib.kick(t,at,.1f);
-            if(hit>.01f)for(var p:hits(c,i,at))f.light(p,0xcfe4ff,8,2.5f*hit);
+            if(hit>.01f)for(var p:hits(c,i,at))f.light(p,0xcfe4ff,7,1.6f*hit);
         }
-        if(combo==1){float k=FxLib.kick(t,.29f,.12f);if(k>.01f)f.light(world(feet,yaw,v(.4,1.6,-.4)),0x7fb0ff,9,2f*k);}
+        if(combo==1){float k=FxLib.kick(t,.29f,.12f);if(k>.01f)f.light(world(feet,yaw,v(.4,1.6,-.4)),0x7fb0ff,8,1.3f*k);}
         if(combo==2){
             float k=FxLib.kick(t,blow(2,0),.14f),fl=FxLib.kick(t,blow(2,1),.16f);
-            if(k+fl>.01f)f.light(world(feet,yaw,v(.35,.6,0)),0x8cbcff,10,2.2f*k+2.6f*fl);
+            if(k+fl>.01f)f.light(world(feet,yaw,v(.35,.6,0)),0x8cbcff,9,1.4f*k+1.7f*fl);
         }
         if(combo==3){
-            float lit=beamLit(t);if(lit>0){var b=beam(feet,yaw,t);f.light(b[0].add(b[1]).multiply(.5),0x6aa8ff,10,2.6f*lit);}
-            for(int i=1;i<5;i++){float k=FxLib.kick(t,blow(3,i),.1f);if(k>.01f)f.light(world(feet,yaw,v(1.4,1.4,0)),0x7fb0ff,8,1.6f*k);}
+            float lit=beamLit(t);if(lit>0){var b=beam(feet,yaw,t);f.light(b[0].add(b[1]).multiply(.5),0x6aa8ff,9,1.7f*lit);}
+            for(int i=1;i<5;i++){float k=FxLib.kick(t,blow(3,i),.1f);if(k>.01f)f.light(world(feet,yaw,v(1.4,1.4,0)),0x7fb0ff,7,1.05f*k);}
         }
         if(combo==4){
             var sw=wave(feet,yaw,t);
             if(sw!=null){
                 float lit=(1-Ease.smooth(t,WAVE_INK0,WAVE_INK1))*(1-Ease.smooth(t,WAVE_EAT0,WAVE_EAT1));
-                Vec3d mid=sw.outer()[sw.n()/2];f.light(mid,0x8cbcff,11,3.2f*lit);
-                f.light(sw.outer()[sw.n()/6],0x6aa0ff,7,1.4f*lit);f.light(sw.outer()[sw.n()*5/6],0x6aa0ff,7,1.4f*lit);
+                Vec3d mid=sw.outer()[sw.n()/2];f.light(mid,0x8cbcff,10,2.1f*lit);
+                f.light(sw.outer()[sw.n()/6],0x6aa0ff,6,.9f*lit);f.light(sw.outer()[sw.n()*5/6],0x6aa0ff,6,.9f*lit);
             }
             float at=blow(4,0),k=FxLib.kick(t,at,.18f);
             if(k>.01f){
-                Vec3d o=world(feet,yaw,v(1.6,.8,0));f.light(o,0xb8d8ff,14,4.4f*k);
+                Vec3d o=world(feet,yaw,v(1.6,.8,0));f.light(o,0xb8d8ff,12,2.9f*k);
                 float near=(float)Math.max(0,Math.min(1,(22-c.camera.distanceTo(o))/10));
                 if(near>0)f.shaft(o,0xb8d8ff,.3f*near*k);
             }
