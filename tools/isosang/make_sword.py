@@ -44,6 +44,13 @@ with a bright line inside it, its lower a bright line, an ink line along each, l
 its flat with little star glints (these glow: painted in the texture, and drawn again at full brightness from the glow
 texture); the guard pale champagne gold with navy insets and white crystals; the grip blue like the blade with white
 gems and bands; the collar and the pommel gold.
+Its decoration (2.76.6, user request: "마지막으로 예쁘게 꾸미면서 다듬어줘"): starlight over it, as in the art. On the
+blade's flat by the guard a crescent moon and a star (her name, 월흔, a moon's trace) and tiny stars along it; four-pointed
+twinkles on the guard's gold, the crystals, the knobs and the gems; flame strokes engraved in front of the wings'
+grooves; the gold's lines engraved (an ink groove with a bright edge on its lit side), a bright rim inside each outline,
+the gold a little richer and brighter towards the wings' peaks and the crests' middles; facets cut in the gems' inner
+diamonds; a little white gem on each face of the pommel's panel; beads round the collar. The crescent, the stars and
+the twinkles glow.
 
 Units are sixteenths of a block. The sword runs along +y with the middle of its grip at the origin (GeckoLib's item
 renderer puts the model's origin at the middle of the item's space, so the hand holds it there), its edges across x (the
@@ -96,13 +103,14 @@ EDGE_LIGHT, EDGE_LOW = hexc('#efe9fc'), hexc('#dcd6f0')
 STEEL_EDGE = hexc('#d4cef0')
 CRACK_CORE, CRACK_HALO = hexc('#f8f2ff'), hexc('#b2a1ee')
 GLINT = hexc('#ffffff')
-GOLD = [hexc(c) for c in ('#4a2a17', '#8c6440', '#b38f62', '#d2b98a', '#e8d49e', '#f6e8b8', '#fff7dc')]
+GOLD = [hexc(c) for c in ('#4a2a17', '#8f6238', '#b98e57', '#d8b77c', '#edd290', '#f8e6a8', '#fff6d6')]   # warm, polished
 GOLD_INK = hexc('#1f1815')
 NAVY = [hexc(c) for c in ('#191a42', '#2b2d6b', '#3a3f8a', '#6069b8')]
 GRIP = [hexc(c) for c in ('#0d0c12', '#191824', '#252436', '#36354d')]
 GRIP_GLINT, GRIP_CORD = hexc('#dedbea'), hexc('#4b4966')
 CRYSTAL = [hexc(c) for c in ('#ffffff', '#eaeef9', '#c8cee6')]    # the white crystals: their lit facet, their face, their shaded facet
 CRYSTAL_LINE = hexc('#8a90ad')
+SPARKLE, GEM_TINT = hexc('#fffaf0'), hexc('#d7e3ff')   # the twinkles; the cool in the gems' lower facets
 POMMEL = [hexc(c) for c in ('#1a1817', '#2d2a28', '#45413c', '#625b53', '#8c8379')]
 
 
@@ -216,6 +224,9 @@ BANDS = (.3, .06, .09, .045)
 POMMEL_SHIELD = [(0, 0), (.5, .44), (.95, .44), (COLLAR[0], .36)]
 POMMEL_PANEL = [(.15, 0), (.52, .3), (.93, .3)]
 POMMEL_Z = (.2, .26)
+# the pommel's gem (2.76.6), a little white diamond on each face of the panel: its middle (p), half its length and its
+# half width, how far its border and its inner diamond stand off the panel (blade widths)
+POMMEL_GEM = (.56, .2, .11, (.035, .06))
 
 
 # ---------------------------------------------------------------- outlines
@@ -461,6 +472,35 @@ for layer, inset, T, top in SOCKET_LAYERS:
         y0, y1 = y_along(a1), y_along(a0)
         for x0, x1 in ([(-hi, hi)] if lo <= 0 else [(lo, hi), (-hi, -lo)]):
             sliced('guard', 'socket', [x0 * W, y0, -T * W], [(x1 - x0) * W, y1 - y0, 2 * T * W], faces, layer=layer, depth=T * W, run=(lo, hi))
+
+# the pommel's gem, a little white diamond on each face of its panel (2.76.6): as a gem (its end towards the collar,
+# pointing down to the shield's point), cut in slices like the grip's gems, standing off the panel
+PG = (POMMEL_GEM[0] + POMMEL_GEM[1], -1, 2 * POMMEL_GEM[1], POMMEL_GEM[1], POMMEL_GEM[2])
+GEM_INSETS = (GEM_INSET, GEM_INSET, .035)   # the inner diamonds' insets: the grip's gems', the pommel's
+ALL_GEMS = GEMS + [PG]
+
+
+def gem_tops(gi, p):
+    """How far a gem's border and its inner diamond stand from the middle of the sword at p (blade widths): the grip's
+    gems on the grip, the pommel's on its panel."""
+    if gi == 2:
+        return POMMEL_Z[1] + POMMEL_GEM[3][0], POMMEL_Z[1] + POMMEL_GEM[3][1]
+    r = np.interp(p, [q[0] for q in GRIP_SHAPE], [q[1] for q in GRIP_SHAPE])
+    return r + GEM_RISE[0], r + GEM_RISE[1]
+
+
+for f in (1, -1):
+    out = 'south' if f > 0 else 'north'
+    for lo_p, hi_p in gem_slices(PG):
+        pm = (lo_p + hi_p) / 2
+        hw = gem_half(PG, pm)
+        b, t = gem_tops(2, pm)
+        for part, half, z0, z1 in (('gem', hw, POMMEL_Z[1] - .01, b), ('gem_top', hw - GEM_INSETS[2], b - .01, t)):
+            if half * W < .015:
+                continue
+            lo, hi = (z0 * W, z1 * W) if f > 0 else (-z1 * W, -z0 * W)
+            sliced('grip', part, [-half * W, y_of(lo_p), lo], [2 * half * W, y_of(hi_p) - y_of(lo_p), hi - lo],
+                   [out, 'east', 'west', 'up', 'down'], gem=2)
 
 # the plate on the flats: slices a sixteenth of a unit long, as wide as its outline at their middle, thicker towards the
 # guard; through the blade (on both flats at once) where it is as thick all along, and where it rises towards the guard
@@ -723,19 +763,20 @@ for name, inset, T, top in SOCKET_LAYERS:
 
 # the gems: their borders' sides (the upper gem's but where the socket holds it), their inner diamonds' sides; each on
 # its face, rising and falling with the grip
-for gi, gem in enumerate(GEMS):
+for gi, gem in enumerate(ALL_GEMS):
     end, way, length, widest, half = gem
-    ta, tb = widest * GEM_INSET / half, length - (length - widest) * GEM_INSET / half
+    inset = GEM_INSETS[gi]
+    ta, tb = widest * inset / half, length - (length - widest) * inset / half
     outer = gem_poly(gem)
-    inner = [(end + way * ta, 0.0), (end + way * widest, half - GEM_INSET), (end + way * tb, 0.0), (end + way * widest, GEM_INSET - half)]
-    for part, poly, rise, sides in (('gem', outer, GEM_RISE[0], (1, 2) if gi == 0 else (0, 1, 2, 3)),
-                                    ('gem_top', inner, GEM_RISE[1], (0, 1, 2, 3))):
-        region = (lambda part: lambda x, y: gem_half(gem, y / W + P_HOLD) - (GEM_INSET if part == 'gem_top' else 0) > abs(x) / W)(part)
-        top = lambda pp: (grip_radius(pp) + rise) * W
+    inner = [(end + way * ta, 0.0), (end + way * widest, half - inset), (end + way * tb, 0.0), (end + way * widest, inset - half)]
+    for part, poly, which, sides in (('gem', outer, 0, (1, 2) if gi == 0 else (0, 1, 2, 3)), ('gem_top', inner, 1, (0, 1, 2, 3))):
+        region = (lambda part, gem, inset: lambda x, y: gem_half(gem, y / W + P_HOLD) - (inset if part == 'gem_top' else 0) > abs(x) / W)(part, gem, inset)
+        top = (lambda gi, which: lambda pp: float(gem_tops(gi, pp)[which]) * W)(gi, which)
+        floor = (lambda gi, part: lambda pp: (POMMEL_Z[1] - .01 if gi == 2 else .12) * W if part == 'gem' else (float(gem_tops(gi, pp)[0]) - .01) * W)(gi, part)
         for k in sides:
             (p0, x0), (p1, x1) = poly[k], poly[(k + 1) % 4]
             p, q = (x0 * W, y_of(p0)), (x1 * W, y_of(p1))
-            thick = min(top(p0), top(p1)) - (.12 * W if part == 'gem' else (grip_radius(min(p0, p1)) + GEM_RISE[0] - .01) * W)
+            thick = min(top(p0), top(p1)) - max(floor(p0), floor(p1))
             for f in (1, -1):
                 edge_face('grip', {'part': part, 'gem': gi}, (*p, f * top(p0)), (*q, f * top(p1)), on_left(p, q, region), f,
                           max(thick, .02))
@@ -778,7 +819,7 @@ def make_bolts(seed):
     rnd = random.Random(seed)
     segs = []
     start = y_along(PLATE[0])
-    runs = [(start + .3 + rnd.random(), Y_TIP_FROM - 1.0 - rnd.random() * 2.5, .05, .135),
+    runs = [(start + 1.45 + rnd.random() * .6, Y_TIP_FROM - 1.0 - rnd.random() * 2.5, .05, .135),
             (start + 7.5 + rnd.random() * 4, start + 13.5 + rnd.random() * 4, .036, .1)]
     lim = LIGHTNING
     for begin, end, core, halo in runs:
@@ -817,6 +858,79 @@ def make_glints(seed, bolts):
 
 BOLTS = {1: make_bolts(11), -1: make_bolts(23)}
 GLINTS = {s: make_glints(s * 7 + 40, BOLTS[s]) for s in (1, -1)}
+
+
+# ---------------------------------------------------------------- the decoration
+# (2.76.6, user request: "마지막으로 예쁘게 꾸미면서 다듬어줘") A little starlight over the sword, as in the art: on the
+# blade's flat by the guard a crescent moon and a star (her name, 월흔, a moon's trace), and tiny stars all along it;
+# four-pointed twinkles on the guard's gold and on the gems; flame strokes engraved on the wings; the gold's lines
+# engraved (an ink line with a bright edge beside it), a bright rim inside each outline; facets cut in the gems; a little
+# white gem on each face of the pommel's panel; beads round the collar. The twinkles, the stars and the crescent glow.
+MOON = (.78, .27, (.1, .075), .225)      # the crescent: its centre (units above the plate's point), radius, the bite's
+                                          # offset and radius
+MOON_STAR = ((-.2, .33), .17)            # the star beside it: its offset from the crescent's centre, its reach
+TWINKLES = [(.30, 1.38, .17), (.53, .92, .12)]   # on each face of each wing: along, up, reach (units)
+CRYSTAL_TWINKLE = (-.15, .88, .14)
+# the flame strokes engraved in front of the groove: how far in front of the groove's front (blade widths), the stretch
+# of it (up) they run
+STROKES = [(.075, (.64, 1.07)), (.15, (.72, 1.0)), (.225, (.82, .95))]
+STROKE_W = .014                           # their half width at their widest (blade widths)
+def twinkle(x, y, cx, cy, r):
+    """A four-pointed twinkle at (cx, cy) reaching r (units): a bright dot with four thin arms fading to their tips; how
+    bright it is at each point (0 to 1)."""
+    dx, dy = np.abs(x - cx), np.abs(y - cy)
+    arm = lambda a, b: np.clip(1 - a / r, 0, 1) ** 1.3 * (b < .006 + .05 * r * np.clip(1 - a / r, 0, 1))
+    return np.maximum(np.maximum(arm(dx, dy), arm(dy, dx)), np.clip(1 - np.hypot(dx, dy) / (.32 * r), 0, 1))
+
+
+def make_stars(seed):
+    """Tiny stars along a flat (x, y, radius, brightness), past the crescent to short of the point."""
+    rnd = random.Random(seed)
+    lo, hi = y_along(PLATE[0]) + 1.25, Y_TIP_FROM - .6
+    return np.array([(rnd.uniform(-.92, .92) * LIGHTNING, rnd.uniform(lo, hi), rnd.uniform(.022, .04), rnd.uniform(.55, 1))
+                     for _ in range(30)])
+
+
+STARS = {1: make_stars(5), -1: make_stars(17)}
+
+
+def star_light(side, x, y):
+    out = np.zeros_like(x)
+    for sx, sy, r, b in STARS[side]:
+        out = np.maximum(out, b * np.clip(1 - np.hypot(x - sx, y - sy) / r, 0, 1) ** .7)
+    return out
+
+
+def moon_light(x, y):
+    """The crescent by the guard and its star: 1 on them, a soft halo round them (like the lightning's)."""
+    cy, r, (ox, oy), rb = y_along(PLATE[0]) + MOON[0], MOON[1], MOON[2], MOON[3]
+    d_out = np.hypot(x, y - cy) - r                      # signed: outside the moon's disc
+    d_bite = rb - np.hypot(x - ox, y - cy - oy)          # signed: inside the bite
+    d = np.maximum(d_out, d_bite)                        # outside the crescent
+    light = np.where(d < 0, 1.0, np.clip(1 - d / .1, 0, 1) ** 2 * .7)
+    (sx, sy), sr = MOON_STAR
+    return np.maximum(light, twinkle(x, y, sx, cy + sy, sr))
+
+
+def engraved(d, w=.018, edge=.016):
+    """An engraved line at distance d from its middle line (blade widths): its groove (ink) and the bright edge beside it."""
+    return d < w, (d >= w) & (d < w + edge)
+
+
+def strokes(a, up):
+    """The flame strokes on a wing's face: how far each point is from the nearest (blade widths) less its half width
+    there (negative inside), and on which side of it the point lies (towards the groove)."""
+    best, side = np.full(np.shape(a), np.inf), np.zeros(np.shape(a), dtype=bool)
+    for off, (u0, u1) in STROKES:
+        us = np.linspace(u0, u1, 28)
+        line = [(float(through(CURVE, u)) - GROOVE_W - off, float(u)) for u in us]
+        t = np.clip((up - u0) / (u1 - u0), 0, 1)
+        half = STROKE_W * np.sin(np.pi * t) ** .55 * ((up >= u0) & (up <= u1))
+        d = dist(line, a, up) - half
+        nearer = d < best
+        best = np.where(nearer, d, best)
+        side = np.where(nearer, a > through(CURVE, up) - GROOVE_W - off, side)
+    return best, side
 
 
 def bolt_light(side, x, y):
@@ -927,10 +1041,10 @@ def paint_blade(c, face, x, y, z, u, v):
         if face in FLATS:
             side = 1 if face == 'south' else -1
             col = near * (1 + .035 * np.sin(x * 41.0 + np.sin(x * 13.0) * 2.0))[..., None]     # brushed lengthwise, faintly
-            b = bolt_light(side, x, y)
+            b = np.maximum(bolt_light(side, x, y), moon_light(x, y))       # the lightning, the crescent and its star
             col = np.where((b >= 1)[..., None], CRACK_CORE, mix(col, CRACK_HALO, b))
             glow |= b > .45
-            g = glint_light(side, x, y)
+            g = np.maximum(glint_light(side, x, y), star_light(side, x, y))   # the glints, the tiny stars
             col = mix(col, GLINT, g)
             glow |= g > .4
             return col, glow
@@ -964,6 +1078,34 @@ def paint_blade(c, face, x, y, z, u, v):
     return mix(STEEL_EDGE * 1.05, mix(STEEL_EDGE, BEVEL_DARK, .55), smooth(t)), glow
 
 
+def lit_side(line, a, up):
+    """Which points lie on the lit side of a straight line (a, up pairs): its side towards the grip, or towards the
+    upper edge for a line running along the sword (an engraved groove's far wall catches the light)."""
+    (a0, u0), (a1, u1) = line[0], line[-1]
+    na, nu = u1 - u0, -(a1 - a0)                    # a normal to it
+    if abs(na) < 1e-9 or (abs(na) < abs(nu) * .2 and nu < 0):
+        na, nu = (-na, -nu) if nu < 0 else (na, nu)
+    elif na < 0:
+        na, nu = -na, -nu
+    return (a - a0) * na + (up - u0) * nu > 0
+
+
+def engrave(col, line, a, up, closed=False, w=.018, edge=.016):
+    """Engrave a line on a face: its groove inked, a bright edge beside it on the lit side."""
+    d = dist(line, a, up, closed)
+    groove, rim = engraved(d, w, edge)
+    col = np.where((rim & lit_side(line, a, up))[..., None], mix(col, GOLD[6], .85), col)
+    return np.where(groove[..., None], GOLD_INK, col)
+
+
+def wing_twinkles(x, y):
+    """The twinkles on a wing's faces (both wings): how bright each point is."""
+    out = np.zeros_like(x)
+    for ta, tu, r in TWINKLES:
+        out = np.maximum(out, twinkle(np.abs(x), y, tu * W, y_along(ta), r))
+    return out
+
+
 def paint_wing(c, face, x, y, z, u, v):
     """A wing's slice: on its faces the rim (an ink line at the outline) and, through the groove, the navy floor; the
     body (lighter in front of the groove, darker on the back facet behind the crest, ink where it steps down); the crest;
@@ -993,10 +1135,13 @@ def paint_wing(c, face, x, y, z, u, v):
         if layer != 'rim':
             ccol = np.where((d < RIM + .02)[..., None], CRYSTAL_LINE, ccol)
         ccol = np.where(((d < .03) | (np.abs(a - through(CRYSTAL_EDGE, up)) < .016))[..., None], GOLD_INK, ccol)
+        tw = twinkle(np.abs(x), y, CRYSTAL_TWINKLE[1] * W, y_along(CRYSTAL_TWINKLE[0]), CRYSTAL_TWINKLE[2]) * crystal
+        ccol, glow = mix(ccol, SPARKLE, tw), glow | (tw > .45)
     groove = inside(GROOVE, a, up)
     g_edge = dist(GROOVE, a, up, closed=True) < .022
     if layer == 'rim':
         col = solid(mix(GOLD[3], GOLD[4], .3), x.shape)
+        col = np.where(((d >= .03) & (d < .043))[..., None], mix(col, GOLD[6], .8), col)            # a bright rim inside the ink
         col = np.where(((d > RIM - .03) & (d < RIM + .01))[..., None], mix(col, GOLD_INK, .55), col)   # where the body rises
         col = np.where(groove[..., None], mix(NAVY[1], NAVY[2], smooth((up - GROOVE_SPAN[0]) / .5)), col)
         col = np.where((g_edge & (d >= RIM))[..., None], GOLD_INK, col)
@@ -1008,12 +1153,22 @@ def paint_wing(c, face, x, y, z, u, v):
         col = solid(GOLD[4], x.shape)
         col = np.where(front[..., None], mix(GOLD[4], GOLD[5], .55 * smooth(1 - np.abs(a - through(CURVE, up) + .2) / .12)), col)
         col = np.where(back[..., None], mix(GOLD[3], GOLD[4], .3), col)
+        col = mix(col, GOLD[5], .25 * smooth((up - .75) / .65))            # polished: brighter up towards the peak
+        sd, groove_side = strokes(a, up)                                   # the flame strokes, a bright edge on their far side
+        col = np.where(((sd >= 0) & (sd < .015) & ~groove_side & front)[..., None], mix(col, GOLD[6], .9), col)
+        col = np.where(((sd < 0) & front)[..., None], mix(GOLD_INK, GOLD[1], .35), col)
+        col = np.where(((d >= RIM + .028) & (d < RIM + .041))[..., None], mix(col, GOLD[6], .75), col)   # a bright rim
         col = np.where((dist(BACK_LINE, a, up) < .016)[..., None], mix(col, GOLD_INK, .7), col)
         col = np.where((g_edge | (d < RIM + .028) | (dist(CREST, a, up, closed=True) < .02))[..., None], GOLD_INK, col)
+        tw = wing_twinkles(x, y)
+        col, glow = mix(col, SPARKLE, tw), glow | (tw > .45)
         return (np.where(crystal[..., None], ccol, col) if crystal.any() else col), glow
-    col = solid(GOLD[5], x.shape)
-    col = np.where(((dist(CREST, a, up, closed=True) < .026) | (d < RIM + .055))[..., None], GOLD_INK, col)
-    return col, glow
+    dc = dist(CREST, a, up, closed=True)
+    col = mix(GOLD[5], GOLD[6], .35 * smooth(dc / .12))                 # the crest rounded: brightest along its middle
+    col = np.where(((dc >= .026) & (dc < .039))[..., None], mix(col, GOLD[6], .8), col)
+    col = np.where(((dc < .026) | (d < RIM + .055))[..., None], GOLD_INK, col)
+    tw = wing_twinkles(x, y)
+    return mix(col, SPARKLE, tw), glow | (tw > .45)
 
 
 def paint_core(c, face, x, y, z, u, v):
@@ -1027,10 +1182,11 @@ def paint_core(c, face, x, y, z, u, v):
     col = np.where((np.abs(up) > np.abs(a - .635) * 1.16)[..., None], GOLD[4], GOLD[3])     # the facets above and below the crossing lighter
     w = (CORE_TO - RIDGE_TOP) * NOTCH_SLOPE
     col = np.where((np.abs(up) < (a - RIDGE_TOP) * NOTCH_SLOPE)[..., None], GOLD[5], col)
-    lines = (dist([(.42, .5), (.85, -.5)], a, up) < .016) | (dist([(.42, -.5), (.85, .5)], a, up) < .016)
-    lines |= (np.abs(a - .635) < .014) & (np.abs(up) < .45)
-    lines |= dist([(CORE_TO, -w), (RIDGE_TOP, 0), (CORE_TO, w)], a, up) < .016
-    return np.where(lines[..., None], GOLD_INK, col), glow
+    col = mix(col, GOLD[5], .2 * smooth(1 - np.hypot(a - .635, up) / .5))   # polished: brightest about the crossing
+    for line in ([(.42, .5), (.85, -.5)], [(.42, -.5), (.85, .5)], [(.635, -.45), (.635, .45)], [(CORE_TO, -w), (RIDGE_TOP, 0)],
+                 [(RIDGE_TOP, 0), (CORE_TO, w)]):
+        col = engrave(col, line, a, up)
+    return col, glow
 
 
 def paint_socket(c, face, x, y, z, u, v):
@@ -1051,7 +1207,7 @@ def paint_socket(c, face, x, y, z, u, v):
     lift = {'rim': .25, 'mid': .6, 'body': 1.0}[c.opts['layer']]          # the layers in from the outline lighter
     col = np.where(between[..., None], mix(GOLD[4], GOLD[5], lift), solid(mix(GOLD[3], GOLD[4], lift), x.shape))
     col = np.where((d_notch < .03)[..., None], GOLD[6], col)
-    col = np.where((dist([(RIDGE_TOP, 0.0), (SOCKET[1], (SOCKET[1] - RIDGE_TOP) * NOTCH_SLOPE)], a, up) < .016)[..., None], GOLD_INK, col)
+    col = engrave(col, [(RIDGE_TOP, 0.0), (SOCKET[1], (SOCKET[1] - RIDGE_TOP) * NOTCH_SLOPE)], a, up)
     return np.where((d_out < .02)[..., None], GOLD_INK, col), glow
 
 
@@ -1065,8 +1221,13 @@ def paint_plate(c, face, x, y, z, u, v):
     inner = inside(INNER_DIAMOND, a, up)
     col = np.where(inner[..., None], mix(mix(NAVY[1], NAVY[2], smooth((a + .36) / .7)), NAVY[3], .45 * (np.abs(up) < .05)), col)
     col = np.where((dist(INNER_DIAMOND, a, up, closed=True) < .024)[..., None], GOLD_INK, col)
-    col = np.where((dist(PLATE_POLY, a, up, closed=True) < .03)[..., None], GOLD_INK, col)
-    return col, glow
+    dp = dist(PLATE_POLY, a, up, closed=True)
+    col = np.where(((dp >= .03) & (dp < .042))[..., None], mix(col, GOLD[6], .8), col)          # a bright rim inside the ink
+    col = np.where(((dp >= .068) & (dp < .08) & ~inner)[..., None], mix(GOLD_INK, GOLD[1], .3), col)   # an engraved border
+    col = np.where(((dp >= .08) & (dp < .096) & ~inner)[..., None], mix(col, GOLD[6], .8), col)
+    col = np.where((dp < .03)[..., None], GOLD_INK, col)
+    tw = twinkle(x, y, 0.0, y_along(-.6), .14)
+    return mix(col, SPARKLE, tw), glow | (tw > .45)
 
 
 def paint_knob(c, face, x, y, z, u, v):
@@ -1078,7 +1239,8 @@ def paint_knob(c, face, x, y, z, u, v):
         r = np.hypot(x - cx, y - cy) / (KNOB[2] * W)          # out from the middle, in the boss's radii
         if c.opts['tier']:
             lit = smooth(1 - np.hypot(x - cx + .15 * KNOB[2] * W, y - cy - .2 * KNOB[2] * W) / (.62 * KNOB[2] * W))
-            return np.where((r > .56)[..., None], GOLD_INK, mix(GOLD[5], GOLD[6], lit)), glow
+            tw = twinkle(x, y, cx - .15 * KNOB[2] * W, cy + .2 * KNOB[2] * W, .07)
+            return np.where((r > .56)[..., None], GOLD_INK, mix(mix(GOLD[5], GOLD[6], lit), SPARKLE, tw)), glow | (tw > .45)
         return np.where((r > .86)[..., None], GOLD_INK, solid(GOLD[4], x.shape)), glow
     return solid(GOLD[3], x.shape), glow
 
@@ -1091,6 +1253,11 @@ def band(c, face, x, y, z):
         col = solid(GOLD[5] if face == 'up' else GOLD[3], x.shape)
         return np.where((np.hypot(x, z) > c.opts['r'] - .03 * W)[..., None], GOLD_INK, col)
     col = mix(GOLD[3], GOLD[5], .3 + .45 * (y - y0) / (y1 - y0))
+    ang = np.arctan2(z, x)
+    near = np.round(ang / (np.pi / 8)) * (np.pi / 8)               # the middle of the side each point is on
+    bead = np.hypot((ang - near) * c.opts['r'], y - (y0 + y1) / 2) / (.05 * W)
+    lit = smooth(1 - np.hypot((ang - near) * c.opts['r'] + .015 * W, y - (y0 + y1) / 2 - .015 * W) / (.04 * W))
+    col = np.where((bead < 1)[..., None], np.where((bead > .78)[..., None], GOLD_INK, mix(GOLD[4], GOLD[6], lit)), col)
     return np.where(((y - y0 < .03) | (y1 - y < .03))[..., None], GOLD_INK, col)
 
 
@@ -1098,21 +1265,31 @@ def paint_gem(c, face, x, y, z):
     """A white gem: its border bevelled in four facets (the one up towards the guard on the left lit), inked round its
     outline; its inner diamond brightest, a fine grey-blue line round it; its sides shaded, their top edge the line
     round the face above it (so that where a side stands a hair above a straight edge it reads as that line)."""
-    gem = GEMS[c.opts['gem']]
-    if face not in FLATS:
-        r = np.interp(y / W + P_HOLD, [q[0] for q in GRIP_SHAPE], [q[1] for q in GRIP_SHAPE])
-        top = (r + (GEM_RISE[1] if c.part == 'gem_top' else GEM_RISE[0])) * W
-        return np.where((np.abs(z) > top - .02 * W)[..., None], CRYSTAL_LINE if c.part == 'gem_top' else GOLD_INK,
-                        solid(CRYSTAL[2], x.shape))
-    poly = gem_poly(gem)
+    gi = c.opts['gem']
+    gem, glow = ALL_GEMS[gi], np.zeros_like(x, dtype=bool)
     p, xa = y / W + P_HOLD, x / W
+    if face not in FLATS:
+        top = gem_tops(gi, p)[1 if c.part == 'gem_top' else 0] * W
+        return np.where((np.abs(z) > top - .02 * W)[..., None], CRYSTAL_LINE if c.part == 'gem_top' else GOLD_INK,
+                        solid(CRYSTAL[2], x.shape)), glow
+    poly = gem_poly(gem)
+    upper, left = p > poly[1][0], xa < 0                 # towards the blade; towards the lower edge
     if c.part == 'gem_top':
-        inner = [(q, u * (1 - GEM_INSET / gem[4])) for q, u in poly]
-        col = mix(CRYSTAL[0], CRYSTAL[1], np.clip((p - poly[1][0]) * gem[1] / (gem[2] - gem[3]), 0, 1) * .6)
-        return np.where((dist(inner, p, xa, closed=True) < .016)[..., None], CRYSTAL_LINE, col)
-    upper, left = p > poly[1][0], xa < 0
+        # its facets cut from its middle to its four corners: the one up towards the blade on the left white, the others
+        # in from it, the lower two cool; a fine line along each cut and round it; a twinkle on the white facet
+        inner = [(q, u * (1 - GEM_INSETS[gi] / gem[4])) for q, u in poly]
+        col = np.where((upper & left)[..., None], CRYSTAL[0], np.where(upper[..., None], CRYSTAL[1],
+                       np.where(left[..., None], mix(CRYSTAL[1], GEM_TINT, .6), mix(CRYSTAL[2], GEM_TINT, .5))))
+        centre = (poly[1][0], 0.0)
+        cuts = np.minimum.reduce([dist([centre, (q, u)], p, xa) for q, u in inner])
+        col = np.where((cuts < .008)[..., None], mix(CRYSTAL_LINE, CRYSTAL[1], .45), col)
+        col = np.where((dist(inner, p, xa, closed=True) < .016)[..., None], CRYSTAL_LINE, col)
+        top_end = max(poly[0][0], poly[2][0])
+        tp, tx = poly[1][0] + .45 * (top_end - poly[1][0]) * (1 - GEM_INSETS[gi] / gem[4]), -.35 * (gem[4] - GEM_INSETS[gi])
+        tw = twinkle(x, y, tx * W, y_of(tp), .1 if gi < 2 else .07)
+        return mix(col, SPARKLE, tw), glow | (tw > .45)
     col = np.where((upper & left)[..., None], CRYSTAL[0], np.where((upper | left)[..., None], CRYSTAL[1], CRYSTAL[2]))
-    return np.where((dist(poly, p, xa, closed=True) < .022)[..., None], GOLD_INK, col)
+    return np.where((dist(poly, p, xa, closed=True) < .022)[..., None], GOLD_INK, col), glow
 
 
 def paint_hilt(c, face, x, y, z, u, v):
@@ -1142,7 +1319,7 @@ def paint_hilt(c, face, x, y, z, u, v):
     if part == 'collar':
         return band(c, face, x, y, z), glow
     if part in ('gem', 'gem_top'):
-        return paint_gem(c, face, x, y, z), glow
+        return paint_gem(c, face, x, y, z)
     # the pommel: a gold shield, its rim bevelled darker and inked round, the raised panel paler, inked round
     xa = x / W
     shield = POMMEL_SHIELD + [(q[0], -q[1]) for q in POMMEL_SHIELD[:0:-1]]

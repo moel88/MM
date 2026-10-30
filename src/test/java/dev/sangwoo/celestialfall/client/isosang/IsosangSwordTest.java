@@ -16,7 +16,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * user sent: a long straight blade with its point, the grip held at the model's middle; the guard two wings, one off
  * each edge, the one the other's mirror image, reaching furthest out near their front (as the 3D model's parts sheet
  * has it); every face its own place on the texture, inside it and apart from the others; the glow texture as large as
- * the texture, its lit texels the texture's own colours and only on the blade's flats (the lightning and its glints);
+ * the texture, its lit texels the texture's own colours, mostly on the blade's flats (the lightning, the stars) and the
+ * rest the twinkles on the guard and the gems;
  * its display holding it in a hand.
  */
 class IsosangSwordTest {
@@ -166,23 +167,26 @@ class IsosangSwordTest {
             }
         }
     }
-    @Test void theLightningGlowsInItsOwnColoursOnTheBladesFlatsOnly(){
+    @Test void theLightningTheStarsAndTheTwinklesGlowInTheirOwnColours(){
+        // the lightning, the crescent by the guard and the tiny stars on the blade's flats, and (2.76.6, user request:
+        // "마지막으로 예쁘게 꾸미면서 다듬어줘") the twinkles on the guard's gold and on the gems
         var geo=geometry();var tex=image("/assets/celestialfall/textures/item/isosang_sword_model.png");
         var glow=image("/assets/celestialfall/textures/item/isosang_sword_model_glow.png");
         assertEquals(tex.getWidth(),glow.getWidth());assertEquals(tex.getHeight(),glow.getHeight());
         boolean[][] flats=new boolean[tex.getHeight()][tex.getWidth()];
         for(var p:places(geo))if(p.bone.equals("blade")&&(p.face.equals("north")||p.face.equals("south")))
             for(int y=p.y;y<p.y+p.h;y++)for(int x=p.x;x<p.x+p.w;x++)flats[y][x]=true;
-        int lit=0,bright=0;
+        int lit=0,bright=0,onFlats=0;
         for(int y=0;y<glow.getHeight();y++)for(int x=0;x<glow.getWidth();x++){
             int g=glow.getRGB(x,y);if(g>>>24==0)continue;
-            lit++;
-            assertTrue(flats[y][x],"only on the blade's flats: "+x+","+y);
+            lit++;if(flats[y][x])onFlats++;
             assertEquals(tex.getRGB(x,y),g,"in the texture's own colour");
             int r=g>>16&255,gr=g>>8&255,b=g&255;
             if(r+gr+b>540)bright++;
         }
-        assertTrue(lit>1000,"the lightning and its glints: "+lit);
+        assertTrue(lit>1000,"the lightning, the stars and the twinkles: "+lit);
+        assertTrue(onFlats>.85*lit,"mostly on the blade's flats: "+onFlats+" of "+lit);
+        assertTrue(lit-onFlats>50,"and twinkles on the guard and the gems: "+(lit-onFlats));
         assertTrue(bright>lit/4,"mostly bright, lavender-white: "+bright+" of "+lit);
     }
     @Test void itsDisplayHoldsItInAHand(){
