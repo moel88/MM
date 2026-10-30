@@ -37,6 +37,16 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
         // the stand arrow in the hands and the chest (2.70.0)
         botand$mapFeatures.add(new dev.sangwoo.celestialfall.client.stand.StandArrowFeature((net.minecraft.client.render.entity.PlayerEntityRenderer)(Object)this));
     }
+    /**
+     * Lee So-sang's player holds their sword (2.76.0: drawn in the main hand whatever it holds, StandClient.sword): that
+     * arm holds it as it would an item, not hanging empty.
+     */
+    @Inject(method="getArmPose",at=@At("RETURN"),cancellable=true)
+    private static void botand$isosangSword(AbstractClientPlayerEntity player,net.minecraft.util.Hand hand,org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose> ci){
+        if(hand==net.minecraft.util.Hand.MAIN_HAND&&ci.getReturnValue()==net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose.EMPTY
+            &&dev.sangwoo.celestialfall.client.StandClient.isosang(player)&&!dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(player))
+            ci.setReturnValue(net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose.ITEM);
+    }
     /** No name over a boss (2.69.0): its bar at the bottom of the screen has it. */
     @Inject(method="renderLabelIfPresent(Lnet/minecraft/client/network/AbstractClientPlayerEntity;Lnet/minecraft/text/Text;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$noBossName(AbstractClientPlayerEntity player,net.minecraft.text.Text text,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){

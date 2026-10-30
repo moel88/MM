@@ -46,6 +46,14 @@ public abstract class HeldItemRendererMixin {
             vertices.draw();
             ci.cancel();return;
         }
+        if(dev.sangwoo.celestialfall.client.StandClient.isosang(player)){
+            // Lee So-sang's sword (2.76.0), as the game holds an item (its swing, the off hand as it is)
+            float swing=player.getHandSwingProgress(delta);
+            renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.MAIN_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?0:swing,dev.sangwoo.celestialfall.client.StandClient.sword(player),0,matrices,vertices,light);
+            if(!player.getOffHandStack().isEmpty())renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?swing:0,player.getOffHandStack(),0,matrices,vertices,light);
+            vertices.draw();
+            ci.cancel();return;
+        }
         if(CombatHands.enabled(player)){CombatHands.render(player,delta,matrices,vertices,light);ci.cancel();}
     }
 }

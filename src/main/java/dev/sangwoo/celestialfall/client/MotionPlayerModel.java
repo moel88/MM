@@ -69,6 +69,13 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             articulated=true;arms="idle";var rest=dev.sangwoo.celestialfall.client.kageno.KagenoClips.idle().joints();
             rightArm.pitch=MotionRig.rad(rest.joint[2][0])+rightArm.pitch*.25f;rightArm.yaw=MotionRig.rad(rest.joint[2][1]);rightArm.roll=MotionRig.rad(rest.joint[2][2]);rightArm.getChild("elbow").pitch=0;
         }
+        else if(StandClient.isosang(player)&&!player.isUsingItem()&&rig&&"base".equals(CombatClient.state(player,animationProgress-player.age))
+            &&!CombatClient.snapshot(player.getUuid()).guard()){
+            // Lee So-sang's sword (2.76.0): held a little forward at the side, the arm keeping a quarter of its walk's
+            // swing (their skills to come will bring their own motion; punching and guarding keep the rig's arms)
+            arms="isosang";
+            rightArm.pitch=-.33f+rightArm.pitch*.25f;rightArm.yaw=-.06f;rightArm.roll=.04f;rightArm.getChild("elbow").pitch=-.12f;
+        }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
         float delta=animationProgress-player.age;
         if(delta>=0&&delta<=1.001f){

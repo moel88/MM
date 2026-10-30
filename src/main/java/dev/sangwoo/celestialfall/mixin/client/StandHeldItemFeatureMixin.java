@@ -39,8 +39,8 @@ public abstract class StandHeldItemFeatureMixin {
     @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",
         at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;getMainHandStack()Lnet/minecraft/item/ItemStack;"))
     private ItemStack botand$standSword(LivingEntity entity){
-        // a stand user holding the meteor pickaxe holds the pickaxe, not the sword
-        return entity instanceof PlayerEntity player&&StandClient.visible(player)
-            &&!(player instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder))?StandClient.sword():entity.getMainHandStack();
+        // a stand user holding the meteor pickaxe holds the pickaxe, not the sword (Kageno's, or Lee So-sang's: 2.76.0)
+        var sword=entity instanceof PlayerEntity player?StandClient.sword(player):null;
+        return sword!=null&&!(entity instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder))?sword:entity.getMainHandStack();
     }
 }

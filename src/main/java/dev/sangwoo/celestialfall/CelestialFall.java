@@ -63,6 +63,7 @@ public final class CelestialFall implements ModInitializer {
         LongCooldowns.initialize();
         dev.sangwoo.celestialfall.gacha.GachaServer.initialize();
         dev.sangwoo.celestialfall.commerce.CommerceRegistry.initialize();
+        dev.sangwoo.celestialfall.isosang.Isosang.initialize();
         dev.sangwoo.celestialfall.meteor.MeteorRegistry.initialize();
         dev.sangwoo.celestialfall.stand.StarPlatinum.initialize();
         dev.sangwoo.celestialfall.loot.LootRegistry.initialize();

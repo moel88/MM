@@ -20,6 +20,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 
 public final class StandClient {
     private static final ItemStack SWORD=new ItemStack(CelestialFall.ATOMIC_SWORD);
+    private static final ItemStack ISOSANG_SWORD=new ItemStack(dev.sangwoo.celestialfall.isosang.Isosang.SWORD);
     public record Target(UUID uuid,int entity,Vec3d position){}
     /** {@code aims}: T held's slashes, the way each was thrown (degrees, NaN before it leaves; the server's). */
     public record Cast(UUID id,UUID caster,Identifier dimension,int skill,int combo,long start,long serverNow,long received,Vec3d origin,float yaw,List<Target> targets,float[] aims){
@@ -43,6 +44,10 @@ public final class StandClient {
     private StandClient(){}
     public static ItemStack sword(){return SWORD;}
     public static boolean visible(PlayerEntity p){return StandManager.kageno(p)&&!p.isInvisible()&&!p.isSleeping();}
+    /** Lee So-sang's player, seen (2.76.0): their sword drawn in their hand, as Kageno's is. */
+    public static boolean isosang(PlayerEntity p){return StandManager.isosang(p)&&!p.isInvisible()&&!p.isSleeping();}
+    /** The sword drawn in this player's hand whatever it holds: Kageno's, or Lee So-sang's (2.76.0); null if none. */
+    public static ItemStack sword(PlayerEntity p){return visible(p)?SWORD:isosang(p)?ISOSANG_SWORD:null;}
     public static void initialize(){
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.sangwoo.celestialfall.client.kageno.KagenoClips::trackGuards);
         KagenoSword.initialize();KagenoFire.initialize();dev.sangwoo.celestialfall.client.atomic.AtomicShader.initialize();dev.sangwoo.celestialfall.client.vfx.Vfx.initialize();dev.sangwoo.celestialfall.client.vfx.FxLayer.initialize();
