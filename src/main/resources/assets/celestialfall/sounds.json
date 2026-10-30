@@ -959,14 +959,5 @@
         "preload": true
       }
     ]
-  },
-  "isosang_m1_hit": {
-    "sounds": [
-      {
-        "name": "celestialfall:isosang_m1_hit",
-        "stream": false,
-        "preload": true
-      }
-    ]
   }
 }

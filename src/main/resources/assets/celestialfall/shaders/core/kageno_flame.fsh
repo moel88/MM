@@ -308,51 +308,114 @@ void main(){
   rgb=mix(rgb,rgb*vec3(.84,.68,1.1),violet);
   alpha=body*tint.a;
  }else if(Mode==16){
-  // Lee So-sang's slashes (2.77.0): blue light outlined in ink, drying to ink. uv.x tail(0)->head(1) along, uv.y
-  // inner(0)->outer(1) across; tint.r = style*16+seed, tint.g = the share eaten from the tail, tint.b = how far it has
-  // turned to ink, tint.a = alpha. Styles: 0 a cut (a crescent moon: pointed at both ends, widest past its middle), 1 a
-  // ring (even), 2 a beam (pointed at both ends), 3 the finisher's (a fuller crescent), 4 ink alone (a ring of it on the
-  // ground: black with a navy rim, breaking up as it dries). An ink line along the cutting (outer) edge, a white-hot edge and one thin white core
-  // lane inside it, a vivid blue body grading to deep blue and to ink along the inner edge, ragged like a brush with pale
-  // speed hairs. As it turns to ink the light drains out (the tail and the inner side first), the band thins and breaks
-  // into blots. Blue carries it; only the edge and the core burn white on the effect layer.
+  // Lee So-sang's slashes (2.77.0; rebuilt stronger in 2.77.2 after the user's videos of each hit): blue light and
+  // black brush ink. uv.x tail(0)->head(1) along, uv.y inner(0)->outer(1) across; tint.r = style*16+seed, tint.g = the
+  // share eaten (from the tail; the wave from both tips; a ground mark: how far it has dried away), tint.b = how far it
+  // has turned to ink, tint.a = alpha. Styles: 0 a cut (a crescent, widest past its middle): a thick black brush stroke
+  // along its outer edge, the white-hot cutting line just inside it, a vivid blue body glowing inward; 1 the ring
+  // (even): a white leading edge outside, blue glowing inward, black brush rings opening inside as it dries; 2 the
+  // thrust's beam (pointed both ends): a white core in blue light; 3 the thrown slash (a full crescent): a white leading
+  // edge, a thick royal blue body and black brush ink dripping off its back edge; 4 a brush stroke of ink on the ground
+  // (a ring: tapered ends, ragged); 5 a splash of ink on the ground (the uv square: a blot, spokes, droplets); 6 the
+  // long cut rising back (as 0, its widest part nearer its head). As it dries the light drains out (the inner side
+  // first), the ink spreads in, blots open and it breaks up. On the effect layer the line and the blue burn past white.
   float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
-  float x=clamp(uv.x,0.0,1.0),y=uv.y,ink=tint.b;
-  float w=style<.5?pow(max(sin(3.14159*pow(x,1.35)),0.0),.55)
-         :style<1.5||style>3.5?.92+.08*sin(x*37.0+sd)
-         :style<2.5?pow(max(sin(3.14159*x),0.0),.45)
-         :pow(max(sin(3.14159*pow(x,1.2)),0.0),.42);
-  w=max(w,.02);
-  float d=(1.0-y)/w;
-  float aa=max(fwidth(d),.0015)*1.3;
-  float strand=fbm(vec2(x*5.0+sd,y*28.0));
-  float hair=noise(vec2(x*9.0+sd,y*90.0));
-  float lim=1.0-.22*(strand-.4)-.28*ink;
-  float body=smoothstep(-aa,aa,d)*(1.0-smoothstep(lim-aa*3.0,lim+aa*3.0,d));
-  // the tail eaten with a ragged edge
-  float front=tint.g*1.1-.05+(strand-.5)*.15;
-  body*=smoothstep(front,front+.03,x);
-  // drying to ink: blots open up in it, more and larger as it dries
-  float blob=fbm(vec2(x*6.5+sd*1.7,y*3.2+sd*.6));
-  body*=1.0-smoothstep(1.0-ink*.9,1.0-ink*.9+.07,blob)*step(.02,ink);
-  vec3 inkc=vec3(.012,.018,.07),navy=vec3(.03,.05,.2),deep=vec3(.05,.15,.66),blue=vec3(.16,.42,1.0),pale=vec3(.62,.84,1.0),edge=vec3(.9,.97,1.0);
-  rgb=mix(edge,pale,smoothstep(.02,.06,d));
-  rgb=mix(rgb,blue,smoothstep(.08,.24,d));
-  rgb=mix(rgb,deep,smoothstep(.36,.68,d));
-  rgb=mix(rgb,navy,smoothstep(.7,.9,d));
-  rgb=mix(rgb,inkc,smoothstep(.9,1.0,d));
-  float line=1.0-smoothstep(.0,aa*2.0+.012,d);
-  rgb=mix(rgb,inkc,line);
-  rgb=mix(rgb,pale,smoothstep(.74,.92,hair)*smoothstep(.18,.3,d)*(1.0-smoothstep(.55,.75,d))*.55);
-  float lane=.13+.025*sin(x*9.0+sd)+.02*(strand-.5);
-  float core=(1.0-smoothstep(.022,.022+aa*2.0+.012*hair,abs(d-lane)))*smoothstep(.06,.4,x)*(style>1.5&&style<2.5?1.0-smoothstep(.85,1.0,x):1.0);
-  rgb=mix(rgb,vec3(1.0),core);
-  float drain=style>3.5?1.0:clamp(ink*1.6-x*.6+d*.3*ink,0.0,1.0);
-  if(style>3.5)rgb=mix(navy,inkc,smoothstep(.12,.3,d)*(1.0-smoothstep(.75,.95,d))+.0);
-  if(style<3.5)rgb=mix(rgb,inkc,drain);
-  float lit=1.0-drain;
-  rgb*=1.0+Hot*lit*(core*.9+(1.0-smoothstep(.02,.1,d))*(1.0-line)*.5);
-  alpha=body*tint.a;
+  float x=clamp(uv.x,0.0,1.0),y=clamp(uv.y,0.0,1.0),erase=tint.g,ink=tint.b;
+  vec3 inkc=vec3(.010,.013,.045),navy=vec3(.03,.05,.22),deep=vec3(.05,.15,.72),blue=vec3(.13,.42,1.0),pale=vec3(.62,.86,1.0),edge=vec3(.94,.98,1.0);
+  if(style>4.5&&style<5.5){
+   // a splash of ink lying on the ground: a lumpy blot, spokes thrown out with a drop at each end, droplets round it
+   vec2 q=uv*2.0-1.0;float r=length(q),a=atan(q.y,q.x);
+   float field=(.40+.22*(fbm(q*2.4+sd)-.5)+.05*sin(a*5.0+sd))-r;
+   for(int i=0;i<5;i++){
+    float fi=float(i),ai=hash(vec2(sd,fi))*6.2832,li=.5+.38*hash(vec2(fi,sd+1.0));
+    vec2 dir=vec2(cos(ai),sin(ai));float along=dot(q,dir),side=abs(dot(q,vec2(-dir.y,dir.x)));
+    float spoke=(.075*(1.0-along/li)+.012-side)*step(0.0,along)*step(along,li);
+    field=max(field,spoke*.9);
+    field=max(field,.055+.035*hash(vec2(fi*3.1,sd))-length(q-dir*(li+.07)));
+   }
+   for(int i=0;i<8;i++){
+    float fi=float(i);vec2 c=vec2(hash(vec2(fi,sd*2.3)),hash(vec2(sd,fi*1.7)))*1.7-.85;
+    field=max(field,.028+.026*hash(vec2(fi+9.0,sd))-length(q-c));
+   }
+   field-=erase*.16;
+   float aa=max(fwidth(field),.002)*1.2;
+   float body=smoothstep(-aa,aa,field)*(1.0-smoothstep(.9,1.0,r));
+   rgb=mix(navy*.6,inkc,smoothstep(0.0,.05,field));
+   alpha=body*tint.a*.93;
+  }else{
+   float w=style<.5?pow(max(sin(3.14159*pow(x,1.45)),0.0),.6)
+          :style<1.5?.9+.1*sin(x*31.0+sd)
+          :style<2.5?pow(max(sin(3.14159*x),0.0),.5)
+          :style<3.5?pow(max(sin(3.14159*x),0.0),.36)
+          :style<4.5?pow(max(sin(3.14159*x),0.0),.22)*(.82+.18*fbm(vec2(x*7.0+sd,1.0)))
+          :pow(max(sin(3.14159*pow(x,.62)),0.0),.55);
+   w=max(w,.02);
+   bool sym=(style>1.5&&style<2.5)||(style>3.5&&style<4.5);
+   float d=sym?abs(y-.5)*2.0/w:(1.0-y)/w;
+   float aa=max(fwidth(d),.0015)*1.4;
+   float strand=fbm(vec2(x*6.0+sd,y*24.0)),hair=noise(vec2(x*12.0+sd,y*90.0));
+   // eaten from the tail with a ragged edge (the thrown slash from both tips)
+   float front=erase*1.1-.05+(strand-.5)*.15;
+   float keep=style>2.5&&style<3.5?smoothstep(front,front+.04,1.0-abs(x*2.0-1.0)):smoothstep(front,front+.03,x);
+   // drying: blots open, more and larger as it dries
+   float blob=fbm(vec2(x*6.5+sd*1.7,y*3.2+sd*.6));
+   float holes=1.0-smoothstep(1.0-ink*.85,1.0-ink*.85+.07,blob)*step(.02,ink);
+   float body,lit;
+   if(style<.5||style>5.5){
+    // a cut: brush ink outside, the white line, the blue glowing in and fading out
+    float inkW=(style>5.5?.2:.27)+.3*ink+.07*(strand-.5);
+    float rag=.07*smoothstep(.5,.9,strand)+.03*hair;
+    float inBand=smoothstep(-rag-aa,-rag+aa,d);
+    float inkMask=1.0-smoothstep(inkW-aa,inkW+aa,d);
+    float glow=(1.0-smoothstep(.5,1.0,d))*(1.0-ink*.8);
+    float line=1.0-smoothstep(.012,.04+aa,abs(d-inkW-.022));
+    vec3 g=mix(pale,blue,smoothstep(inkW+.04,inkW+.2,d));g=mix(g,deep,smoothstep(inkW+.25,.8,d));g=mix(g,navy,ink*.8);
+    rgb=mix(g,inkc,inkMask);
+    rgb=mix(rgb,edge,line*(1.0-inkMask)*(1.0-ink));
+    rgb=mix(rgb,pale,smoothstep(.75,.92,hair)*(1.0-inkMask)*glow*.4);
+    body=inBand*max(inkMask,max(glow,line*(1.0-ink)));
+    lit=(1.0-ink)*(line*3.0+(1.0-inkMask)*glow*.9);
+   }else if(style<1.5){
+    // the ring: a white leading edge, blue in, black brush rings opening inside as it dries
+    float edgeL=1.0-smoothstep(.015,.07+aa,d);
+    float glow=(1.0-smoothstep(.45,1.0,d))*(1.0-ink*.85);
+    float rings=0.0;
+    for(int i=0;i<2;i++){float c=.3+.32*float(i)+.04*(strand-.5);rings=max(rings,1.0-smoothstep(.02,.05+aa+.04*ink,abs(d-c)));}
+    rings*=smoothstep(.05,.35,ink+.15*strand)*smoothstep(.35,.6,strand+ink*.5);
+    float thin=1.0-smoothstep(0.0,aa*2.0+.01,d);
+    vec3 g=mix(pale,blue,smoothstep(.05,.22,d));g=mix(g,deep,smoothstep(.3,.75,d));g=mix(g,navy,ink*.85);
+    rgb=mix(g,edge,edgeL*(1.0-ink));rgb=mix(rgb,inkc,max(rings,thin));
+    body=smoothstep(-aa,aa,d)*max(max(glow,edgeL*(1.0-ink*.7)),rings);
+    lit=(1.0-ink)*(edgeL*3.0+glow*.8)*(1.0-rings);
+   }else if(style<2.5){
+    // the beam: a white core in blue light
+    float core=1.0-smoothstep(.05,.2,d),glow=1.0-smoothstep(.2,1.0,d);
+    rgb=mix(blue,pale,smoothstep(.6,.2,d));rgb=mix(rgb,edge,core);
+    body=max(core,glow*.75)*(1.0-ink);
+    lit=core*3.2+glow*.9;
+   }else if(style<3.5){
+    // the thrown slash: a white leading edge, royal blue, its back edge black brush ink dripping off it
+    float drip=.28*smoothstep(.55,.95,noise(vec2(x*46.0+sd,3.0)))+.06*strand;
+    float backInk=smoothstep(.74-.34*ink-.06*(strand-.5),.8-.34*ink,d);
+    float inBand=1.0-smoothstep(1.0+drip-aa*2.0,1.0+drip+aa*2.0,d);
+    float edgeL=1.0-smoothstep(.02,.06+aa,d);
+    vec3 g=mix(pale,blue,smoothstep(.05,.16,d));g=mix(g,deep,smoothstep(.45,.75,d));g=mix(g,navy,ink*.8);
+    rgb=mix(g,edge,edgeL*(1.0-ink));rgb=mix(rgb,inkc,backInk);
+    rgb=mix(rgb,pale,smoothstep(.8,.95,hair)*(1.0-backInk)*.35*(1.0-ink));
+    body=smoothstep(-aa,aa,d)*inBand*max(.92-.5*ink*(1.0-backInk),backInk);
+    lit=(1.0-ink)*(1.0-backInk)*(edgeL*3.0+.85);
+   }else{
+    // a brush stroke of ink on the ground: ragged, a few dry gaps, drying thinner
+    float dd=d/max(.05,1.0-erase*.85);
+    body=1.0-smoothstep(.72+.22*(strand-.5)-aa,.95+.12*(strand-.5)+aa,dd);
+    body*=1.0-smoothstep(.82,.96,hair)*.7;
+    rgb=mix(navy*.7,inkc,smoothstep(.95,.5,dd));
+    lit=0.0;keep=1.0;holes=1.0;
+   }
+   body*=keep*holes;
+   if(style<3.5)rgb*=1.0+Hot*lit;
+   alpha=body*tint.a;
+  }
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

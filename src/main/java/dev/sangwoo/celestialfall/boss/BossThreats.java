@@ -144,8 +144,17 @@ public final class BossThreats {
             }
         }
     }
-    /** Lee So-sang's sword (2.77.0): the next blow of the hit in flight, in its way (the turn's all round them). */
+    /**
+     * Lee So-sang's sword (2.77.0): the next blow of the hit in flight, in its way (the ring's all round them); and the
+     * finisher's slash while it flies (2.77.2): the rest of its way ahead of where its band is now.
+     */
     private static void isosang(ServerPlayerEntity p,long now,List<Threat> out){
+        var w=dev.sangwoo.celestialfall.isosang.IsosangAttack.flight(p);
+        if(w!=null){
+            double flown=now-w.thrown(),back=IsosangRules.waveFront(flown)-IsosangRules.waveCurve(flown)-IsosangRules.WAVE_DEPTH;
+            out.add(new Threat(p,"isosang4",w.thrown(),now,w.thrown()+IsosangRules.WAVE_TICKS,
+                Zone.lane(w.from(),w.yaw(),back,IsosangRules.WAVE_RANGE,IsosangRules.WAVE_HALF_END,IsosangRules.LOW,IsosangRules.HIGH),false,false,false,IsosangRules.total(4),false,false));
+        }
         var h=dev.sangwoo.celestialfall.isosang.IsosangAttack.hit(p);
         if(h==null||h.combo()<1||h.blows()>=IsosangRules.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+IsosangRules.blowAt(c,i);

@@ -36,8 +36,9 @@ import net.minecraft.util.math.random.Random;
  * Lee So-sang's basic attack on the client (2.77.0): the attack key asks the server for a hit (isosang_attack_v1), and
  * the server's word of every hit (isosang_attack_event_v1) becomes a swing: a cast of the skill IsosangRules.SKILL with
  * the server's clock, whose body clip, slashes and light IsosangSlash draws with the casts' passes (KagenoRenderer,
- * KagenoClips). A swing stopped short keeps what its blows left but lets go of the body. Each hit's sound starts with it
- * on every client near enough (its whooshes on the blows), and every blow that strikes someone is heard on them.
+ * KagenoClips). A swing stopped short keeps what its blows left but lets go of the body. Each hit's sound (the user's
+ * recording of it, the sword and the voice, 2.77.2) starts with it on every client near enough, cut so that what it
+ * strikes lands on the blows.
  */
 public final class IsosangClient {
     /** Every swing seen, by its id: a cast of IsosangRules.SKILL on the cast clock (StandClient.Cast.age). */
@@ -55,7 +56,7 @@ public final class IsosangClient {
      */
     static final int LATE=2;
     /** How loud the sounds are, and how far they carry (blocks, fading out linearly). */
-    static final float VOLUME=.9f,HIT_VOLUME=.8f;
+    static final float VOLUME=.9f;
     static final double CARRY=40;
     /** Ticks a sound takes to fade out once its swing stops short. */
     static final int FADE=3;
@@ -87,11 +88,12 @@ public final class IsosangClient {
         }else if(type==IsosangAttack.LANDED){
             var cast=SWINGS.get(id);var told=STRUCK.get(id);
             if(cast!=null&&told!=null&&blow>=0&&blow<told.length){
-                told[blow]=struck.stream().mapToInt(StandClient.Target::entity).toArray();
+                // (the finisher's thrown slash tells its blow tick by tick as it strikes: whom it took is added up)
+                int[] was=told[blow]==null?new int[0]:told[blow];
+                told[blow]=java.util.stream.IntStream.concat(java.util.Arrays.stream(was),struck.stream().mapToInt(StandClient.Target::entity)).distinct().toArray();
                 if(!struck.isEmpty()){
                     var all=new ArrayList<>(cast.targets());for(var t:struck)if(all.stream().noneMatch(o->o.entity()==t.entity()))all.add(t);
                     SWINGS.put(id,new StandClient.Cast(cast.id(),cast.caster(),cast.dimension(),cast.skill(),cast.combo(),cast.start(),cast.serverNow(),cast.received(),cast.origin(),cast.yaw(),List.copyOf(all)));
-                    impact(mc,struck);
                 }
             }
         }else if(type==IsosangAttack.STOPPED){
@@ -177,11 +179,6 @@ public final class IsosangClient {
         var user=mc.world.getPlayerByUuid(caster);if(user==null)return;
         float v=(user==mc.player?1:volume(mc,user.getPos()))*VOLUME;if(v<=.01f)return;
         var s=new Sound(CelestialFall.id("isosang_m1_"+combo),v);VOICES.put(id,s);mc.getSoundManager().play(s);
-    }
-    /** A blow struck someone: the blade biting, heard on them. */
-    private static void impact(MinecraftClient mc,List<StandClient.Target> struck){
-        Vec3d at=struck.get(0).position();float v=volume(mc,at)*HIT_VOLUME;if(v<=.01f)return;
-        mc.getSoundManager().play(new Sound(CelestialFall.id("isosang_m1_hit"),v));
     }
     /**
      * A sound played like any other until it is told to fade, then quieter tick by tick to nothing (the game sets a
