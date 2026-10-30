@@ -63,12 +63,12 @@ def main():
         piece = clip[onset:onset + int(.3 * SR)]
         near = sample(int(r['nanos'])) + onset
         pos, score = find(wav, piece, int(near - .15 * SR), int(near + .15 * SR + len(piece)))
-        anchors.append((combo, pos - onset, score))
+        anchors.append((combo, pos - onset, score, len(clip)))
     # each of them against the hit it belongs to in the sound run (in order), and the rule checked: a hit's sound starts
     # on the tick its hit began (the ticks' times are the frames' a tick was shown in, so the delays scatter within a
     # tick; their median is how far into its hit the game started each sound)
     delays = []
-    for k, (combo, pos, score) in enumerate(anchors):
+    for k, (combo, pos, score, _) in enumerate(anchors):
         hit = heard[k] if k < len(heard) else None
         if hit is None or int(hit['combo']) != combo:
             sys.exit(f'{entry}: hit {k + 1} of the sound run is not hit {combo}: {heard}')
@@ -83,11 +83,11 @@ def main():
                                     capture_output=True, check=True, text=True).stdout.strip())
     length = int(round(duration * SR))
     track = np.zeros(length + SR)
-    for k, (combo, pos, score) in enumerate(anchors):
+    for k, (combo, pos, score, size) in enumerate(anchors):
         if k >= len(shown) or int(shown[k]['combo']) != combo:
             print(f'  hit {combo}: no hit {combo} in the film run at that place, left out')
             continue
-        stop = anchors[k + 1][1] if k + 1 < len(anchors) else pos + int(1.6 * SR)
+        stop = anchors[k + 1][1] if k + 1 < len(anchors) else pos + max(int(1.6 * SR), size + int(.25 * SR))
         piece = wav[int(pos):int(stop)].copy()
         fade = int(.006 * SR)
         piece[:fade] *= np.linspace(0, 1, fade)

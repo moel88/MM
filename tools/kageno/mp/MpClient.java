@@ -284,13 +284,14 @@ public final class MpClient implements ClientModInitializer {
         "5 STAND","20 AWAKEN","40 Q","60 WSTAR","65 WAWAKEN","90 HOME","100 HEAL","110 H",
         "330 Q","360 END"};
     /**
-     * Lee So-sang's basic attack (2.77.0; 2.77.1 at the pace of the user's videos: the fourth starts 55 ticks into the
-     * combo, so the attack is held that long), on its own (MP_ONLY=isosang): the caster takes Lee So-sang ("ISOSANG"), calls
-     * the watcher 2.5 blocks in front of it at full health and holds its attack down: the four hits at full speed (the
-     * last can take no guard). Then a hit, and the next 40 ticks later: the combo has broken and the attack rests (that
-     * press refused), and a press after the rest starts the first hit again. Then the four hits with the watcher 8 blocks
-     * away ("AWAY": the first three strike no one) and brought back in front of the caster, its guard up ("GUARD+"),
-     * as the fourth comes: the fourth goes through the guard. Both log every hit they see (its number, the tick
+     * Lee So-sang's basic attack (2.77.0; 2.77.2 at the pace of the user's videos of each hit: the fourth starts 51 ticks
+     * into the combo and throws its slash flying 14 ticks later, so the attack is held that long), on its own
+     * (MP_ONLY=isosang): the caster takes Lee So-sang ("ISOSANG"), calls the watcher 2.5 blocks in front of it at full
+     * health and holds its attack down: the four hits at full speed (the last can take no guard). Then a hit, and the next
+     * 40 ticks later: the combo has broken and the attack rests (that press refused), and a press after the rest starts the
+     * first hit again. Then the four hits with the watcher 8 blocks away ("AWAY": the first three strike no one) and
+     * brought back in front of the caster, its guard up ("GUARD+"), as the fourth comes: its thrown slash goes through the
+     * guard, reaching it a tick into its flight. Both log every hit they see (its number, the tick
      * it began on, its age as they heard of it), whom its blows struck and its sounds as they start (at what age of the
      * hit), the watcher its own staggers and every move of its body (a blow throws no one); the server the caster's hits
      * and blows, the watcher's health, its staggers and any move of it.
