@@ -1014,8 +1014,12 @@ public final class IsosangSlash implements Fx.Skill {
     static final double[] BURST_SIZE={0,.6,.55,.5,.78};
     static double burstSize(int combo,Struck w,float t){return (.62+.38*Ease.out(t,w.when(),w.when()+.06f))*BURST_SIZE[combo]*(1-.15*Ease.unit(t,w.when(),w.when()+BURST));}
     static float burstAlpha(Struck w,float t){return Ease.smooth(t,w.when()-.006f,w.when()+.012f)*(float)Math.pow(1-Ease.unit(t,w.when(),w.when()+BURST),.7);}
-    /** Where a burst on a target is drawn: on the near side of them (its centre is inside them, so they would hide half of it). */
-    static Vec3d facing(Vec3d p,Vec3d camera){Vec3d d=camera.subtract(p);double l=d.length();return l<.8?p:p.add(d.multiply(.35/l));}
+    /**
+     * Where a burst on a target is drawn: on the near side of them (its centre is inside them, so they would hide half of
+     * it), 0.75 blocks out (2.77.5: at 0.35 it sat at their skin, where the effect layer melts what touches the world, and
+     * its crescent was all but gone), at most half way to the camera.
+     */
+    static Vec3d facing(Vec3d p,Vec3d camera){Vec3d d=camera.subtract(p);double l=d.length();return l<.8?p:p.add(d.multiply(Math.min(.75,.5*l)/l));}
     /** How much of a burst on a target shows: none to a camera inside them (the struck's own first person), all from 1.4 blocks. */
     static float seen(Vec3d p,Vec3d camera){return (float)Math.max(0,Math.min(1,(camera.distanceTo(p)-.7)/.7));}
     /**
