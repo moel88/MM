@@ -284,7 +284,8 @@ public final class MpClient implements ClientModInitializer {
         "5 STAND","20 AWAKEN","40 Q","60 WSTAR","65 WAWAKEN","90 HOME","100 HEAL","110 H",
         "330 Q","360 END"};
     /**
-     * Lee So-sang's basic attack (2.77.0), on its own (MP_ONLY=isosang): the caster takes Lee So-sang ("ISOSANG"), calls
+     * Lee So-sang's basic attack (2.77.0; 2.77.1 at the pace of the user's videos: the fourth starts 55 ticks into the
+     * combo, so the attack is held that long), on its own (MP_ONLY=isosang): the caster takes Lee So-sang ("ISOSANG"), calls
      * the watcher 2.5 blocks in front of it at full health and holds its attack down: the four hits at full speed (the
      * last can take no guard). Then a hit, and the next 40 ticks later: the combo has broken and the attack rests (that
      * press refused), and a press after the rest starts the first hit again. Then the four hits with the watcher 8 blocks
@@ -295,10 +296,10 @@ public final class MpClient implements ClientModInitializer {
      * and blows, the watcher's health, its staggers and any move of it.
      */
     private static final String[] ISOSANG_SCRIPT={
-        "5 ISOSANG","40 HOME","45 HEAL","60 M1+","100 M1-",
-        "180 HOME","185 HEAL","190 M1","230 M1","262 M1",
-        "330 AWAY","335 HEAL","338 GUARD+","350 M1+","378 HOME","390 M1-","405 GUARD-",
-        "470 END"};
+        "5 ISOSANG","40 HOME","45 HEAL","60 M1+","124 M1-",
+        "190 HOME","195 HEAL","200 M1","240 M1","272 M1",
+        "330 AWAY","335 HEAL","338 GUARD+","350 M1+","402 HOME","414 M1-","440 GUARD-",
+        "500 END"};
     private static final String[] STEPS=ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};

@@ -124,6 +124,16 @@ public final class IsosangClient {
         for(var c:SWINGS.values())if(c.caster().equals(mc.player.getUuid())&&!STOPPED.contains(c.id())&&c.age(0)<IsosangRules.HOLD[c.combo()])return true;
         return false;
     }
+    /**
+     * How far the local player's camera is drawn back now by their own finisher (IsosangSlash.pull, blocks; 2.77.1), on
+     * its clock to the end even if it stopped short, so the camera never jumps.
+     */
+    public static double cameraPull(float delta){
+        var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return 0;
+        double pull=0;
+        for(var c:SWINGS.values())if(c.caster().equals(mc.player.getUuid()))pull=Math.max(pull,IsosangSlash.pull(c.combo(),c.age(delta)/20f));
+        return pull;
+    }
     /** Whether this player's attack key swings Lee So-sang's sword now: theirs, on the map, holding neither the meteor pickaxe nor a fruit. */
     public static boolean attacks(PlayerEntity p){
         return p!=null&&MapClient.enabled()&&StandManager.isosang(p)&&!dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand()

@@ -161,7 +161,14 @@ public final class BotandCamera {
         double fraction=clearFraction(eye,desired);
         double distance=STATE.clip(STATE.distance*fraction,lastClipFrame==frameId?0:dt),ratio=STATE.distance<.001?0:distance/STATE.distance;
         lastClipFrame=frameId;
-        return new CinematicDirector.Pose(eye.add(desired.subtract(eye).multiply(ratio)),STATE.yaw,STATE.pitch,0);
+        Vec3d camera=eye.add(desired.subtract(eye).multiply(ratio));
+        // Lee So-sang's finisher draws its user's camera back for the giant cut (2.77.1), as far as nothing is in the way
+        double pull=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraPull(delta);
+        if(pull>1e-3&&STATE.distance>.001){
+            Vec3d back=desired.subtract(eye).normalize(),far=camera.add(back.multiply(pull));
+            camera=camera.add(back.multiply(pull*clearFraction(camera,far)));
+        }
+        return new CinematicDirector.Pose(camera,STATE.yaw,STATE.pitch,0);
     }
     /** Swept camera volume rather than one centre ray: corners stay clear of walls. */
     private static double clearFraction(Vec3d eye,Vec3d end) {

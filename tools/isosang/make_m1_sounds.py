@@ -3,14 +3,20 @@
 usage: python3 -I tools/isosang/make_m1_sounds.py [OUT_DIR]
 
 isosang_m1_1..4: what the game plays as a client hears of a hit (client/isosang/IsosangClient), the moment the hit's
-clock starts there too, so every whoosh is cut to land on its blow (IsosangRules: the ticks into the hit / 20 s):
-  1. the step in (0.13 s) and the great diagonal cut (0.30 s): a long swish of air through the blade, falling as it
-     comes down, a thin ring of the blade on the blow;
-  2. the turn: the blade whirling round the body (0.17 to 0.5 s), loudest as it passes the front (0.30 s), a ring;
-  3. the thrust's sharp hiss (0.25 s), the cross's two quick swishes (0.45 and 0.55 s) and the sweep's longer one
-     (0.70 s), the blade ringing on the thrust and the sweep;
-  4. the twirl's whirr over the head (0.06 to 0.23 s), the lunge's step and rush of air (0.36 to 0.45 s), the great cut
-     (0.50 s) with a deep thump and the ink's splash after it.
+clock starts there too, so every whoosh is cut to land on its blow (IsosangRules: the ticks into the hit / 20 s). Remade
+for the hits after the user's video of each (2.77.1):
+  1. the sword flipped upright with a small ring of the blade as it glints (0.085 s), the step in (0.15 s), the great
+     diagonal cut (0.30 s): a long swish falling as it comes down and the blade ringing, then the cut rising back up to
+     the right (0.43 s), a shorter swish;
+  2. the sword flipped upright (0.04 s), the half turn down into the crouch (a low rush), the whole turn low round
+     them (0.17 to 0.32 s, loudest as it passes the front at 0.25 s) and the ring flaring as the sword is flicked
+     (0.45 s): a crack, a shimmer and a ring, and the ink falling to the ground after;
+  3. the thrust's sharp hiss into its blow (0.15 s), the long rising cut (0.45 s), the quick cut back down (0.55 s),
+     the great cut up the right side (0.65 s), the low sweep (0.95 s) and its ink; the blade ringing on the thrust, the
+     cut up the side and the sweep;
+  4. the twirl's whirr over the head (0.05 to 0.2 s), a glint at the pointing hand (0.27 s), the crouch and the lunge's
+     step and rush of air (0.43 to 0.52 s), the giant cut (0.55 s) with a deep thump and a ring, the ink bursting and then
+     washing out over the ground.
 isosang_m1_hit: a blow striking someone (played on them as the server tells it): a crack, a dull thud and a short ring.
 
 Made from noise and tones only (fixed seeds), so there is nothing to license and every run makes the same files. Each is
@@ -35,8 +41,8 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'src/main/resourc
 LOUDNESS = {'isosang_m1_1': -16.0, 'isosang_m1_2': -16.5, 'isosang_m1_3': -15.5, 'isosang_m1_4': -14.5, 'isosang_m1_hit': -17.0}
 CEILING_DB = -1.0
 # the blows (seconds into the hit: IsosangRules.BLOWS / 20)
-BLOWS = {1: [.30], 2: [.30], 3: [.25, .45, .55, .70], 4: [.50]}
-LENGTH = {1: .9, 2: 1.0, 3: 1.15, 4: 1.45}
+BLOWS = {1: [.30], 2: [.25, .45], 3: [.15, .45, .55, .65, .95], 4: [.55]}
+LENGTH = {1: 1.2, 2: 1.0, 3: 1.7, 4: 1.6}
 
 
 def t(d):
@@ -133,7 +139,7 @@ def finish(x, name, fade_in=.002, fade_out=.06):
     n = int(fade_out * SR)
     x[-n:] *= np.linspace(1, 0, n)
     ceiling = 10 ** (CEILING_DB / 20)
-    for _ in range(4):
+    for _ in range(8):
         x = limit(x * 10 ** ((LOUDNESS[name] - loudness(x)) / 20), ceiling)
     return x
 
@@ -224,55 +230,82 @@ def whirr(dur, turns, seed):
     return norm(air) * (.25 + .75 * pulse) * env
 
 
+def wash(dur, seed, level=1.0):
+    """Ink spreading out over the ground: a soft wet hiss swelling and dying away, low and dull."""
+    tt = t(dur)
+    grain = np.abs(low(noise(len(tt), seed), 25))
+    wet = band(noise(len(tt), seed + 1), 250, 1600) * (grain / (grain.max() + 1e-9)) ** 1.2
+    env = smooth(tt / (dur * .3)) * np.exp(-np.maximum(0, tt - dur * .3) / (dur * .35))
+    return level * norm(wet) * env
+
+
 def hit1():
     out = np.zeros(int(LENGTH[1] * SR))
-    place(out, step(11, .16), .12)
+    place(out, ring(.3, 3900, 15, .09, .07), .085)
+    place(out, step(11, .16), .15)
     place(out, swish(.32, .19, 380, 1500, 12, q=2.0) * .9, .11)
     place(out, ring(.45, 2650, 13, .14, .14), .3)
-    place(out, step(14, .14), .29)
+    place(out, step(14, .12), .29)
+    place(out, swish(.2, .07, 520, 1900, 16, q=2.4, bright=.4) * .6, .36)
     return finish(out, 'isosang_m1_1')
 
 
 def hit2():
     out = np.zeros(int(LENGTH[2] * SR))
-    tt = t(.5)
-    # round the body: the air swells each time the blade sweeps past the ear and is loudest across the front
-    sweep = 2 * np.pi * smooth((tt - .02) / .4) * 1.0
-    env = smooth(tt / .06) * (1 - smooth((tt - .38) / .12)) * (.45 + .55 * np.cos(sweep - 2 * np.pi * .35) ** 2)
-    centre = 520 + 900 * env
+    place(out, ring(.25, 3600, 24, .08, .06), .04)
+    tt = t(.12)
+    rush = swept(noise(len(tt), 25), 300 + 500 * smooth(tt / .1), 1.8) * smooth(tt / .06) * (1 - smooth((tt - .08) / .04))
+    place(out, norm(rush) * .35, .06)
+    tt = t(.2)
+    # round them low: the air swells as the blade sweeps past and is loudest across the front
+    sweep = 2 * np.pi * smooth((tt - .01) / .16)
+    env = smooth(tt / .03) * (1 - smooth((tt - .15) / .05)) * (.45 + .55 * np.cos(sweep - 2 * np.pi * .5) ** 2)
+    centre = 520 + 1000 * env
     air = swept(noise(len(tt), 21), centre, 2.2)
-    place(out, norm(air) * env, .14)
-    place(out, swish(.22, .14, 500, 1700, 22, q=2.4, bright=.45) * .7, .16)
-    place(out, ring(.5, 2350, 23, .16, .12), .3)
+    place(out, norm(air) * env, .16)
+    place(out, swish(.18, .09, 500, 1800, 22, q=2.4, bright=.45) * .7, .16)
+    place(out, ring(.4, 2350, 23, .14, .12), .25)
+    # the flick: the ring flaring out over the ground
+    place(out, crack(.03, 26, .4), .45)
+    shimmer = high(noise(int(.3 * SR), 27), 2500) * np.exp(-t(.3) / .07) * smooth(t(.3) / .004)
+    place(out, norm(shimmer) * .3, .45)
+    place(out, ring(.5, 2900, 28, .16, .13), .45)
+    place(out, wash(.45, 29, .25), .52)
     return finish(out, 'isosang_m1_2')
 
 
 def hit3():
     out = np.zeros(int(LENGTH[3] * SR))
     # the thrust: a short rising hiss, sharp at its end, the blade ringing higher
-    tt = t(.12)
-    hiss = swept(noise(len(tt), 31), 1200 + 4200 * smooth(tt / .1), 3.0) * smooth(tt / .1) ** 2 * np.exp(-np.maximum(0, tt - .1) / .01)
-    place(out, norm(hiss), .14)
-    place(out, crack(.03, 32, .45), .25)
-    place(out, ring(.5, 3100, 33, .15, .17), .25)
-    place(out, swish(.16, .09, 600, 1900, 34, q=2.6) * .8, .36)
-    place(out, swish(.16, .09, 650, 2000, 35, q=2.6) * .8, .46)
-    place(out, swish(.3, .17, 420, 1600, 36, q=2.1) * 1.0, .53)
-    place(out, ring(.45, 2500, 37, .14, .12), .7)
+    tt = t(.1)
+    hiss = swept(noise(len(tt), 31), 1200 + 4200 * smooth(tt / .085), 3.0) * smooth(tt / .085) ** 2 * np.exp(-np.maximum(0, tt - .085) / .01)
+    place(out, norm(hiss), .05)
+    place(out, crack(.03, 32, .45), .15)
+    place(out, ring(.5, 3100, 33, .15, .17), .15)
+    place(out, swish(.18, .1, 520, 1900, 34, q=2.4) * .85, .35)
+    place(out, swish(.14, .08, 650, 2000, 35, q=2.6) * .75, .47)
+    place(out, swish(.22, .11, 450, 1700, 38, q=2.2) * .9, .54)
+    place(out, ring(.4, 2700, 39, .13, .1), .65)
+    place(out, swish(.3, .17, 420, 1600, 36, q=2.1) * 1.0, .78)
+    place(out, ring(.45, 2500, 37, .14, .12), .95)
+    place(out, wash(.5, 30, .22), 1.08)
     return finish(out, 'isosang_m1_3')
 
 
 def hit4():
     out = np.zeros(int(LENGTH[4] * SR))
-    place(out, whirr(.19, 3.0, 41) * .55, .05)
-    place(out, step(42, .25), .36)
+    place(out, whirr(.17, 3.0, 41) * .55, .04)
+    place(out, ring(.3, 3700, 48, .09, .06), .27)
+    place(out, step(49, .14), .43)
+    place(out, step(42, .25), .49)
     tt = t(.12)
     rush = swept(noise(len(tt), 43), 300 + 900 * smooth(tt / .1), 1.8) * smooth(tt / .08)
-    place(out, norm(rush) * .6, .34)
-    place(out, swish(.36, .14, 260, 1300, 44, q=1.8, bright=.5) * 1.1, .36)
-    place(out, thump(.45, 55, 45, .85), .5)
-    place(out, ring(.6, 2200, 46, .18, .14), .5)
-    place(out, splash(47, .7), .515)
+    place(out, norm(rush) * .6, .42)
+    place(out, swish(.36, .14, 260, 1300, 44, q=1.8, bright=.5) * 1.1, .41)
+    place(out, thump(.45, 55, 45, .85), .55)
+    place(out, ring(.6, 2200, 46, .18, .14), .55)
+    place(out, splash(47, .7), .565)
+    place(out, wash(.7, 40, .35), .85)
     return finish(out, 'isosang_m1_4', fade_out=.12)
 
 

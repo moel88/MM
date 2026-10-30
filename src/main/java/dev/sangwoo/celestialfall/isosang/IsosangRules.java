@@ -2,15 +2,18 @@ package dev.sangwoo.celestialfall.isosang;
 
 /**
  * Lee So-sang's basic attack, four hits with the sword (2.77.0, user request: "이제 평타부터 만들자 영상 보내줄게 1타 2타
- * 3타 4타 다 들어있어 영상에 평타는 넉백이 없게 만들어줘"), after the user's video:
+ * 3타 4타 다 들어있어 영상에 평타는 넉백이 없게 만들어줘"), remade after the user's video of each hit (2.77.1, user request:
+ * "타수 별로 다시 영상 보내줄게 제대로 참고해"):
  * <ol>
- * <li>a big diagonal cut, the sword raised high and brought down from the right shoulder across the front to the left
- * hip with a step in;</li>
- * <li>a turn on the spot with the blade held out level, a full circle round them (it strikes all round);</li>
- * <li>a long thrust straight ahead, the sword pulled back with a twist, two cuts crossing in an X and a rising sweep:
- * four blows;</li>
- * <li>the finisher: the sword twirled overhead, the free hand pointed at the foe, a lunge and a great level cut across
- * the front that bursts into ink.</li>
+ * <li>the sword flipped up at the right side and held out, a step in with it cocked at the shoulder, a great diagonal cut
+ * down across the front to the left and a cut rising back up to the right, the sword held out there;</li>
+ * <li>the sword flipped upright, a half turn to the right into a crouch and a whole turn back to the left low over the
+ * ground: a wide ring round them (it strikes all round, twice: the turn, then the ring flaring as the sword is
+ * flicked);</li>
+ * <li>a long lunging thrust, the sword drawn back low to the right, a long rising cut across, a quick cut back down, a
+ * great cut rising up the right side and a sweep low across the front from the left: five blows;</li>
+ * <li>the finisher: a turn with the sword twirled overhead, the free hand pointed at the foe, a deep crouch, a lunge and
+ * a giant level cut across the front that spreads into ink over the ground.</li>
  * </ol>
  * No blow throws or pushes anyone (user request): whom they strike stay where they stand, staggered as every basic
  * attack's blow staggers (Stagger.isosang). The fourth cannot be guarded, as the other characters' fourth hits. Each hit
@@ -22,19 +25,23 @@ public final class IsosangRules {
     /** The swings' number among the skills' visuals on the clients (KagenoSkills): past every Kageno skill's. */
     public static final int SKILL=15;
     /**
-     * The ticks into hit {@code n} its blows land on: the cut at 0.3 s; the turn's blade passing the front at 0.3 s; the
-     * thrust at 0.25 s, the cross's two cuts at 0.45 and 0.55 s and the sweep at 0.7 s; the finisher at 0.5 s, after the
-     * twirl, the aim and the lunge.
+     * The ticks into hit {@code n} its blows land on, as in the user's videos: the diagonal cut at 0.3 s; the low turn
+     * at 0.25 s and the ring flaring at 0.45 s; the thrust at 0.15 s, the rising cut at 0.45 s, the quick cut at 0.55 s,
+     * the cut up the right side at 0.65 s and the low sweep at 0.95 s; the finisher at 0.55 s, after the twirl, the aim,
+     * the crouch and the lunge.
      */
-    private static final int[][] BLOWS={{},{6},{6},{5,9,11,14},{10}};
-    /** Each blow's damage: 6, 6, 7 (2 + 1.5 + 1.5 + 2) and 10, 29 for the whole combo (Kageno's 28). */
-    private static final float[][] DAMAGE={{},{6},{6},{2,1.5f,1.5f,2},{10}};
-    /** Ticks from a hit's start before the next may start: its last blow has landed (the turn has come all the way round). */
-    public static final int[] STEP={0,8,10,16,0};
+    private static final int[][] BLOWS={{},{6},{5,9},{3,9,11,13,19},{11}};
+    /** Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1 + 1 + 2) and 10, 29 for the whole combo (Kageno's 28). */
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1,1,2},{10}};
+    /**
+     * Ticks from a hit's start before the next may start (the videos' pace): the first held out to the right after its
+     * rising cut, the second turned back to the front after its ring, the third back from its sweep.
+     */
+    public static final int[] STEP={0,12,13,30,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,9,10,16,14};
+    public static final int[] HOLD={0,10,12,21,15};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,16,16,22,30};
+    public static final int[] LENGTH={0,24,20,34,32};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -82,17 +89,22 @@ public final class IsosangRules {
     }
     /** Where hit {@code combo}'s blows reach (blocks from its user's feet): a body this close in counts as in the way. */
     public static final double NEAR=-.3,LOW=-1.2,HIGH=2.8;
-    /** The cut's reach ahead and to either side; the turn's radius all round; the thrust's reach and its narrow way. */
-    public static final double CUT_REACH=3.4,CUT_HALF_WIDTH=1.9,SPIN_RADIUS=3.3,THRUST_REACH=4.8,THRUST_HALF_WIDTH=.75;
-    /** The cross's and the sweep's reach and width; the finisher's (a great level cut across the front). */
-    public static final double CROSS_REACH=3.4,CROSS_HALF_WIDTH=1.6,SWEEP_REACH=3.6,SWEEP_HALF_WIDTH=2.0,FINISH_REACH=4.8,FINISH_HALF_WIDTH=2.6;
+    /** The diagonal cut's reach ahead and to either side (its crescent is wide); the low turn's radius all round. */
+    public static final double CUT_REACH=3.6,CUT_HALF_WIDTH=2.4,SPIN_RADIUS=3.6;
+    /** Hit 3: the thrust's reach and its narrow way, the rising and the quick cuts', the cut up the right side's and the low sweep's. */
+    public static final double THRUST_REACH=5.4,THRUST_HALF_WIDTH=.8,RISE_REACH=3.6,RISE_HALF_WIDTH=2.2,QUICK_REACH=3.2,QUICK_HALF_WIDTH=1.6,
+        ARC_REACH=3.4,ARC_HALF_WIDTH=1.8,SWEEP_REACH=3.8,SWEEP_HALF_WIDTH=2.6;
+    /** The finisher's giant level cut across the front. */
+    public static final double FINISH_REACH=5.6,FINISH_HALF_WIDTH=3.6;
     /** How far ahead of its user's feet hit {@code combo}'s blow {@code blow} reaches (blocks; the turn's radius all round). */
     public static double reach(int combo,int blow){
-        return combo==2?SPIN_RADIUS:combo==3?(blow==0?THRUST_REACH:blow<3?CROSS_REACH:SWEEP_REACH):combo==4?FINISH_REACH:CUT_REACH;
+        if(combo==3)return switch(blow){case 0->THRUST_REACH;case 1->RISE_REACH;case 2->QUICK_REACH;case 3->ARC_REACH;default->SWEEP_REACH;};
+        return combo==2?SPIN_RADIUS:combo==4?FINISH_REACH:CUT_REACH;
     }
     /** How far to either side of the way hit {@code combo}'s blow {@code blow} reaches (blocks). */
     public static double halfWidth(int combo,int blow){
-        return combo==2?SPIN_RADIUS:combo==3?(blow==0?THRUST_HALF_WIDTH:blow<3?CROSS_HALF_WIDTH:SWEEP_HALF_WIDTH):combo==4?FINISH_HALF_WIDTH:CUT_HALF_WIDTH;
+        if(combo==3)return switch(blow){case 0->THRUST_HALF_WIDTH;case 1->RISE_HALF_WIDTH;case 2->QUICK_HALF_WIDTH;case 3->ARC_HALF_WIDTH;default->SWEEP_HALF_WIDTH;};
+        return combo==2?SPIN_RADIUS:combo==4?FINISH_HALF_WIDTH:CUT_HALF_WIDTH;
     }
     /** How near (blocks ahead of its user's feet, behind them below 0) hit {@code combo}'s blow {@code blow} begins to reach: the thrust only ahead. */
     public static double near(int combo,int blow){return combo==3&&blow==0?.1:NEAR;}
