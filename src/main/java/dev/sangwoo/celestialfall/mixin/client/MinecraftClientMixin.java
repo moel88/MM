@@ -21,8 +21,8 @@ public abstract class MinecraftClientMixin {
         // the meteor pickaxe strikes meteors (2.49.0) and does nothing else, the stand's attack included
         if(dev.sangwoo.celestialfall.client.meteor.MeteorClient.attack()){cir.setReturnValue(false);return;}
         BotandCamera.prepareInteraction();
-        // Star Platinum out: its punches (2.54.0)
-        if(dev.sangwoo.celestialfall.client.StandClient.punch()||dev.sangwoo.celestialfall.client.stand.StandAttack.punch()||CombatClient.punch())cir.setReturnValue(false);
+        // Star Platinum out: its punches (2.54.0); Lee So-sang: their sword's hits (2.77.0)
+        if(dev.sangwoo.celestialfall.client.StandClient.punch()||dev.sangwoo.celestialfall.client.stand.StandAttack.punch()||dev.sangwoo.celestialfall.client.isosang.IsosangClient.punch()||CombatClient.punch())cir.setReturnValue(false);
     }
     @Inject(method="doItemUse",at=@At("HEAD"),cancellable=true)
     private void botand$use(CallbackInfo ci){if(CombatClient.actionLocked())ci.cancel();else {BotandCamera.prepareInteraction();if(dev.sangwoo.celestialfall.client.StandClient.useSkill())ci.cancel();}}
@@ -31,7 +31,7 @@ public abstract class MinecraftClientMixin {
     @Inject(method="handleBlockBreaking",at=@At("HEAD"),cancellable=true)
     private void botand$break(boolean breaking,CallbackInfo ci) {
         if(dev.sangwoo.celestialfall.client.meteor.MeteorClient.breaking(breaking)){var mc=(MinecraftClient)(Object)this;if(mc.interactionManager!=null)mc.interactionManager.cancelBlockBreaking();ci.cancel();return;}
-        if(CombatClient.actionLocked()||dev.sangwoo.celestialfall.client.StandClient.visible(((MinecraftClient)(Object)this).player)||dev.sangwoo.celestialfall.client.stand.StandAttack.punching()||dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand()) {var mc=(MinecraftClient)(Object)this;if(mc.interactionManager!=null)mc.interactionManager.cancelBlockBreaking();ci.cancel();}
+        if(CombatClient.actionLocked()||dev.sangwoo.celestialfall.client.StandClient.visible(((MinecraftClient)(Object)this).player)||dev.sangwoo.celestialfall.client.isosang.IsosangClient.attacks(((MinecraftClient)(Object)this).player)||dev.sangwoo.celestialfall.client.stand.StandAttack.punching()||dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand()) {var mc=(MinecraftClient)(Object)this;if(mc.interactionManager!=null)mc.interactionManager.cancelBlockBreaking();ci.cancel();}
     }
     @Redirect(method="handleInputEvents",at=@At(value="INVOKE",target="Lnet/minecraft/client/Mouse;isCursorLocked()Z"))
     private boolean botand$freeCursorMining(net.minecraft.client.Mouse mouse){return mouse.isCursorLocked()||BotandCamera.controls();}

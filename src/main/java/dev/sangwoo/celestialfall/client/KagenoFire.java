@@ -229,6 +229,30 @@ public final class KagenoFire {
             cpoint(outer[i+1],along[i+1],1,code,erase,taper,alpha);cpoint(outer[i],along[i],1,code,erase,taper,alpha);
         }
     }
+    /**
+     * Ink ribbons (2.77.0, Lee So-sang's slashes): the shader's mode 16, drawn in a pass of their own after the crescents.
+     * {@link #inkRibbon} lays a band along a swept path as {@link #ribbon} does.
+     */
+    private static BufferBuilder inks;private static Matrix4f inkMatrix;
+    public static boolean beginInk(Matrix4f m,float age){if(shader==null)return false;inks=begin(age,16);inkMatrix=m;return true;}
+    public static void endInk(){if(inks!=null){end(inks);inks=null;}}
+    private static void ipoint(Vec3d p,float u,float v,int code,float erase,float ink,float alpha){
+        inks.vertex(inkMatrix,(float)p.x,(float)p.y,(float)p.z).texture(u,v)
+            .color(code&255,Math.max(0,Math.min(255,Math.round(erase*255))),Math.max(0,Math.min(255,Math.round(ink*255))),Math.max(0,Math.min(255,(int)(alpha*crescentGain*255)))).next();
+    }
+    /**
+     * A band of blue light outlined in ink along a swept path: {@code inner[i]}..{@code outer[i]} across it (the outer
+     * edge the cutting edge), {@code along[i]} from 0 at the tail to 1 at the head ({@code n} points). {@code style}: 0 a
+     * cut (widest at its head), 1 a ring (even), 2 a beam (pointed at both ends), 3 the finisher's (thicker); {@code erase}
+     * the share eaten from the tail, {@code ink} how far it has turned to ink (0 light, 1 ink breaking up).
+     */
+    public static void inkRibbon(Vec3d[] inner,Vec3d[] outer,float[] along,int n,int style,int seed,float erase,float ink,float alpha){
+        if(inks==null||alpha<=0||erase>=1||n<2)return;int code=(style&15)*16+(seed&15);
+        for(int i=0;i+1<n;i++){
+            ipoint(inner[i],along[i],0,code,erase,ink,alpha);ipoint(inner[i+1],along[i+1],0,code,erase,ink,alpha);
+            ipoint(outer[i+1],along[i+1],1,code,erase,ink,alpha);ipoint(outer[i],along[i],1,code,erase,ink,alpha);
+        }
+    }
     /** Straight band a→b, width measured along {@code side}. */
     public static void streak(Vec3d a,Vec3d b,Vec3d side,double width,int seed,float alpha){
         if(strokes==null||alpha<=0)return;Vec3d s=side.normalize().multiply(width*.5);

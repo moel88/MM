@@ -34,10 +34,12 @@ public final class KagenoClips {
      * the last one has come to rest, starts from the rest pose instead of jumping to where the last one ended.
      */
     public static void begin(StandClient.Cast cast){
-        if(cast.skill()!=M1)return;
+        // (Lee So-sang's sword's hits too, 2.77.0: every one of them, the first from their stance)
+        boolean sword=cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL;
+        if(cast.skill()!=M1&&!sword)return;
         var previous=animated(cast.caster());
-        if(previous!=null||cast.combo()>1){
-            var f=previous!=null?action(previous,0):idle();
+        if(previous!=null||cast.combo()>1||sword){
+            var f=previous!=null?action(previous,0):sword?dev.sangwoo.celestialfall.client.isosang.IsosangSlash.stance():idle();
             COMBO_STARTS.put(cast.id(),new R6.Frame(f.joints(),f.grip(),f.fw(),f.up(),f.rt(),
                 net.minecraft.util.math.MathHelper.wrapDegrees(f.yaw()),f.pitch(),f.roll()));
             while(COMBO_STARTS.size()>64)COMBO_STARTS.remove(COMBO_STARTS.keySet().iterator().next());
@@ -69,7 +71,9 @@ public final class KagenoClips {
     public static StandClient.Cast animated(java.util.UUID id){
         StandClient.Cast best=null;
         for(var c:StandClient.CASTS.values())if(c.caster().equals(id)&&c.age(0)<clip(c.skill(),c.combo()).length()*20+1)best=c;
-        return best;
+        // Lee So-sang's sword's hits (2.77.0): their swings drive the body the same way
+        var swing=dev.sangwoo.celestialfall.client.isosang.IsosangClient.animated(id);
+        return swing!=null?swing:best;
     }
     private static final Anim STILL=Anim.of(k(0,IDLE),k(.5,IDLE));
     public static Anim clip(int skill,int combo){var s=KagenoSkills.of(skill);var c=s==null?null:s.clip(combo);return c==null?STILL:c;}

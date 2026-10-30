@@ -15,6 +15,8 @@ public final class KagenoSkills {
         SKILLS[Y]=new FallenSkill();
         SKILLS[H]=new HighestSkill();
         SKILLS[P]=new PoseSkill();
+        // Lee So-sang's sword's four hits (2.77.0): drawn with the same passes, from their own swings (IsosangClient)
+        SKILLS[dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL]=new dev.sangwoo.celestialfall.client.isosang.IsosangSlash();
     }
     public static Fx.Skill of(int skill){return skill>=0&&skill<SKILLS.length?SKILLS[skill]:null;}
 }

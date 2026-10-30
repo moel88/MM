@@ -52,6 +52,8 @@ public final class StandManager {
     private static void forgetOthers(net.minecraft.server.MinecraftServer server){
         for(var p:server.getPlayerManager().getPlayerList()){
             if(!"star_platinum".equals(ProgressManager.profile(p).stand())){StarPlatinumAttack.forget(p);StarPlatinumRush.forget(p);StarPlatinumInhale.forget(p);}
+            // (2.77.0) Lee So-sang's sword's rest after a combo, as Star Platinum's punches'
+            if(!"isosang".equals(ProgressManager.profile(p).stand()))dev.sangwoo.celestialfall.isosang.IsosangAttack.forget(p);
             // 2.74.3: and the long ones not theirs are gone at once (they begin in full when the stand is theirs again)
             dev.sangwoo.celestialfall.LongCooldowns.forgetOthers(p);
         }

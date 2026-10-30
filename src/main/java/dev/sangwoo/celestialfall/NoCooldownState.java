@@ -36,6 +36,8 @@ public final class NoCooldownState extends PersistentState {
     public static void reset(ServerPlayerEntity player) {
         dev.sangwoo.celestialfall.stand.KagenoManager.resetCooldown(player);
         SpellManager.resetCooldown(player);AtomicManager.resetCooldown(player);HeavenManager.resetCooldown(player);
+        // (2.77.0) Lee So-sang's attack's rest
+        dev.sangwoo.celestialfall.isosang.IsosangAttack.forget(player);
     }
     public static void tick(MinecraftServer server) {
         var state=get(server);if(state.players.isEmpty())return;

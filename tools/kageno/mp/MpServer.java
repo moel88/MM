@@ -79,7 +79,7 @@ public final class MpServer implements ModInitializer {
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
         // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had; 2.74.3 the same for MP_ONLY=fresh)
         if(caster(p)){if(!COOLDOWNS_ONLY&&!FRESH_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
-            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY&&!ISOSANG_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
@@ -123,7 +123,8 @@ public final class MpServer implements ModInitializer {
         punched(server);
         called(server);
         if(COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)cooldowns(server);
-        if(STAGGER_ONLY)staggers(server);
+        if(STAGGER_ONLY||ISOSANG_ONLY)staggers(server);
+        if(ISOSANG_ONLY)isosang(server);
         if(RESIST_ONLY)resist(server);
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
@@ -132,7 +133,7 @@ public final class MpServer implements ModInitializer {
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -281,8 +282,9 @@ public final class MpServer implements ModInitializer {
         // punches threw (2.54.0) is left where it came down
         // (2.60.0: and while the caster has Star Platinum out, the watcher stays where the script puts it: 4.5 blocks
         // in front of the caster for the Star Finger)
+        // (2.77.0: and in Lee So-sang's script, where it is sent 8 blocks away for the first three hits to strike no one)
         boolean standOut=server.getPlayerManager().getPlayerList().stream().anyMatch(q->caster(q)&&dev.sangwoo.celestialfall.stand.StandSummon.out(q));
-        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&standOut)continue;
+        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY))continue;
             if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
@@ -458,6 +460,37 @@ public final class MpServer implements ModInitializer {
     static final boolean STAGGER_ONLY="stagger".equals(System.getProperty("botand.mp.only"));
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
+    /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"));
+    private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
+    /**
+     * Lee So-sang's basic attack (2.77.0) as the server keeps it: the caster's hits (each one, its blows as they land, its
+     * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
+     * while a hit is in flight or for a second after one (a blow throws no one: there should be none).
+     */
+    private void isosang(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        var h=dev.sangwoo.celestialfall.isosang.IsosangAttack.hit(caster);
+        String hit=h==null||h.combo()<1?"":h.combo()+"@"+h.start();
+        if(!hit.equals(hitSeen)){
+            if(!hit.isEmpty())note(server,String.format(java.util.Locale.ROOT,"caster's hit %d began at %d (way %.1f; ready again at %d) %s",h.combo(),h.start(),h.yaw(),dev.sangwoo.celestialfall.isosang.IsosangAttack.ready(caster),where(watcher,caster)));
+            else note(server,"caster's attack: no hit (combo over or broken; ready again at "+dev.sangwoo.celestialfall.isosang.IsosangAttack.ready(caster)+")");
+            hitSeen=hit;blowsSeen=0;watcherAt=watcher.getPos();
+        }
+        if(h!=null&&h.combo()>=1){
+            if(h.blows()>blowsSeen){note(server,"caster's hit "+h.combo()+" blow "+h.blows()+" of "+dev.sangwoo.celestialfall.isosang.IsosangRules.blows(h.combo())+" landed at "+now);blowsSeen=h.blows();}
+            watchUntil=now+20;
+        }
+        if(Math.abs(watcher.getHealth()-watcherHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (guard %s)",watcherHealth,watcher.getHealth(),now,dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));watcherHealth=watcher.getHealth();}
+        if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
+            note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
+            watcherAt=watcher.getPos();
+        }
+        if(now>watchUntil)watcherAt=watcher.getPos();
+    }
     /** Only the stand arrow's script (2.70.0, MP_ONLY=arrow). */
     static final boolean ARROW_ONLY="arrow".equals(System.getProperty("botand.mp.only"));
     private boolean arrowHeld,arrowAlive=true;private String arrowStand="";private int arrowCount=-1;private boolean arrowOut;private net.minecraft.util.math.Vec3d arrowFrom;

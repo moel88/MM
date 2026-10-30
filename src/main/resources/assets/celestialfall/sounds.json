@@ -923,5 +923,50 @@
         "preload": true
       }
     ]
+  },
+  "isosang_m1_1": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_m1_1",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "isosang_m1_2": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_m1_2",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "isosang_m1_3": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_m1_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "isosang_m1_4": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_m1_4",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "isosang_m1_hit": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_m1_hit",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

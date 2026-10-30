@@ -307,6 +307,52 @@ void main(){
   rgb=mix(rgb,top,smoothstep(.22-ab,.22+ab,lit));
   rgb=mix(rgb,rgb*vec3(.84,.68,1.1),violet);
   alpha=body*tint.a;
+ }else if(Mode==16){
+  // Lee So-sang's slashes (2.77.0): blue light outlined in ink, drying to ink. uv.x tail(0)->head(1) along, uv.y
+  // inner(0)->outer(1) across; tint.r = style*16+seed, tint.g = the share eaten from the tail, tint.b = how far it has
+  // turned to ink, tint.a = alpha. Styles: 0 a cut (a crescent moon: pointed at both ends, widest past its middle), 1 a
+  // ring (even), 2 a beam (pointed at both ends), 3 the finisher's (a fuller crescent), 4 ink alone (a ring of it on the
+  // ground: black with a navy rim, breaking up as it dries). An ink line along the cutting (outer) edge, a white-hot edge and one thin white core
+  // lane inside it, a vivid blue body grading to deep blue and to ink along the inner edge, ragged like a brush with pale
+  // speed hairs. As it turns to ink the light drains out (the tail and the inner side first), the band thins and breaks
+  // into blots. Blue carries it; only the edge and the core burn white on the effect layer.
+  float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
+  float x=clamp(uv.x,0.0,1.0),y=uv.y,ink=tint.b;
+  float w=style<.5?pow(max(sin(3.14159*pow(x,1.35)),0.0),.55)
+         :style<1.5||style>3.5?.92+.08*sin(x*37.0+sd)
+         :style<2.5?pow(max(sin(3.14159*x),0.0),.45)
+         :pow(max(sin(3.14159*pow(x,1.2)),0.0),.42);
+  w=max(w,.02);
+  float d=(1.0-y)/w;
+  float aa=max(fwidth(d),.0015)*1.3;
+  float strand=fbm(vec2(x*5.0+sd,y*28.0));
+  float hair=noise(vec2(x*9.0+sd,y*90.0));
+  float lim=1.0-.22*(strand-.4)-.28*ink;
+  float body=smoothstep(-aa,aa,d)*(1.0-smoothstep(lim-aa*3.0,lim+aa*3.0,d));
+  // the tail eaten with a ragged edge
+  float front=tint.g*1.1-.05+(strand-.5)*.15;
+  body*=smoothstep(front,front+.03,x);
+  // drying to ink: blots open up in it, more and larger as it dries
+  float blob=fbm(vec2(x*6.5+sd*1.7,y*3.2+sd*.6));
+  body*=1.0-smoothstep(1.0-ink*.9,1.0-ink*.9+.07,blob)*step(.02,ink);
+  vec3 inkc=vec3(.012,.018,.07),navy=vec3(.03,.05,.2),deep=vec3(.05,.15,.66),blue=vec3(.16,.42,1.0),pale=vec3(.62,.84,1.0),edge=vec3(.9,.97,1.0);
+  rgb=mix(edge,pale,smoothstep(.02,.06,d));
+  rgb=mix(rgb,blue,smoothstep(.08,.24,d));
+  rgb=mix(rgb,deep,smoothstep(.36,.68,d));
+  rgb=mix(rgb,navy,smoothstep(.7,.9,d));
+  rgb=mix(rgb,inkc,smoothstep(.9,1.0,d));
+  float line=1.0-smoothstep(.0,aa*2.0+.012,d);
+  rgb=mix(rgb,inkc,line);
+  rgb=mix(rgb,pale,smoothstep(.74,.92,hair)*smoothstep(.18,.3,d)*(1.0-smoothstep(.55,.75,d))*.55);
+  float lane=.13+.025*sin(x*9.0+sd)+.02*(strand-.5);
+  float core=(1.0-smoothstep(.022,.022+aa*2.0+.012*hair,abs(d-lane)))*smoothstep(.06,.4,x)*(style>1.5&&style<2.5?1.0-smoothstep(.85,1.0,x):1.0);
+  rgb=mix(rgb,vec3(1.0),core);
+  float drain=style>3.5?1.0:clamp(ink*1.6-x*.6+d*.3*ink,0.0,1.0);
+  if(style>3.5)rgb=mix(navy,inkc,smoothstep(.12,.3,d)*(1.0-smoothstep(.75,.95,d))+.0);
+  if(style<3.5)rgb=mix(rgb,inkc,drain);
+  float lit=1.0-drain;
+  rgb*=1.0+Hot*lit*(core*.9+(1.0-smoothstep(.02,.1,d))*(1.0-line)*.5);
+  alpha=body*tint.a;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

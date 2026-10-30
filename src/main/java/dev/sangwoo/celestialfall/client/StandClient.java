@@ -43,6 +43,8 @@ public final class StandClient {
     public static int hitCount;public static long hitTime=-1000,comboStart=-1000;
     private StandClient(){}
     public static ItemStack sword(){return SWORD;}
+    /** This client's tick count, the clock a cast's age is told against (Cast.received): Lee So-sang's swings use it too (2.77.0). */
+    public static int ticks(){return ticks;}
     public static boolean visible(PlayerEntity p){return StandManager.kageno(p)&&!p.isInvisible()&&!p.isSleeping();}
     /** Lee So-sang's player, seen (2.76.0): their sword drawn in their hand, as Kageno's is. */
     public static boolean isosang(PlayerEntity p){return StandManager.isosang(p)&&!p.isInvisible()&&!p.isSleeping();}

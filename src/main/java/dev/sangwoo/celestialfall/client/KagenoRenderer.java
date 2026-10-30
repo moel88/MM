@@ -35,6 +35,14 @@ public final class KagenoRenderer {
             if(pos.squaredDistanceTo(camera)>96*96&&s!=StandClient.cinematic())continue;
             casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
         }
+        // Lee So-sang's sword's hits (2.77.0): drawn as the casts are, from their own list
+        for(var s:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
+            var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
+            float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
+            var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(delta);
+            if(pos.squaredDistanceTo(camera)>96*96)continue;
+            casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
+        }
         var primary=StandClient.visualCast();
         if(primary!=null&&AtomicClient.CASTS.isEmpty()&&HeavenClient.CASTS.isEmpty()){
             Vec3d focus=primary.origin().add(0,1.1,0);
@@ -120,6 +128,12 @@ public final class KagenoRenderer {
         RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
         KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
         if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
+        KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
+        // Ink ribbons (2.77.0, Lee So-sang's slashes): blended, then their light added again on top as the crescents' is.
+        if(KagenoFire.beginInk(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).ink(x);KagenoFire.endInk();}
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
+        KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
+        if(KagenoFire.beginInk(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).ink(x);KagenoFire.endInk();}
         KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
         // Real blocks: on the effect layer they were drawn on the screen before it, with the solids.
         if(!layered)for(var x:casts)KagenoSkills.of(x.cast.skill()).blocks(x);

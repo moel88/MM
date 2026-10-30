@@ -56,9 +56,11 @@ public final class CooldownHud {
     private static final int COMBO_END=14;
     /** The dash's place in the list (after the stand's skill slots), then Star Platinum's punches' rest (2.54.0), its rush (2.57.0), its heavy punch (2.59.0), its Star Finger (2.60.0), its inhale (2.61.0), its beatdown (2.64.0) and its time stop (2.67.0). */
     static final int DASH=10,PUNCHES=11,BARRAGE=12,HEAVY=13,FINGER=14,INHALE=15,BEATDOWN=16,TIME_STOP=17;
+    /** Lee So-sang's attack's rest after a combo (2.77.0), after Star Platinum's. */
+    static final int ISOSANG=18;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
@@ -72,7 +74,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -154,6 +156,10 @@ public final class CooldownHud {
         long timeStop=!star?0:ledger?LongCooldownsClient.ready(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.client.stand.StandTimeStop.ready(p.getUuid());
         int timeStopLength=ledger?LongCooldownsClient.length(LongCooldowns.Skill.TIME_STOP):dev.sangwoo.celestialfall.stand.StarPlatinumRules.TS_COOLDOWN;
         if(timeStop!=timeStopSeen){show(TIME_STOP,timeStopName(),timeStop-time,timeStopLength,now);timeStopSeen=timeStop;}
+        // Lee So-sang's attack (2.77.0): only its rest after a combo, as the others' (the server's ready tick, told with each hit's news)
+        boolean isosang=shows(ISOSANG,stand);if(!isosang)dev.sangwoo.celestialfall.client.isosang.IsosangClient.forget(p.getUuid());
+        long sword=isosang?dev.sangwoo.celestialfall.client.isosang.IsosangClient.ready(p.getUuid()):0;
+        if(sword!=isosangSeen){show(ISOSANG,isosangName(),sword-time,dev.sangwoo.celestialfall.isosang.IsosangRules.REST,now);isosangSeen=sword;}
         LIST.update(now);
     }
     /**
@@ -164,6 +170,8 @@ public final class CooldownHud {
      */
     static boolean shows(int slot,String stand){
         if(slot==DASH)return true;
+        // (2.77.0) Lee So-sang's to theirs
+        if(slot==ISOSANG)return "isosang".equals(stand);
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -190,6 +198,8 @@ public final class CooldownHud {
     private static String beatdownName(){return "비트다운";}
     /** Its time stop's name in the list (the user's word for it). */
     private static String timeStopName(){return "시간 정지";}
+    /** Lee So-sang's attack's name in the list (the user's word for it, 2.77.0). */
+    private static String isosangName(){return "평타";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */
     private static String name(int slot,UUID me){
         if(slot!=T)return NAMES[slot];

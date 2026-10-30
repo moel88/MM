@@ -24,6 +24,16 @@ public abstract class StandHeldItemFeatureMixin {
             if(dev.sangwoo.celestialfall.client.meteor.MiningPose.active(holder,delta))dev.sangwoo.celestialfall.client.meteor.MiningPose.applyGrip(matrices,holder,delta);
             return;
         }
+        if(entity instanceof PlayerEntity holder&&arm==holder.getMainArm()&&!StandClient.visible(holder)&&StandClient.isosang(holder)){
+            // Lee So-sang's sword (2.77.0): turned in the hand as a swing drives it (as the game holds it between swings);
+            // its display already turns it IsosangSlash.DISPLAY_TILT further round the wrist
+            var swing=dev.sangwoo.celestialfall.client.isosang.IsosangClient.animated(holder.getUuid());
+            if(swing!=null){
+                var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.isosang.IsosangSlash.DISPLAY_TILT));
+            }
+            return;
+        }
         if(!(entity instanceof PlayerEntity player)||!StandClient.visible(player)||arm!=player.getMainArm())return;
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=dev.sangwoo.celestialfall.client.AtomicClient.poseCast(player.getUuid());

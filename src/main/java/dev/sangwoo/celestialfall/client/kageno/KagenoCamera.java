@@ -52,7 +52,10 @@ public final class KagenoCamera {
     public static float[] shake(float delta){
         var mc=MinecraftClient.getInstance();if(mc.world==null||mc.player==null||!MapClient.enabled()||StandClient.cinematic()!=null)return null;
         float amount=0;float time=mc.world.getTime()+delta;float[] kick=null;
-        for(var c:StandClient.CASTS.values()){
+        var all=new java.util.ArrayList<>(StandClient.CASTS.values());
+        // Lee So-sang's sword's hits (2.77.0) shake the camera as the casts do
+        all.addAll(dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values());
+        for(var c:all){
             var s=KagenoSkills.of(c.skill());if(s==null)continue;
             // Distance from the cast spot or from the caster, whichever is nearer (T held's caster ends 30 blocks away).
             var caster=mc.world.getPlayerByUuid(c.caster());

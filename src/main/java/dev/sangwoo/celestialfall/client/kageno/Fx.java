@@ -53,6 +53,8 @@ public final class Fx {
         default void strokes(Fx c){}
         /** Brush crescents ({@link dev.sangwoo.celestialfall.client.KagenoFire#crescent}). */
         default void crescents(Fx c){}
+        /** Ink ribbons ({@link dev.sangwoo.celestialfall.client.KagenoFire#inkRibbon}: Lee So-sang's slashes, 2.77.0). */
+        default void ink(Fx c){}
         default void shaders(Fx c){}
         default void blocks(Fx c){}
         /** Full-screen flash strength 0..1 and colour. */

@@ -74,6 +74,27 @@ public final class R6 {
         }
     }
     public static Pose pose(){return new Pose();}
+    /** Body-space direction of the world direction (elevation, azimuth toward the right of the facing) for a torso turned as in p. */
+    public static Dir local(Pose p,double elevation,double azimuth){
+        float k=(float)Math.PI/180;
+        // The frame of KagenoClips.blade with the facing along +z: the character's left is +x.
+        var q=new Quaternionf().rotationAxis(p.yaw*k,0,1,0).rotateAxis(p.pitch*k,1,0,0).rotateAxis(p.roll*k,0,0,1);
+        double e=Math.toRadians(elevation),a=Math.toRadians(azimuth);
+        var w=new Vector3f((float)(-Math.cos(e)*Math.sin(a)),(float)Math.sin(e),(float)(Math.cos(e)*Math.cos(a)));
+        q.conjugate().transform(w);
+        return new Dir(-w.x,w.y,w.z).norm();
+    }
+    /**
+     * A pose written in the world: the root at (fw, up), the torso turned yaw degrees to the left, leaning pitch forward
+     * and rolled; the limbs and the blade along world directions ({elevation, azimuth} toward the right of the facing);
+     * the head facing the target, level.
+     */
+    public static Pose world(double fw,double up,float yaw,float pitch,float roll,double[] rArm,double[] blade,double[] lArm,double[] rLeg,double[] lLeg){
+        Pose p=pose().at(fw,up,0).body(yaw,pitch,roll).head(yaw,-pitch*.8f,0);
+        p.rArm=local(p,rArm[0],rArm[1]);p.blade=local(p,blade[0],blade[1]);p.lArm=local(p,lArm[0],lArm[1]);
+        p.rLeg=local(p,rLeg[0],rLeg[1]);p.lLeg=local(p,lLeg[0],lLeg[1]);
+        return p;
+    }
 
     /** Solved pose ready for the Minecraft rig. */
     public record Frame(MotionPose joints,float grip,double fw,double up,double rt,float yaw,float pitch,float roll){}

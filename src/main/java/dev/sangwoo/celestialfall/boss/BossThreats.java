@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall.boss;
 import dev.sangwoo.celestialfall.AtomicManager;
 import dev.sangwoo.celestialfall.combat.CombatManager;
 import dev.sangwoo.celestialfall.combat.CombatState;
+import dev.sangwoo.celestialfall.isosang.IsosangRules;
 import dev.sangwoo.celestialfall.stand.KagenoManager;
 import dev.sangwoo.celestialfall.stand.KagenoRules;
 import dev.sangwoo.celestialfall.stand.StarPlatinumAttack;
@@ -19,7 +20,8 @@ import net.minecraft.util.math.Vec3d;
 /**
  * What is coming at a boss (2.69.0, BossBrain): every player's blow in the making near it, read off the server's own
  * state of their moves as they make them (a Star Platinum user's punches, rush, inhale and time stop, a bare hand's
- * swing, Kageno's casts, an Atomic), each with the ground it will strike, when, and what a guard does against it. A
+ * swing, Kageno's casts, Lee So-sang's sword since 2.77.0, an Atomic), each with the ground it will strike, when, and
+ * what a guard does against it. A
  * boss sees a move only {@link BossRules#REACTION} ticks after it began, as a quick player would.
  */
 public final class BossThreats {
@@ -68,6 +70,7 @@ public final class BossThreats {
             punches(p,now,out);
             bare(p,now,out);
             kageno(p,now,out);
+            isosang(p,now,out);
         }
         for(var c:AtomicManager.columns(world)){
             double dx=boss.getX()-c[0],dz=boss.getZ()-c[2];
@@ -140,6 +143,16 @@ public final class BossThreats {
                 default->{}
             }
         }
+    }
+    /** Lee So-sang's sword (2.77.0): the next blow of the hit in flight, in its way (the turn's all round them). */
+    private static void isosang(ServerPlayerEntity p,long now,List<Threat> out){
+        var h=dev.sangwoo.celestialfall.isosang.IsosangAttack.hit(p);
+        if(h==null||h.combo()<1||h.blows()>=IsosangRules.blows(h.combo()))return;
+        int c=h.combo(),i=h.blows();long hit=h.start()+IsosangRules.blowAt(c,i);
+        if(now>hit)return;
+        Zone zone=c==2?Zone.ring(p.getPos(),IsosangRules.SPIN_RADIUS,IsosangRules.LOW,IsosangRules.HIGH)
+            :Zone.lane(p.getPos(),h.yaw(),IsosangRules.near(c,i),IsosangRules.reach(c,i),IsosangRules.halfWidth(c,i),IsosangRules.LOW,IsosangRules.HIGH);
+        out.add(new Threat(p,"isosang"+c,h.start(),hit,h.start()+IsosangRules.lastBlow(c),zone,!IsosangRules.unblockable(c),false,false,IsosangRules.total(c),false,false));
     }
     /** How far a dash has carried its dasher {@code ticks} ticks in (blocks; CombatState.dashSpeed, the whole dash after DASH_TICKS). */
     public static double dashDistance(int ticks){double d=0;for(int i=0;i<Math.min(ticks,CombatState.DASH_TICKS);i++)d+=CombatState.dashSpeed(i);return d;}

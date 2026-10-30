@@ -13,7 +13,8 @@ sounds) and its time stop for the awakened (2.72.0, MpClient.CALL_SCRIPT), MP_ON
 and joins again, and since 2.74.0 as it comes back to life after any death (its reset, /kill, killed by the watcher) and
 as the stand arrow gives it a stand; since 2.74.1 only those of the stand it uses, and also as the gacha gives it Kageno),
 MP_ONLY=swap only another stand's cooldowns gone (2.74.2, MpClient.SWAP_SCRIPT: Star Platinum's skills used, a Rokakaka
-eaten and the stand given back at once; Kageno's E, a Rokakaka again), MP_ONLY=fresh only the long cooldowns begun in
+eaten and the stand given back at once; Kageno's E, a Rokakaka again), MP_ONLY=isosang only Lee So-sang's basic attack (2.77.0, MpClient.ISOSANG_SCRIPT: the four hits at full speed, a broken
+combo and its rest, the four against a guard), MP_ONLY=fresh only the long cooldowns begun in
 full whatever they were (2.74.3, MpClient.FRESH_SCRIPT: joining again with Atomic never used, back to life with Star
 Platinum before and after its awakening, the stand arrow and the gacha giving a stand; another stand's forgotten; the
 caster's client drops the world's time packets for 30 ticks after joining again, mixin/MpLateTimeMixin, so its cooldown

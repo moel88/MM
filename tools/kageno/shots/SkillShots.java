@@ -175,7 +175,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * "MOVE_GOK@n" at the results' 확인 and "MOVE_GX@n" at its X; "KEY_M@n" is the menu key. The log gets the gacha's
  * answers (its notice) and the stand the client knows the player has. A Rokakaka (2.74.2): "GIVE_FRUIT@n" puts one in
  * the main hand, "ATTACKDOWN@n"/"ATTACKUP@n" click with it (its ask opens the confirmation), "MOVE_C2@n" points at the
- * confirmation's 사용하고 초기화 and "CLICK@n" eats it ("stand=kageno" starts a SUMMON entry as Kageno).
+ * confirmation's 사용하고 초기화 and "CLICK@n" eats it ("stand=kageno" starts a SUMMON entry as Kageno). Lee So-sang's
+ * sword (2.77.0): "stand=isosang" and "ATTACKDOWN@n"/"ATTACKUP@n"; the log gets each hit seen and whom its blows struck,
+ * NAME/isosang.csv each hit and the tick it began on (tools/isosang/shots/mux_m1.py lays the game's sound by it).
  *
  * <p>"BASE" films the plain body instead of a skill: a jump at 0.5 s and 2 s (airborne pose, landing dip), a blow
  * at 3.5 s and 4.25 s (flinch), then an M1 at 5 s (the crossfade into a skill and out of it). Its clock is the
@@ -704,7 +706,22 @@ public final class SkillShots implements ClientModInitializer {
                 punchLogged=key;
             }
         }
+        // Lee So-sang's sword (2.77.0): each of the player's hits seen, and whom its blows struck as they are told
+        var me=MinecraftClient.getInstance().player;
+        if(me!=null)for(var c:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
+            if(!c.caster().equals(me.getUuid()))continue;
+            if(swingsLogged.add(c.id())){
+                long began=age-(long)Math.floor(c.age(0));
+                log.append("  isosang hit ").append(c.combo()).append(" seen at ").append(age).append(" (began on tick ").append(began).append(")\n");
+                swingRows.append(c.combo()).append(',').append(began).append('\n');
+            }
+            int n=c.targets().size();Integer was=swingTargets.put(c.id(),n);
+            if(was==null?n>0:n>was)log.append("  isosang hit ").append(c.combo()).append(" struck ").append(n).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %.2f s)%n",c.age(0)/20f));
+        }
     }
+    private final java.util.Set<java.util.UUID> swingsLogged=new java.util.HashSet<>();private final java.util.Map<java.util.UUID,Integer> swingTargets=new java.util.HashMap<>();
+    /** 2.77.0: each of the player's sword hits (its number and the tick of the shot's clock it began on), for NAME/isosang.csv. */
+    private final StringBuilder swingRows=new StringBuilder();
     private String punchLogged="";private boolean rushOn;private int rushBlows;private final StringBuilder cameraLog=new StringBuilder();private String worldPass=",,,,,,,";
     private boolean beatOn,beatEnded;private float dummyHealth=-1;
     /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
@@ -1231,6 +1248,7 @@ public final class SkillShots implements ClientModInitializer {
                         stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
+                    if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}
                     if(soundLog.length()>0){var path=OUT.resolve(folder).resolve("sound.csv");Files.writeString(path,"combo,cast_age,shot_clock\n"+soundLog);}if(current.equals("Q"))server(p->{});phase=3;age=0;}}
         }
     }
