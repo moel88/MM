@@ -698,7 +698,7 @@ public final class IsosangSlash implements Fx.Skill {
             double land=lands(d,feet.y+.03);if(land<0)continue;
             float age=t-d.born()-(float)land;if(age<0||age>=STAIN_LIFE)continue;
             Vec3d p=flight(d,land),mv=moving(d,land);
-            stainAt(new Vec3d(p.x,floor+.001*(d.seed()%7),p.z),d.size()*(d.kind()==2?3.6:4.0),Math.atan2(mv.z,mv.x),1+Math.min(1.4,Math.hypot(mv.x,mv.z)*.3),d.seed(),age,.78f);
+            stainAt(new Vec3d(p.x,floor+.001*(d.seed()%7),p.z),d.size()*(d.kind()==2?4.2:4.6),Math.atan2(mv.z,mv.x),1+Math.min(1.4,Math.hypot(mv.x,mv.z)*.3),d.seed(),age,.78f);
         }
     }
 
@@ -1185,7 +1185,7 @@ public final class IsosangSlash implements Fx.Skill {
                 double speed=.8+1.8*Ease.hash(k*19+k0);
                 Vec3d vel=radial.multiply(speed).add(way.multiply(speed*.7*(Ease.hash(k*23+k0)-.2))).add(0,.2+.6*Ease.hash(k*29+k0),0);
                 int kind=k%3==2?1:0;
-                out.add(new Drop(at,vel,3.2,3.4,born,.6f+.45f*(float)Ease.hash(k*11+k0),kind==1?.1+.12*Ease.hash(k*31+k0):.06+.1*Ease.hash(k*31+k0),k*37+k0,kind));
+                out.add(new Drop(at,vel,3.2,3.4,born,.6f+.45f*(float)Ease.hash(k*11+k0),kind==1?.09+.1*Ease.hash(k*31+k0):.05+.09*Ease.hash(k*31+k0),k*37+k0,kind));
             }
             // breaking up: blots and flakes burst off the band where it is being eaten, from its tail on
             if(t>=s.eat0())for(int k=0;k<(s.style()==1?14:9);k++){
@@ -1197,7 +1197,7 @@ public final class IsosangSlash implements Fx.Skill {
                 double speed=1.8+2.4*Ease.hash(seed+3);
                 Vec3d vel=radial.multiply(speed).add(way.multiply(speed*.5)).add(0,.6+.8*Ease.hash(seed+4),0);
                 int kind=k%2==0?2:1;
-                out.add(new Drop(at,vel,2.6,2.6,born,.7f+.35f*(float)Ease.hash(seed+6),kind==2?.16+.18*Ease.hash(seed+5):.1+.12*Ease.hash(seed+5),seed,kind));
+                out.add(new Drop(at,vel,2.6,2.6,born,.7f+.35f*(float)Ease.hash(seed+6),kind==2?.12+.13*Ease.hash(seed+5):.09+.1*Ease.hash(seed+5),seed,kind));
             }
         }
         // splashed from the struck
@@ -1210,7 +1210,7 @@ public final class IsosangSlash implements Fx.Skill {
                 double ang=(Ease.hash(seed+1)-.5)*2.6,rise=Ease.hash(seed+2)*1.3-.2;
                 Vec3d dir=way.multiply(Math.cos(ang)).add(side.multiply(Math.sin(ang))).add(0,rise,0).normalize();
                 int kind=k%3==1?1:k%7==3?2:0;
-                out.add(new Drop(p,dir.multiply(1.6+2.8*Ease.hash(seed+3)),4,2.8,at,.6f+.4f*(float)Ease.hash(seed),kind==0?.07+.11*Ease.hash(seed+4):.12+.14*Ease.hash(seed+4),seed,kind));
+                out.add(new Drop(p,dir.multiply(1.6+2.8*Ease.hash(seed+3)),4,2.8,at,.6f+.4f*(float)Ease.hash(seed),kind==0?.06+.09*Ease.hash(seed+4):.09+.11*Ease.hash(seed+4),seed,kind));
             }
         }
         // dripping off the thrown slash's back edge
@@ -1224,7 +1224,7 @@ public final class IsosangSlash implements Fx.Skill {
                 Vec3d start=back.add(edge.subtract(back).multiply(.15*Ease.hash(seed+3)));
                 Vec3d fly=Vec3d.fromPolar(0,yaw).multiply(1.6*(1-flown(born)/IsosangRules.WAVE_TICKS));
                 int kind=k%4==3?1:0;
-                out.add(new Drop(start,fly,.05,4.6,born,.55f+.35f*(float)Ease.hash(seed+1),kind==1?.1+.12*Ease.hash(seed+4):.07+.11*Ease.hash(seed+4),seed,kind));
+                out.add(new Drop(start,fly,.05,4.6,born,.55f+.35f*(float)Ease.hash(seed+1),kind==1?.09+.1*Ease.hash(seed+4):.06+.1*Ease.hash(seed+4),seed,kind));
             }
         }
         return out;
@@ -1236,7 +1236,7 @@ public final class IsosangSlash implements Fx.Skill {
             float age=t-d.born();if(age<0||age>=d.life())continue;
             double land=lands(d,floor);if(land>=0&&age>=land)continue;
             Vec3d q=flight(d,age),mv=moving(d,age);float u=age/d.life();
-            double size=d.size()*(1-.45*u)*Ease.out(age,0,.06f);float a=.94f*(1-Ease.smooth(u,.6f,1));
+            double size=d.size()*(1-.45*u)*Ease.out(age,0,.06f);float a=.94f*(1-Ease.smooth(u,.6f,1))*near(q,c.camera);
             switch(d.kind()){
                 case 1->flake(m,q,size,age,1.2+2.0*Ease.hash(d.seed()+9),d.seed(),INK,a);
                 case 2->blot(m,q,mv,size,d.seed(),INK,a);
@@ -1244,6 +1244,11 @@ public final class IsosangSlash implements Fx.Skill {
             }
         }
     }
+    /**
+     * Flying ink close to the camera fades out (2.77.6: by the eye a drop covered the screen like a slab of rock, and the
+     * struck saw what splashed from their own face).
+     */
+    static float near(Vec3d q,Vec3d camera){return Ease.smooth((float)camera.distanceTo(q),.6f,1.8f);}
     /**
      * One drop of ink at {@code q}: a round blot stretched the way it moves (in a plane holding that way, tumbling a
      * little, fixed in the world).
