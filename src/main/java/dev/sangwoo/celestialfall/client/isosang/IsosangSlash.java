@@ -95,9 +95,11 @@ public final class IsosangSlash implements Fx.Skill {
     static final R6.Pose H1_ACROSS=w(.35,-.19,-4,12,-1,d(10,28),d(-2,28),d(-36,-118),d(-58,16),d(-72,190));
     /** The cut: down across the front to the left, a deep step in. */
     static final R6.Pose H1_CUT=w(.36,-.22,18,16,-2,d(-6,-10),d(-15,-34),d(-32,-146),d(-56,16),d(-70,190));
+    /** Sweeping on low round the left. */
+    static final R6.Pose H1_THROUGH=w(.37,-.24,30,18,-3,d(-18,-42),d(-10,-74),d(-36,-154),d(-55,16),d(-69,190));
     /** Through low to the left, held there a moment. */
-    static final R6.Pose H1_DOWN=w(.38,-.26,34,20,-3,d(-30,-48),d(-14,-84),d(-38,-160),d(-54,16),d(-68,190));
-    static final R6.Pose H1_LOW=w(.38,-.27,33,20,-3,d(-32,-50),d(-12,-88),d(-38,-158),d(-54,16),d(-68,190));
+    static final R6.Pose H1_DOWN=w(.38,-.26,40,20,-3,d(-28,-70),d(-12,-112),d(-38,-160),d(-54,16),d(-68,190));
+    static final R6.Pose H1_LOW=w(.38,-.27,38,20,-3,d(-30,-72),d(-12,-108),d(-38,-158),d(-54,16),d(-68,190));
     /** The cut rising back across the front to the right. */
     static final R6.Pose H1_RISE=w(.38,-.2,4,12,0,d(0,20),d(8,30),d(-40,-120),d(-56,16),d(-70,190));
     /** Held out to the right at the chest: where the second hit begins. */
@@ -115,6 +117,7 @@ public final class IsosangSlash implements Fx.Skill {
         k(.268,H1_OVER,Anim.Ease.LINEAR),
         k(.284,H1_ACROSS,Anim.Ease.LINEAR),
         k(blow(1,0),H1_CUT,Anim.Ease.LINEAR),
+        k(.322,H1_THROUGH,Anim.Ease.LINEAR),
         k(.345,H1_DOWN,Anim.Ease.OUT),
         k(.385,H1_LOW),
         // and straight back up to the right
@@ -233,9 +236,9 @@ public final class IsosangSlash implements Fx.Skill {
     static final R6.Pose H4_CUT=w(1.0,-.34,6,16,0,d(-18,8),d(-4,12),d(-24,-110),d(-48,16),d(-60,194));
     static final R6.Pose H4_ON=w(1.01,-.35,40,16,0,d(-18,-64),d(-4,-74),d(-26,-160),d(-48,16),d(-60,194));
     /** Followed through behind the left, low, the free arm thrown back: the finishing pose. */
-    static final R6.Pose H4_END=w(1.01,-.38,64,18,0,d(-28,-100),d(-10,-126),d(-18,150),d(-48,16),d(-62,194));
-    static final R6.Pose H4_HOLD=w(1.0,-.37,62,17,0,d(-30,-98),d(-12,-124),d(-20,148),d(-49,16),d(-62,194));
-    static final R6.Pose H4_RISE=w(.88,-.28,54,13,0,d(-34,-90),d(-14,-118),d(-28,138),d(-54,16),d(-66,192));
+    static final R6.Pose H4_END=w(1.01,-.38,64,18,0,d(-28,-100),d(-3,-126),d(-18,150),d(-48,16),d(-62,194));
+    static final R6.Pose H4_HOLD=w(1.0,-.37,62,17,0,d(-30,-98),d(-8,-124),d(-20,148),d(-49,16),d(-62,194));
+    static final R6.Pose H4_RISE=w(.88,-.28,54,13,0,d(-34,-90),d(-12,-118),d(-28,138),d(-54,16),d(-66,192));
     static final Anim H4=Anim.joints(
         k(0,H3_BACK),
         k(.05,H4_UP),
@@ -332,14 +335,14 @@ public final class IsosangSlash implements Fx.Skill {
     static Slash[] slashes(int combo){
         return switch(combo){
             // the great diagonal and the cut rising back
-            case 1->new Slash[]{new Slash(.262f,.325f,.4f,.7f,.42f,.74f,0,2.3,3.1,1),new Slash(.395f,.465f,.5f,.74f,.48f,.76f,0,2.3,2.9,2)};
+            case 1->new Slash[]{new Slash(.262f,.38f,.43f,.72f,.44f,.76f,0,2.3,3.1,1),new Slash(.405f,.47f,.52f,.76f,.5f,.78f,0,2.3,2.9,2)};
             // the ring round them, low over the ground
             case 2->new Slash[]{new Slash(.17f,.32f,.44f,.8f,.42f,.84f,1,2.3,3.3,3)};
             // the rising cut, the quick cut, the great cut up the right side and the low sweep
             case 3->new Slash[]{new Slash(.41f,.49f,.56f,.8f,.55f,.84f,0,2.2,2.9,5),new Slash(.505f,.585f,.64f,.86f,.64f,.9f,0,2.1,2.6,9),
-                new Slash(.6f,.71f,.78f,1.02f,.78f,1.06f,3,2.1,3.0,11),new Slash(.88f,1.02f,1.08f,1.4f,1.06f,1.44f,0,2.3,3.3,13)};
+                new Slash(.6f,.71f,.78f,1.02f,.78f,1.06f,3,2.1,3.0,11),new Slash(.88f,1.07f,1.12f,1.42f,1.1f,1.46f,0,2.3,3.3,13)};
             // the giant crescent
-            default->new Slash[]{new Slash(.515f,.61f,.82f,1.28f,.78f,1.24f,3,2.6,5.6,7)};
+            default->new Slash[]{new Slash(.515f,.72f,.86f,1.3f,.8f,1.26f,3,2.6,5.6,7)};
         };
     }
     static final int SAMPLES=40;
@@ -382,6 +385,8 @@ public final class IsosangSlash implements Fx.Skill {
     }
     /** Hit 2's ring on the ground round its caster: its radius (blocks), out where the ring went round. */
     static final double RING=3.0;
+    /** Where hit 2's ring goes round: the body's middle, where it turns (a step ahead of the feet). */
+    static Vec3d ringCentre(Fx c){return anchor(c).add(Vec3d.fromPolar(0,c.cast.yaw()).multiply(.36));}
 
     /**
      * The ink ribbons (KagenoFire's ink pass): every slash along the blade's own path, drawn on as it sweeps, eaten from
@@ -396,7 +401,7 @@ public final class IsosangSlash implements Fx.Skill {
         }
         if(combo==2&&t>=.4f&&t<1.4f){
             // the ring falls round their feet as a ring of ink and dries there, breaking up
-            Vec3d o=floor(c,anchor(c));double r=RING+.1*Ease.out(t,.4f,.7f);
+            Vec3d o=floor(c,ringCentre(c));double r=RING+.1*Ease.out(t,.4f,.7f);
             ring(o,r-.26,r+.26,4,13,Ease.smooth(t,1.0f,1.4f),.3f+.6f*Ease.smooth(t,.45f,1.15f),.92f*Ease.smooth(t,.4f,.5f));
         }
         if(combo==3){
@@ -503,7 +508,7 @@ public final class IsosangSlash implements Fx.Skill {
             float u=Ease.unit(t,at,at+.18f),a=Ease.smooth(t,at-.01f,at+.01f);boolean big=combo==4;
             for(var p:hits(c,i,at)){
                 m.softDisc(p,(big?1.5:1.1)*(1-.4*u)+.2,BLUE,.45f*a*(1-u));m.softDisc(p,(big?.85:.5)*(1-u)+.12,WHITE,a*(1-u));
-                FxLib.ringPlane(m,p,side,up,.2+(big?1.7:.9)*Ease.out(t,at,at+.16f),big?.22:.16,PALE,.8f*a*(1-Ease.unit(t,at,at+.16f)));
+                FxLib.ringPlane(m,p,side,up,.2+(big?1.1:.9)*Ease.out(t,at,at+.16f),big?.2:.16,PALE,.8f*a*(1-Ease.unit(t,at,at+.16f)));
                 float s=a*(1-Ease.smooth(t,at+.08f,at+.3f));
                 for(int k=0;k<(big?24:12);k++){
                     double ang=(Ease.hash(k*3+combo*17+i*5)-.5)*2.2,rise=(Ease.hash(k*5+combo*11+i)-.5)*1.6;
@@ -524,7 +529,7 @@ public final class IsosangSlash implements Fx.Skill {
     /** Hit 2's second blow: the ring flares out over the ground as the sword is flicked, a flash round them and a ring racing out. */
     static void flare(Fx c,EffectMesh m,float t){
         float at=blow(2,1);if(t<at-.02f||t>=at+.4f)return;
-        Vec3d o=floor(c,anchor(c)).add(0,.08,0);float a=Ease.smooth(t,at-.02f,at+.01f),u=Ease.unit(t,at,at+.3f);
+        Vec3d o=floor(c,ringCentre(c)).add(0,.08,0);float a=Ease.smooth(t,at-.02f,at+.01f),u=Ease.unit(t,at,at+.3f);
         FxLib.ring(m,o,RING-.2+1.1*Ease.out(t,at,at+.3f),.34,AZURE,.75f*a*(1-u));
         FxLib.ring(m,o,RING+.4*Ease.out(t,at,at+.2f),.18,WHITE,.7f*a*(1-Ease.unit(t,at,at+.2f)));
         FxLib.ring(m,o.add(0,.3,0),RING*.85+.6*Ease.out(t,at,at+.25f),.12,PALE,.5f*a*(1-Ease.unit(t,at,at+.25f)));
@@ -647,7 +652,7 @@ public final class IsosangSlash implements Fx.Skill {
     static void groundInk(Fx c,EffectMesh m,float t,int combo){
         double floor=anchor(c).y+.025;
         if(combo==2){
-            Vec3d o=anchor(c);
+            Vec3d o=ringCentre(c);
             for(int k=0;k<26;k++){
                 int seed=k*29+311;float born=.55f+.35f*(float)Ease.hash(seed);if(t<born)continue;
                 double az=Math.PI*2*(k+.6*Ease.hash(seed+1))/26,r=RING+(Ease.hash(seed+2)-.5)*.9;
@@ -745,7 +750,7 @@ public final class IsosangSlash implements Fx.Skill {
         }
         if(combo==4){
             float at=blow(4,0);
-            if(t>=at-.01f&&t<at+.45f){Vec3d o=finishCentre(c).add(0,.9,0);float in=Ease.smooth(t,at-.01f,at+.015f);d.ring(o,c.right,c.f,.5+6*Ease.out(t,at,at+.45f),1.6,.8f*in*(1-Ease.unit(t,at,at+.45f)));}
+            if(t>=at-.01f&&t<at+.45f){Vec3d o=finishCentre(c).add(0,.9,0);float in=Ease.smooth(t,at-.01f,at+.015f);d.ring(o,c.right,c.f,.5+3.5*Ease.out(t,at,at+.4f),1.2,.45f*in*(1-Ease.unit(t,at,at+.4f)));}
         }
     }
 
