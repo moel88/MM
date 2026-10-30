@@ -256,6 +256,10 @@ class IsosangSlashTest {
             float f=IsosangSlash.faceOn(sw,0,o.add(5*Math.cos(Math.toRadians(deg)),5*Math.sin(Math.toRadians(deg)),0));
             assertTrue(f>=prev-1e-6&&f-prev<.2f,"brightening smoothly as the view leaves its plane: "+deg+"° "+f);prev=f;
         }
+        // the band itself: a third of it edge on, all of it from 9° out of its plane
+        assertEquals(.35,IsosangSlash.shown(sw,o.add(9,0,0)),1e-6,"edge on");
+        assertEquals(1,IsosangSlash.shown(sw,o.add(5*Math.cos(Math.toRadians(9)),5*Math.sin(Math.toRadians(9)),0)),1e-6,"9° out of its plane");
+        assertEquals(1,IsosangSlash.shown(sw,o.add(0,5,0)),1e-6,"from above");
     }
     @Test void theFinishersCameraDrawsBackAndComesInSmoothly(){
         for(int combo=1;combo<=3;combo++)for(float t=0;t<2;t+=.05f)assertEquals(0,IsosangSlash.pull(combo,t),1e-9);

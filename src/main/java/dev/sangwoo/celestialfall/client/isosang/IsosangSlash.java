@@ -548,7 +548,7 @@ public final class IsosangSlash implements Fx.Skill {
         for(var s:arcs(combo)){
             if(t>=s.eat1())continue;
             var sw=band(feet,yaw,s,t);if(sw==null)continue;
-            KagenoFire.inkRibbon(sw.inner(),sw.outer(),sw.along(),sw.n(),s.style(),s.seed(),Ease.smooth(t,s.eat0(),s.eat1()),inks(s,sw,t),Ease.smooth(t,s.t0(),s.t0()+.015f));
+            KagenoFire.inkRibbon(sw.inner(),sw.outer(),sw.along(),sw.n(),s.style(),s.seed(),Ease.smooth(t,s.eat0(),s.eat1()),inks(s,sw,t),Ease.smooth(t,s.t0(),s.t0()+.015f)*shown(sw,c.camera));
         }
         if(combo==3){
             float lit=beamLit(t);
@@ -735,9 +735,9 @@ public final class IsosangSlash implements Fx.Skill {
     static void aura(Fx c,EffectMesh m,float t,int combo){
         float g=glow(t,combo);if(g<=.01f)return;
         var hb=bladeNow(c);Vec3d guard=hb[0].add(hb[1].multiply(GUARD)),tip=hb[0].add(hb[1].multiply(TIP));float on=Math.min(1,g);
-        double w=.06*(1+.4*Math.max(0,Math.min(1,g-1)));float a=Math.min(1.35f,g);
+        double w=.06*(1+.4*Math.max(0,Math.min(1,g-1)));float a=Math.min(1.1f,g);
         m.softLine(guard,tip,w*5,AURA[1],a*.12f);m.softLine(guard,tip,w*2.4,AURA[1],a*.45f);
-        m.line(guard,tip,w,AURA[2],a);m.line(guard,tip,w*.45,AURA[3],a);
+        m.line(guard,tip,w,AURA[2],a*.85f);m.line(guard,tip,w*.45,AURA[3],a*.8f);
         m.softDisc(tip,.12+.08*on,AURA[3],.5f*on);
     }
     /**
@@ -760,12 +760,23 @@ public final class IsosangSlash implements Fx.Skill {
             m.line(p0,p1,.05+.04*prof,WHITE,.9f*f*(.4f+.6f*face));
         }
     }
-    /** How face on band {@code sw} is seen from {@code camera} at its segment {@code i}: 0 edge on, 1 once the view is 24° or more out of its plane. */
-    static float faceOn(Swept sw,int i,Vec3d camera){
+    /** The sine of how far out of band {@code sw}'s plane at its segment {@code i} the view from {@code camera} is (0 edge on, 1 face on). */
+    static double outOfPlane(Swept sw,int i,Vec3d camera){
         Vec3d n=sw.outer()[i].subtract(sw.inner()[i]).crossProduct(sw.inner()[i+1].subtract(sw.inner()[i]));
         Vec3d view=camera.subtract(sw.inner()[i].add(sw.outer()[i]).multiply(.5));
-        double nl=n.length(),vl=view.length();if(nl<1e-9||vl<1e-6)return 1;
-        return Ease.smooth((float)Math.abs(n.dotProduct(view)/(nl*vl)),.08f,.4f);
+        double nl=n.length(),vl=view.length();return nl<1e-9||vl<1e-6?1:Math.abs(n.dotProduct(view)/(nl*vl));
+    }
+    /** How face on band {@code sw} is seen from {@code camera} at its segment {@code i}: 0 edge on, 1 once the view is 24° or more out of its plane. */
+    static float faceOn(Swept sw,int i,Vec3d camera){return Ease.smooth((float)outOfPlane(sw,i,camera),.08f,.4f);}
+    /**
+     * How much of a slash shows from {@code camera}: all of it, unless it is seen edge on all along (no part of it more than
+     * about 9° out of its plane), then down to a third. Seen edge on, a flat slash is a sliver with all its light squeezed
+     * into it: a bright line standing up in the air (2.77.4: hit 3's diagonal cuts, from the side). Not the thrown slash:
+     * whom it flies at sees it edge on, coming.
+     */
+    static float shown(Swept sw,Vec3d camera){
+        double most=0;for(int i=0;i+1<sw.n();i++)most=Math.max(most,outOfPlane(sw,i,camera));
+        return .35f+.65f*Ease.smooth((float)most,.03f,.15f);
     }
     /**
      * How bright slash {@code s}'s edge is at {@code t}: flaring as it sweeps, its white edge staying on (thinner) while
@@ -1186,11 +1197,12 @@ public final class IsosangSlash implements Fx.Skill {
             float at=blow(4,0),k=FxLib.kick(t,at,.16f);
             if(k>.01f)f.light(world(feet,yaw,v(1.6,.8,0)),0xb8d8ff,9,1.4f*k);
             // the lunge, the cut and the flight are quick: their afterglow is cut short so they do not smear
-            if(t>=.6f&&t<1.12f)f.afterglow(.4f);
+            if(t>=.6f&&t<1.12f)f.afterglow(.35f);
         }
-        if(combo==1&&t>=.24f&&t<.4f)f.afterglow(.42f);
-        if(combo==2&&t>=.09f&&t<.2f)f.afterglow(.45f);
-        if(combo==3&&(t>=.28f&&t<.32f||t>=.44f&&t<.52f||t>=.65f&&t<.93f))f.afterglow(.48f);
+        // (2.77.4: longer, the blade's bright line left a fan of copies of itself round them in the spin and the sweeps, like spokes)
+        if(combo==1&&t>=.24f&&t<.4f)f.afterglow(.35f);
+        if(combo==2&&t>=.06f&&t<.24f)f.afterglow(.3f);
+        if(combo==3&&(t>=.28f&&t<.32f||t>=.44f&&t<.52f||t>=.65f&&t<.93f))f.afterglow(.35f);
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){
@@ -1221,10 +1233,7 @@ public final class IsosangSlash implements Fx.Skill {
         return v;
     }
     static float bump(float sec,float at,float tau){return sec<at-.02f?0:Ease.smooth(sec,at-.02f,at+.015f)*(float)Math.exp(-Math.max(0,sec-at-.015f)/tau);}
-    /**
-     * Speed afterimages follow the sword's point and the body (the spin, the cuts, the lunge), faint (2.77.4: at full
-     * strength the sword's fanned out round them in white spokes, over the body and the slashes).
-     */
+    /** Speed afterimages of the body (the spin, the cuts, the lunge), faint so they do not cloud it (2.77.4). */
     @Override public float afterimages(float sec){return .25f;}
     /**
      * How far the caster's own camera draws back for the finisher (blocks, as in the user's video: it pulls back over the
