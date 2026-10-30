@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.77.2** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.77.3** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.77.3 — 이소상 평타: 빛은 바깥·먹은 안쪽, 자연스러운 바닥 먹, 땅을 딛는 동작, 크게 강화한 이펙트
+
+- **색:** 검격의 바깥 날이 흰빛·밝은 파랑이고, 안쪽으로 갈수록 짙은 파랑을 지나 검은 붓 먹이 됩니다(원본대로). 먹은 칼이 지나간 자리부터 안쪽에서 바깥으로 번집니다.
+- **바닥의 먹:** 단단한 검은 자국과 바닥의 붓 고리를 없앴습니다. 먹이 떨어진 자리에 바닥이 비치는 부드러운 얼룩이 잠깐 번졌다가 0.9초 안에 사라지고, 붓 고리는 영상처럼 공중에 그어집니다.
+- **이펙트:** 날의 빛과 번쩍임, 별빛, 부서질 때의 빛 알갱이와 먹 덩어리, 뒤집히며 나는 먹 꽃잎, 더 큰 타격, 4타에 맞은 상대에게서 솟는 먹 줄기를 더했습니다.
+- **동작:** 웅크림과 런지에서 발이 땅속으로 들어가던 것을 고쳤습니다(다리를 벌려 땅을 딛음). 몸통을 크게 틀고 기울입니다.
+- **그대로인 것:** 판정·피해·타이밍·소리입니다.
+
+[RELEASE_2.77.3_KO.md](RELEASE_2.77.3_KO.md)를 확인하세요.
 
 # 보탠드 2.77.2 — 이소상 평타를 처음부터 다시: 날아가는 4타 참격, 크게 강화한 이펙트, 보내 주신 소리
 

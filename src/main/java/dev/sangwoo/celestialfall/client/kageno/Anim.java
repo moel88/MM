@@ -41,6 +41,8 @@ public final class Anim {
     private final Quaternionf[][] c1,c2;
     private final float[][] m0,m1;
     private final Stop[] stops;
+    /** Applied to every frame sampled, or null ({@link #after}). */
+    private final java.util.function.UnaryOperator<R6.Frame> after;
     private float memoSec=Float.NaN;private R6.Frame memo;
 
     private Anim(Key[] keys){this(keys,null);}
@@ -94,10 +96,10 @@ public final class Anim {
                 c2[i][j]=exp(new Vector3f(w1[i][j]).mul(-h/3)).mul(rot[i][j]);
             }
         }
-        stops=new Stop[0];
+        stops=new Stop[0];after=null;
     }
-    private Anim(Anim a,Stop[] stops){
-        keys=a.keys;times=a.times;frames=a.frames;rot=a.rot;val=a.val;c1=a.c1;c2=a.c2;m0=a.m0;m1=a.m1;this.stops=stops;
+    private Anim(Anim a,Stop[] stops,java.util.function.UnaryOperator<R6.Frame> after){
+        keys=a.keys;times=a.times;frames=a.frames;rot=a.rot;val=a.val;c1=a.c1;c2=a.c2;m0=a.m0;m1=a.m1;this.stops=stops;this.after=after;
     }
     public static Key k(double sec,Pose pose){return new Key((float)sec,pose,Ease.SMOOTH);}
     public static Key k(double sec,Pose pose,Ease ease){return new Key((float)sec,pose,ease);}
@@ -113,8 +115,13 @@ public final class Anim {
     public Anim stops(Stop... stops){
         var s=stops.clone();java.util.Arrays.sort(s,(a,b)->Float.compare(a.sec,b.sec));
         for(int i=1;i<s.length;i++)if(s[i].sec<s[i-1].sec+s[i-1].hold+s[i-1].recover)throw new IllegalArgumentException("hit-stops overlap at "+s[i].sec);
-        return new Anim(this,s);
+        return new Anim(this,s,after);
     }
+    /**
+     * The same clip with {@code fix} applied to every frame it gives (it must not change the frame it is given; 2.77.3:
+     * Lee So-sang's feet kept out of the ground between keys).
+     */
+    public Anim after(java.util.function.UnaryOperator<R6.Frame> fix){return new Anim(this,stops,fix);}
     public Stop[] stops(){return stops.clone();}
     public float length(){return times[times.length-1];}
     /** Key times (seconds). */
@@ -199,7 +206,7 @@ public final class Anim {
     public Pose pose(float sec){return R6.poseOf(frame(sec));}
     /** Solved frame at {@code sec}; a fresh copy every call. */
     public R6.Frame frame(float sec){
-        if(sec!=memoSec){memo=sample(warp(sec));memoSec=sec;}
+        if(sec!=memoSec){memo=sample(warp(sec));if(after!=null)memo=after.apply(memo);memoSec=sec;}
         return copy(memo);
     }
     private R6.Frame sample(float t){

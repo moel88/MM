@@ -14,7 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * blade cutting through the server's reach on the server's blows, the strokes the videos show, no joint jumping or
  * flipping between frames, each hit beginning exactly where the one before stands as it hands over, every slash sweeping
  * on with its blade and over before its swing is, the thrown slash flying where the server strikes, nothing in the
- * ground, and the finisher's camera drawn back and in smoothly.
+ * ground (the feet on it, never in it), the light along every slash's outer edge with the ink spreading in from its
+ * tail, the ink on the ground gone within a second, and the finisher's camera drawn back and in smoothly.
  */
 class IsosangSlashTest {
     static Quaternionf q(float[] e){float k=(float)Math.PI/180;return new Quaternionf().rotationZYX(e[2]*k,e[1]*k,e[0]*k);}
@@ -167,7 +168,7 @@ class IsosangSlashTest {
             var arcs=IsosangSlash.arcs(combo);
             for(var s:arcs){
                 assertTrue(s.t0()<s.t1()&&s.t1()<=s.eat1()&&s.eat0()<s.eat1()&&s.ink0()<s.ink1(),"hit "+combo);
-                assertTrue(s.ink1()+.8f<=life,"hit "+combo+"'s drops are gone in time");
+                assertTrue(s.eat1()+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"hit "+combo+"'s drops and their stains are gone in time");
                 assertTrue(s.outer()-s.inner()>.9,"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
             }
             // each blow lands while its slash sweeps through (the thrust's beam is lit for it)
@@ -179,7 +180,8 @@ class IsosangSlashTest {
                 assertTrue(at>=s.t0()&&at<=s.t1()+.04f,"hit "+combo+" blow "+i+" lands as its slash sweeps: "+at+" in "+s.t0()+".."+s.t1());
             }
         }
-        assertTrue(IsosangSlash.WAVE_EAT1+.6f<=life,"the thrown slash's drops are gone in time");
+        assertTrue(IsosangSlash.WAVE_EAT1+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"the thrown slash's drops and their stains are gone in time");
+        for(int combo=1;combo<=4;combo++)for(var l:IsosangSlash.loops(combo))assertTrue(l.d0()<l.d1()&&l.d1()<l.e0()&&l.e0()<l.e1()&&l.e1()<=life,"hit "+combo+"'s loops of ink are drawn, then eaten away in time");
         assertEquals(0,IsosangSlash.beamLit(IsosangSlash.BEAM_OFF),1e-6);
         float step=0;for(float t=0;t<1;t+=1/240f)step=Math.max(step,Math.abs(IsosangSlash.beamLit(t+1/60f)-IsosangSlash.beamLit(t)));
         assertTrue(step<.75f,"the beam pops in a single frame: "+step);
@@ -187,6 +189,38 @@ class IsosangSlashTest {
         var g=IsosangSlash.H1_ARCS[0];assertTrue(Math.abs(g.to()-g.from())>250,"hit 1's crescent wraps round: "+(g.to()-g.from()));
         // the ring goes all the way round
         var r=IsosangSlash.H2_ARCS[0];assertEquals(360,Math.abs(r.to()-r.from()),1e-6);
+    }
+    @Test void theFeetStayOnTheGround(){
+        // the legs are rigid: a body brought down is a wide stance or a lunge, never a foot in the ground; one foot always on it
+        for(int combo=1;combo<=4;combo++){
+            var a=IsosangSlash.hit(combo);
+            for(float t=0;t<=a.length();t+=1/120f){
+                double[] f=IsosangSlash.feet(a.frame(t));
+                assertTrue(f[0]>-.02&&f[1]>-.02,"hit "+combo+" puts a foot into the ground at "+t+": "+f[0]+" "+f[1]);
+                assertTrue(Math.min(f[0],f[1])<.05,"hit "+combo+" has no foot on the ground at "+t+": "+f[0]+" "+f[1]);
+            }
+        }
+    }
+    @Test void theCuttingEdgeShinesOutermostAndTheTailGoesToInkFirst(){
+        // the bright line along every slash's outer edge (the videos': light outside, ink inside)
+        for(int style:new int[]{0,1,3,6})assertTrue(IsosangSlash.lineAt(style,1)>.9,"style "+style);
+        // each part of a slash turns to ink after its blade swept it: the tail before the head
+        var s=IsosangSlash.H1_ARCS[0];
+        for(float t=s.t1();t<s.ink1()+(s.t1()-s.t0());t+=.01f){
+            var sw=IsosangSlash.band(Vec3d.ZERO,0,s,t);float[] ink=IsosangSlash.inks(s,sw,t);
+            for(int i=1;i<ink.length;i++)assertTrue(ink[i]<=ink[i-1]+1e-6,"its head goes to ink before its tail at "+t);
+            if(t>s.ink0()+.05f&&t<s.ink1())assertTrue(ink[0]>ink[ink.length-1],"its tail is further gone than its head at "+t);
+        }
+    }
+    @Test void theInkSoaksIntoTheGroundAndIsGoneWithinASecond(){
+        assertEquals(0,IsosangSlash.dried(0),1e-6);assertEquals(1,IsosangSlash.dried(IsosangSlash.STAIN_LIFE),1e-6);
+        assertTrue(IsosangSlash.STAIN_LIFE<1,"gone within a second, as in the videos");
+        // a drop lands where its flight meets the ground (and stains it there); one that cannot reach it does not
+        var d=new IsosangSlash.Drop(new Vec3d(0,1.6,0),new Vec3d(2,1,0),3.2,3.4,0,IsosangSlash.DROP_LIFE,.1,7,0);
+        double land=IsosangSlash.lands(d,.03);
+        assertTrue(land>0&&land<IsosangSlash.DROP_LIFE);assertEquals(.03,IsosangSlash.flight(d,land).y,1e-3);
+        assertTrue(IsosangSlash.flight(d,land*.9).y>.03);
+        assertEquals(-1,IsosangSlash.lands(new IsosangSlash.Drop(new Vec3d(0,40,0),new Vec3d(0,1,0),3.2,3.4,0,.5f,.1,7,0),.03),1e-9);
     }
     @Test void theThrownSlashFliesWhereTheServerStrikes(){
         float at=blow(4,0);

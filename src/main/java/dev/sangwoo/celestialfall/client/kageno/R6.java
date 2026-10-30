@@ -174,6 +174,13 @@ public final class R6 {
         return new Frame(m,grip,p.fw,p.up,p.rt,p.yaw,p.pitch,p.roll);
     }
 
+    /** {@code f} with its legs along {@code rLeg} and {@code lLeg} (body space), swung without twisting as {@link #solve} swings them. */
+    public static Frame legs(Frame f,Dir rLeg,Dir lLeg){
+        MotionPose m=f.joints().copy();
+        m.joint[MotionPose.RIGHT_LEG]=euler(limb(rLeg.norm(),swingFront(rLeg.norm())));
+        m.joint[MotionPose.LEFT_LEG]=euler(limb(lLeg.norm(),swingFront(lLeg.norm())));
+        return new Frame(m,f.grip(),f.fw(),f.up(),f.rt(),f.yaw(),f.pitch(),f.roll());
+    }
     /** Where the blade points in body space for a solved frame (used by tests and effects). */
     public static Dir bladeOf(Frame f){
         float[] e=f.joints().joint[MotionPose.RIGHT_ARM];float k=(float)Math.PI/180;

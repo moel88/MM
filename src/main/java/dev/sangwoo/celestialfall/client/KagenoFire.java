@@ -253,6 +253,14 @@ public final class KagenoFire {
             ipoint(outer[i+1],along[i+1],1,code,erase,ink,alpha);ipoint(outer[i],along[i],1,code,erase,ink,alpha);
         }
     }
+    /** As above, each point turned to ink as far as its own {@code ink[i]} (2.77.3: a slash's tail going to ink before its head). */
+    public static void inkRibbon(Vec3d[] inner,Vec3d[] outer,float[] along,int n,int style,int seed,float erase,float[] ink,float alpha){
+        if(inks==null||alpha<=0||erase>=1||n<2)return;int code=(style&15)*16+(seed&15);
+        for(int i=0;i+1<n;i++){
+            ipoint(inner[i],along[i],0,code,erase,ink[i],alpha);ipoint(inner[i+1],along[i+1],0,code,erase,ink[i+1],alpha);
+            ipoint(outer[i+1],along[i+1],1,code,erase,ink[i+1],alpha);ipoint(outer[i],along[i],1,code,erase,ink[i],alpha);
+        }
+    }
     /** Straight band a→b, width measured along {@code side}. */
     public static void streak(Vec3d a,Vec3d b,Vec3d side,double width,int seed,float alpha){
         if(strokes==null||alpha<=0)return;Vec3d s=side.normalize().multiply(width*.5);
