@@ -706,7 +706,7 @@ public final class IsosangSlash implements Fx.Skill {
     /** Brightness of the blade's aura: lit for the cuts, flaring at each blow; the finisher lights it from the twirl. */
     static float glow(float t,int combo){
         float g=switch(combo){
-            case 2->Ease.window(t,.06f,.5f,.04f,.12f);
+            case 2->Ease.window(t,.06f,.36f,.04f,.12f);
             case 3->Ease.window(t,.2f,1.0f,.04f,.12f);
             case 4->Ease.window(t,.06f,.8f,.04f,.12f);
             default->Ease.window(t,.02f,.48f,.03f,.12f);
@@ -1336,13 +1336,11 @@ public final class IsosangSlash implements Fx.Skill {
             }
             float at=blow(4,0),k=FxLib.kick(t,at,.16f);
             if(k>.01f)f.light(world(feet,yaw,v(1.6,.8,0)),0xb8d8ff,9,1.4f*k);
-            // the lunge, the cut and the flight are quick: their afterglow is cut short so they do not smear
-            if(t>=.6f&&t<1.12f)f.afterglow(.35f);
         }
-        // (2.77.4: longer, the blade's bright line left a fan of copies of itself round them in the spin and the sweeps, like spokes)
-        if(combo==1&&t>=.24f&&t<.4f)f.afterglow(.35f);
-        if(combo==2&&t>=.06f&&t<.24f)f.afterglow(.3f);
-        if(combo==3&&(t>=.28f&&t<.32f||t>=.44f&&t<.52f||t>=.65f&&t<.93f))f.afterglow(.35f);
+        // the whole swing is quick (the cuts, the spin, the lunge, the flight and the blade's moves between them): the
+        // afterglow is cut short throughout, shortest in the spin, else the blade's bright line leaves a fan of copies of
+        // itself round them like spokes (2.77.4 cut it for the cuts alone; 2.77.5 for the recoveries between them too)
+        if(t<IsosangRules.LENGTH[combo]/20f)f.afterglow(combo==2&&t>=.06f&&t<.24f?.25f:.3f);
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){
