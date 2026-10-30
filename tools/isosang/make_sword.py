@@ -42,8 +42,8 @@ pommel's end to the point) and its side view, but for its blade, wider for its l
 Its colours follow the art: the blade deep violet-navy, lighter and bluer by the guard, its upper edge a dark band
 with a bright line inside it, its lower a bright line, an ink line along each, lavender-white lightning running along
 its flat with little star glints (these glow: painted in the texture, and drawn again at full brightness from the glow
-texture); the guard pale champagne gold with navy insets; the grip near-black lacquer with white glints; the pommel
-dark gunmetal.
+texture); the guard pale champagne gold with navy insets and white crystals; the grip blue like the blade with white
+gems and bands; the collar and the pommel gold.
 
 Units are sixteenths of a block. The sword runs along +y with the middle of its grip at the origin (GeckoLib's item
 renderer puts the model's origin at the middle of the item's space, so the hand holds it there), its edges across x (the
@@ -57,24 +57,30 @@ How GeckoLib lays a face's texture (per-face UV), in the cube's own frame (from 
 and it turns a cube by Rz(-rz) . Ry(ry) . Rx(-rx) about its pivot (degrees): a positive rz leans a cube's +y towards +x.
 The handle's round parts are true sixteen-sided prisms (eight bars across each, each as wide as a side, turned a
 sixteenth apart: their long faces its sides); the pommel is turned, each stretch of its outline a ring of sixteen
-planks lying on its facets. The wings, the plate, the socket and the gems are cut in thin slices across the sword,
-each slice a box per run of it (the wings', the socket's and the gems' slices a twenty-fourth of a unit; the socket's on
-the upper gem's, so that the notch's sides and the gem's meet slice for slice), so that their outlines follow the 3D
-model's and the photo's. The knobs are a box and the same box turned an eighth.
+planks lying on its facets. The wings, the plate, the socket, the gems, the pommel and the point are cut in thin slices
+across the sword, each slice a box per run of it (the wings', the socket's and the gems' slices a twenty-fourth of a
+unit; the socket's on the upper gem's, so that the notch's sides and the gem's meet slice for slice), each a hair longer
+than its stretch so that neighbours overlap (the renderer leaves hair-wide gaps between boxes that only meet), so that
+their outlines follow the 3D model's and the photo's; along every edge of them that shows, a thin box laid along the
+edge (turned about z, and tilted where the face it edges rises along it) gives the slices' steps a straight side (2.76.5,
+user request: "마지막으로 아쉬운 부분 전체적으로 다듬어줘"). Where the plate rises towards the guard its slices are
+turned to lie on the slope. The knobs are round domes: sixteen-sided bosses along z (eight bars turned about z). Each
+face has a texel of its own colour round it on the atlas, so that sampling a hair past a face's edge never sees through.
 """
 import json
 import math
 import random
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 from PIL import Image
 
 ROOT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2] / 'src/main/resources/assets/celestialfall'
-DENS = 24       # texels a unit
+DENS = 32       # texels a unit (lines drawn finer than the slices, so that they read smooth up close)
 SS = 3          # samples a texel's side (lines drawn smooth)
-ATLAS_W = 512
+ATLAS_W = 1024
 
 
 def hexc(h):
@@ -157,10 +163,11 @@ OUTLINE = WING[1:-1]
 # back and above it the line where the back facet begins (from its foot up)
 CURVE = [(.50, 1.12), (.445, 1.02), (.432, .93), (.454, .807), (.49, .70), (.535, .613), (.59, .55), (.64, .50)]
 BACK_LINE = [(.76, .50), (.73, .68), (.695, .84), (.50, 1.12), (.22, 1.50)]
-GROOVE_W, GROOVE_SPAN = .065, (.56, 1.06)
+GROOVE_W, GROOVE_SPAN = .08, (.56, 1.06)    # (the straight edges over its sides' steps take a little off its width)
 RIM = .07                                 # the rim: how far in from the outline the wing's body rises
-T_RIM, T_BODY, T_CREST, T_CORE = .12, .26, .32, .22   # half thicknesses
-KNOB = (.82, .60, .065, .06)              # the knob near each wing's root: along, up, radius, how far it stands out
+T_RIM, T_BODY, T_CREST, T_CORE = .12, .26, .32, .259  # half thicknesses (the core's as the body's, a hair under: no step
+                                                      # where the wings' bodies meet it)
+KNOB = (.82, .60, .065, .06)              # the knob near each wing's root, a dome: along, up, radius, how far it stands out
 # the white crystal: each wing's front spike, in front of the line where the spike meets the wing (from the blade's edge
 # to the notch); its ridge from its foot to its tip
 CRYSTAL_EDGE = [(.01, .5), (.035, .94)]
@@ -168,7 +175,7 @@ CRYSTAL_RIDGE = [(.022, .72), (-.38, 1.13)]
 # the plate on the flats: its point on the blade, its widest (and its half width), its point on the core; half thick at
 # its point and from the guard's front back; the navy diamond inside it
 PLATE = (-.856, .073, .43, .42)
-PLATE_Z = (.16, .25)
+PLATE_Z = (.16, .30)
 PLATE_POLY = [(PLATE[0], 0), (PLATE[1], PLATE[2]), (PLATE[3], 0), (PLATE[1], -PLATE[2])]
 INNER_DIAMOND = [(-.36, 0), (.01, .2), (.21, .2), (.39, 0), (.21, -.2), (.01, -.2)]
 CORE_TO = 1.03
@@ -192,10 +199,10 @@ GEM_RISE = (.05, .08)
 # notch's and the socket's foot running from the gem's widest out and down to its legs either side of the grip. Its half
 # width, where its legs end (a); its layers, each in from the one before round its outline (so that it reads rounded
 # from the side): how far in, half thick (the rim flush with the core's face, the body a little above the gem's border,
-# so that the gem is set in it), where each begins (a; each a step up from the one before, towards the core); how far
+# so that the gem is set in it), where each begins (a; the two above the rim together, one step up from the core); how far
 # out from the notch's sides the ridge runs beside them (on up onto the core, where the two meet in a point)
 SOCKET = (.30, 1.37)
-SOCKET_LAYERS = (('rim', 0.0, .22, CORE_TO), ('mid', .025, .255, CORE_TO + .01), ('body', .05, .285, P_BASE - GEMS[0][0]))
+SOCKET_LAYERS = (('rim', 0.0, .26, CORE_TO), ('mid', .025, .28, CORE_TO + .01), ('body', .05, .30, CORE_TO + .01))
 RIDGE = .1
 NOTCH_TOP = P_BASE - GEMS[0][0]                  # the notch's point (a), the gem's
 NOTCH_FOOT = NOTCH_TOP + GEMS[0][3]              # where the gem is widest, at the socket's foot
@@ -282,6 +289,15 @@ def cube(bone, part, origin, size, faces=ALL, **kw):
     CUBES.append(Cube(bone, part, origin, size, list(faces), **kw))
 
 
+SEAM = .0015                              # how far a slice reaches past its neighbours (units): the renderer leaves
+                                          # hair-wide gaps between boxes that only meet, and the far side shows through
+
+
+def sliced(bone, part, origin, size, faces=ALL, **kw):
+    """A slice of a part cut across the sword: a box reaching a hair past its ends along y."""
+    cube(bone, part, [origin[0], origin[1] - SEAM, origin[2]], [size[0], size[1] + 2 * SEAM, size[2]], faces, **kw)
+
+
 def round_prism(bone, part, y0, y1, r, ends=(), sides=16, **kw):
     """A round part along y: a regular polygon of `sides` sides, r across its flats, as sides/2 bars across it, each as
     wide as a side and turned 360/sides apart (each bar's two long faces two of its sides; together they fill it). The
@@ -330,18 +346,19 @@ def tip_half_width(t):
 
 
 # the point in slices: in each, a thin box its whole width (the bevels drawn in to the tip) and a thicker one down its
-# middle (the flat), both thinning to the tip
+# middle (the flat), both thinning to the tip, each as wide as the point is at the slice's tip-ward end (so that no
+# step stands outside its outline: the straight edges below give it its sides)
 for i in range(TIP_SLICES):
     y0 = Y_TIP_FROM + (Y_TIP_TO - Y_TIP_FROM) * i / TIP_SLICES
     y1 = Y_TIP_FROM + (Y_TIP_TO - Y_TIP_FROM) * (i + 1) / TIP_SLICES
     t = (i + .5) / TIP_SLICES
-    hw = float(tip_half_width(t))
+    hw = float(tip_half_width((i + 1) / TIP_SLICES))
     k = hw / (TAPER * W / 2)
     faces = ALL if i == 0 else ['north', 'south', 'east', 'west', 'up']
     th = (T_OUTER * (1 - t) + .012 * t) * W
-    cube('blade', 'tip', [-hw, y0, -th], [2 * hw, y1 - y0, 2 * th], faces, slice=(i, hw, (FLAT + .03) * W * k))
+    sliced('blade', 'tip', [-hw, y0, -th], [2 * hw, y1 - y0, 2 * th], faces, slice=(i, hw, (FLAT + .03) * W * k))
     hm, th = (FLAT + .03) * W * k, (T_FLAT * (1 - t) + .022 * t) * W
-    cube('blade', 'tip_flat', [-hm, y0, -th], [2 * hm, y1 - y0, 2 * th], faces)
+    sliced('blade', 'tip_flat', [-hm, y0, -th], [2 * hm, y1 - y0, 2 * th], faces)
 
 def half_along(side, p):
     """The half width at p of a shape given by its right half (p, half width), nothing beyond its ends."""
@@ -361,7 +378,7 @@ for k in range(_k):
     for part, side, half_t in (('pommel', POMMEL_SHIELD, POMMEL_Z[0]), ('pommel_panel', POMMEL_PANEL, POMMEL_Z[1])):
         hw = half_along(side, pm) * W
         if hw >= .015:
-            cube('grip', part, [-hw, y_of(_pp[k]), -half_t * W], [2 * hw, y_of(_pp[k + 1]) - y_of(_pp[k]), 2 * half_t * W], ALL,
+            sliced('grip', part, [-hw, y_of(_pp[k]), -half_t * W], [2 * hw, y_of(_pp[k + 1]) - y_of(_pp[k]), 2 * half_t * W], ALL,
                  depth=half_t * W)
 round_prism('grip', 'collar', y_of(COLLAR[0]), y_of(COLLAR[1]), COLLAR[2] * W, ends=('up', 'down'))
 turned('grip', 'grip', [(y_of(p), r * W) for p, r in GRIP_SHAPE])
@@ -405,7 +422,7 @@ for gi, gem in enumerate(GEMS):
                 if half * W < .015:
                     continue
                 lo, hi = (a * W, b * W) if f > 0 else (-b * W, -a * W)
-                cube('grip', part, [-half * W, y_of(lo_p), lo], [2 * half * W, y_of(hi_p) - y_of(lo_p), hi - lo],
+                sliced('grip', part, [-half * W, y_of(lo_p), lo], [2 * half * W, y_of(hi_p) - y_of(lo_p), hi - lo],
                      [out, 'east', 'west', 'up', 'down'], gem=gi)
 
 
@@ -443,20 +460,31 @@ for layer, inset, T, top in SOCKET_LAYERS:
                 faces.append(face)
         y0, y1 = y_along(a1), y_along(a0)
         for x0, x1 in ([(-hi, hi)] if lo <= 0 else [(lo, hi), (-hi, -lo)]):
-            cube('guard', 'socket', [x0 * W, y0, -T * W], [(x1 - x0) * W, y1 - y0, 2 * T * W], faces, layer=layer, depth=T * W, run=(lo, hi))
+            sliced('guard', 'socket', [x0 * W, y0, -T * W], [(x1 - x0) * W, y1 - y0, 2 * T * W], faces, layer=layer, depth=T * W, run=(lo, hi))
 
 # the plate on the flats: slices a sixteenth of a unit long, as wide as its outline at their middle, thicker towards the
-# guard; through the blade (on both flats at once)
+# guard; through the blade (on both flats at once) where it is as thick all along, and where it rises towards the guard
+# a slice on each face, turned about x to lie on the slope (so that its faces rise smoothly, not in steps)
 n = int(math.ceil((y_along(PLATE[0]) - y_along(PLATE[3])) * 16))
 ys = np.linspace(y_along(PLATE[3]), y_along(PLATE[0]), n + 1)
+PLATE_SLOPE = math.degrees(math.atan((PLATE_Z[1] - PLATE_Z[0]) / -PLATE[0]))   # how steeply it rises towards the guard
 for k in range(n):
     a = along_of((ys[k] + ys[k + 1]) / 2)
     hw = PLATE[2] * ((a - PLATE[0]) / (PLATE[1] - PLATE[0]) if a < PLATE[1] else (PLATE[3] - a) / (PLATE[3] - PLATE[1]))
     z = PLATE_Z[0] + (PLATE_Z[1] - PLATE_Z[0]) * float(np.clip((a - PLATE[0]) / -PLATE[0], 0, 1))
     if hw * W < .02:
         continue
-    faces = ['north', 'south', 'east', 'west'] + (['up'] if a < PLATE[1] else ['down'])
-    cube('guard', 'plate', [-hw * W, ys[k], -z * W], [2 * hw * W, ys[k + 1] - ys[k], 2 * z * W], faces, depth=z * W)
+    end = ['up'] if a < PLATE[1] else ['down']
+    if a >= 0:
+        sliced('guard', 'plate', [-hw * W, ys[k], -z * W], [2 * hw * W, ys[k + 1] - ys[k], 2 * z * W],
+             ['north', 'south', 'east', 'west'] + end, depth=z * W)
+        continue
+    ym, half = (ys[k] + ys[k + 1]) / 2, (ys[k + 1] - ys[k]) / 2 / math.cos(math.radians(PLATE_SLOPE)) + .001
+    for f in (1, -1):                      # from inside the blade out to the face, turned about the face's line (each as
+                                           # long as its stretch of the slope, so that no hair-wide gap opens between them)
+        cube('guard', 'plate', [-hw * W, ym - half, f * z * W - (z * W - .08 * W if f > 0 else 0)],
+             [2 * hw * W, 2 * half, z * W - .08 * W], ['south' if f > 0 else 'north', 'east', 'west', 'up', 'down'],
+             rot=(f * PLATE_SLOPE, 0, 0), pivot=[0, ym, f * z * W], depth=z * W)
 
 # the wings: each layer cut in slices across the sword, a box for each run of it in a slice; runs that go on unchanged
 # through the next slices are one box. Faces hidden inside the core, or against the same layer in the next slice, are
@@ -507,18 +535,236 @@ for layer, T in (('rim', T_RIM), ('body', T_BODY), ('crest', T_CREST)):
         for s in (1, -1):
             f = faces + (['west'] if s > 0 else ['east']) + ((['east'] if s > 0 else ['west']) if inner else [])
             origin = [x0 if s > 0 else -x1, _edges[k0], -T * W]
-            cube('guard', 'wing', origin, [x1 - x0, _edges[k1] - _edges[k0], 2 * T * W], f, layer=layer, depth=T * W)
+            sliced('guard', 'wing', origin, [x1 - x0, _edges[k1] - _edges[k0], 2 * T * W], f, layer=layer, depth=T * W)
 
-# the knobs near the wings' roots, on each face of each wing (eight-sided, standing out of the body)
+
+def disc(bone, part, cx, cy, z0, z1, r, sides=16, **kw):
+    """A round boss standing along z from z0 to its face at z1: a regular polygon of `sides` sides, r across its flats,
+    as sides/2 bars turned about z (each bar's two long faces two of its sides), their faces staggered a hair."""
+    n, side = sides // 2, 2 * r * math.tan(math.pi / sides)
+    way = 1 if z1 > z0 else -1
+    for k in range(n):
+        lo, hi = sorted((z0, z1 - way * .002 * k))
+        cube(bone, part, [cx - r, cy - side / 2, lo], [2 * r, side, hi - lo], ['south' if way > 0 else 'north', 'east', 'west'],
+             rot=(0, 0, 180 / n * k), pivot=[cx, cy, 0], centre=(cx, cy), r=r, **kw)
+
+
+# the knobs near the wings' roots, on each face of each wing: round domes standing out of the body, a boss and on it a
+# smaller one
 ka, ku, kr, kh = KNOB
 for s_ in (1, -1):
     for f in (1, -1):
-        cx, cy = s_ * ku * W, y_along(ka)
-        z0 = T_BODY * W if f > 0 else -(T_BODY + kh) * W
-        faces = ['south' if f > 0 else 'north', 'east', 'west', 'up', 'down']
-        for turn in (None, (0, 0, 45)):
-            cube('guard', 'knob', [cx - kr * W, cy - kr * W, z0], [2 * kr * W, 2 * kr * W, kh * W], faces,
-                 rot=turn, pivot=[cx, cy, 0] if turn else None, centre=(cx, cy))
+        cx, cy, z0 = s_ * ku * W, y_along(ka), f * T_BODY * W
+        disc('guard', 'knob', cx, cy, z0, z0 + f * .55 * kh * W, kr * W, tier=0)
+        disc('guard', 'knob', cx, cy, z0, z0 + f * kh * W, .62 * kr * W, tier=1)
+
+
+# ---------------------------------------------------------------- straight edges over the slices' steps
+# A part cut in slices has stepped sides. Along every edge of one that shows, a thin box laid along the edge (turned
+# about z, and tilted where the face it edges rises along it) gives it a straight side: its outer face a little outside
+# the steps (none outside its outline where its slices keep inside it), reaching a little in under them, its faces a
+# hair below the faces it edges (where the two overlap the slices' show), painted as what it edges is there.
+EDGE_OUT, EDGE_IN, EDGE_SINK = .02, .06, .004    # units: how far out past the edge, how far in, how far below the faces
+
+
+def edge_through(bone, like, p, q, left, half, out=EDGE_OUT, inward=EDGE_IN):
+    """An edge box from face to face of a part `half` units half thick, along p→q (model x, y), the part on the left of
+    p→q if `left`; `like` says what it edges (for its paint)."""
+    (px, py), (qx, qy) = p, q
+    length = math.hypot(qx - px, qy - py)
+    if length < 1e-4:
+        return
+    x0, x1 = (px - inward, px + out) if left else (px - out, px + inward)
+    h = half - EDGE_SINK
+    cube(bone, 'edge', [x0, py, -h], [x1 - x0, length, 2 * h], ['north', 'south', 'west' if left else 'east', 'up', 'down'],
+         rot=(0, 0, math.degrees(math.atan2(qx - px, qy - py))), pivot=[px, py, 0], like=like)
+
+
+def edge_face(bone, like, p3, q3, left, side, thick, out=EDGE_OUT, inward=EDGE_IN):
+    """An edge box on one face only (side +1 the south, -1 the north), its face following the line from p3 to q3
+    (model x, y and the face's height there) a hair below it, `thick` deep."""
+    (px, py, pz), (qx, qy, qz) = p3, q3
+    dx, dy, dz = qx - px, qy - py, qz - pz
+    length = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if length < 1e-4:
+        return
+    pz -= side * EDGE_SINK
+    x0, x1 = (px - inward, px + out) if left else (px - out, px + inward)
+    z0, z1 = (pz - thick, pz) if side > 0 else (pz, pz + thick)
+    cube(bone, 'edge', [x0, py, z0], [x1 - x0, length, z1 - z0], ['south' if side > 0 else 'north', 'west' if left else 'east', 'up', 'down'],
+         rot=(-math.degrees(math.asin(dz / length)), 0, math.degrees(math.atan2(dx, dy))), pivot=[px, py, pz], like=like)
+
+
+def on_left(p, q, region):
+    """Whether a region (a test of model x, y) lies on the left of p→q."""
+    (px, py), (qx, qy) = p[:2], q[:2]
+    n = math.hypot(qx - px, qy - py)
+    return bool(region((px + qx) / 2 - (qy - py) / n * .01, (py + qy) / 2 + (qx - px) / n * .01))
+
+
+def contour(f, xs, ys):
+    """The lines where f (over the grid ys × xs) crosses zero, as polylines of (x, y): marching squares, each crossing
+    placed between grid points by f's values, the pieces joined end to end."""
+    segs = []
+    for j in range(len(ys) - 1):
+        for i in range(len(xs) - 1):
+            v = (f[j, i], f[j, i + 1], f[j + 1, i + 1], f[j + 1, i])
+            pts = ((xs[i], ys[j]), (xs[i + 1], ys[j]), (xs[i + 1], ys[j + 1]), (xs[i], ys[j + 1]))
+            cuts = []
+            for e in range(4):
+                a, b = e, (e + 1) % 4
+                if (v[a] >= 0) != (v[b] >= 0):
+                    t = v[a] / (v[a] - v[b])
+                    cuts.append((pts[a][0] + t * (pts[b][0] - pts[a][0]), pts[a][1] + t * (pts[b][1] - pts[a][1])))
+            if len(cuts) == 2:
+                segs.append((cuts[0], cuts[1]))
+            elif len(cuts) == 4:
+                segs += [(cuts[0], cuts[1]), (cuts[2], cuts[3])]
+    key = lambda pt: (round(pt[0], 9), round(pt[1], 9))
+    ends = {}
+    for k, (a, b) in enumerate(segs):
+        ends.setdefault(key(a), []).append((k, 1))
+        ends.setdefault(key(b), []).append((k, 0))
+    used, lines = set(), []
+    for k in range(len(segs)):
+        if k in used:
+            continue
+        used.add(k)
+        line = [segs[k][0], segs[k][1]]
+        for grow in (1, 0):                  # grow from its end, then from its start
+            while True:
+                tip = line[-1] if grow else line[0]
+                nxt = [(m, w) for m, w in ends.get(key(tip), []) if m not in used]
+                if not nxt:
+                    break
+                m, w = nxt[0]
+                used.add(m)
+                other = segs[m][w]
+                line = line + [other] if grow else [other] + line
+        lines.append(line)
+    return lines
+
+
+def simplify(line, tol):
+    """A polyline with the points it can do without (within tol of the rest) left out (Douglas-Peucker)."""
+    if len(line) < 3:
+        return list(line)
+    (ax, ay), (bx, by) = line[0], line[-1]
+    n = math.hypot(bx - ax, by - ay)
+    far, at = 0.0, 0
+    for k in range(1, len(line) - 1):
+        x, y = line[k]
+        d = abs((bx - ax) * (ay - y) - (ax - x) * (by - ay)) / n if n > 1e-9 else math.hypot(x - ax, y - ay)   # (a loop)
+        if d > far:
+            far, at = d, k
+    if far <= tol:
+        return [line[0], line[-1]]
+    return simplify(line[:at + 1], tol)[:-1] + simplify(line[at:], tol)
+
+
+def edges_along(bone, like, line, region, half, closed=False, skip=None, **kw):
+    """Edge boxes through a part along each stretch of a line of model (x, y) points (but those `skip` says to leave)."""
+    pts = list(line) + ([line[0]] if closed else [])
+    for p, q in zip(pts, pts[1:]):
+        if skip is None or not skip(p, q):
+            edge_through(bone, like, p, q, on_left(p, q, region), half, **kw)
+
+
+def wing_region(layer, s):
+    return lambda x, y: wing_layer(layer, np.array([along_of(y)]), np.array([s * x / W]))[0]
+
+
+# the wings: their outline (the rim's), the outline of their bodies (where they rise from the rim: found as the line
+# where the distance from the outline is the rim's width), the crests, the grooves' fronts and ends (their backs are the
+# crests')
+_ga, _gu = np.arange(-.45, 1.16, .004), np.arange(.45, 1.62, .004)
+_GA, _GU = np.meshgrid(_ga, _gu)
+_rise = np.where(inside(WING, _GA, _GU), np.minimum(dist(OUTLINE, _GA, _GU) - RIM, _GU - .5), -1.0)
+BODY_LINES = [simplify([(a, u) for a, u in line], .002) for line in contour(_rise, _ga, _gu)]
+for s in (1, -1):
+    xy = lambda pts: [(s * u * W, y_along(a)) for a, u in pts]
+    at_core = lambda p, q: abs(p[0]) < .501 * W and abs(q[0]) < .501 * W       # along the core's side, inside it
+    edges_along('guard', {'part': 'wing', 'layer': 'rim', 'depth': T_RIM * W}, xy(OUTLINE), wing_region('rim', s), T_RIM * W,
+                out=.025)
+    for line in BODY_LINES:
+        edges_along('guard', {'part': 'wing', 'layer': 'body', 'depth': T_BODY * W}, xy(line), wing_region('body', s),
+                    T_BODY * W, skip=at_core)
+    edges_along('guard', {'part': 'wing', 'layer': 'crest', 'depth': T_CREST * W}, xy(CREST), wing_region('crest', s),
+                T_CREST * W, closed=True, skip=at_core)
+    front = GROOVE[len(GROOVE) // 2 - 1:] + GROOVE[:1]          # its back's last point round its front to its back's first
+    edges_along('guard', {'part': 'wing', 'layer': 'body', 'depth': T_BODY * W}, xy(front), wing_region('body', s), T_BODY * W)
+
+# the plate: its sides towards the point, rising with the plate to the guard's front (on each face) and on from there,
+# and its sides towards the grip (through it)
+plate_z = lambda a: (PLATE_Z[0] + (PLATE_Z[1] - PLATE_Z[0]) * float(np.clip((a - PLATE[0]) / -PLATE[0], 0, 1))) * W
+plate_in = lambda x, y: inside(PLATE_POLY, along_of(y), x / W)
+for s in (1, -1):
+    tip, wide, back = (PLATE[0], 0.0), (PLATE[1], s * PLATE[2]), (PLATE[3], 0.0)
+    mid = (0.0, s * PLATE[2] * -PLATE[0] / (PLATE[1] - PLATE[0]))
+    p, q = (tip[1] * W, y_along(tip[0])), (mid[1] * W, y_along(mid[0]))
+    for side in (1, -1):
+        edge_face('guard', {'part': 'plate'}, (*p, side * plate_z(tip[0])), (*q, side * plate_z(0.0)), on_left(p, q, plate_in),
+                  side, plate_z(0.0) - .05 * W)
+    for a0, a1 in ((mid, wide), (wide, back)):
+        p, q = (a0[1] * W, y_along(a0[0])), (a1[1] * W, y_along(a1[0]))
+        edge_through('guard', {'part': 'plate'}, p, q, on_left(p, q, plate_in), plate_z(0.0))
+
+# the socket: each layer's foot, from the end of its leg in to the gem's widest; the notch's sides (the body's)
+for name, inset, T, top in SOCKET_LAYERS:
+    region = (lambda inset, top: lambda x, y: (lambda a, r: a > top and r is not None and r[0] <= abs(x) / W <= r[1])(
+        along_of(y), socket_run(along_of(y), inset)))(inset, top)
+    like = {'part': 'socket', 'layer': name, 'depth': T * W, 'run': (0.0, 9.0)}
+    for s in (1, -1):
+        p, q = (s * (SOCKET[0] - inset) * W, y_along(SOCKET[1] - inset)), (s * GEMS[0][4] * W, y_along(NOTCH_FOOT))
+        edge_through('guard', like, p, q, on_left(p, q, region), T * W)
+        if name == 'body':
+            p = (0.0, y_along(NOTCH_TOP))
+            edge_through('guard', like, p, q, on_left(p, q, region), T * W)
+
+# the gems: their borders' sides (the upper gem's but where the socket holds it), their inner diamonds' sides; each on
+# its face, rising and falling with the grip
+for gi, gem in enumerate(GEMS):
+    end, way, length, widest, half = gem
+    ta, tb = widest * GEM_INSET / half, length - (length - widest) * GEM_INSET / half
+    outer = gem_poly(gem)
+    inner = [(end + way * ta, 0.0), (end + way * widest, half - GEM_INSET), (end + way * tb, 0.0), (end + way * widest, GEM_INSET - half)]
+    for part, poly, rise, sides in (('gem', outer, GEM_RISE[0], (1, 2) if gi == 0 else (0, 1, 2, 3)),
+                                    ('gem_top', inner, GEM_RISE[1], (0, 1, 2, 3))):
+        region = (lambda part: lambda x, y: gem_half(gem, y / W + P_HOLD) - (GEM_INSET if part == 'gem_top' else 0) > abs(x) / W)(part)
+        top = lambda pp: (grip_radius(pp) + rise) * W
+        for k in sides:
+            (p0, x0), (p1, x1) = poly[k], poly[(k + 1) % 4]
+            p, q = (x0 * W, y_of(p0)), (x1 * W, y_of(p1))
+            thick = min(top(p0), top(p1)) - (.12 * W if part == 'gem' else (grip_radius(min(p0, p1)) + GEM_RISE[0] - .01) * W)
+            for f in (1, -1):
+                edge_face('grip', {'part': part, 'gem': gi}, (*p, f * top(p0)), (*q, f * top(p1)), on_left(p, q, region), f,
+                          max(thick, .02))
+
+# the pommel: its shield's slanting sides and its panel's
+for part, poly, half_t in (('pommel', POMMEL_SHIELD, POMMEL_Z[0]), ('pommel_panel', POMMEL_PANEL, POMMEL_Z[1])):
+    region = (lambda poly: lambda x, y: half_along(poly, y / W + P_HOLD) > abs(x) / W)(poly)
+    for (p0, h0), (p1, h1) in zip(poly, poly[1:]):
+        if abs(h1 - h0) < 1e-9:
+            continue                                         # a side along the grip: no steps
+        for s in (1, -1):
+            p, q = (s * h0 * W, y_of(p0)), (s * h1 * W, y_of(p1))
+            edge_through('grip', {'part': part, 'depth': half_t * W}, p, q, on_left(p, q, region), half_t * W)
+
+# the point: its two edges and the edges of its flat, slice by slice (its slices keep inside them)
+tip_t = lambda y: float(np.clip((y - Y_TIP_FROM) / (Y_TIP_TO - Y_TIP_FROM), 0, 1))
+tip_in = lambda x, y: abs(x) < float(tip_half_width(tip_t(y)))
+flat_in = lambda x, y: abs(x) < (FLAT + .03) * W * float(tip_half_width(tip_t(y))) / (TAPER * W / 2)
+for i in range(TIP_SLICES):
+    t0, t1, t = i / TIP_SLICES, (i + 1) / TIP_SLICES, (i + .5) / TIP_SLICES
+    y0, y1 = Y_TIP_FROM + (Y_TIP_TO - Y_TIP_FROM) * t0, Y_TIP_FROM + (Y_TIP_TO - Y_TIP_FROM) * t1
+    h0, h1 = float(tip_half_width(t0)), float(tip_half_width(t1))
+    m0, m1 = ((FLAT + .03) * W * h / (TAPER * W / 2) for h in (h0, h1))
+    th, tf = (T_OUTER * (1 - t) + .012 * t) * W, (T_FLAT * (1 - t) + .022 * t) * W
+    for s in (1, -1):
+        p, q = (s * h0, y0), (s * h1, y1)
+        edge_through('blade', {'part': 'tip', 'depth': th}, p, q, on_left(p, q, tip_in), th, out=0.0, inward=.1)
+        p, q = (s * m0, y0), (s * m1, y1)
+        edge_through('blade', {'part': 'tip_flat', 'depth': tf}, p, q, on_left(p, q, flat_in), tf, out=0.0, inward=.06)
 
 
 # ---------------------------------------------------------------- the lightning on the flat
@@ -658,6 +904,19 @@ def wall(c, face, z, base, depth):
     return np.where((np.abs(z) > depth - .028 * W)[..., None], GOLD_INK, col)
 
 
+def tip_face(x, y):
+    """The point's faces beside its flat: the bevels' bands drawn in to the tip, the line across where it begins; by
+    the point's outline where each texel is (not its slice's), so that the bands run on smoothly from slice to slice."""
+    hw = tip_half_width(np.clip((y - Y_TIP_FROM) / (Y_TIP_TO - Y_TIP_FROM), 0, 1))
+    seen = np.maximum(hw - (FLAT + .03) * W * hw / (TAPER * W / 2), 1e-6)   # how much of each side shows beside the flat
+    du, dl = (hw - x) / seen, (x + hw) / seen
+    col = solid(mix(BEVEL_DARK, BODY_DEEP, .25), x.shape)
+    col = np.where(((x > 0) & (du > .62))[..., None], EDGE_LIGHT, col)
+    col = np.where((x < 0)[..., None], np.where((dl < .55)[..., None], EDGE_LOW, mix(BODY, BODY_DEEP, .55)), col)
+    col = np.where(((hw - np.abs(x)) < .035 * W)[..., None], INK, col)
+    return np.where((np.abs(y - Y_TIP_FROM) < .03)[..., None], INK, col)
+
+
 def paint_blade(c, face, x, y, z, u, v):
     """The blade: its flat (the body, lighter by the guard, the lightning and its glints), its bevels (the upper edge a
     dark band with a bright line inside it, the lower a bright line and a deeper band inside it, ink at the edges), its
@@ -697,15 +956,8 @@ def paint_blade(c, face, x, y, z, u, v):
         if face in FLATS:
             return np.where(line, INK, solid(BODY, x.shape)), glow
         return solid(mix(BEVEL_DARK, BODY_DEEP, .3) if face in ('east', 'west') else BODY_DEEP, x.shape), glow
-    i, hw, hm = c.opts['slice']
     if face in FLATS:
-        seen = max(hw - hm, 1e-6)                    # how much of each side shows beside the flat
-        du, dl = (hw - x) / seen, (x + hw) / seen
-        col = solid(mix(BEVEL_DARK, BODY_DEEP, .25), x.shape)
-        col = np.where(((x > 0) & (du > .62))[..., None], EDGE_LIGHT, col)
-        col = np.where((x < 0)[..., None], np.where((dl < .55)[..., None], EDGE_LOW, mix(BODY, BODY_DEEP, .55)), col)
-        col = np.where(((hw - np.abs(x)) < .035 * W)[..., None], INK, col)
-        return np.where(line, INK, col), glow
+        return tip_face(x, y), glow
     if face in ('up', 'down'):
         return solid(BODY_DEEP, x.shape), glow
     t = np.abs(z) / max(c.size[2] / 2, 1e-6)
@@ -723,7 +975,9 @@ def paint_wing(c, face, x, y, z, u, v):
     if face not in FLATS:
         if layer == 'rim':
             col = wall(c, face, z, GOLD[2], c.opts['depth'])
-            return np.where((crystal & (np.abs(z) <= c.opts['depth'] - .028 * W))[..., None], CRYSTAL[2], col), glow
+            # the crystal's edge: two facets either side of a ridge along it (the south's lit), as the rest of it
+            ccol = np.where((np.abs(z) < .012 * W)[..., None], CRYSTAL_LINE, np.where((z > 0)[..., None], CRYSTAL[1], CRYSTAL[2]))
+            return np.where((crystal & (np.abs(z) <= c.opts['depth'] - .028 * W))[..., None], ccol, col), glow
         # the steps up to the body and the crest read as bevels: no ink, lighter towards the face they rise to
         lift = smooth(np.abs(z) / c.opts['depth'])
         return np.where(crystal[..., None], mix(CRYSTAL[2], CRYSTAL[1], lift), mix(GOLD[2], GOLD[4], lift)), glow
@@ -783,12 +1037,12 @@ def paint_socket(c, face, x, y, z, u, v):
     """The socket below the core: on its faces gold, brighter between the notch and the ridges beside it (as on the core
     above), a bright lip along the notch (the gem's own outline inks where they meet), the layers in from its outline
     lighter, inked at its edge; its outer walls gold inked at the face, the notch's and the foot's in shade, and the
-    steps up from the core (so that they read as creases, not as light seams across it)."""
+    step up from the core dark (so that it reads as a crease, not as a light seam across it)."""
     glow = np.zeros_like(x, dtype=bool)
     a, up = along_of(y), np.abs(x) / W
     if face not in FLATS:
         if face == 'up':
-            return solid(mix(GOLD[2], GOLD[3], .6), x.shape), glow
+            return solid(mix(GOLD_INK, GOLD[1], .5), x.shape), glow
         if face == 'down' or np.all(np.abs(up - c.opts['run'][1]) > 1e-3):
             return solid(GOLD[2], x.shape), glow
         return np.where((np.abs(z) > c.opts['depth'] - .02 * W)[..., None], GOLD_INK, solid(GOLD[3], z.shape)), glow
@@ -816,10 +1070,16 @@ def paint_plate(c, face, x, y, z, u, v):
 
 
 def paint_knob(c, face, x, y, z, u, v):
+    """A knob: its boss's face gold, inked round its rim; the dome on it bright, lit towards its top; their sides
+    shaded."""
     glow = np.zeros_like(x, dtype=bool)
     if face in FLATS:
-        r = np.hypot(u - .5, v - .5) * 2
-        return np.where((r < .5)[..., None], GOLD[6], np.where((r < .85)[..., None], GOLD[4], GOLD_INK)), glow
+        cx, cy = c.opts['centre']
+        r = np.hypot(x - cx, y - cy) / (KNOB[2] * W)          # out from the middle, in the boss's radii
+        if c.opts['tier']:
+            lit = smooth(1 - np.hypot(x - cx + .15 * KNOB[2] * W, y - cy - .2 * KNOB[2] * W) / (.62 * KNOB[2] * W))
+            return np.where((r > .56)[..., None], GOLD_INK, mix(GOLD[5], GOLD[6], lit)), glow
+        return np.where((r > .86)[..., None], GOLD_INK, solid(GOLD[4], x.shape)), glow
     return solid(GOLD[3], x.shape), glow
 
 
@@ -836,10 +1096,14 @@ def band(c, face, x, y, z):
 
 def paint_gem(c, face, x, y, z):
     """A white gem: its border bevelled in four facets (the one up towards the guard on the left lit), inked round its
-    outline; its inner diamond brightest, a fine grey-blue line round it; its sides shaded."""
-    if face not in FLATS:
-        return solid(CRYSTAL[2], x.shape)
+    outline; its inner diamond brightest, a fine grey-blue line round it; its sides shaded, their top edge the line
+    round the face above it (so that where a side stands a hair above a straight edge it reads as that line)."""
     gem = GEMS[c.opts['gem']]
+    if face not in FLATS:
+        r = np.interp(y / W + P_HOLD, [q[0] for q in GRIP_SHAPE], [q[1] for q in GRIP_SHAPE])
+        top = (r + (GEM_RISE[1] if c.part == 'gem_top' else GEM_RISE[0])) * W
+        return np.where((np.abs(z) > top - .02 * W)[..., None], CRYSTAL_LINE if c.part == 'gem_top' else GOLD_INK,
+                        solid(CRYSTAL[2], x.shape))
     poly = gem_poly(gem)
     p, xa = y / W + P_HOLD, x / W
     if c.part == 'gem_top':
@@ -892,11 +1156,33 @@ def paint_hilt(c, face, x, y, z, u, v):
     return np.where((dist(shield, p, xa, closed=True) < .026)[..., None], GOLD_INK, col), glow
 
 
+def paint_edge(c, face, x, y, z, u, v):
+    """An edge box, painted as what it edges is there: its front and back as that part's faces, its outer side and its
+    ends as that part's walls."""
+    glow = np.zeros_like(x, dtype=bool)
+    like = dict(c.opts['like'])
+    part = like.pop('part')
+    if part == 'tip':                         # the point's edge: its faces as the point's, ground steel along it
+        if face in FLATS:
+            return tip_face(x, y), glow
+        return mix(STEEL_EDGE * 1.05, mix(STEEL_EDGE, BEVEL_DARK, .55), smooth(np.abs(z) / like['depth'])), glow
+    if part == 'tip_flat':
+        if face in FLATS:
+            return np.where((np.abs(y - Y_TIP_FROM) < .03)[..., None], INK, solid(BODY, x.shape)), glow
+        return solid(mix(BEVEL_DARK, BODY_DEEP, .3), x.shape), glow
+    if part == 'plate':                       # the plate's walls as deep as the plate is there
+        like['depth'] = (PLATE_Z[0] + (PLATE_Z[1] - PLATE_Z[0]) * np.clip((along_of(y) - PLATE[0]) / -PLATE[0], 0, 1)) * W
+    stand_in = SimpleNamespace(part=part, bone=c.bone, opts=like)
+    return {'wing': paint_wing, 'plate': paint_plate, 'socket': paint_socket}.get(part, paint_hilt)(stand_in, face, x, y, z, u, v)
+
+
 def paint(c, face, u, v):
     """A face's colours and glow at points (u, v) of it."""
     x, y, z = face_point(c, face, u, v)
-    if c.part in ('grip', 'collar', 'gem', 'gem_top'):
+    if c.part in ('grip', 'collar', 'gem', 'gem_top', 'knob', 'edge', 'plate'):
         x, y, z = world_point(c, x, y, z)
+    if c.part == 'edge':
+        return paint_edge(c, face, x, y, z, u, v)
     if c.bone == 'blade':
         return paint_blade(c, face, x, y, z, u, v)
     return {'wing': paint_wing, 'core': paint_core, 'socket': paint_socket, 'plate': paint_plate, 'knob': paint_knob}.get(c.part, paint_hilt)(c, face, x, y, z, u, v)
@@ -909,17 +1195,19 @@ def texels(c, face):
 
 
 def pack():
-    """Every face its own place on the atlas (shelves, tallest first), one texel apart."""
+    """Every face its own place on the atlas (shelves, tallest first), with a texel round it of its own (draw fills it
+    with the face's edge, so that a texel sampled a hair outside a face, at its edge, is still the face's colour and
+    never the empty atlas, which the cutout would see through as a white speck)."""
     items = [(ci, f) + texels(c, f) for ci, c in enumerate(CUBES) for f in c.faces]
     items.sort(key=lambda it: (-it[3], -it[2]))
     place, x, y, row = {}, 0, 0, 0
     for ci, f, w, h in items:
-        if x + w > ATLAS_W:
-            x, y, row = 0, y + row + 1, 0
-        place[(ci, f)] = (x, y, w, h)
-        x += w + 1
-        row = max(row, h)
-    height = y + row + 1
+        if x + w + 2 > ATLAS_W:
+            x, y, row = 0, y + row, 0
+        place[(ci, f)] = (x + 1, y + 1, w, h)
+        x += w + 2
+        row = max(row, h + 2)
+    height = y + row
     return place, int(math.ceil(height / 16) * 16)
 
 
@@ -937,6 +1225,8 @@ def draw(place, height):
         g = g.reshape(h, SS, w, SS).mean(axis=(1, 3)) >= .34
         img[py:py + h, px:px + w, :3] = col
         img[py:py + h, px:px + w, 3] = 1
+        img[py - 1, px:px + w], img[py + h, px:px + w] = img[py, px:px + w], img[py + h - 1, px:px + w]   # its border
+        img[py - 1:py + h + 1, px - 1], img[py - 1:py + h + 1, px + w] = img[py - 1:py + h + 1, px], img[py - 1:py + h + 1, px + w - 1]
         glow[py:py + h, px:px + w] = g
     return img, glow
 

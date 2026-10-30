@@ -109,6 +109,8 @@ class IsosangSwordTest {
         }
         return out;
     }
+    /** How far slices reach past each other along the sword (make_sword.py's seams, twice over), in sixteenths. */
+    static final float SEAMS=4e-3f;
     @Test void theUpperGemSitsInANotchOfTheGuardsSocketRoundTheTopOfTheGrip(){
         // 2.76.4 (user request: "아니 흰 보석이랑 코등이랑 자연스럽게 이어지지가 않았잖아", as on the made copy in the
         // user's photo): below the guard's core its gold goes on down round the grip, and the upper gem sits in a notch
@@ -118,7 +120,7 @@ class IsosangSwordTest {
         float coreBottom=Float.MAX_VALUE;
         for(var b:all)if(b.bone.equals("guard")&&!b.turned&&Math.abs(b.x0+blade)<1e-3f&&Math.abs(b.x1-blade)<1e-3f)coreBottom=Math.min(coreBottom,b.y0);
         var socket=new ArrayList<Box>();
-        for(var b:all)if(b.bone.equals("guard")&&!b.turned&&b.y1<=coreBottom+1e-3f&&b.x0>=-blade-1e-3f&&b.x1<=blade+1e-3f)socket.add(b);
+        for(var b:all)if(b.bone.equals("guard")&&!b.turned&&b.y1<=coreBottom+SEAMS&&b.x0>=-blade-1e-3f&&b.x1<=blade+1e-3f)socket.add(b);
         assertFalse(socket.isEmpty(),"the guard goes on down below its core round the grip");
         for(var b:socket)assertTrue(socket.stream().anyMatch(m->Math.abs(m.x0+b.x1)<1e-3f&&Math.abs(m.x1+b.x0)<1e-3f&&Math.abs(m.y0-b.y0)<1e-3f&&Math.abs(m.z1-b.z1)<1e-3f),
             "its one side the other's mirror image: "+b);
@@ -129,7 +131,7 @@ class IsosangSwordTest {
             if(all.stream().anyMatch(g->g.bone.equals("grip")&&!g.turned&&g.z0>0&&g.y0<b.y1&&g.y1>b.y0&&Math.abs(g.x1-b.x0)<1e-3f)&&(widest==null||b.x0>widest.x0))widest=b;
         }
         float notchTop=topOfNotch;
-        assertTrue(socket.stream().anyMatch(b->b.x0<0&&b.x1>0&&b.y0>=notchTop-1e-3f),"the notch comes to a point in the gold below the core");
+        assertTrue(socket.stream().anyMatch(b->b.x0<0&&b.x1>0&&b.y0>=notchTop-SEAMS),"the notch comes to a point in the gold below the core");
         assertNotNull(widest,"the gem fills the notch, its sides against the gold's");
         var at=widest;
         float gemFace=0,gold=0;
@@ -137,6 +139,17 @@ class IsosangSwordTest {
         for(var b:socket)if(b.y0<at.y1&&b.y1>at.y0)gold=Math.max(gold,b.z1);
         assertTrue(gold>=gemFace,"the gem set in the gold, its border no further out than the gold beside it: "+gemFace+" and "+gold);
         assertTrue(at.x0>0.25f*blade,"the gem about a third of the blade's width across at its widest: "+(2*at.x0/(2*blade)));
+    }
+    @Test void theWingsBodiesMeetTheCoreFlushWithNoStep(){
+        // 2.76.5 (user request: "마지막으로 아쉬운 부분 전체적으로 다듬어줘"): where the wings' bodies meet the core their faces
+        // are level with its face, so that no step runs along the core's sides (it caught the light as a bright seam)
+        var all=boxes(geometry());
+        float blade=0;for(var b:all)if(b.bone.equals("blade"))blade=Math.max(blade,b.x1);
+        float core=0;
+        for(var b:all)if(b.bone.equals("guard")&&!b.turned&&Math.abs(b.x0+blade)<1e-3f&&Math.abs(b.x1-blade)<1e-3f)core=b.z1;
+        float coreFace=core,edge=blade;
+        assertTrue(all.stream().anyMatch(b->b.bone.equals("guard")&&!b.turned&&b.x0<=edge+.03f&&b.x1>edge+.2f&&Math.abs(b.z1-coreFace)<.01f),
+            "a layer of the wings as thick as the core where they meet it: "+coreFace);
     }
     @Test void everyFaceHasItsOwnPlaceOnTheTexture(){
         var geo=geometry();var d=geo.getAsJsonObject("description");
