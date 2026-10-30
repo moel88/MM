@@ -741,7 +741,7 @@ public final class IsosangSlash implements Fx.Skill {
         for(var s:arcs(combo))for(var st:stars(s,t)){
             Vec3d p=world(feet,yaw,point(s,st.deg(),st.radius()));
             int col=st.night()?(st.seed()%3==0?LILAC:PALE):(st.seed()%3==0?WHITE:st.seed()%3==1?PALE:LILAC);
-            if(st.night())m.star(p,st.size(),col,st.alpha());else glint8(m,p,st.size(),col,st.alpha());
+            glint8(m,p,st.size(),col,st.alpha());
         }
         heads(m,t,combo,feet,yaw);
         if(combo==2)ringStars(m,t,feet,yaw);
@@ -821,7 +821,7 @@ public final class IsosangSlash implements Fx.Skill {
         List<Star> out=new ArrayList<>();
         if(t<s.t0()||t>=s.eat1())return out;
         float h=head(s,t),delay=s.ink0()-s.t0(),dur=s.ink1()-s.ink0();double eaten=Ease.smooth(t,s.eat0(),s.eat1())*1.1-.05;
-        int n=s.style()==1?24:16;
+        int n=s.style()==1?30:20;
         for(int k=0;k<n;k++){
             int seed=k*61+s.seed()*977;double f=.04+.92*Ease.hash(seed);
             if(f>h-.02)continue;
@@ -829,11 +829,11 @@ public final class IsosangSlash implements Fx.Skill {
             float swept=s.t0()+(s.t1()-s.t0())*(float)f,ink=Ease.smooth(t,swept+delay,swept+delay+dur);
             double spread=1-(1-ink)*(1-ink),inkAt=.8-.63*spread,whiteEnd=.15-.1*ink,d;float a;
             boolean night=k%2==1;
-            if(night){if(ink<.4f)continue;d=inkAt+.1+(.86-inkAt-.1)*Ease.hash(seed+1);if(d>.86)continue;a=.5f*Ease.smooth(ink,.4f,.75f);}
+            if(night){if(ink<.4f)continue;d=inkAt+.1+(.86-inkAt-.1)*Ease.hash(seed+1);if(d>.86)continue;a=.8f*Ease.smooth(ink,.4f,.75f);}
             else{double room=inkAt-whiteEnd-.15;if(room<.02)continue;d=whiteEnd+.06+room*Ease.hash(seed+1);a=1-Ease.smooth(ink,.55f,.85f);}
             a*=twinkle(t,seed)*Ease.smooth((float)x,(float)eaten+.1f,(float)eaten+.2f)*Ease.smooth(t,swept,swept+.03f);
             if(a<=.01f)continue;
-            out.add(new Star(s.from()+(s.to()-s.from())*f,s.inner()+(s.outer()-s.inner())*(1-d*prof),night?.05+.035*Ease.hash(seed+2):.07+.06*Ease.hash(seed+2),a,night,seed));
+            out.add(new Star(s.from()+(s.to()-s.from())*f,s.inner()+(s.outer()-s.inner())*(1-d*prof),night?.08+.05*Ease.hash(seed+2):.1+.08*Ease.hash(seed+2),a,night,seed));
         }
         return out;
     }
@@ -847,7 +847,7 @@ public final class IsosangSlash implements Fx.Skill {
             if(t<s.t0()||t>=s.t1()+.08f)continue;
             float a=Ease.smooth(t,s.t0(),s.t0()+.015f)*(1-Ease.smooth(t,s.t1()+.01f,s.t1()+.08f));
             Vec3d p=world(feet,yaw,point(s,s.from()+(s.to()-s.from())*head(s,t),s.outer()));
-            glint8(m,p,.24,WHITE,a);m.softDisc(p,.2,AZURE,.3f*a);
+            glint8(m,p,.3,WHITE,a);m.softDisc(p,.24,AZURE,.3f*a);
         }
     }
     /** Hit 2's burst: stars riding out on its white ring, twinkling, gone with it (in place of streaks of light). */
@@ -868,7 +868,7 @@ public final class IsosangSlash implements Fx.Skill {
         for(int k=0;k<6;k++){
             int seed=k*37+409;float on=BEAM_ON+.012f+.022f*k;if(t<on)continue;
             Vec3d p=b[0].add(b[1].subtract(b[0]).multiply(.22+.13*k)).add(0,.1*(Ease.hash(seed)-.5),0);
-            glint8(m,p,.09+.05*Ease.hash(seed+1),k%2==0?WHITE:LILAC,lit*Ease.smooth(t,on,on+.02f)*twinkle(t,seed));
+            glint8(m,p,.12+.06*Ease.hash(seed+1),k%2==0?WHITE:LILAC,lit*Ease.smooth(t,on,on+.02f)*twinkle(t,seed));
         }
     }
     /**
@@ -890,7 +890,7 @@ public final class IsosangSlash implements Fx.Skill {
             double x=(.08+.84*Ease.hash(seed+2))*(swb.n()-1);int i=Math.min(swb.n()-2,(int)x);double fr=x-i;
             Vec3d p=swb.outer()[i].add(swb.outer()[i+1].subtract(swb.outer()[i]).multiply(fr)).add(0,.05+.35*Ease.hash(seed+3)+.25*age,0);
             float u=age/life;
-            m.star(p,.06+.05*Ease.hash(seed+4),k%3==0?WHITE:k%3==1?PALE:LILAC,(1-u)*Ease.smooth(age,0,.03f)*twinkle(t,seed));
+            glint8(m,p,.08+.06*Ease.hash(seed+4),k%3==0?WHITE:k%3==1?PALE:LILAC,(1-u)*Ease.smooth(age,0,.03f)*twinkle(t,seed));
         }
     }
     /** An eight-pointed glint at {@code p}, facing the camera (a glint, so it may turn to it): a four-pointed star and a shorter one turned 45°. */
@@ -1032,7 +1032,7 @@ public final class IsosangSlash implements Fx.Skill {
             float u=Ease.unit(t,at,at+.16f),a=Ease.smooth(t,at-.01f,at+.01f);boolean big=combo==4;double s=big?1.35:1;
             float vis=seen(p,c.camera),ba=burstAlpha(w,t)*vis,flash=a*(1-u)*vis;double br=burstSize(combo,w,t);
             Vec3d near=facing(p,c.camera);
-            if(ba>0){StandPunchFx.burst(m,near,br,.36,9,combo*31+i*7+w.nth()*13,AZURE,BLUE,.85f*ba,.55f*ba);crescentMoon(m,near,br*.4,Math.PI*2*Ease.hash(combo*31+i*7+w.nth()*13+19)+.8*(t-at),MOON,.75f*ba);}
+            if(ba>0){StandPunchFx.burst(m,near,br,.36,9,combo*31+i*7+w.nth()*13,AZURE,BLUE,.85f*ba,.32f*ba);crescentMoon(m,near,br*.56,Math.PI*2*Ease.hash(combo*31+i*7+w.nth()*13+19)+.8*(t-at),MOON,.9f*ba);}
             if(flash>0){m.softDisc(near,.7*s,BLUE,.28f*flash);m.softDisc(near,.16*s*(1-u)+.04,WHITE,.7f*flash);}
             // a thin quick ring across the cut
             FxLib.ringPlane(m,p,side,up,.15+.85*s*Ease.out(t,at,at+.15f),.07,WHITE,.7f*a*(1-Ease.unit(t,at,at+.15f)));
@@ -1248,22 +1248,26 @@ public final class IsosangSlash implements Fx.Skill {
             p[i]=q.add(along.multiply(Math.cos(a)*r*stretch)).add(across.multiply(Math.sin(a)*r));
         }
         for(int i=1;i+1<sides;i++)m.triangle(p[0],p[i],p[i+1],rgb,alpha);
-        gleam(m,q,along,across,size,stretch,alpha);
+        gleam(m,q,p,1,3,size,alpha);
     }
     /**
-     * Moonlight gleaming on a drop of ink (2.77.5): a dark blue sheen over one side of it and a speck of light in that,
-     * so the ink reads as wet (drawn in its plane, over it).
+     * Moonlight gleaming on a drop of ink (2.77.5): a rim of dark blue sheen along one side of its outline {@code p} round
+     * its middle {@code q} ({@code count} edges from point {@code from}, thinning to nothing at both ends) and a speck of
+     * light on that rim, so the ink reads as wet (in its plane, over it). A spot in its middle read as an eye.
      */
-    static void gleam(EffectMesh m,Vec3d q,Vec3d along,Vec3d across,double size,double stretch,float alpha){
+    static void gleam(EffectMesh m,Vec3d q,Vec3d[] p,int from,int count,double size,float alpha){
         if(size<.03||alpha<=.02f)return;
-        Vec3d c=q.add(across.multiply(size*.3)).add(along.multiply(size*.15*stretch));
-        oval(m,c,along,across,size*.38*Math.min(1.8,stretch),size*.3,SHEEN,.55f*alpha);
-        oval(m,c.add(across.multiply(size*.06)),along,across,size*.12,size*.1,WHITE,.45f*alpha);
-    }
-    /** A filled oval at {@code c}, {@code ra} along {@code along} and {@code rb} along {@code across} (unit vectors). */
-    static void oval(EffectMesh m,Vec3d c,Vec3d along,Vec3d across,double ra,double rb,int rgb,float alpha){
-        int n=8;Vec3d prev=c.add(along.multiply(ra));
-        for(int i=1;i<=n;i++){double a=Math.PI*2*i/n;Vec3d p=c.add(along.multiply(Math.cos(a)*ra)).add(across.multiply(Math.sin(a)*rb));m.triangle(c,prev,p,rgb,alpha);prev=p;}
+        for(int k=0;k<count;k++){
+            Vec3d a=p[(from+k)%p.length],b=p[(from+k+1)%p.length];
+            double wa=.32*Math.sin(Math.PI*k/count),wb=.32*Math.sin(Math.PI*(k+1)/count);
+            Vec3d ai=a.add(q.subtract(a).multiply(wa)),bi=b.add(q.subtract(b).multiply(wb));
+            m.triangle(a,b,bi,SHEEN,.6f*alpha);m.triangle(a,bi,ai,SHEEN,.6f*alpha);
+        }
+        Vec3d mid=p[(from+count/2)%p.length],speck=mid.add(q.subtract(mid).multiply(.16));double r=size*.07;
+        Vec3d u=mid.subtract(q);u=u.lengthSquared()<1e-12?UP:u.normalize();Vec3d w=p[(from+count/2+1)%p.length].subtract(mid);
+        w=w.subtract(u.multiply(w.dotProduct(u)));w=w.lengthSquared()<1e-12?UP:w.normalize();
+        m.triangle(speck.add(u.multiply(r)),speck.add(w.multiply(r*1.6)),speck.subtract(u.multiply(r)),WHITE,.5f*alpha);
+        m.triangle(speck.add(u.multiply(r)),speck.subtract(u.multiply(r)),speck.subtract(w.multiply(r*1.6)),WHITE,.5f*alpha);
     }
     /**
      * A flake of ink at {@code q}: a pointed petal {@code size} long, turning over about its own length ({@code spin}
@@ -1295,7 +1299,7 @@ public final class IsosangSlash implements Fx.Skill {
             p[i]=q.add(along.multiply(Math.cos(a)*r*stretch)).add(across.multiply(Math.sin(a)*r));
         }
         for(int i=0;i<sides;i++)m.triangle(q,p[i],p[(i+1)%sides],rgb,alpha);
-        gleam(m,q,along,across,size,stretch,alpha);
+        gleam(m,q,p,2,4,size,alpha);
     }
 
     // ───────────────────────────── the effect layer ─────────────────────────────
