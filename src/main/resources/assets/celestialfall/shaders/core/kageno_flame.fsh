@@ -400,9 +400,9 @@ void main(){
     // opaque at the edge, glassier in the light's middle, the ink solid
     float a=mix(.97,.82,smoothstep(whiteEnd,inkAt,d)*(1.0-ink*.4));
     body=outBand*inBand*max(mix(a,.97,inkMask),crack);
-    // the light dims as it dries; the white edge burns hottest
+    // the light dims as it dries; the white edge burns hottest (not so hot that it blooms over the crescent's shape)
     float edgeLine=1.0-smoothstep(whiteEnd*.6,whiteEnd+.04,d);
-    lit=(1.0-max(inkMask,crack))*(1.0-ink*.75)*(edgeLine*3.6+(1.0-edgeLine)*.6);
+    lit=(1.0-max(inkMask,crack))*(1.0-ink*.75)*(edgeLine*2.6+(1.0-edgeLine)*.45);
    }
    body*=keep*holes;
    rgb*=1.0+Hot*lit;

@@ -196,7 +196,7 @@ public final class StandPunchFx {
      * uneven length round a disc, their tips out to {@code r} and their roots at {@code inner} of it, the centre in
      * {@code core} and the rim and spikes in {@code rim}. Drawn in ink a little bigger first, it gets a dark edge.
      */
-    static void burst(EffectMesh m,Vec3d p,double r,double inner,int n,int seed,int core,int rim,float alpha,float coreAlpha){
+    public static void burst(EffectMesh m,Vec3d p,double r,double inner,int n,int seed,int core,int rim,float alpha,float coreAlpha){
         if(alpha<=0||r<=0)return;
         Vec3d normal=m.camera().subtract(p);if(normal.lengthSquared()<1e-6)return;normal=normal.normalize();
         Vec3d u=normal.crossProduct(UP);if(u.lengthSquared()<1e-4)u=new Vec3d(1,0,0);u=u.normalize();Vec3d v=u.crossProduct(normal).normalize();

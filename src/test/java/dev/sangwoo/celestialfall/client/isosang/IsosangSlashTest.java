@@ -243,6 +243,20 @@ class IsosangSlashTest {
         assertEquals(-1,IsosangSlash.reaches(IsosangRules.WAVE_RANGE+2,0,.3),1e-6);
         assertNull(IsosangSlash.wave(Vec3d.ZERO,0,IsosangSlash.WAVE_EAT1),"gone once it has dried away");
     }
+    @Test void aSlashSeenEdgeOnDoesNotStandUpAsAPillarOfLight(){
+        // a flat band on the ground: its glow (turned to the camera) whole from above, gone to its least seen edge on
+        var sw=new IsosangSlash.Swept(new Vec3d[]{new Vec3d(0,0,0),new Vec3d(1,0,0)},new Vec3d[]{new Vec3d(0,0,1),new Vec3d(1,0,1)},new float[]{0,1},2);
+        Vec3d o=new Vec3d(0,0,.5);
+        assertEquals(1,IsosangSlash.faceOn(sw,0,o.add(0,5,0)),1e-6,"from above");
+        assertEquals(1,IsosangSlash.faceOn(sw,0,o.add(0,-5,0)),1e-6,"from below");
+        assertEquals(0,IsosangSlash.faceOn(sw,0,o.add(9,0,0)),1e-6,"edge on");
+        assertEquals(1,IsosangSlash.faceOn(sw,0,o.add(5*Math.cos(Math.toRadians(25)),5*Math.sin(Math.toRadians(25)),0)),1e-6,"25° out of its plane");
+        float prev=0;
+        for(int deg=0;deg<=30;deg++){
+            float f=IsosangSlash.faceOn(sw,0,o.add(5*Math.cos(Math.toRadians(deg)),5*Math.sin(Math.toRadians(deg)),0));
+            assertTrue(f>=prev-1e-6&&f-prev<.2f,"brightening smoothly as the view leaves its plane: "+deg+"° "+f);prev=f;
+        }
+    }
     @Test void theFinishersCameraDrawsBackAndComesInSmoothly(){
         for(int combo=1;combo<=3;combo++)for(float t=0;t<2;t+=.05f)assertEquals(0,IsosangSlash.pull(combo,t),1e-9);
         double most=0,jump=0;
