@@ -24,11 +24,11 @@ pommel's end to the point) and its side view, but for its blade, wider for its l
   towards the grip to a spike pointing at the grip with a notch under it; thin at the rim and the tips, thick in the
   body, a navy groove curving down each face with a raised crest behind it (the darker back facet behind that) and a
   small knob near the root; between the wings a core round the blade's root, a pointed plate on each flat reaching
-  onto the blade towards the point (a navy diamond inside it); behind them a short neck and a flared ring;
-  an eight-sided grip under a crossing diamond wrap, fine grooves along it;
-  a pommel like a kite, widest near the grip and drawn out to a point, a rune carved in its faces;
-  the grip, the pommel and the ring 0.72 of the 3D model's (user request: as the 3D model has them they looked too big
-  for the sword; in the art the fist all but hides the grip).
+  onto the blade towards the point (a navy diamond inside it);
+  the handle round and smooth (user request: "손잡이 모델링이 너무 이상한데 손잡이만 자연스럽게 바꿔봐"): a gold
+  ferrule against the guard, a round grip under a crossing diamond wrap with fine grooves along it, a gold collar, and
+  a pommel turned like a pear, swelling from the collar to its widest (a gold line round it) and rounding off to a
+  small flat end; slimmer than the 3D model's (user request: as the 3D model has it it looked too big for the sword).
 Its colours follow the art: the blade deep violet-navy, lighter and bluer by the guard, its upper edge a dark band
 with a bright line inside it, its lower a bright line, an ink line along each, lavender-white lightning running along
 its flat with little star glints (these glow: painted in the texture, and drawn again at full brightness from the glow
@@ -45,9 +45,11 @@ How GeckoLib lays a face's texture (per-face UV), in the cube's own frame (from 
   east (x min)   z = z1 - u*sz   y = y1 - v*sy        west (x max)   z = z0 + u*sz   y = y1 - v*sy
   up (y max)     x = x0 + u*sx   z = z1 - v*sz        down (y min)   x = x0 + u*sx   z = z0 + v*sz
 and it turns a cube by Rz(-rz) . Ry(ry) . Rx(-rx) about its pivot (degrees): a positive rz leans a cube's +y towards +x.
-Round parts (the grip, the neck, the ring, the knobs) are a box and the same box turned an eighth (eight sides). The
-wings, the plate and the pommel are cut in thin slices across the sword, each slice a box per run of it (the wings'
-slices a twenty-fourth of a unit), so that their outline follows the 3D model's.
+The handle's round parts are true sixteen-sided prisms (eight bars across each, each as wide as a side, turned a
+sixteenth apart: their long faces its sides); the pommel is turned, each stretch of its outline a ring of sixteen
+planks lying on its facets. The wings and the plate are cut in thin slices across the sword, each slice a box per run
+of it (the wings' slices a twenty-fourth of a unit), so that their outline follows the 3D model's. The knobs are a box
+and the same box turned an eighth.
 """
 import json
 import math
@@ -105,7 +107,9 @@ BLADE = 20.5                              # the blade from the guard's front to 
 HILT = .72                                # the pommel, the grip and the ring smaller than the 3D model's (user request:
                                           # "검에 비해 손잡이가 너무 크다고 생각 안 하니")
 P_GRIP = (1.585 * HILT, (1.585 + 2.985) * HILT)   # the grip, from the pommel to the ring
-P_HOLD = sum(P_GRIP) / 2                  # where the hand holds it: the grip's middle, at the model's origin
+P_HOLD = sum(P_GRIP) / 2 + .55            # where the hand holds it, at the model's origin: a little above the grip's
+                                          # middle, so that the fist (held below the item's middle) sits in the middle of the
+                                          # grip between the collar and the ferrule
 P_BASE = P_GRIP[1] + 1.62                 # the guard's front (the ring, the neck and the core 1.62 widths long)
 P_TIP = (P_BASE + BLADE / W, P_BASE + BLADE / W + 2.15)   # where the point begins, the point
 TAPER = .82                               # the blade's width where the point begins, of its width at the root
@@ -151,14 +155,15 @@ PLATE_Z = (.16, .25)
 PLATE_POLY = [(PLATE[0], 0), (PLATE[1], PLATE[2]), (PLATE[3], 0), (PLATE[1], -PLATE[2])]
 INNER_DIAMOND = [(-.36, 0), (.01, .2), (.21, .2), (.39, 0), (.21, -.2), (.01, -.2)]
 CORE_TO = 1.03
-NECK = (1.03, 1.27, .40 * HILT)                                      # from, to (along), radius
-RING = [(1.27, 1.36, .535 * HILT), (1.36, 1.49, .51 * HILT), (1.49, P_BASE - P_GRIP[1], .46 * HILT)]   # flaring towards the wings
+# the handle (p from the pommel's end, radii in blade widths): the gold ferrule against the guard's core, the grip (running
+# on into the ferrule and the collar), the gold collar, the pommel's outline from its end to the collar and its end
 GRIP_R = .35 * HILT
-# the pommel's half width from its end (p, half width): drawn to a point, widest near the grip, flaring from the grip
-POMMEL_SHAPE = [(p * HILT, h * HILT) for p, h in (
-    (0, 0), (.043, .06), (.11, .16), (.25, .32), (.3, .37), (.42, .46), (.52, .5), (.6, .55), (.7, .59), (.8, .625),
-    (.9, .66), (.98, .69), (1.05, .645), (1.15, .58), (1.25, .525), (1.35, .48), (1.45, .43), (1.55, .40), (1.585, .38))]
-POMMEL_Z, POMMEL_SLICES = .72, 30
+FERRULE = (P_GRIP[1] + .29, P_BASE - CORE_TO, .34)
+GRIP_SPAN = (1.0, FERRULE[0] + .04)
+COLLAR = (1.03, 1.15, .30)
+POMMEL_SHAPE = [(.05, .15), (.17, .28), (.38, .38), (.62, .42), (.85, .37), (1.03, .29)]
+POMMEL_CAP = (0, .05, .15)
+POMMEL_LINE = .62                         # the gold line round it at its widest
 
 
 # ---------------------------------------------------------------- outlines
@@ -232,10 +237,27 @@ def cube(bone, part, origin, size, faces=ALL, **kw):
     CUBES.append(Cube(bone, part, origin, size, list(faces), **kw))
 
 
-def eight(bone, part, y0, y1, r, faces=ALL, **kw):
-    """An eight-sided prism along y (a box and the same box turned an eighth), r its half width across its flats."""
-    cube(bone, part, [-r, y0, -r], [2 * r, y1 - y0, 2 * r], faces, **kw)
-    cube(bone, part, [-r, y0, -r], [2 * r, y1 - y0, 2 * r], faces, rot=(0, 45, 0), pivot=[0, (y0 + y1) / 2, 0], **kw)
+def round_prism(bone, part, y0, y1, r, ends=(), sides=16, **kw):
+    """A round part along y: a regular polygon of `sides` sides, r across its flats, as sides/2 bars across it, each as
+    wide as a side and turned 360/sides apart (each bar's two long faces two of its sides; together they fill it). The
+    ends that show are staggered a hair from bar to bar, so that their faces never fight."""
+    n, side = sides // 2, 2 * r * math.tan(math.pi / sides)
+    for k in range(n):
+        lo, hi = y0 + (.002 * k if 'down' in ends else 0), y1 - (.002 * k if 'up' in ends else 0)
+        cube(bone, part, [-r, lo, -side / 2], [2 * r, hi - lo, side], ['east', 'west'] + list(ends),
+             rot=(0, 180 / n * k, 0), pivot=[0, (y0 + y1) / 2, 0], span=(y0, y1), r=r, **kw)
+
+
+def turned(bone, part, outline, sides=16, **kw):
+    """A body turned about y through an outline of (y, radius): each stretch of it a ring of `sides` planks, each lying on
+    one of its facets (its outer face), tilted with the stretch about its foot and turned about the axis."""
+    for (y0, r0), (y1, r1) in zip(outline, outline[1:]):
+        length, tilt = math.hypot(y1 - y0, r1 - r0), math.atan2(r1 - r0, y1 - y0)
+        w, t = 2 * max(r0, r1) * math.tan(math.pi / sides) * 1.01, max(.4 * min(r0, r1), .06)
+        for k in range(sides):
+            # placed so that tilting it about the axis's point at y0 brings its foot to radius r0 there
+            cube(bone, part, [-w / 2, y0 + r0 * math.sin(tilt), r0 * math.cos(tilt) - t], [w, length, t], ['south'],
+                 rot=(-math.degrees(tilt), 360 / sides * k, 0), pivot=[0, y0, 0], **kw)
 
 
 # the blade: its flat down the middle the whole way; each bevel a strip turned a little so that its outer edge draws in
@@ -276,23 +298,15 @@ for i in range(TIP_SLICES):
     hm, th = (FLAT + .03) * W * k, (T_FLAT * (1 - t) + .022 * t) * W
     cube('blade', 'tip_flat', [-hm, y0, -th], [2 * hm, y1 - y0, 2 * th], faces)
 
-# the hilt: the pommel in slices (each a broad thin box and a narrower thicker one: its faces bevelled to its middle),
-# the grip
-for i in range(POMMEL_SLICES):
-    p0, p1 = P_GRIP[0] * i / POMMEL_SLICES, P_GRIP[0] * (i + 1) / POMMEL_SLICES
-    hx = float(np.interp((p0 + p1) / 2, [q[0] for q in POMMEL_SHAPE], [q[1] for q in POMMEL_SHAPE])) * W
-    hx = max(hx, .03)
-    hz = POMMEL_Z * hx
-    y0, y1 = y_of(p0), y_of(p1)
-    cube('grip', 'pommel', [-hx, y0, -hz * .62], [2 * hx, y1 - y0, 2 * hz * .62], ALL, depth=hz * .62)
-    cube('grip', 'pommel', [-hx * .78, y0, -hz], [2 * hx * .78, y1 - y0, 2 * hz], ALL, depth=hz, face_of=True)
-eight('grip', 'grip', y_of(P_GRIP[0]), y_of(P_GRIP[1]), GRIP_R * W, SIDES)
+# the handle: the pommel's end, the pommel, the collar, the grip
+round_prism('grip', 'cap', y_of(POMMEL_CAP[0]), y_of(POMMEL_CAP[1]), POMMEL_CAP[2] * W, ends=('down',))
+turned('grip', 'pommel', [(y_of(p), r * W) for p, r in POMMEL_SHAPE])
+round_prism('grip', 'collar', y_of(COLLAR[0]), y_of(COLLAR[1]), COLLAR[2] * W, ends=('up', 'down'))
+round_prism('grip', 'grip', y_of(GRIP_SPAN[0]), y_of(GRIP_SPAN[1]), GRIP_R * W)
 
-# the guard: the core round the blade's root, the neck, the ring
+# the guard: the core round the blade's root; against it the handle's ferrule
 cube('guard', 'core', [-W / 2, y_along(CORE_TO), -T_CORE * W], [W, y_along(0) - y_along(CORE_TO), 2 * T_CORE * W])
-eight('guard', 'neck', y_along(NECK[1]), y_along(NECK[0]), NECK[2] * W)
-for i, (a0, a1, r) in enumerate(RING):
-    eight('guard', 'ring', y_along(a1), y_along(a0), r * W, ends=(i == 0, i == len(RING) - 1))
+round_prism('grip', 'ferrule', y_of(FERRULE[0]), y_of(FERRULE[1]), FERRULE[2] * W, ends=('down',))
 
 # the plate on the flats: slices a sixteenth of a unit long, as wide as its outline at their middle, thicker towards the
 # guard; through the blade (on both flats at once)
@@ -635,65 +649,60 @@ def paint_knob(c, face, x, y, z, u, v):
     return solid(GOLD[3], x.shape), glow
 
 
-def gold_ring(c, face, y, u, v, base, ends=(True, True)):
-    """The neck or a slice of the ring: gold, lighter towards the wings (the ring's slices one surface), ink at its
-    front and back."""
-    if face in SIDES:
-        col = mix(base, GOLD[5], .55 * np.clip((P_BASE - P_GRIP[1] - along_of(y)) / (P_BASE - P_GRIP[1] - RING[0][0]), 0, 1))
-        h = c.size[1]
-        return np.where((((v * h < .03) & ends[0]) | (((1 - v) * h < .03) & ends[1]))[..., None], GOLD_INK, col)
-    return solid(GOLD[5] if face == 'up' else GOLD[2], u.shape)
+def band(c, face, x, y, z):
+    """The ferrule or the collar: gold, lit a little more towards the blade, an ink line at each end and round the edge
+    of an end that shows; the ferrule a fine groove round its middle."""
+    y0, y1 = c.opts['span']
+    if face in ('up', 'down'):
+        col = solid(GOLD[5] if face == 'up' else GOLD[3], x.shape)
+        return np.where((np.hypot(x, z) > c.opts['r'] - .03 * W)[..., None], GOLD_INK, col)
+    t = (y - y0) / (y1 - y0)
+    col = mix(GOLD[3], GOLD[5], .3 + .45 * t)
+    col = np.where(((y - y0 < .03) | (y1 - y < .03))[..., None], GOLD_INK, col)
+    if c.part == 'ferrule':
+        col = np.where((np.abs(t - .5) * (y1 - y0) < .018)[..., None], mix(col, GOLD_INK, .7), col)
+    return col
 
 
 def paint_hilt(c, face, x, y, z, u, v):
     glow = np.zeros_like(x, dtype=bool)
     part = c.part
     if part == 'grip':
-        # round it: the crossing diamond wrap, fine grooves along it and the lacquer's white glints, measured round the
-        # grip (its angle about y), so that its eight faces meet
+        # the crossing diamond wrap, fine grooves along it and the lacquer's white glints, measured round the grip (its
+        # angle about y), so that its sixteen faces meet
         r = GRIP_R * W
         ang = np.arctan2(z, x)
         a = ang * r
         q1, q2 = np.mod((y * .62 + a * 1.25) / 1.15, 1), np.mod((y * .62 - a * 1.25) / 1.15, 1)
-        band = (q1 < .1) | (q2 < .1)
-        col = np.where(band[..., None], GRIP_CORD, GRIP[1])
+        wrap = (q1 < .1) | (q2 < .1)
+        col = np.where(wrap[..., None], GRIP_CORD, GRIP[1])
         col = np.where(((np.abs(q1 - .1) < .03) | (np.abs(q2 - .1) < .03) | (q1 < .02) | (q2 < .02))[..., None], GRIP[0], col)
         groove = np.abs(np.mod(a / .11, 1) - .5) < .12
-        col = np.where((groove & ~band)[..., None], mix(col, GRIP[0], .6), col)
+        col = np.where((groove & ~wrap)[..., None], mix(col, GRIP[0], .6), col)
         glint = (np.abs(ang - .55) < .1) & (np.mod(y + .2, 1.6) < 1.0)
         col = np.where(glint[..., None], mix(col, GRIP_GLINT, .55), col)
         return col, glow
-    if part == 'neck':
-        return gold_ring(c, face, y, u, v, GOLD[3]), glow
-    if part == 'ring':
-        return gold_ring(c, face, y, u, v, GOLD[4], c.opts['ends']), glow
-    # the pommel: dark gunmetal, lit from above, ink at its edges; on its middle faces the rune (a frame, a trident
-    # pointing to the end) and a small carved square where it flares from the grip
+    if part in ('ferrule', 'collar'):
+        return band(c, face, x, y, z), glow
     p = y / W + P_HOLD
-    top = {'up': POMMEL[3], 'down': POMMEL[1]}.get(face, POMMEL[2])
-    col = solid(top, x.shape)
-    if face in FLATS:
-        col = mix(col, POMMEL[3], .35) if c.opts.get('face_of') else mix(col, POMMEL[1], .25)
-        if c.opts.get('face_of'):
-            xa, p = x / W / HILT, p / HILT           # in the 3D model's measures
-            frame = (np.maximum(np.abs(p - .62) / .3, np.abs(xa) / .26) < 1) & (np.maximum(np.abs(p - .62) / .3, np.abs(xa) / .26) > .82)
-            stem = (np.abs(xa) < .03) & (p > .38) & (p < .86)
-            prongs = (np.abs(np.abs(xa) - .12) < .028) & (p > .42) & (p < .62)
-            bar = (np.abs(p - .62) < .028) & (np.abs(xa) < .15)
-            square = (np.maximum(np.abs(p - 1.32) / .09, np.abs(xa) / .09) < 1) & (np.maximum(np.abs(p - 1.32) / .09, np.abs(xa) / .09) > .6)
-            rune = frame | stem | prongs | bar | square
-            col = np.where(rune[..., None], POMMEL[0], col)
-            col = np.where((np.roll(rune, 1, axis=0) & ~rune)[..., None], mix(col, POMMEL[4], .5), col)   # a lit lip under each groove
-    elif face in ('east', 'west'):
-        col = mix(col, POMMEL[4], .3)
-    col = np.where(border(c, face, u, v, .03)[..., None] & (face not in FLATS), POMMEL[0], col)
+    if part == 'cap':
+        # the pommel's small flat end: dark, a gold ring round its face
+        if face == 'down':
+            rr = np.hypot(x, z) / (POMMEL_CAP[2] * W)
+            return np.where(((rr > .62) & (rr < .82))[..., None], GOLD[3], solid(POMMEL[1], x.shape)), glow
+        return solid(POMMEL[2], x.shape), glow
+    # the pommel: dark gunmetal, polished brighter towards its widest, the gold line round it there, darker to its end
+    col = mix(POMMEL[1], POMMEL[3], np.clip(1 - np.abs(p - POMMEL_LINE) / .55, 0, 1))
+    col = mix(col, POMMEL[4], .5 * np.clip(1 - np.abs(p - POMMEL_LINE) / .18, 0, 1))
+    col = np.where((np.abs(p - POMMEL_LINE) < .022)[..., None], GOLD[4], col)
+    col = np.where((np.abs(np.abs(p - POMMEL_LINE) - .034) < .01)[..., None], mix(col, POMMEL[0], .7), col)
     return col, glow
 
 
 def paint(c, face, u, v):
     """A face's colours and glow at points (u, v) of it."""
     x, y, z = face_point(c, face, u, v)
-    if c.part == 'grip':
+    if c.part in ('grip', 'ferrule', 'collar', 'cap', 'pommel'):
         x, y, z = world_point(c, x, y, z)
     if c.bone == 'blade':
         return paint_blade(c, face, x, y, z, u, v)
