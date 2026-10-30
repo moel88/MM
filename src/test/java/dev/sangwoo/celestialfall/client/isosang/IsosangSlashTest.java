@@ -276,7 +276,7 @@ class IsosangSlashTest {
                     assertTrue(st.alpha()>0&&st.alpha()<=1);
                     // the light's stars outward of the shader's ink front there, the night's inward of it
                     float swept=s.t0()+(s.t1()-s.t0())*(float)f,ink=Ease.smooth(t,swept+s.ink0()-s.t0(),swept+s.ink1()-s.t0());
-                    double inkAt=.8-.63*(1-(1-ink)*(1-ink)),d=(1-(st.radius()-s.inner())/(s.outer()-s.inner()))/IsosangSlash.profile(s.style(),f/h);
+                    double inkAt=.62-.45*(1-(1-ink)*(1-ink)),d=(1-(st.radius()-s.inner())/(s.outer()-s.inner()))/IsosangSlash.profile(s.style(),f/h);
                     if(st.night()){night++;assertTrue(d>inkAt+.05,"hit "+combo+": a night star in the ink");}
                     else{light++;assertTrue(d<inkAt-.05,"hit "+combo+": a star in the light");}
                 }

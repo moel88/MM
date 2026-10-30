@@ -364,20 +364,24 @@ void main(){
    // eaten from the tail with a ragged edge (the thrown slash from both tips)
    float front=erase*1.1-.05+(strand-.5)*.15;
    float keep=wave?smoothstep(front,front+.04,1.0-abs(x*2.0-1.0)):smoothstep(front,front+.03,x);
-   // breaking up: blots open, more and larger as it dries
-   float blob=fbm(vec2(x*6.5+sd*1.7,y*3.2+sd*.6));
-   float holes=1.0-smoothstep(1.0-ink*.85,1.0-ink*.85+.07,blob)*step(.02,ink);
+   // breaking up: a few blots open as it turns to ink, most as it is eaten (2.77.6: they opened all over as soon as it
+   // was all ink, so the black was gone the moment it was black)
+   float blob=fbm(vec2(x*6.5+sd*1.7,y*3.2+sd*.6)),open=ink*.35+erase*.5;
+   float holes=1.0-smoothstep(1.0-open,1.0-open+.07,blob)*step(.02,ink);
    float body,lit;
    if(beam){
     float core=1.0-smoothstep(.05,.2,d),glow=1.0-smoothstep(.2,1.0,d);
     rgb=mix(blue,pale,smoothstep(.6,.2,d));rgb=mix(rgb,edge,core);
-    body=max(core,glow*.75)*(1.0-ink);
-    lit=core*3.6+glow*1.1;holes=1.0;
+    // a thin line of ink along its sides (2.77.6: a touch of black in the light)
+    float rim=smoothstep(.55,.7,d)*(1.0-smoothstep(.86,.98,d));
+    rgb=mix(rgb,inkc,rim*.75);
+    body=max(max(core,glow*.75),rim*.5)*(1.0-ink);
+    lit=core*3.6+glow*1.1*(1.0-rim);holes=1.0;
    }else{
     // the light outermost (a white-hot edge, bright blue, royal blue), the ink inside it, spreading out as it dries
     float whiteEnd=wave?mix(.11,.04,ink):mix(.15,.05,ink);
     float spread=1.0-(1.0-ink)*(1.0-ink);
-    float inkAt=(wave?mix(.78,.32,spread):mix(.80,.17,spread))+.10*(strand-.5)+.04*(streak-.5);
+    float inkAt=(wave?mix(.62,.30,spread):mix(.62,.17,spread))+.10*(strand-.5)+.04*(streak-.5);
     // the inner edge: a dry brush's, ragged, strands falling short; the thrown slash's back edge drips
     float drip=wave?.30*smoothstep(.55,.95,noise(vec2(x*46.0+sd,3.0)))+.06*strand:0.0;
     float rag=wave?0.0:.13*smoothstep(.45,.9,strand)+.05*hair;
@@ -390,6 +394,10 @@ void main(){
     g=mix(g,navy,smoothstep(inkAt-.18,inkAt,d));
     // the thrown slash's body streaked the way it flies
     if(wave)g=mix(g,deep*.8,smoothstep(.55,.85,streak)*smoothstep(whiteEnd+.1,whiteEnd+.3,d)*.55);
+    // fine black hairs of the brush drawn through the light along it, more as it turns to ink (2.77.6: a touch of black
+    // in the light too; the white edge kept clear)
+    float hairN=noise(vec2(x*8.0+sd*2.3,y*30.0));
+    g=mix(g,inkc,smoothstep(.64,.82,hairN)*smoothstep(whiteEnd+.06,whiteEnd+.18,d)*(.4+.35*ink));
     rgb=mix(g,inkc,inkMask);
     // the brush's grain in the ink: navy strands along it
     rgb=mix(rgb,navy*1.3,inkMask*smoothstep(.6,.86,streak)*.55);
