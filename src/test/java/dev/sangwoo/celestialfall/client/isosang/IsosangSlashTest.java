@@ -100,18 +100,23 @@ class IsosangSlashTest {
             if(!Double.isNaN(prev))swept+=MathHelper.wrapDegrees(azimuth(p)-prev);prev=azimuth(p);
         }
         assertTrue(Math.abs(swept)>330,"hit 2 turns the blade all the way round them: "+swept);
-        // 3: the thrust straight ahead; the cut down from the high right to the low left; back up from the low left to the
-        // high right; the sweep low from the right to the left; the wide sweep at the head from the left to the right
+        // 3 (2.77.7, as the user's videos show it): the thrust ahead, its point climbing a little with the beam; the whirl
+        // taking the point round them by the left, high at the front and low behind; the cut down from the high right to
+        // the low left; the great cut rising from the low left round the front to the high right
         var hb=IsosangSlash.blade(Vec3d.ZERO,0,3,blow(3,0));
-        assertTrue(hb[1].z>.97,"the thrust points ahead: "+hb[1]);
-        a=tip(3,.44f);b=tip(3,.54f);
+        assertTrue(hb[1].z>.97&&hb[1].y>.05,"the thrust points ahead, climbing a little: "+hb[1]);
+        prev=Double.NaN;swept=0;double high=-9,low=9;
+        for(float t=.35f;t<=.43f;t+=1/240f){
+            double[] p=tip(3,t);double az=Math.toDegrees(Math.atan2(p[2],p[0]-.98));
+            if(!Double.isNaN(prev))swept+=MathHelper.wrapDegrees(az-prev);prev=az;
+            if(Math.cos(Math.toRadians(az))>.8)high=Math.max(high,p[1]);if(Math.cos(Math.toRadians(az))<-.8)low=Math.min(low,p[1]);
+        }
+        assertTrue(swept<-180,"the whirl takes the point round them by the left: "+swept);
+        assertTrue(high>low+.8,"the whirl's ring climbs to the front: "+high+" "+low);
+        a=tip(3,.45f);b=tip(3,.54f);
         assertTrue(a[1]>b[1]+1.5&&a[2]>b[2]+2,"the cut comes down from the high right to the low left: "+s(a)+" "+s(b));
-        a=tip(3,.64f);b=tip(3,.72f);
-        assertTrue(b[1]>a[1]+1.5&&b[2]>a[2]+2.5,"the cut rises back to the high right: "+s(a)+" "+s(b));
-        a=tip(3,.77f);b=tip(3,.82f);
-        assertTrue(a[2]>b[2]+2.5&&tip(3,blow(3,3))[1]<1,"the sweep goes low from the right to the left: "+s(a)+" "+s(b));
-        a=tip(3,.86f);b=tip(3,.99f);
-        assertTrue(b[2]>a[2]+3&&tip(3,blow(3,4))[1]>1.1,"the wide sweep goes across at the head from the left to the right: "+s(a)+" "+s(b));
+        a=tip(3,.765f);b=tip(3,.95f);
+        assertTrue(b[1]>a[1]+1.5&&b[2]>a[2]+2.5,"the great cut rises from the low left to the high right: "+s(a)+" "+s(b));
         // 4: the twirl goes round over the head; the low cut goes from the right to the left, low, as it throws the slash
         prev=Double.NaN;swept=0;
         for(float t=.12f;t<=.32f;t+=1/240f){
@@ -177,7 +182,8 @@ class IsosangSlashTest {
                 float at=blow(combo,i);
                 if(combo==3&&i==0){assertTrue(IsosangSlash.beamLit(at+.01f)>.9f,"the beam is out for the thrust");continue;}
                 if(combo==2&&i==1)continue;// the ring's burst
-                var s=arcs[combo==3?i-1:Math.min(i,arcs.length-1)];
+                if(combo==3&&i==2)continue;// the cut down bursting into ink
+                var s=arcs[IsosangSlash.arcOf(combo,i)];
                 assertTrue(at>=s.t0()&&at<=s.t1()+.04f,"hit "+combo+" blow "+i+" lands as its slash sweeps: "+at+" in "+s.t0()+".."+s.t1());
             }
         }
@@ -190,6 +196,12 @@ class IsosangSlashTest {
         var g=IsosangSlash.H1_ARCS[0];assertTrue(Math.abs(g.to()-g.from())>250,"hit 1's crescent wraps round: "+(g.to()-g.from()));
         // the ring goes all the way round
         var r=IsosangSlash.H2_ARCS[0];assertEquals(360,Math.abs(r.to()-r.from()),1e-6);
+        // hit 3 (2.77.7): the whirl's ring goes most of the way round them; the beam still shines as the cut down crosses it
+        // (the X); the great rising cut climbs to the right
+        var w=IsosangSlash.H3_ARCS[0];assertTrue(Math.abs(w.to()-w.from())>240,"hit 3's whirl goes round them: "+(w.to()-w.from()));
+        var x=IsosangSlash.H3_ARCS[1];assertTrue(IsosangSlash.beamLit(x.t1()+.1f)>.9f,"the beam shines on through the cut that crosses it");
+        var up=IsosangSlash.H3_ARCS[2];
+        assertTrue(IsosangSlash.point(up,up.to(),up.outer()).y>IsosangSlash.point(up,up.from(),up.outer()).y+1.5,"hit 3's last cut climbs to the right");
     }
     @Test void theFeetStayOnTheGround(){
         // the legs are rigid: a body brought down is a wide stance or a lunge, never a foot in the ground; one foot always on it
