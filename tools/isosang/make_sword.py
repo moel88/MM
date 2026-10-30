@@ -22,8 +22,9 @@ pommel's end to the point) and its side view, but for its blade, wider for its l
   outline traced off the guard's cut face on the sheet (piece 2b, the same as its outer face, 2a): at the front a short
   spike reaching towards the point, the wing rising steeply to its peak near the front, its back edge running down
   towards the grip to a spike pointing at the grip with a notch under it; thin at the rim and the tips, thick in the
-  body, a navy groove curving down each face with a raised crest behind it (the darker back facet behind that) and a
-  small knob near the root; between the wings a core round the blade's root, a pointed plate on each flat reaching
+  body, a navy groove curving down each face with a raised crest behind it (the darker back facet behind that); near
+  the root of the upper wing a small gold knob, of the lower a white gem in a gold setting (as in the art, user request);
+  between the wings a core round the blade's root, a pointed plate on each flat reaching
   onto the blade towards the point (a navy diamond inside it);
   the handle round and smooth (user request: "손잡이 모델링이 너무 이상한데 손잡이만 자연스럽게 바꿔봐"): a gold
   ferrule against the guard, a round grip under a crossing diamond wrap with fine grooves along it, a gold collar, and
@@ -84,6 +85,8 @@ GOLD_INK = hexc('#1f1815')
 NAVY = [hexc(c) for c in ('#191a42', '#2b2d6b', '#3a3f8a', '#6069b8')]
 GRIP = [hexc(c) for c in ('#0d0c12', '#191824', '#252436', '#36354d')]
 GRIP_GLINT, GRIP_CORD = hexc('#dedbea'), hexc('#4b4966')
+GEM_WHITE = [hexc(c) for c in ('#ffffff', '#f7f9ff', '#d6dcf0')]   # the white gem: its highlight, the stone, towards its rim
+GEM_LAVENDER, GEM_LINE = hexc('#dcd3f4'), hexc('#6b7290')
 POMMEL = [hexc(c) for c in ('#1a1817', '#2d2a28', '#45413c', '#625b53', '#8c8379')]
 
 
@@ -147,7 +150,11 @@ BACK_LINE = [(.76, .50), (.73, .68), (.695, .84), (.50, 1.12), (.22, 1.50)]
 GROOVE_W, GROOVE_SPAN = .065, (.56, 1.06)
 RIM = .07                                 # the rim: how far in from the outline the wing's body rises
 T_RIM, T_BODY, T_CREST, T_CORE = .12, .26, .32, .22   # half thicknesses
-KNOB = (.82, .60, .065, .06)              # along, up, radius, how far it stands out from the body
+KNOB = (.82, .60, .065, .06)              # the upper wing's knob near its root: along, up, radius, how far it stands out
+# the white gem set in the lower wing near its root, where the upper has its knob (user request: "코등이에 아래부분에 흰
+# 보석이 박혀있는데", the art's lower lobe): along, up; the radii of its gold setting, the stone and its crown; how far
+# each stands out from the body
+GEM = (.87, .65, (.15, .12, .08), (.045, .1, .135))
 # the plate on the flats: its point on the blade, its widest (and its half width), its point on the core; half thick at
 # its point and from the guard's front back; the navy diamond inside it
 PLATE = (-.856, .073, .43, .42)
@@ -372,16 +379,34 @@ for layer, T in (('rim', T_RIM), ('body', T_BODY), ('crest', T_CREST)):
             origin = [x0 if s > 0 else -x1, _edges[k0], -T * W]
             cube('guard', 'wing', origin, [x1 - x0, _edges[k1] - _edges[k0], 2 * T * W], f, layer=layer, depth=T * W)
 
-# the knobs near the wings' roots, on each face of each wing (eight-sided, standing out of the body)
+def disc(bone, part, cx, cy, z0, z1, r, sides=16, **kw):
+    """A round part standing out along z from z0 to z1 at (cx, cy): a regular polygon of `sides` sides, r across its flats,
+    as sides/2 bars across it turned about z (as round_prism); its outer face staggered a hair from bar to bar."""
+    n, side = sides // 2, 2 * r * math.tan(math.pi / sides)
+    out, lo, hi = 'south' if z1 > z0 else 'north', min(z0, z1), max(z0, z1)
+    for k in range(n):
+        e = .002 * k
+        a, b = (lo, hi - e) if out == 'south' else (lo + e, hi)
+        cube(bone, part, [cx - r, cy - side / 2, a], [2 * r, side, b - a], ['east', 'west', out],
+             rot=(0, 0, 180 / n * k), pivot=[cx, cy, (lo + hi) / 2], centre=(cx, cy), r=r, **kw)
+
+
+# on each face of the upper wing its knob near the root (eight-sided, standing out of the body); on each face of the
+# lower wing the white gem: a gold setting, the stone and its crown, each a little narrower and standing out further
 ka, ku, kr, kh = KNOB
-for s in (1, -1):
-    for f in (1, -1):
-        cx, cy = s * ku * W, y_along(ka)
-        z0 = T_BODY * W if f > 0 else -(T_BODY + kh) * W
-        faces = ['south' if f > 0 else 'north', 'east', 'west', 'up', 'down']
-        for turn in (None, (0, 0, 45)):
-            cube('guard', 'knob', [cx - kr * W, cy - kr * W, z0], [2 * kr * W, 2 * kr * W, kh * W], faces,
-                 rot=turn, pivot=[cx, cy, 0] if turn else None, centre=(cx, cy))
+for f in (1, -1):
+    cx, cy = ku * W, y_along(ka)
+    z0 = T_BODY * W if f > 0 else -(T_BODY + kh) * W
+    faces = ['south' if f > 0 else 'north', 'east', 'west', 'up', 'down']
+    for turn in (None, (0, 0, 45)):
+        cube('guard', 'knob', [cx - kr * W, cy - kr * W, z0], [2 * kr * W, 2 * kr * W, kh * W], faces,
+             rot=turn, pivot=[cx, cy, 0] if turn else None, centre=(cx, cy))
+ga, gu, radii, heights = GEM
+for f in (1, -1):
+    base = T_BODY
+    for part, r, h in zip(('gem_set', 'gem', 'gem'), radii, heights):
+        disc('guard', part, -gu * W, y_along(ga), f * base * W, f * (T_BODY + h) * W, r * W)
+        base = T_BODY + h - .002
 
 
 # ---------------------------------------------------------------- the lightning on the flat
@@ -641,6 +666,27 @@ def paint_plate(c, face, x, y, z, u, v):
     return col, glow
 
 
+def paint_gem(c, face, x, y, z, u, v):
+    """The white gem: the stone pearl white, a soft blue towards its rim, a bright highlight up towards the point and a
+    faint lavender glow across from it, a grey-blue line round it; its gold setting inked round its edge."""
+    glow = np.zeros_like(x, dtype=bool)
+    cx, cy = c.opts['centre']
+    dx, dy = x - cx, y - cy
+    rho = np.hypot(dx, dy) / (GEM[2][1] * W)
+    outer = face in FLATS
+    if c.part == 'gem_set':
+        if outer:
+            col = solid(GOLD[5], x.shape)
+            return np.where((np.hypot(dx, dy) > c.opts['r'] - .025 * W)[..., None], GOLD_INK, col), glow
+        return solid(GOLD[3], x.shape), glow
+    if not outer:
+        return solid(mix(GEM_WHITE[2], GEM_WHITE[1], .5), x.shape), glow
+    col = mix(GEM_WHITE[1], GEM_WHITE[2], smooth((rho - .35) / .65))
+    col = mix(col, GEM_LAVENDER, .55 * smooth(1 - np.hypot(dx / (GEM[2][1] * W) - .35, dy / (GEM[2][1] * W) + .4) / .45))
+    col = mix(col, GEM_WHITE[0], smooth(1 - np.hypot(dx / (GEM[2][1] * W) + .28, dy / (GEM[2][1] * W) - .32) / .32))
+    return np.where((rho > .9)[..., None], GEM_LINE, col), glow
+
+
 def paint_knob(c, face, x, y, z, u, v):
     glow = np.zeros_like(x, dtype=bool)
     if face in FLATS:
@@ -702,11 +748,12 @@ def paint_hilt(c, face, x, y, z, u, v):
 def paint(c, face, u, v):
     """A face's colours and glow at points (u, v) of it."""
     x, y, z = face_point(c, face, u, v)
-    if c.part in ('grip', 'ferrule', 'collar', 'cap', 'pommel'):
+    if c.part in ('grip', 'ferrule', 'collar', 'cap', 'pommel', 'gem', 'gem_set'):
         x, y, z = world_point(c, x, y, z)
     if c.bone == 'blade':
         return paint_blade(c, face, x, y, z, u, v)
-    return {'wing': paint_wing, 'core': paint_core, 'plate': paint_plate, 'knob': paint_knob}.get(c.part, paint_hilt)(c, face, x, y, z, u, v)
+    return {'wing': paint_wing, 'core': paint_core, 'plate': paint_plate, 'knob': paint_knob, 'gem': paint_gem,
+            'gem_set': paint_gem}.get(c.part, paint_hilt)(c, face, x, y, z, u, v)
 
 
 # ---------------------------------------------------------------- the atlas
