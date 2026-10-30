@@ -27,13 +27,18 @@ pommel's end to the point) and its side view, but for its blade, wider for its l
   small gold knob near the root; each wing's front spike a white crystal (user request: "코등이에 아래부분에 흰 보석이
   박혀있는데", then "그게 아니야 코등이만 봐" with a photo of a made copy of the sword: white faceted crystals reach out
   between the plate and the wings); between the wings a core round the blade's root, a pointed plate on each flat reaching
-  onto the blade towards the point (a navy diamond inside it);
+  onto the blade towards the point (a navy diamond inside it); below the core its gold going on down round the top of
+  the grip as a socket (as the 3D model's ring does), the upper white gem set in a notch up the middle of each of its
+  faces, a ridge either side of the notch running beside it and on up onto the core, the socket's foot running from the
+  gem's widest out and down to its legs either side of the grip (user request: "아니 흰 보석이랑 코등이랑 자연스럽게
+  이어지지가 않았잖아", as on the made copy in the user's photo);
   the handle as on the made copy of the sword in the user's photo (user requests: "손잡이 모델링이 너무 이상한데
-  손잡이만 자연스럽게 바꿔봐", then "손잡이랑 코등이랑 흰색 보석으로 이어지잖아"): a round grip, blue like the blade and
-  swelling a little towards the pommel, on each flat side a long white diamond gem against the guard and another
-  against the pommel's collar, white bands running down the grip from the one to the other and crossing halfway; a gold
-  collar; a gold shield of a pommel pointing down, a raised panel on each face; slimmer than the 3D model's (user
-  request: as the 3D model has it it looked too big for the sword).
+  손잡이만 자연스럽게 바꿔봐", then "손잡이랑 코등이랑 흰색 보석으로 이어지잖아"): a round grip, blue like the blade,
+  swelling a little towards the pommel and slimmer at the guard, on each flat side a long white diamond gem in the guard's
+  socket and another against the pommel's collar, white bands running down the grip from the one to the other and
+  crossing halfway (the wider coming out from under the upper gem's widest corner); a gold collar; a gold shield of a
+  pommel pointing down, a raised panel on each face; slimmer than the 3D model's (user request: as the 3D model has it
+  it looked too big for the sword).
 Its colours follow the art: the blade deep violet-navy, lighter and bluer by the guard, its upper edge a dark band
 with a bright line inside it, its lower a bright line, an ink line along each, lavender-white lightning running along
 its flat with little star glints (these glow: painted in the texture, and drawn again at full brightness from the glow
@@ -52,9 +57,10 @@ How GeckoLib lays a face's texture (per-face UV), in the cube's own frame (from 
 and it turns a cube by Rz(-rz) . Ry(ry) . Rx(-rx) about its pivot (degrees): a positive rz leans a cube's +y towards +x.
 The handle's round parts are true sixteen-sided prisms (eight bars across each, each as wide as a side, turned a
 sixteenth apart: their long faces its sides); the pommel is turned, each stretch of its outline a ring of sixteen
-planks lying on its facets. The wings and the plate are cut in thin slices across the sword, each slice a box per run
-of it (the wings' slices a twenty-fourth of a unit), so that their outline follows the 3D model's. The knobs are a box
-and the same box turned an eighth.
+planks lying on its facets. The wings, the plate, the socket and the gems are cut in thin slices across the sword,
+each slice a box per run of it (the wings', the socket's and the gems' slices a twenty-fourth of a unit; the socket's on
+the upper gem's, so that the notch's sides and the gem's meet slice for slice), so that their outlines follow the 3D
+model's and the photo's. The knobs are a box and the same box turned an eighth.
 """
 import json
 import math
@@ -169,20 +175,35 @@ CORE_TO = 1.03
 # the handle as on the made copy in the user's photo (user request: "아니 손잡이랑 코등이랑 흰색 보석으로 이어지잖아 잘 봐",
 # "그렇다고 보석만 박으면 어떻게 아니 너 사진 잘 안 보는거야?"), p from the pommel's end, in blade widths: the gold collar
 # on the pommel; the grip, blue like the blade, swelling a little towards the pommel (its outline: p, radius), from inside
-# the collar up into the guard's core; on each flat side a long white diamond gem against the guard pointing down the grip
-# and another against the collar pointing up it, white bands running between them; the pommel a gold shield pointing
-# down, a raised panel on each face
+# the collar up into the guard's core, slimmer towards the guard (inside the core and the socket at its top); on each
+# flat side a long white diamond gem in the guard's socket pointing down the grip and another against the collar
+# pointing up it, white bands running between them; the pommel a gold shield pointing down, a raised panel on each face
 COLLAR = (1.03, 1.15, .30)
-GRIP_SHAPE = [(1.0, .29), (1.15, .29), (1.5, .275), (2.2, .255), (3.0, .24), (P_BASE - CORE_TO + .02, .235)]
-# the gems: the end against the guard or the collar (p), the way they point (-1 down the grip, +1 up it), their length,
-# how far from that end they are widest and their half width there; their border's inset; how far their border's face
-# and their inner diamond's face stand off the grip
-GEMS = [(P_BASE - CORE_TO + .03, -1, .55, .12, .17), (COLLAR[1] + .02, 1, .7, .15, .2)]
+GRIP_SHAPE = [(1.0, .29), (1.15, .29), (1.5, .275), (2.2, .255), (3.0, .24), (P_BASE - CORE_TO + .02, .21)]
+# the gems: the end towards the guard or against the collar (p), the way they point (-1 down the grip, +1 up it), their
+# length, how far from that end they are widest and their half width there; their border's inset; how far their
+# border's face and their inner diamond's face stand off the grip
+GEMS = [(P_BASE - 1.06, -1, .51, .20, .16), (COLLAR[1] + .02, 1, .7, .15, .2)]
 GEM_INSET = .065
 GEM_RISE = (.05, .08)
+# the guard's socket (user request: "아니 흰 보석이랑 코등이랑 자연스럽게 이어지지가 않았잖아", as on the made copy in the
+# user's photo): below the core the guard's gold goes on down round the top of the grip, a little wider than it (as the
+# 3D model's ring is), and the upper gem sits in a notch up the middle of each of its faces, the gem's point in the
+# notch's and the socket's foot running from the gem's widest out and down to its legs either side of the grip. Its half
+# width, where its legs end (a); its layers, each in from the one before round its outline (so that it reads rounded
+# from the side): how far in, half thick (the rim flush with the core's face, the body a little above the gem's border,
+# so that the gem is set in it), where each begins (a; each a step up from the one before, towards the core); how far
+# out from the notch's sides the ridge runs beside them (on up onto the core, where the two meet in a point)
+SOCKET = (.30, 1.37)
+SOCKET_LAYERS = (('rim', 0.0, .22, CORE_TO), ('mid', .025, .255, CORE_TO + .01), ('body', .05, .285, P_BASE - GEMS[0][0]))
+RIDGE = .1
+NOTCH_TOP = P_BASE - GEMS[0][0]                  # the notch's point (a), the gem's
+NOTCH_FOOT = NOTCH_TOP + GEMS[0][3]              # where the gem is widest, at the socket's foot
+NOTCH_SLOPE = GEMS[0][4] / GEMS[0][3]            # how far the notch widens for its length
+RIDGE_TOP = NOTCH_TOP - RIDGE * math.hypot(1, NOTCH_SLOPE) / NOTCH_SLOPE   # where the ridges meet, on the core
 # the white bands from the upper gem's point to the lower's, side by side and crossing once halfway, a little waver in
-# the wider: how far apart they start and end (radians round the grip, each side of the flat side's middle), the
-# waver, their widths
+# the wider, which comes out from under the upper gem's widest corner and follows its lower side down to its point: how
+# far apart they start and end (radians round the grip, each side of the flat side's middle), the waver, their widths
 BANDS = (.3, .06, .09, .045)
 # the pommel's shield and its raised panel (their right halves, p and half width, from the point up), half thick
 POMMEL_SHIELD = [(0, 0), (.5, .44), (.95, .44), (COLLAR[0], .36)]
@@ -347,15 +368,15 @@ turned('grip', 'grip', [(y_of(p), r * W) for p, r in GRIP_SHAPE])
 
 # the guard: the core round the blade's root
 cube('guard', 'core', [-W / 2, y_along(CORE_TO), -T_CORE * W], [W, y_along(0) - y_along(CORE_TO), 2 * T_CORE * W])
+SLAB = 1 / 24                             # how long the slices are that the gems, the socket and the wings are cut in
 
 
 def gem_half(gem, p):
-    """A gem's half width (blade widths) at p: its long diamond."""
+    """A gem's half width (blade widths) at p (a number or an array): its long diamond, nothing beyond its ends."""
     end, way, length, widest, half = gem
-    t = (p - end) * way
-    if t <= 0 or t >= length:
-        return 0.0
-    return half * (t / widest if t < widest else (length - t) / (length - widest))
+    t = (np.asarray(p, dtype=np.float64) - end) * way
+    h = np.where((t > 0) & (t < length), half * np.where(t < widest, t / widest, (length - t) / (length - widest)), 0.0)
+    return float(h) if h.ndim == 0 else h
 
 
 def gem_poly(gem):
@@ -363,23 +384,66 @@ def gem_poly(gem):
     return [(end, 0), (end + way * widest, half), (end + way * length, 0), (end + way * widest, -half)]
 
 
-# the gems on each flat side of the grip: slices a twenty-fourth of a unit long, each its border (from inside the grip out
-# past its surface) and, inset, the raised inner diamond
+def gem_slices(gem):
+    """A gem's slices (p from, p to), a SLAB long from its end towards its point, the last one shorter: the upper gem's
+    the socket's own, so that the notch's sides and the gem's meet slice for slice."""
+    end, way, length = gem[:3]
+    n = int(math.ceil(length * W / SLAB - 1e-9))
+    ps = [end + way * min(k * SLAB / W, length) for k in range(n + 1)]
+    return [tuple(sorted(pair)) for pair in zip(ps, ps[1:])]
+
+
+# the gems on each flat side of the grip: each slice its border (from inside the grip out past its surface) and, inset,
+# the raised inner diamond
 for gi, gem in enumerate(GEMS):
-    lo_p, hi_p = sorted((gem[0], gem[0] + gem[1] * gem[2]))
-    n = int(math.ceil(gem[2] * W * 24))
-    ps = np.linspace(lo_p, hi_p, n + 1)
     for f in (1, -1):
         out = 'south' if f > 0 else 'north'
-        for k in range(n):
-            pm = (ps[k] + ps[k + 1]) / 2
+        for lo_p, hi_p in gem_slices(gem):
+            pm = (lo_p + hi_p) / 2
             hw, r = gem_half(gem, pm), grip_radius(pm)
             for part, half, a, b in (('gem', hw, .12, r + GEM_RISE[0]), ('gem_top', hw - GEM_INSET, r + GEM_RISE[0] - .01, r + GEM_RISE[1])):
                 if half * W < .015:
                     continue
                 lo, hi = (a * W, b * W) if f > 0 else (-b * W, -a * W)
-                cube('grip', part, [-half * W, y_of(ps[k]), lo], [2 * half * W, y_of(ps[k + 1]) - y_of(ps[k]), hi - lo],
+                cube('grip', part, [-half * W, y_of(lo_p), lo], [2 * half * W, y_of(hi_p) - y_of(lo_p), hi - lo],
                      [out, 'east', 'west', 'up', 'down'], gem=gi)
+
+
+def foot_line(a, inset=0.0):
+    """How far out (blade widths) the socket's foot is at a, running from the gem's widest out and down to the end of a
+    leg; a layer's (in from the outline by `inset`) from the same corner of the gem to its own leg's end."""
+    g = GEMS[0][4]
+    return g + (a - NOTCH_FOOT) * (SOCKET[0] - inset - g) / (SOCKET[1] - inset - NOTCH_FOOT)
+
+
+def socket_run(a, inset=0.0):
+    """The socket's run across each side at a (from, to: blade widths out from the middle), a layer's in from the
+    outline by `inset` but for the notch's sides (the gem fills the notch); None where it has none."""
+    lo = max(gem_half(GEMS[0], P_BASE - a), foot_line(a, inset), 0.0)
+    hi = SOCKET[0] - inset
+    return (lo, hi) if hi - lo > .012 else None
+
+
+# the socket: in slices on the upper gem's, each layer of a slice one box across it (above the notch) or one either side
+# of the notch and of the gem in it
+SOCKET_OUTLINE = [(CORE_TO, SOCKET[0]), (SOCKET[1], SOCKET[0]), (NOTCH_FOOT, GEMS[0][4])]   # its side and its foot
+NOTCH_SIDE = [(NOTCH_FOOT, GEMS[0][4]), (NOTCH_TOP, 0.0)]
+_s = SLAB / W
+_cuts = sorted({min(max(NOTCH_TOP + k * _s, CORE_TO), SOCKET[1])
+                for k in range(-int(math.ceil((NOTCH_TOP - CORE_TO) / _s)), int(math.ceil((SOCKET[1] - NOTCH_TOP) / _s)) + 1)})
+for layer, inset, T, top in SOCKET_LAYERS:
+    runs = [socket_run((a0 + a1) / 2, inset) if (a0 + a1) / 2 > top else None for a0, a1 in zip(_cuts, _cuts[1:])]
+    for k, (a0, a1) in enumerate(zip(_cuts, _cuts[1:])):
+        if runs[k] is None:
+            continue
+        lo, hi = runs[k]
+        faces = ['north', 'south', 'east', 'west']
+        for face, near in (('up', runs[k - 1] if k > 0 else None), ('down', runs[k + 1] if k + 1 < len(runs) else None)):
+            if near is None or near[0] > lo + 1e-9 or near[1] < hi - 1e-9:
+                faces.append(face)
+        y0, y1 = y_along(a1), y_along(a0)
+        for x0, x1 in ([(-hi, hi)] if lo <= 0 else [(lo, hi), (-hi, -lo)]):
+            cube('guard', 'socket', [x0 * W, y0, -T * W], [(x1 - x0) * W, y1 - y0, 2 * T * W], faces, layer=layer, depth=T * W, run=(lo, hi))
 
 # the plate on the flats: slices a sixteenth of a unit long, as wide as its outline at their middle, thicker towards the
 # guard; through the blade (on both flats at once)
@@ -397,7 +461,7 @@ for k in range(n):
 # the wings: each layer cut in slices across the sword, a box for each run of it in a slice; runs that go on unchanged
 # through the next slices are one box. Faces hidden inside the core, or against the same layer in the next slice, are
 # left out.
-SLAB, XQ = 1 / 24, 1 / 48
+XQ = 1 / 48
 _y0, _y1 = y_along(max(p[0] for p in WING)), y_along(min(p[0] for p in WING))
 _n = int(math.ceil((_y1 - _y0) / SLAB))
 _edges = _y0 + SLAB * np.arange(_n + 1)
@@ -699,19 +763,42 @@ def paint_wing(c, face, x, y, z, u, v):
 
 
 def paint_core(c, face, x, y, z, u, v):
-    """The core between the wings: two lines crossing at the seam across it, the four facets between them, a pointed
-    facet towards the grip; its sides gold."""
+    """The core between the wings: two lines crossing at the seam across it, the four facets between them, towards the
+    grip the ridges beside the socket's notch meeting in a point (brighter between them, as on the socket); its sides
+    gold."""
     glow = np.zeros_like(x, dtype=bool)
     if face not in FLATS:
         return wall(c, face, z, GOLD[3], T_CORE * W), glow
     a, up = along_of(y), x / W
     col = np.where((np.abs(up) > np.abs(a - .635) * 1.16)[..., None], GOLD[4], GOLD[3])     # the facets above and below the crossing lighter
-    dia = [(.80, 0), (CORE_TO, .26), (CORE_TO, -.26)]
-    col = np.where(inside(dia, a, up)[..., None], GOLD[5], col)
+    w = (CORE_TO - RIDGE_TOP) * NOTCH_SLOPE
+    col = np.where((np.abs(up) < (a - RIDGE_TOP) * NOTCH_SLOPE)[..., None], GOLD[5], col)
     lines = (dist([(.42, .5), (.85, -.5)], a, up) < .016) | (dist([(.42, -.5), (.85, .5)], a, up) < .016)
     lines |= (np.abs(a - .635) < .014) & (np.abs(up) < .45)
-    lines |= dist(dia, a, up, closed=True) < .016
+    lines |= dist([(CORE_TO, -w), (RIDGE_TOP, 0), (CORE_TO, w)], a, up) < .016
     return np.where(lines[..., None], GOLD_INK, col), glow
+
+
+def paint_socket(c, face, x, y, z, u, v):
+    """The socket below the core: on its faces gold, brighter between the notch and the ridges beside it (as on the core
+    above), a bright lip along the notch (the gem's own outline inks where they meet), the layers in from its outline
+    lighter, inked at its edge; its outer walls gold inked at the face, the notch's and the foot's in shade, and the
+    steps up from the core (so that they read as creases, not as light seams across it)."""
+    glow = np.zeros_like(x, dtype=bool)
+    a, up = along_of(y), np.abs(x) / W
+    if face not in FLATS:
+        if face == 'up':
+            return solid(mix(GOLD[2], GOLD[3], .6), x.shape), glow
+        if face == 'down' or np.all(np.abs(up - c.opts['run'][1]) > 1e-3):
+            return solid(GOLD[2], x.shape), glow
+        return np.where((np.abs(z) > c.opts['depth'] - .02 * W)[..., None], GOLD_INK, solid(GOLD[3], z.shape)), glow
+    d_out, d_notch = dist(SOCKET_OUTLINE, a, up), dist(NOTCH_SIDE, a, up)
+    between = up < (a - RIDGE_TOP) * NOTCH_SLOPE
+    lift = {'rim': .25, 'mid': .6, 'body': 1.0}[c.opts['layer']]          # the layers in from the outline lighter
+    col = np.where(between[..., None], mix(GOLD[4], GOLD[5], lift), solid(mix(GOLD[3], GOLD[4], lift), x.shape))
+    col = np.where((d_notch < .03)[..., None], GOLD[6], col)
+    col = np.where((dist([(RIDGE_TOP, 0.0), (SOCKET[1], (SOCKET[1] - RIDGE_TOP) * NOTCH_SLOPE)], a, up) < .016)[..., None], GOLD_INK, col)
+    return np.where((d_out < .02)[..., None], GOLD_INK, col), glow
 
 
 def paint_plate(c, face, x, y, z, u, v):
@@ -770,20 +857,22 @@ def paint_hilt(c, face, x, y, z, u, v):
     p = y / W + P_HOLD
     if part == 'grip':
         # blue like the blade, a metallic sheen down one side; on each flat side the white bands from the upper gem's
-        # point to the lower's, swinging round the grip one each way and crossing halfway
+        # point to the lower's, swinging round the grip one each way and crossing halfway, the wider coming out from
+        # under the upper gem's widest corner (at the socket's foot) and running down beside its lower side to its point
         ang = np.arctan2(z, x)
         sheen = smooth(1 - np.abs(np.angle(np.exp(1j * (ang - 2.1)))) / .7)
         col = mix(mix(BODY_DEEP, BODY, .55), mix(BODY, BODY_NEAR, .7), sheen)
         r = grip_radius(p) if np.ndim(p) == 0 else np.interp(p, [q[0] for q in GRIP_SHAPE], [q[1] for q in GRIP_SHAPE])
         top, low = GEMS[0][0] + GEMS[0][1] * GEMS[0][2], GEMS[1][0] + GEMS[1][1] * GEMS[1][2]
+        corner = GEMS[0][0] + GEMS[0][1] * GEMS[0][3]
         t = (top - p) / (top - low)
         apart, waver, wide, thin = BANDS
         side = np.arctan2(x, np.abs(z))                      # round the grip from the nearer flat side
-        within = (t >= -.08) & (t <= 1.08)                   # on under the gems' points
         tc = np.clip(t, 0, 1)
         a = apart * np.cos(np.pi * tc)
-        band_a = within & (np.abs(side - a - waver * np.sin(3 * np.pi * tc)) * r < wide / 2)
-        band_b = within & (np.abs(side + a) * r < thin / 2)
+        course = np.where(t < 0, apart + gem_half(GEMS[0], p) / r, a + waver * np.sin(3 * np.pi * tc))
+        band_a = (p <= corner) & (t <= 1.08) & (np.abs(side - course) * r < wide / 2)
+        band_b = (t >= -.08) & (t <= 1.08) & (np.abs(side + a) * r < thin / 2)    # on under the gems' points
         col = np.where((band_a | band_b)[..., None], CRYSTAL[1], col)
         return col, glow
     if part == 'collar':
@@ -810,7 +899,7 @@ def paint(c, face, u, v):
         x, y, z = world_point(c, x, y, z)
     if c.bone == 'blade':
         return paint_blade(c, face, x, y, z, u, v)
-    return {'wing': paint_wing, 'core': paint_core, 'plate': paint_plate, 'knob': paint_knob}.get(c.part, paint_hilt)(c, face, x, y, z, u, v)
+    return {'wing': paint_wing, 'core': paint_core, 'socket': paint_socket, 'plate': paint_plate, 'knob': paint_knob}.get(c.part, paint_hilt)(c, face, x, y, z, u, v)
 
 
 # ---------------------------------------------------------------- the atlas

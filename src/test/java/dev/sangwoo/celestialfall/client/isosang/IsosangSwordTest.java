@@ -95,6 +95,49 @@ class IsosangSwordTest {
         assertTrue(widths>1.4f&&widths<1.7f,"each reaching about one and a half blade widths out from the middle: "+widths);
         assertTrue(rightY>(wingLow+wingHigh)/2,"furthest out near its front, towards the point: "+rightY+" in "+wingLow+" to "+wingHigh);
     }
+    /** A box of the model as the json has it: its bone, its corners, and whether it is turned. */
+    record Box(String bone,float x0,float y0,float z0,float x1,float y1,float z1,boolean turned){}
+    static List<Box> boxes(JsonObject geo){
+        var out=new ArrayList<Box>();
+        for(var b:geo.getAsJsonArray("bones")){
+            var bone=b.getAsJsonObject();if(!bone.has("cubes"))continue;
+            for(var c:bone.getAsJsonArray("cubes")){
+                var cube=c.getAsJsonObject();var o=cube.getAsJsonArray("origin");var s=cube.getAsJsonArray("size");
+                float x0=o.get(0).getAsFloat(),y0=o.get(1).getAsFloat(),z0=o.get(2).getAsFloat();
+                out.add(new Box(bone.get("name").getAsString(),x0,y0,z0,x0+s.get(0).getAsFloat(),y0+s.get(1).getAsFloat(),z0+s.get(2).getAsFloat(),cube.has("rotation")));
+            }
+        }
+        return out;
+    }
+    @Test void theUpperGemSitsInANotchOfTheGuardsSocketRoundTheTopOfTheGrip(){
+        // 2.76.4 (user request: "아니 흰 보석이랑 코등이랑 자연스럽게 이어지지가 않았잖아", as on the made copy in the
+        // user's photo): below the guard's core its gold goes on down round the grip, and the upper gem sits in a notch
+        // up the middle of it, the gold beside it standing as far out as its border
+        var all=boxes(geometry());
+        float blade=0;for(var b:all)if(b.bone.equals("blade"))blade=Math.max(blade,b.x1);
+        float coreBottom=Float.MAX_VALUE;
+        for(var b:all)if(b.bone.equals("guard")&&!b.turned&&Math.abs(b.x0+blade)<1e-3f&&Math.abs(b.x1-blade)<1e-3f)coreBottom=Math.min(coreBottom,b.y0);
+        var socket=new ArrayList<Box>();
+        for(var b:all)if(b.bone.equals("guard")&&!b.turned&&b.y1<=coreBottom+1e-3f&&b.x0>=-blade-1e-3f&&b.x1<=blade+1e-3f)socket.add(b);
+        assertFalse(socket.isEmpty(),"the guard goes on down below its core round the grip");
+        for(var b:socket)assertTrue(socket.stream().anyMatch(m->Math.abs(m.x0+b.x1)<1e-3f&&Math.abs(m.x1+b.x0)<1e-3f&&Math.abs(m.y0-b.y0)<1e-3f&&Math.abs(m.z1-b.z1)<1e-3f),
+            "its one side the other's mirror image: "+b);
+        float topOfNotch=-Float.MAX_VALUE;Box widest=null;
+        for(var b:socket)if(b.x0>1e-3f){
+            topOfNotch=Math.max(topOfNotch,b.y1);
+            // where the notch is widest with the gold still either side of the gem: the gem's widest, at the socket's foot
+            if(all.stream().anyMatch(g->g.bone.equals("grip")&&!g.turned&&g.z0>0&&g.y0<b.y1&&g.y1>b.y0&&Math.abs(g.x1-b.x0)<1e-3f)&&(widest==null||b.x0>widest.x0))widest=b;
+        }
+        float notchTop=topOfNotch;
+        assertTrue(socket.stream().anyMatch(b->b.x0<0&&b.x1>0&&b.y0>=notchTop-1e-3f),"the notch comes to a point in the gold below the core");
+        assertNotNull(widest,"the gem fills the notch, its sides against the gold's");
+        var at=widest;
+        float gemFace=0,gold=0;
+        for(var g:all)if(g.bone.equals("grip")&&!g.turned&&g.z0>0&&g.y0<at.y1&&g.y1>at.y0&&Math.abs(g.x1-at.x0)<1e-3f)gemFace=Math.max(gemFace,g.z1);
+        for(var b:socket)if(b.y0<at.y1&&b.y1>at.y0)gold=Math.max(gold,b.z1);
+        assertTrue(gold>=gemFace,"the gem set in the gold, its border no further out than the gold beside it: "+gemFace+" and "+gold);
+        assertTrue(at.x0>0.25f*blade,"the gem about a third of the blade's width across at its widest: "+(2*at.x0/(2*blade)));
+    }
     @Test void everyFaceHasItsOwnPlaceOnTheTexture(){
         var geo=geometry();var d=geo.getAsJsonObject("description");
         int tw=d.get("texture_width").getAsInt(),th=d.get("texture_height").getAsInt();
