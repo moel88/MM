@@ -1236,7 +1236,8 @@ public final class IsosangSlash implements Fx.Skill {
             float age=t-d.born();if(age<0||age>=d.life())continue;
             double land=lands(d,floor);if(land>=0&&age>=land)continue;
             Vec3d q=flight(d,age),mv=moving(d,age);float u=age/d.life();
-            double size=d.size()*(1-.45*u)*Ease.out(age,0,.06f);float a=.94f*(1-Ease.smooth(u,.6f,1))*near(q,c.camera);
+            float by=near(q,c.camera);if(by<=0)continue;
+            double size=d.size()*(1-.45*u)*Ease.out(age,0,.06f)*(.35+.65*by);float a=.94f*(1-Ease.smooth(u,.6f,1))*by;
             switch(d.kind()){
                 case 1->flake(m,q,size,age,1.2+2.0*Ease.hash(d.seed()+9),d.seed(),INK,a);
                 case 2->blot(m,q,mv,size,d.seed(),INK,a);
@@ -1245,10 +1246,11 @@ public final class IsosangSlash implements Fx.Skill {
         }
     }
     /**
-     * Flying ink close to the camera fades out (2.77.6: by the eye a drop covered the screen like a slab of rock, and the
-     * struck saw what splashed from their own face).
+     * Flying ink close to the camera shrinks and fades out, from 2.6 blocks to nothing at 1 (2.77.6: by the eye a drop
+     * covered the screen like a slab of rock, half faded a pale ghost of one, and the struck saw what splashed from their
+     * own face).
      */
-    static float near(Vec3d q,Vec3d camera){return Ease.smooth((float)camera.distanceTo(q),.6f,1.8f);}
+    static float near(Vec3d q,Vec3d camera){return Ease.smooth((float)camera.distanceTo(q),1f,2.6f);}
     /**
      * One drop of ink at {@code q}: a round blot stretched the way it moves (in a plane holding that way, tumbling a
      * little, fixed in the world).

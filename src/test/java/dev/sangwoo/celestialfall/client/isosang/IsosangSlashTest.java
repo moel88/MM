@@ -223,6 +223,14 @@ class IsosangSlashTest {
         assertTrue(IsosangSlash.flight(d,land*.9).y>.03);
         assertEquals(-1,IsosangSlash.lands(new IsosangSlash.Drop(new Vec3d(0,40,0),new Vec3d(0,1,0),3.2,3.4,0,.5f,.1,7,0),.03),1e-9);
     }
+    @Test void flyingInkShrinksAndFadesByTheCamera(){
+        // 2.77.6: larger now, a drop by the eye covered the screen like a slab; the struck see none splashed from their own face
+        Vec3d cam=new Vec3d(0,1.6,0);
+        assertEquals(0,IsosangSlash.near(cam.add(.9,0,0),cam),1e-6,"gone by the eye");
+        assertEquals(1,IsosangSlash.near(cam.add(0,0,2.7),cam),1e-6,"as it was further out");
+        float prev=0;
+        for(double r=1;r<=2.6;r+=.05){float n=IsosangSlash.near(cam.add(r,0,0),cam);assertTrue(n>=prev-1e-6&&n-prev<.1f,"fading smoothly as it nears: "+r);prev=n;}
+    }
     @Test void theThrownSlashFliesWhereTheServerStrikes(){
         float at=blow(4,0);
         assertNull(IsosangSlash.wave(Vec3d.ZERO,0,at-.01f),"not before it is thrown");
