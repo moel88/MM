@@ -578,7 +578,8 @@ public final class IsosangSlash implements Fx.Skill {
      * it turns to ink and is gone (it lingers where its flight ends and dries there).
      */
     static final double WAVE_BACK=.55,WAVE_FRONT=1.05,WAVE_LOOK_DEPTH=1.0;
-    static final float WAVE_INK0=1.25f,WAVE_INK1=1.65f,WAVE_EAT0=1.75f,WAVE_EAT1=2.15f;
+    // (2.79.2 draft, the user's videos: it dries from the inside a third of a second after the throw and is gone by 0.58 s)
+    static final float WAVE_INK0=1.0f,WAVE_INK1=1.15f,WAVE_EAT0=1.12f,WAVE_EAT1=1.28f;
     /** Ticks the thrown slash has flown at hit 4's second {@code t} (it stops where its flight ends). */
     static double flown(float t){return Math.max(0,Math.min(IsosangRules.WAVE_TICKS,(t-blow(4,0))*20));}
     /**
@@ -623,10 +624,28 @@ public final class IsosangSlash implements Fx.Skill {
             KagenoFire.inkRibbon(sw.inner(),sw.outer(),sw.along(),sw.n(),s.style(),s.seed(),Ease.smooth(t,s.eat0(),s.eat1()),inks(s,sw,t),Ease.smooth(t,s.t0(),s.t0()+.015f)*shown(sw,c.camera));
         }
         if(combo==4){
+            trail(feet,yaw,t);
             var sw=wave(feet,yaw,t);
             if(sw!=null)KagenoFire.inkRibbon(sw.inner(),sw.outer(),sw.along(),sw.n(),3,7,Ease.smooth(t,WAVE_EAT0,WAVE_EAT1),Ease.smooth(t,WAVE_INK0,WAVE_INK1),Ease.smooth(t,blow(4,0)-.005f,blow(4,0)+.02f));
             inkUp(c,t);
         }
+    }
+    /**
+     * The thrown slash's trail (2.79.2 draft, the user's videos from above, behind and the front): a wide stroke of dark
+     * blue on the ground from just ahead of its user to under the middle of the hanging slash, longest in its middle,
+     * streaked the way it flew, turning to ink with the slash.
+     */
+    static void trail(Vec3d feet,float yaw,float t){
+        float at=blow(4,0);if(t<at||t>=WAVE_EAT1)return;
+        double ticks=flown(t),grow=Ease.out((float)((t-at)*20),0,1.6f);
+        double far=IsosangRules.waveFront(ticks)-IsosangRules.WAVE_DEPTH*WAVE_LOOK_DEPTH*(.7+.3*grow)+.35,near=.45,half=.75;
+        if(far<near+.2)return;
+        double floor=.03;int n=9;Vec3d[] in=new Vec3d[n],out=new Vec3d[n];float[] along=new float[n];
+        for(int i=0;i<n;i++){
+            double u=-1+2.0*i/(n-1),side=half*u;
+            in[i]=world(feet,yaw,v(near,floor,side*.45));out[i]=world(feet,yaw,v(far,floor,side));along[i]=i/(float)(n-1);
+        }
+        KagenoFire.inkRibbon(in,out,along,n,3,11,Ease.smooth(t,WAVE_EAT0,WAVE_EAT1),Ease.smooth(t,WAVE_INK0-.05f,WAVE_INK1),.85f*Ease.smooth(t,at+.02f,at+.08f));
     }
     /** A straight band from a to b, {@code width} across along {@code side} (a unit vector). */
     static void strip(Vec3d a,Vec3d b,Vec3d side,double width,int style,int seed,float erase,float ink,float alpha){
@@ -695,7 +714,9 @@ public final class IsosangSlash implements Fx.Skill {
      * brush ring on the ground where the cut was made, kept a third of a second). The strokes looping in the air round hit
      * 2's ring and hit 4's cut (2.77.2–2.77.7) are gone: the video from above has none.
      */
-    static final Loop[] H4_LOOPS={new Loop(v(.5,.05,0),0,0,1.6,1,.09,-200,160,.7f,.75f,1.0f,1.35f,6)};
+    // (2.79.2 draft, the user's videos: the thin ring of ink is drawn round them at the waist, close to the body, as the
+    // slash is thrown, and stays a little under half a second; 2.78.0 had it on the ground, 1.6 blocks round)
+    static final Loop[] H4_LOOPS={new Loop(v(0,.9,0),0,0,1.1,1,.07,-200,160,.69f,.72f,1.0f,1.18f,6)};
     /** Hit 2's (2.79.2 draft): the thin line of ink the point leaves round them at the waist (the videos' black circle inside the cuts). */
     static final Loop[] H2_LOOPS={new Loop(v(0,.95,0),10,150,1.5,1,.05,20,-400,.2f,.27f,.42f,.55f,4)};
     static Loop[] loops(int combo){return combo==4?H4_LOOPS:combo==2?H2_LOOPS:new Loop[0];}
@@ -759,9 +780,10 @@ public final class IsosangSlash implements Fx.Skill {
             float at=blow(4,0);
             for(int k=0;k<16;k++){
                 int seed=k*37+733;
-                double fw=2+(IsosangRules.WAVE_RANGE-2.5)*Ease.hash(seed),u=(Ease.hash(seed+1)-.5)*2;
-                // the slash's back edge passes over it: when its leading edge is DEPTH past it
-                float when=reaches(fw+IsosangRules.WAVE_DEPTH*.8,0,0);if(when<0)when=at+.4f;
+                double fw=.8+(IsosangRules.WAVE_RANGE-1.2)*Ease.hash(seed),u=(Ease.hash(seed+1)-.5)*2;
+                // the slash's back edge passes over it: when its leading edge is DEPTH past it (2.79.2 draft: where it
+                // hangs, its trail soaks into the ground as it dries)
+                float when=reaches(Math.min(IsosangRules.WAVE_RANGE-.05,fw+IsosangRules.WAVE_DEPTH*.8),0,0);if(when<0)when=at+.15f;when=Math.max(when,WAVE_INK0-.1f);
                 double side=u*IsosangRules.waveHalf(Math.min(IsosangRules.WAVE_TICKS,(when-at)*20))*.8;
                 Vec3d p=world(feet,yaw,v(fw,0,side));
                 stainAt(new Vec3d(p.x,floor+.003*(k%4),p.z),.75+.75*Ease.hash(seed+6),Math.toRadians(yaw+90)+(Ease.hash(seed+5)-.5)*.6,1.5+1.5*Ease.hash(seed+7),seed,t-when-.04f*(float)Ease.hash(seed+2),.85f);

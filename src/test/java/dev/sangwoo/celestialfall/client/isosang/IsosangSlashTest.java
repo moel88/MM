@@ -200,8 +200,9 @@ class IsosangSlashTest {
         }
         assertTrue(IsosangSlash.WAVE_EAT1+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"the thrown slash's drops and their stains are gone in time");
         for(int combo=1;combo<=4;combo++)for(var l:IsosangSlash.loops(combo))assertTrue(l.d0()<l.d1()&&l.d1()<l.e0()&&l.e0()<l.e1()&&l.e1()<=life,"hit "+combo+"'s loops of ink are drawn, then eaten away in time");
-        // hit 4's ring of ink lies on the ground round the cut (2.78.0; no strokes loop in the air any more)
-        assertEquals(1,IsosangSlash.loops(4).length);assertEquals(0,IsosangSlash.loops(4)[0].tilt(),1e-9);assertTrue(IsosangSlash.loops(4)[0].centre().y<.1);
+        // hit 4's ring of ink round them at the waist, close to the body (2.79.2 draft, the user's videos)
+        assertEquals(1,IsosangSlash.loops(4).length);var r4l=IsosangSlash.loops(4)[0];
+        assertTrue(r4l.centre().y>.6&&r4l.centre().y<1.2&&r4l.radius()<1.4,"at the waist, close round them: "+r4l.centre()+" "+r4l.radius());
         // hit 2's thin line of ink round them at the waist (2.79.2 draft: the videos' black circle inside the cuts)
         assertEquals(1,IsosangSlash.loops(2).length);assertTrue(IsosangSlash.loops(2)[0].centre().y>.6&&IsosangSlash.loops(2)[0].radius()<2,"at the waist, inside the cuts");
         // the spin cut wraps round them: more than three quarters of a turn, from the front-left to the back-left, fast
@@ -296,7 +297,7 @@ class IsosangSlashTest {
             assertEquals(IsosangRules.waveFront(k)-IsosangRules.waveCurve(k),tipR.z,.01,"its tips trailing");
         }
         // the client shows each struck as the band reaches them, the moment the server strikes them
-        for(double fw=1;fw<IsosangRules.WAVE_RANGE-.5;fw+=1.5){
+        for(double fw=.6;fw<IsosangRules.WAVE_RANGE-.3;fw+=.6){
             float when=IsosangSlash.reaches(fw,0,.3);int tick=-1;
             for(int k=0;k<=IsosangRules.WAVE_TICKS&&tick<0;k++)if(IsosangRules.waveSweeps(Math.max(0,k-1),k,fw,0,1,.3))tick=k;
             assertTrue(when>=at&&tick>=0,"reached at "+fw);
