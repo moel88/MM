@@ -232,7 +232,9 @@ public final class IsosangRules {
      * back)): where its point is as it is thrown (blocks ahead of them), how far it may fly, how fast (blocks a tick), how
      * wide a way it strikes and how high its way runs over their feet.
      */
-    public static final double GIANT_START=2.7,GIANT_RANGE=8,GIANT_SPEED=3,GIANT_HALF_WIDTH=1.2,GIANT_HEIGHT=1.0;
+    // (2.80.4, user request: "검 아주 조금만 더 느리게 날아가도 될듯": 2 blocks a tick, 40 a second; it was 3, 60: its 5.3
+    // blocks from where it shows to where it stops now take some 0.13 s, not 0.09)
+    public static final double GIANT_START=2.7,GIANT_RANGE=8,GIANT_SPEED=2,GIANT_HALF_WIDTH=1.2,GIANT_HEIGHT=1.0;
     /** Ticks the giant sword takes from its throw to reach a body a little in front of where they stood before the leap (for the stagger: until it could land). */
     public static final int GIANT_LAG=2;
     /** How far back of where it began the empowered fourth has carried its user {@code ticks} in (blocks): a leap, fast at first and slowing to a stop. */

@@ -173,6 +173,10 @@ class IsosangRulesTest {
         assertEquals(GIANT_RANGE,giantHead(100,GIANT_RANGE),1e-9);assertEquals(5,giantHead(100,5),1e-9,"stopped by a block in its way");
         assertEquals(GIANT_START,giantHead(5,1),1e-9,"a block right in front: it stops where it was thrown");
         assertEquals((GIANT_RANGE-GIANT_START)/GIANT_SPEED,giantArrives(GIANT_RANGE),1e-9);
+        // (2.80.4, user request: "검 아주 조금만 더 느리게 날아가도 될듯") 40 blocks a second, some 0.13 s from where it shows to where it
+        // stops (it was 60 and 0.09 s); a little slower, still a thrust
+        assertEquals(40,GIANT_SPEED*20,1e-9);
+        double flight=giantArrives(GIANT_RANGE)/20;assertTrue(flight>.12&&flight<.15,"its flight: "+flight+" s");
         assertTrue(giantFlying(0,GIANT_RANGE)&&giantFlying(Math.ceil(giantArrives(GIANT_RANGE)),GIANT_RANGE)&&!giantFlying(Math.ceil(giantArrives(GIANT_RANGE))+1,GIANT_RANGE)&&!giantFlying(-1,GIANT_RANGE));
         assertTrue(GIANT_RANGE>BACKSTEP+3,"it reaches past where they stood before the leap, to whom they fought: "+GIANT_RANGE);
         // its way: from right in front of them to its point as it goes, as wide as the giant sword; not behind, not beyond, not off to the side
