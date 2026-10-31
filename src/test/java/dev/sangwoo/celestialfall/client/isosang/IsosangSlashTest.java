@@ -79,9 +79,6 @@ class IsosangSlashTest {
                 if(i==0){assertTrue(p[1]<.9,"the ring sweeps low over the ground: "+s(p));assertTrue(Math.hypot(p[0]-.38,p[2])>2,"and far out round them: "+s(p));}
                 continue;
             }
-            // (2.79.2 draft: hit 3's four cuts follow the user's videos; the server's five blows keep their old times until
-            // the user decides whether they follow the cuts)
-            if(combo==3)continue;
             assertTrue(p[0]>1.2,"hit "+combo+" blow "+i+" ahead: "+s(p));
             assertTrue(IsosangRules.lane(combo,i,p[0],p[2],0,.3),"hit "+combo+" blow "+i+" inside its way: "+s(p));
         }
@@ -118,12 +115,13 @@ class IsosangSlashTest {
         }
         // 3 (2.79.2 draft, the user's videos and words): down from her left across the front to her right, the same place
         // back up the other way, the mirror of the first, and the biggest rising from her left round to her right
-        assertTrue(turned(3,.08f,.12f,.3)>200,"hit 3's first cut goes round to the right: "+turned(3,.08f,.12f,.3));
-        assertTrue(turned(3,.36f,.41f,.3)<-200,"the second goes back the other way: "+turned(3,.36f,.41f,.3));
-        assertTrue(turned(3,.54f,.58f,.3)<-200,"the third, the first's mirror, goes round to the left: "+turned(3,.54f,.58f,.3));
-        assertTrue(turned(3,.84f,.9f,.3)>200,"the fourth goes round to the right: "+turned(3,.84f,.9f,.3));
-        a=tip(3,.08f);b=tip(3,.12f);assertTrue(a[1]>b[1]+.8&&b[2]>.5,"the first comes down from high to low at her right: "+s(a)+" "+s(b));
-        a=tip(3,.36f);b=tip(3,.41f);assertTrue(b[1]>a[1]+.8,"the second rises: "+s(a)+" "+s(b));
+        // (each window runs on past its blow's hit-stop until the blade has caught up)
+        assertTrue(turned(3,.08f,.16f,.3)>200,"hit 3's first cut goes round to the right: "+turned(3,.08f,.16f,.3));
+        assertTrue(turned(3,.345f,.41f,.3)<-200,"the second goes back the other way: "+turned(3,.345f,.41f,.3));
+        assertTrue(turned(3,.54f,.61f,.3)<-200,"the third, the first's mirror, goes round to the left: "+turned(3,.54f,.61f,.3));
+        assertTrue(turned(3,.84f,.94f,.3)>200,"the fourth goes round to the right: "+turned(3,.84f,.94f,.3));
+        a=tip(3,.08f);b=tip(3,.16f);assertTrue(a[1]>b[1]+.8&&b[2]>.5,"the first comes down from high to low at her right: "+s(a)+" "+s(b));
+        a=tip(3,.345f);b=tip(3,.41f);assertTrue(b[1]>a[1]+.8,"the second rises: "+s(a)+" "+s(b));
         // 4: the twirl goes round over the head; the low cut goes from the right to the left, low, as it throws the slash
         double swept=0,prev=Double.NaN;
         for(float t=.12f;t<=.32f;t+=1/240f){
@@ -189,10 +187,9 @@ class IsosangSlashTest {
                 if(s.style()!=6&&combo==1)assertTrue(s.to()>s.from(),"hit "+combo+"'s slash from "+s.t0()+" sweeps clockwise seen from above");
                 if(combo==2)assertTrue(s.to()<s.from(),"hit 2's cut from "+s.t0()+" sweeps anticlockwise seen from above");
             }
-            // each blow lands while its slash sweeps through (2.79.2 draft: not hit 3 yet; its five blows wait for the user)
+            // each blow lands while its slash sweeps through (hit 3, 2.79.2: one on each of its four cuts)
             for(int i=0;i<IsosangRules.blows(combo);i++){
                 float at=blow(combo,i);
-                if(combo==3){var s=arcs[IsosangSlash.arcOf(combo,i)];assertTrue(at>=s.t0()&&at<s.eat1(),"hit 3 blow "+i+" lands while its cut is out");continue;}
                 if(combo==2&&i==1)continue;// the ring's burst
                 var s=arcs[IsosangSlash.arcOf(combo,i)];
                 assertTrue(at>=s.t0()&&at<=s.t1()+.04f,"hit "+combo+" blow "+i+" lands as its slash sweeps: "+at+" in "+s.t0()+".."+s.t1());

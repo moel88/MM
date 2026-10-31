@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class IsosangRulesTest {
     @Test void everyHitsBlowsLandInOrderWhileItHoldsItsUser(){
-        // the great cut; the ring and its burst; the thrust and four cuts; the thrown slash
-        assertArrayEquals(new int[]{1,2,5,1},new int[]{blows(1),blows(2),blows(3),blows(4)});
+        // the great cut; the ring and its burst; hit 3's four cuts (2.79.2); the thrown slash
+        assertArrayEquals(new int[]{1,2,4,1},new int[]{blows(1),blows(2),blows(3),blows(4)});
         for(int combo=1;combo<=4;combo++){
             for(int i=0;i<blows(combo);i++){
                 assertTrue(blowAt(combo,i)>0&&blowAt(combo,i)<LENGTH[combo],"hit "+combo+" blow "+i);
@@ -36,7 +36,7 @@ class IsosangRulesTest {
         // each hit's video gives its blows; the video of the whole combo how soon the next may follow
         assertArrayEquals(new int[]{11,10,30},new int[]{STEP[1],STEP[2],STEP[3]});
         assertEquals(6,blowAt(1,0));assertEquals(3,blowAt(2,0));assertEquals(6,blowAt(2,1));
-        assertArrayEquals(new int[]{6,10,14,16,18},new int[]{blowAt(3,0),blowAt(3,1),blowAt(3,2),blowAt(3,3),blowAt(3,4)});
+        assertArrayEquals(new int[]{2,7,11,17},new int[]{blowAt(3,0),blowAt(3,1),blowAt(3,2),blowAt(3,3)});
         assertEquals(14,blowAt(4,0),"the slash is thrown after the twirl, the aim, the crouch and the lunge");
     }
     @Test void theComboBreaksWhenTheNextHitIsLateAndRestsAfterwards(){
@@ -51,12 +51,12 @@ class IsosangRulesTest {
     @Test void everyBlowStaggersUntilTheNextCouldLandAndTheFinisherABitLonger(){
         long start=0;
         // hit 3's blows hold whom they strike from one to the next, and hit 2's ring until it bursts
-        for(int i=0;i<4;i++){long now=start+blowAt(3,i);assertEquals(start+blowAt(3,i+1)+Stagger.PAST,Stagger.isosang(3,i,start,now));}
+        for(int i=0;i<3;i++){long now=start+blowAt(3,i);assertEquals(start+blowAt(3,i+1)+Stagger.PAST,Stagger.isosang(3,i,start,now));}
         assertEquals(start+blowAt(2,1)+Stagger.PAST,Stagger.isosang(2,0,start,start+blowAt(2,0)));
         // the last blow of a hit holds them until the next hit's first could land, started as soon as it may
         assertEquals(start+STEP[1]+blowAt(2,0)+Stagger.PAST,Stagger.isosang(1,0,start,start+blowAt(1,0)));
         assertEquals(start+STEP[2]+blowAt(3,0)+Stagger.PAST,Stagger.isosang(2,1,start,start+blowAt(2,1)));
-        assertEquals(start+STEP[3]+blowAt(4,0)+Stagger.PAST,Stagger.isosang(3,4,start,start+blowAt(3,4)));
+        assertEquals(start+STEP[3]+blowAt(4,0)+Stagger.PAST,Stagger.isosang(3,3,start,start+blowAt(3,3)));
         // the thrown slash throws no one: it staggers them a moment where they stand, whenever it reaches them
         assertEquals(start+blowAt(4,0)+3+Stagger.LAST,Stagger.isosang(4,0,start,start+blowAt(4,0)+3));
         // a late blow (the time stop letting time move again) never staggers into the past
@@ -68,10 +68,9 @@ class IsosangRulesTest {
         // the ring: all round, both blows
         for(int i=0;i<2;i++)for(int a=0;a<360;a+=30){double r=SPIN_RADIUS-.2,x=Math.cos(Math.toRadians(a))*r,y=Math.sin(Math.toRadians(a))*r;assertTrue(lane(2,i,x,y,.5,.3),"the ring at "+a);}
         assertFalse(lane(2,0,SPIN_RADIUS+1,0,.5,.3));
-        // the thrust: long and narrow, only ahead; the cuts after it wide and nearer; the wide sweep the widest of them
-        assertTrue(lane(3,0,6,0,1,.3));assertFalse(lane(3,0,2,1.6,1,.3));assertFalse(lane(3,0,-.5,0,1,.3));
-        assertTrue(lane(3,1,2,2.5,1,.3));assertFalse(lane(3,1,4.8,0,1,.3));
-        assertTrue(lane(3,2,2,2.7,1,.3));assertTrue(lane(3,3,2,3.4,1,.3));assertTrue(lane(3,4,4,3.8,1,.3));assertFalse(lane(3,4,5,0,1,.3));
+        // hit 3's four cuts (2.79.2): each a wide sweep across the front, the fourth the biggest
+        for(int i=0;i<3;i++){assertTrue(lane(3,i,2,2.8,1,.3),"cut "+i);assertFalse(lane(3,i,4.8,0,1,.3),"cut "+i);assertFalse(lane(3,i,-1.5,0,1,.3),"cut "+i);}
+        assertTrue(lane(3,3,4,3.8,1,.3));assertFalse(lane(3,3,5,0,1,.3));assertFalse(lane(3,3,2,4.5,1,.3));
     }
     @Test void theThrownSlashFliesOutWideningAndSlowing(){
         assertEquals(WAVE_START,waveFront(0),1e-9);assertEquals(WAVE_RANGE,waveFront(WAVE_TICKS),1e-9);assertEquals(WAVE_RANGE,waveFront(WAVE_TICKS+5),1e-9);

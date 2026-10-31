@@ -27,13 +27,13 @@ public final class IsosangRules {
     public static final int SKILL=15;
     /**
      * The ticks into hit {@code n} its blows land on, from the user's videos of each hit: the diagonal cut at 0.3 s; the
-     * ring at 0.15 s and its burst into ink at 0.3 s; the thrust at 0.3 s, the cut up the right side at 0.5 s, the cut
-     * rising from the low left at 0.7 s, the low sweep at 0.8 s and the wide sweep at 0.9 s; the finisher's slash thrown
+     * ring at 0.15 s and its burst into ink at 0.3 s; hit 3's four cuts as each passes the front (2.79.2, the user's
+     * videos at a tenth of the speed and "4번으로 바꿔": 0.1, 0.35, 0.55 and 0.85 s; five blows until then); the finisher's slash thrown
      * at 0.7 s, after the twirl, the aim, the crouch and the lunge (it strikes as it flies on, {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{6,10,14,16,18},{14}};
-    /** Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1 + 1 + 2) and 10, 29 for the whole combo (Kageno's 28). */
-    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1,1,2},{10}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{14}};
+    /** Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28). */
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10}};
     /**
      * Ticks from a hit's start before the next may start, from the user's video of the whole combo: the first once its
      * rising cut is through, the second while its ring dries, the third once it is back from its wide sweep.
@@ -96,11 +96,10 @@ public final class IsosangRules {
     /** The diagonal cut (its crescent wraps round the front and the left); the ring's radius all round. */
     public static final double CUT_REACH=4.2,CUT_HALF_WIDTH=3.4,SPIN_RADIUS=3.9;
     /**
-     * Hit 3: the thrust's reach and its narrow way (its beam goes on further, for the eye), the cut up the right side's,
-     * the cut rising from the low left's, the low sweep's and the wide sweep's.
+     * Hit 3 (2.79.2): the first three cuts' way (down, back up in the same place, and their mirror, each a wide sweep
+     * across the front) and the fourth's, the biggest.
      */
-    public static final double THRUST_REACH=6.4,THRUST_HALF_WIDTH=.9,RISE_REACH=3.9,RISE_HALF_WIDTH=2.6,CLIMB_REACH=3.8,CLIMB_HALF_WIDTH=2.8,
-        SWEEP_REACH=3.9,SWEEP_HALF_WIDTH=3.6,WIDE_REACH=4.3,WIDE_HALF_WIDTH=4.0;
+    public static final double CROSS_REACH=3.9,CROSS_HALF_WIDTH=3.0,BIG_REACH=4.3,BIG_HALF_WIDTH=3.8;
     /**
      * The finisher's slash, thrown flying (2.77.2, "4타는 참격을 날리는건데"): a crescent across the way it was thrown
      * (leaning back from its leading edge, for the eye), from {@link #WAVE_START} blocks ahead of its user to
@@ -120,16 +119,16 @@ public final class IsosangRules {
 
     /** How far ahead of its user's feet hit {@code combo}'s blow {@code blow} reaches (blocks; the ring's radius all round). */
     public static double reach(int combo,int blow){
-        if(combo==3)return switch(blow){case 0->THRUST_REACH;case 1->RISE_REACH;case 2->CLIMB_REACH;case 3->SWEEP_REACH;default->WIDE_REACH;};
+        if(combo==3)return blow<3?CROSS_REACH:BIG_REACH;
         return combo==2?SPIN_RADIUS:combo==4?WAVE_RANGE:CUT_REACH;
     }
     /** How far to either side of the way hit {@code combo}'s blow {@code blow} reaches (blocks). */
     public static double halfWidth(int combo,int blow){
-        if(combo==3)return switch(blow){case 0->THRUST_HALF_WIDTH;case 1->RISE_HALF_WIDTH;case 2->CLIMB_HALF_WIDTH;case 3->SWEEP_HALF_WIDTH;default->WIDE_HALF_WIDTH;};
+        if(combo==3)return blow<3?CROSS_HALF_WIDTH:BIG_HALF_WIDTH;
         return combo==2?SPIN_RADIUS:combo==4?WAVE_HALF_END:CUT_HALF_WIDTH;
     }
-    /** How near (blocks ahead of its user's feet, behind them below 0) hit {@code combo}'s blow {@code blow} begins to reach: the thrust only ahead. */
-    public static double near(int combo,int blow){return combo==3&&blow==0?.1:NEAR;}
+    /** How near (blocks ahead of its user's feet, behind them below 0) hit {@code combo}'s blow {@code blow} begins to reach. */
+    public static double near(int combo,int blow){return NEAR;}
     /**
      * Whether a point (ahead along the hit, to its right and up from its user's feet, blocks) is in the way of hit
      * {@code combo}'s blow {@code blow}, for a body {@code halfWidth} across: a lane ahead, the ring's a circle all round.

@@ -258,8 +258,8 @@ public final class IsosangSlash implements Fx.Skill {
     // right; 2: in the same place the other way, rising from her right across the front to her left, lasting a while; 3:
     // the mirror of the first (high at her right), down across the front to her left, crossing the second in an X; 4:
     // once the second and third are gone, the biggest, nearly level, rising from her left across the front round to her
-    // right, lasting longest. The yaws (left +) carry on from hit 2's h2Back(4). Until 2.79.0 hit 3 was five rings to the
-    // right and a long rising beam.
+    // right, lasting longest. One blow on each cut as it passes the front (0.1, 0.35, 0.55, 0.85 s; "4번으로 바꿔"). The yaws
+    // (left +) carry on from hit 2's h2Back(4). Until 2.79.0 hit 3 was five rings to the right and a long rising beam.
     /** Hit 3's cuts (body-space keys: the turn is the root's yaw, left +; the blade {@code az} off the torso's front, right +). */
     static R6.Pose cut3(float yaw,double elev,double az,double up){
         return planted(R6.pose().at(.4,up,0).body(yaw,10,-3).head(0,-8,0).rArm(elev*.7-6,az-14).blade(elev,az).lArm(-30,-100).rLeg(-70,24).lLeg(-30,-28),24,Double.NaN);
@@ -278,12 +278,12 @@ public final class IsosangSlash implements Fx.Skill {
         k(.2,cut3(-110,-4,10,-.3)),
         k(.32,cut3(-100,-6,10,-.32)),
         // 2: the same place the other way: rising from her right across the front to her left, high
-        k(.36,cut3(-90,-8,10,-.33),Anim.Ease.IN),
-        k(.37,cut3(0,2,10,-.34),Anim.Ease.LINEAR),
-        k(.38,cut3(70,28,10,-.3),Anim.Ease.LINEAR),
-        k(.39,cut3(120,30,10,-.28),Anim.Ease.LINEAR),
-        k(.40,cut3(150,23,10,-.28),Anim.Ease.LINEAR),
-        k(.41,cut3(160,20,10,-.28),Anim.Ease.OUT),
+        k(.345f,cut3(-90,-8,10,-.33),Anim.Ease.IN),
+        k(.355f,cut3(0,2,10,-.34),Anim.Ease.LINEAR),
+        k(.365f,cut3(70,28,10,-.3),Anim.Ease.LINEAR),
+        k(.375f,cut3(120,30,10,-.28),Anim.Ease.LINEAR),
+        k(.385f,cut3(150,23,10,-.28),Anim.Ease.LINEAR),
+        k(.395f,cut3(160,20,10,-.28),Anim.Ease.OUT),
         // turning on to the left, the sword brought round high behind to her right
         k(.47,cut3(190,26,10,-.26)),
         k(.51,cut3(212,20,10,-.28)),
@@ -303,7 +303,7 @@ public final class IsosangSlash implements Fx.Skill {
         k(.885,cut3(237,7,10,-.28),Anim.Ease.LINEAR),
         k(.9,cut3(220,4,10,-.28),Anim.Ease.OUT),
         k(1.1,cut3(228,8,10,-.24)),
-        k(1.4,STANCE.body(360,0,0))).after(IsosangSlash::grounded);
+        k(1.4,STANCE.body(360,0,0))).stops(Anim.stop(blow(3,0),.025,.03),Anim.stop(blow(3,1),.025,.03),Anim.stop(blow(3,2),.025,.03),Anim.stop(blow(3,3),.035,.05)).after(IsosangSlash::grounded);
 
     // ───────────────────────────── 4 낙월 ─────────────────────────────
     /** Turning right, the sword raised overhead. */
@@ -492,18 +492,16 @@ public final class IsosangSlash implements Fx.Skill {
     // third down to her left, the fourth a little down to her left.
     static final Arc[] H3_ARCS={
         arc(v(.2,1.5,-.2),32,90,1.4,2.7,-150,100,.08f,.12f,.3f,.45f,.2f,.34f,11,15,2),
-        arc(v(.2,1.5,-.2),32,90,1.5,2.8,100,-150,.36f,.41f,.72f,.86f,.55f,.75f,9,5,2),
+        arc(v(.2,1.5,-.2),32,90,1.5,2.8,100,-150,.345f,.395f,.72f,.86f,.55f,.75f,9,5,2),
         arc(v(.2,1.55,.2),30,-60,1.6,3.0,150,-100,.54f,.58f,.76f,.88f,.68f,.82f,11,11,2),
         arc(v(.4,1.1,0),10,-90,2.0,3.6,-120,150,.84f,.9f,1.2f,1.38f,1.05f,1.25f,9,9,2)};
     static final Arc[] H4_ARCS={arc(v(1.0,.72,0),0,0,1.5,2.9,125,-115,.675f,.715f,.88f,1.04f,.69f,.83f,0,7,0)};
     static Arc[] arcs(int combo){return switch(combo){case 1->H1_ARCS;case 2->H2_ARCS;case 3->H3_ARCS;default->H4_ARCS;};}
     /**
-     * The slash blow {@code i} of hit {@code combo} lands with (an index into {@link #arcs}). Hit 3 (2.79.2 draft): the
-     * server's five blows still land at their old times over the four cuts (the first, the second, the third twice, the
-     * fourth) until the user decides whether the blows follow the cuts.
+     * The slash blow {@code i} of hit {@code combo} lands with (an index into {@link #arcs}). Hit 3 (2.79.2): one blow on
+     * each of its four cuts, as it passes the front.
      */
     static int arcOf(int combo,int i){
-        if(combo==3)return i<=0?0:i==1?1:i<=3?2:3;// (2.79.2 draft: the server's five blows over the four cuts)
         return Math.min(i,arcs(combo).length-1);
     }
 
