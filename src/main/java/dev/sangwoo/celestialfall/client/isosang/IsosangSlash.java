@@ -1495,7 +1495,7 @@ public final class IsosangSlash implements Fx.Skill {
         // the whole swing is quick (the cuts, the spin, the lunge, the flight and the blade's moves between them): the
         // afterglow is cut short throughout, shortest in the spin, else the blade's bright line leaves a fan of copies of
         // itself round them like spokes (2.77.4 cut it for the cuts alone; 2.77.5 for the recoveries between them too)
-        if(t<IsosangRules.LENGTH[combo]/20f)f.afterglow(combo==2&&t>=.06f&&t<.24f?.25f:.3f);
+        if(t<IsosangRules.LENGTH[combo]/20f)f.afterglow(combo==2&&t>=.06f&&t<.24f?.25f:combo==1&&t>=.14f&&t<.34f?.1f:.3f);// (2.79.0: hit 1's quick wind into the spin)
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){
