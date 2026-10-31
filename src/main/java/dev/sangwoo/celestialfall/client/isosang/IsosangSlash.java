@@ -160,9 +160,11 @@ public final class IsosangSlash implements Fx.Skill {
     public static final float DISPLAY_TILT=12;
 
     // ───────────────────────────── 1 참월 ─────────────────────────────
-    // (2.78.0, the user's video from above: the great cut is a whole spin to the right, its crescent sweeping clockwise
-    // from the front-left across the front, round the right and behind to end thick and inked at the back-left; the
-    // first cut ran the other way round until 2.77.7)
+    // (2.79.0, the user's videos from above and from behind: the great cut is a whole spin to the right on a steeply
+    // leaning plane, low by the ground behind the left and high above a target ahead to the right; its crescent sweeps
+    // clockwise from the front-right round the right, behind and the left, and rises from the ground up across the front
+    // to end thick and inked high at the front-right. 2.78.0 ended it low behind the left and added a second thin cut
+    // rising back; the videos have one cut.)
     /** The sword flashed into the hand, held out low to the left, glinting. */
     static final R6.Pose H1_FLASH=w(.02,-.02,8,0,0,d(-40,-30),d(-20,-45),d(-80,12),-20,-160);
     static final R6.Pose H1_GLINT=w(.04,-.04,10,0,1,d(-28,-36),d(-12,-52),d(-78,14),-22,-160);
@@ -177,11 +179,7 @@ public final class IsosangSlash implements Fx.Skill {
      * left, high as it passes the front-right and low behind, so its point goes round them in a crescent that leans
      * down to the back-left.
      */
-    static R6.Pose cut1(float yaw,double elev,double up){return planted(R6.pose().at(.36,up,0).body(yaw,10,-4).head(0,-8,0).rArm(elev*.7-8,-24).blade(elev,-40).lArm(-30,-110).rLeg(-70,20).lLeg(-30,-30),24,Double.NaN);}
-    /** Out of the spin: the long cut rising from the low left behind, across the front, up to the high right; held up there. */
-    static final R6.Pose H1_RISE0=w(.52,-.3,-278,12,2,d(-28,-70),d(-18,-100),d(-34,120),22,-168);
-    static final R6.Pose H1_RISE=w(.5,-.22,-310,10,0,d(6,0),d(20,6),d(-40,-130),24,-168);
-    static final R6.Pose H1_UP=w(.48,-.1,-338,-2,-2,d(48,46),d(56,50),d(-50,-112),24,-168);
+    static R6.Pose cut1(float yaw,double elev,double up){return planted(R6.pose().at(.36,up,0).body(yaw,10,-4).head(0,-8,0).rArm(elev*.7-8,-5).blade(elev,20).lArm(-30,-110).rLeg(-70,20).lLeg(-30,-30),24,Double.NaN);}
     /** Held up there (a whole turn on, 22° to the right): where the second hit begins. */
     static final R6.Pose H1_HOLD=w(.42,-.1,-382,-2,0,d(46,50),d(54,54),d(-58,-100),22,-166);
     static final R6.Pose H1_LOWER=w(.24,-.05,-372,2,0,d(-20,60),d(18,66),d(-70,-50),12,-170);
@@ -189,20 +187,22 @@ public final class IsosangSlash implements Fx.Skill {
         k(0,STANCE),
         k(.03,H1_FLASH),
         k(.07,H1_GLINT),
-        k(.13,H1_TURN),
-        k(.18,H1_RAISE),
-        k(.23,H1_COIL),
-        k(.25,H1_LOAD),
-        // the spin cut, fast out of the coil and slowing: the blade at the front-left, the front-right (the blow), the
-        // right behind, behind, the back-left
-        k(.29,cut1(35,28,-.3),Anim.Ease.IN),
-        k(blow(1,0),cut1(-45,24,-.31),Anim.Ease.LINEAR),
-        k(.315,cut1(-130,8,-.32),Anim.Ease.LINEAR),
-        k(.33,cut1(-210,-4,-.32),Anim.Ease.LINEAR),
-        k(.36,cut1(-280,-10,-.32),Anim.Ease.OUT),
-        k(.375,H1_RISE0),
-        k(.40,H1_RISE,Anim.Ease.LINEAR),
-        k(.43,H1_UP,Anim.Ease.OUT),
+        k(.1,H1_TURN),
+        k(.14,H1_RAISE),
+        k(.17,H1_COIL),
+        k(.19,H1_LOAD),
+        // crouched, turning into the spin, the sword brought up on end (the video's 0.85 s)
+        k(.23f,cut1(25,70,-.32)),
+        // the spin cut (2.79.0), fast out of the coil and slowing, the blade following the leaning plane: high at the
+        // front-right, down behind the right, by the ground behind the left, and rising up across the front (the blow)
+        // to end high at the front-right (the yaw is 20° left of the arc's angle: the blade leads the body by 20°)
+        k(.25,cut1(-10,43,-.3),Anim.Ease.IN),
+        k(.265f,cut1(-152,-8,-.31),Anim.Ease.LINEAR),
+        k(.272f,cut1(-206,-15,-.32),Anim.Ease.LINEAR),
+        k(.28f,cut1(-259,-8,-.32),Anim.Ease.LINEAR),
+        k(blow(1,0),cut1(-350,48,-.3),Anim.Ease.LINEAR),
+        k(.32f,cut1(-380,55,-.25),Anim.Ease.OUT),
+        k(.38f,H1_HOLD),
         k(step(1),H1_HOLD),
         k(.72,H1_LOWER),
         k(.9,STANCE.body(-360,0,0))).stops(Anim.stop(blow(1,0),.03,.05)).after(IsosangSlash::grounded);
@@ -481,8 +481,7 @@ public final class IsosangSlash implements Fx.Skill {
      * itself: {@link #wave}).
      */
     static final Arc[] H1_ARCS={
-        arc(v(0,2.0,-.3),22,-135,2.9,4.3,-75,240,.29f,.36f,.6f,.8f,.33f,.5f,0,1,2),
-        chord(v(-1.0,.5,-1.6),v(2.8,3.4,1.9),v(.5,.4,-1),.7,.6,.375f,.43f,.6f,.8f,.4f,.52f,6,2)};
+        arc(v(.2,2.0,0),27,-135,2.9,4.3,30,400,.25f,.32f,.72f,.86f,.4f,.62f,0,1,2)};
     static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.12f,.36f,1,3,1)};
     static final Arc[] H3_ARCS={
         arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
@@ -751,8 +750,7 @@ public final class IsosangSlash implements Fx.Skill {
     static void groundInk(Fx c,float t,int combo,Vec3d feet,float yaw){
         double floor=feet.y+.02;
         if(combo==1){
-            // under the spin cut's low end behind the left, where it comes down thick with ink (2.78.0)
-            pool(feet,yaw,H1_ARCS[0],175,240,4,.08f,1.6,.8f,101,t);
+            // (2.79.0: no pool under the spin cut: it skims the ground behind the left and ends high in the air)
         }
         if(combo==2){
             // the ground inside the ring darkens as it dries, and a pool of ink gathers under the first quarter it drew
@@ -1475,7 +1473,7 @@ public final class IsosangSlash implements Fx.Skill {
         float g=Math.min(1.3f,glow(t,combo));
         if(g>.02f){var hb=bladeNow(c);f.light(hb[0].add(hb[1].multiply(.9)),AURA[1],4,.4f*g);}
         for(var w:strikes(c,combo)){float k=FxLib.kick(t,w.when(),.08f);if(k>.01f)f.light(w.at(),0xcfe4ff,combo==4?6:5,(combo==4?1.1f:.85f)*k);}
-        if(combo==1){float k=FxLib.kick(t,.29f,.12f);if(k>.01f)f.light(world(feet,yaw,v(.4,1.6,-.4)),0x7fb0ff,7,.7f*k);}
+        if(combo==1){float k=FxLib.kick(t,.25f,.12f);if(k>.01f)f.light(world(feet,yaw,v(.4,1.6,-.4)),0x7fb0ff,7,.7f*k);}
         if(combo==2){
             float k=FxLib.kick(t,blow(2,0),.14f),fl=FxLib.kick(t,blow(2,1),.16f);
             if(k+fl>.01f)f.light(world(feet,yaw,v(.35,.6,0)),0x8cbcff,8,.75f*k+.9f*fl);
