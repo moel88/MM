@@ -357,7 +357,9 @@ void main(){
    // 8 hit 1's great crescent (2.79.1, the user's video): thin only where it began, thick from its middle to its head
    // 9 hit 1's crescent draft (2.79.2): pointed at both tips, thin along the start, thickest at its belly (70% along)
    // 10 hit 2's front cut (2.79.2 draft): the same crescent, light all through while fresh, as the ring was
-   float w=(style>8.5&&style<10.5)?pow(max(sin(3.14159*pow(x,1.94)),0.0),1.6)
+   // 11 hit 3's cuts down (2.79.2 draft): the same crescent thickest near its start
+   float w=(style>10.5&&style<11.5)?pow(max(sin(3.14159*pow(1.0-x,1.94)),0.0),1.6)
+          :(style>8.5&&style<10.5)?pow(max(sin(3.14159*pow(x,1.94)),0.0),1.6)
           :(style>7.5&&style<8.5)?(.06+.94*smoothstep(0.0,.5,x))*(1.0-hd*hd)
           :style<.5?(.08+.92*pow(x,1.3))*(1.0-hd*hd)
           :style<1.5?.9+.1*sin(x*31.0+sd)
