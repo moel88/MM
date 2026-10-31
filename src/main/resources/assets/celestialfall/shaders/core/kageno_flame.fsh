@@ -321,7 +321,7 @@ void main(){
   // of ink soaked into the ground (the uv square: a soft see-through blot darker in its middle, a few drops round it,
   // shrinking and fading as it dries); 6 the thin cut rising back (its widest part nearer its head); 7 a thin bright arc
   // (as the beam, in a band); 8-11 the crescents (below); 12 a splash of ink on the ground (the uv square: sharp-edged,
-  // see-through black, arms flung out, holes, drops round it). On the effect layer the light burns past white and
+  // see-through black, arms flung out, a ragged gap or two, drops round it). On the effect layer the light burns past white and
   // blooms; the ink adds none.
   float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
   float x=clamp(uv.x,0.0,1.0),y=clamp(uv.y,0.0,1.0),erase=tint.g,ink=tint.b;
@@ -347,18 +347,19 @@ void main(){
     float fi=float(i),a1=6.2832*hash(vec2(fi+20.0,sd)),rr=.5+.4*hash(vec2(sd,fi+40.0));
     shape=max(shape,(.012+.03*hash(vec2(fi+60.0,sd)))-length(q-vec2(cos(a1),sin(a1))*rr));
    }
-   // holes where the ground shows through
-   for(int i=0;i<3;i++){
+   // a gap or two where the ground shows through: small and ragged (round ones read as eyes)
+   for(int i=0;i<2;i++){
     float fi=float(i);vec2 h=(vec2(hash(vec2(fi+80.0,sd)),hash(vec2(sd,fi+90.0)))*2.0-1.0)*.3;
-    shape=min(shape,length(q-h)-(.025+.045*hash(vec2(fi+95.0,sd))));
+    vec2 e=(wq-h)*vec2(1.0,.45+.5*hash(vec2(fi+97.0,sd)));
+    shape=min(shape,length(e)*(1.0+.9*(noise(q*9.0+fi*5.3+sd)-.5))-(.012+.022*hash(vec2(fi+95.0,sd))));
    }
-   // drying: it breaks up from its thin parts as it fades
-   shape-=erase*(.05+.3*fbm(q*4.5+sd));
+   // drying: it fades, nibbled away from its edges and thin parts (holes opening in its middle read as eyes)
+   shape-=erase*(.03+.17*fbm(q*4.5+sd))*(.35+.65*smoothstep(.12,.55,r));
    float aa=max(fwidth(shape),.002)*1.2;
-   float cov=smoothstep(-aa,aa,shape),rim=1.0-smoothstep(0.0,.06,shape);
+   float cov=smoothstep(-aa,aa,shape),rim=(1.0-smoothstep(0.0,.05,shape))*smoothstep(.2,.45,r);
    rgb=mix(inkc,navy*.45,.3*fbm(q*5.0-sd));
    // see-through, a little darker where the ink gathers at its edge
-   alpha=cov*(.72+.22*rim)*(.86+.14*fbm(q*7.0+sd*2.0))*(1.0-smoothstep(.94,1.0,r))*tint.a;
+   alpha=cov*(.74+.18*rim)*(.86+.14*fbm(q*7.0+sd*2.0))*(1.0-smoothstep(.94,1.0,r))*tint.a;
   }else if(style>4.5&&style<5.5){
    // a stain soaked into the ground: a soft, lumpy, see-through blot, darker in its middle, a few drops round it
    vec2 q=uv*2.0-1.0;float r=length(q);
