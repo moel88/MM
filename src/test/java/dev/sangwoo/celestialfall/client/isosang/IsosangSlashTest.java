@@ -83,42 +83,51 @@ class IsosangSlashTest {
             assertTrue(IsosangRules.lane(combo,i,p[0],p[2],0,.3),"hit "+combo+" blow "+i+" inside its way: "+s(p));
         }
     }
+    /** How far the point of hit {@code combo} turns round the feet from {@code from} to {@code to} (degrees, clockwise seen from above positive). */
+    static double turned(int combo,float from,float to,double aboutFw){
+        double swept=0,prev=Double.NaN;
+        for(float t=from;t<=to+1e-6;t+=1/240f){
+            double[] p=tip(combo,t);double az=Math.toDegrees(Math.atan2(p[2],p[0]-aboutFw));
+            if(!Double.isNaN(prev))swept+=MathHelper.wrapDegrees(az-prev);prev=az;
+        }
+        return swept;
+    }
     @Test void eachHitCutsTheWayItsVideoShows(){
-        // 1: the sword flashed up at the right side; the great cut from the high right down to the low left; the long cut
-        // rising straight back up to the high right; held up there
-        double[] a=tip(1,.05f);assertTrue(a[1]>2.2&&a[2]>.6,"hit 1 begins with the sword up at the right: "+s(a));
-        a=tip(1,.27f);double[] b=tip(1,.33f);
-        assertTrue(a[1]>b[1]+1.2&&a[2]>b[2]+2.5,"hit 1 comes down from the high right to the low left: "+s(a)+" "+s(b));
-        a=tip(1,.33f);b=tip(1,.4f);
+        // (2.78.0, the user's video from above: every sweep goes round to the right, clockwise seen from above)
+        // 1: the sword flashed out low at the left; the spin cut from the front-left across the front, round the right and
+        // behind to the back-left, high at the front-right and low behind; the thin cut rising back from the low left to
+        // the high right; held up there
+        double[] a=tip(1,.05f);assertTrue(a[1]<1.6&&a[2]<-.3,"hit 1 begins with the sword out low at the left: "+s(a));
+        assertTrue(turned(1,.29f,.36f,.36)>250,"hit 1's cut goes round them to the right: "+turned(1,.29f,.36f,.36));
+        a=tip(1,.3f);double[] b=tip(1,.36f);
+        assertTrue(a[0]>1.2&&a[1]>b[1]+.5&&b[0]<.3&&b[2]<-.5,"hit 1 passes the front high and ends low behind the left: "+s(a)+" "+s(b));
+        a=tip(1,.375f);b=tip(1,.43f);
         assertTrue(b[1]>a[1]+1.6&&b[2]>a[2]+2.5,"hit 1 cuts back up to the high right: "+s(a)+" "+s(b));
         b=tip(1,.55f);assertTrue(b[1]>2.4&&b[2]>.8,"hit 1 holds the sword up at the right: "+s(b));
-        // 2: a whole spin low over the ground, far out round them
-        double swept=0,prev=Double.NaN;
+        // 2: a whole spin to the right low over the ground, far out round them
         for(float t=.1f;t<=.19f;t+=1/240f){
             double[] p=tip(2,t);
             assertTrue(Math.hypot(p[0]-.38,p[2])>2,"hit 2 holds the blade far out round them at "+t);assertTrue(p[1]<.9,"hit 2 sweeps low at "+t+": "+p[1]);
-            if(!Double.isNaN(prev))swept+=MathHelper.wrapDegrees(azimuth(p)-prev);prev=azimuth(p);
         }
-        assertTrue(Math.abs(swept)>330,"hit 2 turns the blade all the way round them: "+swept);
-        // 3 (2.77.7, as the user's videos show it): the thrust ahead, its point climbing a little with the beam; the whirl
-        // taking the point round them by the left, high at the front and low behind; the cut down from the high right to
-        // the low left; the great cut rising from the low left round the front to the high right
+        assertTrue(turned(2,.1f,.19f,.38)>330,"hit 2 turns the blade all the way round them to the right: "+turned(2,.1f,.19f,.38));
+        // 3: four rings round them to the right (the first leaning up to the front, the fourth the widest), the long cut
+        // rising forward out of the first (ahead and climbing at its blow), a thin level arc at the chest before the fourth
+        assertTrue(turned(3,.18f,.24f,.5)>180,"hit 3's first ring goes round to the right: "+turned(3,.18f,.24f,.5));
+        double high=-9,low=9;
+        for(float t=.18f;t<=.24f;t+=1/240f){double[] p=tip(3,t);double az=Math.toDegrees(Math.atan2(p[2],p[0]-.5));if(Math.cos(Math.toRadians(az))>.8)high=Math.max(high,p[1]);if(Math.cos(Math.toRadians(az))<-.3)low=Math.min(low,p[1]);}
+        assertTrue(high>low+.8,"the first ring climbs to the front: "+high+" "+low);
         var hb=IsosangSlash.blade(Vec3d.ZERO,0,3,blow(3,0));
-        assertTrue(hb[1].z>.97&&hb[1].y>.05,"the thrust points ahead, climbing a little: "+hb[1]);
-        prev=Double.NaN;swept=0;double high=-9,low=9;
-        for(float t=.35f;t<=.43f;t+=1/240f){
-            double[] p=tip(3,t);double az=Math.toDegrees(Math.atan2(p[2],p[0]-.98));
-            if(!Double.isNaN(prev))swept+=MathHelper.wrapDegrees(az-prev);prev=az;
-            if(Math.cos(Math.toRadians(az))>.8)high=Math.max(high,p[1]);if(Math.cos(Math.toRadians(az))<-.8)low=Math.min(low,p[1]);
-        }
-        assertTrue(swept<-180,"the whirl takes the point round them by the left: "+swept);
-        assertTrue(high>low+.8,"the whirl's ring climbs to the front: "+high+" "+low);
-        a=tip(3,.45f);b=tip(3,.54f);
-        assertTrue(a[1]>b[1]+1.5&&a[2]>b[2]+2,"the cut comes down from the high right to the low left: "+s(a)+" "+s(b));
-        a=tip(3,.765f);b=tip(3,.95f);
-        assertTrue(b[1]>a[1]+1.5&&b[2]>a[2]+2.5,"the great cut rises from the low left to the high right: "+s(a)+" "+s(b));
+        assertTrue(hb[1].z>.97&&hb[1].y>.05,"the long cut drives ahead, climbing a little: "+hb[1]);
+        assertTrue(tip(3,.27f)[0]<tip(3,.3f)[0]-1.5&&tip(3,.27f)[1]<tip(3,.3f)[1],"it rises from behind, low, to ahead: "+s(tip(3,.27f))+" "+s(tip(3,.3f)));
+        assertTrue(turned(3,.49f,.56f,.5)>240,"the second ring goes round to the right: "+turned(3,.49f,.56f,.5));
+        assertTrue(turned(3,.69f,.76f,.5)>240,"the third ring goes round to the right: "+turned(3,.69f,.76f,.5));
+        assertTrue(turned(3,.79f,.83f,.5)>170,"the level arc goes round to the right: "+turned(3,.79f,.83f,.5));
+        for(float t=.79f;t<=.83f;t+=1/240f)assertTrue(Math.abs(tip(3,t)[1]-1.3)<.5,"the level arc stays at the chest at "+t+": "+tip(3,t)[1]);
+        assertTrue(turned(3,.89f,.97f,.5)>240,"the fourth ring goes round to the right: "+turned(3,.89f,.97f,.5));
+        double far=0;for(float t=.89f;t<=.97f;t+=1/240f)far=Math.max(far,Math.hypot(tip(3,t)[0]-.5,tip(3,t)[2]));
+        assertTrue(far>2.2,"the fourth ring reaches out: "+far);
         // 4: the twirl goes round over the head; the low cut goes from the right to the left, low, as it throws the slash
-        prev=Double.NaN;swept=0;
+        double swept=0,prev=Double.NaN;
         for(float t=.12f;t<=.32f;t+=1/240f){
             double[] p=tip(4,t);assertTrue(p[1]>2,"the twirl is over the head at "+t);
             if(!Double.isNaN(prev))swept+=MathHelper.wrapDegrees(azimuth(p)-prev);prev=azimuth(p);
@@ -165,7 +174,7 @@ class IsosangSlashTest {
         }
         for(float t=blow(4,0);t<IsosangSlash.WAVE_EAT1;t+=.02f){
             var sw=IsosangSlash.wave(Vec3d.ZERO,0,t);
-            for(int i=0;i<sw.n();i++)assertTrue(sw.inner()[i].y>.5&&sw.outer()[i].y<1.6,"the thrown slash flies at the waist");
+            for(int i=0;i<sw.n();i++)assertTrue(sw.inner()[i].y>.3&&sw.outer()[i].y>sw.inner()[i].y+.6&&sw.outer()[i].y<2.3,"the thrown slash flies low at its back edge, its leading edge up at the chest (2.78.0): "+sw.inner()[i].y+" "+sw.outer()[i].y);
         }
     }
     @Test void everySlashSweepsWithItsBladeAndIsOverBeforeItsSwingIs(){
@@ -175,33 +184,50 @@ class IsosangSlashTest {
             for(var s:arcs){
                 assertTrue(s.t0()<s.t1()&&s.t1()<=s.eat1()&&s.eat0()<s.eat1()&&s.ink0()<s.ink1(),"hit "+combo);
                 assertTrue(s.eat1()+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"hit "+combo+"'s drops and their stains are gone in time");
-                assertTrue(s.outer()-s.inner()>.9,"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
+                boolean thin=s.style()==6||s.style()==7;
+                assertTrue(s.outer()-s.inner()>(thin?.4:.9),"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
+                // every sweep goes round to the right (2.78.0, the user's video from above), the chords aside
+                // (hit 4's low cut is a backhand from the right to the left)
+                if(s.style()!=6&&combo!=4)assertTrue(s.to()>s.from(),"hit "+combo+"'s slash from "+s.t0()+" sweeps clockwise seen from above");
             }
-            // each blow lands while its slash sweeps through (the thrust's beam is lit for it)
+            // each blow lands while its slash sweeps through (the long rising cut's beam is lit for it)
             for(int i=0;i<IsosangRules.blows(combo);i++){
                 float at=blow(combo,i);
-                if(combo==3&&i==0){assertTrue(IsosangSlash.beamLit(at+.01f)>.9f,"the beam is out for the thrust");continue;}
+                if(combo==3&&i==0){assertTrue(IsosangSlash.beamLit(at+.01f)>.9f,"the beam is out for the long rising cut");continue;}
                 if(combo==2&&i==1)continue;// the ring's burst
-                if(combo==3&&i==2)continue;// the cut down bursting into ink
                 var s=arcs[IsosangSlash.arcOf(combo,i)];
                 assertTrue(at>=s.t0()&&at<=s.t1()+.04f,"hit "+combo+" blow "+i+" lands as its slash sweeps: "+at+" in "+s.t0()+".."+s.t1());
+                // and the blade is ahead then (the server's lane is ahead): the head of the sweep passes the front near the blow
+                double deg=s.from()+(s.to()-s.from())*IsosangSlash.head(s,at);
+                if(combo!=2)assertTrue(Math.cos(Math.toRadians(deg))>.3,"hit "+combo+" blow "+i+": its slash's head is ahead at the blow: "+deg);
             }
         }
         assertTrue(IsosangSlash.WAVE_EAT1+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"the thrown slash's drops and their stains are gone in time");
         for(int combo=1;combo<=4;combo++)for(var l:IsosangSlash.loops(combo))assertTrue(l.d0()<l.d1()&&l.d1()<l.e0()&&l.e0()<l.e1()&&l.e1()<=life,"hit "+combo+"'s loops of ink are drawn, then eaten away in time");
+        // hit 4's ring of ink lies on the ground round the cut (2.78.0; no strokes loop in the air any more)
+        assertEquals(1,IsosangSlash.loops(4).length);assertEquals(0,IsosangSlash.loops(4)[0].tilt(),1e-9);assertTrue(IsosangSlash.loops(4)[0].centre().y<.1);
+        assertEquals(0,IsosangSlash.loops(2).length,"no strokes of ink in the air round hit 2's ring");
         assertEquals(0,IsosangSlash.beamLit(IsosangSlash.BEAM_OFF),1e-6);
         float step=0;for(float t=0;t<1;t+=1/240f)step=Math.max(step,Math.abs(IsosangSlash.beamLit(t+1/60f)-IsosangSlash.beamLit(t)));
         assertTrue(step<.75f,"the beam pops in a single frame: "+step);
-        // the great cut wraps round them: more than three quarters of a turn
-        var g=IsosangSlash.H1_ARCS[0];assertTrue(Math.abs(g.to()-g.from())>250,"hit 1's crescent wraps round: "+(g.to()-g.from()));
+        // the spin cut wraps round them: more than three quarters of a turn, from the front-left to the back-left, fast
+        // at first (its head past the front within a frame of the blow)
+        var g=IsosangSlash.H1_ARCS[0];assertTrue(g.to()-g.from()>300,"hit 1's crescent wraps round: "+(g.to()-g.from()));
+        assertTrue(g.from()<-45&&g.from()>-100&&g.to()>200&&g.to()<260,"from the front-left to the back-left: "+g.from()+".."+g.to());
+        assertEquals(2,g.pace());
+        // its band is thin at its tail and thick at its head
+        assertTrue(IsosangSlash.profile(0,.05)<.15&&IsosangSlash.profile(0,.8)>.7&&IsosangSlash.profile(0,.8)>IsosangSlash.profile(0,.4),"thin tail, thick head");
         // the ring goes all the way round
         var r=IsosangSlash.H2_ARCS[0];assertEquals(360,Math.abs(r.to()-r.from()),1e-6);
-        // hit 3 (2.77.7): the whirl's ring goes most of the way round them; the beam still shines as the cut down crosses it
-        // (the X); the great rising cut climbs to the right
-        var w=IsosangSlash.H3_ARCS[0];assertTrue(Math.abs(w.to()-w.from())>240,"hit 3's whirl goes round them: "+(w.to()-w.from()));
-        var x=IsosangSlash.H3_ARCS[1];assertTrue(IsosangSlash.beamLit(x.t1()+.1f)>.9f,"the beam shines on through the cut that crosses it");
-        var up=IsosangSlash.H3_ARCS[2];
-        assertTrue(IsosangSlash.point(up,up.to(),up.outer()).y>IsosangSlash.point(up,up.from(),up.outer()).y+1.5,"hit 3's last cut climbs to the right");
+        // hit 3 (2.78.0): four rings most of the way round them, each ending behind the left (the first behind the right),
+        // the fourth the widest; the beam shines on while the third ring crosses it (the X)
+        var r1=IsosangSlash.H3_ARCS[0];assertTrue(r1.to()-r1.from()>=200&&r1.to()>120&&r1.to()<180,"the first ring: "+r1.from()+".."+r1.to());
+        for(int i:new int[]{1,2,4}){var ri=IsosangSlash.H3_ARCS[i];assertTrue(ri.to()-ri.from()>=270&&ri.to()>=240&&ri.to()<=270,"ring "+i+" ends behind the left: "+ri.from()+".."+ri.to());}
+        assertTrue(IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[1].outer()+1&&IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[2].outer()+1,"the fourth ring is the widest");
+        var x=IsosangSlash.H3_ARCS[2];assertTrue(IsosangSlash.beamLit(x.t1())>.9f,"the beam shines on through the third ring that crosses it");
+        // the first ring leans up to the front, the fourth to the front-right
+        assertTrue(IsosangSlash.point(r1,0,r1.outer()).y>IsosangSlash.point(r1,180,r1.outer()).y+1.5,"the first ring is high at the front");
+        var r4=IsosangSlash.H3_ARCS[4];assertTrue(IsosangSlash.point(r4,45,r4.outer()).y>IsosangSlash.point(r4,225,r4.outer()).y+1.5,"the fourth ring is high at the front-right");
     }
     @Test void theFeetStayOnTheGround(){
         // the legs are rigid: a body brought down is a wide stance or a lunge, never a foot in the ground; one foot always on it
@@ -228,6 +254,11 @@ class IsosangSlashTest {
     @Test void theInkSoaksIntoTheGroundAndIsGoneWithinASecond(){
         assertEquals(0,IsosangSlash.dried(0),1e-6);assertEquals(1,IsosangSlash.dried(IsosangSlash.STAIN_LIFE),1e-6);
         assertTrue(IsosangSlash.STAIN_LIFE<1,"gone within a second, as in the videos");
+        // the pools under the slashes (2.78.0) go sooner still: half a second, as the video from above has them
+        assertTrue(IsosangSlash.POOL_LIFE<=.6f);assertEquals(1,IsosangSlash.dried(IsosangSlash.POOL_LIFE,IsosangSlash.POOL_LIFE),1e-6);
+        // the ink front of a band: deep into a thick part, barely into a thin one, spreading out as it ages
+        assertTrue(IsosangSlash.inkFront(1,0)<.6&&IsosangSlash.inkFront(.1,0)>.85,"ink fills the thick parts, not the thin");
+        assertTrue(IsosangSlash.inkFront(1,1)<IsosangSlash.inkFront(1,0)-.2,"and spreads outward as it dries");
         // a drop lands where its flight meets the ground (and stains it there); one that cannot reach it does not
         var d=new IsosangSlash.Drop(new Vec3d(0,1.6,0),new Vec3d(2,1,0),3.2,3.4,0,IsosangSlash.DROP_LIFE,.1,7,0);
         double land=IsosangSlash.lands(d,.03);
@@ -255,7 +286,7 @@ class IsosangSlashTest {
             assertEquals(IsosangRules.waveFront(k)-IsosangRules.waveCurve(k),tipR.z,.01,"its tips trailing");
         }
         // the client shows each struck as the band reaches them, the moment the server strikes them
-        for(double fw=1;fw<12;fw+=1.5){
+        for(double fw=1;fw<IsosangRules.WAVE_RANGE-.5;fw+=1.5){
             float when=IsosangSlash.reaches(fw,0,.3);int tick=-1;
             for(int k=0;k<=IsosangRules.WAVE_TICKS&&tick<0;k++)if(IsosangRules.waveSweeps(Math.max(0,k-1),k,fw,0,1,.3))tick=k;
             assertTrue(when>=at&&tick>=0,"reached at "+fw);
@@ -296,7 +327,7 @@ class IsosangSlashTest {
                     assertTrue(st.alpha()>0&&st.alpha()<=1);
                     // the light's stars outward of the shader's ink front there, the night's inward of it
                     float swept=s.t0()+(s.t1()-s.t0())*(float)f,ink=Ease.smooth(t,swept+s.ink0()-s.t0(),swept+s.ink1()-s.t0());
-                    double inkAt=.62-.45*(1-(1-ink)*(1-ink)),d=(1-(st.radius()-s.inner())/(s.outer()-s.inner()))/IsosangSlash.profile(s.style(),f/h);
+                    double prof=IsosangSlash.profile(s.style(),f/h),inkAt=IsosangSlash.inkFront(prof,ink),d=(1-(st.radius()-s.inner())/(s.outer()-s.inner()))/prof;
                     if(st.night()){night++;assertTrue(d>inkAt+.05,"hit "+combo+": a night star in the ink");}
                     else{light++;assertTrue(d<inkAt-.05,"hit "+combo+": a star in the light");}
                 }

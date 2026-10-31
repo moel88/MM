@@ -102,14 +102,19 @@ public final class IsosangRules {
     public static final double THRUST_REACH=6.4,THRUST_HALF_WIDTH=.9,RISE_REACH=3.9,RISE_HALF_WIDTH=2.6,CLIMB_REACH=3.8,CLIMB_HALF_WIDTH=2.8,
         SWEEP_REACH=3.9,SWEEP_HALF_WIDTH=3.6,WIDE_REACH=4.3,WIDE_HALF_WIDTH=4.0;
     /**
-     * The finisher's slash, thrown flying (2.77.2, "4타는 참격을 날리는건데"): a crescent lying level across the way it
-     * was thrown, from {@link #WAVE_START} blocks ahead of its user to {@link #WAVE_RANGE} over {@link #WAVE_TICKS} ticks
-     * (fast at first, slowing), {@link #WAVE_HALF_START} to {@link #WAVE_HALF_END} blocks to either side as it widens, its
-     * tips trailing {@link #WAVE_CURVE_START} to {@link #WAVE_CURVE_END} blocks behind its middle, {@link #WAVE_DEPTH}
-     * deep. It strikes whoever its band passes over, once; and whoever is right in front as it is thrown.
+     * The finisher's slash, thrown flying (2.77.2, "4타는 참격을 날리는건데"): a crescent across the way it was thrown
+     * (leaning back from its leading edge, for the eye), from {@link #WAVE_START} blocks ahead of its user to
+     * {@link #WAVE_RANGE} over {@link #WAVE_TICKS} ticks (fast at first, slowing: 2.78.0, nearer and slower, as the
+     * user's video from above shows it), {@link #WAVE_HALF_START} to {@link #WAVE_HALF_END} blocks to either side as it
+     * widens, its tips trailing {@link #WAVE_CURVE_START} to {@link #WAVE_CURVE_END} blocks behind its middle,
+     * {@link #WAVE_DEPTH} deep. It strikes whoever its band passes over, once; and whoever is right in front as it is thrown.
      */
-    public static final double WAVE_START=1.2,WAVE_RANGE=13.5,WAVE_HALF_START=2.6,WAVE_HALF_END=6.6,WAVE_CURVE_START=1.0,WAVE_CURVE_END=3.2,WAVE_DEPTH=1.7;
-    public static final int WAVE_TICKS=8;
+    public static final double WAVE_START=1.2,WAVE_RANGE=11,WAVE_HALF_START=2.8,WAVE_HALF_END=8.5,WAVE_CURVE_START=1.0,WAVE_CURVE_END=3.6,WAVE_DEPTH=2.4;
+    /**
+     * Ticks the slash flies (2.78.0, the user's video from above: it is still close and huge a quarter of a second on,
+     * drifting out and widening; 2.77.x had it 13.5 blocks out in 0.4 s, a thin line in the distance).
+     */
+    public static final int WAVE_TICKS=16;
     /** As far as any blow of the attack reaches (blocks): who could be struck at all is looked for within this. */
     public static final double MAX_REACH=WAVE_RANGE+WAVE_HALF_END;
 
@@ -140,8 +145,11 @@ public final class IsosangRules {
 
     // ───────────────────────────── the finisher's flying slash ─────────────────────────────
 
-    /** How far the flight has gone, 0 to 1, {@code ticks} after the slash was thrown (fast at first, slowing to a stop). */
-    public static double waveFlown(double ticks){double u=Math.max(0,Math.min(1,ticks/WAVE_TICKS));return 1-(1-u)*(1-u);}
+    /**
+     * How far the flight has gone, 0 to 1, {@code ticks} after the slash was thrown: fast at first, slowing to a stop
+     * (2.78.0: a gentler curve than the square, so it is still drifting out past a quarter of a second as the video shows).
+     */
+    public static double waveFlown(double ticks){double u=Math.max(0,Math.min(1,ticks/WAVE_TICKS));return 1-Math.pow(1-u,1.8);}
     /** How far ahead of where it was thrown the middle of the slash's leading edge is (blocks), {@code ticks} after. */
     public static double waveFront(double ticks){return WAVE_START+(WAVE_RANGE-WAVE_START)*waveFlown(ticks);}
     /** How far to either side the slash reaches (blocks), {@code ticks} after it was thrown. */

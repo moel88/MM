@@ -319,8 +319,8 @@ void main(){
   // white leading edge, a royal blue body streaked the way it flies, black ink at its back edge dripping off it, spreading
   // forward as it dries; 4 a stroke of ink drawn in the air (thick and thin, tapered at both ends, dry gaps); 5 a stain
   // of ink soaked into the ground (the uv square: a soft see-through blot darker in its middle, a few drops round it,
-  // shrinking and fading as it dries); 6 the long cut rising back (as 0, its widest part nearer its head). On the effect
-  // layer the light burns past white and blooms; the ink adds none.
+  // shrinking and fading as it dries); 6 the thin cut rising back (its widest part nearer its head); 7 a thin bright arc
+  // (as the beam, in a band). On the effect layer the light burns past white and blooms; the ink adds none.
   float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
   float x=clamp(uv.x,0.0,1.0),y=clamp(uv.y,0.0,1.0),erase=tint.g,ink=tint.b;
   vec3 inkc=vec3(.008,.010,.034),navy=vec3(.026,.046,.21),deep=vec3(.05,.16,.80),blue=vec3(.16,.46,1.0),pale=vec3(.66,.88,1.0),edge=vec3(.96,.99,1.0);
@@ -351,13 +351,17 @@ void main(){
    rgb=mix(inkc,navy*.75,smoothstep(.45,1.0,d)*.6);
    alpha=body*keep*tint.a;
   }else{
-   float w=style<.5?pow(max(sin(3.14159*pow(x,1.45)),0.0),.6)
+   // 0 a spin cut (2.78.0, the video from above: a thin line at its tail, where the blade began, thickening all the way to
+   // its rounded head), 1 the ring, 2 the beam, 3 the thrown slash, 6 the thin cut rising back, 7 a thin bright arc
+   float hd=smoothstep(.86,1.0,x);
+   float w=style<.5?(.08+.92*pow(x,1.3))*(1.0-hd*hd)
           :style<1.5?.9+.1*sin(x*31.0+sd)
           :style<2.5?pow(max(sin(3.14159*x),0.0),.5)
           :style<3.5?pow(max(sin(3.14159*x),0.0),.36)
-          :pow(max(sin(3.14159*pow(x,.62)),0.0),.55);
+          :style<6.5?pow(max(sin(3.14159*pow(x,.62)),0.0),.55)
+          :pow(max(sin(3.14159*x),0.0),.3);
    w=max(w,.02);
-   bool beam=style>1.5&&style<2.5,wave=style>2.5&&style<3.5,ring=style>.5&&style<1.5;
+   bool beam=(style>1.5&&style<2.5)||(style>6.5&&style<7.5),wave=style>2.5&&style<3.5,ring=style>.5&&style<1.5;
    float d=beam?abs(y-.5)*2.0/w:(1.0-y)/w;
    float aa=max(fwidth(d),.0015)*1.4;
    float strand=fbm(vec2(x*6.0+sd,y*24.0)),hair=noise(vec2(x*12.0+sd,y*90.0)),streak=noise(vec2(x*70.0+sd,y*2.5));
@@ -378,14 +382,17 @@ void main(){
     body=max(max(core,glow*.75),rim*.5)*(1.0-ink);
     lit=core*3.6+glow*1.1*(1.0-rim);holes=1.0;
    }else{
-    // the light outermost (a white-hot edge, bright blue, royal blue), the ink inside it, spreading out as it dries
-    float whiteEnd=wave?mix(.11,.04,ink):mix(.15,.05,ink);
+    // the light outermost (a white-hot edge, wide while the cut is fresh, bright blue, royal blue), the ink inside it:
+    // filling the thick parts and barely touching the thin (2.78.0, the video from above), spreading out as it dries
+    float whiteEnd=wave?mix(.11,.04,ink):mix(.24,.06,smoothstep(0.0,.4,ink));
     float spread=1.0-(1.0-ink)*(1.0-ink);
-    float inkAt=(wave?mix(.62,.30,spread):mix(.62,.17,spread))+.10*(strand-.5)+.04*(streak-.5);
-    // the inner edge: a dry brush's, ragged, strands falling short; the thrown slash's back edge drips
+    float inkAt=(wave?mix(.62,.30,spread):max(.2,.92-.4*smoothstep(.15,.9,w)-.28*spread))+.08*(strand-.5)+.03*(streak-.5);
+    // the band thins as it dries, its inner edge drawing out toward the light (the video: the blue narrows to a line
+    // before it goes); the inner edge a dry brush's, ragged, strands falling short; the thrown slash's back edge drips
+    float limit=wave?1.0:mix(1.0,.45,smoothstep(.55,1.0,ink));
     float drip=wave?.30*smoothstep(.55,.95,noise(vec2(x*46.0+sd,3.0)))+.06*strand:0.0;
     float rag=wave?0.0:.13*smoothstep(.45,.9,strand)+.05*hair;
-    float inBand=1.0-smoothstep(1.0+drip-rag-aa*2.0,1.0+drip-rag+aa*2.0,d);
+    float inBand=1.0-smoothstep(limit+drip-rag-aa*2.0,limit+drip-rag+aa*2.0,d);
     float outBand=smoothstep(-aa,aa,d);
     float inkMask=smoothstep(inkAt-aa*2.0,inkAt+aa*2.0+.03,d);
     vec3 g=mix(edge,pale,smoothstep(whiteEnd*.55,whiteEnd+.03,d));
@@ -398,7 +405,9 @@ void main(){
     // in the light too; the white edge kept clear)
     float hairN=noise(vec2(x*8.0+sd*2.3,y*30.0));
     g=mix(g,inkc,smoothstep(.64,.82,hairN)*smoothstep(whiteEnd+.06,whiteEnd+.18,d)*(.4+.35*ink));
-    rgb=mix(g,inkc,inkMask);
+    // the black softens toward navy as the band dries down to a line
+    vec3 inkNow=mix(inkc,navy*1.2,smoothstep(.75,1.0,ink)*.55);
+    rgb=mix(g,inkNow,inkMask);
     // the brush's grain in the ink: navy strands along it
     rgb=mix(rgb,navy*1.3,inkMask*smoothstep(.6,.86,streak)*.55);
     // the ring cracks into black lines across it as it dries
