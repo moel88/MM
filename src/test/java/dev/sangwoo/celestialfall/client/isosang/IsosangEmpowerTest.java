@@ -9,8 +9,8 @@ import static dev.sangwoo.celestialfall.client.isosang.IsosangSlashTest.turn;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Lee So-sang's E as drawn (2.80.0): the empowered first (three swords thrown) and fourth (a step back and the giant
- * sword) move as the other hits do (no joint jumping or flipping, facing the front, the feet on the ground, hit-stops on
+ * Lee So-sang's E as drawn (2.80.0): the empowered first (three swords thrown) and fourth (a leap back and the giant
+ * sword thrown, 2.80.1) move as the other hits do (no joint jumping or flipping, facing the front, the feet on the ground, hit-stops on
  * the blows), hand over to the second and take over from the third, the thrust reaches out ahead on its blow, the giant
  * sword lies along the thrust with its grip toward them and its point at the thrust's tip, and the camera draws back for
  * it and comes in again smoothly.
@@ -87,19 +87,60 @@ class IsosangEmpowerTest {
         // drawn back before it (the point nearer them than at the thrust)
         assertTrue(IsosangSlashTest.tip(IsosangRules.THRUST,.1f)[0]<p[0]-.4,"drawn back before it");
     }
-    @Test void theGiantSwordLiesAlongTheThrustItsPointAtTheTip(){
-        var c=new dev.sangwoo.celestialfall.client.StandClient.Cast(java.util.UUID.randomUUID(),java.util.UUID.randomUUID(),new net.minecraft.util.Identifier("minecraft","overworld"),
+    static dev.sangwoo.celestialfall.client.StandClient.Cast giantCast(){
+        return new dev.sangwoo.celestialfall.client.StandClient.Cast(java.util.UUID.randomUUID(),java.util.UUID.randomUUID(),new net.minecraft.util.Identifier("minecraft","overworld"),
             IsosangRules.SKILL,IsosangRules.THRUST,0,0,0,new Vec3d(10,64,10),30,java.util.List.of());
-        Vec3d from=IsosangEmpower.thrustFrom(c),f=Vec3d.fromPolar(0,30);
-        assertEquals(IsosangRules.BACKSTEP,new Vec3d(10,64,10).subtract(from).length(),1e-6,"they thrust from where the step back takes them");
-        Vec3d[] ends=IsosangEmpower.giantEnds(c);
-        double grip=ends[0].subtract(from).dotProduct(f),point=ends[1].subtract(from).dotProduct(f);
-        assertTrue(grip>.6&&grip<1.6,"its grip toward them: "+grip);
-        assertEquals(IsosangRules.THRUST_REACH,point,.6,"its point at the thrust's tip: "+point);
-        assertTrue(ends[1].y<ends[0].y,"dipping toward its point");
-        assertTrue(IsosangEmpower.giantAlpha(blow(IsosangRules.THRUST,0)+.05f)>.99,"there as the thrust strikes");
-        assertEquals(0,IsosangEmpower.giantAlpha(IsosangEmpower.GIANT_GONE+.01f),1e-6,"gone after");
-        for(float t=0;t<1;t+=1/60f)assertTrue(Math.abs(IsosangEmpower.giantAlpha(t+1/60f)-IsosangEmpower.giantAlpha(t))<.35,"it fades in and out, no pop");
+    }
+    @Test void theGiantSwordShowsBesideThemThenFliesOnAndHangsGripTowardThem(){
+        // (2.80.1, user request: "4타 뒤로 5블록 이동하고 그리고 검 안 날리는 거 같은데?") thrown from where the 5-block leap takes them
+        var c=giantCast();Vec3d origin=new Vec3d(10,64,10),f=Vec3d.fromPolar(0,30),right=new Vec3d(-f.z,0,f.x);
+        Vec3d from=IsosangEmpower.throwFrom(c);
+        assertEquals(IsosangRules.backstep(IsosangRules.blowAt(IsosangRules.THRUST,0)),origin.subtract(from).length(),1e-6,"thrown from where the leap has carried them");
+        assertTrue(origin.subtract(from).dotProduct(f)>4,"most of the 5 blocks back by the throw");
+        float at=blow(IsosangRules.THRUST,0),arr=IsosangEmpower.arrive(c);
+        assertNull(IsosangEmpower.giant(c,0),"not yet as the hit begins");
+        // beside them as they leap: at their left, its grip low behind them, its point high ahead
+        var g=IsosangEmpower.giant(c,.1f);Vec3d feet=IsosangEmpower.leapt(c,.1f);
+        assertNotNull(g);
+        Vec3d grip=g.grip().subtract(feet),point=g.point().subtract(feet);
+        assertTrue(grip.dotProduct(right)<-.6&&point.dotProduct(right)<-.6,"at their left: "+grip+" "+point);
+        assertTrue(grip.dotProduct(f)<0&&point.dotProduct(f)>1.5,"its grip behind them, its point ahead");
+        assertTrue(point.y>grip.y+1.5,"tilted up ahead");
+        // thrown: no jump as it goes, its point on along its way at the server's pace, and it stops grip toward them
+        Vec3d prev=null;double back=0;
+        for(float t=at-.05f;t<arr+.2f;t+=1/60f){
+            var now=IsosangEmpower.giant(c,t);assertNotNull(now,"there at "+t);
+            // (before the throw it goes back with them as they leap)
+            if(prev!=null){double step=now.point().distanceTo(prev);assertTrue(step<IsosangRules.GIANT_SPEED*20/60*1.6,"no jump at "+t+": "+step);if(t>at)back=Math.max(back,-now.point().subtract(prev).dotProduct(f));}
+            prev=now.point();
+        }
+        assertTrue(back<.25,"never back along its way but a little jolt as it stops: "+back);
+        var mid=IsosangEmpower.giant(c,at+(arr-at)*.5f);assertTrue(mid.point().subtract(from).dotProduct(f)>IsosangRules.GIANT_START+1,"on its way halfway through");
+        var hung=IsosangEmpower.giant(c,arr+.12f);
+        double ahead=hung.point().subtract(from).dotProduct(f);
+        assertTrue(ahead<=IsosangRules.GIANT_RANGE+1e-6&&ahead>IsosangRules.GIANT_RANGE-.35,"its point where it stopped, at its range with nothing in its way: "+ahead);
+        assertTrue(hung.grip().subtract(from).dotProduct(f)<ahead-3,"its grip toward them");
+        // (the user's videos: from behind its blade rises up the screen over its guard, from above it lies long along the way)
+        assertTrue(hung.point().y>hung.grip().y+1.5,"tilted up ahead, its point high: "+hung.grip()+" "+hung.point());
+        assertTrue(hung.grip().y-from.y<1.2,"its grip low");
+        assertEquals(0,hung.point().subtract(from).dotProduct(right),.05,"on the way they faced");
+        assertEquals(0,hung.grip().subtract(from).dotProduct(right),.05,"in from their left to the way they faced");
+        Vec3d burst=IsosangEmpower.end(c);
+        assertTrue(burst.distanceTo(hung.grip())<IsosangEmpower.GIANT_LEN&&burst.distanceTo(hung.point())<IsosangEmpower.GIANT_LEN,"the burst on its blade");
+        // then it fades, no pop
+        assertNull(IsosangEmpower.giant(c,arr+IsosangEmpower.GIANT_HANG+IsosangEmpower.GIANT_FADE+.01f),"gone after");
+        float last=0;for(float t=0;t<arr+1;t+=1/60f){var x=IsosangEmpower.giant(c,t);float a=x==null?0:x.alpha();assertTrue(Math.abs(a-last)<.35,"it comes and goes, no pop at "+t);last=a;}
+    }
+    @Test void theGiantSwordsWayMatchesTheServers(){
+        // its point as drawn is where the server's way has reached (IsosangRules.giantHead) from its throw on
+        var c=giantCast();Vec3d from=IsosangEmpower.throwFrom(c),f=Vec3d.fromPolar(0,30);float at=blow(IsosangRules.THRUST,0);
+        for(int k=0;k<=2;k++){
+            double head=IsosangRules.giantHead(k,IsosangRules.GIANT_RANGE),drawn=IsosangEmpower.giant(c,at+k/20f).point().subtract(from).dotProduct(f);
+            assertEquals(head,drawn,.2,"tick "+k+" after the throw");
+        }
+        // where it stops, but for the little jolt back
+        double stopped=IsosangEmpower.giant(c,IsosangEmpower.arrive(c)).point().subtract(from).dotProduct(f);
+        assertTrue(stopped<=IsosangRules.GIANT_RANGE+1e-6&&stopped>IsosangRules.GIANT_RANGE-.35,"stopped at its range: "+stopped);
     }
     @Test void aThrownSwordFliesAtItsSpeedAndStops(){
         var w=new IsosangEmpower.Way(Vec3d.ZERO,new Vec3d(0,0,1),7,.1f,false);

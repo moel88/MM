@@ -24,8 +24,8 @@ package dev.sangwoo.celestialfall.isosang;
  * 50% 더 강하고 1타와 4타만 바뀌고 2타 3타는 모션이 같아 1타는 영상 처럼 검을 3개 던지고 4타는 뒤로 이동하고 거대한 검을
  * 찔러 4타에 맞으면 넉백이 있어 E 쿨 타임은 15초야"): the attack's rest is gone at once and the next combo is empowered,
  * every blow {@link #EMPOWER} times as hard; its first hit is {@link #THROWS} (three swords thrown flying the way its user
- * looks, {@link #SWORD_SPEED}), its fourth {@link #THRUST} (a step back and a giant sword thrust ahead, which throws whom
- * it strikes), its second and third as they are. A hit's number here is its kind: 1 to 4 the combo's hits, 5 and 6 the
+ * looks, {@link #SWORD_SPEED}), its fourth {@link #THRUST} (2.80.1: a leap 5 blocks back and a giant sword thrown flying
+ * ahead, which throws whom it strikes), its second and third as they are. A hit's number here is its kind: 1 to 4 the combo's hits, 5 and 6 the
  * empowered first and fourth ({@link #position}). E is ready again {@link #E_COOLDOWN} ticks after the empowered combo is
  * over (the user's choice: "강화 콤보가 끝난 뒤").
  */
@@ -50,7 +50,7 @@ public final class IsosangRules {
     private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
-    /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a step back and a giant sword thrust. */
+    /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
     public static final int THROWS=5,THRUST=6;
     /** Ticks E is not ready again once the empowered combo it gave is over (2.80.0: 15 s). */
     public static final int E_COOLDOWN=300;
@@ -121,11 +121,13 @@ public final class IsosangRules {
     public static long staggerUntil(int combo,int blow,long start,long now,int past,int last){return staggerUntil(combo,blow,start,now,past,last,false);}
     /**
      * The same in the empowered combo or not (2.80.0): a thrown sword's next is the next sword thrown, reaching them
-     * {@link #SWORD_LAG} ticks later, or the second hit's first blow; the third's last, the empowered fourth's thrust.
+     * {@link #SWORD_LAG} ticks later, or the second hit's first blow; the third's last, the empowered fourth's giant sword
+     * reaching where they stood before its leap, {@link #GIANT_LAG} ticks after it is thrown (2.80.1).
      */
     public static long staggerUntil(int combo,int blow,long start,long now,int past,int last,boolean empowered){
         if(position(combo)>=4)return now+last;
-        long next=blow+1<blows(combo)?start+blowAt(combo,blow+1)+(combo==THROWS?SWORD_LAG:0):nextAt(combo,start)+blowAt(next(combo,empowered),0);
+        int after=next(combo,empowered);
+        long next=blow+1<blows(combo)?start+blowAt(combo,blow+1)+(combo==THROWS?SWORD_LAG:0):nextAt(combo,start)+blowAt(after,0)+(after==THRUST?GIANT_LAG:0);
         return Math.max(now,next)+past;
     }
 
@@ -162,14 +164,14 @@ public final class IsosangRules {
     public static double reach(int combo,int blow){
         if(combo==3)return blow<3?CROSS_REACH:BIG_REACH;
         if(combo==THROWS)return SWORD_RANGE;
-        if(combo==THRUST)return THRUST_REACH;
+        if(combo==THRUST)return GIANT_RANGE;
         return combo==2?SPIN_RADIUS:combo==4?WAVE_RANGE:CUT_REACH;
     }
     /** How far to either side of the way hit {@code combo}'s blow {@code blow} reaches (blocks). */
     public static double halfWidth(int combo,int blow){
         if(combo==3)return blow<3?CROSS_HALF_WIDTH:BIG_HALF_WIDTH;
         if(combo==THROWS)return SWORD_RADIUS;
-        if(combo==THRUST)return THRUST_HALF_WIDTH;
+        if(combo==THRUST)return GIANT_HALF_WIDTH;
         return combo==2?SPIN_RADIUS:combo==4?WAVE_HALF_END:CUT_HALF_WIDTH;
     }
     /** How near (blocks ahead of its user's feet, behind them below 0) hit {@code combo}'s blow {@code blow} begins to reach. */
@@ -209,19 +211,53 @@ public final class IsosangRules {
     // ───────────────────────────── the empowered fourth: the giant sword ─────────────────────────────
 
     /**
-     * The empowered fourth (2.80.0, the user's videos of E): its user steps {@link #BACKSTEP} blocks straight back over
-     * ticks {@link #BACKSTEP_FROM} to {@link #BACKSTEP_TO} as a giant sword is thrust past them the way they faced as it
-     * began, its point {@link #THRUST_REACH} blocks ahead of where they stand then, {@link #THRUST_HALF_WIDTH} to either
-     * side; it strikes everyone along it at its blow, takes no guard, and throws them along it ({@link #THRUST_FLY} a tick
-     * out and {@link #THRUST_FLY_UP} up, as Star Platinum's finisher: some 10 blocks on flat ground).
+     * The empowered fourth (2.80.1, user request: "4타 뒤로 5블록 이동하고 그리고 검 안 날리는 거 같은데? 4타만 0.1배속으로 찍은
+     * 영상이야 파란색 검이 날아가는 거 안 보여?"; 2.80.0 stepped back 1 block and thrust a giant blade 7.5 blocks ahead): its
+     * user leaps {@link #BACKSTEP} blocks straight back over ticks {@link #BACKSTEP_FROM} to {@link #BACKSTEP_TO}, fast at
+     * first and slowing to a stop ({@link #backstep}; less if a block is in the way behind them: the room, IsosangAttack.room),
+     * as a giant sword shows beside them; at its blow they throw it flying the way they faced as the hit began, from where
+     * they are then: its point from {@link #GIANT_START} blocks ahead of them on out to {@link #GIANT_RANGE}, or the first
+     * block in its way, {@link #GIANT_SPEED} blocks a tick ({@link #giantHead}); it stops there and hangs a moment. It strikes
+     * everyone it passes ({@link #GIANT_HALF_WIDTH} to either side of its way), each once, takes no guard, and throws them
+     * on the way it flies ({@link #THRUST_FLY} a tick out and {@link #THRUST_FLY_UP} up, as Star Platinum's finisher: some
+     * 10 blocks on flat ground).
      */
-    public static final double BACKSTEP=1.0,THRUST_REACH=7.5,THRUST_HALF_WIDTH=1.2,THRUST_FLY=1.75,THRUST_FLY_UP=.5;
-    public static final int BACKSTEP_FROM=1,BACKSTEP_TO=3;
-    /** How far back of where it began the empowered fourth has stepped its user {@code ticks} in (blocks, eased in and out). */
-    public static double backstep(double ticks){
+    public static final double BACKSTEP=5.0,THRUST_FLY=1.75,THRUST_FLY_UP=.5;
+    public static final int BACKSTEP_FROM=1,BACKSTEP_TO=4;
+    /**
+     * The giant sword's flight (2.80.1, the user's video at a tenth of the speed: it shows at their left as they leap back,
+     * tilted up ahead, and a frame later flies on point first to some 7 blocks ahead of them, where blue blades burst out
+     * of it; the range here reaches past where they stood, 5 blocks back, to whom they fought): where its point is as it is
+     * thrown (blocks ahead of them), how far it may fly, how fast (blocks a tick), how wide a way it strikes and how high
+     * its way runs over their feet.
+     */
+    public static final double GIANT_START=2.7,GIANT_RANGE=10,GIANT_SPEED=3,GIANT_HALF_WIDTH=1.2,GIANT_HEIGHT=1.0;
+    /** Ticks the giant sword takes from its throw to reach a body a little in front of where they stood before the leap (for the stagger: until it could land). */
+    public static final int GIANT_LAG=2;
+    /** How far back of where it began the empowered fourth has carried its user {@code ticks} in (blocks): a leap, fast at first and slowing to a stop. */
+    public static double backstep(double ticks){return backstep(ticks,BACKSTEP);}
+    /** The same with {@code room} blocks behind them at most (a block in the way: IsosangAttack.room). */
+    public static double backstep(double ticks,double room){
         double u=Math.max(0,Math.min(1,(ticks-BACKSTEP_FROM)/(BACKSTEP_TO-BACKSTEP_FROM)));
-        return BACKSTEP*u*u*(3-2*u);
+        return Math.max(0,Math.min(room,BACKSTEP))*(1-(1-u)*(1-u));
     }
+    /** How far ahead of where it was thrown from the giant sword's point is {@code ticks} after the throw (blocks), stopped at {@code most}. */
+    public static double giantHead(double ticks,double most){return Math.min(Math.max(most,GIANT_START),GIANT_START+Math.max(0,ticks)*GIANT_SPEED);}
+    /** Ticks after the throw the giant sword stops, {@code most} blocks on. */
+    public static double giantArrives(double most){return Math.max(0,(most-GIANT_START)/GIANT_SPEED);}
+    /** Whether the giant sword thrown {@code ticks} ago still flies (it strikes on its way until it stops). */
+    public static boolean giantFlying(double ticks,double most){return ticks>=0&&ticks<=Math.ceil(giantArrives(most));}
+    /**
+     * Whether the giant sword's way has reached a body {@code ticks} after the throw: a point ahead, to the right and up
+     * from where it was thrown (blocks; a body {@code halfWidth} across), from {@link #NEAR} to its point, within
+     * {@link #GIANT_HALF_WIDTH} to either side.
+     */
+    public static boolean giantOver(double ticks,double most,double forward,double side,double height,double halfWidth){
+        if(height<LOW||height>HIGH||Math.abs(side)>GIANT_HALF_WIDTH+halfWidth)return false;
+        return forward+halfWidth>=NEAR&&forward-halfWidth<=giantHead(ticks,most);
+    }
+    /** When (ticks after the throw) the giant sword's point reaches a body {@code forward} blocks ahead of where it was thrown from, {@code halfWidth} across. */
+    public static double giantReaches(double forward,double halfWidth){return Math.max(0,(forward-halfWidth-GIANT_START)/GIANT_SPEED);}
 
     // ───────────────────────────── the finisher's flying slash ─────────────────────────────
 

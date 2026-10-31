@@ -463,7 +463,7 @@ public final class MpServer implements ModInitializer {
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
     static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
-    private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt;
+    private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
      * Lee So-sang's basic attack (2.77.0) as the server keeps it: the caster's hits (each one, its blows as they land, its
      * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
@@ -495,6 +495,13 @@ public final class MpServer implements ModInitializer {
             if(now-thrustAt==8||now-thrustAt==60)note(server,String.format(java.util.Locale.ROOT,"empowered fourth +%d: caster stepped %.2f blocks; watcher thrown %.2f blocks (horizontally %.2f) to %s",now-thrustAt,caster.getPos().distanceTo(casterFrom),watcher.getPos().distanceTo(thrustFrom),watcher.getPos().subtract(thrustFrom).horizontalLength(),where(watcher,caster)));
             watcherAt=watcher.getPos();
         }else if(!thrust)thrustFrom=null;
+        // (2.80.1) the giant sword thrown: from where (behind where the hit began), which way, how far it flies
+        var gf=dev.sangwoo.celestialfall.isosang.IsosangAttack.giant(caster);
+        if(gf!=null&&gf.thrown()!=giantSeen&&casterFrom!=null&&h!=null){
+            giantSeen=gf.thrown();
+            note(server,String.format(java.util.Locale.ROOT,"giant sword thrown at %d (%d into the hit) from %.2f blocks behind where the hit began (caster now %.2f back), way %.1f, its point to stop %.2f blocks on",
+                gf.thrown(),gf.thrown()-h.start(),gf.from().distanceTo(casterFrom),caster.getPos().distanceTo(casterFrom),gf.yaw(),gf.most()));
+        }
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
             note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
             watcherAt=watcher.getPos();

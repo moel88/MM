@@ -11,6 +11,7 @@ import dev.sangwoo.celestialfall.client.kageno.R6;
 import dev.sangwoo.celestialfall.client.stand.StandPunchFx;
 import dev.sangwoo.celestialfall.client.vfx.FxDistort;
 import dev.sangwoo.celestialfall.client.vfx.FxFrame;
+import dev.sangwoo.celestialfall.isosang.IsosangAttack;
 import dev.sangwoo.celestialfall.isosang.IsosangRules;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.MinecraftClient;
@@ -46,10 +47,13 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * server strikes the first body it reaches), a black ink line and stars left along its way; where each came out, a white
  * ring with a flower in it, turning to a bubble of ink; then down in a crouch, lightning along the blade, and up again
  * for the second.</li>
- * <li>The empowered fourth: the right arm raised and drawn back, then a step back as a giant see-through blade is thrust
- * past them far ahead; at its point a fan of blue blades bursts out, great strokes of ink sweep round it and the giant
- * sword (the sword itself, three times its size, lying along the thrust, its grip toward them) hangs there a moment and
- * fades; whom it strikes is thrown along it. The caster's own camera draws back for it.</li>
+ * <li>The empowered fourth (2.80.1, user request: "4타 뒤로 5블록 이동하고 그리고 검 안 날리는 거 같은데? … 파란색 검이
+ * 날아가는 거 안 보여?", and their video of it at a tenth of the speed): the right arm raised as a giant sword of blue
+ * light shows at their left (the sword itself, two and a half times its size, its grip low behind them, its point high
+ * ahead), a leap 5 blocks back as the arm is drawn to the hip, and the throw: the sword flies on point first, levelling,
+ * a white-hot streak behind it, and stops some way ahead, where a fan of blue blades bursts out of it, great strokes of
+ * ink sweep round it in a pale bubble and it hangs there grip toward them a moment until ink swirls in round it and it
+ * fades; whom it passes is struck and thrown the way it flew. The caster's own camera draws back for it.</li>
  * </ul>
  * Every effect is a function of the swing's clock, as IsosangSlash's.
  */
@@ -125,18 +129,97 @@ final class IsosangEmpower {
         .stops(Anim.stop(blow(IsosangRules.THRUST,0),.06,.1))
         .after(IsosangSlash::grounded);
 
-    /** The giant sword's size (times the sword's model: about 6.5 blocks), and where it hangs along the thrust (blocks ahead of where they thrust from: its grip; up: its grip, its point lower). */
-    static final double GIANT=3,GIANT_GRIP=2.0,GIANT_HIGH=1.0,GIANT_DIP=6;
-    /** When the giant sword shows and fades (seconds into the hit). */
-    static final float GIANT_IN=.11f,GIANT_FULL=.19f,GIANT_FADE=.42f,GIANT_GONE=.62f;
+    /**
+     * The giant sword (2.80.1, the user's video of the empowered fourth at a tenth of the speed: a sword of blue light at
+     * their left as they leap back, its grip low behind them and its point high ahead; a frame on it flies point first,
+     * levelling, and stops some way ahead, hanging there grip toward them a moment as blue blades burst out of it and ink
+     * swirls round it and swallows it): its size (times the sword's model: some 5.4 blocks long) and its length from the
+     * grip to the point (blocks).
+     */
+    static final double GIANT=2.5,GIANT_LEN=29.74/16*GIANT;
+    /** Where it shows before it is thrown: its grip in their frame as they leap (forward, up, right of their feet), tilted up ahead this much (degrees). */
+    static final double HOVER_FW=-1.3,HOVER_UP=.55,HOVER_RT=-1.05,HOVER_TILT=30;
+    /** Where the burst is when it stops: this far along its blade from the grip (its upper blade, round which the blades burst out in the video). */
+    static final double BURST_ALONG=.6;
+    /** When it shows (seconds into the hit); how long it hangs where it stopped before it fades, and the fading (seconds). */
+    static final float GIANT_IN=.01f,GIANT_FULL=.09f,GIANT_HANG=.28f,GIANT_FADE=.2f;
     /** How far the caster's own camera draws back for the empowered fourth (blocks). */
     static final double PULL=2.0;
     static double pull(float sec){return PULL*Ease.smooth(sec,.04f,.36f)*(1-Ease.smooth(sec,.9f,1.4f));}
 
-    /** Where the empowered fourth thrusts from: its user's place as it began, the step back behind it (the server's plan). */
-    static Vec3d thrustFrom(StandClient.Cast c){return c.origin().subtract(Vec3d.fromPolar(0,c.yaw()).multiply(IsosangRules.BACKSTEP));}
-    /** The thrust's point at the blow (blocks ahead of where it thrusts from, at chest height). */
-    static Vec3d thrustTip(StandClient.Cast c){return world(thrustFrom(c),c.yaw(),v(IsosangRules.THRUST_REACH,.95,0));}
+    /**
+     * How far back the leap may carry them (IsosangAttack.room, in this client's blocks as the server finds it in its own),
+     * held per swing. (The server's class is only touched with a world to look in: it would register the mod's items.)
+     */
+    private static final Map<UUID,Double> ROOMS=new LinkedHashMap<>();
+    static double room(StandClient.Cast c){
+        var r=ROOMS.get(c.id());if(r!=null)return r;
+        var e=caster(c);if(e==null)return IsosangRules.BACKSTEP;
+        double room=IsosangAttack.room(e.getWorld(),e,c.origin(),c.yaw());
+        ROOMS.put(c.id(),room);while(ROOMS.size()>32)ROOMS.remove(ROOMS.keySet().iterator().next());
+        return room;
+    }
+    private static Entity caster(StandClient.Cast c){var mc=MinecraftClient.getInstance();return mc==null||mc.world==null?null:mc.world.getPlayerByUuid(c.caster());}
+    /** Where the leap has carried them at the hit's second {@code sec} (the plan the server and their own client follow). */
+    static Vec3d leapt(StandClient.Cast c,float sec){return c.origin().subtract(Vec3d.fromPolar(0,c.yaw()).multiply(IsosangRules.backstep(sec*20,room(c))));}
+    /** Where they throw the giant sword from (their feet as the leap has carried them at its blow): the server's word, else the plan. */
+    static Vec3d throwFrom(StandClient.Cast c){
+        var told=IsosangClient.swords(c.id());if(told!=null&&told[0]!=null)return told[0].from();
+        return c.origin().subtract(Vec3d.fromPolar(0,c.yaw()).multiply(IsosangRules.backstep(IsosangRules.blowAt(IsosangRules.THRUST,0),room(c))));
+    }
+    /** How far ahead of where it was thrown from its point flies (the server's word, else this client's blocks as the server finds them; held). */
+    private static final Map<UUID,Double> MOSTS=new LinkedHashMap<>();
+    static double most(StandClient.Cast c){
+        var told=IsosangClient.swords(c.id());if(told!=null&&told[0]!=null)return told[0].end();
+        var m=MOSTS.get(c.id());if(m!=null)return m;
+        var e=caster(c);if(e==null)return IsosangRules.GIANT_RANGE;
+        double most=IsosangAttack.giantMost(e.getWorld(),e,throwFrom(c),c.yaw());
+        MOSTS.put(c.id(),most);while(MOSTS.size()>32)MOSTS.remove(MOSTS.keySet().iterator().next());
+        return most;
+    }
+    /** The second into the hit the giant sword stops. */
+    static float arrive(StandClient.Cast c){return blow(IsosangRules.THRUST,0)+(float)(IsosangRules.giantArrives(most(c))/20);}
+    /** Where its grip is when it stops (world): on the way they faced, its point {@link IsosangRules#GIANT_START}… its range ahead. */
+    static Vec3d gripAtEnd(StandClient.Cast c){double tilt=Math.toRadians(HOVER_TILT);return world(throwFrom(c),c.yaw(),v(most(c)-GIANT_LEN*Math.cos(tilt),HOVER_UP,0));}
+    /** Where it bursts when it stops: on its upper blade (world). */
+    static Vec3d end(StandClient.Cast c){return gripAtEnd(c).add(tilted(c.yaw()).multiply(GIANT_LEN*BURST_ALONG));}
+    /** Whether the giant sword flies: the server threw it, or the swing was not stopped short before it could. */
+    static boolean flies(StandClient.Cast c){var told=IsosangClient.swords(c.id());return told!=null&&told[0]!=null||!IsosangClient.stopped(c.id());}
+    /** The giant sword as drawn: its grip, the way it points (grip to point), how strongly it shows and its size (times the sword's model). */
+    record Giant(Vec3d grip,Vec3d dir,float alpha,double scale){
+        Vec3d point(){return grip.add(dir.multiply(GIANT_LEN*scale/GIANT));}
+        Vec3d butt(){return grip.subtract(dir.multiply(5.1/16*scale));}
+    }
+    /** Where its point is as it is thrown (its place beside them, tilted up ahead), from {@code from} facing {@code yaw}. */
+    static Vec3d thrownTip(Vec3d from,float yaw){return world(from,yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)).add(tilted(yaw).multiply(GIANT_LEN));}
+    static Vec3d tilted(float yaw){double tilt=Math.toRadians(HOVER_TILT);return Vec3d.fromPolar(0,yaw).multiply(Math.cos(tilt)).add(0,Math.sin(tilt),0);}
+    /**
+     * The giant sword at the hit's second {@code t} (null before it shows, once it is gone, or if the hit stopped short
+     * before it was thrown): beside them as they leap, coming in; thrown, it flies on as it was, tilted up ahead, its point
+     * at the server's pace from where it was to where it stops (IsosangRules.giantHead), from their left in to the way they
+     * faced; a jolt back as it stops, then it hangs there, its grip low toward them and its point high (the user's videos:
+     * from behind its blade rises up the screen over its guard, from above it lies long along the way), bobbing a little,
+     * and fades.
+     */
+    static Giant giant(StandClient.Cast c,float t){
+        float show=Ease.smooth(t,GIANT_IN,GIANT_FULL);if(show<=0||!flies(c))return null;
+        float yaw=c.yaw(),at=blow(IsosangRules.THRUST,0),arr=arrive(c);
+        float alpha=show*(1-Ease.smooth(t,arr+GIANT_HANG,arr+GIANT_HANG+GIANT_FADE));if(alpha<=0)return null;
+        Vec3d f=Vec3d.fromPolar(0,yaw),up0=tilted(yaw);double scale=GIANT*(.9+.1*show);
+        if(t<at)return new Giant(world(leapt(c,t),yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)),up0,alpha,scale);
+        Vec3d from=throwFrom(c);double most=most(c);
+        Vec3d grip0=world(from,yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)),grip1=gripAtEnd(c);
+        double head=IsosangRules.giantHead((t-at)*20,most),u=Math.max(0,Math.min(1,(head-IsosangRules.GIANT_START)/Math.max(1e-6,most-IsosangRules.GIANT_START)));
+        Vec3d grip=grip0.add(grip1.subtract(grip0).multiply(u));
+        grip=grip.subtract(f.multiply(.3*bump(t,arr,.05f))).add(0,.04*Math.sin(Math.max(0,t-arr)*7.5),0);
+        return new Giant(grip,up0,alpha,scale);
+    }
+    /** When (the hit's second) the giant sword reached {@code e}: as its point passed where they stood as it struck them (the server's word), else where they are. */
+    static float struckAt(Fx c,LivingEntity e){
+        Vec3d pos=e.getLerpedPos(c.delta);for(var tg:c.cast.targets())if(tg.entity()==e.getId()){pos=tg.position();break;}
+        double fw=pos.subtract(throwFrom(c.cast)).dotProduct(Vec3d.fromPolar(0,c.cast.yaw()));
+        return blow(IsosangRules.THRUST,0)+(float)(IsosangRules.giantReaches(fw,e.getWidth()*.5)/20);
+    }
 
     // ───────────────────────────── the swords' ways ─────────────────────────────
 
@@ -226,30 +309,53 @@ final class IsosangEmpower {
                 for(int k=0;k<2;k++)splatAt(g.add((Ease.hash(i*59+k)-.5)*.9,0,(Ease.hash(i*61+k)-.5)*.9),.35+.2*Ease.hash(i*67+k),Ease.hash(i*71+k)*6.28,1.1,i*73+k,t-at-.06f,.6f);
             }
         }else if(combo==IsosangRules.THRUST){
-            Vec3d from=thrustFrom(c.cast);float yaw=c.cast.yaw(),at=blow(IsosangRules.THRUST,0);
-            // great strokes of ink round the point (the videos: a black crescent over it from the left, another at the right)
-            for(var s:STROKES){var sw=band(from,yaw,s,t);if(sw!=null&&t<s.eat1())KagenoFire.inkRibbon(sw.inner(),sw.outer(),sw.along(),sw.n(),s.style(),s.seed(),Ease.smooth(t,s.eat0(),s.eat1()),inks(s,sw,t),Ease.smooth(t,s.t0(),s.t0()+.015f));}
-            // a long dark streak under the thrust, deep blue as it is laid and black as it dries
-            if(t>=at-.02f&&t<at+.9f){
-                Vec3d a=floor(c,world(from,yaw,v(.8,0,0))),b=floor(c,world(from,yaw,v(IsosangRules.THRUST_REACH-.3,0,0)));
-                strip(a,b,c.right,1.1,3,13,Ease.smooth(t,at+.5f,at+.9f),.3f+.7f*Ease.smooth(t,at+.05f,at+.35f),.8f*Ease.smooth(t,at-.02f,at+.04f));
+            if(!flies(c.cast))return;
+            float yaw=c.cast.yaw(),at=blow(IsosangRules.THRUST,0),arr=arrive(c.cast),shift=arr-at;
+            Vec3d from=throwFrom(c.cast),f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);double most=most(c.cast);
+            Vec3d burst=end(c.cast),endFeet=new Vec3d(burst.x,from.y,burst.z);
+            // great strokes of ink round where it stopped (the videos: a black crescent over it from the left, another at
+            // the right), then ink swirling in round it as it fades (2.80.1); their times as if it stopped at the blow
+            for(var s:STROKES)stroke(endFeet,yaw,s,t-shift);
+            for(var s:VORTEX)stroke(endFeet,yaw,s,t-shift);
+            // a long dark streak under its way, laid deep blue as its point passes and drying black
+            int n=8;double a0=.8,a1=most-.3;
+            for(int k=0;k<n&&a1>a0;k++){
+                double p0=a0+(a1-a0)*k/n,p1=a0+(a1-a0)*(k+1)/n;float pass=at+(float)(IsosangRules.giantReaches((p0+p1)*.5,0)/20);
+                if(t<pass-.01f)break;
+                float erase=Ease.smooth(t,pass+.45f,pass+.85f);if(erase>=1)continue;
+                strip(floor(c,world(from,yaw,v(p0,0,0))),floor(c,world(from,yaw,v(p1,0,0))),right,1.1,3,13+k,erase,.3f+.7f*Ease.smooth(t,pass+.04f,pass+.32f),.8f*Ease.smooth(t,pass-.01f,pass+.04f));
             }
-            // ink thrown down round the point
-            Vec3d tip=floor(c,thrustTip(c.cast));
+            // ink thrown down round where it stopped
+            Vec3d tip=floor(c,end(c.cast));
             for(int k=0;k<7;k++){
                 double ang=Ease.hash(k*7+5)*6.28,r=.8+2.2*Ease.hash(k*11+3);
-                splatAt(tip.add(Math.cos(ang)*r,0,Math.sin(ang)*r),.6+.5*Ease.hash(k*13),ang,1.3,k*17+5,t-at-.05f-.04f*(float)Ease.hash(k*19),.8f);
+                splatAt(tip.add(Math.cos(ang)*r,0,Math.sin(ang)*r),.6+.5*Ease.hash(k*13),ang,1.3,k*17+5,t-arr-.05f-.04f*(float)Ease.hash(k*19),.8f);
             }
-            for(var e:thrustStruck(c))for(int k=0;k<3;k++){Vec3d p=floor(c,e.getLerpedPos(c.delta));splatAt(p.add((Ease.hash(k*23+e.getId())-.5)*1.2,0,(Ease.hash(k*29+e.getId())-.5)*1.2),.5,k,1.2,k*31+e.getId(),t-at-.06f,.7f);}
+            for(var e:thrustStruck(c)){float hit=struckAt(c,e);for(int k=0;k<3;k++){Vec3d p=floor(c,e.getLerpedPos(c.delta));splatAt(p.add((Ease.hash(k*23+e.getId())-.5)*1.2,0,(Ease.hash(k*29+e.getId())-.5)*1.2),.5,k,1.2,k*31+e.getId(),t-hit-.06f,.7f);}}
         }
     }
+    /** A stroke of ink at {@code t} (its own clock), by a hit at {@code feet} facing {@code yaw}. */
+    private static void stroke(Vec3d feet,float yaw,Arc s,float t){
+        var sw=band(feet,yaw,s,t);
+        if(sw!=null&&t<s.eat1())KagenoFire.inkRibbon(sw.inner(),sw.outer(),sw.along(),sw.n(),s.style(),s.seed(),Ease.smooth(t,s.eat0(),s.eat1()),inks(s,sw,t),Ease.smooth(t,s.t0(),s.t0()+.015f));
+    }
     /**
-     * The strokes of ink round the giant sword's point, in the thrust's frame from where it thrusts: one sweeping over it
-     * from the left, its plane standing up across the thrust and leaning back; one low round its right.
+     * The strokes of ink round where the giant sword stopped, in the frame of the ground under its burst facing the way it
+     * flew, timed as if it stopped at the blow (0.15 s): one sweeping over it from the left, its plane standing up across
+     * its way and leaning back; one low round its right.
      */
     static final Arc[] STROKES={
-        arc(v(IsosangRules.THRUST_REACH-.6,1.0,0),70,180,2.0,2.7,-150,-20,.155f,.22f,.62f,.9f,.17f,.32f,9,3,2),
-        arc(v(IsosangRules.THRUST_REACH-1.2,.4,.3),15,90,1.7,2.3,20,150,.17f,.24f,.66f,.95f,.19f,.36f,9,9,2)};
+        arc(v(-.6,1.0,0),70,180,2.0,2.7,-150,-20,.155f,.22f,.62f,.9f,.17f,.32f,9,3,2),
+        arc(v(-1.2,.4,.3),15,90,1.7,2.3,20,150,.17f,.24f,.66f,.95f,.19f,.36f,9,9,2)};
+    /**
+     * Ink swirling in round it as it fades (2.80.1, the video: dark strokes whirling round the sword a third of a second
+     * after it stopped, swallowing it): four strokes sweeping round it at even speed, low to high, each drying black at once.
+     */
+    static final Arc[] VORTEX={
+        arc(v(0,1.3,0),12,40,1.5,2.4,-60,170,.43f,.53f,.56f,.74f,.43f,.47f,9,21,1),
+        arc(v(0,.8,0),18,220,1.7,2.7,120,350,.46f,.56f,.6f,.78f,.46f,.5f,9,27,1),
+        arc(v(0,1.7,0),25,300,1.2,2.0,200,420,.49f,.58f,.62f,.8f,.49f,.53f,9,33,1),
+        arc(v(0,.5,0),8,120,1.9,2.9,10,250,.5f,.6f,.64f,.84f,.5f,.54f,9,39,1)};
 
     /** The blended pass: the bubbles of ink the swords came out of, the ink edge under every burst. */
     static void alpha(Fx c,EffectMesh m){
@@ -263,10 +369,8 @@ final class IsosangEmpower {
             }
             for(int i=0;i<IsosangRules.SWORD_FROM.length;i++){var e=struckBy(c,i);var w=way(c,i);if(e==null||w==null)continue;float at=w.reach(w.end());burstInk(c,m,chestOf(c,e,at),at,.55,i*7);}
         }else if(combo==IsosangRules.THRUST){
-            float at=blow(IsosangRules.THRUST,0);
-            // the giant see-through blade thrust past them (a pale body; its edges in the light pass)
-            ghost(c,m,t,false);
-            int k=0;for(var e:thrustStruck(c))burstInk(c,m,chestOf(c,e,at),at,.85,k++*13);
+            if(!flies(c.cast))return;
+            int k=0;for(var e:thrustStruck(c)){float at=struckAt(c,e);burstInk(c,m,chestOf(c,e,at),at,.85,k++*13);}
         }
     }
     /** The light: E's flash; the bursts, the swords flying, the bubbles' rings, the lightning on the blade; the giant blade's edges, the fan of blades at its point, the giant sword's glow. */
@@ -291,11 +395,13 @@ final class IsosangEmpower {
             for(int i=0;i<IsosangRules.SWORD_FROM.length;i++){var e=struckBy(c,i);var w=way(c,i);if(e==null||w==null)continue;float at=w.reach(w.end());burst(c,m,chestOf(c,e,at),w.dir(),at,.55,i*7);}
             lightning(c,m,t);
         }else if(combo==IsosangRules.THRUST){
-            ghost(c,m,t,true);
-            fan(c,m,t);
             giantGlow(c,m,t);
-            float at=blow(IsosangRules.THRUST,0);int k=0;Vec3d f=Vec3d.fromPolar(0,c.cast.yaw());
-            for(var e:thrustStruck(c))burst(c,m,chestOf(c,e,at),f,at,.85,k++*13);
+            if(!flies(c.cast))return;
+            trail(c,m,t);
+            fan(c,m,t);
+            bubble(c,m,t);
+            int k=0;Vec3d f=Vec3d.fromPolar(0,c.cast.yaw());
+            for(var e:thrustStruck(c)){float at=struckAt(c,e);burst(c,m,chestOf(c,e,at),f,at,.85,k++*13);}
         }
     }
     /** Over the ink: the stars along the swords' lines and E's rising stars. */
@@ -314,7 +420,8 @@ final class IsosangEmpower {
                 }
             }
         }else if(combo==IsosangRules.THRUST){
-            float at=blow(IsosangRules.THRUST,0);Vec3d tip=thrustTip(c.cast);
+            if(!flies(c.cast))return;
+            float at=arrive(c.cast);Vec3d tip=end(c.cast);
             if(t>=at&&t<at+.5f){float a=Ease.smooth(t,at,at+.03f)*(1-Ease.smooth(t,at+.2f,at+.5f));crescentMoon(m,tip.add(0,.9,0),.42,Math.PI*.6,MOON,.8f*a);glint8(m,tip,.5,WHITE,.7f*a);}
         }
     }
@@ -417,34 +524,32 @@ final class IsosangEmpower {
         m.softLine(guard,tip,.3,BLUE,.25f*a);
     }
     /**
-     * The giant see-through blade thrust past them (the videos: it shows beside them at once, its point far ahead a tenth
-     * of a second on, and fades as the giant sword hangs there): a long flat blade, its ridge along the middle, its point at
-     * the thrust's tip; the pale body in the blended pass, the bright edges and ridge in the light.
+     * The streak of light the giant sword leaves as it flies (the videos: a long white-hot streak from where it was thrown
+     * to it, a star at its point), drawn in from its tail as it goes and gone a moment after it stops.
      */
-    static void ghost(Fx c,EffectMesh m,float t,boolean light){
-        if(t<.02f||t>=.34f)return;
-        float a=Ease.smooth(t,.02f,.06f)*(1-Ease.smooth(t,.18f,.34f));if(a<=.01f)return;
-        Vec3d from=thrustFrom(c.cast);float yaw=c.cast.yaw();
-        double reach=1.6+(IsosangRules.THRUST_REACH+.2-1.6)*Ease.out(t,.03f,.15f),base=.4,half=.78,high=.95;
-        Vec3d b0=world(from,yaw,v(base,high,-half)),b1=world(from,yaw,v(base,high,half)),ridge0=world(from,yaw,v(base,high+.08,0));
-        Vec3d s0=world(from,yaw,v(base+(reach-base)*.82,high,-half*.42)),s1=world(from,yaw,v(base+(reach-base)*.82,high,half*.42)),tip=world(from,yaw,v(reach,high,0));
-        if(!light){
-            m.triangle(b0,ridge0,s0,PALE,.32f*a);m.triangle(ridge0,tip,s0,PALE,.32f*a);
-            m.triangle(ridge0,b1,s1,PALE,.32f*a);m.triangle(ridge0,s1,tip,PALE,.32f*a);
-            return;
-        }
-        m.softLine(b0,s0,.35,AZURE,.35f*a);m.softLine(s0,tip,.35,AZURE,.35f*a);m.softLine(b1,s1,.35,AZURE,.35f*a);m.softLine(s1,tip,.35,AZURE,.35f*a);
-        m.line(b0,s0,.06,WHITE,.8f*a);m.line(s0,tip,.06,WHITE,.8f*a);m.line(b1,s1,.06,WHITE,.8f*a);m.line(s1,tip,.06,WHITE,.8f*a);
-        m.line(ridge0,tip,.08,WHITE,.9f*a);m.softLine(ridge0,tip,.5,CYAN,.3f*a);
-        m.star(tip,.5,WHITE,a);
+    static void trail(Fx c,EffectMesh m,float t){
+        float at=blow(IsosangRules.THRUST,0),arr=arrive(c.cast);if(t<at||t>=arr+.16f)return;
+        var g=giant(c.cast,t);if(g==null)return;
+        Vec3d tip0=thrownTip(throwFrom(c.cast),c.cast.yaw()),head=g.point();
+        Vec3d tail=tip0.add(head.subtract(tip0).multiply(Ease.smooth(t,at+.02f,arr+.14f)));
+        float a=1-Ease.smooth(t,arr+.02f,arr+.16f),fly=1-Ease.smooth(t,arr,arr+.05f);
+        m.softLine(tail,head,1.1,BLUE,.3f*a);m.softLine(tail,head,.45,AZURE,.6f*a);m.line(tail,head,.12,WHITE,.95f*a);
+        if(fly>0){m.softLine(g.grip(),head,.9,AZURE,.35f*fly);m.star(head,.85,WHITE,fly);m.softDisc(head,.7,PALE,.5f*fly);}
+    }
+    /** A see-through bubble round where it stopped (the video: a pale sphere's rim round the bursting blades), its rim facing the camera. */
+    static void bubble(Fx c,EffectMesh m,float t){
+        float arr=arrive(c.cast),a=Ease.smooth(t,arr+.08f,arr+.16f)*(1-Ease.smooth(t,arr+.4f,arr+.6f));if(a<=.01f)return;
+        Vec3d o=end(c.cast).add(0,-.2,0);Vec3d[] uv=cameraPlane(m,o);if(uv==null)return;
+        double r=2.3+.5*Ease.out(t,arr+.08f,arr+.6f);float vis=seen(o,c.camera);
+        FxLib.ringPlane(m,o,uv[0],uv[1],r,.05,PALE,.35f*a*vis);FxLib.ringPlane(m,o,uv[0],uv[1],r*.98,.22,AZURE,.08f*a*vis);
     }
     /**
-     * At the giant blade's point as it strikes (the videos): a flash and a fan of long thin blue blades bursting out
-     * across the thrust and back from it, and quick rings.
+     * Where the giant sword stops (the videos): a flash and a fan of long thin blue blades bursting out across its way and
+     * back from it, and quick rings.
      */
     static void fan(Fx c,EffectMesh m,float t){
-        float at=blow(IsosangRules.THRUST,0);if(t<at-.01f||t>=at+.55f)return;
-        Vec3d tip=thrustTip(c.cast),f=Vec3d.fromPolar(0,c.cast.yaw()),right=new Vec3d(-f.z,0,f.x);
+        float at=arrive(c.cast);if(t<at-.01f||t>=at+.55f)return;
+        Vec3d tip=end(c.cast),f=Vec3d.fromPolar(0,c.cast.yaw()),right=new Vec3d(-f.z,0,f.x);
         float a=Ease.smooth(t,at-.01f,at+.015f),grow=Ease.out(t,at,at+.09f),fade=1-Ease.smooth(t,at+.2f,at+.55f);
         float flash=a*(1-Ease.smooth(t,at+.02f,at+.16f));
         if(flash>0){m.softDisc(tip,1.8,BLUE,.45f*flash);m.softDisc(tip,.8,PALE,.6f*flash);m.star(tip,1.5,WHITE,flash);}
@@ -457,33 +562,35 @@ final class IsosangEmpower {
         Vec3d up=new Vec3d(0,1,0);
         for(int r=0;r<2;r++){float r0=at+r*.05f;FxLib.ringPlane(m,tip,right,up,.3+2.6*Ease.out(t,r0,r0+.25f),.09,r==0?WHITE:AZURE,.7f*a*(1-Ease.unit(t,r0,r0+.25f)));}
     }
-    /** The giant sword's glow while it hangs there (round the model {@link #models} draws). */
+    /**
+     * The giant sword's glow (round the model {@link #models} draws), white-hot as it shows beside them (the video: a
+     * blade of white light) and blue once thrown.
+     */
     static void giantGlow(Fx c,EffectMesh m,float t){
-        float a=giantAlpha(t);if(a<=.01f)return;
-        Vec3d[] ends=giantEnds(c.cast);
-        // (the videos: a sword of blue light, bright along its edges and its ridge)
-        m.softLine(ends[0],ends[1],1.6,BLUE,.3f*a);m.softLine(ends[0],ends[1],.7,AZURE,.45f*a);m.line(ends[0],ends[1],.08,PALE,.6f*a);
-        Vec3d mid=ends[0].add(ends[1].subtract(ends[0]).multiply(.25));m.softDisc(mid,1.0,AZURE,.25f*a);
+        var g=giant(c.cast,t);if(g==null)return;
+        float a=g.alpha(),hot=1-Ease.smooth(t,blow(IsosangRules.THRUST,0),blow(IsosangRules.THRUST,0)+.06f);
+        Vec3d butt=g.butt(),tip=g.point(),mid=g.grip().add(g.dir().multiply(GIANT_LEN*.35));
+        m.softLine(butt,tip,1.5,BLUE,.28f*a);m.softLine(butt,tip,.65,AZURE,.42f*a);m.line(butt,tip,.07,PALE,.55f*a);
+        m.softDisc(mid,1.0,AZURE,.22f*a);
+        if(hot>0){m.softLine(butt,tip,.55,PALE,.45f*a*hot);m.softLine(butt,tip,.22,WHITE,.6f*a*hot);}
+        // it comes out of a flash of light
+        float pop=FxLib.kick(t,GIANT_IN,.12f);if(pop>.01f){m.star(mid,1.3,WHITE,pop);m.softDisc(mid,1.4,PALE,.45f*pop);}
     }
-    /** How strongly the giant sword shows (0 to 1) at the hit's second {@code t}. */
-    static float giantAlpha(float t){return Ease.smooth(t,GIANT_IN,GIANT_FULL)*(1-Ease.smooth(t,GIANT_FADE,GIANT_GONE));}
-    /** The giant sword's pommel end and point (world). */
-    static Vec3d[] giantEnds(StandClient.Cast c){
-        Vec3d grip=world(thrustFrom(c),c.yaw(),v(GIANT_GRIP,GIANT_HIGH,0)),dir=giantDir(c);
-        return new Vec3d[]{grip.add(dir.multiply(-5.1/16*GIANT)),grip.add(dir.multiply(29.74/16*GIANT))};
-    }
-    /** The way the giant sword points: along the thrust, dipping {@link #GIANT_DIP} degrees toward its point. */
-    static Vec3d giantDir(StandClient.Cast c){Vec3d f=Vec3d.fromPolar(0,c.yaw());double dip=Math.toRadians(GIANT_DIP);return f.multiply(Math.cos(dip)).add(0,-Math.sin(dip),0);}
-    /** Whom the thrust struck (the server's word), else those in its way as the server picks them. */
+    /**
+     * Whom the giant sword struck (the server's word, told tick by tick as it strikes), and until it has flown its way
+     * those in its way the server has not told of yet, as the server picks them.
+     */
     static java.util.List<LivingEntity> thrustStruck(Fx c){
         var out=new java.util.ArrayList<LivingEntity>();var world=c.mc.world;if(world==null)return out;
-        var told=IsosangClient.struck(c.cast.id(),0);
-        if(told!=null){for(int id:told)if(world.getEntityById(id) instanceof LivingEntity e)out.add(e);return out;}
-        if(c.sec>blow(IsosangRules.THRUST,0)+.15f)return out;
-        Vec3d from=thrustFrom(c.cast),f=Vec3d.fromPolar(0,c.cast.yaw()),right=new Vec3d(-f.z,0,f.x);
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(from,from).expand(IsosangRules.THRUST_REACH+3),e->e.isAlive()&&!e.isSpectator()&&e.canHit()&&!e.getUuid().equals(c.cast.caster()))){
+        var told=IsosangClient.struck(c.cast.id(),0);float arr=arrive(c.cast);
+        if(told!=null)for(int id:told)if(world.getEntityById(id) instanceof LivingEntity e)out.add(e);
+        if(c.sec>arr+.15f&&told!=null||c.sec>arr+.3f)return out;
+        Vec3d from=throwFrom(c.cast),f=Vec3d.fromPolar(0,c.cast.yaw()),right=new Vec3d(-f.z,0,f.x);double most=most(c.cast);
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(from,from).expand(most+3),e->e.isAlive()&&!e.isSpectator()&&e.canHit()&&!e.getUuid().equals(c.cast.caster())
+            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+            if(out.contains(e))continue;
             Vec3d o=e.getPos().subtract(from);
-            if(IsosangRules.lane(IsosangRules.THRUST,0,o.dotProduct(f),o.dotProduct(right),o.y,e.getWidth()*.5))out.add(e);
+            if(IsosangRules.giantOver(1e9,most,o.dotProduct(f),o.dotProduct(right),o.y,e.getWidth()*.5))out.add(e);
             if(out.size()>=6)break;
         }
         return out;
@@ -525,18 +632,20 @@ final class IsosangEmpower {
             // quick throws: short afterglow, else each sword leaves copies of itself along its way
             if(t<IsosangRules.LENGTH[IsosangRules.THROWS]/20f)f.afterglow(t<.6f?.08f:.3f);
         }else if(combo==IsosangRules.THRUST){
-            float at=blow(IsosangRules.THRUST,0),k=FxLib.kick(t,at,.2f);
-            if(k>.01f)f.light(thrustTip(c.cast),0xb8d8ff,10,1.5f*k);
-            float g=giantAlpha(t);if(g>.01f){Vec3d[] e=giantEnds(c.cast);f.light(e[0].add(e[1]).multiply(.5),0x6aa0ff,7,.7f*g);}
-            if(t<IsosangRules.LENGTH[IsosangRules.THRUST]/20f)f.afterglow(t<.3f?.06f:.3f);
+            var g=giant(c.cast,t);if(g!=null)f.light(g.grip().add(g.dir().multiply(GIANT_LEN*.5)),0x6aa0ff,7,.7f*g.alpha());
+            if(!flies(c.cast))return;
+            float at=blow(IsosangRules.THRUST,0),arr=arrive(c.cast),k=FxLib.kick(t,arr,.2f);
+            if(k>.01f)f.light(end(c.cast),0xb8d8ff,10,1.5f*k);
+            // fast as it flies: short afterglow, else the sword leaves copies of itself along its way
+            if(t<IsosangRules.LENGTH[IsosangRules.THRUST]/20f)f.afterglow(t<arr+.08f?.05f:.3f);
         }
     }
     static void distort(Fx c,FxDistort d){}
-    /** Shake: each throw a little, the thrust hard (each over two frames). */
+    /** Shake: each throw a little; the giant sword's throw a little and its stop hard (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){
         int combo=cast.combo();float v=0;
         if(combo==IsosangRules.THROWS)for(int i=0;i<3;i++)v=Math.max(v,.5f*bump(sec,blow(combo,i),.06f));
-        if(combo==IsosangRules.THRUST)v=Math.max(v,2.2f*bump(sec,blow(combo,0),.14f));
+        if(combo==IsosangRules.THRUST){v=Math.max(v,.9f*bump(sec,blow(combo,0),.08f));if(flies(cast))v=Math.max(v,2.2f*bump(sec,arrive(cast),.14f));}
         return v;
     }
 
@@ -546,7 +655,8 @@ final class IsosangEmpower {
     private static ItemStack stack;
     /**
      * The swords of light as models (AFTER_ENTITIES): the empowered first's thrown swords flying, and the empowered
-     * fourth's giant sword hanging along its thrust, its grip toward them; drawn see-through, lit through.
+     * fourth's giant sword beside them, flying and hanging where it stopped, its grip toward them; drawn see-through, lit
+     * through.
      */
     static void models(WorldRenderContext ctx){
         var mc=MinecraftClient.getInstance();if(mc.world==null||IsosangClient.SWINGS.isEmpty())return;
@@ -555,10 +665,8 @@ final class IsosangEmpower {
         for(var c:IsosangClient.SWINGS.values()){
             float t=c.age(delta)/20f;
             if(c.combo()==IsosangRules.THRUST){
-                float a=giantAlpha(t);if(a<=.01f)continue;
-                Vec3d[] ends=giantEnds(c);Vec3d grip=world(thrustFrom(c),c.yaw(),v(GIANT_GRIP,GIANT_HIGH,0));
-                double grow=.92+.08*Ease.out(t,GIANT_IN,GIANT_FULL);
-                draw(matrices,buffers,camera,grip,giantDir(c),GIANT*grow,a,0xffffff);
+                var g=giant(c,t);if(g==null||g.alpha()<=.01f)continue;
+                draw(matrices,buffers,camera,g.grip(),g.dir(),g.scale(),g.alpha(),0xffffff);
             }else if(c.combo()==IsosangRules.THROWS){
                 var told=IsosangClient.swords(c.id());if(told==null)continue;
                 for(var s:told){

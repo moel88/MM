@@ -143,6 +143,8 @@ public final class IsosangClient {
     }
     /** Whether this swing's body clip still plays (it is the body's motion until then, unless it stopped short; E's flash has none). */
     static boolean animating(StandClient.Cast c){return IsosangRules.valid(c.combo())&&c.age(0)<KagenoSkills.of(IsosangRules.SKILL).clip(c.combo()).length()*20+1;}
+    /** Whether this swing stopped short (its user struck or held: its body clip is over). */
+    public static boolean stopped(UUID swing){return STOPPED.contains(swing);}
     /** Whether this swing is of the empowered combo (2.80.0: its blade's aura brighter). */
     public static boolean empowered(UUID swing){return EMPOWERED.contains(swing);}
     /** Whether this player's next combo is empowered (E used, its combo not begun or not over, 2.80.0): their sword glows. */
@@ -219,10 +221,11 @@ public final class IsosangClient {
         return false;
     }
     /**
-     * The empowered fourth's step back (2.80.0), moved by its user's own client (a player's movement is its own, as T
-     * held's dash, RushDash): at the start of each client tick of it the local player is given the velocity that takes
-     * them to where the server's plan has them at the tick's end (IsosangRules.backstep, straight back from where the hit
-     * began the way it faced); at its end they stop. Call at the start of every client tick, before the player moves.
+     * The empowered fourth's leap back (2.80.0; 5 blocks since 2.80.1), moved by its user's own client (a player's movement
+     * is its own, as T held's dash, RushDash): at the start of each client tick of it the local player is given the
+     * velocity that takes them to where the server's plan has them at the tick's end (IsosangRules.backstep, straight back
+     * from where the hit began the way it faced, as far as the blocks behind them let it: IsosangAttack.room); at its end
+     * they stop. Call at the start of every client tick, before the player moves.
      */
     public static void drive(MinecraftClient mc){
         var p=mc.player;if(p==null||!MapClient.enabled())return;
@@ -232,7 +235,7 @@ public final class IsosangClient {
             if(k<IsosangRules.BACKSTEP_FROM-1||k>IsosangRules.BACKSTEP_TO)continue;
             Vec3d back=Vec3d.fromPolar(0,c.yaw()).multiply(-1);
             if(k==IsosangRules.BACKSTEP_TO){p.setVelocity(0,Math.min(0,p.getVelocity().y),0);continue;}
-            Vec3d to=c.origin().add(back.multiply(IsosangRules.backstep(k+1))),v=to.subtract(p.getPos()).multiply(1,0,1);
+            Vec3d to=c.origin().add(back.multiply(IsosangRules.backstep(k+1,IsosangEmpower.room(c)))),v=to.subtract(p.getPos()).multiply(1,0,1);
             p.setVelocity(v.x,Math.min(0,p.getVelocity().y),v.z);
         }
     }

@@ -79,8 +79,12 @@ public final class IsosangAttack {
          * begun yet), the hit in flight is one of the empowered combo's ({@code empowered}), and the tick E is ready again.
          */
         boolean charged,restart,empowered;long eReady;
-        /** Where the hit in flight began (the empowered fourth steps back from it and thrusts from there). */
+        /** Where the hit in flight began (the empowered fourth leaps back from it and throws from there). */
         Vec3d origin=Vec3d.ZERO;
+        /** (2.80.1) How far back the empowered fourth in flight may leap (blocks: BACKSTEP, or less for a block behind them, {@link #room}). */
+        double room=BACKSTEP;
+        /** (2.80.1) The empowered fourth's giant sword in flight (null for none). */
+        Giant giant;
         /** The empowered first's swords in flight. */
         final List<Sword> swords=new ArrayList<>();
     }
@@ -95,6 +99,15 @@ public final class IsosangAttack {
     private static final class Wave {
         final UUID id;final long start,thrown;final Vec3d from;final float yaw;final Set<UUID> struck=new HashSet<>();
         Wave(UUID id,long start,long thrown,Vec3d from,float yaw){this.id=id;this.start=start;this.thrown=thrown;this.from=from;this.yaw=yaw;}
+    }
+    /**
+     * The empowered fourth's giant sword thrown flying (2.80.1): its hit's id and start, the tick it was thrown, from where
+     * (its user's feet then), the way it flies, how far its point may go (its range or the block in its way) and whom it
+     * has struck.
+     */
+    private static final class Giant {
+        final UUID id;final long start,thrown;final Vec3d from;final float yaw;final double most;final Set<UUID> struck=new HashSet<>();
+        Giant(UUID id,long start,long thrown,Vec3d from,float yaw,double most){this.id=id;this.start=start;this.thrown=thrown;this.from=from;this.yaw=yaw;this.most=most;}
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
     private IsosangAttack(){}
@@ -142,6 +155,40 @@ public final class IsosangAttack {
     public record Flight(long thrown,Vec3d from,float yaw){}
     /** This player's slash in flight now (null for none). */
     public static Flight flight(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());var w=s==null?null:s.wave;return w==null?null:new Flight(w.thrown,w.from,w.yaw);}
+    /** This player's giant sword in flight, as a boss reads it (2.80.1): thrown at {@code thrown} from {@code from} (their feet), the way {@code yaw}, its point stopping {@code most} blocks on. */
+    public record GiantFlight(long thrown,Vec3d from,float yaw,double most){}
+    /** This player's giant sword in flight now (null for none). */
+    public static GiantFlight giant(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());var g=s==null?null:s.giant;return g==null?null:new GiantFlight(g.thrown,g.from,g.yaw,g.most);}
+    /** How far back this player's empowered fourth in flight leaps (blocks, 2.80.1: its room). */
+    public static double room(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?BACKSTEP:s.room;}
+    /**
+     * How far back the empowered fourth's leap may carry {@code body} from {@code origin}, the hit facing {@code yaw}
+     * (2.80.1): BACKSTEP, or less to stay clear of the first block behind them (looked for at the knees and the chest,
+     * at their middle and either side, a little in from their sides so a wall they stand against is not in the way). The
+     * server and every client find the same room in the same blocks.
+     */
+    public static double room(net.minecraft.world.World world,net.minecraft.entity.Entity body,Vec3d origin,float yaw){
+        if(world==null||body==null)return BACKSTEP;
+        Vec3d back=Vec3d.fromPolar(0,yaw).multiply(-1),side=new Vec3d(-back.z,0,back.x);double half=body.getWidth()*.5,room=BACKSTEP;
+        for(double up:new double[]{.65,1.4})for(double across:new double[]{.05-half,0,half-.05}){
+            Vec3d a=origin.add(0,up,0).add(side.multiply(across)),b=a.add(back.multiply(BACKSTEP+half+.1));
+            var hit=world.raycast(new RaycastContext(a,b,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,body));
+            if(hit.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)room=Math.min(room,a.distanceTo(hit.getPos())-half-.1);
+        }
+        return Math.max(0,room);
+    }
+    /**
+     * How far the giant sword thrown from {@code from} (feet) the way {@code yaw} may fly before a block stops it (2.80.1):
+     * its range, or the first block along its way at its height, looked for from where they stand.
+     */
+    public static double giantMost(net.minecraft.world.World world,net.minecraft.entity.Entity body,Vec3d from,float yaw){
+        if(world==null||body==null)return GIANT_RANGE;
+        Vec3d f=Vec3d.fromPolar(0,yaw),a=from.add(0,GIANT_HEIGHT,0);
+        var hit=world.raycast(new RaycastContext(a,a.add(f.multiply(GIANT_RANGE)),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,body));
+        return hit.getType()==net.minecraft.util.hit.HitResult.Type.MISS?GIANT_RANGE:Math.max(GIANT_START,a.distanceTo(hit.getPos())-.25);
+    }
+    /** Where the empowered fourth throws its giant sword from (2.80.1): where its leap has carried them at its blow, from where the hit began. */
+    public static Vec3d throwFrom(Vec3d origin,float yaw,double room){return origin.subtract(Vec3d.fromPolar(0,yaw).multiply(backstep(blowAt(THRUST,0),room)));}
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again; so are E's cooldown and its empowerment (2.80.0). */
@@ -245,6 +292,8 @@ public final class IsosangAttack {
         // (2.80.0) the empowered combo after E: begun again from its first hit, its first and fourth the empowered kinds
         s.combo=s.restart?kind(1,s.charged):next(s.combo,s.charged&&s.empowered);s.empowered=s.charged;s.restart=false;
         s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;s.origin=p.getPos();
+        // (2.80.1) the empowered fourth leaps back as far as the blocks behind them let it
+        s.room=s.combo==THRUST?room(p.getWorld(),p,s.origin,s.yaw):BACKSTEP;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         // (the rest after the fourth hit: none for a player the cooldowns are off for, /botand nocooldown)
         if(position(s.combo)==4)s.ready=free?now:rested(s.combo,now);
@@ -266,15 +315,17 @@ public final class IsosangAttack {
             // so do the empowered first's swords (2.80.0)
             if(s.wave!=null)fly(p,s,now);
             if(!s.swords.isEmpty()){for(var w:new ArrayList<>(s.swords))if(!w.spent)fly(p,s,w,now);s.swords.removeIf(w->w.spent);}
+            // and the empowered fourth's giant sword (2.80.1)
+            if(s.giant!=null)hurl(p,s,now);
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
             if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
             if(held(p)){stop(p,s,now);continue;}
             settle(p,s,now);
             if(s.queued&&now>=may(s)){if(able(p))begin(p,s,now);else s.queued=false;}
             while(valid(s.combo)&&s.blows<blows(s.combo)&&now>=s.start+blowAt(s.combo,s.blows))blow(p,s,now);
-            // the empowered fourth's step back: a player's own client moves them (IsosangClient.drive); a boss, here
+            // the empowered fourth's leap back: a player's own client moves them (IsosangClient.drive); a boss, here
             if(s.combo==THRUST&&p instanceof dev.sangwoo.celestialfall.boss.BossPlayer&&now-s.start<=BACKSTEP_TO){
-                Vec3d at=s.origin.subtract(Vec3d.fromPolar(0,s.yaw).multiply(backstep(now-s.start)));
+                Vec3d at=s.origin.subtract(Vec3d.fromPolar(0,s.yaw).multiply(backstep(now-s.start,s.room)));
                 p.setPosition(at.x,p.getY(),at.z);
             }
         }
@@ -305,9 +356,17 @@ public final class IsosangAttack {
         if(combo==4){s.wave=new Wave(s.id,s.start,now,p.getPos(),s.yaw);fly(p,s,now);return;}
         // (2.80.0) the empowered first: a sword thrown flying the way they look now
         if(combo==THROWS){toss(p,s,i,now);return;}
+        // (2.80.1) the empowered fourth: the giant sword thrown flying from where the leap carried them, the way they faced as it began
+        if(combo==THRUST){
+            Vec3d from=throwFrom(s.origin,s.yaw,s.room);
+            s.giant=new Giant(s.id,s.start,now,from,s.yaw,giantMost(p.getWorld(),p,from,s.yaw));
+            var told=new Sword(s.id,s.start,0,now,from,Vec3d.fromPolar(0,s.yaw),s.giant.most);
+            send(p,s.id,THRUST,s.start,s.yaw,THROWN,0,null,told);
+            hurl(p,s,now);
+            return;
+        }
         Vec3d f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x);
-        // (2.80.0) the empowered fourth thrusts from where its step back takes them, the way they faced as it began
-        Vec3d at=combo==THRUST?s.origin.subtract(f.multiply(BACKSTEP)):p.getPos();
+        Vec3d at=p.getPos();
         var struck=strike(p,combo,i,s.start,s.yaw,now,at,e->{Vec3d d=e.getPos().subtract(at);return lane(combo,i,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5);},null,s.empowered);
         send(p,s.id,combo,s.start,s.yaw,LANDED,i,struck,null);
     }
@@ -378,15 +437,34 @@ public final class IsosangAttack {
         if(to>=WAVE_TICKS)s.wave=null;
     }
     /**
+     * The empowered fourth's giant sword flies on a tick (2.80.1): whoever its way has reached by now (IsosangRules.giantOver,
+     * not behind a block from its way), not struck by it yet, is struck and thrown on; it is over once it has stopped.
+     */
+    private static void hurl(ServerPlayerEntity p,State s,long now){
+        var g=s.giant;double t=now-g.thrown;
+        if(!giantFlying(t,g.most)){s.giant=null;return;}
+        Vec3d f=Vec3d.fromPolar(0,g.yaw),right=new Vec3d(-f.z,0,f.x);var world=p.getWorld();
+        var struck=strike(p,THRUST,0,g.start,g.yaw,now,g.from,e->{
+            Vec3d d=e.getPos().subtract(g.from);double fw=d.dotProduct(f);
+            if(!giantOver(t,g.most,fw,d.dotProduct(right),d.y,e.getWidth()*.5))return false;
+            // (not through a wall beside its way)
+            Vec3d on=g.from.add(f.multiply(Math.max(0,Math.min(g.most,fw)))).add(0,GIANT_HEIGHT,0),chest=e.getPos().add(0,e.getHeight()*.5,0);
+            return world.raycast(new RaycastContext(on,chest,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()==net.minecraft.util.hit.HitResult.Type.MISS;
+        },g.struck,true);
+        if(!struck.isEmpty())send(p,g.id,THRUST,g.start,g.yaw,LANDED,0,struck,null);
+        if(t>=giantArrives(g.most))s.giant=null;
+    }
+    /**
      * Strikes everyone near {@code at} the test takes (and the slash has not struck yet, {@code done}), in the user's
      * sight: without knockback, staggered until the next blow could land; the finisher takes no guard. Returns whom.
      */
     private static List<LivingEntity> strike(ServerPlayerEntity p,int combo,int i,long start,float yaw,long now,Vec3d at,java.util.function.Predicate<LivingEntity> test,Set<UUID> done,boolean empowered){
         var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i,empowered);
         List<LivingEntity> struck=new ArrayList<>();
-        // (2.80.0: a thrown sword strikes the body it reached, wherever that is: the sword flew a way clear of blocks to it)
-        boolean thrown=combo==THROWS;
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((thrown?2:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        // (2.80.0: a thrown sword strikes the body it reached, wherever that is: the sword flew a way clear of blocks to it;
+        // 2.80.1: so does the giant sword, all along its way)
+        boolean thrown=combo==THROWS||combo==THRUST;
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((combo==THROWS?2:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             if(done!=null&&done.contains(e.getUuid()))continue;
             if(!test.test(e)||!thrown&&!p.canSee(e))continue;
@@ -399,7 +477,7 @@ public final class IsosangAttack {
             // every blow staggers whom it strikes a moment (2.68.0's rule for basic attacks): until the next blow could
             // land at full speed, a little past; one stopped in Star Platinum's stopped time is staggered as time moves again
             if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.isosang(combo,i,start,now,empowered));
-            // (2.80.0, user request: "4타에 맞으면 넉백이 있어") the empowered fourth's thrust throws whom it strikes along it,
+            // (2.80.0, user request: "4타에 맞으면 넉백이 있어") the empowered fourth's giant sword throws whom it strikes the way it flies,
             // as Star Platinum's heavy punch: told to a struck player's client once, through the tracker; one stopped in a
             // time stop is thrown as time moves again
             if(combo==THRUST){

@@ -145,7 +145,9 @@ class IsosangRulesTest {
         // a thrown sword holds whom it strikes until the next could reach them; the third's last until the thrust could land
         assertEquals(start+blowAt(THROWS,1)+SWORD_LAG+Stagger.PAST,Stagger.isosang(THROWS,0,start,start+blowAt(THROWS,0)+1,true));
         assertEquals(start+STEP[THROWS]+blowAt(2,0)+Stagger.PAST,Stagger.isosang(THROWS,2,start,start+blowAt(THROWS,2)+1,true));
-        assertEquals(start+STEP[3]+blowAt(THRUST,0)+Stagger.PAST,Stagger.isosang(3,3,start,start+blowAt(3,3),true));
+        assertEquals(start+STEP[3]+blowAt(THRUST,0)+GIANT_LAG+Stagger.PAST,Stagger.isosang(3,3,start,start+blowAt(3,3),true));
+        // (2.80.1) the giant sword reaches a body a block and a half in front of where they stood before the leap within GIANT_LAG
+        assertTrue(giantReaches(backstep(blowAt(THRUST,0))+1.5,.3)<=GIANT_LAG,"the third's stagger holds until the giant sword can land");
         assertEquals(start+blowAt(THRUST,0)+Stagger.LAST,Stagger.isosang(THRUST,0,start,start+blowAt(THRUST,0),true));
     }
     @Test void aThrownSwordFliesStraightOnToItsEnd(){
@@ -157,14 +159,30 @@ class IsosangRulesTest {
         assertTrue(SWORD_FROM[0][2]>0&&SWORD_FROM[1][2]>0&&SWORD_FROM[2][2]<0,"low at the right, at the right hand, at the left");
         assertTrue(SWORD_FROM[0][1]<SWORD_FROM[1][1],"the first low");
     }
-    @Test void theThrustStepsBackAndReachesFarAhead(){
+    @Test void theFourthLeapsFiveBlocksBackAndThrowsTheGiantSwordFlyingOn(){
+        // (2.80.1, user request: "4타 뒤로 5블록 이동하고") a leap 5 blocks straight back, fast at first and slowing to a stop
+        assertEquals(5,BACKSTEP,1e-9);
         assertEquals(0,backstep(0),1e-9);assertEquals(0,backstep(BACKSTEP_FROM),1e-9);assertEquals(BACKSTEP,backstep(BACKSTEP_TO),1e-9);assertEquals(BACKSTEP,backstep(30),1e-9);
         for(double k=0;k<BACKSTEP_TO+1;k+=.05)assertTrue(backstep(k+.05)>=backstep(k)-1e-12,"straight back, never forward");
-        assertTrue(BACKSTEP_TO<=blowAt(THRUST,0),"stepped back by the thrust");
-        // ahead along it from where it thrusts, wide as the giant blade; not behind, not beyond, not off to the side
-        assertTrue(lane(THRUST,0,6.8,0,1,.3));assertTrue(lane(THRUST,0,2,1.2,1,.3));
-        assertFalse(lane(THRUST,0,-1.5,0,1,.3));assertFalse(lane(THRUST,0,THRUST_REACH+1,0,1,.3));assertFalse(lane(THRUST,0,4,2.2,1,.3));
-        assertTrue(THRUST_REACH>6&&THRUST_REACH<9,"about 7 blocks, as the user's video: "+THRUST_REACH);
+        assertTrue(backstep(BACKSTEP_FROM+1)-backstep(BACKSTEP_FROM)>backstep(BACKSTEP_TO)-backstep(BACKSTEP_TO-1),"fast at first, slowing");
+        for(double k=BACKSTEP_FROM;k<BACKSTEP_TO;k+=1)assertTrue(backstep(k+1)-backstep(k)<4,"a tick's leap within what a player may move: "+k);
+        assertEquals(2,backstep(BACKSTEP_TO,2),1e-9,"no further than the blocks behind let it");assertEquals(0,backstep(BACKSTEP_TO,-1),1e-9);
+        // ("검 안 날리는 거 같은데? … 파란색 검이 날아가는 거 안 보여?") the giant sword thrown as the leap ends, flying on point first
+        assertTrue(blowAt(THRUST,0)>BACKSTEP_FROM&&blowAt(THRUST,0)<=BACKSTEP_TO,"thrown as the leap ends");
+        assertEquals(GIANT_START,giantHead(0,GIANT_RANGE),1e-9);assertEquals(GIANT_START+GIANT_SPEED,giantHead(1,GIANT_RANGE),1e-9);
+        assertEquals(GIANT_RANGE,giantHead(100,GIANT_RANGE),1e-9);assertEquals(5,giantHead(100,5),1e-9,"stopped by a block in its way");
+        assertEquals(GIANT_START,giantHead(5,1),1e-9,"a block right in front: it stops where it was thrown");
+        assertEquals((GIANT_RANGE-GIANT_START)/GIANT_SPEED,giantArrives(GIANT_RANGE),1e-9);
+        assertTrue(giantFlying(0,GIANT_RANGE)&&giantFlying(Math.ceil(giantArrives(GIANT_RANGE)),GIANT_RANGE)&&!giantFlying(Math.ceil(giantArrives(GIANT_RANGE))+1,GIANT_RANGE)&&!giantFlying(-1,GIANT_RANGE));
+        assertTrue(GIANT_RANGE>BACKSTEP+3,"it reaches past where they stood before the leap, to whom they fought: "+GIANT_RANGE);
+        // its way: from right in front of them to its point as it goes, as wide as the giant sword; not behind, not beyond, not off to the side
+        assertTrue(giantOver(0,GIANT_RANGE,2,0,1,.3),"right in front at once");assertFalse(giantOver(0,GIANT_RANGE,6,0,1,.3),"not yet so far");
+        assertTrue(giantOver(giantReaches(6,.3)+1e-9,GIANT_RANGE,6,0,1,.3),"reached as its point passes");assertFalse(giantOver(giantReaches(6,.3)-.1,GIANT_RANGE,6,0,1,.3));
+        assertTrue(giantOver(100,GIANT_RANGE,GIANT_RANGE,0,1,.3));assertFalse(giantOver(100,GIANT_RANGE,GIANT_RANGE+1,0,1,.3),"not beyond where it stops");
+        assertFalse(giantOver(100,GIANT_RANGE,-1.5,0,1,.3),"not behind them");assertFalse(giantOver(100,GIANT_RANGE,4,GIANT_HALF_WIDTH+.6,1,.3),"not off to the side");
+        assertTrue(giantOver(100,GIANT_RANGE,4,GIANT_HALF_WIDTH,1,.3));assertFalse(giantOver(100,GIANT_RANGE,4,0,HIGH+.5,.3),"not far over it");
+        assertEquals(GIANT_RANGE,reach(THRUST,0),1e-9);assertEquals(GIANT_HALF_WIDTH,halfWidth(THRUST,0),1e-9);
+        assertTrue(MAX_REACH>=GIANT_RANGE+GIANT_HALF_WIDTH,"looked for as far as it flies");
         assertTrue(THRUST_FLY>0&&THRUST_FLY_UP>0,"it throws whom it strikes (user request: 4타에 맞으면 넉백)");
     }
 }

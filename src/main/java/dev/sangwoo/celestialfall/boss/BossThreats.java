@@ -146,7 +146,8 @@ public final class BossThreats {
     }
     /**
      * Lee So-sang's sword (2.77.0): the next blow of the hit in flight, in its way (the ring's all round them); and the
-     * finisher's slash while it flies (2.77.2): the rest of its way ahead of where its band is now.
+     * finisher's slash while it flies (2.77.2): the rest of its way ahead of where its band is now; the empowered first's
+     * swords and the empowered fourth's giant sword while they fly (2.80.0, 2.80.1).
      */
     private static void isosang(ServerPlayerEntity p,long now,List<Threat> out){
         var w=dev.sangwoo.celestialfall.isosang.IsosangAttack.flight(p);
@@ -154,6 +155,13 @@ public final class BossThreats {
             double flown=now-w.thrown(),back=IsosangRules.waveFront(flown)-IsosangRules.waveCurve(flown)-IsosangRules.WAVE_DEPTH;
             out.add(new Threat(p,"isosang4",w.thrown(),now,w.thrown()+IsosangRules.WAVE_TICKS,
                 Zone.lane(w.from(),w.yaw(),back,IsosangRules.WAVE_RANGE,IsosangRules.WAVE_HALF_END,IsosangRules.LOW,IsosangRules.HIGH),false,false,false,IsosangRules.total(4),false,false));
+        }
+        // (2.80.1) the empowered fourth's giant sword in flight: the rest of its way ahead of its point, unguardable
+        var g=dev.sangwoo.celestialfall.isosang.IsosangAttack.giant(p);
+        if(g!=null){
+            double head=IsosangRules.giantHead(now-g.thrown(),g.most());
+            out.add(new Threat(p,"isosang6",g.thrown(),now,g.thrown()+(long)Math.ceil(IsosangRules.giantArrives(g.most())),
+                Zone.lane(g.from(),g.yaw(),Math.max(IsosangRules.NEAR,head-IsosangRules.GIANT_SPEED),g.most(),IsosangRules.GIANT_HALF_WIDTH,IsosangRules.LOW,IsosangRules.HIGH),false,false,false,IsosangRules.damage(IsosangRules.THRUST,0),false,false));
         }
         // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
         for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){
@@ -165,8 +173,9 @@ public final class BossThreats {
         if(h==null||!IsosangRules.valid(h.combo())||h.blows()>=IsosangRules.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+IsosangRules.blowAt(c,i);
         if(now>hit)return;
-        // (2.80.0: the empowered fourth thrusts from where its step back takes its user)
-        Vec3d at=c==IsosangRules.THRUST?p.getPos().subtract(Vec3d.fromPolar(0,h.yaw()).multiply(IsosangRules.BACKSTEP-IsosangRules.backstep(now-h.start()))):p.getPos();
+        // (2.80.1: the empowered fourth throws its giant sword from where its leap back takes its user, all along its way)
+        double room=dev.sangwoo.celestialfall.isosang.IsosangAttack.room(p);
+        Vec3d at=c==IsosangRules.THRUST?p.getPos().subtract(Vec3d.fromPolar(0,h.yaw()).multiply(IsosangRules.backstep(IsosangRules.blowAt(c,0),room)-IsosangRules.backstep(now-h.start(),room))):p.getPos();
         Zone zone=c==2?Zone.ring(p.getPos(),IsosangRules.SPIN_RADIUS,IsosangRules.LOW,IsosangRules.HIGH)
             :Zone.lane(at,h.yaw(),IsosangRules.near(c,i),IsosangRules.reach(c,i),IsosangRules.halfWidth(c,i),IsosangRules.LOW,IsosangRules.HIGH);
         float damage=IsosangRules.total(c,dev.sangwoo.celestialfall.isosang.IsosangAttack.charged(p)||c>=IsosangRules.THROWS);
