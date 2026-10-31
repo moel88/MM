@@ -1,13 +1,13 @@
-> **현재 통합본: Botand 2.77.7** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.78.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
 
-# 보탠드 2.77.7 — 이소상 평타 3타: 보내 주신 영상대로
+# 보탠드 2.78.0 — 이소상 평타: 위에서 찍어 주신 영상대로 다시
 
-- **빛줄기와 고리:** 찌르기 빛줄기가 앞쪽으로 비스듬히 올라가고, 찌른 직후 몸을 돌며 기울어진 고리 검격이 몸을 두릅니다.
-- **X자:** 빛줄기가 오래 남아 내려베기 초승달과 X자로 엇갈리고, 그 X가 먹으로 터집니다.
-- **올려베기:** 수평으로 베던 쓸어베기와 넓게 베기 대신, 왼쪽 아래에서 오른쪽 위로 크게 올려 벱니다.
-- **그대로인 것:** 1타·2타·4타, 판정·피해·타격 시간·소리입니다.
+- **방향·크기·굵기:** 모든 베기가 오른쪽으로 돌고(위에서 보면 시계 방향), 검격은 영상에서 잰 크기이며, 꼬리는 가늘고 머리는 굵게 먹이 찹니다. 갓 그은 곳은 희고, 파란 띠가 되고, 가늘어져 사라집니다.
+- **3타:** 오른쪽으로 도는 고리 넷과 그 사이의 긴 올려베기(빛줄기), 가슴 높이의 가는 호입니다. 고리는 뒤왼쪽에서 굵게 끝나고 그 아래 바닥이 먹으로 덮입니다.
+- **4타:** 참격이 거의 평평하게 누운 채 가깝고 천천히 날아가며 빠르게 넓어집니다(서버 규칙). 바닥에 먹 고리, 참격 뒤로 뻗는 빛줄기.
+- **그대로인 것:** 피해·타격 시간·넉백 없음·소리입니다.
 
-[RELEASE_2.77.7_KO.md](RELEASE_2.77.7_KO.md)를 확인하세요.
+[RELEASE_2.78.0_KO.md](RELEASE_2.78.0_KO.md)를 확인하세요. 2.77.7은 [RELEASE_2.77.7_KO.md](RELEASE_2.77.7_KO.md)입니다.
 
 # 보탠드 2.77.6 — 이소상 평타: 먹물답게
 
