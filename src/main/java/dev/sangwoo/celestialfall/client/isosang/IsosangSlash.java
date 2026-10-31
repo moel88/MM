@@ -481,15 +481,15 @@ public final class IsosangSlash implements Fx.Skill {
      * itself: {@link #wave}).
      */
     static final Arc[] H1_ARCS={
-        arc(v(.3,2.1,-.1),22,-135,3.8,5.3,-75,240,.29f,.36f,.6f,.8f,.33f,.5f,0,1,2),
+        arc(v(0,2.0,-.3),22,-135,2.9,4.3,-75,240,.29f,.36f,.6f,.8f,.33f,.5f,0,1,2),
         chord(v(-1.0,.5,-1.6),v(2.8,3.4,1.9),v(.5,.4,-1),.7,.6,.375f,.43f,.6f,.8f,.4f,.52f,6,2)};
-    static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.6,3.7,-60,300,.1f,.19f,.6f,.9f,.16f,.4f,1,3,1)};
+    static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.13f,.37f,1,3,1)};
     static final Arc[] H3_ARCS={
-        arc(v(1.0,1.5,.3),20,180,2.1,3.0,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
-        arc(v(.5,1.3,0),12,-90,2.2,3.1,-30,250,.49f,.56f,.78f,1.0f,.54f,.7f,0,5,2),
-        arc(v(.5,1.45,0),20,135,2.6,3.6,-40,250,.69f,.76f,1.0f,1.22f,.74f,.9f,0,11,2),
-        arc(v(.3,1.35,-.2),4,0,2.85,3.15,-80,120,.79f,.83f,.95f,1.1f,.86f,.95f,7,3,2),
-        arc(v(.5,1.45,0),18,-135,3.4,4.7,-20,260,.89f,.97f,1.28f,1.55f,.95f,1.15f,0,9,2)};
+        arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
+        arc(v(.4,1.3,.3),12,-90,2.0,2.8,-30,250,.49f,.56f,.78f,1.0f,.54f,.7f,0,5,2),
+        arc(v(.4,1.45,0),20,135,2.2,3.0,-40,250,.69f,.76f,1.0f,1.22f,.74f,.9f,0,11,2),
+        arc(v(-.2,1.35,-.7),4,0,2.55,2.8,-80,120,.79f,.83f,.95f,1.1f,.86f,.95f,7,3,2),
+        arc(v(.3,1.45,0),18,-135,2.6,3.6,-20,260,.89f,.97f,1.28f,1.55f,.95f,1.15f,0,9,2)};
     static final Arc[] H4_ARCS={arc(v(1.0,.72,0),0,0,1.5,2.9,125,-115,.675f,.715f,.88f,1.04f,.69f,.83f,0,7,0)};
     static Arc[] arcs(int combo){return switch(combo){case 1->H1_ARCS;case 2->H2_ARCS;case 3->H3_ARCS;default->H4_ARCS;};}
     /**
@@ -551,7 +551,17 @@ public final class IsosangSlash implements Fx.Skill {
      */
     static double inkFront(double prof,double ink){
         double spread=1-(1-ink)*(1-ink);
-        return Math.max(.2,.92-.4*Ease.smooth((float)prof,.15f,.9f)-.28*spread);
+        return Math.max(.2,.92-.55*Ease.smooth((float)prof,.15f,.9f)-.25*spread);
+    }
+    /** The same for a slash of {@code style}: the ring (1) is light all through until it dries, as the shader has it. */
+    static double inkFront(int style,double prof,double ink){
+        if(style==1){double spread=1-(1-ink)*(1-ink);return .9-.6*spread;}
+        return inkFront(prof,ink);
+    }
+    /** How far in from the outer edge the white-hot rim reaches (0..1 of the band), as the shader has it: the ring's broad while fresh. */
+    static double whiteEnd(int style,float ink){
+        float k=Ease.smooth(ink,0,.3f);
+        return style==1?.6-.52*k:.24-.18*k;
     }
 
     /**
@@ -559,7 +569,7 @@ public final class IsosangSlash implements Fx.Skill {
      * (2.77.7, the user's videos: it climbs from low behind them to high ahead, through the foe's chest, and shines on
      * while the cut down crosses it in an X).
      */
-    static final Vec3d BEAM_FROM=v(-2.4,.55,.15),BEAM_TO=v(9.5,3.3,.05);
+    static final Vec3d BEAM_FROM=v(-2.4,.55,.15),BEAM_TO=v(6.5,2.6,.05);
     static final float BEAM_ON=.265f,BEAM_OFF=.92f;
     static float beamLit(float t){return Ease.smooth(t,BEAM_ON,BEAM_ON+.035f)*(1-Ease.smooth(t,BEAM_OFF-.18f,BEAM_OFF));}
     /** The beam's ends at {@code t} (it runs out ahead from the point as the thrust drives in). */
@@ -701,7 +711,7 @@ public final class IsosangSlash implements Fx.Skill {
      * brush ring on the ground where the cut was made, kept a third of a second). The strokes looping in the air round hit
      * 2's ring and hit 4's cut (2.77.2–2.77.7) are gone: the video from above has none.
      */
-    static final Loop[] H4_LOOPS={new Loop(v(.9,.05,0),0,0,2.6,1,.08,-200,160,.7f,.75f,1.0f,1.35f,6)};
+    static final Loop[] H4_LOOPS={new Loop(v(.7,.05,0),0,0,2.2,1,.07,-200,160,.7f,.75f,1.0f,1.35f,6)};
     static Loop[] loops(int combo){return combo==4?H4_LOOPS:new Loop[0];}
     static void loop(Vec3d feet,float yaw,Loop l,float t){
         float drawn=Ease.out(t,l.d0(),l.d1()),erase=Ease.smooth(t,l.e0(),l.e1());
@@ -743,7 +753,7 @@ public final class IsosangSlash implements Fx.Skill {
         double floor=feet.y+.02;
         if(combo==1){
             // under the spin cut's low end behind the left, where it comes down thick with ink (2.78.0)
-            pool(feet,yaw,H1_ARCS[0],175,240,4,.08f,1.9,.8f,101,t);
+            pool(feet,yaw,H1_ARCS[0],175,240,4,.08f,1.6,.8f,101,t);
         }
         if(combo==2){
             // the ground inside the ring darkens as it dries, and a pool of ink gathers under the first quarter it drew
@@ -752,13 +762,13 @@ public final class IsosangSlash implements Fx.Skill {
             var ring=H2_ARCS[0];float dark=t-(ring.t1()+.1f);
             if(dark>=0&&dark<POOL_LIFE+.1f){
                 Vec3d o=world(feet,yaw,v(.35,0,0));float dry=Ease.smooth(dark,.2f,POOL_LIFE+.1f);
-                stain(new Vec3d(o.x,floor-.002,o.z),7.2*(.6+.4*Ease.out(dark,0,.15f)),Math.toRadians(-yaw),1,9,dry,.34f*(1-Ease.smooth(dry,.6f,1)));
+                stain(new Vec3d(o.x,floor-.002,o.z),6.0*(.6+.4*Ease.out(dark,0,.15f)),Math.toRadians(-yaw),1,9,dry,.34f*(1-Ease.smooth(dry,.6f,1)));
             }
-            pool(feet,yaw,ring,40,200,9,.18f,1.7,.9f,211,t);
+            pool(feet,yaw,ring,40,200,9,.18f,1.5,.9f,211,t);
             float at=blow(2,1);
             for(int k=0;k<12;k++){
                 int seed=k*29+311;float born=at+.1f+.14f*(float)Ease.hash(seed);
-                double az=Math.PI*2*(k+.6*Ease.hash(seed+1))/12,r=3.4+1.6*Ease.hash(seed+2);
+                double az=Math.PI*2*(k+.6*Ease.hash(seed+1))/12,r=2.8+1.4*Ease.hash(seed+2);
                 Vec3d p=world(feet,yaw,v(.35+Math.cos(az)*r,0,Math.sin(az)*r));
                 stainAt(new Vec3d(p.x,floor+.003*(k%4),p.z),.8+.8*Ease.hash(seed+5),Math.toRadians(-yaw)+az+Math.PI/2+(Ease.hash(seed+6)-.5),1.3+1.2*Ease.hash(seed+7),seed,t-born,.88f);
             }
@@ -766,9 +776,9 @@ public final class IsosangSlash implements Fx.Skill {
         if(combo==3){
             // under each ring's thick end behind the left (the second, third and fourth: 2.78.0, the video from above has
             // the ground there black with ink by the end), the fourth's the widest
-            pool(feet,yaw,H3_ARCS[1],170,250,4,.06f,1.3,.8f,577,t);
-            pool(feet,yaw,H3_ARCS[2],165,250,5,.06f,1.5,.85f,601,t);
-            pool(feet,yaw,H3_ARCS[4],150,260,8,.06f,2.0,.9f,631,t);
+            pool(feet,yaw,H3_ARCS[1],170,250,4,.06f,1.2,.8f,577,t);
+            pool(feet,yaw,H3_ARCS[2],165,250,5,.06f,1.3,.85f,601,t);
+            pool(feet,yaw,H3_ARCS[4],150,260,8,.06f,1.7,.9f,631,t);
         }
         if(combo==4){
             float at=blow(4,0);
@@ -836,7 +846,7 @@ public final class IsosangSlash implements Fx.Skill {
     static void inkRing(EffectMesh m,float t,Vec3d feet,float yaw){
         float at=blow(2,1);if(t<at-.02f||t>=at+.4f)return;
         Vec3d o=world(feet,yaw,v(.35,.49,0));float a=Ease.smooth(t,at-.02f,at+.01f)*(1-Ease.unit(t,at,at+.3f));
-        FxLib.ring(m,o,3.42+1.2*Ease.out(t,at,at+.22f),.16,INK,.7f*a);
+        FxLib.ring(m,o,2.85+1.0*Ease.out(t,at,at+.22f),.14,INK,.7f*a);
     }
     /**
      * Over the ink ribbons (2.77.5, user request "마지막으로 이펙트 더 예쁘게 꾸며줘": the moon's light and its stars, as the
@@ -937,7 +947,7 @@ public final class IsosangSlash implements Fx.Skill {
             if(f>h-.02)continue;
             double x=f/h,prof=profile(s.style(),x);if(x<eaten+.1||prof<.15)continue;
             float swept=s.t0()+(s.t1()-s.t0())*(float)f,ink=Ease.smooth(t,swept+delay,swept+delay+dur);
-            double inkAt=inkFront(prof,ink),whiteEnd=.24-.18*Ease.smooth(ink,0,.4f),d;float a;
+            double inkAt=inkFront(s.style(),prof,ink),whiteEnd=whiteEnd(s.style(),ink),d;float a;
             boolean night=k%2==1;
             if(night){if(ink<.4f)continue;d=inkAt+.1+(.86-inkAt-.1)*Ease.hash(seed+1);if(d>.86)continue;a=.8f*Ease.smooth(ink,.4f,.75f);}
             else{double room=inkAt-whiteEnd-.15;if(room<.02)continue;d=whiteEnd+.06+room*Ease.hash(seed+1);a=1-Ease.smooth(ink,.55f,.85f);}
@@ -963,7 +973,7 @@ public final class IsosangSlash implements Fx.Skill {
     /** Hit 2's burst: stars riding out on its white ring, twinkling, gone with it (in place of streaks of light). */
     static void ringStars(EffectMesh m,float t,Vec3d feet,float yaw){
         float at=blow(2,1);if(t<at||t>=at+.36f)return;
-        Vec3d o=world(feet,yaw,v(.35,.5,0));double r=3.3+1.2*Ease.out(t,at,at+.22f);float fade=1-Ease.unit(t,at,at+.36f);
+        Vec3d o=world(feet,yaw,v(.35,.5,0));double r=2.75+1.0*Ease.out(t,at,at+.22f);float fade=1-Ease.unit(t,at,at+.36f);
         for(int k=0;k<12;k++){
             int seed=k*53+211;double az=Math.PI*2*(k+.4*Ease.hash(seed))/12;
             Vec3d p=o.add(dir(yaw,v(Math.cos(az)*r,.15*(Ease.hash(seed+1)-.5),Math.sin(az)*r)));
@@ -1183,8 +1193,8 @@ public final class IsosangSlash implements Fx.Skill {
     static void flare(Fx c,EffectMesh m,float t,Vec3d feet,float yaw){
         float at=blow(2,1);if(t<at-.02f||t>=at+.4f)return;
         Vec3d o=world(feet,yaw,v(.35,.5,0));float a=Ease.smooth(t,at-.02f,at+.01f);
-        FxLib.ring(m,o,3.3+1.2*Ease.out(t,at,at+.22f),.09,WHITE,.85f*a*(1-Ease.unit(t,at,at+.22f)));
-        FxLib.ring(m,o,3.1+2.2*Ease.out(t,at,at+.36f),.2,AZURE,.3f*a*(1-Ease.unit(t,at,at+.36f)));
+        FxLib.ring(m,o,2.75+1.0*Ease.out(t,at,at+.22f),.08,WHITE,.85f*a*(1-Ease.unit(t,at,at+.22f)));
+        FxLib.ring(m,o,2.6+1.8*Ease.out(t,at,at+.36f),.18,AZURE,.3f*a*(1-Ease.unit(t,at,at+.36f)));
     }
     /**
      * Hit 3's beam: its light along the whole line and a glint at its far end (2.77.7: no rings of air running on along
@@ -1502,7 +1512,7 @@ public final class IsosangSlash implements Fx.Skill {
         }
         if(combo==2){
             float at=blow(2,1);
-            if(t>=at-.01f&&t<at+.35f){Vec3d o=world(feet,yaw,v(.35,.5,0));d.ring(o,c.right,Vec3d.fromPolar(0,yaw),3.2+1.6*Ease.out(t,at,at+.35f),.9,.2f*Ease.smooth(t,at-.01f,at+.015f)*(1-Ease.unit(t,at,at+.35f)));}
+            if(t>=at-.01f&&t<at+.35f){Vec3d o=world(feet,yaw,v(.35,.5,0));d.ring(o,c.right,Vec3d.fromPolar(0,yaw),2.7+1.4*Ease.out(t,at,at+.35f),.9,.2f*Ease.smooth(t,at-.01f,at+.015f)*(1-Ease.unit(t,at,at+.35f)));}
         }
     }
 

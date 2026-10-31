@@ -185,7 +185,7 @@ class IsosangSlashTest {
                 assertTrue(s.t0()<s.t1()&&s.t1()<=s.eat1()&&s.eat0()<s.eat1()&&s.ink0()<s.ink1(),"hit "+combo);
                 assertTrue(s.eat1()+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"hit "+combo+"'s drops and their stains are gone in time");
                 boolean thin=s.style()==6||s.style()==7;
-                assertTrue(s.outer()-s.inner()>(thin?.25:.85),"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
+                assertTrue(s.outer()-s.inner()>(thin?.2:.75),"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
                 // every sweep goes round to the right (2.78.0, the user's video from above), the chords aside
                 // (hit 4's low cut is a backhand from the right to the left)
                 if(s.style()!=6&&combo!=4)assertTrue(s.to()>s.from(),"hit "+combo+"'s slash from "+s.t0()+" sweeps clockwise seen from above");
@@ -223,7 +223,7 @@ class IsosangSlashTest {
         // the fourth the widest; the beam shines on while the third ring crosses it (the X)
         var r1=IsosangSlash.H3_ARCS[0];assertTrue(r1.to()-r1.from()>=200&&r1.to()>=120&&r1.to()<180,"the first ring: "+r1.from()+".."+r1.to());
         for(int i:new int[]{1,2,4}){var ri=IsosangSlash.H3_ARCS[i];assertTrue(ri.to()-ri.from()>=270&&ri.to()>=240&&ri.to()<=270,"ring "+i+" ends behind the left: "+ri.from()+".."+ri.to());}
-        assertTrue(IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[1].outer()+1&&IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[2].outer()+1,"the fourth ring is the widest");
+        assertTrue(IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[1].outer()+.7&&IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[2].outer()+.5,"the fourth ring is the widest");
         var x=IsosangSlash.H3_ARCS[2];assertTrue(IsosangSlash.beamLit(x.t1())>.9f,"the beam shines on through the third ring that crosses it");
         // the first ring leans up to the front, the fourth to the front-right
         assertTrue(IsosangSlash.point(r1,0,r1.outer()).y>IsosangSlash.point(r1,180,r1.outer()).y+1.5,"the first ring is high at the front");
@@ -257,8 +257,9 @@ class IsosangSlashTest {
         // the pools under the slashes (2.78.0) go sooner still: half a second, as the video from above has them
         assertTrue(IsosangSlash.POOL_LIFE<=.6f);assertEquals(1,IsosangSlash.dried(IsosangSlash.POOL_LIFE,IsosangSlash.POOL_LIFE),1e-6);
         // the ink front of a band: deep into a thick part, barely into a thin one, spreading out as it ages
-        assertTrue(IsosangSlash.inkFront(1,0)<.6&&IsosangSlash.inkFront(.1,0)>.85,"ink fills the thick parts, not the thin");
-        assertTrue(IsosangSlash.inkFront(1,1)<IsosangSlash.inkFront(1,0)-.2,"and spreads outward as it dries");
+        assertTrue(IsosangSlash.inkFront(1,0)<.45&&IsosangSlash.inkFront(.1,0)>.85,"ink fills the thick parts, not the thin");
+        assertTrue(IsosangSlash.inkFront(1,1)<IsosangSlash.inkFront(1,0)-.12,"and spreads outward as it dries");
+        assertTrue(IsosangSlash.inkFront(1,1.0,0)>.85&&IsosangSlash.inkFront(1,1.0,1)<.4,"the ring is light all through until it dries");
         // a drop lands where its flight meets the ground (and stains it there); one that cannot reach it does not
         var d=new IsosangSlash.Drop(new Vec3d(0,1.6,0),new Vec3d(2,1,0),3.2,3.4,0,IsosangSlash.DROP_LIFE,.1,7,0);
         double land=IsosangSlash.lands(d,.03);
@@ -327,7 +328,7 @@ class IsosangSlashTest {
                     assertTrue(st.alpha()>0&&st.alpha()<=1);
                     // the light's stars outward of the shader's ink front there, the night's inward of it
                     float swept=s.t0()+(s.t1()-s.t0())*(float)f,ink=Ease.smooth(t,swept+s.ink0()-s.t0(),swept+s.ink1()-s.t0());
-                    double prof=IsosangSlash.profile(s.style(),f/h),inkAt=IsosangSlash.inkFront(prof,ink),d=(1-(st.radius()-s.inner())/(s.outer()-s.inner()))/prof;
+                    double prof=IsosangSlash.profile(s.style(),f/h),inkAt=IsosangSlash.inkFront(s.style(),prof,ink),d=(1-(st.radius()-s.inner())/(s.outer()-s.inner()))/prof;
                     if(st.night()){night++;assertTrue(d>inkAt+.05,"hit "+combo+": a night star in the ink");}
                     else{light++;assertTrue(d<inkAt-.05,"hit "+combo+": a star in the light");}
                 }

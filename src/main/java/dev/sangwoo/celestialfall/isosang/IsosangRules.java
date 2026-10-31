@@ -109,7 +109,7 @@ public final class IsosangRules {
      * widens, its tips trailing {@link #WAVE_CURVE_START} to {@link #WAVE_CURVE_END} blocks behind its middle,
      * {@link #WAVE_DEPTH} deep. It strikes whoever its band passes over, once; and whoever is right in front as it is thrown.
      */
-    public static final double WAVE_START=1.2,WAVE_RANGE=11,WAVE_HALF_START=4.5,WAVE_HALF_END=8.5,WAVE_CURVE_START=1.0,WAVE_CURVE_END=3.6,WAVE_DEPTH=2.4;
+    public static final double WAVE_START=1.2,WAVE_RANGE=9.5,WAVE_HALF_START=3.9,WAVE_HALF_END=6.2,WAVE_CURVE_START=1.0,WAVE_CURVE_END=3.2,WAVE_DEPTH=2.0;
     /**
      * Ticks the slash flies (2.78.0, the user's video from above: it is still close and huge a quarter of a second on,
      * drifting out and widening; 2.77.x had it 13.5 blocks out in 0.4 s, a thin line in the distance).
@@ -149,7 +149,7 @@ public final class IsosangRules {
      * How far the flight has gone, 0 to 1, {@code ticks} after the slash was thrown: fast at first, slowing to a stop
      * (2.78.0: a gentler curve than the square, so it is still drifting out past a quarter of a second as the video shows).
      */
-    public static double waveFlown(double ticks){double u=Math.max(0,Math.min(1,ticks/WAVE_TICKS));return 1-Math.pow(1-u,1.8);}
+    public static double waveFlown(double ticks){double u=Math.max(0,Math.min(1,ticks/WAVE_TICKS));return 1-Math.pow(1-u,1.6);}
     /** How far ahead of where it was thrown the middle of the slash's leading edge is (blocks), {@code ticks} after. */
     public static double waveFront(double ticks){return WAVE_START+(WAVE_RANGE-WAVE_START)*waveFlown(ticks);}
     /**

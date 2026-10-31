@@ -385,10 +385,11 @@ void main(){
    }else{
     // the light outermost (a white-hot edge, wide while the cut is fresh, bright blue, royal blue), the ink inside it:
     // filling the thick parts and barely touching the thin (2.78.0, the video from above), spreading out as it dries
-    float whiteEnd=wave?mix(.11,.04,ink):mix(.24,.06,smoothstep(0.0,.3,ink));
+    // (the ring is a broad white band as it is drawn, the video's, and narrows to a blue one within a tenth of a second)
+    float whiteEnd=wave?mix(.11,.04,ink):ring?mix(.6,.08,smoothstep(0.0,.3,ink)):mix(.24,.06,smoothstep(0.0,.3,ink));
     float spread=1.0-(1.0-ink)*(1.0-ink);
     // (the ring is light all through while fresh, the video's: its ink comes only as it dries)
-    float inkAt=(wave?mix(.62,.30,spread):ring?mix(.9,.3,spread):max(.2,.92-.4*smoothstep(.15,.9,w)-.28*spread))+.08*(strand-.5)+.03*(streak-.5);
+    float inkAt=(wave?mix(.78,.35,spread):ring?mix(.9,.3,spread):max(.2,.92-.55*smoothstep(.15,.9,w)-.25*spread))+.08*(strand-.5)+.03*(streak-.5);
     // the band thins as it dries, its inner edge drawing out toward the light (the video: the blue narrows to a line
     // before it goes); the inner edge a dry brush's, ragged, strands falling short; the thrown slash's back edge drips
     float limit=wave?1.0:mix(1.0,.45,smoothstep(.55,1.0,ink));
