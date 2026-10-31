@@ -578,8 +578,9 @@ public final class IsosangSlash implements Fx.Skill {
      * it turns to ink and is gone (it lingers where its flight ends and dries there).
      */
     static final double WAVE_BACK=.55,WAVE_FRONT=1.05,WAVE_LOOK_DEPTH=1.0;
-    // (2.79.2 draft, the user's videos: it dries from the inside a third of a second after the throw and is gone by 0.58 s)
-    static final float WAVE_INK0=1.0f,WAVE_INK1=1.15f,WAVE_EAT0=1.12f,WAVE_EAT1=1.28f;
+    // (2.79.2 draft, the user's videos: it dries from the inside a quarter of a second after the throw, is nearly gone by
+    // 0.45 s and quite gone by 0.52 s)
+    static final float WAVE_INK0=.95f,WAVE_INK1=1.1f,WAVE_EAT0=1.06f,WAVE_EAT1=1.22f;
     /** Ticks the thrown slash has flown at hit 4's second {@code t} (it stops where its flight ends). */
     static double flown(float t){return Math.max(0,Math.min(IsosangRules.WAVE_TICKS,(t-blow(4,0))*20));}
     /**
@@ -779,7 +780,7 @@ public final class IsosangSlash implements Fx.Skill {
         if(combo==4){
             float at=blow(4,0);
             // (2.79.2 draft, the user's video from above: the ground along its trail and under it is left black with ink)
-            for(int k=0;k<26;k++){
+            for(int k=0;k<40;k++){
                 int seed=k*37+733;
                 double fw=.8+(IsosangRules.WAVE_RANGE-1.2)*Ease.hash(seed),u=(Ease.hash(seed+1)-.5)*2*(.35+.65*Ease.smooth((float)(fw/IsosangRules.WAVE_RANGE),.2f,1f));
                 // the slash's back edge passes over it: when its leading edge is DEPTH past it (2.79.2 draft: where it
