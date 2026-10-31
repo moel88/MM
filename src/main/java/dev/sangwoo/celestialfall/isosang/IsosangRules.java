@@ -108,10 +108,10 @@ public final class IsosangRules {
      * widens, its tips trailing {@link #WAVE_CURVE_START} to {@link #WAVE_CURVE_END} blocks behind its middle,
      * {@link #WAVE_DEPTH} deep. It strikes whoever its band passes over, once; and whoever is right in front as it is thrown.
      * (2.79.2 draft, the user's videos of hit 4 from above, behind and the front at a tenth of the speed: it flies only a
-     * moment, out to about 3.6 blocks ahead and 8 wide, its tips curving back toward its user, and hangs there; the
+     * moment, out to about 5 blocks ahead and 8 wide, its tips curving back to just past the ring of ink round its user, and hangs there; the
      * judgement follows what is seen. 2.78.0 had it fly 9.5 blocks over 0.8 s.)
      */
-    public static final double WAVE_START=1.0,WAVE_RANGE=3.6,WAVE_HALF_START=2.4,WAVE_HALF_END=4.0,WAVE_CURVE_START=.6,WAVE_CURVE_END=2.2,WAVE_DEPTH=1.6;
+    public static final double WAVE_START=1.2,WAVE_RANGE=5.0,WAVE_HALF_START=2.6,WAVE_HALF_END=4.1,WAVE_CURVE_START=.7,WAVE_CURVE_END=2.6,WAVE_DEPTH=1.8;
     /** Ticks the slash flies (2.79.2 draft, the user's videos: about 0.15 s, then it hangs where it stopped). */
     public static final int WAVE_TICKS=3;
     /** As far as any blow of the attack reaches (blocks): who could be struck at all is looked for within this. */

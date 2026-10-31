@@ -638,7 +638,7 @@ public final class IsosangSlash implements Fx.Skill {
     static void trail(Vec3d feet,float yaw,float t){
         float at=blow(4,0);if(t<at||t>=WAVE_EAT1)return;
         double ticks=flown(t),grow=Ease.out((float)((t-at)*20),0,1.6f);
-        double far=IsosangRules.waveFront(ticks)-IsosangRules.WAVE_DEPTH*WAVE_LOOK_DEPTH*(.7+.3*grow)+.35,near=.45,half=.75;
+        double far=IsosangRules.waveFront(ticks)-IsosangRules.WAVE_DEPTH*WAVE_LOOK_DEPTH*(.7+.3*grow)+.35,near=.45,half=1.0;
         if(far<near+.2)return;
         double floor=.03;int n=9;Vec3d[] in=new Vec3d[n],out=new Vec3d[n];float[] along=new float[n];
         for(int i=0;i<n;i++){
@@ -715,8 +715,8 @@ public final class IsosangSlash implements Fx.Skill {
      * 2's ring and hit 4's cut (2.77.2–2.77.7) are gone: the video from above has none.
      */
     // (2.79.2 draft, the user's videos: the thin ring of ink is drawn round them at the waist, close to the body, as the
-    // slash is thrown, and stays a little under half a second; 2.78.0 had it on the ground, 1.6 blocks round)
-    static final Loop[] H4_LOOPS={new Loop(v(0,.9,0),0,0,1.1,1,.07,-200,160,.69f,.72f,1.0f,1.18f,6)};
+    // slash is thrown, about twice her height across, and stays a little under half a second; 2.78.0 had it on the ground)
+    static final Loop[] H4_LOOPS={new Loop(v(0,.9,0),0,0,2.1,1,.08,-200,160,.69f,.72f,1.0f,1.18f,6)};
     /** Hit 2's (2.79.2 draft): the thin line of ink the point leaves round them at the waist (the videos' black circle inside the cuts). */
     static final Loop[] H2_LOOPS={new Loop(v(0,.95,0),10,150,1.5,1,.05,20,-400,.2f,.27f,.42f,.55f,4)};
     static Loop[] loops(int combo){return combo==4?H4_LOOPS:combo==2?H2_LOOPS:new Loop[0];}
@@ -778,15 +778,16 @@ public final class IsosangSlash implements Fx.Skill {
         }
         if(combo==4){
             float at=blow(4,0);
-            for(int k=0;k<16;k++){
+            // (2.79.2 draft, the user's video from above: the ground along its trail and under it is left black with ink)
+            for(int k=0;k<26;k++){
                 int seed=k*37+733;
-                double fw=.8+(IsosangRules.WAVE_RANGE-1.2)*Ease.hash(seed),u=(Ease.hash(seed+1)-.5)*2;
+                double fw=.8+(IsosangRules.WAVE_RANGE-1.2)*Ease.hash(seed),u=(Ease.hash(seed+1)-.5)*2*(.35+.65*Ease.smooth((float)(fw/IsosangRules.WAVE_RANGE),.2f,1f));
                 // the slash's back edge passes over it: when its leading edge is DEPTH past it (2.79.2 draft: where it
                 // hangs, its trail soaks into the ground as it dries)
                 float when=reaches(Math.min(IsosangRules.WAVE_RANGE-.05,fw+IsosangRules.WAVE_DEPTH*.8),0,0);if(when<0)when=at+.15f;when=Math.max(when,WAVE_INK0-.1f);
                 double side=u*IsosangRules.waveHalf(Math.min(IsosangRules.WAVE_TICKS,(when-at)*20))*.8;
                 Vec3d p=world(feet,yaw,v(fw,0,side));
-                stainAt(new Vec3d(p.x,floor+.003*(k%4),p.z),.75+.75*Ease.hash(seed+6),Math.toRadians(yaw+90)+(Ease.hash(seed+5)-.5)*.6,1.5+1.5*Ease.hash(seed+7),seed,t-when-.04f*(float)Ease.hash(seed+2),.85f);
+                stainAt(new Vec3d(p.x,floor+.003*(k%4),p.z),1.0+1.2*Ease.hash(seed+6),Math.toRadians(yaw+90)+(Ease.hash(seed+5)-.5)*.6,1.5+1.5*Ease.hash(seed+7),seed,t-when-.04f*(float)Ease.hash(seed+2),.88f);
             }
             // round whom it strikes, where it struck them
             int b=0;

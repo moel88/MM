@@ -83,7 +83,7 @@ class IsosangRulesTest {
         }
         assertTrue(waveFront(1)-waveFront(0)>.6,"it leaves fast: "+(waveFront(1)-waveFront(0)));
         // 2.79.2 draft (the user's videos of hit 4): it flies only a moment and hangs there, near
-        assertEquals(WAVE_RANGE,waveFront(4),1e-9,"stopped within a fifth of a second");assertTrue(WAVE_RANGE<5,"near: "+WAVE_RANGE);
+        assertEquals(WAVE_RANGE,waveFront(4),1e-9,"stopped within a fifth of a second");assertTrue(WAVE_RANGE<6,"near: "+WAVE_RANGE);
         // its tips trail behind its middle
         assertTrue(waveEdge(4,waveHalf(4))<waveEdge(4,0)-1);
         assertTrue(waveFlying(0)&&waveFlying(WAVE_TICKS)&&!waveFlying(WAVE_TICKS+1)&&!waveFlying(-1));
@@ -99,13 +99,13 @@ class IsosangRulesTest {
         for(double fw=0;fw<=WAVE_RANGE-WAVE_CURVE_END-.2;fw+=.25)for(double side=-2;side<=2;side+=.5)
             assertTrue(struckAt(fw,side,.3)>=0,"missed at "+fw+", "+side);
         // right in front as it is thrown: at once; further on: later
-        assertEquals(0,struckAt(.5,0,.3));assertTrue(struckAt(3.2,0,.3)>struckAt(1.3,0,.3),"further on, later: "+struckAt(3.2,0,.3)+" "+struckAt(1.3,0,.3));
+        assertEquals(0,struckAt(.5,0,.3));assertTrue(struckAt(4.5,0,.3)>struckAt(1.5,0,.3),"further on, later: "+struckAt(4.5,0,.3)+" "+struckAt(1.5,0,.3));
         // not behind them, not beyond its range, not out past its tips, not over its head or under its feet
         assertEquals(-1,struckAt(-2,0,.3));assertEquals(-1,struckAt(WAVE_RANGE+1,0,.3));
         assertEquals(-1,struckAt(1.5,WAVE_HALF_END+1,.3));assertTrue(struckAt(1.5,3.4,.3)>struckAt(1.5,0,.3),"a wide point beside them only once the band has widened over it: "+struckAt(1.5,3.4,.3)+" "+struckAt(1.5,0,.3));
         assertFalse(waveSweeps(0,WAVE_TICKS,5,0,HIGH+.5,.3));assertFalse(waveSweeps(0,WAVE_TICKS,5,0,LOW-.5,.3));
         // a big body is reached sooner than a small one
-        assertTrue(struckAt(3.3,0,1.2)<=struckAt(3.3,0,.3));
+        assertTrue(struckAt(4.6,0,1.2)<=struckAt(4.6,0,.3));
         // a boss reads it as a lane as long and wide as its flight
         assertEquals(WAVE_RANGE,reach(4,0),1e-9);assertEquals(WAVE_HALF_END,halfWidth(4,0),1e-9);
     }
