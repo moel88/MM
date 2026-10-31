@@ -158,30 +158,32 @@ public final class IsosangSlash implements Fx.Skill {
      */
     public static final float DISPLAY_TILT=12;
 
+    // ───────────────────────────── facing the front ─────────────────────────────
+    // (2.79.3, user request "캐릭터가 개 발광을 하는데 정면만 보고 때리게 하면 안되나? 그대신 손이나 팔을 잘 써서 자연스럽게
+    // 하기": every hit faces the front. The body no longer spins round (hit 1 turned a whole turn, hit 2 two, hit 3 five):
+    // it only twists with the swing, at most 30° either way, the head stays on the front (R6.world), and the sword arm, the
+    // wrist and the free arm do the cutting. The slashes, their timing, the blows and the sounds are as they were: the
+    // crescents are set in the hit's frame, not on the blade. Through each cut the blade trails the arm the way it goes
+    // (to the arm's left in a cut to the right, to its right in a cut to the left), far back as it is wound and less as it
+    // comes through, so it never crosses the arm's line, where R6 would roll the arm over in a frame.)
+
     // ───────────────────────────── 1 참월 ─────────────────────────────
-    // (2.79.0, the user's videos from above and from behind: the great cut is a whole spin to the right on a steeply
-    // leaning plane, low by the ground behind the left and high above a target ahead to the right; its crescent sweeps
-    // clockwise from the front-right round the right, behind and the left, and rises from the ground up across the front
-    // to end thick and inked high at the front-right. 2.78.0 ended it low behind the left and added a second thin cut
-    // rising back; the videos have one cut.)
+    // 1: the sword flashed into the hand low at the left, raised up the right and overhead, wound back over the left
+    // shoulder in a crouch (its point behind them), then swung round in front of them: down by the left side, low across
+    // the front (the blow) and up to end high at the right, as the crescent sweeps from behind round the left and the
+    // front to the right.
     /** The sword flashed into the hand, held out low to the left, glinting. */
     static final R6.Pose H1_FLASH=w(.02,-.02,8,0,0,d(-40,-30),d(-20,-45),d(-80,12),-20,-160);
     static final R6.Pose H1_GLINT=w(.04,-.04,10,0,1,d(-28,-36),d(-12,-52),d(-78,14),-22,-160);
     /** Raised up to the right, then overhead. */
-    static final R6.Pose H1_TURN=w(.1,-.08,-30,4,-2,d(20,50),d(40,56),d(-60,-50),30,-156);
-    static final R6.Pose H1_RAISE=w(.16,-.05,-10,-6,-2,d(70,20),d(60,-20),d(-50,-60),28,-158);
-    /** Down in a coil, turned to the left, the sword wound back over the left shoulder (a moving hold). */
-    static final R6.Pose H1_COIL=w(.24,-.3,50,14,4,d(30,-110),d(10,-150),d(-30,80),-20,-170);
-    static final R6.Pose H1_LOAD=w(.26,-.32,55,15,4,d(28,-116),d(8,-156),d(-30,84),-20,-170);
-    /**
-     * The spin cut (body-space keys: the turn is the root's yaw, to the right): the blade held across the body to the
-     * left, high as it passes the front-right and low behind, so its point goes round them in a crescent that leans
-     * down to the back-left.
-     */
-    static R6.Pose cut1(float yaw,double elev,double up){return planted(R6.pose().at(.36,up,0).body(yaw,10,-4).head(0,-8,0).rArm(elev*.7-8,-5).blade(elev,20).lArm(-30,-110).rLeg(-70,20).lLeg(-30,-30),24,Double.NaN);}
-    /** Held up there (a whole turn on, 22° to the right): where the second hit begins. */
-    static final R6.Pose H1_HOLD=w(.42,-.1,-382,-2,0,d(46,50),d(54,54),d(-58,-100),22,-166);
-    static final R6.Pose H1_LOWER=w(.24,-.05,-372,2,0,d(-20,60),d(18,66),d(-70,-50),12,-170);
+    static final R6.Pose H1_TURN=w(.1,-.08,-14,4,-2,d(20,50),d(40,56),d(-60,-50),30,-156);
+    static final R6.Pose H1_RAISE=w(.16,-.05,-6,-6,-2,d(70,20),d(60,-20),d(-50,-60),28,-158);
+    /** Down in a coil, twisted a little to the left, the sword wound back over the left shoulder, its point behind them. */
+    static final R6.Pose H1_COIL=w(.24,-.3,24,12,4,d(30,-98),d(12,-158),d(-30,80),-14,-170);
+    static final R6.Pose H1_LOAD=w(.26,-.32,26,13,4,d(28,-102),d(10,-162),d(-30,84),-14,-170);
+    /** Held up at the right, facing the front: where the second hit begins. */
+    static final R6.Pose H1_HOLD=w(.42,-.1,-14,-2,0,d(42,64),d(56,48),d(-58,-100),22,-166);
+    static final R6.Pose H1_LOWER=w(.24,-.05,-8,2,0,d(-20,60),d(18,40),d(-70,-50),12,-170);
     static final Anim H1=Anim.joints(
         k(0,STANCE),
         k(.03,H1_FLASH),
@@ -190,65 +192,66 @@ public final class IsosangSlash implements Fx.Skill {
         k(.14,H1_RAISE),
         k(.17,H1_COIL),
         k(.19,H1_LOAD),
-        // crouched, turning into the spin, the sword brought up on end (the video's 0.85 s)
-        k(.23f,cut1(-80,60,-.32)),
-        // the spin cut (2.79.0), fast out of the coil and slowing, the blade following the leaning plane: high at the
-        // front-right, down behind the right, by the ground behind the left, and rising up across the front (the blow)
-        // to end high at the front-right (the yaw is 20° left of the arc's angle: the blade leads the body by 20°)
-        k(.25,cut1(-160,9,-.3),Anim.Ease.IN),
-        k(.263f,cut1(-251,-18,-.32),Anim.Ease.LINEAR),
-        k(.28f,cut1(-342,5,-.31),Anim.Ease.LINEAR),
-        k(blow(1,0),cut1(-408,38,-.3),Anim.Ease.LINEAR),
-        k(.32f,cut1(-430,52,-.25),Anim.Ease.OUT),
+        // wound furthest, crouched, the point behind the left shoulder
+        k(.23f,w(.3,-.32,28,12,4,d(26,-104),d(12,-166),d(-34,86),-10,-172)),
+        // the cut, fast out of the coil and slowing: the arm sweeps the blade from behind the left shoulder down by the
+        // left side, low across the front (the blow) and up to the right, the wrist bringing it through, the body
+        // untwisting from 28° left to 16° right, the free arm swinging back the other way
+        k(.25,w(.33,-.3,22,11,3,d(14,-86),d(0,-150),d(-36,70),-12,-172),Anim.Ease.IN),
+        k(.263f,w(.34,-.31,12,11,2,d(0,-56),d(-16,-104),d(-40,36),-16,-171),Anim.Ease.LINEAR),
+        k(.28f,w(.35,-.31,0,11,0,d(-4,-6),d(-12,-40),d(-44,-12),-20,-170),Anim.Ease.LINEAR),
+        k(blow(1,0),w(.36,-.3,-10,10,-2,d(10,40),d(20,12),d(-46,-50),-22,-168),Anim.Ease.LINEAR),
+        k(.32f,w(.38,-.26,-16,6,-4,d(30,80),d(48,58),d(-50,-80),-22,-166),Anim.Ease.OUT),
         k(.38f,H1_HOLD),
         k(step(1),H1_HOLD),
         k(.72,H1_LOWER),
-        k(.9,STANCE.body(-360,0,0))).stops(Anim.stop(blow(1,0),.03,.05)).after(IsosangSlash::grounded);
+        k(.9,STANCE)).stops(Anim.stop(blow(1,0),.03,.05)).after(IsosangSlash::grounded);
 
     // ───────────────────────────── 2 윤월 ─────────────────────────────
     // (2.79.2 draft, the user's videos from above and from the front, "처음에 뒤로 베고 앞으로 가서 베는거야 그래서 원처럼
     // 보이는거임": two cuts to the left, anticlockwise seen from above (the other way from hit 1): first one behind them at
     // the hip, then, a moment on, one in front of them low over the ground; together they look like a ring, and the one
-    // behind goes first. The yaws (left +) carry on from hit 1's H1_HOLD. Until 2.79.0 hit 2 was one ring to the right.)
-    /**
-     * Hit 2's sweeps to the left (body-space keys: the turn is the root's yaw, to the left +): the blade out {@code az}
-     * off the torso's front (right +) at {@code elev}, so its point goes round them with the cut.
-     */
-    static R6.Pose cut2(float yaw,double elev,double az,double up){
-        return planted(R6.pose().at(.36,up,0).body(yaw,10,4).head(0,-8,0).rArm(elev*.7-6,az-14).blade(elev,az).lArm(-30,-100).rLeg(-70,24).lLeg(-30,-28),24,Double.NaN);
-    }
-    /** Between the cuts (the video's crane): on the right foot, the left knee drawn up and the left hand raised, the blade held out low. */
-    static R6.Pose crane2(float yaw,double az,double elev,double hand){
-        return planted(R6.pose().at(.36,-.14,0).body(yaw,6,0).head(0,-6,0).rArm(elev*.7-4,az-12).blade(elev,az).lArm(hand,-40-.5*(50-hand)).rLeg(-86,10).lLeg(-24,-22),12,Double.NaN);
-    }
+    // behind goes first. 2.79.3, facing the front: wound low behind the right, the arm sweeps the blade from the
+    // front-right across the front to the left at the hip; on the right foot, the left knee up, it is lifted over the head
+    // and dropped low behind the right; then the arm sweeps it low round from behind the right across the front to the
+    // left.)
     /** Wound up to the right before the first cut, crouching, the sword drawn back low behind on the right. */
-    static final R6.Pose H2_WIND=planted(R6.pose().at(.38,-.24,0).body(-405,10,-4).head(0,-8,0).rArm(-22,96).blade(-10,110).lArm(-46,-70).rLeg(-70,40).lLeg(-70,-40),70,-50);
-    /** Out of the front cut, rising, the sword raised across before them, turning back to the front. */
-    static final R6.Pose H2_RISE2=planted(R6.pose().at(.36,-.1,0).body(40,4,0).head(0,-4,0).rArm(30,-20).blade(46,-30).lArm(-60,-50).rLeg(-82,14).lLeg(-84,-14),14,-14);
-    /** Turned back to the front, the sword low at the right: where the third hit begins (yaw 4, as the next clip's first key). */
+    static final R6.Pose H2_WIND=w(.38,-.24,-22,10,-4,d(-22,124),d(-10,150),d(-44,-40),70,-50);
+    /** The moment between the cuts (the video's crane): on the right foot, the left knee drawn up. */
+    static R6.Pose crane2(double up,float yaw,double[] arm,double[] blade,double[] lArm){
+        R6.Pose p=w(.36,up,yaw,6,0,arm,blade,lArm,12,Double.NaN);
+        p.lLeg=R6.local(p,-30,-24);
+        return p;
+    }
+    /** Out of the front cut, rising, the sword raised across before them at the left. */
+    static final R6.Pose H2_RISE2=w(.36,-.1,12,4,0,d(30,-56),d(46,-36),d(-60,-80),14,-14);
+    /** Back to the front, the sword low at the right: where the third hit begins (yaw 4, as the next clip's first key). */
     static R6.Pose h2Back(float yaw){return w(.34,-.08,yaw,4,0,d(-50,30),d(-18,40),d(-72,-20),20,-160);}
     static final Anim H2=Anim.joints(
         k(0,H1_HOLD),
         k(.05,H2_WIND),
-        // the cut behind them, at the hip: the blade from the front-right across the front, round the left and behind to
-        // the back-right (its world angle is the arc's: -yaw+az)
-        k(.08,cut2(-410,-8,10,-.3),Anim.Ease.IN),
-        k(.093,cut2(-350,0,10,-.32),Anim.Ease.LINEAR),
-        k(.106,cut2(-260,-4,10,-.32),Anim.Ease.LINEAR),
-        k(.12,cut2(-170,-11,10,-.32),Anim.Ease.LINEAR),
-        k(.135,cut2(-135,-12,10,-.3),Anim.Ease.OUT),
-        // the moment between (the crane), winding back to the right
-        k(blow(2,0),crane2(-130,10,-12,-5)),
-        k(.21,crane2(-200,-40,-16,50)),
-        // the cut in front of them, low over the ground: from behind round the right, across the front to the left
-        k(.235,cut2(-205,-18,-40,-.42),Anim.Ease.IN),
-        k(.25,cut2(-130,-18,-40,-.44),Anim.Ease.LINEAR),
-        k(.265,cut2(-40,-18,-40,-.44),Anim.Ease.LINEAR),
-        k(.28,cut2(50,-17,-40,-.42),Anim.Ease.LINEAR),
-        k(blow(2,1),cut2(70,-14,-40,-.38),Anim.Ease.OUT),
+        // the cut behind them, at the hip: the arm sweeps the blade from the front-right across the front to the left,
+        // the body untwisting from the right to the left, the free arm swinging the other way
+        k(.08,w(.36,-.3,-20,10,-3,d(-12,40),d(-8,66),d(-40,-60),24,-160),Anim.Ease.IN),
+        k(.093,w(.36,-.32,-6,10,0,d(-4,-30),d(-4,6),d(-38,-20),24,-160),Anim.Ease.LINEAR),
+        k(.106,w(.36,-.32,10,10,2,d(0,-72),d(-6,-40),d(-34,30),24,-160),Anim.Ease.LINEAR),
+        k(.12,w(.36,-.32,20,10,4,d(4,-86),d(-12,-62),d(-32,50),24,-160),Anim.Ease.LINEAR),
+        k(.135,w(.36,-.3,24,10,4,d(4,-90),d(-16,-68),d(-30,60),24,-160),Anim.Ease.OUT),
+        // the moment between (the crane): on the right foot, the left knee up; the sword lifted over the head and
+        // dropped low behind the right, ready to sweep round
+        k(blow(2,0),crane2(-.2,22,d(2,-92),d(-20,-72),d(-24,50))),
+        k(.18,crane2(-.12,4,d(58,-20),d(30,-150),d(10,-40))),
+        k(.21,crane2(-.2,-20,d(-18,112),d(-14,150),d(36,-56))),
+        // the cut in front of them, low over the ground: the arm sweeps the blade from behind the right round the right
+        // and across the front to the left, the body untwisting from the right to the left
+        k(.235,w(.36,-.42,-22,12,-3,d(-22,118),d(-18,160),d(-30,-70),24,-150),Anim.Ease.IN),
+        k(.25,w(.36,-.44,-12,12,-1,d(-26,58),d(-20,92),d(-30,-40),24,-150),Anim.Ease.LINEAR),
+        k(.265,w(.36,-.44,0,12,1,d(-28,-16),d(-20,18),d(-32,0),24,-150),Anim.Ease.LINEAR),
+        k(.28,w(.36,-.42,12,12,3,d(-28,-70),d(-18,-40),d(-34,40),24,-150),Anim.Ease.LINEAR),
+        k(blow(2,1),w(.36,-.38,16,10,3,d(-26,-84),d(-16,-60),d(-36,50),24,-150),Anim.Ease.OUT),
         k(.38,H2_RISE2),
         k(step(2),h2Back(4)),
-        k(.9,STANCE.body(0,0,0))).stops(Anim.stop(blow(2,0),.025,.04),Anim.stop(blow(2,1),.03,.05)).after(IsosangSlash::grounded);
+        k(.9,STANCE)).stops(Anim.stop(blow(2,0),.025,.04),Anim.stop(blow(2,1),.03,.05)).after(IsosangSlash::grounded);
 
     // ───────────────────────────── 3 관월 ─────────────────────────────
     // (2.79.2 draft, the user's videos from above and the front at a tenth of the speed, and the user's own words: "첫번째
@@ -258,71 +261,72 @@ public final class IsosangSlash implements Fx.Skill {
     // right; 2: in the same place the other way, rising from her right across the front to her left, lasting a while; 3:
     // the mirror of the first (high at her right), down across the front to her left, crossing the second in an X; 4:
     // once the second and third are gone, the biggest, nearly level, rising from her left across the front round to her
-    // right, lasting longest. One blow on each cut as it passes the front (0.1, 0.35, 0.55, 0.85 s; "4번으로 바꿔"). The yaws
-    // (left +) carry on from hit 2's h2Back(4). Until 2.79.0 hit 3 was five rings to the right and a long rising beam.
-    /** Hit 3's cuts (body-space keys: the turn is the root's yaw, left +; the blade {@code az} off the torso's front, right +). */
-    static R6.Pose cut3(float yaw,double elev,double az,double up){
-        return planted(R6.pose().at(.4,up,0).body(yaw,10,-3).head(0,-8,0).rArm(elev*.7-6,az-14).blade(elev,az).lArm(-30,-100).rLeg(-70,24).lLeg(-30,-28),24,Double.NaN);
-    }
+    // right, lasting longest. One blow on each cut as it passes the front (0.1, 0.35, 0.55, 0.85 s; "4번으로 바꿔"). 2.79.3,
+    // facing the front: the arm and the wrist swing each cut across the front, the body twisting with them; between the
+    // second and the third the sword is lifted over the head from the left shoulder to the right.
     static final Anim H3=Anim.joints(
         k(0,h2Back(4)),
         // wound up to the left, the sword drawn up over the left shoulder
-        k(.05,cut3(150,30,20,-.24)),
-        // 1: down from her left, high, across the front to her right, low (the blade's world angle is -yaw+az)
-        k(.08,cut3(160,20,10,-.3),Anim.Ease.IN),
-        k(.09,cut3(51,24,10,-.32),Anim.Ease.LINEAR),
-        k(.10,cut3(-27,-6,10,-.33),Anim.Ease.LINEAR),
-        k(.11,cut3(-74,-10,10,-.33),Anim.Ease.LINEAR),
-        k(.12,cut3(-90,-10,10,-.33),Anim.Ease.OUT),
-        // turning back, the sword low at the right
-        k(.2,cut3(-110,-4,10,-.3)),
-        k(.32,cut3(-100,-6,10,-.32)),
-        // 2: the same place the other way: rising from her right across the front to her left, high
-        k(.345f,cut3(-90,-8,10,-.33),Anim.Ease.IN),
-        k(.355f,cut3(0,2,10,-.34),Anim.Ease.LINEAR),
-        k(.365f,cut3(70,28,10,-.3),Anim.Ease.LINEAR),
-        k(.375f,cut3(120,30,10,-.28),Anim.Ease.LINEAR),
-        k(.385f,cut3(150,23,10,-.28),Anim.Ease.LINEAR),
-        k(.395f,cut3(160,20,10,-.28),Anim.Ease.OUT),
-        // turning on to the left, the sword brought round high behind to her right
-        k(.47,cut3(190,26,10,-.26)),
-        k(.51,cut3(212,20,10,-.28)),
-        // 3: the mirror of the first: down from her right, high, across the front to her left, low
-        k(.54,cut3(220,18,10,-.3),Anim.Ease.IN),
-        k(.55,cut3(329,22,10,-.32),Anim.Ease.LINEAR),
-        k(.56,cut3(407,-6,10,-.33),Anim.Ease.LINEAR),
-        k(.57,cut3(454,-9,10,-.33),Anim.Ease.LINEAR),
-        k(.58,cut3(470,-9,10,-.33),Anim.Ease.OUT),
-        // down low behind the X, the sword drawn back low at her left
-        k(.66,cut3(480,-4,10,-.34)),
-        k(.78,cut3(488,-4,10,-.34)),
-        // 4: the biggest, nearly level: rising from her left across the front round to her right
-        k(.84,cut3(490,-8,10,-.33),Anim.Ease.IN),
-        k(.855,cut3(372,-4,10,-.33),Anim.Ease.LINEAR),
-        k(.87,cut3(288,10,10,-.3),Anim.Ease.LINEAR),
-        k(.885,cut3(237,7,10,-.28),Anim.Ease.LINEAR),
-        k(.9,cut3(220,4,10,-.28),Anim.Ease.OUT),
-        k(1.02,cut3(228,8,10,-.24)),
+        k(.05,w(.4,-.24,24,10,-3,d(40,-70),d(28,-150),d(-40,60),24,-160)),
+        // 1: down from her left, high, across the front to her right, low
+        k(.08,w(.4,-.3,22,10,-3,d(36,-72),d(24,-152),d(-40,62),24,-160),Anim.Ease.IN),
+        k(.093,w(.4,-.32,12,10,-1,d(20,-40),d(10,-96),d(-42,30),24,-160),Anim.Ease.LINEAR),
+        k(.106,w(.4,-.33,-2,10,1,d(-4,20),d(-6,-20),d(-44,-20),24,-160),Anim.Ease.LINEAR),
+        k(.12,w(.4,-.33,-14,10,3,d(-22,70),d(-14,44),d(-44,-60),24,-160),Anim.Ease.OUT),
+        // through, the sword low at the right; it rolls over the arm (raised past it) and is cocked to go back
+        k(.2,w(.4,-.3,-18,10,3,d(-28,84),d(-12,66),d(-44,-70),24,-160)),
+        k(.26,w(.4,-.31,-18,10,3,d(-28,88),d(10,88),d(-44,-70),24,-160)),
+        k(.31,w(.4,-.32,-18,10,3,d(-26,90),d(-12,112),d(-44,-70),24,-160)),
+        // 2: the same place the other way: rising from her right across the front (the blow) to her left, high
+        k(.325f,w(.4,-.32,-17,10,3,d(-24,84),d(-10,106),d(-43,-68),24,-160)),
+        k(.345f,w(.4,-.33,-12,10,2,d(-16,56),d(-6,76),d(-42,-50),24,-160),Anim.Ease.IN),
+        k(blow(3,1),w(.4,-.34,-8,10,1,d(-12,36),d(-4,44),d(-41,-36),24,-160),Anim.Ease.LINEAR),
+        k(.36f,w(.4,-.33,0,10,0,d(-2,-6),d(2,4),d(-40,-6),24,-160),Anim.Ease.LINEAR),
+        k(.37f,w(.4,-.31,8,10,-1,d(12,-44),d(10,-30),d(-40,20),24,-160),Anim.Ease.LINEAR),
+        k(.38f,w(.4,-.29,16,10,-2,d(24,-70),d(18,-52),d(-40,42),24,-160),Anim.Ease.LINEAR),
+        k(.395f,w(.4,-.28,22,10,-3,d(34,-86),d(22,-64),d(-40,56),24,-160),Anim.Ease.OUT),
+        // the sword lifted over the head from the left shoulder to the right, the body turning back to the right
+        k(.47,w(.4,-.26,4,8,0,d(64,-10),d(36,-120),d(-30,10),24,-160)),
+        k(.51,w(.4,-.28,-20,10,2,d(44,76),d(24,150),d(-40,-40),24,-160)),
+        // 3: the mirror of the first: down from her right, high, across the front (the blow) to her left, low
+        k(.53,w(.4,-.3,-20,10,2,d(36,62),d(20,126),d(-41,-36),24,-160),Anim.Ease.IN),
+        k(.545,w(.4,-.31,-14,10,1,d(24,30),d(14,80),d(-42,-24),24,-160),Anim.Ease.LINEAR),
+        k(blow(3,2),w(.4,-.32,-10,10,0,d(18,14),d(10,46),d(-42,-14),24,-160),Anim.Ease.LINEAR),
+        k(.56,w(.4,-.33,0,10,-1,d(4,-26),d(-4,6),d(-42,16),24,-160),Anim.Ease.LINEAR),
+        k(.57,w(.4,-.33,12,10,-2,d(-14,-66),d(-12,-36),d(-42,46),24,-160),Anim.Ease.LINEAR),
+        k(.585,w(.4,-.33,20,10,-3,d(-22,-86),d(-16,-60),d(-42,60),24,-160),Anim.Ease.OUT),
+        // down low behind the X, the sword drawn back low at her left, wound for the last
+        k(.66,w(.4,-.34,24,10,-3,d(-20,-86),d(-8,-118),d(-40,64),24,-160)),
+        k(.78,w(.4,-.34,26,10,-3,d(-18,-88),d(-6,-124),d(-40,66),24,-160)),
+        // 4: the biggest, nearly level: from her left across the front (the blow) round to her right
+        k(.82,w(.4,-.34,25,10,-3,d(-16,-86),d(-8,-118),d(-40,64),24,-160)),
+        k(.84,w(.4,-.33,20,10,-2,d(-12,-64),d(-8,-96),d(-41,50),24,-160),Anim.Ease.IN),
+        k(blow(3,3),w(.4,-.32,8,10,0,d(-6,-14),d(-4,-44),d(-42,20),24,-160),Anim.Ease.LINEAR),
+        k(.86,w(.4,-.3,-2,10,1,d(-2,24),d(-2,-6),d(-44,-10),24,-160),Anim.Ease.LINEAR),
+        k(.875,w(.4,-.29,-10,10,2,d(0,64),d(2,34),d(-45,-36),24,-160),Anim.Ease.LINEAR),
+        k(.89,w(.4,-.28,-16,10,3,d(2,96),d(4,66),d(-46,-58),24,-160),Anim.Ease.LINEAR),
+        k(.905,w(.4,-.28,-20,10,4,d(4,110),d(6,86),d(-46,-70),24,-160),Anim.Ease.OUT),
+        k(1.02,w(.38,-.24,-18,8,3,d(6,104),d(10,88),d(-50,-64),22,-162)),
         // (2.79.2: back in the stance as the finisher may begin, 1.25 s, the user's video of the whole combo)
-        k(step(3),STANCE.body(360,0,0))).stops(Anim.stop(blow(3,0),.025,.03),Anim.stop(blow(3,1),.025,.03),Anim.stop(blow(3,2),.025,.03),Anim.stop(blow(3,3),.035,.05)).after(IsosangSlash::grounded);
+        k(step(3),STANCE)).stops(Anim.stop(blow(3,0),.025,.03),Anim.stop(blow(3,1),.025,.03),Anim.stop(blow(3,2),.025,.03),Anim.stop(blow(3,3),.035,.05)).after(IsosangSlash::grounded);
 
     // ───────────────────────────── 4 낙월 ─────────────────────────────
-    /** The twirl: the arm up over the head, the blade level, turning round it (body-space), the body turning right to side-on. */
-    static R6.Pose twirl(double az,float yaw){return planted(R6.pose().at(.12,-.03,0).body(yaw,-4,0).head(0,-10,0).rArm(80,16).blade(10,az).lArm(-60,-40).rLeg(-88,6).lLeg(-88,-6),30,-150);}
-    /** Aimed: side-on, the free hand pointed at the foe, the sword held level behind at the chest. */
-    static final R6.Pose H4_POINT=w(.14,-.2,-72,4,-2,d(-20,140),d(0,176),d(6,-4),26,-160);
-    static final R6.Pose H4_POINT2=w(.14,-.22,-74,6,-2,d(-22,142),d(0,178),d(4,-3),26,-160);
+    /** The twirl: the arm up over the head, the blade level, turning round it (body-space), the head on the front. */
+    static R6.Pose twirl(double az,float yaw){return planted(R6.pose().at(.12,-.03,0).body(yaw,-4,0).head(yaw,-10,0).rArm(80,16).blade(10,az).lArm(-60,-40).rLeg(-88,6).lLeg(-88,-6),30,-150);}
+    /** Aimed: turned a little to the right, the free hand pointed at the foe, the sword held level behind at the chest. */
+    static final R6.Pose H4_POINT=w(.14,-.2,-28,4,-2,d(-20,140),d(0,176),d(6,-4),26,-160);
+    static final R6.Pose H4_POINT2=w(.14,-.22,-30,6,-2,d(-22,142),d(0,178),d(4,-3),26,-160);
     /** Down in a crouch; the lunge, the blade trailing low behind. */
-    static final R6.Pose H4_CROUCH=w(.2,-.34,-62,20,-3,d(-40,150),d(-6,172),d(-10,-20),24,-164);
-    static final R6.Pose H4_DASH=w(1.03,-.34,-50,28,0,d(-36,146),d(0,170),d(-20,-40),18,-172);
+    static final R6.Pose H4_CROUCH=w(.2,-.34,-26,20,-3,d(-40,150),d(-6,172),d(-10,-20),24,-164);
+    static final R6.Pose H4_DASH=w(1.03,-.34,-22,28,0,d(-36,146),d(0,170),d(-20,-40),18,-172);
     /** The low cut that throws the slash: from the right behind round the front, low, to the left. */
-    static final R6.Pose H4_DRAW=w(1.06,-.34,-30,22,0,d(-18,96),d(-4,120),d(-24,-70),18,-172);
-    static final R6.Pose H4_SWING=w(1.07,-.34,-8,21,2,d(-16,50),d(-3,60),d(-24,-90),18,-172);
-    static final R6.Pose H4_CUT=w(1.08,-.34,12,20,4,d(-16,6),d(-3,8),d(-26,-110),18,-172);
-    static final R6.Pose H4_ON=w(1.09,-.35,44,20,6,d(-18,-64),d(-4,-74),d(-26,-160),18,-172);
-    /** Followed through behind the left, low, the free arm thrown back, watching the slash fly. */
-    static final R6.Pose H4_END=w(1.09,-.36,66,20,7,d(-28,-100),d(-3,-126),d(-18,150),18,-172);
-    static final R6.Pose H4_HOLD=w(1.08,-.35,64,19,6,d(-30,-98),d(-8,-124),d(-20,148),18,-172);
+    static final R6.Pose H4_DRAW=w(1.06,-.34,-16,22,0,d(-18,96),d(-4,120),d(-24,-70),18,-172);
+    static final R6.Pose H4_SWING=w(1.07,-.34,-6,21,2,d(-16,40),d(-3,64),d(-24,-90),18,-172);
+    static final R6.Pose H4_CUT=w(1.08,-.34,6,20,4,d(-16,-14),d(-3,12),d(-26,-110),18,-172);
+    static final R6.Pose H4_ON=w(1.09,-.35,20,20,6,d(-18,-74),d(-4,-48),d(-26,-160),18,-172);
+    /** Followed through to the left, low, the free arm thrown back, watching the slash fly. */
+    static final R6.Pose H4_END=w(1.09,-.36,28,20,7,d(-28,-92),d(-3,-70),d(-18,150),18,-172);
+    static final R6.Pose H4_HOLD=w(1.08,-.35,26,19,6,d(-30,-90),d(-8,-68),d(-20,148),18,-172);
     /** Up on the feet, the sword raised upright at the right side, and lowered. */
     static final R6.Pose H4_RISE=w(.66,-.1,-10,0,0,d(10,70),d(80,70),d(-70,-20),16,-164);
     static final R6.Pose H4_LOWER=w(.28,-.05,-6,2,0,d(-30,40),d(30,30),d(-80,-12),10,-170);
@@ -330,18 +334,19 @@ public final class IsosangSlash implements Fx.Skill {
      * The twirl's keys: the blade's way round over the head in the hit's frame ({@code W}, right +) and the body's turn
      * (left +); the blade's angle off the torso's front is their sum. (2.79.2, the user's video of the whole combo at half
      * speed: the sword goes round to the left, anticlockwise seen from above, right, front, left, behind, in about 0.13 s,
-     * and is held back behind for the aim; until 2.79.2 it went round the other way, to the right, over 0.2 s.)
+     * and is held back behind for the aim; until 2.79.2 it went round the other way, to the right, over 0.2 s. 2.79.3: the
+     * body only turns a little to the right with it, facing the front.)
      */
     static R6.Pose twirlAt(double w,float yaw){return twirl(w+yaw,yaw);}
     static final Anim H4=Anim.joints(
         k(0,STANCE),
         // the twirl: the blade swung up behind at the right and round over the head to the left, a quarter of a turn
-        // every 0.03 s, ending held back behind, as the body turns right to side-on
-        k(.05,twirlAt(150,-25)),
-        k(.08,twirlAt(62,-35),Anim.Ease.LINEAR),
-        k(.11,twirlAt(-28,-45),Anim.Ease.LINEAR),
-        k(.14,twirlAt(-118,-55),Anim.Ease.LINEAR),
-        k(.18,twirlAt(-190,-63)),
+        // every 0.03 s, ending held back behind, as the body turns a little to the right
+        k(.05,twirlAt(150,-6)),
+        k(.08,twirlAt(62,-10),Anim.Ease.LINEAR),
+        k(.11,twirlAt(-28,-14),Anim.Ease.LINEAR),
+        k(.14,twirlAt(-118,-18),Anim.Ease.LINEAR),
+        k(.18,twirlAt(-190,-22)),
         // aimed, down, the lunge, and the low cut round the front that throws the slash (2.79.2: 0.2 s sooner, the
         // video of the whole combo)
         k(.24,H4_POINT),

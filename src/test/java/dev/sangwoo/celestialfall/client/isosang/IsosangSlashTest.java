@@ -44,6 +44,17 @@ class IsosangSlashTest {
                 for(int j=0;j<6;j++)assertTrue(turn(a.frame((float)t),a.frame((float)(t+1/60.0)),j)<125,"hit "+combo+" joint "+j+" flips at "+t);
         }
     }
+    @Test void everyHitFacesTheFront(){
+        // (2.79.3, user request "정면만 보고 때리게 ... 손이나 팔을 잘 써서 자연스럽게": the body never spins round; it only
+        // twists with the swing, and the arms and the wrist do the cutting)
+        for(int combo=1;combo<=4;combo++){
+            var a=IsosangSlash.hit(combo);
+            for(double t=0;t<=a.length();t+=1/240.0){
+                float yaw=MathHelper.wrapDegrees(a.frame((float)t).yaw());
+                assertTrue(Math.abs(yaw)<=32,"hit "+combo+" turns "+yaw+" deg away from the front at "+t);
+            }
+        }
+    }
     @Test void hitStopsSitOnBlowsAndAreOverBeforeTheNext(){
         for(int combo=1;combo<=4;combo++){
             var a=IsosangSlash.hit(combo);
@@ -76,7 +87,8 @@ class IsosangSlashTest {
             float at=blow(combo,i);double[] p=tip(combo,at);
             assertTrue(p[1]>.1&&p[1]<3.4,"hit "+combo+" blow "+i+" at a body's height: "+s(p));
             if(combo==2){
-                if(i==0){assertTrue(p[1]<.9,"the ring sweeps low over the ground: "+s(p));assertTrue(Math.hypot(p[0]-.38,p[2])>2,"and far out round them: "+s(p));}
+                // (2.79.3, facing the front: the cut behind them reaches out to the left at arm's length, not round the back)
+                if(i==0){assertTrue(p[1]<.9,"the ring sweeps low over the ground: "+s(p));assertTrue(Math.hypot(p[0]-.38,p[2])>1.7,"and far out round them: "+s(p));}
                 continue;
             }
             assertTrue(p[0]>1.2,"hit "+combo+" blow "+i+" ahead: "+s(p));
@@ -100,15 +112,17 @@ class IsosangSlashTest {
         double[] a=tip(1,.05f);assertTrue(a[1]<1.6&&a[2]<-.3,"hit 1 begins with the sword out low at the left: "+s(a));
         // (2.79.0, the videos from above and behind: one cut, on a plane low behind the left and high ahead to the right,
         // rising from the ground up across the front to end high at the front-right)
-        assertTrue(turned(1,.25f,.32f,.36)>240,"hit 1's cut goes round them to the right: "+turned(1,.25f,.32f,.36));
+        // (2.79.3, facing the front: the arm sweeps it from behind the left shoulder round in front of them to the right)
+        assertTrue(turned(1,.25f,.32f,.36)>150,"hit 1's cut goes round them to the right: "+turned(1,.25f,.32f,.36));
         a=tip(1,.263f);double[] b=tip(1,.32f);
         assertTrue(a[1]<1.0&&a[2]<-1.0,"hit 1 comes down low at the left: "+s(a));
         assertTrue(b[1]>2.0&&b[2]>1.0&&b[1]>a[1]+1.2,"and rises across the front to end high at the right: "+s(b));
         b=tip(1,.55f);assertTrue(b[1]>2.4&&b[2]>.8,"hit 1 holds the sword up at the right: "+s(b));
         // 2 (2.79.2 draft, the user's videos): two cuts to the left, anticlockwise seen from above: behind them at the hip,
         // then in front low over the ground, the blade far out round them
-        assertTrue(turned(2,.08f,.135f,0)<-200,"hit 2's cut behind them goes round to the left: "+turned(2,.08f,.135f,0));
-        assertTrue(turned(2,.235f,.3f,.3)<-200,"hit 2's cut in front goes round to the left: "+turned(2,.235f,.3f,.3));
+        // (2.79.3, facing the front: the arm sweeps each from the right across the front to the left)
+        assertTrue(turned(2,.08f,.135f,0)<-100,"hit 2's cut behind them goes round to the left: "+turned(2,.08f,.135f,0));
+        assertTrue(turned(2,.235f,.3f,.3)<-150,"hit 2's cut in front goes round to the left: "+turned(2,.235f,.3f,.3));
         for(float t=.235f;t<=.28f;t+=1/240f){
             double[] p=tip(2,t);
             assertTrue(p[1]<.8,"the front cut sweeps low at "+t+": "+p[1]);assertTrue(Math.hypot(p[0]-.3,p[2])>1.8,"and far out round them at "+t);
@@ -116,10 +130,11 @@ class IsosangSlashTest {
         // 3 (2.79.2 draft, the user's videos and words): down from her left across the front to her right, the same place
         // back up the other way, the mirror of the first, and the biggest rising from her left round to her right
         // (each window runs on past its blow's hit-stop until the blade has caught up)
-        assertTrue(turned(3,.08f,.16f,.3)>200,"hit 3's first cut goes round to the right: "+turned(3,.08f,.16f,.3));
-        assertTrue(turned(3,.345f,.41f,.3)<-200,"the second goes back the other way: "+turned(3,.345f,.41f,.3));
-        assertTrue(turned(3,.54f,.61f,.3)<-200,"the third, the first's mirror, goes round to the left: "+turned(3,.54f,.61f,.3));
-        assertTrue(turned(3,.84f,.94f,.3)>200,"the fourth goes round to the right: "+turned(3,.84f,.94f,.3));
+        // (2.79.3, facing the front: the arm and the wrist swing each across the front, less far round than the body did)
+        assertTrue(turned(3,.08f,.16f,.3)>150,"hit 3's first cut goes round to the right: "+turned(3,.08f,.16f,.3));
+        assertTrue(turned(3,.325f,.41f,.3)<-120,"the second goes back the other way: "+turned(3,.325f,.41f,.3));
+        assertTrue(turned(3,.51f,.61f,.3)<-150,"the third, the first's mirror, goes round to the left: "+turned(3,.51f,.61f,.3));
+        assertTrue(turned(3,.82f,.94f,.3)>150,"the fourth goes round to the right: "+turned(3,.82f,.94f,.3));
         a=tip(3,.08f);b=tip(3,.16f);assertTrue(a[1]>b[1]+.8&&b[2]>.5,"the first comes down from high to low at her right: "+s(a)+" "+s(b));
         a=tip(3,.345f);b=tip(3,.41f);assertTrue(b[1]>a[1]+.8,"the second rises: "+s(a)+" "+s(b));
         // 4: the twirl goes round over the head to the left (2.79.2, the user's video of the whole combo: anticlockwise seen
