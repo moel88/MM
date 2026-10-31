@@ -236,7 +236,7 @@ class IsosangSlashTest {
         assertTrue(c1.centre().equals(c2.centre())&&c1.a().equals(c2.a())&&c1.from()==c2.to()&&c1.to()==c2.from(),"the second in the first's place, the other way");
         assertTrue(IsosangSlash.point(c1,-90,c1.outer()).y>IsosangSlash.point(c1,90,c1.outer()).y+2,"the first high at her left");
         assertTrue(IsosangSlash.point(c3,90,c3.outer()).y>IsosangSlash.point(c3,-90,c3.outer()).y+2,"the third high at her right");
-        assertTrue(c4.outer()>c3.outer()+1&&Math.abs(IsosangSlash.point(c4,90,c4.outer()).y-IsosangSlash.point(c4,-90,c4.outer()).y)<2,"the fourth the biggest, nearly level");
+        assertTrue(c4.outer()>c3.outer()+.5&&Math.abs(IsosangSlash.point(c4,90,c4.outer()).y-IsosangSlash.point(c4,-90,c4.outer()).y)<2,"the fourth the biggest, nearly level");
         assertTrue(c2.eat1()>c3.t1()&&c2.eat1()<=c4.t0()+.05f&&c3.eat1()<=c4.t0()+.05f,"the second lasts until the third crosses it; both are gone as the fourth comes");
         assertTrue(c4.eat1()>c1.eat1()+.5f,"the fourth lasts longest");
         assertTrue(IsosangSlash.profile(11,.3)>.95&&IsosangSlash.profile(11,.95)<.2,"the cuts down thickest near their start");

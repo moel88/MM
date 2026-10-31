@@ -492,9 +492,9 @@ public final class IsosangSlash implements Fx.Skill {
     // third down to her left, the fourth a little down to her left.
     static final Arc[] H3_ARCS={
         arc(v(.2,1.5,-.2),32,90,1.4,2.7,-150,100,.08f,.12f,.3f,.45f,.2f,.34f,11,15,2),
-        arc(v(.2,1.5,-.2),32,90,1.5,2.8,100,-150,.36f,.41f,.65f,.82f,.5f,.7f,9,5,2),
-        arc(v(.2,1.55,.2),30,-90,1.6,3.0,150,-100,.54f,.58f,.74f,.86f,.66f,.8f,11,11,2),
-        arc(v(.4,1.05,0),10,-90,2.4,4.4,-120,150,.84f,.9f,1.12f,1.32f,1.0f,1.2f,9,9,2)};
+        arc(v(.2,1.5,-.2),32,90,1.5,2.8,100,-150,.36f,.41f,.72f,.86f,.55f,.75f,9,5,2),
+        arc(v(.2,1.55,.2),30,-60,1.6,3.0,150,-100,.54f,.58f,.76f,.88f,.68f,.82f,11,11,2),
+        arc(v(.4,1.1,0),10,-90,2.0,3.6,-120,150,.84f,.9f,1.2f,1.38f,1.05f,1.25f,9,9,2)};
     static final Arc[] H4_ARCS={arc(v(1.0,.72,0),0,0,1.5,2.9,125,-115,.675f,.715f,.88f,1.04f,.69f,.83f,0,7,0)};
     static Arc[] arcs(int combo){return switch(combo){case 1->H1_ARCS;case 2->H2_ARCS;case 3->H3_ARCS;default->H4_ARCS;};}
     /**
