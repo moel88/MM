@@ -122,15 +122,16 @@ class IsosangSlashTest {
         assertTrue(turned(3,.84f,.94f,.3)>200,"the fourth goes round to the right: "+turned(3,.84f,.94f,.3));
         a=tip(3,.08f);b=tip(3,.16f);assertTrue(a[1]>b[1]+.8&&b[2]>.5,"the first comes down from high to low at her right: "+s(a)+" "+s(b));
         a=tip(3,.345f);b=tip(3,.41f);assertTrue(b[1]>a[1]+.8,"the second rises: "+s(a)+" "+s(b));
-        // 4: the twirl goes round over the head; the low cut goes from the right to the left, low, as it throws the slash
+        // 4: the twirl goes round over the head to the left (2.79.2, the user's video of the whole combo: anticlockwise seen
+        // from above, right, front, left, behind); the low cut goes from the right to the left, low, as it throws the slash
         double swept=0,prev=Double.NaN;
-        for(float t=.12f;t<=.32f;t+=1/240f){
+        for(float t=.05f;t<=.18f;t+=1/240f){
             double[] p=tip(4,t);assertTrue(p[1]>2,"the twirl is over the head at "+t);
             if(!Double.isNaN(prev))swept+=MathHelper.wrapDegrees(azimuth(p)-prev);prev=azimuth(p);
         }
-        assertTrue(Math.abs(swept)>300,"the twirl goes round: "+swept);
+        assertTrue(swept<-300,"the twirl goes round to the left: "+swept);
         // (after the blow's hit-stop has caught up)
-        a=tip(4,.68f);b=tip(4,.92f);
+        a=tip(4,.48f);b=tip(4,.72f);
         assertTrue(a[2]>b[2]+3&&tip(4,blow(4,0))[1]<1.2,"the low cut goes from the right to the left: "+s(a)+" "+s(b));
     }
     @Test void eachHitBeginsWhereTheOneBeforeStandsAsItHandsOver(){

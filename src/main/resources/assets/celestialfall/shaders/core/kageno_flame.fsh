@@ -320,11 +320,46 @@ void main(){
   // forward as it dries; 4 a stroke of ink drawn in the air (thick and thin, tapered at both ends, dry gaps); 5 a stain
   // of ink soaked into the ground (the uv square: a soft see-through blot darker in its middle, a few drops round it,
   // shrinking and fading as it dries); 6 the thin cut rising back (its widest part nearer its head); 7 a thin bright arc
-  // (as the beam, in a band). On the effect layer the light burns past white and blooms; the ink adds none.
+  // (as the beam, in a band); 8-11 the crescents (below); 12 a splash of ink on the ground (the uv square: sharp-edged,
+  // see-through black, arms flung out, holes, drops round it). On the effect layer the light burns past white and
+  // blooms; the ink adds none.
   float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
   float x=clamp(uv.x,0.0,1.0),y=clamp(uv.y,0.0,1.0),erase=tint.g,ink=tint.b;
   vec3 inkc=vec3(.008,.010,.034),navy=vec3(.026,.046,.21),deep=vec3(.05,.16,.80),blue=vec3(.16,.46,1.0),pale=vec3(.66,.88,1.0),edge=vec3(.96,.99,1.0);
-  if(style>4.5&&style<5.5){
+  if(style>11.5&&style<12.5){
+   // 12 a splash of ink on the ground (2.79.2, the user's video of the whole combo at half speed: big see-through black
+   // splashes with sharp edges, arms flung out, holes and drops round them; they spread in a blink, then fade and break
+   // up as they dry). The uv square; tint.g how far it has dried.
+   vec2 q=uv*2.0-1.0;float r=length(q);
+   vec2 wq=q+vec2(fbm(q*2.0+sd)-.5,fbm(q*2.0-sd+7.0)-.5)*.34;
+   float shape=.40+.18*(fbm(wq*3.0+sd*1.7)-.5)-length(wq);
+   for(int i=0;i<7;i++){
+    float fi=float(i);
+    float a0=6.2832*hash(vec2(fi*1.3,sd+.7)),reach=.42+.36*hash(vec2(sd*1.1,fi+3.0)),wid=.05+.07*hash(vec2(fi+5.0,sd*.9));
+    vec2 dir=vec2(cos(a0),sin(a0));
+    float tt=clamp(dot(q,dir)/reach,0.0,1.0);
+    // an arm flung out, tapering, its edge a little ragged
+    shape=max(shape,wid*pow(1.0-tt,.8)+.006-length(q-dir*(tt*reach))+.025*(noise(q*11.0+fi*3.1)-.5));
+    // and a drop flung off its end
+    shape=max(shape,(.022+.03*hash(vec2(fi,sd*2.1)))-length(q-dir*(reach+.05+.07*hash(vec2(sd,fi*2.7)))));
+   }
+   for(int i=0;i<14;i++){
+    float fi=float(i),a1=6.2832*hash(vec2(fi+20.0,sd)),rr=.5+.4*hash(vec2(sd,fi+40.0));
+    shape=max(shape,(.012+.03*hash(vec2(fi+60.0,sd)))-length(q-vec2(cos(a1),sin(a1))*rr));
+   }
+   // holes where the ground shows through
+   for(int i=0;i<3;i++){
+    float fi=float(i);vec2 h=(vec2(hash(vec2(fi+80.0,sd)),hash(vec2(sd,fi+90.0)))*2.0-1.0)*.3;
+    shape=min(shape,length(q-h)-(.025+.045*hash(vec2(fi+95.0,sd))));
+   }
+   // drying: it breaks up from its thin parts as it fades
+   shape-=erase*(.05+.3*fbm(q*4.5+sd));
+   float aa=max(fwidth(shape),.002)*1.2;
+   float cov=smoothstep(-aa,aa,shape),rim=1.0-smoothstep(0.0,.06,shape);
+   rgb=mix(inkc,navy*.45,.3*fbm(q*5.0-sd));
+   // see-through, a little darker where the ink gathers at its edge
+   alpha=cov*(.72+.22*rim)*(.86+.14*fbm(q*7.0+sd*2.0))*(1.0-smoothstep(.94,1.0,r))*tint.a;
+  }else if(style>4.5&&style<5.5){
    // a stain soaked into the ground: a soft, lumpy, see-through blot, darker in its middle, a few drops round it
    vec2 q=uv*2.0-1.0;float r=length(q);
    vec2 wq=q+vec2(fbm(q*1.6+sd)-.5,fbm(q*1.6-sd+4.0)-.5)*.55;

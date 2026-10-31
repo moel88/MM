@@ -29,20 +29,24 @@ public final class IsosangRules {
      * The ticks into hit {@code n} its blows land on, from the user's videos of each hit: the diagonal cut at 0.3 s; the
      * ring at 0.15 s and its burst into ink at 0.3 s; hit 3's four cuts as each passes the front (2.79.2, the user's
      * videos at a tenth of the speed and "4번으로 바꿔": 0.1, 0.35, 0.55 and 0.85 s; five blows until then); the finisher's slash thrown
-     * at 0.7 s, after the twirl, the aim, the crouch and the lunge (it strikes as it flies on, {@link #WAVE_TICKS}).
+     * at 0.5 s, after the twirl, the aim, the crouch and the lunge (2.79.2, the user's video of the whole combo at half
+     * speed: the twirl starts 0.05 s in and the slash is thrown 0.44 s after it; it was 0.7 s; it strikes as it flies on,
+     * {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{14}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10}};
     /** Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28). */
     private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10}};
     /**
      * Ticks from a hit's start before the next may start, from the user's video of the whole combo: the first once its
-     * rising cut is through, the second while its ring dries, the third once it is back from its wide sweep.
+     * cut is through, the second while its two cuts dry, the third once its fourth cut is through and they are back in
+     * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
+     * it was 1.5 s).
      */
-    public static final int[] STEP={0,11,10,30,0};
+    public static final int[] STEP={0,11,10,25,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,10,12,22,22};
+    public static final int[] HOLD={0,10,12,22,18};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,18,18,28,36};
+    public static final int[] LENGTH={0,18,18,25,32};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */

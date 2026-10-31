@@ -22,8 +22,9 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'stand'))
 from cut_rush import RATE, TAIL, PEAK_DB, FADE_IN, FADE_OUT, decode, write  # noqa: E402
 
-# where each hit starts in its video's picture (seconds; negative: before its first frame)
-START = {1: .583, 2: -.05, 3: -.32, 4: -.53}
+# where each hit starts in its video's picture (seconds; negative: before its first frame; 2.79.2: the fourth's slash is
+# thrown at 0.5 s, not 0.7, after the user's video of the whole combo, so it starts 0.2 s later in its video)
+START = {1: .583, 2: -.05, 3: -.32, 4: -.33}
 # the recordings' sound comes this long after their picture
 AV_LAG = .35
 # the fade where a video ends before its sound has died away

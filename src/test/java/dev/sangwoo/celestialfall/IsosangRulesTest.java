@@ -34,10 +34,12 @@ class IsosangRulesTest {
     }
     @Test void thePaceIsTheVideos(){
         // each hit's video gives its blows; the video of the whole combo how soon the next may follow
-        assertArrayEquals(new int[]{11,10,30},new int[]{STEP[1],STEP[2],STEP[3]});
+        // (2.79.2, the user's video of the whole combo at half speed: the finisher 1.25 s after the third, not 1.5 s)
+        assertArrayEquals(new int[]{11,10,25},new int[]{STEP[1],STEP[2],STEP[3]});
         assertEquals(6,blowAt(1,0));assertEquals(3,blowAt(2,0));assertEquals(6,blowAt(2,1));
         assertArrayEquals(new int[]{2,7,11,17},new int[]{blowAt(3,0),blowAt(3,1),blowAt(3,2),blowAt(3,3)});
-        assertEquals(14,blowAt(4,0),"the slash is thrown after the twirl, the aim, the crouch and the lunge");
+        // (2.79.2, the same video: thrown 0.44 s after the twirl begins, half a second in; it was 0.7 s)
+        assertEquals(10,blowAt(4,0),"the slash is thrown after the twirl, the aim, the crouch and the lunge");
     }
     @Test void theComboBreaksWhenTheNextHitIsLateAndRestsAfterwards(){
         assertEquals(2,next(1));assertEquals(4,next(3));assertEquals(1,next(4));assertEquals(1,next(0));
