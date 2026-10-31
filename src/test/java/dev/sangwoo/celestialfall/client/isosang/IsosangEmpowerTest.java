@@ -92,11 +92,11 @@ class IsosangEmpowerTest {
             IsosangRules.SKILL,IsosangRules.THRUST,0,0,0,new Vec3d(10,64,10),30,java.util.List.of());
     }
     @Test void theGiantSwordShowsBesideThemThenFliesOnAndHangsGripTowardThem(){
-        // (2.80.1, user request: "4타 뒤로 5블록 이동하고 그리고 검 안 날리는 거 같은데?") thrown from where the 5-block leap takes them
+        // (2.80.1, user request: "검 안 날리는 거 같은데?"; 2.80.2: "2칸 뒤로") thrown from where the 2-block leap takes them
         var c=giantCast();Vec3d origin=new Vec3d(10,64,10),f=Vec3d.fromPolar(0,30),right=new Vec3d(-f.z,0,f.x);
         Vec3d from=IsosangEmpower.throwFrom(c);
         assertEquals(IsosangRules.backstep(IsosangRules.blowAt(IsosangRules.THRUST,0)),origin.subtract(from).length(),1e-6,"thrown from where the leap has carried them");
-        assertTrue(origin.subtract(from).dotProduct(f)>4,"most of the 5 blocks back by the throw");
+        assertTrue(origin.subtract(from).dotProduct(f)>1.6,"most of the 2 blocks back by the throw");
         float at=blow(IsosangRules.THRUST,0),arr=IsosangEmpower.arrive(c);
         assertNull(IsosangEmpower.giant(c,0),"not yet as the hit begins");
         // beside them as they leap: at their left, its grip low behind them, its point high ahead
@@ -134,9 +134,11 @@ class IsosangEmpowerTest {
     @Test void theGiantSwordsWayMatchesTheServers(){
         // its point as drawn is where the server's way has reached (IsosangRules.giantHead) from its throw on
         var c=giantCast();Vec3d from=IsosangEmpower.throwFrom(c),f=Vec3d.fromPolar(0,30);float at=blow(IsosangRules.THRUST,0);
-        for(int k=0;k<=2;k++){
-            double head=IsosangRules.giantHead(k,IsosangRules.GIANT_RANGE),drawn=IsosangEmpower.giant(c,at+k/20f).point().subtract(from).dotProduct(f);
-            assertEquals(head,drawn,.2,"tick "+k+" after the throw");
+        // (while it flies: from where it stops on, a little jolt back)
+        double flies=IsosangRules.giantArrives(IsosangRules.GIANT_RANGE)-.5;
+        for(double k=0;k<=flies;k+=.25){
+            double head=IsosangRules.giantHead(k,IsosangRules.GIANT_RANGE),drawn=IsosangEmpower.giant(c,at+(float)(k/20)).point().subtract(from).dotProduct(f);
+            assertEquals(head,drawn,.2,k+" ticks after the throw");
         }
         // where it stops, but for the little jolt back
         double stopped=IsosangEmpower.giant(c,IsosangEmpower.arrive(c)).point().subtract(from).dotProduct(f);

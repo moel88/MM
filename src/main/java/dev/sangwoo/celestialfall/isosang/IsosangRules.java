@@ -212,7 +212,8 @@ public final class IsosangRules {
 
     /**
      * The empowered fourth (2.80.1, user request: "4타 뒤로 5블록 이동하고 그리고 검 안 날리는 거 같은데? 4타만 0.1배속으로 찍은
-     * 영상이야 파란색 검이 날아가는 거 안 보여?"; 2.80.0 stepped back 1 block and thrust a giant blade 7.5 blocks ahead): its
+     * 영상이야 파란색 검이 날아가는 거 안 보여?"; 2.80.0 stepped back 1 block and thrust a giant blade 7.5 blocks ahead;
+     * 2.80.2, user request: "2칸 뒤로 움직이게 바꾸고"): its
      * user leaps {@link #BACKSTEP} blocks straight back over ticks {@link #BACKSTEP_FROM} to {@link #BACKSTEP_TO}, fast at
      * first and slowing to a stop ({@link #backstep}; less if a block is in the way behind them: the room, IsosangAttack.room),
      * as a giant sword shows beside them; at its blow they throw it flying the way they faced as the hit began, from where
@@ -222,16 +223,16 @@ public final class IsosangRules {
      * on the way it flies ({@link #THRUST_FLY} a tick out and {@link #THRUST_FLY_UP} up, as Star Platinum's finisher: some
      * 10 blocks on flat ground).
      */
-    public static final double BACKSTEP=5.0,THRUST_FLY=1.75,THRUST_FLY_UP=.5;
+    public static final double BACKSTEP=2.0,THRUST_FLY=1.75,THRUST_FLY_UP=.5;
     public static final int BACKSTEP_FROM=1,BACKSTEP_TO=4;
     /**
      * The giant sword's flight (2.80.1, the user's video at a tenth of the speed: it shows at their left as they leap back,
      * tilted up ahead, and a frame later flies on point first to some 7 blocks ahead of them, where blue blades burst out
-     * of it; the range here reaches past where they stood, 5 blocks back, to whom they fought): where its point is as it is
-     * thrown (blocks ahead of them), how far it may fly, how fast (blocks a tick), how wide a way it strikes and how high
-     * its way runs over their feet.
+     * of it; 2.80.2: 8 blocks, a little past that, as the leap is 2 blocks now (10 reached past where they stood 5 blocks
+     * back)): where its point is as it is thrown (blocks ahead of them), how far it may fly, how fast (blocks a tick), how
+     * wide a way it strikes and how high its way runs over their feet.
      */
-    public static final double GIANT_START=2.7,GIANT_RANGE=10,GIANT_SPEED=3,GIANT_HALF_WIDTH=1.2,GIANT_HEIGHT=1.0;
+    public static final double GIANT_START=2.7,GIANT_RANGE=8,GIANT_SPEED=3,GIANT_HALF_WIDTH=1.2,GIANT_HEIGHT=1.0;
     /** Ticks the giant sword takes from its throw to reach a body a little in front of where they stood before the leap (for the stagger: until it could land). */
     public static final int GIANT_LAG=2;
     /** How far back of where it began the empowered fourth has carried its user {@code ticks} in (blocks): a leap, fast at first and slowing to a stop. */

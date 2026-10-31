@@ -160,13 +160,13 @@ class IsosangRulesTest {
         assertTrue(SWORD_FROM[0][1]<SWORD_FROM[1][1],"the first low");
     }
     @Test void theFourthLeapsFiveBlocksBackAndThrowsTheGiantSwordFlyingOn(){
-        // (2.80.1, user request: "4타 뒤로 5블록 이동하고") a leap 5 blocks straight back, fast at first and slowing to a stop
-        assertEquals(5,BACKSTEP,1e-9);
+        // (2.80.2, user request: "2칸 뒤로 움직이게 바꾸고"; 5 blocks in 2.80.1) a leap 2 blocks straight back, fast at first and slowing to a stop
+        assertEquals(2,BACKSTEP,1e-9);
         assertEquals(0,backstep(0),1e-9);assertEquals(0,backstep(BACKSTEP_FROM),1e-9);assertEquals(BACKSTEP,backstep(BACKSTEP_TO),1e-9);assertEquals(BACKSTEP,backstep(30),1e-9);
         for(double k=0;k<BACKSTEP_TO+1;k+=.05)assertTrue(backstep(k+.05)>=backstep(k)-1e-12,"straight back, never forward");
         assertTrue(backstep(BACKSTEP_FROM+1)-backstep(BACKSTEP_FROM)>backstep(BACKSTEP_TO)-backstep(BACKSTEP_TO-1),"fast at first, slowing");
         for(double k=BACKSTEP_FROM;k<BACKSTEP_TO;k+=1)assertTrue(backstep(k+1)-backstep(k)<4,"a tick's leap within what a player may move: "+k);
-        assertEquals(2,backstep(BACKSTEP_TO,2),1e-9,"no further than the blocks behind let it");assertEquals(0,backstep(BACKSTEP_TO,-1),1e-9);
+        assertEquals(1.5,backstep(BACKSTEP_TO,1.5),1e-9,"no further than the blocks behind let it");assertEquals(0,backstep(BACKSTEP_TO,-1),1e-9);
         // ("검 안 날리는 거 같은데? … 파란색 검이 날아가는 거 안 보여?") the giant sword thrown as the leap ends, flying on point first
         assertTrue(blowAt(THRUST,0)>BACKSTEP_FROM&&blowAt(THRUST,0)<=BACKSTEP_TO,"thrown as the leap ends");
         assertEquals(GIANT_START,giantHead(0,GIANT_RANGE),1e-9);assertEquals(GIANT_START+GIANT_SPEED,giantHead(1,GIANT_RANGE),1e-9);
