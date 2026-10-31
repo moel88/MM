@@ -1,4 +1,5 @@
-"""Lays the game's own sound under a film of Lee So-sang's basic attack (2.77.0), each hit's sound where the game plays it.
+"""Lays the game's own sound under a film of Lee So-sang's basic attack (2.77.0), each hit's sound where the game plays it
+(2.81.0: and R's, its swing 7, its sound isosang_r).
 usage: python3 -I tools/isosang/shots/mux_m1.py AUDIO_DIR FILM_DIR ENTRY START END FILM.mp4 OUT.mp4
 
 AUDIO_DIR is a run of tools/kageno/shots/run_shots.py with SHOTS_RECORD=1 over the same shot list in real time (SLOW 1,
@@ -54,14 +55,15 @@ def main():
         return at + (nanos - marker) * SR / 1e9
 
     # every hit's sound the game played in the sound run, found by its own waveform near where the log puts it
-    played = [r for r in rows(os.path.join(folder, 'sounds.csv')) if r['sound'].startswith('celestialfall:isosang_m1_') and not r['sound'].endswith('_hit')]
+    # (2.81.0: R's sound too, isosang_r, its swing number 7)
+    played = [r for r in rows(os.path.join(folder, 'sounds.csv')) if (r['sound'].startswith('celestialfall:isosang_m1_') or r['sound'] == 'celestialfall:isosang_r') and not r['sound'].endswith('_hit')]
     # (2.80.0: E's flash is a swing of its own, number 0, with no sound: left out of both)
     heard = [r for r in rows(os.path.join(folder, 'isosang.csv')) if r['combo'] != '0']
     shown = [r for r in rows(os.path.join(film_dir, entry, 'isosang.csv')) if r['combo'] != '0']
     anchors = []
     for r in played:
-        combo = int(r['sound'][-1])
-        clip = decode(os.path.join(SOUNDS, f'isosang_m1_{combo}.ogg'))
+        combo = 7 if r['sound'].endswith('isosang_r') else int(r['sound'][-1])
+        clip = decode(os.path.join(SOUNDS, 'isosang_r.ogg' if combo == 7 else f'isosang_m1_{combo}.ogg'))
         onset = int(np.argmax(np.abs(clip) > .02))
         piece = clip[onset:onset + int(.3 * SR)]
         near = sample(int(r['nanos'])) + onset

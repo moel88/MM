@@ -163,6 +163,15 @@ public final class BossThreats {
             out.add(new Threat(p,"isosang6",g.thrown(),now,g.thrown()+(long)Math.ceil(IsosangRules.giantArrives(g.most())),
                 Zone.lane(g.from(),g.yaw(),Math.max(IsosangRules.NEAR,head-IsosangRules.GIANT_SPEED),g.most(),IsosangRules.GIANT_HALF_WIDTH,IsosangRules.LOW,IsosangRules.HIGH),false,false,false,IsosangRules.damage(IsosangRules.THRUST,0),false,false));
         }
+        // (2.81.0) R's sword about to sweep or sweeping: everything within its reach round its pommel, unguardable, from as
+        // it begins to turn
+        var r=dev.sangwoo.celestialfall.isosang.IsosangAttack.sweeping(p);
+        if(r!=null){
+            Vec3d pivot=r.at().add(Vec3d.fromPolar(0,r.yaw()).multiply(IsosangRules.SWEEP_PIVOT_FW));
+            long hit=r.start()+(long)Math.floor(IsosangRules.SWEEP_START*20);
+            out.add(new Threat(p,"isosangR",r.start(),Math.max(now,hit),r.start()+(long)Math.ceil(IsosangRules.SWEEP_END*20),
+                Zone.ring(pivot,IsosangRules.SWEEP_REACH,IsosangRules.LOW,IsosangRules.SWEEP_HIGH),false,false,false,IsosangRules.SWEEP_DAMAGE,false,false));
+        }
         // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
         for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){
             float yaw=(float)Math.toDegrees(Math.atan2(-sw.dir().x,sw.dir().z));

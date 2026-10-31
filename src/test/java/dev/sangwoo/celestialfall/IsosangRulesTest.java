@@ -189,4 +189,55 @@ class IsosangRulesTest {
         assertTrue(MAX_REACH>=GIANT_RANGE+GIANT_HALF_WIDTH,"looked for as far as it flies");
         assertTrue(THRUST_FLY>0&&THRUST_FLY_UP>0,"it throws whom it strikes (user request: 4타에 맞으면 넉백)");
     }
+
+    @Test void rSweepsTheGiantSwordLevelRoundItsPommelFromTheRightAcrossTheFrontToTheLeft(){
+        // (2.81.0, user request: "R스킬 거대한 검을 소환해서 전방을 크게 베는거야 … 맞아도 넉백 없어 데미지 20이고"; the user's choices:
+        // a 20 s cooldown, no guard takes it)
+        assertEquals(20,SWEEP_DAMAGE,1e-9);assertEquals(20,R_COOLDOWN/20.0,1e-9);assertTrue(unblockable(SWEEP),"no guard takes it");
+        assertTrue(drawn(SWEEP)&&!valid(SWEEP),"a swing the clients draw, not a hit of the combo");
+        assertEquals(1,blows(SWEEP));assertEquals(SWEEP_DAMAGE,damage(SWEEP,0),1e-9);
+        assertEquals(LENGTH[SWEEP],STEP.length==8?LENGTH[SWEEP]:-1,"every table has R's place");assertTrue(HOLD[SWEEP]<LENGTH[SWEEP]);
+        // its way round (the video from above): held out to the right and back, round across the front, to a stop behind the left
+        assertEquals(SWEEP_FROM,sweepAngle(0),1e-9);assertEquals(SWEEP_FROM,sweepAngle(SWEEP_START),1e-9);
+        assertTrue(SWEEP_FROM>90&&SWEEP_FROM<135,"it begins out to the right and a little back: "+SWEEP_FROM);
+        assertTrue(SWEEP_TO<-90&&SWEEP_TO>-120,"it stops out to the left and a little back: "+SWEEP_TO);
+        assertEquals(0,sweepAngle(SWEEP_FRONT),1e-9);assertEquals(SWEEP_TO,sweepAngle(SWEEP_END),1e-9);assertEquals(SWEEP_TO,sweepAngle(5),1e-9);
+        assertTrue(SWEEP_FRONT>.55&&SWEEP_FRONT<.65,"across the front at some 0.6 s: "+SWEEP_FRONT);
+        double last=SWEEP_FROM,fastest=0;
+        for(double t=0;t<=1.2;t+=1/600.0){
+            double a=sweepAngle(t);assertTrue(a<=last+1e-9,"round one way only at "+t);
+            fastest=Math.max(fastest,(last-a)*600);last=a;
+        }
+        assertTrue(fastest>900&&fastest<2500,"fast, but no jump: "+fastest+" deg/s");
+        assertEquals(0,sweepDone(SWEEP_START),1e-9);assertEquals(1,sweepDone(SWEEP_END),1e-9);
+        // tick by tick, the server's sweep passes every angle from where it begins to where it stops, once
+        double covered=0;
+        for(int k=1;k<=LENGTH[SWEEP];k++){double a0=sweepAngle((k-1)/20.0),a1=sweepAngle(k/20.0);assertTrue(a1<=a0);covered+=a0-a1;}
+        assertEquals(SWEEP_FROM-SWEEP_TO,covered,1e-9);
+        assertTrue(blowAt(SWEEP,0)/20.0>=SWEEP_START&&(blowAt(SWEEP,0)-1)/20.0<SWEEP_START,"its first strike on the first tick it turns");
+        // whom it passes: within its reach of the pommel, in the angles it swept that tick, not behind, not far over it
+        double fw=SWEEP_PIVOT_FW+4;
+        assertFalse(swept(sweepAngle(.5),sweepAngle(.55),fw,0,1,.3),"not before it gets round to the front");
+        assertTrue(swept(sweepAngle(.55),sweepAngle(.6),fw,0,1,.3),"struck as it crosses the front");
+        assertFalse(swept(sweepAngle(.6),sweepAngle(.65),fw,0,1,.3),"once");
+        assertTrue(swept(sweepAngle(.45),sweepAngle(.5),SWEEP_PIVOT_FW,4,1,.3),"out to the right, early");
+        assertTrue(swept(sweepAngle(.6),sweepAngle(.7),SWEEP_PIVOT_FW,-4,1,.3),"out to the left, late");
+        assertFalse(swept(SWEEP_FROM,SWEEP_TO,SWEEP_PIVOT_FW-4,0,1,.3),"never behind it");
+        assertFalse(swept(SWEEP_FROM,SWEEP_TO,SWEEP_PIVOT_FW+SWEEP_REACH+.6,0,1,.3),"never past its point");
+        assertTrue(swept(SWEEP_FROM,SWEEP_TO,SWEEP_PIVOT_FW+SWEEP_REACH+.2,0,1,.3),"a body its point just touches");
+        assertFalse(swept(SWEEP_FROM,SWEEP_TO,fw,0,SWEEP_HIGH+.5,.3),"not far over it");assertTrue(swept(SWEEP_FROM,SWEEP_TO,fw,0,3,.3),"it is up in the air: a body on a ledge under it");
+        assertTrue(swept(SWEEP_FROM,sweepAngle(.5),SWEEP_PIVOT_FW+.5,0,0,.3),"one right under its pommel as it begins");
+        assertEquals(SWEEP_FRONT,sweepReaches(fw,0,1,0),.01,"the front reached as it crosses it");
+        assertTrue(sweepReaches(SWEEP_PIVOT_FW,3,1,.3)<sweepReaches(fw,0,1,.3)&&sweepReaches(fw,0,1,.3)<sweepReaches(SWEEP_PIVOT_FW,-3,1,.3),"the right, then the front, then the left");
+        assertEquals(-1,sweepReaches(SWEEP_PIVOT_FW-4,0,1,.3),1e-9);
+        // (the user's choice, "적에게로 옮겨 감", and their word: "검은 10블록 이내에 내가 쳐다보고 있는 적까지 닿을 수 있어 앞에 적이 없다면
+        // 내 바로 앞을 베어내") with a foe in the crosshair it stands out toward them so the blade passes them; never back from right
+        // in front of its user, never past a foe 10 blocks off
+        assertEquals(0,sweepShift(0),1e-9);assertEquals(0,sweepShift(SWEEP_PIVOT_FW+SWEEP_MEET),1e-9);
+        for(double d=SWEEP_PIVOT_FW+SWEEP_MEET;d<=SWEEP_AIM;d+=.5)assertEquals(SWEEP_PIVOT_FW+SWEEP_MEET,d-sweepShift(d),1e-9,"the blade meets a foe "+d+" off");
+        assertEquals(SWEEP_AIM-SWEEP_PIVOT_FW-SWEEP_MEET,sweepShift(30),1e-9);
+        for(double d=0;d<=SWEEP_AIM;d+=.25){double from=d-sweepShift(d);assertTrue(sweepReaches(from,0,0,.3)>=0,"a foe in the crosshair "+d+" blocks off is struck");}
+        assertEquals(10,SWEEP_AIM,1e-9);
+        assertTrue(SWEEP_REACH>5&&SWEEP_PIVOT_UP>1.8,"a giant sword, up in the air: "+SWEEP_REACH);
+    }
 }

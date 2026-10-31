@@ -366,7 +366,9 @@ public final class IsosangSlash implements Fx.Skill {
 
     @Override public Anim clip(int combo){return hit(combo);}
     /** Hit {@code combo}'s motion (2.80.0: the empowered first and fourth, IsosangEmpower). */
-    static Anim hit(int combo){return switch(combo){case 2->H2;case 3->H3;case 4->H4;case IsosangRules.THROWS->IsosangEmpower.THROWS;case IsosangRules.THRUST->IsosangEmpower.THRUST;default->H1;};}
+    static Anim hit(int combo){return switch(combo){case 2->H2;case 3->H3;case 4->H4;case IsosangRules.THROWS->IsosangEmpower.THROWS;case IsosangRules.THRUST->IsosangEmpower.THRUST;case IsosangRules.SWEEP->GiantSweep.CLIP;default->H1;};}
+    /** Whether this swing is R's sweep (2.81.0), drawn by GiantSweep. */
+    static boolean sweep(int combo){return combo==IsosangRules.SWEEP;}
     /** Whether this swing is drawn by IsosangEmpower (2.80.0): E's flash (0) and the empowered first and fourth. */
     static boolean empowered(int combo){return combo==0||combo==IsosangRules.THROWS||combo==IsosangRules.THRUST;}
     @Override public float lifetime(){return 4.2f;}
@@ -525,7 +527,7 @@ public final class IsosangSlash implements Fx.Skill {
     /** A point of slash {@code s} at angle {@code deg}, {@code radius} out (the hit's frame). */
     static Vec3d point(Arc s,double deg,double radius){double t=Math.toRadians(deg);return s.centre().add(s.a().multiply(Math.cos(t)*radius)).add(s.b().multiply(Math.sin(t)*radius));}
     /** How far slash {@code s}'s head has swept on at {@code t} (0 not yet, 1 all the way). */
-    static float head(Arc s,float t){float u=Ease.unit(t,s.t0(),s.t1());return switch(s.pace()){case 1->u;case 2->1-(1-u)*(1-u);default->u*u*(3-2*u);};}
+    static float head(Arc s,float t){float u=Ease.unit(t,s.t0(),s.t1());return switch(s.pace()){case 1->u;case 2->1-(1-u)*(1-u);case 3->(float)IsosangRules.sweepDone(t);default->u*u*(3-2*u);};}
     /** The band of a slash or a mark: its edges and the fraction along it (0 tail, 1 head). */
     record Swept(Vec3d[] inner,Vec3d[] outer,float[] along,int n){}
     /** Slash {@code s} as drawn at {@code t} by a hit at {@code feet} facing {@code yaw}: its whole path up to its head (null before it starts). */
@@ -632,6 +634,7 @@ public final class IsosangSlash implements Fx.Skill {
      * air, every slash along its arc (drawn on as it sweeps, eaten from the tail as it turns to ink), the thrown slash and the ink thrown up out of whom it strikes.
      */
     @Override public void ink(Fx c){
+        if(sweep(c.cast.combo())){GiantSweep.ink(c);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.ink(c);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         // the ground's stains first (under everything), the loops of ink in the air, then the slashes
@@ -900,6 +903,7 @@ public final class IsosangSlash implements Fx.Skill {
         return g;
     }
     @Override public void additive(Fx c,EffectMesh m){
+        if(sweep(c.cast.combo())){GiantSweep.additive(c,m);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.additive(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         aura(c,m,t,combo);
@@ -930,6 +934,7 @@ public final class IsosangSlash implements Fx.Skill {
         }
     }
     @Override public void alpha(Fx c,EffectMesh m){
+        if(sweep(c.cast.combo())){GiantSweep.alpha(c,m);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.alpha(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         inkBursts(c,m,t,combo);
@@ -941,6 +946,7 @@ public final class IsosangSlash implements Fx.Skill {
      * burst of stars, the stars along the thrust, and the moon riding the thrown slash with its trail of stardust.
      */
     @Override public void overlay(Fx c,EffectMesh m){
+        if(sweep(c.cast.combo())){GiantSweep.overlay(c,m);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.overlay(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         for(var s:arcs(combo))for(var st:stars(s,t)){
@@ -1518,6 +1524,7 @@ public final class IsosangSlash implements Fx.Skill {
      * light as the slash is thrown (it stood over them as a column).
      */
     @Override public void frame(Fx c,FxFrame f){
+        if(sweep(c.cast.combo())){GiantSweep.frame(c,f);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.frame(c,f);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         float g=Math.min(1.3f,glow(t,combo));
@@ -1551,6 +1558,7 @@ public final class IsosangSlash implements Fx.Skill {
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){
+        if(sweep(c.cast.combo()))return;
         if(empowered(c.cast.combo())){IsosangEmpower.distort(c,d);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         for(var s:arcs(combo)){
@@ -1567,6 +1575,7 @@ public final class IsosangSlash implements Fx.Skill {
 
     /** Shake as the blows land, harder for the thrust, the cut down from overhead and the thrown slash; each comes in over two frames. */
     @Override public float shake(StandClient.Cast cast,float sec){
+        if(sweep(cast.combo()))return GiantSweep.shake(cast,sec);
         if(empowered(cast.combo()))return IsosangEmpower.shake(cast,sec);
         int combo=cast.combo();float v=0;
         for(int i=0;i<IsosangRules.blows(combo);i++){
@@ -1586,6 +1595,8 @@ public final class IsosangSlash implements Fx.Skill {
     public static double pull(int combo,float sec){
         // (2.80.0) the empowered fourth's giant sword: drawn back for it too
         if(combo==IsosangRules.THRUST)return IsosangEmpower.pull(sec);
+        // (2.81.0) and for R's giant sword
+        if(combo==IsosangRules.SWEEP)return GiantSweep.pull(sec);
         if(combo!=4)return 0;
         return PULL*Ease.smooth(sec,.35f,.68f)*(1-Ease.smooth(sec,1.2f,1.6f));
     }

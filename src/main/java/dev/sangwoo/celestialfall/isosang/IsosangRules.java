@@ -41,13 +41,13 @@ public final class IsosangRules {
      * speed: the twirl starts 0.05 s in and the slash is thrown 0.44 s after it; it was 0.7 s; it strikes as it flies on,
      * {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
      * and 15; the empowered combo 43.5).
      */
-    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15}};
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
     /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
@@ -60,11 +60,11 @@ public final class IsosangRules {
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
      * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0,16,0};
-    /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,10,12,22,18,14,16};
-    /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,18,18,25,32,22,30};
+    public static final int[] STEP={0,11,10,25,0,16,0,0};
+    /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's). */
+    public static final int[] HOLD={0,10,12,22,18,14,16,21};
+    /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's). */
+    public static final int[] LENGTH={0,18,18,25,32,22,30,24};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -73,12 +73,14 @@ public final class IsosangRules {
     public static final int REST=24;
     /** Whether {@code kind} is a hit (1 to 4, the empowered 5 and 6). */
     public static boolean valid(int kind){return kind>=1&&kind<=THRUST;}
+    /** Whether {@code kind} is a swing the clients draw with the body: a hit, or R's sweep (2.81.0). */
+    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP;}
     /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
     public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
     /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
     public static int kind(int position,boolean empowered){return empowered&&position==1?THROWS:empowered&&position==4?THRUST:position;}
-    /** How many blows hit {@code combo} lands (1 to 6). */
-    public static int blows(int combo){return valid(combo)?BLOWS[combo].length:0;}
+    /** How many blows hit {@code combo} lands (1 to 6; R's sweep, 7, counts as one: it strikes tick by tick as it passes). */
+    public static int blows(int combo){return drawn(combo)?BLOWS[combo].length:0;}
     /** The tick into hit {@code combo} its blow {@code i} lands on. */
     public static int blowAt(int combo,int i){return BLOWS[combo][i];}
     /** The tick into hit {@code combo} its last blow lands on. */
@@ -186,8 +188,8 @@ public final class IsosangRules {
         if(combo==2)return Math.sqrt(forward*forward+side*side)<=SPIN_RADIUS+halfWidth;
         return forward>=near(combo,blow)-halfWidth&&forward<=reach(combo,blow)+halfWidth&&Math.abs(side)<=halfWidth(combo,blow)+halfWidth;
     }
-    /** Whether hit {@code combo} cannot be guarded: the finisher (either kind), as the other characters' fourth hits. */
-    public static boolean unblockable(int combo){return position(combo)==4;}
+    /** Whether hit {@code combo} cannot be guarded: the finisher (either kind), as the other characters' fourth hits; and R's sweep (2.81.0, the user's choice). */
+    public static boolean unblockable(int combo){return position(combo)==4||combo==SWEEP;}
 
     // ───────────────────────────── the empowered first: three swords thrown ─────────────────────────────
 
@@ -261,6 +263,105 @@ public final class IsosangRules {
     }
     /** When (ticks after the throw) the giant sword's point reaches a body {@code forward} blocks ahead of where it was thrown from, {@code halfWidth} across. */
     public static double giantReaches(double forward,double halfWidth){return Math.max(0,(forward-halfWidth-GIANT_START)/GIANT_SPEED);}
+
+    // ───────────────────────────── R: the giant sword's sweep ─────────────────────────────
+
+    /**
+     * R (2.81.0, user request: "이번에는 R스킬 거대한 검을 소환해서 전방을 크게 베는거야 … 맞아도 넉백 없어 데미지 20이고 검은 10블록
+     * 이내에 내가 쳐다보고 있는 적(쉬프트 락 기준으로 십자선으로 보고 있는 적)까지 닿을 수 있어 앞에 적이 없다면 내 바로 앞을 베어내",
+     * and the user's videos of it from above and from behind at a tenth of the speed, read on a sheet the user answered;
+     * their choices: the whole sweep moves out to the foe, everyone it passes is struck, a 20 s cooldown, no guard takes
+     * it): a giant sword of blue light shows in the air ahead of its user, its pommel {@link #SWEEP_PIVOT_UP} up and
+     * {@link #SWEEP_PIVOT_FW} ahead of where the sweep stands, its blade out to their right and back; it hangs there a
+     * moment and sweeps level round its pommel from there across the front to their left and back ({@link #sweepAngle}),
+     * its point {@link #SWEEP_REACH} out. With a foe in the crosshair within {@link #SWEEP_AIM} blocks the whole of it
+     * stands out toward them, so that the middle of its blade passes them ({@link #sweepShift}); with none, it sweeps
+     * right in front of its user. It strikes everyone it passes once, {@link #SWEEP_DAMAGE}, takes no guard and throws no
+     * one. A swing of its own on the clients: kind {@link #SWEEP}.
+     */
+    public static final int SWEEP=7;
+    /** Its damage (the user's word). */
+    public static final float SWEEP_DAMAGE=20;
+    /** Ticks R is not ready again once it is over (the user's choice: 20 s), as every skill's cooldown, from its end. */
+    public static final int R_COOLDOWN=400;
+    /** How far the crosshair's foe may be (blocks along the sight, the user's word) and how wide the sight takes a body (blocks round its box). */
+    public static final double SWEEP_AIM=10,SWEEP_AIM_SLACK=.5;
+    /**
+     * The sword (the videos, measured on the character's height): its pommel, which it turns round, this far ahead of
+     * where the sweep stands and this high (as the sheet the user answered read it: 1.3 ahead, 2.7 up); its length from
+     * the pommel to its point (measured again on the video from above, where the whole sword lies across the picture:
+     * some 8.5 blocks, the empowered fourth's giant sword, SpiritSword, 8.5/3.5 times its size; the sheet had "about 10");
+     * and, measured from the pommel, the sweep's hub, which it strikes as soon as it turns (the grip passes over).
+     */
+    public static final double SWEEP_PIVOT_FW=1.3,SWEEP_PIVOT_UP=2.7,SWEEP_REACH=8.5,SWEEP_HUB=1.0;
+    /** How high over where the sweep stands a body may be and still be struck (blocks; the blade is in the air). */
+    public static final double SWEEP_HIGH=3.6;
+    /** Where along the blade a foe in the crosshair is met (blocks from the pommel): a little past its middle. */
+    public static final double SWEEP_MEET=5.0;
+    /** The tick into R its sweep first strikes: the first tick it has turned. */
+    static final int SWEEP_BLOW=10;
+    /**
+     * The sweep's way (the video from above, frame by frame: the blade's angle off the front, right +, by the second into
+     * R): held out to the right and back until 0.465 s, then round fast, already some 1000° a second in its first frames,
+     * across the front at 0.59 s and on to the left, slowing hard from 0.65 s to a stop 15° behind the left at 0.76 s.
+     * Seconds and degrees; a monotone cubic through them, still at either end.
+     */
+    static final double[] SWEEP_T={.465,.49,.59,.645,.675,.76},SWEEP_A={123,103,0,-72,-90,-105};
+    /** Where the sweep begins and ends (degrees off the front, right +). */
+    public static final double SWEEP_FROM=SWEEP_A[0],SWEEP_TO=SWEEP_A[SWEEP_A.length-1];
+    /** When it begins, crosses the front and stops (seconds into R). */
+    public static final double SWEEP_START=SWEEP_T[0],SWEEP_FRONT=SWEEP_T[2],SWEEP_END=SWEEP_T[SWEEP_T.length-1];
+    private static final double[] SWEEP_M=slopes(SWEEP_T,SWEEP_A);
+    /** Fritsch–Carlson slopes for a monotone cubic through (t, a), still at its ends. */
+    private static double[] slopes(double[] t,double[] a){
+        int n=t.length;double[] d=new double[n-1],m=new double[n];
+        for(int i=0;i<n-1;i++)d[i]=(a[i+1]-a[i])/(t[i+1]-t[i]);
+        for(int i=1;i<n-1;i++){
+            if(d[i-1]*d[i]<=0){m[i]=0;continue;}
+            double w1=2*(t[i+1]-t[i])+(t[i]-t[i-1]),w2=(t[i+1]-t[i])+2*(t[i]-t[i-1]);
+            m[i]=(w1+w2)/(w1/d[i-1]+w2/d[i]);
+        }
+        return m;
+    }
+    /** The blade's angle off the front (degrees, right +) {@code sec} seconds into R. */
+    public static double sweepAngle(double sec){
+        int n=SWEEP_T.length;
+        if(sec<=SWEEP_T[0])return SWEEP_A[0];
+        if(sec>=SWEEP_T[n-1])return SWEEP_A[n-1];
+        int i=0;while(sec>SWEEP_T[i+1])i++;
+        double h=SWEEP_T[i+1]-SWEEP_T[i],u=(sec-SWEEP_T[i])/h,u2=u*u,u3=u2*u;
+        return (2*u3-3*u2+1)*SWEEP_A[i]+(u3-2*u2+u)*h*SWEEP_M[i]+(-2*u3+3*u2)*SWEEP_A[i+1]+(u3-u2)*h*SWEEP_M[i+1];
+    }
+    /** How far round the sweep has gone {@code sec} seconds into R, 0 to 1. */
+    public static double sweepDone(double sec){return (SWEEP_FROM-sweepAngle(sec))/(SWEEP_FROM-SWEEP_TO);}
+    /**
+     * How far ahead of its user the sweep stands for a foe in the crosshair {@code distance} blocks away (level): out so
+     * that the blade, {@link #SWEEP_MEET} along, passes them, but never back from right in front of its user, and never
+     * so far that it would meet a foe past {@link #SWEEP_AIM}.
+     */
+    public static double sweepShift(double distance){return Math.max(0,Math.min(SWEEP_AIM-SWEEP_PIVOT_FW-SWEEP_MEET,distance-SWEEP_PIVOT_FW-SWEEP_MEET));}
+    /**
+     * Whether the blade passes over a body while it turns from {@code fromDeg} to {@code toDeg} (a point ahead, to the
+     * right and up from where the sweep stands, blocks; a body {@code halfWidth} across): within its reach of the pommel
+     * and within the angles it swept (widened by how wide the body looks from there); one under the hub as the sweep
+     * begins.
+     */
+    public static boolean swept(double fromDeg,double toDeg,double forward,double side,double height,double halfWidth){
+        if(height<LOW||height>SWEEP_HIGH||toDeg>=fromDeg)return false;
+        double dx=forward-SWEEP_PIVOT_FW,dz=side,r=Math.sqrt(dx*dx+dz*dz);
+        if(r-halfWidth>SWEEP_REACH)return false;
+        if(r<=SWEEP_HUB+halfWidth)return fromDeg>=SWEEP_FROM-1e-9;
+        double ang=Math.toDegrees(Math.atan2(dz,dx)),m=Math.toDegrees(Math.asin(Math.min(1,halfWidth/r)));
+        return ang<=fromDeg+m&&ang>=toDeg-m&&ang<=SWEEP_FROM+m&&ang>=SWEEP_TO-m;
+    }
+    /** When (seconds into R) the blade passes a body at that point, or -1 if it never does. */
+    public static double sweepReaches(double forward,double side,double height,double halfWidth){
+        for(int i=0;i<=(int)Math.ceil((SWEEP_END-SWEEP_START)*400);i++){
+            double t=SWEEP_START+i/400.0;
+            if(swept(sweepAngle(Math.max(0,t-1/400.0)),sweepAngle(t),forward,side,height,halfWidth)||i==0&&swept(SWEEP_FROM,SWEEP_FROM-1e-6,forward,side,height,halfWidth))return t;
+        }
+        return -1;
+    }
 
     // ───────────────────────────── the finisher's flying slash ─────────────────────────────
 

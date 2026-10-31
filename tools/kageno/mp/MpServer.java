@@ -461,7 +461,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -469,6 +469,7 @@ public final class MpServer implements ModInitializer {
      * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
      * while a hit is in flight or for a second after one (a blow throws no one: there should be none).
      */
+    private long sweepSeen=-1,rReadySeen=-1;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
@@ -502,6 +503,17 @@ public final class MpServer implements ModInitializer {
             note(server,String.format(java.util.Locale.ROOT,"giant sword thrown at %d (%d into the hit) from %.2f blocks behind where the hit began (caster now %.2f back), way %.1f, its point to stop %.2f blocks on",
                 gf.thrown(),gf.thrown()-h.start(),gf.from().distanceTo(casterFrom),caster.getPos().distanceTo(casterFrom),gf.yaw(),gf.most()));
         }
+        // (2.81.0) the caster's R: where its sweep stands against the caster, which way, when R is ready again; the watcher
+        // must not move while it sweeps (it throws no one)
+        var r=dev.sangwoo.celestialfall.isosang.IsosangAttack.sweeping(caster);
+        if(r!=null&&r.start()!=sweepSeen){
+            sweepSeen=r.start();var f=net.minecraft.util.math.Vec3d.fromPolar(0,r.yaw());var d=r.at().subtract(caster.getPos());
+            note(server,String.format(java.util.Locale.ROOT,"caster's R began at %d: it stands %.2f ahead (%.2f to the side, %.2f up) of the caster, way %.1f, the watcher %.2f ahead; ready again at %d",
+                r.start(),d.dotProduct(f),d.dotProduct(new net.minecraft.util.math.Vec3d(-f.z,0,f.x)),d.y,r.yaw(),watcher.getPos().subtract(caster.getPos()).dotProduct(f),dev.sangwoo.celestialfall.isosang.IsosangAttack.rReady(caster)));
+            watcherAt=watcher.getPos();
+        }
+        if(r!=null)watchUntil=Math.max(watchUntil,now+20);
+        long rr=dev.sangwoo.celestialfall.isosang.IsosangAttack.rReady(caster);if(rr!=rReadySeen){rReadySeen=rr;note(server,"caster's R ready again at "+rr+" (now "+now+")");}
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
             note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
             watcherAt=watcher.getPos();

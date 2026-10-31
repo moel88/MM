@@ -713,6 +713,10 @@ public final class SkillShots implements ClientModInitializer {
             if(swingsLogged.add(c.id())){
                 long began=age-(long)Math.floor(c.age(0));
                 log.append("  isosang hit ").append(c.combo()).append(" seen at ").append(age).append(" (began on tick ").append(began).append(")\n");
+                // (2.81.0) R: where its sweep stands against the player (out toward the foe in the crosshair, or where they are)
+                var sw=dev.sangwoo.celestialfall.client.isosang.IsosangClient.sweep(c.id());
+                if(sw!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,sw.yaw());var d=sw.at().subtract(me.getPos());
+                    log.append(String.format(Locale.ROOT,"  isosang R stands %.2f ahead %.2f up of the player, facing %.1f (the player %.1f), aimed at %d%n",d.dotProduct(f),d.y,sw.yaw(),me.getYaw(),sw.target()));}
                 swingRows.append(c.combo()).append(',').append(began).append('\n');
             }
             int n=c.targets().size();Integer was=swingTargets.put(c.id(),n);

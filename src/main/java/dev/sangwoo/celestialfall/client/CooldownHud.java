@@ -56,11 +56,11 @@ public final class CooldownHud {
     private static final int COMBO_END=14;
     /** The dash's place in the list (after the stand's skill slots), then Star Platinum's punches' rest (2.54.0), its rush (2.57.0), its heavy punch (2.59.0), its Star Finger (2.60.0), its inhale (2.61.0), its beatdown (2.64.0) and its time stop (2.67.0). */
     static final int DASH=10,PUNCHES=11,BARRAGE=12,HEAVY=13,FINGER=14,INHALE=15,BEATDOWN=16,TIME_STOP=17;
-    /** Lee So-sang's attack's rest after a combo (2.77.0), after Star Platinum's; their E (2.80.0). */
-    static final int ISOSANG=18,ISOSANG_E=19;
+    /** Lee So-sang's attack's rest after a combo (2.77.0), after Star Platinum's; their E (2.80.0) and R (2.81.0). */
+    static final int ISOSANG=18,ISOSANG_E=19,ISOSANG_R=20;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
@@ -74,7 +74,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -163,6 +163,9 @@ public final class CooldownHud {
         // their E (2.80.0): from when the empowered combo it gave is over (the server's ready tick, told with each hit's news)
         long empower=isosang?dev.sangwoo.celestialfall.client.isosang.IsosangClient.eReady(p.getUuid()):0;
         if(empower!=isosangESeen){show(ISOSANG_E,isosangEName(),empower-time,dev.sangwoo.celestialfall.isosang.IsosangRules.E_COOLDOWN,now);isosangESeen=empower;}
+        // their R (2.81.0): from when its motion is over, or it was cut short (the server's ready tick, told with each swing's news)
+        long sweep=isosang?dev.sangwoo.celestialfall.client.isosang.IsosangClient.rReady(p.getUuid()):0;
+        if(sweep!=isosangRSeen){show(ISOSANG_R,isosangRName(),sweep-time,dev.sangwoo.celestialfall.isosang.IsosangRules.R_COOLDOWN,now);isosangRSeen=sweep;}
         LIST.update(now);
     }
     /**
@@ -174,7 +177,7 @@ public final class CooldownHud {
     static boolean shows(int slot,String stand){
         if(slot==DASH)return true;
         // (2.77.0) Lee So-sang's to theirs
-        if(slot==ISOSANG||slot==ISOSANG_E)return "isosang".equals(stand);
+        if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R)return "isosang".equals(stand);
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -205,6 +208,8 @@ public final class CooldownHud {
     private static String isosangName(){return "평타";}
     /** Their E's name in the list (2.80.0; my choice, the user gave it none: it empowers the sword's next combo). */
     private static String isosangEName(){return "검 강화";}
+    /** Their R's name in the list (2.81.0; my choice, the user gave it none: the giant sword it calls). */
+    private static String isosangRName(){return "거대한 검";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */
     private static String name(int slot,UUID me){
         if(slot!=T)return NAMES[slot];

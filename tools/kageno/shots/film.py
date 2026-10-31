@@ -55,6 +55,9 @@ SKILL, SPEED, FPS = os.environ.get('FILM_SKILL', 'G'), float(os.environ.get('FIL
 # FILM_STAGES="UNTIL:NAME|UNTIL:NAME|..." gives the captions directly (seconds of the shot's clock) and FILM_CLOCK the
 # words before the time (default "시전 후"): the gacha's shots (tools/gacha/shots) run on the screen's own clock.
 CLOCK = os.environ.get('FILM_CLOCK', '시전 후')
+# FILM_CLOCK_ZERO (2.81.0): the shot's second the clock line counts from (a skill pressed into a shot, e.g. Lee So-sang's R
+# at 0.5 s: its own seconds shown, nothing before it)
+CLOCK_ZERO = float(os.environ.get('FILM_CLOCK_ZERO', '0'))
 # the band is a row taller when a CSV line goes with it (2.57.0: the rush's blows and the dummy's health under the HUD's shots)
 # FILM_NOTES="a-b:text|c-d:text" (2.73.0): a line of its own for each stretch of the film (seconds), for shots with no
 # mode to tell what happens (the interface's)
@@ -583,7 +586,7 @@ def caption(img, t):
     d = ImageDraw.Draw(img, 'RGBA')
     speed = '' if SPEED == 1 else f' · {SPEED:g}배속'
     name = stage(t)
-    lines = [(title, big, (255, 255, 255)), (f'{CLOCK} {max(0, t):.{2 if SKILL == "E" else 1}f}초{" · " + name if name else ""}{speed}', small, (255, 230, 120))]
+    lines = [(title, big, (255, 255, 255)), (f'{CLOCK} {max(0, t - CLOCK_ZERO):.{2 if SKILL == "E" or CLOCK_ZERO else 1}f}초{" · " + name if name else ""}{speed}', small, (255, 230, 120))]
     text, color = actor_line(t)
     y = 10
     if BELOW:

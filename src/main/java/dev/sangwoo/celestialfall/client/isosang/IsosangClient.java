@@ -39,6 +39,8 @@ import net.minecraft.util.math.random.Random;
  * KagenoClips). A swing stopped short keeps what its blows left but lets go of the body. Each hit's sound (the user's
  * recording of it, the sword and the voice, 2.77.2) starts with it on every client near enough, cut so that what it
  * strikes lands on the blows.
+ * <p>R (2.81.0): R asks the server for the giant sword's sweep (isosang_skill_v1, R), the camera's crosshair turned to
+ * first; the server's word of it is a swing of kind IsosangRules.SWEEP drawn by GiantSweep, with where its sweep stands.
  */
 public final class IsosangClient {
     /** Every swing seen, by its id: a cast of IsosangRules.SKILL on the cast clock (StandClient.Cast.age). */
@@ -62,6 +64,11 @@ public final class IsosangClient {
      */
     public record Sword(Vec3d from,Vec3d dir,double end,float thrown,boolean landed){}
     public static final Map<UUID,Sword[]> SWORDS=new HashMap<>();
+    /** (2.81.0) R's sweeps, by their swing's id: where each stands (its feet), the way it faces, and the foe it was aimed at (an entity id, -1 for none). */
+    public record Sweep(Vec3d at,float yaw,int target){}
+    public static final Map<UUID,Sweep> SWEEPS=new HashMap<>();
+    /** (2.81.0) The tick each player's R is ready again (the server's). */
+    private static final Map<UUID,Long> R_READY=new HashMap<>();
     /**
      * A hit's sound starts as this client hears of the hit, when its clock starts too (its whooshes are cut to land on
      * the blows from there); one heard later than this many ticks into the hit is not played.
@@ -73,6 +80,8 @@ public final class IsosangClient {
     /** Ticks a sound takes to fade out once its swing stops short. */
     static final int FADE=3;
     private static int ticks,lastAsk=-100;
+    /** Whether R's press was taken (2.81.0): its release is taken too. */
+    private static boolean heldR;
     private static Object world;
     private IsosangClient(){}
 
@@ -80,7 +89,7 @@ public final class IsosangClient {
         ClientPlayNetworking.registerGlobalReceiver(IsosangAttack.EVENT,(mc,handler,b,response)->{
             UUID caster=b.readUuid();var dim=b.readIdentifier();int type=b.readUnsignedByte();UUID id=b.readUuid();int combo=b.readUnsignedByte(),blow=b.readByte();
             long start=b.readLong(),serverNow=b.readLong();Vec3d at=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float yaw=b.readFloat();long ready=b.readLong();
-            int n=b.readVarInt();if(n<0||n>512||type>IsosangAttack.SPENT||combo>IsosangRules.THRUST)return;
+            int n=b.readVarInt();if(n<0||n>512||type>IsosangAttack.SPENT||combo>IsosangRules.SWEEP)return;
             var struck=new ArrayList<StandClient.Target>();
             for(int i=0;i<n;i++)struck.add(new StandClient.Target(b.readUuid(),b.readInt(),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble())));
             // (2.80.0) whether the hit is of the empowered combo, whether the user holds an empowerment, when E is ready
@@ -92,7 +101,11 @@ public final class IsosangClient {
                 if(dir.lengthSquared()>.5&&dir.lengthSquared()<2&&end>=0&&end<=IsosangRules.SWORD_RANGE+1)sword=new Sword(from,dir.normalize(),end,serverNow-start,type==IsosangAttack.LANDED);
             }
             Sword thrown=sword;
-            mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck,empowered,charged,eReady,thrown));
+            // (2.81.0) when R is ready again, and where R's sweep stands (none from a 2.80 server)
+            long rReady=b.isReadable()?b.readLong():0;Sweep sweep=null;
+            if(b.isReadable()&&b.readBoolean()){Vec3d o=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float sy=b.readFloat();sweep=new Sweep(o,sy,b.readVarInt());}
+            Sweep stands=sweep;
+            mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck,empowered,charged,eReady,thrown,rReady,stands));
         });
         ClientTickEvents.START_CLIENT_TICK.register(IsosangClient::tick);
         // (2.80.0) the swords of light: the empowered first's thrown swords and the empowered fourth's giant sword
@@ -100,11 +113,13 @@ public final class IsosangClient {
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->clear(mc)));
     }
     private static void accept(MinecraftClient mc,UUID caster,Identifier dim,int type,UUID id,int combo,int blow,long start,long serverNow,Vec3d at,float yaw,long ready,List<StandClient.Target> struck,
-                               boolean empowered,boolean charged,long eReady,Sword sword){
+                               boolean empowered,boolean charged,long eReady,Sword sword,long rReady,Sweep sweep){
         if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;
         if(world!=mc.world)clear(mc);
-        READY.put(caster,ready);CHARGED.put(caster,charged);E_READY.put(caster,eReady);
-        if(type==IsosangAttack.HIT&&IsosangRules.valid(combo)){
+        READY.put(caster,ready);CHARGED.put(caster,charged);E_READY.put(caster,eReady);R_READY.put(caster,rReady);
+        if(type==IsosangAttack.HIT&&IsosangRules.drawn(combo)){
+            // (2.81.0) R's sweep: where it stands with it (it may stand out toward the foe in the crosshair)
+            if(combo==IsosangRules.SWEEP){if(sweep==null)return;SWEEPS.put(id,sweep);}
             var cast=new StandClient.Cast(id,caster,dim,IsosangRules.SKILL,combo,start,serverNow,StandClient.ticks(),at,yaw,List.of());
             if(cast.age(0)/20f>=KagenoSkills.of(IsosangRules.SKILL).lifetime())return;
             KagenoClips.begin(cast);SWINGS.put(id,cast);STRUCK.put(id,new int[IsosangRules.blows(combo)][]);
@@ -134,15 +149,24 @@ public final class IsosangClient {
                     SWINGS.put(id,new StandClient.Cast(cast.id(),cast.caster(),cast.dimension(),cast.skill(),cast.combo(),cast.start(),cast.serverNow(),cast.received(),cast.origin(),cast.yaw(),List.copyOf(all)));
                 }
             }
+        }else if(type==IsosangAttack.STOPPED&&combo==IsosangRules.SWEEP){
+            // (2.81.0) R stopped short before its sword turned: its sword is gone; after, its user lets go of it and it
+            // sweeps on (the server's word of when: (serverNow - start) ticks in)
+            var c=SWINGS.get(id);
+            if(c!=null){
+                if((serverNow-start)/20.0<IsosangRules.SWEEP_START){SWINGS.remove(id);var v=VOICES.get(id);if(v!=null)v.fade();}
+                else STOPPED.add(id);
+            }
         }else if(type==IsosangAttack.STOPPED){
             // the swing in flight lets go of the body (a hit stopped before its first blow leaves nothing to see)
             for(var c:SWINGS.values())if(c.caster().equals(caster)&&!STOPPED.contains(c.id())&&animating(c))STOPPED.add(c.id());
-            SWINGS.values().removeIf(c->STOPPED.contains(c.id())&&c.age(0)<IsosangRules.blowAt(c.combo(),0));
-            for(var e:VOICES.entrySet()){var c=SWINGS.get(e.getKey());if(c==null||STOPPED.contains(e.getKey()))e.getValue().fade();}
+            // (2.81.0: R's sweep is told of by its own STOPPED, above)
+            SWINGS.values().removeIf(c->STOPPED.contains(c.id())&&c.combo()!=IsosangRules.SWEEP&&c.age(0)<IsosangRules.blowAt(c.combo(),0));
+            for(var e:VOICES.entrySet()){var c=SWINGS.get(e.getKey());if(c==null||STOPPED.contains(e.getKey())&&c.combo()!=IsosangRules.SWEEP)e.getValue().fade();}
         }
     }
     /** Whether this swing's body clip still plays (it is the body's motion until then, unless it stopped short; E's flash has none). */
-    static boolean animating(StandClient.Cast c){return IsosangRules.valid(c.combo())&&c.age(0)<KagenoSkills.of(IsosangRules.SKILL).clip(c.combo()).length()*20+1;}
+    static boolean animating(StandClient.Cast c){return IsosangRules.drawn(c.combo())&&c.age(0)<KagenoSkills.of(IsosangRules.SKILL).clip(c.combo()).length()*20+1;}
     /** Whether this swing stopped short (its user struck or held: its body clip is over). */
     public static boolean stopped(UUID swing){return STOPPED.contains(swing);}
     /** Whether this swing is of the empowered combo (2.80.0: its blade's aura brighter). */
@@ -159,11 +183,17 @@ public final class IsosangClient {
             if(!c.caster().equals(id))continue;float sec=c.age(delta)/20f;
             if(c.combo()==0)g=Math.max(g,Math.min(1,sec/.12f));
             else if(EMPOWERED.contains(c.id())&&!STOPPED.contains(c.id()))g=Math.max(g,c.combo()==IsosangRules.THRUST?1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(sec,.35f,.8f):1);
+            // (2.81.0) R: the sword glows as it is raised to call the giant sword, until the sweep is through
+            else if(c.combo()==IsosangRules.SWEEP&&!STOPPED.contains(c.id()))g=Math.max(g,dev.sangwoo.celestialfall.client.kageno.Ease.window(sec,0,.78f,.08f,.25f));
         }
         return g;
     }
     /** The tick this player's E is ready again, as the server told it (0 if it is ready, 2.80.0). */
     public static long eReady(UUID id){return E_READY.getOrDefault(id,0L);}
+    /** The tick this player's R is ready again, as the server told it (0 if it is ready, 2.81.0). */
+    public static long rReady(UUID id){return R_READY.getOrDefault(id,0L);}
+    /** Where R's sweep of this swing stands (null for none, 2.81.0). */
+    public static Sweep sweep(UUID swing){return SWEEPS.get(swing);}
     /** The empowered first's swords of this swing (null for none yet, 2.80.0). */
     public static Sword[] swords(UUID swing){return SWORDS.get(swing);}
     /** The latest swing of this player whose body clip still plays and did not stop short (KagenoClips.animated), or null. */
@@ -177,7 +207,7 @@ public final class IsosangClient {
     /** The tick this player's attack is ready again after its rest, as the server told it (0 if none). */
     public static long ready(UUID id){return READY.getOrDefault(id,0L);}
     /** Forgets this player's rest (their character is not Lee So-sang now: the server forgot it too, StandManager); and E's (2.80.0). */
-    public static void forget(UUID id){READY.remove(id);E_READY.remove(id);CHARGED.remove(id);}
+    public static void forget(UUID id){READY.remove(id);E_READY.remove(id);CHARGED.remove(id);R_READY.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (IsosangRules.HOLD): their keys do not walk them. The
      * server holds them as long (IsosangAttack.busy).
@@ -207,7 +237,21 @@ public final class IsosangClient {
      * and Star Platinum's): asks the server to empower the next combo. Returns whether it took the key.
      */
     public static boolean key(long window,int key,int action,int modifiers){
-        var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle()||mc.currentScreen!=null||!MapClient.enabled()||!StandManager.isosang(mc.player))return false;
+        var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
+        // (2.81.0) R's release is taken whenever its press was, whatever is open by then
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R&&heldR&&action!=org.lwjgl.glfw.GLFW.GLFW_PRESS){if(action==org.lwjgl.glfw.GLFW.GLFW_RELEASE)heldR=false;return true;}
+        if(mc.currentScreen!=null||!MapClient.enabled()||!StandManager.isosang(mc.player))return false;
+        // (2.81.0) R: the giant sword's sweep, at the foe in the crosshair (the camera's crosshair turned to first, so the
+        // server's sight is its, BotandCamera.prepareInteraction). R is always this for Lee So-sang's player on the map,
+        // as it is the heavy punch's for Star Platinum's.
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS){
+            heldR=true;
+            if(CombatClient.combatInput()&&ClientPlayNetworking.canSend(IsosangAttack.SKILL)){
+                BotandCamera.prepareInteraction();
+                var b=PacketByteBufs.create();b.writeByte(IsosangAttack.R);ClientPlayNetworking.send(IsosangAttack.SKILL,b);
+            }
+            return true;
+        }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_E){
             if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(IsosangAttack.SKILL)){
                 var b=PacketByteBufs.create();b.writeByte(IsosangAttack.E);ClientPlayNetworking.send(IsosangAttack.SKILL,b);
@@ -255,7 +299,7 @@ public final class IsosangClient {
         var id=mc.world.getRegistryKey().getValue();float life=KagenoSkills.of(IsosangRules.SKILL).lifetime()*20;
         // (2.80.0: E's flash is over in under a second; gone then, so it leaves no afterimages behind them as they walk on)
         SWINGS.values().removeIf(c->!c.dimension().equals(id)||c.age(0)>=(c.combo()==0?20:life)||c.age(0)<0||gone(mc,c));
-        STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.retainAll(SWINGS.keySet());EMPOWERED.retainAll(SWINGS.keySet());SWORDS.keySet().retainAll(SWINGS.keySet());
+        STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.retainAll(SWINGS.keySet());EMPOWERED.retainAll(SWINGS.keySet());SWORDS.keySet().retainAll(SWINGS.keySet());SWEEPS.keySet().retainAll(SWINGS.keySet());
         VOICES.entrySet().removeIf(e->e.getValue().isDone());
         // held down, the attack key keeps asking (the server keeps a press made a little early for the next hit)
         if(mc.player!=null&&mc.currentScreen==null&&mc.options.attackKey.isPressed()&&attacks(mc.player))punch();
@@ -264,7 +308,7 @@ public final class IsosangClient {
     private static boolean gone(MinecraftClient mc,StandClient.Cast c){var p=mc.world.getPlayerByUuid(c.caster());return p!=null&&(!p.isAlive()||!StandManager.isosang(p));}
     public static void clear(MinecraftClient mc){
         for(var v:VOICES.values())mc.getSoundManager().stop(v);
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();VOICES.clear();EMPOWERED.clear();CHARGED.clear();E_READY.clear();SWORDS.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();VOICES.clear();EMPOWERED.clear();CHARGED.clear();E_READY.clear();SWORDS.clear();SWEEPS.clear();R_READY.clear();world=null;heldR=false;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -275,9 +319,10 @@ public final class IsosangClient {
     }
     /** The hit's sound, its whooshes on its blows: loud for its user and those near, fading out to CARRY blocks. */
     private static void voice(MinecraftClient mc,UUID id,UUID caster,int combo){
-        var user=mc.world.getPlayerByUuid(caster);if(user==null||!IsosangRules.valid(combo))return;
+        var user=mc.world.getPlayerByUuid(caster);if(user==null||!IsosangRules.drawn(combo))return;
         float v=(user==mc.player?1:volume(mc,user.getPos()))*VOLUME;if(v<=.01f)return;
-        var s=new Sound(CelestialFall.id("isosang_m1_"+combo),v);VOICES.put(id,s);mc.getSoundManager().play(s);
+        // (2.81.0) R's own: its recording, from the user's video of it
+        var s=new Sound(CelestialFall.id(combo==IsosangRules.SWEEP?"isosang_r":"isosang_m1_"+combo),v);VOICES.put(id,s);mc.getSoundManager().play(s);
     }
     /**
      * A sound played like any other until it is told to fade, then quieter tick by tick to nothing (the game sets a
