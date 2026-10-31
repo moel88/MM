@@ -111,4 +111,60 @@ class IsosangRulesTest {
         // a boss reads it as a lane as long and wide as its flight
         assertEquals(WAVE_RANGE,reach(4,0),1e-9);assertEquals(WAVE_HALF_END,halfWidth(4,0),1e-9);
     }
+
+    // ───────────────────────────── E (2.80.0) ─────────────────────────────
+
+    @Test void theEmpoweredComboIsTheFirstAndFourthChangedAndHalfAsHardAgain(){
+        // (user request: "1타와 4타만 바뀌고 2타 3타는 모션이 같아", "데미지 50% 더 강하고")
+        assertEquals(THROWS,kind(1,true));assertEquals(2,kind(2,true));assertEquals(3,kind(3,true));assertEquals(THRUST,kind(4,true));
+        for(int at=1;at<=4;at++)assertEquals(at,kind(at,false));
+        assertEquals(1,position(THROWS));assertEquals(4,position(THRUST));
+        assertEquals(2,next(THROWS,true));assertEquals(3,next(2,true));assertEquals(THRUST,next(3,true));assertEquals(4,next(3,false));
+        float plain=0,empowered=0;
+        for(int at=1;at<=4;at++){plain+=total(kind(at,false),false);empowered+=total(kind(at,true),true);}
+        assertEquals(29,plain,1e-4);assertEquals(29*EMPOWER,empowered,1e-4,"the whole combo half as hard again");
+        assertEquals(total(1)*EMPOWER,total(THROWS),1e-4,"the three swords together");
+        assertEquals(total(4)*EMPOWER,total(THRUST),1e-4,"the thrust");
+        assertEquals(damage(2,0)*EMPOWER,damage(2,0,true),1e-6);assertEquals(damage(3,3)*EMPOWER,damage(3,3,true),1e-6);
+        assertEquals(damage(2,0),damage(2,0,false),1e-6);
+        assertEquals(300,E_COOLDOWN,"15 s");
+    }
+    @Test void theEmpoweredHitsKeepTheCombosRules(){
+        for(int combo:new int[]{THROWS,THRUST}){
+            for(int i=0;i<blows(combo);i++){assertTrue(blowAt(combo,i)>0&&blowAt(combo,i)<LENGTH[combo]);if(i>0)assertTrue(blowAt(combo,i)>blowAt(combo,i-1));}
+            assertTrue(lastBlow(combo)<HOLD[combo]&&HOLD[combo]<=LENGTH[combo]);
+        }
+        assertEquals(3,blows(THROWS),"three swords");assertEquals(1,blows(THRUST));
+        assertTrue(STEP[THROWS]>lastBlow(THROWS)&&STEP[THROWS]<LENGTH[THROWS],"the second may follow once the swords are thrown");
+        long start=100;
+        assertEquals(-1,broken(THROWS,start,start+STEP[THROWS]+GRACE));assertEquals(start+STEP[THROWS]+GRACE+1+REST,broken(THROWS,start,start+STEP[THROWS]+GRACE+1),"a late second breaks it");
+        assertEquals(-1,broken(THRUST,start,start+500),"the thrust ends the combo itself");
+        assertEquals(start+LENGTH[THRUST]+REST,rested(THRUST,start));
+        assertTrue(holding(THRUST,start,start)&&!holding(THRUST,start,start+HOLD[THRUST]));
+        assertTrue(unblockable(THRUST)&&!unblockable(THROWS),"the fourth of either kind takes no guard");
+        // a thrown sword holds whom it strikes until the next could reach them; the third's last until the thrust could land
+        assertEquals(start+blowAt(THROWS,1)+SWORD_LAG+Stagger.PAST,Stagger.isosang(THROWS,0,start,start+blowAt(THROWS,0)+1,true));
+        assertEquals(start+STEP[THROWS]+blowAt(2,0)+Stagger.PAST,Stagger.isosang(THROWS,2,start,start+blowAt(THROWS,2)+1,true));
+        assertEquals(start+STEP[3]+blowAt(THRUST,0)+Stagger.PAST,Stagger.isosang(3,3,start,start+blowAt(3,3),true));
+        assertEquals(start+blowAt(THRUST,0)+Stagger.LAST,Stagger.isosang(THRUST,0,start,start+blowAt(THRUST,0),true));
+    }
+    @Test void aThrownSwordFliesStraightOnToItsEnd(){
+        assertEquals(0,swordFlown(0,SWORD_RANGE),1e-9);assertEquals(SWORD_SPEED,swordFlown(1,SWORD_RANGE),1e-9);
+        assertEquals(SWORD_RANGE,swordFlown(100,SWORD_RANGE),1e-9);assertEquals(4,swordFlown(100,4),1e-9,"stopped by a block in its way");
+        assertTrue(swordFlying(0,SWORD_RANGE)&&!swordFlying(-1,SWORD_RANGE)&&!swordFlying(100,SWORD_RANGE));
+        assertTrue(SWORD_RANGE>WAVE_RANGE,"further than the finisher's slash");
+        assertEquals(3,SWORD_FROM.length);
+        assertTrue(SWORD_FROM[0][2]>0&&SWORD_FROM[1][2]>0&&SWORD_FROM[2][2]<0,"low at the right, at the right hand, at the left");
+        assertTrue(SWORD_FROM[0][1]<SWORD_FROM[1][1],"the first low");
+    }
+    @Test void theThrustStepsBackAndReachesFarAhead(){
+        assertEquals(0,backstep(0),1e-9);assertEquals(0,backstep(BACKSTEP_FROM),1e-9);assertEquals(BACKSTEP,backstep(BACKSTEP_TO),1e-9);assertEquals(BACKSTEP,backstep(30),1e-9);
+        for(double k=0;k<BACKSTEP_TO+1;k+=.05)assertTrue(backstep(k+.05)>=backstep(k)-1e-12,"straight back, never forward");
+        assertTrue(BACKSTEP_TO<=blowAt(THRUST,0),"stepped back by the thrust");
+        // ahead along it from where it thrusts, wide as the giant blade; not behind, not beyond, not off to the side
+        assertTrue(lane(THRUST,0,6.8,0,1,.3));assertTrue(lane(THRUST,0,2,1.2,1,.3));
+        assertFalse(lane(THRUST,0,-1.5,0,1,.3));assertFalse(lane(THRUST,0,THRUST_REACH+1,0,1,.3));assertFalse(lane(THRUST,0,4,2.2,1,.3));
+        assertTrue(THRUST_REACH>6&&THRUST_REACH<9,"about 7 blocks, as the user's video: "+THRUST_REACH);
+        assertTrue(THRUST_FLY>0&&THRUST_FLY_UP>0,"it throws whom it strikes (user request: 4타에 맞으면 넉백)");
+    }
 }

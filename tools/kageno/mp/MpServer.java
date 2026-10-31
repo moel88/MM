@@ -461,8 +461,9 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
+    private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt;
     /**
      * Lee So-sang's basic attack (2.77.0) as the server keeps it: the caster's hits (each one, its blows as they land, its
      * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
@@ -485,6 +486,15 @@ public final class MpServer implements ModInitializer {
             watchUntil=now+20;
         }
         if(Math.abs(watcher.getHealth()-watcherHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (guard %s)",watcherHealth,watcher.getHealth(),now,dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));watcherHealth=watcher.getHealth();}
+        // (2.80.0) the caster's E, and the empowered fourth: its step back and its throw of the watcher (that one moves)
+        String e=dev.sangwoo.celestialfall.isosang.IsosangAttack.charged(caster)+"/"+dev.sangwoo.celestialfall.isosang.IsosangAttack.eReady(caster);
+        if(!e.equals(eSeen)){eSeen=e;note(server,"caster's E: "+(dev.sangwoo.celestialfall.isosang.IsosangAttack.charged(caster)?"empowered":"not empowered")+", ready again at "+dev.sangwoo.celestialfall.isosang.IsosangAttack.eReady(caster)+" (now "+now+")");}
+        boolean thrust=h!=null&&h.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.THRUST;
+        if(thrust&&thrustFrom==null){thrustFrom=watcher.getPos();casterFrom=caster.getPos();thrustAt=now;}
+        if(thrustFrom!=null&&now-thrustAt<=60){
+            if(now-thrustAt==8||now-thrustAt==60)note(server,String.format(java.util.Locale.ROOT,"empowered fourth +%d: caster stepped %.2f blocks; watcher thrown %.2f blocks (horizontally %.2f) to %s",now-thrustAt,caster.getPos().distanceTo(casterFrom),watcher.getPos().distanceTo(thrustFrom),watcher.getPos().subtract(thrustFrom).horizontalLength(),where(watcher,caster)));
+            watcherAt=watcher.getPos();
+        }else if(!thrust)thrustFrom=null;
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
             note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
             watcherAt=watcher.getPos();

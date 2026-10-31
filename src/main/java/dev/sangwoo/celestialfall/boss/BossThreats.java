@@ -155,13 +155,22 @@ public final class BossThreats {
             out.add(new Threat(p,"isosang4",w.thrown(),now,w.thrown()+IsosangRules.WAVE_TICKS,
                 Zone.lane(w.from(),w.yaw(),back,IsosangRules.WAVE_RANGE,IsosangRules.WAVE_HALF_END,IsosangRules.LOW,IsosangRules.HIGH),false,false,false,IsosangRules.total(4),false,false));
         }
+        // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
+        for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){
+            float yaw=(float)Math.toDegrees(Math.atan2(-sw.dir().x,sw.dir().z));
+            out.add(new Threat(p,"isosang5",now-3,now+1,now+1+(long)Math.ceil(sw.left()/IsosangRules.SWORD_SPEED),
+                Zone.lane(sw.at(),yaw,-.5,sw.left(),IsosangRules.SWORD_RADIUS+.2,IsosangRules.LOW,IsosangRules.HIGH),true,false,false,IsosangRules.damage(IsosangRules.THROWS,0),false,false));
+        }
         var h=dev.sangwoo.celestialfall.isosang.IsosangAttack.hit(p);
-        if(h==null||h.combo()<1||h.blows()>=IsosangRules.blows(h.combo()))return;
+        if(h==null||!IsosangRules.valid(h.combo())||h.blows()>=IsosangRules.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+IsosangRules.blowAt(c,i);
         if(now>hit)return;
+        // (2.80.0: the empowered fourth thrusts from where its step back takes its user)
+        Vec3d at=c==IsosangRules.THRUST?p.getPos().subtract(Vec3d.fromPolar(0,h.yaw()).multiply(IsosangRules.BACKSTEP-IsosangRules.backstep(now-h.start()))):p.getPos();
         Zone zone=c==2?Zone.ring(p.getPos(),IsosangRules.SPIN_RADIUS,IsosangRules.LOW,IsosangRules.HIGH)
-            :Zone.lane(p.getPos(),h.yaw(),IsosangRules.near(c,i),IsosangRules.reach(c,i),IsosangRules.halfWidth(c,i),IsosangRules.LOW,IsosangRules.HIGH);
-        out.add(new Threat(p,"isosang"+c,h.start(),hit,h.start()+IsosangRules.lastBlow(c),zone,!IsosangRules.unblockable(c),false,false,IsosangRules.total(c),false,false));
+            :Zone.lane(at,h.yaw(),IsosangRules.near(c,i),IsosangRules.reach(c,i),IsosangRules.halfWidth(c,i),IsosangRules.LOW,IsosangRules.HIGH);
+        float damage=IsosangRules.total(c,dev.sangwoo.celestialfall.isosang.IsosangAttack.charged(p)||c>=IsosangRules.THROWS);
+        out.add(new Threat(p,"isosang"+c,h.start(),hit,h.start()+IsosangRules.lastBlow(c),zone,!IsosangRules.unblockable(c),false,false,damage,false,false));
     }
     /** How far a dash has carried its dasher {@code ticks} ticks in (blocks; CombatState.dashSpeed, the whole dash after DASH_TICKS). */
     public static double dashDistance(int ticks){double d=0;for(int i=0;i<Math.min(ticks,CombatState.DASH_TICKS);i++)d+=CombatState.dashSpeed(i);return d;}

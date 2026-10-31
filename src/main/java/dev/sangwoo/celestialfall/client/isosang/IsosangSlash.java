@@ -365,7 +365,10 @@ public final class IsosangSlash implements Fx.Skill {
         k(1.6,STANCE)).stops(Anim.stop(blow(4,0),.07,.12)).after(IsosangSlash::grounded);
 
     @Override public Anim clip(int combo){return hit(combo);}
-    static Anim hit(int combo){return switch(combo){case 2->H2;case 3->H3;case 4->H4;default->H1;};}
+    /** Hit {@code combo}'s motion (2.80.0: the empowered first and fourth, IsosangEmpower). */
+    static Anim hit(int combo){return switch(combo){case 2->H2;case 3->H3;case 4->H4;case IsosangRules.THROWS->IsosangEmpower.THROWS;case IsosangRules.THRUST->IsosangEmpower.THRUST;default->H1;};}
+    /** Whether this swing is drawn by IsosangEmpower (2.80.0): E's flash (0) and the empowered first and fourth. */
+    static boolean empowered(int combo){return combo==0||combo==IsosangRules.THROWS||combo==IsosangRules.THRUST;}
     @Override public float lifetime(){return 4.2f;}
     @Override public boolean layered(){return true;}
     @Override public int afterimageColor(){return 0x4a7cff;}
@@ -509,7 +512,8 @@ public final class IsosangSlash implements Fx.Skill {
     // (2.79.2 draft, the user's videos: the low cut that throws the slash shows only as it is swung; the thrown slash itself
     // carries on, and no second arc lingers round her)
     static final Arc[] H4_ARCS={arc(v(1.0,.72,0),0,0,1.5,2.9,125,-115,.475f,.515f,.52f,.58f,.5f,.56f,0,7,0)};
-    static Arc[] arcs(int combo){return switch(combo){case 1->H1_ARCS;case 2->H2_ARCS;case 3->H3_ARCS;default->H4_ARCS;};}
+    static final Arc[] NONE={};
+    static Arc[] arcs(int combo){return switch(combo){case 1->H1_ARCS;case 2->H2_ARCS;case 3->H3_ARCS;case 4->H4_ARCS;default->NONE;};}
     /**
      * The slash blow {@code i} of hit {@code combo} lands with (an index into {@link #arcs}). Hit 3 (2.79.2): one blow on
      * each of its four cuts, as it passes the front.
@@ -628,6 +632,7 @@ public final class IsosangSlash implements Fx.Skill {
      * air, every slash along its arc (drawn on as it sweeps, eaten from the tail as it turns to ink), the thrown slash and the ink thrown up out of whom it strikes.
      */
     @Override public void ink(Fx c){
+        if(empowered(c.cast.combo())){IsosangEmpower.ink(c);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         // the ground's stains first (under everything), the loops of ink in the air, then the slashes
         groundInk(c,t,combo,feet,yaw);
@@ -895,6 +900,7 @@ public final class IsosangSlash implements Fx.Skill {
         return g;
     }
     @Override public void additive(Fx c,EffectMesh m){
+        if(empowered(c.cast.combo())){IsosangEmpower.additive(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         aura(c,m,t,combo);
         for(var s:arcs(combo)){var sw=band(feet,yaw,s,t);if(sw!=null&&t<s.eat1())edgeGlow(m,sw,s.style(),edgeLit(s,t),inks(s,sw,t));}
@@ -924,6 +930,7 @@ public final class IsosangSlash implements Fx.Skill {
         }
     }
     @Override public void alpha(Fx c,EffectMesh m){
+        if(empowered(c.cast.combo())){IsosangEmpower.alpha(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         inkBursts(c,m,t,combo);
         airInk(c,m,t,combo,feet,yaw);
@@ -934,6 +941,7 @@ public final class IsosangSlash implements Fx.Skill {
      * burst of stars, the stars along the thrust, and the moon riding the thrown slash with its trail of stardust.
      */
     @Override public void overlay(Fx c,EffectMesh m){
+        if(empowered(c.cast.combo())){IsosangEmpower.overlay(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         for(var s:arcs(combo))for(var st:stars(s,t)){
             Vec3d p=world(feet,yaw,point(s,st.deg(),st.radius()));
@@ -948,7 +956,8 @@ public final class IsosangSlash implements Fx.Skill {
      * 평타 너무 가시성이 안 좋은데": a wide haze round it clouded them).
      */
     static void aura(Fx c,EffectMesh m,float t,int combo){
-        float g=glow(t,combo);if(g<=.01f)return;
+        // (2.80.0) brighter in the empowered combo (E): its second and third look as they do, the blade lit more
+        float g=glow(t,combo)*(IsosangClient.empowered(c.cast.id())?1.4f:1);if(g<=.01f)return;
         var hb=bladeNow(c);Vec3d guard=hb[0].add(hb[1].multiply(GUARD)),tip=hb[0].add(hb[1].multiply(TIP));float on=Math.min(1,g);
         double w=.06*(1+.4*Math.max(0,Math.min(1,g-1)));float a=Math.min(1.1f,g);
         m.softLine(guard,tip,w*5,AURA[1],a*.12f);m.softLine(guard,tip,w*2.4,AURA[1],a*.45f);
@@ -1509,6 +1518,7 @@ public final class IsosangSlash implements Fx.Skill {
      * light as the slash is thrown (it stood over them as a column).
      */
     @Override public void frame(Fx c,FxFrame f){
+        if(empowered(c.cast.combo())){IsosangEmpower.frame(c,f);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         float g=Math.min(1.3f,glow(t,combo));
         if(g>.02f){var hb=bladeNow(c);f.light(hb[0].add(hb[1].multiply(.9)),AURA[1],4,.4f*g);}
@@ -1541,6 +1551,7 @@ public final class IsosangSlash implements Fx.Skill {
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){
+        if(empowered(c.cast.combo())){IsosangEmpower.distort(c,d);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         for(var s:arcs(combo)){
             var sw=band(feet,yaw,s,t);if(sw==null||t>=s.t1()+.18f)continue;
@@ -1556,6 +1567,7 @@ public final class IsosangSlash implements Fx.Skill {
 
     /** Shake as the blows land, harder for the thrust, the cut down from overhead and the thrown slash; each comes in over two frames. */
     @Override public float shake(StandClient.Cast cast,float sec){
+        if(empowered(cast.combo()))return IsosangEmpower.shake(cast,sec);
         int combo=cast.combo();float v=0;
         for(int i=0;i<IsosangRules.blows(combo);i++){
             float at=blow(combo,i),amp=combo==4?2f:combo==3?(i==0?.9f:i==1?.8f:i==4?.7f:.45f):combo==2?(i==0?.6f:.8f):.9f;
@@ -1572,6 +1584,8 @@ public final class IsosangSlash implements Fx.Skill {
      */
     public static final double PULL=2.4;
     public static double pull(int combo,float sec){
+        // (2.80.0) the empowered fourth's giant sword: drawn back for it too
+        if(combo==IsosangRules.THRUST)return IsosangEmpower.pull(sec);
         if(combo!=4)return 0;
         return PULL*Ease.smooth(sec,.35f,.68f)*(1-Ease.smooth(sec,1.2f,1.6f));
     }

@@ -20,6 +20,14 @@ package dev.sangwoo.celestialfall.isosang;
  * attack's blow staggers (Stagger.isosang). The fourth cannot be guarded, as the other characters' fourth hits. Each hit
  * goes the way its user faced as it began and holds them where they stand for {@link #HOLD} ticks. Pure timing and reach,
  * shared by the server and the clients; ticks of 1/20 s.
+ * <p>E (2.80.0, user request: "E스킬을 사용하면 평타 쿨타임이 즉시 초기화가 되고 다음 평타가 강화 돼 강화 평타는 데미지
+ * 50% 더 강하고 1타와 4타만 바뀌고 2타 3타는 모션이 같아 1타는 영상 처럼 검을 3개 던지고 4타는 뒤로 이동하고 거대한 검을
+ * 찔러 4타에 맞으면 넉백이 있어 E 쿨 타임은 15초야"): the attack's rest is gone at once and the next combo is empowered,
+ * every blow {@link #EMPOWER} times as hard; its first hit is {@link #THROWS} (three swords thrown flying the way its user
+ * looks, {@link #SWORD_SPEED}), its fourth {@link #THRUST} (a step back and a giant sword thrust ahead, which throws whom
+ * it strikes), its second and third as they are. A hit's number here is its kind: 1 to 4 the combo's hits, 5 and 6 the
+ * empowered first and fourth ({@link #position}). E is ready again {@link #E_COOLDOWN} ticks after the empowered combo is
+ * over (the user's choice: "강화 콤보가 끝난 뒤").
  */
 public final class IsosangRules {
     private IsosangRules(){}
@@ -33,39 +41,60 @@ public final class IsosangRules {
      * speed: the twirl starts 0.05 s in and the slash is thrown 0.44 s after it; it was 0.7 s; it strikes as it flies on,
      * {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10}};
-    /** Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28). */
-    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3}};
+    /**
+     * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
+     * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
+     * and 15; the empowered combo 43.5).
+     */
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15}};
+    /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
+    public static final float EMPOWER=1.5f;
+    /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a step back and a giant sword thrust. */
+    public static final int THROWS=5,THRUST=6;
+    /** Ticks E is not ready again once the empowered combo it gave is over (2.80.0: 15 s). */
+    public static final int E_COOLDOWN=300;
     /**
      * Ticks from a hit's start before the next may start, from the user's video of the whole combo: the first once its
      * cut is through, the second while its two cuts dry, the third once its fourth cut is through and they are back in
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
-     * it was 1.5 s).
+     * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0};
+    public static final int[] STEP={0,11,10,25,0,16,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,10,12,22,18};
+    public static final int[] HOLD={0,10,12,22,18,14,16};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,18,18,25,32};
+    public static final int[] LENGTH={0,18,18,25,32,22,30};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
     public static final int GRACE=24;
     /** The rest once the fourth hit is over, or once a late hit broke the combo (ticks), as the other characters' attacks. */
     public static final int REST=24;
-
-    /** How many blows hit {@code combo} lands (1 to 4). */
-    public static int blows(int combo){return combo>=1&&combo<=4?BLOWS[combo].length:0;}
+    /** Whether {@code kind} is a hit (1 to 4, the empowered 5 and 6). */
+    public static boolean valid(int kind){return kind>=1&&kind<=THRUST;}
+    /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
+    public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
+    /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
+    public static int kind(int position,boolean empowered){return empowered&&position==1?THROWS:empowered&&position==4?THRUST:position;}
+    /** How many blows hit {@code combo} lands (1 to 6). */
+    public static int blows(int combo){return valid(combo)?BLOWS[combo].length:0;}
     /** The tick into hit {@code combo} its blow {@code i} lands on. */
     public static int blowAt(int combo,int i){return BLOWS[combo][i];}
     /** The tick into hit {@code combo} its last blow lands on. */
     public static int lastBlow(int combo){return BLOWS[combo][BLOWS[combo].length-1];}
     /** The damage of hit {@code combo}'s blow {@code i}. */
     public static float damage(int combo,int i){return DAMAGE[combo][i];}
+    /** The damage of hit {@code combo}'s blow {@code i}, in the empowered combo or not: the second and third half as hard again. */
+    public static float damage(int combo,int i,boolean empowered){float d=DAMAGE[combo][i];return empowered&&(combo==2||combo==3)?d*EMPOWER:d;}
     /** All of hit {@code combo}'s blows together. */
     public static float total(int combo){float t=0;for(float d:DAMAGE[combo])t+=d;return t;}
+    /** All of hit {@code combo}'s blows together, in the empowered combo or not. */
+    public static float total(int combo,boolean empowered){float t=0;for(int i=0;i<blows(combo);i++)t+=damage(combo,i,empowered);return t;}
     /** The hit after {@code combo}: the next of the combo, or the first again after the fourth (or none). */
     public static int next(int combo){return combo>=1&&combo<4?combo+1:1;}
+    /** The hit after {@code kind} in the empowered combo or not: the empowered first is followed by the second, the third by the empowered fourth. */
+    public static int next(int kind,boolean empowered){int at=position(kind);return kind(at>=1&&at<4?at+1:1,empowered);}
     /** When the hit after {@code combo} (begun at {@code start}) may start. */
     public static long nextAt(int combo,long start){return start+STEP[combo];}
     /**
@@ -74,22 +103,29 @@ public final class IsosangRules {
      * fourth hit ended it).
      */
     public static long broken(int combo,long start,long now){
-        if(combo<1||combo>=4)return -1;
+        int at=position(combo);if(at<1||at>=4)return -1;
         long late=nextAt(combo,start)+GRACE;
         return now>late?late+1+REST:-1;
     }
     /** The tick the attack is ready again after the fourth hit begun at {@code start}: once it is over, a rest on. */
-    public static long rested(long start){return start+LENGTH[4]+REST;}
+    public static long rested(long start){return rested(4,start);}
+    /** The same after the fourth hit of either kind ({@code kind} 4 or the empowered {@link #THRUST}). */
+    public static long rested(int kind,long start){return start+LENGTH[kind]+REST;}
     /** Whether hit {@code combo} begun at {@code start} still holds its user at {@code now}. */
-    public static boolean holding(int combo,long start,long now){return combo>=1&&combo<=4&&now>=start&&now<start+HOLD[combo];}
+    public static boolean holding(int combo,long start,long now){return valid(combo)&&now>=start&&now<start+HOLD[combo];}
     /**
      * The tick a blow staggers whom it strikes until (Stagger.isosang): the attacker's next blow at full speed (the next
      * of the same hit, else the next hit's first, started as soon as it may) and Stagger.PAST ticks more; the fourth hit's
      * slash staggers them {@code last} ticks. {@code past} is Stagger.PAST.
      */
-    public static long staggerUntil(int combo,int blow,long start,long now,int past,int last){
-        if(combo>=4)return now+last;
-        long next=blow+1<blows(combo)?start+blowAt(combo,blow+1):nextAt(combo,start)+blowAt(combo+1,0);
+    public static long staggerUntil(int combo,int blow,long start,long now,int past,int last){return staggerUntil(combo,blow,start,now,past,last,false);}
+    /**
+     * The same in the empowered combo or not (2.80.0): a thrown sword's next is the next sword thrown, reaching them
+     * {@link #SWORD_LAG} ticks later, or the second hit's first blow; the third's last, the empowered fourth's thrust.
+     */
+    public static long staggerUntil(int combo,int blow,long start,long now,int past,int last,boolean empowered){
+        if(position(combo)>=4)return now+last;
+        long next=blow+1<blows(combo)?start+blowAt(combo,blow+1)+(combo==THROWS?SWORD_LAG:0):nextAt(combo,start)+blowAt(next(combo,empowered),0);
         return Math.max(now,next)+past;
     }
 
@@ -125,11 +161,15 @@ public final class IsosangRules {
     /** How far ahead of its user's feet hit {@code combo}'s blow {@code blow} reaches (blocks; the ring's radius all round). */
     public static double reach(int combo,int blow){
         if(combo==3)return blow<3?CROSS_REACH:BIG_REACH;
+        if(combo==THROWS)return SWORD_RANGE;
+        if(combo==THRUST)return THRUST_REACH;
         return combo==2?SPIN_RADIUS:combo==4?WAVE_RANGE:CUT_REACH;
     }
     /** How far to either side of the way hit {@code combo}'s blow {@code blow} reaches (blocks). */
     public static double halfWidth(int combo,int blow){
         if(combo==3)return blow<3?CROSS_HALF_WIDTH:BIG_HALF_WIDTH;
+        if(combo==THROWS)return SWORD_RADIUS;
+        if(combo==THRUST)return THRUST_HALF_WIDTH;
         return combo==2?SPIN_RADIUS:combo==4?WAVE_HALF_END:CUT_HALF_WIDTH;
     }
     /** How near (blocks ahead of its user's feet, behind them below 0) hit {@code combo}'s blow {@code blow} begins to reach. */
@@ -144,8 +184,44 @@ public final class IsosangRules {
         if(combo==2)return Math.sqrt(forward*forward+side*side)<=SPIN_RADIUS+halfWidth;
         return forward>=near(combo,blow)-halfWidth&&forward<=reach(combo,blow)+halfWidth&&Math.abs(side)<=halfWidth(combo,blow)+halfWidth;
     }
-    /** Whether hit {@code combo} cannot be guarded: the finisher, as the other characters' fourth hits. */
-    public static boolean unblockable(int combo){return combo==4;}
+    /** Whether hit {@code combo} cannot be guarded: the finisher (either kind), as the other characters' fourth hits. */
+    public static boolean unblockable(int combo){return position(combo)==4;}
+
+    // ───────────────────────────── the empowered first: three swords thrown ─────────────────────────────
+
+    /**
+     * The empowered first's swords (2.80.0, the user's videos of E, read from above and from behind and confirmed by the
+     * user: "맞음, 이대로"): at each of its blows a sword flashes out of a burst of starlight beside its user (low at the
+     * front-right, at the right hand, at the left: {@link #SWORD_FROM}, forward, up and right of their feet) and flies
+     * the way they look then, {@link #SWORD_SPEED} blocks a tick, at the point their sight meets first (a block or a body,
+     * {@link #SWORD_AIM} blocks on at most, {@link #SWORD_AIM_MIN} at least), on out to {@link #SWORD_RANGE} blocks or the
+     * first block in its way; it strikes the first body it comes within {@link #SWORD_RADIUS} of, and is spent.
+     */
+    public static final double[][] SWORD_FROM={{.7,.55,.6},{.6,1.25,.5},{.6,1.05,-.6}};
+    public static final double SWORD_SPEED=3,SWORD_RANGE=16,SWORD_RADIUS=.4,SWORD_AIM=16,SWORD_AIM_MIN=3;
+    /** Ticks a thrown sword takes to reach a body near its user (for the stagger: until the next could land). */
+    public static final int SWORD_LAG=2;
+    /** How far a sword thrown {@code ticks} ago has flown (blocks), stopped at {@code most} (its range, or the block in its way). */
+    public static double swordFlown(double ticks,double most){return Math.max(0,Math.min(most,ticks*SWORD_SPEED));}
+    /** Whether a sword thrown {@code ticks} ago is still on its way to {@code most} blocks. */
+    public static boolean swordFlying(double ticks,double most){return ticks>=0&&ticks*SWORD_SPEED<most+SWORD_SPEED;}
+
+    // ───────────────────────────── the empowered fourth: the giant sword ─────────────────────────────
+
+    /**
+     * The empowered fourth (2.80.0, the user's videos of E): its user steps {@link #BACKSTEP} blocks straight back over
+     * ticks {@link #BACKSTEP_FROM} to {@link #BACKSTEP_TO} as a giant sword is thrust past them the way they faced as it
+     * began, its point {@link #THRUST_REACH} blocks ahead of where they stand then, {@link #THRUST_HALF_WIDTH} to either
+     * side; it strikes everyone along it at its blow, takes no guard, and throws them along it ({@link #THRUST_FLY} a tick
+     * out and {@link #THRUST_FLY_UP} up, as Star Platinum's finisher: some 10 blocks on flat ground).
+     */
+    public static final double BACKSTEP=1.0,THRUST_REACH=7.5,THRUST_HALF_WIDTH=1.2,THRUST_FLY=1.75,THRUST_FLY_UP=.5;
+    public static final int BACKSTEP_FROM=1,BACKSTEP_TO=3;
+    /** How far back of where it began the empowered fourth has stepped its user {@code ticks} in (blocks, eased in and out). */
+    public static double backstep(double ticks){
+        double u=Math.max(0,Math.min(1,(ticks-BACKSTEP_FROM)/(BACKSTEP_TO-BACKSTEP_FROM)));
+        return BACKSTEP*u*u*(3-2*u);
+    }
 
     // ───────────────────────────── the finisher's flying slash ─────────────────────────────
 

@@ -53,8 +53,9 @@ def main():
 
     # every hit's sound the game played in the sound run, found by its own waveform near where the log puts it
     played = [r for r in rows(os.path.join(folder, 'sounds.csv')) if r['sound'].startswith('celestialfall:isosang_m1_') and not r['sound'].endswith('_hit')]
-    heard = rows(os.path.join(folder, 'isosang.csv'))
-    shown = rows(os.path.join(film_dir, entry, 'isosang.csv'))
+    # (2.80.0: E's flash is a swing of its own, number 0, with no sound: left out of both)
+    heard = [r for r in rows(os.path.join(folder, 'isosang.csv')) if r['combo'] != '0']
+    shown = [r for r in rows(os.path.join(film_dir, entry, 'isosang.csv')) if r['combo'] != '0']
     anchors = []
     for r in played:
         combo = int(r['sound'][-1])

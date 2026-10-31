@@ -29,6 +29,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
 
 /**
@@ -47,9 +48,20 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  * then rests as after a broken combo.
  */
 public final class IsosangAttack {
-    public static final Identifier INPUT=CelestialFall.id("isosang_attack_v1"),EVENT=CelestialFall.id("isosang_attack_event_v1");
-    /** A hit starts; one of its blows lands (whom it struck); the attack rests until it is ready again; the hit in flight stops short. */
-    public static final int HIT=0,LANDED=1,RESTS=2,STOPPED=3;
+    /**
+     * The attack key (no payload); E (2.80.0: one byte, the skill: {@link #E}); and every viewer's news (2.80.0: version 2,
+     * with the empowered combo's news and the thrown swords).
+     */
+    public static final Identifier INPUT=CelestialFall.id("isosang_attack_v1"),SKILL=CelestialFall.id("isosang_skill_v1"),EVENT=CelestialFall.id("isosang_attack_event_v2");
+    /**
+     * A hit starts; one of its blows lands (whom it struck); the attack rests until it is ready again; the hit in flight
+     * stops short; (2.80.0) a sword of the empowered first is thrown (from where, which way and how far); E is used (the
+     * next combo is empowered, the attack's rest gone); the empowerment is over without its combo having run (E's
+     * cooldown runs from then).
+     */
+    public static final int HIT=0,LANDED=1,RESTS=2,STOPPED=3,THROWN=4,EMPOWERED=5,SPENT=6;
+    /** The skills E's packet asks for (2.80.0: E only). */
+    public static final int E=1;
     /** At most this many presses a second are heard. */
     static final int RATE=40;
     private static final class State {
@@ -61,6 +73,23 @@ public final class IsosangAttack {
         int window,presses;
         /** The finisher's slash in flight (null for none): thrown by that hit (its id and start) from where they stood, the way it went. */
         Wave wave;
+        /**
+         * (2.80.0) E: the next combo is empowered ({@code charged}: from E until the empowered fourth begins or the empowered
+         * combo is over), the next hit begins it again from the first ({@code restart}: E was used, none of its hits has
+         * begun yet), the hit in flight is one of the empowered combo's ({@code empowered}), and the tick E is ready again.
+         */
+        boolean charged,restart,empowered;long eReady;
+        /** Where the hit in flight began (the empowered fourth steps back from it and thrusts from there). */
+        Vec3d origin=Vec3d.ZERO;
+        /** The empowered first's swords in flight. */
+        final List<Sword> swords=new ArrayList<>();
+    }
+    /** A sword of the empowered first thrown flying: its hit's id and start, which of the three, when, from where, which way, how far it may fly, and whether it is spent. */
+    private static final class Sword {
+        final UUID id;final long start;final int index;final long thrown;final Vec3d from,dir;final double most;boolean spent;
+        /** How far it flew (blocks): its range or the block in its way, else where it struck a body. */
+        double end;
+        Sword(UUID id,long start,int index,long thrown,Vec3d from,Vec3d dir,double most){this.id=id;this.start=start;this.index=index;this.thrown=thrown;this.from=from;this.dir=dir;this.most=end=most;}
     }
     /** The finisher's slash flying: its hit's id and start, the tick it was thrown, from where and which way, and whom it has struck. */
     private static final class Wave {
@@ -78,6 +107,15 @@ public final class IsosangAttack {
                 if(s.window!=second){s.window=second;s.presses=0;}
                 if(++s.presses>RATE)return;
                 request(player);
+            });
+        });
+        ServerPlayNetworking.registerGlobalReceiver(SKILL,(server,player,handler,buf,response)->{
+            if(buf.readableBytes()!=1)return;int skill=buf.readUnsignedByte();
+            server.execute(()->{
+                var s=state(player);int second=server.getTicks()/20;
+                if(s.window!=second){s.window=second;s.presses=0;}
+                if(++s.presses>RATE)return;
+                if(skill==E)empower(player);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(IsosangAttack::tick);
@@ -106,8 +144,25 @@ public final class IsosangAttack {
     public static Flight flight(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());var w=s==null?null:s.wave;return w==null?null:new Flight(w.thrown,w.from,w.yaw);}
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
-    /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again. */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)s.ready=0;}
+    /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again; so are E's cooldown and its empowerment (2.80.0). */
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.charged=s.restart=false;}}
+    /**
+     * This player's cooldowns are off (/botand nocooldown, every tick: NoCooldownState): the attack's rest and E's
+     * cooldown are gone; an empowerment they hold stays theirs (2.80.0).
+     */
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;}}
+    /** The tick this player's E is ready again (0 if it is ready, 2.80.0). */
+    public static long eReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.eReady;}
+    /** Whether this player's next combo is empowered (E used, its combo not begun or not over, 2.80.0). */
+    public static boolean charged(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.charged;}
+    /** This player's thrown swords in flight, as a boss reads them (2.80.0): from where each is now, which way, how much further it may fly. */
+    public record Flying(Vec3d at,Vec3d dir,double left){}
+    public static List<Flying> swords(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());if(s==null)return List.of();long now=p.getWorld().getTime();
+        List<Flying> out=new ArrayList<>();
+        for(var w:s.swords){if(w.spent)continue;double d=swordFlown(now-w.thrown,w.most);out.add(new Flying(w.from.add(w.dir.multiply(d)),w.dir,w.most-d));}
+        return out;
+    }
     private static State state(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());
         if(s==null||s.world!=p.getServerWorld()){s=new State(p);STATES.put(p.getUuid(),s);}
@@ -120,30 +175,83 @@ public final class IsosangAttack {
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
         if(now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
-        if(s.combo>=1&&s.combo<4&&now<nextAt(s.combo,s.start)){
-            if(nextAt(s.combo,s.start)-now<=BUFFER)s.queued=true;
-            return s.queued;
+        long may=may(s);
+        if(now<may){
+            // (the fourth hit's motion runs on after its blow; the next combo waits for its rest, set as it began; after
+            // E the empowered first may begin once it lets go of them, and a press a little early is kept for it)
+            if(position(s.combo)<4||s.restart){if(may-now<=BUFFER)s.queued=true;return s.queued;}
+            return false;
         }
-        // (the fourth hit's motion runs on after its blow; the next combo waits for its rest, set as it began)
-        if(s.combo==4&&now<s.start+LENGTH[4])return false;
         begin(p,s,now);
         return true;
     }
+    /**
+     * When the next hit may begin: at once with none in flight; the next of the combo its STEP after the hit before; the
+     * next combo once the fourth's motion is over (and its rest, s.ready); after E (2.80.0) the empowered first as soon
+     * as the hit in flight could be followed, the fourth's as soon as it lets go of them.
+     */
+    private static long may(State s){
+        if(!valid(s.combo))return Long.MIN_VALUE;
+        if(position(s.combo)<4)return nextAt(s.combo,s.start);
+        return s.start+(s.restart?HOLD[s.combo]:LENGTH[s.combo]);
+    }
+    /**
+     * E (2.80.0, user request): the attack's rest is gone at once and the next combo is empowered, begun again from its
+     * first hit (the empowered one: three swords thrown) as soon as the hit in flight may be followed. Not while one is
+     * held (by a blow, a guard, a dash, a skill, a cutscene; a hit of their own holding them aside), while they hold an
+     * empowerment already, or before E is ready again ({@link IsosangRules#E_COOLDOWN} after the last empowered combo was
+     * over; none for a player the cooldowns are off for, /botand nocooldown).
+     */
+    public static boolean empower(ServerPlayerEntity p){
+        if(!able(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(s.charged||s.empowered&&valid(s.combo)&&now<s.start+LENGTH[s.combo]||now<s.eReady&&!free)return false;
+        s.charged=s.restart=true;s.queued=false;s.ready=0;
+        send(p,new UUID(0,0),0,now,MathHelper.wrapDegrees(p.getYaw()),EMPOWERED,-1,null,null);
+        return true;
+    }
+    /**
+     * The empowerment is over (2.80.0): its combo broke, a hit of it stopped short, or they died or left the map before
+     * it ran; E is ready again {@link IsosangRules#E_COOLDOWN} after {@code at}.
+     */
+    private static void spend(ServerPlayerEntity p,State s,long at){
+        if(!s.charged)return;
+        s.charged=s.restart=false;
+        s.eReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:at+E_COOLDOWN;
+        send(p,s.id,s.combo,s.start,s.yaw,SPENT,-1,null,null);
+    }
     /** The user was struck (staggered or incapacitated, CombatManager): the hit in flight stops short. */
     public static void struck(ServerPlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)stop(p,s,p.getWorld().getTime());}
-    /** The combo broke (the next hit is late): the attack rests and starts again from the first hit; a rest over ends the combo. */
+    /**
+     * The combo broke (the next hit is late): the attack rests and starts again from the first hit; a rest over ends the
+     * combo. (2.80.0) After E the combo it cut off breaks with no rest, and the empowered combo breaking spends E's
+     * empowerment: E's cooldown runs from the break.
+     */
     private static void settle(ServerPlayerEntity p,State s,long now){
         long rest=broken(s.combo,s.start,now);
         // (none for a player the cooldowns are off for, /botand nocooldown: the list shows no rest for them)
-        if(rest>=0){s.combo=0;s.queued=false;if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.ready=Math.max(s.ready,rest);send(p,s.id,s.combo,s.start,s.yaw,RESTS,-1,null);}
-        if(s.combo==4&&now>=s.ready&&now>=s.start+LENGTH[4])s.combo=0;
+        if(rest>=0){
+            boolean spent=s.empowered;
+            s.combo=0;s.queued=false;
+            if(!s.restart&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.ready=Math.max(s.ready,rest);
+            if(spent){s.empowered=false;spend(p,s,rest-REST);}
+            send(p,s.id,s.combo,s.start,s.yaw,RESTS,-1,null,null);
+        }
+        if(position(s.combo)==4&&now>=s.ready&&now>=s.start+LENGTH[s.combo]){s.combo=0;s.empowered=false;}
     }
     private static void begin(ServerPlayerEntity p,State s,long now){
-        s.combo=next(s.combo);s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
+        // (2.80.0) the empowered combo after E: begun again from its first hit, its first and fourth the empowered kinds
+        s.combo=s.restart?kind(1,s.charged):next(s.combo,s.charged&&s.empowered);s.empowered=s.charged;s.restart=false;
+        s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;s.origin=p.getPos();
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         // (the rest after the fourth hit: none for a player the cooldowns are off for, /botand nocooldown)
-        if(s.combo==4)s.ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:rested(now);
+        if(position(s.combo)==4)s.ready=free?now:rested(s.combo,now);
+        // the empowered fourth ends the empowered combo: E's cooldown runs once its motion is over (the user's choice)
+        if(s.combo==THRUST){s.charged=false;s.eReady=free?0:now+LENGTH[THRUST]+E_COOLDOWN;}
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
-        send(p,s.id,s.combo,s.start,s.yaw,HIT,-1,null);
+        send(p,s.id,s.combo,s.start,s.yaw,HIT,-1,null,null);
     }
     /** Whatever ends the hit in flight: its user struck, held, or no longer able to fight with the sword. */
     private static boolean held(ServerPlayerEntity p){
@@ -154,21 +262,38 @@ public final class IsosangAttack {
             var p=server.getPlayerManager().getPlayer(e.getKey());var s=e.getValue();
             if(p==null||p.getServerWorld()!=s.world){STATES.remove(e.getKey());continue;}
             long now=p.getWorld().getTime();
-            // a slash thrown flies on (and strikes) whatever becomes of its user, so long as they are here and Lee So-sang's
+            // a slash thrown flies on (and strikes) whatever becomes of its user, so long as they are here and Lee So-sang's;
+            // so do the empowered first's swords (2.80.0)
             if(s.wave!=null)fly(p,s,now);
+            if(!s.swords.isEmpty()){for(var w:new ArrayList<>(s.swords))if(!w.spent)fly(p,s,w,now);s.swords.removeIf(w->w.spent);}
+            // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
+            if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
             if(held(p)){stop(p,s,now);continue;}
             settle(p,s,now);
-            if(s.queued&&now>=nextAt(s.combo,s.start)){if(able(p))begin(p,s,now);else s.queued=false;}
-            while(s.combo>=1&&s.blows<blows(s.combo)&&now>=s.start+blowAt(s.combo,s.blows))blow(p,s,now);
+            if(s.queued&&now>=may(s)){if(able(p))begin(p,s,now);else s.queued=false;}
+            while(valid(s.combo)&&s.blows<blows(s.combo)&&now>=s.start+blowAt(s.combo,s.blows))blow(p,s,now);
+            // the empowered fourth's step back: a player's own client moves them (IsosangClient.drive); a boss, here
+            if(s.combo==THRUST&&p instanceof dev.sangwoo.celestialfall.boss.BossPlayer&&now-s.start<=BACKSTEP_TO){
+                Vec3d at=s.origin.subtract(Vec3d.fromPolar(0,s.yaw).multiply(backstep(now-s.start)));
+                p.setPosition(at.x,p.getY(),at.z);
+            }
         }
     }
-    /** The hit in flight stops short (or the combo is cut off between hits): the attack rests from now. */
+    /**
+     * The hit in flight stops short (or the combo is cut off between hits): the attack rests from now. (2.80.0) A hit of
+     * the empowered combo stopped short spends the empowerment: E's cooldown runs from now (as every skill cut short).
+     */
     private static void stop(ServerPlayerEntity p,State s,long now){
-        boolean moving=s.combo>=1&&now-s.start<LENGTH[s.combo],open=s.combo>=1&&s.combo<4&&broken(s.combo,s.start,now)<0;
+        boolean moving=valid(s.combo)&&now-s.start<LENGTH[s.combo],open=position(s.combo)>=1&&position(s.combo)<4&&broken(s.combo,s.start,now)<0;
         if(!moving&&!open&&!s.queued)return;
-        s.queued=false;s.combo=0;s.blows=0;
-        if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.ready=Math.max(s.ready,now+REST);
-        send(p,s.id,s.combo,s.start,s.yaw,STOPPED,-1,null);
+        boolean empowered=s.empowered,thrust=s.combo==THRUST&&moving;
+        s.queued=false;s.combo=0;s.blows=0;s.empowered=false;
+        if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p)){
+            s.ready=Math.max(s.ready,now+REST);
+            if(thrust)s.eReady=Math.min(s.eReady,now+E_COOLDOWN);
+        }
+        send(p,s.id,s.combo,s.start,s.yaw,STOPPED,-1,null,null);
+        if(empowered)spend(p,s,now);
     }
     /**
      * One of the hit's blows lands: everyone in its way in front of its user (all round for the ring), in sight, is struck
@@ -178,9 +303,64 @@ public final class IsosangAttack {
     private static void blow(ServerPlayerEntity p,State s,long now){
         int combo=s.combo,i=s.blows++;
         if(combo==4){s.wave=new Wave(s.id,s.start,now,p.getPos(),s.yaw);fly(p,s,now);return;}
-        Vec3d at=p.getPos(),f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x);
-        var struck=strike(p,combo,i,s.start,s.yaw,now,at,e->{Vec3d d=e.getPos().subtract(at);return lane(combo,i,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5);},null);
-        send(p,s.id,combo,s.start,s.yaw,LANDED,i,struck);
+        // (2.80.0) the empowered first: a sword thrown flying the way they look now
+        if(combo==THROWS){toss(p,s,i,now);return;}
+        Vec3d f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x);
+        // (2.80.0) the empowered fourth thrusts from where its step back takes them, the way they faced as it began
+        Vec3d at=combo==THRUST?s.origin.subtract(f.multiply(BACKSTEP)):p.getPos();
+        var struck=strike(p,combo,i,s.start,s.yaw,now,at,e->{Vec3d d=e.getPos().subtract(at);return lane(combo,i,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5);},null,s.empowered);
+        send(p,s.id,combo,s.start,s.yaw,LANDED,i,struck,null);
+    }
+    /**
+     * A sword of the empowered first thrown (2.80.0): out of its place beside them (IsosangRules.SWORD_FROM, the way they
+     * face now), at the point their sight meets first (a block or a body, SWORD_AIM blocks on at most), on out to its
+     * range or the first block in its way. It strikes as it flies ({@link #fly(ServerPlayerEntity,State,Sword,long)});
+     * one right on top of them at once.
+     */
+    private static void toss(ServerPlayerEntity p,State s,int i,long now){
+        var world=p.getServerWorld();float yaw=p.getYaw();
+        Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);double[] o=SWORD_FROM[Math.min(i,SWORD_FROM.length-1)];
+        Vec3d from=p.getPos().add(f.multiply(o[0])).add(0,o[1],0).add(right.multiply(o[2]));
+        Vec3d eye=p.getEyePos(),look=p.getRotationVec(1f);double far=SWORD_AIM;
+        var block=world.raycast(new RaycastContext(eye,eye.add(look.multiply(far)),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+        if(block.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)far=eye.distanceTo(block.getPos());
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(eye,eye.add(look.multiply(far))).expand(1),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit())){
+            var hit=e.getBoundingBox().expand(.3).raycast(eye,eye.add(look.multiply(far)));
+            if(hit.isPresent())far=Math.min(far,eye.distanceTo(hit.get()));
+        }
+        Vec3d aim=eye.add(look.multiply(Math.max(SWORD_AIM_MIN,far))),dir=aim.subtract(from);
+        dir=dir.lengthSquared()<1e-6?look:dir.normalize();
+        double most=SWORD_RANGE;
+        var wall=world.raycast(new RaycastContext(from,from.add(dir.multiply(SWORD_RANGE)),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+        if(wall.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)most=from.distanceTo(wall.getPos());
+        var sword=new Sword(s.id,s.start,i,now,from,dir,most);s.swords.add(sword);
+        send(p,s.id,THROWS,s.start,s.yaw,THROWN,i,null,sword);
+        fly(p,s,sword,now);
+    }
+    /**
+     * A thrown sword flies on a tick (2.80.0): the first body along its way since the last tick (its box widened by
+     * SWORD_RADIUS), not its user, is struck and the sword is spent; so is one that has flown its way.
+     */
+    private static void fly(ServerPlayerEntity p,State s,Sword w,long now){
+        double t=now-w.thrown,d0=swordFlown(t-1,w.most),d1=swordFlown(t,w.most);
+        Vec3d a=w.from.add(w.dir.multiply(d0)),b=w.from.add(w.dir.multiply(d1));
+        var world=p.getServerWorld();LivingEntity first=null;double nearest=Double.MAX_VALUE;
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(a,b).expand(SWORD_RADIUS+1.5),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+            if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
+            Box box=e.getBoundingBox().expand(SWORD_RADIUS);double at;
+            if(box.contains(a))at=0;
+            else{var hit=d1>d0?box.raycast(a,b):java.util.Optional.<Vec3d>empty();if(hit.isEmpty())continue;at=a.distanceTo(hit.get());}
+            if(at<nearest){nearest=at;first=e;}
+        }
+        if(first!=null){
+            // (it stops where it reached them, struck or guarded against: every viewer is told how far it flew)
+            w.spent=true;w.end=d0+nearest;var target=first;
+            var struck=strike(p,THROWS,w.index,w.start,MathHelper.wrapDegrees((float)Math.toDegrees(Math.atan2(-w.dir.x,w.dir.z))),now,a,e->e==target,null,true);
+            send(p,w.id,THROWS,w.start,s.yaw,LANDED,w.index,struck,w);
+            return;
+        }
+        if(d1>=w.most)w.spent=true;
     }
     /**
      * The finisher's slash flies on a tick: whoever its band passed over since the last tick (from the throw: whoever was
@@ -193,21 +373,23 @@ public final class IsosangAttack {
         var struck=strike(p,4,0,w.start,w.yaw,now,w.from,e->{
             Vec3d d=e.getPos().subtract(w.from);
             return waveSweeps(from,to,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5);
-        },w.struck);
-        if(!struck.isEmpty()||to==0)send(p,w.id,4,w.start,w.yaw,LANDED,0,struck);
+        },w.struck,false);
+        if(!struck.isEmpty()||to==0)send(p,w.id,4,w.start,w.yaw,LANDED,0,struck,null);
         if(to>=WAVE_TICKS)s.wave=null;
     }
     /**
      * Strikes everyone near {@code at} the test takes (and the slash has not struck yet, {@code done}), in the user's
      * sight: without knockback, staggered until the next blow could land; the finisher takes no guard. Returns whom.
      */
-    private static List<LivingEntity> strike(ServerPlayerEntity p,int combo,int i,long start,float yaw,long now,Vec3d at,java.util.function.Predicate<LivingEntity> test,Set<UUID> done){
-        var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i);
+    private static List<LivingEntity> strike(ServerPlayerEntity p,int combo,int i,long start,float yaw,long now,Vec3d at,java.util.function.Predicate<LivingEntity> test,Set<UUID> done,boolean empowered){
+        var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i,empowered);
         List<LivingEntity> struck=new ArrayList<>();
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(MAX_REACH+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        // (2.80.0: a thrown sword strikes the body it reached, wherever that is: the sword flew a way clear of blocks to it)
+        boolean thrown=combo==THROWS;
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((thrown?2:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             if(done!=null&&done.contains(e.getUuid()))continue;
-            if(!test.test(e)||!p.canSee(e))continue;
+            if(!test.test(e)||!thrown&&!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
             if(done!=null)done.add(e.getUuid());
             if(unblockable(combo))CombatManager.interrupt(e);
@@ -216,7 +398,14 @@ public final class IsosangAttack {
             struck.add(e);
             // every blow staggers whom it strikes a moment (2.68.0's rule for basic attacks): until the next blow could
             // land at full speed, a little past; one stopped in Star Platinum's stopped time is staggered as time moves again
-            if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.isosang(combo,i,start,now));
+            if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.isosang(combo,i,start,now,empowered));
+            // (2.80.0, user request: "4타에 맞으면 넉백이 있어") the empowered fourth's thrust throws whom it strikes along it,
+            // as Star Platinum's heavy punch: told to a struck player's client once, through the tracker; one stopped in a
+            // time stop is thrown as time moves again
+            if(combo==THRUST){
+                Vec3d fly=Vec3d.fromPolar(0,yaw).multiply(THRUST_FLY).add(0,THRUST_FLY_UP,0);
+                if(!StarPlatinumTimeStop.deferLaunch(e,fly)){e.setVelocity(fly);e.velocityModified=true;}
+            }
             // the user's own hit feedback (the damage number and the blood), as the other characters' (as time moves again
             // for one stopped in a time stop)
             if(!StarPlatinumTimeStop.deferFeedback(p,e,amount,yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
@@ -228,9 +417,11 @@ public final class IsosangAttack {
     }
     /**
      * Tells every player near the user (and the user, and whoever was struck) of the event: the hit (its id, number,
-     * start and way), the blow that landed (-1 for none) and whom it struck, and when the attack is ready again.
+     * start and way), the blow that landed (-1 for none) and whom it struck, and when the attack is ready again; since
+     * 2.80.0 whether the hit is of the empowered combo, whether the user holds an empowerment, when E is ready again, and
+     * for a sword thrown, from where, which way and how far it may fly.
      */
-    private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck){
+    private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword){
         var s=state(p);var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:world.getPlayers()){
             if(viewer!=p&&viewer.squaredDistanceTo(p)>128*128&&(struck==null||!struck.contains(viewer)))continue;
@@ -240,6 +431,9 @@ public final class IsosangAttack {
             b.writeLong(start);b.writeLong(now);b.writeDouble(p.getX());b.writeDouble(p.getY());b.writeDouble(p.getZ());b.writeFloat(yaw);b.writeLong(s.ready);
             int n=struck==null?0:struck.size();b.writeVarInt(n);
             for(int i=0;i<n;i++){var e=struck.get(i);b.writeUuid(e.getUuid());b.writeInt(e.getId());b.writeDouble(e.getX());b.writeDouble(e.getY());b.writeDouble(e.getZ());}
+            b.writeBoolean(s.empowered&&id.equals(s.id)||combo==THROWS||combo==THRUST);b.writeBoolean(s.charged);b.writeLong(s.eReady);
+            b.writeBoolean(sword!=null);
+            if(sword!=null){b.writeDouble(sword.from.x);b.writeDouble(sword.from.y);b.writeDouble(sword.from.z);b.writeDouble(sword.dir.x);b.writeDouble(sword.dir.y);b.writeDouble(sword.dir.z);b.writeDouble(sword.end);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

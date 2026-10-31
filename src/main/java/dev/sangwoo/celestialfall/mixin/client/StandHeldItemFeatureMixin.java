@@ -28,10 +28,14 @@ public abstract class StandHeldItemFeatureMixin {
             // Lee So-sang's sword (2.77.0): turned in the hand as a swing drives it (as the game holds it between swings);
             // its display already turns it IsosangSlash.DISPLAY_TILT further round the wrist
             var swing=dev.sangwoo.celestialfall.client.isosang.IsosangClient.animated(holder.getUuid());
+            float delta=net.minecraft.client.MinecraftClient.getInstance().getTickDelta();
             if(swing!=null){
-                var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,delta);
                 matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.isosang.IsosangSlash.DISPLAY_TILT));
             }
+            // (2.80.0) glowing while their next combo is empowered (E): for this draw only (botand$drawn puts it back)
+            dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=dev.sangwoo.celestialfall.client.isosang.IsosangClient.glow(holder.getUuid(),delta);
+            dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.clock=holder.age+delta;
             return;
         }
         if(!(entity instanceof PlayerEntity player)||!StandClient.visible(player)||arm!=player.getMainArm())return;
@@ -45,6 +49,11 @@ public abstract class StandHeldItemFeatureMixin {
             :dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),delta)!=null?dev.sangwoo.celestialfall.client.kageno.KagenoClips.guardFrame(player.getUuid(),delta)
             :dev.sangwoo.celestialfall.client.kageno.KagenoClips.idle();
         matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()));
+    }
+    /** (2.80.0) The sword's glow is for the one draw it was set for. */
+    @Inject(method="renderItem",at=@At("RETURN"))
+    private void botand$drawn(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
+        dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=0;
     }
     @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",
         at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;getMainHandStack()Lnet/minecraft/item/ItemStack;"))

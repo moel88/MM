@@ -52,4 +52,11 @@ public final class Stagger {
     public static long isosang(int combo,int blow,long start,long now){
         return dev.sangwoo.celestialfall.isosang.IsosangRules.staggerUntil(combo,blow,start,now,PAST,LAST);
     }
+    /**
+     * The same in E's empowered combo or not (2.80.0): a thrown sword holds them until the next sword could reach them,
+     * the third hit's last blow until the empowered fourth's thrust could land.
+     */
+    public static long isosang(int combo,int blow,long start,long now,boolean empowered){
+        return dev.sangwoo.celestialfall.isosang.IsosangRules.staggerUntil(combo,blow,start,now,PAST,LAST,empowered);
+    }
 }
