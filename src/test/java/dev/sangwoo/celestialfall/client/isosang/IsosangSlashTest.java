@@ -105,12 +105,14 @@ class IsosangSlashTest {
         assertTrue(a[1]<1.0&&a[2]<-1.0,"hit 1 comes down low at the left: "+s(a));
         assertTrue(b[1]>2.0&&b[2]>1.0&&b[1]>a[1]+1.2,"and rises across the front to end high at the right: "+s(b));
         b=tip(1,.55f);assertTrue(b[1]>2.4&&b[2]>.8,"hit 1 holds the sword up at the right: "+s(b));
-        // 2: a whole spin to the right low over the ground, far out round them
-        for(float t=.1f;t<=.19f;t+=1/240f){
+        // 2 (2.79.2 draft, the user's videos): two cuts to the left, anticlockwise seen from above: behind them at the hip,
+        // then in front low over the ground, the blade far out round them
+        assertTrue(turned(2,.08f,.135f,0)<-200,"hit 2's cut behind them goes round to the left: "+turned(2,.08f,.135f,0));
+        assertTrue(turned(2,.235f,.3f,.3)<-200,"hit 2's cut in front goes round to the left: "+turned(2,.235f,.3f,.3));
+        for(float t=.235f;t<=.28f;t+=1/240f){
             double[] p=tip(2,t);
-            assertTrue(Math.hypot(p[0]-.38,p[2])>2,"hit 2 holds the blade far out round them at "+t);assertTrue(p[1]<.9,"hit 2 sweeps low at "+t+": "+p[1]);
+            assertTrue(p[1]<.8,"the front cut sweeps low at "+t+": "+p[1]);assertTrue(Math.hypot(p[0]-.3,p[2])>1.8,"and far out round them at "+t);
         }
-        assertTrue(turned(2,.1f,.19f,.38)>330,"hit 2 turns the blade all the way round them to the right: "+turned(2,.1f,.19f,.38));
         // 3: four rings round them to the right (the first leaning up to the front, the fourth the widest), the long cut
         // rising forward out of the first (ahead and climbing at its blow), a thin level arc at the chest before the fourth
         assertTrue(turned(3,.18f,.24f,.5)>180,"hit 3's first ring goes round to the right: "+turned(3,.18f,.24f,.5));
@@ -187,9 +189,10 @@ class IsosangSlashTest {
                 assertTrue(s.eat1()+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"hit "+combo+"'s drops and their stains are gone in time");
                 boolean thin=s.style()==6||s.style()==7;
                 assertTrue(s.outer()-s.inner()>(thin?.2:.75),"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
-                // every sweep goes round to the right (2.78.0, the user's video from above), the chords aside
-                // (hit 4's low cut is a backhand from the right to the left)
-                if(s.style()!=6&&combo!=4)assertTrue(s.to()>s.from(),"hit "+combo+"'s slash from "+s.t0()+" sweeps clockwise seen from above");
+                // hits 1 and 3 sweep round to the right (2.78.0, the user's video from above), the chords aside; hit 2's two
+                // cuts to the left (2.79.2 draft); hit 4's low cut is a backhand from the right to the left
+                if(s.style()!=6&&combo!=4&&combo!=2)assertTrue(s.to()>s.from(),"hit "+combo+"'s slash from "+s.t0()+" sweeps clockwise seen from above");
+                if(combo==2)assertTrue(s.to()<s.from(),"hit 2's cut from "+s.t0()+" sweeps anticlockwise seen from above");
             }
             // each blow lands while its slash sweeps through (the long rising cut's beam is lit for it)
             for(int i=0;i<IsosangRules.blows(combo);i++){
@@ -207,7 +210,8 @@ class IsosangSlashTest {
         for(int combo=1;combo<=4;combo++)for(var l:IsosangSlash.loops(combo))assertTrue(l.d0()<l.d1()&&l.d1()<l.e0()&&l.e0()<l.e1()&&l.e1()<=life,"hit "+combo+"'s loops of ink are drawn, then eaten away in time");
         // hit 4's ring of ink lies on the ground round the cut (2.78.0; no strokes loop in the air any more)
         assertEquals(1,IsosangSlash.loops(4).length);assertEquals(0,IsosangSlash.loops(4)[0].tilt(),1e-9);assertTrue(IsosangSlash.loops(4)[0].centre().y<.1);
-        assertEquals(0,IsosangSlash.loops(2).length,"no strokes of ink in the air round hit 2's ring");
+        // hit 2's thin line of ink round them at the waist (2.79.2 draft: the videos' black circle inside the cuts)
+        assertEquals(1,IsosangSlash.loops(2).length);assertTrue(IsosangSlash.loops(2)[0].centre().y>.6&&IsosangSlash.loops(2)[0].radius()<2,"at the waist, inside the cuts");
         assertEquals(0,IsosangSlash.beamLit(IsosangSlash.BEAM_OFF),1e-6);
         float step=0;for(float t=0;t<1;t+=1/240f)step=Math.max(step,Math.abs(IsosangSlash.beamLit(t+1/60f)-IsosangSlash.beamLit(t)));
         assertTrue(step<.75f,"the beam pops in a single frame: "+step);
@@ -223,8 +227,14 @@ class IsosangSlashTest {
         assertTrue(IsosangSlash.profile(0,.05)<.15&&IsosangSlash.profile(0,.8)>.7&&IsosangSlash.profile(0,.8)>IsosangSlash.profile(0,.4),"thin tail, thick head");
         // hit 1's great crescent (2.79.1): thin only where it began, thick through its second half
         assertEquals(9,g.style());assertTrue(IsosangSlash.profile(9,.05)<.15&&IsosangSlash.profile(9,.33)<.4&&IsosangSlash.profile(9,.7)>.95&&IsosangSlash.profile(9,.98)<.15,"a crescent: pointed tips, thin along its start, thickest at its belly");
-        // the ring goes all the way round
-        var r=IsosangSlash.H2_ARCS[0];assertEquals(360,Math.abs(r.to()-r.from()),1e-6);
+        // hit 2 (2.79.2 draft): the cut behind them first, at the hip, then the one in front, low; the one behind gone first;
+        // each thickest where it cuts (behind, ahead)
+        var ba=IsosangSlash.H2_ARCS[0];var fr=IsosangSlash.H2_ARCS[1];
+        assertEquals(2,IsosangSlash.H2_ARCS.length);
+        assertTrue(ba.t1()<fr.t0()&&ba.eat1()<fr.eat1(),"behind first, in front after; the one behind gone first");
+        double bf=ba.from()+(ba.to()-ba.from())*.7,ff=fr.from()+(fr.to()-fr.from())*.7;
+        assertTrue(IsosangSlash.point(ba,bf,ba.outer()).x<-1&&IsosangSlash.point(fr,ff,fr.outer()).x>1.5,"one behind them, one in front");
+        assertTrue(ba.centre().y>.5&&fr.centre().y<.3,"the one behind at the hip, the one in front low");
         // hit 3 (2.78.0): four rings most of the way round them, each ending behind the left (the first behind the right),
         // the fourth the widest; the beam shines on while the third ring crosses it (the X)
         var r1=IsosangSlash.H3_ARCS[0];assertTrue(r1.to()-r1.from()>=200&&r1.to()>=120&&r1.to()<180,"the first ring: "+r1.from()+".."+r1.to());

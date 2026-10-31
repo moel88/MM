@@ -356,7 +356,8 @@ void main(){
    float hd=smoothstep(.86,1.0,x);
    // 8 hit 1's great crescent (2.79.1, the user's video): thin only where it began, thick from its middle to its head
    // 9 hit 1's crescent draft (2.79.2): pointed at both tips, thin along the start, thickest at its belly (70% along)
-   float w=(style>8.5&&style<9.5)?pow(max(sin(3.14159*pow(x,1.94)),0.0),1.6)
+   // 10 hit 2's front cut (2.79.2 draft): the same crescent, light all through while fresh, as the ring was
+   float w=(style>8.5&&style<10.5)?pow(max(sin(3.14159*pow(x,1.94)),0.0),1.6)
           :(style>7.5&&style<8.5)?(.06+.94*smoothstep(0.0,.5,x))*(1.0-hd*hd)
           :style<.5?(.08+.92*pow(x,1.3))*(1.0-hd*hd)
           :style<1.5?.9+.1*sin(x*31.0+sd)
@@ -365,7 +366,7 @@ void main(){
           :style<6.5?pow(max(sin(3.14159*pow(x,.62)),0.0),.55)
           :pow(max(sin(3.14159*x),0.0),.3);
    w=max(w,.02);
-   bool beam=(style>1.5&&style<2.5)||(style>6.5&&style<7.5),wave=style>2.5&&style<3.5,ring=style>.5&&style<1.5;
+   bool beam=(style>1.5&&style<2.5)||(style>6.5&&style<7.5),wave=style>2.5&&style<3.5,ring=(style>.5&&style<1.5)||(style>9.5&&style<10.5),cracks=style>.5&&style<1.5;
    float d=beam?abs(y-.5)*2.0/w:(1.0-y)/w;
    float aa=max(fwidth(d),.0015)*1.4;
    float strand=fbm(vec2(x*6.0+sd,y*24.0)),hair=noise(vec2(x*12.0+sd,y*90.0)),streak=noise(vec2(x*70.0+sd,y*2.5));
@@ -419,7 +420,7 @@ void main(){
     rgb=mix(rgb,navy*1.3,inkMask*smoothstep(.6,.86,streak)*.55);
     // the ring cracks into black lines across it as it dries
     float crack=0.0;
-    if(ring){float c=abs(sin((x*11.0+sd)*3.14159+2.4*fbm(vec2(x*4.0+sd,d*1.5))));crack=(1.0-smoothstep(0.0,.07+aa*3.0,c))*smoothstep(.2,.5,ink);}
+    if(cracks){float c=abs(sin((x*11.0+sd)*3.14159+2.4*fbm(vec2(x*4.0+sd,d*1.5))));crack=(1.0-smoothstep(0.0,.07+aa*3.0,c))*smoothstep(.2,.5,ink);}
     rgb=mix(rgb,inkc,crack);
     // opaque at the edge, glassier in the light's middle, the ink solid
     float a=mix(.97,.82,smoothstep(whiteEnd,inkAt,d)*(1.0-ink*.4));

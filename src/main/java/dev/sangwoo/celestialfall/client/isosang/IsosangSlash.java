@@ -207,38 +207,49 @@ public final class IsosangSlash implements Fx.Skill {
         k(.9,STANCE.body(-360,0,0))).stops(Anim.stop(blow(1,0),.03,.05)).after(IsosangSlash::grounded);
 
     // ───────────────────────────── 2 윤월 ─────────────────────────────
-    // Body-space keys while they turn: the turn is the root's yaw, the arm and the blade ride with it. (2.78.0, the user's
-    // video from above: the spin is to the right, the ring drawn clockwise from the front; it went round to the left
-    // until 2.77.7.) The yaws carry on from hit 1's whole turn (H1_HOLD: -382).
-    /** Winding up to the left, going down, the sword trailing behind on the right. */
-    static final R6.Pose H2_TURN=planted(R6.pose().at(.38,-.18,0).body(-322,8,4).head(6,-6,0).rArm(-34,100).blade(-14,120).lArm(-46,-56).rLeg(-72,24).lLeg(-80,-22),150,-40);
-    /** Crouched, coiled to the left, the blade low out at the right-front. */
-    static final R6.Pose H2_LOW=planted(R6.pose().at(.38,-.28,0).body(-272,16,6).head(0,-10,0).rArm(-36,100).blade(-6,116).lArm(-52,-74).rLeg(-66,30).lLeg(-84,-30),160,-30);
-    /** The whole spin to the right on the right foot, the left knee drawn up: the blade held out low at the right, sweeping round over the ground. */
-    static R6.Pose spin(float yaw){return planted(R6.pose().at(.38,-.3,0).body(yaw,14,0).head(0,-8,0).rArm(-32,88).blade(-6,94).lArm(-38,-96).rLeg(-68,28).lLeg(-22,-26),165,Double.NaN);}
-    /** Out of the spin, rising; the blade snapped out down to the right as the ring bursts into ink. */
-    static final R6.Pose H2_RISE=planted(R6.pose().at(.36,-.2,0).body(-628,8,0).head(0,-6,0).rArm(-40,74).blade(-10,92).lArm(-60,-60).rLeg(-76,24).lLeg(-82,-24),165,-20);
-    static final R6.Pose H2_FLICK=planted(R6.pose().at(.35,-.14,0).body(-640,6,0).head(0,-4,0).rArm(-34,84).blade(-18,104).lArm(-72,-40).rLeg(-82,14).lLeg(-86,-14),160,-20);
-    static final R6.Pose H2_SET=planted(R6.pose().at(.34,-.1,0).body(-646,3,0).head(0,-4,0).rArm(-44,70).blade(-18,86).lArm(-74,-34).rLeg(-84,12).lLeg(-86,-12),150,-20);
-    /** Turned back to the front, the sword low at the right: where the third hit begins (yaw: -716, or 4 for the next clip). */
+    // (2.79.2 draft, the user's videos from above and from the front, "처음에 뒤로 베고 앞으로 가서 베는거야 그래서 원처럼
+    // 보이는거임": two cuts to the left, anticlockwise seen from above (the other way from hit 1): first one behind them at
+    // the hip, then, a moment on, one in front of them low over the ground; together they look like a ring, and the one
+    // behind goes first. The yaws (left +) carry on from hit 1's H1_HOLD. Until 2.79.0 hit 2 was one ring to the right.)
+    /**
+     * Hit 2's sweeps to the left (body-space keys: the turn is the root's yaw, to the left +): the blade out {@code az}
+     * off the torso's front (right +) at {@code elev}, so its point goes round them with the cut.
+     */
+    static R6.Pose cut2(float yaw,double elev,double az,double up){
+        return planted(R6.pose().at(.36,up,0).body(yaw,10,4).head(0,-8,0).rArm(elev*.7-6,az-14).blade(elev,az).lArm(-30,-100).rLeg(-70,24).lLeg(-30,-28),24,Double.NaN);
+    }
+    /** Between the cuts (the video's crane): on the right foot, the left knee drawn up and the left hand raised, the blade held out low. */
+    static R6.Pose crane2(float yaw,double az,double elev,double hand){
+        return planted(R6.pose().at(.36,-.14,0).body(yaw,6,0).head(0,-6,0).rArm(elev*.7-4,az-12).blade(elev,az).lArm(hand,-40-.5*(50-hand)).rLeg(-86,10).lLeg(-24,-22),12,Double.NaN);
+    }
+    /** Wound up to the right before the first cut, crouching, the sword drawn back low behind on the right. */
+    static final R6.Pose H2_WIND=planted(R6.pose().at(.38,-.24,0).body(-405,10,-4).head(0,-8,0).rArm(-22,96).blade(-10,110).lArm(-46,-70).rLeg(-70,40).lLeg(-70,-40),70,-50);
+    /** Out of the front cut, rising, the sword raised across before them, turning back to the front. */
+    static final R6.Pose H2_RISE2=planted(R6.pose().at(.36,-.1,0).body(40,4,0).head(0,-4,0).rArm(30,-20).blade(46,-30).lArm(-60,-50).rLeg(-82,14).lLeg(-84,-14),14,-14);
+    /** Turned back to the front, the sword low at the right: where the third hit begins (yaw 4, as the next clip's first key). */
     static R6.Pose h2Back(float yaw){return w(.34,-.08,yaw,4,0,d(-50,30),d(-18,40),d(-72,-20),20,-160);}
     static final Anim H2=Anim.joints(
         k(0,H1_HOLD),
-        k(.05,H2_TURN),
-        k(.085,H2_LOW),
-        // the spin: an even speed to the right from the front, round the right, behind (the blow) and the left, to the front
-        k(.1,spin(-262),Anim.Ease.IN),
-        k(.115,spin(-342),Anim.Ease.LINEAR),
-        k(.13,spin(-422),Anim.Ease.LINEAR),
-        k(blow(2,0),spin(-502),Anim.Ease.LINEAR),
-        k(.165,spin(-577),Anim.Ease.LINEAR),
-        k(.19,spin(-614),Anim.Ease.OUT),
-        k(.24,H2_RISE),
-        k(blow(2,1),H2_FLICK,Anim.Ease.OUT),
-        k(.38,H2_SET),
-        k(step(2),h2Back(-716)),
-        // two whole turns on: the stance faces the same way as the start
-        k(.9,STANCE.body(-720,0,0))).stops(Anim.stop(blow(2,0),.025,.04),Anim.stop(blow(2,1),.03,.05)).after(IsosangSlash::grounded);
+        k(.05,H2_WIND),
+        // the cut behind them, at the hip: the blade from the front-right across the front, round the left and behind to
+        // the back-right (its world angle is the arc's: -yaw+az)
+        k(.08,cut2(-410,-8,10,-.3),Anim.Ease.IN),
+        k(.093,cut2(-350,0,10,-.32),Anim.Ease.LINEAR),
+        k(.106,cut2(-260,-4,10,-.32),Anim.Ease.LINEAR),
+        k(.12,cut2(-170,-11,10,-.32),Anim.Ease.LINEAR),
+        k(.135,cut2(-135,-12,10,-.3),Anim.Ease.OUT),
+        // the moment between (the crane), winding back to the right
+        k(blow(2,0),crane2(-130,10,-12,-5)),
+        k(.21,crane2(-200,-40,-16,50)),
+        // the cut in front of them, low over the ground: from behind round the right, across the front to the left
+        k(.235,cut2(-205,-18,-40,-.42),Anim.Ease.IN),
+        k(.25,cut2(-130,-18,-40,-.44),Anim.Ease.LINEAR),
+        k(.265,cut2(-40,-18,-40,-.44),Anim.Ease.LINEAR),
+        k(.28,cut2(50,-17,-40,-.42),Anim.Ease.LINEAR),
+        k(blow(2,1),cut2(70,-14,-40,-.38),Anim.Ease.OUT),
+        k(.38,H2_RISE2),
+        k(step(2),h2Back(4)),
+        k(.9,STANCE.body(0,0,0))).stops(Anim.stop(blow(2,0),.025,.04),Anim.stop(blow(2,1),.03,.05)).after(IsosangSlash::grounded);
 
     // ───────────────────────────── 3 관월 ─────────────────────────────
     // (2.78.0, the user's video from above: hit 3 is a flurry of spins to the right. A ring round them first, leaning up to
@@ -484,7 +495,13 @@ public final class IsosangSlash implements Fx.Skill {
         // its thickest belly ahead, its bright pointed tip at the right; standing out ahead of them; high at the right,
         // low at the left; at the height of the face)
         arc(v(1.0,1.45,0),25,-90,1.3,2.6,180,450,.25f,.32f,.74f,.9f,.27f,.45f,9,1,2)};
-    static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.12f,.36f,1,3,1)};
+    // (2.79.2 draft) 2: the cut behind them, drawn first at the hip, its plane a little low behind on the right (the video
+    // from the front sees it nearly edge on), from the front-right across the front, round the left and behind to the
+    // back-right, thickest behind on the left; then the cut in front of them, low over the ground, from behind round the
+    // right, across the front to the left, thickest ahead, white while fresh (style 10). Both anticlockwise seen from above.
+    static final Arc[] H2_ARCS={
+        arc(v(0,.7,0),10,150,2.25,3.05,60,-215,.08f,.12f,.36f,.52f,.2f,.36f,9,3,2),
+        arc(v(.3,.15,0),0,0,1.8,2.6,165,-110,.235f,.28f,.52f,.7f,.42f,.56f,10,5,2)};
     static final Arc[] H3_ARCS={
         arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
         arc(v(.4,1.3,.3),12,-90,2.0,2.8,-30,250,.49f,.56f,.78f,1.0f,.54f,.7f,0,5,2),
@@ -539,7 +556,7 @@ public final class IsosangSlash implements Fx.Skill {
             // hit 1's great crescent (2.79.1): thin only where it began, thick from its middle to its rounded head
             case 8->{double h=Ease.smooth((float)x,.86f,1);yield (.06+.94*Ease.smooth((float)x,0,.5f))*(1-h*h);}
             // hit 1's crescent draft (2.79.2): pointed at both tips, thin along its start, thickest at its belly (70% along)
-            case 9->Math.pow(Math.max(Math.sin(Math.PI*Math.pow(x,1.94)),0),1.6);
+            case 9,10->Math.pow(Math.max(Math.sin(Math.PI*Math.pow(x,1.94)),0),1.6);
             case 2->Math.pow(Math.max(Math.sin(Math.PI*x),0),.5);
             case 3->Math.pow(Math.max(Math.sin(Math.PI*x),0),.36);
             case 6->Math.pow(Math.max(Math.sin(Math.PI*Math.pow(x,.62)),0),.55);
@@ -560,12 +577,12 @@ public final class IsosangSlash implements Fx.Skill {
     }
     /** The same for a slash of {@code style}: the ring (1) is light all through until it dries, as the shader has it. */
     static double inkFront(int style,double prof,double ink){
-        if(style==1){double spread=1-(1-ink)*(1-ink);return .9-.6*spread;}
+        if(style==1||style==10){double spread=1-(1-ink)*(1-ink);return .9-.6*spread;}
         return inkFront(prof,ink);
     }
     /** How far in from the outer edge the white-hot rim reaches (0..1 of the band), as the shader has it: the ring's broad while fresh. */
     static double whiteEnd(int style,float ink){
-        return style==1?.6-.52*Ease.smooth(ink,0,.12f):.24-.18*Ease.smooth(ink,0,.3f);
+        return style==1||style==10?.6-.52*Ease.smooth(ink,0,.12f):.24-.18*Ease.smooth(ink,0,.3f);
     }
 
     /**
@@ -716,7 +733,9 @@ public final class IsosangSlash implements Fx.Skill {
      * 2's ring and hit 4's cut (2.77.2–2.77.7) are gone: the video from above has none.
      */
     static final Loop[] H4_LOOPS={new Loop(v(.5,.05,0),0,0,1.6,1,.09,-200,160,.7f,.75f,1.0f,1.35f,6)};
-    static Loop[] loops(int combo){return combo==4?H4_LOOPS:new Loop[0];}
+    /** Hit 2's (2.79.2 draft): the thin line of ink the point leaves round them at the waist (the videos' black circle inside the cuts). */
+    static final Loop[] H2_LOOPS={new Loop(v(0,.95,0),10,150,1.5,1,.05,20,-400,.2f,.27f,.42f,.55f,4)};
+    static Loop[] loops(int combo){return combo==4?H4_LOOPS:combo==2?H2_LOOPS:new Loop[0];}
     static void loop(Vec3d feet,float yaw,Loop l,float t){
         float drawn=Ease.out(t,l.d0(),l.d1()),erase=Ease.smooth(t,l.e0(),l.e1());
         if(drawn<=.004f||erase>=1)return;
@@ -759,21 +778,11 @@ public final class IsosangSlash implements Fx.Skill {
             // (2.79.0: no pool under the spin cut: it skims the ground behind the left and ends high in the air)
         }
         if(combo==2){
-            // the ground inside the ring darkens as it dries, and a pool of ink gathers under the first quarter it drew
-            // (2.78.0, the video from above: the ring's black crescent on the ground, right and behind, lasting on while
-            // the rest thins to a line); then the ink it bursts into splashes round it
-            var ring=H2_ARCS[0];float dark=t-(ring.t1()+.1f);
-            if(dark>=0&&dark<POOL_LIFE+.1f){
-                Vec3d o=world(feet,yaw,v(.35,0,0));float dry=Ease.smooth(dark,.2f,POOL_LIFE+.1f);
-                stain(new Vec3d(o.x,floor-.002,o.z),6.0*(.6+.4*Ease.out(dark,0,.15f)),Math.toRadians(-yaw),1,9,dry,.34f*(1-Ease.smooth(dry,.6f,1)));
-            }
-            pool(feet,yaw,ring,40,200,9,.18f,1.5,.9f,211,t);
-            float at=blow(2,1);
-            for(int k=0;k<12;k++){
-                int seed=k*29+311;float born=at+.1f+.14f*(float)Ease.hash(seed);
-                double az=Math.PI*2*(k+.6*Ease.hash(seed+1))/12,r=2.8+1.4*Ease.hash(seed+2);
-                Vec3d p=world(feet,yaw,v(.35+Math.cos(az)*r,0,Math.sin(az)*r));
-                stainAt(new Vec3d(p.x,floor+.003*(k%4),p.z),.8+.8*Ease.hash(seed+5),Math.toRadians(-yaw)+az+Math.PI/2+(Ease.hash(seed+6)-.5),1.3+1.2*Ease.hash(seed+7),seed,t-born,.88f);
+            // (2.79.2 draft) the ground inside darkens for a moment under the front cut (the videos), then dries
+            var b=H2_ARCS[1];float dark=t-(b.t0()+.02f);
+            if(dark>=0&&dark<.45f){
+                Vec3d o=world(feet,yaw,v(b.centre().x,0,0));float dry=Ease.smooth(dark,.15f,.45f);
+                stain(new Vec3d(o.x,floor-.002,o.z),4.6*(.7+.3*Ease.out(dark,0,.12f)),Math.toRadians(-yaw),1,9,dry,.28f*(1-Ease.smooth(dry,.6f,1)));
             }
         }
         if(combo==3){
@@ -842,14 +851,7 @@ public final class IsosangSlash implements Fx.Skill {
     @Override public void alpha(Fx c,EffectMesh m){
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         inkBursts(c,m,t,combo);
-        if(combo==2)inkRing(m,t,feet,yaw);
         airInk(c,m,t,combo,feet,yaw);
-    }
-    /** Hit 2's burst: a ring of ink running out under its white ring, a little wider, so the light is drawn in ink (2.77.6). */
-    static void inkRing(EffectMesh m,float t,Vec3d feet,float yaw){
-        float at=blow(2,1);if(t<at-.02f||t>=at+.4f)return;
-        Vec3d o=world(feet,yaw,v(.35,.49,0));float a=Ease.smooth(t,at-.02f,at+.01f)*(1-Ease.unit(t,at,at+.3f));
-        FxLib.ring(m,o,2.85+1.0*Ease.out(t,at,at+.22f),.14,INK,.7f*a);
     }
     /**
      * Over the ink ribbons (2.77.5, user request "마지막으로 이펙트 더 예쁘게 꾸며줘": the moon's light and its stars, as the
@@ -864,7 +866,6 @@ public final class IsosangSlash implements Fx.Skill {
             glint8(m,p,st.size(),col,st.alpha());
         }
         heads(m,t,combo,feet,yaw);
-        if(combo==2)ringStars(m,t,feet,yaw);
         if(combo==3)beamStars(m,t,feet,yaw);
         if(combo==4)waveStars(m,t,feet,yaw);
     }
@@ -972,17 +973,6 @@ public final class IsosangSlash implements Fx.Skill {
             float a=Ease.smooth(t,s.t0(),s.t0()+.015f)*(1-Ease.smooth(t,s.t1()+.01f,s.t1()+.08f));
             Vec3d p=world(feet,yaw,point(s,s.from()+(s.to()-s.from())*head(s,t),s.outer()));
             glint8(m,p,.3,WHITE,a);m.softDisc(p,.24,AZURE,.3f*a);
-        }
-    }
-    /** Hit 2's burst: stars riding out on its white ring, twinkling, gone with it (in place of streaks of light). */
-    static void ringStars(EffectMesh m,float t,Vec3d feet,float yaw){
-        float at=blow(2,1);if(t<at||t>=at+.36f)return;
-        Vec3d o=world(feet,yaw,v(.35,.5,0));double r=2.75+1.0*Ease.out(t,at,at+.22f);float fade=1-Ease.unit(t,at,at+.36f);
-        for(int k=0;k<12;k++){
-            int seed=k*53+211;double az=Math.PI*2*(k+.4*Ease.hash(seed))/12;
-            Vec3d p=o.add(dir(yaw,v(Math.cos(az)*r,.15*(Ease.hash(seed+1)-.5),Math.sin(az)*r)));
-            float a=fade*twinkle(t,seed)*Ease.smooth(t,at+.008f*(k%4),at+.008f*(k%4)+.02f);
-            glint8(m,p,.1+.07*Ease.hash(seed+2),k%3==2?LILAC:k%3==1?PALE:WHITE,a);
         }
     }
     /** Hit 3's thrust: stars lighting one after another along the beam as it pierces, twinkling while it shines. */
@@ -1190,15 +1180,24 @@ public final class IsosangSlash implements Fx.Skill {
         Vec3d w=b.subtract(a);return w.lengthSquared()<1e-8?Vec3d.fromPolar(0,c.cast.yaw()):w.normalize();
     }
     /**
-     * Hit 2's burst at its second blow (as the ring cracks into ink): a thin white ring and a narrow blue one running out
-     * over the ground from the ring (2.77.4: no wide flash round the ring, and the rings narrow, so the ring cracking into
-     * ink shows through), with stars riding out on the white one ({@link #ringStars}, 2.77.5, in place of streaks of light).
+     * Hit 2's front cut (2.79.2 draft, the videos): as it is drawn a wide sheet of white light spreads over the ground
+     * inside it, strongest ahead of them, gone within a fifth of a second.
      */
     static void flare(Fx c,EffectMesh m,float t,Vec3d feet,float yaw){
-        float at=blow(2,1);if(t<at-.02f||t>=at+.4f)return;
-        Vec3d o=world(feet,yaw,v(.35,.5,0));float a=Ease.smooth(t,at-.02f,at+.01f);
-        FxLib.ring(m,o,2.75+1.0*Ease.out(t,at,at+.22f),.08,WHITE,.85f*a*(1-Ease.unit(t,at,at+.22f)));
-        FxLib.ring(m,o,2.6+1.8*Ease.out(t,at,at+.36f),.18,AZURE,.3f*a*(1-Ease.unit(t,at,at+.36f)));
+        var b=H2_ARCS[1];float t0=b.t0();if(t<t0||t>=t0+.3f)return;
+        float a=Ease.smooth(t,t0,t0+.03f)*(1-Ease.smooth(t,t0+.08f,t0+.3f)),h=head(b,t);
+        int n=18;Vec3d[] o=new Vec3d[n+1],mid=new Vec3d[n+1],in=new Vec3d[n+1];float[] wgt=new float[n+1];
+        for(int i=0;i<=n;i++){
+            double deg=b.from()+(b.to()-b.from())*h*i/n;
+            Vec3d q0=point(b,deg,b.inner()+.25),q1=point(b,deg,b.inner()-.45),q2=point(b,deg,Math.max(.4,b.inner()-1.2));
+            o[i]=world(feet,yaw,v(q0.x,.05,q0.z));mid[i]=world(feet,yaw,v(q1.x,.05,q1.z));in[i]=world(feet,yaw,v(q2.x,.05,q2.z));
+            wgt[i]=(float)(.35+.65*Math.max(0,Math.cos(Math.toRadians(deg))));
+        }
+        for(int i=0;i<n;i++){
+            float w=a*(wgt[i]+wgt[i+1])*.5f;
+            m.triangle(o[i],o[i+1],mid[i+1],PALE,.34f*w);m.triangle(o[i],mid[i+1],mid[i],PALE,.34f*w);
+            m.triangle(mid[i],mid[i+1],in[i+1],AZURE,.14f*w);m.triangle(mid[i],in[i+1],in[i],AZURE,.14f*w);
+        }
     }
     /**
      * Hit 3's beam: its light along the whole line and a glint at its far end (2.77.7: no rings of air running on along
@@ -1481,8 +1480,9 @@ public final class IsosangSlash implements Fx.Skill {
         for(var w:strikes(c,combo)){float k=FxLib.kick(t,w.when(),.08f);if(k>.01f)f.light(w.at(),0xcfe4ff,combo==4?6:5,(combo==4?1.1f:.85f)*k);}
         if(combo==1){float k=FxLib.kick(t,.25f,.12f);if(k>.01f)f.light(world(feet,yaw,v(.4,1.6,-.4)),0x7fb0ff,7,.7f*k);}
         if(combo==2){
-            float k=FxLib.kick(t,blow(2,0),.14f),fl=FxLib.kick(t,blow(2,1),.16f);
-            if(k+fl>.01f)f.light(world(feet,yaw,v(.35,.6,0)),0x8cbcff,8,.75f*k+.9f*fl);
+            float ka=FxLib.kick(t,H2_ARCS[0].t1(),.14f),kb=FxLib.kick(t,H2_ARCS[1].t0()+.02f,.16f);
+            if(ka>.01f)f.light(world(feet,yaw,v(0,.8,0)),0x8cbcff,7,.6f*ka);
+            if(kb>.01f)f.light(world(feet,yaw,v(1.2,.3,0)),0xb8d8ff,8,.9f*kb);
         }
         if(combo==3){
             float lit=beamLit(t);if(lit>0){var b=beam(feet,yaw,t);f.light(b[0].add(b[1]).multiply(.5),0x6aa8ff,8,.9f*lit);}
@@ -1501,7 +1501,7 @@ public final class IsosangSlash implements Fx.Skill {
         // the whole swing is quick (the cuts, the spin, the lunge, the flight and the blade's moves between them): the
         // afterglow is cut short throughout, shortest in the spin, else the blade's bright line leaves a fan of copies of
         // itself round them like spokes (2.77.4 cut it for the cuts alone; 2.77.5 for the recoveries between them too)
-        if(t<IsosangRules.LENGTH[combo]/20f)f.afterglow(combo==2&&t>=.06f&&t<.24f?.25f:combo==1&&t<.34f?.1f:.3f);// (2.79.0-1: hit 1's quick wind into the spin leaves no fan of blade copies)
+        if(t<IsosangRules.LENGTH[combo]/20f)f.afterglow(combo==2&&t>=.06f&&t<.32f?.25f:combo==1&&t<.34f?.1f:.3f);// (2.79.0-1: hit 1's quick wind into the spin leaves no fan of blade copies)
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){
@@ -1513,10 +1513,6 @@ public final class IsosangSlash implements Fx.Skill {
         if(combo==4){
             var sw=wave(feet,yaw,t);float at=blow(4,0);
             if(sw!=null&&t<at+.5f)d.ribbon(sw.inner(),sw.outer(),sw.n(),.3f*Ease.smooth(t,at,at+.03f)*(1-Ease.smooth(t,at+.3f,at+.5f)));
-        }
-        if(combo==2){
-            float at=blow(2,1);
-            if(t>=at-.01f&&t<at+.35f){Vec3d o=world(feet,yaw,v(.35,.5,0));d.ring(o,c.right,Vec3d.fromPolar(0,yaw),2.7+1.4*Ease.out(t,at,at+.35f),.9,.2f*Ease.smooth(t,at-.01f,at+.015f)*(1-Ease.unit(t,at,at+.35f)));}
         }
     }
 
