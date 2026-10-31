@@ -103,49 +103,56 @@ final class IsosangEmpower {
 
     // ───────────────────────────── the empowered fourth: the giant sword ─────────────────────────────
 
-    /** The right arm raised forward, the sword up, leaning back a little: the giant blade shows beside them. */
-    static final R6.Pose G_RAISE=w(.04,-.04,-10,-6,-1,d(40,24),d(70,-14),d(-14,-24),20,-160);
-    /** Drawn back to the right hip, the point ahead (a thrust's chamber), as the step back begins. */
-    static final R6.Pose G_DRAW=w(.02,-.12,-18,2,-2,d(-12,118),d(-6,8),d(-10,-30),26,-150);
-    /** The thrust: the arm straight ahead at the shoulder, the right shoulder forward, leaning in; the left arm back. */
-    static final R6.Pose G_THRUST=w(.1,-.2,20,12,2,d(4,12),d(-6,-12),d(-24,-150),16,-170);
-    static final R6.Pose G_HOLD=w(.1,-.21,22,12,2,d(2,14),d(-8,-10),d(-26,-148),16,-170);
-    /** Drawn back up, and lowered. */
-    static final R6.Pose G_BACK=w(.06,-.08,-4,2,0,d(20,60),d(52,40),d(-62,-60),18,-164);
+    // (2.80.3, user request: "4타 찌르는 걸 더 자연스럽게 다듬어주고 … 찌르는 모션이 너무 이상하다": the right arm stabbed
+    // ahead at nothing while the giant sword flew from their left, and swung up high on its way back. Now as the user's
+    // video of it shows: the sword raised a moment as the giant sword is called at their left, then down in a crouch as
+    // they leap back, the left hand drawn back low by the giant sword's grip and the sword out low behind them at the right;
+    // the left hand is driven forward as the giant sword is thrust, the body turning into it and leaning in, held low a
+    // moment, and up into the stance.)
+    /** The sword raised high at the right a moment, leaning back a little: the giant sword called at their left. */
+    static final R6.Pose G_CALL=w(.02,-.02,-6,-5,-1,d(62,18),d(78,-40),d(-62,-38),12,-168);
+    /** Down in a crouch as they leap back, turned to the left: the left hand drawn back low by the giant sword's grip, the sword out low behind them at the right. */
+    static final R6.Pose G_COCK=w(-.04,-.2,14,9,0,d(-14,96),d(-8,138),d(-48,-142),150,-24);
+    /** The thrust: the left hand driven straight ahead at the chest, the body turned into it (the left shoulder forward) and leaning in; the sword swung back behind at the right. */
+    static final R6.Pose G_DRIVE=w(.1,-.24,-16,15,0,d(-10,124),d(-8,158),d(4,-6),164,-12);
+    static final R6.Pose G_HOLD=w(.11,-.26,-18,15,0,d(-12,126),d(-10,160),d(2,-4),164,-12);
+    /** Still low, easing up. */
+    static final R6.Pose G_EASE=w(.08,-.2,-14,12,0,d(-20,118),d(-14,150),d(-6,-10),160,-16);
+    /** Up out of it: the left hand down, the sword brought round in front toward the stance. */
+    static final R6.Pose G_RISE=w(.04,-.07,-4,4,0,d(-46,48),d(12,22),d(-66,-30),70,-110);
     /**
-     * The empowered fourth (IsosangRules.THRUST; the user's videos of E: the giant blade beside them at once, its point far
+     * The empowered fourth (IsosangRules.THRUST; the user's videos of E: the giant sword beside them at once, its point far
      * ahead a tenth of a second on, the giant sword there for some 0.4 s): the step back is real (IsosangClient.drive).
      */
     static final Anim THRUST=Anim.joints(
         k(0,STANCE),
-        k(.05,G_RAISE),
-        k(.1,G_DRAW),
-        k(blow(IsosangRules.THRUST,0),G_THRUST,Anim.Ease.IN),
-        k(.25,G_HOLD),
-        k(.6,G_HOLD),
-        k(.85,G_BACK),
-        k(1.15,H1_LOWER),
+        k(.04,G_CALL),
+        k(.11,G_COCK),
+        k(blow(IsosangRules.THRUST,0),G_DRIVE,Anim.Ease.IN),
+        k(.26,G_HOLD),
+        k(.55,G_EASE),
+        k(.9,G_RISE),
         k(IsosangRules.LENGTH[IsosangRules.THRUST]/20f,STANCE))
         .stops(Anim.stop(blow(IsosangRules.THRUST,0),.06,.1))
         .after(IsosangSlash::grounded);
 
     /**
      * The giant sword (2.80.1, the user's video of the empowered fourth at a tenth of the speed: a sword of blue light at
-     * their left as they leap back, its grip low behind them and its point high ahead; a frame on it flies point first and
-     * stops some way ahead, hanging there grip toward them a moment as blue blades burst out of it and ink swirls round it
-     * and swallows it). 2.80.2 (user request: "검 모델링 제대로 만들어 영상이랑 똑같은 검 모델로", "검 더 커야 돼", "키의 4배
-     * (약 7블록)", and the outline they drew round it): its own model, SpiritSword, some 7 blocks long; not the sword in
-     * their hand. Its length from the middle of its grip to its end (blocks).
+     * their left as they leap back; a frame on it flies point first and stops some way ahead, hanging there a moment as blue
+     * blades burst out of it and ink swirls round it and swallows it). 2.80.2 (user request: "검 모델링 제대로 만들어 영상이랑
+     * 똑같은 검 모델로", and the outline they drew round it): its own model, SpiritSword; not the sword in their hand. 2.80.3
+     * (user request: "4타 찌르는 걸 더 자연스럽게 다듬어주고 검도 더 날카롭게 만들어 주고 찌르는 모션이 너무 이상하다 검 크기도
+     * 2배 더 줄이고"): half the size (3.5 blocks), sharp, and thrust: it shows at their left already aimed at where it will
+     * stop and is driven point first along its own line (2.80.1-2.80.2 flew tilted 30° up, its point above its way, sliding
+     * on rather than thrust). Its length from the middle of its grip to its point (blocks).
      */
     static final double GIANT_LEN=SpiritSword.TIP;
-    /**
-     * How it shows before it is thrown: tilted up ahead this much (degrees), its grip in their frame as they leap (forward,
-     * up, right of their feet): at their left, behind them, so its end is IsosangRules.GIANT_START ahead of them (where the
-     * server's way begins) and its pommel clear of the ground.
-     */
-    static final double HOVER_TILT=30,HOVER_FW=IsosangRules.GIANT_START-GIANT_LEN*Math.cos(Math.toRadians(HOVER_TILT)),HOVER_UP=.9,HOVER_RT=-1.4;
-    /** Where the burst is when it stops: this far along its blade from the grip (its upper blade, round which the blades burst out in the video). */
-    static final double BURST_ALONG=.6;
+    /** Where it shows beside them: its grip by their left hip (up and right of their feet, blocks), as they leap. */
+    static final double HOVER_UP=.85,HOVER_RT=-.9;
+    /** How high its point aims where it stops (blocks over the feet it was thrown from): a standing body's chest. */
+    static final double AIM_UP=1.25;
+    /** Where the burst is when it stops: this far along it from the grip (near its point, which went in). */
+    static final double BURST_ALONG=.8;
     /** When it shows (seconds into the hit); how long it hangs where it stopped before it fades, and the fading (seconds). */
     static final float GIANT_IN=.01f,GIANT_FULL=.09f,GIANT_HANG=.28f,GIANT_FADE=.2f;
     /** How far the caster's own camera draws back for the empowered fourth (blocks). */
@@ -184,41 +191,58 @@ final class IsosangEmpower {
     }
     /** The second into the hit the giant sword stops. */
     static float arrive(StandClient.Cast c){return blow(IsosangRules.THRUST,0)+(float)(IsosangRules.giantArrives(most(c))/20);}
-    /** Where its grip is when it stops (world): on the way they faced, its point {@link IsosangRules#GIANT_START}… its range ahead. */
-    static Vec3d gripAtEnd(StandClient.Cast c){double tilt=Math.toRadians(HOVER_TILT);return world(throwFrom(c),c.yaw(),v(most(c)-GIANT_LEN*Math.cos(tilt),HOVER_UP,0));}
-    /** Where it bursts when it stops: on its upper blade (world). */
-    static Vec3d end(StandClient.Cast c){return gripAtEnd(c).add(tilted(c.yaw()).multiply(GIANT_LEN*BURST_ALONG));}
+    /** Where its point stops (world): on the way they faced, as far as it flies, at the chest. */
+    static Vec3d target(StandClient.Cast c){return world(throwFrom(c),c.yaw(),v(most(c),AIM_UP,0));}
+    /**
+     * How far ahead of their feet its grip shows (blocks) so that, aimed at {@code most} ahead, its point is just where the
+     * server's way begins (IsosangRules.GIANT_START) as it is thrown: the grip, at their left by their hip, and the point it
+     * aims at fix the line, and its point lies its length along it.
+     */
+    static double hoverFw(double most){
+        double c2=(AIM_UP-HOVER_UP)*(AIM_UP-HOVER_UP)+HOVER_RT*HOVER_RT,a=Math.max(0,most-IsosangRules.GIANT_START),x=a+GIANT_LEN;
+        for(int i=0;i<6;i++)x=a+GIANT_LEN*x/Math.sqrt(x*x+c2);
+        return most-x;
+    }
+    /** Its grip as it shows beside them at the hit's second {@code sec} (world): their left hip as the leap carries them. */
+    static Vec3d hoverGrip(StandClient.Cast c,float sec){return world(leapt(c,sec),c.yaw(),v(hoverFw(most(c)),HOVER_UP,HOVER_RT));}
+    /** The way it points, from its grip at {@code grip} to where its point will stop. */
+    static Vec3d aimFrom(StandClient.Cast c,Vec3d grip){return target(c).subtract(grip).normalize();}
+    /** The way it is thrust (from its grip as it is thrown to where its point stops). */
+    static Vec3d aim(StandClient.Cast c){return aimFrom(c,world(throwFrom(c),c.yaw(),v(hoverFw(most(c)),HOVER_UP,HOVER_RT)));}
+    /** Where its grip is when it stops (world): its length back along its way from where its point stopped. */
+    static Vec3d gripAtEnd(StandClient.Cast c){return target(c).subtract(aim(c).multiply(GIANT_LEN));}
+    /** Where it bursts when it stops: near its point (world). */
+    static Vec3d end(StandClient.Cast c){return gripAtEnd(c).add(aim(c).multiply(GIANT_LEN*BURST_ALONG));}
     /** Whether the giant sword flies: the server threw it, or the swing was not stopped short before it could. */
     static boolean flies(StandClient.Cast c){var told=IsosangClient.swords(c.id());return told!=null&&told[0]!=null||!IsosangClient.stopped(c.id());}
-    /** The giant sword as drawn: the middle of its grip, the way it points (grip to end), how strongly it shows and its size (1 its full size). */
+    /** The giant sword as drawn: the middle of its grip, the way it points (grip to point), how strongly it shows and its size (1 its full size). */
     record Giant(Vec3d grip,Vec3d dir,float alpha,double scale){
         Vec3d point(){return grip.add(dir.multiply(GIANT_LEN*scale));}
         Vec3d butt(){return grip.add(dir.multiply(SpiritSword.POMMEL*scale));}
         Vec3d at(double along){return grip.add(dir.multiply(along*scale));}
     }
-    /** Where its point is as it is thrown (its place beside them, tilted up ahead), from {@code from} facing {@code yaw}. */
-    static Vec3d thrownTip(Vec3d from,float yaw){return world(from,yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)).add(tilted(yaw).multiply(GIANT_LEN));}
-    static Vec3d tilted(float yaw){double tilt=Math.toRadians(HOVER_TILT);return Vec3d.fromPolar(0,yaw).multiply(Math.cos(tilt)).add(0,Math.sin(tilt),0);}
+    /** Where its point is as it is thrust (beside them, aimed at where it stops). */
+    static Vec3d thrownTip(StandClient.Cast c){return world(throwFrom(c),c.yaw(),v(hoverFw(most(c)),HOVER_UP,HOVER_RT)).add(aim(c).multiply(GIANT_LEN));}
     /**
      * The giant sword at the hit's second {@code t} (null before it shows, once it is gone, or if the hit stopped short
-     * before it was thrown): beside them as they leap, coming in; thrown, it flies on as it was, tilted up ahead, its point
-     * at the server's pace from where it was to where it stops (IsosangRules.giantHead), from their left in to the way they
-     * faced; a jolt back as it stops, then it hangs there, its grip low toward them and its point high (the user's videos:
-     * from behind its blade rises up the screen over its guard, from above it lies long along the way), bobbing a little,
-     * and fades.
+     * before it was thrown): beside them at their left as they leap, coming in, aimed at where it will stop (the way they
+     * faced, at the chest); thrust, it is driven point first along its own line, its point at the server's pace from where
+     * it was to where it stops (IsosangRules.giantHead); a jolt back as it stops, then it hangs there a moment, bobbing a
+     * little, and fades as the ink swallows it.
      */
     static Giant giant(StandClient.Cast c,float t){
         float show=Ease.smooth(t,GIANT_IN,GIANT_FULL);if(show<=0||!flies(c))return null;
-        float yaw=c.yaw(),at=blow(IsosangRules.THRUST,0),arr=arrive(c);
+        float at=blow(IsosangRules.THRUST,0),arr=arrive(c);
         float alpha=show*(1-Ease.smooth(t,arr+GIANT_HANG,arr+GIANT_HANG+GIANT_FADE));if(alpha<=0)return null;
-        Vec3d f=Vec3d.fromPolar(0,yaw),up0=tilted(yaw);double scale=.9+.1*show;
-        if(t<at)return new Giant(world(leapt(c,t),yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)),up0,alpha,scale);
-        Vec3d from=throwFrom(c);double most=most(c);
-        Vec3d grip0=world(from,yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)),grip1=gripAtEnd(c);
-        double head=IsosangRules.giantHead((t-at)*20,most),u=Math.max(0,Math.min(1,(head-IsosangRules.GIANT_START)/Math.max(1e-6,most-IsosangRules.GIANT_START)));
-        Vec3d grip=grip0.add(grip1.subtract(grip0).multiply(u));
-        grip=grip.subtract(f.multiply(.3*bump(t,arr,.05f))).add(0,.04*Math.sin(Math.max(0,t-arr)*7.5),0);
-        return new Giant(grip,up0,alpha,scale);
+        double scale=.9+.1*show;
+        if(t<at){Vec3d grip=hoverGrip(c,t);return new Giant(grip,aimFrom(c,grip),alpha,scale);}
+        Vec3d dir=aim(c),f=Vec3d.fromPolar(0,c.yaw());double most=most(c);
+        Vec3d grip0=world(throwFrom(c),c.yaw(),v(hoverFw(most),HOVER_UP,HOVER_RT));
+        // its point's way ahead is the server's (giantHead), along its own line
+        double head=IsosangRules.giantHead((t-at)*20,most),along=(head-IsosangRules.GIANT_START)/Math.max(1e-6,dir.dotProduct(f));
+        Vec3d grip=grip0.add(dir.multiply(Math.max(0,along)));
+        grip=grip.subtract(dir.multiply(.18*bump(t,arr,.05f))).add(0,.03*Math.sin(Math.max(0,t-arr)*7.5),0);
+        return new Giant(grip,dir,alpha,scale);
     }
     /** When (the hit's second) the giant sword reached {@code e}: as its point passed where they stood as it struck them (the server's word), else where they are. */
     static float struckAt(Fx c,LivingEntity e){
@@ -329,14 +353,14 @@ final class IsosangEmpower {
                 double p0=a0+(a1-a0)*k/n,p1=a0+(a1-a0)*(k+1)/n;float pass=at+(float)(IsosangRules.giantReaches((p0+p1)*.5,0)/20);
                 if(t<pass-.01f)break;
                 float erase=Ease.smooth(t,pass+.45f,pass+.85f);if(erase>=1)continue;
-                strip(floor(c,world(from,yaw,v(p0,0,0))),floor(c,world(from,yaw,v(p1,0,0))),right,1.1,3,13+k,erase,.3f+.7f*Ease.smooth(t,pass+.04f,pass+.32f),.8f*Ease.smooth(t,pass-.01f,pass+.04f));
+                strip(floor(c,world(from,yaw,v(p0,0,0))),floor(c,world(from,yaw,v(p1,0,0))),right,.75,3,13+k,erase,.3f+.7f*Ease.smooth(t,pass+.04f,pass+.32f),.8f*Ease.smooth(t,pass-.01f,pass+.04f));
             }
             // ink thrown down round where it stopped, a pool spreading under it (2.80.2)
             Vec3d tip=floor(c,end(c.cast));
-            splatAt(tip,2.1,yaw*Math.PI/180,1.5,77,t-arr-.03f,.85f);splatAt(floor(c,gripAtEnd(c.cast)),1.3,yaw*Math.PI/180+.6,1.4,79,t-arr-.06f,.75f);
+            splatAt(tip,1.4,yaw*Math.PI/180,1.5,77,t-arr-.03f,.85f);splatAt(floor(c,gripAtEnd(c.cast)),.9,yaw*Math.PI/180+.6,1.4,79,t-arr-.06f,.75f);
             for(int k=0;k<7;k++){
-                double ang=Ease.hash(k*7+5)*6.28,r=.8+2.2*Ease.hash(k*11+3);
-                splatAt(tip.add(Math.cos(ang)*r,0,Math.sin(ang)*r),.6+.5*Ease.hash(k*13),ang,1.3,k*17+5,t-arr-.05f-.04f*(float)Ease.hash(k*19),.8f);
+                double ang=Ease.hash(k*7+5)*6.28,r=.6+1.5*Ease.hash(k*11+3);
+                splatAt(tip.add(Math.cos(ang)*r,0,Math.sin(ang)*r),.45+.35*Ease.hash(k*13),ang,1.3,k*17+5,t-arr-.05f-.04f*(float)Ease.hash(k*19),.8f);
             }
             for(var e:thrustStruck(c)){float hit=struckAt(c,e);for(int k=0;k<3;k++){Vec3d p=floor(c,e.getLerpedPos(c.delta));splatAt(p.add((Ease.hash(k*23+e.getId())-.5)*1.2,0,(Ease.hash(k*29+e.getId())-.5)*1.2),.5,k,1.2,k*31+e.getId(),t-hit-.06f,.7f);}}
         }
@@ -349,26 +373,27 @@ final class IsosangEmpower {
     /**
      * The strokes of ink round where the giant sword stopped, in the frame of the ground under its burst facing the way it
      * flew, timed as if it stopped at the blow (0.15 s): one sweeping over it from the left, its plane standing up across
-     * its way and leaning back; one low round its right.
+     * its way and leaning back; one low round its right; two great crescents over the ground.
      */
     static final Arc[] STROKES={
-        arc(v(-.6,1.2,0),70,180,2.4,3.3,-150,-20,.155f,.22f,.62f,.9f,.17f,.32f,9,3,2),
-        arc(v(-1.2,.5,.3),15,90,2.0,2.8,20,150,.17f,.24f,.66f,.95f,.19f,.36f,9,9,2),
+        // (2.80.3: smaller, round a sword half the size, lying level at the chest)
+        arc(v(-.45,.95,0),70,180,1.7,2.35,-150,-20,.155f,.22f,.62f,.9f,.17f,.32f,9,3,2),
+        arc(v(-.9,.4,.22),15,90,1.45,2.05,20,150,.17f,.24f,.66f,.95f,.19f,.36f,9,9,2),
         // (2.80.2, the video: a great black crescent sweeping the ground round it from the left, and a lesser one at its right)
-        arc(v(0,.12,0),6,0,3.5,4.7,-210,15,.155f,.25f,.72f,1.02f,.16f,.3f,9,15,2),
-        arc(v(.6,.2,0),9,180,2.7,3.5,40,205,.17f,.26f,.74f,1.04f,.18f,.32f,9,45,2)};
+        arc(v(0,.1,0),6,0,2.6,3.5,-210,15,.155f,.25f,.72f,1.02f,.16f,.3f,9,15,2),
+        arc(v(.45,.15,0),9,180,2.0,2.6,40,205,.17f,.26f,.74f,1.04f,.18f,.32f,9,45,2)};
     /**
      * Ink swirling in round it as it fades (2.80.1, the video: dark strokes whirling round the sword a third of a second
-     * after it stopped, swallowing it): four strokes sweeping round it at even speed, low to high, each drying black at once.
+     * after it stopped, swallowing it): strokes sweeping round it at even speed, low to high, each drying black at once
+     * (2.80.3: round a sword half the size, lying level at the chest).
      */
     static final Arc[] VORTEX={
-        arc(v(0,2.0,0),12,40,1.7,2.8,-60,170,.43f,.53f,.56f,.74f,.43f,.47f,9,21,1),
-        arc(v(0,1.3,0),18,220,1.9,3.1,120,350,.46f,.56f,.6f,.78f,.46f,.5f,9,27,1),
-        arc(v(0,2.7,0),25,300,1.4,2.4,200,420,.49f,.58f,.62f,.8f,.49f,.53f,9,33,1),
-        arc(v(0,.7,0),8,120,2.1,3.3,10,250,.5f,.6f,.64f,.84f,.5f,.54f,9,39,1),
-        // (2.80.2: thicker, round the whole blade as it is swallowed)
-        arc(v(0,3.3,0),20,90,1.2,2.1,300,520,.52f,.61f,.66f,.84f,.52f,.56f,9,51,1),
-        arc(v(0,1.7,0),15,270,2.3,3.4,-20,200,.54f,.63f,.68f,.86f,.54f,.58f,9,57,1)};
+        arc(v(0,1.25,0),12,40,1.05,1.75,-60,170,.43f,.53f,.56f,.74f,.43f,.47f,9,21,1),
+        arc(v(0,.85,0),18,220,1.2,1.95,120,350,.46f,.56f,.6f,.78f,.46f,.5f,9,27,1),
+        arc(v(0,1.65,0),25,300,.9,1.5,200,420,.49f,.58f,.62f,.8f,.49f,.53f,9,33,1),
+        arc(v(0,.5,0),8,120,1.3,2.05,10,250,.5f,.6f,.64f,.84f,.5f,.54f,9,39,1),
+        arc(v(0,2.0,0),20,90,.75,1.3,300,520,.52f,.61f,.66f,.84f,.52f,.56f,9,51,1),
+        arc(v(0,1.05,0),15,270,1.45,2.1,-20,200,.54f,.63f,.68f,.86f,.54f,.58f,9,57,1)};
 
     /** The blended pass: the bubbles of ink the swords came out of, the ink edge under every burst. */
     static void alpha(Fx c,EffectMesh m){
@@ -550,17 +575,17 @@ final class IsosangEmpower {
     static void trail(Fx c,EffectMesh m,float t){
         float at=blow(IsosangRules.THRUST,0),arr=arrive(c.cast);if(t<at||t>=arr+.16f)return;
         var g=giant(c.cast,t);if(g==null)return;
-        Vec3d tip0=thrownTip(throwFrom(c.cast),c.cast.yaw()),head=g.point();
+        Vec3d tip0=thrownTip(c.cast),head=g.point();
         Vec3d tail=tip0.add(head.subtract(tip0).multiply(Ease.smooth(t,at+.02f,arr+.14f)));
         float a=1-Ease.smooth(t,arr+.02f,arr+.16f),fly=1-Ease.smooth(t,arr,arr+.05f);
-        m.softLine(tail,head,1.1,BLUE,.3f*a);m.softLine(tail,head,.45,AZURE,.6f*a);m.line(tail,head,.12,WHITE,.95f*a);
-        if(fly>0){m.softLine(g.grip(),head,.7,AZURE,.25f*fly);m.star(head,.5,WHITE,.8f*fly);m.softDisc(head,.5,PALE,.4f*fly);}
+        m.softLine(tail,head,.7,BLUE,.3f*a);m.softLine(tail,head,.3,AZURE,.6f*a);m.line(tail,head,.07,WHITE,.95f*a);
+        if(fly>0){m.softLine(g.grip(),head,.45,AZURE,.25f*fly);m.star(head,.38,WHITE,.85f*fly);m.softDisc(head,.32,PALE,.4f*fly);}
     }
     /** A see-through bubble round where it stopped (the video: a pale sphere's rim round the bursting blades), its rim facing the camera. */
     static void bubble(Fx c,EffectMesh m,float t){
         float arr=arrive(c.cast),a=Ease.smooth(t,arr+.08f,arr+.16f)*(1-Ease.smooth(t,arr+.4f,arr+.6f));if(a<=.01f)return;
         Vec3d o=end(c.cast).add(0,-.2,0);Vec3d[] uv=cameraPlane(m,o);if(uv==null)return;
-        double r=3.0+.6*Ease.out(t,arr+.08f,arr+.6f);float vis=seen(o,c.camera);
+        double r=1.9+.4*Ease.out(t,arr+.08f,arr+.6f);float vis=seen(o,c.camera);
         FxLib.ringPlane(m,o,uv[0],uv[1],r,.05,PALE,.35f*a*vis);FxLib.ringPlane(m,o,uv[0],uv[1],r*.98,.22,AZURE,.08f*a*vis);m.softDisc(o,r,AZURE,.05f*a*vis);
     }
     /**
@@ -572,15 +597,15 @@ final class IsosangEmpower {
         Vec3d tip=end(c.cast),f=Vec3d.fromPolar(0,c.cast.yaw()),right=new Vec3d(-f.z,0,f.x);
         float a=Ease.smooth(t,at-.01f,at+.015f),grow=Ease.out(t,at,at+.09f),fade=1-Ease.smooth(t,at+.14f,at+.4f);
         float flash=a*(1-Ease.smooth(t,at+.02f,at+.16f));
-        if(flash>0){m.softDisc(tip,1.6,BLUE,.3f*flash);m.softDisc(tip,.6,PALE,.35f*flash);m.star(tip,.9,WHITE,.6f*flash);}
+        if(flash>0){m.softDisc(tip,1.1,BLUE,.3f*flash);m.softDisc(tip,.42,PALE,.35f*flash);m.star(tip,.62,WHITE,.6f*flash);}
         for(int k=0;k<10;k++){
-            double ang=Math.PI*(.15+.7*Ease.hash(k*7+101))*(k%2==0?1:-1),back=-.15-.55*Ease.hash(k*11+102),len=(1.2+1.6*Ease.hash(k*13+103))*grow;
+            double ang=Math.PI*(.15+.7*Ease.hash(k*7+101))*(k%2==0?1:-1),back=-.15-.55*Ease.hash(k*11+102),len=(.8+1.05*Ease.hash(k*13+103))*grow;
             Vec3d dir=right.multiply(Math.cos(ang)).add(0,Math.sin(Math.abs(ang))*(k%3==0?-.5:1),0).add(f.multiply(back)).normalize();
-            Vec3d q=tip.add(dir.multiply(.2));int col=k%3==0?PALE:AZURE;
-            m.needle(q,q.add(dir.multiply(len)),.09,.4,col,.6f*a*fade);m.softLine(q,q.add(dir.multiply(len*.8)),.22,BLUE,.14f*a*fade);
+            Vec3d q=tip.add(dir.multiply(.14));int col=k%3==0?PALE:AZURE;
+            m.needle(q,q.add(dir.multiply(len)),.065,.4,col,.6f*a*fade);m.softLine(q,q.add(dir.multiply(len*.8)),.15,BLUE,.14f*a*fade);
         }
         Vec3d up=new Vec3d(0,1,0);
-        for(int r=0;r<2;r++){float r0=at+r*.05f;FxLib.ringPlane(m,tip,right,up,.3+2.6*Ease.out(t,r0,r0+.25f),.08,r==0?PALE:AZURE,.5f*a*(1-Ease.unit(t,r0,r0+.25f)));}
+        for(int r=0;r<2;r++){float r0=at+r*.05f;FxLib.ringPlane(m,tip,right,up,.22+1.7*Ease.out(t,r0,r0+.25f),.06,r==0?PALE:AZURE,.5f*a*(1-Ease.unit(t,r0,r0+.25f)));}
     }
     /** How white-hot the giant sword is at the hit's second {@code t}: as it shows beside them (the video: a blade of white light), cooling as it is thrown. */
     static float heat(float t){float at=blow(IsosangRules.THRUST,0);return .38f*(1-Ease.smooth(t,at-.02f,at+.12f));}
@@ -595,14 +620,14 @@ final class IsosangEmpower {
         SpiritSword.glow(m,g.grip(),g.dir(),g.scale(),g.alpha(),heat(t),ink(c.cast,t));
         Vec3d mid=g.at(GIANT_LEN*.45);
         // it comes out of a flash of light, sparks drawn in to its blade
-        float pop=FxLib.kick(t,GIANT_IN,.1f);if(pop>.01f){m.star(mid,1.0,WHITE,.8f*pop);m.softDisc(mid,1.5,PALE,.3f*pop);}
+        float pop=FxLib.kick(t,GIANT_IN,.1f);if(pop>.01f){m.star(mid,.62,WHITE,.8f*pop);m.softDisc(mid,.95,PALE,.3f*pop);}
         for(int k=0;k<14;k++){
             float t0=.06f*(float)Ease.hash(k*71+3),life=.1f,age=t-t0;if(age<0||age>=life)continue;
             Vec3d target=g.at(SpiritSword.BLADE_BASE+(GIANT_LEN-SpiritSword.BLADE_BASE)*Ease.hash(k*73));
-            Vec3d from=target.add(new Vec3d(Ease.hash(k*79)-.5,Ease.hash(k*83)-.3,Ease.hash(k*89)-.5).normalize().multiply(1.8+1.4*Ease.hash(k*97)));
+            Vec3d from=target.add(new Vec3d(Ease.hash(k*79)-.5,Ease.hash(k*83)-.3,Ease.hash(k*89)-.5).normalize().multiply(1.15+.85*Ease.hash(k*97)));
             float u=Ease.unit(t,t0,t0+life);u=u*u;
             Vec3d q=from.add(target.subtract(from).multiply(u)),tail=from.add(target.subtract(from).multiply(Math.max(0,u-.4f)));
-            m.line(tail,q,.045,k%2==0?WHITE:PALE,.9f*(1-.5f*u));m.softLine(tail,q,.2,AZURE,.3f);
+            m.line(tail,q,.032,k%2==0?WHITE:PALE,.9f*(1-.5f*u));m.softLine(tail,q,.14,AZURE,.3f);
         }
     }
     /** Lines of speed streaming past it as it flies (2.80.2): thin and pale, along its way. */
@@ -611,7 +636,7 @@ final class IsosangEmpower {
         float a=Ease.smooth(t,at,at+.02f)*(1-Ease.smooth(t,arr,arr+.12f));
         Vec3d dir=Vec3d.fromPolar(0,c.cast.yaw()),side=new Vec3d(-dir.z,0,dir.x),mid=g.at(GIANT_LEN*.5);
         for(int k=0;k<10;k++){
-            double off=(Ease.hash(k*53)-.5)*3.4,h=(Ease.hash(k*59)-.35)*2.8,len=2.4+2.8*Ease.hash(k*61),lag=1.8*Ease.hash(k*67);
+            double off=(Ease.hash(k*53)-.5)*2.2,h=(Ease.hash(k*59)-.4)*1.7,len=1.6+1.8*Ease.hash(k*61),lag=1.2*Ease.hash(k*67);
             Vec3d q=mid.add(side.multiply(off)).add(0,h,0).subtract(dir.multiply(lag));
             m.line(q.subtract(dir.multiply(len)),q,.03,k%3==0?WHITE:PALE,.6f*a);
         }
@@ -629,11 +654,11 @@ final class IsosangEmpower {
         for(int k=0;k<12;k++){
             double ang=Math.PI*(.1+.8*Ease.hash(k*7+1))*(k%2==0?1:-1),back=-.1-.55*Ease.hash(k*11+2),rise=(k%3==0?-.45:.8)*Math.sin(Math.abs(ang));
             Vec3d d=right.multiply(Math.cos(ang)).add(up.multiply(rise)).add(f.multiply(back)).normalize();
-            double len=(1.7+2.0*Ease.hash(k*13+3))*grow,drift=.45*Ease.out(t,at+.05f,at+.44f);
-            Vec3d base=p.add(d.multiply(.4+drift)),tip=base.add(d.multiply(len));
+            double len=(1.0+1.2*Ease.hash(k*13+3))*grow,drift=.3*Ease.out(t,at+.05f,at+.44f);
+            Vec3d base=p.add(d.multiply(.25+drift)),tip=base.add(d.multiply(len));
             Vec3d side=d.crossProduct(new Vec3d(Ease.hash(k*17)-.5,Ease.hash(k*19)-.5,Ease.hash(k*23)-.5));
             if(side.lengthSquared()<1e-4)side=d.crossProduct(up);
-            out.add(new Shard(base,tip,side.normalize(),.36+.26*Ease.hash(k*29),fade));
+            out.add(new Shard(base,tip,side.normalize(),.22+.16*Ease.hash(k*29),fade));
         }
         return out;
     }
@@ -660,7 +685,7 @@ final class IsosangEmpower {
             if(age<0||age>=life)continue;
             double th=Ease.hash(k*41)*6.283,ph=(Ease.hash(k*43)-.4)*1.1;
             Vec3d d=new Vec3d(Math.cos(th)*Math.cos(ph),Math.sin(ph),Math.sin(th)*Math.cos(ph)).normalize();
-            double r=1.2+7*Ease.out(age,0,life),len=.6+.9*Ease.hash(k*47);
+            double r=.8+4.5*Ease.out(age,0,life),len=.4+.6*Ease.hash(k*47);
             Vec3d a=p.add(d.multiply(r)),b=p.add(d.multiply(r+len));
             float alpha=(1-age/life)*Ease.smooth(age,0,.03f);
             m.line(a,b,.03,WHITE,.7f*alpha);m.softLine(a,b,.18,AZURE,.22f*alpha);
