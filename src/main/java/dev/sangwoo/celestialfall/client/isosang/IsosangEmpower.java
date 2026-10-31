@@ -131,14 +131,19 @@ final class IsosangEmpower {
 
     /**
      * The giant sword (2.80.1, the user's video of the empowered fourth at a tenth of the speed: a sword of blue light at
-     * their left as they leap back, its grip low behind them and its point high ahead; a frame on it flies point first,
-     * levelling, and stops some way ahead, hanging there grip toward them a moment as blue blades burst out of it and ink
-     * swirls round it and swallows it): its size (times the sword's model: some 5.4 blocks long) and its length from the
-     * grip to the point (blocks).
+     * their left as they leap back, its grip low behind them and its point high ahead; a frame on it flies point first and
+     * stops some way ahead, hanging there grip toward them a moment as blue blades burst out of it and ink swirls round it
+     * and swallows it). 2.80.2 (user request: "검 모델링 제대로 만들어 영상이랑 똑같은 검 모델로", "검 더 커야 돼", "키의 4배
+     * (약 7블록)", and the outline they drew round it): its own model, SpiritSword, some 7 blocks long; not the sword in
+     * their hand. Its length from the middle of its grip to its end (blocks).
      */
-    static final double GIANT=2.5,GIANT_LEN=29.74/16*GIANT;
-    /** Where it shows before it is thrown: its grip in their frame as they leap (forward, up, right of their feet), tilted up ahead this much (degrees). */
-    static final double HOVER_FW=-1.3,HOVER_UP=.55,HOVER_RT=-1.05,HOVER_TILT=30;
+    static final double GIANT_LEN=SpiritSword.TIP;
+    /**
+     * How it shows before it is thrown: tilted up ahead this much (degrees), its grip in their frame as they leap (forward,
+     * up, right of their feet): at their left, behind them, so its end is IsosangRules.GIANT_START ahead of them (where the
+     * server's way begins) and its pommel clear of the ground.
+     */
+    static final double HOVER_TILT=30,HOVER_FW=IsosangRules.GIANT_START-GIANT_LEN*Math.cos(Math.toRadians(HOVER_TILT)),HOVER_UP=.9,HOVER_RT=-1.4;
     /** Where the burst is when it stops: this far along its blade from the grip (its upper blade, round which the blades burst out in the video). */
     static final double BURST_ALONG=.6;
     /** When it shows (seconds into the hit); how long it hangs where it stopped before it fades, and the fading (seconds). */
@@ -185,10 +190,11 @@ final class IsosangEmpower {
     static Vec3d end(StandClient.Cast c){return gripAtEnd(c).add(tilted(c.yaw()).multiply(GIANT_LEN*BURST_ALONG));}
     /** Whether the giant sword flies: the server threw it, or the swing was not stopped short before it could. */
     static boolean flies(StandClient.Cast c){var told=IsosangClient.swords(c.id());return told!=null&&told[0]!=null||!IsosangClient.stopped(c.id());}
-    /** The giant sword as drawn: its grip, the way it points (grip to point), how strongly it shows and its size (times the sword's model). */
+    /** The giant sword as drawn: the middle of its grip, the way it points (grip to end), how strongly it shows and its size (1 its full size). */
     record Giant(Vec3d grip,Vec3d dir,float alpha,double scale){
-        Vec3d point(){return grip.add(dir.multiply(GIANT_LEN*scale/GIANT));}
-        Vec3d butt(){return grip.subtract(dir.multiply(5.1/16*scale));}
+        Vec3d point(){return grip.add(dir.multiply(GIANT_LEN*scale));}
+        Vec3d butt(){return grip.add(dir.multiply(SpiritSword.POMMEL*scale));}
+        Vec3d at(double along){return grip.add(dir.multiply(along*scale));}
     }
     /** Where its point is as it is thrown (its place beside them, tilted up ahead), from {@code from} facing {@code yaw}. */
     static Vec3d thrownTip(Vec3d from,float yaw){return world(from,yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)).add(tilted(yaw).multiply(GIANT_LEN));}
@@ -205,7 +211,7 @@ final class IsosangEmpower {
         float show=Ease.smooth(t,GIANT_IN,GIANT_FULL);if(show<=0||!flies(c))return null;
         float yaw=c.yaw(),at=blow(IsosangRules.THRUST,0),arr=arrive(c);
         float alpha=show*(1-Ease.smooth(t,arr+GIANT_HANG,arr+GIANT_HANG+GIANT_FADE));if(alpha<=0)return null;
-        Vec3d f=Vec3d.fromPolar(0,yaw),up0=tilted(yaw);double scale=GIANT*(.9+.1*show);
+        Vec3d f=Vec3d.fromPolar(0,yaw),up0=tilted(yaw);double scale=.9+.1*show;
         if(t<at)return new Giant(world(leapt(c,t),yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)),up0,alpha,scale);
         Vec3d from=throwFrom(c);double most=most(c);
         Vec3d grip0=world(from,yaw,v(HOVER_FW,HOVER_UP,HOVER_RT)),grip1=gripAtEnd(c);
@@ -325,8 +331,9 @@ final class IsosangEmpower {
                 float erase=Ease.smooth(t,pass+.45f,pass+.85f);if(erase>=1)continue;
                 strip(floor(c,world(from,yaw,v(p0,0,0))),floor(c,world(from,yaw,v(p1,0,0))),right,1.1,3,13+k,erase,.3f+.7f*Ease.smooth(t,pass+.04f,pass+.32f),.8f*Ease.smooth(t,pass-.01f,pass+.04f));
             }
-            // ink thrown down round where it stopped
+            // ink thrown down round where it stopped, a pool spreading under it (2.80.2)
             Vec3d tip=floor(c,end(c.cast));
+            splatAt(tip,2.1,yaw*Math.PI/180,1.5,77,t-arr-.03f,.85f);splatAt(floor(c,gripAtEnd(c.cast)),1.3,yaw*Math.PI/180+.6,1.4,79,t-arr-.06f,.75f);
             for(int k=0;k<7;k++){
                 double ang=Ease.hash(k*7+5)*6.28,r=.8+2.2*Ease.hash(k*11+3);
                 splatAt(tip.add(Math.cos(ang)*r,0,Math.sin(ang)*r),.6+.5*Ease.hash(k*13),ang,1.3,k*17+5,t-arr-.05f-.04f*(float)Ease.hash(k*19),.8f);
@@ -345,17 +352,23 @@ final class IsosangEmpower {
      * its way and leaning back; one low round its right.
      */
     static final Arc[] STROKES={
-        arc(v(-.6,1.0,0),70,180,2.0,2.7,-150,-20,.155f,.22f,.62f,.9f,.17f,.32f,9,3,2),
-        arc(v(-1.2,.4,.3),15,90,1.7,2.3,20,150,.17f,.24f,.66f,.95f,.19f,.36f,9,9,2)};
+        arc(v(-.6,1.2,0),70,180,2.4,3.3,-150,-20,.155f,.22f,.62f,.9f,.17f,.32f,9,3,2),
+        arc(v(-1.2,.5,.3),15,90,2.0,2.8,20,150,.17f,.24f,.66f,.95f,.19f,.36f,9,9,2),
+        // (2.80.2, the video: a great black crescent sweeping the ground round it from the left, and a lesser one at its right)
+        arc(v(0,.12,0),6,0,3.5,4.7,-210,15,.155f,.25f,.72f,1.02f,.16f,.3f,9,15,2),
+        arc(v(.6,.2,0),9,180,2.7,3.5,40,205,.17f,.26f,.74f,1.04f,.18f,.32f,9,45,2)};
     /**
      * Ink swirling in round it as it fades (2.80.1, the video: dark strokes whirling round the sword a third of a second
      * after it stopped, swallowing it): four strokes sweeping round it at even speed, low to high, each drying black at once.
      */
     static final Arc[] VORTEX={
-        arc(v(0,1.3,0),12,40,1.5,2.4,-60,170,.43f,.53f,.56f,.74f,.43f,.47f,9,21,1),
-        arc(v(0,.8,0),18,220,1.7,2.7,120,350,.46f,.56f,.6f,.78f,.46f,.5f,9,27,1),
-        arc(v(0,1.7,0),25,300,1.2,2.0,200,420,.49f,.58f,.62f,.8f,.49f,.53f,9,33,1),
-        arc(v(0,.5,0),8,120,1.9,2.9,10,250,.5f,.6f,.64f,.84f,.5f,.54f,9,39,1)};
+        arc(v(0,2.0,0),12,40,1.7,2.8,-60,170,.43f,.53f,.56f,.74f,.43f,.47f,9,21,1),
+        arc(v(0,1.3,0),18,220,1.9,3.1,120,350,.46f,.56f,.6f,.78f,.46f,.5f,9,27,1),
+        arc(v(0,2.7,0),25,300,1.4,2.4,200,420,.49f,.58f,.62f,.8f,.49f,.53f,9,33,1),
+        arc(v(0,.7,0),8,120,2.1,3.3,10,250,.5f,.6f,.64f,.84f,.5f,.54f,9,39,1),
+        // (2.80.2: thicker, round the whole blade as it is swallowed)
+        arc(v(0,3.3,0),20,90,1.2,2.1,300,520,.52f,.61f,.66f,.84f,.52f,.56f,9,51,1),
+        arc(v(0,1.7,0),15,270,2.3,3.4,-20,200,.54f,.63f,.68f,.86f,.54f,.58f,9,57,1)};
 
     /** The blended pass: the bubbles of ink the swords came out of, the ink edge under every burst. */
     static void alpha(Fx c,EffectMesh m){
@@ -369,7 +382,11 @@ final class IsosangEmpower {
             }
             for(int i=0;i<IsosangRules.SWORD_FROM.length;i++){var e=struckBy(c,i);var w=way(c,i);if(e==null||w==null)continue;float at=w.reach(w.end());burstInk(c,m,chestOf(c,e,at),at,.55,i*7);}
         }else if(combo==IsosangRules.THRUST){
+            // (2.80.2) the giant sword itself: its own model of blue light (SpiritSword)
+            var g=giant(c.cast,t);
+            if(g!=null)SpiritSword.body(m,c.camera,g.grip(),g.dir(),g.scale(),g.alpha(),heat(t),ink(c.cast,t));
             if(!flies(c.cast))return;
+            for(var sh:shards(c,t))shardBody(m,sh);
             int k=0;for(var e:thrustStruck(c)){float at=struckAt(c,e);burstInk(c,m,chestOf(c,e,at),at,.85,k++*13);}
         }
     }
@@ -398,7 +415,10 @@ final class IsosangEmpower {
             giantGlow(c,m,t);
             if(!flies(c.cast))return;
             trail(c,m,t);
+            var g=giant(c.cast,t);if(g!=null)speed(c,m,t,g);
             fan(c,m,t);
+            for(var sh:shards(c,t))shardGlow(m,sh);
+            streaks(c,m,t);
             bubble(c,m,t);
             int k=0;Vec3d f=Vec3d.fromPolar(0,c.cast.yaw());
             for(var e:thrustStruck(c)){float at=struckAt(c,e);burst(c,m,chestOf(c,e,at),f,at,.85,k++*13);}
@@ -534,47 +554,117 @@ final class IsosangEmpower {
         Vec3d tail=tip0.add(head.subtract(tip0).multiply(Ease.smooth(t,at+.02f,arr+.14f)));
         float a=1-Ease.smooth(t,arr+.02f,arr+.16f),fly=1-Ease.smooth(t,arr,arr+.05f);
         m.softLine(tail,head,1.1,BLUE,.3f*a);m.softLine(tail,head,.45,AZURE,.6f*a);m.line(tail,head,.12,WHITE,.95f*a);
-        if(fly>0){m.softLine(g.grip(),head,.9,AZURE,.35f*fly);m.star(head,.85,WHITE,fly);m.softDisc(head,.7,PALE,.5f*fly);}
+        if(fly>0){m.softLine(g.grip(),head,.7,AZURE,.25f*fly);m.star(head,.5,WHITE,.8f*fly);m.softDisc(head,.5,PALE,.4f*fly);}
     }
     /** A see-through bubble round where it stopped (the video: a pale sphere's rim round the bursting blades), its rim facing the camera. */
     static void bubble(Fx c,EffectMesh m,float t){
         float arr=arrive(c.cast),a=Ease.smooth(t,arr+.08f,arr+.16f)*(1-Ease.smooth(t,arr+.4f,arr+.6f));if(a<=.01f)return;
         Vec3d o=end(c.cast).add(0,-.2,0);Vec3d[] uv=cameraPlane(m,o);if(uv==null)return;
-        double r=2.3+.5*Ease.out(t,arr+.08f,arr+.6f);float vis=seen(o,c.camera);
-        FxLib.ringPlane(m,o,uv[0],uv[1],r,.05,PALE,.35f*a*vis);FxLib.ringPlane(m,o,uv[0],uv[1],r*.98,.22,AZURE,.08f*a*vis);
+        double r=3.0+.6*Ease.out(t,arr+.08f,arr+.6f);float vis=seen(o,c.camera);
+        FxLib.ringPlane(m,o,uv[0],uv[1],r,.05,PALE,.35f*a*vis);FxLib.ringPlane(m,o,uv[0],uv[1],r*.98,.22,AZURE,.08f*a*vis);m.softDisc(o,r,AZURE,.05f*a*vis);
     }
     /**
      * Where the giant sword stops (the videos): a flash and a fan of long thin blue blades bursting out across its way and
      * back from it, and quick rings.
      */
     static void fan(Fx c,EffectMesh m,float t){
-        float at=arrive(c.cast);if(t<at-.01f||t>=at+.55f)return;
+        float at=arrive(c.cast);if(t<at-.01f||t>=at+.4f)return;
         Vec3d tip=end(c.cast),f=Vec3d.fromPolar(0,c.cast.yaw()),right=new Vec3d(-f.z,0,f.x);
-        float a=Ease.smooth(t,at-.01f,at+.015f),grow=Ease.out(t,at,at+.09f),fade=1-Ease.smooth(t,at+.2f,at+.55f);
+        float a=Ease.smooth(t,at-.01f,at+.015f),grow=Ease.out(t,at,at+.09f),fade=1-Ease.smooth(t,at+.14f,at+.4f);
         float flash=a*(1-Ease.smooth(t,at+.02f,at+.16f));
-        if(flash>0){m.softDisc(tip,1.8,BLUE,.45f*flash);m.softDisc(tip,.8,PALE,.6f*flash);m.star(tip,1.5,WHITE,flash);}
-        for(int k=0;k<22;k++){
-            double ang=Math.PI*(.15+.7*Ease.hash(k*7+1))*(k%2==0?1:-1),back=-.15-.55*Ease.hash(k*11+2),len=(1.6+2.2*Ease.hash(k*13+3))*grow;
+        if(flash>0){m.softDisc(tip,1.6,BLUE,.3f*flash);m.softDisc(tip,.6,PALE,.35f*flash);m.star(tip,.9,WHITE,.6f*flash);}
+        for(int k=0;k<10;k++){
+            double ang=Math.PI*(.15+.7*Ease.hash(k*7+101))*(k%2==0?1:-1),back=-.15-.55*Ease.hash(k*11+102),len=(1.2+1.6*Ease.hash(k*13+103))*grow;
             Vec3d dir=right.multiply(Math.cos(ang)).add(0,Math.sin(Math.abs(ang))*(k%3==0?-.5:1),0).add(f.multiply(back)).normalize();
-            Vec3d q=tip.add(dir.multiply(.2));int col=k%4==0?WHITE:k%4==1?PALE:AZURE;
-            m.needle(q,q.add(dir.multiply(len)),.09,.4,col,.85f*a*fade);m.softLine(q,q.add(dir.multiply(len*.8)),.22,BLUE,.18f*a*fade);
+            Vec3d q=tip.add(dir.multiply(.2));int col=k%3==0?PALE:AZURE;
+            m.needle(q,q.add(dir.multiply(len)),.09,.4,col,.6f*a*fade);m.softLine(q,q.add(dir.multiply(len*.8)),.22,BLUE,.14f*a*fade);
         }
         Vec3d up=new Vec3d(0,1,0);
-        for(int r=0;r<2;r++){float r0=at+r*.05f;FxLib.ringPlane(m,tip,right,up,.3+2.6*Ease.out(t,r0,r0+.25f),.09,r==0?WHITE:AZURE,.7f*a*(1-Ease.unit(t,r0,r0+.25f)));}
+        for(int r=0;r<2;r++){float r0=at+r*.05f;FxLib.ringPlane(m,tip,right,up,.3+2.6*Ease.out(t,r0,r0+.25f),.08,r==0?PALE:AZURE,.5f*a*(1-Ease.unit(t,r0,r0+.25f)));}
     }
+    /** How white-hot the giant sword is at the hit's second {@code t}: as it shows beside them (the video: a blade of white light), cooling as it is thrown. */
+    static float heat(float t){float at=blow(IsosangRules.THRUST,0);return .38f*(1-Ease.smooth(t,at-.02f,at+.12f));}
+    /** How far the ink has swallowed it: from just before it fades, as the ink swirls in round it. */
+    static float ink(StandClient.Cast c,float t){float arr=arrive(c);return Ease.smooth(t,arr+GIANT_HANG-.06f,arr+GIANT_HANG+GIANT_FADE);}
     /**
-     * The giant sword's glow (round the model {@link #models} draws), white-hot as it shows beside them (the video: a
-     * blade of white light) and blue once thrown.
+     * The giant sword's light (2.80.2): its own white-hot edges and glow (SpiritSword.glow), the flash it shows out of and
+     * the light gathering into it as it does.
      */
     static void giantGlow(Fx c,EffectMesh m,float t){
         var g=giant(c.cast,t);if(g==null)return;
-        float a=g.alpha(),hot=1-Ease.smooth(t,blow(IsosangRules.THRUST,0),blow(IsosangRules.THRUST,0)+.06f);
-        Vec3d butt=g.butt(),tip=g.point(),mid=g.grip().add(g.dir().multiply(GIANT_LEN*.35));
-        m.softLine(butt,tip,1.5,BLUE,.28f*a);m.softLine(butt,tip,.65,AZURE,.42f*a);m.line(butt,tip,.07,PALE,.55f*a);
-        m.softDisc(mid,1.0,AZURE,.22f*a);
-        if(hot>0){m.softLine(butt,tip,.55,PALE,.45f*a*hot);m.softLine(butt,tip,.22,WHITE,.6f*a*hot);}
-        // it comes out of a flash of light
-        float pop=FxLib.kick(t,GIANT_IN,.12f);if(pop>.01f){m.star(mid,1.3,WHITE,pop);m.softDisc(mid,1.4,PALE,.45f*pop);}
+        SpiritSword.glow(m,g.grip(),g.dir(),g.scale(),g.alpha(),heat(t),ink(c.cast,t));
+        Vec3d mid=g.at(GIANT_LEN*.45);
+        // it comes out of a flash of light, sparks drawn in to its blade
+        float pop=FxLib.kick(t,GIANT_IN,.1f);if(pop>.01f){m.star(mid,1.0,WHITE,.8f*pop);m.softDisc(mid,1.5,PALE,.3f*pop);}
+        for(int k=0;k<14;k++){
+            float t0=.06f*(float)Ease.hash(k*71+3),life=.1f,age=t-t0;if(age<0||age>=life)continue;
+            Vec3d target=g.at(SpiritSword.BLADE_BASE+(GIANT_LEN-SpiritSword.BLADE_BASE)*Ease.hash(k*73));
+            Vec3d from=target.add(new Vec3d(Ease.hash(k*79)-.5,Ease.hash(k*83)-.3,Ease.hash(k*89)-.5).normalize().multiply(1.8+1.4*Ease.hash(k*97)));
+            float u=Ease.unit(t,t0,t0+life);u=u*u;
+            Vec3d q=from.add(target.subtract(from).multiply(u)),tail=from.add(target.subtract(from).multiply(Math.max(0,u-.4f)));
+            m.line(tail,q,.045,k%2==0?WHITE:PALE,.9f*(1-.5f*u));m.softLine(tail,q,.2,AZURE,.3f);
+        }
+    }
+    /** Lines of speed streaming past it as it flies (2.80.2): thin and pale, along its way. */
+    static void speed(Fx c,EffectMesh m,float t,Giant g){
+        float at=blow(IsosangRules.THRUST,0),arr=arrive(c.cast);if(t<at||t>=arr+.12f)return;
+        float a=Ease.smooth(t,at,at+.02f)*(1-Ease.smooth(t,arr,arr+.12f));
+        Vec3d dir=Vec3d.fromPolar(0,c.cast.yaw()),side=new Vec3d(-dir.z,0,dir.x),mid=g.at(GIANT_LEN*.5);
+        for(int k=0;k<10;k++){
+            double off=(Ease.hash(k*53)-.5)*3.4,h=(Ease.hash(k*59)-.35)*2.8,len=2.4+2.8*Ease.hash(k*61),lag=1.8*Ease.hash(k*67);
+            Vec3d q=mid.add(side.multiply(off)).add(0,h,0).subtract(dir.multiply(lag));
+            m.line(q.subtract(dir.multiply(len)),q,.03,k%3==0?WHITE:PALE,.6f*a);
+        }
+    }
+    /**
+     * A blue crystal blade burst out of the giant sword where it stops (2.80.2, the video: long flat blades fanning out
+     * across its way and back from it, see-through, white along their ridges): a flat diamond fixed in the world, from its
+     * base to its tip, {@code width} across in the plane of {@code side}.
+     */
+    record Shard(Vec3d base,Vec3d tip,Vec3d side,double width,float alpha){}
+    static java.util.List<Shard> shards(Fx c,float t){
+        var out=new java.util.ArrayList<Shard>();float at=arrive(c.cast);if(t<at-.01f||t>=at+.44f)return out;
+        Vec3d p=end(c.cast),f=Vec3d.fromPolar(0,c.cast.yaw()),right=new Vec3d(-f.z,0,f.x),up=new Vec3d(0,1,0);
+        float grow=Ease.out(t,at,at+.07f),fade=Ease.smooth(t,at-.01f,at+.01f)*(1-Ease.smooth(t,at+.16f,at+.44f));
+        for(int k=0;k<12;k++){
+            double ang=Math.PI*(.1+.8*Ease.hash(k*7+1))*(k%2==0?1:-1),back=-.1-.55*Ease.hash(k*11+2),rise=(k%3==0?-.45:.8)*Math.sin(Math.abs(ang));
+            Vec3d d=right.multiply(Math.cos(ang)).add(up.multiply(rise)).add(f.multiply(back)).normalize();
+            double len=(1.7+2.0*Ease.hash(k*13+3))*grow,drift=.45*Ease.out(t,at+.05f,at+.44f);
+            Vec3d base=p.add(d.multiply(.4+drift)),tip=base.add(d.multiply(len));
+            Vec3d side=d.crossProduct(new Vec3d(Ease.hash(k*17)-.5,Ease.hash(k*19)-.5,Ease.hash(k*23)-.5));
+            if(side.lengthSquared()<1e-4)side=d.crossProduct(up);
+            out.add(new Shard(base,tip,side.normalize(),.36+.26*Ease.hash(k*29),fade));
+        }
+        return out;
+    }
+    /** A crystal blade's faces (the blended pass): light blue, see-through, a little darker toward its base. */
+    static void shardBody(EffectMesh m,Shard s){
+        if(s.alpha()<=.01f||s.tip().distanceTo(s.base())<.05)return;
+        Vec3d mid=s.base().add(s.tip().subtract(s.base()).multiply(.32)),l=mid.add(s.side().multiply(s.width()*.5)),r=mid.subtract(s.side().multiply(s.width()*.5));
+        m.triangle(s.base(),l,s.tip(),0x7cccff,.62f*s.alpha());m.triangle(s.base(),s.tip(),r,0x4f9ff0,.62f*s.alpha());
+    }
+    /** A crystal blade's light: white along its ridge, blue along its edges, a glow round it. */
+    static void shardGlow(EffectMesh m,Shard s){
+        if(s.alpha()<=.01f||s.tip().distanceTo(s.base())<.05)return;
+        Vec3d mid=s.base().add(s.tip().subtract(s.base()).multiply(.32)),l=mid.add(s.side().multiply(s.width()*.5)),r=mid.subtract(s.side().multiply(s.width()*.5));
+        float a=s.alpha();
+        m.line(s.base(),s.tip(),.028,WHITE,.55f*a);m.softLine(s.base(),s.tip(),.45,BLUE,.16f*a);
+        m.line(s.base(),l,.024,PALE,.5f*a);m.line(l,s.tip(),.024,PALE,.5f*a);m.line(s.base(),r,.024,AZURE,.45f*a);m.line(r,s.tip(),.024,AZURE,.45f*a);
+    }
+    /** White streaks shot out from where it stops (2.80.2, the video: thin white lines flying out a moment after the blades). */
+    static void streaks(Fx c,EffectMesh m,float t){
+        float at=arrive(c.cast);if(t<at||t>=at+.75f)return;
+        Vec3d p=end(c.cast);
+        for(int k=0;k<12;k++){
+            float t0=at+.02f+.14f*(float)Ease.hash(k*31+7),life=.28f+.2f*(float)Ease.hash(k*37),age=t-t0;
+            if(age<0||age>=life)continue;
+            double th=Ease.hash(k*41)*6.283,ph=(Ease.hash(k*43)-.4)*1.1;
+            Vec3d d=new Vec3d(Math.cos(th)*Math.cos(ph),Math.sin(ph),Math.sin(th)*Math.cos(ph)).normalize();
+            double r=1.2+7*Ease.out(age,0,life),len=.6+.9*Ease.hash(k*47);
+            Vec3d a=p.add(d.multiply(r)),b=p.add(d.multiply(r+len));
+            float alpha=(1-age/life)*Ease.smooth(age,0,.03f);
+            m.line(a,b,.03,WHITE,.7f*alpha);m.softLine(a,b,.18,AZURE,.22f*alpha);
+        }
     }
     /**
      * Whom the giant sword struck (the server's word, told tick by tick as it strikes), and until it has flown its way
@@ -654,9 +744,8 @@ final class IsosangEmpower {
     private static IsosangSwordRenderer.Spectral spectral;
     private static ItemStack stack;
     /**
-     * The swords of light as models (AFTER_ENTITIES): the empowered first's thrown swords flying, and the empowered
-     * fourth's giant sword beside them, flying and hanging where it stopped, its grip toward them; drawn see-through, lit
-     * through.
+     * The swords of light as models (AFTER_ENTITIES): the empowered first's thrown swords flying, drawn see-through, lit
+     * through. (The empowered fourth's giant sword is its own model in the effect layer since 2.80.2: SpiritSword.)
      */
     static void models(WorldRenderContext ctx){
         var mc=MinecraftClient.getInstance();if(mc.world==null||IsosangClient.SWINGS.isEmpty())return;
@@ -664,10 +753,7 @@ final class IsosangEmpower {
         var camera=ctx.camera().getPos();var matrices=ctx.matrixStack();var buffers=ctx.consumers();if(buffers==null)return;float delta=ctx.tickDelta();
         for(var c:IsosangClient.SWINGS.values()){
             float t=c.age(delta)/20f;
-            if(c.combo()==IsosangRules.THRUST){
-                var g=giant(c,t);if(g==null||g.alpha()<=.01f)continue;
-                draw(matrices,buffers,camera,g.grip(),g.dir(),g.scale(),g.alpha(),0xffffff);
-            }else if(c.combo()==IsosangRules.THROWS){
+            if(c.combo()==IsosangRules.THROWS){
                 var told=IsosangClient.swords(c.id());if(told==null)continue;
                 for(var s:told){
                     if(s==null)continue;
