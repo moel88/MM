@@ -33,7 +33,9 @@ def main():
     wav = (raw.astype(np.float64) / (32768.0 if raw.dtype == np.int16 else 1.0))
     wav = wav.mean(1) if wav.ndim > 1 else wav
     assert rate == SR, rate
-    folder = os.path.join(audio, entry)
+    # (2.80.0) MUX_SOUND_ENTRY: the sound run's entry to take the sound from, if not the film's own (another entry of the
+    # same list whose hits began on the same ticks, when this one's sound run stalled)
+    folder = os.path.join(audio, os.environ.get('MUX_SOUND_ENTRY', entry))
     ticks = rows(os.path.join(folder, 'ticks.csv'))
     marker = int(ticks[0]['nanos'])
     tick_nanos = {round(float(r['clock'])): int(r['nanos']) for r in ticks[1:]}
@@ -79,6 +81,11 @@ def main():
             delays.append(pos - sample(nanos))
         print(line + (f', {(pos - sample(nanos)) / SR * 1000:+.0f} ms from it' if nanos is not None else ''))
     delay = float(np.median(delays)) if delays else 0.0
+    # (2.80.0) MUX_DELAY_MS: a delay given instead, when the sound run stalled on some hits (the first time a model is
+    # drawn, the sound of the hit then starts late) and the median is not the game's usual
+    if os.environ.get('MUX_DELAY_MS'):
+        print(f'  the sound run\'s median {delay / SR * 1000:+.0f} ms; {os.environ["MUX_DELAY_MS"]} ms given instead')
+        delay = float(os.environ['MUX_DELAY_MS']) / 1000 * SR
     print(f'  each hit\'s sound goes {delay / SR * 1000:+.0f} ms after its hit began in the film run')
     duration = float(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'csv=p=0', film],
                                     capture_output=True, check=True, text=True).stdout.strip())
