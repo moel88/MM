@@ -495,7 +495,9 @@ public final class IsosangSlash implements Fx.Skill {
         arc(v(.2,1.5,-.2),32,90,1.5,2.8,100,-150,.345f,.395f,.72f,.86f,.55f,.75f,9,5,2),
         arc(v(.2,1.55,.2),30,-60,1.6,3.0,150,-100,.54f,.58f,.76f,.88f,.68f,.82f,11,11,2),
         arc(v(.4,1.1,0),10,-90,2.0,3.6,-120,150,.84f,.9f,1.2f,1.38f,1.05f,1.25f,9,9,2)};
-    static final Arc[] H4_ARCS={arc(v(1.0,.72,0),0,0,1.5,2.9,125,-115,.675f,.715f,.88f,1.04f,.69f,.83f,0,7,0)};
+    // (2.79.2 draft, the user's videos: the low cut that throws the slash shows only as it is swung; the thrown slash itself
+    // carries on, and no second arc lingers round her)
+    static final Arc[] H4_ARCS={arc(v(1.0,.72,0),0,0,1.5,2.9,125,-115,.675f,.715f,.72f,.78f,.7f,.76f,0,7,0)};
     static Arc[] arcs(int combo){return switch(combo){case 1->H1_ARCS;case 2->H2_ARCS;case 3->H3_ARCS;default->H4_ARCS;};}
     /**
      * The slash blow {@code i} of hit {@code combo} lands with (an index into {@link #arcs}). Hit 3 (2.79.2): one blow on

@@ -343,7 +343,9 @@ class IsosangSlashTest {
                     else{light++;assertTrue(d<inkAt-.05,"hit "+combo+": a star in the light");}
                 }
             }
-            assertTrue(light>0&&night>0,"hit "+combo+" has stars in its light and in its ink: "+light+", "+night);
+            // (2.79.2 draft: hit 4's low cut shows only as it is swung, gone before it could turn to ink, so it has no night stars)
+            boolean quick=s.eat1()-s.t1()<.1f;
+            assertTrue(light>0&&(night>0||quick),"hit "+combo+" has stars in its light and in its ink: "+light+", "+night);
         }
         for(int seed=0;seed<50;seed++)for(float t=0;t<2;t+=1/60f){
             float w=IsosangSlash.twinkle(t,seed);assertTrue(w>=.3f-1e-6&&w<=1+1e-6);
