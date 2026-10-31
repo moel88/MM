@@ -192,16 +192,15 @@ public final class IsosangSlash implements Fx.Skill {
         k(.17,H1_COIL),
         k(.19,H1_LOAD),
         // crouched, turning into the spin, the sword brought up on end (the video's 0.85 s)
-        k(.23f,cut1(25,70,-.32)),
+        k(.23f,cut1(-40,60,-.32)),
         // the spin cut (2.79.0), fast out of the coil and slowing, the blade following the leaning plane: high at the
         // front-right, down behind the right, by the ground behind the left, and rising up across the front (the blow)
         // to end high at the front-right (the yaw is 20° left of the arc's angle: the blade leads the body by 20°)
-        k(.25,cut1(-10,43,-.3),Anim.Ease.IN),
-        k(.265f,cut1(-152,-8,-.31),Anim.Ease.LINEAR),
-        k(.272f,cut1(-206,-15,-.32),Anim.Ease.LINEAR),
-        k(.28f,cut1(-259,-8,-.32),Anim.Ease.LINEAR),
-        k(blow(1,0),cut1(-350,48,-.3),Anim.Ease.LINEAR),
-        k(.32f,cut1(-380,55,-.25),Anim.Ease.OUT),
+        k(.25,cut1(-115,17,-.3),Anim.Ease.IN),
+        k(.263f,cut1(-205,-15,-.32),Anim.Ease.LINEAR),
+        k(.28f,cut1(-297,18,-.31),Anim.Ease.LINEAR),
+        k(blow(1,0),cut1(-363,42,-.3),Anim.Ease.LINEAR),
+        k(.32f,cut1(-385,60,-.25),Anim.Ease.OUT),
         k(.38f,H1_HOLD),
         k(step(1),H1_HOLD),
         k(.72,H1_LOWER),
@@ -481,7 +480,7 @@ public final class IsosangSlash implements Fx.Skill {
      * itself: {@link #wave}).
      */
     static final Arc[] H1_ARCS={
-        arc(v(.2,2.0,0),27,-135,2.9,4.3,30,400,.25f,.32f,.72f,.86f,.4f,.62f,0,1,2)};
+        arc(v(.2,1.9,0),27,-135,2.2,4.1,135,405,.25f,.32f,.74f,.9f,.27f,.45f,8,1,2)};
     static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.12f,.36f,1,3,1)};
     static final Arc[] H3_ARCS={
         arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
@@ -534,6 +533,8 @@ public final class IsosangSlash implements Fx.Skill {
     static double profile(int style,double x){
         return switch(style){
             case 0->{double h=Ease.smooth((float)x,.86f,1);yield (.08+.92*Math.pow(x,1.3))*(1-h*h);}
+            // hit 1's great crescent (2.79.1): thin only where it began, thick from its middle to its rounded head
+            case 8->{double h=Ease.smooth((float)x,.86f,1);yield (.06+.94*Ease.smooth((float)x,0,.5f))*(1-h*h);}
             case 2->Math.pow(Math.max(Math.sin(Math.PI*x),0),.5);
             case 3->Math.pow(Math.max(Math.sin(Math.PI*x),0),.36);
             case 6->Math.pow(Math.max(Math.sin(Math.PI*Math.pow(x,.62)),0),.55);
@@ -1495,7 +1496,7 @@ public final class IsosangSlash implements Fx.Skill {
         // the whole swing is quick (the cuts, the spin, the lunge, the flight and the blade's moves between them): the
         // afterglow is cut short throughout, shortest in the spin, else the blade's bright line leaves a fan of copies of
         // itself round them like spokes (2.77.4 cut it for the cuts alone; 2.77.5 for the recoveries between them too)
-        if(t<IsosangRules.LENGTH[combo]/20f)f.afterglow(combo==2&&t>=.06f&&t<.24f?.25f:combo==1&&t>=.14f&&t<.34f?.1f:.3f);// (2.79.0: hit 1's quick wind into the spin)
+        if(t<IsosangRules.LENGTH[combo]/20f)f.afterglow(combo==2&&t>=.06f&&t<.24f?.25f:combo==1&&t<.34f?.1f:.3f);// (2.79.0-1: hit 1's quick wind into the spin leaves no fan of blade copies)
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){

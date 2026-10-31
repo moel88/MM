@@ -354,7 +354,9 @@ void main(){
    // 0 a spin cut (2.78.0, the video from above: a thin line at its tail, where the blade began, thickening all the way to
    // its rounded head), 1 the ring, 2 the beam, 3 the thrown slash, 6 the thin cut rising back, 7 a thin bright arc
    float hd=smoothstep(.86,1.0,x);
-   float w=style<.5?(.08+.92*pow(x,1.3))*(1.0-hd*hd)
+   // 8 hit 1's great crescent (2.79.1, the user's video): thin only where it began, thick from its middle to its head
+   float w=(style>7.5&&style<8.5)?(.06+.94*smoothstep(0.0,.5,x))*(1.0-hd*hd)
+          :style<.5?(.08+.92*pow(x,1.3))*(1.0-hd*hd)
           :style<1.5?.9+.1*sin(x*31.0+sd)
           :style<2.5?pow(max(sin(3.14159*x),0.0),.5)
           :style<3.5?pow(max(sin(3.14159*x),0.0),.36)

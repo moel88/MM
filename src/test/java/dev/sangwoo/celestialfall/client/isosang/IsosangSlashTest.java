@@ -100,8 +100,8 @@ class IsosangSlashTest {
         double[] a=tip(1,.05f);assertTrue(a[1]<1.6&&a[2]<-.3,"hit 1 begins with the sword out low at the left: "+s(a));
         // (2.79.0, the videos from above and behind: one cut, on a plane low behind the left and high ahead to the right,
         // rising from the ground up across the front to end high at the front-right)
-        assertTrue(turned(1,.25f,.32f,.36)>300,"hit 1's cut goes round them to the right: "+turned(1,.25f,.32f,.36));
-        a=tip(1,.272f);double[] b=tip(1,.32f);
+        assertTrue(turned(1,.25f,.32f,.36)>240,"hit 1's cut goes round them to the right: "+turned(1,.25f,.32f,.36));
+        a=tip(1,.263f);double[] b=tip(1,.32f);
         assertTrue(a[1]<.9&&a[0]<0&&a[2]<0,"hit 1 comes down by the ground behind the left: "+s(a));
         assertTrue(b[1]>2.3&&b[0]>.5&&b[2]>.2&&b[1]>a[1]+1.6,"and rises across the front to end high at the front-right: "+s(b));
         b=tip(1,.55f);assertTrue(b[1]>2.4&&b[2]>.8,"hit 1 holds the sword up at the right: "+s(b));
@@ -213,14 +213,16 @@ class IsosangSlashTest {
         assertTrue(step<.75f,"the beam pops in a single frame: "+step);
         // the spin cut wraps round them: more than three quarters of a turn, from the front-left to the back-left, fast
         // at first (its head past the front within a frame of the blow)
-        var g=IsosangSlash.H1_ARCS[0];assertTrue(g.to()-g.from()>340,"hit 1's crescent wraps round: "+(g.to()-g.from()));
+        var g=IsosangSlash.H1_ARCS[0];assertTrue(g.to()-g.from()>250&&g.to()-g.from()<300,"hit 1's crescent: three quarters round, open at the right (the video): "+(g.to()-g.from()));
         assertEquals(1,IsosangSlash.H1_ARCS.length,"one cut");
-        assertTrue(g.from()>=0&&g.from()<=60&&g.to()>=380&&g.to()<=420,"from the front-right round to the front-right: "+g.from()+".."+g.to());
+        assertTrue(g.from()>=100&&g.from()<=160&&g.to()>=380&&g.to()<=420,"from the back-right round to the front-right: "+g.from()+".."+g.to());
         assertTrue(IsosangSlash.point(g,45,g.outer()).y>IsosangSlash.point(g,225,g.outer()).y+2.5,"steep: high at the front-right, low behind the left");
         assertTrue(IsosangSlash.point(g,225,(g.inner()+g.outer())/2).y<.5&&IsosangSlash.point(g,225,(g.inner()+g.outer())/2).y>-.2,"by the ground behind the left");
         assertEquals(2,g.pace());
         // its band is thin at its tail and thick at its head
         assertTrue(IsosangSlash.profile(0,.05)<.15&&IsosangSlash.profile(0,.8)>.7&&IsosangSlash.profile(0,.8)>IsosangSlash.profile(0,.4),"thin tail, thick head");
+        // hit 1's great crescent (2.79.1): thin only where it began, thick through its second half
+        assertEquals(8,g.style());assertTrue(IsosangSlash.profile(8,.05)<.15&&IsosangSlash.profile(8,.5)>.95&&IsosangSlash.profile(8,.8)>.95,"thick from the middle on");
         // the ring goes all the way round
         var r=IsosangSlash.H2_ARCS[0];assertEquals(360,Math.abs(r.to()-r.from()),1e-6);
         // hit 3 (2.78.0): four rings most of the way round them, each ending behind the left (the first behind the right),
