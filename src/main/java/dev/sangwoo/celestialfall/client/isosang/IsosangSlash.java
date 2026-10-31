@@ -500,8 +500,8 @@ public final class IsosangSlash implements Fx.Skill {
     // back-right, thickest behind on the left; then the cut in front of them, low over the ground, from behind round the
     // right, across the front to the left, thickest ahead, white while fresh (style 10). Both anticlockwise seen from above.
     static final Arc[] H2_ARCS={
-        arc(v(0,.7,0),10,150,2.25,3.05,60,-215,.08f,.12f,.36f,.52f,.2f,.36f,9,3,2),
-        arc(v(.3,.15,0),0,0,1.8,2.6,165,-110,.235f,.28f,.52f,.7f,.42f,.56f,10,5,2)};
+        arc(v(0,.7,0),10,150,2.0,3.05,60,-215,.08f,.12f,.36f,.52f,.2f,.36f,9,3,2),
+        arc(v(.3,.15,0),0,0,1.8,2.6,165,-110,.235f,.28f,.52f,.7f,.3f,.5f,10,5,2)};
     static final Arc[] H3_ARCS={
         arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
         arc(v(.4,1.3,.3),12,-90,2.0,2.8,-30,250,.49f,.56f,.78f,1.0f,.54f,.7f,0,5,2),
