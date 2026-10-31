@@ -608,7 +608,7 @@ final class IsosangEmpower {
         for(int r=0;r<2;r++){float r0=at+r*.05f;FxLib.ringPlane(m,tip,right,up,.22+1.7*Ease.out(t,r0,r0+.25f),.06,r==0?PALE:AZURE,.5f*a*(1-Ease.unit(t,r0,r0+.25f)));}
     }
     /** How white-hot the giant sword is at the hit's second {@code t}: as it shows beside them (the video: a blade of white light), cooling as it is thrown. */
-    static float heat(float t){float at=blow(IsosangRules.THRUST,0);return .38f*(1-Ease.smooth(t,at-.02f,at+.12f));}
+    static float heat(float t){float at=blow(IsosangRules.THRUST,0);return .26f*(1-Ease.smooth(t,at-.02f,at+.12f));}
     /** How far the ink has swallowed it: from just before it fades, as the ink swirls in round it. */
     static float ink(StandClient.Cast c,float t){float arr=arrive(c);return Ease.smooth(t,arr+GIANT_HANG-.06f,arr+GIANT_HANG+GIANT_FADE);}
     /**
@@ -620,14 +620,14 @@ final class IsosangEmpower {
         SpiritSword.glow(m,g.grip(),g.dir(),g.scale(),g.alpha(),heat(t),ink(c.cast,t));
         Vec3d mid=g.at(GIANT_LEN*.45);
         // it comes out of a flash of light, sparks drawn in to its blade
-        float pop=FxLib.kick(t,GIANT_IN,.1f);if(pop>.01f){m.star(mid,.62,WHITE,.8f*pop);m.softDisc(mid,.95,PALE,.3f*pop);}
-        for(int k=0;k<14;k++){
+        float pop=FxLib.kick(t,GIANT_IN,.1f);if(pop>.01f){m.star(mid,.45,WHITE,.55f*pop);m.softDisc(mid,.7,PALE,.22f*pop);}
+        for(int k=0;k<10;k++){
             float t0=.06f*(float)Ease.hash(k*71+3),life=.1f,age=t-t0;if(age<0||age>=life)continue;
             Vec3d target=g.at(SpiritSword.BLADE_BASE+(GIANT_LEN-SpiritSword.BLADE_BASE)*Ease.hash(k*73));
             Vec3d from=target.add(new Vec3d(Ease.hash(k*79)-.5,Ease.hash(k*83)-.3,Ease.hash(k*89)-.5).normalize().multiply(1.15+.85*Ease.hash(k*97)));
             float u=Ease.unit(t,t0,t0+life);u=u*u;
             Vec3d q=from.add(target.subtract(from).multiply(u)),tail=from.add(target.subtract(from).multiply(Math.max(0,u-.4f)));
-            m.line(tail,q,.032,k%2==0?WHITE:PALE,.9f*(1-.5f*u));m.softLine(tail,q,.14,AZURE,.3f);
+            m.line(tail,q,.028,k%2==0?WHITE:PALE,.65f*(1-.5f*u));m.softLine(tail,q,.1,AZURE,.2f);
         }
     }
     /** Lines of speed streaming past it as it flies (2.80.2): thin and pale, along its way. */

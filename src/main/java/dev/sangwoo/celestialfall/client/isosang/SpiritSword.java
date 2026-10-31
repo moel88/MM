@@ -201,7 +201,7 @@ final class SpiritSword {
             if(facing<=0)continue;
             double lit=.72+.28*Math.max(0,n.dotProduct(LIGHT)),rim=1-Math.min(1,facing/Math.max(1e-6,view.length()));
             int col=scale(rgb(face.role()),lit);
-            col=mix(col,0xffffff,.28*rim*rim+.72*heat);
+            col=mix(col,0xffffff,.22*rim*rim+.65*heat);
             col=mix(col,0x0b1338,.82*ink);
             float a=alpha*opacity(face.role())*(1-.25f*ink);
             if(w.length==3)m.triangle(w[0],w[1],w[2],col,a);else m.quad(w[0],w[1],w[2],w[3],col,a);
@@ -220,7 +220,7 @@ final class SpiritSword {
             else m.line(p,q,.014*scale,0xdff6ff,.34f*a);
         }
         Vec3d base=world(grip,f,scale,new Vec3d(0,BLADE_BASE,0)),end=world(grip,f,scale,new Vec3d(0,TIP,0)),butt=world(grip,f,scale,new Vec3d(0,POMMEL,0));
-        m.softLine(base,end,1.1*scale,0x2a5cff,(.06f+.08f*heat)*a);m.softLine(butt,end,.45*scale,0x9fe8ff,(.04f+.12f*heat)*a);
+        m.softLine(base,end,.75*scale,0x2a5cff,(.06f+.08f*heat)*a);m.softLine(butt,end,.35*scale,0x9fe8ff,(.04f+.1f*heat)*a);
         m.softDisc(world(grip,f,scale,new Vec3d(0,GEM_AT,0)),.22*scale,0xbfe2ff,.28f*a);
         // a glint at its point, so the point reads sharp
         m.star(end,.32*scale,0xffffff,(.35f+.4f*heat)*a);
