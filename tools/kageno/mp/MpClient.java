@@ -326,7 +326,10 @@ public final class MpClient implements ClientModInitializer {
     private static final String[] ISOSANGR_SCRIPT={
         "5 ISOSANG","40 HOME","45 HEAL","60 R","100 R",
         "500 DIST8","505 HEAL","520 R","536 M1","538 M1-",
-        "940 HOME","945 HEAL","950 GUARD+","962 M1","964 M1-","966 R","1010 GUARD-","1060 END"};
+        "940 HOME","945 HEAL","950 GUARD+","962 M1","964 M1-","966 R","1010 GUARD-",
+        // (2.81.1) R held: the watcher 25 blocks ahead in the crosshair (the camera all but level, so its crosshair reaches
+        // them), R held down 12 ticks: the sword sent to them once it has been held 8
+        "1395 PITCH2","1400 DIST25","1405 HEAL","1420 R+","1432 R-","1500 END"};
     private static final String[] STEPS=ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -355,7 +358,9 @@ public final class MpClient implements ClientModInitializer {
     private void attack(boolean down){var k=InputUtil.Type.MOUSE.createFromCode(GLFW_MOUSE_BUTTON_LEFT);KeyBinding.setKeyPressed(k,down);if(down)KeyBinding.onKeyPressed(k);}
     private String name(UUID id){var p=mc.world.getPlayerByUuid(id);return p==null?id.toString().substring(0,8):p.getGameProfile().getName();}
     /** The watcher looks a little up at G's pillar from outside; otherwise both look slightly down at each other. */
-    private void face(){if(mc.player==null)return;BotandCamera.STATE.yaw=caster?0:180;BotandCamera.STATE.pitch=!caster&&!AtomicClient.CASTS.isEmpty()?-8:12;}
+    private void face(){if(mc.player==null)return;BotandCamera.STATE.yaw=caster?0:180;BotandCamera.STATE.pitch=!caster&&!AtomicClient.CASTS.isEmpty()?-8:caster?casterPitch:12;}
+    /** The caster's camera pitch as it presses a key ("PITCHn", 2.81.1: all but level to reach a foe 25 blocks off with its crosshair). */
+    private float casterPitch=12;
 
     private void tick()throws Exception{
         age++;
@@ -395,7 +400,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("stagger"))staggerWatch();
                     if(ONLY.equals("resist"))resistWatch();
                     if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr"))watcherStill();
-                    if(age>(ONLY.equals("isosangr")?1300:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -468,6 +473,7 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("STANDK")){if(down)command("botand progress stand @s kageno");return;}
         // 2.77.0: the caster takes Lee So-sang (MP_ONLY=isosang)
         if(step.equals("ISOSANG")){if(down)command("botand progress stand @s isosang");return;}
+        if(step.startsWith("PITCH")){if(down){casterPitch=Float.parseFloat(step.substring(5));note("caster's camera pitch "+casterPitch);}return;}
         if(step.equals("FRUIT")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:rokakaka");return;}
         if(step.equals("EAT")){if(down){note("left click with "+mc.player.getMainHandStack().getItem()+" (the Rokakaka's ask)");dev.sangwoo.celestialfall.client.commerce.CommerceClient.clickFruit();}return;}
         if(step.equals("CONFIRM")){if(down){

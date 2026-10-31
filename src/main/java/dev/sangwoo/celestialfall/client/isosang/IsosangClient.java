@@ -41,6 +41,8 @@ import net.minecraft.util.math.random.Random;
  * strikes lands on the blows.
  * <p>R (2.81.0): R asks the server for the giant sword's sweep (isosang_skill_v1, R), the camera's crosshair turned to
  * first; the server's word of it is a swing of kind IsosangRules.SWEEP drawn by GiantSweep, with where its sweep stands.
+ * (2.81.1) Let go within IsosangRules.R_HOLD_TICKS it is R, asked as the key comes up (the sweep right in front);
+ * held that long it is R held (R_HELD), asked then with the key still down (the sword sent to the foe in the crosshair).
  */
 public final class IsosangClient {
     /** Every swing seen, by its id: a cast of IsosangRules.SKILL on the cast clock (StandClient.Cast.age). */
@@ -81,7 +83,8 @@ public final class IsosangClient {
     static final int FADE=3;
     private static int ticks,lastAsk=-100;
     /** Whether R's press was taken (2.81.0): its release is taken too. */
-    private static boolean heldR;
+    /** R down (2.81.1: when, by the client's ticks, and whether R or R held has been asked for yet). */
+    private static boolean heldR,askedR;private static long rDown;
     private static Object world;
     private IsosangClient(){}
 
@@ -194,6 +197,18 @@ public final class IsosangClient {
     public static long rReady(UUID id){return R_READY.getOrDefault(id,0L);}
     /** Where R's sweep of this swing stands (null for none, 2.81.0). */
     public static Sweep sweep(UUID swing){return SWEEPS.get(swing);}
+    /** R's sword's pommel, which it turns round, where this swing's sweep stands (world); null for a swing not R's (2.81.1). */
+    public static Vec3d sweepPivot(UUID swing){var s=SWEEPS.get(swing);return s==null?null:s.at().add(Vec3d.fromPolar(0,s.yaw()).multiply(IsosangRules.SWEEP_PIVOT_FW)).add(0,IsosangRules.SWEEP_PIVOT_UP,0);}
+    /** Where a swing is heard from by a listener: its user, or R's sword's pommel when that is nearer (2.81.1). */
+    static Vec3d heardFrom(Vec3d listener,Vec3d user,Vec3d pivot){return pivot!=null&&pivot.squaredDistanceTo(listener)<user.squaredDistanceTo(listener)?pivot:user;}
+    /**
+     * Whether a swing is near enough the camera to be drawn: its user within {@code far} blocks, or R's sword standing
+     * out toward the foe in the crosshair within that of it (2.81.1: up to some 32 blocks out from its user).
+     */
+    public static boolean shown(StandClient.Cast s,Vec3d user,Vec3d camera,double far){
+        if(user.squaredDistanceTo(camera)<=far*far)return true;
+        var pivot=sweepPivot(s.id());return pivot!=null&&pivot.squaredDistanceTo(camera)<=far*far;
+    }
     /** The empowered first's swords of this swing (null for none yet, 2.80.0). */
     public static Sword[] swords(UUID swing){return SWORDS.get(swing);}
     /** The latest swing of this player whose body clip still plays and did not stop short (KagenoClips.animated), or null. */
@@ -238,20 +253,18 @@ public final class IsosangClient {
      */
     public static boolean key(long window,int key,int action,int modifiers){
         var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
-        // (2.81.0) R's release is taken whenever its press was, whatever is open by then
-        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R&&heldR&&action!=org.lwjgl.glfw.GLFW.GLFW_PRESS){if(action==org.lwjgl.glfw.GLFW.GLFW_RELEASE)heldR=false;return true;}
-        if(mc.currentScreen!=null||!MapClient.enabled()||!StandManager.isosang(mc.player))return false;
-        // (2.81.0) R: the giant sword's sweep, at the foe in the crosshair (the camera's crosshair turned to first, so the
-        // server's sight is its, BotandCamera.prepareInteraction). R is always this for Lee So-sang's player on the map,
-        // as it is the heavy punch's for Star Platinum's.
-        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS){
-            heldR=true;
-            if(CombatClient.combatInput()&&ClientPlayNetworking.canSend(IsosangAttack.SKILL)){
-                BotandCamera.prepareInteraction();
-                var b=PacketByteBufs.create();b.writeByte(IsosangAttack.R);ClientPlayNetworking.send(IsosangAttack.SKILL,b);
-            }
+        // (2.81.0) R's release is taken whenever its press was, whatever is open by then; (2.81.1) let go before R held
+        // was asked for, it is R
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R&&heldR&&action!=org.lwjgl.glfw.GLFW.GLFW_PRESS){
+            if(action==org.lwjgl.glfw.GLFW.GLFW_RELEASE){heldR=false;if(!askedR)askR(mc,IsosangAttack.R);}
             return true;
         }
+        if(mc.currentScreen!=null||!MapClient.enabled()||!StandManager.isosang(mc.player))return false;
+        // (2.81.0) R: the giant sword's sweep; (2.81.1, user request: "그냥 r은 원래처럼 앞만 베고 R홀드를 해야지 보고 있는
+        // 적에게 검이 순간이동 되게 만들자") right in front as the key comes up, or, held down R_HOLD_TICKS, at the foe in
+        // the crosshair (tick). R is always this for Lee So-sang's player on the map, as it is the heavy punch's for Star
+        // Platinum's.
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS){heldR=true;askedR=false;rDown=ticks;return true;}
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_E){
             if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(IsosangAttack.SKILL)){
                 var b=PacketByteBufs.create();b.writeByte(IsosangAttack.E);ClientPlayNetworking.send(IsosangAttack.SKILL,b);
@@ -283,6 +296,18 @@ public final class IsosangClient {
             p.setVelocity(v.x,Math.min(0,p.getVelocity().y),v.z);
         }
     }
+    /**
+     * Asks the server for R or R held (2.81.1), once a press: the camera's crosshair turned to first, so the server's
+     * sight is its (BotandCamera.prepareInteraction): R's way, and R held's foe.
+     */
+    private static void askR(MinecraftClient mc,int which){
+        askedR=true;
+        if(mc.player==null||mc.currentScreen!=null||!MapClient.enabled()||!StandManager.isosang(mc.player))return;
+        if(CombatClient.combatInput()&&ClientPlayNetworking.canSend(IsosangAttack.SKILL)){
+            BotandCamera.prepareInteraction();
+            var b=PacketByteBufs.create();b.writeByte(which);ClientPlayNetworking.send(IsosangAttack.SKILL,b);
+        }
+    }
     /** The attack key: asks the server for a hit (at most every other tick). Returns whether the sword takes the key (nothing else happens). */
     public static boolean punch(){
         var mc=MinecraftClient.getInstance();if(!attacks(mc.player))return false;
@@ -301,6 +326,8 @@ public final class IsosangClient {
         SWINGS.values().removeIf(c->!c.dimension().equals(id)||c.age(0)>=(c.combo()==0?20:life)||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.retainAll(SWINGS.keySet());EMPOWERED.retainAll(SWINGS.keySet());SWORDS.keySet().retainAll(SWINGS.keySet());SWEEPS.keySet().retainAll(SWINGS.keySet());
         VOICES.entrySet().removeIf(e->e.getValue().isDone());
+        // (2.81.1) R held down R_HOLD_TICKS: R held, asked with the key still down
+        if(heldR&&!askedR&&ticks-rDown>=IsosangRules.R_HOLD_TICKS)askR(mc,IsosangAttack.R_HELD);
         // held down, the attack key keeps asking (the server keeps a press made a little early for the next hit)
         if(mc.player!=null&&mc.currentScreen==null&&mc.options.attackKey.isPressed()&&attacks(mc.player))punch();
     }
@@ -319,8 +346,11 @@ public final class IsosangClient {
     }
     /** The hit's sound, its whooshes on its blows: loud for its user and those near, fading out to CARRY blocks. */
     private static void voice(MinecraftClient mc,UUID id,UUID caster,int combo){
-        var user=mc.world.getPlayerByUuid(caster);if(user==null||!IsosangRules.drawn(combo))return;
-        float v=(user==mc.player?1:volume(mc,user.getPos()))*VOLUME;if(v<=.01f)return;
+        var user=mc.world.getPlayerByUuid(caster);if(user==null||!IsosangRules.drawn(combo)||mc.player==null)return;
+        // (2.81.1) R's sword may stand out some 24 blocks toward the foe in the crosshair: heard as from the nearer of its
+        // user and the sword's pommel, so the foe it sweeps past hears it as loud as its user's neighbours do
+        Vec3d from=heardFrom(mc.player.getPos(),user.getPos(),combo==IsosangRules.SWEEP?sweepPivot(id):null);
+        float v=(user==mc.player?1:volume(mc,from))*VOLUME;if(v<=.01f)return;
         // (2.81.0) R's own: its recording, from the user's video of it
         var s=new Sound(CelestialFall.id(combo==IsosangRules.SWEEP?"isosang_r":"isosang_m1_"+combo),v);VOICES.put(id,s);mc.getSoundManager().play(s);
     }

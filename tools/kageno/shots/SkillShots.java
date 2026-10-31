@@ -124,7 +124,8 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * stand.csv gets its two stances, how far its fingers are open and out, how long they were drawn and how far ahead of
  * the player's feet their tips reach, and whether the dummy is incapacitated and its speed; the log how far the
  * fingers went each time and when the dummy is incapacitated and free again. Its inhale (2.61.0; held down since
- * 2.62.0): "KEYDOWN_Y@n" and "KEYUP_Y@n" hold Y down and let it up through the real keyboard path ("KEY_Y@n" taps it);
+ * 2.62.0): "KEYDOWN_Y@n" and "KEYUP_Y@n" hold Y down and let it up through the real keyboard path ("KEY_Y@n" taps it;
+ * "KEYDOWN_R@n"/"KEYUP_R@n", 2.81.1, hold Lee So-sang's R down for R held);
  * stand.csv gets its stances (and the strain), the inhale (its age, whether it is on, whether it holds anyone now, how
  * many guards were seen holding it off lately, how hard it sucks) and where the dummy is from the player (ahead, to
  * their right), and the log when it comes on, when it catches someone and lets go, when a guard holds it off and when
@@ -1092,7 +1093,7 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.startsWith("GIVE_")){if(age==at)server(p->{
                             var stack=switch(what.substring(5)){case "PICKAXE"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.PICKAXE);case "FRAGMENTS"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.FRAGMENT,3);case "STICK"->new net.minecraft.item.ItemStack(net.minecraft.item.Items.STICK);default->throw new IllegalArgumentException(what);};
                             p.getInventory().offerOrDrop(stack);p.currentScreenHandler.sendContentUpdates();log.append("  given ").append(what.substring(5)).append(" at ").append(age).append('\n');});continue;}
-                    if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;case "A"->GLFW_KEY_A;case "S"->GLFW_KEY_S;case "D"->GLFW_KEY_D;case "Y"->GLFW_KEY_Y;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;case "A"->GLFW_KEY_A;case "S"->GLFW_KEY_S;case "D"->GLFW_KEY_D;case "Y"->GLFW_KEY_Y;case "R"->GLFW_KEY_R;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what).append(" at ").append(age).append('\n');key(code,down);}continue;}
                     if(what.startsWith("STANCE_")){if(age==at)server(p->{int stance=dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(what.substring(7).toLowerCase(Locale.ROOT));
                             for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(stance);

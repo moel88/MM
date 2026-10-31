@@ -16,7 +16,8 @@ MP_ONLY=swap only another stand's cooldowns gone (2.74.2, MpClient.SWAP_SCRIPT: 
 eaten and the stand given back at once; Kageno's E, a Rokakaka again), MP_ONLY=isosang only Lee So-sang's basic attack (2.77.0, MpClient.ISOSANG_SCRIPT: the four hits at full speed, a broken
 combo and its rest, the four against a guard), MP_ONLY=isosange its E (2.80.0, MpClient.ISOSANGE_SCRIPT), MP_ONLY=isosangr
 its R (2.81.0, MpClient.ISOSANGR_SCRIPT: the giant sword's sweep at the watcher close and 8 blocks off in the crosshair,
-again at once (refused), a press of the attack kept through it, R kept through a hit, through a guard), MP_ONLY=fresh only the long cooldowns begun in
+again at once (refused), a press of the attack kept through it, R kept through a hit, through a guard; 2.81.1: R right in
+front whatever the crosshair is on, R held at the watcher 25 blocks off in the crosshair), MP_ONLY=fresh only the long cooldowns begun in
 full whatever they were (2.74.3, MpClient.FRESH_SCRIPT: joining again with Atomic never used, back to life with Star
 Platinum before and after its awakening, the stand arrow and the gacha giving a stand; another stand's forgotten; the
 caster's client drops the world's time packets for 30 ticks after joining again, mixin/MpLateTimeMixin, so its cooldown

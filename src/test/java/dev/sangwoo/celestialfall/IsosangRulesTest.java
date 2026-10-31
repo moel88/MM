@@ -232,12 +232,17 @@ class IsosangRulesTest {
         assertEquals(-1,sweepReaches(SWEEP_PIVOT_FW-4,0,1,.3),1e-9);
         // (the user's choice, "적에게로 옮겨 감", and their word: "검은 10블록 이내에 내가 쳐다보고 있는 적까지 닿을 수 있어 앞에 적이 없다면
         // 내 바로 앞을 베어내") with a foe in the crosshair it stands out toward them so the blade passes them; never back from right
-        // in front of its user, never past a foe 10 blocks off
+        // in front of its user, never past a foe SWEEP_AIM blocks off (2.81.1, the user's word: "사거리를 30블록으로 늘리자 그러니까
+        // 바라보는 적이 30블록 이내에 있으면 검이 적한테 이동해서 밴다는 뜻임")
         assertEquals(0,sweepShift(0),1e-9);assertEquals(0,sweepShift(SWEEP_PIVOT_FW+SWEEP_MEET),1e-9);
         for(double d=SWEEP_PIVOT_FW+SWEEP_MEET;d<=SWEEP_AIM;d+=.5)assertEquals(SWEEP_PIVOT_FW+SWEEP_MEET,d-sweepShift(d),1e-9,"the blade meets a foe "+d+" off");
-        assertEquals(SWEEP_AIM-SWEEP_PIVOT_FW-SWEEP_MEET,sweepShift(30),1e-9);
+        assertEquals(SWEEP_AIM-SWEEP_PIVOT_FW-SWEEP_MEET,sweepShift(45),1e-9);
+        assertEquals(23.7,sweepShift(30),1e-9);assertEquals(13.7,sweepShift(20),1e-9);assertEquals(3.7,sweepShift(10),1e-9);
         for(double d=0;d<=SWEEP_AIM;d+=.25){double from=d-sweepShift(d);assertTrue(sweepReaches(from,0,0,.3)>=0,"a foe in the crosshair "+d+" blocks off is struck");}
-        assertEquals(10,SWEEP_AIM,1e-9);
+        assertEquals(30,SWEEP_AIM,1e-9);
+        // (2.81.1, the user's word: "그냥 r은 원래처럼 앞만 베고 R홀드를 해야지 보고 있는 적에게 검이 순간이동 되게 만들자") R held is
+        // the key held down as long as Kageno's T held is
+        assertEquals(dev.sangwoo.celestialfall.stand.KagenoRules.HOLD,R_HOLD_TICKS);assertEquals(.4,R_HOLD_TICKS/20.0,1e-9);
         assertTrue(SWEEP_REACH>5&&SWEEP_PIVOT_UP>1.8,"a giant sword, up in the air: "+SWEEP_REACH);
     }
 }

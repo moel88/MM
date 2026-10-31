@@ -63,8 +63,11 @@ public final class IsosangAttack {
      * cooldown runs from then).
      */
     public static final int HIT=0,LANDED=1,RESTS=2,STOPPED=3,THROWN=4,EMPOWERED=5,SPENT=6;
-    /** The skills the skill packet asks for: E (2.80.0) and R (2.81.0). */
-    public static final int E=1,R=2;
+    /**
+     * The skills the skill packet asks for: E (2.80.0), R (2.81.0) and R held (2.81.1: the key held down
+     * {@link IsosangRules#R_HOLD_TICKS} ticks, the client's call, as Kageno's T held is).
+     */
+    public static final int E=1,R=2,R_HELD=3;
     /** At most this many presses a second are heard. */
     static final int RATE=40;
     private static final class State {
@@ -91,7 +94,7 @@ public final class IsosangAttack {
         /** The empowered first's swords in flight. */
         final List<Sword> swords=new ArrayList<>();
         /** (2.81.0) R's sweep in flight or the last one (null for none), the tick R is ready again, and a press of R kept for when a hit lets go of them. */
-        Sweep sweep;long rReady;boolean rQueued;
+        Sweep sweep;long rReady;boolean rQueued,rHeld;
     }
     /**
      * R's sweep (2.81.0): its id and start, where it stands (its feet: its user's, or out toward the foe in the crosshair)
@@ -143,7 +146,7 @@ public final class IsosangAttack {
                 if(s.window!=second){s.window=second;s.presses=0;}
                 if(++s.presses>RATE)return;
                 if(skill==E)empower(player);
-                else if(skill==R)sweep(player);
+                else if(skill==R||skill==R_HELD)sweep(player,skill==R_HELD);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(IsosangAttack::tick);
@@ -224,7 +227,7 @@ public final class IsosangAttack {
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again; so are E's cooldown and its empowerment (2.80.0), and R's cooldown (2.81.0). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.charged=s.restart=s.rQueued=false;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;}}
     /**
      * This player's cooldowns are off (/botand nocooldown, every tick: NoCooldownState): the attack's rest and E's
      * cooldown are gone; an empowerment they hold stays theirs (2.80.0).
@@ -299,19 +302,21 @@ public final class IsosangAttack {
      * R (2.81.0, user request: "R스킬 거대한 검을 소환해서 전방을 크게 베는거야"): the giant sword's sweep, at once or, while a
      * hit of theirs holds them, as soon as it lets go if that is near (a press a little early is kept). Not while one is
      * held otherwise (a blow, a guard, a dash, a skill, a cutscene), while R is under way, or before it is ready again
-     * ({@link IsosangRules#R_COOLDOWN} after the last one was over; none for a player the cooldowns are off for).
+     * ({@link IsosangRules#R_COOLDOWN} after the last one was over; none for a player the cooldowns are off for). R
+     * sweeps right in front of its user; R held (2.81.1, user request: "그냥 r은 원래처럼 앞만 베고 R홀드를 해야지 보고 있는
+     * 적에게 검이 순간이동 되게 만들자") sends the sword to the foe in the crosshair (aimSweep); the two share the cooldown.
      */
-    public static boolean sweep(ServerPlayerEntity p){
+    public static boolean sweep(ServerPlayerEntity p,boolean held){
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
         if(sweeping(s,now)||now<s.rReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         if(holding(s.combo,s.start,now)){
             long free=s.start+HOLD[s.combo];
-            if(free-now<=BUFFER){s.rQueued=true;return true;}
+            if(free-now<=BUFFER){s.rQueued=true;s.rHeld=held;return true;}
             return false;
         }
-        unleash(p,s,now);
+        unleash(p,s,now,held);
         return true;
     }
     /**
@@ -336,12 +341,13 @@ public final class IsosangAttack {
         return best;
     }
     /**
-     * Where R's sweep stands for this player now and the way it faces (2.81.0, the user's choice: "적에게로 옮겨 감"): out
-     * toward the foe in the crosshair, so its blade passes them (IsosangRules.sweepShift), at their height; with none,
-     * right where they stand, the way they look.
+     * Where R's sweep stands for this player now and the way it faces: right where they stand, the way they look; held
+     * (2.81.1, the user's word: "R홀드를 해야지 보고 있는 적에게 검이 순간이동"; 2.81.0's R did this whenever a foe was in
+     * the crosshair, the user's choice then "적에게로 옮겨 감"), out toward the foe in the crosshair if there is one, so its
+     * blade passes them (IsosangRules.sweepShift), at their height: the sword shows there, not at its user.
      */
-    static Sweep aimSweep(ServerPlayerEntity p,long now){
-        var foe=aimed(p);Vec3d feet=p.getPos();float yaw=MathHelper.wrapDegrees(p.getYaw());
+    static Sweep aimSweep(ServerPlayerEntity p,long now,boolean held){
+        var foe=held?aimed(p):null;Vec3d feet=p.getPos();float yaw=MathHelper.wrapDegrees(p.getYaw());
         if(foe==null)return new Sweep(UUID.randomUUID(),now,feet,yaw,-1);
         Vec3d d=foe.getPos().subtract(feet);double far=Math.sqrt(d.x*d.x+d.z*d.z);
         if(far>1e-3)yaw=MathHelper.wrapDegrees((float)Math.toDegrees(Math.atan2(-d.x,d.z)));
@@ -353,12 +359,12 @@ public final class IsosangAttack {
      * under way is spent, E's cooldown running from now), the sweep stands where its aim puts it, and R is ready again
      * {@link IsosangRules#R_COOLDOWN} after its motion is over.
      */
-    private static void unleash(ServerPlayerEntity p,State s,long now){
-        s.rQueued=false;s.queued=false;
+    private static void unleash(ServerPlayerEntity p,State s,long now,boolean held){
+        s.rQueued=false;s.rHeld=false;s.queued=false;
         boolean spent=s.empowered;
         s.combo=0;s.blows=0;s.empowered=false;
         if(spent)spend(p,s,now);
-        s.sweep=aimSweep(p,now);
+        s.sweep=aimSweep(p,now,held);
         s.rReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+LENGTH[SWEEP]+R_COOLDOWN;
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
         send(p,s.sweep.id,SWEEP,now,s.sweep.yaw,HIT,-1,null,null,s.sweep);
@@ -457,7 +463,7 @@ public final class IsosangAttack {
             if(held(p)){stop(p,s,now);release(p,s,now);s.rQueued=false;continue;}
             settle(p,s,now);
             // (2.81.0) R kept for when the hit holding them lets go
-            if(s.rQueued&&!holding(s.combo,s.start,now)){if(able(p)&&!sweeping(s,now))unleash(p,s,now);else s.rQueued=false;}
+            if(s.rQueued&&!holding(s.combo,s.start,now)){if(able(p)&&!sweeping(s,now))unleash(p,s,now,s.rHeld);else s.rQueued=false;}
             if(s.queued&&now>=may(s)){if(able(p))begin(p,s,now);else s.queued=false;}
             while(valid(s.combo)&&s.blows<blows(s.combo)&&now>=s.start+blowAt(s.combo,s.blows))blow(p,s,now);
             // the empowered fourth's leap back: a player's own client moves them (IsosangClient.drive); a boss, here

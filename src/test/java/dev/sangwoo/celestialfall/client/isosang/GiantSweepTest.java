@@ -13,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * or flipping between frames, a little spring off the ground as the giant sword forms and down into a crouch as it
  * sweeps, never a foot in the ground, her blade trailing her arm); the giant sword where the server's sweep is (its
  * pommel where it turns, its point as far out as it reaches, round the front as the server strikes there), and its
- * crescent swept on with it.
+ * crescent swept on with it; and (2.81.1) sent by R held to a foe in the crosshair as far as 30 blocks off, heard, drawn
+ * and shaking the camera from where the sword is as well as from its user.
  */
 class GiantSweepTest {
     static final Anim CLIP=GiantSweep.CLIP;
@@ -96,6 +97,24 @@ class GiantSweepTest {
         assertTrue(GiantSweep.ARC.ink0()>IsosangRules.SWEEP_END&&GiantSweep.ARC.eat1()<4.2f,"it turns to ink after the sweep and is gone well within the swing's life");
         // when the blade passes each angle (the ink on the ground lands as it does)
         for(double deg=IsosangRules.SWEEP_TO;deg<=IsosangRules.SWEEP_FROM;deg+=10)assertEquals(deg,IsosangRules.sweepAngle(GiantSweep.passes(deg)),.05);
+    }
+    @Test void farOutTowardTheFoeItIsHeardShownAndShakesFromTheSword(){
+        // (2.81.1) R held at a foe in the crosshair 30 blocks ahead (facing +z): the sweep stands 23.7 out, its pommel 25 out and up
+        var id=java.util.UUID.randomUUID();
+        var cast=new dev.sangwoo.celestialfall.client.StandClient.Cast(id,java.util.UUID.randomUUID(),null,IsosangRules.SKILL,IsosangRules.SWEEP,0,0,0,Vec3d.ZERO,0,java.util.List.of());
+        assertNull(IsosangClient.sweepPivot(id),"none before the server says where it stands");
+        IsosangClient.SWEEPS.put(id,new IsosangClient.Sweep(new Vec3d(0,0,IsosangRules.sweepShift(30)),0,-1));
+        try{
+            Vec3d pivot=IsosangClient.sweepPivot(id);
+            assertEquals(30-IsosangRules.SWEEP_MEET,pivot.z,1e-5);assertEquals(0,pivot.x,1e-5);assertEquals(IsosangRules.SWEEP_PIVOT_UP,pivot.y,1e-9);
+            assertEquals(pivot,GiantSweep.pivot(cast),"where it is drawn turning");
+            assertSame(pivot,IsosangClient.heardFrom(new Vec3d(0,0,30),Vec3d.ZERO,pivot),"the foe it sweeps past hears it from the sword");
+            assertSame(Vec3d.ZERO,IsosangClient.heardFrom(new Vec3d(0,0,-3),Vec3d.ZERO,pivot),"one behind its user hears it from them");
+            assertSame(Vec3d.ZERO,IsosangClient.heardFrom(new Vec3d(0,0,30),Vec3d.ZERO,null),"a swing not R's from its user");
+            assertTrue(IsosangClient.shown(cast,Vec3d.ZERO,new Vec3d(0,0,110),96),"drawn for a camera 110 off its user but 85 off the sword");
+            assertFalse(IsosangClient.shown(cast,Vec3d.ZERO,new Vec3d(0,0,-100),96),"not for one far from both");
+        }finally{IsosangClient.SWEEPS.remove(id);}
+        assertTrue(IsosangClient.shown(cast,Vec3d.ZERO,new Vec3d(0,0,90),96),"any swing near its user");
     }
     @Test void theCasterCameraDrawsBackAndComesInSmoothly(){
         assertEquals(0,GiantSweep.pull(0),1e-9);assertEquals(0,GiantSweep.pull(1.46f),1e-9);

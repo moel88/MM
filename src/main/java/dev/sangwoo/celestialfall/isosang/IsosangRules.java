@@ -271,21 +271,34 @@ public final class IsosangRules {
      * 이내에 내가 쳐다보고 있는 적(쉬프트 락 기준으로 십자선으로 보고 있는 적)까지 닿을 수 있어 앞에 적이 없다면 내 바로 앞을 베어내",
      * and the user's videos of it from above and from behind at a tenth of the speed, read on a sheet the user answered;
      * their choices: the whole sweep moves out to the foe, everyone it passes is struck, a 20 s cooldown, no guard takes
-     * it): a giant sword of blue light shows in the air ahead of its user, its pommel {@link #SWEEP_PIVOT_UP} up and
+     * it; 2.81.1, user requests: "사거리를 30블록으로 늘리자 그러니까 바라보는 적이 30블록 이내에 있으면 검이 적한테 이동해서
+     * 밴다는 뜻임", "정확히는 검이 적에게 순간이동하는게 맞음", "아니다 그냥 r은 원래처럼 앞만 베고 R홀드를 해야지 보고 있는 적에게
+     * 검이 순간이동 되게 만들자"): a giant sword of blue light shows in the air ahead of its user, its pommel {@link #SWEEP_PIVOT_UP} up and
      * {@link #SWEEP_PIVOT_FW} ahead of where the sweep stands, its blade out to their right and back; it hangs there a
      * moment and sweeps level round its pommel from there across the front to their left and back ({@link #sweepAngle}),
-     * its point {@link #SWEEP_REACH} out. With a foe in the crosshair within {@link #SWEEP_AIM} blocks the whole of it
-     * stands out toward them, so that the middle of its blade passes them ({@link #sweepShift}); with none, it sweeps
-     * right in front of its user. It strikes everyone it passes once, {@link #SWEEP_DAMAGE}, takes no guard and throws no
-     * one. A swing of its own on the clients: kind {@link #SWEEP}.
+     * its point {@link #SWEEP_REACH} out. R sweeps right in front of its user. R held ({@link #R_HOLD_TICKS}) with a foe
+     * in the crosshair within {@link #SWEEP_AIM} blocks sends the sword to them: the whole of it stands out toward them,
+     * so that the middle of its blade passes them ({@link #sweepShift}); with none, it sweeps right in front of its user as
+     * R does. It strikes everyone it passes once, {@link #SWEEP_DAMAGE}, takes no guard and throws no one. A swing of its
+     * own on the clients: kind {@link #SWEEP}.
      */
     public static final int SWEEP=7;
     /** Its damage (the user's word). */
     public static final float SWEEP_DAMAGE=20;
     /** Ticks R is not ready again once it is over (the user's choice: 20 s), as every skill's cooldown, from its end. */
     public static final int R_COOLDOWN=400;
-    /** How far the crosshair's foe may be (blocks along the sight, the user's word) and how wide the sight takes a body (blocks round its box). */
-    public static final double SWEEP_AIM=10,SWEEP_AIM_SLACK=.5;
+    /**
+     * How long R is held down for R held (ticks, 2.81.1): as long as Kageno's T held is (KagenoRules.HOLD, 0.4 s). Let go
+     * sooner, it is R, asked as the key comes up; held this long, it is R held, asked then, the key still down. The
+     * client's call: the server is asked for one or the other (IsosangAttack.R, R_HELD).
+     */
+    public static final int R_HOLD_TICKS=8;
+    /**
+     * How far the crosshair's foe may be (blocks along the sight, the user's word: 10 in 2.81.0, 30 since 2.81.1, the sword
+     * standing out as much as {@code SWEEP_AIM-SWEEP_PIVOT_FW-SWEEP_MEET} toward them) and how wide the sight takes a body
+     * (blocks round its box).
+     */
+    public static final double SWEEP_AIM=30,SWEEP_AIM_SLACK=.5;
     /**
      * The sword (the videos, measured on the character's height): its pommel, which it turns round, this far ahead of
      * where the sweep stands and this high (as the sheet the user answered read it: 1.3 ahead, 2.7 up); its length from
