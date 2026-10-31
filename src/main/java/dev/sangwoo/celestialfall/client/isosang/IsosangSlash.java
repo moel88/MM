@@ -192,15 +192,15 @@ public final class IsosangSlash implements Fx.Skill {
         k(.17,H1_COIL),
         k(.19,H1_LOAD),
         // crouched, turning into the spin, the sword brought up on end (the video's 0.85 s)
-        k(.23f,cut1(-40,60,-.32)),
+        k(.23f,cut1(-80,60,-.32)),
         // the spin cut (2.79.0), fast out of the coil and slowing, the blade following the leaning plane: high at the
         // front-right, down behind the right, by the ground behind the left, and rising up across the front (the blow)
         // to end high at the front-right (the yaw is 20° left of the arc's angle: the blade leads the body by 20°)
-        k(.25,cut1(-115,17,-.3),Anim.Ease.IN),
-        k(.263f,cut1(-205,-15,-.32),Anim.Ease.LINEAR),
-        k(.28f,cut1(-297,18,-.31),Anim.Ease.LINEAR),
-        k(blow(1,0),cut1(-363,42,-.3),Anim.Ease.LINEAR),
-        k(.32f,cut1(-385,60,-.25),Anim.Ease.OUT),
+        k(.25,cut1(-160,9,-.3),Anim.Ease.IN),
+        k(.263f,cut1(-251,-18,-.32),Anim.Ease.LINEAR),
+        k(.28f,cut1(-342,5,-.31),Anim.Ease.LINEAR),
+        k(blow(1,0),cut1(-408,38,-.3),Anim.Ease.LINEAR),
+        k(.32f,cut1(-430,52,-.25),Anim.Ease.OUT),
         k(.38f,H1_HOLD),
         k(step(1),H1_HOLD),
         k(.72,H1_LOWER),
@@ -480,7 +480,10 @@ public final class IsosangSlash implements Fx.Skill {
      * itself: {@link #wave}).
      */
     static final Arc[] H1_ARCS={
-        arc(v(.2,1.85,0),27,-135,1.9,4.1,135,405,.25f,.32f,.74f,.9f,.27f,.45f,8,1,2)};
+        // (2.79.2 draft, the user's marks: a crescent, not a circle round them: its thin tip behind, thin along the left,
+        // its thickest belly ahead, its bright pointed tip at the right; standing out ahead of them; high at the right,
+        // low at the left; at the height of the face)
+        arc(v(1.0,1.45,0),25,-90,1.3,2.6,180,450,.25f,.32f,.74f,.9f,.27f,.45f,9,1,2)};
     static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.12f,.36f,1,3,1)};
     static final Arc[] H3_ARCS={
         arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
@@ -535,6 +538,8 @@ public final class IsosangSlash implements Fx.Skill {
             case 0->{double h=Ease.smooth((float)x,.86f,1);yield (.08+.92*Math.pow(x,1.3))*(1-h*h);}
             // hit 1's great crescent (2.79.1): thin only where it began, thick from its middle to its rounded head
             case 8->{double h=Ease.smooth((float)x,.86f,1);yield (.06+.94*Ease.smooth((float)x,0,.5f))*(1-h*h);}
+            // hit 1's crescent draft (2.79.2): pointed at both tips, thin along its start, thickest at its belly (70% along)
+            case 9->Math.pow(Math.max(Math.sin(Math.PI*Math.pow(x,1.94)),0),1.6);
             case 2->Math.pow(Math.max(Math.sin(Math.PI*x),0),.5);
             case 3->Math.pow(Math.max(Math.sin(Math.PI*x),0),.36);
             case 6->Math.pow(Math.max(Math.sin(Math.PI*Math.pow(x,.62)),0),.55);
