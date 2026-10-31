@@ -174,7 +174,7 @@ class IsosangSlashTest {
         }
         for(float t=blow(4,0);t<IsosangSlash.WAVE_EAT1;t+=.02f){
             var sw=IsosangSlash.wave(Vec3d.ZERO,0,t);
-            for(int i=0;i<sw.n();i++)assertTrue(sw.inner()[i].y>.3&&sw.outer()[i].y>sw.inner()[i].y+.6&&sw.outer()[i].y<2.3,"the thrown slash flies low at its back edge, its leading edge up at the chest (2.78.0): "+sw.inner()[i].y+" "+sw.outer()[i].y);
+            for(int i=0;i<sw.n();i++)assertTrue(sw.inner()[i].y>.3&&sw.outer()[i].y>sw.inner()[i].y+.2&&sw.outer()[i].y<1.6,"the thrown slash lies nearly flat at the waist, its leading edge a little up (2.78.0, the video from above): "+sw.inner()[i].y+" "+sw.outer()[i].y);
         }
     }
     @Test void everySlashSweepsWithItsBladeAndIsOverBeforeItsSwingIs(){
@@ -185,7 +185,7 @@ class IsosangSlashTest {
                 assertTrue(s.t0()<s.t1()&&s.t1()<=s.eat1()&&s.eat0()<s.eat1()&&s.ink0()<s.ink1(),"hit "+combo);
                 assertTrue(s.eat1()+IsosangSlash.DROP_LIFE+IsosangSlash.STAIN_LIFE<=life,"hit "+combo+"'s drops and their stains are gone in time");
                 boolean thin=s.style()==6||s.style()==7;
-                assertTrue(s.outer()-s.inner()>(thin?.4:.9),"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
+                assertTrue(s.outer()-s.inner()>(thin?.25:.85),"hit "+combo+"'s slash is a broad band: "+(s.outer()-s.inner()));
                 // every sweep goes round to the right (2.78.0, the user's video from above), the chords aside
                 // (hit 4's low cut is a backhand from the right to the left)
                 if(s.style()!=6&&combo!=4)assertTrue(s.to()>s.from(),"hit "+combo+"'s slash from "+s.t0()+" sweeps clockwise seen from above");
@@ -221,7 +221,7 @@ class IsosangSlashTest {
         var r=IsosangSlash.H2_ARCS[0];assertEquals(360,Math.abs(r.to()-r.from()),1e-6);
         // hit 3 (2.78.0): four rings most of the way round them, each ending behind the left (the first behind the right),
         // the fourth the widest; the beam shines on while the third ring crosses it (the X)
-        var r1=IsosangSlash.H3_ARCS[0];assertTrue(r1.to()-r1.from()>=200&&r1.to()>120&&r1.to()<180,"the first ring: "+r1.from()+".."+r1.to());
+        var r1=IsosangSlash.H3_ARCS[0];assertTrue(r1.to()-r1.from()>=200&&r1.to()>=120&&r1.to()<180,"the first ring: "+r1.from()+".."+r1.to());
         for(int i:new int[]{1,2,4}){var ri=IsosangSlash.H3_ARCS[i];assertTrue(ri.to()-ri.from()>=270&&ri.to()>=240&&ri.to()<=270,"ring "+i+" ends behind the left: "+ri.from()+".."+ri.to());}
         assertTrue(IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[1].outer()+1&&IsosangSlash.H3_ARCS[4].outer()>IsosangSlash.H3_ARCS[2].outer()+1,"the fourth ring is the widest");
         var x=IsosangSlash.H3_ARCS[2];assertTrue(IsosangSlash.beamLit(x.t1())>.9f,"the beam shines on through the third ring that crosses it");

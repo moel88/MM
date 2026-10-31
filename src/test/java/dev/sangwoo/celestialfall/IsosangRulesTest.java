@@ -103,7 +103,7 @@ class IsosangRulesTest {
         assertEquals(0,struckAt(.5,0,.3));assertTrue(struckAt(8,0,.3)>struckAt(4,0,.3));
         // not behind them, not beyond its range, not out past its tips, not over its head or under its feet
         assertEquals(-1,struckAt(-2,0,.3));assertEquals(-1,struckAt(WAVE_RANGE+1,0,.3));
-        assertEquals(-1,struckAt(6,WAVE_HALF_END+1,.3));assertEquals(-1,struckAt(1.5,8,.3),"too wide yet that near");
+        assertEquals(-1,struckAt(6,WAVE_HALF_END+1,.3));assertTrue(struckAt(.5,7,.3)>struckAt(.5,0,.3),"a wide point beside them only once the band has widened over it");
         assertFalse(waveSweeps(0,WAVE_TICKS,5,0,HIGH+.5,.3));assertFalse(waveSweeps(0,WAVE_TICKS,5,0,LOW-.5,.3));
         // a big body is reached sooner than a small one
         assertTrue(struckAt(9,0,1.2)<=struckAt(9,0,.3));

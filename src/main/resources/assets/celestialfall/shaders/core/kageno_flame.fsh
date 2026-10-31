@@ -380,13 +380,15 @@ void main(){
     float rim=smoothstep(.55,.7,d)*(1.0-smoothstep(.86,.98,d));
     rgb=mix(rgb,inkc,rim*.75);
     body=max(max(core,glow*.75),rim*.5)*(1.0-ink);
-    lit=core*3.6+glow*1.1*(1.0-rim);holes=1.0;
+    bool thin=style>6.5;
+    lit=thin?core*2.0+glow*.5:core*3.6+glow*1.1*(1.0-rim);holes=1.0;
    }else{
     // the light outermost (a white-hot edge, wide while the cut is fresh, bright blue, royal blue), the ink inside it:
     // filling the thick parts and barely touching the thin (2.78.0, the video from above), spreading out as it dries
-    float whiteEnd=wave?mix(.11,.04,ink):mix(.24,.06,smoothstep(0.0,.4,ink));
+    float whiteEnd=wave?mix(.11,.04,ink):mix(.24,.06,smoothstep(0.0,.3,ink));
     float spread=1.0-(1.0-ink)*(1.0-ink);
-    float inkAt=(wave?mix(.62,.30,spread):max(.2,.92-.4*smoothstep(.15,.9,w)-.28*spread))+.08*(strand-.5)+.03*(streak-.5);
+    // (the ring is light all through while fresh, the video's: its ink comes only as it dries)
+    float inkAt=(wave?mix(.62,.30,spread):ring?mix(.9,.3,spread):max(.2,.92-.4*smoothstep(.15,.9,w)-.28*spread))+.08*(strand-.5)+.03*(streak-.5);
     // the band thins as it dries, its inner edge drawing out toward the light (the video: the blue narrows to a line
     // before it goes); the inner edge a dry brush's, ragged, strands falling short; the thrown slash's back edge drips
     float limit=wave?1.0:mix(1.0,.45,smoothstep(.55,1.0,ink));
@@ -416,6 +418,8 @@ void main(){
     rgb=mix(rgb,inkc,crack);
     // opaque at the edge, glassier in the light's middle, the ink solid
     float a=mix(.97,.82,smoothstep(whiteEnd,inkAt,d)*(1.0-ink*.4));
+    // the thrown slash's body lets the ground show through (2.78.0, the video from above)
+    if(wave)a*=mix(.62,.9,max(ink,1.0-smoothstep(.0,.1,d)));
     body=outBand*inBand*max(mix(a,.97,inkMask),crack);
     // the light dims as it dries; the white edge burns hottest (not so hot that it blooms over the crescent's shape)
     float edgeLine=1.0-smoothstep(whiteEnd*.6,whiteEnd+.04,d);
