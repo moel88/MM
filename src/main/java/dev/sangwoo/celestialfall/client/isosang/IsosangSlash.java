@@ -480,7 +480,7 @@ public final class IsosangSlash implements Fx.Skill {
      * itself: {@link #wave}).
      */
     static final Arc[] H1_ARCS={
-        arc(v(.2,1.9,0),27,-135,2.2,4.1,135,405,.25f,.32f,.74f,.9f,.27f,.45f,8,1,2)};
+        arc(v(.2,1.85,0),27,-135,1.9,4.1,135,405,.25f,.32f,.74f,.9f,.27f,.45f,8,1,2)};
     static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.12f,.36f,1,3,1)};
     static final Arc[] H3_ARCS={
         arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
