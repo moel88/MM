@@ -483,7 +483,7 @@ public final class IsosangSlash implements Fx.Skill {
     static final Arc[] H1_ARCS={
         arc(v(0,2.0,-.3),22,-135,2.9,4.3,-75,240,.29f,.36f,.6f,.8f,.33f,.5f,0,1,2),
         chord(v(-1.0,.5,-1.6),v(2.8,3.4,1.9),v(.5,.4,-1),.7,.6,.375f,.43f,.6f,.8f,.4f,.52f,6,2)};
-    static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.13f,.37f,1,3,1)};
+    static final Arc[] H2_ARCS={arc(v(.35,.5,0),3,180,2.3,3.1,-60,300,.1f,.19f,.6f,.9f,.12f,.36f,1,3,1)};
     static final Arc[] H3_ARCS={
         arc(v(.5,1.5,.5),20,180,1.7,2.5,-90,120,.18f,.24f,.42f,.62f,.22f,.36f,0,15,2),
         arc(v(.4,1.3,.3),12,-90,2.0,2.8,-30,250,.49f,.56f,.78f,1.0f,.54f,.7f,0,5,2),
@@ -560,8 +560,7 @@ public final class IsosangSlash implements Fx.Skill {
     }
     /** How far in from the outer edge the white-hot rim reaches (0..1 of the band), as the shader has it: the ring's broad while fresh. */
     static double whiteEnd(int style,float ink){
-        float k=Ease.smooth(ink,0,.3f);
-        return style==1?.6-.52*k:.24-.18*k;
+        return style==1?.6-.52*Ease.smooth(ink,0,.12f):.24-.18*Ease.smooth(ink,0,.3f);
     }
 
     /**
@@ -711,7 +710,7 @@ public final class IsosangSlash implements Fx.Skill {
      * brush ring on the ground where the cut was made, kept a third of a second). The strokes looping in the air round hit
      * 2's ring and hit 4's cut (2.77.2–2.77.7) are gone: the video from above has none.
      */
-    static final Loop[] H4_LOOPS={new Loop(v(.7,.05,0),0,0,2.2,1,.07,-200,160,.7f,.75f,1.0f,1.35f,6)};
+    static final Loop[] H4_LOOPS={new Loop(v(.5,.05,0),0,0,1.6,1,.09,-200,160,.7f,.75f,1.0f,1.35f,6)};
     static Loop[] loops(int combo){return combo==4?H4_LOOPS:new Loop[0];}
     static void loop(Vec3d feet,float yaw,Loop l,float t){
         float drawn=Ease.out(t,l.d0(),l.d1()),erase=Ease.smooth(t,l.e0(),l.e1());
@@ -893,11 +892,12 @@ public final class IsosangSlash implements Fx.Skill {
             double k=lineAt(style,prof);
             Vec3d p0=sw.inner()[i].add(sw.outer()[i].subtract(sw.inner()[i]).multiply(k)),p1=sw.inner()[i+1].add(sw.outer()[i+1].subtract(sw.inner()[i+1]).multiply(k));
             float dim=ink==null?1:1-.8f*(ink[i]+ink[i+1])*.5f;
-            double width=sw.outer()[i].distanceTo(sw.inner()[i])*prof;float f=a*(float)prof*dim,face=faceOn(sw,i,m.camera()),glow=f*(.2f+.8f*face);
+            // (2.78.0: the glow is a rim, no wider than on a band 0.6 blocks thick, so a thick head stays dark inside)
+            double width=Math.min(.6,sw.outer()[i].distanceTo(sw.inner()[i])*prof);float f=a*(float)Math.min(1,prof*1.6)*dim,face=faceOn(sw,i,m.camera()),glow=f*(.2f+.8f*face);
             m.softLine(p0,p1,width*1.2,DEEP,.08f*glow);
             m.softLine(p0,p1,width*.55,BLUE,.26f*glow);
             m.softLine(p0,p1,width*.22,AZURE,.45f*glow);
-            m.line(p0,p1,.05+.04*prof,WHITE,.9f*f*(.4f+.6f*face));
+            m.line(p0,p1,.05+.03*Math.min(1,prof*1.6),WHITE,.9f*f*(.4f+.6f*face));
         }
     }
     /** The sine of how far out of band {@code sw}'s plane at its segment {@code i} the view from {@code camera} is (0 edge on, 1 face on). */
