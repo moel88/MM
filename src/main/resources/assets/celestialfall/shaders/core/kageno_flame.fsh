@@ -381,7 +381,7 @@ void main(){
     float wob=.042*sin(3.0*th+sd+1.1*tsec)+.026*sin(5.0*th-1.7*sd-1.9*tsec)+.014*sin(9.0*th+2.3*sd+3.3*tsec)
              +.06*(fbm(dir*1.4+vec2(sd*.37,tsec*.6))-.5);
     float edgeR=1.0+wob,d=r-edgeR;
-    float depth=smoothstep(0.0,.3,-d),inside=1.0-smoothstep(-aa,aa*.5,d);
+    float depth=smoothstep(0.0,.11,-d),inside=1.0-smoothstep(-aa,aa*.5,d);
     float mott=fbm(q*2.6+vec2(sd,-sd)+tsec*vec2(.13,-.09));
     // the streaks: in toward the middle as it gathers, out as it swirls out, turning round it as they go
     float sw=th+(swirling>.5?.75:-.55)*lr+(swirling>.5?-.9:.7)*tsec;
@@ -393,15 +393,15 @@ void main(){
     float cover;
     if(swirling<.5)cover=smoothstep(n-.13,n+.13,share*1.3-.15);
     else cover=1.0-smoothstep(n-.09,n+.09,share*1.3-.15+.3*(1.0-depth)*share);
-    vec3 thinC=mix(deep*.85,blue*.75,.35);
-    rgb=mix(thinC,mix(inkc,navy*.8,.35*mott),depth);
-    rgb=mix(rgb,mix(deep,navy*1.6,depth),streak*.5);
-    float a=inside*cover*mix(.5,.92,depth)*(.9+.1*mott);
+    vec3 thinC=mix(navy*1.5,deep*.75,.45);
+    rgb=mix(thinC,mix(inkc,navy*.7,.3*mott),depth);
+    rgb=mix(rgb,mix(deep*.8,navy*1.5,depth),streak*.45);
+    float a=inside*cover*mix(.62,.93,depth)*(.9+.1*mott);
     // the edge lit (dimming once it has swirled all the way out, a faint rim left): a wide blue glow outside, a thin
     // bright line along the ink, white at its heart
     float lit_=swirling>.5?1.0-.65*smoothstep(.9,1.25,tsec):1.0;
-    float glow=d>0.0?exp(-d/.12)*smoothstep(0.0,aa*2.0+.004,d)*cover*lit_:0.0;
-    if(d>0.0){rgb=mix(blue,deep,.35);a=.5*glow;}
+    float glow=d>0.0?exp(-d/.075)*smoothstep(0.0,aa*2.0+.004,d)*cover*lit_:0.0;
+    if(d>0.0){rgb=mix(blue,deep,.4);a=.42*glow;}
     float lw=max(aa*1.5,.01);
     float line=(1.0-smoothstep(lw*.4,lw*1.7,abs(d)))*cover;
     float core=1.0-smoothstep(0.0,lw*.6,abs(d));
@@ -411,17 +411,17 @@ void main(){
     if(swirling>.5){
      float young=1.0-smoothstep(.95,1.3,tsec);
      for(int i=0;i<3;i++){
-      float rho=fract(float(i)/3.0+tsec*1.15)*.96,rw=max(aa*1.3,.008)+.012*rho;
+      float rho=fract(float(i)/3.0+tsec*1.15)*.96,rw=max(aa*1.1,.006)+.008*rho;
       ripple+=(1.0-smoothstep(rw*.5,rw*1.8,abs(r-rho*edgeR)))*sin(3.14159*rho);
      }
      ripple*=young*cover;
      float spiral=.5+.5*cos(3.0*th-2.4*lr-2.6*tsec+sd);
      float win=smoothstep(.08,.28,r)*(1.0-smoothstep(.75,.98,r/edgeR));
-     arm=smoothstep(.8,.97,spiral)*win*(1.0-smoothstep(0.0,.45,share))*smoothstep(.70,.78,tsec)*cover;
-     rgb=mix(rgb,mix(blue,pale,.5),min(1.0,ripple)*.8);a=max(a,min(1.0,ripple)*.85);
-     rgb=mix(rgb,mix(blue,pale,smoothstep(.9,.99,spiral)),arm*.85);a=max(a,arm*.9);
+     arm=smoothstep(.86,.985,spiral)*win*(1.0-smoothstep(0.0,.45,share))*smoothstep(.70,.78,tsec)*cover;
+     rgb=mix(rgb,mix(blue,pale,.4),min(1.0,ripple)*.6);a=max(a,min(1.0,ripple)*.6);
+     rgb=mix(rgb,mix(blue,pale,smoothstep(.93,.995,spiral)),arm*.8);a=max(a,arm*.85);
     }
-    float lit=line*(1.0+1.6*lit_)+glow*.6+min(1.0,ripple)*1.2+arm*1.4;
+    float lit=line*(1.0+1.6*lit_)+glow*.45+min(1.0,ripple)*.7+arm*1.1;
     rgb*=1.0+Hot*lit;
     alpha=a*tint.a;
    }
