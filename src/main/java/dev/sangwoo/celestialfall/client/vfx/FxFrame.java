@@ -45,10 +45,12 @@ public final class FxFrame {
     /** Chromatic split in screen fractions per unit of distance from the focus. */
     public void chroma(float amount){if(amount>chroma)chroma=amount;}
     /**
-     * How long the afterglow lasts this frame, as a share of the usual (0..1, the shortest asked wins): something
-     * flying fast would otherwise leave fading copies of itself behind it, side by side like extra strokes.
+     * How long the afterglow lasts this frame, as a share of the usual (0.01..1, the shortest asked wins): something
+     * flying fast would otherwise leave fading copies of itself behind it, side by side like extra strokes (2.82.6:
+     * down to .01, for the edge of Lee So-sang's ink sweeping in at a hundred blocks a second, whose copies showed even
+     * at .05 where frames come close together in game time, as in a slowed shot).
      */
-    public void afterglow(float share){if(share>=0&&share<afterglow)afterglow=Math.max(.05f,share);}
+    public void afterglow(float share){if(share>=0&&share<afterglow)afterglow=Math.max(.01f,share);}
 
     /** The lights that reach the camera's surroundings most, brightest first, at most {@link #MAX_LIGHTS}. */
     public List<Light> strongest(Vec3d camera){

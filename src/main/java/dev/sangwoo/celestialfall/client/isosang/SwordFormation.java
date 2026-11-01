@@ -1177,8 +1177,9 @@ final class SwordFormation {
         if(flare>.01f)f.light(centre.add(0,1,0),0x7fe6ff,14,1.3f*flare);
         float stand=Ease.smooth(t,SILVER0,SILVER1)*(1-Ease.smooth(t,e,e+GONE));
         if(stand>.01f)f.light(centre.add(0,2.2,0),0x8fb4ff,12,.25f*stand);
-        // fast as she leaps and the swords rain: the afterglow cut short, else they leave copies of themselves on the way
-        f.afterglow(t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
+        // fast as she leaps and the swords rain: the afterglow cut short, else they leave copies of themselves on the way;
+        // all but none while the ink's lit edge sweeps in and out (2.82.6: its copies showed as rings beside it)
+        f.afterglow(t>=GATHER0-.02f&&t<SPREAD1+.2f?.01f:t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
     }
     /** Shake: the burst in the middle, the rain of swords crashing in, and a little as the formation ends (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){

@@ -45,6 +45,8 @@ class FxFrameTest {
     @Test void theShortestAfterglowWins(){
         var f=new FxFrame();assertEquals(1,f.afterglow(),1e-6);
         f.afterglow(.35f);f.afterglow(.2f);f.afterglow(.5f);f.afterglow(-1);assertEquals(.2f,f.afterglow(),1e-6);
-        f.afterglow(0);assertEquals(.05f,f.afterglow(),1e-6);
+        // (2.82.6: down to .01, never none: the ink of Lee So-sang's H sweeping in)
+        f.afterglow(.03f);assertEquals(.03f,f.afterglow(),1e-6);
+        f.afterglow(0);assertEquals(.01f,f.afterglow(),1e-6);
     }
 }
