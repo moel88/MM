@@ -12,6 +12,7 @@ import dev.sangwoo.celestialfall.client.kageno.R6;
 import dev.sangwoo.celestialfall.client.vfx.FxFrame;
 import dev.sangwoo.celestialfall.isosang.IsosangRules;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,10 +34,11 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * strikes first, a black spike shooting up out of the pool and bursting into blue light, and as she dives back down to
  * the middle the pool swirls out over the whole formation in bands of blue and the swords rain down all round, each
  * trailing blue lightning, each struck into the ground with a flower of blue crystal and a splash of ink at its foot. Ink
- * mountains rise round the formation and a white mist drifts in; the swords, dark as they strike, turn silver with a
- * white glow; she hops up onto the middle sword's pommel and stands there (IsosangClient.drive lifts her, IsosangClient.lift
- * draws the leap and the hop's arc) until the formation ends: every sword flares sky blue, turns to ink and breaks away,
- * the mountains, the mist and the blue of the ground going with them, and she drops back down.
+ * mountains rise round the formation, white clouds curling over them and wisps of mist drifting low (2.82.1); the swords,
+ * dark as they strike, turn silver with a white glow, a gleam running down one now and then; she hops up onto the middle
+ * sword's pommel and stands there (IsosangClient.drive lifts her, IsosangClient.lift draws the leap and the hop's arc)
+ * until the formation ends: every sword flares sky blue over a four-pointed star of light, turns to ink and breaks away,
+ * the mountains, the clouds and the blue of the ground going with them, and she drops back down.
  * <p>The formation lies round its middle as the server laid it (IsosangClient.formation: the ground under her as she
  * began, the way she faced), each sword where the swing's id seeds it (every client the same). Every effect is a function
  * of the swing's clock, so it moves at the render frame rate.
@@ -56,8 +58,8 @@ final class SwordFormation {
     static final double POOL_R=3.2,SWIRL_R=IsosangRules.FORMATION_RADIUS-.4;
     /** The pool and its swirl dry away (the video: the formation's ground clears from 1.6 s, colours back by 2.1 s). */
     static final float DRY0=1.3f,DRY1=1.9f;
-    /** The mountains rise; the mist comes in. */
-    static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f,MIST1=2.6f;
+    /** The mountains rise; the clouds and the mist start coming in (each a little after this, over a second: Cloud.in). */
+    static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f;
     /** The swords, dark as they strike, turn silver; the crystal flowers at their feet wilt. */
     static final float SILVER0=1.42f,SILVER1=1.8f,WILT0=1.45f,WILT1=1.78f;
     /** As it ends (seconds after its end): the swords flare sky blue (to GLOW), turn to ink (to INKED), and are gone (GONE). */
@@ -206,11 +208,19 @@ final class SwordFormation {
 
     /** The formation's sword (the video: a plain silver longsword), along it from its pommel's top (y 0) to its point, blocks. */
     static final double S_LEN=2.2,S_POMMEL=.09,S_GRIP=.4,S_GUARD=.47,S_W=.072,S_W2=.058,S_T=.022,S_POINT=.34,S_GUARD_W=.27,S_GUARD_T=.042,S_GRIP_R=.03;
-    enum Part{BLADE,GUARD,GRIP,POMMEL}
+    /**
+     * Its finer parts (2.82.1, the video's sword looked at again: a groove down its blade, its guard's ends rounded, its
+     * grip wound): the fuller's half width and how far down the blade it runs, the guard's knobs' size, and the guard's sweep
+     * toward the point at its ends.
+     */
+    static final double S_FULLER=.017,S_FULLER_END=.7,S_KNOB=.034,S_SWEEP=.035;
+    enum Part{BLADE,FULLER,GUARD,KNOB,GEM,GRIP,RING,POMMEL}
     record Face(Vec3d[] v,Vec3d n,Part part){}
     record Edge(Vec3d a,Vec3d b,boolean outline){}
     static final List<Face> FACES=new ArrayList<>();
     static final List<Edge> EDGES=new ArrayList<>();
+    /** The middles of its guard's knobs and of its gems (the points their faces turn out from), and the way each gem faces. */
+    static final List<Vec3d> KNOBS=new ArrayList<>(),GEMS=new ArrayList<>(),GEM_WAYS=new ArrayList<>();
     static{build();}
     private static Vec3d p(double x,double y,double z){return new Vec3d(x,y,z);}
     /** A face, its normal turned to agree with {@code out} (a rough outward way). */
@@ -220,9 +230,18 @@ final class SwordFormation {
         n=n.normalize();if(n.dotProduct(out)<0)n=n.negate();
         FACES.add(new Face(v,n,part));
     }
+    /** The blade's half width {@code y} along the sword (from its guard to where its point begins), and how far its ridge stands out there. */
+    static double bladeWidth(double y){double u=MathHelper.clamp((y-S_GUARD)/(S_LEN-S_POINT-S_GUARD),0,1);return S_W+(S_W2-S_W)*u;}
+    static double bladeRidge(double y){double u=MathHelper.clamp((y-S_GUARD)/(S_LEN-S_POINT-S_GUARD),0,1);return S_T*(1-.15*u);}
+    /** A point of the blade's edge (its right one, x > 0) {@code y} along the sword, on to its point. */
+    static Vec3d edge(double y){
+        double y1=S_LEN-S_POINT;
+        if(y<=y1)return p(bladeWidth(y),y,0);
+        return p(S_W2*(1-MathHelper.clamp((y-y1)/S_POINT,0,1)),Math.min(y,S_LEN),0);
+    }
     private static void build(){
         // the blade: a diamond across (its edges at x = ±w, its ridge at z = ±t), narrowing a little to where its point begins
-        double y0=S_GUARD,y1=S_LEN-S_POINT,t1=S_T*.85;
+        double y0=S_GUARD,y1=S_LEN-S_POINT,t1=bladeRidge(y1);
         Vec3d e0=p(S_W,y0,0),r0=p(0,y0,S_T),f0=p(-S_W,y0,0),q0=p(0,y0,-S_T);
         Vec3d e1=p(S_W2,y1,0),r1=p(0,y1,t1),f1=p(-S_W2,y1,0),q1=p(0,y1,-t1),tip=p(0,S_LEN,0);
         face(Part.BLADE,p(1,0,1),e0,e1,r1,r0);face(Part.BLADE,p(-1,0,1),r0,r1,f1,f0);
@@ -231,8 +250,16 @@ final class SwordFormation {
         face(Part.BLADE,p(-1,.4,-1),f1,tip,q1);face(Part.BLADE,p(1,.4,-1),q1,tip,e1);
         EDGES.add(new Edge(e0,e1,true));EDGES.add(new Edge(e1,tip,true));EDGES.add(new Edge(f0,f1,true));EDGES.add(new Edge(f1,tip,true));
         EDGES.add(new Edge(r0,r1,false));EDGES.add(new Edge(r1,tip,false));EDGES.add(new Edge(q0,q1,false));EDGES.add(new Edge(q1,tip,false));
+        // the fuller: a groove down the middle of each broad side from just under the guard, a hair over the blade's faces
+        double fy0=S_GUARD+.04,fy1=S_GUARD+S_FULLER_END*(y1-S_GUARD),lift=.0015;
+        for(int side=-1;side<=1;side+=2)for(int half=-1;half<=1;half+=2){
+            double fw=S_FULLER*half;
+            Vec3d a=p(0,fy0,side*(bladeRidge(fy0)+lift)),b=p(fw,fy0,side*(bladeRidge(fy0)*(1-Math.abs(fw)/bladeWidth(fy0))+lift));
+            Vec3d c=p(fw,fy1,side*(bladeRidge(fy1)*(1-Math.abs(fw)/bladeWidth(fy1))+lift)),d=p(0,fy1,side*(bladeRidge(fy1)+lift));
+            face(Part.FULLER,p(half*.3,0,side),a,b,c,d);
+        }
         // the guard: a straight bar across, its ends a little swept toward the point
-        double g0=S_GRIP,g1=S_GUARD,gw=S_GUARD_W,gt=S_GUARD_T,sweep=.035;
+        double g0=S_GRIP,g1=S_GUARD,gw=S_GUARD_W,gt=S_GUARD_T,sweep=S_SWEEP;
         Vec3d a=p(-gw,g0+sweep,-gt),b=p(gw,g0+sweep,-gt),c=p(gw,g1+sweep,-gt),dd=p(-gw,g1+sweep,-gt);
         Vec3d e=p(-gw,g0+sweep,gt),f=p(gw,g0+sweep,gt),g=p(gw,g1+sweep,gt),h=p(-gw,g1+sweep,gt);
         Vec3d ma=p(0,g0,-gt),mb=p(0,g1,-gt),me=p(0,g0,gt),mf=p(0,g1,gt);
@@ -244,24 +271,46 @@ final class SwordFormation {
         face(Part.GUARD,p(-1,0,0),a,dd,h,e);face(Part.GUARD,p(1,0,0),b,f,g,c);
         EDGES.add(new Edge(p(-gw,g0+sweep,0),p(0,g0,0),true));EDGES.add(new Edge(p(0,g0,0),p(gw,g0+sweep,0),true));
         EDGES.add(new Edge(p(-gw,g1+sweep,0),p(0,g1,0),true));EDGES.add(new Edge(p(0,g1,0),p(gw,g1+sweep,0),true));
-        EDGES.add(new Edge(p(-gw,g0+sweep,0),p(-gw,g1+sweep,0),true));EDGES.add(new Edge(p(gw,g0+sweep,0),p(gw,g1+sweep,0),true));
-        // the grip and the pommel: turned, eight sides
-        double[][] lathe={{0,.034},{.028,.058},{.066,.052},{S_POMMEL,S_GRIP_R},{S_GRIP,S_GRIP_R}};
+        // the knobs rounding its ends: small eight-faced studs
+        for(int side=-1;side<=1;side+=2){
+            Vec3d k=p(side*(gw+S_KNOB*.55),(g0+g1)/2+sweep,0);KNOBS.add(k);
+            Vec3d[] ax={p(S_KNOB*1.1,0,0),p(0,S_KNOB,0),p(0,0,S_KNOB*.9)};
+            for(int sx=-1;sx<=1;sx+=2)for(int sy=-1;sy<=1;sy+=2)for(int sz=-1;sz<=1;sz+=2){
+                Vec3d px=k.add(ax[0].multiply(sx)),py=k.add(ax[1].multiply(sy)),pz=k.add(ax[2].multiply(sz));
+                face(Part.KNOB,p(sx,sy,sz),px,py,pz);
+            }
+            EDGES.add(new Edge(k.add(ax[1]),k.add(ax[0].multiply(side)),true));EDGES.add(new Edge(k.add(ax[0].multiply(side)),k.subtract(ax[1]),true));
+        }
+        // the gems: a low four-sided stone on each face of the guard's middle and of the pommel
+        for(int side=-1;side<=1;side+=2){
+            gem(p(0,(g0+g1)/2,side*(gt+.002)),.026,.034,.009,side);
+            gem(p(0,.047,side*.0575),.019,.025,.007,side);
+        }
+        // the grip and the pommel: turned, eight sides; the grip wound with three raised bands
+        double r=S_GRIP_R,rr=r*1.25;
+        double[][] lathe={{0,.034},{.028,.058},{.066,.052},{S_POMMEL,r},
+            {.15,r},{.156,rr},{.168,rr},{.174,r},{.236,r},{.242,rr},{.254,rr},{.26,r},{.322,r},{.328,rr},{.34,rr},{.346,r},{S_GRIP,r}};
+        Part[] parts={Part.POMMEL,Part.POMMEL,Part.POMMEL,Part.GRIP,Part.RING,Part.RING,Part.RING,Part.GRIP,Part.RING,Part.RING,Part.RING,Part.GRIP,Part.RING,Part.RING,Part.RING,Part.GRIP};
         int sides=8;
         for(int i=0;i+1<lathe.length;i++){
-            Part part=i==lathe.length-2?Part.GRIP:Part.POMMEL;
-            for(int s=0;s<sides;s++){
-                double u0=Math.PI*2*s/sides,u1=Math.PI*2*(s+1)/sides,um=(u0+u1)*.5;
+            for(int sd=0;sd<sides;sd++){
+                double u0=Math.PI*2*sd/sides,u1=Math.PI*2*(sd+1)/sides,um=(u0+u1)*.5;
                 Vec3d p0=p(Math.cos(u0)*lathe[i][1],lathe[i][0],Math.sin(u0)*lathe[i][1]),p1=p(Math.cos(u1)*lathe[i][1],lathe[i][0],Math.sin(u1)*lathe[i][1]);
                 Vec3d p2=p(Math.cos(u1)*lathe[i+1][1],lathe[i+1][0],Math.sin(u1)*lathe[i+1][1]),p3=p(Math.cos(u0)*lathe[i+1][1],lathe[i+1][0],Math.sin(u0)*lathe[i+1][1]);
-                face(part,p(Math.cos(um),0,Math.sin(um)),p0,p1,p2,p3);
+                face(parts[i],p(Math.cos(um),0,Math.sin(um)),p0,p1,p2,p3);
             }
         }
-        for(int s=0;s<sides;s++){
-            double u0=Math.PI*2*s/sides,u1=Math.PI*2*(s+1)/sides;
+        for(int sd=0;sd<sides;sd++){
+            double u0=Math.PI*2*sd/sides,u1=Math.PI*2*(sd+1)/sides;
             face(Part.POMMEL,p(0,-1,0),p(0,0,0),p(Math.cos(u0)*lathe[0][1],0,Math.sin(u0)*lathe[0][1]),p(Math.cos(u1)*lathe[0][1],0,Math.sin(u1)*lathe[0][1]));
         }
         EDGES.add(new Edge(p(0,0,0),p(0,S_GRIP,0),false));
+    }
+    /** A gem: a low four-sided stone {@code w} across and {@code h} along the sword, standing {@code raise} out from {@code base} on side {@code side} (z). */
+    private static void gem(Vec3d base,double w,double h,double raise,int side){
+        GEMS.add(base);GEM_WAYS.add(p(0,0,side));
+        Vec3d top=base.add(0,0,side*raise),l=base.add(-w,0,0),rt=base.add(w,0,0),up=base.add(0,h,0),dn=base.add(0,-h,0);
+        face(Part.GEM,p(-1,1,side*2),top,l,up);face(Part.GEM,p(1,1,side*2),top,up,rt);face(Part.GEM,p(1,-1,side*2),top,rt,dn);face(Part.GEM,p(-1,-1,side*2),top,dn,l);
     }
     /** A sword's frame in the world, pointing along {@code dir} from its pommel, its guard turned {@code spin} degrees: across, along, through. */
     static Vec3d[] frame(Vec3d dir,double spin){
@@ -272,7 +321,7 @@ final class SwordFormation {
         return new Vec3d[]{x,y,z};
     }
     static Vec3d at(Vec3d pommel,Vec3d[] f,Vec3d p){return pommel.add(f[0].multiply(p.x)).add(f[1].multiply(p.y)).add(f[2].multiply(p.z));}
-    private static int colour(Part part){return switch(part){case BLADE->0xd2dbee;case GUARD->0xaab5cd;case GRIP->0x3b4459;case POMMEL->0xbcc6dc;};}
+    private static int colour(Part part){return switch(part){case BLADE->0xd2dbee;case FULLER->0x7d89a6;case GUARD->0xaab5cd;case KNOB->0xc6cfe4;case GEM->0x6aa6ff;case GRIP->0x343c52;case RING->0xb7c1d8;case POMMEL->0xbcc6dc;};}
     /** The light the swords are lit by: from above, a little from the side. */
     static final Vec3d LIGHT=new Vec3d(.35,1,.25).normalize();
     /**
@@ -312,29 +361,34 @@ final class SwordFormation {
         }
         Vec3d base=at(pommel,f,p(0,S_GUARD,0)),tip=at(pommel,f,p(0,S_LEN,0)),top=at(pommel,f,p(0,0,0));
         m.softLine(top,tip,.36,dark>.5f?BLUE:AZURE,(.04f+.03f*sky)*a);
+        // its gems glint blue on the side turned to the camera (2.82.1)
+        if(dark<.5f)for(int i=0;i<GEMS.size();i++){
+            Vec3d g=at(pommel,f,GEMS.get(i)),way=f[0].multiply(GEM_WAYS.get(i).x).add(f[1].multiply(GEM_WAYS.get(i).y)).add(f[2].multiply(GEM_WAYS.get(i).z));
+            if(way.dotProduct(m.camera().subtract(g))>0)m.softDisc(g.add(way.multiply(.012)),.055,AZURE,(.32f+.2f*sky)*a);
+        }
         if(flare>.01f){m.softLine(top,tip,.9,CYAN,.5f*flare*a);m.line(base,tip,.05,WHITE,.85f*flare*a);m.softDisc(top,.45,CYAN,.5f*flare*a);}
     }
 
-    // ───────────────────────────── the ink mountains, the mist ─────────────────────────────
+    // ───────────────────────────── the ink mountains, the clouds, the mist ─────────────────────────────
 
     /**
-     * An ink mountain round the formation (the video: dark peaks drawn as with a brush, rimmed in light blue, round it):
-     * which way from its middle (radians), how far, how wide, its ridge (heights at RIDGE points across it), its peaks
-     * (where along it and how high), its seed.
+     * A pinnacle of an ink mountain (2.82.1, user request: "H 검이나 산 같은 것들 영상 보고 더 예쁘게 꾸며줘 산 위에 구름
+     * 장식도 있는 거 같던데", the video looked at again: each mountain tall narrow peaks drawn as with a brush, one before
+     * another, near black, each rimmed in light blue down its sides from its summit, the rim thick under the summit and
+     * thinning as it runs down, stepped where the brush paused): its outline from its left foot up over its summit and
+     * down to its right foot (x along its mountain from the mountain's middle, y up, blocks; x only grows along it), the
+     * summit's index in it, how far before its mountain's face it stands (toward the formation's middle, blocks), how long
+     * after its mountain it rises (seconds), how far down each side its rim runs (0 to 1 of the side) and its seed.
      */
-    record Mountain(double az,double radius,double width,double[] ridge,double[] peakX,double[] peakH,int seed){
-        /** The ridge's height {@code x} along it (blocks from its middle). */
-        double at(double x){
-            double u=(x/width+.5)*(RIDGE-1);if(u<=0)return ridge[0];if(u>=RIDGE-1)return ridge[RIDGE-1];
-            int i=(int)u;double f=u-i;return ridge[i]*(1-f)+ridge[i+1]*f;
-        }
-        double x(int i){return width*(i/(double)(RIDGE-1)-.5);}
+    record Peak(double[] xs,double[] ys,int top,double front,float delay,double rimL,double rimR,int seed){
+        double height(){return ys[top];}
     }
-    static final int RIDGE=44;
+    /** An ink mountain round the formation: which way from its middle (radians), how far, its peaks from the back one to the front one, how long after the first it rises, its seed. */
+    record Mountain(double az,double radius,Peak[] peaks,float delay,int seed){}
     private static final Map<UUID,Mountain[]> MOUNTAINS=new LinkedHashMap<>();
     /**
-     * The mountains of the formation of swing {@code id}: nine round it, each two to four tall peaks with round tops and
-     * steep sides running into one another (as ink mountains are painted), a little ragged along the ridge.
+     * The mountains of the formation of swing {@code id} (the same on every client): nine round it, each a tall pinnacle,
+     * a lower one beside it a little before it, and one to three small ones before them.
      */
     static Mountain[] mountains(UUID id){
         var l=MOUNTAINS.get(id);if(l!=null)return l;
@@ -342,121 +396,317 @@ final class SwordFormation {
         int n=9;l=new Mountain[n];double off=Math.PI*2*Ease.hash(s0+5);
         for(int i=0;i<n;i++){
             int seed=s0+211*(i+1);
-            double az=off+Math.PI*2*(i+.35*(Ease.hash(seed+1)-.5))/n,radius=11.8+2.0*Ease.hash(seed+2),width=4.4+2.8*Ease.hash(seed+3);
-            int peaks=2+(int)Math.floor(Ease.hash(seed+4)*2.99);
-            double[] px=new double[peaks],ph=new double[peaks],pw=new double[peaks];double top=0;
-            for(int j=0;j<peaks;j++){
-                px[j]=width*((j+.5+.35*(Ease.hash(seed+10+j)-.5))/peaks-.5);
-                ph[j]=(3.0+3.3*Ease.hash(seed+20+j))*(j==peaks/2?1.18:1);
-                pw[j]=width/peaks*(.75+.5*Ease.hash(seed+30+j));top=Math.max(top,ph[j]);
+            double az=off+Math.PI*2*(i+.35*(Ease.hash(seed+1)-.5))/n,radius=11.8+2.0*Ease.hash(seed+2),width=5+3*Ease.hash(seed+3);
+            double tall=4.2+2.4*Ease.hash(seed+4),side=Ease.hash(seed+6)<.5?-1:1;int count=3+(int)Math.floor(Ease.hash(seed+5)*2.99);
+            // from the back to the front: where along the mountain (of its width), how tall (of the tall one's height), how far before the face, how late it rises
+            double[][] plan={{(Ease.hash(seed+7)-.5)*.3,1,0,0},{side*(.26+.14*Ease.hash(seed+8)),.56+.2*Ease.hash(seed+9),.14,.05},
+                {-side*(.16+.2*Ease.hash(seed+10)),.3+.16*Ease.hash(seed+11),.32,.09},{side*(.38+.12*Ease.hash(seed+12)),.22+.12*Ease.hash(seed+13),.48,.12},
+                {(Ease.hash(seed+14)-.5)*.35,.15+.08*Ease.hash(seed+15),.62,.15}};
+            Peak[] peaks=new Peak[count];
+            for(int j=0;j<count;j++){
+                double h=tall*plan[j][1];
+                peaks[j]=peakOf(plan[j][0]*width,h,h*(.3+.12*Ease.hash(seed+20+j))+.2,plan[j][2],(float)plan[j][3],seed+1000*(j+1));
             }
-            double[] ridge=new double[RIDGE];
-            for(int k=0;k<RIDGE;k++){
-                double x=width*(k/(double)(RIDGE-1)-.5),y=0;
-                for(int j=0;j<peaks;j++){double u=Math.min(1,Math.abs(x-px[j])/pw[j]);y=Math.max(y,ph[j]*Math.pow(Math.cos(u*Math.PI/2),1.6));}
-                double edge=Math.min(1,(x+width/2)/.7)*Math.min(1,(width/2-x)/.7);
-                y+=top*(.035*Math.sin(9.3*x+seed)+.025*Math.sin(21.7*x+seed*1.7))*Math.min(1,y/top*3);
-                ridge[k]=Math.max(0,y)*Math.max(0,edge);
-            }
-            l[i]=new Mountain(az,radius,width,ridge,px,ph,seed);
+            l[i]=new Mountain(az,radius,peaks,.14f*(float)Ease.hash(seed+90),seed);
         }
         MOUNTAINS.put(id,l);while(MOUNTAINS.size()>16)MOUNTAINS.remove(MOUNTAINS.keySet().iterator().next());
         return l;
     }
-    /** How tall a mountain stands at {@code t} (0 to 1): brushed up out of the ground, each a little after the last, and sinking as the formation ends. */
-    static float risen(StandClient.Cast c,Mountain mt,float t){
-        float d=.14f*(float)Ease.hash(mt.seed()+90);
+    /** A pinnacle: its summit {@code x} along its mountain and {@code h} up, its foot about {@code half} out to each side, stepped down each side. */
+    static Peak peakOf(double x,double h,double half,double front,float delay,int seed){
+        List<double[]> left=peakSide(x,h,half*(.8+.4*Ease.hash(seed+1)),-1,seed+10),right=peakSide(x,h,half*(.8+.4*Ease.hash(seed+2)),1,seed+50);
+        int n=left.size()+right.size()-1,k=0;double[] xs=new double[n],ys=new double[n];
+        for(int i=left.size()-1;i>=0;i--){xs[k]=left.get(i)[0];ys[k]=left.get(i)[1];k++;}
+        for(int i=1;i<right.size();i++){xs[k]=right.get(i)[0];ys[k]=right.get(i)[1];k++;}
+        // (one side's rim runs further down than the other's)
+        boolean rightLonger=Ease.hash(seed+3)<.6;double longer=.7+.22*Ease.hash(seed+4),shorter=.4+.2*Ease.hash(seed+5);
+        return new Peak(xs,ys,left.size()-1,front,delay,rightLonger?shorter:longer,rightLonger?longer:shorter,seed);
+    }
+    /**
+     * One side of a pinnacle from its summit down to its foot ({@code dir} -1 to the left, 1 to the right): a little
+     * shoulder under the summit (a round top, not a needle), then three or four steps down a steep straight slope, each a
+     * steep drop and a ledge (or a ledge and a drop).
+     */
+    static List<double[]> peakSide(double x,double h,double half,int dir,int seed){
+        List<double[]> pts=new ArrayList<>();pts.add(new double[]{x,h});
+        double px=x+dir*half*(.1+.1*Ease.hash(seed)),py=h*(1-.05-.04*Ease.hash(seed+1)),shoulder=py;
+        pts.add(new double[]{px,py});
+        int steps=3+(int)Math.floor(Ease.hash(seed+2)*1.99);
+        for(int k=1;k<=steps;k++){
+            double f=k/(double)steps;
+            double nx=k==steps?x+dir*half:x+dir*half*Math.pow(f,.9)*(1+.18*(Ease.hash(seed+k*3+3)-.5));
+            double ny=k==steps?0:Math.max(0,Math.min(py-.05,shoulder*(1-Math.pow(f,1.1))*(1+.16*(Ease.hash(seed+k*3+4)-.5))));
+            nx=dir>0?Math.max(nx,px+.03):Math.min(nx,px-.03);
+            boolean drop=Ease.hash(seed+k*3+5)<.68;
+            double mx=drop?px+(nx-px)*.18:px+(nx-px)*.72,my=drop?ny+(py-ny)*.3:py-(py-ny)*.18;
+            pts.add(new double[]{mx,my});pts.add(new double[]{nx,ny});px=nx;py=ny;
+        }
+        return pts;
+    }
+    /** How tall a peak stands at {@code t} (0 to 1): brushed up out of the ground (each mountain a little after the last, its front peaks after its back one), sinking as the formation ends. */
+    static float risen(StandClient.Cast c,Mountain mt,Peak p,float t){
+        float d=mt.delay()+p.delay();
         return Ease.out(t,RISE0+d,RISE1+d)*(1-Ease.smooth(t,end(c)+GLOW,end(c)+GONE+.2f));
     }
-    /** A point of a mountain's face (fixed in the world, looking at the formation's middle): {@code x} along it, {@code y} up. */
-    static Vec3d onMountain(Vec3d centre,Mountain mt,double x,double y){
+    /** How far down from its summit a peak's rims are drawn at {@code t} (0 to 1): the brush runs down as the peak rises. */
+    static float drawn(Mountain mt,Peak p,float t){float d=mt.delay()+p.delay();return Ease.smooth(t,RISE0+d+.06f,RISE1+d+.32f);}
+    /** A point of a mountain's face (fixed in the world, looking at the formation's middle): {@code x} along it, {@code y} up, {@code front} before it. */
+    static Vec3d onMountain(Vec3d centre,Mountain mt,double x,double y,double front){
         Vec3d out=new Vec3d(Math.cos(mt.az()),0,Math.sin(mt.az())),along=new Vec3d(-out.z,0,out.x);
-        return centre.add(out.multiply(mt.radius())).add(along.multiply(x)).add(0,y,0);
+        return centre.add(out.multiply(mt.radius()-front)).add(along.multiply(x)).add(0,y,0);
     }
-    /**
-     * The mountains' ink (the blended pass): their faces darkest along the ridge, fading out toward their feet as ink
-     * washed into mist does.
-     */
-    static void mountainInk(Fx c,EffectMesh m,float t){
-        Vec3d centre=centre(c.cast);
-        for(var mt:mountains(c.cast.id())){
-            float h=risen(c.cast,mt,t);if(h<=.01f)continue;float a=Math.min(1,h*1.6f);
-            for(int k=0;k+1<RIDGE;k++){
-                double x0=mt.x(k),x1=mt.x(k+1),y0=mt.ridge()[k]*h,y1=mt.ridge()[k+1]*h;
-                if(y0<.01&&y1<.01)continue;
-                Vec3d b0=onMountain(centre,mt,x0,-.05),b1=onMountain(centre,mt,x1,-.05),p0=onMountain(centre,mt,x0,y0),p1=onMountain(centre,mt,x1,y1);
-                Vec3d m0=onMountain(centre,mt,x0,y0*.55),m1=onMountain(centre,mt,x1,y1*.55);
-                m.vertex(b0,0x16224a,.14f*a);m.vertex(b1,0x16224a,.14f*a);m.vertex(m1,0x0a1028,.7f*a);m.vertex(m0,0x0a1028,.7f*a);
-                m.vertex(m0,0x0a1028,.7f*a);m.vertex(m1,0x0a1028,.7f*a);m.vertex(p1,0x05070f,.95f*a);m.vertex(p0,0x05070f,.95f*a);
-            }
+    /** The ink of a mountain's peak (the blended pass): near black under its outline, washing out a little toward its foot. */
+    static void peakBody(EffectMesh m,Vec3d centre,Mountain mt,Peak p,float h,float a){
+        for(int k=0;k+1<p.xs().length;k++){
+            double x0=p.xs()[k],x1=p.xs()[k+1],y0=p.ys()[k]*h,y1=p.ys()[k+1]*h;
+            if(y0<.01&&y1<.01)continue;
+            Vec3d t0=onMountain(centre,mt,x0,y0,p.front()),t1=onMountain(centre,mt,x1,y1,p.front());
+            Vec3d m0=onMountain(centre,mt,x0,y0*.35,p.front()),m1=onMountain(centre,mt,x1,y1*.35,p.front());
+            Vec3d b0=onMountain(centre,mt,x0,-.08,p.front()),b1=onMountain(centre,mt,x1,-.08,p.front());
+            m.vertex(t0,0x04060d,.95f*a);m.vertex(t1,0x04060d,.95f*a);m.vertex(m1,0x070b1d,.9f*a);m.vertex(m0,0x070b1d,.9f*a);
+            m.vertex(m0,0x070b1d,.9f*a);m.vertex(m1,0x070b1d,.9f*a);m.vertex(b1,0x111a38,.5f*a);m.vertex(b0,0x111a38,.5f*a);
         }
     }
     /**
-     * The mountains' light (the light pass): their ridges rimmed in light blue (brightest down their lit sides) with a soft
-     * glow, and strokes of light down the lit side of each peak, as the brush leaves them.
+     * A peak's rims of light down both its sides from its summit, the one further than the other, and on the taller peaks
+     * folds down its face from notches of its sides: paint (the blended pass) or their glow ({@code glow}, added).
      */
-    static void mountainLight(Fx c,EffectMesh m,float t){
-        Vec3d centre=centre(c.cast);
-        for(var mt:mountains(c.cast.id())){
-            float h=risen(c.cast,mt,t);if(h<=.01f)continue;float a=Math.min(1,h*1.4f);
-            for(int k=0;k+1<RIDGE;k++){
-                double y0=mt.ridge()[k]*h,y1=mt.ridge()[k+1]*h;if(y0<.05&&y1<.05)continue;
-                Vec3d p0=onMountain(centre,mt,mt.x(k),y0),p1=onMountain(centre,mt,mt.x(k+1),y1);
-                boolean lit=y1<y0;float fade=(float)Math.min(1,Math.min(y0,y1)/1.2);
-                m.line(p0,p1,lit?.06:.035,lit?PALE:AZURE,(lit?.72f:.36f)*a*fade);
-                m.softLine(p0,p1,lit?.42:.26,BLUE,(lit?.18f:.09f)*a*fade);
+    static void peakRims(EffectMesh m,Vec3d centre,Mountain mt,Peak p,float h,float drawn,float a,boolean glow){
+        if(drawn<=.005f)return;
+        double w0=(.07+.025*p.height())*Math.sqrt(h);
+        for(int dir=-1;dir<=1;dir+=2){
+            List<double[]> pts=new ArrayList<>();
+            for(int i=p.top();i>=0&&i<p.xs().length;i+=dir)pts.add(new double[]{p.xs()[i],p.ys()[i]*h});
+            brushStroke(m,centre,mt,p.front()+.01,pts,dir<0,w0,(dir<0?p.rimL():p.rimR())*drawn,p.seed()+(dir<0?7:13),a,glow);
+        }
+        // folds down its face (the video: light strokes down each mountain's face): from a notch of each side of a tall
+        // peak, of its longer side only on a middling one, none on the small ones before them
+        for(int dir=-1;dir<=1;dir+=2){
+            boolean longer=dir>0==p.rimR()>p.rimL();
+            if(p.height()<=1.8||!longer&&p.height()<=3)continue;
+            for(int f=0;f<(p.height()>4.5&&longer?2:1);f++){
+                int i=p.top()+dir*(3+2*f);
+                if(i<=0||i>=p.xs().length-1)continue;
+                int seed=p.seed()+29+f*11+(dir>0?5:0);
+                double x0=p.xs()[i],y0=p.ys()[i]*h,len=y0*(.32+.18*Ease.hash(seed+31)),x1=x0-dir*len*(.16+.12*Ease.hash(seed+32)),y1=y0-len;
+                List<double[]> fold=new ArrayList<>(List.of(new double[]{x0,y0},new double[]{(x0+x1)/2+dir*.06,(y0+y1)/2},new double[]{x1,y1}));
+                brushStroke(m,centre,mt,p.front()+.015,fold,dir<0,w0*(longer?.55:.42),Ease.smooth(drawn,.45f+.15f*f,1),seed,(longer?.85f:.7f)*a,glow);
             }
-            for(int j=0;j<mt.peakX().length;j++){
-                for(int s=0;s<4;s++){
-                    int seed=mt.seed()+j*17+s*5;
-                    double x0=mt.peakX()[j]+.12+.22*s+.1*Ease.hash(seed),y0=mt.at(x0)*h-.18-.1*s;if(y0<.6)continue;
-                    double x1=x0+.25+.35*Ease.hash(seed+1),y1=y0*(.42+.16*Ease.hash(seed+2));
-                    m.line(onMountain(centre,mt,x0,y0),onMountain(centre,mt,x1,y1),.032,AZURE,.3f*a*(1-.18f*s));
+        }
+    }
+    /** Where along a polyline {@code d} is (by the lengths {@code len} along it). */
+    static double[] strokeAt(List<double[]> pts,double[] len,double d){
+        int n=pts.size();if(d<=0)return pts.get(0);if(d>=len[n-1])return pts.get(n-1);
+        int i=1;while(i<n-1&&len[i]<d)i++;
+        double f=(d-len[i-1])/Math.max(1e-9,len[i]-len[i-1]);double[] a=pts.get(i-1),b=pts.get(i);
+        return new double[]{a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f};
+    }
+    /** A smooth ragged wobble (0 to 1) along a stroke. */
+    static double ragged(double x){return .5+.5*(.6*Math.sin(x)+.4*Math.sin(2.7*x+1.3));}
+    /** The light blue paint of the mountains' rims: pale at their edge, light blue into the mountain, and the blue it washes into. */
+    static final int RIM_EDGE=0xe6edff,RIM_BODY=0x8aa0ff,RIM_WASH=0x3c55d6,RIM_GLOW=0x4d6dff;
+    /**
+     * A brush stroke on a mountain's face along {@code pts} (x along it, y up) from its first point: its outer edge on them,
+     * its paint {@code w0} wide into the mountain (to the left of the way it runs when {@code left}), landing a little
+     * thinner, thinning to nothing at its far end, ragged as a dry brush, {@code reach} of it drawn (0 to 1). Paint of light
+     * (the blended pass: pale at its edge, light blue into the mountain, washing into it), or ({@code glow}) its halo of
+     * light, added: soft to both sides, a little brighter under the summit.
+     */
+    static void brushStroke(EffectMesh m,Vec3d centre,Mountain mt,double front,List<double[]> pts,boolean left,double w0,double reach,int seed,float a,boolean glow){
+        int n=pts.size();if(n<2||reach<=.005||a<=.005f)return;
+        double[] len=new double[n];
+        for(int i=1;i<n;i++)len[i]=len[i-1]+Math.hypot(pts.get(i)[0]-pts.get(i-1)[0],pts.get(i)[1]-pts.get(i-1)[1]);
+        double total=len[n-1],end=total*Math.min(1,reach);if(end<.02)return;
+        int steps=Math.max(2,(int)Math.ceil(end/.09));
+        Vec3d[] prev=null;float pw=0;
+        for(int s=0;s<=steps;s++){
+            double d=end*s/steps;
+            double[] q=strokeAt(pts,len,d),q0=strokeAt(pts,len,Math.max(0,d-.07)),q1=strokeAt(pts,len,Math.min(total,d+.07));
+            double tx=q1[0]-q0[0],ty=q1[1]-q0[1],tl=Math.hypot(tx,ty);if(tl<1e-9){tx=0;ty=-1;tl=1;}tx/=tl;ty/=tl;
+            double nx=left?-ty:ty,ny=left?tx:-tx,u=d/total;
+            double w=w0*(.55+.45*Ease.smooth((float)d,0,.18f))*Math.pow(Math.max(0,1-u),.75)*(.78+.44*ragged(d*6.5+seed*.37));
+            float k=(float)(w/w0);
+            Vec3d[] now=glow
+                ?new Vec3d[]{onMountain(centre,mt,q[0]-nx*.2,q[1]-ny*.2,front),onMountain(centre,mt,q[0],q[1],front),onMountain(centre,mt,q[0]+nx*.26,q[1]+ny*.26,front),
+                    onMountain(centre,mt,q[0]-nx*.09,q[1]-ny*.09,front),onMountain(centre,mt,q[0]+nx*w*1.1,q[1]+ny*w*1.1,front)}
+                :new Vec3d[]{onMountain(centre,mt,q[0]-nx*.012,q[1]-ny*.012,front),onMountain(centre,mt,q[0]+nx*w,q[1]+ny*w,front),onMountain(centre,mt,q[0]+nx*w*1.9,q[1]+ny*w*1.9,front)};
+            if(prev!=null){
+                if(glow){
+                    float g0=.16f*a*pw,g1=.16f*a*k,s0=.2f*a*pw*pw,s1=.2f*a*k*k;
+                    m.vertex(prev[0],RIM_GLOW,0);m.vertex(now[0],RIM_GLOW,0);m.vertex(now[1],RIM_GLOW,g1);m.vertex(prev[1],RIM_GLOW,g0);
+                    m.vertex(prev[1],RIM_GLOW,g0);m.vertex(now[1],RIM_GLOW,g1);m.vertex(now[2],RIM_GLOW,0);m.vertex(prev[2],RIM_GLOW,0);
+                    m.vertex(prev[3],PALE,0);m.vertex(now[3],PALE,0);m.vertex(now[1],PALE,s1);m.vertex(prev[1],PALE,s0);
+                    m.vertex(prev[1],PALE,s0);m.vertex(now[1],PALE,s1);m.vertex(now[4],PALE,0);m.vertex(prev[4],PALE,0);
+                }else{
+                    float e0=.95f*a*Math.min(1,pw*3),e1=.95f*a*Math.min(1,k*3),b0=.72f*a*Math.min(1,pw*3),b1=.72f*a*Math.min(1,k*3);
+                    m.vertex(prev[0],RIM_EDGE,e0);m.vertex(now[0],RIM_EDGE,e1);m.vertex(now[1],RIM_BODY,b1);m.vertex(prev[1],RIM_BODY,b0);
+                    m.vertex(prev[1],RIM_BODY,b0);m.vertex(now[1],RIM_BODY,b1);m.vertex(now[2],RIM_WASH,0);m.vertex(prev[2],RIM_WASH,0);
                 }
             }
+            prev=now;pw=k;
         }
     }
-    /** A wisp of the white mist drifting round the formation: which way, how far, how high, its size, how far and how slowly it drifts, its seed. */
-    record Mist(double az,double radius,double up,double width,double height,double drift,double period,int seed){}
-    private static final Map<UUID,Mist[]> MISTS=new LinkedHashMap<>();
-    static Mist[] mists(UUID id){
-        var l=MISTS.get(id);if(l!=null)return l;
-        int s0=(int)(id.getMostSignificantBits()*17+id.getLeastSignificantBits()*7);
-        l=new Mist[13];
-        for(int i=0;i<l.length;i++){
-            int seed=s0+131*(i+1);
-            // (most of it before the mountains, seen against them from inside; some out over them)
-            double radius=i%4==3?12+3*Ease.hash(seed+2):7.5+3.5*Ease.hash(seed+2),up=i%4==3?3.5+2*Ease.hash(seed+3):.7+1.8*Ease.hash(seed+3);
-            l[i]=new Mist(Math.PI*2*(i+.6*Ease.hash(seed+1))/l.length,radius,up,2.6+2.2*Ease.hash(seed+4),.8+.6*Ease.hash(seed+5),1.4+1.8*Ease.hash(seed+6),24+18*Ease.hash(seed+7),seed);
+    /** A mountain (the blended pass): its peaks one over another, the farthest from the camera first, each its ink and its rims. */
+    static void mountain(Fx c,EffectMesh m,float t,Vec3d centre,Mountain mt){
+        Vec3d out=new Vec3d(Math.cos(mt.az()),0,Math.sin(mt.az()));
+        boolean inside=c.camera.subtract(centre).dotProduct(out)<mt.radius()-.35;
+        int n=mt.peaks().length;
+        for(int j=0;j<n;j++){
+            var p=mt.peaks()[inside?j:n-1-j];
+            float h=risen(c.cast,mt,p,t);if(h<=.01f)continue;float a=Math.min(1,h*1.6f);
+            peakBody(m,centre,mt,p,h,a);
+            peakRims(m,centre,mt,p,h,drawn(mt,p,t),a,false);
         }
-        MISTS.put(id,l);while(MISTS.size()>16)MISTS.remove(MISTS.keySet().iterator().next());
+    }
+    /** The mountains' light (the light pass): the glow of their rims. */
+    static void mountainLight(Fx c,EffectMesh m,float t){
+        Vec3d centre=centre(c.cast);
+        for(var mt:mountains(c.cast.id()))for(var p:mt.peaks()){
+            float h=risen(c.cast,mt,p,t);if(h<=.01f)continue;
+            peakRims(m,centre,mt,p,h,drawn(mt,p,t),Math.min(1,h*1.4f),true);
+        }
+    }
+
+    /**
+     * A cloud of the formation (2.82.1, the video: white bands of cloud over and among the mountains, drifting slowly, one
+     * end curled as auspicious clouds are drawn; low over the ground, thinner wisps of mist): which way round the formation
+     * its curl lies (radians) and how fast it drifts round (radians a second), how far out, how high, how long its band runs
+     * from its curl, how thick, how big its curl and how many turns it winds (none for a wisp), which way the curl turns
+     * (-1 up over the band, 1 down under it), how high the band arches, when it comes in, how strong it is, its seed.
+     */
+    record Cloud(double az,double drift,double radius,double up,double length,double thick,double curl,double turns,int dir,double arch,float in,float strength,int seed){}
+    private static final Map<UUID,Cloud[]> CLOUDS=new LinkedHashMap<>();
+    /**
+     * The clouds of the formation of swing {@code id} (the same on every client): six high over the mountains (most behind
+     * their summits, as in the video), two among them before their feet, and seven low wisps of mist over the ground.
+     */
+    static Cloud[] clouds(UUID id){
+        var l=CLOUDS.get(id);if(l!=null)return l;
+        int s0=(int)(id.getMostSignificantBits()*17+id.getLeastSignificantBits()*7);
+        List<Cloud> out=new ArrayList<>();double off=Math.PI*2*Ease.hash(s0+3);
+        for(int i=0;i<6;i++){
+            int seed=s0+131*(i+1);
+            out.add(new Cloud(off+Math.PI*2*(i+.5*Ease.hash(seed+1))/6,(Ease.hash(seed+2)<.5?-1:1)*(.006+.008*Ease.hash(seed+3)),13.2+2.8*Ease.hash(seed+4),4.8+2.2*Ease.hash(seed+5),
+                6+5*Ease.hash(seed+6),1.15+.55*Ease.hash(seed+7),1.35+.65*Ease.hash(seed+8),.85+.3*Ease.hash(seed+9),Ease.hash(seed+10)<.72?-1:1,(Ease.hash(seed+11)-.5)*1.4,
+                MIST0+.05f+.5f*(float)Ease.hash(seed+12),1,seed));
+        }
+        for(int i=0;i<2;i++){
+            int seed=s0+977*(i+1);
+            out.add(new Cloud(off+Math.PI*(i+.3+.4*Ease.hash(seed+1)),(Ease.hash(seed+2)<.5?-1:1)*(.008+.008*Ease.hash(seed+3)),10.4+1.2*Ease.hash(seed+4),2.8+1.0*Ease.hash(seed+5),
+                4.5+3*Ease.hash(seed+6),.75+.35*Ease.hash(seed+7),.95+.4*Ease.hash(seed+8),.8+.3*Ease.hash(seed+9),Ease.hash(seed+10)<.6?-1:1,(Ease.hash(seed+11)-.5)*.9,
+                MIST0+.25f+.4f*(float)Ease.hash(seed+12),.85f,seed));
+        }
+        for(int i=0;i<7;i++){
+            int seed=s0+1601*(i+1);
+            out.add(new Cloud(Math.PI*2*(i+.6*Ease.hash(seed+1))/7,(Ease.hash(seed+2)<.5?-1:1)*(.012+.014*Ease.hash(seed+3)),5.6+4.8*Ease.hash(seed+4),.45+1.0*Ease.hash(seed+5),
+                3.5+3*Ease.hash(seed+6),.35+.25*Ease.hash(seed+7),0,0,1,(Ease.hash(seed+11)-.5)*.5,
+                MIST0+.6f*(float)Ease.hash(seed+12),.7f,seed));
+        }
+        l=out.toArray(new Cloud[0]);
+        CLOUDS.put(id,l);while(CLOUDS.size()>16)CLOUDS.remove(CLOUDS.keySet().iterator().next());
         return l;
     }
+    /** How strongly a cloud shows at {@code t} (0 to 1): coming in, going with the mountains as the formation ends. */
+    static float cloudShown(StandClient.Cast c,Cloud cl,float t){return Ease.smooth(t,cl.in(),cl.in()+1f)*(1-Ease.smooth(t,end(c)+GLOW,end(c)+GONE+.3f));}
     /**
-     * The mist (the blended pass): soft white wisps, each three sheets fixed in the world 60° apart (never turned to the
-     * camera, as every smoke and mist here), drifting slowly to and fro round the formation and swelling a little.
+     * A cloud's band at {@code t} in its own surface (round the formation at its radius): u along it (blocks round), v up
+     * from its height, and its thickness (0 to 1), from the inner end of its curl out to its tail; flowing out from where
+     * the curl meets the band as it comes in ({@code shown}), a slow wave running along it and its curl breathing.
      */
-    static void mist(Fx c,EffectMesh m,float t){
-        float a=Ease.smooth(t,MIST0,MIST1)*(1-Ease.smooth(t,end(c.cast)+GLOW,end(c.cast)+GONE+.3f));if(a<=.01f)return;
-        Vec3d centre=centre(c.cast);
-        for(var w:mists(c.cast.id())){
-            double drift=w.drift()*Math.sin(Math.PI*2*t/w.period()+w.seed()),swell=1+.12*Math.sin(t*.7+w.seed()*.3);
-            Vec3d out=new Vec3d(Math.cos(w.az()),0,Math.sin(w.az())),along=new Vec3d(-out.z,0,out.x);
-            Vec3d mid=centre.add(out.multiply(w.radius())).add(along.multiply(drift)).add(0,w.up(),0);
-            for(int s=0;s<3;s++){
-                double turn=Math.toRadians(60*s+20*Ease.hash(w.seed()+8));
-                Vec3d u=along.multiply(Math.cos(turn)).add(out.multiply(Math.sin(turn))).multiply(w.width()*swell),vv=new Vec3d(0,w.height()*swell,0);
-                puff(m,mid,u,vv,0xe9eef6,(s==0?.2f:.12f)*a);
+    static List<double[]> cloudPath(Cloud cl,float t,float shown){
+        List<double[]> pts=new ArrayList<>();
+        double len=cl.length(),wave=cl.curl()>0?.16:.1,lambda=cl.curl()>0?2.6:2.0;
+        int nb=Math.max(8,(int)(len/.22));
+        // the curl: from its inner end back out to where it meets the band
+        if(cl.curl()>0){
+            double slope=cl.arch()*Math.PI/len,tl=Math.hypot(1,slope),tx=-1/tl,ty=-slope/tl;
+            double nx=-ty*cl.dir(),ny=tx*cl.dir(),r=cl.curl()*(1+.04*Math.sin(t*.6+cl.seed()));
+            double cx=nx*r,cy=ny*r,phi0=Math.atan2(-ny,-nx),total=Math.PI*2*cl.turns();
+            // (the curl sways a little about where it meets the band)
+            double sway=.08*Math.sin(t*.35+cl.seed()),cs=Math.cos(sway),sn=Math.sin(sway);
+            int nc=Math.max(12,(int)(total*cl.curl()/.2));
+            for(int i=nc;i>0;i--){
+                double th=total*i/nc,rr=r*(1-.55*th/total),phi=phi0+cl.dir()*th,x=th/total;
+                double px=cx+rr*Math.cos(phi),py=cy+rr*Math.sin(phi);
+                pts.add(new double[]{px*cs-py*sn,px*sn+py*cs,(.35+.65*Math.pow(1-x,.8))*cloudIn(shown,x)});
             }
         }
-    }
-    /** A soft sheet: opaque at its middle, fading to nothing at all four edges ({@code u}, {@code v} its half sizes). */
-    static void puff(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,int rgb,float alpha){
-        Vec3d[][] g=new Vec3d[3][3];float[][] al=new float[3][3];
-        for(int i=0;i<3;i++)for(int j=0;j<3;j++){g[i][j]=c.add(u.multiply(i-1)).add(v.multiply(j-1));al[i][j]=i==1&&j==1?alpha:0;}
-        for(int i=0;i<2;i++)for(int j=0;j<2;j++){
-            m.vertex(g[i][j],rgb,al[i][j]);m.vertex(g[i+1][j],rgb,al[i+1][j]);m.vertex(g[i+1][j+1],rgb,al[i+1][j+1]);m.vertex(g[i][j+1],rgb,al[i][j+1]);
+        for(int i=0;i<=nb;i++){
+            double u=len*i/nb,x=u/len;
+            double v=cl.arch()*Math.sin(Math.PI*x)+wave*Math.sin(Math.PI*2*(u/lambda-t/5.5)+cl.seed())*Math.min(1,u/1.2);
+            // (full to six tenths of the way, then rounding off; a little puffed out and drawn in along it, as a cloud is)
+            double prof=(x<.6?1:Math.sqrt(Math.max(0,1-Math.pow((x-.6)/.4,2))))*(1+.14*Math.sin(u*2.3+cl.seed()*.7+t*.25)*Math.min(1,u/.8));
+            pts.add(new double[]{u,v,prof*cloudIn(shown,x)});
         }
+        return pts;
+    }
+    /** How much of a cloud has flowed out to {@code x} (0 where its curl meets its band, 1 at either end) as it comes in. */
+    static double cloudIn(float shown,double x){return Ease.smooth((float)((shown*1.25-x)/.25),0,1);}
+    static final int CLOUD=0xeef2f8,CLOUD_TOP=0xffffff,CLOUD_UNDER=0xb4bdcd;
+    /** How far out across a cloud's band it stays full before it fades (of its half thickness). */
+    static final double PLATEAU=.55;
+    /**
+     * A cloud (the blended pass): its band soft and white, three ribbons round its line 60° apart (fixed in the world,
+     * never turned to the camera, as every smoke and mist here), each full over its middle and fading to nothing at its
+     * edges, white along its top, grey under it.
+     */
+    static void cloud(StandClient.Cast cast,EffectMesh m,float t,Vec3d centre,Cloud cl){
+        float shown=cloudShown(cast,cl,t);if(shown<=.01f)return;
+        var path=cloudPath(cl,t,shown);int n=path.size();
+        double az=cl.az()+cl.drift()*t,up=cl.up()+.12*Math.sin(t*.5+cl.seed()),grow=1+.3*Ease.smooth(t,end(cast)+GLOW,end(cast)+GONE+.3f);
+        Vec3d[] p=new Vec3d[n],o=new Vec3d[n];
+        for(int i=0;i<n;i++){
+            double a=az+path.get(i)[0]/cl.radius();o[i]=new Vec3d(Math.cos(a),0,Math.sin(a));
+            p[i]=centre.add(o[i].multiply(cl.radius())).add(0,up+path.get(i)[1],0);
+        }
+        float[] al={.5f,.2f,.2f};
+        Vec3d[][] prev=null;Vec3d[] ways=new Vec3d[3];double ph=0;
+        for(int i=0;i<n;i++){
+            Vec3d tan=p[Math.min(n-1,i+1)].subtract(p[Math.max(0,i-1)]);if(tan.lengthSquared()<1e-10)tan=new Vec3d(0,1,0);tan=tan.normalize();
+            Vec3d across=o[i].crossProduct(tan);if(across.lengthSquared()<1e-8)across=UP;across=across.normalize();
+            double half=cl.thick()*.5*path.get(i)[2]*grow;
+            Vec3d[][] now=new Vec3d[3][];
+            for(int k=0;k<3;k++){
+                // (each ribbon's way across kept turning on from the last point's: else round the curl it would flip over)
+                double turn=Math.PI/3*k;Vec3d dir=across.multiply(Math.cos(turn)).add(o[i].multiply(Math.sin(turn)));
+                if(ways[k]==null?dir.y<0:dir.dotProduct(ways[k])<0)dir=dir.negate();
+                ways[k]=dir;
+                now[k]=new Vec3d[]{p[i].add(dir.multiply(half)),p[i].subtract(dir.multiply(half))};
+            }
+            if(prev!=null&&(ph>.01||half>.01)){
+                for(int k=0;k<3;k++){
+                    float a0=al[k]*cl.strength()*shown*(float)Math.min(1,ph/Math.max(.05,cl.thick()*.25)),a1=al[k]*cl.strength()*shown*(float)Math.min(1,half/Math.max(.05,cl.thick()*.25));
+                    // (full over its middle, fading to nothing over its outer part: soft and round, not a line)
+                    Vec3d pt=p[i-1].lerp(prev[k][0],PLATEAU),nt=p[i].lerp(now[k][0],PLATEAU),pu=p[i-1].lerp(prev[k][1],PLATEAU),nu=p[i].lerp(now[k][1],PLATEAU);
+                    m.vertex(prev[k][0],CLOUD_TOP,0);m.vertex(now[k][0],CLOUD_TOP,0);m.vertex(nt,CLOUD_TOP,a1);m.vertex(pt,CLOUD_TOP,a0);
+                    m.vertex(pt,CLOUD_TOP,a0);m.vertex(nt,CLOUD_TOP,a1);m.vertex(p[i],CLOUD,a1);m.vertex(p[i-1],CLOUD,a0);
+                    m.vertex(p[i-1],CLOUD,a0);m.vertex(p[i],CLOUD,a1);m.vertex(nu,CLOUD_UNDER,a1);m.vertex(pu,CLOUD_UNDER,a0);
+                    m.vertex(pu,CLOUD_UNDER,a0);m.vertex(nu,CLOUD_UNDER,a1);m.vertex(now[k][1],CLOUD_UNDER,0);m.vertex(prev[k][1],CLOUD_UNDER,0);
+                }
+            }
+            prev=now;ph=half;
+        }
+    }
+    /**
+     * The mountains and the clouds (the blended pass): everything drawn from the farthest from the camera to the nearest,
+     * the blended pass keeping no depth of its own.
+     */
+    static void scenery(Fx c,EffectMesh m,float t){
+        Vec3d centre=centre(c.cast);
+        record Far(double far,Runnable draw){}
+        List<Far> all=new ArrayList<>();
+        for(var mt:mountains(c.cast.id())){
+            boolean any=false;for(var p:mt.peaks())any|=risen(c.cast,mt,p,t)>.01f;
+            if(any)all.add(new Far(onMountain(centre,mt,0,2,0).squaredDistanceTo(c.camera),()->mountain(c,m,t,centre,mt)));
+        }
+        for(var cl:clouds(c.cast.id())){
+            if(cloudShown(c.cast,cl,t)<=.01f)continue;
+            double a=cl.az()+cl.drift()*t+cl.length()*.3/cl.radius();
+            Vec3d mid=centre.add(Math.cos(a)*cl.radius(),cl.up(),Math.sin(a)*cl.radius());
+            all.add(new Far(mid.squaredDistanceTo(c.camera),()->cloud(c.cast,m,t,centre,cl)));
+        }
+        all.sort(Comparator.comparingDouble((Far f)->-f.far()));
+        for(var f:all)f.draw().run();
     }
 
     // ───────────────────────────── the ground ─────────────────────────────
@@ -564,15 +814,14 @@ final class SwordFormation {
         return out;
     }
     /**
-     * The blended pass: the blue of the formation's ground, the ink mountains, the mist, the black spike out of the pool,
-     * the swords (farthest first), the crystal flowers at their feet, and as it ends the ink the swords break into; the
-     * ink round whom it strikes.
+     * The blended pass: the blue of the formation's ground, the ink mountains, the clouds and the mist, the black spike out
+     * of the pool, the swords (farthest first), the crystal flowers at their feet, and as it ends the ink the swords break
+     * into; the ink round whom it strikes.
      */
     static void alpha(Fx c,EffectMesh m){
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
         groundDisc(m,centre.add(0,.06,0),IsosangRules.FORMATION_RADIUS+.6,.88,NAVY,tint(c.cast,t));
-        mountainInk(c,m,t);
-        mist(c,m,t);
+        scenery(c,m,t);
         spike(m,centre,t);
         drawSwords(c,m,t,centre,yaw);
         flowers(c,m,t,centre,yaw,false);
@@ -757,20 +1006,36 @@ final class SwordFormation {
                 float s=Ease.smooth(t,b.plant(),b.plant()+.02f)*(1-Ease.smooth(t,b.plant()+.1f,b.plant()+.4f));
                 if(s>.01f){Vec3d up=foot.add(0,14,0);m.line(foot,up,.06,WHITE,.55f*s);m.softLine(foot,up,.45,CYAN,.25f*s);}
             }
-            // as the formation ends: the flare spreads over the ground at its foot (a cross of light)
+            // standing: now and then a gleam runs down its edge from its guard to its point (2.82.1)
+            if(t>SILVER1&&flare<=.01f&&ink<=.01f&&a>.5f){
+                double period=5.5+3.5*Ease.hash(b.seed()+84),u=((t+period*Ease.hash(b.seed()+85))%period)/GLEAM;
+                if(u<1){
+                    double y=S_GUARD+.05+(S_LEN-S_GUARD-.12)*Ease.smooth((float)u,0,1);float g=(float)Math.sin(Math.PI*u)*a;
+                    Vec3d g0=at(top,f,edge(y-.15)),g1=at(top,f,edge(y+.15)),g2=at(top,f,edge(y));
+                    m.softLine(g0,g1,.09,PALE,.5f*g);m.line(g0,g1,.016,WHITE,.75f*g);m.softDisc(g2,.12,WHITE,.35f*g);
+                }
+            }
+            // as the formation ends: a four-pointed star of light lies on the ground at its foot, a pillar of light up it (the video)
             if(flare>.01f){
-                Vec3d g=foot.add(0,.06,0),x=Vec3d.fromPolar(0,(float)b.spin()).multiply(1.3),z=new Vec3d(-x.z,0,x.x);
-                groundSoftLine(m,g.subtract(x),g.add(x),.5,CYAN,.55f*flare);groundSoftLine(m,g.subtract(z),g.add(z),.5,CYAN,.55f*flare);
-                m.softDisc(g.add(0,.2,0),.8,CYAN,.45f*flare);
+                Vec3d g=foot.add(0,.05,0),x=Vec3d.fromPolar(0,(float)b.spin()),z=new Vec3d(-x.z,0,x.x);
+                double big=b.middle()?2.4:1.6;
+                groundStar(m,g,x,z,big,big*.72,flare);
+                m.softTaper(foot,top.add(0,1.2,0),.95,.25,CYAN,.38f*flare);
             }
         }
     }
-    /** A soft line lying flat on the ground (its width across it on the ground, not turned to the camera). */
-    static void groundSoftLine(EffectMesh m,Vec3d a,Vec3d b,double width,int rgb,float alpha){
-        Vec3d d=b.subtract(a);if(d.lengthSquared()<1e-8||alpha<=0)return;
-        Vec3d side=new Vec3d(-d.z,0,d.x).normalize().multiply(width*.5);
-        m.vertex(a,rgb,alpha);m.vertex(b,rgb,alpha);m.vertex(b.add(side),rgb,0);m.vertex(a.add(side),rgb,0);
-        m.vertex(a.subtract(side),rgb,0);m.vertex(b.subtract(side),rgb,0);m.vertex(b,rgb,alpha);m.vertex(a,rgb,alpha);
+    /** How long a gleam takes to run down a standing sword's edge (seconds). */
+    static final float GLEAM=.6f;
+    /**
+     * A four-pointed star of light lying flat on the ground at {@code g}: its long points {@code big} out along {@code x}, its
+     * short ones {@code small} out along {@code z}, sharp, white along their middles, a soft pool of light under it.
+     */
+    static void groundStar(EffectMesh m,Vec3d g,Vec3d x,Vec3d z,double big,double small,float alpha){
+        m.needle(g.subtract(x.multiply(big)),g.add(x.multiply(big)),z,.42,.5,CYAN,.6f*alpha);
+        m.needle(g.subtract(z.multiply(small)),g.add(z.multiply(small)),x,.36,.5,CYAN,.6f*alpha);
+        m.needle(g.subtract(x.multiply(big*.8)),g.add(x.multiply(big*.8)),z,.12,.5,WHITE,.8f*alpha);
+        m.needle(g.subtract(z.multiply(small*.8)),g.add(z.multiply(small*.8)),x,.1,.5,WHITE,.8f*alpha);
+        groundDisc(m,g.add(0,.01,0),big*.55,.15,CYAN,.35f*alpha);
     }
     /**
      * Bursts on whom the formation struck, as the server told (IsosangClient.formationStruck): blue spikes round a pale heart

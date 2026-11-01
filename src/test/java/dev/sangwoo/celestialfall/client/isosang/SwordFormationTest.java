@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * facing the front, no joint jumping or flipping between frames, never a foot in the ground, her feet on the pommel as she
  * stands there, the leap and the hop drawn over where she is); the formation's swords (the same for every client, round
  * the middle out to its radius, the middle one's pommel as high as she stands, each showing in the sky before it falls and
- * striking as the server's rain does); the plain sword's shape; and her camera drawn back for it and in again.
+ * striking as the server's rain does); the plain sword's shape; the ink mountains and the clouds round it (2.82.1); and her
+ * camera drawn back for it and in again.
  */
 class SwordFormationTest {
     static final Anim CLIP=SwordFormation.CLIP;
@@ -107,14 +108,83 @@ class SwordFormationTest {
         for(var f:SwordFormation.FACES){
             Vec3d c=Vec3d.ZERO;for(var v:f.v())c=c.add(v);c=c.multiply(1.0/f.v().length);
             for(var v:f.v()){top=Math.min(top,v.y);bottom=Math.max(bottom,v.y);}
-            // (out from its axis; the guard's faces out from the guard's own middle)
-            Vec3d axis=f.part()==SwordFormation.Part.GUARD?new Vec3d(0,(SwordFormation.S_GRIP+SwordFormation.S_GUARD)/2,0):new Vec3d(0,MathHelper.clamp(c.y,.02,SwordFormation.S_LEN-.02),0),out=c.subtract(axis);
+            // (out from its axis; the guard's faces out from the guard's own middle, a knob's or a gem's from its own)
+            final Vec3d cc=c;
+            Vec3d axis=switch(f.part()){
+                case GUARD->new Vec3d(0,(SwordFormation.S_GRIP+SwordFormation.S_GUARD)/2,0);
+                case KNOB->SwordFormation.KNOBS.stream().min(java.util.Comparator.comparingDouble(k->k.squaredDistanceTo(cc))).orElseThrow();
+                case GEM->SwordFormation.GEMS.stream().min(java.util.Comparator.comparingDouble(k->k.squaredDistanceTo(cc))).orElseThrow();
+                default->new Vec3d(0,MathHelper.clamp(c.y,.02,SwordFormation.S_LEN-.02),0);
+            },out=c.subtract(axis);
             if(out.lengthSquared()>1e-6)assertTrue(f.n().dotProduct(out)>-1e-6,"a face turned inward at "+c);
             assertEquals(1,f.n().length(),1e-9);
         }
         assertEquals(0,top,1e-9);assertEquals(SwordFormation.S_LEN,bottom,1e-9);
         assertTrue(SwordFormation.S_LEN>IsosangRules.FORMATION_STAND+.3,"the middle sword stands its pommel her height up, its point in the ground");
         assertTrue(SwordFormation.EDGES.stream().anyMatch(SwordFormation.Edge::outline));
+        // (2.82.1) its finer parts: a fuller down the blade on both sides, a knob at each end of the guard, a gem on each face of its guard and pommel, a wound grip
+        for(var part:SwordFormation.Part.values())assertTrue(SwordFormation.FACES.stream().anyMatch(f->f.part()==part),"no "+part);
+        assertEquals(2,SwordFormation.KNOBS.size());assertEquals(4,SwordFormation.GEMS.size());
+        for(var k:SwordFormation.KNOBS)assertTrue(Math.abs(k.x)>SwordFormation.S_GUARD_W,"a knob past the guard's end");
+        for(var f:SwordFormation.FACES)if(f.part()==SwordFormation.Part.FULLER)for(var v:f.v()){
+            assertTrue(v.y>SwordFormation.S_GUARD&&v.y<SwordFormation.S_LEN-SwordFormation.S_POINT,"the fuller on the blade");
+            assertTrue(Math.abs(v.z)>=SwordFormation.bladeRidge(v.y)*(1-Math.abs(v.x)/SwordFormation.bladeWidth(v.y))-1e-9,"the fuller over the blade's face");
+        }
+        // its edge runs from the guard to the point
+        assertEquals(SwordFormation.S_W,SwordFormation.edge(SwordFormation.S_GUARD).x,1e-9);
+        assertEquals(0,SwordFormation.edge(SwordFormation.S_LEN).x,1e-9);
+    }
+    @Test void theMountainsArePinnaclesOneBeforeAnotherRimmedFromTheirSummits(){
+        UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
+        var all=SwordFormation.mountains(id);
+        assertEquals(9,all.length);
+        assertSame(all,SwordFormation.mountains(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits())),"the same mountains for the same formation");
+        for(var mt:all){
+            assertTrue(mt.radius()>IsosangRules.FORMATION_RADIUS+1,"outside the formation");
+            assertTrue(mt.peaks().length>=3&&mt.peaks().length<=5);
+            double front=-1;
+            for(var p:mt.peaks()){
+                assertTrue(p.front()>front,"each peak before the last");front=p.front();
+                assertTrue(p.height()<=mt.peaks()[0].height()+1e-9,"the back one the tallest");
+                // its outline: from the ground up to its summit and down again, x only growing along it
+                assertEquals(0,p.ys()[0],1e-9);assertEquals(0,p.ys()[p.ys().length-1],1e-9);
+                for(int i=0;i+1<p.xs().length;i++){
+                    assertTrue(p.xs()[i+1]>p.xs()[i],"x grows along the outline");
+                    if(i<p.top())assertTrue(p.ys()[i+1]>p.ys()[i],"up to the summit");else assertTrue(p.ys()[i+1]<p.ys()[i],"down from the summit");
+                }
+                // a pinnacle: taller than it is wide, steep
+                double wide=p.xs()[p.xs().length-1]-p.xs()[0];
+                if(p==mt.peaks()[0])assertTrue(p.height()>wide*.8&&p.height()>4,"the tall one a pinnacle: "+p.height()+" over "+wide);
+                assertTrue(p.rimL()>.3&&p.rimL()<=1&&p.rimR()>.3&&p.rimR()<=1);
+            }
+            assertTrue(mt.peaks()[0].height()<7,"not over the clouds");
+        }
+    }
+    @Test void cloudsCurlOverTheMountainsAndWispsOfMistDriftLow(){
+        UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
+        var all=SwordFormation.clouds(id);
+        int high=0,low=0;
+        for(var cl:all){
+            if(cl.curl()>0){
+                assertTrue(cl.turns()>.8,"its curl winds round");
+                if(cl.up()>4.5){high++;assertTrue(cl.radius()>13,"out by the mountains");assertTrue(cl.thick()>1.1,"a full band");}
+            }else{low++;assertTrue(cl.up()<1.6&&cl.radius()<IsosangRules.FORMATION_RADIUS+1,"a wisp low over the formation");}
+            // its band runs on without a break, from the inner end of its curl out to its tail, thinning to nothing there
+            var path=SwordFormation.cloudPath(cl,10,1);
+            for(int i=0;i+1<path.size();i++){
+                double d=Math.hypot(path.get(i+1)[0]-path.get(i)[0],path.get(i+1)[1]-path.get(i)[1]);
+                assertTrue(d<.35,"a gap in a cloud's band: "+d);
+            }
+            assertEquals(0,path.get(path.size()-1)[2],1e-9,"its tail thins to nothing");
+            assertTrue(path.stream().mapToDouble(q->q[2]).max().orElse(0)>.99,"full in its body");
+            // it drifts and its wave runs along it as a function of the clock: no jump from one frame to the next
+            var a=SwordFormation.cloudPath(cl,10,1);var b=SwordFormation.cloudPath(cl,10+1/60f,1);
+            for(int i=0;i<a.size();i++)assertEquals(a.get(i)[1],b.get(i)[1],.02,"a cloud jumps");
+        }
+        assertEquals(6,high,"six high over the mountains");assertEquals(7,low,"seven wisps of mist");
+        // coming in, it flows out from where its curl meets its band
+        var cl=all[0];var in=SwordFormation.cloudPath(cl,cl.in()+.1f,.2f);
+        assertTrue(in.get(in.size()-1)[2]==0&&in.stream().anyMatch(q->q[2]>.3),"flowing out as it comes in");
     }
     @Test void herCameraIsDrawnBackForItAndInAgain(){
         assertEquals(0,SwordFormation.pull(0),1e-9);
