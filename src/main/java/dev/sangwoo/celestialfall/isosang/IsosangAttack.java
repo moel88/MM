@@ -67,7 +67,10 @@ public final class IsosangAttack {
      * The skills the skill packet asks for: E (2.80.0), R (2.81.0) and R held (2.81.1: the key held down
      * {@link IsosangRules#R_HOLD_TICKS} ticks, the client's call, as Kageno's T held is).
      */
-    public static final int E=1,R=2,R_HELD=3;
+    public static final int E=1,R=2,R_HELD=3,H=4;
+    /** The formation's damage (2.82.0): no guard takes it (minecraft:bypasses_shield), its user is the attacker. */
+    public static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> FORMATION_DAMAGE=
+        net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("sword_formation"));
     /** At most this many presses a second are heard. */
     static final int RATE=40;
     private static final class State {
@@ -95,6 +98,16 @@ public final class IsosangAttack {
         final List<Sword> swords=new ArrayList<>();
         /** (2.81.0) R's sweep in flight or the last one (null for none), the tick R is ready again, and a press of R kept for when a hit lets go of them. */
         Sweep sweep;long rReady;boolean rQueued,rHeld;
+        /** (2.82.0) H's sword formation under way (null for none) and the tick H is ready again. */
+        Formation form;long hReady;
+    }
+    /**
+     * H's sword formation (2.82.0): its id and start, its middle (on the ground under its user as it began) and the way
+     * its user faced.
+     */
+    private static final class Formation {
+        final UUID id;final long start;final Vec3d centre;final float yaw;
+        Formation(UUID id,long start,Vec3d centre,float yaw){this.id=id;this.start=start;this.centre=centre;this.yaw=yaw;}
     }
     /**
      * R's sweep (2.81.0): its id and start, where it stands (its feet: its user's, or out toward the foe in the crosshair)
@@ -147,10 +160,15 @@ public final class IsosangAttack {
                 if(++s.presses>RATE)return;
                 if(skill==E)empower(player);
                 else if(skill==R||skill==R_HELD)sweep(player,skill==R_HELD);
+                else if(skill==H)formation(player);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(IsosangAttack::tick);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->STATES.remove(handler.player.getUuid()));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
+            // (2.82.0) a formation under way ends with them: every viewer is told, its swords go
+            var st=STATES.get(handler.player.getUuid());if(st!=null&&st.form!=null)end(handler.player,st,handler.player.getWorld().getTime());
+            STATES.remove(handler.player.getUuid());
+        });
         ServerLifecycleEvents.SERVER_STOPPED.register(server->STATES.clear());
     }
     /** Whether this player's attack is Lee So-sang's sword: theirs, alive, on the map. */
@@ -160,8 +178,27 @@ public final class IsosangAttack {
     /** Whether one of this player's hits (or, 2.81.0, their R) holds them now (IsosangRules.HOLD): CombatManager.busy and actionLocked count it. */
     public static boolean busy(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());
-        return s!=null&&s.world==p.getWorld()&&(holding(s.combo,s.start,p.getWorld().getTime())||sweepHolds(s,p.getWorld().getTime()));
+        return s!=null&&s.world==p.getWorld()&&(holding(s.combo,s.start,p.getWorld().getTime())||sweepHolds(s,p.getWorld().getTime())||forming(s,p.getWorld().getTime()));
     }
+    /** Whether H's sword formation is under way for its user now (2.82.0): it holds them from its start to its end. */
+    private static boolean forming(State s,long now){var f=s.form;return f!=null&&now>=f.start&&now-f.start<LENGTH[FORMATION];}
+    /**
+     * Whether this player stands on H's middle sword now (2.82.0): up over the ground with nothing under them, the server
+     * must not take them for flying (ServerPlayNetworkHandler's floating check, FormationFloatMixin).
+     */
+    public static boolean raised(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld()||!forming(s,p.getWorld().getTime()))return false;
+        return onSword((p.getWorld().getTime()-s.form.start)/20.0);
+    }
+    /** This player's sword formation as a boss reads it (2.82.0): begun at {@code start}, its middle at {@code centre}. */
+    public record FormationNow(long start,Vec3d centre){}
+    /** This player's sword formation now (null for none). */
+    public static FormationNow formationNow(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());if(s==null||!forming(s,p.getWorld().getTime()))return null;
+        return new FormationNow(s.form.start,s.form.centre);
+    }
+    /** The tick this player's H is ready again (0 if it is ready, 2.82.0). */
+    public static long hReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.hReady;}
     /** Whether R's sweep holds its user now (2.81.0): from its start for its HOLD, until they let go of it. */
     private static boolean sweepHolds(State s,long now){var w=s.sweep;return w!=null&&!w.released&&now>=w.start&&now<w.start+HOLD[SWEEP];}
     /** Whether R is under way now (2.81.0): its motion still runs (it cannot be used again until then). */
@@ -227,12 +264,12 @@ public final class IsosangAttack {
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again; so are E's cooldown and its empowerment (2.80.0), and R's cooldown (2.81.0). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;}}
     /**
      * This player's cooldowns are off (/botand nocooldown, every tick: NoCooldownState): the attack's rest and E's
      * cooldown are gone; an empowerment they hold stays theirs (2.80.0).
      */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;}}
     /** The tick this player's E is ready again (0 if it is ready, 2.80.0). */
     public static long eReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.eReady;}
     /** Whether this player's next combo is empowered (E used, its combo not begun or not over, 2.80.0). */
@@ -256,6 +293,8 @@ public final class IsosangAttack {
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
+        // (2.82.0) on H's sword only R may be used (the user's word: "일단은 R만 됨")
+        if(forming(s,now))return false;
         if(now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         // (2.81.0) while R holds them: a press a little before it lets go is kept for then
         if(sweepHolds(s,now)){long free=s.sweep.start+HOLD[SWEEP];if(free-now<=BUFFER)s.queued=true;return s.queued;}
@@ -293,7 +332,7 @@ public final class IsosangAttack {
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
-        if(s.charged||s.empowered&&valid(s.combo)&&now<s.start+LENGTH[s.combo]||now<s.eReady&&!free)return false;
+        if(forming(s,now)||s.charged||s.empowered&&valid(s.combo)&&now<s.start+LENGTH[s.combo]||now<s.eReady&&!free)return false;
         s.charged=s.restart=true;s.queued=false;s.ready=0;
         send(p,new UUID(0,0),0,now,MathHelper.wrapDegrees(p.getYaw()),EMPOWERED,-1,null,null,null);
         return true;
@@ -348,6 +387,8 @@ public final class IsosangAttack {
      */
     static Sweep aimSweep(ServerPlayerEntity p,long now,boolean held){
         var foe=held?aimed(p):null;Vec3d feet=p.getPos();float yaw=MathHelper.wrapDegrees(p.getYaw());
+        // (2.82.0) from H's sword: the sweep stands on the formation's ground under them, not up where they stand
+        var st=STATES.get(p.getUuid());if(st!=null&&forming(st,now))feet=new Vec3d(feet.x,st.form.centre.y,feet.z);
         if(foe==null)return new Sweep(UUID.randomUUID(),now,feet,yaw,-1);
         Vec3d d=foe.getPos().subtract(feet);double far=Math.sqrt(d.x*d.x+d.z*d.z);
         if(far>1e-3)yaw=MathHelper.wrapDegrees((float)Math.toDegrees(Math.atan2(-d.x,d.z)));
@@ -398,6 +439,90 @@ public final class IsosangAttack {
         w.released=true;
         if(!turning){s.sweep=null;if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.rReady=now+R_COOLDOWN;}
         send(p,w.id,SWEEP,w.start,w.yaw,STOPPED,-1,null,null,null);
+    }
+    /**
+     * H (2.82.0, user request: "다음은 H스킬이야 엄청 많은 검을 박고 검 위로 올라가 검 위에 올라가 있을때는 움직 일 수 없어"): the
+     * sword formation, at once. Not while one is held otherwise (a blow, a guard, a dash, a skill, a cutscene), while a
+     * hit or R of theirs holds them, while it is under way, or before it is ready again ({@link IsosangRules#H_COOLDOWN}
+     * after the last one was over; none for a player the cooldowns are off for).
+     */
+    public static boolean formation(ServerPlayerEntity p){
+        if(!able(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(s.form!=null&&now-s.form.start<LENGTH[FORMATION]||now<s.hReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        if(holding(s.combo,s.start,now)||sweepHolds(s,now))return false;
+        unfold(p,s,now);
+        return true;
+    }
+    /**
+     * H begins (2.82.0): the combo in flight ends here with no rest (an empowered combo under way is spent), the formation
+     * is laid round them on the ground under them, and H is ready again {@link IsosangRules#H_COOLDOWN} after it is over.
+     */
+    private static void unfold(ServerPlayerEntity p,State s,long now){
+        s.queued=false;s.rQueued=false;
+        boolean spent=s.empowered;
+        s.combo=0;s.blows=0;s.empowered=false;
+        if(spent)spend(p,s,now);
+        var world=p.getServerWorld();Vec3d at=p.getPos();double y=at.y;
+        var hit=world.raycast(new RaycastContext(at.add(0,.2,0),at.add(0,-6,0),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+        if(hit.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)y=hit.getPos().y;
+        s.form=new Formation(UUID.randomUUID(),now,new Vec3d(at.x,y,at.z),MathHelper.wrapDegrees(p.getYaw()));
+        s.hReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+LENGTH[FORMATION]+H_COOLDOWN;
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s.form.id,FORMATION,now,s.form.yaw,HIT,-1,null,null,null,s.form);
+    }
+    /**
+     * The formation on a tick (2.82.0): it strikes whoever is in it as the swords strike and every FORMATION_EVERY ticks
+     * after; its user is held at its middle (their own client lifts them onto the middle sword's pommel and down again,
+     * IsosangClient.drive, as its own movement is; the server puts them back over the middle if they stray, a moment
+     * allowed at first for the steps they were taking as it began, and never falls them: FormationFloatMixin, fallDistance);
+     * it is over once its motion is. Whatever takes them off the map, into a cutscene, to sleep or onto a mount ends it now.
+     */
+    private static void hold(ServerPlayerEntity p,State s,long now){
+        var f=s.form;long age=now-f.start;
+        if(age>=LENGTH[FORMATION]){s.form=null;return;}
+        if(!attacks(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);return;}
+        if(formationStrikes(age))zone(p,f,age);
+        Vec3d at=p.getPos();double dx=at.x-f.centre.x,dz=at.z-f.centre.z,leave=age<STRAY_GRACE?1:STRAY;
+        // (a boss has no client to lift it: the server does, as the empowered fourth's leap back)
+        if(p instanceof dev.sangwoo.celestialfall.boss.BossPlayer){
+            double t=age/20.0;
+            if(onSword(t)){p.setPosition(f.centre.x,f.centre.y+IsosangRules.raised(t),f.centre.z);p.setVelocity(Vec3d.ZERO);}
+            else if(dx*dx+dz*dz>STRAY*STRAY)p.setPosition(f.centre.x,at.y,f.centre.z);
+        }else if(dx*dx+dz*dz>leave*leave)p.networkHandler.requestTeleport(f.centre.x,at.y,f.centre.z,p.getYaw(),p.getPitch());
+        p.fallDistance=0;
+    }
+    /**
+     * How far (blocks, level) the formation's user may stand off its middle before the server puts them back, and for how
+     * many ticks at first a block is allowed (2.82.0: the steps they were taking as it began, before their client heard of it).
+     */
+    static final double STRAY=.35;static final int STRAY_GRACE=10;
+    /** The formation strikes (2.82.0): everyone in it, alive, the user's own aside, takes its damage; the first time, what they were doing stops. */
+    private static void zone(ServerPlayerEntity p,Formation f,long age){
+        var world=p.getServerWorld();float amount=formationDamage(age);boolean impact=age==FORMATION_IMPACT_AT;
+        var source=new net.minecraft.entity.damage.DamageSource(world.getRegistryManager().get(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).entryOf(FORMATION_DAMAGE),p);
+        List<LivingEntity> struck=new ArrayList<>();
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(f.centre,f.centre).expand(FORMATION_RADIUS+2,FORMATION_HIGH+2,FORMATION_RADIUS+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+            if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
+            Vec3d d=e.getPos().subtract(f.centre);
+            if(!formationOver(d.x,d.z,d.y,e.getWidth()*.5))continue;
+            if(impact)CombatManager.interrupt(e);
+            e.timeUntilRegen=0;
+            if(!CombatManager.damageWithoutKnockback(e,source,amount))continue;
+            struck.add(e);
+            if(!StarPlatinumTimeStop.deferFeedback(p,e,amount,f.yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
+                var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(amount);b.writeFloat(f.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);
+            }
+        }
+        if(!struck.isEmpty()){p.onAttacking(struck.get(0));send(p,f.id,FORMATION,f.start,f.yaw,LANDED,impact?0:1,struck,null,null,f);}
+    }
+    /** The formation ends early (2.82.0): every viewer is told (its swords go now), and H is ready again its cooldown after now. */
+    private static void end(ServerPlayerEntity p,State s,long now){
+        var f=s.form;if(f==null)return;s.form=null;
+        if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.hReady=Math.min(s.hReady,now+H_COOLDOWN);
+        send(p,f.id,FORMATION,f.start,f.yaw,STOPPED,-1,null,null,null,f);
     }
     /**
      * The empowerment is over (2.80.0): its combo broke, a hit of it stopped short, or they died or left the map before
@@ -458,6 +583,8 @@ public final class IsosangAttack {
             // and the empowered fourth's giant sword (2.80.1); and R's sword sweeping (2.81.0)
             if(s.giant!=null)hurl(p,s,now);
             if(s.sweep!=null)cut(p,s,now);
+            // (2.82.0) and H's sword formation (it goes on whoever strikes its user; only what takes them away ends it)
+            if(s.form!=null)hold(p,s,now);
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
             if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
             if(held(p)){stop(p,s,now);release(p,s,now);s.rQueued=false;continue;}
@@ -644,6 +771,9 @@ public final class IsosangAttack {
      * for a sword thrown, from where, which way and how far it may fly.
      */
     private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep){
+        send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,null);
+    }
+    private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form){
         var s=state(p);var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:world.getPlayers()){
             if(viewer!=p&&viewer.squaredDistanceTo(p)>128*128&&(struck==null||!struck.contains(viewer)))continue;
@@ -660,6 +790,9 @@ public final class IsosangAttack {
             // start where its sweep stands, the way it faces and the foe it was aimed at
             b.writeLong(s.rReady);b.writeBoolean(sweep!=null);
             if(sweep!=null){b.writeDouble(sweep.at.x);b.writeDouble(sweep.at.y);b.writeDouble(sweep.at.z);b.writeFloat(sweep.yaw);b.writeVarInt(sweep.target);}
+            // (2.82.0, after what 2.81 sent) when H is ready again, and for H's formation its middle and the way its user faced
+            b.writeLong(s.hReady);b.writeBoolean(form!=null);
+            if(form!=null){b.writeDouble(form.centre.x);b.writeDouble(form.centre.y);b.writeDouble(form.centre.z);b.writeFloat(form.yaw);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

@@ -41,13 +41,13 @@ public final class IsosangRules {
      * speed: the twirl starts 0.05 s in and the slash is thrown 0.44 s after it; it was 0.7 s; it strikes as it flies on,
      * {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
      * and 15; the empowered combo 43.5).
      */
-    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE}};
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
     /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
@@ -60,11 +60,11 @@ public final class IsosangRules {
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
      * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0,16,0,0};
-    /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's). */
-    public static final int[] HOLD={0,10,12,22,18,14,16,21};
-    /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's). */
-    public static final int[] LENGTH={0,18,18,25,32,22,30,24};
+    public static final int[] STEP={0,11,10,25,0,16,0,0,0};
+    /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it). */
+    public static final int[] HOLD={0,10,12,22,18,14,16,21,826};
+    /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's). */
+    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -73,8 +73,8 @@ public final class IsosangRules {
     public static final int REST=24;
     /** Whether {@code kind} is a hit (1 to 4, the empowered 5 and 6). */
     public static boolean valid(int kind){return kind>=1&&kind<=THRUST;}
-    /** Whether {@code kind} is a swing the clients draw with the body: a hit, or R's sweep (2.81.0). */
-    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP;}
+    /** Whether {@code kind} is a swing the clients draw with the body: a hit, R's sweep (2.81.0), or H's sword formation (2.82.0). */
+    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION;}
     /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
     public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
     /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
@@ -424,4 +424,78 @@ public final class IsosangRules {
     }
     /** Whether the slash thrown {@code ticks} ago still flies (it strikes on its way until then). */
     public static boolean waveFlying(double ticks){return ticks>=0&&ticks<=WAVE_TICKS;}
+
+    // ───────────────────────────── H: the sword formation ─────────────────────────────
+
+    /**
+     * H (2.82.0, user request: "다음은 H스킬이야 엄청 많은 검을 박고 검 위로 올라가 검 위에 올라가 있을때는 움직 일 수 없어 영상이랑
+     * 똑같이 구현해줘 이펙트도", the user's video of it (c213bfd7, 60 fps, 42.5 s) read frame by frame on a sheet; their
+     * answers: as long as in the video (some 39 s), only R while on the sword ("일단은 R만 됨"), a 60 s cooldown; and
+     * "데미지는 처음 한 번 H 박을때 30데미지 그리고 5초마다 5 데미지"): Lee So-sang leaps up, a thread of light from her sword
+     * to the ground opening a pool of black there, swords showing in the sky; one is driven into the middle, she dives
+     * back down to it, and the rest rain down all round with blue lightning, planting themselves in rings out to
+     * {@link #FORMATION_RADIUS} blocks, blue crystal flowers blooming where they strike; ink mountains rise round its edge
+     * and mist drifts by. She hops up onto the middle sword's pommel and stands there, unable to walk (only R may be used),
+     * until the formation ends ({@link #H_END}): every sword flashes blue, turns to ink and is gone, and she drops down.
+     * Whoever is inside it as the swords strike is struck once ({@link #FORMATION_IMPACT}), and every
+     * {@link #FORMATION_EVERY} ticks after that again ({@link #FORMATION_TICK}); no guard takes it, no one is thrown.
+     */
+    public static final int FORMATION=8;
+    /** How far out the formation reaches (blocks, level, from its middle; the video: swords out to some 10 blocks) and how far under and over its ground a body is still in it. */
+    public static final double FORMATION_RADIUS=10,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
+    /** The damage as the swords strike (the user's word: 30) and every {@link #FORMATION_EVERY} ticks after (5). */
+    public static final float FORMATION_IMPACT=30,FORMATION_TICK=5;
+    /** The tick into H the swords strike (as the rain of swords crashes in), and how often it strikes again after (the user's word: every 5 s). */
+    public static final int FORMATION_IMPACT_AT=20,FORMATION_EVERY=100;
+    /** Ticks H is not ready again once it is over (the user's choice: 60 s), from its end, as every skill's cooldown. */
+    public static final int H_COOLDOWN=1200;
+    /** How high she stands on the middle sword's pommel (blocks over the ground; the video: about her own height) and how high she leaps. */
+    public static final double FORMATION_STAND=1.7,H_LEAP_HEIGHT=3.0,H_HOP_ARC=.7;
+    /**
+     * H's times (seconds; the video from 0.4 s): she leaps (0.6 s in the video), is at the top, dives (1.18), lands in
+     * the middle (1.25); the middle sword strikes (1.1); the swords show in the sky (0.75) and land (1.22 to 1.52); she
+     * hops up onto the sword (1.6 to 1.95); the formation ends (40.72: the swords flash) and she drops (41.0 to 41.4).
+     */
+    public static final float H_LEAP=.2f,H_PEAK=.42f,H_DIVE=.78f,H_LANDED=.86f,H_PLANT=.7f,H_SKY=.35f,H_RAIN0=.82f,H_RAIN1=1.12f,
+        H_HOP=1.2f,H_ON=1.55f,H_END=40.32f,H_DROP=40.6f,H_DOWN=41f;
+    /** Whether a body ({@code dx}, {@code dz} level from the middle, {@code dy} over its ground, {@code halfWidth} across) is in the formation. */
+    public static boolean formationOver(double dx,double dz,double dy,double halfWidth){
+        return dy>=FORMATION_LOW&&dy<=FORMATION_HIGH&&Math.hypot(dx,dz)<=FORMATION_RADIUS+halfWidth;
+    }
+    /** Whether the formation strikes on its tick {@code age}: as the swords strike, then every FORMATION_EVERY ticks until it ends. */
+    public static boolean formationStrikes(long age){
+        return age==FORMATION_IMPACT_AT||age>FORMATION_IMPACT_AT&&(age-FORMATION_IMPACT_AT)%FORMATION_EVERY==0&&age<H_END*20;
+    }
+    /** The damage of the formation's strike on its tick {@code age}. */
+    public static float formationDamage(long age){return age==FORMATION_IMPACT_AT?FORMATION_IMPACT:FORMATION_TICK;}
+    /** All the formation strikes on one who stays in it to its end. */
+    public static float formationTotal(){float t=0;for(long a=0;a<LENGTH[FORMATION];a++)if(formationStrikes(a))t+=formationDamage(a);return t;}
+    /**
+     * How high her body is drawn over the formation's ground {@code t} seconds into H (blocks): the leap up, the hang, the
+     * dive back down, the hop up onto the middle sword (over it and down onto its pommel), stood there, and the drop.
+     */
+    public static double planned(double t){
+        if(t<H_LEAP)return 0;
+        if(t<H_PEAK){double u=(t-H_LEAP)/(H_PEAK-H_LEAP);return H_LEAP_HEIGHT*(1-(1-u)*(1-u));}
+        if(t<H_DIVE){double u=(t-H_PEAK)/(H_DIVE-H_PEAK);return H_LEAP_HEIGHT+.18*Math.sin(Math.PI*u);}
+        if(t<H_LANDED){double u=(t-H_DIVE)/(H_LANDED-H_DIVE);return H_LEAP_HEIGHT*(1-u*u);}
+        if(t<H_HOP)return 0;
+        if(t<H_ON){double u=(t-H_HOP)/(H_ON-H_HOP);return FORMATION_STAND*u*u*(3-2*u)+H_HOP_ARC*4*u*(1-u);}
+        return raised(t);
+    }
+    /**
+     * How high her body really is over the formation's ground {@code t} seconds into H (blocks): on the ground until the
+     * hop, up onto the middle sword's pommel over it, there until the drop, and down. Her own client moves her so
+     * (IsosangClient.drive; a boss, the server) and the server keeps her over its middle; {@link #planned} draws the leap
+     * and the hop's arc over it.
+     */
+    public static double raised(double t){
+        if(t<H_HOP)return 0;
+        if(t<H_ON){double u=(t-H_HOP)/(H_ON-H_HOP);return FORMATION_STAND*u*u*(3-2*u);}
+        if(t<H_DROP)return FORMATION_STAND;
+        if(t<H_DOWN){double u=(t-H_DROP)/(H_DOWN-H_DROP);return FORMATION_STAND*(1-u*u);}
+        return 0;
+    }
+    /** Whether she stands on the middle sword {@code t} seconds into H (held there: the server lets her float). */
+    public static boolean onSword(double t){return t>=H_HOP&&t<H_DOWN;}
 }

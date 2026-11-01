@@ -285,7 +285,8 @@ public final class MpServer implements ModInitializer {
         // (2.77.0: and in Lee So-sang's script, where it is sent 8 blocks away for the first three hits to strike no one)
         boolean standOut=server.getPlayerManager().getPlayerList().stream().anyMatch(q->caster(q)&&dev.sangwoo.celestialfall.stand.StandSummon.out(q));
         for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY))continue;
-            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+            // (2.82.0: nor a player on Lee So-sang's sword formation, held up on its middle sword)
+            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
@@ -461,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -469,7 +470,7 @@ public final class MpServer implements ModInitializer {
      * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
      * while a hit is in flight or for a second after one (a blow throws no one: there should be none).
      */
-    private long sweepSeen=-1,rReadySeen=-1;
+    private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
@@ -514,6 +515,18 @@ public final class MpServer implements ModInitializer {
         }
         if(r!=null)watchUntil=Math.max(watchUntil,now+20);
         long rr=dev.sangwoo.celestialfall.isosang.IsosangAttack.rReady(caster);if(rr!=rReadySeen){rReadySeen=rr;note(server,"caster's R ready again at "+rr+" (now "+now+")");}
+        // (2.82.0) the caster's H: its formation as it begins (its middle against the caster), every second the caster's
+        // height over its middle and how far off it level, and when it is over; when H is ready again
+        var form=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(caster);
+        if(form!=null){
+            if(form.start()!=formSeen){formSeen=form.start();var d=form.centre().subtract(caster.getPos());
+                note(server,String.format(java.util.Locale.ROOT,"caster's H began at %d: its middle %.2f %.2f %.2f from the caster; the watcher %.2f off it",form.start(),d.x,d.y,d.z,watcher.getPos().distanceTo(form.centre())));}
+            if((now-form.start())%20==0){var d=caster.getPos().subtract(form.centre());
+                note(server,String.format(java.util.Locale.ROOT,"caster's formation +%d: the caster %.2f over its middle, %.2f off it level (on ground %s, fall %.2f)",now-form.start(),d.y,Math.hypot(d.x,d.z),caster.isOnGround(),caster.fallDistance));}
+            watchUntil=Math.max(watchUntil,now+20);
+        }else if(formSeen>=0&&!formOver){formOver=true;note(server,"caster's formation over at "+now+String.format(java.util.Locale.ROOT," (the caster %.2f over the ground it began on)",caster.getY()-formFloor));}
+        if(form!=null){formOver=false;formFloor=form.centre().y;}
+        long hr=dev.sangwoo.celestialfall.isosang.IsosangAttack.hReady(caster);if(hr!=hReadySeen){hReadySeen=hr;note(server,"caster's H ready again at "+hr+" (now "+now+")");}
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
             note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
             watcherAt=watcher.getPos();

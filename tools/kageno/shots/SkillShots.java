@@ -775,6 +775,9 @@ public final class SkillShots implements ClientModInitializer {
     private void frame()throws Exception{
         if(phase!=4||current==null)return;
         float t=clock();if(t<-2||t>length(current))return;
+        // (2.82.0) "save=FROM-TO/FROM-TO": only the frames within these stretches of the entry's clock (ticks) are kept,
+        // for a long skill (Lee So-sang's H, 41 s) whose start and end are filmed and not its middle
+        if(opts.containsKey("save")){boolean keep=false;for(String w:opts.get("save").split("/")){String[] v=w.split("-");if(t>=Float.parseFloat(v[0])&&t<=Float.parseFloat(v[1]))keep=true;}if(!keep)return;}
         if(shake&&"G".equals(current))logShake(t);
         // 2.67.0: where the camera was for each frame of a stand shot (and its field of view), to camera.csv
         if("SUMMON".equals(current)){var cam=mc.gameRenderer.getCamera();var pos=cam.getPos();

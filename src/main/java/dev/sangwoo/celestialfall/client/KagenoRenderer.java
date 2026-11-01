@@ -38,7 +38,8 @@ public final class KagenoRenderer {
         // Lee So-sang's sword's hits (2.77.0): drawn as the casts are, from their own list
         for(var s:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
             var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
-            float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
+            // (2.82.0: H's formation lasts its whole length)
+            float a=s.age(delta);if(a<0||a/20f>=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lifeOf(s))continue;
             var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(delta);
             // (2.81.1) R's sword may stand far out from its user: drawn while either is near
             if(!dev.sangwoo.celestialfall.client.isosang.IsosangClient.shown(s,pos,camera,96))continue;

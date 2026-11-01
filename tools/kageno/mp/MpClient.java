@@ -330,7 +330,19 @@ public final class MpClient implements ClientModInitializer {
         // (2.81.1) R held: the watcher 25 blocks ahead in the crosshair (the camera all but level, so its crosshair reaches
         // them), R held down 12 ticks: the sword sent to them once it has been held 8
         "1395 PITCH2","1400 DIST25","1405 HEAL","1420 R+","1432 R-","1500 END"};
-    private static final String[] STEPS=ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * Lee So-sang's H (2.82.0, MP_ONLY=isosangh): H with the watcher 2.5 blocks in front at full health (its swords strike
+     * it 30 as they come down and 5 every 5 s after, no guard, no throw); the attack and E while it is under way (refused:
+     * only R may be used up there), R from the middle sword (it strikes the watcher 20 from the formation's ground), H again
+     * (refused: under way), and H once it is over (refused: 60 s from its end). The caster stands on the middle sword some
+     * 39 s with nothing under it: the server must not take it for flying. Both log the formation they see (its middle, the
+     * caster's height over it as drawn and as it is), its sounds, and the caster's H; the server the caster's formation,
+     * its height and its strikes, and the watcher's health.
+     */
+    private static final String[] ISOSANGH_SCRIPT={
+        "5 ISOSANG","40 HOME","45 HEAL","60 H","75 M1","100 E","120 M1","140 R","200 H",
+        "930 H","980 END"};
+    private static final String[] STEPS=ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -382,7 +394,7 @@ public final class MpClient implements ClientModInitializer {
                 if(traceUntil>0&&age<=traceUntil)trace();
                 if(ONLY.equals("boss"))bossWatch();
                 if(ONLY.equals("arrow"))arrowWatch();
-                if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr"))isosangWatch();
+                if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh"))isosangWatch();
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -399,8 +411,8 @@ public final class MpClient implements ClientModInitializer {
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
                     if(ONLY.equals("resist"))resistWatch();
-                    if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr"))watcherStill();
-                    if(age>(ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh"))watcherStill();
+                    if(age>(ONLY.equals("isosangh")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -848,7 +860,7 @@ public final class MpClient implements ClientModInitializer {
     private final java.util.Set<String> swordsSeen=new java.util.HashSet<>();private String eSeen="";
     private void isosangWatch(){
         if(!swingListening&&mc.getSoundManager()!=null){swingListening=true;mc.getSoundManager().registerListener((sound,set)->{
-            String id=sound.getId().getPath();if(!id.startsWith("isosang_m1")&&!id.equals("isosang_r"))return;
+            String id=sound.getId().getPath();if(!id.startsWith("isosang_m1")&&!id.equals("isosang_r")&&!id.startsWith("isosang_h"))return;
             var newest=dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values().stream().reduce((a,b)->b).orElse(null);
             note(String.format(Locale.ROOT,"sound %s at hit %s's age %.2f ticks (volume %.2f)",id,newest==null?"-":String.valueOf(newest.combo()),newest==null?-1:newest.age(0),sound.getVolume()));});}
         long now=mc.world.getTime();
@@ -875,9 +887,23 @@ public final class MpClient implements ClientModInitializer {
         String e=charged+"/"+eReady;if(!e.equals(eSeen)){eSeen=e;note("own E: "+(charged?"empowered":"not empowered")+", ready again at "+eReady+" (world tick "+now+")");}
         long rReady=dev.sangwoo.celestialfall.client.isosang.IsosangClient.rReady(self.getUuid());
         if(rReady!=rSeen){rSeen=rReady;note("own R: ready again at "+rReady+" (world tick "+now+")");}
+        // (2.82.0) H's formation: its middle as told, and every second the caster's height over it, as it is and as drawn
+        long hReady=dev.sangwoo.celestialfall.client.isosang.IsosangClient.hReady(self.getUuid());
+        if(hReady!=hSeen){hSeen=hReady;note("own H: ready again at "+hReady+" (world tick "+now+")");}
+        for(var c:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
+            if(c.combo()!=dev.sangwoo.celestialfall.isosang.IsosangRules.FORMATION)continue;
+            var form=dev.sangwoo.celestialfall.client.isosang.IsosangClient.formation(c.id());var who=mc.world.getPlayerByUuid(c.caster());if(form==null||who==null)continue;
+            int sec=(int)Math.floor(c.age(0)/20);float end=dev.sangwoo.celestialfall.client.isosang.IsosangClient.formationEnd(c.id());
+            String key=c.id()+"/"+sec+"/"+(Float.isNaN(end)?"":"end");
+            if(formationSeen.add(key)){
+                var d=who.getPos().subtract(form.centre());
+                note(String.format(Locale.ROOT,"%s's formation at its age %.1f s: the caster %.2f over its middle (%.2f off it level), drawn %.2f over it%s",name(c.caster()),c.age(0)/20,d.y,Math.hypot(d.x,d.z),
+                    d.y+dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(c.caster(),0),Float.isNaN(end)?"":String.format(Locale.ROOT," (ended early at %.2f s)",end)));
+            }
+        }
     }
     /** The watcher (2.77.0): its staggers as its client knows them, and every move of its body (a blow throws no one). */
-    private long rSeen=-1;
+    private long rSeen=-1,hSeen=-1;private final java.util.Set<String> formationSeen=new java.util.HashSet<>();
     private void watcherStill(){
         long now=mc.world.getTime();var mine=CombatClient.snapshot(mc.player.getUuid());
         boolean st=mine.staggered(now);if(st!=stillStaggered){stillStaggered=st;note(st?"staggered (until "+mine.staggerUntil()+")":"free of its stagger");}

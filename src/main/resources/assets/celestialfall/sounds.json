@@ -986,5 +986,23 @@
         "preload": true
       }
     ]
+  },
+  "isosang_h": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_h",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "isosang_h_end": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_h_end",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

@@ -105,6 +105,8 @@
   "death.attack.celestialfall.reset.player": "%1$s reset their character while trying to escape %2$s",
   "death.attack.celestialfall.stand_arrow": "%1$s was not chosen by the Stand Arrow",
   "death.attack.celestialfall.stand_arrow.player": "%1$s was not chosen by the Stand Arrow",
+  "death.attack.celestialfall.sword_formation": "%1$s was cut down by a sword formation",
+  "death.attack.celestialfall.sword_formation.player": "%1$s was cut down by %2$s's sword formation",
   "block.celestialfall.asphalt": "Asphalt",
   "block.celestialfall.asphalt_slab": "Asphalt Slab",
   "block.celestialfall.asphalt_edge_line": "Asphalt with Edge Line",

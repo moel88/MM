@@ -156,6 +156,9 @@ public final class BotandCamera {
         if(!enabled()||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.ownsCamera())return null;var mc=MinecraftClient.getInstance();
         Vec3d eye=mc.player.getLerpedPos(delta).add(0,mc.player.getStandingEyeHeight(),0);
         if(STATE.firstPerson())return new CinematicDirector.Pose(eye,STATE.yaw,STATE.pitch,0);
+        // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
+        double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);
+        if(lift>1e-3)eye=eye.add(0,.8*lift,0);
         var offset=STATE.offset(STATE.distance,STATE.shoulder);
         Vec3d desired=eye.add(offset.x(),offset.y(),offset.z());
         double fraction=clearFraction(eye,desired);

@@ -196,7 +196,7 @@ class IsosangRulesTest {
         assertEquals(20,SWEEP_DAMAGE,1e-9);assertEquals(20,R_COOLDOWN/20.0,1e-9);assertTrue(unblockable(SWEEP),"no guard takes it");
         assertTrue(drawn(SWEEP)&&!valid(SWEEP),"a swing the clients draw, not a hit of the combo");
         assertEquals(1,blows(SWEEP));assertEquals(SWEEP_DAMAGE,damage(SWEEP,0),1e-9);
-        assertEquals(LENGTH[SWEEP],STEP.length==8?LENGTH[SWEEP]:-1,"every table has R's place");assertTrue(HOLD[SWEEP]<LENGTH[SWEEP]);
+        for(int[] table:new int[][]{STEP,HOLD,LENGTH})assertTrue(table.length>SWEEP,"every table has R's place");assertTrue(HOLD[SWEEP]<LENGTH[SWEEP]);
         // its way round (the video from above): held out to the right and back, round across the front, to a stop behind the left
         assertEquals(SWEEP_FROM,sweepAngle(0),1e-9);assertEquals(SWEEP_FROM,sweepAngle(SWEEP_START),1e-9);
         assertTrue(SWEEP_FROM>90&&SWEEP_FROM<135,"it begins out to the right and a little back: "+SWEEP_FROM);
@@ -244,5 +244,42 @@ class IsosangRulesTest {
         // the key held down as long as Kageno's T held is
         assertEquals(dev.sangwoo.celestialfall.stand.KagenoRules.HOLD,R_HOLD_TICKS);assertEquals(.4,R_HOLD_TICKS/20.0,1e-9);
         assertTrue(SWEEP_REACH>5&&SWEEP_PIVOT_UP>1.8,"a giant sword, up in the air: "+SWEEP_REACH);
+    }
+    @Test void hLaysTheSwordFormationStrikingAsTheSwordsComeDownAndEveryFiveSecondsAfter(){
+        // (2.82.0, the user's word: "데미지는 처음 한 번 H 박을때 30데미지 그리고 5초마다 5 데미지")
+        assertTrue(formationStrikes(FORMATION_IMPACT_AT),"as the swords come down");
+        assertEquals(30,formationDamage(FORMATION_IMPACT_AT),1e-6);
+        assertEquals(100,FORMATION_EVERY,"every five seconds");
+        for(long a=FORMATION_IMPACT_AT+FORMATION_EVERY;a<H_END*20;a+=FORMATION_EVERY){assertTrue(formationStrikes(a),"again at "+a);assertEquals(5,formationDamage(a),1e-6);}
+        int strikes=0;for(long a=0;a<LENGTH[FORMATION];a++)if(formationStrikes(a))strikes++;
+        assertEquals(8,strikes,"once as the swords come down and seven times after, over its 40 s");
+        assertEquals(65,formationTotal(),1e-6);
+        assertFalse(formationStrikes(FORMATION_IMPACT_AT-1));assertFalse(formationStrikes(FORMATION_IMPACT_AT+1));
+        assertTrue(FORMATION_IMPACT_AT/20f>=H_RAIN0&&FORMATION_IMPACT_AT/20f<=H_RAIN1,"it strikes as the swords rain down");
+        // (the user's answers: some 39 s as in the video, 60 s cooldown, only R up there)
+        assertEquals(826,LENGTH[FORMATION]);assertEquals(LENGTH[FORMATION],HOLD[FORMATION],"it holds them all along");
+        assertEquals(1200,H_COOLDOWN);
+        assertTrue(H_END-H_ON>38&&H_END-H_ON<40,"stood on the sword some 39 s: "+(H_END-H_ON));
+        assertTrue(drawn(FORMATION));assertEquals(0,blows(FORMATION),"its strikes are its own, not a hit's blows");
+        // who is in it: out to its radius, a little under and well over its ground
+        assertTrue(formationOver(FORMATION_RADIUS,0,0,0));assertTrue(formationOver(0,FORMATION_RADIUS+.3,1,.3));
+        assertFalse(formationOver(FORMATION_RADIUS+.5,0,0,.3));assertFalse(formationOver(0,0,FORMATION_HIGH+.1,.3));assertFalse(formationOver(0,0,FORMATION_LOW-.1,.3));
+        assertTrue(formationOver(3,4,4.5,.3),"one jumping over it");
+    }
+    @Test void herBodyGoesUpOntoTheMiddleSwordAndDownAgainWithoutAJump(){
+        // her real height and her drawn one: continuous, and the same once she stands on the pommel
+        double h=1e-4;
+        for(double t=0;t<LENGTH[FORMATION]/20.0+.5;t+=.001){
+            assertEquals(planned(t),planned(t+h),.015,"the drawn body jumps at "+t);
+            assertEquals(raised(t),raised(t+h),.012,"the real body jumps at "+t);
+            assertTrue(planned(t)>=-1e-9&&raised(t)>=-1e-9);
+            if(t>=H_ON&&t<H_DOWN)assertEquals(raised(t),planned(t),1e-9,"drawn where she is at "+t);
+            if(t<H_HOP||t>=H_DOWN)assertEquals(0,raised(t),1e-9,"on the ground at "+t);
+        }
+        assertEquals(H_LEAP_HEIGHT,planned(H_PEAK),1e-9,"some three blocks up as she hangs");
+        assertEquals(FORMATION_STAND,raised(10),1e-9,"on the pommel, her own height up");
+        assertTrue(planned((H_HOP+H_ON)/2)>raised((H_HOP+H_ON)/2)+.3,"the hop arcs over the pommel");
+        assertTrue(onSword(H_HOP)&&onSword(40)&&!onSword(H_DOWN)&&!onSword(H_HOP-.01));
+        assertTrue(H_DOWN<=LENGTH[FORMATION]/20.0,"down before its motion is over");
     }
 }
