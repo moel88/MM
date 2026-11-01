@@ -259,54 +259,50 @@ class IsosangRulesTest {
         // (the user's answers: some 39 s as in the video, 60 s cooldown, only R up there)
         assertEquals(826,LENGTH[FORMATION]);assertEquals(LENGTH[FORMATION],HOLD[FORMATION],"it holds them all along");
         assertEquals(1200,H_COOLDOWN);
-        assertTrue(H_END-H_ON>38&&H_END-H_ON<40,"stood on the sword some 39 s: "+(H_END-H_ON));
+        assertTrue(H_END-H_LANDED>38&&H_END-H_LANDED<40,"stood on the sword some 39 s: "+(H_END-H_LANDED));
         assertTrue(drawn(FORMATION));assertEquals(0,blows(FORMATION),"its strikes are its own, not a hit's blows");
         // who is in it: out to its radius, a little under and well over its ground
         assertTrue(formationOver(FORMATION_RADIUS,0,0,0));assertTrue(formationOver(0,FORMATION_RADIUS+.3,1,.3));
         assertFalse(formationOver(FORMATION_RADIUS+.5,0,0,.3));assertFalse(formationOver(0,0,FORMATION_HIGH+.1,.3));assertFalse(formationOver(0,0,FORMATION_LOW-.1,.3));
         assertTrue(formationOver(3,4,4.5,.3),"one jumping over it");
     }
-    @Test void herBodyLeapsOntoASwordAndDownAgainWithoutAJump(){
+    @Test void herBodyLeapsUpAndComesDownOntoTheSwordUnderHerWithoutAJump(){
         // her real height and her drawn one: continuous, and the same once she stands on the pommel
         double h=1e-4;
         for(double t=0;t<LENGTH[FORMATION]/20.0+.5;t+=.001){
             assertEquals(planned(t),planned(t+h),.015,"the drawn body jumps at "+t);
             assertEquals(raised(t),raised(t+h),.012,"the real body jumps at "+t);
             assertTrue(planned(t)>=-1e-9&&raised(t)>=-1e-9);
-            if(t>=H_ON&&t<H_DOWN)assertEquals(raised(t),planned(t),1e-9,"drawn where she is at "+t);
-            if(t<H_HOP||t>=H_DOWN)assertEquals(0,raised(t),1e-9,"on the ground at "+t);
+            if(t>=H_LANDED&&t<H_DOWN)assertEquals(raised(t),planned(t),1e-9,"drawn where she is at "+t);
+            if(t<H_LEAP||t>=H_DOWN)assertEquals(0,raised(t),1e-9,"on the ground at "+t);
+            // (2.82.4) up from her leap to her drop: she never comes down to the ground between, she comes down onto the pommel
+            if(t>=H_PEAK&&t<H_DROP){assertEquals(FORMATION_STAND,raised(t),1e-9,"held as high as the pommel at "+t);assertTrue(planned(t)>=FORMATION_STAND-1e-9,"under the pommel at "+t);}
         }
         assertEquals(H_LEAP_HEIGHT,planned(H_PEAK),1e-9,"some three blocks up as she hangs");
         assertEquals(FORMATION_STAND,raised(10),1e-9,"on the pommel, her own height up");
-        assertTrue(planned((H_HOP+H_ON)/2)>raised((H_HOP+H_ON)/2)+.3,"the leap arcs over the way to the pommel");
-        assertTrue(onSword(H_HOP)&&onSword(40)&&!onSword(H_DOWN)&&!onSword(H_HOP-.01));
+        assertTrue(planned(H_DIVE)>FORMATION_STAND+1,"she comes down onto the pommel from well over it");
+        assertEquals(FORMATION_STAND,planned(H_LANDED),1e-9,"down on the pommel as she lands");
+        assertTrue(H_PLANT<H_DIVE,"the sword struck under her before she comes down onto it");
+        assertTrue(onSword(H_LEAP)&&onSword(40)&&!onSword(H_DOWN)&&!onSword(H_LEAP-.01));
         assertTrue(H_DOWN<=LENGTH[FORMATION]/20.0,"down before its motion is over");
-        // (2.82.3) across to the sword she stands on: at the middle until she leaps, there from when she lands, never a jump, never back
-        for(double t=0;t<LENGTH[FORMATION]/20.0;t+=.001){
-            assertEquals(across(t),across(t+1e-4),.0005,"the leap jumps at "+t);
-            assertTrue(across(t+.001)>=across(t)-1e-12,"back at "+t);
-            if(t<H_HOP)assertEquals(0,across(t),1e-12);
-            if(t>=H_ON)assertEquals(1,across(t),1e-12);
-        }
-        assertTrue(H_ON-H_HOP>=.45,"half a second across: "+(H_ON-H_HOP));
     }
-    @Test void sheLeapsOntoTheInnerRingsSwordStraightAheadTheSameForTheServerAndEveryClient(){
-        // (2.82.3, "아니 다른 검에 올라가야지": the middle sword gone, she stands on a sword of the inner ring, the one most
-        // nearly straight ahead of her; the server holds her there and every client draws it there: one reckoning)
+    @Test void sheStandsOnTheOuterRingWhereSheLeptTheFormationAheadOfHer(){
+        // (2.82.4, "H를 쓰면 내가 점프를 하고 그 자리에 검이 하나 있어야해 그러니까 H는 플레이어 기준 중앙으로 나오는게 아니고
+        // 외곽부분으로 나와야함": the sword she stands on is where she leapt, on the formation's outer ring, its middle ahead
+        // of her; the server holds her there and every client draws that sword there: one reckoning)
+        assertEquals(FORMATION_RING_R[FORMATION_RING_R.length-1],FORMATION_STAND_BACK,1e-12,"on the outer ring");
+        assertTrue(FORMATION_STAND_BACK<FORMATION_RADIUS-1,"inside the formation, near its edge");
+        assertArrayEquals(new double[]{-FORMATION_STAND_BACK,0},standAt(),1e-12);
         var rnd=new java.util.Random(7);
         for(int n=0;n<300;n++){
             var id=new java.util.UUID(rnd.nextLong(),rnd.nextLong());int s0=formationSeed(id);
             assertEquals(s0,formationSeed(new java.util.UUID(id.getMostSignificantBits(),id.getLeastSignificantBits())));
-            var swords=formationSwords(s0);int k=standSword(s0);
+            var swords=formationSwords(s0);int k=standSword();
             assertEquals(48,swords.length);
-            assertTrue(k>=0&&k<FORMATION_RING_N[0],"of the inner ring: "+k);
-            double[] at=standAt(s0);assertArrayEquals(swords[k],at,1e-12);
-            double r=Math.hypot(at[0],at[1]),off=Math.toDegrees(Math.abs(Math.atan2(at[1],at[0])));
-            assertTrue(r>FORMATION_RING_R[0]-FORMATION_RING_JITTER-1e-9&&r<FORMATION_RING_R[0]+FORMATION_RING_JITTER+1e-9,"on the inner ring: "+r);
-            assertTrue(off<=180.0/FORMATION_RING_N[0]+.3*360/FORMATION_RING_N[0]/2+1e-6,"ahead of her: "+off);
-            for(int j=0;j<FORMATION_RING_N[0];j++)assertTrue(Math.abs(Math.atan2(swords[j][1],swords[j][0]))>=Math.toRadians(off)-1e-12,"the most nearly ahead");
-            // the leap: never a block a tick across (it moves her own client, IsosangClient.drive)
-            for(double t=H_HOP;t<H_ON;t+=.05)assertTrue((across(t+.05)-across(t))*r<1,"too fast across at "+t);
+            assertEquals(FORMATION_RING_N[0]+FORMATION_RING_N[1],k,"the outer ring's first");
+            assertArrayEquals(standAt(),swords[k],1e-12,"right behind the middle");
+            // no other sword right by her
+            for(int j=0;j<swords.length;j++)if(j!=k)assertTrue(Math.hypot(swords[j][0]-swords[k][0],swords[j][1]-swords[k][1])>1.2,"a sword by hers");
         }
     }
 }

@@ -58,7 +58,7 @@ class SwordFormationTest {
             double[] f=IsosangSlash.feet(CLIP.frame(t));
             assertTrue(f[0]>-.02&&f[1]>-.02,"a foot in the ground at "+t+": "+f[0]+" "+f[1]);
             // on the ground before the leap and after she lands, on what she stands on up there, down again at the end
-            boolean standing=t<.16f||t>.9f&&t<IsosangRules.H_HOP||t>IsosangRules.H_ON+.05f&&t<IsosangRules.H_DROP||t>IsosangRules.H_DOWN;
+            boolean standing=t<.16f||t>.9f&&t<IsosangRules.H_DROP||t>IsosangRules.H_DOWN;
             if(standing)assertTrue(Math.min(f[0],f[1])<.05,"no foot down at "+t+": "+f[0]+" "+f[1]);
         }
         // her feet together up there
@@ -77,19 +77,22 @@ class SwordFormationTest {
         assertEquals(10,IsosangRules.FORMATION_RADIUS,1e-9);
         assertEquals(48,a.length,"three rings, none in the middle");
         Vec3d centre=new Vec3d(5,64,-3);
-        // where the server reckons they lie (IsosangRules.formationSwords), and the one she stands on upright, its pommel
-        // where the server holds her and her own client takes her (IsosangClient.over, IsosangRules.raised)
-        int s0=IsosangRules.formationSeed(id);var places=IsosangRules.formationSwords(s0);int stand=IsosangRules.standSword(s0);
+        // where the server reckons they lie (IsosangRules.formationSwords), and the one she stands on (2.82.4: where she
+        // leapt, on the outer ring right behind the middle) upright, struck first, its pommel where the server holds her
+        // and her own client takes her (IsosangClient.spot, IsosangRules.raised)
+        int s0=IsosangRules.formationSeed(id);var places=IsosangRules.formationSwords(s0);int stand=IsosangRules.standSword();
         for(int i=0;i<a.length;i++){assertEquals(places[i][0],a[i].fw(),1e-12);assertEquals(places[i][1],a[i].rt(),1e-12);}
         for(int i=0;i<a.length;i++)if(i!=stand)assertTrue(a[i].tilt()>1,"the others lean a little");
         var on=a[stand];assertEquals(0,on.tilt(),1e-12,"the one she stands on upright");assertEquals(IsosangRules.FORMATION_STAND,on.height(),1e-12);
+        assertEquals(IsosangRules.H_PLANT,on.plant(),1e-6,"it strikes first, under her as she hangs in the air");
+        for(var b2:a)if(b2!=on)assertTrue(b2.plant()>on.plant(),"the rest after it");
+        assertTrue(on.plant()<IsosangRules.H_DIVE,"struck before she comes down onto it");
         for(float yaw:new float[]{0,30,-135}){
-            Vec3d pommel=SwordFormation.planted(centre,yaw,on),there=IsosangClient.over(id,new IsosangClient.Formation(centre,yaw),10).add(0,IsosangRules.raised(10),0);
-            assertEquals(0,pommel.distanceTo(there),1e-9,"she stands on its pommel");
-            assertEquals(0,IsosangClient.over(id,new IsosangClient.Formation(centre,yaw),1).distanceTo(centre),1e-12,"at the middle before she leaps");
-            // ahead of her, the way she faced
-            Vec3d ahead=Vec3d.fromPolar(0,yaw),to=pommel.subtract(centre).multiply(1,0,1).normalize();
-            assertTrue(ahead.dotProduct(to)>Math.cos(Math.toRadians(25)),"ahead of her");
+            Vec3d pommel=SwordFormation.planted(centre,yaw,on),spot=IsosangClient.spot(new IsosangClient.Formation(centre,yaw));
+            assertEquals(0,pommel.distanceTo(spot.add(0,IsosangRules.raised(10),0)),1e-9,"she stands on its pommel");
+            // behind the formation's middle, the way she faced: the formation lies ahead of her, she on its outer ring
+            Vec3d ahead=Vec3d.fromPolar(0,yaw);
+            assertEquals(0,centre.subtract(spot).subtract(ahead.multiply(IsosangRules.FORMATION_STAND_BACK)).length(),1e-9,"its middle ahead of her");
         }
         var seen=new HashSet<String>();
         double near=0;
@@ -102,7 +105,7 @@ class SwordFormationTest {
             for(int j=0;j<a.length;j++)if(j!=i)nearest=Math.min(nearest,Math.hypot(s.fw()-a[j].fw(),s.rt()-a[j].rt()));
             assertTrue(nearest>1,"two swords too close: "+nearest);
             near+=nearest/a.length;
-            assertTrue(s.plant()>=IsosangRules.H_RAIN0-1e-6&&s.plant()<=IsosangRules.H_RAIN1+1e-6,"it strikes as the swords rain: "+s.plant());
+            if(i!=stand)assertTrue(s.plant()>=IsosangRules.H_RAIN0-1e-6&&s.plant()<=IsosangRules.H_RAIN1+1e-6,"it strikes as the swords rain: "+s.plant());
             assertTrue(s.shows()+.08f<=s.plant()-SwordFormation.FALL+1e-4,"it shows in the sky before it falls");
             assertTrue(s.shows()>=IsosangRules.H_SKY-1e-6);
             assertTrue(s.sky()>=6&&s.sky()<=13,"high in the sky: "+s.sky());
@@ -145,22 +148,36 @@ class SwordFormationTest {
         // (2.82.1) its finer parts: a fuller down the blade on both sides, a knob at each end of the guard, a gem on each face of its guard and pommel, a wound grip
         for(var part:SwordFormation.Part.values())assertTrue(SwordFormation.FACES.stream().anyMatch(f->f.part()==part),"no "+part);
         assertEquals(2,SwordFormation.KNOBS.size());assertEquals(4,SwordFormation.GEMS.size());
-        for(var k:SwordFormation.KNOBS)assertTrue(Math.abs(k.x)>SwordFormation.S_GUARD_W,"a knob past the guard's end");
+        for(var k:SwordFormation.KNOBS)assertTrue(Math.abs(k.x)>SwordFormation.S_GUARD_W*SwordFormation.THIN,"a knob past the guard's end");
         for(var f:SwordFormation.FACES)if(f.part()==SwordFormation.Part.FULLER)for(var v:f.v()){
             assertTrue(v.y>SwordFormation.S_GUARD&&v.y<SwordFormation.S_LEN-SwordFormation.S_POINT,"the fuller on the blade");
-            assertTrue(Math.abs(v.z)>=SwordFormation.bladeRidge(v.y)*(1-Math.abs(v.x)/SwordFormation.bladeWidth(v.y))-1e-9,"the fuller over the blade's face");
+            // (as thinned, 2.82.4: across and through alike, so the fuller still lies over the blade's face)
+            double th=SwordFormation.THIN;
+            assertTrue(Math.abs(v.z)>=th*SwordFormation.bladeRidge(v.y)*(1-Math.abs(v.x)/(th*SwordFormation.bladeWidth(v.y)))-1e-9,"the fuller over the blade's face");
         }
-        // its edge runs from the guard to the point
-        assertEquals(SwordFormation.S_W,SwordFormation.edge(SwordFormation.S_GUARD).x,1e-9);
+        // its edge runs from the guard to the point (2.82.4: thinner, THIN across)
+        assertEquals(SwordFormation.S_W*SwordFormation.THIN,SwordFormation.edge(SwordFormation.S_GUARD).x,1e-9);
         assertEquals(0,SwordFormation.edge(SwordFormation.S_LEN).x,1e-9);
+        // (2.82.4, "검 두께를 지금보다 더 작아지게") thinner: no wider than THIN of the shape built, as long as it was
+        double across=0,through=0;
+        for(var f:SwordFormation.FACES)for(var v:f.v()){across=Math.max(across,Math.abs(v.x));through=Math.max(through,Math.abs(v.z));}
+        assertTrue(SwordFormation.THIN<.7,"thinner");
+        assertTrue(across<=(SwordFormation.S_GUARD_W+SwordFormation.S_KNOB*1.7)*SwordFormation.THIN+1e-9,"its guard no wider than THIN of it: "+across);
+        assertTrue(through<=.07*SwordFormation.THIN,"no thicker than THIN of it: "+through);
     }
     @Test void theMountainsAreBroadMassesOneBeforeAnotherRimmedFromTheirSummits(){
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
-        var all=SwordFormation.mountains(id);
+        float yaw=40;var all=SwordFormation.mountains(id,yaw);
         assertEquals(6,all.length);
-        assertSame(all,SwordFormation.mountains(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits())),"the same mountains for the same formation");
+        assertSame(all,SwordFormation.mountains(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()),yaw),"the same mountains for the same formation");
+        double behind=SwordFormation.behind(yaw);
         for(var mt:all){
             assertTrue(mt.radius()>IsosangRules.FORMATION_RADIUS+1,"outside the formation");
+            // (2.82.4) none behind her, where her camera looks at her from: no mass reaches within 25 degrees of it
+            for(var p:mt.peaks())for(double x:new double[]{p.xs()[0],p.xs()[p.xs().length-1]}){
+                double a=mt.az()+Math.atan2(x,mt.radius()-p.front());
+                assertTrue(Math.abs(MathHelper.wrapDegrees(Math.toDegrees(a-behind)))>25,"a mountain behind her: "+Math.toDegrees(a-behind));
+            }
             assertTrue(mt.peaks().length>=3&&mt.peaks().length<=4);
             double front=-1;
             for(var p:mt.peaks()){
@@ -190,9 +207,12 @@ class SwordFormationTest {
     }
     @Test void cloudsCurlOverTheMountainsAndWispsOfMistDriftLow(){
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
-        var all=SwordFormation.clouds(id);
-        int high=0,low=0;
+        float yaw=-70;var all=SwordFormation.clouds(id,yaw);
+        int high=0,low=0;double behind=SwordFormation.behind(yaw);
         for(var cl:all){
+            // (2.82.4) none of the clouds behind her, where her camera looks at her from (the mist low under it is), even as they drift
+            if(!cl.mist())for(float t:new float[]{0,20,41})
+                assertTrue(Math.abs(MathHelper.wrapDegrees(Math.toDegrees(cl.az()+cl.drift()*t-behind)))>40,"a cloud behind her at "+t);
             if(!cl.mist()){
                 assertTrue(cl.turns()>.6,"its curl winds round");
                 if(cl.radius()>IsosangRules.FORMATION_RADIUS+4){high++;assertTrue(cl.up()>4.5,"among and over the summits");assertTrue(cl.thick()>1.1,"a full band");}

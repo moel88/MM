@@ -433,15 +433,17 @@ public final class IsosangRules {
      * H (2.82.0, user request: "다음은 H스킬이야 엄청 많은 검을 박고 검 위로 올라가 검 위에 올라가 있을때는 움직 일 수 없어 영상이랑
      * 똑같이 구현해줘 이펙트도", the user's video of it (c213bfd7, 60 fps, 42.5 s) read frame by frame on a sheet; their
      * answers: as long as in the video (some 39 s), only R while on the sword ("일단은 R만 됨"), a 60 s cooldown; and
-     * "데미지는 처음 한 번 H 박을때 30데미지 그리고 5초마다 5 데미지"): Lee So-sang leaps up, a thread of light from her sword
-     * to the ground opening a pool of black there, swords showing in the sky; one is driven into the middle, she dives
-     * back down to it, and the rest rain down all round with blue lightning, planting themselves in rings out to
-     * {@link #FORMATION_RADIUS} blocks, blue crystal flowers blooming where they strike; ink mountains rise round its edge
-     * and mist drifts by. She leaps onto one of them and stands on its pommel, unable to walk (only R may be used), until
-     * the formation ends ({@link #H_END}): every sword flashes blue, turns to ink and is gone, and she drops down. (Until
-     * 2.82.3 she hopped up onto a sword driven into the middle; 2.82.3 took that sword away, user request: "가운데에
-     * 플레이어가 올라가 있는 검 치워", then "아니 다른 검에 올라가야지": she leaps onto the inner ring's sword straight
-     * ahead of her, {@link #standSword}.)
+     * "데미지는 처음 한 번 H 박을때 30데미지 그리고 5초마다 5 데미지"): Lee So-sang leaps up where she stands, a thread of
+     * light from her sword to the ground opening a pool of black there, swords showing in the sky; one is driven into the
+     * ground right under her and she comes down onto its pommel, and the rest rain down with blue lightning, planting
+     * themselves in rings round the formation's middle out to {@link #FORMATION_RADIUS} blocks, blue crystal flowers
+     * blooming where they strike; ink mountains rise round its edge and mist drifts by. She stands on that pommel, unable
+     * to walk (only R may be used), until the formation ends ({@link #H_END}): every sword flashes blue, turns to ink and
+     * is gone, and she drops down. The formation does not lie round her: she stands on its outer ring, its middle
+     * {@link #FORMATION_STAND_BACK} blocks ahead of her (2.82.4, user request: "가운데에서 점프해서 올라가는게 아니고 H를 쓰면
+     * 내가 점프를 하고 그 자리에 검이 하나 있어야해 그러니까 H는 플레이어 기준 중앙으로 나오는게 아니고 외곽부분으로
+     * 나와야함"; until 2.82.2 it lay round her and she stood on a sword in its middle, in 2.82.3 she leapt from its middle
+     * onto its inner ring).
      * Whoever is inside it as the swords strike is struck once ({@link #FORMATION_IMPACT}), and every
      * {@link #FORMATION_EVERY} ticks after that again ({@link #FORMATION_TICK}); no guard takes it, no one is thrown.
      */
@@ -458,21 +460,16 @@ public final class IsosangRules {
     public static final int FORMATION_IMPACT_AT=20,FORMATION_EVERY=100;
     /** Ticks H is not ready again once it is over (the user's choice: 60 s), from its end, as every skill's cooldown. */
     public static final int H_COOLDOWN=1200;
+    /** How high she stands on the pommel of the sword she stands on (blocks over the ground; the video: about her own height) and how high she leaps. */
+    public static final double FORMATION_STAND=1.7,H_LEAP_HEIGHT=3.0;
     /**
-     * How high she stands on the pommel of the sword she stands on (blocks over the ground; the video: about her own
-     * height), how high she leaps as the swords are called, and how high the leap onto the sword arcs over the straight
-     * way there (2.82.3: across to a sword of the inner ring, no more straight up onto the middle one).
-     */
-    public static final double FORMATION_STAND=1.7,H_LEAP_HEIGHT=3.0,H_HOP_ARC=1.1;
-    /**
-     * H's times (seconds; the video from 0.4 s): she leaps (0.6 s in the video), is at the top, dives (1.18), lands in
-     * the middle (1.25); a black spike shoots up out of the middle (1.1: as the middle sword struck, until 2.82.3); the
-     * swords show in the sky (0.75) and land (1.22 to 1.52); she leaps onto the sword she stands on (the video: 1.6 to
-     * 1.95, straight up onto the middle sword; 2.82.3: across some 5.5 blocks to the inner ring, so half a second); the
-     * formation ends (40.72: the swords flash) and she drops (41.0 to 41.4).
+     * H's times (seconds; the video from 0.4 s): she leaps (0.6 s in the video), is at the top, dives (1.18), lands (1.25:
+     * 2.82.4, on the pommel of the sword struck under her; until 2.82.3 on the ground, hopping up onto a sword after);
+     * that sword strikes, a black spike shooting up out of the pool (1.1); the rest show in the sky (0.75) and land (1.22
+     * to 1.52); the formation ends (40.72: the swords flash) and she drops (41.0 to 41.4).
      */
     public static final float H_LEAP=.2f,H_PEAK=.42f,H_DIVE=.78f,H_LANDED=.86f,H_PLANT=.7f,H_SKY=.35f,H_RAIN0=.82f,H_RAIN1=1.12f,
-        H_HOP=1.2f,H_ON=1.7f,H_END=40.32f,H_DROP=40.6f,H_DOWN=41f;
+        H_END=40.32f,H_DROP=40.6f,H_DOWN=41f;
     /** Whether a body ({@code dx}, {@code dz} level from the middle, {@code dy} over its ground, {@code halfWidth} across) is in the formation. */
     public static boolean formationOver(double dx,double dz,double dy,double halfWidth){
         return dy>=FORMATION_LOW&&dy<=FORMATION_HIGH&&Math.hypot(dx,dz)<=FORMATION_RADIUS+halfWidth;
@@ -487,32 +484,30 @@ public final class IsosangRules {
     public static float formationTotal(){float t=0;for(long a=0;a<LENGTH[FORMATION];a++)if(formationStrikes(a))t+=formationDamage(a);return t;}
     /**
      * How high her body is drawn over the formation's ground {@code t} seconds into H (blocks): the leap up, the hang, the
-     * dive back down, the leap onto the sword she stands on (up over its pommel and down onto it), stood there, and the drop.
+     * dive down onto the pommel of the sword struck under her (2.82.4), stood there, and the drop.
      */
     public static double planned(double t){
         if(t<H_LEAP)return 0;
         if(t<H_PEAK){double u=(t-H_LEAP)/(H_PEAK-H_LEAP);return H_LEAP_HEIGHT*(1-(1-u)*(1-u));}
         if(t<H_DIVE){double u=(t-H_PEAK)/(H_DIVE-H_PEAK);return H_LEAP_HEIGHT+.18*Math.sin(Math.PI*u);}
-        if(t<H_LANDED){double u=(t-H_DIVE)/(H_LANDED-H_DIVE);return H_LEAP_HEIGHT*(1-u*u);}
-        if(t<H_HOP)return 0;
-        if(t<H_ON){double u=(t-H_HOP)/(H_ON-H_HOP);return FORMATION_STAND*u*u*(3-2*u)+H_HOP_ARC*4*u*(1-u);}
+        if(t<H_LANDED){double u=(t-H_DIVE)/(H_LANDED-H_DIVE);return H_LEAP_HEIGHT-(H_LEAP_HEIGHT-FORMATION_STAND)*u*u;}
         return raised(t);
     }
     /**
-     * How high her body really is over the formation's ground {@code t} seconds into H (blocks): on the ground until the
-     * leap, up onto the pommel of the sword she stands on, there until the drop, and down. Her own client moves her so
-     * (IsosangClient.drive; a boss, the server) and the server keeps her where {@link #across} has her; {@link #planned}
-     * draws the leap and its arc over it.
+     * How high her body really is over the formation's ground {@code t} seconds into H (blocks): on the ground until she
+     * leaps, up as high as the pommel she will stand on as she leaps (2.82.4: she never comes down to the ground between),
+     * there until the drop, and down. Her own client moves her so (IsosangClient.drive; a boss, the server) and the server
+     * keeps her where she stood; {@link #planned} draws the leap over it.
      */
     public static double raised(double t){
-        if(t<H_HOP)return 0;
-        if(t<H_ON){double u=(t-H_HOP)/(H_ON-H_HOP);return FORMATION_STAND*u*u*(3-2*u);}
+        if(t<H_LEAP)return 0;
+        if(t<H_PEAK){double u=(t-H_LEAP)/(H_PEAK-H_LEAP);return FORMATION_STAND*u*u*(3-2*u);}
         if(t<H_DROP)return FORMATION_STAND;
         if(t<H_DOWN){double u=(t-H_DROP)/(H_DOWN-H_DROP);return FORMATION_STAND*(1-u*u);}
         return 0;
     }
-    /** Whether she is up off the ground {@code t} seconds into H, leaping onto the sword or on it (held there: the server lets her float). */
-    public static boolean onSword(double t){return t>=H_HOP&&t<H_DOWN;}
+    /** Whether she is up off the ground {@code t} seconds into H, in the leap or on the sword (held there: the server lets her float). */
+    public static boolean onSword(double t){return t>=H_LEAP&&t<H_DOWN;}
 
     // where the formation's swords lie (2.82.3: here, not with the effects, for the server to know the sword she stands on)
 
@@ -526,6 +521,11 @@ public final class IsosangRules {
     public static final double[] FORMATION_RING_R={5.5,7.1,8.7};
     public static final int[] FORMATION_RING_N={12,16,20};
     public static final double FORMATION_RING_JITTER=.3;
+    /**
+     * How far behind the formation's middle she stands (blocks, 2.82.4: on its outer ring, the sword struck under her one
+     * of it; the formation's middle is this far ahead of her, the way she faced, the crosshair's).
+     */
+    public static final double FORMATION_STAND_BACK=8.7;
     /** A formation's seed: where its swords lie and how they look follow from it (its swing's id), the same on the server and every client. */
     public static int formationSeed(UUID id){
         return (int)(id.getMostSignificantBits()^(id.getMostSignificantBits()>>>32)^id.getLeastSignificantBits()^(id.getLeastSignificantBits()>>>32));
@@ -537,14 +537,17 @@ public final class IsosangRules {
     /**
      * Where the formation's swords strike the ground: forward and right of its middle (blocks, in the way its user faced),
      * ring by ring from the inner one, each ring turned a seeded way round and its swords a little off their even places
-     * and their ring's radius (the second ring a half step round from the first: staggered).
+     * and their ring's radius (the second ring a half step round from the first: staggered); the outer ring turned so that
+     * its first sword is the one she stands on, right behind the middle (2.82.4, {@link #standSword}).
      */
     public static double[][] formationSwords(int s0){
         int total=0;for(int n:FORMATION_RING_N)total+=n;
         double[][] out=new double[total][];int k=0;
         for(int r=0;r<FORMATION_RING_R.length;r++){
-            double off=Math.PI*2*hash(s0+11)+Math.PI*r/FORMATION_RING_N[r];
+            boolean outer=r==FORMATION_RING_R.length-1;
+            double off=outer?Math.PI:Math.PI*2*hash(s0+11)+Math.PI*r/FORMATION_RING_N[r];
             for(int i=0;i<FORMATION_RING_N[r];i++,k++){
+                if(outer&&i==0){out[k]=standAt();continue;}
                 int seed=swordSeed(s0,k);
                 double a=off+Math.PI*2*(i+.3*(hash(seed+2)-.5))/FORMATION_RING_N[r];
                 double rad=Math.min(FORMATION_RADIUS-.4,FORMATION_RING_R[r]+(hash(seed+3)-.5)*2*FORMATION_RING_JITTER);
@@ -554,24 +557,11 @@ public final class IsosangRules {
         return out;
     }
     /**
-     * The sword she stands on (2.82.3, user request: "아니 다른 검에 올라가야지", once the middle sword was taken away): of
-     * the inner ring, the one most nearly straight ahead of her (the way she faced as it began, the crosshair's), its
-     * place in {@link #formationSwords}. It stands upright, its pommel {@link #FORMATION_STAND} up.
+     * The sword she stands on (2.82.4, user request: "H를 쓰면 내가 점프를 하고 그 자리에 검이 하나 있어야해"): the one struck
+     * into the ground right where she leapt, the outer ring's first, its place in {@link #formationSwords}. It stands
+     * upright, its pommel {@link #FORMATION_STAND} up, and strikes first ({@link #H_PLANT}).
      */
-    public static int standSword(int s0){
-        var swords=formationSwords(s0);int best=0;double most=Double.MAX_VALUE;
-        for(int k=0;k<FORMATION_RING_N[0];k++){double off=Math.abs(Math.atan2(swords[k][1],swords[k][0]));if(off<most){most=off;best=k;}}
-        return best;
-    }
-    /** Where she stands up there: the sword she stands on, forward and right of the formation's middle (blocks). */
-    public static double[] standAt(int s0){return formationSwords(s0)[standSword(s0)];}
-    /**
-     * How far along the way from the formation's middle to the sword she stands on she is {@code t} seconds into H (0 to 1,
-     * 2.82.3): at the middle until she leaps, across in the air (quickest halfway, a third as quick as she springs and as
-     * she lands), on it until the end.
-     */
-    public static double across(double t){
-        if(t<H_HOP)return 0;if(t>=H_ON)return 1;
-        double u=(t-H_HOP)/(H_ON-H_HOP);return u-.5*Math.sin(2*Math.PI*u)/(2*Math.PI);
-    }
+    public static int standSword(){return FORMATION_RING_N[0]+FORMATION_RING_N[1];}
+    /** Where she stands: right behind the formation's middle on its outer ring (forward and right of the middle, blocks). */
+    public static double[] standAt(){return new double[]{-FORMATION_STAND_BACK,0};}
 }

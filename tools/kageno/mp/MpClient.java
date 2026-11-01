@@ -333,9 +333,10 @@ public final class MpClient implements ClientModInitializer {
     /**
      * Lee So-sang's H (2.82.0, MP_ONLY=isosangh): H with the watcher 2.5 blocks in front at full health (its swords strike
      * it 30 as they come down and 5 every 5 s after, no guard, no throw); the attack and E while it is under way (refused:
-     * only R may be used up there), R from the sword (it strikes the watcher 20 from the formation's ground; 2.82.3: the
-     * watcher put 3 blocks before the caster first, for the caster has leapt across to the inner ring's sword ahead, past
-     * where the watcher stood), H again (refused: under way), and H once it is over (refused: 60 s from its end). The
+     * only R may be used up there), R from the sword (it strikes the watcher 20 from the formation's ground; the watcher
+     * put 3 blocks before the caster first: 2.82.3, the caster leapt across past it; 2.82.4, the caster stands where it
+     * leapt, on the formation's outer ring, its middle 8.7 blocks ahead), H again (refused: under way), and H once it is
+     * over (refused: 60 s from its end). The
      * caster stands on the sword some 39 s with nothing under it: the server must not take it for flying. Both log the
      * formation they see (its middle, the caster's height over it as drawn and as it is, and 2.82.3 how far off the plan's
      * place level the caster is and is drawn), its sounds, and the caster's H; the server the caster's formation, its
@@ -902,9 +903,10 @@ public final class MpClient implements ClientModInitializer {
             if(formationSeen.add(key)){
                 // (as the body is drawn at the frame's start: where it is between ticks, getLerpedPos, moved as the plan has it)
                 var at=who.getLerpedPos(0);var d=at.subtract(form.centre());
-                // (2.82.3) and where the plan has them level (its middle, then the sword they stand on): how far off it they are and are drawn
-                var plan=dev.sangwoo.celestialfall.client.isosang.IsosangClient.over(c.id(),form,c.age(0)/20.0);
-                var drawn=at.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(c.caster(),0));
+                // (2.82.3) and where the plan has them level (2.82.4: where they stood, on the formation's outer ring, its
+                // middle ahead): how far off it they are and are drawn (drawn where they are: no lag to make up level)
+                var plan=dev.sangwoo.celestialfall.client.isosang.IsosangClient.spot(form);
+                var drawn=at;
                 note(String.format(Locale.ROOT,"%s's formation at its age %.2f s: the caster %.2f over its middle (%.2f off it level; %.2f off the plan, drawn %.2f off it, the plan %.2f from the middle), drawn %.2f over it (planned %.2f)%s",name(c.caster()),c.age(0)/20,d.y,Math.hypot(d.x,d.z),
                     Math.hypot(at.x-plan.x,at.z-plan.z),Math.hypot(drawn.x-plan.x,drawn.z-plan.z),Math.hypot(plan.x-form.centre().x,plan.z-form.centre().z),
                     d.y+dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(c.caster(),0),Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangRules.planned(c.age(0)/20.0)),
