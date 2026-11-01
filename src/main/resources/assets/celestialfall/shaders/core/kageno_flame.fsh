@@ -384,18 +384,20 @@ void main(){
     float depth=smoothstep(0.0,.11,-d),inside=1.0-smoothstep(-aa,aa*.5,d);
     float mott=fbm(q*2.6+vec2(sd,-sd)+tsec*vec2(.13,-.09));
     // the streaks: in toward the middle as it gathers, out as it swirls out, turning round it as they go
-    float sw=th+(swirling>.5?.75:-.55)*lr+(swirling>.5?-.9:.7)*tsec;
+    float sw=th+(swirling>.5?.75:-1.1)*lr+(swirling>.5?-.9:.7)*tsec;
     float st=.5+.5*sin(13.0*sw+(swirling>.5?-1.0:1.0)*(4.0*lr-7.0*tsec)+2.6*fbm(dir*1.9+vec2(lr*.5,sd)));
-    float streak=smoothstep(.8,.97,st)*(.55+.45*mott)*smoothstep(.05,.25,r);
+    // broken into dashes running along them (in as it gathers, out as it swirls out), never whole spokes
+    float dash=.5+.5*sin(9.0*lr+(swirling>.5?-14.0:14.0)*tsec+3.0*sin(7.0*sw+sd));
+    float streak=smoothstep(.84,.97,st)*smoothstep(.25,.75,dash)*(.55+.45*mott)*smoothstep(.05,.25,r);
     // soaking in (gathering: in patches all over at once, never spreading out from one place) or drying (swirling out:
     // its thin parts first, breaking up in patches)
     float n=fbm(q*2.2+vec2(sd*1.3,sd*.7));
     float cover;
-    if(swirling<.5)cover=smoothstep(n-.13,n+.13,share*1.3-.15);
+    if(swirling<.5)cover=smoothstep(n-.035,n+.035,share*1.3-.15);
     else cover=1.0-smoothstep(n-.09,n+.09,share*1.3-.15+.3*(1.0-depth)*share);
     vec3 thinC=mix(navy*1.5,deep*.75,.45);
     rgb=mix(thinC,mix(inkc,navy*.7,.3*mott),depth);
-    rgb=mix(rgb,mix(deep*.8,navy*1.5,depth),streak*.45);
+    rgb=mix(rgb,mix(deep*.8,navy*1.5,depth),streak*.3);
     float a=inside*cover*mix(.62,.93,depth)*(.9+.1*mott);
     // the edge lit (dimming once it has swirled all the way out, a faint rim left): a wide blue glow outside, a thin
     // bright line along the ink, white at its heart
