@@ -360,21 +360,73 @@ void main(){
    rgb=mix(inkc,navy*.45,.3*fbm(q*5.0-sd));
    // see-through, a little darker where the ink gathers at its edge
    alpha=cov*(.74+.18*rim)*(.86+.14*fbm(q*7.0+sd*2.0))*(1.0-smoothstep(.94,1.0,r))*tint.a;
-  }else if(style>12.5&&style<14.5){
-   // 13 the ink of Lee So-sang's H lying on the ground (2.82.6, user request: "잉크 모였다가 퍼지는게 너무 부자연스러운데
-   // 이거만 예쁘게 다듬어줘"), a liquid sheet: uv is the offset from its middle over its radius (its edge near 1, wavering
-   // slowly), tint.g the formation's clock (seconds over 2), tint.b its kind (128 and up: swirling out) and a share
-   // (0..127: as it gathers, how far it has soaked in; as it swirls out, how far it has dried). Dense and black inside,
-   // thin and glassy toward its edge (deep blue showing through), mottled, with streaks flowing in toward its middle as
-   // it gathers and out as it swirls out, turning as they go; its edge a thin bright line, white at its heart, in a wide
-   // blue glow just outside it; swirling out, ripples running out across it and three arms of blue light turning in it.
+  }else if(style>12.5){
+   // 13 the ink of Lee So-sang's H lying on the ground as it gathers (2.82.6, user request: "잉크 모였다가 퍼지는게 너무
+   // 부자연스러운데 이거만 예쁘게 다듬어줘"), a liquid sheet: uv is the offset from its middle over its radius (its edge near 1,
+   // wavering slowly), tint.g the formation's clock (seconds over 2), tint.b how far it has soaked in (0..127). Dense and
+   // black inside, thin and glassy toward its edge (deep blue showing through), mottled, with streaks flowing in toward its
+   // middle, turning as they go; its edge a thin bright line, white at its heart, in a wide blue glow just outside it.
    // 14 the formation's blue ground (the same square, solid to .88 of it, fading to its rim; tint.a).
+   // 15 the whirlpool once the gathered ink has gone into the middle and burst there (2.82.7, user request: "잉크가 모였다가
+   // 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가 크게 나옴" with their still of the video): streams of
+   // black water swirling out of the middle as wide as the ink first soaked in. uv the offset from its middle over its outer
+   // radius (the swirl spreads with it, as the video's does), tint.g the formation's clock, tint.b its eye (the black
+   // middle no stream crosses: a share of its radius, over .6). Seen from above its streams curl counterclockwise as they
+   // run out (the video put back on the ground plane: some ten degrees off the round) and all of it turns slowly the same
+   // way; theta here grows clockwise seen from above, so a stream keeps th+TWIST*lr. Crescents of light on black water,
+   // a white heart in pale blue, broken along their length so they taper at both ends; fine streaks running out along
+   // them; a blue sheen round the eye; its rim soft and ragged, the streams' tails reaching a little past it. As the swords
+   // strike its light dims and its water settles into a dark blue; then it dries away in patches, its thin parts first.
    vec2 q=uv;float r=length(q);
-   if(style>13.5){
+   if(style>14.5){
+    float tsec=tint.g*2.0,eye=tint.b*.6;
+    vec2 dir=r>1e-4?q/r:vec2(1.0,0.0);
+    float th=r>1e-4?atan(q.y,q.x):0.0,lr=log(max(r,.035)),aa=max(fwidth(r),.0015);
+    // the eye: black, its edge wavering a little
+    float eyeR=eye*(1.0+.035*sin(4.0*th+sd+.8*tsec)+.02*sin(7.0*th-1.3*sd-1.4*tsec));
+    float inEye=eye>.01?1.0-smoothstep(eyeR-aa,eyeR+aa,r):0.0;
+    // the streams (TWIST 5.2, turning SPIN .38 a second; SwordFormation.WHIRL_TWIST, WHIRL_SPIN): two broad, three thinner
+    float warp=fbm(q*2.3+vec2(sd*.7,-sd))-.5;
+    float psi=th+5.2*lr+.38*tsec+1.6*warp;
+    float s2=.5+.5*cos(2.0*psi+sd),s3=.5+.5*cos(3.0*psi+1.7*sd+2.1);
+    // broken into crescents by looser families running across them, the pieces carried out along the streams
+    float cut2=smoothstep(-.75,.45,cos(2.0*(th-1.3*lr)+2.4*tsec+.7*sd));
+    float cut3=smoothstep(-.45,.7,cos(3.0*(th-1.0*lr)+3.1*tsec+1.3*sd+1.0));
+    // (each fading as it thins, so the crescents taper away and never run on as hairlines)
+    float c2=smoothstep(.999-.5*cut2,1.0-.15*cut2,s2)*smoothstep(.05,.4,cut2),c3=smoothstep(.999-.3*cut3,1.0-.09*cut3,s3)*smoothstep(.1,.5,cut3);
+    // only between the eye and the rim (their tails a little past where the water thins out), not in the very middle
+    float band=smoothstep(eyeR+.004,eyeR+.05,r)*(1.0-smoothstep(.86,1.04,r))*smoothstep(.04,.14,r);
+    float crest=max(c2,.8*c3)*band;
+    // fine streaks of water running out along the streams
+    float st=.5+.5*cos(13.0*psi+2.2*fbm(dir*2.0+vec2(lr*.6,sd)));
+    float dash=.5+.5*sin(8.0*lr-10.0*tsec+3.0*sin(4.0*psi+sd));
+    float streak=smoothstep(.76,.95,st)*smoothstep(.3,.8,dash)*band;
+    // its light dims and its water settles into a dark blue as the swords strike
+    float lit=1.0-.7*smoothstep(1.1,1.5,tsec),settle=smoothstep(.95,1.4,tsec);
+    float mott=fbm(q*3.1+vec2(-sd,sd)+tsec*vec2(.11,-.08));
+    vec3 water=mix(inkc,navy*.85,.25*mott+.4*settle*(1.0-inEye));
+    vec3 cc=mix(deep,blue,smoothstep(0.0,.3,crest));
+    cc=mix(cc,pale,smoothstep(.3,.85,crest));
+    cc=mix(cc,edge,smoothstep(.88,1.0,crest)*.5);
+    cc=mix(cc,deep*.6,streak*.7);
+    rgb=mix(water,mix(navy*1.6,blue*.8,.4),streak*(1.0-crest)*.18);
+    rgb=mix(rgb,cc,crest*lit);
+    float sheen=eye>.01?exp(-max(r-eyeR,0.0)/.05)*(1.0-inEye)*band:0.0;
+    rgb=mix(rgb,mix(deep,blue,.5),sheen*.35*lit);
+    // dense in the eye, thinning out to a soft, ragged rim; drying away (SwordFormation.DRY0 to DRY1) by patches
+    float n=fbm(q*2.0+vec2(sd*1.3,sd*.7));
+    float rim=1.0-smoothstep(.7,1.0,r+.14*(n-.5));
+    float share=smoothstep(1.3,1.9,tsec),thin=smoothstep(eyeR,1.0,r);
+    float cover=1.0-smoothstep(n-.09,n+.09,share*1.3-.15+.3*thin*share);
+    float a=max(mix(.86,.95,inEye)*rim,crest*lit*.95)*cover;
+    float glow=crest*lit*(.55+.45*smoothstep(.75,1.0,crest))+sheen*.35*lit+streak*.1;
+    rgb*=1.0+Hot*glow;
+    alpha=a*tint.a;
+   }else if(style>13.5){
     rgb=vec3(.043,.078,.275);
     alpha=(1.0-smoothstep(.88,1.0,r))*tint.a;
    }else{
-    float tsec=tint.g*2.0,kb=floor(tint.b*255.0+.5),swirling=step(127.5,kb),share=mod(kb,128.0)/127.0;
+    float tsec=tint.g*2.0,share=min(floor(tint.b*255.0+.5),127.0)/127.0;
     vec2 dir=r>1e-4?q/r:vec2(1.0,0.0);
     float th=r>1e-4?atan(q.y,q.x):0.0,lr=log(max(r,.015)),aa=max(fwidth(r),.0015);
     // its edge wavers: slow lobes drifting round it and finer ones (a small pool reads rounder: they are shares of it)
@@ -383,47 +435,27 @@ void main(){
     float edgeR=1.0+wob,d=r-edgeR;
     float depth=smoothstep(0.0,.11,-d),inside=1.0-smoothstep(-aa,aa*.5,d);
     float mott=fbm(q*2.6+vec2(sd,-sd)+tsec*vec2(.13,-.09));
-    // the streaks: in toward the middle as it gathers, out as it swirls out, turning round it as they go
-    float sw=th+(swirling>.5?.75:-1.1)*lr+(swirling>.5?-.9:.7)*tsec;
-    float st=.5+.5*sin(13.0*sw+(swirling>.5?-1.0:1.0)*(4.0*lr-7.0*tsec)+2.6*fbm(dir*1.9+vec2(lr*.5,sd)));
-    // broken into dashes running along them (in as it gathers, out as it swirls out), never whole spokes
-    float dash=.5+.5*sin(9.0*lr+(swirling>.5?-14.0:14.0)*tsec+3.0*sin(7.0*sw+sd));
+    // the streaks, in toward the middle, turning round it as they go
+    float sw=th-1.1*lr+.7*tsec;
+    float st=.5+.5*sin(13.0*sw+(4.0*lr-7.0*tsec)+2.6*fbm(dir*1.9+vec2(lr*.5,sd)));
+    // broken into dashes running in along them, never whole spokes
+    float dash=.5+.5*sin(9.0*lr+14.0*tsec+3.0*sin(7.0*sw+sd));
     float streak=smoothstep(.84,.97,st)*smoothstep(.25,.75,dash)*(.55+.45*mott)*smoothstep(.05,.25,r);
-    // soaking in (gathering: in patches all over at once, never spreading out from one place) or drying (swirling out:
-    // its thin parts first, breaking up in patches)
+    // soaking in, in patches all over at once, never spreading out from one place
     float n=fbm(q*2.2+vec2(sd*1.3,sd*.7));
-    float cover;
-    if(swirling<.5)cover=smoothstep(n-.035,n+.035,share*1.3-.15);
-    else cover=1.0-smoothstep(n-.09,n+.09,share*1.3-.15+.3*(1.0-depth)*share);
+    float cover=smoothstep(n-.035,n+.035,share*1.3-.15);
     vec3 thinC=mix(navy*1.5,deep*.75,.45);
     rgb=mix(thinC,mix(inkc,navy*.7,.3*mott),depth);
     rgb=mix(rgb,mix(deep*.8,navy*1.5,depth),streak*.3);
     float a=inside*cover*mix(.62,.93,depth)*(.9+.1*mott);
-    // the edge lit (dimming once it has swirled all the way out, a faint rim left): a wide blue glow outside, a thin
-    // bright line along the ink, white at its heart
-    float lit_=swirling>.5?1.0-.65*smoothstep(.9,1.25,tsec):1.0;
-    float glow=d>0.0?exp(-d/.075)*smoothstep(0.0,aa*2.0+.004,d)*cover*lit_:0.0;
+    // the edge lit: a wide blue glow outside, a thin bright line along the ink, white at its heart
+    float glow=d>0.0?exp(-d/.075)*smoothstep(0.0,aa*2.0+.004,d)*cover:0.0;
     if(d>0.0){rgb=mix(blue,deep,.4);a=.42*glow;}
     float lw=max(aa*1.5,.01);
     float line=(1.0-smoothstep(lw*.4,lw*1.7,abs(d)))*cover;
     float core=1.0-smoothstep(0.0,lw*.6,abs(d));
-    rgb=mix(rgb,mix(pale,edge,core),line*(.55+.45*lit_));a=max(a,line*.95);
-    // swirling out: three ripples running out across it, three arms of blue light turning in it (gone as it dries)
-    float ripple=0.0,arm=0.0;
-    if(swirling>.5){
-     float young=1.0-smoothstep(.95,1.3,tsec);
-     for(int i=0;i<3;i++){
-      float rho=fract(float(i)/3.0+tsec*1.15)*.96,rw=max(aa*1.1,.006)+.008*rho;
-      ripple+=(1.0-smoothstep(rw*.5,rw*1.8,abs(r-rho*edgeR)))*sin(3.14159*rho);
-     }
-     ripple*=young*cover;
-     float spiral=.5+.5*cos(3.0*th-2.4*lr-2.6*tsec+sd);
-     float win=smoothstep(.08,.28,r)*(1.0-smoothstep(.75,.98,r/edgeR));
-     arm=smoothstep(.86,.985,spiral)*win*(1.0-smoothstep(0.0,.45,share))*smoothstep(.70,.78,tsec)*cover;
-     rgb=mix(rgb,mix(blue,pale,.4),min(1.0,ripple)*.6);a=max(a,min(1.0,ripple)*.6);
-     rgb=mix(rgb,mix(blue,pale,smoothstep(.93,.995,spiral)),arm*.8);a=max(a,arm*.85);
-    }
-    float lit=line*(1.0+1.6*lit_)+glow*.45+min(1.0,ripple)*.7+arm*1.1;
+    rgb=mix(rgb,mix(pale,edge,core),line);a=max(a,line*.95);
+    float lit=line*2.6+glow*.45;
     rgb*=1.0+Hot*lit;
     alpha=a*tint.a;
    }

@@ -235,7 +235,7 @@ class SwordFormationTest {
         var cl=all[0];var in=SwordFormation.cloudPath(cl,cl.in()+.1f,.2f);
         assertTrue(in.get(in.size()-1)[2]==0&&in.stream().anyMatch(q->q[2]>.3),"flowing out as it comes in");
     }
-    @Test void theInkCoversTheGroundGathersIntoTheMiddleThenSwirlsOutAsTheSwordsStrike(){
+    @Test void theInkCoversTheGroundGathersIntoTheMiddleThenSwirlsOutAsAWhirlpool(){
         // (2.82.5, "처음에 잉크가 중앙에 모였다가 점점 확장하고 검이 박히게": 2.82.4's pool opened under her and grew; the
         // video's ink darkens the ground all round, gathers into the middle, a spike bursts there, and it swirls out again.
         // 2.82.6, "잉크 모였다가 퍼지는게 너무 부자연스러운데 이거만 예쁘게 다듬어줘": it eases into motion, sweeps in, lingers,
@@ -269,25 +269,53 @@ class SwordFormationTest {
         assertEquals(IsosangRules.H_PLANT-.055f,SwordFormation.COLLAPSE,1e-6,"as the flash breaks");
         assertEquals(0,SwordFormation.gathered(SwordFormation.COLLAPSE),1e-6,"gone with the flash");
         assertTrue(SwordFormation.SWIRL0>=IsosangRules.H_PLANT,"swirling out once it has burst");
-        for(float t=0;t<SwordFormation.SWIRL0;t+=frame)assertEquals(0,SwordFormation.pool(t),1e-9,"no swirl before the burst, at "+t);
-        // swirling out from the middle, never jumping, most of the way out as the rain of swords strikes and all of it after
-        last=0;
-        for(float t=SwordFormation.SWIRL0;t<1.4f;t+=frame){
-            double r=SwordFormation.pool(t);
-            assertTrue(r>=last-1e-9&&r-last<.7,"swirling out smoothly at "+t);
-            last=r;
+        // (2.82.7, "잉크가 모였다가 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가 크게 나옴": then a
+        // whirlpool of black streams swirls out of the middle, as wide as the ink first soaked in, round a black eye)
+        for(float t=0;t<SwordFormation.SWIRL0;t+=frame){
+            assertEquals(0,SwordFormation.whirl(t),1e-9,"no whirlpool before the burst, at "+t);
+            assertEquals(0,SwordFormation.eyeByte(t),1e-9,"no eye before the burst, at "+t);
         }
-        assertTrue(SwordFormation.pool(IsosangRules.H_RAIN0)>.75*SwordFormation.SWIRL_R,"mostly out as the swords strike: "+SwordFormation.pool(IsosangRules.H_RAIN0));
-        assertEquals(SwordFormation.SWIRL_R,SwordFormation.pool(IsosangRules.H_RAIN1),1e-9);
+        // spreading out of the middle, never jumping or drawing back, slow to start
+        last=0;fastest=0;
+        for(float t=SwordFormation.SWIRL0;t<1.4f;t+=frame){
+            double r=SwordFormation.whirl(t);
+            assertTrue(r>=last-1e-9&&r-last<.7,"swirling out smoothly at "+t+": "+(r-last));
+            fastest=Math.max(fastest,r-last);last=r;
+        }
+        assertTrue(SwordFormation.whirl(SwordFormation.SWIRL0+frame)<.1*fastest,"slow to start");
+        assertTrue(SwordFormation.whirl(SwordFormation.SWIRL0+.03f)<1.5,"a small whirlpool first: "+SwordFormation.whirl(SwordFormation.SWIRL0+.03f));
+        // big (the user's still: past the formation's edge, under her camera), mostly out as the rain of swords strikes
+        assertEquals(SwordFormation.POOL_WIDE,SwordFormation.WHIRL_R,1e-9,"as wide as the ink first soaked in");
+        assertTrue(SwordFormation.WHIRL_R>IsosangRules.FORMATION_RADIUS+4,"well past the formation's edge");
+        assertTrue(SwordFormation.WHIRL_R>IsosangRules.FORMATION_STAND_BACK+4,"well past where she stands");
+        assertTrue(SwordFormation.whirl(IsosangRules.H_RAIN0)>.75*SwordFormation.WHIRL_R,"mostly out as the swords strike: "+SwordFormation.whirl(IsosangRules.H_RAIN0));
+        assertEquals(SwordFormation.WHIRL_R,SwordFormation.whirl(IsosangRules.H_RAIN1),1e-9);
+        // its eye: the formation's empty middle (every sword strikes outside it, round its edge), opening after the
+        // whirlpool has started to spread and always well inside it, never jumping
+        double inner=IsosangRules.FORMATION_RING_R[0]-IsosangRules.FORMATION_RING_JITTER;
+        assertTrue(SwordFormation.EYE_R<inner&&SwordFormation.EYE_R>inner-.8,"the swords strike round the eye's edge: "+SwordFormation.EYE_R+" inside "+inner);
+        assertTrue(SwordFormation.EYE0>SwordFormation.SWIRL0,"the eye opens once it has started to spread");
+        double lastEye=0;
+        for(float t=SwordFormation.SWIRL0;t<1.4f;t+=frame){
+            double e=SwordFormation.eye(t),w=SwordFormation.whirl(t);
+            assertTrue(e<=.45*w+1e-9,"the eye well inside the whirlpool at "+t+": "+e+" of "+w);
+            assertTrue(e>=lastEye-1e-9&&e-lastEye<.35,"the eye opens smoothly at "+t+": "+(e-lastEye));
+            lastEye=e;
+            // what the shader is told of it: its share of the whirlpool over .6, to a byte
+            assertEquals(w<=1e-6?0:Math.min(1,e/w/.6),SwordFormation.eyeByte(t),.5/255+1e-6,"the eye's byte at "+t);
+        }
+        assertEquals(SwordFormation.EYE_R,SwordFormation.eye(SwordFormation.EYE1),1e-9);
+        // its streams curl counterclockwise seen from above as they run out, some ten degrees off the round (the video
+        // put back on the ground plane), and it turns slowly the same way (the shader's constants)
+        assertTrue(SwordFormation.WHIRL_TWIST>0,"a stream keeps theta + TWIST ln r, theta growing clockwise seen from above");
+        double pitch=Math.toDegrees(Math.atan(1/SwordFormation.WHIRL_TWIST));
+        assertTrue(pitch>7&&pitch<14,"some ten degrees off the round: "+pitch);
+        assertTrue(SwordFormation.WHIRL_SPIN>0&&SwordFormation.WHIRL_SPIN<1,"turning slowly: "+SwordFormation.WHIRL_SPIN);
         // drying by patches as the formation settles, gone before the colour of the ground is all that is left
         assertEquals(0,SwordFormation.dry(SwordFormation.DRY0),1e-6);assertEquals(1,SwordFormation.dry(SwordFormation.DRY1),1e-6);
-        // what the ink shader is told: its clock over two seconds, its kind and share in one byte (exactly)
+        // what the ink shader is told: its clock over two seconds; the gathering sheet's share in a byte (exactly)
         assertEquals(.25f,SwordFormation.poolClock(.5f),1e-6);assertEquals(1,SwordFormation.poolClock(9),1e-6);
-        for(int k=0;k<=127;k++){
-            float share=k/127f;
-            assertEquals(k,Math.round(SwordFormation.poolByte(false,share)*255));
-            assertEquals(128+k,Math.round(SwordFormation.poolByte(true,share)*255));
-        }
+        for(int k=0;k<=127;k++)assertEquals(k,Math.round(SwordFormation.soakByte(k/127f)*255));
     }
     @Test void herCameraIsDrawnBackForItAndInAgain(){
         assertEquals(0,SwordFormation.pull(0),1e-9);

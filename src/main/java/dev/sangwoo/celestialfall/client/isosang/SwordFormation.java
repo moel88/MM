@@ -33,8 +33,9 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * ground all round the formation ahead of her and gathers into its middle, its shrinking edge lit blue (2.82.5), while
  * swords show high in the sky, points down. She spreads her arms to call them; the first is struck into the ground right
  * under her where the lightning ran; out of the middle, where the ink has gathered, a black spike shoots up and bursts
- * into blue light, and she dives down onto the pommel of the sword under her as the ink swirls out again from the middle
- * over the whole formation in bands of blue and the rest rain down round its empty middle, each trailing blue lightning,
+ * into blue light, and she dives down onto the pommel of the sword under her as streams of black water swirl out of the
+ * middle, a whirlpool past the formation's edge, crescents of light curling round its black eye (2.82.7), and the rest
+ * rain down round its empty middle, each trailing blue lightning,
  * each struck into the ground with a flower of blue crystal and a splash of ink at its foot. Ink mountains rise round
  * the formation (none behind her, where her camera looks from), white clouds curling over them and wisps of mist
  * drifting low (2.82.1); the swords, dark as they strike, turn silver with a white glow, a gleam running down one now
@@ -67,13 +68,29 @@ final class SwordFormation {
      * POOL1, POOL_WIDE blocks out, she well inside it) and lies there; then it gathers into the middle, its edge easing
      * into motion, sweeping in (GATHER0 to GATHER_FAST, in to some GATHER_MID blocks), lingering as it closes slowly
      * (GATHER_SLOW to GATHER1, toward POOL_IN), and drawn in all the way at the last (COLLAPSE0 to COLLAPSE, as the flash
-     * breaks there); once the spike has burst there it swirls out again over the formation (SWIRL0 to SPREAD1, out to
-     * SWIRL_R; the blue of the ground deepening to SWIRL1). (2.82.4 opened a small pool under her and spread it, sliding
-     * it out to the formation's middle as it swirled out; 2.82.5 drew a flat disc of black shrinking and fading.)
+     * breaks there); once the spike has burst there, a whirlpool: streams of black water swirl out of the middle (SWIRL0
+     * to WHIRL1, out to WHIRL_R; its black eye opening to EYE_R from EYE0 to EYE1; the blue of the ground deepening to
+     * SWIRL1). (2.82.4 opened a small pool under her and spread it, sliding it out to the formation's middle as it swirled
+     * out; 2.82.5 drew a flat disc of black shrinking and fading; 2.82.6 spread the sheet out again to the formation's
+     * edge, three thin arms of light turning in it the wrong way round, a lit rim round it like a puddle's.)
      */
-    static final float POOL0=.19f,POOL1=.29f,GATHER0=.32f,GATHER_FAST=.5f,GATHER_SLOW=.42f,GATHER1=.64f,COLLAPSE0=.56f,COLLAPSE=IsosangRules.H_PLANT-.055f,SWIRL0=.7f,SPREAD1=.95f,SWIRL1=1.15f;
-    static final double POOL_WIDE=14.5,GATHER_MID=3.4,POOL_IN=2.4,SWIRL_R=IsosangRules.FORMATION_RADIUS-.4;
-    /** The pool and its swirl dry away (the video: the formation's ground clears from 1.6 s, colours back by 2.1 s). */
+    static final float POOL0=.19f,POOL1=.29f,GATHER0=.32f,GATHER_FAST=.5f,GATHER_SLOW=.42f,GATHER1=.64f,COLLAPSE0=.56f,COLLAPSE=IsosangRules.H_PLANT-.055f,SWIRL0=.7f,SWIRL1=1.15f;
+    static final double POOL_WIDE=14.5,GATHER_MID=3.4,POOL_IN=2.4;
+    /**
+     * The whirlpool (2.82.7, user request: "잉크가 모였다가 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가
+     * 크게 나옴" with their still of the video; the video read again a frame at a time and put back on the ground plane):
+     * once the gathered ink has gone into the middle and burst there, streams of black water swirl out of it, crescents of
+     * light on them, out as wide as the ink first soaked in (WHIRL_R, past the formation's edge and under her camera) in
+     * some sixth of a second (SWIRL0 to WHIRL1, slow to start, fastest midway), its middle a black eye no stream crosses
+     * (EYE_R, the formation's empty middle: the swords strike round its edge) opening a little later (EYE0 to EYE1). Seen
+     * from above its streams curl counterclockwise as they run out, some ten degrees off the round, and all of it turns
+     * slowly the same way (the ink shader, style 15: a stream keeps theta + WHIRL_TWIST ln r, it turns WHIRL_SPIN radians
+     * a second; theta there grows clockwise seen from above). Its light dims and its water settles into a dark blue as
+     * the swords strike; it dries away by patches (DRY0 to DRY1).
+     */
+    static final float WHIRL1=.86f,EYE0=.73f,EYE1=.85f;
+    static final double WHIRL_R=POOL_WIDE,EYE_R=5,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
+    /** The whirlpool dries away (the video: the formation's ground clears from 1.6 s, colours back by 2.1 s). */
     static final float DRY0=1.3f,DRY1=1.9f;
     /** The mountains rise; the clouds and the mist start coming in (each a little after this, over a second: Cloud.in). */
     static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f;
@@ -821,29 +838,34 @@ final class SwordFormation {
     static float gathered(float t){return Ease.smooth(t,POOL0,POOL0+.02f)*(1-Ease.smooth(t,COLLAPSE-.02f,COLLAPSE));}
     /** How far the ink has soaked into the ground as she leaps (0 to 1: in patches all over it at once, never from one place). */
     static float soak(float t){return Ease.smooth(t,POOL0,POOL1);}
-    /** How far the ink has swirled out again from the middle once the spike has burst there (blocks; 0 before SWIRL0). */
-    static double pool(float t){return t<SWIRL0?0:SWIRL_R*Ease.out(t,SWIRL0,SPREAD1);}
-    /** How far the ink swirled out over the formation has dried (0 to 1: its thin parts first, breaking up in patches). */
+    /** How far the whirlpool reaches from the middle once the spike has burst there (blocks; 0 before SWIRL0): slow to start, fastest midway, all the way out at WHIRL1. */
+    static double whirl(float t){return t<SWIRL0?0:WHIRL_R*Ease.smooth(t,SWIRL0,WHIRL1);}
+    /** How wide its black eye is (blocks): opening after it has started to spread, EYE_R from EYE1. */
+    static double eye(float t){return EYE_R*Ease.smooth(t,EYE0,EYE1);}
+    /** The ink shader's byte for the eye (style 15): its radius as a share of the whirlpool's, over .6 (0 while there is none). */
+    static float eyeByte(float t){double w=whirl(t);return w<=1e-6?0:Math.round(MathHelper.clamp(eye(t)/w/.6,0,1)*255)/255f;}
+    /** How far the whirlpool has dried (0 to 1: its thin parts first, breaking up in patches; the ink shader reads it off the clock). */
     static float dry(float t){return Ease.smooth(t,DRY0,DRY1);}
-    /** The ink shader's byte for the pool (KagenoFire.inkGround, style 13): swirling out or gathering, and its share (soaked in, or dried). */
-    static float poolByte(boolean swirling,float share){return ((swirling?128:0)+Math.round(MathHelper.clamp(share,0,1)*127))/255f;}
+    /** The ink shader's byte for the gathering sheet (style 13): how far it has soaked in (0 to 127). */
+    static float soakByte(float share){return Math.round(MathHelper.clamp(share,0,1)*127)/255f;}
     /** The formation's clock as the ink shader reads it (seconds over two, 0 to 1). */
     static float poolClock(float t){return MathHelper.clamp(t/2,0,1);}
     /** A ground ring's edge at the angle {@code a} (radians), as a share of its radius: wavering a little, slowly. */
     static double wobble(double a,int seed,float t){return 1+.035*Math.sin(a*5+seed+t*3)+.02*Math.sin(a*11-seed);}
     /**
      * The ink lying on the ground, under everything else of it (2.82.6, the ink shader's ground pass, before the swords,
-     * the mountains and the light): the blue of the formation's ground; the ink gathering into its middle; the ink swirling
-     * out again. Each a square of the ink shader (KagenoFire.inkGround) on the ground, its uv the offset over its radius.
+     * the mountains and the light): the blue of the formation's ground; the ink gathering into its middle; the whirlpool
+     * (2.82.7). Each a square of the ink shader (KagenoFire.inkGround) on the ground, its uv the offset over its radius.
      */
     static void ground(Fx c){
         float t=c.sec;Vec3d centre=centre(c.cast);int seed=c.cast.id().hashCode();
         float blue=tint(c.cast,t);
         if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed,0,0,blue);}
         double g=gather(t);float a=gathered(t);
-        if(a>.005f&&g>.02)KagenoFire.inkGround(centre.add(0,.05,0),g*1.45,g,13,seed,poolClock(t),poolByte(false,soak(t)),a);
-        double p=pool(t);float o=Ease.smooth(t,SWIRL0,SWIRL0+.02f)*(1-Ease.smooth(t,DRY1-.04f,DRY1+.06f));
-        if(o>.005f&&p>.02)KagenoFire.inkGround(centre.add(0,.055,0),p*1.45,p,13,seed+5,poolClock(t),poolByte(true,dry(t)),o);
+        if(a>.005f&&g>.02)KagenoFire.inkGround(centre.add(0,.05,0),g*1.45,g,13,seed,poolClock(t),soakByte(soak(t)),a);
+        // (its streams' tails reach a little past its radius)
+        double w=whirl(t);float o=Ease.smooth(t,SWIRL0,SWIRL0+.02f)*(1-Ease.smooth(t,DRY1-.04f,DRY1+.06f));
+        if(o>.005f&&w>.02)KagenoFire.inkGround(centre.add(0,.055,0),w*1.06,w,15,seed+5,poolClock(t),eyeByte(t),o);
     }
     /** The blue of the formation's ground (0 to about .6): deep as the pool swirls out and the swords strike, then a faint blue while it stands. */
     static float tint(StandClient.Cast c,float t){
@@ -1169,8 +1191,11 @@ final class SwordFormation {
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
         float th=Ease.smooth(t,THREAD0-.02f,THREAD0+.02f)*(1-Ease.smooth(t,THREAD1-.08f,THREAD1));
         if(th>.01f)f.light(spot(c.cast).add(0,1.5,0),0x9fc8ff,8,.9f*th);
-        float pool=Ease.smooth(t,GATHER0,GATHER0+.1f)*(1-Ease.smooth(t,COLLAPSE0,COLLAPSE))+Ease.smooth(t,SWIRL0,SWIRL0+.06f)*(1-Ease.smooth(t,SWIRL1,DRY1));
+        float pool=Ease.smooth(t,GATHER0,GATHER0+.1f)*(1-Ease.smooth(t,COLLAPSE0,COLLAPSE));
         if(pool>.01f)f.light(poolCentre(c.cast).add(0,.6,0),0x5a8cff,11,.8f*pool);
+        // the whirlpool's crescents light the ground round it as far as it reaches, dimming as its light does
+        float whirl=Ease.smooth(t,SWIRL0,SWIRL0+.06f)*(1-.6f*Ease.smooth(t,1.1f,1.5f))*(1-Ease.smooth(t,DRY0,DRY1));
+        if(whirl>.01f)f.light(poolCentre(c.cast).add(0,.6,0),0x6a9cff,Math.max(6,whirl(t)),.8f*whirl);
         float mid=Math.max(FxLib.kick(t,IsosangRules.H_PLANT+.02f,.16f),.7f*FxLib.kick(t,IsosangRules.H_PLANT-.055f,.02f));if(mid>.01f)f.light(centre.add(0,1,0),0xb8d8ff,12,1.4f*mid);
         for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.12f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,6,.7f*k);}
         float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED+.05f));
@@ -1178,8 +1203,9 @@ final class SwordFormation {
         float stand=Ease.smooth(t,SILVER0,SILVER1)*(1-Ease.smooth(t,e,e+GONE));
         if(stand>.01f)f.light(centre.add(0,2.2,0),0x8fb4ff,12,.25f*stand);
         // fast as she leaps and the swords rain: the afterglow cut short, else they leave copies of themselves on the way;
-        // all but none while the ink's lit edge sweeps in and out (2.82.6: its copies showed as rings beside it)
-        f.afterglow(t>=GATHER0-.02f&&t<SPREAD1+.2f?.01f:t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
+        // all but none while the ink's lit edge sweeps in and the whirlpool's crescents spread out (2.82.6: its copies
+        // showed as rings beside it)
+        f.afterglow(t>=GATHER0-.02f&&t<WHIRL1+.25f?.01f:t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
     }
     /** Shake: the burst in the middle, the rain of swords crashing in, and a little as the formation ends (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){
