@@ -11,7 +11,7 @@ film shows the stretches A..B, C..D, ... of the entry's clock (seconds) one afte
 The game's sound under each stretch is the recording of the same stretch of the sound run, moved by the ticks H began
 later or sooner in one run than in the other (the server starts it a tick sooner or later), so H's own sound, found in
 the recording by its waveform, is where H began in the film. The pieces are joined with 6 ms fades; the sound written is
-exactly as long as the film.
+exactly as long as the film. (film.py shows both ends of a stretch: each piece is a frame longer than its stretch.)
 """
 import os
 import subprocess
@@ -71,12 +71,16 @@ def main():
     print(f'  film run: H began on tick {shown[0]["start"]}; the sound run\'s clock moved by {shift:+d} ticks')
     duration = float(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'csv=p=0', film],
                                     capture_output=True, check=True, text=True).stdout.strip())
+    num, den = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', film],
+                              capture_output=True, check=True, text=True).stdout.strip().split('/')
+    # (film.py shows both ends of its stretch: a stretch is a frame longer than its seconds)
+    frame = float(den) / float(num)
     length = int(round(duration * SR))
     track = np.zeros(length + SR)
     place = 0
     fade = int(.006 * SR)
     for a, b in spans:
-        n = int(round((b - a) * SR))
+        n = int(round((b - a + frame) * SR))
         lo = int(round(sample(a * 20 + shift)))
         piece = wav[lo:lo + n].copy()
         if len(piece) < n:
