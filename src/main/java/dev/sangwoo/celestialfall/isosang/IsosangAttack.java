@@ -196,12 +196,15 @@ public final class IsosangAttack {
         var s=p==null?null:STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld()||!forming(s,p.getWorld().getTime()))return false;
         return onSword((p.getWorld().getTime()-s.form.start)/20.0);
     }
-    /** This player's sword formation as a boss reads it (2.82.0): begun at {@code start}, its middle at {@code centre}. */
-    public record FormationNow(long start,Vec3d centre){}
+    /**
+     * This player's sword formation as a boss reads it (2.82.0): begun at {@code start}, its middle at {@code centre}, and
+     * where it holds them now, level on its ground (2.82.3: its middle, then the sword they stand on).
+     */
+    public record FormationNow(long start,Vec3d centre,Vec3d holds){}
     /** This player's sword formation now (null for none). */
     public static FormationNow formationNow(PlayerEntity p){
-        var s=p==null?null:STATES.get(p.getUuid());if(s==null||!forming(s,p.getWorld().getTime()))return null;
-        return new FormationNow(s.form.start,s.form.centre);
+        var s=p==null?null:STATES.get(p.getUuid());long now=p==null?0:p.getWorld().getTime();if(s==null||!forming(s,now))return null;
+        return new FormationNow(s.form.start,s.form.centre,s.form.over((now-s.form.start)/20.0));
     }
     /** The tick this player's H is ready again (0 if it is ready, 2.82.0). */
     public static long hReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.hReady;}

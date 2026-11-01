@@ -521,8 +521,10 @@ public final class MpServer implements ModInitializer {
         if(form!=null){
             if(form.start()!=formSeen){formSeen=form.start();var d=form.centre().subtract(caster.getPos());
                 note(server,String.format(java.util.Locale.ROOT,"caster's H began at %d: its middle %.2f %.2f %.2f from the caster; the watcher %.2f off it",form.start(),d.x,d.y,d.z,watcher.getPos().distanceTo(form.centre())));}
-            if((now-form.start())%20==0){var d=caster.getPos().subtract(form.centre());
-                note(server,String.format(java.util.Locale.ROOT,"caster's formation +%d: the caster %.2f over its middle, %.2f off it level (on ground %s, fall %.2f)",now-form.start(),d.y,Math.hypot(d.x,d.z),caster.isOnGround(),caster.fallDistance));}
+            if((now-form.start())%20==0||(now-form.start())>=24&&(now-form.start())<=40&&(now-form.start())%2==0){var d=caster.getPos().subtract(form.centre());var off=caster.getPos().subtract(form.holds());
+                // (2.82.3: and how far off where it holds them level: its middle, then across to the sword they stand on)
+                note(server,String.format(java.util.Locale.ROOT,"caster's formation +%d: the caster %.2f over its middle, %.2f off it level, %.2f off where it holds them (%.2f from the middle) (on ground %s, fall %.2f)",
+                    now-form.start(),d.y,Math.hypot(d.x,d.z),Math.hypot(off.x,off.z),Math.hypot(form.holds().x-form.centre().x,form.holds().z-form.centre().z),caster.isOnGround(),caster.fallDistance));}
             watchUntil=Math.max(watchUntil,now+20);
         }else if(formSeen>=0&&!formOver){formOver=true;note(server,"caster's formation over at "+now+String.format(java.util.Locale.ROOT," (the caster %.2f over the ground it began on)",caster.getY()-formFloor));}
         if(form!=null){formOver=false;formFloor=form.centre().y;}

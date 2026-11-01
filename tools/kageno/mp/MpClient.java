@@ -333,14 +333,16 @@ public final class MpClient implements ClientModInitializer {
     /**
      * Lee So-sang's H (2.82.0, MP_ONLY=isosangh): H with the watcher 2.5 blocks in front at full health (its swords strike
      * it 30 as they come down and 5 every 5 s after, no guard, no throw); the attack and E while it is under way (refused:
-     * only R may be used up there), R from the middle sword (it strikes the watcher 20 from the formation's ground), H again
-     * (refused: under way), and H once it is over (refused: 60 s from its end). The caster stands on the middle sword some
-     * 39 s with nothing under it: the server must not take it for flying. Both log the formation they see (its middle, the
-     * caster's height over it as drawn and as it is), its sounds, and the caster's H; the server the caster's formation,
-     * its height and its strikes, and the watcher's health.
+     * only R may be used up there), R from the sword (it strikes the watcher 20 from the formation's ground; 2.82.3: the
+     * watcher put 3 blocks before the caster first, for the caster has leapt across to the inner ring's sword ahead, past
+     * where the watcher stood), H again (refused: under way), and H once it is over (refused: 60 s from its end). The
+     * caster stands on the sword some 39 s with nothing under it: the server must not take it for flying. Both log the
+     * formation they see (its middle, the caster's height over it as drawn and as it is, and 2.82.3 how far off the plan's
+     * place level the caster is and is drawn), its sounds, and the caster's H; the server the caster's formation, its
+     * height, how far off where it holds the caster (every other tick as they leap), and its strikes, and the watcher's health.
      */
     private static final String[] ISOSANGH_SCRIPT={
-        "5 ISOSANG","40 HOME","45 HEAL","60 H","75 M1","100 E","120 M1","140 R","200 H",
+        "5 ISOSANG","40 HOME","45 HEAL","60 H","75 M1","100 E","120 M1","130 DIST3","140 R","200 H",
         "930 H","980 END"};
     private static final String[] STEPS=ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
@@ -894,11 +896,19 @@ public final class MpClient implements ClientModInitializer {
             if(c.combo()!=dev.sangwoo.celestialfall.isosang.IsosangRules.FORMATION)continue;
             var form=dev.sangwoo.celestialfall.client.isosang.IsosangClient.formation(c.id());var who=mc.world.getPlayerByUuid(c.caster());if(form==null||who==null)continue;
             int sec=(int)Math.floor(c.age(0)/20);float end=dev.sangwoo.celestialfall.client.isosang.IsosangClient.formationEnd(c.id());
-            String key=c.id()+"/"+sec+"/"+(Float.isNaN(end)?"":"end");
+            // (2.82.3: every other tick as the caster leaps across, 1.1 to 2.1 s; else every second)
+            int tick=(int)Math.floor(c.age(0));boolean leap=tick>=22&&tick<=42;
+            String key=c.id()+"/"+(leap?"t"+(tick/2):sec)+"/"+(Float.isNaN(end)?"":"end");
             if(formationSeen.add(key)){
-                var d=who.getPos().subtract(form.centre());
-                note(String.format(Locale.ROOT,"%s's formation at its age %.1f s: the caster %.2f over its middle (%.2f off it level), drawn %.2f over it%s",name(c.caster()),c.age(0)/20,d.y,Math.hypot(d.x,d.z),
-                    d.y+dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(c.caster(),0),Float.isNaN(end)?"":String.format(Locale.ROOT," (ended early at %.2f s)",end)));
+                // (as the body is drawn at the frame's start: where it is between ticks, getLerpedPos, moved as the plan has it)
+                var at=who.getLerpedPos(0);var d=at.subtract(form.centre());
+                // (2.82.3) and where the plan has them level (its middle, then the sword they stand on): how far off it they are and are drawn
+                var plan=dev.sangwoo.celestialfall.client.isosang.IsosangClient.over(c.id(),form,c.age(0)/20.0);
+                var drawn=at.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(c.caster(),0));
+                note(String.format(Locale.ROOT,"%s's formation at its age %.2f s: the caster %.2f over its middle (%.2f off it level; %.2f off the plan, drawn %.2f off it, the plan %.2f from the middle), drawn %.2f over it (planned %.2f)%s",name(c.caster()),c.age(0)/20,d.y,Math.hypot(d.x,d.z),
+                    Math.hypot(at.x-plan.x,at.z-plan.z),Math.hypot(drawn.x-plan.x,drawn.z-plan.z),Math.hypot(plan.x-form.centre().x,plan.z-form.centre().z),
+                    d.y+dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(c.caster(),0),Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangRules.planned(c.age(0)/20.0)),
+                    Float.isNaN(end)?"":String.format(Locale.ROOT," (ended early at %.2f s)",end)));
             }
         }
     }

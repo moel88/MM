@@ -15,7 +15,7 @@ as the stand arrow gives it a stand; since 2.74.1 only those of the stand it use
 MP_ONLY=swap only another stand's cooldowns gone (2.74.2, MpClient.SWAP_SCRIPT: Star Platinum's skills used, a Rokakaka
 eaten and the stand given back at once; Kageno's E, a Rokakaka again), MP_ONLY=isosang only Lee So-sang's basic attack (2.77.0, MpClient.ISOSANG_SCRIPT: the four hits at full speed, a broken
 combo and its rest, the four against a guard), MP_ONLY=isosange its E (2.80.0, MpClient.ISOSANGE_SCRIPT), MP_ONLY=isosangh its H (2.82.0, MpClient.ISOSANGH_SCRIPT: the sword formation with the watcher in it, the attack and E refused
-and R used up on the middle sword, H again refused; the caster held up some 39 s with nothing under it), MP_ONLY=isosangr
+and R used up on the sword (2.82.3: the inner ring's sword ahead, the watcher put before it first), H again refused; the caster held up some 39 s with nothing under it), MP_ONLY=isosangr
 its R (2.81.0, MpClient.ISOSANGR_SCRIPT: the giant sword's sweep at the watcher close and 8 blocks off in the crosshair,
 again at once (refused), a press of the attack kept through it, R kept through a hit, through a guard; 2.81.1: R right in
 front whatever the crosshair is on, R held at the watcher 25 blocks off in the crosshair), MP_ONLY=fresh only the long cooldowns begun in
