@@ -44,9 +44,10 @@ import net.minecraft.util.math.random.Random;
  * (2.81.1) Let go within IsosangRules.R_HOLD_TICKS it is R, asked as the key comes up (the sweep right in front);
  * held that long it is R held (R_HELD), asked then with the key still down (the sword sent to the foe in the crosshair).
  * <p>H (2.82.0): H asks the server for the sword formation (isosang_skill_v1, H); the server's word of it is a swing of kind
- * IsosangRules.FORMATION drawn by SwordFormation, with the formation's middle. Its user's own client lifts them onto the
- * middle sword's pommel and down again (drive), and every client draws the body as high as the formation's plan has it
- * (lift: the leap, the hop's arc, whatever the position heard from the server lags behind).
+ * IsosangRules.FORMATION drawn by SwordFormation, with the formation's middle. Its user's own client moves them across
+ * to the sword they stand on, up onto its pommel and down again (drive; 2.82.3: a sword of the inner ring, no more the
+ * middle one), and every client draws the body where the formation's plan has it (lift and shift: the leap, its arc,
+ * whatever the position heard from the server lags behind).
  */
 public final class IsosangClient {
     /** Every swing seen, by its id: a cast of IsosangRules.SKILL on the cast clock (StandClient.Cast.age). */
@@ -78,6 +79,8 @@ public final class IsosangClient {
     /** (2.82.0) H's formations, by their swing's id: the formation's middle (on its ground) and the way its user faced. */
     public record Formation(Vec3d centre,float yaw){}
     public static final Map<UUID,Formation> FORMATIONS=new HashMap<>();
+    /** (2.82.3) Where the sword each formation's user stands on is, by its swing's id: forward and right of its middle (IsosangRules.standAt). */
+    private static final Map<UUID,double[]> STANDS=new HashMap<>();
     /** (2.82.0) When a formation ended early (seconds into its swing, the server's word): its swords go then. */
     private static final Map<UUID,Float> FORMATION_ENDS=new HashMap<>();
     /** (2.82.0) The tick each player's H is ready again (the server's), and the formations whose end has been heard. */
@@ -245,9 +248,9 @@ public final class IsosangClient {
     public static float formationEnd(UUID swing){var e=FORMATION_ENDS.get(swing);return e==null?Float.NaN:e;}
     /**
      * How much higher than where it is this player's body is drawn now (blocks, 2.82.0): during H, as high over the
-     * formation's ground as its plan has them (IsosangRules.planned: the leap, the hang, the dive, the hop onto the middle
-     * sword, standing on its pommel, the drop) less how high they are (their own client lifts them onto the pommel and
-     * down, drive; others see that a little late), so the body is where the plan has it whatever the position lags. 0
+     * formation's ground as its plan has them (IsosangRules.planned: the leap, the hang, the dive, the leap onto the sword
+     * they stand on, standing on its pommel, the drop) less how high they are (their own client lifts them onto the pommel
+     * and down, drive; others see that a little late), so the body is where the plan has it whatever the position lags. 0
      * when they have no formation under way.
      */
     public static double lift(UUID caster,float delta){
@@ -261,6 +264,35 @@ public final class IsosangClient {
     }
     /** The lift that draws a body {@code real} blocks over the formation's ground {@code planned} blocks over it. */
     static double lift(double planned,double real){return Math.max(0,planned)-real;}
+    /**
+     * Where H's formation of swing {@code swing} has its user {@code t} seconds into it, level on its ground (2.82.3, as
+     * the server holds them, IsosangAttack.Formation.over): its middle, then across to the sword they stand on and there.
+     */
+    public static Vec3d over(UUID swing,Formation f,double t){
+        double[] st=STANDS.computeIfAbsent(swing,k->IsosangRules.standAt(IsosangRules.formationSeed(k)));
+        double k=IsosangRules.across(t);Vec3d fw=Vec3d.fromPolar(0,f.yaw()),r=new Vec3d(-fw.z,0,fw.x);
+        return f.centre().add(fw.multiply(st[0]*k)).add(r.multiply(st[1]*k));
+    }
+    /**
+     * How far off where it is this player's body is drawn now, level (blocks, 2.82.3): as they leap across to the sword
+     * they stand on and stand there, where the formation's plan has them (over) less where they are (their own client
+     * moves them so, drive; others see that a little late), coming in as they spring and going once they are down. Zero
+     * when they have no formation under way.
+     */
+    public static Vec3d shift(UUID caster,float delta){
+        var mc=MinecraftClient.getInstance();if(mc.world==null)return Vec3d.ZERO;
+        StandClient.Cast form=null;
+        for(var c:SWINGS.values())if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(caster)&&!STOPPED.contains(c.id()))form=c;
+        if(form==null)return Vec3d.ZERO;
+        var f=FORMATIONS.get(form.id());var p=mc.world.getPlayerByUuid(caster);if(f==null||p==null)return Vec3d.ZERO;
+        double t=form.age(delta)/20.0;if(t<IsosangRules.H_HOP||t>=IsosangRules.H_DOWN+.3)return Vec3d.ZERO;
+        double w=shiftWeight(t);Vec3d to=over(form.id(),f,t),at=p.getLerpedPos(delta);
+        return new Vec3d((to.x-at.x)*w,0,(to.z-at.z)*w);
+    }
+    /** How much of the plan's place a body is drawn at {@code t} seconds into H (0 to 1): coming in over the leap's first tenth of a second, going after the drop. */
+    static double shiftWeight(double t){
+        return dev.sangwoo.celestialfall.client.kageno.Ease.smooth((float)t,IsosangRules.H_HOP,IsosangRules.H_HOP+.1f)*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth((float)t,IsosangRules.H_DOWN,IsosangRules.H_DOWN+.3f));
+    }
     /** Where R's sweep of this swing stands (null for none, 2.81.0). */
     public static Sweep sweep(UUID swing){return SWEEPS.get(swing);}
     /** R's sword's pommel, which it turns round, where this swing's sweep stands (world); null for a swing not R's (2.81.1). */
@@ -362,13 +394,13 @@ public final class IsosangClient {
     public static void drive(MinecraftClient mc){
         var p=mc.player;if(p==null||!MapClient.enabled())return;
         for(var c:SWINGS.values()){
-            // (2.82.0) H: over the formation's middle all along, up onto the middle sword's pommel, held there and down again
-            // (IsosangRules.raised: every tick to where it has them at the tick's end; the leap and the hop's arc are drawn,
-            // lift). Let go of at once if it ended early: they fall as anyone would.
+            // (2.82.0) H: over the formation's middle, then (2.82.3) across to the sword they stand on and up onto its
+            // pommel, held there and down again (over and IsosangRules.raised: every tick to where they have them at the
+            // tick's end; the leap's arc is drawn, lift). Let go of at once if it ended early: they fall as anyone would.
             if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(p.getUuid())&&!STOPPED.contains(c.id())){
                 var f=FORMATIONS.get(c.id());double next=(Math.floor(c.age(0))+1)/20.0;
                 if(f==null||next>=IsosangRules.H_DOWN+.1)continue;
-                Vec3d v=f.centre().subtract(p.getPos()).multiply(1,0,1);
+                Vec3d v=over(c.id(),f,next).subtract(p.getPos()).multiply(1,0,1);
                 double vy=next<IsosangRules.H_HOP?Math.min(0,p.getVelocity().y):f.centre().y+IsosangRules.raised(next)-p.getY();
                 // (a step down of a hair, the rounding of the sum, is taken by the game for landing on something: it would
                 // tell the server they stand on the ground up there)
@@ -415,7 +447,7 @@ public final class IsosangClient {
         // 2.82.0: H's formation lasts its whole length, lifeOf)
         SWINGS.values().removeIf(c->!c.dimension().equals(id)||c.age(0)>=(c.combo()==0?20:lifeOf(c)*20)||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.retainAll(SWINGS.keySet());EMPOWERED.retainAll(SWINGS.keySet());SWORDS.keySet().retainAll(SWINGS.keySet());SWEEPS.keySet().retainAll(SWINGS.keySet());
-        FORMATIONS.keySet().retainAll(SWINGS.keySet());FORMATION_ENDS.keySet().retainAll(SWINGS.keySet());ENDED.retainAll(SWINGS.keySet());FORMATION_STRUCK.keySet().retainAll(SWINGS.keySet());
+        FORMATIONS.keySet().retainAll(SWINGS.keySet());STANDS.keySet().retainAll(SWINGS.keySet());FORMATION_ENDS.keySet().retainAll(SWINGS.keySet());ENDED.retainAll(SWINGS.keySet());FORMATION_STRUCK.keySet().retainAll(SWINGS.keySet());
         // (2.82.0) H's formation ends (its whole length run, or the server's word that it ended early): its end's sound once
         for(var c:SWINGS.values()){
             if(c.combo()!=IsosangRules.FORMATION||ENDED.contains(c.id()))continue;
@@ -444,7 +476,7 @@ public final class IsosangClient {
     public static void clear(MinecraftClient mc){
         for(var v:VOICES.values())mc.getSoundManager().stop(v);
         SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();VOICES.clear();EMPOWERED.clear();CHARGED.clear();E_READY.clear();SWORDS.clear();SWEEPS.clear();R_READY.clear();
-        FORMATIONS.clear();FORMATION_ENDS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();world=null;heldR=false;
+        FORMATIONS.clear();STANDS.clear();FORMATION_ENDS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();world=null;heldR=false;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────

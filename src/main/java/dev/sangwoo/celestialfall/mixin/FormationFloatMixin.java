@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Lee So-sang standing on H's middle sword (2.82.0) is up over the ground with nothing under her for some 39 s: the server
+ * Lee So-sang standing up over H's middle (2.82.0: on its middle sword; 2.82.3: on the air) is up over the ground with nothing under her for some 39 s: the server
  * must not take her for flying and kick her ("multiplayer.disconnect.flying" after 80 ticks of floating).
  */
 @Mixin(ServerPlayNetworkHandler.class)

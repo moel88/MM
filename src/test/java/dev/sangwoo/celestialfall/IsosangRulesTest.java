@@ -266,7 +266,7 @@ class IsosangRulesTest {
         assertFalse(formationOver(FORMATION_RADIUS+.5,0,0,.3));assertFalse(formationOver(0,0,FORMATION_HIGH+.1,.3));assertFalse(formationOver(0,0,FORMATION_LOW-.1,.3));
         assertTrue(formationOver(3,4,4.5,.3),"one jumping over it");
     }
-    @Test void herBodyGoesUpOntoTheMiddleSwordAndDownAgainWithoutAJump(){
+    @Test void herBodyLeapsOntoASwordAndDownAgainWithoutAJump(){
         // her real height and her drawn one: continuous, and the same once she stands on the pommel
         double h=1e-4;
         for(double t=0;t<LENGTH[FORMATION]/20.0+.5;t+=.001){
@@ -278,8 +278,35 @@ class IsosangRulesTest {
         }
         assertEquals(H_LEAP_HEIGHT,planned(H_PEAK),1e-9,"some three blocks up as she hangs");
         assertEquals(FORMATION_STAND,raised(10),1e-9,"on the pommel, her own height up");
-        assertTrue(planned((H_HOP+H_ON)/2)>raised((H_HOP+H_ON)/2)+.3,"the hop arcs over the pommel");
+        assertTrue(planned((H_HOP+H_ON)/2)>raised((H_HOP+H_ON)/2)+.3,"the leap arcs over the way to the pommel");
         assertTrue(onSword(H_HOP)&&onSword(40)&&!onSword(H_DOWN)&&!onSword(H_HOP-.01));
         assertTrue(H_DOWN<=LENGTH[FORMATION]/20.0,"down before its motion is over");
+        // (2.82.3) across to the sword she stands on: at the middle until she leaps, there from when she lands, never a jump, never back
+        for(double t=0;t<LENGTH[FORMATION]/20.0;t+=.001){
+            assertEquals(across(t),across(t+1e-4),.0005,"the leap jumps at "+t);
+            assertTrue(across(t+.001)>=across(t)-1e-12,"back at "+t);
+            if(t<H_HOP)assertEquals(0,across(t),1e-12);
+            if(t>=H_ON)assertEquals(1,across(t),1e-12);
+        }
+        assertTrue(H_ON-H_HOP>=.45,"half a second across: "+(H_ON-H_HOP));
+    }
+    @Test void sheLeapsOntoTheInnerRingsSwordStraightAheadTheSameForTheServerAndEveryClient(){
+        // (2.82.3, "아니 다른 검에 올라가야지": the middle sword gone, she stands on a sword of the inner ring, the one most
+        // nearly straight ahead of her; the server holds her there and every client draws it there: one reckoning)
+        var rnd=new java.util.Random(7);
+        for(int n=0;n<300;n++){
+            var id=new java.util.UUID(rnd.nextLong(),rnd.nextLong());int s0=formationSeed(id);
+            assertEquals(s0,formationSeed(new java.util.UUID(id.getMostSignificantBits(),id.getLeastSignificantBits())));
+            var swords=formationSwords(s0);int k=standSword(s0);
+            assertEquals(48,swords.length);
+            assertTrue(k>=0&&k<FORMATION_RING_N[0],"of the inner ring: "+k);
+            double[] at=standAt(s0);assertArrayEquals(swords[k],at,1e-12);
+            double r=Math.hypot(at[0],at[1]),off=Math.toDegrees(Math.abs(Math.atan2(at[1],at[0])));
+            assertTrue(r>FORMATION_RING_R[0]-FORMATION_RING_JITTER-1e-9&&r<FORMATION_RING_R[0]+FORMATION_RING_JITTER+1e-9,"on the inner ring: "+r);
+            assertTrue(off<=180.0/FORMATION_RING_N[0]+.3*360/FORMATION_RING_N[0]/2+1e-6,"ahead of her: "+off);
+            for(int j=0;j<FORMATION_RING_N[0];j++)assertTrue(Math.abs(Math.atan2(swords[j][1],swords[j][0]))>=Math.toRadians(off)-1e-12,"the most nearly ahead");
+            // the leap: never a block a tick across (it moves her own client, IsosangClient.drive)
+            for(double t=H_HOP;t<H_ON;t+=.05)assertTrue((across(t+.05)-across(t))*r<1,"too fast across at "+t);
+        }
     }
 }

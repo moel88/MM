@@ -102,12 +102,18 @@ public final class IsosangAttack {
         Formation form;long hReady;
     }
     /**
-     * H's sword formation (2.82.0): its id and start, its middle (on the ground under its user as it began) and the way
-     * its user faced.
+     * H's sword formation (2.82.0): its id and start, its middle (on the ground under its user as it began), the way its
+     * user faced, and where the sword its user stands on is (2.82.3: forward and right of the middle, blocks;
+     * IsosangRules.standAt, the same sword every client draws there).
      */
     private static final class Formation {
-        final UUID id;final long start;final Vec3d centre;final float yaw;
-        Formation(UUID id,long start,Vec3d centre,float yaw){this.id=id;this.start=start;this.centre=centre;this.yaw=yaw;}
+        final UUID id;final long start;final Vec3d centre;final float yaw;final double[] stand;
+        Formation(UUID id,long start,Vec3d centre,float yaw){this.id=id;this.start=start;this.centre=centre;this.yaw=yaw;this.stand=IsosangRules.standAt(IsosangRules.formationSeed(id));}
+        /** Where its user is held {@code t} seconds into it, level (on its ground): its middle, then across to the sword they stand on (2.82.3). */
+        Vec3d over(double t){
+            double k=IsosangRules.across(t);Vec3d f=Vec3d.fromPolar(0,yaw),r=new Vec3d(-f.z,0,f.x);
+            return centre.add(f.multiply(stand[0]*k)).add(r.multiply(stand[1]*k));
+        }
     }
     /**
      * R's sweep (2.81.0): its id and start, where it stands (its feet: its user's, or out toward the foe in the crosshair)
@@ -183,7 +189,7 @@ public final class IsosangAttack {
     /** Whether H's sword formation is under way for its user now (2.82.0): it holds them from its start to its end. */
     private static boolean forming(State s,long now){var f=s.form;return f!=null&&now>=f.start&&now-f.start<LENGTH[FORMATION];}
     /**
-     * Whether this player stands on H's middle sword now (2.82.0): up over the ground with nothing under them, the server
+     * Whether this player stands up over H's middle now (2.82.0; on its middle sword until 2.82.3): up over the ground with nothing under them, the server
      * must not take them for flying (ServerPlayNetworkHandler's floating check, FormationFloatMixin).
      */
     public static boolean raised(PlayerEntity p){
@@ -474,30 +480,38 @@ public final class IsosangAttack {
     }
     /**
      * The formation on a tick (2.82.0): it strikes whoever is in it as the swords strike and every FORMATION_EVERY ticks
-     * after; its user is held at its middle (their own client lifts them onto the middle sword's pommel and down again,
-     * IsosangClient.drive, as its own movement is; the server puts them back over the middle if they stray, a moment
-     * allowed at first for the steps they were taking as it began, and never falls them: FormationFloatMixin, fallDistance);
-     * it is over once its motion is. Whatever takes them off the map, into a cutscene, to sleep or onto a mount ends it now.
+     * after; its user is held where it has them (its middle; 2.82.3: then across to the sword they stand on and there,
+     * Formation.over; their own client moves them so, up and down too, IsosangClient.drive, as its own movement is; the
+     * server puts them back if they stray, a moment allowed at first for the steps they were taking as it began and while
+     * they leap across, and never falls them: FormationFloatMixin, fallDistance); it is over once its motion is. Whatever
+     * takes them off the map, into a cutscene, to sleep or onto a mount ends it now.
      */
     private static void hold(ServerPlayerEntity p,State s,long now){
         var f=s.form;long age=now-f.start;
         if(age>=LENGTH[FORMATION]){s.form=null;return;}
         if(!attacks(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);return;}
         if(formationStrikes(age))zone(p,f,age);
-        Vec3d at=p.getPos();double dx=at.x-f.centre.x,dz=at.z-f.centre.z,leave=age<STRAY_GRACE?1:STRAY;
+        double t=age/20.0;Vec3d at=p.getPos(),to=f.over(t);double dx=at.x-to.x,dz=at.z-to.z,leave=age<STRAY_GRACE?1:STRAY;
         // (a boss has no client to lift it: the server does, as the empowered fourth's leap back)
         if(p instanceof dev.sangwoo.celestialfall.boss.BossPlayer){
-            double t=age/20.0;
-            if(onSword(t)){p.setPosition(f.centre.x,f.centre.y+IsosangRules.raised(t),f.centre.z);p.setVelocity(Vec3d.ZERO);}
-            else if(dx*dx+dz*dz>STRAY*STRAY)p.setPosition(f.centre.x,at.y,f.centre.z);
-        }else if(dx*dx+dz*dz>leave*leave)p.networkHandler.requestTeleport(f.centre.x,at.y,f.centre.z,p.getYaw(),p.getPitch());
+            if(onSword(t)){p.setPosition(to.x,f.centre.y+IsosangRules.raised(t),to.z);p.setVelocity(Vec3d.ZERO);}
+            else if(dx*dx+dz*dz>STRAY*STRAY)p.setPosition(to.x,at.y,to.z);
+        }else if(!leaping(t)&&dx*dx+dz*dz>leave*leave)p.networkHandler.requestTeleport(to.x,at.y,to.z,p.getYaw(),p.getPitch());
         p.fallDistance=0;
     }
     /**
-     * How far (blocks, level) the formation's user may stand off its middle before the server puts them back, and for how
-     * many ticks at first a block is allowed (2.82.0: the steps they were taking as it began, before their client heard of it).
+     * How far (blocks, level) the formation's user may stand off where it has them before the server puts them back, and
+     * for how many ticks at first a block is allowed (2.82.0: the steps they were taking as it began, before their client
+     * heard of it).
      */
     static final double STRAY=.35;static final int STRAY_GRACE=10;
+    /**
+     * Whether its user is leaping across to the sword they stand on {@code t} seconds into the formation, or has just
+     * landed on it (2.82.3): their client moves them some 11 blocks a second then, so where the server hears they are lags
+     * the plan by as much as their latency; they are not put back until a moment ({@link #LEAP_GRACE} s) after they land.
+     */
+    static boolean leaping(double t){return t>=IsosangRules.H_HOP&&t<IsosangRules.H_ON+LEAP_GRACE;}
+    static final double LEAP_GRACE=.5;
     /** The formation strikes (2.82.0): everyone in it, alive, the user's own aside, takes its damage; the first time, what they were doing stops. */
     private static void zone(ServerPlayerEntity p,Formation f,long age){
         var world=p.getServerWorld();float amount=formationDamage(age);boolean impact=age==FORMATION_IMPACT_AT;

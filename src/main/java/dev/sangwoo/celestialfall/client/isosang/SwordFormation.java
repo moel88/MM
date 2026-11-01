@@ -30,13 +30,14 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * answered: some 39 s, the formation strikes all along, only R up there, 60 s cooldown; then "데미지는 처음 한 번 H 박을때
  * 30데미지 그리고 5초마다 5 데미지"). She crouches with her sword low at her right and leaps some three blocks up, her sword
  * pointing straight down: a thread of lightning runs from its point to the ground and a pool of ink spreads under her,
- * its rim lit blue, while swords show high in the sky, points down. She spreads her arms to call them; the middle one
- * strikes first, a black spike shooting up out of the pool and bursting into blue light, and as she dives back down to
- * the middle the pool swirls out over the whole formation in bands of blue and the swords rain down all round, each
+ * its rim lit blue, while swords show high in the sky, points down. She spreads her arms to call them; a black spike
+ * shoots up out of the middle of the pool and bursts into blue light, and as she dives back down to the middle the pool
+ * swirls out over the whole formation in bands of blue and the swords rain down all round its empty middle, each
  * trailing blue lightning, each struck into the ground with a flower of blue crystal and a splash of ink at its foot. Ink
  * mountains rise round the formation, white clouds curling over them and wisps of mist drifting low (2.82.1); the swords,
- * dark as they strike, turn silver with a white glow, a gleam running down one now and then; she hops up onto the middle
- * sword's pommel and stands there (IsosangClient.drive lifts her, IsosangClient.lift draws the leap and the hop's arc)
+ * dark as they strike, turn silver with a white glow, a gleam running down one now and then; she hops up over the middle
+ * and stands there (IsosangClient.drive lifts her, IsosangClient.lift draws the leap and the hop's arc; until 2.82.3 on
+ * a sword driven into the middle, then on the air: "가운데에 플레이어가 올라가 있는 검 치워")
  * until the formation ends: every sword flares sky blue over a four-pointed star of light, turns to ink and breaks away,
  * the mountains, the clouds and the blue of the ground going with them, and she drops back down.
  * <p>The formation lies round its middle as the server laid it (IsosangClient.formation: the ground under her as she
@@ -75,8 +76,10 @@ final class SwordFormation {
     // ───────────────────────────── the body ─────────────────────────────
     // (the video: she crouches, her sword low at her right; springs up, her sword turned straight down below her right hand,
     // her free arm out to the left; hangs there; spreads both arms to call the swords down; dives back down to the middle
-    // and lands in a crouch; stands with her arms spread as they rain; dips and hops up onto the middle sword, lands on its
-    // pommel and stands there, her sword held as she holds it, shifting a little now and then; steps off as it ends,
+    // and lands in a crouch; stands with her arms spread as they rain; dips and leaps onto a sword's pommel (straight up
+    // onto the middle sword in the video; 2.82.3: forward, across to the inner ring's sword ahead of her, leaning into it,
+    // one leg before the other, drawing them in under her as she comes down on it) and stands there, her sword held as she
+    // holds it, shifting a little now and then; steps off as it ends,
     // drops and lands in a crouch, and rises. The body faces the way she faced, as every hit's.)
     static final R6.Pose H_DIP=w(.04,-.12,-4,6,0,d(-55,40),d(0,60),d(-70,-25),22,-158);
     static final R6.Pose H_CROUCH=w(.06,-.32,-10,15,0,d(-32,72),d(-18,122),d(-36,-48),30,-150);
@@ -91,9 +94,11 @@ final class SwordFormation {
     static final R6.Pose H_CONDUCT=w(.02,-.05,0,0,0,d(2,86),d(14,100),d(6,-88),22,-158);
     static final R6.Pose H_CONDUCT2=w(.02,-.04,0,-2,0,d(6,84),d(18,98),d(10,-86),22,-158);
     static final R6.Pose H_HOP_DIP=w(.04,-.2,0,9,0,d(-28,60),d(-14,96),d(-30,-62),24,-156);
-    static final R6.Pose H_HOP_AIR=w(.02,.02,0,-4,0,d(-36,42),d(-60,40),d(-6,-80),d(-56,10),d(-72,-12));
-    static final R6.Pose H_HOP_FALL=w(.01,.02,0,0,0,d(-52,30),d(-30,24),d(-40,-50),d(-82,6),d(-86,-6));
-    /** On the pommel: her feet together on it, her sword as she holds it. */
+    /** Across in the air (2.82.3): leaning into the leap, her front leg reaching ahead, the other trailing, her free arm back for balance. */
+    static final R6.Pose H_HOP_AIR=w(.02,.02,0,9,0,d(-30,40),d(-56,38),d(-10,-120),d(-40,8),d(-62,170));
+    /** Coming down on the pommel: upright again, her legs drawn in under her. */
+    static final R6.Pose H_HOP_FALL=w(.01,.02,0,2,0,d(-50,30),d(-30,24),d(-36,-60),d(-80,8),d(-84,-8));
+    /** Up there: her feet together, her sword as she holds it. */
     static final R6.Pose H_ON=w(0,0,0,3,0,d(-62,14),d(18,6),d(-74,-16),d(-90,3),d(-90,-3));
     /** Standing there, shifting a little now and then. */
     static final R6.Pose H_IDLE=w(0,0,3,1,0,d(-68,6),d(26,4),d(-84,-10),d(-90,3),d(-90,-3));
@@ -121,12 +126,12 @@ final class SwordFormation {
             k(1.08,H_CONDUCT),
             k(1.15,H_CONDUCT2),
             k(IsosangRules.H_HOP,H_HOP_DIP,Anim.Ease.OUT),
-            k(1.33,H_HOP_AIR,Anim.Ease.OUT),
-            k(1.49,H_HOP_FALL),
+            k(IsosangRules.H_HOP+.17,H_HOP_AIR,Anim.Ease.OUT),
+            k(IsosangRules.H_ON-.08,H_HOP_FALL),
             k(IsosangRules.H_ON+.01,H_ON,Anim.Ease.OUT),
-            k(1.8,STANCE)));
+            k(IsosangRules.H_ON+.25,STANCE)));
         boolean shifted=true;
-        for(double t=1.8+SHIFT;t<=IsosangRules.H_END-1;t+=SHIFT){keys.add(k(t,shifted?H_IDLE:STANCE));shifted=!shifted;}
+        for(double t=IsosangRules.H_ON+.25+SHIFT;t<=IsosangRules.H_END-1;t+=SHIFT){keys.add(k(t,shifted?H_IDLE:STANCE));shifted=!shifted;}
         keys.add(k(IsosangRules.H_END,STANCE));
         keys.add(k(IsosangRules.H_DROP,H_STEP));
         keys.add(k(IsosangRules.H_DROP+.25,H_FALL));
@@ -142,8 +147,8 @@ final class SwordFormation {
     static Vec3d centre(StandClient.Cast c){var f=IsosangClient.formation(c.id());return f==null?c.origin():f.centre();}
     /** The way she faced as it began. */
     static float yaw(StandClient.Cast c){var f=IsosangClient.formation(c.id());return f==null?c.yaw():f.yaw();}
-    /** Her body as drawn: where she is, lifted as the formation's plan has her (IsosangClient.lift). */
-    static Vec3d body(Fx c){return c.pos.add(0,IsosangClient.lift(c.cast.caster(),c.delta),0);}
+    /** Her body as drawn: where she is, moved as the formation's plan has her (IsosangClient.shift, IsosangClient.lift). */
+    static Vec3d body(Fx c){return c.pos.add(IsosangClient.shift(c.cast.caster(),c.delta)).add(0,IsosangClient.lift(c.cast.caster(),c.delta),0);}
     /** Her sword's hand and blade at {@code t} as drawn (on her lifted body). */
     static Vec3d[] blade(Fx c,float t){return KagenoClips.blade(body(c),c.cast.yaw(),R6.poseOf(CLIP.frame(t)));}
 
@@ -152,41 +157,28 @@ final class SwordFormation {
      * stands over it, how far it leans from upright and which way (degrees), its guard's turn, when it strikes the ground,
      * how high over its place it hangs in the sky, when it shows there, how big the flower at its foot is, and its seed.
      */
-    record Blade(double fw,double rt,double height,double tilt,double toward,double spin,float plant,double sky,float shows,double flower,int seed){
-        boolean middle(){return fw==0&&rt==0;}
-    }
-    /**
-     * The rings it lies in: radius, how many (2.82.2, user request: "영역 내에 중앙에 검이 없고 외곽에만 있잖아", then "아니
-     * 너무 비었잖아 조금만 비우면 돼": a little room left round the middle one, no sword within some 4 blocks of it, the rest
-     * spread out to the formation's edge as evenly as before).
-     */
-    static final double[] RING_R={4.3,5.85,7.3};
-    static final int[] RING_N={9,12,15};
-    /** How far a sword of a ring may stray from its ring's radius (blocks, either way). */
-    static final double RING_JITTER=.3;
+    record Blade(double fw,double rt,double height,double tilt,double toward,double spin,float plant,double sky,float shows,double flower,int seed){}
     private static final Map<UUID,Blade[]> LAYOUTS=new LinkedHashMap<>();
-    /** The swords of the formation of swing {@code id} (the same on every client: seeded by the id). */
+    /**
+     * The swords of the formation of swing {@code id} (the same on every client: seeded by the id). Where each strikes is
+     * the rules' (IsosangRules.formationSwords: rings round an empty middle, 2.82.2 and 2.82.3, as the server reckons the
+     * sword she stands on); the one she stands on (IsosangRules.standSword, 2.82.3: "아니 다른 검에 올라가야지") stands
+     * upright, its pommel as high as she stands; the rest lean a little, a little higher or lower.
+     */
     static Blade[] layout(UUID id){
         var l=LAYOUTS.get(id);if(l!=null)return l;
-        int s0=(int)(id.getMostSignificantBits()^(id.getMostSignificantBits()>>>32)^id.getLeastSignificantBits()^(id.getLeastSignificantBits()>>>32));
+        int s0=IsosangRules.formationSeed(id);
+        var places=IsosangRules.formationSwords(s0);int stand=IsosangRules.standSword(s0);
         List<Blade> out=new ArrayList<>();
-        // the middle one: upright, its pommel as high as she stands on it, first to strike
-        out.add(new Blade(0,0,IsosangRules.FORMATION_STAND,0,0,180*Ease.hash(s0+1),IsosangRules.H_PLANT,10,IsosangRules.H_SKY,0,s0));
-        int n=0;
-        for(int r=0;r<RING_R.length;r++){
-            // (the second row a half step round from the first: staggered)
-            double off=Math.PI*2*Ease.hash(s0+11)+Math.PI*r/RING_N[r];
-            for(int i=0;i<RING_N[r];i++){
-                int seed=s0+97*(++n);
-                double a=off+Math.PI*2*(i+.3*(Ease.hash(seed+2)-.5))/RING_N[r];
-                double rad=Math.min(IsosangRules.FORMATION_RADIUS-.4,RING_R[r]+(Ease.hash(seed+3)-.5)*2*RING_JITTER);
-                double height=1.25+.5*Ease.hash(seed+4),tilt=2+11*Ease.hash(seed+5),toward=360*Ease.hash(seed+6),spin=180*Ease.hash(seed+7);
-                float plant=IsosangRules.H_RAIN0+(IsosangRules.H_RAIN1-IsosangRules.H_RAIN0)*(float)Math.min(1,.12*r+.82*Ease.hash(seed+8));
-                double sky=7+5*Ease.hash(seed+9);
-                // (it shows a little before it falls: at least a tenth of a second of hanging in the sky)
-                float shows=IsosangRules.H_SKY+(float)Math.min(plant-FALL-IsosangRules.H_SKY-.1f,.24*Ease.hash(seed+10));
-                out.add(new Blade(Math.cos(a)*rad,Math.sin(a)*rad,height,tilt,toward,spin,plant,sky,shows,.8+.45*Ease.hash(seed+11),seed));
-            }
+        for(int k=0,r=0,inRing=0;k<places.length;k++,inRing++){
+            if(inRing==IsosangRules.FORMATION_RING_N[r]){r++;inRing=0;}
+            int seed=IsosangRules.swordSeed(s0,k);
+            double height=k==stand?IsosangRules.FORMATION_STAND:1.25+.5*Ease.hash(seed+4),tilt=k==stand?0:2+11*Ease.hash(seed+5),toward=360*Ease.hash(seed+6),spin=180*Ease.hash(seed+7);
+            float plant=IsosangRules.H_RAIN0+(IsosangRules.H_RAIN1-IsosangRules.H_RAIN0)*(float)Math.min(1,.12*r+.82*Ease.hash(seed+8));
+            double sky=7+5*Ease.hash(seed+9);
+            // (it shows a little before it falls: at least a tenth of a second of hanging in the sky)
+            float shows=IsosangRules.H_SKY+(float)Math.min(plant-FALL-IsosangRules.H_SKY-.1f,.24*Ease.hash(seed+10));
+            out.add(new Blade(places[k][0],places[k][1],height,tilt,toward,spin,plant,sky,shows,.8+.45*Ease.hash(seed+11),seed));
         }
         l=out.toArray(new Blade[0]);
         LAYOUTS.put(id,l);while(LAYOUTS.size()>16)LAYOUTS.remove(LAYOUTS.keySet().iterator().next());
@@ -831,7 +823,7 @@ final class SwordFormation {
         // a splash of ink at every sword's foot as it strikes (the video: black splashes round each one's flower)
         for(var b:layout(c.cast.id())){
             if(t<b.plant())continue;Vec3d f=foot(centre,yaw,b);
-            GiantSweep.splatFor(new Vec3d(f.x,floor+.003+.001*(b.seed()&7),f.z),b.middle()?3.2:1.3+.8*b.flower(),Math.PI*2*Ease.hash(b.seed()+40),1+.3*Ease.hash(b.seed()+41),b.seed()&15,t-b.plant()-.02f,.9f);
+            GiantSweep.splatFor(new Vec3d(f.x,floor+.003+.001*(b.seed()&7),f.z),1.3+.8*b.flower(),Math.PI*2*Ease.hash(b.seed()+40),1+.3*Ease.hash(b.seed()+41),b.seed()&15,t-b.plant()-.02f,.9f);
         }
         // as it ends: ink where the swords stood and where the ink they break into falls
         float e=end(c.cast)+INKED;
@@ -906,8 +898,9 @@ final class SwordFormation {
     /** How bright a sword is in the sky (0 to 1): white as it hangs and falls, gone dark as it strikes. */
     static float sky(Blade b,float t){return t<b.plant()?1:1-Ease.smooth(t,b.plant(),b.plant()+.06f);}
     /**
-     * The black spike shooting up out of the pool as the middle sword strikes (the video: a black point up out of the
-     * middle of the pool, then a burst of blue light): two crossed blades of ink fixed in the world.
+     * The black spike shooting up out of the middle of the pool (the video: a black point up out of the middle of the
+     * pool as the middle sword strikes, then a burst of blue light; it stays with that sword gone, 2.82.3): two crossed
+     * blades of ink fixed in the world.
      */
     static void spike(EffectMesh m,Vec3d centre,float t){
         float at=IsosangRules.H_PLANT;if(t<at-.06f||t>=at+.12f)return;
@@ -926,7 +919,7 @@ final class SwordFormation {
     static void flowers(Fx c,EffectMesh m,float t,Vec3d centre,float yaw,boolean light){
         if(t>=WILT1)return;
         for(var b:layout(c.cast.id())){
-            if(b.middle()||t<b.plant())continue;
+            if(t<b.plant())continue;
             float open=(float)backOut(Ease.unit(t,b.plant(),b.plant()+.12f)),wilt=Ease.smooth(t,WILT0+.06f*(float)Ease.hash(b.seed()+70),WILT1);
             double size=b.flower()*open*(1-.4*wilt);float a=(1-wilt);if(a<=.01f||size<=.01)continue;
             Vec3d f=foot(centre,yaw,b).add(0,.03,0);
@@ -952,7 +945,7 @@ final class SwordFormation {
     /**
      * The light: her sword's aura; the thread of lightning from its point to the ground; the pool's blue rim; the swords
      * showing in the sky, their glow, the lightning they trail as they fall and the flash, the shaft of light and the
-     * crystal's light as each strikes; the middle sword's burst; the mountains' rims; and the bursts on whom it strikes.
+     * crystal's light as each strikes; the burst out of the middle; the mountains' rims; and the bursts on whom it strikes.
      */
     static void additive(Fx c,EffectMesh m){
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
@@ -1010,7 +1003,7 @@ final class SwordFormation {
             prev=next;
         }
     }
-    /** The middle sword's burst as it strikes (the video: the black point bursting into a crown of blue light, a ring racing out). */
+    /** The burst out of the middle as the spike breaks (the video: the black point bursting into a crown of blue light as the middle sword strikes, a ring racing out). */
     static void burst(EffectMesh m,Vec3d centre,float t){
         float at=IsosangRules.H_PLANT,k=FxLib.kick(t,at+.02f,.1f);if(k<=.01f&&t>at+.4f)return;
         if(k>.01f){
@@ -1049,10 +1042,10 @@ final class SwordFormation {
             // as it strikes: a flash and a ring at its foot, a shaft of light from every fifth one
             float k=FxLib.kick(t,b.plant(),.1f);
             if(k>.01f){
-                m.softDisc(foot.add(0,.3,0),b.middle()?2:1.1,BLUE,.45f*k);m.star(foot.add(0,.35,0),.8,WHITE,.7f*k);
+                m.softDisc(foot.add(0,.3,0),1.1,BLUE,.45f*k);m.star(foot.add(0,.35,0),.8,WHITE,.7f*k);
                 float u=Ease.unit(t,b.plant(),b.plant()+.18f);if(u<1)groundBand(m,foot.add(0,.06,0),.15+.7*Ease.out(t,b.plant(),b.plant()+.18f),.08,PALE,.45f*(1-u),b.seed(),t);
             }
-            if(Math.floorMod(b.seed(),5)==0||b.middle()){
+            if(Math.floorMod(b.seed(),5)==0){
                 float s=Ease.smooth(t,b.plant(),b.plant()+.02f)*(1-Ease.smooth(t,b.plant()+.1f,b.plant()+.4f));
                 if(s>.01f){Vec3d up=foot.add(0,14,0);m.line(foot,up,.06,WHITE,.55f*s);m.softLine(foot,up,.45,CYAN,.25f*s);}
             }
@@ -1068,8 +1061,7 @@ final class SwordFormation {
             // as the formation ends: a four-pointed star of light lies on the ground at its foot, a pillar of light up it (the video)
             if(flare>.01f){
                 Vec3d g=foot.add(0,.05,0),x=Vec3d.fromPolar(0,(float)b.spin()),z=new Vec3d(-x.z,0,x.x);
-                double big=b.middle()?2.4:1.6;
-                groundStar(m,g,x,z,big,big*.72,flare);
+                groundStar(m,g,x,z,1.6,1.15,flare);
                 m.softTaper(foot,top.add(0,1.2,0),.95,.25,CYAN,.38f*flare);
             }
         }
@@ -1115,7 +1107,7 @@ final class SwordFormation {
         float pool=Ease.smooth(t,POOL0,POOL0+.1f)*(1-Ease.smooth(t,SWIRL1,DRY1));
         if(pool>.01f)f.light(centre.add(0,.6,0),0x5a8cff,11,.8f*pool);
         float mid=FxLib.kick(t,IsosangRules.H_PLANT+.02f,.16f);if(mid>.01f)f.light(centre.add(0,1,0),0xb8d8ff,12,1.4f*mid);
-        for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.12f);if(k>.05f&&!b.middle())f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,6,.7f*k);}
+        for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.12f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,6,.7f*k);}
         float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED+.05f));
         if(flare>.01f)f.light(centre.add(0,1,0),0x7fe6ff,14,1.3f*flare);
         float stand=Ease.smooth(t,SILVER0,SILVER1)*(1-Ease.smooth(t,e,e+GONE));
@@ -1123,7 +1115,7 @@ final class SwordFormation {
         // fast as she leaps and the swords rain: the afterglow cut short, else they leave copies of themselves on the way
         f.afterglow(t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
     }
-    /** Shake: the middle sword striking, the rain of swords crashing in, and a little as the formation ends (each over two frames). */
+    /** Shake: the burst out of the middle, the rain of swords crashing in, and a little as the formation ends (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){
         float e=end(cast);
         return Math.max(Math.max(.7f*bump(sec,IsosangRules.H_PLANT,.1f),.95f*bump(sec,(float)IsosangRules.FORMATION_IMPACT_AT/20,.16f)),.45f*bump(sec,e+.02f,.1f));

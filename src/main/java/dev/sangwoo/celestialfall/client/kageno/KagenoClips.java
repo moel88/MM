@@ -115,9 +115,10 @@ public final class KagenoClips {
         if(w!=null)FACINGS.put(cast.caster(),new float[]{facing,w.getTime()+delta});
         var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,facing),left=new Vec3d(f.z,0,-f.x);
         Vec3d off=f.multiply(fr.fw()).add(0,fr.up(),0).add(left.multiply(-fr.rt()));
-        // (2.82.0) Lee So-sang's H: the body as high as the sword formation's plan has it (the leap, the hop onto the middle
-        // sword, standing on its pommel), whatever swing moves it (R may be used up there)
-        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL)off=off.add(0,dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(cast.caster(),delta),0);
+        // (2.82.0) Lee So-sang's H: the body where the sword formation's plan has it (the leap, the leap onto the sword she
+        // stands on, standing on its pommel: as high, and 2.82.3 as far across), whatever swing moves it (R may be used up there)
+        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL)
+            off=off.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(cast.caster(),delta)).add(0,dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(cast.caster(),delta),0);
         m.translate(off.x,off.y,off.z);
         if(fr.yaw()!=0||fr.pitch()!=0||fr.roll()!=0){
             float k=(float)Math.PI/180;
