@@ -106,7 +106,14 @@ public final class KagenoRenderer {
     private static void effects(MinecraftClient mc,List<Fx> casts,boolean status,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta,boolean layered){
         var buffer=Tessellator.getInstance().getBuffer();
         RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);RenderSystem.setShaderColor(1,1,1,1);
+        RenderSystem.setShaderColor(1,1,1,1);
+        // Ink lying on the ground, under everything else (2.82.6, Lee So-sang's H): blended, then its light added again.
+        if(KagenoFire.beginInk(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).ground(x);KagenoFire.endInk();}
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
+        KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
+        if(KagenoFire.beginInk(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).ground(x);KagenoFire.endInk();}
+        KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
         // Opaque-ish blended geometry.
         buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var m=new EffectMesh(buffer,matrix,camera);
         for(var x:casts)KagenoSkills.of(x.cast.skill()).alpha(x,m);

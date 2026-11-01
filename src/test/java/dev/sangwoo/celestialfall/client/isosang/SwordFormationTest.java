@@ -237,29 +237,37 @@ class SwordFormationTest {
     }
     @Test void theInkCoversTheGroundGathersIntoTheMiddleThenSwirlsOutAsTheSwordsStrike(){
         // (2.82.5, "처음에 잉크가 중앙에 모였다가 점점 확장하고 검이 박히게": 2.82.4's pool opened under her and grew; the
-        // video's ink darkens the ground all round, gathers into the middle, a spike bursts there, and it swirls out again)
+        // video's ink darkens the ground all round, gathers into the middle, a spike bursts there, and it swirls out again.
+        // 2.82.6, "잉크 모였다가 퍼지는게 너무 부자연스러운데 이거만 예쁘게 다듬어줘": it eases into motion, sweeps in, lingers,
+        // and is drawn in all the way as the flash breaks; it soaks in by patches and dries by patches)
         float frame=1/240f;
         // it soaks in all round the formation as she leaps: wide, round its middle, she well inside it, nothing under her first
         assertEquals(0,SwordFormation.gathered(SwordFormation.POOL0),1e-6);
-        assertTrue(SwordFormation.gathered(SwordFormation.POOL1)>.99f,"all dark");
+        assertEquals(0,SwordFormation.soak(SwordFormation.POOL0),1e-6);
+        assertTrue(SwordFormation.gathered(SwordFormation.POOL0+.03f)>.99f&&SwordFormation.soak(SwordFormation.POOL1)>.99f,"all soaked in");
         for(float t=0;t<=SwordFormation.GATHER0;t+=frame)assertEquals(SwordFormation.POOL_WIDE,SwordFormation.gather(t),1e-9,"as wide as it soaks in at "+t);
-        assertTrue(SwordFormation.POOL_WIDE-Math.max(.35,.1*SwordFormation.POOL_WIDE)>IsosangRules.FORMATION_STAND_BACK+2,"over where she stands and well past her");
+        assertTrue(SwordFormation.POOL_WIDE>IsosangRules.FORMATION_STAND_BACK+3,"over where she stands and well past her");
         assertTrue(SwordFormation.POOL_WIDE>IsosangRules.FORMATION_RADIUS+2,"over the whole formation");
-        // then it only closes in, fast and then slowly (the video: some five blocks a tenth of a second in), never jumping
-        double last=SwordFormation.gather(0);
-        for(float t=frame;t<=SwordFormation.GATHER1+.1f;t+=frame){
+        // then it only closes in, never jumping; easing into motion (no sudden start), sweeping in (the video: some five
+        // blocks a tenth of a second in), lingering, then drawn in all the way as the flash breaks there
+        double last=SwordFormation.gather(0),fastest=0;
+        for(float t=frame;t<=SwordFormation.COLLAPSE+.05f;t+=frame){
             double r=SwordFormation.gather(t);
             assertTrue(r<=last+1e-9,"it never spreads again as it gathers, at "+t);
             assertTrue(last-r<.7,"no jump at "+t+": "+(last-r));
-            last=r;
+            fastest=Math.max(fastest,last-r);last=r;
         }
-        assertEquals(SwordFormation.POOL_IN,SwordFormation.gather(SwordFormation.GATHER1),1e-9);
+        double first=SwordFormation.POOL_WIDE-SwordFormation.gather(SwordFormation.GATHER0+frame);
+        assertTrue(first<.1*fastest,"easing into motion: "+first+" in its first frame, "+fastest+" at its fastest");
+        assertTrue(fastest*240>90,"sweeping in fast: "+fastest*240+" blocks a second");
         double tenth=SwordFormation.gather(SwordFormation.GATHER0+.1f);
         assertTrue(tenth>4&&tenth<6.5,"some five blocks a tenth of a second in: "+tenth);
-        assertTrue(SwordFormation.gather(SwordFormation.FADE0)<3,"gathered small in the middle as it fades");
-        // gone from the middle before the spike shoots up there; swirling out only after it has burst
-        float spike=IsosangRules.H_PLANT-.06f;
-        assertEquals(0,SwordFormation.gathered(spike),1e-6,"gone before the spike");
+        double before=SwordFormation.gather(.5f),after=SwordFormation.gather(.56f);
+        assertTrue(before<3.3&&after>2.4&&(before-after)/.06<10,"lingering, closing slowly: "+before+" to "+after);
+        assertEquals(0,SwordFormation.gather(SwordFormation.COLLAPSE),1e-9,"drawn into the middle");
+        // gone into the middle as the flash before the spike breaks there; swirling out only after it has burst
+        assertEquals(IsosangRules.H_PLANT-.055f,SwordFormation.COLLAPSE,1e-6,"as the flash breaks");
+        assertEquals(0,SwordFormation.gathered(SwordFormation.COLLAPSE),1e-6,"gone with the flash");
         assertTrue(SwordFormation.SWIRL0>=IsosangRules.H_PLANT,"swirling out once it has burst");
         for(float t=0;t<SwordFormation.SWIRL0;t+=frame)assertEquals(0,SwordFormation.pool(t),1e-9,"no swirl before the burst, at "+t);
         // swirling out from the middle, never jumping, most of the way out as the rain of swords strikes and all of it after
@@ -271,6 +279,15 @@ class SwordFormationTest {
         }
         assertTrue(SwordFormation.pool(IsosangRules.H_RAIN0)>.75*SwordFormation.SWIRL_R,"mostly out as the swords strike: "+SwordFormation.pool(IsosangRules.H_RAIN0));
         assertEquals(SwordFormation.SWIRL_R,SwordFormation.pool(IsosangRules.H_RAIN1),1e-9);
+        // drying by patches as the formation settles, gone before the colour of the ground is all that is left
+        assertEquals(0,SwordFormation.dry(SwordFormation.DRY0),1e-6);assertEquals(1,SwordFormation.dry(SwordFormation.DRY1),1e-6);
+        // what the ink shader is told: its clock over two seconds, its kind and share in one byte (exactly)
+        assertEquals(.25f,SwordFormation.poolClock(.5f),1e-6);assertEquals(1,SwordFormation.poolClock(9),1e-6);
+        for(int k=0;k<=127;k++){
+            float share=k/127f;
+            assertEquals(k,Math.round(SwordFormation.poolByte(false,share)*255));
+            assertEquals(128+k,Math.round(SwordFormation.poolByte(true,share)*255));
+        }
     }
     @Test void herCameraIsDrawnBackForItAndInAgain(){
         assertEquals(0,SwordFormation.pull(0),1e-9);

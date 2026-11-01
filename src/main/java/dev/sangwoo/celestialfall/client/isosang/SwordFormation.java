@@ -61,15 +61,17 @@ final class SwordFormation {
     static final float THREAD0=.22f,THREAD1=.6f;
     /**
      * The ink on the formation's ground, all round its middle (2.82.5, user request: "처음에 잉크가 중앙에 모였다가 점점
-     * 확장하고 검이 박히게 만들어야지", and the user's video at a tenth of the speed read again frame by frame): it soaks in
-     * all over the ground as she leaps (POOL0 to POOL1, POOL_WIDE blocks out from the middle, she well inside it) and lies
-     * there; then it gathers into the middle, its shrinking edge lit blue, fast at first (GATHER0 to GATHER_FAST, in to some
-     * GATHER_MID blocks) and then slowly (GATHER_SLOW to GATHER1, down to POOL_IN); it fades out there, faint rings left
-     * where it was (FADE0 to FADE1); and once the spike has burst there it swirls out again over the formation (SWIRL0 to
-     * SPREAD1, out to SWIRL_R; the swirl and the blue of the ground deepening to SWIRL1). (2.82.4 opened a small pool under
-     * her and spread it, sliding it out to the formation's middle as it swirled out.)
+     * 확장하고 검이 박히게 만들어야지", and the user's video at a tenth of the speed read again frame by frame; 2.82.6, user
+     * request: "잉크 모였다가 퍼지는게 너무 부자연스러운데 이거만 예쁘게 다듬어줘": a liquid sheet drawn by the ink shader,
+     * KagenoFire.inkGround, style 13): it soaks into the ground all round the middle in patches as she leaps (POOL0 to
+     * POOL1, POOL_WIDE blocks out, she well inside it) and lies there; then it gathers into the middle, its edge easing
+     * into motion, sweeping in (GATHER0 to GATHER_FAST, in to some GATHER_MID blocks), lingering as it closes slowly
+     * (GATHER_SLOW to GATHER1, toward POOL_IN), and drawn in all the way at the last (COLLAPSE0 to COLLAPSE, as the flash
+     * breaks there); once the spike has burst there it swirls out again over the formation (SWIRL0 to SPREAD1, out to
+     * SWIRL_R; the blue of the ground deepening to SWIRL1). (2.82.4 opened a small pool under her and spread it, sliding
+     * it out to the formation's middle as it swirled out; 2.82.5 drew a flat disc of black shrinking and fading.)
      */
-    static final float POOL0=.19f,POOL1=.25f,GATHER0=.32f,GATHER_FAST=.52f,GATHER_SLOW=.42f,GATHER1=.64f,FADE0=.58f,FADE1=.67f,SWIRL0=.7f,SPREAD1=.95f,SWIRL1=1.15f;
+    static final float POOL0=.19f,POOL1=.29f,GATHER0=.32f,GATHER_FAST=.5f,GATHER_SLOW=.42f,GATHER1=.64f,COLLAPSE0=.56f,COLLAPSE=IsosangRules.H_PLANT-.055f,SWIRL0=.7f,SPREAD1=.95f,SWIRL1=1.15f;
     static final double POOL_WIDE=14.5,GATHER_MID=3.4,POOL_IN=2.4,SWIRL_R=IsosangRules.FORMATION_RADIUS-.4;
     /** The pool and its swirl dry away (the video: the formation's ground clears from 1.6 s, colours back by 2.1 s). */
     static final float DRY0=1.3f,DRY1=1.9f;
@@ -806,39 +808,42 @@ final class SwordFormation {
      */
     static Vec3d poolCentre(StandClient.Cast c){return centre(c);}
     /**
-     * How far the ink reaches from the formation's middle as it gathers (blocks): POOL_WIDE as it soaks in and lies there,
-     * then drawn into the middle (the video: its edge sweeping in to some five blocks in a tenth of a second, then closing
-     * slowly to some two and a half as it fades).
+     * How far the ink reaches from the formation's middle as it gathers (blocks): POOL_WIDE as it soaks in and lies there;
+     * then its edge eases into motion and sweeps in (the video: to some five blocks in a tenth of a second), lingers as it
+     * closes slowly, and is drawn in all the way at the last, faster and faster, gone into the middle as the flash breaks.
      */
     static double gather(float t){
-        return POOL_IN+(GATHER_MID-POOL_IN)*(1-Ease.smooth(t,GATHER_SLOW,GATHER1))+(POOL_WIDE-GATHER_MID)*Math.pow(1-Ease.unit(t,GATHER0,GATHER_FAST),2.8);
+        double sweep=Math.pow(1-Ease.smooth(t,GATHER0,GATHER_FAST),2.4);
+        double r=POOL_IN+(GATHER_MID-POOL_IN)*(1-Ease.smooth(t,GATHER_SLOW,GATHER1))+(POOL_WIDE-GATHER_MID)*sweep;
+        return r*(1-Ease.in(t,COLLAPSE0,COLLAPSE));
     }
-    /** How dark the gathering ink is (0 to 1): soaking in as she leaps, lying there and gathering, fading out in the middle. */
-    static float gathered(float t){return Ease.smooth(t,POOL0,POOL1)*(1-Ease.smooth(t,FADE0,FADE0+.05f));}
+    /** How strongly the gathering ink is drawn (0 to 1): there from POOL0 (it soaks in by patches, soak), gone as it is drawn into the middle. */
+    static float gathered(float t){return Ease.smooth(t,POOL0,POOL0+.02f)*(1-Ease.smooth(t,COLLAPSE-.02f,COLLAPSE));}
+    /** How far the ink has soaked into the ground as she leaps (0 to 1: in patches all over it at once, never from one place). */
+    static float soak(float t){return Ease.smooth(t,POOL0,POOL1);}
     /** How far the ink has swirled out again from the middle once the spike has burst there (blocks; 0 before SWIRL0). */
     static double pool(float t){return t<SWIRL0?0:SWIRL_R*Ease.out(t,SWIRL0,SPREAD1);}
-    /** A ground ring's or the ink's edge at the angle {@code a} (radians), as a share of its radius: wavering a little, slowly. */
+    /** How far the ink swirled out over the formation has dried (0 to 1: its thin parts first, breaking up in patches). */
+    static float dry(float t){return Ease.smooth(t,DRY0,DRY1);}
+    /** The ink shader's byte for the pool (KagenoFire.inkGround, style 13): swirling out or gathering, and its share (soaked in, or dried). */
+    static float poolByte(boolean swirling,float share){return ((swirling?128:0)+Math.round(MathHelper.clamp(share,0,1)*127))/255f;}
+    /** The formation's clock as the ink shader reads it (seconds over two, 0 to 1). */
+    static float poolClock(float t){return MathHelper.clamp(t/2,0,1);}
+    /** A ground ring's edge at the angle {@code a} (radians), as a share of its radius: wavering a little, slowly. */
     static double wobble(double a,int seed,float t){return 1+.035*Math.sin(a*5+seed+t*3)+.02*Math.sin(a*11-seed);}
     /**
-     * The ink as it gathers (the blended pass): a sheet of see-through black lying on the formation's ground round its
-     * middle, its edge wavering a little and soft over its last stretch (the video: the ground all dark as she leaps, then a
-     * black pool closing into the middle); and as it fades there, faint rings where it was, spreading a little, like
-     * ripples on a puddle.
+     * The ink lying on the ground, under everything else of it (2.82.6, the ink shader's ground pass, before the swords,
+     * the mountains and the light): the blue of the formation's ground; the ink gathering into its middle; the ink swirling
+     * out again. Each a square of the ink shader (KagenoFire.inkGround) on the ground, its uv the offset over its radius.
      */
-    static void gathering(EffectMesh m,Vec3d centre,float t,int seed){
-        double r=gather(t);float a=gathered(t);
-        if(a>.005f){
-            int n=Math.max(40,(int)(r*8));double soft=Math.max(.35,.1*r);Vec3d c=centre.add(0,.05,0);
-            for(int i=0;i<n;i++){
-                double a0=Math.PI*2*i/n,a1=Math.PI*2*(i+1)/n,k0=wobble(a0,seed,t),k1=wobble(a1,seed,t);
-                Vec3d d0=new Vec3d(Math.cos(a0),0,Math.sin(a0)),d1=new Vec3d(Math.cos(a1),0,Math.sin(a1));
-                Vec3d i0=c.add(d0.multiply(Math.max(0,r*k0-soft))),i1=c.add(d1.multiply(Math.max(0,r*k1-soft))),o0=c.add(d0.multiply(r*k0)),o1=c.add(d1.multiply(r*k1));
-                m.vertex(c,INK,.9f*a);m.vertex(i0,INK,.9f*a);m.vertex(i1,INK,.9f*a);m.vertex(c,INK,.9f*a);
-                m.vertex(i0,INK,.9f*a);m.vertex(o0,INK,0);m.vertex(o1,INK,0);m.vertex(i1,INK,.9f*a);
-            }
-        }
-        float rip=Ease.window(t,FADE0,FADE1,.03f,.05f);
-        if(rip>.005f)for(int i=0;i<3;i++)groundBand(m,centre.add(0,.05,0),r*(.38+.31*i)*(1+.18*Ease.out(t,FADE0,FADE1)),.07+.03*i,INK,.45f*rip*(1-.22f*i),seed+i*5,t);
+    static void ground(Fx c){
+        float t=c.sec;Vec3d centre=centre(c.cast);int seed=c.cast.id().hashCode();
+        float blue=tint(c.cast,t);
+        if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed,0,0,blue);}
+        double g=gather(t);float a=gathered(t);
+        if(a>.005f&&g>.02)KagenoFire.inkGround(centre.add(0,.05,0),g*1.45,g,13,seed,poolClock(t),poolByte(false,soak(t)),a);
+        double p=pool(t);float o=Ease.smooth(t,SWIRL0,SWIRL0+.02f)*(1-Ease.smooth(t,DRY1-.04f,DRY1+.06f));
+        if(o>.005f&&p>.02)KagenoFire.inkGround(centre.add(0,.055,0),p*1.45,p,13,seed+5,poolClock(t),poolByte(true,dry(t)),o);
     }
     /** The blue of the formation's ground (0 to about .6): deep as the pool swirls out and the swords strike, then a faint blue while it stands. */
     static float tint(StandClient.Cast c,float t){
@@ -867,41 +872,14 @@ final class SwordFormation {
             m.vertex(c.add(d0.multiply(r*soft)),rgb,alpha);m.vertex(c.add(d0.multiply(r)),rgb,0);m.vertex(c.add(d1.multiply(r)),rgb,0);m.vertex(c.add(d1.multiply(r*soft)),rgb,alpha);
         }
     }
-    /** The swirl: three arms of blue light lined with ink, spiralling out from the middle over the formation's ground as the ink swirls out. */
-    static final int ARMS=3;
-    static void swirl(Vec3d centre,float t,int seed){
-        if(t<SWIRL0-.02f||t>=DRY1)return;
-        double head=1.2+(SWIRL_R-1.2)*Ease.out(t,SWIRL0,SPREAD1),turn=.9*(t-SWIRL0)+Math.PI*2*Ease.hash(seed);
-        float ink=Ease.smooth(t,1.08f,1.42f),erase=Ease.smooth(t,1.25f,DRY1-.05f),alpha=Ease.smooth(t,SWIRL0-.02f,SWIRL0+.06f);
-        int n=40;
-        for(int arm=0;arm<ARMS;arm++){
-            Vec3d[] in=new Vec3d[n],out=new Vec3d[n];float[] along=new float[n];
-            for(int i=0;i<n;i++){
-                double s=i/(double)(n-1),r=1.0+(head-1.0)*s,phi=turn+Math.PI*2*arm/ARMS+2.3*s,w=.28+.72*s;
-                Vec3d d=new Vec3d(Math.cos(phi),0,Math.sin(phi));
-                in[i]=centre.add(d.multiply(Math.max(.2,r-w*.5))).add(0,.05,0);out[i]=centre.add(d.multiply(r+w*.5)).add(0,.05,0);along[i]=(float)s;
-            }
-            KagenoFire.inkRibbon(in,out,along,n,0,(seed+arm*5)&15,erase,ink,.8f*alpha);
-        }
-    }
-
     // ───────────────────────────── the passes ─────────────────────────────
 
     /**
-     * The ink: the pool swirling out from the formation's middle once the ink has gathered there (the gathering ink is the
-     * blended pass's), its swirl, the ink splashed at every sword's foot as it strikes, and as it ends the ink each sword
-     * breaks into, where it falls.
+     * The ink: the ink splashed at every sword's foot as it strikes, and as it ends the ink each sword breaks into, where it
+     * falls (the ink lying on the formation's ground, gathering and swirling out, is the ground pass's, under the swords).
      */
     static void ink(Fx c){
-        float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);double floor=centre.y+.02;int seed=c.cast.id().hashCode();
-        // the pool: swirled out from the middle over the formation, drying away as the formation stands
-        double r=pool(t);
-        if(r>.05&&t<DRY1+.1f){
-            float dry=Ease.smooth(t,DRY0,DRY1);
-            Vec3d pc=poolCentre(c.cast);
-            stain(new Vec3d(pc.x,floor-.004,pc.z),2.1*r,Math.toRadians(-yaw),1,seed&15,dry,.94f*(1-Ease.smooth(dry,.55f,1)));
-        }
-        swirl(poolCentre(c.cast),t,seed);
+        float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);double floor=centre.y+.02;
         // a splash of ink at every sword's foot as it strikes (the video: black splashes round each one's flower)
         for(var b:layout(c.cast.id())){
             if(t<b.plant())continue;Vec3d f=foot(centre,yaw,b);
@@ -944,8 +922,6 @@ final class SwordFormation {
      */
     static void alpha(Fx c,EffectMesh m){
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
-        groundDisc(m,centre.add(0,.06,0),IsosangRules.FORMATION_RADIUS+.6,.88,NAVY,tint(c.cast,t));
-        gathering(m,centre,t,c.cast.id().hashCode());
         scenery(c,m,t);
         spike(m,centre,t);
         drawSwords(c,m,t,centre,yaw);
@@ -1034,14 +1010,7 @@ final class SwordFormation {
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
         aura(c,m,t);
         thread(c,m,t,spot(c.cast));
-        // the edge of the ink lit blue as it gathers into the middle (the video: a thin bright line along the black and a
-        // wide blue glow just outside it; the same wavering as the ink's own edge), then the ring of the ink swirling out
-        // again from the middle (2.82.5: 2.82.4's ring opened under her and grew)
-        int seed=c.cast.id().hashCode();
-        float edge=gathered(t)*(1-Ease.smooth(t,FADE0-.04f,FADE0+.02f));
-        if(edge>.01f){double r=gather(t);groundBand(m,centre.add(0,.06,0),r+.3,.6,BLUE,.5f*edge,seed,t);groundBand(m,centre.add(0,.07,0),r,.13,PALE,.8f*edge,seed,t);}
-        float out=Ease.smooth(t,SWIRL0,SWIRL0+.05f)*(1-Ease.smooth(t,SWIRL1,DRY0+.1f));
-        if(out>.01f){double r=pool(t);groundBand(m,centre.add(0,.06,0),r,.5,BLUE,.55f*out,seed,t);groundBand(m,centre.add(0,.07,0),r,.14,PALE,.75f*out,seed+3,t);}
+        // (the edge of the ink, lit blue as it gathers and as it swirls out, is the ink shader's: ground)
         burst(m,centre,t);
         swordLight(c,m,t,centre,yaw);
         flowers(c,m,t,centre,yaw,true);
@@ -1113,8 +1082,7 @@ final class SwordFormation {
             }
             m.softDisc(centre.add(0,.6,0),2.4,BLUE,.42f*k);m.softDisc(centre.add(0,.4,0),.8,WHITE,.6f*k);
         }
-        float u=Ease.unit(t,at,at+.3f);
-        if(u>0&&u<1)groundBand(m,centre.add(0,.07,0),.4+3.2*Ease.out(t,at,at+.3f),.22,PALE,.8f*(1-u),17,t);
+        // (2.82.6: no ring of its own racing out over the ground: the ink's ripples run out from here)
     }
     /**
      * The swords' light: a flash as each shows in the sky; their glow; the lightning each trails as it falls; the flash,
@@ -1201,7 +1169,7 @@ final class SwordFormation {
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
         float th=Ease.smooth(t,THREAD0-.02f,THREAD0+.02f)*(1-Ease.smooth(t,THREAD1-.08f,THREAD1));
         if(th>.01f)f.light(spot(c.cast).add(0,1.5,0),0x9fc8ff,8,.9f*th);
-        float pool=Ease.smooth(t,GATHER0,GATHER0+.1f)*(1-Ease.smooth(t,FADE0,FADE1))+Ease.smooth(t,SWIRL0,SWIRL0+.06f)*(1-Ease.smooth(t,SWIRL1,DRY1));
+        float pool=Ease.smooth(t,GATHER0,GATHER0+.1f)*(1-Ease.smooth(t,COLLAPSE0,COLLAPSE))+Ease.smooth(t,SWIRL0,SWIRL0+.06f)*(1-Ease.smooth(t,SWIRL1,DRY1));
         if(pool>.01f)f.light(poolCentre(c.cast).add(0,.6,0),0x5a8cff,11,.8f*pool);
         float mid=Math.max(FxLib.kick(t,IsosangRules.H_PLANT+.02f,.16f),.7f*FxLib.kick(t,IsosangRules.H_PLANT-.055f,.02f));if(mid>.01f)f.light(centre.add(0,1,0),0xb8d8ff,12,1.4f*mid);
         for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.12f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,6,.7f*k);}

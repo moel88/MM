@@ -360,6 +360,71 @@ void main(){
    rgb=mix(inkc,navy*.45,.3*fbm(q*5.0-sd));
    // see-through, a little darker where the ink gathers at its edge
    alpha=cov*(.74+.18*rim)*(.86+.14*fbm(q*7.0+sd*2.0))*(1.0-smoothstep(.94,1.0,r))*tint.a;
+  }else if(style>12.5&&style<14.5){
+   // 13 the ink of Lee So-sang's H lying on the ground (2.82.6, user request: "잉크 모였다가 퍼지는게 너무 부자연스러운데
+   // 이거만 예쁘게 다듬어줘"), a liquid sheet: uv is the offset from its middle over its radius (its edge near 1, wavering
+   // slowly), tint.g the formation's clock (seconds over 2), tint.b its kind (128 and up: swirling out) and a share
+   // (0..127: as it gathers, how far it has soaked in; as it swirls out, how far it has dried). Dense and black inside,
+   // thin and glassy toward its edge (deep blue showing through), mottled, with streaks flowing in toward its middle as
+   // it gathers and out as it swirls out, turning as they go; its edge a thin bright line, white at its heart, in a wide
+   // blue glow just outside it; swirling out, ripples running out across it and three arms of blue light turning in it.
+   // 14 the formation's blue ground (the same square, solid to .88 of it, fading to its rim; tint.a).
+   vec2 q=uv;float r=length(q);
+   if(style>13.5){
+    rgb=vec3(.043,.078,.275);
+    alpha=(1.0-smoothstep(.88,1.0,r))*tint.a;
+   }else{
+    float tsec=tint.g*2.0,kb=floor(tint.b*255.0+.5),swirling=step(127.5,kb),share=mod(kb,128.0)/127.0;
+    vec2 dir=r>1e-4?q/r:vec2(1.0,0.0);
+    float th=r>1e-4?atan(q.y,q.x):0.0,lr=log(max(r,.015)),aa=max(fwidth(r),.0015);
+    // its edge wavers: slow lobes drifting round it and finer ones (a small pool reads rounder: they are shares of it)
+    float wob=.042*sin(3.0*th+sd+1.1*tsec)+.026*sin(5.0*th-1.7*sd-1.9*tsec)+.014*sin(9.0*th+2.3*sd+3.3*tsec)
+             +.06*(fbm(dir*1.4+vec2(sd*.37,tsec*.6))-.5);
+    float edgeR=1.0+wob,d=r-edgeR;
+    float depth=smoothstep(0.0,.3,-d),inside=1.0-smoothstep(-aa,aa*.5,d);
+    float mott=fbm(q*2.6+vec2(sd,-sd)+tsec*vec2(.13,-.09));
+    // the streaks: in toward the middle as it gathers, out as it swirls out, turning round it as they go
+    float sw=th+(swirling>.5?.75:-.55)*lr+(swirling>.5?-.9:.7)*tsec;
+    float st=.5+.5*sin(13.0*sw+(swirling>.5?-1.0:1.0)*(4.0*lr-7.0*tsec)+2.6*fbm(dir*1.9+vec2(lr*.5,sd)));
+    float streak=smoothstep(.8,.97,st)*(.55+.45*mott)*smoothstep(.05,.25,r);
+    // soaking in (gathering: in patches all over at once, never spreading out from one place) or drying (swirling out:
+    // its thin parts first, breaking up in patches)
+    float n=fbm(q*2.2+vec2(sd*1.3,sd*.7));
+    float cover;
+    if(swirling<.5)cover=smoothstep(n-.13,n+.13,share*1.3-.15);
+    else cover=1.0-smoothstep(n-.09,n+.09,share*1.3-.15+.3*(1.0-depth)*share);
+    vec3 thinC=mix(deep*.85,blue*.75,.35);
+    rgb=mix(thinC,mix(inkc,navy*.8,.35*mott),depth);
+    rgb=mix(rgb,mix(deep,navy*1.6,depth),streak*.5);
+    float a=inside*cover*mix(.5,.92,depth)*(.9+.1*mott);
+    // the edge lit (dimming once it has swirled all the way out, a faint rim left): a wide blue glow outside, a thin
+    // bright line along the ink, white at its heart
+    float lit_=swirling>.5?1.0-.65*smoothstep(.9,1.25,tsec):1.0;
+    float glow=d>0.0?exp(-d/.12)*smoothstep(0.0,aa*2.0+.004,d)*cover*lit_:0.0;
+    if(d>0.0){rgb=mix(blue,deep,.35);a=.5*glow;}
+    float lw=max(aa*1.5,.01);
+    float line=(1.0-smoothstep(lw*.4,lw*1.7,abs(d)))*cover;
+    float core=1.0-smoothstep(0.0,lw*.6,abs(d));
+    rgb=mix(rgb,mix(pale,edge,core),line*(.55+.45*lit_));a=max(a,line*.95);
+    // swirling out: three ripples running out across it, three arms of blue light turning in it (gone as it dries)
+    float ripple=0.0,arm=0.0;
+    if(swirling>.5){
+     float young=1.0-smoothstep(.95,1.3,tsec);
+     for(int i=0;i<3;i++){
+      float rho=fract(float(i)/3.0+tsec*1.15)*.96,rw=max(aa*1.3,.008)+.012*rho;
+      ripple+=(1.0-smoothstep(rw*.5,rw*1.8,abs(r-rho*edgeR)))*sin(3.14159*rho);
+     }
+     ripple*=young*cover;
+     float spiral=.5+.5*cos(3.0*th-2.4*lr-2.6*tsec+sd);
+     float win=smoothstep(.08,.28,r)*(1.0-smoothstep(.75,.98,r/edgeR));
+     arm=smoothstep(.8,.97,spiral)*win*(1.0-smoothstep(0.0,.45,share))*smoothstep(.70,.78,tsec)*cover;
+     rgb=mix(rgb,mix(blue,pale,.5),min(1.0,ripple)*.8);a=max(a,min(1.0,ripple)*.85);
+     rgb=mix(rgb,mix(blue,pale,smoothstep(.9,.99,spiral)),arm*.85);a=max(a,arm*.9);
+    }
+    float lit=line*(1.0+1.6*lit_)+glow*.6+min(1.0,ripple)*1.2+arm*1.4;
+    rgb*=1.0+Hot*lit;
+    alpha=a*tint.a;
+   }
   }else if(style>4.5&&style<5.5){
    // a stain soaked into the ground: a soft, lumpy, see-through blot, darker in its middle, a few drops round it
    vec2 q=uv*2.0-1.0;float r=length(q);

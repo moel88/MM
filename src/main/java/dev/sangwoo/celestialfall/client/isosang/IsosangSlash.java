@@ -635,6 +635,8 @@ public final class IsosangSlash implements Fx.Skill {
      * The ink ribbons (KagenoFire's ink pass): the ink soaked into the ground, the strokes of ink looping round them in the
      * air, every slash along its arc (drawn on as it sweeps, eaten from the tail as it turns to ink), the thrown slash and the ink thrown up out of whom it strikes.
      */
+    /** The ink lying under everything else (2.82.6): the formation's ground, its ink gathering and swirling out. */
+    @Override public void ground(Fx c){if(formation(c.cast.combo()))SwordFormation.ground(c);}
     @Override public void ink(Fx c){
         if(sweep(c.cast.combo())){GiantSweep.ink(c);return;}
         if(formation(c.cast.combo())){SwordFormation.ink(c);return;}

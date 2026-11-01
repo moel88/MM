@@ -261,6 +261,16 @@ public final class KagenoFire {
             ipoint(outer[i+1],along[i+1],1,code,erase,ink[i+1],alpha);ipoint(outer[i],along[i],1,code,erase,ink[i],alpha);
         }
     }
+    /**
+     * A square of ink lying flat round {@code centre}, {@code half} blocks out each way, its uv the offset from the middle
+     * over {@code scale} blocks (2.82.6: the ink of Lee So-sang's H on the ground, styles 13 and 14 of the ink shader);
+     * {@code g} and {@code b} the style's own (0 to 1, a byte each).
+     */
+    public static void inkGround(Vec3d centre,double half,double scale,int style,int seed,float g,float b,float alpha){
+        if(inks==null||alpha<=0||half<=0||scale<=1e-4)return;int code=(style&15)*16+(seed&15);float k=(float)(half/scale);
+        ipoint(centre.add(-half,0,-half),-k,-k,code,g,b,alpha);ipoint(centre.add(half,0,-half),k,-k,code,g,b,alpha);
+        ipoint(centre.add(half,0,half),k,k,code,g,b,alpha);ipoint(centre.add(-half,0,half),-k,k,code,g,b,alpha);
+    }
     /** Straight band a→b, width measured along {@code side}. */
     public static void streak(Vec3d a,Vec3d b,Vec3d side,double width,int seed,float alpha){
         if(strokes==null||alpha<=0)return;Vec3d s=side.normalize().multiply(width*.5);
