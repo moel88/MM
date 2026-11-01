@@ -35,9 +35,10 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * under her where the lightning ran; out of the middle, where the ink has gathered, a black spike shoots up and bursts
  * into blue light, and she dives down onto the pommel of the sword under her as the ink swirls out again from the middle
  * over the whole formation in bands of blue and the rest rain down round its empty middle, each trailing blue lightning,
- * each struck into the ground with a flower of blue crystal and a splash of ink at its foot. Ink mountains rise round the formation (none behind her, where her
- * camera looks from), white clouds curling over them and wisps of mist drifting low (2.82.1); the swords, dark as they
- * strike, turn silver with a white glow, a gleam running down one now and then; she stands on that pommel
+ * each struck into the ground with a flower of blue crystal and a splash of ink at its foot. Ink mountains rise round
+ * the formation (none behind her, where her camera looks from), white clouds curling over them and wisps of mist
+ * drifting low (2.82.1); the swords, dark as they strike, turn silver with a white glow, a gleam running down one now
+ * and then; she stands on that pommel
  * (IsosangClient.drive lifts her, IsosangClient.lift draws the leap and the dive) until the formation ends: every sword
  * flares sky blue over a four-pointed star of light, turns to ink and breaks away, the mountains, the clouds and the blue
  * of the ground going with them, and she drops down.
