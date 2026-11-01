@@ -73,7 +73,7 @@ class SwordFormationTest {
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
         var a=SwordFormation.layout(id);var b=SwordFormation.layout(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()));
         assertArrayEquals(a,b,"the same swords from the same id");
-        assertEquals(43,a.length,"the middle one and three rings (the video: some 45)");
+        assertEquals(37,a.length,"the middle one and three rings (2.82.2: the formation a little smaller)");
         var middle=a[0];assertTrue(middle.middle());assertEquals(IsosangRules.FORMATION_STAND,middle.height(),1e-9);assertEquals(0,middle.tilt(),1e-9);
         assertEquals(IsosangRules.H_PLANT,middle.plant(),1e-6,"the middle one first");
         Vec3d centre=new Vec3d(5,64,-3);
@@ -83,7 +83,8 @@ class SwordFormationTest {
         for(int i=1;i<a.length;i++){
             var s=a[i];
             double r=Math.hypot(s.fw(),s.rt());
-            assertTrue(r>2&&r<IsosangRules.FORMATION_RADIUS,"inside the formation: "+r);
+            // (2.82.2: a little room round the middle one, the rest out to the formation's edge)
+            assertTrue(r>3.8&&r<IsosangRules.FORMATION_RADIUS,"out from the middle to the formation's edge: "+r);
             assertTrue(s.plant()>=IsosangRules.H_RAIN0-1e-6&&s.plant()<=IsosangRules.H_RAIN1+1e-6,"it strikes as the swords rain: "+s.plant());
             assertTrue(s.shows()+.08f<=s.plant()-SwordFormation.FALL+1e-4,"it shows in the sky before it falls");
             assertTrue(s.shows()>=IsosangRules.H_SKY-1e-6);
@@ -134,30 +135,38 @@ class SwordFormationTest {
         assertEquals(SwordFormation.S_W,SwordFormation.edge(SwordFormation.S_GUARD).x,1e-9);
         assertEquals(0,SwordFormation.edge(SwordFormation.S_LEN).x,1e-9);
     }
-    @Test void theMountainsArePinnaclesOneBeforeAnotherRimmedFromTheirSummits(){
+    @Test void theMountainsAreBroadMassesOneBeforeAnotherRimmedFromTheirSummits(){
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
         var all=SwordFormation.mountains(id);
-        assertEquals(9,all.length);
+        assertEquals(6,all.length);
         assertSame(all,SwordFormation.mountains(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits())),"the same mountains for the same formation");
         for(var mt:all){
             assertTrue(mt.radius()>IsosangRules.FORMATION_RADIUS+1,"outside the formation");
-            assertTrue(mt.peaks().length>=3&&mt.peaks().length<=5);
+            assertTrue(mt.peaks().length>=3&&mt.peaks().length<=4);
             double front=-1;
             for(var p:mt.peaks()){
-                assertTrue(p.front()>front,"each peak before the last");front=p.front();
+                assertTrue(p.front()>front,"each mass before the last");front=p.front();
                 assertTrue(p.height()<=mt.peaks()[0].height()+1e-9,"the back one the tallest");
-                // its outline: from the ground up to its summit and down again, x only growing along it
+                // its outline: from the ground up to its summit, the highest point, and down again; x only growing along it
                 assertEquals(0,p.ys()[0],1e-9);assertEquals(0,p.ys()[p.ys().length-1],1e-9);
-                for(int i=0;i+1<p.xs().length;i++){
-                    assertTrue(p.xs()[i+1]>p.xs()[i],"x grows along the outline");
-                    if(i<p.top())assertTrue(p.ys()[i+1]>p.ys()[i],"up to the summit");else assertTrue(p.ys()[i+1]<p.ys()[i],"down from the summit");
-                }
-                // a pinnacle: taller than it is wide, steep
+                for(int i=0;i+1<p.xs().length;i++)assertTrue(p.xs()[i+1]>p.xs()[i],"x grows along the outline");
+                for(int i=0;i<p.ys().length;i++)if(i!=p.top())assertTrue(p.ys()[i]<p.height(),"the summit the highest");
+                // round at its summit: the outline falls slowly just under it, steeper further down
+                double near=p.height()-p.at(p.xs()[p.top()]+.05*(p.xs()[p.xs().length-1]-p.xs()[p.top()]));
+                assertTrue(near<.1*p.height(),"a round summit: "+near);
+                // a broad mass, not a needle
                 double wide=p.xs()[p.xs().length-1]-p.xs()[0];
-                if(p==mt.peaks()[0])assertTrue(p.height()>wide*.8&&p.height()>4,"the tall one a pinnacle: "+p.height()+" over "+wide);
+                if(p==mt.peaks()[0])assertTrue(wide>1.15*p.height()&&wide<2.4*p.height(),"the tall one broad: "+wide+" for "+p.height());
                 assertTrue(p.rimL()>.3&&p.rimL()<=1&&p.rimR()>.3&&p.rimR()<=1);
+                // its ridges run down inside it from the top
+                assertTrue(p.ridges().length>=2,"a ridge from the summit down each flank");
+                for(int r=0;r<p.ridges().length;r++){
+                    var ridge=p.ridges()[r];
+                    assertTrue(ridge[0][1]>ridge[ridge.length-1][1],"a ridge runs down");
+                    for(var q:ridge)assertTrue(q[1]>=0&&q[1]<=p.at(q[0])+1e-9,"a ridge inside the mass");
+                }
             }
-            assertTrue(mt.peaks()[0].height()<7,"not over the clouds");
+            assertTrue(mt.peaks()[0].height()>4&&mt.peaks()[0].height()<7,"as tall as the video's (the clouds among their summits)");
         }
     }
     @Test void cloudsCurlOverTheMountainsAndWispsOfMistDriftLow(){
@@ -165,12 +174,13 @@ class SwordFormationTest {
         var all=SwordFormation.clouds(id);
         int high=0,low=0;
         for(var cl:all){
-            if(cl.curl()>0){
-                assertTrue(cl.turns()>.8,"its curl winds round");
-                if(cl.up()>4.5){high++;assertTrue(cl.radius()>13,"out by the mountains");assertTrue(cl.thick()>1.1,"a full band");}
-            }else{low++;assertTrue(cl.up()<1.6&&cl.radius()<IsosangRules.FORMATION_RADIUS+1,"a wisp low over the formation");}
+            if(!cl.mist()){
+                assertTrue(cl.turns()>.6,"its curl winds round");
+                if(cl.radius()>IsosangRules.FORMATION_RADIUS+4){high++;assertTrue(cl.up()>4.5,"among and over the summits");assertTrue(cl.thick()>1.1,"a full band");}
+            }else{low++;assertTrue(cl.up()<1.1&&cl.radius()<IsosangRules.FORMATION_RADIUS+1,"a wisp low over the formation");}
             // its band runs on without a break, from the inner end of its curl out to its tail, thinning to nothing there
             var path=SwordFormation.cloudPath(cl,10,1);
+            assertEquals(SwordFormation.curlPoints(cl)+(int)Math.max(8,(int)(cl.length()/.22))+1,path.size());
             for(int i=0;i+1<path.size();i++){
                 double d=Math.hypot(path.get(i+1)[0]-path.get(i)[0],path.get(i+1)[1]-path.get(i)[1]);
                 assertTrue(d<.35,"a gap in a cloud's band: "+d);
@@ -181,7 +191,7 @@ class SwordFormationTest {
             var a=SwordFormation.cloudPath(cl,10,1);var b=SwordFormation.cloudPath(cl,10+1/60f,1);
             for(int i=0;i<a.size();i++)assertEquals(a.get(i)[1],b.get(i)[1],.02,"a cloud jumps");
         }
-        assertEquals(6,high,"six high over the mountains");assertEquals(7,low,"seven wisps of mist");
+        assertEquals(6,high,"six over and behind the mountains");assertEquals(7,low,"seven wisps of mist");
         // coming in, it flows out from where its curl meets its band
         var cl=all[0];var in=SwordFormation.cloudPath(cl,cl.in()+.1f,.2f);
         assertTrue(in.get(in.size()-1)[2]==0&&in.stream().anyMatch(q->q[2]>.3),"flowing out as it comes in");

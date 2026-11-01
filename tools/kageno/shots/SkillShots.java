@@ -218,6 +218,7 @@ public final class SkillShots implements ClientModInitializer {
     public static Boolean nextHold(){return HOLDS.poll();}
     private volatile boolean filming;private volatile long serverStart=-1;private volatile net.minecraft.util.math.Vec3d spot=net.minecraft.util.math.Vec3d.ZERO;
     private final Set<String> moving=new HashSet<>();private final StringBuilder actorLog=new StringBuilder();
+    private static final java.util.Map<String,Float> ACTOR_HEALTH=new java.util.HashMap<>();
     private final StringBuilder motionLog=new StringBuilder(),soundLog=new StringBuilder();private final Set<UUID> sounded=new HashSet<>();
 
     /** Fixed far camera of the current entry ("far=ex/ey/ez/tx/ty/tz[/fov]" in blocks from the cast spot), or null. */
@@ -873,7 +874,7 @@ public final class SkillShots implements ClientModInitializer {
     /** Removes the last shot's actors and spawns this one's: still husks with no goals and plenty of health. */
     private void actors(net.minecraft.server.world.ServerWorld w,int y){
         for(int id:ACTOR_IDS.values()){var old=w.getEntityById(id);if(old!=null)old.discard();}
-        ACTOR_IDS.clear();ACTORS.clear();moving.clear();
+        ACTOR_IDS.clear();ACTORS.clear();moving.clear();ACTOR_HEALTH.clear();
         for(var a:actors){
             var husk=net.minecraft.entity.EntityType.HUSK.create(w);if(husk==null)continue;
             var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(a.dir().multiply(a.dist));
@@ -903,7 +904,10 @@ public final class SkillShots implements ClientModInitializer {
                 moving.add(a.name);var target=spot.add(a.dir().multiply(400));
                 mob.getMoveControl().moveTo(target.x,mob.getY(),target.z,1);
             }
-            actorLog.append(String.format(Locale.ROOT,"%d,%s,%.3f,%.3f,%.3f,%d,%.4f,%.3f%n",age,a.name,mob.getX(),mob.getZ(),out,held?1:0,speed.getValue()/speed.getBaseValue(),edge));
+            actorLog.append(String.format(Locale.ROOT,"%d,%s,%.3f,%.3f,%.3f,%d,%.4f,%.3f,%.1f%n",age,a.name,mob.getX(),mob.getZ(),out,held?1:0,speed.getValue()/speed.getBaseValue(),edge,mob.getHealth()));
+            // (2.82.2) each change of an actor's health, and how far out it stands then (a skill's reach measured)
+            Float was=ACTOR_HEALTH.put(a.name,mob.getHealth());
+            if(was!=null&&Math.abs(was-mob.getHealth())>.01f)log.append(String.format(Locale.ROOT,"  actor %s health %.1f -> %.1f at %d (%.2f out)%n",a.name,was,mob.getHealth(),age,out));
         }
     }
     private float opt(String key,float fallback){var v=opts.get(key);return v==null?fallback:Float.parseFloat(v);}
@@ -1241,7 +1245,7 @@ public final class SkillShots implements ClientModInitializer {
                 if(!current.equals("H"))camera();
                 if(Math.min(age,clock())>length(current)+4||age>length(current)*3+40){log.append(folder).append(" frames ").append(shotIndex).append('\n');
                     if(opts.containsKey("walk"))key(GLFW_KEY_W,false);
-                    filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
+                    filming=false;if(!actors.isEmpty()){var rows="age,name,x,z,out,held,speed_attr,edge,health\n"+actorLog;var path=OUT.resolve(folder).resolve("actors.csv");Files.createDirectories(path.getParent());Files.writeString(path,rows);}
                     if(shakeLog.length()>0){var path=OUT.resolve(folder).resolve("shake.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,gap,wall,yaw,pitch\n"+shakeLog);}
                     {var path=OUT.resolve(folder).resolve("motion.csv");Files.createDirectories(path.getParent());Files.writeString(path,"t,x,y,z,yaw,fov_target,fov\n"+motionLog);}
                     if(bossLog.length()>0){Files.writeString(OUT.resolve(folder).resolve("boss.csv"),"t,health,angry,doing,target,distance,x,z,yaw,stand_out,guard,dash,player_health,player_held,boxes,mate_health\n"+bossLog);bossLog.setLength(0);bossDoing="";}

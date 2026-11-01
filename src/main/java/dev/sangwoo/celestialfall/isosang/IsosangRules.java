@@ -441,8 +441,12 @@ public final class IsosangRules {
      * {@link #FORMATION_EVERY} ticks after that again ({@link #FORMATION_TICK}); no guard takes it, no one is thrown.
      */
     public static final int FORMATION=8;
-    /** How far out the formation reaches (blocks, level, from its middle; the video: swords out to some 10 blocks) and how far under and over its ground a body is still in it. */
-    public static final double FORMATION_RADIUS=10,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
+    /**
+     * How far out the formation reaches (blocks, level, from its middle; the video: swords out to some 10 blocks, made a
+     * little smaller in 2.82.2, user request: "그리고 범위 조금만 줄여") and how far under and over its ground a body is
+     * still in it.
+     */
+    public static final double FORMATION_RADIUS=8,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
     /** The damage as the swords strike (the user's word: 30) and every {@link #FORMATION_EVERY} ticks after (5). */
     public static final float FORMATION_IMPACT=30,FORMATION_TICK=5;
     /** The tick into H the swords strike (as the rain of swords crashes in), and how often it strikes again after (the user's word: every 5 s). */
