@@ -1043,6 +1043,7 @@ final class SwordFormation {
         wisps(c,m,t,centre,yaw);
         drawSwords(c,m,t,centre,yaw);
         flecks(c,m,t,centre,yaw);
+        inkLines(c,m,t,centre);
         flowers(c,m,t,centre,yaw,false);
         double floor=centre.y+.03;
         for(var d:drops(c,t)){
@@ -1181,6 +1182,28 @@ final class SwordFormation {
             }
         }
     }
+    /**
+     * Long thin black lines flying across the whole formation as it stands (2.82.13, the video and the build side by
+     * side, read and confirmed: long thin black lines flying all over the formation): INK_LINES at a time, each from
+     * somewhere over the formation (out to its edge, half a block to three and a half up), flying straight a little way,
+     * fast, thin and pointed at both ends, coming in and going (ink dashes fixed in the world); while the formation stands.
+     */
+    static void inkLines(Fx c,EffectMesh m,float t,Vec3d centre){
+        float on=standing(c.cast,t);if(on<=.01f)return;
+        int base=c.cast.id().hashCode()*31+1201;
+        for(int k=0;k<INK_LINES;k++){
+            double[] life=shed(base+k*71,k,INK_LINES,INK_LINE_LIFE,t);double u=life[0];int seed=(int)life[1];
+            float a=(float)(.9*on*Ease.smooth((float)u,0,.15f)*(1-Ease.smooth((float)u,.65f,1)));if(a<=.01f)continue;
+            double rr=IsosangRules.FORMATION_RADIUS*Math.sqrt(Ease.hash(seed+1)),az=Math.PI*2*Ease.hash(seed+2);
+            double way=Math.PI*2*Ease.hash(seed+3),speed=3+3*Ease.hash(seed+4),age=u*INK_LINE_LIFE;
+            Vec3d dir=new Vec3d(Math.cos(way),(Ease.hash(seed+5)-.5)*.5,Math.sin(way)).normalize();
+            Vec3d q=centre.add(Math.cos(az)*rr,.5+3*Ease.hash(seed+6),Math.sin(az)*rr).add(dir.multiply(speed*age));
+            float by=near(q,c.camera);if(by<=0)continue;
+            streak(m,q,dir,(.6+1.2*Ease.hash(seed+7))*(.7+.3*Math.sin(Math.PI*u)),.02,INK,a*by);
+        }
+    }
+    static final int INK_LINES=26;
+    static final float INK_LINE_LIFE=.8f;
     /** A thin dash of ink at {@code q}, {@code len} long along the way it moves, pointed at both ends: two crossed planes along it, fixed in the world. */
     static void streak(EffectMesh m,Vec3d q,Vec3d moving,double len,double wid,int rgb,float alpha){
         if(alpha<=.01f||len<=.005)return;
