@@ -770,8 +770,10 @@ void main(){
   float lit=clamp((d-du)*6.0,0.0,1.0)*smoothstep(.36,.58,d)*m*env;
   float shade=clamp((d-dd)*5.0,0.0,1.0)*smoothstep(.36,.58,d)*m*env;
   // ("구름 더 잘 보이게", then "너무 진해": between the two)
-  rgb=mix(vec3(.74,.8,.92),vec3(.96,.97,1.0),lit);
-  rgb=mix(rgb,vec3(.5,.57,.7),shade*.6);
+  // (a cool grey-blue body, a little darker than the game's light sky so it reads against it as well as against the
+  // ground; white only where it is lit)
+  rgb=mix(vec3(.64,.7,.83),vec3(.93,.95,1.0),lit);
+  rgb=mix(rgb,vec3(.46,.52,.66),shade*.6);
   alpha=clamp(c*.62+lit*.15+shade*.09,0.0,.7)*tint.a;
  }else if(Mode==17&&tint.b>.5){
   // The stream of water under the mountains of Lee So-sang's sword formation (2.82.16, user request with their marked
