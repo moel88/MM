@@ -558,7 +558,8 @@ final class SwordFormation {
      * to show its size) and how strongly it shows.
      */
     static final double PEAK_BACK=.4,PEAK_LEFT=1.5,PEAK_TOP=2.0;
-    static final float PEAK_ALPHA=.7f;
+    /** (PEAK_ALPHA .85, was .7: "큰산 작은산들 투명도만 조금 낮추자 거의 희미해서 자세히 봐야하는 산들 제외".) */
+    static final float PEAK_ALPHA=.85f;
     /** The small mountains: how many, how far behind the six (from, to), how tall (from, to), how strongly they show, how far round from right behind her none stands. */
     static final int SMALL_COUNT=20;
     static final double SMALL_BACK0=1.0,SMALL_BACK1=3.0,SMALL_TOP0=1.6,SMALL_TOP1=2.4,SMALL_CLEAR=Math.toRadians(70);

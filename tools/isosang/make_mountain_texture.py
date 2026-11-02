@@ -9,17 +9,18 @@ paintings themselves are not redrawn; this only:
   - with --black, takes the black round the painting away (the near-black connected to its border; dark ink inside the
     mountain stays, however dark);
   - crops it to the mountain;
-  - makes its ink body a little see-through and a little darker, its rims of light kept as they are (earlier: "산을 더
-    투명하게 만들고 테두리 제외 산을 더 어둡게");
+  - makes its ink body a little see-through (--body, BODY_ALPHA; the mountain and the peak .9 since "큰산 작은산들
+    투명도만 조금 낮추자 거의 희미해서 자세히 봐야하는 산들 제외") and a little darker, its rims of light kept as they are
+    (earlier: "산을 더 투명하게 만들고 테두리 제외 산을 더 어둡게");
   - frays its foot away over its lowest FOOT of its height (it floats: "영상에는 산이 중간에 떠있는데");
   - with --sides F, frays its sides away where the picture cut it off: from where the mountain first meets a side, in
     from that side, widening downward to F of its width at its foot;
   - scales it down to --width pixels across (never up) in premultiplied alpha (no dark fringe at its edges) and pads it
     with a clear border of PAD pixels (no clamped edge pixels smeared).
 
-python3 -I tools/isosang/make_mountain_texture.py mountain.png \
+python3 -I tools/isosang/make_mountain_texture.py --body .9 mountain.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain.png
-python3 -I tools/isosang/make_mountain_texture.py --black --width 800 --seed 8218 peak.png \
+python3 -I tools/isosang/make_mountain_texture.py --black --width 800 --seed 8218 --body .9 peak.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain_peak.png
 python3 -I tools/isosang/make_mountain_texture.py --black --width 960 --seed 8219 small.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain_small.png
@@ -73,7 +74,7 @@ def noise(rng, h, w):
     return n / max(1e-6, np.abs(n).max()) * .5
 
 
-def main(src, out, width=WIDTH, black=False, sides=0.0, seed=SEED):
+def main(src, out, width=WIDTH, black=False, sides=0.0, seed=SEED, body=BODY_ALPHA):
     a = load(src, black)
     ys, xs = np.nonzero(a[..., 3] > .02)
     a = a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
@@ -82,7 +83,7 @@ def main(src, out, width=WIDTH, black=False, sides=0.0, seed=SEED):
     # how much of a rim of light each pixel is: bright and blue (the ink body is dark)
     rim = np.clip((rgb[..., 2] - .35) / .45, 0, 1) * np.clip((rgb.mean(2) - .2) / .35, 0, 1)
     rgb = rgb * (BODY_DARK + (1 - BODY_DARK) * rim[..., None])
-    al = al * (BODY_ALPHA + (1 - BODY_ALPHA) * rim)
+    al = al * (body + (1 - body) * rim)
     # its foot frays away, raggedly (a soft noise, the same every time)
     rng = np.random.default_rng(seed)
     nz = noise(rng, h, w)
@@ -124,5 +125,6 @@ if __name__ == '__main__':
     p.add_argument('--black', action='store_true', help='painted on black, no transparency of its own')
     p.add_argument('--sides', type=float, default=0.0, help='fray its sides away over this much of its width each')
     p.add_argument('--seed', type=int, default=SEED)
+    p.add_argument('--body', type=float, default=BODY_ALPHA, help='how strongly its ink body shows (1 opaque)')
     o = p.parse_args()
-    main(o.src, o.out, o.width, o.black, o.sides, o.seed)
+    main(o.src, o.out, o.width, o.black, o.sides, o.seed, o.body)
