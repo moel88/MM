@@ -218,6 +218,52 @@ class SwordFormationTest {
         assertEquals(1,SwordFormation.occlusion(mt0,toBack,Double.NaN),1e-9);
         assertEquals(1,SwordFormation.occlusion(mt0,toBack,behind+Math.PI),1e-6);
     }
+    @Test void theUsersPeakStandsInTheGapsAndTheirSmallMountainsBarelyThereBehind() throws java.io.IOException{
+        // 2.82.16 ("빈 공간에 이거 넣고 그래도 남는 공간에는 이 작은 산들 촘촘하게 끼워넣는데 엄청 투명하게 끼워넣어줘 자세히
+        // 봐야 알 정도로", with their tall peak and small mountain)
+        UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
+        float yaw=40;var fill=SwordFormation.fill(id,yaw);var six=SwordFormation.mountains(id,yaw);
+        assertSame(fill,SwordFormation.fill(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()),yaw),"the same for the same formation");
+        assertEquals(6+fill.length,SwordFormation.peaks(id,yaw).size(),"drawn with the six");
+        for(var mt:six){assertEquals(0,mt.art());assertEquals(SwordFormation.MOUNTAIN_HALF,mt.half(),1e-12);assertEquals(1,mt.alpha());}
+        double behind=SwordFormation.behind(yaw);
+        int peaks=0,small=0;double prev=Double.NaN;
+        for(var mt:fill){
+            double off=Math.toDegrees(Math.abs(Math.IEEEremainder(mt.az()-behind,Math.PI*2)));
+            if(mt.art()==1){
+                peaks++;
+                assertEquals(0,Math.min(off%60,60-off%60),1e-6,"in a gap between two of the six: "+off);
+                assertTrue(off>30,"none in the gap right behind her (her camera looks in through it)");
+                assertEquals(1,mt.alpha());assertFalse(mt.flip());
+                assertTrue(mt.radius()>SwordFormation.MOUNTAIN_R&&mt.radius()<SwordFormation.MOUNTAIN_R+1,"just behind the six");
+                assertTrue(mt.top()>3&&mt.top()<=SwordFormation.MOUNTAIN_TOP,"about as tall as the six: "+mt.top());
+                assertTrue(mt.half()<2,"narrow, in the gap: "+mt.half());
+            }else{
+                assertEquals(2,mt.art());small++;
+                assertTrue(mt.alpha()<.2f,"barely there (\"자세히 봐야 알 정도로\"): "+mt.alpha());
+                assertTrue(mt.radius()>SwordFormation.MOUNTAIN_R+.8&&mt.radius()<SwordFormation.MOUNTAIN_R+3.5,"behind the six");
+                assertTrue(mt.top()<SwordFormation.MOUNTAIN_TOP*.6,"small: "+mt.top());
+                assertTrue(off>=Math.toDegrees(SwordFormation.SMALL_CLEAR)-1e-6,"none near behind her: "+off);
+                double az=Math.toDegrees(mt.az());
+                if(!Double.isNaN(prev))assertTrue(Math.abs(MathHelper.wrapDegrees(az-prev))<20,"close together (\"촘촘하게\")");
+                prev=az;
+            }
+        }
+        assertEquals(5,peaks);assertEquals(SwordFormation.SMALL_COUNT,small);
+        assertTrue(java.util.Arrays.stream(fill).anyMatch(Mountain->Mountain.flip())&&java.util.Arrays.stream(fill).anyMatch(m->m.art()==2&&!m.flip()),"some mirrored, some not");
+        // the paintings are in the mod, each as wide as its texture, clear round it
+        for(int i=1;i<=2;i++)try(var in=SwordFormation.class.getResourceAsStream("/assets/celestialfall/textures/effect/"+(i==1?"isosang_mountain_peak":"isosang_mountain_small")+".png")){
+            assertNotNull(in,"the user's painting "+i+" is in the mod");
+            var img=javax.imageio.ImageIO.read(in);
+            assertEquals(SwordFormation.ASPECT[i],img.getWidth()/(double)img.getHeight(),1e-9,"as wide as its painting");
+            assertTrue(img.getColorModel().hasAlpha());
+            assertEquals(0,img.getRGB(0,0)>>>24,"clear at its corners");assertEquals(0,img.getRGB(img.getWidth()-1,img.getHeight()-1)>>>24);
+        }
+        // rising into place without a jump, as the six do
+        float end=IsosangRules.H_END,frame=1/60f;
+        for(var mt:fill)for(float t=SwordFormation.RISE0;t<end+3;t+=frame)
+            assertEquals(SwordFormation.mountainUp(end,mt,t),SwordFormation.mountainUp(end,mt,t+frame),.06,"it jumps at "+t);
+    }
     @Test void faintHazeTurnsSlowlyOverTheMountainsAndWispsOfMistDriftLow(){
         // 2.82.16 ("산 위에는 희미한 안개같은 구름이 천천히 돌아가고"): banks of faint haze over and behind the mountains, all
         // turning slowly the same way together; the low wisps of mist as before; no curled clouds any more

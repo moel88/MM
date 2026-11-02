@@ -478,8 +478,15 @@ final class SwordFormation {
 
     // ───────────────────────────── the ink mountains, the clouds, the mist ─────────────────────────────
 
-    /** An ink mountain round the formation: which way from its middle (radians), how far, how long after the first it rises, its seed. */
-    record Mountain(double az,double radius,float delay,int seed){}
+    /**
+     * An ink mountain round the formation: which way from its middle (radians), how far, how long after the first it
+     * rises, its seed; which of the user's paintings it is (ART: 0 the mountain, 1 the tall peak, 2 the small mountain),
+     * how tall (blocks), how strongly it shows (0 to 1) and whether it is drawn mirrored.
+     */
+    record Mountain(double az,double radius,float delay,int seed,int art,double top,float alpha,boolean flip){
+        /** Half its width (blocks along the circle at its radius): as wide as its painting is for its height. */
+        double half(){return top*ASPECT[art]/2;}
+    }
     private static final Map<UUID,Mountain[]> MOUNTAINS=new LinkedHashMap<>();
     /**
      * How far round from right behind her (seen from the formation's middle, radians) the mist at the rim stands low
@@ -503,13 +510,52 @@ final class SwordFormation {
         l=new Mountain[MOUNTAIN_COUNT];double off=behind(yaw)+Math.PI/MOUNTAIN_COUNT;
         for(int i=0;i<MOUNTAIN_COUNT;i++){
             int seed=s0+211*(i+1);
-            l[i]=new Mountain(off+Math.PI*2*i/MOUNTAIN_COUNT,MOUNTAIN_R,.14f*(float)Ease.hash(seed+90),seed);
+            l[i]=new Mountain(off+Math.PI*2*i/MOUNTAIN_COUNT,MOUNTAIN_R,.14f*(float)Ease.hash(seed+90),seed,0,MOUNTAIN_TOP,1,false);
         }
         MOUNTAINS.put(id,l);while(MOUNTAINS.size()>16)MOUNTAINS.remove(MOUNTAINS.keySet().iterator().next());
         return l;
     }
     static final int MOUNTAIN_COUNT=6;
     static final double MOUNTAIN_R=IsosangRules.FORMATION_RADIUS+3.4;
+    private static final Map<UUID,Mountain[]> FILL=new LinkedHashMap<>();
+    /**
+     * The user's two other paintings among the six (2.82.16, user request, with the two: "빈 공간에 이거 넣고 그래도 남는
+     * 공간에는 이 작은 산들 촘촘하게 끼워넣는데 엄청 투명하게 끼워넣어줘 자세히 봐야 알 정도로"): in each gap between two of
+     * them the tall peak (PEAK_*), standing just behind them; and all round behind them the small mountain, SMALL_COUNT
+     * of it close together (SMALL_*, every other one mirrored), barely there: they show only where the sky is left open
+     * above the others. None in the gap right behind her nor, for the small ones, within SMALL_CLEAR of it (her camera
+     * looks in from out there: a mountain there would stand before it).
+     */
+    static Mountain[] fill(UUID id,float yaw){
+        var l=FILL.get(id);if(l!=null)return l;
+        int s0=(int)(id.getLeastSignificantBits()*37+id.getMostSignificantBits()*3);
+        List<Mountain> out=new ArrayList<>();double back=behind(yaw);
+        for(int i=1;i<MOUNTAIN_COUNT;i++){
+            int seed=s0+307*(i+1);
+            out.add(new Mountain(back+Math.PI*2*i/MOUNTAIN_COUNT,MOUNTAIN_R+PEAK_BACK,.06f+.12f*(float)Ease.hash(seed+2),seed,1,
+                PEAK_TOP*(.95+.1*Ease.hash(seed+3)),1,false));
+        }
+        double span=Math.PI*2-2*SMALL_CLEAR;
+        for(int i=0;i<SMALL_COUNT;i++){
+            int seed=s0+919*(i+1);
+            double az=back+SMALL_CLEAR+span*(i+.5+.5*(Ease.hash(seed+1)-.5))/SMALL_COUNT;
+            out.add(new Mountain(az,MOUNTAIN_R+SMALL_BACK0+(SMALL_BACK1-SMALL_BACK0)*((i&1)*.6+.4*Ease.hash(seed+2)),.16f+.2f*(float)Ease.hash(seed+3),seed,2,
+                SMALL_TOP0+(SMALL_TOP1-SMALL_TOP0)*Ease.hash(seed+4),SMALL_ALPHA*(float)(.85+.3*Ease.hash(seed+5)),(i&1)==1));
+        }
+        l=out.toArray(new Mountain[0]);
+        FILL.put(id,l);while(FILL.size()>16)FILL.remove(FILL.keySet().iterator().next());
+        return l;
+    }
+    /** The tall peak: how far behind the six it stands and how tall it is (blocks). */
+    static final double PEAK_BACK=.4,PEAK_TOP=4.0;
+    /** The small mountains: how many, how far behind the six (from, to), how tall (from, to), how strongly they show, how far round from right behind her none stands. */
+    static final int SMALL_COUNT=20;
+    static final double SMALL_BACK0=1.0,SMALL_BACK1=3.0,SMALL_TOP0=1.6,SMALL_TOP1=2.4,SMALL_CLEAR=Math.toRadians(70);
+    static final float SMALL_ALPHA=.15f;
+    /** All the mountains of a formation as drawn: the six, the peaks in their gaps, the small ones behind. */
+    static List<Mountain> peaks(UUID id,float yaw){
+        List<Mountain> l=new ArrayList<>(List.of(mountains(id,yaw)));l.addAll(List.of(fill(id,yaw)));return l;
+    }
     /**
      * The mountain: the user's painting (2.82.16: tools/isosang/make_mountain_texture.py crops it, makes its ink body a
      * little see-through and darker, its rims of light kept, and frays its foot away), MOUNTAIN_TOP blocks tall (2.82.16:
@@ -519,6 +565,14 @@ final class SwordFormation {
      */
     static final net.minecraft.util.Identifier MOUNTAIN_TEX=new net.minecraft.util.Identifier("celestialfall","textures/effect/isosang_mountain.png");
     static final double MOUNTAIN_TOP=4.4,MOUNTAIN_ASPECT=1540/518.0,MOUNTAIN_HALF=MOUNTAIN_TOP*MOUNTAIN_ASPECT/2;
+    /**
+     * The user's paintings: the mountain, the tall peak (its sides and foot, where the picture cut it off, frayed away),
+     * the small mountain (painted on black: the black taken away), all made into textures by make_mountain_texture.py;
+     * each one's width over its height (its texture's).
+     */
+    static final net.minecraft.util.Identifier[] ART={MOUNTAIN_TEX,art("isosang_mountain_peak"),art("isosang_mountain_small")};
+    static final double[] ASPECT={MOUNTAIN_ASPECT,391/609.0,964/363.0};
+    static net.minecraft.util.Identifier art(String name){return new net.minecraft.util.Identifier("celestialfall","textures/effect/"+name+".png");}
     static final int MOUNTAIN_COLS=48;
     /** How far a mountain is up at {@code t} (0 to 1): rising into place (each a little after the last), sinking away as the formation ends. */
     static float mountainUp(float end,Mountain mt,float t){
@@ -560,10 +614,10 @@ final class SwordFormation {
         return Math.hypot(dx,dz)<MOUNTAIN_R-.35?Double.NaN:Math.atan2(dz,dx);
     }
     /**
-     * The mountains (2.82.16), in the ground pass in a draw call of their own (KagenoFire.inkInterlude): first the haze
-     * behind and over them (drawn after them it veiled them), then the mountains, the farthest from the camera first,
-     * each the user's painting on a strip bent round the circle (from its left as seen from the formation's middle),
-     * rising into place, thinning where it stands before her camera (occlusion).
+     * The mountains (2.82.16), in the ground pass in draw calls of their own (KagenoFire.inkInterlude): first the haze
+     * behind and over them (drawn after them it veiled them), then the mountains (peaks), the farthest from the camera
+     * first, each one of the user's paintings on a strip bent round the circle (from its left as seen from the
+     * formation's middle, mirrored if it is), rising into place, thinning where it stands before her camera (occlusion).
      */
     static void mountainInk(Fx c){
         float t=c.sec;Vec3d centre=centre(c.cast);double camAz=cameraAz(centre,c.camera);
@@ -579,25 +633,28 @@ final class SwordFormation {
             net.minecraft.client.render.BufferRenderer.drawWithGlobalProgram(buf.end());
         }
         List<Mountain> order=new ArrayList<>();
-        float end=end(c.cast);for(var mt:mountains(c.cast.id(),yaw(c.cast)))if(mountainUp(end,mt,t)>.01f)order.add(mt);
+        float end=end(c.cast);for(var mt:peaks(c.cast.id(),yaw(c.cast)))if(mountainUp(end,mt,t)>.01f)order.add(mt);
         if(order.isEmpty())return;
-        order.sort(Comparator.comparingDouble((Mountain mt)->-onMountain(centre,mt,0,2,0).squaredDistanceTo(c.camera)));
+        order.sort(Comparator.comparingDouble((Mountain mt)->-onMountain(centre,mt,0,mt.top()/2,0).squaredDistanceTo(c.camera)));
         com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.render.GameRenderer::getPositionTexColorProgram);
-        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0,MOUNTAIN_TEX);
-        buf.begin(net.minecraft.client.render.VertexFormat.DrawMode.QUADS,net.minecraft.client.render.VertexFormats.POSITION_TEXTURE_COLOR);
         for(var mt:order){
-            float up=mountainUp(end,mt,t);double lift=-(1-up)*MOUNTAIN_RISE;
-            for(int i=0;i<MOUNTAIN_COLS;i++){
-                float u0=i/(float)MOUNTAIN_COLS,u1=(i+1)/(float)MOUNTAIN_COLS;
-                double x0=(u0-.5)*2*MOUNTAIN_HALF,x1=(u1-.5)*2*MOUNTAIN_HALF;
-                float a0=up*occlusion(mt,x0,camAz),a1=up*occlusion(mt,x1,camAz);
-                texVertex(buf,mat,onMountain(centre,mt,x0,lift,0),u0,1,a0);
-                texVertex(buf,mat,onMountain(centre,mt,x1,lift,0),u1,1,a1);
-                texVertex(buf,mat,onMountain(centre,mt,x1,lift+MOUNTAIN_TOP,0),u1,0,a1);
-                texVertex(buf,mat,onMountain(centre,mt,x0,lift+MOUNTAIN_TOP,0),u0,0,a0);
+            // each in a draw call of its own, the farthest first, its painting bound for it
+            com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0,ART[mt.art()]);
+            buf.begin(net.minecraft.client.render.VertexFormat.DrawMode.QUADS,net.minecraft.client.render.VertexFormats.POSITION_TEXTURE_COLOR);
+            float up=mountainUp(end,mt,t);double lift=-(1-up)*MOUNTAIN_RISE,half=mt.half(),top=mt.top();
+            int cols=mt.art()==0?MOUNTAIN_COLS:Math.max(4,(int)Math.ceil(MOUNTAIN_COLS*half/MOUNTAIN_HALF));
+            for(int i=0;i<cols;i++){
+                float u0=i/(float)cols,u1=(i+1)/(float)cols;
+                double x0=(u0-.5)*2*half,x1=(u1-.5)*2*half;
+                float a0=mt.alpha()*up*occlusion(mt,x0,camAz),a1=mt.alpha()*up*occlusion(mt,x1,camAz);
+                float t0=mt.flip()?1-u0:u0,t1=mt.flip()?1-u1:u1;
+                texVertex(buf,mat,onMountain(centre,mt,x0,lift,0),t0,1,a0);
+                texVertex(buf,mat,onMountain(centre,mt,x1,lift,0),t1,1,a1);
+                texVertex(buf,mat,onMountain(centre,mt,x1,lift+top,0),t1,0,a1);
+                texVertex(buf,mat,onMountain(centre,mt,x0,lift+top,0),t0,0,a0);
             }
+            net.minecraft.client.render.BufferRenderer.drawWithGlobalProgram(buf.end());
         }
-        net.minecraft.client.render.BufferRenderer.drawWithGlobalProgram(buf.end());
     }
     static void texVertex(net.minecraft.client.render.BufferBuilder b,org.joml.Matrix4f m,Vec3d p,float u,float v,float a){
         b.vertex(m,(float)p.x,(float)p.y,(float)p.z).texture(u,v).color(255,255,255,Math.max(0,Math.min(255,Math.round(a*255)))).next();
@@ -884,7 +941,7 @@ final class SwordFormation {
     /** How much of the mountain {@code mt} stands the way {@code az} (0 to 1): 1 along it, fading out over EDGE_FADE blocks past its ends; 0 off to its sides. */
     static double along(Mountain mt,double az){
         double off=Math.IEEEremainder(az-mt.az(),Math.PI*2);if(Math.abs(off)>1.2)return 0;
-        double over=Math.abs(mt.radius()*off)-MOUNTAIN_HALF;
+        double over=Math.abs(mt.radius()*off)-mt.half();
         return over<=0?1:1-Ease.smooth((float)over,0,(float)EDGE_FADE);
     }
     /** How much a mountain stands the way {@code az} (0 to 1, the most of any). */
