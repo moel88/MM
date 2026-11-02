@@ -167,75 +167,103 @@ class SwordFormationTest {
         assertTrue(across<=(SwordFormation.S_GUARD_W+SwordFormation.S_KNOB*1.7)*SwordFormation.THIN+1e-9,"its guard no wider than THIN of it: "+across);
         assertTrue(through<=.07*SwordFormation.THIN,"no thicker than THIN of it: "+through);
     }
-    @Test void theMountainsAreBroadMassesOneBeforeAnotherRimmedFromTheirSummits(){
+    @Test void sixOfTheSameMountainGoAllTheWayRoundAsTheStillShowsIt(){
+        // 2.82.16 ("이제 산 갈아엎고 사진이랑 똑같이 만들어봐 인게임에서는 저거랑 똑같은 산 6개가 한 바퀴로 둘러져있음")
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
         float yaw=40;var all=SwordFormation.mountains(id,yaw);
         assertEquals(6,all.length);
         assertSame(all,SwordFormation.mountains(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()),yaw),"the same mountains for the same formation");
-        double behind=SwordFormation.behind(yaw);
-        for(var mt:all){
-            assertTrue(mt.radius()>IsosangRules.FORMATION_RADIUS+1,"outside the formation");
-            // (2.82.4) none behind her, where her camera looks at her from: no mass reaches within 25 degrees of it
-            for(var p:mt.peaks())for(double x:new double[]{p.xs()[0],p.xs()[p.xs().length-1]}){
-                double a=mt.az()+Math.atan2(x,mt.radius()-p.front());
-                assertTrue(Math.abs(MathHelper.wrapDegrees(Math.toDegrees(a-behind)))>25,"a mountain behind her: "+Math.toDegrees(a-behind));
-            }
-            assertTrue(mt.peaks().length>=3&&mt.peaks().length<=4);
-            double front=-1;
-            for(var p:mt.peaks()){
-                assertTrue(p.front()>front,"each mass before the last");front=p.front();
-                assertTrue(p.height()<=mt.peaks()[0].height()+1e-9,"the back one the tallest");
-                // its outline: from the ground up to its summit, the highest point, and down again; x only growing along it
-                assertEquals(0,p.ys()[0],1e-9);assertEquals(0,p.ys()[p.ys().length-1],1e-9);
-                for(int i=0;i+1<p.xs().length;i++)assertTrue(p.xs()[i+1]>p.xs()[i],"x grows along the outline");
-                for(int i=0;i<p.ys().length;i++)if(i!=p.top())assertTrue(p.ys()[i]<p.height(),"the summit the highest");
-                // round at its summit: the outline falls slowly just under it, steeper further down
-                double near=p.height()-p.at(p.xs()[p.top()]+.05*(p.xs()[p.xs().length-1]-p.xs()[p.top()]));
-                assertTrue(near<.1*p.height(),"a round summit: "+near);
-                // a broad mass, not a needle
-                double wide=p.xs()[p.xs().length-1]-p.xs()[0];
-                if(p==mt.peaks()[0])assertTrue(wide>1.15*p.height()&&wide<2.4*p.height(),"the tall one broad: "+wide+" for "+p.height());
-                assertTrue(p.rimL()>.3&&p.rimL()<=1&&p.rimR()>.3&&p.rimR()<=1);
-                // its ridges run down inside it from the top
-                assertTrue(p.ridges().length>=2,"a ridge from the summit down each flank");
-                for(int r=0;r<p.ridges().length;r++){
-                    var ridge=p.ridges()[r];
-                    assertTrue(ridge[0][1]>ridge[ridge.length-1][1],"a ridge runs down");
-                    for(var q:ridge)assertTrue(q[1]>=0&&q[1]<=p.at(q[0])+1e-9,"a ridge inside the mass");
-                }
-            }
-            assertTrue(mt.peaks()[0].height()>4&&mt.peaks()[0].height()<7,"as tall as the video's (the clouds among their summits)");
+        double behind=SwordFormation.behind(yaw),half=0,top=0,leftTop=0;
+        for(int i=0;i<all.length;i++){
+            var mt=all[i];
+            assertSame(SwordFormation.MOUNTAIN,mt.peaks(),"all the same mountain");
+            assertEquals(SwordFormation.MOUNTAIN_R,mt.radius(),1e-12);assertTrue(mt.radius()>IsosangRules.FORMATION_RADIUS+2,"outside the formation");
+            // evenly round, a sixth apart, two of them meeting right behind her
+            assertEquals(60,MathHelper.wrapDegrees(Math.toDegrees(all[(i+1)%6].az()-mt.az())),1e-6);
+            assertEquals(30,Math.abs(MathHelper.wrapDegrees(Math.toDegrees(mt.az()-behind)))%60,1e-6,"their middles 30 degrees off behind her");
         }
+        double front=-1;
+        for(var p:SwordFormation.MOUNTAIN){
+            assertTrue(p.front()>front,"each layer before the last");front=p.front();
+            // its outline: from the ground up over its summit, the highest point, and down again; x only growing along it
+            assertEquals(0,p.ys()[0],1e-9);assertEquals(0,p.ys()[p.ys().length-1],1e-9);
+            for(int k=0;k+1<p.xs().length;k++)assertTrue(p.xs()[k+1]>p.xs()[k],"x grows along the outline");
+            for(int k=0;k<p.ys().length;k++)if(k!=p.top())assertTrue(p.ys()[k]<p.height(),"the summit the highest");
+            assertTrue(p.rimL()>.2&&p.rimL()<=1&&p.rimR()>.2&&p.rimR()<=1);
+            half=Math.max(half,Math.max(-p.xs()[0],p.xs()[p.xs().length-1]));top=Math.max(top,p.height());
+            if(p.xs()[p.top()]<0)leftTop=Math.max(leftTop,p.height());
+        }
+        assertEquals(17,SwordFormation.MOUNTAIN.length,"its layers as the still shows them");
+        // as the still: the right one's spire the highest, the left one's peak some eight tenths of it
+        assertEquals(SwordFormation.MOUNTAIN_TOP,top,1e-6);assertEquals(145/178.0,leftTop/top,.01);
+        assertTrue(SwordFormation.MOUNTAIN_TOP<5,"smaller (\"산 크기가 너무 커 지금 더 줄이고\")");
+        // most of a sixth of the round each, round the circle, a little gap between neighbours (as the still's)
+        double sixth=SwordFormation.MOUNTAIN_R*Math.PI/6;
+        assertTrue(half<sixth-.5&&half>.65*sixth,"most of a sixth of the round: "+half+" of "+sixth);
+        // on the circle (not a hexagon of flat faces): every point of a face as far from the middle
+        Vec3d mid=new Vec3d(0,0,0);
+        for(var mt:all)for(double x=-half;x<=half;x+=.5)
+            assertEquals(mt.radius(),SwordFormation.onMountain(mid,mt,x,0,0).horizontalLength(),1e-9,"round the circle");
+        // floating over the ground ("영상에는 산이 중간에 떠있는데"), their feet fraying away above it in the shader
+        assertEquals(SwordFormation.MOUNTAIN_FLOAT,SwordFormation.onMountain(mid,all[0],0,0,0).y,1e-12);
+        assertTrue(SwordFormation.MOUNTAIN_FLOAT>.5&&SwordFormation.MOUNTAIN_FLOAT<3,"floating, a little (\"조금 더 낮추고\")");
+        // each layer's rim: full at its summit, fading down each flank, none at its feet; only near the summit while it
+        // is still being drawn
+        for(var p:SwordFormation.MOUNTAIN){
+            float[] rim=SwordFormation.rimAlong(p,1,1);
+            assertEquals(1,rim[p.top()],1e-6);assertEquals(0,rim[0],.02);assertEquals(0,rim[rim.length-1],.02);
+            for(int k=p.top();k>0;k--)assertTrue(rim[k-1]<=rim[k]+1e-6,"fading down the left flank");
+            for(int k=p.top();k+1<rim.length;k++)assertTrue(rim[k+1]<=rim[k]+1e-6,"fading down the right flank");
+            float[] early=SwordFormation.rimAlong(p,1,.3f);
+            for(int k=0;k<rim.length;k++)assertTrue(early[k]<=rim[k]+1e-6,"drawn down from the summit");
+        }
+        // all the way round, a gap between each two and one of the gaps right behind her (her camera looks in through it)
+        var ms=all;
+        for(var mt:ms)assertEquals(1,SwordFormation.mountainCover(ms,mt.az()),1e-9,"a mountain at each sixth");
+        assertTrue(SwordFormation.mountainCover(ms,behind)<.1,"a gap behind her");
+        double low=0;
+        for(var mt:ms){
+            double off=Math.IEEEremainder(behind-mt.az(),Math.PI*2);if(Math.abs(off)>Math.PI/3)continue;
+            double x=mt.radius()*off;for(var p:mt.peaks())low=Math.max(low,p.at(x));
+        }
+        assertTrue(low<.05,"nothing standing right behind her: "+low);
+        // where they stand before her camera, out behind her, they thin to let her be seen; not inside their ring
+        var mt0=all[0];double back=SwordFormation.behind(yaw),toBack=Math.IEEEremainder(back-mt0.az(),Math.PI*2)*mt0.radius();
+        assertEquals(SwordFormation.OCCLUDED,SwordFormation.occlusion(mt0,toBack,back),1e-6);
+        assertEquals(1,SwordFormation.occlusion(mt0,toBack,Double.NaN),1e-9);
+        assertEquals(1,SwordFormation.occlusion(mt0,toBack,back+Math.PI),1e-6);
     }
-    @Test void cloudsCurlOverTheMountainsAndWispsOfMistDriftLow(){
+    @Test void faintHazeTurnsSlowlyOverTheMountainsAndWispsOfMistDriftLow(){
+        // 2.82.16 ("산 위에는 희미한 안개같은 구름이 천천히 돌아가고"): banks of faint haze over and behind the mountains, all
+        // turning slowly the same way together; the low wisps of mist as before; no curled clouds any more
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
         float yaw=-70;var all=SwordFormation.clouds(id,yaw);
-        int high=0,low=0;double behind=SwordFormation.behind(yaw);
+        int high=0,low=0;
         for(var cl:all){
-            // (2.82.4) none of the clouds behind her, where her camera looks at her from (the mist low under it is), even as they drift
-            if(!cl.mist())for(float t:new float[]{0,20,41})
-                assertTrue(Math.abs(MathHelper.wrapDegrees(Math.toDegrees(cl.az()+cl.drift()*t-behind)))>40,"a cloud behind her at "+t);
-            if(!cl.mist()){
-                assertTrue(cl.turns()>.6,"its curl winds round");
-                if(cl.radius()>IsosangRules.FORMATION_RADIUS+4){high++;assertTrue(cl.up()>4.5,"among and over the summits");assertTrue(cl.thick()>1.1,"a full band");}
+            assertTrue(cl.mist(),"no curled clouds");
+            if(cl.haze()){
+                high++;
+                assertTrue(cl.up()>2.5&&cl.up()<6.3,"from among the mountains up over their summits: "+cl.up());
+                assertTrue(cl.radius()>SwordFormation.MOUNTAIN_R-1,"round and behind the mountains");
+                assertEquals(SwordFormation.HAZE_TURN,cl.drift(),1e-12,"turning together");
             }else{low++;assertTrue(cl.up()<1.1&&cl.radius()<IsosangRules.FORMATION_RADIUS+1,"a wisp low over the formation");}
-            // its band runs on without a break, from the inner end of its curl out to its tail, thinning to nothing there
+            // its band runs on without a break, thinning to nothing at its end(s)
             var path=SwordFormation.cloudPath(cl,10,1);
-            assertEquals(SwordFormation.curlPoints(cl)+(int)Math.max(8,(int)(cl.length()/.22))+1,path.size());
-            for(int i=0;i+1<path.size();i++){
-                double d=Math.hypot(path.get(i+1)[0]-path.get(i)[0],path.get(i+1)[1]-path.get(i)[1]);
+            for(int k=0;k+1<path.size();k++){
+                double d=Math.hypot(path.get(k+1)[0]-path.get(k)[0],path.get(k+1)[1]-path.get(k)[1]);
                 assertTrue(d<.35,"a gap in a cloud's band: "+d);
             }
             assertEquals(0,path.get(path.size()-1)[2],1e-9,"its tail thins to nothing");
-            assertTrue(path.stream().mapToDouble(q->q[2]).max().orElse(0)>.99,"full in its body");
+            if(cl.haze())assertEquals(0,path.get(0)[2],1e-9,"a bank of haze soft at both ends");
+            assertTrue(path.stream().mapToDouble(q->q[2]).max().orElse(0)>.95,"full in its body");
             // it drifts and its wave runs along it as a function of the clock: no jump from one frame to the next
             var a=SwordFormation.cloudPath(cl,10,1);var b=SwordFormation.cloudPath(cl,10+1/60f,1);
-            for(int i=0;i<a.size();i++)assertEquals(a.get(i)[1],b.get(i)[1],.02,"a cloud jumps");
+            for(int k=0;k<a.size();k++)assertEquals(a.get(k)[1],b.get(k)[1],.02,"a cloud jumps");
         }
-        assertEquals(6,high,"six over and behind the mountains");assertEquals(7,low,"seven wisps of mist");
-        // coming in, it flows out from where its curl meets its band
-        var cl=all[0];var in=SwordFormation.cloudPath(cl,cl.in()+.1f,.2f);
-        assertTrue(in.get(in.size()-1)[2]==0&&in.stream().anyMatch(q->q[2]>.3),"flowing out as it comes in");
+        assertEquals(SwordFormation.HAZE,high);assertEquals(7,low,"seven wisps of mist");
+        assertTrue(Math.PI*2/SwordFormation.HAZE_TURN>90,"slowly: a turn in some two minutes");
+        assertTrue(SwordFormation.HAZE_ALPHA>.15f&&SwordFormation.HAZE_ALPHA<.25f,"denser (\"안개 구름도 더 진하게\"), still see-through");
+        assertTrue(SwordFormation.HAZE_NEAR0<SwordFormation.HAZE_NEAR1,"thinning away as the camera comes into it");
     }
     @Test void theInkCoversTheGroundGathersIntoTheMiddleThenSwirlsOutAsAWhirlpoolAndSpreadsAway(){
         // (2.82.5, "처음에 잉크가 중앙에 모였다가 점점 확장하고 검이 박히게": 2.82.4's pool opened under her and grew; the
@@ -498,30 +526,32 @@ class SwordFormationTest {
     }
     @Test void theWaterRunsUpToTheMountainsFeet(){
         // 2.82.14 ("산이랑 물이랑 X좌표 붙어있게 해"): each way round the water runs to the nearest mountain standing that
-        // way and a little under it, never stopping short of it; behind her (no mountain) as far as the farthest one; its
-        // edge smooth all round; its pale strands along the mountains' feet only, inside the water
+        // way and a little under it, never stopping short of it; its edge smooth all round; its pale strands along the
+        // mountains' feet, inside the water (2.82.16: the mountains all the way round)
         int checked=0;
         for(long seed=1;seed<=24;seed++){
             UUID id=new UUID(seed*0x9E3779B97F4A7C15L,~seed*31);float yaw=(float)(seed*47%360);
             var ms=SwordFormation.mountains(id,yaw);var sh=SwordFormation.shore(id,yaw);
-            double far=0;for(var mt:ms)far=Math.max(far,mt.radius());
+            double far=0;for(var mt:ms)far=Math.max(far,mt.radius());double cap=far;
             int n=SwordFormation.SHORE_STEPS;double last=Double.NaN;
             for(int k=0;k<=n*10;k++){
                 double az=Math.PI*2*k/(n*10),e=SwordFormation.waterEdge(ms,az),nearest=far;
                 for(var mt:ms){
                     double w=SwordFormation.along(mt,az);if(w<=0)continue;
-                    double s=mt.radius()/Math.cos(Math.IEEEremainder(az-mt.az(),Math.PI*2));
+                    double s=mt.radius();
                     if(w>=1)assertTrue(e<=s+1e-9,"it runs to every mountain standing that way: "+e+" "+s);
                     nearest=Math.min(nearest,s);
                 }
                 assertTrue(e>=nearest-1e-9,"never short of the nearest: "+e+" "+nearest);
-                assertTrue(e<=far+1e-9&&e>SwordFormation.WATER_IN+SwordFormation.STRAND_FROM,"between: "+e);
+                assertTrue(e<=cap+1e-9&&e>SwordFormation.WATER_IN+SwordFormation.STRAND_FROM,"between: "+e);
                 if(!Double.isNaN(last))assertEquals(last,e,.25,"its edge jumps at "+az);
                 last=e;checked++;
             }
+            // (2.82.16) the water's edge the circle at the mountains' feet, right round (behind her, in the gap between
+            // two, too); no strands in the gap
             double back=SwordFormation.behind(yaw);
-            assertEquals(far,SwordFormation.waterEdge(ms,back),1e-9,"behind her as far as the farthest mountain");
-            assertEquals(0,SwordFormation.mountainCover(ms,back),1e-9,"no strands behind her");
+            assertEquals(SwordFormation.MOUNTAIN_R,SwordFormation.waterEdge(ms,back),1e-9,"on the circle behind her too");
+            assertTrue(SwordFormation.mountainCover(ms,back)<.1,"no strands in the gap behind her");
             for(var mt:ms){
                 assertEquals(1,SwordFormation.mountainCover(ms,mt.az()),1e-9,"strands at its feet");
                 assertTrue(SwordFormation.waterEdge(ms,mt.az())<=mt.radius()+1e-9,"up to its face");

@@ -771,6 +771,47 @@ void main(){
   float body=1.0-smoothstep(.45+n*.45,.95,r);
   rgb=mix(vec3(.02,.0,.05),vec3(.30,.04,.62),smoothstep(.45,.85,n)*.8);
   alpha=body*(.55+.45*n)*tint.a;
+ }else if(Mode==18){
+  // Lee So-sang's H's ink mountains (2.82.16, user request: "이제 산 갈아엎고 사진이랑 똑같이 만들어봐", "산이 더 연해야 하고
+  // 퀄리티가 너무 안 좋아 퀄리티를 더 높히고", "산 퀄리티 올리라고 했을텐데 그리고 영상에는 산이 중간에 떠있는데 너가 만든건
+  // 왜 바닥에서 부터 산이 있냐? 그리고 왜 이렇게 연해짐?"): a layer of the mountain traced from the user's still, bent
+  // round the formation's circle and floating over its ground (SwordFormation.mountainInk). uv.x along the layer
+  // (blocks, each layer its own offset), uv.y how far below its top edge (blocks, straight down); tint.r how strongly its
+  // rim shows there, tint.g the cosine of its top edge's slope there (so its rim is as fine across the edge however
+  // steep it falls), tint.b how high over the mountain's foot (of 8 blocks), tint.a how strongly it shows (rising, and
+  // thinning where it stands before her camera).
+  float rimK=tint.r,cs=max(tint.g,.12),hy=tint.b*8.0,d=max(uv.y,0.0)*cs,aa=max(fwidth(d),1e-4);
+  // a dark slate ink (charcoal with a little blue, as the still's), barely lighter low on it; its tone mottled and
+  // streaked up and down as a brush leaves it, faint lighter washes in it, deepest just under its rim
+  float n1=fbm(vec2(uv.x*1.3,hy*.5)),n2=fbm(vec2(uv.x*3.8+11.0,hy*1.4+3.0)),n3=fbm(vec2(uv.x*10.0+5.0,hy*1.1+1.7));
+  // (2.82.16, "산을 더 투명하게 만들고 테두리 제외 산을 더 어둡게": darker and more see-through)
+  vec3 body=mix(vec3(.04,.046,.068),vec3(.024,.028,.044),smoothstep(.3,4.0,hy));
+  body*=.8+.42*(.55*n1+.3*n2+.15*n3);
+  body+=vec3(.035,.04,.055)*smoothstep(.62,.8,n2)*smoothstep(.2,.8,d);
+  body=mix(body,vec3(.01,.012,.024),exp(-d/.25)*.7);
+  // texture strokes inside it, as an ink painting's: faint lines of light following its top edge's shape at three
+  // depths, broken here and there, fainter the deeper
+  float vv=max(uv.y,0.0),echo=0.0;
+  for(int k=1;k<=3;k++){
+   float dk=.2*float(k)+.06*float(k*k),gk=exp(-pow((vv-dk)/(.026+.008*float(k)),2.0));
+   echo+=gk*smoothstep(.42,.68,fbm(vec2(uv.x*1.9+float(k)*7.1,2.3+float(k))))*(1.15-.25*float(k));
+  }
+  body+=vec3(.13,.17,.32)*echo*.7*max(rimK,.35);
+  // its rim (2.82.16, "산 퀄리티를 엄청 높여봐"): a bright pale line along its top edge, its width wavering as a brush's,
+  // a light blue band under it and a soft blue light round it, as bold as the still's
+  // (crisp, as the still's: a white-blue core, a pale blue band, a dim blue light just under it; brighter and broken
+  // here and there along the edge as a dry brush runs)
+  float wob=.7+.6*fbm(vec2(uv.x*2.2,9.1)),brk=smoothstep(.22,.5,fbm(vec2(uv.x*3.1,4.3))),rk=rimK*(.55+.45*brk);
+  float w=(.04+.05*rimK)*wob;
+  float core=1.0-smoothstep(w*.5-aa*.5,w*.8+aa*.5,d),band=1.0-smoothstep(w*.8-aa*.5,w*1.35+aa*.5,d),halo=exp(-d/(w*1.5));
+  vec3 col=mix(body,vec3(.2,.3,.72),clamp(halo*.35*rk,0.0,1.0));
+  col=mix(col,vec3(.6,.73,1.0),clamp(band*rk,0.0,1.0));
+  col=mix(col,vec3(.93,.96,1.0),clamp(core*rk*(.8+.2*rimK),0.0,1.0));
+  // its edge crisp but not jagged; floating, its foot frays away into the air
+  float edge=smoothstep(0.0,aa*1.4,d);
+  float foot=smoothstep(0.0,1.0,hy+.5*(fbm(vec2(uv.x*1.6,7.3))-.5)+.2*(n3-.5));
+  rgb=col;
+  alpha=tint.a*edge*foot*clamp(.6+.24*exp(-d/.35)+.08*(n1-.5)+.6*max(core,band*.8)*rk,0.0,1.0);
  }else{
   float y=uv.y;
   vec2 flow=vec2(uv.x*3.0+seed, y*3.7-t*2.1);

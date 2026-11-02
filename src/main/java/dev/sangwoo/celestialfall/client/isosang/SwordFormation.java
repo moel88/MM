@@ -504,96 +504,81 @@ final class SwordFormation {
     }
     private static final Map<UUID,Mountain[]> MOUNTAINS=new LinkedHashMap<>();
     /**
-     * How far round from right behind her (seen from the formation's middle, radians) no mountain stands and no cloud
-     * hangs (2.82.4: she stands on the formation's outer ring and her camera looks at her from behind, from out over the
-     * mountains' ring; a mountain or a cloud there would stand between them). The clouds keep further off: they drift.
+     * How far round from right behind her (seen from the formation's middle, radians) the mist at the rim stands low
+     * (2.82.4: she stands on the formation's outer ring and her camera looks at her from behind, from out over the
+     * mountains' ring; until 2.82.15 no mountain stood there either, nor a cloud near it).
      */
-    static final double MOUNTAIN_GAP=Math.toRadians(50),CLOUD_GAP=Math.toRadians(70);
+    static final double MOUNTAIN_GAP=Math.toRadians(50);
     /** The way from the formation's middle to where she stands (radians in the world's x, z), as it faced {@code yaw}. */
     static double behind(float yaw){Vec3d b=Vec3d.fromPolar(0,yaw).negate();return Math.atan2(b.z,b.x);}
     /**
-     * The mountains of the formation of swing {@code id} (the same on every client), its user having faced {@code yaw}:
-     * six round it, a little apart, each a broad mass with a lower one beside it a little before it and one or two
-     * foothills before them; none behind her (2.82.4, MOUNTAIN_GAP).
+     * The mountains of the formation of swing {@code id}, its user having faced {@code yaw} (2.82.16, user request: "이제 산
+     * 갈아엎고 사진이랑 똑같이 만들어봐 인게임에서는 저거랑 똑같은 산 6개가 한 바퀴로 둘러져있음", with their still of the
+     * game): six of the same mountain (MOUNTAIN, traced from the still) all the way round, MOUNTAIN_R blocks out, a sixth
+     * of the round apart, their faces bent round the circle looking at its middle, a little gap between neighbours (as the
+     * still's); one of the gaps right behind her (her camera looks in at her from out there, through it).
      */
     static Mountain[] mountains(UUID id,float yaw){
         var l=MOUNTAINS.get(id);if(l!=null)return l;
         int s0=(int)(id.getLeastSignificantBits()*31+id.getMostSignificantBits());
-        int n=6;l=new Mountain[n];double off=behind(yaw)+MOUNTAIN_GAP,span=Math.PI*2-2*MOUNTAIN_GAP;
-        for(int i=0;i<n;i++){
+        l=new Mountain[MOUNTAIN_COUNT];double off=behind(yaw)+Math.PI/MOUNTAIN_COUNT;
+        for(int i=0;i<MOUNTAIN_COUNT;i++){
             int seed=s0+211*(i+1);
-            double az=off+span*(i+.5+.3*(Ease.hash(seed+1)-.5))/n,radius=IsosangRules.FORMATION_RADIUS+2.6+1.6*Ease.hash(seed+2);
-            double tall=4.4+2.0*Ease.hash(seed+4),side=Ease.hash(seed+6)<.5?-1:1;int count=3+(Ease.hash(seed+5)<.5?1:0);
-            // from the back to the front: where along the mountain and how tall (of the tall one's height), how broad (half its foot, of its own height), how far before the face, how late it rises
-            double[][] plan={{(Ease.hash(seed+7)-.5)*.4,1,.7+.25*Ease.hash(seed+8),0,0},
-                {side*(.55+.2*Ease.hash(seed+9)),.55+.2*Ease.hash(seed+10),.75+.25*Ease.hash(seed+11),.14,.06},
-                {-side*(.3+.25*Ease.hash(seed+12)),.28+.12*Ease.hash(seed+13),.95+.35*Ease.hash(seed+14),.32,.1},
-                {side*(.9+.2*Ease.hash(seed+15)),.2+.1*Ease.hash(seed+16),.95+.35*Ease.hash(seed+17),.46,.13}};
-            Peak[] peaks=new Peak[count];
-            for(int j=0;j<count;j++){
-                double h=tall*plan[j][1],half=h*plan[j][2];
-                peaks[j]=massOf(plan[j][0]*tall,h,half*(.88+.24*Ease.hash(seed+30+j)),half*(.88+.24*Ease.hash(seed+40+j)),plan[j][3],(float)plan[j][4],seed+1000*(j+1));
-            }
-            l[i]=new Mountain(az,radius,peaks,.14f*(float)Ease.hash(seed+90),seed);
+            l[i]=new Mountain(off+Math.PI*2*i/MOUNTAIN_COUNT,MOUNTAIN_R,MOUNTAIN,.14f*(float)Ease.hash(seed+90),seed);
         }
         MOUNTAINS.put(id,l);while(MOUNTAINS.size()>16)MOUNTAINS.remove(MOUNTAINS.keySet().iterator().next());
         return l;
     }
-    /** How many points down each flank of a mass. */
-    static final int FLANK=24;
-    /** A flank of a mass, from its summit down to its foot: its points, where its shoulders are (of the way down it), how concave it is. */
-    record Flank(double[][] pts,double[] shoulders,double bend){}
+    static final int MOUNTAIN_COUNT=6;
+    static final double MOUNTAIN_R=IsosangRules.FORMATION_RADIUS+3.4;
     /**
-     * A flank ({@code dir} -1 to the left, 1 to the right): round under the summit, steep there and spreading out toward
-     * its foot (concave), with one or two shoulders swelling out of it, a little uneven.
+     * The mountain, traced from the user's still of the game (2.82.16): its layers from the back to the front, each its
+     * summit's index in its outline, how far down its left and right flanks its rim runs (of the flank), then its outline
+     * from its left foot over its summit to its right foot in the still's pixels (x to the right, y down, x only growing
+     * along it). Two groups side by side: on the left a peak with a lower one at its left shoulder, a ridge nested in
+     * that, two ridges nested inside the peak and a little foothill before it; on the right two spires side by side with
+     * ridges stepping down from them to the right (two rising behind the step), ridges nested inside them and three small
+     * spires before them. Every layer a dark ink rimmed in light blue along its top from its summit down, as the still's.
      */
-    static Flank flank(double x0,double h,double half,int dir,int seed){
-        double bend=1.3+.45*Ease.hash(seed),c=.07,norm=Math.sqrt(1+c*c)-c;
-        int humps=Ease.hash(seed+1)<.55?1:2;double[] hu=new double[humps],hw=new double[humps],hh=new double[humps];
-        for(int k=0;k<humps;k++){
-            hu[k]=humps==1?.38+.25*Ease.hash(seed+2):k==0?.28+.14*Ease.hash(seed+2):.56+.16*Ease.hash(seed+3);
-            hw[k]=.07+.06*Ease.hash(seed+4+k);hh[k]=.05+.07*Ease.hash(seed+6+k);
-        }
-        double[][] pts=new double[FLANK+1][];
-        for(int i=0;i<=FLANK;i++){
-            double u=i/(double)FLANK,ue=(Math.sqrt(u*u+c*c)-c)/norm,y=h*Math.pow(1-ue,bend);
-            for(int k=0;k<humps;k++){double z=(u-hu[k])/hw[k];if(Math.abs(z)<1){double cz=Math.cos(z*Math.PI/2);y+=h*hh[k]*cz*cz;}}
-            y+=h*.016*(.6*Math.sin(u*19+seed)+.4*Math.sin(u*41+seed*1.7))*4*u*(1-u);
-            pts[i]=new double[]{x0+dir*half*u,i==0?h:i==FLANK?0:MathHelper.clamp(y,0,h*.985)};
-        }
-        double[] tops=new double[humps];for(int k=0;k<humps;k++)tops[k]=hu[k];
-        return new Flank(pts,tops,bend);
-    }
+    static final double[][] MOUNTAIN_PX={
+        // the left group: its shoulder peak, a ridge in it, the main peak, two ridges nested in it, a foothill
+        {9,.95,.4,  573,300,577,279,580,267,584,253,588,239,592,223,596,211,600,199,606,189,614,183,620,189,626,195,632,201,638,216,644,240,650,300},
+        {6,.85,.35, 583,300,586,275,590,259,594,243,598,227,604,219,610,215,618,221,626,229,632,242,637,300},
+        {10,.95,.85,603,300,610,279,616,263,624,239,630,219,636,201,642,191,650,181,658,171,666,162,674,155,682,163,688,173,692,183,696,195,700,207,703,219,706,231,710,243,714,255,718,265,723,300},
+        {9,.85,.55, 613,300,622,271,628,255,636,239,644,225,650,215,656,207,662,199,670,193,679,187,685,191,690,201,694,211,698,223,702,233,706,252,711,300},
+        {5,.45,.45, 655,300,662,262,666,240,668,230,672,221,678,215,684,219,690,229,694,235,700,240,705,300},
+        {2,.8,.8,   584,300,590,292,595,288,600,292,607,300},
+        // the right group: the twin spires, the two peaks rising behind the step, the step, a ridge in the step, two ridges
+        // nested in the spires, one more under them, three small spires before them
+        {20,1,.4,   739,300,740,280,741,262,742,247,743,232,745,214,747,197,751,184,754,172,756,162,757,152,759,143,762,137,767,134,775,135,782,136,787,142,792,137,800,131,806,125,810,122,815,127,819,137,822,150,825,160,827,170,830,178,834,195,838,240,842,300},
+        {5,.45,.9,  870,300,876,250,880,232,884,218,888,209,892,204,897,210,901,220,905,230,910,242,917,252,925,260,932,265,940,275,950,282,960,286,975,292,992,300},
+        {4,.5,.85,  874,300,879,258,882,246,887,236,895,227,905,235,915,242,922,239,930,250,935,260,937,270,945,286,955,300},
+        {4,.3,.9,   811,300,815,205,819,190,824,184,835,181,847,185,857,190,865,200,870,210,875,222,882,240,890,255,900,265,912,274,928,288,945,300},
+        {3,.3,.8,   836,300,839,225,841,208,845,197,852,210,857,220,862,232,870,245,877,255,885,262,895,267,905,275,916,300},
+        {7,.65,.8,  751,300,754,232,756,212,759,200,762,192,767,185,772,177,779,172,785,175,791,180,796,185,800,195,802,205,806,215,810,227,815,240,821,300},
+        {4,.3,.5,   788,300,791,200,794,178,798,169,803,165,810,169,815,175,822,183,828,200,833,300},
+        {4,.5,.7,   799,300,805,240,809,227,812,220,817,215,822,220,827,227,831,237,834,250,839,300},
+        {5,.8,.6,   749,300,754,270,756,260,759,250,761,240,765,234,769,240,771,250,772,260,775,300},
+        {3,.7,.9,   769,300,776,265,779,255,782,250,786,255,790,265,795,280,800,293,803,300},
+        {2,.9,.9,   805,300,810,294,817,290,824,294,829,300}};
     /**
-     * A mass: its summit {@code x} along its mountain and {@code h} up, its foot {@code halfL} out to the left and {@code halfR}
-     * to the right; its ridges: one from the summit down each flank into its face, steeper than the flank, and one down
-     * from each shoulder, all kept inside its outline.
+     * Where the still's mountain stands in it (its middle and its ground, pixels), how high its summit stands (blocks;
+     * 2.82.16, user request: "산 크기가 너무 커 지금 더 줄이고": some 4.6 blocks, a gap between neighbours), and so how many
+     * blocks a pixel of it is.
      */
-    static Peak massOf(double x,double h,double halfL,double halfR,double front,float delay,int seed){
-        Flank left=flank(x,h,halfL,-1,seed+10),right=flank(x,h,halfR,1,seed+50);
-        int n=left.pts().length+right.pts().length-1,k=0;double[] xs=new double[n],ys=new double[n];
-        for(int i=left.pts().length-1;i>=0;i--){xs[k]=left.pts()[i][0];ys[k]=left.pts()[i][1];k++;}
-        for(int i=1;i<right.pts().length;i++){xs[k]=right.pts()[i][0];ys[k]=right.pts()[i][1];k++;}
-        List<double[][]> ridges=new ArrayList<>();List<Integer> sides=new ArrayList<>();List<Double> widths=new ArrayList<>();
-        for(int dir=-1;dir<=1;dir+=2){
-            Flank fl=dir<0?left:right;double half=dir<0?halfL:halfR;int rs=seed+(dir<0?60:80);
-            double ue=.2+.16*Ease.hash(rs),ye=h*Math.max(.18,(1-fl.bend()*ue)*.82);
-            double[] a={x+dir*half*.03,h*.975},e={x+dir*half*ue,ye},mid={(a[0]+e[0])/2+dir*half*.035,(a[1]+e[1])/2};
-            ridges.add(within(xs,ys,new double[][]{a,mid,e}));sides.add(dir);widths.add(.62);
-            for(int s=0;s<fl.shoulders().length;s++){
-                double su=fl.shoulders()[s],sx=x+dir*half*su,sy=outlineAt(xs,ys,sx);if(sy<.6)continue;
-                double len=sy*(.42+.16*Ease.hash(rs+5+s)),ex=sx+dir*half*(.05+.06*Ease.hash(rs+7+s)),ey=sy-len;
-                ridges.add(within(xs,ys,new double[][]{{sx,sy*.97},{(sx+ex)/2+dir*.04,(sy+ey)/2},{ex,ey}}));sides.add(dir);widths.add(.48);
-            }
+    static final double MOUNTAIN_MID=782.5,MOUNTAIN_BASE=300,MOUNTAIN_TOP=4.6,MOUNTAIN_SCALE=MOUNTAIN_TOP/178;
+    /** How far before its mountain's face each layer stands (blocks), one after another from the back. */
+    static final double LAYER_STEP=.025;
+    static final Peak[] MOUNTAIN=mountain();
+    /** The traced mountain's layers in blocks along its face (x from its middle, y up), each before the last, rising a little after the ones behind it. */
+    static Peak[] mountain(){
+        Peak[] out=new Peak[MOUNTAIN_PX.length];
+        for(int k=0;k<MOUNTAIN_PX.length;k++){
+            double[] row=MOUNTAIN_PX[k];int n=(row.length-3)/2;double[] xs=new double[n],ys=new double[n];
+            for(int i=0;i<n;i++){xs[i]=(row[3+2*i]-MOUNTAIN_MID)*MOUNTAIN_SCALE;ys[i]=Math.max(0,(MOUNTAIN_BASE-row[4+2*i])*MOUNTAIN_SCALE);}
+            double front=LAYER_STEP*k;
+            out[k]=new Peak(xs,ys,(int)row[0],front,(float)(.6*front),row[1],row[2],new double[0][][],new int[0],new double[0],7919*(k+1));
         }
-        boolean rightLonger=Ease.hash(seed+3)<.6;double longer=.72+.2*Ease.hash(seed+4),shorter=.45+.2*Ease.hash(seed+5);
-        return new Peak(xs,ys,left.pts().length-1,front,delay,rightLonger?shorter:longer,rightLonger?longer:shorter,
-            ridges.toArray(new double[0][][]),sides.stream().mapToInt(Integer::intValue).toArray(),widths.stream().mapToDouble(Double::doubleValue).toArray(),seed);
-    }
-    /** A ridge's points kept inside an outline: each a little under it (and over the ground). */
-    static double[][] within(double[] xs,double[] ys,double[][] pts){
-        double[][] out=new double[pts.length][];
-        for(int i=0;i<pts.length;i++){double top=outlineAt(xs,ys,pts[i][0]);out[i]=new double[]{pts[i][0],MathHelper.clamp(pts[i][1],0,Math.max(0,top-.06-.02*i))};}
         return out;
     }
     /** How tall a mass stands at {@code t} (0 to 1): brushed up out of the ground (each mountain a little after the last, its front masses after its back one), sinking as the formation ends. */
@@ -603,27 +588,130 @@ final class SwordFormation {
     }
     /** How far down from its summit a mass's rims are drawn at {@code t} (0 to 1): the brush runs down as it rises. */
     static float drawn(Mountain mt,Peak p,float t){float d=mt.delay()+p.delay();return Ease.smooth(t,RISE0+d+.06f,RISE1+d+.32f);}
-    /** A point of a mountain's face (fixed in the world, looking at the formation's middle): {@code x} along it, {@code y} up, {@code front} before it. */
+    /**
+     * A point of a mountain's face (fixed in the world, looking at the formation's middle): {@code x} along it round the
+     * circle (blocks at its radius), {@code y} up from its floating foot, {@code front} before it (2.82.16, user request:
+     * "지금은 원이 아니잖아 둘러진게": the faces are bent round the circle, so the six go round it, not as a hexagon of flat
+     * faces).
+     */
     static Vec3d onMountain(Vec3d centre,Mountain mt,double x,double y,double front){
-        Vec3d out=new Vec3d(Math.cos(mt.az()),0,Math.sin(mt.az())),along=new Vec3d(-out.z,0,out.x);
-        return centre.add(out.multiply(mt.radius()-front)).add(along.multiply(x)).add(0,y,0);
+        double a=mt.az()+x/mt.radius(),r=mt.radius()-front;
+        return centre.add(Math.cos(a)*r,MOUNTAIN_FLOAT+y,Math.sin(a)*r);
     }
-    /** The ink of a mass (the blended pass): near black under its outline, washing out a little toward its foot. */
-    static void peakBody(EffectMesh m,Vec3d centre,Mountain mt,Peak p,float h,float a){
-        for(int k=0;k+1<p.xs().length;k++){
-            double x0=p.xs()[k],x1=p.xs()[k+1],y0=p.ys()[k]*h,y1=p.ys()[k+1]*h;
-            if(y0<.01&&y1<.01)continue;
-            Vec3d t0=onMountain(centre,mt,x0,y0,p.front()),t1=onMountain(centre,mt,x1,y1,p.front());
-            Vec3d m0=onMountain(centre,mt,x0,y0*.35,p.front()),m1=onMountain(centre,mt,x1,y1*.35,p.front());
-            Vec3d b0=onMountain(centre,mt,x0,-.08,p.front()),b1=onMountain(centre,mt,x1,-.08,p.front());
-            m.vertex(t0,0x04060d,.95f*a);m.vertex(t1,0x04060d,.95f*a);m.vertex(m1,0x070b1d,.9f*a);m.vertex(m0,0x070b1d,.9f*a);
-            m.vertex(m0,0x070b1d,.9f*a);m.vertex(m1,0x070b1d,.9f*a);m.vertex(b1,0x111a38,.5f*a);m.vertex(b0,0x111a38,.5f*a);
+    /**
+     * How high over the ground the mountains float (blocks; 2.82.16, user request: "영상에는 산이 중간에 떠있는데 너가 만든건
+     * 왜 바닥에서 부터 산이 있냐?": in the video their feet fray away above the ground, the grass showing through and under
+     * them; then "조금 더 낮추고"), their feet fraying away over some block above that (the ink shader).
+     */
+    static final double MOUNTAIN_FLOAT=.8;
+    /**
+     * How strongly a mountain shows at {@code x} along it (0 to 1), her camera {@code camAz} round the formation from its
+     * middle (NaN when her camera is inside the mountains' ring): where it stands between her camera and the formation,
+     * just round from where her camera looks in, it thins to let her be seen (OCCLUDED of it), as a camera does in a game.
+     */
+    static float occlusion(Mountain mt,double x,double camAz){
+        if(Double.isNaN(camAz))return 1;
+        double off=Math.abs(Math.IEEEremainder(mt.az()+x/mt.radius()-camAz,Math.PI*2));
+        return OCCLUDED+(1-OCCLUDED)*Ease.smooth((float)off,(float)OCCLUDE0,(float)OCCLUDE1);
+    }
+    static final float OCCLUDED=.2f;
+    static final double OCCLUDE0=Math.toRadians(4),OCCLUDE1=Math.toRadians(16);
+    /** Which way round the formation her camera is from its middle (radians), or NaN when it is inside the mountains' ring (where they never stand before it). */
+    static double cameraAz(Vec3d centre,Vec3d camera){
+        double dx=camera.x-centre.x,dz=camera.z-centre.z;
+        return Math.hypot(dx,dz)<MOUNTAIN_R-.35?Double.NaN:Math.atan2(dz,dx);
+    }
+    /**
+     * The mountains in ink (2.82.16, user request: "산이 더 연해야 하고 퀄리티가 너무 안 좋아 퀄리티를 더 높히고 산은 더
+     * 연하게 뒤가 조금 보일 정도로", then "산 퀄리티 올리라고 했을텐데", "왜 이렇게 연해짐?"): drawn by the ink shader (mode
+     * 18: a dark blue-grey ink wash, mottled and streaked, deeper under a fine rim of light, a little see-through, its
+     * floating foot fraying away), a draw call of its own inside the ground pass (KagenoFire.inkInterlude), the farthest
+     * mountain from the camera first, each layer over the one behind it (the other way when her camera looks at them
+     * from outside their ring). Each layer a strip of quads from its top edge down to its foot, at most MAX_COL blocks
+     * across (bent round the circle), each told how strongly its rim shows (down each flank from its summit, reaching
+     * further as the mountain rises), how steep its edge falls and how high over the foot it is; thinning where it stands
+     * before her camera (occlusion). The soft glow of the rims is the light pass's (mountainLight).
+     */
+    static void mountainInk(Fx c){
+        float t=c.sec;Vec3d centre=centre(c.cast);double camAz=cameraAz(centre,c.camera);boolean inside=Double.isNaN(camAz);
+        List<Mountain> order=new ArrayList<>(List.of(mountains(c.cast.id(),yaw(c.cast))));
+        order.sort(Comparator.comparingDouble((Mountain mt)->-onMountain(centre,mt,0,2,0).squaredDistanceTo(c.camera)));
+        // the haze first, behind the mountains (it stands behind and over them; drawn after them it veiled them)
+        List<Cloud> haze=new ArrayList<>();for(var cl:clouds(c.cast.id(),yaw(c.cast)))if(cl.haze()&&cloudShown(c.cast,cl,t)>.01f)haze.add(cl);
+        if(!haze.isEmpty()){
+            haze.sort(Comparator.comparingDouble((Cloud cl)->{double a=cl.az()+cl.drift()*t;return -centre.add(Math.cos(a)*cl.radius(),cl.up(),Math.sin(a)*cl.radius()).squaredDistanceTo(c.camera);}));
+            var buf=net.minecraft.client.render.Tessellator.getInstance().getBuffer();
+            com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.render.GameRenderer::getPositionColorProgram);
+            buf.begin(net.minecraft.client.render.VertexFormat.DrawMode.QUADS,net.minecraft.client.render.VertexFormats.POSITION_COLOR);
+            var mesh=new EffectMesh(buf,KagenoFire.inkMatrix(),c.camera);
+            for(var cl:haze)cloud(c.cast,mesh,t,centre,cl,c.camera);
+            net.minecraft.client.render.BufferRenderer.drawWithGlobalProgram(buf.end());
+        }
+        if(!KagenoFire.beginHills(KagenoFire.inkMatrix(),KagenoFire.inkAge()))return;
+        for(var mt:order){
+            int n=mt.peaks().length;
+            for(int j=0;j<n;j++){
+                int k=inside?j:n-1-j;var p=mt.peaks()[k];
+                float h=risen(c.cast,mt,p,t);if(h<=.01f)continue;
+                hillLayer(centre,mt,p,k,h,Math.min(1,h*1.6f),drawn(mt,p,t),camAz);
+            }
+        }
+        KagenoFire.endHills();
+    }
+    /** How many blocks across a mountain's quads are at most (bent round the circle in these steps, and as fine as its rocky edge). */
+    static final double MAX_COL=.16;
+    /** A small bump of a mountain's rocky edge at {@code x} along it, {@code f} of the way along its traced segment (none at either end), the segment {@code low} blocks up at its lower end (none near the ground). */
+    static double rock(double x,double f,double low){
+        int i=(int)Math.floor(x*4.0);double u=x*4.0-i;u=u*u*(3-2*u);
+        double n=Ease.hash(i*7919+131)*(1-u)+Ease.hash((i+1)*7919+131)*u;
+        return ROCK*(n-.5)*2*Math.sin(Math.PI*f)*Math.min(1,low/.6);
+    }
+    static final double ROCK=.045;
+    /** A layer of a mountain for the ink shader (its {@code k}th, risen {@code h}, showing {@code a}, its rims drawn {@code drawn} of their way). */
+    static void hillLayer(Vec3d centre,Mountain mt,Peak p,int k,float h,float a,float drawn,double camAz){
+        double[] xs=p.xs(),ys=p.ys();float[] rim=rimAlong(p,h,drawn);float off=23.7f*k;
+        for(int i=0;i+1<xs.length;i++){
+            double x0=xs[i],x1=xs[i+1],y0=ys[i]*h,y1=ys[i+1]*h;if(y0<.005&&y1<.005)continue;
+            int m=Math.max(1,(int)Math.ceil((x1-x0)/MAX_COL));
+            for(int q=0;q<m;q++){
+                double fa=q/(double)m,fb=(q+1)/(double)m,xa=x0+(x1-x0)*fa,xb=x0+(x1-x0)*fb;
+                // (its edge a little rocky between the traced points: small bumps, none at the points themselves nor
+                // near the ground; 2.82.16, "퀄리티 크게 올려봐")
+                double ya=y0+(y1-y0)*fa+rock(xa+k*3.1,fa,Math.min(y0,y1)),yb=y0+(y1-y0)*fb+rock(xb+k*3.1,fb,Math.min(y0,y1));
+                float cs=(float)((xb-xa)/Math.hypot(xb-xa,yb-ya));
+                float ra=rim[i]+(rim[i+1]-rim[i])*(float)fa,rb=rim[i]+(rim[i+1]-rim[i])*(float)fb;
+                float aa=a*occlusion(mt,xa,camAz),ab=a*occlusion(mt,xb,camAz);
+                KagenoFire.hillVertex(onMountain(centre,mt,xa,0,p.front()),(float)xa+off,(float)ya,ra,cs,0,aa);
+                KagenoFire.hillVertex(onMountain(centre,mt,xb,0,p.front()),(float)xb+off,(float)yb,rb,cs,0,ab);
+                KagenoFire.hillVertex(onMountain(centre,mt,xb,yb,p.front()),(float)xb+off,0,rb,cs,(float)yb,ab);
+                KagenoFire.hillVertex(onMountain(centre,mt,xa,ya,p.front()),(float)xa+off,0,ra,cs,(float)ya,aa);
+            }
         }
     }
+    /**
+     * How strongly a layer's rim shows at each point of its outline (0 to 1): from its summit down each flank, full near
+     * the summit and fading out toward rimL or rimR of the flank's length, reaching only {@code drawn} of that way as the
+     * mountain rises (the brush running down from the summit), a little brighter right at the summit.
+     */
+    static float[] rimAlong(Peak p,float h,float drawn){
+        double[] xs=p.xs(),ys=p.ys();int n=xs.length,top=p.top();float[] out=new float[n];
+        for(int dir=-1;dir<=1;dir+=2){
+            double total=0;for(int i=top;i+dir>=0&&i+dir<n;i+=dir)total+=Math.hypot(xs[i+dir]-xs[i],(ys[i+dir]-ys[i])*h);
+            double reach=(dir<0?p.rimL():p.rimR())*drawn,run=0;
+            for(int i=top;i>=0&&i<n;i+=dir){
+                double f=total<1e-9?0:run/total;
+                float r=(float)((1-Ease.smooth((float)f,(float)(.55*reach),(float)Math.max(.01,reach)))*(.82+.18*Math.exp(-f/.12)));
+                out[i]=dir<0||i!=top?r:out[i];
+                if(i+dir>=0&&i+dir<n)run+=Math.hypot(xs[i+dir]-xs[i],(ys[i+dir]-ys[i])*h);
+            }
+        }
+        return out;
+    }
     /** A mass's rims of light down both flanks from its summit, the one further than the other, and its ridges: paint (the blended pass) or their glow ({@code glow}, added). */
-    static void peakRims(EffectMesh m,Vec3d centre,Mountain mt,Peak p,float h,float drawn,float a,boolean glow){
+    static void peakRims(EffectMesh m,Vec3d centre,Mountain mt,Peak p,float h,float drawn,float a,boolean glow,double camAz){
         if(drawn<=.005f)return;
-        double w0=(.06+.02*p.height())*Math.sqrt(h);
+        // (2.82.16: finer than the masses' rims were, as the still's: some 0.05 to 0.13 of a block)
+        double w0=(.045+.012*p.height())*Math.sqrt(h);float occ=occlusion(mt,p.xs()[p.top()],camAz);a*=occ;
         for(int dir=-1;dir<=1;dir+=2){
             List<double[]> pts=new ArrayList<>();
             for(int i=p.top();i>=0&&i<p.xs().length;i+=dir)pts.add(new double[]{p.xs()[i],p.ys()[i]*h});
@@ -644,7 +732,7 @@ final class SwordFormation {
     /** A smooth ragged wobble (0 to 1) along a stroke. */
     static double ragged(double x){return .5+.5*(.6*Math.sin(x)+.4*Math.sin(2.7*x+1.3));}
     /** The light blue paint of the mountains' rims: pale at their edge, light blue into the mountain, and the blue it washes into. */
-    static final int RIM_EDGE=0xe6edff,RIM_BODY=0x8aa0ff,RIM_WASH=0x3c55d6,RIM_GLOW=0x4d6dff;
+    static final int RIM_EDGE=0xd2e2ff,RIM_BODY=0x82a0ff,RIM_WASH=0x3a55cc,RIM_GLOW=0x4d6dff;
     /**
      * A brush stroke on a mountain's face along {@code pts} (x along it, y up) from its first point: its outer edge on them,
      * its paint {@code w0} wide into the mountain (to the left of the way it runs when {@code left}), landing a little
@@ -686,24 +774,12 @@ final class SwordFormation {
             prev=now;pw=k;
         }
     }
-    /** A mountain (the blended pass): its masses one over another, the farthest from the camera first, each its ink and its rims. */
-    static void mountain(Fx c,EffectMesh m,float t,Vec3d centre,Mountain mt){
-        Vec3d out=new Vec3d(Math.cos(mt.az()),0,Math.sin(mt.az()));
-        boolean inside=c.camera.subtract(centre).dotProduct(out)<mt.radius()-.35;
-        int n=mt.peaks().length;
-        for(int j=0;j<n;j++){
-            var p=mt.peaks()[inside?j:n-1-j];
-            float h=risen(c.cast,mt,p,t);if(h<=.01f)continue;float a=Math.min(1,h*1.6f);
-            peakBody(m,centre,mt,p,h,a);
-            peakRims(m,centre,mt,p,h,drawn(mt,p,t),a,false);
-        }
-    }
     /** The mountains' light (the light pass): the soft glow of their rims and ridges. */
     static void mountainLight(Fx c,EffectMesh m,float t){
-        Vec3d centre=centre(c.cast);
+        Vec3d centre=centre(c.cast);double camAz=cameraAz(centre,c.camera);
         for(var mt:mountains(c.cast.id(),yaw(c.cast)))for(var p:mt.peaks()){
             float h=risen(c.cast,mt,p,t);if(h<=.01f)continue;
-            peakRims(m,centre,mt,p,h,drawn(mt,p,t),Math.min(1,h*1.4f),true);
+            peakRims(m,centre,mt,p,h,drawn(mt,p,t),.5f*Math.min(1,h*1.4f),true,camAz);
         }
     }
 
@@ -713,43 +789,43 @@ final class SwordFormation {
      * white tubes looked strange): which way round the formation its curl lies (radians) and how fast it drifts round
      * (radians a second), how far out, how high, how long its band runs from its curl, how thick, how big its curl and how
      * many turns it winds (none for a wisp of mist), which way the curl turns (-1 up over the band, 1 down under it), how
-     * high the band arches, when it comes in, how strong it is, its seed.
+     * high the band arches, when it comes in, how strong it is, its seed, and whether it is a bank of haze over the
+     * mountains (2.82.16, user request: "산 위에는 희미한 안개같은 구름이 천천히 돌아가고": the curled clouds are gone).
      */
-    record Cloud(double az,double drift,double radius,double up,double length,double thick,double curl,double turns,int dir,double arch,float in,float strength,int seed){
+    record Cloud(double az,double drift,double radius,double up,double length,double thick,double curl,double turns,int dir,double arch,float in,float strength,int seed,boolean haze){
         boolean mist(){return curl<=0;}
     }
     private static final Map<UUID,Cloud[]> CLOUDS=new LinkedHashMap<>();
     /**
-     * The clouds of the formation of swing {@code id} (the same on every client), its user having faced {@code yaw}: six
-     * over and behind the mountains, two among them before their feet (none of these behind her, 2.82.4: CLOUD_GAP), and
-     * seven low wisps of mist over the ground.
+     * The clouds of the formation of swing {@code id} (the same on every client), its user having faced {@code yaw}
+     * (2.82.16, user request: "산 위에는 희미한 안개같은 구름이 천천히 돌아가고", with their still of the game: soft, faint
+     * banks of mist over and behind the mountains; then "구름은 더 많게 산까지 내려 올 정도로"): HAZE banks of faint haze
+     * round the mountains, from among their middles up over their summits and behind them, all turning slowly
+     * the same way round together (HAZE_TURN radians a second, clockwise seen from above, as the darker water flows), and
+     * seven low wisps of mist over the ground. (2.82.2 to 2.82.15: curled clouds over the mountains and two before them.)
      */
     static Cloud[] clouds(UUID id,float yaw){
         var l=CLOUDS.get(id);if(l!=null)return l;
         int s0=(int)(id.getMostSignificantBits()*17+id.getLeastSignificantBits()*7);
-        List<Cloud> out=new ArrayList<>();double off=behind(yaw)+CLOUD_GAP,span=Math.PI*2-2*CLOUD_GAP;
-        for(int i=0;i<6;i++){
+        List<Cloud> out=new ArrayList<>();double off=behind(yaw);
+        for(int i=0;i<HAZE;i++){
             int seed=s0+131*(i+1);
-            out.add(new Cloud(off+span*(i+.25+.5*Ease.hash(seed+1))/6,(Ease.hash(seed+2)<.5?-1:1)*(.006+.008*Ease.hash(seed+3)),IsosangRules.FORMATION_RADIUS+4.2+3.0*Ease.hash(seed+4),4.6+2.2*Ease.hash(seed+5),
-                5+4*Ease.hash(seed+6),1.2+.5*Ease.hash(seed+7),1.1+.5*Ease.hash(seed+8),.75+.3*Ease.hash(seed+9),Ease.hash(seed+10)<.72?-1:1,(Ease.hash(seed+11)-.5)*1.2,
-                MIST0+.05f+.5f*(float)Ease.hash(seed+12),1,seed));
-        }
-        for(int i=0;i<2;i++){
-            int seed=s0+977*(i+1);
-            out.add(new Cloud(off+span*(i+.3+.4*Ease.hash(seed+1))/2,(Ease.hash(seed+2)<.5?-1:1)*(.008+.008*Ease.hash(seed+3)),IsosangRules.FORMATION_RADIUS+1.2+1.2*Ease.hash(seed+4),2.4+1.2*Ease.hash(seed+5),
-                4+3*Ease.hash(seed+6),.8+.35*Ease.hash(seed+7),.8+.35*Ease.hash(seed+8),.7+.3*Ease.hash(seed+9),Ease.hash(seed+10)<.6?-1:1,(Ease.hash(seed+11)-.5)*.9,
-                MIST0+.25f+.4f*(float)Ease.hash(seed+12),.85f,seed));
+            out.add(new Cloud(off+Math.PI*2*(i+.5+.3*(Ease.hash(seed+1)-.5))/HAZE,HAZE_TURN,MOUNTAIN_R+.4+2.8*Ease.hash(seed+4),2.6+3.6*Ease.hash(seed+5),
+                7+4*Ease.hash(seed+6),2.2+1.0*Ease.hash(seed+7),0,0,1,(Ease.hash(seed+11)-.5)*1.0,
+                MIST0+.1f+.6f*(float)Ease.hash(seed+12),1,seed,true));
         }
         for(int i=0;i<7;i++){
             int seed=s0+1601*(i+1);
             out.add(new Cloud(Math.PI*2*(i+.6*Ease.hash(seed+1))/7,(Ease.hash(seed+2)<.5?-1:1)*(.012+.014*Ease.hash(seed+3)),IsosangRules.FORMATION_RADIUS-3.6+4*Ease.hash(seed+4),.35+.65*Ease.hash(seed+5),
                 3.5+3*Ease.hash(seed+6),.4+.25*Ease.hash(seed+7),0,0,1,(Ease.hash(seed+11)-.5)*.4,
-                MIST0+.6f*(float)Ease.hash(seed+12),.7f,seed));
+                MIST0+.6f*(float)Ease.hash(seed+12),.7f,seed,false));
         }
         l=out.toArray(new Cloud[0]);
         CLOUDS.put(id,l);while(CLOUDS.size()>16)CLOUDS.remove(CLOUDS.keySet().iterator().next());
         return l;
     }
+    static final int HAZE=14;
+    static final double HAZE_TURN=.05;
     /** How strongly a cloud shows at {@code t} (0 to 1): coming in, going with the mountains as the formation ends. */
     static float cloudShown(StandClient.Cast c,Cloud cl,float t){return Ease.smooth(t,cl.in(),cl.in()+1f)*(1-Ease.smooth(t,end(c)+GLOW,end(c)+GONE+.3f));}
     /** How many points of a cloud's path its curl takes (none for a wisp of mist). */
@@ -780,8 +856,8 @@ final class SwordFormation {
             double u=len*i/nb,x=u/len;
             double v=cl.arch()*Math.sin(Math.PI*x)+wave*Math.sin(Math.PI*2*(u/lambda-t/5.5)+cl.seed())*Math.min(1,u/1.2);
             // (full to six tenths of the way, then rounding off; a little puffed out and drawn in along it, as a cloud is)
-            double prof=(x<.6?1:Math.sqrt(Math.max(0,1-Math.pow((x-.6)/.4,2))))*(1+.14*Math.sin(u*2.3+cl.seed()*.7+t*.25)*Math.min(1,u/.8));
-            pts.add(new double[]{u,v,prof*cloudIn(shown,x)});
+            double prof=(cl.haze()?Math.pow(Math.sin(Math.PI*x),.6):x<.6?1:Math.sqrt(Math.max(0,1-Math.pow((x-.6)/.4,2))))*(1+.14*Math.sin(u*2.3+cl.seed()*.7+t*.25)*Math.min(1,u/.8));
+            pts.add(new double[]{u,v,prof*(cl.haze()?1:cloudIn(shown,x))});
         }
         return pts;
     }
@@ -800,12 +876,12 @@ final class SwordFormation {
      * (never turned to the camera, as every smoke and mist here), white over its middle, greyer underneath, fading to
      * nothing at its edge.
      */
-    static void cloud(StandClient.Cast cast,EffectMesh m,float t,Vec3d centre,Cloud cl){
+    static void cloud(StandClient.Cast cast,EffectMesh m,float t,Vec3d centre,Cloud cl,Vec3d camera){
         float shown=cloudShown(cast,cl,t);if(shown<=.01f)return;
         var path=cloudPath(cl,t,shown);int n=path.size(),curl=curlPoints(cl);
         double az=cl.az()+cl.drift()*t,up=cl.up()+.12*Math.sin(t*.5+cl.seed()),grow=1+.3*Ease.smooth(t,end(cast)+GLOW,end(cast)+GONE+.3f);
-        boolean mist=cl.mist();double aspect=mist?2.3:1.15,tall=mist?.55:1,least=mist?.3:.12;
-        float a0=(mist?.1f:.14f)*cl.strength()*shown;
+        boolean mist=cl.mist(),haze=cl.haze();double aspect=haze?1.4:mist?2.3:1.15,tall=haze?1:mist?.55:1,least=haze?.35:mist?.3:.12;
+        float a0=(haze?HAZE_ALPHA:mist?.1f:.14f)*cl.strength()*shown;
         double carry=0;int k=0;
         for(int i=0;i+1<n;i++){
             double[] p0=path.get(i),p1=path.get(i+1);double du=p1[0]-p0[0],dv=p1[1]-p0[1],len=Math.hypot(du,dv);if(len<1e-9)continue;
@@ -813,12 +889,12 @@ final class SwordFormation {
                 double f=carry/len,u=p0[0]+du*f,v=p0[1]+dv*f,prof=p0[2]+(p1[2]-p0[2])*f;
                 double r=cl.thick()*.5*prof*grow*(.72+.5*Ease.hash(cl.seed()*31+k*7));
                 if(r>.04){
-                    puff(m,centre,cl,az,up,u,v,r*aspect,r*tall,a0);
+                    puff(m,centre,cl,az,up,u,v,r*aspect,r*tall,a0,camera);
                     // the band's top swells here and there into a smaller puff (not round the curl, nor its thin ends)
                     if(!mist&&i>=curl&&prof>.5&&Ease.hash(cl.seed()*13+k*5)<.4){
                         double nu=-dv/len,nv=du/len;if(nv<0){nu=-nu;nv=-nv;}
                         double br=r*(.45+.3*Ease.hash(cl.seed()*17+k*3)),lift=r*(.35+.25*Ease.hash(cl.seed()*19+k));
-                        puff(m,centre,cl,az,up,u+nu*lift,v+nv*lift,br*aspect,br,a0*.85f);
+                        puff(m,centre,cl,az,up,u+nu*lift,v+nv*lift,br*aspect,br,a0*.85f,camera);
                     }
                 }
                 k++;carry+=Math.max(least,r*PUFF_STEP*(.8+.4*Ease.hash(cl.seed()*23+k*11)));
@@ -827,25 +903,34 @@ final class SwordFormation {
         }
     }
     /** A puff of a cloud at {@code u} along its band and {@code v} up: three soft discs {@code ru} across and {@code rv} up, 60° apart round the upright, the first facing the formation's middle. */
-    static void puff(EffectMesh m,Vec3d centre,Cloud cl,double az,double up,double u,double v,double ru,double rv,float alpha){
+    static void puff(EffectMesh m,Vec3d centre,Cloud cl,double az,double up,double u,double v,double ru,double rv,float alpha,Vec3d camera){
         double a=az+u/cl.radius();Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a)),along=new Vec3d(-out.z,0,out.x);
         Vec3d c=centre.add(out.multiply(cl.radius())).add(0,up+v,0),vv=new Vec3d(0,rv,0);
+        // (haze thins away as the camera comes into it: it drifts round over her camera too)
+        if(cl.haze())alpha*=Ease.smooth((float)c.distanceTo(camera),HAZE_NEAR0,HAZE_NEAR1);if(alpha<=.002f)return;
+        // (each disc thins as it turns edge-on to the camera: seen edge-on a soft disc is a bright bar; 2.82.16)
+        Vec3d look=c.subtract(camera);double ll=look.length();look=ll<1e-6?new Vec3d(0,0,1):look.multiply(1/ll);
         for(int s=0;s<3;s++){
-            double turn=Math.PI/3*s;Vec3d uu=along.multiply(Math.cos(turn)).add(out.multiply(Math.sin(turn))).multiply(ru);
-            disc(m,c,uu,vv,s==0?alpha:alpha*.72f);
+            double turn=Math.PI/3*s;Vec3d dir=along.multiply(Math.cos(turn)).add(out.multiply(Math.sin(turn))),uu=dir.multiply(ru);
+            float facing=(float)Math.abs(dir.crossProduct(UP).normalize().dotProduct(look));
+            disc(m,c,uu,vv,(s==0?alpha:alpha*.72f)*Ease.smooth(facing,.12f,.5f),cl.haze());
         }
     }
-    /** A soft disc: full over its inner six tenths, fading to nothing at its rim; white along its top, greyer under it. */
-    static void disc(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,float alpha){
+    /** A soft disc: full over its inner six tenths, fading to nothing at its rim; white along its top, greyer under it (haze an even pale grey, faint and soft). */
+    static void disc(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,float alpha,boolean haze){
+        int mid=haze?HAZE_GREY:CLOUD,top=haze?HAZE_GREY:CLOUD_TOP,under=haze?HAZE_UNDER:CLOUD_UNDER;float inner=haze?.6f:.85f;
         for(int i=0;i<PUFF_SEGS;i++){
             double a0=Math.PI*2*i/PUFF_SEGS,a1=Math.PI*2*(i+1)/PUFF_SEGS;
             Vec3d d0=u.multiply(Math.cos(a0)).add(v.multiply(Math.sin(a0))),d1=u.multiply(Math.cos(a1)).add(v.multiply(Math.sin(a1)));
             Vec3d i0=c.add(d0.multiply(.6)),i1=c.add(d1.multiply(.6)),o0=c.add(d0),o1=c.add(d1);
-            int c0=Math.sin(a0)>0?CLOUD_TOP:CLOUD_UNDER,c1=Math.sin(a1)>0?CLOUD_TOP:CLOUD_UNDER;
-            m.vertex(c,CLOUD,alpha);m.vertex(i0,CLOUD,alpha*.85f);m.vertex(i1,CLOUD,alpha*.85f);m.vertex(c,CLOUD,alpha);
-            m.vertex(i0,CLOUD,alpha*.85f);m.vertex(o0,c0,0);m.vertex(o1,c1,0);m.vertex(i1,CLOUD,alpha*.85f);
+            int c0=Math.sin(a0)>0?top:under,c1=Math.sin(a1)>0?top:under;
+            m.vertex(c,mid,alpha);m.vertex(i0,mid,alpha*inner);m.vertex(i1,mid,alpha*inner);m.vertex(c,mid,alpha);
+            m.vertex(i0,mid,alpha*inner);m.vertex(o0,c0,0);m.vertex(o1,c1,0);m.vertex(i1,mid,alpha*inner);
         }
     }
+    /** The haze: how strongly each of its puffs lies, its pale grey (a little bluish, darker under it), and how near the camera it thins away to nothing (blocks). */
+    static final float HAZE_ALPHA=.19f,HAZE_NEAR0=1.5f,HAZE_NEAR1=4.5f;
+    static final int HAZE_GREY=0xc8d0da,HAZE_UNDER=0xa3aebd;
     /**
      * The mountains and the clouds (the blended pass): everything drawn from the farthest from the camera to the nearest,
      * the blended pass keeping no depth of its own.
@@ -854,15 +939,12 @@ final class SwordFormation {
         Vec3d centre=centre(c.cast);
         record Far(double far,Runnable draw){}
         List<Far> all=new ArrayList<>();
-        for(var mt:mountains(c.cast.id(),yaw(c.cast))){
-            boolean any=false;for(var p:mt.peaks())any|=risen(c.cast,mt,p,t)>.01f;
-            if(any)all.add(new Far(onMountain(centre,mt,0,2,0).squaredDistanceTo(c.camera),()->mountain(c,m,t,centre,mt)));
-        }
+        // (the mountains and the haze behind them are drawn in the ground pass since 2.82.16: mountainInk)
         for(var cl:clouds(c.cast.id(),yaw(c.cast))){
-            if(cloudShown(c.cast,cl,t)<=.01f)continue;
+            if(cl.haze()||cloudShown(c.cast,cl,t)<=.01f)continue;
             double a=cl.az()+cl.drift()*t+cl.length()*.3/cl.radius();
             Vec3d mid=centre.add(Math.cos(a)*cl.radius(),cl.up(),Math.sin(a)*cl.radius());
-            all.add(new Far(mid.squaredDistanceTo(c.camera),()->cloud(c.cast,m,t,centre,cl)));
+            all.add(new Far(mid.squaredDistanceTo(c.camera),()->cloud(c.cast,m,t,centre,cl,c.camera)));
         }
         all.sort(Comparator.comparingDouble((Far f)->-f.far()));
         for(var f:all)f.draw().run();
@@ -969,23 +1051,19 @@ final class SwordFormation {
     /**
      * How far out the water runs the way {@code az} (radians in the world's x, z) from the formation's middle: to the
      * face of the nearest mountain that way (a mountain's face counts along its masses, fading out over EDGE_FADE blocks
-     * past their feet; the masses before it stand in the water), else as far as the farthest mountain's face. Smooth all
-     * round (the least of the faces that way, each eased toward the farthest as it fades).
+     * past their feet, its pull on the water going with it; the masses before it stand in the water), else as far as the
+     * farthest mountain's face (2.82.16: the faces are bent round the circle and the six go all the way round, so the
+     * water's edge is the circle at their feet). Smooth all round.
      */
     static double waterEdge(Mountain[] ms,double az){
-        double far=0;for(var mt:ms)far=Math.max(far,mt.radius());
-        double d=far;
-        for(var mt:ms){
-            double w=along(mt,az);if(w<=0)continue;
-            double s=mt.radius()/Math.cos(Math.IEEEremainder(az-mt.az(),Math.PI*2));
-            d=Math.min(d,far+Math.min(0,s-far)*w);
-        }
+        double d=0;for(var mt:ms)d=Math.max(d,mt.radius());
+        for(var mt:ms){double w=along(mt,az);if(w>0)d=Math.min(d,mt.radius()/w);}
         return d;
     }
     /** How much of the mountain {@code mt} stands the way {@code az} (0 to 1): 1 along its masses, fading out over EDGE_FADE blocks past their feet; 0 off to its sides. */
     static double along(Mountain mt,double az){
-        double off=Math.IEEEremainder(az-mt.az(),Math.PI*2);if(Math.cos(off)<.25)return 0;
-        double x=mt.radius()*Math.tan(off),lo=Double.MAX_VALUE,hi=-Double.MAX_VALUE;
+        double off=Math.IEEEremainder(az-mt.az(),Math.PI*2);if(Math.abs(off)>1.2)return 0;
+        double x=mt.radius()*off,lo=Double.MAX_VALUE,hi=-Double.MAX_VALUE;
         for(var p:mt.peaks()){lo=Math.min(lo,p.xs()[0]);hi=Math.max(hi,p.xs()[p.xs().length-1]);}
         double over=Math.max(lo-x,x-hi);
         return over<=0?1:1-Ease.smooth((float)over,0,(float)EDGE_FADE);
@@ -1022,6 +1100,8 @@ final class SwordFormation {
         // until the smoke at its rim has thinned away)
         double w=whirl(t);float o=Ease.smooth(t,SWIRL0,SWIRL0+.02f)*(1-Ease.smooth(t,SMOKE_OUT1-.03f,SMOKE_OUT1+.02f));
         if(o>.005f&&w>.02)KagenoFire.inkGround(centre.add(0,.055,0),w*1.4,w,15,seed+5,poolClock(t),eyeByte(t),o);
+        // the mountains, in their own draw call (2.82.16), once: in the blended pass, not the light added after it
+        if(KagenoFire.crescentGain>.99f&&t>RISE0-.05f&&t<end(c.cast)+GONE+.4f)KagenoFire.inkInterlude(()->mountainInk(c));
     }
     /**
      * The ink left on the ground {@code d} blocks from the formation's middle (0 to 1): gone as the spreading whirlpool's
