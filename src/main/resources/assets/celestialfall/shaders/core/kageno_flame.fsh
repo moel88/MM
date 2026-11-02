@@ -764,7 +764,7 @@ void main(){
   float top=.68+.24*pnoise(vec2(x*.5,7.0+sd),26.0),bot=.12+.16*pnoise(vec2(x*.5,11.0-sd),26.0);
   float env=smoothstep(bot,bot+.25,v)*(1.0-smoothstep(top-.3,top,v));
   float d=cloudDens(x,y,sd,tm),du=cloudDens(x,y+.12,sd,tm),dd=cloudDens(x,y-.12,sd,tm);
-  float c=max(smoothstep(.36,.64,d),.45*smoothstep(.15,.45,d))*m*env;
+  float c=max(smoothstep(.36,.64,d),.5*smoothstep(.15,.45,d))*m*env;
   // lit along its upper edges, a little shaded along its lower ones (so it reads against a bright sky as well as the
   // screenshot's dark forest)
   float lit=clamp((d-du)*6.0,0.0,1.0)*smoothstep(.36,.58,d)*m*env;
@@ -772,7 +772,7 @@ void main(){
   // ("구름 더 잘 보이게", then "너무 진해": between the two)
   rgb=mix(vec3(.74,.8,.92),vec3(.96,.97,1.0),lit);
   rgb=mix(rgb,vec3(.5,.57,.7),shade*.6);
-  alpha=clamp(c*.46+lit*.12+shade*.07,0.0,.55)*tint.a;
+  alpha=clamp(c*.62+lit*.15+shade*.09,0.0,.7)*tint.a;
  }else if(Mode==17&&tint.b>.5){
   // The stream of water under the mountains of Lee So-sang's sword formation (2.82.16, user request with their marked
   // screenshot of the game: "산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래",
