@@ -78,7 +78,7 @@ final class SwordFormation {
      * edge, three thin arms of light turning in it the wrong way round, a lit rim round it like a puddle's.)
      */
     static final float POOL0=.19f,POOL1=.29f,GATHER0=.32f,GATHER_FAST=.5f,GATHER_SLOW=.42f,GATHER1=.64f,COLLAPSE0=.56f,COLLAPSE=IsosangRules.H_PLANT-.055f,SWIRL0=.7f,SWIRL1=1.15f;
-    static final double POOL_WIDE=14.5,GATHER_MID=3.4,POOL_IN=2.4;
+    static final double POOL_WIDE=IsosangRules.FORMATION_RADIUS+4.5,GATHER_MID=3.4,POOL_IN=2.4;
     /**
      * The whirlpool (2.82.7, user request: "잉크가 모였다가 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가
      * 크게 나옴" with their still of the video; the video read again a frame at a time and put back on the ground plane):
@@ -121,7 +121,7 @@ final class SwordFormation {
      * in the whirlpool's square (style 15), reading these off the formation's clock.
      */
     static final float SMOKE_IN=1.22f,SMOKE_FULL=1.36f,SMOKE_OUT0=1.64f,SMOKE_OUT1=1.88f;
-    static final double RIM_R=11.2,RIM_OUT=12.2;
+    static final double RIM_R=IsosangRules.FORMATION_RADIUS+1.2,RIM_OUT=IsosangRules.FORMATION_RADIUS+2.2;
     /** The mountains rise; the clouds and the mist start coming in (each a little after this, over a second: Cloud.in). */
     static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f;
     /** The swords, dark as they strike, turn silver; the crystal flowers at their feet wilt. */
@@ -225,8 +225,8 @@ final class SwordFormation {
     private static final Map<UUID,Blade[]> LAYOUTS=new LinkedHashMap<>();
     /**
      * The swords of the formation of swing {@code id} (the same on every client: seeded by the id). Where each strikes is
-     * the rules' (IsosangRules.formationSwords: rings round an empty middle, 2.82.2 to 2.82.4, as the server reckons the
-     * sword she stands on); the one she stands on (IsosangRules.standSword, 2.82.4: "H를 쓰면 내가 점프를 하고 그 자리에
+     * the rules' (IsosangRules.formationSwords: spread evenly over all of it but its empty middle, 2.82.16; as the
+     * server reckons the sword she stands on); the one she stands on (IsosangRules.standSword, 2.82.4: "H를 쓰면 내가 점프를 하고 그 자리에
      * 검이 하나 있어야해") strikes first, right under her as she hangs in the air, and stands upright, its pommel as high as
      * she stands (its crystal flower as the others', 2.82.5: the spike is out of the middle again); the rest stand
      * upright as it does (2.82.13), a little higher or lower, and rain down after it.
@@ -236,9 +236,11 @@ final class SwordFormation {
         int s0=IsosangRules.formationSeed(id);
         var places=IsosangRules.formationSwords(s0);int stand=IsosangRules.standSword();
         List<Blade> out=new ArrayList<>();
-        for(int k=0,r=0,inRing=0;k<places.length;k++,inRing++){
-            if(inRing==IsosangRules.FORMATION_RING_N[r]){r++;inRing=0;}
+        double r0=IsosangRules.FORMATION_EMPTY,r1=IsosangRules.FORMATION_RADIUS-IsosangRules.FORMATION_EDGE;
+        for(int k=0;k<places.length;k++){
             int seed=IsosangRules.swordSeed(s0,k);
+            // how far out it lies (0 the empty middle's edge, 1 the outermost): the inner ones fall a little first
+            double out01=Math.max(0,Math.min(1,(Math.hypot(places[k][0],places[k][1])-r0)/(r1-r0)));
             if(k==stand){
                 out.add(new Blade(places[k][0],places[k][1],IsosangRules.FORMATION_STAND,0,0,180*Ease.hash(seed+7),IsosangRules.H_PLANT,10,IsosangRules.H_SKY,.8+.45*Ease.hash(seed+11),seed));
                 continue;
@@ -246,7 +248,7 @@ final class SwordFormation {
             // (2.82.13, user request: "검들이 다 삐 뚫어져있냐 영상은 전부 제대로 박혀있는데": every sword struck straight
             // down, upright; 2.82.1-2.82.12 leaned them 2 to 13 degrees)
             double height=1.25+.5*Ease.hash(seed+4),tilt=0,toward=0,spin=180*Ease.hash(seed+7);
-            float plant=IsosangRules.H_RAIN0+(IsosangRules.H_RAIN1-IsosangRules.H_RAIN0)*(float)Math.min(1,.12*r+.82*Ease.hash(seed+8));
+            float plant=IsosangRules.H_RAIN0+(IsosangRules.H_RAIN1-IsosangRules.H_RAIN0)*(float)Math.min(1,.24*out01+.82*Ease.hash(seed+8));
             double sky=7+5*Ease.hash(seed+9);
             // (it shows a little before it falls: at least a tenth of a second of hanging in the sky)
             float shows=IsosangRules.H_SKY+(float)Math.min(plant-FALL-IsosangRules.H_SKY-.1f,.24*Ease.hash(seed+10));
@@ -1336,7 +1338,7 @@ final class SwordFormation {
     static double frontMistHeight(float t){return FRONT_MIST_HIGH*(.45+.55*Ease.smooth(t,SPREAD0,SPREAD1));}
     static final double FRONT_MIST_OUT=1.2,FRONT_MIST_HIGH=1.1;
     /** How finely a ring of mist is drawn round, and how far it leans out (blocks a block up). */
-    static final int MIST_SEGS=96;
+    static final int MIST_SEGS=120;
     static final double MIST_LEAN=.25;
     /**
      * How much of the mist's light is added again (0: none, blended only) and how strongly the spreading whirlpool's front

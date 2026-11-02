@@ -286,23 +286,37 @@ class IsosangRulesTest {
         assertTrue(onSword(H_LEAP)&&onSword(40)&&!onSword(H_DOWN)&&!onSword(H_LEAP-.01));
         assertTrue(H_DOWN<=LENGTH[FORMATION]/20.0,"down before its motion is over");
     }
-    @Test void sheStandsOnTheOuterRingWhereSheLeptTheFormationAheadOfHer(){
+    @Test void sheStandsOnTheSwordWhereSheLeptTheFormationAheadOfHerSwordsAllOverIt(){
         // (2.82.4, "H를 쓰면 내가 점프를 하고 그 자리에 검이 하나 있어야해 그러니까 H는 플레이어 기준 중앙으로 나오는게 아니고
         // 외곽부분으로 나와야함": the sword she stands on is where she leapt, on the formation's outer ring, its middle ahead
         // of her; the server holds her there and every client draws that sword there: one reckoning)
-        assertEquals(FORMATION_RING_R[FORMATION_RING_R.length-1],FORMATION_STAND_BACK,1e-12,"on the outer ring");
-        assertTrue(FORMATION_STAND_BACK<FORMATION_RADIUS-1,"inside the formation, near its edge");
+        assertTrue(FORMATION_STAND_BACK>FORMATION_EMPTY+2&&FORMATION_STAND_BACK<FORMATION_RADIUS-1,"inside the formation, out toward its edge");
         assertArrayEquals(new double[]{-FORMATION_STAND_BACK,0},standAt(),1e-12);
         var rnd=new java.util.Random(7);
         for(int n=0;n<300;n++){
             var id=new java.util.UUID(rnd.nextLong(),rnd.nextLong());int s0=formationSeed(id);
             assertEquals(s0,formationSeed(new java.util.UUID(id.getMostSignificantBits(),id.getLeastSignificantBits())));
             var swords=formationSwords(s0);int k=standSword();
-            assertEquals(48,swords.length);
-            assertEquals(FORMATION_RING_N[0]+FORMATION_RING_N[1],k,"the outer ring's first");
+            assertEquals(FORMATION_SWORDS,swords.length);
             assertArrayEquals(standAt(),swords[k],1e-12,"right behind the middle");
             // no other sword right by her
             for(int j=0;j<swords.length;j++)if(j!=k)assertTrue(Math.hypot(swords[j][0]-swords[k][0],swords[j][1]-swords[k][1])>1.2,"a sword by hers");
+            // (2.82.16, "검이 중앙 제외 모든 범위에 박혀 있게 하자 지금 너무 앞부분에 쏠려있어") all over the formation but its
+            // empty middle: none in it nor past the edge; some in every eighth of the round, and round and behind her too
+            int behindHer=0;int[] eighths=new int[8];double near=1e9;
+            for(int j=0;j<swords.length;j++){
+                double r=Math.hypot(swords[j][0],swords[j][1]);
+                assertTrue(r>=FORMATION_EMPTY-FORMATION_JITTER-1e-9&&r<=FORMATION_RADIUS-FORMATION_EDGE+FORMATION_JITTER+1e-9,"out of its bounds: "+r);
+                eighths[(int)Math.floor((Math.atan2(swords[j][1],swords[j][0])+Math.PI)/(Math.PI/4))%8]++;
+                if(swords[j][0]<-FORMATION_STAND_BACK)behindHer++;
+                for(int i=0;i<j;i++)near=Math.min(near,Math.hypot(swords[j][0]-swords[i][0],swords[j][1]-swords[i][1]));
+            }
+            for(int e:eighths)assertTrue(e>=2,"swords all round: "+java.util.Arrays.toString(eighths));
+            assertTrue(behindHer>=1,"some behind her");
+            assertTrue(near>1.2,"none right by another: "+near);
+            // the outermost are out near the edge, the innermost round the empty middle
+            double far=0,in=1e9;for(var w:swords){double r=Math.hypot(w[0],w[1]);far=Math.max(far,r);in=Math.min(in,r);}
+            assertTrue(far>FORMATION_RADIUS-FORMATION_EDGE-.8&&in<FORMATION_EMPTY+.8,"from "+in+" to "+far);
         }
     }
 }

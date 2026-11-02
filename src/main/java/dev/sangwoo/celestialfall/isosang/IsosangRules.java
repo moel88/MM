@@ -453,7 +453,7 @@ public final class IsosangRules {
      * 2.82.2, user request: "그리고 범위 조금만 줄여", then 10 again in 2.82.3: "아니다 범위는 원래대로 늘리고") and how far
      * under and over its ground a body is still in it.
      */
-    public static final double FORMATION_RADIUS=10,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
+    public static final double FORMATION_RADIUS=12,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
     /** The damage as the swords strike (the user's word: 30) and every {@link #FORMATION_EVERY} ticks after (5). */
     public static final float FORMATION_IMPACT=30,FORMATION_TICK=5;
     /** The tick into H the swords strike (as the rain of swords crashes in), and how often it strikes again after (the user's word: every 5 s). */
@@ -512,18 +512,20 @@ public final class IsosangRules {
     // where the formation's swords lie (2.82.3: here, not with the effects, for the server to know the sword she stands on)
 
     /**
-     * The rings the formation's swords lie in: radius (blocks from its middle), how many, and how far a sword may stray
-     * from its ring's radius either way (2.82.2, user request: "영역 내에 중앙에 검이 없고 외곽에만 있잖아", then "아니 너무
-     * 비었잖아 조금만 비우면 돼"; 2.82.3, "아니다 범위는 원래대로 늘리고 가운데 원 조금만 더 늘리자 검 밀도 지금이랑 비슷하게
-     * 그리고 가운데에 플레이어가 올라가 있는 검 치워": the formation 10 blocks again, no sword within some 5 blocks of its
-     * middle, as close together as in 2.82.2, some 4.5 square blocks to a sword, and none in the middle).
+     * The formation's swords (2.82.16, user request: "H 범위를 조금만 더 넓히고 검 개수는 조금만 줄이고 검이 중앙 제외 모든
+     * 범위에 박혀 있게 하자 지금 너무 앞부분에 쏠려있어", then "검 28개": FORMATION_RADIUS 12, was 10; 28 swords, were 48 in
+     * three rings from 5.5 to 8.7 blocks out, none in the band outside them nor round behind her): how many, from how far out (the empty
+     * middle, as since 2.82.3), how far inside the formation's edge the outermost stand, and how far a sword may stray
+     * from its even place either way (blocks).
      */
-    public static final double[] FORMATION_RING_R={5.5,7.1,8.7};
-    public static final int[] FORMATION_RING_N={12,16,20};
-    public static final double FORMATION_RING_JITTER=.3;
+    public static final int FORMATION_SWORDS=28;
+    public static final double FORMATION_EMPTY=5.4,FORMATION_EDGE=1.2,FORMATION_JITTER=.35;
+    /** The golden angle: each sword this far round from the one before, so they spread evenly with no rows. */
+    static final double GOLDEN=Math.PI*(3-Math.sqrt(5));
     /**
-     * How far behind the formation's middle she stands (blocks, 2.82.4: on its outer ring, the sword struck under her one
-     * of it; the formation's middle is this far ahead of her, the way she faced, the crosshair's).
+     * How far behind the formation's middle she stands (blocks, 2.82.4: out toward its edge, on the sword struck under
+     * her; the formation's middle is this far ahead of her, the way she faced, the crosshair's; since 2.82.16 swords
+     * stand round her and behind her too).
      */
     public static final double FORMATION_STAND_BACK=8.7;
     /** A formation's seed: where its swords lie and how they look follow from it (its swing's id), the same on the server and every client. */
@@ -535,33 +537,36 @@ public final class IsosangRules {
     /** Each sword's seed in a formation of seed {@code s0}, by its place in {@link #formationSwords} (its look follows from it too). */
     public static int swordSeed(int s0,int k){return s0+97*(k+1);}
     /**
-     * Where the formation's swords strike the ground: forward and right of its middle (blocks, in the way its user faced),
-     * ring by ring from the inner one, each ring turned a seeded way round and its swords a little off their even places
-     * and their ring's radius (the second ring a half step round from the first: staggered); the outer ring turned so that
-     * its first sword is the one she stands on, right behind the middle (2.82.4, {@link #standSword}).
+     * Where the formation's swords strike the ground: forward and right of its middle (blocks, in the way its user faced).
+     * Spread evenly over all of it but its empty middle (2.82.16: "검이 중앙 제외 모든 범위에 박혀 있게"), from
+     * FORMATION_EMPTY out to FORMATION_EDGE inside its edge, as a sunflower's seeds lie: the k-th as far out as leaves
+     * each the same ground (its radius squared even from the inside out) and the golden angle round from the one before,
+     * each a little off its place by its seed. The pattern is turned so that the one as far out as she stands lies right
+     * behind the middle, where she stands: that one is the sword she stands on (2.82.4, {@link #standSword}).
      */
     public static double[][] formationSwords(int s0){
-        int total=0;for(int n:FORMATION_RING_N)total+=n;
-        double[][] out=new double[total][];int k=0;
-        for(int r=0;r<FORMATION_RING_R.length;r++){
-            boolean outer=r==FORMATION_RING_R.length-1;
-            double off=outer?Math.PI:Math.PI*2*hash(s0+11)+Math.PI*r/FORMATION_RING_N[r];
-            for(int i=0;i<FORMATION_RING_N[r];i++,k++){
-                if(outer&&i==0){out[k]=standAt();continue;}
-                int seed=swordSeed(s0,k);
-                double a=off+Math.PI*2*(i+.3*(hash(seed+2)-.5))/FORMATION_RING_N[r];
-                double rad=Math.min(FORMATION_RADIUS-.4,FORMATION_RING_R[r]+(hash(seed+3)-.5)*2*FORMATION_RING_JITTER);
-                out[k]=new double[]{Math.cos(a)*rad,Math.sin(a)*rad};
-            }
+        int n=FORMATION_SWORDS,j=standSword();
+        double r0=FORMATION_EMPTY,r1=FORMATION_RADIUS-FORMATION_EDGE,turn=Math.PI-j*GOLDEN;
+        double[][] out=new double[n][];
+        for(int k=0;k<n;k++){
+            if(k==j){out[k]=standAt();continue;}
+            int seed=swordSeed(s0,k);
+            double rad=Math.sqrt(r0*r0+(r1*r1-r0*r0)*(k+.5)/n)+(hash(seed+3)-.5)*2*FORMATION_JITTER;
+            rad=Math.max(r0-FORMATION_JITTER,Math.min(r1+FORMATION_JITTER,rad));
+            double a=turn+k*GOLDEN+(hash(seed+2)-.5)*2*FORMATION_JITTER/rad;
+            out[k]=new double[]{Math.cos(a)*rad,Math.sin(a)*rad};
         }
         return out;
     }
     /**
      * The sword she stands on (2.82.4, user request: "H를 쓰면 내가 점프를 하고 그 자리에 검이 하나 있어야해"): the one struck
-     * into the ground right where she leapt, the outer ring's first, its place in {@link #formationSwords}. It stands
+     * into the ground right where she leapt, the one of {@link #formationSwords} as far out as she stands. It stands
      * upright, its pommel {@link #FORMATION_STAND} up, and strikes first ({@link #H_PLANT}).
      */
-    public static int standSword(){return FORMATION_RING_N[0]+FORMATION_RING_N[1];}
+    public static int standSword(){
+        double r0=FORMATION_EMPTY,r1=FORMATION_RADIUS-FORMATION_EDGE,f=(FORMATION_STAND_BACK*FORMATION_STAND_BACK-r0*r0)/(r1*r1-r0*r0);
+        return (int)Math.max(0,Math.min(FORMATION_SWORDS-1,Math.round(f*FORMATION_SWORDS-.5)));
+    }
     /** Where she stands: right behind the formation's middle on its outer ring (forward and right of the middle, blocks). */
     public static double[] standAt(){return new double[]{-FORMATION_STAND_BACK,0};}
 }

@@ -73,9 +73,9 @@ class SwordFormationTest {
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
         var a=SwordFormation.layout(id);var b=SwordFormation.layout(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()));
         assertArrayEquals(a,b,"the same swords from the same id");
-        // (2.82.3: three rings and none in the middle, the formation 10 blocks again)
-        assertEquals(10,IsosangRules.FORMATION_RADIUS,1e-9);
-        assertEquals(48,a.length,"three rings, none in the middle");
+        // (2.82.16: the formation 12 blocks, 28 swords all over it but its empty middle: "검 28개")
+        assertEquals(12,IsosangRules.FORMATION_RADIUS,1e-9);
+        assertEquals(28,a.length,"\"검 28개\"");
         Vec3d centre=new Vec3d(5,64,-3);
         // where the server reckons they lie (IsosangRules.formationSwords), and the one she stands on (2.82.4: where she
         // leapt, on the outer ring right behind the middle) upright, struck first, its pommel where the server holds her
@@ -123,9 +123,8 @@ class SwordFormationTest {
             for(float t=s.plant()-SwordFormation.FALL;t<=s.plant();t+=.01f){double y=SwordFormation.above(s,t);assertTrue(y<=prev+1e-9);if(prev!=Double.MAX_VALUE){assertTrue(prev-y>=prevStep-1e-3);prevStep=prev-y;}prev=y;}
         }
         assertEquals(a.length,seen.size(),"no two in one place");
-        // as close together as in 2.82.2 (its rings 4.3, 5.85, 7.3 of 9, 12, 15: 1.68 blocks to the nearest on the mean of
-        // 200 formations; these rings 1.74)
-        assertTrue(near>1.55&&near<1.95,"as close together as before: "+near);
+        // (2.82.16, "검 28개": 28 over the wider formation, some three blocks to the nearest on the mean of 200 formations)
+        assertTrue(near>2.6&&near<3.6,"spread over the formation: "+near);
         assertNotEquals(a[5].fw(),SwordFormation.layout(UUID.randomUUID())[5].fw(),"another formation, other places");
     }
     @Test void thePlainSwordIsWhole(){
@@ -192,7 +191,7 @@ class SwordFormationTest {
             assertEquals(0,img.getRGB(0,0)>>>24,"clear at its corner");
         }
         double sixth=SwordFormation.MOUNTAIN_R*Math.PI/6;
-        assertTrue(SwordFormation.MOUNTAIN_HALF<sixth-1&&SwordFormation.MOUNTAIN_HALF>.75*sixth,"most of a sixth of the round, a gap between: "+SwordFormation.MOUNTAIN_HALF+" of "+sixth);
+        assertTrue(SwordFormation.MOUNTAIN_HALF<sixth-1&&SwordFormation.MOUNTAIN_HALF>.7*sixth,"most of a sixth of the round, a gap between: "+SwordFormation.MOUNTAIN_HALF+" of "+sixth);
         assertTrue(SwordFormation.MOUNTAIN_TOP<4.2,"smaller again (\"산들 크기 다시 줄이자\"): "+SwordFormation.MOUNTAIN_TOP);
         // on the circle (not a hexagon of flat faces), floating over the ground ("영상에는 산이 중간에 떠있는데", "조금 더 낮추고")
         Vec3d mid=new Vec3d(0,0,0);
@@ -347,7 +346,7 @@ class SwordFormationTest {
             fastest=Math.max(fastest,r-last);last=r;
         }
         assertTrue(SwordFormation.whirl(SwordFormation.SWIRL0+frame)<.1*fastest,"slow to start");
-        assertTrue(SwordFormation.whirl(SwordFormation.SWIRL0+.03f)<1.5,"a small whirlpool first: "+SwordFormation.whirl(SwordFormation.SWIRL0+.03f));
+        assertTrue(SwordFormation.whirl(SwordFormation.SWIRL0+.03f)<.1*SwordFormation.WHIRL_R,"a small whirlpool first: "+SwordFormation.whirl(SwordFormation.SWIRL0+.03f));
         // big (the user's still: past the formation's edge, under her camera), mostly out as the rain of swords strikes
         assertEquals(SwordFormation.POOL_WIDE,SwordFormation.WHIRL_R,1e-9,"as wide as the ink first soaked in");
         assertTrue(SwordFormation.WHIRL_R>IsosangRules.FORMATION_RADIUS+4,"well past the formation's edge");
@@ -356,7 +355,7 @@ class SwordFormationTest {
         assertEquals(SwordFormation.WHIRL_R,SwordFormation.whirl(IsosangRules.H_RAIN1),1e-9);
         // its eye: the formation's empty middle (every sword strikes outside it, round its edge), opening after the
         // whirlpool has started to spread and always well inside it, never jumping
-        double inner=IsosangRules.FORMATION_RING_R[0]-IsosangRules.FORMATION_RING_JITTER;
+        double inner=IsosangRules.FORMATION_EMPTY-IsosangRules.FORMATION_JITTER;
         assertTrue(SwordFormation.EYE_R<inner&&SwordFormation.EYE_R>inner-.8,"the swords strike round the eye's edge: "+SwordFormation.EYE_R+" inside "+inner);
         assertTrue(SwordFormation.EYE0>SwordFormation.SWIRL0,"the eye opens once it has started to spread");
         double lastEye=0;
@@ -381,7 +380,7 @@ class SwordFormationTest {
         assertTrue(SwordFormation.SPREAD0>IsosangRules.H_RAIN0&&Math.abs(SwordFormation.SPREAD0-1)<.05f,"at some 1 s, once the swords have begun to strike");
         assertTrue(SwordFormation.SPREAD1-SwordFormation.SPREAD0>=.25f&&SwordFormation.SPREAD1-SwordFormation.SPREAD0<=.4f,"long enough to see it run out, quick as a burst");
         for(float t=0;t<=SwordFormation.SPREAD0;t+=frame)assertEquals(0,SwordFormation.front(t),1e-9,"no front before it spreads, at "+t);
-        assertTrue(SwordFormation.front(SwordFormation.SPREAD0+.02f)<.5,"from the very middle, easing in: "+SwordFormation.front(SwordFormation.SPREAD0+.02f));
+        assertTrue(SwordFormation.front(SwordFormation.SPREAD0+.02f)<.045*SwordFormation.RIM_R,"from the very middle, easing in: "+SwordFormation.front(SwordFormation.SPREAD0+.02f));
         assertEquals(SwordFormation.RIM_R,SwordFormation.front(SwordFormation.SPREAD1),1e-6,"out to the rim");
         assertEquals(SwordFormation.RIM_R,SwordFormation.front(3),1e-6,"and there it stays");
         double lastFront=0,fastestFront=0,lateFront=0;
@@ -434,7 +433,7 @@ class SwordFormationTest {
             assertTrue(r>=lastRim-1e-9&&r-lastRim<.05,"drifting out smoothly at "+t+": "+(r-lastRim));
             lastRim=r;
         }
-        double outer=IsosangRules.FORMATION_RING_R[IsosangRules.FORMATION_RING_R.length-1]+IsosangRules.FORMATION_RING_JITTER;
+        double outer=IsosangRules.FORMATION_RADIUS-IsosangRules.FORMATION_EDGE+IsosangRules.FORMATION_JITTER;
         assertTrue(SwordFormation.RIM_R-1.2>outer,"outside every sword: "+SwordFormation.RIM_R+" and "+outer);
         assertTrue(SwordFormation.RIM_OUT<IsosangRules.FORMATION_RADIUS+2.6,"before the mountains' feet");
         assertEquals(0,SwordFormation.smoke(SwordFormation.SMOKE_IN),1e-6);
