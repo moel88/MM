@@ -686,7 +686,7 @@ final class SwordFormation {
         KagenoFire.clouds(KagenoFire.inkMatrix(),c.camera,centre.add(0,CLOUD_LOW,0),rr,hh,aa,c.cast.id().hashCode()+71,c.age);
     }
     /** The clouds: how far out (just behind the mountains), from how high up and how tall (blocks), how finely drawn round. */
-    static final double CLOUD_R=MOUNTAIN_R+1.0,CLOUD_LOW=1.0,CLOUD_HIGH=4.6;
+    static final double CLOUD_R=MOUNTAIN_R+1.0,CLOUD_LOW=1.0,CLOUD_HIGH=4.8;
     static final int CLOUD_SEGS=160;
     static void texVertex(net.minecraft.client.render.BufferBuilder b,org.joml.Matrix4f m,Vec3d p,float u,float v,float a){
         b.vertex(m,(float)p.x,(float)p.y,(float)p.z).texture(u,v).color(255,255,255,Math.max(0,Math.min(255,Math.round(a*255)))).next();
