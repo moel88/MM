@@ -1,4 +1,18 @@
-> **현재 통합본: Botand 2.82.15** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.82.16** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.82.16 — 이소상 H: 보내 주신 산, 넓어진 검진, 산 아래 물줄기, 한 바퀴 도는 구름
+
+- **산:** 산은 모두 보내 주신 그림이고, 제가 그렸던 산은 뺐습니다.
+  - 큰 산 여섯이 검진 가운데에서 15.4블록 원을 따라 둘러섭니다. 땅에서 0.7칸 떠 있고 불투명도는 0.82입니다.
+  - 산 사이 틈마다 작은 봉우리가 섭니다. 틈 가운데에서 조금 왼쪽에 있고 불투명도는 0.58입니다.
+  - 그 뒤로 작은 산 20개가 자세히 봐야 보일 만큼 옅게(0.15) 둘러섭니다.
+- **검진:** 범위는 반지름 10 → 14.5블록입니다. 산은 그대로이고, 범위는 산 발치 안쪽 전체입니다.
+  - 검은 48 → 28자루입니다. 비운 가운데 바깥에서 범위 끝까지, 시전자 옆과 뒤에도 고르게 박힙니다.
+- **물줄기:** 산 발치 바로 앞에 땅에서 산 발치 높이(1.15칸)까지, 옅고 투명한 물줄기가 한 바퀴 흐릅니다.
+- **구름:** 산 위로 옅은 청회색 안개 구름이 끊김 없이 한 바퀴 이어져 천천히 돕니다(약 2분에 한 바퀴).
+- **서버도 바꿔야 합니다:** 범위와 검 자리가 서버 규칙입니다.
+
+[RELEASE_2.82.16_KO.md](RELEASE_2.82.16_KO.md)를 확인하세요. 2.82.15는 [RELEASE_2.82.15_KO.md](RELEASE_2.82.15_KO.md)입니다.
 
 # 보탠드 2.82.15 — 이소상 H: 물 안에서 천천히 흐르는 어두운 물살
 
