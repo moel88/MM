@@ -78,7 +78,12 @@ final class SwordFormation {
      * edge, three thin arms of light turning in it the wrong way round, a lit rim round it like a puddle's.)
      */
     static final float POOL0=.19f,POOL1=.29f,GATHER0=.32f,GATHER_FAST=.5f,GATHER_SLOW=.42f,GATHER1=.64f,COLLAPSE0=.56f,COLLAPSE=IsosangRules.H_PLANT-.055f,SWIRL0=.7f,SWIRL1=1.15f;
-    static final double POOL_WIDE=SwordFormation.MOUNTAIN_R+1.1,GATHER_MID=3.4,POOL_IN=2.4;
+    /**
+     * (POOL_WIDE: the formation's reach since 2.82.17, user request: "전체 범위를 줄여달라는거였는대", "10블록으로 줄이고":
+     * all of it on the ground within it; out past the mountains' feet in 2.82.16, MOUNTAIN_R+1.1, and past the
+     * formation's edge under her camera before.)
+     */
+    static final double POOL_WIDE=IsosangRules.FORMATION_RADIUS+.5,GATHER_MID=3.4,POOL_IN=2.4;
     /**
      * The whirlpool (2.82.7, user request: "잉크가 모였다가 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가
      * 크게 나옴" with their still of the video; the video read again a frame at a time and put back on the ground plane):
@@ -93,11 +98,11 @@ final class SwordFormation {
      * arms and three thinner ones over a faint blue haze, its water a dark navy (2.82.12, user request: "소용돌이를
      * 포현하는 하늘색 부분이 너무 두껍다고 해야하나 결이 더 많아야 할듯", "그냥 영상 따라서 만드는게 너는 힘든가?";
      * 2.82.7-2.82.11 drew thick crescents). As the swords strike it spreads out (2.82.10, below) and turns into the dark
-     * navy smoke at the rim. (EYE_R 5 until 2.82.16; 4 in 2.82.17, the formation 8 blocks wide: inside its swords, which
-     * strike from 4.25 blocks out.)
+     * navy smoke at the rim. (EYE_R 5 until 2.82.16, of a whirlpool 14.5 to 16.5 blocks wide; 3.6 since 2.82.17, the
+     * whirlpool within the formation's 10: the same share of it, the swords striking outside it.)
      */
     static final float WHIRL1=.86f,EYE0=.73f,EYE1=.85f;
-    static final double WHIRL_R=POOL_WIDE,EYE_R=4,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
+    static final double WHIRL_R=POOL_WIDE,EYE_R=3.6,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
     /**
      * The whirlpool spreads out and turns into smoke (2.82.10, user request: "퍼진다는 느낌이 안 나잖아 그리고 연기
      * 파란색이여함 연기를 더 진하게 만들고 더 많이 피어오르게 하고 소용돌이가 퍼져서 연기가 되는거처럼 만들어"; 2.82.9 only
@@ -122,7 +127,8 @@ final class SwordFormation {
      * in the whirlpool's square (style 15), reading these off the formation's clock.
      */
     static final float SMOKE_IN=1.22f,SMOKE_FULL=1.36f,SMOKE_OUT0=1.64f,SMOKE_OUT1=1.88f;
-    static final double RIM_R=SwordFormation.MOUNTAIN_R-.8,RIM_OUT=SwordFormation.MOUNTAIN_R-.2;
+    /** (RIM_R and RIM_OUT at the formation's edge since 2.82.17, within it all on the ground; at the mountains' feet in 2.82.16.) */
+    static final double RIM_R=IsosangRules.FORMATION_RADIUS,RIM_OUT=IsosangRules.FORMATION_RADIUS+.4;
     /** The mountains rise; the clouds and the mist start coming in (each a little after this, over a second: Cloud.in). */
     static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f;
     /** The swords, dark as they strike, turn silver; the crystal flowers at their feet wilt. */
@@ -937,18 +943,19 @@ final class SwordFormation {
     /**
      * (FLOW_SCALE: the shader's unit for the water, 11 blocks: its darker water's bands some a block wide, spreading out
      * FLOW_OUT blocks a second, as in 2.82.15; 2.82.16 had it the formation's reach and a block, 15.5, its bands and its
-     * bare middle half as big again. Fixed since 2.82.17: the formation 8 blocks wide, its bare middle drawn to fit in the
-     * shader, some 4 to 5.7 blocks out.)
+     * bare middle half as big again. Fixed since 2.82.17: the formation 10 blocks wide, its bare middle as in 2.82.15,
+     * some 5 to 6.7 blocks out.)
      */
     static final double FLOW_TURN=.2,FLOW_OUT=.5,FLOW_SCALE=11;
     /**
      * Where the water lies round the formation (2.82.14, user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까
      * 이상함": it ended a block and more short of the mountains, the ground bare between): its rings at SHORE_STEPS ways
      * round, from WATER_IN blocks out (inside the shader's soft inner edge: the formation's middle is bare, its darker
-     * water flowing only in its water, 2.82.15) to the foot of the nearest mountain that way
-     * (waterEdge), fading out over EDGE_PAST blocks past it, under the mountain; and the strip of its pale strands along
-     * the mountains' feet (STRAND_* blocks inside the edge, there only as far as a mountain stands that way: cover).
-     * Fixed for a formation, as its mountains are.
+     * water flowing only in its water, 2.82.15) to the foot of the nearest mountain that way, fading out over EDGE_PAST
+     * blocks past it, under the mountain; and the strip of its pale strands along the mountains' feet (STRAND_* blocks
+     * inside the edge, there only as far as a mountain stands that way: cover). Since 2.82.17 (user request: "전체 범위를
+     * 줄여달라는거였는대", "10블록으로 줄이고") its edge is the formation's, WATER_EDGE, all round, the mountains off beyond
+     * it; its strands still broken where the mountains leave a gap. Fixed for a formation, as its mountains are.
      */
     record Shore(double[][] water,double[][] strands,float[] cover){}
     private static final Map<UUID,Shore> SHORES=new LinkedHashMap<>();
@@ -957,7 +964,7 @@ final class SwordFormation {
         var ms=mountains(id,yaw);int n=SHORE_STEPS;
         double[] in=new double[n],edge=new double[n],past=new double[n],s0=new double[n],s1=new double[n],s2=new double[n],s3=new double[n];float[] cover=new float[n];
         for(int k=0;k<n;k++){
-            double az=Math.PI*2*k/n,e=waterEdge(ms,az);
+            double az=Math.PI*2*k/n,e=WATER_EDGE;
             in[k]=WATER_IN;edge[k]=e;past[k]=e+EDGE_PAST;cover[k]=(float)mountainCover(ms,az);
             s0[k]=e-STRAND_FROM;s1[k]=e-STRAND_FULL0;s2[k]=e-STRAND_FULL1;s3[k]=e-STRAND_TO;
         }
@@ -968,19 +975,12 @@ final class SwordFormation {
     /** How strongly the water lies on each of its rings (to its edge, then fading out past it). */
     static final float[] WATER_RINGS={1,1,0},STRAND_RINGS={0,1,1,0};
     static final int SHORE_STEPS=180;
-    static final double WATER_IN=2.8,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
     /**
-     * How far out the water runs the way {@code az} (radians in the world's x, z) from the formation's middle: to the
-     * face of the nearest mountain that way (a mountain's face counts along it, fading out over EDGE_FADE blocks past its
-     * ends, its pull on the water going with it), else as far as the
-     * farthest mountain's face (2.82.16: the faces are bent round the circle and the six go all the way round, so the
-     * water's edge is the circle at their feet). Smooth all round.
+     * (WATER_EDGE: the formation's edge since 2.82.17, user request: "전체 범위를 줄여달라는거였는대", "10블록으로 줄이고": all
+     * of it on the ground within it, the mountains standing off beyond, higher; 2.82.14 to 2.82.16 ran it on to the
+     * mountains' feet, waterEdge, "산이랑 물이랑 X좌표 붙어있게 해". Its strands along it a third narrower than then.)
      */
-    static double waterEdge(Mountain[] ms,double az){
-        double d=0;for(var mt:ms)d=Math.max(d,mt.radius());
-        for(var mt:ms){double w=along(mt,az);if(w>0)d=Math.min(d,mt.radius()/w);}
-        return d;
-    }
+    static final double WATER_EDGE=IsosangRules.FORMATION_RADIUS-.3,WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=1.8,STRAND_FULL0=1.2,STRAND_FULL1=.55,STRAND_TO=.14;
     /** How much of the mountain {@code mt} stands the way {@code az} (0 to 1): 1 along it, fading out over EDGE_FADE blocks past its ends; 0 off to its sides. */
     static double along(Mountain mt,double az){
         double off=Math.IEEEremainder(az-mt.az(),Math.PI*2);if(Math.abs(off)>1.2)return 0;
