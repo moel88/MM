@@ -192,8 +192,8 @@ class SwordFormationTest {
             assertEquals(0,img.getRGB(0,0)>>>24,"clear at its corner");
         }
         double sixth=SwordFormation.MOUNTAIN_R*Math.PI/6;
-        assertTrue(SwordFormation.MOUNTAIN_HALF<sixth-1&&SwordFormation.MOUNTAIN_HALF>.75*sixth,"most of a sixth of the round, a gap between: "+SwordFormation.MOUNTAIN_HALF+" of "+sixth);
-        assertTrue(SwordFormation.MOUNTAIN_TOP<5);
+        assertTrue(SwordFormation.MOUNTAIN_HALF<sixth&&SwordFormation.MOUNTAIN_HALF>.85*sixth,"most of a sixth of the round, a little gap between: "+SwordFormation.MOUNTAIN_HALF+" of "+sixth);
+        assertTrue(SwordFormation.MOUNTAIN_TOP<5&&SwordFormation.MOUNTAIN_TOP>4.2,"a little bigger than 3.9 (\"산 크기를 조금 더 키우고\")");
         // on the circle (not a hexagon of flat faces), floating over the ground ("영상에는 산이 중간에 떠있는데", "조금 더 낮추고")
         Vec3d mid=new Vec3d(0,0,0);
         for(var mt:all)for(double x=-SwordFormation.MOUNTAIN_HALF;x<=SwordFormation.MOUNTAIN_HALF;x+=.5)

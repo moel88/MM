@@ -513,11 +513,12 @@ final class SwordFormation {
     /**
      * The mountain: the user's painting (2.82.16: tools/isosang/make_mountain_texture.py crops it, makes its ink body a
      * little see-through and darker, its rims of light kept, and frays its foot away), MOUNTAIN_TOP blocks tall (2.82.16:
-     * "산 크기가 너무 커 지금 더 줄이고"), as wide as the painting is for that (MOUNTAIN_ASPECT, the texture's width over its
+     * "산 크기가 너무 커 지금 더 줄이고", then "산 크기를 조금 더 키우고": a block or so of gap left between neighbours), as
+     * wide as the painting is for that (MOUNTAIN_ASPECT, the texture's width over its
      * height), drawn as a strip of MOUNTAIN_COLS quads bent round the circle.
      */
     static final net.minecraft.util.Identifier MOUNTAIN_TEX=new net.minecraft.util.Identifier("celestialfall","textures/effect/isosang_mountain.png");
-    static final double MOUNTAIN_TOP=3.9,MOUNTAIN_ASPECT=1540/518.0,MOUNTAIN_HALF=MOUNTAIN_TOP*MOUNTAIN_ASPECT/2;
+    static final double MOUNTAIN_TOP=4.4,MOUNTAIN_ASPECT=1540/518.0,MOUNTAIN_HALF=MOUNTAIN_TOP*MOUNTAIN_ASPECT/2;
     static final int MOUNTAIN_COLS=48;
     /** How far a mountain is up at {@code t} (0 to 1): rising into place (each a little after the last), sinking away as the formation ends. */
     static float mountainUp(float end,Mountain mt,float t){
@@ -866,7 +867,8 @@ final class SwordFormation {
     /** How strongly the water lies on each of its rings (to its edge, then fading out past it). */
     static final float[] WATER_RINGS={1,1,0},STRAND_RINGS={0,1,1,0};
     static final int SHORE_STEPS=180;
-    static final double WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
+    /** (EDGE_FADE: 2.82.16's bigger mountains leave a gap of a block or so between neighbours; their strands break there.) */
+    static final double WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=.45,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
     /**
      * How far out the water runs the way {@code az} (radians in the world's x, z) from the formation's middle: to the
      * face of the nearest mountain that way (a mountain's face counts along it, fading out over EDGE_FADE blocks past its
