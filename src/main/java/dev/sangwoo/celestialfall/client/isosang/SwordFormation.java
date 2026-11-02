@@ -604,9 +604,10 @@ final class SwordFormation {
     /**
      * How high over the ground the mountains float (blocks; 2.82.16, user request: "영상에는 산이 중간에 떠있는데 너가 만든건
      * 왜 바닥에서 부터 산이 있냐?": in the video their feet fray away above the ground, the grass showing through and under
-     * them; then "조금 더 낮추고"), their feet fraying away in the painting's lowest eighth.
+     * them; then "조금 더 낮추고"; then .7, as the user had it, the stream under them .6 high: "지금 0.7칸 떠있다고 했나? 그럼
+     * 물줄기 높이는 0.6칸으로"), their feet fraying away in the painting's lowest eighth.
      */
-    static final double MOUNTAIN_FLOAT=.8;
+    static final double MOUNTAIN_FLOAT=.7;
     /**
      * How strongly a mountain shows at {@code x} along it (0 to 1), her camera {@code camAz} round the formation from its
      * middle (NaN when her camera is inside the mountains' ring): where it stands between her camera and the formation,
@@ -1389,16 +1390,17 @@ final class SwordFormation {
         int n=STREAM_SEGS;double[] rr=new double[n+1],hh=new double[n+1];float[] aa=new float[n+1];
         for(int i=0;i<=n;i++){
             double az=Math.PI*2*i/n;rr[i]=STREAM_R;hh[i]=STREAM_HIGH;
-            float before=Double.isNaN(camAz)?1:OCCLUDED+(1-OCCLUDED)*Ease.smooth((float)Math.abs(Math.IEEEremainder(az-camAz,Math.PI*2)),(float)OCCLUDE0,(float)OCCLUDE1);
+            // (where it runs between her camera and the formation, out near the camera, it is gone: STREAM_OPEN)
+            float before=Double.isNaN(camAz)?1:Ease.smooth((float)Math.abs(Math.IEEEremainder(az-camAz,Math.PI*2)),(float)STREAM_OPEN0,(float)STREAM_OPEN1);
             Vec3d p=mid.add(Math.cos(az)*STREAM_R,STREAM_HIGH/2,Math.sin(az)*STREAM_R);
             aa[i]=(float)(up*before*camera(p,c.camera));
         }
         KagenoFire.stream(c.matrix,c.camera,mid,rr,hh,aa,c.cast.id().hashCode()+53,c.age,STREAM_GLOW,0);
     }
     /** The stream: how far out (just before the mountains' feet), how high (blocks), how finely drawn round, how much of its light is added again. */
-    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=.6;
+    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=.6,STREAM_OPEN0=Math.toRadians(35),STREAM_OPEN1=Math.toRadians(65);
     static final int STREAM_SEGS=160;
-    static final float STREAM_GLOW=.35f;
+    static final float STREAM_GLOW=.08f;
     /** A ring of the mist round {@code mid}: {@code r} blocks out, {@code high} blocks up (low and thin behind her), of strength {@code strength}, thinned away {@code thin}. */
     static void mist(Fx c,Vec3d mid,double r,double high,float strength,float thin,int seed,double back){
         int n=MIST_SEGS;double[] rr=new double[n+1],hh=new double[n+1];float[] aa=new float[n+1];
