@@ -192,8 +192,8 @@ class SwordFormationTest {
             assertEquals(0,img.getRGB(0,0)>>>24,"clear at its corner");
         }
         double sixth=SwordFormation.MOUNTAIN_R*Math.PI/6;
-        assertTrue(SwordFormation.MOUNTAIN_HALF<sixth&&SwordFormation.MOUNTAIN_HALF>.85*sixth,"most of a sixth of the round, a little gap between: "+SwordFormation.MOUNTAIN_HALF+" of "+sixth);
-        assertTrue(SwordFormation.MOUNTAIN_TOP<5&&SwordFormation.MOUNTAIN_TOP>4.2,"a little bigger than 3.9 (\"산 크기를 조금 더 키우고\")");
+        assertTrue(SwordFormation.MOUNTAIN_HALF<sixth-1&&SwordFormation.MOUNTAIN_HALF>.75*sixth,"most of a sixth of the round, a gap between: "+SwordFormation.MOUNTAIN_HALF+" of "+sixth);
+        assertTrue(SwordFormation.MOUNTAIN_TOP<4.2,"smaller again (\"산들 크기 다시 줄이자\"): "+SwordFormation.MOUNTAIN_TOP);
         // on the circle (not a hexagon of flat faces), floating over the ground ("영상에는 산이 중간에 떠있는데", "조금 더 낮추고")
         Vec3d mid=new Vec3d(0,0,0);
         for(var mt:all)for(double x=-SwordFormation.MOUNTAIN_HALF;x<=SwordFormation.MOUNTAIN_HALF;x+=.5)
@@ -232,17 +232,20 @@ class SwordFormationTest {
             double off=Math.toDegrees(Math.abs(Math.IEEEremainder(mt.az()-behind,Math.PI*2)));
             if(mt.art()==1){
                 peaks++;
-                assertEquals(0,Math.min(off%60,60-off%60),1e-6,"in a gap between two of the six: "+off);
+                // in a gap between two of the six, a block and a half left of its middle as seen from the formation's
+                // middle ("너무 정가운데 두지 말고 왼쪽에 더 가깝게"): the way the paintings' left lies (u 0 at -half)
+                double gapAz=behind+Math.round((mt.az()-behind)/(Math.PI/3))*(Math.PI/3);
+                assertEquals(-SwordFormation.PEAK_LEFT,Math.IEEEremainder(mt.az()-gapAz,Math.PI*2)*mt.radius(),1e-9,"left of the gap's middle");
                 assertTrue(off>30,"none in the gap right behind her (her camera looks in through it)");
-                assertEquals(1,mt.alpha());assertFalse(mt.flip());
+                assertTrue(mt.alpha()<1&&mt.alpha()>.5,"a little see-through (\"얘도 조금 투명하게\"): "+mt.alpha());assertFalse(mt.flip());
                 assertTrue(mt.radius()>SwordFormation.MOUNTAIN_R&&mt.radius()<SwordFormation.MOUNTAIN_R+1,"just behind the six");
-                assertTrue(mt.top()>3&&mt.top()<=SwordFormation.MOUNTAIN_TOP,"about as tall as the six: "+mt.top());
+                assertTrue(mt.top()>1.6&&mt.top()<2.4,"about as tall as the part of the old peak they cut out (\"이정도 크기로\"): "+mt.top());
                 assertTrue(mt.half()<2,"narrow, in the gap: "+mt.half());
             }else{
                 assertEquals(2,mt.art());small++;
                 assertTrue(mt.alpha()<.2f,"barely there (\"자세히 봐야 알 정도로\"): "+mt.alpha());
                 assertTrue(mt.radius()>SwordFormation.MOUNTAIN_R+.8&&mt.radius()<SwordFormation.MOUNTAIN_R+3.5,"behind the six");
-                assertTrue(mt.top()<SwordFormation.MOUNTAIN_TOP*.6,"small: "+mt.top());
+                assertTrue(mt.top()<SwordFormation.MOUNTAIN_TOP*.65,"small: "+mt.top());
                 assertTrue(off>=Math.toDegrees(SwordFormation.SMALL_CLEAR)-1e-6,"none near behind her: "+off);
                 double az=Math.toDegrees(mt.az());
                 if(!Double.isNaN(prev))assertTrue(Math.abs(MathHelper.wrapDegrees(az-prev))<20,"close together (\"촘촘하게\")");

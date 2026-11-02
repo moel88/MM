@@ -480,7 +480,7 @@ final class SwordFormation {
 
     /**
      * An ink mountain round the formation: which way from its middle (radians), how far, how long after the first it
-     * rises, its seed; which of the user's paintings it is (ART: 0 the mountain, 1 the tall peak, 2 the small mountain),
+     * rises, its seed; which of the user's paintings it is (ART: 0 the mountain, 1 the peak, 2 the small mountain),
      * how tall (blocks), how strongly it shows (0 to 1) and whether it is drawn mirrored.
      */
     record Mountain(double az,double radius,float delay,int seed,int art,double top,float alpha,boolean flip){
@@ -521,7 +521,8 @@ final class SwordFormation {
     /**
      * The user's two other paintings among the six (2.82.16, user request, with the two: "빈 공간에 이거 넣고 그래도 남는
      * 공간에는 이 작은 산들 촘촘하게 끼워넣는데 엄청 투명하게 끼워넣어줘 자세히 봐야 알 정도로"): in each gap between two of
-     * them the tall peak (PEAK_*), standing just behind them; and all round behind them the small mountain, SMALL_COUNT
+     * them their peak (PEAK_*), standing just behind them a little left of its middle, a little see-through; and all
+     * round behind them the small mountain, SMALL_COUNT
      * of it close together (SMALL_*, every other one mirrored), barely there: they show only where the sky is left open
      * above the others. None in the gap right behind her nor, for the small ones, within SMALL_CLEAR of it (her camera
      * looks in from out there: a mountain there would stand before it).
@@ -532,8 +533,8 @@ final class SwordFormation {
         List<Mountain> out=new ArrayList<>();double back=behind(yaw);
         for(int i=1;i<MOUNTAIN_COUNT;i++){
             int seed=s0+307*(i+1);
-            out.add(new Mountain(back+Math.PI*2*i/MOUNTAIN_COUNT,MOUNTAIN_R+PEAK_BACK,.06f+.12f*(float)Ease.hash(seed+2),seed,1,
-                PEAK_TOP*(.95+.1*Ease.hash(seed+3)),1,false));
+            out.add(new Mountain(back+Math.PI*2*i/MOUNTAIN_COUNT-PEAK_LEFT/(MOUNTAIN_R+PEAK_BACK),MOUNTAIN_R+PEAK_BACK,.06f+.12f*(float)Ease.hash(seed+2),seed,1,
+                PEAK_TOP*(.95+.1*Ease.hash(seed+3)),PEAK_ALPHA,false));
         }
         double span=Math.PI*2-2*SMALL_CLEAR;
         for(int i=0;i<SMALL_COUNT;i++){
@@ -546,8 +547,15 @@ final class SwordFormation {
         FILL.put(id,l);while(FILL.size()>16)FILL.remove(FILL.keySet().iterator().next());
         return l;
     }
-    /** The tall peak: how far behind the six it stands and how tall it is (blocks). */
-    static final double PEAK_BACK=.4,PEAK_TOP=4.0;
+    /**
+     * The peak in each gap (2.82.16, user request, with a smaller mountain of theirs in place of the tall peak: "너무
+     * 이상하다 이정도 크기로 바꾸고 얘도 조금 투명하게 바꿔줘", "너무 정가운데 두지 말고 왼쪽에 더 가깝게 두자", "방금 보낸 사진 말고
+     * 이걸로"): how far behind the six it stands, how far left of the gap's middle (as seen from the formation's middle:
+     * the way the paintings' left lies), how tall it is (blocks; about as tall as the part of the tall peak they cut out
+     * to show its size) and how strongly it shows.
+     */
+    static final double PEAK_BACK=.4,PEAK_LEFT=1.5,PEAK_TOP=2.0;
+    static final float PEAK_ALPHA=.7f;
     /** The small mountains: how many, how far behind the six (from, to), how tall (from, to), how strongly they show, how far round from right behind her none stands. */
     static final int SMALL_COUNT=20;
     static final double SMALL_BACK0=1.0,SMALL_BACK1=3.0,SMALL_TOP0=1.6,SMALL_TOP1=2.4,SMALL_CLEAR=Math.toRadians(70);
@@ -559,19 +567,19 @@ final class SwordFormation {
     /**
      * The mountain: the user's painting (2.82.16: tools/isosang/make_mountain_texture.py crops it, makes its ink body a
      * little see-through and darker, its rims of light kept, and frays its foot away), MOUNTAIN_TOP blocks tall (2.82.16:
-     * "산 크기가 너무 커 지금 더 줄이고", then "산 크기를 조금 더 키우고": a block or so of gap left between neighbours), as
+     * "산 크기가 너무 커 지금 더 줄이고"; then "산 크기를 조금 더 키우고" made it 4.4, and "산들 크기 다시 줄이자" 3.9 again), as
      * wide as the painting is for that (MOUNTAIN_ASPECT, the texture's width over its
      * height), drawn as a strip of MOUNTAIN_COLS quads bent round the circle.
      */
     static final net.minecraft.util.Identifier MOUNTAIN_TEX=new net.minecraft.util.Identifier("celestialfall","textures/effect/isosang_mountain.png");
-    static final double MOUNTAIN_TOP=4.4,MOUNTAIN_ASPECT=1540/518.0,MOUNTAIN_HALF=MOUNTAIN_TOP*MOUNTAIN_ASPECT/2;
+    static final double MOUNTAIN_TOP=3.9,MOUNTAIN_ASPECT=1540/518.0,MOUNTAIN_HALF=MOUNTAIN_TOP*MOUNTAIN_ASPECT/2;
     /**
-     * The user's paintings: the mountain, the tall peak (its sides and foot, where the picture cut it off, frayed away),
-     * the small mountain (painted on black: the black taken away), all made into textures by make_mountain_texture.py;
+     * The user's paintings: the mountain, the peak and the small mountain (the last two painted on black: the black
+     * taken away), all made into textures by make_mountain_texture.py;
      * each one's width over its height (its texture's).
      */
     static final net.minecraft.util.Identifier[] ART={MOUNTAIN_TEX,art("isosang_mountain_peak"),art("isosang_mountain_small")};
-    static final double[] ASPECT={MOUNTAIN_ASPECT,391/609.0,964/363.0};
+    static final double[] ASPECT={MOUNTAIN_ASPECT,804/500.0,964/363.0};
     static net.minecraft.util.Identifier art(String name){return new net.minecraft.util.Identifier("celestialfall","textures/effect/"+name+".png");}
     static final int MOUNTAIN_COLS=48;
     /** How far a mountain is up at {@code t} (0 to 1): rising into place (each a little after the last), sinking away as the formation ends. */
@@ -924,8 +932,7 @@ final class SwordFormation {
     /** How strongly the water lies on each of its rings (to its edge, then fading out past it). */
     static final float[] WATER_RINGS={1,1,0},STRAND_RINGS={0,1,1,0};
     static final int SHORE_STEPS=180;
-    /** (EDGE_FADE: 2.82.16's bigger mountains leave a gap of a block or so between neighbours; their strands break there.) */
-    static final double WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=.45,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
+    static final double WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
     /**
      * How far out the water runs the way {@code az} (radians in the world's x, z) from the formation's middle: to the
      * face of the nearest mountain that way (a mountain's face counts along it, fading out over EDGE_FADE blocks past its

@@ -3,9 +3,9 @@
 
 User requests: "이거 쓰면 되는데 투명하게 다듬으면 될듯", with their painted mountain (a PNG with its own transparency: the
 background clear, the mountain all but opaque); then, with two more of theirs, "빈 공간에 이거 넣고 그래도 남는 공간에는 이
-작은 산들 촘촘하게 끼워넣는데 엄청 투명하게 끼워넣어줘": a tall peak (cut out of a bigger picture, its sides and foot cut
-off) and a small mountain (painted on black, no transparency of its own). The paintings themselves are not redrawn; this
-only:
+작은 산들 촘촘하게 끼워넣는데 엄청 투명하게 끼워넣어줘", a peak and a small mountain (in place of the first peak, a tall one
+cut out of a bigger picture: "방금 보낸 사진 말고 이걸로"), both painted on black with no transparency of their own. The
+paintings themselves are not redrawn; this only:
   - with --black, takes the black round the painting away (the near-black connected to its border; dark ink inside the
     mountain stays, however dark);
   - crops it to the mountain;
@@ -19,7 +19,7 @@ only:
 
 python3 -I tools/isosang/make_mountain_texture.py mountain.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain.png
-python3 -I tools/isosang/make_mountain_texture.py --sides .4 --seed 8218 peak.png \
+python3 -I tools/isosang/make_mountain_texture.py --black --width 800 --seed 8218 peak.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain_peak.png
 python3 -I tools/isosang/make_mountain_texture.py --black --width 960 --seed 8219 small.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain_small.png
