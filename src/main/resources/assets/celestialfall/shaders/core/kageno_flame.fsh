@@ -366,7 +366,8 @@ void main(){
    // wavering slowly), tint.g the formation's clock (seconds over 2), tint.b how far it has soaked in (0..127). Dense and
    // black inside, thin and glassy toward its edge (deep blue showing through), mottled, with streaks flowing in toward its
    // middle, turning as they go; its edge a thin bright line, white at its heart, in a wide blue glow just outside it.
-   // 14 the formation's blue ground (the same square, solid to .88 of it, fading to its rim; tint.a).
+   // 14 the formation's blue ground (the same square, solid to .88 of it, fading to its rim; tint.a; its middle cleared by
+   // the spreading whirlpool's front, tint.g its reach over 1.25 of the square, 2.82.10).
    // 15 the whirlpool once the gathered ink has gone into the middle and burst there (2.82.7, user request: "잉크가 모였다가
    // 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가 크게 나옴" with their still of the video): streams of
    // black water swirling out of the middle as wide as the ink first soaked in. uv the offset from its middle over its outer
@@ -376,16 +377,24 @@ void main(){
    // way; theta here grows clockwise seen from above, so a stream keeps th+TWIST*lr. Crescents of a see-through pale
    // blue on black water (2.82.8: no white, some third of 2.82.7's brightness), broken along their length so they taper
    // at both ends; fine streaks running out along them; a blue sheen round the eye; its rim soft and ragged, the streams'
-   // tails reaching a little past it. As the swords strike it spreads out as it is and is gone in a fifth of a second
-   // (2.82.9), its pale blue lying along the rim as smoke that thins away (2.82.8).
+   // tails reaching a little past it. As the swords strike it spreads out from its middle to the rim, turning blue, and
+   // turns into the blue smoke lying along the rim, which thins away (2.82.10; the smoke since 2.82.8).
    vec2 q=uv;float r=length(q);
    if(style>14.5){
     float tsec=tint.g*2.0,eye=tint.b*.6;
-    // as the swords strike it spreads out as it is, three tenths further, and is gone (2.82.9, user request: "1초때 그냥
-    // 퍼지고 끝나게 만들면 안되나?", SwordFormation.OUT0 to OUT1, OUT_GROW): drawn from qW, the square scaled back
-    float grow=1.0+.3*smoothstep(1.0,1.2,tsec),shownW=1.0-smoothstep(1.04,1.2,tsec);
-    vec2 qW=q/grow;float rW=length(qW);
+    // as the swords strike it spreads out and turns into the smoke at the rim (2.82.10, user request: "퍼진다는 느낌이 안
+    // 나잖아 ... 소용돌이가 퍼져서 연기가 되는거처럼 만들어"): a clean front opens in its middle and runs out to the rim
+    // (SwordFormation.front: SPREAD0 1.0 s to SPREAD1 1.33 s, easing in, fast through the middle and slowing, RIM_R 11.2
+    // blocks over its radius 14.5), the water and its streams squeezed out between it and its edge (pushed SPREAD_PUSH .06
+    // further out): rO is
+    // the radius each bit of it was at before it spread, so the black eye piles up just outside the front and the
+    // crescents pack in ahead of it.
+    float fr=pow(smoothstep(1.0,1.33,tsec),.7)*(11.2/14.5);
+    float outerE=1.0+.06*smoothstep(1.0,1.33,tsec);
+    float rO=max(r-fr,0.0)/max(outerE-fr,1e-3);
+    float clean=fr>1e-4?smoothstep(fr-.012,fr+.003,r):1.0;
     vec2 dir=r>1e-4?q/r:vec2(1.0,0.0);
+    vec2 qW=dir*rO;float rW=rO;
     float th=r>1e-4?atan(q.y,q.x):0.0,lr=log(max(rW,.035)),aa=max(fwidth(rW),.0015);
     // the eye: black, its edge wavering a little
     float eyeR=eye*(1.0+.035*sin(4.0*th+sd+.8*tsec)+.02*sin(7.0*th-1.3*sd-1.4*tsec));
@@ -406,62 +415,81 @@ void main(){
     float st=.5+.5*cos(13.0*psi+2.2*fbm(dir*2.0+vec2(lr*.6,sd)));
     float dash=.5+.5*sin(8.0*lr-10.0*tsec+3.0*sin(4.0*psi+sd));
     float streak=smoothstep(.76,.95,st)*smoothstep(.3,.8,dash)*band;
-    // its water settles a little toward a dark blue as the swords strike
-    float settle=smoothstep(.95,1.2,tsec);
+    // its water settles a little toward a dark blue as the swords strike, and turns blue as it spreads (into smoke)
+    float settle=smoothstep(.95,1.2,tsec),conv=smoothstep(1.1,1.33,tsec);
     float mott=fbm(qW*3.1+vec2(-sd,sd)+tsec*vec2(.11,-.08));
     vec3 water=mix(inkc,navy*.85,.25*mott+.4*settle*(1.0-inEye));
+    water=mix(water,vec3(.08,.17,.55),.55*conv);
     // its crescents a see-through pale blue, no white (2.82.8, user request: "회오리 하늘색 부분 더 더 연하게": some
     // third of 2.82.7's brightness; the video's crescents are periwinkle): the black water shows through them
     vec3 pb=vec3(.5,.62,.92);
     vec3 cc=mix(deep*.8,blue*.8,smoothstep(0.0,.3,crest));
     cc=mix(cc,pb,smoothstep(.3,.9,crest));
     cc=mix(cc,deep*.55,streak*.5);
+    cc=mix(cc,vec3(.3,.52,1.0),.5*conv);
     rgb=mix(water,mix(navy*1.6,blue*.8,.4),streak*(1.0-crest)*.12);
     rgb=mix(rgb,cc,crest*.6);
     float sheen=eye>.01?exp(-max(rW-eyeR,0.0)/.05)*(1.0-inEye)*band:0.0;
     rgb=mix(rgb,mix(deep,blue,.5),sheen*.2);
-    // dense in the eye, thinning out to a soft, ragged rim; gone as it spreads out (no drying by patches after it)
+    // dense in the eye, thinning out to a soft, ragged rim; the ground clean behind the front; thinning as it turns into
+    // smoke, gone once what reached the rim has (SwordFormation.whirlShown: WATER_OUT0 1.27 s to WATER_OUT1 1.45 s)
     float n=fbm(qW*2.0+vec2(sd*1.3,sd*.7));
     float rim=1.0-smoothstep(.7,1.0,rW+.14*(n-.5));
-    float a=max(mix(.86,.95,inEye)*rim,crest*.6)*shownW;
-    float glow=(crest*.16+sheen*.15+streak*.04)*shownW;
+    float shownW=1.0-smoothstep(1.27,1.45,tsec);
+    float a=max(mix(.86,.95,inEye)*rim,crest*.6)*clean*(1.0-.3*conv)*shownW;
+    float glow=(crest*(.16+.3*conv)+sheen*.15+streak*.04)*clean*shownW;
+    // its front as it runs out: a thin, faint line of blue where the clean ground meets the water, ragged along it (the
+    // edge of the water, not a lit rim round a puddle: 2.82.6's), and a thin blue mist lifting just behind it (the
+    // whirlpool turning into smoke as it goes; the puffs rise off the water ahead of it)
+    float fK=smoothstep(1.0,1.03,tsec)*(1.0-smoothstep(1.3,1.42,tsec));
+    if(fK>0.0){
+     float d=r-fr,rag=.6+.4*fbm(dir*5.0+vec2(sd,tsec*1.3));
+     float wA=(d<0.0?exp(d/.035):0.0)*fK*rag*.2;
+     float aw=a;a=wA+aw*(1.0-wA);rgb=(vec3(.14,.3,.86)*wA+rgb*aw*(1.0-wA))/max(a,1e-4);
+     float line=exp(-abs(d)/.0035)*fK*rag;
+     float lA=min(1.0,line*.55);aw=a;a=lA+aw*(1.0-lA);rgb=(vec3(.24,.44,.95)*lA+rgb*aw*(1.0-lA))/max(a,1e-4);
+     glow+=line*.35+wA*.4;
+    }
     // the smoke at the rim (2.82.8, user request: "끝으로 퍼지면서 이상한 아우라가 테두리 부분으로 퍼지면서 사라지거든", the
-    // video's pale blue smoke round the formation's rim, read on a marked still and "일단 그렇게 해봐"; 2.82.9: it comes
-    // where it lies as the whirlpool spreads out past it, no haze sweeping out to it): along the rim (SwordFormation.RIM_R,
-    // 11.2 blocks, out to RIM_OUT as it goes), fixed in the world (drawn from q), on the ground, in wisps streaming round it
-    // the way the whirlpool turned (counterclockwise seen from above). It comes up as the whirlpool spreads out (SMOKE_IN to
-    // SMOKE_FULL), drifts a little further out and thins away by patches, its thin wisps first (SMOKE_OUT0 to SMOKE_OUT1).
-    // Soft and see-through, glowing a little; the smoke rising off it is SwordFormation.veil.
-    float life=smoothstep(1.02,1.15,tsec)*(1.0-smoothstep(1.34,1.47,tsec));
+    // video's smoke round the formation's rim, read on a marked still and "일단 그렇게 해봐"; 2.82.10: "연기 파란색이여함
+    // 연기를 더 진하게": blue and thick, what the spreading whirlpool turns into as it reaches the rim): along the rim
+    // (SwordFormation.RIM_R, 11.2 blocks, out to RIM_OUT 12.2 as it goes), fixed in the world (drawn from q), on the
+    // ground, in wisps streaming round it the way the whirlpool turned (counterclockwise seen from above). It comes up as
+    // the whirlpool reaches the rim (SMOKE_IN 1.22 s to SMOKE_FULL 1.36 s), drifts a little further out and thins away by
+    // patches, its thin wisps first (SMOKE_OUT0 1.64 s to SMOKE_OUT1 1.88 s). The smoke billowing up off it is
+    // SwordFormation.puffs (mode 17).
+    float life=smoothstep(1.22,1.36,tsec)*(1.0-smoothstep(1.64,1.88,tsec));
     if(life>0.0){
      float lr0=log(max(r,.035));
      float ca=cos(.45*tsec),sa_=sin(.45*tsec);
      vec2 dS=vec2(ca*dir.x-sa_*dir.y,sa_*dir.x+ca*dir.y);
-     float rimR=mix(11.2,12.0,smoothstep(1.15,1.46,tsec))/14.5;
+     float rimR=mix(11.2,12.2,smoothstep(1.36,1.88,tsec))/14.5;
      // swelling and thinning round the rim, ragged at its edges
      float lo=fbm(dS*1.6+vec2(sd*.6,4.1)),wv=fbm(dS*2.6+vec2(sd*.9,1.7));
-     float hw=(1.4+.5*smoothstep(1.15,1.46,tsec))*(.65+.7*lo)/14.5;
+     float hw=(1.5+.5*smoothstep(1.36,1.72,tsec))*(.65+.7*lo)/14.5;
      float dr=(r-rimR-.05*(wv-.5))/max(hw,1e-3);
      float body=exp(-dr*dr*1.2);
      // soft wisps streaming round it the way the whirlpool turned, smeared along it like mist
      float wisp=fbm(dS*3.4+vec2(lr0*9.0,-lr0*6.0)+sd);
      float strk=.5+.5*cos(17.0*lr0+2.0*th-1.2*tsec+2.6*wisp);
-     float smoke=body*(.4+.6*strk)*(.45+.55*wisp);
+     float smoke=body*(.5+.5*strk)*(.55+.45*wisp);
      // thinning away by patches, its thin wisps first
      float nS=fbm(dS*3.3+vec2(lr0*5.0,sd*1.9));
-     float gone=smoothstep(1.32,1.47,tsec);
+     float gone=smoothstep(1.62,1.88,tsec);
      smoke*=(1.0-smoothstep(nS-.14,nS+.14,gone*1.2-.1+.15*(1.0-smoke)))*life;
-     vec3 sc=mix(vec3(.28,.45,.98),vec3(.62,.78,1.0),smoothstep(.3,.75,smoke));
-     float sA=min(1.0,smoke*.95);
+     vec3 sc=mix(vec3(.1,.22,.82),vec3(.38,.6,1.0),smoothstep(.3,.8,smoke));
+     float sA=min(1.0,smoke*1.05);
      float aw=a;a=sA+aw*(1.0-sA);
      rgb=(sc*sA+rgb*aw*(1.0-sA))/max(a,1e-4);
-     glow+=smoke*.65;
+     glow+=smoke*.55;
     }
     rgb*=1.0+Hot*glow;
     alpha=a*tint.a;
    }else if(style>13.5){
+    // (2.82.10: its middle cleared by the spreading whirlpool's front, tint.g its reach over 1.25 of the square)
     rgb=vec3(.043,.078,.275);
-    alpha=(1.0-smoothstep(.88,1.0,r))*tint.a;
+    float hole=tint.g*1.25,keep=tint.g>0.0?smoothstep(hole-.02,hole+.03,r):1.0;
+    alpha=(1.0-smoothstep(.88,1.0,r))*keep*tint.a;
    }else{
     float tsec=tint.g*2.0,share=min(floor(tint.b*255.0+.5),127.0)/127.0;
     vec2 dir=r>1e-4?q/r:vec2(1.0,0.0);
@@ -609,6 +637,28 @@ void main(){
    rgb*=1.0+Hot*lit;
    alpha=body*tint.a;
   }
+ }else if(Mode==17){
+  // Blue smoke billowing up off the rim of Lee So-sang's sword formation (2.82.10, user request: "연기 파란색이여함 연기를
+  // 더 진하게 만들고 더 많이 피어오르게"), on the fire cells' fixed planes: a soft lobed billow in three blues (a deep
+  // shadowed base, a middle and a pale lit top), a darker blue rim keeping the billows apart, lit from below by the
+  // whirlpool's light (tint.g) and opening in holes as it thins out (tint.b). Blue, never white: the lit top stays under
+  // white, glowing a little on the effect layer.
+  float light=tint.g,thin=tint.b;
+  vec2 flow=p*1.5+vec2(seed*.29,-Age*.05);
+  float n=fbm(flow+vec2(noise(flow+1.9),noise(flow-3.3))*1.5);
+  float r=length(p*vec2(1.0,1.05));
+  float edge=.72+(n-.5)*.5+.06*sin(atan(p.y,p.x)*5.0+seed);
+  float aa=max(fwidth(r),.002)*2.0;
+  float body=1.0-smoothstep(edge-.1-aa,edge+aa,r);
+  body*=1.0-smoothstep(.5-thin*.32,.58-thin*.32,fbm(flow*1.7+5.0))*thin;
+  float lit=p.y+(n-.5)*.5;
+  rgb=mix(vec3(.07,.15,.52),vec3(.16,.34,.9),smoothstep(-.35,-.05,lit));
+  rgb=mix(rgb,vec3(.42,.62,1.0),smoothstep(.15,.45,lit));
+  float rimLine=smoothstep(edge-.16,edge-.04,r);
+  rgb=mix(rgb,vec3(.05,.1,.38),rimLine*.45);
+  rgb+=vec3(.08,.16,.4)*light*(1.0-smoothstep(-.6,.4,p.y));
+  rgb*=1.0+Hot*light*.6*(1.0-rimLine);
+  alpha=body*tint.a*(.82+.18*n);
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

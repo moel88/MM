@@ -88,25 +88,34 @@ final class SwordFormation {
      * slowly the same way (the ink shader, style 15: a stream keeps theta + WHIRL_TWIST ln r, it turns WHIRL_SPIN radians
      * a second; theta there grows clockwise seen from above). Its crescents are a see-through pale blue, no white, some
      * third of 2.82.7's brightness (2.82.8, user request: "회오리 하늘색 부분 더 더 연하게"). As the swords strike it spreads
-     * out as it is, OUT_GROW further, and is gone (OUT0 to OUT1; 2.82.9, user request: "1초때 그냥 퍼지고 끝나게 만들면
-     * 안되나? 2초때부터 이상해지는데", read on a marked picture and "일단은 그렇게 해봐": 2.82.8 swept a haze ring out from
-     * its eye gathering the crescents and left its water drying by patches until 1.9 s), its pale blue lying along the rim
-     * as smoke and rising off it (below), the formation's blue ground under it.
+     * out (2.82.10, below) and turns into the blue smoke at the rim.
      */
-    static final float WHIRL1=.86f,EYE0=.73f,EYE1=.85f,OUT0=1.0f,OUT1=1.2f;
-    static final double WHIRL_R=POOL_WIDE,EYE_R=5,WHIRL_TWIST=5.2,WHIRL_SPIN=.38,OUT_GROW=.3;
+    static final float WHIRL1=.86f,EYE0=.73f,EYE1=.85f;
+    static final double WHIRL_R=POOL_WIDE,EYE_R=5,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
+    /**
+     * The whirlpool spreads out and turns into smoke (2.82.10, user request: "퍼진다는 느낌이 안 나잖아 그리고 연기
+     * 파란색이여함 연기를 더 진하게 만들고 더 많이 피어오르게 하고 소용돌이가 퍼져서 연기가 되는거처럼 만들어"; 2.82.9 only
+     * grew it three tenths as it faded, too little and too quick to read as spreading): a clean front opens in its middle
+     * and runs out to the rim (SPREAD0 to SPREAD1, easing in, fast through the middle and slowing as it gets there, front), the black water
+     * and its streams squeezed out ahead of it (its edge pushed SPREAD_PUSH further out), the ground clean behind it (the
+     * formation's blue ground and the ink at the swords' feet go as it passes them, groundInk). As it runs it turns blue,
+     * mist lifting off it (puffs), and what reaches the rim turns into the smoke there (WATER_OUT0 to WATER_OUT1). The ink
+     * shader draws the front from the formation's clock as front does.
+     */
+    static final float SPREAD0=1.0f,SPREAD1=1.33f,WATER_OUT0=1.27f,WATER_OUT1=1.45f;
+    static final double SPREAD_PUSH=.06;
     /**
      * The smoke at the rim (2.82.8, user request: "끝으로 퍼지면서 이상한 아우라가 테두리 부분으로 퍼지면서 사라지거든", the
-     * video's pale blue smoke round the formation's rim, read on a marked still, then "일단 그렇게 해봐"): as the whirlpool
-     * spreads out past the formation's rim (RIM_R, outside every sword and before the mountains' feet) its pale blue comes
-     * up there where it lies (SMOKE_IN to SMOKE_FULL; 2.82.9: no haze sweeping out to it from the eye), a band of blue mist
-     * on the ground, its wisps streaming round the way the whirlpool turned, and rises off it faintly to some half the
-     * mountains' height (veil); it drifts a little further out (to RIM_OUT) and thins away by patches, its thin wisps first
-     * (SMOKE_OUT0 to SMOKE_OUT1; the video: thickest at 1.28 s, gone by 1.45 s). The ink shader draws the band in the
-     * whirlpool's square (style 15), reading these off the formation's clock.
+     * video's pale blue smoke round the formation's rim, read on a marked still, then "일단 그렇게 해봐"; 2.82.10: blue,
+     * thicker, rising more, the whirlpool spreading out into it): as the spreading whirlpool reaches the formation's rim
+     * (RIM_R, outside every sword and before the mountains' feet) it turns into a band of blue smoke on the ground there
+     * (SMOKE_IN to SMOKE_FULL), its wisps streaming round the way the whirlpool turned, billowing up off it (puffs, up to
+     * some three quarters of the mountains' height); it drifts a little further out (to RIM_OUT) and thins away by patches,
+     * its thin wisps first (SMOKE_OUT0 to SMOKE_OUT1). The ink shader draws the band in the whirlpool's square (style 15),
+     * reading these off the formation's clock.
      */
-    static final float SMOKE_IN=1.02f,SMOKE_FULL=1.15f,SMOKE_OUT0=1.34f,SMOKE_OUT1=1.47f;
-    static final double RIM_R=11.2,RIM_OUT=12.0;
+    static final float SMOKE_IN=1.22f,SMOKE_FULL=1.36f,SMOKE_OUT0=1.64f,SMOKE_OUT1=1.88f;
+    static final double RIM_R=11.2,RIM_OUT=12.2;
     /** The mountains rise; the clouds and the mist start coming in (each a little after this, over a second: Cloud.in). */
     static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f;
     /** The swords, dark as they strike, turn silver; the crystal flowers at their feet wilt. */
@@ -859,12 +868,18 @@ final class SwordFormation {
     static double eye(float t){return EYE_R*Ease.smooth(t,EYE0,EYE1);}
     /** The ink shader's byte for the eye (style 15): its radius as a share of the whirlpool's, over .6 (0 while there is none). */
     static float eyeByte(float t){double w=whirl(t);return w<=1e-6?0:Math.round(MathHelper.clamp(eye(t)/w/.6,0,1)*255)/255f;}
-    /** How far the whirlpool has spread out as it ends (a share of its size: 1 until OUT0, 1 + OUT_GROW from OUT1; as the ink shader draws it). */
-    static double spreadOut(float t){return 1+OUT_GROW*Ease.smooth(t,OUT0,OUT1);}
-    /** How much of the whirlpool is left as it spreads out (1 to 0, gone by OUT1; as the ink shader draws it). */
-    static float whirlShown(float t){return 1-Ease.smooth(t,OUT0+.04f,OUT1);}
+    /**
+     * How far the clean ground behind the spreading whirlpool reaches from the middle (blocks): 0 until SPREAD0, out to the
+     * rim at SPREAD1, easing in, fastest a third of the way through (some 45 blocks a second) and slowing as it gets there
+     * (as the ink shader draws it).
+     */
+    static double front(float t){return RIM_R*Math.pow(Ease.smooth(t,SPREAD0,SPREAD1),.7);}
+    /** How far the whirlpool's edge is pushed out as it spreads (a share of its radius; as the ink shader draws it). */
+    static double pushed(float t){return SPREAD_PUSH*Ease.smooth(t,SPREAD0,SPREAD1);}
+    /** How much of the whirlpool is left (1 to 0): all of it as it spreads, gone as what reached the rim turns into the smoke (as the ink shader draws it). */
+    static float whirlShown(float t){return 1-Ease.smooth(t,WATER_OUT0,WATER_OUT1);}
     /** Where the smoke lies (blocks from the middle): at the rim, drifting a little further out as it goes (as the ink shader draws it). */
-    static double rim(float t){return RIM_R+(RIM_OUT-RIM_R)*Ease.smooth(t,SMOKE_FULL,1.46f);}
+    static double rim(float t){return RIM_R+(RIM_OUT-RIM_R)*Ease.smooth(t,SMOKE_FULL,SMOKE_OUT1);}
     /** How thick the smoke lies (0 to 1): coming as the whirlpool spreads out past it, gone as it thins away (as the ink shader draws it). */
     static float smoke(float t){return Ease.smooth(t,SMOKE_IN,SMOKE_FULL)*(1-Ease.smooth(t,SMOKE_OUT0,SMOKE_OUT1));}
     /** The ink shader's byte for the gathering sheet (style 13): how far it has soaked in (0 to 127). */
@@ -881,22 +896,25 @@ final class SwordFormation {
     static void ground(Fx c){
         float t=c.sec;Vec3d centre=centre(c.cast);int seed=c.cast.id().hashCode();
         float blue=tint(t);
-        if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed,0,0,blue);}
+        if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed,holeByte(t,r),0,blue);}
         double g=gather(t);float a=gathered(t);
         if(a>.005f&&g>.02)KagenoFire.inkGround(centre.add(0,.05,0),g*1.45,g,13,seed,poolClock(t),soakByte(soak(t)),a);
-        // (its square big enough for it to spread out OUT_GROW further, its streams' tails a little past its radius; drawn
+        // (its square big enough for its edge pushed out as it spreads, its streams' tails a little past its radius; drawn
         // until the smoke at its rim has thinned away)
         double w=whirl(t);float o=Ease.smooth(t,SWIRL0,SWIRL0+.02f)*(1-Ease.smooth(t,SMOKE_OUT1-.03f,SMOKE_OUT1+.02f));
         if(o>.005f&&w>.02)KagenoFire.inkGround(centre.add(0,.055,0),w*1.4,w,15,seed+5,poolClock(t),eyeByte(t),o);
     }
     /**
-     * The ink on the ground left as the whirlpool spreads out (0 to 1): there from the swords' first strikes, gone as it
-     * spreads out and is gone (2.82.9, user request: "바닥 잉크도 퍼질때 동시에 사라지게 하면 안되나?": no blue ground
-     * left under the formation after it, nor the ink splashed at the swords' feet).
+     * The ink left on the ground {@code d} blocks from the formation's middle (0 to 1): gone as the spreading whirlpool's
+     * clean front passes it (2.82.9, user request: "바닥 잉크도 퍼질때 동시에 사라지게 하면 안되나?": no blue ground left
+     * under the formation after it, nor the ink splashed at the swords' feet; 2.82.10: from the middle out with the front,
+     * drying away just behind it).
      */
-    static float groundInk(float t){return whirlShown(t);}
-    /** The blue of the formation's ground (0 to about .6): coming in as the whirlpool swirls out, gone with it. */
-    static float tint(float t){return .58f*Ease.smooth(t,SWIRL0,SWIRL0+.15f)*groundInk(t);}
+    static float groundInk(float t,double d){return 1-Ease.smooth((float)front(t),(float)d-1f,(float)d+2f);}
+    /** The blue of the formation's ground (0 to about .6): coming in as the whirlpool swirls out; its middle cleared by the front (holeByte), gone once it reaches the rim. */
+    static float tint(float t){return .58f*Ease.smooth(t,SWIRL0,SWIRL0+.15f)*(1-Ease.smooth(t,SPREAD1-.06f,SPREAD1+.04f));}
+    /** The ink shader's byte for the blue ground's cleared middle (style 14): the front's reach as a share of the square's half-width {@code r}, over 1.25. */
+    static float holeByte(float t,double r){return Math.round(MathHelper.clamp(front(t)/r/1.25,0,1)*255)/255f;}
     /** A ring of light lying on the ground (radius {@code r}, {@code w} wide, brightest along its middle), wavering a little. */
     static void groundBand(EffectMesh m,Vec3d c,double r,double w,int rgb,float alpha,int seed,float t){
         if(alpha<=.005f||r<=.01)return;int n=Math.max(24,(int)(r*10));
@@ -926,11 +944,10 @@ final class SwordFormation {
      */
     static void ink(Fx c){
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);double floor=centre.y+.02;
-        // a splash of ink at every sword's foot as it strikes (the video: black splashes round each one's flower), gone with
-        // the whirlpool as it spreads out (2.82.9)
-        float left=groundInk(t);
-        if(left>.005f)for(var b:layout(c.cast.id())){
-            if(t<b.plant())continue;Vec3d f=foot(centre,yaw,b);
+        // a splash of ink at every sword's foot as it strikes (the video: black splashes round each one's flower), gone as
+        // the spreading whirlpool's clean front passes it (2.82.9, 2.82.10)
+        if(t<SPREAD1+.1f)for(var b:layout(c.cast.id())){
+            if(t<b.plant())continue;Vec3d f=foot(centre,yaw,b);float left=groundInk(t,Math.hypot(b.fw(),b.rt()));if(left<=.005f)continue;
             GiantSweep.splatFor(new Vec3d(f.x,floor+.003+.001*(b.seed()&7),f.z),1.3+.8*b.flower(),Math.PI*2*Ease.hash(b.seed()+40),1+.3*Ease.hash(b.seed()+41),b.seed()&15,t-b.plant()-.02f,.9f*left);
         }
         // as it ends: ink where the swords stood and where the ink they break into falls
@@ -1093,15 +1110,19 @@ final class SwordFormation {
             m.vertex(p[i][j],VEIL,a[i][j]);m.vertex(p[i+1][j],VEIL,a[i+1][j]);m.vertex(p[i+1][j+1],VEIL,a[i+1][j+1]);m.vertex(p[i][j+1],VEIL,a[i][j+1]);
         }
     }
-    /** The rising smoke's colour (light), how high it rises (blocks, some half the mountains' height), how finely it is drawn. */
-    static final int VEIL=0x7aa2ff,VEIL_SEGS=120,VEIL_ROWS=6;
+    /**
+     * The glow under the rising smoke: its colour (light: a deep blue, 2.82.10, user request: "연기 파란색이여함": added
+     * light only brightens what is behind it, so the smoke's blue body is the puffs', blended over it), how high it
+     * stands (blocks, some half the mountains' height), how finely it is drawn.
+     */
+    static final int VEIL=0x3f6cff,VEIL_SEGS=120,VEIL_ROWS=6;
     static final double VEIL_HIGH=3.0;
     /** How strongly the rising smoke shows (0 to 1): coming once the smoke lies at the rim, gone with it. */
     static float veilLife(float t){return Ease.smooth(t,SMOKE_IN,SMOKE_IN+.12f)*(1-Ease.smooth(t,SMOKE_OUT0-.02f,SMOKE_OUT1));}
     /** How high the rising smoke stands (blocks): a little as it comes, VEIL_HIGH by the time it is thickest, rising on a little as it goes. */
     static double veilHeight(float t){return VEIL_HIGH*(.3+.7*Ease.smooth(t,SMOKE_IN,VEIL_UP))+.4*Ease.smooth(t,VEIL_UP,SMOKE_OUT1);}
     /** When the rising smoke stands at VEIL_HIGH. */
-    static final float VEIL_UP=1.3f;
+    static final float VEIL_UP=1.4f;
     /**
      * The rising smoke's strength at the angle {@code az} round the rim (radians, the world's x to z), {@code y} blocks up
      * ({@code u} of its height): densest just over the ground, thinning to nothing at its top; in wisps that climb (with the
@@ -1114,15 +1135,101 @@ final class SwordFormation {
         double w1=.5+.5*Math.sin(11*lean+2.2*Math.sin(5*lean+s1)+s2);
         double w2=.5+.5*Math.sin(2.3*(y-1.9*t)+2.6*Math.sin(3*lean+s3));
         double w3=.6+.4*Math.sin(4*az+s3+.7*t);
-        return 2.3*prof*(.35+.65*w1)*(.5+.5*w2)*w3;
+        return 1.3*prof*(.35+.65*w1)*(.5+.5*w2)*w3;
     }
     /** How open the rim is to the rising smoke at the angle {@code az} (0 straight behind her, where her camera looks in from, to 1 past MOUNTAIN_GAP, over 30 degrees). */
     static double veilOpen(double az,double back){
         double off=Math.abs(Math.atan2(Math.sin(az-back),Math.cos(az-back)));
         return Ease.smooth((float)off,(float)(MOUNTAIN_GAP-Math.toRadians(15)),(float)(MOUNTAIN_GAP+Math.toRadians(15)));
     }
+    /**
+     * How open the rim is to the billowing smoke at the angle {@code az} (0 behind her to 1 across from her): wider than
+     * the glow's (veilOpen), from 55 to 95 degrees off straight behind her, as her camera looks in over the rim there and
+     * the smoke near it fills the screen.
+     */
+    static double puffOpen(double az,double back){
+        double off=Math.abs(Math.atan2(Math.sin(az-back),Math.cos(az-back)));
+        return Ease.smooth((float)off,(float)Math.toRadians(55),(float)Math.toRadians(95));
+    }
     /** Gone close to the camera (1.5 blocks), whole from 4.5 blocks off. */
     static double camera(Vec3d p,Vec3d cam){return MathHelper.clamp((p.distanceTo(cam)-1.5)/3,0,1);}
+    /**
+     * The blue smoke billowing up (2.82.10, user request: "연기 파란색이여함 연기를 더 진하게 만들고 더 많이 피어오르게 하고
+     * 소용돌이가 퍼져서 연기가 되는거처럼 만들어"): puffs of blue smoke on fixed upright planes (KagenoFire.blueSmoke, the
+     * fire cells' planes: smoke never turns to the camera), farthest first: off the spreading whirlpool as it runs out
+     * (its pale blue lifting as mist, carried out with it) and off the rim as it reaches it, thick, billowing up to some
+     * three quarters of the mountains' height (puffs). Low and thin behind her, where her camera looks in from; thinning
+     * within 6.5 blocks of the camera, gone within 2.5 (a puff close by would fill the screen), and gone close to her.
+     */
+    static void shaders(Fx c){
+        float t=c.sec;if(t<FRONT0||t>=PUFF_END)return;
+        Vec3d mid=poolCentre(c.cast),her=spot(c.cast).add(0,IsosangRules.FORMATION_STAND+.9,0);
+        List<Vec3d> pts=new ArrayList<>();List<float[]> cells=new ArrayList<>();
+        for(var pf:puffs(c.cast.id().hashCode(),behind(yaw(c.cast)),t)){
+            Vec3d p=mid.add(pf.x(),pf.y(),pf.z());
+            float a=pf.alpha()*(float)(MathHelper.clamp((p.distanceTo(c.camera)-2.5)/4,0,1)*MathHelper.clamp((p.distanceTo(her)-.8)/1.2,0,1));if(a<=.01f)continue;
+            pts.add(p);cells.add(new float[]{(float)pf.size(),a,pf.light(),pf.thin(),pf.seed()});
+        }
+        if(pts.isEmpty())return;
+        // (on the effect layer its lit tops glow a little)
+        KagenoFire.hot(dev.sangwoo.celestialfall.client.vfx.FxLayer.available()?.6f:0);
+        KagenoFire.blueSmoke(c.matrix,c.camera,pts,cells,c.age);
+        KagenoFire.hot(0);
+    }
+    /** A puff of the blue smoke: where it is (blocks from the formation's middle, the world's x, up and z), its half-size, strength, light and thinning (0 to 1), and its seed. */
+    record Puff(double x,double y,double z,double size,float alpha,float light,float thin,int seed){}
+    /**
+     * When the puffs are born: off the spreading whirlpool (FRONT0 to FRONT1, every FRONT_EVERY round FRONT_SLOTS places)
+     * and off the rim (PUFF0 to PUFF1, every PUFF_EVERY round PUFF_SLOTS places); how high the rim's rise (PUFF_HIGH,
+     * blocks); all gone by PUFF_END.
+     */
+    static final int FRONT_SLOTS=36,PUFF_SLOTS=44;
+    static final float FRONT0=1.04f,FRONT1=1.3f,FRONT_EVERY=.05f,PUFF0=1.2f,PUFF1=1.58f,PUFF_EVERY=.1f,PUFF_END=PUFF1+.72f;
+    static final double PUFF_HIGH=4.4;
+    /**
+     * The puffs of blue smoke at {@code t} (seeded by {@code seed}; {@code back} the angle from the formation's middle to
+     * behind her, radians, the world's x to z): each born at its time and place and living a while, rising fast at first
+     * and slowing, swelling, leaning the way the whirlpool turned (counterclockwise seen from above: the angle falls),
+     * coming in quickly and thinning away by holes. Off the spreading whirlpool: born on its water just outside the clean
+     * front and carried out with it, lifting under a block or so, more of them as it nears the rim (none on the clean
+     * ground: there they showed as blue blots lying among the swords). Off the rim: born there as the whirlpool reaches
+     * it, drifting a little out, billowing up 3 to 5 blocks. Low and thin behind her, where her camera is (puffOpen). A
+     * function of the clock.
+     */
+    static List<Puff> puffs(int seed,double back,float t){
+        List<Puff> out=new ArrayList<>();if(t<FRONT0||t>=PUFF_END)return out;
+        for(int k=0;k<FRONT_SLOTS;k++){
+            int s=seed*31+k*977+11;double az=Math.PI*2*(k+.7*Ease.hash(s))/FRONT_SLOTS,open=puffOpen(az,back);
+            float phase=FRONT_EVERY*(float)Ease.hash(s+1);
+            for(int j=0;;j++){
+                float tb=FRONT0+phase+j*FRONT_EVERY;if(tb>=FRONT1||tb>t)break;
+                int ps=s+j*131+7;float life=.26f+.1f*(float)Ease.hash(ps+2),u=(t-tb)/life;if(u>=1)continue;
+                // (on the water just outside the front, never in the formation's middle: where it is born decides, so
+                // none shows up on the way)
+                double f0=front(tb),born=f0+.6+1.0*Ease.hash(ps+3);if(born<2.5)continue;
+                double r=born+front(Math.min(t,SPREAD1))-f0;
+                double a=az-.25*u,y=.1+(.7+.5*Ease.hash(ps+4))*(.35+.65*open)*(1-Math.pow(1-u,1.7));
+                double size=(.35+.3*Ease.hash(ps+5))*(.6+.7*Ease.out(u,0,1));
+                float alpha=(float)(.5*Ease.smooth(tb,FRONT0,FRONT1-.06f)*Ease.smooth(u,0,.22f)*(1-Ease.smooth(u,.45f,1))*(.4+.6*open));
+                out.add(new Puff(Math.cos(a)*r,y,Math.sin(a)*r,size,alpha,.9f,Ease.smooth(u,.4f,1),ps));
+            }
+        }
+        for(int k=0;k<PUFF_SLOTS;k++){
+            int s=seed*37+k*1013+29;double az=Math.PI*2*(k+.6*Ease.hash(s))/PUFF_SLOTS,open=puffOpen(az,back);
+            float phase=PUFF_EVERY*(float)Ease.hash(s+1);
+            for(int j=0;;j++){
+                float tb=PUFF0+phase+j*PUFF_EVERY;if(tb>=PUFF1||tb>t)break;
+                int ps=s+j*131+7;float life=.5f+.2f*(float)Ease.hash(ps+2),u=(t-tb)/life;if(u>=1)continue;
+                double r=rim(tb)+.7*(Ease.hash(ps+3)-.5)+.5*u,a=az+.18*(Ease.hash(ps+6)-.5)-.3*u;
+                double high=PUFF_HIGH*(.7+.45*Ease.hash(ps+4))*(.3+.7*open),y=.2+high*(1-Math.pow(1-u,1.6));
+                double size=(.8+.5*Ease.hash(ps+5))*(.55+.75*Ease.out(u,0,1))*(.6+.4*open);
+                float env=Ease.smooth(tb,PUFF0,PUFF0+.08f)*(1-.35f*Ease.smooth(tb,PUFF1-.15f,PUFF1));
+                float alpha=(float)(.88*env*Ease.smooth(u,0,.18f)*(1-Ease.smooth(u,.5f,1))*(.4+.6*open));
+                out.add(new Puff(Math.cos(a)*r,y,Math.sin(a)*r,size,alpha,.1f+.85f*(1-Ease.smooth(u,0,.6f)),Ease.smooth(u,.45f,1),ps));
+            }
+        }
+        return out;
+    }
     /** Over the ink: the starlight now and then on a sword as the formation stands. */
     static void overlay(Fx c,EffectMesh m){
         float t=c.sec;if(t<SILVER1||t>=end(c.cast))return;
@@ -1278,14 +1385,18 @@ final class SwordFormation {
         float pool=Ease.smooth(t,GATHER0,GATHER0+.1f)*(1-Ease.smooth(t,COLLAPSE0,COLLAPSE));
         if(pool>.01f)f.light(poolCentre(c.cast).add(0,.6,0),0x5a8cff,11,.8f*pool);
         // the whirlpool's crescents light the ground round it as far as it reaches, faintly (2.82.8: they are a pale,
-        // see-through blue), gone as it spreads out
-        float whirl=Ease.smooth(t,SWIRL0,SWIRL0+.06f)*whirlShown(t);
+        // see-through blue), gone as it turns into the smoke
+        float whirl=Ease.smooth(t,SWIRL0,SWIRL0+.06f)*whirlShown(t)*(1-Ease.smooth(t,SPREAD0,SPREAD0+.1f));
         if(whirl>.01f)f.light(poolCentre(c.cast).add(0,.6,0),0x6a9cff,Math.max(6,whirl(t)),.3f*whirl);
+        // the spreading whirlpool's front glows blue on the ground and the swords as it runs out (2.82.10)
+        float run=Ease.smooth(t,SPREAD0,SPREAD0+.04f)*(1-Ease.smooth(t,SPREAD1-.04f,SPREAD1+.08f));
+        double fr=front(t);
+        if(run>.01f&&fr>1){Vec3d m0=poolCentre(c.cast);for(int k=0;k<4;k++){double a=Math.PI*2*k/4+.8;f.light(m0.add(Math.cos(a)*fr,.4,Math.sin(a)*fr),0x4f7dff,4,.35f*run);}}
         // the smoke at the rim glows a little on the ground and the mountains' feet round it
         float smoke=smoke(t);
         if(smoke>.01f){
             double rr=rim(t);Vec3d mid=poolCentre(c.cast);
-            for(int k=0;k<6;k++){double a=Math.PI*2*k/6+.4;f.light(mid.add(Math.cos(a)*rr,.5,Math.sin(a)*rr),0x5a7cff,4.5,.3f*smoke);}
+            for(int k=0;k<6;k++){double a=Math.PI*2*k/6+.4;f.light(mid.add(Math.cos(a)*rr,1,Math.sin(a)*rr),0x3f68ff,5.5,.4f*smoke);}
         }
         float mid=Math.max(FxLib.kick(t,IsosangRules.H_PLANT+.02f,.16f),.7f*FxLib.kick(t,IsosangRules.H_PLANT-.055f,.02f));if(mid>.01f)f.light(centre.add(0,1,0),0xb8d8ff,12,1.4f*mid);
         for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.12f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,6,.7f*k);}
@@ -1295,8 +1406,8 @@ final class SwordFormation {
         if(stand>.01f)f.light(centre.add(0,2.2,0),0x8fb4ff,12,.25f*stand);
         // fast as she leaps and the swords rain: the afterglow cut short, else they leave copies of themselves on the way;
         // all but none while the ink's lit edge sweeps in and the whirlpool swirls and spreads out (2.82.6: its copies
-        // showed as rings beside it)
-        f.afterglow(t>=GATHER0-.02f&&t<OUT1+.05f?.01f:t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
+        // showed as rings beside it; 2.82.10: its front running out)
+        f.afterglow(t>=GATHER0-.02f&&t<SPREAD1+.08f?.01f:t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
     }
     /** Shake: the burst in the middle, the rain of swords crashing in, and a little as the formation ends (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){

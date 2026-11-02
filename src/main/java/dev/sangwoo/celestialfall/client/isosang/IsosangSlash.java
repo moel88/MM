@@ -637,6 +637,8 @@ public final class IsosangSlash implements Fx.Skill {
      */
     /** The ink lying under everything else (2.82.6): the formation's ground, its ink gathering and swirling out. */
     @Override public void ground(Fx c){if(formation(c.cast.combo()))SwordFormation.ground(c);}
+    /** The blue smoke billowing up off the formation's rim (2.82.10). */
+    @Override public void shaders(Fx c){if(formation(c.cast.combo()))SwordFormation.shaders(c);}
     @Override public void ink(Fx c){
         if(sweep(c.cast.combo())){GiantSweep.ink(c);return;}
         if(formation(c.cast.combo())){SwordFormation.ink(c);return;}

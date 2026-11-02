@@ -84,6 +84,11 @@ public final class KagenoFire {
      * thinning, seed}.
      */
     public static void dust(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){cells(m,camera,pts,cells,age,14);}
+    /**
+     * Blue smoke billows on the same fixed planes as the fire cells (shader mode 17, 2.82.10: the smoke of Lee So-sang's
+     * H, billowing up off the formation's rim): each cell is {size, alpha, light, thinning, seed}.
+     */
+    public static void blueSmoke(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){cells(m,camera,pts,cells,age,17);}
     private static void cells(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age,int mode){
         if(shader==null||pts.isEmpty())return;
         Integer[] order=new Integer[pts.size()];for(int i=0;i<order.length;i++)order[i]=i;

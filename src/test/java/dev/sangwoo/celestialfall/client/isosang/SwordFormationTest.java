@@ -311,40 +311,61 @@ class SwordFormationTest {
         double pitch=Math.toDegrees(Math.atan(1/SwordFormation.WHIRL_TWIST));
         assertTrue(pitch>7&&pitch<14,"some ten degrees off the round: "+pitch);
         assertTrue(SwordFormation.WHIRL_SPIN>0&&SwordFormation.WHIRL_SPIN<1,"turning slowly: "+SwordFormation.WHIRL_SPIN);
-        // (2.82.9, "1초때 그냥 퍼지고 끝나게 만들면 안되나?", "일단은 그렇게 해봐") as the swords strike it spreads out as it
-        // is and is gone a fifth of a second later; nothing of it is left drying after
-        assertTrue(SwordFormation.OUT0>IsosangRules.H_RAIN0&&Math.abs(SwordFormation.OUT0-1)<.05f,"at some 1 s, once the swords have begun to strike");
-        assertEquals(1,SwordFormation.spreadOut(SwordFormation.OUT0),1e-9);
-        assertEquals(1+SwordFormation.OUT_GROW,SwordFormation.spreadOut(SwordFormation.OUT1),1e-9);
-        assertTrue(SwordFormation.OUT_GROW>.15&&SwordFormation.OUT_GROW<.5,"spreading out a little further, as it is: "+SwordFormation.OUT_GROW);
-        assertEquals(1,SwordFormation.whirlShown(SwordFormation.OUT0),1e-6);
-        assertEquals(0,SwordFormation.whirlShown(SwordFormation.OUT1),1e-6,"gone");
-        assertTrue(SwordFormation.OUT1-SwordFormation.OUT0<=.25f,"in some fifth of a second");
-        double lastOut=1;
-        for(float t=SwordFormation.OUT0;t<1.4f;t+=frame){
-            double g=SwordFormation.spreadOut(t);
-            assertTrue(g>=lastOut-1e-9&&g-lastOut<.01,"spreading out smoothly at "+t);lastOut=g;
-            assertEquals(SwordFormation.whirlShown(t),SwordFormation.whirlShown(t+frame),.07,"it vanishes in a jump at "+t);
+        // (2.82.10, "퍼진다는 느낌이 안 나잖아 ... 소용돌이가 퍼져서 연기가 되는거처럼 만들어": 2.82.9 grew it three tenths
+        // as it faded, too little and too quick) as the swords strike a clean front opens in its middle and runs out to the
+        // rim, the whirlpool squeezed out ahead of it, turning into the smoke there
+        assertTrue(SwordFormation.SPREAD0>IsosangRules.H_RAIN0&&Math.abs(SwordFormation.SPREAD0-1)<.05f,"at some 1 s, once the swords have begun to strike");
+        assertTrue(SwordFormation.SPREAD1-SwordFormation.SPREAD0>=.25f&&SwordFormation.SPREAD1-SwordFormation.SPREAD0<=.4f,"long enough to see it run out, quick as a burst");
+        for(float t=0;t<=SwordFormation.SPREAD0;t+=frame)assertEquals(0,SwordFormation.front(t),1e-9,"no front before it spreads, at "+t);
+        assertTrue(SwordFormation.front(SwordFormation.SPREAD0+.02f)<.5,"from the very middle, easing in: "+SwordFormation.front(SwordFormation.SPREAD0+.02f));
+        assertEquals(SwordFormation.RIM_R,SwordFormation.front(SwordFormation.SPREAD1),1e-6,"out to the rim");
+        assertEquals(SwordFormation.RIM_R,SwordFormation.front(3),1e-6,"and there it stays");
+        double lastFront=0,fastestFront=0,lateFront=0;
+        for(float t=SwordFormation.SPREAD0;t<1.5f;t+=frame){
+            double f=SwordFormation.front(t);
+            assertTrue(f>=lastFront-1e-9,"running out only, at "+t);
+            assertTrue(f-lastFront<.5,"never jumping at "+t+": "+(f-lastFront));
+            fastestFront=Math.max(fastestFront,f-lastFront);
+            if(t>SwordFormation.SPREAD1-.02f&&t<=SwordFormation.SPREAD1)lateFront=Math.max(lateFront,f-lastFront);
+            lastFront=f;
         }
-        // (2.82.9, "바닥 잉크도 퍼질때 동시에 사라지게 하면 안되나?") the ink on the ground goes with it: the formation's blue
-        // ground and the ink at the swords' feet, nothing left on the ground after
+        assertTrue(fastestFront*240>40,"fast enough to read as spreading: "+fastestFront*240+" blocks a second");
+        assertTrue(lateFront<.25*fastestFront,"slowing as it reaches the rim: "+lateFront/fastestFront);
+        assertTrue(SwordFormation.front((SwordFormation.SPREAD0+SwordFormation.SPREAD1)/2)>.55*SwordFormation.RIM_R,"over half way out half way through");
+        assertTrue(fastestFront*240<80,"never so fast it only pops: "+fastestFront*240+" blocks a second");
+        // its edge pushed out a little, never past its square (1.4 of its radius), the streams' tails 1.04 of it
+        assertEquals(0,SwordFormation.pushed(SwordFormation.SPREAD0),1e-9);
+        assertEquals(SwordFormation.SPREAD_PUSH,SwordFormation.pushed(SwordFormation.SPREAD1),1e-9);
+        assertTrue((1+SwordFormation.SPREAD_PUSH)*1.04<1.4,"inside its square");
+        // what reached the rim turns into the smoke there, then nothing of it is left
+        assertTrue(SwordFormation.WATER_OUT0>=SwordFormation.SPREAD1-.1f&&SwordFormation.WATER_OUT1>SwordFormation.SPREAD1,"once it has reached the rim");
+        for(float t=0;t<SwordFormation.WATER_OUT0;t+=frame)assertEquals(1,SwordFormation.whirlShown(t),1e-6);
+        for(float t=SwordFormation.WATER_OUT1;t<45;t+=.05f)assertEquals(0,SwordFormation.whirlShown(t),1e-6,"nothing left at "+t);
+        for(float t=1;t<1.6f;t+=frame)assertEquals(SwordFormation.whirlShown(t),SwordFormation.whirlShown(t+frame),.05,"it vanishes in a jump at "+t);
+        // (2.82.9, "바닥 잉크도 퍼질때 동시에 사라지게 하면 안되나?") the ink on the ground goes with it, from the middle out
+        // as the front passes: the formation's blue ground and the ink at every sword's foot
         assertTrue(SwordFormation.tint(1.0f)>.5f,"the blue ground under the whirlpool");
-        for(float t=SwordFormation.OUT1;t<45;t+=.05f){
-            assertEquals(0,SwordFormation.tint(t),1e-6,"no blue ground left at "+t);
-            assertEquals(0,SwordFormation.groundInk(t),1e-6,"no ink on the ground left at "+t);
+        for(float t=SwordFormation.SPREAD1+.04f;t<45;t+=.05f)assertEquals(0,SwordFormation.tint(t),1e-6,"no blue ground left at "+t);
+        for(float t=1;t<1.5f;t+=frame)assertEquals(SwordFormation.tint(t),SwordFormation.tint(t+frame),.05,"the blue ground jumps at "+t);
+        double square=IsosangRules.FORMATION_RADIUS+.6;
+        assertTrue(SwordFormation.RIM_R>square,"the front clears all of the blue ground");
+        for(float t=0;t<2;t+=frame)assertEquals(Math.min(1,SwordFormation.front(t)/square/1.25),SwordFormation.holeByte(t,square),.5/255+1e-6,"the hole's byte at "+t);
+        double farthest=0;
+        for(var b:SwordFormation.layout(new UUID(9,3))){
+            double d=Math.hypot(b.fw(),b.rt());farthest=Math.max(farthest,d);
+            assertEquals(1,SwordFormation.groundInk(SwordFormation.SPREAD0,d),1e-6,"the ink at its foot there as it starts");
+            assertEquals(0,SwordFormation.groundInk(SwordFormation.SPREAD1,d),1e-6,"cleared by the time the front reaches the rim");
+            for(float t=1;t<1.4f;t+=frame)assertEquals(SwordFormation.groundInk(t,d),SwordFormation.groundInk(t+frame,d),.12,"a sword's ink jumps at "+t);
         }
-        for(float t=SwordFormation.OUT0;t<SwordFormation.OUT1;t+=frame){
-            assertEquals(SwordFormation.groundInk(t),SwordFormation.whirlShown(t),1e-6,"going with the whirlpool at "+t);
-            assertEquals(SwordFormation.tint(t),SwordFormation.tint(t+frame),.05,"the blue ground jumps at "+t);
-        }
-        // the spread-out whirlpool keeps inside the square it is drawn in (1.4 of its radius)
-        assertTrue(1.04*(1+SwordFormation.OUT_GROW)<1.4,"inside its square");
-        // its pale blue comes up along the rim where it lies as it spreads out past it (no haze sweeping out from the eye)
-        assertTrue(SwordFormation.SMOKE_IN>=SwordFormation.OUT0&&SwordFormation.SMOKE_IN<SwordFormation.OUT1,"as it spreads out");
+        assertTrue(farthest+2<SwordFormation.RIM_R,"every sword inside the rim, its ink dried as the front gets there");
+        // the inner ones go first: the ground clears from the middle out
+        assertTrue(SwordFormation.groundInk(1.15f,5.5)<SwordFormation.groundInk(1.15f,8.7),"from the middle out");
+        // the smoke at the rim: as the whirlpool reaches it, drifting a little out, thinning away by patches
+        assertTrue(SwordFormation.front(SwordFormation.SMOKE_IN)>.8*SwordFormation.RIM_R,"as the whirlpool reaches the rim: "+SwordFormation.front(SwordFormation.SMOKE_IN));
         assertTrue(SwordFormation.WHIRL_R>SwordFormation.RIM_OUT,"the whirlpool reaches past the rim");
         assertEquals(SwordFormation.RIM_R,SwordFormation.rim(SwordFormation.SMOKE_IN),1e-9,"where it lies from the first");
         double lastRim=SwordFormation.RIM_R;
-        for(float t=SwordFormation.SMOKE_IN;t<1.6f;t+=frame){
+        for(float t=SwordFormation.SMOKE_IN;t<2.2f;t+=frame){
             double r=SwordFormation.rim(t);
             assertTrue(r>=lastRim-1e-9&&r-lastRim<.05,"drifting out smoothly at "+t+": "+(r-lastRim));
             lastRim=r;
@@ -352,32 +373,84 @@ class SwordFormationTest {
         double outer=IsosangRules.FORMATION_RING_R[IsosangRules.FORMATION_RING_R.length-1]+IsosangRules.FORMATION_RING_JITTER;
         assertTrue(SwordFormation.RIM_R-1.2>outer,"outside every sword: "+SwordFormation.RIM_R+" and "+outer);
         assertTrue(SwordFormation.RIM_OUT<IsosangRules.FORMATION_RADIUS+2.6,"before the mountains' feet");
-        // there as thick as it gets when the video's is thickest (1.28 s), gone by when the video's is (1.45 s), never jumping
         assertEquals(0,SwordFormation.smoke(SwordFormation.SMOKE_IN),1e-6);
-        assertEquals(1,SwordFormation.smoke(1.28f),1e-6);
-        assertTrue(SwordFormation.smoke(1.4f)>.1f&&SwordFormation.smoke(1.4f)<.9f,"thinning away: "+SwordFormation.smoke(1.4f));
-        assertTrue(SwordFormation.SMOKE_OUT1<=1.47f,"gone as the video's is");
+        assertEquals(1,SwordFormation.smoke(1.5f),1e-6,"thick");
+        assertTrue(SwordFormation.smoke(1.76f)>.1f&&SwordFormation.smoke(1.76f)<.9f,"thinning away: "+SwordFormation.smoke(1.76f));
         assertEquals(0,SwordFormation.smoke(SwordFormation.SMOKE_OUT1),1e-6);
-        for(float t=0;t<2;t+=frame)assertEquals(SwordFormation.smoke(t),SwordFormation.smoke(t+frame),.07,"the smoke jumps at "+t);
-        // (2.82.8, "연기가 끝부분으로 피어오르다가 사라지는 거", "산 중간 부분까지 희미하게 피오르는듯") it rises off the rim
-        // as it lies there, to some half the mountains' height, and goes with it; low behind her, where her camera is
+        assertTrue(SwordFormation.SMOKE_OUT1<2,"gone before two seconds");
+        for(float t=0;t<2.2f;t+=frame)assertEquals(SwordFormation.smoke(t),SwordFormation.smoke(t+frame),.07,"the smoke jumps at "+t);
+        // its glow rises off the rim with it and goes with it; low behind her, where her camera is
         assertEquals(0,SwordFormation.veilLife(SwordFormation.SMOKE_IN),1e-6);
-        assertEquals(1,SwordFormation.veilLife(1.28f),1e-6,"risen as the smoke is thickest");
+        assertEquals(1,SwordFormation.veilLife(1.5f),1e-6,"risen as the smoke is thickest");
         assertEquals(0,SwordFormation.veilLife(SwordFormation.SMOKE_OUT1),1e-6,"gone with the smoke");
         assertTrue(SwordFormation.VEIL_HIGH>=2.2&&SwordFormation.VEIL_HIGH<=3.2,"some half the mountains' height (4.4 to 6.4 blocks): "+SwordFormation.VEIL_HIGH);
         assertEquals(SwordFormation.VEIL_HIGH,SwordFormation.veilHeight(SwordFormation.VEIL_UP),1e-6);
         double lastHigh=SwordFormation.veilHeight(1.0f);
-        for(float t=1.0f;t<1.6f;t+=frame){
+        for(float t=1.0f;t<2.2f;t+=frame){
             double h=SwordFormation.veilHeight(t);
             assertTrue(h>=lastHigh-1e-9&&h-lastHigh<.08,"rising smoothly at "+t);lastHigh=h;
-            assertEquals(SwordFormation.veilLife(t),SwordFormation.veilLife(t+frame),.07,"the rising smoke jumps at "+t);
+            assertEquals(SwordFormation.veilLife(t),SwordFormation.veilLife(t+frame),.07,"the rising glow jumps at "+t);
         }
         assertEquals(0,SwordFormation.veilOpen(1.0,1.0),1e-9,"low straight behind her");
         assertEquals(1,SwordFormation.veilOpen(1.0+Math.PI,1.0),1e-9,"full across from her");
         for(double az=0;az<6.3;az+=.37){
-            assertEquals(SwordFormation.veilAlpha(az,1.2,.4,1.25f,1,2,3),SwordFormation.veilAlpha(az+Math.PI*2,1.2,.4,1.25f,1,2,3),1e-9,"no seam round the rim");
-            assertEquals(0,SwordFormation.veilAlpha(az,3,1,1.25f,1,2,3),1e-9,"nothing at its top");
+            assertEquals(SwordFormation.veilAlpha(az,1.2,.4,1.4f,1,2,3),SwordFormation.veilAlpha(az+Math.PI*2,1.2,.4,1.4f,1,2,3),1e-9,"no seam round the rim");
+            assertEquals(0,SwordFormation.veilAlpha(az,3,1,1.4f,1,2,3),1e-9,"nothing at its top");
         }
+    }
+    @Test void theWhirlpoolSpreadsOutIntoThickBlueSmokeBillowingUpOffTheRim(){
+        // (2.82.10, "연기 파란색이여함 연기를 더 진하게 만들고 더 많이 피어오르게 하고 소용돌이가 퍼져서 연기가 되는거처럼
+        // 만들어") puffs of blue smoke: off the spreading whirlpool as it runs out, then thick off the rim, billowing up
+        float frame=1/240f;int seed=0x5eed;double back=1.0;
+        assertTrue(SwordFormation.puffs(seed,back,SwordFormation.FRONT0-.01f).isEmpty(),"none before it spreads");
+        assertTrue(SwordFormation.puffs(seed,back,SwordFormation.PUFF_END).isEmpty(),"all gone after");
+        assertTrue(SwordFormation.FRONT0>=SwordFormation.SPREAD0&&SwordFormation.FRONT1<=SwordFormation.SPREAD1,"off the whirlpool while it spreads");
+        assertTrue(SwordFormation.PUFF0<=SwordFormation.SMOKE_IN&&SwordFormation.PUFF0>SwordFormation.SPREAD0,"off the rim as the whirlpool reaches it");
+        assertTrue(SwordFormation.PUFF_END<2.4f,"gone soon after the smoke");
+        int most=0;double highest=0;
+        for(float t=SwordFormation.FRONT0;t<SwordFormation.PUFF_END;t+=.01f){
+            var all=SwordFormation.puffs(seed,back,t);most=Math.max(most,all.size());
+            for(var p:all){
+                double r=Math.hypot(p.x(),p.z());
+                assertTrue(r>=1.4&&r<SwordFormation.RIM_OUT+1.3,"over the formation and its rim, before the mountains: "+r+" at "+t);
+                assertTrue(p.y()>=.1&&p.y()<6.2,"rising off the ground, no higher than the mountains: "+p.y());
+                assertTrue(p.size()>0&&p.size()<2.6,"a puff's size: "+p.size());
+                assertTrue(p.alpha()>=0&&p.alpha()<=1&&p.light()>=0&&p.light()<=1&&p.thin()>=0&&p.thin()<=1);
+                highest=Math.max(highest,p.y());
+            }
+        }
+        assertTrue(most>120,"plenty of smoke: "+most);
+        assertTrue(most<700,"not more than it can draw: "+most);
+        assertTrue(highest>4,"billowing up past most of the mountains' height: "+highest);
+        // thick: at its thickest the rim round the far side is covered
+        float thick=1.4f;double cover=0;
+        for(var p:SwordFormation.puffs(seed,back,thick))if(Math.hypot(p.x(),p.z())>SwordFormation.RIM_R-1)cover+=p.alpha()*p.size()*2;
+        assertTrue(cover>SwordFormation.RIM_R*2*Math.PI*.9,"the rim covered over: "+cover);
+        // each puff moves and changes smoothly (puffs are told apart by their seeds)
+        for(float t=SwordFormation.FRONT0;t<SwordFormation.PUFF_END;t+=.0137f){
+            var a=SwordFormation.puffs(seed,back,t);var b=SwordFormation.puffs(seed,back,t+frame);
+            java.util.Map<Integer,SwordFormation.Puff> next=new java.util.HashMap<>();for(var p:b)next.put(p.seed(),p);
+            for(var p:a){
+                var q=next.get(p.seed());if(q==null){assertTrue(p.alpha()<.03f,"a puff vanishes in a jump at "+t+": "+p.alpha());continue;}
+                assertTrue(Math.abs(q.y()-p.y())<.12&&Math.hypot(q.x()-p.x(),q.z()-p.z())<.3,"a puff jumps at "+t);
+                assertEquals(p.size(),q.size(),.06,"a puff's size jumps at "+t);
+                assertEquals(p.alpha(),q.alpha(),.1,"a puff's strength jumps at "+t);
+            }
+            java.util.Set<Integer> before=new java.util.HashSet<>();for(var p:a)before.add(p.seed());
+            for(var q:b)if(!before.contains(q.seed()))assertTrue(q.alpha()<.03f,"a puff appears in a jump at "+t+": "+q.alpha());
+        }
+        // low and thin behind her (her camera looks in from there), full across from her
+        double behindTop=0,acrossTop=0;
+        for(float t=SwordFormation.PUFF0;t<SwordFormation.PUFF_END;t+=.02f)for(var p:SwordFormation.puffs(seed,back,t)){
+            double az=Math.atan2(p.z(),p.x()),off=Math.abs(Math.atan2(Math.sin(az-back),Math.cos(az-back)));
+            if(off<Math.toRadians(20))behindTop=Math.max(behindTop,p.y());
+            if(off>Math.toRadians(150))acrossTop=Math.max(acrossTop,p.y());
+        }
+        assertTrue(behindTop<.6*acrossTop,"low behind her: "+behindTop+" against "+acrossTop);
+        // the same for everyone: seeded
+        assertEquals(SwordFormation.puffs(seed,back,1.4f),SwordFormation.puffs(seed,back,1.4f));
+    }
+    @Test void theWhirlpoolsClockAndBytes(){
         // what the ink shader is told: its clock over two seconds; the gathering sheet's share in a byte (exactly)
         assertEquals(.25f,SwordFormation.poolClock(.5f),1e-6);assertEquals(1,SwordFormation.poolClock(9),1e-6);
         for(int k=0;k<=127;k++)assertEquals(k,Math.round(SwordFormation.soakByte(k/127f)*255));
