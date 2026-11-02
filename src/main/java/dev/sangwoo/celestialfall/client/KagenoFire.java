@@ -102,6 +102,13 @@ public final class KagenoFire {
     public static void stream(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,int seed,float age,float glow,float glowHot){
         ring(m,camera,centre,radius,height,alpha,0,0,seed,age,glow,glowHot,255);
     }
+    /**
+     * The faint clouds going round over the mountains of Lee So-sang's H (2.82.16): the same ring of upright quads, its
+     * foot at {@code centre}'s height, drawn by the ink shader's mode 17 as clouds (the blue byte at its middle).
+     */
+    public static void clouds(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,int seed,float age){
+        ring(m,camera,centre,radius,height,alpha,0,0,seed,age,0,0,128);
+    }
     private static void ring(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,double lean,float thin,int seed,float age,float glow,float glowHot,int kind){
         if(shader==null)return;int n=radius.length-1;if(n<3||height.length<=n||alpha.length<=n)return;
         boolean any=false;for(int i=0;i<n;i++)if(alpha[i]+alpha[i+1]>.004f){any=true;break;}

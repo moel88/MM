@@ -268,6 +268,23 @@ class SwordFormationTest {
         for(var mt:fill)for(float t=SwordFormation.RISE0;t<end+3;t+=frame)
             assertEquals(SwordFormation.mountainUp(end,mt,t),SwordFormation.mountainUp(end,mt,t+frame),.06,"it jumps at "+t);
     }
+    @Test void faintCloudsGoRoundOverTheMountainsInOneRingTurningSlowly() throws java.io.IOException{
+        // 2.82.16 ("사진에 있는 희미한 구름 보이지? 마지막으로 구름만 저 퀄리티로 만들어줘 저 구름들은 한바퀴로 이어져 있고 천천히
+        // 한 바퀴 돌고 있어"): one ring just behind the mountains, from among them up over their summits; no banks of puffs
+        assertTrue(SwordFormation.CLOUD_R>SwordFormation.MOUNTAIN_R&&SwordFormation.CLOUD_R<SwordFormation.MOUNTAIN_R+2,"just behind the mountains");
+        assertTrue(SwordFormation.CLOUD_LOW<SwordFormation.MOUNTAIN_FLOAT+SwordFormation.MOUNTAIN_TOP*.6,"down among them");
+        assertTrue(SwordFormation.CLOUD_LOW+SwordFormation.CLOUD_HIGH>SwordFormation.MOUNTAIN_FLOAT+SwordFormation.MOUNTAIN_TOP+1,"up over their summits");
+        assertEquals(0,SwordFormation.HAZE,"the banks of puffs are gone");
+        assertTrue(Math.PI*2*SwordFormation.CLOUD_R/SwordFormation.CLOUD_SEGS<.7,"drawn finely round");
+        // the shader turns it slowly round, as the haze turned (HAZE_TURN), and its noise closes up round the ring
+        String fsh;
+        try(var in=SwordFormation.class.getResourceAsStream("/assets/celestialfall/shaders/core/kageno_flame.fsh")){fsh=new String(in.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}
+        var m=java.util.regex.Pattern.compile("x=u\\*([0-9.]+)-tm\\*([0-9.]+),y=v\\*2\\.4").matcher(fsh);
+        assertTrue(m.find(),"the clouds' turning in the shader");
+        double cells=Double.parseDouble(m.group(1)),speed=Double.parseDouble(m.group(2));
+        assertEquals(SwordFormation.HAZE_TURN,speed/cells*Math.PI*2,.002,"turning at some .05 radians a second");
+        assertEquals(0,cells%4,1e-9,"whole numbers of cells round at every scale it is drawn at (x .25, .5, .75, 1.5)");
+    }
     @Test void aStreamRunsUnderTheMountains(){
         // 2.82.16 ("산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래", "산이 떠있는 높이만큼
         // 물줄기 높이를 잡아주면 돼 ... 물줄기 높이는 0.6칸으로"): 0.6 blocks high, under the floating mountains, just before

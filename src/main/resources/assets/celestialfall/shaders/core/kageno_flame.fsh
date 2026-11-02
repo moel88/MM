@@ -38,6 +38,17 @@ float pnoise(vec2 p,float n){
 }
 float pfbm(vec2 p,float n){return .55*pnoise(p,n)+.3*pnoise(p*2.0+vec2(0.0,17.7),n*2.0)+.15*pnoise(p*4.0+vec2(0.0,8.3),n*4.0);}
 const float FLOW_W=.2,FLOW_OUT=.5;
+// The density of the faint clouds round Lee So-sang's sword formation (mode 17, its clouds; 2.82.16): a gently swirled
+// noise (not marbled), a little fibrous along the ring; x round the ring in cells (52 to a turn), y up it. Whole numbers
+// of cells to a turn at every scale (pnoise), so the ring closes with no seam.
+float cloudDens(float x,float y,float sd,float tm){
+ float w=pfbm(vec2(x*.5+3.1,y*.5+sd+tm*.03),26.0);
+ float ang=6.2831853*w;
+ float xw=x+cos(ang),yw=y+.6*sin(ang);
+ float d=pfbm(vec2(xw*.75,yw*1.1+sd*.3),39.0);
+ float f=pnoise(vec2(xw*1.5,yw*5.0+sd),78.0);
+ return d*(.82+.18*f);
+}
 void main(){
  vec2 p=uv*2.0-1.0;float seed=tint.r*31.7,t=Age*.075+seed;
  vec3 rgb;float alpha;
@@ -739,6 +750,23 @@ void main(){
    rgb*=1.0+Hot*lit;
    alpha=body*tint.a;
   }
+ }else if(Mode==17&&tint.b>.25&&tint.b<.75){
+  // The faint clouds going round over the mountains of Lee So-sang's sword formation (2.82.16, user request with their
+  // screenshot of the game: "사진에 있는 희미한 구름 보이지? 마지막으로 구름만 저 퀄리티로 만들어줘 저 구름들은 한바퀴로
+  // 이어져 있고 천천히 한 바퀴 돌고 있어"): soft, see-through clouds of mist, joined all the way round in one ring
+  // (KagenoFire.clouds: upright quads round the formation; uv.x the share of a turn, uv.y of its height), thinner here and
+  // there, their uneven tops and feet fading away, a little curled, lit along their upper edges; the whole ring turning
+  // slowly (some .05 radians a second, clockwise seen from above).
+  float u=uv.x,v=clamp(uv.y,0.0,1.0),tm=Age,sd=seed*.1;
+  float x=u*52.0-tm*.41,y=v*2.4;
+  float m=smoothstep(.26,.55,pfbm(vec2(x*.25+1.7,sd*.7+tm*.01),13.0));
+  float top=.66+.28*pnoise(vec2(x*.5,7.0+sd),26.0),bot=.1+.2*pnoise(vec2(x*.5,11.0-sd),26.0);
+  float env=smoothstep(bot,bot+.25,v)*(1.0-smoothstep(top-.3,top,v));
+  float d=cloudDens(x,y,sd,tm),du=cloudDens(x,y+.12,sd,tm);
+  float c=smoothstep(.42,.68,d)*m*env;
+  float lit=clamp((d-du)*6.0,0.0,1.0)*smoothstep(.4,.6,d)*m*env;
+  rgb=vec3(.76,.83,.94)+lit*vec3(.18,.13,.06);
+  alpha=clamp(c*.34+lit*.18,0.0,.48)*tint.a;
  }else if(Mode==17&&tint.b>.5){
   // The stream of water under the mountains of Lee So-sang's sword formation (2.82.16, user request with their marked
   // screenshot of the game: "산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래",

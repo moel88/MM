@@ -638,15 +638,7 @@ final class SwordFormation {
         float t=c.sec;Vec3d centre=centre(c.cast);double camAz=cameraAz(centre,c.camera);
         var mat=KagenoFire.inkMatrix();
         var buf=net.minecraft.client.render.Tessellator.getInstance().getBuffer();
-        List<Cloud> haze=new ArrayList<>();for(var cl:clouds(c.cast.id(),yaw(c.cast)))if(cl.haze()&&cloudShown(c.cast,cl,t)>.01f)haze.add(cl);
-        if(!haze.isEmpty()){
-            haze.sort(Comparator.comparingDouble((Cloud cl)->{double a=cl.az()+cl.drift()*t;return -centre.add(Math.cos(a)*cl.radius(),cl.up(),Math.sin(a)*cl.radius()).squaredDistanceTo(c.camera);}));
-            com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.render.GameRenderer::getPositionColorProgram);
-            buf.begin(net.minecraft.client.render.VertexFormat.DrawMode.QUADS,net.minecraft.client.render.VertexFormats.POSITION_COLOR);
-            var mesh=new EffectMesh(buf,mat,c.camera);
-            for(var cl:haze)cloud(c.cast,mesh,t,centre,cl,c.camera);
-            net.minecraft.client.render.BufferRenderer.drawWithGlobalProgram(buf.end());
-        }
+        cloudRing(c,centre,t,camAz);
         List<Mountain> order=new ArrayList<>();
         float end=end(c.cast);for(var mt:peaks(c.cast.id(),yaw(c.cast)))if(mountainUp(end,mt,t)>.01f)order.add(mt);
         if(order.isEmpty())return;
@@ -671,6 +663,31 @@ final class SwordFormation {
             net.minecraft.client.render.BufferRenderer.drawWithGlobalProgram(buf.end());
         }
     }
+    /**
+     * The faint clouds over the mountains (2.82.16, user request with their screenshot of the game: "사진에 있는 희미한
+     * 구름 보이지? 마지막으로 구름만 저 퀄리티로 만들어줘 저 구름들은 한바퀴로 이어져 있고 천천히 한 바퀴 돌고 있어"): one ring
+     * of soft, see-through clouds of mist CLOUD_R out, from CLOUD_LOW blocks up for CLOUD_HIGH (among the mountains and
+     * over their summits), joined all the way round and turning slowly (the ink shader's mode 17, its clouds,
+     * KagenoFire.clouds). Drawn before the mountains (behind them). It comes in after the mountains rise and goes with
+     * them; where it runs between her camera and the formation, out near the camera, it is gone (as the stream).
+     * (2.82.16's first draft: fourteen banks of round puffs, HAZE.)
+     */
+    static void cloudRing(Fx c,Vec3d centre,float t,double camAz){
+        float end=end(c.cast);
+        float up=Ease.smooth(t,MIST0+.1f,MIST0+1.3f)*(1-Ease.smooth(t,end+GLOW,end+GONE+.3f));
+        if(up<=.005f)return;
+        int n=CLOUD_SEGS;double[] rr=new double[n+1],hh=new double[n+1];float[] aa=new float[n+1];
+        for(int i=0;i<=n;i++){
+            double az=Math.PI*2*i/n;rr[i]=CLOUD_R;hh[i]=CLOUD_HIGH;
+            float before=Double.isNaN(camAz)?1:Ease.smooth((float)Math.abs(Math.IEEEremainder(az-camAz,Math.PI*2)),(float)STREAM_OPEN0,(float)STREAM_OPEN1);
+            Vec3d p=centre.add(Math.cos(az)*CLOUD_R,CLOUD_LOW+CLOUD_HIGH/2,Math.sin(az)*CLOUD_R);
+            aa[i]=(float)(up*before*camera(p,c.camera));
+        }
+        KagenoFire.clouds(KagenoFire.inkMatrix(),c.camera,centre.add(0,CLOUD_LOW,0),rr,hh,aa,c.cast.id().hashCode()+71,c.age);
+    }
+    /** The clouds: how far out (just behind the mountains), from how high up and how tall (blocks), how finely drawn round. */
+    static final double CLOUD_R=MOUNTAIN_R+1.0,CLOUD_LOW=1.6,CLOUD_HIGH=4.8;
+    static final int CLOUD_SEGS=160;
     static void texVertex(net.minecraft.client.render.BufferBuilder b,org.joml.Matrix4f m,Vec3d p,float u,float v,float a){
         b.vertex(m,(float)p.x,(float)p.y,(float)p.z).texture(u,v).color(255,255,255,Math.max(0,Math.min(255,Math.round(a*255)))).next();
     }
@@ -716,7 +733,7 @@ final class SwordFormation {
         CLOUDS.put(id,l);while(CLOUDS.size()>16)CLOUDS.remove(CLOUDS.keySet().iterator().next());
         return l;
     }
-    static final int HAZE=14;
+    static final int HAZE=0;
     static final double HAZE_TURN=.05;
     /** How strongly a cloud shows at {@code t} (0 to 1): coming in, going with the mountains as the formation ends. */
     static float cloudShown(StandClient.Cast c,Cloud cl,float t){return Ease.smooth(t,cl.in(),cl.in()+1f)*(1-Ease.smooth(t,end(c)+GLOW,end(c)+GONE+.3f));}
