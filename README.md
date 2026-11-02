@@ -1,12 +1,12 @@
-> **현재 통합본: Botand 2.82.14** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.82.15** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
 
-# 보탠드 2.82.14 — 이소상 H: 산 발치까지 깔린 남색 물, 검은 덩어리만 순환
+# 보탠드 2.82.15 — 이소상 H: 물 안에서 천천히 흐르는 어두운 물살
 
-- **바닥의 물:** 가운데를 비우고 둘레에 깔린 남색 물이 이제 산 발치까지 닿습니다(산 밑으로 조금 들어감). 물과 산 사이에 맨땅이 보이지 않습니다.
-- **움직임:** 남색 물과 연한 물줄기는 멈춰 있고, 그 안의 부드러운 검은 덩어리만 빙 돌며 순환합니다. 연한 물줄기는 산 발치를 따라서만 있고, 검진 위로 긴 가는 검은 줄이 날아다닙니다.
-- 클라이언트 그림만 바뀌었습니다(서버는 2.82.4~2.82.13 그대로 써도 됩니다).
+- **어두운 물살:** 넓은 검은 덩어리 대신, 바닥이 비치는 어두운 남색의 긴 띠(폭 약 1블록)가 물 안에서만 흐릅니다. 가운데 맨땅에는 없습니다.
+- **움직임:** 2.82.14보다 훨씬 느리게, 영상처럼 시계 방향으로 돌며(약 31초에 한 바퀴) 바깥으로 퍼집니다. 남색 물과 연한 물줄기는 그대로 멈춰 있습니다.
+- 클라이언트 그림만 바뀌었습니다(서버는 2.82.4~2.82.14 그대로 써도 됩니다).
 
-[RELEASE_2.82.14_KO.md](RELEASE_2.82.14_KO.md)를 확인하세요. 2.82.13은 [RELEASE_2.82.13_KO.md](RELEASE_2.82.13_KO.md)입니다.
+[RELEASE_2.82.15_KO.md](RELEASE_2.82.15_KO.md)를 확인하세요. 2.82.14는 [RELEASE_2.82.14_KO.md](RELEASE_2.82.14_KO.md)입니다.
 
 # 보탠드 2.82.10 — 이소상 H: 바깥으로 퍼져 파란 연기가 되는 회오리
 

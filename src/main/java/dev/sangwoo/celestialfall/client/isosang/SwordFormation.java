@@ -921,24 +921,28 @@ final class SwordFormation {
      * user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까 이상함", "그리고 물은 안 움직이고 검정색만 움직이게 해
      * 영상도 검정색만 순환하잖아"; 2.82.15, user request: "너무 빨리 돌아가고 검정색이 너무 커 영상처럼 지나치게 두껍거나
      * 넓은 검은 면이 되지 않도록 하고, 가늘고 길게 이어지는 형태로 만들어어함 걍 검정색을 강가의 흐름처럼 만들면 되는데"):
-     * a see-through navy water, still, from round the formation's bare middle out to the mountains' feet (shore); in it
-     * thin, long dark streaks drifting slowly along still, gently winding lanes round the middle as a river carries
-     * things, the only thing of it that moves: counterclockwise seen from above (as the whirlpool turned), FLOW_SPEED
-     * blocks a second in the middle of its channel and FLOW_BANK of that at its banks (the ink shader's riverTurn, its
-     * RIVER_V and RIVER_BANK); a few thin strands of pale water, still, along the mountains' feet (the ink shader, style
-     * 14: the water seeds 8 to 11, the strands 12 to 15; its uv the offset over FLOW_SCALE blocks). How strongly it lies
-     * (0 to 1: coming in as the whirlpool's water turns into the smoke, FLOW0 to FLOW1, and going as the formation ends,
-     * with the mountains), and the formation's clock the river runs by, in thousandths of a second in sixteen bits (each
-     * lane of it turns at its own pace, so it is told the time, not a turn).
+     * then "가운데 검정색이 순환", "전체적으로 순환하는게 안 보여? 검정색이?", of the video's darker water marked red: "너가
+     * 빨간색으로 표시한 이거 맞음 이게 완전 검정이 아니고 물의 흐름 느낌으로 만든거 같음", and "가운데는 왜 흐름? 아무것도
+     * 없는곳인데"): a see-through navy water, still, from round the formation's bare middle out to the mountains' feet
+     * (shore); in it (not over the bare middle) long bands of its darker water flowing, see-through (not black), some a
+     * block wide, curving round it, the only thing of it that moves: turning slowly clockwise seen from above (FLOW_TURN
+     * radians a second, as the video's darker water goes round) and spreading outward as they go (FLOW_OUT blocks a
+     * second), each
+     * coming and going along its length (the ink shader's FLOW_W and FLOW_OUT); a few thin strands of pale water, still,
+     * along the mountains' feet (the ink shader, style 14: the water seeds 8 to 11, the strands 12 to 15; its uv the
+     * offset over FLOW_SCALE blocks). How strongly it lies (0 to 1: coming in as the whirlpool's water turns into the
+     * smoke, FLOW0 to FLOW1, and going as the formation ends, with the mountains), and the formation's clock the flow
+     * runs by, in thousandths of a second in sixteen bits.
      */
     static float flowLife(float t,float end){return Ease.smooth(t,FLOW0,FLOW1)*(1-Ease.smooth(t,end,end+GONE));}
     static int flowClock(float t){return MathHelper.clamp(Math.round(t*1000),0,65535);}
     static final float FLOW0=1.3f,FLOW1=2f;
-    static final double FLOW_SPEED=.9,FLOW_BANK=.45,FLOW_SCALE=IsosangRules.FORMATION_RADIUS+1;
+    static final double FLOW_TURN=.2,FLOW_OUT=.5,FLOW_SCALE=IsosangRules.FORMATION_RADIUS+1;
     /**
      * Where the water lies round the formation (2.82.14, user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까
      * 이상함": it ended a block and more short of the mountains, the ground bare between): its rings at SHORE_STEPS ways
-     * round, from WATER_IN blocks out (inside the shader's soft inner edge) to the foot of the nearest mountain that way
+     * round, from WATER_IN blocks out (inside the shader's soft inner edge: the formation's middle is bare, its darker
+     * water flowing only in its water, 2.82.15) to the foot of the nearest mountain that way
      * (waterEdge), fading out over EDGE_PAST blocks past it, under the mountain; and the strip of its pale strands along
      * the mountains' feet (STRAND_* blocks inside the edge, there only as far as a mountain stands that way: cover).
      * Fixed for a formation, as its mountains are.
@@ -997,8 +1001,8 @@ final class SwordFormation {
     /**
      * The ink lying on the ground, under everything else of it (2.82.6, the ink shader's ground pass, before the swords,
      * the mountains and the light): the blue of the formation's ground; the ink gathering into its middle; the whirlpool
-     * (2.82.7); the still navy water lying on the ground as it stands, out to the mountains' feet, thin dark streaks
-     * drifting in it as a river's (2.82.13 to 2.82.15: style 14, seeds 8 to 15, the formation's clock in the green and
+     * (2.82.7); the still navy water lying on the ground as it stands, out to the mountains' feet, bands of darker water
+     * flowing in it (2.82.13 to 2.82.15: style 14, seeds 8 to 15, the formation's clock in the green and
      * blue bytes; drawn in rings out to the mountains, KagenoFire.inkGroundRings). The others each a square of the ink shader
      * (KagenoFire.inkGround) on the ground, its uv the offset over its radius.
      */
