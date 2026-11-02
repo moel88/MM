@@ -85,10 +85,43 @@ public final class KagenoFire {
      */
     public static void dust(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){cells(m,camera,pts,cells,age,14);}
     /**
-     * Blue smoke billows on the same fixed planes as the fire cells (shader mode 17, 2.82.10: the smoke of Lee So-sang's
-     * H, billowing up off the formation's rim): each cell is {size, alpha, light, thinning, seed}.
+     * A ring of blue mist standing round {@code centre} (shader mode 17, 2.82.11: the mist round Lee So-sang's sword
+     * formation, as the user's marked screenshot shows it): upright quads fixed in the world, farthest first, between the
+     * angles i/n and (i+1)/n of a turn (the world's x to z), {@code radius[i]} out and {@code height[i]} up there (n+1
+     * values, the last at the whole turn), leaning out {@code lean} a block per block up; uv the share of the turn and of
+     * the height; {@code alpha[i]} its strength there; {@code thin} how far it has thinned away (0 to 1). Blended, then its
+     * light added again at {@code glow} of its strength (at {@code glowHot} over white on the effect layer).
      */
-    public static void blueSmoke(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age){cells(m,camera,pts,cells,age,17);}
+    public static void mist(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,double lean,float thin,int seed,float age,float glow,float glowHot){
+        if(shader==null)return;int n=radius.length-1;if(n<3||height.length<=n||alpha.length<=n)return;
+        boolean any=false;for(int i=0;i<n;i++)if(alpha[i]+alpha[i+1]>.004f){any=true;break;}
+        if(!any)return;
+        Vec3d[] bottom=new Vec3d[n+1],top=new Vec3d[n+1];
+        for(int i=0;i<=n;i++){
+            double a=Math.PI*2*i/n;Vec3d d=new Vec3d(Math.cos(a),0,Math.sin(a));
+            bottom[i]=centre.add(d.multiply(radius[i])).add(0,.05,0);
+            top[i]=bottom[i].add(d.multiply(lean*height[i])).add(0,height[i],0);
+        }
+        Integer[] order=new Integer[n];for(int i=0;i<n;i++)order[i]=i;
+        Arrays.sort(order,Comparator.comparingDouble((Integer i)->bottom[i].add(top[i+1]).multiply(.5).squaredDistanceTo(camera)).reversed());
+        int t=Math.round(Math.max(0,Math.min(1,thin))*255);
+        for(int pass=0;pass<(glow>0?2:1);pass++){
+            float k=pass==0?1:glow;float h0=hot;
+            if(pass==1){RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);hot=glowHot;}
+            var b=begin(age,17);
+            for(int i:order){
+                if(alpha[i]+alpha[i+1]<=.004f)continue;
+                float u0=i/(float)n,u1=(i+1)/(float)n;
+                int a0=Math.max(0,Math.min(255,(int)(alpha[i]*k*255))),a1=Math.max(0,Math.min(255,(int)(alpha[i+1]*k*255)));
+                b.vertex(m,(float)bottom[i].x,(float)bottom[i].y,(float)bottom[i].z).texture(u0,0).color(seed&255,t,0,a0).next();
+                b.vertex(m,(float)bottom[i+1].x,(float)bottom[i+1].y,(float)bottom[i+1].z).texture(u1,0).color(seed&255,t,0,a1).next();
+                b.vertex(m,(float)top[i+1].x,(float)top[i+1].y,(float)top[i+1].z).texture(u1,1).color(seed&255,t,0,a1).next();
+                b.vertex(m,(float)top[i].x,(float)top[i].y,(float)top[i].z).texture(u0,1).color(seed&255,t,0,a0).next();
+            }
+            end(b);
+            if(pass==1){RenderSystem.defaultBlendFunc();hot=h0;}
+        }
+    }
     private static void cells(Matrix4f m,Vec3d camera,List<Vec3d> pts,List<float[]> cells,float age,int mode){
         if(shader==null||pts.isEmpty())return;
         Integer[] order=new Integer[pts.size()];for(int i=0;i<order.length;i++)order[i]=i;

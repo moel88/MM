@@ -99,7 +99,7 @@ final class SwordFormation {
      * and runs out to the rim (SPREAD0 to SPREAD1, easing in, fast through the middle and slowing as it gets there, front), the black water
      * and its streams squeezed out ahead of it (its edge pushed SPREAD_PUSH further out), the ground clean behind it (the
      * formation's blue ground and the ink at the swords' feet go as it passes them, groundInk). As it runs it turns blue,
-     * mist lifting off it (puffs), and what reaches the rim turns into the smoke there (WATER_OUT0 to WATER_OUT1). The ink
+     * blue mist lifting off it (frontMist), and what reaches the rim turns into the smoke there (WATER_OUT0 to WATER_OUT1). The ink
      * shader draws the front from the formation's clock as front does.
      */
     static final float SPREAD0=1.0f,SPREAD1=1.33f,WATER_OUT0=1.27f,WATER_OUT1=1.45f;
@@ -109,8 +109,8 @@ final class SwordFormation {
      * video's pale blue smoke round the formation's rim, read on a marked still, then "일단 그렇게 해봐"; 2.82.10: blue,
      * thicker, rising more, the whirlpool spreading out into it): as the spreading whirlpool reaches the formation's rim
      * (RIM_R, outside every sword and before the mountains' feet) it turns into a band of blue smoke on the ground there
-     * (SMOKE_IN to SMOKE_FULL), its wisps streaming round the way the whirlpool turned, billowing up off it (puffs, up to
-     * some three quarters of the mountains' height); it drifts a little further out (to RIM_OUT) and thins away by patches,
+     * (SMOKE_IN to SMOKE_FULL), its wisps streaming round the way the whirlpool turned, a see-through blue mist standing
+     * round it (veilLife, shaders: 2.82.11, the user's marked screenshot); it drifts a little further out (to RIM_OUT) and thins away by patches,
      * its thin wisps first (SMOKE_OUT0 to SMOKE_OUT1). The ink shader draws the band in the whirlpool's square (style 15),
      * reading these off the formation's clock.
      */
@@ -1080,155 +1080,68 @@ final class SwordFormation {
         swordLight(c,m,t,centre,yaw);
         flowers(c,m,t,centre,yaw,true);
         mountainLight(c,m,t);
-        veil(c,m,t);
         struck(c,m,t,false);
     }
     /**
-     * The smoke rising off the rim (2.82.8, user request: "H 끝날때 내가 보내준 사진 보면 연기가 끝부분으로 피어오르다가
-     * 사라지는 거 보이지?", "산 중간 부분까지 희미하게 피오르는듯"; the video: a blue haze over the mountains' feet, up to some
-     * half their height, fading with the smoke): a faint veil of blue light standing round the rim where the smoke lies,
-     * rising to VEIL_HIGH as the smoke thickens and on a little as it goes, its wisps climbing and leaning the way the
-     * whirlpool turned (counterclockwise seen from above), gone with the smoke; low behind her (MOUNTAIN_GAP, where her
-     * camera looks in from) and gone close to the camera. Light (the additive pass, so its order does not matter), fixed
-     * in the world: a ring of upright strips round the middle, leaning out a little as it rises.
+     * The mist round the rim (2.82.8, user request: "H 끝날때 내가 보내준 사진 보면 연기가 끝부분으로 피어오르다가 사라지는
+     * 거 보이지?", "산 중간 부분까지 희미하게 피오르는듯"; 2.82.10: "연기 파란색이여함 연기를 더 진하게 만들고 더 많이
+     * 피어오르게"; 2.82.11: "아니 내가 사진에 표시한 애들처럼 나오게 해달라고 연기를", their marked screenshot of the game:
+     * a see-through, deep blue mist standing round the formation's rim, hugging the ground in streaks that run round it,
+     * rising a little before the mountains' feet. 2.82.10 drew it as opaque billows, lumps, and 2.82.9 as a faint wash of
+     * added light, near white): how strongly it stands (0 to 1: coming as the whirlpool reaches the rim, gone with the
+     * smoke lying there), how high (blocks: a little as it comes, VEIL_HIGH by VEIL_UP, its wisps rising on a little as it
+     * goes), and how far it has thinned away (0 to 1: whole, then breaking up by holes, its thin wisps first).
      */
-    static void veil(Fx c,EffectMesh m,float t){
-        float life=veilLife(t);if(life<=.005f)return;
-        Vec3d mid=poolCentre(c.cast);double back=behind(yaw(c.cast)),high=veilHeight(t),r0=rim(t);
-        int seed=c.cast.id().hashCode();double s1=Ease.hash(seed+501)*6.283,s2=Ease.hash(seed+502)*6.283,s3=Ease.hash(seed+503)*6.283;
-        Vec3d[][] p=new Vec3d[VEIL_SEGS+1][VEIL_ROWS+1];float[][] a=new float[VEIL_SEGS+1][VEIL_ROWS+1];
-        for(int i=0;i<=VEIL_SEGS;i++){
-            double az=Math.PI*2*i/VEIL_SEGS,open=veilOpen(az,back),h=high*(.35+.65*open);
-            for(int j=0;j<=VEIL_ROWS;j++){
-                double u=j/(double)VEIL_ROWS,y=h*u,r=r0+.3*y;
-                p[i][j]=mid.add(Math.cos(az)*r,y+.05,Math.sin(az)*r);
-                a[i][j]=(float)(veilAlpha(az,y,u,t,s1,s2,s3)*life*(.55+.45*open)*camera(p[i][j],c.camera));
-            }
-        }
-        for(int i=0;i<VEIL_SEGS;i++)for(int j=0;j<VEIL_ROWS;j++){
-            if(a[i][j]+a[i+1][j]+a[i+1][j+1]+a[i][j+1]<=.004f)continue;
-            m.vertex(p[i][j],VEIL,a[i][j]);m.vertex(p[i+1][j],VEIL,a[i+1][j]);m.vertex(p[i+1][j+1],VEIL,a[i+1][j+1]);m.vertex(p[i][j+1],VEIL,a[i][j+1]);
-        }
-    }
-    /**
-     * The glow under the rising smoke: its colour (light: a deep blue, 2.82.10, user request: "연기 파란색이여함": added
-     * light only brightens what is behind it, so the smoke's blue body is the puffs', blended over it), how high it
-     * stands (blocks, some half the mountains' height), how finely it is drawn.
-     */
-    static final int VEIL=0x3f6cff,VEIL_SEGS=120,VEIL_ROWS=6;
-    static final double VEIL_HIGH=3.0;
-    /** How strongly the rising smoke shows (0 to 1): coming once the smoke lies at the rim, gone with it. */
     static float veilLife(float t){return Ease.smooth(t,SMOKE_IN,SMOKE_IN+.12f)*(1-Ease.smooth(t,SMOKE_OUT0-.02f,SMOKE_OUT1));}
-    /** How high the rising smoke stands (blocks): a little as it comes, VEIL_HIGH by the time it is thickest, rising on a little as it goes. */
-    static double veilHeight(float t){return VEIL_HIGH*(.3+.7*Ease.smooth(t,SMOKE_IN,VEIL_UP))+.4*Ease.smooth(t,VEIL_UP,SMOKE_OUT1);}
-    /** When the rising smoke stands at VEIL_HIGH. */
-    static final float VEIL_UP=1.4f;
+    static double veilHeight(float t){return VEIL_HIGH*(.3+.7*Ease.smooth(t,SMOKE_IN,VEIL_UP))+.5*Ease.smooth(t,VEIL_UP,SMOKE_OUT1);}
+    static float veilThin(float t){return Ease.smooth(t,SMOKE_OUT0-.1f,SMOKE_OUT1);}
+    static final double VEIL_HIGH=3.6;
+    static final float VEIL_UP=1.45f;
     /**
-     * The rising smoke's strength at the angle {@code az} round the rim (radians, the world's x to z), {@code y} blocks up
-     * ({@code u} of its height): densest just over the ground, thinning to nothing at its top; in wisps that climb (with the
-     * clock) and lean the way the whirlpool turned as they rise (counterclockwise seen from above: the angle falls with
-     * height). Whole turns of the angle only, so it has no seam.
+     * The mist off the spreading whirlpool (2.82.10, user request: "소용돌이가 퍼져서 연기가 되는거처럼 만들어"): a low ring
+     * of the same mist riding on its water just outside the clean front as it runs out (FRONT_MIST_OUT blocks out, up to
+     * FRONT_MIST_HIGH), growing as it nears the rim and handing over to the mist there: how strongly (0 to 1) and where.
      */
-    static double veilAlpha(double az,double y,double u,float t,double s1,double s2,double s3){
-        double prof=(.6+.4*Ease.smooth((float)u,0,.15f))*Math.pow(1-u,1.15);
-        double lean=az+.22*y;
-        double w1=.5+.5*Math.sin(11*lean+2.2*Math.sin(5*lean+s1)+s2);
-        double w2=.5+.5*Math.sin(2.3*(y-1.9*t)+2.6*Math.sin(3*lean+s3));
-        double w3=.6+.4*Math.sin(4*az+s3+.7*t);
-        return 1.3*prof*(.35+.65*w1)*(.5+.5*w2)*w3;
-    }
-    /** How open the rim is to the rising smoke at the angle {@code az} (0 straight behind her, where her camera looks in from, to 1 past MOUNTAIN_GAP, over 30 degrees). */
+    static float frontMist(float t){return Ease.smooth(t,SPREAD0+.03f,SPREAD0+.2f)*(1-Ease.smooth(t,SPREAD1-.08f,SPREAD1+.08f));}
+    static double frontMistAt(float t){return front(t)+FRONT_MIST_OUT;}
+    static double frontMistHeight(float t){return FRONT_MIST_HIGH*(.45+.55*Ease.smooth(t,SPREAD0,SPREAD1));}
+    static final double FRONT_MIST_OUT=1.2,FRONT_MIST_HIGH=1.1;
+    /** How finely a ring of mist is drawn round, and how far it leans out (blocks a block up). */
+    static final int MIST_SEGS=96;
+    static final double MIST_LEAN=.25;
+    /** How open the rim is to the mist at the angle {@code az} (0 straight behind her, where her camera looks in from, to 1 past MOUNTAIN_GAP, over 30 degrees). */
     static double veilOpen(double az,double back){
         double off=Math.abs(Math.atan2(Math.sin(az-back),Math.cos(az-back)));
         return Ease.smooth((float)off,(float)(MOUNTAIN_GAP-Math.toRadians(15)),(float)(MOUNTAIN_GAP+Math.toRadians(15)));
     }
+    /** Gone close to the camera (2 blocks), whole from 5.5 blocks off (mist close by would fill the screen). */
+    static double camera(Vec3d p,Vec3d cam){return MathHelper.clamp((p.distanceTo(cam)-2)/3.5,0,1);}
     /**
-     * How open the rim is to the billowing smoke at the angle {@code az} (0 behind her to 1 across from her): wider than
-     * the glow's (veilOpen), from 55 to 95 degrees off straight behind her, as her camera looks in over the rim there and
-     * the smoke near it fills the screen.
-     */
-    static double puffOpen(double az,double back){
-        double off=Math.abs(Math.atan2(Math.sin(az-back),Math.cos(az-back)));
-        return Ease.smooth((float)off,(float)Math.toRadians(55),(float)Math.toRadians(95));
-    }
-    /** Gone close to the camera (1.5 blocks), whole from 4.5 blocks off. */
-    static double camera(Vec3d p,Vec3d cam){return MathHelper.clamp((p.distanceTo(cam)-1.5)/3,0,1);}
-    /**
-     * The blue smoke billowing up (2.82.10, user request: "연기 파란색이여함 연기를 더 진하게 만들고 더 많이 피어오르게 하고
-     * 소용돌이가 퍼져서 연기가 되는거처럼 만들어"): puffs of blue smoke on fixed upright planes (KagenoFire.blueSmoke, the
-     * fire cells' planes: smoke never turns to the camera), farthest first: off the spreading whirlpool as it runs out
-     * (its pale blue lifting as mist, carried out with it) and off the rim as it reaches it, thick, billowing up to some
-     * three quarters of the mountains' height (puffs). Low and thin behind her, where her camera looks in from; thinning
-     * within 6.5 blocks of the camera, gone within 2.5 (a puff close by would fill the screen), and gone close to her.
+     * The blue mist (the shader pass): a ring of upright mist fixed in the world (the ink shader's mode 17,
+     * KagenoFire.mist: streaks running round the way the whirlpool turned and rising, dense at its foot, wisps at its
+     * uneven top, thinning away by holes; deep electric blue), blended for its blue and its light added again a little.
+     * Off the spreading whirlpool, low, riding just outside its clean front as it runs out; then round the rim as the
+     * whirlpool reaches it, standing to VEIL_HIGH. Low and thin behind her, where her camera looks in from (veilOpen);
+     * gone close to the camera.
      */
     static void shaders(Fx c){
-        float t=c.sec;if(t<FRONT0||t>=PUFF_END)return;
-        Vec3d mid=poolCentre(c.cast),her=spot(c.cast).add(0,IsosangRules.FORMATION_STAND+.9,0);
-        List<Vec3d> pts=new ArrayList<>();List<float[]> cells=new ArrayList<>();
-        for(var pf:puffs(c.cast.id().hashCode(),behind(yaw(c.cast)),t)){
-            Vec3d p=mid.add(pf.x(),pf.y(),pf.z());
-            float a=pf.alpha()*(float)(MathHelper.clamp((p.distanceTo(c.camera)-2.5)/4,0,1)*MathHelper.clamp((p.distanceTo(her)-.8)/1.2,0,1));if(a<=.01f)continue;
-            pts.add(p);cells.add(new float[]{(float)pf.size(),a,pf.light(),pf.thin(),pf.seed()});
-        }
-        if(pts.isEmpty())return;
-        // (on the effect layer its lit tops glow a little)
-        KagenoFire.hot(dev.sangwoo.celestialfall.client.vfx.FxLayer.available()?.6f:0);
-        KagenoFire.blueSmoke(c.matrix,c.camera,pts,cells,c.age);
-        KagenoFire.hot(0);
+        float t=c.sec;if(t<SPREAD0||t>=SMOKE_OUT1+.02f)return;
+        Vec3d mid=poolCentre(c.cast);double back=behind(yaw(c.cast));int seed=c.cast.id().hashCode();
+        float fm=frontMist(t);
+        if(fm>.005f)mist(c,mid,frontMistAt(t),frontMistHeight(t),.55f*fm,0,seed+11,back);
+        float rm=veilLife(t);
+        if(rm>.005f)mist(c,mid,rim(t),veilHeight(t),.92f*rm,veilThin(t),seed+29,back);
     }
-    /** A puff of the blue smoke: where it is (blocks from the formation's middle, the world's x, up and z), its half-size, strength, light and thinning (0 to 1), and its seed. */
-    record Puff(double x,double y,double z,double size,float alpha,float light,float thin,int seed){}
-    /**
-     * When the puffs are born: off the spreading whirlpool (FRONT0 to FRONT1, every FRONT_EVERY round FRONT_SLOTS places)
-     * and off the rim (PUFF0 to PUFF1, every PUFF_EVERY round PUFF_SLOTS places); how high the rim's rise (PUFF_HIGH,
-     * blocks); all gone by PUFF_END.
-     */
-    static final int FRONT_SLOTS=36,PUFF_SLOTS=44;
-    static final float FRONT0=1.04f,FRONT1=1.3f,FRONT_EVERY=.05f,PUFF0=1.2f,PUFF1=1.58f,PUFF_EVERY=.1f,PUFF_END=PUFF1+.72f;
-    static final double PUFF_HIGH=4.4;
-    /**
-     * The puffs of blue smoke at {@code t} (seeded by {@code seed}; {@code back} the angle from the formation's middle to
-     * behind her, radians, the world's x to z): each born at its time and place and living a while, rising fast at first
-     * and slowing, swelling, leaning the way the whirlpool turned (counterclockwise seen from above: the angle falls),
-     * coming in quickly and thinning away by holes. Off the spreading whirlpool: born on its water just outside the clean
-     * front and carried out with it, lifting under a block or so, more of them as it nears the rim (none on the clean
-     * ground: there they showed as blue blots lying among the swords). Off the rim: born there as the whirlpool reaches
-     * it, drifting a little out, billowing up 3 to 5 blocks. Low and thin behind her, where her camera is (puffOpen). A
-     * function of the clock.
-     */
-    static List<Puff> puffs(int seed,double back,float t){
-        List<Puff> out=new ArrayList<>();if(t<FRONT0||t>=PUFF_END)return out;
-        for(int k=0;k<FRONT_SLOTS;k++){
-            int s=seed*31+k*977+11;double az=Math.PI*2*(k+.7*Ease.hash(s))/FRONT_SLOTS,open=puffOpen(az,back);
-            float phase=FRONT_EVERY*(float)Ease.hash(s+1);
-            for(int j=0;;j++){
-                float tb=FRONT0+phase+j*FRONT_EVERY;if(tb>=FRONT1||tb>t)break;
-                int ps=s+j*131+7;float life=.26f+.1f*(float)Ease.hash(ps+2),u=(t-tb)/life;if(u>=1)continue;
-                // (on the water just outside the front, never in the formation's middle: where it is born decides, so
-                // none shows up on the way)
-                double f0=front(tb),born=f0+.6+1.0*Ease.hash(ps+3);if(born<2.5)continue;
-                double r=born+front(Math.min(t,SPREAD1))-f0;
-                double a=az-.25*u,y=.1+(.7+.5*Ease.hash(ps+4))*(.35+.65*open)*(1-Math.pow(1-u,1.7));
-                double size=(.35+.3*Ease.hash(ps+5))*(.6+.7*Ease.out(u,0,1));
-                float alpha=(float)(.5*Ease.smooth(tb,FRONT0,FRONT1-.06f)*Ease.smooth(u,0,.22f)*(1-Ease.smooth(u,.45f,1))*(.4+.6*open));
-                out.add(new Puff(Math.cos(a)*r,y,Math.sin(a)*r,size,alpha,.9f,Ease.smooth(u,.4f,1),ps));
-            }
+    /** A ring of the mist round {@code mid}: {@code r} blocks out, {@code high} blocks up (low and thin behind her), of strength {@code strength}, thinned away {@code thin}. */
+    static void mist(Fx c,Vec3d mid,double r,double high,float strength,float thin,int seed,double back){
+        int n=MIST_SEGS;double[] rr=new double[n+1],hh=new double[n+1];float[] aa=new float[n+1];
+        for(int i=0;i<=n;i++){
+            double az=Math.PI*2*i/n,open=veilOpen(az,back);
+            rr[i]=r;hh[i]=high*(.35+.65*open);
+            Vec3d p=mid.add(Math.cos(az)*r,hh[i]*.35,Math.sin(az)*r);
+            aa[i]=(float)(strength*(.45+.55*open)*camera(p,c.camera));
         }
-        for(int k=0;k<PUFF_SLOTS;k++){
-            int s=seed*37+k*1013+29;double az=Math.PI*2*(k+.6*Ease.hash(s))/PUFF_SLOTS,open=puffOpen(az,back);
-            float phase=PUFF_EVERY*(float)Ease.hash(s+1);
-            for(int j=0;;j++){
-                float tb=PUFF0+phase+j*PUFF_EVERY;if(tb>=PUFF1||tb>t)break;
-                int ps=s+j*131+7;float life=.5f+.2f*(float)Ease.hash(ps+2),u=(t-tb)/life;if(u>=1)continue;
-                double r=rim(tb)+.7*(Ease.hash(ps+3)-.5)+.5*u,a=az+.18*(Ease.hash(ps+6)-.5)-.3*u;
-                double high=PUFF_HIGH*(.7+.45*Ease.hash(ps+4))*(.3+.7*open),y=.2+high*(1-Math.pow(1-u,1.6));
-                double size=(.8+.5*Ease.hash(ps+5))*(.55+.75*Ease.out(u,0,1))*(.6+.4*open);
-                float env=Ease.smooth(tb,PUFF0,PUFF0+.08f)*(1-.35f*Ease.smooth(tb,PUFF1-.15f,PUFF1));
-                float alpha=(float)(.88*env*Ease.smooth(u,0,.18f)*(1-Ease.smooth(u,.5f,1))*(.4+.6*open));
-                out.add(new Puff(Math.cos(a)*r,y,Math.sin(a)*r,size,alpha,.1f+.85f*(1-Ease.smooth(u,0,.6f)),Ease.smooth(u,.45f,1),ps));
-            }
-        }
-        return out;
+        KagenoFire.mist(c.matrix,c.camera,mid,rr,hh,aa,MIST_LEAN,thin,seed,c.age,.3f,dev.sangwoo.celestialfall.client.vfx.FxLayer.available()?1.2f:0);
     }
     /** Over the ink: the starlight now and then on a sword as the formation stands. */
     static void overlay(Fx c,EffectMesh m){

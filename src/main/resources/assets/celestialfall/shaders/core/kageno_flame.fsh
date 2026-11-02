@@ -638,27 +638,28 @@ void main(){
    alpha=body*tint.a;
   }
  }else if(Mode==17){
-  // Blue smoke billowing up off the rim of Lee So-sang's sword formation (2.82.10, user request: "연기 파란색이여함 연기를
-  // 더 진하게 만들고 더 많이 피어오르게"), on the fire cells' fixed planes: a soft lobed billow in three blues (a deep
-  // shadowed base, a middle and a pale lit top), a darker blue rim keeping the billows apart, lit from below by the
-  // whirlpool's light (tint.g) and opening in holes as it thins out (tint.b). Blue, never white: the lit top stays under
-  // white, glowing a little on the effect layer.
-  float light=tint.g,thin=tint.b;
-  vec2 flow=p*1.5+vec2(seed*.29,-Age*.05);
-  float n=fbm(flow+vec2(noise(flow+1.9),noise(flow-3.3))*1.5);
-  float r=length(p*vec2(1.0,1.05));
-  float edge=.72+(n-.5)*.5+.06*sin(atan(p.y,p.x)*5.0+seed);
-  float aa=max(fwidth(r),.002)*2.0;
-  float body=1.0-smoothstep(edge-.1-aa,edge+aa,r);
-  body*=1.0-smoothstep(.5-thin*.32,.58-thin*.32,fbm(flow*1.7+5.0))*thin;
-  float lit=p.y+(n-.5)*.5;
-  rgb=mix(vec3(.07,.15,.52),vec3(.16,.34,.9),smoothstep(-.35,-.05,lit));
-  rgb=mix(rgb,vec3(.42,.62,1.0),smoothstep(.15,.45,lit));
-  float rimLine=smoothstep(edge-.16,edge-.04,r);
-  rgb=mix(rgb,vec3(.05,.1,.38),rimLine*.45);
-  rgb+=vec3(.08,.16,.4)*light*(1.0-smoothstep(-.6,.4,p.y));
-  rgb*=1.0+Hot*light*.6*(1.0-rimLine);
-  alpha=body*tint.a*(.82+.18*n);
+  // Blue mist standing round Lee So-sang's sword formation (2.82.11, user request with their marked screenshot of the
+  // game: "아니 내가 사진에 표시한 애들처럼 나오게 해달라고 연기를": a see-through, deep blue mist hugging the ground round
+  // the formation's rim, in streaks running round it, rising a little before the mountains' feet; 2.82.10 drew it as
+  // opaque billows). A ring of upright quads fixed in the world (KagenoFire.mist): uv.x the share of a turn round it
+  // (so its noise is drawn on the circle and has no seam), uv.y the share of its height; tint.g how far it has thinned
+  // away. Streaks lying along it, running round the way the whirlpool turned (counterclockwise seen from above) and
+  // rising; dense at its foot, wisps up to an uneven top; a deep electric blue with brighter streaks, glowing a little
+  // on the effect layer, never white.
+  float th=uv.x*6.2831853,v=clamp(uv.y,0.0,1.0),thin=tint.g,tm=Age*.05;
+  vec2 rg=vec2(cos(th+.3*tm),sin(th+.3*tm));
+  float big=fbm(rg*2.6+vec2(seed*.37,1.3));
+  float mid=fbm(rg*8.0+vec2(v*2.4-tm*.8,seed*.53));
+  float fine=noise(rg*23.0+vec2(v*6.0-tm*1.7,-seed));
+  float lay=.5+.5*sin(v*9.0-tm*2.2+mid*5.5+big*4.0);
+  float top=.42+.5*big+.3*(mid-.5);
+  float body=smoothstep(0.0,.05,v)*(1.0-smoothstep(top*.45,top,v));
+  float dens=body*(.5+.5*lay)*(.55+.45*mid)*(.8+.4*fine);
+  dens*=1.0-smoothstep(.45-thin*.4,.6-thin*.4,fbm(rg*6.0+vec2(v*3.0+tm*.3,seed*.7)))*thin;
+  rgb=mix(vec3(.06,.12,.6),vec3(.15,.31,1.0),smoothstep(.12,.5,dens));
+  rgb=mix(rgb,vec3(.38,.57,1.0),smoothstep(.55,.95,dens)*.65);
+  rgb*=1.0+Hot*smoothstep(.35,.9,dens);
+  alpha=clamp(dens*1.4,0.0,.92)*tint.a;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);
