@@ -772,9 +772,9 @@ void main(){
   // ("구름 더 잘 보이게", then "너무 진해": between the two)
   // (a cool grey-blue body, a little darker than the game's light sky so it reads against it as well as against the
   // ground; white only where it is lit)
-  rgb=mix(vec3(.64,.7,.83),vec3(.93,.95,1.0),lit);
-  rgb=mix(rgb,vec3(.46,.52,.66),shade*.6);
-  alpha=clamp(c*.62+lit*.15+shade*.09,0.0,.7)*tint.a;
+  rgb=mix(vec3(.58,.64,.79),vec3(.92,.94,1.0),lit);
+  rgb=mix(rgb,vec3(.44,.5,.64),shade*.6);
+  alpha=clamp(c*.74+lit*.14+shade*.08,0.0,.66)*tint.a;
  }else if(Mode==17&&tint.b>.5){
   // The stream of water under the mountains of Lee So-sang's sword formation (2.82.16, user request with their marked
   // screenshot of the game: "산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래",
