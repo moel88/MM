@@ -167,71 +167,56 @@ class SwordFormationTest {
         assertTrue(across<=(SwordFormation.S_GUARD_W+SwordFormation.S_KNOB*1.7)*SwordFormation.THIN+1e-9,"its guard no wider than THIN of it: "+across);
         assertTrue(through<=.07*SwordFormation.THIN,"no thicker than THIN of it: "+through);
     }
-    @Test void sixOfTheSameMountainGoAllTheWayRoundAsTheStillShowsIt(){
-        // 2.82.16 ("이제 산 갈아엎고 사진이랑 똑같이 만들어봐 인게임에서는 저거랑 똑같은 산 6개가 한 바퀴로 둘러져있음")
+    @Test void sixOfTheUsersMountainGoRoundTheCircleFloating() throws java.io.IOException{
+        // 2.82.16 ("이제 산 갈아엎고 사진이랑 똑같이 만들어봐 인게임에서는 저거랑 똑같은 산 6개가 한 바퀴로 둘러져있음", then
+        // their painting: "이거 쓰면 되는데 투명하게 다듬으면 될듯")
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
         float yaw=40;var all=SwordFormation.mountains(id,yaw);
         assertEquals(6,all.length);
         assertSame(all,SwordFormation.mountains(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()),yaw),"the same mountains for the same formation");
-        double behind=SwordFormation.behind(yaw),half=0,top=0,leftTop=0;
+        double behind=SwordFormation.behind(yaw);
         for(int i=0;i<all.length;i++){
             var mt=all[i];
-            assertSame(SwordFormation.MOUNTAIN,mt.peaks(),"all the same mountain");
             assertEquals(SwordFormation.MOUNTAIN_R,mt.radius(),1e-12);assertTrue(mt.radius()>IsosangRules.FORMATION_RADIUS+2,"outside the formation");
-            // evenly round, a sixth apart, two of them meeting right behind her
+            // evenly round, a sixth apart, one of the gaps between them right behind her
             assertEquals(60,MathHelper.wrapDegrees(Math.toDegrees(all[(i+1)%6].az()-mt.az())),1e-6);
             assertEquals(30,Math.abs(MathHelper.wrapDegrees(Math.toDegrees(mt.az()-behind)))%60,1e-6,"their middles 30 degrees off behind her");
         }
-        double front=-1;
-        for(var p:SwordFormation.MOUNTAIN){
-            assertTrue(p.front()>front,"each layer before the last");front=p.front();
-            // its outline: from the ground up over its summit, the highest point, and down again; x only growing along it
-            assertEquals(0,p.ys()[0],1e-9);assertEquals(0,p.ys()[p.ys().length-1],1e-9);
-            for(int k=0;k+1<p.xs().length;k++)assertTrue(p.xs()[k+1]>p.xs()[k],"x grows along the outline");
-            for(int k=0;k<p.ys().length;k++)if(k!=p.top())assertTrue(p.ys()[k]<p.height(),"the summit the highest");
-            assertTrue(p.rimL()>.2&&p.rimL()<=1&&p.rimR()>.2&&p.rimR()<=1);
-            half=Math.max(half,Math.max(-p.xs()[0],p.xs()[p.xs().length-1]));top=Math.max(top,p.height());
-            if(p.xs()[p.top()]<0)leftTop=Math.max(leftTop,p.height());
+        // the painting as the texture: as wide as it is for its height; most of a sixth of the round each, a little gap
+        // between neighbours (as the still's); smaller than the traced one was ("산 크기가 너무 커 지금 더 줄이고")
+        try(var in=SwordFormation.class.getResourceAsStream("/assets/celestialfall/textures/effect/isosang_mountain.png")){
+            assertNotNull(in,"the painting is in the mod");
+            var img=javax.imageio.ImageIO.read(in);
+            assertEquals(SwordFormation.MOUNTAIN_ASPECT,img.getWidth()/(double)img.getHeight(),1e-6,"as wide as the painting");
+            assertTrue(img.getColorModel().hasAlpha(),"see-through round it");
+            assertEquals(0,img.getRGB(0,0)>>>24,"clear at its corner");
         }
-        assertEquals(17,SwordFormation.MOUNTAIN.length,"its layers as the still shows them");
-        // as the still: the right one's spire the highest, the left one's peak some eight tenths of it
-        assertEquals(SwordFormation.MOUNTAIN_TOP,top,1e-6);assertEquals(145/178.0,leftTop/top,.01);
-        assertTrue(SwordFormation.MOUNTAIN_TOP<5,"smaller (\"산 크기가 너무 커 지금 더 줄이고\")");
-        // most of a sixth of the round each, round the circle, a little gap between neighbours (as the still's)
         double sixth=SwordFormation.MOUNTAIN_R*Math.PI/6;
-        assertTrue(half<sixth-.5&&half>.65*sixth,"most of a sixth of the round: "+half+" of "+sixth);
-        // on the circle (not a hexagon of flat faces): every point of a face as far from the middle
+        assertTrue(SwordFormation.MOUNTAIN_HALF<sixth-1&&SwordFormation.MOUNTAIN_HALF>.75*sixth,"most of a sixth of the round, a gap between: "+SwordFormation.MOUNTAIN_HALF+" of "+sixth);
+        assertTrue(SwordFormation.MOUNTAIN_TOP<5);
+        // on the circle (not a hexagon of flat faces), floating over the ground ("영상에는 산이 중간에 떠있는데", "조금 더 낮추고")
         Vec3d mid=new Vec3d(0,0,0);
-        for(var mt:all)for(double x=-half;x<=half;x+=.5)
+        for(var mt:all)for(double x=-SwordFormation.MOUNTAIN_HALF;x<=SwordFormation.MOUNTAIN_HALF;x+=.5)
             assertEquals(mt.radius(),SwordFormation.onMountain(mid,mt,x,0,0).horizontalLength(),1e-9,"round the circle");
-        // floating over the ground ("영상에는 산이 중간에 떠있는데"), their feet fraying away above it in the shader
         assertEquals(SwordFormation.MOUNTAIN_FLOAT,SwordFormation.onMountain(mid,all[0],0,0,0).y,1e-12);
-        assertTrue(SwordFormation.MOUNTAIN_FLOAT>.5&&SwordFormation.MOUNTAIN_FLOAT<3,"floating, a little (\"조금 더 낮추고\")");
-        // each layer's rim: full at its summit, fading down each flank, none at its feet; only near the summit while it
-        // is still being drawn
-        for(var p:SwordFormation.MOUNTAIN){
-            float[] rim=SwordFormation.rimAlong(p,1,1);
-            assertEquals(1,rim[p.top()],1e-6);assertEquals(0,rim[0],.02);assertEquals(0,rim[rim.length-1],.02);
-            for(int k=p.top();k>0;k--)assertTrue(rim[k-1]<=rim[k]+1e-6,"fading down the left flank");
-            for(int k=p.top();k+1<rim.length;k++)assertTrue(rim[k+1]<=rim[k]+1e-6,"fading down the right flank");
-            float[] early=SwordFormation.rimAlong(p,1,.3f);
-            for(int k=0;k<rim.length;k++)assertTrue(early[k]<=rim[k]+1e-6,"drawn down from the summit");
+        assertTrue(SwordFormation.MOUNTAIN_FLOAT>.5&&SwordFormation.MOUNTAIN_FLOAT<3,"floating, a little");
+        // a mountain at each sixth, a gap right behind her (her camera looks in through it)
+        for(var mt:all)assertEquals(1,SwordFormation.mountainCover(all,mt.az()),1e-9,"a mountain at each sixth");
+        assertTrue(SwordFormation.mountainCover(all,behind)<.2,"a gap behind her");
+        // rising into place without a jump, sinking away as the formation ends
+        float end=IsosangRules.H_END,frame=1/60f;
+        for(var mt:all){
+            assertEquals(0,SwordFormation.mountainUp(end,mt,SwordFormation.RISE0-.01f),1e-9);
+            assertEquals(1,SwordFormation.mountainUp(end,mt,10),1e-6);
+            assertEquals(0,SwordFormation.mountainUp(end,mt,end+SwordFormation.GONE+.25f),1e-6);
+            for(float t=SwordFormation.RISE0;t<end+3;t+=frame)
+                assertEquals(SwordFormation.mountainUp(end,mt,t),SwordFormation.mountainUp(end,mt,t+frame),.06,"it jumps at "+t);
         }
-        // all the way round, a gap between each two and one of the gaps right behind her (her camera looks in through it)
-        var ms=all;
-        for(var mt:ms)assertEquals(1,SwordFormation.mountainCover(ms,mt.az()),1e-9,"a mountain at each sixth");
-        assertTrue(SwordFormation.mountainCover(ms,behind)<.1,"a gap behind her");
-        double low=0;
-        for(var mt:ms){
-            double off=Math.IEEEremainder(behind-mt.az(),Math.PI*2);if(Math.abs(off)>Math.PI/3)continue;
-            double x=mt.radius()*off;for(var p:mt.peaks())low=Math.max(low,p.at(x));
-        }
-        assertTrue(low<.05,"nothing standing right behind her: "+low);
         // where they stand before her camera, out behind her, they thin to let her be seen; not inside their ring
-        var mt0=all[0];double back=SwordFormation.behind(yaw),toBack=Math.IEEEremainder(back-mt0.az(),Math.PI*2)*mt0.radius();
-        assertEquals(SwordFormation.OCCLUDED,SwordFormation.occlusion(mt0,toBack,back),1e-6);
+        var mt0=all[0];double toBack=Math.IEEEremainder(behind-mt0.az(),Math.PI*2)*mt0.radius();
+        assertEquals(SwordFormation.OCCLUDED,SwordFormation.occlusion(mt0,toBack,behind),1e-6);
         assertEquals(1,SwordFormation.occlusion(mt0,toBack,Double.NaN),1e-9);
-        assertEquals(1,SwordFormation.occlusion(mt0,toBack,back+Math.PI),1e-6);
+        assertEquals(1,SwordFormation.occlusion(mt0,toBack,behind+Math.PI),1e-6);
     }
     @Test void faintHazeTurnsSlowlyOverTheMountainsAndWispsOfMistDriftLow(){
         // 2.82.16 ("산 위에는 희미한 안개같은 구름이 천천히 돌아가고"): banks of faint haze over and behind the mountains, all
@@ -551,7 +536,7 @@ class SwordFormationTest {
             // two, too); no strands in the gap
             double back=SwordFormation.behind(yaw);
             assertEquals(SwordFormation.MOUNTAIN_R,SwordFormation.waterEdge(ms,back),1e-9,"on the circle behind her too");
-            assertTrue(SwordFormation.mountainCover(ms,back)<.1,"no strands in the gap behind her");
+            assertTrue(SwordFormation.mountainCover(ms,back)<.2,"few strands in the gap behind her");
             for(var mt:ms){
                 assertEquals(1,SwordFormation.mountainCover(ms,mt.az()),1e-9,"strands at its feet");
                 assertTrue(SwordFormation.waterEdge(ms,mt.az())<=mt.radius()+1e-9,"up to its face");

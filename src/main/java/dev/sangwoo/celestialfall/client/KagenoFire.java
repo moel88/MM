@@ -274,31 +274,16 @@ public final class KagenoFire {
     private static BufferBuilder inks;private static Matrix4f inkMatrix;private static float inkAge;
     public static boolean beginInk(Matrix4f m,float age){if(shader==null)return false;inks=begin(age,16);inkMatrix=m;inkAge=age;return true;}
     /**
-     * Ends the ground's ink for a moment to run {@code draw} (a draw call of its own, as the ink mountains, mode 18), then
-     * opens the ink again as it was (2.82.16).
+     * Ends the ground's ink for a moment to run {@code draw} (draw calls of its own, as Lee So-sang's H's mountains and
+     * the haze behind them), then opens the ink again as it was (2.82.16).
      */
     public static void inkInterlude(Runnable draw){
         if(inks==null){draw.run();return;}
         end(inks);inks=null;Matrix4f m=inkMatrix;float age=inkAge;
         try{draw.run();}finally{inks=begin(age,16);inkMatrix=m;inkAge=age;}
     }
-    /**
-     * The ink mountains of Lee So-sang's H (2.82.16): the shader's mode 18. Each vertex: where it is, {@code u} along its
-     * layer and {@code v} how far below its top edge (blocks), how strongly its rim shows ({@code rim}), the cosine of its
-     * top edge's slope ({@code cos}), how high over its mountain's foot ({@code high}, blocks, up to 8), how strongly it
-     * shows ({@code alpha}).
-     */
-    private static BufferBuilder hills;private static Matrix4f hillMatrix;
-    public static boolean beginHills(Matrix4f m,float age){if(shader==null)return false;hills=begin(age,18);hillMatrix=m;return true;}
-    public static void endHills(){if(hills!=null){end(hills);hills=null;}}
     public static Matrix4f inkMatrix(){return inkMatrix;}
     public static float inkAge(){return inkAge;}
-    public static void hillVertex(Vec3d p,float u,float v,float rim,float cos,float high,float alpha){
-        if(hills==null)return;
-        hills.vertex(hillMatrix,(float)p.x,(float)p.y,(float)p.z).texture(u,v)
-            .color(byteOf(rim),byteOf(cos),byteOf(high/8),byteOf(alpha)).next();
-    }
-    private static int byteOf(float x){return Math.max(0,Math.min(255,Math.round(x*255)));}
     public static void endInk(){if(inks!=null){end(inks);inks=null;}}
     private static void ipoint(Vec3d p,float u,float v,int code,float erase,float ink,float alpha){
         inks.vertex(inkMatrix,(float)p.x,(float)p.y,(float)p.z).texture(u,v)
