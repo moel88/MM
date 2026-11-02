@@ -40,7 +40,9 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * each struck into the ground with a flower of blue crystal and a splash of ink at its foot. Ink mountains rise round
  * the formation (none behind her, where her camera looks from), white clouds curling over them and wisps of mist
  * drifting low (2.82.1); the swords, dark as they strike, turn silver with a white glow, a gleam running down one now
- * and then; she stands on that pommel
+ * and then; as it stands, a deep navy water lies on its ground with black grain going round in it and strands of pale
+ * water, rings open from the swords' feet now and then, dark smoke and black flecks come off their blades, and each
+ * stands upright, turning slowly about its length (2.82.13); she stands on that pommel
  * (IsosangClient.drive lifts her, IsosangClient.lift draws the leap and the dive) until the formation ends: every sword
  * flares sky blue over a four-pointed star of light, turns to ink and breaks away, the mountains, the clouds and the blue
  * of the ground going with them, and she drops down.
@@ -216,15 +218,18 @@ final class SwordFormation {
      * stands over it, how far it leans from upright and which way (degrees), its guard's turn, when it strikes the ground,
      * how high over its place it hangs in the sky, when it shows there, how big the flower at its foot is, and its seed.
      */
-    record Blade(double fw,double rt,double height,double tilt,double toward,double spin,float plant,double sky,float shows,double flower,int seed){}
+    record Blade(double fw,double rt,double height,double tilt,double toward,double spin,float plant,double sky,float shows,double flower,int seed){
+        /** The one she stands on (it strikes first, right under her). */
+        boolean hers(){return plant==IsosangRules.H_PLANT;}
+    }
     private static final Map<UUID,Blade[]> LAYOUTS=new LinkedHashMap<>();
     /**
      * The swords of the formation of swing {@code id} (the same on every client: seeded by the id). Where each strikes is
      * the rules' (IsosangRules.formationSwords: rings round an empty middle, 2.82.2 to 2.82.4, as the server reckons the
      * sword she stands on); the one she stands on (IsosangRules.standSword, 2.82.4: "H를 쓰면 내가 점프를 하고 그 자리에
      * 검이 하나 있어야해") strikes first, right under her as she hangs in the air, and stands upright, its pommel as high as
-     * she stands (its crystal flower as the others', 2.82.5: the spike is out of the middle again); the rest lean a
-     * little, a little higher or lower, and rain down after it.
+     * she stands (its crystal flower as the others', 2.82.5: the spike is out of the middle again); the rest stand
+     * upright as it does (2.82.13), a little higher or lower, and rain down after it.
      */
     static Blade[] layout(UUID id){
         var l=LAYOUTS.get(id);if(l!=null)return l;
@@ -238,7 +243,9 @@ final class SwordFormation {
                 out.add(new Blade(places[k][0],places[k][1],IsosangRules.FORMATION_STAND,0,0,180*Ease.hash(seed+7),IsosangRules.H_PLANT,10,IsosangRules.H_SKY,.8+.45*Ease.hash(seed+11),seed));
                 continue;
             }
-            double height=1.25+.5*Ease.hash(seed+4),tilt=2+11*Ease.hash(seed+5),toward=360*Ease.hash(seed+6),spin=180*Ease.hash(seed+7);
+            // (2.82.13, user request: "검들이 다 삐 뚫어져있냐 영상은 전부 제대로 박혀있는데": every sword struck straight
+            // down, upright; 2.82.1-2.82.12 leaned them 2 to 13 degrees)
+            double height=1.25+.5*Ease.hash(seed+4),tilt=0,toward=0,spin=180*Ease.hash(seed+7);
             float plant=IsosangRules.H_RAIN0+(IsosangRules.H_RAIN1-IsosangRules.H_RAIN0)*(float)Math.min(1,.12*r+.82*Ease.hash(seed+8));
             double sky=7+5*Ease.hash(seed+9);
             // (it shows a little before it falls: at least a tenth of a second of hanging in the sky)
@@ -266,6 +273,24 @@ final class SwordFormation {
         if(t<from)return b.sky()+.06*Math.sin(t*5+b.seed());
         float u=Ease.unit(t,from,b.plant());return b.sky()*(1-u*u)+.06*Math.sin(from*5+b.seed())*(1-u);
     }
+    /**
+     * How far a sword's guard has turned at {@code t} (degrees): the swords turn slowly about their own length as the
+     * formation stands (2.82.13, user request: "검들이 천천히 회전하네 자연스럽게", the user's video read and confirmed: some
+     * six seconds a turn, each at its own time): each from TURN_FROM after it strikes, easing in over TURN_IN, at its own
+     * pace (TURN_RATE degrees a second, give or take a fifth) and its own way round; the one she stands on stays still.
+     */
+    static double spinAt(Blade b,float t){
+        if(b.hers())return b.spin();
+        double rate=TURN_RATE*(.8+.4*Ease.hash(b.seed()+95))*(Ease.hash(b.seed()+96)<.5?-1:1);
+        return b.spin()+rate*eased(t-b.plant()-TURN_FROM,TURN_IN);
+    }
+    /** How far a turn easing in over {@code in} seconds has gone {@code s} seconds into it (in seconds at full speed): none before, smooth, full speed after. */
+    static double eased(double s,double in){
+        if(s<=0)return 0;if(s>=in)return s-in*.5;
+        double x=s/in;return in*(x*x*x-.5*x*x*x*x);
+    }
+    static final double TURN_RATE=60;
+    static final float TURN_FROM=.5f,TURN_IN=1.2f;
     /** How strongly a sword shows at {@code t} (0 to 1): coming in where it hangs, and going as the formation ends. */
     static float shown(StandClient.Cast c,Blade b,float t){return Ease.smooth(t,b.shows(),b.shows()+.08f)*(1-Ease.smooth(t,end(c)+INKED+.02f,end(c)+GONE));}
 
@@ -886,6 +911,23 @@ final class SwordFormation {
     static double rim(float t){return RIM_R+(RIM_OUT-RIM_R)*Ease.smooth(t,SMOKE_FULL,SMOKE_OUT1);}
     /** How thick the smoke lies (0 to 1): coming as the whirlpool spreads out past it, gone as it thins away (as the ink shader draws it). */
     static float smoke(float t){return Ease.smooth(t,SMOKE_IN,SMOKE_FULL)*(1-Ease.smooth(t,SMOKE_OUT0,SMOKE_OUT1));}
+    /**
+     * The water lying on the formation's ground once the whirlpool has gone, until the formation ends (2.82.13, user
+     * request: "소용돌이가 끝나고 H가 끝날때까지 바닥 지속적으로 흐르는 물 같은 이펙트를 만들어야함 영상 보면 바닥에서 연하게
+     * 뭐가 계속 흐르는 거 보여?", then "물이 너무 연하잖아 더 진하게 만들어 엄청 진하게 만드는데 원래 바닥은 보일정도로
+     * 조금 연하게", "물 색은 남색", "원본은 그냥 검정색 결이 순환하는데 너가 만든건 소용돌이야"): a deep navy water over the
+     * whole formation, the ground showing a little through it; black grain in it going round and round the formation
+     * (streaks long round it and thin across, gathering in broad patches; no arms curling in or out as a whirlpool's), and
+     * thin strands of pale water among it; all of it turning counterclockwise seen from above (as the whirlpool turned) at
+     * FLOW_TURN radians a second (the ink shader, style 14, seeds 8 to 15, out to FLOW_R blocks). How strongly it lies (0
+     * to 1: coming in as the whirlpool's water turns into the smoke, FLOW0 to FLOW1, and going as the formation ends, with
+     * the mountains), and its turn in sixteen bits (a share of a whole turn: the shader's pattern comes back exactly after
+     * one, so it never jumps as it wraps).
+     */
+    static float flowLife(float t,float end){return Ease.smooth(t,FLOW0,FLOW1)*(1-Ease.smooth(t,end,end+GONE));}
+    static int flowPhase(float t){double turns=t*FLOW_TURN/(Math.PI*2);return (int)Math.floor((turns-Math.floor(turns))*65536)&0xffff;}
+    static final float FLOW0=1.3f,FLOW1=2f;
+    static final double FLOW_TURN=.55,FLOW_R=IsosangRules.FORMATION_RADIUS+1;
     /** The ink shader's byte for the gathering sheet (style 13): how far it has soaked in (0 to 127). */
     static float soakByte(float share){return Math.round(MathHelper.clamp(share,0,1)*127)/255f;}
     /** The formation's clock as the ink shader reads it (seconds over two, 0 to 1). */
@@ -895,12 +937,16 @@ final class SwordFormation {
     /**
      * The ink lying on the ground, under everything else of it (2.82.6, the ink shader's ground pass, before the swords,
      * the mountains and the light): the blue of the formation's ground; the ink gathering into its middle; the whirlpool
-     * (2.82.7). Each a square of the ink shader (KagenoFire.inkGround) on the ground, its uv the offset over its radius.
+     * (2.82.7); the navy water lying on the ground as it stands, black grain going round in it (2.82.13: style 14, seeds 8
+     * to 15, its turn in the green and blue bytes). Each a square of the ink shader (KagenoFire.inkGround) on the ground, its uv the offset over
+     * its radius.
      */
     static void ground(Fx c){
         float t=c.sec;Vec3d centre=centre(c.cast);int seed=c.cast.id().hashCode();
         float blue=tint(t);
-        if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed,holeByte(t,r),0,blue);}
+        if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed&7,holeByte(t,r),0,blue);}
+        float water=flowLife(t,end(c.cast));
+        if(water>.005f){int ph=flowPhase(t);KagenoFire.inkGround(centre.add(0,.045,0),FLOW_R,FLOW_R,14,8|(seed&7),(ph>>8)/255f,(ph&255)/255f,water);}
         double g=gather(t);float a=gathered(t);
         if(a>.005f&&g>.02)KagenoFire.inkGround(centre.add(0,.05,0),g*1.45,g,13,seed,poolClock(t),soakByte(soak(t)),a);
         // (its square big enough for its edge pushed out as it spreads, its streams' tails a little past its radius; drawn
@@ -921,7 +967,7 @@ final class SwordFormation {
     static float holeByte(float t,double r){return Math.round(MathHelper.clamp(front(t)/r/1.25,0,1)*255)/255f;}
     /** A ring of light lying on the ground (radius {@code r}, {@code w} wide, brightest along its middle), wavering a little. */
     static void groundBand(EffectMesh m,Vec3d c,double r,double w,int rgb,float alpha,int seed,float t){
-        if(alpha<=.005f||r<=.01)return;int n=Math.max(24,(int)(r*10));
+        if(alpha<=.005f||r<=.01)return;int n=Math.max(40,(int)(r*20));
         for(int i=0;i<n;i++){
             double a0=Math.PI*2*i/n,a1=Math.PI*2*(i+1)/n,k0=wobble(a0,seed,t),k1=wobble(a1,seed,t);
             Vec3d d0=new Vec3d(Math.cos(a0),0,Math.sin(a0)),d1=new Vec3d(Math.cos(a1),0,Math.sin(a1));
@@ -993,7 +1039,10 @@ final class SwordFormation {
         float t=c.sec;Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
         scenery(c,m,t);
         spike(m,centre,t);
+        ripples(c,m,t,centre,yaw);
+        wisps(c,m,t,centre,yaw);
         drawSwords(c,m,t,centre,yaw);
+        flecks(c,m,t,centre,yaw);
         flowers(c,m,t,centre,yaw,false);
         double floor=centre.y+.03;
         for(var d:drops(c,t)){
@@ -1018,7 +1067,128 @@ final class SwordFormation {
         float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED)),ink=Ease.smooth(t,e+GLOW,e+INKED);
         for(int i:order){
             var b=all[i];float a=shown(c.cast,b,t);if(a<=.005f)continue;
-            sword(m,c.camera,tops[i],frame(down(b),b.spin()),a,dark(b,t),flare,ink);
+            sword(m,c.camera,tops[i],frame(down(b),spinAt(b,t)),a,dark(b,t),flare,ink);
+        }
+    }
+    // ───────────────────────────── as it stands: rings at the swords' feet, black smoke off their blades ─────────────────────────────
+
+    /** How strongly the formation stands at {@code t} (0 to 1): coming in as its swords turn silver, gone as it ends (its swords flaring). */
+    static float standing(StandClient.Cast c,float t){float e=end(c);return Ease.smooth(t,STAND0,STAND0+.4f)*(1-Ease.smooth(t,e,e+GLOW));}
+    static final float STAND0=1.6f;
+    /**
+     * Rings spreading from the swords' feet as from swords standing in water (2.82.13, the user's video read and
+     * confirmed: "검 밑동에서 동그란 물결이 퍼짐"): now and then (each sword every RIPPLE_EVERY seconds or so, at its own
+     * time) a thin dark ring opens from its foot out to RIPPLE_R blocks over RIPPLE_LIFE seconds, quick at first, wavering
+     * a little and fading as it goes; while the formation stands.
+     */
+    static void ripples(Fx c,EffectMesh m,float t,Vec3d centre,float yaw){
+        float on=standing(c.cast,t);if(on<=.01f)return;
+        for(var b:layout(c.cast.id())){
+            double u=rippleAge(b,t);if(u<0)continue;
+            float a=rippleAlpha(u)*on;if(a<=.004f)continue;
+            groundBand(m,foot(centre,yaw,b).add(0,.04,0),rippleRadius(u),.03+.035*u,RIPPLE_INK,a,b.seed(),t);
+        }
+    }
+    /** How far through its ring a sword's foot is at {@code t} (0 to 1), or -1 between rings. */
+    static double rippleAge(Blade b,float t){
+        double period=RIPPLE_EVERY*(.75+.5*Ease.hash(b.seed()+97)),u=((t+period*Ease.hash(b.seed()+98))%period)/RIPPLE_LIFE;
+        return u<1?u:-1;
+    }
+    /** A ring's radius {@code u} through it (blocks): quick at first, slowing as it spreads. */
+    static double rippleRadius(double u){return .18+(RIPPLE_R-.18)*(1-Math.pow(1-u,2.2));}
+    /** A ring's darkness {@code u} through it: coming in at once, fading as it spreads. */
+    static float rippleAlpha(double u){return (float)(RIPPLE_ALPHA*Ease.smooth((float)u,0,.08f)*Math.pow(Math.max(0,1-u),1.4));}
+    static final float RIPPLE_EVERY=3.4f,RIPPLE_LIFE=1.5f,RIPPLE_ALPHA=.4f;
+    static final double RIPPLE_R=1.5;
+    static final int RIPPLE_INK=0x070c22;
+    /** A unit vector square to {@code d}, {@code az} radians round it. */
+    static Vec3d perp(Vec3d d,double az){
+        Vec3d x0=d.crossProduct(UP);if(x0.lengthSquared()<1e-6)x0=new Vec3d(1,0,0);x0=x0.normalize();
+        Vec3d x1=d.crossProduct(x0).normalize();
+        return x0.multiply(Math.cos(az)).add(x1.multiply(Math.sin(az)));
+    }
+    /**
+     * Where one of a sword's shed things is in its life at {@code t}: its share of the way through it (0 to 1) and the
+     * seed of this one (a new one, somewhere else, as each goes), the {@code k}th of {@code count}, each lasting about
+     * {@code life} seconds.
+     */
+    static double[] shed(int base,int k,int count,float life,float t){
+        double period=life*(.85+.3*Ease.hash(base)),s=t+period*(k/(double)count+.3*Ease.hash(base+1));
+        double cycle=Math.floor(s/period);return new double[]{s/period-cycle,base+cycle*173};
+    }
+    /**
+     * The dark smoke flowing off the swords' blades (2.82.13, user request: "그리고 검들도 검정 이펙트가 조금씩 흐르고",
+     * their video read and confirmed: dark smoke beside the blades): each sword trails WISPS strands of it at a time, each
+     * from a place on its blade, streaming up along it and curling away from it as it thins (over WISP_LIFE seconds or
+     * so), another following somewhere else as each goes; soft dark ribbons in two crossed planes along the blade, fixed in
+     * the world (not turned to the camera); while the formation stands.
+     */
+    static void wisps(Fx c,EffectMesh m,float t,Vec3d centre,float yaw){
+        float on=standing(c.cast,t);if(on<=.01f)return;
+        for(var b:layout(c.cast.id())){
+            Vec3d top=planted(centre,yaw,b),d=down(b);
+            for(int k=0;k<WISPS;k++){
+                double[] life=shed(b.seed()*11+k*37+611,k,WISPS,WISP_LIFE,t);double u=life[0];int seed=(int)life[1];
+                float a=wispAlpha(u)*on;if(a<=.004f)continue;
+                Vec3d anchor=top.add(d.multiply(S_GUARD+.2+(S_LEN-S_GUARD-.55)*Ease.hash(seed+2)));
+                float by=near(anchor,c.camera);if(by<=0)continue;
+                Vec3d side=perp(d,Math.PI*2*Ease.hash(seed+3)),across=side.crossProduct(d).normalize();
+                double len=.45+.7*u,gap=.03+.12*u,curl=.22*u,rise=.12*u,phase=Math.PI*2*Ease.hash(seed+4);
+                int n=7;Vec3d[] pts=new Vec3d[n];double[] w=new double[n];float[] al=new float[n];
+                for(int i=0;i<n;i++){
+                    double sv=i/(double)(n-1);
+                    pts[i]=anchor.subtract(d.multiply(len*sv)).add(side.multiply(gap+curl*sv*sv)).add(across.multiply(.05*Math.sin(5*sv+phase+3*u))).add(0,rise*sv,0);
+                    w[i]=(.07+.08*u)*(1-.5*sv);
+                    al[i]=a*by*(float)Math.pow(Math.sin(Math.PI*(.08+.84*sv)),.8);
+                }
+                ribbon(m,pts,w,al,side,INK);ribbon(m,pts,w,al,across,INK);
+            }
+        }
+    }
+    /** A strand of smoke's darkness {@code u} through its life: coming in, then thinning away. */
+    static float wispAlpha(double u){return (float)(WISP_ALPHA*Ease.smooth((float)u,0,.2f)*(1-Ease.smooth((float)u,.5f,1)));}
+    static final int WISPS=2,FLECKS=3;
+    static final float WISP_LIFE=1.8f,WISP_ALPHA=.55f,FLECK_LIFE=1.5f;
+    /** A soft ribbon along {@code pts}: {@code w} out either way along {@code across}, its colour at {@code al} along its middle, none at its edges. */
+    static void ribbon(EffectMesh m,Vec3d[] pts,double[] w,float[] al,Vec3d across,int rgb){
+        for(int i=0;i+1<pts.length;i++){
+            Vec3d c0=pts[i],c1=pts[i+1],o0=across.multiply(w[i]),o1=across.multiply(w[i+1]);
+            m.vertex(c0.subtract(o0),rgb,0);m.vertex(c0,rgb,al[i]);m.vertex(c1,rgb,al[i+1]);m.vertex(c1.subtract(o1),rgb,0);
+            m.vertex(c0,rgb,al[i]);m.vertex(c0.add(o0),rgb,0);m.vertex(c1.add(o1),rgb,0);m.vertex(c1,rgb,al[i+1]);
+        }
+    }
+    /**
+     * Small black flecks of ink drifting off the swords (2.82.13, the user's video read and confirmed: small black flecks
+     * flying round the swords): each sword sheds FLECKS at a time, each from a place on its blade, drifting out from it
+     * and up a little, turning over as it goes (the M1's ink flakes, fixed in the world), fading over FLECK_LIFE seconds
+     * or so, another following somewhere else; while the formation stands.
+     */
+    static void flecks(Fx c,EffectMesh m,float t,Vec3d centre,float yaw){
+        float on=standing(c.cast,t);if(on<=.01f)return;
+        for(var b:layout(c.cast.id())){
+            Vec3d top=planted(centre,yaw,b),d=down(b);
+            for(int k=0;k<FLECKS;k++){
+                double[] life=shed(b.seed()*13+k*53+977,k,FLECKS,FLECK_LIFE,t);double u=life[0];int seed=(int)life[1];
+                float a=(float)(.85*on*Ease.smooth((float)u,0,.12f)*(1-Ease.smooth((float)u,.6f,1)));if(a<=.01f)continue;
+                // every third a thin dash flung off faster (the video: long thin black strokes flying past), the rest flakes
+                boolean dash=k%3==0;double age=u*FLECK_LIFE,speed=(dash?.7:.25)+(dash?.6:.45)*Ease.hash(seed+4);
+                Vec3d start=top.add(d.multiply(S_GUARD+.1+(S_LEN-S_GUARD-.3)*Ease.hash(seed+2)));
+                Vec3d away=perp(d,Math.PI*2*Ease.hash(seed+3)),lift=new Vec3d(0,.1+.3*Ease.hash(seed+5),0);
+                Vec3d q=start.add(away.multiply(.05+speed*age)).add(lift.multiply(age)).add(0,-.08*age*age,0);
+                float by=near(q,c.camera);if(by<=0)continue;
+                if(dash)streak(m,q,away.multiply(speed).add(lift).add(0,-.16*age,0),(.12+.12*Ease.hash(seed+6))*(1-.3*u),.016,INK,a*by);
+                else flake(m,q,(.04+.035*Ease.hash(seed+6))*(1-.3*u),age,.8+1.4*Ease.hash(seed+7),seed,INK,a*by);
+            }
+        }
+    }
+    /** A thin dash of ink at {@code q}, {@code len} long along the way it moves, pointed at both ends: two crossed planes along it, fixed in the world. */
+    static void streak(EffectMesh m,Vec3d q,Vec3d moving,double len,double wid,int rgb,float alpha){
+        if(alpha<=.01f||len<=.005)return;
+        double speed=moving.length();Vec3d along=speed<1e-4?UP:moving.multiply(1/speed);
+        Vec3d s1=perp(along,0),s2=along.crossProduct(s1).normalize(),a=q.subtract(along.multiply(len*.5)),b=q.add(along.multiply(len*.5));
+        for(Vec3d s:new Vec3d[]{s1,s2}){
+            Vec3d l=q.add(s.multiply(wid)),r=q.subtract(s.multiply(wid));
+            m.triangle(a,l,b,rgb,alpha);m.triangle(a,b,r,rgb,alpha);
         }
     }
     /** How dark a sword is at {@code t} (0 to 1): dark as ink as it strikes (the video: black swords over the blue ground), silver again after. */
@@ -1162,7 +1332,7 @@ final class SwordFormation {
         for(var b:layout(c.cast.id())){
             double period=4+3*Ease.hash(b.seed()+80),phase=period*Ease.hash(b.seed()+81),u=((t+phase)%period)/period;
             if(u>.07)continue;float a=(float)Math.sin(Math.PI*u/.07);
-            Vec3d top=planted(centre,yaw,b),q=at(top,frame(down(b),b.spin()),p(0,S_GUARD+.4*Ease.hash(b.seed()+82),0));
+            Vec3d top=planted(centre,yaw,b),q=at(top,frame(down(b),spinAt(b,t)),p(0,S_GUARD+.4*Ease.hash(b.seed()+82),0));
             glint8(m,q,.2,WHITE,.8f*a);
         }
     }
@@ -1230,7 +1400,7 @@ final class SwordFormation {
         float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED)),ink=Ease.smooth(t,e+GLOW,e+INKED);
         for(var b:layout(c.cast.id())){
             float a=shown(c.cast,b,t);if(a<=.005f)continue;
-            Vec3d top=planted(centre,yaw,b).add(0,above(b,t),0),foot=foot(centre,yaw,b);var f=frame(down(b),b.spin());
+            Vec3d top=planted(centre,yaw,b).add(0,above(b,t),0),foot=foot(centre,yaw,b);var f=frame(down(b),spinAt(b,t));
             // shows in the sky
             float show=FxLib.kick(t,b.shows()+.02f,.1f);
             if(show>.01f){Vec3d mid=at(top,f,p(0,S_LEN*.45,0));m.star(mid,.5,WHITE,.7f*show);m.softDisc(mid,.6,AZURE,.3f*show);}
@@ -1263,7 +1433,7 @@ final class SwordFormation {
             }
             // as the formation ends: a four-pointed star of light lies on the ground at its foot, a pillar of light up it (the video)
             if(flare>.01f){
-                Vec3d g=foot.add(0,.05,0),x=Vec3d.fromPolar(0,(float)b.spin()),z=new Vec3d(-x.z,0,x.x);
+                Vec3d g=foot.add(0,.05,0),x=Vec3d.fromPolar(0,(float)spinAt(b,t)),z=new Vec3d(-x.z,0,x.x);
                 groundStar(m,g,x,z,1.6,1.15,flare);
                 m.softTaper(foot,top.add(0,1.2,0),.95,.25,CYAN,.38f*flare);
             }

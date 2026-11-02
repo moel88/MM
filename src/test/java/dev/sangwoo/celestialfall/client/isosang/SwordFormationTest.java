@@ -82,8 +82,10 @@ class SwordFormationTest {
         // and her own client takes her (IsosangClient.spot, IsosangRules.raised)
         int s0=IsosangRules.formationSeed(id);var places=IsosangRules.formationSwords(s0);int stand=IsosangRules.standSword();
         for(int i=0;i<a.length;i++){assertEquals(places[i][0],a[i].fw(),1e-12);assertEquals(places[i][1],a[i].rt(),1e-12);}
-        for(int i=0;i<a.length;i++)if(i!=stand)assertTrue(a[i].tilt()>1,"the others lean a little");
-        var on=a[stand];assertEquals(0,on.tilt(),1e-12,"the one she stands on upright");assertEquals(IsosangRules.FORMATION_STAND,on.height(),1e-12);
+        // (2.82.13, "검들이 다 삐 뚫어져있냐 영상은 전부 제대로 박혀있는데": every one struck straight down)
+        for(var s:a)assertEquals(0,s.tilt(),1e-12,"upright");
+        var on=a[stand];assertEquals(IsosangRules.FORMATION_STAND,on.height(),1e-12);
+        assertTrue(on.hers());for(int i=0;i<a.length;i++)if(i!=stand)assertFalse(a[i].hers(),"only the one she stands on is hers");
         assertEquals(IsosangRules.H_PLANT,on.plant(),1e-6,"it strikes first, under her as she hangs in the air");
         for(var b2:a)if(b2!=on)assertTrue(b2.plant()>on.plant(),"the rest after it");
         assertTrue(on.plant()<IsosangRules.H_DIVE,"struck before she comes down onto it");
@@ -109,7 +111,7 @@ class SwordFormationTest {
             assertTrue(s.shows()+.08f<=s.plant()-SwordFormation.FALL+1e-4,"it shows in the sky before it falls");
             assertTrue(s.shows()>=IsosangRules.H_SKY-1e-6);
             assertTrue(s.sky()>=6&&s.sky()<=13,"high in the sky: "+s.sky());
-            assertTrue(s.tilt()<15,"near upright: "+s.tilt());
+
             Vec3d pommel=SwordFormation.planted(centre,0,s),point=pommel.add(SwordFormation.down(s).multiply(SwordFormation.S_LEN));
             assertTrue(pommel.y-centre.y>1.1&&pommel.y-centre.y<1.9,"its pommel over the ground: "+(pommel.y-centre.y));
             assertTrue(point.y<centre.y,"its point in the ground");
@@ -425,6 +427,60 @@ class SwordFormationTest {
         // 살짝 투명하고": none of its light added again; the front running out lights what is round it only a little)
         assertEquals(0,SwordFormation.MIST_GLOW,1e-9,"no light added");
         assertTrue(SwordFormation.FRONT_LIGHT>0&&SwordFormation.FRONT_LIGHT<.2f,"the front's light faint: "+SwordFormation.FRONT_LIGHT);
+    }
+    @Test void asItStandsTheSwordsTurnSlowlyTheWaterFlowsAndInkComesOffThem(){
+        // (2.82.13: the user's video read and confirmed, "검들이 천천히 회전하네 자연스럽게", "돌면서 바깥으로 퍼짐", "연한
+        // 물도 있는데", "검 밑동에서 동그란 물결", "칼날 옆의 어두운 연기")
+        var a=SwordFormation.layout(UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b"));
+        float frame=1/240f;int one=0,other=0;
+        for(var b:a){
+            // still in the sky and as it strikes; then turning slowly about its length, at its own pace, never jumping
+            assertEquals(b.spin(),SwordFormation.spinAt(b,b.plant()),1e-9);
+            if(b.hers()){assertEquals(b.spin(),SwordFormation.spinAt(b,30),1e-9,"hers stays still under her");continue;}
+            double rate=(SwordFormation.spinAt(b,20.5f)-SwordFormation.spinAt(b,20))/.5;
+            assertTrue(Math.abs(rate)>=47&&Math.abs(rate)<=73,"some six seconds a turn: "+rate);
+            if(rate>0)one++;else other++;
+            for(float t=b.plant();t<b.plant()+3;t+=frame)
+                assertTrue(Math.abs(SwordFormation.spinAt(b,t+frame)-SwordFormation.spinAt(b,t))<=73*frame+1e-6,"it jumps at "+t);
+        }
+        assertTrue(one>5&&other>5,"each its own way round: "+one+" "+other);
+        assertEquals(0,SwordFormation.eased(0,1.2),1e-12);assertEquals(.6,SwordFormation.eased(1.2,1.2),1e-12);assertEquals(1.4,SwordFormation.eased(2,1.2),1e-9);
+        // rings opening from their feet now and then, fading as they spread, never jumping
+        double lastR=0;
+        for(double u=0;u<1;u+=.01){double r=SwordFormation.rippleRadius(u);assertTrue(r>=lastR&&r<=SwordFormation.RIPPLE_R+1e-9);lastR=r;}
+        assertEquals(0,SwordFormation.rippleAlpha(0),1e-9,"comes in from nothing");assertEquals(0,SwordFormation.rippleAlpha(1),1e-9,"gone as it ends");
+        for(var b:a){
+            int rings=0;double last=-1;
+            for(float t=2;t<12;t+=frame){
+                double u=SwordFormation.rippleAge(b,t);float now=u<0?0:SwordFormation.rippleAlpha(u),then;
+                double v=SwordFormation.rippleAge(b,t+frame);then=v<0?0:SwordFormation.rippleAlpha(v);
+                assertEquals(now,then,.03,"a ring jumps at "+t);
+                if(u>=0&&last<0)rings++;last=u;
+            }
+            assertTrue(rings>=2&&rings<=5,"now and then: "+rings);
+        }
+        // the dark smoke and the flecks off the blades: one after another, each coming in and going without a jump
+        for(int base:new int[]{611,4242,-977})for(int k=0;k<SwordFormation.WISPS;k++)
+            for(float t=2;t<8;t+=frame){
+                float now=SwordFormation.wispAlpha(SwordFormation.shed(base,k,SwordFormation.WISPS,SwordFormation.WISP_LIFE,t)[0]);
+                float then=SwordFormation.wispAlpha(SwordFormation.shed(base,k,SwordFormation.WISPS,SwordFormation.WISP_LIFE,t+frame)[0]);
+                assertEquals(now,then,.03,"smoke jumps at "+t);
+            }
+        assertEquals(0,SwordFormation.wispAlpha(0),1e-9);assertEquals(0,SwordFormation.wispAlpha(.9999),.01);
+        // the water on the ground: coming in as the whirlpool's water goes, there until the formation ends, gone with it;
+        // its turn told in sixteen bits, always on, a whole turn some eleven seconds
+        float end=IsosangRules.H_END;
+        assertEquals(0,SwordFormation.flowLife(SwordFormation.FLOW0,end),1e-9);
+        assertTrue(SwordFormation.FLOW0<SwordFormation.WATER_OUT1&&SwordFormation.FLOW1>SwordFormation.WATER_OUT1,"as the whirlpool's water goes");
+        assertEquals(1,SwordFormation.flowLife(5,end),1e-9);assertEquals(1,SwordFormation.flowLife(end-.01f,end),1e-6);
+        assertEquals(0,SwordFormation.flowLife(end+SwordFormation.GONE,end),1e-9);
+        for(float t=1;t<end+1;t+=frame){
+            assertEquals(SwordFormation.flowLife(t,end),SwordFormation.flowLife(t+frame,end),.03,"the water jumps at "+t);
+            int step=Math.floorMod(SwordFormation.flowPhase(t+frame)-SwordFormation.flowPhase(t),65536);
+            assertTrue(step>=0&&step<40,"it turns on smoothly at "+t+": "+step);
+        }
+        double turn=Math.PI*2/SwordFormation.FLOW_TURN;assertTrue(turn>9&&turn<14,"a whole turn: "+turn);
+        assertTrue(SwordFormation.FLOW_R>IsosangRules.FORMATION_RADIUS,"over the whole formation");
     }
     @Test void theWhirlpoolsClockAndBytes(){
         // what the ink shader is told: its clock over two seconds; the gathering sheet's share in a byte (exactly)
