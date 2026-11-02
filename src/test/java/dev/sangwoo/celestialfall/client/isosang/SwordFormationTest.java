@@ -272,8 +272,8 @@ class SwordFormationTest {
         // 2.82.16 ("산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래", "산이 떠있는 높이만큼
         // 물줄기 높이를 잡아주면 돼 ... 물줄기 높이는 0.6칸으로"): 0.6 blocks high, under the floating mountains, just before
         // their feet, all the way round
-        assertEquals(.6,SwordFormation.STREAM_HIGH,1e-12);
-        assertTrue(SwordFormation.STREAM_HIGH<SwordFormation.MOUNTAIN_FLOAT,"under the mountains as they float");
+        // (then "물줄기 높이가 너무 낮잖아": up to the mountains' frayed feet)
+        assertTrue(SwordFormation.STREAM_HIGH>SwordFormation.MOUNTAIN_FLOAT+.3&&SwordFormation.STREAM_HIGH<SwordFormation.MOUNTAIN_FLOAT+.6,"up to the mountains' feet: "+SwordFormation.STREAM_HIGH);
         assertTrue(SwordFormation.STREAM_R<SwordFormation.MOUNTAIN_R&&SwordFormation.STREAM_R>SwordFormation.MOUNTAIN_R-1,"just before their feet");
         assertTrue(Math.PI*2*SwordFormation.STREAM_R/SwordFormation.STREAM_SEGS<.7,"drawn finely round");
     }

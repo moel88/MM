@@ -1398,7 +1398,8 @@ final class SwordFormation {
         KagenoFire.stream(c.matrix,c.camera,mid,rr,hh,aa,c.cast.id().hashCode()+53,c.age,STREAM_GLOW,0);
     }
     /** The stream: how far out (just before the mountains' feet), how high (blocks), how finely drawn round, how much of its light is added again. */
-    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=.6,STREAM_OPEN0=Math.toRadians(35),STREAM_OPEN1=Math.toRadians(65);
+    /** (STREAM_HIGH: up to the mountains' frayed feet, "물줄기 높이가 너무 낮잖아": .6 at first, under them with a gap.) */
+    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=1.15,STREAM_OPEN0=Math.toRadians(35),STREAM_OPEN1=Math.toRadians(65);
     static final int STREAM_SEGS=160;
     static final float STREAM_GLOW=.08f;
     /** A ring of the mist round {@code mid}: {@code r} blocks out, {@code high} blocks up (low and thin behind her), of strength {@code strength}, thinned away {@code thin}. */
