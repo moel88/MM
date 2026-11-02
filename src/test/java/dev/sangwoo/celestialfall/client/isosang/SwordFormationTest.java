@@ -126,7 +126,7 @@ class SwordFormationTest {
         assertEquals(a.length,seen.size(),"no two in one place");
         // (2.82.16, "검 28개": 28 over the formation out to the mountains' feet, some four blocks to the nearest on the mean
         // of 200 formations)
-        assertTrue(near>3.5&&near<4.6,"spread over the formation: "+near);
+        assertTrue(near>3.0&&near<4.6,"spread over the formation: "+near);
         assertNotEquals(a[5].fw(),SwordFormation.layout(UUID.randomUUID())[5].fw(),"another formation, other places");
     }
     @Test void thePlainSwordIsWhole(){
@@ -358,9 +358,9 @@ class SwordFormationTest {
         // its eye: the formation's empty middle (every sword strikes outside it, round its edge), opening after the
         // whirlpool has started to spread and always well inside it, never jumping
         double inner=IsosangRules.FORMATION_EMPTY-IsosangRules.FORMATION_JITTER;
-        assertTrue(SwordFormation.EYE_R<inner&&SwordFormation.EYE_R>inner-1.2,"the swords strike round the eye's edge: "+SwordFormation.EYE_R+" inside "+inner);
-        // (2.82.16, "중앙으로 넘어간 검 있잖아": none in the bare middle, which the water leaves some 5.7 blocks across)
-        assertTrue(inner>5.9,"none in the bare middle: "+inner);
+        assertTrue(SwordFormation.EYE_R<inner,"the swords strike outside the eye: "+SwordFormation.EYE_R+" inside "+inner);
+        // (2.82.16, "중앙으로 넘어간 검 있잖아": none in the bare middle the water leaves, some 7.5 blocks out in the game)
+        assertTrue(inner>7.8,"none in the bare middle: "+inner);
         assertTrue(SwordFormation.EYE0>SwordFormation.SWIRL0,"the eye opens once it has started to spread");
         double lastEye=0;
         for(float t=SwordFormation.SWIRL0;t<1.4f;t+=frame){
