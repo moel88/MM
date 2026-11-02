@@ -25,6 +25,32 @@ float streaks(float k,float kw,float u,float n,float w,float d,float fill,float 
  float wid=w*mix(.7,1.3,h2)*(.3+.7*taper),ww=max(wid,kw*.75);
  return exp(-f*f/(ww*ww))*wid/ww*taper*mix(.7,1.0,h2)*(1.0-smoothstep(.22,.45,kw));
 }
+// The river on the ground of Lee So-sang's H as its formation stands (2.82.15, user request: "너무 빨리 돌아가고 검정색이
+// 너무 커 영상처럼 지나치게 두껍거나 넓은 검은 면이 되지 않도록 하고, 가늘고 길게 이어지는 형태로 만들어어함 걍 검정색을
+// 강가의 흐름처럼 만들면 되는데"): how fast its water carries its streaks rb blocks from the formation's middle (radians a
+// second, counterclockwise seen from above): RIVER_V blocks a second in the middle of its channel, RIVER_BANK of that at
+// its banks (RIVER_IN, RIVER_OUT blocks out), as a river runs (SwordFormation.FLOW_SPEED, FLOW_BANK).
+const float RIVER_V=.9,RIVER_BANK=.45,RIVER_IN=5.4,RIVER_OUT=13.6;
+float riverTurn(float rb){
+ float x=clamp((rb-RIVER_IN)/(RIVER_OUT-RIVER_IN),0.0,1.0);
+ return RIVER_V*mix(RIVER_BANK,1.0,sin(3.1415927*x))/max(rb,1.0);
+}
+// Thin dark streaks drifting along still lanes, as a river's: lanes every `lane` blocks across the flow (k, in lanes:
+// the lane its nearest whole number), each lane's water running round at its own pace (riverTurn of its radius) for
+// tsec seconds; along it its streaks, cells of some `cell` blocks (n round the lane, so a whole turn brings its pattern
+// back exactly), each cell's streak there or not (fill), as long as a share of its cell, thin and tapering at both ends,
+// w its half width in lanes; th the angle round the middle; kw a pixel's size in lanes (thinner than one, a streak is
+// drawn a pixel wide and fainter; too far off to draw, it fades away).
+float drift(float k,float kw,float th,float tsec,float lane,float cell,float w,float fill,float s){
+ float i=floor(k+.5),f=k-i,rl=max(i*lane,1.0),n=max(1.0,floor(6.2831853*rl/cell));
+ float h1=hash(vec2(i+.31,s)),h2=hash(vec2(i*1.37+5.1,s+2.3));
+ float x=(th+riverTurn(rl)*tsec)*(n/6.2831853)+h1*n,j=floor(x),g=x-j,jm=mod(j,n);
+ float h3=hash(vec2(jm+i*17.0,s+4.7)),h4=hash(vec2(jm*1.7+i*5.0,s+8.9)),h5=hash(vec2(jm*2.3+i*3.1,s+1.9));
+ float len=mix(.45,.95,h3),tt=(g-(1.0-len)*h5)/len;
+ float taper=smoothstep(0.0,.3,tt)*(1.0-smoothstep(.6,1.0,tt))*step(1.0-fill,h4)*step(0.0,tt)*step(tt,1.0);
+ float wid=w*mix(.65,1.35,h2)*(.35+.65*taper),ww=max(wid,kw*.75);
+ return exp(-f*f/(ww*ww))*wid/ww*taper*(1.0-smoothstep(.25,.5,kw));
+}
 void main(){
  vec2 p=uv*2.0-1.0;float seed=tint.r*31.7,t=Age*.075+seed;
  vec3 rgb;float alpha;
@@ -525,10 +551,12 @@ void main(){
      // Drawn in rings out to the mountains' feet (SwordFormation.shore: how far out it lies each way, its edge fading in
      // tint.a); uv the offset over SwordFormation.FLOW_SCALE (11 blocks); the variant (the low two bits of the seed) the
      // same for the water and its strands. Seeds 8-11 the water: a see-through navy round the formation's middle, still,
-     // its inner edge soft and wandering; soft dark patches in it, the only thing that moves, going round and round
-     // counterclockwise seen from above (no arms curling in or out, as a whirlpool's; theta here grows clockwise, so the
-     // turn is added to it), tint.g and tint.b their turn, sixteen bits of a whole one (SwordFormation.flowPhase: drawn
-     // on the circle, so a whole turn brings it back exactly). Seeds 12-15 a few thin strands of pale water along the
+     // its inner edge soft and wandering; in it thin, long dark streaks drifting slowly along still, gently winding lanes
+     // round the middle, as a river carries things (2.82.15: "너무 빨리 돌아가고 검정색이 너무 커 ... 가늘고 길게 이어지는
+     // 형태로 ... 검정색을 강가의 흐름처럼": the soft dark patches of 2.82.14 were too broad and turned too fast), the
+     // only thing that moves, counterclockwise seen from above (theta here grows clockwise, so the river's turn is added
+     // to it), faster in the middle of its channel than at its banks (riverTurn); tint.g and tint.b the formation's clock
+     // in thousandths of a second (SwordFormation.flowClock). Seeds 12-15 a few thin strands of pale water along the
      // mountains' feet, still (drawn in a strip there over the water, its alpha how strongly they lie).
      float vs=mod(mod(code,16.0),4.0)*3.7;
      float th=r>1e-4?atan(q.y,q.x):0.0;
@@ -544,19 +572,24 @@ void main(){
       rgb=vec3(.62,.76,1.0)*(1.0+Hot*.25);
       alpha=.38*strand*tint.a;
      }else{
-      float ph=(floor(tint.g*255.0+.5)*256.0+floor(tint.b*255.0+.5))*(6.2831853/65536.0),ang=th+ph;
-      vec2 cA=vec2(cos(ang),sin(ang)),cB=vec2(cos(2.0*ang+1.3),sin(2.0*ang+1.3));
+      // the formation's clock (seconds: thousandths in sixteen bits)
+      float tsec=(floor(tint.g*255.0+.5)*256.0+floor(tint.b*255.0+.5))/1000.0;
       // the navy water round the middle, still, its inner edge soft and wandering
       float ri=.52+.16*(fbm(cS*1.3+vec2(vs*.4,2.9))-.5);
       float ring=smoothstep(ri-.07,ri+.09,r);
       float m=fbm(cS*1.1+vec2(r*2.2,vs*.6));
       vec3 navyW=mix(vec3(.04,.065,.26),vec3(.07,.1,.34),smoothstep(.35,.75,m));
       float wA=.46*ring*(.85+.15*m)*tint.a;
-      // soft dark patches going round in it, clear at their edges
-      float pf=fbm(cA*1.5+vec2(r*3.2,1.7+vs*.37))+.1*(fbm(cB*2.6+vec2(r*5.0,-vs))-.5);
-      float body=smoothstep(.53,.58,pf);
-      float bA=.6*body*(.8+.2*smoothstep(.58,.7,pf))*smoothstep(ri-.02,ri+.12,r)*tint.a;
-      vec3 blk=vec3(.012,.016,.05);
+      // thin dark streaks drifting along it as a river's (2.82.15): its lanes round the middle, winding gently and still
+      // (the river's course); two kinds, the finer closer together
+      float rb=r*11.0;
+      float bend=.6*(fbm(cS*1.4+vec2(rb*.16,vs*.5))-.5)+.25*(fbm(cS*3.1+vec2(rb*.37,vs+3.1))-.5);
+      float kA=(rb+bend)/.7,kB=(rb+bend+.31)/1.25;
+      float lA=drift(kA,length(vec2(dFdx(kA),dFdy(kA))),th,tsec,.7,8.0,.1,.55,vs+1.3);
+      float lB=drift(kB,length(vec2(dFdx(kB),dFdy(kB))),th,tsec,1.25,12.0,.075,.45,vs+7.9);
+      float river=1.0-(1.0-lA)*(1.0-lB);
+      float bA=.8*river*smoothstep(ri-.02,ri+.12,r)*tint.a;
+      vec3 blk=vec3(.008,.011,.032);
       alpha=bA+wA*(1.0-bA);
       rgb=(blk*bA+navyW*wA*(1.0-bA))/max(alpha,1e-4);
      }

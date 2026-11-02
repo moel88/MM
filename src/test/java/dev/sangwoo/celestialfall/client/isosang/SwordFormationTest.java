@@ -468,7 +468,7 @@ class SwordFormationTest {
             }
         assertEquals(0,SwordFormation.wispAlpha(0),1e-9);assertEquals(0,SwordFormation.wispAlpha(.9999),.01);
         // the water on the ground: coming in as the whirlpool's water goes, there until the formation ends, gone with it;
-        // its turn told in sixteen bits, always on, a whole turn some eleven seconds
+        // the formation's clock it runs by told in thousandths of a second, sixteen bits
         float end=IsosangRules.H_END;
         assertEquals(0,SwordFormation.flowLife(SwordFormation.FLOW0,end),1e-9);
         assertTrue(SwordFormation.FLOW0<SwordFormation.WATER_OUT1&&SwordFormation.FLOW1>SwordFormation.WATER_OUT1,"as the whirlpool's water goes");
@@ -476,10 +476,30 @@ class SwordFormationTest {
         assertEquals(0,SwordFormation.flowLife(end+SwordFormation.GONE,end),1e-9);
         for(float t=1;t<end+1;t+=frame){
             assertEquals(SwordFormation.flowLife(t,end),SwordFormation.flowLife(t+frame,end),.03,"the water jumps at "+t);
-            int step=Math.floorMod(SwordFormation.flowPhase(t+frame)-SwordFormation.flowPhase(t),65536);
-            assertTrue(step>=0&&step<40,"it turns on smoothly at "+t+": "+step);
+            int step=SwordFormation.flowClock(t+frame)-SwordFormation.flowClock(t);
+            assertTrue(step>=3&&step<=6,"its clock runs on smoothly at "+t+": "+step);
         }
-        double turn=Math.PI*2/SwordFormation.FLOW_TURN;assertTrue(turn>9&&turn<14,"a whole turn: "+turn);
+        assertTrue(SwordFormation.flowClock(end+SwordFormation.GONE)<65535,"told all the while it lies");
+    }
+    @Test void itsBlackDriftsSlowlyAsARiversStreaks() throws java.io.IOException{
+        // 2.82.15 ("너무 빨리 돌아가고 ... 걍 검정색을 강가의 흐름처럼"): the ink shader carries its thin streaks round at
+        // FLOW_SPEED blocks a second in the middle of its channel and FLOW_BANK of that at its banks; gentle, and far
+        // slower than 2.82.14's whole turn every eleven seconds or so (some five blocks a second mid-channel)
+        String src;try(var in=SwordFormation.class.getResourceAsStream("/assets/celestialfall/shaders/core/kageno_flame.fsh")){src=new String(in.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}
+        var m=java.util.regex.Pattern.compile("const float RIVER_V=([0-9.]+),RIVER_BANK=([0-9.]+),RIVER_IN=([0-9.]+),RIVER_OUT=([0-9.]+);").matcher(src);
+        assertTrue(m.find(),"the shader says how fast its river runs");
+        double v=Double.parseDouble(m.group(1)),bank=Double.parseDouble(m.group(2)),in=Double.parseDouble(m.group(3)),out=Double.parseDouble(m.group(4));
+        assertEquals(SwordFormation.FLOW_SPEED,v,1e-9);assertEquals(SwordFormation.FLOW_BANK,bank,1e-9);
+        assertTrue(in<SwordFormation.WATER_IN+2&&out>IsosangRules.FORMATION_RADIUS+2,"its channel from the bare middle to the mountains");
+        double fastest=0;
+        for(double rb=in;rb<=out;rb+=.05){
+            double x=(rb-in)/(out-in),speed=v*(bank+(1-bank)*Math.sin(Math.PI*x));
+            assertTrue(speed<=1.0+1e-9&&speed>=v*bank-1e-9,"gentle: "+speed);
+            assertTrue(speed<.25*.55*rb,"far slower than 2.82.14 at "+rb+": "+speed);
+            fastest=Math.max(fastest,speed);
+        }
+        assertEquals(v,fastest,1e-3,"fastest in the middle of its channel");
+        assertTrue(src.contains("float drift(float k,float kw,float th,float tsec,float lane,float cell,float w,float fill,float s)"),"thin streaks along still lanes");
     }
     @Test void theWaterRunsUpToTheMountainsFeet(){
         // 2.82.14 ("산이랑 물이랑 X좌표 붙어있게 해"): each way round the water runs to the nearest mountain standing that

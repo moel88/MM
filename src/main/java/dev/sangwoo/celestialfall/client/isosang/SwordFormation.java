@@ -919,19 +919,22 @@ final class SwordFormation {
      * by side, read and confirmed: the water leaves the middle bare and lies round it, faint, the ground showing well
      * through it; darker patches flow in it, soft with clear edges; strands of pale water only at the far rim; 2.82.14,
      * user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까 이상함", "그리고 물은 안 움직이고 검정색만 움직이게 해
-     * 영상도 검정색만 순환하잖아"): a see-through navy water, still, from round the formation's bare middle out to the
-     * mountains' feet (shore); soft dark patches in it, the only thing of it that moves, going round and round the
-     * formation counterclockwise seen from above (as the whirlpool turned) at FLOW_TURN radians a second (no arms curling
-     * in or out as a whirlpool's); a few thin strands of pale water, still, along the mountains' feet (the ink shader,
-     * style 14: the water seeds 8 to 11, the strands 12 to 15; its uv the offset over FLOW_SCALE blocks). How strongly it
-     * lies (0 to 1: coming in as the whirlpool's water turns into the smoke, FLOW0 to FLOW1, and going as the formation
-     * ends, with the mountains), and the patches' turn in sixteen bits (a share of a whole turn: the shader's pattern
-     * comes back exactly after one, so it never jumps as it wraps).
+     * 영상도 검정색만 순환하잖아"; 2.82.15, user request: "너무 빨리 돌아가고 검정색이 너무 커 영상처럼 지나치게 두껍거나
+     * 넓은 검은 면이 되지 않도록 하고, 가늘고 길게 이어지는 형태로 만들어어함 걍 검정색을 강가의 흐름처럼 만들면 되는데"):
+     * a see-through navy water, still, from round the formation's bare middle out to the mountains' feet (shore); in it
+     * thin, long dark streaks drifting slowly along still, gently winding lanes round the middle as a river carries
+     * things, the only thing of it that moves: counterclockwise seen from above (as the whirlpool turned), FLOW_SPEED
+     * blocks a second in the middle of its channel and FLOW_BANK of that at its banks (the ink shader's riverTurn, its
+     * RIVER_V and RIVER_BANK); a few thin strands of pale water, still, along the mountains' feet (the ink shader, style
+     * 14: the water seeds 8 to 11, the strands 12 to 15; its uv the offset over FLOW_SCALE blocks). How strongly it lies
+     * (0 to 1: coming in as the whirlpool's water turns into the smoke, FLOW0 to FLOW1, and going as the formation ends,
+     * with the mountains), and the formation's clock the river runs by, in thousandths of a second in sixteen bits (each
+     * lane of it turns at its own pace, so it is told the time, not a turn).
      */
     static float flowLife(float t,float end){return Ease.smooth(t,FLOW0,FLOW1)*(1-Ease.smooth(t,end,end+GONE));}
-    static int flowPhase(float t){double turns=t*FLOW_TURN/(Math.PI*2);return (int)Math.floor((turns-Math.floor(turns))*65536)&0xffff;}
+    static int flowClock(float t){return MathHelper.clamp(Math.round(t*1000),0,65535);}
     static final float FLOW0=1.3f,FLOW1=2f;
-    static final double FLOW_TURN=.55,FLOW_SCALE=IsosangRules.FORMATION_RADIUS+1;
+    static final double FLOW_SPEED=.9,FLOW_BANK=.45,FLOW_SCALE=IsosangRules.FORMATION_RADIUS+1;
     /**
      * Where the water lies round the formation (2.82.14, user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까
      * 이상함": it ended a block and more short of the mountains, the ground bare between): its rings at SHORE_STEPS ways
@@ -994,9 +997,9 @@ final class SwordFormation {
     /**
      * The ink lying on the ground, under everything else of it (2.82.6, the ink shader's ground pass, before the swords,
      * the mountains and the light): the blue of the formation's ground; the ink gathering into its middle; the whirlpool
-     * (2.82.7); the still navy water lying on the ground as it stands, out to the mountains' feet, soft dark patches going
-     * round in it (2.82.13, 2.82.14: style 14, seeds 8 to 15, the patches' turn in the green and blue bytes; drawn in
-     * rings out to the mountains, KagenoFire.inkGroundRings). The others each a square of the ink shader
+     * (2.82.7); the still navy water lying on the ground as it stands, out to the mountains' feet, thin dark streaks
+     * drifting in it as a river's (2.82.13 to 2.82.15: style 14, seeds 8 to 15, the formation's clock in the green and
+     * blue bytes; drawn in rings out to the mountains, KagenoFire.inkGroundRings). The others each a square of the ink shader
      * (KagenoFire.inkGround) on the ground, its uv the offset over its radius.
      */
     static void ground(Fx c){
@@ -1005,8 +1008,8 @@ final class SwordFormation {
         if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed&7,holeByte(t,r),0,blue);}
         float water=flowLife(t,end(c.cast));
         if(water>.005f){
-            var sh=shore(c.cast.id(),yaw(c.cast));int ph=flowPhase(t);Vec3d at=centre.add(0,.045,0);
-            KagenoFire.inkGroundRings(at,sh.water(),WATER_RINGS,null,FLOW_SCALE,14,8|(seed&3),(ph>>8)/255f,(ph&255)/255f,water);
+            var sh=shore(c.cast.id(),yaw(c.cast));int clock=flowClock(t);Vec3d at=centre.add(0,.045,0);
+            KagenoFire.inkGroundRings(at,sh.water(),WATER_RINGS,null,FLOW_SCALE,14,8|(seed&3),(clock>>8)/255f,(clock&255)/255f,water);
             KagenoFire.inkGroundRings(at,sh.strands(),STRAND_RINGS,sh.cover(),FLOW_SCALE,14,12|(seed&3),0,0,water);
         }
         double g=gather(t);float a=gathered(t);
