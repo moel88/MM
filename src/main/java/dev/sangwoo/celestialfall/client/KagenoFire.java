@@ -309,6 +309,30 @@ public final class KagenoFire {
         ipoint(centre.add(-half,0,-half),-k,-k,code,g,b,alpha);ipoint(centre.add(half,0,-half),k,-k,code,g,b,alpha);
         ipoint(centre.add(half,0,half),k,k,code,g,b,alpha);ipoint(centre.add(-half,0,half),-k,k,code,g,b,alpha);
     }
+    /**
+     * Ink lying flat round {@code centre} in rings (2.82.14: the water of Lee So-sang's H, its edge where the mountains
+     * stand): ring {@code j} lies {@code radius[j][k]} blocks out the k-th of n ways round (from the world's x toward its
+     * z, the last joined to the first), as strongly as {@code alpha} times {@code ring[j]} (times {@code cover[k]} if
+     * given, between the ways linearly); its uv the offset from the middle over {@code scale} blocks, as inkGround's.
+     */
+    public static void inkGroundRings(Vec3d centre,double[][] radius,float[] ring,float[] cover,double scale,int style,int seed,float g,float b,float alpha){
+        if(inks==null||alpha<=0||scale<=1e-4||radius.length<2)return;int code=(style&15)*16+(seed&15),n=radius[0].length;
+        for(int k=0;k<n;k++){
+            int k1=(k+1)%n;float w0=cover==null?1:cover[k],w1=cover==null?1:cover[k1];if(w0<=0&&w1<=0)continue;
+            double a0=Math.PI*2*k/n,a1=Math.PI*2*(k+1)/n,c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1);
+            for(int j=0;j+1<radius.length;j++){
+                if(ring[j]<=0&&ring[j+1]<=0)continue;
+                // (wound as inkGround's squares are)
+                gpoint(centre,c0*radius[j][k],s0*radius[j][k],scale,code,g,b,alpha*ring[j]*w0);
+                gpoint(centre,c0*radius[j+1][k],s0*radius[j+1][k],scale,code,g,b,alpha*ring[j+1]*w0);
+                gpoint(centre,c1*radius[j+1][k1],s1*radius[j+1][k1],scale,code,g,b,alpha*ring[j+1]*w1);
+                gpoint(centre,c1*radius[j][k1],s1*radius[j][k1],scale,code,g,b,alpha*ring[j]*w1);
+            }
+        }
+    }
+    private static void gpoint(Vec3d centre,double x,double z,double scale,int code,float g,float b,float alpha){
+        ipoint(centre.add(x,0,z),(float)(x/scale),(float)(z/scale),code,g,b,alpha);
+    }
     /** Straight band a→b, width measured along {@code side}. */
     public static void streak(Vec3d a,Vec3d b,Vec3d side,double width,int seed,float alpha){
         if(strokes==null||alpha<=0)return;Vec3d s=side.normalize().multiply(width*.5);

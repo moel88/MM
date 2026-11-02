@@ -915,19 +915,76 @@ final class SwordFormation {
      * The water lying on the formation's ground once the whirlpool has gone, until the formation ends (2.82.13, user
      * request: "소용돌이가 끝나고 H가 끝날때까지 바닥 지속적으로 흐르는 물 같은 이펙트를 만들어야함 영상 보면 바닥에서 연하게
      * 뭐가 계속 흐르는 거 보여?", then "물이 너무 연하잖아 더 진하게 만들어 엄청 진하게 만드는데 원래 바닥은 보일정도로
-     * 조금 연하게", "물 색은 남색", "원본은 그냥 검정색 결이 순환하는데 너가 만든건 소용돌이야"): a deep navy water over the
-     * whole formation, the ground showing a little through it; black grain in it going round and round the formation
-     * (streaks long round it and thin across, gathering in broad patches; no arms curling in or out as a whirlpool's), and
-     * thin strands of pale water among it; all of it turning counterclockwise seen from above (as the whirlpool turned) at
-     * FLOW_TURN radians a second (the ink shader, style 14, seeds 8 to 15, out to FLOW_R blocks). How strongly it lies (0
-     * to 1: coming in as the whirlpool's water turns into the smoke, FLOW0 to FLOW1, and going as the formation ends, with
-     * the mountains), and its turn in sixteen bits (a share of a whole turn: the shader's pattern comes back exactly after
-     * one, so it never jumps as it wraps).
+     * 조금 연하게", "물 색은 남색", "원본은 그냥 검정색 결이 순환하는데 너가 만든건 소용돌이야"; the video and the build side
+     * by side, read and confirmed: the water leaves the middle bare and lies round it, faint, the ground showing well
+     * through it; darker patches flow in it, soft with clear edges; strands of pale water only at the far rim; 2.82.14,
+     * user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까 이상함", "그리고 물은 안 움직이고 검정색만 움직이게 해
+     * 영상도 검정색만 순환하잖아"): a see-through navy water, still, from round the formation's bare middle out to the
+     * mountains' feet (shore); soft dark patches in it, the only thing of it that moves, going round and round the
+     * formation counterclockwise seen from above (as the whirlpool turned) at FLOW_TURN radians a second (no arms curling
+     * in or out as a whirlpool's); a few thin strands of pale water, still, along the mountains' feet (the ink shader,
+     * style 14: the water seeds 8 to 11, the strands 12 to 15; its uv the offset over FLOW_SCALE blocks). How strongly it
+     * lies (0 to 1: coming in as the whirlpool's water turns into the smoke, FLOW0 to FLOW1, and going as the formation
+     * ends, with the mountains), and the patches' turn in sixteen bits (a share of a whole turn: the shader's pattern
+     * comes back exactly after one, so it never jumps as it wraps).
      */
     static float flowLife(float t,float end){return Ease.smooth(t,FLOW0,FLOW1)*(1-Ease.smooth(t,end,end+GONE));}
     static int flowPhase(float t){double turns=t*FLOW_TURN/(Math.PI*2);return (int)Math.floor((turns-Math.floor(turns))*65536)&0xffff;}
     static final float FLOW0=1.3f,FLOW1=2f;
-    static final double FLOW_TURN=.55,FLOW_R=IsosangRules.FORMATION_RADIUS+1;
+    static final double FLOW_TURN=.55,FLOW_SCALE=IsosangRules.FORMATION_RADIUS+1;
+    /**
+     * Where the water lies round the formation (2.82.14, user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까
+     * 이상함": it ended a block and more short of the mountains, the ground bare between): its rings at SHORE_STEPS ways
+     * round, from WATER_IN blocks out (inside the shader's soft inner edge) to the foot of the nearest mountain that way
+     * (waterEdge), fading out over EDGE_PAST blocks past it, under the mountain; and the strip of its pale strands along
+     * the mountains' feet (STRAND_* blocks inside the edge, there only as far as a mountain stands that way: cover).
+     * Fixed for a formation, as its mountains are.
+     */
+    record Shore(double[][] water,double[][] strands,float[] cover){}
+    private static final Map<UUID,Shore> SHORES=new LinkedHashMap<>();
+    static Shore shore(UUID id,float yaw){
+        var s=SHORES.get(id);if(s!=null)return s;
+        var ms=mountains(id,yaw);int n=SHORE_STEPS;
+        double[] in=new double[n],edge=new double[n],past=new double[n],s0=new double[n],s1=new double[n],s2=new double[n],s3=new double[n];float[] cover=new float[n];
+        for(int k=0;k<n;k++){
+            double az=Math.PI*2*k/n,e=waterEdge(ms,az);
+            in[k]=WATER_IN;edge[k]=e;past[k]=e+EDGE_PAST;cover[k]=(float)mountainCover(ms,az);
+            s0[k]=e-STRAND_FROM;s1[k]=e-STRAND_FULL0;s2[k]=e-STRAND_FULL1;s3[k]=e-STRAND_TO;
+        }
+        s=new Shore(new double[][]{in,edge,past},new double[][]{s0,s1,s2,s3},cover);
+        SHORES.put(id,s);while(SHORES.size()>16)SHORES.remove(SHORES.keySet().iterator().next());
+        return s;
+    }
+    /** How strongly the water lies on each of its rings (to its edge, then fading out past it). */
+    static final float[] WATER_RINGS={1,1,0},STRAND_RINGS={0,1,1,0};
+    static final int SHORE_STEPS=180;
+    static final double WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
+    /**
+     * How far out the water runs the way {@code az} (radians in the world's x, z) from the formation's middle: to the
+     * face of the nearest mountain that way (a mountain's face counts along its masses, fading out over EDGE_FADE blocks
+     * past their feet; the masses before it stand in the water), else as far as the farthest mountain's face. Smooth all
+     * round (the least of the faces that way, each eased toward the farthest as it fades).
+     */
+    static double waterEdge(Mountain[] ms,double az){
+        double far=0;for(var mt:ms)far=Math.max(far,mt.radius());
+        double d=far;
+        for(var mt:ms){
+            double w=along(mt,az);if(w<=0)continue;
+            double s=mt.radius()/Math.cos(Math.IEEEremainder(az-mt.az(),Math.PI*2));
+            d=Math.min(d,far+Math.min(0,s-far)*w);
+        }
+        return d;
+    }
+    /** How much of the mountain {@code mt} stands the way {@code az} (0 to 1): 1 along its masses, fading out over EDGE_FADE blocks past their feet; 0 off to its sides. */
+    static double along(Mountain mt,double az){
+        double off=Math.IEEEremainder(az-mt.az(),Math.PI*2);if(Math.cos(off)<.25)return 0;
+        double x=mt.radius()*Math.tan(off),lo=Double.MAX_VALUE,hi=-Double.MAX_VALUE;
+        for(var p:mt.peaks()){lo=Math.min(lo,p.xs()[0]);hi=Math.max(hi,p.xs()[p.xs().length-1]);}
+        double over=Math.max(lo-x,x-hi);
+        return over<=0?1:1-Ease.smooth((float)over,0,(float)EDGE_FADE);
+    }
+    /** How much a mountain stands the way {@code az} (0 to 1, the most of any). */
+    static double mountainCover(Mountain[] ms,double az){double c=0;for(var mt:ms)c=Math.max(c,along(mt,az));return c;}
     /** The ink shader's byte for the gathering sheet (style 13): how far it has soaked in (0 to 127). */
     static float soakByte(float share){return Math.round(MathHelper.clamp(share,0,1)*127)/255f;}
     /** The formation's clock as the ink shader reads it (seconds over two, 0 to 1). */
@@ -937,16 +994,21 @@ final class SwordFormation {
     /**
      * The ink lying on the ground, under everything else of it (2.82.6, the ink shader's ground pass, before the swords,
      * the mountains and the light): the blue of the formation's ground; the ink gathering into its middle; the whirlpool
-     * (2.82.7); the navy water lying on the ground as it stands, black grain going round in it (2.82.13: style 14, seeds 8
-     * to 15, its turn in the green and blue bytes). Each a square of the ink shader (KagenoFire.inkGround) on the ground, its uv the offset over
-     * its radius.
+     * (2.82.7); the still navy water lying on the ground as it stands, out to the mountains' feet, soft dark patches going
+     * round in it (2.82.13, 2.82.14: style 14, seeds 8 to 15, the patches' turn in the green and blue bytes; drawn in
+     * rings out to the mountains, KagenoFire.inkGroundRings). The others each a square of the ink shader
+     * (KagenoFire.inkGround) on the ground, its uv the offset over its radius.
      */
     static void ground(Fx c){
         float t=c.sec;Vec3d centre=centre(c.cast);int seed=c.cast.id().hashCode();
         float blue=tint(t);
         if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed&7,holeByte(t,r),0,blue);}
         float water=flowLife(t,end(c.cast));
-        if(water>.005f){int ph=flowPhase(t);KagenoFire.inkGround(centre.add(0,.045,0),FLOW_R,FLOW_R,14,8|(seed&7),(ph>>8)/255f,(ph&255)/255f,water);}
+        if(water>.005f){
+            var sh=shore(c.cast.id(),yaw(c.cast));int ph=flowPhase(t);Vec3d at=centre.add(0,.045,0);
+            KagenoFire.inkGroundRings(at,sh.water(),WATER_RINGS,null,FLOW_SCALE,14,8|(seed&3),(ph>>8)/255f,(ph&255)/255f,water);
+            KagenoFire.inkGroundRings(at,sh.strands(),STRAND_RINGS,sh.cover(),FLOW_SCALE,14,12|(seed&3),0,0,water);
+        }
         double g=gather(t);float a=gathered(t);
         if(a>.005f&&g>.02)KagenoFire.inkGround(centre.add(0,.05,0),g*1.45,g,13,seed,poolClock(t),soakByte(soak(t)),a);
         // (its square big enough for its edge pushed out as it spreads, its streams' tails a little past its radius; drawn

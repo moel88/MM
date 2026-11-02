@@ -480,7 +480,51 @@ class SwordFormationTest {
             assertTrue(step>=0&&step<40,"it turns on smoothly at "+t+": "+step);
         }
         double turn=Math.PI*2/SwordFormation.FLOW_TURN;assertTrue(turn>9&&turn<14,"a whole turn: "+turn);
-        assertTrue(SwordFormation.FLOW_R>IsosangRules.FORMATION_RADIUS,"over the whole formation");
+    }
+    @Test void theWaterRunsUpToTheMountainsFeet(){
+        // 2.82.14 ("산이랑 물이랑 X좌표 붙어있게 해"): each way round the water runs to the nearest mountain standing that
+        // way and a little under it, never stopping short of it; behind her (no mountain) as far as the farthest one; its
+        // edge smooth all round; its pale strands along the mountains' feet only, inside the water
+        int checked=0;
+        for(long seed=1;seed<=24;seed++){
+            UUID id=new UUID(seed*0x9E3779B97F4A7C15L,~seed*31);float yaw=(float)(seed*47%360);
+            var ms=SwordFormation.mountains(id,yaw);var sh=SwordFormation.shore(id,yaw);
+            double far=0;for(var mt:ms)far=Math.max(far,mt.radius());
+            int n=SwordFormation.SHORE_STEPS;double last=Double.NaN;
+            for(int k=0;k<=n*10;k++){
+                double az=Math.PI*2*k/(n*10),e=SwordFormation.waterEdge(ms,az),nearest=far;
+                for(var mt:ms){
+                    double w=SwordFormation.along(mt,az);if(w<=0)continue;
+                    double s=mt.radius()/Math.cos(Math.IEEEremainder(az-mt.az(),Math.PI*2));
+                    if(w>=1)assertTrue(e<=s+1e-9,"it runs to every mountain standing that way: "+e+" "+s);
+                    nearest=Math.min(nearest,s);
+                }
+                assertTrue(e>=nearest-1e-9,"never short of the nearest: "+e+" "+nearest);
+                assertTrue(e<=far+1e-9&&e>SwordFormation.WATER_IN+SwordFormation.STRAND_FROM,"between: "+e);
+                if(!Double.isNaN(last))assertEquals(last,e,.25,"its edge jumps at "+az);
+                last=e;checked++;
+            }
+            double back=SwordFormation.behind(yaw);
+            assertEquals(far,SwordFormation.waterEdge(ms,back),1e-9,"behind her as far as the farthest mountain");
+            assertEquals(0,SwordFormation.mountainCover(ms,back),1e-9,"no strands behind her");
+            for(var mt:ms){
+                assertEquals(1,SwordFormation.mountainCover(ms,mt.az()),1e-9,"strands at its feet");
+                assertTrue(SwordFormation.waterEdge(ms,mt.az())<=mt.radius()+1e-9,"up to its face");
+            }
+            // the rings as drawn: the water from inside the shader's soft inner edge to its edge and past it, the strands
+            // a strip inside the edge
+            for(int k=0;k<n;k++){
+                double e=SwordFormation.waterEdge(ms,Math.PI*2*k/n);
+                assertEquals(SwordFormation.WATER_IN,sh.water()[0][k],1e-12);assertEquals(e,sh.water()[1][k],1e-12);
+                assertEquals(e+SwordFormation.EDGE_PAST,sh.water()[2][k],1e-12);
+                for(int j=0;j+1<sh.strands().length;j++)assertTrue(sh.strands()[j][k]<sh.strands()[j+1][k]);
+                assertTrue(sh.strands()[0][k]>SwordFormation.WATER_IN&&sh.strands()[3][k]<e);
+            }
+        }
+        assertTrue(checked>40000);
+        assertTrue(SwordFormation.WATER_IN<.37*SwordFormation.FLOW_SCALE,"inside the shader's soft inner edge");
+        assertTrue(SwordFormation.EDGE_PAST>.3,"a little under the mountains, no ground between");
+        assertArrayEquals(new float[]{1,1,0},SwordFormation.WATER_RINGS);assertArrayEquals(new float[]{0,1,1,0},SwordFormation.STRAND_RINGS);
     }
     @Test void theWhirlpoolsClockAndBytes(){
         // what the ink shader is told: its clock over two seconds; the gathering sheet's share in a byte (exactly)

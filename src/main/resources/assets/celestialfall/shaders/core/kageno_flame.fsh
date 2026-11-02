@@ -384,7 +384,8 @@ void main(){
    // middle, turning as they go; its edge a thin bright line, white at its heart, in a wide blue glow just outside it.
    // 14 the formation's blue ground (seeds 0-7: the same square, solid to .88 of it, fading to its rim; tint.a; its middle
    // cleared by the spreading whirlpool's front, tint.g its reach over 1.25 of the square, 2.82.10), or (seeds 8-15) the
-   // navy water lying round its middle as it stands, soft dark patches going round in it (2.82.13, below).
+   // still navy water lying round its middle out to the mountains' feet as it stands, soft dark patches going round in
+   // it, pale strands along the mountains' feet (2.82.13, 2.82.14, below).
    // 15 the whirlpool once the gathered ink has gone into the middle and burst there (2.82.7, user request: "잉크가 모였다가
    // 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가 크게 나옴" with their still of the video): streams of
    // black water swirling out of the middle as wide as the ink first soaked in. uv the offset from its middle over its outer
@@ -519,41 +520,46 @@ void main(){
      // 끝날때까지 바닥 지속적으로 흐르는 물 같은 이펙트를 만들어야함", "물 색은 남색", "원본은 그냥 검정색 결이 순환하는데
      // 너가 만든건 소용돌이야"; then the video and the build side by side, read and confirmed: the water leaves the middle
      // bare and lies round it, faint, the ground showing well through it; darker patches flow in it, soft with clear
-     // edges, not brushed streaks; strands of pale water only at the far rim): a see-through navy round the formation's
-     // middle, its inner edge soft and wandering; soft dark patches in it going round and round (no arms curling in or
-     // out, as a whirlpool's); a few thin pale strands along the rim. All of it turns counterclockwise seen from above
-     // (theta here grows clockwise, so the turn is added to it). tint.g and tint.b the turn, sixteen bits of a whole one
-     // (SwordFormation.flowPhase: drawn on the circle, so a whole turn brings it back exactly); uv the offset over its
-     // radius (SwordFormation.FLOW_R, 11 blocks); tint.a how strongly it lies.
-     float ph=(floor(tint.g*255.0+.5)*256.0+floor(tint.b*255.0+.5))*(6.2831853/65536.0);
-     float th=r>1e-4?atan(q.y,q.x):0.0,ang=th+ph;
-     vec2 cA=vec2(cos(ang),sin(ang)),cB=vec2(cos(2.0*ang+1.3),sin(2.0*ang+1.3));
-     float edge=1.0-smoothstep(.9,1.0,r);
-     // the navy water round the middle, its inner edge soft and wandering
-     float ri=.52+.16*(fbm(cA*1.3+vec2(sd*.4,2.9))-.5);
-     float ring=smoothstep(ri-.07,ri+.09,r)*edge;
-     float m=fbm(cA*1.1+vec2(r*2.2,sd*.6));
-     vec3 navyW=mix(vec3(.04,.065,.26),vec3(.07,.1,.34),smoothstep(.35,.75,m));
-     float wA=.46*ring*(.85+.15*m)*tint.a;
-     // soft dark patches going round in it, clear at their edges
-     float pf=fbm(cA*1.5+vec2(r*3.2,1.7+sd*.37))+.1*(fbm(cB*2.6+vec2(r*5.0,-sd))-.5);
-     float body=smoothstep(.53,.58,pf);
-     float bA=.6*body*(.8+.2*smoothstep(.58,.7,pf))*smoothstep(ri-.02,ri+.12,r)*edge*tint.a;
-     vec3 blk=vec3(.012,.016,.05);
-     // a few thin strands of pale water along the far rim (some .06 of a block either side of a contour wherever it
-     // lies: its distance found from the field's slope on the screen against the ground's)
-     float sf=fbm(cA*2.1+vec2(r*7.0,sd*.7+7.3));
-     float px=length(vec2(dFdx(r),dFdy(r)))*11.0,gf=length(vec2(dFdx(sf),dFdy(sf)));
-     float df=abs(sf-.5)/max(gf,1e-5)*px;
-     float strand=exp(-df*df/.004)*smoothstep(.3,.65,fbm(cA*4.0+vec2(r*9.0,sd)))*smoothstep(.8,.88,r)*(1.0-smoothstep(.96,1.0,r));
-     float sA=.38*strand*tint.a;
-     // the navy water, the patches over it, the strands over all
-     vec3 col=navyW;float a=wA;
-     col=(blk*bA+col*a*(1.0-bA))/max(bA+a*(1.0-bA),1e-4);a=bA+a*(1.0-bA);
-     col=(vec3(.62,.76,1.0)*sA+col*a*(1.0-sA))/max(sA+a*(1.0-sA),1e-4);a=sA+a*(1.0-sA);
-     // the strands catch the light a little on the effect layer
-     rgb=col*(1.0+Hot*.25*sA/max(a,1e-4));
-     alpha=a;
+     // edges, not brushed streaks; strands of pale water only at the far rim; 2.82.14, user request: "산이랑 물이랑
+     // X좌표 붙어있게 해 떨어져있으니까 이상함", "물은 안 움직이고 검정색만 움직이게 해 영상도 검정색만 순환하잖아").
+     // Drawn in rings out to the mountains' feet (SwordFormation.shore: how far out it lies each way, its edge fading in
+     // tint.a); uv the offset over SwordFormation.FLOW_SCALE (11 blocks); the variant (the low two bits of the seed) the
+     // same for the water and its strands. Seeds 8-11 the water: a see-through navy round the formation's middle, still,
+     // its inner edge soft and wandering; soft dark patches in it, the only thing that moves, going round and round
+     // counterclockwise seen from above (no arms curling in or out, as a whirlpool's; theta here grows clockwise, so the
+     // turn is added to it), tint.g and tint.b their turn, sixteen bits of a whole one (SwordFormation.flowPhase: drawn
+     // on the circle, so a whole turn brings it back exactly). Seeds 12-15 a few thin strands of pale water along the
+     // mountains' feet, still (drawn in a strip there over the water, its alpha how strongly they lie).
+     float vs=mod(mod(code,16.0),4.0)*3.7;
+     float th=r>1e-4?atan(q.y,q.x):0.0;
+     vec2 cS=vec2(cos(th),sin(th));
+     if(mod(code,16.0)>11.5){
+      // some .06 of a block either side of a contour wherever it lies: its distance found from the field's slope on the
+      // screen against the ground's
+      float sf=fbm(cS*2.1+vec2(r*7.0,vs*.7+7.3));
+      float px=length(vec2(dFdx(r),dFdy(r)))*11.0,gf=length(vec2(dFdx(sf),dFdy(sf)));
+      float df=abs(sf-.5)/max(gf,1e-5)*px;
+      float strand=exp(-df*df/.004)*smoothstep(.3,.65,fbm(cS*4.0+vec2(r*9.0,vs)));
+      // catching the light a little on the effect layer
+      rgb=vec3(.62,.76,1.0)*(1.0+Hot*.25);
+      alpha=.38*strand*tint.a;
+     }else{
+      float ph=(floor(tint.g*255.0+.5)*256.0+floor(tint.b*255.0+.5))*(6.2831853/65536.0),ang=th+ph;
+      vec2 cA=vec2(cos(ang),sin(ang)),cB=vec2(cos(2.0*ang+1.3),sin(2.0*ang+1.3));
+      // the navy water round the middle, still, its inner edge soft and wandering
+      float ri=.52+.16*(fbm(cS*1.3+vec2(vs*.4,2.9))-.5);
+      float ring=smoothstep(ri-.07,ri+.09,r);
+      float m=fbm(cS*1.1+vec2(r*2.2,vs*.6));
+      vec3 navyW=mix(vec3(.04,.065,.26),vec3(.07,.1,.34),smoothstep(.35,.75,m));
+      float wA=.46*ring*(.85+.15*m)*tint.a;
+      // soft dark patches going round in it, clear at their edges
+      float pf=fbm(cA*1.5+vec2(r*3.2,1.7+vs*.37))+.1*(fbm(cB*2.6+vec2(r*5.0,-vs))-.5);
+      float body=smoothstep(.53,.58,pf);
+      float bA=.6*body*(.8+.2*smoothstep(.58,.7,pf))*smoothstep(ri-.02,ri+.12,r)*tint.a;
+      vec3 blk=vec3(.012,.016,.05);
+      alpha=bA+wA*(1.0-bA);
+      rgb=(blk*bA+navyW*wA*(1.0-bA))/max(alpha,1e-4);
+     }
     }else{
      // (2.82.10: its middle cleared by the spreading whirlpool's front, tint.g its reach over 1.25 of the square)
      rgb=vec3(.043,.078,.275);
