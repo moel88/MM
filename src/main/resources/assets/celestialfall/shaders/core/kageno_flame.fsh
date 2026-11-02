@@ -761,9 +761,10 @@ void main(){
   }
   float body=smoothstep(0.0,.1,v)*(1.0-smoothstep(.86,1.0,v));
   float haze=.4+.6*pfbm(vec2(u*28.0-tm*.9,v*2.0+seed),28.0);
-  rgb=mix(vec3(.42,.62,.92),vec3(.66,.83,1.0),soft);
-  rgb=mix(rgb,vec3(.88,.95,1.0),core);
-  alpha=clamp(haze*.12+soft*.22+core*.55,0.0,.7)*body*tint.a;
+  // (then "물 줄기를 더 투명하게 만들고 강도를 더 낮춰 지금 물줄기 너무 쎄": about half as strong, its cores less white)
+  rgb=mix(vec3(.42,.62,.92),vec3(.62,.8,1.0),soft);
+  rgb=mix(rgb,vec3(.8,.9,1.0),core*.8);
+  alpha=clamp(haze*.06+soft*.11+core*.28,0.0,.36)*body*tint.a;
  }else if(Mode==17){
   // Blue mist standing round Lee So-sang's sword formation (2.82.11, user request with their marked screenshot of the
   // game: "아니 내가 사진에 표시한 애들처럼 나오게 해달라고 연기를": a see-through, deep blue mist hugging the ground round
