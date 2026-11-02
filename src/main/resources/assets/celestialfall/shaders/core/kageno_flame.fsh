@@ -373,10 +373,11 @@ void main(){
    // radius (the swirl spreads with it, as the video's does), tint.g the formation's clock, tint.b its eye (the black
    // middle no stream crosses: a share of its radius, over .6). Seen from above its streams curl counterclockwise as they
    // run out (the video put back on the ground plane: some ten degrees off the round) and all of it turns slowly the same
-   // way; theta here grows clockwise seen from above, so a stream keeps th+TWIST*lr. Crescents of light on black water,
-   // a white heart in pale blue, broken along their length so they taper at both ends; fine streaks running out along
-   // them; a blue sheen round the eye; its rim soft and ragged, the streams' tails reaching a little past it. As the swords
-   // strike its light dims and its water settles into a dark blue; then it dries away in patches, its thin parts first.
+   // way; theta here grows clockwise seen from above, so a stream keeps th+TWIST*lr. Crescents of a see-through pale
+   // blue on black water (2.82.8: no white, some third of 2.82.7's brightness), broken along their length so they taper
+   // at both ends; fine streaks running out along them; a blue sheen round the eye; its rim soft and ragged, the streams'
+   // tails reaching a little past it. As the swords strike its pale blue spreads out to the rim and lies there as smoke
+   // that thins away (2.82.8); its water settles into a dark blue; then it dries away in patches, its thin parts first.
    vec2 q=uv;float r=length(q);
    if(style>14.5){
     float tsec=tint.g*2.0,eye=tint.b*.6;
@@ -385,41 +386,78 @@ void main(){
     // the eye: black, its edge wavering a little
     float eyeR=eye*(1.0+.035*sin(4.0*th+sd+.8*tsec)+.02*sin(7.0*th-1.3*sd-1.4*tsec));
     float inEye=eye>.01?1.0-smoothstep(eyeR-aa,eyeR+aa,r):0.0;
+    // as it ends its pale blue spreads out to the rim (2.82.8, SwordFormation.SPREAD0 to SMOKE_FULL): the crescents'
+    // pattern is carried outward and a front sweeping out from the eye leaves none behind it
+    float spread=smoothstep(1.0,1.2,tsec),lrs=lr-.32*spread;
+    // its smoke sweeping out from the eye's edge to the rim (SwordFormation.rim), then drifting a little further out
+    float rimR=(mix(5.6,11.2,1.0-(1.0-spread)*(1.0-spread))+.8*smoothstep(1.2,1.46,tsec))/14.5;
     // the streams (TWIST 5.2, turning SPIN .38 a second; SwordFormation.WHIRL_TWIST, WHIRL_SPIN): two broad, three thinner
     float warp=fbm(q*2.3+vec2(sd*.7,-sd))-.5;
-    float psi=th+5.2*lr+.38*tsec+1.6*warp;
+    float psi=th+5.2*lrs+.38*tsec+1.6*warp;
     float s2=.5+.5*cos(2.0*psi+sd),s3=.5+.5*cos(3.0*psi+1.7*sd+2.1);
     // broken into crescents by looser families running across them, the pieces carried out along the streams
-    float cut2=smoothstep(-.75,.45,cos(2.0*(th-1.3*lr)+2.4*tsec+.7*sd));
-    float cut3=smoothstep(-.45,.7,cos(3.0*(th-1.0*lr)+3.1*tsec+1.3*sd+1.0));
+    float cut2=smoothstep(-.75,.45,cos(2.0*(th-1.3*lrs)+2.4*tsec+.7*sd));
+    float cut3=smoothstep(-.45,.7,cos(3.0*(th-1.0*lrs)+3.1*tsec+1.3*sd+1.0));
     // (each fading as it thins, so the crescents taper away and never run on as hairlines)
     float c2=smoothstep(.999-.5*cut2,1.0-.15*cut2,s2)*smoothstep(.05,.4,cut2),c3=smoothstep(.999-.3*cut3,1.0-.09*cut3,s3)*smoothstep(.1,.5,cut3);
     // only between the eye and the rim (their tails a little past where the water thins out), not in the very middle
     float band=smoothstep(eyeR+.004,eyeR+.05,r)*(1.0-smoothstep(.86,1.04,r))*smoothstep(.04,.14,r);
-    float crest=max(c2,.8*c3)*band;
+    float crest=max(c2,.8*c3)*band*mix(1.0,smoothstep(rimR-.05,rimR+.03,r),smoothstep(1.0,1.03,tsec))*(1.0-smoothstep(.7,1.0,spread));
     // fine streaks of water running out along the streams
     float st=.5+.5*cos(13.0*psi+2.2*fbm(dir*2.0+vec2(lr*.6,sd)));
     float dash=.5+.5*sin(8.0*lr-10.0*tsec+3.0*sin(4.0*psi+sd));
-    float streak=smoothstep(.76,.95,st)*smoothstep(.3,.8,dash)*band;
+    float streak=smoothstep(.76,.95,st)*smoothstep(.3,.8,dash)*band*(1.0-spread);
     // its light dims and its water settles into a dark blue as the swords strike
     float lit=1.0-.7*smoothstep(1.1,1.5,tsec),settle=smoothstep(.95,1.4,tsec);
     float mott=fbm(q*3.1+vec2(-sd,sd)+tsec*vec2(.11,-.08));
     vec3 water=mix(inkc,navy*.85,.25*mott+.4*settle*(1.0-inEye));
-    vec3 cc=mix(deep,blue,smoothstep(0.0,.3,crest));
-    cc=mix(cc,pale,smoothstep(.3,.85,crest));
-    cc=mix(cc,edge,smoothstep(.88,1.0,crest)*.5);
-    cc=mix(cc,deep*.6,streak*.7);
-    rgb=mix(water,mix(navy*1.6,blue*.8,.4),streak*(1.0-crest)*.18);
-    rgb=mix(rgb,cc,crest*lit);
+    // its crescents a see-through pale blue, no white (2.82.8, user request: "회오리 하늘색 부분 더 더 연하게": some
+    // third of 2.82.7's brightness; the video's crescents are periwinkle): the black water shows through them
+    vec3 pb=vec3(.5,.62,.92);
+    vec3 cc=mix(deep*.8,blue*.8,smoothstep(0.0,.3,crest));
+    cc=mix(cc,pb,smoothstep(.3,.9,crest));
+    cc=mix(cc,deep*.55,streak*.5);
+    rgb=mix(water,mix(navy*1.6,blue*.8,.4),streak*(1.0-crest)*.12);
+    rgb=mix(rgb,cc,crest*lit*.6);
     float sheen=eye>.01?exp(-max(r-eyeR,0.0)/.05)*(1.0-inEye)*band:0.0;
-    rgb=mix(rgb,mix(deep,blue,.5),sheen*.35*lit);
+    rgb=mix(rgb,mix(deep,blue,.5),sheen*.2*lit);
     // dense in the eye, thinning out to a soft, ragged rim; drying away (SwordFormation.DRY0 to DRY1) by patches
     float n=fbm(q*2.0+vec2(sd*1.3,sd*.7));
     float rim=1.0-smoothstep(.7,1.0,r+.14*(n-.5));
     float share=smoothstep(1.3,1.9,tsec),thin=smoothstep(eyeR,1.0,r);
     float cover=1.0-smoothstep(n-.09,n+.09,share*1.3-.15+.3*thin*share);
-    float a=max(mix(.86,.95,inEye)*rim,crest*lit*.95)*cover;
-    float glow=crest*lit*(.55+.45*smoothstep(.75,1.0,crest))+sheen*.35*lit+streak*.1;
+    float a=max(mix(.86,.95,inEye)*rim,crest*lit*.6)*cover;
+    float glow=crest*lit*.16+sheen*.15*lit+streak*.04;
+    // the smoke (2.82.8, user request: "끝으로 퍼지면서 이상한 아우라가 테두리 부분으로 퍼지면서 사라지거든", the video's
+    // pale blue smoke round the formation's rim, read on a marked still and "일단 그렇게 해봐"): the pale blue the
+    // crescents carried out lies along the rim (SwordFormation.RIM_R, 11.2 blocks, out to RIM_OUT as it goes), on the
+    // ground, in wisps streaming round it the way the whirlpool turned (counterclockwise seen from above). It thickens
+    // as the crescents reach it (SMOKE_IN to SMOKE_FULL), drifts a little further out and thins away by patches, its thin
+    // wisps first (SMOKE_OUT0 to SMOKE_OUT1). Soft and see-through, glowing a little.
+    float life=smoothstep(1.0,1.1,tsec)*(1.0-smoothstep(1.36,1.47,tsec));
+    if(life>0.0){
+     float ca=cos(.45*tsec),sa_=sin(.45*tsec);
+     vec2 dS=vec2(ca*dir.x-sa_*dir.y,sa_*dir.x+ca*dir.y);
+     // swelling and thinning round the rim, ragged at its edges
+     float lo=fbm(dS*1.6+vec2(sd*.6,4.1)),wv=fbm(dS*2.6+vec2(sd*.9,1.7));
+     float hw=(1.1+.5*spread+.5*smoothstep(1.2,1.46,tsec))*(.65+.7*lo)/14.5;
+     float dr=(r-rimR-.05*(wv-.5))/max(hw,1e-3);
+     float body=exp(-dr*dr*1.2);
+     // soft wisps streaming round it the way the whirlpool turned, smeared along it like mist
+     float wisp=fbm(dS*3.4+vec2(lr*9.0,-lr*6.0)+sd);
+     float strk=.5+.5*cos(17.0*lr+2.0*th-1.2*tsec+2.6*wisp);
+     // (faint and broken as it sweeps out, gathering the crescents' pale blue as it goes)
+     float smoke=body*(.4+.6*strk)*(.45+.55*wisp)*mix(.3*smoothstep(.25,.7,lo),1.0,spread);
+     // thinning away by patches, its thin wisps first
+     float nS=fbm(dS*3.3+vec2(lr*5.0,sd*1.9));
+     float gone=smoothstep(1.33,1.47,tsec);
+     smoke*=(1.0-smoothstep(nS-.14,nS+.14,gone*1.2-.1+.15*(1.0-smoke)))*life;
+     vec3 sc=mix(vec3(.26,.42,.98),vec3(.58,.74,1.0),smoothstep(.3,.75,smoke));
+     float sA=min(1.0,smoke*.95);
+     float aw=a;a=sA+aw*(1.0-sA);
+     rgb=(sc*sA+rgb*aw*(1.0-sA))/max(a,1e-4);
+     glow+=smoke*.6;
+    }
     rgb*=1.0+Hot*glow;
     alpha=a*tint.a;
    }else if(style>13.5){

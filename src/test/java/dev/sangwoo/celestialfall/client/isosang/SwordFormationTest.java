@@ -311,6 +311,48 @@ class SwordFormationTest {
         double pitch=Math.toDegrees(Math.atan(1/SwordFormation.WHIRL_TWIST));
         assertTrue(pitch>7&&pitch<14,"some ten degrees off the round: "+pitch);
         assertTrue(SwordFormation.WHIRL_SPIN>0&&SwordFormation.WHIRL_SPIN<1,"turning slowly: "+SwordFormation.WHIRL_SPIN);
+        // (2.82.8, "끝으로 퍼지면서 이상한 아우라가 테두리 부분으로 퍼지면서 사라지거든", "일단 그렇게 해봐") as the swords strike,
+        // its pale blue sweeps out from the eye's edge to the formation's rim as smoke, lies there and thins away
+        assertTrue(SwordFormation.SPREAD0>IsosangRules.H_RAIN0,"once the swords have begun to strike");
+        assertEquals(SwordFormation.RIM_FROM,SwordFormation.rim(SwordFormation.SPREAD0),1e-9);
+        assertTrue(SwordFormation.RIM_FROM>SwordFormation.EYE_R&&SwordFormation.RIM_FROM<SwordFormation.EYE_R+1,"out of the eye's edge");
+        double lastRim=SwordFormation.RIM_FROM;
+        for(float t=SwordFormation.SPREAD0;t<1.6f;t+=frame){
+            double r=SwordFormation.rim(t);
+            assertTrue(r>=lastRim-1e-9&&r-lastRim<.25,"sweeping out smoothly at "+t+": "+(r-lastRim));
+            lastRim=r;
+        }
+        assertEquals(SwordFormation.RIM_R,SwordFormation.rim(SwordFormation.SMOKE_FULL),1e-9,"at the rim as the crescents are all gathered");
+        double outer=IsosangRules.FORMATION_RING_R[IsosangRules.FORMATION_RING_R.length-1]+IsosangRules.FORMATION_RING_JITTER;
+        assertTrue(SwordFormation.RIM_R-1.2>outer,"outside every sword: "+SwordFormation.RIM_R+" and "+outer);
+        assertTrue(SwordFormation.RIM_OUT<IsosangRules.FORMATION_RADIUS+2.6,"before the mountains' feet");
+        assertTrue(SwordFormation.RIM_OUT<SwordFormation.WHIRL_R-1.5,"inside the whirlpool's square");
+        // there as thick as it gets when the video's is thickest (1.28 s), gone by when the video's is (1.45 s), never jumping
+        assertEquals(0,SwordFormation.smoke(SwordFormation.SPREAD0),1e-6);
+        assertEquals(1,SwordFormation.smoke(1.28f),1e-6);
+        assertTrue(SwordFormation.smoke(1.4f)>.1f&&SwordFormation.smoke(1.4f)<.9f,"thinning away: "+SwordFormation.smoke(1.4f));
+        assertTrue(SwordFormation.SMOKE_OUT1<=1.47f,"gone as the video's is");
+        assertEquals(0,SwordFormation.smoke(SwordFormation.SMOKE_OUT1),1e-6);
+        for(float t=0;t<2;t+=frame)assertEquals(SwordFormation.smoke(t),SwordFormation.smoke(t+frame),.07,"the smoke jumps at "+t);
+        // (2.82.8, "연기가 끝부분으로 피어오르다가 사라지는 거", "산 중간 부분까지 희미하게 피오르는듯") it rises off the rim
+        // as it lies there, to some half the mountains' height, and goes with it; low behind her, where her camera is
+        assertEquals(0,SwordFormation.veilLife(SwordFormation.SMOKE_FULL-.09f),1e-6);
+        assertEquals(1,SwordFormation.veilLife(1.28f),1e-6,"risen as the smoke is thickest");
+        assertEquals(0,SwordFormation.veilLife(SwordFormation.SMOKE_OUT1),1e-6,"gone with the smoke");
+        assertTrue(SwordFormation.VEIL_HIGH>=2.2&&SwordFormation.VEIL_HIGH<=3.2,"some half the mountains' height (4.4 to 6.4 blocks): "+SwordFormation.VEIL_HIGH);
+        assertEquals(SwordFormation.VEIL_HIGH,SwordFormation.veilHeight(1.32f),1e-6);
+        double lastHigh=SwordFormation.veilHeight(1.0f);
+        for(float t=1.0f;t<1.6f;t+=frame){
+            double h=SwordFormation.veilHeight(t);
+            assertTrue(h>=lastHigh-1e-9&&h-lastHigh<.08,"rising smoothly at "+t);lastHigh=h;
+            assertEquals(SwordFormation.veilLife(t),SwordFormation.veilLife(t+frame),.07,"the rising smoke jumps at "+t);
+        }
+        assertEquals(0,SwordFormation.veilOpen(1.0,1.0),1e-9,"low straight behind her");
+        assertEquals(1,SwordFormation.veilOpen(1.0+Math.PI,1.0),1e-9,"full across from her");
+        for(double az=0;az<6.3;az+=.37){
+            assertEquals(SwordFormation.veilAlpha(az,1.2,.4,1.25f,1,2,3),SwordFormation.veilAlpha(az+Math.PI*2,1.2,.4,1.25f,1,2,3),1e-9,"no seam round the rim");
+            assertEquals(0,SwordFormation.veilAlpha(az,3,1,1.25f,1,2,3),1e-9,"nothing at its top");
+        }
         // drying by patches as the formation settles, gone before the colour of the ground is all that is left
         assertEquals(0,SwordFormation.dry(SwordFormation.DRY0),1e-6);assertEquals(1,SwordFormation.dry(SwordFormation.DRY1),1e-6);
         // what the ink shader is told: its clock over two seconds; the gathering sheet's share in a byte (exactly)
