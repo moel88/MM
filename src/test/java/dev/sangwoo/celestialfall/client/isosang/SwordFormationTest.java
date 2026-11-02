@@ -421,6 +421,10 @@ class SwordFormationTest {
         assertEquals(1,SwordFormation.camera(new Vec3d(0,0,0),new Vec3d(6,0,0)),1e-9);
         // a ring drawn finely enough that its quads read as one sheet round the rim (some 3/4 of a block each)
         assertTrue(Math.PI*2*SwordFormation.RIM_OUT/SwordFormation.MIST_SEGS<.85,"fine round the rim");
+        // a dark navy, see-through, giving no light (2.82.12, "더 진하고 어두운 남색", "연기는 눈에 잘 안 띄이게 만들어야함
+        // 살짝 투명하고": none of its light added again; the front running out lights what is round it only a little)
+        assertEquals(0,SwordFormation.MIST_GLOW,1e-9,"no light added");
+        assertTrue(SwordFormation.FRONT_LIGHT>0&&SwordFormation.FRONT_LIGHT<.2f,"the front's light faint: "+SwordFormation.FRONT_LIGHT);
     }
     @Test void theWhirlpoolsClockAndBytes(){
         // what the ink shader is told: its clock over two seconds; the gathering sheet's share in a byte (exactly)

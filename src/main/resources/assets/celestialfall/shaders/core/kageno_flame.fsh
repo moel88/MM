@@ -9,6 +9,22 @@ out vec4 fragColor;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1)),f.x),f.y);}
 float fbm(vec2 p){return .53*noise(p)+.28*noise(p*2.03+17.7)+.13*noise(p*4.11+8.3)+.06*noise(p*8.23);}
+// Thin streaks of light along a family of n spiral lines (Lee So-sang's H whirlpool, mode 16 style 15; 2.82.12, user
+// request: "소용돌이를 포현하는 하늘색 부분이 너무 두껍다고 해야하나 결이 더 많아야 할듯"). k the line coordinate (a line where
+// it is whole, n of them a turn), kw how much it changes across a pixel, u the place along each line (the log of the
+// radius, so no seam), w a line's half width (a share of the gap between lines), d the dashes a unit of u, fill the
+// share of dashes drawn, s a seed. Each line its own width and brightness, each dash its own length, tapering at both
+// ends, its head (outward, leading the turn) the fuller; too fine to draw, a family fades away rather than shimmer.
+float streaks(float k,float kw,float u,float n,float w,float d,float fill,float s){
+ float i=floor(k+.5),f=k-i,id=mod(i,n);
+ float h1=hash(vec2(id+.31,s)),h2=hash(vec2(id*1.37+5.1,s+2.3));
+ float x=u*d+h1*13.0,j=floor(x),g=x-j;
+ float h3=hash(vec2(j+id*17.0,s+4.7)),h4=hash(vec2(j*1.7+id*5.0,s+8.9));
+ float tt=g/mix(.5,.97,h3);
+ float taper=smoothstep(0.0,.7,tt)*(1.0-smoothstep(.7,1.0,tt))*step(1.0-fill,h4);
+ float wid=w*mix(.7,1.3,h2)*(.3+.7*taper),ww=max(wid,kw*.75);
+ return exp(-f*f/(ww*ww))*wid/ww*taper*mix(.7,1.0,h2)*(1.0-smoothstep(.22,.45,kw));
+}
 void main(){
  vec2 p=uv*2.0-1.0;float seed=tint.r*31.7,t=Age*.075+seed;
  vec3 rgb;float alpha;
@@ -396,39 +412,48 @@ void main(){
     vec2 dir=r>1e-4?q/r:vec2(1.0,0.0);
     vec2 qW=dir*rO;float rW=rO;
     float th=r>1e-4?atan(q.y,q.x):0.0,lr=log(max(rW,.035)),aa=max(fwidth(rW),.0015);
-    // the eye: black, its edge wavering a little
-    float eyeR=eye*(1.0+.035*sin(4.0*th+sd+.8*tsec)+.02*sin(7.0*th-1.3*sd-1.4*tsec));
+    // the eye: black, round, its edge wavering only a little (2.82.12: the video's eye is a clean round; 2.82.7-2.82.11's
+    // wavered lumpily)
+    float eyeR=eye*(1.0+.012*sin(3.0*th+sd+.8*tsec)+.006*sin(5.0*th-1.3*sd-1.4*tsec));
     float inEye=eye>.01?1.0-smoothstep(eyeR-aa,eyeR+aa,rW):0.0;
-    // the streams (TWIST 5.2, turning SPIN .38 a second; SwordFormation.WHIRL_TWIST, WHIRL_SPIN): two broad, three thinner
+    // the streams (TWIST 5.2, turning SPIN .38 a second; SwordFormation.WHIRL_TWIST, WHIRL_SPIN)
     float warp=fbm(qW*2.3+vec2(sd*.7,-sd))-.5;
-    float psi=th+5.2*lr+.38*tsec+1.6*warp;
-    float s2=.5+.5*cos(2.0*psi+sd),s3=.5+.5*cos(3.0*psi+1.7*sd+2.1);
-    // broken into crescents by looser families running across them, the pieces carried out along the streams
+    float psi=th+5.2*lr+.38*tsec+.6*warp;
+    // (how fast psi changes across a pixel, leaving out the seam theta has behind the middle)
+    float psiW=fwidth(5.2*lr+.6*warp)+fwidth(r)/max(r,1e-3);
+    // where its light gathers: two broad arms and three thinner ones, each sharp on its inner side and trailing off
+    // outward, broken by looser families running across them, the pieces carried out along the streams
+    float p2=fract((2.0*psi+sd)/6.2831853),p3=fract((3.0*psi+1.7*sd+2.1)/6.2831853);
+    float e2=smoothstep(0.0,.07,p2)*(1.0-smoothstep(.07,.62,p2)),e3=smoothstep(0.0,.08,p3)*(1.0-smoothstep(.08,.5,p3));
     float cut2=smoothstep(-.75,.45,cos(2.0*(th-1.3*lr)+2.4*tsec+.7*sd));
     float cut3=smoothstep(-.45,.7,cos(3.0*(th-1.0*lr)+3.1*tsec+1.3*sd+1.0));
-    // (each fading as it thins, so the crescents taper away and never run on as hairlines)
-    float c2=smoothstep(.999-.5*cut2,1.0-.15*cut2,s2)*smoothstep(.05,.4,cut2),c3=smoothstep(.999-.3*cut3,1.0-.09*cut3,s3)*smoothstep(.1,.5,cut3);
     // only between the eye and the rim (their tails a little past where the water thins out), not in the very middle
     float band=smoothstep(eyeR+.004,eyeR+.05,rW)*(1.0-smoothstep(.86,1.04,rW))*smoothstep(.04,.14,rW);
-    float crest=max(c2,.8*c3)*band;
-    // fine streaks of water running out along the streams
-    float st=.5+.5*cos(13.0*psi+2.2*fbm(dir*2.0+vec2(lr*.6,sd)));
-    float dash=.5+.5*sin(8.0*lr-10.0*tsec+3.0*sin(4.0*psi+sd));
-    float streak=smoothstep(.76,.95,st)*smoothstep(.3,.8,dash)*band;
-    // its water settles a little toward a dark blue as the swords strike, and turns blue as it spreads (into smoke)
+    float gath=max(e2*cut2,.8*e3*cut3)*band;
+    // its light (2.82.12, user request: "소용돌이를 포현하는 하늘색 부분이 너무 두껍다고 해야하나 결이 더 많아야 할듯",
+    // "그냥 영상 따라서 만드는게 너는 힘든가?"; the video: thin swirling lines of pale light, many of them, gathering into
+    // the arms; 2.82.7-2.82.11 drew thick crescents): thin streaks along the streams, four families finer and finer,
+    // broken into dashes tapering at both ends that run out along them, the finer ones mostly where the arms gather
+    float u=lr-.55*tsec;
+    float sA=streaks(8.0*psi/6.2831853,8.0*psiW/6.2831853,u,8.0,.085,2.2,.85,sd);
+    float sB=streaks(14.0*psi/6.2831853+.37,14.0*psiW/6.2831853,u*1.15+.4,14.0,.07,3.0,.75,sd+3.3);
+    float sC=streaks(24.0*psi/6.2831853+.71,24.0*psiW/6.2831853,u*1.3+.9,24.0,.06,4.0,.7,sd+7.1);
+    float sD=streaks(40.0*psi/6.2831853+.13,40.0*psiW/6.2831853,u*1.45+1.3,40.0,.05,5.0,.65,sd+11.3);
+    float lines=(1.0-(1.0-sA*(.6+.4*gath))*(1.0-sB*(.3+.7*gath))*(1.0-sC*(.2+.8*gath))*(1.0-.8*sD*(.1+.9*gath)))*band;
+    // its water a dark navy (the video's), the eye darker; it settles a little toward a dark blue as the swords strike,
+    // a faint see-through blue haze where the arms gather, and it turns a dark blue as it spreads (into smoke)
     float settle=smoothstep(.95,1.2,tsec),conv=smoothstep(1.1,1.33,tsec);
     float mott=fbm(qW*3.1+vec2(-sd,sd)+tsec*vec2(.11,-.08));
-    vec3 water=mix(inkc,navy*.85,.25*mott+.4*settle*(1.0-inEye));
-    water=mix(water,vec3(.08,.17,.55),.55*conv);
-    // its crescents a see-through pale blue, no white (2.82.8, user request: "회오리 하늘색 부분 더 더 연하게": some
-    // third of 2.82.7's brightness; the video's crescents are periwinkle): the black water shows through them
-    vec3 pb=vec3(.5,.62,.92);
-    vec3 cc=mix(deep*.8,blue*.8,smoothstep(0.0,.3,crest));
-    cc=mix(cc,pb,smoothstep(.3,.9,crest));
-    cc=mix(cc,deep*.55,streak*.5);
-    cc=mix(cc,vec3(.3,.52,1.0),.5*conv);
-    rgb=mix(water,mix(navy*1.6,blue*.8,.4),streak*(1.0-crest)*.12);
-    rgb=mix(rgb,cc,crest*.6);
+    vec3 water=mix(vec3(.012,.018,.07),vec3(.03,.05,.18),.35+.45*mott);
+    water=mix(water,mix(inkc,navy*.6,.3*mott),inEye);
+    water=mix(water,navy*.9,.25*settle*(1.0-inEye));
+    water=mix(water,vec3(.18,.27,.62),.45*gath);
+    water=mix(water,vec3(.05,.09,.3),.5*conv);
+    // the streaks a pale periwinkle, no white (2.82.8, user request: "회오리 하늘색 부분 더 더 연하게"), a deeper blue
+    // where faint; the water showing through them
+    vec3 lc=mix(vec3(.3,.42,.86),vec3(.66,.78,.98),smoothstep(.2,.8,lines));
+    lc=mix(lc,vec3(.2,.32,.7),.5*conv);
+    rgb=mix(water,lc,min(1.0,lines*1.05));
     float sheen=eye>.01?exp(-max(rW-eyeR,0.0)/.05)*(1.0-inEye)*band:0.0;
     rgb=mix(rgb,mix(deep,blue,.5),sheen*.2);
     // dense in the eye, thinning out to a soft, ragged rim; the ground clean behind the front; thinning as it turns into
@@ -436,8 +461,8 @@ void main(){
     float n=fbm(qW*2.0+vec2(sd*1.3,sd*.7));
     float rim=1.0-smoothstep(.7,1.0,rW+.14*(n-.5));
     float shownW=1.0-smoothstep(1.27,1.45,tsec);
-    float a=max(mix(.86,.95,inEye)*rim,crest*.6)*clean*(1.0-.3*conv)*shownW;
-    float glow=(crest*(.16+.3*conv)+sheen*.15+streak*.04)*clean*shownW;
+    float a=max(mix(.86,.95,inEye)*rim,lines*.75)*clean*(1.0-.3*conv)*shownW;
+    float glow=(lines*(.28+.2*conv)+sheen*.15+gath*.04)*clean*shownW;
     // its front as it runs out: a thin, faint line of blue where the clean ground meets the water, ragged along it (the
     // edge of the water, not a lit rim round a puddle: 2.82.6's), and a thin blue mist lifting just behind it (the
     // whirlpool turning into smoke as it goes; the puffs rise off the water ahead of it)
@@ -445,10 +470,10 @@ void main(){
     if(fK>0.0){
      float d=r-fr,rag=.6+.4*fbm(dir*5.0+vec2(sd,tsec*1.3));
      float wA=(d<0.0?exp(d/.035):0.0)*fK*rag*.2;
-     float aw=a;a=wA+aw*(1.0-wA);rgb=(vec3(.14,.3,.86)*wA+rgb*aw*(1.0-wA))/max(a,1e-4);
+     float aw=a;a=wA+aw*(1.0-wA);rgb=(vec3(.05,.09,.3)*wA+rgb*aw*(1.0-wA))/max(a,1e-4);
      float line=exp(-abs(d)/.0035)*fK*rag;
-     float lA=min(1.0,line*.55);aw=a;a=lA+aw*(1.0-lA);rgb=(vec3(.24,.44,.95)*lA+rgb*aw*(1.0-lA))/max(a,1e-4);
-     glow+=line*.35+wA*.4;
+     float lA=min(1.0,line*.4);aw=a;a=lA+aw*(1.0-lA);rgb=(vec3(.18,.3,.72)*lA+rgb*aw*(1.0-lA))/max(a,1e-4);
+     glow+=line*.2+wA*.05;
     }
     // the smoke at the rim (2.82.8, user request: "끝으로 퍼지면서 이상한 아우라가 테두리 부분으로 퍼지면서 사라지거든", the
     // video's smoke round the formation's rim, read on a marked still and "일단 그렇게 해봐"; 2.82.10: "연기 파란색이여함
@@ -477,11 +502,13 @@ void main(){
      float nS=fbm(dS*3.3+vec2(lr0*5.0,sd*1.9));
      float gone=smoothstep(1.62,1.88,tsec);
      smoke*=(1.0-smoothstep(nS-.14,nS+.14,gone*1.2-.1+.15*(1.0-smoke)))*life;
-     vec3 sc=mix(vec3(.1,.22,.82),vec3(.38,.6,1.0),smoothstep(.3,.8,smoke));
-     float sA=min(1.0,smoke*1.05);
+     // a dark navy, see-through and not to catch the eye, barely lit (2.82.12, user request: "더 진하고 어두운 남색",
+     // "연기는 눈에 잘 안 띄이게 만들어야함 살짝 투명하고"; 2.82.10-2.82.11 a bright, thick electric blue)
+     vec3 sc=mix(vec3(.025,.04,.15),vec3(.07,.11,.33),smoothstep(.3,.8,smoke));
+     float sA=min(.85,smoke*.8);
      float aw=a;a=sA+aw*(1.0-sA);
      rgb=(sc*sA+rgb*aw*(1.0-sA))/max(a,1e-4);
-     glow+=smoke*.55;
+     glow+=smoke*.05;
     }
     rgb*=1.0+Hot*glow;
     alpha=a*tint.a;
@@ -656,10 +683,11 @@ void main(){
   float body=smoothstep(0.0,.05,v)*(1.0-smoothstep(top*.45,top,v));
   float dens=body*(.5+.5*lay)*(.55+.45*mid)*(.8+.4*fine);
   dens*=1.0-smoothstep(.45-thin*.4,.6-thin*.4,fbm(rg*6.0+vec2(v*3.0+tm*.3,seed*.7)))*thin;
-  rgb=mix(vec3(.06,.12,.6),vec3(.15,.31,1.0),smoothstep(.12,.5,dens));
-  rgb=mix(rgb,vec3(.38,.57,1.0),smoothstep(.55,.95,dens)*.65);
-  rgb*=1.0+Hot*smoothstep(.35,.9,dens);
-  alpha=clamp(dens*1.4,0.0,.92)*tint.a;
+  // (2.82.12, user request: "더 진하고 어두운 남색", "연기는 눈에 잘 안 띄이게 만들어야함 살짝 투명하고": a dark navy,
+  // see-through, unlit; 2.82.11 a bright electric blue near opaque at its foot, its light added again)
+  rgb=mix(vec3(.025,.04,.15),vec3(.06,.1,.32),smoothstep(.12,.5,dens));
+  rgb=mix(rgb,vec3(.11,.18,.46),smoothstep(.55,.95,dens)*.6);
+  alpha=clamp(dens*1.05,0.0,.62)*tint.a;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

@@ -34,9 +34,9 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * swords show high in the sky, points down. She spreads her arms to call them; the first is struck into the ground right
  * under her where the lightning ran; out of the middle, where the ink has gathered, a black spike shoots up and bursts
  * into blue light, and she dives down onto the pommel of the sword under her as streams of black water swirl out of the
- * middle, a whirlpool past the formation's edge, crescents of pale blue curling round its black eye (2.82.7), and the rest
- * rain down round its empty middle, each trailing blue lightning (it then spreads out and is gone, its pale blue lying
- * along the formation's rim as smoke and rising off it a moment, 2.82.8-2.82.9),
+ * middle, a whirlpool past the formation's edge, thin streaks of pale blue swirling round its black eye (2.82.7, many and
+ * thin since 2.82.12), and the rest rain down round its empty middle, each trailing blue lightning (it then spreads out
+ * and is gone, lying along the formation's rim as a dark navy smoke and mist a moment, 2.82.8-2.82.12),
  * each struck into the ground with a flower of blue crystal and a splash of ink at its foot. Ink mountains rise round
  * the formation (none behind her, where her camera looks from), white clouds curling over them and wisps of mist
  * drifting low (2.82.1); the swords, dark as they strike, turn silver with a white glow, a gleam running down one now
@@ -86,9 +86,12 @@ final class SwordFormation {
      * (EYE_R, the formation's empty middle: the swords strike round its edge) opening a little later (EYE0 to EYE1). Seen
      * from above its streams curl counterclockwise as they run out, some ten degrees off the round, and all of it turns
      * slowly the same way (the ink shader, style 15: a stream keeps theta + WHIRL_TWIST ln r, it turns WHIRL_SPIN radians
-     * a second; theta there grows clockwise seen from above). Its crescents are a see-through pale blue, no white, some
-     * third of 2.82.7's brightness (2.82.8, user request: "회오리 하늘색 부분 더 더 연하게"). As the swords strike it spreads
-     * out (2.82.10, below) and turns into the blue smoke at the rim.
+     * a second; theta there grows clockwise seen from above). Its light is a see-through pale blue, no white (2.82.8, user
+     * request: "회오리 하늘색 부분 더 더 연하게"): thin streaks, many of them, along its streams, gathering into two broad
+     * arms and three thinner ones over a faint blue haze, its water a dark navy (2.82.12, user request: "소용돌이를
+     * 포현하는 하늘색 부분이 너무 두껍다고 해야하나 결이 더 많아야 할듯", "그냥 영상 따라서 만드는게 너는 힘든가?";
+     * 2.82.7-2.82.11 drew thick crescents). As the swords strike it spreads out (2.82.10, below) and turns into the dark
+     * navy smoke at the rim.
      */
     static final float WHIRL1=.86f,EYE0=.73f,EYE1=.85f;
     static final double WHIRL_R=POOL_WIDE,EYE_R=5,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
@@ -111,8 +114,9 @@ final class SwordFormation {
      * (RIM_R, outside every sword and before the mountains' feet) it turns into a band of blue smoke on the ground there
      * (SMOKE_IN to SMOKE_FULL), its wisps streaming round the way the whirlpool turned, a see-through blue mist standing
      * round it (veilLife, shaders: 2.82.11, the user's marked screenshot); it drifts a little further out (to RIM_OUT) and thins away by patches,
-     * its thin wisps first (SMOKE_OUT0 to SMOKE_OUT1). The ink shader draws the band in the whirlpool's square (style 15),
-     * reading these off the formation's clock.
+     * its thin wisps first (SMOKE_OUT0 to SMOKE_OUT1). Both a dark navy, see-through, giving no light (2.82.12, user
+     * request: "더 진하고 어두운 남색", "연기는 눈에 잘 안 띄이게 만들어야함 살짝 투명하고"). The ink shader draws the band
+     * in the whirlpool's square (style 15), reading these off the formation's clock.
      */
     static final float SMOKE_IN=1.22f,SMOKE_FULL=1.36f,SMOKE_OUT0=1.64f,SMOKE_OUT1=1.88f;
     static final double RIM_R=11.2,RIM_OUT=12.2;
@@ -1088,7 +1092,8 @@ final class SwordFormation {
      * 피어오르게"; 2.82.11: "아니 내가 사진에 표시한 애들처럼 나오게 해달라고 연기를", their marked screenshot of the game:
      * a see-through, deep blue mist standing round the formation's rim, hugging the ground in streaks that run round it,
      * rising a little before the mountains' feet. 2.82.10 drew it as opaque billows, lumps, and 2.82.9 as a faint wash of
-     * added light, near white): how strongly it stands (0 to 1: coming as the whirlpool reaches the rim, gone with the
+     * added light, near white; 2.82.12: a dark navy, not to catch the eye, see-through, "더 진하고 어두운 남색", "연기는
+     * 눈에 잘 안 띄이게 만들어야함 살짝 투명하고"): how strongly it stands (0 to 1: coming as the whirlpool reaches the rim, gone with the
      * smoke lying there), how high (blocks: a little as it comes, VEIL_HIGH by VEIL_UP, its wisps rising on a little as it
      * goes), and how far it has thinned away (0 to 1: whole, then breaking up by holes, its thin wisps first).
      */
@@ -1109,6 +1114,13 @@ final class SwordFormation {
     /** How finely a ring of mist is drawn round, and how far it leans out (blocks a block up). */
     static final int MIST_SEGS=96;
     static final double MIST_LEAN=.25;
+    /**
+     * How much of the mist's light is added again (0: none, blended only) and how strongly the spreading whirlpool's front
+     * lights what is round it (2.82.12, user request: "더 진하고 어두운 남색", "연기는 눈에 잘 안 띄이게 만들어야함 살짝
+     * 투명하고": the smoke a dark navy, see-through, giving no light; 2.82.11 added a third of its light again and lit
+     * the rim with six blue lights, the front .35).
+     */
+    static final float MIST_GLOW=0,FRONT_LIGHT=.12f;
     /** How open the rim is to the mist at the angle {@code az} (0 straight behind her, where her camera looks in from, to 1 past MOUNTAIN_GAP, over 30 degrees). */
     static double veilOpen(double az,double back){
         double off=Math.abs(Math.atan2(Math.sin(az-back),Math.cos(az-back)));
@@ -1119,7 +1131,7 @@ final class SwordFormation {
     /**
      * The blue mist (the shader pass): a ring of upright mist fixed in the world (the ink shader's mode 17,
      * KagenoFire.mist: streaks running round the way the whirlpool turned and rising, dense at its foot, wisps at its
-     * uneven top, thinning away by holes; deep electric blue), blended for its blue and its light added again a little.
+     * uneven top, thinning away by holes; a dark navy, see-through, 2.82.12), blended, no light added (MIST_GLOW).
      * Off the spreading whirlpool, low, riding just outside its clean front as it runs out; then round the rim as the
      * whirlpool reaches it, standing to VEIL_HIGH. Low and thin behind her, where her camera looks in from (veilOpen);
      * gone close to the camera.
@@ -1141,7 +1153,7 @@ final class SwordFormation {
             Vec3d p=mid.add(Math.cos(az)*r,hh[i]*.35,Math.sin(az)*r);
             aa[i]=(float)(strength*(.45+.55*open)*camera(p,c.camera));
         }
-        KagenoFire.mist(c.matrix,c.camera,mid,rr,hh,aa,MIST_LEAN,thin,seed,c.age,.3f,dev.sangwoo.celestialfall.client.vfx.FxLayer.available()?1.2f:0);
+        KagenoFire.mist(c.matrix,c.camera,mid,rr,hh,aa,MIST_LEAN,thin,seed,c.age,MIST_GLOW,0);
     }
     /** Over the ink: the starlight now and then on a sword as the formation stands. */
     static void overlay(Fx c,EffectMesh m){
@@ -1301,16 +1313,12 @@ final class SwordFormation {
         // see-through blue), gone as it turns into the smoke
         float whirl=Ease.smooth(t,SWIRL0,SWIRL0+.06f)*whirlShown(t)*(1-Ease.smooth(t,SPREAD0,SPREAD0+.1f));
         if(whirl>.01f)f.light(poolCentre(c.cast).add(0,.6,0),0x6a9cff,Math.max(6,whirl(t)),.3f*whirl);
-        // the spreading whirlpool's front glows blue on the ground and the swords as it runs out (2.82.10)
+        // the spreading whirlpool's front glows a little blue on the ground and the swords as it runs out (2.82.10; 2.82.12
+        // fainter: the water it pushes out is a dark blue now). The smoke at the rim gives no light (2.82.12, user request:
+        // "연기는 눈에 잘 안 띄이게": a dark navy; 2.82.8-2.82.11 lit the ground and the mountains' feet round it).
         float run=Ease.smooth(t,SPREAD0,SPREAD0+.04f)*(1-Ease.smooth(t,SPREAD1-.04f,SPREAD1+.08f));
         double fr=front(t);
-        if(run>.01f&&fr>1){Vec3d m0=poolCentre(c.cast);for(int k=0;k<4;k++){double a=Math.PI*2*k/4+.8;f.light(m0.add(Math.cos(a)*fr,.4,Math.sin(a)*fr),0x4f7dff,4,.35f*run);}}
-        // the smoke at the rim glows a little on the ground and the mountains' feet round it
-        float smoke=smoke(t);
-        if(smoke>.01f){
-            double rr=rim(t);Vec3d mid=poolCentre(c.cast);
-            for(int k=0;k<6;k++){double a=Math.PI*2*k/6+.4;f.light(mid.add(Math.cos(a)*rr,1,Math.sin(a)*rr),0x3f68ff,5.5,.4f*smoke);}
-        }
+        if(run>.01f&&fr>1){Vec3d m0=poolCentre(c.cast);for(int k=0;k<4;k++){double a=Math.PI*2*k/4+.8;f.light(m0.add(Math.cos(a)*fr,.4,Math.sin(a)*fr),0x4f7dff,4,FRONT_LIGHT*run);}}
         float mid=Math.max(FxLib.kick(t,IsosangRules.H_PLANT+.02f,.16f),.7f*FxLib.kick(t,IsosangRules.H_PLANT-.055f,.02f));if(mid>.01f)f.light(centre.add(0,1,0),0xb8d8ff,12,1.4f*mid);
         for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.12f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,6,.7f*k);}
         float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED+.05f));
