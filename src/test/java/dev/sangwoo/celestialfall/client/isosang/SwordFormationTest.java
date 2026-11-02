@@ -358,7 +358,9 @@ class SwordFormationTest {
         // its eye: the formation's empty middle (every sword strikes outside it, round its edge), opening after the
         // whirlpool has started to spread and always well inside it, never jumping
         double inner=IsosangRules.FORMATION_EMPTY-IsosangRules.FORMATION_JITTER;
-        assertTrue(SwordFormation.EYE_R<inner&&SwordFormation.EYE_R>inner-.8,"the swords strike round the eye's edge: "+SwordFormation.EYE_R+" inside "+inner);
+        assertTrue(SwordFormation.EYE_R<inner&&SwordFormation.EYE_R>inner-1.2,"the swords strike round the eye's edge: "+SwordFormation.EYE_R+" inside "+inner);
+        // (2.82.16, "중앙으로 넘어간 검 있잖아": none in the bare middle, which the water leaves some 5.7 blocks across)
+        assertTrue(inner>5.9,"none in the bare middle: "+inner);
         assertTrue(SwordFormation.EYE0>SwordFormation.SWIRL0,"the eye opens once it has started to spread");
         double lastEye=0;
         for(float t=SwordFormation.SWIRL0;t<1.4f;t+=frame){

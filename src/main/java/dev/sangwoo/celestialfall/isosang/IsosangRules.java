@@ -521,7 +521,8 @@ public final class IsosangRules {
      * from its even place either way (blocks).
      */
     public static final int FORMATION_SWORDS=28;
-    public static final double FORMATION_EMPTY=5.4,FORMATION_EDGE=.6,FORMATION_JITTER=.35;
+    /** (FORMATION_EMPTY 6.3, was 5.4: "중앙으로 넘어간 검 있잖아": a sword or two stood in the bare middle, which is some 5.7 blocks across.) */
+    public static final double FORMATION_EMPTY=6.3,FORMATION_EDGE=.6,FORMATION_JITTER=.35;
     /** The golden angle: each sword this far round from the one before, so they spread evenly with no rows. */
     static final double GOLDEN=Math.PI*(3-Math.sqrt(5));
     /**
