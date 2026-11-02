@@ -2,7 +2,7 @@
 
 Not a game screenshot: a developer's look at the shape before a shoot (never sent as in-game verification). It draws the
 formation's blue ground (style 14) and the whirlpool at SwordFormation's sizes (whirl, eye) seen from straight above,
-north up, 16.5 blocks either side, blended and then its light added (crescentGain .18, Hot 1.8) as the ground pass does.
+north up, 20.5 blocks either side, blended and then its light added (crescentGain .18, Hot 1.8) as the ground pass does.
 Needs libEGL (apt-get install libegl1 libegl-mesa0).
 
     python3 -I tools/isosang/preview_whirl.py src/main/resources/assets/celestialfall/shaders/core .78,.95,1.25 560 out.png
@@ -60,21 +60,22 @@ def quad(half,span,k,code,gb,bb,alpha):
         v+= [cx*s,cy*s,0, cx*k,-cy*k, code/255.0,gb,bb,alpha]
     arr=(F*len(v))(*v);g('glBufferData',None,[U,C.c_ssize_t,P,U])(0x8892,C.sizeof(arr),arr,0x88E0)
     g('glDrawArrays',None,[U,I,I])(4,0,6)
+def smooth(t,a,b):
+    x=min(max((t-a)/(b-a),0),1);return x*x*(3-2*x)
 def frame(R,eye_share,tsec,span,seed=5,alpha=1.0,ground=True):
     g('glClearColor',None,[F,F,F,F])(.36,.42,.30,1);g('glClear',None,[U])(0x4000)
     clock=min(max(tsec/2,0),1);eb=min(max(eye_share,0),1)
     # pass 1: blended
     g('glBlendFunc',None,[U,U])(0x0302,0x0303);g('glUniform1f',None,[I,F])(hotloc,0.0)
-    if ground:quad(10.6,span,1.0,14*16+(seed&15),0,0,.58)
-    if R>0.02:quad(R*1.06,span,1.06,15*16+((seed+5)&15),round(clock*255)/255,round(eb*255)/255,alpha)
+    # the formation's blue ground, gone with the whirlpool (SwordFormation.tint)
+    if ground:quad(10.6,span,1.0,14*16+(seed&15),0,0,.58*smooth(tsec,.7,.85)*(1-smooth(tsec,1.04,1.2)))
+    if R>0.02:quad(R*1.4,span,1.4,15*16+((seed+5)&15),round(clock*255)/255,round(eb*255)/255,alpha)
     # pass 2: additive glow (crescentGain .18, Hot 1.8)
     g('glBlendFunc',None,[U,U])(0x0302,1);g('glUniform1f',None,[I,F])(hotloc,1.8)
-    if R>0.02:quad(R*1.06,span,1.06,15*16+((seed+5)&15),round(clock*255)/255,round(eb*255)/255,alpha*.18)
+    if R>0.02:quad(R*1.4,span,1.4,15*16+((seed+5)&15),round(clock*255)/255,round(eb*255)/255,alpha*.18)
     px=np.empty((H,W,4),np.uint8);g('glReadPixels',None,[I,I,I,I,U,U,P])(0,0,W,H,0x1908,0x1401,px.ctypes.data)
     err=g('glGetError',U,[])();assert err==0,hex(err)
     return Image.fromarray(px[::-1].copy()).convert('RGB')
-def smooth(t,a,b):
-    x=min(max((t-a)/(b-a),0),1);return x*x*(3-2*x)
 def plan(t):
     # SwordFormation.whirl and eye (2.82.7)
     R=14.5*smooth(t,.70,.86) if t>=.70 else 0
@@ -84,8 +85,8 @@ times=[float(v) for v in sys.argv[2].split(',')]
 tiles=[]
 for t in times:
     R,es=plan(t)
-    a=smooth(t,.70,.72)*(1-smooth(t,1.86,1.96))
-    im=frame(R,es,t,16.5,alpha=a)
+    a=smooth(t,.70,.72)*(1-smooth(t,1.43,1.49))
+    im=frame(R,es,t,20.5,alpha=a)
     d=ImageDraw.Draw(im);d.rectangle((0,0,170,18),fill=(0,0,0));d.text((4,4),f't={t:.2f}s R={R:.1f} eye={es*.6*R:.1f}',fill=(255,255,0))
     tiles.append(im)
 cols=3;rows=(len(tiles)+cols-1)//cols
