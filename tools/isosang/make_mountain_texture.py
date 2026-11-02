@@ -9,8 +9,7 @@ paintings themselves are not redrawn; this only:
   - with --black, takes the black round the painting away (the near-black connected to its border; dark ink inside the
     mountain stays, however dark);
   - crops it to the mountain;
-  - makes its ink body a little see-through (--body, BODY_ALPHA; the mountain and the peak .9 since "큰산 작은산들
-    투명도만 조금 낮추자 거의 희미해서 자세히 봐야하는 산들 제외") and a little darker, its rims of light kept as they are
+  - makes its ink body a little see-through (--body, BODY_ALPHA) and a little darker, its rims of light kept as they are
     (earlier: "산을 더 투명하게 만들고 테두리 제외 산을 더 어둡게");
   - frays its foot away over its lowest FOOT of its height (it floats: "영상에는 산이 중간에 떠있는데");
   - with --sides F, frays its sides away where the picture cut it off: from where the mountain first meets a side, in
@@ -18,9 +17,9 @@ paintings themselves are not redrawn; this only:
   - scales it down to --width pixels across (never up) in premultiplied alpha (no dark fringe at its edges) and pads it
     with a clear border of PAD pixels (no clamped edge pixels smeared).
 
-python3 -I tools/isosang/make_mountain_texture.py --body .9 mountain.png \
+python3 -I tools/isosang/make_mountain_texture.py mountain.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain.png
-python3 -I tools/isosang/make_mountain_texture.py --black --width 800 --seed 8218 --body .9 peak.png \
+python3 -I tools/isosang/make_mountain_texture.py --black --width 800 --seed 8218 peak.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain_peak.png
 python3 -I tools/isosang/make_mountain_texture.py --black --width 960 --seed 8219 small.png \
     src/main/resources/assets/celestialfall/textures/effect/isosang_mountain_small.png

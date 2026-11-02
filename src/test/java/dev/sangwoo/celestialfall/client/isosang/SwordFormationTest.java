@@ -226,7 +226,7 @@ class SwordFormationTest {
         float yaw=40;var fill=SwordFormation.fill(id,yaw);var six=SwordFormation.mountains(id,yaw);
         assertSame(fill,SwordFormation.fill(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()),yaw),"the same for the same formation");
         assertEquals(6+fill.length,SwordFormation.peaks(id,yaw).size(),"drawn with the six");
-        for(var mt:six){assertEquals(0,mt.art());assertEquals(SwordFormation.MOUNTAIN_HALF,mt.half(),1e-12);assertEquals(1,mt.alpha());}
+        for(var mt:six){assertEquals(0,mt.art());assertEquals(SwordFormation.MOUNTAIN_HALF,mt.half(),1e-12);assertEquals(SwordFormation.MOUNTAIN_ALPHA,mt.alpha(),1e-6);assertTrue(mt.alpha()<1&&mt.alpha()>.6,"a little see-through");}
         double behind=SwordFormation.behind(yaw);
         int peaks=0,small=0;double prev=Double.NaN;
         for(var mt:fill){

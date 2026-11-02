@@ -512,12 +512,14 @@ final class SwordFormation {
         l=new Mountain[MOUNTAIN_COUNT];double off=behind(yaw)+Math.PI/MOUNTAIN_COUNT;
         for(int i=0;i<MOUNTAIN_COUNT;i++){
             int seed=s0+211*(i+1);
-            l[i]=new Mountain(off+Math.PI*2*i/MOUNTAIN_COUNT,MOUNTAIN_R,.14f*(float)Ease.hash(seed+90),seed,0,MOUNTAIN_TOP,1,false);
+            l[i]=new Mountain(off+Math.PI*2*i/MOUNTAIN_COUNT,MOUNTAIN_R,.14f*(float)Ease.hash(seed+90),seed,0,MOUNTAIN_TOP,MOUNTAIN_ALPHA,false);
         }
         MOUNTAINS.put(id,l);while(MOUNTAINS.size()>16)MOUNTAINS.remove(MOUNTAINS.keySet().iterator().next());
         return l;
     }
     static final int MOUNTAIN_COUNT=6;
+    /** How strongly the six show (2.82.16: "큰산 작은산들 ... 더 투명하게": a little see-through, rims and all). */
+    static final float MOUNTAIN_ALPHA=.82f;
     /** (2.82.16: where they stood with the formation 12 blocks; they stay there as the swords spread out to their feet.) */
     static final double MOUNTAIN_R=15.4;
     private static final Map<UUID,Mountain[]> FILL=new LinkedHashMap<>();
@@ -558,8 +560,8 @@ final class SwordFormation {
      * to show its size) and how strongly it shows.
      */
     static final double PEAK_BACK=.4,PEAK_LEFT=1.5,PEAK_TOP=2.0;
-    /** (PEAK_ALPHA .85, was .7: "큰산 작은산들 투명도만 조금 낮추자 거의 희미해서 자세히 봐야하는 산들 제외".) */
-    static final float PEAK_ALPHA=.85f;
+    /** (PEAK_ALPHA .58, was .7, and the six at MOUNTAIN_ALPHA: "큰산 작은산들 투명도만 조금 낮추자 거의 희미해서 자세히 봐야하는 산들 제외", then "아니아니 더 투명하게".) */
+    static final float PEAK_ALPHA=.58f;
     /** The small mountains: how many, how far behind the six (from, to), how tall (from, to), how strongly they show, how far round from right behind her none stands. */
     static final int SMALL_COUNT=20;
     static final double SMALL_BACK0=1.0,SMALL_BACK1=3.0,SMALL_TOP0=1.6,SMALL_TOP1=2.4,SMALL_CLEAR=Math.toRadians(70);
