@@ -1364,6 +1364,7 @@ final class SwordFormation {
      * gone close to the camera.
      */
     static void shaders(Fx c){
+        stream(c);
         float t=c.sec;if(t<SPREAD0||t>=SMOKE_OUT1+.02f)return;
         Vec3d mid=poolCentre(c.cast);double back=behind(yaw(c.cast));int seed=c.cast.id().hashCode();
         float fm=frontMist(t);
@@ -1371,6 +1372,33 @@ final class SwordFormation {
         float rm=veilLife(t);
         if(rm>.005f)mist(c,mid,rim(t),veilHeight(t),.92f*rm,veilThin(t),seed+29,back);
     }
+    /**
+     * The stream of water under the mountains (2.82.16, user request with their marked screenshot of the game: "산 아래에
+     * 물 줄기 비슷한게 흐르거든? 그거만 만들면 돼 사진까지 보내줄게 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래", "산이
+     * 떠있는 높이만큼 물줄기 높이를 잡아주면 돼 ... 물줄기 높이는 0.6칸으로"): a ring of running water standing on the ground
+     * just before the mountains' feet, STREAM_HIGH blocks high, under them as they float (MOUNTAIN_FLOAT), its streaks
+     * running round (the ink shader's mode 17, its stream, KagenoFire.stream; a little of its light added again). It comes
+     * in as the mountains rise and goes as they sink; it thins where it stands before her camera, as the mountains do
+     * (occlusion), and close to the camera.
+     */
+    static void stream(Fx c){
+        float t=c.sec,end=end(c.cast);
+        float up=Ease.smooth(t,RISE0+.2f,RISE1+.6f)*(1-Ease.smooth(t,end+GLOW,end+GONE+.2f));
+        if(up<=.005f)return;
+        Vec3d mid=centre(c.cast);double camAz=cameraAz(mid,c.camera);
+        int n=STREAM_SEGS;double[] rr=new double[n+1],hh=new double[n+1];float[] aa=new float[n+1];
+        for(int i=0;i<=n;i++){
+            double az=Math.PI*2*i/n;rr[i]=STREAM_R;hh[i]=STREAM_HIGH;
+            float before=Double.isNaN(camAz)?1:OCCLUDED+(1-OCCLUDED)*Ease.smooth((float)Math.abs(Math.IEEEremainder(az-camAz,Math.PI*2)),(float)OCCLUDE0,(float)OCCLUDE1);
+            Vec3d p=mid.add(Math.cos(az)*STREAM_R,STREAM_HIGH/2,Math.sin(az)*STREAM_R);
+            aa[i]=(float)(up*before*camera(p,c.camera));
+        }
+        KagenoFire.stream(c.matrix,c.camera,mid,rr,hh,aa,c.cast.id().hashCode()+53,c.age,STREAM_GLOW,0);
+    }
+    /** The stream: how far out (just before the mountains' feet), how high (blocks), how finely drawn round, how much of its light is added again. */
+    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=.6;
+    static final int STREAM_SEGS=160;
+    static final float STREAM_GLOW=.35f;
     /** A ring of the mist round {@code mid}: {@code r} blocks out, {@code high} blocks up (low and thin behind her), of strength {@code strength}, thinned away {@code thin}. */
     static void mist(Fx c,Vec3d mid,double r,double high,float strength,float thin,int seed,double back){
         int n=MIST_SEGS;double[] rr=new double[n+1],hh=new double[n+1];float[] aa=new float[n+1];

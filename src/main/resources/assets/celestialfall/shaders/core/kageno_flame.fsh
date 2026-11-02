@@ -739,6 +739,30 @@ void main(){
    rgb*=1.0+Hot*lit;
    alpha=body*tint.a;
   }
+ }else if(Mode==17&&tint.b>.5){
+  // The stream of water under the mountains of Lee So-sang's sword formation (2.82.16, user request with their marked
+  // screenshot of the game: "산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래",
+  // "물줄기 높이는 0.6칸으로"): the same ring of upright quads as the mist (KagenoFire.stream; uv.x the share of a turn
+  // round it, uv.y of its height), its water running round under the mountains: a see-through pale blue body and in it
+  // streaks of light water, four lines along its height each wavering up and down, broken into running dashes, white
+  // at their cores. Its noise has whole numbers of cells round the ring (pnoise), so it closes up with no seam.
+  float u=uv.x,v=clamp(uv.y,0.0,1.0),tm=Age;
+  float swell=fbm(vec2(cos(u*6.2831853),sin(u*6.2831853))*3.2+vec2(seed*.29,tm*.07));
+  float core=0.0,soft=0.0;
+  for(int i=0;i<4;i++){
+   float fi=float(i),x=u*56.0-tm*(1.6+.3*fi);
+   float y0=.17+.2*fi+.07*sin(x*.45+fi*2.1+swell*4.0)+.05*(pnoise(vec2(x*.75,fi*3.7+seed),42.0)-.5);
+   float w=.08+.05*pnoise(vec2(x*1.25+fi*5.0,seed+fi),70.0);
+   float d=abs(v-y0);
+   float dash=smoothstep(.36,.6,pnoise(vec2(x*.5+fi*11.0,fi*1.9-seed),28.0));
+   core=max(core,(1.0-smoothstep(w*.3,w,d))*dash);
+   soft=max(soft,(1.0-smoothstep(w,w*3.2,d))*dash);
+  }
+  float body=smoothstep(0.0,.12,v)*(1.0-smoothstep(.78,1.0,v));
+  float haze=.45+.55*pfbm(vec2(u*28.0-tm*.9,v*2.0+seed),28.0);
+  rgb=mix(vec3(.36,.56,.9),vec3(.68,.85,1.0),soft);
+  rgb=mix(rgb,vec3(.95,.98,1.0),core);
+  alpha=clamp(haze*.2+soft*.3+core*.72,0.0,.9)*body*tint.a;
  }else if(Mode==17){
   // Blue mist standing round Lee So-sang's sword formation (2.82.11, user request with their marked screenshot of the
   // game: "아니 내가 사진에 표시한 애들처럼 나오게 해달라고 연기를": a see-through, deep blue mist hugging the ground round

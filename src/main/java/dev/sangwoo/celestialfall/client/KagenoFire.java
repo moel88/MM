@@ -93,6 +93,16 @@ public final class KagenoFire {
      * light added again at {@code glow} of its strength (at {@code glowHot} over white on the effect layer).
      */
     public static void mist(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,double lean,float thin,int seed,float age,float glow,float glowHot){
+        ring(m,camera,centre,radius,height,alpha,lean,thin,seed,age,glow,glowHot,0);
+    }
+    /**
+     * The stream of water under the mountains of Lee So-sang's H (2.82.16): the same ring of upright quads as the mist,
+     * drawn by the ink shader's mode 17 as running water (its stream: the blue byte set).
+     */
+    public static void stream(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,int seed,float age,float glow,float glowHot){
+        ring(m,camera,centre,radius,height,alpha,0,0,seed,age,glow,glowHot,255);
+    }
+    private static void ring(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,double lean,float thin,int seed,float age,float glow,float glowHot,int kind){
         if(shader==null)return;int n=radius.length-1;if(n<3||height.length<=n||alpha.length<=n)return;
         boolean any=false;for(int i=0;i<n;i++)if(alpha[i]+alpha[i+1]>.004f){any=true;break;}
         if(!any)return;
@@ -113,10 +123,10 @@ public final class KagenoFire {
                 if(alpha[i]+alpha[i+1]<=.004f)continue;
                 float u0=i/(float)n,u1=(i+1)/(float)n;
                 int a0=Math.max(0,Math.min(255,(int)(alpha[i]*k*255))),a1=Math.max(0,Math.min(255,(int)(alpha[i+1]*k*255)));
-                b.vertex(m,(float)bottom[i].x,(float)bottom[i].y,(float)bottom[i].z).texture(u0,0).color(seed&255,t,0,a0).next();
-                b.vertex(m,(float)bottom[i+1].x,(float)bottom[i+1].y,(float)bottom[i+1].z).texture(u1,0).color(seed&255,t,0,a1).next();
-                b.vertex(m,(float)top[i+1].x,(float)top[i+1].y,(float)top[i+1].z).texture(u1,1).color(seed&255,t,0,a1).next();
-                b.vertex(m,(float)top[i].x,(float)top[i].y,(float)top[i].z).texture(u0,1).color(seed&255,t,0,a0).next();
+                b.vertex(m,(float)bottom[i].x,(float)bottom[i].y,(float)bottom[i].z).texture(u0,0).color(seed&255,t,kind,a0).next();
+                b.vertex(m,(float)bottom[i+1].x,(float)bottom[i+1].y,(float)bottom[i+1].z).texture(u1,0).color(seed&255,t,kind,a1).next();
+                b.vertex(m,(float)top[i+1].x,(float)top[i+1].y,(float)top[i+1].z).texture(u1,1).color(seed&255,t,kind,a1).next();
+                b.vertex(m,(float)top[i].x,(float)top[i].y,(float)top[i].z).texture(u0,1).color(seed&255,t,kind,a0).next();
             }
             end(b);
             if(pass==1){RenderSystem.defaultBlendFunc();hot=h0;}

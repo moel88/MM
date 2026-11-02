@@ -268,6 +268,15 @@ class SwordFormationTest {
         for(var mt:fill)for(float t=SwordFormation.RISE0;t<end+3;t+=frame)
             assertEquals(SwordFormation.mountainUp(end,mt,t),SwordFormation.mountainUp(end,mt,t+frame),.06,"it jumps at "+t);
     }
+    @Test void aStreamRunsUnderTheMountains(){
+        // 2.82.16 ("산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래", "산이 떠있는 높이만큼
+        // 물줄기 높이를 잡아주면 돼 ... 물줄기 높이는 0.6칸으로"): 0.6 blocks high, under the floating mountains, just before
+        // their feet, all the way round
+        assertEquals(.6,SwordFormation.STREAM_HIGH,1e-12);
+        assertTrue(SwordFormation.STREAM_HIGH<SwordFormation.MOUNTAIN_FLOAT,"under the mountains as they float");
+        assertTrue(SwordFormation.STREAM_R<SwordFormation.MOUNTAIN_R&&SwordFormation.STREAM_R>SwordFormation.MOUNTAIN_R-1,"just before their feet");
+        assertTrue(Math.PI*2*SwordFormation.STREAM_R/SwordFormation.STREAM_SEGS<.7,"drawn finely round");
+    }
     @Test void faintHazeTurnsSlowlyOverTheMountainsAndWispsOfMistDriftLow(){
         // 2.82.16 ("산 위에는 희미한 안개같은 구름이 천천히 돌아가고"): banks of faint haze over and behind the mountains, all
         // turning slowly the same way together; the low wisps of mist as before; no curled clouds any more
