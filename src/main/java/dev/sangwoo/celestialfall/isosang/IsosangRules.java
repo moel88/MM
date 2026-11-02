@@ -453,7 +453,7 @@ public final class IsosangRules {
      * 2.82.2, user request: "그리고 범위 조금만 줄여", then 10 again in 2.82.3: "아니다 범위는 원래대로 늘리고") and how far
      * under and over its ground a body is still in it.
      */
-    public static final double FORMATION_RADIUS=12,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
+    public static final double FORMATION_RADIUS=14.5,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
     /** The damage as the swords strike (the user's word: 30) and every {@link #FORMATION_EVERY} ticks after (5). */
     public static final float FORMATION_IMPACT=30,FORMATION_TICK=5;
     /** The tick into H the swords strike (as the rain of swords crashes in), and how often it strikes again after (the user's word: every 5 s). */
@@ -513,13 +513,15 @@ public final class IsosangRules {
 
     /**
      * The formation's swords (2.82.16, user request: "H 범위를 조금만 더 넓히고 검 개수는 조금만 줄이고 검이 중앙 제외 모든
-     * 범위에 박혀 있게 하자 지금 너무 앞부분에 쏠려있어", then "검 28개": FORMATION_RADIUS 12, was 10; 28 swords, were 48 in
-     * three rings from 5.5 to 8.7 blocks out, none in the band outside them nor round behind her): how many, from how far out (the empty
+     * 범위에 박혀 있게 하자 지금 너무 앞부분에 쏠려있어", then "검 28개", then "뒤가 ㅈㄴ 빈다고 걍 뒤까지 포함에서 칼을 골고루
+     * 박으라는건데": FORMATION_RADIUS 14.5, was 10, so the swords lie all over the ground inside the mountains, behind her
+     * too, the mountains where they were; 28 swords, were 48 in three rings from 5.5 to 8.7 blocks out, none in the band
+     * outside them nor round behind her): how many, from how far out (the empty
      * middle, as since 2.82.3), how far inside the formation's edge the outermost stand, and how far a sword may stray
      * from its even place either way (blocks).
      */
     public static final int FORMATION_SWORDS=28;
-    public static final double FORMATION_EMPTY=5.4,FORMATION_EDGE=1.2,FORMATION_JITTER=.35;
+    public static final double FORMATION_EMPTY=5.4,FORMATION_EDGE=.6,FORMATION_JITTER=.35;
     /** The golden angle: each sword this far round from the one before, so they spread evenly with no rows. */
     static final double GOLDEN=Math.PI*(3-Math.sqrt(5));
     /**

@@ -78,7 +78,7 @@ final class SwordFormation {
      * edge, three thin arms of light turning in it the wrong way round, a lit rim round it like a puddle's.)
      */
     static final float POOL0=.19f,POOL1=.29f,GATHER0=.32f,GATHER_FAST=.5f,GATHER_SLOW=.42f,GATHER1=.64f,COLLAPSE0=.56f,COLLAPSE=IsosangRules.H_PLANT-.055f,SWIRL0=.7f,SWIRL1=1.15f;
-    static final double POOL_WIDE=IsosangRules.FORMATION_RADIUS+4.5,GATHER_MID=3.4,POOL_IN=2.4;
+    static final double POOL_WIDE=SwordFormation.MOUNTAIN_R+1.1,GATHER_MID=3.4,POOL_IN=2.4;
     /**
      * The whirlpool (2.82.7, user request: "잉크가 모였다가 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가
      * 크게 나옴" with their still of the video; the video read again a frame at a time and put back on the ground plane):
@@ -113,7 +113,7 @@ final class SwordFormation {
      * The smoke at the rim (2.82.8, user request: "끝으로 퍼지면서 이상한 아우라가 테두리 부분으로 퍼지면서 사라지거든", the
      * video's pale blue smoke round the formation's rim, read on a marked still, then "일단 그렇게 해봐"; 2.82.10: blue,
      * thicker, rising more, the whirlpool spreading out into it): as the spreading whirlpool reaches the formation's rim
-     * (RIM_R, outside every sword and before the mountains' feet) it turns into a band of blue smoke on the ground there
+     * (RIM_R, outside every sword, just before the mountains' feet) it turns into a band of blue smoke on the ground there
      * (SMOKE_IN to SMOKE_FULL), its wisps streaming round the way the whirlpool turned, a see-through blue mist standing
      * round it (veilLife, shaders: 2.82.11, the user's marked screenshot); it drifts a little further out (to RIM_OUT) and thins away by patches,
      * its thin wisps first (SMOKE_OUT0 to SMOKE_OUT1). Both a dark navy, see-through, giving no light (2.82.12, user
@@ -121,7 +121,7 @@ final class SwordFormation {
      * in the whirlpool's square (style 15), reading these off the formation's clock.
      */
     static final float SMOKE_IN=1.22f,SMOKE_FULL=1.36f,SMOKE_OUT0=1.64f,SMOKE_OUT1=1.88f;
-    static final double RIM_R=IsosangRules.FORMATION_RADIUS+1.2,RIM_OUT=IsosangRules.FORMATION_RADIUS+2.2;
+    static final double RIM_R=SwordFormation.MOUNTAIN_R-.8,RIM_OUT=SwordFormation.MOUNTAIN_R-.2;
     /** The mountains rise; the clouds and the mist start coming in (each a little after this, over a second: Cloud.in). */
     static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f;
     /** The swords, dark as they strike, turn silver; the crystal flowers at their feet wilt. */
@@ -518,7 +518,8 @@ final class SwordFormation {
         return l;
     }
     static final int MOUNTAIN_COUNT=6;
-    static final double MOUNTAIN_R=IsosangRules.FORMATION_RADIUS+3.4;
+    /** (2.82.16: where they stood with the formation 12 blocks; they stay there as the swords spread out to their feet.) */
+    static final double MOUNTAIN_R=15.4;
     private static final Map<UUID,Mountain[]> FILL=new LinkedHashMap<>();
     /**
      * The user's two other paintings among the six (2.82.16, user request, with the two: "빈 공간에 이거 넣고 그래도 남는
@@ -972,7 +973,7 @@ final class SwordFormation {
     static void ground(Fx c){
         float t=c.sec;Vec3d centre=centre(c.cast);int seed=c.cast.id().hashCode();
         float blue=tint(t);
-        if(blue>.005f){double r=IsosangRules.FORMATION_RADIUS+.6;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed&7,holeByte(t,r),0,blue);}
+        if(blue>.005f){double r=RIM_R-.1;KagenoFire.inkGround(centre.add(0,.04,0),r,r,14,seed&7,holeByte(t,r),0,blue);}
         float water=flowLife(t,end(c.cast));
         if(water>.005f){
             var sh=shore(c.cast.id(),yaw(c.cast));int clock=flowClock(t);Vec3d at=centre.add(0,.045,0);
@@ -994,7 +995,7 @@ final class SwordFormation {
      * under the formation after it, nor the ink splashed at the swords' feet; 2.82.10: from the middle out with the front,
      * drying away just behind it).
      */
-    static float groundInk(float t,double d){return 1-Ease.smooth((float)front(t),(float)d-1f,(float)d+2f);}
+    static float groundInk(float t,double d){return 1-Ease.smooth((float)front(t),(float)d-1.5f,(float)Math.min(d+2.5,RIM_R));}
     /** The blue of the formation's ground (0 to about .6): coming in as the whirlpool swirls out; its middle cleared by the front (holeByte), gone once it reaches the rim. */
     static float tint(float t){return .58f*Ease.smooth(t,SWIRL0,SWIRL0+.15f)*(1-Ease.smooth(t,SPREAD1-.06f,SPREAD1+.04f));}
     /** The ink shader's byte for the blue ground's cleared middle (style 14): the front's reach as a share of the square's half-width {@code r}, over 1.25. */
