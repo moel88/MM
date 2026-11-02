@@ -290,7 +290,7 @@ class IsosangRulesTest {
         // (2.82.4, "H를 쓰면 내가 점프를 하고 그 자리에 검이 하나 있어야해 그러니까 H는 플레이어 기준 중앙으로 나오는게 아니고
         // 외곽부분으로 나와야함": the sword she stands on is where she leapt, on the formation's outer ring, its middle ahead
         // of her; the server holds her there and every client draws that sword there: one reckoning)
-        assertTrue(FORMATION_STAND_BACK>FORMATION_EMPTY-FORMATION_JITTER&&FORMATION_STAND_BACK<FORMATION_RADIUS-4,"among the swords, the formation reaching on behind her");
+        assertTrue(FORMATION_STAND_BACK>FORMATION_EMPTY-FORMATION_JITTER&&FORMATION_RADIUS-FORMATION_STAND_BACK>3,"among the swords, the formation reaching on behind her");
         assertArrayEquals(new double[]{-FORMATION_STAND_BACK,0},standAt(),1e-12);
         var rnd=new java.util.Random(7);
         for(int n=0;n<300;n++){

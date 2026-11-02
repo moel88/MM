@@ -93,10 +93,11 @@ final class SwordFormation {
      * arms and three thinner ones over a faint blue haze, its water a dark navy (2.82.12, user request: "소용돌이를
      * 포현하는 하늘색 부분이 너무 두껍다고 해야하나 결이 더 많아야 할듯", "그냥 영상 따라서 만드는게 너는 힘든가?";
      * 2.82.7-2.82.11 drew thick crescents). As the swords strike it spreads out (2.82.10, below) and turns into the dark
-     * navy smoke at the rim.
+     * navy smoke at the rim. (EYE_R 5 until 2.82.16; 4 in 2.82.17, the formation 8 blocks wide: inside its swords, which
+     * strike from 4.25 blocks out.)
      */
     static final float WHIRL1=.86f,EYE0=.73f,EYE1=.85f;
-    static final double WHIRL_R=POOL_WIDE,EYE_R=5,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
+    static final double WHIRL_R=POOL_WIDE,EYE_R=4,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
     /**
      * The whirlpool spreads out and turns into smoke (2.82.10, user request: "퍼진다는 느낌이 안 나잖아 그리고 연기
      * 파란색이여함 연기를 더 진하게 만들고 더 많이 피어오르게 하고 소용돌이가 퍼져서 연기가 되는거처럼 만들어"; 2.82.9 only
@@ -608,9 +609,12 @@ final class SwordFormation {
      * How high over the ground the mountains float (blocks; 2.82.16, user request: "영상에는 산이 중간에 떠있는데 너가 만든건
      * 왜 바닥에서 부터 산이 있냐?": in the video their feet fray away above the ground, the grass showing through and under
      * them; then "조금 더 낮추고"; then .7, as the user had it, the stream under them .6 high: "지금 0.7칸 떠있다고 했나? 그럼
-     * 물줄기 높이는 0.6칸으로"), their feet fraying away in the painting's lowest eighth.
+     * 물줄기 높이는 0.6칸으로"), their feet fraying away in the painting's lowest eighth. 2.5 since 2.82.17 (user request: "H
+     * 범위 8블록으로 줄여 그대신 지금 산 간격은 똑같해야 하니까 산의 X값은 그대로 두고 Y값만 올려": the formation 8 blocks
+     * wide, the mountains where they were round it, MOUNTAIN_R, only higher; how much higher mine to choose: their feet
+     * about level with her eyes as she stands on her sword); the stream under them and the clouds over them go up with them.
      */
-    static final double MOUNTAIN_FLOAT=.7;
+    static final double MOUNTAIN_FLOAT=2.5;
     /**
      * How strongly a mountain shows at {@code x} along it (0 to 1), her camera {@code camAz} round the formation from its
      * middle (NaN when her camera is inside the mountains' ring): where it stands between her camera and the formation,
@@ -688,7 +692,7 @@ final class SwordFormation {
         KagenoFire.clouds(KagenoFire.inkMatrix(),c.camera,centre.add(0,CLOUD_LOW,0),rr,hh,aa,c.cast.id().hashCode()+71,c.age);
     }
     /** The clouds: how far out (just behind the mountains), from how high up and how tall (blocks), how finely drawn round. */
-    static final double CLOUD_R=MOUNTAIN_R+1.0,CLOUD_LOW=1.0,CLOUD_HIGH=4.8,CLOUD_OPEN0=Math.toRadians(20),CLOUD_OPEN1=Math.toRadians(45);
+    static final double CLOUD_R=MOUNTAIN_R+1.0,CLOUD_LOW=MOUNTAIN_FLOAT+.3,CLOUD_HIGH=4.8,CLOUD_OPEN0=Math.toRadians(20),CLOUD_OPEN1=Math.toRadians(45);
     static final int CLOUD_SEGS=160;
     static void texVertex(net.minecraft.client.render.BufferBuilder b,org.joml.Matrix4f m,Vec3d p,float u,float v,float a){
         b.vertex(m,(float)p.x,(float)p.y,(float)p.z).texture(u,v).color(255,255,255,Math.max(0,Math.min(255,Math.round(a*255)))).next();
@@ -930,7 +934,13 @@ final class SwordFormation {
     static float flowLife(float t,float end){return Ease.smooth(t,FLOW0,FLOW1)*(1-Ease.smooth(t,end,end+GONE));}
     static int flowClock(float t){return MathHelper.clamp(Math.round(t*1000),0,65535);}
     static final float FLOW0=1.3f,FLOW1=2f;
-    static final double FLOW_TURN=.2,FLOW_OUT=.5,FLOW_SCALE=IsosangRules.FORMATION_RADIUS+1;
+    /**
+     * (FLOW_SCALE: the shader's unit for the water, 11 blocks: its darker water's bands some a block wide, spreading out
+     * FLOW_OUT blocks a second, as in 2.82.15; 2.82.16 had it the formation's reach and a block, 15.5, its bands and its
+     * bare middle half as big again. Fixed since 2.82.17: the formation 8 blocks wide, its bare middle drawn to fit in the
+     * shader, some 4 to 5.7 blocks out.)
+     */
+    static final double FLOW_TURN=.2,FLOW_OUT=.5,FLOW_SCALE=11;
     /**
      * Where the water lies round the formation (2.82.14, user request: "산이랑 물이랑 X좌표 붙어있게 해 떨어져있으니까
      * 이상함": it ended a block and more short of the mountains, the ground bare between): its rings at SHORE_STEPS ways
@@ -958,7 +968,7 @@ final class SwordFormation {
     /** How strongly the water lies on each of its rings (to its edge, then fading out past it). */
     static final float[] WATER_RINGS={1,1,0},STRAND_RINGS={0,1,1,0};
     static final int SHORE_STEPS=180;
-    static final double WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
+    static final double WATER_IN=2.8,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=2.6,STRAND_FULL0=1.7,STRAND_FULL1=.8,STRAND_TO=.2;
     /**
      * How far out the water runs the way {@code az} (radians in the world's x, z) from the formation's middle: to the
      * face of the nearest mountain that way (a mountain's face counts along it, fading out over EDGE_FADE blocks past its
@@ -1417,11 +1427,15 @@ final class SwordFormation {
             Vec3d p=mid.add(Math.cos(az)*STREAM_R,STREAM_HIGH/2,Math.sin(az)*STREAM_R);
             aa[i]=(float)(up*before*camera(p,c.camera));
         }
-        KagenoFire.stream(c.matrix,c.camera,mid,rr,hh,aa,c.cast.id().hashCode()+53,c.age,STREAM_GLOW,0);
+        KagenoFire.stream(c.matrix,c.camera,mid,rr,hh,aa,STREAM_HIGH,c.cast.id().hashCode()+53,c.age,STREAM_GLOW,0);
     }
     /** The stream: how far out (just before the mountains' feet), how high (blocks), how finely drawn round, how much of its light is added again. */
-    /** (STREAM_HIGH: up to the mountains' frayed feet, "물줄기 높이가 너무 낮잖아": .6 at first, under them with a gap.) */
-    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=1.15,STREAM_OPEN0=Math.toRadians(35),STREAM_OPEN1=Math.toRadians(65);
+    /**
+     * (STREAM_HIGH: up to the mountains' frayed feet, "물줄기 높이가 너무 낮잖아": .6 at first, under them with a gap; going
+     * up with them as they float higher, 2.82.17, the user's own rule: "산이 떠있는 높이만큼 물줄기 높이를 잡아주면 돼". Its
+     * streaks stay as thin as they were and spread over its height: the ink shader is told how high it is.)
+     */
+    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=MOUNTAIN_FLOAT+.45,STREAM_OPEN0=Math.toRadians(35),STREAM_OPEN1=Math.toRadians(65);
     static final int STREAM_SEGS=160;
     static final float STREAM_GLOW=0;
     /** A ring of the mist round {@code mid}: {@code r} blocks out, {@code high} blocks up (low and thin behind her), of strength {@code strength}, thinned away {@code thin}. */

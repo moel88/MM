@@ -97,10 +97,11 @@ public final class KagenoFire {
     }
     /**
      * The stream of water under the mountains of Lee So-sang's H (2.82.16): the same ring of upright quads as the mist,
-     * drawn by the ink shader's mode 17 as running water (its stream: the blue byte set).
+     * drawn by the ink shader's mode 17 as running water (its stream: the blue byte set); the shader told how high it
+     * stands ({@code high} blocks, up to 8, in the green byte: 2.82.17) so its streaks keep their thickness however high.
      */
-    public static void stream(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,int seed,float age,float glow,float glowHot){
-        ring(m,camera,centre,radius,height,alpha,0,0,seed,age,glow,glowHot,255);
+    public static void stream(Matrix4f m,Vec3d camera,Vec3d centre,double[] radius,double[] height,float[] alpha,double high,int seed,float age,float glow,float glowHot){
+        ring(m,camera,centre,radius,height,alpha,0,(float)(high/8),seed,age,glow,glowHot,255);
     }
     /**
      * The faint clouds going round over the mountains of Lee So-sang's H (2.82.16): the same ring of upright quads, its

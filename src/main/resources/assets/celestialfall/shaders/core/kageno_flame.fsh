@@ -571,8 +571,9 @@ void main(){
      }else{
       // the formation's clock (seconds: thousandths in sixteen bits)
       float tsec=(floor(tint.g*255.0+.5)*256.0+floor(tint.b*255.0+.5))/1000.0;
-      // the navy water round the middle, still, its inner edge soft and wandering
-      float ri=.52+.16*(fbm(cS*1.3+vec2(vs*.4,2.9))-.5);
+      // the navy water round the middle, still, its inner edge soft and wandering (2.82.17: some 4 to 5.7 blocks out, the
+      // formation 8 blocks wide, its swords from 4.4; 5.7 to 7.4 until 2.82.16: ri .52)
+      float ri=.43+.13*(fbm(cS*1.3+vec2(vs*.4,2.9))-.5);
       float ring=smoothstep(ri-.07,ri+.09,r);
       float m=fbm(cS*1.1+vec2(r*2.2,vs*.6));
       vec3 navyW=mix(vec3(.04,.065,.26),vec3(.07,.1,.34),smoothstep(.35,.75,m));
@@ -757,7 +758,9 @@ void main(){
   // (KagenoFire.clouds: upright quads round the formation; uv.x the share of a turn, uv.y of its height), thinner here and
   // there, their uneven tops and feet fading away, a little curled, lit along their upper edges; the whole ring turning
   // slowly (some .05 radians a second, clockwise seen from above).
-  float u=uv.x,v=clamp(uv.y,0.0,1.0),tm=Age,sd=seed*.1;
+  // (tm in seconds: Age is the cast's clock in ticks; 2.82.16 took it for seconds and the ring went round twenty times
+  // too fast, a turn in some six seconds: "구름 물줄기 ㅈㄴ 빨리 도는데")
+  float u=uv.x,v=clamp(uv.y,0.0,1.0),tm=Age*.05,sd=seed*.1;
   float x=u*52.0-tm*.41,y=v*2.4;
   // (joined all the way round: thinner here and there, never gone; "한바퀴 안 둘러져있고 지금은 또 너무 진해")
   float m=.7+.3*smoothstep(.25,.55,pfbm(vec2(x*.25+1.7,sd*.7+tm*.01),13.0));
@@ -782,21 +785,25 @@ void main(){
   // round it, uv.y of its height), its water running round under the mountains: a see-through pale blue body and in it
   // streaks of light water, four lines along its height each wavering up and down, broken into running dashes, white
   // at their cores. Its noise has whole numbers of cells round the ring (pnoise), so it closes up with no seam.
-  float u=uv.x,v=clamp(uv.y,0.0,1.0),tm=Age;
+  // (tm in seconds: Age is the cast's clock in ticks; 2.82.16 took it for seconds and its streaks ran round twenty times
+  // too fast, a turn in a second or two: "구름 물줄기 ㅈㄴ 빨리 도는데"; 2.82.17 runs them at half what was meant then,
+  // some 1.4 to 2.1 blocks a second. H how high it stands, blocks, in the green byte (2.82.17: it goes up with the
+  // mountains as they float higher, KagenoFire.stream): its streaks as thin as at 1.15 blocks, spread over its height.)
+  float u=uv.x,v=clamp(uv.y,0.0,1.0),tm=Age*.05,H=tint.g>.004?tint.g*8.0:1.15,k=1.15/H;
   float swell=fbm(vec2(cos(u*6.2831853),sin(u*6.2831853))*3.2+vec2(seed*.29,tm*.07));
   // (thin and see-through like the screenshot's: no solid band, a faint body only; the first draft read as a glowing tube)
   float core=0.0,soft=0.0;
   for(int i=0;i<4;i++){
-   float fi=float(i),x=u*112.0-tm*(3.2+.6*fi);
-   float y0=.18+.2*fi+.08*sin(x*.3+fi*2.1+swell*4.0)+.06*(pnoise(vec2(x*.375,fi*3.7+seed),42.0)-.5);
-   float w=.065+.04*pnoise(vec2(x*.625+fi*5.0,seed+fi),70.0);
+   float fi=float(i),x=u*112.0-tm*(1.6+.3*fi);
+   float y0=.18+.2*fi+k*(.08*sin(x*.3+fi*2.1+swell*4.0)+.06*(pnoise(vec2(x*.375,fi*3.7+seed),42.0)-.5));
+   float w=k*(.065+.04*pnoise(vec2(x*.625+fi*5.0,seed+fi),70.0));
    float d=abs(v-y0);
    float dash=smoothstep(.45,.68,pnoise(vec2(x*.25+fi*11.0,fi*1.9-seed),28.0));
    core=max(core,(1.0-smoothstep(w*.3,w,d))*dash);
    soft=max(soft,(1.0-smoothstep(w,w*3.0,d))*dash);
   }
-  float body=smoothstep(0.0,.1,v)*(1.0-smoothstep(.86,1.0,v));
-  float haze=.4+.6*pfbm(vec2(u*28.0-tm*.9,v*2.0+seed),28.0);
+  float body=smoothstep(0.0,.1*k,v)*(1.0-smoothstep(1.0-.14*k,1.0,v));
+  float haze=.4+.6*pfbm(vec2(u*28.0-tm*.45,v*2.0/k+seed),28.0);
   // (then "물 줄기를 더 투명하게 만들고 강도를 더 낮춰 지금 물줄기 너무 쎄": about half as strong, its cores less white)
   rgb=mix(vec3(.42,.62,.92),vec3(.62,.8,1.0),soft);
   rgb=mix(rgb,vec3(.8,.9,1.0),core*.8);

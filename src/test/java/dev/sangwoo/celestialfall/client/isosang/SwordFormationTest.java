@@ -73,9 +73,9 @@ class SwordFormationTest {
         UUID id=UUID.fromString("6b0e5a1c-1d2e-4f00-9a3b-0c1d2e3f4a5b");
         var a=SwordFormation.layout(id);var b=SwordFormation.layout(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()));
         assertArrayEquals(a,b,"the same swords from the same id");
-        // (2.82.16: 28 swords all over the ground inside the mountains but its empty middle, behind her too: "검 28개",
-        // "뒤까지 포함에서 칼을 골고루 박으라는건데")
-        assertEquals(14.5,IsosangRules.FORMATION_RADIUS,1e-9);
+        // (2.82.16: 28 swords all over the formation but its empty middle, behind her too: "검 28개", "뒤까지 포함에서 칼을
+        // 골고루 박으라는건데"; 2.82.17: the formation 8 blocks wide, "H 범위 8블록으로 줄여")
+        assertEquals(8,IsosangRules.FORMATION_RADIUS,1e-9);
         assertEquals(28,a.length,"\"검 28개\"");
         Vec3d centre=new Vec3d(5,64,-3);
         // where the server reckons they lie (IsosangRules.formationSwords), and the one she stands on (2.82.4: where she
@@ -102,8 +102,8 @@ class SwordFormationTest {
         for(int i=0;i<a.length;i++){
             var s=a[i];
             double r=Math.hypot(s.fw(),s.rt());
-            // (2.82.3: no sword within some 5 blocks of the middle, under her or round her; the rest out to the formation's edge)
-            assertTrue(r>5&&r<IsosangRules.FORMATION_RADIUS-.5,"out from the empty middle to the formation's edge: "+r);
+            // (2.82.3: none in the empty middle, under her or round her; the rest out to the formation's edge)
+            assertTrue(r>IsosangRules.FORMATION_EMPTY-IsosangRules.FORMATION_JITTER-1e-9&&r<IsosangRules.FORMATION_RADIUS-.5+1e-9,"out from the empty middle to the formation's edge: "+r);
             double nearest=Double.MAX_VALUE;
             for(int j=0;j<a.length;j++)if(j!=i)nearest=Math.min(nearest,Math.hypot(s.fw()-a[j].fw(),s.rt()-a[j].rt()));
             assertTrue(nearest>1,"two swords too close: "+nearest);
@@ -125,8 +125,8 @@ class SwordFormationTest {
         }
         assertEquals(a.length,seen.size(),"no two in one place");
         // (2.82.16, "검 28개": 28 over the formation out to the mountains' feet, some four blocks to the nearest on the mean
-        // of 200 formations)
-        assertTrue(near>3.0&&near<4.6,"spread over the formation: "+near);
+        // of 200 formations; 2.82.17, the formation 8 blocks wide, "H 범위 8블록으로 줄여": the 28 some two blocks apart)
+        assertTrue(near>1.5&&near<2.4,"spread over the formation: "+near);
         assertNotEquals(a[5].fw(),SwordFormation.layout(UUID.randomUUID())[5].fw(),"another formation, other places");
     }
     @Test void thePlainSwordIsWhole(){
@@ -282,10 +282,15 @@ class SwordFormationTest {
         var m=java.util.regex.Pattern.compile("x=u\\*([0-9.]+)-tm\\*([0-9.]+),y=v\\*2\\.4").matcher(fsh);
         assertTrue(m.find(),"the clouds' turning in the shader");
         double cells=Double.parseDouble(m.group(1)),speed=Double.parseDouble(m.group(2));
+        // (its clock in seconds: the shader is given the cast's clock in ticks, Fx.age; 2.82.16 took it for seconds and the
+        // ring went round twenty times too fast: "구름 물줄기 ㅈㄴ 빨리 도는데")
+        var clock=java.util.regex.Pattern.compile("tm=Age\\*([0-9.]+),sd=seed\\*\\.1").matcher(fsh);
+        assertTrue(clock.find(),"the clouds' clock in the shader");
+        assertEquals(1/20.0,Double.parseDouble(clock.group(1)),1e-9,"seconds, from the cast's ticks");
         assertEquals(SwordFormation.HAZE_TURN,speed/cells*Math.PI*2,.002,"turning at some .05 radians a second");
         assertEquals(0,cells%4,1e-9,"whole numbers of cells round at every scale it is drawn at (x .25, .5, .75, 1.5)");
     }
-    @Test void aStreamRunsUnderTheMountains(){
+    @Test void aStreamRunsUnderTheMountains() throws java.io.IOException{
         // 2.82.16 ("산 아래에 물 줄기 비슷한게 흐르거든? ... 이거보고 그대로 물줄기가 흐르게 만들면 돼 산 아래", "산이 떠있는 높이만큼
         // 물줄기 높이를 잡아주면 돼 ... 물줄기 높이는 0.6칸으로"): 0.6 blocks high, under the floating mountains, just before
         // their feet, all the way round
@@ -293,6 +298,23 @@ class SwordFormationTest {
         assertTrue(SwordFormation.STREAM_HIGH>SwordFormation.MOUNTAIN_FLOAT+.3&&SwordFormation.STREAM_HIGH<SwordFormation.MOUNTAIN_FLOAT+.6,"up to the mountains' feet: "+SwordFormation.STREAM_HIGH);
         assertTrue(SwordFormation.STREAM_R<SwordFormation.MOUNTAIN_R&&SwordFormation.STREAM_R>SwordFormation.MOUNTAIN_R-1,"just before their feet");
         assertTrue(Math.PI*2*SwordFormation.STREAM_R/SwordFormation.STREAM_SEGS<.7,"drawn finely round");
+        // (2.82.17, "구름 물줄기 ㅈㄴ 빨리 도는데": its clock in seconds, from the cast's ticks, its streaks running round at a
+        // stream's pace, some 1.4 to 2.1 blocks a second; 2.82.16's went round in a second or two)
+        String fsh;
+        try(var in=SwordFormation.class.getResourceAsStream("/assets/celestialfall/shaders/core/kageno_flame.fsh")){fsh=new String(in.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}
+        var clock=java.util.regex.Pattern.compile("tm=Age\\*([0-9.]+),H=tint\\.g").matcher(fsh);
+        assertTrue(clock.find(),"the stream's clock in the shader");
+        assertEquals(1/20.0,Double.parseDouble(clock.group(1)),1e-9,"seconds, from the cast's ticks");
+        var run=java.util.regex.Pattern.compile("x=u\\*([0-9.]+)-tm\\*\\(([0-9.]+)\\+([0-9.]+)\\*fi\\)").matcher(fsh);
+        assertTrue(run.find(),"its streaks' running in the shader");
+        double cells=Double.parseDouble(run.group(1)),a=Double.parseDouble(run.group(2)),b=Double.parseDouble(run.group(3));
+        for(int fi=0;fi<4;fi++){
+            double speed=(a+b*fi)/cells*Math.PI*2*SwordFormation.STREAM_R;
+            assertTrue(speed>1&&speed<2.5,"blocks a second: "+speed);
+        }
+        // the mountains float higher (2.82.17, "산의 X값은 그대로 두고 Y값만 올려"): it goes up to their feet with them, the
+        // shader told how high it stands so its streaks keep their thickness
+        assertTrue(SwordFormation.STREAM_HIGH<8,"its height fits the shader's byte (up to 8 blocks)");
     }
     @Test void faintHazeTurnsSlowlyOverTheMountainsAndWispsOfMistDriftLow(){
         // 2.82.16 ("산 위에는 희미한 안개같은 구름이 천천히 돌아가고"): banks of faint haze over and behind the mountains, all
@@ -385,8 +407,10 @@ class SwordFormationTest {
         // whirlpool has started to spread and always well inside it, never jumping
         double inner=IsosangRules.FORMATION_EMPTY-IsosangRules.FORMATION_JITTER;
         assertTrue(SwordFormation.EYE_R<inner,"the swords strike outside the eye: "+SwordFormation.EYE_R+" inside "+inner);
-        // (2.82.16, "중앙으로 넘어간 검 있잖아": none in the bare middle the water leaves, some 7.5 blocks out in the game)
-        assertTrue(inner>7.8,"none in the bare middle: "+inner);
+        // (2.82.16, "중앙으로 넘어간 검 있잖아": none in the bare middle the water leaves: it read some 7.5 blocks out in the
+        // game, .034 of FLOW_SCALE past where the shader's soft inner edge starts on the mean, ri-.07; 2.82.17, the
+        // formation 8 blocks wide: ri .43, FLOW_SCALE 11)
+        assertTrue(inner>(.43-.07+.034)*SwordFormation.FLOW_SCALE,"none in the bare middle: "+inner);
         assertTrue(SwordFormation.EYE0>SwordFormation.SWIRL0,"the eye opens once it has started to spread");
         double lastEye=0;
         for(float t=SwordFormation.SWIRL0;t<1.4f;t+=frame){
@@ -630,7 +654,7 @@ class SwordFormationTest {
             }
         }
         assertTrue(checked>40000);
-        assertTrue(SwordFormation.WATER_IN<.37*SwordFormation.FLOW_SCALE,"inside the shader's soft inner edge");
+        assertTrue(SwordFormation.WATER_IN<(.43-.065-.07)*SwordFormation.FLOW_SCALE,"inside the shader's soft inner edge");
         assertTrue(SwordFormation.EDGE_PAST>.3,"a little under the mountains, no ground between");
         assertArrayEquals(new float[]{1,1,0},SwordFormation.WATER_RINGS);assertArrayEquals(new float[]{0,1,1,0},SwordFormation.STRAND_RINGS);
     }
