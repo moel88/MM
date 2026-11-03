@@ -10,8 +10,14 @@ film shows the stretches A..B, C..D, ... of the entry's clock (seconds) one afte
 
 The game's sound under each stretch is the recording of the same stretch of the sound run, moved by the ticks H began
 later or sooner in one run than in the other (the server starts it a tick sooner or later), so H's own sound, found in
-the recording by its waveform, is where H began in the film. The pieces are joined with 6 ms fades; the sound written is
+the recording by its loudness, is where H began in the film. The pieces are joined with 6 ms fades; the sound written is
 exactly as long as the film. (film.py shows both ends of a stretch: each piece is a frame longer than its stretch.)
+
+(2.82.17: the entry clock's times in ticks.csv put the recording some .25 s late, the sounds in it that much ahead of
+their ticks, H's own and its end's alike. H's sound is now found by its loudness envelope against isosang_h.ogg's,
+log against log, within .6 s of where the clock puts H's start, its waveform matching too poorly under the other sounds;
+every piece is moved by how far that is from a tick after H began (the client plays it as it hears of H), MUX_LEAD=0
+leaves them where the clock puts them.)
 """
 import os
 import subprocess
@@ -24,6 +30,29 @@ sys.path.insert(0, os.path.join(HERE, '../../stand/shots'))
 from mux_punches import SR, SOUNDS, decode, pling, find, earliest, rows  # noqa: E402
 
 FORMATION = '8'
+
+
+def envelope(x, w=240):
+    """The loudness of {x}, every {w} samples (5 ms at 48 kHz)."""
+    return np.sqrt(np.convolve(x * x, np.ones(w) / w, 'same'))[::w]
+
+
+def onset(wav, clip, near, before=.6, after=.6, w=240):
+    """Where {clip} starts in {wav} (samples), near {near}: the lag whose loudness envelope matches the clip's best, the
+    logarithms of the two against each other (the game plays it quieter or louder, and other sounds lie over it)."""
+    lo = max(0, int(near - before * SR))
+    seg = wav[lo:int(near + after * SR) + len(clip)]
+    es, ec = envelope(seg, w), envelope(clip[:2 * SR], w)
+    lc = np.log(ec + 1e-4)
+    best = (0, -2.0)
+    for lag in range(0, len(es) - len(ec)):
+        a = es[lag:lag + len(ec)]
+        if a.std() < 1e-6:
+            continue
+        r = np.corrcoef(np.log(a + 1e-4), lc)[0, 1]
+        if r > best[1]:
+            best = (lag, r)
+    return lo + best[0] * w, best[1]
 
 
 def main():
@@ -59,15 +88,16 @@ def main():
     # H's sound in the sound run, found by its waveform near where the log puts it: the rule checked (it starts as its
     # client hears of H, a tick or so after H began)
     played = [r for r in rows(os.path.join(folder, 'sounds.csv')) if r['sound'] == 'celestialfall:isosang_h']
+    lead = 0.0
     if played:
         clip = decode(os.path.join(SOUNDS, 'isosang_h.ogg'))
-        onset = int(np.argmax(np.abs(clip) > .02))
-        piece = clip[onset:onset + int(.4 * SR)]
-        near = at + (int(played[0]['nanos']) - marker) * SR / 1e9 + onset
-        pos, score = find(wav, piece, int(near - .2 * SR), int(near + .2 * SR + len(piece)))
         began = sample(int(heard[0]['start']))
-        print(f'  sound run: H began on tick {heard[0]["start"]}, its sound at {(pos - onset) / SR:.3f} s (match {score:.2f}), '
-              f'{(pos - onset - began) / SR * 1000:+.0f} ms after it')
+        pos, score = onset(wav, clip, began)
+        print(f'  sound run: H began on tick {heard[0]["start"]}, its sound at {pos / SR:.3f} s (envelope match {score:.2f}), '
+              f'{(pos - began) / SR * 1000:+.0f} ms after it by the clock')
+        if os.environ.get('MUX_LEAD', '1') != '0' and score > .8:
+            lead = pos - (began + SR / 20)
+            print(f'  every piece moved {lead / SR * 1000:+.0f} ms in the recording: H\'s sound a tick after H began')
     print(f'  film run: H began on tick {shown[0]["start"]}; the sound run\'s clock moved by {shift:+d} ticks')
     duration = float(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'csv=p=0', film],
                                     capture_output=True, check=True, text=True).stdout.strip())
@@ -81,7 +111,7 @@ def main():
     fade = int(.006 * SR)
     for a, b in spans:
         n = int(round((b - a + frame) * SR))
-        lo = int(round(sample(a * 20 + shift)))
+        lo = int(round(sample(a * 20 + shift) + lead))
         piece = wav[lo:lo + n].copy()
         if len(piece) < n:
             piece = np.concatenate([piece, np.zeros(n - len(piece))])
