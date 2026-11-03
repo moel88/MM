@@ -185,7 +185,7 @@ class FallingSwordTest {
             String py=new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("tools/isosang/make_g_sword.py")),java.nio.charset.StandardCharsets.UTF_8);
             assertTrue(py.contains("L, W = "+IsosangRules.BLADE_LENGTH+", "+IsosangRules.BLADE_WIDTH),"the texture's blade is the same size");
             assertTrue(py.contains("P = "+FallingSword.POINT)&&py.contains("N = "+FallingSword.ROUND)&&py.contains("(1 - u) ** N"),"the texture's outline is the same");
-            // and it carries the user's lines onto the face from the sky shot as FallingSword places it
+            // and its carving was traced through the sky shot's camera and the sword's pose in it, as FallingSword places them
             assertTrue(py.contains("CAM = ("+fmt(FallingSword.SKY_EYE_FW)+", "+fmt(FallingSword.SKY_EYE_SIDE)+", "+fmt(FallingSword.SKY_EYE_UP)+", "+fmt(FallingSword.SKY_PITCH)+", "
                 +fmt(FallingSword.SKY_PAN)+", "+fmt(FallingSword.SKY_ROLL)+", "+fmt(FallingSword.SKY_FOV)+")"),"the same sky camera");
             assertTrue(py.contains("POSE = ("+fmt(FallingSword.SKY_TIP_DEPTH)+", "+fmt(FallingSword.SKY_AXIS_UP)+", "+fmt(FallingSword.SKY_AXIS_RIGHT)+")"),"the same pose");
