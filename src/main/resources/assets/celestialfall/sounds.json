@@ -991,8 +991,7 @@
     "sounds": [
       {
         "name": "celestialfall:isosang_h",
-        "stream": false,
-        "preload": true
+        "stream": true
       }
     ]
   },

@@ -466,39 +466,65 @@ public final class IsosangClient {
     /** The hit's sound, its whooshes on its blows: loud for its user and those near, fading out to CARRY blocks. */
     private static void voice(MinecraftClient mc,UUID id,UUID caster,int combo){
         var user=mc.world.getPlayerByUuid(caster);if(user==null||!IsosangRules.drawn(combo)||mc.player==null)return;
+        if(combo==IsosangRules.FORMATION){formationVoice(mc,id,caster);return;}
         // (2.81.1) R's sword may stand out some 24 blocks toward the foe in the crosshair: heard as from the nearer of its
         // user and the sword's pommel, so the foe it sweeps past hears it as loud as its user's neighbours do
         Vec3d from=heardFrom(mc.player.getPos(),user.getPos(),combo==IsosangRules.SWEEP?sweepPivot(id):null);
         float v=(user==mc.player?1:volume(mc,from))*VOLUME;if(v<=.01f)return;
-        // (2.81.0) R's own: its recording, from the user's video of it; (2.82.0) H's too
-        var s=new Sound(CelestialFall.id(combo==IsosangRules.SWEEP?"isosang_r":combo==IsosangRules.FORMATION?"isosang_h":"isosang_m1_"+combo),v);VOICES.put(id,s);mc.getSoundManager().play(s);
+        // (2.81.0) R's own: its recording, from the user's video of it
+        var s=new Sound(CelestialFall.id(combo==IsosangRules.SWEEP?"isosang_r":"isosang_m1_"+combo),v);VOICES.put(id,s);mc.getSoundManager().play(s);
     }
     /**
-     * The sound of H's formation ending (2.82.0: from the user's video, the swords flaring and going to ink), heard from its
-     * middle: loud for its user and those near, fading out to CARRY blocks.
+     * H's sound (2.82.18, user request with their video of H: "처음부터 끝날때까지 소리가 나야함 영상처럼"): its
+     * recording from H's start right through to the formation's end (40.32 s; until 2.82.17 only its first 4.2 s), the
+     * end's sound going on from where it stops (ending). Loud for its user; for everyone else heard from the nearer of its
+     * user and the formation's middle, fading out to CARRY blocks, measured again every tick (over its 40 s a listener
+     * may walk in or away), so it plays even when it starts too far off to be heard.
+     */
+    private static void formationVoice(MinecraftClient mc,UUID id,UUID caster){
+        java.util.function.DoubleSupplier loud=caster.equals(mc.player.getUuid())?()->VOLUME:()->formationLoudness(MinecraftClient.getInstance(),id,caster);
+        var s=new Sound(CelestialFall.id("isosang_h"),(float)loud.getAsDouble(),loud);VOICES.put(id,s);mc.getSoundManager().play(s);
+    }
+    /** How loud H's sounds are where this client listens (2.82.18): from the nearer of its user and the formation's middle. */
+    private static double formationLoudness(MinecraftClient mc,UUID id,UUID caster){
+        if(mc.player==null||mc.world==null)return 0;
+        var f=FORMATIONS.get(id);var user=mc.world.getPlayerByUuid(caster);
+        Vec3d from=user!=null?heardFrom(mc.player.getPos(),user.getPos(),f==null?null:f.centre()):f==null?null:f.centre();
+        return from==null?0:volume(mc,from)*VOLUME;
+    }
+    /**
+     * The sound of H's formation ending (2.82.0: from the user's video, the swords flaring and going to ink; 2.82.18: the
+     * recording going on from where H's own sound stops): loud for its user, for everyone else heard from the nearer of
+     * its user and its middle (as H's own sound is, so the two meet at one loudness), fading out to CARRY blocks.
      */
     private static void ending(MinecraftClient mc,StandClient.Cast c){
-        var f=FORMATIONS.get(c.id());if(f==null||mc.player==null)return;
-        float v=(c.caster().equals(mc.player.getUuid())?1:volume(mc,f.centre()))*VOLUME;if(v<=.01f)return;
+        if(!FORMATIONS.containsKey(c.id())||mc.player==null)return;
+        float v=c.caster().equals(mc.player.getUuid())?VOLUME:(float)formationLoudness(mc,c.id(),c.caster());if(v<=.01f)return;
         mc.getSoundManager().play(new Sound(CelestialFall.id("isosang_h_end"),v));
     }
     /**
      * A sound played like any other until it is told to fade, then quieter tick by tick to nothing (the game sets a
      * playing sound's loudness once a tick, so a fade has no click where a stop would). Heard at the listener, its
-     * loudness set by the distance.
+     * loudness set by the distance (as it starts, or (2.82.18) every tick by its loud: one that does plays even when it
+     * starts too far off to be heard).
      */
     static final class Sound extends AbstractSoundInstance implements TickableSoundInstance {
-        private final float full;private int fading=-1;private boolean done,begun;
-        Sound(Identifier id,float volume){
+        private float full;private int fading=-1;private boolean done,begun;
+        private final java.util.function.DoubleSupplier loud;
+        Sound(Identifier id,float volume){this(id,volume,null);}
+        Sound(Identifier id,float volume,java.util.function.DoubleSupplier loud){
             super(id,SoundCategory.PLAYERS,Random.create());
+            this.loud=loud;
             this.volume=full=volume;pitch=1;attenuationType=SoundInstance.AttenuationType.NONE;relative=true;x=y=z=0;
         }
         void fade(){if(fading<0)fading=0;}
         @Override public boolean canPlay(){return !done&&(fading<0||begun);}
         @Override public boolean isDone(){return done;}
+        @Override public boolean shouldAlwaysPlay(){return loud!=null;}
         @Override public void tick(){
             begun=true;
-            if(fading<0)return;
+            if(loud!=null)full=(float)loud.getAsDouble();
+            if(fading<0){volume=full;return;}
             fading++;volume=full*Math.max(0,1-fading/(float)FADE);
             if(fading>=FADE)done=true;
         }

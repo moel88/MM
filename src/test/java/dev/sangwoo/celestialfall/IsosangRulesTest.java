@@ -319,4 +319,15 @@ class IsosangRulesTest {
             assertTrue(far>FORMATION_RADIUS-FORMATION_EDGE-.8&&in<FORMATION_EMPTY+.8,"from "+in+" to "+far);
         }
     }
+    @Test void hsSoundRunsFromItsStartToTheFormationsEndAndItsEndsGoesOn()throws Exception{
+        // (2.82.18) "처음부터 끝날때까지 소리가 나야함 영상처럼": H's sound is its recording right through to H_END (2.82.17
+        // and before: its first 4.2 s), and the end's (from H_END to the video's end) takes over where it stops
+        double cast=StarPlatinumRulesTest.seconds("isosang_h"),end=StarPlatinumRulesTest.seconds("isosang_h_end");
+        assertEquals(H_END,cast,.02,"H's sound runs to the formation's end");
+        assertTrue(end>1&&end<2,"the end's goes on from there: "+end+" s");
+        // streamed (40 s is too long to keep whole in memory), the end's loaded whole as before
+        String json;try(var in=IsosangRulesTest.class.getResourceAsStream("/assets/celestialfall/sounds.json")){assertNotNull(in);json=new String(in.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}
+        var sounds=com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+        assertTrue(sounds.getAsJsonObject("isosang_h").getAsJsonArray("sounds").get(0).getAsJsonObject().get("stream").getAsBoolean(),"H's sound streams");
+    }
 }

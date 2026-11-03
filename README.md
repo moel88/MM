@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.82.17** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.82.18** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.82.18 — 이소상 H: 소리가 처음부터 끝까지
+
+- **H 소리:** 보내 주신 영상처럼, H를 쓴 때부터 검진이 끝날 때까지 소리가 납니다(약 41초).
+  - 전에는 영상의 처음 4.2초만 넣었습니다.
+  - 이제 영상의 소리를 H의 시작부터 검진이 끝나는 때(40.32초)까지 그대로 씁니다. 그 뒤로 끝 소리가 끊김 없이 이어집니다.
+- **들리는 크기:** 쓴 사람에게는 늘 크게 들립니다. 다른 사람에게는 시전자와 검진 가운데 중 가까운 쪽에서 40블록까지 작아집니다. 매 틱 다시 재므로, 걸어 들어오면 커지고 멀어지면 작아집니다.
+- **접속자만 바꾸면 됩니다:** 소리와 그 재생만 바뀌었습니다. 서버는 2.82.17 그대로 둬도 됩니다.
+
+[RELEASE_2.82.18_KO.md](RELEASE_2.82.18_KO.md)를 확인하세요. 2.82.17은 [RELEASE_2.82.17_KO.md](RELEASE_2.82.17_KO.md)입니다.
 
 # 보탠드 2.82.17 — 이소상 H: 구름·물줄기 속도 수정, 전체를 12블록으로, 높이 뜬 산
 
