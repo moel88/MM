@@ -454,9 +454,12 @@ public final class IsosangRules {
      * the whole ground inside the mountains; 10 in 2.82.17, user request: "H 범위 8블록으로 줄여 그대신 지금 산 간격은 똑같해야
      * 하니까 산의 X값은 그대로 두고 Y값만 올려", "전체 범위를 줄여달라는거였는대", then "10블록으로 줄이고 사진만 뽑아봐": all
      * of it on the ground within this, its swords, its water, its whirlpool, its first ink and the smoke at its rim; the
-     * mountains where they were, only higher) and how far under and over its ground a body is still in it.
+     * mountains where they were, only higher; then "전체 all", the mountains in too, "산도 같은 비율로 줄임", and "12블록으로
+     * 늘리는 대신에 중앙 빈 부분이 너무 크니까 중앙 빈 부분을 조금 줄여": 12, all of 2.82.16 at 12/14.5 of its size, the
+     * mountains floating as high as before, its empty middle a little smaller) and how far under and over its ground a body
+     * is still in it.
      */
-    public static final double FORMATION_RADIUS=10,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
+    public static final double FORMATION_RADIUS=12,FORMATION_LOW=-1.2,FORMATION_HIGH=5;
     /** The damage as the swords strike (the user's word: 30) and every {@link #FORMATION_EVERY} ticks after (5). */
     public static final float FORMATION_IMPACT=30,FORMATION_TICK=5;
     /** The tick into H the swords strike (as the rain of swords crashes in), and how often it strikes again after (the user's word: every 5 s). */
@@ -526,20 +529,21 @@ public final class IsosangRules {
     public static final int FORMATION_SWORDS=28;
     /**
      * (FORMATION_EMPTY 8.3 in 2.82.16, was 5.4: "중앙으로 넘어간 검 있잖아": swords stood in the bare middle the water leaves,
-     * which read some 7.5 blocks out from the middle in the game; 5.7 in 2.82.17, the formation 10 blocks wide: the same
-     * share of it, the water's bare middle as in 2.82.15; FORMATION_JITTER .25, was .35: the swords closer together, no
-     * two within 1.7 blocks.)
+     * which read some 7.5 blocks out from the middle in the game; 5.2 in 2.82.17, the formation 12 blocks wide, "중앙 빈
+     * 부분이 너무 크니까 중앙 빈 부분을 조금 줄여": a smaller share of it than 2.82.16's, the water's bare middle as small;
+     * FORMATION_EDGE and FORMATION_JITTER at 12/14.5 of 2.82.16's: no two swords within 2.4 blocks.)
      */
-    public static final double FORMATION_EMPTY=5.7,FORMATION_EDGE=.6,FORMATION_JITTER=.25;
+    public static final double FORMATION_EMPTY=5.2,FORMATION_EDGE=.5,FORMATION_JITTER=.29;
     /** The golden angle: each sword this far round from the one before, so they spread evenly with no rows. */
     static final double GOLDEN=Math.PI*(3-Math.sqrt(5));
     /**
      * How far behind the formation's middle she stands (blocks, 2.82.4: out toward its edge, on the sword struck under
      * her; the formation's middle is this far ahead of her, the way she faced, the crosshair's; since 2.82.16 swords
      * stand round her and behind her too: "뒤가 ㅈㄴ 빈다고 걍 뒤까지 포함에서 칼을 골고루 박으라는건데"; 8.7 until 2.82.16,
-     * 6 in 2.82.17 with the formation 10 blocks wide: the same share of it, the swords round and behind her as before).
+     * 5.6 in 2.82.17 with the formation 12 blocks wide: as before just outside its empty middle, on its innermost
+     * swords, the swords round and behind her).
      */
-    public static final double FORMATION_STAND_BACK=6;
+    public static final double FORMATION_STAND_BACK=5.6;
     /** A formation's seed: where its swords lie and how they look follow from it (its swing's id), the same on the server and every client. */
     public static int formationSeed(UUID id){
         return (int)(id.getMostSignificantBits()^(id.getMostSignificantBits()>>>32)^id.getLeastSignificantBits()^(id.getLeastSignificantBits()>>>32));

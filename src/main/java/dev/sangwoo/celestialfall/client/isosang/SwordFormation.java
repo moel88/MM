@@ -79,11 +79,14 @@ final class SwordFormation {
      */
     static final float POOL0=.19f,POOL1=.29f,GATHER0=.32f,GATHER_FAST=.5f,GATHER_SLOW=.42f,GATHER1=.64f,COLLAPSE0=.56f,COLLAPSE=IsosangRules.H_PLANT-.055f,SWIRL0=.7f,SWIRL1=1.15f;
     /**
-     * (POOL_WIDE: the formation's reach since 2.82.17, user request: "전체 범위를 줄여달라는거였는대", "10블록으로 줄이고":
-     * all of it on the ground within it; out past the mountains' feet in 2.82.16, MOUNTAIN_R+1.1, and past the
-     * formation's edge under her camera before.)
+     * How much smaller than 2.82.16 all of it is (2.82.17, user request: "H 범위 8블록으로 줄여", "전체 범위를
+     * 줄여달라는거였는대", "전체 all", "산도 같은 비율로 줄임", "12블록으로 늘리는 대신에"): the formation 12 blocks wide, was
+     * 14.5, and every length of it out to the mountains, their clouds and the faint mountains behind them with it, but for
+     * how high the mountains float (MOUNTAIN_FLOAT) and the empty middle, smaller still (IsosangRules.FORMATION_EMPTY).
      */
-    static final double POOL_WIDE=IsosangRules.FORMATION_RADIUS+.5,GATHER_MID=3.4,POOL_IN=2.4;
+    static final double SHRINK=IsosangRules.FORMATION_RADIUS/14.5;
+    /** (POOL_WIDE: out past the mountains' feet, as in 2.82.16.) */
+    static final double POOL_WIDE=SwordFormation.MOUNTAIN_R+1.1*SHRINK,GATHER_MID=3.4,POOL_IN=2.4;
     /**
      * The whirlpool (2.82.7, user request: "잉크가 모였다가 사라지고 검정색 물줄기가 회오리 처럼 흐르는거임", "이거처럼 이펙트가
      * 크게 나옴" with their still of the video; the video read again a frame at a time and put back on the ground plane):
@@ -98,11 +101,11 @@ final class SwordFormation {
      * arms and three thinner ones over a faint blue haze, its water a dark navy (2.82.12, user request: "소용돌이를
      * 포현하는 하늘색 부분이 너무 두껍다고 해야하나 결이 더 많아야 할듯", "그냥 영상 따라서 만드는게 너는 힘든가?";
      * 2.82.7-2.82.11 drew thick crescents). As the swords strike it spreads out (2.82.10, below) and turns into the dark
-     * navy smoke at the rim. (EYE_R 5 until 2.82.16, of a whirlpool 14.5 to 16.5 blocks wide; 3.6 since 2.82.17, the
-     * whirlpool within the formation's 10: the same share of it, the swords striking outside it.)
+     * navy smoke at the rim. (EYE_R 5 until 2.82.16; 4 since 2.82.17, the empty middle smaller: the swords striking
+     * outside it.)
      */
     static final float WHIRL1=.86f,EYE0=.73f,EYE1=.85f;
-    static final double WHIRL_R=POOL_WIDE,EYE_R=3.6,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
+    static final double WHIRL_R=POOL_WIDE,EYE_R=4,WHIRL_TWIST=5.2,WHIRL_SPIN=.38;
     /**
      * The whirlpool spreads out and turns into smoke (2.82.10, user request: "퍼진다는 느낌이 안 나잖아 그리고 연기
      * 파란색이여함 연기를 더 진하게 만들고 더 많이 피어오르게 하고 소용돌이가 퍼져서 연기가 되는거처럼 만들어"; 2.82.9 only
@@ -127,8 +130,7 @@ final class SwordFormation {
      * in the whirlpool's square (style 15), reading these off the formation's clock.
      */
     static final float SMOKE_IN=1.22f,SMOKE_FULL=1.36f,SMOKE_OUT0=1.64f,SMOKE_OUT1=1.88f;
-    /** (RIM_R and RIM_OUT at the formation's edge since 2.82.17, within it all on the ground; at the mountains' feet in 2.82.16.) */
-    static final double RIM_R=IsosangRules.FORMATION_RADIUS,RIM_OUT=IsosangRules.FORMATION_RADIUS+.4;
+    static final double RIM_R=SwordFormation.MOUNTAIN_R-.8*SwordFormation.SHRINK,RIM_OUT=SwordFormation.MOUNTAIN_R-.2*SwordFormation.SHRINK;
     /** The mountains rise; the clouds and the mist start coming in (each a little after this, over a second: Cloud.in). */
     static final float RISE0=1.0f,RISE1=1.45f,MIST0=1.2f;
     /** The swords, dark as they strike, turn silver; the crystal flowers at their feet wilt. */
@@ -528,7 +530,7 @@ final class SwordFormation {
     /** How strongly the six show (2.82.16: "큰산 작은산들 ... 더 투명하게": a little see-through, rims and all). */
     static final float MOUNTAIN_ALPHA=.82f;
     /** (2.82.16: where they stood with the formation 12 blocks; they stay there as the swords spread out to their feet.) */
-    static final double MOUNTAIN_R=15.4;
+    static final double MOUNTAIN_R=15.4*SHRINK;
     private static final Map<UUID,Mountain[]> FILL=new LinkedHashMap<>();
     /**
      * The user's two other paintings among the six (2.82.16, user request, with the two: "빈 공간에 이거 넣고 그래도 남는
@@ -566,12 +568,12 @@ final class SwordFormation {
      * the way the paintings' left lies), how tall it is (blocks; about as tall as the part of the tall peak they cut out
      * to show its size) and how strongly it shows.
      */
-    static final double PEAK_BACK=.4,PEAK_LEFT=1.5,PEAK_TOP=2.0;
+    static final double PEAK_BACK=.4*SHRINK,PEAK_LEFT=1.5*SHRINK,PEAK_TOP=2.0*SHRINK;
     /** (PEAK_ALPHA .58, was .7, and the six at MOUNTAIN_ALPHA: "큰산 작은산들 투명도만 조금 낮추자 거의 희미해서 자세히 봐야하는 산들 제외", then "아니아니 더 투명하게".) */
     static final float PEAK_ALPHA=.58f;
     /** The small mountains: how many, how far behind the six (from, to), how tall (from, to), how strongly they show, how far round from right behind her none stands. */
     static final int SMALL_COUNT=20;
-    static final double SMALL_BACK0=1.0,SMALL_BACK1=3.0,SMALL_TOP0=1.6,SMALL_TOP1=2.4,SMALL_CLEAR=Math.toRadians(70);
+    static final double SMALL_BACK0=1.0*SHRINK,SMALL_BACK1=3.0*SHRINK,SMALL_TOP0=1.6*SHRINK,SMALL_TOP1=2.4*SHRINK,SMALL_CLEAR=Math.toRadians(70);
     static final float SMALL_ALPHA=.15f;
     /** All the mountains of a formation as drawn: the six, the peaks in their gaps, the small ones behind. */
     static List<Mountain> peaks(UUID id,float yaw){
@@ -585,7 +587,7 @@ final class SwordFormation {
      * height), drawn as a strip of MOUNTAIN_COLS quads bent round the circle.
      */
     static final net.minecraft.util.Identifier MOUNTAIN_TEX=new net.minecraft.util.Identifier("celestialfall","textures/effect/isosang_mountain.png");
-    static final double MOUNTAIN_TOP=3.9,MOUNTAIN_ASPECT=1540/518.0,MOUNTAIN_HALF=MOUNTAIN_TOP*MOUNTAIN_ASPECT/2;
+    static final double MOUNTAIN_TOP=3.9*SHRINK,MOUNTAIN_ASPECT=1540/518.0,MOUNTAIN_HALF=MOUNTAIN_TOP*MOUNTAIN_ASPECT/2;
     /**
      * The user's paintings: the mountain, the peak and the small mountain (the last two painted on black: the black
      * taken away), all made into textures by make_mountain_texture.py;
@@ -601,7 +603,7 @@ final class SwordFormation {
         return Ease.smooth(t,RISE0+d,RISE1+d+.15f)*(1-Ease.smooth(t,end+GLOW,end+GONE+.2f));
     }
     /** How far a mountain rises into place from (blocks under it). */
-    static final double MOUNTAIN_RISE=1.2;
+    static final double MOUNTAIN_RISE=1.2*SHRINK;
     /**
      * A point of a mountain (fixed in the world, looking at the formation's middle): {@code x} along it round the circle
      * (blocks at its radius), {@code y} up from its floating foot, {@code front} before it (2.82.16, user request: "지금은
@@ -698,7 +700,7 @@ final class SwordFormation {
         KagenoFire.clouds(KagenoFire.inkMatrix(),c.camera,centre.add(0,CLOUD_LOW,0),rr,hh,aa,c.cast.id().hashCode()+71,c.age);
     }
     /** The clouds: how far out (just behind the mountains), from how high up and how tall (blocks), how finely drawn round. */
-    static final double CLOUD_R=MOUNTAIN_R+1.0,CLOUD_LOW=MOUNTAIN_FLOAT+.3,CLOUD_HIGH=4.8,CLOUD_OPEN0=Math.toRadians(20),CLOUD_OPEN1=Math.toRadians(45);
+    static final double CLOUD_R=MOUNTAIN_R+1.0*SHRINK,CLOUD_LOW=MOUNTAIN_FLOAT+.3*SHRINK,CLOUD_HIGH=4.8*SHRINK,CLOUD_OPEN0=Math.toRadians(20),CLOUD_OPEN1=Math.toRadians(45);
     static final int CLOUD_SEGS=160;
     static void texVertex(net.minecraft.client.render.BufferBuilder b,org.joml.Matrix4f m,Vec3d p,float u,float v,float a){
         b.vertex(m,(float)p.x,(float)p.y,(float)p.z).texture(u,v).color(255,255,255,Math.max(0,Math.min(255,Math.round(a*255)))).next();
@@ -975,12 +977,8 @@ final class SwordFormation {
     /** How strongly the water lies on each of its rings (to its edge, then fading out past it). */
     static final float[] WATER_RINGS={1,1,0},STRAND_RINGS={0,1,1,0};
     static final int SHORE_STEPS=180;
-    /**
-     * (WATER_EDGE: the formation's edge since 2.82.17, user request: "전체 범위를 줄여달라는거였는대", "10블록으로 줄이고": all
-     * of it on the ground within it, the mountains standing off beyond, higher; 2.82.14 to 2.82.16 ran it on to the
-     * mountains' feet, waterEdge, "산이랑 물이랑 X좌표 붙어있게 해". Its strands along it a third narrower than then.)
-     */
-    static final double WATER_EDGE=IsosangRules.FORMATION_RADIUS-.3,WATER_IN=3.9,EDGE_PAST=.6,EDGE_FADE=1.5,STRAND_FROM=1.8,STRAND_FULL0=1.2,STRAND_FULL1=.55,STRAND_TO=.14;
+    /** (WATER_EDGE: the mountains' feet, as since 2.82.14: "산이랑 물이랑 X좌표 붙어있게 해"; the six go all the way round.) */
+    static final double WATER_EDGE=MOUNTAIN_R,WATER_IN=3.3,EDGE_PAST=.6*SHRINK,EDGE_FADE=1.5*SHRINK,STRAND_FROM=2.6*SHRINK,STRAND_FULL0=1.7*SHRINK,STRAND_FULL1=.8*SHRINK,STRAND_TO=.2*SHRINK;
     /** How much of the mountain {@code mt} stands the way {@code az} (0 to 1): 1 along it, fading out over EDGE_FADE blocks past its ends; 0 off to its sides. */
     static double along(Mountain mt,double az){
         double off=Math.IEEEremainder(az-mt.az(),Math.PI*2);if(Math.abs(off)>1.2)return 0;
@@ -1360,7 +1358,7 @@ final class SwordFormation {
     static float veilLife(float t){return Ease.smooth(t,SMOKE_IN,SMOKE_IN+.12f)*(1-Ease.smooth(t,SMOKE_OUT0-.02f,SMOKE_OUT1));}
     static double veilHeight(float t){return VEIL_HIGH*(.3+.7*Ease.smooth(t,SMOKE_IN,VEIL_UP))+.5*Ease.smooth(t,VEIL_UP,SMOKE_OUT1);}
     static float veilThin(float t){return Ease.smooth(t,SMOKE_OUT0-.1f,SMOKE_OUT1);}
-    static final double VEIL_HIGH=3.6;
+    static final double VEIL_HIGH=3.6*SHRINK;
     static final float VEIL_UP=1.45f;
     /**
      * The mist off the spreading whirlpool (2.82.10, user request: "소용돌이가 퍼져서 연기가 되는거처럼 만들어"): a low ring
@@ -1435,7 +1433,7 @@ final class SwordFormation {
      * up with them as they float higher, 2.82.17, the user's own rule: "산이 떠있는 높이만큼 물줄기 높이를 잡아주면 돼". Its
      * streaks stay as thin as they were and spread over its height: the ink shader is told how high it is.)
      */
-    static final double STREAM_R=MOUNTAIN_R-.35,STREAM_HIGH=MOUNTAIN_FLOAT+.45,STREAM_OPEN0=Math.toRadians(35),STREAM_OPEN1=Math.toRadians(65);
+    static final double STREAM_R=MOUNTAIN_R-.35*SHRINK,STREAM_HIGH=MOUNTAIN_FLOAT+.45*SHRINK,STREAM_OPEN0=Math.toRadians(35),STREAM_OPEN1=Math.toRadians(65);
     static final int STREAM_SEGS=160;
     static final float STREAM_GLOW=0;
     /** A ring of the mist round {@code mid}: {@code r} blocks out, {@code high} blocks up (low and thin behind her), of strength {@code strength}, thinned away {@code thin}. */

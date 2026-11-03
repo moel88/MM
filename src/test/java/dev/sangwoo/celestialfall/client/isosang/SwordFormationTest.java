@@ -74,8 +74,8 @@ class SwordFormationTest {
         var a=SwordFormation.layout(id);var b=SwordFormation.layout(new UUID(id.getMostSignificantBits(),id.getLeastSignificantBits()));
         assertArrayEquals(a,b,"the same swords from the same id");
         // (2.82.16: 28 swords all over the formation but its empty middle, behind her too: "검 28개", "뒤까지 포함에서 칼을
-        // 골고루 박으라는건데"; 2.82.17: all of it 10 blocks wide, "전체 범위를 줄여달라는거였는대", "10블록으로 줄이고")
-        assertEquals(10,IsosangRules.FORMATION_RADIUS,1e-9);
+        // 골고루 박으라는건데"; 2.82.17: all of it at 12/14.5 of its size, "전체 all", "12블록으로 늘리는 대신에")
+        assertEquals(12,IsosangRules.FORMATION_RADIUS,1e-9);
         assertEquals(28,a.length,"\"검 28개\"");
         Vec3d centre=new Vec3d(5,64,-3);
         // where the server reckons they lie (IsosangRules.formationSwords), and the one she stands on (2.82.4: where she
@@ -125,8 +125,8 @@ class SwordFormationTest {
         }
         assertEquals(a.length,seen.size(),"no two in one place");
         // (2.82.16, "검 28개": 28 over the formation out to the mountains' feet, some four blocks to the nearest on the mean
-        // of 200 formations; 2.82.17, the formation 10 blocks wide, "10블록으로 줄이고": the 28 some 2.4 blocks apart)
-        assertTrue(near>2&&near<2.8,"spread over the formation: "+near);
+        // of 200 formations; 2.82.17, the formation 12 blocks wide, "12블록으로 늘리는 대신에": the 28 some 3.2 blocks apart)
+        assertTrue(near>2.8&&near<3.8,"spread over the formation: "+near);
         assertNotEquals(a[5].fw(),SwordFormation.layout(UUID.randomUUID())[5].fw(),"another formation, other places");
     }
     @Test void thePlainSwordIsWhole(){
@@ -240,7 +240,7 @@ class SwordFormationTest {
                 assertTrue(off>30,"none in the gap right behind her (her camera looks in through it)");
                 assertTrue(mt.alpha()<1&&mt.alpha()>.5,"a little see-through (\"얘도 조금 투명하게\"): "+mt.alpha());assertFalse(mt.flip());
                 assertTrue(mt.radius()>SwordFormation.MOUNTAIN_R&&mt.radius()<SwordFormation.MOUNTAIN_R+1,"just behind the six");
-                assertTrue(mt.top()>1.6&&mt.top()<2.4,"about as tall as the part of the old peak they cut out (\"이정도 크기로\"): "+mt.top());
+                assertTrue(mt.top()>1.6*SwordFormation.SHRINK&&mt.top()<2.4*SwordFormation.SHRINK,"about as tall as the part of the old peak they cut out (\"이정도 크기로\"), all of it smaller since 2.82.17: "+mt.top());
                 assertTrue(mt.half()<2,"narrow, in the gap: "+mt.half());
             }else{
                 assertEquals(2,mt.art());small++;
@@ -273,7 +273,7 @@ class SwordFormationTest {
         // 한 바퀴 돌고 있어"): one ring just behind the mountains, from among them up over their summits; no banks of puffs
         assertTrue(SwordFormation.CLOUD_R>SwordFormation.MOUNTAIN_R&&SwordFormation.CLOUD_R<SwordFormation.MOUNTAIN_R+2,"just behind the mountains");
         assertTrue(SwordFormation.CLOUD_LOW<SwordFormation.MOUNTAIN_FLOAT+SwordFormation.MOUNTAIN_TOP*.6,"down among them");
-        assertTrue(SwordFormation.CLOUD_LOW+SwordFormation.CLOUD_HIGH>SwordFormation.MOUNTAIN_FLOAT+SwordFormation.MOUNTAIN_TOP+1,"up over their summits");
+        assertTrue(SwordFormation.CLOUD_LOW+SwordFormation.CLOUD_HIGH>SwordFormation.MOUNTAIN_FLOAT+SwordFormation.MOUNTAIN_TOP+.8*SwordFormation.SHRINK,"up over their summits");
         assertEquals(0,SwordFormation.HAZE,"the banks of puffs are gone");
         assertTrue(Math.PI*2*SwordFormation.CLOUD_R/SwordFormation.CLOUD_SEGS<.7,"drawn finely round");
         // the shader turns it slowly round, as the haze turned (HAZE_TURN), and its noise closes up round the ring
@@ -360,8 +360,7 @@ class SwordFormationTest {
         assertTrue(SwordFormation.gathered(SwordFormation.POOL0+.03f)>.99f&&SwordFormation.soak(SwordFormation.POOL1)>.99f,"all soaked in");
         for(float t=0;t<=SwordFormation.GATHER0;t+=frame)assertEquals(SwordFormation.POOL_WIDE,SwordFormation.gather(t),1e-9,"as wide as it soaks in at "+t);
         assertTrue(SwordFormation.POOL_WIDE>IsosangRules.FORMATION_STAND_BACK+3,"over where she stands and well past her");
-        // (2.82.17, "전체 범위를 줄여달라는거였는대", "10블록으로 줄이고": as wide as the formation, all of it within its reach)
-        assertTrue(SwordFormation.POOL_WIDE>IsosangRules.FORMATION_RADIUS&&SwordFormation.POOL_WIDE<=IsosangRules.FORMATION_RADIUS+.6,"over the whole formation, no further");
+        assertTrue(SwordFormation.POOL_WIDE>IsosangRules.FORMATION_RADIUS+1.5,"over the whole formation, out past the mountains' feet");
         // then it only closes in, never jumping; easing into motion (no sudden start), sweeping in (the video: some five
         // blocks a tenth of a second in), lingering, then drawn in all the way as the flash breaks there
         double last=SwordFormation.gather(0),fastest=0;
@@ -401,8 +400,8 @@ class SwordFormationTest {
         assertTrue(SwordFormation.whirl(SwordFormation.SWIRL0+.03f)<.1*SwordFormation.WHIRL_R,"a small whirlpool first: "+SwordFormation.whirl(SwordFormation.SWIRL0+.03f));
         // big (the user's still: past the formation's edge, under her camera), mostly out as the rain of swords strikes
         assertEquals(SwordFormation.POOL_WIDE,SwordFormation.WHIRL_R,1e-9,"as wide as the ink first soaked in");
-        assertTrue(SwordFormation.WHIRL_R<=IsosangRules.FORMATION_RADIUS+.6,"within the formation's reach (2.82.17)");
-        assertTrue(SwordFormation.WHIRL_R>IsosangRules.FORMATION_STAND_BACK+3,"well past where she stands");
+        assertTrue(SwordFormation.WHIRL_R>SwordFormation.MOUNTAIN_R,"past the formation's edge, out under the mountains");
+        assertTrue(SwordFormation.WHIRL_R>IsosangRules.FORMATION_STAND_BACK+4,"well past where she stands");
         assertTrue(SwordFormation.whirl(IsosangRules.H_RAIN0)>.75*SwordFormation.WHIRL_R,"mostly out as the swords strike: "+SwordFormation.whirl(IsosangRules.H_RAIN0));
         assertEquals(SwordFormation.WHIRL_R,SwordFormation.whirl(IsosangRules.H_RAIN1),1e-9);
         // its eye: the formation's empty middle (every sword strikes outside it, round its edge), opening after the
@@ -410,9 +409,9 @@ class SwordFormationTest {
         double inner=IsosangRules.FORMATION_EMPTY-IsosangRules.FORMATION_JITTER;
         assertTrue(SwordFormation.EYE_R<inner,"the swords strike outside the eye: "+SwordFormation.EYE_R+" inside "+inner);
         // (2.82.16, "중앙으로 넘어간 검 있잖아": none in the bare middle the water leaves: it read some 7.5 blocks out in the
-        // game, .034 of FLOW_SCALE past where the shader's soft inner edge starts on the mean, ri-.07; 2.82.17, the
-        // formation 10 blocks wide: ri .52, FLOW_SCALE 11, as in 2.82.15)
-        assertTrue(inner>(.52-.07+.034)*SwordFormation.FLOW_SCALE,"none in the bare middle: "+inner);
+        // game, .034 of FLOW_SCALE past where the shader's soft inner edge starts on the mean, ri-.07; 2.82.17, "중앙 빈
+        // 부분이 너무 크니까 중앙 빈 부분을 조금 줄여": ri .47, FLOW_SCALE 11)
+        assertTrue(inner>(.47-.07+.034)*SwordFormation.FLOW_SCALE,"none in the bare middle: "+inner);
         assertTrue(SwordFormation.EYE0>SwordFormation.SWIRL0,"the eye opens once it has started to spread");
         double lastEye=0;
         for(float t=SwordFormation.SWIRL0;t<1.4f;t+=frame){
@@ -509,7 +508,8 @@ class SwordFormationTest {
         assertEquals(0,SwordFormation.veilLife(SwordFormation.SMOKE_IN),1e-6);
         assertEquals(1,SwordFormation.veilLife(1.5f),1e-6,"there as the smoke is thickest");
         assertEquals(0,SwordFormation.veilLife(SwordFormation.SMOKE_OUT1),1e-6,"gone with the smoke");
-        assertTrue(SwordFormation.VEIL_HIGH>3&&SwordFormation.VEIL_HIGH<4.4,"over half the mountains' height (4.4 to 6.4 blocks), under the lowest: "+SwordFormation.VEIL_HIGH);
+        // (3.6 blocks in 2.82.16; since 2.82.17 all of it at 12/14.5 of that size, SHRINK)
+        assertTrue(SwordFormation.VEIL_HIGH>3*SwordFormation.SHRINK&&SwordFormation.VEIL_HIGH<4.4*SwordFormation.SHRINK,"some half the mountains' height and more: "+SwordFormation.VEIL_HIGH);
         assertEquals(SwordFormation.VEIL_HIGH,SwordFormation.veilHeight(SwordFormation.VEIL_UP),1e-6);
         assertTrue(SwordFormation.VEIL_UP>SwordFormation.SMOKE_IN&&SwordFormation.VEIL_UP<SwordFormation.SMOKE_OUT0);
         double lastHigh=SwordFormation.veilHeight(1.0f);
@@ -613,30 +613,29 @@ class SwordFormationTest {
         assertTrue(src.contains("float bA=.42*band*along*grain*smoothstep(ri-.02,ri+.12,r)*tint.a;"),"in its water only, not over the bare middle");
         assertTrue(SwordFormation.WATER_IN>2,"its middle bare");
     }
-    @Test void theWaterLiesWithinTheFormationTheMountainsOffBeyond(){
-        // 2.82.17 ("전체 범위를 줄여달라는거였는대", "10블록으로 줄이고"): all of it on the ground within the formation's reach,
-        // its water too, out over its outermost swords to its edge and fading just past it; the mountains standing off
-        // beyond, where they were (2.82.14 to 2.82.16 ran the water on to the mountains' feet); its pale strands a strip
-        // inside its edge, broken where the mountains leave a gap (behind her)
-        double r=IsosangRules.FORMATION_RADIUS;
-        assertTrue(SwordFormation.WATER_EDGE>r-IsosangRules.FORMATION_EDGE+IsosangRules.FORMATION_JITTER,"over the outermost swords");
-        assertTrue(SwordFormation.WATER_EDGE+SwordFormation.EDGE_PAST<=r+.5,"within the formation's reach");
-        assertTrue(SwordFormation.MOUNTAIN_R-(SwordFormation.WATER_EDGE+SwordFormation.EDGE_PAST)>4,"the mountains off beyond it");
+    @Test void theWaterRunsUpToTheMountainsFeet(){
+        // 2.82.14 ("산이랑 물이랑 X좌표 붙어있게 해"): the water runs to the mountains' feet and a little under them, all
+        // round (2.82.16: the six all the way round); its pale strands a strip along their feet inside it, broken where
+        // they leave a gap (behind her). (2.82.17's 10-block draft stopped it at the formation's edge, the mountains off
+        // beyond: "전체 all", the mountains came in with it.)
+        assertEquals(SwordFormation.MOUNTAIN_R,SwordFormation.WATER_EDGE,1e-12);
+        assertTrue(SwordFormation.WATER_EDGE>IsosangRules.FORMATION_RADIUS-IsosangRules.FORMATION_EDGE+IsosangRules.FORMATION_JITTER,"over the outermost swords");
+        assertTrue(SwordFormation.EDGE_PAST>.3,"a little under the mountains, no ground between");
         for(long seed=1;seed<=24;seed++){
             UUID id=new UUID(seed*0x9E3779B97F4A7C15L,~seed*31);float yaw=(float)(seed*47%360);
             var ms=SwordFormation.mountains(id,yaw);var sh=SwordFormation.shore(id,yaw);int n=SwordFormation.SHORE_STEPS;
+            for(var mt:ms)assertEquals(SwordFormation.WATER_EDGE,mt.radius(),1e-12,"at every mountain's foot");
             for(int k=0;k<n;k++){
                 double az=Math.PI*2*k/n,e=SwordFormation.WATER_EDGE;
                 assertEquals(SwordFormation.WATER_IN,sh.water()[0][k],1e-12);assertEquals(e,sh.water()[1][k],1e-12);
                 assertEquals(e+SwordFormation.EDGE_PAST,sh.water()[2][k],1e-12);
                 for(int j=0;j+1<sh.strands().length;j++)assertTrue(sh.strands()[j][k]<sh.strands()[j+1][k]);
-                assertTrue(sh.strands()[0][k]>IsosangRules.FORMATION_EMPTY&&sh.strands()[3][k]<e,"a strip inside its edge, out among the outer swords");
+                assertTrue(sh.strands()[0][k]>IsosangRules.FORMATION_EMPTY&&sh.strands()[3][k]<e,"a strip inside its edge");
                 assertEquals((float)SwordFormation.mountainCover(ms,az),sh.cover()[k],1e-6);
             }
-            double back=SwordFormation.behind(yaw);
-            assertTrue(SwordFormation.mountainCover(ms,back)<.2,"few strands in the gap behind her");
+            assertTrue(SwordFormation.mountainCover(ms,SwordFormation.behind(yaw))<.2,"few strands in the gap behind her");
         }
-        assertTrue(SwordFormation.WATER_IN<(.52-.08-.07)*SwordFormation.FLOW_SCALE,"inside the shader's soft inner edge");
+        assertTrue(SwordFormation.WATER_IN<(.47-.08-.07)*SwordFormation.FLOW_SCALE,"inside the shader's soft inner edge");
         assertArrayEquals(new float[]{1,1,0},SwordFormation.WATER_RINGS);assertArrayEquals(new float[]{0,1,1,0},SwordFormation.STRAND_RINGS);
     }
     @Test void theWhirlpoolsClockAndBytes(){

@@ -571,9 +571,9 @@ void main(){
      }else{
       // the formation's clock (seconds: thousandths in sixteen bits)
       float tsec=(floor(tint.g*255.0+.5)*256.0+floor(tint.b*255.0+.5))/1000.0;
-      // the navy water round the middle, still, its inner edge soft and wandering (some 5 to 6.7 blocks out: the formation
-      // 10 blocks wide, its swords from 5.45, as in 2.82.15; 2.82.16 had it half as big again)
-      float ri=.52+.16*(fbm(cS*1.3+vec2(vs*.4,2.9))-.5);
+      // the navy water round the middle, still, its inner edge soft and wandering (some 4.4 to 6.2 blocks out since 2.82.17:
+      // "중앙 빈 부분이 너무 크니까 중앙 빈 부분을 조금 줄여", its swords from 4.9; .52 until then)
+      float ri=.47+.16*(fbm(cS*1.3+vec2(vs*.4,2.9))-.5);
       float ring=smoothstep(ri-.07,ri+.09,r);
       float m=fbm(cS*1.1+vec2(r*2.2,vs*.6));
       vec3 navyW=mix(vec3(.04,.065,.26),vec3(.07,.1,.34),smoothstep(.35,.75,m));
