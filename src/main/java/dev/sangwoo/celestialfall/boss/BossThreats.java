@@ -172,6 +172,12 @@ public final class BossThreats {
             out.add(new Threat(p,"isosangR",r.start(),Math.max(now,hit),r.start()+(long)Math.ceil(IsosangRules.SWEEP_END*20),
                 Zone.ring(pivot,IsosangRules.SWEEP_REACH,IsosangRules.LOW,IsosangRules.SWEEP_HIGH),false,false,false,IsosangRules.SWEEP_DAMAGE,false,false));
         }
+        // (2.83.0) G before its tablet strikes: everything within its reach round its user, unguardable
+        var u=dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimateNow(p);
+        if(u!=null){
+            long hit=u.start()+IsosangRules.G_IMPACT;
+            out.add(new Threat(p,"isosangG",u.start(),Math.max(now,hit),hit,Zone.ring(u.at(),IsosangRules.G_RANGE,-IsosangRules.G_RANGE,IsosangRules.G_RANGE),false,false,false,IsosangRules.G_DAMAGE,false,false));
+        }
         // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
         for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){
             float yaw=(float)Math.toDegrees(Math.atan2(-sw.dir().x,sw.dir().z));

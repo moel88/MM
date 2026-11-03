@@ -43,13 +43,13 @@ public final class IsosangRules {
      * speed: the twirl starts 0.05 s in and the slash is thrown 0.44 s after it; it was 0.7 s; it strikes as it flies on,
      * {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{},{}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
      * and 15; the empowered combo 43.5).
      */
-    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{}};
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{},{}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
     /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
@@ -62,11 +62,11 @@ public final class IsosangRules {
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
      * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0,16,0,0,0};
-    /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it). */
-    public static final int[] HOLD={0,10,12,22,18,14,16,21,826};
-    /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's). */
-    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826};
+    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0};
+    /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it; 2.83.0: G's cutscene). */
+    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD};
+    /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's; 2.83.0: and G's). */
+    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -75,8 +75,8 @@ public final class IsosangRules {
     public static final int REST=24;
     /** Whether {@code kind} is a hit (1 to 4, the empowered 5 and 6). */
     public static boolean valid(int kind){return kind>=1&&kind<=THRUST;}
-    /** Whether {@code kind} is a swing the clients draw with the body: a hit, R's sweep (2.81.0), or H's sword formation (2.82.0). */
-    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION;}
+    /** Whether {@code kind} is a swing the clients draw with the body: a hit, R's sweep (2.81.0), H's sword formation (2.82.0) or G (2.83.0). */
+    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE;}
     /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
     public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
     /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
@@ -585,4 +585,59 @@ public final class IsosangRules {
     }
     /** Where she stands: right behind the formation's middle on its outer ring (forward and right of the middle, blocks). */
     public static double[] standAt(){return new double[]{-FORMATION_STAND_BACK,0};}
+
+    // ───────────────────────────── G: the ultimate ─────────────────────────────
+
+    /**
+     * G (2.83.0, user request: "이번에는 G스킬 궁극기 시전자만 컷씬이 나오고 범위는 30블록 효과음과 대사는 내가 영상에 보냈고
+     * 저거 2개중에 랜덤으로 하나 나오게 하면 돼 컷씬은 저거랑 똑같이 나오게", the user's two videos of it (e3953f00 and
+     * b266d9b5, 60 fps) read on a sheet, and their answers: "피해 100 쿨 5분"; struck as the tablet strikes the ground, free
+     * until then; everyone sees a giant golden tablet fall out of the sky; the cutscene filmed in the world itself): Lee
+     * So-sang raises two fingers, light gathering at their tip, and draws a stroke of gold in the air; holds them before her
+     * face, a cross of light flaring there; leans back and cries out as a whirl of cloud opens high over her and a giant
+     * golden tablet, carved all over, shows in it; it falls point first and strikes the ground {@link #G_AHEAD} blocks ahead
+     * of her, everyone within {@link #G_RANGE} blocks of her struck as it does ({@link #G_DAMAGE}: no guard takes it, no one
+     * is thrown), bursting into fire, flying stone and dust; it darkens, crumbles, and fire leaps up out of the ground round
+     * her. Only she sees it as a cutscene (her own camera's shots of it, the clients' work); she is held where she stands
+     * and nothing harms her until it is over ({@link #G_HOLD}), and G is ready again {@link #G_COOLDOWN} after that. One of
+     * the two videos' recordings is played, at random (the server's choice, {@link #G_VARIANTS}), with that video's face.
+     */
+    public static final int ULTIMATE=9;
+    /** Its damage (the user's word), and how far from her it reaches (blocks, from her middle to the nearest of them; the user's word). */
+    public static final float G_DAMAGE=100;
+    public static final double G_RANGE=30;
+    /** The tick into G the tablet strikes the ground (3.1 s: the videos' tablet strikes 3.08 s after the screen darkens). */
+    public static final int G_IMPACT=62;
+    /**
+     * Ticks G holds her (4.85 s: the videos come back to the game 4.83 s in, from the cutscene's dark) and ticks it is not
+     * ready again once it is over (the user's word: 5 minutes), from its end, as every skill's cooldown.
+     */
+    public static final int G_HOLD=97,G_COOLDOWN=6000;
+    /** How many recordings (and faces) it has, one chosen at random each time (the user's two videos). */
+    public static final int G_VARIANTS=2;
+    /**
+     * G's times (seconds; the videos, from the frame the screen goes dark): the light at the fingertips (0.22), the face
+     * (1.0), the sky (1.55), the tablet falling (2.68), striking (3.1), the game again (4.83 to 4.95), the fire leaping
+     * up round her (5.05) and the dust cleared (6.4).
+     */
+    public static final float G_GLOW=.217f,G_FACE=1f,G_SKY=1.55f,G_FALL=2.68f,G_STRIKE=G_IMPACT/20f,G_BACK=4.83f,G_GAME=4.95f,G_ERUPT=5.05f,G_CLEAR=6.4f;
+    /**
+     * Where the tablet is: it strikes the ground {@link #G_AHEAD} blocks ahead of where she stands (the way she faced); in
+     * the sky it shows {@link #G_SKY_BACK} blocks behind her and {@link #G_SKY_UP} over her feet (its middle), so that her
+     * camera, low in front of her looking up, has it behind her as the video has; its point goes {@link #G_SINK} blocks into
+     * the ground. Its size (blocks): {@link #TABLET_HEIGHT} from its point to its top, {@link #TABLET_WIDTH} across.
+     */
+    public static final double G_AHEAD=9,G_SKY_BACK=3,G_SKY_UP=21,G_SINK=2.2,TABLET_HEIGHT=15,TABLET_WIDTH=7.6;
+    /**
+     * Whether a body is within its reach: {@code dx}, {@code dz} level from her feet, {@code dy} from her feet up to their
+     * feet, {@code halfWidth} across and {@code height} tall; the nearest of them within G_RANGE of her middle (a block
+     * over her feet).
+     */
+    public static boolean ultimateReaches(double dx,double dy,double dz,double halfWidth,double height){
+        double h=Math.max(0,Math.hypot(dx,dz)-halfWidth),low=dy-1,high=dy+height-1;
+        double v=low>0?low:high<0?-high:0;
+        return h*h+v*v<=G_RANGE*G_RANGE;
+    }
+    /** Whether G strikes on its tick {@code age} (once, as the tablet strikes the ground). */
+    public static boolean ultimateStrikes(long age){return age==G_IMPACT;}
 }

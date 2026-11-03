@@ -366,11 +366,13 @@ public final class IsosangSlash implements Fx.Skill {
 
     @Override public Anim clip(int combo){return hit(combo);}
     /** Hit {@code combo}'s motion (2.80.0: the empowered first and fourth, IsosangEmpower). */
-    static Anim hit(int combo){return switch(combo){case 2->H2;case 3->H3;case 4->H4;case IsosangRules.THROWS->IsosangEmpower.THROWS;case IsosangRules.THRUST->IsosangEmpower.THRUST;case IsosangRules.SWEEP->GiantSweep.CLIP;case IsosangRules.FORMATION->SwordFormation.CLIP;default->H1;};}
+    static Anim hit(int combo){return switch(combo){case 2->H2;case 3->H3;case 4->H4;case IsosangRules.THROWS->IsosangEmpower.THROWS;case IsosangRules.THRUST->IsosangEmpower.THRUST;case IsosangRules.SWEEP->GiantSweep.CLIP;case IsosangRules.FORMATION->SwordFormation.CLIP;case IsosangRules.ULTIMATE->JadeTablet.CLIP;default->H1;};}
     /** Whether this swing is R's sweep (2.81.0), drawn by GiantSweep. */
     static boolean sweep(int combo){return combo==IsosangRules.SWEEP;}
     /** Whether this swing is H's sword formation (2.82.0), drawn by SwordFormation. */
     static boolean formation(int combo){return combo==IsosangRules.FORMATION;}
+    /** Whether this swing is G (2.83.0), drawn by JadeTablet. */
+    static boolean ultimate(int combo){return combo==IsosangRules.ULTIMATE;}
     /** Whether this swing is drawn by IsosangEmpower (2.80.0): E's flash (0) and the empowered first and fourth. */
     static boolean empowered(int combo){return combo==0||combo==IsosangRules.THROWS||combo==IsosangRules.THRUST;}
     @Override public float lifetime(){return 4.2f;}
@@ -640,6 +642,7 @@ public final class IsosangSlash implements Fx.Skill {
     /** The blue smoke billowing up off the formation's rim (2.82.10). */
     @Override public void shaders(Fx c){if(formation(c.cast.combo()))SwordFormation.shaders(c);}
     @Override public void ink(Fx c){
+        if(ultimate(c.cast.combo()))return;
         if(sweep(c.cast.combo())){GiantSweep.ink(c);return;}
         if(formation(c.cast.combo())){SwordFormation.ink(c);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.ink(c);return;}
@@ -912,6 +915,7 @@ public final class IsosangSlash implements Fx.Skill {
     @Override public void additive(Fx c,EffectMesh m){
         if(sweep(c.cast.combo())){GiantSweep.additive(c,m);return;}
         if(formation(c.cast.combo())){SwordFormation.additive(c,m);return;}
+        if(ultimate(c.cast.combo())){JadeTablet.additive(c,m);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.additive(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         aura(c,m,t,combo);
@@ -944,6 +948,7 @@ public final class IsosangSlash implements Fx.Skill {
     @Override public void alpha(Fx c,EffectMesh m){
         if(sweep(c.cast.combo())){GiantSweep.alpha(c,m);return;}
         if(formation(c.cast.combo())){SwordFormation.alpha(c,m);return;}
+        if(ultimate(c.cast.combo())){JadeTablet.alpha(c,m);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.alpha(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         inkBursts(c,m,t,combo);
@@ -957,6 +962,7 @@ public final class IsosangSlash implements Fx.Skill {
     @Override public void overlay(Fx c,EffectMesh m){
         if(sweep(c.cast.combo())){GiantSweep.overlay(c,m);return;}
         if(formation(c.cast.combo())){SwordFormation.overlay(c,m);return;}
+        if(ultimate(c.cast.combo())){JadeTablet.overlay(c,m);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.overlay(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         for(var s:arcs(combo))for(var st:stars(s,t)){
@@ -1536,6 +1542,7 @@ public final class IsosangSlash implements Fx.Skill {
     @Override public void frame(Fx c,FxFrame f){
         if(sweep(c.cast.combo())){GiantSweep.frame(c,f);return;}
         if(formation(c.cast.combo())){SwordFormation.frame(c,f);return;}
+        if(ultimate(c.cast.combo())){JadeTablet.frame(c,f);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.frame(c,f);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         float g=Math.min(1.3f,glow(t,combo));
@@ -1569,7 +1576,7 @@ public final class IsosangSlash implements Fx.Skill {
     }
     /** The air bends a little along each slash as it sweeps, along the thrown slash as it flies, and in a ring round the ring's burst. */
     @Override public void distort(Fx c,FxDistort d){
-        if(sweep(c.cast.combo())||formation(c.cast.combo()))return;
+        if(sweep(c.cast.combo())||formation(c.cast.combo())||ultimate(c.cast.combo()))return;
         if(empowered(c.cast.combo())){IsosangEmpower.distort(c,d);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         for(var s:arcs(combo)){
@@ -1588,6 +1595,7 @@ public final class IsosangSlash implements Fx.Skill {
     @Override public float shake(StandClient.Cast cast,float sec){
         if(sweep(cast.combo()))return GiantSweep.shake(cast,sec);
         if(formation(cast.combo()))return SwordFormation.shake(cast,sec);
+        if(ultimate(cast.combo()))return JadeTablet.shake(cast,sec);
         if(empowered(cast.combo()))return IsosangEmpower.shake(cast,sec);
         int combo=cast.combo();float v=0;
         for(int i=0;i<IsosangRules.blows(combo);i++){

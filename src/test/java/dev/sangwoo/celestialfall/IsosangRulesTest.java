@@ -330,4 +330,23 @@ class IsosangRulesTest {
         var sounds=com.google.gson.JsonParser.parseString(json).getAsJsonObject();
         assertTrue(sounds.getAsJsonObject("isosang_h").getAsJsonArray("sounds").get(0).getAsJsonObject().get("stream").getAsBoolean(),"H's sound streams");
     }
+    @Test void gStrikesEveryoneWithinThirtyBlocksAsTheTabletLands()throws Exception{
+        // (2.83.0) "피해 100 쿨 5분", "범위는 30블록": once, as its tablet strikes (3.1 s), holding her through its cutscene
+        assertEquals(100,G_DAMAGE,1e-6);assertEquals(30,G_RANGE,1e-9);
+        assertEquals(6000,G_COOLDOWN,"five minutes");
+        assertEquals(62,G_IMPACT);assertTrue(ultimateStrikes(62)&&!ultimateStrikes(61)&&!ultimateStrikes(63));
+        assertTrue(G_HOLD>G_IMPACT&&G_HOLD/20f<5,"she is held through the cutscene, under five seconds");
+        assertEquals(G_HOLD,HOLD[ULTIMATE]);assertEquals(G_HOLD,LENGTH[ULTIMATE]);assertTrue(drawn(ULTIMATE));assertEquals(0,blows(ULTIMATE));
+        // within 30 blocks of her middle: a body 29.5 blocks out level is struck, 30.6 is not; above and below too
+        assertTrue(ultimateReaches(29.5,0,0,.3,1.8));assertFalse(ultimateReaches(30.6,0,0,.3,1.8));
+        assertTrue(ultimateReaches(0,25,0,.3,1.8));assertFalse(ultimateReaches(0,31.2,0,.3,1.8));
+        assertTrue(ultimateReaches(0,-29,0,.3,1.8));assertFalse(ultimateReaches(0,-32,0,.3,1.8));
+        assertTrue(ultimateReaches(21,0,21,.3,1.8),"diagonally within");assertFalse(ultimateReaches(22,0,22,.3,1.8));
+        // two recordings, each as long as it goes on in the video (the screen dark to silence again)
+        assertEquals(2,G_VARIANTS);
+        for(int i=1;i<=G_VARIANTS;i++){double len=StarPlatinumRulesTest.seconds("isosang_g_"+i);assertEquals(7.28,len,.05,"its recording "+i);}
+        // the times: the face, the sky, the fall, the strike, the game back, in order
+        assertTrue(G_GLOW<G_FACE&&G_FACE<G_SKY&&G_SKY<G_FALL&&G_FALL<G_STRIKE&&G_STRIKE<G_BACK&&G_BACK<G_GAME&&G_GAME<G_ERUPT&&G_ERUPT<G_CLEAR);
+        assertEquals(G_IMPACT/20f,G_STRIKE,1e-6);
+    }
 }

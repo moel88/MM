@@ -36,6 +36,8 @@ public abstract class LivingCombatMixin {
         if((Object)this instanceof ServerPlayerEntity p && dev.sangwoo.celestialfall.AtomicManager.invulnerable(p) && !source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)){cir.setReturnValue(false);return;}
         // Star Platinum's beatdown's cutscene (2.64.0): nothing but its own blows harms its user or the one struck
         if(dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
+        // Lee So-sang's G (2.83.0): nothing harms its user while its cutscene holds them
+        if(dev.sangwoo.celestialfall.isosang.IsosangAttack.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
         // stopped in Star Platinum's stopped time (2.67.0): the harm is kept and comes to them all at once as time moves
         // again (the blow counts as landed now)
         if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.defer((LivingEntity)(Object)this,source,amount)){cir.setReturnValue(true);return;}

@@ -163,6 +163,16 @@ public final class KagenoClips {
         Vec3d local=right.multiply(-.3125).add(0,1.375-PIVOT,0).add(world(p.lArm,f,right).multiply(.625));
         return pivot(feet,f,p).add(rotate(q,local));
     }
+    /** World position of the free (left) shoulder for pose {@code p}, as {@link #freeHand} (2.83.0: Lee So-sang's G points with that hand). */
+    public static Vec3d freeShoulder(Vec3d feet,float yaw,Pose p){
+        Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);
+        return pivot(feet,f,p).add(rotate(torso(f,p),right.multiply(-.3125).add(0,1.375-PIVOT,0)));
+    }
+    /** World position of the head's middle for pose {@code p} (2.83.0: the camera of Lee So-sang's G frames her face). */
+    public static Vec3d head(Vec3d feet,float yaw,Pose p){
+        Vec3d f=Vec3d.fromPolar(0,yaw);
+        return pivot(feet,f,p).add(rotate(torso(f,p),new Vec3d(0,1.5+.25-PIVOT,0)));
+    }
     /** World position of the sword shoulder for pose {@code p}, as {@link #blade}. */
     public static Vec3d shoulder(Vec3d feet,float yaw,Pose p){
         Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);

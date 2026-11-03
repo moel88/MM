@@ -43,7 +43,9 @@
     "TimeStopSoundMixin",
     "TimeStopWorldMixin",
     "BossSkinMixin",
-    "WorldTimeMixin"
+    "WorldTimeMixin",
+    "IsosangDarkMixin",
+    "IsosangSkyMixin"
   ],
   "injectors": {
     "defaultRequire": 1

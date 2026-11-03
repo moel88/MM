@@ -254,7 +254,7 @@ public final class StarPlatinumTimeStop {
      * passive: no other stand's time stop holds them, KagenoManager.ignoresTimeStop).
      */
     private static boolean passedBy(LivingEntity e){
-        if(StarPlatinumBeatdown.involved(e)||BY_HELD.containsKey(e.getUuid())||BY_RESISTING.containsKey(e.getUuid()))return true;
+        if(StarPlatinumBeatdown.involved(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e)||BY_HELD.containsKey(e.getUuid())||BY_RESISTING.containsKey(e.getUuid()))return true;
         if(e instanceof ServerPlayerEntity p){
             var own=BY_USER.get(p.getUuid());if(own!=null&&own.stopped)return true;
             if(KagenoManager.ignoresTimeStop(p,SOURCE))return true;

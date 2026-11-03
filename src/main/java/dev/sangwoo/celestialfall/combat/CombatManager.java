@@ -87,7 +87,7 @@ public final class CombatManager {
      */
     public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p)&&!dev.sangwoo.celestialfall.stand.StandManager.isosang(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
     /** In a cutscene or a cast that holds the player: Kageno's skills, the old items', and Star Platinum's beatdown's (2.64.0, its user and the one struck). */
-    public static boolean cinematic(PlayerEntity p) { return dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||SpellManager.isCasting(p.getUuid())||AtomicManager.isCasting(p.getUuid())||HeavenManager.isCasting(p.getUuid())||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p); }
+    public static boolean cinematic(PlayerEntity p) { return dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||SpellManager.isCasting(p.getUuid())||AtomicManager.isCasting(p.getUuid())||HeavenManager.isCasting(p.getUuid())||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(p); }
     private static boolean valid(ServerPlayerEntity p) {
         // (2.77.0: nor while a hit of Lee So-sang's sword holds them: no guard or dash then, IsosangRules.HOLD)
         return dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()&&!p.hasVehicle()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()&&!cinematic(p)&&!HitStun.stunned(p)

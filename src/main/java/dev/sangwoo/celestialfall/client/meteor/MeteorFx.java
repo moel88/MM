@@ -47,6 +47,15 @@ public final class MeteorFx {
     private static final List<Fall> FALLS=new ArrayList<>();
     private static final List<Burst> BURSTS=new ArrayList<>();
     private static final List<Ending> ENDINGS=new ArrayList<>();
+    /**
+     * (2.83.0) Lee So-sang's G: its giant tablet striking the ground as a meteor lands (the same fire, dust, stone and
+     * sparks, {@link #BLAST_SCALE} times as big), and, {@link #ERUPT_AFTER} ticks later, fire leaping up out of the ground
+     * round its user and dust spreading over them. Keyed by the cast (its swing's id).
+     */
+    private record Blast(java.util.UUID key,Vec3d to,Vec3d user,int seed,double zero,BlockState ground){}
+    private static final List<Blast> BLASTS=new ArrayList<>();
+    /** How big G's landing is (a meteor's is 1) and when, after it, the fire leaps up round its user (ticks: the video, 1.95 s). */
+    public static final double BLAST_SCALE=1.45,ERUPT_AFTER=39;
     /** Each rock on the ground (entity id): the clock at its landing, and at its last hit. */
     private static final Map<Integer,Double> LANDED=new HashMap<>(),JOLTS=new HashMap<>();
     private static final Vec3d UP=new Vec3d(0,1,0),WIND=new Vec3d(.016,0,.007);
@@ -59,7 +68,20 @@ public final class MeteorFx {
             c.register(CelestialFall.id("meteor_fx_add"),VertexFormats.POSITION_TEXTURE_COLOR,s->glow=s);
         });
     }
-    static void clear(){FALLS.clear();BURSTS.clear();ENDINGS.clear();LANDED.clear();JOLTS.clear();}
+    static void clear(){FALLS.clear();BURSTS.clear();ENDINGS.clear();LANDED.clear();JOLTS.clear();BLASTS.clear();}
+    /**
+     * G's landing (2.83.0): its tablet strikes the ground at {@code to} (its user at {@code user}) {@code -age} ticks from
+     * now ({@code age} ticks ago if it already has). Once for each cast.
+     */
+    public static void blast(java.util.UUID key,Vec3d to,Vec3d user,int seed,double age){
+        if(BLASTS.stream().anyMatch(b->b.key().equals(key)))return;
+        var mc=MinecraftClient.getInstance();
+        BlockState under=mc.world==null?Blocks.DIRT.getDefaultState():mc.world.getBlockState(BlockPos.ofFloored(to.x,to.y-.5,to.z));
+        BlockState ground=under.isAir()||under.getRenderType()!=net.minecraft.block.BlockRenderType.MODEL?Blocks.DIRT.getDefaultState():under;
+        BLASTS.add(new Blast(key,to,user,seed,MeteorClient.clock(0)-age,ground));
+    }
+    /** G called off before its tablet struck (2.83.0): its landing is not drawn. */
+    public static void unblast(java.util.UUID key){BLASTS.removeIf(b->b.key().equals(key));}
 
     // ---------------------------------------------------------------- events
 
@@ -100,6 +122,7 @@ public final class MeteorFx {
         FALLS.removeIf(f->now-f.zero>f.ticks+340);
         BURSTS.removeIf(b->now-b.zero>70);
         ENDINGS.removeIf(e->now-e.zero>150);
+        BLASTS.removeIf(b->now-b.zero()>360);
         if(mc.world==null){LANDED.clear();JOLTS.clear();return;}
         LANDED.keySet().removeIf(id->!(mc.world.getEntityById(id) instanceof MeteorEntity));
         JOLTS.keySet().removeIf(id->!(mc.world.getEntityById(id) instanceof MeteorEntity)||now-JOLTS.get(id)>20);
@@ -159,7 +182,7 @@ public final class MeteorFx {
         var mc=MinecraftClient.getInstance();if(mc.world==null)return;
         List<MeteorEntity> rocks=new ArrayList<>();
         for(var e:mc.world.getEntities())if(e instanceof MeteorEntity m&&m.isAlive())rocks.add(m);
-        if(FALLS.isEmpty()&&BURSTS.isEmpty()&&ENDINGS.isEmpty()&&rocks.isEmpty())return;
+        if(FALLS.isEmpty()&&BURSTS.isEmpty()&&ENDINGS.isEmpty()&&rocks.isEmpty()&&BLASTS.isEmpty())return;
         if(blend==null||glow==null)return;
         float delta=c.tickDelta();double now=MeteorClient.clock(delta);
         Vec3d cam=c.camera().getPos();
@@ -173,6 +196,8 @@ public final class MeteorFx {
             for(var b:BURSTS)b.collect(f,now,ms,consumers,mc);
             for(var e:ENDINGS)e.collect(f,now,ms,consumers,mc);
             for(var rock:rocks)landed(rock,f,now,delta);
+            // (2.83.0) G's tablet landing, and the fire leaping up round its user after
+            for(var b:BLASTS){double ti=now-b.zero();if(ti>=0)impact(f,ti,b.to(),b.seed(),b.ground(),BLAST_SCALE);if(ti>=ERUPT_AFTER)eruption(f,ti-ERUPT_AFTER,b.user(),b.to(),b.seed(),b.ground());}
             consumers.draw();
             f.draw(ms,c.camera());
         }finally{
@@ -265,7 +290,7 @@ public final class MeteorFx {
             }
             trailPuffs(f,t);
             sheddings(f,t);
-            if(ti>=0)impact(f,ti,ms,consumers,mc);
+            if(ti>=0)impact(f,ti,to,seed,ground,1);
             // until its rock is on the ground here, the landed rock is drawn from the fall
             if(ti>=0&&ti<60&&!rockArrived(mc)){
                 ms.push();ms.translate(to.x,to.y,to.z);
@@ -316,20 +341,24 @@ public final class MeteorFx {
                 f.spark(p,q,.09,(float)(1-a/life*.7),(float)(1-smooth(life*.6,life,a)));
             }
         }
+    }
 
-        /** The landing, {@code ti} ticks after it. */
-        private void impact(Frame f,double ti,MatrixStack ms,VertexConsumerProvider consumers,MinecraftClient mc){
+    /**
+     * A landing, {@code ti} ticks after it, at {@code to} on {@code ground} (2.83.0: its own method, a scale {@code k} to its
+     * size, so Lee So-sang's G can land its giant tablet as a rock lands; a meteor's is k 1, as it always was).
+     */
+    private static void impact(Frame f,double ti,Vec3d to,int seed,BlockState ground,double k){
             if(ti>330)return;
-            Vec3d c=to.add(0,.9,0);
+            Vec3d c=to.add(0,.9*k,0);
             if(ti<26){
                 // the flash: big seen from afar, held back close by (a few blocks off it must not white the whole view out)
                 double off=to.distanceTo(f.cam);
-                f.glow(c,(5+6*smooth(0,2.5,ti))*Math.min(1,.45+off/40),1f,.65f,(float)((ti<1?1:Math.exp(-(ti-1)/3.5))*Math.min(1,.55+off/60)));
-                f.glow(c,6,.2f,.35f,(float)(.55*Math.exp(-ti/20)));
+                f.glow(c,(5+6*smooth(0,2.5,ti))*k*Math.min(1,.45+off/40),1f,.65f,(float)((ti<1?1:Math.exp(-(ti-1)/3.5))*Math.min(1,.55+off/60)));
+                f.glow(c,6*k,.2f,.35f,(float)(.55*Math.exp(-ti/20)));
             }
-            f.pool(to.add(0,.05,0),10,.75,Math.max(0,.7*Math.exp(-ti/20)),seed,true);
+            f.pool(to.add(0,.05,0),10*k,.75,Math.max(0,.7*Math.exp(-ti/20)),seed,true);
             if(ti<30){
-                double r=1.5+21*(1-Math.exp(-ti/7));
+                double r=(1.5+21*(1-Math.exp(-ti/7)))*k;
                 f.ring(to.add(0,.12,0),r*.55,r,seed,(float)(ti/30),(float)(.95*(1-smooth(10,30,ti))));
             }
             // the flash on the screen of those close
@@ -339,27 +368,27 @@ public final class MeteorFx {
             for(int i=0;i<18;i++){
                 double life=12+rnd(seed,i,51)*8,a=ti;if(a>life)continue;
                 double ang=rnd(seed,i,52)*Math.PI*2,out=.3+.3*rnd(seed,i,53);
-                Vec3d v=new Vec3d(Math.cos(ang)*out,.25+.4*rnd(seed,i,54),Math.sin(ang)*out);
-                Vec3d p=drag(to.add(0,.8,0),v,a,.14).add(0,.06*a,0);
-                f.fire(p,1.3+1.8*(1-Math.exp(-a/6)),(float)(1.05*Math.exp(-a/6)),(float)(.25+.5*rnd(seed,i,55)),(float)(smooth(0,1,a)*(1-smooth(life*.25,life*.75,a))),seed+i*11);
+                Vec3d v=new Vec3d(Math.cos(ang)*out,.25+.4*rnd(seed,i,54),Math.sin(ang)*out).multiply(k);
+                Vec3d p=drag(to.add(0,.8*k,0),v,a,.14).add(0,.06*a*k,0);
+                f.fire(p,(1.3+1.8*(1-Math.exp(-a/6)))*k,(float)(1.05*Math.exp(-a/6)),(float)(.25+.5*rnd(seed,i,55)),(float)(smooth(0,1,a)*(1-smooth(life*.25,life*.75,a))),seed+i*11);
             }
             // the dark column rising out of the hole
             for(int i=0;i<22;i++){
                 double born=1+i*2.6,a=ti-born,life=100+rnd(seed,i,61)*70;if(a<0||a>life)continue;
-                Vec3d o=to.add((rnd(seed,i,62)-.5)*1.8,.7,(rnd(seed,i,63)-.5)*1.8);
+                Vec3d o=to.add((rnd(seed,i,62)-.5)*1.8*k,.7,(rnd(seed,i,63)-.5)*1.8*k);
                 // quick at first out of the hole, then a steady rise that slows a little as it spreads
-                double rise=.5*(1-Math.exp(-a/4))*4+(.11+.07*rnd(seed,i,64))*a*(1-a/(life*3));
+                double rise=(.5*(1-Math.exp(-a/4))*4+(.11+.07*rnd(seed,i,64))*a*(1-a/(life*3)))*k;
                 Vec3d p=o.add(0,rise,0).add(WIND.multiply(a*(.8+.6*rnd(seed,i,65))));
-                double size=.8+(1.2+.9*rnd(seed,i,66))*(1-Math.exp(-a/35))+rise*.08;
+                double size=(.8+(1.2+.9*rnd(seed,i,66))*(1-Math.exp(-a/35)))*k+rise*.08;
                 f.smoke(p,size,.58+.22*rnd(seed,i,67),(float)(.9*Math.exp(-a/9)),(float)(.5*smooth(0,3,a)*(1-smooth(life*.35,life,a))),seed+i*17);
             }
             // the dust racing out along the ground
             for(int i=0;i<26;i++){
                 double born=rnd(seed,i,71)*4,a=ti-born,life=34+rnd(seed,i,72)*26;if(a<0||a>life)continue;
-                double ang=(i+rnd(seed,i,73)*.8)/26*Math.PI*2,r0=1.3+rnd(seed,i,74)*1.4;
+                double ang=(i+rnd(seed,i,73)*.8)/26*Math.PI*2,r0=(1.3+rnd(seed,i,74)*1.4)*k;
                 Vec3d o=to.add(Math.cos(ang)*r0,.35,Math.sin(ang)*r0);
-                Vec3d v=new Vec3d(Math.cos(ang),0,Math.sin(ang)).multiply(.45+.3*rnd(seed,i,75));
-                double size=.8+1.9*(1-Math.exp(-a/14));
+                Vec3d v=new Vec3d(Math.cos(ang),0,Math.sin(ang)).multiply((.45+.3*rnd(seed,i,75))*k);
+                double size=(.8+1.9*(1-Math.exp(-a/14)))*k;
                 // it rolls out along the ground, its middle never higher than its own size
                 Vec3d p=drag(o,v,a,.1).add(0,Math.min(size*.55,.006*a),0).add(WIND.multiply(a));
                 f.smoke(p,size,.2+.2*rnd(seed,i,76),0,(float)(.72*smooth(0,2,a)*(1-smooth(life*.35,life,a)))*f.groundFade(p),seed+i*23+64);
@@ -367,9 +396,9 @@ public final class MeteorFx {
             // sparks spraying out, bouncing off nothing: they go out as they reach the ground
             for(int i=0;i<64;i++){
                 double life=14+rnd(seed,i,81)*26,a=ti;if(a>life)continue;
-                double ang=rnd(seed,i,82)*Math.PI*2,up=.25+.75*rnd(seed,i,83),sp=.45+.65*rnd(seed,i,84);
+                double ang=rnd(seed,i,82)*Math.PI*2,up=.25+.75*rnd(seed,i,83),sp=(.45+.65*rnd(seed,i,84))*Math.sqrt(k);
                 Vec3d v=new Vec3d(Math.cos(ang)*sp*(1.1-up*.6),up*sp,Math.sin(ang)*sp*(1.1-up*.6));
-                Vec3d o=to.add(0,.7,0);
+                Vec3d o=to.add(0,.7*k,0);
                 Vec3d p=ballistic(o,v,a,.03,.045),q=ballistic(o,v,Math.max(0,a-1.4),.03,.045);
                 if(p.y<to.y+.05)continue;
                 f.spark(p,q,.08,(float)(1-a/life*.8),(float)(1-smooth(life*.55,life,a)));
@@ -377,18 +406,69 @@ public final class MeteorFx {
             // earth and stone thrown out, bouncing to rest, then sinking out of sight
             for(int i=0;i<20;i++){
                 double a=ti,end=150+rnd(seed,i,91)*40;if(a>end)continue;
-                double ang=rnd(seed,i,92)*Math.PI*2,sp=.16+.26*rnd(seed,i,93),size=.2+.3*rnd(seed,i,94);
-                Vec3d v=new Vec3d(Math.cos(ang)*sp,.38+.38*rnd(seed,i,95),Math.sin(ang)*sp);
-                double[] s=bounce(to.add(Math.cos(ang)*.8,.6,Math.sin(ang)*.8),v,a,to.y+size*.5);
+                double ang=rnd(seed,i,92)*Math.PI*2,sp=(.16+.26*rnd(seed,i,93))*Math.sqrt(k),size=(.2+.3*rnd(seed,i,94))*Math.sqrt(k);
+                Vec3d v=new Vec3d(Math.cos(ang)*sp,(.38+.38*rnd(seed,i,95))*Math.sqrt(k),Math.sin(ang)*sp);
+                double[] s=bounce(to.add(Math.cos(ang)*.8*k,.6,Math.sin(ang)*.8*k),v,a,to.y+size*.5);
                 float shrink=(float)(1-smooth(end-25,end,a));
                 f.block(i%3==0?Blocks.BLACKSTONE.getDefaultState():ground,new Vec3d(s[0],s[1],s[2]),size*shrink,s[3]*(1+rnd(seed,i,96)),i,f.groundFade(new Vec3d(s[0],s[1],s[2]))>0);
             }
             // embers drifting up out of the hole for a few seconds
             for(int i=0;i<24;i++){
                 double born=rnd(seed,i,101)*30,a=ti-born,life=30+rnd(seed,i,102)*30;if(a<0||a>life)continue;
-                Vec3d p=to.add((rnd(seed,i,103)-.5)*3+Math.sin(a*.2+i)*.3,.6+(.06+.05*rnd(seed,i,104))*a,(rnd(seed,i,105)-.5)*3+Math.cos(a*.17+i)*.3);
+                Vec3d p=to.add((rnd(seed,i,103)-.5)*3*k+Math.sin(a*.2+i)*.3,.6+(.06+.05*rnd(seed,i,104))*a,(rnd(seed,i,105)-.5)*3*k+Math.cos(a*.17+i)*.3);
                 f.glow(p,.12+rnd(seed,i,106)*.08,.8f,.35f,(float)(smooth(0,3,a)*(1-smooth(life*.5,life,a))));
             }
+            }
+
+    /**
+     * G's fire leaping up round its user (2.83.0, the user's videos: as the game comes back, tongues of fire shoot up out
+     * of the ground round her and ahead, stones fly up, and dust rolls over everything and clears in about a second and a
+     * half), {@code ti} ticks after it begins: {@code user} their feet, {@code to} where the tablet struck.
+     */
+    private static void eruption(Frame f,double ti,Vec3d user,Vec3d to,int seed,BlockState ground){
+        if(ti>60)return;
+        Vec3d mid=user.lerp(to,.45);
+        // a flash of heat over them as it begins
+        if(ti<8)f.glow(mid.add(0,1.5,0),9,.3f,.4f,(float)(.55*smooth(0,1,ti)*Math.exp(-ti/3)));
+        // tongues of fire shooting up out of the ground, round them and ahead (each a few cells stacked up its height)
+        for(int i=0;i<18;i++){
+            double born=rnd(seed,i,201)*7,a=ti-born,life=11+rnd(seed,i,202)*8;if(a<0||a>life)continue;
+            double ang=rnd(seed,i,203)*Math.PI*2,rad=2.2+rnd(seed,i,204)*8.5;
+            Vec3d o=mid.add(Math.cos(ang)*rad,0,Math.sin(ang)*rad);
+            double height=(2.4+rnd(seed,i,205)*3.2)*smooth(0,2.5,a);
+            float fade=(float)(1-smooth(life*.45,life,a));
+            for(int k=0;k<4;k++){
+                double up=height*(k+.5)/4;
+                f.fire(o.add(Math.sin(a*.4+k)*.12,up,Math.cos(a*.37+k)*.12),(1.15-.18*k)*(.8+.4*rnd(seed,i,206)),(float)(1.1-.15*k),(float)(.4+.4*rnd(seed,i,207)),fade*(float)smooth(0,1,a),seed+i*7+k);
+            }
+            f.glow(o.add(0,.4,0),1.6,.6f,.45f,.55f*fade*(float)smooth(0,1,a));
+        }
+        // dust rolling out over everything (a pale cloud that fills the view, then thins away)
+        for(int i=0;i<34;i++){
+            double born=1+rnd(seed,i,211)*6,a=ti-born,life=26+rnd(seed,i,212)*16;if(a<0||a>life)continue;
+            double ang=rnd(seed,i,213)*Math.PI*2,rad=Math.sqrt(rnd(seed,i,214))*9;
+            Vec3d o=mid.add(Math.cos(ang)*rad,.5,Math.sin(ang)*rad);
+            Vec3d v=new Vec3d(Math.cos(ang),.12,Math.sin(ang)).multiply(.18+.18*rnd(seed,i,215));
+            double size=1.6+3.2*(1-Math.exp(-a/8));
+            Vec3d p=drag(o,v,a,.08).add(0,Math.min(size*.5,.02*a),0).add(WIND.multiply(a));
+            f.smoke(p,size,.12+.14*rnd(seed,i,216),0,(float)(.62*smooth(0,2.5,a)*(1-smooth(life*.4,life,a))),seed+i*29+300);
+        }
+        // stones thrown up, bouncing to rest and sinking away
+        for(int i=0;i<14;i++){
+            double a=ti,end=48+rnd(seed,i,221)*12;if(a>end)continue;
+            double ang=rnd(seed,i,222)*Math.PI*2,rad=1.5+rnd(seed,i,223)*7,sp=.08+.12*rnd(seed,i,224),size=.2+.28*rnd(seed,i,225);
+            Vec3d o=mid.add(Math.cos(ang)*rad,.4,Math.sin(ang)*rad);
+            Vec3d v=new Vec3d(Math.cos(ang)*sp,.42+.32*rnd(seed,i,226),Math.sin(ang)*sp);
+            double[] st=bounce(o,v,a,o.y-.4+size*.5);
+            float shrink=(float)(1-smooth(end-12,end,a));
+            f.block(i%3==0?Blocks.BLACKSTONE.getDefaultState():ground,new Vec3d(st[0],st[1],st[2]),size*shrink,st[3]*(1+rnd(seed,i,227)),i+40,f.groundFade(new Vec3d(st[0],st[1],st[2]))>0);
+        }
+        // embers riding up with the fire
+        for(int i=0;i<30;i++){
+            double born=rnd(seed,i,231)*12,a=ti-born,life=16+rnd(seed,i,232)*14;if(a<0||a>life)continue;
+            double ang=rnd(seed,i,233)*Math.PI*2,rad=1.5+rnd(seed,i,234)*9;
+            Vec3d p=mid.add(Math.cos(ang)*rad+Math.sin(a*.25+i)*.3,.4+(.12+.1*rnd(seed,i,235))*a,Math.sin(ang)*rad+Math.cos(a*.2+i)*.3);
+            f.glow(p,.14+rnd(seed,i,236)*.1,.8f,.35f,(float)(smooth(0,2,a)*(1-smooth(life*.5,life,a))));
         }
     }
 

@@ -91,6 +91,8 @@ public final class KagenoManager {
         if(e instanceof PlayerEntity p&&AtomicManager.immobilized(p))return true;
         // Star Platinum's beatdown's cutscene holds its user and the one struck where they are (2.64.0)
         if(StarPlatinumBeatdown.involved(e))return true;
+        // Lee So-sang's G (2.83.0) holds its user where they stand through its cutscene
+        if(dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e))return true;
         // Star Platinum's time stop (2.67.0) holds its user as they call it, and whom it stopped until time moves again
         if(StarPlatinumTimeStop.holds(e))return true;
         // a stand arrow in their chest (2.70.0) holds them until its choice is made (and for one it rejects, until they die)

@@ -65,12 +65,15 @@ public final class IsosangAttack {
     public static final int HIT=0,LANDED=1,RESTS=2,STOPPED=3,THROWN=4,EMPOWERED=5,SPENT=6;
     /**
      * The skills the skill packet asks for: E (2.80.0), R (2.81.0) and R held (2.81.1: the key held down
-     * {@link IsosangRules#R_HOLD_TICKS} ticks, the client's call, as Kageno's T held is).
+     * {@link IsosangRules#R_HOLD_TICKS} ticks, the client's call, as Kageno's T held is), H (2.82.0) and G (2.83.0).
      */
-    public static final int E=1,R=2,R_HELD=3,H=4;
+    public static final int E=1,R=2,R_HELD=3,H=4,G=5;
     /** The formation's damage (2.82.0): no guard takes it (minecraft:bypasses_shield), its user is the attacker. */
     public static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> FORMATION_DAMAGE=
         net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("sword_formation"));
+    /** G's damage (2.83.0): no guard takes it either (minecraft:bypasses_shield), its user is the attacker. */
+    public static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> ULTIMATE_DAMAGE=
+        net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("jade_tablet"));
     /** At most this many presses a second are heard. */
     static final int RATE=40;
     private static final class State {
@@ -100,6 +103,17 @@ public final class IsosangAttack {
         Sweep sweep;long rReady;boolean rQueued,rHeld;
         /** (2.82.0) H's sword formation under way (null for none) and the tick H is ready again. */
         Formation form;long hReady;
+        /** (2.83.0) G under way or the last one (null for none), and the tick G is ready again. */
+        Ultimate ult;long gReady;
+    }
+    /**
+     * G (2.83.0): its id and start, where its user stands (their feet) and the way they faced, which of the recordings
+     * (and faces) it plays, where its tablet strikes the ground ({@link IsosangRules#G_AHEAD} blocks ahead, on whatever is
+     * there), and whether it has struck (or will not: its user gone before it did).
+     */
+    private static final class Ultimate {
+        final UUID id;final long start;final Vec3d at,strike;final float yaw;final int variant;boolean struck,over;
+        Ultimate(UUID id,long start,Vec3d at,float yaw,int variant,Vec3d strike){this.id=id;this.start=start;this.at=at;this.yaw=yaw;this.variant=variant;this.strike=strike;}
     }
     /**
      * H's sword formation (2.82.0): its id and start, its middle (on the ground; 2.82.4: IsosangRules.FORMATION_STAND_BACK
@@ -166,12 +180,15 @@ public final class IsosangAttack {
                 if(skill==E)empower(player);
                 else if(skill==R||skill==R_HELD)sweep(player,skill==R_HELD);
                 else if(skill==H)formation(player);
+                else if(skill==G)ultimate(player);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(IsosangAttack::tick);
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
             // (2.82.0) a formation under way ends with them: every viewer is told, its swords go
             var st=STATES.get(handler.player.getUuid());if(st!=null&&st.form!=null)end(handler.player,st,handler.player.getWorld().getTime());
+            // (2.83.0) and G before its tablet strikes: it does not
+            if(st!=null&&st.ult!=null&&!st.ult.struck&&!st.ult.over)call(handler.player,st,handler.player.getWorld().getTime());
             STATES.remove(handler.player.getUuid());
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server->STATES.clear());
@@ -183,7 +200,30 @@ public final class IsosangAttack {
     /** Whether one of this player's hits (or, 2.81.0, their R) holds them now (IsosangRules.HOLD): CombatManager.busy and actionLocked count it. */
     public static boolean busy(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());
-        return s!=null&&s.world==p.getWorld()&&(holding(s.combo,s.start,p.getWorld().getTime())||sweepHolds(s,p.getWorld().getTime())||forming(s,p.getWorld().getTime()));
+        return s!=null&&s.world==p.getWorld()&&(holding(s.combo,s.start,p.getWorld().getTime())||sweepHolds(s,p.getWorld().getTime())||forming(s,p.getWorld().getTime())||casting(s,p.getWorld().getTime()));
+    }
+    /** Whether G holds its user now (2.83.0): from its start for its cutscene ({@link IsosangRules#G_HOLD}), unless it was called off. */
+    private static boolean casting(State s,long now){var u=s.ult;return u!=null&&!u.over&&now>=u.start&&now-u.start<HOLD[ULTIMATE];}
+    /**
+     * Whether this one is held by their G now (2.83.0): its cutscene holds them where they stand (KagenoManager.frozen),
+     * nothing harms them (shielded), and nothing else of theirs may begin (CombatManager.cinematic).
+     */
+    public static boolean casting(LivingEntity e){
+        if(!(e instanceof PlayerEntity p)||e.getWorld().isClient)return false;
+        var s=STATES.get(p.getUuid());return s!=null&&s.world==p.getWorld()&&casting(s,p.getWorld().getTime());
+    }
+    /** Whether harm from {@code source} is kept from {@code e}: G holds them (what bypasses invulnerability, /kill or the void, still reaches them). */
+    public static boolean shielded(LivingEntity e,net.minecraft.entity.damage.DamageSource source){
+        return casting(e)&&!source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY);
+    }
+    /** The tick this player's G is ready again (0 if it is ready, 2.83.0). */
+    public static long gReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.gReady;}
+    /** This player's G as a boss reads it (2.83.0): begun at {@code start}, where its user stands; null for none under way before its strike. */
+    public record UltimateNow(long start,Vec3d at,Vec3d strike){}
+    public static UltimateNow ultimateNow(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());long now=p==null?0:p.getWorld().getTime();
+        if(s==null||s.ult==null||s.ult.struck||s.ult.over||now-s.ult.start>G_IMPACT)return null;
+        return new UltimateNow(s.ult.start,s.ult.at,s.ult.strike);
     }
     /** Whether H's sword formation is under way for its user now (2.82.0): it holds them from its start to its end. */
     private static boolean forming(State s,long now){var f=s.form;return f!=null&&now>=f.start&&now-f.start<LENGTH[FORMATION];}
@@ -272,12 +312,12 @@ public final class IsosangAttack {
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again; so are E's cooldown and its empowerment (2.80.0), and R's cooldown (2.81.0). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.gReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;}}
     /**
      * This player's cooldowns are off (/botand nocooldown, every tick: NoCooldownState): the attack's rest and E's
      * cooldown are gone; an empowerment they hold stays theirs (2.80.0).
      */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.gReady=0;}}
     /** The tick this player's E is ready again (0 if it is ready, 2.80.0). */
     public static long eReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.eReady;}
     /** Whether this player's next combo is empowered (E used, its combo not begun or not over, 2.80.0). */
@@ -528,6 +568,74 @@ public final class IsosangAttack {
         }
         if(!struck.isEmpty()){p.onAttacking(struck.get(0));send(p,f.id,FORMATION,f.start,f.yaw,LANDED,impact?0:1,struck,null,null,f);}
     }
+    /**
+     * G (2.83.0, user request: "이번에는 G스킬 궁극기 시전자만 컷씬이 나오고 범위는 30블록 ..."): at once. Not while one is held
+     * otherwise (a blow, a guard, a dash, a skill, a cutscene), while a hit, R or H of theirs holds them, while it is under
+     * way, or before it is ready again ({@link IsosangRules#G_COOLDOWN} after the last one was over; none for a player the
+     * cooldowns are off for).
+     */
+    public static boolean ultimate(ServerPlayerEntity p){
+        if(!able(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(casting(s,now)||now<s.gReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        if(holding(s.combo,s.start,now)||sweepHolds(s,now)||forming(s,now))return false;
+        s.queued=false;s.rQueued=false;
+        boolean spent=s.empowered;
+        s.combo=0;s.blows=0;s.empowered=false;
+        if(spent)spend(p,s,now);
+        var world=p.getServerWorld();Vec3d at=p.getPos();float yaw=MathHelper.wrapDegrees(p.getYaw());
+        // where its tablet strikes: G_AHEAD blocks ahead the way they face, on the first thing under the sky there
+        Vec3d over=at.add(Vec3d.fromPolar(0,yaw).multiply(G_AHEAD));double y=at.y;
+        var down=world.raycast(new RaycastContext(new Vec3d(over.x,at.y+24,over.z),new Vec3d(over.x,at.y-24,over.z),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+        if(down.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)y=down.getPos().y;
+        int variant=p.getRandom().nextInt(G_VARIANTS);
+        s.ult=new Ultimate(UUID.randomUUID(),now,at,yaw,variant,new Vec3d(over.x,y,over.z));
+        s.gReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+HOLD[ULTIMATE]+G_COOLDOWN;
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s.ult.id,ULTIMATE,now,yaw,HIT,-1,null,null,null,null,s.ult);
+        return true;
+    }
+    /**
+     * G on a tick (2.83.0): its tablet strikes as G_IMPACT comes (everyone within G_RANGE of where its user stands, alive,
+     * they aside, takes its damage, what they were doing stopping); it holds its user until its cutscene is over. Its user
+     * gone from the map, dead or Lee So-sang no more before it strikes calls it off: it does not strike.
+     */
+    private static void cast(ServerPlayerEntity p,State s,long now){
+        var u=s.ult;long age=now-u.start;
+        if(u.over){s.ult=null;return;}
+        if(!u.struck&&(!attacks(p)||!p.isAlive())){call(p,s,now);s.ult=null;return;}
+        if(!u.struck&&age>=G_IMPACT){u.struck=true;strike(p,u);}
+        if(age>=HOLD[ULTIMATE]){s.ult=null;return;}
+        p.fallDistance=0;
+    }
+    /** G is called off before its tablet strikes (2.83.0): every viewer is told (its tablet goes), and G is ready again its cooldown after now. */
+    private static void call(ServerPlayerEntity p,State s,long now){
+        var u=s.ult;if(u==null||u.over)return;u.over=true;
+        if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.gReady=Math.min(s.gReady,now+G_COOLDOWN);
+        send(p,u.id,ULTIMATE,u.start,u.yaw,STOPPED,-1,null,null,null,null,u);
+    }
+    /** G's tablet strikes (2.83.0): everyone within G_RANGE of its user, its user aside, takes its damage. */
+    private static void strike(ServerPlayerEntity p,Ultimate u){
+        var world=p.getServerWorld();
+        var source=new net.minecraft.entity.damage.DamageSource(world.getRegistryManager().get(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).entryOf(ULTIMATE_DAMAGE),p);
+        List<LivingEntity> struck=new ArrayList<>();
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(u.at,u.at).expand(G_RANGE+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+            if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
+            Vec3d d=e.getPos().subtract(u.at);
+            if(!ultimateReaches(d.x,d.y,d.z,e.getWidth()*.5,e.getHeight()))continue;
+            CombatManager.interrupt(e);
+            e.timeUntilRegen=0;
+            if(!CombatManager.damageWithoutKnockback(e,source,G_DAMAGE))continue;
+            struck.add(e);
+            if(!StarPlatinumTimeStop.deferFeedback(p,e,G_DAMAGE,u.yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
+                var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(G_DAMAGE);b.writeFloat(u.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);
+            }
+        }
+        if(!struck.isEmpty())p.onAttacking(struck.get(0));
+        send(p,u.id,ULTIMATE,u.start,u.yaw,LANDED,0,struck,null,null,null,u);
+    }
     /** The formation ends early (2.82.0): every viewer is told (its swords go now), and H is ready again its cooldown after now. */
     private static void end(ServerPlayerEntity p,State s,long now){
         var f=s.form;if(f==null)return;s.form=null;
@@ -595,6 +703,8 @@ public final class IsosangAttack {
             if(s.sweep!=null)cut(p,s,now);
             // (2.82.0) and H's sword formation (it goes on whoever strikes its user; only what takes them away ends it)
             if(s.form!=null)hold(p,s,now);
+            // (2.83.0) and G (nothing harms its user while it holds them; only what takes them away calls it off)
+            if(s.ult!=null)cast(p,s,now);
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
             if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
             if(held(p)){stop(p,s,now);release(p,s,now);s.rQueued=false;continue;}
@@ -784,6 +894,9 @@ public final class IsosangAttack {
         send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,null);
     }
     private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form){
+        send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,null);
+    }
+    private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult){
         var s=state(p);var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:world.getPlayers()){
             if(viewer!=p&&viewer.squaredDistanceTo(p)>128*128&&(struck==null||!struck.contains(viewer)))continue;
@@ -803,6 +916,10 @@ public final class IsosangAttack {
             // (2.82.0, after what 2.81 sent) when H is ready again, and for H's formation its middle and the way its user faced
             b.writeLong(s.hReady);b.writeBoolean(form!=null);
             if(form!=null){b.writeDouble(form.centre.x);b.writeDouble(form.centre.y);b.writeDouble(form.centre.z);b.writeFloat(form.yaw);}
+            // (2.83.0, after what 2.82 sent) when G is ready again, and for G which recording (and face) it plays and where
+            // its tablet strikes the ground
+            b.writeLong(s.gReady);b.writeBoolean(ult!=null);
+            if(ult!=null){b.writeByte(ult.variant);b.writeDouble(ult.strike.x);b.writeDouble(ult.strike.y);b.writeDouble(ult.strike.z);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }
