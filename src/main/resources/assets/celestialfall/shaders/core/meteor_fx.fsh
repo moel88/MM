@@ -87,6 +87,16 @@ void main(){
    rgb=mix(rgb,fire(.52+.3*n),ember*smoothstep(.3,-.65,p.y+(n-.5)*.3)*.9);
    alpha=body*tint.a*soft(.7);
   }
+ }else if(Mode==10){
+  // (2.83.0) Soft dust: a billowing cloud with no edge drawn, lit from above, thinning out at its rim (G's, rolling out
+  // over the ground where its sword strikes and round its user as the fire leaps up); tint.g how dark.
+  float r=length(p);
+  vec2 flow=p*1.4+vec2(seed*.31,-Age*.02);
+  float n=fbm(flow+vec2(noise(flow+2.9),noise(flow-4.3))*1.2);
+  float body=1.0-smoothstep(.2+.32*n,.96,r);
+  float lit=clamp(.45+.4*p.y+(n-.5)*.7,0.0,1.0);
+  rgb=mix(mix(vec3(.46,.41,.36),vec3(.80,.75,.68),lit),mix(vec3(.12,.11,.11),vec3(.30,.28,.27),lit),tint.g)*Ambient;
+  alpha=body*(.55+.45*n)*tint.a*soft(.9);
  }else if(Mode==2){
   // Light: a soft halo (tint.b from deep orange to pale gold) round a white-hot core (tint.g).
   float r=length(p);

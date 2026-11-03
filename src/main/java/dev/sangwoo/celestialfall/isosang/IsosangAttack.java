@@ -73,7 +73,7 @@ public final class IsosangAttack {
         net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("sword_formation"));
     /** G's damage (2.83.0): no guard takes it either (minecraft:bypasses_shield), its user is the attacker. */
     public static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> ULTIMATE_DAMAGE=
-        net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("jade_tablet"));
+        net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("giant_sword"));
     /** At most this many presses a second are heard. */
     static final int RATE=40;
     private static final class State {
@@ -106,9 +106,11 @@ public final class IsosangAttack {
         /** (2.83.0) G under way or the last one (null for none), and the tick G is ready again. */
         Ultimate ult;long gReady;
     }
+    /** (2.83.0) For the film harness only (as StandArrow.rigged): the recording the next G plays (0 or 1), -1 to roll. */
+    public static volatile int riggedVariant=-1;
     /**
      * G (2.83.0): its id and start, where its user stands (their feet) and the way they faced, which of the recordings
-     * (and faces) it plays, where its tablet strikes the ground ({@link IsosangRules#G_AHEAD} blocks ahead, on whatever is
+     * (and faces) it plays, where its sword strikes the ground ({@link IsosangRules#G_AHEAD} blocks ahead, on whatever is
      * there), and whether it has struck (or will not: its user gone before it did).
      */
     private static final class Ultimate {
@@ -187,7 +189,7 @@ public final class IsosangAttack {
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
             // (2.82.0) a formation under way ends with them: every viewer is told, its swords go
             var st=STATES.get(handler.player.getUuid());if(st!=null&&st.form!=null)end(handler.player,st,handler.player.getWorld().getTime());
-            // (2.83.0) and G before its tablet strikes: it does not
+            // (2.83.0) and G before its sword strikes: it does not
             if(st!=null&&st.ult!=null&&!st.ult.struck&&!st.ult.over)call(handler.player,st,handler.player.getWorld().getTime());
             STATES.remove(handler.player.getUuid());
         });
@@ -585,11 +587,11 @@ public final class IsosangAttack {
         s.combo=0;s.blows=0;s.empowered=false;
         if(spent)spend(p,s,now);
         var world=p.getServerWorld();Vec3d at=p.getPos();float yaw=MathHelper.wrapDegrees(p.getYaw());
-        // where its tablet strikes: G_AHEAD blocks ahead the way they face, on the first thing under the sky there
+        // where its sword strikes: G_AHEAD blocks ahead the way they face, on the first thing under the sky there
         Vec3d over=at.add(Vec3d.fromPolar(0,yaw).multiply(G_AHEAD));double y=at.y;
         var down=world.raycast(new RaycastContext(new Vec3d(over.x,at.y+24,over.z),new Vec3d(over.x,at.y-24,over.z),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
         if(down.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)y=down.getPos().y;
-        int variant=p.getRandom().nextInt(G_VARIANTS);
+        int variant=riggedVariant>=0?Math.min(riggedVariant,G_VARIANTS-1):p.getRandom().nextInt(G_VARIANTS);riggedVariant=-1;
         s.ult=new Ultimate(UUID.randomUUID(),now,at,yaw,variant,new Vec3d(over.x,y,over.z));
         s.gReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+HOLD[ULTIMATE]+G_COOLDOWN;
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
@@ -597,7 +599,7 @@ public final class IsosangAttack {
         return true;
     }
     /**
-     * G on a tick (2.83.0): its tablet strikes as G_IMPACT comes (everyone within G_RANGE of where its user stands, alive,
+     * G on a tick (2.83.0): its sword strikes as G_IMPACT comes (everyone within G_RANGE of where its user stands, alive,
      * they aside, takes its damage, what they were doing stopping); it holds its user until its cutscene is over. Its user
      * gone from the map, dead or Lee So-sang no more before it strikes calls it off: it does not strike.
      */
@@ -609,13 +611,13 @@ public final class IsosangAttack {
         if(age>=HOLD[ULTIMATE]){s.ult=null;return;}
         p.fallDistance=0;
     }
-    /** G is called off before its tablet strikes (2.83.0): every viewer is told (its tablet goes), and G is ready again its cooldown after now. */
+    /** G is called off before its sword strikes (2.83.0): every viewer is told (its sword goes), and G is ready again its cooldown after now. */
     private static void call(ServerPlayerEntity p,State s,long now){
         var u=s.ult;if(u==null||u.over)return;u.over=true;
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.gReady=Math.min(s.gReady,now+G_COOLDOWN);
         send(p,u.id,ULTIMATE,u.start,u.yaw,STOPPED,-1,null,null,null,null,u);
     }
-    /** G's tablet strikes (2.83.0): everyone within G_RANGE of its user, its user aside, takes its damage. */
+    /** G's sword strikes (2.83.0): everyone within G_RANGE of its user, its user aside, takes its damage. */
     private static void strike(ServerPlayerEntity p,Ultimate u){
         var world=p.getServerWorld();
         var source=new net.minecraft.entity.damage.DamageSource(world.getRegistryManager().get(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).entryOf(ULTIMATE_DAMAGE),p);
@@ -917,7 +919,7 @@ public final class IsosangAttack {
             b.writeLong(s.hReady);b.writeBoolean(form!=null);
             if(form!=null){b.writeDouble(form.centre.x);b.writeDouble(form.centre.y);b.writeDouble(form.centre.z);b.writeFloat(form.yaw);}
             // (2.83.0, after what 2.82 sent) when G is ready again, and for G which recording (and face) it plays and where
-            // its tablet strikes the ground
+            // its sword strikes the ground
             b.writeLong(s.gReady);b.writeBoolean(ult!=null);
             if(ult!=null){b.writeByte(ult.variant);b.writeDouble(ult.strike.x);b.writeDouble(ult.strike.y);b.writeDouble(ult.strike.z);}
             ServerPlayNetworking.send(viewer,EVENT,b);

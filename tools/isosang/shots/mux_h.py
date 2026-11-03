@@ -29,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '../../stand/shots'))
 from mux_punches import SR, SOUNDS, decode, pling, find, earliest, rows  # noqa: E402
 
-FORMATION = '8'
+FORMATION = '8'  # H's swing (IsosangRules.FORMATION)
 
 
 def envelope(x, w=240):
@@ -55,8 +55,9 @@ def onset(wav, clip, near, before=.6, after=.6, w=240):
     return lo + best[0] * w, best[1]
 
 
-def main():
-    audio, film_dir, entry, spans, film, out = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6]
+def mux(audio, film_dir, entry, spans, film, out, combo=FORMATION, sounds=('isosang_h',), name='H'):
+    """Lays the sound run's recording under the film (see the module's doc): {combo} is the swing whose start both runs
+    are lined up by, {sounds} the sounds of it that may have played (2.83.0: G plays one of two), found by loudness."""
     spans = [tuple(float(x) for x in s.split('-')) for s in spans.split(',')]
     rate, raw = wavfile.read(os.path.join(audio, 'game.wav'))
     wav = raw.astype(np.float64) / (32768.0 if raw.dtype == np.int16 else 1.0)
@@ -80,25 +81,30 @@ def main():
         """Where the sound run's entry clock {tick} (ticks, fractional) is in the recording."""
         return at + (np.interp(tick, clock, nanos) - marker) * SR / 1e9
 
-    heard = [r for r in rows(os.path.join(folder, 'isosang.csv')) if r['combo'] == FORMATION]
-    shown = [r for r in rows(os.path.join(film_dir, entry, 'isosang.csv')) if r['combo'] == FORMATION]
+    heard = [r for r in rows(os.path.join(folder, 'isosang.csv')) if r['combo'] == combo]
+    shown = [r for r in rows(os.path.join(film_dir, entry, 'isosang.csv')) if r['combo'] == combo]
     if not heard or not shown:
-        sys.exit(f'{entry}: no H in the sound run ({len(heard)}) or the film run ({len(shown)})')
+        sys.exit(f'{entry}: no {name} in the sound run ({len(heard)}) or the film run ({len(shown)})')
     shift = int(heard[0]['start']) - int(shown[0]['start'])
     # H's sound in the sound run, found by its waveform near where the log puts it: the rule checked (it starts as its
     # client hears of H, a tick or so after H began)
-    played = [r for r in rows(os.path.join(folder, 'sounds.csv')) if r['sound'] == 'celestialfall:isosang_h']
+    played = [r['sound'].split(':')[-1] for r in rows(os.path.join(folder, 'sounds.csv')) if r['sound'].split(':')[-1] in sounds]
     lead = 0.0
     if played:
-        clip = decode(os.path.join(SOUNDS, 'isosang_h.ogg'))
+        # (2.83.0) the film shows the one the film run played: the two runs must have played the same
+        filmed = [r['sound'].split(':')[-1] for r in rows(os.path.join(film_dir, entry, 'sounds.csv')) if r['sound'].split(':')[-1] in sounds] \
+            if os.path.exists(os.path.join(film_dir, entry, 'sounds.csv')) else []
+        if filmed and filmed[0] != played[0]:
+            sys.exit(f'{entry}: the film run played {filmed[0]}, the sound run {played[0]}: rig both to the same')
+        clip = decode(os.path.join(SOUNDS, played[0] + '.ogg'))
         began = sample(int(heard[0]['start']))
         pos, score = onset(wav, clip, began)
-        print(f'  sound run: H began on tick {heard[0]["start"]}, its sound at {pos / SR:.3f} s (envelope match {score:.2f}), '
+        print(f'  sound run: {name} ({played[0]}) began on tick {heard[0]["start"]}, its sound at {pos / SR:.3f} s (envelope match {score:.2f}), '
               f'{(pos - began) / SR * 1000:+.0f} ms after it by the clock')
         if os.environ.get('MUX_LEAD', '1') != '0' and score > .8:
             lead = pos - (began + SR / 20)
-            print(f'  every piece moved {lead / SR * 1000:+.0f} ms in the recording: H\'s sound a tick after H began')
-    print(f'  film run: H began on tick {shown[0]["start"]}; the sound run\'s clock moved by {shift:+d} ticks')
+            print(f'  every piece moved {lead / SR * 1000:+.0f} ms in the recording: {name}\'s sound a tick after {name} began')
+    print(f'  film run: {name} began on tick {shown[0]["start"]}; the sound run\'s clock moved by {shift:+d} ticks')
     duration = float(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'csv=p=0', film],
                                     capture_output=True, check=True, text=True).stdout.strip())
     num, den = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', film],
@@ -127,8 +133,15 @@ def main():
     tmp = out + '.wav'
     wavfile.write(tmp, SR, (track * 32767).astype(np.int16))
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', film, '-i', tmp, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', out], check=True)
-    os.remove(tmp)
+    # (2.83.0) MUX_KEEP_WAV=1 keeps the sound as written (OUT.wav, exactly as long as the film): films made of parts join
+    # their parts' sounds before encoding them once (joining encoded parts moves each later part's sound by the encoder's delay)
+    if os.environ.get('MUX_KEEP_WAV') != '1':
+        os.remove(tmp)
     print(f'{out}: {len(track) / SR:.2f} s of sound ({place / SR:.2f} s of stretches)')
+
+
+def main():
+    mux(*sys.argv[1:7])
 
 
 if __name__ == '__main__':

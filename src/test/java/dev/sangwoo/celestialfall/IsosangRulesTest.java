@@ -330,8 +330,8 @@ class IsosangRulesTest {
         var sounds=com.google.gson.JsonParser.parseString(json).getAsJsonObject();
         assertTrue(sounds.getAsJsonObject("isosang_h").getAsJsonArray("sounds").get(0).getAsJsonObject().get("stream").getAsBoolean(),"H's sound streams");
     }
-    @Test void gStrikesEveryoneWithinThirtyBlocksAsTheTabletLands()throws Exception{
-        // (2.83.0) "피해 100 쿨 5분", "범위는 30블록": once, as its tablet strikes (3.1 s), holding her through its cutscene
+    @Test void gStrikesEveryoneWithinThirtyBlocksAsTheSwordLands()throws Exception{
+        // (2.83.0) "피해 100 쿨 5분", "범위는 30블록": once, as its sword strikes (3.1 s), holding her through its cutscene
         assertEquals(100,G_DAMAGE,1e-6);assertEquals(30,G_RANGE,1e-9);
         assertEquals(6000,G_COOLDOWN,"five minutes");
         assertEquals(62,G_IMPACT);assertTrue(ultimateStrikes(62)&&!ultimateStrikes(61)&&!ultimateStrikes(63));

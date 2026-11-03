@@ -462,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -470,7 +470,7 @@ public final class MpServer implements ModInitializer {
      * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
      * while a hit is in flight or for a second after one (a blow throws no one: there should be none).
      */
-    private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1;private boolean formOver;private double formFloor;
+    private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
@@ -529,6 +529,14 @@ public final class MpServer implements ModInitializer {
         }else if(formSeen>=0&&!formOver){formOver=true;note(server,"caster's formation over at "+now+String.format(java.util.Locale.ROOT," (the caster %.2f over the ground it began on)",caster.getY()-formFloor));}
         if(form!=null){formOver=false;formFloor=form.centre().y;}
         long hr=dev.sangwoo.celestialfall.isosang.IsosangAttack.hReady(caster);if(hr!=hReadySeen){hReadySeen=hr;note(server,"caster's H ready again at "+hr+" (now "+now+")");}
+        // (2.83.0) the caster's G: as it begins, where it strikes against where the caster stands and the watcher; every
+        // ten ticks while it holds the caster, how far the caster has moved from where it stood and its health
+        var g=dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimateNow(caster);
+        if(g!=null&&g.start()!=gSeen){gSeen=g.start();gFrom=caster.getPos();gHealth=caster.getHealth();var f=net.minecraft.util.math.Vec3d.fromPolar(0,caster.getYaw());var d=g.strike().subtract(g.at());
+            note(server,String.format(java.util.Locale.ROOT,"caster's G began at %d: it strikes %.2f ahead (%.2f across, %.2f up) of the caster; the watcher %.2f from the caster",g.start(),d.dotProduct(f),d.dotProduct(new net.minecraft.util.math.Vec3d(-f.z,0,f.x)),d.y,watcher.getPos().distanceTo(caster.getPos())));}
+        if(gSeen>=0&&gFrom!=null&&now-gSeen<=110&&(now-gSeen)%10==0)
+            note(server,String.format(java.util.Locale.ROOT,"caster's G +%d: held %s, moved %.3f blocks, health %.1f (was %.1f)",now-gSeen,dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(caster),caster.getPos().distanceTo(gFrom),caster.getHealth(),gHealth));
+        long gr=dev.sangwoo.celestialfall.isosang.IsosangAttack.gReady(caster);if(gr!=gReadySeen){gReadySeen=gr;note(server,"caster's G ready again at "+gr+" (now "+now+")");}
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
             note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
             watcherAt=watcher.getPos();

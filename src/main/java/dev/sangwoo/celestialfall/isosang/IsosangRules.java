@@ -591,22 +591,23 @@ public final class IsosangRules {
     /**
      * G (2.83.0, user request: "이번에는 G스킬 궁극기 시전자만 컷씬이 나오고 범위는 30블록 효과음과 대사는 내가 영상에 보냈고
      * 저거 2개중에 랜덤으로 하나 나오게 하면 돼 컷씬은 저거랑 똑같이 나오게", the user's two videos of it (e3953f00 and
-     * b266d9b5, 60 fps) read on a sheet, and their answers: "피해 100 쿨 5분"; struck as the tablet strikes the ground, free
-     * until then; everyone sees a giant golden tablet fall out of the sky; the cutscene filmed in the world itself): Lee
-     * So-sang raises two fingers, light gathering at their tip, and draws a stroke of gold in the air; holds them before her
-     * face, a cross of light flaring there; leans back and cries out as a whirl of cloud opens high over her and a giant
-     * golden tablet, carved all over, shows in it; it falls point first and strikes the ground {@link #G_AHEAD} blocks ahead
-     * of her, everyone within {@link #G_RANGE} blocks of her struck as it does ({@link #G_DAMAGE}: no guard takes it, no one
-     * is thrown), bursting into fire, flying stone and dust; it darkens, crumbles, and fire leaps up out of the ground round
-     * her. Only she sees it as a cutscene (her own camera's shots of it, the clients' work); she is held where she stands
-     * and nothing harms her until it is over ({@link #G_HOLD}), and G is ready again {@link #G_COOLDOWN} after that. One of
-     * the two videos' recordings is played, at random (the server's choice, {@link #G_VARIANTS}), with that video's face.
+     * b266d9b5, 60 fps) read on a sheet, and their answers: "피해 100 쿨 5분"; struck as the sword strikes the ground, free
+     * until then; then "그리고 저거 거대한 검 떨어지는거임" and "컷씬은 그냥 다른 공간 보여줘서 검 안보이게 하고 박히는 순간
+     * 원래 월드에는 박히는 효과만 남게"): Lee So-sang raises two fingers, light gathering at their tip, and draws a stroke of
+     * gold in the air; holds them before her face, a cross of light flaring there; leans back and cries out, and a giant
+     * golden sword comes down point first out of a storm and strikes the ground {@link #G_AHEAD} blocks ahead of her,
+     * everyone within {@link #G_RANGE} blocks of her struck as it does ({@link #G_DAMAGE}: no guard takes it, no one is
+     * thrown); the ground bursts into fire, flying stone and dust, and fire leaps up out of the ground round her. Only she
+     * sees the sword: her own camera's cutscene, in a space of its own (the clients' work); the world itself shows only
+     * where it struck. She is held where she stands and nothing harms her until it is over ({@link #G_HOLD}), and G is
+     * ready again {@link #G_COOLDOWN} after that. One of the two videos' recordings is played, at random (the server's
+     * choice, {@link #G_VARIANTS}), with that video's face.
      */
     public static final int ULTIMATE=9;
     /** Its damage (the user's word), and how far from her it reaches (blocks, from her middle to the nearest of them; the user's word). */
     public static final float G_DAMAGE=100;
     public static final double G_RANGE=30;
-    /** The tick into G the tablet strikes the ground (3.1 s: the videos' tablet strikes 3.08 s after the screen darkens). */
+    /** The tick into G the sword strikes the ground (3.1 s: the videos' sword strikes 3.08 s after the screen darkens). */
     public static final int G_IMPACT=62;
     /**
      * Ticks G holds her (4.85 s: the videos come back to the game 4.83 s in, from the cutscene's dark) and ticks it is not
@@ -617,17 +618,17 @@ public final class IsosangRules {
     public static final int G_VARIANTS=2;
     /**
      * G's times (seconds; the videos, from the frame the screen goes dark): the light at the fingertips (0.22), the face
-     * (1.0), the sky (1.55), the tablet falling (2.68), striking (3.1), the game again (4.83 to 4.95), the fire leaping
+     * (1.0), the sky (1.55), the sword coming down (2.68), striking (3.1), the game again (4.83 to 4.95), the fire leaping
      * up round her (5.05) and the dust cleared (6.4).
      */
     public static final float G_GLOW=.217f,G_FACE=1f,G_SKY=1.55f,G_FALL=2.68f,G_STRIKE=G_IMPACT/20f,G_BACK=4.83f,G_GAME=4.95f,G_ERUPT=5.05f,G_CLEAR=6.4f;
     /**
-     * Where the tablet is: it strikes the ground {@link #G_AHEAD} blocks ahead of where she stands (the way she faced); in
-     * the sky it shows {@link #G_SKY_BACK} blocks behind her and {@link #G_SKY_UP} over her feet (its middle), so that her
-     * camera, low in front of her looking up, has it behind her as the video has; its point goes {@link #G_SINK} blocks into
-     * the ground. Its size (blocks): {@link #TABLET_HEIGHT} from its point to its top, {@link #TABLET_WIDTH} across.
+     * Where the sword is: it strikes the ground {@link #G_AHEAD} blocks ahead of where she stands (the way she faced), its
+     * point {@link #G_SINK} blocks into it. Its blade (blocks): {@link #BLADE_WIDTH} across (the videos', measured against
+     * her) and {@link #BLADE_LENGTH} from its point up, longer than any shot of it shows (the videos show only its lower
+     * part: its point, its rim and its carving; never its guard or its grip).
      */
-    public static final double G_AHEAD=9,G_SKY_BACK=3,G_SKY_UP=21,G_SINK=2.2,TABLET_HEIGHT=15,TABLET_WIDTH=7.6;
+    public static final double G_AHEAD=9,G_SINK=2.2,BLADE_LENGTH=24,BLADE_WIDTH=7.6;
     /**
      * Whether a body is within its reach: {@code dx}, {@code dz} level from her feet, {@code dy} from her feet up to their
      * feet, {@code halfWidth} across and {@code height} tall; the nearest of them within G_RANGE of her middle (a block
@@ -638,6 +639,6 @@ public final class IsosangRules {
         double v=low>0?low:high<0?-high:0;
         return h*h+v*v<=G_RANGE*G_RANGE;
     }
-    /** Whether G strikes on its tick {@code age} (once, as the tablet strikes the ground). */
+    /** Whether G strikes on its tick {@code age} (once, as the sword strikes the ground). */
     public static boolean ultimateStrikes(long age){return age==G_IMPACT;}
 }

@@ -45,7 +45,10 @@
     "BossSkinMixin",
     "WorldTimeMixin",
     "IsosangDarkMixin",
-    "IsosangSkyMixin"
+    "IsosangSkyMixin",
+    "IsosangStageMixin",
+    "IsosangStageParticlesMixin",
+    "IsosangStageBlockEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1

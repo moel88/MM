@@ -715,6 +715,9 @@ public final class SkillShots implements ClientModInitializer {
             if(swingsLogged.add(c.id())){
                 long began=age-(long)Math.floor(c.age(0));
                 log.append("  isosang hit ").append(c.combo()).append(" seen at ").append(age).append(" (began on tick ").append(began).append(")\n");
+                // (2.83.0) G: the recording it plays
+                var ult=dev.sangwoo.celestialfall.client.isosang.IsosangClient.ultimate(c.id());
+                if(ult!=null)log.append("  G plays recording ").append(ult.variant()+1).append(", its sword strikes ").append(String.format(Locale.ROOT,"%.1f %.1f %.1f",ult.strike().x,ult.strike().y,ult.strike().z)).append('\n');
                 // (2.81.0) R: where its sweep stands against the player (out toward the foe in the crosshair, or where they are)
                 var sw=dev.sangwoo.celestialfall.client.isosang.IsosangClient.sweep(c.id());
                 if(sw!=null){var f=net.minecraft.util.math.Vec3d.fromPolar(0,sw.yaw());var d=sw.at().subtract(me.getPos());
@@ -1002,6 +1005,10 @@ public final class SkillShots implements ClientModInitializer {
                     track=opts.containsKey("track")?opts.get("track").split(":"):null;shake=opts.containsKey("shake")&&!"0".equals(opts.get("shake"));
                     HOLDS.clear();if(opts.containsKey("holds"))for(String v:opts.get("holds").split("/"))HOLDS.add(!"0".equals(v.trim()));
                     mc.options.hudHidden=!opts.containsKey("hud")||"0".equals(opts.get("hud"));
+                    // (2.83.0) "cine=0": the player's own cutscenes off (CelestialFall.CONFIG.cinematicCamera), so their G is seen
+                    // as everyone else sees it; "gvar=1|2": the recording (and faces) their next G plays (IsosangAttack.riggedVariant)
+                    CelestialFall.CONFIG.cinematicCamera=!"0".equals(opts.get("cine"));
+                    if(opts.containsKey("gvar")){int gv=Integer.parseInt(opts.get("gvar"))-1;server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.riggedVariant=gv);log.append("  next G rigged to recording ").append(gv+1).append('\n');}
                     // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
                     if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);

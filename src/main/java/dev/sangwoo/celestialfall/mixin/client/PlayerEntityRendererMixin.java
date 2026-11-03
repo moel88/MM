@@ -26,6 +26,8 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
     @Unique private List<FeatureRenderer<AbstractClientPlayerEntity,PlayerEntityModel<AbstractClientPlayerEntity>>> botand$normalFeatures,botand$mapFeatures;
     @Unique private boolean botand$usingMap;
     @Unique private boolean botand$posed;
+    /** What it wears and holds, set aside while only its free arm is drawn (2.83.0: G's cutscene, GStage.handOnly). */
+    @Unique private List<FeatureRenderer<AbstractClientPlayerEntity,PlayerEntityModel<AbstractClientPlayerEntity>>> botand$setAside;
     @Inject(method="<init>",at=@At("TAIL"))
     private void botand$articulatedSkin(EntityRendererFactory.Context context,boolean slim,CallbackInfo ci) {
         botand$vanilla=this.model;botand$normalFeatures=new ArrayList<>(this.features);
@@ -71,13 +73,26 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
             &&!dev.sangwoo.celestialfall.client.CinematicDirector.isActive()&&dev.sangwoo.celestialfall.client.BotandCamera.STATE.collisionDistance<.7){ci.cancel();return;}
         if(player.isAlive() && (AtomicClient.actor(player.getUuid())!=null || dev.sangwoo.celestialfall.client.HeavenClient.actor(player.getUuid())!=null)){ci.cancel();return;}
         matrices.push();botand$posed=true;
+        if(dev.sangwoo.celestialfall.client.isosang.GStage.handOnly(player)){botand$setAside=new ArrayList<>(this.features);this.features.clear();}
         var stand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
-        if(stand!=null&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.hidden(stand,delta)){matrices.pop();botand$posed=false;ci.cancel();return;}
+        if(stand!=null&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.hidden(stand,delta)){matrices.pop();botand$posed=false;botand$restoreFeatures();ci.cancel();return;}
         float bodyYaw=net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,player.prevBodyYaw,player.bodyYaw);
         dev.sangwoo.celestialfall.client.kageno.BodyGhost.begin(player,matrices,delta,this.getPositionOffset(player,delta));
         if(stand!=null)dev.sangwoo.celestialfall.client.kageno.KagenoClips.root(matrices,stand,delta,bodyYaw);
         else dev.sangwoo.celestialfall.client.kageno.KagenoClips.unwind(matrices,player.getUuid(),delta,bodyYaw);
     }
     @Inject(method="render(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("RETURN"))
-    private void botand$restoreLift(AbstractClientPlayerEntity player,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){dev.sangwoo.celestialfall.client.kageno.BodyGhost.end();if(botand$posed){matrices.pop();botand$posed=false;}}
+    private void botand$restoreLift(AbstractClientPlayerEntity player,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){dev.sangwoo.celestialfall.client.kageno.BodyGhost.end();if(botand$posed){matrices.pop();botand$posed=false;}botand$restoreFeatures();}
+    @Unique private void botand$restoreFeatures(){if(botand$setAside!=null){this.features.clear();this.features.addAll(botand$setAside);botand$setAside=null;}}
+    /**
+     * Lee So-sang's G's cutscene (2.83.0): in the shots of her hand, in its own black space, only her free arm is drawn
+     * (the videos' hand is alone on black); what she wears and holds is set aside for that frame.
+     */
+    @Inject(method="setModelPose",at=@At("TAIL"))
+    private void botand$handOnly(AbstractClientPlayerEntity player,CallbackInfo ci){
+        if(!dev.sangwoo.celestialfall.client.isosang.GStage.handOnly(player))return;
+        var m=this.getModel();
+        m.head.visible=m.hat.visible=m.body.visible=m.jacket.visible=false;
+        m.rightArm.visible=m.rightSleeve.visible=m.rightLeg.visible=m.rightPants.visible=m.leftLeg.visible=m.leftPants.visible=false;
+    }
 }

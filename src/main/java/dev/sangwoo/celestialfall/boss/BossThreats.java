@@ -172,7 +172,7 @@ public final class BossThreats {
             out.add(new Threat(p,"isosangR",r.start(),Math.max(now,hit),r.start()+(long)Math.ceil(IsosangRules.SWEEP_END*20),
                 Zone.ring(pivot,IsosangRules.SWEEP_REACH,IsosangRules.LOW,IsosangRules.SWEEP_HIGH),false,false,false,IsosangRules.SWEEP_DAMAGE,false,false));
         }
-        // (2.83.0) G before its tablet strikes: everything within its reach round its user, unguardable
+        // (2.83.0) G before its sword strikes: everything within its reach round its user, unguardable
         var u=dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimateNow(p);
         if(u!=null){
             long hit=u.start()+IsosangRules.G_IMPACT;

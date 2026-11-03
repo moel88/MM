@@ -85,8 +85,8 @@ public final class IsosangClient {
     private static final Map<UUID,Long> H_READY=new HashMap<>();
     private static final Set<UUID> ENDED=new HashSet<>();
     /**
-     * (2.83.0) G's casts, by their swing's id: which recording (and face) it plays and where its tablet strikes the ground
-     * (the server's word); when one was called off (seconds into it: its tablet goes then); and the tick each player's G is
+     * (2.83.0) G's casts, by their swing's id: which recording (and face) it plays and where its sword strikes the ground
+     * (the server's word); when one was called off (seconds into it: its sword goes then); and the tick each player's G is
      * ready again (the server's).
      */
     public record Ultimate(int variant,Vec3d strike){}
@@ -136,7 +136,7 @@ public final class IsosangClient {
             long hReady=b.isReadable()?b.readLong():0;Formation form=null;
             if(b.isReadable()&&b.readBoolean()){Vec3d c=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());form=new Formation(c,b.readFloat());}
             Formation laid=form;
-            // (2.83.0) when G is ready again, and G's recording and where its tablet strikes (none from a 2.82 server)
+            // (2.83.0) when G is ready again, and G's recording and where its sword strikes (none from a 2.82 server)
             long gReady=b.isReadable()?b.readLong():0;Ultimate ult=null;
             if(b.isReadable()&&b.readBoolean()){int variant=b.readUnsignedByte();ult=new Ultimate(Math.min(variant,IsosangRules.G_VARIANTS-1),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble()));}
             Ultimate cast=ult;
@@ -145,8 +145,10 @@ public final class IsosangClient {
         ClientTickEvents.START_CLIENT_TICK.register(IsosangClient::tick);
         // (2.80.0) the swords of light: the empowered first's thrown swords and the empowered fourth's giant sword
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(IsosangEmpower::models);
-        // (2.83.0) G's tablet and its whirl of cloud: solid, drawn with the entities
-        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(JadeTablet::models);
+        // (2.83.0) G's own space for its user's cutscene: its ground under the sword coming down, and the sword (solid, with the entities)
+        GStage.initialize();
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BEFORE_ENTITIES.register(GStage::ground);
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(GStage::sword);
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->clear(mc)));
     }
     private static void accept(MinecraftClient mc,UUID caster,Identifier dim,int type,UUID id,int combo,int blow,long start,long serverNow,Vec3d at,float yaw,long ready,List<StandClient.Target> struck,
@@ -159,13 +161,13 @@ public final class IsosangClient {
             if(combo==IsosangRules.SWEEP){if(sweep==null)return;SWEEPS.put(id,sweep);}
             // (2.82.0) H's formation: where its middle is
             if(combo==IsosangRules.FORMATION){if(form==null)return;FORMATIONS.put(id,form);}
-            // (2.83.0) G: which recording it plays and where its tablet strikes
+            // (2.83.0) G: which recording it plays and where its sword strikes
             if(combo==IsosangRules.ULTIMATE){if(ult==null)return;ULTIMATES.put(id,ult);}
             var cast=new StandClient.Cast(id,caster,dim,IsosangRules.SKILL,combo,start,serverNow,StandClient.ticks(),at,yaw,List.of());
             if(cast.age(0)/20f>=life(combo))return;
             KagenoClips.begin(cast);SWINGS.put(id,cast);STRUCK.put(id,new int[IsosangRules.blows(combo)][]);
             // (2.83.0) G: its landing and the fire after it, drawn as a meteor's
-            if(combo==IsosangRules.ULTIMATE)JadeTablet.begin(cast);
+            if(combo==IsosangRules.ULTIMATE)FallingSword.begin(cast);
             if(empowered)EMPOWERED.add(id);
             if(serverNow-start<=LATE)voice(mc,id,caster,combo);
         }else if(type==IsosangAttack.EMPOWERED){
@@ -204,8 +206,8 @@ public final class IsosangClient {
                 else STOPPED.add(id);
             }
         }else if(type==IsosangAttack.STOPPED&&combo==IsosangRules.ULTIMATE){
-            // (2.83.0) G called off before its tablet struck (its user gone): its tablet goes now, its sound fades
-            var c=SWINGS.get(id);if(c!=null){ULTIMATE_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);var v=VOICES.get(id);if(v!=null)v.fade();JadeTablet.calledOff(id);}
+            // (2.83.0) G called off before its sword struck (its user gone): its sword goes now, its sound fades
+            var c=SWINGS.get(id);if(c!=null){ULTIMATE_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);var v=VOICES.get(id);if(v!=null)v.fade();FallingSword.calledOff(id);}
         }else if(type==IsosangAttack.STOPPED&&combo==IsosangRules.FORMATION){
             // (2.82.0) H's formation ended early (its user taken away): its swords go now, its user drops
             var c=SWINGS.get(id);if(c!=null){FORMATION_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);}
@@ -224,12 +226,12 @@ public final class IsosangClient {
      * How long a swing of this kind is drawn for (seconds, 2.82.0): H's formation its whole length and the ink and mist
      * after it; every other its skill's (IsosangSlash.lifetime).
      */
-    public static float life(int combo){return combo==IsosangRules.FORMATION?IsosangRules.H_END+SwordFormation.AFTER:combo==IsosangRules.ULTIMATE?JadeTablet.LIFE:KagenoSkills.of(IsosangRules.SKILL).lifetime();}
+    public static float life(int combo){return combo==IsosangRules.FORMATION?IsosangRules.H_END+SwordFormation.AFTER:combo==IsosangRules.ULTIMATE?FallingSword.LIFE:KagenoSkills.of(IsosangRules.SKILL).lifetime();}
     /** How long this swing is drawn for (seconds): a formation that ended early only until its swords have gone (2.82.0). */
     public static float lifeOf(StandClient.Cast c){
         float life=life(c.combo());
         if(c.combo()==IsosangRules.FORMATION){Float end=FORMATION_ENDS.get(c.id());if(end!=null)life=Math.min(life,end+SwordFormation.AFTER);}
-        if(c.combo()==IsosangRules.ULTIMATE){Float end=ULTIMATE_ENDS.get(c.id());if(end!=null)life=Math.min(life,end+JadeTablet.GONE);}
+        if(c.combo()==IsosangRules.ULTIMATE){Float end=ULTIMATE_ENDS.get(c.id());if(end!=null)life=Math.min(life,end+FallingSword.GONE);}
         return life;
     }
     /** Whether this swing stopped short (its user struck or held: its body clip is over). */
@@ -263,7 +265,7 @@ public final class IsosangClient {
     public static long hReady(UUID id){return H_READY.getOrDefault(id,0L);}
     /** The tick this player's G is ready again, as the server told it (0 if it is ready, 2.83.0). */
     public static long gReady(UUID id){return G_READY.getOrDefault(id,0L);}
-    /** G of this swing: its recording and where its tablet strikes (null for none, 2.83.0). */
+    /** G of this swing: its recording and where its sword strikes (null for none, 2.83.0). */
     public static Ultimate ultimate(UUID swing){return ULTIMATES.get(swing);}
     /** When this swing's G was called off (seconds into it, the server's word), or NaN if it was not (2.83.0). */
     public static float ultimateEnd(UUID swing){var e=ULTIMATE_ENDS.get(swing);return e==null?Float.NaN:e;}
@@ -535,7 +537,7 @@ public final class IsosangClient {
     /**
      * G's sound (2.83.0, user request: "효과음과 대사는 내가 영상에 보냈고 저거 2개중에 랜덤으로 하나 나오게 하면 돼"): the
      * recording of the user's video the server chose (its variant), from the screen going dark to its end, as it is. Loud
-     * for its user; for everyone else heard from the nearer of its user and where its tablet strikes, fading out to CARRY
+     * for its user; for everyone else heard from the nearer of its user and where its sword strikes, fading out to CARRY
      * blocks, measured again every tick.
      */
     private static void ultimateVoice(MinecraftClient mc,UUID id,UUID caster){

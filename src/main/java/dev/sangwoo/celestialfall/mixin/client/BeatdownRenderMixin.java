@@ -35,6 +35,8 @@ public abstract class BeatdownRenderMixin {
     private void botand$beatdownSeen(Entity e,Frustum frustum,double x,double y,double z,CallbackInfoReturnable<Boolean> ci){
         // (2.66.0: not drawn while its shot is from their own eyes)
         if(StandBeatdown.hidden(e)){ci.setReturnValue(false);return;}
+        // (2.83.0) Lee So-sang's G's own space: nobody else is in it (GStage)
+        if(dev.sangwoo.celestialfall.client.isosang.GStage.hides(e)){ci.setReturnValue(false);return;}
         var offset=StandBeatdown.offset(e,1);
         if(offset!=null&&frustum.isVisible(e.getBoundingBox().offset(offset).expand(1)))ci.setReturnValue(true);
     }
