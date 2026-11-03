@@ -1,17 +1,19 @@
-"""Lee So-sang's G (2.83.0): the giant sword's carved blade, drawn here (fixed seeds), never by hand.
+"""Lee So-sang's G (2.83.1): the giant sword's blade (a real model's: GStage draws it), its colour and its carving's
+normals, drawn here (fixed seeds), never by hand.
 
 usage: python3 -I tools/isosang/make_g_sword.py [OUT_DIR]
 
-The user's videos of G show only the lower part of a giant sword's blade as it comes down (user: "그리고 저거 거대한 검
-떨어지는거임"): a broad blade coming to a point like a shield's, amber gold lit warm, its edges beveled, carved deep all over:
-a raised rim inside the bevel with a groove and a second band inside it that follow the point, and in the field inside them
-channels cut deep and angular: a spine of three down its middle, crossed by bars near the point, and either side climbing
-the blade slanting strokes that turn up and hook back down, with stepped keys by the border. It is lit as it is drawn (the isosang_blade program: the carving by its normals), so its colour here is
-its colour only, with the hollows' shade. Its outline is the one FallingSword draws (half(y): the same numbers), its face
-mapped so that across it is u (0 its left edge, 1 its right) and down it v (0 its top, 1 its point).
-- isosang_g_blade.png: its colour (amber, darker deep in the carving); its alpha is where it glows when hot (its point
-  most, its edges and the carving near the point);
+User request (2.83.1: "이게 ㅈㄴ 큰 검이 내려오는건데 구름에 가려져서 칼 끝 부분밖에 안 보이는거야", "저거 아직 그림이지? 실제 모델
+아니지?"): a giant sword, a broad blade with a point, its edges bevelled, coming down point first; its carving is the one
+the user drew over the videos' sky shot (their red lines, g_slab_lines.png beside this file, in the videos' frame at 1.917 s
+over LX0..LX1 and LY0..LY1), carried onto its face as the sky shot's camera sees it there at 1.95 s (FallingSword's sky
+camera and the sword's pose in it, fitted to the edges they drew: the same numbers below), cut in as channels; past where
+they drew, up the blade toward its guard, the same carving goes on: the spine's lines up its middle and hooked strokes
+either side.
+- isosang_g_blade.png: its colour (a muted terracotta, darker in the channels, the rim a little lighter); its alpha is
+  where it glows when hot (its point most);
 - isosang_g_blade_n.png: the carving's normals (red across to the right, green up the blade, blue out of the face).
+Its face is mapped so that across it is u (0 its left edge, 1 its right) and down it v (0 its top, 1 its point).
 """
 import sys
 from pathlib import Path
@@ -20,46 +22,153 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = Path(__file__).resolve().parents[2] / 'src/main/resources/assets/celestialfall/textures/effect'
-# the blade (blocks): as FallingSword / IsosangRules (BLADE_LENGTH, BLADE_WIDTH), the point's length and the bevel's width
+LINES = Path(__file__).resolve().parent / 'g_slab_lines.png'
+# the blade (blocks): as FallingSword / IsosangRules (BLADE_LENGTH, BLADE_WIDTH), its point's length and roundness, its
+# bevel's width, how far in from its edge the panel's border groove is, and its carving's channels' width
 L, W = 24.0, 7.6
 P = 6.0
-BEVEL = 0.45
+N = 2.2
+BEVEL = .45
+RIM = .8
+CHANNEL = .17
 TW, TH = 512, 1536
+# the sky shot's camera (FallingSword: SKY_EYE_FW, SKY_EYE_SIDE, SKY_EYE_UP, SKY_PITCH, SKY_PAN, SKY_ROLL, SKY_FOV) and the
+# sword's pose in it at 1.95 s (FallingSword: its point's place in the frame, SKY_TIP_DEPTH, SKY_AXIS_UP, SKY_AXIS_RIGHT)
+CAM = (1.114, -.023, -.326, 60, 41.92, 27.61, 84.42)
+TIP = (.648, .653)
+POSE = (4.23, 44.92, -50.63)
+ASPECT = 1920 / 886
+# where the user's lines are (the slab picture's place: the frame at 1.917 s), and the frame at 1.95 s against it
+LX0, LX1, LY0, LY1 = .38, .69, .1, .7
+S130, TX130, TY130 = 1.00271, -.00122, -.00036
 
 
 def half(y):
-    """The blade's half width at y blocks up from its point (it goes on past its top: the texture's top is no edge)."""
+    """The blade's half width at y blocks up from its point."""
     y = np.asarray(y, dtype=np.float64)
-    r = W / 2
     u = np.clip(y / P, 0, 1)
-    out = np.where(y < P, r * (1 - (1 - u) ** 1.8), r)
-    return np.where(y < 0, 0, out)
+    return np.where(y < 0, 0, W / 2 * (1 - (1 - u) ** N))
 
 
-def grid():
-    """Each texel's place on the face: x across from the middle, y up from the point (blocks)."""
-    px = (np.arange(TW) + .5) / TW
-    py = (np.arange(TH) + .5) / TH
-    return np.meshgrid((px - .5) * W, (1 - py) * L)
+def unit(v):
+    return v / np.linalg.norm(v)
 
 
-def inset(x, y):
-    """How far inside the outline a point is (blocks; negative outside)."""
-    best = half(y) - np.abs(x)
-    for ang in np.linspace(0, np.pi, 15)[1:-1]:
-        dx, dy = np.cos(ang), np.sin(ang)
-        for sgn in (1, -1):
-            d = np.zeros_like(x)
-            step = .05
-            inside = np.ones_like(x, dtype=bool)
-            for k in range(1, 50):
-                xx = x + sgn * dx * k * step
-                yy = y + sgn * dy * k * step
-                out = np.abs(xx) > half(yy)
-                d = np.where(inside & out, k * step, d)
-                inside &= ~out
-            best = np.minimum(best, np.where(inside, 99, d))
-    return best
+def sky_camera():
+    """The sky shot's camera (as FallingSword.skyView): its eye, its look, its right and its up (world: x her left, y up, z her front)."""
+    fw, side, up, pitch, pan, roll, fov = CAM
+    f = np.array([0, 0, 1.0]); r = np.array([-1.0, 0, 0]); Y = np.array([0, 1.0, 0])
+    eye = f * fw - r * side + Y * up
+    pa, pi = np.radians(pan), np.radians(pitch)
+    level = unit(-f * np.cos(pa) - r * np.sin(pa))
+    look = unit(level * np.cos(pi) + Y * np.sin(pi))
+    cr = unit(np.cross(look, Y)); cu = unit(np.cross(cr, look))
+    a = np.radians(-roll)
+    cr, cu = cr * np.cos(a) + cu * np.sin(a), -cr * np.sin(a) + cu * np.cos(a)
+    return eye, look, cr, cu, np.tan(np.radians(fov / 2))
+
+
+def sky_lines(xs, ys):
+    """The user's lines where the face's points (xs across, ys up the blade) are seen in the sky shot at 1.95 s (0 to 1)."""
+    eye, look, cr, cu, t = sky_camera()
+    depth, el, az = POSE
+    tip = eye + (look + cr * (2 * TIP[0] - 1) * t * ASPECT + cu * (1 - 2 * TIP[1]) * t) * depth
+    e, z = np.radians(el), np.radians(az)
+    axis = unit(look * np.cos(e) * np.cos(z) + cr * np.cos(e) * np.sin(z) + cu * np.sin(e))
+    nn = eye - tip; nn = unit(nn - axis * (nn @ axis)); across = np.cross(axis, nn)
+    pw = tip + across * xs[..., None] + axis * ys[..., None] + nn * .45
+    d = pw - eye; zz = d @ look
+    sx = ((d @ cr) / zz / (t * ASPECT) + 1) / 2
+    sy = (1 - (d @ cu) / zz / t) / 2
+    us = ((sx - TX130) / S130 - LX0) / (LX1 - LX0)
+    vs = ((sy - TY130) / S130 - LY0) / (LY1 - LY0)
+    img = np.asarray(Image.open(LINES).convert('L'), dtype=np.float64) / 255
+    h, w = img.shape
+    fx = np.clip(us * w - .5, 0, w - 1.001); fy = np.clip(vs * h - .5, 0, h - 1.001)
+    x0 = np.floor(fx).astype(int); y0 = np.floor(fy).astype(int); ax = fx - x0; ay = fy - y0
+    val = (img[y0, x0] * (1 - ax) + img[y0, x0 + 1] * ax) * (1 - ay) + (img[y0 + 1, x0] * (1 - ax) + img[y0 + 1, x0 + 1] * ax) * ay
+    ok = (zz > 0) & (us > 0) & (us < 1) & (vs > 0) & (vs < 1)
+    return np.where(ok, val, 0)
+
+
+def to_px(x, y):
+    return ((x / W + .5) * TW, (1 - y / L) * TH)
+
+
+def continued():
+    """Past where the user drew (from 6.5 blocks up the blade to its guard): the spine's three lines up its middle, and
+    either side hooked strokes climbing it (the videos' fall shot carves them so)."""
+    lines = []
+    for x in (-.55, 0, .55):
+        lines.append([(x, 6.2), (x, L - .8)])
+    k = 0
+    while True:
+        y0 = 7.0 + k * 3.4
+        if y0 > L - 2.5:
+            break
+        for s in (-1, 1):
+            lines.append([(s * .9, y0), (s * 1.7, y0 + .9), (s * 1.7, y0 + 2.0), (s * 2.5, y0 + 2.6), (s * 2.5, y0 + 1.7)])
+            lines.append([(s * 1.1, y0 - .3), (s * 2.6, y0 - .3), (s * 2.6, y0 + .7)])
+        k += 1
+    return lines
+
+
+def blade():
+    k = 2
+    u = (np.arange(TW * k) + .5) / (TW * k)
+    v = (np.arange(TH * k) + .5) / (TH * k)
+    U, V = np.meshgrid(u, v)
+    x = (U - .5) * W
+    y = (1 - V) * L
+    hw = half(y)
+    # how far in from its edge each place on its face is (blocks, across)
+    ins = hw - np.abs(x)
+    # the user's lines, carried onto it, made into channels of an even width
+    drawn = sky_lines(x, y)
+    line = Image.fromarray((np.clip(drawn * 1.6, 0, 1) * 255).astype(np.uint8))
+    line = line.point(lambda q: 255 if q > 90 else 0)
+    px = TW * k / W
+    line = line.filter(ImageFilter.MaxFilter(2 * int(CHANNEL * px / 2) + 1))
+    cut = np.asarray(line.filter(ImageFilter.GaussianBlur(.06 * px)), dtype=np.float64) / 255
+    # its carving going on up the blade, in the same channels
+    more = Image.new('L', (TW * k, TH * k), 0)
+    d = ImageDraw.Draw(more)
+    for pts in continued():
+        d.line([(a * k, b * k) for a, b in (to_px(px_, py_) for px_, py_ in pts)], fill=255, width=max(3, int(CHANNEL * px)), joint='curve')
+    cut = np.maximum(cut, np.asarray(more.filter(ImageFilter.GaussianBlur(.06 * px)), dtype=np.float64) / 255)
+    # its height (0 deep, 1 high): the bevel is the mesh's own (flat here), the rim, the panel's border groove, the panel
+    # with its channels cut in (rounded at their bottoms)
+    def band(a, b, soft=.04):
+        return np.clip((ins - a) / soft, 0, 1) * np.clip((b - ins) / soft, 0, 1)
+    h = np.full_like(x, .8)
+    panel = np.clip((ins - (RIM + .14)) / .05, 0, 1)
+    h = h + .06 * band(BEVEL, RIM) - .5 * band(RIM, RIM + .12, .025)
+    h = h - .5 * cut * panel
+    h = h + .015 * (fbm(h.shape, 60, 3) - .5)
+    hs = np.asarray(Image.fromarray((np.clip(h, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), dtype=np.float64) / 255
+    gy, gx = np.gradient(hs)
+    s = 6.0
+    n = np.stack([-gx * s, gy * s, np.ones_like(gx)], -1)
+    n /= np.linalg.norm(n, axis=-1, keepdims=True)
+    nimg = ((n + 1) * 127.5).astype(np.uint8)
+    nrgb = Image.fromarray(nimg, 'RGB').resize((TW, TH), Image.LANCZOS)
+    Image.merge('RGBA', (*nrgb.split(), Image.new('L', (TW, TH), 255))).save(OUT / 'isosang_g_blade_n.png')
+    # its colour: a muted terracotta (the videos'), warmer toward its point, a little uneven, darker deep in the channels,
+    # the rim a touch lighter
+    near = np.exp(-y / 7)[..., None]
+    base = np.array([186, 120, 96]) * (1 - near) + np.array([206, 136, 100]) * near
+    grain = fbm(h.shape, 70, 11, 4)
+    hollow = np.clip((.8 - hs) / .5, 0, 1)
+    col = base * (.92 + .12 * grain[..., None]) * (1 - .38 * hollow[..., None])
+    col = col * (1 + .05 * band(BEVEL, RIM)[..., None])
+    col = np.clip(col, 0, 255)
+    # where it glows when hot: its point most, its edges and the carving near it a little
+    edge = np.clip(1 - ins / .6, 0, 1)
+    glow = np.exp(-y / 1.6) + .3 * np.exp(-y / 4) * edge + .12 * np.exp(-y / 4) * cut + .03
+    # (its colour and its glow made small apart: shrunk together, the faint glow would crush the colour)
+    rgb = Image.fromarray(col.astype(np.uint8), 'RGB').resize((TW, TH), Image.LANCZOS)
+    a = Image.fromarray((np.clip(glow, 0, 1) * 255).astype(np.uint8), 'L').resize((TW, TH), Image.LANCZOS)
+    Image.merge('RGBA', (*rgb.split(), a)).save(OUT / 'isosang_g_blade.png')
 
 
 def noise(shape, scale, seed):
@@ -82,98 +191,6 @@ def fbm(shape, scale, seed, octaves=4):
         out += amp * noise(shape, scale / (2 ** o), seed + o * 17)
         tot += amp; amp *= .5
     return out / tot
-
-
-def spline(points, n=12):
-    """A smooth curve through the points (Catmull-Rom)."""
-    p = [points[0]] + list(points) + [points[-1]]
-    out = []
-    for i in range(1, len(p) - 2):
-        p0, p1, p2, p3 = (np.array(q, dtype=float) for q in p[i - 1:i + 3])
-        for t in np.linspace(0, 1, n, endpoint=False):
-            t2, t3 = t * t, t * t * t
-            out.append(tuple(.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)))
-    out.append(tuple(points[-1]))
-    return out
-
-
-def channels():
-    """The channels cut into the field (blocks: polylines on the face, x from the middle, y up from the point): as the
-    videos' carving, angular: straight cuts with sharp turns and slanting strokes, not round scrolls."""
-    lines = []
-    # the spine: three down the middle, coming to points over the bars
-    for x, y0 in ((0, 1.55), (-.44, 2.05), (.44, 2.05)):
-        lines.append([(x, y0), (x, L + .5)])
-    # bars across it near the point
-    for y in (2.7, 3.2, 3.7):
-        lines.append([(-.78, y), (.78, y)])
-    # either side, climbing the blade: a slanting stroke out from the spine that turns up and hooks back down at its
-    # top (a claw), a stepped key by the border, and a short slash between
-    k = 0
-    while True:
-        y0 = 4.2 + k * 3.1
-        if y0 > L - .5:
-            break
-        for s in (-1, 1):
-            lines.append([(s * .8, y0), (s * 1.55, y0 + .85), (s * 1.55, y0 + 1.95), (s * 2.25, y0 + 2.55), (s * 2.25, y0 + 1.7)])
-            lines.append([(s * 1.05, y0 - .15), (s * 2.42, y0 - .15), (s * 2.42, y0 + .75), (s * 1.98, y0 + .75), (s * 1.98, y0 + .35)])
-            lines.append([(s * .8, y0 + 2.2), (s * 1.18, y0 + 2.62)])
-        k += 1
-    return lines
-
-
-def to_px(x, y):
-    return ((x / W + .5) * TW, (1 - y / L) * TH)
-
-
-def blade():
-    x, y = grid()
-    ins = inset(x, y)
-    # the carving's height (0 deep, 1 high): the bevel is the mesh's own (flat here), then the rim, a groove, a band, a
-    # groove, and the field, cut by its channels (rounded at their bottoms)
-    def band(a, b, soft=.05):
-        return np.clip((ins - a) / soft, 0, 1) * np.clip((b - ins) / soft, 0, 1)
-    h = np.full_like(x, .8)
-    h = np.where(ins < BEVEL, .8, h)
-    h = h + .2 * band(BEVEL, BEVEL + .18) - .45 * band(BEVEL + .18, BEVEL + .29, .03) + .12 * band(BEVEL + .29, BEVEL + .62) \
-        - .45 * band(BEVEL + .62, BEVEL + .73, .03)
-    cut = Image.new('L', (TW, TH), 0)
-    d = ImageDraw.Draw(cut)
-    for pts in channels():
-        if len(pts) > 1:
-            d.line([to_px(px, py) for px, py in pts], fill=255, width=max(3, int(.24 / W * TW)))
-            for px, py in pts[1:-1]:
-                cx, cy = to_px(px, py); r = .12 / W * TW
-                d.rectangle([cx - r, cy - r, cx + r, cy + r], fill=255)
-            for px, py in (pts[0], pts[-1]):
-                cx, cy = to_px(px, py); r = .12 / W * TW
-                d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=255)
-    c = np.asarray(cut.filter(ImageFilter.GaussianBlur(2.2)), dtype=np.float64) / 255
-    field = np.clip((ins - (BEVEL + .85)) / .08, 0, 1)
-    h = h - .55 * c * field
-    h = h + .015 * (fbm(h.shape, 30, 3) - .5)
-    hs = np.asarray(Image.fromarray((np.clip(h, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.0)), dtype=np.float64) / 255
-    # normals: the carving's slopes, across (x) and up the blade (y) in texels, made steep enough to read
-    gy, gx = np.gradient(hs)
-    k = 7.0
-    nx, ny, nz = -gx * k, gy * k, np.ones_like(gx)
-    n = np.stack([nx, ny, nz], -1)
-    n /= np.linalg.norm(n, axis=-1, keepdims=True)
-    nimg = np.dstack([(n + 1) * 127.5, np.full(h.shape, 255)]).astype(np.uint8)
-    Image.fromarray(nimg, 'RGBA').save(OUT / 'isosang_g_blade_n.png')
-    # colour: amber, warmer toward the point, a little uneven, darker deep in the channels and grooves (their hollows'
-    # shade), the high places a touch lighter
-    near = np.exp(-y / 7)[..., None]
-    base = np.array([212, 124, 90]) * (1 - near) + np.array([226, 138, 92]) * near
-    grain = fbm(h.shape, 50, 11, 4)
-    hollow = np.clip((.8 - hs) / .5, 0, 1)
-    col = base * (.92 + .12 * grain[..., None]) * (1 - .42 * hollow[..., None]) * (.94 + .1 * np.clip(hs - .8, 0, .2)[..., None] / .2)
-    col = np.clip(col + np.array([20, 8, 0]) * (np.clip(.3 - ins, 0, .3) / .3)[..., None], 0, 255)
-    # where it glows when hot: its point most, its edges and the carving near the point
-    edge = np.clip(1 - ins / .6, 0, 1)
-    glow = np.exp(-y / 1.4) + .3 * np.exp(-y / 4) * edge + .15 * np.exp(-y / 4) * c + .03
-    img = np.dstack([col, np.clip(glow, 0, 1) * 255]).astype(np.uint8)
-    Image.fromarray(img, 'RGBA').save(OUT / 'isosang_g_blade.png')
 
 
 def main():

@@ -1,16 +1,18 @@
 #version 150
 // Lee So-sang's G's own space (2.83.0, user request: "컷씬은 그냥 다른 공간 보여줘서 검 안보이게 하고 박히는 순간 원래 월드에는
 // 박히는 효과만 남게"): its cutscene's shots taken somewhere of their own, as the user's videos' are. Mode 0 black (round
-// her hand), 1 a pale sky over far ink mountains (her face), 2 a storm whirling round its eye (Eye: where the sword comes
-// out of it, over her), 3 a dusky sky over dark hills (the sword coming down), 5 the dusky ground (uv: blocks from where
-// it strikes). The sky's pos is the way it looks. (The sword is drawn with isosang_blade, lit.)
+// her hand), 1 a pale sky over far ink mountains (her face), 2 a storm whirling round its eye (Eye: the way to it, and
+// its hole's radius in radians: where the sword comes down through it, over her), 3 a dusky sky over dark hills (the sword coming down), 5 the dusky ground (uv: blocks from where
+// it strikes), 4 the ring's clouds in front of the sword's tip. The sky's pos is the way it looks. (The sword is drawn with isosang_blade, lit.)
 in vec3 pos;
 in vec2 uv;
 in vec4 tint;
 uniform vec4 ColorModulator;
 uniform float Age;
 uniform int Mode;
-uniform vec3 Eye;
+uniform vec4 Eye;
+// (the way the sword goes away into the storm, square to Eye: its far side, where the clouds take it)
+uniform vec3 Far;
 out vec4 fragColor;
 
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -40,27 +42,83 @@ vec3 grey(vec3 d){
  if(e<0.0)col=mix(col,vec3(.64,.65,.65),smoothstep(0.0,-.06,e));
  return col;
 }
+vec3 C(float r,float g,float b){return vec3(r,g,b)/255.0;}
+// the storm's clouds round its eye: big painted masses (q: round the eye, radians)
+float clouds(vec2 q){vec2 w=vec2(fbm(q*1.7+vec2(3.1,1.7)),fbm(q*1.7+vec2(-4.3,8.1)));return fbm(q*2.3+2.2*w+vec2(Age*.01,0.0));}
+// where its ring's clouds begin round the hole (isosang_blade.fsh fades the sword out by the same edge)
+float holeEdge(float ph,float th){return Eye.w*(1.0+.08*(fbm(vec2(cos(ph)*3.0+Age*.05,sin(ph)*3.0+log(th+.02)*2.0))-.5));}
 vec3 storm(vec3 d){
- vec3 E=normalize(Eye);
- float th=acos(clamp(dot(d,E),-1.0,1.0));
- vec3 b1=normalize(cross(E,abs(E.y)<.95?vec3(0,1,0):vec3(1,0,0)));vec3 b2=cross(E,b1);
- float ph=atan(dot(d,b2),dot(d,b1));
- // the arms wind in toward the eye, turning
- float tw=ph+1.9*log(th+.04)-Age*.32;
- vec2 q=vec2(cos(tw),sin(tw))*(.6+th*2.2);
- float n=fbm(q*2.2+3.1),fine=fbm(q*6.5-1.7);
- float arms=.5+.5*cos(tw*3.0);
- float dens=clamp(.5*arms+.9*n+.25*fine-.45,0.0,1.0);
- float lit=1.0-smoothstep(.05,1.1,th);
- vec3 col=mix(vec3(.10,.14,.22),vec3(.24,.31,.42),smoothstep(0.0,.35,dens));
- col=mix(col,vec3(.52,.60,.72),smoothstep(.35,.7,dens)*(.45+.55*lit));
- col=mix(col,vec3(.93,.95,.98),smoothstep(.62,.95,dens)*lit);
- // rays out of the eye
- float ray=pow(noise(vec2(cos(ph),sin(ph))*9.0+vec2(Age*.05,0.0)),5.0);
- col+=vec3(.95,.92,.85)*ray*smoothstep(1.3,.15,th)*.5;
- // the eye, open and bright
- col=mix(col,vec3(1.0,.97,.90),1.0-smoothstep(.05,.18,th));
+ // (2.83.1, the videos' sky shot: a ring of bright clouds wound round a hole the sword comes down through, wide on
+ // the left and over the top, a narrow band on the right; dark slate clouds round it lit from the eye; a few thin rays)
+ vec3 E=normalize(Eye.xyz);float R=Eye.w;
+ vec3 b1=normalize(cross(E,vec3(0,1,0)));vec3 b2=cross(E,b1);
+ float th=acos(clamp(dot(d,E),-1.0,1.0)),ph=atan(dot(d,b2),dot(d,b1));
+ float lt=log(th+.02);
+ float s=ph+1.35*lt-Age*.12;vec2 cs=vec2(cos(s),sin(s));
+ vec2 q=vec2(cos(ph),sin(ph))*th;
+ // the clouds round it, brighter on the side facing the eye
+ float n=clouds(q),nl=clouds(q*(1.0-.06/max(th,1e-3)));
+ float lit=clamp((n-nl)*9.0,0.0,1.0),fine=fbm(q*11.0+vec2(5.5,-2.5));
+ vec3 col=mix(C(24.,40.,68.),C(48.,66.,98.),smoothstep(.36,.56,n));
+ col=mix(col,C(82.,100.,128.),smoothstep(.5,.72,n)*(.55+.45*fine));
+ col=mix(col,C(150.,162.,180.),lit*smoothstep(.45,.6,n)*.75);
+ // the ring
+ // (its sizes round the hole drawn for a hole of 21 degrees, grown with it: the sky shot's lens is wider now)
+ float k=R/.3665;
+ float edge=holeEdge(ph,th);
+ float left=.5-.5*cos(ph);
+ float reach=R+k*(.07+.2*left+.1*(.5-.5*sin(ph))*left+.14*fbm(cs*2.2+vec2(5.0,lt*1.5)));
+ float rt=clamp((th-edge)/max(reach-edge,1e-3),0.0,1.5);
+ float puff=fbm(q*7.0+vec2(1.3,4.4));
+ float streak=fbm(vec2(cs.x*1.5+3.3+.6*puff,cs.y*1.5+lt*4.0));
+ float streak2=fbm(vec2(cs.x*3.2+lt*2.0,cs.y*3.2+lt*9.0));
+ float rd=1.0-smoothstep(.55,1.05,rt+.45*(puff-.5)+.2*(streak-.5));
+ float v=streak*.65+streak2*.45;
+ vec3 rc=mix(C(92.,114.,146.),C(150.,163.,182.),smoothstep(.3,.62,v));
+ rc=mix(rc,C(198.,201.,205.),smoothstep(.5,.78,v)*(1.0-.6*clamp(rt,0.0,1.0)));
+ float lip=exp(-pow((th-edge)/(.025*k),2.0))*(.6+.4*streak);
+ rc=mix(rc,C(198.,201.,205.),lip*.8);
+ col=mix(col,rc,rd);
+ // inside the hole: the tunnel, pale, its streaks winding in
+ float tun=fbm(vec2(cs.x*2.4+1.1,cs.y*2.4+lt*9.0));
+ col=mix(mix(C(132.,154.,182.),C(198.,203.,208.),smoothstep(.35,.7,tun)),col,smoothstep(edge-.025*k,edge+.004*k,th));
+ // a few thin rays out of the eye over the clouds round it
+ float N=56.0,a=(ph/6.2831853+.5)*N,i=floor(a),f=a-i;
+ float on=step(.7,hash(vec2(i,3.7))),at=.2+.6*hash(vec2(i,9.1));
+ float w=abs(f-at)*(6.2831853/N)*sin(th),thick=.002+.0016*hash(vec2(i,5.3));
+ float ray=on*(1.0-smoothstep(0.0,thick+fwidth(w),w))*(.35+.65*hash(vec2(i,7.7)));
+ ray*=smoothstep(R+.12*k,R+.4*k,th)*(1.0-smoothstep(1.0,1.6,th));
+ col+=C(205.,212.,224.)*ray*.32;
  return col;
+}
+// the ring's clouds in front of the sword (mode 4, drawn over it): round the hole's edge, reaching in over its tip in
+// wisps (isosang_slab.fsh fades it out by the same edge), thinning out into the ring drawn behind
+vec4 front(vec3 d){
+ // (the same clouds as the ring drawn behind (storm), so they show only where they cover the sword)
+ vec3 E=normalize(Eye.xyz);float R=Eye.w,k=R/.3665;
+ vec3 b1=normalize(cross(E,vec3(0,1,0)));vec3 b2=cross(E,b1);
+ float th=acos(clamp(dot(d,E),-1.0,1.0)),ph=atan(dot(d,b2),dot(d,b1)),lt=log(th+.02);
+ float s=ph+1.35*lt-Age*.12;vec2 cs=vec2(cos(s),sin(s));
+ vec2 q=vec2(cos(ph),sin(ph))*th;
+ float edge=holeEdge(ph,th);
+ vec3 tg=d-E*dot(d,E);float far=smoothstep(-.2,.6,dot(tg/max(length(tg),1e-5),normalize(Far)));
+ float wisp=fbm(vec2(cos(ph)*7.0-Age*.08,sin(ph)*7.0+lt*9.0));
+ float cut=edge+.012*k-far*.07*k*wisp;
+ float left=.5-.5*cos(ph);
+ float reach=R+k*(.07+.2*left+.1*(.5-.5*sin(ph))*left+.14*fbm(cs*2.2+vec2(5.0,lt*1.5)));
+ float rt=clamp((th-edge)/max(reach-edge,1e-3),0.0,1.5);
+ float puff=fbm(q*7.0+vec2(1.3,4.4));
+ float streak=fbm(vec2(cs.x*1.5+3.3+.6*puff,cs.y*1.5+lt*4.0));
+ float streak2=fbm(vec2(cs.x*3.2+lt*2.0,cs.y*3.2+lt*9.0));
+ float rd=1.0-smoothstep(.55,1.05,rt+.45*(puff-.5)+.2*(streak-.5));
+ float v=streak*.65+streak2*.45;
+ vec3 rc=mix(C(92.,114.,146.),C(150.,163.,182.),smoothstep(.3,.62,v));
+ rc=mix(rc,C(198.,201.,205.),smoothstep(.5,.78,v)*(1.0-.6*clamp(rt,0.0,1.0)));
+ rc=mix(rc,C(198.,201.,205.),exp(-pow((th-edge)/(.025*k),2.0))*(.6+.4*streak)*.8);
+ // its wisps over the sword's far side: bright cloud reaching in
+ float a=smoothstep(cut-.025*k,cut+.006*k,th)*max(rd,far*(1.0-smoothstep(edge,edge+.05*k,th)));
+ rc=mix(rc,C(206.,210.,214.),far*(1.0-smoothstep(cut,edge+.02*k,th))*.6);
+ return vec4(rc,a);
 }
 vec3 dusk(vec3 d){
  float e=asin(clamp(d.y,-1.0,1.0)),az=atan(d.z,d.x);
@@ -81,6 +139,7 @@ void main(){
  else if(Mode==1){rgb=grey(normalize(pos));}
  else if(Mode==2){rgb=storm(normalize(pos));}
  else if(Mode==3){rgb=dusk(normalize(pos));}
+ else if(Mode==4){vec4 f=front(normalize(pos));rgb=f.rgb;alpha=f.a;}
  else if(Mode==5){
   float r=length(uv);
   float n=fbm(uv*.35),f2=fbm(uv*2.1+5.0);

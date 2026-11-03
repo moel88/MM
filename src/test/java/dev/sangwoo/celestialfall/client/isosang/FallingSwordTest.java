@@ -50,34 +50,86 @@ class FallingSwordTest {
             assertTrue(Math.min(f[0],f[1])<.05,"no foot down at "+t);
         }
     }
-    /** Where {@code p} is in a shot's frame (16:9): {x, y} from -1 to 1 across and up, or null behind it. */
+    /** Where {@code p} is in a shot's frame (the videos', FallingSword.ASPECT wide): {x, y} from -1 to 1 across and up, or null behind it. */
     static double[] inFrame(FallingSword.Shot s,Vec3d p){
         Vec3d f=s.look().subtract(s.eye()).normalize(),r=f.crossProduct(new Vec3d(0,1,0)).normalize(),u=r.crossProduct(f);
         Vec3d d=p.subtract(s.eye());double z=d.dotProduct(f);if(z<=0)return null;
         double t=Math.tan(Math.toRadians(s.fov()/2));
-        return new double[]{d.dotProduct(r)/z/(t*16/9.0),d.dotProduct(u)/z/t};
+        return new double[]{d.dotProduct(r)/z/(t*FallingSword.ASPECT),d.dotProduct(u)/z/t};
     }
+    /** Where {@code p} is in the picture of a camera's frame (its own right and up: turned as the picture is), as the videos' frames are measured: 0 to 1 across and down. */
+    static double[] onScreen(FallingSword.Frame k,double fov,Vec3d p){
+        Vec3d d=p.subtract(k.eye());double z=d.dotProduct(k.f());
+        double t=Math.tan(Math.toRadians(fov/2));
+        return new double[]{(d.dotProduct(k.r())/z/(t*FallingSword.ASPECT)+1)/2,(1-d.dotProduct(k.u())/z/t)/2};
+    }
+    /**
+     * The sword's edges the user drew on the videos' sky shot (2.83.1, "검 그거 아니야": its right edge straight up, its
+     * bottom edge to her head, meeting at a corner), at 1.95 s: points along them (across, down the frame).
+     */
+    static final double[][] RIGHT_EDGE={{.6532,.21},{.6646,.27},{.6679,.33},{.6676,.39},{.6635,.48},{.6581,.54},{.6524,.60}};
+    static final double[][] BOTTOM_EDGE={{.42,.5891},{.46,.6114},{.50,.6306},{.54,.6460},{.58,.6570},{.62,.6559}};
+    /** How far (of the frame's width) the nearest of the sword's two edges near its point passes from a point on the screen. */
+    static double offEdge(FallingSword.Frame k,FallingSword.Blade b,double[] p){
+        double best=9;
+        for(int s=-1;s<=1;s+=2){
+            double[] prev=null;
+            for(double y=0;y<=20;y+=.02){
+                double[] q=onScreen(k,FallingSword.SKY_FOV,b.at(s*FallingSword.half(y),y,FallingSword.THICK*.5));
+                if(prev!=null){
+                    double ax=prev[0]*FallingSword.ASPECT,ay=prev[1],bx=q[0]*FallingSword.ASPECT,by=q[1],px=p[0]*FallingSword.ASPECT,py=p[1];
+                    double dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,u=l<1e-12?0:Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l));
+                    best=Math.min(best,Math.hypot(px-ax-u*dx,py-ay-u*dy)/FallingSword.ASPECT);
+                }
+                prev=q;
+            }
+        }
+        return best;
+    }
+    /** {@code d} as the generator writes it (.38 for 0.38, -.023 for -0.023, 60 for 60.0). */
+    static String fmt(double d){String t=d==Math.rint(d)?Long.toString((long)d):Double.toString(d);return t.startsWith("0.")?t.substring(1):t.startsWith("-0.")?"-"+t.substring(2):t;}
     @Test void itsShotsAreTakenInTheirOwnSpaces(){
         // (2.83.0, "컷씬은 그냥 다른 공간 보여줘서"): black round her hand, a pale sky behind her face, the storm, dusk; the world once the game is back
         var c=cast();
         assertEquals(GStage.BLACK,FallingSword.space(c,.5f));assertEquals(GStage.GREY,FallingSword.space(c,1.2f));
         assertEquals(GStage.STORM,FallingSword.space(c,2f));assertEquals(GStage.DUSK,FallingSword.space(c,2.9f));
         assertEquals(GStage.DUSK,FallingSword.space(c,IsosangRules.G_BACK-.01f));assertEquals(GStage.NONE,FallingSword.space(c,IsosangRules.G_BACK));
+        // (2.83.1) as the videos' frames: the pale sky at 1.500 s, the storm behind her face from 1.517 s; the sword alone
+        // in the storm at 2.717 s (she is not in it), coming down at 2.733 s
+        assertEquals(GStage.GREY,FallingSword.space(c,1.5f));assertEquals(GStage.STORM,FallingSword.space(c,1.517f));
+        assertFalse(FallingSword.alone(2.7f));assertTrue(FallingSword.alone(2.717f));
+        assertEquals(GStage.STORM,FallingSword.space(c,2.717f));assertEquals(GStage.DUSK,FallingSword.space(c,2.733f));
     }
     @Test void theSwordComesOutOfTheStormDownAndStrikesWhereTheServerSays(){
         var c=cast();
         assertNull(FallingSword.blade(c,1),"not in the shots of her hand and face");
-        // in the storm: a little right of the sky shot's middle and above it, its point toward the camera below its blade,
-        // its blade lost in the eye past LOST_TO
-        var sky=FallingSword.blade(c,2.2f);var shot=FallingSword.shot(c,2.2f);
-        double[] at=inFrame(shot,sky.at(0,3,0)),tip=inFrame(shot,sky.point());
-        assertNotNull(at);assertTrue(at[0]>0&&at[0]<.5&&at[1]>-.2&&at[1]<.7,"the sword's lower part a little right of the middle: "+at[0]+" "+at[1]);
-        assertNotNull(tip);assertTrue(tip[1]<at[1],"its point below its blade: "+tip[1]+" "+at[1]);
-        assertEquals(1,sky.shown(1),1e-6);assertEquals(0,sky.shown(FallingSword.LOST_TO),1e-6);
-        // her head left of the middle at its height, her feet out of the frame below
-        double[] head=inFrame(shot,FallingSword.head(c.origin(),c.yaw(),2.2f)),foot=inFrame(shot,c.origin());
-        assertNotNull(head);assertTrue(head[0]<-.1&&Math.abs(head[1])<.25,"her head left of the middle at its height: "+head[0]+" "+head[1]);
-        assertTrue(foot==null||foot[1]<-1,"her feet in the frame");
+        // in the storm (2.83.1): the giant sword itself, its point at the corner the user marked on the videos' sky shot
+        // and its two edges along the lines they drew (its right edge straight up, its bottom edge to her head), at 1.95 s
+        var k=FallingSword.skyView(c);
+        var sky=FallingSword.blade(c,1.95f);
+        assertNotNull(sky,"the sword in the storm");
+        double[] tip=onScreen(k,FallingSword.SKY_FOV,sky.point());
+        assertEquals(.648,tip[0],.004,"its point across");assertEquals(.653,tip[1],.004,"its point down");
+        for(double[] p:RIGHT_EDGE)assertTrue(offEdge(k,sky,p)<.009,"its right edge "+offEdge(k,sky,p)+" off the line drawn at "+p[1]);
+        for(double[] p:BOTTOM_EDGE)assertTrue(offEdge(k,sky,p)<.009,"its bottom edge "+offEdge(k,sky,p)+" off the line drawn at "+p[0]);
+        // a sword coming down point first: its blade goes up from its point, away from the camera; its face to the camera
+        assertTrue(sky.axis().y>.6,"its blade goes up from its point");
+        assertTrue(sky.axis().dotProduct(k.f())>0,"its blade goes away from the camera");
+        assertTrue(sky.normal().dotProduct(k.eye().subtract(sky.point()))>0,"its face to the camera");
+        // nearing over the shot: its point down to .675 and .707 by its end (the videos' frame 174)
+        double[] late=onScreen(k,FallingSword.SKY_FOV,FallingSword.blade(c,2.683f).point());
+        assertEquals(.675,late[0],.006);assertEquals(.707,late[1],.006);
+        assertTrue(FallingSword.blade(c,2.683f).point().distanceTo(k.eye())<sky.point().distanceTo(k.eye()),"it nears");
+        // behind her; her head a little right of the videos' (.41 across, .52 down), her feet out of the frame below
+        Vec3d headAt=FallingSword.head(c.origin(),c.yaw(),1.95f);
+        assertTrue(sky.point().distanceTo(k.eye())>headAt.distanceTo(k.eye()),"the sword behind her");
+        double[] head=onScreen(k,FallingSword.SKY_FOV,headAt),foot=onScreen(k,FallingSword.SKY_FOV,c.origin());
+        assertEquals(.408,head[0],.03,"her head across");assertEquals(.515,head[1],.04,"her head down");
+        assertTrue(foot[1]>1,"her feet in the frame");
+        // the clouds take it only on its far side: its point is inside the hole round the storm's eye
+        Vec3d eye=FallingSword.stormEye(c,1.95f);
+        assertTrue(Math.toDegrees(Math.acos(sky.point().subtract(k.eye()).normalize().dotProduct(eye)))<FallingSword.HOLE,"its point in the hole");
+        assertTrue(FallingSword.farSide(c).dotProduct(sky.axis())>0,"the clouds' side is the way it goes away");
         // struck: its point bites G_SINK into the ground where it strikes (the strike as far ahead as the rules say)
         var struck=FallingSword.blade(c,IsosangRules.G_STRIKE+.5f);
         Vec3d s=FallingSword.strike(c);
@@ -104,17 +156,19 @@ class FallingSwordTest {
     }
     @Test void herCameraMovesSmoothlyWithinEachShot(){
         var c=cast();
-        float[] cuts={FallingSword.S_FACE,FallingSword.S_SKY,FallingSword.S_FALL};
+        // (the pull-back from her face to the sky is three of the videos' frames, as quick as a cut)
+        float[] cuts={FallingSword.S_FACE,FallingSword.S_FALL};
         for(float t=0;t+1/60f<IsosangRules.G_BACK;t+=1/240f){
             boolean cut=false;for(float k:cuts)if(t<k&&t+1/60f>=k)cut=true;
             if(cut)continue;
             var a=FallingSword.shot(c,t);var b=FallingSword.shot(c,t+1/60f);
             double step=a.eye().distanceTo(b.eye());
-            assertTrue(step<.6,"her camera jumps "+step+" blocks at "+t);
+            boolean pull=t>=FallingSword.S_PULL-1/60f&&t<FallingSword.S_PULLED;
+            assertTrue(step<(pull?1.6:.6),"her camera jumps "+step+" blocks at "+t);
             Vec3d da=a.look().subtract(a.eye()).normalize(),db=b.look().subtract(b.eye()).normalize();
             // (the whip round her hand as it sweeps up is quick, as the videos' is: a few frames)
             boolean whip=t>=FallingSword.S_WHIP-1/60f&&t<FallingSword.S_ARM;
-            assertTrue(da.dotProduct(db)>Math.cos(Math.toRadians(whip?40:16)),"her camera turns sharply at "+t);
+            assertTrue(da.dotProduct(db)>Math.cos(Math.toRadians(whip||pull?40:16)),"her camera turns sharply at "+t);
         }
         // the hand's shots have it in view: the eye close to it
         for(float t=.05f;t<FallingSword.S_FACE;t+=.05f)assertTrue(FallingSword.shot(c,t).eye().distanceTo(FallingSword.hand(c.origin(),c.yaw(),t))<1.2,"far from her hand at "+t);
@@ -123,14 +177,18 @@ class FallingSwordTest {
         double w=IsosangRules.BLADE_WIDTH/2;
         assertEquals(0,FallingSword.half(0),1e-9);
         assertEquals(w,FallingSword.half(FallingSword.POINT),1e-9);assertEquals(w,FallingSword.half(IsosangRules.BLADE_LENGTH),1e-9);
-        // a point like a shield's: its edges meet at under 110 degrees
+        // a point: its edges meet at under 120 degrees
         double slope=FallingSword.half(.01)/.01;
-        assertTrue(2*Math.toDegrees(Math.atan(slope))<110,"its point is blunt");
+        assertTrue(2*Math.toDegrees(Math.atan(slope))<120,"its point is blunt");
         // the texture's outline is drawn by the same numbers (tools/isosang/make_g_sword.py: L, W, P)
         try{
             String py=new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of("tools/isosang/make_g_sword.py")),java.nio.charset.StandardCharsets.UTF_8);
             assertTrue(py.contains("L, W = "+IsosangRules.BLADE_LENGTH+", "+IsosangRules.BLADE_WIDTH),"the texture's blade is the same size");
-            assertTrue(py.contains("P = "+FallingSword.POINT)&&py.contains("(1 - u) ** 1.8"),"the texture's outline is the same");
+            assertTrue(py.contains("P = "+FallingSword.POINT)&&py.contains("N = "+FallingSword.ROUND)&&py.contains("(1 - u) ** N"),"the texture's outline is the same");
+            // and it carries the user's lines onto the face from the sky shot as FallingSword places it
+            assertTrue(py.contains("CAM = ("+fmt(FallingSword.SKY_EYE_FW)+", "+fmt(FallingSword.SKY_EYE_SIDE)+", "+fmt(FallingSword.SKY_EYE_UP)+", "+fmt(FallingSword.SKY_PITCH)+", "
+                +fmt(FallingSword.SKY_PAN)+", "+fmt(FallingSword.SKY_ROLL)+", "+fmt(FallingSword.SKY_FOV)+")"),"the same sky camera");
+            assertTrue(py.contains("POSE = ("+fmt(FallingSword.SKY_TIP_DEPTH)+", "+fmt(FallingSword.SKY_AXIS_UP)+", "+fmt(FallingSword.SKY_AXIS_RIGHT)+")"),"the same pose");
         }catch(java.io.IOException e){fail(e);}
     }
 }

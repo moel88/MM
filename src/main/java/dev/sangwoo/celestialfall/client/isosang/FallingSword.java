@@ -55,11 +55,10 @@ final class FallingSword {
     static final R6.Pose G_POINT=w(0,0,-12,-4,0,d(-74,10),d(16,18),d(54,-44),d(-90,3),d(-90,-3)).head(-10,-20,0);
     static final R6.Pose G_POINT2=w(0,0,-12,-4,0,d(-74,10),d(16,18),d(56,-40),d(-90,3),d(-90,-3)).head(-10,-22,0);
     static final R6.Pose G_STROKE=w(0,0,-4,-2,0,d(-74,10),d(16,18),d(50,22),d(-90,3),d(-90,-3)).head(-2,-12,0);
-    static final R6.Pose G_FACE=w(0,0,0,2,0,d(-76,12),d(14,20),d(22,32),d(-90,3),d(-90,-3)).head(0,4,0);
-    static final R6.Pose G_FACE2=w(0,0,0,2,0,d(-76,12),d(14,20),d(24,30),d(-90,3),d(-90,-3)).head(2,6,2);
-    // (the videos': her free hand kept at her lips, leaning back with her head thrown back, crying out; her sword arm out and down at her side)
-    static final R6.Pose G_SKY=w(0,0,0,-16,0,d(-34,62),d(-40,80),d(26,30),d(-88,6),d(-88,-6)).head(0,-38,0);
-    static final R6.Pose G_SKY2=w(0,0,0,-20,0,d(-30,66),d(-36,84),d(28,28),d(-88,6),d(-88,-6)).head(0,-44,0);
+    // (2.83.1, the videos' face, pull-back and sky shots: her free hand's finger at her lips, her sword arm across her
+    // waist under it, standing straight; user request, marked on the sky shot: "머리", "손")
+    static final R6.Pose G_SHH=w(0,0,0,0,0,d(-12,-53),d(-55,-35),d(30,46),d(-90,4),d(-90,-4)).head(0,5,0);
+    static final R6.Pose G_SHH2=w(0,0,0,1,0,d(-13,-52),d(-56,-34),d(31,45),d(-90,4),d(-90,-4)).head(1,6,1);
     static final R6.Pose G_CALL=w(0,0,0,6,0,d(-60,30),d(-10,40),d(-6,2),d(-90,3),d(-90,-3)).head(0,10,0);
     static final R6.Pose G_CALL2=w(0,0,0,4,0,d(-62,28),d(-6,36),d(-10,4),d(-90,3),d(-90,-3)).head(0,8,0);
     static final R6.Pose G_WATCH=w(0,0,0,2,0,d(-68,16),d(20,10),d(-44,-12),d(-90,3),d(-90,-3)).head(0,4,0);
@@ -71,10 +70,8 @@ final class FallingSword {
         k(.62,G_POINT),
         k(.83,G_POINT2),
         k(.96,G_STROKE,Anim.Ease.OUT),
-        k(1.06,G_FACE,Anim.Ease.OUT),
-        k(1.5,G_FACE2),
-        k(1.66,G_SKY,Anim.Ease.OUT),
-        k(2.6,G_SKY2),
+        k(1.06,G_SHH,Anim.Ease.OUT),
+        k(2.6,G_SHH2),
         k(2.8,G_CALL,Anim.Ease.OUT),
         k(3.3,G_CALL2),
         k(3.9,G_WATCH),
@@ -103,19 +100,27 @@ final class FallingSword {
     /** The space each shot is taken in (GStage), by when it is: black round her hand, pale sky behind her face, the storm, dusk; none once the game is back. */
     static int space(StandClient.Cast c,float t){
         if(t<0||t>=IsosangRules.G_BACK||!Float.isNaN(off(c)))return GStage.NONE;
-        return t<S_FACE?GStage.BLACK:t<S_SKY?GStage.GREY:t<S_FALL?GStage.STORM:GStage.DUSK;
+        return t<S_GREY?GStage.BLACK:t<S_SKY?GStage.GREY:t<S_FALL?GStage.STORM:GStage.DUSK;
     }
 
     // ───────────────────────────── the sword ─────────────────────────────
 
-    /** Its blade's point (blocks: how far up its outline comes to its full width), and how thick it is. */
-    static final double POINT=6,THICK=.9;
+    /**
+     * Its blade's point (blocks: how far up its outline comes to its full width; how round it is: its edges' curve, fitted
+     * with the sword's pose to the edges the user drew on the videos' sky shot), and how thick it is.
+     */
+    static final double POINT=6,ROUND=2.2,THICK=.9;
     /** Its half width at {@code y} blocks up from its point (tools/isosang/make_g_sword.py draws the same outline). */
     static double half(double y){
         double r=IsosangRules.BLADE_WIDTH/2;
         if(y<0)return 0;
-        if(y<POINT){double u=y/POINT;return r*(1-Math.pow(1-u,1.8));}
+        if(y<POINT){double u=y/POINT;return r*(1-Math.pow(1-u,ROUND));}
         return r;
+    }
+    /** How fast its half width grows up the blade at {@code y} (its outline's slope). */
+    static double widening(double y){
+        if(y<0||y>=POINT)return 0;
+        return IsosangRules.BLADE_WIDTH/2*ROUND*Math.pow(1-y/POINT,ROUND-1)/POINT;
     }
     /**
      * The sword at a moment: its point, its long axis (from its point up its blade), its face's normal, how much of it
@@ -131,15 +136,6 @@ final class FallingSword {
     /** {@code a} made square to {@code axis} (unit). */
     static Vec3d square(Vec3d a,Vec3d axis){Vec3d n=a.subtract(axis.multiply(a.dotProduct(axis)));return n.lengthSquared()<1e-8?right(axis).normalize():n.normalize();}
 
-    /**
-     * In the storm (the sky shot's frame at its start): how deep, how far right and up in the frame its blade's lower part
-     * is, and the way its blade goes (mostly away from the camera, its point toward it): a little right of the frame's
-     * middle and above it, as the videos' (measured on a grid: its lower blade from .40 to .69 across, .19 to .60 down).
-     */
-    static final double SKY_DEPTH=8.5,SKY_RIGHT=1.5,SKY_UP=1.5,SKY_AWAY=.8,SKY_LEFT=.17;
-    /** It comes out of the storm's eye (seconds), and how far along its blade it is lost in the eye (blocks from its point). */
-    static final float EMERGE=.3f;
-    static final double LOST_FROM=8,LOST_TO=13;
     /** Coming down: how high its point starts (blocks), how it leans (degrees, its top to her left as she faces it), how far it goes into the ground (G_SINK). */
     static final double FALL_FROM=2.2,FALL_LEAN=12;
     /** The times it darkens (seconds) as the game comes back (the videos': bright until 4.35 s, then the whole frame dims). */
@@ -149,15 +145,14 @@ final class FallingSword {
         if(t<S_SKY||t>=IsosangRules.G_BACK)return null;
         float gone=off(c);if(!Float.isNaN(gone))return null;
         if(t<S_FALL){
-            // out of the storm's eye, its point toward her, its blade going back up into the eye
-            var k=skyFrame(c,0);
-            Vec3d hub=k.eye().add(k.f().multiply(SKY_DEPTH)).add(k.r().multiply(SKY_RIGHT)).add(k.u().multiply(SKY_UP));
-            Vec3d axis=k.f().multiply(SKY_AWAY).add(k.u().multiply(.85)).subtract(k.r().multiply(SKY_LEFT)).normalize();
-            Vec3d normal=square(k.f().negate(),axis);
-            float e=Ease.smooth(t,S_SKY,S_SKY+EMERGE);
-            double drift=.5*(t-S_SKY)/(S_FALL-S_SKY);
-            Vec3d point=hub.subtract(axis.multiply(3+drift-4*(1-e)));
-            return new Blade(point,axis,normal,e,1,0,LOST_FROM,LOST_TO);
+            // in the storm: the giant sword coming down point first out of its eye, its point where the user marked it and
+            // its edges along the lines they drew, nearing as the videos' does; past the hole in the storm's ring its
+            // clouds take it (isosang_blade, GStage)
+            var k=skyView(c);
+            double near=nearing(1.95f)/nearing(t);
+            Vec3d point=k.at(SKY_TIP_X[0]+t*(SKY_TIP_X[1]+t*SKY_TIP_X[2]),SKY_TIP_Y[0]+t*(SKY_TIP_Y[1]+t*SKY_TIP_Y[2]),SKY_TIP_DEPTH*near,SKY_FOV);
+            Vec3d axis=k.way(SKY_AXIS_UP,SKY_AXIS_RIGHT);
+            return new Blade(point,axis,square(k.eye().subtract(point),axis),1,1,0,99,99);
         }
         // coming down point first where it strikes, and stuck there
         Vec3d s=strike(c),f=forward(c),r=right(f);
@@ -174,12 +169,8 @@ final class FallingSword {
         float dark=.45f*Ease.smooth(t,DARK0,DARK1);
         return new Blade(s.add(axis.multiply(-IsosangRules.G_SINK+recoil)),axis,normal,1,Math.max(0,heat),dark,99,99);
     }
-    /** The storm's eye as the sky shot sees it (the way to it from its eye): where the sword's blade is lost. */
-    static Vec3d stormEye(StandClient.Cast c,float t){
-        var k=skyFrame(c,push(t));var b=blade(c,Math.max(t,S_SKY+EMERGE));
-        Vec3d at=b==null?k.eye().add(k.f().multiply(20)):b.point().add(b.axis().multiply(LOST_TO-1));
-        return at.subtract(k.eye()).normalize();
-    }
+    /** The storm's eye as the sky shot sees it (the way to its middle from the camera). */
+    static Vec3d stormEye(StandClient.Cast c,float t){return ring(c);}
 
     // ───────────────────────────── the effect layer ─────────────────────────────
 
@@ -313,26 +304,23 @@ final class FallingSword {
             }
         }
     }
-    /** The storm's eye shining where the sword's blade is lost in it, and lightning flickering round it. */
+    /** Lightning flickering in the storm's clouds round its eye's ring (the videos' bolts at its right), a few quick bolts. */
     static void sky(Fx c,EffectMesh m,float t){
         if(t<S_SKY||t>=S_FALL)return;
-        var bl=blade(c.cast,Math.max(t,S_SKY+EMERGE));if(bl==null)return;
-        var k=skyFrame(c.cast,push(t));
-        Vec3d o=bl.point().add(bl.axis().multiply(LOST_TO-1.5));
-        float light=Ease.smooth(t,S_SKY,S_SKY+.25f);
-        m.softDisc(o,7,EYE,.28f*light);m.softDisc(o,3,GOLD_WHITE,.3f*light);m.softDisc(o,1.2,WHITE,.4f*light);
-        // lightning round the eye, a few quick bolts
+        var k=skyView(c.cast);Vec3d e=ring(c.cast);
+        Vec3d b1=e.crossProduct(UP).normalize(),b2=b1.crossProduct(e).normalize();
         for(int n=0;n<5;n++){
-            float at=S_SKY+.12f+n*.21f+.06f*(float)Ease.hash(n*31+7);
+            float at=S_SKY+.18f+n*.2f+.06f*(float)Ease.hash(n*31+7);
             float a=Ease.window(t,at,at+.09f,.01f,.05f);if(a<=.01f)continue;
-            double ang=Ease.hash(n*19+5)*Math.PI*2,r0=6+5*Ease.hash(n*23+7);
-            Vec3d across=k.r().multiply(Math.cos(ang)).add(k.u().multiply(Math.sin(ang)));
-            Vec3d p=o.add(across.multiply(r0)).add(k.f().multiply(4));
-            for(int s=0;s<5;s++){
-                double ang2=ang+(Ease.hash(n*41+s)-.5)*.6,r1=r0*(1-.15*(s+1));
-                Vec3d acr2=k.r().multiply(Math.cos(ang2)).add(k.u().multiply(Math.sin(ang2)));
-                Vec3d q=o.add(acr2.multiply(r1)).add(k.f().multiply(4-.4*(s+1)));
-                m.line(p,q,.05,0xe8f2ff,.85f*a);m.softLine(p,q,.3,0x9cc4ff,.3f*a);p=q;
+            // out in the clouds right of the ring, 40 blocks off
+            double ang=-.9+1.4*Ease.hash(n*19+5),r0=Math.toRadians(HOLE+10+14*Ease.hash(n*23+7));
+            Vec3d p=null;
+            for(int s=0;s<6;s++){
+                double ang2=ang+(Ease.hash(n*41+s)-.5)*.25,r1=r0+Math.toRadians(3.5*s);
+                Vec3d d=e.multiply(Math.cos(r1)).add(b1.multiply(Math.sin(r1)*Math.cos(ang2))).add(b2.multiply(Math.sin(r1)*Math.sin(ang2)));
+                Vec3d q=k.eye().add(d.multiply(40));
+                if(p!=null){m.line(p,q,.12,0xe8f2ff,.85f*a);m.softLine(p,q,.7,0x9cc4ff,.3f*a);}
+                p=q;
             }
         }
     }
@@ -385,23 +373,83 @@ final class FallingSword {
     /** When her hand is up (seconds: G_RAISE's key). */
     static final float RAISED=.16f;
     static final float S_WHIP=.3f,S_ARM=.45f,S_STROKE=.83f,S_FACE=IsosangRules.G_FACE,S_SIDE=1.42f,S_SKY=IsosangRules.G_SKY,S_FALL=IsosangRules.G_FALL;
+    /** The pale sky behind her face (seconds: the videos' 1.067 s frame; before it, her face in the dark as her hand comes down). */
+    static final float S_GREY=1.058f;
+    /** Whether her whole body is drawn now (from the cut to her face; in the shots of her hand, only her free arm). */
+    static boolean wholeBody(float t){return t>=S_FACE;}
     /** A camera's frame: its eye, the way it looks, its right and its up. */
-    record Frame(Vec3d eye,Vec3d f,Vec3d r,Vec3d u){}
+    record Frame(Vec3d eye,Vec3d f,Vec3d r,Vec3d u){
+        /** The frame turned as the game turns its view by {@code roll} degrees (GameRendererMixin: the picture turns the other way). */
+        Frame rolled(double roll){
+            double a=Math.toRadians(-roll);
+            return new Frame(eye,f,r.multiply(Math.cos(a)).add(u.multiply(Math.sin(a))),r.multiply(-Math.sin(a)).add(u.multiply(Math.cos(a))));
+        }
+        /** The point seen at {@code sx}, {@code sy} of the videos' frame (0 to 1 across and down), {@code depth} blocks deep, through a lens of {@code fov} degrees. */
+        Vec3d at(double sx,double sy,double depth,double fov){
+            double t=Math.tan(Math.toRadians(fov/2));
+            return eye.add(f.add(r.multiply((2*sx-1)*t*ASPECT)).add(u.multiply((1-2*sy)*t)).multiply(depth));
+        }
+        /** The way {@code elevation} degrees up and {@code azimuth} degrees right of where it looks. */
+        Vec3d way(double elevation,double azimuth){
+            double e=Math.toRadians(elevation),z=Math.toRadians(azimuth);
+            return f.multiply(Math.cos(e)*Math.cos(z)).add(r.multiply(Math.cos(e)*Math.sin(z))).add(u.multiply(Math.sin(e))).normalize();
+        }
+    }
+    /** The videos' frame (1920 by 886): her cutscene shows it between black bars where the window is narrower (CinematicHud). */
+    public static final double ASPECT=1920/886.0;
+    /** How much of the window's height her cutscene's frame takes (1 where the window is as wide as the videos' or wider). */
+    public static double frameHeight(){
+        var w=MinecraftClient.getInstance().getWindow();if(w==null)return 1;
+        return Math.min(1,w.getFramebufferWidth()/(double)Math.max(1,w.getFramebufferHeight())/ASPECT);
+    }
+    /** The window's lens for a shot's lens (degrees, up and down its frame): the frame's sides where the videos' are. */
+    static double windowFov(double fov){return Math.toDegrees(2*Math.atan(Math.tan(Math.toRadians(fov/2))/frameHeight()));}
     /**
-     * The sky shot: low before her, close, a little to her left; looking up past her, turned so that she stands left of the
-     * middle, her head at its height and her feet just out of the frame, as the videos' (measured on a grid: her head at
-     * .37 across and .48 down, her hips at .33 and .70), the camera pushing in only a little.
+     * The sky shot (2.83.1, fitted to the user's video frame by frame, tools: the fit drew her body over its frames; user
+     * request: "카메라를 더 올려다 봐야한다고", "오른쪽으로 있어야해 살짝 캐릭터가"): low before her, its eye half a block
+     * under her feet 1.1 blocks before her, looking 60 degrees up and 42 to her left, turned 27.6 degrees, its lens wide
+     * (84 degrees up and down the videos' frame): her head at .41 across and .52 down the frame (a little right of the
+     * videos'), her hips at .40 and .70, her legs out of its bottom, wide (still all through the shot, as the videos' camera is).
      */
-    static final double SKY_EYE_FW=1.9,SKY_EYE_SIDE=.5,SKY_EYE_UP=.2,SKY_PUSH=.15,SKY_PITCH=36,SKY_PAN=11,SKY_FOV=76;
-    static float push(float t){return MathHelper.clamp((t-S_SKY)/(S_FALL-S_SKY),0,1);}
-    static Frame skyFrame(StandClient.Cast c,float push){
+    static final double SKY_EYE_FW=1.114,SKY_EYE_SIDE=-.023,SKY_EYE_UP=-.326,SKY_PITCH=60,SKY_PAN=41.92,SKY_ROLL=27.61,SKY_FOV=84.42;
+    static Frame skyFrame(StandClient.Cast c){
         Vec3d feet=c.origin(),f=forward(c),r=right(f);
-        Vec3d eye=feet.add(f.multiply(SKY_EYE_FW-SKY_PUSH*push)).subtract(r.multiply(SKY_EYE_SIDE)).add(0,SKY_EYE_UP,0);
+        Vec3d eye=feet.add(f.multiply(SKY_EYE_FW)).subtract(r.multiply(SKY_EYE_SIDE)).add(0,SKY_EYE_UP,0);
         double pan=Math.toRadians(SKY_PAN),pitch=Math.toRadians(SKY_PITCH);
         Vec3d level=f.negate().multiply(Math.cos(pan)).add(r.negate().multiply(Math.sin(pan))).normalize();
         Vec3d look=level.multiply(Math.cos(pitch)).add(UP.multiply(Math.sin(pitch))).normalize();
         Vec3d cr=look.crossProduct(UP).normalize(),cu=cr.crossProduct(look).normalize();
         return new Frame(eye,look,cr,cu);
+    }
+    /** The sky shot's frame as its picture shows it (turned SKY_ROLL): what the slab and the storm are placed in. */
+    static Frame skyView(StandClient.Cast c){return skyFrame(c).rolled(SKY_ROLL);}
+    /**
+     * The sword in the storm (2.83.1, user request: the edges they drew on the sky shot, "검 그거 아니야"; "이게 ㅈㄴ 큰 검이
+     * 내려오는건데 구름에 가려져서 칼 끝 부분밖에 안 보이는거야"; "저거 아직 그림이지? 실제 모델 아니지?"): the giant sword itself,
+     * its point at the corner they marked (.648 across and .653 down at 1.95 s; the corner tracked on the video over the
+     * shot: across and down as quadratics in its seconds), 4.23 blocks from the camera then, its blade going up from its
+     * point into the storm's eye, its face to the camera: its pose and its point's shape fitted to the lines they drew
+     * (within .007 of every point of them); nearing as the videos' sword does (its picture grows .95 to 1.07 times over the
+     * shot: NEARING, a quadratic in its seconds, within .015 of every frame measured).
+     */
+    static final double SKY_TIP_DEPTH=4.23,SKY_AXIS_UP=44.92,SKY_AXIS_RIGHT=-50.63;
+    static final double[] SKY_TIP_X={.5989945,.01809719,.00359858},SKY_TIP_Y={.66175,-.06177856,.0290817};
+    static final double[] NEARING={.70791,.19574,-.02285};
+    static double nearing(float t){return NEARING[0]+t*(NEARING[1]+t*NEARING[2]);}
+    /**
+     * The storm's eye: where its middle is in the videos' frame (the ring of clouds round the slab, fitted) and how wide the
+     * hole in the ring is round it (degrees through the sky shot's lens: the ring's clouds take the slab past it).
+     */
+    static final double RING_X=.5519,RING_Y=.4486,HOLE=29.5;
+    static Vec3d ring(StandClient.Cast c){var k=skyView(c);return k.at(RING_X,RING_Y,1,SKY_FOV).subtract(k.eye()).normalize();}
+    /**
+     * The way the sword goes away into the storm from the ring's middle (square to it: up and to the left in the frame, as
+     * far up as across in its pixels): the clouds take it only on that side, its point and its near edges clear of them
+     * (user request: "검 끝이 구름에 묻히면 안되지").
+     */
+    static Vec3d farSide(StandClient.Cast c){
+        var k=skyView(c);Vec3d e=ring(c),p=k.at(RING_X-.03,RING_Y-.065,1,SKY_FOV).subtract(k.eye()).normalize();
+        return p.subtract(e.multiply(p.dotProduct(e))).normalize();
     }
     /** Coming down: from the ground before it (between her and it), looking up at it; pushing in a little after it strikes. */
     static final double FALL_BACK=8.6,FALL_SIDE=.45,FALL_UP=1.2,FALL_LOOK=2.8,FALL_PUSH=.3,FALL_FOV=58;
@@ -433,19 +481,58 @@ final class FallingSword {
             float u=Ease.smooth(t,S_STROKE,S_FACE);Vec3d front=f.multiply(.72).subtract(r.multiply(.2)).add(0,-.24,0);
             return new Shot(h.add(slerp(under.multiply(.88),front,u)),h.subtract(d.multiply(.12)).lerp(tip,u),52,-22*(1-u));
         }
-        if(t<S_SKY){
-            Vec3d head=head(feet,yaw,t);
-            if(t>=S_SIDE&&variant(c)==1)return new Shot(head.add(f.multiply(.74)).subtract(r.multiply(.34)).add(0,-.02,0),head,46,0);
-            float u=(t-S_FACE)/(S_SKY-S_FACE);return new Shot(head.add(f.multiply(.88-.06*u)).add(0,-.06,0),head.add(0,-.06,0),48,0);
-        }
         if(t<S_FALL){
-            var k=skyFrame(c,push(t));
-            return new Shot(k.eye(),k.eye().add(k.f()),SKY_FOV,-6);
+            var k=skyFrame(c);Shot sky=new Shot(k.eye(),k.eye().add(k.f()),SKY_FOV,(float)SKY_ROLL);
+            if(t>=S_PULLED)return sky;
+            Shot face=face(c,Math.min(t,S_PULL));
+            if(t<S_PULL)return face;
+            // the pull-back (the videos': fast, out and down from her face to the sky shot)
+            float u=Ease.smooth(t,S_PULL,S_PULLED);
+            return new Shot(face.eye().lerp(sky.eye(),u),face.look().lerp(sky.look(),u),face.fov()+(sky.fov()-face.fov())*u,face.roll()+(sky.roll()-face.roll())*u);
         }
         Vec3d s=strike(c);
         float u=Math.max(0,Math.min(1,(t-IsosangRules.G_STRIKE)/(IsosangRules.G_BACK-IsosangRules.G_STRIKE)));
         Vec3d eye=s.subtract(f.multiply(FALL_BACK-FALL_PUSH*Ease.smooth(u,0,1))).add(r.multiply(FALL_SIDE)).add(0,FALL_UP,0);
         return new Shot(eye,s.add(0,FALL_LOOK,0),FALL_FOV,0);
+    }
+    /**
+     * The pull-back from her face to the sky shot (seconds, the videos': the storm behind her face from 1.517 s, the
+     * camera out and down to the sky shot from 1.567 to 1.617 s, three frames), and the one frame of the sword alone in
+     * the storm at its end (the videos' 2.717 s: she is gone from it) before the cut to it coming down.
+     */
+    static final float S_PULL=1.567f,S_PULLED=1.617f,S_ALONE=2.708f;
+    /** Whether the sky shot shows the sword alone now (she is not drawn: the videos' frame before the cut). */
+    static boolean alone(float t){return t>=S_ALONE&&t<S_FALL;}
+    /**
+     * The face shot (2.83.1, fitted to the videos' frames: her eyes found on each): square before her face, level, its lens
+     * 48 degrees up and down the frame, as near as makes her eyes as far apart as the videos' (.135 of the frame's width:
+     * the player model's eyes are a quarter block apart); where her eyes' middle is in the frame at each moment (FACE_AT:
+     * seconds, across, down), the camera moving with it (slowly, then quickly down before the pull-back, a little shake).
+     */
+    static final double FACE_FOV=48,FACE_EYES=.135,EYE_SPACING=.25,EYE_DROP=.031;
+    static final double[][] FACE_AT={{1.008,.470,.300},{1.067,.483,.3065},{1.25,.4935,.3255},{1.45,.5015,.3345},{1.483,.5055,.289},
+        {1.5,.5085,.2425},{1.517,.508,.227},{1.533,.508,.247},{1.55,.5075,.257},{1.567,.5135,.2335}};
+    /** Where her eyes' middle is in the face shot's frame at {@code t} (across, down): eased between the videos' frames. */
+    static double[] faceAt(float t){
+        double[][] k=FACE_AT;
+        if(t<=k[0][0])return new double[]{k[0][1],k[0][2]};
+        for(int i=0;i+1<k.length;i++)if(t<k[i+1][0]){
+            double u=Ease.smooth((float)((t-k[i][0])/(k[i+1][0]-k[i][0])),0,1);
+            return new double[]{k[i][1]+(k[i+1][1]-k[i][1])*u,k[i][2]+(k[i+1][2]-k[i][2])*u};
+        }
+        var e=k[k.length-1];return new double[]{e[1],e[2]};
+    }
+    /** The face shot at {@code t}: before her face, her finger at her lips. */
+    static Shot face(StandClient.Cast c,float t){
+        Vec3d feet=c.origin();float yaw=c.yaw();Vec3d f=forward(c),r=right(f);Vec3d head=head(feet,yaw,t);
+        if(t>=S_SIDE&&variant(c)==1)return new Shot(head.add(f.multiply(.74)).subtract(r.multiply(.34)).add(0,-.02,0),head,46,0);
+        // the frame at her face: as wide as puts her eyes FACE_EYES of it apart
+        double wide=EYE_SPACING/FACE_EYES,high=wide/ASPECT,back=high/2/Math.tan(Math.toRadians(FACE_FOV/2));
+        Vec3d eyes=head.add(f.multiply(.25)).add(0,-EYE_DROP,0);
+        Vec3d look=f.negate(),cr=look.crossProduct(UP).normalize();
+        double[] at=faceAt(t);
+        Vec3d eye=eyes.add(f.multiply(back)).subtract(cr.multiply((at[0]-.5)*wide)).add(0,(at[1]-.5)*high,0);
+        return new Shot(eye,eye.add(look),FACE_FOV,0);
     }
     /** Before her and below her hand ({@code f} the way she faces, {@code r} her right): her raised forearm runs from the bottom left of the frame to her hand at its top right, as the videos'. */
     static Vec3d under(Vec3d f,Vec3d r){return f.multiply(.78).add(r.multiply(.12)).add(0,-.42,0);}
@@ -469,7 +556,7 @@ final class FallingSword {
     }
     public static double fov(double vanilla,float delta){
         var c=cinematic();if(c==null)return vanilla;
-        float t=c.age(delta)/20f;return shot(c,t).fov()-8*bump(t,IsosangRules.G_STRIKE,.2f);
+        float t=c.age(delta)/20f;return windowFov(shot(c,t).fov()-8*bump(t,IsosangRules.G_STRIKE,.2f));
     }
     public static float roll(float delta){
         var c=cinematic();if(c==null)return 0;

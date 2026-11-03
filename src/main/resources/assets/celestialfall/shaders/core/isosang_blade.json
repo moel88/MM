@@ -126,6 +126,35 @@
       "values": [
         0
       ]
+    },
+    {
+      "name": "Hole",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Far",
+      "type": "float",
+      "count": 3,
+      "values": [
+        -1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Age",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
     }
   ],
   "blend": {
