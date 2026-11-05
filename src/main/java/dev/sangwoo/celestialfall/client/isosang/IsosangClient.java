@@ -113,6 +113,8 @@ public final class IsosangClient {
     private IsosangClient(){}
 
     public static void initialize(){
+        // (the user's 2.87.0 preview) G's arena: a cutscene shared with everyone in it
+        GArenaClient.initialize();
         ClientPlayNetworking.registerGlobalReceiver(IsosangAttack.EVENT,(mc,handler,b,response)->{
             UUID caster=b.readUuid();var dim=b.readIdentifier();int type=b.readUnsignedByte();UUID id=b.readUuid();int combo=b.readUnsignedByte(),blow=b.readByte();
             long start=b.readLong(),serverNow=b.readLong();Vec3d at=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float yaw=b.readFloat();long ready=b.readLong();
@@ -149,6 +151,7 @@ public final class IsosangClient {
         GStage.initialize();
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BEFORE_ENTITIES.register(GStage::ground);
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(GStage::sword);
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(GStage::worldClouds);
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->clear(mc)));
     }
     private static void accept(MinecraftClient mc,UUID caster,Identifier dim,int type,UUID id,int combo,int blow,long start,long serverNow,Vec3d at,float yaw,long ready,List<StandClient.Target> struck,
@@ -166,8 +169,6 @@ public final class IsosangClient {
             var cast=new StandClient.Cast(id,caster,dim,IsosangRules.SKILL,combo,start,serverNow,StandClient.ticks(),at,yaw,List.of());
             if(cast.age(0)/20f>=life(combo))return;
             KagenoClips.begin(cast);SWINGS.put(id,cast);STRUCK.put(id,new int[IsosangRules.blows(combo)][]);
-            // (2.83.0) G: its landing and the fire after it, drawn as a meteor's
-            if(combo==IsosangRules.ULTIMATE)FallingSword.begin(cast);
             if(empowered)EMPOWERED.add(id);
             if(serverNow-start<=LATE)voice(mc,id,caster,combo);
         }else if(type==IsosangAttack.EMPOWERED){
@@ -207,7 +208,7 @@ public final class IsosangClient {
             }
         }else if(type==IsosangAttack.STOPPED&&combo==IsosangRules.ULTIMATE){
             // (2.83.0) G called off before its sword struck (its user gone): its sword goes now, its sound fades
-            var c=SWINGS.get(id);if(c!=null){ULTIMATE_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);var v=VOICES.get(id);if(v!=null)v.fade();FallingSword.calledOff(id);}
+            var c=SWINGS.get(id);if(c!=null){ULTIMATE_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);var v=VOICES.get(id);if(v!=null)v.fade();}
         }else if(type==IsosangAttack.STOPPED&&combo==IsosangRules.FORMATION){
             // (2.82.0) H's formation ended early (its user taken away): its swords go now, its user drops
             var c=SWINGS.get(id);if(c!=null){FORMATION_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);}
@@ -495,6 +496,8 @@ public final class IsosangClient {
      * second after they died with no word of its end).
      */
     private static boolean gone(MinecraftClient mc,StandClient.Cast c){
+        // (the user's 2.87.0 preview) G plays to its end whatever becomes of her (the server calls it off)
+        if(c.combo()==IsosangRules.ULTIMATE)return false;
         var p=mc.world.getPlayerByUuid(c.caster());if(p==null)return false;
         if(c.combo()==IsosangRules.FORMATION)return !StandManager.isosang(p)||!p.isAlive()&&!FORMATION_ENDS.containsKey(c.id())&&p.deathTime>20;
         return !p.isAlive()||!StandManager.isosang(p);

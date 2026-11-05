@@ -618,18 +618,17 @@ public final class IsosangRules {
     public static final int G_VARIANTS=2;
     /**
      * G's times (seconds; the videos, from the frame the screen goes dark): the light at the fingertips (0.22), the face
-     * (1.008: the videos' cut to it between their 1.0 and 1.017 s frames), the storm behind it (1.51: the videos' 1.517 s frame; the camera pulls back to the sky from 1.567 s), the
-     * sword coming down (2.725: the videos' 2.733 s frame), striking (3.1), the game again (4.83 to 4.95), the fire
-     * leaping up round her (5.05) and the dust cleared (6.4).
+     * (1.0), the sky (1.55), the sword coming down (2.68), striking (3.1), the game again (4.83 to 4.95), the fire leaping
+     * up round her (5.05) and the dust cleared (6.4).
      */
-    public static final float G_GLOW=.217f,G_FACE=1.008f,G_SKY=1.51f,G_FALL=2.725f,G_STRIKE=G_IMPACT/20f,G_BACK=4.83f,G_GAME=4.95f,G_ERUPT=5.05f,G_CLEAR=6.4f;
+    public static final float G_GLOW=.217f,G_FACE=1.008f,G_SKY=1.51f,G_FALL=2.7833333f,G_STRIKE=G_IMPACT/20f,G_BACK=4.83f,G_GAME=4.95f,G_ERUPT=5.15f,G_CLEAR=7f;
     /**
      * Where the sword is: it strikes the ground {@link #G_AHEAD} blocks ahead of where she stands (the way she faced), its
      * point {@link #G_SINK} blocks into it. Its blade (blocks): {@link #BLADE_WIDTH} across (the videos', measured against
      * her) and {@link #BLADE_LENGTH} from its point up, longer than any shot of it shows (the videos show only its lower
      * part: its point, its rim and its carving; never its guard or its grip).
      */
-    public static final double G_AHEAD=9,G_SINK=2.2,BLADE_LENGTH=24,BLADE_WIDTH=7.6;
+    public static final double G_AHEAD=9,G_SINK=2.6,BLADE_LENGTH=96,BLADE_WIDTH=7.6;
     /**
      * Whether a body is within its reach: {@code dx}, {@code dz} level from her feet, {@code dy} from her feet up to their
      * feet, {@code halfWidth} across and {@code height} tall; the nearest of them within G_RANGE of her middle (a block

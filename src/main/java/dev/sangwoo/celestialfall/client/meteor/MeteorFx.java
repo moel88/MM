@@ -181,6 +181,8 @@ public final class MeteorFx {
 
     /** Draws it all after the world (the rocks in the air and the pieces through the game's entity layers first). */
     static void render(WorldRenderContext c){
+        // (the user's 2.87.0 preview) nothing of the world's while G's cutscene hides it
+        if(dev.sangwoo.celestialfall.client.isosang.GStage.hidden())return;
         var mc=MinecraftClient.getInstance();if(mc.world==null)return;
         List<MeteorEntity> rocks=new ArrayList<>();
         for(var e:mc.world.getEntities())if(e instanceof MeteorEntity m&&m.isAlive())rocks.add(m);
@@ -363,7 +365,7 @@ public final class MeteorFx {
             // (a sword's bite, k over 1: the ground glows only round its foot, its ring of dust not as far, as the videos')
             boolean bitten=k>1;
             f.pool(to.add(0,.05,0),(bitten?4:10)*k,.75,Math.max(0,(bitten?.45:.7)*Math.exp(-ti/(bitten?12:20))),seed,true);
-            if(ti<30){
+            if(ti<30&&!bitten){
                 double r=(1.5+21*(1-Math.exp(-ti/7)))*k*(bitten?.55:1);
                 f.ring(to.add(0,.12,0),r*.55,r,seed,(float)(ti/30),(float)((bitten?.6:.95)*(1-smooth(10,30,ti))));
             }
@@ -418,7 +420,7 @@ public final class MeteorFx {
                 else f.smoke(p,size,.2+.2*rnd(seed,i,76),0,da,seed+i*23+64);
             }
             // sparks spraying out, bouncing off nothing: they go out as they reach the ground
-            for(int i=0;i<64;i++){
+            for(int i=0;i<(bite?32:64);i++){
                 double life=14+rnd(seed,i,81)*26,a=ti;if(a>life)continue;
                 double ang=rnd(seed,i,82)*Math.PI*2,up=.25+.75*rnd(seed,i,83),sp=(.45+.65*rnd(seed,i,84))*Math.sqrt(k);
                 Vec3d v=new Vec3d(Math.cos(ang)*sp*(1.1-up*.6),up*sp,Math.sin(ang)*sp*(1.1-up*.6));
@@ -441,7 +443,7 @@ public final class MeteorFx {
                 f.fire(o.add(0,.35,0),.55+.25*rnd(seed,i,119),1.1f,.6f,fade*.75f,seed+i*13+9);
             }
             // earth and stone thrown out, bouncing to rest, then sinking out of sight
-            for(int i=0;i<(bite?12:20);i++){
+            for(int i=0;i<(bite?6:20);i++){
                 double a=ti,end=150+rnd(seed,i,91)*40;if(a>end)continue;
                 double ang=rnd(seed,i,92)*Math.PI*2,sp=(.16+.26*rnd(seed,i,93))*Math.sqrt(k),size=(.2+.3*rnd(seed,i,94))*(bite?.55:Math.sqrt(k));
                 Vec3d v=new Vec3d(Math.cos(ang)*sp,(.38+.38*rnd(seed,i,95))*Math.sqrt(k),Math.sin(ang)*sp);

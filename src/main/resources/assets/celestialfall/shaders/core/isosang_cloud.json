@@ -1,0 +1,199 @@
+{
+  "vertex": "celestialfall:isosang_cloud",
+  "fragment": "celestialfall:isosang_cloud",
+  "attributes": [
+    "Position",
+    "UV0",
+    "Color"
+  ],
+  "samplers": [
+    {
+      "name": "Sampler0"
+    },
+    {
+      "name": "Sampler1"
+    },
+    {
+      "name": "Sampler2"
+    },
+    {
+      "name": "Sampler3"
+    },
+    {
+      "name": "Sampler4"
+    }
+  ],
+  "uniforms": [
+    {
+      "name": "InverseViewProjection",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Origin",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BasisX",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BasisY",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BasisZ",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BladePoint",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BladeAcross",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BladeAxis",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "BladeNormal",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Age",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
+    },
+    {
+      "name": "Mode",
+      "type": "int",
+      "count": 1,
+      "values": [
+        0
+      ]
+    },
+    {
+      "name": "Sun",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "CloudCenter",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "DistantView",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
+    },
+    {
+      "name": "BurstRadius",
+      "type": "float",
+      "count": 1,
+      "values": [
+        20
+      ]
+    },
+    {
+      "name": "ArenaRect",
+      "type": "float",
+      "count": 4,
+      "values": [
+        -20,
+        -20,
+        20,
+        20
+      ]
+    }
+  ],
+  "blend": {
+    "func": "add",
+    "srcrgb": "srcalpha",
+    "dstrgb": "1-srcalpha"
+  }
+}

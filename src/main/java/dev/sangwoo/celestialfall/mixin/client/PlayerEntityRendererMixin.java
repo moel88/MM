@@ -73,6 +73,8 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
             &&!dev.sangwoo.celestialfall.client.CinematicDirector.isActive()&&dev.sangwoo.celestialfall.client.BotandCamera.STATE.collisionDistance<.7){ci.cancel();return;}
         if(player.isAlive() && (AtomicClient.actor(player.getUuid())!=null || dev.sangwoo.celestialfall.client.HeavenClient.actor(player.getUuid())!=null)){ci.cancel();return;}
         matrices.push();botand$posed=true;
+        // (the user's 2.87.0 preview) G's caster placed in the cutscene's shot (GStage.actor)
+        dev.sangwoo.celestialfall.client.isosang.GStage.actor(matrices,player,delta);
         if(dev.sangwoo.celestialfall.client.isosang.GStage.handOnly(player)){botand$setAside=new ArrayList<>(this.features);this.features.clear();}
         var stand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         if(stand!=null&&dev.sangwoo.celestialfall.client.kageno.KagenoClips.hidden(stand,delta)){matrices.pop();botand$posed=false;botand$restoreFeatures();ci.cancel();return;}

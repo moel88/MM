@@ -6,7 +6,11 @@
   "UV0",
   "Color"
  ],
- "samplers": [],
+ "samplers": [
+  {
+   "name": "Sampler0"
+  }
+ ],
  "uniforms": [
   {
    "name": "ModelViewMat",
@@ -93,11 +97,41 @@
    ]
   },
   {
-   "name": "Far",
+   "name": "StormForward",
    "type": "float",
    "count": 3,
    "values": [
-    -1,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "StormRight",
+   "type": "float",
+   "count": 3,
+   "values": [
+    1,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "StormUp",
+   "type": "float",
+   "count": 3,
+   "values": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "name": "GroundOrigin",
+   "type": "float",
+   "count": 3,
+   "values": [
+    0,
     0,
     0
    ]

@@ -172,11 +172,12 @@ public final class BossThreats {
             out.add(new Threat(p,"isosangR",r.start(),Math.max(now,hit),r.start()+(long)Math.ceil(IsosangRules.SWEEP_END*20),
                 Zone.ring(pivot,IsosangRules.SWEEP_REACH,IsosangRules.LOW,IsosangRules.SWEEP_HIGH),false,false,false,IsosangRules.SWEEP_DAMAGE,false,false));
         }
-        // (2.83.0) G before its sword strikes: everything within its reach round its user, unguardable
+        // G before it strikes (the user's 2.87.0 preview: at 4.85 s, round where the sword strikes, or its whole arena), unguardable
         var u=dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimateNow(p);
         if(u!=null){
-            long hit=u.start()+IsosangRules.G_IMPACT;
-            out.add(new Threat(p,"isosangG",u.start(),Math.max(now,hit),hit,Zone.ring(u.at(),IsosangRules.G_RANGE,-IsosangRules.G_RANGE,IsosangRules.G_RANGE),false,false,false,IsosangRules.G_DAMAGE,false,false));
+            long hit=u.start()+dev.sangwoo.celestialfall.isosang.GExplosionRules.HIT_TICK;
+            out.add(new Threat(p,"isosangG",u.start(),Math.max(now,hit),hit,
+                dev.sangwoo.celestialfall.isosang.GArenaServer.threat(u.strike(),dev.sangwoo.celestialfall.isosang.GExplosionRules.RADIUS,-dev.sangwoo.celestialfall.isosang.GExplosionRules.RADIUS,dev.sangwoo.celestialfall.isosang.GExplosionRules.RADIUS,p),false,false,false,200,false,false));
         }
         // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
         for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){

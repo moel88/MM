@@ -14,7 +14,10 @@ public final class MotionRig {
         segment(r,"left_sleeve",48,48,5,2,slim?3:4,-1,-2,4,"elbow",new Dilation(.25f),false);
         segment(r,"right_pants",0,32,-1.9f,12,4,-2,0,6,"knee",new Dilation(.25f),false);
         segment(r,"left_pants",0,48,1.9f,12,4,-2,0,6,"knee",new Dilation(.25f),false);
-        var root=TexturedModelData.of(data,64,64).createModel();fixCaps(root,64,true);return root;
+        dev.sangwoo.celestialfall.client.isosang.GGesture.build(r,slim);
+        var root=TexturedModelData.of(data,64,64).createModel();fixCaps(root,64,true);
+        dev.sangwoo.celestialfall.client.isosang.GGesture.reset(root.getChild("left_arm"));
+        return root;
     }
     public static ModelPart armor(Dilation dilation) {
         ModelData data=BipedEntityModel.getModelData(dilation,0);limbs(data.getRoot(),dilation,false,true);
@@ -76,6 +79,10 @@ public final class MotionRig {
         model.hat.copyTransform(model.head);
     }
     public static void reset(BipedEntityModel<?> m) {
+        // the G hand (GGesture) hidden again, the sleeve's forearm shown
+        dev.sangwoo.celestialfall.client.isosang.GGesture.resetRight(m);
+        dev.sangwoo.celestialfall.client.isosang.GGesture.reset(m.leftArm);
+        if(m instanceof net.minecraft.client.render.entity.model.PlayerEntityModel<?> player)player.leftSleeve.getChild("elbow").visible=true;
         for(var part:new ModelPart[]{m.head,m.hat,m.body,m.rightArm,m.leftArm,m.rightLeg,m.leftLeg})part.resetTransform();
         for(var part:new ModelPart[]{m.rightArm,m.leftArm})part.getChild("elbow").resetTransform();
         for(var part:new ModelPart[]{m.rightLeg,m.leftLeg})part.getChild("knee").resetTransform();

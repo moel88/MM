@@ -74,26 +74,6 @@
       ]
     },
     {
-      "name": "Across",
-      "type": "float",
-      "count": 3,
-      "values": [
-        1,
-        0,
-        0
-      ]
-    },
-    {
-      "name": "Axis",
-      "type": "float",
-      "count": 3,
-      "values": [
-        0,
-        1,
-        0
-      ]
-    },
-    {
       "name": "Light",
       "type": "float",
       "count": 3,
@@ -120,6 +100,22 @@
       ]
     },
     {
+      "name": "Buried",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
+    },
+    {
+      "name": "Storm",
+      "type": "float",
+      "count": 1,
+      "values": [
+        0
+      ]
+    },
+    {
       "name": "Edge",
       "type": "int",
       "count": 1,
@@ -128,31 +124,42 @@
       ]
     },
     {
-      "name": "Hole",
-      "type": "float",
-      "count": 4,
-      "values": [
-        0,
-        1,
-        0,
-        0
-      ]
-    },
-    {
-      "name": "Far",
+      "name": "Across",
       "type": "float",
       "count": 3,
       "values": [
-        -1,
+        0,
         0,
         0
       ]
     },
     {
-      "name": "Age",
+      "name": "Axis",
       "type": "float",
-      "count": 1,
+      "count": 3,
       "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Tip",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Exposure",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0,
+        0,
         0
       ]
     }

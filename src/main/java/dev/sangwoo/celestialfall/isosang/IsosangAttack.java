@@ -164,6 +164,8 @@ public final class IsosangAttack {
     private IsosangAttack(){}
 
     public static void initialize(){
+        // (the user's 2.87.0 preview) G's arena: who shares its cutscene
+        GArenaServer.initialize();
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,player,handler,buf,response)->{
             if(buf.readableBytes()!=0)return;
             server.execute(()->{
@@ -224,7 +226,7 @@ public final class IsosangAttack {
     public record UltimateNow(long start,Vec3d at,Vec3d strike){}
     public static UltimateNow ultimateNow(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());long now=p==null?0:p.getWorld().getTime();
-        if(s==null||s.ult==null||s.ult.struck||s.ult.over||now-s.ult.start>G_IMPACT)return null;
+        if(s==null||s.ult==null||s.ult.struck||s.ult.over||now-s.ult.start>GExplosionRules.HIT_TICK)return null;
         return new UltimateNow(s.ult.start,s.ult.at,s.ult.strike);
     }
     /** Whether H's sword formation is under way for its user now (2.82.0): it holds them from its start to its end. */
@@ -607,7 +609,8 @@ public final class IsosangAttack {
         var u=s.ult;long age=now-u.start;
         if(u.over){s.ult=null;return;}
         if(!u.struck&&(!attacks(p)||!p.isAlive())){call(p,s,now);s.ult=null;return;}
-        if(!u.struck&&age>=G_IMPACT){u.struck=true;strike(p,u);}
+        // (the user's 2.87.0 preview) it strikes as the cutscene ends (4.85 s)
+        if(!u.struck&&age>=GExplosionRules.HIT_TICK){u.struck=true;strike(p,u);}
         if(age>=HOLD[ULTIMATE]){s.ult=null;return;}
         p.fallDistance=0;
     }
@@ -617,24 +620,12 @@ public final class IsosangAttack {
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.gReady=Math.min(s.gReady,now+G_COOLDOWN);
         send(p,u.id,ULTIMATE,u.start,u.yaw,STOPPED,-1,null,null,null,null,u);
     }
-    /** G's sword strikes (2.83.0): everyone within G_RANGE of its user, its user aside, takes its damage. */
+    /**
+     * G's sword strikes (the user's 2.87.0 preview, GExplosionDamage): round where it strikes (200 within 5 blocks, 100
+     * within 10, 50 within 20), or, in the garden's arena, everyone in the arena by how far from it; its user aside.
+     */
     private static void strike(ServerPlayerEntity p,Ultimate u){
-        var world=p.getServerWorld();
-        var source=new net.minecraft.entity.damage.DamageSource(world.getRegistryManager().get(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE).entryOf(ULTIMATE_DAMAGE),p);
-        List<LivingEntity> struck=new ArrayList<>();
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(u.at,u.at).expand(G_RANGE+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
-            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
-            if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
-            Vec3d d=e.getPos().subtract(u.at);
-            if(!ultimateReaches(d.x,d.y,d.z,e.getWidth()*.5,e.getHeight()))continue;
-            CombatManager.interrupt(e);
-            e.timeUntilRegen=0;
-            if(!CombatManager.damageWithoutKnockback(e,source,G_DAMAGE))continue;
-            struck.add(e);
-            if(!StarPlatinumTimeStop.deferFeedback(p,e,G_DAMAGE,u.yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
-                var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(G_DAMAGE);b.writeFloat(u.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);
-            }
-        }
+        List<LivingEntity> struck=GExplosionDamage.apply(p,u.strike,u.yaw,u.id);
         if(!struck.isEmpty())p.onAttacking(struck.get(0));
         send(p,u.id,ULTIMATE,u.start,u.yaw,LANDED,0,struck,null,null,null,u);
     }
@@ -899,6 +890,7 @@ public final class IsosangAttack {
         send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,null);
     }
     private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult){
+        GArenaServer.event(p,id,combo,start,type);
         var s=state(p);var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:world.getPlayers()){
             if(viewer!=p&&viewer.squaredDistanceTo(p)>128*128&&(struck==null||!struck.contains(viewer)))continue;

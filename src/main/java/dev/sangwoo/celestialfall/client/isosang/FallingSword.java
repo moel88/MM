@@ -1,9 +1,7 @@
 package dev.sangwoo.celestialfall.client.isosang;
 
-import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.client.CinematicDirector;
 import dev.sangwoo.celestialfall.client.EffectMesh;
-import dev.sangwoo.celestialfall.client.MapClient;
 import dev.sangwoo.celestialfall.client.StandClient;
 import dev.sangwoo.celestialfall.client.kageno.Anim;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
@@ -12,600 +10,951 @@ import dev.sangwoo.celestialfall.client.kageno.FxLib;
 import dev.sangwoo.celestialfall.client.kageno.KagenoClips;
 import dev.sangwoo.celestialfall.client.kageno.R6;
 import dev.sangwoo.celestialfall.client.vfx.FxFrame;
-import dev.sangwoo.celestialfall.isosang.IsosangRules;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.client.util.Window;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult.Type;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
-import static dev.sangwoo.celestialfall.client.isosang.IsosangSlash.*;
-import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
+import net.minecraft.world.RaycastContext.FluidHandling;
+import net.minecraft.world.RaycastContext.ShapeType;
 
-/**
- * Lee So-sang's G as drawn (2.83.0, user request: "이번에는 G스킬 궁극기 시전자만 컷씬이 나오고 범위는 30블록 효과음과 대사는
- * 내가 영상에 보냈고 저거 2개중에 랜덤으로 하나 나오게 하면 돼 컷씬은 저거랑 똑같이 나오게", the user's two videos of it read on
- * a sheet and their answers; then "그리고 저거 거대한 검 떨어지는거임" and "컷씬은 그냥 다른 공간 보여줘서 검 안보이게 하고 박히는
- * 순간 원래 월드에는 박히는 효과만 남게").
- * <p>Everyone sees her raise her free hand, light gathering at its fingertip, sweep it up and draw a stroke of gold in
- * the air, bring it before her face (a cross of light flaring there), lean back with her arms spread and call it down;
- * as it strikes, the ground ahead of her (IsosangRules.G_AHEAD) bursts (MeteorFx.blast: a meteor's landing, bigger),
- * and soon fire leaps up out of the ground round her as dust rolls over everything. The sword itself is never in the world.
- * <p>She alone sees it, as a cutscene taken in a space of its own ({@link GStage}), her own camera's shots of it as the
- * videos have them ({@link #shot}): her hand close in the black, the camera whipping round it as the light sweeps up,
- * along her forearm to the fingertip, her face behind her raised hand under a pale sky (and, in the second video's, her
- * face from the side), up at her from below as a giant golden sword comes down point first out of a storm over her, then
- * from the ground on a dusky plain as it comes down and strikes; and back to the game. Only the lower part of its blade is
- * ever seen, as in the videos: its point, its rim and its carving.
- */
 final class FallingSword {
-    private FallingSword(){}
-    /** How long it is drawn (seconds): until the dust has cleared; and, called off, how long after that what it shows takes to go. */
-    static final float LIFE=IsosangRules.G_CLEAR+.4f,GONE=.6f;
-    static final Vec3d UP=new Vec3d(0,1,0);
-    static final int GOLD=0xffc46a,GOLD_WHITE=0xffe9b8,WHITE=0xffffff,SHARD=0x3d8dff,EYE=0xffdca0;
+   static final float LIFE = 7.4F;
+   static final float GONE = 0.6F;
+   static final Vec3d UP = new Vec3d(0.0, 1.0, 0.0);
+   static final int GOLD = 16761962;
+   static final int GOLD_WHITE = 16771512;
+   static final int WHITE = 16777215;
+   static final int SHARD = 4034047;
+   static final int EYE = 16768160;
+   static final R6.Pose G_RAISE = IsosangSlash.w(
+      0.0,
+      0.0,
+      -6.0F,
+      2.0F,
+      0.0F,
+      IsosangSlash.d(-74.0, 10.0),
+      IsosangSlash.d(18.0, 16.0),
+      IsosangSlash.d(4.0, -55.0),
+      IsosangSlash.d(-90.0, 3.0),
+      IsosangSlash.d(-90.0, -3.0)
+   );
+   static final R6.Pose G_SWEEP = IsosangSlash.w(
+         0.0,
+         0.0,
+         -10.0F,
+         -2.0F,
+         0.0F,
+         IsosangSlash.d(-74.0, 10.0),
+         IsosangSlash.d(16.0, 18.0),
+         IsosangSlash.d(48.0, -40.0),
+         IsosangSlash.d(-90.0, 3.0),
+         IsosangSlash.d(-90.0, -3.0)
+      )
+      .head(-8.0F, -14.0F, 0.0F);
+   static final R6.Pose G_POINT = IsosangSlash.w(
+         0.0,
+         0.0,
+         -12.0F,
+         -4.0F,
+         0.0F,
+         IsosangSlash.d(-74.0, 10.0),
+         IsosangSlash.d(16.0, 18.0),
+         IsosangSlash.d(54.0, -44.0),
+         IsosangSlash.d(-90.0, 3.0),
+         IsosangSlash.d(-90.0, -3.0)
+      )
+      .head(-10.0F, -20.0F, 0.0F);
+   static final R6.Pose G_POINT2 = IsosangSlash.w(
+         0.0,
+         0.0,
+         -12.0F,
+         -4.0F,
+         0.0F,
+         IsosangSlash.d(-74.0, 10.0),
+         IsosangSlash.d(16.0, 18.0),
+         IsosangSlash.d(56.0, -40.0),
+         IsosangSlash.d(-90.0, 3.0),
+         IsosangSlash.d(-90.0, -3.0)
+      )
+      .head(-10.0F, -22.0F, 0.0F);
+   static final R6.Pose G_STROKE = IsosangSlash.w(
+         0.0,
+         0.0,
+         -4.0F,
+         -2.0F,
+         0.0F,
+         IsosangSlash.d(-74.0, 10.0),
+         IsosangSlash.d(16.0, 18.0),
+         IsosangSlash.d(50.0, 22.0),
+         IsosangSlash.d(-90.0, 3.0),
+         IsosangSlash.d(-90.0, -3.0)
+      )
+      .head(-2.0F, -12.0F, 0.0F);
+   static final R6.Pose G_SHH = IsosangSlash.w(
+         0.0,
+         0.0,
+         0.0F,
+         0.0F,
+         0.0F,
+         IsosangSlash.d(-12.0, -53.0),
+         IsosangSlash.d(-55.0, -35.0),
+         IsosangSlash.d(30.0, 46.0),
+         IsosangSlash.d(-90.0, 4.0),
+         IsosangSlash.d(-90.0, -4.0)
+      )
+      .head(0.0F, 5.0F, 0.0F);
+   static final R6.Pose G_SHH2 = IsosangSlash.w(
+         0.0,
+         0.0,
+         0.0F,
+         1.0F,
+         0.0F,
+         IsosangSlash.d(-13.0, -52.0),
+         IsosangSlash.d(-56.0, -34.0),
+         IsosangSlash.d(31.0, 45.0),
+         IsosangSlash.d(-90.0, 4.0),
+         IsosangSlash.d(-90.0, -4.0)
+      )
+      .head(1.0F, 6.0F, 1.0F);
+   static final R6.Pose G_CALL = IsosangSlash.w(
+         0.0,
+         0.0,
+         0.0F,
+         6.0F,
+         0.0F,
+         IsosangSlash.d(-60.0, 30.0),
+         IsosangSlash.d(-10.0, 40.0),
+         IsosangSlash.d(-6.0, 2.0),
+         IsosangSlash.d(-90.0, 3.0),
+         IsosangSlash.d(-90.0, -3.0)
+      )
+      .head(0.0F, 10.0F, 0.0F);
+   static final R6.Pose G_CALL2 = IsosangSlash.w(
+         0.0,
+         0.0,
+         0.0F,
+         4.0F,
+         0.0F,
+         IsosangSlash.d(-62.0, 28.0),
+         IsosangSlash.d(-6.0, 36.0),
+         IsosangSlash.d(-10.0, 4.0),
+         IsosangSlash.d(-90.0, 3.0),
+         IsosangSlash.d(-90.0, -3.0)
+      )
+      .head(0.0F, 8.0F, 0.0F);
+   static final R6.Pose G_WATCH = IsosangSlash.w(
+         0.0,
+         0.0,
+         0.0F,
+         2.0F,
+         0.0F,
+         IsosangSlash.d(-68.0, 16.0),
+         IsosangSlash.d(20.0, 10.0),
+         IsosangSlash.d(-44.0, -12.0),
+         IsosangSlash.d(-90.0, 3.0),
+         IsosangSlash.d(-90.0, -3.0)
+      )
+      .head(0.0F, 4.0F, 0.0F);
+   static final Anim CLIP = Anim.joints(
+         Anim.k(0.0, IsosangSlash.STANCE),
+         Anim.k(0.16, G_RAISE, Anim.Ease.OUT),
+         Anim.k(0.3, G_RAISE),
+         Anim.k(0.44, G_SWEEP, Anim.Ease.OUT),
+         Anim.k(0.62, G_POINT),
+         Anim.k(0.83, G_POINT2),
+         Anim.k(0.96, G_STROKE, Anim.Ease.OUT),
+         Anim.k(1.06, G_SHH, Anim.Ease.OUT),
+         Anim.k(2.6, G_SHH2),
+         Anim.k(2.8, G_CALL, Anim.Ease.OUT),
+         Anim.k(3.3, G_CALL2),
+         Anim.k(3.9, G_WATCH),
+         Anim.k(4.85F, IsosangSlash.STANCE)
+      )
+      .after(IsosangSlash::grounded);
+   static final double POINT = 5.534;
+   static final double ROUND = 1.503;
+   static final double THICK = 0.75;
+   static final double FALL_FROM = 32.0;
+   static final double FALL_LEAN = 16.96;
+   static final float DARK0 = 4.3F;
+   static final float DARK1 = 4.83F;
+   static final float PENETRATION_TIME = 2.4F;
+   static final float RAISED = 0.16F;
+   static final float S_WHIP = 0.3F;
+   static final float S_ARM = 0.45F;
+   static final float S_STROKE = 0.83F;
+   static final float S_FACE = 1.008F;
+   static final float S_SIDE = 1.42F;
+   static final float S_SKY = 1.51F;
+   static final float S_FALL = 2.7833333F;
+   static final float S_GREY = 1.058F;
+   public static final double ASPECT = 2.1670428893905194;
+   static final double SKY_EYE_FW = 1.114;
+   static final double SKY_EYE_SIDE = -0.023;
+   static final double SKY_EYE_UP = -0.326;
+   static final double SKY_PITCH = 60.0;
+   static final double SKY_PAN = 41.92;
+   static final double SKY_ROLL = 27.61;
+   static final double SKY_FOV = 84.42;
+   static final double SKY_TIP_DEPTH = 3.23023249;
+   static final Vec3d SKY_ACROSS = new Vec3d(0.82441557, 0.55122074, -0.12843154);
+   static final Vec3d SKY_AXIS = new Vec3d(-0.39547105, 0.48696541, 0.5620446);
+   static final Vec3d SKY_NORMAL = new Vec3d(-0.44742353, 0.49574641, -0.74434379);
+   static final double[] SKY_TIP_X = new double[]{0.5989945, 0.01809719, 0.00359858};
+   static final double[] SKY_TIP_Y = new double[]{0.66175, -0.06177856, 0.0290817};
+   static final double[] NEARING = new double[]{0.70791, 0.19574, -0.02285};
+   static final double RING_X = 0.5519;
+   static final double RING_Y = 0.4486;
+   static final double HOLE = 29.5;
+   static final double FALL_BACK = 7.19;
+   static final double FALL_SIDE = -0.82;
+   static final double FALL_UP = 3.667;
+   static final double FALL_LOOK = 4.155;
+   static final double FALL_PUSH = 0.18;
+   static final double FALL_FOV = 58.0;
+   static final double[][] LANDING_HEIGHT = new double[][]{{3.0, 3.667}, {3.1, 2.9225}, {3.15, 2.7}, {3.2, 2.57}, {3.24, 2.57}};
+   static final float S_PULL = 1.6F;
+   static final float S_PULLED = 1.65F;
+   static final float S_ALONE = 2.75F;
+   static final double FACE_FOV = 48.0;
+   static final double FACE_EYES = 0.135;
+   static final double EYE_SPACING = 0.25;
+   static final double EYE_DROP = 0.031;
+   static final double[][] FACE_AT = new double[][]{
+      {1.008, 0.47, 0.3},
+      {1.067, 0.483, 0.3065},
+      {1.25, 0.4935, 0.3255},
+      {1.45, 0.5015, 0.3345},
+      {1.483, 0.5055, 0.289},
+      {1.5, 0.5085, 0.2425},
+      {1.517, 0.508, 0.227},
+      {1.533, 0.508, 0.247},
+      {1.55, 0.5075, 0.257},
+      {1.567, 0.5135, 0.2335}
+   };
 
-    // ───────────────────────────── the body ─────────────────────────────
+   private FallingSword() {
+   }
 
-    // (Her free hand does it all, her sword held low at her side: it comes up before her, pointing across to her right;
-    // sweeps up to point at the sky over her left; draws a stroke across; comes before her face, the hand at her nose; then
-    // she leans back with her arms spread, looking up at the storm; points down at where the sword will strike; watches it
-    // and lowers her hand. The body faces the way she faced, as every hit's.)
-    static final R6.Pose G_RAISE=w(0,0,-6,2,0,d(-74,10),d(18,16),d(4,-55),d(-90,3),d(-90,-3));
-    static final R6.Pose G_SWEEP=w(0,0,-10,-2,0,d(-74,10),d(16,18),d(48,-40),d(-90,3),d(-90,-3)).head(-8,-14,0);
-    static final R6.Pose G_POINT=w(0,0,-12,-4,0,d(-74,10),d(16,18),d(54,-44),d(-90,3),d(-90,-3)).head(-10,-20,0);
-    static final R6.Pose G_POINT2=w(0,0,-12,-4,0,d(-74,10),d(16,18),d(56,-40),d(-90,3),d(-90,-3)).head(-10,-22,0);
-    static final R6.Pose G_STROKE=w(0,0,-4,-2,0,d(-74,10),d(16,18),d(50,22),d(-90,3),d(-90,-3)).head(-2,-12,0);
-    // (2.83.1, the videos' face, pull-back and sky shots: her free hand's finger at her lips, her sword arm across her
-    // waist under it, standing straight; user request, marked on the sky shot: "머리", "손")
-    static final R6.Pose G_SHH=w(0,0,0,0,0,d(-12,-53),d(-55,-35),d(30,46),d(-90,4),d(-90,-4)).head(0,5,0);
-    static final R6.Pose G_SHH2=w(0,0,0,1,0,d(-13,-52),d(-56,-34),d(31,45),d(-90,4),d(-90,-4)).head(1,6,1);
-    static final R6.Pose G_CALL=w(0,0,0,6,0,d(-60,30),d(-10,40),d(-6,2),d(-90,3),d(-90,-3)).head(0,10,0);
-    static final R6.Pose G_CALL2=w(0,0,0,4,0,d(-62,28),d(-6,36),d(-10,4),d(-90,3),d(-90,-3)).head(0,8,0);
-    static final R6.Pose G_WATCH=w(0,0,0,2,0,d(-68,16),d(20,10),d(-44,-12),d(-90,3),d(-90,-3)).head(0,4,0);
-    static final Anim CLIP=Anim.joints(
-        k(0,STANCE),
-        k(.16,G_RAISE,Anim.Ease.OUT),
-        k(.3,G_RAISE),
-        k(.44,G_SWEEP,Anim.Ease.OUT),
-        k(.62,G_POINT),
-        k(.83,G_POINT2),
-        k(.96,G_STROKE,Anim.Ease.OUT),
-        k(1.06,G_SHH,Anim.Ease.OUT),
-        k(2.6,G_SHH2),
-        k(2.8,G_CALL,Anim.Ease.OUT),
-        k(3.3,G_CALL2),
-        k(3.9,G_WATCH),
-        k(IsosangRules.G_HOLD/20f,STANCE)).after(IsosangSlash::grounded);
+   static Vec3d hand(Vec3d feet, float yaw, float t) {
+      return KagenoClips.freeHand(feet, yaw, R6.poseOf(CLIP.frame(t)));
+   }
 
-    /** Her free hand and its fingertip at {@code t} as drawn, standing at {@code feet} facing {@code yaw}. */
-    static Vec3d hand(Vec3d feet,float yaw,float t){return KagenoClips.freeHand(feet,yaw,R6.poseOf(CLIP.frame(t)));}
-    static Vec3d tip(Vec3d feet,float yaw,float t){
-        var p=R6.poseOf(CLIP.frame(t));Vec3d h=KagenoClips.freeHand(feet,yaw,p),s=KagenoClips.freeShoulder(feet,yaw,p);
-        Vec3d d=h.subtract(s);return d.lengthSquared()<1e-6?h:h.add(d.normalize().multiply(.13));
-    }
-    /** Her head's middle at {@code t} as drawn. */
-    static Vec3d head(Vec3d feet,float yaw,float t){return KagenoClips.head(feet,yaw,R6.poseOf(CLIP.frame(t)));}
+   static Vec3d tip(Vec3d feet, float yaw, float t) {
+      R6.Pose p = R6.poseOf(CLIP.frame(t));
+      Vec3d h = KagenoClips.freeHand(feet, yaw, p);
+      Vec3d s = KagenoClips.freeShoulder(feet, yaw, p);
+      Vec3d d = h.subtract(s);
+      return d.lengthSquared() < 1.0E-6 ? h : h.add(d.normalize().multiply(0.13));
+   }
 
-    // ───────────────────────────── where it is ─────────────────────────────
+   static Vec3d head(Vec3d feet, float yaw, float t) {
+      return KagenoClips.head(feet, yaw, R6.poseOf(CLIP.frame(t)));
+   }
 
-    static Vec3d forward(StandClient.Cast c){return Vec3d.fromPolar(0,c.yaw());}
-    static Vec3d right(Vec3d f){return new Vec3d(-f.z,0,f.x);}
-    /** Where its sword strikes the ground (the server's word, else as far ahead of where she stood as it strikes). */
-    static Vec3d strike(StandClient.Cast c){var u=IsosangClient.ultimate(c.id());return u!=null?u.strike():c.origin().add(forward(c).multiply(IsosangRules.G_AHEAD));}
-    /** Which recording and face (0 the first video's, 1 the second's). */
-    static int variant(StandClient.Cast c){var u=IsosangClient.ultimate(c.id());return u==null?0:u.variant();}
-    /** When it was called off (seconds into it), or NaN. */
-    static float off(StandClient.Cast c){return IsosangClient.ultimateEnd(c.id());}
+   static Vec3d forward(StandClient.Cast c) {
+      return Vec3d.fromPolar(0.0F, c.yaw());
+   }
 
-    /** The space each shot is taken in (GStage), by when it is: black round her hand, pale sky behind her face, the storm, dusk; none once the game is back. */
-    static int space(StandClient.Cast c,float t){
-        if(t<0||t>=IsosangRules.G_BACK||!Float.isNaN(off(c)))return GStage.NONE;
-        return t<S_GREY?GStage.BLACK:t<S_SKY?GStage.GREY:t<S_FALL?GStage.STORM:GStage.DUSK;
-    }
+   static Vec3d right(Vec3d f) {
+      return new Vec3d(-f.z, 0.0, f.x);
+   }
 
-    // ───────────────────────────── the sword ─────────────────────────────
+   static Vec3d strike(StandClient.Cast c) {
+      IsosangClient.Ultimate u = IsosangClient.ultimate(c.id());
+      return u != null ? u.strike() : c.origin().add(forward(c).multiply(9.0));
+   }
 
-    /**
-     * Its blade's point (blocks: how far up its outline comes to its full width; how round it is: its edges' curve, fitted
-     * with the sword's pose to the edges the user drew on the videos' sky shot), and how thick it is.
-     */
-    static final double POINT=6,ROUND=2.2,THICK=.9;
-    /** Its half width at {@code y} blocks up from its point (tools/isosang/make_g_sword.py draws the same outline). */
-    static double half(double y){
-        double r=IsosangRules.BLADE_WIDTH/2;
-        if(y<0)return 0;
-        if(y<POINT){double u=y/POINT;return r*(1-Math.pow(1-u,ROUND));}
-        return r;
-    }
-    /** How fast its half width grows up the blade at {@code y} (its outline's slope). */
-    static double widening(double y){
-        if(y<0||y>=POINT)return 0;
-        return IsosangRules.BLADE_WIDTH/2*ROUND*Math.pow(1-y/POINT,ROUND-1)/POINT;
-    }
-    /**
-     * The sword at a moment: its point, its long axis (from its point up its blade), its face's normal, how much of it
-     * shows, how hot it glows (0 to 1), how dark it has gone (0 to 1), and how far up its blade it shows (it fades out
-     * between {@code fadeFrom} and {@code fadeTo} blocks from its point: in the storm, into its eye).
-     */
-    record Blade(Vec3d point,Vec3d axis,Vec3d normal,float alpha,float heat,float dark,double fadeFrom,double fadeTo){
-        Vec3d across(){return axis.crossProduct(normal);}
-        Vec3d at(double x,double y,double z){return point.add(across().multiply(x)).add(axis.multiply(y)).add(normal.multiply(z));}
-        /** How much of it shows {@code y} blocks up from its point. */
-        float shown(double y){return alpha*(1-Ease.smooth((float)y,(float)fadeFrom,(float)fadeTo));}
-    }
-    /** {@code a} made square to {@code axis} (unit). */
-    static Vec3d square(Vec3d a,Vec3d axis){Vec3d n=a.subtract(axis.multiply(a.dotProduct(axis)));return n.lengthSquared()<1e-8?right(axis).normalize():n.normalize();}
+   static int variant(StandClient.Cast c) {
+      IsosangClient.Ultimate u = IsosangClient.ultimate(c.id());
+      return u == null ? 0 : u.variant();
+   }
 
-    /** Coming down: how high its point starts (blocks), how it leans (degrees, its top to her left as she faces it), how far it goes into the ground (G_SINK). */
-    static final double FALL_FROM=2.2,FALL_LEAN=12;
-    /** The times it darkens (seconds) as the game comes back (the videos': bright until 4.35 s, then the whole frame dims). */
-    static final float DARK0=4.3f,DARK1=4.83f;
-    /** The sword at {@code t} (null while no shot shows it): only in her own cutscene's storm and on its dusky plain. */
-    static Blade blade(StandClient.Cast c,float t){
-        if(t<S_SKY||t>=IsosangRules.G_BACK)return null;
-        float gone=off(c);if(!Float.isNaN(gone))return null;
-        if(t<S_FALL){
-            // in the storm: the giant sword coming down point first out of its eye, its point where the user marked it and
-            // its edges along the lines they drew, nearing as the videos' does; past the hole in the storm's ring its
-            // clouds take it (isosang_blade, GStage)
-            var k=skyView(c);
-            double near=nearing(1.95f)/nearing(t);
-            Vec3d point=k.at(SKY_TIP_X[0]+t*(SKY_TIP_X[1]+t*SKY_TIP_X[2]),SKY_TIP_Y[0]+t*(SKY_TIP_Y[1]+t*SKY_TIP_Y[2]),SKY_TIP_DEPTH*near,SKY_FOV);
-            Vec3d axis=k.way(SKY_AXIS_UP,SKY_AXIS_RIGHT);
-            return new Blade(point,axis,square(k.eye().subtract(point),axis),1,1,0,99,99);
-        }
-        // coming down point first where it strikes, and stuck there
-        Vec3d s=strike(c),f=forward(c),r=right(f);
-        double lean=Math.toRadians(FALL_LEAN);
-        Vec3d axis=UP.multiply(Math.cos(lean)).subtract(r.multiply(Math.sin(lean))).normalize();
-        Vec3d normal=square(f.negate(),axis);
-        if(t<IsosangRules.G_STRIKE){
-            float u=(t-S_FALL)/(IsosangRules.G_STRIKE-S_FALL);double q=Math.pow(u,1.35);
-            return new Blade(s.add(axis.multiply(FALL_FROM*(1-q)-IsosangRules.G_SINK*q)),axis,normal,1,1,0,99,99);
-        }
-        double after=t-IsosangRules.G_STRIKE;
-        double recoil=.18*Math.exp(-after/.08)*Math.sin(after*55);
-        float heat=1-.5f*Ease.smooth(t,IsosangRules.G_STRIKE+.1f,DARK0)-.5f*Ease.smooth(t,DARK0,DARK1);
-        float dark=.45f*Ease.smooth(t,DARK0,DARK1);
-        return new Blade(s.add(axis.multiply(-IsosangRules.G_SINK+recoil)),axis,normal,1,Math.max(0,heat),dark,99,99);
-    }
-    /** The storm's eye as the sky shot sees it (the way to its middle from the camera). */
-    static Vec3d stormEye(StandClient.Cast c,float t){return ring(c);}
+   static float off(StandClient.Cast c) {
+      return IsosangClient.ultimateEnd(c.id());
+   }
 
-    // ───────────────────────────── the effect layer ─────────────────────────────
+   static int space(StandClient.Cast c, float t) {
+      if (!(t < 0.0F) && !(t >= 4.83F) && Float.isNaN(off(c))) {
+         return t < 1.058F ? 0 : (t < 1.51F ? 1 : (t < 2.7833333F ? 2 : 3));
+      } else {
+         return -1;
+      }
+   }
 
-    /** When she called it, what it is drawn from: the cast's own place (she is held there). */
-    static Vec3d feet(Fx c){return c.origin;}
-    /** Whether this G is the one the local player's camera is in now (what only her cutscene shows is drawn only then). */
-    static boolean shown(Fx c){var own=cinematic();return own!=null&&own.id().equals(c.cast.id())&&c.sec<IsosangRules.G_BACK;}
-    /**
-     * The light at her fingertip, the stroke it draws, the cross before her face (everyone sees her hand); in her cutscene
-     * the storm's eye, its lightning and the sword's edges and wind; the strike's flash where it struck (everyone).
-     */
-    static void additive(Fx c,EffectMesh m){
-        float t=c.sec;Vec3d feet=feet(c);float yaw=c.cast.yaw();
-        boolean gone=!Float.isNaN(off(c.cast));
-        if(!gone)fingertip(c,m,t,feet,yaw);
-        if(shown(c)){
-            sky(c,m,t);
-            var bl=blade(c.cast,t);
-            if(bl!=null)edges(c,m,t,bl);
-        }
-        // the strike: a flash where its point bites
-        float ks=FxLib.kick(t,IsosangRules.G_STRIKE,.18f);
-        if(ks>.01f&&!gone){Vec3d s=strike(c.cast).add(0,1,0);m.softDisc(s,6,GOLD,.42f*ks);m.softDisc(s,2.4,GOLD_WHITE,.5f*ks);m.star(s,3.4,WHITE,.6f*ks);}
-        if(!gone){rays(c,m,t);foot(c,m,t);}
-    }
-    /** The fire at its foot (3.1 to 4.4 s): a flickering orange glow over the ground where it bites, hot at first. */
-    static void foot(Fx c,EffectMesh m,float t){
-        float a=Ease.window(t,IsosangRules.G_STRIKE,DARK1,.05f,.6f);if(a<=.01f)return;
-        Vec3d s=strike(c.cast).add(0,.5,0);
-        float flick=.85f+.15f*(float)Math.sin(t*37)*(float)Math.sin(t*23+1);
-        float hot=1-Ease.smooth(t,IsosangRules.G_STRIKE,DARK0);
-        m.softDisc(s,4.5,0xff8a30,.4f*a*flick);m.softDisc(s.add(0,.3,0),1.8,0xffd080,(.3f+.4f*hot)*a*flick);
-    }
-    /** Sparks shooting out of where it bites as it strikes (0.6 s): long orange streaks, out and up, slowing and falling. */
-    static void rays(Fx c,EffectMesh m,float t){
-        float after=t-IsosangRules.G_STRIKE;if(after<0||after>.6f)return;
-        Vec3d s=strike(c.cast);
-        for(int i=0;i<30;i++){
-            double ang=Ease.hash(i*29+3)*Math.PI*2,up=.35+.6*Ease.hash(i*31+5),sp=10+14*Ease.hash(i*37+7);
-            Vec3d dir=new Vec3d(Math.cos(ang)*(1-up*.5),up,Math.sin(ang)*(1-up*.5)).normalize();
-            double life=.3+.3*Ease.hash(i*41+9);if(after>life)continue;
-            double a=after,head=sp*a*(1-a*.6),tail=Math.max(0,head-2.2-3*Ease.hash(i*43+1));
-            Vec3d o=s.add(0,.4,0),p=o.add(dir.multiply(head)).add(0,-2*a*a,0),q=o.add(dir.multiply(tail)).add(0,-2*Math.max(0,a-.06)*Math.max(0,a-.06),0);
-            float k=(float)(1-a/life);
-            m.softLine(q,p,.09,0xff9a40,.55f*k);m.line(q,p,.025,0xfff0c0,.9f*k);
-        }
-    }
-    /** The sword's edges catching the light, and the wind it tears through as it comes down. */
-    static void edges(Fx c,EffectMesh m,float t,Blade bl){
-        float glow=bl.heat()*(1-bl.dark());
-        if(glow>.02f){
-            double z=THICK*.5;double[] ys=GStage.SLICES;
-            for(int s=-1;s<=1;s+=2)for(int i=0;i+1<ys.length;i++){
-                float a=Math.min(bl.shown(ys[i]),bl.shown(ys[i+1]))*glow;if(a<=.01f)continue;
-                Vec3d p=bl.at(s*half(ys[i]),ys[i],z),q=bl.at(s*half(ys[i+1]),ys[i+1],z);
-                m.softLine(p,q,.35,GOLD,.16f*a);m.line(p,q,.03,GOLD_WHITE,.36f*a);
+   static double half(double y) {
+      double r = 3.8;
+      if (y < 0.0) {
+         return 0.0;
+      } else if (y < 5.534) {
+         double u = y / 5.534;
+         return r * (1.0 - Math.pow(1.0 - u, 1.503));
+      } else {
+         return r;
+      }
+   }
+
+   static double edgeDepth(double y) {
+      return 0.07500000000000001 * Math.min(1.0, Math.max(0.0, y / 0.45));
+   }
+
+   static double widening(double y) {
+      return !(y < 0.0) && !(y >= 5.534) ? 5.711399999999999 * Math.pow(1.0 - y / 5.534, 0.5029999999999999) / 5.534 : 0.0;
+   }
+
+   static Vec3d square(Vec3d a, Vec3d axis) {
+      Vec3d n = a.subtract(axis.multiply(a.dotProduct(axis)));
+      return n.lengthSquared() < 1.0E-8 ? right(axis).normalize() : n.normalize();
+   }
+
+   static FallingSword.Blade blade(StandClient.Cast c, float t) {
+      return !(t < 1.51F) && !(t >= 4.83F) && Float.isNaN(off(c)) ? GScene.blade(c, t) : null;
+   }
+
+   static double fallHeight(float t) {
+      if (t < 3.1F) {
+         double u = (double)Math.max(0.0F, Math.min(1.0F, (t - 2.7833333F) / 0.3166666F));
+         return 32.0 * (1.0 - u * u);
+      } else {
+         double a = (double)Math.max(0.0F, t - 3.1F);
+         double bite = 0.2 * (1.0 - Math.exp(-a / 0.18));
+         double drive = (double)Ease.smooth((float)a, 0.0F, 2.4F);
+         return -bite - 2.4 * drive;
+      }
+   }
+
+   static Vec3d stormEye(StandClient.Cast c, float t) {
+      return ring(c);
+   }
+
+   static Vec3d feet(Fx c) {
+      return c.origin;
+   }
+
+   static boolean shown(Fx c) {
+      StandClient.Cast own = cinematic();
+      return own != null && own.id().equals(c.cast.id()) && c.sec < 4.83F;
+   }
+
+   static void additive(Fx c, EffectMesh m) {
+      float t = c.sec;
+      Vec3d feet = feet(c);
+      float yaw = c.cast.yaw();
+      boolean gone = !Float.isNaN(off(c.cast));
+      if (!gone) {
+         fingertip(c, m, t, feet, yaw);
+      }
+
+      if (shown(c)) {
+         sky(c, m, t);
+         FallingSword.Blade bl = blade(c.cast, t);
+         if (bl != null) {
+            edges(c, m, t, bl);
+            GWorld.wind(c, m, t, bl);
+         }
+      } else if (!GStage.hidden() && GWorld.active(c.cast, t)) {
+         FallingSword.Blade bl = GWorld.blade(c.cast, t);
+         if (bl.alpha() > 0.004F) {
+            edges(c, m, t, bl);
+            GWorld.wind(c, m, t, bl);
+         }
+      }
+
+      float ks = FxLib.kick(t, 3.1F, 0.18F);
+      if (ks > 0.01F && !gone && (!shown(c) || !GStage.supported())) {
+         Vec3d s = strike(c.cast).add(0.0, 1.0, 0.0);
+         m.softDisc(s, 6.0, 16761962, 0.42F * ks);
+         m.softDisc(s, 2.4, 16771512, 0.5F * ks);
+         m.star(s, 3.4, 16777215, 0.6F * ks);
+      }
+
+      if (!gone && (shown(c) || !GStage.hidden())) {
+         GImpact.sparks(c, m, t);
+      }
+   }
+
+   static void foot(Fx c, EffectMesh m, float t) {
+      float a = Ease.window(t, 3.1F, 4.83F, 0.05F, 0.6F);
+      if (!(a <= 0.01F)) {
+         Vec3d s = strike(c.cast).add(0.0, 0.5, 0.0);
+         float flick = 0.85F + 0.15F * (float)Math.sin((double)(t * 37.0F)) * (float)Math.sin((double)(t * 23.0F + 1.0F));
+         float hot = 1.0F - Ease.smooth(t, 3.1F, 4.3F);
+         m.softDisc(s, 4.5, 16747056, 0.4F * a * flick);
+         m.softDisc(s.add(0.0, 0.3, 0.0), 1.8, 16765056, (0.3F + 0.4F * hot) * a * flick);
+      }
+   }
+
+   static void rays(Fx c, EffectMesh m, float t) {
+      float after = t - 3.1F;
+      if (!(after < 0.0F) && !(after > 0.6F)) {
+         Vec3d s = strike(c.cast);
+
+         for (int i = 0; i < 18; i++) {
+            double ang = Ease.hash(i * 29 + 3) * Math.PI * 2.0;
+            double up = 0.35 + 0.6 * Ease.hash(i * 31 + 5);
+            double sp = 10.0 + 14.0 * Ease.hash(i * 37 + 7);
+            Vec3d dir = new Vec3d(Math.cos(ang) * (1.0 - up * 0.5), up, Math.sin(ang) * (1.0 - up * 0.5)).normalize();
+            double life = 0.3 + 0.3 * Ease.hash(i * 41 + 9);
+            if (!((double)after > life)) {
+               double a = (double)after;
+               double head = sp * a * (1.0 - a * 0.6);
+               double tail = Math.max(0.0, head - 2.2 - 3.0 * Ease.hash(i * 43 + 1));
+               Vec3d o = s.add(0.0, 0.4, 0.0);
+               Vec3d p = o.add(dir.multiply(head)).add(0.0, -2.0 * a * a, 0.0);
+               Vec3d q = o.add(dir.multiply(tail)).add(0.0, -2.0 * Math.max(0.0, a - 0.06) * Math.max(0.0, a - 0.06), 0.0);
+               float k = (float)(1.0 - a / life);
+               m.softLine(q, p, 0.09, 16751168, 0.25F * k);
+               m.line(q, p, 0.025, 16773312, 0.55F * k);
             }
-        }
-        if(t>=S_FALL&&t<IsosangRules.G_STRIKE+.1f){
-            float w=Ease.smooth(t,S_FALL,S_FALL+.06f)*(1-Ease.smooth(t,IsosangRules.G_STRIKE,IsosangRules.G_STRIKE+.1f));
-            // (the videos': white streaks bending round its edges as it comes down, each a long arc from its point up its sides)
-            for(int i=0;i<18;i++){
-                int side=i%2==0?1:-1;double y0=.6+(i/2)*.9,off=.3+.5*Ease.hash(i*7+3),len=5+4*Ease.hash(i*7+5);
-                Vec3d prev=null;
-                for(int k=0;k<=8;k++){
-                    double y=y0+len*k/8,bend=off*(1+.6*Math.sin(k/8.0*Math.PI));
-                    Vec3d p=bl.at(side*(half(y)+bend),y,(i%3-1)*THICK*.8);
-                    if(prev!=null){float a=(float)Math.sin(k/8.0*Math.PI);m.softLine(prev,p,.08,0xeaf4ff,.45f*w*a);m.line(prev,p,.015,WHITE,.6f*w*a);}
-                    prev=p;
-                }
-            }
-        }
-    }
-    /**
-     * The light at her fingertip (0.15 to 1.5 s): it gathers, a beam shoots off it as her hand sweeps up, it glows as she
-     * points at the sky, draws a stroke of gold as her hand crosses, and flares into a cross before her face; a few blue
-     * shards spin round her hand. Small: her cutscene's camera is a hand's length from it.
-     */
-    static void fingertip(Fx c,EffectMesh m,float t,Vec3d feet,float yaw){
-        if(t<.15f||t>1.5f)return;
-        Vec3d tip=tip(feet,yaw,t);
-        float on=Ease.window(t,.17f,1.42f,.06f,.12f);
-        float pulse=.85f+.15f*(float)Math.sin(t*31);
-        // (the videos': a golden radiance round the fingertip that grows as the light gathers, a hot core, and a thin
-        // streak through it level, like a lens's flare; it is light, facing the eye)
-        // (smaller once it is before her face, a hand's length from the camera there: its light must not white her face out)
-        float grow=(.15f+.85f*Ease.smooth(t,.33f,.6f))*(1-.65f*Ease.smooth(t,S_FACE-.03f,S_FACE+.03f));
-        m.softDisc(tip,.3*grow,GOLD,.45f*on);m.softDisc(tip,.12*grow,GOLD_WHITE,.6f*on);m.softDisc(tip,.045*grow,WHITE,.9f*on);
-        m.star(tip,(.13+.04*pulse)*grow*on,GOLD_WHITE,.95f*on);
-        Vec3d look=tip.subtract(c.camera);look=look.lengthSquared()<1e-6?c.f:look.normalize();
-        Vec3d level=look.crossProduct(UP);level=level.lengthSquared()<1e-6?c.right:level.normalize();
-        m.softLine(tip.subtract(level.multiply(.9*grow)),tip.add(level.multiply(.9*grow)),.025,GOLD,.3f*on*grow);
-        // the beam as her hand sweeps up, along the way the finger points
-        float beam=Ease.window(t,.28f,.55f,.03f,.1f);
-        if(beam>.01f){
-            Vec3d h=hand(feet,yaw,t),d=tip.subtract(h);d=d.lengthSquared()<1e-6?UP:d.normalize();
-            Vec3d end=tip.add(d.multiply(3.2));
-            m.softLine(tip,end,.16,GOLD,.45f*beam);m.softLine(tip,end,.06,GOLD_WHITE,.6f*beam);m.line(tip,end,.02,WHITE,.85f*beam);
-        }
-        // the stroke: where the fingertip went from 0.83 s, left hanging in the air, fading
-        if(t>.83f){
-            float fade=1-Ease.smooth(t,1.02f,1.3f);
-            if(fade>.01f){
-                int n=14;Vec3d prev=null;float to=Math.min(t,.97f);
-                for(int i=0;i<=n;i++){
-                    float s=.83f+(to-.83f)*i/n;Vec3d p=tip(feet,yaw,s);
-                    if(prev!=null){float w=i/(float)n;m.softLine(prev,p,.14+.1*w,GOLD,.5f*fade);m.softLine(prev,p,.05+.03*w,GOLD_WHITE,.6f*fade);m.line(prev,p,.014+.008*w,WHITE,.85f*fade);}
-                    prev=p;
-                }
-            }
-        }
-        // the cross before her face (1.0 to 1.4 s): a streak right across the view and a shorter one up and down, a burst where they cross
-        float cross=FxLib.kick(t,1.02f,.12f);
-        if(cross>.01f){
-            Vec3d right=level,up=right.crossProduct(look).normalize();
-            m.softLine(tip.subtract(right.multiply(2.8)),tip.add(right.multiply(2.8)),.025,GOLD,.5f*cross);
-            m.line(tip.subtract(right.multiply(2.4)),tip.add(right.multiply(2.4)),.005,WHITE,.85f*cross);
-            m.softLine(tip.subtract(up.multiply(.8)),tip.add(up.multiply(.8)),.02,GOLD,.4f*cross);
-            m.line(tip.subtract(up.multiply(.6)),tip.add(up.multiply(.6)),.004,WHITE,.75f*cross);
-            m.star(tip,.18*cross,WHITE,.9f*cross);m.softDisc(tip,.16,GOLD_WHITE,.5f*cross);m.softDisc(tip,.4,GOLD,.16f*cross);
-        }
-        // blue shards spinning round her hand
-        float sh=Ease.window(t,.38f,1.02f,.08f,.12f);
-        if(sh>.01f){
-            Vec3d h=hand(feet,yaw,t);
-            for(int i=0;i<6;i++){
-                double a=t*(2.2+i*.3)+i*1.05,r=.42+.16*Ease.hash(i*13+1),y=-.1+.36*Ease.hash(i*17+2);
-                Vec3d p=h.add(Math.cos(a)*r,y+.06*Math.sin(t*5+i),Math.sin(a)*r);
-                Vec3d u=new Vec3d(Math.cos(a+1.3),.4,Math.sin(a+1.3)).normalize().multiply(.13),v=new Vec3d(-Math.sin(a),.2,Math.cos(a)).normalize().multiply(.05);
-                m.triangle(p.add(u),p.subtract(u).add(v),p.subtract(u).subtract(v),SHARD,.85f*sh);
-            }
-        }
-    }
-    /** Lightning flickering in the storm's clouds round its eye's ring (the videos' bolts at its right), a few quick bolts. */
-    static void sky(Fx c,EffectMesh m,float t){
-        if(t<S_SKY||t>=S_FALL)return;
-        var k=skyView(c.cast);Vec3d e=ring(c.cast);
-        Vec3d b1=e.crossProduct(UP).normalize(),b2=b1.crossProduct(e).normalize();
-        for(int n=0;n<5;n++){
-            float at=S_SKY+.18f+n*.2f+.06f*(float)Ease.hash(n*31+7);
-            float a=Ease.window(t,at,at+.09f,.01f,.05f);if(a<=.01f)continue;
-            // out in the clouds right of the ring, 40 blocks off
-            double ang=-.9+1.4*Ease.hash(n*19+5),r0=Math.toRadians(HOLE+10+14*Ease.hash(n*23+7));
-            Vec3d p=null;
-            for(int s=0;s<6;s++){
-                double ang2=ang+(Ease.hash(n*41+s)-.5)*.25,r1=r0+Math.toRadians(3.5*s);
-                Vec3d d=e.multiply(Math.cos(r1)).add(b1.multiply(Math.sin(r1)*Math.cos(ang2))).add(b2.multiply(Math.sin(r1)*Math.sin(ang2)));
-                Vec3d q=k.eye().add(d.multiply(40));
-                if(p!=null){m.line(p,q,.12,0xe8f2ff,.85f*a);m.softLine(p,q,.7,0x9cc4ff,.3f*a);}
-                p=q;
-            }
-        }
-    }
-    static void alpha(Fx c,EffectMesh m){}
-    static void overlay(Fx c,EffectMesh m){}
-    /** Lights: the fingertip, the sword's glow over the ground (her cutscene), the strike, the fire leaping up; afterglow cut short in the quick parts. */
-    static void frame(Fx c,FxFrame f){
-        float t=c.sec;Vec3d feet=feet(c);float yaw=c.cast.yaw();boolean gone=!Float.isNaN(off(c.cast));
-        float on=Ease.window(t,.17f,1.42f,.06f,.12f);
-        if(on>.01f&&!gone)f.light(tip(feet,yaw,t),0xffd08a,3,.6f*on);
-        if(shown(c)){
-            var bl=blade(c.cast,t);
-            if(bl!=null){float glow=bl.heat()*bl.alpha()*(1-bl.dark());if(glow>.02f&&t>=S_FALL)f.light(bl.at(0,2,0),0xffb060,16,.8f*glow);}
-        }
-        float ks=FxLib.kick(t,IsosangRules.G_STRIKE,.5f);
-        if(ks>.01f&&!gone)f.light(strike(c.cast).add(0,2,0),0xffa050,20,1.3f*ks);
-        float ke=FxLib.kick(t,IsosangRules.G_ERUPT,.6f);
-        if(ke>.01f&&!gone)f.light(feet.add(0,1.5,0),0xff9a40,16,1f*ke);
-        if((t>.28f&&t<1.1f)||(t>S_FALL&&t<IsosangRules.G_STRIKE+.3f))f.afterglow(.08f);
-    }
-    /** Shake as it strikes and as the fire leaps up (in over two frames). */
-    static float shake(StandClient.Cast cast,float sec){
-        if(!Float.isNaN(off(cast))&&off(cast)<IsosangRules.G_STRIKE)return 0;
-        return Math.max(2.6f*bump(sec,IsosangRules.G_STRIKE,.25f),1.2f*bump(sec,IsosangRules.G_ERUPT,.2f));
-    }
+         }
+      }
+   }
 
-    // ───────────────────────────── the news of it ─────────────────────────────
+   static void edges(Fx c, EffectMesh m, float t, FallingSword.Blade bl) {
+      float glow = bl.heat() * (1.0F - bl.dark());
+      if (glow > 0.02F) {
+         double z = 0.375;
+         double[] ys = GStage.SLICES;
 
-    /** G heard of (its swing begun on this client): where it strikes and the fire after it are drawn with a meteor's landing (MeteorFx). */
-    static void begin(StandClient.Cast c){
-        int seed=IsosangRules.formationSeed(c.id());
-        dev.sangwoo.celestialfall.client.meteor.MeteorFx.blast(c.id(),strike(c),c.origin(),seed,c.age(0)-IsosangRules.G_IMPACT);
-    }
-    /** G called off before it struck: no landing. */
-    static void calledOff(java.util.UUID id){dev.sangwoo.celestialfall.client.meteor.MeteorFx.unblast(id);}
-
-    // ───────────────────────────── her cutscene ─────────────────────────────
-
-    /** Her own G whose cutscene her camera is in now (null for none): until the game's camera has it back. */
-    static StandClient.Cast cinematic(){
-        var mc=MinecraftClient.getInstance();
-        if(mc.player==null||!mc.player.isAlive()||!MapClient.enabled()||!CelestialFall.CONFIG.cinematicCamera)return null;
-        var c=IsosangClient.ownUltimate();if(c==null)return null;
-        float t=c.age(0)/20f;if(t<0||t>=IsosangRules.G_BACK||!Float.isNaN(off(c)))return null;
-        return c;
-    }
-    /** A shot: where the eye is, what it looks at, its lens (degrees) and its roll. */
-    record Shot(Vec3d eye,Vec3d look,double fov,float roll){}
-    /** The shots' cuts (seconds): the hand, the whip round it, along the forearm, the stroke, the face, the sky, the sword coming down. */
-    /** When her hand is up (seconds: G_RAISE's key). */
-    static final float RAISED=.16f;
-    static final float S_WHIP=.3f,S_ARM=.45f,S_STROKE=.83f,S_FACE=IsosangRules.G_FACE,S_SIDE=1.42f,S_SKY=IsosangRules.G_SKY,S_FALL=IsosangRules.G_FALL;
-    /** The pale sky behind her face (seconds: the videos' 1.067 s frame; before it, her face in the dark as her hand comes down). */
-    static final float S_GREY=1.058f;
-    /** Whether her whole body is drawn now (from the cut to her face; in the shots of her hand, only her free arm). */
-    static boolean wholeBody(float t){return t>=S_FACE;}
-    /** A camera's frame: its eye, the way it looks, its right and its up. */
-    record Frame(Vec3d eye,Vec3d f,Vec3d r,Vec3d u){
-        /** The frame turned as the game turns its view by {@code roll} degrees (GameRendererMixin: the picture turns the other way). */
-        Frame rolled(double roll){
-            double a=Math.toRadians(-roll);
-            return new Frame(eye,f,r.multiply(Math.cos(a)).add(u.multiply(Math.sin(a))),r.multiply(-Math.sin(a)).add(u.multiply(Math.cos(a))));
-        }
-        /** The point seen at {@code sx}, {@code sy} of the videos' frame (0 to 1 across and down), {@code depth} blocks deep, through a lens of {@code fov} degrees. */
-        Vec3d at(double sx,double sy,double depth,double fov){
-            double t=Math.tan(Math.toRadians(fov/2));
-            return eye.add(f.add(r.multiply((2*sx-1)*t*ASPECT)).add(u.multiply((1-2*sy)*t)).multiply(depth));
-        }
-        /** The way {@code elevation} degrees up and {@code azimuth} degrees right of where it looks. */
-        Vec3d way(double elevation,double azimuth){
-            double e=Math.toRadians(elevation),z=Math.toRadians(azimuth);
-            return f.multiply(Math.cos(e)*Math.cos(z)).add(r.multiply(Math.cos(e)*Math.sin(z))).add(u.multiply(Math.sin(e))).normalize();
-        }
-    }
-    /** The videos' frame (1920 by 886): her cutscene shows it between black bars where the window is narrower (CinematicHud). */
-    public static final double ASPECT=1920/886.0;
-    /** How much of the window's height her cutscene's frame takes (1 where the window is as wide as the videos' or wider). */
-    public static double frameHeight(){
-        var w=MinecraftClient.getInstance().getWindow();if(w==null)return 1;
-        return Math.min(1,w.getFramebufferWidth()/(double)Math.max(1,w.getFramebufferHeight())/ASPECT);
-    }
-    /** The window's lens for a shot's lens (degrees, up and down its frame): the frame's sides where the videos' are. */
-    static double windowFov(double fov){return Math.toDegrees(2*Math.atan(Math.tan(Math.toRadians(fov/2))/frameHeight()));}
-    /**
-     * The sky shot (2.83.1, fitted to the user's video frame by frame, tools: the fit drew her body over its frames; user
-     * request: "카메라를 더 올려다 봐야한다고", "오른쪽으로 있어야해 살짝 캐릭터가"): low before her, its eye half a block
-     * under her feet 1.1 blocks before her, looking 60 degrees up and 42 to her left, turned 27.6 degrees, its lens wide
-     * (84 degrees up and down the videos' frame): her head at .41 across and .52 down the frame (a little right of the
-     * videos'), her hips at .40 and .70, her legs out of its bottom, wide (still all through the shot, as the videos' camera is).
-     */
-    static final double SKY_EYE_FW=1.114,SKY_EYE_SIDE=-.023,SKY_EYE_UP=-.326,SKY_PITCH=60,SKY_PAN=41.92,SKY_ROLL=27.61,SKY_FOV=84.42;
-    static Frame skyFrame(StandClient.Cast c){
-        Vec3d feet=c.origin(),f=forward(c),r=right(f);
-        Vec3d eye=feet.add(f.multiply(SKY_EYE_FW)).subtract(r.multiply(SKY_EYE_SIDE)).add(0,SKY_EYE_UP,0);
-        double pan=Math.toRadians(SKY_PAN),pitch=Math.toRadians(SKY_PITCH);
-        Vec3d level=f.negate().multiply(Math.cos(pan)).add(r.negate().multiply(Math.sin(pan))).normalize();
-        Vec3d look=level.multiply(Math.cos(pitch)).add(UP.multiply(Math.sin(pitch))).normalize();
-        Vec3d cr=look.crossProduct(UP).normalize(),cu=cr.crossProduct(look).normalize();
-        return new Frame(eye,look,cr,cu);
-    }
-    /** The sky shot's frame as its picture shows it (turned SKY_ROLL): what the slab and the storm are placed in. */
-    static Frame skyView(StandClient.Cast c){return skyFrame(c).rolled(SKY_ROLL);}
-    /**
-     * The sword in the storm (2.83.1, user request: the edges they drew on the sky shot, "검 그거 아니야"; "이게 ㅈㄴ 큰 검이
-     * 내려오는건데 구름에 가려져서 칼 끝 부분밖에 안 보이는거야"; "저거 아직 그림이지? 실제 모델 아니지?"): the giant sword itself,
-     * its point at the corner they marked (.648 across and .653 down at 1.95 s; the corner tracked on the video over the
-     * shot: across and down as quadratics in its seconds), 4.23 blocks from the camera then, its blade going up from its
-     * point into the storm's eye, its face to the camera: its pose and its point's shape fitted to the lines they drew
-     * (within .007 of every point of them); nearing as the videos' sword does (its picture grows .95 to 1.07 times over the
-     * shot: NEARING, a quadratic in its seconds, within .015 of every frame measured).
-     */
-    static final double SKY_TIP_DEPTH=4.23,SKY_AXIS_UP=44.92,SKY_AXIS_RIGHT=-50.63;
-    static final double[] SKY_TIP_X={.5989945,.01809719,.00359858},SKY_TIP_Y={.66175,-.06177856,.0290817};
-    static final double[] NEARING={.70791,.19574,-.02285};
-    static double nearing(float t){return NEARING[0]+t*(NEARING[1]+t*NEARING[2]);}
-    /**
-     * The storm's eye: where its middle is in the videos' frame (the ring of clouds round the slab, fitted) and how wide the
-     * hole in the ring is round it (degrees through the sky shot's lens: the ring's clouds take the slab past it).
-     */
-    static final double RING_X=.5519,RING_Y=.4486,HOLE=29.5;
-    static Vec3d ring(StandClient.Cast c){var k=skyView(c);return k.at(RING_X,RING_Y,1,SKY_FOV).subtract(k.eye()).normalize();}
-    /**
-     * The way the sword goes away into the storm from the ring's middle (square to it: up and to the left in the frame, as
-     * far up as across in its pixels): the clouds take it only on that side, its point and its near edges clear of them
-     * (user request: "검 끝이 구름에 묻히면 안되지").
-     */
-    static Vec3d farSide(StandClient.Cast c){
-        var k=skyView(c);Vec3d e=ring(c),p=k.at(RING_X-.03,RING_Y-.065,1,SKY_FOV).subtract(k.eye()).normalize();
-        return p.subtract(e.multiply(p.dotProduct(e))).normalize();
-    }
-    /** Coming down: from the ground before it (between her and it), looking up at it; pushing in a little after it strikes. */
-    static final double FALL_BACK=8.6,FALL_SIDE=.45,FALL_UP=1.2,FALL_LOOK=2.8,FALL_PUSH=.3,FALL_FOV=58;
-    /** Her camera's shot at {@code t} of the cast {@code c}. */
-    static Shot shot(StandClient.Cast c,float t){
-        Vec3d feet=c.origin();float yaw=c.yaw();Vec3d f=forward(c),r=right(f);
-        if(t<S_FACE){
-            Vec3d h=hand(feet,yaw,t),tip=tip(feet,yaw,t);
-            // the way her finger points (her arm's line), and square to it level: the camera's sides of her hand
-            Vec3d d=tip.subtract(h);d=d.lengthSquared()<1e-6?f:d.normalize();
-            Vec3d across=d.crossProduct(UP);across=across.lengthSquared()<1e-6?r:across.normalize();
-            // her hand side on, a little over it, her finger pointing to the left of the frame; then from under her
-            // forearm, behind her hand on her arm's line, looking along it to her fingertip
-            Vec3d side=across.multiply(-.72).add(0,.14,0),under=under(f,r);
-            if(t<S_WHIP){
-                // held on where her hand comes up to (0.16 s) as it comes up into the frame
-                Vec3d h0=hand(feet,yaw,RAISED),d0=tip(feet,yaw,RAISED).subtract(h0).normalize(),a0=d0.crossProduct(UP).normalize();
-                return new Shot(h0.add(a0.multiply(-.7)).add(0,.16,0).subtract(d0.multiply(.18+.04*t/S_WHIP)),h0.subtract(d0.multiply(.16)),44,0);
+         for (int s = -1; s <= 1; s += 2) {
+            for (int i = 0; i + 1 < ys.length; i++) {
+               float a = Math.min(bl.shown(ys[i]), bl.shown(ys[i + 1])) * glow;
+               if (!(a <= 0.01F)) {
+                  Vec3d p = bl.at((double)s * half(ys[i]), ys[i], z);
+                  Vec3d q = bl.at((double)s * half(ys[i + 1]), ys[i + 1], z);
+                  m.softLine(p, q, 0.35, 16761962, 0.1F * a);
+                  m.line(p, q, 0.03, 16771512, 0.12F * a);
+               }
             }
-            if(t<S_ARM){
-                // the whip round her hand as it sweeps up: turned by the eased time, not by her arm (which starts fast)
-                float u=Ease.smooth(t,S_WHIP,S_ARM);
-                Vec3d h0=hand(feet,yaw,RAISED),d0=tip(feet,yaw,RAISED).subtract(h0).normalize(),a0=d0.crossProduct(UP).normalize();
-                Vec3d h1=hand(feet,yaw,S_ARM),d1=tip(feet,yaw,S_ARM).subtract(h1).normalize(),a1=d1.crossProduct(UP).normalize();
-                Vec3d from=a0.multiply(-.7).add(0,.16,0).subtract(d0.multiply(.22)),to=under(f,r);
-                return new Shot(h.add(slerp(from,to,u)),h.subtract(d0.multiply(.16)).lerp(h.subtract(d1.multiply(.12)),u),44+8*u,-30*u);
+         }
+      }
+
+      if (t >= 2.7833333F && t < 3.1999998F) {
+         float w = Ease.smooth(t, 2.7833333F, 2.8433332F) * (1.0F - Ease.smooth(t, 3.1F, 3.1999998F));
+
+         for (int ix = 0; ix < 10; ix++) {
+            int side = ix % 2 == 0 ? 1 : -1;
+            double y0 = 0.6 + (double)(ix / 2) * 0.9;
+            double off = 0.3 + 0.5 * Ease.hash(ix * 7 + 3);
+            double len = 5.0 + 4.0 * Ease.hash(ix * 7 + 5);
+            Vec3d prev = null;
+
+            for (int k = 0; k <= 8; k++) {
+               double y = y0 + len * (double)k / 8.0;
+               double bend = off * (1.0 + 0.6 * Math.sin((double)k / 8.0 * Math.PI));
+               Vec3d p = bl.at((double)side * (half(y) + bend), y, (double)(ix % 3 - 1) * 0.75 * 0.8);
+               if (prev != null) {
+                  float a = (float)Math.sin((double)k / 8.0 * Math.PI);
+                  m.softLine(prev, p, 0.12, 15398143, 0.12F * w * a);
+                  m.line(prev, p, 0.015, 16777215, 0.1F * w * a);
+               }
+
+               prev = p;
             }
-            if(t<S_STROKE){float u=(t-S_ARM)/(S_STROKE-S_ARM);return new Shot(h.add(under.multiply(1-.12*u)),h.subtract(d.multiply(.12)),52,-30+8*u);}
-            float u=Ease.smooth(t,S_STROKE,S_FACE);Vec3d front=f.multiply(.72).subtract(r.multiply(.2)).add(0,-.24,0);
-            return new Shot(h.add(slerp(under.multiply(.88),front,u)),h.subtract(d.multiply(.12)).lerp(tip,u),52,-22*(1-u));
-        }
-        if(t<S_FALL){
-            var k=skyFrame(c);Shot sky=new Shot(k.eye(),k.eye().add(k.f()),SKY_FOV,(float)SKY_ROLL);
-            if(t>=S_PULLED)return sky;
-            Shot face=face(c,Math.min(t,S_PULL));
-            if(t<S_PULL)return face;
-            // the pull-back (the videos': fast, out and down from her face to the sky shot)
-            float u=Ease.smooth(t,S_PULL,S_PULLED);
-            return new Shot(face.eye().lerp(sky.eye(),u),face.look().lerp(sky.look(),u),face.fov()+(sky.fov()-face.fov())*u,face.roll()+(sky.roll()-face.roll())*u);
-        }
-        Vec3d s=strike(c);
-        float u=Math.max(0,Math.min(1,(t-IsosangRules.G_STRIKE)/(IsosangRules.G_BACK-IsosangRules.G_STRIKE)));
-        Vec3d eye=s.subtract(f.multiply(FALL_BACK-FALL_PUSH*Ease.smooth(u,0,1))).add(r.multiply(FALL_SIDE)).add(0,FALL_UP,0);
-        return new Shot(eye,s.add(0,FALL_LOOK,0),FALL_FOV,0);
-    }
-    /**
-     * The pull-back from her face to the sky shot (seconds, the videos': the storm behind her face from 1.517 s, the
-     * camera out and down to the sky shot from 1.567 to 1.617 s, three frames), and the one frame of the sword alone in
-     * the storm at its end (the videos' 2.717 s: she is gone from it) before the cut to it coming down.
-     */
-    static final float S_PULL=1.567f,S_PULLED=1.617f,S_ALONE=2.708f;
-    /** Whether the sky shot shows the sword alone now (she is not drawn: the videos' frame before the cut). */
-    static boolean alone(float t){return t>=S_ALONE&&t<S_FALL;}
-    /**
-     * The face shot (2.83.1, fitted to the videos' frames: her eyes found on each): square before her face, level, its lens
-     * 48 degrees up and down the frame, as near as makes her eyes as far apart as the videos' (.135 of the frame's width:
-     * the player model's eyes are a quarter block apart); where her eyes' middle is in the frame at each moment (FACE_AT:
-     * seconds, across, down), the camera moving with it (slowly, then quickly down before the pull-back, a little shake).
-     */
-    static final double FACE_FOV=48,FACE_EYES=.135,EYE_SPACING=.25,EYE_DROP=.031;
-    static final double[][] FACE_AT={{1.008,.470,.300},{1.067,.483,.3065},{1.25,.4935,.3255},{1.45,.5015,.3345},{1.483,.5055,.289},
-        {1.5,.5085,.2425},{1.517,.508,.227},{1.533,.508,.247},{1.55,.5075,.257},{1.567,.5135,.2335}};
-    /** Where her eyes' middle is in the face shot's frame at {@code t} (across, down): eased between the videos' frames. */
-    static double[] faceAt(float t){
-        double[][] k=FACE_AT;
-        if(t<=k[0][0])return new double[]{k[0][1],k[0][2]};
-        for(int i=0;i+1<k.length;i++)if(t<k[i+1][0]){
-            double u=Ease.smooth((float)((t-k[i][0])/(k[i+1][0]-k[i][0])),0,1);
-            return new double[]{k[i][1]+(k[i+1][1]-k[i][1])*u,k[i][2]+(k[i+1][2]-k[i][2])*u};
-        }
-        var e=k[k.length-1];return new double[]{e[1],e[2]};
-    }
-    /** The face shot at {@code t}: before her face, her finger at her lips. */
-    static Shot face(StandClient.Cast c,float t){
-        Vec3d feet=c.origin();float yaw=c.yaw();Vec3d f=forward(c),r=right(f);Vec3d head=head(feet,yaw,t);
-        if(t>=S_SIDE&&variant(c)==1)return new Shot(head.add(f.multiply(.74)).subtract(r.multiply(.34)).add(0,-.02,0),head,46,0);
-        // the frame at her face: as wide as puts her eyes FACE_EYES of it apart
-        double wide=EYE_SPACING/FACE_EYES,high=wide/ASPECT,back=high/2/Math.tan(Math.toRadians(FACE_FOV/2));
-        Vec3d eyes=head.add(f.multiply(.25)).add(0,-EYE_DROP,0);
-        Vec3d look=f.negate(),cr=look.crossProduct(UP).normalize();
-        double[] at=faceAt(t);
-        Vec3d eye=eyes.add(f.multiply(back)).subtract(cr.multiply((at[0]-.5)*wide)).add(0,(at[1]-.5)*high,0);
-        return new Shot(eye,eye.add(look),FACE_FOV,0);
-    }
-    /** Before her and below her hand ({@code f} the way she faces, {@code r} her right): her raised forearm runs from the bottom left of the frame to her hand at its top right, as the videos'. */
-    static Vec3d under(Vec3d f,Vec3d r){return f.multiply(.78).add(r.multiply(.12)).add(0,-.42,0);}
-    static Vec3d slerp(Vec3d a,Vec3d b,double u){
-        double la=a.length(),lb=b.length();Vec3d na=a.multiply(1/la),nb=b.multiply(1/lb);
-        double dot=MathHelper.clamp(na.dotProduct(nb),-1,1),ang=Math.acos(dot);
-        Vec3d d=ang<1e-4?na.lerp(nb,u):na.multiply(Math.sin((1-u)*ang)/Math.sin(ang)).add(nb.multiply(Math.sin(u*ang)/Math.sin(ang)));
-        return d.normalize().multiply(la+(lb-la)*u);
-    }
-    /** The jolt of the strike on her shot of it (blocks: the eye shaken up and across, coming in over two frames). */
-    static double jolt(float t){return .22*bump(t,IsosangRules.G_STRIKE,.22f);}
-    public static CinematicDirector.Pose camera(Vec3d vanilla,float yaw,float pitch,float delta){
-        var c=cinematic();if(c==null)return null;
-        float t=c.age(delta)/20f;var s=shot(c,t);var mc=MinecraftClient.getInstance();
-        // in its own space no block stands between (the world is not drawn there); in the world, kept out of the walls
-        Vec3d eye=GStage.supported()?s.eye():clear(mc,s.look(),s.eye());
-        double j=jolt(t);if(j>1e-4)eye=eye.add(0,j*Math.sin(t*61),j*.6*Math.cos(t*53));
-        Vec3d d=s.look().subtract(eye);if(d.lengthSquared()<1e-6)d=forward(c);d=d.normalize();
-        float sy=(float)Math.toDegrees(Math.atan2(-d.x,d.z)),sp=(float)-Math.toDegrees(Math.asin(MathHelper.clamp(d.y,-1,1)));
-        return new CinematicDirector.Pose(eye,sy,sp,s.roll());
-    }
-    public static double fov(double vanilla,float delta){
-        var c=cinematic();if(c==null)return vanilla;
-        float t=c.age(delta)/20f;return windowFov(shot(c,t).fov()-8*bump(t,IsosangRules.G_STRIKE,.2f));
-    }
-    public static float roll(float delta){
-        var c=cinematic();if(c==null)return 0;
-        float t=c.age(delta)/20f;return shot(c,t).roll()+(float)(3*bump(t,IsosangRules.G_STRIKE,.18f)*Math.sin(t*47));
-    }
-    /** Keeps an eye out of the walls: pulled in toward what it looks at where a block stands between. */
-    static Vec3d clear(MinecraftClient mc,Vec3d look,Vec3d eye){
-        if(mc.world==null||mc.player==null)return eye;
-        var hit=mc.world.raycast(new RaycastContext(look,eye,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,mc.player));
-        if(hit.getType()==HitResult.Type.MISS||hit.isInsideBlock()||hit.getPos().squaredDistanceTo(look)<.04)return eye;
-        Vec3d d=eye.subtract(look);double len=d.length();if(len<1e-4)return eye;
-        return look.add(d.multiply(Math.max(.3,look.distanceTo(hit.getPos())-.3)/len));
-    }
-    /**
-     * How dark the world is for her camera now (0 to 1): a moment of black as the game comes back, before the fire leaps
-     * up, as the videos have it; and where the world cannot be hidden (a shader pack's mod), black round her hand through
-     * the first shots too (the fog closing in to a couple of blocks, the sky gone). Only her own G's, only her camera's.
-     */
-    /**
-     * How thick the dust is round this client's camera now (0 to 1): as the fire leaps up out of the ground round her, the
-     * dust rolls over everything near and clears in about a second and a half (the videos' game is a beige haze); for
-     * anyone within 35 blocks of it (whole within 15), its user or not.
-     */
-    public static float dust(float delta){
-        var mc=MinecraftClient.getInstance();if(mc.world==null||mc.gameRenderer==null||!MapClient.enabled())return 0;
-        Vec3d cam=mc.gameRenderer.getCamera().getPos();float most=0;
-        for(var c:IsosangClient.SWINGS.values()){
-            if(c.combo()!=IsosangRules.ULTIMATE||!Float.isNaN(off(c)))continue;
-            float t=c.age(delta)/20f;
-            float a=Ease.window(t,IsosangRules.G_ERUPT+.05f,IsosangRules.G_CLEAR+.3f,.3f,.9f);if(a<=0)continue;
-            double far=cam.distanceTo(c.origin().lerp(strike(c),.45));
-            most=Math.max(most,a*(1-Ease.smooth((float)far,15,35)));
-        }
-        return most;
-    }
-    /**
-     * How far her cutscene's whole frame has dimmed (0 to 1) as it ends: the videos' frame (sky, ground and sword alike)
-     * goes dim from 4.3 s to its cut, the game's view coming back on it (CinematicHud draws it over the frame).
-     */
-    public static float dim(float delta){
-        var c=cinematic();if(c==null)return 0;
-        float t=c.age(delta)/20f;return .62f*Ease.smooth(t,DARK0,IsosangRules.G_BACK);
-    }
-    public static float dark(float delta){
-        var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled()||!CelestialFall.CONFIG.cinematicCamera)return 0;
-        var c=IsosangClient.ownUltimate();if(c==null)return 0;
-        float t=c.age(delta)/20f;
-        if(!Float.isNaN(off(c)))return 0;
-        float back=.55f*Ease.window(t,IsosangRules.G_BACK+.04f,IsosangRules.G_ERUPT+.06f,.04f,.08f);
-        return GStage.supported()?back:Math.max(Ease.window(t,0,S_FACE,.03f,.04f),back);
-    }
+         }
+      }
+   }
+
+   static void fingertip(Fx var0, EffectMesh var1, float var2, Vec3d var3, float var4) {
+      if (!(var2 < 0.15F) && !(var2 > 1.5F)) {
+         Vec3d var8 = GGesture.tip(var0.cast, var2);
+         float var9 = Ease.window(var2, 0.17F, 1.42F, 0.06F, 0.12F);
+         float var10 = 0.85F + 0.15F * (float)Math.sin((double)(var2 * 31.0F));
+         float var11 = 0.45F * (0.15F + 0.85F * Ease.smooth(var2, 0.33F, 0.6F)) * (1.0F - 0.65F * Ease.smooth(var2, 0.97800004F, 1.038F));
+         var1.softDisc(var8, 0.3 * (double)var11, 16761962, 0.45F * var9);
+         var1.softDisc(var8, 0.12 * (double)var11, 16771512, 0.6F * var9);
+         var1.softDisc(var8, 0.045 * (double)var11, 16777215, 0.9F * var9);
+         var1.star(var8, (0.13 + 0.04 * (double)var10) * (double)var11 * (double)var9, 16771512, 0.95F * var9);
+         Vec3d var12 = var8.subtract(var0.camera);
+         var12 = var12.lengthSquared() < 1.0E-6 ? var0.f : var12.normalize();
+         Vec3d var13 = var12.crossProduct(UP);
+         var13 = var13.lengthSquared() < 1.0E-6 ? var0.right : var13.normalize();
+         var1.softLine(var8.subtract(var13.multiply(0.9 * (double)var11)), var8.add(var13.multiply(0.9 * (double)var11)), 0.025, 16761962, 0.3F * var9 * var11);
+         float var14 = Ease.window(var2, 0.28F, 0.55F, 0.03F, 0.1F);
+         if (var14 > 0.01F) {
+            Vec3d var15 = hand(var3, var4, var2);
+            Vec3d var16 = UP;
+            var16 = var16.lengthSquared() < 1.0E-6 ? UP : var16.normalize();
+            Vec3d var17 = var8.add(var16.multiply(3.2));
+            var1.softLine(var8, var17, 0.16, 16761962, 0.45F * var14);
+            var1.softLine(var8, var17, 0.06, 16771512, 0.6F * var14);
+            var1.line(var8, var17, 0.02, 16777215, 0.85F * var14);
+         }
+
+         float var7;
+         if (var2 > 0.83F && (var7 = 1.0F - Ease.smooth(var2, 1.02F, 1.3F)) > 0.01F) {
+            byte var28 = 14;
+            Vec3d var31 = null;
+            float var34 = Math.min(var2, 0.97F);
+
+            for (int var18 = 0; var18 <= var28; var18++) {
+               float var19 = 0.83F + (var34 - 0.83F) * (float)var18 / (float)var28;
+               Vec3d var20 = GGesture.tip(var0.cast, var19);
+               if (var31 != null) {
+                  float var21 = (float)var18 / (float)var28;
+                  var1.softLine(var31, var20, 0.14 + 0.1 * (double)var21, 16761962, 0.5F * var7);
+                  var1.softLine(var31, var20, 0.05 + 0.03 * (double)var21, 16771512, 0.6F * var7);
+                  var1.line(var31, var20, 0.014 + 0.008 * (double)var21, 16777215, 0.85F * var7);
+               }
+
+               var31 = var20;
+            }
+         }
+
+         float var6;
+         if ((var6 = FxLib.kick(var2, 1.02F, 0.12F)) > 0.01F) {
+            Vec3d var32 = var13.crossProduct(var12).normalize();
+            var1.softLine(var8.subtract(var13.multiply(2.8)), var8.add(var13.multiply(2.8)), 0.025, 16761962, 0.5F * var6);
+            var1.line(var8.subtract(var13.multiply(2.4)), var8.add(var13.multiply(2.4)), 0.005, 16777215, 0.85F * var6);
+            var1.softLine(var8.subtract(var32.multiply(0.8)), var8.add(var32.multiply(0.8)), 0.02, 16761962, 0.4F * var6);
+            var1.line(var8.subtract(var32.multiply(0.6)), var8.add(var32.multiply(0.6)), 0.004, 16777215, 0.75F * var6);
+            var1.star(var8, 0.07 * (double)var6, 16777215, 0.7F * var6);
+            var1.softDisc(var8, 0.07, 16771512, 0.35F * var6);
+            var1.softDisc(var8, 0.18, 16761962, 0.1F * var6);
+         }
+
+         float var5;
+         if ((var5 = Ease.window(var2, 0.38F, 1.02F, 0.08F, 0.12F)) > 0.01F) {
+            Vec3d var29 = hand(var3, var4, var2);
+
+            for (int var33 = 0; var33 < 6; var33++) {
+               double var35 = (double)var2 * (2.2 + (double)var33 * 0.3) + (double)var33 * 1.05;
+               double var36 = 0.42 + 0.16 * Ease.hash(var33 * 13 + 1);
+               double var37 = -0.1 + 0.36 * Ease.hash(var33 * 17 + 2);
+               Vec3d var23 = var29.add(Math.cos(var35) * var36, var37 + 0.06 * Math.sin((double)(var2 * 5.0F + (float)var33)), Math.sin(var35) * var36);
+               Vec3d var24 = new Vec3d(Math.cos(var35 + 1.3), 0.4, Math.sin(var35 + 1.3)).normalize().multiply(0.13);
+               Vec3d var25 = new Vec3d(-Math.sin(var35), 0.2, Math.cos(var35)).normalize().multiply(0.05);
+               var1.triangle(var23.add(var24), var23.subtract(var24).add(var25), var23.subtract(var24).subtract(var25), 4034047, 0.85F * var5);
+            }
+         }
+      }
+   }
+
+   static void sky(Fx c, EffectMesh m, float t) {
+      if (!(t < 1.51F) && !(t >= 2.7833333F)) {
+         FallingSword.Frame k = GScene.skyFrame(c.cast, t);
+
+         for (int i = 0; i < 34; i++) {
+            double phase = ((double)t * 1.1 + Ease.hash(i * 17 + 3)) % 1.0;
+            double angle = Ease.hash(i * 29 + 5) * Math.PI * 2.0;
+            double depth = 3.4 + 4.0 * Ease.hash(i * 31 + 7);
+            double radius = 2.4 + phase * 7.0;
+            double length = 3.0 + 6.0 * Ease.hash(i * 37 + 9);
+            Vec3d center = k.at(0.53, 0.34, depth, 59.82126740260396);
+            Vec3d direction = k.r().multiply(Math.cos(angle)).add(k.u().multiply(Math.sin(angle)));
+            Vec3d a = center.add(direction.multiply(radius));
+            Vec3d b = center.add(direction.multiply(radius + length));
+            float alpha = (float)(Math.pow(Math.sin(phase * Math.PI), 2.0) * (0.02 + 0.06 * Math.abs(Math.cos(angle))));
+            m.softTaper(a, b, 0.002, 0.045, 14018559, alpha);
+         }
+      }
+   }
+
+   static void alpha(Fx c, EffectMesh m) {
+   }
+
+   static void overlay(Fx c, EffectMesh m) {
+   }
+
+   static void frame(Fx var0, FxFrame var1) {
+      float var4 = var0.sec;
+      Vec3d var5 = feet(var0);
+      float var6 = var0.cast.yaw();
+      boolean var7 = !Float.isNaN(off(var0.cast));
+      float var8 = Ease.window(var4, 0.17F, 1.42F, 0.06F, 0.12F);
+      if (var8 > 0.01F && !var7) {
+         var1.light(GGesture.tip(var0.cast, var4), 16765066, 3.0, 0.6F * var8);
+      }
+
+      if (!var7 && (shown(var0) || GWorld.active(var0.cast, var4))) {
+         FallingSword.Blade var11 = shown(var0) ? blade(var0.cast, var4) : GWorld.blade(var0.cast, var4);
+         float var10;
+         if (var11 != null && (var10 = var11.heat() * var11.alpha() * (1.0F - var11.dark())) > 0.02F && var4 >= 2.7833333F) {
+            var1.light(var11.at(0.0, 2.0, 0.0), 16756832, 16.0, 0.8F * var10);
+         }
+
+         float var9;
+         if ((var9 = Ease.window(var4, 3.1F, 4.78F, 0.06F, 0.18F)) > 0.01F) {
+            Vec3d var13 = strike(var0.cast).add(0.0, 0.65, 0.0);
+            var1.light(var13, 16760688, 12.0, 1.1F * var9);
+            var1.shaft(var13, 16766106, 0.22F * var9);
+            var1.afterglow(0.12F);
+         }
+      }
+
+      float var3;
+      if ((var3 = FxLib.kick(var4, 3.1F, 0.5F)) > 0.01F && !var7) {
+         var1.light(strike(var0.cast).add(0.0, 2.0, 0.0), 16752720, 20.0, 1.3F * var3);
+      }
+
+      float var2;
+      if ((var2 = FxLib.kick(var4, 5.15F, 0.6F)) > 0.01F && !var7) {
+         var1.light(var5.add(0.0, 1.5, 0.0), 16751168, 16.0, 1.0F * var2);
+      }
+
+      if (var4 > 0.28F && var4 < 1.1F || var4 > 2.7833333F && var4 < 3.3999999F) {
+         var1.afterglow(0.08F);
+      }
+   }
+
+   static float shake(StandClient.Cast cast, float sec) {
+      return !Float.isNaN(off(cast)) && off(cast) < 3.1F
+         ? 0.0F
+         : Math.max(2.6F * IsosangSlash.bump(sec, 3.1F, 0.25F), 1.2F * IsosangSlash.bump(sec, 5.15F, 0.2F));
+   }
+
+   static StandClient.Cast cinematic() {
+      return GArenaClient.cinematic();
+   }
+
+   static boolean wholeBody(float t) {
+      return t >= 1.008F;
+   }
+
+   public static double frameHeight() {
+      Window w = MinecraftClient.getInstance().getWindow();
+      return w == null ? 1.0 : Math.min(1.0, (double)w.getFramebufferWidth() / (double)Math.max(1, w.getFramebufferHeight()) / 2.1670428893905194);
+   }
+
+   static double windowFov(double fov) {
+      return Math.toDegrees(2.0 * Math.atan(Math.tan(Math.toRadians(fov / 2.0)) / frameHeight()));
+   }
+
+   static FallingSword.Frame skyFrame(StandClient.Cast c) {
+      Vec3d feet = c.origin();
+      Vec3d f = forward(c);
+      Vec3d r = right(f);
+      Vec3d eye = feet.add(f.multiply(1.114)).subtract(r.multiply(-0.023)).add(0.0, -0.326, 0.0);
+      double pan = Math.toRadians(41.92);
+      double pitch = Math.toRadians(60.0);
+      Vec3d level = f.negate().multiply(Math.cos(pan)).add(r.negate().multiply(Math.sin(pan))).normalize();
+      Vec3d look = level.multiply(Math.cos(pitch)).add(UP.multiply(Math.sin(pitch))).normalize();
+      Vec3d cr = look.crossProduct(UP).normalize();
+      Vec3d cu = cr.crossProduct(look).normalize();
+      return new FallingSword.Frame(eye, look, cr, cu);
+   }
+
+   static FallingSword.Frame skyView(StandClient.Cast c) {
+      return skyFrame(c).rolled(27.61);
+   }
+
+   static double nearing(float t) {
+      return NEARING[0] + (double)t * (NEARING[1] + (double)t * NEARING[2]);
+   }
+
+   static Vec3d ring(StandClient.Cast c) {
+      FallingSword.Frame k = skyView(c);
+      return k.at(0.5519, 0.4486, 1.0, 84.42).subtract(k.eye()).normalize();
+   }
+
+   static Vec3d farSide(StandClient.Cast c) {
+      FallingSword.Frame k = skyView(c);
+      Vec3d e = ring(c);
+      Vec3d p = k.at(0.5218999999999999, 0.3836, 1.0, 84.42).subtract(k.eye()).normalize();
+      return p.subtract(e.multiply(p.dotProduct(e))).normalize();
+   }
+
+   static double landingHeight(float t) {
+      if ((double)t <= LANDING_HEIGHT[0][0]) {
+         return LANDING_HEIGHT[0][1];
+      } else {
+         for (int i = 0; i + 1 < LANDING_HEIGHT.length; i++) {
+            if ((double)t < LANDING_HEIGHT[i + 1][0]) {
+               double[] a = LANDING_HEIGHT[i];
+               double[] b = LANDING_HEIGHT[i + 1];
+               double u = (double)Ease.smooth((float)(((double)t - a[0]) / (b[0] - a[0])), 0.0F, 1.0F);
+               return a[1] + (b[1] - a[1]) * u;
+            }
+         }
+
+         return LANDING_HEIGHT[LANDING_HEIGHT.length - 1][1];
+      }
+   }
+
+   static FallingSword.Shot shot(StandClient.Cast c, float t) {
+      Vec3d feet = c.origin();
+      float yaw = c.yaw();
+      Vec3d f = forward(c);
+      Vec3d r = right(f);
+      if (t < 1.008F) {
+         Vec3d h = hand(feet, yaw, t);
+         Vec3d tip = tip(feet, yaw, t);
+         Vec3d d = tip.subtract(h);
+         d = d.lengthSquared() < 1.0E-6 ? f : d.normalize();
+         Vec3d across = d.crossProduct(UP);
+         across = across.lengthSquared() < 1.0E-6 ? r : across.normalize();
+         Vec3d side = across.multiply(-0.72).add(0.0, 0.14, 0.0);
+         Vec3d under = under(f, r);
+         if (t < 0.3F) {
+            Vec3d h0 = hand(feet, yaw, 0.16F);
+            Vec3d d0 = tip(feet, yaw, 0.16F).subtract(h0).normalize();
+            Vec3d a0 = d0.crossProduct(UP).normalize();
+            return GGesture.handShot(
+               new FallingSword.Shot(
+                  h0.add(a0.multiply(-0.7)).add(0.0, 0.16, 0.0).subtract(d0.multiply(0.18 + 0.04 * (double)t / 0.3F)),
+                  h0.subtract(d0.multiply(0.16)),
+                  44.0,
+                  0.0F
+               ),
+               c,
+               t
+            );
+         } else if (t < 0.45F) {
+            float u = Ease.smooth(t, 0.3F, 0.45F);
+            Vec3d h0 = hand(feet, yaw, 0.16F);
+            Vec3d d0 = tip(feet, yaw, 0.16F).subtract(h0).normalize();
+            Vec3d a0 = d0.crossProduct(UP).normalize();
+            Vec3d h1 = hand(feet, yaw, 0.45F);
+            Vec3d d1 = tip(feet, yaw, 0.45F).subtract(h1).normalize();
+            Vec3d a1 = d1.crossProduct(UP).normalize();
+            Vec3d from = a0.multiply(-0.7).add(0.0, 0.16, 0.0).subtract(d0.multiply(0.22));
+            Vec3d to = under(f, r);
+            return GGesture.handShot(
+               new FallingSword.Shot(
+                  h.add(slerp(from, to, (double)u)),
+                  h.subtract(d0.multiply(0.16)).lerp(h.subtract(d1.multiply(0.12)), (double)u),
+                  (double)(44.0F + 8.0F * u),
+                  -30.0F * u
+               ),
+               c,
+               t
+            );
+         } else if (t < 0.83F) {
+            float u = (t - 0.45F) / 0.38F;
+            return GGesture.handShot(
+               new FallingSword.Shot(h.add(under.multiply(1.0 - 0.12 * (double)u)), h.subtract(d.multiply(0.12)), 52.0, -30.0F + 8.0F * u), c, t
+            );
+         } else {
+            float u = Ease.smooth(t, 0.83F, 1.008F);
+            Vec3d front = f.multiply(0.72).subtract(r.multiply(0.2)).add(0.0, -0.24, 0.0);
+            return GGesture.handShot(
+               new FallingSword.Shot(
+                  h.add(slerp(under.multiply(0.88), front, (double)u)), h.subtract(d.multiply(0.12)).lerp(tip, (double)u), 52.0, -22.0F * (1.0F - u)
+               ),
+               c,
+               t
+            );
+         }
+      } else if (t < 2.7833333F) {
+         FallingSword.Shot sky = GScene.skyShot(c, t);
+         if (t >= 1.65F) {
+            return GGesture.handShot(sky, c, t);
+         } else {
+            FallingSword.Shot face = face(c, Math.min(t, 1.6F));
+            if (t < 1.6F) {
+               return GGesture.handShot(face, c, t);
+            } else {
+               float u = Ease.smooth(t, 1.6F, 1.65F);
+               return GGesture.handShot(
+                  new FallingSword.Shot(
+                     face.eye().lerp(sky.eye(), (double)u),
+                     face.look().lerp(sky.look(), (double)u),
+                     face.fov() + (sky.fov() - face.fov()) * (double)u,
+                     face.roll() + (sky.roll() - face.roll()) * u
+                  ),
+                  c,
+                  t
+               );
+            }
+         }
+      } else {
+         Vec3d s = strike(c);
+         float u = Ease.smooth(t, 3.1F, 4.83F);
+         double follow = Math.max(0.0, fallHeight(t));
+         double lean = Math.toRadians(16.96);
+         Vec3d shift = UP.multiply(Math.cos(lean) * follow).subtract(r.multiply(Math.sin(lean) * follow));
+         Vec3d eye = s.subtract(f.multiply(7.19 - 0.18 * (double)u)).add(r.multiply(-0.82)).add(0.0, landingHeight(t), 0.0).add(shift);
+         double j = jolt(t);
+         eye = eye.add(r.multiply(j * 0.6 * Math.cos((double)(t * 53.0F)))).add(0.0, j * Math.sin((double)(t * 61.0F)), 0.0);
+         double kick = (double)IsosangSlash.bump(t, 3.1F, 0.2F);
+         return GGesture.handShot(
+            new FallingSword.Shot(eye, eye.add(f).add(0.0, 0.06787204450625875, 0.0), 58.0 - 1.2 * kick, (float)(0.45 * kick * Math.sin((double)(t * 47.0F)))),
+            c,
+            t
+         );
+      }
+   }
+
+   static boolean alone(float t) {
+      return t >= 2.75F && t < 2.7833333F;
+   }
+
+   static double[] faceAt(float t) {
+      double[][] k = FACE_AT;
+      if ((double)t <= k[0][0]) {
+         return new double[]{k[0][1], k[0][2]};
+      } else {
+         for (int i = 0; i + 1 < k.length; i++) {
+            if ((double)t < k[i + 1][0]) {
+               double u = (double)Ease.smooth((float)(((double)t - k[i][0]) / (k[i + 1][0] - k[i][0])), 0.0F, 1.0F);
+               return new double[]{k[i][1] + (k[i + 1][1] - k[i][1]) * u, k[i][2] + (k[i + 1][2] - k[i][2]) * u};
+            }
+         }
+
+         double[] e = k[k.length - 1];
+         return new double[]{e[1], e[2]};
+      }
+   }
+
+   static FallingSword.Shot face(StandClient.Cast c, float t) {
+      Vec3d feet = c.origin();
+      float yaw = c.yaw();
+      Vec3d f = forward(c);
+      Vec3d r = right(f);
+      Vec3d head = head(feet, yaw, t);
+      double wide = 1.8518518518518516;
+      double high = wide / 2.1670428893905194;
+      double back = high / 2.0 / Math.tan(Math.toRadians(24.0));
+      Vec3d eyes = head.add(f.multiply(0.25)).add(0.0, -0.031, 0.0);
+      Vec3d look = f.negate();
+      Vec3d cr = look.crossProduct(UP).normalize();
+      double[] at = faceAt(t);
+      Vec3d eye = eyes.add(f.multiply(back)).subtract(cr.multiply((at[0] - 0.5) * wide)).add(0.0, (at[1] - 0.5) * high, 0.0);
+      return new FallingSword.Shot(eye, eye.add(look), 48.0, 0.0F);
+   }
+
+   static Vec3d under(Vec3d f, Vec3d r) {
+      return f.multiply(0.78).add(r.multiply(0.12)).add(0.0, -0.42, 0.0);
+   }
+
+   static Vec3d slerp(Vec3d a, Vec3d b, double u) {
+      double la = a.length();
+      double lb = b.length();
+      Vec3d na = a.multiply(1.0 / la);
+      Vec3d nb = b.multiply(1.0 / lb);
+      double dot = MathHelper.clamp(na.dotProduct(nb), -1.0, 1.0);
+      double ang = Math.acos(dot);
+      Vec3d d = ang < 1.0E-4 ? na.lerp(nb, u) : na.multiply(Math.sin((1.0 - u) * ang) / Math.sin(ang)).add(nb.multiply(Math.sin(u * ang) / Math.sin(ang)));
+      return d.normalize().multiply(la + (lb - la) * u);
+   }
+
+   static double jolt(float t) {
+      return 0.055 * (double)IsosangSlash.bump(t, 3.1F, 0.22F) + 0.008 * (double)Ease.window(t, 3.1999998F, 5.5F, 0.15F, 0.3F);
+   }
+
+   public static CinematicDirector.Pose camera(Vec3d vanilla, float yaw, float pitch, float delta) {
+      StandClient.Cast c = cinematic();
+      if (c == null) {
+         return null;
+      } else {
+         float t = c.age(delta) / 20.0F;
+         FallingSword.Shot s = shot(c, t);
+         MinecraftClient mc = MinecraftClient.getInstance();
+         Vec3d eye = GStage.supported() ? s.eye() : clear(mc, s.look(), s.eye());
+         Vec3d d = s.look().subtract(eye);
+         if (d.lengthSquared() < 1.0E-6) {
+            d = forward(c);
+         }
+
+         d = d.normalize();
+         float sy = (float)Math.toDegrees(Math.atan2(-d.x, d.z));
+         float sp = (float)(-Math.toDegrees(Math.asin(MathHelper.clamp(d.y, -1.0, 1.0))));
+         return new CinematicDirector.Pose(eye, sy, sp, s.roll());
+      }
+   }
+
+   public static double fov(double vanilla, float delta) {
+      StandClient.Cast c = cinematic();
+      if (c == null) {
+         return vanilla;
+      } else {
+         float t = c.age(delta) / 20.0F;
+         return windowFov(shot(c, t).fov());
+      }
+   }
+
+   public static float roll(float delta) {
+      StandClient.Cast c = cinematic();
+      if (c == null) {
+         return 0.0F;
+      } else {
+         float t = c.age(delta) / 20.0F;
+         return shot(c, t).roll();
+      }
+   }
+
+   static Vec3d clear(MinecraftClient mc, Vec3d look, Vec3d eye) {
+      if (mc.world != null && mc.player != null) {
+         BlockHitResult hit = mc.world.raycast(new RaycastContext(look, eye, ShapeType.COLLIDER, FluidHandling.NONE, mc.player));
+         if (hit.getType() != Type.MISS && !hit.isInsideBlock() && !(hit.getPos().squaredDistanceTo(look) < 0.04)) {
+            Vec3d d = eye.subtract(look);
+            double len = d.length();
+            return len < 1.0E-4 ? eye : look.add(d.multiply(Math.max(0.3, look.distanceTo(hit.getPos()) - 0.3) / len));
+         } else {
+            return eye;
+         }
+      } else {
+         return eye;
+      }
+   }
+
+   public static float dust(float delta) {
+      return 0.0F;
+   }
+
+   public static float dim(float delta) {
+      StandClient.Cast c = cinematic();
+      if (c == null) {
+         return 0.0F;
+      } else {
+         float t = c.age(delta) / 20.0F;
+         return 0.62F * Ease.smooth(t, 4.3F, 4.83F);
+      }
+   }
+
+   public static float dark(float var0) {
+      return GBlackout.alpha(var0);
+   }
+
+   static record Blade(Vec3d point, Vec3d axis, Vec3d across, Vec3d normal, float alpha, float heat, float dark, double fadeFrom, double fadeTo) {
+      Vec3d acrossNormal() {
+         return this.axis.crossProduct(this.normal).multiply(1.0 / this.across.dotProduct(this.axis.crossProduct(this.normal)));
+      }
+
+      Vec3d axisNormal() {
+         return this.normal.crossProduct(this.across).multiply(1.0 / this.axis.dotProduct(this.normal.crossProduct(this.across)));
+      }
+
+      Vec3d normalAt(double x, double y, double z) {
+         return this.acrossNormal().multiply(x).add(this.axisNormal().multiply(y)).add(this.normal.multiply(z)).normalize();
+      }
+
+      Vec3d at(double x, double y, double z) {
+         return this.point.add(this.across().multiply(x)).add(this.axis.multiply(y)).add(this.normal.multiply(z));
+      }
+
+      float shown(double y) {
+         return this.alpha * (1.0F - Ease.smooth((float)y, (float)this.fadeFrom, (float)this.fadeTo));
+      }
+   }
+
+   static record Frame(Vec3d eye, Vec3d f, Vec3d r, Vec3d u) {
+      FallingSword.Frame rolled(double roll) {
+         double a = Math.toRadians(-roll);
+         return new FallingSword.Frame(
+            this.eye, this.f, this.r.multiply(Math.cos(a)).add(this.u.multiply(Math.sin(a))), this.r.multiply(-Math.sin(a)).add(this.u.multiply(Math.cos(a)))
+         );
+      }
+
+      Vec3d at(double sx, double sy, double depth, double fov) {
+         double t = Math.tan(Math.toRadians(fov / 2.0));
+         return this.eye.add(this.f.add(this.r.multiply((2.0 * sx - 1.0) * t * 2.1670428893905194)).add(this.u.multiply((1.0 - 2.0 * sy) * t)).multiply(depth));
+      }
+
+      Vec3d vector(Vec3d v) {
+         return this.r.multiply(v.x).add(this.u.multiply(v.y)).add(this.f.multiply(v.z));
+      }
+
+      Vec3d way(double elevation, double azimuth) {
+         double e = Math.toRadians(elevation);
+         double z = Math.toRadians(azimuth);
+         return this.f.multiply(Math.cos(e) * Math.cos(z)).add(this.r.multiply(Math.cos(e) * Math.sin(z))).add(this.u.multiply(Math.sin(e))).normalize();
+      }
+   }
+
+   static record Shot(Vec3d eye, Vec3d look, double fov, float roll) {
+   }
 }

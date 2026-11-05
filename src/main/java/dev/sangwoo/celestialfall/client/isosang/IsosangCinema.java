@@ -18,8 +18,8 @@ public final class IsosangCinema {
     public static float dark(float delta){return FallingSword.dark(delta);}
     /** How far the frame of the local player's G's cutscene has dimmed as it ends (0 to 1). */
     public static float dim(float delta){return FallingSword.dim(delta);}
-    /** The black bars at the top and the bottom of its cutscene (of the window's height each): the videos' 1920 by 886 frame. */
-    public static float bars(){return (float)(1-FallingSword.frameHeight())/2;}
     /** How thick G's dust is round the camera (0 to 1): a beige haze over everything near as the fire leaps up. */
     public static float dust(float delta){return FallingSword.dust(delta);}
+    /** The black bar at the top and the bottom of the cutscene's frame (a share of the screen's height each). */
+    public static float bars(){return (float)(1-FallingSword.frameHeight())/2f;}
 }

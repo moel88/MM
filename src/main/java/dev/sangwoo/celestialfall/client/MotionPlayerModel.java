@@ -96,6 +96,8 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         }
         dev.sangwoo.celestialfall.client.integration.PlayerAnimatorBridge.apply(player,this,animationProgress-player.age);
         overlays();
+        // Lee So-sang's G (the user's 2.87.0 preview): the sword-fingers hand over the clip's arms
+        dev.sangwoo.celestialfall.client.isosang.GGesture.apply(this,player,animationProgress-player.age);
     }
     @Override public void render(MatrixStack matrices,net.minecraft.client.render.VertexConsumer vertices,int light,int overlay,float red,float green,float blue,float alpha) {
         super.render(matrices,vertices,light,overlay,red,green,blue,alpha);

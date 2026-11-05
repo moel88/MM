@@ -15,11 +15,11 @@ public final class CinematicHud {
         else if(StandClient.cinematic()!=null)KagenoRenderer.hud(c,delta);
         else if(HeavenClient.cinematic()!=null)HeavenHud.render(c,delta);
         else if(AtomicClient.cinematic()!=null)AtomicHud.render(c,delta);
-        // Lee So-sang's G (2.83.0): its frame dims as its cutscene ends, as the videos'; (2.83.1) the videos' wide frame
-        // between black bars where the window is narrower
+        // Lee So-sang's G (2.83.0): its frame dims as its cutscene ends, as the videos'
         else if(dev.sangwoo.celestialfall.client.isosang.IsosangCinema.active()){
             float d=dev.sangwoo.celestialfall.client.isosang.IsosangCinema.dim(delta);
             if(d>.003f)c.fill(0,0,mc.getWindow().getScaledWidth(),mc.getWindow().getScaledHeight(),Math.round(d*255)<<24);
+            // the user's 2.87.0 preview: the videos' wide (21:9) frame between black bars in the cutscene
             letterbox(mc,c,dev.sangwoo.celestialfall.client.isosang.IsosangCinema.bars());
         }
         else CelestialHud.render(c,delta);
