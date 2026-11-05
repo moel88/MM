@@ -63,16 +63,17 @@ vec3 storm(vec3 d){
  col=mix(col,C(82.,100.,128.),smoothstep(.5,.72,n)*(.55+.45*fine));
  col=mix(col,C(150.,162.,180.),lit*smoothstep(.45,.6,n)*.75);
  // the ring
- // (its sizes round the hole drawn for a hole of 21 degrees, grown with it: the sky shot's lens is wider now)
+ // (its sizes round the hole drawn for a hole of 21 degrees, grown with it: the sky shot's lens is wider now; half as
+ // far out as first drawn, the videos' ring is tight round the hole; its outer edge soft, shaped by big puffs only)
  float k=R/.3665;
  float edge=holeEdge(ph,th);
  float left=.5-.5*cos(ph);
- float reach=R+k*(.07+.2*left+.1*(.5-.5*sin(ph))*left+.14*fbm(cs*2.2+vec2(5.0,lt*1.5)));
+ float reach=R+k*.5*(.07+.2*left+.1*(.5-.5*sin(ph))*left+.14*fbm(cs*2.2+vec2(5.0,lt*1.5)));
  float rt=clamp((th-edge)/max(reach-edge,1e-3),0.0,1.5);
  float puff=fbm(q*7.0+vec2(1.3,4.4));
  float streak=fbm(vec2(cs.x*1.5+3.3+.6*puff,cs.y*1.5+lt*4.0));
  float streak2=fbm(vec2(cs.x*3.2+lt*2.0,cs.y*3.2+lt*9.0));
- float rd=1.0-smoothstep(.55,1.05,rt+.45*(puff-.5)+.2*(streak-.5));
+ float rd=1.0-smoothstep(.45,1.25,rt+.3*(fbm(q*2.2+vec2(1.3,4.4))-.5)+.12*(streak-.5));
  float v=streak*.65+streak2*.45;
  vec3 rc=mix(C(92.,114.,146.),C(150.,163.,182.),smoothstep(.3,.62,v));
  rc=mix(rc,C(198.,201.,205.),smoothstep(.5,.78,v)*(1.0-.6*clamp(rt,0.0,1.0)));
@@ -102,15 +103,15 @@ vec4 front(vec3 d){
  vec2 q=vec2(cos(ph),sin(ph))*th;
  float edge=holeEdge(ph,th);
  vec3 tg=d-E*dot(d,E);float far=smoothstep(-.2,.6,dot(tg/max(length(tg),1e-5),normalize(Far)));
- float wisp=fbm(vec2(cos(ph)*7.0-Age*.08,sin(ph)*7.0+lt*9.0));
- float cut=edge+.012*k-far*.07*k*wisp;
+ // (2.83.1: from the hole's round edge, as the sword's own cut (isosang_blade.fsh): no wisps reaching in over it)
+ float cut=edge+.012*k;
  float left=.5-.5*cos(ph);
- float reach=R+k*(.07+.2*left+.1*(.5-.5*sin(ph))*left+.14*fbm(cs*2.2+vec2(5.0,lt*1.5)));
+ float reach=R+k*.5*(.07+.2*left+.1*(.5-.5*sin(ph))*left+.14*fbm(cs*2.2+vec2(5.0,lt*1.5)));
  float rt=clamp((th-edge)/max(reach-edge,1e-3),0.0,1.5);
  float puff=fbm(q*7.0+vec2(1.3,4.4));
  float streak=fbm(vec2(cs.x*1.5+3.3+.6*puff,cs.y*1.5+lt*4.0));
  float streak2=fbm(vec2(cs.x*3.2+lt*2.0,cs.y*3.2+lt*9.0));
- float rd=1.0-smoothstep(.55,1.05,rt+.45*(puff-.5)+.2*(streak-.5));
+ float rd=1.0-smoothstep(.45,1.25,rt+.3*(fbm(q*2.2+vec2(1.3,4.4))-.5)+.12*(streak-.5));
  float v=streak*.65+streak2*.45;
  vec3 rc=mix(C(92.,114.,146.),C(150.,163.,182.),smoothstep(.3,.62,v));
  rc=mix(rc,C(198.,201.,205.),smoothstep(.5,.78,v)*(1.0-.6*clamp(rt,0.0,1.0)));

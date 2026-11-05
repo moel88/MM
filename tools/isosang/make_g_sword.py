@@ -31,7 +31,7 @@ P = 6.0
 N = 2.2
 BEVEL = .45
 RIM = .78
-CHANNEL = .13
+CHANNEL = .16
 TW, TH = 512, 1536
 # the camera the carving was traced through (FallingSword's sky shot: SKY_EYE_FW, SKY_EYE_SIDE, SKY_EYE_UP, SKY_PITCH,
 # SKY_PAN, SKY_ROLL, SKY_FOV) and the sword's pose in it at 1.95 s (SKY_TIP_DEPTH, SKY_AXIS_UP, SKY_AXIS_RIGHT)
@@ -159,7 +159,7 @@ def blade():
     d = ImageDraw.Draw(more)
     for pts in CARVING + continued():
         channel(d, pts, CHANNEL, k)
-    cut = np.asarray(more.filter(ImageFilter.GaussianBlur(.03 * px)), dtype=np.float64) / 255
+    cut = np.asarray(more.filter(ImageFilter.GaussianBlur(.016 * px)), dtype=np.float64) / 255
     # its height (0 deep, 1 high): the bevel is the mesh's own (flat here), the rim, the panel's border groove, the panel
     # with its channels cut in (rounded at their bottoms)
     def band(a, b, soft=.04, by=None):
@@ -170,9 +170,9 @@ def blade():
     h = h + .06 * band(BEVEL, RIM, by=sq) - .5 * band(RIM, RIM + .12, .025, by=sq)
     h = h - .5 * cut * panel
     h = h + .015 * (fbm(h.shape, 60, 3) - .5)
-    hs = np.asarray(Image.fromarray((np.clip(h, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), dtype=np.float64) / 255
+    hs = np.asarray(Image.fromarray((np.clip(h, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(.8)), dtype=np.float64) / 255
     gy, gx = np.gradient(hs)
-    s = 6.0
+    s = 9.0
     n = np.stack([-gx * s, gy * s, np.ones_like(gx)], -1)
     n /= np.linalg.norm(n, axis=-1, keepdims=True)
     nimg = ((n + 1) * 127.5).astype(np.uint8)
@@ -184,7 +184,7 @@ def blade():
     base = np.array([186, 120, 96]) * (1 - near) + np.array([206, 136, 100]) * near
     grain = fbm(h.shape, 70, 11, 4)
     hollow = np.clip((.8 - hs) / .5, 0, 1)
-    col = base * (.92 + .12 * grain[..., None]) * (1 - .38 * hollow[..., None])
+    col = base * (.92 + .12 * grain[..., None]) * (1 - .55 * hollow[..., None])
     col = col * (1 + .05 * band(BEVEL, RIM, by=sq)[..., None])
     col = np.clip(col, 0, 255)
     # where it glows when hot: its point most, its edges and the carving near it a little

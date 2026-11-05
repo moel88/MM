@@ -36,10 +36,13 @@ vec2 clouds(){
  float th=acos(clamp(dot(d,E),-1.0,1.0)),ph=atan(dot(d,b2),dot(d,b1)),lt=log(th+.02);
  float edge=R*(1.0+.08*(fbm(vec2(cos(ph)*3.0+Age*.05,sin(ph)*3.0+lt*2.0))-.5));
  vec3 tg=d-E*dot(d,E);float far=smoothstep(-.2,.6,dot(tg/max(length(tg),1e-5),normalize(Far)));
- float wisp=fbm(vec2(cos(ph)*7.0-Age*.08,sin(ph)*7.0+lt*9.0));
- float cut=edge+.012*k-far*.07*k*wisp;
+ // (2.83.1, user: "왼쪽은 검이 더 멀리까지 보이는데 너는 끝부분 밖에 안 보여": the videos' sword goes on to the hole's round
+ // edge, 28 to 32 degrees from the eye, before the clouds take it; no wisps reaching in over it)
+ float cut=edge+.012*k;
  // (only on its far side: near its point the ring's clouds are behind it)
  float shown=1.0-far*smoothstep(cut-.025*k,cut+.006*k,th);
+ // (its thin edges glow: past the hole's edge, on any side, they are lost in the clouds too)
+ if(Edge==1)shown*=1.0-smoothstep(edge-.02*k,edge+.01*k,th);
  return vec2(shown,smoothstep(cut-.12*k,cut,th)*far);
 }
 void main(){
@@ -72,9 +75,11 @@ void main(){
  float sky=.5+.5*N.y;
  vec3 col=albedo*(vec3(.20,.21,.27)*sky+vec3(.08,.06,.05)+vec3(1.0,.86,.70)*wrap*.86);
  col+=vec3(1.0,.86,.66)*spec*.3+vec3(1.0,.72,.46)*rim*.38;
- // its point burning: a hot glow over it, whitening where it is hottest
+ // (2.83.1: as muted as the videos' sky shot: a pinkish terracotta, less orange; measured against it)
+ col*=vec3(.81,.84,1.04);
+ // its point burning: a hot glow over it, whitening where it is hottest (the videos' is nearly white there)
  float hot=Heat*hotMask;
- col+=vec3(1.0,.60,.26)*hot*.8+vec3(1.0,.93,.76)*hot*hot*.55;
+ col+=vec3(1.0,.72,.48)*hot*.45+vec3(1.0,.97,.92)*hot*hot*.38;
  col=mix(col,col*vec3(.26,.22,.21),Dark);
  col=mix(col,vec3(.80,.84,.90),.6*cl.y);
  fragColor=vec4(col,shown)*ColorModulator;
