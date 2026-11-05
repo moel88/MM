@@ -71,6 +71,7 @@ class FallingSwordTest {
     @Test void theFireLeapsUpAfterTheBlack(){
         // the screen black after the cut, lifting just before the fire (the videos'), all within the cast's life
         assertTrue(FallingSword.AFTER_BLACK>IsosangRules.G_BACK&&FallingSword.AFTER_LIT<=IsosangRules.G_ERUPT);
+        assertTrue(FallingSword.FIRE<FallingSword.AFTER_LIT&&FallingSword.FIRE>FallingSword.AFTER_BLACK,"the fire leaps up as the black lifts");
         assertTrue(IsosangClient.life(IsosangRules.ULTIMATE)>IsosangRules.G_ERUPT+2);
     }
 

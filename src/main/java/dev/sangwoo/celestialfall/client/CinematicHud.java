@@ -8,6 +8,12 @@ public final class CinematicHud {
     private CinematicHud() {}
     public static void render(float delta) {
         var mc=MinecraftClient.getInstance();
+        // (2.87.0) Lee So-sang's G: a moment of black as its cutscene cuts back to the game, under the HUD (the videos')
+        float black=dev.sangwoo.celestialfall.client.isosang.IsosangCinema.afterBlack(delta);
+        if(black>.003f&&!CinematicDirector.isActive()){
+            var bc=new DrawContext(mc,mc.getBufferBuilders().getEntityVertexConsumers());
+            bc.fill(0,0,mc.getWindow().getScaledWidth(),mc.getWindow().getScaledHeight(),Math.round(black*255)<<24);bc.draw();
+        }
         if(!CinematicDirector.isActive())return;
         // (2.87.0) Lee So-sang's G: the shots of her hand turned back left for right, as the videos' (GMirror)
         dev.sangwoo.celestialfall.client.isosang.IsosangCinema.mirror(delta);

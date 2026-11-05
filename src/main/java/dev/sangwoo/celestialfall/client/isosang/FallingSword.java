@@ -901,11 +901,11 @@ final class FallingSword {
    /**
     * A G begun (IsosangClient): the sword's bite into the ground as it strikes (3.1 s: the dust and smoke round its foot,
     * its embers and its glow, MeteorFx's landing the sword's way, over G's own strike, GImpact), and the fire leaping up
-    * round her and the dust over them at G_ERUPT (5.15 s), as the videos' after the cutscene (tongues of fire on fixed
-    * planes, dust, stones, embers). Everyone sees both.
+    * round her and the dust over them at FIRE (5.05 s, tall by G_ERUPT), as the videos' after the cutscene (tongues of
+    * fire on fixed planes, dust, stones, embers). Everyone sees both.
     */
    static void begin(StandClient.Cast c) {
-      dev.sangwoo.celestialfall.client.meteor.MeteorFx.strike(c.id(), strike(c), c.origin(), c.id().hashCode(), c.age(0.0F) - IsosangRules.G_IMPACT, (IsosangRules.G_ERUPT - IsosangRules.G_STRIKE) * 20.0F);
+      dev.sangwoo.celestialfall.client.meteor.MeteorFx.strike(c.id(), strike(c), c.origin(), c.id().hashCode(), c.age(0.0F) - IsosangRules.G_IMPACT, (FIRE - IsosangRules.G_STRIKE) * 20.0F);
    }
 
    /** G called off before it strikes: no fire after it. */
@@ -1053,23 +1053,31 @@ final class FallingSword {
       }
    }
 
-   /** When the screen is black after the cut (seconds): held from it, then lifting just before the fire leaps up (the videos'). */
-   static final float AFTER_BLACK = 4.98F, AFTER_LIT = 5.13F;
+   /** When the screen is black after the cut (seconds): held from it, then lifting as the fire leaps up (the videos'). */
+   static final float AFTER_BLACK = 4.97F, AFTER_LIT = 5.1F;
+   /** When the fire leaps up round her (seconds): a moment before G_ERUPT so it stands tall by then (the videos' 5.1 s). */
+   static final float FIRE = IsosangRules.G_ERUPT - 0.1F;
 
    /**
     * How dark the world is for the local camera (0 to 1): the black round her hand (GBlackout), and, as the videos', the
     * moment of black after the cutscene cuts back to the game (4.83 s) before the fire leaps up, for those who watched it.
     */
    public static float dark(float delta) {
-      float d = GBlackout.alpha(delta);
+      return Math.max(GBlackout.alpha(delta), afterBlack(delta));
+   }
+
+   /**
+    * The black over everything after the cut (0 to 1), for those who watched the cutscene: the GUI's black (drawn before
+    * the HUD, IsosangCinema.afterBlack, so the HUD shows over it as the videos') and the world's fog (dark). The burst's
+    * light would otherwise flash through at once.
+    */
+   public static float afterBlack(float delta) {
       StandClient.Cast c = GArenaClient.watched(delta, AFTER_LIT + 0.05F);
-      if (c != null) {
-         float t = c.age(delta) / 20.0F;
-         if (t >= 4.83F) {
-            d = Math.max(d, 0.94F * (1.0F - Ease.smooth(t, AFTER_BLACK, AFTER_LIT)));
-         }
+      if (c == null) {
+         return 0.0F;
       }
-      return d;
+      float t = c.age(delta) / 20.0F;
+      return t >= 4.83F ? 0.94F * (1.0F - Ease.smooth(t, AFTER_BLACK, AFTER_LIT)) : 0.0F;
    }
 
    static record Blade(Vec3d point, Vec3d axis, Vec3d across, Vec3d normal, float alpha, float heat, float dark, double fadeFrom, double fadeTo) {

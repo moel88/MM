@@ -1,4 +1,17 @@
-> **현재 통합본: Botand 2.83.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.87.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.87.0 — 이소상 G: 사용자님 G를 영상에 맞춰 고치고 이펙트 강화
+
+- **바탕:** 사용자님이 따로 만든 G(2.87.0-preview.25)입니다. 검이 실제 월드에 떨어지고, 정원 경기장에서는 모두가 컷씬을 함께 보며, 꽂힌 곳에서 가까울수록 피해가 큽니다(5블록 200, 10블록 100, 20블록 50).
+- **영상과 다르던 곳:**
+  - 손 장면이 영상과 좌우가 반대였습니다. 이제 영상처럼 손가락이 왼쪽을 가리키다가, 팔이 왼쪽 아래에서 들어와 손끝이 오른쪽 위를 향합니다.
+  - 손가락은 손 장면 동안 팔을 따라 뻗고, 얼굴 앞에서만 세로로 섭니다.
+  - 하늘 장면의 캐릭터를 영상처럼 작게 그리고 왼쪽 아래로 기울였습니다.
+  - 컷씬이 끝나면 화면이 잠깐 까매졌다가, 시전자 둘레에서 뾰족한 불길이 솟습니다.
+- **이펙트 강화:** 손끝의 넓은 금빛과 휘두를 때의 궤적, 팔을 따라 뻗는 빛, 빛의 칼날과 빛 십자를 넣었습니다. 가장자리를 스치는 큰 파란 조각, 얼굴 옆의 금빛 세로선, 꽂힐 때 칼 발치의 연기·먼지·불티도 더했습니다. 너무 많던 돌은 줄였습니다.
+- **서버도 바꿔야 합니다:** 2.83.0과 비교하면 G의 서버 규칙과 네트워크가 바뀌었습니다(사용자님 버전).
+
+[RELEASE_2.87.0_KO.md](RELEASE_2.87.0_KO.md)를 확인하세요. 2.83.0은 [RELEASE_2.83.0_KO.md](RELEASE_2.83.0_KO.md)입니다.
 
 # 보탠드 2.83.0 — 이소상 G(궁극기): 시전자만 보는 컷씬, 내리꽂히는 거대한 검
 

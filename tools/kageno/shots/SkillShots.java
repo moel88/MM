@@ -973,11 +973,23 @@ public final class SkillShots implements ClientModInitializer {
         if(AUDIO)ClientTickEvents.START_CLIENT_TICK.register(client->{if(client.getSoundManager()!=null&&!listening){listening=true;client.getSoundManager().registerListener((sound,set)->{
             if(phase==4)soundRows.append(String.format(Locale.ROOT,"%.3f,%d,%s%n",clock(),System.nanoTime(),sound.getId()));});}});
     }
+    private int slowNow=SLOW;
+    private void setSlow(int n)throws Exception{
+        slowNow=n;System.setProperty("botand.shots.slow",Integer.toString(n));
+        var f=MinecraftClient.class.getDeclaredField("renderTickCounter");f.setAccessible(true);var counter=f.get(mc);
+        var t=counter.getClass().getDeclaredField("tickTime");t.setAccessible(true);t.setFloat(counter,50f*n);
+        log.append("  slow ").append(n).append(" at ").append(age).append('\n');
+    }
     private void tick()throws Exception{
         age++;if((System.nanoTime()-started)/1e9>1500*SLOW)throw new IllegalStateException("timeout");
         if(mc.getToastManager()!=null)mc.getToastManager().clear();
         if(phase>=1&&phase<99&&mc.world!=null&&mc.currentScreen instanceof dev.sangwoo.celestialfall.client.title.BotandTitleScreen)mc.setScreen(null);
         if(SLOW>1&&!slowed&&phase>=3){var f=MinecraftClient.class.getDeclaredField("renderTickCounter");f.setAccessible(true);var counter=f.get(mc);var t=counter.getClass().getDeclaredField("tickTime");t.setAccessible(true);t.setFloat(counter,50f*SLOW);slowed=true;}
+        // 2.87.0 slows=AGE:N/AGE:N/...: from that tick of the entry on, the game runs N times slower (a heavy stretch slower,
+        // the rest of the entry faster: Lee So-sang's G's clouds and strike took 6 to 8 s a frame in the software renderer).
+        // The server follows at once (SkillShotsServerMixin reads the property every tick). Back to SLOW as an entry starts.
+        if(phase==4&&age==1&&slowNow!=SLOW)setSlow(SLOW);
+        if(phase==4&&opts.containsKey("slows"))for(String w:opts.get("slows").split("/")){String[] v=w.split(":");if(age==Integer.parseInt(v[0].trim()))setSlow(Integer.parseInt(v[1].trim()));}
         switch(phase){
             case 0->{if(mc.currentScreen!=null&&mc.getOverlay()==null&&age>100){
                 if(LANG!=null&&!LANG.equals(mc.options.language)){mc.options.language=LANG;mc.getLanguageManager().setLanguage(LANG);mc.reloadResources();age=0;return;}
