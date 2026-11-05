@@ -92,7 +92,12 @@ public final class GGesture {
         root.transform(local);
         return new Vec3d(local.x-pose.rt,local.y+pose.up+KagenoClips.PIVOT,local.z+pose.fw);
     }
-    static float uprightWeight(float t){return Ease.smooth(t,.04f,.16f)*(1-Ease.smooth(t,2.70f,2.80f));}
+    /**
+     * How far the two fingers are held upright (2.87.0): as the videos', they run on along the forearm through the shots of
+     * the hand (pointing ahead, then up and out under the arm), turn up as the hand comes before the face (0.86 to
+     * 0.99 s) and stay upright at the lips. The preview held them upright from the first shot.
+     */
+    static float uprightWeight(float t){return Ease.smooth(t,.86f,.99f)*(1-Ease.smooth(t,2.70f,2.80f));}
     /** Keep the right index/middle axis vertical from the opening hand shot,
      * independently of the arm sweep and the small animated torso lean. */
     static Quaternionf upright(float t){
@@ -192,8 +197,11 @@ public final class GGesture {
         if(t>=1.008f)return shot;
         return new FallingSword.Shot(mirror(cast,t,shot.eye(),false),mirror(cast,t,shot.look(),false),shot.fov(),-shot.roll());
     }
+    /** Her right wrist where it is drawn (2.87.0: the light along her arm and the shards round her hand go by it). */
+    static Vec3d wrist(StandClient.Cast cast,float t){return point(cast,t,false);}
     /** The light tracks the corrected fingertips, independently of the unchanged camera anchors. */
-    static Vec3d tip(StandClient.Cast cast,float t){
+    static Vec3d tip(StandClient.Cast cast,float t){return point(cast,t,true);}
+    private static Vec3d point(StandClient.Cast cast,float t,boolean fingertips){
         var mc=MinecraftClient.getInstance();var player=mc.world==null?null:mc.world.getPlayerByUuid(cast.caster());
         float center=player instanceof AbstractClientPlayerEntity p&&p.getModel().equals("slim")?.5f:1f;
         var frame=FallingSword.CLIP.frame(t);var pose=R6.poseOf(frame);
@@ -205,7 +213,7 @@ public final class GGesture {
         Quaternionf wrist=wristPose(lower,t);
         Quaternionf fingers=new Quaternionf(lower).mul(wrist);
         Vector3f model=new Vector3f(LEFT_SHOULDER).add(upper.transform(new Vector3f(0,4,0)))
-            .add(lower.transform(new Vector3f(center,4,0))).add(fingers.transform(new Vector3f(-.675f,4.175f,-.12f)));
+            .add(lower.transform(new Vector3f(center,4,0))).add(fingertips?fingers.transform(new Vector3f(-.675f,4.175f,-.12f)):new Vector3f());
         model.x=-model.x;
         Vec3d f=FallingSword.forward(cast),right=FallingSword.right(f),left=right.negate();
         // PlayerEntityRenderer's vanilla 15/16 scale and LivingEntityRenderer's 1.501 pivot.

@@ -88,8 +88,9 @@ final class GExplosionVisual {
          BufferBuilder var11 = Tessellator.getInstance().getBuffer();
          var11.begin(DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
 
-         for (int var12 = 0; var12 < 480; var12++) {
-            double var13 = var3 - (var12 < 360 ? 0.085 : 0.1 + 0.18 * rand(var12, 11));
+         // (2.87.0) a few dark chunks thrown off, as the videos' (480 in the preview: a swarm of rock over everything)
+         for (int var12 = 0; var12 < 120; var12++) {
+            double var13 = var3 - (var12 < 90 ? 0.085 : 0.1 + 0.18 * rand(var12, 11));
             if (!(var13 <= 0.0)) {
                boolean var15 = var12 % 19 == 0;
                double var16 = (double)(var15 ? 10 : 6) + 8.0 * rand(var12, 23);
@@ -180,7 +181,7 @@ final class GExplosionVisual {
             }
          }
 
-         for (int var35 = 0; var35 < 940; var35++) {
+         for (int var35 = 0; var35 < 320; var35++) {
             double var36 = 0.015 + 0.19 * rand(var35, 67);
             double var37 = var3 - var36;
             double var38 = 0.55 + 0.85 * rand(var35, 71);

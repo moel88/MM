@@ -125,6 +125,27 @@ public final class GArenaClient {
       }
    }
 
+   /**
+    * The G this client's camera showed (its own with the cutscene camera on, or one shared with it in the arena), a little
+    * past its cutscene too (until {@code until} seconds into it): the dark after the cut is drawn over its view (2.87.0).
+    */
+   static StandClient.Cast watched(float delta, float until) {
+      MinecraftClient mc = MinecraftClient.getInstance();
+      if (mc.world == null || mc.player == null) {
+         return null;
+      }
+      for (Entry<UUID, GArenaClient.Scene> e : scenes.entrySet()) {
+         if (e.getValue().selected) {
+            StandClient.Cast c = IsosangClient.SWINGS.get(e.getKey());
+            if (c != null && c.age(delta) >= 0.0F && c.age(delta) / 20.0F < until && Float.isNaN(IsosangClient.ultimateEnd(c.id()))) {
+               return c;
+            }
+         }
+      }
+      StandClient.Cast own = IsosangClient.ownUltimate();
+      return own != null && CelestialFall.CONFIG.cinematicCamera && own.age(delta) / 20.0F < until ? own : null;
+   }
+
    public static boolean shared() {
       StandClient.Cast var0 = cinematic();
       return var0 != null && scenes.containsKey(var0.id()) && scenes.get(var0.id()).selected;

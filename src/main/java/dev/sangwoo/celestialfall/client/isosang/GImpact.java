@@ -86,8 +86,9 @@ final class GImpact {
             var11.begin(DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
             boolean var12 = GWorld.observer(var1);
 
-            for (int var13 = 0; var13 < 640; var13++) {
-               double var14 = var13 < 480 ? 0.025 + 2.3 * random(var13, 11) : 2.0500002F + 0.22 * random(var13, 11);
+            // (2.87.0) fewer, the videos' few dark chunks (640 in the preview: a hail of black stone over the strike)
+            for (int var13 = 0; var13 < 170; var13++) {
+               double var14 = var13 < 130 ? 0.025 + 2.3 * random(var13, 11) : 2.0500002F + 0.22 * random(var13, 11);
                boolean var16 = var12 && var13 % 7 == 0;
                if (var16 && var13 % 3 != 0) {
                   var14 = 0.025 + 0.23 * random(var13, 93);

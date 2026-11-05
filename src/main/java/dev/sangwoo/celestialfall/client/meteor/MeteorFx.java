@@ -52,7 +52,7 @@ public final class MeteorFx {
      * sparks, {@link #BLAST_SCALE} times as big), and, {@link #ERUPT_AFTER} ticks later, fire leaping up out of the ground
      * round its user and dust spreading over them. Keyed by the cast (its swing's id).
      */
-    private record Blast(java.util.UUID key,Vec3d to,Vec3d user,int seed,double zero,BlockState ground){}
+    private record Blast(java.util.UUID key,Vec3d to,Vec3d user,int seed,double zero,BlockState ground,boolean landing,double eruptAfter){}
     private static final List<Blast> BLASTS=new ArrayList<>();
     /** How big G's landing is (a meteor's is 1) and when, after it, the fire leaps up round its user (ticks: the video, 1.95 s). */
     public static final double BLAST_SCALE=1.45,ERUPT_AFTER=39;
@@ -78,7 +78,19 @@ public final class MeteorFx {
         var mc=MinecraftClient.getInstance();
         BlockState under=mc.world==null?Blocks.DIRT.getDefaultState():mc.world.getBlockState(BlockPos.ofFloored(to.x,to.y-.5,to.z));
         BlockState ground=under.isAir()||under.getRenderType()!=net.minecraft.block.BlockRenderType.MODEL?Blocks.DIRT.getDefaultState():under;
-        BLASTS.add(new Blast(key,to,user,seed,MeteorClient.clock(0)-age,ground));
+        BLASTS.add(new Blast(key,to,user,seed,MeteorClient.clock(0)-age,ground,true,ERUPT_AFTER));
+    }
+    /**
+     * (2.87.0) Lee So-sang's G: its sword's bite into the ground at {@code to} {@code -age} ticks from now (a landing as
+     * the meteor's, the sword's way: no fireball, its dust and smoke round its foot), and the fire leaping up round its
+     * user {@code eruptAfter} ticks after it. Once for each cast.
+     */
+    public static void strike(java.util.UUID key,Vec3d to,Vec3d user,int seed,double age,double eruptAfter){
+        if(BLASTS.stream().anyMatch(b->b.key().equals(key)))return;
+        var mc=MinecraftClient.getInstance();
+        BlockState under=mc.world==null?Blocks.DIRT.getDefaultState():mc.world.getBlockState(BlockPos.ofFloored(to.x,to.y-.5,to.z));
+        BlockState ground=under.isAir()||under.getRenderType()!=net.minecraft.block.BlockRenderType.MODEL?Blocks.DIRT.getDefaultState():under;
+        BLASTS.add(new Blast(key,to,user,seed,MeteorClient.clock(0)-age,ground,true,eruptAfter));
     }
     /** G called off before its sword struck (2.83.0): its landing is not drawn. */
     public static void unblast(java.util.UUID key){BLASTS.removeIf(b->b.key().equals(key));}
@@ -201,7 +213,7 @@ public final class MeteorFx {
             for(var e:ENDINGS)e.collect(f,now,ms,consumers,mc);
             for(var rock:rocks)landed(rock,f,now,delta);
             // (2.83.0) G's sword landing, and the fire leaping up round its user after
-            for(var b:BLASTS){double ti=now-b.zero();if(ti>=0)impact(f,ti,b.to(),b.seed(),b.ground(),BLAST_SCALE,b.user());if(ti>=ERUPT_AFTER)eruption(f,ti-ERUPT_AFTER,b.user(),b.to(),b.seed(),b.ground());}
+            for(var b:BLASTS){double ti=now-b.zero();if(ti>=0&&b.landing())impact(f,ti,b.to(),b.seed(),b.ground(),BLAST_SCALE,b.user());if(ti>=b.eruptAfter())eruption(f,ti-b.eruptAfter(),b.user(),b.to(),b.seed(),b.ground());}
             consumers.draw();
             f.draw(ms,c.camera());
         }finally{

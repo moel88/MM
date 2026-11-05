@@ -46,7 +46,7 @@ final class GBladeMesh {
             BufferBuilder var8 = Tessellator.getInstance().getBuffer();
             var8.begin(DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR_NORMAL);
 
-            for (byte var9 = 0; var9 < var5.length; var9 += 8) {
+            for (int var9 = 0; var9 < var5.length; var9 += 8) {
                var8.vertex((double)var5[var9], (double)var5[var9 + 1], (double)((float)var7 * var5[var9 + 2]))
                   .texture(var7 > 0 ? var5[var9 + 3] : 1.0F - var5[var9 + 3], var5[var9 + 4])
                   .color(var7 > 0 ? 1.0F : 0.0F, 0.0F, 0.0F, 1.0F)
@@ -122,7 +122,7 @@ final class GBladeMesh {
       for (int var12 = 0; var12 < (var3 ? 2 : 1); var12++) {
          int var13 = var3 && var12 == 0 ? -var11 : var11;
 
-         for (byte var14 = 0; var14 < var4.length; var14 += 8) {
+         for (int var14 = 0; var14 < var4.length; var14 += 8) {
             double var15 = (double)var4[var14];
             double var17 = (double)var4[var14 + 1];
             double var19 = (double)(var4[var14 + 2] * (float)var13);

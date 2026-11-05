@@ -105,27 +105,48 @@ final class GScene {
       return new FallingSword.Shot(var2.eye(), var2.eye().add(var2.f()), 59.82126740260396, var5);
    }
 
-   static Matrix4f actor(StandClient.Cast var0, float var1, Vec3d var2) {
-      FallingSword.Frame var3 = FallingSword.skyView(var0);
-      FallingSword.Frame var4 = skyFrame(var0, var1);
-      double var5 = Math.tan(Math.toRadians(29.91063370130198)) / Math.tan(Math.toRadians(42.21));
-      Vec3d[] var7 = new Vec3d[3];
+   /**
+    * How much smaller she is drawn in the sky shot than the camera she was fitted to shows her (the videos' figure is
+    * slight: her head about 0.06 of the frame across against the blocky body's 0.09), and how far she leans away to the
+    * frame's left (degrees round the shot's line of sight, counterclockwise as seen; negative: her feet go to its lower
+    * left, as the videos').
+    */
+   static final float ACTOR_SCALE = 0.68F;
+   static final double ACTOR_LEAN = -24.0;
+   /** How far above her feet her figure is pivoted for it (her head: it stays where the videos have it). */
+   static final double ACTOR_PIVOT = 1.45;
 
-      for (int var8 = 0; var8 < 3; var8++) {
-         Vec3d var9 = var8 == 0 ? new Vec3d(1.0, 0.0, 0.0) : (var8 == 1 ? new Vec3d(0.0, 1.0, 0.0) : new Vec3d(0.0, 0.0, 1.0));
-         var7[var8] = var4.r()
-            .multiply(var5 * var9.dotProduct(var3.r()))
-            .add(var4.u().multiply(var5 * var9.dotProduct(var3.u())))
-            .add(var4.f().multiply(var9.dotProduct(var3.f())));
+   /**
+    * Her figure in the sky shot (GStage.actor): drawn as the camera she was fitted to (FallingSword.skyView) would show her,
+    * through the shot's own camera, then made slighter and leaning away round her head (ACTOR_*). The identity at the
+    * face shot, eased in over its cut (1.6 to 1.65 s).
+    */
+   static Matrix4f actor(StandClient.Cast c, float t, Vec3d pos) {
+      FallingSword.Frame view = FallingSword.skyView(c);
+      FallingSword.Frame frame = skyFrame(c, t);
+      double k = Math.tan(Math.toRadians(29.91063370130198)) / Math.tan(Math.toRadians(42.21));
+      Vec3d[] axes = new Vec3d[3];
+      for (int i = 0; i < 3; i++) {
+         Vec3d e = i == 0 ? new Vec3d(1.0, 0.0, 0.0) : (i == 1 ? new Vec3d(0.0, 1.0, 0.0) : new Vec3d(0.0, 0.0, 1.0));
+         axes[i] = frame.r().multiply(k * e.dotProduct(view.r())).add(frame.u().multiply(k * e.dotProduct(view.u()))).add(frame.f().multiply(e.dotProduct(view.f())));
       }
-
-      Vec3d var11 = var2.subtract(var3.eye());
-      Vec3d var12 = var4.eye().add(var7[0].multiply(var11.x)).add(var7[1].multiply(var11.y)).add(var7[2].multiply(var11.z)).subtract(var2);
-      Matrix4f var10 = new Matrix4f();
-      var10.setColumn(0, new Vector4f((float)var7[0].x, (float)var7[0].y, (float)var7[0].z, 0.0F));
-      var10.setColumn(1, new Vector4f((float)var7[1].x, (float)var7[1].y, (float)var7[1].z, 0.0F));
-      var10.setColumn(2, new Vector4f((float)var7[2].x, (float)var7[2].y, (float)var7[2].z, 0.0F));
-      var10.setTranslation((float)var12.x, (float)var12.y, (float)var12.z);
-      return new Matrix4f().lerp(var10, Ease.smooth(var1, 1.6F, 1.65F));
+      // her head where the fitted camera puts it; the rest of her slighter and turned about it in the frame's plane
+      Vec3d head = pos.add(0.0, ACTOR_PIVOT, 0.0);
+      Vec3d rel = head.subtract(view.eye());
+      Vec3d headAt = frame.eye().add(axes[0].multiply(rel.x)).add(axes[1].multiply(rel.y)).add(axes[2].multiply(rel.z));
+      double lean = Math.toRadians(ACTOR_LEAN), cos = Math.cos(lean), sin = Math.sin(lean);
+      for (int i = 0; i < 3; i++) {
+         Vec3d a = axes[i];
+         double x = a.dotProduct(frame.r()), y = a.dotProduct(frame.u()), z = a.dotProduct(frame.f());
+         axes[i] = frame.r().multiply(x * cos - y * sin).add(frame.u().multiply(x * sin + y * cos)).add(frame.f().multiply(z)).multiply(ACTOR_SCALE);
+      }
+      Vec3d back = pos.subtract(head);
+      Vec3d at = headAt.add(axes[0].multiply(back.x)).add(axes[1].multiply(back.y)).add(axes[2].multiply(back.z)).subtract(pos);
+      Matrix4f m = new Matrix4f();
+      m.setColumn(0, new Vector4f((float)axes[0].x, (float)axes[0].y, (float)axes[0].z, 0.0F));
+      m.setColumn(1, new Vector4f((float)axes[1].x, (float)axes[1].y, (float)axes[1].z, 0.0F));
+      m.setColumn(2, new Vector4f((float)axes[2].x, (float)axes[2].y, (float)axes[2].z, 0.0F));
+      m.setTranslation((float)at.x, (float)at.y, (float)at.z);
+      return new Matrix4f().lerp(m, Ease.smooth(t, 1.6F, 1.65F));
    }
 }

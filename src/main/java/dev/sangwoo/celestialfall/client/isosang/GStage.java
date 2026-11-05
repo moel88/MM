@@ -40,6 +40,8 @@ public final class GStage {
    static final Identifier BLADE_N = CelestialFall.id("textures/effect/isosang_g_blade_n.png");
    private static ShaderProgram blade;
    private static ShaderProgram observerBlade;
+   /** The stage's own program (isosang_stage: the pale sky with ink mountains behind her face, FACE_SPACE). */
+   private static ShaderProgram stage;
    private static boolean materialMipmapsReady;
    static final double[] SLICES = slices();
    static final double BEVEL = 0.22;
@@ -54,6 +56,8 @@ public final class GStage {
 
    static void initialize() {
       GClouds.initialize();
+      CoreShaderRegistrationCallback.EVENT
+         .register((CoreShaderRegistrationCallback)c -> c.register(CelestialFall.id("isosang_stage"), VertexFormats.POSITION_TEXTURE_COLOR, program -> stage = program));
       CoreShaderRegistrationCallback.EVENT
          .register(
             (CoreShaderRegistrationCallback)var0 -> var0.register(CelestialFall.id("isosang_blade"), VertexFormats.POSITION_TEXTURE_COLOR_NORMAL, var0x -> {
@@ -101,23 +105,89 @@ public final class GStage {
       wholeCaster = false;
    }
 
+   /**
+    * Whether the world is hidden from the frame being drawn: the black round her hand (GBlackout), and her face's own space
+    * if it has one (FACE_SPACE).
+    */
    public static boolean hidden() {
-      return GBlackout.hidden();
+      return GBlackout.hidden() || FACE_SPACE && currentShot == GREY;
    }
 
-   public static boolean sky(MatrixStack var0, float var1) {
-      return GBlackout.hidden();
+   /**
+    * Whether her face is shot in its own space (the videos' pale sky and ink mountains) rather than in the world. The sky
+    * and the fall stay in the real world: the user made the sword come down there on purpose.
+    */
+   static final boolean FACE_SPACE = false;
+
+   /** Draws the cutscene's own sky in place of the world's (from the sky's mixin); whether the world's is left out. */
+   public static boolean sky(MatrixStack matrices, float delta) {
+      if (!(FACE_SPACE && currentShot == GREY)) {
+         return GBlackout.hidden();
+      }
+      StandClient.Cast c = FallingSword.cinematic();
+      if (c == null || stage == null) {
+         return true;
+      }
+      float t = c.age(delta) / 20.0F;
+      int mode = 1;
+      RenderSystem.depthMask(false);
+      RenderSystem.disableCull();
+      drawStage(matrices.peek().getPositionMatrix(), mode, t, b -> {
+         int lat = 24, lon = 48;
+         for (int i = 0; i < lat; i++) {
+            double a0 = -Math.PI / 2 + Math.PI * i / lat, a1 = -Math.PI / 2 + Math.PI * (i + 1) / lat;
+            for (int j = 0; j < lon; j++) {
+               double b0 = 2 * Math.PI * j / lon, b1 = 2 * Math.PI * (j + 1) / lon;
+               sphere(b, a0, b0);
+               sphere(b, a0, b1);
+               sphere(b, a1, b1);
+               sphere(b, a1, b0);
+            }
+         }
+      });
+      RenderSystem.depthMask(true);
+      RenderSystem.enableCull();
+      return true;
    }
 
-   static void ground(WorldRenderContext var0) {
+   private static void drawStage(Matrix4f view, int mode, float age, java.util.function.Consumer<BufferBuilder> fill) {
+      MatrixStack mv = RenderSystem.getModelViewStack();
+      mv.push();
+      mv.multiplyPositionMatrix(view);
+      RenderSystem.applyModelViewMatrix();
+      RenderSystem.setShader(() -> stage);
+      stage.getUniform("Mode").set(mode);
+      stage.getUniform("Age").set(age);
+      RenderSystem.enableBlend();
+      RenderSystem.defaultBlendFunc();
+      BufferBuilder b = Tessellator.getInstance().getBuffer();
+      b.begin(DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+      fill.accept(b);
+      BufferRenderer.drawWithGlobalProgram(b.end());
+      mv.pop();
+      RenderSystem.applyModelViewMatrix();
+   }
+
+   private static void vertex(BufferBuilder b, double x, double y, double z, float u, float v) {
+      b.vertex((float)x, (float)y, (float)z).texture(u, v).color(1.0F, 1.0F, 1.0F, 1.0F).next();
+   }
+
+   private static void sphere(BufferBuilder b, double lat, double lon) {
+      double cl = Math.cos(lat);
+      vertex(b, Math.cos(lon) * cl * SKY_R, Math.sin(lat) * SKY_R, Math.sin(lon) * cl * SKY_R, 0.0F, 0.0F);
+   }
+
+   /** The black round her hand (the world's colour cleared). */
+   static void ground(WorldRenderContext ctx) {
       if (GBlackout.hidden()) {
          RenderSystem.clearColor(0.0F, 0.0F, 0.0F, 1.0F);
          RenderSystem.clear(16384, MinecraftClient.IS_SYSTEM_MAC);
       }
    }
 
+   /** Whether {@code e} is left out of the frame: everyone but her where the world is hidden, and her as the sword comes down. */
    public static boolean hides(Entity var0) {
-      return GBlackout.hidden() && !GArenaClient.actor(var0) ? true : (currentShot == 3 || bladeOnly) && GArenaClient.actor(var0);
+      return hidden() && !GArenaClient.actor(var0) ? true : (currentShot == 3 || bladeOnly) && GArenaClient.actor(var0);
    }
 
    public static boolean handOnly(Entity var0) {
@@ -202,7 +272,7 @@ public final class GStage {
 
             for (Identifier var3 : List.of(BLADE, BLADE_N)) {
                RenderSystem.bindTexture(var1.getTexture(var3).getGlId());
-               short var4 = 3553;
+               int var4 = 3553;
                GL11.glTexParameteri(var4, 33085, 13);
                GL11.glTexParameterf(var4, 33083, 13.0F);
                GL30.glGenerateMipmap(var4);
@@ -268,8 +338,8 @@ public final class GStage {
    }
 
    private static double[] slices() {
-      byte var1 = 22;
-      short var2 = 128;
+      int var1 = 22;
+      int var2 = 128;
       double var3 = 5.534;
       double var5 = 96.0;
       double[] var7 = new double[var1 + var2 + 1];
@@ -324,7 +394,7 @@ public final class GStage {
    private static void faces(BufferBuilder var0, FallingSword.Blade var1, Vec3d var2) {
       double var3 = 96.0;
 
-      for (byte var5 = -1; var5 <= 1; var5 += 2) {
+      for (int var5 = -1; var5 <= 1; var5 += 2) {
          for (int var6 = 0; var6 + 1 < SLICES.length; var6++) {
             double var7 = SLICES[var6];
             double var9 = SLICES[var6 + 1];
@@ -363,7 +433,7 @@ public final class GStage {
    }
 
    private static void edges(BufferBuilder var0, FallingSword.Blade var1, Vec3d var2) {
-      for (byte var3 = -1; var3 <= 1; var3 += 2) {
+      for (int var3 = -1; var3 <= 1; var3 += 2) {
          for (int var4 = 0; var4 + 1 < SLICES.length; var4++) {
             double var5 = SLICES[var4];
             double var7 = SLICES[var4 + 1];

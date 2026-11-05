@@ -169,6 +169,8 @@ public final class IsosangClient {
             var cast=new StandClient.Cast(id,caster,dim,IsosangRules.SKILL,combo,start,serverNow,StandClient.ticks(),at,yaw,List.of());
             if(cast.age(0)/20f>=life(combo))return;
             KagenoClips.begin(cast);SWINGS.put(id,cast);STRUCK.put(id,new int[IsosangRules.blows(combo)][]);
+            // (2.87.0) G: the fire round her after its cutscene
+            if(combo==IsosangRules.ULTIMATE)FallingSword.begin(cast);
             if(empowered)EMPOWERED.add(id);
             if(serverNow-start<=LATE)voice(mc,id,caster,combo);
         }else if(type==IsosangAttack.EMPOWERED){
@@ -208,7 +210,7 @@ public final class IsosangClient {
             }
         }else if(type==IsosangAttack.STOPPED&&combo==IsosangRules.ULTIMATE){
             // (2.83.0) G called off before its sword struck (its user gone): its sword goes now, its sound fades
-            var c=SWINGS.get(id);if(c!=null){ULTIMATE_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);var v=VOICES.get(id);if(v!=null)v.fade();}
+            var c=SWINGS.get(id);if(c!=null){ULTIMATE_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);var v=VOICES.get(id);if(v!=null)v.fade();FallingSword.calledOff(id);}
         }else if(type==IsosangAttack.STOPPED&&combo==IsosangRules.FORMATION){
             // (2.82.0) H's formation ended early (its user taken away): its swords go now, its user drops
             var c=SWINGS.get(id);if(c!=null){FORMATION_ENDS.put(id,Math.max(0,(serverNow-start)/20f));STOPPED.add(id);}

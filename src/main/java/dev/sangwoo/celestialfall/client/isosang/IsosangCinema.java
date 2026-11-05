@@ -22,4 +22,6 @@ public final class IsosangCinema {
     public static float dust(float delta){return FallingSword.dust(delta);}
     /** The black bar at the top and the bottom of the cutscene's frame (a share of the screen's height each). */
     public static float bars(){return (float)(1-FallingSword.frameHeight())/2f;}
+    /** Turns the finished world back left for right in the shots of her hand (GMirror; before the GUI draws). */
+    public static void mirror(float delta){GMirror.apply(delta);}
 }

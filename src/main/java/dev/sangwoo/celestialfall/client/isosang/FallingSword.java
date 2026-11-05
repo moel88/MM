@@ -1,5 +1,7 @@
 package dev.sangwoo.celestialfall.client.isosang;
 
+import dev.sangwoo.celestialfall.isosang.IsosangRules;
+
 import dev.sangwoo.celestialfall.client.CinematicDirector;
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.StandClient;
@@ -349,6 +351,7 @@ final class FallingSword {
       }
 
       if (shown(c)) {
+         faceLight(c, m, t);
          sky(c, m, t);
          FallingSword.Blade bl = blade(c.cast, t);
          if (bl != null) {
@@ -458,78 +461,195 @@ final class FallingSword {
       }
    }
 
-   static void fingertip(Fx var0, EffectMesh var1, float var2, Vec3d var3, float var4) {
-      if (!(var2 < 0.15F) && !(var2 > 1.5F)) {
-         Vec3d var8 = GGesture.tip(var0.cast, var2);
-         float var9 = Ease.window(var2, 0.17F, 1.42F, 0.06F, 0.12F);
-         float var10 = 0.85F + 0.15F * (float)Math.sin((double)(var2 * 31.0F));
-         float var11 = 0.45F * (0.15F + 0.85F * Ease.smooth(var2, 0.33F, 0.6F)) * (1.0F - 0.65F * Ease.smooth(var2, 0.97800004F, 1.038F));
-         var1.softDisc(var8, 0.3 * (double)var11, 16761962, 0.45F * var9);
-         var1.softDisc(var8, 0.12 * (double)var11, 16771512, 0.6F * var9);
-         var1.softDisc(var8, 0.045 * (double)var11, 16777215, 0.9F * var9);
-         var1.star(var8, (0.13 + 0.04 * (double)var10) * (double)var11 * (double)var9, 16771512, 0.95F * var9);
-         Vec3d var12 = var8.subtract(var0.camera);
-         var12 = var12.lengthSquared() < 1.0E-6 ? var0.f : var12.normalize();
-         Vec3d var13 = var12.crossProduct(UP);
-         var13 = var13.lengthSquared() < 1.0E-6 ? var0.right : var13.normalize();
-         var1.softLine(var8.subtract(var13.multiply(0.9 * (double)var11)), var8.add(var13.multiply(0.9 * (double)var11)), 0.025, 16761962, 0.3F * var9 * var11);
-         float var14 = Ease.window(var2, 0.28F, 0.55F, 0.03F, 0.1F);
-         if (var14 > 0.01F) {
-            Vec3d var15 = hand(var3, var4, var2);
-            Vec3d var16 = UP;
-            var16 = var16.lengthSquared() < 1.0E-6 ? UP : var16.normalize();
-            Vec3d var17 = var8.add(var16.multiply(3.2));
-            var1.softLine(var8, var17, 0.16, 16761962, 0.45F * var14);
-            var1.softLine(var8, var17, 0.06, 16771512, 0.6F * var14);
-            var1.line(var8, var17, 0.02, 16777215, 0.85F * var14);
+   /** The golds and the blue of the light at her fingertips (the videos'). */
+   static final int HAZE = 16757836, AMBER = 16750144;
+
+   /**
+    * The light at her fingertips (2.87.0, as the videos' and much stronger than the preview's): a star and a wide warm
+    * haze that fills the frame beside her hand as it gathers (0.2 to 0.45 s); the gold trail her fingertips leave as the
+    * hand whips round under the arm (0.33 to 0.55 s, in place of the preview's beam straight up); a long thin light run
+    * out along the arm under it (0.45 to 0.7 s); the stroke her two fingers draw (0.83 s on) running on past them as a
+    * blade of light; blue shards breaking past close to the camera on the frame's left (her hair's crystals, the videos'
+    * 0.5 and 1 s). Every part is a continuous function of the cast's clock.
+    */
+   static void fingertip(Fx c, EffectMesh m, float t, Vec3d feet, float yaw) {
+      if (t < 0.15F || t > 1.5F) {
+         return;
+      }
+      Vec3d tip = GGesture.tip(c.cast, t);
+      float on = Ease.window(t, 0.17F, 1.42F, 0.06F, 0.12F);
+      float flick = 0.85F + 0.15F * (float)Math.sin((double)(t * 31.0F));
+      float grow = 0.45F * (0.15F + 0.85F * Ease.smooth(t, 0.33F, 0.6F)) * (1.0F - 0.65F * Ease.smooth(t, 0.978F, 1.038F));
+      m.softDisc(tip, 0.3 * (double)grow, GOLD, 0.45F * on);
+      m.softDisc(tip, 0.12 * (double)grow, GOLD_WHITE, 0.6F * on);
+      m.softDisc(tip, 0.045 * (double)grow, WHITE, 0.9F * on);
+      m.star(tip, (0.13 + 0.04 * (double)flick) * (double)grow * (double)on, GOLD_WHITE, 0.95F * on);
+      Vec3d view = tip.subtract(c.camera);
+      view = view.lengthSquared() < 1.0E-6 ? c.f : view.normalize();
+      Vec3d across = view.crossProduct(UP);
+      across = across.lengthSquared() < 1.0E-6 ? c.right : across.normalize();
+      Vec3d upward = across.crossProduct(view).normalize();
+      m.softLine(tip.subtract(across.multiply(0.9 * (double)grow)), tip.add(across.multiply(0.9 * (double)grow)), 0.025, GOLD, 0.3F * on * grow);
+      // the warm haze filling the frame beside her hand as the light gathers (the videos' 0.27 to 0.42 s)
+      float haze = Ease.window(t, 0.2F, 0.5F, 0.08F, 0.1F);
+      if (haze > 0.01F) {
+         m.softDisc(tip, 0.42, HAZE, 0.34F * haze);
+         m.softDisc(tip, 0.2, GOLD_WHITE, 0.3F * haze);
+         m.softLine(tip.subtract(across.multiply(0.55)), tip.add(across.multiply(0.55)), 0.06, GOLD_WHITE, 0.5F * haze);
+      }
+      // the trail of gold her fingertips leave as the hand whips round (the preview drew a beam straight up instead)
+      float whip = Ease.window(t, 0.33F, 0.56F, 0.03F, 0.08F);
+      if (whip > 0.01F) {
+         Vec3d prev = null;
+         int n = 16;
+         for (int i = 0; i <= n; i++) {
+            float back = (float)i / (float)n;
+            float at = Math.max(0.3F, t - 0.13F * back);
+            Vec3d p = GGesture.tip(c.cast, at);
+            if (prev != null) {
+               float k = (1.0F - back) * whip;
+               m.softLine(prev, p, 0.16 * (double)(1.0F - back * 0.7F), GOLD, 0.55F * k);
+               m.softLine(prev, p, 0.05 * (double)(1.0F - back * 0.7F), GOLD_WHITE, 0.75F * k);
+               m.line(prev, p, 0.012 * (double)(1.0F - back * 0.6F), WHITE, 0.9F * k);
+            }
+            prev = p;
          }
-
-         float var7;
-         if (var2 > 0.83F && (var7 = 1.0F - Ease.smooth(var2, 1.02F, 1.3F)) > 0.01F) {
-            byte var28 = 14;
-            Vec3d var31 = null;
-            float var34 = Math.min(var2, 0.97F);
-
-            for (int var18 = 0; var18 <= var28; var18++) {
-               float var19 = 0.83F + (var34 - 0.83F) * (float)var18 / (float)var28;
-               Vec3d var20 = GGesture.tip(var0.cast, var19);
-               if (var31 != null) {
-                  float var21 = (float)var18 / (float)var28;
-                  var1.softLine(var31, var20, 0.14 + 0.1 * (double)var21, 16761962, 0.5F * var7);
-                  var1.softLine(var31, var20, 0.05 + 0.03 * (double)var21, 16771512, 0.6F * var7);
-                  var1.line(var31, var20, 0.014 + 0.008 * (double)var21, 16777215, 0.85F * var7);
-               }
-
-               var31 = var20;
+      }
+      // a long thin light run out along her arm under it, from beside the hand back past the elbow (the videos' 0.5 s)
+      float streak = Ease.window(t, 0.45F, 0.72F, 0.04F, 0.12F);
+      if (streak > 0.01F) {
+         Vec3d hand = GGesture.wrist(c.cast, t);
+         Vec3d along = tip.subtract(hand);
+         along = along.lengthSquared() < 1.0E-6 ? c.f : along.normalize();
+         Vec3d side = along.crossProduct(view);
+         side = side.lengthSquared() < 1.0E-6 ? upward : side.normalize();
+         Vec3d o = tip.add(side.multiply(0.035));
+         float run = Ease.smooth(t, 0.45F, 0.56F);
+         Vec3d far = o.subtract(along.multiply(0.2 + 1.6 * (double)run));
+         m.softTaper(o.add(along.multiply(0.25)), far, 0.05, 0.002, GOLD, 0.6F * streak);
+         m.softTaper(o.add(along.multiply(0.25)), far, 0.014, 0.001, WHITE, 0.95F * streak);
+      }
+      // the stroke her two fingers draw, and the blade of light it runs on into past them (the videos' 0.95 to 1.05 s)
+      float stroke = 1.0F - Ease.smooth(t, 1.02F, 1.3F);
+      if (t > 0.83F && stroke > 0.01F) {
+         int steps = 14;
+         Vec3d prev = null;
+         float upTo = Math.min(t, 0.97F);
+         for (int i = 0; i <= steps; i++) {
+            float at = 0.83F + (upTo - 0.83F) * (float)i / (float)steps;
+            Vec3d p = GGesture.tip(c.cast, at);
+            if (prev != null) {
+               float k = (float)i / (float)steps;
+               m.softLine(prev, p, 0.14 + 0.1 * (double)k, GOLD, 0.5F * stroke);
+               m.softLine(prev, p, 0.05 + 0.03 * (double)k, GOLD_WHITE, 0.6F * stroke);
+               m.line(prev, p, 0.014 + 0.008 * (double)k, WHITE, 0.85F * stroke);
+            }
+            prev = p;
+         }
+         float blade = Ease.window(t, 0.9F, 1.12F, 0.04F, 0.1F);
+         if (blade > 0.01F) {
+            Vec3d from = GGesture.tip(c.cast, Math.min(t, 0.97F) - 0.06F);
+            Vec3d to = GGesture.tip(c.cast, Math.min(t, 0.97F));
+            Vec3d way = to.subtract(from);
+            if (way.lengthSquared() > 1.0E-6) {
+               way = way.normalize();
+               float reach = Ease.smooth(t, 0.9F, 1.0F);
+               Vec3d end = to.add(way.multiply(0.3 + 1.5 * (double)reach)).add(upward.multiply(0.12 * (double)reach));
+               m.softTaper(to, end, 0.22, 0.01, GOLD, 0.5F * blade);
+               m.softTaper(to, end, 0.07, 0.003, GOLD_WHITE, 0.8F * blade);
+               m.softTaper(to, end, 0.02, 0.001, WHITE, 0.95F * blade);
             }
          }
-
-         float var6;
-         if ((var6 = FxLib.kick(var2, 1.02F, 0.12F)) > 0.01F) {
-            Vec3d var32 = var13.crossProduct(var12).normalize();
-            var1.softLine(var8.subtract(var13.multiply(2.8)), var8.add(var13.multiply(2.8)), 0.025, 16761962, 0.5F * var6);
-            var1.line(var8.subtract(var13.multiply(2.4)), var8.add(var13.multiply(2.4)), 0.005, 16777215, 0.85F * var6);
-            var1.softLine(var8.subtract(var32.multiply(0.8)), var8.add(var32.multiply(0.8)), 0.02, 16761962, 0.4F * var6);
-            var1.line(var8.subtract(var32.multiply(0.6)), var8.add(var32.multiply(0.6)), 0.004, 16777215, 0.75F * var6);
-            var1.star(var8, 0.07 * (double)var6, 16777215, 0.7F * var6);
-            var1.softDisc(var8, 0.07, 16771512, 0.35F * var6);
-            var1.softDisc(var8, 0.18, 16761962, 0.1F * var6);
+      }
+      // the flash of the seal as the two fingers come up before her face: a long level line across, a short upright one
+      float seal = FxLib.kick(t, 1.02F, 0.12F);
+      if (seal > 0.01F) {
+         Vec3d cross = across.crossProduct(view).normalize();
+         m.softLine(tip.subtract(across.multiply(3.6)), tip.add(across.multiply(3.6)), 0.03, GOLD, 0.55F * seal);
+         m.line(tip.subtract(across.multiply(3.0)), tip.add(across.multiply(3.0)), 0.006, WHITE, 0.9F * seal);
+         m.softLine(tip.subtract(cross.multiply(1.0)), tip.add(cross.multiply(1.0)), 0.024, GOLD, 0.45F * seal);
+         m.line(tip.subtract(cross.multiply(0.75)), tip.add(cross.multiply(0.75)), 0.005, WHITE, 0.8F * seal);
+         m.star(tip, 0.09 * (double)seal, WHITE, 0.8F * seal);
+         m.softDisc(tip, 0.09, GOLD_WHITE, 0.4F * seal);
+         m.softDisc(tip, 0.26, GOLD, 0.16F * seal);
+      }
+      // blue shards round her hand, and big ones breaking past close to the camera on the frame's left
+      float shards = Ease.window(t, 0.38F, 1.06F, 0.08F, 0.1F);
+      if (shards > 0.01F) {
+         Vec3d hand = GGesture.wrist(c.cast, t);
+         for (int i = 0; i < 6; i++) {
+            double turn = (double)t * (2.2 + (double)i * 0.3) + (double)i * 1.05;
+            double r = 0.42 + 0.16 * Ease.hash(i * 13 + 1);
+            double lift = -0.1 + 0.36 * Ease.hash(i * 17 + 2);
+            Vec3d p = hand.add(Math.cos(turn) * r, lift + 0.06 * Math.sin((double)(t * 5.0F + (float)i)), Math.sin(turn) * r);
+            Vec3d a = new Vec3d(Math.cos(turn + 1.3), 0.4, Math.sin(turn + 1.3)).normalize().multiply(0.13);
+            Vec3d b = new Vec3d(-Math.sin(turn), 0.2, Math.cos(turn)).normalize().multiply(0.05);
+            m.triangle(p.add(a), p.subtract(a).add(b), p.subtract(a).subtract(b), SHARD, 0.85F * shards);
          }
+         shardsByCamera(c, m, t, view, across, upward);
+      }
+   }
 
-         float var5;
-         if ((var5 = Ease.window(var2, 0.38F, 1.02F, 0.08F, 0.12F)) > 0.01F) {
-            Vec3d var29 = hand(var3, var4, var2);
-
-            for (int var33 = 0; var33 < 6; var33++) {
-               double var35 = (double)var2 * (2.2 + (double)var33 * 0.3) + (double)var33 * 1.05;
-               double var36 = 0.42 + 0.16 * Ease.hash(var33 * 13 + 1);
-               double var37 = -0.1 + 0.36 * Ease.hash(var33 * 17 + 2);
-               Vec3d var23 = var29.add(Math.cos(var35) * var36, var37 + 0.06 * Math.sin((double)(var2 * 5.0F + (float)var33)), Math.sin(var35) * var36);
-               Vec3d var24 = new Vec3d(Math.cos(var35 + 1.3), 0.4, Math.sin(var35 + 1.3)).normalize().multiply(0.13);
-               Vec3d var25 = new Vec3d(-Math.sin(var35), 0.2, Math.cos(var35)).normalize().multiply(0.05);
-               var1.triangle(var23.add(var24), var23.subtract(var24).add(var25), var23.subtract(var24).subtract(var25), 4034047, 0.85F * var5);
-            }
+   /**
+    * Big blue shards breaking past between the camera and her hand on the frame's left (drawn on its right: the picture
+    * is turned back across, GMirror), as the videos' at 0.5 s and at 1 s. Each a long sliver with a lighter edge.
+    */
+   private static void shardsByCamera(Fx c, EffectMesh m, float t, Vec3d view, Vec3d across, Vec3d upward) {
+      if (!shown(c)) {
+         return;
+      }
+      for (int i = 0; i < 5; i++) {
+         float born = i < 3 ? 0.44F + 0.03F * (float)i : 0.9F + 0.035F * (float)(i - 3);
+         float life = 0.2F + 0.05F * (float)(i % 2);
+         float a = (t - born) / life;
+         if (a <= 0.0F || a >= 1.0F) {
+            continue;
          }
+         float fade = Ease.smooth(a, 0.0F, 0.15F) * (1.0F - Ease.smooth(a, 0.6F, 1.0F));
+         double depth = 0.34 + 0.12 * Ease.hash(i * 7 + 3);
+         double side = (mirrored(t) ? 1.0 : -1.0) * (0.19 + 0.07 * Ease.hash(i * 7 + 5));
+         Vec3d o = c.camera.add(view.multiply(depth)).add(across.multiply(side)).add(upward.multiply(0.12 * (Ease.hash(i * 7 + 9) - 0.3) + 0.12 * (double)a));
+         Vec3d drift = across.multiply((mirrored(t) ? 1.0 : -1.0) * 0.06 * (double)a).add(upward.multiply(0.04 * (double)a));
+         double turn = 0.6 + 1.8 * Ease.hash(i * 7 + 11) + 1.2 * (double)a;
+         Vec3d len = across.multiply(Math.cos(turn)).add(upward.multiply(Math.sin(turn))).multiply(0.07 + 0.04 * Ease.hash(i * 7 + 13));
+         Vec3d wid = across.multiply(-Math.sin(turn)).add(upward.multiply(Math.cos(turn))).multiply(0.018);
+         Vec3d p = o.add(drift);
+         m.quad(p.add(len), p.add(wid), p.subtract(len), p.subtract(wid).multiply(1.0), SHARD, 0.9F * fade);
+         m.line(p.add(len), p.add(wid), 0.003, 9425919, 0.8F * fade);
+      }
+   }
+
+   /**
+    * Behind and round her face (2.87.0, the videos' 1.1 to 1.5 s): thin upright lines of gold falling either side of her
+    * head, a soft glow behind it, and motes of light drifting up past her, all fading as the shot pulls away.
+    */
+   static void faceLight(Fx c, EffectMesh m, float t) {
+      float on = Ease.window(t, 1.06F, 1.58F, 0.06F, 0.1F);
+      if (on <= 0.01F) {
+         return;
+      }
+      Vec3d head = head(c.cast.origin(), c.cast.yaw(), t);
+      Vec3d view = head.subtract(c.camera);
+      view = view.lengthSquared() < 1.0E-6 ? c.f : view.normalize();
+      Vec3d across = view.crossProduct(UP);
+      across = across.lengthSquared() < 1.0E-6 ? c.right : across.normalize();
+      Vec3d back = head.add(view.multiply(0.6));
+      m.softDisc(back.add(0.0, 0.05, 0.0), 0.9, HAZE, 0.12F * on);
+      for (int i = 0; i < 7; i++) {
+         double side = (i % 2 == 0 ? -1.0 : 1.0) * (0.55 + 0.38 * Ease.hash(i * 11 + 1));
+         double fall = ((double)t * (0.7 + 0.5 * Ease.hash(i * 11 + 3)) + Ease.hash(i * 11 + 5)) % 1.0;
+         double len = 0.5 + 0.6 * Ease.hash(i * 11 + 7);
+         Vec3d top = back.add(across.multiply(side)).add(0.0, 0.9 - 1.6 * fall, 0.0);
+         Vec3d bottom = top.add(0.0, -len, 0.0);
+         float k = on * (float)Math.sin(Math.PI * fall) * (0.6F + 0.4F * (float)Math.sin((double)(t * 19.0F + (float)i)));
+         m.softLine(top, bottom, 0.02, GOLD, 0.45F * k);
+         m.line(top, bottom, 0.004, GOLD_WHITE, 0.85F * k);
+      }
+      for (int i = 0; i < 16; i++) {
+         double u = ((double)t * (0.25 + 0.2 * Ease.hash(i * 19 + 1)) + Ease.hash(i * 19 + 3)) % 1.0;
+         Vec3d p = head.add(across.multiply(-0.7 + 1.4 * Ease.hash(i * 19 + 5))).add(view.multiply(-0.15 + 0.5 * Ease.hash(i * 19 + 7))).add(0.0, -0.45 + 0.9 * u, 0.0);
+         float k = on * (float)Math.sin(Math.PI * u);
+         m.softDisc(p, 0.016 + 0.012 * Ease.hash(i * 19 + 9), GOLD_WHITE, 0.6F * k);
       }
    }
 
@@ -695,8 +815,8 @@ final class FallingSword {
             return GGesture.handShot(
                new FallingSword.Shot(
                   h0.add(a0.multiply(-0.7)).add(0.0, 0.16, 0.0).subtract(d0.multiply(0.18 + 0.04 * (double)t / 0.3F)),
-                  h0.subtract(d0.multiply(0.16)),
-                  44.0,
+                  h0.subtract(d0.multiply(0.16)).add(0.0, HAND_DROP, 0.0),
+                  HAND_FOV,
                   0.0F
                ),
                c,
@@ -715,8 +835,8 @@ final class FallingSword {
             return GGesture.handShot(
                new FallingSword.Shot(
                   h.add(slerp(from, to, (double)u)),
-                  h.subtract(d0.multiply(0.16)).lerp(h.subtract(d1.multiply(0.12)), (double)u),
-                  (double)(44.0F + 8.0F * u),
+                  h.subtract(d0.multiply(0.16)).add(0.0, HAND_DROP * (1.0F - u), 0.0).lerp(h.subtract(d1.multiply(UNDER_LOOK)), (double)u),
+                  HAND_FOV + (UNDER_FOV - HAND_FOV) * u,
                   -30.0F * u
                ),
                c,
@@ -725,14 +845,14 @@ final class FallingSword {
          } else if (t < 0.83F) {
             float u = (t - 0.45F) / 0.38F;
             return GGesture.handShot(
-               new FallingSword.Shot(h.add(under.multiply(1.0 - 0.12 * (double)u)), h.subtract(d.multiply(0.12)), 52.0, -30.0F + 8.0F * u), c, t
+               new FallingSword.Shot(h.add(under.multiply(1.0 - 0.12 * (double)u)), h.subtract(d.multiply(UNDER_LOOK)), UNDER_FOV, -30.0F + 8.0F * u), c, t
             );
          } else {
             float u = Ease.smooth(t, 0.83F, 1.008F);
             Vec3d front = f.multiply(0.72).subtract(r.multiply(0.2)).add(0.0, -0.24, 0.0);
             return GGesture.handShot(
                new FallingSword.Shot(
-                  h.add(slerp(under.multiply(0.88), front, (double)u)), h.subtract(d.multiply(0.12)).lerp(tip, (double)u), 52.0, -22.0F * (1.0F - u)
+                  h.add(slerp(under.multiply(0.88), front, (double)u)), h.subtract(d.multiply(UNDER_LOOK)).lerp(tip, (double)u), UNDER_FOV + (FACE_FOV - UNDER_FOV) * u, -22.0F * (1.0F - u)
                ),
                c,
                t
@@ -776,6 +896,34 @@ final class FallingSword {
             t
          );
       }
+   }
+
+   /**
+    * A G begun (IsosangClient): the sword's bite into the ground as it strikes (3.1 s: the dust and smoke round its foot,
+    * its embers and its glow, MeteorFx's landing the sword's way, over G's own strike, GImpact), and the fire leaping up
+    * round her and the dust over them at G_ERUPT (5.15 s), as the videos' after the cutscene (tongues of fire on fixed
+    * planes, dust, stones, embers). Everyone sees both.
+    */
+   static void begin(StandClient.Cast c) {
+      dev.sangwoo.celestialfall.client.meteor.MeteorFx.strike(c.id(), strike(c), c.origin(), c.id().hashCode(), c.age(0.0F) - IsosangRules.G_IMPACT, (IsosangRules.G_ERUPT - IsosangRules.G_STRIKE) * 20.0F);
+   }
+
+   /** G called off before it strikes: no fire after it. */
+   static void calledOff(java.util.UUID id) {
+      dev.sangwoo.celestialfall.client.meteor.MeteorFx.unblast(id);
+   }
+
+   /**
+    * The shots of her hand framed as tight as the videos' (2.87.0, measured against them: the hand about twice as large
+    * across as the preview's): beside the hand (HAND_FOV, the view dropped HAND_DROP so the hand sits at the frame's
+    * middle), and under the arm (UNDER_FOV, looking UNDER_LOOK back down the arm so the hand rides up to the upper
+    * right and the fingertips near the corner). Vertical fields of view (degrees) of the cutscene's frame.
+    */
+   static final double HAND_FOV = 28.0, UNDER_FOV = 31.0, UNDER_LOOK = 0.27, HAND_DROP = -0.03;
+
+   /** Whether the shot at {@code t} is one of her hand's, flipped back left for right (GMirror). */
+   static boolean mirrored(float t) {
+      return t >= 0.0F && t < 1.008F;
    }
 
    static boolean alone(float t) {
@@ -905,8 +1053,23 @@ final class FallingSword {
       }
    }
 
-   public static float dark(float var0) {
-      return GBlackout.alpha(var0);
+   /** When the screen is black after the cut (seconds): held from it, then lifting just before the fire leaps up (the videos'). */
+   static final float AFTER_BLACK = 4.98F, AFTER_LIT = 5.13F;
+
+   /**
+    * How dark the world is for the local camera (0 to 1): the black round her hand (GBlackout), and, as the videos', the
+    * moment of black after the cutscene cuts back to the game (4.83 s) before the fire leaps up, for those who watched it.
+    */
+   public static float dark(float delta) {
+      float d = GBlackout.alpha(delta);
+      StandClient.Cast c = GArenaClient.watched(delta, AFTER_LIT + 0.05F);
+      if (c != null) {
+         float t = c.age(delta) / 20.0F;
+         if (t >= 4.83F) {
+            d = Math.max(d, 0.94F * (1.0F - Ease.smooth(t, AFTER_BLACK, AFTER_LIT)));
+         }
+      }
+      return d;
    }
 
    static record Blade(Vec3d point, Vec3d axis, Vec3d across, Vec3d normal, float alpha, float heat, float dark, double fadeFrom, double fadeTo) {

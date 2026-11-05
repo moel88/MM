@@ -9,6 +9,8 @@ public final class CinematicHud {
     public static void render(float delta) {
         var mc=MinecraftClient.getInstance();
         if(!CinematicDirector.isActive())return;
+        // (2.87.0) Lee So-sang's G: the shots of her hand turned back left for right, as the videos' (GMirror)
+        dev.sangwoo.celestialfall.client.isosang.IsosangCinema.mirror(delta);
         var c=new DrawContext(mc,mc.getBufferBuilders().getEntityVertexConsumers());
         // Star Platinum's beatdown (2.64.0): black bars sliding in from the top and the bottom as its cutscene begins
         if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)letterbox(mc,c,dev.sangwoo.celestialfall.client.stand.StandBeatdown.bars(delta));
