@@ -120,6 +120,11 @@ final class GClouds {
                shader.getUniform("Mode").set(var3);
                // (2.88.0) the storm made grand: its eye burning gold, lightning lighting it from inside (the cutscene's canopy)
                float[] storm = var3 == 2 ? GGrand.storm(var4) : new float[12];
+               if (var3 == 3) {
+                  // (2.89.0) the observers' storm seen from afar: its eye burning gold, the bolt flashing now (storm frame)
+                  float[] far = GFar.storm(var1, var4, var14);
+                  System.arraycopy(far, 0, storm, 0, far.length);
+               }
                net.minecraft.client.gl.GlUniform grand = shader.getUniform("Grand");
                if (grand != null) {
                   grand.set(storm[0], storm[1], 0.0F, 0.0F);

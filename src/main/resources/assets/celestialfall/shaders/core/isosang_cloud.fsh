@@ -52,6 +52,8 @@ uniform vec4 Lightning;
 // Bolt from and to in the frame (across, down), BoltLook its seed and how bright (0 none)
 uniform vec4 Bolt;
 uniform vec2 BoltLook;
+// (2.89.0) In the observers' storm (Mode 3, GFar.storm) Grand.x is how strongly its eye burns gold and Lightning is
+// where the bolt flashing now leaves its base (in the storm's own frame) and how strongly it lights the banks.
 
 const vec2 projectionScale = vec2(.40066, -.86915);
 const vec2 eyeCenter = vec2(.546, .399);
@@ -327,6 +329,17 @@ vec4 observerMedium(vec3 p,float gather,float breach){
             +.65*exp(-square(length((beamCoord-vec2(3.,6.))*vec2(.67,1.))/2.6));
  beams*=breach*.069*smoothstep(-41.,-17.,z)*(1.-smoothstep(4.,13.,z))*(.7+.3*n.b);
  float lit=density+sleeve+beams;
+ // (2.89.0) the eye burning gold from within, and lightning lighting the banks round where it leaves them
+ if(Grand.x>0.){
+  float burn=Grand.x*exp(-r*r/420.)*(.65+.55*n.g)*(.55+.45*smoothstep(-4.,6.,p.y));
+  float lum=dot(bankColor,vec3(.2126,.7152,.0722));
+  bankColor=mix(bankColor,vec3(1.,.70,.34)*(.45+.8*lum),clamp(burn,0.,.8))+vec3(.22,.12,.03)*burn;
+ }
+ if(Lightning.w>0.){
+  vec3 l=p-Lightning.xyz;
+  float flash=Lightning.w*(exp(-dot(l,l)/260.)+.18*exp(-dot(l,l)/2400.))*(.75+.4*fine.g);
+  bankColor=bankColor*(1.+.85*flash)+vec3(.18,.22,.36)*flash;
+ }
  return vec4((bankColor*density+vec3(.91,.95,1.)*sleeve+vec3(1.,.85,.57)*beams)/max(lit,.0001),lit);
 }
 vec4 observerSky(vec3 origin, vec3 ray, float limit) {

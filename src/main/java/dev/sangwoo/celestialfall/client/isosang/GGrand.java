@@ -27,6 +27,8 @@ import net.minecraft.util.math.Vec3d;
  *   sword and light is drawn in to its foot;</li>
  *   <li>the blast: a dome of light swelling over its ground, rings racing out along it, and a pillar of light into the sky.</li>
  * </ul>
+ * From afar (2.89.0) the shock waves and the cracks widen and reach further ({@link #grown}), the impact frame reaches
+ * watchers up to 90 blocks off, and the far view's own effects are added ({@link GFar}).
  * Every part is a function of the cast clock alone (smooth at any frame rate). The sky and the fall are the caster's
  * cutscene's (and the arena's watchers'); the strike and the blast are in the world for everyone.
  */
@@ -128,6 +130,7 @@ final class GGrand {
          strike(c, m, t, false);
          blast(c, m, t, false);
       }
+      GFar.additive(c, m);
    }
 
    /** The ink: the dark rims of the shock waves and the fissures, and the dust behind the waves. */
@@ -139,6 +142,7 @@ final class GGrand {
          strike(c, m, c.sec, true);
          blast(c, m, c.sec, true);
       }
+      GFar.alpha(c, m);
    }
 
    static void frame(Fx c, FxFrame f) {
@@ -163,7 +167,8 @@ final class GGrand {
       }
       float impact = impact(t, IsosangRules.G_STRIKE);
       if (impact > 0.0F) {
-         float near = FallingSword.shown(c) ? 1.0F : (float)Math.max(0.0, Math.min(1.0, (40.0 - c.camera.distanceTo(s)) / 20.0));
+         // (2.89.0) seen from afar too: whole within 40 blocks, gone by 90
+         float near = FallingSword.shown(c) ? 1.0F : (float)Math.max(0.0, Math.min(1.0, (90.0 - c.camera.distanceTo(s)) / 50.0));
          if (near > 0.0F) {
             f.impact(.85F * near * impact, 0.0F, GOLDEN);
          }
@@ -177,6 +182,7 @@ final class GGrand {
          f.light(s.add(0.0, 8.0, 0.0), GOLD, 36.0, .5F * b);
          f.shaft(s.add(0.0, 10.0, 0.0), GOLD, .25F * b);
       }
+      GFar.frame(c, f);
    }
 
    // ───────────────────────────── her face ─────────────────────────────
@@ -275,9 +281,10 @@ final class GGrand {
       }
       Vec3d s = FallingSword.strike(c.cast);
       Vec3d floor = s.add(0.0, .06, 0.0);
+      double grow = grown(c);
       if (tau < 1.2F) {
-         wave(m, floor, tau, 46.0, .28, ink);
-         wave(m, floor.add(0.0, .02, 0.0), tau - .09F, 30.0, .34, ink);
+         wave(m, floor, tau, 46.0, .28, ink, grow);
+         wave(m, floor.add(0.0, .02, 0.0), tau - .09F, 30.0, .34, ink, grow);
       }
       if (!ink) {
          float k = FxLib.kick(t, IsosangRules.G_STRIKE, .22F);
@@ -311,7 +318,7 @@ final class GGrand {
          return;
       }
       float charge = Ease.smooth(t, 3.3F, 4.7F), beat = heart(t);
-      double buried = Math.max(0.0, -GScene.height(t)) + .2;
+      double buried = Math.max(0.0, -GScene.height(t)) + .2, grow = grown(c);
       int side = bl.normal().dotProduct(c.camera.subtract(bl.point())) >= 0.0 ? 1 : -1;
       for (int i = 0; i < 90; i++) {
          if (i >= 40 + 50 * charge) {
@@ -324,18 +331,30 @@ final class GGrand {
          double z = (.45 + .5 * Ease.hash(i * 23 + 7)) * side;
          Vec3d p = bl.at(x, y, z);
          float al = on * bl.alpha() * (float)Math.sin(Math.PI * ph) * (.55F + .45F * (float)Math.sin(t * 17.0F + i * 2.1F)) * (.75F + .5F * beat);
-         m.softDisc(p, .16 + .06 * charge, AMBER, .45F * al);
-         m.star(p, .1 + .08 * Ease.hash(i * 23 + 9), GOLD_WHITE, .85F * al);
+         m.softDisc(p, (.16 + .06 * charge) * grow, AMBER, .45F * al);
+         m.star(p, (.1 + .08 * Ease.hash(i * 23 + 9)) * grow, GOLD_WHITE, .85F * al);
       }
    }
 
-   /** A shock wave {@code tau} seconds old racing out along the ground from {@code o}: bright, its ink rim, the dust behind. */
-   static void wave(EffectMesh m, Vec3d o, float tau, double reach, double pace, boolean ink) {
+   /**
+    * How much the world effects grow for a far watcher (2.89.0): 1 near; up to the far view's stroke scale from afar
+    * ({@link GFar#scale}, by {@link GFar#weight}).
+    */
+   static double grown(Fx c) {
+      float w = GFar.weight(c);
+      return 1.0 + (GFar.scale(c) - 1.0) * w;
+   }
+
+   /**
+    * A shock wave {@code tau} seconds old racing out along the ground from {@code o}: bright, its ink rim, the dust behind;
+    * {@code grow} widens it (and sends it a little further) for a far watcher.
+    */
+   static void wave(EffectMesh m, Vec3d o, float tau, double reach, double pace, boolean ink, double grow) {
       if (tau <= 0.0F) {
          return;
       }
-      double r = reach * (1.0 - Math.exp(-tau / pace));
-      double w = .6 + 2.4 * tau;
+      double r = reach * (1.0 + .25 * (grow - 1.0) / Math.max(1.0, grow)) * (1.0 - Math.exp(-tau / pace));
+      double w = (.6 + 2.4 * tau) * grow;
       float a = Ease.smooth(tau, 0.0F, .02F) * (1.0F - Ease.smooth(tau, .15F, .95F));
       if (ink) {
          band(m, o, X, Z, r + w * .55, w * .35, INK, .5F * a, 96);
@@ -358,9 +377,12 @@ final class GGrand {
       float tau = t - IsosangRules.G_STRIKE;
       double grown = Ease.out(tau, 0.0F, .32F);
       int seed = c.cast.id().hashCode();
+      // (2.89.0) from afar the cracks run further and wider
+      float far = GFar.weight(c);
+      double wide = grown(c);
       for (int i = 0; i < FISSURES; i++) {
          double angle = (i + .35 * Ease.hash(seed + i * 11)) * Math.PI * 2.0 / FISSURES;
-         double length = 9.0 + 9.0 * Ease.hash(seed + i * 11 + 3);
+         double length = (9.0 + 9.0 * Ease.hash(seed + i * 11 + 3)) * (1.0 + .9 * far);
          Vec3d[] points = new Vec3d[10];
          for (int j = 0; j < points.length; j++) {
             double u = (double)j / (points.length - 1);
@@ -368,7 +390,7 @@ final class GGrand {
             double bend = (Ease.hash(seed + i * 11 + j * 3 + 7) - .5) * (.18 + .1 * u);
             points[j] = o.add(Math.cos(angle + bend) * r, 0.0, Math.sin(angle + bend) * r);
          }
-         crack(m, points, grown, g, ink, 1.0);
+         crack(m, points, grown, g, ink, wide);
          Vec3d[] fork = new Vec3d[5];
          double turn = (Ease.hash(seed + i * 11 + 5) > .5 ? 1 : -1) * (.45 + .25 * Ease.hash(seed + i * 11 + 9));
          fork[0] = points[5];
@@ -376,7 +398,7 @@ final class GGrand {
             double r = length * .22 * j / (fork.length - 1);
             fork[j] = points[5].add(Math.cos(angle + turn) * r, 0.0, Math.sin(angle + turn) * r);
          }
-         crack(m, fork, Math.max(0.0, (grown - .55) / .45), g * .8F, ink, .7);
+         crack(m, fork, Math.max(0.0, (grown - .55) / .45), g * .8F, ink, .7 * wide);
       }
    }
 
@@ -428,7 +450,8 @@ final class GGrand {
          double x1 = (Ease.hash(seed + 4) * 2.0 - 1.0) * Math.max(.2, FallingSword.half(y1) - .4);
          Vec3d from = bl.at(x0, y0, .45 * side), to = bl.at(x1, y1, .45 * side);
          float al = (float)Math.sin(Math.PI * u) * showing;
-         bolt(m, from, to, bl.across().normalize(), seed, .2, .05, .9F * al);
+         double grow = grown(c);
+         bolt(m, from, to, bl.across().normalize(), seed, .2 * grow, .05 * grow, .9F * al);
       }
    }
 
@@ -439,6 +462,7 @@ final class GGrand {
          return;
       }
       Vec3d foot = s.add(0.0, 1.2, 0.0);
+      double grow = grown(c);
       for (int i = 0; i < 72; i++) {
          double ph = ((double)t * (.9 + .8 * Ease.hash(i * 19 + 1)) + Ease.hash(i * 19 + 3)) % 1.0;
          double az = Ease.hash(i * 19 + 5) * Math.PI * 2.0, el = .1 + 1.1 * Ease.hash(i * 19 + 7);
@@ -447,10 +471,10 @@ final class GGrand {
          double in = ph * ph;
          Vec3d p = start.add(foot.subtract(start).multiply(in)), q = start.add(foot.subtract(start).multiply(Math.max(0.0, in - .08)));
          float al = charge * (float)Math.sin(Math.PI * ph);
-         m.softTaper(q, p, .02, .1, AMBER, .35F * al);
-         m.star(p, .14, GOLD_WHITE, .6F * al);
+         m.softTaper(q, p, .02 * grow, .1 * grow, AMBER, .35F * al);
+         m.star(p, .14 * grow, GOLD_WHITE, .6F * al);
       }
-      m.softDisc(foot, 1.5 + 2.5 * charge, GOLD_WHITE, .35F * charge);
+      m.softDisc(foot, (1.5 + 2.5 * charge) * grow, GOLD_WHITE, .35F * charge);
    }
 
    // ───────────────────────────── the blast ─────────────────────────────
@@ -463,8 +487,9 @@ final class GGrand {
       }
       Vec3d s = FallingSword.strike(c.cast);
       double reach = Math.max(31.0, GArenaClient.radius(c.cast));
-      wave(m, s.add(0.0, .08, 0.0), tau, reach + 6.0, .35, ink);
-      wave(m, s.add(0.0, .1, 0.0), tau - .12F, reach, .45, ink);
+      double grow = grown(c);
+      wave(m, s.add(0.0, .08, 0.0), tau, reach + 6.0, .35, ink, grow);
+      wave(m, s.add(0.0, .1, 0.0), tau - .12F, reach, .45, ink, grow);
       if (ink) {
          return;
       }
