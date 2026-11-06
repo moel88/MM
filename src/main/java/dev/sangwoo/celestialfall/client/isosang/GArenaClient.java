@@ -5,6 +5,7 @@ import dev.sangwoo.celestialfall.client.MapClient;
 import dev.sangwoo.celestialfall.client.StandClient;
 import dev.sangwoo.celestialfall.isosang.GArenaBounds;
 import dev.sangwoo.celestialfall.isosang.GArenaServer;
+import dev.sangwoo.celestialfall.isosang.GExplosionRules;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -80,14 +81,22 @@ public final class GArenaClient {
       return var1 == null ? null : var1.arena;
    }
 
-   public static double radius(StandClient.Cast var0) {
+   /**
+    * The ground G's last blast covers (2.87.1, as the server's GExplosionDamage): the arena it was cast in, or 62 × 47
+    * blocks round where its sword strikes (GExplosionRules.area; before, 20 blocks round it).
+    */
+   public static GArenaBounds area(StandClient.Cast var0) {
       GArenaBounds var1 = arena(var0);
-      return var1 == null ? 20.0 : var1.reach(FallingSword.strike(var0));
+      return var1 != null ? var1 : GExplosionRules.area(FallingSword.strike(var0));
+   }
+
+   /** How far from where the sword strikes the blast's ground goes, to its furthest corner. */
+   public static double radius(StandClient.Cast var0) {
+      return area(var0).reach(FallingSword.strike(var0));
    }
 
    public static boolean contains(StandClient.Cast var0, Vec3d var1) {
-      GArenaBounds var2 = arena(var0);
-      return var2 == null ? var1.squaredDistanceTo(FallingSword.strike(var0)) <= 400.0 : var2.contains(var1);
+      return area(var0).contains(var1);
    }
 
    private static boolean live(StandClient.Cast var0) {

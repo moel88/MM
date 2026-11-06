@@ -1,4 +1,15 @@
-> **현재 통합본: Botand 2.87.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.87.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.87.1 — 이소상 G: 마지막 폭발 62 × 47, 거리별 피해 200·100·50·20
+
+- **폭발 범위:** 검이 꽂힌 뒤 4.85초에 터지는 폭발이 62 × 47블록을 덮습니다(정원 경기장과 같은 크기).
+  - 경기장 밖에서는 꽂힌 곳을 가운데로, 경기장과 같은 방향의 상자입니다(동서 62, 남북 47). 전에는 꽂힌 곳 둘레 20블록이었습니다.
+  - 정원 경기장 안에서는 전처럼 경기장 전체입니다.
+- **피해:** 꽂힌 곳에서 5블록 안 200, 5~15블록 100, 15~30블록 50, 그보다 멀면 20입니다. 경기장 안도 같습니다(전에는 200·140·90·50).
+- **그림:** 폭발의 먼지와 빛줄기도 그 범위를 채웁니다.
+- **서버도 바꿔야 합니다:** 맞는 범위와 피해(서버 규칙)가 바뀌었습니다.
+
+[RELEASE_2.87.1_KO.md](RELEASE_2.87.1_KO.md)를 확인하세요. 2.87.0은 [RELEASE_2.87.0_KO.md](RELEASE_2.87.0_KO.md)입니다.
 
 # 보탠드 2.87.0 — 이소상 G: 사용자님 G를 영상에 맞춰 고치고 이펙트 강화
 

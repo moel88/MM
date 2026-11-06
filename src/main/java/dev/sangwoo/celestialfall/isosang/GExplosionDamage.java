@@ -16,7 +16,6 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 public final class GExplosionDamage {
@@ -25,20 +24,25 @@ public final class GExplosionDamage {
 
    public static List<LivingEntity> apply(ServerPlayerEntity var0, Vec3d var1, float var2, UUID var3) {
       ServerWorld var4 = var0.getServerWorld();
+      // (2.87.1) the arena, or out of it 62 × 47 blocks round where the sword struck (GExplosionRules.area)
       GArenaBounds var5 = GArenaServer.arena(var3);
+      if (var5 == null) {
+         var5 = GExplosionRules.area(var1);
+      }
+
       DamageSource var6 = new DamageSource(var4.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(IsosangAttack.ULTIMATE_DAMAGE), var0);
       ArrayList var7 = new ArrayList();
 
       for (LivingEntity var9 : var4.getEntitiesByClass(
          LivingEntity.class,
-         var5 == null ? new Box(var1, var1).expand(20.0) : var5.box(),
+         var5.box(),
          var1x -> var1x != var0 && var1x.isAlive() && !var1x.isSpectator() && var1x.canHit() && !(var1x instanceof MerchantEntity)
       )) {
          if (var9 instanceof PlayerEntity var10 && !var0.shouldDamagePlayer(var10)) {
             continue;
          }
 
-         float var12 = var5 == null ? GExplosionRules.damage(var9.getPos().squaredDistanceTo(var1)) : var5.damage(var9.getPos(), var1);
+         float var12 = var5.damage(var9.getPos(), var1);
          if (!(var12 <= 0.0F)) {
             CombatManager.interrupt(var9);
             var9.timeUntilRegen = 0;

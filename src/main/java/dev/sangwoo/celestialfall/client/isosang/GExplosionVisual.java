@@ -147,7 +147,8 @@ final class GExplosionVisual {
       double var3 = (double)(var2 - 4.85F);
       if (!(var3 < 0.0) && !(var3 > 2.1)) {
          Vec3d var5 = FallingSword.strike(var0.cast);
-         GArenaBounds var6 = GArenaClient.arena(var0.cast);
+         // (2.87.1) out of the arena too its blast covers 62 × 47 blocks, its rays thrown up all over that ground as in the arena
+         GArenaBounds var6 = GArenaClient.area(var0.cast);
          double var7 = GArenaClient.radius(var0.cast) / 20.0;
          float var9 = (float)(Math.min(1.0, var3 / 0.018) * Math.exp(-var3 * 15.0));
          if (var9 > 0.002F) {
@@ -156,7 +157,7 @@ final class GExplosionVisual {
             var1.star(var5.add(0.0, 0.8, 0.0), 7.0, 16775120, 0.65F * var9);
          }
 
-         for (int var10 = 0; var10 < (var6 == null ? 12 : 32); var10++) {
+         for (int var10 = 0; var10 < 32; var10++) {
             double var11 = var3 - 0.012 - 0.032 * rand(var10, 47);
             if (!(var11 <= 0.0) && !(var11 > 0.58)) {
                double var13 = (double)var10 * 2.399963 + 0.17 * rand(var10, 51);
@@ -166,7 +167,7 @@ final class GExplosionVisual {
                double var19 = 1.0 - Math.exp(-35.0 * var11);
                double var21 = (var16 ? 9.0 + 6.0 * rand(var10, 53) : 6.0 + 7.0 * rand(var10, 53)) * var19;
                Vec3d var23 = var5.add(var15.multiply(var17)).add(0.0, 0.12, 0.0);
-               if (var6 != null && var16) {
+               if (var16) {
                   var23 = new Vec3d(
                      var6.minX() + 1.5 + (var6.maxX() - var6.minX() - 3.0) * rand(var10, 97),
                      var5.y + 0.12,

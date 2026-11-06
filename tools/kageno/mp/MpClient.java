@@ -346,8 +346,9 @@ public final class MpClient implements ClientModInitializer {
         "5 ISOSANG","40 HOME","45 HEAL","60 H","75 M1","100 E","120 M1","130 DIST3","140 R","200 H",
         "930 H","980 END"};
     /**
-     * Lee So-sang's G (2.83.0, MP_ONLY=isosangg): G with the watcher 12 blocks ahead at full health (inside its 30 blocks,
-     * 3 past where its sword strikes): the watcher is struck 100 as it strikes (3.1 s), no guard, no throw; G again while it
+     * Lee So-sang's G (2.83.0, MP_ONLY=isosangg): G with the watcher 30 blocks ahead at full health (2.87.1: 21 past where
+     * its sword strikes, in the blast's 62 × 47 blocks but out of the 20 blocks round it before): the watcher is struck 50
+     * as it strikes (4.85 s), no guard, no throw; G again while it
      * is under way (refused), the attack while it holds the caster (refused), and G once it is over (refused: 5 minutes).
      * The caster's camera is in its cutscene, in its own space (the world hidden), until 4.83 s; the watcher's never is, nor
      * does its world hide: it sees the caster's hand, and where it struck, the landing's fire and dust. Both log what they
@@ -356,7 +357,7 @@ public final class MpClient implements ClientModInitializer {
      * unharmed, and the watcher's health.
      */
     private static final String[] ISOSANGG_SCRIPT={
-        "5 ISOSANG","40 DIST12","45 HEAL","60 G","75 G","90 M1","300 G","360 END"};
+        "5 ISOSANG","40 DIST30","45 HEAL","60 G","75 G","90 M1","300 G","360 END"};
     private static final String[] STEPS=ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};

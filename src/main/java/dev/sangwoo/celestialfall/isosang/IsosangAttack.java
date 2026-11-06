@@ -621,8 +621,9 @@ public final class IsosangAttack {
         send(p,u.id,ULTIMATE,u.start,u.yaw,STOPPED,-1,null,null,null,null,u);
     }
     /**
-     * G's sword strikes (the user's 2.87.0 preview, GExplosionDamage): round where it strikes (200 within 5 blocks, 100
-     * within 10, 50 within 20), or, in the garden's arena, everyone in the arena by how far from it; its user aside.
+     * G's sword strikes (the user's 2.87.0 preview, GExplosionDamage): everyone in 62 × 47 blocks round where it strikes,
+     * or in the garden's arena everyone in the arena, by how far from it (2.87.1: 200 within 5 blocks, 100 within 15, 50
+     * within 30, 20 further on, GExplosionRules); its user aside.
      */
     private static void strike(ServerPlayerEntity p,Ultimate u){
         List<LivingEntity> struck=GExplosionDamage.apply(p,u.strike,u.yaw,u.id);

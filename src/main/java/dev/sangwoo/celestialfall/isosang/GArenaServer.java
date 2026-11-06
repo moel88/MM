@@ -57,29 +57,20 @@ public final class GArenaServer {
       }
    }
 
-   public static BossThreats.Zone threat(Vec3d var0, double var1, double var3, double var5, ServerPlayerEntity var7) {
+   /**
+    * The ground G's last blast strikes, as a boss reads it: the arena it was cast in, or (2.87.1) 62 × 47 blocks round
+    * where its sword strikes ({@link GExplosionRules#area}; before, a ring of 20 blocks).
+    */
+   public static BossThreats.Zone threat(Vec3d var0, ServerPlayerEntity var7) {
       IsosangAttack.UltimateNow var8 = IsosangAttack.ultimateNow(var7);
 
       for (GArenaServer.Scene var10 : scenes.values()) {
          if (var8 != null && var10.start == var8.start() && var10.caster.equals(var7.getUuid())) {
-            GArenaBounds var11 = var10.arena;
-            return new BossThreats.Zone(
-               var11.minX(),
-               var11.minY(),
-               var11.minZ(),
-               0.0F,
-               0.0,
-               var11.maxZ() - var11.minZ(),
-               var11.minX() - var11.maxX(),
-               0.0,
-               0.0,
-               var11.maxY() - var11.minY(),
-               0.0
-            );
+            return var10.arena.zone();
          }
       }
 
-      return BossThreats.Zone.ring(var0, var1, var3, var5);
+      return GExplosionRules.area(var0).zone();
    }
 
    public static GArenaBounds arena(UUID var0) {

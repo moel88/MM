@@ -59,14 +59,35 @@ class FallingSwordTest {
     @Test void itStrikesAsTheCutsceneEndsAndHurtsByHowFar(){
         // (the user's preview) the server strikes at 97 ticks, the end of the hold; by distance from the strike, squared
         assertEquals(IsosangRules.G_HOLD,GExplosionRules.HIT_TICK);
-        assertEquals(200,GExplosionRules.damage(4.9*4.9));assertEquals(100,GExplosionRules.damage(9.9*9.9));
-        assertEquals(50,GExplosionRules.damage(19.9*19.9));assertEquals(0,GExplosionRules.damage(20.1*20.1));
-        assertEquals(0,GExplosionRules.damage(Double.NaN));
-        // in the garden's arena: everyone in it, by how far
-        var arena=GArenaBounds.GARDEN;Vec3d s=new Vec3d(30,81,-50);
-        assertEquals(200,arena.damage(s.add(3,0,0),s));assertEquals(140,arena.damage(s.add(10,0,0),s));
-        assertEquals(90,arena.damage(s.add(20,0,0),s));assertEquals(50,arena.damage(s.add(30,0,-10),s));
-        assertEquals(0,arena.damage(new Vec3d(100,81,-50),s),"outside the arena");
+        // (2.87.1, user request) 200 within 5 blocks, 100 within 15, 50 within 30, 20 further on
+        assertEquals(200,GExplosionRules.damage(0));assertEquals(200,GExplosionRules.damage(5*5));
+        assertEquals(100,GExplosionRules.damage(5.01*5.01));assertEquals(100,GExplosionRules.damage(15*15));
+        assertEquals(50,GExplosionRules.damage(15.01*15.01));assertEquals(50,GExplosionRules.damage(30*30));
+        assertEquals(20,GExplosionRules.damage(30.01*30.01));assertEquals(20,GExplosionRules.damage(60*60));
+        assertEquals(0,GExplosionRules.damage(Double.NaN));assertEquals(0,GExplosionRules.damage(-1));
+        // its ground out of the arena: 62 × 47 blocks round the strike, lying as the garden arena lies (east-west × north-south)
+        Vec3d s=new Vec3d(-120.3,72,415.6);var area=GExplosionRules.area(s);
+        assertEquals(62,area.maxX()-area.minX(),1e-9);assertEquals(47,area.maxZ()-area.minZ(),1e-9);
+        assertEquals(GArenaBounds.GARDEN.maxX()-GArenaBounds.GARDEN.minX(),area.maxX()-area.minX(),1e-9);
+        assertEquals(GArenaBounds.GARDEN.maxZ()-GArenaBounds.GARDEN.minZ(),area.maxZ()-area.minZ(),1e-9);
+        assertEquals(s.x,(area.minX()+area.maxX())/2,1e-9);assertEquals(s.z,(area.minZ()+area.maxZ())/2,1e-9);
+        assertEquals(200,area.damage(s.add(3,0,-3),s));assertEquals(100,area.damage(s.add(0,0,14),s));
+        assertEquals(50,area.damage(s.add(-29,0,0),s));assertEquals(50,area.damage(s.add(0,0,-23),s));
+        assertEquals(20,area.damage(s.add(30.9,0,0),s),"the ground's far east, past 30 blocks");
+        assertEquals(20,area.damage(s.add(-30,0,20),s),"a corner, 36 blocks off");
+        assertEquals(0,area.damage(s.add(31.1,0,0),s),"past its east edge");assertEquals(0,area.damage(s.add(0,0,23.6),s),"past its south edge");
+        assertEquals(0,area.damage(s.add(0,-20.5,0),s),"too far under");assertEquals(0,area.damage(s.add(0,20.5,0),s),"too far over");
+        assertEquals(200,area.damage(s.add(1,12,0),s),"how far is across the ground");
+        assertEquals(Math.hypot(31,23.5),area.reach(s),1e-9);
+        // a boss reads the same ground (BossThreats, GArenaServer.threat): in its corners, not past its edges
+        var zone=area.zone();
+        assertTrue(zone.covers(s,0));assertTrue(zone.covers(s.add(30.9,0,23.4),0));assertTrue(zone.covers(s.add(-30.9,19.9,-23.4),0));
+        assertFalse(zone.covers(s.add(31.5,0,0),.3));assertFalse(zone.covers(s.add(0,0,-24),.3));assertFalse(zone.covers(s.add(0,-20.5,0),.3));
+        // in the garden's arena: everyone in it, by how far, the same steps
+        var arena=GArenaBounds.GARDEN;Vec3d a=new Vec3d(30,81,-50);
+        assertEquals(200,arena.damage(a.add(3,0,0),a));assertEquals(100,arena.damage(a.add(10,0,0),a));
+        assertEquals(50,arena.damage(a.add(20,0,0),a));assertEquals(20,arena.damage(a.add(30,0,-10),a));
+        assertEquals(0,arena.damage(new Vec3d(100,81,-50),a),"outside the arena");
     }
     @Test void theFireLeapsUpAfterTheBlack(){
         // the screen black after the cut, lifting just before the fire (the videos'), all within the cast's life

@@ -109,17 +109,13 @@ final class GClouds {
                vec("BladeAxis", local(var2.axis(), var10, var11, var12));
                vec("BladeNormal", local(var3 != 4 ? var2.normal() : var2.normal().normalize(), var10, var11, var12));
                shader.getUniform("DistantView").set(!var7 && var3 != 4 ? 0.0F : GWorld.distantWeight(var1, var14));
-               GArenaBounds var15 = GArenaClient.arena(var1);
+               // (2.87.1) the blast fills its ground: the arena, or 62 × 47 blocks round where the sword struck
+               GArenaBounds var15 = GArenaClient.area(var1);
                Vec3d var16 = FallingSword.strike(var1);
                float var17 = (float)GArenaClient.radius(var1);
                shader.getUniform("BurstRadius").set(var17);
                shader.getUniform("ArenaRect")
-                  .set(
-                     var15 == null ? -var17 : (float)(var15.minX() - var16.x),
-                     var15 == null ? -var17 : (float)(var15.minZ() - var16.z),
-                     var15 == null ? var17 : (float)(var15.maxX() - var16.x),
-                     var15 == null ? var17 : (float)(var15.maxZ() - var16.z)
-                  );
+                  .set((float)(var15.minX() - var16.x), (float)(var15.minZ() - var16.z), (float)(var15.maxX() - var16.x), (float)(var15.maxZ() - var16.z));
                shader.getUniform("Age").set(var4);
                shader.getUniform("Mode").set(var3);
                RenderSystem.disableDepthTest();
