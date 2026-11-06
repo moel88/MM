@@ -367,8 +367,8 @@ final class GGrand {
          double z = (.45 + .5 * Ease.hash(i * 23 + 7)) * side;
          Vec3d p = bl.at(x, y, z);
          float al = on * bl.alpha() * (float)Math.sin(Math.PI * ph) * (.55F + .45F * (float)Math.sin(t * 17.0F + i * 2.1F)) * (.75F + .5F * beat);
-         m.softDisc(p, .1 + .05 * charge, AMBER, .45F * al);
-         m.star(p, .07 + .05 * Ease.hash(i * 23 + 9), GOLD_WHITE, .8F * al);
+         m.softDisc(p, .16 + .06 * charge, AMBER, .45F * al);
+         m.star(p, .1 + .08 * Ease.hash(i * 23 + 9), GOLD_WHITE, .85F * al);
       }
    }
 
