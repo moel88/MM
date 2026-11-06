@@ -22,9 +22,10 @@ import static dev.sangwoo.celestialfall.client.isosang.SwordFormation.*;
  * may be the one she looks at ({@link #aimed}: the camera's middle, as R held's foe, whether or not the shift lock is
  * on): only she sees it, white along its outline with a blue flower opening at its foot, while Z may move her
  * ({@link #ready}). Z flies her onto it (IsosangClient: Z with the sword's place, the server's IsosangAttack.cross);
- * everyone sees the flight ({@link #flights}): her body gone into a blue bubble with white petals scattering at the
- * sword she left, a blue orb trailing white streaks to the other in Z_TRAVEL ticks, and a burst of blue lightning as
- * she stands on its pommel, white petals at its foot. Her body is not drawn while she flies ({@link #hides}).
+ * everyone sees the flight: her body gone into a blue bubble, a blue orb trailing white streaks to the other sword in
+ * Z_TRAVEL ticks, and a burst of blue lightning as she stands on its pommel, petal shards drifting about her; a white
+ * flower blooms at the foot of the sword she leaves and of the one she lands on and is gone again ({@link #bloom},
+ * 2.93.1). Her body is not drawn while she flies ({@link #hides}).
  */
 public final class SwordStep {
     private SwordStep(){}
@@ -122,8 +123,11 @@ public final class SwordStep {
         for(var fl:IsosangClient.FLIGHTS.getOrDefault(c.cast.id(),java.util.List.of())){
             float since=since(c,fl,t);if(since<-.05f||since>FLIGHT_LIFE)continue;
             Vec3d from=foot(centre,yaw,all[fl.from()]),to=foot(centre,yaw,all[fl.to()]);
-            petals(m,from.add(0,.03,0),all[fl.from()].seed(),since,false);
-            petals(m,to.add(0,.03,0),all[fl.to()].seed()+5,since-flight(),false);
+            // (2.93.1, user request: "원본 영상 잘 보면 검에서 이동하면 검 아래 꽃이 피어났다가 사라짐") the white flower at the
+            // foot of the sword she leaves and of the one she lands on, blooming and gone again
+            bloom(m,from.add(0,.03,0),all[fl.from()].seed(),departs(since),false,t);
+            bloom(m,to.add(0,.03,0),all[fl.to()].seed()+5,arrives(since),false,t);
+            drift(m,planted(centre,yaw,all[fl.to()]).add(0,CHEST,0),all[fl.to()].seed(),since-flight(),false);
             bubble(m,c.camera,planted(centre,yaw,all[fl.from()]).add(0,CHEST,0),since,false);
         }
     }
@@ -143,8 +147,9 @@ public final class SwordStep {
             bubble(m,c.camera,a,since,true);
             orb(m,a,b,since,c.cast.id().hashCode()+(int)fl.moved());
             burst(m,b,since-flight(),c.cast.id().hashCode()+(int)fl.moved(),t);
-            petals(m,foot(centre,yaw,all[fl.from()]).add(0,.03,0),all[fl.from()].seed(),since,true);
-            petals(m,foot(centre,yaw,all[fl.to()]).add(0,.03,0),all[fl.to()].seed()+5,since-flight(),true);
+            bloom(m,foot(centre,yaw,all[fl.from()]).add(0,.03,0),all[fl.from()].seed(),departs(since),true,t);
+            bloom(m,foot(centre,yaw,all[fl.to()]).add(0,.03,0),all[fl.to()].seed()+5,arrives(since),true,t);
+            drift(m,b,all[fl.to()].seed(),since-flight(),true);
         }
     }
     /** Seconds since flight {@code fl} of formation {@code c} began, at {@code t} seconds into it. */
@@ -273,23 +278,76 @@ public final class SwordStep {
     static final float BURST=.45f;
     static final int BOLTS=6;
     /**
-     * White petals scattering at a sword's foot as she leaves it or lands on it (the video's): ten white petals thrown out
-     * and up a little, turning, fading in PETALS seconds.
+     * The white flower at a sword's foot as she flies from it or onto it (2.93.1, user request: "원본 영상 잘 보면 검에서
+     * 이동하면 검 아래 꽃이 피어났다가 사라짐", the video read frame by frame): white crystal petals, blue at their foot,
+     * opening from a closed bud ({@code oa[0]} 0) round the sword's foot and curling out at their tips ({@code oa[0]} 1, a
+     * little over as they open), six outer and three inner ones, a faint ring of light on the ground once open; their bodies
+     * blended ({@code light} false) or their light added (white rims, a blue glow, a glint), {@code oa[1]} strong.
      */
-    static void petals(EffectMesh m,Vec3d f,int seed,float since,boolean light){
-        if(since<0||since>PETALS)return;
-        float a=1-Ease.smooth(since,PETALS*.4f,PETALS);double go=Ease.out(since,0,PETALS);
-        for(int j=0;j<10;j++){
-            int s=seed*37+j*13;double az=Math.PI*2*(j+Ease.hash(s))/10,spin=since*(4+4*Ease.hash(s+1));
-            Vec3d out=new Vec3d(Math.cos(az),0,Math.sin(az));
-            Vec3d c=f.add(out.multiply(.25+.75*go*(.6+.4*Ease.hash(s+2)))).add(0,.1+.45*go*Ease.hash(s+3)-.2*go*go,0);
-            double size=.13*(1-.3*go);
-            Vec3d u=new Vec3d(Math.cos(az+spin),.4,Math.sin(az+spin)).normalize().multiply(size),v=out.crossProduct(UP).normalize().multiply(size*.45);
-            if(!light){m.quad(c.subtract(u),c.subtract(v),c.add(u),c.add(v),0xeef4ff,.9f*a);}
-            else m.softDisc(c,size*1.6,PALE,.25f*a);
+    static void bloom(EffectMesh m,Vec3d f,int seed,float[] oa,boolean light,float t){
+        float open=oa[0],a=oa[1];if(a<=.01f)return;
+        double size=BLOOM,turn=Ease.hash(seed+3)*Math.PI*2+t*.25,wide=Math.min(1,open);
+        for(int ring=0;ring<2;ring++){
+            int petals=ring==0?6:3;
+            for(int j=0;j<petals;j++){
+                int s=seed*31+j*7+ring*97;
+                double az=turn+Math.PI*2*(j+(ring==0?0:.5)+.15*(Ease.hash(s)-.5))/petals;
+                double el=Math.toRadians(ring==0?84-(46+8*Ease.hash(s+1))*open:88-24*open);
+                double len=(ring==0?.5+.12*Ease.hash(s+2):.34+.06*Ease.hash(s+2))*size,wid=(ring==0?.19:.12)*size*(.45+.55*wide);
+                Vec3d out=new Vec3d(Math.cos(az),0,Math.sin(az)),side=new Vec3d(-Math.sin(az),0,Math.cos(az));
+                Vec3d dir=out.multiply(Math.cos(el)).add(0,Math.sin(el),0);
+                Vec3d mid=f.add(dir.multiply(len*.42)),tip=f.add(dir.multiply(len)).add(out.multiply(.16*len*open)).add(0,-.05*len*open,0);
+                Vec3d l=mid.add(side.multiply(wid)),r=mid.subtract(side.multiply(wid));
+                if(!light){
+                    m.vertex(f,BLOOM_BASE,.9f*a);m.vertex(l,BLOOM_MID,.88f*a);m.vertex(tip,WHITE,.92f*a);m.vertex(tip,WHITE,.92f*a);
+                    m.vertex(f,BLOOM_BASE,.9f*a);m.vertex(tip,WHITE,.92f*a);m.vertex(r,BLOOM_MID,.88f*a);m.vertex(r,BLOOM_MID,.88f*a);
+                }else{
+                    double w=.02*size;
+                    m.line(l,tip,w,WHITE,.7f*a);m.line(r,tip,w,WHITE,.7f*a);m.line(f,l,w*.7,PALE,.4f*a);m.line(f,r,w*.7,PALE,.4f*a);
+                }
+            }
+        }
+        if(light){
+            m.softDisc(f.add(0,.08,0),.7*size,BLUE,.22f*a);
+            m.ring(f.add(0,.02,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.55*size*(.5+.5*wide),40,1,.02,PALE,.35f*a*(float)wide,0);
+            glint8(m,f.add(0,.25*size,0),.1*size*(.6+.4*twinkle(t,seed)),WHITE,.5f*a);
         }
     }
-    static final float PETALS=.5f;
+    static final double BLOOM=1.05;
+    static final int BLOOM_BASE=0x3a62e0,BLOOM_MID=0xc8dcff;
+    /**
+     * How open and how strong the flower at the sword she leaves is {@code s} seconds into her flight (the video: open by
+     * 0.12 s, gone some half a second on): {open, strength}.
+     */
+    static float[] departs(float s){
+        return new float[]{(float)Math.min(1.08,backOut(Ease.unit(s,0,DEPART_OPEN))),Ease.smooth(s,0,.04f)*(1-Ease.smooth(s,DEPART_FADE0,DEPART_FADE1))};
+    }
+    /**
+     * The same for the sword she lands on (the video: a closed bud there as the orb comes, 0.15 s on, opening as she lands
+     * and stands on it, full by 0.38 s, gone by 0.65 s).
+     */
+    static float[] arrives(float s){
+        return new float[]{(float)Math.min(1.08,backOut(Ease.unit(s,ARRIVE_OPEN0,ARRIVE_OPEN1))),Ease.smooth(s,ARRIVE_BUD,ARRIVE_BUD+.05f)*(1-Ease.smooth(s,ARRIVE_FADE0,ARRIVE_FADE1))};
+    }
+    static final float DEPART_OPEN=.14f,DEPART_FADE0=.32f,DEPART_FADE1=.52f,ARRIVE_BUD=.13f,ARRIVE_OPEN0=.24f,ARRIVE_OPEN1=.4f,ARRIVE_FADE0=.46f,ARRIVE_FADE1=.66f;
+    /**
+     * Small petal shards drifting out about her body as she lands (the video's), turning, fading in DRIFT seconds: their
+     * bodies blended or a faint blue glow added.
+     */
+    static void drift(EffectMesh m,Vec3d at,int seed,float s,boolean light){
+        if(s<0||s>DRIFT)return;
+        float a=Ease.smooth(s,0,.05f)*(1-Ease.smooth(s,DRIFT*.5f,DRIFT));double go=Ease.out(s,0,DRIFT);
+        for(int j=0;j<6;j++){
+            int q=seed*41+j*17;double az=Math.PI*2*(j+Ease.hash(q))/6,spin=s*(5+4*Ease.hash(q+1));
+            Vec3d out=new Vec3d(Math.cos(az),0,Math.sin(az));
+            Vec3d c=at.add(out.multiply(.35+.55*go*(.6+.4*Ease.hash(q+2)))).add(0,(Ease.hash(q+3)-.4)*.6+.25*go,0);
+            double size=.09*(1-.35*go);
+            Vec3d u=new Vec3d(Math.cos(az+spin),.5,Math.sin(az+spin)).normalize().multiply(size),v=out.crossProduct(UP).normalize().multiply(size*.4);
+            if(!light)m.quad(c.subtract(u),c.subtract(v),c.add(u),c.add(v),0xd8e6ff,.85f*a);
+            else m.softDisc(c,size*1.8,AZURE,.25f*a);
+        }
+    }
+    static final float DRIFT=.55f;
 
     /** Whether {@code e}'s body is left out of the frame now (2.93.0: she is the orb while she flies). */
     public static boolean hides(Entity e){

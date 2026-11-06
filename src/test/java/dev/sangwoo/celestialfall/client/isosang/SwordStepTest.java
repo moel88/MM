@@ -59,6 +59,25 @@ class SwordStepTest {
         for(int i=0;i<=6;i++){Vec3d d=foot.lerp(top,i/6.0).subtract(eye);near=Math.min(near,Math.acos(Math.min(1,d.dotProduct(look)/d.length())));}
         return near;
     }
+    @Test void aWhiteFlowerBloomsAtBothSwordsAndIsGoneAgain(){
+        // (2.93.1) "원본 영상 잘 보면 검에서 이동하면 검 아래 꽃이 피어났다가 사라짐": as she leaves a sword its flower opens at
+        // once and is gone some half a second on; the one she lands on shows a closed bud as the orb comes, opens as she lands
+        // on it and is gone too
+        float fl=IsosangRules.Z_TRAVEL/20f;
+        assertEquals(0,SwordStep.departs(0)[1],1e-6,"nothing before she leaves");
+        assertTrue(SwordStep.departs(.12f)[0]>.9&&SwordStep.departs(.12f)[1]>.95,"open as she flies off");
+        assertEquals(0,SwordStep.departs(.6f)[1],1e-6,"gone again");
+        assertEquals(0,SwordStep.arrives(.1f)[1],1e-6,"nothing there before the orb comes near");
+        float[] bud=SwordStep.arrives(fl-.02f);assertTrue(bud[1]>.5&&bud[0]<.05,"a closed bud there as she comes: "+java.util.Arrays.toString(bud));
+        float[] full=SwordStep.arrives(.42f);assertTrue(full[0]>.95&&full[1]>.95,"open as she stands on it");
+        assertEquals(0,SwordStep.arrives(.7f)[1],1e-6,"gone again");
+        assertTrue(SwordStep.arrives(.7f)[1]<1e-6&&SwordStep.departs(.7f)[1]<1e-6&&.7f<SwordStep.FLIGHT_LIFE,"drawn as long as the flight's light lasts");
+        // no jumps: every value a continuous function of the flight's clock
+        for(float t=-.05f;t<1;t+=.001f){
+            float[] a=SwordStep.departs(t),b=SwordStep.departs(t+1e-4f),c=SwordStep.arrives(t),d=SwordStep.arrives(t+1e-4f);
+            for(int i=0;i<2;i++)assertTrue(Math.abs(a[i]-b[i])<.01&&Math.abs(c[i]-d[i])<.01,"a jump at "+t);
+        }
+    }
     @Test void eachSwordIsWhereTheServerTakesHer(){
         // the client draws sword k where IsosangRules.formationSwords has it (the server's Formation.place: forward and right
         // of the middle the way she faced), so she lands on the pommel she looked at
