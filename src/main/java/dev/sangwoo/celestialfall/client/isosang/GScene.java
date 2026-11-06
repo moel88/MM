@@ -106,18 +106,33 @@ final class GScene {
    }
 
    /**
-    * Her figure in the sky shot, as the videos frame her (2.87.2, user request: "컷씬 나올때 원본 영상은 캐릭터가 다리부터
-    * 보이는데 너가 만든건 캐릭터가 아예 공중에 떠있음 똑같이 다리부터 보이게 만들어줘"): her face at (0.383, 0.522) of the 21:9
-    * frame and her legs out through its bottom edge at about 0.30 across, cut at the knee, her feet below it (the shot
-    * looks up at her, so her legs come big towards it). How much bigger she is drawn than the camera she was fitted to
-    * shows her, how far she leans round the shot's line of sight (degrees, counterclockwise as seen; the look up from
-    * below already sends her feet to the frame's lower left), and where her head is moved in the frame (right and down,
-    * in frame heights). 2.87.0's 0.68 times and -24 degrees, her head sized as the videos', left her whole and floating
-    * in the sky.
+    * Her figure in the sky shot. 2.87.2 (user request: "컷씬 나올때 원본 영상은 캐릭터가 다리부터 보이는데 너가 만든건 캐릭터가
+    * 아예 공중에 떠있음 똑같이 다리부터 보이게 만들어줘"): her legs out through the frame's bottom edge, her feet below it (the
+    * shot looks up at her, so her legs come big towards it); fitted to the videos' face at (0.383, 0.522) of the 21:9
+    * frame and legs out at about 0.30 across (1.18 times, -2 degrees, her head moved 0.07 left and 0.015 down). 2.87.3
+    * (user request, on drafts in the game: "캐릭터를 2cm 정도만 오른쪽으로 옮기고 그리고 몸을 오른쪽으로 더 돌려야함", then
+    * "B로 하고 캐릭터는 왼쪽으로 보내야함", "이 정도 맞음", "그리고 캐릭터 크기 30% 더 줄여야 할 듯"): her front turned 25 degrees
+    * further to the frame's right (draft B), she moved 10 degrees round the camera to the left (about 7.5 % of the
+    * frame across), drawn 30 % smaller (0.70 times) and moved 8 degrees down so her legs still go out through the
+    * frame's bottom edge (smaller, they would end in the sky): her face at about (0.30, 0.68), her legs out at about
+    * 0.23 across, cut at the shin. How much she is drawn as the camera she was fitted to shows her, how far she leans
+    * round the shot's line of sight (degrees, counterclockwise as seen), where her head is moved in the frame at its own
+    * depth (right and down, in frame heights), how far she is turned round her own upright, and how far she is moved as a
+    * whole round the camera (ACTOR_PAN, ACTOR_DROP). 2.87.0's 0.68 times and -24 degrees, her head sized as the videos',
+    * left her whole and floating in the sky.
     */
-   static final float ACTOR_SCALE = 1.18F;
+   static final float ACTOR_SCALE = 0.70F;
    static final double ACTOR_LEAN = -2.0;
    static final double ACTOR_RIGHT = -0.07, ACTOR_DOWN = 0.015;
+   /** How far she is turned round her own upright (degrees; positive turns her front to the frame's right). */
+   static final double ACTOR_YAW = 25.0;
+   /**
+    * How far she is moved across and down the frame as a whole (degrees round the camera's own upright and its own
+    * level through its eye; positive to the frame's right and down): every part of her moves alike, near or far.
+    */
+   static final double ACTOR_PAN = -10.0, ACTOR_DROP = 8.0;
+   /** The shot tool's own fit for her (scale, lean, right, down, yaw, pan, drop) in place of the constants above, to try them; null for none. */
+   static volatile double[] tuned;
    /** How far above her feet her figure is pivoted for it (her neck). */
    static final double ACTOR_PIVOT = 1.45;
 
@@ -127,11 +142,19 @@ final class GScene {
     * face shot, eased in over its cut (1.6 to 1.65 s).
     */
    static Matrix4f actor(StandClient.Cast c, float t, Vec3d pos) {
-      return actor(c, t, pos, ACTOR_SCALE, ACTOR_LEAN, ACTOR_RIGHT, ACTOR_DOWN);
+      double[] k = tuned;
+      return k != null
+         ? actor(c, t, pos, (float)k[0], k[1], k[2], k[3], k[4], k[5], k[6])
+         : actor(c, t, pos, ACTOR_SCALE, ACTOR_LEAN, ACTOR_RIGHT, ACTOR_DOWN, ACTOR_YAW, ACTOR_PAN, ACTOR_DROP);
    }
 
-   /** The same with its size, lean and where her head is moved to in the frame (right and down, in frame heights) given. */
-   static Matrix4f actor(StandClient.Cast c, float t, Vec3d pos, float scale, double leanDegrees, double right, double down) {
+   /**
+    * The same with its size, lean, where her head is moved to in the frame (right and down, in frame heights), how far she
+    * is turned round her own upright (degrees, her front to the frame's right) and how far she is moved across and down
+    * the frame as a whole (degrees round the camera's own upright and level through its eye, to the frame's right and
+    * down: every part of her moves alike, near or far) given.
+    */
+   static Matrix4f actor(StandClient.Cast c, float t, Vec3d pos, float scale, double leanDegrees, double right, double down, double yawDegrees, double panDegrees, double dropDegrees) {
       FallingSword.Frame view = FallingSword.skyView(c);
       FallingSword.Frame frame = skyFrame(c, t);
       double k = Math.tan(Math.toRadians(29.91063370130198)) / Math.tan(Math.toRadians(42.21));
@@ -160,6 +183,19 @@ final class GScene {
       m.setColumn(1, new Vector4f((float)axes[1].x, (float)axes[1].y, (float)axes[1].z, 0.0F));
       m.setColumn(2, new Vector4f((float)axes[2].x, (float)axes[2].y, (float)axes[2].z, 0.0F));
       m.setTranslation((float)at.x, (float)at.y, (float)at.z);
+      // turned round her upright through her feet (and so her neck): her head stays where it is
+      if (yawDegrees != 0.0) {
+         m.mul(new Matrix4f().rotateY((float)Math.toRadians(yawDegrees)));
+      }
+      // moved across and down the frame round the camera's eye: drawn = eye + R (pos + m v - eye)
+      if (panDegrees != 0.0 || dropDegrees != 0.0) {
+         Vec3d up = frame.u(), side = frame.r(), eye = frame.eye();
+         Matrix4f r = new Matrix4f().rotate((float)Math.toRadians(-panDegrees), (float)up.x, (float)up.y, (float)up.z)
+            .rotate((float)Math.toRadians(-dropDegrees), (float)side.x, (float)side.y, (float)side.z);
+         Vector4f lead = r.transform(new Vector4f((float)(pos.x - eye.x + at.x), (float)(pos.y - eye.y + at.y), (float)(pos.z - eye.z + at.z), 0.0F));
+         m = new Matrix4f(r).mul(m);
+         m.setTranslation((float)(eye.x + lead.x - pos.x), (float)(eye.y + lead.y - pos.y), (float)(eye.z + lead.z - pos.z));
+      }
       return new Matrix4f().lerp(m, Ease.smooth(t, 1.6F, 1.65F));
    }
 }

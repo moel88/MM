@@ -1021,6 +1021,9 @@ public final class SkillShots implements ClientModInitializer {
                     // as everyone else sees it; "gvar=1|2": the recording (and faces) their next G plays (IsosangAttack.riggedVariant)
                     CelestialFall.CONFIG.cinematicCamera=!"0".equals(opts.get("cine"));
                     if(opts.containsKey("gvar")){int gv=Integer.parseInt(opts.get("gvar"))-1;server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.riggedVariant=gv);log.append("  next G rigged to recording ").append(gv+1).append('\n');}
+                    // (2.87.3) "gfit=SCALE/LEAN/RIGHT/DOWN/YAW/PAN/DROP": G's sky-shot figure fitted so in this entry (GScene.tuned), to try a fit before it goes in
+                    {double[] fit=null;if(opts.containsKey("gfit")){String[] v=opts.get("gfit").split("/");fit=new double[7];for(int i=0;i<7;i++)fit[i]=i<v.length?Double.parseDouble(v[i].trim()):0;log.append("  G sky figure fitted ").append(opts.get("gfit")).append('\n');}
+                     var tuned=Class.forName("dev.sangwoo.celestialfall.client.isosang.GScene").getDeclaredField("tuned");tuned.setAccessible(true);tuned.set(null,fit);}
                     // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
                     if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);

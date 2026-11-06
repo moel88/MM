@@ -1,4 +1,16 @@
-> **현재 통합본: Botand 2.87.2** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.87.3** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.87.3 — 이소상 G: 하늘 장면 캐릭터를 작게, 왼쪽으로, 검 쪽으로
+
+- **하늘 장면(G 1.65~2.78초):** 게임에서 찍은 시안 셋 가운데 고르신 B로 맞췄습니다.
+  - 정면을 화면 오른쪽(검 쪽)으로 25° 더 돌렸습니다.
+  - 화면에서 왼쪽으로 화면 폭의 약 7.5% 옮겼습니다.
+  - 30% 작게 그렸습니다.
+  - 작게 하면 발이 화면 안으로 올라오므로, 캐릭터 전체를 조금 내려 다리가 계속 화면 아래로 이어지게 했습니다.
+- **하늘 텍스처:** 사용자님 하늘 텍스처에 남아 있던 원본 캐릭터의 치마·머리카락 조각을 주변 구름으로 메웠습니다. 작아진 캐릭터가 더는 가리지 않아 하늘에 따로 떠 보였습니다.
+- **접속자만 바꾸면 됩니다:** 컷씬 그림만 바뀌었습니다. 서버는 2.87.1 그대로 둬도 됩니다.
+
+[RELEASE_2.87.3_KO.md](RELEASE_2.87.3_KO.md)를 확인하세요. 2.87.2는 [RELEASE_2.87.2_KO.md](RELEASE_2.87.2_KO.md)입니다.
 
 # 보탠드 2.87.2 — 이소상 G: 하늘 장면에서 캐릭터가 영상처럼 다리부터 보임
 

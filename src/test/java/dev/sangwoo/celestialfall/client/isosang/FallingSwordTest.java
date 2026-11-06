@@ -150,24 +150,29 @@ class FallingSwordTest {
         assertEquals(0,GGesture.uprightWeight(.6f),1e-6);assertEquals(1,GGesture.uprightWeight(1.2f),1e-6);
     }
     @Test void inTheSkySheStandsUpFromTheFramesBottom(){
-        // (2.87.2, user request) as the videos: her face at (0.383, 0.522), her legs out through the frame's bottom edge
-        // at about 0.30 across, cut about the knee, her feet below the frame; nothing of her floating in the sky
+        // (2.87.2, user request) her legs out through the frame's bottom edge, her feet below the frame: nothing of her
+        // floating in the sky; (2.87.3, user request) 30 % smaller, moved left, her face at about (0.30, 0.68), her legs out
+        // at about 0.23 across, cut at the shin, her front turned further to the frame's right
         var c=cast();
         for(float t:new float[]{1.7f,2.2f,2.7f}){
             var shot=GScene.skyShot(c,t);Vec3d feet=c.origin();
             Matrix4f m=GScene.actor(c,t,feet);
             double[] face=inFrame(shot,apply(m,feet,feet.add(0,1.75,0)),false),soles=inFrame(shot,apply(m,feet,feet),false);
-            assertEquals(.383,face[0],.015,"her face across at "+t);assertEquals(.522,face[1],.015,"her face down at "+t);
-            assertTrue(soles==null||soles[1]>1.05,"her feet below the frame at "+t+": "+(soles==null?"behind":soles[1]));
-            double[] above=null,below=null;double cutAt=Double.NaN;
+            assertEquals(.296,face[0],.015,"her face across at "+t);assertEquals(.675,face[1],.015,"her face down at "+t);
+            assertTrue(soles==null||soles[1]>1.03,"her feet below the frame at "+t+": "+(soles==null?"behind":soles[1]));
+            double[] above=null;double cutAt=Double.NaN;
             for(double h=.75;h>=0;h-=.01){
                 double[] q=inFrame(shot,apply(m,feet,feet.add(0,h,0)),false);
                 if(q!=null&&q[1]<1){above=q;continue;}
-                below=q;cutAt=h;break;
+                cutAt=h;break;
             }
-            assertNotNull(above);assertTrue(cutAt>.25&&cutAt<.5,"the frame's bottom edge cuts her legs about the knee at "+t+": "+cutAt);
-            assertEquals(.30,above[0],.03,"her legs leave the frame at about 0.30 across at "+t);
-            assertTrue(above[0]<face[0]-.05,"her legs to the lower left of her face at "+t);
+            assertNotNull(above);assertTrue(cutAt>.08&&cutAt<.4,"the frame's bottom edge cuts her legs above her ankles at "+t+": "+cutAt);
+            assertEquals(.23,above[0],.03,"her legs leave the frame at about 0.23 across at "+t);
+            assertTrue(above[0]<face[0]-.03,"her legs to the lower left of her face at "+t);
+            // her front turned to the frame's right (draft B): her front, from her chest, goes to the frame's right
+            Vec3d f=FallingSword.forward(c),chest=feet.add(0,1.1,0);
+            double[] at=inFrame(shot,apply(m,feet,chest),false),ahead=inFrame(shot,apply(m,feet,chest.add(f.multiply(.5))),false);
+            assertTrue(ahead[0]>at[0]+.02,"her front to the frame's right at "+t+": "+at[0]+" "+ahead[0]);
         }
     }
     static Vec3d apply(Matrix4f m,Vec3d origin,Vec3d p){
