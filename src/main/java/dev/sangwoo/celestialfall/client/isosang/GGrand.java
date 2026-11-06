@@ -16,9 +16,9 @@ import net.minecraft.util.math.Vec3d;
  *   and burning hotter and whiter the longer it stands in the ground, until the blast;</li>
  *   <li>her face: a golden light behind her head, rimming it, with two rings and a halo of thin golden rays round it;</li>
  *   <li>the sky: the storm's eye burning gold behind the sword, its light thrown out through the banks in slowly turning
- *   rays, and lightning forking through the storm, lighting its banks from inside (isosang_cloud.fsh's Grand and
- *   Lightning, {@link #storm}) and the sword; golden motes drawn spinning into the eye. The banks are drawn over the
- *   effect layer, so what of it is in the sky is drawn in front of them (some 7.5 blocks out);</li>
+ *   rays, and lightning forking through the storm, lighting its banks from inside and the sword and her (all drawn by
+ *   the banks' own shader, isosang_cloud.fsh's Grand, Lightning, Bolt and BoltLook, {@link #storm}: the banks are drawn
+ *   over the effect layer, which writes no depth);</li>
  *   <li>the fall: collars of vapour round the falling blade, the air streaking past the camera, and rings of light on the
  *   ground drawn in to where it will strike;</li>
  *   <li>the strike: a shock wave racing out along the ground with an ink rim and a ring of dust behind it, a pillar of light
@@ -34,8 +34,6 @@ final class GGrand {
    static final int GOLD = FallingSword.GOLD, GOLD_WHITE = FallingSword.GOLD_WHITE, EMBER = 0xFF8A2E, AMBER = 0xFFB04A;
    static final int BOLT = 0xA6BCFF, BOLT_CORE = 0xF4F7FF, MIST = 0xE6EEFF, INK = 0x170D07, DUST = 0x7A6650;
    static final Vec3d X = new Vec3d(1.0, 0.0, 0.0), Z = new Vec3d(0.0, 0.0, 1.0), UP = new Vec3d(0.0, 1.0, 0.0);
-   /** Where the storm's eye is in the sky shot's frame (across, down; the clouds' own eyeCenter). */
-   static final double EYE_X = .546, EYE_Y = .40;
    /** The lightning in the sky shot: when (seconds), from and to (frame across and down), over before the sword falls. */
    static final double[][] SKY_BOLTS = {
       {1.70, .20, .02, .30, .40},
@@ -49,11 +47,6 @@ final class GGrand {
    /** The heart the fissures beat with while the sword stands in the ground (seconds), faster toward the blast. */
    static final float[] BEATS = {3.5F, 3.85F, 4.12F, 4.34F, 4.5F, 4.62F, 4.72F};
    static final int FISSURES = 13;
-   /**
-    * How deep the sky shot's motes start and its bolts are drawn: in front of the storm's banks, whose outer parts begin
-    * some four blocks out (and none nearer than 1.2), behind the caster and the sword's point (blocks).
-    */
-   static final double NEAR = 2.2, BOLT_DEPTH = 2.0;
    /** The strike's impact frame: white gold on deep amber (the effect layer's frame, in place of Kageno's violet). */
    static final dev.sangwoo.celestialfall.client.vfx.FxFrame.ImpactLook GOLDEN =
       new dev.sangwoo.celestialfall.client.vfx.FxFrame.ImpactLook(0x2E1704, 0xFFF1CC, 0xFFF6E2, 0x1C0E02, 0x8C4E0A);
@@ -94,24 +87,30 @@ final class GGrand {
    }
 
    /**
-    * The storm's own light at {@code t} (isosang_cloud.fsh's Grand and Lightning, the cutscene's canopy): how strongly its
-    * eye burns gold behind the sword and the clock its rays turn by; where the lightning flashing now forks in the frame
-    * (across, down), how strongly it lights the banks round it and how wide.
+    * The storm's own light at {@code t} (isosang_cloud.fsh's Grand, Lightning, Bolt and BoltLook, the cutscene's canopy):
+    * how strongly its eye burns gold behind the sword and the clock its rays turn by; where the lightning flashing now
+    * lights the banks round it (across, down in the frame), how strongly and how wide; its stroke (from and to in the
+    * frame), its seed and how bright it is. The banks are drawn over the effect layer (which writes no depth), so all of
+    * the storm's light is drawn by the banks' own shader.
     */
    static float[] storm(float t) {
       float eye = .95F * Ease.smooth(t, 1.62F, 1.95F) * (1.0F - Ease.smooth(t, 2.68F, 2.84F));
       float best = 0.0F;
-      double[] at = SKY_BOLTS[0];
-      for (double[] b : SKY_BOLTS) {
-         float fl = flash(t - (float)b[0]);
+      int which = 0;
+      for (int i = 0; i < SKY_BOLTS.length; i++) {
+         float fl = flash(t - (float)SKY_BOLTS[i][0]);
          if (fl > best) {
             best = fl;
-            at = b;
+            which = i;
          }
       }
       best *= 1.0F - Ease.smooth(t, IsosangRules.G_FALL - .05F, IsosangRules.G_FALL);
       eye *= 1.0F + .35F * best;
-      return new float[]{eye, t, (float)((at[1] + at[3]) * .5), (float)((at[2] + at[4]) * .5), .62F * best, .13F};
+      double[] at = SKY_BOLTS[which];
+      return new float[]{
+         eye, t, (float)((at[1] + at[3]) * .5), (float)((at[2] + at[4]) * .5), .62F * best, .13F,
+         (float)at[1], (float)at[2], (float)at[3], (float)at[4], which * 7 + 3, best
+      };
    }
 
    // ───────────────────────────── passes ─────────────────────────────
@@ -123,7 +122,6 @@ final class GGrand {
       float t = c.sec;
       if (FallingSword.shown(c)) {
          face(c, m, t);
-         sky(c, m, t);
          fall(c, m, t);
       }
       if (FallingSword.shown(c) || !GStage.hidden()) {
@@ -151,9 +149,6 @@ final class GGrand {
       Vec3d s = FallingSword.strike(c.cast);
       if (FallingSword.shown(c) && t >= 1.6F && t < IsosangRules.G_FALL) {
          FallingSword.Frame k = GScene.skyFrame(c.cast, t);
-         float on = Ease.window(t, 1.6F, IsosangRules.G_FALL, .1F, .04F);
-         // the motes' light drawn out into rays from the eye
-         f.shaft(k.at(EYE_X, EYE_Y, NEAR + 1.3, GScene.SKY_FOV), GOLD, .22F * on);
          for (double[] b : SKY_BOLTS) {
             float fl = flash(t - (float)b[0]);
             if (fl > .02F) {
@@ -214,44 +209,6 @@ final class GGrand {
    }
 
    // ───────────────────────────── the sky ─────────────────────────────
-
-   /**
-    * The sky shot (1.6 to 2.78 s): the storm's eye burning gold behind the sword with rays thrown out round it, motes drawn
-    * spinning into it, and lightning forking through the storm.
-    */
-   static void sky(Fx c, EffectMesh m, float t) {
-      if (t < 1.6F || t >= IsosangRules.G_FALL) {
-         return;
-      }
-      float on = Ease.window(t, 1.6F, IsosangRules.G_FALL, .1F, .04F);
-      FallingSword.Frame k = GScene.skyFrame(c.cast, t);
-      double fov = GScene.SKY_FOV, tan = Math.tan(Math.toRadians(fov / 2.0));
-      // golden motes drawn spinning into the eye, in front of the banks
-      for (int i = 0; i < 48; i++) {
-         double ph = ((double)t * (.35 + .25 * Ease.hash(i * 13 + 1)) + Ease.hash(i * 13 + 3)) % 1.0;
-         double depth = NEAR + .9 * Ease.hash(i * 13 + 5);
-         double r = (.16 + .5 * Ease.hash(i * 13 + 7)) * Math.pow(1.0 - ph, 1.4);
-         double a = Ease.hash(i * 13 + 9) * Math.PI * 2.0 + 2.4 * ph;
-         double height = 2.0 * tan * depth;
-         Vec3d p = k.at(EYE_X, EYE_Y, depth, fov).add(k.r().multiply(Math.cos(a) * r * height)).add(k.u().multiply(Math.sin(a) * r * height));
-         float al = on * (float)Math.sin(Math.PI * ph) * (.55F + .45F * (float)Math.sin(t * 13.0F + i));
-         m.softDisc(p, .006 * depth, GOLD, .5F * al);
-         m.star(p, .008 * depth, GOLD_WHITE, .7F * al);
-      }
-      // the lightning: its bolts in front of the banks, which it lights from inside (storm)
-      for (int i = 0; i < SKY_BOLTS.length; i++) {
-         double[] b = SKY_BOLTS[i];
-         float fl = flash(t - (float)b[0]);
-         if (fl <= .01F) {
-            continue;
-         }
-         double depth = BOLT_DEPTH;
-         Vec3d from = k.at(b[1], b[2], depth, fov), to = k.at(b[3], b[4], depth, fov);
-         Vec3d side = to.subtract(from).crossProduct(k.f()).normalize();
-         bolt(m, from, to, side, i * 7 + 3, .011 * depth, .0032 * depth, on * fl);
-         m.softDisc(from.add(to).multiply(.5), .22 * depth, BOLT, .12F * on * fl);
-      }
-   }
 
    // ───────────────────────────── the fall ─────────────────────────────
 

@@ -48,6 +48,10 @@ uniform vec3 CloudCenter;
 // clock its rays turn by; Lightning the flash lighting the banks from inside (where in the frame, how strongly, how wide).
 uniform vec4 Grand;
 uniform vec4 Lightning;
+// the stroke of the bolt flashing now, drawn over the banks it lights (the effect layer is drawn under the banks):
+// Bolt from and to in the frame (across, down), BoltLook its seed and how bright (0 none)
+uniform vec4 Bolt;
+uniform vec2 BoltLook;
 
 const vec2 projectionScale = vec2(.40066, -.86915);
 const vec2 eyeCenter = vec2(.546, .399);
@@ -609,6 +613,36 @@ vec4 finishPass(vec3 origin,vec3 ray,float limit,bool hasSurface){
 }
 
 
+float boltHash(float n){return fract(sin(n*12.9898+78.233)*43758.5453);}
+float segmentDistance(vec2 p,vec2 a,vec2 b){vec2 pa=p-a,ba=b-a;float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-8),0.,1.);return length(pa-ba*h);}
+// How far (in frame heights) p is from the bolt: a jagged stroke from Bolt.xy to Bolt.zw, forking twice.
+float boltDistance(vec2 p){
+ vec2 k=vec2(2.167,1.),a=Bolt.xy*k,b=Bolt.zw*k,q=p*k,d=b-a;
+ float len=max(length(d),1e-4),seed=BoltLook.x,best=1e3;
+ vec2 along=d/len,side=vec2(-along.y,along.x),prev=a,fork1=a,fork2=a;
+ int at1=3+int(boltHash(seed*41.)*2.),at2=7+int(boltHash(seed*41.+1.)*2.);
+ for(int j=1;j<=12;j++){
+  float u=float(j)/12.;
+  float off=j==12?0.:(boltHash(seed*31.+float(j))-.5)*.22*len*sin(3.14159*u)+(boltHash(seed*37.+float(j)*3.)-.5)*.05*len;
+  vec2 c=a+d*u+side*off;
+  best=min(best,segmentDistance(q,prev,c));
+  if(j==at1)fork1=c;
+  if(j==at2)fork2=c;
+  prev=c;
+ }
+ for(int f=0;f<2;f++){
+  vec2 o=f==0?fork1:fork2,dir=normalize(along*.6+side*(f==0?.8:-.8)),c0=o;
+  float reach=len*(.18+.12*boltHash(seed*43.+float(f)));
+  for(int j=1;j<=5;j++){
+   float u=float(j)/5.;
+   vec2 c=o+dir*reach*u+side*(boltHash(seed*47.+float(f)*7.+float(j))-.5)*.12*reach;
+   // a fork is fainter than the stroke, more so as it goes
+   best=min(best,segmentDistance(q,c0,c)+.0012+.0025*u);
+   c0=c;
+  }
+ }
+ return best;
+}
 void main(){
  vec4 far=InverseViewProjection*vec4(screen*2.-1.,1.,1.);
  vec3 direction=normalize(far.xyz/far.w);
@@ -632,7 +666,16 @@ void main(){
       fragColor=vec4((fragColor.rgb*fragColor.a+vec3(.14,.18,.25)*shade*(1.-fragColor.a))/max(.0001,a),a);
     }
    }
-   else fragColor=marchCanopy(origin,ray,limit);
+   else{
+    fragColor=marchCanopy(origin,ray,limit);
+    // (2.88.0) the lightning's stroke over the banks it lights: a white core in a blue glow
+    if(Mode==2 && BoltLook.y>0. && ray.z>.01){
+     float d=boltDistance(.5+projectionScale*ray.xy/ray.z);
+     vec3 light=(vec3(1.)*exp(-d*d/3.8e-6)*1.4+vec3(.6,.72,1.)*exp(-d*d/1.2e-4)*.75+vec3(.5,.6,.95)*exp(-d/.045)*.16)*BoltLook.y;
+     float a=fragColor.a,na=a+(1.-a)*clamp(dot(light,vec3(.4)),0.,1.);
+     fragColor=vec4((fragColor.rgb*a+light)/max(na,1e-4),na);
+    }
+   }
    // Steel has cleared at 4.78 s; the last sky vapour clears before camera return.
    fragColor.a*=1.-smoothstep(4.73,4.81,Age);
    return;

@@ -52,9 +52,12 @@ class GGrandTest {
             assertEquals((b[1]+b[3])*.5,k[2],1e-4,"round where it forks");
             assertEquals((b[2]+b[4])*.5,k[3],1e-4);
             assertTrue(k[2]>0&&k[2]<1&&k[3]>-.05&&k[3]<1,"in the frame");
+            assertArrayEquals(new float[]{(float)b[1],(float)b[2],(float)b[3],(float)b[4]},new float[]{k[6],k[7],k[8],k[9]},1e-6f,"its stroke");
+            assertTrue(k[11]>.9f,"drawn bright");
         }
         assertEquals(0,GGrand.storm(1.6f)[4],1e-6,"no lightning before the first bolt");
         assertEquals(0,GGrand.storm(3.3f)[4],1e-6,"nor after the sky shot");
+        assertEquals(0,GGrand.storm(3.3f)[11],1e-6,"its stroke neither");
         for(float t=0;t<4;t+=FRAME/10){
             float[] a=GGrand.storm(t),b=GGrand.storm(t+FRAME);
             assertTrue(Math.abs(b[0]-a[0])<.45f,"the eye's light jumps at "+t);
