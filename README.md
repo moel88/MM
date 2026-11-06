@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.93.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.94.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.94.0 — 이소상 H: 검진에서 한 대는 맞지 않고 다른 검으로
+
+- **한 번 피하기:** H를 쓰면 검진마다 한 번, 처음 맞는 타격 하나가 들어가지 않습니다(피해·경직·날림·컷씬 모두 없음). 그 순간 검진의 검 중 무작위 하나로 Z처럼 옮겨 갑니다.
+- **그 뒤로는 모두 들어갑니다:** 평타든 다단히트 스킬이든 첫 한 대만 피하고, 나머지 타는 닿으면 그대로 들어갑니다.
+- **Z와 따로입니다:** Z의 횟수·10초·쿨타임을 쓰지 않고, Z가 쿨타임이어도 옮겨 갑니다.
+- **서버를 바꿔야 합니다:** 서버 규칙만 바뀌었고 패킷은 그대로입니다. 멀티는 서버가 2.94.0이어야 하고, 접속자는 2.93.0 이상이면 그대로 둬도 피하는 모습이 보입니다. 싱글은 이 JAR로 바꾸면 됩니다.
+
+[RELEASE_2.94.0_KO.md](RELEASE_2.94.0_KO.md)를 확인하세요. 2.93.1은 [RELEASE_2.93.1_KO.md](RELEASE_2.93.1_KO.md)입니다.
 
 # 보탠드 2.93.1 — 이소상 Z: 검 아래 꽃이 피었다가 사라짐
 

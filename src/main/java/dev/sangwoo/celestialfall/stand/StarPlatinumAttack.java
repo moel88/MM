@@ -346,7 +346,8 @@ public final class StarPlatinumAttack {
             // the beatdown's blow (2.64.0): a guard up breaks (and nothing more comes of it); none up, the cutscene begins
             for(var e:way){
                 if(CombatManager.breakGuard(e,HEAVY_BREAK))broke.add(e);
-                else if(!e.isInvulnerableTo(source)&&StarPlatinumBeatdown.begin(p,e,s.start,s.yaw)){
+                // (2.94.0) Lee So-sang's H's dodge keeps its blow from her, as any other's (IsosangAttack.dodges): no cutscene
+                else if(!e.isInvulnerableTo(source)&&!dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(e,source)&&StarPlatinumBeatdown.begin(p,e,s.start,s.yaw)){
                     struck.add(e);p.onAttacking(e);
                     world.playSound(null,e.getX(),e.getY(),e.getZ(),SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK,SoundCategory.PLAYERS,.9f,.8f);
                 }

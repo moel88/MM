@@ -638,6 +638,25 @@ public final class IsosangRules {
     /** How high over the straight way between the two pommels her flight arcs {@code u} through it (blocks). */
     public static double zArc(double u){u=Math.max(0,Math.min(1,u));return Z_ARC*4*u*(1-u);}
     public static final double Z_ARC=.55;
+    /**
+     * H's dodge (2.94.0, user request: "그리고 H를 쓰고 단 1회 맞은 데미지 무시하고 랜덤한 검으로 이동되게 바꿔 그 뒤로는 데미지 잘
+     * 박히고 단 1회야 평타든 뭐든 다단히트 스킬 박혀도 1대만 씹을 수 있어"): once in each formation, the first blow to reach
+     * her does not (none of it: no harm, no stagger, no throw, no cutscene) and she is moved onto a sword of it picked at
+     * random, as Z moves her (its flight, its light and its sound; none of Z's moves spent, its window and cooldown as
+     * they were, and while Z cools down too). Every blow after it lands, the rest of the same attack's too.
+     * It holds from H's start until a move would land too late (as Z's). A blow before the swords stand
+     * (before Z_FROM) is kept from her at once, and she moves as they do; one as she flies, as she lands; one while
+     * something holds her where she is (a time stop, a Kageno skill), as it lets go.
+     */
+    public static boolean dodgeTime(double t){return t>=0&&t+Z_TRAVEL/20.0<H_END;}
+    /**
+     * The sword H's dodge moves her onto: {@code roll} (at random, 0 to {@code swords}-2) over every sword of her formation
+     * but the one she stands on ({@code on}).
+     */
+    public static int dodgeSword(int on,int roll,int swords){
+        if(swords<2)return on;
+        roll=Math.floorMod(roll,swords-1);return roll<on?roll:roll+1;
+    }
 
     // ───────────────────────────── G: the ultimate ─────────────────────────────
 

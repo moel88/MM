@@ -132,6 +132,11 @@ public final class IsosangAttack {
          * them at first), the one they flew from (-1 for none yet), and the tick they left it.
          */
         int on=IsosangRules.standSword(),from=-1;long moved=Long.MIN_VALUE/2;
+        /**
+         * (2.94.0) H's dodge: whether its one blow has been kept from its user (IsosangRules.dodgeTime), and whether its
+         * move waits for them to be free to fly (the swords not standing yet, a flight under way, held where they are).
+         */
+        boolean dodged,waiting;
         final double[][] swords;
         Formation(UUID id,long start,Vec3d spot,float yaw){
             this.id=id;this.start=start;this.spot=spot;this.yaw=yaw;
@@ -576,6 +581,47 @@ public final class IsosangAttack {
         return true;
     }
     /**
+     * H's dodge (2.94.0, user request: "그리고 H를 쓰고 단 1회 맞은 데미지 무시하고 랜덤한 검으로 이동되게 바꿔 그 뒤로는 데미지
+     * 잘 박히고 단 1회야 평타든 뭐든 다단히트 스킬 박혀도 1대만 씹을 수 있어", IsosangRules.dodgeTime): whether the blow
+     * {@code source} brings {@code e} now is kept from them (none of it lands: the caller lets it go as a miss). Only the
+     * first to reach them in their formation, and only a blow (it comes from someone or something: not fire, a fall,
+     * poison or the like, nor their own); what bypasses invulnerability (/kill, the void) reaches them all the same. They
+     * are moved onto a sword of it picked at random, now or as soon as they are free to fly (dodge).
+     */
+    public static boolean dodges(LivingEntity e,net.minecraft.entity.damage.DamageSource source){
+        if(!(e instanceof ServerPlayerEntity p)||e.getWorld().isClient||!p.isAlive())return false;
+        var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld()||s.form==null)return false;
+        long now=p.getWorld().getTime();var f=s.form;
+        if(f.dodged||!forming(s,now)||!IsosangRules.dodgeTime((now-f.start)/20.0)||!attacks(p))return false;
+        if(source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY))return false;
+        var by=source.getAttacker();var through=source.getSource();
+        if(by==null&&through==null||by==p||through==p)return false;
+        f.dodged=f.waiting=true;
+        dodge(p,s,now);
+        return true;
+    }
+    /**
+     * H's dodge's move (2.94.0): its user flies onto a sword of their formation picked at random (not the one they stand
+     * on) as Z flies them, its viewers told as of Z's move (its light and its sound; Z's own moves, window and cooldown as
+     * they were). Once they are free to: the swords standing (IsosangRules.zTime), no flight under way, nothing holding
+     * them where they are (a time stop, a Kageno skill, KagenoManager.frozen). Too late for it (the swords about to flare),
+     * there is none.
+     */
+    private static void dodge(ServerPlayerEntity p,State s,long now){
+        var f=s.form;if(f==null||!f.waiting)return;
+        double t=(now-f.start)/20.0;
+        if(!IsosangRules.zTime(t)){if(t>=IsosangRules.Z_FROM)f.waiting=false;return;}
+        if(f.flying(now)||KagenoManager.frozen(p))return;
+        f.waiting=false;
+        int k=IsosangRules.dodgeSword(f.on,p.getRandom().nextInt(f.swords.length-1),f.swords.length);
+        f.from=f.on;f.on=k;f.moved=now;
+        send(p,f.id,FORMATION,f.start,f.yaw,CROSSED,k,null,null,null,f);
+    }
+    /** (2.94.0) Whether this player's formation's dodge has been used (the multiplayer check reads it). */
+    public static boolean dodged(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.form!=null&&s.form.dodged;}
+    /** (2.94.0) The sword this player stands on in their formation now (-1 for none; the multiplayer check reads it). */
+    public static int standsOn(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||s.form==null?-1:s.form.on;}
+    /**
      * The formation on a tick (2.82.0): it strikes whoever is in it as the swords strike and every FORMATION_EVERY ticks
      * after; its user is held where they stood (2.82.4: on the formation's outer ring, its middle ahead; their own client
      * lifts them up onto the pommel of the sword struck there and down again, IsosangClient.drive, as its own movement is;
@@ -588,6 +634,8 @@ public final class IsosangAttack {
         if(age>=LENGTH[FORMATION]){s.form=null;return;}
         if(!attacks(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);return;}
         if(formationStrikes(age))zone(p,f,age);
+        // (2.94.0) H's dodge's move, kept until they were free to fly
+        if(f.waiting)dodge(p,s,now);
         // (2.93.0) where it holds them: under the sword they stand on, Z's flight between two (their own client flies them;
         // the server lets it be as they fly and a moment after, as at first)
         double t=age/20.0;Vec3d at=p.getPos(),to=f.spotAt(now);double dx=at.x-to.x,dz=at.z-to.z,leave=age<STRAY_GRACE?1:STRAY;

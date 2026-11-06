@@ -5,10 +5,12 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.*;
 @Mixin(LivingEntity.class)
 public abstract class LivingCombatMixin {
+    @Shadow protected float lastDamageTaken;
     @ModifyVariable(method="travel",at=@At("HEAD"),argsOnly=true)
     private net.minecraft.util.math.Vec3d botand$stunnedTravel(net.minecraft.util.math.Vec3d movement) {
         var entity=(LivingEntity)(Object)this;
@@ -38,10 +40,20 @@ public abstract class LivingCombatMixin {
         if(dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
         // Lee So-sang's G (2.83.0): nothing harms its user while its cutscene holds them
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
+        // Lee So-sang's H (2.94.0): the first blow to reach her in its formation does not, and she is moved onto another of
+        // its swords (only one that would land: none the moment after a blow is kept from her anyway, nor fire with fire
+        // resistance, as the rest of this method has it)
+        if((Object)this instanceof ServerPlayerEntity p&&Float.isFinite(amount)&&amount>0&&lands(p,source,amount)
+            &&dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(p,source)){cir.setReturnValue(false);return;}
         // stopped in Star Platinum's stopped time (2.67.0): the harm is kept and comes to them all at once as time moves
         // again (the blow counts as landed now)
         if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.defer((LivingEntity)(Object)this,source,amount)){cir.setReturnValue(true);return;}
         if((Object)this instanceof ServerPlayerEntity p && CombatManager.block(p,source,amount))cir.setReturnValue(false);
+    }
+    /** Whether vanilla would let this blow land ({@code LivingEntity.damage}): not within the moment after one that was greater, not fire on one fire cannot hurt. */
+    private boolean lands(LivingEntity e,DamageSource source,float amount){
+        if(source.isIn(net.minecraft.registry.tag.DamageTypeTags.IS_FIRE)&&e.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.FIRE_RESISTANCE))return false;
+        return !(e.timeUntilRegen>10&&!source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_COOLDOWN)&&amount<=lastDamageTaken);
     }
     @Inject(method="damage",at=@At("RETURN"))
     private void botand$interruptComboOnDamage(DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir) {

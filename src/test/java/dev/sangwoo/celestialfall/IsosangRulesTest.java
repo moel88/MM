@@ -352,6 +352,23 @@ class IsosangRulesTest {
         assertTrue(zTime(H_END-Z_TRAVEL/20.0-.01));assertFalse(zTime(H_END-Z_TRAVEL/20.0),"she would still fly as the swords flare");
         assertTrue(Z_TRAVEL/20.0>.15&&Z_TRAVEL/20.0<=.25,"some 0.2 s, as the video's: "+Z_TRAVEL/20.0);
     }
+    @Test void hsDodgeHoldsFromItsStartAndMovesHerToAnyOtherSwordAtRandom(){
+        // (2.94.0) "H를 쓰고 단 1회 맞은 데미지 무시하고 랜덤한 검으로 이동": from H's start (a blow before the swords stand is kept
+        // from her at once, and she moves as they do), until a move would land too late, as Z's
+        assertTrue(dodgeTime(0),"from H's start");assertTrue(dodgeTime(.3));assertTrue(dodgeTime(Z_FROM));assertTrue(dodgeTime(30));
+        assertFalse(dodgeTime(-.05),"not before it");
+        assertTrue(dodgeTime(H_END-Z_TRAVEL/20.0-.01));assertFalse(dodgeTime(H_END-Z_TRAVEL/20.0),"she would still fly as the swords flare");
+        for(double t=Z_FROM;t<H_END;t+=.05)assertEquals(zTime(t),dodgeTime(t),"its move as Z's at "+t);
+        // any sword but the one she stands on, each as likely: every roll a sword, every other sword one roll
+        int n=FORMATION_SWORDS;
+        for(int on=0;on<n;on++){
+            var seen=new java.util.HashSet<Integer>();
+            for(int roll=0;roll<n-1;roll++){int k=dodgeSword(on,roll,n);assertNotEquals(on,k,"never the one she stands on");assertTrue(k>=0&&k<n);assertTrue(seen.add(k),"one roll each");}
+            assertEquals(n-1,seen.size(),"every other sword");
+        }
+        // a roll out of its range still lands on one of them
+        assertNotEquals(5,dodgeSword(5,n+7,n));assertNotEquals(5,dodgeSword(5,-3,n));
+    }
     @Test void herFlightRunsSmoothlyFromOnePommelToTheOther()throws Exception{
         assertEquals(0,zAlong(0),1e-12);assertEquals(1,zAlong(1),1e-12);assertEquals(0,zArc(0),1e-12);assertEquals(0,zArc(1),1e-12);
         double prev=0;

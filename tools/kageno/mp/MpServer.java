@@ -462,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -470,6 +470,7 @@ public final class MpServer implements ModInitializer {
      * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
      * while a hit is in flight or for a second after one (a blow throws no one: there should be none).
      */
+    private float dodgeHealth=-1;private String dodgeSeen="";private int onSeen=-1;
     private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1,zFrom=-1;private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zSeen;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
@@ -532,6 +533,12 @@ public final class MpServer implements ModInitializer {
         // (2.93.0) the caster's Z: its state as it changes (its window's first move, how many, when it is ready again); and
         // every tick for 16 ticks from each move, how far off where the formation holds them the caster is, how high over its
         // middle, and how far from the middle that is (the sword they fly to)
+        // (2.94.0) H's dodge: the caster's health as it changes, its formation's dodge (used or not) and the sword it stands
+        // on as they change (a move of either kind: the per-tick lines below follow it as they follow Z's)
+        if(Math.abs(caster.getHealth()-dodgeHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at %d",dodgeHealth,caster.getHealth(),now));dodgeHealth=caster.getHealth();}
+        int on=dev.sangwoo.celestialfall.isosang.IsosangAttack.standsOn(caster);boolean dodged=dev.sangwoo.celestialfall.isosang.IsosangAttack.dodged(caster);String dg=dodged+"/"+on;
+        if(!dg.equals(dodgeSeen)){if(onSeen>=0&&on>=0&&on!=onSeen)zFrom=now;onSeen=on;dodgeSeen=dg;
+            note(server,String.format(java.util.Locale.ROOT,"caster's H dodge %s, on sword %d at %d",dodged?"used":"unused",on,now));}
         var z=dev.sangwoo.celestialfall.isosang.IsosangAttack.zNow(caster);
         if(!z.equals(zSeen)){if(zSeen!=null&&z.uses()>0&&(z.uses()!=zSeen.uses()||z.first()!=zSeen.first()))zFrom=now;zSeen=z;
             note(server,String.format(java.util.Locale.ROOT,"caster's Z: first %d, used %d, ready again at %d (now %d)",z.first(),z.uses(),z.ready(),now));}

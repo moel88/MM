@@ -1245,9 +1245,15 @@ public final class SkillShots implements ClientModInitializer {
                             if(KagenoManager.frozen(fake))return;
                             var stride=net.minecraft.util.math.Vec3d.fromPolar(0,fakeRunYaw).multiply(opt("fspd",4.317f)/20);
                             fake.refreshPositionAndAngles(fake.getX()+stride.x,fake.getY(),fake.getZ()+stride.z,fakeRunYaw,0);fake.setHeadYaw(fakeRunYaw);fake.setBodyYaw(fakeRunYaw);});}continue;}
-                    if(what.equals("HURT")){if(age==at)server(p->{float amount=(float)opt("hurt",4);
+                    // (2.94.0) and with Lee So-sang's H under way, which sword she stands on as it comes and 8 ticks on (H's dodge
+                    // moves her onto another at random as the first blow is kept from her), and how far she stands off where the
+                    // server holds her then
+                    if(what.equals("HURT")){if(age==at)server(p->{float amount=(float)opt("hurt",4);int on=dev.sangwoo.celestialfall.isosang.IsosangAttack.standsOn(p);
                             boolean ok=dev.sangwoo.celestialfall.combat.CombatManager.damageWithoutKnockback(p,fakePlayer==null?p.getDamageSources().generic():p.getDamageSources().playerAttack(fakePlayer),amount);
-                            log.append(String.format(Locale.ROOT,"  hurt %.1f %s at %d (health %.1f)%n",amount,ok?"landed":"refused",age,p.getHealth()));});continue;}
+                            log.append(String.format(Locale.ROOT,"  hurt %.1f %s at %d (health %.1f)%s%n",amount,ok?"landed":"refused",age,p.getHealth(),on<0?"":String.format(Locale.ROOT,", on sword %d, H's dodge %s",on,dev.sangwoo.celestialfall.isosang.IsosangAttack.dodged(p)?"used":"unused")));});
+                        if(age==at+8)server(p->{var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);if(f==null)return;
+                            log.append(String.format(Locale.ROOT,"  hurt after %d: on sword %d, %.2f blocks off where it holds them, %.2f up (health %.1f)%n",age,dev.sangwoo.celestialfall.isosang.IsosangAttack.standsOn(p),Math.hypot(p.getX()-f.holds().x,p.getZ()-f.holds().z),p.getY()-f.centre().y,p.getHealth()));});
+                        continue;}
                     // "FLING@n": the player sent flying "fly" (2) blocks a tick away from the fake user and "flyup" (0.6) up, as a
                     // punch's throw is (held by a time stop that holds the player until time moves again)
                     if(what.equals("FLING")){if(age==at)server(p->{var from=fakePlayer==null?p.getPos().add(0,0,-1):fakePlayer.getPos();var away=p.getPos().subtract(from).multiply(1,0,1).normalize();
