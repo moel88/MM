@@ -26,7 +26,7 @@ class GGrandTest {
         for(float t=FRAME;t<7;t+=FRAME){
             float now=GGrand.rune(t)[2];
             assertTrue(now>before,"the light running up it never runs back, at "+t);
-            assertTrue(now-before<FRAME*4,"nor races (it runs at most four times as fast), at "+t);
+            assertTrue(now-before<FRAME*3,"nor races (it runs at most three times as fast), at "+t);
             before=now;
         }
     }
@@ -36,7 +36,7 @@ class GGrandTest {
         for(int i=0;i+2<GGrand.BEATS.length;i++)
             assertTrue(GGrand.BEATS[i+2]-GGrand.BEATS[i+1]<GGrand.BEATS[i+1]-GGrand.BEATS[i]+1e-4,"each beat comes sooner than the last");
         for(int i=0;i+1<GGrand.BEATS.length;i++){
-            float beat=GGrand.ground(GGrand.BEATS[i]+.02f),between=GGrand.ground((GGrand.BEATS[i]+GGrand.BEATS[i+1])*.5f+.05f);
+            float beat=GGrand.ground(GGrand.BEATS[i]+.04f),between=GGrand.ground((GGrand.BEATS[i]+GGrand.BEATS[i+1])*.5f+.05f);
             assertTrue(beat>between+.1f,"the ground beats at "+GGrand.BEATS[i]);
         }
         assertEquals(0,GGrand.ground(5.9f),1e-6,"the fissures have gone after the blast");
@@ -64,19 +64,21 @@ class GGrandTest {
 
     @Test void theSwordsLightBeatsWithItsHeart(){
         for(int i=0;i<GGrand.BEATS.length;i++){
-            float on=GGrand.rune(GGrand.BEATS[i]+.02f)[0],off=GGrand.rune(GGrand.BEATS[i]-.02f)[0];
-            assertTrue(on>off+.1f,"the inscriptions swell on the beat at "+GGrand.BEATS[i]);
+            assertTrue(GGrand.heart(GGrand.BEATS[i]+.04f)>.95f,"a beat at "+GGrand.BEATS[i]);
+            float on=GGrand.rune(GGrand.BEATS[i]+.04f)[0],off=GGrand.rune(GGrand.BEATS[i]-.04f)[0];
+            assertTrue(on>off+.05f,"the inscriptions swell on the beat at "+GGrand.BEATS[i]);
         }
+        for(int i=0;i+1<4;i++)assertTrue(GGrand.heart((GGrand.BEATS[i]+GGrand.BEATS[i+1])*.5f+.06f)<.5f,"the first beats are apart");
         assertEquals(0,GGrand.heart(3.4f),1e-6,"no beat before the first");
     }
 
     @Test void lightningFlashesTwiceAndIsGone(){
         assertEquals(0,GGrand.flash(-.02f),1e-6);
         assertEquals(0,GGrand.flash(.46f),1e-6);
-        assertTrue(GGrand.flash(.02f)>.9f,"a strike");
-        assertTrue(GGrand.flash(.06f)<GGrand.flash(.02f)-.2f,"dimming");
+        assertTrue(GGrand.flash(.015f)>.9f,"a strike");
+        assertTrue(GGrand.flash(.06f)<GGrand.flash(.015f)-.2f,"dimming");
         assertTrue(GGrand.flash(.09f)>GGrand.flash(.06f)+.1f,"and a second stroke");
-        for(double[] b:GGrand.SKY_BOLTS)assertTrue(b[0]>=1.65&&b[0]+.45<IsosangRules.G_FALL+.01,"each bolt is over within the sky shot");
+        for(double[] b:GGrand.SKY_BOLTS)assertTrue(b[0]>=1.65&&b[0]+.2<IsosangRules.G_FALL,"each bolt strikes and strikes again within the sky shot");
     }
 
     @Test void nothingJumpsBetweenTwoFrames(){

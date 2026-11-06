@@ -36,15 +36,15 @@ final class GGrand {
    static final Vec3d X = new Vec3d(1.0, 0.0, 0.0), Z = new Vec3d(0.0, 0.0, 1.0), UP = new Vec3d(0.0, 1.0, 0.0);
    /** Where the storm's eye is in the sky shot's frame (across, down; the clouds' own eyeCenter). */
    static final double EYE_X = .546, EYE_Y = .40;
-   /** The lightning in the sky shot: when (seconds), from and to (frame across and down), how deep (blocks). */
+   /** The lightning in the sky shot: when (seconds), from and to (frame across and down), over before the sword falls. */
    static final double[][] SKY_BOLTS = {
-      {1.70, .20, .02, .30, .40, 30.0},
-      {1.88, .82, .00, .73, .36, 34.0},
-      {2.04, .05, .26, .15, .56, 28.0},
-      {2.20, .64, -.04, .69, .20, 36.0},
-      {2.37, .93, .22, .84, .60, 30.0},
-      {2.55, .36, -.04, .44, .18, 34.0},
-      {2.70, .12, .06, .32, .28, 30.0}
+      {1.70, .20, .02, .30, .40},
+      {1.86, .82, .00, .73, .36},
+      {2.02, .05, .26, .15, .56},
+      {2.17, .64, -.04, .69, .20},
+      {2.31, .93, .22, .84, .60},
+      {2.44, .36, -.04, .44, .18},
+      {2.56, .12, .06, .32, .28}
    };
    /** The heart the fissures beat with while the sword stands in the ground (seconds), faster toward the blast. */
    static final float[] BEATS = {3.5F, 3.85F, 4.12F, 4.34F, 4.5F, 4.62F, 4.72F};
@@ -69,17 +69,23 @@ final class GGrand {
       float beat = heart(t);
       float strength = .85F * Ease.smooth(t, 1.62F, 1.82F) + .15F * Ease.smooth(t, 2.6F, 2.9F) + .55F * Ease.smooth(t, 3.25F, 4.55F) + .3F * beat;
       float front = 2.0F + 34.0F * Ease.smooth(t, 1.66F, 2.45F) + 60.0F * Ease.smooth(t, 2.6F, 2.9F);
-      double standing = Math.max(0.0, t - IsosangRules.G_STRIKE);
-      float clock = (float)(t + .5 * standing * standing);
+      // the light running up them speeds up while it stands in the ground, to nearly three times as fast
+      double standing = Math.max(0.0, t - IsosangRules.G_STRIKE), most = 1.7;
+      float clock = (float)(t + (standing < most ? .5 * standing * standing : .5 * most * most + most * (standing - most)));
       float flare = .9F * FxLib.kick(t, IsosangRules.G_STRIKE, .2F) + .7F * Ease.smooth(t, 4.15F, 4.62F) + .35F * beat;
       return new float[]{strength, front, clock, Math.min(1.0F, flare)};
    }
 
-   /** The heart the sword and the ground beat with while it stands in the ground (0 between beats, 1 on one). */
+   /**
+    * The heart the sword and the ground beat with while it stands in the ground (0 between beats, 1 on one): each beat
+    * swells over some five frames at 60 fps and dies away.
+    */
    static float heart(float t) {
       float heart = 0.0F;
       for (float b : BEATS) {
-         heart = Math.max(heart, FxLib.kick(t, b, .1F));
+         if (t > b - .04F) {
+            heart = Math.max(heart, Ease.smooth(t, b - .04F, b + .04F) * (float)Math.exp(-Math.max(0.0F, t - b - .04F) / .07F));
+         }
       }
       return heart;
    }
@@ -90,7 +96,7 @@ final class GGrand {
     * (across, down), how strongly it lights the banks round it and how wide.
     */
    static float[] storm(float t) {
-      float eye = .95F * Ease.smooth(t, 1.62F, 1.95F) * (1.0F - Ease.smooth(t, 2.7F, 2.95F));
+      float eye = .95F * Ease.smooth(t, 1.62F, 1.95F) * (1.0F - Ease.smooth(t, 2.68F, 2.84F));
       float best = 0.0F;
       double[] at = SKY_BOLTS[0];
       for (double[] b : SKY_BOLTS) {
@@ -100,6 +106,7 @@ final class GGrand {
             at = b;
          }
       }
+      best *= 1.0F - Ease.smooth(t, IsosangRules.G_FALL - .05F, IsosangRules.G_FALL);
       eye *= 1.0F + .35F * best;
       return new float[]{eye, t, (float)((at[1] + at[3]) * .5), (float)((at[2] + at[4]) * .5), 1.25F * best, .16F};
    }
@@ -169,8 +176,8 @@ final class GGrand {
       }
       float b = FxLib.kick(t, 4.86F, .5F);
       if (b > .01F) {
-         f.light(s.add(0.0, 8.0, 0.0), GOLD_WHITE, 48.0, 1.6F * b);
-         f.shaft(s.add(0.0, 10.0, 0.0), GOLD, .5F * b);
+         f.light(s.add(0.0, 8.0, 0.0), GOLD, 40.0, .9F * b);
+         f.shaft(s.add(0.0, 10.0, 0.0), GOLD, .3F * b);
       }
    }
 
@@ -488,7 +495,7 @@ final class GGrand {
 
    // ───────────────────────────── the blast ─────────────────────────────
 
-   /** The blast (4.85 s): a dome of light swelling over its ground, rings racing out along it, a pillar into the sky. */
+   /** The blast (4.85 s): a dome of light rings swelling over its ground, rings racing out along it, a pillar into the sky. */
    static void blast(Fx c, EffectMesh m, float t, boolean ink) {
       float tau = t - 4.85F;
       if (tau < 0.0F || tau > 1.7F) {
@@ -502,16 +509,15 @@ final class GGrand {
          return;
       }
       double r = 36.0 * (1.0 - Math.exp(-tau / .3));
-      float fade = Ease.smooth(tau, 0.0F, .03F) * (1.0F - Ease.smooth(tau, .25F, 1.4F));
-      for (int i = 0; i < 7; i++) {
-         double lat = Math.toRadians(i * 12.5);
-         band(m, s.add(0.0, r * Math.sin(lat), 0.0), X, Z, r * Math.cos(lat), .9 + .05 * r, i == 0 ? GOLD_WHITE : GOLD, .28F * fade * (1.0F - i / 9.0F), 96);
+      float fade = Ease.smooth(tau, 0.0F, .03F) * (1.0F - Ease.smooth(tau, .2F, 1.1F));
+      for (int i = 0; i < 5; i++) {
+         double lat = Math.toRadians(i * 15.0);
+         band(m, s.add(0.0, r * Math.sin(lat), 0.0), X, Z, r * Math.cos(lat), .7 + .035 * r, i == 0 ? GOLD_WHITE : GOLD, .2F * fade * (1.0F - i / 6.0F), 96);
       }
-      m.softDisc(s.add(0.0, r * .35, 0.0), r * .9, GOLD, .12F * fade);
       float k = FxLib.kick(t, 4.86F, .4F);
       if (k > .01F) {
-         m.softTaper(s, s.add(0.0, 110.0, 0.0), 16.0, 5.0, GOLD, .32F * k);
-         m.softTaper(s, s.add(0.0, 110.0, 0.0), 3.5, 1.0, GOLD_WHITE, .8F * k);
+         m.softTaper(s, s.add(0.0, 110.0, 0.0), 12.0, 4.0, GOLD, .2F * k);
+         m.softTaper(s, s.add(0.0, 110.0, 0.0), 2.6, .8, GOLD_WHITE, .6F * k);
       }
    }
 
