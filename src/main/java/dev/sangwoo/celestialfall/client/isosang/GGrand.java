@@ -28,8 +28,8 @@ import net.minecraft.util.math.Vec3d;
  *   <li>the blast: a dome of light swelling over its ground, rings racing out along it, and a pillar of light into the sky.</li>
  * </ul>
  * From afar (2.89.0) the shock waves and the cracks widen and reach further ({@link #grown}), the impact frame reaches
- * watchers up to 90 blocks off, and the far view's own effects are added ({@link GFar}): from 2.90.0 the sword cleaving
- * the storm's clouds as it falls through them.
+ * watchers up to 90 blocks off, and the far view's own effects are added ({@link GFar}): from 2.90.0 the sword piercing
+ * the round storm and coming down through it.
  * Every part is a function of the cast clock alone (smooth at any frame rate). The sky and the fall are the caster's
  * cutscene's (and the arena's watchers'); the strike and the blast are in the world for everyone.
  */

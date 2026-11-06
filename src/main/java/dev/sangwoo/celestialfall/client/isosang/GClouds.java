@@ -132,7 +132,8 @@ final class GClouds {
                shader.getUniform("Mode").set(var3);
                // (2.88.0) the storm made grand: its eye burning gold behind the sword (the cutscene's canopy);
                // (2.89.0) the observers' storm seen from afar burning gold within. (2.90.0: no lightning, user request.)
-               // (2.90.0) and the cleft the sword cuts through the observers' storm (how long, how wide)
+               // (2.90.0) and the hole the sword punches through the observers' storm (the light through it, how far the
+               // cloud round it is dragged down, how wide)
                float[] storm = var3 == 2 ? GGrand.storm(var4) : var3 == 3 ? GFar.storm(var1, var4, var14) : new float[2];
                net.minecraft.client.gl.GlUniform grand = shader.getUniform("Grand");
                if (grand != null) {

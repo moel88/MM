@@ -46,9 +46,9 @@ uniform sampler2D Sampler4;
 uniform vec3 CloudCenter;
 // (2.88.0) The storm made grand (GGrand.storm): Grand.x how strongly its eye burns gold behind the sword, Grand.y the
 // clock its rays turn by. (2.89.0) In the observers' storm (Mode 3, GFar.storm) Grand.x is how strongly its eye burns
-// gold from within; (2.90.0) Grand.y how strongly the light pouring through the cleft the sword cuts through it lights
-// its walls (GFar.cleftOn, from afar), Grand.z how long the cleft is (GFar.cleftSpan), Grand.w how wide (GFar.cleftWide).
-// (2.90.0: no lightning, user request.)
+// gold from within; (2.90.0) Grand.y how strongly the light pouring down through the hole the sword punches through it
+// lights its walls (GFar.holeOn, from afar), Grand.z how far the cloud round the hole is dragged down with the falling
+// sword (GFar.holeDrag), Grand.w how wide the hole is (GFar.holeRadius). (2.90.0: no lightning, user request.)
 uniform vec4 Grand;
 
 const vec2 projectionScale = vec2(.40066, -.86915);
@@ -280,37 +280,38 @@ float square(float x) { return x * x; }
 float bankShape(vec3 p,vec3 dimensions){
  vec3 v=p/dimensions;return 1.-dot(v,v);
 }
-// (2.90.0) More cloud round the storm: eight great towering banks on a ring round it, their bases lumpy at about the
-// storm's own, gathering in with it (from 1.6 times as far).
+// (2.90.0) More cloud: the storm grown into a great round mass, ten banks overlapping on a ring round its middle and
+// lower than it (a round dome), gathering in with it (from 1.6 times as far).
 float outerBanks3(vec3 p,float gather){
  float best=-1e3,spread=1.+.6*(1.-gather);
- for(int i=0;i<8;i++){
+ for(int i=0;i<10;i++){
   float f=float(i);
-  float ai=f*.785398+.35*sin(f*2.1);
-  float ri=(48.+12.*sin(f*1.7+.4))*spread;
-  vec3 dim=vec3(21.+6.*sin(f*3.1),10.5+3.5*sin(f*1.3+.5),21.+6.*cos(f*2.7));
-  vec3 c=vec3(cos(ai)*ri,dim.y-3.+3.*sin(f*2.3),sin(ai)*ri);
+  float ai=f*.628319+.2*sin(f*2.1);
+  float ri=(40.+5.*sin(f*1.7+.4))*spread;
+  vec3 dim=vec3(24.+4.*sin(f*3.1),8.5+2.5*sin(f*1.3+.5),24.+4.*cos(f*2.7));
+  vec3 c=vec3(cos(ai)*ri,dim.y-3.5+1.5*sin(f*2.3),sin(ai)*ri);
   best=max(best,bankShape(p-c,dim));
  }
  return best;
 }
 vec4 observerMedium(vec3 p,float gather,float breach){
  vec3 wind=vec3(.68,.07,-.46)*Age;
- // (2.90.0) The sword cleaves the clouds along its own plane (z=0 here: the blade faces the caster), the cut running
- // out as it comes through the base and torn wider as it falls (GFar.cleftSpan and cleftWide, Grand.z and Grand.w): a
- // straight cut through the whole storm, torn wider still into a trough along its base, the two halves shoved apart
- // and the cloud nearest the cut piled up against it (each point samples the clouds from nearer the plane).
+ // (2.90.0) The sword pierces the round storm and comes down through it (user request: "구름을 그렇게 반으로 가르면 안
+ // 돼 그냥 원본 영상처럼 동그란 구름을 뚫고 내려오게 해야돼"): a round hole round its path (its axis leans 16.96 degrees:
+ // x=-.305y here), a little one as it comes through the base, punched wide open as it falls (GFar.holeRadius, Grand.w).
+ // The cloud from the hole is shoved out to its rim and piles up there, and round it the cloud is dragged down with
+ // the falling sword (GFar.holeDrag, Grand.z): each point samples the clouds from nearer the path and from higher up.
  vec3 rag=noise3(p*vec3(.045,.07,.045)+vec3(.71,.13,.37)-vec3(Age*.03,Age*.12,0.));
- float along=abs(.957*p.x+.292*p.y);
- float span=max(Grand.z,1.);
- float trough=1.+1.1*(1.-smoothstep(-5.,9.,p.y));
- float wide=Grand.w*(1.-smoothstep(span*.5,span,along))*trough*(.82+.36*rag.r);
- float az=abs(p.z),cut=smoothstep(0.,1.5,wide);
- float cleft=(1.-smoothstep(wide-1.2,wide+.6,az))*cut;
- float beyond=max(az-wide,0.);
- float carry=wide*exp(-beyond/26.);
- float squeeze=min(2.,1.+.9*cut*exp(-beyond/4.));
- vec3 pc=vec3(p.x,p.y,sign(p.z)*max(az-carry,0.));
+ vec2 h=vec2(p.x+.305*p.y,p.z);
+ float hr=length(h),ha=atan(h.y,h.x);
+ float hole=Grand.w*(.86+.28*rag.r+.08*sin(5.*ha+Age));
+ float cut=smoothstep(0.,1.5,hole);
+ float pierced=(1.-smoothstep(hole-1.5,hole+.8,hr))*cut;
+ float beyond=max(hr-hole,0.);
+ float carry=hole*exp(-beyond/18.);
+ float squeeze=min(2.,1.+.9*cut*exp(-beyond/5.));
+ vec2 hc=h*(max(hr-carry,0.)/max(hr,.001));
+ vec3 pc=vec3(hc.x-.305*p.y,p.y+Grand.z*exp(-beyond/11.),hc.y);
  vec3 n=noise3((pc-wind)*vec3(.038,.075,.036)+vec3(.3,.2,.45));
  vec3 fine=noise3((pc-1.6*wind)*.134+vec3(.53,.24,.65));
  vec2 rim=pc.xz;float r=length(rim),a=atan(rim.y,rim.x);
@@ -329,15 +330,15 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  float tear=smoothstep(.12,.74,.50+.35*sin(2.*a+.7)+.48*(n.b-.5));
  float low=smoothstep(-.22,.65,skirt+.98*(fine.r-.5))*tear;
  float density=(deck+.78*low)*gather;
- density*=(1.-cleft)*squeeze;
- // (2.90.0) as the sword breaks through the base a shock races out through the banks: the clouds behind it thinned,
- // pressed into a bright ring at its front
+ density*=(1.-pierced)*squeeze;
+ // (2.90.0) as the sword breaks through the base a shock races out through the banks from where it came through: the
+ // clouds behind it thinned, pressed into a bright ring at its front
  float r0=length(p.xz),shock=Age-1.58,ring=0.;
  if(shock>0.&&shock<1.8){
   float rs=8.+96.*(1.-exp(-shock/.42));
   float fade=1.-smoothstep(.65,1.8,shock);
-  ring=exp(-square((r0-rs)/(2.6+3.2*shock)))*fade*smoothstep(-.7,.25,outline);
-  density=density*(1.-.32*(1.-smoothstep(rs-16.,rs-3.,r0))*fade)+.95*ring*gather;
+  ring=exp(-square((hr-rs)/(2.6+3.2*shock)))*fade*smoothstep(-.7,.25,outline);
+  density=density*(1.-.32*(1.-smoothstep(rs-16.,rs-3.,hr))*fade)+.95*ring*gather;
  }
  // (2.90.0) cloud dragged down behind the falling sword: a ragged hollow sleeve round its path from the base down
  float dragged=0.;
@@ -364,8 +365,8 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  vec3 bankColor=mix(vec3(.49,.60,.75),vec3(.98,.98,.955),smoothstep(.06,.90,sunFace));
  float silver=exp(-square((r-skirtR)/6.6))*breach*(.7+.3*cos(a+.8));
  bankColor+=vec3(.25,.16,.053)*silver;
- // the pressed lips of the cleft and the shock's ring catch the light
- float lips=exp(-square(beyond/6.))*cut*(1.-cleft);
+ // the hole's pressed rim and the shock's ring catch the light
+ float lips=exp(-square(beyond/6.))*cut*(1.-pierced);
  bankColor=mix(bankColor,vec3(1.,.99,.97),clamp(.45*lips+.55*ring,0.,.7));
  // Sidelit vapor condenses along both shoulders, then is thrown outwards
  // on contact. Large loose sheets briefly cross the steel, never sheath it.
@@ -383,14 +384,14 @@ vec4 observerMedium(vec3 p,float gather,float breach){
             +.65*exp(-square(length((beamCoord-vec2(3.,6.))*vec2(.67,1.))/2.6));
  beams*=breach*.069*smoothstep(-41.,-17.,z)*(1.-smoothstep(4.,13.,z))*(.7+.3*n.b)*(1.-smoothstep(4.5,4.9,Age));
  float lit=density+sleeve+beams;
- // (2.89.0) the eye burning gold from within; (2.90.0) its light spilling along the cleft's lips
+ // (2.89.0) the eye burning gold from within, round where the sword comes through
  if(Grand.x>0.){
-  float burn=Grand.x*.6*exp(-r0*r0/250.)*(.65+.55*n.g)*(.55+.45*smoothstep(-4.,6.,p.y));
+  float burn=Grand.x*.6*exp(-hr*hr/250.)*(.65+.55*n.g)*(.55+.45*smoothstep(-4.,6.,p.y));
   float lum=dot(bankColor,vec3(.2126,.7152,.0722));
   bankColor=mix(bankColor,vec3(1.,.70,.34)*(.45+.8*lum),clamp(burn,0.,.8))+vec3(.22,.12,.03)*burn;
  }
- // (2.90.0) the walls of the cut lit gold by the light pouring through it (Grand.y: GFar.cleftOn, from afar)
- float wall=Grand.y*lips*exp(-along/55.)*(.6+.5*n.g);
+ // (2.90.0) the hole's walls lit gold by the light pouring down through it (Grand.y: GFar.holeOn, from afar)
+ float wall=Grand.y*lips*(.6+.5*n.g);
  bankColor=mix(bankColor,vec3(1.,.82,.55)*(.55+.6*dot(bankColor,vec3(.2126,.7152,.0722))),clamp(wall,0.,.6))+vec3(.12,.07,.02)*wall;
  // (2.90.0) the blast lights the undersides gold as it blows them apart
  bankColor+=vec3(1.,.66,.3)*boom*.9;

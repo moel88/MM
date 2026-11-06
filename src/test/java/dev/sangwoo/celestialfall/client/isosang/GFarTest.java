@@ -9,29 +9,31 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Lee So-sang's G seen from afar (2.89.0): the storm's light is the far view's only (none for a camera close by); the
  * column of light stands while the sword hangs in the sky; nothing jumps between two frames at 60 fps but the flashes.
- * (2.90.0) No lightning: the sword cleaves the storm instead, the cleft opening as it comes through the storm's base and
- * torn wider as it falls, light pouring down through it until the blast blows the storm apart.
+ * (2.90.0) No lightning: the sword pierces the round storm instead and comes down through it, a little hole as it comes
+ * through the storm's base punched wide open as it falls, light pouring down through it until the blast blows the storm
+ * apart.
  */
 class GFarTest {
     static final float FRAME=1/60f;
     static StandClient.Cast cast(){return GGesture.REFERENCE_CAST;}
 
-    @Test void theSwordCleavesTheStorm(){
-        for(float t=0;t<1.48f;t+=.01f)assertEquals(0,GFar.cleftWide(t),1e-6,"no cleft before the sword comes through, at "+t);
-        assertTrue(GFar.cleftWide(2.4f)>4,"a slit as it hangs in the sky: "+GFar.cleftWide(2.4f));
-        assertTrue(GFar.cleftWide(3.3f)>2.5f*GFar.cleftWide(2.7f),"torn wide open as it falls");
-        assertTrue(GFar.cleftSpan(3.3f)*.5>50,"right through the storm's banks either side");
-        assertTrue(GFar.cleftSpan(2.4f)>GFar.cleftSpan(1.6f)+30,"running out as it comes through");
-        for(float t=2.0f;t<4.84f;t+=.01f)assertEquals(1,GFar.cleftOn(t),1e-6,"light pours through it the while it stands open, at "+t);
-        for(float t=5.25f;t<7;t+=.01f)assertEquals(0,GFar.cleftOn(t),1e-6,"until the blast blows the storm apart, at "+t);
+    @Test void theSwordPiercesTheRoundStormAndComesDownThroughIt(){
+        for(float t=0;t<1.48f;t+=.01f)assertEquals(0,GFar.holeRadius(t),1e-6,"no hole before the sword comes through, at "+t);
+        assertTrue(GFar.holeRadius(2.4f)>8&&GFar.holeRadius(2.4f)<13,"a little one as it hangs in the storm's base: "+GFar.holeRadius(2.4f));
+        assertTrue(GFar.holeRadius(3.3f)>2.2f*GFar.holeRadius(2.7f),"punched wide open as it falls");
+        assertEquals(0,GFar.holeDrag(2.7f),1e-6,"the cloud round it is not dragged down before it falls");
+        assertTrue(GFar.holeDrag(3.3f)>5,"and is as it falls through");
+        for(float t=2.0f;t<4.84f;t+=.01f)assertEquals(1,GFar.holeOn(t),1e-6,"light pours through it the while it stands open, at "+t);
+        for(float t=5.25f;t<7;t+=.01f)assertEquals(0,GFar.holeOn(t),1e-6,"until the blast blows the storm apart, at "+t);
         Vec3d far=FallingSword.strike(cast()).add(60,10,0);
         float[] k=GFar.storm(cast(),2.9f,far);
-        assertEquals(GFar.cleftSpan(2.9f),k[2],1e-6,"the shader gets the cleft's length");
-        assertEquals(GFar.cleftWide(2.9f),k[3],1e-6,"and its width");
+        assertEquals(GFar.holeOn(2.9f),k[1],1e-6,"the shader gets the light through the hole (from afar)");
+        assertEquals(GFar.holeDrag(2.9f),k[2],1e-6,"how far the cloud round it is dragged down");
+        assertEquals(GFar.holeRadius(2.9f),k[3],1e-6,"and how wide it is");
         for(float t=0;t<7;t+=FRAME/10){
-            assertTrue(Math.abs(GFar.cleftWide(t+FRAME)-GFar.cleftWide(t))<.8f,"the cleft's walls jump at "+t);
-            assertTrue(Math.abs(GFar.cleftSpan(t+FRAME)-GFar.cleftSpan(t))<3f,"its length jumps at "+t);
-            assertTrue(Math.abs(GFar.cleftOn(t+FRAME)-GFar.cleftOn(t))<.12f,"the light through it jumps at "+t);
+            assertTrue(Math.abs(GFar.holeRadius(t+FRAME)-GFar.holeRadius(t))<1f,"the hole's rim jumps at "+t);
+            assertTrue(Math.abs(GFar.holeDrag(t+FRAME)-GFar.holeDrag(t))<.4f,"the dragged cloud jumps at "+t);
+            assertTrue(Math.abs(GFar.holeOn(t+FRAME)-GFar.holeOn(t))<.12f,"the light through it jumps at "+t);
         }
     }
 
@@ -41,7 +43,7 @@ class GFarTest {
         for(float t=0;t<7;t+=.05f)assertEquals(0,GFar.storm(cast(),t,near)[0],1e-6,"no golden eye for a camera close by, at "+t);
         assertTrue(GFar.storm(cast(),2.2f,far)[0]>.8f,"from afar the eye burns gold while the sword hangs in it");
         assertEquals(0,GFar.storm(cast(),3.4f,far)[0],1e-6,"and is out once it has struck");
-        assertEquals(4,GFar.storm(cast(),2.2f,far).length,"its eye, its clock and its cleft: no lightning (2.90.0)");
+        assertEquals(4,GFar.storm(cast(),2.2f,far).length,"its eye, the light through the hole and the hole: no lightning (2.90.0)");
     }
 
     @Test void theColumnStandsWhileTheSwordHangsInTheSky(){

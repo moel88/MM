@@ -18,11 +18,13 @@ import net.minecraft.util.math.Vec3d;
  * <ul>
  *   <li>the storm: its eye burning gold (isosang_cloud.fsh's Grand in the observers' Mode 3, {@link #storm}). The
  *   lightning that struck the ground round it (2.89.0) is gone (2.90.0, user request: "번개 치는 건 없애고 구름을 더 많이
- *   추가하고 구름을 갈라서 떨어진다는 걸 아주 강하게 표현했으면 좋겠어", "멀리서 봐도 엄청 웅장하게"): instead there is far more
- *   cloud, and the sword cleaves it ({@link #cleftSpan}, {@link #cleftWide}: the clouds pushed aside along the blade's
- *   plane and piled up along the cleft's lips, a shock racing out through the banks as it comes through, cloud dragged
- *   down behind it as it falls, the storm blown apart by the blast, all in the shader), light pouring down through the
- *   cleft from its lit lips ({@link #cleft});</li>
+ *   추가하고 구름을 갈라서 떨어진다는 걸 아주 강하게 표현했으면 좋겠어", "멀리서 봐도 엄청 웅장하게", and, not split in half,
+ *   "구름을 그렇게 반으로 가르면 안 돼 그냥 원본 영상처럼 동그란 구름을 뚫고 내려오게 해야돼"): instead the storm is a far greater
+ *   round mass of cloud and the sword pierces it and comes down through it ({@link #holeRadius}, {@link #holeDrag}: a
+ *   round hole punched through it round the sword's path, a little one as it comes through the storm's base and punched
+ *   wide open as it falls, the cloud shoved out to its rim and dragged down round it with the sword, a shock racing out
+ *   through the banks as it comes through, the storm blown apart by the blast, all in the shader), and light pouring
+ *   down through the hole ({@link #shafts});</li>
  *   <li>a column of golden light from the storm down to where the sword will strike, motes drawn down it, and rings of
  *   light marking the spot;</li>
  *   <li>the fall: a long golden trail behind the sword and rings of vapour it bursts through on its way down;</li>
@@ -66,31 +68,33 @@ final class GFar {
    // ───────────────────────────── the storm ─────────────────────────────
 
    /**
-    * The storm's own light and its cleft for the observers' view of it (isosang_cloud.fsh's Grand in Mode 3): how strongly
-    * its eye burns gold and how strongly the light pouring through the cleft lights its walls (both from afar only), and
-    * how long and how wide the cleft the sword cuts through it is ({@link #cleftSpan}, {@link #cleftWide}: for everyone).
+    * The storm's own light and the hole the sword punches through it for the observers' view of it (isosang_cloud.fsh's
+    * Grand in Mode 3): how strongly its eye burns gold and how strongly the light pouring down through the hole lights
+    * its walls (both from afar only); how far the cloud round the hole is dragged down with the sword and how wide the
+    * hole is ({@link #holeDrag}, {@link #holeRadius}: for everyone).
     */
    static float[] storm(StandClient.Cast cast, float t, Vec3d camera) {
       float w = Ease.smooth((float)camera.distanceTo(FallingSword.strike(cast)), (float)NEAR, (float)FULL);
       float eye = w * .9F * Ease.smooth(t, 1.2F, 1.8F) * (1.0F - Ease.smooth(t, 3.0F, 3.3F));
-      return new float[]{eye, w * cleftOn(t), cleftSpan(t), cleftWide(t)};
+      return new float[]{eye, w * holeOn(t), holeDrag(t), holeRadius(t)};
    }
 
    /**
-    * How long the cleft through the storm is (blocks along the blade's breadth, from its plane's centre line: whole to half
-    * of it, closing to nothing at its end): a slit running out as the sword comes through the storm's base, torn right
-    * through the storm as it falls.
+    * How wide the hole the sword punches through the storm is (blocks round its path): a little one as it comes through
+    * the storm's base, punched wide open as it falls through.
     */
-   static float cleftSpan(float t) {
-      return 16.0F + 40.0F * Ease.smooth(t, 1.5F, 2.25F) + 54.0F * Ease.smooth(t, 2.74F, 3.24F);
+   static float holeRadius(float t) {
+      return (6.0F + 5.0F * Ease.smooth(t, 1.5F, 2.3F) + 17.0F * Ease.smooth(t, 2.74F, 3.24F)) * Ease.smooth(t, 1.48F, 1.72F);
    }
 
-   /**
-    * How wide the cleft is (blocks either side of the blade's plane): a narrow slit while the sword hangs in the storm's
-    * base, torn wide open as it falls.
-    */
-   static float cleftWide(float t) {
-      return (2.0F + 3.5F * Ease.smooth(t, 1.5F, 2.3F) + 13.5F * Ease.smooth(t, 2.74F, 3.24F)) * Ease.smooth(t, 1.48F, 1.72F);
+   /** How far the cloud round the hole is dragged down with the falling sword (blocks), settling back a little after. */
+   static float holeDrag(float t) {
+      return 7.0F * Ease.smooth(t, 2.76F, 3.25F) * (1.0F - .4F * Ease.smooth(t, 3.4F, 4.8F));
+   }
+
+   /** How much light pours down through the hole: from when it opens until the blast blows the storm apart. */
+   static float holeOn(float t) {
+      return Ease.smooth(t, 1.55F, 2.0F) * (1.0F - Ease.smooth(t, 4.84F, 5.25F));
    }
 
    // ───────────────────────────── passes ─────────────────────────────
@@ -102,7 +106,7 @@ final class GFar {
       }
       float t = c.sec;
       double k = scale(c);
-      cleft(c, m, t, w, k);
+      shafts(c, m, t, w, k);
       column(c, m, t, w, k);
       fall(c, m, t, w, k);
       strike(c, m, t, w, k, false);
@@ -127,9 +131,9 @@ final class GFar {
       }
       float t = c.sec;
       Vec3d s = FallingSword.strike(c.cast);
-      float through = cleftOn(t);
+      float through = holeOn(t);
       if (through > .02F) {
-         // the light pouring down through the cleft lights the land under it
+         // the light pouring down through the hole lights the land under it
          f.light(s.add(0.0, 12.0, 0.0), GOLD, 64.0, .7F * through * w);
       }
       float col = columnOn(t);
@@ -152,40 +156,33 @@ final class GFar {
       }
    }
 
-   // ───────────────────────────── the cleft ─────────────────────────────
-
-   /** How much light pours down through the cleft: from when it opens until the blast blows the storm apart. */
-   static float cleftOn(float t) {
-      return Ease.smooth(t, 1.55F, 2.0F) * (1.0F - Ease.smooth(t, 4.84F, 5.25F));
-   }
+   // ───────────────────────────── the light through the hole ─────────────────────────────
 
    /**
-    * Light pouring down through the cleft the sword cuts through the storm (its walls lit gold by the clouds' own shader):
-    * soft shafts of light fanning down from it to the land round where the sword falls, brighter as the falling sword
-    * tears it wider.
+    * Light pouring down through the hole the sword punches through the storm (its walls lit gold by the clouds' own
+    * shader): a cone of soft shafts from round the hole to the land round where the sword falls, brighter as the falling
+    * sword punches it wide open.
     */
-   static void cleft(Fx c, EffectMesh m, float t, float w, double k) {
-      float on = cleftOn(t) * w;
+   static void shafts(Fx c, EffectMesh m, float t, float w, double k) {
+      float on = holeOn(t) * w;
       if (on <= .01F) {
          return;
       }
       Vec3d s = FallingSword.strike(c.cast);
-      Vec3d centre = GScene.cloudCenter(c.cast);
-      Vec3d f = FallingSword.forward(c.cast), r = FallingSword.right(f);
-      Vec3d across = new Vec3d(-.957 * r.x, -.292, -.957 * r.z).normalize();
-      double half = cleftSpan(t) * .5, wide = cleftWide(t);
-      // the storm's base along the cleft (the clouds' centre is 40 blocks up the sword's axis)
-      Vec3d base = new Vec3d(centre.x, s.y + BASE - 2.0, centre.z);
+      Vec3d axis = GScene.axis(c.cast);
+      double hole = holeRadius(t);
+      // where the sword's path meets the storm's base
+      Vec3d base = s.add(axis.multiply((BASE - 2.0) / axis.y));
       float torn = FxLib.kick(t, 2.85F, .6F);
-      for (int i = 0; i < 15; i++) {
-         double u = -.86 + 1.72 * i / 14.0 + .04 * Math.sin(i * 3.7);
-         Vec3d top = base.add(across.multiply(u * half * .85)).add(f.multiply((Ease.hash(i * 7 + 1) - .5) * wide));
-         double drift = Math.sin(t * .7 + i * 2.1);
-         Vec3d foot = s.add(across.multiply(u * half * .5)).add(f.multiply((Ease.hash(i * 7 + 3) - .5) * 14.0 + 3.0 * drift)).add(0.0, .1, 0.0);
-         float al = on * (.5F + .5F * (float)Math.sin(t * 1.3 + i * 1.9)) * (float)Math.cos(u * Math.PI * .5);
+      for (int i = 0; i < 14; i++) {
+         double a = i * Math.PI * 2.0 / 14.0 + .25 * Math.sin(i * 2.3) + t * .05;
+         Vec3d d = new Vec3d(Math.cos(a), 0.0, Math.sin(a));
+         Vec3d top = base.add(d.multiply(hole * (.45 + .35 * Ease.hash(i * 7 + 1))));
+         Vec3d foot = s.add(d.multiply(hole * (.8 + .6 * Ease.hash(i * 7 + 3)) + 4.0)).add(0.0, .1, 0.0);
+         float al = on * (.5F + .5F * (float)Math.sin(t * 1.3 + i * 1.9));
          double thin = .6 + .5 * Ease.hash(i * 7 + 5);
-         m.softTaper(top, foot, (wide * .3 + 1.5) * thin, (wide * .55 + 4.0) * thin, GOLD, (.07F + .06F * torn) * al);
-         m.softTaper(top, foot, (wide * .08 + .5) * thin, (wide * .15 + 1.2) * thin, GOLD_WHITE, (.08F + .07F * torn) * al);
+         m.softTaper(top, foot, (hole * .2 + 1.5) * thin, (hole * .35 + 4.0) * thin, GOLD, (.06F + .06F * torn) * al);
+         m.softTaper(top, foot, (hole * .05 + .5) * thin, (hole * .1 + 1.2) * thin, GOLD_WHITE, (.07F + .07F * torn) * al);
       }
    }
 

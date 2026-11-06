@@ -257,7 +257,7 @@ public final class GStage {
    /**
     * (2.90.0) The world's storm seen from outside the cutscene, drawn before the effect layer (an earlier phase of the
     * last world pass): the effect layer writes no depth, so drawn after it the storm's far greater clouds would cover the
-    * far view's light in front of them (the column, the trail, the pillars, the light pouring down through the cleft).
+    * far view's light in front of them (the column, the trail, the pillars, the light pouring down through the hole).
     */
    static void farClouds(WorldRenderContext var0) {
       if (!GBlackout.hidden()) {
