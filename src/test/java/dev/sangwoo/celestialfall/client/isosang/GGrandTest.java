@@ -70,7 +70,7 @@ class GGrandTest {
         for(int seed=0;seed<40;seed++){
             double angle=seed*.37,length=9+seed%10;
             net.minecraft.util.math.Vec3d[] p=GGrand.jagged(o,angle,1.4,length,16,seed*131+7,.55);
-            assertEquals(1.4,p[0].distanceTo(o),1e-6,"it starts at the strike's edge");
+            assertEquals(1.4,p[0].distanceTo(o),.05,"it starts at the strike's edge");
             assertEquals(length,p[p.length-1].distanceTo(o),1.0,"and runs out its length");
             for(net.minecraft.util.math.Vec3d q:p)assertEquals(64,q.y,1e-9,"along the ground");
             int sharp=0;

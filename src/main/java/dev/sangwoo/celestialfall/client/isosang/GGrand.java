@@ -416,10 +416,10 @@ final class GGrand {
          }
          double taper = width * Math.max(.12, 1.0 - .85 * j / (points.length - 1));
          if (ink) {
-            strip(m, a, b, UP, .26 * taper, INK, .5F * Math.min(1.0F, g * 1.6F));
+            strip(m, a, b, UP, .34 * taper, INK, .5F * Math.min(1.0F, g * 1.6F));
          } else {
-            strip(m, a.add(0.0, .01, 0.0), b.add(0.0, .01, 0.0), UP, .3 * taper, GOLD, .32F * g);
-            strip(m, a.add(0.0, .02, 0.0), b.add(0.0, .02, 0.0), UP, .075 * taper, GOLD_WHITE, Math.min(1.0F, 1.1F * g));
+            strip(m, a.add(0.0, .01, 0.0), b.add(0.0, .01, 0.0), UP, .4 * taper, GOLD, .36F * g);
+            strip(m, a.add(0.0, .02, 0.0), b.add(0.0, .02, 0.0), UP, .1 * taper, GOLD_WHITE, Math.min(1.0F, 1.1F * g));
          }
       }
    }

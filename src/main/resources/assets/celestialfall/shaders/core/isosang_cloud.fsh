@@ -724,7 +724,9 @@ void main(){
  vec3 a=(lower-origin)/safeRay,b=(upper-origin)/safeRay;
  vec3 lo=min(a,b),hi=max(a,b);
  start=max(0.,max(lo.x,max(lo.y,lo.z)));end=min(end,min(hi.x,min(hi.y,hi.z)));
- vec4 surface=(Mode==4 && z<.99999) ? arenaMark(origin+ray*limit,Age) : vec4(0.);
+ // (2.91.0) the ground's cracks are GGrand.fissures' (sharp and jagged, for everyone): these wavy ones doubled them as
+ // dark tubes laid on the ground (user request: "마지막으로 G스킬 전체적으로 예쁘게 이펙트 강화해주고 다듬어줘")
+ vec4 surface=vec4(0.);
  if(start>=end){fragColor=surface;return;}
  // Full-resolution PC pass. More samples preserve thin moving jets and distant
  // cloud edges; no mobile-resolution reduction is applied to this cinematic.
