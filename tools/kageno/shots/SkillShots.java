@@ -143,7 +143,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * stop stops mid-stride, end the walk before time stops: the walk moves it whatever holds it), "HURT@n" deals the player "hurt" damage from it through the game's
  * own blow path and "FLING@n" throws the player "fly" blocks a tick away from it ("flyup" up) through the time stop's
  * hold, as a punch's throw is (the fake has no stand attacks of its own: the server runs those for listed players
- * only), and "UNFAKE@n" takes it away. stand.csv gets the time stop (its age, whether time is stopped, when it moved
+ * only), and "UNFAKE@n" takes it away. (2.92.0) "fstand=isosang" makes the fake a Lee So-sang user ("fname" its name)
+ * and "FAKEG@n" has it cast G by the real rules, to film one of the others in its blast's ground: the log gets when the
+ * player's camera goes into its cutscene and out of it, and every half second how loud it sounds for them (no one is
+ * struck: the server forgets a fake's swing the next tick). stand.csv gets the time stop (its age, whether time is stopped, when it moved
  * again, cut short, whether this client's screen is held still, its wave: how far it has spread, the far world's
  * grade, the flash, the negative, since 2.68.0 how brightly its bubble shows, its cracks and the impact frame), the
  * call's two stances, the player's health and whether the dummy and the player are held; camera.csv each frame's camera
@@ -710,8 +713,9 @@ public final class SkillShots implements ClientModInitializer {
         }
         // Lee So-sang's sword (2.77.0): each of the player's hits seen, and whom its blows struck as they are told
         var me=MinecraftClient.getInstance().player;
+        // (2.92.0) and the fake user's, so a G it casts is in NAME/isosang.csv for its sound (mux_g.py)
         if(me!=null)for(var c:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
-            if(!c.caster().equals(me.getUuid()))continue;
+            if(!c.caster().equals(me.getUuid())&&(fakePlayer==null||!c.caster().equals(fakePlayer.getUuid())))continue;
             if(swingsLogged.add(c.id())){
                 long began=age-(long)Math.floor(c.age(0));
                 log.append("  isosang hit ").append(c.combo()).append(" seen at ").append(age).append(" (began on tick ").append(began).append(")\n");
@@ -727,7 +731,26 @@ public final class SkillShots implements ClientModInitializer {
             int n=c.targets().size();Integer was=swingTargets.put(c.id(),n);
             if(was==null?n>0:n>was)log.append("  isosang hit ").append(c.combo()).append(" struck ").append(n).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %.2f s)%n",c.age(0)/20f));
         }
+        // (2.92.0) another's G: when the player's camera goes into its cutscene and out of it (and how far into it),
+        // and every half second how loud its sound is for the player and where they stand
+        if(me!=null){
+            var g=dev.sangwoo.celestialfall.client.isosang.GArenaClient.cinematic();
+            var other=g!=null&&!g.caster().equals(me.getUuid())?g:null;
+            if((other==null)!=(othersG==null)){
+                var c=other!=null?other:othersG;
+                log.append("  others' G cutscene ").append(other!=null?"on":"off").append(" at ").append(age)
+                    .append(String.format(Locale.ROOT," (its age %.3f s, the player at %.1f %.1f %.1f)%n",c.age(MinecraftClient.getInstance().getTickDelta())/20f,me.getX(),me.getY(),me.getZ()));
+            }
+            othersG=other;
+            if(age%10==0)for(var c:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
+                var u=dev.sangwoo.celestialfall.client.isosang.IsosangClient.ultimate(c.id());
+                if(c.combo()!=dev.sangwoo.celestialfall.isosang.IsosangRules.ULTIMATE||c.caster().equals(me.getUuid())||u==null||c.age(0)/20f>8)continue;
+                log.append(String.format(Locale.ROOT,"  others' G heard at %.3f at %d (its age %.2f s, the player at %.1f %.1f %.1f, %.1f blocks from where it strikes)%n",
+                    dev.sangwoo.celestialfall.client.isosang.IsosangClient.ultimateLoudness(MinecraftClient.getInstance(),c.id(),u.strike()),age,c.age(0)/20f,me.getX(),me.getY(),me.getZ(),me.getPos().distanceTo(u.strike())));
+            }
+        }
     }
+    private dev.sangwoo.celestialfall.client.StandClient.Cast othersG;
     private final java.util.Set<java.util.UUID> swingsLogged=new java.util.HashSet<>();private final java.util.Map<java.util.UUID,Integer> swingTargets=new java.util.HashMap<>();
     /** 2.77.0: each of the player's sword hits (its number and the tick of the shot's clock it began on), for NAME/isosang.csv. */
     private final StringBuilder swingRows=new StringBuilder();
@@ -1144,16 +1167,22 @@ public final class SkillShots implements ClientModInitializer {
                     // player (and "crt" to their right), facing them: "FAKE@n" brings it in, "FAKEH@n" makes it stop time (H, its
                     // real rules: the player stands stopped in it), "HURT@n" deals the player "hurt" (4) through the game's own
                     // blow path from it (kept until time moves again), "UNFAKE@n" takes it away
+                    // (2.92.0) "fstand=isosang" makes it a Lee So-sang user instead (its stand id; "fname" its name, SP_User),
+                    // and "FAKEG@n" has it cast G by the real rules (IsosangAttack.ultimate): the player is one of the
+                    // others in its blast's ground. The server forgets a fake player's swing the next tick (its tick looks
+                    // players up in the player list), so its G strikes no one: the player's client plays it out alone.
                     if(what.equals("FAKE")){if(age==at)server(p->{
-                            var w=p.getServerWorld();var profile=new com.mojang.authlib.GameProfile(UUID.randomUUID(),"SP_User");
+                            var w=p.getServerWorld();var profile=new com.mojang.authlib.GameProfile(UUID.randomUUID(),opts.getOrDefault("fname","SP_User"));
+                            String fstand=opts.getOrDefault("fstand","star_platinum");
                             var fake=net.fabricmc.fabric.api.entity.FakePlayer.get(w,profile);
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
                             var to=p.getPos().add(f.multiply(opt("cfw",6))).add(right.multiply(opt("crt",0)));float yaw=p.getYaw()+180;
                             fake.refreshPositionAndAngles(to.x,p.getY(),to.z,yaw,0);fake.setHeadYaw(yaw);fake.setBodyYaw(yaw);
-                            ((StandHolder)fake).botand$setStand("star_platinum");((StandHolder)fake).botand$setStandOut(true);
+                            ((StandHolder)fake).botand$setStand(fstand);((StandHolder)fake).botand$setStandOut(fstand.equals("star_platinum"));
                             p.networkHandler.sendPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.entryFromPlayer(List.of(fake)));
                             boolean in=w.spawnEntity(fake);fakePlayer=fake;
-                            log.append("  fake Star Platinum user ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f, tick %d%n",to.x,to.y,to.z,yaw,age));});continue;}
+                            log.append("  fake ").append(fstand).append(" user ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f, tick %d%n",to.x,to.y,to.z,yaw,age));});continue;}
+                    if(what.equals("FAKEG")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimate(fakePlayer);log.append("  fake G ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
                     if(what.equals("FAKEH")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.request(fakePlayer);log.append("  fake H ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
                     // "FAKEWALK@n": the fake user walks up to "fto" blocks (1.6) in front of the player and "frt" (0) to their right
                     // over "fwt" ticks (30), facing the way it walks; "FAKER@n": it throws its heavy punch (R, its real rules)

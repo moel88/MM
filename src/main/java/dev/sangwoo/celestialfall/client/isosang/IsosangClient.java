@@ -518,8 +518,10 @@ public final class IsosangClient {
 
     private static float volume(MinecraftClient mc,Vec3d from){
         if(mc.player==null)return 0;double far=from.distanceTo(mc.player.getPos());
-        return (float)(CelestialFall.CONFIG.effectVolume*Math.max(0,1-far/CARRY));
+        return (float)(CelestialFall.CONFIG.effectVolume*carried(far));
     }
+    /** How loud a sound is (0 to 1) {@code beyond} blocks out of where it is as loud as at its source: fading out to CARRY blocks. */
+    static double carried(double beyond){return Math.max(0,1-beyond/CARRY);}
     /** The hit's sound, its whooshes on its blows: loud for its user and those near, fading out to CARRY blocks. */
     private static void voice(MinecraftClient mc,UUID id,UUID caster,int combo){
         var user=mc.world.getPlayerByUuid(caster);if(user==null||!IsosangRules.drawn(combo)||mc.player==null)return;
@@ -546,17 +548,25 @@ public final class IsosangClient {
     /**
      * G's sound (2.83.0, user request: "효과음과 대사는 내가 영상에 보냈고 저거 2개중에 랜덤으로 하나 나오게 하면 돼"): the
      * recording of the user's video the server chose (its variant), from the screen going dark to its end, as it is. Loud
-     * for its user; for everyone else heard from the nearer of its user and where its sword strikes, fading out to CARRY
-     * blocks, measured again every tick.
+     * for its user. (2.92.0, user request: "그대신 시전하는 소리는 처음부터 끝까지 들리게 하고 ... 그래야 다른 플레이어들이
+     * 소리 듣고 조금이라도 도망 갈 수 있을 거 같아") As loud for everyone in its blast's ground (GArenaClient.ground: the
+     * arena it was cast in, or 62 × 47 blocks round where its sword strikes), from its start to its end, and fading out to
+     * CARRY blocks beyond the ground's edge ({@link #carried}; before 2.92.0, from the nearer of its user and where its
+     * sword strikes, so the ground's far corners barely heard it), measured again every tick: one running out of it hears
+     * it fade as they go.
      */
     private static void ultimateVoice(MinecraftClient mc,UUID id,UUID caster){
         var u=ULTIMATES.get(id);if(u==null)return;
-        java.util.function.DoubleSupplier loud=caster.equals(mc.player.getUuid())?()->VOLUME:()->{
-            var m=MinecraftClient.getInstance();if(m.player==null||m.world==null)return 0;
-            var user=m.world.getPlayerByUuid(caster);Vec3d from=user==null?u.strike():heardFrom(m.player.getPos(),user.getPos(),u.strike());
-            return volume(m,from)*VOLUME;
-        };
+        java.util.function.DoubleSupplier loud=caster.equals(mc.player.getUuid())?()->VOLUME:()->ultimateLoudness(MinecraftClient.getInstance(),id,u.strike());
         var s=new Sound(CelestialFall.id("isosang_g_"+(u.variant()+1)),(float)loud.getAsDouble(),loud);VOICES.put(id,s);mc.getSoundManager().play(s);
+    }
+    /**
+     * How loud another's G {@code id}, its sword striking at {@code strike}, sounds for this client's player now (2.92.0,
+     * ultimateVoice): as loud as for its user in its blast's ground, fading out to CARRY blocks beyond its edge.
+     */
+    public static double ultimateLoudness(MinecraftClient mc,UUID id,Vec3d strike){
+        if(mc.player==null||mc.world==null)return 0;
+        return CelestialFall.CONFIG.effectVolume*carried(GArenaClient.ground(id,strike).outside(mc.player.getPos()))*VOLUME;
     }
     /** How loud H's sounds are where this client listens (2.82.18): from the nearer of its user and the formation's middle. */
     private static double formationLoudness(MinecraftClient mc,UUID id,UUID caster){

@@ -11,6 +11,17 @@ public record GArenaBounds(double minX, double minY, double minZ, double maxX, d
       return var1.x >= this.minX && var1.x < this.maxX && var1.y >= this.minY && var1.y < this.maxY && var1.z >= this.minZ && var1.z < this.maxZ;
    }
 
+   /**
+    * How far {@code at} stands out of this box (blocks, the straight way to its nearest face, edge or corner; 0 in it):
+    * the client hears G's sound as loud as its user does in its blast's ground and fainter beyond it by this (2.92.0).
+    */
+   public double outside(Vec3d at) {
+      double x = Math.max(Math.max(this.minX - at.x, at.x - this.maxX), 0.0);
+      double y = Math.max(Math.max(this.minY - at.y, at.y - this.maxY), 0.0);
+      double z = Math.max(Math.max(this.minZ - at.z, at.z - this.maxZ), 0.0);
+      return Math.sqrt(x * x + y * y + z * z);
+   }
+
    public Box box() {
       return new Box(this.minX, this.minY, this.minZ, this.maxX, this.maxY, this.maxZ);
    }
