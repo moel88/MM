@@ -48,7 +48,7 @@ class GGrandTest {
         assertEquals(0,GGrand.storm(2.96f)[0],1e-6,"and is out once the sword falls");
         for(double[] b:GGrand.SKY_BOLTS){
             float[] k=GGrand.storm((float)b[0]+.015f);
-            assertTrue(k[4]>.9f,"each bolt lights the banks, at "+b[0]);
+            assertTrue(k[4]>.5f,"each bolt lights the banks, at "+b[0]);
             assertEquals((b[1]+b[3])*.5,k[2],1e-4,"round where it forks");
             assertEquals((b[2]+b[4])*.5,k[3],1e-4);
             assertTrue(k[2]>0&&k[2]<1&&k[3]>-.05&&k[3]<1,"in the frame");

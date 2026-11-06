@@ -41,7 +41,7 @@ final class GGrand {
       {1.70, .20, .02, .30, .40},
       {1.86, .82, .00, .73, .36},
       {2.02, .05, .26, .15, .56},
-      {2.17, .64, -.04, .69, .20},
+      {2.17, .74, -.04, .79, .22},
       {2.31, .93, .22, .84, .60},
       {2.44, .36, -.04, .44, .18},
       {2.56, .12, .06, .32, .28}
@@ -49,8 +49,11 @@ final class GGrand {
    /** The heart the fissures beat with while the sword stands in the ground (seconds), faster toward the blast. */
    static final float[] BEATS = {3.5F, 3.85F, 4.12F, 4.34F, 4.5F, 4.62F, 4.72F};
    static final int FISSURES = 13;
-   /** How deep the sky shot's motes start and its bolts are drawn: in front of the storm's banks (blocks). */
-   static final double NEAR = 3.9, BOLT_DEPTH = 5.6;
+   /**
+    * How deep the sky shot's motes start and its bolts are drawn: in front of the storm's banks, whose outer parts begin
+    * some four blocks out (and none nearer than 1.2), behind the caster and the sword's point (blocks).
+    */
+   static final double NEAR = 2.2, BOLT_DEPTH = 2.0;
    /** The strike's impact frame: white gold on deep amber (the effect layer's frame, in place of Kageno's violet). */
    static final dev.sangwoo.celestialfall.client.vfx.FxFrame.ImpactLook GOLDEN =
       new dev.sangwoo.celestialfall.client.vfx.FxFrame.ImpactLook(0x2E1704, 0xFFF1CC, 0xFFF6E2, 0x1C0E02, 0x8C4E0A);
@@ -108,7 +111,7 @@ final class GGrand {
       }
       best *= 1.0F - Ease.smooth(t, IsosangRules.G_FALL - .05F, IsosangRules.G_FALL);
       eye *= 1.0F + .35F * best;
-      return new float[]{eye, t, (float)((at[1] + at[3]) * .5), (float)((at[2] + at[4]) * .5), 1.25F * best, .16F};
+      return new float[]{eye, t, (float)((at[1] + at[3]) * .5), (float)((at[2] + at[4]) * .5), .62F * best, .13F};
    }
 
    // ───────────────────────────── passes ─────────────────────────────
@@ -223,10 +226,10 @@ final class GGrand {
       float on = Ease.window(t, 1.6F, IsosangRules.G_FALL, .1F, .04F);
       FallingSword.Frame k = GScene.skyFrame(c.cast, t);
       double fov = GScene.SKY_FOV, tan = Math.tan(Math.toRadians(fov / 2.0));
-      // golden motes drawn spinning into the eye, in front of the banks (which begin some 7.5 blocks out)
-      for (int i = 0; i < 64; i++) {
+      // golden motes drawn spinning into the eye, in front of the banks
+      for (int i = 0; i < 48; i++) {
          double ph = ((double)t * (.35 + .25 * Ease.hash(i * 13 + 1)) + Ease.hash(i * 13 + 3)) % 1.0;
-         double depth = NEAR + 2.6 * Ease.hash(i * 13 + 5);
+         double depth = NEAR + .9 * Ease.hash(i * 13 + 5);
          double r = (.16 + .5 * Ease.hash(i * 13 + 7)) * Math.pow(1.0 - ph, 1.4);
          double a = Ease.hash(i * 13 + 9) * Math.PI * 2.0 + 2.4 * ph;
          double height = 2.0 * tan * depth;

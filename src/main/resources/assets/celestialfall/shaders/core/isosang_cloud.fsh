@@ -189,19 +189,21 @@ vec4 sampleCloud(vec3 p, vec3 ray, float opening, float gathering) {
                     +.22*clamp(dot(p-CloudCenter,up)/12.,-1.,1.);
     vec3 flank=mix(vec3(.34,.44,.60),vec3(.94,.955,.975),smoothstep(.05,.90,facingSun));
     col=mix(flank,col,smoothstep(.90,.995,facing));
-    // (2.88.0) the eye burning gold behind the sword, its light thrown out through the banks in slowly turning rays
+    // (2.88.0) the eye burning gold behind the sword, its light thrown out through the banks in slowly turning rays:
+    // the banks there take on gold by their own brightness (their shapes kept), lit a little more
     if(Grand.x>0.){
      vec2 e=(uv-eyeCenter)*vec2(2.167,1.);
      float er=length(e),ea=atan(e.y,e.x);
      float rays=pow(.5+.5*sin(ea*7.+Grand.y*.6+1.7*sin(ea*3.-Grand.y*.35)),4.);
-     float burn=exp(-er*er/.018)*1.15+exp(-er/.2)*(.35+.65*rays)*.6;
-     col+=vec3(1.,.66,.27)*burn*Grand.x*(.72+.45*erosion)*(.55+.45*edge);
+     float burn=(exp(-er*er/.03)*.95+exp(-er/.24)*(.25+.75*rays)*.6)*Grand.x*(.75+.4*erosion);
+     float lum=dot(col,vec3(.2126,.7152,.0722));
+     col=mix(col,vec3(1.,.69,.33)*(.42+.78*lum),clamp(burn,0.,.8))+vec3(.2,.11,.03)*burn;
     }
-    // lightning lighting the banks from inside, round where it forks
+    // lightning lighting the banks from inside round where it forks: their own shapes brightened and cooled
     if(Lightning.z>0.){
      vec2 b=(uv-Lightning.xy)*vec2(2.167,1.);
-     float flash=exp(-dot(b,b)/(Lightning.w*Lightning.w))+.25*exp(-dot(b,b)/(9.*Lightning.w*Lightning.w));
-     col+=vec3(.72,.80,1.)*flash*Lightning.z*(.6+.4*edge)*(.7+.5*erosion);
+     float flash=(exp(-dot(b,b)/(Lightning.w*Lightning.w))+.12*exp(-dot(b,b)/(6.*Lightning.w*Lightning.w)))*Lightning.z*(.65+.35*edge)*(.75+.4*erosion);
+     col=col*(1.+.75*flash)+vec3(.16,.2,.32)*flash;
     }
     return vec4(col,(density+vapor)*extent*smoothstep(.35,1.03,Age));
 }
