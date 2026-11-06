@@ -377,6 +377,8 @@ final class FallingSword {
       if (!gone && (shown(c) || !GStage.hidden())) {
          GImpact.sparks(c, m, t);
       }
+
+      GGrand.additive(c, m);
    }
 
    static void foot(Fx c, EffectMesh m, float t) {
@@ -674,6 +676,7 @@ final class FallingSword {
    }
 
    static void alpha(Fx c, EffectMesh m) {
+      GGrand.alpha(c, m);
    }
 
    static void overlay(Fx c, EffectMesh m) {
@@ -718,6 +721,8 @@ final class FallingSword {
       if (var4 > 0.28F && var4 < 1.1F || var4 > 2.7833333F && var4 < 3.3999999F) {
          var1.afterglow(0.08F);
       }
+
+      GGrand.frame(var0, var1);
    }
 
    static float shake(StandClient.Cast cast, float sec) {

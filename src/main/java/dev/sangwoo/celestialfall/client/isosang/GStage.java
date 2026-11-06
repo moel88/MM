@@ -310,6 +310,12 @@ public final class GStage {
          double[] shape = GScene.bladeShape();
          skyShape.set((float)shape[0], (float)shape[1], (float)shape[2]);
       }
+      // (2.88.0) its inscriptions burning (both shaders)
+      GlUniform rune = var4.getUniform("Rune");
+      if (rune != null) {
+         float[] k = GGrand.rune(var3);
+         rune.set(k[0], k[1], k[2], k[3]);
+      }
       prepareBladeTextures();
       RenderSystem.setShaderTexture(0, BLADE);
       RenderSystem.setShaderTexture(1, BLADE_N);

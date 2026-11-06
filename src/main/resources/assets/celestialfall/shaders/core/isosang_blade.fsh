@@ -16,6 +16,21 @@ uniform float Buried;
 uniform float Storm;
 uniform int Edge;
 out vec4 fragColor;
+// (2.88.0) The inscriptions burn: molten gold in the carved channels, lit from the point up to Rune.y blocks,
+// a light running up through them (Rune.z, seconds), whitening as Rune.w rises. Rune.x is how strongly (0 none).
+uniform vec4 Rune;
+float runeGlow(float cavity,float y,float inside){
+ if(Rune.x<=0.)return 0.;
+ float groove=smoothstep(.25,.75,cavity)*inside;
+ float lit=1.-smoothstep(Rune.y-1.,Rune.y+1.5,y);
+ float run=fract((y-Rune.z*11.)/16.);
+ float flow=.62+.26*sin(y*.55-Rune.z*6.5)+.55*exp(-pow((run-.5)*5.,2.));
+ return Rune.x*groove*lit*flow;
+}
+vec3 runeLight(float rune){
+ // gold, its hottest parts going white-gold; the flare whitens the whole of it
+ return vec3(1.,.58,.18)*rune*1.15+vec3(1.,.86,.55)*rune*rune*.7+vec3(1.,.96,.86)*rune*Rune.w*.9;
+}
 // Resolve the same inscription at every screen scale. Subpixel grooves should
 // contribute their average bronze/occlusion, rather than alternating black and white.
 vec4 readSurface(sampler2D surface, vec2 coord, float lod, float coarse) {
@@ -26,7 +41,7 @@ vec4 readSurface(sampler2D surface, vec2 coord, float lod, float coarse) {
 void main(){
  float shown=tint.a;
  if(shown<.004)discard;
- vec2 sampleUV=uv;float cavityLight=1.,cavity=0.;
+ vec2 sampleUV=uv;float cavityLight=1.,cavity=0.,rune=0.;
  vec2 texel=vec2(textureSize(Sampler0,0));
  float footprint=max(length(dFdx(uv)*texel),length(dFdy(uv)*texel));
  float coarse=smoothstep(9.,23.,footprint);
@@ -58,6 +73,7 @@ void main(){
   N=normalize(mix(Ng,fine,smoothstep(.20,.25,h-abs(x))*smoothstep(.35,.5,y)));
   cavity=clamp((.8-relief.a)/.5,0.,1.);
   cavityLight=1.-cavity*.29;
+  rune=runeGlow(cavity,y,smoothstep(.12,.3,h-abs(x)));
  }else{
   albedo=vec3(.80,.47,.29);hotMask=.35;
  }
@@ -135,6 +151,8 @@ void main(){
  // The distant engraving loses warm contrast over tens of metres, while the
  // approaching lower blade retains its bronze relief and white-hot edge.
  col=mix(col,vec3(.62,.70,.77),smoothstep(5.,22.,bladeY)*.65*Storm);
+ // (2.88.0) the burning inscriptions light through the storm's haze, a little dimmed by it far up the blade
+ col+=runeLight(rune)*(1.-.45*smoothstep(5.,22.,bladeY)*Storm)*(1.-Dark);
 
  fragColor=vec4(col,shown)*ColorModulator;
 }
