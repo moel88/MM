@@ -32,8 +32,8 @@ import net.minecraft.util.math.Vec3d;
  *   sword, and the land lit gold;</li>
  *   <li>while it stands: a ring of light racing out along the ground on each beat of its heart, golden spirals climbing
  *   it and lightning running up it;</li>
- *   <li>the blast: a great dome of light rings, rings racing out past the edge of its ground, a pillar of light into the
- *   sky, and a ring at the storm's height blowing it apart.</li>
+ *   <li>the blast: a great dome of light, rings racing out past the edge of its ground and a pillar of light into the
+ *   sky, while the storm is blown apart (in the clouds' own shader).</li>
  * </ul>
  * Every part is a function of the cast clock alone.
  */
@@ -212,9 +212,10 @@ final class GFar {
          double a = Ease.hash(i * 11 + 5) * Math.PI * 2.0 + t * (1.2 + Ease.hash(i * 11 + 7));
          double r = 1.5 + 4.5 * Ease.hash(i * 11 + 9);
          Vec3d p = s.add(axis.multiply(h)).add(across.multiply(Math.cos(a) * r)).add(normal.multiply(Math.sin(a) * r));
-         float al = on * (float)Math.sin(Math.PI * ph);
-         m.softDisc(p, .5 * k, GOLD, .4F * al);
-         m.star(p, .45 * k, GOLD_WHITE, .7F * al);
+         // (2.91.0) fine sparkles twinkling down it (soft discs read as bubbles from afar)
+         float al = on * (float)Math.sin(Math.PI * ph) * (.55F + .45F * (float)Math.sin(t * 11.0 + i * 2.3));
+         m.star(p, .42 * k, GOLD_WHITE, .85F * al);
+         m.softDisc(p, .16 * k, GOLD, .35F * al);
       }
       Vec3d floor = s.add(0.0, .1, 0.0);
       GGrand.band(m, floor, GGrand.X, GGrand.Z, 7.5, .45 * k, GOLD_WHITE, .75F * on, 96);
@@ -348,20 +349,20 @@ final class GFar {
       Vec3d view = o.subtract(camera);
       Vec3d across = new Vec3d(-view.z, 0.0, view.x);
       across = across.lengthSquared() < 1.0E-6 ? GGrand.X : across.normalize();
+      // (2.91.0) a softer shell: its outline fading toward the top, no latitude (the lines read as clutter from afar)
       Vec3d prev = null;
       for (int i = 0; i <= 64; i++) {
          double a = Math.PI * i / 64.0;
          Vec3d p = o.add(across.multiply(Math.cos(a) * r)).add(0.0, Math.sin(a) * r, 0.0);
          if (prev != null) {
-            m.softLine(prev, p, (1.6 + .05 * r) * k, GOLD, .4F * fade);
-            m.line(prev, p, .3 * k, GOLD_WHITE, .75F * fade);
+            float edge = (float)(.55 + .45 * Math.abs(Math.cos(a)));
+            m.softLine(prev, p, (2.2 + .06 * r) * k, GOLD, .26F * fade * edge);
+            m.line(prev, p, .22 * k, GOLD_WHITE, .55F * fade * edge);
          }
          prev = p;
       }
       GGrand.band(m, o.add(0.0, .1, 0.0), GGrand.X, GGrand.Z, r, (1.0 + .04 * r) * k, GOLD_WHITE, .45F * fade, 96);
-      double lat = Math.toRadians(32.0);
-      GGrand.band(m, o.add(0.0, r * Math.sin(lat), 0.0), GGrand.X, GGrand.Z, r * Math.cos(lat), (.7 + .03 * r) * k, GOLD, .22F * fade, 96);
-      m.softDisc(o.add(0.0, r * .45, 0.0), r * .95, GOLD, .08F * fade);
+      m.softDisc(o.add(0.0, r * .45, 0.0), r * .95, GOLD, .1F * fade);
    }
 
    // ───────────────────────────── while it stands ─────────────────────────────
@@ -445,10 +446,6 @@ final class GFar {
          m.softTaper(s, s.add(0.0, 260.0, 0.0), 34.0, 16.0, GOLD, .18F * kick * w);
          m.softTaper(s, s.add(0.0, 260.0, 0.0), 9.0, 4.0, GOLD_WHITE, .45F * kick * w);
       }
-      Vec3d high = s.add(0.0, BASE, 0.0);
-      double r = 14.0 + 90.0 * (1.0 - Math.exp(-tau / .45));
-      float a = Ease.smooth(tau, 0.0F, .05F) * (1.0F - Ease.smooth(tau, .3F, 1.5F)) * w;
-      GGrand.band(m, high, GGrand.X, GGrand.Z, r, (3.0 + 9.0 * tau) * k, MIST, .45F * a, 120);
-      GGrand.band(m, high.add(0.0, .1, 0.0), GGrand.X, GGrand.Z, r, (1.0 + 2.5 * tau) * k, GOLD_WHITE, .6F * a, 120);
+      // (2.91.0) the storm itself is blown apart by the clouds' own shader (2.90.0): no ring drawn at its height
    }
 }

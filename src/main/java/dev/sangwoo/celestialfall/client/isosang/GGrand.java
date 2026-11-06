@@ -151,7 +151,11 @@ final class GGrand {
 
    // ───────────────────────────── her face ─────────────────────────────
 
-   /** A golden light behind her head, two rings and a halo of thin golden rays, turning slowly (her face shot, 1.06 to 1.58 s). */
+   /**
+    * A golden light behind her head, rimming it, and a halo round it: long thin rays turning slowly, a bright ring and a
+    * wide faint one with a ring of fine ticks between them turning the other way, and motes of light drifting up beside
+    * her (her face shot, 1.06 to 1.58 s). (2.91.0) Brighter and finer: the halo of 2.88.0 barely showed.
+    */
    static void face(Fx c, EffectMesh m, float t) {
       float on = Ease.window(t, 1.06F, 1.58F, .08F, .1F);
       if (on <= .01F) {
@@ -164,18 +168,36 @@ final class GGrand {
       across = across.lengthSquared() < 1.0E-6 ? c.right : across.normalize();
       Vec3d up = across.crossProduct(view).normalize();
       Vec3d back = head.add(view.multiply(1.1));
+      float breathe = .9F + .1F * (float)Math.sin(t * 5.0F);
       // a golden light behind her head (her head hides its middle: it rims her)
-      m.softDisc(back, 1.25, GOLD, .2F * on);
-      m.softDisc(back, .62, GOLD_WHITE, .16F * on);
-      for (int i = 0; i < 14; i++) {
-         double a = i * Math.PI * 2.0 / 14.0 + .35 * t + .12 * Ease.hash(i * 7 + 1);
+      m.softDisc(back, 1.9, GOLD, .22F * on * breathe);
+      m.softDisc(back, 1.0, GOLD_WHITE, .26F * on * breathe);
+      // long thin rays, every other one longer, turning slowly
+      for (int i = 0; i < 28; i++) {
+         double a = i * Math.PI * 2.0 / 28.0 + .25 * t;
          Vec3d d = across.multiply(Math.cos(a)).add(up.multiply(Math.sin(a)));
-         double len = 1.0 + .9 * Ease.hash(i * 7 + 3);
-         float k = on * (.6F + .4F * (float)Math.sin(t * 7.0F + i * 1.7F));
-         m.softTaper(back.add(d.multiply(.45)), back.add(d.multiply(.45 + len)), .1, .004, GOLD, .36F * k);
+         double len = (i % 2 == 0 ? 2.2 : 1.3) * (.85 + .3 * Ease.hash(i * 7 + 3));
+         float k = on * (.55F + .45F * (float)Math.sin(t * 5.0F + i * 1.3F));
+         m.softTaper(back.add(d.multiply(.55)), back.add(d.multiply(.55 + len)), .07, .003, GOLD, .42F * k);
+         m.softTaper(back.add(d.multiply(.55)), back.add(d.multiply(.55 + len * .6)), .02, .002, GOLD_WHITE, .5F * k);
       }
-      m.ring(back, across, up, .42, 48, 1.0F, .014, GOLD_WHITE, .5F * on, .4 * t);
-      m.ring(back, across, up, .78, 64, 1.0F, .01, GOLD, .28F * on, -.25 * t);
+      // the halo: a bright ring, a wide faint one, and fine ticks between them turning the other way
+      m.ring(back, across, up, .62, 64, 1.0F, .016, GOLD_WHITE, .7F * on, .4 * t);
+      m.ring(back, across, up, 1.08, 72, 1.0F, .01, GOLD, .4F * on, -.25 * t);
+      for (int i = 0; i < 24; i++) {
+         double a = i * Math.PI * 2.0 / 24.0 - .3 * t;
+         Vec3d d = across.multiply(Math.cos(a)).add(up.multiply(Math.sin(a)));
+         m.line(back.add(d.multiply(i % 6 == 0 ? .72 : .8)), back.add(d.multiply(.95)), .012, GOLD_WHITE, .55F * on);
+      }
+      // motes of light drifting up beside her
+      for (int i = 0; i < 18; i++) {
+         double ph = (t * (.35 + .25 * Ease.hash(i * 5 + 1)) + Ease.hash(i * 5 + 2)) % 1.0;
+         double x = (i % 2 == 0 ? 1 : -1) * (.5 + .9 * Ease.hash(i * 5 + 3)), z = (Ease.hash(i * 5 + 4) - .5) * 1.2;
+         Vec3d p = head.add(across.multiply(x)).add(up.multiply(-1.4 + 2.8 * ph)).add(view.multiply(z));
+         float k = on * (float)Math.sin(Math.PI * ph) * (.6F + .4F * (float)Math.sin(t * 9.0F + i));
+         m.star(p, .07, GOLD_WHITE, .9F * k);
+         m.softDisc(p, .1, GOLD, .25F * k);
+      }
    }
 
    // ───────────────────────────── the sky ─────────────────────────────
@@ -331,7 +353,9 @@ final class GGrand {
 
    /**
     * The fissures: {@link #FISSURES} cracks torn out along the ground from where the sword struck (in a third of a second),
-    * glowing with {@link #ground} (their dark rims in the ink pass).
+    * glowing with {@link #ground} (their dark rims in the ink pass). (2.91.0) Each is a sharp jagged crack, a thin
+    * white-gold core in a narrow golden glow between thin dark lips, tapering to a point, with two jagged branches (they
+    * read as orange tubes laid on the ground before, user request: "마지막으로 G스킬 전체적으로 예쁘게 이펙트 강화해주고 다듬어줘").
     */
    static void fissures(Fx c, EffectMesh m, float t, Vec3d o, boolean ink) {
       float g = ground(t);
@@ -345,28 +369,41 @@ final class GGrand {
       float far = GFar.weight(c);
       double wide = grown(c);
       for (int i = 0; i < FISSURES; i++) {
-         double angle = (i + .35 * Ease.hash(seed + i * 11)) * Math.PI * 2.0 / FISSURES;
-         double length = (9.0 + 9.0 * Ease.hash(seed + i * 11 + 3)) * (1.0 + .9 * far);
-         Vec3d[] points = new Vec3d[10];
-         for (int j = 0; j < points.length; j++) {
-            double u = (double)j / (points.length - 1);
-            double r = 1.6 + (length - 1.6) * u;
-            double bend = (Ease.hash(seed + i * 11 + j * 3 + 7) - .5) * (.18 + .1 * u);
-            points[j] = o.add(Math.cos(angle + bend) * r, 0.0, Math.sin(angle + bend) * r);
-         }
+         int h = seed + i * 131;
+         double angle = (i + .35 * Ease.hash(h)) * Math.PI * 2.0 / FISSURES;
+         double length = (9.0 + 9.0 * Ease.hash(h + 3)) * (1.0 + .9 * far);
+         Vec3d[] points = jagged(o, angle, 1.4, length, 16, h + 7, .55);
          crack(m, points, grown, g, ink, wide);
-         Vec3d[] fork = new Vec3d[5];
-         double turn = (Ease.hash(seed + i * 11 + 5) > .5 ? 1 : -1) * (.45 + .25 * Ease.hash(seed + i * 11 + 9));
-         fork[0] = points[5];
-         for (int j = 1; j < fork.length; j++) {
-            double r = length * .22 * j / (fork.length - 1);
-            fork[j] = points[5].add(Math.cos(angle + turn) * r, 0.0, Math.sin(angle + turn) * r);
+         // two jagged branches, torn out once the crack has run past them
+         for (int b = 0; b < 2; b++) {
+            int at = 4 + b * 5 + (int)(2.0 * Ease.hash(h + 40 + b));
+            double turn = (Ease.hash(h + 50 + b) > .5 ? 1 : -1) * (.5 + .4 * Ease.hash(h + 60 + b));
+            Vec3d from = points[at];
+            Vec3d[] fork = jagged(from, angle + turn, 0.0, length * (.18 + .12 * Ease.hash(h + 70 + b)), 7, h + 80 + b * 13, .35);
+            double start = (double)at / (points.length - 1);
+            crack(m, fork, Math.max(0.0, (grown - start) / (1.0 - start)), g * .85F, ink, .6 * wide);
          }
-         crack(m, fork, Math.max(0.0, (grown - .55) / .45), g * .8F, ink, .7 * wide);
       }
    }
 
-   /** One crack along {@code points}, drawn out to {@code grown} (0..1) of its length. */
+   /**
+    * A jagged crack's points: from {@code o} (starting {@code from} blocks out) along {@code angle} for {@code length}
+    * blocks in {@code n} points, each thrown sideways by up to {@code zig} blocks, less toward its point.
+    */
+   static Vec3d[] jagged(Vec3d o, double angle, double from, double length, int n, int seed, double zig) {
+      Vec3d along = new Vec3d(Math.cos(angle), 0.0, Math.sin(angle)), side = new Vec3d(-along.z, 0.0, along.x);
+      Vec3d[] points = new Vec3d[n];
+      for (int j = 0; j < n; j++) {
+         double u = (double)j / (n - 1);
+         double r = from + (length - from) * u;
+         double bend = .12 * Math.sin(u * 4.0 + seed * .37) * r;
+         double off = j == 0 ? 0.0 : (Ease.hash(seed + j * 3) - .5) * 2.0 * zig * (1.0 - .45 * u);
+         points[j] = o.add(along.multiply(r)).add(side.multiply(bend * .1 + off));
+      }
+      return points;
+   }
+
+   /** One crack along {@code points}, drawn out to {@code grown} (0..1) of its length, tapering to a point. */
    static void crack(EffectMesh m, Vec3d[] points, double grown, float g, boolean ink, double width) {
       if (grown <= 0.0) {
          return;
@@ -377,12 +414,12 @@ final class GGrand {
          if (j + 1 > reach) {
             b = a.add(b.subtract(a).multiply(reach - j));
          }
-         double taper = width * (1.0 - .55 * j / (points.length - 1));
+         double taper = width * Math.max(.12, 1.0 - .85 * j / (points.length - 1));
          if (ink) {
-            strip(m, a, b, UP, .7 * taper, INK, .55F * Math.min(1.0F, g * 1.6F));
+            strip(m, a, b, UP, .26 * taper, INK, .5F * Math.min(1.0F, g * 1.6F));
          } else {
-            strip(m, a.add(0.0, .01, 0.0), b.add(0.0, .01, 0.0), UP, .38 * taper, EMBER, .55F * g);
-            strip(m, a.add(0.0, .02, 0.0), b.add(0.0, .02, 0.0), UP, .11 * taper, GOLD_WHITE, .95F * Math.min(1.0F, g));
+            strip(m, a.add(0.0, .01, 0.0), b.add(0.0, .01, 0.0), UP, .3 * taper, GOLD, .32F * g);
+            strip(m, a.add(0.0, .02, 0.0), b.add(0.0, .02, 0.0), UP, .075 * taper, GOLD_WHITE, Math.min(1.0F, 1.1F * g));
          }
       }
    }
