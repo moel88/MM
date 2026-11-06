@@ -46,8 +46,9 @@ uniform sampler2D Sampler4;
 uniform vec3 CloudCenter;
 // (2.88.0) The storm made grand (GGrand.storm): Grand.x how strongly its eye burns gold behind the sword, Grand.y the
 // clock its rays turn by. (2.89.0) In the observers' storm (Mode 3, GFar.storm) Grand.x is how strongly its eye burns
-// gold from within; (2.90.0) Grand.z how long the cleft the sword cuts through it is (GFar.cleftSpan), Grand.w how wide
-// (GFar.cleftWide). (2.90.0: no lightning, user request.)
+// gold from within; (2.90.0) Grand.y how strongly the light pouring through the cleft the sword cuts through it lights
+// its walls (GFar.cleftOn, from afar), Grand.z how long the cleft is (GFar.cleftSpan), Grand.w how wide (GFar.cleftWide).
+// (2.90.0: no lightning, user request.)
 uniform vec4 Grand;
 
 const vec2 projectionScale = vec2(.40066, -.86915);
@@ -279,33 +280,36 @@ float square(float x) { return x * x; }
 float bankShape(vec3 p,vec3 dimensions){
  vec3 v=p/dimensions;return 1.-dot(v,v);
 }
-// (2.90.0) More cloud round the storm: eight great banks on a wider ring that gather in with it, filling the sky.
+// (2.90.0) More cloud round the storm: eight great towering banks on a ring round it, their bases lumpy at about the
+// storm's own, gathering in with it (from 1.6 times as far).
 float outerBanks3(vec3 p,float gather){
  float best=-1e3,spread=1.+.6*(1.-gather);
  for(int i=0;i<8;i++){
   float f=float(i);
   float ai=f*.785398+.35*sin(f*2.1);
-  float ri=(56.+14.*sin(f*1.7+.4))*spread;
-  vec3 c=vec3(cos(ai)*ri,7.+5.*sin(f*2.3),sin(ai)*ri);
-  vec3 dim=vec3(25.+7.*sin(f*3.1),8.5+4.*sin(f*1.3+.5),25.+7.*cos(f*2.7));
+  float ri=(48.+12.*sin(f*1.7+.4))*spread;
+  vec3 dim=vec3(21.+6.*sin(f*3.1),10.5+3.5*sin(f*1.3+.5),21.+6.*cos(f*2.7));
+  vec3 c=vec3(cos(ai)*ri,dim.y-3.+3.*sin(f*2.3),sin(ai)*ri);
   best=max(best,bankShape(p-c,dim));
  }
  return best;
 }
 vec4 observerMedium(vec3 p,float gather,float breach){
  vec3 wind=vec3(.68,.07,-.46)*Age;
- // (2.90.0) The sword cleaves the clouds along its own plane (z=0 here: the blade faces the caster), opening as it
- // comes through the base and again as it falls: the clouds that were in the cleft are pushed out to either side
- // and pile up along its lips (each point samples the clouds from nearer the plane; they are compressed there).
+ // (2.90.0) The sword cleaves the clouds along its own plane (z=0 here: the blade faces the caster), the cut running
+ // out as it comes through the base and torn wider as it falls (GFar.cleftSpan and cleftWide, Grand.z and Grand.w): a
+ // straight cut through the whole storm, torn wider still into a trough along its base, the two halves shoved apart
+ // and the cloud nearest the cut piled up against it (each point samples the clouds from nearer the plane).
  vec3 rag=noise3(p*vec3(.045,.07,.045)+vec3(.71,.13,.37)-vec3(Age*.03,Age*.12,0.));
  float along=abs(.957*p.x+.292*p.y);
  float span=max(Grand.z,1.);
- float wide=Grand.w*(1.-smoothstep(span*.5,span,along))*(.75+.5*rag.r);
- float az=abs(p.z);
- float cleft=(1.-smoothstep(wide-1.8,wide+.9,az))*smoothstep(0.,1.5,wide);
+ float trough=1.+1.1*(1.-smoothstep(-5.,9.,p.y));
+ float wide=Grand.w*(1.-smoothstep(span*.5,span,along))*trough*(.82+.36*rag.r);
+ float az=abs(p.z),cut=smoothstep(0.,1.5,wide);
+ float cleft=(1.-smoothstep(wide-1.2,wide+.6,az))*cut;
  float beyond=max(az-wide,0.);
- float carry=wide*exp(-beyond/13.);
- float squeeze=min(2.2,1.+wide/13.*exp(-beyond/13.));
+ float carry=wide*exp(-beyond/26.);
+ float squeeze=min(2.,1.+.9*cut*exp(-beyond/4.));
  vec3 pc=vec3(p.x,p.y,sign(p.z)*max(az-carry,0.));
  vec3 n=noise3((pc-wind)*vec3(.038,.075,.036)+vec3(.3,.2,.45));
  vec3 fine=noise3((pc-1.6*wind)*.134+vec3(.53,.24,.65));
@@ -324,10 +328,7 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  float skirt=1.-square((r-skirtR)/6.3)-square((pc.y-1.3-2.8*sin(a+.5))/3.3);
  float tear=smoothstep(.12,.74,.50+.35*sin(2.*a+.7)+.48*(n.b-.5));
  float low=smoothstep(-.22,.65,skirt+.98*(fine.r-.5))*tear;
- // (2.90.0) and a broad lower layer under it all, torn into holes
- float layer=smoothstep(-.15,.55,1.-square((pc.y-1.5+2.5*(n.b-.5))/4.6)+1.25*(n.r-.5)+.55*(fine.g-.5))
-            *(1.-smoothstep(78.,112.,r*(1.+.4*(1.-gather))))*smoothstep(.2,1.,gather)*(.25+.75*eye);
- float density=(deck+.78*low+.62*layer)*gather;
+ float density=(deck+.78*low)*gather;
  density*=(1.-cleft)*squeeze;
  // (2.90.0) as the sword breaks through the base a shock races out through the banks: the clouds behind it thinned,
  // pressed into a bright ring at its front
@@ -364,7 +365,7 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  float silver=exp(-square((r-skirtR)/6.6))*breach*(.7+.3*cos(a+.8));
  bankColor+=vec3(.25,.16,.053)*silver;
  // the pressed lips of the cleft and the shock's ring catch the light
- float lips=exp(-square(beyond/5.))*smoothstep(0.,1.5,wide)*(1.-cleft);
+ float lips=exp(-square(beyond/6.))*cut*(1.-cleft);
  bankColor=mix(bankColor,vec3(1.,.99,.97),clamp(.45*lips+.55*ring,0.,.7));
  // Sidelit vapor condenses along both shoulders, then is thrown outwards
  // on contact. Large loose sheets briefly cross the steel, never sheath it.
@@ -384,10 +385,13 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  float lit=density+sleeve+beams;
  // (2.89.0) the eye burning gold from within; (2.90.0) its light spilling along the cleft's lips
  if(Grand.x>0.){
-  float burn=Grand.x*(exp(-r0*r0/420.)+.75*lips*exp(-along/45.))*(.65+.55*n.g)*(.55+.45*smoothstep(-4.,6.,p.y));
+  float burn=Grand.x*.6*exp(-r0*r0/250.)*(.65+.55*n.g)*(.55+.45*smoothstep(-4.,6.,p.y));
   float lum=dot(bankColor,vec3(.2126,.7152,.0722));
   bankColor=mix(bankColor,vec3(1.,.70,.34)*(.45+.8*lum),clamp(burn,0.,.8))+vec3(.22,.12,.03)*burn;
  }
+ // (2.90.0) the walls of the cut lit gold by the light pouring through it (Grand.y: GFar.cleftOn, from afar)
+ float wall=Grand.y*lips*exp(-along/55.)*(.6+.5*n.g);
+ bankColor=mix(bankColor,vec3(1.,.82,.55)*(.55+.6*dot(bankColor,vec3(.2126,.7152,.0722))),clamp(wall,0.,.6))+vec3(.12,.07,.02)*wall;
  // (2.90.0) the blast lights the undersides gold as it blows them apart
  bankColor+=vec3(1.,.66,.3)*boom*.9;
  return vec4((bankColor*density+vec3(.91,.95,1.)*sleeve+vec3(1.,.85,.57)*beams)/max(lit,.0001),lit);

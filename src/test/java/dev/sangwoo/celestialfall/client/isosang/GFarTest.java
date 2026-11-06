@@ -18,10 +18,10 @@ class GFarTest {
 
     @Test void theSwordCleavesTheStorm(){
         for(float t=0;t<1.48f;t+=.01f)assertEquals(0,GFar.cleftWide(t),1e-6,"no cleft before the sword comes through, at "+t);
-        assertTrue(GFar.cleftWide(2.4f)>9,"open as it hangs in the sky: "+GFar.cleftWide(2.4f));
-        assertTrue(GFar.cleftWide(3.3f)>GFar.cleftWide(2.7f)+6,"torn wider as it falls");
-        assertTrue(GFar.cleftSpan(3.3f)*.5>50,"past the storm's own banks either side");
-        assertTrue(GFar.cleftSpan(2.4f)>GFar.cleftSpan(1.6f)+40,"running out as it comes through");
+        assertTrue(GFar.cleftWide(2.4f)>4,"a slit as it hangs in the sky: "+GFar.cleftWide(2.4f));
+        assertTrue(GFar.cleftWide(3.3f)>2.5f*GFar.cleftWide(2.7f),"torn wide open as it falls");
+        assertTrue(GFar.cleftSpan(3.3f)*.5>50,"right through the storm's banks either side");
+        assertTrue(GFar.cleftSpan(2.4f)>GFar.cleftSpan(1.6f)+30,"running out as it comes through");
         for(float t=2.0f;t<4.84f;t+=.01f)assertEquals(1,GFar.cleftOn(t),1e-6,"light pours through it the while it stands open, at "+t);
         for(float t=5.25f;t<7;t+=.01f)assertEquals(0,GFar.cleftOn(t),1e-6,"until the blast blows the storm apart, at "+t);
         Vec3d far=FallingSword.strike(cast()).add(60,10,0);
@@ -29,8 +29,8 @@ class GFarTest {
         assertEquals(GFar.cleftSpan(2.9f),k[2],1e-6,"the shader gets the cleft's length");
         assertEquals(GFar.cleftWide(2.9f),k[3],1e-6,"and its width");
         for(float t=0;t<7;t+=FRAME/10){
-            assertTrue(Math.abs(GFar.cleftWide(t+FRAME)-GFar.cleftWide(t))<.5f,"the cleft's width jumps at "+t);
-            assertTrue(Math.abs(GFar.cleftSpan(t+FRAME)-GFar.cleftSpan(t))<2.5f,"its length jumps at "+t);
+            assertTrue(Math.abs(GFar.cleftWide(t+FRAME)-GFar.cleftWide(t))<.8f,"the cleft's walls jump at "+t);
+            assertTrue(Math.abs(GFar.cleftSpan(t+FRAME)-GFar.cleftSpan(t))<3f,"its length jumps at "+t);
             assertTrue(Math.abs(GFar.cleftOn(t+FRAME)-GFar.cleftOn(t))<.12f,"the light through it jumps at "+t);
         }
     }
