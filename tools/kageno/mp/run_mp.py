@@ -18,7 +18,8 @@ combo and its rest, the four against a guard), MP_ONLY=isosange its E (2.80.0, M
 and R used up on the sword (2.82.3: the inner ring's sword ahead, the watcher put before it first), H again refused; the caster held up some 39 s with nothing under it), MP_ONLY=isosangr
 its R (2.81.0, MpClient.ISOSANGR_SCRIPT: the giant sword's sweep at the watcher close and 8 blocks off in the crosshair,
 again at once (refused), a press of the attack kept through it, R kept through a hit, through a guard; 2.81.1: R right in
-front whatever the crosshair is on, R held at the watcher 25 blocks off in the crosshair), MP_ONLY=isosangg its G (2.83.0,
+front whatever the crosshair is on, R held at the watcher 25 blocks off in the crosshair), MP_ONLY=isosangz its Z (2.93.0, MpClient.ISOSANGZ_SCRIPT: three moves across H's swords within ten seconds, a fourth refused,
+one after the cooldown and its window run out, R from that sword, Z after the window refused), MP_ONLY=isosangg its G (2.83.0,
 MpClient.ISOSANGG_SCRIPT: G with the watcher 30 blocks ahead (2.87.1: 21 past where its sword strikes, in the blast's
 62 x 47 blocks), struck 50 as its sword strikes; the caster's cutscene in its
 own space, the watcher's world left as it is with the landing drawn; G and the attack refused while it holds, G refused

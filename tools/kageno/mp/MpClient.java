@@ -358,7 +358,21 @@ public final class MpClient implements ClientModInitializer {
      */
     private static final String[] ISOSANGG_SCRIPT={
         "5 ISOSANG","40 DIST30","45 HEAL","60 G","75 G","90 M1","300 G","360 END"};
-    private static final String[] STEPS=ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * Lee So-sang's Z (2.93.0, MP_ONLY=isosangz): H with the watcher 2.5 blocks in front, then Z three times within ten
+     * seconds of the first, each onto a sword the caster's camera turns to ("ZAIMdeg": of its formation, the one nearest
+     * deg degrees clockwise of where the camera looks, 3.5 to 10 blocks off), a fourth at once (refused: its twenty
+     * seconds' cooldown runs from the third), one once that is over and none after it (its cooldown runs from its
+     * window's end), R from the sword it stands on then (the sweep stands there), and Z after the window (refused). Both
+     * log each flight they hear of (from which sword to which), the caster every tick through it and after (hidden or not,
+     * how far off the plan it is and is drawn), and the caster's Z as their client has it; the server the caster's Z as it
+     * changes and every tick of each flight how far off where the formation holds them the caster is.
+     */
+    private static final String[] ISOSANGZ_SCRIPT={
+        "5 ISOSANG","40 HOME","45 HEAL","60 H",
+        "100 ZAIM30","104 Z","140 ZAIM-40","144 Z","180 ZAIM35","184 Z","210 ZAIM-30","214 Z",
+        "600 ZAIM30","604 Z","700 R","810 ZAIM-30","814 Z","950 END"};
+    private static final String[] STEPS=ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -386,6 +400,27 @@ public final class MpClient implements ClientModInitializer {
     private void attack(boolean down){var k=InputUtil.Type.MOUSE.createFromCode(GLFW_MOUSE_BUTTON_LEFT);KeyBinding.setKeyPressed(k,down);if(down)KeyBinding.onKeyPressed(k);}
     private String name(UUID id){var p=mc.world.getPlayerByUuid(id);return p==null?id.toString().substring(0,8):p.getGameProfile().getName();}
     /** The watcher looks a little up at G's pillar from outside; otherwise both look slightly down at each other. */
+    /** (2.93.0) The sword of the caster's own formation nearest {@code deg} degrees clockwise of where the camera looks, 3.5 to 10 blocks off, not the one it stands on (-1 for none). */
+    private int pickSword(float deg){
+        var mids=dev.sangwoo.celestialfall.client.isosang.SwordStep.middles();if(mids==null)return -1;int on=dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),best=-1;double bestD=1e9;
+        float want=BotandCamera.STATE.yaw+deg;var at=mc.player.getPos();
+        for(int k=0;k<mids.length;k++){if(k==on)continue;double dx=mids[k].x-at.x,dz=mids[k].z-at.z,far=Math.hypot(dx,dz);if(far<3.5||far>10)continue;
+            double off=Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees((float)Math.toDegrees(Math.atan2(-dx,dz))-want));if(off<bestD){bestD=off;best=k;}}
+        return best;
+    }
+    /** (2.93.0) The camera's yaw and pitch for its middle to fall on {@code target} (the shoulder camera's offset and H's pull taken in). */
+    private float[] aimAt(net.minecraft.util.math.Vec3d target){
+        float yaw=BotandCamera.STATE.yaw,pitch=BotandCamera.STATE.pitch,keepYaw=yaw,keepPitch=pitch;
+        var eye=mc.player.getPos().add(0,mc.player.getStandingEyeHeight()+.8*Math.max(0,dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),1)),0);
+        double pull=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraPull(1);
+        for(int i=0;i<8;i++){
+            BotandCamera.STATE.yaw=yaw;BotandCamera.STATE.pitch=pitch;var o=BotandCamera.STATE.offset(BotandCamera.STATE.distance,BotandCamera.shoulder(1));
+            var off=new net.minecraft.util.math.Vec3d(o.x(),o.y(),o.z());var cam=eye.add(off).add(off.lengthSquared()>1e-6?off.normalize().multiply(pull):net.minecraft.util.math.Vec3d.ZERO);
+            var d=target.subtract(cam);yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z));pitch=(float)-Math.toDegrees(Math.atan2(d.y,Math.hypot(d.x,d.z)));
+        }
+        BotandCamera.STATE.yaw=keepYaw;BotandCamera.STATE.pitch=keepPitch;
+        return new float[]{yaw,pitch};
+    }
     private void face(){if(mc.player==null)return;BotandCamera.STATE.yaw=caster?0:180;BotandCamera.STATE.pitch=!caster&&!AtomicClient.CASTS.isEmpty()?-8:caster?casterPitch:12;}
     /** The caster's camera pitch as it presses a key ("PITCHn", 2.81.1: all but level to reach a foe 25 blocks off with its crosshair). */
     private float casterPitch=12;
@@ -410,7 +445,8 @@ public final class MpClient implements ClientModInitializer {
                 if(traceUntil>0&&age<=traceUntil)trace();
                 if(ONLY.equals("boss"))bossWatch();
                 if(ONLY.equals("arrow"))arrowWatch();
-                if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg"))isosangWatch();
+                if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz"))isosangWatch();
+                if(ONLY.equals("isosangz"))zWatch();
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -427,8 +463,8 @@ public final class MpClient implements ClientModInitializer {
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
                     if(ONLY.equals("resist"))resistWatch();
-                    if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg"))watcherStill();
-                    if(age>(ONLY.equals("isosangg")?700:ONLY.equals("isosangh")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz"))watcherStill();
+                    if(age>(ONLY.equals("isosangg")?700:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -502,6 +538,13 @@ public final class MpClient implements ClientModInitializer {
         // 2.77.0: the caster takes Lee So-sang (MP_ONLY=isosang)
         if(step.equals("ISOSANG")){if(down)command("botand progress stand @s isosang");return;}
         if(step.startsWith("PITCH")){if(down){casterPitch=Float.parseFloat(step.substring(5));note("caster's camera pitch "+casterPitch);}return;}
+        // 2.93.0: Lee So-sang's Z: the camera onto a sword of the caster's formation ("ZAIMdeg"), and Z pressed where it looks
+        if(step.startsWith("ZAIM")){if(down){var mids=dev.sangwoo.celestialfall.client.isosang.SwordStep.middles();int k=pickSword(Float.parseFloat(step.substring(4)));
+            if(k<0||mids==null)note("ERROR no sword to aim at");
+            else{float[] a=aimAt(mids[k]);BotandCamera.STATE.yaw=a[0];BotandCamera.STATE.pitch=a[1];
+                note(String.format(Locale.ROOT,"aim at sword %d (on %d), %.1f blocks off (camera yaw %.1f pitch %.1f)",k,dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),Math.hypot(mids[k].x-mc.player.getX(),mids[k].z-mc.player.getZ()),a[0],a[1]));}}return;}
+        if(step.equals("Z")){if(down){note(String.format(Locale.ROOT,"press Z: it aims at sword %d (on %d, Z left %d)",dev.sangwoo.celestialfall.client.isosang.SwordStep.aimedForFilm(),dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),
+                dev.sangwoo.celestialfall.client.isosang.IsosangClient.zState(mc.player.getUuid()).left(mc.world.getTime())));key(GLFW_KEY_Z,true);}else key(GLFW_KEY_Z,false);return;}
         if(step.equals("FRUIT")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:rokakaka");return;}
         if(step.equals("EAT")){if(down){note("left click with "+mc.player.getMainHandStack().getItem()+" (the Rokakaka's ask)");dev.sangwoo.celestialfall.client.commerce.CommerceClient.clickFruit();}return;}
         if(step.equals("CONFIRM")){if(down){
@@ -940,6 +983,32 @@ public final class MpClient implements ClientModInitializer {
                     Float.isNaN(end)?"":String.format(Locale.ROOT," (ended early at %.2f s)",end)));
             }
         }
+    }
+    /** (2.93.0) Z's flights seen (by swing and its tick), and the own Z last logged. */
+    private final java.util.Set<String> zFlightSeen=new java.util.HashSet<>();private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zStateSeen;
+    /**
+     * Z as this client sees it (2.93.0): each flight as it is heard (from which sword to which, how late), and every tick
+     * for 14 ticks from its start the caster hidden or not, how far off the formation's plan it is and is drawn (level:
+     * where it is between ticks, and that moved as the client draws it, IsosangClient.shift) and how high it is drawn over
+     * the plan's height; the own Z as the server told it.
+     */
+    private void zWatch(){
+        for(var c:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
+            if(c.combo()!=dev.sangwoo.celestialfall.isosang.IsosangRules.FORMATION)continue;
+            var form=dev.sangwoo.celestialfall.client.isosang.IsosangClient.formation(c.id());var who=mc.world.getPlayerByUuid(c.caster());if(form==null||who==null)continue;
+            for(var fl:dev.sangwoo.celestialfall.client.isosang.IsosangClient.flights(c.id())){
+                double since=c.age(0)-(fl.moved()-c.start());String key=c.id()+"/z"+fl.moved();
+                if(zFlightSeen.add(key))note(String.format(Locale.ROOT,"%s's Z heard: from sword %d to sword %d, %.1f ticks into its flight here",name(c.caster()),fl.from(),fl.to(),since));
+                if(since>=0&&since<=14&&zFlightSeen.add(key+"/"+(int)Math.floor(since))){
+                    var at=who.getLerpedPos(0);var plan=dev.sangwoo.celestialfall.client.isosang.IsosangClient.spot(c.id(),form,c.age(0));var drawn=at.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(c.caster(),0));
+                    double high=at.y+dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(c.caster(),0)-form.centre().y,planned=dev.sangwoo.celestialfall.client.isosang.IsosangClient.raised(c.id(),c.age(0)/20.0);
+                    note(String.format(Locale.ROOT,"%s's Z %d->%d +%.0f: hidden %s, %.2f off the plan level (drawn %.2f), drawn %.2f over its ground (planned %.2f)",name(c.caster()),fl.from(),fl.to(),Math.floor(since),
+                        dev.sangwoo.celestialfall.client.isosang.SwordStep.hides(who),Math.hypot(at.x-plan.x,at.z-plan.z),Math.hypot(drawn.x-plan.x,drawn.z-plan.z),high,planned));
+                }
+            }
+        }
+        var zs=dev.sangwoo.celestialfall.client.isosang.IsosangClient.zState(mc.player.getUuid());
+        if(!zs.equals(zStateSeen)){zStateSeen=zs;note(String.format(Locale.ROOT,"own Z: first %d, used %d, ready again at %d (world tick %d)",zs.first(),zs.uses(),zs.ready(),mc.world.getTime()));}
     }
     /** The watcher (2.77.0): its staggers as its client knows them, and every move of its body (a blow throws no one). */
     private long rSeen=-1,hSeen=-1,gSeen=-1;private final java.util.Set<String> formationSeen=new java.util.HashSet<>(),ultSeen=new java.util.HashSet<>();

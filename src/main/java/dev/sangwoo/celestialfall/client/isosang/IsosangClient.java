@@ -418,6 +418,8 @@ public final class IsosangClient {
     }
     /** How high H's plan draws its user {@code t} seconds into the formation of swing {@code id} (IsosangRules.planned, on the pommel as raised has it from the landing). */
     static double planned(UUID id,double t){return t<IsosangRules.H_LANDED?IsosangRules.planned(t):raised(id,t);}
+    /** (2.93.0) The flights of this swing's formation so far (Z: from which sword to which, when), oldest first (the multiplayer check reads them). */
+    public static List<Flight> flights(UUID swing){return FLIGHTS.getOrDefault(swing,List.of());}
     /** This player's Z (its window, its moves, when it is ready again: the server's; 2.93.0). */
     public static IsosangRules.ZState zState(UUID id){return Z_STATES.getOrDefault(id,IsosangRules.ZState.FRESH);}
     /** The tick this player's Z is ready again (0 if it is ready: the server's word, 2.93.0). */
@@ -469,6 +471,24 @@ public final class IsosangClient {
         for(var c:SWINGS.values())if(c.caster().equals(mc.player.getUuid()))pull=Math.max(pull,IsosangSlash.pull(c.combo(),c.age(delta)/20f));
         return pull;
     }
+    /**
+     * How far right of the local player their camera stands now (blocks, 2.93.0): through their own formation, from as Z
+     * may first be used until its swords flare (or it ends early), over their right shoulder (SHOULDER, the shift lock's
+     * way), so the middle of the screen, which picks the sword Z flies them to (SwordStep.aimed: "화면 가운데를 따라 바뀜"),
+     * is not on their own body and the sword is seen beside it (the user's video). Eased in and out on the formation's clock.
+     */
+    public static double cameraShoulder(float delta){
+        var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return 0;
+        double s=0;
+        for(var c:SWINGS.values()){
+            if(c.combo()!=IsosangRules.FORMATION||!c.caster().equals(mc.player.getUuid()))continue;
+            float t=c.age(delta)/20f,end=formationEnd(c.id()),off=Float.isNaN(end)?IsosangRules.H_END:Math.min(end,IsosangRules.H_END);
+            s=Math.max(s,SHOULDER*dev.sangwoo.celestialfall.client.kageno.Ease.smooth(t,SHOULDER_IN,IsosangRules.Z_FROM)*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(t,off,off+SHOULDER_OUT)));
+        }
+        return s;
+    }
+    /** How far right the formation's camera stands (blocks), and when it eases in (seconds into H, to Z_FROM) and how long it eases out. */
+    static final double SHOULDER=1.0;static final float SHOULDER_IN=1.0f,SHOULDER_OUT=.4f;
     /** Whether this player's attack key swings Lee So-sang's sword now: theirs, on the map, holding neither the meteor pickaxe nor a fruit. */
     public static boolean attacks(PlayerEntity p){
         return p!=null&&MapClient.enabled()&&StandManager.isosang(p)&&!dev.sangwoo.celestialfall.client.commerce.CommerceClient.fruitInHand()

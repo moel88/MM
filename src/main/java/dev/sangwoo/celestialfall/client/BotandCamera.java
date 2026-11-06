@@ -166,7 +166,7 @@ public final class BotandCamera {
         // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
         double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);
         if(lift>1e-3)eye=eye.add(0,.8*lift,0);
-        var offset=STATE.offset(STATE.distance,STATE.shoulder);
+        var offset=STATE.offset(STATE.distance,shoulder(delta));
         Vec3d desired=eye.add(offset.x(),offset.y(),offset.z());
         double fraction=clearFraction(eye,desired);
         double distance=STATE.clip(STATE.distance*fraction,lastClipFrame==frameId?0:dt),ratio=STATE.distance<.001?0:distance/STATE.distance;
@@ -180,6 +180,8 @@ public final class BotandCamera {
         }
         return new CinematicDirector.Pose(camera,STATE.yaw,STATE.pitch,0);
     }
+    /** How far right of the player the camera stands (blocks): the shift lock's, or (2.93.0) through Lee So-sang's formation its own (IsosangClient.cameraShoulder). */
+    public static double shoulder(float delta){return Math.max(STATE.shoulder,dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraShoulder(delta));}
     /** Swept camera volume rather than one centre ray: corners stay clear of walls. */
     private static double clearFraction(Vec3d eye,Vec3d end) {
         var mc=MinecraftClient.getInstance();double fraction=1,length=eye.distanceTo(end);

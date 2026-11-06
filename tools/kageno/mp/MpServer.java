@@ -462,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -470,7 +470,7 @@ public final class MpServer implements ModInitializer {
      * rest), the watcher's health (each blow), its guard, and where it is: every move of more than a hundredth of a block
      * while a hit is in flight or for a second after one (a blow throws no one: there should be none).
      */
-    private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
+    private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1,zFrom=-1;private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zSeen;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
@@ -529,6 +529,15 @@ public final class MpServer implements ModInitializer {
         }else if(formSeen>=0&&!formOver){formOver=true;note(server,"caster's formation over at "+now+String.format(java.util.Locale.ROOT," (the caster %.2f over the ground it began on)",caster.getY()-formFloor));}
         if(form!=null){formOver=false;formFloor=form.centre().y;}
         long hr=dev.sangwoo.celestialfall.isosang.IsosangAttack.hReady(caster);if(hr!=hReadySeen){hReadySeen=hr;note(server,"caster's H ready again at "+hr+" (now "+now+")");}
+        // (2.93.0) the caster's Z: its state as it changes (its window's first move, how many, when it is ready again); and
+        // every tick for 16 ticks from each move, how far off where the formation holds them the caster is, how high over its
+        // middle, and how far from the middle that is (the sword they fly to)
+        var z=dev.sangwoo.celestialfall.isosang.IsosangAttack.zNow(caster);
+        if(!z.equals(zSeen)){if(zSeen!=null&&z.uses()>0&&(z.uses()!=zSeen.uses()||z.first()!=zSeen.first()))zFrom=now;zSeen=z;
+            note(server,String.format(java.util.Locale.ROOT,"caster's Z: first %d, used %d, ready again at %d (now %d)",z.first(),z.uses(),z.ready(),now));}
+        if(form!=null&&zFrom>=0&&now-zFrom<=16){var off=caster.getPos().subtract(form.holds());
+            note(server,String.format(java.util.Locale.ROOT,"caster's Z +%d: %.2f off where it holds them level, %.2f over its middle, held %.2f from the middle (on ground %s)",
+                now-zFrom,Math.hypot(off.x,off.z),caster.getY()-form.centre().y,Math.hypot(form.holds().x-form.centre().x,form.holds().z-form.centre().z),caster.isOnGround()));}
         // (2.83.0) the caster's G: as it begins, where it strikes against where the caster stands and the watcher; every
         // ten ticks while it holds the caster, how far the caster has moved from where it stood and its health
         var g=dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimateNow(caster);

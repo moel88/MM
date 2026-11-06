@@ -996,7 +996,7 @@ public final class SkillShots implements ClientModInitializer {
         var eye=mc.player.getPos().add(0,mc.player.getStandingEyeHeight()+.8*Math.max(0,dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),1)),0);
         double pull=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraPull(1);
         for(int i=0;i<8;i++){
-            BotandCamera.STATE.yaw=yaw;BotandCamera.STATE.pitch=pitch;var o=BotandCamera.STATE.offset(BotandCamera.STATE.distance,BotandCamera.STATE.shoulder);
+            BotandCamera.STATE.yaw=yaw;BotandCamera.STATE.pitch=pitch;var o=BotandCamera.STATE.offset(BotandCamera.STATE.distance,BotandCamera.shoulder(1));
             var off=new net.minecraft.util.math.Vec3d(o.x(),o.y(),o.z());var cam=eye.add(off).add(off.lengthSquared()>1e-6?off.normalize().multiply(pull):net.minecraft.util.math.Vec3d.ZERO);
             var d=target.subtract(cam);yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z));pitch=(float)-Math.toDegrees(Math.atan2(d.y,Math.hypot(d.x,d.z)));
         }
@@ -1138,7 +1138,7 @@ public final class SkillShots implements ClientModInitializer {
                             dev.sangwoo.celestialfall.client.isosang.IsosangClient.zState(mc.player.getUuid()).left(mc.world.getTime()),age));zaimSword=-1;}
                         // and 8 ticks on, where the server has them (the sword it holds them under, how far off it they are, how high) and Z's state
                         if(what.equals("KEY_Z")&&age==at+8)server(p->{var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);var z=dev.sangwoo.celestialfall.isosang.IsosangAttack.zNow(p);long now=p.getWorld().getTime();
-                            log.append(f==null?"  Z after: no formation\n":String.format(Locale.ROOT,"  Z after %d: %.2f blocks off where it holds them, %.2f up; Z first %d (%d ago), used %d, ready in %d ticks%n",age,Math.hypot(p.getX()-f.spot().x,p.getZ()-f.spot().z),p.getY()-f.centre().y,z.first(),now-z.first(),z.uses(),Math.max(0,z.ready()-now)));});
+                            log.append(f==null?"  Z after: no formation\n":String.format(Locale.ROOT,"  Z after %d: %.2f blocks off where it holds them, %.2f up; Z first %d (%d ago), used %d, ready in %d ticks%n",age,Math.hypot(p.getX()-f.holds().x,p.getZ()-f.holds().z),p.getY()-f.centre().y,z.first(),now-z.first(),z.uses(),Math.max(0,z.ready()-now)));});
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);if(what.equals("KEY_H"))lastH=age;
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,

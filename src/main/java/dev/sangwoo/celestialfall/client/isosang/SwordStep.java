@@ -134,7 +134,7 @@ public final class SwordStep {
         for(int k:new int[]{mark,was}){
             if(k<0||k>=all.length)continue;float a=open(k,t);if(a<=.01f)continue;
             var b=all[k];
-            outline(m,planted(centre,yaw,b),frame(down(b),spinAt(b,t)),Math.min(1,a));
+            outline(m,c.camera,planted(centre,yaw,b),frame(down(b),spinAt(b,t)),Math.min(1,a));
             flower(m,foot(centre,yaw,b).add(0,.03,0),b.seed(),t,a,true);
         }
         for(var fl:IsosangClient.FLIGHTS.getOrDefault(c.cast.id(),java.util.List.of())){
@@ -154,43 +154,56 @@ public final class SwordStep {
     /** How long a flight's light lasts after it begins (seconds). */
     static final float FLIGHT_LIFE=1.0f;
 
-    /** The white outline of the sword she looks at (hers only): a crisp white line round it in a pale glow. */
-    static void outline(EffectMesh m,Vec3d pommel,Vec3d[] f,float a){
+    /**
+     * The white outline of the sword she looks at (hers only, the video's: a crisp white line round all of it): its outline
+     * edges as white lines about as wide on the screen wherever it stands (OUTLINE blocks, wider with the distance: some
+     * 2.5 pixels at 960 x 540), in a narrow pale glow.
+     */
+    static void outline(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,float a){
+        double w=Math.max(OUTLINE,camera.distanceTo(pommel)*OUTLINE_PER);
         for(var e:EDGES){
             if(!e.outline())continue;
             Vec3d p=at(pommel,f,e.a()),q=at(pommel,f,e.b());
-            m.line(p,q,.032*THIN,WHITE,.95f*a);m.softLine(p,q,.2*THIN,PALE,.42f*a);
+            m.line(p,q,w,WHITE,.95f*a);m.softLine(p,q,w*3.2,PALE,.28f*a);
         }
-        Vec3d top=at(pommel,f,new Vec3d(0,0,0)),tip=at(pommel,f,new Vec3d(0,S_LEN,0));
-        m.softLine(top,tip,.75*THIN,WHITE,.1f*a);
     }
+    static final double OUTLINE=.035,OUTLINE_PER=.0055;
     /**
-     * The blue flower at the foot of the sword she looks at (hers only, the video's): eight crystal petals opening out of
-     * the ground, deep blue to azure, pale at their tips, turning slowly; their bodies blended ({@code light} false) or
-     * their light added (white edges, a blue glow on the ground, a glint).
+     * The blue flower at the foot of the sword she looks at (hers only, the video's: crystal petals opening round its foot
+     * like a lotus, deep navy with white rims): six petals rising out of the ground and curling out at their tips, three
+     * smaller ones standing up inside them, turning slowly; their bodies blended ({@code light} false), or their light
+     * added (white rims, a pale vein, a faint blue glow on the ground and a glint).
      */
     static void flower(EffectMesh m,Vec3d f,int seed,float t,float open,boolean light){
         double size=FLOWER*open;if(size<=.01)return;float a=Math.min(1,open);
-        int petals=8;double turn=t*.6;
-        for(int j=0;j<petals;j++){
-            int s=seed*29+j*11;
-            double az=turn+Math.PI*2*(j+.25*(Ease.hash(s)-.5))/petals,el=Math.toRadians(30+22*Ease.hash(s+1));
-            double len=(.5+.18*Ease.hash(s+2))*size,wid=(.17+.06*Ease.hash(s+3))*size;
-            Vec3d dir=new Vec3d(Math.cos(az)*Math.cos(el),Math.sin(el),Math.sin(az)*Math.cos(el)),side=new Vec3d(-Math.sin(az),0,Math.cos(az));
-            Vec3d tip=f.add(dir.multiply(len)),mid=f.add(dir.multiply(len*.4)),l=mid.add(side.multiply(wid)),r=mid.subtract(side.multiply(wid));
-            if(!light){
-                m.vertex(f,DEEP,.92f*a);m.vertex(l,BLUE,.9f*a);m.vertex(tip,AZURE,.94f*a);m.vertex(tip,AZURE,.94f*a);
-                m.vertex(f,DEEP,.92f*a);m.vertex(tip,AZURE,.94f*a);m.vertex(r,0x3a6cff,.9f*a);m.vertex(r,0x3a6cff,.9f*a);
-            }else{
-                m.line(l,tip,.016*size,PALE,.6f*a);m.line(r,tip,.016*size,PALE,.6f*a);m.line(f,tip,.012*size,WHITE,.45f*a);
+        double turn=t*.35;
+        for(int ring=0;ring<2;ring++){
+            int petals=ring==0?6:3;
+            for(int j=0;j<petals;j++){
+                int s=seed*29+j*11+ring*101;
+                double az=turn*(ring==0?1:-1)+Math.PI*2*(j+(ring==0?0:.5)+.2*(Ease.hash(s)-.5))/petals;
+                double el=Math.toRadians(ring==0?32+16*Ease.hash(s+1):62+10*Ease.hash(s+1));
+                double len=(ring==0?.55+.15*Ease.hash(s+2):.36+.08*Ease.hash(s+2))*size,wid=(ring==0?.2:.13)*size*(.9+.2*Ease.hash(s+3));
+                Vec3d out=new Vec3d(Math.cos(az),0,Math.sin(az)),side=new Vec3d(-Math.sin(az),0,Math.cos(az));
+                Vec3d dir=out.multiply(Math.cos(el)).add(0,Math.sin(el),0);
+                Vec3d mid=f.add(dir.multiply(len*.45)),tip=f.add(dir.multiply(len)).add(out.multiply(.18*len)).add(0,-.06*len,0);
+                Vec3d l=mid.add(side.multiply(wid)),r=mid.subtract(side.multiply(wid));
+                if(!light){
+                    m.vertex(f,NAVY,.95f*a);m.vertex(l,DEEP,.92f*a);m.vertex(tip,BLUE,.95f*a);m.vertex(tip,BLUE,.95f*a);
+                    m.vertex(f,NAVY,.95f*a);m.vertex(tip,BLUE,.95f*a);m.vertex(r,DEEP,.92f*a);m.vertex(r,DEEP,.92f*a);
+                }else{
+                    double w=.022*size;
+                    m.line(l,tip,w,WHITE,.75f*a);m.line(r,tip,w,WHITE,.75f*a);m.line(f,l,w*.7,PALE,.45f*a);m.line(f,r,w*.7,PALE,.45f*a);
+                    m.line(f.lerp(mid,.3),tip.lerp(mid,.2),w*.6,AZURE,.35f*a);
+                }
             }
         }
         if(light){
-            m.softDisc(f.add(0,.12,0),.95*size,BLUE,.42f*a);m.softDisc(f.add(0,.08,0),.45*size,AZURE,.5f*a);
-            glint8(m,f.add(0,.32*size,0),.2*size*(.65+.35*twinkle(t,seed)),WHITE,.7f*a);
+            m.softDisc(f.add(0,.06,0),.85*size,BLUE,.2f*a);
+            glint8(m,f.add(0,.3*size,0),.12*size*(.65+.35*twinkle(t,seed)),WHITE,.55f*a);
         }
     }
-    static final double FLOWER=.95;
+    static final double FLOWER=1.2;
     /**
      * The bubble left where she was as she flies off (the video's): a blue sphere of light about her body, a bright rim and
      * a faint inside (light: turned to the camera, as every flash of light), swelling a little and gone in BUBBLE seconds.
@@ -200,8 +213,9 @@ public final class SwordStep {
         float a=Ease.smooth(since,0,.03f)*(1-Ease.smooth(since,BUBBLE*.45f,BUBBLE));double r=.82+.22*Ease.out(since,0,BUBBLE);
         Vec3d view=camera.subtract(at).normalize(),u=view.crossProduct(UP);if(u.lengthSquared()<1e-6)u=new Vec3d(1,0,0);u=u.normalize();Vec3d v=u.crossProduct(view).normalize();
         if(!light){m.softDisc(at,r,0x2346c8,.32f*a);return;}
-        m.ring(at,u,v,r,40,1,.05,AZURE,.55f*a,0);m.ring(at,u,v,r*.93,40,1,.025,PALE,.35f*a,0);
-        m.softDisc(at,r*1.1,BLUE,.22f*a);
+        // (bright at its rim and faint inside, as a bubble of light is)
+        for(int k=0;k<4;k++)m.ring(at,u,v,r*(1-.07*k),48,1,.05,k==0?AZURE:BLUE,(.5f-.11f*k)*a,0);
+        m.ring(at,u,v,r*.95,48,1,.022,PALE,.4f*a,0);m.softDisc(at,r,BLUE,.08f*a);
         glint8(m,at.add(u.multiply(-r*.45)).add(v.multiply(r*.45)),.14,WHITE,.6f*a);
     }
     static final float BUBBLE=.38f;
