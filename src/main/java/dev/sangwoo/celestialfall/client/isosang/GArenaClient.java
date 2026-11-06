@@ -26,12 +26,13 @@ import net.minecraft.util.math.Vec3d;
  * Who sees Lee So-sang's G's cutscene, and the ground its last blast covers. Its user sees it all, from her hand on (with
  * the cutscene camera on). 2.92.0 (user request: "62 × 47 범위에 있는 사람은 모두 시전자의 컷씬이 보이는 대신 검이 하늘에서
  * 떨어지는 순간부터 보이게 해줘 그대신 시전하는 소리는 처음부터 끝까지 들리게 하고 시전자는 원래랑 똑같이 손으로 인을 맺고
- * 검이 떨어지는거 똑같이 처음부터 재생되게 그래야 다른 플레이어들이 소리 듣고 조금이라도 도망 갈 수 있을 거 같아"):
- * everyone else standing in its blast's ground ({@link #area}: the garden arena it was cast in, or 62 × 47 blocks round
- * where its sword strikes) as its sword falls from the sky ({@link #JOIN}) watches it from there to its cut, and the dark
- * after it; until then they keep their own camera and may run (its sound they hear from its start, IsosangClient). Who
- * stood in it is settled once, at that moment. Before 2.92.0 those in the arena as it was cast watched it all (the
- * user's 2.87.0 preview; the server still says who they were, {@link Scene#selected}, but it no longer counts).
+ * 검이 떨어지는거 똑같이 처음부터 재생되게 그래야 다른 플레이어들이 소리 듣고 조금이라도 도망 갈 수 있을 거 같아", then
+ * with a frame of the sky's shot, the sword coming out of the storm over her: "다른 사람들도 이 시점부터 보이게"): everyone
+ * else standing in its blast's ground ({@link #area}: the garden arena it was cast in, or 62 × 47 blocks round where its
+ * sword strikes) as its sky's shot begins ({@link #JOIN}) watches it from there to its cut, and the dark after it; until
+ * then they keep their own camera and may run (its sound they hear from its start, IsosangClient). Who stood in it is
+ * settled once, at that moment. Before 2.92.0 those in the arena as it was cast watched it all (the user's 2.87.0
+ * preview; the server still says who they were, {@link Scene#selected}, but it no longer counts).
  */
 public final class GArenaClient {
    private static final Map<UUID, GArenaClient.Scene> scenes = new LinkedHashMap<>();
@@ -39,8 +40,12 @@ public final class GArenaClient {
    private static final Map<UUID, Boolean> joined = new HashMap<>();
    private static Object world;
    private static UUID active;
-   /** When those in another's G's blast ground join its cutscene (seconds into it, 2.92.0): as its sword falls from the sky. */
-   static final float JOIN = IsosangRules.G_FALL;
+   /**
+    * When those in another's G's blast ground join its cutscene (seconds into it, 2.92.0): the sky's shot's first frame
+    * (FallingSword.S_PULLED, 1.65 s), the sword just out of the storm. The user's frame of it was 1.83 s into G (matched
+    * against the 2.88.0 film): the shot from its start, so they see the sword come out too. First taken as its fall (2.78 s).
+    */
+   static final float JOIN = FallingSword.S_PULLED;
 
    public static void initialize() {
       ClientPlayNetworking.registerGlobalReceiver(
@@ -125,8 +130,8 @@ public final class GArenaClient {
 
    /**
     * The G whose cutscene this client's camera shows now, or null: its player's own (with the cutscene camera on), from
-    * her hand to its cut; or (2.92.0) another's, from its fall to its cut, if they stood in its blast's ground as its
-    * sword fell ({@link #watches}).
+    * her hand to its cut; or (2.92.0) another's, from its sky's shot to its cut, if they stood in its blast's ground as
+    * that began ({@link #watches}).
     */
    public static StandClient.Cast cinematic() {
       MinecraftClient mc = MinecraftClient.getInstance();
@@ -153,8 +158,8 @@ public final class GArenaClient {
    }
 
    /**
-    * Whether this client watches another's G {@code c} now (2.92.0): from its fall ({@link #JOIN}) to its cut, while its
-    * user lives and it was not called off, if this client's player stood in its blast's ground as its sword fell (looked
+    * Whether this client watches another's G {@code c} now (2.92.0): from its sky's shot ({@link #JOIN}) to its cut, while
+    * its user lives and it was not called off, if this client's player stood in its blast's ground as that began (looked
     * at once, the first frame from then; one who ran out of it before then keeps their own camera).
     */
    private static boolean watches(MinecraftClient mc, StandClient.Cast c) {
@@ -165,15 +170,15 @@ public final class GArenaClient {
       return joined.computeIfAbsent(c.id(), id -> contains(c, mc.player.getPos()));
    }
 
-   /** Whether one in another's G's blast ground watches its cutscene {@code sec} seconds into it (2.92.0): from its fall to its cut. */
+   /** Whether one in another's G's blast ground watches its cutscene {@code sec} seconds into it (2.92.0): from its sky's shot to its cut. */
    static boolean joins(float sec) {
       return sec >= JOIN && sec < IsosangRules.G_BACK;
    }
 
    /**
     * The G this client's camera showed (its own with the cutscene camera on, from its start; 2.92.0: another's it joined
-    * as its sword fell, from then), a little past its cutscene too (until {@code until} seconds into it): the dark after
-    * the cut is drawn over its view (2.87.0).
+    * as its sky's shot began, from then), a little past its cutscene too (until {@code until} seconds into it): the dark
+    * after the cut is drawn over its view (2.87.0).
     */
    static StandClient.Cast watched(float delta, float until) {
       MinecraftClient mc = MinecraftClient.getInstance();
@@ -190,7 +195,7 @@ public final class GArenaClient {
       return own != null && CelestialFall.CONFIG.cinematicCamera && own.age(delta) / 20.0F < until ? own : null;
    }
 
-   /** Whether this client's camera shows another's G's cutscene now (2.92.0: one it joined as its sword fell). */
+   /** Whether this client's camera shows another's G's cutscene now (2.92.0: one it joined as its sky's shot began). */
    public static boolean shared() {
       StandClient.Cast c = cinematic();
       MinecraftClient mc = MinecraftClient.getInstance();

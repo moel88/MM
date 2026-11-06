@@ -41,9 +41,16 @@ public final class BotandCamera {
     }
     public static boolean gameplay(){var mc=MinecraftClient.getInstance();return !dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active()&&enabled()&&mc.currentScreen==null&&mc.getOverlay()==null&&mc.isWindowFocused()&&mc.player.isAlive();}
     public static boolean controls(){return gameplay()&&!CinematicDirector.isActive();}
+    /**
+     * Whether the movement keys walk the player as their own camera has them (relative to where it looks, the body turning
+     * the way they go, the run kept): in play, and (2.92.0) while another's G's cutscene holds their screen (GArenaClient
+     * .shared: its 3.2 s would otherwise turn a key held to run from it round, the keys going by the body as in any other
+     * cutscene: one running from it toward their camera would walk back at it).
+     */
+    public static boolean walking(){return gameplay()&&(!CinematicDirector.isActive()||dev.sangwoo.celestialfall.client.isosang.GArenaClient.shared());}
     public static boolean locked(){return STATE.shiftLock||STATE.firstPerson();}
     public static boolean sprinting() {
-        var mc=MinecraftClient.getInstance();if(!controls()||CombatClient.actionLocked()||!STATE.run)return false;
+        var mc=MinecraftClient.getInstance();if(!walking()||CombatClient.actionLocked()||!STATE.run)return false;
         var p=mc.player;var s=CombatClient.snapshot(p.getUuid());
         return !s.guard()&&s.attack()==0&&s.dashAge(mc.world.getTime())>=7&&!p.hasVehicle()&&!p.isUsingItem()
             &&!p.isFallFlying()&&!p.getAbilities().flying&&(p.getHungerManager().getFoodLevel()>6||p.getAbilities().allowFlying)
@@ -137,7 +144,7 @@ public final class BotandCamera {
         // On-foot crouch is removed. X is only dismount / creative-flight descent.
         input.sneaking=!CombatClient.actionLocked()&&(p.hasVehicle()||p.getAbilities().flying)&&DISMOUNT.isPressed();
         if(CombatClient.actionLocked())input.jumping=false;
-        if(!controls()||p.hasVehicle())return;
+        if(!walking()||p.hasVehicle())return;
         float forward=input.movementForward,side=input.movementSideways;
         var s=CombatClient.snapshot(p.getUuid());
         // E's thrusts are aimed (user request): the caster faces where the camera looks and walks relative to it; so

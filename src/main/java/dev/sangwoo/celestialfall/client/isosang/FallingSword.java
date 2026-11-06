@@ -218,6 +218,11 @@ final class FallingSword {
    static final double FALL_PUSH = 0.18;
    static final double FALL_FOV = 58.0;
    static final double[][] LANDING_HEIGHT = new double[][]{{3.0, 3.667}, {3.1, 2.9225}, {3.15, 2.7}, {3.2, 2.57}, {3.24, 2.57}};
+   /**
+    * When the camera swings from her face up to the sky (seconds): from S_PULL to S_PULLED, the sky's shot (GScene.skyShot,
+    * the sword coming out of the storm) on its own from S_PULLED; (2.92.0) the others in the blast's ground join the
+    * cutscene there (GArenaClient.JOIN).
+    */
    static final float S_PULL = 1.6F;
    static final float S_PULLED = 1.65F;
    static final float S_ALONE = 2.75F;
@@ -865,14 +870,14 @@ final class FallingSword {
          }
       } else if (t < 2.7833333F) {
          FallingSword.Shot sky = GScene.skyShot(c, t);
-         if (t >= 1.65F) {
+         if (t >= S_PULLED) {
             return GGesture.handShot(sky, c, t);
          } else {
-            FallingSword.Shot face = face(c, Math.min(t, 1.6F));
-            if (t < 1.6F) {
+            FallingSword.Shot face = face(c, Math.min(t, S_PULL));
+            if (t < S_PULL) {
                return GGesture.handShot(face, c, t);
             } else {
-               float u = Ease.smooth(t, 1.6F, 1.65F);
+               float u = Ease.smooth(t, S_PULL, S_PULLED);
                return GGesture.handShot(
                   new FallingSword.Shot(
                      face.eye().lerp(sky.eye(), (double)u),

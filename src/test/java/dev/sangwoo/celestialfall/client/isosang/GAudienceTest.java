@@ -10,24 +10,33 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Who sees and hears Lee So-sang's G (2.92.0, user request: "62 × 47 범위에 있는 사람은 모두 시전자의 컷씬이 보이는 대신 검이
- * 하늘에서 떨어지는 순간부터 보이게 해줘 그대신 시전하는 소리는 처음부터 끝까지 들리게 하고"): the others in its blast's
- * ground watch its cutscene from the very frame its sword falls from the sky to its cut, and keep their own camera before
- * it; its sound is as loud for them as for its user anywhere in that ground, fading out beyond its edge, never fainter than
- * before 2.92.0 and with no step as one walks out.
+ * 하늘에서 떨어지는 순간부터 보이게 해줘 그대신 시전하는 소리는 처음부터 끝까지 들리게 하고", then with a frame of the sky's
+ * shot: "다른 사람들도 이 시점부터 보이게"): the others in its blast's ground watch its cutscene from the very first frame
+ * of its sky's shot (the sword coming out of the storm) to its cut, and keep their own camera before it; its sound is as
+ * loud for them as for its user anywhere in that ground, fading out beyond its edge, never fainter than before 2.92.0 and
+ * with no step as one walks out.
  */
 class GAudienceTest {
     static final float FRAME=1/60f;
     static StandClient.Cast cast(){return GGesture.REFERENCE_CAST;}
 
-    @Test void othersInItsGroundWatchItFromItsFallToItsCut(){
-        assertEquals(IsosangRules.G_FALL,GArenaClient.JOIN,0,"they join as its sword falls from the sky");
-        for(float t=0;t<GArenaClient.JOIN;t+=.005f)assertFalse(GArenaClient.joins(t),"their own camera before its sword falls, at "+t);
+    @Test void othersInItsGroundWatchItFromItsSkysShotToItsCut(){
+        assertEquals(FallingSword.S_PULLED,GArenaClient.JOIN,0,"they join as the sky's shot begins");
+        for(float t=0;t<GArenaClient.JOIN;t+=.005f)assertFalse(GArenaClient.joins(t),"their own camera before it, at "+t);
         for(float t=GArenaClient.JOIN;t<IsosangRules.G_BACK;t+=.005f)assertTrue(GArenaClient.joins(t),"its cutscene from then to its cut, at "+t);
         for(float t=IsosangRules.G_BACK;t<8;t+=.005f)assertFalse(GArenaClient.joins(t),"and their own camera again after it, at "+t);
-        // the first shot they see is the fall's own, from its first frame: not the sky's, not one partway through
-        assertEquals(GStage.STORM,FallingSword.space(cast(),Math.nextDown(GArenaClient.JOIN)),"the sky's shot is the last they miss");
-        assertEquals(3,FallingSword.space(cast(),GArenaClient.JOIN),"the fall's is the first they see");
-        assertEquals(3,FallingSword.space(cast(),Math.nextDown(IsosangRules.G_BACK)),"and the last, up to the cut");
+        assertTrue(GArenaClient.joins(1.83f),"the user's frame of it (1.83 s into G in the 2.88.0 film) is in it");
+        // the first shot they see is the sky's own, from its first frame: not a moment of her face, nor of the swing up
+        var sky=GScene.skyShot(cast(),GArenaClient.JOIN);var first=FallingSword.shot(cast(),GArenaClient.JOIN);
+        assertEquals(0,first.eye().distanceTo(sky.eye()),1e-9,"the sky's camera from the first frame");
+        assertEquals(0,first.look().distanceTo(sky.look()),1e-9);
+        assertEquals(sky.fov(),first.fov(),1e-9);
+        var before=FallingSword.shot(cast(),GArenaClient.JOIN-FRAME);
+        assertTrue(before.look().subtract(before.eye()).normalize().dotProduct(sky.look().subtract(sky.eye()).normalize())<.999,
+            "a frame (60 fps) before it the camera is still swinging up from her face");
+        assertEquals(GStage.STORM,FallingSword.space(cast(),GArenaClient.JOIN),"in the sky's space");
+        assertEquals(3,FallingSword.space(cast(),IsosangRules.G_FALL),"then the fall's");
+        assertEquals(3,FallingSword.space(cast(),Math.nextDown(IsosangRules.G_BACK)),"up to the cut");
         assertEquals(-1,FallingSword.space(cast(),IsosangRules.G_BACK),"the cutscene is over as they leave it");
     }
 
