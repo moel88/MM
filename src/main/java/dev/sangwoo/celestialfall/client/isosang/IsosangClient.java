@@ -351,7 +351,8 @@ public final class IsosangClient {
      * How far level from where it is this player's body is drawn now (2.93.0, Z): from Z's flight to a moment after it,
      * where their formation has them (IsosangClient.spot: over the sword they fly to) less where they are, so whoever sees
      * them a little late (another client, 3 ticks behind) sees them stand on that sword as the orb lands, not walk the
-     * last of the way there; easing out over SHIFT_OUT ticks once their position has caught up. Zero otherwise.
+     * last of the way there (2.93.0's check: up to 8.5 blocks behind for 7 ticks on a local server; held long enough for a
+     * slower one); easing out over SHIFT_OUT ticks once their position has caught up. Zero otherwise.
      */
     public static Vec3d shift(UUID caster,float delta){
         var mc=MinecraftClient.getInstance();if(mc.world==null)return Vec3d.ZERO;
@@ -367,7 +368,7 @@ public final class IsosangClient {
         return new Vec3d((to.x-at.x)*w,0,(to.z-at.z)*w);
     }
     /** How long after Z's flight the body is still drawn where the formation has it (ticks), and how long it eases out over. */
-    static final float SHIFT_HOLD=6,SHIFT_OUT=4;
+    static final float SHIFT_HOLD=12,SHIFT_OUT=6;
     /** The lift that draws a body {@code real} blocks over the formation's ground {@code planned} blocks over it. */
     static double lift(double planned,double real){return Math.max(0,planned)-real;}
     /**

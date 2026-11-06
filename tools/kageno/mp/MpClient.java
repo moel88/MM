@@ -919,7 +919,7 @@ public final class MpClient implements ClientModInitializer {
     private final java.util.Set<String> swordsSeen=new java.util.HashSet<>();private String eSeen="";
     private void isosangWatch(){
         if(!swingListening&&mc.getSoundManager()!=null){swingListening=true;mc.getSoundManager().registerListener((sound,set)->{
-            String id=sound.getId().getPath();if(!id.startsWith("isosang_m1")&&!id.equals("isosang_r")&&!id.startsWith("isosang_h")&&!id.startsWith("isosang_g"))return;
+            String id=sound.getId().getPath();if(!id.startsWith("isosang_m1")&&!id.equals("isosang_r")&&!id.startsWith("isosang_h")&&!id.startsWith("isosang_g")&&!id.equals("isosang_z"))return;
             var newest=dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values().stream().reduce((a,b)->b).orElse(null);
             note(String.format(Locale.ROOT,"sound %s at hit %s's age %.2f ticks (volume %.2f)",id,newest==null?"-":String.valueOf(newest.combo()),newest==null?-1:newest.age(0),sound.getVolume()));});}
         long now=mc.world.getTime();
