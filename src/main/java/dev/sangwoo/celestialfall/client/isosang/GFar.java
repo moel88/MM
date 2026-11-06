@@ -187,7 +187,7 @@ final class GFar {
          Vec3d side = d.crossProduct(new Vec3d(0.0, 1.0, 0.0));
          side = side.lengthSquared() < 1.0E-6 ? new Vec3d(1.0, 0.0, 0.0) : side.normalize();
          float a = fl * w;
-         GGrand.bolt(m, b[0], b[1], side, c.cast.id().hashCode() + i * 13, .7 * k, .16 * k, a);
+         GGrand.bolt(m, b[0], b[1], side, c.cast.id().hashCode() + i * 13, 1.05 * k, .24 * k, a);
          m.softDisc(b[1].add(0.0, 1.0, 0.0), 6.0 * k, BOLT, .22F * a);
          m.softDisc(b[1].add(0.0, .4, 0.0), 2.2 * k, BOLT_CORE, .45F * a);
          float since = t - GROUND_BOLTS[i];
@@ -282,7 +282,7 @@ final class GFar {
       if (ink) {
          return;
       }
-      dome(m, s, tau, 30.0, .1, .6F, w, k);
+      dome(m, c.camera, s, tau, 30.0, .1, .6F, w, k);
       float kick = FxLib.kick(t, IsosangRules.G_STRIKE, .3F);
       if (kick > .01F) {
          Vec3d axis = GScene.axis(c.cast);
@@ -325,13 +325,13 @@ final class GFar {
             m.vertex(b1.add(0.0, .3 * h, 0.0), INK, 0.0F);
             m.vertex(b0.add(0.0, .3 * h, 0.0), INK, 0.0F);
          } else {
-            m.vertex(b0, GOLD, .5F * a);
-            m.vertex(b1, GOLD, .5F * a);
+            m.vertex(b0, GOLD, .4F * a);
+            m.vertex(b1, GOLD, .4F * a);
             m.vertex(t1, GOLD, 0.0F);
             m.vertex(t0, GOLD, 0.0F);
             Vec3d m0 = o.add(d0.multiply(r + lean * .55)).add(0.0, h * .55, 0.0), m1 = o.add(d1.multiply(r + lean * .55)).add(0.0, h * .55, 0.0);
-            m.vertex(b0, GOLD_WHITE, .55F * a);
-            m.vertex(b1, GOLD_WHITE, .55F * a);
+            m.vertex(b0, GOLD_WHITE, .45F * a);
+            m.vertex(b1, GOLD_WHITE, .45F * a);
             m.vertex(m1, GOLD_WHITE, 0.0F);
             m.vertex(m0, GOLD_WHITE, 0.0F);
          }
@@ -341,8 +341,12 @@ final class GFar {
       }
    }
 
-   /** A dome of light rings swelling over the ground to {@code reach} blocks, gone after {@code life} seconds. */
-   static void dome(EffectMesh m, Vec3d o, float tau, double reach, double pace, float life, float w, double k) {
+   /**
+    * A dome of light swelling over the ground to {@code reach} blocks, gone after {@code life} seconds: its outline as the
+    * camera sees it (a half circle standing over the ground across the view), its rim along the ground, one latitude and
+    * a faint fill.
+    */
+   static void dome(EffectMesh m, Vec3d camera, Vec3d o, float tau, double reach, double pace, float life, float w, double k) {
       if (tau <= 0.0F) {
          return;
       }
@@ -351,12 +355,23 @@ final class GFar {
       if (fade <= .005F) {
          return;
       }
-      for (int i = 0; i < 7; i++) {
-         double lat = Math.toRadians(i * 12.0);
-         double width = (.8 + .045 * r) * k;
-         GGrand.band(m, o.add(0.0, r * Math.sin(lat), 0.0), GGrand.X, GGrand.Z, r * Math.cos(lat), width, i == 0 ? GOLD_WHITE : GOLD, .3F * fade * (1.0F - i / 8.0F), 96);
+      Vec3d view = o.subtract(camera);
+      Vec3d across = new Vec3d(-view.z, 0.0, view.x);
+      across = across.lengthSquared() < 1.0E-6 ? GGrand.X : across.normalize();
+      Vec3d prev = null;
+      for (int i = 0; i <= 64; i++) {
+         double a = Math.PI * i / 64.0;
+         Vec3d p = o.add(across.multiply(Math.cos(a) * r)).add(0.0, Math.sin(a) * r, 0.0);
+         if (prev != null) {
+            m.softLine(prev, p, (1.6 + .05 * r) * k, GOLD, .4F * fade);
+            m.line(prev, p, .3 * k, GOLD_WHITE, .75F * fade);
+         }
+         prev = p;
       }
-      m.softDisc(o.add(0.0, r * .5, 0.0), r * .95, GOLD, .1F * fade);
+      GGrand.band(m, o.add(0.0, .1, 0.0), GGrand.X, GGrand.Z, r, (1.0 + .04 * r) * k, GOLD_WHITE, .45F * fade, 96);
+      double lat = Math.toRadians(32.0);
+      GGrand.band(m, o.add(0.0, r * Math.sin(lat), 0.0), GGrand.X, GGrand.Z, r * Math.cos(lat), (.7 + .03 * r) * k, GOLD, .22F * fade, 96);
+      m.softDisc(o.add(0.0, r * .45, 0.0), r * .95, GOLD, .08F * fade);
    }
 
    // ───────────────────────────── while it stands ─────────────────────────────
@@ -383,27 +398,26 @@ final class GFar {
       if (charge <= .01F) {
          return;
       }
-      Vec3d axis = GScene.axis(c.cast);
-      Vec3d across = GScene.across(c.cast).normalize(), normal = GScene.normal(c.cast).normalize();
+      FallingSword.Blade bl = GWorld.blade(c.cast, t);
+      if (bl == null || bl.alpha() < .02F) {
+         return;
+      }
+      // the far view's sword is the observers' own, wider and thicker (isosang_blade_observer.vsh): its surface is
+      // GWorld.bladeSurface, so the spirals and the lightning go just outside it
       double buried = Math.max(0.0, -GScene.height(t));
       for (int h = 0; h < 3; h++) {
          Vec3d prev = null;
          for (int j = 0; j <= 90; j++) {
-            double y = buried + 36.0 * j / 90.0;
-            double a = h * Math.PI * 2.0 / 3.0 + y * .38 - t * 5.5;
-            double r = FallingSword.half(Math.min(y, 6.0)) + 3.0 + .12 * y;
-            Vec3d p = s.add(axis.multiply(y - buried)).add(across.multiply(Math.cos(a) * r * 1.25)).add(normal.multiply(Math.sin(a) * r));
+            double y = buried + .5 + 29.0 * j / 90.0;
+            double a = h * Math.PI * 2.0 / 3.0 + y * .35 - t * 5.5;
+            Vec3d p = GWorld.bladeSurface(bl, Math.cos(a) * 5.6, y, Math.sin(a) * 1.7);
             if (prev != null) {
-               float al = charge * (float)Math.sin(Math.PI * j / 90.0) * (.6F + .4F * GGrand.heart(t));
-               m.softLine(prev, p, 1.2 * k, GOLD, .35F * al);
-               m.line(prev, p, .22 * k, GOLD_WHITE, .7F * al);
+               float al = charge * bl.alpha() * (float)Math.sin(Math.PI * j / 90.0) * (.6F + .4F * GGrand.heart(t));
+               m.softLine(prev, p, 1.3 * k, GOLD, .35F * al);
+               m.line(prev, p, .24 * k, GOLD_WHITE, .7F * al);
             }
             prev = p;
          }
-      }
-      FallingSword.Blade bl = GWorld.blade(c.cast, t);
-      if (bl == null || bl.alpha() < .02F) {
-         return;
       }
       int side = bl.normal().dotProduct(c.camera.subtract(bl.point())) >= 0.0 ? 1 : -1;
       for (int i = 0; i < 6; i++) {
@@ -412,12 +426,11 @@ final class GFar {
          long n = (long)Math.floor(clock / slot);
          double u = clock / slot - n;
          int seed = (int)(n * 131L + i * 17L);
-         double y0 = buried + 14.0 * Ease.hash(seed + 1), y1 = y0 + 8.0 + 16.0 * Ease.hash(seed + 2);
+         double y0 = buried + .5 + 12.0 * Ease.hash(seed + 1), y1 = y0 + 6.0 + 12.0 * Ease.hash(seed + 2);
          int edge = Ease.hash(seed + 3) > .5 ? 1 : -1;
-         double x0 = edge * (FallingSword.half(y0) * 1.6 + 1.0), x1 = edge * (FallingSword.half(y1) * 1.6 + 1.5);
-         Vec3d from = bl.at(x0, y0, 1.6 * side), to = bl.at(x1, y1, 1.6 * side);
+         Vec3d from = GWorld.bladeSurface(bl, edge * 4.3, y0, 1.3 * side), to = GWorld.bladeSurface(bl, edge * 4.6, y1, 1.3 * side);
          float al = (float)Math.sin(Math.PI * u) * charge * bl.alpha();
-         GGrand.bolt(m, from, to, bl.across().normalize(), seed, .45 * k, .1 * k, .9F * al);
+         GGrand.bolt(m, from, to, bl.across().normalize(), seed, .5 * k, .12 * k, .9F * al);
       }
    }
 
@@ -436,7 +449,7 @@ final class GFar {
       if (ink) {
          return;
       }
-      dome(m, s, tau, 50.0, .22, 1.3F, w, k);
+      dome(m, c.camera, s, tau, 50.0, .22, 1.3F, w, k);
       float kick = FxLib.kick(t, 4.86F, .5F);
       if (kick > .01F) {
          m.softTaper(s, s.add(0.0, 260.0, 0.0), 34.0, 16.0, GOLD, .18F * kick * w);

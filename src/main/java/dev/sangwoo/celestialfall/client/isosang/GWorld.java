@@ -158,7 +158,7 @@ final class GWorld {
       return var0.at(Math.cos(var3) * (var10 + var5), var8, Math.sin(var3) * (var12 + var5 * 0.8));
    }
 
-   private static Vec3d bladeSurface(FallingSword.Blade var0, double var1, double var3, double var5) {
+   static Vec3d bladeSurface(FallingSword.Blade var0, double var1, double var3, double var5) {
       double var7 = Math.max(0.0, Math.min(1.0, (var3 - 3.5) / 13.0));
       double var9 = var7 * var7 * (3.0 - 2.0 * var7);
       double var11 = 13.0 * (var7 * var7 * var7 - 0.5 * var7 * var7 * var7 * var7) + Math.max(0.0, var3 - 16.5);
