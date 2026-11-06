@@ -139,6 +139,26 @@ final class GScene {
    static final double ACTOR_PIVOT = 1.45;
 
    /**
+    * How the blade widens past its point in the sky shot (isosang_blade.vsh's SkyShape): over how many blocks along the
+    * blade its start (and its end, far up in the storm) are rounded, and how much its side at negative and at positive
+    * across widens (1 as the user's 2.87.0 shader, 0 not at all). 2.87.5 (user request, a circled picture: "내가 동그라미
+    * 친 부분 검이 삐뚫어진거 같은데 이거 고쳐줘"): begun at once 5.534 blocks up, the widening turned the outline and its light
+    * a corner where the point's curve meets it, and the frame's left side (negative across) then flared out to the left as
+    * a crooked flap; her figure had hidden it until 2.87.3 (as the girl's head hides that corner in the videos). Now the
+    * widening is rounded over 3 blocks either side of its start and its end, and the frame's left side does not widen: from
+    * the point's corner it rises into the storm, the sword's shape the videos' shield (draft B of two filmed in the game;
+    * A, only the corner rounded, still flared out to the left). The right side widens as before.
+    */
+   static final double BLADE_ROUND = 3.0, BLADE_LEFT = 0.0, BLADE_RIGHT = 1.0;
+   /** The shot tool's own shape for the blade (round, left, right) in place of the constants above, to try it; null for none. */
+   static volatile double[] tunedBlade;
+
+   static double[] bladeShape() {
+      double[] k = tunedBlade;
+      return k != null ? k : new double[]{BLADE_ROUND, BLADE_LEFT, BLADE_RIGHT};
+   }
+
+   /**
     * Her figure in the sky shot (GStage.actor): drawn as the camera she was fitted to (FallingSword.skyView) would show her,
     * through the shot's own camera, then made slighter and leaning away round her head (ACTOR_*). The identity at the
     * face shot, eased in over its cut (1.6 to 1.65 s).

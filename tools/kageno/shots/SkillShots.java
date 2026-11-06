@@ -1024,6 +1024,9 @@ public final class SkillShots implements ClientModInitializer {
                     // (2.87.3) "gfit=SCALE/LEAN/RIGHT/DOWN/YAW/PAN/DROP": G's sky-shot figure fitted so in this entry (GScene.tuned), to try a fit before it goes in
                     {double[] fit=null;if(opts.containsKey("gfit")){String[] v=opts.get("gfit").split("/");fit=new double[7];for(int i=0;i<7;i++)fit[i]=i<v.length?Double.parseDouble(v[i].trim()):0;log.append("  G sky figure fitted ").append(opts.get("gfit")).append('\n');}
                      var tuned=Class.forName("dev.sangwoo.celestialfall.client.isosang.GScene").getDeclaredField("tuned");tuned.setAccessible(true);tuned.set(null,fit);}
+                    // (2.87.5) "gblade=ROUND/LEFT/RIGHT": G's sky-shot blade widened so in this entry (GScene.tunedBlade), to try a shape before it goes in
+                    {double[] shape=null;if(opts.containsKey("gblade")){String[] v=opts.get("gblade").split("/");shape=new double[3];for(int i=0;i<3;i++)shape[i]=i<v.length?Double.parseDouble(v[i].trim()):1;log.append("  G sky blade shaped ").append(opts.get("gblade")).append('\n');}
+                     var tunedBlade=Class.forName("dev.sangwoo.celestialfall.client.isosang.GScene").getDeclaredField("tunedBlade");tunedBlade.setAccessible(true);tunedBlade.set(null,shape);}
                     // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
                     if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);

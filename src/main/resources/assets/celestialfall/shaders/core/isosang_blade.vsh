@@ -10,6 +10,10 @@ uniform vec3 Across;
 uniform vec3 Axis;
 uniform vec3 Exposure;
 uniform float Storm;
+// (2.87.5) the sky close-up's widening: x how long its start and its end are rounded over (blocks along the
+// blade, 0 for the sharp corners of 2.87.4), y and z how much the side at negative and positive across widens
+// (1 as before, 0 not at all)
+uniform vec3 SkyShape;
 out vec3 pos;
 out vec2 uv;
 out vec4 tint;
@@ -44,8 +48,21 @@ void main(){
  float depth=1.+2.65*b;
  float integral=13.*(t*t*t-.5*t*t*t*t)+max(q.y-16.5,0.);
  float h=q.y+.93*integral;
- float width=1.+clamp((h-5.534)*.43/3.8,0.,2.52);
- float widthDerivative=(h>5.534 && h<27.804) ? .43*(1.+.93*b)/3.8 : 0.;
+ // The blade widens past its point, by .43 of its half width a block, up to 3.52 times. (2.87.5) Its start
+ // and its end are rounded over SkyShape.x blocks: begun at once, the outline and the light turned a corner
+ // where the point's curve meets the widening (5.534), and the sky shot showed a crooked flap there.
+ float L=SkyShape.x,k=.43/3.8,s=h-5.534,ramp,rampSlope;
+ if(L<=0.){ramp=max(s,0.);rampSlope=s>0.?1.:0.;}
+ else if(s<=-L){ramp=0.;rampSlope=0.;}
+ else if(s>=L){ramp=s;rampSlope=1.;}
+ else{ramp=(s+L)*(s+L)/(4.*L);rampSlope=(s+L)/(2.*L);}
+ float spread=k*ramp,cap=2.52,c=k*L,spreadSlope=k*rampSlope;
+ if(c<=0.){spreadSlope=spread<cap?spreadSlope:0.;spread=min(spread,cap);}
+ else if(spread>=cap+c){spread=cap;spreadSlope=0.;}
+ else if(spread>cap-c){spreadSlope*=1.-(spread-cap+c)/(2.*c);spread-=(spread-cap+c)*(spread-cap+c)/(4.*c);}
+ float sideWidening=q.x<0.?SkyShape.y:SkyShape.z;
+ float width=1.+sideWidening*spread;
+ float widthDerivative=sideWidening*spreadSlope*(1.+.93*b);
  float roof=max(0.,1.-abs(q.x)/3.8);
  float fold=2.65*roof*sign(q.z);
  pos=Tip+basis*vec3(q.x*width,h,q.z*depth+fold*b);

@@ -176,6 +176,48 @@ class FallingSwordTest {
             assertTrue(ahead[0]>at[0]+.02,"her front to the frame's right at "+t+": "+at[0]+" "+ahead[0]);
         }
     }
+    /**
+     * Where the sky shot draws the blade's edge {@code y} blocks up from its point on its side {@code side} (-1 or 1): the
+     * position across and along it that isosang_blade.vsh's sky branch gives (keep the two alike), the blade shaped as
+     * {@code shape} (GScene.bladeShape: rounding, left, right).
+     */
+    static double[] skyEdge(double y,int side,double[] shape){
+        double t=Math.max(0,Math.min(1,(y-3.5)/13)),b=t*t*(3-2*t);
+        double h=y+.93*(13*(t*t*t-.5*t*t*t*t)+Math.max(y-16.5,0));
+        double L=shape[0],k=.43/3.8,s=h-5.534,ramp;
+        if(L<=0)ramp=Math.max(s,0);else if(s<=-L)ramp=0;else if(s>=L)ramp=s;else ramp=(s+L)*(s+L)/(4*L);
+        double spread=k*ramp,cap=2.52,c=k*L;
+        if(c<=0)spread=Math.min(spread,cap);else if(spread>=cap+c)spread=cap;else if(spread>cap-c)spread-=(spread-cap+c)*(spread-cap+c)/(4*c);
+        return new double[]{side*FallingSword.half(y)*(1+(side<0?shape[1]:shape[2])*spread),h};
+    }
+    @Test void inTheSkyTheBladeTurnsNoCornerAndItsLeftSideRises(){
+        // (2.87.5, user request: a circled picture, "검이 삐뚫어진거 같은데 이거 고쳐줘") the edge turns no corner where the
+        // point's curve meets the widening (2.87.4: its slope jumped by .43 at 5.534 blocks up)
+        double[] shape=GScene.bladeShape();
+        for(int side=-1;side<=1;side+=2){
+            double[] prev=skyEdge(3,side,shape);double last=Double.NaN;
+            for(double y=3.01;y<14;y+=.01){
+                double[] p=skyEdge(y,side,shape);double slope=(p[0]-prev[0])/(p[1]-prev[1]);
+                if(!Double.isNaN(last))assertTrue(Math.abs(slope-last)<.06,"the edge turns a corner "+y+" blocks up on side "+side+": "+last+" to "+slope);
+                last=slope;prev=p;
+            }
+        }
+        // and the frame's left side rises from the point's corner into the storm, not flaring out to the left as a flap
+        var c=cast();
+        for(float t:new float[]{1.7f,2.2f,2.7f}){
+            var shot=GScene.skyShot(c,t);var bl=GScene.blade(c,t);
+            java.util.function.DoubleFunction<double[]> at=y->{double[] e=skyEdge(y,-1,shape);
+                return inFrame(shot,bl.point().add(bl.across().multiply(e[0])).add(bl.axis().multiply(e[1])),false);};
+            double[] corner=at.apply(5.534);
+            assertTrue(corner[0]<.45,"the side at negative across is the frame's left at "+t+": "+corner[0]);
+            for(double y=6;y<=14;y+=1){
+                double[] p=at.apply(y),q=at.apply(y+1);
+                double steep=Math.toDegrees(Math.atan2(Math.abs(q[0]-p[0])*FallingSword.ASPECT,p[1]-q[1]));
+                assertTrue(steep<20,"the frame's left side heads "+steep+" degrees off upright "+y+" blocks up at "+t);
+                assertTrue(q[0]>corner[0]-.03,"the frame's left side flares out to the left "+(y+1)+" blocks up at "+t+": "+q[0]+" < "+corner[0]);
+            }
+        }
+    }
     static Vec3d apply(Matrix4f m,Vec3d origin,Vec3d p){
         Vector4f v=m.transform(new Vector4f((float)(p.x-origin.x),(float)(p.y-origin.y),(float)(p.z-origin.z),1));
         return origin.add(v.x,v.y,v.z);

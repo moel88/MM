@@ -162,6 +162,16 @@
         0,
         0
       ]
+    },
+    {
+      "name": "SkyShape",
+      "type": "float",
+      "count": 3,
+      "values": [
+        0.0,
+        1.0,
+        1.0
+      ]
     }
   ],
   "blend": {

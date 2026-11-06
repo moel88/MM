@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
@@ -303,6 +304,12 @@ public final class GStage {
       var4.getUniform("Dark").set(var2.dark());
       var4.getUniform("Buried").set((float)Math.max(0.0, -GScene.height(var3)));
       var4.getUniform("Storm").set(var3 < 2.7833333F ? 1.0F : 0.0F);
+      // (2.87.5) the sky shot's widening, rounded and per side (the observer's shader has its own profile)
+      GlUniform skyShape = var4.getUniform("SkyShape");
+      if (skyShape != null) {
+         double[] shape = GScene.bladeShape();
+         skyShape.set((float)shape[0], (float)shape[1], (float)shape[2]);
+      }
       prepareBladeTextures();
       RenderSystem.setShaderTexture(0, BLADE);
       RenderSystem.setShaderTexture(1, BLADE_N);
