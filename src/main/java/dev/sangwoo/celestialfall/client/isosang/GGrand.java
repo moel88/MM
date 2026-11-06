@@ -170,8 +170,8 @@ final class GGrand {
       Vec3d back = head.add(view.multiply(1.1));
       float breathe = .9F + .1F * (float)Math.sin(t * 5.0F);
       // a golden light behind her head (her head hides its middle: it rims her)
-      m.softDisc(back, 1.9, GOLD, .22F * on * breathe);
-      m.softDisc(back, 1.0, GOLD_WHITE, .26F * on * breathe);
+      m.softDisc(back, 1.9, GOLD, .2F * on * breathe);
+      m.softDisc(back, 1.0, GOLD_WHITE, .2F * on * breathe);
       // long thin rays, every other one longer, turning slowly
       for (int i = 0; i < 28; i++) {
          double a = i * Math.PI * 2.0 / 28.0 + .25 * t;
@@ -179,7 +179,7 @@ final class GGrand {
          double len = (i % 2 == 0 ? 2.2 : 1.3) * (.85 + .3 * Ease.hash(i * 7 + 3));
          float k = on * (.55F + .45F * (float)Math.sin(t * 5.0F + i * 1.3F));
          m.softTaper(back.add(d.multiply(.55)), back.add(d.multiply(.55 + len)), .07, .003, GOLD, .42F * k);
-         m.softTaper(back.add(d.multiply(.55)), back.add(d.multiply(.55 + len * .6)), .02, .002, GOLD_WHITE, .5F * k);
+         m.softTaper(back.add(d.multiply(.55)), back.add(d.multiply(.55 + len * .6)), .02, .002, GOLD_WHITE, .34F * k);
       }
       // the halo: a bright ring, a wide faint one, and fine ticks between them turning the other way
       m.ring(back, across, up, .62, 64, 1.0F, .016, GOLD_WHITE, .7F * on, .4 * t);
@@ -195,7 +195,7 @@ final class GGrand {
          double x = (i % 2 == 0 ? 1 : -1) * (.5 + .9 * Ease.hash(i * 5 + 3)), z = (Ease.hash(i * 5 + 4) - .5) * 1.2;
          Vec3d p = head.add(across.multiply(x)).add(up.multiply(-1.4 + 2.8 * ph)).add(view.multiply(z));
          float k = on * (float)Math.sin(Math.PI * ph) * (.6F + .4F * (float)Math.sin(t * 9.0F + i));
-         m.star(p, .07, GOLD_WHITE, .9F * k);
+         m.star(p, .055, GOLD_WHITE, .85F * k);
          m.softDisc(p, .1, GOLD, .25F * k);
       }
    }

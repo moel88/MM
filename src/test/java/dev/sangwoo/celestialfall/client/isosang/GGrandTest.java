@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Lee So-sang's G made grand (2.88.0): the sword's inscriptions light only once it is out of the storm, run up it, flare
  * as it strikes and burn hotter until the blast; the ground beats faster toward the blast; the storm's eye burns gold
- * behind the sword in the sky shot (2.90.0: no lightning in it). Every part is a continuous function of the cast clock:
+ * behind the sword in the sky shot (2.90.0: no lightning in it); (2.91.0) the ground's cracks are jagged and run out to
+ * their length. Every part is a continuous function of the cast clock:
  * nothing jumps between two frames at 60 fps but the flashes, which come in over a frame and a half as the codebase's
  * kicks do.
  */
@@ -62,6 +63,23 @@ class GGrandTest {
         }
         for(int i=0;i+1<4;i++)assertTrue(GGrand.heart((GGrand.BEATS[i]+GGrand.BEATS[i+1])*.5f+.06f)<.5f,"the first beats are apart");
         assertEquals(0,GGrand.heart(3.4f),1e-6,"no beat before the first");
+    }
+
+    @Test void theCracksAreJaggedAndRunOutToAPoint(){
+        net.minecraft.util.math.Vec3d o=new net.minecraft.util.math.Vec3d(10,64,-5);
+        for(int seed=0;seed<40;seed++){
+            double angle=seed*.37,length=9+seed%10;
+            net.minecraft.util.math.Vec3d[] p=GGrand.jagged(o,angle,1.4,length,16,seed*131+7,.55);
+            assertEquals(1.4,p[0].distanceTo(o),1e-6,"it starts at the strike's edge");
+            assertEquals(length,p[p.length-1].distanceTo(o),1.0,"and runs out its length");
+            for(net.minecraft.util.math.Vec3d q:p)assertEquals(64,q.y,1e-9,"along the ground");
+            int sharp=0;
+            for(int j=1;j+1<p.length;j++){
+                net.minecraft.util.math.Vec3d a=p[j].subtract(p[j-1]).normalize(),b=p[j+1].subtract(p[j]).normalize();
+                if(Math.toDegrees(Math.acos(Math.max(-1,Math.min(1,a.dotProduct(b)))))>15)sharp++;
+            }
+            assertTrue(sharp>=5,"jagged, not a smooth tube: "+sharp+" sharp turns (seed "+seed+")");
+        }
     }
 
     @Test void nothingJumpsBetweenTwoFrames(){
