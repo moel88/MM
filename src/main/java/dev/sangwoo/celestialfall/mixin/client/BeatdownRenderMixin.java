@@ -37,6 +37,8 @@ public abstract class BeatdownRenderMixin {
         if(StandBeatdown.hidden(e)){ci.setReturnValue(false);return;}
         // (2.83.0) Lee So-sang's G's own space: nobody else is in it (GStage)
         if(dev.sangwoo.celestialfall.client.isosang.GStage.hides(e)){ci.setReturnValue(false);return;}
+        // (2.93.0) Lee So-sang's Z: she is the orb of light as she flies from one of her formation's swords to another (SwordStep)
+        if(dev.sangwoo.celestialfall.client.isosang.SwordStep.hides(e)){ci.setReturnValue(false);return;}
         // (the user's 2.87.0 preview) she is drawn wherever the cutscene's camera looks, posed in its shot (GStage.staged)
         if(dev.sangwoo.celestialfall.client.isosang.GStage.staged(e)){ci.setReturnValue(true);return;}
         var offset=StandBeatdown.offset(e,1);

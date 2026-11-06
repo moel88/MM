@@ -319,6 +319,51 @@ class IsosangRulesTest {
             assertTrue(far>FORMATION_RADIUS-FORMATION_EDGE-.8&&in<FORMATION_EMPTY+.8,"from "+in+" to "+far);
         }
     }
+    @Test void zMovesHerUpToThreeTimesWithinTenSecondsOfTheFirstThenItsTwentySecondsRun(){
+        // (2.93.0) "z스킬을 누르면 10초 동안 최대 3번 쳐다보는 검으로 이동 할 수 있어 영상 처럼 10초 안에 3번 다 사용하는 순간
+        // 즉시 재사용 쿨타임 20초가 흐르고 또는 3번 다 사용 안 해도 10초가 지나면 재사용 쿨타임 20초가 흐르게"; one press, one
+        // move; the ten seconds from the first (the user's answers)
+        assertEquals(3,Z_USES);assertEquals(10*20,Z_WINDOW);assertEquals(20*20,Z_COOLDOWN);
+        var s=ZState.FRESH;assertTrue(s.usable(0)&&s.usable(5000));assertEquals(3,s.left(5000));
+        // all three in the window: its cooldown runs from the third at once
+        s=zUse(s,1000,false);assertNotNull(s);assertEquals(1000,s.first());assertEquals(1,s.uses());
+        assertTrue(s.open(1100)&&s.usable(1100));assertEquals(2,s.left(1100));
+        s=zUse(s,1100,false);assertNotNull(s);assertEquals(1000,s.first(),"the window from the first move");assertEquals(1,s.left(1101));
+        s=zUse(s,1150,false);assertNotNull(s);assertEquals(3,s.uses());
+        assertEquals(1150+Z_COOLDOWN,s.ready(),"twenty seconds from the third move, at once");
+        assertFalse(s.open(1151)||s.usable(1151));assertEquals(0,s.left(1151));
+        assertNull(zUse(s,1151,false),"none while it cools down");assertNull(zUse(s,1150+Z_COOLDOWN-1,false));
+        var again=zUse(s,1150+Z_COOLDOWN,false);assertNotNull(again,"ready again");
+        assertEquals(1150+Z_COOLDOWN,again.first(),"a new window");assertEquals(1,again.uses());
+        // fewer than three: its cooldown runs from the window's end
+        for(int used=1;used<=2;used++){
+            var t=ZState.FRESH;for(int i=0;i<used;i++)t=zUse(t,2000+60*i,false);
+            assertEquals(2000+Z_WINDOW+Z_COOLDOWN,t.ready(),used+" used: from the window's end");
+            assertTrue(t.usable(2000+Z_WINDOW-1),"the window still open");assertEquals(Z_USES-used,t.left(2000+Z_WINDOW-1));
+            assertFalse(t.usable(2000+Z_WINDOW),"the ten seconds over: none left");assertNull(zUse(t,2000+Z_WINDOW,false));
+            assertNull(zUse(t,2000+Z_WINDOW+Z_COOLDOWN-1,false));assertNotNull(zUse(t,2000+Z_WINDOW+Z_COOLDOWN,false));
+        }
+        // the cooldowns off for its user (/botand nocooldown): ready again at once, a move on every press
+        var f=ZState.FRESH;for(int i=0;i<8;i++){f=zUse(f,4000+i,true);assertNotNull(f);assertEquals(0,f.ready());assertTrue(f.usable(4001+i));}
+    }
+    @Test void zMovesHerOnceEverySwordHasStruckAndLandsHerBeforeTheSwordsFlare(){
+        assertTrue(Z_FROM>=H_RAIN1+.2,"every sword struck (the last strikes by H_RAIN1)");
+        assertFalse(zTime(Z_FROM-.01));assertTrue(zTime(Z_FROM));assertTrue(zTime(30));
+        assertTrue(zTime(H_END-Z_TRAVEL/20.0-.01));assertFalse(zTime(H_END-Z_TRAVEL/20.0),"she would still fly as the swords flare");
+        assertTrue(Z_TRAVEL/20.0>.15&&Z_TRAVEL/20.0<=.25,"some 0.2 s, as the video's: "+Z_TRAVEL/20.0);
+    }
+    @Test void herFlightRunsSmoothlyFromOnePommelToTheOther()throws Exception{
+        assertEquals(0,zAlong(0),1e-12);assertEquals(1,zAlong(1),1e-12);assertEquals(0,zArc(0),1e-12);assertEquals(0,zArc(1),1e-12);
+        double prev=0;
+        for(int i=1;i<=1000;i++){
+            double u=i/1000.0,a=zAlong(u);assertTrue(a>=prev-1e-12,"onward at "+u);assertTrue(a-prev<.005,"no jump at "+u);prev=a;
+            assertTrue(zArc(u)>=0&&zArc(u)<=Z_ARC+1e-9);
+        }
+        assertTrue(zAlong(.25)>.4,"quick from the start: "+zAlong(.25));
+        assertTrue((zAlong(1)-zAlong(.98))/.02<.1,"easing onto the pommel");
+        // the sound of it is the user's video's, about a second
+        double z=StarPlatinumRulesTest.seconds("isosang_z");assertTrue(z>.8&&z<1.3,"Z's sound: "+z+" s");
+    }
     @Test void hsSoundRunsFromItsStartToTheFormationsEndAndItsEndsGoesOn()throws Exception{
         // (2.82.18) "처음부터 끝날때까지 소리가 나야함 영상처럼": H's sound is its recording right through to H_END (2.82.17
         // and before: its first 4.2 s), and the end's (from H_END to the video's end) takes over where it stops

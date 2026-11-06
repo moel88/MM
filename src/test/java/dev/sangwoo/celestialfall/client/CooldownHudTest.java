@@ -28,6 +28,13 @@ class CooldownHudTest {
             assertFalse(CooldownHud.shows(slot,"none"),"slot "+slot+" is gone with the stand");
         }
     }
+    @Test void leeSoSangsAreShownOnlyToLeeSoSang(){
+        // (2.77.0-2.93.0) the attack's rest, E, R, H, G and Z
+        for(int slot:new int[]{CooldownHud.ISOSANG,CooldownHud.ISOSANG_E,CooldownHud.ISOSANG_R,CooldownHud.ISOSANG_H,CooldownHud.ISOSANG_G,CooldownHud.ISOSANG_Z}){
+            assertTrue(CooldownHud.shows(slot,"isosang"),"slot "+slot);
+            for(String other:new String[]{"kageno","star_platinum","none"})assertFalse(CooldownHud.shows(slot,other),"slot "+slot+" for "+other);
+        }
+    }
     @Test void theDashIsEveryones(){
         for(String stand:StandStats.ids())assertTrue(CooldownHud.shows(CooldownHud.DASH,stand),stand);
     }

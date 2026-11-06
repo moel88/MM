@@ -96,6 +96,19 @@ public final class IsosangClient {
     /** (2.82.0) Whom each formation struck, by the tick of its clock it struck on (the server's word): entity ids. */
     private static final Map<UUID,java.util.TreeMap<Long,int[]>> FORMATION_STRUCK=new HashMap<>();
     /**
+     * (2.93.0) Z: where each formation's user stands, by its swing's id (the server's word): the sword they stand on (its
+     * place in IsosangRules.formationSwords), the one they flew from (-1 for none) and the server's tick they left it.
+     */
+    public record Perch(int on,int from,long moved){}
+    static final Map<UUID,Perch> PERCHES=new HashMap<>();
+    /** (2.93.0) Each formation's flights so far (for their light: the bubble left behind, the orb, the burst on landing), by its swing's id. */
+    public record Flight(int from,int to,long moved){}
+    static final Map<UUID,List<Flight>> FLIGHTS=new HashMap<>();
+    /** (2.93.0) Each Lee So-sang player's Z (its window, its moves, when it is ready again: the server's), by their id. */
+    private static final Map<UUID,IsosangRules.ZState> Z_STATES=new HashMap<>();
+    /** (2.93.0) Each formation's swords' places (forward and right of its middle), by its swing's id. */
+    private static final Map<UUID,double[][]> PLACES=new HashMap<>();
+    /**
      * A hit's sound starts as this client hears of the hit, when its clock starts too (its whooshes are cut to land on
      * the blows from there); one heard later than this many ticks into the hit is not played.
      */
@@ -118,7 +131,7 @@ public final class IsosangClient {
         ClientPlayNetworking.registerGlobalReceiver(IsosangAttack.EVENT,(mc,handler,b,response)->{
             UUID caster=b.readUuid();var dim=b.readIdentifier();int type=b.readUnsignedByte();UUID id=b.readUuid();int combo=b.readUnsignedByte(),blow=b.readByte();
             long start=b.readLong(),serverNow=b.readLong();Vec3d at=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float yaw=b.readFloat();long ready=b.readLong();
-            int n=b.readVarInt();if(n<0||n>512||type>IsosangAttack.SPENT||combo>IsosangRules.ULTIMATE)return;
+            int n=b.readVarInt();if(n<0||n>512||type>IsosangAttack.CROSSED||combo>IsosangRules.ULTIMATE)return;
             var struck=new ArrayList<StandClient.Target>();
             for(int i=0;i<n;i++)struck.add(new StandClient.Target(b.readUuid(),b.readInt(),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble())));
             // (2.80.0) whether the hit is of the empowered combo, whether the user holds an empowerment, when E is ready
@@ -142,7 +155,15 @@ public final class IsosangClient {
             long gReady=b.isReadable()?b.readLong():0;Ultimate ult=null;
             if(b.isReadable()&&b.readBoolean()){int variant=b.readUnsignedByte();ult=new Ultimate(Math.min(variant,IsosangRules.G_VARIANTS-1),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble()));}
             Ultimate cast=ult;
-            mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck,empowered,charged,eReady,thrown,rReady,stands,hReady,laid,gReady,cast));
+            // (2.93.0) Z: when it is ready again, its window and its moves; and H's formation's perch (none from a 2.92 server)
+            IsosangRules.ZState z=null;Perch perch=null;
+            if(b.isReadable()){
+                long zReady=b.readLong(),zFirst=b.readLong();int zUses=b.readUnsignedByte();z=new IsosangRules.ZState(zFirst,Math.min(zUses,IsosangRules.Z_USES),zReady);
+                if(b.readBoolean()){int on=b.readUnsignedByte(),from=b.readUnsignedByte();long moved=b.readLong();
+                    if(on<IsosangRules.FORMATION_SWORDS&&(from==255||from<IsosangRules.FORMATION_SWORDS))perch=new Perch(on,from==255?-1:from,moved);}
+            }
+            IsosangRules.ZState zs=z;Perch perched=perch;
+            mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck,empowered,charged,eReady,thrown,rReady,stands,hReady,laid,gReady,cast,zs,perched));
         });
         ClientTickEvents.START_CLIENT_TICK.register(IsosangClient::tick);
         // (2.80.0) the swords of light: the empowered first's thrown swords and the empowered fourth's giant sword
@@ -159,10 +180,24 @@ public final class IsosangClient {
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->clear(mc)));
     }
     private static void accept(MinecraftClient mc,UUID caster,Identifier dim,int type,UUID id,int combo,int blow,long start,long serverNow,Vec3d at,float yaw,long ready,List<StandClient.Target> struck,
-                               boolean empowered,boolean charged,long eReady,Sword sword,long rReady,Sweep sweep,long hReady,Formation form,long gReady,Ultimate ult){
+                               boolean empowered,boolean charged,long eReady,Sword sword,long rReady,Sweep sweep,long hReady,Formation form,long gReady,Ultimate ult,
+                               IsosangRules.ZState z,Perch perch){
         if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;
         if(world!=mc.world)clear(mc);
         READY.put(caster,ready);CHARGED.put(caster,charged);E_READY.put(caster,eReady);R_READY.put(caster,rReady);H_READY.put(caster,hReady);G_READY.put(caster,gReady);
+        if(z!=null)Z_STATES.put(caster,z);
+        // (2.93.0) where H's formation's user stands: every formation's news says
+        if(perch!=null&&combo==IsosangRules.FORMATION)PERCHES.put(id,perch);
+        if(type==IsosangAttack.CROSSED){
+            // Z (2.93.0): its user flies to another sword of their formation: its light, and its sound as it begins
+            if(perch!=null&&perch.from()>=0&&combo==IsosangRules.FORMATION){
+                var all=FLIGHTS.computeIfAbsent(id,k->new ArrayList<>());
+                if(all.stream().noneMatch(f->f.moved()==perch.moved()))all.add(new Flight(perch.from(),perch.on(),perch.moved()));
+                while(all.size()>6)all.remove(0);
+                if(serverNow-perch.moved()<=LATE)stepVoice(mc,id,caster);
+            }
+            return;
+        }
         if(type==IsosangAttack.HIT&&IsosangRules.drawn(combo)){
             // (2.81.0) R's sweep: where it stands with it (it may stand out toward the foe in the crosshair)
             if(combo==IsosangRules.SWEEP){if(sweep==null)return;SWEEPS.put(id,sweep);}
@@ -283,6 +318,13 @@ public final class IsosangClient {
         for(var c:SWINGS.values())if(c.combo()==IsosangRules.ULTIMATE&&c.caster().equals(mc.player.getUuid())&&!STOPPED.contains(c.id()))best=c;
         return best;
     }
+    /** The local player's own formation under way now (2.93.0, for Z: the swords they may look at), or null. */
+    public static StandClient.Cast ownFormation(){
+        var mc=MinecraftClient.getInstance();if(mc.player==null)return null;
+        StandClient.Cast best=null;
+        for(var c:SWINGS.values())if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(mc.player.getUuid())&&!STOPPED.contains(c.id())&&FORMATIONS.containsKey(c.id()))best=c;
+        return best;
+    }
     /** H's formation of this swing: its middle and its user's way (null for none, 2.82.0). */
     public static Formation formation(UUID swing){return FORMATIONS.get(swing);}
     /** Whom this swing's formation struck, by the tick of its clock (the server's word; empty for none yet, 2.82.0). */
@@ -303,8 +345,29 @@ public final class IsosangClient {
         if(form==null)return 0;
         var f=FORMATIONS.get(form.id());var p=mc.world.getPlayerByUuid(caster);if(f==null||p==null)return 0;
         double t=form.age(delta)/20.0;if(t<0||t>=IsosangRules.H_DOWN+.3)return 0;
-        return lift(IsosangRules.planned(t),p.getLerpedPos(delta).y-f.centre().y);
+        return lift(planned(form.id(),t),p.getLerpedPos(delta).y-f.centre().y);
     }
+    /**
+     * How far level from where it is this player's body is drawn now (2.93.0, Z): from Z's flight to a moment after it,
+     * where their formation has them (IsosangClient.spot: over the sword they fly to) less where they are, so whoever sees
+     * them a little late (another client, 3 ticks behind) sees them stand on that sword as the orb lands, not walk the
+     * last of the way there; easing out over SHIFT_OUT ticks once their position has caught up. Zero otherwise.
+     */
+    public static Vec3d shift(UUID caster,float delta){
+        var mc=MinecraftClient.getInstance();if(mc.world==null)return Vec3d.ZERO;
+        StandClient.Cast form=null;
+        for(var c:SWINGS.values())if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(caster)&&!STOPPED.contains(c.id()))form=c;
+        if(form==null)return Vec3d.ZERO;
+        var p=PERCHES.get(form.id());var f=FORMATIONS.get(form.id());var who=mc.world.getPlayerByUuid(caster);
+        if(p==null||p.from()<0||f==null||who==null)return Vec3d.ZERO;
+        double age=form.age(delta),since=age-(p.moved()-form.start());
+        float w=1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth((float)since,IsosangRules.Z_TRAVEL+SHIFT_HOLD,IsosangRules.Z_TRAVEL+SHIFT_HOLD+SHIFT_OUT);
+        if(since<0||w<=0)return Vec3d.ZERO;
+        Vec3d to=spot(form.id(),f,age),at=who.getLerpedPos(delta);
+        return new Vec3d((to.x-at.x)*w,0,(to.z-at.z)*w);
+    }
+    /** How long after Z's flight the body is still drawn where the formation has it (ticks), and how long it eases out over. */
+    static final float SHIFT_HOLD=6,SHIFT_OUT=4;
     /** The lift that draws a body {@code real} blocks over the formation's ground {@code planned} blocks over it. */
     static double lift(double planned,double real){return Math.max(0,planned)-real;}
     /**
@@ -315,6 +378,50 @@ public final class IsosangClient {
         double[] st=IsosangRules.standAt();Vec3d fw=Vec3d.fromPolar(0,f.yaw()),r=new Vec3d(-fw.z,0,fw.x);
         return f.centre().add(fw.multiply(st[0])).add(r.multiply(st[1]));
     }
+    /** Where sword {@code k} of the formation of swing {@code id} strikes its ground (level, world; 2.93.0, as the server's Formation.place). */
+    static Vec3d place(UUID id,Formation f,int k){
+        double[] w=PLACES.computeIfAbsent(id,i->IsosangRules.formationSwords(IsosangRules.formationSeed(i)))[k];
+        Vec3d fw=Vec3d.fromPolar(0,f.yaw()),r=new Vec3d(-fw.z,0,fw.x);
+        return f.centre().add(fw.multiply(w[0])).add(r.multiply(w[1]));
+    }
+    /** The sword the user of the formation of swing {@code id} stands on (2.93.0: Z moves them; the first one until then). */
+    public static int perch(UUID id){var p=PERCHES.get(id);return p==null?IsosangRules.standSword():p.on();}
+    /** Their flight in the formation of swing {@code id}, {@code age} ticks into it: how far through it (0 to 1), or -1 when not flying (2.93.0). */
+    static double flying(UUID id,double age){
+        var p=PERCHES.get(id);var c=SWINGS.get(id);if(p==null||p.from()<0||c==null)return -1;
+        double since=age-(p.moved()-c.start());return since<0||since>=IsosangRules.Z_TRAVEL?-1:since/IsosangRules.Z_TRAVEL;
+    }
+    /**
+     * Where the formation of swing {@code id} holds its user {@code age} ticks into it, level on its ground (2.93.0, as the
+     * server's Formation.spotAt): under the sword they stand on, on the way between two in Z's flight.
+     */
+    public static Vec3d spot(UUID id,Formation f,double age){
+        var p=PERCHES.get(id);var c=SWINGS.get(id);
+        if(p==null||p.from()<0||c==null)return p==null||p.on()==IsosangRules.standSword()?spot(f):place(id,f,p.on());
+        double since=age-(p.moved()-c.start());
+        if(since>=IsosangRules.Z_TRAVEL)return place(id,f,p.on());
+        return place(id,f,p.from()).lerp(place(id,f,p.on()),IsosangRules.zAlong(Math.max(0,since)/IsosangRules.Z_TRAVEL));
+    }
+    /** How high the pommel of sword {@code k} of the formation of swing {@code id} stands over its ground (blocks; SwordFormation's layout). */
+    static double pommel(UUID id,int k){var l=SwordFormation.layout(id);return k>=0&&k<l.length?l[k].height():IsosangRules.FORMATION_STAND;}
+    /**
+     * How high the formation of swing {@code id} has its user over its ground {@code t} seconds into it (blocks, 2.93.0):
+     * IsosangRules.raised, standing on the pommel of the sword they stand on (each sword's own height), in Z's flight from
+     * one pommel to the other over a low arc, and dropping from the last.
+     */
+    public static double raised(UUID id,double t){
+        double base=IsosangRules.raised(t);if(t<IsosangRules.H_PEAK||t>=IsosangRules.H_DOWN)return base;
+        var p=PERCHES.get(id);if(p==null)return base;
+        double h=pommel(id,p.on()),u=flying(id,t*20);
+        if(u>=0){double a=IsosangRules.zAlong(u);h=pommel(id,p.from())*(1-a)+h*a+IsosangRules.zArc(u);}
+        return base/IsosangRules.FORMATION_STAND*h;
+    }
+    /** How high H's plan draws its user {@code t} seconds into the formation of swing {@code id} (IsosangRules.planned, on the pommel as raised has it from the landing). */
+    static double planned(UUID id,double t){return t<IsosangRules.H_LANDED?IsosangRules.planned(t):raised(id,t);}
+    /** This player's Z (its window, its moves, when it is ready again: the server's; 2.93.0). */
+    public static IsosangRules.ZState zState(UUID id){return Z_STATES.getOrDefault(id,IsosangRules.ZState.FRESH);}
+    /** The tick this player's Z is ready again (0 if it is ready: the server's word, 2.93.0). */
+    public static long zReady(UUID id){return zState(id).ready();}
     /** Where R's sweep of this swing stands (null for none, 2.81.0). */
     public static Sweep sweep(UUID swing){return SWEEPS.get(swing);}
     /** R's sword's pommel, which it turns round, where this swing's sweep stands (world); null for a swing not R's (2.81.1). */
@@ -342,7 +449,7 @@ public final class IsosangClient {
     /** The tick this player's attack is ready again after its rest, as the server told it (0 if none). */
     public static long ready(UUID id){return READY.getOrDefault(id,0L);}
     /** Forgets this player's rest (their character is not Lee So-sang now: the server forgot it too, StandManager); and E's (2.80.0). */
-    public static void forget(UUID id){READY.remove(id);E_READY.remove(id);CHARGED.remove(id);R_READY.remove(id);H_READY.remove(id);G_READY.remove(id);}
+    public static void forget(UUID id){READY.remove(id);E_READY.remove(id);CHARGED.remove(id);R_READY.remove(id);H_READY.remove(id);G_READY.remove(id);Z_STATES.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (IsosangRules.HOLD): their keys do not walk them. The
      * server holds them as long (IsosangAttack.busy).
@@ -409,6 +516,15 @@ public final class IsosangClient {
             }
             return true;
         }
+        // (2.93.0) Z: onto the sword of their formation they look at (the camera's middle, as R held's foe: SwordStep.aimed),
+        // the sword's place sent with it; nothing if they look at none
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Z){
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(IsosangAttack.SKILL)){
+                int k=SwordStep.aimedNow(mc);
+                if(k>=0){var b=PacketByteBufs.create();b.writeByte(IsosangAttack.Z);b.writeByte(k);ClientPlayNetworking.send(IsosangAttack.SKILL,b);}
+            }
+            return true;
+        }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_I&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS){
             if(!CombatClient.actionLocked())mc.setScreen(new net.minecraft.client.gui.screen.ingame.InventoryScreen(mc.player));
             return true;
@@ -432,8 +548,9 @@ public final class IsosangClient {
             if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(p.getUuid())&&!STOPPED.contains(c.id())){
                 var f=FORMATIONS.get(c.id());double next=(Math.floor(c.age(0))+1)/20.0;
                 if(f==null||next>=IsosangRules.H_DOWN+.1)continue;
-                Vec3d spot=spot(f),v=spot.subtract(p.getPos()).multiply(1,0,1);
-                double vy=next<IsosangRules.H_LEAP?Math.min(0,p.getVelocity().y):spot.y+IsosangRules.raised(next)-p.getY();
+                // (2.93.0) Z: under the sword they stand on now, flying between two
+                Vec3d spot=spot(c.id(),f,next*20),v=spot.subtract(p.getPos()).multiply(1,0,1);
+                double vy=next<IsosangRules.H_LEAP?Math.min(0,p.getVelocity().y):spot.y+raised(c.id(),next)-p.getY();
                 // (a step down of a hair, the rounding of the sum, is taken by the game for landing on something: it would
                 // tell the server they stand on the ground up there)
                 if(Math.abs(vy)<1e-6)vy=0;
@@ -480,6 +597,7 @@ public final class IsosangClient {
         SWINGS.values().removeIf(c->!c.dimension().equals(id)||c.age(0)>=(c.combo()==0?20:lifeOf(c)*20)||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.retainAll(SWINGS.keySet());EMPOWERED.retainAll(SWINGS.keySet());SWORDS.keySet().retainAll(SWINGS.keySet());SWEEPS.keySet().retainAll(SWINGS.keySet());
         FORMATIONS.keySet().retainAll(SWINGS.keySet());FORMATION_ENDS.keySet().retainAll(SWINGS.keySet());ENDED.retainAll(SWINGS.keySet());FORMATION_STRUCK.keySet().retainAll(SWINGS.keySet());
+        PERCHES.keySet().retainAll(SWINGS.keySet());FLIGHTS.keySet().retainAll(SWINGS.keySet());PLACES.keySet().retainAll(SWINGS.keySet());
         ULTIMATES.keySet().retainAll(SWINGS.keySet());ULTIMATE_ENDS.keySet().retainAll(SWINGS.keySet());
         // (2.82.0) H's formation ends (its whole length run, or the server's word that it ended early): its end's sound once
         for(var c:SWINGS.values()){
@@ -512,6 +630,7 @@ public final class IsosangClient {
         for(var v:VOICES.values())mc.getSoundManager().stop(v);
         SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();VOICES.clear();EMPOWERED.clear();CHARGED.clear();E_READY.clear();SWORDS.clear();SWEEPS.clear();R_READY.clear();
         FORMATIONS.clear();FORMATION_ENDS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();ULTIMATES.clear();ULTIMATE_ENDS.clear();G_READY.clear();world=null;heldR=false;
+        PERCHES.clear();FLIGHTS.clear();Z_STATES.clear();PLACES.clear();
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -567,6 +686,16 @@ public final class IsosangClient {
     public static double ultimateLoudness(MinecraftClient mc,UUID id,Vec3d strike){
         if(mc.player==null||mc.world==null)return 0;
         return CelestialFall.CONFIG.effectVolume*carried(GArenaClient.ground(id,strike).outside(mc.player.getPos()))*VOLUME;
+    }
+    /**
+     * Z's sound (2.93.0, user's choice: the move's own sound from their video of it, as it is): as its user flies off a
+     * sword, loud for its user, for everyone else from its user fading out to CARRY blocks.
+     */
+    private static void stepVoice(MinecraftClient mc,UUID id,UUID caster){
+        if(mc.player==null||mc.world==null)return;
+        var user=mc.world.getPlayerByUuid(caster);if(user==null)return;
+        float v=caster.equals(mc.player.getUuid())?VOLUME:volume(mc,user.getPos())*VOLUME;if(v<=.01f)return;
+        mc.getSoundManager().play(new Sound(CelestialFall.id("isosang_z"),v));
     }
     /** How loud H's sounds are where this client listens (2.82.18): from the nearer of its user and the formation's middle. */
     private static double formationLoudness(MinecraftClient mc,UUID id,UUID caster){

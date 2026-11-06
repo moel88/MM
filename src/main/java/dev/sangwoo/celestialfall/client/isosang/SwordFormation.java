@@ -218,7 +218,7 @@ final class SwordFormation {
     /** The way she faced as it began. */
     static float yaw(StandClient.Cast c){var f=IsosangClient.formation(c.id());return f==null?c.yaw():f.yaw();}
     /** Her body as drawn: where she is, lifted as the formation's plan has her (IsosangClient.lift). */
-    static Vec3d body(Fx c){return c.pos.add(0,IsosangClient.lift(c.cast.caster(),c.delta),0);}
+    static Vec3d body(Fx c){return c.pos.add(0,IsosangClient.lift(c.cast.caster(),c.delta),0).add(IsosangClient.shift(c.cast.caster(),c.delta));}
     /** Her sword's hand and blade at {@code t} as drawn (on her lifted body). */
     static Vec3d[] blade(Fx c,float t){return KagenoClips.blade(body(c),c.cast.yaw(),R6.poseOf(CLIP.frame(t)));}
 
@@ -1111,6 +1111,8 @@ final class SwordFormation {
         flecks(c,m,t,centre,yaw);
         inkLines(c,m,t,centre);
         flowers(c,m,t,centre,yaw,false);
+        // (2.93.0) Z: the sword she looks at (hers only) and her flights between them
+        SwordStep.alpha(c,m,t,centre,yaw);
         double floor=centre.y+.03;
         for(var d:drops(c,t)){
             float age=t-d.born();if(age<0||age>=d.life())continue;
@@ -1342,6 +1344,8 @@ final class SwordFormation {
         burst(m,centre,t);
         swordLight(c,m,t,centre,yaw);
         flowers(c,m,t,centre,yaw,true);
+        // (2.93.0) Z: the sword she looks at (hers only) and her flights between them
+        SwordStep.additive(c,m,t,centre,yaw);
         struck(c,m,t,false);
     }
     /**

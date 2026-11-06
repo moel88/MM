@@ -118,6 +118,8 @@ public final class KagenoClips {
         // (2.82.0) Lee So-sang's H: the body as high as the sword formation's plan has it (the leap, the dive onto the pommel
         // of the sword struck under her, standing on it), whatever swing moves it (R may be used up there)
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL)off=off.add(0,dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(cast.caster(),delta),0);
+        // (2.93.0) and level, over the sword Z flies her to, as she lands on it (seen a little late, she would walk there)
+        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL)off=off.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(cast.caster(),delta));
         m.translate(off.x,off.y,off.z);
         if(fr.yaw()!=0||fr.pitch()!=0||fr.roll()!=0){
             float k=(float)Math.PI/180;

@@ -62,12 +62,12 @@ public final class IsosangAttack {
      * next combo is empowered, the attack's rest gone); the empowerment is over without its combo having run (E's
      * cooldown runs from then).
      */
-    public static final int HIT=0,LANDED=1,RESTS=2,STOPPED=3,THROWN=4,EMPOWERED=5,SPENT=6;
+    public static final int HIT=0,LANDED=1,RESTS=2,STOPPED=3,THROWN=4,EMPOWERED=5,SPENT=6,CROSSED=7;
     /**
      * The skills the skill packet asks for: E (2.80.0), R (2.81.0) and R held (2.81.1: the key held down
      * {@link IsosangRules#R_HOLD_TICKS} ticks, the client's call, as Kageno's T held is), H (2.82.0) and G (2.83.0).
      */
-    public static final int E=1,R=2,R_HELD=3,H=4,G=5;
+    public static final int E=1,R=2,R_HELD=3,H=4,G=5,Z=6;
     /** The formation's damage (2.82.0): no guard takes it (minecraft:bypasses_shield), its user is the attacker. */
     public static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> FORMATION_DAMAGE=
         net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("sword_formation"));
@@ -105,6 +105,8 @@ public final class IsosangAttack {
         Formation form;long hReady;
         /** (2.83.0) G under way or the last one (null for none), and the tick G is ready again. */
         Ultimate ult;long gReady;
+        /** (2.93.0) Z: its window, its moves in it and when it is ready again (IsosangRules.ZState). */
+        IsosangRules.ZState z=IsosangRules.ZState.FRESH;
     }
     /** (2.83.0) For the film harness only (as StandArrow.rigged): the recording the next G plays (0 or 1), -1 to roll. */
     public static volatile int riggedVariant=-1;
@@ -125,9 +127,32 @@ public final class IsosangAttack {
      */
     private static final class Formation {
         final UUID id;final long start;final Vec3d centre,spot;final float yaw;
+        /**
+         * (2.93.0) Z: the sword its user stands on now (by its place in IsosangRules.formationSwords: the one struck under
+         * them at first), the one they flew from (-1 for none yet), and the tick they left it.
+         */
+        int on=IsosangRules.standSword(),from=-1;long moved=Long.MIN_VALUE/2;
+        final double[][] swords;
         Formation(UUID id,long start,Vec3d spot,float yaw){
             this.id=id;this.start=start;this.spot=spot;this.yaw=yaw;
             this.centre=spot.add(Vec3d.fromPolar(0,yaw).multiply(IsosangRules.FORMATION_STAND_BACK));
+            this.swords=IsosangRules.formationSwords(IsosangRules.formationSeed(id));
+        }
+        /** Where sword {@code k} strikes the ground (level, on the formation's ground): forward and right of its middle the way its user faced. */
+        Vec3d place(int k){
+            Vec3d f=Vec3d.fromPolar(0,yaw),r=new Vec3d(-f.z,0,f.x);double[] w=swords[k];
+            return centre.add(f.multiply(w[0])).add(r.multiply(w[1]));
+        }
+        /** Whether its user is flying from one sword to another at {@code now} (2.93.0). */
+        boolean flying(long now){return now>=moved&&now<moved+IsosangRules.Z_TRAVEL;}
+        /**
+         * Where it holds its user at {@code now}, level on its ground (2.93.0): under the sword they stand on (the first,
+         * where they stood as it began, until Z moves them), on the way between two in Z's flight.
+         */
+        Vec3d spotAt(long now){
+            if(from<0||now>=moved+IsosangRules.Z_TRAVEL)return on==IsosangRules.standSword()&&from<0?spot:place(on);
+            double u=IsosangRules.zAlong(Math.max(0,now-moved)/(double)IsosangRules.Z_TRAVEL);
+            return place(from).lerp(place(on),u);
         }
     }
     /**
@@ -176,7 +201,9 @@ public final class IsosangAttack {
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(SKILL,(server,player,handler,buf,response)->{
-            if(buf.readableBytes()!=1)return;int skill=buf.readUnsignedByte();
+            // (2.93.0) Z with the sword it moves to (a second byte); every other skill is its one byte
+            int bytes=buf.readableBytes();if(bytes<1||bytes>2)return;int skill=buf.readUnsignedByte();
+            if((skill==Z)!=(bytes==2))return;int sword=skill==Z?buf.readUnsignedByte():-1;
             server.execute(()->{
                 var s=state(player);int second=server.getTicks()/20;
                 if(s.window!=second){s.window=second;s.presses=0;}
@@ -185,6 +212,7 @@ public final class IsosangAttack {
                 else if(skill==R||skill==R_HELD)sweep(player,skill==R_HELD);
                 else if(skill==H)formation(player);
                 else if(skill==G)ultimate(player);
+                else if(skill==Z)cross(player,sword);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(IsosangAttack::tick);
@@ -247,8 +275,10 @@ public final class IsosangAttack {
     /** This player's sword formation now (null for none). */
     public static FormationNow formationNow(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());long now=p==null?0:p.getWorld().getTime();if(s==null||!forming(s,now))return null;
-        return new FormationNow(s.form.start,s.form.centre,s.form.spot);
+        return new FormationNow(s.form.start,s.form.centre,s.form.spotAt(now));
     }
+    /** This player's Z now (2.93.0, for the film harness and a boss): its window, its moves and when it is ready again. */
+    public static IsosangRules.ZState zNow(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?IsosangRules.ZState.FRESH:s.z;}
     /** The tick this player's H is ready again (0 if it is ready, 2.82.0). */
     public static long hReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.hReady;}
     /** Whether R's sweep holds its user now (2.81.0): from its start for its HOLD, until they let go of it. */
@@ -402,6 +432,8 @@ public final class IsosangAttack {
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
         if(sweeping(s,now)||now<s.rReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        // (2.93.0) not while Z flies them from one of their formation's swords to another
+        if(s.form!=null&&forming(s,now)&&s.form.flying(now))return false;
         if(holding(s.combo,s.start,now)){
             long free=s.start+HOLD[s.combo];
             if(free-now<=BUFFER){s.rQueued=true;s.rHeld=held;return true;}
@@ -526,6 +558,24 @@ public final class IsosangAttack {
         send(p,s.form.id,FORMATION,now,s.form.yaw,HIT,-1,null,null,null,s.form);
     }
     /**
+     * Z (2.93.0, user request: "H 스킬에서 박혀있는 모든 검이 전부 상호작용 되게 바꿔줘 그리고 동시에 z스킬 만들자 ... z스킬을
+     * 누르면 10초 동안 최대 3번 쳐다보는 검으로 이동 할 수 있어", IsosangRules.zUse): its user flies onto the pommel of
+     * sword {@code k} of their formation (the one they look at, as their client found it: the camera's middle), and stands
+     * on it from then as on the first. Only while their formation stands with every sword planted
+     * (IsosangRules.zTime), not while they fly or R holds them, not onto the sword they stand on, and only as Z's rules
+     * let it (IsosangRules.zUse: up to three moves within ten seconds of the first, then twenty seconds' cooldown).
+     */
+    public static boolean cross(ServerPlayerEntity p,int k){
+        if(!able(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();var f=s.form;
+        if(f==null||!forming(s,now)||!IsosangRules.zTime((now-f.start)/20.0))return false;
+        if(f.flying(now)||sweepHolds(s,now)||k<0||k>=f.swords.length||k==f.on)return false;
+        var next=IsosangRules.zUse(s.z,now,dev.sangwoo.celestialfall.NoCooldownState.enabled(p));if(next==null)return false;
+        s.z=next;f.from=f.on;f.on=k;f.moved=now;
+        send(p,f.id,FORMATION,f.start,f.yaw,CROSSED,k,null,null,null,f);
+        return true;
+    }
+    /**
      * The formation on a tick (2.82.0): it strikes whoever is in it as the swords strike and every FORMATION_EVERY ticks
      * after; its user is held where they stood (2.82.4: on the formation's outer ring, its middle ahead; their own client
      * lifts them up onto the pommel of the sword struck there and down again, IsosangClient.drive, as its own movement is;
@@ -538,7 +588,10 @@ public final class IsosangAttack {
         if(age>=LENGTH[FORMATION]){s.form=null;return;}
         if(!attacks(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);return;}
         if(formationStrikes(age))zone(p,f,age);
-        double t=age/20.0;Vec3d at=p.getPos(),to=f.spot;double dx=at.x-to.x,dz=at.z-to.z,leave=age<STRAY_GRACE?1:STRAY;
+        // (2.93.0) where it holds them: under the sword they stand on, Z's flight between two (their own client flies them;
+        // the server lets it be as they fly and a moment after, as at first)
+        double t=age/20.0;Vec3d at=p.getPos(),to=f.spotAt(now);double dx=at.x-to.x,dz=at.z-to.z,leave=age<STRAY_GRACE?1:STRAY;
+        if(now<f.moved+IsosangRules.Z_TRAVEL+STRAY_GRACE)leave=Double.MAX_VALUE;
         // (a boss has no client to lift it: the server does, as the empowered fourth's leap back)
         if(p instanceof dev.sangwoo.celestialfall.boss.BossPlayer){
             if(onSword(t)){p.setPosition(to.x,to.y+IsosangRules.raised(t),to.z);p.setVelocity(Vec3d.ZERO);}
@@ -915,6 +968,10 @@ public final class IsosangAttack {
             // its sword strikes the ground
             b.writeLong(s.gReady);b.writeBoolean(ult!=null);
             if(ult!=null){b.writeByte(ult.variant);b.writeDouble(ult.strike.x);b.writeDouble(ult.strike.y);b.writeDouble(ult.strike.z);}
+            // (2.93.0, after what 2.92 sent) Z: when it is ready again, its window's first move and how many it has had; and
+            // for H's formation the sword its user stands on, the one they flew from (255 for none) and the tick they left it
+            b.writeLong(s.z.ready());b.writeLong(s.z.first());b.writeByte(s.z.uses());b.writeBoolean(form!=null);
+            if(form!=null){b.writeByte(form.on);b.writeByte(form.from<0?255:form.from);b.writeLong(form.moved);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

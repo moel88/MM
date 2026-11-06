@@ -586,6 +586,59 @@ public final class IsosangRules {
     /** Where she stands: right behind the formation's middle on its outer ring (forward and right of the middle, blocks). */
     public static double[] standAt(){return new double[]{-FORMATION_STAND_BACK,0};}
 
+    // ───────────────────────────── Z: across the formation's swords ─────────────────────────────
+
+    /**
+     * Z (2.93.0, user request: "H 스킬에서 박혀있는 모든 검이 전부 상호작용 되게 바꿔줘 그리고 동시에 z스킬 만들자 쳐다보는
+     * 검(쉬프락은 가운데 십자가로 쳐다보는 검)에 자신에게만 보이는 흰색 테두리가 생기고 아래에는 푸른색 꽃이 피어나고 z스킬을
+     * 누르면 10초 동안 최대 3번 쳐다보는 검으로 이동 할 수 있어 영상 처럼 10초 안에 3번 다 사용하는 순간 즉시 재사용 쿨타임
+     * 20초가 흐르고 또는 3번 다 사용 안 해도 10초가 지나면 재사용 쿨타임 20초가 흐르게", the user's video of it
+     * (68d5f592, 60 fps) read on a sheet and confirmed: "맞음, 이대로"; and their answers: the flower too only for her,
+     * one press one move, the window counted from the first): while her formation stands, Z moves Lee So-sang onto the
+     * pommel of the sword she looks at (the camera's middle, as R held's foe): she is gone into a bubble, flies there as
+     * a blue orb trailing white streaks in Z_TRAVEL ticks (the video: some 0.2 s) and stands on it, held there as on the
+     * first. Up to Z_USES moves within Z_WINDOW ticks of the first (one press, one move); the moment the last is used,
+     * or once the window is over with fewer, Z is not ready again for Z_COOLDOWN ticks.
+     */
+    public static final int Z_USES=3,Z_WINDOW=200,Z_COOLDOWN=400,Z_TRAVEL=4;
+    /**
+     * From when into H Z may move her (seconds): every sword planted (the last falls by H_RAIN1, for some 0.22 s); and
+     * until the flight would end as the swords flare (H_END).
+     */
+    public static final float Z_FROM=1.35f;
+    /** Whether Z may move her {@code t} seconds into her formation (it would land before the swords flare). */
+    public static boolean zTime(double t){return t>=Z_FROM&&t+Z_TRAVEL/20.0<H_END;}
+    /**
+     * Z's state for one user: the tick its window opened (its first move; -1 for none), how many moves it has had, and
+     * the tick Z is ready again (as the server tells every viewer with each of its swings' news).
+     */
+    public record ZState(long first,int uses,long ready){
+        public static final ZState FRESH=new ZState(-1,0,0);
+        /** Whether its window is open at {@code now}: moved, fewer than all, its time not up. */
+        public boolean open(long now){return uses>0&&uses<Z_USES&&now<first+Z_WINDOW;}
+        /** Whether Z may move her at {@code now}: in its open window, or ready again. */
+        public boolean usable(long now){return open(now)||now>=ready;}
+        /** How many moves are left at {@code now}: what its open window has left, all once ready, none while cooling down. */
+        public int left(long now){return open(now)?Z_USES-uses:now>=ready?Z_USES:0;}
+    }
+    /**
+     * Z used at {@code now} (one move): its state after it, or null when it may not be used then (cooling down). The first
+     * move opens a window of Z_WINDOW ticks; the last of Z_USES starts its cooldown at once, else it starts as the window
+     * is over ({@code free}: the cooldowns are off for its user, it is ready again at once).
+     */
+    public static ZState zUse(ZState s,long now,boolean free){
+        boolean open=s.open(now);
+        if(!open&&now<s.ready()&&!free)return null;
+        long first=open?s.first():now;int uses=(open?s.uses():0)+1;
+        long ready=free?0:uses>=Z_USES?now+Z_COOLDOWN:first+Z_WINDOW+Z_COOLDOWN;
+        return new ZState(first,uses,ready);
+    }
+    /** How far along its flight she is {@code u} through it (0 to 1): quick from the start, easing onto the pommel. */
+    public static double zAlong(double u){u=Math.max(0,Math.min(1,u));return 1-(1-u)*(1-u)*(1-u*.4);}
+    /** How high over the straight way between the two pommels her flight arcs {@code u} through it (blocks). */
+    public static double zArc(double u){u=Math.max(0,Math.min(1,u));return Z_ARC*4*u*(1-u);}
+    public static final double Z_ARC=.55;
+
     // ───────────────────────────── G: the ultimate ─────────────────────────────
 
     /**

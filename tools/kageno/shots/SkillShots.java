@@ -509,6 +509,8 @@ public final class SkillShots implements ClientModInitializer {
     private final StringBuilder standLog=new StringBuilder();private boolean standOutLogged,dummyBroken;
     /** 2.72.0: the call sound last logged, whether the client was last logged awakened, the tick H was last tapped. */
     private String callLogged="";private boolean awakeLogged;private long lastH=-1;
+    /** (2.93.0) "ZAIM<deg>@n": the sword of the player's own formation the camera turns onto (-1 once Z is pressed), from when, from where; and where it holds once it has. */
+    private int zaimSword=-1,zaimAt=-1;private float zaimYaw0,zaimPitch0,zaimYaw,zaimPitch;private boolean zaimHeld;
     /** SUMMON: this tick's row of stand.csv, and a line in the log each time the stand comes out or goes back. */
     private void logStand(){
         boolean out=((StandHolder)mc.player).botand$isStandOut();
@@ -961,6 +963,13 @@ public final class SkillShots implements ClientModInitializer {
         if(opts.containsKey("aimrock")&&phase==4&&mc.player!=null)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m&&m.squaredDistanceTo(mc.player)<49){
             var v=m.getPos().add(0,.55,0).subtract(mc.player.getEyePos());
             BotandCamera.STATE.yaw=(float)Math.toDegrees(Math.atan2(-v.x,v.z))+opt("rockyaw",0);BotandCamera.STATE.pitch=(float)-Math.toDegrees(Math.atan2(v.y,v.horizontalLength()))+opt("rockpitch",6);break;}
+        // "ZAIM<deg>@n" (2.93.0): onto the sword picked, eased in over 8 ticks; held where it is after Z
+        if(zaimHeld&&phase==4&&mc.player!=null){
+            var mids=dev.sangwoo.celestialfall.client.isosang.SwordStep.middles();
+            if(zaimSword>=0&&mids!=null&&zaimSword<mids.length){float[] a=aimAt(mids[zaimSword]);float u=Math.min(1,(age-zaimAt)/8f);u=u*u*(3-2*u);
+                zaimYaw=zaimYaw0+net.minecraft.util.math.MathHelper.wrapDegrees(a[0]-zaimYaw0)*u;zaimPitch=zaimPitch0+(a[1]-zaimPitch0)*u;}
+            BotandCamera.STATE.yaw=zaimYaw;BotandCamera.STATE.pitch=zaimPitch;
+        }
         // "bface=1" (2.69.0): the player keeps their camera (and so their blows) on the boss, as a player fighting it does,
         // from tick "bfrom" (0); "bchase=D" walks them at it while it is further than D blocks. Film it with a far= camera.
         if(opts.containsKey("bface")&&phase==4&&mc.player!=null&&age>=opt("bfrom",0)){
@@ -972,6 +981,27 @@ public final class SkillShots implements ClientModInitializer {
                 if(opts.containsKey("bchase"))mc.options.forwardKey.setPressed(v.horizontalLength()>opt("bchase",3));
             }else if(opts.containsKey("bchase"))mc.options.forwardKey.setPressed(false);
         }
+    }
+    /** (2.93.0) The sword of the player's own formation nearest {@code deg} degrees clockwise of where the camera looks, 3.5 to 10 blocks from them, not the one they stand on (-1 for none). */
+    private int pickSword(float deg){
+        var mids=dev.sangwoo.celestialfall.client.isosang.SwordStep.middles();if(mids==null)return -1;int on=dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),best=-1;double bestD=1e9;
+        float want=BotandCamera.STATE.yaw+deg;var at=mc.player.getPos();
+        for(int k=0;k<mids.length;k++){if(k==on)continue;double dx=mids[k].x-at.x,dz=mids[k].z-at.z,far=Math.hypot(dx,dz);if(far<3.5||far>10)continue;
+            double off=Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees((float)Math.toDegrees(Math.atan2(-dx,dz))-want));if(off<bestD){bestD=off;best=k;}}
+        return best;
+    }
+    /** (2.93.0) The camera's yaw and pitch for its middle to fall on {@code target} (the shoulder camera's offset and H's pull taken in, a few rounds). */
+    private float[] aimAt(net.minecraft.util.math.Vec3d target){
+        float yaw=BotandCamera.STATE.yaw,pitch=BotandCamera.STATE.pitch,keepYaw=yaw,keepPitch=pitch;
+        var eye=mc.player.getPos().add(0,mc.player.getStandingEyeHeight()+.8*Math.max(0,dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),1)),0);
+        double pull=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraPull(1);
+        for(int i=0;i<8;i++){
+            BotandCamera.STATE.yaw=yaw;BotandCamera.STATE.pitch=pitch;var o=BotandCamera.STATE.offset(BotandCamera.STATE.distance,BotandCamera.STATE.shoulder);
+            var off=new net.minecraft.util.math.Vec3d(o.x(),o.y(),o.z());var cam=eye.add(off).add(off.lengthSquared()>1e-6?off.normalize().multiply(pull):net.minecraft.util.math.Vec3d.ZERO);
+            var d=target.subtract(cam);yaw=(float)Math.toDegrees(Math.atan2(-d.x,d.z));pitch=(float)-Math.toDegrees(Math.atan2(d.y,Math.hypot(d.x,d.z)));
+        }
+        BotandCamera.STATE.yaw=keepYaw;BotandCamera.STATE.pitch=keepPitch;
+        return new float[]{yaw,pitch};
     }
     private void face(ServerPlayerEntity p,float face){float y=facing(face);p.setYaw(y);p.setHeadYaw(y);p.setBodyYaw(y);p.networkHandler.requestTeleport(p.getX(),p.getY(),p.getZ(),y,0);}
 
@@ -1097,7 +1127,18 @@ public final class SkillShots implements ClientModInitializer {
                             }else if(age>=at+120){tried.add(id);log.append("  try ").append(k).append(" gave up at ").append(age).append('\n');}
                         }
                         continue;}
-                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;case "M"->GLFW_KEY_M;default->throw new IllegalArgumentException(what);};
+                    // "ZAIM<deg>@n" (2.93.0, Lee So-sang's Z): from tick n the camera turns over 8 ticks onto a sword of the player's
+                    // own formation, the one nearest <deg> degrees clockwise of where it looks then, 3.5 to 10 blocks from them, and
+                    // follows it until Z is pressed; it holds where it is after that
+                    if(what.startsWith("ZAIM")){if(age==at){zaimSword=pickSword(Float.parseFloat(what.substring(4)));zaimAt=age;zaimYaw0=BotandCamera.STATE.yaw;zaimPitch0=BotandCamera.STATE.pitch;zaimYaw=zaimYaw0;zaimPitch=zaimPitch0;zaimHeld=true;
+                            log.append(String.format(Locale.ROOT,"  aim at sword %d (on %d) at %d%n",zaimSword,dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),age));}continue;}
+                    if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;case "M"->GLFW_KEY_M;case "Z"->GLFW_KEY_Z;default->throw new IllegalArgumentException(what);};
+                        // (2.93.0) Z: which sword it aims at as it is pressed (the client's own reckoning), and the camera stops following it
+                        if(what.equals("KEY_Z")&&age==at){log.append(String.format(Locale.ROOT,"  Z aims at sword %d (on %d, Z left %d) at %d%n",dev.sangwoo.celestialfall.client.isosang.SwordStep.aimedForFilm(),dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),
+                            dev.sangwoo.celestialfall.client.isosang.IsosangClient.zState(mc.player.getUuid()).left(mc.world.getTime()),age));zaimSword=-1;}
+                        // and 8 ticks on, where the server has them (the sword it holds them under, how far off it they are, how high) and Z's state
+                        if(what.equals("KEY_Z")&&age==at+8)server(p->{var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);var z=dev.sangwoo.celestialfall.isosang.IsosangAttack.zNow(p);long now=p.getWorld().getTime();
+                            log.append(f==null?"  Z after: no formation\n":String.format(Locale.ROOT,"  Z after %d: %.2f blocks off where it holds them, %.2f up; Z first %d (%d ago), used %d, ready in %d ticks%n",age,Math.hypot(p.getX()-f.spot().x,p.getZ()-f.spot().z),p.getY()-f.centre().y,z.first(),now-z.first(),z.uses(),Math.max(0,z.ready()-now)));});
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);if(what.equals("KEY_H"))lastH=age;
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,
