@@ -16,9 +16,13 @@ import net.minecraft.util.math.Vec3d;
  * the camera's distance from where the sword strikes ({@link #weight}: none within {@link #NEAR} blocks, whole from
  * {@link #FULL}), and their strokes widen with that distance ({@link #scale}) so they keep their weight on the screen:
  * <ul>
- *   <li>the storm: lightning striking the ground round it from its base ({@link #GROUND_BOLTS}), each bolt lighting its
- *   banks from inside, and its eye burning gold (isosang_cloud.fsh's Grand and Lightning in the observers' Mode 3,
- *   {@link #storm});</li>
+ *   <li>the storm: its eye burning gold (isosang_cloud.fsh's Grand in the observers' Mode 3, {@link #storm}). The
+ *   lightning that struck the ground round it (2.89.0) is gone (2.90.0, user request: "번개 치는 건 없애고 구름을 더 많이
+ *   추가하고 구름을 갈라서 떨어진다는 걸 아주 강하게 표현했으면 좋겠어", "멀리서 봐도 엄청 웅장하게"): instead there is far more
+ *   cloud, and the sword cleaves it ({@link #cleftSpan}, {@link #cleftWide}: the clouds pushed aside along the blade's
+ *   plane and piled up along the cleft's lips, a shock racing out through the banks as it comes through, cloud dragged
+ *   down behind it as it falls, the storm blown apart by the blast, all in the shader), light pouring down through the
+ *   cleft from its lit lips ({@link #cleft});</li>
  *   <li>a column of golden light from the storm down to where the sword will strike, motes drawn down it, and rings of
  *   light marking the spot;</li>
  *   <li>the fall: a long golden trail behind the sword and rings of vapour it bursts through on its way down;</li>
@@ -33,15 +37,12 @@ import net.minecraft.util.math.Vec3d;
  */
 final class GFar {
    static final int GOLD = FallingSword.GOLD, GOLD_WHITE = FallingSword.GOLD_WHITE, MIST = 0xE6EEFF, INK = 0x170D07;
-   static final int BOLT = GGrand.BOLT, BOLT_CORE = GGrand.BOLT_CORE;
    /** From how far (blocks from where the sword strikes) the far view's effects come in, and from how far they are whole. */
    static final double NEAR = 14.0, FULL = 40.0;
    /** The distance at which strokes keep their own widths; further away they widen with it. */
    static final double UNIT = 24.0;
    /** How high the storm's base is above where the sword strikes (the clouds' centre is 40 blocks up its axis). */
    static final double BASE = 36.0;
-   /** The lightning from the storm to the ground: when (seconds). Where is chosen from the cast. */
-   static final float[] GROUND_BOLTS = {.92F, 1.08F, 1.27F, 1.41F, 1.58F, 1.73F, 1.86F, 2.02F, 2.16F, 2.31F, 2.44F, 2.57F, 2.69F};
    static final double[] FALL_RINGS = {29.0, 21.0, 13.0, 6.0};
 
    private GFar() {
@@ -64,53 +65,31 @@ final class GFar {
 
    // ───────────────────────────── the storm ─────────────────────────────
 
-   /** Where the {@code i}th bolt leaves the storm's base and where it strikes the ground. */
-   static Vec3d[] groundBolt(StandClient.Cast cast, int i) {
-      Vec3d s = FallingSword.strike(cast);
-      Vec3d centre = GScene.cloudCenter(cast);
-      int seed = cast.id().hashCode() * 31 + i * 97;
-      double a = Ease.hash(seed + 1) * Math.PI * 2.0;
-      double top = 8.0 + 20.0 * Ease.hash(seed + 3);
-      double turn = (Ease.hash(seed + 5) - .5) * .9;
-      double reach = 12.0 + 26.0 * Ease.hash(seed + 7);
-      Vec3d from = new Vec3d(centre.x + Math.cos(a) * top, s.y + BASE - 2.0 * Ease.hash(seed + 9), centre.z + Math.sin(a) * top);
-      Vec3d to = new Vec3d(s.x + Math.cos(a + turn) * reach, s.y + .05, s.z + Math.sin(a + turn) * reach);
-      return new Vec3d[]{from, to};
-   }
-
-   /** The bolt flashing now and how brightly (its index, or -1 for none, and its flash). */
-   static float[] flashing(float t) {
-      float best = 0.0F;
-      int which = -1;
-      for (int i = 0; i < GROUND_BOLTS.length; i++) {
-         float fl = GGrand.flash(t - GROUND_BOLTS[i]);
-         if (fl > best) {
-            best = fl;
-            which = i;
-         }
-      }
-      return new float[]{which, best};
-   }
-
    /**
-    * The storm's own light for the observers' view of it (isosang_cloud.fsh's Mode 3): how strongly its eye burns gold;
-    * where the bolt flashing now leaves its base, in the storm's own frame (right, up, forward of the caster, from its
-    * centre), and how strongly it lights the banks round it.
+    * The storm's own light and its cleft for the observers' view of it (isosang_cloud.fsh's Grand in Mode 3): how strongly
+    * its eye burns gold, the clock, and how long and how wide the cleft the sword cuts through it is ({@link #cleftSpan},
+    * {@link #cleftWide}).
     */
    static float[] storm(StandClient.Cast cast, float t, Vec3d camera) {
       float w = Ease.smooth((float)camera.distanceTo(FallingSword.strike(cast)), (float)NEAR, (float)FULL);
       float eye = w * .9F * Ease.smooth(t, 1.2F, 1.8F) * (1.0F - Ease.smooth(t, 3.0F, 3.3F));
-      float[] now = flashing(t);
-      float[] out = new float[]{eye, t, 0.0F, 0.0F, 0.0F, 0.0F};
-      if (now[0] >= 0.0F && now[1] > .005F) {
-         Vec3d top = groundBolt(cast, (int)now[0])[0].subtract(GScene.cloudCenter(cast));
-         Vec3d f = FallingSword.forward(cast), r = FallingSword.right(f);
-         out[2] = (float)top.dotProduct(r);
-         out[3] = (float)top.y;
-         out[4] = (float)top.dotProduct(f);
-         out[5] = w * 1.1F * now[1];
-      }
-      return out;
+      return new float[]{eye, t, cleftSpan(t), cleftWide(t)};
+   }
+
+   /**
+    * How long the cleft through the storm is (blocks along the blade's breadth, from its plane's centre line: whole to half
+    * of it, closing to nothing at its end): it runs out as the sword comes through the storm's base and again as it falls.
+    */
+   static float cleftSpan(float t) {
+      return 18.0F + 58.0F * Ease.smooth(t, 1.5F, 2.2F) + 30.0F * Ease.smooth(t, 2.78F, 3.3F);
+   }
+
+   /**
+    * How wide the cleft is (blocks either side of the blade's plane): opening as the sword comes through the storm's base,
+    * torn wider as it falls.
+    */
+   static float cleftWide(float t) {
+      return (2.0F + 8.0F * Ease.smooth(t, 1.5F, 2.3F) + 7.0F * Ease.smooth(t, 2.78F, 3.3F)) * Ease.smooth(t, 1.48F, 1.72F);
    }
 
    // ───────────────────────────── passes ─────────────────────────────
@@ -122,7 +101,7 @@ final class GFar {
       }
       float t = c.sec;
       double k = scale(c);
-      bolts(c, m, t, w, k);
+      cleft(c, m, t, w, k);
       column(c, m, t, w, k);
       fall(c, m, t, w, k);
       strike(c, m, t, w, k, false);
@@ -147,11 +126,10 @@ final class GFar {
       }
       float t = c.sec;
       Vec3d s = FallingSword.strike(c.cast);
-      float[] now = flashing(t);
-      if (now[0] >= 0.0F && now[1] > .02F) {
-         Vec3d[] b = groundBolt(c.cast, (int)now[0]);
-         f.light(b[1].add(0.0, 2.0, 0.0), BOLT, 34.0, 1.8F * now[1] * w);
-         f.light(b[0], BOLT, 30.0, 1.2F * now[1] * w);
+      float through = cleftOn(t);
+      if (through > .02F) {
+         // the light pouring down through the cleft lights the land under it
+         f.light(s.add(0.0, 12.0, 0.0), GOLD, 64.0, .7F * through * w);
       }
       float col = columnOn(t);
       if (col > .02F) {
@@ -173,26 +151,56 @@ final class GFar {
       }
    }
 
-   // ───────────────────────────── the storm's lightning ─────────────────────────────
+   // ───────────────────────────── the cleft ─────────────────────────────
 
-   /** Lightning striking the ground from the storm's base: jagged, forking, flashing twice; the ground lit where it lands. */
-   static void bolts(Fx c, EffectMesh m, float t, float w, double k) {
-      for (int i = 0; i < GROUND_BOLTS.length; i++) {
-         float fl = GGrand.flash(t - GROUND_BOLTS[i]);
-         if (fl <= .01F) {
-            continue;
+   /** How much light pours down through the cleft: from when it opens until the blast blows the storm apart. */
+   static float cleftOn(float t) {
+      return Ease.smooth(t, 1.55F, 2.0F) * (1.0F - Ease.smooth(t, 4.84F, 5.25F));
+   }
+
+   /**
+    * Light pouring down through the cleft the sword cuts through the storm: its two lips lit gold and white along the
+    * storm's base, a burst of light along them as it is torn wider by the falling sword, and shafts of light fanning down
+    * from it to the land round where the sword falls.
+    */
+   static void cleft(Fx c, EffectMesh m, float t, float w, double k) {
+      float on = cleftOn(t) * w;
+      if (on <= .01F) {
+         return;
+      }
+      Vec3d s = FallingSword.strike(c.cast);
+      Vec3d centre = GScene.cloudCenter(c.cast);
+      Vec3d f = FallingSword.forward(c.cast), r = FallingSword.right(f);
+      Vec3d across = new Vec3d(-.957 * r.x, -.292, -.957 * r.z).normalize();
+      double half = cleftSpan(t) * .5, wide = cleftWide(t);
+      // the base of the storm, along the cleft: the clouds' centre is 40 blocks up the sword's axis
+      Vec3d base = new Vec3d(centre.x, s.y + BASE - 1.0, centre.z);
+      float torn = FxLib.kick(t, 2.8F, .45F);
+      float glow = on * (.75F + .25F * (float)Math.sin(t * 2.3F));
+      for (int side = -1; side <= 1; side += 2) {
+         Vec3d lip = base.add(f.multiply(side * wide * .92));
+         Vec3d prev = null;
+         for (int j = 0; j <= 48; j++) {
+            double u = -1.0 + 2.0 * j / 48.0;
+            double ragged = .9 * Math.sin(u * 9.0 + side * 1.3 + t * .7) + .5 * Math.sin(u * 23.0 + side * 2.1);
+            Vec3d p = lip.add(across.multiply(u * half)).add(f.multiply(side * ragged)).add(0.0, .6 * Math.sin(u * 5.0 + side), 0.0);
+            if (prev != null) {
+               float al = glow * (float)Math.pow(Math.cos(u * Math.PI * .5), .6);
+               m.softLine(prev, p, (2.6 + 5.0 * torn) * k, GOLD, (.32F + .4F * torn) * al);
+               m.line(prev, p, (.45 + .6 * torn) * k, GOLD_WHITE, (.7F + .3F * torn) * al);
+            }
+            prev = p;
          }
-         Vec3d[] b = groundBolt(c.cast, i);
-         Vec3d d = b[1].subtract(b[0]);
-         Vec3d side = d.crossProduct(new Vec3d(0.0, 1.0, 0.0));
-         side = side.lengthSquared() < 1.0E-6 ? new Vec3d(1.0, 0.0, 0.0) : side.normalize();
-         float a = fl * w;
-         GGrand.bolt(m, b[0], b[1], side, c.cast.id().hashCode() + i * 13, 1.05 * k, .24 * k, a);
-         m.softDisc(b[1].add(0.0, 1.0, 0.0), 6.0 * k, BOLT, .22F * a);
-         m.softDisc(b[1].add(0.0, .4, 0.0), 2.2 * k, BOLT_CORE, .45F * a);
-         float since = t - GROUND_BOLTS[i];
-         double r = 1.5 + 9.0 * (1.0 - Math.exp(-Math.max(0.0, since) / .12));
-         GGrand.band(m, b[1].add(0.0, .08, 0.0), GGrand.X, GGrand.Z, r, (.6 + 1.2 * since) * k, BOLT, .5F * a, 48);
+      }
+      // shafts of light fanning down from the cleft to the land round where the sword falls
+      for (int i = 0; i < 11; i++) {
+         double u = -.85 + 1.7 * i / 10.0 + .06 * Math.sin(i * 3.7);
+         Vec3d top = base.add(across.multiply(u * half * .9));
+         double drift = Math.sin(t * .8 + i * 2.1);
+         Vec3d foot = s.add(across.multiply(u * half * .55)).add(f.multiply((Ease.hash(i * 7 + 3) - .5) * 10.0 + 3.0 * drift)).add(0.0, .1, 0.0);
+         float al = on * (.55F + .45F * (float)Math.sin(t * 1.7 + i * 1.9)) * (float)Math.cos(u * Math.PI * .5);
+         m.softTaper(top, foot, wide * 1.1 + 2.0, wide * 1.7 + 5.0, GOLD, (.06F + .05F * torn) * al);
+         m.softTaper(top, foot, wide * .3 + .8, wide * .5 + 1.6, GOLD_WHITE, (.07F + .06F * torn) * al);
       }
    }
 

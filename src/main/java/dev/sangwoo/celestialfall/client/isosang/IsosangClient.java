@@ -152,6 +152,10 @@ public final class IsosangClient {
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BEFORE_ENTITIES.register(GStage::ground);
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(GStage::sword);
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(GStage::worldClouds);
+        // (2.90.0) the observers' storm before the effect layer (Kageno's renderer, in the default phase)
+        net.minecraft.util.Identifier farClouds=dev.sangwoo.celestialfall.CelestialFall.id("isosang_g_far_clouds");
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.addPhaseOrdering(farClouds,net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE);
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(farClouds,GStage::farClouds);
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(()->clear(mc)));
     }
     private static void accept(MinecraftClient mc,UUID caster,Identifier dim,int type,UUID id,int combo,int blow,long start,long serverNow,Vec3d at,float yaw,long ready,List<StandClient.Target> struck,

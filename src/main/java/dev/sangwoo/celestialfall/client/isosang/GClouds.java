@@ -25,6 +25,8 @@ final class GClouds {
    private static final Identifier MATERIAL = CelestialFall.id("textures/effect/isosang_g_cloud_material.png");
    private static final Identifier PRESSURE = CelestialFall.id("textures/effect/isosang_g_cloud_pressure.png");
    private static final Identifier CONDENSATION = CelestialFall.id("textures/effect/isosang_g_condensation.png");
+   /** (2.90.0) When the observers' storm (Mode 3) has been blown apart by the blast and is gone: G seconds. */
+   static final float STORM_END = 6.25F;
    private static ShaderProgram shader;
    private static SimpleFramebuffer depth;
 
@@ -53,13 +55,23 @@ final class GClouds {
    }
 
    static void world(WorldRenderContext var0, StandClient.Cast var1, FallingSword.Blade var2) {
-      draw(var0, var1, var2, GWorld.observer(var1) ? 3 : 2);
+      draw(var0, var1, var2, far(var1, var1.age(var0.tickDelta()) / 20.0F) ? 3 : 2);
+   }
+
+   /**
+    * (2.90.0) Whether this camera sees the world's storm (Mode 3, drawn before the effect layer so the far view's light
+    * shows over its clouds) rather than the cutscene's canopy: those outside the caster's cutscene, and, once the cut is
+    * over, everyone (the caster too sees the storm blown apart by the blast).
+    */
+   static boolean far(StandClient.Cast var1, float var2) {
+      return GWorld.observer(var1) || var2 >= FallingSword.DARK1;
    }
 
    private static void draw(WorldRenderContext var0, StandClient.Cast var1, FallingSword.Blade var2, int var3) {
       if (shader != null) {
          float var4 = var1.age(var0.tickDelta()) / 20.0F;
-         if (var3 == 1 || !(var4 >= 4.82F)) {
+         // (2.90.0) the observers' storm stays on until the blast has blown it apart (6.25 s)
+         if (var3 == 1 || var4 < (var3 == 3 ? STORM_END : 4.82F)) {
             MinecraftClient var5 = MinecraftClient.getInstance();
             Framebuffer var6 = var5.getFramebuffer();
             if (GL11.glGetInteger(36006) == var6.fbo) {
@@ -118,28 +130,13 @@ final class GClouds {
                   .set((float)(var15.minX() - var16.x), (float)(var15.minZ() - var16.z), (float)(var15.maxX() - var16.x), (float)(var15.maxZ() - var16.z));
                shader.getUniform("Age").set(var4);
                shader.getUniform("Mode").set(var3);
-               // (2.88.0) the storm made grand: its eye burning gold, lightning lighting it from inside (the cutscene's canopy)
-               float[] storm = var3 == 2 ? GGrand.storm(var4) : new float[12];
-               if (var3 == 3) {
-                  // (2.89.0) the observers' storm seen from afar: its eye burning gold, the bolt flashing now (storm frame)
-                  float[] far = GFar.storm(var1, var4, var14);
-                  System.arraycopy(far, 0, storm, 0, far.length);
-               }
+               // (2.88.0) the storm made grand: its eye burning gold behind the sword (the cutscene's canopy);
+               // (2.89.0) the observers' storm seen from afar burning gold within. (2.90.0: no lightning, user request.)
+               // (2.90.0) and the cleft the sword cuts through the observers' storm (how long, how wide)
+               float[] storm = var3 == 2 ? GGrand.storm(var4) : var3 == 3 ? GFar.storm(var1, var4, var14) : new float[2];
                net.minecraft.client.gl.GlUniform grand = shader.getUniform("Grand");
                if (grand != null) {
-                  grand.set(storm[0], storm[1], 0.0F, 0.0F);
-               }
-               net.minecraft.client.gl.GlUniform lightning = shader.getUniform("Lightning");
-               if (lightning != null) {
-                  lightning.set(storm[2], storm[3], storm[4], storm[5]);
-               }
-               net.minecraft.client.gl.GlUniform bolt = shader.getUniform("Bolt");
-               if (bolt != null) {
-                  bolt.set(storm[6], storm[7], storm[8], storm[9]);
-               }
-               net.minecraft.client.gl.GlUniform boltLook = shader.getUniform("BoltLook");
-               if (boltLook != null) {
-                  boltLook.set(storm[10], storm[11]);
+                  grand.set(storm[0], storm[1], storm.length > 2 ? storm[2] : 0.0F, storm.length > 3 ? storm[3] : 0.0F);
                }
                RenderSystem.disableDepthTest();
                RenderSystem.depthMask(false);

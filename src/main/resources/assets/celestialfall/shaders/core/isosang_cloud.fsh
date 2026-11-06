@@ -45,15 +45,10 @@ uniform sampler2D Sampler3;
 uniform sampler2D Sampler4;
 uniform vec3 CloudCenter;
 // (2.88.0) The storm made grand (GGrand.storm): Grand.x how strongly its eye burns gold behind the sword, Grand.y the
-// clock its rays turn by; Lightning the flash lighting the banks from inside (where in the frame, how strongly, how wide).
+// clock its rays turn by. (2.89.0) In the observers' storm (Mode 3, GFar.storm) Grand.x is how strongly its eye burns
+// gold from within; (2.90.0) Grand.z how long the cleft the sword cuts through it is (GFar.cleftSpan), Grand.w how wide
+// (GFar.cleftWide). (2.90.0: no lightning, user request.)
 uniform vec4 Grand;
-uniform vec4 Lightning;
-// the stroke of the bolt flashing now, drawn over the banks it lights (the effect layer is drawn under the banks):
-// Bolt from and to in the frame (across, down), BoltLook its seed and how bright (0 none)
-uniform vec4 Bolt;
-uniform vec2 BoltLook;
-// (2.89.0) In the observers' storm (Mode 3, GFar.storm) Grand.x is how strongly its eye burns gold and Lightning is
-// where the bolt flashing now leaves its base (in the storm's own frame) and how strongly it lights the banks.
 
 const vec2 projectionScale = vec2(.40066, -.86915);
 const vec2 eyeCenter = vec2(.546, .399);
@@ -205,12 +200,6 @@ vec4 sampleCloud(vec3 p, vec3 ray, float opening, float gathering) {
      float lum=dot(col,vec3(.2126,.7152,.0722));
      col=mix(col,vec3(1.,.69,.33)*(.42+.78*lum),clamp(burn,0.,.8))+vec3(.2,.11,.03)*burn;
     }
-    // lightning lighting the banks from inside round where it forks: their own shapes brightened and cooled
-    if(Lightning.z>0.){
-     vec2 b=(uv-Lightning.xy)*vec2(2.167,1.);
-     float flash=(exp(-dot(b,b)/(Lightning.w*Lightning.w))+.12*exp(-dot(b,b)/(6.*Lightning.w*Lightning.w)))*Lightning.z*(.65+.35*edge)*(.75+.4*erosion);
-     col=col*(1.+.75*flash)+vec3(.16,.2,.32)*flash;
-    }
     return vec4(col,(density+vapor)*extent*smoothstep(.35,1.03,Age));
 }
 
@@ -290,29 +279,93 @@ float square(float x) { return x * x; }
 float bankShape(vec3 p,vec3 dimensions){
  vec3 v=p/dimensions;return 1.-dot(v,v);
 }
+// (2.90.0) More cloud round the storm: eight great banks on a wider ring that gather in with it, filling the sky.
+float outerBanks3(vec3 p,float gather){
+ float best=-1e3,spread=1.+.6*(1.-gather);
+ for(int i=0;i<8;i++){
+  float f=float(i);
+  float ai=f*.785398+.35*sin(f*2.1);
+  float ri=(56.+14.*sin(f*1.7+.4))*spread;
+  vec3 c=vec3(cos(ai)*ri,7.+5.*sin(f*2.3),sin(ai)*ri);
+  vec3 dim=vec3(25.+7.*sin(f*3.1),8.5+4.*sin(f*1.3+.5),25.+7.*cos(f*2.7));
+  best=max(best,bankShape(p-c,dim));
+ }
+ return best;
+}
 vec4 observerMedium(vec3 p,float gather,float breach){
  vec3 wind=vec3(.68,.07,-.46)*Age;
- vec3 n=noise3((p-wind)*vec3(.038,.075,.036)+vec3(.3,.2,.45));
- vec3 fine=noise3((p-1.6*wind)*.134+vec3(.53,.24,.65));
- vec2 rim=p.xz;float r=length(rim),a=atan(rim.y,rim.x);
+ // (2.90.0) The sword cleaves the clouds along its own plane (z=0 here: the blade faces the caster), opening as it
+ // comes through the base and again as it falls: the clouds that were in the cleft are pushed out to either side
+ // and pile up along its lips (each point samples the clouds from nearer the plane; they are compressed there).
+ vec3 rag=noise3(p*vec3(.045,.07,.045)+vec3(.71,.13,.37)-vec3(Age*.03,Age*.12,0.));
+ float along=abs(.957*p.x+.292*p.y);
+ float span=max(Grand.z,1.);
+ float wide=Grand.w*(1.-smoothstep(span*.5,span,along))*(.75+.5*rag.r);
+ float az=abs(p.z);
+ float cleft=(1.-smoothstep(wide-1.8,wide+.9,az))*smoothstep(0.,1.5,wide);
+ float beyond=max(az-wide,0.);
+ float carry=wide*exp(-beyond/13.);
+ float squeeze=min(2.2,1.+wide/13.*exp(-beyond/13.));
+ vec3 pc=vec3(p.x,p.y,sign(p.z)*max(az-carry,0.));
+ vec3 n=noise3((pc-wind)*vec3(.038,.075,.036)+vec3(.3,.2,.45));
+ vec3 fine=noise3((pc-1.6*wind)*.134+vec3(.53,.24,.65));
+ vec2 rim=pc.xz;float r=length(rim),a=atan(rim.y,rim.x);
  float curl=1.9*sin(2.*a-.8*Age)+1.35*cos(3.*a+Age*.45);
  float escort=1.-gather,slide=11.*escort+2.8*breach;
- vec3 drift=p+vec3(5.*(n.r-.5),3.*(n.b-.5),5.*(n.g-.5));
+ vec3 drift=pc+vec3(5.*(n.r-.5),3.*(n.b-.5),5.*(n.g-.5));
  float left=bankShape(drift-vec3(-23.-slide,6.,-7.),vec3(28.,6.3,18.));
  float right=bankShape(drift-vec3(23.+slide,12.,4.+slide*.4),vec3(34.,8.2,22.));
  float high=bankShape(drift-vec3(-2.,17.,-21.-slide),vec3(45.,7.,26.));
- float outline=max(max(left,right),high)+1.14*(n.r-.5)+.48*(fine.g-.5);
+ float more=outerBanks3(drift,gather);
+ float outline=max(max(max(left,right),high),more)+1.14*(n.r-.5)+.48*(fine.g-.5);
  float eye=smoothstep(3.6+6.2*breach,12.+7.6*breach,r+curl+4.*(n.g-.5));
  float deck=smoothstep(-.25,.58,outline)*(.018+.982*eye);
  float skirtR=11.6+6.3*breach+curl;
- float skirt=1.-square((r-skirtR)/6.3)-square((p.y-1.3-2.8*sin(a+.5))/3.3);
+ float skirt=1.-square((r-skirtR)/6.3)-square((pc.y-1.3-2.8*sin(a+.5))/3.3);
  float tear=smoothstep(.12,.74,.50+.35*sin(2.*a+.7)+.48*(n.b-.5));
  float low=smoothstep(-.22,.65,skirt+.98*(fine.r-.5))*tear;
- float density=(deck+.78*low)*gather;
- float sunFace=clamp(.26+.36*clamp((p.y-6.)/12.,0.,1.)+.18*cos(a+.75)+.68*(n.r-.5)+.45*(fine.g-.5),0.,1.);
+ // (2.90.0) and a broad lower layer under it all, torn into holes
+ float layer=smoothstep(-.15,.55,1.-square((pc.y-1.5+2.5*(n.b-.5))/4.6)+1.25*(n.r-.5)+.55*(fine.g-.5))
+            *(1.-smoothstep(78.,112.,r*(1.+.4*(1.-gather))))*smoothstep(.2,1.,gather)*(.25+.75*eye);
+ float density=(deck+.78*low+.62*layer)*gather;
+ density*=(1.-cleft)*squeeze;
+ // (2.90.0) as the sword breaks through the base a shock races out through the banks: the clouds behind it thinned,
+ // pressed into a bright ring at its front
+ float r0=length(p.xz),shock=Age-1.58,ring=0.;
+ if(shock>0.&&shock<1.8){
+  float rs=8.+96.*(1.-exp(-shock/.42));
+  float fade=1.-smoothstep(.65,1.8,shock);
+  ring=exp(-square((r0-rs)/(2.6+3.2*shock)))*fade*smoothstep(-.7,.25,outline);
+  density=density*(1.-.32*(1.-smoothstep(rs-16.,rs-3.,r0))*fade)+.95*ring*gather;
+ }
+ // (2.90.0) cloud dragged down behind the falling sword: a ragged hollow sleeve round its path from the base down
+ float dragged=0.;
+ if(Age>2.76&&Age<4.5){
+  vec3 axis=normalize(BladeAxis),v=p-BladePoint;
+  float up=dot(v,axis),side=length(v-axis*up);
+  float top=(-1.5-BladePoint.y)/max(axis.y,.2);
+  float reach=11.+.32*max(up,0.)+5.*(fine.b-.5);
+  dragged=exp(-square((side-reach)/3.4))*smoothstep(-2.,6.,up)*(1.-smoothstep(top-2.,top+4.,up))
+          *smoothstep(2.78,2.95,Age)*(1.-smoothstep(3.35,4.4,Age))*smoothstep(.35,.75,.55*n.g+.45*fine.r)*.55;
+  density+=dragged;
+ }
+ // (2.90.0) the blast blows the storm apart: cleared inside its front, pressed into a ring at it, then gone
+ float boom=0.;
+ if(Age>4.84){
+  float blast=Age-4.84;
+  float rb=10.+130.*(1.-exp(-blast/.55));
+  float front=exp(-square((r0-rb-5.)/(4.+4.*blast)))*smoothstep(-.6,.3,outline);
+  density=density*smoothstep(rb-3.,rb+11.,r0)+.8*front*(1.-smoothstep(.6,1.3,blast));
+  density*=1.-smoothstep(5.15,6.2,Age);
+  boom=exp(-blast/.38)*(1.-smoothstep(-3.,9.,p.y));
+ }
+ float sunFace=clamp(.26+.36*clamp((pc.y-6.)/12.,0.,1.)+.18*cos(a+.75)+.68*(n.r-.5)+.45*(fine.g-.5),0.,1.);
  vec3 bankColor=mix(vec3(.49,.60,.75),vec3(.98,.98,.955),smoothstep(.06,.90,sunFace));
  float silver=exp(-square((r-skirtR)/6.6))*breach*(.7+.3*cos(a+.8));
  bankColor+=vec3(.25,.16,.053)*silver;
+ // the pressed lips of the cleft and the shock's ring catch the light
+ float lips=exp(-square(beyond/5.))*smoothstep(0.,1.5,wide)*(1.-cleft);
+ bankColor=mix(bankColor,vec3(1.,.99,.97),clamp(.45*lips+.55*ring,0.,.7));
  // Sidelit vapor condenses along both shoulders, then is thrown outwards
  // on contact. Large loose sheets briefly cross the steel, never sheath it.
  vec3 q=bladeCoordinates(p);float ax=atan(q.z,q.x),height=q.y;
@@ -327,24 +380,21 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  vec2 beamCoord=p.xz-vec2(.38*z,-.22*z);
  float beams=exp(-square(length((beamCoord-vec2(-8.,2.))*vec2(.81,1.))/3.2))
             +.65*exp(-square(length((beamCoord-vec2(3.,6.))*vec2(.67,1.))/2.6));
- beams*=breach*.069*smoothstep(-41.,-17.,z)*(1.-smoothstep(4.,13.,z))*(.7+.3*n.b);
+ beams*=breach*.069*smoothstep(-41.,-17.,z)*(1.-smoothstep(4.,13.,z))*(.7+.3*n.b)*(1.-smoothstep(4.5,4.9,Age));
  float lit=density+sleeve+beams;
- // (2.89.0) the eye burning gold from within, and lightning lighting the banks round where it leaves them
+ // (2.89.0) the eye burning gold from within; (2.90.0) its light spilling along the cleft's lips
  if(Grand.x>0.){
-  float burn=Grand.x*exp(-r*r/420.)*(.65+.55*n.g)*(.55+.45*smoothstep(-4.,6.,p.y));
+  float burn=Grand.x*(exp(-r0*r0/420.)+.75*lips*exp(-along/45.))*(.65+.55*n.g)*(.55+.45*smoothstep(-4.,6.,p.y));
   float lum=dot(bankColor,vec3(.2126,.7152,.0722));
   bankColor=mix(bankColor,vec3(1.,.70,.34)*(.45+.8*lum),clamp(burn,0.,.8))+vec3(.22,.12,.03)*burn;
  }
- if(Lightning.w>0.){
-  vec3 l=p-Lightning.xyz;
-  float flash=Lightning.w*(exp(-dot(l,l)/260.)+.18*exp(-dot(l,l)/2400.))*(.75+.4*fine.g);
-  bankColor=bankColor*(1.+.85*flash)+vec3(.18,.22,.36)*flash;
- }
+ // (2.90.0) the blast lights the undersides gold as it blows them apart
+ bankColor+=vec3(1.,.66,.3)*boom*.9;
  return vec4((bankColor*density+vec3(.91,.95,1.)*sleeve+vec3(1.,.85,.57)*beams)/max(lit,.0001),lit);
 }
 vec4 observerSky(vec3 origin, vec3 ray, float limit) {
     vec3 d=mix(ray,vec3(.00001),lessThan(abs(ray),vec3(.00001)));
-    vec3 a=(vec3(-68.,-42.,-68.)-origin)/d,b=(vec3(68.,29.,68.)-origin)/d;
+    vec3 a=(vec3(-118.,-42.,-118.)-origin)/d,b=(vec3(118.,40.,118.)-origin)/d;
     vec3 lo=min(a,b),hi=max(a,b);
     float near=max(0.,max(lo.x,max(lo.y,lo.z))),far=min(limit,min(hi.x,min(hi.y,hi.z)));
     float gather=smoothstep(.35,1.42,Age),breach=smoothstep(1.42,2.34,Age);
@@ -626,36 +676,6 @@ vec4 finishPass(vec3 origin,vec3 ray,float limit,bool hasSurface){
 }
 
 
-float boltHash(float n){return fract(sin(n*12.9898+78.233)*43758.5453);}
-float segmentDistance(vec2 p,vec2 a,vec2 b){vec2 pa=p-a,ba=b-a;float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-8),0.,1.);return length(pa-ba*h);}
-// How far (in frame heights) p is from the bolt: a jagged stroke from Bolt.xy to Bolt.zw, forking twice.
-float boltDistance(vec2 p){
- vec2 k=vec2(2.167,1.),a=Bolt.xy*k,b=Bolt.zw*k,q=p*k,d=b-a;
- float len=max(length(d),1e-4),seed=BoltLook.x,best=1e3;
- vec2 along=d/len,side=vec2(-along.y,along.x),prev=a,fork1=a,fork2=a;
- int at1=3+int(boltHash(seed*41.)*2.),at2=7+int(boltHash(seed*41.+1.)*2.);
- for(int j=1;j<=12;j++){
-  float u=float(j)/12.;
-  float off=j==12?0.:(boltHash(seed*31.+float(j))-.5)*.22*len*sin(3.14159*u)+(boltHash(seed*37.+float(j)*3.)-.5)*.05*len;
-  vec2 c=a+d*u+side*off;
-  best=min(best,segmentDistance(q,prev,c));
-  if(j==at1)fork1=c;
-  if(j==at2)fork2=c;
-  prev=c;
- }
- for(int f=0;f<2;f++){
-  vec2 o=f==0?fork1:fork2,dir=normalize(along*.6+side*(f==0?.8:-.8)),c0=o;
-  float reach=len*(.18+.12*boltHash(seed*43.+float(f)));
-  for(int j=1;j<=5;j++){
-   float u=float(j)/5.;
-   vec2 c=o+dir*reach*u+side*(boltHash(seed*47.+float(f)*7.+float(j))-.5)*.12*reach;
-   // a fork is fainter than the stroke, more so as it goes
-   best=min(best,segmentDistance(q,c0,c)+.0012+.0025*u);
-   c0=c;
-  }
- }
- return best;
-}
 void main(){
  vec4 far=InverseViewProjection*vec4(screen*2.-1.,1.,1.);
  vec3 direction=normalize(far.xyz/far.w);
@@ -664,7 +684,8 @@ void main(){
  float limit=z>.99999?320.:length(hit.xyz/hit.w);
  vec3 origin=coordinates(-Origin),ray=coordinates(direction);
  if(Mode==0 || Mode==2 || Mode==3){
-   if(Age>=4.82){fragColor=vec4(0.);return;}
+   // (2.90.0) the observers' storm stays to be blown apart by the blast
+   if(Age>=(Mode==3?6.25:4.82)){fragColor=vec4(0.);return;}
    if(Mode==3){
     fragColor=observerSky(origin,ray,limit);
     if(z<.99999 && Age>1.51 && Age<4.78){
@@ -679,18 +700,9 @@ void main(){
       fragColor=vec4((fragColor.rgb*fragColor.a+vec3(.14,.18,.25)*shade*(1.-fragColor.a))/max(.0001,a),a);
     }
    }
-   else{
-    fragColor=marchCanopy(origin,ray,limit);
-    // (2.88.0) the lightning's stroke over the banks it lights: a white core in a blue glow
-    if(Mode==2 && BoltLook.y>0. && ray.z>.01){
-     float d=boltDistance(.5+projectionScale*ray.xy/ray.z);
-     vec3 light=(vec3(1.)*exp(-d*d/3.8e-6)*1.4+vec3(.6,.72,1.)*exp(-d*d/1.2e-4)*.75+vec3(.5,.6,.95)*exp(-d/.045)*.16)*BoltLook.y;
-     float a=fragColor.a,na=a+(1.-a)*clamp(dot(light,vec3(.4)),0.,1.);
-     fragColor=vec4((fragColor.rgb*a+light)/max(na,1e-4),na);
-    }
-   }
+   else fragColor=marchCanopy(origin,ray,limit);
    // Steel has cleared at 4.78 s; the last sky vapour clears before camera return.
-   fragColor.a*=1.-smoothstep(4.73,4.81,Age);
+   fragColor.a*=Mode==3?1.-smoothstep(6.0,6.25,Age):1.-smoothstep(4.73,4.81,Age);
    return;
  }
  // Replace the whole contact volume. In particular the old 5.15 s fire tower

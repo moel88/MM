@@ -244,9 +244,27 @@ public final class GStage {
          for (StandClient.Cast var2 : worldCasts(var0)) {
             float var3 = var2.age(var0.tickDelta()) / 20.0F;
             FallingSword.Blade var4 = GWorld.blade(var2, var3);
-            GClouds.world(var0, var2, var4);
+            if (!GClouds.far(var2, var3)) {
+               GClouds.world(var0, var2, var4);
+            }
             if (var3 >= 3.1F) {
                GClouds.draw(var0, var2, var4, false);
+            }
+         }
+      }
+   }
+
+   /**
+    * (2.90.0) The world's storm seen from outside the cutscene, drawn before the effect layer (an earlier phase of the
+    * last world pass): the effect layer writes no depth, so drawn after it the storm's far greater clouds would cover the
+    * far view's light in front of them (the column, the trail, the pillars, the light pouring down through the cleft).
+    */
+   static void farClouds(WorldRenderContext var0) {
+      if (!GBlackout.hidden()) {
+         for (StandClient.Cast var2 : worldCasts(var0)) {
+            float var3 = var2.age(var0.tickDelta()) / 20.0F;
+            if (GClouds.far(var2, var3)) {
+               GClouds.world(var0, var2, GWorld.blade(var2, var3));
             }
          }
       }

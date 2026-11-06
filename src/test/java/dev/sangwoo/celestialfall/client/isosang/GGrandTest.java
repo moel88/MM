@@ -6,9 +6,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Lee So-sang's G made grand (2.88.0): the sword's inscriptions light only once it is out of the storm, run up it, flare
- * as it strikes and burn hotter until the blast; the ground beats faster toward the blast; the lightning flashes twice
- * and is gone. Every part is a continuous function of the cast clock: nothing jumps between two frames at 60 fps but the
- * flashes, which come in over a frame and a half as the codebase's kicks do.
+ * as it strikes and burn hotter until the blast; the ground beats faster toward the blast; the storm's eye burns gold
+ * behind the sword in the sky shot (2.90.0: no lightning in it). Every part is a continuous function of the cast clock:
+ * nothing jumps between two frames at 60 fps but the flashes, which come in over a frame and a half as the codebase's
+ * kicks do.
  */
 class GGrandTest {
     static final float FRAME=1/60f;
@@ -42,26 +43,14 @@ class GGrandTest {
         assertEquals(0,GGrand.ground(5.9f),1e-6,"the fissures have gone after the blast");
     }
 
-    @Test void theStormsEyeBurnsGoldAndLightningLightsItsBanks(){
+    @Test void theStormsEyeBurnsGoldWithNoLightning(){
         for(float t=0;t<1.62f;t+=.01f)assertEquals(0,GGrand.storm(t)[0],1e-6,"the eye does not burn before the sky shot, at "+t);
         assertTrue(GGrand.storm(2.3f)[0]>.8f,"the eye burns gold behind the sword in the sky shot");
         assertEquals(0,GGrand.storm(2.96f)[0],1e-6,"and is out once the sword falls");
-        for(double[] b:GGrand.SKY_BOLTS){
-            float[] k=GGrand.storm((float)b[0]+.015f);
-            assertTrue(k[4]>.5f,"each bolt lights the banks, at "+b[0]);
-            assertEquals((b[1]+b[3])*.5,k[2],1e-4,"round where it forks");
-            assertEquals((b[2]+b[4])*.5,k[3],1e-4);
-            assertTrue(k[2]>0&&k[2]<1&&k[3]>-.05&&k[3]<1,"in the frame");
-            assertArrayEquals(new float[]{(float)b[1],(float)b[2],(float)b[3],(float)b[4]},new float[]{k[6],k[7],k[8],k[9]},1e-6f,"its stroke");
-            assertTrue(k[11]>.9f,"drawn bright");
-        }
-        assertEquals(0,GGrand.storm(1.6f)[4],1e-6,"no lightning before the first bolt");
-        assertEquals(0,GGrand.storm(3.3f)[4],1e-6,"nor after the sky shot");
-        assertEquals(0,GGrand.storm(3.3f)[11],1e-6,"its stroke neither");
+        assertEquals(2,GGrand.storm(2.0f).length,"its eye and its clock only: no lightning (2.90.0)");
         for(float t=0;t<4;t+=FRAME/10){
             float[] a=GGrand.storm(t),b=GGrand.storm(t+FRAME);
             assertTrue(Math.abs(b[0]-a[0])<.45f,"the eye's light jumps at "+t);
-            assertTrue(Math.abs(b[4]-a[4])<1.1f,"a flash jumps by more than it enters over a frame and a half, at "+t);
         }
     }
 
@@ -75,15 +64,6 @@ class GGrandTest {
         assertEquals(0,GGrand.heart(3.4f),1e-6,"no beat before the first");
     }
 
-    @Test void lightningFlashesTwiceAndIsGone(){
-        assertEquals(0,GGrand.flash(-.02f),1e-6);
-        assertEquals(0,GGrand.flash(.46f),1e-6);
-        assertTrue(GGrand.flash(.015f)>.9f,"a strike");
-        assertTrue(GGrand.flash(.06f)<GGrand.flash(.015f)-.2f,"dimming");
-        assertTrue(GGrand.flash(.09f)>GGrand.flash(.06f)+.1f,"and a second stroke");
-        for(double[] b:GGrand.SKY_BOLTS)assertTrue(b[0]>=1.65&&b[0]+.2<IsosangRules.G_FALL,"each bolt strikes and strikes again within the sky shot");
-    }
-
     @Test void nothingJumpsBetweenTwoFrames(){
         for(float t=0;t<7;t+=FRAME/10){
             float[] a=GGrand.rune(t),b=GGrand.rune(t+FRAME);
@@ -91,7 +71,6 @@ class GGrandTest {
             assertTrue(Math.abs(b[1]-a[1])<8,"how far up they are lit jumps at "+t);
             assertTrue(Math.abs(b[3]-a[3])<.8f,"their flare jumps at "+t);
             assertTrue(Math.abs(GGrand.ground(t+FRAME)-GGrand.ground(t))<.85f,"the fissures jump at "+t);
-            assertTrue(Math.abs(GGrand.flash(t-2+FRAME)-GGrand.flash(t-2))<.85f,"a flash jumps at "+t);
             assertTrue(Math.abs(GGrand.impact(t+FRAME,IsosangRules.G_STRIKE)-GGrand.impact(t,IsosangRules.G_STRIKE))<.85f,"the impact frame jumps at "+t);
         }
         float most=0;

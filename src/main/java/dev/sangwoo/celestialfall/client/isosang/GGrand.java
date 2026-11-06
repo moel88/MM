@@ -16,9 +16,9 @@ import net.minecraft.util.math.Vec3d;
  *   and burning hotter and whiter the longer it stands in the ground, until the blast;</li>
  *   <li>her face: a golden light behind her head, rimming it, with two rings and a halo of thin golden rays round it;</li>
  *   <li>the sky: the storm's eye burning gold behind the sword, its light thrown out through the banks in slowly turning
- *   rays, and lightning forking through the storm, lighting its banks from inside and the sword and her (all drawn by
- *   the banks' own shader, isosang_cloud.fsh's Grand, Lightning, Bolt and BoltLook, {@link #storm}: the banks are drawn
- *   over the effect layer, which writes no depth);</li>
+ *   rays (drawn by the banks' own shader, isosang_cloud.fsh's Grand, {@link #storm}: the banks are drawn over the effect
+ *   layer, which writes no depth). The lightning that forked through the storm (2.88.0) is gone (2.90.0, user request:
+ *   "번개 치는 건 없애고");</li>
  *   <li>the fall: collars of vapour round the falling blade, the air streaking past the camera, and rings of light on the
  *   ground drawn in to where it will strike;</li>
  *   <li>the strike: a shock wave racing out along the ground with an ink rim and a ring of dust behind it, a pillar of light
@@ -28,7 +28,8 @@ import net.minecraft.util.math.Vec3d;
  *   <li>the blast: a dome of light swelling over its ground, rings racing out along it, and a pillar of light into the sky.</li>
  * </ul>
  * From afar (2.89.0) the shock waves and the cracks widen and reach further ({@link #grown}), the impact frame reaches
- * watchers up to 90 blocks off, and the far view's own effects are added ({@link GFar}).
+ * watchers up to 90 blocks off, and the far view's own effects are added ({@link GFar}): from 2.90.0 the sword cleaving
+ * the storm's clouds as it falls through them.
  * Every part is a function of the cast clock alone (smooth at any frame rate). The sky and the fall are the caster's
  * cutscene's (and the arena's watchers'); the strike and the blast are in the world for everyone.
  */
@@ -36,16 +37,6 @@ final class GGrand {
    static final int GOLD = FallingSword.GOLD, GOLD_WHITE = FallingSword.GOLD_WHITE, EMBER = 0xFF8A2E, AMBER = 0xFFB04A;
    static final int BOLT = 0xA6BCFF, BOLT_CORE = 0xF4F7FF, MIST = 0xE6EEFF, INK = 0x170D07, DUST = 0x7A6650;
    static final Vec3d X = new Vec3d(1.0, 0.0, 0.0), Z = new Vec3d(0.0, 0.0, 1.0), UP = new Vec3d(0.0, 1.0, 0.0);
-   /** The lightning in the sky shot: when (seconds), from and to (frame across and down), over before the sword falls. */
-   static final double[][] SKY_BOLTS = {
-      {1.70, .20, .02, .30, .40},
-      {1.86, .82, .00, .73, .36},
-      {2.02, .05, .26, .15, .56},
-      {2.17, .74, -.04, .79, .22},
-      {2.31, .93, .22, .84, .60},
-      {2.44, .36, -.04, .44, .18},
-      {2.56, .12, .06, .32, .28}
-   };
    /** The heart the fissures beat with while the sword stands in the ground (seconds), faster toward the blast. */
    static final float[] BEATS = {3.5F, 3.85F, 4.12F, 4.34F, 4.5F, 4.62F, 4.72F};
    static final int FISSURES = 13;
@@ -89,30 +80,13 @@ final class GGrand {
    }
 
    /**
-    * The storm's own light at {@code t} (isosang_cloud.fsh's Grand, Lightning, Bolt and BoltLook, the cutscene's canopy):
-    * how strongly its eye burns gold behind the sword and the clock its rays turn by; where the lightning flashing now
-    * lights the banks round it (across, down in the frame), how strongly and how wide; its stroke (from and to in the
-    * frame), its seed and how bright it is. The banks are drawn over the effect layer (which writes no depth), so all of
-    * the storm's light is drawn by the banks' own shader.
+    * The storm's own light at {@code t} (isosang_cloud.fsh's Grand, the cutscene's canopy): how strongly its eye burns gold
+    * behind the sword and the clock its rays turn by. The banks are drawn over the effect layer (which writes no depth),
+    * so the storm's light is drawn by the banks' own shader.
     */
    static float[] storm(float t) {
       float eye = .95F * Ease.smooth(t, 1.62F, 1.95F) * (1.0F - Ease.smooth(t, 2.68F, 2.84F));
-      float best = 0.0F;
-      int which = 0;
-      for (int i = 0; i < SKY_BOLTS.length; i++) {
-         float fl = flash(t - (float)SKY_BOLTS[i][0]);
-         if (fl > best) {
-            best = fl;
-            which = i;
-         }
-      }
-      best *= 1.0F - Ease.smooth(t, IsosangRules.G_FALL - .05F, IsosangRules.G_FALL);
-      eye *= 1.0F + .35F * best;
-      double[] at = SKY_BOLTS[which];
-      return new float[]{
-         eye, t, (float)((at[1] + at[3]) * .5), (float)((at[2] + at[4]) * .5), .62F * best, .13F,
-         (float)at[1], (float)at[2], (float)at[3], (float)at[4], which * 7 + 3, best
-      };
+      return new float[]{eye, t};
    }
 
    // ───────────────────────────── passes ─────────────────────────────
@@ -151,16 +125,6 @@ final class GGrand {
       }
       float t = c.sec;
       Vec3d s = FallingSword.strike(c.cast);
-      if (FallingSword.shown(c) && t >= 1.6F && t < IsosangRules.G_FALL) {
-         FallingSword.Frame k = GScene.skyFrame(c.cast, t);
-         for (double[] b : SKY_BOLTS) {
-            float fl = flash(t - (float)b[0]);
-            if (fl > .02F) {
-               // the bolt lights the sword: its light pulled in from the storm to near the camera
-               f.light(k.at((b[1] + b[3]) * .5, (b[2] + b[4]) * .5, 9.0, GScene.SKY_FOV), BOLT, 26.0, 1.1F * fl);
-            }
-         }
-      }
       float k = FxLib.kick(t, IsosangRules.G_STRIKE, .3F);
       if (k > .01F) {
          f.light(s.add(0.0, 6.0, 0.0), GOLD_WHITE, 34.0, 1.2F * k);
@@ -599,14 +563,6 @@ final class GGrand {
    }
 
    // ───────────────────────────── timing ─────────────────────────────
-
-   /** A lightning flash {@code since} seconds after it began: a strike and a weaker second stroke. */
-   static float flash(float since) {
-      if (since < -.01F || since > .45F) {
-         return 0.0F;
-      }
-      return Math.min(1.0F, FxLib.kick(since, 0.0F, .03F) + .75F * FxLib.kick(since, .075F, .05F)) * (1.0F - Ease.smooth(since, .35F, .45F));
-   }
 
    /** The impact frame round {@code at} (as FxLib's: a few frames). */
    static float impact(float t, float at) {
