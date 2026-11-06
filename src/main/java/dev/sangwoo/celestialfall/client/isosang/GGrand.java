@@ -179,8 +179,8 @@ final class GGrand {
       }
       float b = FxLib.kick(t, 4.86F, .5F);
       if (b > .01F) {
-         f.light(s.add(0.0, 8.0, 0.0), GOLD, 40.0, .9F * b);
-         f.shaft(s.add(0.0, 10.0, 0.0), GOLD, .3F * b);
+         f.light(s.add(0.0, 8.0, 0.0), GOLD, 36.0, .5F * b);
+         f.shaft(s.add(0.0, 10.0, 0.0), GOLD, .25F * b);
       }
    }
 
@@ -515,12 +515,12 @@ final class GGrand {
       float fade = Ease.smooth(tau, 0.0F, .03F) * (1.0F - Ease.smooth(tau, .2F, 1.1F));
       for (int i = 0; i < 5; i++) {
          double lat = Math.toRadians(i * 15.0);
-         band(m, s.add(0.0, r * Math.sin(lat), 0.0), X, Z, r * Math.cos(lat), .7 + .035 * r, i == 0 ? GOLD_WHITE : GOLD, .2F * fade * (1.0F - i / 6.0F), 96);
+         band(m, s.add(0.0, r * Math.sin(lat), 0.0), X, Z, r * Math.cos(lat), .7 + .035 * r, i == 0 ? GOLD_WHITE : GOLD, .15F * fade * (1.0F - i / 6.0F), 96);
       }
       float k = FxLib.kick(t, 4.86F, .4F);
       if (k > .01F) {
-         m.softTaper(s, s.add(0.0, 110.0, 0.0), 12.0, 4.0, GOLD, .2F * k);
-         m.softTaper(s, s.add(0.0, 110.0, 0.0), 2.6, .8, GOLD_WHITE, .6F * k);
+         m.softTaper(s, s.add(0.0, 110.0, 0.0), 10.0, 3.5, GOLD, .13F * k);
+         m.softTaper(s, s.add(0.0, 110.0, 0.0), 2.4, .8, GOLD_WHITE, .5F * k);
       }
    }
 
