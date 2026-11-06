@@ -149,16 +149,26 @@ class FallingSwordTest {
         // the fingers turned up only as the hand comes before her face, and held upright at her lips
         assertEquals(0,GGesture.uprightWeight(.6f),1e-6);assertEquals(1,GGesture.uprightWeight(1.2f),1e-6);
     }
-    @Test void sheIsSlighterAndLeansAwayInTheSky(){
-        // her feet go to the frame's lower left of her head, and she is drawn smaller than the fitted camera shows her
-        var c=cast();float t=2.2f;
-        var shot=GScene.skyShot(c,t);Vec3d feet=c.origin(),head=feet.add(0,GScene.ACTOR_PIVOT,0);
-        Matrix4f m=GScene.actor(c,t,feet);
-        Vec3d drawnHead=apply(m,feet,head),drawnFeet=apply(m,feet,feet);
-        double[] h=inFrame(shot,drawnHead,false),f=inFrame(shot,drawnFeet,false);
-        assertNotNull(h);
-        assertTrue(f==null||f[0]<h[0]-.02,"her feet to the left of her head: "+(f==null?"out":f[0])+" "+h[0]);
-        assertTrue(GScene.ACTOR_SCALE<1);
+    @Test void inTheSkySheStandsUpFromTheFramesBottom(){
+        // (2.87.2, user request) as the videos: her face at (0.383, 0.522), her legs out through the frame's bottom edge
+        // at about 0.30 across, cut about the knee, her feet below the frame; nothing of her floating in the sky
+        var c=cast();
+        for(float t:new float[]{1.7f,2.2f,2.7f}){
+            var shot=GScene.skyShot(c,t);Vec3d feet=c.origin();
+            Matrix4f m=GScene.actor(c,t,feet);
+            double[] face=inFrame(shot,apply(m,feet,feet.add(0,1.75,0)),false),soles=inFrame(shot,apply(m,feet,feet),false);
+            assertEquals(.383,face[0],.015,"her face across at "+t);assertEquals(.522,face[1],.015,"her face down at "+t);
+            assertTrue(soles==null||soles[1]>1.05,"her feet below the frame at "+t+": "+(soles==null?"behind":soles[1]));
+            double[] above=null,below=null;double cutAt=Double.NaN;
+            for(double h=.75;h>=0;h-=.01){
+                double[] q=inFrame(shot,apply(m,feet,feet.add(0,h,0)),false);
+                if(q!=null&&q[1]<1){above=q;continue;}
+                below=q;cutAt=h;break;
+            }
+            assertNotNull(above);assertTrue(cutAt>.25&&cutAt<.5,"the frame's bottom edge cuts her legs about the knee at "+t+": "+cutAt);
+            assertEquals(.30,above[0],.03,"her legs leave the frame at about 0.30 across at "+t);
+            assertTrue(above[0]<face[0]-.05,"her legs to the lower left of her face at "+t);
+        }
     }
     static Vec3d apply(Matrix4f m,Vec3d origin,Vec3d p){
         Vector4f v=m.transform(new Vector4f((float)(p.x-origin.x),(float)(p.y-origin.y),(float)(p.z-origin.z),1));

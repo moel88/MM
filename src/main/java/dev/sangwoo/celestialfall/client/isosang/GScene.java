@@ -106,14 +106,19 @@ final class GScene {
    }
 
    /**
-    * How much smaller she is drawn in the sky shot than the camera she was fitted to shows her (the videos' figure is
-    * slight: her head about 0.06 of the frame across against the blocky body's 0.09), and how far she leans away to the
-    * frame's left (degrees round the shot's line of sight, counterclockwise as seen; negative: her feet go to its lower
-    * left, as the videos').
+    * Her figure in the sky shot, as the videos frame her (2.87.2, user request: "컷씬 나올때 원본 영상은 캐릭터가 다리부터
+    * 보이는데 너가 만든건 캐릭터가 아예 공중에 떠있음 똑같이 다리부터 보이게 만들어줘"): her face at (0.383, 0.522) of the 21:9
+    * frame and her legs out through its bottom edge at about 0.30 across, cut at the knee, her feet below it (the shot
+    * looks up at her, so her legs come big towards it). How much bigger she is drawn than the camera she was fitted to
+    * shows her, how far she leans round the shot's line of sight (degrees, counterclockwise as seen; the look up from
+    * below already sends her feet to the frame's lower left), and where her head is moved in the frame (right and down,
+    * in frame heights). 2.87.0's 0.68 times and -24 degrees, her head sized as the videos', left her whole and floating
+    * in the sky.
     */
-   static final float ACTOR_SCALE = 0.68F;
-   static final double ACTOR_LEAN = -24.0;
-   /** How far above her feet her figure is pivoted for it (her head: it stays where the videos have it). */
+   static final float ACTOR_SCALE = 1.18F;
+   static final double ACTOR_LEAN = -2.0;
+   static final double ACTOR_RIGHT = -0.07, ACTOR_DOWN = 0.015;
+   /** How far above her feet her figure is pivoted for it (her neck). */
    static final double ACTOR_PIVOT = 1.45;
 
    /**
@@ -122,6 +127,11 @@ final class GScene {
     * face shot, eased in over its cut (1.6 to 1.65 s).
     */
    static Matrix4f actor(StandClient.Cast c, float t, Vec3d pos) {
+      return actor(c, t, pos, ACTOR_SCALE, ACTOR_LEAN, ACTOR_RIGHT, ACTOR_DOWN);
+   }
+
+   /** The same with its size, lean and where her head is moved to in the frame (right and down, in frame heights) given. */
+   static Matrix4f actor(StandClient.Cast c, float t, Vec3d pos, float scale, double leanDegrees, double right, double down) {
       FallingSword.Frame view = FallingSword.skyView(c);
       FallingSword.Frame frame = skyFrame(c, t);
       double k = Math.tan(Math.toRadians(29.91063370130198)) / Math.tan(Math.toRadians(42.21));
@@ -134,11 +144,14 @@ final class GScene {
       Vec3d head = pos.add(0.0, ACTOR_PIVOT, 0.0);
       Vec3d rel = head.subtract(view.eye());
       Vec3d headAt = frame.eye().add(axes[0].multiply(rel.x)).add(axes[1].multiply(rel.y)).add(axes[2].multiply(rel.z));
-      double lean = Math.toRadians(ACTOR_LEAN), cos = Math.cos(lean), sin = Math.sin(lean);
+      // moved in the frame's plane, at its own depth: a frame height there is 2 tan(fov / 2) times that depth
+      double depth = headAt.subtract(frame.eye()).dotProduct(frame.f()), across = 2.0 * Math.tan(Math.toRadians(59.82126740260396 / 2.0)) * depth;
+      headAt = headAt.add(frame.r().multiply(right * across)).add(frame.u().multiply(-down * across));
+      double lean = Math.toRadians(leanDegrees), cos = Math.cos(lean), sin = Math.sin(lean);
       for (int i = 0; i < 3; i++) {
          Vec3d a = axes[i];
          double x = a.dotProduct(frame.r()), y = a.dotProduct(frame.u()), z = a.dotProduct(frame.f());
-         axes[i] = frame.r().multiply(x * cos - y * sin).add(frame.u().multiply(x * sin + y * cos)).add(frame.f().multiply(z)).multiply(ACTOR_SCALE);
+         axes[i] = frame.r().multiply(x * cos - y * sin).add(frame.u().multiply(x * sin + y * cos)).add(frame.f().multiply(z)).multiply(scale);
       }
       Vec3d back = pos.subtract(head);
       Vec3d at = headAt.add(axes[0].multiply(back.x)).add(axes[1].multiply(back.y)).add(axes[2].multiply(back.z)).subtract(pos);
