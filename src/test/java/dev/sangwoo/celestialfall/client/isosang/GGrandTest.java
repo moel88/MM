@@ -42,6 +42,34 @@ class GGrandTest {
         assertEquals(0,GGrand.ground(5.9f),1e-6,"the fissures have gone after the blast");
     }
 
+    @Test void theStormsEyeBurnsGoldAndLightningLightsItsBanks(){
+        for(float t=0;t<1.62f;t+=.01f)assertEquals(0,GGrand.storm(t)[0],1e-6,"the eye does not burn before the sky shot, at "+t);
+        assertTrue(GGrand.storm(2.3f)[0]>.8f,"the eye burns gold behind the sword in the sky shot");
+        assertEquals(0,GGrand.storm(2.96f)[0],1e-6,"and is out once the sword falls");
+        for(double[] b:GGrand.SKY_BOLTS){
+            float[] k=GGrand.storm((float)b[0]+.015f);
+            assertTrue(k[4]>.9f,"each bolt lights the banks, at "+b[0]);
+            assertEquals((b[1]+b[3])*.5,k[2],1e-4,"round where it forks");
+            assertEquals((b[2]+b[4])*.5,k[3],1e-4);
+            assertTrue(k[2]>0&&k[2]<1&&k[3]>-.05&&k[3]<1,"in the frame");
+        }
+        assertEquals(0,GGrand.storm(1.6f)[4],1e-6,"no lightning before the first bolt");
+        assertEquals(0,GGrand.storm(3.3f)[4],1e-6,"nor after the sky shot");
+        for(float t=0;t<4;t+=FRAME/10){
+            float[] a=GGrand.storm(t),b=GGrand.storm(t+FRAME);
+            assertTrue(Math.abs(b[0]-a[0])<.45f,"the eye's light jumps at "+t);
+            assertTrue(Math.abs(b[4]-a[4])<1.1f,"a flash jumps by more than it enters over a frame and a half, at "+t);
+        }
+    }
+
+    @Test void theSwordsLightBeatsWithItsHeart(){
+        for(int i=0;i<GGrand.BEATS.length;i++){
+            float on=GGrand.rune(GGrand.BEATS[i]+.02f)[0],off=GGrand.rune(GGrand.BEATS[i]-.02f)[0];
+            assertTrue(on>off+.1f,"the inscriptions swell on the beat at "+GGrand.BEATS[i]);
+        }
+        assertEquals(0,GGrand.heart(3.4f),1e-6,"no beat before the first");
+    }
+
     @Test void lightningFlashesTwiceAndIsGone(){
         assertEquals(0,GGrand.flash(-.02f),1e-6);
         assertEquals(0,GGrand.flash(.46f),1e-6);

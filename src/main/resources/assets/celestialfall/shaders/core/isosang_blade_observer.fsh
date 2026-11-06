@@ -126,8 +126,8 @@ void main(){
  // The distant engraving loses warm contrast over tens of metres, while the
  // approaching lower blade retains its bronze relief and white-hot edge.
  col=mix(col,vec3(.62,.70,.77),smoothstep(5.,22.,bladeY)*.65*Storm);
- // (2.88.0) the burning inscriptions, as the caster's cutscene shows them
- col+=runeLight(rune)*(1.-Dark);
+ // (2.88.0) the burning inscriptions, as the caster's cutscene shows them (burning on as the metal darkens)
+ col+=runeLight(rune);
 
  fragColor=vec4(col,shown)*ColorModulator;
 }

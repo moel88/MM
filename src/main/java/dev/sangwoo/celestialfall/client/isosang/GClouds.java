@@ -118,6 +118,16 @@ final class GClouds {
                   .set((float)(var15.minX() - var16.x), (float)(var15.minZ() - var16.z), (float)(var15.maxX() - var16.x), (float)(var15.maxZ() - var16.z));
                shader.getUniform("Age").set(var4);
                shader.getUniform("Mode").set(var3);
+               // (2.88.0) the storm made grand: its eye burning gold, lightning lighting it from inside (the cutscene's canopy)
+               float[] storm = var3 == 2 ? GGrand.storm(var4) : new float[6];
+               net.minecraft.client.gl.GlUniform grand = shader.getUniform("Grand");
+               if (grand != null) {
+                  grand.set(storm[0], storm[1], 0.0F, 0.0F);
+               }
+               net.minecraft.client.gl.GlUniform lightning = shader.getUniform("Lightning");
+               if (lightning != null) {
+                  lightning.set(storm[2], storm[3], storm[4], storm[5]);
+               }
                RenderSystem.disableDepthTest();
                RenderSystem.depthMask(false);
                RenderSystem.disableCull();

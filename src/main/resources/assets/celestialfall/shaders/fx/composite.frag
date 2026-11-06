@@ -14,6 +14,12 @@ uniform float ShaftGain;
 uniform vec3 ShaftTint;
 uniform float Impact;
 uniform float ImpactMode;
+// the impact frame's colours (FxFrame.ImpactLook: Kageno's violet unless a skill asks for its own)
+uniform vec3 ImpactDeep;
+uniform vec3 ImpactShapes;
+uniform vec3 ImpactPale;
+uniform vec3 ImpactShade;
+uniform vec3 ImpactHue;
 uniform float Chroma;
 uniform vec2 Focus;
 in vec2 texCoord;
@@ -32,12 +38,13 @@ void main(){
     c=hot(c);
     if(Impact>.001){
         // Flat impact frame: the effects' shapes (the light they added) and the dark silhouettes of the world
-        // (bodies, pillars) over a flat ground. First white shapes on deep violet, then dark shapes on white.
+        // (bodies, pillars) over a flat ground. First white shapes on deep violet, then dark shapes on white
+        // (violet unless the skill asks for its own colours, FxFrame.ImpactLook).
         vec3 added=max(texture(HdrTex,texCoord).rgb-texture(BaseTex,texCoord).rgb,0.0);
         float fx=smoothstep(.10,.18,dot(added,vec3(.2126,.7152,.0722)));
         float sil=1.0-smoothstep(.26,.34,dot(texture(SceneTex,texCoord).rgb,vec3(.2126,.7152,.0722)));
-        vec3 a=mix(mix(vec3(.10,.0,.22),vec3(.0),sil),vec3(1.0,.95,1.0),fx);
-        vec3 b=mix(mix(vec3(.99,.95,1.0),vec3(.05,.0,.1),sil),vec3(.30,.02,.52),fx);
+        vec3 a=mix(mix(ImpactDeep,vec3(.0),sil),ImpactShapes,fx);
+        vec3 b=mix(mix(ImpactPale,ImpactShade,sil),ImpactHue,fx);
         c=mix(c,mix(a,b,clamp(ImpactMode,0.0,1.0)),clamp(Impact,0.0,1.0));
     }
     fragColor=vec4(c,1.0);

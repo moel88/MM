@@ -14,15 +14,17 @@ import net.minecraft.util.math.Vec3d;
  *   <li>the sword's carved inscriptions burn with molten gold (isosang_blade.fsh's Rune, {@link #rune}): lit from its point
  *   up as it comes out of the storm, a light running up through them, brighter as it falls, flaring white as it strikes,
  *   and burning hotter and whiter the longer it stands in the ground, until the blast;</li>
- *   <li>her face: a halo of thin golden rays behind her head;</li>
- *   <li>the sky: the storm's eye burning gold behind the sword, its rays thrown out round it (and the effect layer's light
- *   shafts from it), golden motes drawn spinning into it, and lightning forking through the storm, each bolt lighting
- *   the sword;</li>
+ *   <li>her face: a golden light behind her head, rimming it, with two rings and a halo of thin golden rays round it;</li>
+ *   <li>the sky: the storm's eye burning gold behind the sword, its light thrown out through the banks in slowly turning
+ *   rays, and lightning forking through the storm, lighting its banks from inside (isosang_cloud.fsh's Grand and
+ *   Lightning, {@link #storm}) and the sword; golden motes drawn spinning into the eye. The banks are drawn over the
+ *   effect layer, so what of it is in the sky is drawn in front of them (some 7.5 blocks out);</li>
  *   <li>the fall: collars of vapour round the falling blade, the air streaking past the camera, and rings of light on the
  *   ground drawn in to where it will strike;</li>
  *   <li>the strike: a shock wave racing out along the ground with an ink rim and a ring of dust behind it, a pillar of light
- *   along the sword, a burst of light, an impact frame, and the ground cracking open in glowing fissures that beat like a
- *   heart, faster and brighter, while lightning crawls over the sword and light is drawn in to its foot;</li>
+ *   along the sword, a burst of light, an impact frame in white gold on deep amber ({@link #GOLDEN}), and the ground
+ *   cracking open in glowing fissures that beat like a heart, faster and brighter, while lightning crawls over the
+ *   sword and light is drawn in to its foot;</li>
  *   <li>the blast: a dome of light swelling over its ground, rings racing out along it, and a pillar of light into the sky.</li>
  * </ul>
  * Every part is a function of the cast clock alone (smooth at any frame rate). The sky and the fall are the caster's
@@ -32,8 +34,8 @@ final class GGrand {
    static final int GOLD = FallingSword.GOLD, GOLD_WHITE = FallingSword.GOLD_WHITE, EMBER = 0xFF8A2E, AMBER = 0xFFB04A;
    static final int BOLT = 0xA6BCFF, BOLT_CORE = 0xF4F7FF, MIST = 0xE6EEFF, INK = 0x170D07, DUST = 0x7A6650;
    static final Vec3d X = new Vec3d(1.0, 0.0, 0.0), Z = new Vec3d(0.0, 0.0, 1.0), UP = new Vec3d(0.0, 1.0, 0.0);
-   /** Where the storm's eye is in the sky shot's frame (across, down; the clouds' own eyeCenter) and how deep. */
-   static final double EYE_X = .546, EYE_Y = .40, EYE_DEPTH = 30.0;
+   /** Where the storm's eye is in the sky shot's frame (across, down; the clouds' own eyeCenter). */
+   static final double EYE_X = .546, EYE_Y = .40;
    /** The lightning in the sky shot: when (seconds), from and to (frame across and down), how deep (blocks). */
    static final double[][] SKY_BOLTS = {
       {1.70, .20, .02, .30, .40, 30.0},
@@ -47,6 +49,11 @@ final class GGrand {
    /** The heart the fissures beat with while the sword stands in the ground (seconds), faster toward the blast. */
    static final float[] BEATS = {3.5F, 3.85F, 4.12F, 4.34F, 4.5F, 4.62F, 4.72F};
    static final int FISSURES = 13;
+   /** How deep the sky shot's motes start and its bolts are drawn: in front of the storm's banks (blocks). */
+   static final double NEAR = 3.9, BOLT_DEPTH = 5.6;
+   /** The strike's impact frame: white gold on deep amber (the effect layer's frame, in place of Kageno's violet). */
+   static final dev.sangwoo.celestialfall.client.vfx.FxFrame.ImpactLook GOLDEN =
+      new dev.sangwoo.celestialfall.client.vfx.FxFrame.ImpactLook(0x2E1704, 0xFFF1CC, 0xFFF6E2, 0x1C0E02, 0x8C4E0A);
 
    private GGrand() {
    }
@@ -59,12 +66,42 @@ final class GGrand {
     * white they flare (a flash as it strikes, then whiter until the blast).
     */
    static float[] rune(float t) {
-      float strength = .85F * Ease.smooth(t, 1.62F, 1.82F) + .15F * Ease.smooth(t, 2.6F, 2.9F) + .55F * Ease.smooth(t, 3.25F, 4.55F);
+      float beat = heart(t);
+      float strength = .85F * Ease.smooth(t, 1.62F, 1.82F) + .15F * Ease.smooth(t, 2.6F, 2.9F) + .55F * Ease.smooth(t, 3.25F, 4.55F) + .3F * beat;
       float front = 2.0F + 34.0F * Ease.smooth(t, 1.66F, 2.45F) + 60.0F * Ease.smooth(t, 2.6F, 2.9F);
       double standing = Math.max(0.0, t - IsosangRules.G_STRIKE);
       float clock = (float)(t + .5 * standing * standing);
-      float flare = .9F * FxLib.kick(t, IsosangRules.G_STRIKE, .2F) + .7F * Ease.smooth(t, 4.15F, 4.62F);
+      float flare = .9F * FxLib.kick(t, IsosangRules.G_STRIKE, .2F) + .7F * Ease.smooth(t, 4.15F, 4.62F) + .35F * beat;
       return new float[]{strength, front, clock, Math.min(1.0F, flare)};
+   }
+
+   /** The heart the sword and the ground beat with while it stands in the ground (0 between beats, 1 on one). */
+   static float heart(float t) {
+      float heart = 0.0F;
+      for (float b : BEATS) {
+         heart = Math.max(heart, FxLib.kick(t, b, .1F));
+      }
+      return heart;
+   }
+
+   /**
+    * The storm's own light at {@code t} (isosang_cloud.fsh's Grand and Lightning, the cutscene's canopy): how strongly its
+    * eye burns gold behind the sword and the clock its rays turn by; where the lightning flashing now forks in the frame
+    * (across, down), how strongly it lights the banks round it and how wide.
+    */
+   static float[] storm(float t) {
+      float eye = .95F * Ease.smooth(t, 1.62F, 1.95F) * (1.0F - Ease.smooth(t, 2.7F, 2.95F));
+      float best = 0.0F;
+      double[] at = SKY_BOLTS[0];
+      for (double[] b : SKY_BOLTS) {
+         float fl = flash(t - (float)b[0]);
+         if (fl > best) {
+            best = fl;
+            at = b;
+         }
+      }
+      eye *= 1.0F + .35F * best;
+      return new float[]{eye, t, (float)((at[1] + at[3]) * .5), (float)((at[2] + at[4]) * .5), 1.25F * best, .16F};
    }
 
    // ───────────────────────────── passes ─────────────────────────────
@@ -105,7 +142,8 @@ final class GGrand {
       if (FallingSword.shown(c) && t >= 1.6F && t < IsosangRules.G_FALL) {
          FallingSword.Frame k = GScene.skyFrame(c.cast, t);
          float on = Ease.window(t, 1.6F, IsosangRules.G_FALL, .1F, .04F);
-         f.shaft(k.at(EYE_X, EYE_Y, EYE_DEPTH, GScene.SKY_FOV), GOLD, .32F * on);
+         // the motes' light drawn out into rays from the eye
+         f.shaft(k.at(EYE_X, EYE_Y, NEAR + 1.3, GScene.SKY_FOV), GOLD, .22F * on);
          for (double[] b : SKY_BOLTS) {
             float fl = flash(t - (float)b[0]);
             if (fl > .02F) {
@@ -122,7 +160,7 @@ final class GGrand {
       if (impact > 0.0F) {
          float near = FallingSword.shown(c) ? 1.0F : (float)Math.max(0.0, Math.min(1.0, (40.0 - c.camera.distanceTo(s)) / 20.0));
          if (near > 0.0F) {
-            f.impact(.85F * near * impact, impactMode(t, IsosangRules.G_STRIKE));
+            f.impact(.85F * near * impact, 0.0F, GOLDEN);
          }
       }
       float glow = ground(t);
@@ -138,7 +176,7 @@ final class GGrand {
 
    // ───────────────────────────── her face ─────────────────────────────
 
-   /** A halo of thin golden rays behind her head, turning slowly (her face shot, 1.06 to 1.58 s). */
+   /** A golden light behind her head, two rings and a halo of thin golden rays, turning slowly (her face shot, 1.06 to 1.58 s). */
    static void face(Fx c, EffectMesh m, float t) {
       float on = Ease.window(t, 1.06F, 1.58F, .08F, .1F);
       if (on <= .01F) {
@@ -151,14 +189,18 @@ final class GGrand {
       across = across.lengthSquared() < 1.0E-6 ? c.right : across.normalize();
       Vec3d up = across.crossProduct(view).normalize();
       Vec3d back = head.add(view.multiply(1.1));
+      // a golden light behind her head (her head hides its middle: it rims her)
+      m.softDisc(back, 1.25, GOLD, .2F * on);
+      m.softDisc(back, .62, GOLD_WHITE, .16F * on);
       for (int i = 0; i < 14; i++) {
          double a = i * Math.PI * 2.0 / 14.0 + .35 * t + .12 * Ease.hash(i * 7 + 1);
          Vec3d d = across.multiply(Math.cos(a)).add(up.multiply(Math.sin(a)));
          double len = 1.0 + .9 * Ease.hash(i * 7 + 3);
          float k = on * (.6F + .4F * (float)Math.sin(t * 7.0F + i * 1.7F));
-         m.softTaper(back.add(d.multiply(.45)), back.add(d.multiply(.45 + len)), .07, .004, GOLD, .22F * k);
+         m.softTaper(back.add(d.multiply(.45)), back.add(d.multiply(.45 + len)), .1, .004, GOLD, .36F * k);
       }
-      m.ring(back, across, up, .42, 48, 1.0F, .012, GOLD_WHITE, .35F * on, .4 * t);
+      m.ring(back, across, up, .42, 48, 1.0F, .014, GOLD_WHITE, .5F * on, .4 * t);
+      m.ring(back, across, up, .78, 64, 1.0F, .01, GOLD, .28F * on, -.25 * t);
    }
 
    // ───────────────────────────── the sky ─────────────────────────────
@@ -174,21 +216,10 @@ final class GGrand {
       float on = Ease.window(t, 1.6F, IsosangRules.G_FALL, .1F, .04F);
       FallingSword.Frame k = GScene.skyFrame(c.cast, t);
       double fov = GScene.SKY_FOV, tan = Math.tan(Math.toRadians(fov / 2.0));
-      Vec3d eye = k.at(EYE_X, EYE_Y, EYE_DEPTH, fov);
-      float pulse = .85F + .15F * (float)Math.sin(t * 9.0F);
-      m.softDisc(eye, 10.0, GOLD, .15F * on * pulse);
-      m.softDisc(eye, 4.5, GOLD_WHITE, .22F * on * pulse);
-      double unit = 2.0 * tan * EYE_DEPTH;
-      for (int i = 0; i < 16; i++) {
-         double a = i * Math.PI * 2.0 / 16.0 + .22 * t + .2 * Ease.hash(i * 5 + 2);
-         Vec3d d = k.r().multiply(Math.cos(a)).add(k.u().multiply(Math.sin(a)));
-         double from = .06 * unit, len = (.35 + .35 * Ease.hash(i * 5 + 4)) * unit;
-         float flick = .7F + .3F * (float)Math.sin(t * (5.0F + i % 3) + i);
-         m.softTaper(eye.add(d.multiply(from)), eye.add(d.multiply(from + len)), .9, .05, GOLD, .1F * on * flick);
-      }
+      // golden motes drawn spinning into the eye, in front of the banks (which begin some 7.5 blocks out)
       for (int i = 0; i < 64; i++) {
          double ph = ((double)t * (.35 + .25 * Ease.hash(i * 13 + 1)) + Ease.hash(i * 13 + 3)) % 1.0;
-         double depth = 8.0 + 22.0 * Ease.hash(i * 13 + 5);
+         double depth = NEAR + 2.6 * Ease.hash(i * 13 + 5);
          double r = (.16 + .5 * Ease.hash(i * 13 + 7)) * Math.pow(1.0 - ph, 1.4);
          double a = Ease.hash(i * 13 + 9) * Math.PI * 2.0 + 2.4 * ph;
          double height = 2.0 * tan * depth;
@@ -197,13 +228,14 @@ final class GGrand {
          m.softDisc(p, .006 * depth, GOLD, .5F * al);
          m.star(p, .008 * depth, GOLD_WHITE, .7F * al);
       }
+      // the lightning: its bolts in front of the banks, which it lights from inside (storm)
       for (int i = 0; i < SKY_BOLTS.length; i++) {
          double[] b = SKY_BOLTS[i];
          float fl = flash(t - (float)b[0]);
          if (fl <= .01F) {
             continue;
          }
-         double depth = b[5];
+         double depth = BOLT_DEPTH;
          Vec3d from = k.at(b[1], b[2], depth, fov), to = k.at(b[3], b[4], depth, fov);
          Vec3d side = to.subtract(from).crossProduct(k.f()).normalize();
          bolt(m, from, to, side, i * 7 + 3, .011 * depth, .0032 * depth, on * fl);
@@ -260,12 +292,8 @@ final class GGrand {
       if (present <= 0.0F) {
          return 0.0F;
       }
-      float heart = 0.0F;
-      for (float b : BEATS) {
-         heart = Math.max(heart, FxLib.kick(t, b, .1F));
-      }
       float charge = Ease.smooth(t, 3.3F, 4.7F);
-      return present * (.45F + .35F * charge + .5F * heart + .8F * FxLib.kick(t, 4.86F, .25F));
+      return present * (.45F + .35F * charge + .5F * heart(t) + .8F * FxLib.kick(t, 4.86F, .25F));
    }
 
    /**
@@ -288,16 +316,49 @@ final class GGrand {
          float k = FxLib.kick(t, IsosangRules.G_STRIKE, .22F);
          if (k > .01F) {
             Vec3d axis = GScene.axis(c.cast);
-            m.softTaper(s.subtract(axis), s.add(axis.multiply(80.0)), 10.0, 3.0, GOLD, .3F * k);
-            m.softTaper(s.subtract(axis), s.add(axis.multiply(80.0)), 2.4, .6, GOLD_WHITE, .75F * k);
-            double r = 4.0 + 18.0 * Ease.out(tau, 0.0F, .25F);
-            m.softDisc(s.add(0.0, 3.0, 0.0), r, GOLD_WHITE, .35F * (1.0F - Ease.smooth(tau, .05F, .35F)));
+            m.softTaper(s.subtract(axis), s.add(axis.multiply(80.0)), 10.0, 3.0, GOLD, .26F * k);
+            m.softTaper(s.subtract(axis), s.add(axis.multiply(80.0)), 2.0, .5, GOLD_WHITE, .55F * k);
+            double r = 3.0 + 8.0 * Ease.out(tau, 0.0F, .2F);
+            m.softDisc(s.add(0.0, 2.0, 0.0), r, GOLD, .26F * (1.0F - Ease.smooth(tau, .03F, .25F)));
          }
       }
       fissures(c, m, t, floor, ink);
       if (!ink && t < 4.8F) {
          arcs(c, m, t);
          gather(c, m, t, s);
+         embers(c, m, t);
+      }
+   }
+
+   /**
+    * Embers rising off the sword's face on both sides while it stands in the ground, more of them and faster as the blast
+    * nears, swelling on each beat of its heart.
+    */
+   static void embers(Fx c, EffectMesh m, float t) {
+      float on = Ease.smooth(t, IsosangRules.G_STRIKE + .05F, 3.5F) * (1.0F - Ease.smooth(t, 4.66F, 4.8F));
+      if (on <= .01F) {
+         return;
+      }
+      FallingSword.Blade bl = FallingSword.shown(c) ? FallingSword.blade(c.cast, t) : GWorld.blade(c.cast, t);
+      if (bl == null || bl.alpha() < .02F) {
+         return;
+      }
+      float charge = Ease.smooth(t, 3.3F, 4.7F), beat = heart(t);
+      double buried = Math.max(0.0, -GScene.height(t)) + .2;
+      int side = bl.normal().dotProduct(c.camera.subtract(bl.point())) >= 0.0 ? 1 : -1;
+      for (int i = 0; i < 90; i++) {
+         if (i >= 40 + 50 * charge) {
+            break;
+         }
+         double speed = .3 + .25 * Ease.hash(i * 23 + 1) + .3 * charge;
+         double ph = ((double)t * speed + Ease.hash(i * 23 + 3)) % 1.0;
+         double y = buried + 13.0 * ph;
+         double x = (Ease.hash(i * 23 + 5) * 2.0 - 1.0) * Math.max(.3, FallingSword.half(y) - .2) + .25 * Math.sin(t * 2.3 + i);
+         double z = (.45 + .5 * Ease.hash(i * 23 + 7)) * side;
+         Vec3d p = bl.at(x, y, z);
+         float al = on * bl.alpha() * (float)Math.sin(Math.PI * ph) * (.55F + .45F * (float)Math.sin(t * 17.0F + i * 2.1F)) * (.75F + .5F * beat);
+         m.softDisc(p, .1 + .05 * charge, AMBER, .45F * al);
+         m.star(p, .07 + .05 * Ease.hash(i * 23 + 9), GOLD_WHITE, .8F * al);
       }
    }
 
@@ -562,9 +623,5 @@ final class GGrand {
          return 0.0F;
       }
       return Ease.smooth(t, at - .01F, at + .02F) * (1.0F - Ease.smooth(t, at + .085F, at + .125F));
-   }
-
-   static float impactMode(float t, float at) {
-      return Ease.smooth(t, at + .04F, at + .075F);
    }
 }

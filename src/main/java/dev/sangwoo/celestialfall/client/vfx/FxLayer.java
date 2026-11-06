@@ -257,6 +257,9 @@ public final class FxLayer {
             int rgb=frame.shaftRgb();f3(compProg,"ShaftTint",((rgb>>16)&255)/255f,((rgb>>8)&255)/255f,(rgb&255)/255f);
             boolean flash=CelestialFall.CONFIG.screenFlash&&CelestialFall.CONFIG.animeImpactFrames;
             f(compProg,"Impact",flash?frame.impact():0);f(compProg,"ImpactMode",frame.impactMode());
+            FxFrame.ImpactLook look=frame.impactLook();
+            rgb3(compProg,"ImpactDeep",look.deep());rgb3(compProg,"ImpactShapes",look.shapes());rgb3(compProg,"ImpactPale",look.pale());
+            rgb3(compProg,"ImpactShade",look.shade());rgb3(compProg,"ImpactHue",look.hue());
             f(compProg,"Chroma",CelestialFall.CONFIG.screenDistortion?frame.chroma():0);
             f2(compProg,"Focus",focus[0],focus[1]);
             triangle();
@@ -401,6 +404,7 @@ public final class FxLayer {
     private static void f(int p,String name,float v){GL20.glUniform1f(GL20.glGetUniformLocation(p,name),v);}
     private static void f2(int p,String name,float a,float b){GL20.glUniform2f(GL20.glGetUniformLocation(p,name),a,b);}
     private static void f3(int p,String name,float a,float b,float c){GL20.glUniform3f(GL20.glGetUniformLocation(p,name),a,b,c);}
+    private static void rgb3(int p,String name,int rgb){f3(p,name,((rgb>>16)&255)/255f,((rgb>>8)&255)/255f,(rgb&255)/255f);}
     private static void matrix(int p,String name,Matrix4f m){
         try(MemoryStack stack=MemoryStack.stackPush()){FloatBuffer b=stack.mallocFloat(16);m.get(b);GL20.glUniformMatrix4fv(GL20.glGetUniformLocation(p,name),false,b);}
     }

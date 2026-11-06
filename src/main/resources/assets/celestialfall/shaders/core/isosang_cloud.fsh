@@ -44,6 +44,10 @@ uniform sampler2D Sampler2;
 uniform sampler2D Sampler3;
 uniform sampler2D Sampler4;
 uniform vec3 CloudCenter;
+// (2.88.0) The storm made grand (GGrand.storm): Grand.x how strongly its eye burns gold behind the sword, Grand.y the
+// clock its rays turn by; Lightning the flash lighting the banks from inside (where in the frame, how strongly, how wide).
+uniform vec4 Grand;
+uniform vec4 Lightning;
 
 const vec2 projectionScale = vec2(.40066, -.86915);
 const vec2 eyeCenter = vec2(.546, .399);
@@ -185,6 +189,20 @@ vec4 sampleCloud(vec3 p, vec3 ray, float opening, float gathering) {
                     +.22*clamp(dot(p-CloudCenter,up)/12.,-1.,1.);
     vec3 flank=mix(vec3(.34,.44,.60),vec3(.94,.955,.975),smoothstep(.05,.90,facingSun));
     col=mix(flank,col,smoothstep(.90,.995,facing));
+    // (2.88.0) the eye burning gold behind the sword, its light thrown out through the banks in slowly turning rays
+    if(Grand.x>0.){
+     vec2 e=(uv-eyeCenter)*vec2(2.167,1.);
+     float er=length(e),ea=atan(e.y,e.x);
+     float rays=pow(.5+.5*sin(ea*7.+Grand.y*.6+1.7*sin(ea*3.-Grand.y*.35)),4.);
+     float burn=exp(-er*er/.018)*1.15+exp(-er/.2)*(.35+.65*rays)*.6;
+     col+=vec3(1.,.66,.27)*burn*Grand.x*(.72+.45*erosion)*(.55+.45*edge);
+    }
+    // lightning lighting the banks from inside, round where it forks
+    if(Lightning.z>0.){
+     vec2 b=(uv-Lightning.xy)*vec2(2.167,1.);
+     float flash=exp(-dot(b,b)/(Lightning.w*Lightning.w))+.25*exp(-dot(b,b)/(9.*Lightning.w*Lightning.w));
+     col+=vec3(.72,.80,1.)*flash*Lightning.z*(.6+.4*edge)*(.7+.5*erosion);
+    }
     return vec4(col,(density+vapor)*extent*smoothstep(.35,1.03,Age));
 }
 

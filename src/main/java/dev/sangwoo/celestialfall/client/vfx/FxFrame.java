@@ -25,6 +25,14 @@ public final class FxFrame {
     private final List<Decal> decals=new ArrayList<>();
     private Vec3d shaft;private int shaftRgb;private float shaftStrength;
     private float impact,impactMode,chroma,afterglow=1;
+    /**
+     * The impact frame's colours: first {@code shapes} on {@code deep} (black silhouettes), then {@code shade}
+     * silhouettes and {@code hue} shapes on {@code pale}.
+     */
+    public record ImpactLook(int deep,int shapes,int pale,int shade,int hue){}
+    /** Kageno's violet (the default). */
+    public static final ImpactLook VIOLET=new ImpactLook(0x1A0038,0xFFF2FF,0xFCF2FF,0x0D001A,0x4D0585);
+    private ImpactLook impactLook=VIOLET;
 
     public void light(Vec3d pos,int rgb,double radius,float intensity){
         if(!(intensity>0)||!(radius>0)||pos==null)return;
@@ -41,7 +49,11 @@ public final class FxFrame {
         if(strength>shaftStrength&&pos!=null){shaft=pos;shaftRgb=rgb;shaftStrength=strength;}
     }
     /** Impact frame 0..1; {@code mode} 0 is white shapes on black, 1 dark shapes on white. The strongest wins. */
-    public void impact(float amount,float mode){if(amount>impact){impact=Math.min(1,amount);impactMode=mode;}}
+    public void impact(float amount,float mode){impact(amount,mode,VIOLET);}
+    /** An impact frame in its own colours (2.88.0, Lee So-sang's G: deep amber and white gold in place of the violet). */
+    public void impact(float amount,float mode,ImpactLook look){
+        if(amount>impact){impact=Math.min(1,amount);impactMode=mode;impactLook=look;}
+    }
     /** Chromatic split in screen fractions per unit of distance from the focus. */
     public void chroma(float amount){if(amount>chroma)chroma=amount;}
     /**
@@ -71,6 +83,7 @@ public final class FxFrame {
     public float shaftStrength(){return shaftStrength;}
     public float impact(){return impact;}
     public float impactMode(){return impactMode;}
+    public ImpactLook impactLook(){return impactLook;}
     public float chroma(){return chroma;}
     public float afterglow(){return afterglow;}
     public int lightCount(){return lights.size();}

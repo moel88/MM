@@ -189,6 +189,28 @@
         20,
         20
       ]
+    },
+    {
+      "name": "Grand",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Lightning",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
     }
   ],
   "blend": {
