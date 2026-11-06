@@ -312,6 +312,15 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  float squeeze=min(2.,1.+.9*cut*exp(-beyond/5.));
  vec2 hc=h*(max(hr-carry,0.)/max(hr,.001));
  vec3 pc=vec3(hc.x-.305*p.y,p.y+Grand.z*exp(-beyond/11.),hc.y);
+ // (2.90.0) the blast blows the storm apart: its clouds shoved out from round where the sword struck, the nearer the
+ // further, so it opens from the middle into a ring racing out (each point samples the clouds from nearer the middle)
+ float blast=max(Age-4.84,0.),rb=0.;
+ if(blast>0.){
+  rb=10.+130.*(1.-exp(-blast/.55));
+  float rr=length(pc.xz);
+  float shove=.8*rb*exp(-max(rr-rb,0.)/24.);
+  pc.xz*=max(rr-shove,0.)/max(rr,.001);
+ }
  vec3 n=noise3((pc-wind)*vec3(.038,.075,.036)+vec3(.3,.2,.45));
  vec3 fine=noise3((pc-1.6*wind)*.134+vec3(.53,.24,.65));
  vec2 rim=pc.xz;float r=length(rim),a=atan(rim.y,rim.x);
@@ -340,26 +349,11 @@ vec4 observerMedium(vec3 p,float gather,float breach){
   ring=exp(-square((hr-rs)/(2.6+3.2*shock)))*fade*smoothstep(-.7,.25,outline);
   density=density*(1.-.32*(1.-smoothstep(rs-16.,rs-3.,hr))*fade)+.95*ring*gather;
  }
- // (2.90.0) cloud dragged down behind the falling sword: a ragged hollow sleeve round its path from the base down
- float dragged=0.;
- if(Age>2.76&&Age<4.5){
-  vec3 axis=normalize(BladeAxis),v=p-BladePoint;
-  float up=dot(v,axis),side=length(v-axis*up);
-  float top=(-1.5-BladePoint.y)/max(axis.y,.2);
-  float reach=11.+.32*max(up,0.)+5.*(fine.b-.5);
-  dragged=exp(-square((side-reach)/3.4))*smoothstep(-2.,6.,up)*(1.-smoothstep(top-2.,top+4.,up))
-          *smoothstep(2.78,2.95,Age)*(1.-smoothstep(3.35,4.4,Age))*smoothstep(.35,.75,.55*n.g+.45*fine.r)*.55;
-  density+=dragged;
- }
- // (2.90.0) the blast blows the storm apart: cleared inside its front, pressed into a ring at it, then gone
+ // (2.90.0) the ring of shoved cloud lit gold from below at its inner edge, the storm thinning until it is gone
  float boom=0.;
- if(Age>4.84){
-  float blast=Age-4.84;
-  float rb=10.+130.*(1.-exp(-blast/.55));
-  float front=exp(-square((r0-rb-5.)/(4.+4.*blast)))*smoothstep(-.6,.3,outline);
-  density=density*smoothstep(rb-3.,rb+11.,r0)+.8*front*(1.-smoothstep(.6,1.3,blast));
-  density*=1.-smoothstep(5.15,6.2,Age);
-  boom=exp(-blast/.38)*(1.-smoothstep(-3.,9.,p.y));
+ if(blast>0.){
+  density*=smoothstep(.5*rb,.85*rb,r0)*(1.-smoothstep(5.15,6.2,Age));
+  boom=exp(-square((r0-rb)/(6.+10.*blast)))*exp(-blast/.6)*(1.-smoothstep(-3.,12.,p.y));
  }
  float sunFace=clamp(.26+.36*clamp((pc.y-6.)/12.,0.,1.)+.18*cos(a+.75)+.68*(n.r-.5)+.45*(fine.g-.5),0.,1.);
  vec3 bankColor=mix(vec3(.49,.60,.75),vec3(.98,.98,.955),smoothstep(.06,.90,sunFace));
@@ -394,7 +388,7 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  float wall=Grand.y*lips*(.6+.5*n.g);
  bankColor=mix(bankColor,vec3(1.,.82,.55)*(.55+.6*dot(bankColor,vec3(.2126,.7152,.0722))),clamp(wall,0.,.6))+vec3(.12,.07,.02)*wall;
  // (2.90.0) the blast lights the undersides gold as it blows them apart
- bankColor+=vec3(1.,.66,.3)*boom*.9;
+ bankColor+=vec3(1.,.66,.3)*boom*.6;
  return vec4((bankColor*density+vec3(.91,.95,1.)*sleeve+vec3(1.,.85,.57)*beams)/max(lit,.0001),lit);
 }
 vec4 observerSky(vec3 origin, vec3 ray, float limit) {
