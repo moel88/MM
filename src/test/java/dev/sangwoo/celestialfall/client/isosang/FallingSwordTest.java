@@ -152,21 +152,22 @@ class FallingSwordTest {
     @Test void inTheSkySheStandsUpFromTheFramesBottom(){
         // (2.87.2, user request) her legs out through the frame's bottom edge, her feet below the frame: nothing of her
         // floating in the sky; (2.87.3, user request) 30 % smaller, moved left, her face at about (0.30, 0.68), her legs out
-        // at about 0.23 across, cut at the shin, her front turned further to the frame's right
+        // at about 0.23 across, her front turned further to the frame's right; (2.87.4, user request) 20 % bigger again,
+        // the rest as it was: her face where it was, her legs now cut at the knee
         var c=cast();
         for(float t:new float[]{1.7f,2.2f,2.7f}){
             var shot=GScene.skyShot(c,t);Vec3d feet=c.origin();
             Matrix4f m=GScene.actor(c,t,feet);
             double[] face=inFrame(shot,apply(m,feet,feet.add(0,1.75,0)),false),soles=inFrame(shot,apply(m,feet,feet),false);
-            assertEquals(.296,face[0],.015,"her face across at "+t);assertEquals(.675,face[1],.015,"her face down at "+t);
+            assertEquals(.298,face[0],.015,"her face across at "+t);assertEquals(.669,face[1],.015,"her face down at "+t);
             assertTrue(soles==null||soles[1]>1.03,"her feet below the frame at "+t+": "+(soles==null?"behind":soles[1]));
             double[] above=null;double cutAt=Double.NaN;
-            for(double h=.75;h>=0;h-=.01){
+            for(double h=1.2;h>=0;h-=.01){
                 double[] q=inFrame(shot,apply(m,feet,feet.add(0,h,0)),false);
                 if(q!=null&&q[1]<1){above=q;continue;}
                 cutAt=h;break;
             }
-            assertNotNull(above);assertTrue(cutAt>.08&&cutAt<.4,"the frame's bottom edge cuts her legs above her ankles at "+t+": "+cutAt);
+            assertNotNull(above);assertTrue(cutAt>.28&&cutAt<.46,"the frame's bottom edge cuts her legs at about her knees at "+t+": "+cutAt);
             assertEquals(.23,above[0],.03,"her legs leave the frame at about 0.23 across at "+t);
             assertTrue(above[0]<face[0]-.03,"her legs to the lower left of her face at "+t);
             // her front turned to the frame's right (draft B): her front, from her chest, goes to the frame's right

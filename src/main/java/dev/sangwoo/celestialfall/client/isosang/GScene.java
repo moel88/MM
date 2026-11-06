@@ -115,13 +115,15 @@ final class GScene {
     * further to the frame's right (draft B), she moved 10 degrees round the camera to the left (about 7.5 % of the
     * frame across), drawn 30 % smaller (0.70 times) and moved 8 degrees down so her legs still go out through the
     * frame's bottom edge (smaller, they would end in the sky): her face at about (0.30, 0.68), her legs out at about
-    * 0.23 across, cut at the shin. How much she is drawn as the camera she was fitted to shows her, how far she leans
+    * 0.23 across, cut at the shin. 2.87.4 (user request: "여기서 20%만 키워봐 캐릭터 크기"): drawn 20 % bigger than 2.87.3
+    * (0.84 times), all else as it was: her face still at about (0.30, 0.67), her legs out at about 0.23 across, now cut at
+    * the knee. How much she is drawn as the camera she was fitted to shows her, how far she leans
     * round the shot's line of sight (degrees, counterclockwise as seen), where her head is moved in the frame at its own
     * depth (right and down, in frame heights), how far she is turned round her own upright, and how far she is moved as a
     * whole round the camera (ACTOR_PAN, ACTOR_DROP). 2.87.0's 0.68 times and -24 degrees, her head sized as the videos',
     * left her whole and floating in the sky.
     */
-   static final float ACTOR_SCALE = 0.70F;
+   static final float ACTOR_SCALE = 0.84F;
    static final double ACTOR_LEAN = -2.0;
    static final double ACTOR_RIGHT = -0.07, ACTOR_DOWN = 0.015;
    /** How far she is turned round her own upright (degrees; positive turns her front to the frame's right). */
