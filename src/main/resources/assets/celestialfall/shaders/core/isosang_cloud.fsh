@@ -340,6 +340,14 @@ vec4 observerMedium(vec3 p,float gather,float breach){
  float low=smoothstep(-.22,.65,skirt+.98*(fine.r-.5))*tear;
  float density=(deck+.78*low)*gather;
  density*=(1.-pierced)*squeeze;
+ // (2.90.0) the hole covered from above by more cloud (user request: "이거 뚫린 부분 위는 또 다른 구름으로 덮어줘 저게
+ // 겁나 큰 검이 떨어지는데 칼날만 뚝 떨어진거처럼 보이잖아", "구름으로 가려져서 검이 다 안보인다는 느낌으로 가려야해"): a thick round
+ // cloud over the middle of the storm, from a little above its base up past its top, round the sword's leaning path,
+ // so only the storm's lower part is pierced and the sword goes up into cloud and is lost in it (the observers' blade
+ // fades out 12 to 31 blocks above the clouds' centre, GScene.blade). Above the hole it samples the path itself.
+ float capShape=bankShape(drift-vec3(-.305*20.,20.,0.),vec3(40.,15.,40.))+.9*(n.r-.5)+.4*(fine.g-.5);
+ float cap=smoothstep(-.2,.5,capShape)*smoothstep(4.5,8.5,p.y+2.5*(fine.b-.5))*gather;
+ density=max(density,cap);
  // (2.90.0) as the sword breaks through the base a shock races out through the banks from where it came through: the
  // clouds behind it thinned, pressed into a bright ring at its front
  float r0=length(p.xz),shock=Age-1.58,ring=0.;
@@ -384,8 +392,9 @@ vec4 observerMedium(vec3 p,float gather,float breach){
   float lum=dot(bankColor,vec3(.2126,.7152,.0722));
   bankColor=mix(bankColor,vec3(1.,.70,.34)*(.45+.8*lum),clamp(burn,0.,.8))+vec3(.22,.12,.03)*burn;
  }
- // (2.90.0) the hole's walls lit gold by the light pouring down through it (Grand.y: GFar.holeOn, from afar)
- float wall=Grand.y*lips*(.6+.5*n.g);
+ // (2.90.0) the hole's walls and the cloud over it lit gold by the light from the sword (Grand.y: GFar.holeOn, from afar)
+ float under=cap*(1.-smoothstep(6.,16.,p.y))*(1.-smoothstep(.6*Grand.w,Grand.w+6.,hr))*cut;
+ float wall=Grand.y*(lips+.8*under)*(.6+.5*n.g);
  bankColor=mix(bankColor,vec3(1.,.82,.55)*(.55+.6*dot(bankColor,vec3(.2126,.7152,.0722))),clamp(wall,0.,.6))+vec3(.12,.07,.02)*wall;
  // (2.90.0) the blast lights the undersides gold as it blows them apart
  bankColor+=vec3(1.,.66,.3)*boom*.6;
