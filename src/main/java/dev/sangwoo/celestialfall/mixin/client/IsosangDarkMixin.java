@@ -28,16 +28,24 @@ public abstract class IsosangDarkMixin {
         // (its dust: a beige haze as the fire leaps up, for anyone near)
         float dust=IsosangCinema.dust(tickDelta)*.85f;
         if(dust>0){red+=(.62f-red)*dust;green+=(.53f-green)*dust;blue+=(.41f-blue)*dust;RenderSystem.clearColor(red,green,blue,0);}
+        // (2.101.0) H again's cutscene: a red dusk, the world darker into the distance
+        float k=IsosangCinema.dusk(tickDelta);
+        if(k>0){red+=(DUSK[0]-red)*k;green+=(DUSK[1]-green)*k;blue+=(DUSK[2]-blue)*k;RenderSystem.clearColor(red,green,blue,0);}
         float d=IsosangCinema.dark(tickDelta);if(d<=0)return;
         red*=1-d;green*=1-d;blue*=1-d;
         RenderSystem.clearColor(red,green,blue,0);
     }
+    /** H again's dusk's fog colour (2.101.0: the videos' world gone a dark navy under its amber sky), and how near its fog closes in. */
+    private static final float[] DUSK={.035f,.05f,.085f};
     @Inject(method="applyFog",at=@At("TAIL"))
     private static void botand$ultimateFog(Camera camera,BackgroundRenderer.FogType fogType,float viewDistance,boolean thickFog,float tickDelta,CallbackInfo ci){
         if(camera.getSubmersionType()!=CameraSubmersionType.NONE)return;
         float dust=IsosangCinema.dust(tickDelta)*.8f;
         if(dust>0){float start=RenderSystem.getShaderFogStart(),end=RenderSystem.getShaderFogEnd();
             RenderSystem.setShaderFogStart(start+(2f-start)*dust);RenderSystem.setShaderFogEnd(end+(28f-end)*dust);}
+        float k=IsosangCinema.dusk(tickDelta);
+        if(k>0){float start=RenderSystem.getShaderFogStart(),end=RenderSystem.getShaderFogEnd();
+            RenderSystem.setShaderFogStart(start+(4f-start)*k);RenderSystem.setShaderFogEnd(end+(44f-end)*k);}
         float d=IsosangCinema.dark(tickDelta);if(d<=0)return;
         float start=RenderSystem.getShaderFogStart(),end=RenderSystem.getShaderFogEnd();
         RenderSystem.setShaderFogStart(start+(1.0f-start)*d);

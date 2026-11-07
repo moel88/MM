@@ -136,6 +136,8 @@ public final class KagenoClips {
      */
     static float turnIn(StandClient.Cast cast,float delta){
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&dev.sangwoo.celestialfall.client.isosang.IsosangClient.chainedAfter(cast)!=null)return 1;
+        // (2.101.0) Lee So-sang's H again: its facing begins where her formation had her (IsosangClient.finaleFacing)
+        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.FINALE)return 1;
         return Ease.smooth(cast.age(delta)/20f,0,.08f);
     }
     /** How far {@link #root} has turned the body left of its own facing {@code bodyYaw} to the cast facing (degrees). */
@@ -146,6 +148,8 @@ public final class KagenoClips {
     public static float facing(StandClient.Cast cast,float delta){
         // (2.96.0) Lee So-sang's T: the way she dashed, turning back to her formation's on the far sword
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE)return dev.sangwoo.celestialfall.client.isosang.IsosangClient.lungeFacing(cast,delta);
+        // (2.101.0) H again: from her formation's facing round to the way she looked as she pressed it
+        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.FINALE)return dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleFacing(cast,delta);
         return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.skill()==E?KagenoAim.thrust(cast,delta):cast.yaw();
     }
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */
@@ -192,6 +196,15 @@ public final class KagenoClips {
     public static Vec3d shoulder(Vec3d feet,float yaw,Pose p){
         Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);
         return pivot(feet,f,p).add(rotate(torso(f,p),right.multiply(.3125).add(0,1.375-PIVOT,0)));
+    }
+    /**
+     * World position of a point fixed on the torso for pose {@code p} (2.101.0: Lee So-sang's eyes and raised fingers in
+     * H again): {@code rt} to the right of its middle, {@code up} over the feet and {@code fw} ahead (blocks, as the model
+     * is built), turned as the pose turns the torso.
+     */
+    public static Vec3d onTorso(Vec3d feet,float yaw,Pose p,double rt,double up,double fw){
+        Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);
+        return pivot(feet,f,p).add(rotate(torso(f,p),right.multiply(rt).add(0,up-PIVOT,0).add(f.multiply(fw))));
     }
     /** The torso's rotation and the world position of its pivot for pose {@code p} facing {@code f}. */
     private static Quaternionf torso(Vec3d f,Pose p){

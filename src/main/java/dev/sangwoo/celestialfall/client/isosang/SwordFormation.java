@@ -144,6 +144,18 @@ final class SwordFormation {
     static float end(StandClient.Cast c){float e=IsosangClient.formationEnd(c.id());return Float.isNaN(e)?IsosangRules.H_END:Math.min(IsosangRules.H_END,e);}
     /** How far it has gone as it ends: 0 until then; through the flare, the ink and the breaking away (0 to 1). */
     static float going(StandClient.Cast c,float t){return Ease.smooth(t,end(c)+INKED,end(c)+GONE);}
+    /**
+     * Whether H again took this formation (2.101.0, IsosangClient.takenBy): it ends as H again begins, its swords not
+     * flaring and going to ink but pulled out of the ground one by one (SwordFinale draws each from then), the rest of it
+     * (its mountains, clouds, water, night) going as at any end.
+     */
+    static boolean taken(StandClient.Cast c){return IsosangClient.takenBy(c.id())!=null;}
+    /** Whether sword {@code b} of this formation has been pulled out by H again by {@code t} seconds into the formation (2.101.0). */
+    static boolean pulled(StandClient.Cast c,Blade b,float t){
+        var fin=IsosangClient.takenBy(c.id());if(fin==null)return false;
+        int k=(b.seed()-IsosangRules.formationSeed(c.id()))/97-1;
+        return t-(fin.start()-c.start())/20f>=SwordFinale.pullAt(fin,k);
+    }
 
     // ───────────────────────────── the body ─────────────────────────────
     // (the video: she crouches, her sword low at her right; springs up, her sword turned straight down below her right hand,
@@ -303,7 +315,11 @@ final class SwordFormation {
     static final double TURN_RATE=60;
     static final float TURN_FROM=.5f,TURN_IN=1.2f;
     /** How strongly a sword shows at {@code t} (0 to 1): coming in where it hangs, and going as the formation ends. */
-    static float shown(StandClient.Cast c,Blade b,float t){return Ease.smooth(t,b.shows(),b.shows()+.08f)*(1-Ease.smooth(t,end(c)+INKED+.02f,end(c)+GONE));}
+    static float shown(StandClient.Cast c,Blade b,float t){
+        // (2.101.0) taken by H again: there until it is pulled out (the finale draws it from then), never inked
+        if(taken(c))return pulled(c,b,t)?0:Ease.smooth(t,b.shows(),b.shows()+.08f);
+        return Ease.smooth(t,b.shows(),b.shows()+.08f)*(1-Ease.smooth(t,end(c)+INKED+.02f,end(c)+GONE));
+    }
 
     // ───────────────────────────── a sword ─────────────────────────────
 
@@ -1070,9 +1086,10 @@ final class SwordFormation {
             if(t<b.plant())continue;Vec3d f=foot(centre,yaw,b);float left=groundInk(t,Math.hypot(b.fw(),b.rt()));if(left<=.005f)continue;
             GiantSweep.splatFor(new Vec3d(f.x,floor+.003+.001*(b.seed()&7),f.z),1.3+.8*b.flower(),Math.PI*2*Ease.hash(b.seed()+40),1+.3*Ease.hash(b.seed()+41),b.seed()&15,t-b.plant()-.02f,.9f*left);
         }
-        // as it ends: ink where the swords stood and where the ink they break into falls
+        // as it ends: ink where the swords stood and where the ink they break into falls (2.101.0: none when H again took
+        // its swords)
         float e=end(c.cast)+INKED;
-        if(t>=e)for(var b:layout(c.cast.id())){
+        if(t>=e&&!taken(c.cast))for(var b:layout(c.cast.id())){
             Vec3d f=foot(centre,yaw,b);
             GiantSweep.splatFor(new Vec3d(f.x,floor+.004+.001*(b.seed()&7),f.z),1.5+.9*Ease.hash(b.seed()+43),Math.PI*2*Ease.hash(b.seed()+44),1.1,(b.seed()+3)&15,t-e-.04f,.85f);
         }
@@ -1086,7 +1103,7 @@ final class SwordFormation {
     }
     /** The ink each sword breaks into as the formation ends: flakes and drops flung off along it, falling. */
     static List<Drop> drops(Fx c,float t){
-        List<Drop> out=new ArrayList<>();float e=end(c.cast)+INKED;if(t<e)return out;
+        List<Drop> out=new ArrayList<>();float e=end(c.cast)+INKED;if(t<e||taken(c.cast))return out;
         Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
         for(var b:layout(c.cast.id())){
             Vec3d top=planted(centre,yaw,b),f=foot(centre,yaw,b),out0=f.subtract(centre).multiply(1,0,1);out0=out0.lengthSquared()<1e-4?Vec3d.fromPolar(0,yaw):out0.normalize();
@@ -1137,7 +1154,7 @@ final class SwordFormation {
         var all=layout(c.cast.id());Integer[] order=new Integer[all.length];Vec3d[] tops=new Vec3d[all.length];
         for(int i=0;i<all.length;i++){order[i]=i;tops[i]=planted(centre,yaw,all[i]).add(0,above(all[i],t),0);}
         Arrays.sort(order,Comparator.comparingDouble((Integer i)->-tops[i].squaredDistanceTo(c.camera)));
-        float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED)),ink=Ease.smooth(t,e+GLOW,e+INKED);
+        float e=end(c.cast),flare=taken(c.cast)?0:Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED)),ink=taken(c.cast)?0:Ease.smooth(t,e+GLOW,e+INKED);
         for(int i:order){
             var b=all[i];float a=shown(c.cast,b,t);if(a<=.005f)continue;
             sword(m,c.camera,tops[i],frame(down(b),spinAt(b,t)),a,dark(b,t),flare,ink);
@@ -1553,7 +1570,7 @@ final class SwordFormation {
      * the shaft of light (every fifth one) and the ring at its foot as it strikes.
      */
     static void swordLight(Fx c,EffectMesh m,float t,Vec3d centre,float yaw){
-        float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED)),ink=Ease.smooth(t,e+GLOW,e+INKED);
+        float e=end(c.cast),flare=taken(c.cast)?0:Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED)),ink=taken(c.cast)?0:Ease.smooth(t,e+GLOW,e+INKED);
         for(var b:layout(c.cast.id())){
             float a=shown(c.cast,b,t);if(a<=.005f)continue;
             Vec3d top=planted(centre,yaw,b).add(0,above(b,t),0),foot=foot(centre,yaw,b);var f=frame(down(b),spinAt(b,t));
@@ -1661,7 +1678,7 @@ final class SwordFormation {
         if(run>.01f&&fr>1){Vec3d m0=poolCentre(c.cast);for(int k=0;k<4;k++){double a=Math.PI*2*k/4+.8;f.light(m0.add(Math.cos(a)*fr,.4,Math.sin(a)*fr),0x4f7dff,4,FRONT_LIGHT*run);}}
         float mid=Math.max(FxLib.kick(t,IsosangRules.H_PLANT+.02f,.16f),.7f*FxLib.kick(t,IsosangRules.H_PLANT-.055f,.02f));if(mid>.01f)f.light(centre.add(0,1,0),0xb8d8ff,12,1.4f*mid);
         for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.14f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,9,1.0f*k);}
-        float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED+.05f));
+        float e=end(c.cast),flare=taken(c.cast)?0:Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED+.05f));
         if(flare>.01f)f.light(centre.add(0,1,0),0x7fe6ff,20,1.7f*flare);
         // (2.98.0) as she springs, the pillar in the middle, each five-second beat, the ring as it ends
         FormationLights.frame(c,f);
@@ -1675,7 +1692,7 @@ final class SwordFormation {
     /** Shake: the burst in the middle, the rain of swords crashing in, and a little as the formation ends (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){
         float e=end(cast);
-        return Math.max(Math.max(.7f*bump(sec,IsosangRules.H_PLANT,.1f),.95f*bump(sec,(float)IsosangRules.FORMATION_IMPACT_AT/20,.16f)),.45f*bump(sec,e+.02f,.1f));
+        return Math.max(Math.max(.7f*bump(sec,IsosangRules.H_PLANT,.1f),.95f*bump(sec,(float)IsosangRules.FORMATION_IMPACT_AT/20,.16f)),taken(cast)?0:.45f*bump(sec,e+.02f,.1f));
     }
     /** How far her own camera draws back for it (blocks): out as she leaps, further as the swords rain to show them all, held a little back while it stands, in again as she drops. */
     static final double PULL_LEAP=2.2,PULL_RAIN=5,PULL_STAND=3.2;

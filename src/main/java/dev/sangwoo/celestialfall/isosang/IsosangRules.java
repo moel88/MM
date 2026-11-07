@@ -48,7 +48,10 @@ public final class IsosangRules {
         {6,11,12,13,14,14,15,15,16,16},
         // (2.97.0) Y: the swords coming down two at a time (CAGE_DROPS) and the ink bursting up round the foe, thirteen
         // blows in all from 0.55 s to 0.9 s (the videos' hit counter)
-        {11,11,12,12,13,14,15,15,15,16,17,18,18}};
+        {11,11,12,12,13,14,15,15,15,16,17,18,18},
+        // (2.101.0) H again, the formation's finale: its swords coming down into the band ahead of her (2.6 to 3.4 s, the
+        // videos'), the last as the band flashes blue (3.5 s)
+        {52,56,60,64,70}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
@@ -58,7 +61,9 @@ public final class IsosangRules {
         // (2.96.0) T: the user's choice, 30 in all: the dash 6, each sword 2, each slash 4
         {6,2,2,2,2,4,2,4,2,4},
         // (2.97.0) Y: the user's choice, 40 in all over its thirteen blows: twelve of 3 and the last 4
-        {3,3,3,3,3,3,3,3,3,3,3,3,4}};
+        {3,3,3,3,3,3,3,3,3,3,3,3,4},
+        // (2.101.0) H again: the user's choice, 60 in all ("합 60"), five of 12
+        {12,12,12,12,12}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
     /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
@@ -71,11 +76,11 @@ public final class IsosangRules {
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
      * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0,0,0};
+    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it; 2.83.0: G's cutscene). */
-    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD,IsosangRules.LUNGE_FREE,IsosangRules.CAGE_HOLD};
+    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD,IsosangRules.LUNGE_FREE,IsosangRules.CAGE_HOLD,IsosangRules.FINALE_HOLD};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's; 2.83.0: and G's). */
-    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH,IsosangRules.LUNGE_LENGTH,IsosangRules.CAGE_LENGTH};
+    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH,IsosangRules.LUNGE_LENGTH,IsosangRules.CAGE_LENGTH,IsosangRules.FINALE_LENGTH};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -88,7 +93,7 @@ public final class IsosangRules {
      * Whether {@code kind} is a swing the clients draw: a hit, R's sweep (2.81.0), H's sword formation (2.82.0), G (2.83.0)
      * or H's basic attack (2.95.0, VOLLEY: its swords only, the body standing on in the formation's stance).
      */
-    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE||kind==VOLLEY||kind==LUNGE||kind==CAGE;}
+    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE||kind==VOLLEY||kind==LUNGE||kind==CAGE||kind==FINALE;}
     /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
     public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
     /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
@@ -209,7 +214,7 @@ public final class IsosangRules {
      * Whether hit {@code combo} cannot be guarded: the finisher (either kind), as the other characters' fourth hits; R's
      * sweep (2.81.0, the user's choice); and Y's swords (2.97.0: they come down from above, round whom they cage).
      */
-    public static boolean unblockable(int combo){return position(combo)==4||combo==SWEEP||combo==CAGE;}
+    public static boolean unblockable(int combo){return position(combo)==4||combo==SWEEP||combo==CAGE||combo==FINALE;}
 
     // ───────────────────────────── the empowered first: three swords thrown ─────────────────────────────
 
@@ -978,6 +983,93 @@ public final class IsosangRules {
      * {@link #CAGE_BACK1}), each eased (seconds into Y).
      */
     public static final float CAGE_SIDE_IN=.12f,CAGE_BEHIND0=.36f,CAGE_BEHIND1=.54f,CAGE_BACK0=1.22f,CAGE_BACK1=1.6f;
+
+    // ───────────────────────────── H again: the formation's finale ─────────────────────────────
+
+    /**
+     * H again on her formation (2.101.0, user request: "이번에는 H를 사용한 상태에서 H를 한 번 더 누르면 되는 스킬 음성은
+     * 저렇게 3개고 랜덤으로 하나 나오면 돼 스킬은 카메라가 플레이어로 빛추고 H 영역에 있던 모든 검이 전부 플레이어 뒤로 가고
+     * 앞으로 꽂는 스킬이야 이걸 쓰면 H가 해제돼", the user's three videos of it read on a sheet and confirmed: "맞음, 이대로";
+     * their answers: 60 in all ("합 60"), the band ahead where the swords come down ("앞쪽 검이 꽂히는 띠"), the cutscene
+     * hers alone ("시전자만")): on her formation's sword, every sword of it standing, H again ends the formation in one
+     * stroke. A blue flash, and her own camera goes into a cutscene: she leaps high off the pommel and every sword of the
+     * formation is pulled out of the ground and flies up round her trailing white light; she comes down onto the ground
+     * where she stood, the swords gathering behind her back and spreading there like wings; she raises two fingers before
+     * her face, her eyes alight; they fly from behind her all at once and come down slanting into the ground in a wide
+     * band ahead of her ({@link #finaleIn}: the way she looks as she presses it), blue crystal flaring up where each
+     * strikes, and the band flashes blue. Everyone in the band is struck as they come down (BLOWS, {@link #FINALE_DAMAGE}
+     * each, 60 in all): no guard takes it, no one is thrown or staggered. It holds her until her camera is back with her
+     * ({@link #FINALE_HOLD}: nothing harms her, nothing else of hers may begin, as G); the swords stand a moment more and
+     * are gone ({@link #FINALE_LENGTH}). One of the three videos' recordings plays, at random ({@link #FINALE_VARIANTS},
+     * the server's roll). The formation is over as it begins; H's cooldown runs once it is over.
+     */
+    public static final int FINALE=13;
+    /** Each of its blows (the user's word: 60 in all). */
+    public static final float FINALE_DAMAGE=12;
+    /**
+     * Ticks it holds her (3.7 s: the videos' camera back to her 3.6 s after their flash, ours a tenth of a second in) and
+     * ticks until its swords are gone (4.8 s: the videos' swords gone one by one some 4.5 s after their flash).
+     */
+    public static final int FINALE_HOLD=74,FINALE_LENGTH=96;
+    /** How many recordings it has, one chosen at random each time (the user's three videos: "음성은 저렇게 3개고 랜덤으로 하나"). */
+    public static final int FINALE_VARIANTS=3;
+    /**
+     * Its times (seconds in; the videos' times from their flash, the flash here a tenth of a second in, FINALE_FLASH):
+     * the flash and her camera into its cutscene; she leaps (FINALE_LEAP), is at the top (FINALE_TOP), comes down at the
+     * camera (FINALE_DESCEND to FINALE_LAND); the white ring round her (FINALE_RING); her two fingers raised before her
+     * face (FINALE_SEAL0 to FINALE_SEAL1); the swords launched from behind her (FINALE_LAUNCH), coming down into the band
+     * (FINALE_PLANT0 to FINALE_PLANT1); the band's flash (FINALE_BURST); her camera back to her (FINALE_BACK0 to
+     * FINALE_BACK1); the swords gone one by one (FINALE_GONE0 to FINALE_GONE1).
+     */
+    public static final float FINALE_FLASH=.1f,FINALE_LEAP=.2f,FINALE_TOP=.6f,FINALE_DESCEND=.95f,FINALE_LAND=1.3f,FINALE_RING=1.6f,
+        FINALE_SEAL0=1.62f,FINALE_SEAL1=2.25f,FINALE_LAUNCH=2.3f,FINALE_PLANT0=2.6f,FINALE_PLANT1=3.4f,FINALE_BURST=3.5f,
+        FINALE_BACK0=3.62f,FINALE_BACK1=3.9f,FINALE_GONE0=4.15f,FINALE_GONE1=4.6f;
+    /**
+     * The band its swords come down in (blocks from where she stands, the way she looks as she presses it: the user's
+     * choice "앞쪽 검이 꽂히는 띠"): from just ahead of her out to FINALE_REACH, FINALE_HALF either side, and how far under
+     * and over its ground a body may be and still be in it.
+     */
+    public static final double FINALE_NEAR=.5,FINALE_REACH=16,FINALE_HALF=9,FINALE_LOW=-1.5,FINALE_HIGH=4;
+    /** Whether a body ({@code forward} and {@code side} of where she stands, {@code height} from its ground to its feet, {@code halfWidth} across) is in the band. */
+    public static boolean finaleIn(double forward,double side,double height,double halfWidth){
+        return height>=FINALE_LOW&&height<=FINALE_HIGH&&forward>=FINALE_NEAR-halfWidth&&forward<=FINALE_REACH+halfWidth&&Math.abs(side)<=FINALE_HALF+halfWidth;
+    }
+    /**
+     * Whether it may begin {@code t} seconds into her formation: every sword standing (as Z, H's basic attack, T and Y), and
+     * before they flare (H_END: it ends the formation then itself).
+     */
+    public static boolean finaleTime(double t){return t>=Z_FROM&&t<H_END;}
+    /** How high she leaps over the pommel she stood on (blocks: the videos' leap, some three times her height). */
+    public static final double FINALE_LEAP_HEIGHT=5.0;
+    /**
+     * How high over the formation's ground her body is drawn {@code t} seconds in, from the pommel she stood on
+     * ({@code pommel} blocks up): there until she leaps, up to FINALE_LEAP_HEIGHT over it slowing to the top, drifting a
+     * little higher, then down onto the ground, quicker and quicker and soft at the last (the videos: she comes down at
+     * the camera and lands in a crouch).
+     */
+    public static double finaleDrawn(double t,double pommel){
+        if(t<FINALE_LEAP)return pommel;
+        double top=pommel+FINALE_LEAP_HEIGHT;
+        if(t<FINALE_TOP){double u=(t-FINALE_LEAP)/(FINALE_TOP-FINALE_LEAP);return pommel+FINALE_LEAP_HEIGHT*(1-(1-u)*(1-u));}
+        if(t<FINALE_DESCEND){double u=(t-FINALE_TOP)/(FINALE_DESCEND-FINALE_TOP);return top+FINALE_DRIFT*Math.sin(u*Math.PI*.5);}
+        if(t<FINALE_LAND){
+            // quick and quicker down, the last fifth easing onto the ground (its speed the same either side of the turn)
+            double u=(t-FINALE_DESCEND)/(FINALE_LAND-FINALE_DESCEND),v=(u-.8)/.2;
+            double fall=u<.8?.8*(u/.8)*(u/.8):.8+.2*(1-(1-v)*(1-v));
+            return (top+FINALE_DRIFT)*(1-fall);
+        }
+        return 0;
+    }
+    public static final double FINALE_DRIFT=.25;
+    /**
+     * How high over the formation's ground she really is {@code t} seconds in (blocks): on the pommel until her drawn body
+     * comes down past it, then with it onto the ground (her own client moves her so; the leap over it is drawn).
+     */
+    public static double finaleReal(double t,double pommel){return Math.max(0,Math.min(pommel,finaleDrawn(t,pommel)));}
+    /** Whether it holds her up off the ground {@code t} seconds in (the server lets her float until she is down). */
+    public static boolean finaleAloft(double t){return t>=0&&t<FINALE_LAND+.2f;}
+    /** The tick H is ready again after a finale begun at {@code start} ({@code free}: the cooldowns are off for her): once its swords are gone, and H's cooldown after. */
+    public static long finaleReady(long start,boolean free){return free?0:start+FINALE_LENGTH+H_COOLDOWN;}
 
     // ───────────────────────────── G: the ultimate ─────────────────────────────
 

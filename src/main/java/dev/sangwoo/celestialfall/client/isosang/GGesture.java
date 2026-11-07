@@ -142,6 +142,8 @@ public final class GGesture {
     }
     public static void apply(PlayerEntityModel<AbstractClientPlayerEntity> model,AbstractClientPlayerEntity player,float delta){
         var cast=IsosangClient.animated(player.getUuid());
+        // (2.101.0) H again: the same hand, its two fingers raised before her face
+        if(cast!=null&&cast.combo()==IsosangRules.FINALE){applyFinale(model,cast,delta);return;}
         if(cast==null||cast.combo()!=IsosangRules.ULTIMATE||!Float.isNaN(FallingSword.off(cast)))return;
         float t=cast.age(delta)/20f;if(t<.04f||t>2.8f)return;
         var originalLeft=model.leftArm.getTransform();var originalRight=model.rightArm.getTransform();
@@ -181,6 +183,32 @@ public final class GGesture {
         }
         model.rightSleeve.getChild("elbow").visible=false;
     }
+    /**
+     * (2.101.0) Lee So-sang's H again: her right hand's two fingers raised before her face while she holds them up (the
+     * videos': her eyes alight; SwordFinale.sealWeight): G's hand of sword-fingers in place of the end of her right
+     * forearm, its wrist turned from the way the forearm points so the fingers stand upright, the clip's arm as it is.
+     */
+    static void applyFinale(PlayerEntityModel<AbstractClientPlayerEntity> model,StandClient.Cast cast,float delta){
+        float k=SwordFinale.sealWeight(cast.age(delta)/20f);if(k<=.001f)return;
+        var elbow=model.rightArm.getChild("elbow");if(!elbow.hasChild("g_hand"))return;
+        var hand=elbow.getChild("g_hand");var wrist=hand.getChild("wrist");
+        elbow.hidden=true;hand.visible=true;
+        // the arm bent at the elbow, its wrist before her chin a little to her right (the videos': the hand at the side of
+        // her face, the two fingers up before her nose and her eyes over them)
+        applyChain(model.rightArm,solve(FINALE_SHOULDER,FINALE_WRIST,4,FINALE_POLE),k);
+        // upright: the model's up is its -y, and the fingers run along the hand's +y
+        Quaternionf lower=rotation(model.rightArm).mul(rotation(elbow));
+        rotation(wrist,new Quaternionf().slerp(new Quaternionf(lower).conjugate().mul(SEAL_HAND),k));
+        model.rightSleeve.copyTransform(model.rightArm);model.rightSleeve.getChild("elbow").copyTransform(elbow);
+        model.rightSleeve.getChild("elbow").visible=false;
+    }
+    /**
+     * (2.101.0) H again's seal (model pixels: her left +x, down +y, back +z): her right shoulder, where its wrist is held
+     * (before her chin, a little to her right) and which way its elbow bends (out and down); where the two fingers' tips
+     * then are (SwordFinale.seal: its light), upright 4.25 pixels over the wrist and a little in toward her middle.
+     */
+    static final Vector3f FINALE_SHOULDER=new Vector3f(-5,2,0),FINALE_WRIST=new Vector3f(-1.5f,1.3f,-5.6f),FINALE_POLE=new Vector3f(-9,8,-1);
+    static final Vector3f FINALE_TIP=new Vector3f(-.9f,1.3f-4.25f,-5.6f);
     static void restore(ModelPart part,ModelTransform initial,float amount){
         if(amount<=0)return;
         rotation(part,rotation(part).slerp(new Quaternionf().rotationZYX(initial.roll,initial.yaw,initial.pitch),amount));

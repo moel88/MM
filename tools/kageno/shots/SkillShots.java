@@ -1087,6 +1087,8 @@ public final class SkillShots implements ClientModInitializer {
                     // as everyone else sees it; "gvar=1|2": the recording (and faces) their next G plays (IsosangAttack.riggedVariant)
                     CelestialFall.CONFIG.cinematicCamera=!"0".equals(opts.get("cine"));
                     if(opts.containsKey("gvar")){int gv=Integer.parseInt(opts.get("gvar"))-1;server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.riggedVariant=gv);log.append("  next G rigged to recording ").append(gv+1).append('\n');}
+                    // (2.101.0) "hvar=1|2|3": the recording their next H again plays (IsosangAttack.riggedFinale)
+                    if(opts.containsKey("hvar")){int hv=Integer.parseInt(opts.get("hvar"))-1;server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.riggedFinale=hv);log.append("  next H again rigged to recording ").append(hv+1).append('\n');}
                     // (2.87.3) "gfit=SCALE/LEAN/RIGHT/DOWN/YAW/PAN/DROP": G's sky-shot figure fitted so in this entry (GScene.tuned), to try a fit before it goes in
                     {double[] fit=null;if(opts.containsKey("gfit")){String[] v=opts.get("gfit").split("/");fit=new double[7];for(int i=0;i<7;i++)fit[i]=i<v.length?Double.parseDouble(v[i].trim()):0;log.append("  G sky figure fitted ").append(opts.get("gfit")).append('\n');}
                      var tuned=Class.forName("dev.sangwoo.celestialfall.client.isosang.GScene").getDeclaredField("tuned");tuned.setAccessible(true);tuned.set(null,fit);}
@@ -1184,6 +1186,14 @@ public final class SkillShots implements ClientModInitializer {
                                     y.at().x,y.at().y,y.at().z,d==null?-1:Math.hypot(d.getX()-y.at().x,d.getZ()-y.at().z),y.blows()),
                                 hp,caged,dev.sangwoo.celestialfall.isosang.IsosangAttack.standsOn(p),p.getY()-f.centre().y,
                                 Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangAttack.yReady(p)-now)));});
+                        // (2.101.0) H again on her formation: whether the server began its finale (where she stands, its band's way,
+                        // its blows so far), the dummy's health, how high she is over where she stands, when H is ready again
+                        if(what.equals("KEY_H")&&(age==at+3||age==at+30||age==at+60||age==at+80))server(p->{var u=dev.sangwoo.celestialfall.isosang.IsosangAttack.finaleNow(p);if(u==null)return;
+                            var d=p.getServerWorld().getEntityById(dummyId);long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                            var fw=net.minecraft.util.math.Vec3d.fromPolar(0,u.yaw());double dfw=d==null?Double.NaN:d.getPos().subtract(u.spot()).dotProduct(fw);
+                            log.append(String.format(Locale.ROOT,"  H again at %d: begun %d ticks ago, she at (%.2f, %.2f, %.2f) %.2f up, %.2f off it, way %.1f, %d struck, dummy %.2f ahead, health %.1f, formation %s, H ready in %d%n",age,now-u.start(),
+                                u.spot().x,u.spot().y,u.spot().z,p.getY()-u.spot().y,Math.hypot(p.getX()-u.spot().x,p.getZ()-u.spot().z),u.yaw(),u.blows(),dfw,hp,
+                                dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null?"over":"standing",Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangAttack.hReady(p)-now)));});
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);if(what.equals("KEY_H"))lastH=age;
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,

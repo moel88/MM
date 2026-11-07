@@ -120,6 +120,21 @@ public final class IsosangAttack {
         TPress tQueued;
         /** (2.97.0) Y under way or the last one (null for none), and the tick it is ready again. */
         Cage cage;long yReady;
+        /** (2.101.0) H again, the formation's finale, under way (null for none; H's ready tick is hReady's). */
+        Finale finale;
+    }
+    /**
+     * H again (2.101.0, IsosangRules.FINALE): its id and start, where she stands (level, on the formation's ground, under
+     * the sword she stood on: where she comes down), the way she looked as she pressed it (the band ahead), which recording
+     * it plays, the formation it ends (its id, its start, its middle, the way its user faced, the sword she stood on) and
+     * how many of its blows have landed.
+     */
+    private static final class Finale {
+        final UUID id,form;final long start,formStart;final Vec3d spot,centre;final float yaw,formYaw;final int variant,on;int blows;
+        Finale(UUID id,long start,Vec3d spot,float yaw,int variant,Formation f){
+            this.id=id;this.start=start;this.spot=spot;this.yaw=yaw;this.variant=variant;
+            this.form=f.id;this.formStart=f.start;this.centre=f.centre;this.formYaw=f.yaw;this.on=f.on;
+        }
     }
     /**
      * Y (2.97.0, IsosangRules.CAGE): whom and where its swords come down on (as H's basic attack's, {@code aim}: its id,
@@ -155,6 +170,8 @@ public final class IsosangAttack {
     private record TPress(boolean aimed,int foe,Vec3d meets){}
     /** (2.83.0) For the film harness only (as StandArrow.rigged): the recording the next G plays (0 or 1), -1 to roll. */
     public static volatile int riggedVariant=-1;
+    /** (2.101.0) For the film harness only: the recording the next finale plays (0 to 2), -1 to roll. */
+    public static volatile int riggedFinale=-1;
     /**
      * G (2.83.0): its id and start, where its user stands (their feet) and the way they faced, which of the recordings
      * (and faces) it plays, where its sword strikes the ground ({@link IsosangRules#G_AHEAD} blocks ahead, on whatever is
@@ -303,6 +320,8 @@ public final class IsosangAttack {
             var st=STATES.get(handler.player.getUuid());if(st!=null&&st.form!=null)end(handler.player,st,handler.player.getWorld().getTime());
             // (2.83.0) and G before its sword strikes: it does not
             if(st!=null&&st.ult!=null&&!st.ult.struck&&!st.ult.over)call(handler.player,st,handler.player.getWorld().getTime());
+            // (2.101.0) and H again before its swords are down: they are not
+            if(st!=null&&st.finale!=null)callOff(handler.player,st,handler.player.getWorld().getTime());
             STATES.remove(handler.player.getUuid());
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server->STATES.clear());
@@ -310,11 +329,12 @@ public final class IsosangAttack {
     /** Whether this player's attack is Lee So-sang's sword: theirs, alive, on the map. */
     public static boolean attacks(PlayerEntity p){return p!=null&&StandManager.isosang(p);}
     /** Free to start a hit: nothing else holds them (a blow, a guard, a dash, a skill, a cutscene); a hit's own hold aside. */
-    public static boolean able(ServerPlayerEntity p){return attacks(p)&&!p.isSleeping()&&!p.hasVehicle()&&!CombatManager.busyOtherwise(p)&&!CombatManager.cinematic(p);}
+    public static boolean able(ServerPlayerEntity p){return attacks(p)&&!p.isSleeping()&&!p.hasVehicle()&&!CombatManager.busyOtherwise(p)&&!CombatManager.cinematic(p)&&!finaling(p);}
     /** Whether one of this player's hits (or, 2.81.0, their R) holds them now (IsosangRules.HOLD): CombatManager.busy and actionLocked count it. */
     public static boolean busy(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());
-        return s!=null&&s.world==p.getWorld()&&(holding(s.combo,s.start,p.getWorld().getTime())||sweepHolds(s,p.getWorld().getTime())||forming(s,p.getWorld().getTime())||casting(s,p.getWorld().getTime()));
+        return s!=null&&s.world==p.getWorld()&&(holding(s.combo,s.start,p.getWorld().getTime())||sweepHolds(s,p.getWorld().getTime())||forming(s,p.getWorld().getTime())||casting(s,p.getWorld().getTime())
+            ||finaling(s,p.getWorld().getTime()));
     }
     /** Whether G holds its user now (2.83.0): from its start for its cutscene ({@link IsosangRules#G_HOLD}), unless it was called off. */
     private static boolean casting(State s,long now){var u=s.ult;return u!=null&&!u.over&&now>=u.start&&now-u.start<HOLD[ULTIMATE];}
@@ -328,7 +348,24 @@ public final class IsosangAttack {
     }
     /** Whether harm from {@code source} is kept from {@code e}: G holds them (what bypasses invulnerability, /kill or the void, still reaches them). */
     public static boolean shielded(LivingEntity e,net.minecraft.entity.damage.DamageSource source){
-        return casting(e)&&!source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY);
+        return (casting(e)||finaling(e))&&!source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY);
+    }
+    /** Whether her H again holds her now (2.101.0): from its start until her camera is back with her (IsosangRules.FINALE_HOLD). */
+    private static boolean finaling(State s,long now){var u=s.finale;return u!=null&&now>=u.start&&now-u.start<HOLD[FINALE];}
+    /**
+     * Whether this one is held by their H again now (2.101.0): its cutscene holds them where they stand (their own client
+     * brings them down from the pommel, IsosangClient.drive), nothing harms them (shielded), nothing else of theirs may
+     * begin (busy), and a time stop passes them by (as G's).
+     */
+    public static boolean finaling(LivingEntity e){
+        if(!(e instanceof PlayerEntity p)||e.getWorld().isClient)return false;
+        var s=STATES.get(p.getUuid());return s!=null&&s.world==p.getWorld()&&finaling(s,p.getWorld().getTime());
+    }
+    /** This player's H again as a boss reads it (2.101.0): begun at {@code start}, she at {@code spot}, its band the way {@code yaw}, {@code blows} landed; null for none. */
+    public record FinaleNow(long start,Vec3d spot,float yaw,int blows){}
+    public static FinaleNow finaleNow(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());var u=s==null?null:s.finale;
+        return u==null?null:new FinaleNow(u.start,u.spot,u.yaw,u.blows);
     }
     /** The tick this player's G is ready again (0 if it is ready, 2.83.0). */
     public static long gReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.gReady;}
@@ -346,7 +383,10 @@ public final class IsosangAttack {
      * must not take them for flying (ServerPlayNetworkHandler's floating check, FormationFloatMixin).
      */
     public static boolean raised(PlayerEntity p){
-        var s=p==null?null:STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld()||!forming(s,p.getWorld().getTime()))return false;
+        var s=p==null?null:STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld())return false;
+        // (2.101.0) H again: up on the pommel until she comes down onto the ground
+        if(s.finale!=null&&IsosangRules.finaleAloft((p.getWorld().getTime()-s.finale.start)/20.0))return true;
+        if(!forming(s,p.getWorld().getTime()))return false;
         return onSword((p.getWorld().getTime()-s.form.start)/20.0);
     }
     /**
@@ -636,7 +676,9 @@ public final class IsosangAttack {
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
-        if(s.form!=null&&now-s.form.start<LENGTH[FORMATION]||now<s.hReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        // (2.101.0) H again on her formation: its finale
+        if(forming(s,now))return finale(p,s,now);
+        if(finaling(s,now)||now<s.hReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         if(holding(s.combo,s.start,now)||sweepHolds(s,now))return false;
         unfold(p,s,now);
         return true;
@@ -658,6 +700,60 @@ public final class IsosangAttack {
         s.hReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+LENGTH[FORMATION]+H_COOLDOWN;
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
         send(p,s.form.id,FORMATION,now,s.form.yaw,HIT,-1,null,null,null,s.form);
+    }
+    /**
+     * H again on her formation (2.101.0, user request: "이번에는 H를 사용한 상태에서 H를 한 번 더 누르면 되는 스킬 ... H 영역에
+     * 있던 모든 검이 전부 플레이어 뒤로 가고 앞으로 꽂는 스킬이야 이걸 쓰면 H가 해제돼", IsosangRules.FINALE): its finale, at
+     * once. Only while every sword of it stands and before they flare (IsosangRules.finaleTime), not while Z flies her, R
+     * holds her, H's basic attack's swords fan out, T holds her or Y does. The formation is over as it begins (its swords
+     * are the finale's: every viewer told of both, the finale first); the band it comes down in lies ahead the way she
+     * looks now (her crosshair's: her client turned her to it), from where she stands; H is ready again its cooldown after
+     * the finale's swords are gone (IsosangRules.finaleReady). One of its recordings at random (the server's roll).
+     */
+    private static boolean finale(ServerPlayerEntity p,State s,long now){
+        var f=s.form;
+        if(!IsosangRules.finaleTime((now-f.start)/20.0)||f.flying(now)||f.lunging(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        float yaw=MathHelper.wrapDegrees(p.getYaw());
+        int variant=riggedFinale>=0?Math.min(riggedFinale,FINALE_VARIANTS-1):p.getRandom().nextInt(FINALE_VARIANTS);riggedFinale=-1;
+        s.finale=new Finale(UUID.randomUUID(),now,f.spotAt(now),yaw,variant,f);
+        s.queued=false;s.rQueued=false;s.tQueued=null;
+        // the formation is over as it begins: its swords are the finale's now (T's and Y's blows still to come go on)
+        s.form=null;
+        s.hReady=IsosangRules.finaleReady(now,free);
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s.finale.id,FINALE,now,yaw,HIT,-1,null,null,null,f,null,null,null,null,s.finale);
+        send(p,f.id,FORMATION,f.start,f.yaw,STOPPED,-1,null,null,null,f);
+        return true;
+    }
+    /**
+     * H again on a tick (2.101.0): it holds her where she stands (level; her own client brings her down from the pommel,
+     * a boss is put there) until her camera is back with her; each blow on its tick strikes everyone in the band ahead
+     * (IsosangRules.finaleIn: no guard takes it, no one is thrown or staggered). Her gone (dead, off the map, Lee So-sang
+     * no more) calls the rest off.
+     */
+    private static void conclude(ServerPlayerEntity p,State s,long now){
+        var u=s.finale;long age=now-u.start;
+        if(age>=FINALE_LENGTH){s.finale=null;return;}
+        if(!attacks(p)||!p.isAlive()){callOff(p,s,now);return;}
+        if(age<HOLD[FINALE]){
+            double t=age/20.0;Vec3d at=p.getPos();double dx=at.x-u.spot.x,dz=at.z-u.spot.z;
+            if(p instanceof dev.sangwoo.celestialfall.boss.BossPlayer){p.setPosition(u.spot.x,u.spot.y+IsosangRules.finaleReal(t,FORMATION_STAND),u.spot.z);p.setVelocity(Vec3d.ZERO);}
+            else if(age>=2&&dx*dx+dz*dz>STRAY*STRAY)p.networkHandler.requestTeleport(u.spot.x,at.y,u.spot.z,p.getYaw(),p.getPitch());
+            p.fallDistance=0;
+        }
+        Vec3d fw=Vec3d.fromPolar(0,u.yaw),rt=new Vec3d(-fw.z,0,fw.x),mid=u.spot.add(fw.multiply((FINALE_NEAR+FINALE_REACH)/2));
+        while(u.blows<blows(FINALE)&&age>=blowAt(FINALE,u.blows)){
+            int i=u.blows++;
+            var struck=strike(p,FINALE,i,u.start,u.yaw,now,mid,e->{Vec3d d=e.getPos().subtract(u.spot);return IsosangRules.finaleIn(d.dotProduct(fw),d.dotProduct(rt),d.y,e.getWidth()*.5);},null,false);
+            if(!struck.isEmpty())send(p,u.id,FINALE,u.start,u.yaw,LANDED,i,struck,null,null,null,null,null,null,null,u);
+        }
+    }
+    /** H again called off before it is over (2.101.0: her gone): its viewers told (its swords not down yet go), H's cooldown from now. */
+    private static void callOff(ServerPlayerEntity p,State s,long now){
+        var u=s.finale;if(u==null)return;s.finale=null;
+        if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.hReady=Math.min(s.hReady,now+H_COOLDOWN);
+        send(p,u.id,FINALE,u.start,u.yaw,STOPPED,-1,null,null,null,null,null,null,null,null,u);
     }
     /**
      * Z (2.93.0, user request: "H 스킬에서 박혀있는 모든 검이 전부 상호작용 되게 바꿔줘 그리고 동시에 z스킬 만들자 ... z스킬을
@@ -843,7 +939,8 @@ public final class IsosangAttack {
      * slashes down after the next has begun.
      */
     private static void rush(ServerPlayerEntity p,State s,long now){
-        if(!attacks(p)||s.form==null){halt(p,s,now);return;}
+        // (2.101.0: H again ends the formation; what T still brings down goes on)
+        if(!attacks(p)||s.form==null&&s.finale==null){halt(p,s,now);return;}
         for(var l:List.copyOf(s.lunges)){
             var v=l.aim;long age=now-v.start;
             LivingEntity foe=null;
@@ -941,7 +1038,8 @@ public final class IsosangAttack {
     private static void trap(ServerPlayerEntity p,State s,long now){
         var c=s.cage;var v=c.aim;long age=now-v.start;
         if(age>=CAGE_LENGTH){s.cage=null;return;}
-        if(!attacks(p)||s.form==null){stopCage(p,s,now);return;}
+        // (2.101.0: H again ends the formation; Y's swords stand on through it)
+        if(!attacks(p)||s.form==null&&s.finale==null){stopCage(p,s,now);return;}
         if(!c.planted){
             if(v.target>=0&&p.getWorld().getEntityById(v.target) instanceof LivingEntity e&&fair(p,e)&&within(v.centre,e,IsosangRules.VOLLEY_LEASH)){
                 v.last=chest(e);c.at=cageGround(p.getWorld(),p,e.getPos(),v.centre.y);
@@ -1199,6 +1297,8 @@ public final class IsosangAttack {
             if(!s.lunges.isEmpty())rush(p,s,now);
             // (2.97.0) and Y's swords and its cage
             if(s.cage!=null)trap(p,s,now);
+            // (2.101.0) and H again (nothing harms her while it holds her; only what takes her away calls it off)
+            if(s.finale!=null)conclude(p,s,now);
             // (2.96.4) a press of T kept goes as the one before lets go of her (if it may then)
             if(s.tQueued!=null&&!lungeHolds(s,now)){var q=s.tQueued;s.tQueued=null;lunge(p,q.aimed(),q.foe(),q.meets());}
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
@@ -1352,8 +1452,10 @@ public final class IsosangAttack {
         // (2.95.0: so does H's basic attack's every sword, coming down on whom it was sent at)
         // (2.96.0: and T's every blow: the dash through, the swords and the slashes on whom it was sent at)
         // (2.97.0: and Y's swords, coming down round whom they cage)
-        boolean thrown=combo==THROWS||combo==THRUST||combo==SWEEP||combo==VOLLEY||combo==LUNGE||combo==CAGE;
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((combo==THROWS||combo==VOLLEY||combo==LUNGE||combo==CAGE?2:combo==SWEEP?SWEEP_PIVOT_FW+SWEEP_REACH:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        // (2.101.0: and H again's, coming down into the band ahead of her)
+        boolean thrown=combo==THROWS||combo==THRUST||combo==SWEEP||combo==VOLLEY||combo==LUNGE||combo==CAGE||combo==FINALE;
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((combo==THROWS||combo==VOLLEY||combo==LUNGE||combo==CAGE?2:combo==SWEEP?SWEEP_PIVOT_FW+SWEEP_REACH
+            :combo==FINALE?Math.hypot((FINALE_REACH-FINALE_NEAR)/2,FINALE_HALF):MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             if(done!=null&&done.contains(e.getUuid()))continue;
             if(!test.test(e)||!thrown&&!p.canSee(e))continue;
@@ -1367,7 +1469,8 @@ public final class IsosangAttack {
             // land at full speed, a little past; one stopped in Star Platinum's stopped time is staggered as time moves again
             // (2.81.0: R's sweep staggers no one: a skill's blow, as Kageno's skills' are)
             // (2.97.0: nor Y's: whom it strikes it cages, IsosangRules.CAGE_FREE, trap)
-            if(combo!=SWEEP&&combo!=CAGE&&(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e)))HitStun.stagger(p,e,combo,Stagger.isosang(combo,i,start,now,empowered));
+            // (2.101.0: nor H again's)
+            if(combo!=SWEEP&&combo!=CAGE&&combo!=FINALE&&(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e)))HitStun.stagger(p,e,combo,Stagger.isosang(combo,i,start,now,empowered));
             // (2.80.0, user request: "4타에 맞으면 넉백이 있어") the empowered fourth's giant sword throws whom it strikes the way it flies,
             // as Star Platinum's heavy punch: told to a struck player's client once, through the tracker; one stopped in a
             // time stop is thrown as time moves again
@@ -1406,6 +1509,9 @@ public final class IsosangAttack {
         send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,ult,volley,lunge,null);
     }
     private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult,Volley volley,Lunge lunge,Cage cage){
+        send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,ult,volley,lunge,cage,null);
+    }
+    private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult,Volley volley,Lunge lunge,Cage cage,Finale finale){
         GArenaServer.event(p,id,combo,start,type);
         var s=state(p);var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:world.getPlayers()){
@@ -1446,6 +1552,13 @@ public final class IsosangAttack {
             // stands on the ground now (its foe and the point it began on are the basic attack's, above)
             b.writeLong(s.yReady);b.writeBoolean(cage!=null);
             if(cage!=null){b.writeBoolean(cage.planted);b.writeDouble(cage.at.x);b.writeDouble(cage.at.y);b.writeDouble(cage.at.z);}
+            // (2.101.0, after what 2.97 to 2.100 sent) H again: the formation it ends (its id and start, its middle and its
+            // user's way, the sword she stood on), which recording it plays, and where she stands (where she comes down)
+            b.writeBoolean(finale!=null);
+            if(finale!=null){
+                b.writeUuid(finale.form);b.writeLong(finale.formStart);b.writeDouble(finale.centre.x);b.writeDouble(finale.centre.y);b.writeDouble(finale.centre.z);
+                b.writeFloat(finale.formYaw);b.writeByte(finale.on);b.writeByte(finale.variant);b.writeDouble(finale.spot.x);b.writeDouble(finale.spot.y);b.writeDouble(finale.spot.z);
+            }
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

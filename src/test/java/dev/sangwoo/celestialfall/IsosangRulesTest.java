@@ -670,4 +670,47 @@ class IsosangRulesTest {
         assertTrue(CAGE_BEHIND1<=CAGE_DROPS[0]/20f,"behind her before the first swords strike");
         assertEquals(HOLD[CAGE]/20f,CAGE_BACK0,.05f,"back to her as it lets go of her");assertEquals(LENGTH[CAGE]/20f,CAGE_BACK1,1e-6f);
     }
+    @Test void hAgainEndsTheFormationWithFiveBlowsOfTwelveInTheBandAhead()throws Exception{
+        // (2.101.0) the user's answer "합 60": five blows of 12 as its swords come down into the band (2.6 to 3.4 s) and as
+        // the band flashes (3.5 s), no guard taking them
+        assertEquals(13,FINALE);assertTrue(drawn(FINALE));assertFalse(valid(FINALE),"not a hit of the combo");
+        assertEquals(5,blows(FINALE));assertEquals(60,total(FINALE),1e-6);
+        for(int i=0;i<blows(FINALE);i++){assertEquals(FINALE_DAMAGE,damage(FINALE,i),1e-6);if(i>0)assertTrue(blowAt(FINALE,i)>blowAt(FINALE,i-1),"in order");}
+        assertTrue(blowAt(FINALE,0)/20f>=FINALE_PLANT0-.01f,"none before its first swords come down");
+        assertEquals(FINALE_BURST,lastBlow(FINALE)/20f,1e-6f,"the last as the band flashes");
+        assertTrue(lastBlow(FINALE)<HOLD[FINALE],"every blow while it holds her");
+        assertTrue(unblockable(FINALE));
+        assertEquals(74,HOLD[FINALE]);assertEquals(96,LENGTH[FINALE]);assertEquals(0,STEP[FINALE]);
+        // the band: ahead of her (the way she looks as she presses it), wide; not behind her, nor past its reach or its sides
+        assertTrue(finaleIn(8,0,0,.3));assertTrue(finaleIn(FINALE_REACH,FINALE_HALF,0,.3));assertTrue(finaleIn(1,-3,1.5,.3));
+        assertFalse(finaleIn(-1,0,0,.3),"not behind her");assertFalse(finaleIn(FINALE_REACH+.5,0,0,.3));assertFalse(finaleIn(8,FINALE_HALF+.5,0,.3));
+        assertFalse(finaleIn(8,0,FINALE_HIGH+.1,.3));assertFalse(finaleIn(8,0,FINALE_LOW-.1,.3));
+        // only on her formation, its swords standing, before they flare
+        assertFalse(finaleTime(Z_FROM-.01));assertTrue(finaleTime(Z_FROM));assertTrue(finaleTime(H_END-.05));assertFalse(finaleTime(H_END));
+        // H ready again its cooldown after its swords are gone (none for a player the cooldowns are off for)
+        assertEquals(1000+FINALE_LENGTH+H_COOLDOWN,finaleReady(1000,false));assertEquals(0,finaleReady(1000,true));
+        // its three recordings (the user's three videos), each from just before its flash to its end
+        assertEquals(3,FINALE_VARIANTS);
+        for(int v=1;v<=3;v++){double sec=StarPlatinumRulesTest.seconds("isosang_hh_"+v);assertTrue(sec>4.5&&sec<5.05,"recording "+v+": "+sec);}
+        // its times in order; it lets go of her as her camera comes back to her; its swords gone by its end
+        float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_TOP,FINALE_DESCEND,FINALE_LAND,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_PLANT0,FINALE_PLANT1,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
+        for(int i=1;i<ts.length;i++)assertTrue(ts[i]>ts[i-1],"in order: "+i);
+        assertEquals(HOLD[FINALE]/20f,FINALE_BACK0,.1f,"lets go of her as her camera comes back to her");
+        assertTrue(FINALE_GONE1<=LENGTH[FINALE]/20f);
+    }
+    @Test void hAgainLeapsHerHighAndBringsHerDownOntoTheGroundSmoothly(){
+        double pommel=FORMATION_STAND;
+        assertEquals(pommel,finaleDrawn(0,pommel),1e-9);assertEquals(pommel,finaleDrawn(FINALE_LEAP,pommel),1e-9);
+        assertEquals(0,finaleDrawn(FINALE_LAND,pommel),1e-6);assertEquals(0,finaleDrawn(FINALE_LAND+1,pommel),1e-9);
+        double max=0,prev=pommel;
+        // (down at the camera at some 40 blocks a second at its fastest: under 0.7 of a block a frame)
+        for(double t=0;t<=FINALE_LAND+.2;t+=1/60.0){double h=finaleDrawn(t,pommel);max=Math.max(max,h);assertTrue(Math.abs(h-prev)<.7,"no jump at "+t+": "+prev+" to "+h);prev=h;}
+        assertEquals(pommel+FINALE_LEAP_HEIGHT+FINALE_DRIFT,max,.02,"high over the pommel");
+        // really: on the pommel until her drawn body comes down past it, then with it; never under the ground, never over the
+        // pommel, never higher than she is drawn
+        for(double t=0;t<=FINALE_LAND+.3;t+=.02){double r=finaleReal(t,pommel);assertTrue(r>=0&&r<=pommel+1e-9);assertTrue(r<=finaleDrawn(t,pommel)+1e-9,"drawn never under where she is");}
+        assertTrue(finaleAloft(FINALE_LAND)&&!finaleAloft(FINALE_LAND+.25));
+        // soft onto the ground at the last
+        assertTrue(finaleDrawn(FINALE_LAND-.02,pommel)<.2,"soft onto the ground: "+finaleDrawn(FINALE_LAND-.02,pommel));
+    }
 }

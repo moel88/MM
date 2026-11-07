@@ -253,7 +253,7 @@ final class FormationLights {
 
     /** As it ends (its flare): a ring of light running out past its rim, and stars rising off every sword as it goes. */
     static void ending(Fx c,EffectMesh m,float t,Vec3d centre,float yaw){
-        float e=SwordFormation.end(c.cast),s=t-e;if(s<-.01f||s>=1.2f)return;
+        float e=SwordFormation.end(c.cast),s=t-e;if(s<-.01f||s>=1.2f||SwordFormation.taken(c.cast))return;
         float a=Ease.smooth(s,-.01f,.02f)*(1-Ease.smooth(s,.25f,.7f));
         if(a>.01f){
             double r=1+(IsosangRules.FORMATION_RADIUS+4)*Ease.out(s,0,.6f);Vec3d g=centre.add(0,.08,0);
@@ -278,6 +278,6 @@ final class FormationLights {
         float up=FxLib.kick(t,IsosangRules.H_LEAP,.2f);if(up>.01f)f.light(SwordFormation.spot(c.cast).add(0,1,0),0x9fc8ff,8,.9f*up);
         float pillar=FxLib.kick(t,IsosangRules.H_PLANT+.02f,.3f);if(pillar>.01f)f.light(centre.add(0,4,0),0xb8d8ff,20,1.2f*pillar);
         float s=pulseAge(c.cast,t);if(s>=0&&s<PULSE)f.light(centre.add(0,1,0),0x8cc4ff,16,.7f*(1-Ease.smooth(s,.1f,PULSE)));
-        float e=t-SwordFormation.end(c.cast);if(e>=0&&e<.8f)f.light(centre.add(0,1.5,0),0x7fe6ff,24,.6f*(1-Ease.smooth(e,.1f,.8f)));
+        float e=t-SwordFormation.end(c.cast);if(e>=0&&e<.8f&&!SwordFormation.taken(c.cast))f.light(centre.add(0,1.5,0),0x7fe6ff,24,.6f*(1-Ease.smooth(e,.1f,.8f)));
     }
 }

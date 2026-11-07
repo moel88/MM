@@ -462,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"))||"isosangy".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"))||"isosangy".equals(System.getProperty("botand.mp.only"))||"isosanghh".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -477,6 +477,8 @@ public final class MpServer implements ModInitializer {
     private long lungeSeen=-1,tReadySeen=-1;private int lungeBlows;
     /** (2.97.0) The caster's Y last logged: its start, its blows, when it is ready again; whether the watcher was caged, and where it stood a tick ago. */
     private long cageSeen=-1,yReadySeen=-1;private int cageBlows;private boolean cagedSeen;private net.minecraft.util.math.Vec3d cageWatcherAt;
+    /** (2.101.0) The caster's H again last logged: its start and its blows. */
+    private long finaleSeen=-1;private int finaleBlows;
     private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1,zFrom=-1;private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zSeen;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
@@ -493,6 +495,19 @@ public final class MpServer implements ModInitializer {
         if(h!=null&&h.combo()>=1){
             if(h.blows()>blowsSeen){note(server,"caster's hit "+h.combo()+" blow "+h.blows()+" of "+dev.sangwoo.celestialfall.isosang.IsosangRules.blows(h.combo())+" landed at "+now);blowsSeen=h.blows();}
             watchUntil=now+20;
+        }
+        // (2.101.0) H again: its start (where she stands, its way, the watcher ahead and aside, the formation over or not,
+        // H's ready tick), each blow as it lands, and every 10 ticks to 40 how high over where she stands the caster is
+        var fi=dev.sangwoo.celestialfall.isosang.IsosangAttack.finaleNow(caster);
+        if(fi!=null){
+            var f=net.minecraft.util.math.Vec3d.fromPolar(0,fi.yaw());var d=watcher.getPos().subtract(fi.spot());
+            if(fi.start()!=finaleSeen){finaleSeen=fi.start();finaleBlows=0;
+                note(server,String.format(java.util.Locale.ROOT,"caster's H again began at %d: she stands %.2f from the caster, way %.1f, the watcher %.2f ahead and %.2f aside of her; formation %s; H ready again at %d",
+                    fi.start(),Math.hypot(caster.getX()-fi.spot().x,caster.getZ()-fi.spot().z),fi.yaw(),d.dotProduct(f),d.dotProduct(new net.minecraft.util.math.Vec3d(-f.z,0,f.x)),
+                    dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(caster)==null?"over":"standing",dev.sangwoo.celestialfall.isosang.IsosangAttack.hReady(caster)));}
+            if(fi.blows()>finaleBlows){finaleBlows=fi.blows();note(server,"caster's H again blow "+fi.blows()+" of "+dev.sangwoo.celestialfall.isosang.IsosangRules.blows(dev.sangwoo.celestialfall.isosang.IsosangRules.FINALE)+" landed at "+now+" ("+(now-fi.start())+" in)");}
+            long in=now-fi.start();
+            if(in%10==0&&in<=40)note(server,String.format(java.util.Locale.ROOT,"caster's H again +%d: %.2f over where she stands, %.2f off it, fall distance %.2f",in,caster.getY()-fi.spot().y,Math.hypot(caster.getX()-fi.spot().x,caster.getZ()-fi.spot().z),caster.fallDistance));
         }
         if(Math.abs(watcher.getHealth()-watcherHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (guard %s)",watcherHealth,watcher.getHealth(),now,dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));watcherHealth=watcher.getHealth();}
         // (2.80.0) the caster's E, and the empowered fourth: its step back and its throw of the watcher (that one moves)
