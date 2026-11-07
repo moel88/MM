@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * both feet on her sword as she rides it), its swords (the formation's own pulled out from where and as they stood,
  * nearest her first, as many of light with them; the one she stood on under her feet as she rides; streaming after her,
  * spread behind her back like wings, launched and come down slanting into the band ahead of her, hilts toward her, grown
- * twice as big, gone while it is drawn; never jumping from one frame to the next), and her camera's shots (following her
+ * three times as big, gone while it is drawn; never jumping from one frame to the next), and her camera's shots (following her
  * round her lap from low before her, in front of her and close as she raises her fingers up there, behind her as they
  * come down, never inside her, never jumping but at its one cut).
  */
@@ -76,7 +76,7 @@ class SwordFinaleTest {
     }
     @Test void everySwordOfTheFormationIsPulledOutAsItStoodNearestFirst(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
-        assertEquals(2*IsosangRules.FORMATION_SWORDS,plans.length,"the formation's own and as many of light");
+        assertEquals(IsosangRules.FORMATION_SWORDS,plans.length,"the formation's own (2.101.1: 28 in the band, none of light)");
         var layout=SwordFormation.layout(FORM);float formT=(c.start()-r.formStart())/20f;
         double lastD=-1;float lastPull=-1;
         java.util.List<Integer> order=new java.util.ArrayList<>();for(int k=0;k<SwordFinale.OWN;k++)order.add(k);
@@ -116,7 +116,7 @@ class SwordFinaleTest {
                 assertTrue(p.launch()>=IsosangRules.FINALE_LAUNCH-.03f&&p.launch()<IsosangRules.FINALE_DESCEND,"sent from behind her in the air");
                 assertTrue(SwordFinale.mid(fr,p,p.launch()).y-fr.spot().y>IsosangRules.FINALE_HOVER,"from up there");
             }
-            // in the band ahead, slanting, its hilt back toward her, grown twice as big, its point in the ground
+            // in the band ahead, slanting, its hilt back toward her, grown three times as big, its point in the ground
             Vec3d d=p.foot().subtract(fr.spot());
             assertTrue(IsosangRules.finaleIn(d.dotProduct(fr.f()),d.dotProduct(fr.r()),d.y,0),"it comes down in the band: "+d.dotProduct(fr.f())+" ahead, "+d.dotProduct(fr.r())+" aside");
             double slant=Math.toDegrees(Math.acos(-p.stuckDir().y));
@@ -124,20 +124,20 @@ class SwordFinaleTest {
             assertTrue(p.stuckDir().dotProduct(fr.f())>0,"its point on ahead, its hilt back toward her");
             var ends=SwordFinale.stuck(p);
             assertTrue(ends[1].y<p.foot().y,"its point in the ground");
-            assertEquals(2*SwordFormation.S_LEN,ends[0].distanceTo(ends[1]),1e-6,"twice as big as it stands");
+            assertEquals(3*SwordFormation.S_LEN,ends[0].distanceTo(ends[1]),1e-6,"three times as big as it stands");
             assertTrue(ends[0].subtract(fr.spot()).dotProduct(fr.f())>1.2,"its hilt short of where she comes down");
-            var b=SwordFinale.blade(fr,p,p.plant()+.3f);assertEquals(2,b.scale(),1e-9);
+            var b=SwordFinale.blade(fr,p,p.plant()+.3f);assertEquals(SwordFinale.GROW,b.scale(),1e-9);
             // launched before it strikes, gone after the band's burst
             assertTrue(p.plant()-p.launch()>=.19f);
             assertTrue(p.plant()>=IsosangRules.FINALE_PLANT0&&p.plant()<=IsosangRules.FINALE_PLANT1+1e-6);
             assertTrue(p.vanish()>=IsosangRules.FINALE_GONE0&&p.vanish()+SwordFinale.FADE<=IsosangRules.FINALE_GONE1+.05f);
             assertNull(SwordFinale.blade(fr,p,p.vanish()+SwordFinale.FADE+.01f),"gone");
-            // growing as it flies: its size from the fan's to twice it, never a jump
+            // growing as it flies: its size from the fan's to three times it, never a jump
             double prev=1;
-            for(float t=p.launch()-.05f;t<p.plant()+.05f;t+=1/60f){double sc=SwordFinale.scale(p,t);assertTrue(sc>=prev-1e-9&&sc-prev<.2,"growing smoothly: "+prev+" to "+sc);prev=sc;}
+            for(float t=p.launch()-.05f;t<p.plant()+.05f;t+=1/60f){double sc=SwordFinale.scale(p,t);assertTrue(sc>=prev-1e-9&&sc-prev<.4,"growing smoothly: "+prev+" to "+sc);prev=sc;}
         }
         assertEquals(1,steeds,"one sword under her feet: the one she stood on");
-        assertTrue(left>10&&right>10,"spread to both sides like wings: "+left+" "+right);
+        assertTrue(left>8&&right>8,"spread to both sides like wings: "+left+" "+right);
     }
     @Test void herSwordComesUpUnderHerFeetAndCarriesHerRoundUntilSheStepsOff(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);

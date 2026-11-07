@@ -1,15 +1,14 @@
-> **현재 통합본: Botand 2.101.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.101.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
 
-# 보탠드 2.101.0 — 이소상 H 재입력: 검진 마무리
+# 보탠드 2.101.1 — 이소상 H 재입력: 칼을 타고 한 바퀴, 공중에서 꽂고 내려옴
 
-- **H 재입력:** 검진의 검 위에서 H를 한 번 더 누르면, 검진의 검이 모두 뽑혀 그녀 둘레를 돌고 등 뒤에 날개처럼 펼쳐졌다가 앞쪽 띠에 꽂힙니다. 검진은 그 순간 끝납니다.
-- **피해:** 앞쪽 띠(앞 16블록, 옆 9블록씩)에 12씩 다섯 번, 합 60. 가드 불가.
-- **컷씬:** 시전자만 봅니다(파란 번쩍임, 어두운 남색 세상과 호박빛 노을).
-- **소리:** 보내 주신 영상 셋의 녹음 중 하나를 무작위로 냅니다.
-- **쿨타임:** H의 60초는 마무리가 끝난 뒤(4.8초)부터 돕니다.
+- **H 재입력:** 검진의 검 위에서 H를 한 번 더 누르면, 서 있던 검을 타고 하늘을 한 바퀴 돌고, 공중에 멈춰 칼을 휘두르고 두 손가락을 세운 뒤, 공중에서 검을 앞쪽 띠에 모두 꽂고 내려옵니다. 검진은 누르는 순간 끝납니다.
+- **꽂히는 검:** 날아가며 커져 검진 검의 3배로 꽂힙니다. 28자루입니다. 꽂힐 때마다 먹이 튑니다.
+- **피해:** 앞쪽 띠(앞 16블록, 옆 9블록씩)에 12씩 다섯 번, 합 60. 가드 불가. (2.101.0과 같음)
+- **컷씬:** 시전자만 봅니다.
 - **서버와 모든 접속자를 바꿔야 합니다.**
 
-[RELEASE_2.101.0_KO.md](RELEASE_2.101.0_KO.md)를 확인하세요. 2.100.1은 [RELEASE_2.100.1_KO.md](RELEASE_2.100.1_KO.md)입니다.
+[RELEASE_2.101.1_KO.md](RELEASE_2.101.1_KO.md)를 확인하세요. 2.101.0은 [RELEASE_2.101.0_KO.md](RELEASE_2.101.0_KO.md)입니다.
 
 # 보탠드 2.100.1 — 이소상 T: 더 크고 멋있어진 세 참격
 

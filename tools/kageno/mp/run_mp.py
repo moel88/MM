@@ -33,7 +33,8 @@ off in the crosshair as it walks, their ring following it until set, thirteen bl
 (incapacitated, 80% slower) from the first to 1.55 s; again under way and again too soon refused), MP_ONLY=isosanghh its
 H again (2.101.0, MpClient.ISOSANGHH_SCRIPT: H with the watcher out of the formation, then H once more on the sword with
 the watcher 11/3 blocks off in its band: the formation over at once, its swords pulled from where they stood, the caster up her leap and down where she
-stood (as drawn and as the server holds her), five blows of 12, the recording each client plays, her H ready again only
+stood (as drawn and as the server holds her; 2.101.1: round her lap of the sky on her sword, drawn level against its
+plan on each client, and its 28 swords), five blows of 12, the recording each client plays, her H ready again only
 once its swords are gone), MP_ONLY=isosangg its G (2.83.0,
 MpClient.ISOSANGG_SCRIPT: G with the watcher 30 blocks ahead (2.87.1: 21 past where its sword strikes, in the blast's
 62 x 47 blocks), struck 50 as its sword strikes; the caster's cutscene in its
