@@ -793,6 +793,8 @@ final class IsosangEmpower {
     }
     /** The sword's model with its grip at {@code grip}, pointing along {@code dir}, flat (its guard's wings level), {@code scale} times its size. */
     static void draw(net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider buffers,Vec3d camera,Vec3d grip,Vec3d dir,double scale,float alpha,int tint){
+        // (2.95.0: H's basic attack's swords are drawn with it too, SwordVolley.models)
+        if(spectral==null){spectral=new IsosangSwordRenderer.Spectral();stack=new ItemStack(dev.sangwoo.celestialfall.isosang.Isosang.SWORD);}
         Vec3d y=dir.normalize(),x=y.crossProduct(UP);
         if(x.lengthSquared()<1e-4)x=new Vec3d(1,0,0);
         x=x.normalize();Vec3d z=x.crossProduct(y).normalize();

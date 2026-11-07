@@ -62,6 +62,8 @@ public final class KagenoCamera {
             double dist=Math.min(c.origin().distanceTo(mc.player.getPos()),caster==null?1e9:caster.getPos().distanceTo(mc.player.getPos()));
             // (2.81.1) or from Lee So-sang's R's sword, which may stand some 24 blocks out toward the foe in the crosshair
             var sword=dev.sangwoo.celestialfall.client.isosang.IsosangClient.sweepPivot(c.id());if(sword!=null)dist=Math.min(dist,sword.distanceTo(mc.player.getPos()));
+            // (2.95.0) or from where H's basic attack's swords come down, up to 30 blocks off
+            var rain=dev.sangwoo.celestialfall.client.isosang.IsosangClient.volleyPoint(c.id());if(rain!=null)dist=Math.min(dist,rain.distanceTo(mc.player.getPos()));
             float reach=(float)Math.max(0,1-dist/40);
             var k=s.kick(c,c.age(delta)/20f);
             if(k!=null&&reach>0){if(kick==null)kick=new float[3];for(int i=0;i<3;i++)kick[i]+=k[i]*reach;}

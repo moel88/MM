@@ -996,6 +996,15 @@
       }
     ]
   },
+  "isosang_volley": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_volley",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
   "isosang_h": {
     "sounds": [
       {

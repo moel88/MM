@@ -352,6 +352,41 @@ class IsosangRulesTest {
         assertTrue(zTime(H_END-Z_TRAVEL/20.0-.01));assertFalse(zTime(H_END-Z_TRAVEL/20.0),"she would still fly as the swords flare");
         assertTrue(Z_TRAVEL/20.0>.15&&Z_TRAVEL/20.0<=.25,"some 0.2 s, as the video's: "+Z_TRAVEL/20.0);
     }
+    @Test void hsBasicAttackFansSixSwordsAndEachStrikesOnceEveryThreeSeconds(){
+        // (2.95.0) "등 뒤에 검 6개가 나와서 바라보고 있는 상대에게 날아감", the user's answers: 2 a sword, every 3 s
+        assertEquals(6,VOLLEY_SWORDS);assertEquals(VOLLEY_SWORDS,blows(VOLLEY));
+        for(int i=0;i<VOLLEY_SWORDS;i++)assertEquals(2f,damage(VOLLEY,i),1e-6f,"2 a sword");
+        assertEquals(12f,total(VOLLEY),1e-6f);
+        assertTrue(drawn(VOLLEY),"its swords are drawn");assertFalse(valid(VOLLEY),"not one of the combo's hits");assertFalse(unblockable(VOLLEY),"a guard takes it");
+        // shown one after another (the video: 0.17 s for all six), all of them before the first is thrown
+        for(int i=1;i<VOLLEY_SWORDS;i++){assertTrue(volleyShows(i)>volleyShows(i-1));assertTrue(volleyThrown(i)>volleyThrown(i-1));assertTrue(blowAt(VOLLEY,i)>=blowAt(VOLLEY,i-1));}
+        assertEquals(.17,volleyShows(5)-volleyShows(0),.01,"0.17 s from the first to the last");
+        assertTrue(volleyShows(5)<volleyThrown(0),"the fan is whole before the first is thrown");
+        for(int i=0;i<VOLLEY_SWORDS;i++){
+            float flight=volleyArrives(i)-volleyThrown(i);
+            assertTrue(flight>.45f&&flight<.7f,"a wheel round the air of about half a second: "+flight);
+            assertTrue(volleyStrikes(i)>volleyArrives(i),"it sticks in, then strikes");
+            // as the video's blows are heard and shown: 1.0 to 1.25 s in
+            assertTrue(volleyStrikes(i)>=1f&&volleyStrikes(i)<=1.26f,"strikes at "+volleyStrikes(i));
+            assertTrue(blowAt(VOLLEY,i)<VOLLEY_LENGTH,"over by its end");
+        }
+        assertTrue(VOLLEY_HOLD/20f>=volleyThrown(5),"no Z or R until the last is thrown");
+        // one every 3 s from one's start to the next's (its cooldown from its end); with the cooldowns off, once it is over
+        assertEquals(60,volleyReady(1000,false)-1000);assertEquals(VOLLEY_LENGTH,volleyReady(1000,true)-1000);
+        // on the sword once every sword stands, over before the swords flare
+        assertFalse(volleyTime(Z_FROM-.01));assertTrue(volleyTime(Z_FROM));assertTrue(volleyTime(30));
+        assertTrue(volleyTime(H_END-VOLLEY_LENGTH/20.0));assertFalse(volleyTime(H_END-VOLLEY_LENGTH/20.0+.01));
+        // a basic attack's stagger: until the next sword strikes and a little past; the last a moment
+        long start=500;
+        for(int i=0;i<VOLLEY_SWORDS-1;i++){long now=start+blowAt(VOLLEY,i);assertEquals(start+blowAt(VOLLEY,i+1)+Stagger.PAST,Stagger.isosang(VOLLEY,i,start,now,false));}
+        long last=start+blowAt(VOLLEY,5);assertEquals(last+Stagger.LAST,Stagger.isosang(VOLLEY,5,start,last,false));
+    }
+    @Test void hsBasicAttacksSoundIsTheVideosRunningPastItsLastBlow()throws Exception{
+        // (2.95.0) the user's video's own sound (cut_volley_sound.py): its swords' rush, and their burst on the blows, run
+        // on past the last until it is back down to the formation's sound
+        double v=StarPlatinumRulesTest.seconds("isosang_volley");
+        assertTrue(v>volleyStrikes(VOLLEY_SWORDS-1)+.3&&v<2.2,"its sound: "+v+" s");
+    }
     @Test void hsDodgeHoldsFromItsStartAndMovesHerToAnyOtherSwordAtRandom(){
         // (2.94.0) "H를 쓰고 단 1회 맞은 데미지 무시하고 랜덤한 검으로 이동": from H's start (a blow before the swords stand is kept
         // from her at once, and she moves as they do), until a move would land too late, as Z's

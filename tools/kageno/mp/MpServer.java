@@ -462,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -471,6 +471,8 @@ public final class MpServer implements ModInitializer {
      * while a hit is in flight or for a second after one (a blow throws no one: there should be none).
      */
     private float dodgeHealth=-1;private String dodgeSeen="";private int onSeen=-1;
+    /** (2.95.0) The caster's H basic attack last logged: its start, its blows, when it is ready again. */
+    private long volleySeen=-1,vReadySeen=-1;private int volleyBlows;
     private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1,zFrom=-1;private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zSeen;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
@@ -553,6 +555,16 @@ public final class MpServer implements ModInitializer {
         if(gSeen>=0&&gFrom!=null&&now-gSeen<=110&&(now-gSeen)%10==0)
             note(server,String.format(java.util.Locale.ROOT,"caster's G +%d: held %s, moved %.3f blocks, health %.1f (was %.1f)",now-gSeen,dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(caster),caster.getPos().distanceTo(gFrom),caster.getHealth(),gHealth));
         long gr=dev.sangwoo.celestialfall.isosang.IsosangAttack.gReady(caster);if(gr!=gReadySeen){gReadySeen=gr;note(server,"caster's G ready again at "+gr+" (now "+now+")");}
+        // (2.95.0) the caster's H basic attack (회풍만검): each volley as it begins (whom it comes down on and where, against
+        // the watcher's chest), its blows as they land (the watcher's health beside them), when it is ready again; the
+        // watcher must not move while it strikes (no knockback)
+        var vo=dev.sangwoo.celestialfall.isosang.IsosangAttack.volleyNow(caster);
+        if(vo!=null&&vo.start()!=volleySeen){volleySeen=vo.start();volleyBlows=0;watcherAt=watcher.getPos();
+            note(server,String.format(java.util.Locale.ROOT,"caster's volley began at %d on %s at %.2f %.2f %.2f (%.2f off the watcher's chest, the watcher %.2f from the caster); ready again at %d",
+                vo.start(),vo.target()<0?"no one":vo.target()==watcher.getId()?"the watcher":"entity "+vo.target(),vo.at().x,vo.at().y,vo.at().z,vo.at().distanceTo(watcher.getPos().add(0,watcher.getHeight()*.55,0)),
+                watcher.distanceTo(caster),dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster)));}
+        if(vo!=null){if(vo.blows()>volleyBlows){note(server,"caster's volley blow "+vo.blows()+" of 6 at "+now+" (its tick "+(now-vo.start())+")");volleyBlows=vo.blows();}watchUntil=Math.max(watchUntil,now+20);}
+        long vr=dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster);if(vr!=vReadySeen){vReadySeen=vr;note(server,"caster's volley ready again at "+vr+" (now "+now+")");}
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
             note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
             watcherAt=watcher.getPos();

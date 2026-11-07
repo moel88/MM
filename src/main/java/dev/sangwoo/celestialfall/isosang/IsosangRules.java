@@ -43,13 +43,13 @@ public final class IsosangRules {
      * speed: the twirl starts 0.05 s in and the slash is thrown 0.44 s after it; it was 0.7 s; it strikes as it flies on,
      * {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{},{}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{},{},{20,21,22,23,24,25}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
      * and 15; the empowered combo 43.5).
      */
-    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{},{}};
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{},{},{2,2,2,2,2,2}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
     /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
@@ -62,11 +62,11 @@ public final class IsosangRules {
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
      * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0};
+    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it; 2.83.0: G's cutscene). */
-    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD};
+    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's; 2.83.0: and G's). */
-    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD};
+    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -75,8 +75,11 @@ public final class IsosangRules {
     public static final int REST=24;
     /** Whether {@code kind} is a hit (1 to 4, the empowered 5 and 6). */
     public static boolean valid(int kind){return kind>=1&&kind<=THRUST;}
-    /** Whether {@code kind} is a swing the clients draw with the body: a hit, R's sweep (2.81.0), H's sword formation (2.82.0) or G (2.83.0). */
-    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE;}
+    /**
+     * Whether {@code kind} is a swing the clients draw: a hit, R's sweep (2.81.0), H's sword formation (2.82.0), G (2.83.0)
+     * or H's basic attack (2.95.0, VOLLEY: its swords only, the body standing on in the formation's stance).
+     */
+    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE||kind==VOLLEY;}
     /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
     public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
     /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
@@ -129,6 +132,8 @@ public final class IsosangRules {
      * reaching where they stood before its leap, {@link #GIANT_LAG} ticks after it is thrown (2.80.1).
      */
     public static long staggerUntil(int combo,int blow,long start,long now,int past,int last,boolean empowered){
+        // (2.95.0) H's basic attack: until its next sword lands, its last {@code last} ticks (the next volley is 3 s off)
+        if(combo==VOLLEY)return blow+1<blows(combo)?Math.max(now,start+blowAt(combo,blow+1))+past:now+last;
         if(position(combo)>=4)return now+last;
         int after=next(combo,empowered);
         long next=blow+1<blows(combo)?start+blowAt(combo,blow+1)+(combo==THROWS?SWORD_LAG:0):nextAt(combo,start)+blowAt(after,0)+(after==THRUST?GIANT_LAG:0);
@@ -657,6 +662,57 @@ public final class IsosangRules {
         if(swords<2)return on;
         roll=Math.floorMod(roll,swords-1);return roll<on?roll:roll+1;
     }
+
+    // ───────────────────────────── H's basic attack: 회풍만검 ─────────────────────────────
+
+    /**
+     * H's basic attack, 회풍만검 (2.95.0, user request: "이번에는 평타 만들자 영상 처럼 등 뒤에 검 6개가 나와서 바라보고 있는
+     * 상대에게 날아감", the user's video of it (5f78fd72, 60 fps) read on a sheet and confirmed: "맞음, 이대로"; and their
+     * answers: 2 a sword, every 3 s, with no foe in sight they fly at the crosshair): while she stands on her formation's
+     * sword the attack key fans {@link #VOLLEY_SWORDS} swords of light out behind her back one after another (hilts at her
+     * back, points out from her left through overhead to her right), throws them one after another up and away, and they
+     * wheel round in the air and come down on the foe she looks at from all round, each sticking in and striking once
+     * ({@link #VOLLEY_DAMAGE}; no knockback, a basic attack's stagger, a guard takes it). With no foe in her sight they
+     * come down where her crosshair meets a block, or {@link #VOLLEY_RANGE} blocks on, and strike whoever is there. Her body
+     * stands on as it does on the sword (the video: hardly a move).
+     */
+    public static final int VOLLEY=10,VOLLEY_SWORDS=6;
+    public static final float VOLLEY_DAMAGE=2;
+    /**
+     * How long it runs (ticks, its last sword struck and its light gone by then), how long it holds her (its swords all
+     * thrown: no Z or R until then), and the ticks before the next once it is over: one every 3 s (the user's choice:
+     * "3초마다", from one's start to the next's; its cooldown runs once it is over, as every skill's).
+     */
+    public static final int VOLLEY_LENGTH=28,VOLLEY_HOLD=10,VOLLEY_COOLDOWN=32;
+    /**
+     * How far off the foe she looks at may be (blocks from her eyes), and how far off the middle of her view (radians):
+     * the nearest to it within this is the one she looks at; and how near the point they come down on (no foe) a body
+     * must be to be struck there (blocks, its box widened).
+     */
+    public static final double VOLLEY_RANGE=30,VOLLEY_AIM=Math.toRadians(6),VOLLEY_SPOT=.6;
+    /**
+     * When into it (seconds) its swords show behind her back, the first and each after (from the video: 0.17 s for all
+     * six, from the middle out), when they are thrown, the first and each after (the video: the same pace, 0.06 s after the
+     * last shows), and how long each sticks in the foe before it strikes (the video: the blows are heard and their damage
+     * shown some 0.15 s after the swords reach the foe). Each strikes on its blow's tick (BLOWS: 1.0 to 1.25 s, as the
+     * video's).
+     */
+    public static final float VOLLEY_SHOW0=.05f,VOLLEY_SHOW_STEP=.034f,VOLLEY_THROW0=.3f,VOLLEY_THROW_STEP=.034f,VOLLEY_STICK=.15f;
+    /** When into the volley sword {@code i} shows behind her back (seconds). */
+    public static float volleyShows(int i){return VOLLEY_SHOW0+i*VOLLEY_SHOW_STEP;}
+    /** When into the volley sword {@code i} is thrown (seconds). */
+    public static float volleyThrown(int i){return VOLLEY_THROW0+i*VOLLEY_THROW_STEP;}
+    /** When into the volley sword {@code i} reaches what it comes down on and sticks in (seconds). */
+    public static float volleyArrives(int i){return blowAt(VOLLEY,i)/20f-VOLLEY_STICK;}
+    /** When into the volley sword {@code i} strikes (seconds): its blow's tick. */
+    public static float volleyStrikes(int i){return blowAt(VOLLEY,i)/20f;}
+    /** Whether the volley may begin {@code t} seconds into her formation: every sword planted (Z's from), and over before the swords flare. */
+    public static boolean volleyTime(double t){return t>=Z_FROM&&t+VOLLEY_LENGTH/20.0<=H_END;}
+    /**
+     * The tick the volley is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her, it
+     * is ready once this one is over).
+     */
+    public static long volleyReady(long start,boolean free){return start+VOLLEY_LENGTH+(free?0:VOLLEY_COOLDOWN);}
 
     // ───────────────────────────── G: the ultimate ─────────────────────────────
 

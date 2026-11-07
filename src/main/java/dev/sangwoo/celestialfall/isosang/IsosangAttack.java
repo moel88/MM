@@ -107,6 +107,18 @@ public final class IsosangAttack {
         Ultimate ult;long gReady;
         /** (2.93.0) Z: its window, its moves in it and when it is ready again (IsosangRules.ZState). */
         IsosangRules.ZState z=IsosangRules.ZState.FRESH;
+        /** (2.95.0) H's basic attack, 회풍만검, under way or the last one (null for none), and the tick it is ready again. */
+        Volley volley;long vReady;
+    }
+    /**
+     * H's basic attack, 회풍만검 (2.95.0, IsosangRules.VOLLEY): its id and start, the way its user faced, the foe it comes
+     * down on (an entity id, -1 for none: then the point), where it comes down (the foe's chest as it began, else where
+     * the crosshair met), where the foe was last seen (its chest: where the rest come down if it is gone) and how many of
+     * its swords have struck.
+     */
+    private static final class Volley {
+        final UUID id;final long start;final float yaw;final int target;final Vec3d point;Vec3d last;int blows;
+        Volley(UUID id,long start,float yaw,int target,Vec3d point){this.id=id;this.start=start;this.yaw=yaw;this.target=target;this.point=point;this.last=point;}
     }
     /** (2.83.0) For the film harness only (as StandArrow.rigged): the recording the next G plays (0 or 1), -1 to roll. */
     public static volatile int riggedVariant=-1;
@@ -197,12 +209,20 @@ public final class IsosangAttack {
         // (the user's 2.87.0 preview) G's arena: who shares its cutscene
         GArenaServer.initialize();
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,player,handler,buf,response)->{
-            if(buf.readableBytes()!=0)return;
+            // (2.95.0) on H's sword the press carries whom the client's crosshair looks at (an entity id, -1 for none) and
+            // where it meets (H's basic attack, 회풍만검); every other press is empty (and an older client's on the sword)
+            int bytes=buf.readableBytes();if(bytes!=0&&(bytes<25||bytes>29))return;
+            int asked=-1;Vec3d meets=null;
+            if(bytes!=0){
+                asked=buf.readVarInt();meets=new Vec3d(buf.readDouble(),buf.readDouble(),buf.readDouble());
+                if(buf.isReadable()||!Double.isFinite(meets.x)||!Double.isFinite(meets.y)||!Double.isFinite(meets.z))return;
+            }
+            int foe=asked;Vec3d at=meets;boolean aimed=bytes!=0;
             server.execute(()->{
                 var s=state(player);int second=server.getTicks()/20;
                 if(s.window!=second){s.window=second;s.presses=0;}
                 if(++s.presses>RATE)return;
-                request(player);
+                request(player,aimed,foe,at);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(SKILL,(server,player,handler,buf,response)->{
@@ -376,12 +396,17 @@ public final class IsosangAttack {
     }
 
     /** The player asks for a hit. Returns whether one starts now or is kept for when it may. */
-    public static boolean request(ServerPlayerEntity p){
+    public static boolean request(ServerPlayerEntity p){return request(p,false,-1,null);}
+    /**
+     * The same, with whom and where their client's crosshair looks ({@code aimed}: it said; the foe's entity id, -1 for
+     * none, and where the crosshair meets): on H's sword it is H's basic attack (2.95.0, {@link #volley}).
+     */
+    public static boolean request(ServerPlayerEntity p,boolean aimed,int foe,Vec3d meets){
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
-        // (2.82.0) on H's sword only R may be used (the user's word: "일단은 R만 됨")
-        if(forming(s,now))return false;
+        // (2.82.0) on H's sword only R and Z were used (the user's word: "일단은 R만 됨"); (2.95.0) and its own basic attack
+        if(forming(s,now))return volley(p,s,now,aimed,foe,meets);
         if(now<s.ready&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         // (2.81.0) while R holds them: a press a little before it lets go is kept for then
         if(sweepHolds(s,now)){long free=s.sweep.start+HOLD[SWEEP];if(free-now<=BUFFER)s.queued=true;return s.queued;}
@@ -437,8 +462,9 @@ public final class IsosangAttack {
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
         if(sweeping(s,now)||now<s.rReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
-        // (2.93.0) not while Z flies them from one of their formation's swords to another
-        if(s.form!=null&&forming(s,now)&&s.form.flying(now))return false;
+        // (2.93.0) not while Z flies them from one of their formation's swords to another; (2.95.0) nor while H's basic
+        // attack's swords fan out behind them
+        if(s.form!=null&&forming(s,now)&&(s.form.flying(now)||volleyHolds(s,now)))return false;
         if(holding(s.combo,s.start,now)){
             long free=s.start+HOLD[s.combo];
             if(free-now<=BUFFER){s.rQueued=true;s.rHeld=held;return true;}
@@ -574,7 +600,7 @@ public final class IsosangAttack {
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();var f=s.form;
         if(f==null||!forming(s,now)||!IsosangRules.zTime((now-f.start)/20.0))return false;
-        if(f.flying(now)||sweepHolds(s,now)||k<0||k>=f.swords.length||k==f.on)return false;
+        if(f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||k<0||k>=f.swords.length||k==f.on)return false;
         var next=IsosangRules.zUse(s.z,now,dev.sangwoo.celestialfall.NoCooldownState.enabled(p));if(next==null)return false;
         s.z=next;f.from=f.on;f.on=k;f.moved=now;
         send(p,f.id,FORMATION,f.start,f.yaw,CROSSED,k,null,null,null,f);
@@ -611,12 +637,82 @@ public final class IsosangAttack {
         var f=s.form;if(f==null||!f.waiting)return;
         double t=(now-f.start)/20.0;
         if(!IsosangRules.zTime(t)){if(t>=IsosangRules.Z_FROM)f.waiting=false;return;}
-        if(f.flying(now)||KagenoManager.frozen(p))return;
+        if(f.flying(now)||KagenoManager.frozen(p)||volleyHolds(s,now))return;
         f.waiting=false;
         int k=IsosangRules.dodgeSword(f.on,p.getRandom().nextInt(f.swords.length-1),f.swords.length);
         f.from=f.on;f.on=k;f.moved=now;
         send(p,f.id,FORMATION,f.start,f.yaw,CROSSED,k,null,null,null,f);
     }
+    /**
+     * H's basic attack, 회풍만검 (2.95.0, user request: "이번에는 평타 만들자 영상 처럼 등 뒤에 검 6개가 나와서 바라보고 있는
+     * 상대에게 날아감", IsosangRules.VOLLEY): the attack key on their formation's sword. Six swords of light fan out behind
+     * them and come down on the foe they look at (the one their client's crosshair is nearest, as it said: {@code foe},
+     * checked here; an older client's press says nothing, and the server looks along their sight itself), each striking
+     * once as it reaches it (shower); with none they come down where the crosshair met ({@code meets}, VOLLEY_RANGE blocks
+     * on at most). Only while every sword of the formation stands (IsosangRules.volleyTime), not while Z flies them or R
+     * holds them, one at a time, and once every 3 s (IsosangRules.volleyReady; as soon as the last is over for a player the
+     * cooldowns are off for).
+     */
+    private static boolean volley(ServerPlayerEntity p,State s,long now,boolean aimed,int foe,Vec3d meets){
+        var f=s.form;if(f==null||!IsosangRules.volleyTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(s.volley!=null&&now<s.volley.start+VOLLEY_LENGTH||now<s.vReady&&!free)return false;
+        Vec3d eye=p.getEyePos();LivingEntity target=null;Vec3d at;
+        if(aimed){
+            if(foe>=0&&p.getWorld().getEntityById(foe) instanceof LivingEntity e&&fair(p,e)&&e.squaredDistanceTo(eye)<=(VOLLEY_RANGE+2)*(VOLLEY_RANGE+2)&&p.canSee(e))target=e;
+            at=meets==null?eye:meets;
+            // (where the crosshair met, no further than VOLLEY_RANGE from their eyes)
+            Vec3d d=at.subtract(eye);if(d.lengthSquared()>VOLLEY_RANGE*VOLLEY_RANGE)at=eye.add(d.normalize().multiply(VOLLEY_RANGE));
+        }else{
+            // (an older client's press: whom their sight meets first, R held's way; else where it meets a block)
+            target=aimed(p);
+            Vec3d look=p.getRotationVec(1f);at=eye.add(look.multiply(VOLLEY_RANGE));
+            var block=p.getServerWorld().raycast(new RaycastContext(eye,at,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+            if(block.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)at=block.getPos();
+        }
+        if(target!=null&&target.squaredDistanceTo(eye)>(VOLLEY_RANGE+2)*(VOLLEY_RANGE+2))target=null;
+        if(target!=null)at=chest(target);
+        s.volley=new Volley(UUID.randomUUID(),now,MathHelper.wrapDegrees(p.getYaw()),target==null?-1:target.getId(),at);
+        s.vReady=IsosangRules.volleyReady(now,free);
+        send(p,s.volley.id,VOLLEY,now,s.volley.yaw,HIT,-1,null,null,null,f,null,s.volley);
+        return true;
+    }
+    /** Whether H's basic attack's swords still fan out behind this player now (IsosangRules.VOLLEY_HOLD): no Z, R or move to another sword until they are thrown. */
+    private static boolean volleyHolds(State s,long now){var v=s.volley;return v!=null&&now>=v.start&&now<v.start+VOLLEY_HOLD;}
+    /** Whether {@code e} may be struck by {@code p}'s swords: alive, in the world, not them, not a merchant, and by the PvP rules. */
+    private static boolean fair(ServerPlayerEntity p,LivingEntity e){
+        return e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&e.getWorld()==p.getWorld()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)
+            &&!(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other));
+    }
+    /** The middle of {@code e}'s body: where H's basic attack's swords come down. */
+    private static Vec3d chest(LivingEntity e){return e.getPos().add(0,e.getHeight()*.55,0);}
+    /**
+     * H's basic attack on a tick (2.95.0): each sword strikes on its blow's tick (IsosangRules.volleyStrikes) the foe it was
+     * sent at, wherever it has gone (so long as it is still there and within reach), or, with none (or it gone), whoever
+     * is where they come down (its box widened VOLLEY_SPOT); each a blow of 2, no knockback, a basic attack's stagger. Its
+     * user gone (dead, off the map, Lee So-sang no more) calls the rest off.
+     */
+    private static void shower(ServerPlayerEntity p,State s,long now){
+        var v=s.volley;long age=now-v.start;
+        if(!attacks(p)){s.volley=null;send(p,v.id,VOLLEY,v.start,v.yaw,STOPPED,-1,null,null,null,s.form,null,v);return;}
+        LivingEntity foe=null;
+        if(v.target>=0&&p.getWorld().getEntityById(v.target) instanceof LivingEntity e&&fair(p,e)&&e.squaredDistanceTo(p.getEyePos())<=(VOLLEY_RANGE+10)*(VOLLEY_RANGE+10)){foe=e;v.last=chest(e);}
+        while(v.blows<VOLLEY_SWORDS&&age>=blowAt(VOLLEY,v.blows)){
+            int i=v.blows++;List<LivingEntity> struck;
+            if(foe!=null){var target=foe;struck=strike(p,VOLLEY,i,v.start,v.yaw,now,target.getPos(),e->e==target,null,false);}
+            else{Vec3d at=v.last;struck=strike(p,VOLLEY,i,v.start,v.yaw,now,at,e->e.getBoundingBox().expand(VOLLEY_SPOT).contains(at),null,false);}
+            if(!struck.isEmpty())send(p,v.id,VOLLEY,v.start,v.yaw,LANDED,i,struck,null,null,s.form,null,v);
+        }
+        if(age>=VOLLEY_LENGTH)s.volley=null;
+    }
+    /** H's basic attack as a boss reads it (2.95.0): begun at {@code start}, its swords coming down at {@code at} (its foe's chest as last seen), {@code blows} struck so far. */
+    public record VolleyNow(long start,Vec3d at,int target,int blows){}
+    public static VolleyNow volleyNow(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());var v=s==null?null:s.volley;
+        return v==null?null:new VolleyNow(v.start,v.last,v.target,v.blows);
+    }
+    /** (2.95.0) The tick this player's H's basic attack is ready again (0 if it is). */
+    public static long vReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.vReady;}
     /** (2.94.0) Whether this player's formation's dodge has been used (the multiplayer check reads it). */
     public static boolean dodged(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s!=null&&s.form!=null&&s.form.dodged;}
     /** (2.94.0) The sword this player stands on in their formation now (-1 for none; the multiplayer check reads it). */
@@ -800,6 +896,8 @@ public final class IsosangAttack {
             if(s.form!=null)hold(p,s,now);
             // (2.83.0) and G (nothing harms its user while it holds them; only what takes them away calls it off)
             if(s.ult!=null)cast(p,s,now);
+            // (2.95.0) and H's basic attack's swords, so long as their user is here and Lee So-sang's
+            if(s.volley!=null)shower(p,s,now);
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
             if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
             if(held(p)){stop(p,s,now);release(p,s,now);s.rQueued=false;continue;}
@@ -948,8 +1046,9 @@ public final class IsosangAttack {
         List<LivingEntity> struck=new ArrayList<>();
         // (2.80.0: a thrown sword strikes the body it reached, wherever that is: the sword flew a way clear of blocks to it;
         // 2.80.1: so does the giant sword, all along its way)
-        boolean thrown=combo==THROWS||combo==THRUST||combo==SWEEP;
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((combo==THROWS?2:combo==SWEEP?SWEEP_PIVOT_FW+SWEEP_REACH:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        // (2.95.0: so does H's basic attack's every sword, coming down on whom it was sent at)
+        boolean thrown=combo==THROWS||combo==THRUST||combo==SWEEP||combo==VOLLEY;
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((combo==THROWS||combo==VOLLEY?2:combo==SWEEP?SWEEP_PIVOT_FW+SWEEP_REACH:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             if(done!=null&&done.contains(e.getUuid()))continue;
             if(!test.test(e)||!thrown&&!p.canSee(e))continue;
@@ -992,6 +1091,9 @@ public final class IsosangAttack {
         send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,null);
     }
     private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult){
+        send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,ult,null);
+    }
+    private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult,Volley volley){
         GArenaServer.event(p,id,combo,start,type);
         var s=state(p);var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:world.getPlayers()){
@@ -1020,6 +1122,10 @@ public final class IsosangAttack {
             // for H's formation the sword its user stands on, the one they flew from (255 for none) and the tick they left it
             b.writeLong(s.z.ready());b.writeLong(s.z.first());b.writeByte(s.z.uses());b.writeBoolean(form!=null);
             if(form!=null){b.writeByte(form.on);b.writeByte(form.from<0?255:form.from);b.writeLong(form.moved);}
+            // (2.95.0, after what 2.94 sent) when H's basic attack is ready again, and for it the foe it comes down on (-1 for
+            // none) and where (the foe's chest as it began, else where the crosshair met)
+            b.writeLong(s.vReady);b.writeBoolean(volley!=null);
+            if(volley!=null){b.writeVarInt(volley.target);b.writeDouble(volley.point.x);b.writeDouble(volley.point.y);b.writeDouble(volley.point.z);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

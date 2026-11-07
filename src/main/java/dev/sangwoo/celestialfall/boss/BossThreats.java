@@ -179,6 +179,14 @@ public final class BossThreats {
             out.add(new Threat(p,"isosangG",u.start(),Math.max(now,hit),hit,
                 dev.sangwoo.celestialfall.isosang.GArenaServer.threat(u.strike(),p),false,false,false,200,false,false));
         }
+        // (2.95.0) H's basic attack's swords coming down: round where they come down (its foe's feet as last seen), until its
+        // last sword, guardable (the blows come from its user's side)
+        var vo=dev.sangwoo.celestialfall.isosang.IsosangAttack.volleyNow(p);
+        if(vo!=null&&vo.blows()<IsosangRules.VOLLEY_SWORDS){
+            long hit=vo.start()+IsosangRules.blowAt(IsosangRules.VOLLEY,vo.blows());
+            out.add(new Threat(p,"isosangV",vo.start(),Math.max(now,hit),vo.start()+IsosangRules.lastBlow(IsosangRules.VOLLEY),
+                Zone.ring(vo.at().subtract(0,1,0),IsosangRules.VOLLEY_SPOT+.9,-1.5,3),true,false,false,IsosangRules.total(IsosangRules.VOLLEY),false,false));
+        }
         // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
         for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){
             float yaw=(float)Math.toDegrees(Math.atan2(-sw.dir().x,sw.dir().z));

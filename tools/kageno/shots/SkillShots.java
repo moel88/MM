@@ -511,6 +511,8 @@ public final class SkillShots implements ClientModInitializer {
     private String callLogged="";private boolean awakeLogged;private long lastH=-1;
     /** (2.93.0) "ZAIM<deg>@n": the sword of the player's own formation the camera turns onto (-1 once Z is pressed), from when, from where; and where it holds once it has. */
     private int zaimSword=-1,zaimAt=-1;private float zaimYaw0,zaimPitch0,zaimYaw,zaimPitch;private boolean zaimHeld;
+    /** (2.95.0) "DAIM@n" / "PAIM<deg>@n": the camera turned onto the training dummy (following it) or onto a spot of the ground (held), from when and from where. */
+    private boolean daimHeld;private net.minecraft.util.math.Vec3d paimPoint;private int daimAt=-1;private float daimYaw0,daimPitch0;
     /** SUMMON: this tick's row of stand.csv, and a line in the log each time the stand comes out or goes back. */
     private void logStand(){
         boolean out=((StandHolder)mc.player).botand$isStandOut();
@@ -970,6 +972,14 @@ public final class SkillShots implements ClientModInitializer {
                 zaimYaw=zaimYaw0+net.minecraft.util.math.MathHelper.wrapDegrees(a[0]-zaimYaw0)*u;zaimPitch=zaimPitch0+(a[1]-zaimPitch0)*u;}
             BotandCamera.STATE.yaw=zaimYaw;BotandCamera.STATE.pitch=zaimPitch;
         }
+        // "DAIM@n" (2.95.0, Lee So-sang's H basic attack, 회풍만검): onto the training dummy's chest, eased in over 8 ticks and
+        // following it; "PAIM<deg>@n" onto the spot of the ground picked then, held there
+        if((daimHeld||paimPoint!=null)&&phase==4&&mc.player!=null){
+            net.minecraft.util.math.Vec3d to=paimPoint;
+            if(daimHeld){var dm=mc.world.getEntityById(dummyId);to=dm==null?null:dm.getPos().add(0,dm.getHeight()*.55,0);}
+            if(to!=null){float[] a=aimAt(to);float u=Math.min(1,(age-daimAt)/8f);u=u*u*(3-2*u);
+                BotandCamera.STATE.yaw=daimYaw0+net.minecraft.util.math.MathHelper.wrapDegrees(a[0]-daimYaw0)*u;BotandCamera.STATE.pitch=daimPitch0+(a[1]-daimPitch0)*u;}
+        }
         // "bface=1" (2.69.0): the player keeps their camera (and so their blows) on the boss, as a player fighting it does,
         // from tick "bfrom" (0); "bchase=D" walks them at it while it is further than D blocks. Film it with a far= camera.
         if(opts.containsKey("bface")&&phase==4&&mc.player!=null&&age>=opt("bfrom",0)){
@@ -1203,7 +1213,28 @@ public final class SkillShots implements ClientModInitializer {
                             log.append("  wheel ").append(what.equals("WHEEL_UP")?"up":"down").append(" at ").append(age).append(String.format(Locale.ROOT,": the list goes to row %d%n",(int)sc[1]));}continue;}
                     if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
                     // 2.54.0: the attack (the left button) held down and let go, through Minecraft's own mouse handler
-                    if(what.equals("ATTACKDOWN")||what.equals("ATTACKUP")){if(age==at){log.append("  attack ").append(what.equals("ATTACKDOWN")?"down":"up").append(" at ").append(age).append('\n');button(what.equals("ATTACKDOWN"));}continue;}
+                    if(what.equals("ATTACKDOWN")||what.equals("ATTACKUP")){if(age==at){log.append("  attack ").append(what.equals("ATTACKDOWN")?"down":"up").append(" at ").append(age).append('\n');button(what.equals("ATTACKDOWN"));}
+                        // (2.95.0) on H's sword: whom and where the client's crosshair picks for 회풍만검 as it is pressed,
+                        // whether the server began one (whom it comes down on), and what its swords struck by its end
+                        if(what.equals("ATTACKDOWN")){
+                            if(age==at){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.aimNow(mc);
+                                if(aim!=null)log.append(String.format(Locale.ROOT,"  volley aims at %s (%.2f, %.2f, %.2f) at %d%n",aim.target()<0?"no one":aim.target()==dummyId?"the dummy":"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z,age));}
+                            if(age==at+3||age==at+27)server(p->{var v=dev.sangwoo.celestialfall.isosang.IsosangAttack.volleyNow(p);var d=p.getServerWorld().getEntityById(dummyId);
+                                if(v==null&&age==at+27&&!(d instanceof net.minecraft.entity.LivingEntity))return;
+                                long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity l?l.getHealth():Float.NaN;
+                                if(age==at+3&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null)return;
+                                log.append(String.format(Locale.ROOT,"  volley %s at %d: %s, dummy health %.1f, ready in %d%n",age==at+3?"begun":"after",age,
+                                    v==null?"none under way":String.format(Locale.ROOT,"begun %d ticks ago on %s at (%.2f, %.2f, %.2f), %d struck",now-v.start(),v.target()<0?"no one":v.target()==dummyId?"the dummy":"entity "+v.target(),v.at().x,v.at().y,v.at().z,v.blows()),
+                                    hp,Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(p)-now)));});
+                        }
+                        continue;}
+                    // "DAIM@n" / "PAIM<deg>@n" (2.95.0): the camera onto the training dummy (following it), or onto the spot of the
+                    // ground "paimd" (10) blocks from the player <deg> degrees clockwise of where the camera looks then (held)
+                    if(what.equals("DAIM")||what.startsWith("PAIM")){if(age==at){
+                            daimAt=age;daimYaw0=BotandCamera.STATE.yaw;daimPitch0=BotandCamera.STATE.pitch;zaimHeld=false;daimHeld=what.equals("DAIM");paimPoint=null;
+                            if(!daimHeld){var f=net.minecraft.util.math.Vec3d.fromPolar(0,BotandCamera.STATE.yaw+Float.parseFloat(what.substring(4)));var at2=mc.player.getPos().add(f.multiply(opt("paimd",10)));
+                                int gy=mc.world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,(int)Math.floor(at2.x),(int)Math.floor(at2.z));paimPoint=new net.minecraft.util.math.Vec3d(at2.x,gy+.05,at2.z);}
+                            log.append(String.format(Locale.ROOT,"  camera onto %s at %d%n",daimHeld?"the dummy":String.format(Locale.ROOT,"the ground at (%.2f, %.2f, %.2f)",paimPoint.x,paimPoint.y,paimPoint.z),age));}continue;}
                     // 2.67.0: a second Star Platinum user (a server-side fake player, its stand out) "cfw" blocks ahead of the
                     // player (and "crt" to their right), facing them: "FAKE@n" brings it in, "FAKEH@n" makes it stop time (H, its
                     // real rules: the player stands stopped in it), "HURT@n" deals the player "hurt" (4) through the game's own
@@ -1358,7 +1389,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
                         +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;
+                        stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}

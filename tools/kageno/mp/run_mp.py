@@ -21,7 +21,9 @@ again at once (refused), a press of the attack kept through it, R kept through a
 front whatever the crosshair is on, R held at the watcher 25 blocks off in the crosshair), MP_ONLY=isosangz its Z (2.93.0, MpClient.ISOSANGZ_SCRIPT: three moves across H's swords within ten seconds, a fourth refused,
 one after the cooldown and its window run out, R from that sword, Z after the window refused), MP_ONLY=isosangdodge its H's
 dodge (2.94.0, MpClient.ISOSANGDODGE_SCRIPT: the caster struck three times by the watcher in H, the first kept from it and
-the caster moved onto a sword at random, the others landing), MP_ONLY=isosangg its G (2.83.0,
+the caster moved onto a sword at random, the others landing), MP_ONLY=isosangvolley its H basic attack (2.95.0,
+MpClient.ISOSANGVOLLEY_SCRIPT: on the sword, six swords of 2 at the watcher 20 blocks off in the crosshair, again too soon
+refused, again 3 s on, then onto the ground with no one in the crosshair), MP_ONLY=isosangg its G (2.83.0,
 MpClient.ISOSANGG_SCRIPT: G with the watcher 30 blocks ahead (2.87.1: 21 past where its sword strikes, in the blast's
 62 x 47 blocks), struck 50 as its sword strikes; the caster's cutscene in its
 own space, the watcher's world left as it is with the landing drawn; G and the attack refused while it holds, G refused
