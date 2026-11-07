@@ -56,14 +56,26 @@ class SwordCageTest {
             float show=SwordCage.shows(k),land=SwordCage.lands(k);
             assertNull(SwordCage.blade(RING,HER,k,show-.02f,none),"not before it shows");
             assertTrue(show>=.09f&&show<=.3f,"each shows between the videos' 0.1 and 0.29 s");
-            // hanging over the foe, point down, well above its head, a little out from its middle
+            // hanging over the foe well above its head, some 4 to 5 blocks out, aimed at it (2.97.1, the user: "검 방향이
+            // 너무 1자로 되어있어 영상은 검 방향이 적으로 되어있고"): its point down and in, slanting, its line coming
+            // down under the foe's feet
             var hang=SwordCage.blade(RING,HER,k,show+.15f,none);assertNotNull(hang);assertEquals(0,hang.phase());
-            assertEquals(-1,hang.dir().y,1e-9,"point down");
             assertTrue(hang.tip().y-RING.y>2.6,"its point above a player's head: "+(hang.tip().y-RING.y));
-            double out=Math.hypot(hang.grip().x-RING.x,hang.grip().z-RING.z);assertEquals(SwordCage.HOVER_R,out,1e-6);
+            double out=Math.hypot(hang.grip().x-RING.x,hang.grip().z-RING.z);
+            assertTrue(out>3.5&&out<5.5,"hanging some 4 to 5 blocks out: "+out);
+            Vec3d hd=hang.dir();double lean=Math.toDegrees(Math.acos(-hd.y));
+            assertTrue(lean>15&&lean<30,"slanting, not upright: "+lean);
+            assertTrue(new Vec3d(hd.x,0,hd.z).dotProduct(RING.subtract(hang.grip()).multiply(1,0,1))>0,"its point in toward the foe");
+            Vec3d down=hang.grip().add(hd.multiply((RING.y-hang.grip().y)/hd.y));
+            assertTrue(Math.hypot(down.x-RING.x,down.z-RING.z)<1.4,"its line comes down at the foe's feet: "+Math.hypot(down.x-RING.x,down.z-RING.z));
             // coming down just before it strikes, in the ground from then
             assertEquals(1,SwordCage.blade(RING,HER,k,land-.02f,none).phase());
             var stuck=SwordCage.blade(RING,HER,k,land+.05f,none);assertEquals(2,stuck.phase());
+            // down along the line it hung on, point first, never turning
+            Vec3d off=stuck.grip().subtract(hang.grip());
+            assertTrue(off.subtract(hd.multiply(off.dotProduct(hd))).length()<.1,"it stands on the line it hung on");
+            assertTrue(off.dotProduct(hd)>4,"it came a long way down that line: "+off.dotProduct(hd));
+            assertEquals(1,stuck.dir().dotProduct(hd),1e-9,"its blade's way the same");
             // standing in the ring: where its blade meets the ground about the ring's radius out, its point under the ground,
             // its hilt up over it, leaning its point in
             Vec3d g=stuck.grip(),d=stuck.dir();double s=(RING.y-g.y)/d.y;Vec3d at=g.add(d.multiply(s));
@@ -109,8 +121,9 @@ class SwordCageTest {
         for(int n=0;n<SwordCage.COLUMNS;n++){
             var c=SwordCage.column(n);
             assertTrue(c.born()>=SwordCage.COLUMN0&&c.born()<=SwordCage.COLUMN0+SwordCage.COLUMN_SPREAD,"the columns burst up from 0.68 s");
-            assertTrue(c.height()>SwordCage.STUCK_UP+.7&&c.height()<8,"taller than the swords stand: "+c.height());
-            assertTrue(c.width()>.6,"broad brush strokes, not spikes");
+            // (2.97.1, the user: "잉크가 너무 많이 튀고 있어 잉크를 좀 많이 줄여줘": low and narrow, 2.97.0's up to 7.5 tall)
+            assertTrue(c.height()>2&&c.height()<4.5,"low strokes, up about as high as the swords' hilts stand: "+c.height());
+            assertTrue(c.width()>.5&&c.width()<1,"brush strokes, not spikes, not walls: "+c.width());
             assertEquals(1,SwordCage.columnEaten(c,c.born()+.7f),1e-6,"eaten from below and gone");
             assertTrue(c.born()+.7f<SwordCage.LIFE);
             assertTrue(Math.hypot(c.fw(),c.rt())<3,"round the ring");
@@ -128,8 +141,12 @@ class SwordCageTest {
             }
         }
         // (the videos: the clumps fly off and drift and are gone in the air; some come down and splash the ground)
-        assertTrue(down>=4,"some of it comes down onto the ground round it: "+down);
-        assertTrue(SwordCage.CLUMPS+SwordCage.FLAKES+SwordCage.DROPS>=80,"a lot of ink (the user: 잉크가 많이 튀는)");
+        assertTrue(down>=1,"some of it comes down onto the ground round it: "+down);
+        // ink still bursting (the user's first ask: 잉크가 많이 튀는), but much less of it (2.97.1: a quarter of 2.97.0's)
+        assertTrue(SwordCage.COLUMNS<=6,"six columns at most");
+        int bits=SwordCage.CLUMPS+SwordCage.FLAKES+SwordCage.DROPS;
+        assertTrue(bits>=20&&bits<=30,"a little ink flung, not a storm of it: "+bits);
+        assertTrue(SwordCage.SPLASHES<=4);
     }
     @Test void herCameraGoesRoundToHerSideThenLowBehindHerNeverThroughHerOrJumping(){
         int n=(int)(IsosangRules.CAGE_BACK1*120);Vec3d[] cams=new Vec3d[n+1],looks=new Vec3d[n+1];
