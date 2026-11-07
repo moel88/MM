@@ -187,8 +187,6 @@ public final class IsosangClient {
         ClientTickEvents.START_CLIENT_TICK.register(IsosangClient::tick);
         // (2.80.0) the swords of light: the empowered first's thrown swords and the empowered fourth's giant sword
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(IsosangEmpower::models);
-        // (2.95.0) and H's basic attack's six swords
-        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(SwordVolley::models);
         // (2.83.0) G's own space for its user's cutscene: its ground under the sword coming down, and the sword (solid, with the entities)
         GStage.initialize();
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BEFORE_ENTITIES.register(GStage::ground);

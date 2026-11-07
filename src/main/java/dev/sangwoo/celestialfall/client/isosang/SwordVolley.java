@@ -8,7 +8,6 @@ import dev.sangwoo.celestialfall.client.kageno.Fx;
 import dev.sangwoo.celestialfall.client.kageno.FxLib;
 import dev.sangwoo.celestialfall.client.vfx.FxFrame;
 import dev.sangwoo.celestialfall.isosang.IsosangRules;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -25,7 +24,8 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  * H's basic attack, 회풍만검 (2.95.0, user request: "이번에는 평타 만들자 영상 처럼 등 뒤에 검 6개가 나와서 바라보고 있는
  * 상대에게 날아감", the user's video of it (5f78fd72, 60 fps) read on a sheet and confirmed: "맞음, 이대로"), drawn on every
  * client from the server's word of it (a swing of kind IsosangRules.VOLLEY: whom it comes down on, or where): six swords
- * of light (the sword's model, see-through and lit through, as E's thrown swords: IsosangEmpower.draw) show one after
+ * of sky-blue light (2.95.1, user request "검이 하늘색이여야 하고 지금 검 모델링이 너무 안 좋아 영상이랑 똑같이 만들어봐":
+ * their own model as the video's, VolleyBlade; 2.95.0 drew the sword in her hand see-through) show one after
  * another behind her back out of a light there, the middle ones first, and fan out like a peacock's tail, hilts at her
  * upper back, points out from her left through overhead to her right; then one after another each is thrown on out the
  * way it points, wheels round through the air and comes down on the foe from its own side (those from high in the fan
@@ -35,15 +35,15 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  */
 final class SwordVolley {
     private SwordVolley(){}
-    /** The swords' size (the sword's model scaled: the video's each about as long as she is tall), and the length from grip to point (blocks). */
-    static final double SCALE=.8,LEN=29.74/16*SCALE;
+    /** The length from a sword's grip to its point (blocks; 2.95.1: its own model, VolleyBlade, 1.6 blocks pommel to point, the video's each nearly as long as she is tall). */
+    static final double LEN=VolleyBlade.TIP;
     /** Each sword's angle in the fan from straight up (degrees, to her right positive), in the order they show: the middle first, then out to either side. */
     static final double[] FAN={16,-16,46,-46,76,-76};
     /**
      * Where their hilts meet (blocks over her feet and behind her: the small of her back, where the video's fan spreads
      * from), how far out of it each comes (its grip), and how far the fan leans back.
      */
-    static final double HILT_UP=1.02,HILT_BACK=.3,OUT=.3,LEAN=.3;
+    static final double HILT_UP=1.02,HILT_BACK=.3,OUT=.3,LEAN=.06;
     /** How long a sword takes to be gone in light once it has struck (seconds). */
     static final float GONE=.12f;
     /** How long a volley is drawn for (seconds, IsosangClient.life): until its last sword's burst of light is out. */
@@ -171,21 +171,12 @@ final class SwordVolley {
 
     // ───────────────────────────── the swords themselves ─────────────────────────────
 
-    /** The swords of light as models (AFTER_ENTITIES), see-through and lit through, as E's thrown swords. */
-    static void models(WorldRenderContext ctx){
-        var mc=MinecraftClient.getInstance();if(mc.world==null||IsosangClient.SWINGS.isEmpty())return;
-        var buffers=ctx.consumers();if(buffers==null)return;var camera=ctx.camera().getPos();float delta=ctx.tickDelta();
-        for(var c:IsosangClient.SWINGS.values()){
-            if(c.combo()!=VOLLEY||c.origin().squaredDistanceTo(camera)>128*128)continue;
-            float t=c.age(delta)/20f,k=kept(c.id(),t);if(t>=volleyStrikes(VOLLEY_SWORDS-1)+GONE||k<=.01f)continue;
-            Vec3d target=target(c,delta);if(target==null)continue;
-            for(int i=0;i<VOLLEY_SWORDS;i++){
-                var p=pose(c.origin(),c.yaw(),target,t,i);if(p==null||p.alpha()*k<=.01f)continue;
-                // (its body faint and pale: the light drawn over it is what reads, a sword of white light as the video's)
-                IsosangEmpower.draw(ctx.matrixStack(),buffers,camera,p.grip(),p.dir(),SCALE*p.size(),.5f*p.alpha()*k,0xcfe6ff);
-            }
-        }
-    }
+    /**
+     * The way each sword's flat faces (2.95.1): away from her back, where the camera behind her is, so the fan shows the
+     * broad sides of its blades and the points of its guards as the video's does (and the swords stuck in the foe show
+     * her theirs).
+     */
+    static Vec3d flat(float yaw){return Vec3d.fromPolar(0,yaw).multiply(-1);}
 
     // ───────────────────────────── their light ─────────────────────────────
 
@@ -200,7 +191,7 @@ final class SwordVolley {
         if(k>.01f){
             // a soft light at the small of her back as they come out of it (no flare: the video's swords simply are)
             float back=k*Ease.smooth(t,.02f,.07f)*(1-Ease.smooth(t,volleyThrown(VOLLEY_SWORDS-1)-.04f,volleyThrown(VOLLEY_SWORDS-1)+.1f));
-            if(back>.01f){Vec3d near=facing(h,c.camera);m.softDisc(near,.45,BLUE,.22f*back);m.softDisc(near,.16,PALE,.4f*back);}
+            if(back>.01f){Vec3d near=facing(h,c.camera);m.softDisc(near,.35,BLUE,.14f*back);m.softDisc(near,.12,PALE,.25f*back);}
             for(int i=0;i<VOLLEY_SWORDS;i++){
                 float show=volleyShows(i),arr=volleyArrives(i);
                 if(t>=show-.01f&&t<show+.12f){
@@ -208,7 +199,8 @@ final class SwordVolley {
                     m.softDisc(o,.3,AZURE,.35f*a);m.softDisc(o,.1,WHITE,.6f*a);
                 }
                 var p=pose(from,yaw,target,t,i);if(p==null)continue;float pa=p.alpha()*k;
-                lightSword(m,p,pa);
+                // (2.95.1) its own light: its outline white, a sky-blue glow round it (its body is drawn in the blended pass, alpha)
+                VolleyBlade.glow(m,p.grip(),p.dir(),flat(yaw),p.size(),pa);
                 if(p.phase()==1){trail(m,from,yaw,target,t,i,k);m.softDisc(p.tip(),.16,PALE,.5f*k);}
                 if(t>=arr-.01f&&t<arr+.1f){float a=k*Ease.smooth(t,arr-.01f,arr+.01f)*(1-Ease.unit(t,arr,arr+.1f));Vec3d o=facing(p.tip(),c.camera);m.softDisc(o,.3,AZURE,.4f*a);m.softDisc(o,.1,WHITE,.7f*a);}
             }
@@ -218,22 +210,6 @@ final class SwordVolley {
             float at=volleyStrikes(i);if(t<at-.01f||t>=at+.3f||!strikes(c.cast.id(),i))continue;
             Vec3d[] w=curve(from,yaw,target,i);IsosangEmpower.burst(c,m,target,w[3].subtract(w[2]).normalize(),at,.4,i*11+3);
         }
-    }
-    /**
-     * A sword of light over its faint body (the video's: a long white blade with a blue glow round it, a small cross-guard,
-     * a short hilt): the glow along the whole of it, the blade white-hot from the guard to the point, narrowing to it,
-     * the guard a short bar across it (in the plane facing the camera) and the hilt behind.
-     */
-    static void lightSword(EffectMesh m,Pose p,float a){
-        if(a<=.01f)return;
-        double s=p.size()*SCALE/.8;Vec3d d=p.dir(),grip=p.grip(),pommel=grip.subtract(d.multiply(.2*s)),guard=grip.add(d.multiply(.17*s)),tip=p.tip();
-        m.softTaper(pommel,tip,.36*s,.14*s,BLUE,.3f*a);
-        m.softTaper(guard,tip,.2*s,.07*s,AZURE,.55f*a);
-        m.needle(guard,tip,.085*s,.06,PALE,.9f*a);
-        m.needle(guard,tip,.035*s,.06,WHITE,a);
-        Vec3d side=d.crossProduct(m.camera().subtract(guard));
-        if(side.lengthSquared()>1e-8){side=side.normalize().multiply(.17*s);m.line(guard.subtract(side),guard.add(side),.045*s,PALE,.85f*a);m.softLine(guard.subtract(side),guard.add(side),.14*s,AZURE,.3f*a);}
-        m.line(pommel,guard,.04*s,PALE,.7f*a);
     }
     /** The streak a flying sword leaves: its point's way over the last 0.14 s, white at its head, blue and fading behind. */
     static void trail(EffectMesh m,Vec3d from,float yaw,Vec3d target,float t,int i,float kept){
@@ -246,9 +222,16 @@ final class SwordVolley {
             prev=q;
         }
     }
-    /** The ink edge under each burst, as the sword's other blows' (IsosangEmpower.burstInk). */
+    /**
+     * The swords themselves (2.95.1: their own model of sky-blue light, VolleyBlade, in the blended pass; 2.95.0 drew the
+     * sword in her hand see-through), and the ink edge under each burst, as the sword's other blows' (IsosangEmpower.burstInk).
+     */
     static void alpha(Fx c,EffectMesh m){
-        float t=c.sec;Vec3d target=target(c.cast,c.delta);if(target==null)return;
+        float t=c.sec,k=kept(c.cast.id(),t);Vec3d from=c.cast.origin();float yaw=c.cast.yaw();Vec3d target=target(c.cast,c.delta);if(target==null)return;
+        if(k>.01f)for(int i=0;i<VOLLEY_SWORDS;i++){
+            var p=pose(from,yaw,target,t,i);if(p==null)continue;
+            VolleyBlade.body(m,c.camera,p.grip(),p.dir(),flat(yaw),p.size(),.92f*p.alpha()*k);
+        }
         for(int i=0;i<VOLLEY_SWORDS;i++){float at=volleyStrikes(i);if(t>=at-.01f&&t<at+.3f&&strikes(c.cast.id(),i))IsosangEmpower.burstInk(c,m,target,at,.4,i*11+3);}
     }
     /** A few stars along the fan while it is spread (the swords' own starlight). */
