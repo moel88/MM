@@ -461,7 +461,7 @@ public final class IsosangSlash implements Fx.Skill {
      * (forward, up, right from its user's feet); its head sweeping on over [t0, t1] ({@code pace}: 0 smoothly, 1 at an
      * even speed for a spin, 2 fast at first and slowing, as the video's spin cuts: 2.78.0), eaten from the tail over
      * [eat0, eat1] while it turns to ink over [ink0, ink1]. Style: the ink ribbons' (0 a spin cut, thin at its tail and
-     * thick at its head; 1 the ring; 6 the thin cut rising back; 7 a thin bright arc).
+     * thick at its head; 1 the ring; 9 to 11 the crescents; 6 to 8 are T's since 2.96.2, SwordLunge).
      */
     record Arc(Vec3d centre,Vec3d a,Vec3d b,double inner,double outer,double from,double to,float t0,float t1,float eat0,float eat1,float ink0,float ink1,int style,int seed,int pace){}
     /**
@@ -646,7 +646,8 @@ public final class IsosangSlash implements Fx.Skill {
     /** The blue smoke billowing up off the formation's rim (2.82.10). */
     @Override public void shaders(Fx c){if(formation(c.cast.combo()))SwordFormation.shaders(c);}
     @Override public void ink(Fx c){
-        if(ultimate(c.cast.combo())||volley(c.cast.combo())||lunge(c.cast.combo()))return;
+        if(ultimate(c.cast.combo())||volley(c.cast.combo()))return;
+        if(lunge(c.cast.combo())){SwordLunge.ink(c);return;}
         if(sweep(c.cast.combo())){GiantSweep.ink(c);return;}
         if(formation(c.cast.combo())){SwordFormation.ink(c);return;}
         if(empowered(c.cast.combo())){IsosangEmpower.ink(c);return;}
@@ -1621,6 +1622,10 @@ public final class IsosangSlash implements Fx.Skill {
     static float bump(float sec,float at,float tau){return sec<at-.02f?0:Ease.smooth(sec,at-.02f,at+.015f)*(float)Math.exp(-Math.max(0,sec-at-.015f)/tau);}
     /** Speed afterimages of the body (the spin, the cuts, the lunge), faint so they do not cloud it (2.77.4). */
     @Override public float afterimages(float sec){return .25f;}
+    /** (2.96.2) T's: full and violet as she dashes (the video's copies of her as she goes, SwordLunge.afterimages). */
+    @Override public float afterimages(Fx c){return lunge(c.cast.combo())?SwordLunge.afterimages(c.sec):afterimages(c.sec);}
+    @Override public int afterimageColor(Fx c){return lunge(c.cast.combo())?SwordLunge.GHOST:afterimageColor();}
+    @Override public boolean afterimageSilhouette(Fx c){return lunge(c.cast.combo());}
     /**
      * How far the caster's own camera draws back for the finisher (blocks, as in the user's video: it pulls back over the
      * crouch and the lunge to show the slash flying, holds while it dries into ink and comes back in), 0 for the others.

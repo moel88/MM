@@ -400,9 +400,10 @@ public final class MpClient implements ClientModInitializer {
     /**
      * Lee So-sang's T (2.96.0, MP_ONLY=isosangt): H with the watcher 20 blocks ahead (out of the formation: its swords do
      * not strike it, within T's reach), then on the sword the caster's camera onto the watcher ("VAIM") and T where it
-     * looks ("VT", its crosshair's pick sent with it): the caster dashes through the watcher (6), six swords of 2 and three
-     * slashes of 4 come down on it (200 to 170, no throw), and the caster lands 3 blocks beyond it and flies on onto the
-     * formation's sword farthest from it; T again at once (refused: its cooldown, 15 s from its end); then once it is ready
+     * looks ("VT", its crosshair's pick sent with it): the caster dashes at the watcher and cuts it (6), six swords of 2
+     * and three slashes of 4 come down on it (200 to 170, no throw), and the caster lands just in front of it at its side
+     * (2.96.2; 2.96.0 to 2.96.1 3 blocks beyond it) and flies on onto a sword on the other side of the formation from the
+     * one it began on (2.96.1); T again at once (refused: its cooldown, 15 s from its end); then once it is ready
      * the camera onto the ground 50 degrees to the left 10 blocks off ("VGROUND-50") and T: the caster dashes there, the
      * blows come down there, no one struck (170 kept). Both log each T they hear (on whom, where she lands against the
      * watcher, the swords she flies from and to, how late) and, every tick through it, the caster hidden or not, how far

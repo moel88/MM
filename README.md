@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.96.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.96.2** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.96.2 — 이소상 T: 영상대로 이펙트를 새로
+
+- **돌진:** 출발 직전 그녀 뒤에서 상대까지 검은 먹선이 그어지고, 돌진하는 순간 몸보다 훨씬 넓은 흰빛·하늘빛·파랑 빛이 여러 겹으로 상대까지 한꺼번에 뻗어 상대를 감쌉니다. 빛은 파랑을 거쳐 안쪽에 파란 테를 남긴 먹 띠로 식어 약 0.6초에 사라집니다. 돌진하는 동안 몸이 보이고 비치는 보라 잔상을 여러 겹 남깁니다.
+- **내려서는 곳:** 상대를 뚫고 지나가 너머 3블록에 내려서던 것을, 영상처럼 상대 바로 앞(그녀가 온 쪽 1.3블록) 옆(오른쪽 0.9블록)에 낮게 내려서게 바꿨습니다.
+- **참격 세 줄:** 상대 몸에 모인 별 모양이 아니라 길고 가는 칼날(흰 심·파랑·검은 먹 테두리)입니다. 상대를 지나 그녀 쪽(카메라 쪽)으로 길게 뻗어, 넘어간 검에서 보면 상대에서 모여 화면 밖으로 퍼져 나갑니다. 잠깐 빛나고 먹 선으로 가늘어져 사라집니다.
+- **서버와 접속자 모두 바꾸세요:** 내려서는 곳은 서버가, 이펙트는 접속자가 정합니다.
+
+[RELEASE_2.96.2_KO.md](RELEASE_2.96.2_KO.md)를 확인하세요. 2.96.1은 [RELEASE_2.96.1_KO.md](RELEASE_2.96.1_KO.md)입니다.
 
 # 보탠드 2.96.1 — 이소상 T: 반대편 검으로, 카메라는 플레이어에게, 더 큰 참격
 

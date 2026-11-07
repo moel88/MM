@@ -118,7 +118,7 @@ public final class BodyGhost {
         return Math.max(a.points[part*2].distanceTo(b.points[part*2]),a.points[part*2+1].distanceTo(b.points[part*2+1]));
     }
 
-    private record Copy(Shot shot,float[] alpha,int rgb){}
+    private record Copy(Shot shot,float[] alpha,int rgb,boolean silhouette){}
 
     /** Draws the copies of every caster in {@code casts}; {@code view} is the camera's rotation, {@code camera} its position. */
     public static void render(List<Fx> casts,Matrix4f view,Vec3d camera,float delta){
@@ -128,7 +128,7 @@ public final class BodyGhost {
         List<Copy> copies=new ArrayList<>();
         for(Fx c:casts){
             var skill=KagenoSkills.of(c.cast.skill());if(skill==null||c.sec<0||skill.hidden(c.sec))continue;
-            float own=skill.afterimages(c.sec),gain=own<0?1:Math.min(1,own);if(gain<=.01f)continue;
+            float own=skill.afterimages(c),gain=own<0?1:Math.min(1,own);if(gain<=.01f)continue;
             var shots=HISTORY.get(c.cast.caster());if(shots==null||shots.isEmpty())continue;
             // Only while the body is on screen this frame (not in first person, not hidden).
             Shot current=shots.peekLast();if(Math.abs(current.time-now)>1e-4f)continue;
@@ -137,7 +137,7 @@ public final class BodyGhost {
                 Shot s=nearest(shots,now-k*GAP);if(s==null||s==newer||s.time>=newer.time)break;
                 float dt=newer.time-s.time,fade=gain*ALPHA*(1-(k-1f)/COPIES);float[] alpha=new float[7];boolean any=false;
                 for(int part=0;part<7;part++){double speed=moved(s,newer,part)/dt,away=moved(s,current,part);alpha[part]=fade*(part<6?strength(speed,away):bladeStrength(speed,away));any|=alpha[part]>.01f;}
-                if(any)copies.add(new Copy(s,alpha,skill.afterimageColor()));
+                if(any)copies.add(new Copy(s,alpha,skill.afterimageColor(c),skill.afterimageSilhouette(c)));
                 newer=s;
             }
         }
@@ -148,7 +148,7 @@ public final class BodyGhost {
             RenderSystem.enableCull();RenderSystem.defaultBlendFunc();RenderSystem.setShader(GameRenderer::getPositionTexColorProgram);
             var buffer=Tessellator.getInstance().getBuffer();
             Map<Identifier,List<Copy>> bySkin=new HashMap<>();
-            for(int i=copies.size()-1;i>=0;i--)bySkin.computeIfAbsent(copies.get(i).shot.skin,k->new ArrayList<>()).add(copies.get(i));
+            for(int i=copies.size()-1;i>=0;i--)if(!copies.get(i).silhouette)bySkin.computeIfAbsent(copies.get(i).shot.skin,k->new ArrayList<>()).add(copies.get(i));
             for(var e:bySkin.entrySet()){
                 RenderSystem.setShaderTexture(0,e.getKey());
                 buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_TEXTURE_COLOR);var sink=new Sink(buffer,true);
@@ -164,19 +164,30 @@ public final class BodyGhost {
                 glow.tint(copy.rgb,.5f,copy.alpha[6]*1.4f);KagenoSword.renderMesh(stack(view,camera,copy.shot,copy.shot.sword),glow,0,OverlayTexture.DEFAULT_UV);
             }
             BufferRenderer.drawWithGlobalProgram(buffer.end());
+            // (2.96.2) Silhouettes: the body's front faces in one colour, see-through, oldest first (Lee So-sang's T: the
+            // video's violet copies of her as she dashes)
+            if(copies.stream().anyMatch(Copy::silhouette)){
+                RenderSystem.enableCull();RenderSystem.defaultBlendFunc();
+                buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var shade=new Sink(buffer,false);
+                for(int i=copies.size()-1;i>=0;i--){Copy copy=copies.get(i);if(copy.silhouette)drawBody(copy,shade,view,camera,.1f,SILHOUETTE);}
+                BufferRenderer.drawWithGlobalProgram(buffer.end());
+            }
         }finally{RenderSystem.defaultBlendFunc();RenderSystem.disableCull();RenderSystem.depthMask(false);RenderSystem.setShader(GameRenderer::getPositionColorProgram);}
     }
     private static MatrixStack stack(Matrix4f view,Vec3d camera,Shot s,Matrix4f local){
         var m=new MatrixStack();m.peek().getPositionMatrix().set(view).translate((float)(s.pos.x-camera.x),(float)(s.pos.y-camera.y),(float)(s.pos.z-camera.z)).mul(local);return m;
     }
-    private static void drawBody(Copy copy,Sink sink,Matrix4f view,Vec3d camera){
+    /** How opaque a silhouette is against a tinted copy. */
+    static final float SILHOUETTE=1.3f;
+    private static void drawBody(Copy copy,Sink sink,Matrix4f view,Vec3d camera){drawBody(copy,sink,view,camera,.45f,1);}
+    private static void drawBody(Copy copy,Sink sink,Matrix4f view,Vec3d camera,float white,float gain){
         var model=copy.shot.model;float[][] shown=PoseBlend.capture(model);
         try{
             PoseBlend.write(model,copy.shot.parts);model.overlays();
             var m=stack(view,camera,copy.shot,copy.shot.body);
             ModelPart[][] parts={{model.head,model.hat},{model.body,model.jacket},{model.rightArm,model.rightSleeve},{model.leftArm,model.leftSleeve},{model.rightLeg,model.rightPants},{model.leftLeg,model.leftPants}};
             for(int i=0;i<6;i++){
-                if(copy.alpha[i]<=.01f)continue;sink.tint(copy.rgb,.45f,copy.alpha[i]);
+                if(copy.alpha[i]<=.01f)continue;sink.tint(copy.rgb,white,copy.alpha[i]*gain);
                 for(ModelPart p:parts[i])if(p.visible)p.render(m,sink,0,OverlayTexture.DEFAULT_UV);
             }
         }finally{PoseBlend.write(model,shown);model.overlays();}

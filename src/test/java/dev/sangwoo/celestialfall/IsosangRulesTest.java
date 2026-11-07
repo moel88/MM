@@ -452,9 +452,9 @@ class IsosangRulesTest {
         // once every sword stands, and over (on the far sword) before they flare
         assertFalse(lungeTime(Z_FROM-.01));assertTrue(lungeTime(Z_FROM));assertTrue(lungeTime(H_END-LUNGE_LENGTH/20.0));assertFalse(lungeTime(H_END-LUNGE_LENGTH/20.0+.01));
     }
-    @Test void tsWayRunsOnUnbrokenFromHerSwordThroughTheFoeOntoTheFarthest(){
+    @Test void tsWayRunsOnUnbrokenFromHerSwordToTheFoeOntoTheFarSword(){
         // (2.96.0) the formation holds her along it (the server's Formation.spotAt, the client's spot and raised): on the
-        // sword she stood on, along the dash to where she lands beyond the foe, there, over Z's flight onto the far sword
+        // sword she stood on, along the dash to where she lands in front of the foe (2.96.2), there, over Z's flight onto the far sword
         double fx=2,fz=-5,px=14,pz=7,tx=-9,tz=4,from=1.6,to=1.4;
         double[] prev=null;double ph=Double.NaN;
         for(double a=0;a<=LUNGE_LENGTH;a+=.05){
@@ -468,17 +468,35 @@ class IsosangRulesTest {
             assertTrue(h>=-1e-9,"never under the ground");
         }
         assertArrayEquals(new double[]{fx,fz},lungeSpot(0,fx,fz,px,pz,tx,tz),1e-9);assertEquals(from,lungeHeight(0,from,to),1e-9,"on her pommel as it begins");
-        assertArrayEquals(new double[]{px,pz},lungeSpot(LUNGE_LAND,fx,fz,px,pz,tx,tz),1e-9);assertEquals(0,lungeHeight(LUNGE_LAND,from,to),1e-9,"down beyond the foe");
+        assertArrayEquals(new double[]{px,pz},lungeSpot(LUNGE_LAND,fx,fz,px,pz,tx,tz),1e-9);assertEquals(0,lungeHeight(LUNGE_LAND,from,to),1e-9,"down in front of the foe");
         assertArrayEquals(new double[]{px,pz},lungeSpot(LUNGE_HOP,fx,fz,px,pz,tx,tz),1e-9);
         assertArrayEquals(new double[]{tx,tz},lungeSpot(LUNGE_HOP+Z_TRAVEL,fx,fz,px,pz,tx,tz),1e-9);assertEquals(to,lungeHeight(LUNGE_HOP+Z_TRAVEL,from,to),1e-9,"on the far pommel");
         assertEquals(to,lungeHeight(LUNGE_LENGTH,from,to),1e-9);
-        // out of sight as she dashes and as she flies on, seen between and after
-        assertFalse(lungeHidden(LUNGE_GO-.1));assertTrue(lungeHidden(LUNGE_GO+.5));assertFalse(lungeHidden(LUNGE_LAND+.5));
+        // out of sight only as she flies on (2.96.2: seen as she dashes, trailing violet afterimages; seen between and after)
+        assertFalse(lungeHidden(LUNGE_GO-.1));assertFalse(lungeHidden(LUNGE_GO+.5));assertFalse(lungeHidden(LUNGE_LAND+.5));
         assertTrue(lungeHidden(LUNGE_HOP+1));assertFalse(lungeHidden(LUNGE_HOP+Z_TRAVEL+.1));
-        // each tick's step of the longest dash (from her sword across the formation to beyond a foe at the reach's far
-        // edge) under the 8 blocks a frame the camera takes for a teleport (BotandCamera)
-        double longest=FORMATION_RADIUS+VOLLEY_BEYOND+FORMATION_RADIUS+LUNGE_PAST;
+        // each tick's step of the longest dash (from her sword across the formation to a foe at the reach's far edge)
+        // under the 8 blocks a frame the camera takes for a teleport (BotandCamera)
+        double longest=FORMATION_RADIUS+VOLLEY_BEYOND+FORMATION_RADIUS;
         assertTrue(longest/(LUNGE_LAND-LUNGE_GO)<8,"a tick's step: "+longest/(LUNGE_LAND-LUNGE_GO));
+    }
+    @Test void tLandsLowJustInFrontOfTheFoeAtItsSide(){
+        // (2.96.2, the user's video read again and confirmed: "상대 바로 앞 옆 (영상처럼)") LUNGE_FRONT short of the foe on
+        // the way she came, LUNGE_SIDE to her right; never past it, and never behind where she set out
+        for(int k=0;k<16;k++){
+            double a=Math.PI*2*k/16,wx=Math.cos(a),wz=Math.sin(a),gx=3,gz=-4;
+            for(double reach:new double[]{.3,1,1.5,6,20}){
+                double[] p=lungeLanding(gx,gz,wx,wz,reach);double dx=p[0]-gx,dz=p[1]-gz;
+                double front=-(dx*wx+dz*wz),side=dx*-wz+dz*wx;
+                assertEquals(LUNGE_SIDE,side,1e-9,"to her right");
+                assertTrue(front>=-1e-9,"never past the foe");
+                assertTrue(front<=Math.max(0,reach-.5)+1e-9,"never behind where she set out");
+                if(reach>=LUNGE_FRONT+.5)assertEquals(LUNGE_FRONT,front,1e-9);
+            }
+        }
+        // her right as she dashes: dashing south (+z) her right is west (-x)
+        double[] p=lungeLanding(0,0,0,1,10);assertEquals(-LUNGE_SIDE,p[0],1e-9);assertEquals(-LUNGE_FRONT,p[1],1e-9);
+        assertTrue(LUNGE_FRONT>=1&&LUNGE_FRONT<=2&&LUNGE_SIDE>=.5&&LUNGE_SIDE<=1.5,"just in front of it, at its side");
     }
     @Test void tFliesOnToAnySwordOnTheOtherSideOfHers(){
         // (2.96.1, user request: "스킬을 사용한 검에 반대편 검 아무대나 이동으로 바꿔") every formation, from every sword:

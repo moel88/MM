@@ -88,6 +88,11 @@ public final class Fx {
         default float afterimages(float sec){return -1;}
         /** Colour of the speed afterimages. */
         default int afterimageColor(){return 0x8a5cff;}
+        /** The same two for one cast (2.96.2: Lee So-sang's T's are full and violet as she dashes); the skill's own by default. */
+        default float afterimages(Fx c){return afterimages(c.sec);}
+        default int afterimageColor(Fx c){return afterimageColor();}
+        /** Whether one cast's afterimages are see-through silhouettes in its colour (2.96.2: Lee So-sang's T's violet copies), not tinted copies of the skin. */
+        default boolean afterimageSilhouette(Fx c){return false;}
         /**
          * Drawn through the HDR effect layer ({@link dev.sangwoo.celestialfall.client.vfx.FxLayer}): light adds up past
          * white, bloom from the effects only, soft edges where effects meet the world, afterglow, and the hooks below.

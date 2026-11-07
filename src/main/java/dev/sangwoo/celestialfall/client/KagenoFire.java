@@ -310,7 +310,8 @@ public final class KagenoFire {
     /**
      * A band of blue light outlined in ink along a swept path: {@code inner[i]}..{@code outer[i]} across it (the outer
      * edge the cutting edge), {@code along[i]} from 0 at the tail to 1 at the head ({@code n} points). {@code style}: 0 a
-     * cut (widest at its head), 1 a ring (even), 2 a beam (pointed at both ends), 3 the finisher's (thicker); {@code erase}
+     * cut (widest at its head), 1 a ring (even), 2 a beam (pointed at both ends), 3 the finisher's (thicker), 6 to 8 Lee
+     * So-sang's T's (2.96.2: its dash's rim, its slashes' blades, its dash's light; SwordLunge); {@code erase}
      * the share eaten from the tail, {@code ink} how far it has turned to ink (0 light, 1 ink breaking up).
      */
     public static void inkRibbon(Vec3d[] inner,Vec3d[] outer,float[] along,int n,int style,int seed,float erase,float ink,float alpha){

@@ -774,25 +774,36 @@ public final class IsosangRules {
      * twice) read on a sheet and confirmed: "맞음, 이대로"; and their answers: 30 in all with a 15 s cooldown, onto the sword
      * farthest from the foe (2.96.1: onto any sword on the other side of the formation from hers), and with no foe toward
      * the crosshair): on her formation's sword the six swords of H's basic
-     * attack fan out behind her and are thrown as she dashes straight through the foe she looks at (picked as the basic
-     * attack picks it, within its reach), cutting it once as she passes, and lands {@link #LUNGE_PAST} blocks beyond it;
-     * the swords come down on it one after another, and while she flies on (Z's flight) onto a sword of her formation
-     * on the other side of its middle from hers (oppositeSwords, at random), three slashes cross on it. With no foe she dashes to where her crosshair meets (brought in to the
-     * reach's edge, on the ground) and all of it comes down there on whoever is there. Ten blows (LUNGE_KIND: the dash,
+     * attack fan out behind her and are thrown as she dashes at the foe she looks at (picked as the basic attack picks
+     * it, within its reach), cutting it once as she comes, and lands low just in front of it at its side (2.96.2, the
+     * video read again: lungeLanding; 2.96.0 to 2.96.1 dashed through it and landed 3 blocks beyond); the swords come
+     * down on it one after another, and while she flies on (Z's flight) onto a sword of her formation on the other side
+     * of its middle from hers (oppositeSwords, at random), three slashes cross on it. With no foe she dashes to where her
+     * crosshair meets (brought in to the reach's edge, on the ground) and all of it comes down there on whoever is there. Ten blows (LUNGE_KIND: the dash,
      * the swords, the slashes; 6, 2 each and 4 each), a guard takes each, no knockback, a basic attack's stagger until the
      * next. It holds her for all of it (no Z, R or basic attack), and is ready again {@link #LUNGE_COOLDOWN} after it is over.
      */
     public static final int LUNGE=11;
     /**
-     * T's ticks (the video, from the press: the fan at 0.1 s, the dash through at 0.25 s, landed beyond it by 0.5 s, the
-     * swords coming down 0.55 to 0.8 s, gone to the far sword by 0.7 s, the slashes 0.7 to 0.9 s, settled at 1.25 s): she
-     * sets off ({@link #LUNGE_GO}), passes the foe as its blow lands (its first, 6), is down beyond it
-     * ({@link #LUNGE_LAND}), flies on to the far sword ({@link #LUNGE_HOP}, over Z's {@link #Z_TRAVEL}), the first sword
+     * T's ticks (the video, from the press: the fan at 0.1 s, the dash at 0.2 s, its light on the foe by 0.25 s, she low
+     * in front of it by 0.3 s, the swords coming down 0.55 to 0.8 s, gone to the far sword by 0.7 s, the slashes 0.7 to
+     * 0.9 s, settled at 1.25 s): she sets off ({@link #LUNGE_GO}), cuts the foe as its blow lands (its first, 6), is down
+     * in front of it ({@link #LUNGE_LAND}), flies on to the far sword ({@link #LUNGE_HOP}, over Z's {@link #Z_TRAVEL}), the first sword
      * strikes ({@link #LUNGE_SWORDS}, one a tick), and it is over ({@link #LUNGE_LENGTH}). Its cooldown, from its end.
      */
     public static final int LUNGE_GO=3,LUNGE_LAND=7,LUNGE_HOP=10,LUNGE_SWORDS=11,LUNGE_LENGTH=25,LUNGE_COOLDOWN=300;
-    /** How far beyond the foe she lands (blocks, level, the way she dashed: the video's a few steps). */
-    public static final double LUNGE_PAST=3;
+    /**
+     * Where T lands her (2.96.2, the user's video read again and confirmed: "상대 바로 앞 옆 (영상처럼)"): {@link #LUNGE_FRONT}
+     * blocks short of the foe on the way she came and {@link #LUNGE_SIDE} to her right as she dashed (the video: low at its
+     * front-right, seen from behind her), less short of it when she began nearer it than that (never behind where she set
+     * out); level, x and z. {@code gx}, {@code gz} the foe, {@code wx}, {@code wz} the way she dashes (level, unit), {@code
+     * reach} how far it was from her sword.
+     */
+    public static final double LUNGE_FRONT=1.3,LUNGE_SIDE=.9;
+    public static double[] lungeLanding(double gx,double gz,double wx,double wz,double reach){
+        double front=Math.min(LUNGE_FRONT,Math.max(0,reach-.5));
+        return new double[]{gx-wx*front-wz*LUNGE_SIDE,gz-wz*front+wx*LUNGE_SIDE};
+    }
     /** When T's swords are thrown (seconds: as she sets off), and how long before it strikes each sticks in (seconds). */
     public static final float LUNGE_THROW0=.2f,LUNGE_STICK=.1f;
     /** What each of T's blows is (0 the dash, 1 a sword, 2 a slash) and which one of them (BLOWS[LUNGE]'s order). */
@@ -812,7 +823,8 @@ public final class IsosangRules {
     public static double lungeHop(double a){return a<LUNGE_HOP?-1:Math.min(1,(a-LUNGE_HOP)/Z_TRAVEL);}
     /**
      * Where T has her level {@code a} ticks in (2.96.0, as fractions of the way): the sword she stood on ({@code from}),
-     * along the dash to where she lands ({@code past}), there, over Z's flight to the far sword ({@code to}); x and z.
+     * along the dash to where she lands ({@code past}: in front of the foe, lungeLanding), there, over Z's flight to the
+     * far sword ({@code to}); x and z.
      */
     public static double[] lungeSpot(double a,double fx,double fz,double px,double pz,double tx,double tz){
         if(a<LUNGE_HOP){double u=lungeDash(a);return new double[]{fx+(px-fx)*u,fz+(pz-fz)*u};}
@@ -827,8 +839,12 @@ public final class IsosangRules {
         if(a<LUNGE_HOP)return 0;
         double u=lungeHop(a);return u<1?to*zAlong(u)+zArc(u):to;
     }
-    /** Whether her body is out of sight {@code a} ticks into T: a streak of light as she dashes, the orb as she flies on (Z's). */
-    public static boolean lungeHidden(double a){return a>=LUNGE_GO&&a<LUNGE_LAND||a>=LUNGE_HOP&&a<LUNGE_HOP+Z_TRAVEL;}
+    /**
+     * Whether her body is out of sight {@code a} ticks into T: as she flies on, the orb of Z's flight. She is seen as she
+     * dashes (2.96.2, the video: her body trailing violet afterimages in the light; 2.96.0 to 2.96.1 she was a streak of
+     * light then).
+     */
+    public static boolean lungeHidden(double a){return a>=LUNGE_HOP&&a<LUNGE_HOP+Z_TRAVEL;}
     /**
      * The swords T may fly her on to (2.96.1, user request: "스킬을 사용한 검에 반대편 검 아무대나 이동으로 바꿔"; 2.96.0
      * flew her onto the sword farthest from the foe): those on the other side of the formation's middle from the sword she

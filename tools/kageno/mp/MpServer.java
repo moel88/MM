@@ -589,9 +589,15 @@ public final class MpServer implements ModInitializer {
                 double tx=places[lu.to()].x-mid.centre().x,tz=places[lu.to()].z-mid.centre().z;
                 turn=Math.toDegrees(Math.acos(Math.max(-1,Math.min(1,(fx*tx+fz*tz)/(Math.hypot(fx,fz)*Math.hypot(tx,tz))))));
             }
-            note(server,String.format(java.util.Locale.ROOT,"caster's T began at %d on %s at %.2f %.2f %.2f (%.2f off the watcher's chest, the watcher %.2f from the caster); it lands %.2f from the watcher's feet (%.2f beyond it level), flies from sword %d to sword %d (%.2f from where it comes down; %.1f deg round the formation's middle from the first, %s, one of %d on the other side); ready again at %d",
+            // (2.96.2) where it lands against the watcher: how far in front of it on the way the caster came, and to its side (right +)
+            double front=Double.NaN,side=Double.NaN;
+            if(places!=null&&lu.from()>=0){
+                double wx=watcher.getX()-places[lu.from()].x,wz=watcher.getZ()-places[lu.from()].z,wl=Math.hypot(wx,wz);
+                if(wl>1e-3){wx/=wl;wz/=wl;double dx=lu.past().x-watcher.getX(),dz=lu.past().z-watcher.getZ();front=-(dx*wx+dz*wz);side=dx*-wz+dz*wx;}
+            }
+            note(server,String.format(java.util.Locale.ROOT,"caster's T began at %d on %s at %.2f %.2f %.2f (%.2f off the watcher's chest, the watcher %.2f from the caster); it lands %.2f from the watcher's feet (%.2f in front of it, %.2f to its side, level), flies from sword %d to sword %d (%.2f from where it comes down; %.1f deg round the formation's middle from the first, %s, one of %d on the other side); ready again at %d",
                 lu.start(),lu.target()<0?"no one":lu.target()==watcher.getId()?"the watcher":"entity "+lu.target(),lu.at().x,lu.at().y,lu.at().z,lu.at().distanceTo(watcher.getPos().add(0,watcher.getHeight()*.55,0)),watcher.distanceTo(caster),
-                lu.past().distanceTo(watcher.getPos()),Math.hypot(lu.past().x-watcher.getX(),lu.past().z-watcher.getZ()),lu.from(),lu.to(),places==null||lu.to()<0?-1:Math.hypot(places[lu.to()].x-goal.x,places[lu.to()].z-goal.z),
+                lu.past().distanceTo(watcher.getPos()),front,side,lu.from(),lu.to(),places==null||lu.to()<0?-1:Math.hypot(places[lu.to()].x-goal.x,places[lu.to()].z-goal.z),
                 turn,turn>90?"on the other side":"NOT on the other side",across,
                 dev.sangwoo.celestialfall.isosang.IsosangAttack.tReady(caster)));}
         if(lu!=null){

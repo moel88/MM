@@ -359,8 +359,8 @@ void main(){
   // white leading edge, a royal blue body streaked the way it flies, black ink at its back edge dripping off it, spreading
   // forward as it dries; 4 a stroke of ink drawn in the air (thick and thin, tapered at both ends, dry gaps); 5 a stain
   // of ink soaked into the ground (the uv square: a soft see-through blot darker in its middle, a few drops round it,
-  // shrinking and fading as it dries); 6 the thin cut rising back (its widest part nearer its head); 7 a thin bright arc
-  // (as the beam, in a band); 8-11 the crescents (below); 12 a splash of ink on the ground (the uv square: sharp-edged,
+  // shrinking and fading as it dries); 6-8 T's (2.96.2: its dash's rim, its slashes' blades, its dash's light, below);
+  // 9-11 the crescents (below); 12 a splash of ink on the ground (the uv square: sharp-edged,
   // see-through black, arms flung out, a ragged gap or two, drops round it). On the effect layer the light burns past white and
   // blooms; the ink adds none.
   float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
@@ -638,6 +638,102 @@ void main(){
     rgb*=1.0+Hot*lit;
     alpha=a*tint.a;
    }
+  }else if(style>5.5&&style<8.5){
+   // Lee So-sang's T (2.96.2, user request: "3참격 느낌이 영상이랑 너무 달라 영상을 보고 완전 똑같이 만들어봐 ... 3참격도
+   // 이상하고 돌진하는 것도 이상해 스킬 이펙트를 싹 다 갈아엎고 영상이랑 비슷하게 만들어봐", the user's video read again frame
+   // by frame and confirmed: "맞음, 이대로").
+   // 6 the rim of her dash's light: a band of even width round the long drop of light, from behind where she set out,
+   //   round the foe and back (uv.x 0 at one end, .5 round the foe, 1 at the other; uv.y 0 inside, 1 its outer edge).
+   //   Fresh a bright blue line, white at its heart; cooling, the ink comes in from its outer edge and leaves a cyan rim
+   //   inside a band of black (the video's), which thins to a line and is eaten from both ends in toward the foe.
+   // 7 a slash: a long thin blade pointed at both ends, fullest a little past its middle (uv.x 0 its far tip beyond the
+   //   foe, 1 its near tip; uv.y across): a white heart, bright then royal blue, an edge of black ink; cooling, the white
+   //   goes, the blue darkens and the ink comes in from its edges until it is a thin line of ink, eaten from both tips.
+   // 8 the light of her dash: the drop itself (uv.x 0 its tail, behind where she set out, 1 its end past the foe; uv.y
+   //   across): white-hot along its middle in lanes running its length, cyan then blue out to its sides, lilac toward
+   //   its tail, a dark streak of ink down one side thickest at its tail (the video's black wedge); cooling through cyan
+   //   to a see-through blue and gone, eaten from its tail. Its edge is the rim's. Seeds 8 to 15: the layers of light
+   //   laid with it (narrow bands facing the camera, the same colours, no wedge).
+   if(style<6.5){
+    float u=1.0-abs(x*2.0-1.0),e=1.0-y;
+    float strand=fbm(vec2(x*18.0+sd,y*3.0)),hair=noise(vec2(x*90.0+sd,y*7.0));
+    // its ends taper to points; it thins as it dries, from inside (the outer edge kept)
+    float taper=smoothstep(0.0,.09,u);
+    float thin=mix(1.0,.34,smoothstep(.55,1.0,ink))*taper;
+    float aa=max(fwidth(e),.002)*1.5;
+    float inBand=1.0-smoothstep(thin-aa-.08*strand*step(.4,ink),thin+aa,e);
+    // eaten from both ends in toward the foe, raggedly
+    float front=erase*1.08-.04+(strand-.5)*.1;
+    float keep=smoothstep(front,front+.04,u);
+    // the ink from its outer edge in, a cyan rim left inside it
+    float inkW=thin*smoothstep(.12,.62,ink)*(.8+.4*(strand-.5))+.05*(hair-.5)*step(.05,ink);
+    float inkMask=1.0-smoothstep(inkW-aa,inkW+aa+.02,e);
+    float mid=abs(e/max(thin,.05)-.45);
+    float core=(1.0-smoothstep(0.0,.2,mid))*(1.0-smoothstep(0.0,.45,ink));
+    vec3 g=mix(blue,pale,(1.0-smoothstep(.1,.45,mid))*(1.0-ink*.7));
+    g=mix(g,edge,core);
+    float rim=smoothstep(inkW-.02,inkW+.04,e)*(1.0-smoothstep(inkW+.12,inkW+.3,e))*smoothstep(.04,.12,ink);
+    g=mix(g,vec3(.30,.85,1.0),rim*.9);
+    g=mix(g,deep,smoothstep(.35,.9,ink)*(1.0-rim));
+    rgb=mix(g,mix(inkc,navy*.8,.35*strand),inkMask);
+    alpha=inBand*keep*mix(.9,.97,inkMask)*tint.a;
+    float lit=(1.0-inkMask)*(1.0-ink*.8)*(core*2.4+rim*.9+.45);
+    rgb*=1.0+Hot*lit;
+   }else if(style<7.5){
+    // its half width along it: sharp at both tips, fullest 55% along, a long fine taper
+    float w=max(pow(max(sin(3.14159*pow(x,1.16)),0.0),.62),.02);
+    float d=abs(y-.5)*2.0/w;
+    float aa=max(fwidth(d),.0015)*1.4;
+    float strand=fbm(vec2(x*9.0+sd,y*4.0)),hair=noise(vec2(x*60.0+sd,y*9.0));
+    // thinning as it dries, raggedly; eaten from both tips
+    float limit=mix(1.0,.38,smoothstep(.5,1.0,ink));
+    float inBand=1.0-smoothstep(limit-aa-.06*hair*step(.3,ink),limit+aa,d);
+    float front=erase*1.08-.04+(strand-.5)*.12;
+    float keep=smoothstep(front,front+.04,1.0-abs(x*2.0-1.0));
+    // the ink edge: thin while it is bright, coming in to fill it as it cools (ragged as a dry brush's)
+    float inkAt=mix(.74,-.05,smoothstep(.3,.95,ink))+.07*(strand-.5)+.04*(hair-.5);
+    float inkMask=smoothstep(inkAt-aa,inkAt+aa+.03,d);
+    float coreW=.22*(1.0-smoothstep(0.0,.45,ink));
+    float core=1.0-smoothstep(coreW*.5,coreW+aa,d);
+    vec3 g=mix(edge,pale,smoothstep(coreW*.6,coreW+.08,d));
+    g=mix(g,blue,smoothstep(coreW+.04,coreW+.22,d));
+    g=mix(g,deep,smoothstep(.36,max(inkAt,.4),d));
+    g=mix(g,mix(deep,navy,.6),smoothstep(.2,.8,ink));
+    rgb=mix(g,mix(inkc,navy*.9,.3*strand),inkMask);
+    alpha=inBand*keep*mix(.92,.97,inkMask)*tint.a;
+    float lit=(1.0-inkMask)*(1.0-ink*.85)*(core*3.0+.6);
+    rgb*=1.0+Hot*lit;
+   }else{
+    float d=abs(y-.5)*2.0;
+    float aa=max(fwidth(d),.002)*1.5;
+    // lanes running its length, finer toward its middle
+    float s1=noise(vec2(x*2.2+sd,y*9.0)),s2=noise(vec2(x*5.0-sd,y*23.0)),s3=noise(vec2(x*1.1+sd*.5,y*4.0));
+    float lane=.55*s1+.3*s2+.15*s3;
+    // eaten from its tail
+    float front=erase*1.08-.04+(s2-.5)*.1;
+    float keep=smoothstep(front,front+.05,x);
+    // white-hot along its middle, cyan and blue out to its sides, lilac toward its tail
+    float heat=(1.0-smoothstep(0.0,.62,d+.25*(lane-.5)))*(1.0-smoothstep(0.0,.5,ink));
+    vec3 g=mix(deep,blue,1.0-smoothstep(.55,.95,d));
+    g=mix(g,vec3(.32,.84,1.0),(1.0-smoothstep(.25,.75,d))*smoothstep(.35,.7,lane));
+    g=mix(g,pale,(1.0-smoothstep(.15,.5,d))*smoothstep(.4,.6,lane));
+    g=mix(g,edge,heat*smoothstep(.45,.62,lane));
+    g=mix(g,vec3(.80,.68,1.0),(1.0-smoothstep(0.0,.3,x))*.55*(1.0-ink));
+    // the dark streak down its left side, thickest at its tail (the video's black wedge), gone as it cools; not on its
+    // layers of light (seeds 8 to 15)
+    float wedgeW=.16*(1.0-smoothstep(0.0,.8,x));
+    float wedge=(1.0-step(.5,y))*(1.0-smoothstep(wedgeW*.6,wedgeW+aa,abs(d-.62)))*(1.0-smoothstep(.3,.7,ink))*(1.0-step(7.5,mod(code,16.0)));
+    g=mix(g,mix(inkc,navy,.4),wedge*.92);
+    // cooling: through cyan to a see-through blue, in lanes, and gone
+    g=mix(g,mix(blue,deep,.5),smoothstep(.15,.5,ink)*(1.0-wedge));
+    float a=(1.0-smoothstep(.82,1.0,d))*mix(.94,0.0,smoothstep(.3,.9,ink));
+    a*=mix(1.0,.55+.45*lane,smoothstep(.2,.5,ink));
+    a=max(a,wedge*.9);
+    rgb=g;
+    alpha=a*keep*tint.a;
+    float lit=(1.0-wedge)*(1.0-ink*.85)*(heat*3.2+(1.0-smoothstep(.3,.9,d))*.9+.3);
+    rgb*=1.0+Hot*lit;
+   }
   }else if(style>4.5&&style<5.5){
    // a stain soaked into the ground: a soft, lumpy, see-through blot, darker in its middle, a few drops round it
    vec2 q=uv*2.0-1.0;float r=length(q);
@@ -666,23 +762,19 @@ void main(){
    alpha=body*keep*tint.a;
   }else{
    // 0 a spin cut (2.78.0, the video from above: a thin line at its tail, where the blade began, thickening all the way to
-   // its rounded head), 1 the ring, 2 the beam, 3 the thrown slash, 6 the thin cut rising back, 7 a thin bright arc
+   // its rounded head), 1 the ring, 2 the beam, 3 the thrown slash
    float hd=smoothstep(.86,1.0,x);
-   // 8 hit 1's great crescent (2.79.1, the user's video): thin only where it began, thick from its middle to its head
    // 9 hit 1's crescent draft (2.79.2): pointed at both tips, thin along the start, thickest at its belly (70% along)
    // 10 hit 2's front cut (2.79.2 draft): the same crescent, light all through while fresh, as the ring was
    // 11 hit 3's cuts down (2.79.2 draft): the same crescent thickest near its start
    float w=(style>10.5&&style<11.5)?pow(max(sin(3.14159*pow(1.0-x,1.94)),0.0),1.6)
           :(style>8.5&&style<10.5)?pow(max(sin(3.14159*pow(x,1.94)),0.0),1.6)
-          :(style>7.5&&style<8.5)?(.06+.94*smoothstep(0.0,.5,x))*(1.0-hd*hd)
           :style<.5?(.08+.92*pow(x,1.3))*(1.0-hd*hd)
           :style<1.5?.9+.1*sin(x*31.0+sd)
           :style<2.5?pow(max(sin(3.14159*x),0.0),.5)
-          :style<3.5?pow(max(sin(3.14159*x),0.0),.36)
-          :style<6.5?pow(max(sin(3.14159*pow(x,.62)),0.0),.55)
-          :pow(max(sin(3.14159*x),0.0),.3);
+          :pow(max(sin(3.14159*x),0.0),.36);
    w=max(w,.02);
-   bool beam=(style>1.5&&style<2.5)||(style>6.5&&style<7.5),wave=style>2.5&&style<3.5,ring=(style>.5&&style<1.5)||(style>9.5&&style<10.5),cracks=style>.5&&style<1.5;
+   bool beam=style>1.5&&style<2.5,wave=style>2.5&&style<3.5,ring=(style>.5&&style<1.5)||(style>9.5&&style<10.5),cracks=style>.5&&style<1.5;
    float d=beam?abs(y-.5)*2.0/w:(1.0-y)/w;
    float aa=max(fwidth(d),.0015)*1.4;
    float strand=fbm(vec2(x*6.0+sd,y*24.0)),hair=noise(vec2(x*12.0+sd,y*90.0)),streak=noise(vec2(x*70.0+sd,y*2.5));
@@ -701,8 +793,7 @@ void main(){
     float rim=smoothstep(.55,.7,d)*(1.0-smoothstep(.86,.98,d));
     rgb=mix(rgb,inkc,rim*.75);
     body=max(max(core,glow*.75),rim*.5)*(1.0-ink);
-    bool thin=style>6.5;
-    lit=thin?core*2.0+glow*.5:core*3.6+glow*1.1*(1.0-rim);holes=1.0;
+    lit=core*3.6+glow*1.1*(1.0-rim);holes=1.0;
    }else{
     // the light outermost (a white-hot edge, wide while the cut is fresh, bright blue, royal blue), the ink inside it:
     // filling the thick parts and barely touching the thin (2.78.0, the video from above), spreading out as it dries
