@@ -355,6 +355,8 @@ final class SwordLunge {
     /** The blended pass: the swords' bodies, the line of ink to the foe, the ink under each burst. */
     static void alpha(Fx c,EffectMesh m){
         SwordVolley.alpha(c,m);
+        // (2.100.0) its moonlight and starlight: the crystal petals, the flower at the sword she leaves
+        LungeLights.alpha(c,m);
         float t=c.sec,k=kept(c.cast.id(),t);Vec3d foe=SwordVolley.target(c.cast,c.delta);if(foe==null||k<=.01f)return;
         // the line of ink from behind her to the foe, the way she will go
         if(t>=AIM0&&t<AIM_GONE1){
@@ -373,6 +375,8 @@ final class SwordLunge {
      */
     static void additive(Fx c,EffectMesh m){
         SwordVolley.additive(c,m);
+        // (2.100.0) its moonlight and starlight
+        LungeLights.additive(c,m);
         float t=c.sec,k=kept(c.cast.id(),t);if(k<=.01f)return;
         Vec3d foe=SwordVolley.target(c.cast,c.delta);
         float go=LUNGE_GO/20f;
@@ -395,6 +399,8 @@ final class SwordLunge {
     /** Over the ink: the swords' starlight (SwordVolley), the head of the light racing to the foe, and a glint at each slash's head as it is drawn on. */
     static void overlay(Fx c,EffectMesh m){
         SwordVolley.overlay(c,m);
+        // (2.100.0) the stars on its dash's light and on its slashes
+        LungeLights.overlay(c,m);
         float t=c.sec,k=kept(c.cast.id(),t);Vec3d foe=SwordVolley.target(c.cast,c.delta);if(foe==null||k<=.01f)return;
         float l=light();
         if(t>=l-.01f&&t<l+RACE+.05f){
@@ -412,6 +418,7 @@ final class SwordLunge {
     /** Lights: the swords' (SwordVolley), the head of the light racing to the foe, the foe as she cuts it and as each slash cuts; the afterglow cut short throughout. */
     static void frame(Fx c,FxFrame f){
         SwordVolley.frame(c,f);
+        LungeLights.frame(c,f);
         float t=c.sec,k=kept(c.cast.id(),t);if(k<=.01f)return;
         float l=light(),land=LUNGE_LAND/20f;
         Vec3d foe=SwordVolley.target(c.cast,c.delta);
