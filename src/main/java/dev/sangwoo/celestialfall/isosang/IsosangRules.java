@@ -840,11 +840,18 @@ public final class IsosangRules {
         double u=lungeHop(a);return u<1?to*zAlong(u)+zArc(u):to;
     }
     /**
-     * Whether her body is out of sight {@code a} ticks into T: as she flies on, the orb of Z's flight. She is seen as she
-     * dashes (2.96.2, the video: her body trailing violet afterimages in the light; 2.96.0 to 2.96.1 she was a streak of
-     * light then).
+     * How long after she sets off the light of her dash comes (ticks: the video's 0.2 s; 2.96.3, user request: "이펙트가
+     * 여전히 조금 이상해 돌진도 그렇고", the video and the game set side by side and confirmed), and how long before she lands
+     * she is seen again, down in front of the foe (ticks).
      */
-    public static boolean lungeHidden(double a){return a>=LUNGE_HOP&&a<LUNGE_HOP+Z_TRAVEL;}
+    public static final int LUNGE_LIGHT=1;
+    public static final double LUNGE_SEEN=.2;
+    /**
+     * Whether her body is out of sight {@code a} ticks into T: in the light of her dash, from as it comes until she is down in
+     * front of the foe (2.96.3, the video: a few violet copies of her as she sets off, then hidden in its light), and as she
+     * flies on, the orb of Z's flight. (2.96.2 showed her all through the dash; 2.96.0 to 2.96.1 she was a streak of light.)
+     */
+    public static boolean lungeHidden(double a){return a>=LUNGE_GO+LUNGE_LIGHT&&a<LUNGE_LAND-LUNGE_SEEN||a>=LUNGE_HOP&&a<LUNGE_HOP+Z_TRAVEL;}
     /**
      * The swords T may fly her on to (2.96.1, user request: "스킬을 사용한 검에 반대편 검 아무대나 이동으로 바꿔"; 2.96.0
      * flew her onto the sword farthest from the foe): those on the other side of the formation's middle from the sword she

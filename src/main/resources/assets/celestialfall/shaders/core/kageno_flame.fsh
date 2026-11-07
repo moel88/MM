@@ -641,43 +641,50 @@ void main(){
   }else if(style>5.5&&style<8.5){
    // Lee So-sang's T (2.96.2, user request: "3참격 느낌이 영상이랑 너무 달라 영상을 보고 완전 똑같이 만들어봐 ... 3참격도
    // 이상하고 돌진하는 것도 이상해 스킬 이펙트를 싹 다 갈아엎고 영상이랑 비슷하게 만들어봐", the user's video read again frame
-   // by frame and confirmed: "맞음, 이대로").
+   // by frame and confirmed: "맞음, 이대로"; 2.96.3, user request: "3참격이 너무 크고 이펙트가 여전히 조금 이상해 돌진도
+   // 그렇고", the game and the video set side by side and confirmed: hard-edged, far less of a haze).
    // 6 the rim of her dash's light: a band of even width round the long drop of light, from behind where she set out,
    //   round the foe and back (uv.x 0 at one end, .5 round the foe, 1 at the other; uv.y 0 inside, 1 its outer edge).
-   //   Fresh a bright blue line, white at its heart; cooling, the ink comes in from its outer edge and leaves a cyan rim
-   //   inside a band of black (the video's), which thins to a line and is eaten from both ends in toward the foe.
-   // 7 a slash: a long thin blade pointed at both ends, fullest a little past its middle (uv.x 0 its far tip beyond the
-   //   foe, 1 its near tip; uv.y across): a white heart, bright then royal blue, an edge of black ink; cooling, the white
-   //   goes, the blue darkens and the ink comes in from its edges until it is a thin line of ink, eaten from both tips.
+   //   Fresh a bright blue band, white along it; cooling, the ink comes in from its outer edge over most of its breadth
+   //   and leaves a hard cyan line inside a broad band of black (the video's), which thins as it is eaten from both ends
+   //   in toward the foe.
+   // 7 a slash: a thin blade pointed at both ends, fullest a little past its middle (uv.x 0 its far tip, 1 its near tip;
+   //   uv.y across): hard-edged, a white heart, sky, royal blue, an edge of black ink; cooling, the white goes, the blue
+   //   darkens and the ink comes in from its edges until it is a thin line of ink, eaten from both tips.
    // 8 the light of her dash: the drop itself (uv.x 0 its tail, behind where she set out, 1 its end past the foe; uv.y
-   //   across): white-hot along its middle in lanes running its length, cyan then blue out to its sides, lilac toward
-   //   its tail, a dark streak of ink down one side thickest at its tail (the video's black wedge); cooling through cyan
-   //   to a see-through blue and gone, eaten from its tail. Its edge is the rim's. Seeds 8 to 15: the layers of light
-   //   laid with it (narrow bands facing the camera, the same colours, no wedge).
+   //   across): hard-edged lanes running its length, white, sky, blue and navy (the video's stripes), whiter toward its
+   //   middle, lilac toward its tail, a dark streak of ink down one side thickest at its tail (the video's black wedge);
+   //   cooling through cyan to a see-through blue and gone, eaten from its tail. Its edge is the rim's. Seeds 8 to 15: the
+   //   streaks of light laid with it (narrow bands facing the camera, one stripe each: white edged with cyan, cyan edged
+   //   with blue, blue edged with navy).
+   vec3 cyan=vec3(.32,.84,1.0);
    if(style<6.5){
     float u=1.0-abs(x*2.0-1.0),e=1.0-y;
     float strand=fbm(vec2(x*18.0+sd,y*3.0)),hair=noise(vec2(x*90.0+sd,y*7.0));
-    // its ends taper to points; it thins as it dries, from inside (the outer edge kept)
+    // its ends taper to points; broad until it is eaten, thinning as it is
     float taper=smoothstep(0.0,.09,u);
-    float thin=mix(1.0,.34,smoothstep(.55,1.0,ink))*taper;
+    float thin=mix(1.0,.4,smoothstep(0.0,.45,erase))*mix(1.0,.9,smoothstep(.6,1.0,ink))*taper;
     float aa=max(fwidth(e),.002)*1.5;
-    float inBand=1.0-smoothstep(thin-aa-.08*strand*step(.4,ink),thin+aa,e);
+    float inBand=1.0-smoothstep(thin-aa-.06*strand*step(.4,ink),thin+aa,e);
     // eaten from both ends in toward the foe, raggedly
     float front=erase*1.08-.04+(strand-.5)*.1;
     float keep=smoothstep(front,front+.04,u);
-    // the ink from its outer edge in, a cyan rim left inside it
-    float inkW=thin*smoothstep(.12,.62,ink)*(.8+.4*(strand-.5))+.05*(hair-.5)*step(.05,ink);
-    float inkMask=1.0-smoothstep(inkW-aa,inkW+aa+.02,e);
+    // the ink from its outer edge in over most of its breadth, a hard cyan line left inside it
+    float inkW=thin*.84*smoothstep(.1,.6,ink)+.04*(hair-.5)*step(.05,ink);
+    float inkMask=1.0-smoothstep(inkW-aa,inkW+aa,e);
     float mid=abs(e/max(thin,.05)-.45);
-    float core=(1.0-smoothstep(0.0,.2,mid))*(1.0-smoothstep(0.0,.45,ink));
-    vec3 g=mix(blue,pale,(1.0-smoothstep(.1,.45,mid))*(1.0-ink*.7));
+    float core=(1.0-smoothstep(.08-aa,.08+aa,mid))*(1.0-smoothstep(0.0,.45,ink));
+    vec3 g=mix(blue,pale,(1.0-smoothstep(.2-aa,.2+aa,mid))*(1.0-ink*.7));
     g=mix(g,edge,core);
-    float rim=smoothstep(inkW-.02,inkW+.04,e)*(1.0-smoothstep(inkW+.12,inkW+.3,e))*smoothstep(.04,.12,ink);
-    g=mix(g,vec3(.30,.85,1.0),rim*.9);
+    float lineW=max(.09*thin,aa*2.0);
+    float rim=(1.0-smoothstep(lineW-aa,lineW+aa,e-inkW))*smoothstep(-aa,aa,e-inkW)*smoothstep(.04,.12,ink);
+    g=mix(g,cyan,rim);
     g=mix(g,deep,smoothstep(.35,.9,ink)*(1.0-rim));
-    rgb=mix(g,mix(inkc,navy*.8,.35*strand),inkMask);
-    alpha=inBand*keep*mix(.9,.97,inkMask)*tint.a;
-    float lit=(1.0-inkMask)*(1.0-ink*.8)*(core*2.4+rim*.9+.45);
+    rgb=mix(g,mix(inkc,navy*.8,.3*strand),inkMask);
+    // inside the cyan line, once it has gone to ink, the band clears (the video: black, a cyan line, then the ground)
+    float clear=smoothstep(.5,.9,ink)*(1.0-rim)*(1.0-inkMask);
+    alpha=inBand*keep*mix(.92,.97,inkMask)*(1.0-clear*.85)*tint.a;
+    float lit=(1.0-inkMask)*(1.0-ink*.8)*(core*1.4+rim*.7+.25);
     rgb*=1.0+Hot*lit;
    }else if(style<7.5){
     // its half width along it: sharp at both tips, fullest 55% along, a long fine taper
@@ -685,53 +692,63 @@ void main(){
     float d=abs(y-.5)*2.0/w;
     float aa=max(fwidth(d),.0015)*1.4;
     float strand=fbm(vec2(x*9.0+sd,y*4.0)),hair=noise(vec2(x*60.0+sd,y*9.0));
-    // thinning as it dries, raggedly; eaten from both tips
-    float limit=mix(1.0,.38,smoothstep(.5,1.0,ink));
-    float inBand=1.0-smoothstep(limit-aa-.06*hair*step(.3,ink),limit+aa,d);
+    // thinning as it dries; eaten from both tips
+    float limit=mix(1.0,.42,smoothstep(.5,1.0,ink));
+    float inBand=1.0-smoothstep(limit-aa,limit+aa,d+.05*hair*step(.3,ink));
     float front=erase*1.08-.04+(strand-.5)*.12;
     float keep=smoothstep(front,front+.04,1.0-abs(x*2.0-1.0));
-    // the ink edge: thin while it is bright, coming in to fill it as it cools (ragged as a dry brush's)
-    float inkAt=mix(.74,-.05,smoothstep(.3,.95,ink))+.07*(strand-.5)+.04*(hair-.5);
-    float inkMask=smoothstep(inkAt-aa,inkAt+aa+.03,d);
-    float coreW=.22*(1.0-smoothstep(0.0,.45,ink));
-    float core=1.0-smoothstep(coreW*.5,coreW+aa,d);
-    vec3 g=mix(edge,pale,smoothstep(coreW*.6,coreW+.08,d));
-    g=mix(g,blue,smoothstep(coreW+.04,coreW+.22,d));
-    g=mix(g,deep,smoothstep(.36,max(inkAt,.4),d));
+    // hard-edged: a white heart, sky, royal blue, an edge of black ink coming in to fill it as it cools
+    float inkAt=mix(.72,-.05,smoothstep(.3,.95,ink))+.05*(strand-.5);
+    float inkMask=smoothstep(inkAt-aa,inkAt+aa,d);
+    float coreW=.26*(1.0-smoothstep(0.0,.45,ink));
+    float core=1.0-smoothstep(coreW-aa,coreW+aa,d);
+    float skyW=coreW+.2;
+    vec3 g=mix(pale,blue,smoothstep(skyW-aa,skyW+aa,d));
+    g=mix(g,edge,core);
     g=mix(g,mix(deep,navy,.6),smoothstep(.2,.8,ink));
     rgb=mix(g,mix(inkc,navy*.9,.3*strand),inkMask);
-    alpha=inBand*keep*mix(.92,.97,inkMask)*tint.a;
-    float lit=(1.0-inkMask)*(1.0-ink*.85)*(core*3.0+.6);
+    alpha=inBand*keep*mix(.94,.97,inkMask)*tint.a;
+    float lit=(1.0-inkMask)*(1.0-ink*.85)*(core*1.3+.15);
     rgb*=1.0+Hot*lit;
    }else{
     float d=abs(y-.5)*2.0;
     float aa=max(fwidth(d),.002)*1.5;
-    // lanes running its length, finer toward its middle
-    float s1=noise(vec2(x*2.2+sd,y*9.0)),s2=noise(vec2(x*5.0-sd,y*23.0)),s3=noise(vec2(x*1.1+sd*.5,y*4.0));
-    float lane=.55*s1+.3*s2+.15*s3;
+    float layer=mod(code,16.0)-8.0;
+    vec3 lilac=vec3(.78,.66,1.0),navyS=vec3(.07,.11,.46);
     // eaten from its tail
-    float front=erase*1.08-.04+(s2-.5)*.1;
-    float keep=smoothstep(front,front+.05,x);
-    // white-hot along its middle, cyan and blue out to its sides, lilac toward its tail
-    float heat=(1.0-smoothstep(0.0,.62,d+.25*(lane-.5)))*(1.0-smoothstep(0.0,.5,ink));
-    vec3 g=mix(deep,blue,1.0-smoothstep(.55,.95,d));
-    g=mix(g,vec3(.32,.84,1.0),(1.0-smoothstep(.25,.75,d))*smoothstep(.35,.7,lane));
-    g=mix(g,pale,(1.0-smoothstep(.15,.5,d))*smoothstep(.4,.6,lane));
-    g=mix(g,edge,heat*smoothstep(.45,.62,lane));
-    g=mix(g,vec3(.80,.68,1.0),(1.0-smoothstep(0.0,.3,x))*.55*(1.0-ink));
-    // the dark streak down its left side, thickest at its tail (the video's black wedge), gone as it cools; not on its
-    // layers of light (seeds 8 to 15)
-    float wedgeW=.16*(1.0-smoothstep(0.0,.8,x));
-    float wedge=(1.0-step(.5,y))*(1.0-smoothstep(wedgeW*.6,wedgeW+aa,abs(d-.62)))*(1.0-smoothstep(.3,.7,ink))*(1.0-step(7.5,mod(code,16.0)));
-    g=mix(g,mix(inkc,navy,.4),wedge*.92);
-    // cooling: through cyan to a see-through blue, in lanes, and gone
-    g=mix(g,mix(blue,deep,.5),smoothstep(.15,.5,ink)*(1.0-wedge));
-    float a=(1.0-smoothstep(.82,1.0,d))*mix(.94,0.0,smoothstep(.3,.9,ink));
-    a*=mix(1.0,.55+.45*lane,smoothstep(.2,.5,ink));
-    a=max(a,wedge*.9);
+    float front=erase*1.08-.04+(noise(vec2(x*5.0-sd,y*23.0))-.5)*.1;
+    float keep=smoothstep(front,front+.03,x);
+    vec3 g;float a,lit,wedge=0.0;
+    if(layer<-.5){
+     // lanes running its length, hard-edged: a field across it that drifts slowly along it, cut into white, sky, blue
+     // and navy; whiter toward its middle, fewer white lanes as it cools
+     float f=.62*noise(vec2(x*1.6+sd,y*6.5))+.38*noise(vec2(x*3.1-sd,y*13.0));
+     f+=.34*(1.0-smoothstep(0.0,.75,d))-.1-.4*smoothstep(0.0,.7,ink);
+     float fa=max(fwidth(f),.003)*1.2;
+     float wB=smoothstep(.30-fa,.30+fa,f),wC=smoothstep(.46-fa,.46+fa,f),wW=smoothstep(.60-fa,.60+fa,f);
+     g=mix(navyS,blue,wB);g=mix(g,cyan,wC);g=mix(g,edge,wW);
+     g=mix(g,lilac,(1.0-smoothstep(0.0,.3,x))*.5*(1.0-wW));
+     // the dark streak down its left side, thickest at its tail (the video's black wedge), gone as it cools
+     float wedgeW=.16*(1.0-smoothstep(0.0,.8,x));
+     wedge=(1.0-step(.5,y))*(1.0-smoothstep(wedgeW*.6,wedgeW+aa,abs(d-.62)))*(1.0-smoothstep(.3,.7,ink));
+     g=mix(g,mix(inkc,navy,.4),wedge*.92);
+     // cooling: to a see-through blue, and gone
+     g=mix(g,mix(blue,deep,.45),smoothstep(.35,.85,ink)*(1.0-wedge));
+     a=(1.0-smoothstep(.95-aa,.95+aa,d))*mix(.95,0.0,smoothstep(.35,.95,ink));
+     a=max(a,wedge*.9);
+     lit=(1.0-wedge)*(1.0-ink*.9)*(wW*1.1+(wC-wW)*.3+.06);
+    }else{
+     // a streak of light: one stripe, hard-edged
+     float c=mod(layer,3.0);
+     vec3 inC=c<.5?edge:c<1.5?cyan:blue,outC=c<.5?cyan:c<1.5?blue:navyS;
+     float inner=1.0-smoothstep(.5-aa,.5+aa,d);
+     g=mix(outC,inC,inner);
+     g=mix(g,mix(blue,deep,.45),smoothstep(.3,.8,ink));
+     a=(1.0-smoothstep(.96-aa,.96+aa,d))*mix(.92,0.0,smoothstep(.3,.9,ink));
+     lit=(1.0-ink*.9)*(c<.5?inner+.15:.12);
+    }
     rgb=g;
     alpha=a*keep*tint.a;
-    float lit=(1.0-wedge)*(1.0-ink*.85)*(heat*3.2+(1.0-smoothstep(.3,.9,d))*.9+.3);
     rgb*=1.0+Hot*lit;
    }
   }else if(style>4.5&&style<5.5){

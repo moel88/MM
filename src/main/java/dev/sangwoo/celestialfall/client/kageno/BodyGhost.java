@@ -165,7 +165,7 @@ public final class BodyGhost {
             }
             BufferRenderer.drawWithGlobalProgram(buffer.end());
             // (2.96.2) Silhouettes: the body's front faces in one colour, see-through, oldest first (Lee So-sang's T: the
-            // video's violet copies of her as she dashes)
+            // video's violet copies of her as she sets off)
             if(copies.stream().anyMatch(Copy::silhouette)){
                 RenderSystem.enableCull();RenderSystem.defaultBlendFunc();
                 buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);var shade=new Sink(buffer,false);
@@ -177,8 +177,8 @@ public final class BodyGhost {
     private static MatrixStack stack(Matrix4f view,Vec3d camera,Shot s,Matrix4f local){
         var m=new MatrixStack();m.peek().getPositionMatrix().set(view).translate((float)(s.pos.x-camera.x),(float)(s.pos.y-camera.y),(float)(s.pos.z-camera.z)).mul(local);return m;
     }
-    /** How opaque a silhouette is against a tinted copy. */
-    static final float SILHOUETTE=1.3f;
+    /** How opaque a silhouette is against a tinted copy (2.96.3: 1.0, a fainter violet; 2.96.2: 1.3). */
+    static final float SILHOUETTE=1f;
     private static void drawBody(Copy copy,Sink sink,Matrix4f view,Vec3d camera){drawBody(copy,sink,view,camera,.45f,1);}
     private static void drawBody(Copy copy,Sink sink,Matrix4f view,Vec3d camera,float white,float gain){
         var model=copy.shot.model;float[][] shown=PoseBlend.capture(model);

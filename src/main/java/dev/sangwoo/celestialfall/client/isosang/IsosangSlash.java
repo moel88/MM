@@ -1622,7 +1622,7 @@ public final class IsosangSlash implements Fx.Skill {
     static float bump(float sec,float at,float tau){return sec<at-.02f?0:Ease.smooth(sec,at-.02f,at+.015f)*(float)Math.exp(-Math.max(0,sec-at-.015f)/tau);}
     /** Speed afterimages of the body (the spin, the cuts, the lunge), faint so they do not cloud it (2.77.4). */
     @Override public float afterimages(float sec){return .25f;}
-    /** (2.96.2) T's: full and violet as she dashes (the video's copies of her as she goes, SwordLunge.afterimages). */
+    /** (2.96.2) T's: full and violet as she sets off (the video's copies of her as she goes, SwordLunge.afterimages; 2.96.3: until its light hides her). */
     @Override public float afterimages(Fx c){return lunge(c.cast.combo())?SwordLunge.afterimages(c.sec):afterimages(c.sec);}
     @Override public int afterimageColor(Fx c){return lunge(c.cast.combo())?SwordLunge.GHOST:afterimageColor();}
     @Override public boolean afterimageSilhouette(Fx c){return lunge(c.cast.combo());}

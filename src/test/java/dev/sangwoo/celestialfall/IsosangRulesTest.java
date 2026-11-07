@@ -472,8 +472,13 @@ class IsosangRulesTest {
         assertArrayEquals(new double[]{px,pz},lungeSpot(LUNGE_HOP,fx,fz,px,pz,tx,tz),1e-9);
         assertArrayEquals(new double[]{tx,tz},lungeSpot(LUNGE_HOP+Z_TRAVEL,fx,fz,px,pz,tx,tz),1e-9);assertEquals(to,lungeHeight(LUNGE_HOP+Z_TRAVEL,from,to),1e-9,"on the far pommel");
         assertEquals(to,lungeHeight(LUNGE_LENGTH,from,to),1e-9);
-        // out of sight only as she flies on (2.96.2: seen as she dashes, trailing violet afterimages; seen between and after)
-        assertFalse(lungeHidden(LUNGE_GO-.1));assertFalse(lungeHidden(LUNGE_GO+.5));assertFalse(lungeHidden(LUNGE_LAND+.5));
+        // out of sight in the light of her dash and as she flies on (2.96.3: seen as she sets off, trailing a few violet
+        // afterimages, hidden from as its light comes until just before she is down in front of the foe; seen there and after)
+        assertFalse(lungeHidden(LUNGE_GO-.1));assertFalse(lungeHidden(LUNGE_GO+.5));
+        assertTrue(lungeHidden(LUNGE_GO+LUNGE_LIGHT+.05));assertTrue(lungeHidden(LUNGE_LAND-LUNGE_SEEN-.05));
+        assertFalse(lungeHidden(LUNGE_LAND-LUNGE_SEEN+.05));assertFalse(lungeHidden(LUNGE_LAND+.5));
+        assertEquals(.2,(LUNGE_GO+LUNGE_LIGHT)/20.0,1e-9,"its light comes at the video's 0.2 s");
+        assertTrue((LUNGE_LAND-LUNGE_SEEN)/20.0>=.32,"hidden while the light covers her (the video: to some 0.32 s)");
         assertTrue(lungeHidden(LUNGE_HOP+1));assertFalse(lungeHidden(LUNGE_HOP+Z_TRAVEL+.1));
         // each tick's step of the longest dash (from her sword across the formation to a foe at the reach's far edge)
         // under the 8 blocks a frame the camera takes for a teleport (BotandCamera)

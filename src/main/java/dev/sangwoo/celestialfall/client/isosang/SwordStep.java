@@ -359,7 +359,7 @@ public final class SwordStep {
         for(var c:IsosangClient.SWINGS.values()){
             if(c.combo()!=IsosangRules.FORMATION||!c.caster().equals(e.getUuid()))continue;
             double age=c.age(mc.getTickDelta());if(IsosangClient.flying(c.id(),age)>=0)return true;
-            // (2.96.0) T: a streak of light as she dashes, the orb as she flies on
+            // (2.96.0) T: hidden in the light of her dash (2.96.3; 2.96.0 to 2.96.1 a streak of light), the orb as she flies on
             double a=IsosangClient.rushAge(c.id(),age);if(!Double.isNaN(a)&&IsosangRules.lungeHidden(a))return true;
         }
         return false;
