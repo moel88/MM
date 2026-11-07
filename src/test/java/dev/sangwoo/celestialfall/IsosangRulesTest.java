@@ -460,6 +460,32 @@ class IsosangRulesTest {
         // once every sword stands, and over (on the far sword) before they flare
         assertFalse(lungeTime(Z_FROM-.01));assertTrue(lungeTime(Z_FROM));assertTrue(lungeTime(H_END-LUNGE_LENGTH/20.0));assertFalse(lungeTime(H_END-LUNGE_LENGTH/20.0+.01));
     }
+    @Test void tsCameraStandsStillThroughItAndComesBackOnceItIsOver(){
+        // (2.96.5, user request: "T쓸때 카메라 무빙을 영상 처럼 바꿔줘") held where it stood as the first began, all through it
+        for(double a=0;a<=LUNGE_LENGTH;a+=.25)assertEquals(1,lungeCameraHeld(a,LUNGE_LENGTH),1e-12,"held at "+a);
+        // and through every T after it in a row: the next begins (the latest's clock from 0 again) before the one before is over
+        assertTrue(LUNGE_FREE<LUNGE_LENGTH,"a T used again as soon as it may begins before the one before is over");
+        // then back to her over 0.5 s (user choice "T가 끝나면"), eased: no jump, steady, still at either end
+        assertEquals(.5,LUNGE_CAMERA_BACK/20.0,1e-9);
+        assertEquals(0,lungeCameraHeld(LUNGE_LENGTH+LUNGE_CAMERA_BACK,LUNGE_LENGTH),1e-12);
+        assertEquals(0,lungeCameraHeld(LUNGE_LENGTH+LUNGE_CAMERA_BACK+3,LUNGE_LENGTH),1e-12);
+        double prev=1,step=1/60.0*20;
+        for(double a=LUNGE_LENGTH;a<=LUNGE_LENGTH+LUNGE_CAMERA_BACK+1;a+=step){
+            double h=lungeCameraHeld(a,LUNGE_LENGTH);
+            assertTrue(h<=prev+1e-12,"it only comes back");assertTrue(prev-h<.08,"no jump in a frame: "+(prev-h)+" at "+a);prev=h;
+        }
+        assertTrue(1-lungeCameraHeld(LUNGE_LENGTH+.2,LUNGE_LENGTH)<.01,"it starts back gently");
+        // called off early (her formation over): back from then
+        assertEquals(1,lungeCameraHeld(8,8),1e-12);assertEquals(0,lungeCameraHeld(8+LUNGE_CAMERA_BACK,8),1e-12);
+        // its way: the mouse's while held, then round onto where the last T came down along the same ease, the shorter way
+        assertEquals(30f,lungeCameraTurn(10,LUNGE_LENGTH,30f,170f),1e-4f);
+        assertEquals(170f,lungeCameraTurn(LUNGE_LENGTH+LUNGE_CAMERA_BACK,LUNGE_LENGTH,30f,170f),1e-4f);
+        assertEquals(100f,lungeCameraTurn(LUNGE_LENGTH+LUNGE_CAMERA_BACK/2.0,LUNGE_LENGTH,30f,170f),1e-3f);
+        float across=lungeCameraTurn(LUNGE_LENGTH+LUNGE_CAMERA_BACK,LUNGE_LENGTH,170f,-170f);
+        assertEquals(190f,across,1e-4f,"through 180, 20 degrees round, not 340");
+        float half=lungeCameraTurn(LUNGE_LENGTH+LUNGE_CAMERA_BACK/2.0,LUNGE_LENGTH,170f,-170f);
+        assertEquals(180f,half,1e-3f);
+    }
     @Test void tsWayRunsOnUnbrokenFromHerSwordToTheFoeOntoTheFarSword(){
         // (2.96.0) the formation holds her along it (the server's Formation.spotAt, the client's spot and raised): on the
         // sword she stood on, along the dash to where she lands in front of the foe (2.96.2), there, over Z's flight onto the far sword

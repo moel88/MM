@@ -393,26 +393,56 @@ public final class IsosangClient {
     public static long vReady(UUID id){return V_READY.getOrDefault(id,0L);}
     /** H's basic attack of this swing: whom its swords come down on and where (null for none, 2.95.0). */
     public static VolleyAim volley(UUID swing){return VOLLEYS.get(swing);}
+    // (2.96.5) the local player's camera held through their T: where it stands (null for none), the latest T it holds for,
+    // how much it was held the last time, when that T is over (ticks into it), where it came down, the way the camera
+    // looked as it began to come back, and whether its last turn has been given
+    private static Vec3d heldAt,heldFoe;private static StandClient.Cast heldBy;private static double heldW,heldEnd;
+    private static float turnFrom=Float.NaN;private static boolean turnDone;
+    private static void letGo(){heldAt=heldFoe=null;heldBy=null;heldW=0;turnFrom=Float.NaN;turnDone=false;}
     /**
-     * The way the local player's camera turns to through their T (2.96.0, the video's camera turning round onto the foe
-     * as she lands beyond it, and on it from the sword she flies on to): toward T's foe as drawn (or where it comes down)
-     * from where they are, from their landing until it is over; NaN otherwise (BotandCamera eases the camera round). The
-     * camera stays with them all the while (2.96.1, user request: "카메라는 플레이어한테 고정": 2.96.0 held it back beyond
-     * the foe as she flew on and glided it round the foe to her).
+     * Where the local player's camera stands through their T (2.96.5, user request: "이게 카메라가 너무 어지러운데 T쓸때 카메라
+     * 무빙을 영상 처럼 바꿔줘", the reading confirmed: "맞음, 이대로"): where it stood as their first T began, all through it and
+     * every T after it in a row (it follows neither her dash nor her flight on to the far sword: the video's camera stood
+     * still through four T's while she moved about in it; 2.96.1 to 2.96.4 went with her and turned round onto the foe,
+     * half a turn a T), then back to her over IsosangRules.LUNGE_CAMERA_BACK once the last is over (user choice "T가
+     * 끝나면"); {@code follow}, where it would stand with her, otherwise. Its way stays the mouse's all the while (user choice
+     * "방향만 돌림"). A T begun as it comes back holds it where it is then, so it never jumps.
      */
-    public static float cameraFace(float delta){
-        var mc=MinecraftClient.getInstance();var p=mc.player;if(p==null||mc.world==null)return Float.NaN;
-        // (2.96.4: one after another, the latest landed one's foe)
-        float face=Float.NaN;long latest=Long.MIN_VALUE;
-        for(var c:SWINGS.values()){
-            if(c.combo()!=IsosangRules.LUNGE||!c.caster().equals(p.getUuid())||STOPPED.contains(c.id())||c.start()<latest)continue;
-            double a=c.age(delta);if(a<IsosangRules.LUNGE_LAND||a>=IsosangRules.LUNGE_LENGTH)continue;
-            Vec3d at=SwordVolley.target(c,delta);if(at==null)continue;
-            Vec3d d=at.subtract(p.getLerpedPos(delta));if(d.horizontalLengthSquared()<1)continue;
-            face=(float)Math.toDegrees(Math.atan2(-d.x,d.z));latest=c.start();
+    public static Vec3d cameraHold(Vec3d follow,float delta){
+        var mc=MinecraftClient.getInstance();var p=mc.player;
+        if(p==null||mc.world==null||!MapClient.enabled()){letGo();return follow;}
+        StandClient.Cast latest=null;
+        for(var c:SWINGS.values())if(c.combo()==IsosangRules.LUNGE&&c.caster().equals(p.getUuid())&&(latest==null||c.start()>latest.start()))latest=c;
+        if(latest!=null&&(heldBy==null||latest.start()>heldBy.start())){
+            heldAt=heldBy==null?follow:follow.lerp(heldAt,heldW);
+            heldBy=latest;heldEnd=IsosangRules.LUNGE_LENGTH;turnFrom=Float.NaN;turnDone=false;
         }
-        return face;
+        if(heldBy==null)return follow;
+        Float stop=LUNGE_ENDS.get(heldBy.id());if(stop!=null)heldEnd=Math.min(IsosangRules.LUNGE_LENGTH,stop*20);
+        Vec3d at=SWINGS.containsKey(heldBy.id())?SwordVolley.target(heldBy,delta):null;if(at!=null)heldFoe=at;
+        double age=heldBy.age(delta),w=IsosangRules.lungeCameraHeld(age,heldEnd);
+        if(w<=0){if(age>heldEnd+IsosangRules.LUNGE_CAMERA_BACK+5)letGo();heldW=0;return follow;}
+        heldW=w;
+        return follow.lerp(heldAt,w);
     }
+    /**
+     * The way the local player's camera looks as it comes back to them after their T (2.96.5): round onto where their last
+     * T came down (its foe as drawn, or the ground it went for) from where they are, on the same ease as it comes back
+     * (IsosangRules.lungeCameraTurn), from the way it looked ({@code current}) as it began to; NaN while it is held (its way
+     * the mouse's) and after (BotandCamera sets it). With her across the foe from where it stood, the camera come back
+     * behind her the way it looked would have the foe behind it.
+     */
+    public static float cameraTurn(float current,float delta){
+        var p=MinecraftClient.getInstance().player;
+        if(p==null||heldBy==null||heldFoe==null||turnDone)return Float.NaN;
+        double age=heldBy.age(delta);if(age<=heldEnd){turnFrom=Float.NaN;return Float.NaN;}
+        Vec3d d=heldFoe.subtract(p.getLerpedPos(delta));if(d.horizontalLengthSquared()<1)return Float.NaN;
+        if(Float.isNaN(turnFrom))turnFrom=current;
+        if(age>=heldEnd+IsosangRules.LUNGE_CAMERA_BACK)turnDone=true;
+        return IsosangRules.lungeCameraTurn(age,heldEnd,turnFrom,(float)Math.toDegrees(Math.atan2(-d.x,d.z)));
+    }
+    /** (2.96.5) Whether the local player's camera is held through their T now (for the film's log). */
+    public static double cameraHeld(){return heldBy==null?0:heldW;}
     /**
      * Whether this player is carried by their formation now (2.96.0): Z's flight or the dodge's, T's dash and its flight
      * on, a tick either side. BotandCamera takes no step of theirs then for a teleport (a long flight's first tick goes
@@ -892,7 +922,7 @@ public final class IsosangClient {
         FORMATIONS.clear();FORMATION_ENDS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();ULTIMATES.clear();ULTIMATE_ENDS.clear();G_READY.clear();world=null;heldR=false;
         PERCHES.clear();FLIGHTS.clear();Z_STATES.clear();PLACES.clear();
         VOLLEYS.clear();VOLLEY_ENDS.clear();V_READY.clear();SwordVolley.clear();
-        LUNGES.clear();RUSHES.clear();LUNGE_ENDS.clear();T_READY.clear();
+        LUNGES.clear();RUSHES.clear();LUNGE_ENDS.clear();T_READY.clear();letGo();
     }
 
     // ───────────────────────────── sounds ─────────────────────────────

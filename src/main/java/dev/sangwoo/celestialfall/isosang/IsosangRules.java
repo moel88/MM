@@ -823,6 +823,30 @@ public final class IsosangRules {
     public static boolean lungeTime(double t){return t>=Z_FROM&&t+LUNGE_LENGTH/20.0<=H_END;}
     /** The tick T is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her): once she stands on the far sword, and its cooldown after (none for now, 2.96.4). */
     public static long lungeReady(long start,boolean free){return start+LUNGE_FREE+(free?0:LUNGE_COOLDOWN);}
+    /**
+     * (2.96.5) How long her camera takes to come back to her once her last T is over (ticks, 0.5 s; user request: "T쓸때
+     * 카메라 무빙을 영상 처럼 바꿔줘", user choice "T가 끝나면"): through T it stays where it stood as the first began.
+     */
+    public static final int LUNGE_CAMERA_BACK=10;
+    /**
+     * (2.96.5) How much her camera is held where it stood as her first T began (1 held, 0 with her) {@code age} ticks into
+     * her latest T, which is over {@code end} ticks into it (LUNGE_LENGTH, or when it was called off): held all through it,
+     * then let go over LUNGE_CAMERA_BACK, eased (the video's camera stood still through four T's in a row).
+     */
+    public static double lungeCameraHeld(double age,double end){
+        if(age<=end)return 1;if(age>=end+LUNGE_CAMERA_BACK)return 0;
+        double u=(age-end)/LUNGE_CAMERA_BACK;return 1-u*u*(3-2*u);
+    }
+    /**
+     * (2.96.5) The way her camera looks {@code age} ticks into her latest T as it comes back to her (degrees): from the way
+     * it looked as it began to let go ({@code from}) round to {@code to} (onto where that T came down, from where she is),
+     * along the same ease as it comes back, the shorter way round; {@code from} while it is held.
+     */
+    public static float lungeCameraTurn(double age,double end,float from,float to){
+        double held=lungeCameraHeld(age,end);
+        float d=to-from;d-=360f*(float)Math.floor((d+180f)/360f);
+        return from+d*(float)(1-held);
+    }
     /** How far along her dash she is {@code a} ticks into T (0 to 1): on the sword until LUNGE_GO, at a steady flash of a pace to LUNGE_LAND. */
     public static double lungeDash(double a){return Math.max(0,Math.min(1,(a-LUNGE_GO)/(LUNGE_LAND-LUNGE_GO)));}
     /** How far through her flight on to the far sword she is {@code a} ticks into T (0 to 1, Z's flight), -1 before it. */

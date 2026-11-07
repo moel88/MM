@@ -24,8 +24,6 @@ public final class BotandCamera {
     private static long lastFrame;
     private static long frameId,lastClipFrame=-1;
     private static double dt=1.0/60;
-    /** The game's clock at the last frame (the player's ticks and the frame's part of one; -1 before the first). */
-    private static double lastClock=-1;
     private static Perspective previousPerspective;
     private static Vec3d lastPlayerPos;
     private BotandCamera() {}
@@ -86,13 +84,12 @@ public final class BotandCamera {
         long now=System.nanoTime();dt=lastFrame==0?1.0/60:Math.min(.1,(now-lastFrame)*1e-9);lastFrame=now;frameId++;
         var mc=MinecraftClient.getInstance();boolean cinematic=CinematicDirector.isActive();
         if(!cinematic&&!mc.isPaused())STATE.step(dt);
-        // (2.96.0) Lee So-sang's T turns the camera round onto its foe as she lands beyond it (eased, a frame at a time;
-        // 2.96.1 by the game's clock, the player's ticks and the frame's part of one: as fast in game time whatever the
-        // frame rate or however much slower the game runs)
-        double clock=mc.player.age+mc.getTickDelta(),gameDt=lastClock<0?0:Math.max(0,Math.min(.1,(clock-lastClock)/20));lastClock=clock;
-        float face=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraFace(mc.getTickDelta());
+        // (2.96.5) Lee So-sang's T holds the camera where it stood as it began (IsosangClient.cameraHold, its way the
+        // mouse's); as it comes back to her it turns round onto where her last T came down (IsosangClient.cameraTurn, on
+        // T's clock: 2.96.0 to 2.96.4 turned it onto the foe through every T, half a turn a T)
+        float face=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraTurn(STATE.yaw,mc.getTickDelta());
         if(!cinematic&&!mc.isPaused()&&!Float.isNaN(face)){
-            STATE.yaw+=net.minecraft.util.math.MathHelper.wrapDegrees(face-STATE.yaw)*(float)(1-Math.exp(-gameDt*FACE_TURN));
+            STATE.yaw=face;
             if(locked())faceCamera();
         }
         if(wasCinematic&&!cinematic){rightDrag=false;lastFrame=now;}
@@ -105,8 +102,6 @@ public final class BotandCamera {
         if(mc.options.getPerspective()!=wanted){mc.options.setPerspective(wanted);mc.worldRenderer.scheduleTerrainUpdate();}
         refreshCapture();
     }
-    /** How fast the camera turns round onto T's foe (per second, of the way left: 2.96.0). */
-    static final double FACE_TURN=9;
     public static void refreshCapture() {
         if(!enabled()||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return;
         boolean capture=gameplay()&&(CinematicDirector.isActive()||STATE.captured(rightDrag));
@@ -193,6 +188,9 @@ public final class BotandCamera {
             Vec3d back=desired.subtract(eye).normalize(),far=camera.add(back.multiply(pull));
             camera=camera.add(back.multiply(pull*clearFraction(camera,far)));
         }
+        // (2.96.5) through her T it stays where it stood as the first began, then comes back to her (user request: "T쓸때
+        // 카메라 무빙을 영상 처럼 바꿔줘")
+        camera=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraHold(camera,delta);
         return new CinematicDirector.Pose(camera,STATE.yaw,STATE.pitch,0);
     }
     /** How far right of the player the camera stands (blocks): the shift lock's, or (2.93.0) through Lee So-sang's formation its own (IsosangClient.cameraShoulder). */
