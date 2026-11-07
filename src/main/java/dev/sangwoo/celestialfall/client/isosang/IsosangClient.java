@@ -396,44 +396,20 @@ public final class IsosangClient {
     /**
      * The way the local player's camera turns to through their T (2.96.0, the video's camera turning round onto the foe
      * as she lands beyond it, and on it from the sword she flies on to): toward T's foe as drawn (or where it comes down)
-     * from where they are, from their landing until it is over; NaN otherwise (BotandCamera eases the camera round).
+     * from where they are, from their landing until it is over; NaN otherwise (BotandCamera eases the camera round). The
+     * camera stays with them all the while (2.96.1, user request: "카메라는 플레이어한테 고정": 2.96.0 held it back beyond
+     * the foe as she flew on and glided it round the foe to her).
      */
     public static float cameraFace(float delta){
         var mc=MinecraftClient.getInstance();var p=mc.player;if(p==null||mc.world==null)return Float.NaN;
         for(var c:SWINGS.values()){
             if(c.combo()!=IsosangRules.LUNGE||!c.caster().equals(p.getUuid())||STOPPED.contains(c.id()))continue;
-            double a=c.age(delta);if(a<IsosangRules.LUNGE_LAND||a>=Math.max(IsosangRules.LUNGE_LENGTH,SwordLunge.CAMERA_BACK))continue;
+            double a=c.age(delta);if(a<IsosangRules.LUNGE_LAND||a>=IsosangRules.LUNGE_LENGTH)continue;
             Vec3d at=SwordVolley.target(c,delta);if(at==null)continue;
-            // (from where the camera looks from: held back beyond the foe as she flies on and gliding on to her round it, cameraLag)
-            Vec3d d=at.subtract(p.getLerpedPos(delta).add(cameraLag(delta)));if(d.horizontalLengthSquared()<1)continue;
+            Vec3d d=at.subtract(p.getLerpedPos(delta));if(d.horizontalLengthSquared()<1)continue;
             return (float)Math.toDegrees(Math.atan2(-d.x,d.z));
         }
         return Float.NaN;
-    }
-    /** Where the local player's own T holds their camera as they fly on: where they stood beyond its foe (2.96.0, cameraLag). */
-    private static UUID lagSwing;private static Vec3d lagAt;
-    /**
-     * How far from where the local player is their camera looks from now (2.96.0, T: the video's camera stays beyond the
-     * foe where she landed while she flies on to the far sword, the swords and the slashes seen up close from there, and
-     * then glides on to her): from her flight on, all the way back to where she stood beyond the foe (as she stood there;
-     * the plan's spot if no frame was drawn then) until SwordLunge.CAMERA_HOLD, then on to her, eased, round the foe and
-     * not through it (SwordLunge.cameraAt), there by SwordLunge.CAMERA_BACK; called off, gone over a quarter of a second.
-     * Zero otherwise (and for anyone else's T).
-     */
-    public static Vec3d cameraLag(float delta){
-        var mc=MinecraftClient.getInstance();var p=mc.player;if(p==null||mc.world==null)return Vec3d.ZERO;
-        StandClient.Cast own=null;
-        for(var c:SWINGS.values())if(c.combo()==IsosangRules.LUNGE&&c.caster().equals(p.getUuid())&&(own==null||c.start()>own.start()))own=c;
-        if(own==null)return Vec3d.ZERO;
-        var run=LUNGES.get(own.id());if(run==null)return Vec3d.ZERO;
-        float a=own.age(delta);Vec3d at=p.getLerpedPos(delta);
-        if(a<IsosangRules.LUNGE_HOP){if(a>=IsosangRules.LUNGE_LAND){lagSwing=own.id();lagAt=at;}return Vec3d.ZERO;}
-        if(a>=SwordLunge.CAMERA_BACK)return Vec3d.ZERO;
-        float w=1;float end=volleyEnd(own.id());if(!Float.isNaN(end))w=1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(a/20f,end,end+.25f);
-        if(w<=0)return Vec3d.ZERO;
-        Vec3d anchor=own.id().equals(lagSwing)&&lagAt!=null?lagAt:null;
-        if(anchor==null){var form=formationOf(p.getUuid());var f=form==null?null:FORMATIONS.get(form.id());anchor=new Vec3d(run.past().x,f==null?run.past().y:f.centre().y,run.past().z);}
-        return SwordLunge.cameraAt(a,anchor,at,SwordVolley.target(own,delta)).subtract(at).multiply(w);
     }
     /**
      * Whether this player is carried by their formation now (2.96.0): Z's flight or the dodge's, T's dash and its flight
@@ -681,29 +657,9 @@ public final class IsosangClient {
      */
     public static double cameraPull(float delta){
         var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return 0;
-        double pull=0;float near=lungeNear(delta);
-        for(var c:SWINGS.values())if(c.caster().equals(mc.player.getUuid())){
-            double p=IsosangSlash.pull(c.combo(),c.age(delta)/20f);
-            // (2.96.0) the formation's pull mostly let go while T holds the camera by its foe (the video's strokes up close)
-            if(c.combo()==IsosangRules.FORMATION)p*=1-SwordLunge.CAMERA_NEAR*near;
-            pull=Math.max(pull,p);
-        }
+        double pull=0;
+        for(var c:SWINGS.values())if(c.caster().equals(mc.player.getUuid()))pull=Math.max(pull,IsosangSlash.pull(c.combo(),c.age(delta)/20f));
         return pull;
-    }
-    /**
-     * How near the local player's own T brings their camera to its foe now (0 to 1, 2.96.0): eased in as she lands beyond
-     * it and the camera turns round onto it, all the while it holds there as she flies on, eased out as it glides on to
-     * her (SwordLunge.CAMERA_HOLD to CAMERA_BACK). 0 with no T of theirs.
-     */
-    static float lungeNear(float delta){
-        var mc=MinecraftClient.getInstance();if(mc.player==null)return 0;
-        StandClient.Cast own=null;
-        for(var c:SWINGS.values())if(c.combo()==IsosangRules.LUNGE&&c.caster().equals(mc.player.getUuid())&&(own==null||c.start()>own.start()))own=c;
-        if(own==null||!LUNGES.containsKey(own.id()))return 0;
-        float a=own.age(delta);
-        float near=dev.sangwoo.celestialfall.client.kageno.Ease.smooth(a,IsosangRules.LUNGE_LAND,IsosangRules.LUNGE_HOP+3)*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(a,SwordLunge.CAMERA_HOLD,SwordLunge.CAMERA_BACK));
-        float end=volleyEnd(own.id());if(!Float.isNaN(end))near*=1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(a/20f,end,end+.25f);
-        return near;
     }
     /**
      * How far right of the local player their camera stands now (blocks, 2.93.0): through their own formation, from as Z

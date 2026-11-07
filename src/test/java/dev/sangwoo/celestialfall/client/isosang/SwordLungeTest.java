@@ -10,7 +10,9 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Lee So-sang's T as drawn (2.96.0): the body's motion (from the stance back to it as long as the server holds her, no
  * joint jumping or flipping between frames, never a foot in the ground, low in a crouch where she lands beyond the foe),
- * and the three slashes crossing on the foe (through it, as long as they are, each a way of its own).
+ * and the three slashes crossing on the foe (through it, as long as they are, each a way of its own). 2.96.1: her camera
+ * stays with her (the hold beyond the foe and the glide round it are gone), and the slashes are long enough to be seen
+ * from her far sword.
  */
 class SwordLungeTest {
     static final Anim CLIP=SwordLunge.CLIP;
@@ -52,42 +54,14 @@ class SwordLungeTest {
                 double deg=Math.toDegrees(Math.acos(Math.min(1,Math.abs(d[a].dotProduct(d[b])))));
                 assertTrue(deg>25,"slashes "+a+" and "+b+" "+deg+" deg apart");
             }
-            // across the way she dashed, not along it
-            for(var s:d)assertTrue(Math.abs(s.dotProduct(way))<.35,"across her way: "+s.dotProduct(way));
+            // across the way they are seen along (2.96.1: from the sword she flies on to, to the foe, SwordLunge.slashWay;
+            // her camera is with her there), not along it: each is seen near its full length
+            for(var s:d)assertTrue(Math.abs(s.dotProduct(way))<.35,"across the way seen: "+s.dotProduct(way));
             assertTrue(d[0].y<-.4&&d[1].y<-.4,"the diagonals cut down");assertTrue(Math.abs(d[2].y)<.25,"one near level");
         }
-        assertTrue(SwordLunge.SLASH>4&&SwordLunge.SLASH<5.5,"as long as the video's strokes over her foe");
-    }
-    @Test void herCameraStaysBeyondTheFoeThroughTheSlashesThenGlidesOnToHer(){
-        // (the video: the camera by the foe as the swords and the slashes come down, on its way to her by 1 s, there by
-        // about 1.3 s) held from her flight on until after the last slash cuts, back with her a moment after T is over
-        assertTrue(SwordLunge.CAMERA_HOLD>IsosangRules.lastBlow(IsosangRules.LUNGE),"held through the last slash");
-        assertTrue(SwordLunge.CAMERA_HOLD>=IsosangRules.LUNGE_HOP+IsosangRules.Z_TRAVEL,"and until she stands on the far sword");
-        assertTrue(SwordLunge.CAMERA_BACK>SwordLunge.CAMERA_HOLD+8&&SwordLunge.CAMERA_BACK<=IsosangRules.LUNGE_LENGTH+8,"glided on to her over half a second or so, about as T ends");
-        assertTrue(SwordLunge.CAMERA_BACK/20f<SwordLunge.LIFE,"while T is still drawn");
-        // held, then with her
-        Vec3d held=new Vec3d(0,0,0),her=new Vec3d(1,1.7,-19),foe=new Vec3d(0,1.2,-3);
-        assertEquals(0,SwordLunge.cameraAt(SwordLunge.CAMERA_HOLD,held,her,foe).distanceTo(held),1e-9);
-        assertEquals(0,SwordLunge.cameraAt(SwordLunge.CAMERA_BACK,held,her,foe).distanceTo(her),1e-9);
-    }
-    @Test void herCameraGoesRoundTheFoeNotThroughIt(){
-        // her far sword mostly on the far side of the foe from where she landed (3 blocks beyond it): the camera's way bows
-        // out round it, smoothly, and is back on her at its end
-        Vec3d held=Vec3d.ZERO;
-        for(double side:new double[]{-1.2,-.4,0,.3,1.1})for(double far:new double[]{9,14,22,28}){
-            Vec3d her=new Vec3d(side*.5,1.7,-far),foe=new Vec3d(side,1.2,-3);
-            double nearest=1e9;Vec3d last=null;
-            for(float a=SwordLunge.CAMERA_HOLD;a<=SwordLunge.CAMERA_BACK;a+=.02f){
-                Vec3d at=SwordLunge.cameraAt(a,held,her,foe);
-                nearest=Math.min(nearest,Math.hypot(at.x-foe.x,at.z-foe.z));
-                // no jump between frames even at 2.5 times the fastest a 60 fps frame would see
-                if(last!=null)assertTrue(at.distanceTo(last)<.6,"a jump of "+at.distanceTo(last)+" at "+a);
-                last=at;
-            }
-            assertTrue(nearest>SwordLunge.CAMERA_CLEAR-.35,"through the foe: "+nearest+" (side "+side+", far "+far+")");
-        }
-        // with no foe (it all comes down where she stands): straight on to her
-        Vec3d her=new Vec3d(3,1.7,-12);
-        assertEquals(0,SwordLunge.cameraAt((SwordLunge.CAMERA_HOLD+SwordLunge.CAMERA_BACK)/2,Vec3d.ZERO,her,null).distanceTo(Vec3d.ZERO.lerp(her,.5)),1e-9);
+        // (2.96.1, user request: "3참격이 안 보이는 거 같아") near twice the video's strokes: seen from her far sword, 10 to
+        // 20 blocks off, not from beside the foe
+        assertTrue(SwordLunge.SLASH>7.5&&SwordLunge.SLASH<10,"long enough to be seen from her far sword: "+SwordLunge.SLASH);
+        assertTrue(SwordLunge.HOLD_LIGHT>=.12f&&SwordLunge.INK_GONE<SwordLunge.LIFE-IsosangRules.lastBlow(IsosangRules.LUNGE)/20f+.01f,"lit a while, gone while T is drawn");
     }
 }

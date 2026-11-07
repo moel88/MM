@@ -772,11 +772,12 @@ public final class IsosangRules {
      * T (2.96.0, user request: "이번에는 T스킬 만들자 영상처럼 일단 T를 누르면 평타 6검이 날아가는 동시에 빠르게 바라보는 상대에게
      * 돌진 베어내고 적에게 3 참격으로 베이는 동시에 다른 검으로 넘어가는 스킬이야", the user's video of it (e6830cf0, 60 fps, used
      * twice) read on a sheet and confirmed: "맞음, 이대로"; and their answers: 30 in all with a 15 s cooldown, onto the sword
-     * farthest from the foe, and with no foe toward the crosshair): on her formation's sword the six swords of H's basic
+     * farthest from the foe (2.96.1: onto any sword on the other side of the formation from hers), and with no foe toward
+     * the crosshair): on her formation's sword the six swords of H's basic
      * attack fan out behind her and are thrown as she dashes straight through the foe she looks at (picked as the basic
      * attack picks it, within its reach), cutting it once as she passes, and lands {@link #LUNGE_PAST} blocks beyond it;
-     * the swords come down on it one after another, and while she flies on (Z's flight) onto the sword of her formation
-     * farthest from it, three slashes cross on it. With no foe she dashes to where her crosshair meets (brought in to the
+     * the swords come down on it one after another, and while she flies on (Z's flight) onto a sword of her formation
+     * on the other side of its middle from hers (oppositeSwords, at random), three slashes cross on it. With no foe she dashes to where her crosshair meets (brought in to the
      * reach's edge, on the ground) and all of it comes down there on whoever is there. Ten blows (LUNGE_KIND: the dash,
      * the swords, the slashes; 6, 2 each and 4 each), a guard takes each, no knockback, a basic attack's stagger until the
      * next. It holds her for all of it (no Z, R or basic attack), and is ready again {@link #LUNGE_COOLDOWN} after it is over.
@@ -829,13 +830,20 @@ public final class IsosangRules {
     /** Whether her body is out of sight {@code a} ticks into T: a streak of light as she dashes, the orb as she flies on (Z's). */
     public static boolean lungeHidden(double a){return a>=LUNGE_GO&&a<LUNGE_LAND||a>=LUNGE_HOP&&a<LUNGE_HOP+Z_TRAVEL;}
     /**
-     * The sword of her formation farthest (level) from ({@code x}, {@code z}), not the one she stands on ({@code on}):
-     * where T has her fly on to (2.96.0, the user's choice "상대에게서 가장 먼 검"); {@code xz} each sword's place (world x, z).
+     * The swords T may fly her on to (2.96.1, user request: "스킬을 사용한 검에 반대편 검 아무대나 이동으로 바꿔"; 2.96.0
+     * flew her onto the sword farthest from the foe): those on the other side of the formation's middle from the sword she
+     * used it from ({@code from}), their way out from its middle more than a right angle from that one's ({@code swords}:
+     * forward and right of its middle, formationSwords' layout). The server rolls which of them.
      */
-    public static int farthest(double[][] xz,int on,double x,double z){
-        int best=-1;double far=-1;
-        for(int k=0;k<xz.length;k++){if(k==on)continue;double d=Math.hypot(xz[k][0]-x,xz[k][1]-z);if(d>far){far=d;best=k;}}
-        return best<0?on:best;
+    public static int[] oppositeSwords(double[][] swords,int from){
+        double fx=swords[from][0],fz=swords[from][1];int n=0;int[] out=new int[swords.length];
+        for(int k=0;k<swords.length;k++)if(k!=from&&swords[k][0]*fx+swords[k][1]*fz<0)out[n++]=k;
+        return java.util.Arrays.copyOf(out,n);
+    }
+    /** The one of oppositeSwords {@code roll} picks (any int, by its remainder: the server rolls it), or with none the next sword. */
+    public static int oppositeSword(double[][] swords,int from,int roll){
+        int[] far=oppositeSwords(swords,from);
+        return far.length==0?(from+1)%swords.length:far[Math.floorMod(roll,far.length)];
     }
 
     // ───────────────────────────── G: the ultimate ─────────────────────────────

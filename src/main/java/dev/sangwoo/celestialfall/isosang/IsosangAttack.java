@@ -125,7 +125,8 @@ public final class IsosangAttack {
     /**
      * T (2.96.0, IsosangRules.LUNGE): whom and where its blows come down on (as H's basic attack's, {@code aim}: its id,
      * start, way, foe, point, the formation's middle, the foe's last chest, its blows so far), the sword she stood on,
-     * the one she flies on to (the farthest from the foe) and where she lands beyond the foe.
+     * the one she flies on to (2.96.1: any on the other side of the formation from hers; 2.96.0 the farthest from the foe)
+     * and where she lands beyond the foe.
      */
     private static final class Lunge {
         final Volley aim;final int from,to;final Vec3d past;
@@ -746,8 +747,9 @@ public final class IsosangAttack {
      * sword, the foe the crosshair picks (as the basic attack picks it: {@code foe} as their client said, checked here;
      * an older client's press says nothing and their sight is looked along) or, with none, where it met (brought in to the
      * reach's edge, on the ground there, downAt). They dash from the sword they stand on straight through it and land
-     * LUNGE_PAST blocks beyond (short of any block in the way), then fly on onto the sword of the formation farthest from
-     * it (Z's flight; the formation holds them along all of it, Formation.spotAt). Only while every sword stands and it
+     * LUNGE_PAST blocks beyond (short of any block in the way), then fly on onto a sword of the formation on the other side
+     * of its middle from the one they used it from, the server's roll (2.96.1, IsosangRules.oppositeSword; Z's flight;
+     * the formation holds them along all of it, Formation.spotAt). Only while every sword stands and it
      * can be over before they flare (IsosangRules.lungeTime), not while Z flies them, R holds them, H's basic attack's
      * swords fan out or T is under way, and once it is ready again (IsosangRules.lungeReady: 15 s after it is over).
      */
@@ -781,9 +783,9 @@ public final class IsosangAttack {
         Vec3d top=new Vec3d(past.x,Math.max(past.y,f.centre.y)+2,past.z),bottom=new Vec3d(past.x,f.centre.y+FORMATION_LOW-IsosangRules.VOLLEY_BEYOND,past.z);
         var ground=world.raycast(new RaycastContext(top,bottom,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
         past=ground.getType()!=net.minecraft.util.hit.HitResult.Type.MISS?ground.getPos():new Vec3d(past.x,f.centre.y,past.z);
-        // the sword they fly on to: the formation's farthest from the foe (or where it all comes down)
-        double[][] xz=new double[f.swords.length][];for(int k=0;k<xz.length;k++){Vec3d q=f.place(k);xz[k]=new double[]{q.x,q.z};}
-        int onto=IsosangRules.farthest(xz,f.on,goal.x,goal.z);
+        // the sword they fly on to: any on the other side of the formation's middle from the one they used it from (2.96.1,
+        // the server's roll; 2.96.0 the farthest from the foe)
+        int onto=IsosangRules.oppositeSword(f.swords,f.on,p.getRandom().nextInt(1<<20));
         float yaw=(float)Math.toDegrees(Math.atan2(-way.x,way.z));
         s.lunge=new Lunge(new Volley(UUID.randomUUID(),now,MathHelper.wrapDegrees(yaw),target==null?-1:target.getId(),at,f.centre),f.on,onto,past);
         f.lungeAt=now;f.lungeFrom=f.on;f.past=past;f.from=f.on;f.on=onto;f.moved=now+IsosangRules.LUNGE_HOP;

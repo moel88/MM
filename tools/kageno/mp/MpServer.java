@@ -574,17 +574,25 @@ public final class MpServer implements ModInitializer {
         if(vo!=null){if(vo.blows()>volleyBlows){note(server,"caster's volley blow "+vo.blows()+" of 6 at "+now+" (its tick "+(now-vo.start())+")");volleyBlows=vo.blows();}watchUntil=Math.max(watchUntil,now+20);}
         long vr=dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster);if(vr!=vReadySeen){vReadySeen=vr;note(server,"caster's volley ready again at "+vr+" (now "+now+")");}
         // (2.96.0) the caster's T: as it begins (whom its blows come down on and where, against the watcher's chest; where the
-        // caster lands against the watcher; the swords it flies from and to, and whether that is the formation's farthest
-        // from the watcher), its blows as they land, every tick through it how far off where the formation holds them the
+        // caster lands against the watcher; the swords it flies from and to, and (2.96.1) whether that one is on the other
+        // side of the formation's middle from the one it began on, of how many there), its blows as they land, every tick through it how far off where the formation holds them the
         // caster is and how high over its middle; when it is ready again. The watcher must not move (no knockback)
         var lu=dev.sangwoo.celestialfall.isosang.IsosangAttack.lungeNow(caster);
         if(lu!=null&&lu.start()!=lungeSeen){lungeSeen=lu.start();lungeBlows=0;watcherAt=watcher.getPos();
             var places=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationPlaces(caster);
             var goal=lu.target()==watcher.getId()?watcher.getPos():lu.at();
-            int far=-1;double most=-1;if(places!=null)for(int k=0;k<places.length;k++){if(k==lu.from())continue;double d=Math.hypot(places[k].x-goal.x,places[k].z-goal.z);if(d>most){most=d;far=k;}}
-            note(server,String.format(java.util.Locale.ROOT,"caster's T began at %d on %s at %.2f %.2f %.2f (%.2f off the watcher's chest, the watcher %.2f from the caster); it lands %.2f from the watcher's feet (%.2f beyond it level), flies from sword %d to sword %d (%.2f from where it comes down; the farthest is %d at %.2f); ready again at %d",
+            var mid=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(caster);
+            double turn=Double.NaN;int across=0;
+            if(places!=null&&mid!=null&&lu.from()>=0&&lu.to()>=0){
+                double fx=places[lu.from()].x-mid.centre().x,fz=places[lu.from()].z-mid.centre().z;
+                for(int k=0;k<places.length;k++)if(k!=lu.from()&&(places[k].x-mid.centre().x)*fx+(places[k].z-mid.centre().z)*fz<0)across++;
+                double tx=places[lu.to()].x-mid.centre().x,tz=places[lu.to()].z-mid.centre().z;
+                turn=Math.toDegrees(Math.acos(Math.max(-1,Math.min(1,(fx*tx+fz*tz)/(Math.hypot(fx,fz)*Math.hypot(tx,tz))))));
+            }
+            note(server,String.format(java.util.Locale.ROOT,"caster's T began at %d on %s at %.2f %.2f %.2f (%.2f off the watcher's chest, the watcher %.2f from the caster); it lands %.2f from the watcher's feet (%.2f beyond it level), flies from sword %d to sword %d (%.2f from where it comes down; %.1f deg round the formation's middle from the first, %s, one of %d on the other side); ready again at %d",
                 lu.start(),lu.target()<0?"no one":lu.target()==watcher.getId()?"the watcher":"entity "+lu.target(),lu.at().x,lu.at().y,lu.at().z,lu.at().distanceTo(watcher.getPos().add(0,watcher.getHeight()*.55,0)),watcher.distanceTo(caster),
-                lu.past().distanceTo(watcher.getPos()),Math.hypot(lu.past().x-watcher.getX(),lu.past().z-watcher.getZ()),lu.from(),lu.to(),places==null||lu.to()<0?-1:Math.hypot(places[lu.to()].x-goal.x,places[lu.to()].z-goal.z),far,most,
+                lu.past().distanceTo(watcher.getPos()),Math.hypot(lu.past().x-watcher.getX(),lu.past().z-watcher.getZ()),lu.from(),lu.to(),places==null||lu.to()<0?-1:Math.hypot(places[lu.to()].x-goal.x,places[lu.to()].z-goal.z),
+                turn,turn>90?"on the other side":"NOT on the other side",across,
                 dev.sangwoo.celestialfall.isosang.IsosangAttack.tReady(caster)));}
         if(lu!=null){
             if(lu.blows()>lungeBlows){note(server,"caster's T blow "+lu.blows()+" of "+dev.sangwoo.celestialfall.isosang.IsosangRules.blows(dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE)+" at "+now+" (its tick "+(now-lu.start())+")");lungeBlows=lu.blows();}

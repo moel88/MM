@@ -221,17 +221,22 @@ final class SwordVolley {
         // each sword's burst on the foe as it strikes (one called off before its blow does not)
         for(int i=0;i<VOLLEY_SWORDS;i++){
             float at=volleyStrikes(combo,i);if(t<at-.01f||t>=at+.3f||!strikes(combo,c.cast.id(),i))continue;
-            Vec3d[] w=curve(from,yaw,target,i);IsosangEmpower.burst(c,m,target,w[3].subtract(w[2]).normalize(),at,.4,i*11+3);
+            Vec3d[] w=curve(from,yaw,target,i);IsosangEmpower.burst(c,m,target,w[3].subtract(w[2]).normalize(),at,burst(combo),i*11+3);
         }
     }
-    /** The streak a flying sword leaves: its point's way over the last 0.14 s, white at its head, blue and fading behind. */
+    /**
+     * How big each sword's burst on the foe is (IsosangEmpower.burst's size): H's basic attack's .4, T's twice as big
+     * (2.96.1, user request: "이펙트가 너무 작고": seen from her far sword, SwordLunge.SWORD_BURST).
+     */
+    static double burst(int combo){return combo==LUNGE?SwordLunge.SWORD_BURST:.4;}
+    /** The streak a flying sword leaves: its point's way over the last 0.14 s, white at its head, blue and fading behind (T's 1.7 times as wide, 2.96.1). */
     static void trail(int combo,EffectMesh m,Vec3d from,float yaw,Vec3d target,float t,int i,float kept){
         float thrown=volleyThrown(combo,i);Vec3d prev=null;int n=8;
         for(int k=0;k<=n;k++){
             float tk=t-.14f*k/n;if(tk<thrown)break;
             var p=pose(combo,from,yaw,target,tk,i);if(p==null||p.phase()!=1)break;
             Vec3d q=p.tip();
-            if(prev!=null){float a=1-(k-1f)/n;m.softLine(prev,q,.22*a+.05,AZURE,.35f*a*kept);m.line(prev,q,.04*a+.01,PALE,.7f*a*a*kept);}
+            if(prev!=null){float a=1-(k-1f)/n;double w=combo==LUNGE?1.7:1;m.softLine(prev,q,(.22*a+.05)*w,AZURE,.35f*a*kept);m.line(prev,q,(.04*a+.01)*w,PALE,.7f*a*a*kept);}
             prev=q;
         }
     }
@@ -246,7 +251,7 @@ final class SwordVolley {
             var p=pose(combo,from,yaw,target,t,i);if(p==null)continue;
             VolleyBlade.body(m,c.camera,p.grip(),p.dir(),flat(yaw),p.size(),.92f*p.alpha()*k);
         }
-        for(int i=0;i<VOLLEY_SWORDS;i++){float at=volleyStrikes(combo,i);if(t>=at-.01f&&t<at+.3f&&strikes(combo,c.cast.id(),i))IsosangEmpower.burstInk(c,m,target,at,.4,i*11+3);}
+        for(int i=0;i<VOLLEY_SWORDS;i++){float at=volleyStrikes(combo,i);if(t>=at-.01f&&t<at+.3f&&strikes(combo,c.cast.id(),i))IsosangEmpower.burstInk(c,m,target,at,burst(combo),i*11+3);}
     }
     /** A few stars along the fan while it is spread (the swords' own starlight). */
     static void overlay(Fx c,EffectMesh m){
@@ -266,7 +271,7 @@ final class SwordVolley {
         if(back>.01f)f.light(hilts(from,yaw),0x8cbcff,5,.8f*back);
         for(int i=0;i<VOLLEY_SWORDS;i++){
             var p=pose(combo,from,yaw,target,t,i);if(p!=null&&p.phase()==1&&kept>.01f)f.light(p.tip(),0x9fc8ff,3,.45f*kept);
-            float k=strikes(combo,c.cast.id(),i)?FxLib.kick(t,volleyStrikes(combo,i),.1f):0;if(k>.01f)f.light(target,0xcfe4ff,4,.75f*k);
+            float k=strikes(combo,c.cast.id(),i)?FxLib.kick(t,volleyStrikes(combo,i),.1f):0;if(k>.01f)f.light(target,0xcfe4ff,combo==LUNGE?7:4,(combo==LUNGE?.9f:.75f)*k);
         }
         // quick as they fly: short afterglow, else each sword leaves copies of itself along its way
         if(t>=volleyThrown(combo,0)-.02f&&t<volleyStrikes(combo,VOLLEY_SWORDS-1)+.15f)f.afterglow(.06f);

@@ -960,7 +960,9 @@ public final class SkillShots implements ClientModInitializer {
         }
         return prev;
     }
-    private void camera(){float d=opt("dist",camDist);BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;
+    /** (2.96.1) Whether the camera's way is left as the game leaves it (after KEY_T), not set back to the entry's each tick. */
+    private boolean camKept;
+    private void camera(){float d=opt("dist",camDist);if(!camKept||phase!=4){BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);}BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;
         // "aimrock=1": with a rock within reach the camera looks at it from over the player's shoulder (a click aims where the camera looks)
         if(opts.containsKey("aimrock")&&phase==4&&mc.player!=null)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m&&m.squaredDistanceTo(mc.player)<49){
             var v=m.getPos().add(0,.55,0).subtract(mc.player.getEyePos());
@@ -1140,7 +1142,7 @@ public final class SkillShots implements ClientModInitializer {
                     // "ZAIM<deg>@n" (2.93.0, Lee So-sang's Z): from tick n the camera turns over 8 ticks onto a sword of the player's
                     // own formation, the one nearest <deg> degrees clockwise of where it looks then, 3.5 to 10 blocks from them, and
                     // follows it until Z is pressed; it holds where it is after that
-                    if(what.startsWith("ZAIM")){if(age==at){zaimSword=pickSword(Float.parseFloat(what.substring(4)));zaimAt=age;zaimYaw0=BotandCamera.STATE.yaw;zaimPitch0=BotandCamera.STATE.pitch;zaimYaw=zaimYaw0;zaimPitch=zaimPitch0;zaimHeld=true;
+                    if(what.startsWith("ZAIM")){if(age==at){zaimSword=pickSword(Float.parseFloat(what.substring(4)));zaimAt=age;camKept=false;zaimYaw0=BotandCamera.STATE.yaw;zaimPitch0=BotandCamera.STATE.pitch;zaimYaw=zaimYaw0;zaimPitch=zaimPitch0;zaimHeld=true;
                             log.append(String.format(Locale.ROOT,"  aim at sword %d (on %d) at %d%n",zaimSword,dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),age));}continue;}
                     if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;case "M"->GLFW_KEY_M;case "Z"->GLFW_KEY_Z;default->throw new IllegalArgumentException(what);};
                         // (2.93.0) Z: which sword it aims at as it is pressed (the client's own reckoning), and the camera stops following it
@@ -1154,8 +1156,10 @@ public final class SkillShots implements ClientModInitializer {
                         // where the server has her and the dummy's health
                         if(what.equals("KEY_T")&&age==at){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lungeAimNow(mc);
                             if(aim!=null)log.append(String.format(Locale.ROOT,"  T aims at %s (%.2f, %.2f, %.2f) at %d%n",aim.target()<0?"no one":aim.target()==dummyId?"the dummy":"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z,age));
-                            // and the camera let go from DAIM/PAIM: T turns it itself (onto its foe as she lands beyond it, held there as she flies on)
-                            if(daimHeld||paimPoint!=null)log.append("  camera let go at ").append(age).append('\n');daimHeld=false;paimPoint=null;}
+                            // and the camera let go from DAIM/PAIM: T turns it itself (onto its foe as she lands beyond it); (2.96.1) and
+                            // from then on left as the game leaves it, as a player's whose mouse is still (not set back each tick to the
+                            // entry's way: that snapped it round as T let go of it), until another DAIM/PAIM/ZAIM
+                            if(daimHeld||paimPoint!=null)log.append("  camera let go at ").append(age).append('\n');daimHeld=false;paimPoint=null;camKept=true;}
                         if(what.equals("KEY_T")&&(age==at+3||age==at+28))server(p->{var l=dev.sangwoo.celestialfall.isosang.IsosangAttack.lungeNow(p);var d=p.getServerWorld().getEntityById(dummyId);
                             var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);if(f==null)return;
                             long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
@@ -1246,7 +1250,7 @@ public final class SkillShots implements ClientModInitializer {
                     // "DAIM@n" / "PAIM<deg>@n" (2.95.0): the camera onto the training dummy (following it), or onto the spot of the
                     // ground "paimd" (10) blocks from the player <deg> degrees clockwise of where the camera looks then (held)
                     if(what.equals("DAIM")||what.startsWith("PAIM")){if(age==at){
-                            daimAt=age;daimYaw0=BotandCamera.STATE.yaw;daimPitch0=BotandCamera.STATE.pitch;zaimHeld=false;daimHeld=what.equals("DAIM");paimPoint=null;
+                            daimAt=age;daimYaw0=BotandCamera.STATE.yaw;daimPitch0=BotandCamera.STATE.pitch;zaimHeld=false;daimHeld=what.equals("DAIM");paimPoint=null;camKept=false;
                             if(!daimHeld){var f=net.minecraft.util.math.Vec3d.fromPolar(0,BotandCamera.STATE.yaw+Float.parseFloat(what.substring(4)));var at2=mc.player.getPos().add(f.multiply(opt("paimd",10)));
                                 int gy=mc.world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,(int)Math.floor(at2.x),(int)Math.floor(at2.z));paimPoint=new net.minecraft.util.math.Vec3d(at2.x,gy+.05,at2.z);}
                             log.append(String.format(Locale.ROOT,"  camera onto %s at %d%n",daimHeld?"the dummy":String.format(Locale.ROOT,"the ground at (%.2f, %.2f, %.2f)",paimPoint.x,paimPoint.y,paimPoint.z),age));}continue;}
@@ -1404,7 +1408,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
                         +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;
+                        stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}

@@ -480,19 +480,24 @@ class IsosangRulesTest {
         double longest=FORMATION_RADIUS+VOLLEY_BEYOND+FORMATION_RADIUS+LUNGE_PAST;
         assertTrue(longest/(LUNGE_LAND-LUNGE_GO)<8,"a tick's step: "+longest/(LUNGE_LAND-LUNGE_GO));
     }
-    @Test void tFliesOnOntoTheSwordFarthestFromTheFoe(){
-        // (2.96.0, the user's choice "상대에게서 가장 먼 검")
-        double[][] xz={{0,0},{5,0},{-6,0},{0,7},{0,-2}};
-        assertEquals(2,farthest(xz,0,4,0),"the far side from a foe at the right");
-        assertEquals(3,farthest(xz,0,0,-5),"from one at the back");
-        assertEquals(1,farthest(xz,2,-8,0),"never the one she stands on, the next farthest then");
-        // every formation's: never the one she stands on, and as far from the foe as any
+    @Test void tFliesOnToAnySwordOnTheOtherSideOfHers(){
+        // (2.96.1, user request: "스킬을 사용한 검에 반대편 검 아무대나 이동으로 바꿔") every formation, from every sword:
+        // only swords on the other side of its middle (more than a right angle round from hers), never her own, about
+        // half of them to pick from, each picked by some roll
         for(int seed=0;seed<40;seed++){
-            double[][] sw=formationSwords(seed*977);int on=standSword();
-            double fx=Math.cos(seed)*11,fz=Math.sin(seed)*11;int k=farthest(sw,on,fx,fz);
-            assertNotEquals(on,k);double far=Math.hypot(sw[k][0]-fx,sw[k][1]-fz);
-            for(int j=0;j<sw.length;j++)if(j!=on)assertTrue(Math.hypot(sw[j][0]-fx,sw[j][1]-fz)<=far+1e-9);
+            double[][] sw=formationSwords(seed*977);
+            for(int from=0;from<sw.length;from++){
+                int[] far=oppositeSwords(sw,from);
+                assertTrue(far.length>=sw.length/4,"few to pick from: "+far.length+" from sword "+from);
+                for(int k:far){assertNotEquals(from,k);assertTrue(sw[k][0]*sw[from][0]+sw[k][1]*sw[from][1]<0,"sword "+k+" is on her side of the middle");}
+                java.util.Set<Integer> picked=new java.util.HashSet<>();
+                for(int roll=0;roll<far.length*3;roll++){int k=oppositeSword(sw,from,roll);picked.add(k);assertTrue(java.util.Arrays.stream(far).anyMatch(x->x==k));}
+                assertEquals(far.length,picked.size(),"every one of them can be picked");
+            }
+            // from where she stands as the formation begins (right behind its middle): the half ahead of the middle
+            for(int k:oppositeSwords(sw,standSword()))assertTrue(sw[k][0]>0,"ahead of the middle");
         }
+        assertEquals(2,oppositeSword(new double[][]{{1,0},{2,0},{-1,0}},0,7),"the one on the other side");
     }
     @Test void hsBasicAttacksSoundIsTheVideosRunningPastItsLastBlow()throws Exception{
         // (2.95.0) the user's video's own sound (cut_volley_sound.py): its swords' rush, and their burst on the blows, run

@@ -24,6 +24,8 @@ public final class BotandCamera {
     private static long lastFrame;
     private static long frameId,lastClipFrame=-1;
     private static double dt=1.0/60;
+    /** The game's clock at the last frame (the player's ticks and the frame's part of one; -1 before the first). */
+    private static double lastClock=-1;
     private static Perspective previousPerspective;
     private static Vec3d lastPlayerPos;
     private BotandCamera() {}
@@ -84,10 +86,13 @@ public final class BotandCamera {
         long now=System.nanoTime();dt=lastFrame==0?1.0/60:Math.min(.1,(now-lastFrame)*1e-9);lastFrame=now;frameId++;
         var mc=MinecraftClient.getInstance();boolean cinematic=CinematicDirector.isActive();
         if(!cinematic&&!mc.isPaused())STATE.step(dt);
-        // (2.96.0) Lee So-sang's T turns the camera round onto its foe as she lands beyond it (eased, a frame at a time)
+        // (2.96.0) Lee So-sang's T turns the camera round onto its foe as she lands beyond it (eased, a frame at a time;
+        // 2.96.1 by the game's clock, the player's ticks and the frame's part of one: as fast in game time whatever the
+        // frame rate or however much slower the game runs)
+        double clock=mc.player.age+mc.getTickDelta(),gameDt=lastClock<0?0:Math.max(0,Math.min(.1,(clock-lastClock)/20));lastClock=clock;
         float face=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraFace(mc.getTickDelta());
         if(!cinematic&&!mc.isPaused()&&!Float.isNaN(face)){
-            STATE.yaw+=net.minecraft.util.math.MathHelper.wrapDegrees(face-STATE.yaw)*(float)(1-Math.exp(-dt*FACE_TURN));
+            STATE.yaw+=net.minecraft.util.math.MathHelper.wrapDegrees(face-STATE.yaw)*(float)(1-Math.exp(-gameDt*FACE_TURN));
             if(locked())faceCamera();
         }
         if(wasCinematic&&!cinematic){rightDrag=false;lastFrame=now;}
@@ -176,8 +181,6 @@ public final class BotandCamera {
         // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
         double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);
         if(lift>1e-3)eye=eye.add(0,.8*lift,0);
-        // (2.96.0) and her T holds it back beyond its foe as she flies on, then glides it on to her
-        eye=eye.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraLag(delta));
         var offset=STATE.offset(STATE.distance,shoulder(delta));
         Vec3d desired=eye.add(offset.x(),offset.y(),offset.z());
         double fraction=clearFraction(eye,desired);
