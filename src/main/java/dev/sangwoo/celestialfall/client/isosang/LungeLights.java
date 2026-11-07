@@ -317,7 +317,7 @@ final class LungeLights {
         int seed=j*257+i*23+41;double h=Ease.hash(seed),u=h<.5?.08+.6*h:.62+.6*(h-.5);
         return new double[]{u,Ease.hash(seed+1)<.5?-1:1,-.01+(SwordLunge.DRAW+.01)*(1-Math.cbrt(1-u))};
     }
-    static final int SLASH_SPARKS=12;
+    static final int SLASH_SPARKS=18;
     static final float SPARK_LIFE0=.35f,SPARK_LIFE1=.6f;
     /**
      * Where spark {@code s} (slashSpark) of slash {@code b} is {@code age} seconds after it springs off its edge: out across
@@ -325,7 +325,7 @@ final class LungeLights {
      * slowing quickly, then drifting down.
      */
     static Vec3d sparkAt(SwordLunge.Blade b,Vec3d side,double[] s,int seed,float age){
-        Vec3d v=side.multiply(s[1]*(1+1.6*Ease.hash(seed+3))).add(b.way().multiply(.4+.9*Ease.hash(seed+4))).add(0,.5+.9*Ease.hash(seed+5),0);
+        Vec3d v=side.multiply(s[1]*(1.4+2.2*Ease.hash(seed+3))).add(b.way().multiply(.5+1.1*Ease.hash(seed+4))).add(0,.5+1.1*Ease.hash(seed+5),0);
         double go=(1-Math.exp(-5*age))/5;
         return b.point(s[0]).add(side.multiply(s[1]*b.width()*.5)).add(v.multiply(go)).add(0,-.7*age*age,0);
     }
@@ -352,9 +352,9 @@ final class LungeLights {
                 int col=i%3==0?WHITE:i%3==1?PALE:LILAC;
                 if(age<.12f){
                     Vec3d back=sparkAt(b,side,s,seed,Math.max(0,age-.05f));
-                    m.softTaper(back,p,0,.04,col,.5f*a*(1-age/.12f));
+                    m.softTaper(back,p,0,.055,col,.55f*a*(1-age/.12f));
                 }
-                glint8(m,p,.08+.05*Ease.hash(seed+6),col,.85f*a);
+                glint8(m,p,.1+.07*Ease.hash(seed+6),col,.9f*a);
             }
         }
     }
@@ -387,7 +387,7 @@ final class LungeLights {
         }
     }
 
-    /** Moon dust sprayed off each slash as it is eaten (from its far tip toward her): motes from where it is being eaten, drifting out and up, fading. */
+    /** Moon dust sprayed off each slash as it is eaten (from both its tips toward its middle): motes from where it is being eaten, drifting out and up, fading. */
     static void slashDust(Fx c,EffectMesh m,float t,float k,Vec3d foe){
         Vec3d to=SwordLunge.toward(c.cast,foe);
         for(int j=0;j<LUNGE_SLASHES;j++){
@@ -397,15 +397,21 @@ final class LungeLights {
             for(int i=0;i<SLASH_DUST;i++){
                 int seed=j*211+i*19+77;float when=(float)((i+Ease.hash(seed))/SLASH_DUST);
                 float born=at+SwordLunge.EAT0+(SwordLunge.EAT1-SwordLunge.EAT0)*when,age=t-born,life=dustLife(born);if(age<0||age>=life)continue;
-                // where it was being eaten then (its share of the way from the far tip), a little off its line
-                double u=Ease.smooth(born,at+SwordLunge.EAT0,at+SwordLunge.EAT1);
+                // where it was being eaten then (from both its tips toward its middle, as its band in the shader), a little off its line
+                double u=eaten(Ease.smooth(born,at+SwordLunge.EAT0,at+SwordLunge.EAT1),i%2==0);
                 Vec3d p=b.point(u).add(side.multiply((Ease.hash(seed+1)-.5)*.8*(.3+age))).add(0,.4*age+(Ease.hash(seed+2)-.5)*.2,0);
                 float da=k*Ease.smooth(age,0,.04f)*(1-age/life)*twinkle(t,seed)*near(p,c.camera);if(da<=.01f)continue;
                 if(i%2==0)glint8(m,p,.07+.03*Ease.hash(seed+3),i%4==0?WHITE:PALE,.7f*da);else m.softDisc(p,.04,LILAC,.8f*da);
             }
         }
     }
-    static final int SLASH_DUST=8;
+    static final int SLASH_DUST=12;
+    /**
+     * Where a slash is being eaten at {@code erase} (0 to 1; its share of the way from its far tip, on its far half or its
+     * near half): as its band in the shader (kageno_flame style 7), eaten from both tips toward its middle, its front at
+     * erase*1.08-.04 of the way from either tip to the middle.
+     */
+    static double eaten(float erase,boolean farHalf){double x=Math.max(0,Math.min(.5,(erase*1.08-.04)*.5));return farHalf?x:1-x;}
     /** How long a mote of the slashes' dust shed at {@code born} lasts: DUST_LIFE, shorter for the last ones so all of it is gone before T stops being drawn (SwordLunge.LIFE). */
     static float dustLife(float born){return Math.max(.05f,Math.min(DUST_LIFE,SwordLunge.LIFE-.05f-born));}
 

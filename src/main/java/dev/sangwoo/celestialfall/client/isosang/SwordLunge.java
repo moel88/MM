@@ -231,9 +231,10 @@ final class SwordLunge {
      * toward her (the video's blades reaching down toward its camera); never under the ground ({@link #GROUND} over it,
      * raised to {@link #HIGHEST} at most, else its lower part shorter) nor nearer her than {@link #CLEAR} (pushed back
      * past the foe when she is that near it). Rolled anew for every T from its swing's id (the server's, so the same on
-     * every client).
+     * every client). Their size: the user's "약 5블록·굵기 0.25", then "a little bigger" (6.5 and 0.32), then (2.96.6,
+     * "3참격 더 커도 될듯") 8.5 and 0.42, then (2.100.1, "3참격을 조금만 더 키우고") a fifth bigger again: 10.2 and 0.5.
      */
-    static final double LENGTH=8.5,WIDTH=.42;
+    static final double LENGTH=10.2,WIDTH=.5;
     static final double FRONT0=.5,FRONT1=1.1,SIDE=.7,HIGH0=.4,HIGH1=1.6,SHIFT=1.1;
     static final double STEEP=50,APART=28,LEAN0=12,LEAN1=32;
     static final double GROUND=.15,HIGHEST=1.7,CLEAR=2.7;
@@ -328,8 +329,11 @@ final class SwordLunge {
     /** How bright slash {@code j} is {@code t} seconds in (its light, not its ink). */
     static float lit(int j,float t){float at=lungeSlash(j);return Ease.smooth(t,at-.01f,at+.01f)*(1-Ease.smooth(t,at+LIT,at+DIM));}
 
-    /** How big each slash's burst is (where it passes the foe), the burst as she cuts the foe, and each of the swords' bursts (IsosangEmpower.burst's size; 2.96.2: .65, .75, .8). */
-    static final double SLASH_BURST=.35,PASS_BURST=.75,SWORD_BURST=.8;
+    /**
+     * How big the burst as she cuts the foe is, and each of the swords' bursts (IsosangEmpower.burst's size; 2.96.2: .75,
+     * .8). Each slash's own is LungeSlashes.burst (2.100.1: .55, the last .85; .35 before).
+     */
+    static final double PASS_BURST=.75,SWORD_BURST=.8;
 
     // ───────────────────────────── the passes ─────────────────────────────
 
@@ -365,13 +369,13 @@ final class SwordLunge {
             m.line(from,to,AIM_WIDTH,INK,.9f*k*(1-Ease.smooth(t,AIM_GONE0,AIM_GONE1)));
         }
         Vec3d to=toward(c.cast,foe);
-        for(int j=0;j<LUNGE_SLASHES;j++)if(cuts(c.cast.id(),j))IsosangEmpower.burstInk(c,m,blade(c.cast.id(),foe,to,j).nearest(foe),lungeSlash(j),SLASH_BURST,j*17+5);
+        for(int j=0;j<LUNGE_SLASHES;j++)if(cuts(c.cast.id(),j))IsosangEmpower.burstInk(c,m,blade(c.cast.id(),foe,to,j).nearest(foe),lungeSlash(j),LungeSlashes.burst(j),j*17+5);
         if(passes(c.cast.id()))IsosangEmpower.burstInk(c,m,foe,blowAt(LUNGE,0)/20f,PASS_BURST,3);
     }
     /**
      * The light under the ink: the swords' (SwordVolley), a violet shimmer round her as she coils, the burst on the foe as
-     * she cuts it, a faint blue glow along each slash while it is bright (2.96.3: faint, the blade itself sharp), and its
-     * burst.
+     * she cuts it, and round each slash (2.100.1, LungeSlashes) its sword's aura while it is bright, a ring on the ground
+     * under the foe and its burst (2.96.3 had only a faint blue glow along it).
      */
     static void additive(Fx c,EffectMesh m){
         SwordVolley.additive(c,m);
@@ -389,14 +393,15 @@ final class SwordLunge {
         if(passes(c.cast.id()))IsosangEmpower.burst(c,m,foe,way(c.cast,foe),blowAt(LUNGE,0)/20f,PASS_BURST,3);
         Vec3d to=toward(c.cast,foe);
         for(int j=0;j<LUNGE_SLASHES;j++){
-            float at=lungeSlash(j);if(t<at-.01f||t>=at+DIM||!cuts(c.cast.id(),j))continue;
-            Blade b=blade(c.cast.id(),foe,to,j);float lit=k*lit(j,t);
-            Vec3d head=b.point(drawn(j,t));
-            m.needle(b.far(),head,b.width()*2.2,.55,BLUE,.1f*lit);m.needle(b.far(),head,b.width()*1.3,.55,AZURE,.14f*lit);
-            IsosangEmpower.burst(c,m,b.nearest(foe),b.way(),at,SLASH_BURST,j*17+5);
+            float at=lungeSlash(j);if(t<at-.01f||t>=at+Math.max(DIM,LungeSlashes.RING_LIFE)||!cuts(c.cast.id(),j))continue;
+            Blade b=blade(c.cast.id(),foe,to,j);
+            // (2.100.1) its sword's aura, its lightning, the ring on the ground under the foe, a bigger burst
+            LungeSlashes.aura(m,b,j,t,k);
+            LungeSlashes.ground(m,foe,j,t,k);
+            IsosangEmpower.burst(c,m,b.nearest(foe),b.way(),at,LungeSlashes.burst(j),j*17+5);
         }
     }
-    /** Over the ink: the swords' starlight (SwordVolley), the head of the light racing to the foe, and a glint at each slash's head as it is drawn on. */
+    /** Over the ink: the swords' starlight (SwordVolley), the head of the light racing to the foe, and each slash's cutting edge as it is drawn on, the flare of its heart and its lightning (LungeSlashes). */
     static void overlay(Fx c,EffectMesh m){
         SwordVolley.overlay(c,m);
         // (2.100.0) the stars on its dash's light and on its slashes
@@ -409,10 +414,12 @@ final class SwordLunge {
         }
         Vec3d to=toward(c.cast,foe);
         for(int j=0;j<LUNGE_SLASHES;j++){
-            float at=lungeSlash(j);if(t<at-.01f||t>=at+DRAW+.05f||!cuts(c.cast.id(),j))continue;
-            Blade b=blade(c.cast.id(),foe,to,j);double h=drawn(j,t);
-            float draw=k*Ease.smooth(t,at-.01f,at)*(1-Ease.smooth(t,at+DRAW,at+DRAW+.04f));
-            if(draw>.01f){Vec3d p=b.point(h);glint8(m,p,.3,WHITE,.7f*draw);m.softDisc(p,.25,PALE,.4f*draw);}
+            float at=lungeSlash(j);if(t<at-.01f||t>=at+.3f||!cuts(c.cast.id(),j))continue;
+            // (2.100.1) the cutting edge at its head as it is drawn on, the flare of white heat down its heart as it is cut,
+            // its lightning
+            Blade b=blade(c.cast.id(),foe,to,j);
+            LungeSlashes.edge(c,m,b,j,t,k);
+            LungeSlashes.lightning(c,m,b,j,t,k);
         }
     }
     /** Lights: the swords' (SwordVolley), the head of the light racing to the foe, the foe as she cuts it and as each slash cuts; the afterglow cut short throughout. */
@@ -428,8 +435,10 @@ final class SwordLunge {
                 Drop d=drop(c.cast,foe,t);f.light(d.head(),0xd6e6ff,8,.55f*a);f.light(d.at(d.length()*.45,0),0xb8c8ff,6,.3f*a);
             }
             float kp=passes(c.cast.id())?FxLib.kick(t,blowAt(LUNGE,0)/20f,.15f):0;if(kp>.01f)f.light(foe,0xcfe4ff,9,.8f*kp);
-            for(int j=0;j<LUNGE_SLASHES;j++){float ks=cuts(c.cast.id(),j)?FxLib.kick(t,lungeSlash(j),.18f):0;if(ks>.01f)f.light(foe,0x9fc8ff,8,.7f*ks);}
+            for(int j=0;j<LUNGE_SLASHES;j++){float ks=cuts(c.cast.id(),j)?FxLib.kick(t,lungeSlash(j),.2f):0;if(ks>.01f)f.light(foe,0x9fc8ff,LungeSlashes.lightReach(j),LungeSlashes.lightBright(j)*ks);}
         }
+        // (2.100.1) the last slash's impact frame
+        LungeSlashes.frame(c,f,foe);
         // quick throughout (the dash, the flight on, the slashes): short afterglow, else each leaves copies of itself
         if(t<LUNGE_LENGTH/20f)f.afterglow(t<land+.1f?.02f:.05f);
     }
@@ -437,7 +446,7 @@ final class SwordLunge {
     static float shake(StandClient.Cast cast,float sec){
         float v=SwordVolley.shake(cast,sec);
         if(passes(cast.id()))v=Math.max(v,.55f*bump(sec,blowAt(LUNGE,0)/20f,.08f));
-        for(int j=0;j<LUNGE_SLASHES;j++)if(cuts(cast.id(),j))v=Math.max(v,.3f*bump(sec,lungeSlash(j),.06f));
+        for(int j=0;j<LUNGE_SLASHES;j++)if(cuts(cast.id(),j))v=Math.max(v,LungeSlashes.jolt(j)*bump(sec,lungeSlash(j),.06f));
         return v;
     }
     /**
