@@ -60,10 +60,10 @@ public final class CooldownHud {
      * Lee So-sang's attack's rest after a combo (2.77.0), after Star Platinum's; their E (2.80.0), R (2.81.0), H (2.82.0),
      * G (2.83.0), Z (2.93.0) and H's basic attack (2.95.0).
      */
-    static final int ISOSANG=18,ISOSANG_E=19,ISOSANG_R=20,ISOSANG_H=21,ISOSANG_G=22,ISOSANG_Z=23,ISOSANG_VOLLEY=24;
+    static final int ISOSANG=18,ISOSANG_E=19,ISOSANG_R=20,ISOSANG_H=21,ISOSANG_G=22,ISOSANG_Z=23,ISOSANG_VOLLEY=24,ISOSANG_T=25;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
@@ -77,7 +77,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -181,6 +181,9 @@ public final class CooldownHud {
         // H's basic attack (2.95.0): from when its last sword has struck (the server's ready tick, told with each volley's news)
         long volley=isosang?dev.sangwoo.celestialfall.client.isosang.IsosangClient.vReady(p.getUuid()):0;
         if(volley!=isosangVSeen){show(ISOSANG_VOLLEY,isosangVolleyName(),volley-time,dev.sangwoo.celestialfall.isosang.IsosangRules.VOLLEY_COOLDOWN,now);isosangVSeen=volley;}
+        // their T (2.96.0): from when it is over, or it was called off (the server's ready tick, told with each T's news)
+        long lunge=isosang?dev.sangwoo.celestialfall.client.isosang.IsosangClient.tReady(p.getUuid()):0;
+        if(lunge!=isosangTSeen){show(ISOSANG_T,isosangTName(),lunge-time,dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE_COOLDOWN,now);isosangTSeen=lunge;}
         LIST.update(now);
     }
     /**
@@ -192,7 +195,7 @@ public final class CooldownHud {
     static boolean shows(int slot,String stand){
         if(slot==DASH)return true;
         // (2.77.0) Lee So-sang's to theirs
-        if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R||slot==ISOSANG_H||slot==ISOSANG_G||slot==ISOSANG_Z||slot==ISOSANG_VOLLEY)return "isosang".equals(stand);
+        if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R||slot==ISOSANG_H||slot==ISOSANG_G||slot==ISOSANG_Z||slot==ISOSANG_VOLLEY||slot==ISOSANG_T)return "isosang".equals(stand);
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -233,6 +236,8 @@ public final class CooldownHud {
     private static String isosangZName(){return "검진 이동";}
     /** (2.95.0) H's basic attack (the name the user's video gives it). */
     private static String isosangVolleyName(){return "회풍만검";}
+    /** (2.96.0) Lee So-sang's T. */
+    private static String isosangTName(){return "돌진 베기";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */
     private static String name(int slot,UUID me){
         if(slot!=T)return NAMES[slot];

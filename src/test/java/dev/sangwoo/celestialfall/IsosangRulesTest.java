@@ -416,11 +416,92 @@ class IsosangRulesTest {
         // her eyes outside it (none on the formation's swords): the nearest point of it
         double[] near=volleyPoint(0,3,-20,0,0,-30);assertEquals(15,Math.hypot(near[0],near[2]),1e-9);assertEquals(1,near[3],1e-9);
     }
+    @Test void tDashesThroughTheFoeThenItsSwordsAndThreeSlashesCome(){
+        // (2.96.0) "T를 누르면 평타 6검이 날아가는 동시에 빠르게 바라보는 상대에게 돌진 베어내고 적에게 3 참격으로 베이는 동시에
+        // 다른 검으로 넘어가는 스킬", the user's answers: 30 in all (the dash 6, each sword 2, each slash 4), 15 s
+        assertEquals(10,blows(LUNGE));assertTrue(drawn(LUNGE));assertFalse(valid(LUNGE),"not one of the combo's hits");assertFalse(unblockable(LUNGE),"a guard takes it");
+        assertEquals(30f,total(LUNGE),1e-6f);
+        int dash=0,swords=0,slashes=0;
+        for(int i=0;i<blows(LUNGE);i++){
+            if(i>0)assertTrue(blowAt(LUNGE,i)>=blowAt(LUNGE,i-1),"in order");
+            switch(lungeKind(i)){
+                case 0->{dash++;assertEquals(6f,damage(LUNGE,i),1e-6f);assertTrue(blowAt(LUNGE,i)>LUNGE_GO&&blowAt(LUNGE,i)<LUNGE_LAND,"as she passes, on her dash");}
+                case 1->{swords++;assertEquals(2f,damage(LUNGE,i),1e-6f);assertEquals(blowAt(LUNGE,i)/20f,volleyStrikes(LUNGE,lungeNth(i)),1e-6f,"each sword on its blow");}
+                default->{slashes++;assertEquals(4f,damage(LUNGE,i),1e-6f);assertEquals(blowAt(LUNGE,i)/20f,lungeSlash(lungeNth(i)),1e-6f);}
+            }
+        }
+        assertEquals(1,dash);assertEquals(VOLLEY_SWORDS,swords);assertEquals(LUNGE_SLASHES,slashes);
+        // the video: the fan as she goes, the swords coming down 0.55 to 0.8 s as she has flown on, the slashes among the last
+        for(int i=0;i<VOLLEY_SWORDS;i++){
+            assertTrue(volleyShows(LUNGE,i)<volleyThrown(LUNGE,i),"shown, then thrown");
+            assertTrue(volleyThrown(LUNGE,i)>=LUNGE_GO/20f-.01f,"thrown as she sets off");
+            assertTrue(volleyArrives(LUNGE,i)>volleyThrown(LUNGE,i)+.2f,"a flight round the air");
+            assertTrue(volleyStrikes(LUNGE,i)>volleyArrives(LUNGE,i));
+            assertTrue(volleyStrikes(LUNGE,i)>=.55f&&volleyStrikes(LUNGE,i)<=.8f,"strikes at "+volleyStrikes(LUNGE,i));
+        }
+        for(int j=0;j<LUNGE_SLASHES;j++){
+            float at=lungeSlash(j);assertTrue(at>=(LUNGE_HOP+Z_TRAVEL)/20f-.001f,"she has flown on by then");assertTrue(at<LUNGE_LENGTH/20f);
+            if(j>0)assertTrue(at>lungeSlash(j-1));
+        }
+        // a basic attack's stagger until the next blow, the last a moment
+        long start=900;
+        for(int i=0;i+1<blows(LUNGE);i++){long now=start+blowAt(LUNGE,i);assertEquals(Math.max(now,start+blowAt(LUNGE,i+1))+Stagger.PAST,Stagger.isosang(LUNGE,i,start,now,false));}
+        // 15 s from its end; held for all of it
+        assertEquals(LUNGE_LENGTH+300,lungeReady(1000,false)-1000);assertEquals(LUNGE_LENGTH,lungeReady(1000,true)-1000);
+        assertEquals(LUNGE_LENGTH,HOLD[LUNGE]);assertEquals(LUNGE_LENGTH,LENGTH[LUNGE]);assertEquals(1.25,LUNGE_LENGTH/20.0,1e-9,"the video: settled 1.25 s in");
+        // once every sword stands, and over (on the far sword) before they flare
+        assertFalse(lungeTime(Z_FROM-.01));assertTrue(lungeTime(Z_FROM));assertTrue(lungeTime(H_END-LUNGE_LENGTH/20.0));assertFalse(lungeTime(H_END-LUNGE_LENGTH/20.0+.01));
+    }
+    @Test void tsWayRunsOnUnbrokenFromHerSwordThroughTheFoeOntoTheFarthest(){
+        // (2.96.0) the formation holds her along it (the server's Formation.spotAt, the client's spot and raised): on the
+        // sword she stood on, along the dash to where she lands beyond the foe, there, over Z's flight onto the far sword
+        double fx=2,fz=-5,px=14,pz=7,tx=-9,tz=4,from=1.6,to=1.4;
+        double[] prev=null;double ph=Double.NaN;
+        for(double a=0;a<=LUNGE_LENGTH;a+=.05){
+            double[] q=lungeSpot(a,fx,fz,px,pz,tx,tz);double h=lungeHeight(a,from,to);
+            if(prev!=null){
+                // never a jump: a twentieth of a tick moves her well under a block (the dash and the flight on are quick, not broken)
+                assertTrue(Math.hypot(q[0]-prev[0],q[1]-prev[1])<1,"a jump at "+a);
+                assertTrue(Math.abs(h-ph)<.5,"its height jumps at "+a);
+            }
+            prev=q;ph=h;
+            assertTrue(h>=-1e-9,"never under the ground");
+        }
+        assertArrayEquals(new double[]{fx,fz},lungeSpot(0,fx,fz,px,pz,tx,tz),1e-9);assertEquals(from,lungeHeight(0,from,to),1e-9,"on her pommel as it begins");
+        assertArrayEquals(new double[]{px,pz},lungeSpot(LUNGE_LAND,fx,fz,px,pz,tx,tz),1e-9);assertEquals(0,lungeHeight(LUNGE_LAND,from,to),1e-9,"down beyond the foe");
+        assertArrayEquals(new double[]{px,pz},lungeSpot(LUNGE_HOP,fx,fz,px,pz,tx,tz),1e-9);
+        assertArrayEquals(new double[]{tx,tz},lungeSpot(LUNGE_HOP+Z_TRAVEL,fx,fz,px,pz,tx,tz),1e-9);assertEquals(to,lungeHeight(LUNGE_HOP+Z_TRAVEL,from,to),1e-9,"on the far pommel");
+        assertEquals(to,lungeHeight(LUNGE_LENGTH,from,to),1e-9);
+        // out of sight as she dashes and as she flies on, seen between and after
+        assertFalse(lungeHidden(LUNGE_GO-.1));assertTrue(lungeHidden(LUNGE_GO+.5));assertFalse(lungeHidden(LUNGE_LAND+.5));
+        assertTrue(lungeHidden(LUNGE_HOP+1));assertFalse(lungeHidden(LUNGE_HOP+Z_TRAVEL+.1));
+        // each tick's step of the longest dash (from her sword across the formation to beyond a foe at the reach's far
+        // edge) under the 8 blocks a frame the camera takes for a teleport (BotandCamera)
+        double longest=FORMATION_RADIUS+VOLLEY_BEYOND+FORMATION_RADIUS+LUNGE_PAST;
+        assertTrue(longest/(LUNGE_LAND-LUNGE_GO)<8,"a tick's step: "+longest/(LUNGE_LAND-LUNGE_GO));
+    }
+    @Test void tFliesOnOntoTheSwordFarthestFromTheFoe(){
+        // (2.96.0, the user's choice "상대에게서 가장 먼 검")
+        double[][] xz={{0,0},{5,0},{-6,0},{0,7},{0,-2}};
+        assertEquals(2,farthest(xz,0,4,0),"the far side from a foe at the right");
+        assertEquals(3,farthest(xz,0,0,-5),"from one at the back");
+        assertEquals(1,farthest(xz,2,-8,0),"never the one she stands on, the next farthest then");
+        // every formation's: never the one she stands on, and as far from the foe as any
+        for(int seed=0;seed<40;seed++){
+            double[][] sw=formationSwords(seed*977);int on=standSword();
+            double fx=Math.cos(seed)*11,fz=Math.sin(seed)*11;int k=farthest(sw,on,fx,fz);
+            assertNotEquals(on,k);double far=Math.hypot(sw[k][0]-fx,sw[k][1]-fz);
+            for(int j=0;j<sw.length;j++)if(j!=on)assertTrue(Math.hypot(sw[j][0]-fx,sw[j][1]-fz)<=far+1e-9);
+        }
+    }
     @Test void hsBasicAttacksSoundIsTheVideosRunningPastItsLastBlow()throws Exception{
         // (2.95.0) the user's video's own sound (cut_volley_sound.py): its swords' rush, and their burst on the blows, run
         // on past the last until it is back down to the formation's sound
         double v=StarPlatinumRulesTest.seconds("isosang_volley");
         assertTrue(v>volleyStrikes(VOLLEY_SWORDS-1)+.3&&v<2.2,"its sound: "+v+" s");
+        // (2.96.0) T's, from the user's video of it: its rush, its crack, the swords' blows and the slashes, on past them
+        double t=StarPlatinumRulesTest.seconds("isosang_t");
+        assertTrue(t>lungeSlash(LUNGE_SLASHES-1)+.4&&t<2.2,"its sound: "+t+" s");
     }
     @Test void hsDodgeHoldsFromItsStartAndMovesHerToAnyOtherSwordAtRandom(){
         // (2.94.0) "H를 쓰고 단 1회 맞은 데미지 무시하고 랜덤한 검으로 이동": from H's start (a blow before the swords stand is kept

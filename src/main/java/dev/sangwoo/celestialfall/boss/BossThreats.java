@@ -187,6 +187,14 @@ public final class BossThreats {
             out.add(new Threat(p,"isosangV",vo.start(),Math.max(now,hit),vo.start()+IsosangRules.lastBlow(IsosangRules.VOLLEY),
                 Zone.ring(vo.at().subtract(0,1,0),IsosangRules.VOLLEY_SPOT+.9,-1.5,3),true,false,false,IsosangRules.total(IsosangRules.VOLLEY),false,false));
         }
+        // (2.96.0) T's blows (the dash cutting through its foe, the six swords, the three slashes): all on its foe (its chest
+        // as last seen) or where it comes down, until its last, guardable (each comes from its user's side)
+        var lu=dev.sangwoo.celestialfall.isosang.IsosangAttack.lungeNow(p);
+        if(lu!=null&&lu.blows()<IsosangRules.blows(IsosangRules.LUNGE)){
+            long hit=lu.start()+IsosangRules.blowAt(IsosangRules.LUNGE,lu.blows());
+            out.add(new Threat(p,"isosangT",lu.start(),Math.max(now,hit),lu.start()+IsosangRules.lastBlow(IsosangRules.LUNGE),
+                Zone.ring(lu.at().subtract(0,1,0),IsosangRules.VOLLEY_SPOT+.9,-1.5,3),true,false,false,IsosangRules.total(IsosangRules.LUNGE),false,false));
+        }
         // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
         for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){
             float yaw=(float)Math.toDegrees(Math.atan2(-sw.dir().x,sw.dir().z));

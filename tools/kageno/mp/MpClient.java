@@ -397,10 +397,24 @@ public final class MpClient implements ClientModInitializer {
      * down as drawn here against the watcher's chest, how many swords are drawn as they fan out, fly and strike) and its
      * sound; the server each volley, its blows and the watcher's health.
      */
+    /**
+     * Lee So-sang's T (2.96.0, MP_ONLY=isosangt): H with the watcher 20 blocks ahead (out of the formation: its swords do
+     * not strike it, within T's reach), then on the sword the caster's camera onto the watcher ("VAIM") and T where it
+     * looks ("VT", its crosshair's pick sent with it): the caster dashes through the watcher (6), six swords of 2 and three
+     * slashes of 4 come down on it (200 to 170, no throw), and the caster lands 3 blocks beyond it and flies on onto the
+     * formation's sword farthest from it; T again at once (refused: its cooldown, 15 s from its end); then once it is ready
+     * the camera onto the ground 50 degrees to the left 10 blocks off ("VGROUND-50") and T: the caster dashes there, the
+     * blows come down there, no one struck (170 kept). Both log each T they hear (on whom, where she lands against the
+     * watcher, the swords she flies from and to, how late) and, every tick through it, the caster hidden or not, how far
+     * off the plan it is and is drawn; the server each T, its blows, the watcher's health and how far off where the
+     * formation holds them the caster is through it.
+     */
+    private static final String[] ISOSANGT_SCRIPT={
+        "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VT","134 VAIM","136 VT","440 VGROUND-50","446 VT","530 END"};
     private static final String[] ISOSANGVOLLEY_SCRIPT={
         "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1",
         "200 DIST23","236 VAIM","240 VM1","296 VGROUND-50","302 VM1","380 END"};
-    private static final String[] STEPS=ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    private static final String[] STEPS=ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -473,8 +487,9 @@ public final class MpClient implements ClientModInitializer {
                 if(traceUntil>0&&age<=traceUntil)trace();
                 if(ONLY.equals("boss"))bossWatch();
                 if(ONLY.equals("arrow"))arrowWatch();
-                if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley"))isosangWatch();
+                if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt"))isosangWatch();
                 if(ONLY.equals("isosangvolley"))volleyWatch();
+                if(ONLY.equals("isosangt"))tWatch();
                 if(ONLY.equals("isosangz")||ONLY.equals("isosangdodge"))zWatch();
                 if(age%4==0)shot();
                 if(caster){
@@ -492,8 +507,8 @@ public final class MpClient implements ClientModInitializer {
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
                     if(ONLY.equals("resist"))resistWatch();
-                    if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley"))watcherStill();
-                    if(age>(ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt"))watcherStill();
+                    if(age>(ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -585,6 +600,10 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("VM1")){if(down){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.aimNow(mc);
                 note(aim==null?"press the attack: no volley aim (off the sword)":String.format(Locale.ROOT,"press the attack: its crosshair picks %s at %.2f %.2f %.2f",aim.target()<0?"no one":mc.world.getEntityById(aim.target())==mc.player?"me":mc.world.getEntityById(aim.target()) instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z));
                 attack(true);}else attack(false);return;}
+        // (2.96.0) Lee So-sang's T where the camera looks ("VT": not turned back to the script's way first), its crosshair's pick logged
+        if(step.equals("VT")){if(down){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lungeAimNow(mc);
+                note(aim==null?"press T: no aim (off the sword)":String.format(Locale.ROOT,"press T: its crosshair picks %s at %.2f %.2f %.2f",aim.target()<0?"no one":mc.world.getEntityById(aim.target())==mc.player?"me":mc.world.getEntityById(aim.target()) instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z));
+                key(GLFW_KEY_T,true);}else key(GLFW_KEY_T,false);return;}
         if(step.equals("Z")){if(down){note(String.format(Locale.ROOT,"press Z: it aims at sword %d (on %d, Z left %d)",dev.sangwoo.celestialfall.client.isosang.SwordStep.aimedForFilm(),dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),
                 dev.sangwoo.celestialfall.client.isosang.IsosangClient.zState(mc.player.getUuid()).left(mc.world.getTime())));key(GLFW_KEY_Z,true);}else key(GLFW_KEY_Z,false);return;}
         if(step.equals("FRUIT")){if(down)command("item replace entity @s weapon.mainhand with celestialfall:rokakaka");return;}
@@ -1050,6 +1069,40 @@ public final class MpClient implements ClientModInitializer {
         }
         long vr=dev.sangwoo.celestialfall.client.isosang.IsosangClient.vReady(mc.player.getUuid());
         if(vr!=vReadySeen){vReadySeen=vr;note("own volley: ready again at "+vr+" (world tick "+mc.world.getTime()+")");}
+    }
+    /** (2.96.0) T's seen (by swing and its tick), and the own T's readiness last logged. */
+    private final java.util.Set<String> tSeen=new java.util.HashSet<>();private long tReadySeen=-1;
+    /**
+     * T as this client sees it (2.96.0): each as it is heard (on whom, where she lands against the watcher's feet as drawn
+     * here, the swords she flies from and to, how late), every tick of it the caster hidden or not, how far off the plan
+     * (the formation's, IsosangClient.spot) it is and is drawn level and how high it is drawn over the plan's height, how
+     * many swords are drawn; the own T's readiness as the server told it.
+     */
+    private void tWatch(){
+        for(var c:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
+            if(c.combo()!=dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE)continue;
+            var run=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lunge(c.id());var v=dev.sangwoo.celestialfall.client.isosang.IsosangClient.volley(c.id());if(run==null||v==null)continue;
+            var who=mc.world.getPlayerByUuid(c.caster());
+            if(tSeen.add(c.id()+"/heard")){var e=mc.world.getEntityById(v.target());var w=mc.world.getPlayers().stream().filter(q->q!=who).findFirst().orElse(null);
+                note(String.format(Locale.ROOT,"%s's T heard %.1f ticks into it: on %s, at %.2f %.2f %.2f; lands at %.2f %.2f %.2f (%s), from sword %d to sword %d",name(c.caster()),c.age(0),
+                    v.target()<0?"no one":e==mc.player?"me":e instanceof net.minecraft.entity.player.PlayerEntity q?q.getGameProfile().getName():"entity "+v.target(),v.point().x,v.point().y,v.point().z,
+                    run.past().x,run.past().y,run.past().z,w==null?"no watcher":String.format(Locale.ROOT,"%.2f from the watcher's feet",run.past().distanceTo(w.getLerpedPos(0))),run.from(),run.to()));}
+            int age=(int)Math.floor(c.age(0));
+            if(who!=null&&age>=0&&age<=dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE_LENGTH&&tSeen.add(c.id()+"/"+age)){
+                var formSwing=dev.sangwoo.celestialfall.client.isosang.IsosangClient.formationOf(c.caster());
+                var form=formSwing==null?null:dev.sangwoo.celestialfall.client.isosang.IsosangClient.formation(formSwing.id());
+                if(form!=null){
+                    double fa=formSwing.age(0);var plan=dev.sangwoo.celestialfall.client.isosang.IsosangClient.spot(formSwing.id(),form,fa);var at=who.getLerpedPos(0);
+                    var drawn=at.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(c.caster(),0));
+                    double high=at.y+dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(c.caster(),0)-form.centre().y,planned=dev.sangwoo.celestialfall.client.isosang.IsosangClient.raised(formSwing.id(),fa/20.0);
+                    note(String.format(Locale.ROOT,"%s's T +%d: hidden %s, %.2f off the plan level (drawn %.2f), drawn %.2f over its ground (planned %.2f), %d swords drawn",name(c.caster()),age,
+                        dev.sangwoo.celestialfall.client.isosang.SwordStep.hides(who),Math.hypot(at.x-plan.x,at.z-plan.z),Math.hypot(drawn.x-plan.x,drawn.z-plan.z),high,planned,
+                        dev.sangwoo.celestialfall.client.isosang.IsosangClient.volleyDrawn(c.id(),0)));
+                }
+            }
+        }
+        long tr=dev.sangwoo.celestialfall.client.isosang.IsosangClient.tReady(mc.player.getUuid());
+        if(tr!=tReadySeen){tReadySeen=tr;note("own T: ready again at "+tr+" (world tick "+mc.world.getTime()+")");}
     }
     /** (2.93.0) Z's flights seen (by swing and its tick), and the own Z last logged. */
     private final java.util.Set<String> zFlightSeen=new java.util.HashSet<>();private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zStateSeen;

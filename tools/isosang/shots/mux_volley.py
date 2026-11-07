@@ -8,7 +8,8 @@ usage: python3 -I tools/isosang/shots/mux_volley.py AUDIO_DIR FILM_DIR ENTRY "A-
 
 One stretch only (A..B of the entry's clock, seconds). Afterwards each 회풍만검's sound is found in the sound written (by
 its loudness against isosang_volley.ogg's, as mux_h.onset) and its place printed against the tick after it began in the
-film. MUX_KEEP_WAV=1 keeps the sound written beside OUT (OUT.wav), as mux_h.py does.
+film. MUX_KEEP_WAV=1 keeps the sound written beside OUT (OUT.wav), as mux_h.py does. MUX_COMBO and MUX_SOUND line up another
+skill of the formation the same way (2.96.0: T, MUX_COMBO=11 MUX_SOUND=isosang_t.ogg).
 """
 import os
 import subprocess
@@ -23,7 +24,9 @@ sys.path.insert(0, os.path.join(HERE, '../../stand/shots'))
 from mux_h import onset  # noqa: E402
 from mux_punches import SR, SOUNDS, decode, pling, find, earliest, rows  # noqa: E402
 
-FORMATION, VOLLEY = '8', '10'  # IsosangRules.FORMATION, IsosangRules.VOLLEY
+FORMATION = '8'  # IsosangRules.FORMATION
+VOLLEY = os.environ.get('MUX_COMBO', '10')  # IsosangRules.VOLLEY (or LUNGE, 11)
+SOUND = os.environ.get('MUX_SOUND', 'isosang_volley.ogg')
 XFADE = .025
 
 
@@ -56,15 +59,20 @@ def main():
 
     heard_h, shown_h = swings(folder, FORMATION), swings(os.path.join(film_dir, entry), FORMATION)
     heard_v, shown_v = swings(folder, VOLLEY), swings(os.path.join(film_dir, entry), VOLLEY)
-    if not heard_h or not shown_h or len(heard_v) != len(shown_v):
+    if not heard_v or len(heard_v) != len(shown_v) or bool(heard_h) != bool(shown_h):
         sys.exit(f'H in the runs: {heard_h} {shown_h}; 회풍만검: {heard_v} {shown_v}')
-    shift = heard_h[0] - shown_h[0]
-    # H's own sound a tick after H began (mux_h's lead)
-    clip = decode(os.path.join(SOUNDS, 'isosang_h.ogg'))
-    began = sample(heard_h[0])
+    if heard_h:
+        shift = heard_h[0] - shown_h[0]
+        # H's own sound a tick after H began (mux_h's lead)
+        clip, began, what = decode(os.path.join(SOUNDS, 'isosang_h.ogg')), sample(heard_h[0]), f'H began on tick {heard_h[0]} (sound run) / {shown_h[0]} (film run)'
+    else:
+        # (2.96.0) an entry on a formation begun before it (in an entry before): lined up by the skill's own start and its
+        # own sound a tick after it
+        shift = heard_v[0] - shown_v[0]
+        clip, began, what = decode(os.path.join(SOUNDS, SOUND)), sample(heard_v[0]), f'no H in the entry; it began on tick {heard_v[0]} (sound run) / {shown_v[0]} (film run)'
     pos, score = onset(wav, clip, began)
     lead = pos - (began + SR / 20) if score > .8 else 0.0
-    print(f'  H began on tick {heard_h[0]} (sound run) / {shown_h[0]} (film run); its sound {(pos - began) / SR * 1000:+.0f} ms after it by the clock '
+    print(f'  {what}; its sound {(pos - began) / SR * 1000:+.0f} ms after it by the clock '
           f'(match {score:.2f}): every piece moved {lead / SR * 1000:+.0f} ms')
     num, den = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', film],
                               capture_output=True, check=True, text=True).stdout.strip().split('/')
@@ -79,7 +87,7 @@ def main():
         return np.concatenate([p, np.zeros(n - len(p))]) if len(p) < n else p
 
     track = piece(shift)
-    vlen = len(decode(os.path.join(SOUNDS, 'isosang_volley.ogg'))) / SR
+    vlen = len(decode(os.path.join(SOUNDS, SOUND))) / SR
     t = a + np.arange(n) / SR
     for hv, sv in zip(heard_v, shown_v):
         own = hv - sv
@@ -98,7 +106,7 @@ def main():
     if peak > .99:
         track *= .99 / peak
     # each 회풍만검's sound in what was written, against a tick after it began in the film
-    vclip = decode(os.path.join(SOUNDS, 'isosang_volley.ogg'))
+    vclip = decode(os.path.join(SOUNDS, SOUND))
     for sv in shown_v:
         want = ((sv + 1) / 20 - a) * SR
         got, sc = onset(track, vclip, want, before=.3, after=.3)

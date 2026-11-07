@@ -24,7 +24,10 @@ dodge (2.94.0, MpClient.ISOSANGDODGE_SCRIPT: the caster struck three times by th
 the caster moved onto a sword at random, the others landing), MP_ONLY=isosangvolley its H basic attack (2.95.0,
 MpClient.ISOSANGVOLLEY_SCRIPT: on the sword, six swords of 2 at the watcher 20 blocks off in the crosshair, again too soon
 refused, again 3 s on, 2.95.2: the watcher moved on out of the reach (the formation and 3 blocks more) and not picked,
-the swords at the reach's edge, then onto the ground with no one in the crosshair), MP_ONLY=isosangg its G (2.83.0,
+the swords at the reach's edge, then onto the ground with no one in the crosshair), MP_ONLY=isosangt its T (2.96.0,
+MpClient.ISOSANGT_SCRIPT: on the sword, a dash through the watcher 20 blocks off in the crosshair, six swords of 2 and three
+slashes of 4 on it, a flight on to the formation's sword farthest from it; again at once refused; again once ready onto the
+ground with no one in the crosshair), MP_ONLY=isosangg its G (2.83.0,
 MpClient.ISOSANGG_SCRIPT: G with the watcher 30 blocks ahead (2.87.1: 21 past where its sword strikes, in the blast's
 62 x 47 blocks), struck 50 as its sword strikes; the caster's cutscene in its
 own space, the watcher's world left as it is with the landing drawn; G and the attack refused while it holds, G refused

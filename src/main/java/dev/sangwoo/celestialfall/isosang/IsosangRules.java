@@ -43,13 +43,17 @@ public final class IsosangRules {
      * speed: the twirl starts 0.05 s in and the slash is thrown 0.44 s after it; it was 0.7 s; it strikes as it flies on,
      * {@link #WAVE_TICKS}).
      */
-    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{},{},{20,21,22,23,24,25}};
+    private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{},{},{20,21,22,23,24,25},
+        // (2.96.0) T: the dash through the foe, then the six swords, the three slashes among the last three (LUNGE_KIND)
+        {6,11,12,13,14,14,15,15,16,16}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
      * and 15; the empowered combo 43.5).
      */
-    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{},{},{2,2,2,2,2,2}};
+    private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{},{},{2,2,2,2,2,2},
+        // (2.96.0) T: the user's choice, 30 in all: the dash 6, each sword 2, each slash 4
+        {6,2,2,2,2,4,2,4,2,4}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
     /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
@@ -62,11 +66,11 @@ public final class IsosangRules {
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
      * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0};
+    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it; 2.83.0: G's cutscene). */
-    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD};
+    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD,IsosangRules.LUNGE_LENGTH};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's; 2.83.0: and G's). */
-    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH};
+    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH,IsosangRules.LUNGE_LENGTH};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -79,7 +83,7 @@ public final class IsosangRules {
      * Whether {@code kind} is a swing the clients draw: a hit, R's sweep (2.81.0), H's sword formation (2.82.0), G (2.83.0)
      * or H's basic attack (2.95.0, VOLLEY: its swords only, the body standing on in the formation's stance).
      */
-    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE||kind==VOLLEY;}
+    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE||kind==VOLLEY||kind==LUNGE;}
     /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
     public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
     /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
@@ -132,8 +136,9 @@ public final class IsosangRules {
      * reaching where they stood before its leap, {@link #GIANT_LAG} ticks after it is thrown (2.80.1).
      */
     public static long staggerUntil(int combo,int blow,long start,long now,int past,int last,boolean empowered){
-        // (2.95.0) H's basic attack: until its next sword lands, its last {@code last} ticks (the next volley is 3 s off)
-        if(combo==VOLLEY)return blow+1<blows(combo)?Math.max(now,start+blowAt(combo,blow+1))+past:now+last;
+        // (2.95.0) H's basic attack: until its next sword lands, its last {@code last} ticks (the next volley is 3 s off);
+        // (2.96.0) T the same, until its next blow (a sword or a slash)
+        if(combo==VOLLEY||combo==LUNGE)return blow+1<blows(combo)?Math.max(now,start+blowAt(combo,blow+1))+past:now+last;
         if(position(combo)>=4)return now+last;
         int after=next(combo,empowered);
         long next=blow+1<blows(combo)?start+blowAt(combo,blow+1)+(combo==THROWS?SWORD_LAG:0):nextAt(combo,start)+blowAt(after,0)+(after==THRUST?GIANT_LAG:0);
@@ -745,6 +750,14 @@ public final class IsosangRules {
     public static float volleyArrives(int i){return blowAt(VOLLEY,i)/20f-VOLLEY_STICK;}
     /** When into the volley sword {@code i} strikes (seconds): its blow's tick. */
     public static float volleyStrikes(int i){return blowAt(VOLLEY,i)/20f;}
+    /**
+     * The same for the six swords of swing {@code combo} (2.96.0): H's basic attack's, or T's (LUNGE: shown as the
+     * basic attack's, thrown as she sets off on her dash, LUNGE_THROW0, and coming down one a tick from LUNGE_SWORDS).
+     */
+    public static float volleyShows(int combo,int i){return volleyShows(i);}
+    public static float volleyThrown(int combo,int i){return combo==LUNGE?LUNGE_THROW0+i*VOLLEY_THROW_STEP:volleyThrown(i);}
+    public static float volleyArrives(int combo,int i){return combo==LUNGE?volleyStrikes(combo,i)-LUNGE_STICK:volleyArrives(i);}
+    public static float volleyStrikes(int combo,int i){return combo==LUNGE?(LUNGE_SWORDS+i)/20f:volleyStrikes(i);}
     /** Whether the volley may begin {@code t} seconds into her formation: every sword planted (Z's from), and over before the swords flare. */
     public static boolean volleyTime(double t){return t>=Z_FROM&&t+VOLLEY_LENGTH/20.0<=H_END;}
     /**
@@ -752,6 +765,78 @@ public final class IsosangRules {
      * is ready once this one is over).
      */
     public static long volleyReady(long start,boolean free){return start+VOLLEY_LENGTH+(free?0:VOLLEY_COOLDOWN);}
+
+    // ───────────────────────────── T: the dash through the foe ─────────────────────────────
+
+    /**
+     * T (2.96.0, user request: "이번에는 T스킬 만들자 영상처럼 일단 T를 누르면 평타 6검이 날아가는 동시에 빠르게 바라보는 상대에게
+     * 돌진 베어내고 적에게 3 참격으로 베이는 동시에 다른 검으로 넘어가는 스킬이야", the user's video of it (e6830cf0, 60 fps, used
+     * twice) read on a sheet and confirmed: "맞음, 이대로"; and their answers: 30 in all with a 15 s cooldown, onto the sword
+     * farthest from the foe, and with no foe toward the crosshair): on her formation's sword the six swords of H's basic
+     * attack fan out behind her and are thrown as she dashes straight through the foe she looks at (picked as the basic
+     * attack picks it, within its reach), cutting it once as she passes, and lands {@link #LUNGE_PAST} blocks beyond it;
+     * the swords come down on it one after another, and while she flies on (Z's flight) onto the sword of her formation
+     * farthest from it, three slashes cross on it. With no foe she dashes to where her crosshair meets (brought in to the
+     * reach's edge, on the ground) and all of it comes down there on whoever is there. Ten blows (LUNGE_KIND: the dash,
+     * the swords, the slashes; 6, 2 each and 4 each), a guard takes each, no knockback, a basic attack's stagger until the
+     * next. It holds her for all of it (no Z, R or basic attack), and is ready again {@link #LUNGE_COOLDOWN} after it is over.
+     */
+    public static final int LUNGE=11;
+    /**
+     * T's ticks (the video, from the press: the fan at 0.1 s, the dash through at 0.25 s, landed beyond it by 0.5 s, the
+     * swords coming down 0.55 to 0.8 s, gone to the far sword by 0.7 s, the slashes 0.7 to 0.9 s, settled at 1.25 s): she
+     * sets off ({@link #LUNGE_GO}), passes the foe as its blow lands (its first, 6), is down beyond it
+     * ({@link #LUNGE_LAND}), flies on to the far sword ({@link #LUNGE_HOP}, over Z's {@link #Z_TRAVEL}), the first sword
+     * strikes ({@link #LUNGE_SWORDS}, one a tick), and it is over ({@link #LUNGE_LENGTH}). Its cooldown, from its end.
+     */
+    public static final int LUNGE_GO=3,LUNGE_LAND=7,LUNGE_HOP=10,LUNGE_SWORDS=11,LUNGE_LENGTH=25,LUNGE_COOLDOWN=300;
+    /** How far beyond the foe she lands (blocks, level, the way she dashed: the video's a few steps). */
+    public static final double LUNGE_PAST=3;
+    /** When T's swords are thrown (seconds: as she sets off), and how long before it strikes each sticks in (seconds). */
+    public static final float LUNGE_THROW0=.2f,LUNGE_STICK=.1f;
+    /** What each of T's blows is (0 the dash, 1 a sword, 2 a slash) and which one of them (BLOWS[LUNGE]'s order). */
+    private static final int[] LUNGE_KIND={0,1,1,1,1,2,1,2,1,2},LUNGE_NTH={0,0,1,2,3,0,4,1,5,2};
+    public static int lungeKind(int blow){return LUNGE_KIND[blow];}
+    public static int lungeNth(int blow){return LUNGE_NTH[blow];}
+    /** T's three slashes (2.96.0): how many, and when slash {@code j} is cut (seconds: its blow's tick). */
+    public static final int LUNGE_SLASHES=3;
+    public static float lungeSlash(int j){for(int b=0;b<LUNGE_KIND.length;b++)if(LUNGE_KIND[b]==2&&LUNGE_NTH[b]==j)return blowAt(LUNGE,b)/20f;return Float.NaN;}
+    /** Whether T may begin {@code t} seconds into her formation (2.96.0): every sword standing, and over (on the far sword) before they flare. */
+    public static boolean lungeTime(double t){return t>=Z_FROM&&t+LUNGE_LENGTH/20.0<=H_END;}
+    /** The tick T is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her, once it is over). */
+    public static long lungeReady(long start,boolean free){return start+LUNGE_LENGTH+(free?0:LUNGE_COOLDOWN);}
+    /** How far along her dash she is {@code a} ticks into T (0 to 1): on the sword until LUNGE_GO, at a steady flash of a pace to LUNGE_LAND. */
+    public static double lungeDash(double a){return Math.max(0,Math.min(1,(a-LUNGE_GO)/(LUNGE_LAND-LUNGE_GO)));}
+    /** How far through her flight on to the far sword she is {@code a} ticks into T (0 to 1, Z's flight), -1 before it. */
+    public static double lungeHop(double a){return a<LUNGE_HOP?-1:Math.min(1,(a-LUNGE_HOP)/Z_TRAVEL);}
+    /**
+     * Where T has her level {@code a} ticks in (2.96.0, as fractions of the way): the sword she stood on ({@code from}),
+     * along the dash to where she lands ({@code past}), there, over Z's flight to the far sword ({@code to}); x and z.
+     */
+    public static double[] lungeSpot(double a,double fx,double fz,double px,double pz,double tx,double tz){
+        if(a<LUNGE_HOP){double u=lungeDash(a);return new double[]{fx+(px-fx)*u,fz+(pz-fz)*u};}
+        double u=zAlong(lungeHop(a));return new double[]{px+(tx-px)*u,pz+(tz-pz)*u};
+    }
+    /**
+     * How high over her formation's ground T has her {@code a} ticks in (blocks): on the pommel she stood on
+     * ({@code from} high), down along the dash to the ground, on the ground, up over Z's arc onto the far pommel ({@code to} high).
+     */
+    public static double lungeHeight(double a,double from,double to){
+        if(a<LUNGE_LAND)return from*(1-lungeDash(a));
+        if(a<LUNGE_HOP)return 0;
+        double u=lungeHop(a);return u<1?to*zAlong(u)+zArc(u):to;
+    }
+    /** Whether her body is out of sight {@code a} ticks into T: a streak of light as she dashes, the orb as she flies on (Z's). */
+    public static boolean lungeHidden(double a){return a>=LUNGE_GO&&a<LUNGE_LAND||a>=LUNGE_HOP&&a<LUNGE_HOP+Z_TRAVEL;}
+    /**
+     * The sword of her formation farthest (level) from ({@code x}, {@code z}), not the one she stands on ({@code on}):
+     * where T has her fly on to (2.96.0, the user's choice "상대에게서 가장 먼 검"); {@code xz} each sword's place (world x, z).
+     */
+    public static int farthest(double[][] xz,int on,double x,double z){
+        int best=-1;double far=-1;
+        for(int k=0;k<xz.length;k++){if(k==on)continue;double d=Math.hypot(xz[k][0]-x,xz[k][1]-z);if(d>far){far=d;best=k;}}
+        return best<0?on:best;
+    }
 
     // ───────────────────────────── G: the ultimate ─────────────────────────────
 

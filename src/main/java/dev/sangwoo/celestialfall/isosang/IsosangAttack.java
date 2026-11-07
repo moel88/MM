@@ -67,7 +67,7 @@ public final class IsosangAttack {
      * The skills the skill packet asks for: E (2.80.0), R (2.81.0) and R held (2.81.1: the key held down
      * {@link IsosangRules#R_HOLD_TICKS} ticks, the client's call, as Kageno's T held is), H (2.82.0) and G (2.83.0).
      */
-    public static final int E=1,R=2,R_HELD=3,H=4,G=5,Z=6;
+    public static final int E=1,R=2,R_HELD=3,H=4,G=5,Z=6,T=7;
     /** The formation's damage (2.82.0): no guard takes it (minecraft:bypasses_shield), its user is the attacker. */
     public static final net.minecraft.registry.RegistryKey<net.minecraft.entity.damage.DamageType> FORMATION_DAMAGE=
         net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.DAMAGE_TYPE,dev.sangwoo.celestialfall.CelestialFall.id("sword_formation"));
@@ -109,6 +109,8 @@ public final class IsosangAttack {
         IsosangRules.ZState z=IsosangRules.ZState.FRESH;
         /** (2.95.0) H's basic attack, 회풍만검, under way or the last one (null for none), and the tick it is ready again. */
         Volley volley;long vReady;
+        /** (2.96.0) T under way (null for none), and the tick it is ready again. */
+        Lunge lunge;long tReady;
     }
     /**
      * H's basic attack, 회풍만검 (2.95.0, IsosangRules.VOLLEY): its id and start, the way its user faced, the foe it comes
@@ -119,6 +121,15 @@ public final class IsosangAttack {
     private static final class Volley {
         final UUID id;final long start;final float yaw;final int target;final Vec3d point,centre;Vec3d last;int blows;
         Volley(UUID id,long start,float yaw,int target,Vec3d point,Vec3d centre){this.id=id;this.start=start;this.yaw=yaw;this.target=target;this.point=point;this.last=point;this.centre=centre;}
+    }
+    /**
+     * T (2.96.0, IsosangRules.LUNGE): whom and where its blows come down on (as H's basic attack's, {@code aim}: its id,
+     * start, way, foe, point, the formation's middle, the foe's last chest, its blows so far), the sword she stood on,
+     * the one she flies on to (the farthest from the foe) and where she lands beyond the foe.
+     */
+    private static final class Lunge {
+        final Volley aim;final int from,to;final Vec3d past;
+        Lunge(Volley aim,int from,int to,Vec3d past){this.aim=aim;this.from=from;this.to=to;this.past=past;}
     }
     /** (2.83.0) For the film harness only (as StandArrow.rigged): the recording the next G plays (0 or 1), -1 to roll. */
     public static volatile int riggedVariant=-1;
@@ -149,6 +160,11 @@ public final class IsosangAttack {
          * move waits for them to be free to fly (the swords not standing yet, a flight under way, held where they are).
          */
         boolean dodged,waiting;
+        /**
+         * (2.96.0) T: the tick it began (its dash, landing and flight on, IsosangRules.lungeSpot), the sword she stood on
+         * as it began and where she lands beyond the foe; she flies on to {@code on} at {@code moved} (Z's flight).
+         */
+        long lungeAt=Long.MIN_VALUE/2;int lungeFrom=-1;Vec3d past=Vec3d.ZERO;
         final double[][] swords;
         Formation(UUID id,long start,Vec3d spot,float yaw){
             this.id=id;this.start=start;this.spot=spot;this.yaw=yaw;
@@ -162,11 +178,19 @@ public final class IsosangAttack {
         }
         /** Whether its user is flying from one sword to another at {@code now} (2.93.0). */
         boolean flying(long now){return now>=moved&&now<moved+IsosangRules.Z_TRAVEL;}
+        /** Whether T has them on its way at {@code now} (2.96.0): from its start until they stand on the far sword. */
+        boolean lunging(long now){return lungeFrom>=0&&now>=lungeAt&&now<lungeAt+IsosangRules.LUNGE_HOP+IsosangRules.Z_TRAVEL;}
         /**
          * Where it holds its user at {@code now}, level on its ground (2.93.0): under the sword they stand on (the first,
          * where they stood as it began, until Z moves them), on the way between two in Z's flight.
          */
         Vec3d spotAt(long now){
+            // (2.96.0) T: along its dash from the sword she stood on to where she lands, there, and on over Z's flight
+            if(lunging(now)){
+                Vec3d a=place(lungeFrom),b=place(on);
+                double[] xz=IsosangRules.lungeSpot(now-lungeAt,a.x,a.z,past.x,past.z,b.x,b.z);
+                return new Vec3d(xz[0],centre.y,xz[1]);
+            }
             if(from<0||now>=moved+IsosangRules.Z_TRAVEL)return on==IsosangRules.standSword()&&from<0?spot:place(on);
             double u=IsosangRules.zAlong(Math.max(0,now-moved)/(double)IsosangRules.Z_TRAVEL);
             return place(from).lerp(place(on),u);
@@ -226,9 +250,16 @@ public final class IsosangAttack {
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(SKILL,(server,player,handler,buf,response)->{
-            // (2.93.0) Z with the sword it moves to (a second byte); every other skill is its one byte
-            int bytes=buf.readableBytes();if(bytes<1||bytes>2)return;int skill=buf.readUnsignedByte();
-            if((skill==Z)!=(bytes==2))return;int sword=skill==Z?buf.readUnsignedByte():-1;
+            // (2.93.0) Z with the sword it moves to (a second byte); (2.96.0) T with whom the crosshair picks and where it
+            // meets (as the basic attack's press: a VarInt and three doubles, or nothing); every other skill is its one byte
+            int bytes=buf.readableBytes();if(bytes<1||bytes>30)return;int skill=buf.readUnsignedByte();
+            if(skill==Z?bytes!=2:skill==T?bytes!=1&&bytes<26:bytes!=1)return;int sword=skill==Z?buf.readUnsignedByte():-1;
+            int asked=-1;Vec3d meets=null;
+            if(skill==T&&bytes>1){
+                asked=buf.readVarInt();meets=new Vec3d(buf.readDouble(),buf.readDouble(),buf.readDouble());
+                if(buf.isReadable()||!Double.isFinite(meets.x)||!Double.isFinite(meets.y)||!Double.isFinite(meets.z))return;
+            }
+            int foe=asked;Vec3d at=meets;
             server.execute(()->{
                 var s=state(player);int second=server.getTicks()/20;
                 if(s.window!=second){s.window=second;s.presses=0;}
@@ -238,6 +269,7 @@ public final class IsosangAttack {
                 else if(skill==H)formation(player);
                 else if(skill==G)ultimate(player);
                 else if(skill==Z)cross(player,sword);
+                else if(skill==T)lunge(player,at!=null,foe,at);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(IsosangAttack::tick);
@@ -292,6 +324,20 @@ public final class IsosangAttack {
         var s=p==null?null:STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld()||!forming(s,p.getWorld().getTime()))return false;
         return onSword((p.getWorld().getTime()-s.form.start)/20.0);
     }
+    /**
+     * Whether this player's formation carries them now (2.96.0): Z's flight or the dodge's, T's dash and its flight on, a
+     * few ticks either side for their client's lag. FormationMoveMixin lets their moves through the server's "moved too
+     * quickly" check then (a long flight's first tick goes over 10 blocks; a host's are let through anyway, so in single
+     * player it was never seen); the formation holds them to its way after (hold).
+     */
+    public static boolean carried(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld())return false;
+        long now=p.getWorld().getTime();var f=s.form;if(f==null||!forming(s,now))return false;
+        if(now>=f.moved-CARRY_BEFORE&&now<f.moved+IsosangRules.Z_TRAVEL+CARRY_AFTER)return true;
+        return f.lungeFrom>=0&&now>=f.lungeAt-CARRY_BEFORE&&now<f.lungeAt+IsosangRules.LUNGE_HOP+IsosangRules.Z_TRAVEL+CARRY_AFTER;
+    }
+    /** How many ticks before and after the formation carries its user their moves are let through (their client's lag). */
+    static final int CARRY_BEFORE=2,CARRY_AFTER=8;
     /**
      * This player's sword formation as a boss reads it (2.82.0): begun at {@code start}, its middle at {@code centre}, and
      * where it holds them, level on its ground (2.82.4: where they stood, on its outer ring).
@@ -464,7 +510,7 @@ public final class IsosangAttack {
         if(sweeping(s,now)||now<s.rReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         // (2.93.0) not while Z flies them from one of their formation's swords to another; (2.95.0) nor while H's basic
         // attack's swords fan out behind them
-        if(s.form!=null&&forming(s,now)&&(s.form.flying(now)||volleyHolds(s,now)))return false;
+        if(s.form!=null&&forming(s,now)&&(s.form.flying(now)||volleyHolds(s,now)||lungeHolds(s,now)))return false;
         if(holding(s.combo,s.start,now)){
             long free=s.start+HOLD[s.combo];
             if(free-now<=BUFFER){s.rQueued=true;s.rHeld=held;return true;}
@@ -600,7 +646,7 @@ public final class IsosangAttack {
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();var f=s.form;
         if(f==null||!forming(s,now)||!IsosangRules.zTime((now-f.start)/20.0))return false;
-        if(f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||k<0||k>=f.swords.length||k==f.on)return false;
+        if(f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now)||k<0||k>=f.swords.length||k==f.on)return false;
         var next=IsosangRules.zUse(s.z,now,dev.sangwoo.celestialfall.NoCooldownState.enabled(p));if(next==null)return false;
         s.z=next;f.from=f.on;f.on=k;f.moved=now;
         send(p,f.id,FORMATION,f.start,f.yaw,CROSSED,k,null,null,null,f);
@@ -637,7 +683,7 @@ public final class IsosangAttack {
         var f=s.form;if(f==null||!f.waiting)return;
         double t=(now-f.start)/20.0;
         if(!IsosangRules.zTime(t)){if(t>=IsosangRules.Z_FROM)f.waiting=false;return;}
-        if(f.flying(now)||KagenoManager.frozen(p)||volleyHolds(s,now))return;
+        if(f.flying(now)||KagenoManager.frozen(p)||volleyHolds(s,now)||lungeHolds(s,now))return;
         f.waiting=false;
         int k=IsosangRules.dodgeSword(f.on,p.getRandom().nextInt(f.swords.length-1),f.swords.length);
         f.from=f.on;f.on=k;f.moved=now;
@@ -656,7 +702,7 @@ public final class IsosangAttack {
      * (IsosangRules.volleyReady; as soon as the last is over for a player the cooldowns are off for).
      */
     private static boolean volley(ServerPlayerEntity p,State s,long now,boolean aimed,int foe,Vec3d meets){
-        var f=s.form;if(f==null||!IsosangRules.volleyTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now))return false;
+        var f=s.form;if(f==null||!IsosangRules.volleyTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now)||lungeHolds(s,now))return false;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(s.volley!=null&&now<s.volley.start+VOLLEY_LENGTH||now<s.vReady&&!free)return false;
         Vec3d eye=p.getEyePos();LivingEntity target=null;Vec3d at;
@@ -694,6 +740,102 @@ public final class IsosangAttack {
         var block=p.getServerWorld().raycast(new RaycastContext(at,floor,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
         return block.getType()!=net.minecraft.util.hit.HitResult.Type.MISS?block.getPos():at;
     }
+    /**
+     * T (2.96.0, user request: "이번에는 T스킬 만들자 영상처럼 일단 T를 누르면 평타 6검이 날아가는 동시에 빠르게 바라보는 상대에게
+     * 돌진 베어내고 적에게 3 참격으로 베이는 동시에 다른 검으로 넘어가는 스킬이야", IsosangRules.LUNGE): on their formation's
+     * sword, the foe the crosshair picks (as the basic attack picks it: {@code foe} as their client said, checked here;
+     * an older client's press says nothing and their sight is looked along) or, with none, where it met (brought in to the
+     * reach's edge, on the ground there, downAt). They dash from the sword they stand on straight through it and land
+     * LUNGE_PAST blocks beyond (short of any block in the way), then fly on onto the sword of the formation farthest from
+     * it (Z's flight; the formation holds them along all of it, Formation.spotAt). Only while every sword stands and it
+     * can be over before they flare (IsosangRules.lungeTime), not while Z flies them, R holds them, H's basic attack's
+     * swords fan out or T is under way, and once it is ready again (IsosangRules.lungeReady: 15 s after it is over).
+     */
+    public static boolean lunge(ServerPlayerEntity p,boolean aimed,int foe,Vec3d meets){
+        if(!able(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();var f=s.form;
+        if(f==null||!forming(s,now)||!IsosangRules.lungeTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(now<s.tReady&&!free)return false;
+        Vec3d eye=p.getEyePos();LivingEntity target=null;Vec3d at;
+        if(aimed){
+            if(foe>=0&&p.getWorld().getEntityById(foe) instanceof LivingEntity e&&fair(p,e)&&within(f.centre,e,1)&&p.canSee(e))target=e;
+            at=meets==null?eye:meets;
+        }else{
+            target=aimed(p);if(target!=null&&!within(f.centre,target,0))target=null;
+            Vec3d look=p.getRotationVec(1f);at=eye.add(look.multiply(VOLLEY_RANGE));
+            var block=p.getServerWorld().raycast(new RaycastContext(eye,at,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+            if(block.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)at=block.getPos();
+        }
+        at=target!=null?chest(target):downAt(p,f.centre,eye,at);
+        // where they land: beyond the foe the way they dash, on the ground there (with none, where they come down), short
+        // of a block in the way
+        Vec3d start=f.place(f.on),goal=target!=null?target.getPos():at;
+        Vec3d way=new Vec3d(goal.x-start.x,0,goal.z-start.z);
+        way=way.lengthSquared()<1e-4?Vec3d.fromPolar(0,p.getYaw()):way.normalize();
+        Vec3d past=target!=null?goal.add(way.multiply(IsosangRules.LUNGE_PAST)):at;
+        var world=p.getServerWorld();
+        Vec3d from=start.add(0,1,0),to=new Vec3d(past.x,Math.max(past.y,f.centre.y)+1,past.z);
+        var wall=world.raycast(new RaycastContext(from,to,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+        if(wall.getType()!=net.minecraft.util.hit.HitResult.Type.MISS){Vec3d hit=wall.getPos().subtract(way.multiply(.6));past=new Vec3d(hit.x,past.y,hit.z);}
+        Vec3d top=new Vec3d(past.x,Math.max(past.y,f.centre.y)+2,past.z),bottom=new Vec3d(past.x,f.centre.y+FORMATION_LOW-IsosangRules.VOLLEY_BEYOND,past.z);
+        var ground=world.raycast(new RaycastContext(top,bottom,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+        past=ground.getType()!=net.minecraft.util.hit.HitResult.Type.MISS?ground.getPos():new Vec3d(past.x,f.centre.y,past.z);
+        // the sword they fly on to: the formation's farthest from the foe (or where it all comes down)
+        double[][] xz=new double[f.swords.length][];for(int k=0;k<xz.length;k++){Vec3d q=f.place(k);xz[k]=new double[]{q.x,q.z};}
+        int onto=IsosangRules.farthest(xz,f.on,goal.x,goal.z);
+        float yaw=(float)Math.toDegrees(Math.atan2(-way.x,way.z));
+        s.lunge=new Lunge(new Volley(UUID.randomUUID(),now,MathHelper.wrapDegrees(yaw),target==null?-1:target.getId(),at,f.centre),f.on,onto,past);
+        f.lungeAt=now;f.lungeFrom=f.on;f.past=past;f.from=f.on;f.on=onto;f.moved=now+IsosangRules.LUNGE_HOP;
+        s.tReady=IsosangRules.lungeReady(now,free);
+        p.swingHand(Hand.MAIN_HAND,true);
+        send(p,s.lunge.aim.id,LUNGE,now,s.lunge.aim.yaw,HIT,-1,null,null,null,f,null,s.lunge.aim,s.lunge);
+        return true;
+    }
+    /** Whether T holds this player now (2.96.0): all of it, until they stand on the far sword and it is over. */
+    private static boolean lungeHolds(State s,long now){var l=s.lunge;return l!=null&&now>=l.aim.start&&now<l.aim.start+IsosangRules.LUNGE_LENGTH;}
+    /**
+     * T on a tick (2.96.0): each blow on its tick (the dash as they pass the foe, the six swords, the three slashes) the foe
+     * it was sent at, wherever it has gone so long as it is still there and within VOLLEY_LEASH of the reach, or, with none
+     * (or it gone), whoever is where it all comes down (its box widened VOLLEY_SPOT); no knockback, a basic attack's stagger
+     * until the next. Its user gone (dead, off the map, Lee So-sang no more, their formation over) calls the rest off.
+     */
+    private static void rush(ServerPlayerEntity p,State s,long now){
+        var l=s.lunge;var v=l.aim;long age=now-v.start;
+        if(!attacks(p)||s.form==null){halt(p,s,now);return;}
+        LivingEntity foe=null;
+        if(v.target>=0&&p.getWorld().getEntityById(v.target) instanceof LivingEntity e&&fair(p,e)&&within(v.centre,e,IsosangRules.VOLLEY_LEASH)){foe=e;v.last=chest(e);}
+        while(v.blows<blows(LUNGE)&&age>=blowAt(LUNGE,v.blows)){
+            int i=v.blows++;List<LivingEntity> struck;
+            if(foe!=null){var target=foe;struck=strike(p,LUNGE,i,v.start,v.yaw,now,target.getPos(),e->e==target,null,false);}
+            else{Vec3d at=v.last;struck=strike(p,LUNGE,i,v.start,v.yaw,now,at,e->e.getBoundingBox().expand(VOLLEY_SPOT).contains(at),null,false);}
+            if(!struck.isEmpty())send(p,v.id,LUNGE,v.start,v.yaw,LANDED,i,struck,null,null,s.form,null,v,l);
+        }
+        if(age>=IsosangRules.LUNGE_LENGTH)s.lunge=null;
+    }
+    /**
+     * T called off before it is over (2.96.0: its user gone, their formation over): its viewers told, its cooldown from
+     * now; their formation (if it stands on) holds them on the sword they were flying to.
+     */
+    private static void halt(ServerPlayerEntity p,State s,long now){
+        var l=s.lunge;if(l==null)return;s.lunge=null;
+        if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.tReady=Math.min(s.tReady,now+IsosangRules.LUNGE_COOLDOWN);
+        var f=s.form;if(f!=null&&f.lunging(now)){f.lungeFrom=-1;f.from=-1;f.moved=now;}
+        send(p,l.aim.id,LUNGE,l.aim.start,l.aim.yaw,STOPPED,-1,null,null,null,f,null,l.aim,l);
+    }
+    /** T as a boss and the checks read it (2.96.0): begun at {@code start}, its blows coming down at {@code at} (its foe's chest as last seen, -1 for none), {@code blows} landed, where she lands and the swords she flies from and to. */
+    public record LungeNow(long start,Vec3d at,int target,int blows,Vec3d past,int from,int to){}
+    public static LungeNow lungeNow(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());var l=s==null?null:s.lunge;
+        return l==null?null:new LungeNow(l.aim.start,l.aim.last,l.aim.target,l.aim.blows,l.past,l.from,l.to);
+    }
+    /** (2.96.0) Where each sword of this player's formation stands (its foot on the ground; null for none; the multiplayer check reads it). */
+    public static Vec3d[] formationPlaces(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());if(s==null||s.form==null)return null;
+        Vec3d[] out=new Vec3d[s.form.swords.length];for(int k=0;k<out.length;k++)out[k]=s.form.place(k);return out;
+    }
+    /** (2.96.0) The tick this player's T is ready again (0 if it is). */
+    public static long tReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.tReady;}
     /** Whether H's basic attack's swords still fan out behind this player now (IsosangRules.VOLLEY_HOLD): no Z, R or move to another sword until they are thrown. */
     private static boolean volleyHolds(State s,long now){var v=s.volley;return v!=null&&now>=v.start&&now<v.start+VOLLEY_HOLD;}
     /** Whether {@code e} may be struck by {@code p}'s swords: alive, in the world, not them, not a merchant, and by the PvP rules. */
@@ -756,7 +898,7 @@ public final class IsosangAttack {
         if(now<f.moved+IsosangRules.Z_TRAVEL+STRAY_GRACE)leave=Double.MAX_VALUE;
         // (a boss has no client to lift it: the server does, as the empowered fourth's leap back)
         if(p instanceof dev.sangwoo.celestialfall.boss.BossPlayer){
-            if(onSword(t)){p.setPosition(to.x,to.y+IsosangRules.raised(t),to.z);p.setVelocity(Vec3d.ZERO);}
+            if(onSword(t)){double up=f.lunging(now)?IsosangRules.lungeHeight(now-f.lungeAt,FORMATION_STAND,FORMATION_STAND):IsosangRules.raised(t);p.setPosition(to.x,to.y+up,to.z);p.setVelocity(Vec3d.ZERO);}
             else if(dx*dx+dz*dz>STRAY*STRAY)p.setPosition(to.x,at.y,to.z);
         }else if(dx*dx+dz*dz>leave*leave)p.networkHandler.requestTeleport(to.x,at.y,to.z,p.getYaw(),p.getPitch());
         p.fallDistance=0;
@@ -847,7 +989,10 @@ public final class IsosangAttack {
     }
     /** The formation ends early (2.82.0): every viewer is told (its swords go now), and H is ready again its cooldown after now. */
     private static void end(ServerPlayerEntity p,State s,long now){
-        var f=s.form;if(f==null)return;s.form=null;
+        var f=s.form;if(f==null)return;
+        // (2.96.0) T on the way ends with it, its cooldown from now
+        if(s.lunge!=null)halt(p,s,now);
+        s.form=null;
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.hReady=Math.min(s.hReady,now+H_COOLDOWN);
         send(p,f.id,FORMATION,f.start,f.yaw,STOPPED,-1,null,null,null,f);
     }
@@ -916,6 +1061,8 @@ public final class IsosangAttack {
             if(s.ult!=null)cast(p,s,now);
             // (2.95.0) and H's basic attack's swords, so long as their user is here and Lee So-sang's
             if(s.volley!=null)shower(p,s,now);
+            // (2.96.0) and T's blows, so long as their formation stands
+            if(s.lunge!=null)rush(p,s,now);
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
             if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
             if(held(p)){stop(p,s,now);release(p,s,now);s.rQueued=false;continue;}
@@ -1065,8 +1212,9 @@ public final class IsosangAttack {
         // (2.80.0: a thrown sword strikes the body it reached, wherever that is: the sword flew a way clear of blocks to it;
         // 2.80.1: so does the giant sword, all along its way)
         // (2.95.0: so does H's basic attack's every sword, coming down on whom it was sent at)
-        boolean thrown=combo==THROWS||combo==THRUST||combo==SWEEP||combo==VOLLEY;
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((combo==THROWS||combo==VOLLEY?2:combo==SWEEP?SWEEP_PIVOT_FW+SWEEP_REACH:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        // (2.96.0: and T's every blow: the dash through, the swords and the slashes on whom it was sent at)
+        boolean thrown=combo==THROWS||combo==THRUST||combo==SWEEP||combo==VOLLEY||combo==LUNGE;
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand((combo==THROWS||combo==VOLLEY||combo==LUNGE?2:combo==SWEEP?SWEEP_PIVOT_FW+SWEEP_REACH:MAX_REACH)+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
             if(done!=null&&done.contains(e.getUuid()))continue;
             if(!test.test(e)||!thrown&&!p.canSee(e))continue;
@@ -1112,6 +1260,9 @@ public final class IsosangAttack {
         send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,ult,null);
     }
     private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult,Volley volley){
+        send(p,id,combo,start,yaw,type,blow,struck,sword,sweep,form,ult,volley,null);
+    }
+    private static void send(ServerPlayerEntity p,UUID id,int combo,long start,float yaw,int type,int blow,List<LivingEntity> struck,Sword sword,Sweep sweep,Formation form,Ultimate ult,Volley volley,Lunge lunge){
         GArenaServer.event(p,id,combo,start,type);
         var s=state(p);var world=p.getServerWorld();long now=world.getTime();
         for(var viewer:world.getPlayers()){
@@ -1144,6 +1295,10 @@ public final class IsosangAttack {
             // none) and where (the foe's chest as it began, else where the crosshair met)
             b.writeLong(s.vReady);b.writeBoolean(volley!=null);
             if(volley!=null){b.writeVarInt(volley.target);b.writeDouble(volley.point.x);b.writeDouble(volley.point.y);b.writeDouble(volley.point.z);}
+            // (2.96.0, after what 2.95 sent) when T is ready again, and for T the sword she stood on, the one she flies on
+            // to and where she lands beyond the foe (its foe and where it comes down are the basic attack's, above)
+            b.writeLong(s.tReady);b.writeBoolean(lunge!=null);
+            if(lunge!=null){b.writeByte(lunge.from);b.writeByte(lunge.to);b.writeDouble(lunge.past.x);b.writeDouble(lunge.past.y);b.writeDouble(lunge.past.z);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

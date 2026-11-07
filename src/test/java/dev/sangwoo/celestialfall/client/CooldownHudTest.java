@@ -30,7 +30,7 @@ class CooldownHudTest {
     }
     @Test void leeSoSangsAreShownOnlyToLeeSoSang(){
         // (2.77.0-2.93.0) the attack's rest, E, R, H, G and Z
-        for(int slot:new int[]{CooldownHud.ISOSANG,CooldownHud.ISOSANG_E,CooldownHud.ISOSANG_R,CooldownHud.ISOSANG_H,CooldownHud.ISOSANG_G,CooldownHud.ISOSANG_Z,CooldownHud.ISOSANG_VOLLEY}){
+        for(int slot:new int[]{CooldownHud.ISOSANG,CooldownHud.ISOSANG_E,CooldownHud.ISOSANG_R,CooldownHud.ISOSANG_H,CooldownHud.ISOSANG_G,CooldownHud.ISOSANG_Z,CooldownHud.ISOSANG_VOLLEY,CooldownHud.ISOSANG_T}){
             assertTrue(CooldownHud.shows(slot,"isosang"),"slot "+slot);
             for(String other:new String[]{"kageno","star_platinum","none"})assertFalse(CooldownHud.shows(slot,other),"slot "+slot+" for "+other);
         }

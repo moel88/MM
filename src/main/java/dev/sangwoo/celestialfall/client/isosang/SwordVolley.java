@@ -47,14 +47,14 @@ final class SwordVolley {
     /** How long a sword takes to be gone in light once it has struck (seconds). */
     static final float GONE=.12f;
     /** How long a volley is drawn for (seconds, IsosangClient.life): until its last sword's burst of light is out. */
-    static final float LIFE=volleyStrikes(VOLLEY_SWORDS-1)+.45f;
+    static final float LIFE=volleyStrikes(VOLLEY,VOLLEY_SWORDS-1)+.45f;
     /**
      * How much of volley {@code id} still shows {@code t} seconds into it: all of it, or, called off (its user gone: the
      * server's word, IsosangClient.volleyEnd), fading out over a tenth of a second from then.
      */
     static float kept(UUID id,float t){float end=IsosangClient.volleyEnd(id);return Float.isNaN(end)?1:1-Ease.smooth(t,end,end+.1f);}
     /** Whether sword {@code i} of volley {@code id} struck (or will): not one whose blow was due after it was called off. */
-    static boolean strikes(UUID id,int i){float end=IsosangClient.volleyEnd(id);return Float.isNaN(end)||volleyStrikes(i)<=end;}
+    static boolean strikes(int combo,UUID id,int i){float end=IsosangClient.volleyEnd(id);return Float.isNaN(end)||volleyStrikes(combo,i)<=end;}
 
     // ───────────────────────────── where the swords are ─────────────────────────────
 
@@ -86,8 +86,10 @@ final class SwordVolley {
      * a curve out the way it pointed (at rest at first, quicker and quicker) and round onto the foe from its side
      * ({@link #approach}), sticking in VOLLEY_STICK seconds before it strikes, then gone in light.
      */
-    static Pose pose(Vec3d from,float yaw,Vec3d target,float t,int i){
-        float show=volleyShows(i),thrown=volleyThrown(i),arrive=volleyArrives(i),strike=volleyStrikes(i);
+    static Pose pose(Vec3d from,float yaw,Vec3d target,float t,int i){return pose(VOLLEY,from,yaw,target,t,i);}
+    /** The same for the six swords of swing {@code combo} (2.96.0: H's basic attack's, or T's, IsosangRules.LUNGE, on its own clock). */
+    static Pose pose(int combo,Vec3d from,float yaw,Vec3d target,float t,int i){
+        float show=volleyShows(combo,i),thrown=volleyThrown(combo,i),arrive=volleyArrives(combo,i),strike=volleyStrikes(combo,i);
         if(t<show||t>=strike+GONE)return null;
         Vec3d d=fan(yaw,i),h=hilts(from,yaw);
         if(t<thrown){
@@ -132,7 +134,7 @@ final class SwordVolley {
     static Vec3d target(StandClient.Cast cast,float delta){
         var v=IsosangClient.volley(cast.id());if(v==null)return null;
         var mc=MinecraftClient.getInstance();Vec3d last=LAST.get(cast.id());
-        if(v.target()>=0&&mc.world!=null&&mc.world.getEntityById(v.target()) instanceof LivingEntity e&&!e.isRemoved()&&cast.age(delta)/20f<volleyStrikes(VOLLEY_SWORDS-1)
+        if(v.target()>=0&&mc.world!=null&&mc.world.getEntityById(v.target()) instanceof LivingEntity e&&!e.isRemoved()&&cast.age(delta)/20f<lastBlow(cast.combo())/20f
             &&(v.centre()==null||leashed(v.centre(),e))){
             Vec3d at=e.getLerpedPos(delta).add(0,e.getHeight()*.55,0);
             LAST.put(cast.id(),at);while(LAST.size()>32)LAST.remove(LAST.keySet().iterator().next());
@@ -149,10 +151,12 @@ final class SwordVolley {
      * in their sight; and where the camera's middle line meets a block, or VOLLEY_RANGE blocks on (the server brings that
      * in to the reach's edge). Null when they are not on their formation's sword (the attack is the sword's combo then).
      */
-    static Aim aim(MinecraftClient mc){
+    static Aim aim(MinecraftClient mc){return aim(mc,false);}
+    /** The same for T ({@code lunge}, 2.96.0: the same pick, while T may be used, IsosangRules.lungeTime). */
+    static Aim aim(MinecraftClient mc,boolean lunge){
         var me=mc.player;if(me==null||mc.world==null||mc.gameRenderer==null||!MapClient.enabled())return null;
         var own=IsosangClient.ownFormation();if(own==null||IsosangClient.stopped(own.id()))return null;
-        if(!volleyTime(own.age(mc.getTickDelta())/20.0))return null;
+        double ft=own.age(mc.getTickDelta())/20.0;if(lunge?!lungeTime(ft):!volleyTime(ft))return null;
         var form=IsosangClient.formation(own.id());if(form==null)return null;Vec3d mid=form.centre();
         var cam=mc.gameRenderer.getCamera();Vec3d eye=me.getEyePos(),look=Vec3d.fromPolar(cam.getPitch(),cam.getYaw()),c=cam.getPos();
         LivingEntity best=null;double near=VOLLEY_AIM,out=FORMATION_RADIUS+VOLLEY_BEYOND+2;
@@ -194,37 +198,38 @@ final class SwordVolley {
      * foe, and a burst on the foe as each strikes (IsosangEmpower.burst: blue spikes, a crescent moon, a ring, sparks).
      */
     static void additive(Fx c,EffectMesh m){
+        int combo=c.cast.combo();
         float t=c.sec,k=kept(c.cast.id(),t);Vec3d from=c.cast.origin();float yaw=c.cast.yaw();Vec3d target=target(c.cast,c.delta);if(target==null)return;
         Vec3d h=hilts(from,yaw);
         if(k>.01f){
             // a soft light at the small of her back as they come out of it (no flare: the video's swords simply are)
-            float back=k*Ease.smooth(t,.02f,.07f)*(1-Ease.smooth(t,volleyThrown(VOLLEY_SWORDS-1)-.04f,volleyThrown(VOLLEY_SWORDS-1)+.1f));
+            float back=k*Ease.smooth(t,.02f,.07f)*(1-Ease.smooth(t,volleyThrown(combo,VOLLEY_SWORDS-1)-.04f,volleyThrown(combo,VOLLEY_SWORDS-1)+.1f));
             if(back>.01f){Vec3d near=facing(h,c.camera);m.softDisc(near,.35,BLUE,.14f*back);m.softDisc(near,.12,PALE,.25f*back);}
             for(int i=0;i<VOLLEY_SWORDS;i++){
-                float show=volleyShows(i),arr=volleyArrives(i);
+                float show=volleyShows(combo,i),arr=volleyArrives(combo,i);
                 if(t>=show-.01f&&t<show+.12f){
                     float a=k*Ease.smooth(t,show-.01f,show+.01f)*(1-Ease.unit(t,show,show+.12f));Vec3d o=facing(h.add(fan(yaw,i).multiply(.4)),c.camera);
                     m.softDisc(o,.3,AZURE,.35f*a);m.softDisc(o,.1,WHITE,.6f*a);
                 }
-                var p=pose(from,yaw,target,t,i);if(p==null)continue;float pa=p.alpha()*k;
+                var p=pose(combo,from,yaw,target,t,i);if(p==null)continue;float pa=p.alpha()*k;
                 // (2.95.1) its own light: its outline white, a sky-blue glow round it (its body is drawn in the blended pass, alpha)
                 VolleyBlade.glow(m,p.grip(),p.dir(),flat(yaw),p.size(),pa);
-                if(p.phase()==1){trail(m,from,yaw,target,t,i,k);m.softDisc(p.tip(),.16,PALE,.5f*k);}
+                if(p.phase()==1){trail(combo,m,from,yaw,target,t,i,k);m.softDisc(p.tip(),.16,PALE,.5f*k);}
                 if(t>=arr-.01f&&t<arr+.1f){float a=k*Ease.smooth(t,arr-.01f,arr+.01f)*(1-Ease.unit(t,arr,arr+.1f));Vec3d o=facing(p.tip(),c.camera);m.softDisc(o,.3,AZURE,.4f*a);m.softDisc(o,.1,WHITE,.7f*a);}
             }
         }
         // each sword's burst on the foe as it strikes (one called off before its blow does not)
         for(int i=0;i<VOLLEY_SWORDS;i++){
-            float at=volleyStrikes(i);if(t<at-.01f||t>=at+.3f||!strikes(c.cast.id(),i))continue;
+            float at=volleyStrikes(combo,i);if(t<at-.01f||t>=at+.3f||!strikes(combo,c.cast.id(),i))continue;
             Vec3d[] w=curve(from,yaw,target,i);IsosangEmpower.burst(c,m,target,w[3].subtract(w[2]).normalize(),at,.4,i*11+3);
         }
     }
     /** The streak a flying sword leaves: its point's way over the last 0.14 s, white at its head, blue and fading behind. */
-    static void trail(EffectMesh m,Vec3d from,float yaw,Vec3d target,float t,int i,float kept){
-        float thrown=volleyThrown(i);Vec3d prev=null;int n=8;
+    static void trail(int combo,EffectMesh m,Vec3d from,float yaw,Vec3d target,float t,int i,float kept){
+        float thrown=volleyThrown(combo,i);Vec3d prev=null;int n=8;
         for(int k=0;k<=n;k++){
             float tk=t-.14f*k/n;if(tk<thrown)break;
-            var p=pose(from,yaw,target,tk,i);if(p==null||p.phase()!=1)break;
+            var p=pose(combo,from,yaw,target,tk,i);if(p==null||p.phase()!=1)break;
             Vec3d q=p.tip();
             if(prev!=null){float a=1-(k-1f)/n;m.softLine(prev,q,.22*a+.05,AZURE,.35f*a*kept);m.line(prev,q,.04*a+.01,PALE,.7f*a*a*kept);}
             prev=q;
@@ -235,37 +240,41 @@ final class SwordVolley {
      * sword in her hand see-through), and the ink edge under each burst, as the sword's other blows' (IsosangEmpower.burstInk).
      */
     static void alpha(Fx c,EffectMesh m){
+        int combo=c.cast.combo();
         float t=c.sec,k=kept(c.cast.id(),t);Vec3d from=c.cast.origin();float yaw=c.cast.yaw();Vec3d target=target(c.cast,c.delta);if(target==null)return;
         if(k>.01f)for(int i=0;i<VOLLEY_SWORDS;i++){
-            var p=pose(from,yaw,target,t,i);if(p==null)continue;
+            var p=pose(combo,from,yaw,target,t,i);if(p==null)continue;
             VolleyBlade.body(m,c.camera,p.grip(),p.dir(),flat(yaw),p.size(),.92f*p.alpha()*k);
         }
-        for(int i=0;i<VOLLEY_SWORDS;i++){float at=volleyStrikes(i);if(t>=at-.01f&&t<at+.3f&&strikes(c.cast.id(),i))IsosangEmpower.burstInk(c,m,target,at,.4,i*11+3);}
+        for(int i=0;i<VOLLEY_SWORDS;i++){float at=volleyStrikes(combo,i);if(t>=at-.01f&&t<at+.3f&&strikes(combo,c.cast.id(),i))IsosangEmpower.burstInk(c,m,target,at,.4,i*11+3);}
     }
     /** A few stars along the fan while it is spread (the swords' own starlight). */
     static void overlay(Fx c,EffectMesh m){
+        int combo=c.cast.combo();
         float t=c.sec,kept=kept(c.cast.id(),t);if(kept<=.01f)return;
         Vec3d from=c.cast.origin();float yaw=c.cast.yaw();Vec3d target=target(c.cast,c.delta);if(target==null)return;
         for(int i=0;i<VOLLEY_SWORDS;i++){
-            var p=pose(from,yaw,target,t,i);if(p==null||p.phase()!=0)continue;
+            var p=pose(combo,from,yaw,target,t,i);if(p==null||p.phase()!=0)continue;
             for(int k=0;k<2;k++){int seed=i*31+k*7;Vec3d q=p.grip().add(p.dir().multiply(LEN*(.35+.5*Ease.hash(seed))));glint8(m,q,.07+.05*Ease.hash(seed+1),k==0?WHITE:LILAC,.7f*p.alpha()*kept*twinkle(t,seed));}
         }
     }
     /** Lights: her back while they fan out, each sword as it flies, the foe as each strikes; the afterglow cut short while they fly. */
     static void frame(Fx c,FxFrame f){
+        int combo=c.cast.combo();
         float t=c.sec,kept=kept(c.cast.id(),t);Vec3d from=c.cast.origin();float yaw=c.cast.yaw();Vec3d target=target(c.cast,c.delta);if(target==null)return;
-        float back=kept*Ease.smooth(t,.02f,.07f)*(1-Ease.smooth(t,volleyThrown(VOLLEY_SWORDS-1),volleyThrown(VOLLEY_SWORDS-1)+.12f));
+        float back=kept*Ease.smooth(t,.02f,.07f)*(1-Ease.smooth(t,volleyThrown(combo,VOLLEY_SWORDS-1),volleyThrown(combo,VOLLEY_SWORDS-1)+.12f));
         if(back>.01f)f.light(hilts(from,yaw),0x8cbcff,5,.8f*back);
         for(int i=0;i<VOLLEY_SWORDS;i++){
-            var p=pose(from,yaw,target,t,i);if(p!=null&&p.phase()==1&&kept>.01f)f.light(p.tip(),0x9fc8ff,3,.45f*kept);
-            float k=strikes(c.cast.id(),i)?FxLib.kick(t,volleyStrikes(i),.1f):0;if(k>.01f)f.light(target,0xcfe4ff,4,.75f*k);
+            var p=pose(combo,from,yaw,target,t,i);if(p!=null&&p.phase()==1&&kept>.01f)f.light(p.tip(),0x9fc8ff,3,.45f*kept);
+            float k=strikes(combo,c.cast.id(),i)?FxLib.kick(t,volleyStrikes(combo,i),.1f):0;if(k>.01f)f.light(target,0xcfe4ff,4,.75f*k);
         }
         // quick as they fly: short afterglow, else each sword leaves copies of itself along its way
-        if(t>=volleyThrown(0)-.02f&&t<volleyStrikes(VOLLEY_SWORDS-1)+.15f)f.afterglow(.06f);
+        if(t>=volleyThrown(combo,0)-.02f&&t<volleyStrikes(combo,VOLLEY_SWORDS-1)+.15f)f.afterglow(.06f);
     }
     /** A little shake as each strikes (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){
-        float v=0;for(int i=0;i<VOLLEY_SWORDS;i++)if(strikes(cast.id(),i))v=Math.max(v,.25f*bump(sec,volleyStrikes(i),.06f));
+        int combo=cast.combo();
+        float v=0;for(int i=0;i<VOLLEY_SWORDS;i++)if(strikes(combo,cast.id(),i))v=Math.max(v,.25f*bump(sec,volleyStrikes(combo,i),.06f));
         return v;
     }
     static void clear(){LAST.clear();}

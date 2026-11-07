@@ -1039,5 +1039,14 @@
         "preload": true
       }
     ]
+  },
+  "isosang_t": {
+    "sounds": [
+      {
+        "name": "celestialfall:isosang_t",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

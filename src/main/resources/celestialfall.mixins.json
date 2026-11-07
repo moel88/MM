@@ -23,7 +23,8 @@
     "StandArrowSilentMixin",
     "BossChunkMixin",
     "BossSleepMixin",
-    "FormationFloatMixin"
+    "FormationFloatMixin",
+    "FormationMoveMixin"
   ],
   "injectors": {
     "defaultRequire": 1

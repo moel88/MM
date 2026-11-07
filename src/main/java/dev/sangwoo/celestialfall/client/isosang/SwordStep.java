@@ -122,13 +122,14 @@ public final class SwordStep {
         }
         for(var fl:IsosangClient.FLIGHTS.getOrDefault(c.cast.id(),java.util.List.of())){
             float since=since(c,fl,t);if(since<-.05f||since>FLIGHT_LIFE)continue;
-            Vec3d from=foot(centre,yaw,all[fl.from()]),to=foot(centre,yaw,all[fl.to()]);
+            Vec3d to=foot(centre,yaw,all[fl.to()]);
             // (2.93.1, user request: "원본 영상 잘 보면 검에서 이동하면 검 아래 꽃이 피어났다가 사라짐") the white flower at the
-            // foot of the sword she leaves and of the one she lands on, blooming and gone again
-            bloom(m,from.add(0,.03,0),all[fl.from()].seed(),departs(since),false,t);
+            // foot of the sword she leaves and of the one she lands on, blooming and gone again ((2.96.0) T's flight on
+            // sets off from the ground where she landed: no sword there)
+            if(fl.start()==null)bloom(m,foot(centre,yaw,all[fl.from()]).add(0,.03,0),all[fl.from()].seed(),departs(since),false,t);
             bloom(m,to.add(0,.03,0),all[fl.to()].seed()+5,arrives(since),false,t);
             drift(m,planted(centre,yaw,all[fl.to()]).add(0,CHEST,0),all[fl.to()].seed(),since-flight(),false);
-            bubble(m,c.camera,planted(centre,yaw,all[fl.from()]).add(0,CHEST,0),since,false);
+            bubble(m,c.camera,setOff(centre,yaw,all,fl),since,false);
         }
     }
     /** The light: the mark's white outline and its flower's light (hers only); each flight's bubble, orb, streaks and burst. */
@@ -143,17 +144,19 @@ public final class SwordStep {
         }
         for(var fl:IsosangClient.FLIGHTS.getOrDefault(c.cast.id(),java.util.List.of())){
             float since=since(c,fl,t);if(since<-.05f||since>FLIGHT_LIFE)continue;
-            Vec3d a=planted(centre,yaw,all[fl.from()]).add(0,CHEST,0),b=planted(centre,yaw,all[fl.to()]).add(0,CHEST,0);
+            Vec3d a=setOff(centre,yaw,all,fl),b=planted(centre,yaw,all[fl.to()]).add(0,CHEST,0);
             bubble(m,c.camera,a,since,true);
             orb(m,a,b,since,c.cast.id().hashCode()+(int)fl.moved());
             burst(m,b,since-flight(),c.cast.id().hashCode()+(int)fl.moved(),t);
-            bloom(m,foot(centre,yaw,all[fl.from()]).add(0,.03,0),all[fl.from()].seed(),departs(since),true,t);
+            if(fl.start()==null)bloom(m,foot(centre,yaw,all[fl.from()]).add(0,.03,0),all[fl.from()].seed(),departs(since),true,t);
             bloom(m,foot(centre,yaw,all[fl.to()]).add(0,.03,0),all[fl.to()].seed()+5,arrives(since),true,t);
             drift(m,b,all[fl.to()].seed(),since-flight(),true);
         }
     }
+    /** Where flight {@code fl} sets off (her chest): over the sword she leaves, or (2.96.0, T's flight on) where she landed. */
+    static Vec3d setOff(Vec3d centre,float yaw,Blade[] all,IsosangClient.Flight fl){return (fl.start()!=null?fl.start():planted(centre,yaw,all[fl.from()])).add(0,CHEST,0);}
     /** Seconds since flight {@code fl} of formation {@code c} began, at {@code t} seconds into it. */
-    static float since(Fx c,IsosangClient.Flight fl,float t){return t-(fl.moved()-c.cast.start())/20f;}
+    static float since(Fx c,IsosangClient.Flight fl,float t){return t-(float)(IsosangClient.moveLag(c.cast.id(),fl.moved())/20)-(fl.moved()-c.cast.start())/20f;}
     /** How long a flight takes (seconds). */
     static float flight(){return IsosangRules.Z_TRAVEL/20f;}
     /** How long a flight's light lasts after it begins (seconds). */
@@ -353,8 +356,12 @@ public final class SwordStep {
     public static boolean hides(Entity e){
         if(!(e instanceof PlayerEntity))return false;
         var mc=MinecraftClient.getInstance();
-        for(var c:IsosangClient.SWINGS.values())
-            if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(e.getUuid())&&IsosangClient.flying(c.id(),c.age(mc.getTickDelta()))>=0)return true;
+        for(var c:IsosangClient.SWINGS.values()){
+            if(c.combo()!=IsosangRules.FORMATION||!c.caster().equals(e.getUuid()))continue;
+            double age=c.age(mc.getTickDelta());if(IsosangClient.flying(c.id(),age)>=0)return true;
+            // (2.96.0) T: a streak of light as she dashes, the orb as she flies on
+            double a=IsosangClient.rushAge(c.id(),age);if(!Double.isNaN(a)&&IsosangRules.lungeHidden(a))return true;
+        }
         return false;
     }
 }

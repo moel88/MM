@@ -1149,6 +1149,21 @@ public final class SkillShots implements ClientModInitializer {
                         // and 8 ticks on, where the server has them (the sword it holds them under, how far off it they are, how high) and Z's state
                         if(what.equals("KEY_Z")&&age==at+8)server(p->{var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);var z=dev.sangwoo.celestialfall.isosang.IsosangAttack.zNow(p);long now=p.getWorld().getTime();
                             log.append(f==null?"  Z after: no formation\n":String.format(Locale.ROOT,"  Z after %d: %.2f blocks off where it holds them, %.2f up; Z first %d (%d ago), used %d, ready in %d ticks%n",age,Math.hypot(p.getX()-f.holds().x,p.getZ()-f.holds().z),p.getY()-f.centre().y,z.first(),now-z.first(),z.uses(),Math.max(0,z.ready()-now)));});
+                        // (2.96.0) T on H's sword: whom and where the client's crosshair picks as it is pressed, whether the server
+                        // began it (its foe, where she lands, the swords she flies from and to), and by its end what it struck,
+                        // where the server has her and the dummy's health
+                        if(what.equals("KEY_T")&&age==at){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lungeAimNow(mc);
+                            if(aim!=null)log.append(String.format(Locale.ROOT,"  T aims at %s (%.2f, %.2f, %.2f) at %d%n",aim.target()<0?"no one":aim.target()==dummyId?"the dummy":"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z,age));
+                            // and the camera let go from DAIM/PAIM: T turns it itself (onto its foe as she lands beyond it, held there as she flies on)
+                            if(daimHeld||paimPoint!=null)log.append("  camera let go at ").append(age).append('\n');daimHeld=false;paimPoint=null;}
+                        if(what.equals("KEY_T")&&(age==at+3||age==at+28))server(p->{var l=dev.sangwoo.celestialfall.isosang.IsosangAttack.lungeNow(p);var d=p.getServerWorld().getEntityById(dummyId);
+                            var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);if(f==null)return;
+                            long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                            log.append(String.format(Locale.ROOT,"  T %s at %d: %s, dummy health %.1f, on sword %d, %.2f blocks off where it holds them, %.2f up, ready in %d%n",age==at+3?"begun":"after",age,
+                                l==null?"none under way":String.format(Locale.ROOT,"begun %d ticks ago on %s at (%.2f, %.2f, %.2f), lands at (%.2f, %.2f, %.2f), sword %d to %d, %d struck",now-l.start(),l.target()<0?"no one":l.target()==dummyId?"the dummy":"entity "+l.target(),
+                                    l.at().x,l.at().y,l.at().z,l.past().x,l.past().y,l.past().z,l.from(),l.to(),l.blows()),
+                                hp,dev.sangwoo.celestialfall.isosang.IsosangAttack.standsOn(p),Math.hypot(p.getX()-f.holds().x,p.getZ()-f.holds().z),p.getY()-f.centre().y,
+                                Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangAttack.tReady(p)-now)));});
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);if(what.equals("KEY_H"))lastH=age;
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,

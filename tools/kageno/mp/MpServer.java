@@ -462,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -473,6 +473,8 @@ public final class MpServer implements ModInitializer {
     private float dodgeHealth=-1;private String dodgeSeen="";private int onSeen=-1;
     /** (2.95.0) The caster's H basic attack last logged: its start, its blows, when it is ready again. */
     private long volleySeen=-1,vReadySeen=-1;private int volleyBlows;
+    /** (2.96.0) The caster's T last logged: its start, its blows, when it is ready again. */
+    private long lungeSeen=-1,tReadySeen=-1;private int lungeBlows;
     private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1,zFrom=-1;private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zSeen;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
@@ -571,6 +573,27 @@ public final class MpServer implements ModInitializer {
                 dev.sangwoo.celestialfall.isosang.IsosangRules.FORMATION_RADIUS+dev.sangwoo.celestialfall.isosang.IsosangRules.VOLLEY_BEYOND));}
         if(vo!=null){if(vo.blows()>volleyBlows){note(server,"caster's volley blow "+vo.blows()+" of 6 at "+now+" (its tick "+(now-vo.start())+")");volleyBlows=vo.blows();}watchUntil=Math.max(watchUntil,now+20);}
         long vr=dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster);if(vr!=vReadySeen){vReadySeen=vr;note(server,"caster's volley ready again at "+vr+" (now "+now+")");}
+        // (2.96.0) the caster's T: as it begins (whom its blows come down on and where, against the watcher's chest; where the
+        // caster lands against the watcher; the swords it flies from and to, and whether that is the formation's farthest
+        // from the watcher), its blows as they land, every tick through it how far off where the formation holds them the
+        // caster is and how high over its middle; when it is ready again. The watcher must not move (no knockback)
+        var lu=dev.sangwoo.celestialfall.isosang.IsosangAttack.lungeNow(caster);
+        if(lu!=null&&lu.start()!=lungeSeen){lungeSeen=lu.start();lungeBlows=0;watcherAt=watcher.getPos();
+            var places=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationPlaces(caster);
+            var goal=lu.target()==watcher.getId()?watcher.getPos():lu.at();
+            int far=-1;double most=-1;if(places!=null)for(int k=0;k<places.length;k++){if(k==lu.from())continue;double d=Math.hypot(places[k].x-goal.x,places[k].z-goal.z);if(d>most){most=d;far=k;}}
+            note(server,String.format(java.util.Locale.ROOT,"caster's T began at %d on %s at %.2f %.2f %.2f (%.2f off the watcher's chest, the watcher %.2f from the caster); it lands %.2f from the watcher's feet (%.2f beyond it level), flies from sword %d to sword %d (%.2f from where it comes down; the farthest is %d at %.2f); ready again at %d",
+                lu.start(),lu.target()<0?"no one":lu.target()==watcher.getId()?"the watcher":"entity "+lu.target(),lu.at().x,lu.at().y,lu.at().z,lu.at().distanceTo(watcher.getPos().add(0,watcher.getHeight()*.55,0)),watcher.distanceTo(caster),
+                lu.past().distanceTo(watcher.getPos()),Math.hypot(lu.past().x-watcher.getX(),lu.past().z-watcher.getZ()),lu.from(),lu.to(),places==null||lu.to()<0?-1:Math.hypot(places[lu.to()].x-goal.x,places[lu.to()].z-goal.z),far,most,
+                dev.sangwoo.celestialfall.isosang.IsosangAttack.tReady(caster)));}
+        if(lu!=null){
+            if(lu.blows()>lungeBlows){note(server,"caster's T blow "+lu.blows()+" of "+dev.sangwoo.celestialfall.isosang.IsosangRules.blows(dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE)+" at "+now+" (its tick "+(now-lu.start())+")");lungeBlows=lu.blows();}
+            var fo=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(caster);
+            if(fo!=null){var off=caster.getPos().subtract(fo.holds());
+                note(server,String.format(java.util.Locale.ROOT,"caster's T +%d: %.2f off where it holds them level, %.2f over its middle (on ground %s, fall %.2f)",now-lu.start(),Math.hypot(off.x,off.z),caster.getY()-fo.centre().y,caster.isOnGround(),caster.fallDistance));}
+            watchUntil=Math.max(watchUntil,now+20);
+        }
+        long tr=dev.sangwoo.celestialfall.isosang.IsosangAttack.tReady(caster);if(tr!=tReadySeen){tReadySeen=tr;note(server,"caster's T ready again at "+tr+" (now "+now+")");}
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){
             note(server,String.format(java.util.Locale.ROOT,"ERROR? watcher moved %.3f blocks at %d (velocity %.3f %.3f %.3f) %s",watcher.getPos().distanceTo(watcherAt),now,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z,where(watcher,caster)));
             watcherAt=watcher.getPos();

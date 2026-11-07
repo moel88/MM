@@ -134,7 +134,11 @@ public final class KagenoClips {
         return net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing(cast,delta))*Ease.smooth(cast.age(delta)/20f,0,.08f);
     }
     /** The way a cast's body is drawn facing (degrees): the cast facing, but T held and E turn with the caster's aim ({@link KagenoAim}). */
-    public static float facing(StandClient.Cast cast,float delta){return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.skill()==E?KagenoAim.thrust(cast,delta):cast.yaw();}
+    public static float facing(StandClient.Cast cast,float delta){
+        // (2.96.0) Lee So-sang's T: the way she dashed, turning back to her formation's on the far sword
+        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE)return dev.sangwoo.celestialfall.client.isosang.IsosangClient.lungeFacing(cast,delta);
+        return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.skill()==E?KagenoAim.thrust(cast,delta):cast.yaw();
+    }
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */
     private static final java.util.Map<java.util.UUID,float[]> FACINGS=new java.util.HashMap<>();
     /** Ticks the body takes to turn from a finished clip's facing back to its own. */
