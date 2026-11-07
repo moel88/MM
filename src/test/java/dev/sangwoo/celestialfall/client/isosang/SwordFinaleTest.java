@@ -12,13 +12,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Lee So-sang's H again as drawn (2.101.0, user request: "이번에는 H를 사용한 상태에서 H를 한 번 더 누르면 되는 스킬 ... H 영역에
- * 있던 모든 검이 전부 플레이어 뒤로 가고 앞으로 꽂는 스킬이야 이걸 쓰면 H가 해제돼", the reading confirmed): her motion (from
- * the formation's stance on the pommel to the stance on the ground, no joint jumping or flipping, never a foot in the
- * ground), its swords (the formation's own pulled out from where and as they stood, nearest her first, as many of light
- * with them; swirling round her, spread behind her back like wings, launched and come down slanting into the band ahead
- * of her, hilts toward her, gone while it is drawn; never jumping from one frame to the next), and her camera's shots (in
- * front of her and close as she raises her fingers, behind her as they come down, never inside her, never jumping but
- * at its one cut).
+ * 있던 모든 검이 전부 플레이어 뒤로 가고 앞으로 꽂는 스킬이야 이걸 쓰면 H가 해제돼", the reading confirmed; 2.101.1: "영상은 칼을
+ * 타고 한바퀴를 돈 다음에 공중에서 검을 전면에 모두 꽂는거야 그리고 내려옴", "그리고 박히는 검들은 더 커야해"): her motion (from the
+ * formation's stance on the pommel to the stance on the ground, no joint jumping or flipping, never a foot in the ground,
+ * both feet on her sword as she rides it), its swords (the formation's own pulled out from where and as they stood,
+ * nearest her first, as many of light with them; the one she stood on under her feet as she rides; streaming after her,
+ * spread behind her back like wings, launched and come down slanting into the band ahead of her, hilts toward her, grown
+ * twice as big, gone while it is drawn; never jumping from one frame to the next), and her camera's shots (following her
+ * round her lap from low before her, in front of her and close as she raises her fingers up there, behind her as they
+ * come down, never inside her, never jumping but at its one cut).
  */
 class SwordFinaleTest {
     static final Anim CLIP=SwordFinale.CLIP;
@@ -60,6 +62,12 @@ class SwordFinaleTest {
         }
         // a crouch as she lands, her hand up before her face as she raises her fingers
         assertTrue(CLIP.frame(IsosangRules.FINALE_LAND).up()<-.2,"crouched as she lands");
+        // (2.101.1) both feet on her sword as she rides it round (the ground of the pose is its top), crouched
+        for(float t=IsosangRules.FINALE_RIDE;t<=1.2f;t+=1/60f){
+            double[] f=IsosangSlash.feet(CLIP.frame(t));
+            assertTrue(f[0]<.12&&f[1]<.12,"both feet on her sword at "+t+": "+f[0]+" "+f[1]);
+        }
+        assertTrue(CLIP.frame(.66f).up()<-.1,"crouched as she rides");
         for(float t=1.8f;t<2.2f;t+=.1f){
             var p=dev.sangwoo.celestialfall.client.kageno.R6.poseOf(CLIP.frame(t));
             Vec3d hand=dev.sangwoo.celestialfall.client.kageno.KagenoClips.blade(Vec3d.ZERO,0,p)[0],head=dev.sangwoo.celestialfall.client.kageno.KagenoClips.head(Vec3d.ZERO,0,p);
@@ -91,29 +99,66 @@ class SwordFinaleTest {
         // the formation's own sword k is pulled out then (SwordFormation hides it from then)
         for(int k=0;k<SwordFinale.OWN;k++)assertEquals(plans[k].start(),SwordFinale.plans(c,r,null)[k].start(),1e-9f);
     }
-    @Test void theyGatherBehindHerAsWingsAndComeDownSlantingIntoTheBandAhead(){
+    @Test void theyGatherBehindHerAsWingsAndComeDownSlantingIntoTheBandAheadGrown(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
-        int left=0,right=0;
+        int left=0,right=0,steeds=0;
+        Vec3d hub=fr.at(-SwordFinale.HUB_BACK,IsosangRules.FINALE_HOVER+SwordFinale.HUB_UP,0);
         for(var p:plans){
-            Vec3d back=p.fanMid().subtract(fr.spot());
-            assertTrue(back.dotProduct(fr.f())<-.2,"its place in the fan behind her back");
-            if(back.dotProduct(fr.r())<-1)left++;if(back.dotProduct(fr.r())>1)right++;
-            assertTrue(p.fanDir().dotProduct(p.fanMid().subtract(fr.at(-SwordFinale.HUB_BACK,SwordFinale.HUB_UP,0)))>0,"pointing out from her back, as a wing's feathers");
-            // in the band ahead, slanting, its hilt back toward her
+            if(p.steed())steeds++;
+            else{
+                Vec3d back=p.fanMid().subtract(fr.spot());
+                assertTrue(back.dotProduct(fr.f())<-.2,"its place in the fan behind her back");
+                assertTrue(back.y>IsosangRules.FINALE_HOVER,"up behind her as she stands in the air");
+                if(back.dotProduct(fr.r())<-1)left++;if(back.dotProduct(fr.r())>1)right++;
+                assertTrue(p.fanDir().dotProduct(p.fanMid().subtract(hub))>0,"pointing out from her back, as a wing's feathers");
+                // its times: gathered (after her lap) before it is launched, from the air
+                assertTrue(p.gather()+SwordFinale.GATHER<p.launch());
+                assertTrue(p.launch()>=IsosangRules.FINALE_LAUNCH-.03f&&p.launch()<IsosangRules.FINALE_DESCEND,"sent from behind her in the air");
+                assertTrue(SwordFinale.mid(fr,p,p.launch()).y-fr.spot().y>IsosangRules.FINALE_HOVER,"from up there");
+            }
+            // in the band ahead, slanting, its hilt back toward her, grown twice as big, its point in the ground
             Vec3d d=p.foot().subtract(fr.spot());
             assertTrue(IsosangRules.finaleIn(d.dotProduct(fr.f()),d.dotProduct(fr.r()),d.y,0),"it comes down in the band: "+d.dotProduct(fr.f())+" ahead, "+d.dotProduct(fr.r())+" aside");
             double slant=Math.toDegrees(Math.acos(-p.stuckDir().y));
             assertTrue(slant>=SwordFinale.SLANT0-1&&slant<=SwordFinale.SLANT0+SwordFinale.SLANT+4,"slanting: "+slant);
             assertTrue(p.stuckDir().dotProduct(fr.f())>0,"its point on ahead, its hilt back toward her");
-            assertTrue(p.stuckMid().add(p.stuckDir().multiply(SwordFormation.S_LEN/2)).y<p.foot().y,"its point in the ground");
-            // its times: gathered before it is launched, launched before it strikes, gone after the band's burst
-            assertTrue(p.gather()+SwordFinale.GATHER<p.launch());
-            assertTrue(p.launch()>=IsosangRules.FINALE_LAUNCH-.03f&&p.plant()-p.launch()>=.19f);
+            var ends=SwordFinale.stuck(p);
+            assertTrue(ends[1].y<p.foot().y,"its point in the ground");
+            assertEquals(2*SwordFormation.S_LEN,ends[0].distanceTo(ends[1]),1e-6,"twice as big as it stands");
+            assertTrue(ends[0].subtract(fr.spot()).dotProduct(fr.f())>1.2,"its hilt short of where she comes down");
+            var b=SwordFinale.blade(fr,p,p.plant()+.3f);assertEquals(2,b.scale(),1e-9);
+            // launched before it strikes, gone after the band's burst
+            assertTrue(p.plant()-p.launch()>=.19f);
             assertTrue(p.plant()>=IsosangRules.FINALE_PLANT0&&p.plant()<=IsosangRules.FINALE_PLANT1+1e-6);
             assertTrue(p.vanish()>=IsosangRules.FINALE_GONE0&&p.vanish()+SwordFinale.FADE<=IsosangRules.FINALE_GONE1+.05f);
             assertNull(SwordFinale.blade(fr,p,p.vanish()+SwordFinale.FADE+.01f),"gone");
+            // growing as it flies: its size from the fan's to twice it, never a jump
+            double prev=1;
+            for(float t=p.launch()-.05f;t<p.plant()+.05f;t+=1/60f){double sc=SwordFinale.scale(p,t);assertTrue(sc>=prev-1e-9&&sc-prev<.2,"growing smoothly: "+prev+" to "+sc);prev=sc;}
         }
+        assertEquals(1,steeds,"one sword under her feet: the one she stood on");
         assertTrue(left>10&&right>10,"spread to both sides like wings: "+left+" "+right);
+    }
+    @Test void herSwordComesUpUnderHerFeetAndCarriesHerRoundUntilSheStepsOff(){
+        var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
+        SwordFinale.Plan steed=null;for(var p:plans)if(p.steed())steed=p;
+        assertNotNull(steed);assertEquals(r.on(),steed.k(),"the one she stood on");
+        assertEquals(IsosangRules.FINALE_DESCEND+.02f,steed.launch(),1e-6f,"flung down into the band as she steps off it");
+        for(float t=IsosangRules.FINALE_RIDE;t<steed.launch();t+=1/60f){
+            var b=SwordFinale.blade(fr,steed,t);Vec3d feet=SwordFinale.body(fr,t);
+            assertTrue(b.mid().distanceTo(feet)<.3,"under her feet at "+t+": "+b.mid().distanceTo(feet));
+            assertTrue(b.mid().y<feet.y,"its flat under her soles");
+            assertTrue(Math.abs(b.dir().y)<.16,"lying along under her: "+b.dir().y);
+            assertTrue(b.dir().dotProduct(SwordFinale.heading(fr,t))>.98,"pointing the way she goes");
+            assertEquals(1,b.scale(),1e-9);
+        }
+        // up off the ground after her as she leaps: from where it stood to under her feet, never a jump
+        Vec3d prev=null;
+        for(float t=steed.start();t<=IsosangRules.FINALE_RIDE;t+=1/60f){
+            var b=SwordFinale.blade(fr,steed,t);
+            if(prev!=null)assertTrue(b.mid().distanceTo(prev)<1.2,"no jump at "+t);
+            prev=b.mid();
+        }
     }
     @Test void noSwordJumpsFromOneFrameToTheNext(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);

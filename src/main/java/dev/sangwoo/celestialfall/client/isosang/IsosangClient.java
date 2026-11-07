@@ -732,12 +732,12 @@ public final class IsosangClient {
     }
     /**
      * (2.101.0) The way H again's body faces {@code delta} into it: from the way her formation had her facing round to the
-     * way she looked as she pressed it (its band's), as she dips on the pommel, never snapping.
+     * way she looked as she pressed it (its band's), as she dips on the pommel, never snapping; (2.101.1) then the way she
+     * rides round her lap (IsosangRules.finaleHeading: once round to the right), back to the band's as she stops in the air.
      */
     public static float finaleFacing(StandClient.Cast cast,float delta){
         var r=FINALES.get(cast.id());if(r==null)return cast.yaw();
-        float w=dev.sangwoo.celestialfall.client.kageno.Ease.smooth(cast.age(delta)/20f,0,SwordFinale.TURN);
-        return r.formYaw()+net.minecraft.util.math.MathHelper.wrapDegrees(cast.yaw()-r.formYaw())*w;
+        return SwordFinale.faces(SwordFinale.frame(cast,r),cast.age(delta)/20f);
     }
     /** Whom this swing's formation struck, by the tick of its clock (the server's word; empty for none yet, 2.82.0). */
     static java.util.SortedMap<Long,int[]> formationStruck(UUID swing){var m=FORMATION_STRUCK.get(swing);return m==null?java.util.Collections.emptySortedMap():m;}
@@ -774,6 +774,16 @@ public final class IsosangClient {
      */
     public static Vec3d shift(UUID caster,float delta){
         var mc=MinecraftClient.getInstance();if(mc.world==null)return Vec3d.ZERO;
+        // (2.101.1) H again: round her lap of the sky and back over where she stands (IsosangRules.finaleLap; where she
+        // really is the server keeps)
+        var fin=finaleOf(caster);
+        if(fin!=null){
+            var r=FINALES.get(fin.id());var who=mc.world.getPlayerByUuid(caster);double t=fin.age(delta)/20.0;
+            if(r!=null&&who!=null&&t>=0&&t<IsosangRules.FINALE_LAND+.3){
+                Vec3d to=finaleOver(fin,t),at=who.getLerpedPos(delta);
+                return new Vec3d(to.x-at.x,0,to.z-at.z);
+            }
+        }
         StandClient.Cast form=null;
         for(var c:SWINGS.values())if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(caster)&&!STOPPED.contains(c.id()))form=c;
         if(form==null)return Vec3d.ZERO;
@@ -787,6 +797,15 @@ public final class IsosangClient {
         if(since<0||w<=0)return Vec3d.ZERO;
         Vec3d to=spot(form.id(),f,age),at=who.getLerpedPos(delta);
         return new Vec3d((to.x-at.x)*w,0,(to.z-at.z)*w);
+    }
+    /**
+     * (2.101.1) Where H again {@code fin} has her body {@code t} seconds in, level, on the ground where she stands: round her
+     * lap of the sky (IsosangRules.finaleLap, the band's way and its right), else where she stands.
+     */
+    public static Vec3d finaleOver(StandClient.Cast fin,double t){
+        var r=FINALES.get(fin.id());if(r==null)return fin.origin();
+        double[] lap=IsosangRules.finaleLap(t);Vec3d f=Vec3d.fromPolar(0,fin.yaw()),right=new Vec3d(-f.z,0,f.x);
+        return r.spot().add(f.multiply(lap[0])).add(right.multiply(lap[1]));
     }
     /** How long after Z's flight the body is still drawn where the formation has it (ticks), and how long it eases out over. */
     static final float SHIFT_HOLD=12,SHIFT_OUT=6;

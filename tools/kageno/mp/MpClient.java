@@ -1187,8 +1187,9 @@ public final class MpClient implements ClientModInitializer {
     /**
      * H again as this client sees it (2.101.0): as it is heard (its recording, where she stands against where the caster
      * is, the formation it takes, how late); every 4 ticks through it the formation's swords still drawn by the formation
-     * and the finale's swords drawn, how high the caster is drawn and really is over where she stands, whether her hand
-     * is empty, and (the caster) whether her cutscene is on and her camera; the own H's ready tick as the server told it.
+     * and the finale's swords drawn, how high the caster is drawn and really is over where she stands, (2.101.1) how far
+     * from where she stands she is drawn round her lap against its plan, whether her hand is empty, and (the caster)
+     * whether her cutscene is on and her camera; the own H's ready tick as the server told it.
      */
     private void finaleWatch(){
         for(var c:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values()){
@@ -1201,10 +1202,14 @@ public final class MpClient implements ClientModInitializer {
             int age=(int)Math.floor(c.age(0));
             if(who!=null&&age>=0&&age<=dev.sangwoo.celestialfall.isosang.IsosangRules.FINALE_LENGTH+4&&age%4==0&&finaleSeen.add(c.id()+"/"+age)){
                 double real=who.getLerpedPos(0).y-r.spot().y,drawn=real+dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(c.caster(),0);
-                note(String.format(Locale.ROOT,"%s's H again +%d: formation swords standing %d, its own swords drawn %d; the caster %.2f up (drawn %.2f, planned %.2f), %.2f off where she stands, hand %s%s",name(c.caster()),age,
+                // (2.101.1) and level: where her body is drawn round her lap against where it plans her
+                var level=who.getLerpedPos(0).add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(c.caster(),0));
+                var plan=dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleOver(c,c.age(0)/20.0);
+                note(String.format(Locale.ROOT,"%s's H again +%d: formation swords standing %d, its own swords drawn %d; the caster %.2f up (drawn %.2f, planned %.2f), %.2f off where she stands, drawn %.2f off it (planned %.2f, %.2f apart), hand %s%s",name(c.caster()),age,
                     dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleFormationStanding(r.form()),dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleSwordsDrawn(c.id()),real,drawn,
                     dev.sangwoo.celestialfall.isosang.IsosangRules.finaleDrawn(c.age(0)/20.0,dev.sangwoo.celestialfall.client.isosang.IsosangClient.finalePommel(c.id())),
-                    Math.hypot(who.getX()-r.spot().x,who.getZ()-r.spot().z),dev.sangwoo.celestialfall.client.isosang.IsosangCinema.emptyHanded(who)?"empty":"holding her sword",
+                    Math.hypot(who.getX()-r.spot().x,who.getZ()-r.spot().z),Math.hypot(level.x-r.spot().x,level.z-r.spot().z),Math.hypot(plan.x-r.spot().x,plan.z-r.spot().z),Math.hypot(level.x-plan.x,level.z-plan.z),
+                    dev.sangwoo.celestialfall.client.isosang.IsosangCinema.emptyHanded(who)?"empty":"holding her sword",
                     caster?String.format(Locale.ROOT,", cutscene %s",dev.sangwoo.celestialfall.client.isosang.IsosangCinema.active()):""));
             }
         }

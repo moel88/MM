@@ -216,7 +216,10 @@ public final class KagenoClips {
     private static Vec3d rotate(Quaternionf q,Vec3d v){var r=q.transform(new org.joml.Vector3f((float)v.x,(float)v.y,(float)v.z));return new Vec3d(r.x,r.y,r.z);}
     public static Vec3d groundOffset(StandClient.Cast cast,float delta){
         var fr=action(cast,delta);Vec3d f=Vec3d.fromPolar(0,facing(cast,delta)),left=new Vec3d(f.z,0,-f.x);
-        return f.multiply(fr.fw()).add(left.multiply(-fr.rt()));
+        Vec3d off=f.multiply(fr.fw()).add(left.multiply(-fr.rt()));
+        // (2.101.1) Lee So-sang's body drawn away from where she is (H again's ride, Z's and T's flights): its shadow with it
+        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL)off=off.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(cast.caster(),delta));
+        return off;
     }
     public static R6.Frame idle(){return R6.solve(IDLE);}
     public static R6.Frame guard(){return R6.solve(GUARD);}

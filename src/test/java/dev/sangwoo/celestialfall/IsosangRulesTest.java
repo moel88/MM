@@ -692,20 +692,45 @@ class IsosangRulesTest {
         // its three recordings (the user's three videos), each from just before its flash to its end
         assertEquals(3,FINALE_VARIANTS);
         for(int v=1;v<=3;v++){double sec=StarPlatinumRulesTest.seconds("isosang_hh_"+v);assertTrue(sec>4.5&&sec<5.05,"recording "+v+": "+sec);}
-        // its times in order; it lets go of her as her camera comes back to her; its swords gone by its end
-        float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_TOP,FINALE_DESCEND,FINALE_LAND,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_PLANT0,FINALE_PLANT1,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
+        // its times in order (2.101.1: she rides round, stops in the air, swings, raises her fingers, sends the swords and
+        // comes down after them, by the time the last are down); it lets go of her as her camera comes back to her; its
+        // swords gone by its end
+        float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_RIDE,FINALE_CREST,FINALE_LAP1,FINALE_SWING0,FINALE_SWING1,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_PLANT0,FINALE_DESCEND,FINALE_LAND,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
         for(int i=1;i<ts.length;i++)assertTrue(ts[i]>ts[i-1],"in order: "+i);
+        assertTrue(FINALE_DESCEND>FINALE_PLANT0&&FINALE_PLANT1<=FINALE_LAND&&FINALE_PLANT1<FINALE_BURST,"the swords sent from the air, she down after them");
         assertEquals(HOLD[FINALE]/20f,FINALE_BACK0,.1f,"lets go of her as her camera comes back to her");
         assertTrue(FINALE_GONE1<=LENGTH[FINALE]/20f);
     }
-    @Test void hAgainLeapsHerHighAndBringsHerDownOntoTheGroundSmoothly(){
+    @Test void hAgainRidesHerRoundALapOfTheSkyStopsHerUpThereAndBringsHerDownSmoothly(){
+        // (2.101.1, user request: "영상은 칼을 타고 한바퀴를 돈 다음에 공중에서 검을 전면에 모두 꽂는거야 그리고 내려옴", the
+        // video read again and confirmed, their choice: "그녀 둘레 6블록")
         double pommel=FORMATION_STAND;
         assertEquals(pommel,finaleDrawn(0,pommel),1e-9);assertEquals(pommel,finaleDrawn(FINALE_LEAP,pommel),1e-9);
+        assertEquals(FINALE_LAP_LOW,finaleDrawn(FINALE_RIDE,pommel),1e-6,"on her sword some three and a half blocks up");
+        assertEquals(FINALE_LAP_HIGH,finaleDrawn(FINALE_CREST,pommel),1e-6,"highest at its crest");
+        assertEquals(FINALE_HOVER,finaleDrawn(FINALE_LAP1,pommel),1e-6,"stopped some three blocks up");
+        for(double t=FINALE_LAP1;t<FINALE_DESCEND;t+=.01)assertEquals(FINALE_HOVER,finaleDrawn(t,pommel),FINALE_BOB+1e-9,"up there while she swings, raises her fingers and sends them");
         assertEquals(0,finaleDrawn(FINALE_LAND,pommel),1e-6);assertEquals(0,finaleDrawn(FINALE_LAND+1,pommel),1e-9);
         double max=0,prev=pommel;
-        // (down at the camera at some 40 blocks a second at its fastest: under 0.7 of a block a frame)
-        for(double t=0;t<=FINALE_LAND+.2;t+=1/60.0){double h=finaleDrawn(t,pommel);max=Math.max(max,h);assertTrue(Math.abs(h-prev)<.7,"no jump at "+t+": "+prev+" to "+h);prev=h;}
-        assertEquals(pommel+FINALE_LEAP_HEIGHT+FINALE_DRIFT,max,.02,"high over the pommel");
+        for(double t=0;t<=FINALE_LAND+.2;t+=1/60.0){double h=finaleDrawn(t,pommel);max=Math.max(max,h);assertTrue(Math.abs(h-prev)<.5,"no jump at "+t+": "+prev+" to "+h);prev=h;}
+        assertEquals(FINALE_LAP_HIGH,max,.02,"three to five blocks up as she rides round");
+        assertTrue(finaleDrawn(FINALE_RIDE+.01,pommel)>=FINALE_LAP_LOW,"on up her lap, not stopping on her sword");
+        // round the sky: nothing before she leaps or once she is back; out to some six blocks, all on her right, turning
+        // right all the way; back in from behind her at the band's way; never jumping
+        for(double t:new double[]{0,FINALE_LEAP,FINALE_LAP1,FINALE_LAP1+.5}){double[] l=finaleLap(t);assertEquals(0,Math.hypot(l[0],l[1]),1e-9);}
+        double far=0;double[] last=finaleLap(FINALE_LEAP);double way=finaleHeading(FINALE_LEAP),wayMax=0;
+        for(double t=FINALE_LEAP;t<=FINALE_LAP1+1e-9;t+=1/60.0){
+            double[] l=finaleLap(t);far=Math.max(far,Math.hypot(l[0],l[1]));
+            assertTrue(l[1]>=-1e-9,"on her right: "+l[1]+" at "+t);
+            assertTrue(Math.hypot(l[0]-last[0],l[1]-last[1])<.6,"no jump at "+t);last=l;
+            double h=finaleHeading(t);assertTrue(h>=way-1e-6,"turning right all the way: "+way+" to "+h+" at "+t);
+            wayMax=Math.max(wayMax,h-way);way=h;
+        }
+        assertEquals(FINALE_LAP_R,far,.05,"some six blocks round her");
+        assertTrue(wayMax<12,"never turning sharply: "+wayMax+" deg in a frame");
+        assertEquals(0,finaleHeading(FINALE_LEAP+.005),5,"out ahead");assertEquals(360,finaleHeading(FINALE_LAP1-.005),5,"once round, back in at the band's way");
+        assertEquals(180,finaleHeading((FINALE_LEAP+FINALE_LAP1)/2),5,"half round at its middle");
+        double[] in=finaleLap(FINALE_LAP1-.12);assertTrue(in[0]<-.5&&Math.abs(in[1])<.3,"back in from behind where she stood: "+in[0]+" "+in[1]);
         // really: on the pommel until her drawn body comes down past it, then with it; never under the ground, never over the
         // pommel, never higher than she is drawn
         for(double t=0;t<=FINALE_LAND+.3;t+=.02){double r=finaleReal(t,pommel);assertTrue(r>=0&&r<=pommel+1e-9);assertTrue(r<=finaleDrawn(t,pommel)+1e-9,"drawn never under where she is");}

@@ -1015,14 +1015,19 @@ public final class IsosangRules {
     public static final int FINALE_VARIANTS=3;
     /**
      * Its times (seconds in; the videos' times from their flash, the flash here a tenth of a second in, FINALE_FLASH):
-     * the flash and her camera into its cutscene; she leaps (FINALE_LEAP), is at the top (FINALE_TOP), comes down at the
-     * camera (FINALE_DESCEND to FINALE_LAND); the white ring round her (FINALE_RING); her two fingers raised before her
-     * face (FINALE_SEAL0 to FINALE_SEAL1); the swords launched from behind her (FINALE_LAUNCH), coming down into the band
-     * (FINALE_PLANT0 to FINALE_PLANT1); the band's flash (FINALE_BURST); her camera back to her (FINALE_BACK0 to
-     * FINALE_BACK1); the swords gone one by one (FINALE_GONE0 to FINALE_GONE1).
+     * the flash and her camera into its cutscene; she leaps off the pommel (FINALE_LEAP), comes down onto her own sword
+     * flying up under her feet (FINALE_RIDE: 2.101.1) and rides it round a lap of the sky, at its crest far behind
+     * where she stood (FINALE_CREST), coming back at the camera to stop in the air over where she stood (FINALE_LAP1);
+     * up there on it: her sword swung across (FINALE_SWING0 to FINALE_SWING1), the white ring round her (FINALE_RING),
+     * her two fingers raised before her face (FINALE_SEAL0 to FINALE_SEAL1), the swords launched from behind her
+     * (FINALE_LAUNCH) and coming down into the band (FINALE_PLANT0 to FINALE_PLANT1); she steps off it and comes down
+     * onto the ground where she stood (FINALE_DESCEND to FINALE_LAND), it flung down into the band after the rest; the
+     * band's flash (FINALE_BURST); her camera back to her (FINALE_BACK0 to FINALE_BACK1); the swords gone one by one
+     * (FINALE_GONE0 to FINALE_GONE1).
      */
-    public static final float FINALE_FLASH=.1f,FINALE_LEAP=.2f,FINALE_TOP=.6f,FINALE_DESCEND=.95f,FINALE_LAND=1.3f,FINALE_RING=1.6f,
-        FINALE_SEAL0=1.62f,FINALE_SEAL1=2.25f,FINALE_LAUNCH=2.3f,FINALE_PLANT0=2.6f,FINALE_PLANT1=3.4f,FINALE_BURST=3.5f,
+    public static final float FINALE_FLASH=.1f,FINALE_LEAP=.2f,FINALE_RIDE=.45f,FINALE_CREST=.98f,FINALE_LAP1=1.3f,
+        FINALE_SWING0=1.38f,FINALE_SWING1=1.56f,FINALE_RING=1.6f,FINALE_SEAL0=1.62f,FINALE_SEAL1=2.25f,FINALE_LAUNCH=2.3f,
+        FINALE_PLANT0=2.6f,FINALE_PLANT1=3.4f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
         FINALE_BACK0=3.62f,FINALE_BACK1=3.9f,FINALE_GONE0=4.15f,FINALE_GONE1=4.6f;
     /**
      * The band its swords come down in (blocks from where she stands, the way she looks as she presses it: the user's
@@ -1039,31 +1044,85 @@ public final class IsosangRules {
      * before they flare (H_END: it ends the formation then itself).
      */
     public static boolean finaleTime(double t){return t>=Z_FROM&&t<H_END;}
-    /** How high she leaps over the pommel she stood on (blocks: the videos' leap, some three times her height). */
-    public static final double FINALE_LEAP_HEIGHT=5.0;
     /**
-     * How high over the formation's ground her body is drawn {@code t} seconds in, from the pommel she stood on
-     * ({@code pommel} blocks up): there until she leaps, up to FINALE_LEAP_HEIGHT over it slowing to the top, drifting a
-     * little higher, then down onto the ground, quicker and quicker and soft at the last (the videos: she comes down at
-     * the camera and lands in a crouch).
+     * How high over the formation's ground her feet are on her lap (2.101.1, the user's word on our reading of their video:
+     * "그녀 둘레 6블록", three to five blocks up): as she comes down onto her sword after her leap (FINALE_LAP_LOW), at its crest
+     * far behind where she stood (FINALE_LAP_HIGH), and where she stops in the air over where she stood (FINALE_HOVER), her
+     * sword under her; how far round her the lap goes (FINALE_LAP_R), and how fast she springs up off the pommel (blocks
+     * a second).
+     */
+    public static final double FINALE_LAP_LOW=3.6,FINALE_LAP_HIGH=5.0,FINALE_HOVER=3.2,FINALE_LAP_R=6,FINALE_SPRING=12;
+    /** How much she bobs up there on her sword, and how long each bob takes (two between her stop and her step off). */
+    public static final double FINALE_BOB=.08,FINALE_BOB_PERIOD=(FINALE_DESCEND-FINALE_LAP1)/2.0;
+    /**
+     * How high over the formation's ground her body is drawn {@code t} seconds in (2.101.1, user request: "영상은 칼을
+     * 타고 한바퀴를 돈 다음에 공중에서 검을 전면에 모두 꽂는거야 그리고 내려옴"), from the pommel she stood on ({@code pommel}
+     * blocks up): there until she leaps; up off it onto her sword (FINALE_RIDE, still rising); up round her lap to its
+     * crest and down, slowing, to where she stops (FINALE_HOVER); bobbing there on her sword while she swings, raises her
+     * fingers and sends the swords; then off it and down onto the ground, quicker and quicker and soft at the last (the
+     * videos: she lands in front of the swords).
      */
     public static double finaleDrawn(double t,double pommel){
         if(t<FINALE_LEAP)return pommel;
-        double top=pommel+FINALE_LEAP_HEIGHT;
-        if(t<FINALE_TOP){double u=(t-FINALE_LEAP)/(FINALE_TOP-FINALE_LEAP);return pommel+FINALE_LEAP_HEIGHT*(1-(1-u)*(1-u));}
-        if(t<FINALE_DESCEND){double u=(t-FINALE_TOP)/(FINALE_DESCEND-FINALE_TOP);return top+FINALE_DRIFT*Math.sin(u*Math.PI*.5);}
+        if(t<FINALE_RIDE)return hermite(t,FINALE_LEAP,FINALE_RIDE,pommel,FINALE_LAP_LOW,FINALE_SPRING,RIDE_RISE);
+        if(t<FINALE_CREST)return hermite(t,FINALE_RIDE,FINALE_CREST,FINALE_LAP_LOW,FINALE_LAP_HIGH,RIDE_RISE,0);
+        if(t<FINALE_LAP1)return hermite(t,FINALE_CREST,FINALE_LAP1,FINALE_LAP_HIGH,FINALE_HOVER,0,0);
+        if(t<FINALE_DESCEND)return FINALE_HOVER+FINALE_BOB*.5*(1-Math.cos(2*Math.PI*(t-FINALE_LAP1)/FINALE_BOB_PERIOD));
         if(t<FINALE_LAND){
             // quick and quicker down, the last fifth easing onto the ground (its speed the same either side of the turn)
             double u=(t-FINALE_DESCEND)/(FINALE_LAND-FINALE_DESCEND),v=(u-.8)/.2;
             double fall=u<.8?.8*(u/.8)*(u/.8):.8+.2*(1-(1-v)*(1-v));
-            return (top+FINALE_DRIFT)*(1-fall);
+            return FINALE_HOVER*(1-fall);
         }
         return 0;
     }
-    public static final double FINALE_DRIFT=.25;
+    /** How fast she still rises as she comes onto her sword (blocks a second): on up her lap, not stopping on it. */
+    static final double RIDE_RISE=2;
+    /** The cubic from {@code a} at {@code t0} to {@code b} at {@code t1}, going {@code va} and {@code vb} a second at its ends. */
+    static double hermite(double t,double t0,double t1,double a,double b,double va,double vb){
+        double h=t1-t0,u=(t-t0)/h,u2=u*u,u3=u2*u;
+        return (2*u3-3*u2+1)*a+(u3-2*u2+u)*h*va+(-2*u3+3*u2)*b+(u3-u2)*h*vb;
+    }
+    /**
+     * Where her lap has her {@code t} seconds in, level, from where she stands (2.101.1: blocks forward along the band's
+     * way and to its right; the videos read and confirmed: "검을 타고(서핑처럼) 하늘을 크게 한 바퀴 돎", "한 바퀴를 돌아
+     * 카메라 쪽으로 돌아옴", "카메라 앞 공중에 검을 탄 채 멈춤", and the user's "그녀 둘레 6블록"): one loop round the sky to
+     * her right, turning right all the way: out ahead from over the pommel, round out to her right FINALE_LAP_R blocks off,
+     * on round behind where she stood and straight back in from behind toward the band's way, slowing, to stop over where
+     * she stood; turning once round as she goes, never sharply. Nothing before she leaps or once she is back.
+     */
+    public static double[] finaleLap(double t){
+        if(t<=FINALE_LEAP||t>=FINALE_LAP1)return new double[]{0,0};
+        double u=(t-FINALE_LEAP)/(FINALE_LAP1-FINALE_LEAP);
+        // (out and back in as the square of a sine: off and to a stop gently, no jolt at either end)
+        double sn=Math.sin(Math.PI*u),out=FINALE_LAP_R*sn*sn,th=Math.PI*smooth(u);
+        return new double[]{out*Math.cos(th),out*Math.sin(th)};
+    }
+    /** The smooth step of {@code x} (0 at or under 0, 1 at or over 1). */
+    static double smooth(double x){if(x<=0)return 0;if(x>=1)return 1;return x*x*(3-2*x);}
+    /**
+     * The way she goes on her lap {@code t} seconds in (degrees round to the right of the band's way, 2.101.1): ahead as
+     * she goes out, round to the right through behind and on round to ahead again as she comes back in, 0 to 360 without
+     * a jump; ahead (0) before and after it, and while she hardly moves.
+     */
+    public static double finaleHeading(double t){
+        if(t<=FINALE_LEAP||t>=FINALE_LAP1)return 0;
+        double e=1e-3;double[] a=finaleLap(t-e),b=finaleLap(t+e);
+        double vf=(b[0]-a[0])/(2*e),vr=(b[1]-a[1])/(2*e),speed=Math.hypot(vf,vr);
+        double deg=Math.toDegrees(Math.atan2(vr,vf)),u=(t-FINALE_LEAP)/(FINALE_LAP1-FINALE_LEAP);
+        // (it turns only to the right, once round: from ahead through her right and behind to ahead again, so a way that
+        // reads less than ahead is more than half round, and in its second half, near ahead is all the way round)
+        if(u>.5?deg<90:deg<-90)deg+=360;
+        // (where she hardly moves, at its ends, its way is no way at all: ahead)
+        double rest=u>.5?360:0;
+        return rest+(deg-rest)*smooth(speed/HEADING_SURE);
+    }
+    /** How fast she must go for her way to be her lap's (blocks a second; slower, toward ahead: only at its ends). */
+    static final double HEADING_SURE=1.5;
     /**
      * How high over the formation's ground she really is {@code t} seconds in (blocks): on the pommel until her drawn body
-     * comes down past it, then with it onto the ground (her own client moves her so; the leap over it is drawn).
+     * comes down past it, then with it onto the ground (her own client moves her so; the leap, her lap and the hover over
+     * it are drawn, where she really is the server keeps).
      */
     public static double finaleReal(double t,double pommel){return Math.max(0,Math.min(pommel,finaleDrawn(t,pommel)));}
     /** Whether it holds her up off the ground {@code t} seconds in (the server lets her float until she is down). */

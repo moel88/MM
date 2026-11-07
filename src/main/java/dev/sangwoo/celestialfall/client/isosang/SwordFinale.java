@@ -18,11 +18,9 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import static dev.sangwoo.celestialfall.client.isosang.IsosangSlash.*;
@@ -33,19 +31,26 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  * Lee So-sang's H again as drawn (2.101.0, user request: "이번에는 H를 사용한 상태에서 H를 한 번 더 누르면 되는 스킬 음성은
  * 저렇게 3개고 랜덤으로 하나 나오면 돼 스킬은 카메라가 플레이어로 빛추고 H 영역에 있던 모든 검이 전부 플레이어 뒤로 가고 앞으로
  * 꽂는 스킬이야 이걸 쓰면 H가 해제돼", the user's three videos of it read on a sheet and confirmed: "맞음, 이대로"; the cutscene
- * hers alone: "시전자만"):
+ * hers alone: "시전자만"; 2.101.1, user request: "좀 많이 달라 영상은 칼을 타고 한바퀴를 돈 다음에 공중에서 검을 전면에 모두
+ * 꽂는거야 그리고 내려옴", "그리고 박히는 검들은 더 커야해", "그리고 꽂힐때마다 잉크가 튀어야해", the video read again and
+ * confirmed, and their answers: twice as big, growing as they fly, her lap some six blocks round):
  * <ul>
  * <li>a blue flash, a ring of blue light at her feet, and her own camera into its cutscene: the world goes dark under a
  * red dusk ({@link #ground}, IsosangCinema.dusk);</li>
- * <li>she leaps high off the pommel (IsosangRules.finaleDrawn) and every sword of her formation is pulled up out of the
- * ground, nearest first, and flies up round her trailing white light, swirling round her as she rises, swords of light
- * joining them out of bursts of blue ({@link #LIGHT}: as many again, the videos' swarm);</li>
- * <li>she comes down at the camera onto the ground where she stood, a great arc of blue light behind her; the swords
- * gather behind her back and spread there like wings, points out ({@link #fan}); a white ring bursts round her; she
- * raises two fingers before her face, her eyes alight;</li>
+ * <li>she leaps off the pommel, and the sword she stood on is pulled up out of the ground and flies up under her feet
+ * ({@link #steedMid}); she rides it round a lap of the sky (IsosangRules.finaleLap), leaning into its turn, a long arc of
+ * white and blue light behind her ({@link #trail}); every other sword of her formation is pulled up out of the ground,
+ * nearest first, and streams after her swirling round her, swords of light joining them out of bursts of blue
+ * ({@link #LIGHT}: as many again, the videos' swarm);</li>
+ * <li>she comes back at the camera and stops in the air over where she stood, on her sword; she swings her own sword
+ * across in a blue arc ({@link #swing}) and it goes into light; the swords gather behind her back and spread there like
+ * wings, points out ({@link #fan}); a white ring bursts round her; she raises two fingers before her face, her eyes
+ * alight;</li>
  * <li>her camera cuts round behind her as the swords fly from behind her all at once, long white streaks over her, and
- * come down slanting into the ground in a wide band ahead of her, nearest first, blue crystal flaring up where each
- * strikes, a splash of ink at its foot; the band flashes blue ({@link IsosangRules#FINALE_BURST});</li>
+ * come down slanting into the ground in a wide band ahead of her, nearest first, growing to twice their size as they fly
+ * ({@link #GROW}), blue crystal flaring up where each strikes and black ink flung up and splashed round it ({@link #ink},
+ * {@link #inkBit}); she steps off her sword and comes down onto the ground where she stood, her sword flung down into
+ * the band after the rest; the band flashes blue ({@link IsosangRules#FINALE_BURST});</li>
  * <li>her camera comes back to her; the swords stand a moment more and are gone one by one in light.</li>
  * </ul>
  * The formation's own swords are its swords: each is the formation's until it is pulled out (SwordFormation.pulled),
@@ -54,47 +59,79 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  */
 final class SwordFinale {
     private SwordFinale(){}
-    /** How long it is drawn (seconds, IsosangClient.life): until the last of its swords' light is gone. */
+    /** How long it is drawn (seconds, IsosangClient.life): until the last of its swords' light and ink are gone. */
     static final float LIFE=5.2f;
     /** How long her body takes to turn from her formation's way round to the band's (seconds, IsosangClient.finaleFacing). */
     static final float TURN=.14f;
 
     // ───────────────────────────── the body ─────────────────────────────
-    // (the videos: on the pommel a dip, then up into the air, arms spread wide as the swords fly up round her; down at the
-    // camera, a crouch as she lands, up tall with her arms open low; her right hand up before her face, two fingers raised
-    // (no sword in it: hers went into the light with the rest); the hand thrown forward as they fly; watching them come
-    // down; her sword back in her hand as her camera comes back to her)
+    // (the videos: on the pommel a dip, then up into the air, and down onto her sword come up under her feet; riding it
+    // round the sky, crouched, her right foot ahead of her left along it, arms out, leaning into the turn; coming back at
+    // the camera she leans back to slow and stops up tall on it, her left knee up; her sword swung across in the air; her
+    // right hand up before her face, two fingers raised (no sword in it: hers went into the light after the swing); the hand
+    // thrown forward as they fly; watching them come down; off her sword, down onto the ground in a crouch; her sword back in
+    // her hand as her camera comes back to her)
     static final R6.Pose F_DIP=w(.03,-.1,-2,6,0,d(-50,40),d(-10,70),d(-62,-30),d(-80,6),d(-86,-6));
     static final R6.Pose F_SPRING=w(.03,0,-2,-4,0,d(-25,62),d(-55,90),d(-25,-62),d(-70,10),d(-100,-6));
-    static final R6.Pose F_AIR=w(.02,.05,0,-10,0,d(20,95),d(-10,110),d(20,-95),d(-62,10),d(-100,-10));
-    static final R6.Pose F_AIR2=w(.02,.05,0,-6,0,d(28,92),d(0,105),d(28,-92),d(-66,10),d(-98,-10));
-    static final R6.Pose F_DESCEND=w(.03,0,0,8,0,d(-20,140),d(-40,150),d(-20,-140),d(-72,8),d(-98,-6));
+    /** Up in the air, coming down onto her sword: her legs gathered under her, her arms out. */
+    static final R6.Pose F_TUCK=w(.02,.02,-4,8,6,d(-5,85),d(-25,125),d(0,-82),d(-74,10),d(-74,-8));
+    /** Riding: crouched on it, her right foot ahead and her left behind along it, leaning forward and into the turn (her right), her arms out, her sword trailing back. */
+    static final R6.Pose F_RIDE=w(.04,-.16,-10,16,18,d(-18,100),d(-24,150),d(6,-76),6,182);
+    static final R6.Pose F_RIDE2=w(.04,-.18,-14,18,26,d(-28,118),d(-30,165),d(12,-62),6,180);
+    static final R6.Pose F_RIDE3=w(.03,-.15,-8,10,20,d(-14,108),d(-24,158),d(14,-72),4,178);
+    static final R6.Pose F_CREST=w(.02,-.12,-4,4,12,d(0,100),d(-14,150),d(10,-92),4,176);
+    /** Coming straight back in at the camera: leaning back to slow, her arms out wide. */
+    static final R6.Pose F_SWOOP=w(0,-.14,0,-12,2,d(6,112),d(-8,158),d(6,-112),6,174);
+    /** Stopped in the air on it (the videos): up tall on her right foot, her left knee up, her arms a little open. */
+    static final R6.Pose F_HOVER=w(.01,0,0,-2,0,d(-50,40),d(-30,70),d(-55,-40),d(-88,4),d(-40,-2));
+    /**
+     * Her sword swung across before her up there (the videos' blue arc): drawn back up at her right, the body turned
+     * right; cut across before her to her left, the blade trailing her arm the way it goes (never across its line); followed
+     * through, the body turned left.
+     */
+    static final R6.Pose F_WIND=w(.01,0,-28,4,0,d(22,118),d(16,165),d(12,-40),d(-88,4),d(-52,-2));
+    static final R6.Pose F_MID=w(.03,-.01,-6,7,0,d(10,40),d(8,95),d(-5,-80),d(-88,4),d(-58,-2));
+    static final R6.Pose F_CUT=w(.04,-.02,24,8,0,d(0,-40),d(2,10),d(-18,-122),d(-88,4),d(-64,-2));
+    static final R6.Pose F_FOLLOW=w(.03,-.03,34,6,0,d(-16,-95),d(-20,-55),d(-30,-140),d(-88,4),d(-74,-2));
+    static final R6.Pose F_SEAL=w(.01,-.04,4,-2,0,d(30,-50),d(80,-40),d(-55,-50),6,174);
+    static final R6.Pose F_SEAL2=w(.01,-.04,5,-3,0,d(33,-48),d(80,-40),d(-57,-52),6,174);
+    static final R6.Pose F_SEND=w(.04,-.05,-6,6,0,d(8,8),d(10,6),d(-60,-40),6,174);
+    static final R6.Pose F_WATCH=w(.03,-.05,-4,4,0,d(-6,10),d(4,8),d(-62,-40),6,174);
+    static final R6.Pose F_WATCH2=w(.02,-.05,-2,2,0,d(-28,14),d(-10,10),d(-68,-30),6,174);
+    /** Off her sword: her left foot forward off it; then down, her legs together, her arms a little up. */
+    static final R6.Pose F_STEP=w(.04,0,-2,6,0,d(-40,30),d(-20,40),d(-45,-40),d(-88,4),d(-62,-4));
+    static final R6.Pose F_DROP=w(.02,0,0,2,0,d(18,78),d(-10,100),d(18,-78),d(-82,8),d(-82,-8));
     static final R6.Pose F_LAND=w(.06,-.28,0,14,0,d(-35,120),d(-45,140),d(-35,-120),22,-158);
     static final R6.Pose F_RISE=w(.02,0,0,-3,0,d(-45,55),d(-60,70),d(-45,-55),d(-90,4),d(-90,-4));
-    static final R6.Pose F_SEAL=w(.01,0,4,-2,0,d(30,-50),d(80,-40),d(-55,-50),d(-90,4),d(-90,-4));
-    static final R6.Pose F_SEAL2=w(.01,0,5,-3,0,d(33,-48),d(80,-40),d(-57,-52),d(-90,4),d(-90,-4));
-    static final R6.Pose F_SEND=w(.04,0,-6,6,0,d(8,8),d(10,6),d(-60,-40),d(-82,10),d(-96,-8));
-    static final R6.Pose F_WATCH=w(.03,0,-4,4,0,d(-6,10),d(4,8),d(-62,-40),d(-84,8),d(-94,-8));
-    static final R6.Pose F_WATCH2=w(.02,0,-2,2,0,d(-28,14),d(-10,10),d(-68,-30),d(-88,5),d(-92,-5));
     static final R6.Pose F_LOWER=w(.01,0,0,1,0,d(-65,10),d(25,4),d(-80,-10),d(-90,3),d(-90,-3));
     static final Anim CLIP=Anim.joints(
         k(0,SwordFormation.H_ON),
         k(.08,F_DIP,Anim.Ease.OUT),
         k(FINALE_LEAP,F_SPRING),
-        k(.42,F_AIR,Anim.Ease.OUT),
-        k(.88,F_AIR2),
-        k(1.02,F_DESCEND),
-        k(FINALE_LAND,F_LAND,Anim.Ease.OUT),
-        k(1.5,F_RISE),
+        k(.32,F_TUCK,Anim.Ease.OUT),
+        k(FINALE_RIDE,F_RIDE),
+        k(.66,F_RIDE2),
+        k(.86,F_RIDE3),
+        k(FINALE_CREST,F_CREST),
+        k(1.14,F_SWOOP),
+        k(FINALE_LAP1,F_HOVER,Anim.Ease.OUT),
+        k(FINALE_SWING0,F_WIND),
+        k(1.43,F_MID),
+        k(1.48,F_CUT),
+        k(FINALE_SWING1,F_FOLLOW,Anim.Ease.OUT),
         k(1.72,F_SEAL,Anim.Ease.OUT),
         k(2.2,F_SEAL2),
         k(2.36,F_SEND,Anim.Ease.OUT),
         k(2.75,F_WATCH),
-        k(3.5,F_WATCH2),
+        k(2.95,F_WATCH2),
+        k(3.06,F_STEP),
+        k(3.22,F_DROP),
+        k(FINALE_LAND,F_LAND,Anim.Ease.OUT),
+        k(3.58,F_RISE),
         k(3.85,F_LOWER),
         k(FINALE_LENGTH/20f,STANCE)).after(IsosangSlash::grounded);
 
-    /** Whether {@code e} holds nothing now (her sword gone into the light with the rest, from her leap until her camera comes back to her). */
+    /** Whether {@code e} holds nothing now (her sword gone into the light after she swings it up there, until her camera comes back to her). */
     static boolean emptyHanded(Entity e){
         if(e==null)return false;
         var c=IsosangClient.finaleOf(e.getUuid());if(c==null)return false;
@@ -103,64 +140,96 @@ final class SwordFinale {
     }
     /** How far her right hand's two fingers are raised before her face (0 to 1, GGesture.applyFinale): the videos' seal. */
     static float sealWeight(float t){return Ease.window(t,FINALE_SEAL0-.08f,FINALE_SEAL1+.12f,.1f,.12f);}
-    /** When her own sword goes into light as she leaps, and comes back to her hand (seconds). */
-    static final float HAND_GONE=FINALE_LEAP-.02f,HAND_BACK=FINALE_BACK0;
+    /** When her own sword goes into light (as her swing ends, 2.101.1), and comes back to her hand (seconds). */
+    static final float HAND_GONE=FINALE_SWING1,HAND_BACK=FINALE_BACK0;
 
     // ───────────────────────────── where it is ─────────────────────────────
 
-    /** Its frame: where she stands (on the formation's ground), the band's way, its right, and how high the pommel she stood on is. */
-    record Frame(Vec3d spot,Vec3d f,Vec3d r,double pommel){
+    /**
+     * Its frame: where she stands (on the formation's ground), the band's way, its right, how high the pommel she stood on
+     * is, the band's way (degrees) and the way her formation had her facing.
+     */
+    record Frame(Vec3d spot,Vec3d f,Vec3d r,double pommel,float yaw,float formYaw){
         Vec3d at(double fw,double up,double rt){return spot.add(f.multiply(fw)).add(0,up,0).add(r.multiply(rt));}
     }
     static Frame frame(StandClient.Cast c){return frame(c,IsosangClient.finale(c.id()));}
     /** The same for the run {@code run} (the server's word of it: where she stands, the sword she stood on). */
     static Frame frame(StandClient.Cast c,IsosangClient.FinaleRun run){
         Vec3d f=Vec3d.fromPolar(0,c.yaw());
-        return new Frame(run==null?c.origin():run.spot(),f,new Vec3d(-f.z,0,f.x),pommel(run));
+        return new Frame(run==null?c.origin():run.spot(),f,new Vec3d(-f.z,0,f.x),pommel(run),c.yaw(),run==null?c.yaw():run.formYaw());
     }
     /** How high over its ground the pommel she stood on stands (blocks: that sword's, SwordFormation.layout). */
     static double pommel(IsosangClient.FinaleRun run){
         if(run==null)return FORMATION_STAND;
         var l=SwordFormation.layout(run.form());return run.on()<l.length?l[run.on()].height():FORMATION_STAND;
     }
-    /** Where her chest is drawn {@code t} seconds in (her body up her leap, IsosangRules.finaleDrawn). */
-    static Vec3d chest(Frame fr,float t){return fr.spot.add(0,finaleDrawn(t,fr.pommel)+1.2,0);}
+    /** Where her feet are drawn {@code t} seconds in: round her lap of the sky (IsosangRules.finaleLap) and up it (finaleDrawn). */
+    static Vec3d body(Frame fr,float t){
+        double[] l=finaleLap(t);
+        return fr.spot.add(fr.f.multiply(l[0])).add(fr.r.multiply(l[1])).add(0,finaleDrawn(t,fr.pommel),0);
+    }
+    /** Where her chest is drawn {@code t} seconds in. */
+    static Vec3d chest(Frame fr,float t){return body(fr,t).add(0,1.2,0);}
+    /**
+     * The way her body faces {@code t} seconds in (degrees): from her formation's way round to the band's as she dips on
+     * the pommel; then the way she rides round her lap (IsosangRules.finaleHeading: once round to the right), the band's
+     * again as she stops in the air.
+     */
+    static float faces(Frame fr,float t){
+        if(t>=FINALE_LEAP)return fr.yaw+(float)finaleHeading(t);
+        return fr.formYaw+MathHelper.wrapDegrees(fr.yaw-fr.formYaw)*Ease.smooth(t,0,TURN);
+    }
+    /** The same as a level way. */
+    static Vec3d heading(Frame fr,float t){return Vec3d.fromPolar(0,faces(fr,t));}
     /** The middle of the band its swords come down in (where its sound is heard from for those away from her). */
     static Vec3d bandMiddle(StandClient.Cast c){var fr=frame(c);return fr.at((FINALE_NEAR+FINALE_REACH)/2,0,0);}
 
     // ───────────────────────────── the swords ─────────────────────────────
 
     /**
-     * How many swords it has: the formation's own (each pulled out of the ground) and as many of light again (2.101.0, my
-     * choice: the videos' swarm is twice as thick as the formation's swords; they join the swirl out of bursts of blue).
+     * How many swords it has: the formation's own (each pulled out of the ground; the one she stood on her sword to ride,
+     * {@link #steedMid}) and as many of light again (2.101.0, my choice: the videos' swarm is twice as thick as the
+     * formation's swords; they join the swirl out of bursts of blue).
      */
     static final int OWN=FORMATION_SWORDS,LIGHT=FORMATION_SWORDS,SWORDS=OWN+LIGHT;
     /**
      * One sword's way: its own (k &lt; OWN, the formation's sword k: where its pommel stood, its way down, its guard's turn)
-     * or of light; when it is pulled out (or shows out of the light); its swirl round her (how far out, how high over her
-     * chest, its angle at the start, its speed round); when it goes to its place in the fan behind her and where that is
-     * (its middle and the way it points); when it is launched and where it comes down (the middle of it standing in the
-     * ground slanting and the way it points); when it strikes and when it is gone; its seed.
+     * or of light; whether it is the one she rides; when it is pulled out (or shows out of the light); its swirl after her
+     * (how far behind her along her way, how far round her, how high, its angle at the start and its speed round); when it
+     * goes to its place in the fan behind her and where that is (its middle and the way it points); when it is launched
+     * and where it comes down (the middle of it standing in the ground slanting, grown, and the way it points); when it
+     * strikes and when it is gone; its seed.
      */
-    record Plan(int k,boolean own,Vec3d planted,Vec3d down,double spin,float start,float join,double orbitR,double orbitUp,double orbitA,double orbitW,
+    record Plan(int k,boolean own,boolean steed,Vec3d planted,Vec3d down,double spin,float start,float join,float lag,double orbitR,double orbitUp,double orbitA,double orbitW,
                 float gather,Vec3d fanMid,Vec3d fanDir,float launch,Vec3d foot,Vec3d stuckMid,Vec3d stuckDir,float plant,float vanish,int seed){}
     private static final Map<UUID,Plan[]> PLANS=new LinkedHashMap<>();
     static void clear(){PLANS.clear();}
     /** How long a sword pulled out rises straight up out of the ground, and how long it takes to join the swirl (seconds). */
     static final float RISE=.12f,JOIN=.3f,JOIN_PER=.035f,GATHER=.34f;
     /**
-     * The fan behind her back (the videos: the swords spread behind her like wings, points out): its hub at her upper back,
-     * rings of swords out round it from her left low over the top to her right low, each a little further back than the
-     * last, leaning a little back.
+     * The swirl after her (2.101.1, the videos: the swords stream after her round her lap, wheeling round her): each a
+     * little behind her along her way (LAG0 to LAG0+LAG seconds), wheeling round it in the upright round across her way.
+     */
+    static final float LAG0=.03f,LAG=.28f;
+    /**
+     * The fan behind her back as she stands in the air on her sword (the videos: the swords spread behind her like wings,
+     * points out): its hub at her upper back, rings of swords out round it from her left low over the top to her right
+     * low, each a little further back than the last, leaning a little back.
      */
     static final double HUB_UP=1.3,HUB_BACK=.5,FAN_FROM=-84,FAN_TO=84,RING0=1.15,RING_STEP=.78;
     static final int RINGS=4,PER_RING=SWORDS/RINGS;
     /**
      * The band's swords (blocks from where she stands): from {@link #BAND_NEAR} out to {@link #BAND_FAR}, {@link #BAND_HALF}
      * either side (inside the band that strikes, IsosangRules.finaleIn), slanting {@link #SLANT0} to SLANT0+SLANT degrees off
-     * upright, their hilts toward her, {@link #BURY} blocks of them in the ground.
+     * upright, their hilts toward her, {@link #BURY} blocks of them in the ground as drawn at their size (2.101.1: twice as
+     * far for them grown, and the nearest further out, so their hilts lean back toward her short of where she comes down).
      */
-    static final double BAND_NEAR=2.6,BAND_FAR=14.8,BAND_HALF=7.6,SLANT0=28,SLANT=18,BURY=.55;
+    static final double BAND_NEAR=4.2,BAND_FAR=15,BAND_HALF=7.6,SLANT0=28,SLANT=18,BURY=.55;
+    /**
+     * How big the swords grow as they fly down into the band (2.101.1, user request: "그리고 박히는 검들은 더 커야해", their
+     * choice: twice as big, growing as they fly): their size from the fan (1) to standing in the ground.
+     */
+    static final double GROW=2;
     /** Each sword's slot in the fan: its own swords on the even rings' slots, the light's between them. */
     static int slot(int j){return j<OWN?2*j:2*(j-OWN)+1;}
     /** A slot's angle round the fan (radians, 0 straight up, + to her right) and ring. */
@@ -185,19 +254,20 @@ final class SwordFinale {
         Arrays.sort(near,Comparator.comparingDouble((Integer k)->SwordFormation.foot(run.centre(),run.formYaw(),layout[k]).squaredDistanceTo(fr.spot)));
         float[] pulls=new float[OWN];
         for(int r=0;r<OWN;r++){int k=near[r];pulls[k]=k==run.on()?FINALE_LEAP+.02f:PULL0+PULL_SPREAD*r/(OWN-1f)+.01f*(float)Ease.hash(k*31+5);}
-        Vec3d hub=fr.at(-HUB_BACK,HUB_UP,0);
+        Vec3d hub=fr.at(-HUB_BACK,FINALE_HOVER+HUB_UP,0);
         Plan[] out=new Plan[SWORDS];
         for(int j=0;j<SWORDS;j++){
-            int seed=j*977+run.form().hashCode()*31+13;boolean own=j<OWN;
+            int seed=j*977+run.form().hashCode()*31+13;boolean own=j<OWN,steed=own&&j==run.on();
             Vec3d planted=null,down=new Vec3d(0,-1,0);double spin=360*Ease.hash(seed+1);float start,join=JOIN;
             if(own){
                 var b=layout[j];planted=SwordFormation.planted(run.centre(),run.formYaw(),b);down=SwordFormation.down(b);
                 spin=SwordFormation.spinAt(b,formT+pulls[j]);start=pulls[j];
-                // (the farther it stood from her, the longer it takes to fly up into the swirl round her)
+                // (the farther it stood from her, the longer it takes to fly up into the swirl after her)
                 join=JOIN+JOIN_PER*(float)SwordFormation.foot(run.centre(),run.formYaw(),b).distanceTo(fr.spot);
             }else start=BORN0+BORN_SPREAD*(j-OWN)/(LIGHT-1f)+.03f*(float)Ease.hash(seed+2);
-            double orbitR=own?1.8+2.4*Ease.hash(seed+3):2.4+2.6*Ease.hash(seed+3),orbitUp=-1.4+3.4*Ease.hash(seed+4);
-            double orbitA=Math.PI*2*Ease.hash(seed+5),orbitW=5+2*Ease.hash(seed+6);
+            float lag=LAG0+LAG*(float)Ease.hash(seed+15);
+            double orbitR=own?1+1.6*Ease.hash(seed+3):1.2+1.8*Ease.hash(seed+3),orbitUp=-.6+1.6*Ease.hash(seed+4);
+            double orbitA=Math.PI*2*Ease.hash(seed+5),orbitW=(4+2*Ease.hash(seed+6))*(Ease.hash(seed+16)<.5?-1:1);
             // (it goes on into the fan once it has joined the swirl: never off its way into it)
             float gather=Math.max(GATHER0+GATHER_SPREAD*(float)Ease.hash(seed+7),start+(own?RISE+join+.04f:.15f));
             int s=slot(j);double phi=slotAngle(s),rho=RING0+RING_STEP*ring(s);
@@ -205,22 +275,28 @@ final class SwordFinale {
             Vec3d fanDir=radial.subtract(fr.f.multiply(.2)).normalize();
             Vec3d fanPommel=hub.add(radial.multiply(rho)).subtract(fr.f.multiply(.12+.16*rho));
             Vec3d fanMid=fanPommel.add(fanDir.multiply(SwordFormation.S_LEN/2));
-            // where it comes down: across the band as it stood across the fan, its ring how far out
-            double side=BAND_HALF*Math.sin(phi)*(.8+.2*Ease.hash(seed+8))+(Ease.hash(seed+9)-.5)*.9;
-            double fw=BAND_NEAR+(BAND_FAR-BAND_NEAR)*((ring(s)+.15+.7*Ease.hash(seed+10))/RINGS);
+            // where it comes down: across the band as it stood across the fan, its ring how far out (hers, the one she
+            // rides, in the near middle of it, flung there last as she steps off it)
+            double side,fw;
+            if(steed){side=(Ease.hash(seed+9)-.5)*.8;fw=BAND_NEAR+.5;}
+            else{side=BAND_HALF*Math.sin(phi)*(.8+.2*Ease.hash(seed+8))+(Ease.hash(seed+9)-.5)*.9;fw=BAND_NEAR+(BAND_FAR-BAND_NEAR)*((ring(s)+.15+.7*Ease.hash(seed+10))/RINGS);}
             Vec3d foot=ground(mc,fr.at(fw,0,side),fr.spot.y);
             double slant=Math.toRadians(SLANT0+SLANT*Ease.hash(seed+11));
             Vec3d stuckDir=fr.f.multiply(Math.sin(slant)).add(fr.r.multiply(side/BAND_HALF*.25)).add(0,-Math.cos(slant),0).normalize();
-            Vec3d point=foot.add(stuckDir.multiply(BURY)),stuckMid=point.subtract(stuckDir.multiply(SwordFormation.S_LEN/2));
-            float plant=Math.min(FINALE_PLANT1,FINALE_PLANT0+(FINALE_PLANT1-FINALE_PLANT0-.04f)*(float)((fw-BAND_NEAR)/(BAND_FAR-BAND_NEAR))+.04f*(float)Ease.hash(seed+12));
-            float launch=Math.min(plant-.2f,FINALE_LAUNCH-.02f+.1f*(float)Ease.hash(seed+13)+.02f*ring(s));
+            Vec3d point=foot.add(stuckDir.multiply(BURY*GROW)),stuckMid=point.subtract(stuckDir.multiply(SwordFormation.S_LEN*GROW/2));
+            float plant,launch;
+            if(steed){plant=FINALE_PLANT1-.04f;launch=FINALE_DESCEND+.02f;gather=launch;}
+            else{
+                plant=Math.min(FINALE_PLANT1,FINALE_PLANT0+(FINALE_PLANT1-FINALE_PLANT0-.04f)*(float)((fw-BAND_NEAR)/(BAND_FAR-BAND_NEAR))+.04f*(float)Ease.hash(seed+12));
+                launch=Math.min(plant-.2f,FINALE_LAUNCH-.02f+.1f*(float)Ease.hash(seed+13)+.02f*ring(s));
+            }
             float vanish=FINALE_GONE0+(FINALE_GONE1-FINALE_GONE0-.2f)*(float)Ease.hash(seed+14);
-            out[j]=new Plan(j,own,planted,down,spin,start,join,orbitR,orbitUp,orbitA,orbitW,gather,fanMid,fanDir,launch,foot,stuckMid,stuckDir,plant,vanish,seed);
+            out[j]=new Plan(j,own,steed,planted,down,spin,start,join,lag,orbitR,orbitUp,orbitA,orbitW,gather,fanMid,fanDir,launch,foot,stuckMid,stuckDir,plant,vanish,seed);
         }
         return out;
     }
-    /** When the formation's swords are pulled out (seconds: the nearest as she leaps, the farthest by PULL0+PULL_SPREAD), and when the swords of light show. */
-    static final float PULL0=.24f,PULL_SPREAD=.42f,BORN0=.34f,BORN_SPREAD=.5f,GATHER0=.98f,GATHER_SPREAD=.28f;
+    /** When the formation's swords are pulled out (seconds: the nearest as she leaps, the farthest by PULL0+PULL_SPREAD), and when the swords of light show; when they gather behind her. */
+    static final float PULL0=.24f,PULL_SPREAD=.42f,BORN0=.34f,BORN_SPREAD=.5f,GATHER0=1.24f,GATHER_SPREAD=.3f;
     /** When the formation's sword {@code k} is pulled out of the ground by H again {@code fin} (seconds into it; never for none). */
     static float pullAt(StandClient.Cast fin,int k){
         var p=plans(fin);return p==null||k<0||k>=OWN?Float.MAX_VALUE:p[k].start();
@@ -233,42 +309,89 @@ final class SwordFinale {
         return hit.getType()==HitResult.Type.MISS?level:hit.getPos();
     }
 
-    /** A sword as it is drawn: its middle, the way it points (pommel to point), its guard's turn, how strongly it shows, whether it flies (its light streaks behind it). */
-    record Blade(Vec3d mid,Vec3d dir,double spin,float alpha,boolean flying){
-        Vec3d pommel(){return mid.subtract(dir.multiply(SwordFormation.S_LEN/2));}
-        Vec3d point(){return mid.add(dir.multiply(SwordFormation.S_LEN/2));}
+    /** A sword as it is drawn: its middle, the way it points (pommel to point), its guard's turn, how strongly it shows, whether it flies (its light streaks behind it), how big it is. */
+    record Blade(Vec3d mid,Vec3d dir,double spin,float alpha,boolean flying,double scale){
+        Vec3d pommel(){return mid.subtract(dir.multiply(SwordFormation.S_LEN*scale/2));}
+        Vec3d point(){return mid.add(dir.multiply(SwordFormation.S_LEN*scale/2));}
     }
-    /** Where sword {@code p} swirls round her {@code t} seconds in (its middle): round her chest as she rises and comes down. */
+    /** Where sword {@code p} streams after her {@code t} seconds in (its middle): a little behind her along her way, wheeling round it. */
     static Vec3d orbit(Frame fr,Plan p,float t){
-        // (round her as she rises and hangs; as she comes down they stay up there, swirling, until they gather behind her)
-        double a=p.orbitA()+p.orbitW()*t;Vec3d c=chest(fr,Math.min(t,FINALE_DESCEND));
-        return c.add(Math.cos(a)*p.orbitR(),p.orbitUp(),Math.sin(a)*p.orbitR());
+        float at=Math.max(0,t-p.lag());
+        Vec3d c=chest(fr,at),h=heading(fr,at),side=new Vec3d(-h.z,0,h.x);
+        double a=p.orbitA()+p.orbitW()*t;
+        return c.add(side.multiply(Math.cos(a)*p.orbitR())).add(0,.75*Math.sin(a)*p.orbitR()+p.orbitUp(),0);
     }
-    /** The way a swirling sword points {@code t} seconds in: round her the way it goes, tilted with her rise and fall. */
+    /** How fast it goes there (blocks a second). */
+    static Vec3d orbitVel(Frame fr,Plan p,float t){return orbit(fr,p,t+.005f).subtract(orbit(fr,p,t-.005f)).multiply(100);}
+    /**
+     * The way it points as it streams after her: the way she went where it is behind her (point first after her, as a
+     * shoal: her way round, up as she climbs and down as she comes down); round the way it wheels as she leaps and as she
+     * stops, turning from one to the other over a moment. (Its own motion, her way and its wheel together, would turn it
+     * round in a frame wherever the two nearly cancel.)
+     */
     static Vec3d swirl(Frame fr,Plan p,float t){
-        double vy=t>=FINALE_DESCEND?0:(finaleDrawn(Math.min(t+.01,FINALE_DESCEND),fr.pommel)-finaleDrawn(t-.01,fr.pommel))/.02;
-        return round(p,t).add(0,.6*vy,0).normalize();
+        float at=Math.max(0,t-p.lag());
+        Vec3d h=heading(fr,at),side=new Vec3d(-h.z,0,h.x);double a=p.orbitA()+p.orbitW()*t;
+        Vec3d wheel=side.multiply(-Math.sin(a)).add(0,.75*Math.cos(a),0).multiply(Math.signum(p.orbitW())).normalize();
+        float w=Ease.smooth(at,FINALE_LEAP,FINALE_LEAP+SURE)*(1-Ease.smooth(at,FINALE_LAP1-.2f,FINALE_LAP1-.02f));
+        if(w<=0)return wheel;
+        // (her way: along her heading, never straight up or down, so never right against its wheel)
+        Vec3d v=chest(fr,at+.005f).subtract(chest(fr,at-.005f)).multiply(100);
+        Vec3d way=h.multiply(Math.max(SURE_ON,v.x*h.x+v.z*h.z)).add(0,v.y,0).normalize();
+        return slerp(wheel,way,w);
     }
-    /** Its way round her (blocks a second, level: the swirl's own, not her rise or fall with it). */
-    static Vec3d round(Plan p,float t){double a=p.orbitA()+p.orbitW()*t,v=p.orbitR()*p.orbitW();return new Vec3d(-Math.sin(a)*v,0,Math.cos(a)*v);}
+    /** How long the swords after her take to turn from their wheel to her way as she leaps (seconds), and the least of her way along her heading they take (blocks a second). */
+    static final float SURE=.12f;
+    static final double SURE_ON=4;
+    /**
+     * Her sword under her feet as she rides {@code t} seconds in (its middle): along the way she goes, a little ahead of
+     * her, its flat just under her soles.
+     */
+    static Vec3d rideMid(Frame fr,float t){return body(fr,t).add(heading(fr,t).multiply(STEED_AHEAD)).add(0,-STEED_UNDER,0);}
+    /** The way it points: her way, its point a little up as she climbs and down as she comes down (half her climb, at most STEED_PITCH degrees). */
+    static Vec3d rideDir(Frame fr,float t){
+        double vy=(finaleDrawn(t+.01,fr.pommel)-finaleDrawn(t-.01,fr.pommel))/.02;
+        double[] a=finaleLap(t-.01),b=finaleLap(t+.01);double vh=Math.hypot(b[0]-a[0],b[1]-a[1])/.02;
+        double pitch=MathHelper.clamp(.5*Math.atan2(vy,Math.max(4,vh)),-Math.toRadians(STEED_PITCH),Math.toRadians(STEED_PITCH));
+        return heading(fr,t).multiply(Math.cos(pitch)).add(0,Math.sin(pitch),0).normalize();
+    }
+    static final double STEED_AHEAD=.12,STEED_UNDER=.04,STEED_PITCH=8;
+    /**
+     * The sword she stood on {@code t} seconds in as she rides it (its middle, 2.101.1, the videos: "뛰어오른 그녀가 서 있던
+     * 검을 발밑에 두고 올라탐"): pulled up out of the ground as she leaps off it, rising, and up after her to come under her
+     * feet as she comes down onto it (FINALE_RIDE); under them from then until she steps off it.
+     */
+    static Vec3d steedMid(Frame fr,Plan p,float t){
+        if(t>=FINALE_RIDE)return rideMid(fr,t);
+        Vec3d stood=p.planted().add(p.down().multiply(SwordFormation.S_LEN/2));
+        Vec3d up=stood.add(0,RISE_UP*Ease.out(t,p.start(),p.start()+RISE),0);
+        return up.lerp(rideMid(fr,t),steedIn(p,t));
+    }
+    /** How far up under her feet it has come (0 to 1). */
+    static float steedIn(Plan p,float t){return Ease.smooth(t,p.start()+RISE*.4f,FINALE_RIDE);}
+    /** How big sword {@code p} is {@code t} seconds in (1 until it is launched, growing to GROW as it flies). */
+    static double scale(Plan p,float t){return t<p.launch()?1:1+(GROW-1)*Ease.smooth(t,p.launch(),p.plant()-.02f);}
     /** Its middle {@code t} seconds in (null when it is not drawn), before the way it points is found from how it moves. */
     static Vec3d mid(Frame fr,Plan p,float t){
         if(t<p.start()||t>=p.vanish()+FADE)return null;
         if(t>=p.plant())return p.stuckMid();
         if(t>=p.launch()){
             float x=Ease.unit(t,p.launch(),p.plant());double u=Math.pow(x,1.3);
-            // (2.101.0: the videos' swords go straight on ahead of her in long streaks, not up and over: out of the fan
-            // forward, a little up, then in along the way it will stand)
-            Vec3d a=fanAt(p,p.launch()),b=a.add(0,LIFT_UP,0).add(fr.f.multiply(LIFT_ON)),d=p.stuckMid(),cc=d.subtract(p.stuckDir().multiply(APPROACH));
+            // (the videos' swords go straight on ahead of her in long streaks and down: out of the fan forward, a
+            // little up, then in along the way it will stand; hers on from under her feet)
+            Vec3d a=p.steed()?rideMid(fr,p.launch()):fanAt(p,p.launch());
+            Vec3d b=p.steed()?a.add(rideDir(fr,p.launch()).multiply(STEED_ON)):a.add(0,LIFT_UP,0).add(fr.f.multiply(LIFT_ON));
+            Vec3d d=p.stuckMid(),cc=d.subtract(p.stuckDir().multiply(APPROACH));
             return bezier(a,b,cc,d,u);
         }
+        if(p.steed())return steedMid(fr,p,t);
         float fanned=p.gather()+GATHER;
         if(t>=fanned)return fanAt(p,t);
         if(t>=p.gather()){
             float u=Ease.smooth(t,p.gather(),fanned);
-            // (on round from the swirl, not down with her as she comes down; out into its place point first: it comes in
-            // along the way it will point)
-            Vec3d a=orbit(fr,p,p.gather()),v=round(p,p.gather());
+            // (on along its way after her, not straight off it; out into its place point first: it comes in along the
+            // way it will point)
+            Vec3d a=orbit(fr,p,p.gather()),v=orbitVel(fr,p,p.gather());
             return bezier(a,a.add(v.multiply(.06)),p.fanMid().subtract(p.fanDir().multiply(1.2)),fanAt(p,fanned),u);
         }
         if(!p.own())return orbit(fr,p,t);
@@ -276,12 +399,16 @@ final class SwordFinale {
         if(t<p.start()+RISE)return stood.add(0,RISE_UP*Ease.out(t,p.start(),p.start()+RISE),0);
         float v=Ease.smooth(t,p.start()+RISE,p.start()+RISE+p.join());
         if(v>=1)return orbit(fr,p,t);
-        // (up out of the ground and round into the swirl: it comes in along the way it will go round)
-        Vec3d o=orbit(fr,p,t),go=round(p,t);
-        return bezier(top,top.add(0,2.2,0).add(o.subtract(top).multiply(1,0,1).multiply(.25)),o.subtract(go.multiply(.1)),o,v);
+        // (up out of the ground and after her into the swirl: it comes in along the way it will go)
+        Vec3d o=orbit(fr,p,t),go=orbitVel(fr,p,t);
+        return bezier(top,top.add(0,2.2,0).add(o.subtract(top).multiply(1,0,1).multiply(.25)),o.subtract(go.multiply(.08)),o,v);
     }
-    /** How high a sword pulled out rises straight up before it flies (blocks), and its flight's start out of the fan (up a little and on ahead), and how far up its way down it comes in from. */
-    static final double RISE_UP=1.5,LIFT_UP=.5,LIFT_ON=3.2,APPROACH=2.6;
+    /**
+     * How high a sword pulled out rises straight up before it flies (blocks), its flight's start out of the fan (up a
+     * little and on ahead), how far up its way down it comes in from (grown), and how far on her own sword shoots on
+     * ahead from under her feet before it turns down into the band.
+     */
+    static final double RISE_UP=1.5,LIFT_UP=.5,LIFT_ON=3.2,APPROACH=3.6,STEED_ON=2.2;
     /** How long a sword takes to go (seconds). */
     static final float FADE=.22f;
     /** Its place in the fan, breathing a little. */
@@ -291,39 +418,56 @@ final class SwordFinale {
     static Vec3d bezier(Vec3d a,Vec3d b,Vec3d c,Vec3d d,double u){
         double v=1-u;return a.multiply(v*v*v).add(b.multiply(3*v*v*u)).add(c.multiply(3*v*u*u)).add(d.multiply(u*u*u));
     }
+    /** Its guard's turn {@code t} seconds in: spinning slowly as it flies after her until it is launched; hers turned flat as it comes under her feet. */
+    static double spinAt(Plan p,float t){
+        if(p.steed())return p.spin()*(1-steedIn(p,t));
+        return p.spin()+SPIN*Math.max(0,Math.min(t,p.launch())-p.start()-RISE);
+    }
     /** Sword {@code p} {@code t} seconds in (null when it is not drawn). */
     static Blade blade(Frame fr,Plan p,float t){
         Vec3d m=mid(fr,p,t);if(m==null)return null;
         float alpha=(p.own()?1:Ease.smooth(t,p.start(),p.start()+.1f))*(1-Ease.smooth(t,p.vanish(),p.vanish()+FADE));
-        double spin=p.spin()+(t<p.launch()?SPIN*Math.max(0,t-p.start()-RISE):SPIN*Math.max(0,p.launch()-p.start()-RISE));
-        // stuck: slanting into the ground, quivering a moment as it strikes
+        double spin=spinAt(p,t),sc=scale(p,t);
+        // stuck: slanting into the ground, grown, quivering a moment as it strikes
         if(t>=p.plant()){
             float s=t-p.plant();double q=Math.toRadians(QUIVER)*Math.sin(s*42)*Math.exp(-s/.12);
             Vec3d side=p.stuckDir().crossProduct(UP);side=side.lengthSquared()<1e-6?new Vec3d(1,0,0):side.normalize();
             Vec3d d=p.stuckDir().multiply(Math.cos(q)).add(side.crossProduct(p.stuckDir()).multiply(Math.sin(q))).normalize();
-            Vec3d point=p.stuckMid().add(p.stuckDir().multiply(SwordFormation.S_LEN/2));
-            return new Blade(point.subtract(d.multiply(SwordFormation.S_LEN/2)),d,spin,alpha,false);
+            Vec3d point=p.stuckMid().add(p.stuckDir().multiply(SwordFormation.S_LEN*GROW/2));
+            return new Blade(point.subtract(d.multiply(SwordFormation.S_LEN*GROW/2)),d,spin,alpha,false,GROW);
+        }
+        // hers: pointing down as it stood, turned up under her feet along her way as it comes, her way while she rides
+        if(p.steed()){
+            Vec3d d;
+            if(t>=p.launch())d=flightDir(fr,p,t,rideDir(fr,p.launch()));
+            else if(t>=FINALE_RIDE)d=rideDir(fr,t);
+            else if(t<p.start()+RISE*.4f)d=p.down();
+            else d=slerp(p.down(),rideDir(fr,t),steedIn(p,t));
+            return new Blade(m,d,spin,alpha,t>=p.launch(),sc);
         }
         // pulled out: pointing down as it stood, until it turns up as it rises
-        if(p.own()&&t<p.start()+RISE*.5f)return new Blade(m,p.down(),spin,alpha,false);
+        if(p.own()&&t<p.start()+RISE*.5f)return new Blade(m,p.down(),spin,alpha,false,1);
         // in the fan: pointing out, as the wings' feathers
         float fanned=p.gather()+GATHER;
-        if(t>=fanned&&t<p.launch())return new Blade(m,p.fanDir(),spin,alpha,false);
-        // flying: launched, along its way (turned in from pointing out of the fan); swirling, round her the way it goes
-        // round (her rise and fall with it); pulled out, turned up from pointing down as it rises, then round into the
-        // swirl; gathering, turned from its way round her out to the way it points in the fan (each turned smoothly,
-        // never flipping round where its way bends tight)
+        if(t>=fanned&&t<p.launch())return new Blade(m,p.fanDir(),spin,alpha,false,1);
+        // flying: launched, along its way (turned in from pointing out of the fan); streaming after her, the way it goes;
+        // pulled out, turned up from pointing down as it rises, then after her into the swirl; gathering, turned from its
+        // way after her out to the way it points in the fan (each turned smoothly, never flipping round where its way
+        // bends tight)
         Vec3d d;
-        if(t>=p.launch()){
-            Vec3d a=mid(fr,p,Math.max(p.launch(),t-WAY)),b=mid(fr,p,Math.min(p.plant(),t+WAY));
-            Vec3d way=a==null||b==null||b.squaredDistanceTo(a)<1e-8?p.fanDir():b.subtract(a).normalize();
-            d=slerp(p.fanDir(),way,Ease.smooth(t,p.launch(),p.launch()+Math.min(.1f,(p.plant()-p.launch())*.35f)));
-        }else if(t>=p.gather())d=slerp(swirl(fr,p,p.gather()),p.fanDir(),Ease.smooth(t,p.gather(),fanned));
+        if(t>=p.launch())d=flightDir(fr,p,t,p.fanDir());
+        else if(t>=p.gather())d=slerp(swirl(fr,p,p.gather()),p.fanDir(),Ease.smooth(t,p.gather(),fanned));
         else if(p.own()&&t<p.start()+RISE+p.join()){
             Vec3d upward=slerp(p.down(),UP,Ease.smooth(t,p.start()+RISE*.5f,p.start()+RISE+.14f));
             d=slerp(upward,swirl(fr,p,t),Ease.smooth(t,p.start()+RISE+p.join()*.3f,p.start()+RISE+p.join()));
         }else d=swirl(fr,p,t);
-        return new Blade(m,d,spin,alpha,true);
+        return new Blade(m,d,spin,alpha,true,sc);
+    }
+    /** The way a launched sword points: turned in from {@code from} to the way it flies, over its first tenth of a second. */
+    static Vec3d flightDir(Frame fr,Plan p,float t,Vec3d from){
+        Vec3d a=mid(fr,p,Math.max(p.launch(),t-WAY)),b=mid(fr,p,Math.min(p.plant(),t+WAY));
+        Vec3d way=a==null||b==null||b.squaredDistanceTo(a)<1e-8?from:b.subtract(a).normalize();
+        return slerp(from,way,Ease.smooth(t,p.launch(),p.launch()+Math.min(.1f,(p.plant()-p.launch())*.35f)));
     }
     static final double SPIN=140,QUIVER=6;
     static final float WAY=.03f;
@@ -343,13 +487,48 @@ final class SwordFinale {
         for(int j=0;j<plans.length;j++){
             var p=plans[j];
             // called off: what has not come down yet goes now
-            if(!Float.isNaN(end)&&t>=end&&p.plant()>end){var b=blade(fr,p,Math.min(t,end));if(b!=null&&t<end+.2f)out[j]=new Blade(b.mid(),b.dir(),b.spin(),b.alpha()*(1-Ease.smooth(t,end,end+.2f)),false);continue;}
+            if(!Float.isNaN(end)&&t>=end&&p.plant()>end){var b=blade(fr,p,Math.min(t,end));if(b!=null&&t<end+.2f)out[j]=new Blade(b.mid(),b.dir(),b.spin(),b.alpha()*(1-Ease.smooth(t,end,end+.2f)),false,b.scale());continue;}
             out[j]=blade(fr,p,t);
         }
         return out;
     }
     /** Whether its blows are still to come or came before it was called off: the band's burst only for one not called off before it. */
     static boolean comes(StandClient.Cast c,float at){float end=IsosangClient.finaleEnd(c.id());return Float.isNaN(end)||at<=end;}
+    /** A sword standing in the band: its pommel and its point (grown). */
+    static Vec3d[] stuck(Plan p){
+        Vec3d h=p.stuckDir().multiply(SwordFormation.S_LEN*GROW/2);
+        return new Vec3d[]{p.stuckMid().subtract(h),p.stuckMid().add(h)};
+    }
+
+    // ───────────────────────────── the ink ─────────────────────────────
+
+    /**
+     * The ink as each strikes (2.101.1, user request: "그리고 꽂힐때마다 잉크가 튀어야해"; the video: black ink flying up among
+     * the blue crystal where each comes down, the ground black round it): a splash of ink round its foot ({@link #SPLASH}
+     * across, lasting {@link #SPLASH_LIFE}) and {@link #SPLASH_RING} smaller ones by it, {@link #SPIKES} strokes of ink
+     * shooting up out of it and eaten from below, and pieces of ink flung up and out ({@link #CLUMPS} clumps,
+     * {@link #FLAKES} flakes, {@link #DROPS} drops, falling, each clump splashing where it lands).
+     */
+    static final double SPLASH=2.2;
+    static final int SPLASH_RING=2,SPIKES=2,CLUMPS=2,FLAKES=3,DROPS=3;
+    static final float SPLASH_LIFE=1.6f;
+    /** Piece {@code i} of kind {@code kind} (0 clump, 1 flake, 2 drop) flung off as sword {@code p} strikes. */
+    static SwordCage.Bit inkBit(Plan p,int kind,int i){
+        int seed=p.seed()*31+kind*1009+i*67+5;
+        double a=Math.PI*2*Ease.hash(seed);Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a));
+        Vec3d from=p.foot().add(out.multiply(.15+.35*Ease.hash(seed+1))).add(0,.1+.35*Ease.hash(seed+2),0);
+        double speed=kind==0?1.6+2.6*Ease.hash(seed+3):kind==1?1.4+2.8*Ease.hash(seed+3):2.5+4*Ease.hash(seed+3);
+        double rise=kind==0?2.4+3*Ease.hash(seed+4):kind==1?3+3*Ease.hash(seed+4):3.5+4*Ease.hash(seed+4);
+        double size=kind==0?.13+.12*Ease.hash(seed+5):kind==1?.09+.08*Ease.hash(seed+5):.035+.04*Ease.hash(seed+5);
+        float born=p.plant()+.03f*(float)Ease.hash(seed+6);
+        return new SwordCage.Bit(kind,from,out.multiply(speed).add(0,rise,0),born,size,1.5+3*Ease.hash(seed+7),seed);
+    }
+    /** A splash of ink {@code age} seconds after it struck (spreading in a blink, black a while, breaking up and gone by SPLASH_LIFE). */
+    static void splash(Vec3d p,double size,double angle,double stretch,int seed,float age,float alpha){
+        if(age<0||age>=SPLASH_LIFE)return;
+        float dry=Ease.smooth(age,.5f*SPLASH_LIFE,SPLASH_LIFE);
+        splat(p,size*(.55+.45*Ease.out(age,0,.07f)),angle,stretch,seed&15,dry,alpha*(1-Ease.smooth(dry,.35f,1)));
+    }
 
     // ───────────────────────────── the passes ─────────────────────────────
 
@@ -361,16 +540,33 @@ final class SwordFinale {
         for(int i:order){
             var b=all[i];if(b==null||b.alpha()<=.005f)continue;
             var p=plans[i];float flare=flare(p,b,t,false);
-            SwordFormation.sword(m,c.camera,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.alpha()*(p.own()?1:.88f),0,flare,0);
+            SwordFormation.sword(m,c.camera,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.scale(),b.alpha()*(p.own()?1:.88f),0,flare,0);
         }
         for(var p:plans)if(comes(c.cast,p.plant()))crystal(m,p,t,false);
+        // the ink flung up as each strikes, falling (a clump breaks smaller as it flies)
+        for(var p:plans){
+            if(t<p.plant()||t>=p.plant()+SwordCage.BIT_LIFE+.05f||!comes(c.cast,p.plant()))continue;
+            double floor=p.foot().y;
+            for(int kind=0;kind<3;kind++){
+                int n=kind==0?CLUMPS:kind==1?FLAKES:DROPS;
+                for(int i=0;i<n;i++){
+                    var b=inkBit(p,kind,i);double s=t-b.born();if(s<0||s>=SwordCage.BIT_LIFE)continue;
+                    double l=b.lands(floor);if(s>=l)continue;
+                    Vec3d q=b.at(s);float a=(1-Ease.smooth((float)s,SwordCage.BIT_LIFE-SwordCage.BIT_FADE,SwordCage.BIT_LIFE))*Ease.smooth((float)s,0,.03f)*near(q,c.camera);
+                    double size=b.size()*(kind==0?1-.35*Ease.smooth((float)s,.2f,.7f):1);
+                    if(kind==0)blot(m,q,b.moving(s),size,b.seed(),INK,.95f*a);
+                    else if(kind==1)flake(m,q,size,s,b.spin(),b.seed(),INK,.95f*a);
+                    else drop(m,q,b.moving(s),size,b.seed(),INK,.95f*a);
+                }
+            }
+        }
     }
     /**
-     * The light under the ink: the flash and the ring at her feet as it begins; her own sword gone into light as she leaps
-     * and back as her camera comes back to her; the streak up under her; each sword's glow and the white light it streaks
-     * behind it as it flies; each sword of light's burst as it shows; the great arc of blue behind her as she comes down;
-     * the white ring round her; her eyes and her two fingers alight; as each strikes, a flash and a ring at its foot and the
-     * crystal's light; the band's burst; the swords going in light.
+     * The light under the ink: the flash and the ring at her feet as it begins; the streak up under her as she leaps; each
+     * sword's glow and the white light it streaks behind it as it flies; each sword of light's burst as it shows; the arc of
+     * light behind her as she rides round; her sword swung across in a blue arc, and into light; the white ring round her;
+     * her eyes and her two fingers alight; as each strikes, a flash and a ring at its foot and the crystal's light; a ring
+     * at her feet as she comes down; the band's burst; the swords going in light.
      */
     static void additive(Fx c,EffectMesh m){
         float t=c.sec;Frame fr=frame(c.cast);var plans=plans(c.cast);if(plans==null)return;
@@ -384,21 +580,21 @@ final class SwordFinale {
             FxLib.ring(m,feet0,.3+3.2*Ease.out(t,FINALE_FLASH,FINALE_FLASH+.35f),.16,AZURE,.75f*(1-u));
             FxLib.ring(m,feet0,.2+2*Ease.out(t,FINALE_FLASH,FINALE_FLASH+.25f),.05,WHITE,.7f*(1-u));
         }
-        // her own sword into light as she leaps, and back as her camera comes back to her
+        // her own sword into light after her swing, and back as her camera comes back to her
         for(float at:new float[]{HAND_GONE,HAND_BACK}){
             float k=FxLib.kick(t,at,.1f);if(k<=.01f)continue;
-            Vec3d h=hand(c,fr,at);if(h==null)continue;
+            Vec3d h=hand(fr,at);if(h==null)continue;
             Vec3d o=facing(h,c.camera);m.softDisc(o,.9,AZURE,.45f*k);glint8(m,o,.6*k,WHITE,.85f*k);
         }
-        // the streak of light up under her as she leaps
-        float up=Ease.window(t,FINALE_LEAP,FINALE_TOP+.1f,.04f,.25f);
-        if(up>.01f){Vec3d top=fr.spot.add(0,finaleDrawn(t,fr.pommel),0);m.softTaper(feet0,top,.9,.25,BLUE,.32f*up);m.line(feet0,top,.05,PALE,.6f*up);}
+        // the streak of light up under her as she leaps, until her sword is under her feet
+        float up=Ease.window(t,FINALE_LEAP,FINALE_RIDE+.1f,.04f,.15f);
+        if(up>.01f){Vec3d top=body(fr,t);m.softTaper(feet0,top,.9,.25,BLUE,.32f*up);m.line(feet0,top,.05,PALE,.6f*up);}
         // the swords: their glow, the light they streak behind them as they fly, the burst each of light shows out of
         for(int j=0;j<all.length;j++){
             var b=all[j];var p=plans[j];if(b==null)continue;
             float flare=flare(p,b,t,true);
             // (its outline lit less than the formation's under its night: against the dusk the fan was a mass of white)
-            SwordFormation.swordGlow(m,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.alpha(),0,GLOW_SKY,flare,0);
+            SwordFormation.swordGlow(m,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.scale(),b.alpha(),0,GLOW_SKY,flare,0);
             if(b.flying())streak(m,fr,p,t,b);
             if(!p.own()){
                 float k=FxLib.kick(t,p.start(),.09f);
@@ -409,45 +605,49 @@ final class SwordFinale {
                 if(k>.01f){Vec3d g=p.planted().add(p.down().multiply(SwordFormation.S_LEN));m.softDisc(g.add(0,.3,0),1.2,BLUE,.35f*k);FxLib.ring(m,g.add(0,.05,0),.2+1.2*Ease.out(t,p.start(),p.start()+.25f),.06,PALE,.6f*k);}
             }
         }
-        // the great arc of blue behind her as she comes down
-        arc(m,fr,t);
-        // the white ring round her as she stands (the videos' burst round her)
+        // the arc of light behind her as she rides round the sky
+        trail(m,fr,t);
+        // her sword swung across in the air
+        swing(m,fr,t);
+        // the white ring round her as she stands in the air (the videos' burst round her)
         ringBurst(c,m,fr,t);
         // her eyes and her two fingers alight
         seal(c,m,fr,t);
         // launched: a flash behind her as they go
         float go=FxLib.kick(t,FINALE_LAUNCH,.14f);
-        if(go>.01f){Vec3d o=fr.at(-HUB_BACK-.4,HUB_UP+1.2,0);m.softDisc(o,4.5,BLUE,.32f*go);m.softDisc(o,1.6,PALE,.3f*go);}
+        if(go>.01f){Vec3d o=fr.at(-HUB_BACK-.4,FINALE_HOVER+HUB_UP+1.2,0);m.softDisc(o,4.5,BLUE,.32f*go);m.softDisc(o,1.6,PALE,.3f*go);}
         // each striking: a flash and a ring at its foot, the crystal's light
         for(var p:plans){
             if(!comes(c.cast,p.plant()))continue;
             float k=FxLib.kick(t,p.plant(),.1f);
             if(k>.01f){
-                Vec3d g=p.foot();m.softDisc(g.add(0,.35,0),2.0,BLUE,.42f*k);m.star(g.add(0,.4,0),1.1,PALE,.5f*k);
-                float u=Ease.unit(t,p.plant(),p.plant()+.3f);if(u<1)FxLib.ring(m,g.add(0,.05,0),.25+1.8*Ease.out(t,p.plant(),p.plant()+.28f),.09,AZURE,.6f*(1-u));
+                Vec3d g=p.foot();m.softDisc(g.add(0,.45,0),2.4,BLUE,.42f*k);m.star(g.add(0,.5,0),1.3,PALE,.5f*k);
+                float u=Ease.unit(t,p.plant(),p.plant()+.3f);if(u<1)FxLib.ring(m,g.add(0,.05,0),.3+2.2*Ease.out(t,p.plant(),p.plant()+.28f),.1,AZURE,.6f*(1-u));
             }
             crystal(m,p,t,true);
         }
+        landing(c,m,fr,t);
         burst(c,m,fr,t);
         // going: lit along its blade a moment, a scatter of motes off it
         for(int j=0;j<plans.length;j++){
             var p=plans[j];if(t<p.vanish()-.02f||t>=p.vanish()+.6f||!comes(c.cast,p.plant()))continue;
-            Vec3d point=p.stuckMid().add(p.stuckDir().multiply(SwordFormation.S_LEN/2)),pommel=p.stuckMid().subtract(p.stuckDir().multiply(SwordFormation.S_LEN/2));
+            Vec3d[] ends=stuck(p);Vec3d pommel=ends[0],point=ends[1];
             float g=Ease.window(t,p.vanish()-.02f,p.vanish()+FADE,.04f,.1f);
-            if(g>.01f){m.softLine(pommel,point,.3,BLUE,.3f*g);m.softLine(pommel,point,.12,PALE,.45f*g);}
-            for(int s=0;s<6;s++){
+            if(g>.01f){m.softLine(pommel,point,.45,BLUE,.3f*g);m.softLine(pommel,point,.18,PALE,.45f*g);}
+            for(int s=0;s<8;s++){
                 int seed=p.seed()*7+s*13;float born=p.vanish()+.12f*(float)Ease.hash(seed);float u=Ease.unit(t,born,born+.45f);if(u<=0||u>=1)continue;
-                Vec3d q=pommel.lerp(point,.1+.8*Ease.hash(seed+1)).add((Ease.hash(seed+2)-.5)*.5*u,1.4*u,(Ease.hash(seed+3)-.5)*.5*u);
-                glint8(m,facing(q,c.camera),.2*(1-u),s%3==0?WHITE:s%3==1?PALE:CYAN,.8f*(1-u));
+                Vec3d q=pommel.lerp(point,.1+.8*Ease.hash(seed+1)).add((Ease.hash(seed+2)-.5)*.6*u,1.6*u,(Ease.hash(seed+3)-.5)*.6*u);
+                glint8(m,facing(q,c.camera),.22*(1-u),s%3==0?WHITE:s%3==1?PALE:CYAN,.8f*(1-u));
             }
         }
     }
     /**
      * How strongly sword {@code b} flares with light (SwordFormation.sword's flare: a broad glow along it): its own swords
-     * a little as they fly, the swords of light as they fly; standing in the fan a little, and standing in the ground hardly
-     * (a broad glow round a standing sword looked like a pale slab, not a sword).
+     * a little as they fly, the swords of light as they fly, hers glowing as she rides it; standing in the fan a little,
+     * and standing in the ground hardly (a broad glow round a standing sword looked like a pale slab, not a sword).
      */
     static float flare(Plan p,Blade b,float t,boolean light){
+        if(p.steed()&&t<p.launch())return t<FINALE_RIDE?(light?.2f:.12f):(light?.3f:.2f);
         if(b.flying())return p.own()?(light?.25f:.18f):(light?.35f:.4f);
         if(t>=p.plant())return p.own()?0:.05f;
         return p.own()?0:.16f;
@@ -457,84 +657,115 @@ final class SwordFinale {
         float back=t>=p.launch()?STREAK_FLY:STREAK_SWIRL;
         Vec3d head=b.point();
         Vec3d tail=null;
-        for(float s=back;s>.005f;s*=.5f){Vec3d m0=mid(fr,p,Math.max(p.start(),t-s));if(m0!=null){tail=m0.add(b.dir().multiply(SwordFormation.S_LEN/2));break;}}
+        for(float s=back;s>.005f;s*=.5f){
+            float at=Math.max(p.start(),t-s);Vec3d m0=mid(fr,p,at);
+            if(m0!=null){tail=m0.add(b.dir().multiply(SwordFormation.S_LEN*scale(p,at)/2));break;}
+        }
         if(tail==null||tail.squaredDistanceTo(head)<.01)return;
-        float a=b.alpha()*(t>=p.launch()?.9f:.7f);
-        m.softTaper(tail,head,0,.32,BLUE,.32f*a);m.softTaper(tail,head,0,.12,PALE,.6f*a);m.line(tail.lerp(head,.35),head,.03,WHITE,.85f*a);
+        float a=b.alpha()*(t>=p.launch()?.9f:.7f);double w=b.scale();
+        m.softTaper(tail,head,0,.32*w,BLUE,.32f*a);m.softTaper(tail,head,0,.12*w,PALE,.6f*a);m.line(tail.lerp(head,.35),head,.03*w,WHITE,.85f*a);
     }
     static final float STREAK_SWIRL=.07f,STREAK_FLY=.11f;
     /** How strongly its swords' outlines are lit (SwordFormation.swordGlow's sky: 1 the formation's own under its night). */
     static final float GLOW_SKY=.5f;
-    /** Her right hand (where her sword was) at {@code t} as drawn: up her leap. */
-    static Vec3d hand(Fx c,Frame fr,float t){
-        var pose=R6.poseOf(CLIP.frame(t));
-        return KagenoClips.blade(fr.spot.add(0,finaleDrawn(t,fr.pommel),0),c.cast.yaw(),pose)[0];
-    }
+    /** Her pose {@code t} seconds in. */
+    static R6.Pose pose(float t){return R6.poseOf(CLIP.frame(t));}
+    /** Her right hand (where her sword is) and the way her sword points at {@code t} as drawn: round her lap and up it. */
+    static Vec3d[] sword(Frame fr,float t){return KagenoClips.blade(body(fr,t),faces(fr,t),pose(t));}
+    static Vec3d hand(Frame fr,float t){return sword(fr,t)[0];}
     /** Her head's middle at {@code t} as drawn. */
-    static Vec3d head(Fx c,Frame fr,float t){
-        var pose=R6.poseOf(CLIP.frame(t));
-        return KagenoClips.head(fr.spot.add(0,finaleDrawn(t,fr.pommel),0),c.cast.yaw(),pose);
-    }
+    static Vec3d head(Frame fr,float t){return KagenoClips.head(body(fr,t),faces(fr,t),pose(t));}
     /**
-     * The great arc of blue light behind her as she comes down (the videos: a sweep of light round behind her as the swords
-     * gather): round her upper back from high at her left down to her right, drawn on quickly and gone as she stands.
+     * The arc of white and blue light behind her as she rides round the sky (2.101.1, the videos: "흰·파란 빛의 큰 호"):
+     * back along her way under her feet some TRAIL seconds, broad and bright at her and thin and faint behind; drawn into her
+     * as she stops.
      */
-    static void arc(EffectMesh m,Frame fr,float t){
-        if(t<ARC0||t>=ARC1+.4f)return;
-        float drawn=Ease.out(t,ARC0,ARC1),fade=1-Ease.smooth(t,ARC1+.05f,ARC1+.4f);if(drawn<=.01f||fade<=.01f)return;
-        Vec3d hub=fr.at(-HUB_BACK-.3,HUB_UP+.2,0);int n=40;Vec3d prev=null;
+    static void trail(EffectMesh m,Frame fr,float t){
+        if(t<FINALE_RIDE-.02f||t>=FINALE_LAP1+TRAIL+.02f)return;
+        float head=Math.min(t,FINALE_LAP1),tail=Math.max(FINALE_RIDE-.06f,t-TRAIL);if(head-tail<.01f)return;
+        float fade=Ease.smooth(t,FINALE_RIDE-.02f,FINALE_RIDE+.06f)*(1-Ease.smooth(t,FINALE_LAP1-.05f,FINALE_LAP1+TRAIL));
+        int n=30;Vec3d prev=null;
         for(int i=0;i<=n;i++){
-            double u=i/(double)n;if(u>drawn)break;
-            double a=Math.toRadians(-150+200*u);
-            Vec3d q=hub.add(fr.r.multiply(Math.cos(a)*ARC_R)).add(0,Math.sin(a)*ARC_R*.8+ARC_R*.15,0).subtract(fr.f.multiply(.4*Math.sin(Math.PI*u)));
+            float s=tail+(head-tail)*i/n;Vec3d q=body(fr,s).add(0,-.03,0);
             if(prev!=null){
-                double head=1-Math.min(1,(drawn-u)/.35);float w=(float)(.25+.75*Math.sin(Math.PI*u));
-                m.softLine(prev,q,.9*w,BLUE,.3f*fade);m.softLine(prev,q,.35*w,AZURE,.5f*fade);m.line(prev,q,.05*w,head>.5?WHITE:PALE,.7f*fade);
+                double k=i/(double)n,w=.3+.7*k;float a=(float)(k*k)*fade;
+                m.softLine(prev,q,1.1*w,BLUE,.3f*a);m.softLine(prev,q,.42*w,AZURE,.45f*a);m.line(prev,q,.06*w,k>.6?WHITE:PALE,.75f*a);
             }
             prev=q;
         }
-        if(prev!=null){glint8(m,prev,.5,WHITE,.8f*fade*(1-Ease.smooth(t,ARC1,ARC1+.15f)));}
+        if(prev!=null&&fade>.01f){m.softDisc(prev,.7,AZURE,.3f*fade);glint8(m,prev,.3,WHITE,.6f*fade);}
     }
-    static final float ARC0=1.0f,ARC1=1.18f;
-    static final double ARC_R=2.6;
-    /** The white ring that bursts round her (a ring turned to the camera, soft and wide, with a flash), and a ring along the ground. */
+    static final float TRAIL=.32f;
+    /**
+     * Her sword swung across in the air (2.101.1, the videos: "공중에서 칼을 휘둘러 파란 호"): a crescent of blue light where
+     * her blade has gone from where it was drawn back to where it is, broad and bright at its head, white along its edge,
+     * fading behind it and gone soon after.
+     */
+    static void swing(EffectMesh m,Frame fr,float t){
+        if(t<FINALE_SWING0||t>=FINALE_SWING1+SWING_FADE)return;
+        float head=Math.min(t,FINALE_SWING1);if(head-FINALE_SWING0<.005f)return;
+        int n=24;Vec3d[] in=new Vec3d[n+1],out=new Vec3d[n+1];float[] at=new float[n+1];
+        for(int i=0;i<=n;i++){
+            float s=FINALE_SWING0+(head-FINALE_SWING0)*i/n;at[i]=s;
+            Vec3d[] b=sword(fr,s);in[i]=b[0].add(b[1].multiply(GUARD+.2));out[i]=b[0].add(b[1].multiply(TIP+.35));
+        }
+        for(int i=0;i<n;i++){
+            float age=t-at[i+1];float a=(1-Ease.smooth(age,.03f,SWING_FADE))*(float)Math.pow((i+1)/(double)n,.6);if(a<=.01f)continue;
+            m.quad(in[i],out[i],out[i+1],in[i+1],BLUE,.3f*a);
+            m.softLine(out[i],out[i+1],.45,AZURE,.4f*a);
+            m.line(out[i],out[i+1],.06,WHITE,.85f*a);
+        }
+        if(t<FINALE_SWING1+.06f){float k=1-Ease.smooth(t,FINALE_SWING1,FINALE_SWING1+.06f);glint8(m,out[n],.35*k+.1,WHITE,.8f*k);}
+    }
+    static final float SWING_FADE=.28f;
+    /** The white ring that bursts round her up there (a ring turned to the camera, soft and wide, with a flash), and a flat ring round her feet. */
     static void ringBurst(Fx c,EffectMesh m,Frame fr,float t){
         float at=FINALE_RING;if(t<at-.02f||t>=at+.45f)return;
         float a=Ease.smooth(t,at-.02f,at+.01f),u=Ease.unit(t,at,at+.4f);
-        Vec3d o=fr.at(0,1.15,0);
+        Vec3d feet=body(fr,t),o=feet.add(0,1.15,0);
         double r=.6+3.4*Ease.out(t,at,at+.24f);
         SwordCage.ringToCamera(m,o,c.camera,r,.9,PALE,.42f*a*(1-u));
         SwordCage.ringToCamera(m,o,c.camera,r*.96,.25,WHITE,.65f*a*(1-u));
         m.softDisc(facing(o,c.camera),2.6,AZURE,.3f*a*(1-u)*(1-u));
-        FxLib.ring(m,fr.spot.add(0,.06,0),.4+4.5*Ease.out(t,at,at+.35f),.18,AZURE,.5f*a*(1-u));
+        FxLib.ring(m,feet.add(0,.02,0),.4+4.5*Ease.out(t,at,at+.35f),.18,AZURE,.5f*a*(1-u));
     }
     /** Her eyes alight and a star at her two raised fingers while she holds them before her face (the videos' glowing eyes). */
     static void seal(Fx c,EffectMesh m,Frame fr,float t){
         float k=Ease.window(t,FINALE_SEAL0,FINALE_SEAL1+.12f,.08f,.12f);if(k<=.01f)return;
         // (small and on her: a star on her face at a close camera fills the frame and hides her)
         for(int s=-1;s<=1;s+=2){
-            Vec3d eye=toward(onBody(c,fr,t,EYE_RT*s,EYE_UP,EYE_FW),c.camera,.04);
+            Vec3d eye=toward(onBody(fr,t,EYE_RT*s,EYE_UP,EYE_FW),c.camera,.04);
             m.softDisc(eye,.075,AZURE,.55f*k);m.softDisc(eye,.03,WHITE,.7f*k);
             if(s<0)glint8(m,eye,.1+.02*Math.sin(t*28),PALE,.75f*k);
         }
         var tip=GGesture.FINALE_TIP;
-        Vec3d at=toward(onBody(c,fr,t,-tip.x/16,(24-tip.y)/16,-tip.z/16),c.camera,.05);
+        Vec3d at=toward(onBody(fr,t,-tip.x/16,(24-tip.y)/16,-tip.z/16),c.camera,.05);
         m.softDisc(at,.2,AZURE,.3f*k);glint8(m,at,.085+.012*Math.sin(t*31),WHITE,.8f*k);
     }
     /** Where her eyes are on her face (blocks as the model is built: either side of its middle, over her feet, ahead). */
     static final double EYE_RT=.125,EYE_UP=1.72,EYE_FW=.255,MODEL_SCALE=.9375;
     /** A point on her torso {@code t} seconds in as she is drawn (the model drawn 0.9375 the size it is built). */
-    static Vec3d onBody(Fx c,Frame fr,float t,double rt,double up,double fw){
-        Vec3d feet=fr.spot.add(0,finaleDrawn(t,fr.pommel),0);
-        Vec3d q=KagenoClips.onTorso(feet,IsosangClient.finaleFacing(c.cast,c.delta),R6.poseOf(CLIP.frame(t)),rt,up,fw);
+    static Vec3d onBody(Frame fr,float t,double rt,double up,double fw){
+        Vec3d feet=body(fr,t);
+        Vec3d q=KagenoClips.onTorso(feet,faces(fr,t),pose(t),rt,up,fw);
         return feet.add(q.subtract(feet).multiply(MODEL_SCALE));
     }
     /** {@code p} moved {@code by} blocks toward the camera (over what it lies on). */
     static Vec3d toward(Vec3d p,Vec3d camera,double by){Vec3d d=camera.subtract(p);double l=d.length();return l<1e-4?p:p.add(d.multiply(Math.min(by,l*.5)/l));}
+    /** As she comes down onto the ground: a ring of blue light out round her feet and a soft flash. */
+    static void landing(Fx c,EffectMesh m,Frame fr,float t){
+        float at=FINALE_LAND;if(t<at-.02f||t>=at+.45f||!comes(c.cast,at))return;
+        float u=Ease.unit(t,at,at+.42f),k=FxLib.kick(t,at,.12f);
+        Vec3d g=fr.spot.add(0,.05,0);
+        FxLib.ring(m,g,.3+2.6*Ease.out(t,at,at+.3f),.12,AZURE,.6f*(1-u));
+        FxLib.ring(m,g,.2+1.6*Ease.out(t,at,at+.22f),.04,WHITE,.6f*(1-u));
+        if(k>.01f)m.softDisc(g.add(0,.4,0),1.6,BLUE,.3f*k);
+    }
     /**
      * The crystal flaring up where a sword strikes (the videos' blue crystal fire): sharp shards of blue crystal standing
      * up round its foot, each two crossing diamonds fixed in the world (fire is not turned to the camera), shooting up as it
-     * strikes and breaking away; the blended pass draws their bodies, the light pass their glow and white hearts.
+     * strikes and breaking away; the blended pass draws their bodies, the light pass their glow and white hearts (2.101.1:
+     * a third bigger, for the swords grown).
      */
     static void crystal(EffectMesh m,Plan p,float t,boolean light){
         float s=t-p.plant();if(s<0||s>=CRYSTAL)return;
@@ -544,8 +775,8 @@ final class SwordFinale {
             // (each its own moment, up in a few hundredths of a second, sharp: the videos' jagged blue crystal)
             float born=.035f*(float)Ease.hash(seed+7),grow=Ease.out(s,born,born+.05f);if(grow<=.01f)continue;
             Vec3d way=new Vec3d((Ease.hash(seed)-.5)*1.3,1,(Ease.hash(seed+1)-.5)*1.3).normalize();
-            double len=(1.1+1.7*Ease.hash(seed+2))*(i==0?1.25:1)*grow*(1+.18*s),w=.07+.09*Ease.hash(seed+3);
-            Vec3d base=p.foot().add((Ease.hash(seed+4)-.5)*.6,-.05,(Ease.hash(seed+5)-.5)*.6).add(way.multiply(.35*s));
+            double len=CRYSTAL_SIZE*(1.1+1.7*Ease.hash(seed+2))*(i==0?1.25:1)*grow*(1+.18*s),w=CRYSTAL_SIZE*(.07+.09*Ease.hash(seed+3));
+            Vec3d base=p.foot().add((Ease.hash(seed+4)-.5)*.7,-.05,(Ease.hash(seed+5)-.5)*.7).add(way.multiply(.35*s));
             Vec3d side=way.crossProduct(UP);side=side.lengthSquared()<1e-6?new Vec3d(1,0,0):side.normalize();
             double turn=Math.PI*Ease.hash(seed+6);side=side.multiply(Math.cos(turn)).add(way.crossProduct(side).multiply(Math.sin(turn))).normalize();
             Vec3d side2=way.crossProduct(side).normalize();
@@ -558,12 +789,13 @@ final class SwordFinale {
                 }
             }else{
                 m.softLine(base,tip,w*2.2,BLUE,.24f*fade);m.line(waist,tip,w*.28,WHITE,.85f*fade);m.line(base,waist,w*.4,PALE,.6f*fade);
-                if(i==0)m.softDisc(base.add(0,.5,0),1.1,AZURE,.22f*fade);
+                if(i==0)m.softDisc(base.add(0,.5,0),1.3,AZURE,.22f*fade);
             }
         }
     }
     static final int SHARDS=7;
     static final float CRYSTAL=.56f;
+    static final double CRYSTAL_SIZE=1.3;
     /**
      * The band's burst as the last come down (FINALE_BURST, the videos' great blue flash): the ground of the band alight in
      * blue, a ring racing out along it, every sword lit up along its blade with a spike of light up out of its foot, and
@@ -579,9 +811,9 @@ final class SwordFinale {
         var plans=plans(c.cast);if(plans==null)return;
         float spike=a*(1-Ease.smooth(t,at+.05f,at+.4f));
         for(var p:plans){
-            Vec3d point=p.stuckMid().add(p.stuckDir().multiply(SwordFormation.S_LEN/2)),pommel=p.stuckMid().subtract(p.stuckDir().multiply(SwordFormation.S_LEN/2));
-            m.softLine(pommel,point,.5,CYAN,.35f*a*fade);
-            if(spike>.01f)m.needle(p.foot(),p.foot().add(0,2+2.5*Ease.hash(p.seed()+40),0),.12,.3,Ease.hash(p.seed()+41)<.3?WHITE:PALE,.7f*spike);
+            Vec3d[] ends=stuck(p);
+            m.softLine(ends[0],ends[1],.7,CYAN,.35f*a*fade);
+            if(spike>.01f)m.needle(p.foot(),p.foot().add(0,2.5+3*Ease.hash(p.seed()+40),0),.14,.36,Ease.hash(p.seed()+41)<.3?WHITE:PALE,.7f*spike);
         }
         for(int s=0;s<STARS;s++){
             int seed=s*53+911;float born=at+.02f+.18f*(float)Ease.hash(seed),v=Ease.unit(t,born,born+.7f);if(v<=0||v>=1)continue;
@@ -590,45 +822,71 @@ final class SwordFinale {
         }
     }
     static final int STARS=48;
-    /** Over the ink: a star at each sword's point as it strikes, and a few stars on the swords standing in the band. */
+    /** Over the ink: a star at each sword's foot as it strikes, and a few stars on the swords standing in the band. */
     static void overlay(Fx c,EffectMesh m){
         float t=c.sec;var plans=plans(c.cast);if(plans==null)return;
         for(var p:plans){
             if(!comes(c.cast,p.plant()))continue;
             float k=FxLib.kick(t,p.plant(),.08f);
-            if(k>.01f)glint8(m,facing(p.foot().add(0,.25,0),c.camera),1.1*k+.15,WHITE,.85f*k);
+            if(k>.01f)glint8(m,facing(p.foot().add(0,.3,0),c.camera),1.2*k+.15,WHITE,.85f*k);
             if(t>p.plant()+.1f&&t<p.vanish()){
-                Vec3d q=p.stuckMid().add(p.stuckDir().multiply(-.3+.6*Ease.hash(p.seed()+60)));
-                glint8(m,q,.14,Ease.hash(p.seed()+61)<.5?WHITE:PALE,.7f*twinkle(t,p.seed()));
+                Vec3d q=p.stuckMid().add(p.stuckDir().multiply(GROW*(-.3+.6*Ease.hash(p.seed()+60))));
+                glint8(m,q,.18,Ease.hash(p.seed()+61)<.5?WHITE:PALE,.7f*twinkle(t,p.seed()));
             }
         }
     }
-    /** The ink: a splash of ink at each sword's foot as it strikes (the videos' dark round each). */
+    /**
+     * The ink as each strikes (2.101.1: "그리고 꽂힐때마다 잉크가 튀어야해"): the ground black round its foot (a big splash and
+     * smaller ones by it), strokes of ink shooting up out of it, eaten from below, and a splash where each clump flung off
+     * comes down.
+     */
     static void ink(Fx c){
         float t=c.sec;var plans=plans(c.cast);if(plans==null)return;
         for(var p:plans){
             if(t<p.plant()||!comes(c.cast,p.plant()))continue;
-            GiantSweep.splatFor(p.foot().add(0,.004+.001*(p.seed()&7),0),.9+.5*Ease.hash(p.seed()+70),Math.PI*2*Ease.hash(p.seed()+71),1.2,p.seed()&15,t-p.plant()-.02f,.85f);
+            float age=t-p.plant();Vec3d g=p.foot();double floor=g.y;
+            splash(new Vec3d(g.x,floor+.004+.001*(p.seed()&7),g.z),SPLASH*(.85+.35*Ease.hash(p.seed()+70)),Math.PI*2*Ease.hash(p.seed()+71),1.25,p.seed(),age-.01f,.92f);
+            for(int i=0;i<SPLASH_RING;i++){
+                int seed=p.seed()*11+i*37+2;double a=Math.PI*2*Ease.hash(seed),r=.9+1.1*Ease.hash(seed+1);
+                Vec3d q=g.add(Math.cos(a)*r,0,Math.sin(a)*r);
+                splash(new Vec3d(q.x,floor+.002+.001*i,q.z),.6+.5*Ease.hash(seed+2),Math.PI*2*Ease.hash(seed+3),1.2,seed,age-.05f-.06f*(float)Ease.hash(seed+4),.85f);
+            }
+            // where the flung clumps come down
+            for(int i=0;i<CLUMPS;i++){
+                var b=inkBit(p,0,i);double l=b.lands(floor);if(l>SwordCage.BIT_LIFE+.3)continue;
+                Vec3d q=b.at(l);splatAt(new Vec3d(q.x,floor+.003+.001*(i%4),q.z),b.size()*3,Math.PI*2*Ease.hash(b.seed()+9),1.3,b.seed(),(float)(t-b.born()-l),.8f);
+            }
+            // the strokes of ink shooting up out of it, twice crossed, eaten from below
+            if(age<.6f)for(int i=0;i<SPIKES;i++){
+                int seed=p.seed()*17+i*101+3;double a=Math.PI*2*Ease.hash(seed);Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a));
+                double h=1.1+.9*Ease.hash(seed+1),w=.2+.14*Ease.hash(seed+2),lean=.25+.35*Ease.hash(seed+3);
+                float rise=Ease.out(age,.01f,.07f),eaten=Ease.smooth(age,.16f,.5f);if(rise<=0||eaten>=1)continue;
+                Vec3d foot=new Vec3d(g.x,floor,g.z).add(out.multiply(.15));
+                Vec3d top=foot.add(0,h,0).add(out.multiply(lean*h)),to=foot.add(top.subtract(foot).multiply(rise));
+                IsosangSlash.strip(foot,to,new Vec3d(-out.z,0,out.x),w,4,seed&15,eaten,0,.95f);
+                IsosangSlash.strip(foot,to,out,w*.85,4,(seed+5)&15,eaten,0,.95f);
+            }
         }
     }
     /**
-     * Lights: the flash as it begins, round her as the swords swirl, as each strikes, the band's burst; the afterglow cut
-     * short while they swirl and fly (else they leave copies of themselves on the way); a deep blue impact frame as the band
-     * bursts (a few frames, whole within 40 blocks, gone by 70).
+     * Lights: the flash as it begins, round her as she rides round with the swords after her, the fan, as each strikes, as
+     * she comes down, the band's burst; the afterglow cut short while they swirl and fly (else they leave copies of
+     * themselves on the way); a deep blue impact frame as the band bursts (a few frames, whole within 40 blocks, gone by 70).
      */
     static void frame(Fx c,FxFrame f){
         float t=c.sec;Frame fr=frame(c.cast);var plans=plans(c.cast);if(plans==null)return;
         float flash=FxLib.kick(t,FINALE_FLASH,.15f);if(flash>.01f)f.light(fr.spot.add(0,fr.pommel+1,0),0x9fc8ff,10,1.4f*flash);
         float swirl=Ease.window(t,FINALE_LEAP,GATHER0+GATHER+.2f,.1f,.25f);if(swirl>.01f)f.light(chest(fr,t),0x8cbcff,10,.8f*swirl);
-        float fan=Ease.window(t,GATHER0+GATHER,FINALE_LAUNCH+.1f,.1f,.1f);if(fan>.01f)f.light(fr.at(-HUB_BACK,HUB_UP+1,0),0x8cbcff,8,.6f*fan);
-        for(var p:plans){float k=comes(c.cast,p.plant())?FxLib.kick(t,p.plant(),.14f):0;if(k>.05f)f.light(p.foot().add(0,.8,0),0x9fd4ff,7,.9f*k);}
+        float fan=Ease.window(t,GATHER0+GATHER,FINALE_LAUNCH+.1f,.1f,.1f);if(fan>.01f)f.light(fr.at(-HUB_BACK,FINALE_HOVER+HUB_UP+1,0),0x8cbcff,8,.6f*fan);
+        for(var p:plans){float k=comes(c.cast,p.plant())?FxLib.kick(t,p.plant(),.14f):0;if(k>.05f)f.light(p.foot().add(0,.8,0),0x9fd4ff,8,.9f*k);}
+        if(comes(c.cast,FINALE_LAND)){float k=FxLib.kick(t,FINALE_LAND,.12f);if(k>.01f)f.light(fr.spot.add(0,.8,0),0x9fc8ff,6,.6f*k);}
         if(comes(c.cast,FINALE_BURST)){
             float b=FxLib.kick(t,FINALE_BURST,.3f);if(b>.01f)f.light(fr.at((BAND_NEAR+BAND_FAR)/2,1.5,0),0xa8d8ff,26,1.8f*b);
             float imp=GGrand.impact(t,FINALE_BURST);
             float near=(float)Math.max(0,Math.min(1,(70-c.camera.distanceTo(fr.at(8,1,0)))/30));
             if(imp>0&&near>0)f.impact(.7f*near*imp,0,SwordCage.CAGE_LOOK);
         }
-        if(t>=FINALE_LEAP&&t<GATHER0+GATHER+.1f||t>=FINALE_LAUNCH-.05f&&t<FINALE_PLANT1+.1f)f.afterglow(.05f);
+        if(t>=FINALE_LEAP&&t<GATHER0+GATHER+.1f||t>=FINALE_SWING0&&t<FINALE_SWING1+.1f||t>=FINALE_LAUNCH-.05f&&t<FINALE_PLANT1+.1f)f.afterglow(.05f);
     }
     /** A jolt as the swords strike (small each), harder as the band bursts; each over two frames. */
     static float shake(StandClient.Cast cast,float sec){
@@ -703,39 +961,44 @@ final class SwordFinale {
     /** A shot: where the camera stands, what it looks at, its field of view (degrees). */
     record Shot(Vec3d eye,Vec3d look,double fov){}
     /**
-     * Her camera's shots {@code t} seconds in (the videos'): low in front of her and to her left, wide, looking up after
-     * her as she leaps and the swords swirl round her; in to her as she comes down at it; close before her, her chest and
-     * face, as the swords spread behind her and she raises her fingers; cut round behind her at her left, wide, the band
-     * ahead, as they fly and come down.
+     * Her camera's shots {@code t} seconds in (the videos; 2.101.1, read again: "카메라는 아래에서 그녀를 따라 돎"): low before
+     * where she stood and a little to her left, wide, following her up off the pommel and round her lap of the sky as she
+     * rides it, rising to her as she comes back at it and stops in the air before it; in close before her up there as she
+     * swings her sword, the swords spread behind her and she raises her fingers; cut round behind her at her right, the
+     * band ahead and below, she at the left in the air, as they fly and come down and she comes down after them.
      */
     static Shot shot(StandClient.Cast c,float t){return shot(c,IsosangClient.finale(c.id()),t);}
     static Shot shot(StandClient.Cast c,IsosangClient.FinaleRun run,float t){
-        Frame fr=frame(c,run);Vec3d chest=chest(fr,t);
-        if(t<WIDE1){
-            float u=Ease.unit(t,FINALE_FLASH,WIDE1);
-            Vec3d eye=fr.at(WIDE[0]-.6*u,WIDE[1]+WIDE_RISE*finaleDrawn(t,fr.pommel),WIDE[2]);
-            return new Shot(eye,chest.add(0,.3,0),FOV_WIDE);
-        }
+        Frame fr=frame(c,run);
+        if(t<FINALE_LAP1)return lap(fr,t);
         if(t<CLOSE0){
-            float u=Ease.smooth(t,WIDE1,CLOSE0);
-            Vec3d a=fr.at(WIDE[0]-.6,WIDE[1]+WIDE_RISE*finaleDrawn(WIDE1,fr.pommel),WIDE[2]),b=fr.at(CLOSE[0],CLOSE[1],CLOSE[2]);
-            return new Shot(a.lerp(b,u),chest.add(0,.3*(1-u),0).lerp(fr.at(0,CLOSE_LOOK,0),u),FOV_WIDE+(FOV_CLOSE-FOV_WIDE)*u);
+            float u=Ease.smooth(t,FINALE_LAP1,CLOSE0);Shot a=lap(fr,FINALE_LAP1);
+            return new Shot(a.eye().lerp(fr.at(CLOSE[0],FINALE_HOVER+CLOSE[1],CLOSE[2]),u),a.look().lerp(fr.at(0,FINALE_HOVER+CLOSE_LOOK,0),u),a.fov()+(FOV_CLOSE-a.fov())*u);
         }
         if(t<FINALE_LAUNCH){
             float u=Ease.unit(t,CLOSE0,FINALE_LAUNCH);
-            Vec3d eye=fr.at(CLOSE[0]-CLOSE_IN*u,CLOSE[1],CLOSE[2]);
-            return new Shot(eye,fr.at(0,CLOSE_LOOK,0),FOV_CLOSE);
+            return new Shot(fr.at(CLOSE[0]-CLOSE_IN*u,FINALE_HOVER+CLOSE[1],CLOSE[2]),fr.at(0,FINALE_HOVER+CLOSE_LOOK,0),FOV_CLOSE);
         }
         float u=Ease.unit(t,FINALE_LAUNCH,FINALE_BACK1);
-        Vec3d eye=fr.at(BEHIND[0]+.8*u,BEHIND[1]+.5*u,BEHIND[2]);
-        return new Shot(eye,fr.at(BEHIND_LOOK,.6,0),FOV_BEHIND);
+        return new Shot(fr.at(BEHIND[0]+.8*u,BEHIND[1]+.3*u,BEHIND[2]),fr.at(BEHIND_LOOK[0],BEHIND_LOOK[1],BEHIND_LOOK[2]),FOV_BEHIND);
     }
-    /** The wide shot: its place (forward, up, right of where she stands); in close; behind her at her left, and what it looks at ahead. */
-    static final double[] WIDE={6.2,.45,-2.6},CLOSE={2.95,1.5,.14},BEHIND={-6,2.2,-3.2};
-    /** How much of her leap the wide shot rises with (it looks up at her nearer, not from the ground far off), where the close shot looks (her chest, her head and the fan's foot in frame) and how far it comes in. */
-    static final double WIDE_RISE=.42,CLOSE_LOOK=1.5,CLOSE_IN=.3;
-    static final double BEHIND_LOOK=8,FOV_WIDE=70,FOV_CLOSE=50,FOV_BEHIND=74;
-    static final float WIDE1=.98f,CLOSE0=1.38f;
+    /** The lap's shot {@code t} seconds in: where it stands (eased from its start to its end), looking at her a moment late. */
+    static Shot lap(Frame fr,float t){
+        float u=Ease.smooth(t,FINALE_FLASH,FINALE_LAP1);
+        Vec3d eye=fr.at(LAP0[0]+(LAP1[0]-LAP0[0])*u,LAP0[1]+(LAP1[1]-LAP0[1])*u,LAP0[2]+(LAP1[2]-LAP0[2])*u);
+        Vec3d look=chest(fr,Math.max(0,t-LOOK_LAG)).add(0,.3,0);
+        return new Shot(eye,look,FOV_LAP+(FOV_HOVER-FOV_LAP)*Ease.smooth(t,FINALE_CREST,FINALE_LAP1));
+    }
+    /** The lap's shot's place as it begins and as she stops before it (forward, up, right of where she stands), and how late it looks at her (seconds). */
+    static final double[] LAP0={4.4,.9,-1.6},LAP1={4.4,3.0,-.6};
+    static final float LOOK_LAG=.07f;
+    /** In close before her up there (over her feet as she stands in the air: FINALE_HOVER), where it looks (her chest, her head and the fan's foot in frame), how far it comes in. */
+    static final double[] CLOSE={2.95,1.5,.14};
+    static final double CLOSE_LOOK=1.5,CLOSE_IN=.3;
+    /** Behind her at her right (she at the left of it, in the air), and what it looks at ahead (the band, a little to her left). */
+    static final double[] BEHIND={-5.5,3.6,3.4},BEHIND_LOOK={9,.6,-.6};
+    static final double FOV_LAP=72,FOV_HOVER=58,FOV_CLOSE=50,FOV_BEHIND=74;
+    static final float CLOSE0=1.5f;
     /** Her camera in its cutscene: the shot, short of a block between her and it; going back to the game's camera as it ends. */
     static CinematicDirector.Pose camera(Vec3d vanilla,float yaw,float pitch,float delta){
         var c=cinematic();if(c==null)return null;

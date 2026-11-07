@@ -462,12 +462,14 @@ final class SwordFormation {
      * A sword's body (the blended pass): every face toward the camera, lit from above and brighter at its rim, darkened
      * toward ink ({@code dark}: as it strikes), flared sky blue ({@code flare}) and inked ({@code ink}) as the formation ends.
      */
-    static void sword(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,float alpha,float dark,float flare,float ink){
+    static void sword(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,float alpha,float dark,float flare,float ink){sword(m,camera,pommel,f,1,alpha,dark,flare,ink);}
+    /** The same, the sword {@code scale} times its size (2.101.1: H again's swords grow twice as big as they fly down into the band). */
+    static void sword(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float flare,float ink){
         if(alpha<=.005f)return;
         for(var face:FACES){
             Vec3d n=f[0].multiply(face.n().x).add(f[1].multiply(face.n().y)).add(f[2].multiply(face.n().z));
             Vec3d[] w=new Vec3d[face.v().length];Vec3d c=Vec3d.ZERO;
-            for(int i=0;i<w.length;i++){w[i]=at(pommel,f,face.v()[i]);c=c.add(w[i]);}
+            for(int i=0;i<w.length;i++){w[i]=at(pommel,f,face.v()[i].multiply(scale));c=c.add(w[i]);}
             c=c.multiply(1.0/w.length);
             Vec3d view=camera.subtract(c);double facing=n.dotProduct(view);if(facing<=0)continue;
             double lit=.6+.4*Math.max(0,n.dotProduct(LIGHT)),rim=1-Math.min(1,facing/Math.max(1e-6,view.length()));
@@ -485,22 +487,24 @@ final class SwordFormation {
      * the formation glow white at their edges), blue at its edges while it is dark, brighter in the sky, and flaring sky
      * blue as the formation ends; none once it is ink.
      */
-    static void swordGlow(EffectMesh m,Vec3d pommel,Vec3d[] f,float alpha,float dark,float sky,float flare,float ink){
+    static void swordGlow(EffectMesh m,Vec3d pommel,Vec3d[] f,float alpha,float dark,float sky,float flare,float ink){swordGlow(m,pommel,f,1,alpha,dark,sky,flare,ink);}
+    /** The same, the sword {@code scale} times its size (its lines as much broader). */
+    static void swordGlow(EffectMesh m,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float sky,float flare,float ink){
         float a=alpha*(1-ink);if(a<=.005f)return;
-        int edge=dark>.5f?AZURE:WHITE;float strong=.42f+.18f*sky+.5f*flare;
+        int edge=dark>.5f?AZURE:WHITE;float strong=.42f+.18f*sky+.5f*flare;double k=THIN*scale;
         for(var e:EDGES){
-            Vec3d p=at(pommel,f,e.a()),q=at(pommel,f,e.b());
-            if(e.outline()){m.line(p,q,(.014+.01*flare)*THIN,edge,Math.min(1,strong)*a);m.softLine(p,q,(.1+.25*flare)*THIN,dark>.5f?BLUE:PALE,(.13f+.04f*sky+.3f*flare)*a);}
-            else m.line(p,q,.009*THIN,PALE,(.2f+.08f*sky)*a*(1-dark));
+            Vec3d p=at(pommel,f,e.a().multiply(scale)),q=at(pommel,f,e.b().multiply(scale));
+            if(e.outline()){m.line(p,q,(.014+.01*flare)*k,edge,Math.min(1,strong)*a);m.softLine(p,q,(.1+.25*flare)*k,dark>.5f?BLUE:PALE,(.13f+.04f*sky+.3f*flare)*a);}
+            else m.line(p,q,.009*k,PALE,(.2f+.08f*sky)*a*(1-dark));
         }
-        Vec3d base=at(pommel,f,p(0,S_GUARD,0)),tip=at(pommel,f,p(0,S_LEN,0)),top=at(pommel,f,p(0,0,0));
-        m.softLine(top,tip,.36*THIN,dark>.5f?BLUE:AZURE,(.04f+.03f*sky)*a);
+        Vec3d base=at(pommel,f,p(0,S_GUARD*scale,0)),tip=at(pommel,f,p(0,S_LEN*scale,0)),top=at(pommel,f,p(0,0,0));
+        m.softLine(top,tip,.36*k,dark>.5f?BLUE:AZURE,(.04f+.03f*sky)*a);
         // its gems glint blue on the side turned to the camera (2.82.1)
         if(dark<.5f)for(int i=0;i<GEMS.size();i++){
-            Vec3d g=at(pommel,f,GEMS.get(i)),way=f[0].multiply(GEM_WAYS.get(i).x).add(f[1].multiply(GEM_WAYS.get(i).y)).add(f[2].multiply(GEM_WAYS.get(i).z));
-            if(way.dotProduct(m.camera().subtract(g))>0)m.softDisc(g.add(way.multiply(.012*THIN)),.055*THIN,AZURE,(.32f+.2f*sky)*a);
+            Vec3d g=at(pommel,f,GEMS.get(i).multiply(scale)),way=f[0].multiply(GEM_WAYS.get(i).x).add(f[1].multiply(GEM_WAYS.get(i).y)).add(f[2].multiply(GEM_WAYS.get(i).z));
+            if(way.dotProduct(m.camera().subtract(g))>0)m.softDisc(g.add(way.multiply(.012*k)),.055*k,AZURE,(.32f+.2f*sky)*a);
         }
-        if(flare>.01f){m.softLine(top,tip,.9*THIN,CYAN,.5f*flare*a);m.line(base,tip,.05*THIN,WHITE,.85f*flare*a);m.softDisc(top,.45*THIN,CYAN,.5f*flare*a);}
+        if(flare>.01f){m.softLine(top,tip,.9*k,CYAN,.5f*flare*a);m.line(base,tip,.05*k,WHITE,.85f*flare*a);m.softDisc(top,.45*k,CYAN,.5f*flare*a);}
     }
 
     // ───────────────────────────── the ink mountains, the clouds, the mist ─────────────────────────────
