@@ -68,7 +68,7 @@ public final class IsosangRules {
      */
     public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it; 2.83.0: G's cutscene). */
-    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD,IsosangRules.LUNGE_LENGTH};
+    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD,IsosangRules.LUNGE_FREE};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's; 2.83.0: and G's). */
     public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH,IsosangRules.LUNGE_LENGTH};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
@@ -781,7 +781,9 @@ public final class IsosangRules {
      * of its middle from hers (oppositeSwords, at random), three slashes cross on it. With no foe she dashes to where her
      * crosshair meets (brought in to the reach's edge, on the ground) and all of it comes down there on whoever is there. Ten blows (LUNGE_KIND: the dash,
      * the swords, the slashes; 6, 2 each and 4 each), a guard takes each, no knockback, a basic attack's stagger until the
-     * next. It holds her for all of it (no Z, R or basic attack), and is ready again {@link #LUNGE_COOLDOWN} after it is over.
+     * next. It holds her until she stands on the far sword (no Z, R or basic attack until then) and she may use it again
+     * from then (2.96.4, user request: "T는 아직 쿨타임 없게 만들어줘 속도는 영상처럼", the user's video using it again every
+     * 0.67 s or so: no cooldown for now), its blows still to come coming down while the next one goes.
      */
     public static final int LUNGE=11;
     /**
@@ -789,9 +791,13 @@ public final class IsosangRules {
      * in front of it by 0.3 s, the swords coming down 0.55 to 0.8 s, gone to the far sword by 0.7 s, the slashes 0.7 to
      * 0.9 s, settled at 1.25 s): she sets off ({@link #LUNGE_GO}), cuts the foe as its blow lands (its first, 6), is down
      * in front of it ({@link #LUNGE_LAND}), flies on to the far sword ({@link #LUNGE_HOP}, over Z's {@link #Z_TRAVEL}), the first sword
-     * strikes ({@link #LUNGE_SWORDS}, one a tick), and it is over ({@link #LUNGE_LENGTH}). Its cooldown, from its end.
+     * strikes ({@link #LUNGE_SWORDS}, one a tick), and it is over ({@link #LUNGE_LENGTH}: its last slash cut, her body
+     * settled). It holds her until she stands on the far sword ({@link #LUNGE_FREE}, HOLD[LUNGE]: 0.7 s; 2.96.4, the user's
+     * video: each next T 0.67 s or so after the one before, as she stands on the far sword), when she may use it (or
+     * anything else) again; its cooldown from then: none for now (2.96.4, user request: "T는 아직 쿨타임 없게 만들어줘";
+     * 2.96.0 to 2.96.3 held her all 1.25 s and it was ready 15 s after).
      */
-    public static final int LUNGE_GO=3,LUNGE_LAND=7,LUNGE_HOP=10,LUNGE_SWORDS=11,LUNGE_LENGTH=25,LUNGE_COOLDOWN=300;
+    public static final int LUNGE_GO=3,LUNGE_LAND=7,LUNGE_HOP=10,LUNGE_SWORDS=11,LUNGE_LENGTH=25,LUNGE_FREE=LUNGE_HOP+Z_TRAVEL,LUNGE_COOLDOWN=0;
     /**
      * Where T lands her (2.96.2, the user's video read again and confirmed: "상대 바로 앞 옆 (영상처럼)"): {@link #LUNGE_FRONT}
      * blocks short of the foe on the way she came and {@link #LUNGE_SIDE} to her right as she dashed (the video: low at its
@@ -815,8 +821,8 @@ public final class IsosangRules {
     public static float lungeSlash(int j){for(int b=0;b<LUNGE_KIND.length;b++)if(LUNGE_KIND[b]==2&&LUNGE_NTH[b]==j)return blowAt(LUNGE,b)/20f;return Float.NaN;}
     /** Whether T may begin {@code t} seconds into her formation (2.96.0): every sword standing, and over (on the far sword) before they flare. */
     public static boolean lungeTime(double t){return t>=Z_FROM&&t+LUNGE_LENGTH/20.0<=H_END;}
-    /** The tick T is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her, once it is over). */
-    public static long lungeReady(long start,boolean free){return start+LUNGE_LENGTH+(free?0:LUNGE_COOLDOWN);}
+    /** The tick T is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her): once she stands on the far sword, and its cooldown after (none for now, 2.96.4). */
+    public static long lungeReady(long start,boolean free){return start+LUNGE_FREE+(free?0:LUNGE_COOLDOWN);}
     /** How far along her dash she is {@code a} ticks into T (0 to 1): on the sword until LUNGE_GO, at a steady flash of a pace to LUNGE_LAND. */
     public static double lungeDash(double a){return Math.max(0,Math.min(1,(a-LUNGE_GO)/(LUNGE_LAND-LUNGE_GO)));}
     /** How far through her flight on to the far sword she is {@code a} ticks into T (0 to 1, Z's flight), -1 before it. */

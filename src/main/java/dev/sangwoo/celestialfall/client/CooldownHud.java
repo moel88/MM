@@ -183,7 +183,12 @@ public final class CooldownHud {
         if(volley!=isosangVSeen){show(ISOSANG_VOLLEY,isosangVolleyName(),volley-time,dev.sangwoo.celestialfall.isosang.IsosangRules.VOLLEY_COOLDOWN,now);isosangVSeen=volley;}
         // their T (2.96.0): from when it is over, or it was called off (the server's ready tick, told with each T's news)
         long lunge=isosang?dev.sangwoo.celestialfall.client.isosang.IsosangClient.tReady(p.getUuid()):0;
-        if(lunge!=isosangTSeen){show(ISOSANG_T,isosangTName(),lunge-time,dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE_COOLDOWN,now);isosangTSeen=lunge;}
+        // (2.96.4: no cooldown for now, "T는 아직 쿨타임 없게": no slot; the moment it holds her is no cooldown)
+        if(lunge!=isosangTSeen){
+            if(dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE_COOLDOWN>0)show(ISOSANG_T,isosangTName(),lunge-time,dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE_COOLDOWN,now);
+            else LIST.finish(ISOSANG_T,now);
+            isosangTSeen=lunge;
+        }
         LIST.update(now);
     }
     /**

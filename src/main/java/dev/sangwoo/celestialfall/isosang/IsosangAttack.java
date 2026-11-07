@@ -109,8 +109,14 @@ public final class IsosangAttack {
         IsosangRules.ZState z=IsosangRules.ZState.FRESH;
         /** (2.95.0) H's basic attack, 회풍만검, under way or the last one (null for none), and the tick it is ready again. */
         Volley volley;long vReady;
-        /** (2.96.0) T under way (null for none), and the tick it is ready again. */
-        Lunge lunge;long tReady;
+        /**
+         * (2.96.0) T: the latest one (null for none under way), every one whose blows are still to come (2.96.4: she may use
+         * it again as she stands on the far sword, the one before still bringing its swords and slashes down), and the tick
+         * it is ready again.
+         */
+        Lunge lunge;final List<Lunge> lunges=new ArrayList<>();long tReady;
+        /** (2.96.4) A press of T kept for when the one under way lets go of her (IsosangRules.BUFFER before: pressed again and again, one goes as she stands on the far sword), or null. */
+        TPress tQueued;
     }
     /**
      * H's basic attack, 회풍만검 (2.95.0, IsosangRules.VOLLEY): its id and start, the way its user faced, the foe it comes
@@ -132,6 +138,8 @@ public final class IsosangAttack {
         final Volley aim;final int from,to;final Vec3d past;
         Lunge(Volley aim,int from,int to,Vec3d past){this.aim=aim;this.from=from;this.to=to;this.past=past;}
     }
+    /** (2.96.4) A press of T kept (what its client said: whether it aimed, at whom and where). */
+    private record TPress(boolean aimed,int foe,Vec3d meets){}
     /** (2.83.0) For the film harness only (as StandArrow.rigged): the recording the next G plays (0 or 1), -1 to roll. */
     public static volatile int riggedVariant=-1;
     /**
@@ -418,7 +426,7 @@ public final class IsosangAttack {
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again; so are E's cooldown and its empowerment (2.80.0), and R's cooldown (2.81.0). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.gReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.gReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;s.tQueued=null;}}
     /**
      * This player's cooldowns are off (/botand nocooldown, every tick: NoCooldownState): the attack's rest and E's
      * cooldown are gone; an empowerment they hold stays theirs (2.80.0).
@@ -752,11 +760,14 @@ public final class IsosangAttack {
      * of its middle from the one they used it from, the server's roll (2.96.1, IsosangRules.oppositeSword; Z's flight;
      * the formation holds them along all of it, Formation.spotAt). Only while every sword stands and it
      * can be over before they flare (IsosangRules.lungeTime), not while Z flies them, R holds them, H's basic attack's
-     * swords fan out or T is under way, and once it is ready again (IsosangRules.lungeReady: 15 s after it is over).
+     * swords fan out or T holds them, and once it is ready again (IsosangRules.lungeReady, 2.96.4: as they stand on the far
+     * sword, no cooldown for now; the T before still brings its last blows down).
      */
     public static boolean lunge(ServerPlayerEntity p,boolean aimed,int foe,Vec3d meets){
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();var f=s.form;
+        // (2.96.4) pressed while the one under way still holds her, a moment before it lets go: kept for then
+        if(f!=null&&forming(s,now)&&lungeHolds(s,now)&&s.lunge.aim.start+HOLD[LUNGE]-now<=BUFFER){s.tQueued=new TPress(aimed,foe,meets);return true;}
         if(f==null||!forming(s,now)||!IsosangRules.lungeTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now))return false;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(now<s.tReady&&!free)return false;
@@ -770,6 +781,11 @@ public final class IsosangAttack {
             var block=p.getServerWorld().raycast(new RaycastContext(eye,at,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
             if(block.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)at=block.getPos();
         }
+        // (2.96.4) used again while the one before is under way with no one in the crosshair (she has just flown on to the
+        // far sword and the camera is still turning): the one before's foe again, as the video brings T after T down on one
+        var last=s.lunge;
+        if(target==null&&last!=null&&now-last.aim.start<IsosangRules.LUNGE_LENGTH&&last.aim.target>=0
+            &&p.getWorld().getEntityById(last.aim.target) instanceof LivingEntity prev&&fair(p,prev)&&within(f.centre,prev,1)&&p.canSee(prev))target=prev;
         at=target!=null?chest(target):downAt(p,f.centre,eye,at);
         // where they land: just in front of the foe at its side (2.96.2, IsosangRules.lungeLanding), on the ground there
         // (with none, where they come down), short of a block in the way
@@ -793,42 +809,49 @@ public final class IsosangAttack {
         int onto=IsosangRules.oppositeSword(f.swords,f.on,p.getRandom().nextInt(1<<20));
         float yaw=(float)Math.toDegrees(Math.atan2(-way.x,way.z));
         s.lunge=new Lunge(new Volley(UUID.randomUUID(),now,MathHelper.wrapDegrees(yaw),target==null?-1:target.getId(),at,f.centre),f.on,onto,past);
+        s.lunges.add(s.lunge);
         f.lungeAt=now;f.lungeFrom=f.on;f.past=past;f.from=f.on;f.on=onto;f.moved=now+IsosangRules.LUNGE_HOP;
         s.tReady=IsosangRules.lungeReady(now,free);
         p.swingHand(Hand.MAIN_HAND,true);
         send(p,s.lunge.aim.id,LUNGE,now,s.lunge.aim.yaw,HIT,-1,null,null,null,f,null,s.lunge.aim,s.lunge);
         return true;
     }
-    /** Whether T holds this player now (2.96.0): all of it, until they stand on the far sword and it is over. */
-    private static boolean lungeHolds(State s,long now){var l=s.lunge;return l!=null&&now>=l.aim.start&&now<l.aim.start+IsosangRules.LUNGE_LENGTH;}
+    /** Whether T holds this player now (2.96.0; 2.96.4: until they stand on the far sword, HOLD[LUNGE]; it held them all 1.25 s before). */
+    private static boolean lungeHolds(State s,long now){var l=s.lunge;return l!=null&&now>=l.aim.start&&now<l.aim.start+HOLD[LUNGE];}
     /**
      * T on a tick (2.96.0): each blow on its tick (the dash as they pass the foe, the six swords, the three slashes) the foe
      * it was sent at, wherever it has gone so long as it is still there and within VOLLEY_LEASH of the reach, or, with none
      * (or it gone), whoever is where it all comes down (its box widened VOLLEY_SPOT); no knockback, a basic attack's stagger
      * until the next. Its user gone (dead, off the map, Lee So-sang no more, their formation over) calls the rest off.
+     * (2.96.4) Every T whose blows are still to come, oldest first: the one before goes on bringing its last swords and
+     * slashes down after the next has begun.
      */
     private static void rush(ServerPlayerEntity p,State s,long now){
-        var l=s.lunge;var v=l.aim;long age=now-v.start;
         if(!attacks(p)||s.form==null){halt(p,s,now);return;}
-        LivingEntity foe=null;
-        if(v.target>=0&&p.getWorld().getEntityById(v.target) instanceof LivingEntity e&&fair(p,e)&&within(v.centre,e,IsosangRules.VOLLEY_LEASH)){foe=e;v.last=chest(e);}
-        while(v.blows<blows(LUNGE)&&age>=blowAt(LUNGE,v.blows)){
-            int i=v.blows++;List<LivingEntity> struck;
-            if(foe!=null){var target=foe;struck=strike(p,LUNGE,i,v.start,v.yaw,now,target.getPos(),e->e==target,null,false);}
-            else{Vec3d at=v.last;struck=strike(p,LUNGE,i,v.start,v.yaw,now,at,e->e.getBoundingBox().expand(VOLLEY_SPOT).contains(at),null,false);}
-            if(!struck.isEmpty())send(p,v.id,LUNGE,v.start,v.yaw,LANDED,i,struck,null,null,s.form,null,v,l);
+        for(var l:List.copyOf(s.lunges)){
+            var v=l.aim;long age=now-v.start;
+            LivingEntity foe=null;
+            if(v.target>=0&&p.getWorld().getEntityById(v.target) instanceof LivingEntity e&&fair(p,e)&&within(v.centre,e,IsosangRules.VOLLEY_LEASH)){foe=e;v.last=chest(e);}
+            while(v.blows<blows(LUNGE)&&age>=blowAt(LUNGE,v.blows)){
+                int i=v.blows++;List<LivingEntity> struck;
+                if(foe!=null){var target=foe;struck=strike(p,LUNGE,i,v.start,v.yaw,now,target.getPos(),e->e==target,null,false);}
+                else{Vec3d at=v.last;struck=strike(p,LUNGE,i,v.start,v.yaw,now,at,e->e.getBoundingBox().expand(VOLLEY_SPOT).contains(at),null,false);}
+                if(!struck.isEmpty())send(p,v.id,LUNGE,v.start,v.yaw,LANDED,i,struck,null,null,s.form,null,v,l);
+            }
+            if(age>=IsosangRules.LUNGE_LENGTH){s.lunges.remove(l);if(s.lunge==l)s.lunge=null;}
         }
-        if(age>=IsosangRules.LUNGE_LENGTH)s.lunge=null;
     }
     /**
      * T called off before it is over (2.96.0: its user gone, their formation over): its viewers told, its cooldown from
-     * now; their formation (if it stands on) holds them on the sword they were flying to.
+     * now; their formation (if it stands on) holds them on the sword they were flying to. (2.96.4) Every one whose blows
+     * are still to come.
      */
     private static void halt(ServerPlayerEntity p,State s,long now){
-        var l=s.lunge;if(l==null)return;s.lunge=null;
+        if(s.lunges.isEmpty())return;
+        var all=List.copyOf(s.lunges);s.lunges.clear();s.lunge=null;s.tQueued=null;
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.tReady=Math.min(s.tReady,now+IsosangRules.LUNGE_COOLDOWN);
         var f=s.form;if(f!=null&&f.lunging(now)){f.lungeFrom=-1;f.from=-1;f.moved=now;}
-        send(p,l.aim.id,LUNGE,l.aim.start,l.aim.yaw,STOPPED,-1,null,null,null,f,null,l.aim,l);
+        for(var l:all)send(p,l.aim.id,LUNGE,l.aim.start,l.aim.yaw,STOPPED,-1,null,null,null,f,null,l.aim,l);
     }
     /** T as a boss and the checks read it (2.96.0): begun at {@code start}, its blows coming down at {@code at} (its foe's chest as last seen, -1 for none), {@code blows} landed, where she lands and the swords she flies from and to. */
     public record LungeNow(long start,Vec3d at,int target,int blows,Vec3d past,int from,int to){}
@@ -998,8 +1021,8 @@ public final class IsosangAttack {
     private static void end(ServerPlayerEntity p,State s,long now){
         var f=s.form;if(f==null)return;
         // (2.96.0) T on the way ends with it, its cooldown from now
-        if(s.lunge!=null)halt(p,s,now);
-        s.form=null;
+        if(!s.lunges.isEmpty())halt(p,s,now);
+        s.tQueued=null;s.form=null;
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.hReady=Math.min(s.hReady,now+H_COOLDOWN);
         send(p,f.id,FORMATION,f.start,f.yaw,STOPPED,-1,null,null,null,f);
     }
@@ -1069,7 +1092,9 @@ public final class IsosangAttack {
             // (2.95.0) and H's basic attack's swords, so long as their user is here and Lee So-sang's
             if(s.volley!=null)shower(p,s,now);
             // (2.96.0) and T's blows, so long as their formation stands
-            if(s.lunge!=null)rush(p,s,now);
+            if(!s.lunges.isEmpty())rush(p,s,now);
+            // (2.96.4) a press of T kept goes as the one before lets go of her (if it may then)
+            if(s.tQueued!=null&&!lungeHolds(s,now)){var q=s.tQueued;s.tQueued=null;lunge(p,q.aimed(),q.foe(),q.meets());}
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
             if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
             if(held(p)){stop(p,s,now);release(p,s,now);s.rQueued=false;continue;}

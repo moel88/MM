@@ -402,14 +402,16 @@ public final class IsosangClient {
      */
     public static float cameraFace(float delta){
         var mc=MinecraftClient.getInstance();var p=mc.player;if(p==null||mc.world==null)return Float.NaN;
+        // (2.96.4: one after another, the latest landed one's foe)
+        float face=Float.NaN;long latest=Long.MIN_VALUE;
         for(var c:SWINGS.values()){
-            if(c.combo()!=IsosangRules.LUNGE||!c.caster().equals(p.getUuid())||STOPPED.contains(c.id()))continue;
+            if(c.combo()!=IsosangRules.LUNGE||!c.caster().equals(p.getUuid())||STOPPED.contains(c.id())||c.start()<latest)continue;
             double a=c.age(delta);if(a<IsosangRules.LUNGE_LAND||a>=IsosangRules.LUNGE_LENGTH)continue;
             Vec3d at=SwordVolley.target(c,delta);if(at==null)continue;
             Vec3d d=at.subtract(p.getLerpedPos(delta));if(d.horizontalLengthSquared()<1)continue;
-            return (float)Math.toDegrees(Math.atan2(-d.x,d.z));
+            face=(float)Math.toDegrees(Math.atan2(-d.x,d.z));latest=c.start();
         }
-        return Float.NaN;
+        return face;
     }
     /**
      * Whether this player is carried by their formation now (2.96.0): Z's flight or the dodge's, T's dash and its flight
@@ -432,10 +434,31 @@ public final class IsosangClient {
      * until she flies on, then turning back over the rest of it to her formation's way (the formation's own swing faces
      * that way: no turn as T's motion ends and the formation's goes on).
      */
-    public static float lungeFacing(StandClient.Cast cast,float delta){
+    public static float lungeFacing(StandClient.Cast cast,float delta){return lungeFacingAt(cast,cast.age(delta));}
+    /** The same {@code age} ticks into T. */
+    static float lungeFacingAt(StandClient.Cast cast,double age){
         var form=formationOf(cast.caster());if(form==null)return cast.yaw();
-        float u=dev.sangwoo.celestialfall.client.kageno.Ease.smooth(cast.age(delta),IsosangRules.LUNGE_HOP+IsosangRules.Z_TRAVEL,IsosangRules.LUNGE_LENGTH-2);
-        return cast.yaw()+net.minecraft.util.math.MathHelper.wrapDegrees(form.yaw()-cast.yaw())*u;
+        float u=dev.sangwoo.celestialfall.client.kageno.Ease.smooth((float)age,IsosangRules.LUNGE_HOP+IsosangRules.Z_TRAVEL,IsosangRules.LUNGE_LENGTH-2);
+        float own=cast.yaw()+net.minecraft.util.math.MathHelper.wrapDegrees(form.yaw()-cast.yaw())*u;
+        // (2.96.4) used again as she stands on the far sword: from the way the one before had her facing then, round to
+        // this one's as she coils (before she sets off), never snapping
+        var before=chainedAfter(cast);if(before==null)return own;
+        float from=lungeFacingAt(before,cast.start()-before.start()),w=dev.sangwoo.celestialfall.client.kageno.Ease.smooth((float)age,0,IsosangRules.LUNGE_GO);
+        return from+net.minecraft.util.math.MathHelper.wrapDegrees(own-from)*w;
+    }
+    /**
+     * The T this one follows on from (2.96.4: she may use it again as she stands on the far sword, IsosangRules.LUNGE_FREE):
+     * the latest T of the same player begun before it whose body clip still played as it began, or null.
+     */
+    public static StandClient.Cast chainedAfter(StandClient.Cast cast){
+        if(cast.combo()!=IsosangRules.LUNGE)return null;
+        StandClient.Cast best=null;
+        for(var c:SWINGS.values()){
+            if(c==cast||c.combo()!=IsosangRules.LUNGE||!c.caster().equals(cast.caster())||STOPPED.contains(c.id()))continue;
+            long gap=cast.start()-c.start();
+            if(gap>0&&gap<IsosangRules.LUNGE_LENGTH&&(best==null||c.start()>best.start()))best=c;
+        }
+        return best;
     }
     /** (2.96.0) T's run of this swing (null for a swing not T's). */
     public static LungeRun lunge(UUID swing){return LUNGES.get(swing);}

@@ -403,15 +403,17 @@ public final class MpClient implements ClientModInitializer {
      * looks ("VT", its crosshair's pick sent with it): the caster dashes at the watcher and cuts it (6), six swords of 2
      * and three slashes of 4 come down on it (200 to 170, no throw), and the caster lands just in front of it at its side
      * (2.96.2; 2.96.0 to 2.96.1 3 blocks beyond it) and flies on onto a sword on the other side of the formation from the
-     * one it began on (2.96.1); T again at once (refused: its cooldown, 15 s from its end); then once it is ready
-     * the camera onto the ground 50 degrees to the left 10 blocks off ("VGROUND-50") and T: the caster dashes there, the
+     * one it began on (2.96.1); 2.96.4 (no cooldown for now, again as she stands on the far sword, a press a moment before
+     * kept for then): T again 3 ticks in (refused: it holds her), 9 ticks in (kept: it goes 14 ticks in, from the far
+     * sword, the first's last swords and slashes still coming down), and so a third (200 to 170 to 140 to 110); then the
+     * camera onto the ground 50 degrees to the left 10 blocks off ("VGROUND-50") and T: the caster dashes there, the
      * blows come down there, no one struck (170 kept). Both log each T they hear (on whom, where she lands against the
      * watcher, the swords she flies from and to, how late) and, every tick through it, the caster hidden or not, how far
      * off the plan it is and is drawn; the server each T, its blows, the watcher's health and how far off where the
      * formation holds them the caster is through it.
      */
     private static final String[] ISOSANGT_SCRIPT={
-        "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VT","134 VAIM","136 VT","440 VGROUND-50","446 VT","530 END"};
+        "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VT","107 VT","112 VAIM","113 VT","126 VAIM","127 VT","440 VGROUND-50","446 VT","530 END"};
     private static final String[] ISOSANGVOLLEY_SCRIPT={
         "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1",
         "200 DIST23","236 VAIM","240 VM1","296 VGROUND-50","302 VM1","380 END"};

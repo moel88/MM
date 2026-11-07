@@ -446,9 +446,17 @@ class IsosangRulesTest {
         // a basic attack's stagger until the next blow, the last a moment
         long start=900;
         for(int i=0;i+1<blows(LUNGE);i++){long now=start+blowAt(LUNGE,i);assertEquals(Math.max(now,start+blowAt(LUNGE,i+1))+Stagger.PAST,Stagger.isosang(LUNGE,i,start,now,false));}
-        // 15 s from its end; held for all of it
-        assertEquals(LUNGE_LENGTH+300,lungeReady(1000,false)-1000);assertEquals(LUNGE_LENGTH,lungeReady(1000,true)-1000);
-        assertEquals(LUNGE_LENGTH,HOLD[LUNGE]);assertEquals(LUNGE_LENGTH,LENGTH[LUNGE]);assertEquals(1.25,LUNGE_LENGTH/20.0,1e-9,"the video: settled 1.25 s in");
+        // (2.96.4, user request: "T는 아직 쿨타임 없게 만들어줘 속도는 영상처럼") no cooldown for now; it holds her until she
+        // stands on the far sword, and she may use it again then (the user's video: again every 0.67 s or so)
+        assertEquals(0,LUNGE_COOLDOWN);
+        assertEquals(LUNGE_HOP+Z_TRAVEL,LUNGE_FREE);assertEquals(LUNGE_FREE,HOLD[LUNGE]);
+        assertEquals(LUNGE_FREE,lungeReady(1000,false)-1000);assertEquals(LUNGE_FREE,lungeReady(1000,true)-1000);
+        assertTrue(Math.abs(LUNGE_FREE/20.0-.67)<=.05,"again as soon as the video's: "+LUNGE_FREE/20.0);
+        assertTrue(LUNGE_FREE>BUFFER,"a press kept a moment before it lets go of her, not at once");
+        assertEquals(LUNGE_LENGTH,LENGTH[LUNGE]);assertEquals(1.25,LUNGE_LENGTH/20.0,1e-9,"the video: settled 1.25 s in");
+        // the one before's last swords and slashes come down after the next may begin, all before the next one's first blow
+        assertTrue(blowAt(LUNGE,blows(LUNGE)-1)>=LUNGE_FREE,"some blows come down after the next may begin");
+        assertTrue(blowAt(LUNGE,blows(LUNGE)-1)<LUNGE_FREE+blowAt(LUNGE,0),"all of them before the next one's first");
         // once every sword stands, and over (on the far sword) before they flare
         assertFalse(lungeTime(Z_FROM-.01));assertTrue(lungeTime(Z_FROM));assertTrue(lungeTime(H_END-LUNGE_LENGTH/20.0));assertFalse(lungeTime(H_END-LUNGE_LENGTH/20.0+.01));
     }

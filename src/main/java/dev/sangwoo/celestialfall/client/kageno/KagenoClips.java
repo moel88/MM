@@ -127,11 +127,20 @@ public final class KagenoClips {
             m.translate(0,PIVOT,0);m.multiply(q);m.translate(0,-PIVOT,0);
         }
         // The body turns to the cast facing over the first frames instead of snapping to it.
-        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing)*Ease.smooth(cast.age(delta)/20f,0,.08f)));
+        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing)*turnIn(cast,delta)));
+    }
+    /**
+     * How far a cast's body has turned from the caster's own facing to the cast facing (0 to 1, over its first frames);
+     * all the way at once for Lee So-sang's T used again as she stands on the far sword (2.96.4: its facing begins where
+     * the one before left her, IsosangClient.lungeFacing).
+     */
+    static float turnIn(StandClient.Cast cast,float delta){
+        if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&dev.sangwoo.celestialfall.client.isosang.IsosangClient.chainedAfter(cast)!=null)return 1;
+        return Ease.smooth(cast.age(delta)/20f,0,.08f);
     }
     /** How far {@link #root} has turned the body left of its own facing {@code bodyYaw} to the cast facing (degrees). */
     public static float facingTurn(StandClient.Cast cast,float delta,float bodyYaw){
-        return net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing(cast,delta))*Ease.smooth(cast.age(delta)/20f,0,.08f);
+        return net.minecraft.util.math.MathHelper.wrapDegrees(bodyYaw-facing(cast,delta))*turnIn(cast,delta);
     }
     /** The way a cast's body is drawn facing (degrees): the cast facing, but T held and E turn with the caster's aim ({@link KagenoAim}). */
     public static float facing(StandClient.Cast cast,float delta){
