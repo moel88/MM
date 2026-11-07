@@ -15,9 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * and confirmed): the drop of light her dash lays from behind her to round the foe. 2.96.3 (user request: "3참격이 너무 크고
  * 이펙트가 여전히 조금 이상해 돌진도 그렇고", the size "약 5블록·굵기 0.25" and then "크기 조금만 더 키워도 될듯", and "저거
  * 3참격 랜덤으로 나오게"): its light a twentieth of a second later and hiding her, its rim a broad band; the three slashes
- * 6.5 blocks long and a third of a block wide,
- * crossing just in front of the foe each at an angle of its own rolled anew for every T, leaning toward where she stands,
- * short of her and above the ground; all of it gone while T is drawn.
+ * 6.5 blocks long and a third of a block wide (2.96.6, "3참격 더 커도 될듯": 8.5 and 0.42),
+ * crossing just in front of the foe each at an angle of its own rolled anew for every T, leaning toward the side her camera
+ * stays on (2.96.6: where she began her row of T's; 2.96.3 where she stands as they cut), short of it and above the ground;
+ * all of it gone while T is drawn.
  */
 class SwordLungeTest {
     static final Anim CLIP=SwordLunge.CLIP;
@@ -85,14 +86,16 @@ class SwordLungeTest {
             UUID id=new UUID(r.nextLong(),r.nextLong());
             double far=fars[n%fars.length];
             Vec3d toward=Vec3d.fromPolar(0,(float)(r.nextDouble()*360)).multiply(far),fw=toward.normalize(),her=feet.add(toward);
-            // her camera behind her, over her right shoulder (the formation's 3.2 blocks back, a block to her right, high)
+            // (2.96.6) toward the side her camera stays on, the sword she began her row of T's from; her camera behind it, over
+            // her right shoulder (the formation's 3.2 blocks back, a block to her right, high), standing still there through them
             Vec3d rt=new Vec3d(-fw.z,0,fw.x),camera=her.add(fw.multiply(3.2)).add(rt.multiply(1)).add(0,2.6,0);
             double[] ang=SwordLunge.angles(id);
             for(int j=0;j<IsosangRules.LUNGE_SLASHES;j++){
                 var s=SwordLunge.blade(id,foe,toward,j);
-                // the user's choice: some 5 blocks long and a quarter of a block wide, then "a little bigger": 6.5 and 0.32
-                assertEquals(6.5,s.far().distanceTo(s.near()),1e-6,"slash "+j+" 6.5 blocks long");
-                assertEquals(.32,s.width(),1e-9,"slash "+j+" a third of a block wide");
+                // the user's choice: some 5 blocks long and a quarter of a block wide, then "a little bigger": 6.5 and 0.32, then
+                // (2.96.6) "3참격 더 커도 될듯": a third bigger again, 8.5 and 0.42
+                assertEquals(8.5,s.far().distanceTo(s.near()),1e-6,"slash "+j+" 8.5 blocks long");
+                assertEquals(.42,s.width(),1e-9,"slash "+j+" 0.42 of a block wide");
                 // the same every time it is drawn (and on every client: rolled from the swing's id)
                 assertEquals(0,SwordLunge.blade(id,foe,toward,j).far().distanceTo(s.far()),1e-12);
                 // on the foe: crossing just in front of it, its line passing by its column

@@ -129,6 +129,8 @@ public final class IsosangClient {
     static final Map<UUID,Rush> RUSHES=new HashMap<>();
     /** (2.96.0) When a T was called off (seconds into it, the server's word), and when each Lee So-sang player's T is ready again. */
     private static final Map<UUID,Float> LUNGE_ENDS=new HashMap<>();
+    /** (2.96.6) Where the first T of each T's row began (her sword then): the side her camera stays on, the way its slashes reach. */
+    private static final Map<UUID,Vec3d> CHAIN_FROM=new HashMap<>();
     private static final Map<UUID,Long> T_READY=new HashMap<>();
     /** (2.95.0) When a volley was called off (seconds into its swing, the server's word: its user gone): its swords go then. */
     private static final Map<UUID,Float> VOLLEY_ENDS=new HashMap<>();
@@ -258,6 +260,14 @@ public final class IsosangClient {
                 if(volley==null||lunge==null)return;
                 VOLLEYS.put(id,new VolleyAim(volley.target(),volley.point(),form==null?null:form.centre()));LUNGES.put(id,lunge);
                 var on=formationOf(caster);
+                // (2.96.6) where the first T of her row began: the side her camera stays on through them (cameraHold), the
+                // way its slashes reach (SwordLunge.toward); the one before it in the row still drawn as this one begins
+                StandClient.Cast before=null;
+                for(var c:SWINGS.values())if(c.combo()==IsosangRules.LUNGE&&c.caster().equals(caster)&&!STOPPED.contains(c.id())
+                    &&start>c.start()&&start-c.start()<IsosangRules.LUNGE_LENGTH&&(before==null||c.start()>before.start()))before=c;
+                Vec3d began=before==null?null:CHAIN_FROM.get(before.id());
+                if(began==null&&on!=null){var f=formation(on.id());if(f!=null)began=place(on.id(),f,lunge.from());}
+                if(began!=null)CHAIN_FROM.put(id,began);
                 if(on!=null){
                     RUSHES.put(on.id(),new Rush(start,lunge,id));PERCHES.put(on.id(),new Perch(lunge.to(),lunge.from(),start+IsosangRules.LUNGE_HOP));
                     var all=FLIGHTS.computeIfAbsent(on.id(),k->new ArrayList<>());long hop=start+IsosangRules.LUNGE_HOP;
@@ -492,6 +502,8 @@ public final class IsosangClient {
     }
     /** (2.96.0) T's run of this swing (null for a swing not T's). */
     public static LungeRun lunge(UUID swing){return LUNGES.get(swing);}
+    /** (2.96.6) Where the first T of this T's row began (her sword then), or null if not heard. */
+    public static Vec3d chainFrom(UUID swing){return CHAIN_FROM.get(swing);}
     /** (2.96.0) The tick this player's T is ready again (0 if it is: the server's word). */
     public static long tReady(UUID id){return T_READY.getOrDefault(id,0L);}
     /** The formation under way of this player (2.96.0: T's run goes through it; the multiplayer check reads it), or null. */
@@ -883,7 +895,7 @@ public final class IsosangClient {
         PERCHES.keySet().retainAll(SWINGS.keySet());FLIGHTS.keySet().retainAll(SWINGS.keySet());PLACES.keySet().retainAll(SWINGS.keySet());
         ULTIMATES.keySet().retainAll(SWINGS.keySet());ULTIMATE_ENDS.keySet().retainAll(SWINGS.keySet());
         VOLLEYS.keySet().retainAll(SWINGS.keySet());VOLLEY_ENDS.keySet().retainAll(SWINGS.keySet());
-        LUNGES.keySet().retainAll(SWINGS.keySet());RUSHES.keySet().retainAll(SWINGS.keySet());LUNGE_ENDS.keySet().retainAll(SWINGS.keySet());
+        LUNGES.keySet().retainAll(SWINGS.keySet());RUSHES.keySet().retainAll(SWINGS.keySet());LUNGE_ENDS.keySet().retainAll(SWINGS.keySet());CHAIN_FROM.keySet().retainAll(SWINGS.keySet());
         // (2.82.0) H's formation ends (its whole length run, or the server's word that it ended early): its end's sound once
         for(var c:SWINGS.values()){
             if(c.combo()!=IsosangRules.FORMATION||ENDED.contains(c.id()))continue;
@@ -922,7 +934,7 @@ public final class IsosangClient {
         FORMATIONS.clear();FORMATION_ENDS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();ULTIMATES.clear();ULTIMATE_ENDS.clear();G_READY.clear();world=null;heldR=false;
         PERCHES.clear();FLIGHTS.clear();Z_STATES.clear();PLACES.clear();
         VOLLEYS.clear();VOLLEY_ENDS.clear();V_READY.clear();SwordVolley.clear();
-        LUNGES.clear();RUSHES.clear();LUNGE_ENDS.clear();T_READY.clear();letGo();
+        LUNGES.clear();RUSHES.clear();LUNGE_ENDS.clear();T_READY.clear();CHAIN_FROM.clear();letGo();
     }
 
     // ───────────────────────────── sounds ─────────────────────────────

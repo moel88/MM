@@ -221,7 +221,8 @@ final class SwordLunge {
     /**
      * The three slashes (2.96.3, user request: "3참격이 너무 크고", their size the user's choice: "약 5블록·굵기 0.25", then
      * on seeing it "크기 조금만 더 키워도 될듯": a third bigger; and "저거 3참격 랜덤으로 나오게": the video's two uses cut
-     * them each its own way): each a thin blade {@link #LENGTH} blocks
+     * them each its own way; 2.96.6, user request: "3참격 더 커도 될듯": a third bigger again, 8.5 blocks and 0.42; "her"
+     * below is the side her camera stays on, where she began the first T of her row, toward): each a thin blade {@link #LENGTH} blocks
      * long and {@link #WIDTH} wide passing just in front of the foe on her side ({@link #FRONT0} to {@link #FRONT1}
      * blocks toward her, up to {@link #SIDE} to its side, {@link #HIGH0} to {@link #HIGH1} over its feet), reaching on
      * further one way than the other (by up to {@link #SHIFT} blocks, so the three cross one another here and there and
@@ -232,7 +233,7 @@ final class SwordLunge {
      * past the foe when she is that near it). Rolled anew for every T from its swing's id (the server's, so the same on
      * every client).
      */
-    static final double LENGTH=6.5,WIDTH=.32;
+    static final double LENGTH=8.5,WIDTH=.42;
     static final double FRONT0=.5,FRONT1=1.1,SIDE=.7,HIGH0=.4,HIGH1=1.6,SHIFT=1.1;
     static final double STEEP=50,APART=28,LEAN0=12,LEAN1=32;
     static final double GROUND=.15,HIGHEST=1.7,CLEAR=2.7;
@@ -267,13 +268,15 @@ final class SwordLunge {
         return a;
     }
     /**
-     * Toward where she stands as the slashes cut (level, its length how far): the sword she flies on to (the server's
-     * word), else back the way she came.
+     * Toward the side her camera stays on through her T (level, its length how far; 2.96.6): the sword she began the first
+     * T of her row from (IsosangClient.chainFrom, the same on every client), else where this one began. Her camera stands
+     * still there through them (2.96.5, IsosangClient.cameraHold) as the video's did, and the video's blades reach down
+     * toward it; 2.96.2 to 2.96.4 reached toward the sword she flies on to, where her camera went with her then, which
+     * since 2.96.5 put them on the far side of the foe from it.
      */
     static Vec3d toward(StandClient.Cast c,Vec3d foe){
-        var run=IsosangClient.lunge(c.id());var form=IsosangClient.formationOf(c.caster());
-        var f=form==null?null:IsosangClient.formation(form.id());
-        if(run!=null&&f!=null){Vec3d d=IsosangClient.place(form.id(),f,run.to()).subtract(foe).multiply(1,0,1);if(d.lengthSquared()>1)return d;}
+        Vec3d began=IsosangClient.chainFrom(c.id());
+        if(began!=null){Vec3d d=began.subtract(foe).multiply(1,0,1);if(d.lengthSquared()>1)return d;}
         Vec3d d=c.origin().subtract(foe).multiply(1,0,1);
         return d.lengthSquared()>1?d:Vec3d.fromPolar(0,c.yaw()).multiply(-6);
     }
