@@ -117,8 +117,8 @@ public final class IsosangAttack {
      * its swords have struck.
      */
     private static final class Volley {
-        final UUID id;final long start;final float yaw;final int target;final Vec3d point;Vec3d last;int blows;
-        Volley(UUID id,long start,float yaw,int target,Vec3d point){this.id=id;this.start=start;this.yaw=yaw;this.target=target;this.point=point;this.last=point;}
+        final UUID id;final long start;final float yaw;final int target;final Vec3d point,centre;Vec3d last;int blows;
+        Volley(UUID id,long start,float yaw,int target,Vec3d point,Vec3d centre){this.id=id;this.start=start;this.yaw=yaw;this.target=target;this.point=point;this.last=point;this.centre=centre;}
     }
     /** (2.83.0) For the film harness only (as StandArrow.rigged): the recording the next G plays (0 or 1), -1 to roll. */
     public static volatile int riggedVariant=-1;
@@ -648,10 +648,12 @@ public final class IsosangAttack {
      * 상대에게 날아감", IsosangRules.VOLLEY): the attack key on their formation's sword. Six swords of light fan out behind
      * them and come down on the foe they look at (the one their client's crosshair is nearest, as it said: {@code foe},
      * checked here; an older client's press says nothing, and the server looks along their sight itself), each striking
-     * once as it reaches it (shower); with none they come down where the crosshair met ({@code meets}, VOLLEY_RANGE blocks
-     * on at most). Only while every sword of the formation stands (IsosangRules.volleyTime), not while Z flies them or R
-     * holds them, one at a time, and once every 3 s (IsosangRules.volleyReady; as soon as the last is over for a player the
-     * cooldowns are off for).
+     * once as it reaches it (shower); with none they come down where the crosshair met ({@code meets}). Its reach is the
+     * formation and 3 blocks more (2.95.2, user request: "평타 사거리는 H 범위 전체에서 3블록 정도 더", IsosangRules.volleyIn:
+     * the foe must be in it, a block allowed for what their client saw; a crosshair beyond it brings the swords down at its
+     * edge, on the ground there if there is any, downAt). Only while every sword of the formation stands
+     * (IsosangRules.volleyTime), not while Z flies them or R holds them, one at a time, and once every 3 s
+     * (IsosangRules.volleyReady; as soon as the last is over for a player the cooldowns are off for).
      */
     private static boolean volley(ServerPlayerEntity p,State s,long now,boolean aimed,int foe,Vec3d meets){
         var f=s.form;if(f==null||!IsosangRules.volleyTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now))return false;
@@ -659,23 +661,38 @@ public final class IsosangAttack {
         if(s.volley!=null&&now<s.volley.start+VOLLEY_LENGTH||now<s.vReady&&!free)return false;
         Vec3d eye=p.getEyePos();LivingEntity target=null;Vec3d at;
         if(aimed){
-            if(foe>=0&&p.getWorld().getEntityById(foe) instanceof LivingEntity e&&fair(p,e)&&e.squaredDistanceTo(eye)<=(VOLLEY_RANGE+2)*(VOLLEY_RANGE+2)&&p.canSee(e))target=e;
+            if(foe>=0&&p.getWorld().getEntityById(foe) instanceof LivingEntity e&&fair(p,e)&&within(f.centre,e,1)&&p.canSee(e))target=e;
             at=meets==null?eye:meets;
-            // (where the crosshair met, no further than VOLLEY_RANGE from their eyes)
-            Vec3d d=at.subtract(eye);if(d.lengthSquared()>VOLLEY_RANGE*VOLLEY_RANGE)at=eye.add(d.normalize().multiply(VOLLEY_RANGE));
         }else{
             // (an older client's press: whom their sight meets first, R held's way; else where it meets a block)
-            target=aimed(p);
+            target=aimed(p);if(target!=null&&!within(f.centre,target,0))target=null;
             Vec3d look=p.getRotationVec(1f);at=eye.add(look.multiply(VOLLEY_RANGE));
             var block=p.getServerWorld().raycast(new RaycastContext(eye,at,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
             if(block.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)at=block.getPos();
         }
-        if(target!=null&&target.squaredDistanceTo(eye)>(VOLLEY_RANGE+2)*(VOLLEY_RANGE+2))target=null;
-        if(target!=null)at=chest(target);
-        s.volley=new Volley(UUID.randomUUID(),now,MathHelper.wrapDegrees(p.getYaw()),target==null?-1:target.getId(),at);
+        at=target!=null?chest(target):downAt(p,f.centre,eye,at);
+        s.volley=new Volley(UUID.randomUUID(),now,MathHelper.wrapDegrees(p.getYaw()),target==null?-1:target.getId(),at,f.centre);
         s.vReady=IsosangRules.volleyReady(now,free);
         send(p,s.volley.id,VOLLEY,now,s.volley.yaw,HIT,-1,null,null,null,f,null,s.volley);
         return true;
+    }
+    /** Whether {@code e} is within H's basic attack's reach of the formation whose middle is {@code centre} (2.95.2, IsosangRules.volleyIn), {@code slack} blocks more all round. */
+    private static boolean within(Vec3d centre,LivingEntity e,double slack){
+        Vec3d d=e.getPos().subtract(centre);return IsosangRules.volleyIn(d.x,d.z,d.y,e.getWidth()*.5,slack);
+    }
+    /**
+     * Where H's basic attack's swords come down with no foe (2.95.2): where the crosshair met, within the reach
+     * (IsosangRules.volleyPoint: else where the line to it from their eyes goes out of the reach); brought in, onto the
+     * ground under that if there is some down to the reach's floor (so they stick in at its edge, not in the air).
+     */
+    private static Vec3d downAt(ServerPlayerEntity p,Vec3d centre,Vec3d eye,Vec3d meets){
+        Vec3d a=eye.subtract(centre),b=meets.subtract(centre);
+        double[] k=IsosangRules.volleyPoint(a.x,a.y,a.z,b.x,b.y,b.z);
+        Vec3d at=centre.add(k[0],k[1],k[2]);if(k[3]==0)return at;
+        Vec3d floor=new Vec3d(at.x,centre.y+FORMATION_LOW-IsosangRules.VOLLEY_BEYOND,at.z);
+        if(floor.y>=at.y)return at;
+        var block=p.getServerWorld().raycast(new RaycastContext(at,floor,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
+        return block.getType()!=net.minecraft.util.hit.HitResult.Type.MISS?block.getPos():at;
     }
     /** Whether H's basic attack's swords still fan out behind this player now (IsosangRules.VOLLEY_HOLD): no Z, R or move to another sword until they are thrown. */
     private static boolean volleyHolds(State s,long now){var v=s.volley;return v!=null&&now>=v.start&&now<v.start+VOLLEY_HOLD;}
@@ -688,15 +705,16 @@ public final class IsosangAttack {
     private static Vec3d chest(LivingEntity e){return e.getPos().add(0,e.getHeight()*.55,0);}
     /**
      * H's basic attack on a tick (2.95.0): each sword strikes on its blow's tick (IsosangRules.volleyStrikes) the foe it was
-     * sent at, wherever it has gone (so long as it is still there and within reach), or, with none (or it gone), whoever
-     * is where they come down (its box widened VOLLEY_SPOT); each a blow of 2, no knockback, a basic attack's stagger. Its
-     * user gone (dead, off the map, Lee So-sang no more) calls the rest off.
+     * sent at, wherever it has gone (so long as it is still there and within VOLLEY_LEASH of the reach, 2.95.2; until
+     * 2.95.1 within 40 blocks of their eyes), or, with none (or it gone), whoever is where they come down (its box widened
+     * VOLLEY_SPOT); each a blow of 2, no knockback, a basic attack's stagger. Its user gone (dead, off the map, Lee So-sang
+     * no more) calls the rest off.
      */
     private static void shower(ServerPlayerEntity p,State s,long now){
         var v=s.volley;long age=now-v.start;
         if(!attacks(p)){s.volley=null;send(p,v.id,VOLLEY,v.start,v.yaw,STOPPED,-1,null,null,null,s.form,null,v);return;}
         LivingEntity foe=null;
-        if(v.target>=0&&p.getWorld().getEntityById(v.target) instanceof LivingEntity e&&fair(p,e)&&e.squaredDistanceTo(p.getEyePos())<=(VOLLEY_RANGE+10)*(VOLLEY_RANGE+10)){foe=e;v.last=chest(e);}
+        if(v.target>=0&&p.getWorld().getEntityById(v.target) instanceof LivingEntity e&&fair(p,e)&&within(v.centre,e,IsosangRules.VOLLEY_LEASH)){foe=e;v.last=chest(e);}
         while(v.blows<VOLLEY_SWORDS&&age>=blowAt(VOLLEY,v.blows)){
             int i=v.blows++;List<LivingEntity> struck;
             if(foe!=null){var target=foe;struck=strike(p,VOLLEY,i,v.start,v.yaw,now,target.getPos(),e->e==target,null,false);}

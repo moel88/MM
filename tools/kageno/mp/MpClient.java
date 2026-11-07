@@ -388,13 +388,18 @@ public final class MpClient implements ClientModInitializer {
      * Lee So-sang's H basic attack, 회풍만검 (2.95.0, MP_ONLY=isosangvolley): H with the watcher 20 blocks ahead (out of the
      * formation: its swords do not strike it), then on the sword the caster's camera onto the watcher ("VAIM") and the
      * attack ("VM1", its crosshair's pick sent with it): six swords of 2 come down on the watcher (200 to 188, no throw);
-     * again 1.6 s later (refused: once every 3 s), again once that is over (188 to 176); then the camera onto the ground
-     * 50 degrees to the left 10 blocks off ("VGROUND-50") and the attack: the swords come down there, no one struck. Both
-     * log each volley they hear (on whom, where it comes down as drawn here against the watcher's chest, how many swords
-     * are drawn as they fan out, fly and strike) and its sound; the server each volley, its blows and the watcher's health.
+     * again 1.6 s later (refused: once every 3 s), again once that is over (188 to 176); (2.95.2) then the watcher moved
+     * on to 23 blocks ahead ("DIST23": 17.4 from the formation's middle, out of the reach of the formation and 3 blocks
+     * more; as that volley's last sword comes down, which follows it out there all the same, within VOLLEY_LEASH, the
+     * server's "watcher moved" lines then being the move and its fall) and the camera onto it again: it is not picked,
+     * the swords come down at the reach's edge on the ground before it, no one struck (176 kept); then the camera onto the ground 50 degrees to the left 10 blocks off ("VGROUND-50")
+     * and the attack: the swords come down there, no one struck. Both log each volley they hear (on whom, where it comes
+     * down as drawn here against the watcher's chest, how many swords are drawn as they fan out, fly and strike) and its
+     * sound; the server each volley, its blows and the watcher's health.
      */
     private static final String[] ISOSANGVOLLEY_SCRIPT={
-        "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1","240 VGROUND-50","246 VM1","320 END"};
+        "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1",
+        "200 DIST23","236 VAIM","240 VM1","296 VGROUND-50","302 VM1","380 END"};
     private static final String[] STEPS=ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};

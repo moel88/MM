@@ -126,33 +126,41 @@ final class SwordVolley {
     private static final Map<UUID,Vec3d> LAST=new LinkedHashMap<>();
     /**
      * Where swing {@code cast}'s swords come down now: its foe's chest as drawn while it is there (and its swords not all
-     * struck yet), else where it was last drawn, else where the server said (no foe: where the crosshair met).
+     * struck yet, and it no further than VOLLEY_LEASH beyond the reach: 2.95.2, as the server follows it), else where it
+     * was last drawn, else where the server said (no foe: where the crosshair met).
      */
     static Vec3d target(StandClient.Cast cast,float delta){
         var v=IsosangClient.volley(cast.id());if(v==null)return null;
         var mc=MinecraftClient.getInstance();Vec3d last=LAST.get(cast.id());
-        if(v.target()>=0&&mc.world!=null&&mc.world.getEntityById(v.target()) instanceof LivingEntity e&&!e.isRemoved()&&cast.age(delta)/20f<volleyStrikes(VOLLEY_SWORDS-1)){
+        if(v.target()>=0&&mc.world!=null&&mc.world.getEntityById(v.target()) instanceof LivingEntity e&&!e.isRemoved()&&cast.age(delta)/20f<volleyStrikes(VOLLEY_SWORDS-1)
+            &&(v.centre()==null||leashed(v.centre(),e))){
             Vec3d at=e.getLerpedPos(delta).add(0,e.getHeight()*.55,0);
             LAST.put(cast.id(),at);while(LAST.size()>32)LAST.remove(LAST.keySet().iterator().next());
             return at;
         }
         return last!=null?last:v.point();
     }
+    /** Whether the foe {@code e} is still followed (2.95.2): within VOLLEY_LEASH beyond the reach of the formation whose middle is {@code centre}. */
+    static boolean leashed(Vec3d centre,LivingEntity e){Vec3d d=e.getPos().subtract(centre);return volleyIn(d.x,d.z,d.y,e.getWidth()*.5,VOLLEY_LEASH);}
     /**
      * Whom the local player's crosshair looks at now on their formation's sword, and where it meets (2.95.0, sent with the
-     * attack: IsosangClient.punch): the body nearest the middle of the camera's view within VOLLEY_AIM, VOLLEY_RANGE
-     * blocks of their eyes at most and in their sight; and where the camera's middle line meets a block, or VOLLEY_RANGE
-     * blocks on. Null when they are not on their formation's sword (the attack is the sword's combo then).
+     * attack: IsosangClient.punch): the body nearest the middle of the camera's view within VOLLEY_AIM, within the reach
+     * (2.95.2: the formation and 3 blocks more, IsosangRules.volleyIn; until 2.95.1 VOLLEY_RANGE blocks of their eyes) and
+     * in their sight; and where the camera's middle line meets a block, or VOLLEY_RANGE blocks on (the server brings that
+     * in to the reach's edge). Null when they are not on their formation's sword (the attack is the sword's combo then).
      */
     static Aim aim(MinecraftClient mc){
         var me=mc.player;if(me==null||mc.world==null||mc.gameRenderer==null||!MapClient.enabled())return null;
         var own=IsosangClient.ownFormation();if(own==null||IsosangClient.stopped(own.id()))return null;
         if(!volleyTime(own.age(mc.getTickDelta())/20.0))return null;
+        var form=IsosangClient.formation(own.id());if(form==null)return null;Vec3d mid=form.centre();
         var cam=mc.gameRenderer.getCamera();Vec3d eye=me.getEyePos(),look=Vec3d.fromPolar(cam.getPitch(),cam.getYaw()),c=cam.getPos();
-        LivingEntity best=null;double near=VOLLEY_AIM;
-        for(var e:mc.world.getEntitiesByClass(LivingEntity.class,me.getBoundingBox().expand(VOLLEY_RANGE+2),e->e!=me&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+        LivingEntity best=null;double near=VOLLEY_AIM,out=FORMATION_RADIUS+VOLLEY_BEYOND+2;
+        var room=new net.minecraft.util.math.Box(mid.x-out,mid.y+FORMATION_LOW-VOLLEY_BEYOND-2,mid.z-out,mid.x+out,mid.y+FORMATION_HIGH+VOLLEY_BEYOND+2,mid.z+out);
+        for(var e:mc.world.getEntitiesByClass(LivingEntity.class,room,e->e!=me&&e.isAlive()&&!e.isSpectator()&&e.canHit()
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
-            Vec3d chest=e.getPos().add(0,e.getHeight()*.55,0);if(chest.squaredDistanceTo(eye)>VOLLEY_RANGE*VOLLEY_RANGE)continue;
+            Vec3d d=e.getPos().subtract(mid);if(!volleyIn(d.x,d.z,d.y,e.getWidth()*.5,0))continue;
+            Vec3d chest=e.getPos().add(0,e.getHeight()*.55,0);
             // the nearer of its chest, head and feet to the line of sight (a big body is looked at anywhere on it)
             double off=Math.PI;
             for(double up:new double[]{.15,.55,.9}){Vec3d p=e.getPos().add(0,e.getHeight()*up,0).subtract(c);double l=p.length();if(l<1e-4)continue;off=Math.min(off,Math.acos(Math.max(-1,Math.min(1,p.dotProduct(look)/l))));}

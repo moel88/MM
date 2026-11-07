@@ -562,7 +562,13 @@ public final class MpServer implements ModInitializer {
         if(vo!=null&&vo.start()!=volleySeen){volleySeen=vo.start();volleyBlows=0;watcherAt=watcher.getPos();
             note(server,String.format(java.util.Locale.ROOT,"caster's volley began at %d on %s at %.2f %.2f %.2f (%.2f off the watcher's chest, the watcher %.2f from the caster); ready again at %d",
                 vo.start(),vo.target()<0?"no one":vo.target()==watcher.getId()?"the watcher":"entity "+vo.target(),vo.at().x,vo.at().y,vo.at().z,vo.at().distanceTo(watcher.getPos().add(0,watcher.getHeight()*.55,0)),
-                watcher.distanceTo(caster),dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster)));}
+                watcher.distanceTo(caster),dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster)));
+            // (2.95.2) its reach is the formation and 3 blocks more: how far out (level) from the formation's middle where
+            // they come down and the watcher are, and how high over its ground
+            var fo=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(caster);
+            if(fo!=null)note(server,String.format(java.util.Locale.ROOT,"  from the formation's middle: where they come down %.2f out, %.2f up; the watcher %.2f out, %.2f up (the reach %.0f out)",
+                Math.hypot(vo.at().x-fo.centre().x,vo.at().z-fo.centre().z),vo.at().y-fo.centre().y,Math.hypot(watcher.getX()-fo.centre().x,watcher.getZ()-fo.centre().z),watcher.getY()-fo.centre().y,
+                dev.sangwoo.celestialfall.isosang.IsosangRules.FORMATION_RADIUS+dev.sangwoo.celestialfall.isosang.IsosangRules.VOLLEY_BEYOND));}
         if(vo!=null){if(vo.blows()>volleyBlows){note(server,"caster's volley blow "+vo.blows()+" of 6 at "+now+" (its tick "+(now-vo.start())+")");volleyBlows=vo.blows();}watchUntil=Math.max(watchUntil,now+20);}
         long vr=dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster);if(vr!=vReadySeen){vReadySeen=vr;note(server,"caster's volley ready again at "+vr+" (now "+now+")");}
         if(now<=watchUntil&&watcherAt!=null&&watcher.getPos().distanceTo(watcherAt)>.01){

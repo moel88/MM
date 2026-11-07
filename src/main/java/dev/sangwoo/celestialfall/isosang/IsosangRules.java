@@ -673,8 +673,9 @@ public final class IsosangRules {
      * back, points out from her left through overhead to her right), throws them one after another up and away, and they
      * wheel round in the air and come down on the foe she looks at from all round, each sticking in and striking once
      * ({@link #VOLLEY_DAMAGE}; no knockback, a basic attack's stagger, a guard takes it). With no foe in her sight they
-     * come down where her crosshair meets a block, or {@link #VOLLEY_RANGE} blocks on, and strike whoever is there. Her body
-     * stands on as it does on the sword (the video: hardly a move).
+     * come down where her crosshair meets a block, and strike whoever is there. Its reach is her formation and
+     * {@link #VOLLEY_BEYOND} blocks more (2.95.2, {@link #volleyIn}: the foe must be in it; a crosshair beyond it brings
+     * them down at its edge, {@link #volleyPoint}). Her body stands on as it does on the sword (the video: hardly a move).
      */
     public static final int VOLLEY=10,VOLLEY_SWORDS=6;
     public static final float VOLLEY_DAMAGE=2;
@@ -685,11 +686,49 @@ public final class IsosangRules {
      */
     public static final int VOLLEY_LENGTH=28,VOLLEY_HOLD=10,VOLLEY_COOLDOWN=32;
     /**
-     * How far off the foe she looks at may be (blocks from her eyes), and how far off the middle of her view (radians):
-     * the nearest to it within this is the one she looks at; and how near the point they come down on (no foe) a body
-     * must be to be struck there (blocks, its box widened).
+     * How far her crosshair's line is followed to find where it meets (blocks from her eyes: past the far edge of the
+     * reach wherever on her formation she stands; until 2.95.1 also how far off the foe she looked at might be), and how
+     * far off the middle of her view the foe may be (radians): the nearest to it within this is the one she looks at; and
+     * how near the point they come down on (no foe) a body must be to be struck there (blocks, its box widened).
      */
     public static final double VOLLEY_RANGE=30,VOLLEY_AIM=Math.toRadians(6),VOLLEY_SPOT=.6;
+    /**
+     * How far H's basic attack reaches beyond her formation (2.95.2, user request: "평타 사거리는 H 범위 전체에서 3블록 정도
+     * 더"; until 2.95.1, VOLLEY_RANGE blocks from her eyes): all round, level out from its middle to FORMATION_RADIUS and
+     * this more (15 blocks), from FORMATION_LOW and this under its ground to FORMATION_HIGH and this over it (the user said
+     * only "3블록 정도 더": over and under as well is mine). And how far beyond that the swords still follow the foe they
+     * were sent at (blocks, all round; past it they come down where it was last).
+     */
+    public static final double VOLLEY_BEYOND=3,VOLLEY_LEASH=10;
+    /**
+     * Whether a body ({@code dx}, {@code dz} level from her formation's middle, {@code dy} from its ground up to its feet,
+     * {@code halfWidth} across) is within H's basic attack's reach (2.95.2), {@code slack} blocks more all round.
+     */
+    public static boolean volleyIn(double dx,double dz,double dy,double halfWidth,double slack){
+        double out=VOLLEY_BEYOND+slack;
+        return dy>=FORMATION_LOW-out&&dy<=FORMATION_HIGH+out&&Math.hypot(dx,dz)<=FORMATION_RADIUS+out+halfWidth;
+    }
+    /**
+     * Where H's basic attack's swords come down with no foe (2.95.2): where her crosshair met ({@code b}: x, y, z from her
+     * formation's middle, its ground at y 0) if that is within the reach; else where the line to it from her eyes
+     * ({@code a}) goes out of the reach (its edge, or its top or floor); her eyes out of it themselves, the nearest point of
+     * the reach to it. Its last entry is 1 if the point was brought in, 0 if not.
+     */
+    public static double[] volleyPoint(double ax,double ay,double az,double bx,double by,double bz){
+        double r=FORMATION_RADIUS+VOLLEY_BEYOND,low=FORMATION_LOW-VOLLEY_BEYOND,high=FORMATION_HIGH+VOLLEY_BEYOND;
+        if(by>=low&&by<=high&&bx*bx+bz*bz<=r*r)return new double[]{bx,by,bz,0};
+        if(ay<low||ay>high||ax*ax+az*az>r*r){
+            double h=Math.hypot(bx,bz),k=h>r?r/h:1;
+            return new double[]{bx*k,Math.max(low,Math.min(high,by)),bz*k,1};
+        }
+        double dx=bx-ax,dy=by-ay,dz=bz-az,s=1,a=dx*dx+dz*dz;
+        // the level circle: |a + s d| = r, the root ahead (her eyes inside it)
+        if(a>1e-12){double b=ax*dx+az*dz,c=ax*ax+az*az-r*r;s=Math.min(s,(-b+Math.sqrt(Math.max(0,b*b-a*c)))/a);}
+        // its top and its floor
+        if(dy>1e-12)s=Math.min(s,(high-ay)/dy);else if(dy<-1e-12)s=Math.min(s,(low-ay)/dy);
+        s=Math.max(0,s);
+        return new double[]{ax+dx*s,ay+dy*s,az+dz*s,1};
+    }
     /**
      * When into it (seconds) its swords show behind her back, the first and each after (from the video: 0.17 s for all
      * six, from the middle out), when they are thrown, the first and each after (the video: the same pace, 0.06 s after the

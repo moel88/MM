@@ -381,6 +381,41 @@ class IsosangRulesTest {
         for(int i=0;i<VOLLEY_SWORDS-1;i++){long now=start+blowAt(VOLLEY,i);assertEquals(start+blowAt(VOLLEY,i+1)+Stagger.PAST,Stagger.isosang(VOLLEY,i,start,now,false));}
         long last=start+blowAt(VOLLEY,5);assertEquals(last+Stagger.LAST,Stagger.isosang(VOLLEY,5,start,last,false));
     }
+    @Test void hsBasicAttackReachesTheWholeFormationAndThreeBlocksMore(){
+        // (2.95.2) "평타 사거리는 H 범위 전체에서 3블록 정도 더": the formation's 12 blocks and 3 more, all round
+        assertEquals(15,FORMATION_RADIUS+VOLLEY_BEYOND,1e-9);
+        assertTrue(volleyIn(0,0,0,.3,0),"its middle");assertTrue(volleyIn(FORMATION_RADIUS,0,0,.3,0),"the formation's edge");
+        assertTrue(volleyIn(0,FORMATION_RADIUS+2.9,0,0,0),"3 blocks past it");assertTrue(volleyIn(10.5,10.5,0,.3,0),"3 blocks past it anyway round");
+        assertFalse(volleyIn(0,15.4,0,.3,0),"no further");assertFalse(volleyIn(11,11,0,.3,0));
+        assertTrue(volleyIn(15.2,0,0,.3,0),"a body reaching into it");
+        assertTrue(volleyIn(0,5,FORMATION_HIGH+3,.3,0));assertFalse(volleyIn(0,5,FORMATION_HIGH+3.1,.3,0),"over it");
+        assertTrue(volleyIn(0,5,FORMATION_LOW-3,.3,0));assertFalse(volleyIn(0,5,FORMATION_LOW-3.1,.3,0),"under it");
+        // within the formation's own strike all of it is (and more)
+        for(double dx=-14;dx<=14;dx+=.5)for(double dz=-14;dz<=14;dz+=.5)for(double dy=-1;dy<=5;dy+=1)if(formationOver(dx,dz,dy,.3))assertTrue(volleyIn(dx,dz,dy,.3,0));
+        // the server's slack and how far it follows the foe
+        assertTrue(volleyIn(0,15.8,0,.3,1));assertFalse(volleyIn(0,16.4,0,.3,1));
+        assertTrue(volleyIn(0,24.5,0,.3,VOLLEY_LEASH));assertFalse(volleyIn(0,25.5,0,.3,VOLLEY_LEASH));
+        // her eyes are in it wherever on the formation she stands (its swords, at the height of their pommels and her eyes)
+        for(var sw:formationSwords(42))assertTrue(volleyIn(sw[0],sw[1],1.75+1.62,0,0),"her eyes on a sword");
+        // the crosshair: within it, as it met
+        double[] in=volleyPoint(0,3.3,-5.6,2,0,8);assertArrayEquals(new double[]{2,0,8,0},in,1e-9);
+        // beyond its edge: where the line from her eyes goes out of it
+        double[] edge=volleyPoint(0,3.3,-5.6,0,0,30);
+        assertEquals(1,edge[3],1e-9);assertEquals(15,Math.hypot(edge[0],edge[2]),1e-9);assertEquals(0,edge[0],1e-9);
+        assertEquals(3.3-3.3*(15+5.6)/(30+5.6),edge[1],1e-9,"on the line to it");
+        // over its top: where the line goes out through it
+        double[] top=volleyPoint(0,3.3,-5.6,0,30,10);assertEquals(FORMATION_HIGH+3,top[1],1e-9);assertTrue(Math.hypot(top[0],top[2])<15);
+        // under its floor
+        double[] floor=volleyPoint(0,3.3,-5.6,0,-30,0);assertEquals(FORMATION_LOW-3,floor[1],1e-9);
+        // any way round, never further than its edge
+        for(int k=0;k<72;k++){double a=Math.toRadians(k*5);double[] q=volleyPoint(3,3.3,-4,40*Math.sin(a),-1,40*Math.cos(a));
+            assertEquals(15,Math.hypot(q[0],q[2]),1e-9,"brought in to its edge");
+            // on the line from her eyes to it
+            double[] d={q[0]-3,q[1]-3.3,q[2]+4},t={40*Math.sin(a)-3,-1-3.3,40*Math.cos(a)+4};double l=Math.sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2]),m=Math.sqrt(t[0]*t[0]+t[1]*t[1]+t[2]*t[2]);
+            assertEquals(1,(d[0]*t[0]+d[1]*t[1]+d[2]*t[2])/(l*m),1e-9);}
+        // her eyes outside it (none on the formation's swords): the nearest point of it
+        double[] near=volleyPoint(0,3,-20,0,0,-30);assertEquals(15,Math.hypot(near[0],near[2]),1e-9);assertEquals(1,near[3],1e-9);
+    }
     @Test void hsBasicAttacksSoundIsTheVideosRunningPastItsLastBlow()throws Exception{
         // (2.95.0) the user's video's own sound (cut_volley_sound.py): its swords' rush, and their burst on the blows, run
         // on past the last until it is back down to the formation's sound

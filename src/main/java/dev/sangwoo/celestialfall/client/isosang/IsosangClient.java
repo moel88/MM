@@ -110,9 +110,11 @@ public final class IsosangClient {
     private static final Map<UUID,double[][]> PLACES=new HashMap<>();
     /**
      * (2.95.0) H's basic attack's volleys (회풍만검), by their swing's id: whom its swords come down on (an entity id, -1
-     * for none) and where (the foe's chest as it began, else where the crosshair met: the server's word).
+     * for none) and where (the foe's chest as it began, else where the crosshair met: the server's word); and the middle
+     * of the formation it was begun on (2.95.2: its swords follow the foe no further than VOLLEY_LEASH beyond its reach,
+     * as the server's; null for none heard of).
      */
-    public record VolleyAim(int target,Vec3d point){}
+    public record VolleyAim(int target,Vec3d point,Vec3d centre){}
     private static final Map<UUID,VolleyAim> VOLLEYS=new HashMap<>();
     /** (2.95.0) When a volley was called off (seconds into its swing, the server's word: its user gone): its swords go then. */
     private static final Map<UUID,Float> VOLLEY_ENDS=new HashMap<>();
@@ -179,7 +181,7 @@ public final class IsosangClient {
             if(b.isReadable()){
                 vReady=b.readLong();
                 if(b.readBoolean()){int target=b.readVarInt();Vec3d p=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());
-                    if(Double.isFinite(p.x)&&Double.isFinite(p.y)&&Double.isFinite(p.z))volley=new VolleyAim(target,p);}
+                    if(Double.isFinite(p.x)&&Double.isFinite(p.y)&&Double.isFinite(p.z))volley=new VolleyAim(target,p,null);}
             }
             long vr=vReady;VolleyAim shower=volley;
             mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck,empowered,charged,eReady,thrown,rReady,stands,hReady,laid,gReady,cast,zs,perched,vr,shower));
@@ -226,7 +228,7 @@ public final class IsosangClient {
             // (2.83.0) G: which recording it plays and where its sword strikes
             if(combo==IsosangRules.ULTIMATE){if(ult==null)return;ULTIMATES.put(id,ult);}
             // (2.95.0) H's basic attack: whom its swords come down on, or where
-            if(combo==IsosangRules.VOLLEY){if(volley==null)return;VOLLEYS.put(id,volley);}
+            if(combo==IsosangRules.VOLLEY){if(volley==null)return;VOLLEYS.put(id,new VolleyAim(volley.target(),volley.point(),form==null?null:form.centre()));}
             var cast=new StandClient.Cast(id,caster,dim,IsosangRules.SKILL,combo,start,serverNow,StandClient.ticks(),at,yaw,List.of());
             if(cast.age(0)/20f>=life(combo))return;
             // (2.95.0: H's basic attack moves no body, standing on in the formation's)
@@ -360,7 +362,7 @@ public final class IsosangClient {
         int n=0;float t=c.age(delta)/20f;for(int i=0;i<IsosangRules.VOLLEY_SWORDS;i++)if(SwordVolley.pose(c.origin(),c.yaw(),at,t,i)!=null)n++;return n;
     }
     /** (2.95.0) Whom and where the local player's crosshair picks for H's basic attack now (SwordVolley.aim: null off their formation's sword; the film's log reads it). */
-    public static VolleyAim aimNow(MinecraftClient mc){var a=SwordVolley.aim(mc);return a==null?null:new VolleyAim(a.target(),a.point());}
+    public static VolleyAim aimNow(MinecraftClient mc){var a=SwordVolley.aim(mc);return a==null?null:new VolleyAim(a.target(),a.point(),null);}
     /** Where H's basic attack of this swing comes down as the server told it (null for a swing not one, 2.95.0): its sound is heard from the nearer of it and its user. */
     public static Vec3d volleyPoint(UUID swing){var v=VOLLEYS.get(swing);return v==null?null:v.point();}
     /** G of this swing: its recording and where its sword strikes (null for none, 2.83.0). */
