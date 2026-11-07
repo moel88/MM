@@ -1017,8 +1017,12 @@ final class SwordFormation {
         // until the smoke at its rim has thinned away)
         double w=whirl(t);float o=Ease.smooth(t,SWIRL0,SWIRL0+.02f)*(1-Ease.smooth(t,SMOKE_OUT1-.03f,SMOKE_OUT1+.02f));
         if(o>.005f&&w>.02)KagenoFire.inkGround(centre.add(0,.055,0),w*1.4,w,15,seed+5,poolClock(t),eyeByte(t),o);
-        // the mountains, in their own draw call (2.82.16), once: in the blended pass, not the light added after it
-        if(KagenoFire.crescentGain>.99f&&t>RISE0-.05f&&t<end(c.cast)+GONE+.4f)KagenoFire.inkInterlude(()->mountainInk(c));
+        // the night over it (2.99.0), the mountains (2.82.16), then the light on its water, in draw calls of their own,
+        // once: in the blended pass, not the light added after it
+        if(KagenoFire.crescentGain>.99f){
+            boolean night=FormationSky.up(t,end(c.cast)),hills=t>RISE0-.05f&&t<end(c.cast)+GONE+.4f;
+            if(night||hills)KagenoFire.inkInterlude(()->{if(night)FormationSky.sky(c);if(hills)mountainInk(c);if(night)FormationSky.water(c);});
+        }
     }
     /**
      * The ink left on the ground {@code d} blocks from the formation's middle (0 to 1): gone as the spreading whirlpool's
@@ -1355,8 +1359,9 @@ final class SwordFormation {
         burst(m,centre,t);
         swordLight(c,m,t,centre,yaw);
         flowers(c,m,t,centre,yaw,true);
-        // (2.98.0) the moonlight and starlight over all of it
+        // (2.98.0) the moonlight and starlight over all of it; (2.99.0) fireflies over its water
         FormationLights.additive(c,m);
+        FormationSky.fireflies(c,m);
         // (2.93.0) Z: the sword she looks at (hers only) and her flights between them
         SwordStep.additive(c,m,t,centre,yaw);
         struck(c,m,t,false);

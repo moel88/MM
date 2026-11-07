@@ -104,6 +104,16 @@ public final class KagenoRenderer {
      * the light runs hotter.
      */
     private static void effects(MinecraftClient mc,List<Fx> casts,boolean status,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta,boolean layered){
+        layering=layered;
+        try{effectPasses(mc,casts,status,view,matrix,camera,delta,layered);}finally{layering=false;}
+    }
+    private static boolean layering;
+    /**
+     * Whether the passes being drawn now are on the HDR effect layer (2.99.0: a skill drawing a batch of its own inside
+     * one, as Lee So-sang's H's night does on its ground pass, draws it through FxLayer.draw if so).
+     */
+    public static boolean layering(){return layering;}
+    private static void effectPasses(MinecraftClient mc,List<Fx> casts,boolean status,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta,boolean layered){
         var buffer=Tessellator.getInstance().getBuffer();
         RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1,1,1,1);
