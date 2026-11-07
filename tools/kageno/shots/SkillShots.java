@@ -761,6 +761,7 @@ public final class SkillShots implements ClientModInitializer {
     private String punchLogged="";private boolean rushOn;private int rushBlows;private final StringBuilder cameraLog=new StringBuilder();private String worldPass=",,,,,,,";
     private boolean beatOn,beatEnded;private float dummyHealth=-1;
     /** 2.67.0: the fake Star Platinum user of the shot (server side), and what the log has said of the time stop and the player's health. */
+    private volatile UUID fakeId;
     private net.minecraft.server.network.ServerPlayerEntity fakePlayer;private String stopLogged="";private boolean stillLogged;private int keptLogged;private float playerHealth=-1;private float fakeRunYaw;
     private boolean playerStaggered,dummyStaggeredLogged,playerDeadLogged;
     /** (2.75.0) last logged: the player resisting a time stop, stopped in one; the fake user the same. */
@@ -1289,6 +1290,21 @@ public final class SkillShots implements ClientModInitializer {
                             boolean in=w.spawnEntity(fake);fakePlayer=fake;
                             log.append("  fake ").append(fstand).append(" user ").append(in?"in":"refused").append(String.format(Locale.ROOT," at (%.2f, %.2f, %.2f) facing %.0f, tick %d%n",to.x,to.y,to.z,yaw,age));});continue;}
                     if(what.equals("FAKEG")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.isosang.IsosangAttack.ultimate(fakePlayer);log.append("  fake G ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
+                    // (2.99.1) "FAKEFORM@n": the fake Lee So-sang user turns the way the player faces and casts H by the real
+                    // rules (IsosangAttack.formation): the player is someone else, outside it or walking into it (H's night is
+                    // its caster's and whoever stands in it). The server forgets a fake's swing the next tick (as its G), so
+                    // the player's client plays the formation out alone and nothing strikes. From then on, every 5 ticks, the
+                    // log gets how far the player's feet are from its middle and how much of its night their screen shows.
+                    if(what.equals("FAKEFORM")){
+                        if(age==at)server(p->{var fake=fakePlayer;boolean ok=false;
+                            if(fake!=null){float yaw=p.getYaw();fake.refreshPositionAndAngles(fake.getX(),fake.getY(),fake.getZ(),yaw,0);fake.setHeadYaw(yaw);fake.setBodyYaw(yaw);
+                                fakeId=fake.getUuid();ok=dev.sangwoo.celestialfall.isosang.IsosangAttack.formation(fake);}
+                            log.append("  fake H (formation) ").append(ok?"at ":"refused at ").append(age).append('\n');});
+                        if(age>at&&(age-at)%5==0&&fakeId!=null){var swing=dev.sangwoo.celestialfall.client.isosang.IsosangClient.formationOf(fakeId);
+                            var form=swing==null?null:dev.sangwoo.celestialfall.client.isosang.IsosangClient.formation(swing.id());
+                            if(form!=null)log.append(String.format(Locale.ROOT,"  passer-by %.2f blocks from its middle at %d (H %.2f s), its night shown %.2f%n",
+                                Math.hypot(mc.player.getX()-form.centre().x,mc.player.getZ()-form.centre().z),age,swing.age(0)/20f,dev.sangwoo.celestialfall.client.isosang.IsosangClient.nightShown(swing.id())));}
+                        continue;}
                     if(what.equals("FAKEH")){if(age==at)server(p->{boolean ok=fakePlayer!=null&&dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.request(fakePlayer);log.append("  fake H ").append(ok?"at ":"refused at ").append(age).append('\n');});continue;}
                     // "FAKEWALK@n": the fake user walks up to "fto" blocks (1.6) in front of the player and "frt" (0) to their right
                     // over "fwt" ticks (30), facing the way it walks; "FAKER@n": it throws its heavy punch (R, its real rules)

@@ -42,11 +42,34 @@ class FormationSkyTest {
         assertFalse(FormationSky.up(.5f,end));assertTrue(FormationSky.up(2f,end));assertFalse(FormationSky.up(end+1.2f,end));
         assertTrue(FormationSky.up(end+FormationSky.DAWN0+FormationSky.DAWN_SPREAD+FormationSky.DAWN_FALL-.01f,end));
     }
-    @Test void itIsSeenFromInsideTheFormationOnly(){
+    @Test void onlyItsCasterAndWhoeverStandsInItSeeIt(){
+        // by where their body is (2.99.1): in its reach across the ground, not far over or under its ground
+        assertTrue(FormationSky.within(CENTRE,CENTRE.add(11.9,0,0)));
+        assertTrue(FormationSky.within(CENTRE,CENTRE.add(-6,IsosangRules.FORMATION_STAND,6)),"on a sword");
+        assertFalse(FormationSky.within(CENTRE,CENTRE.add(12.2,0,0)),"a passer-by just outside");
+        assertFalse(FormationSky.within(CENTRE,CENTRE.add(3,13,0)),"far over it");
+        assertFalse(FormationSky.within(CENTRE,CENTRE.add(3,-5,0)),"far under it");
+        // stepping in and out: over half a second each way, smoothly, from nothing the first time it is drawn
+        UUID id=UUID.fromString("00000000-0000-0000-0000-0000000099b1");
+        assertEquals(0,FormationSky.presence(id,10f,false),1e-6);
+        assertEquals(0,FormationSky.presence(id,10.5f,false),1e-6,"outside: none");
+        float a=FormationSky.presence(id,10.6f,true);
+        assertEquals(a,FormationSky.presence(id,10.6f,true),1e-6,"asked again in the same frame it does not move");
+        assertTrue(a>0&&a<.2f,"coming in: "+a);
+        assertEquals(.5f,FormationSky.presence(id,10.75f,true),1e-4,"half way at a quarter second");
+        assertEquals(1,FormationSky.presence(id,11.1f,true),1e-6,"all of it at half a second");
+        assertEquals(1,FormationSky.presence(id,20f,true),1e-6);
+        assertEquals(.5f,FormationSky.presence(id,20.25f,false),1e-4,"going out as smoothly");
+        assertEquals(0,FormationSky.presence(id,20.6f,false),1e-6);
+        assertEquals(0,FormationSky.presenceNow(id),1e-6);
+        // the camera of whoever is in it stays well inside its sky (at its edge, the camera drawn back as far as it goes),
+        // so none of them sees its edge; a camera that far out sees none of it
+        double farthest=IsosangRules.FORMATION_RADIUS+dev.sangwoo.celestialfall.combat.OrbitCameraState.MAX_DISTANCE;
+        assertEquals(1,FormationSky.inside(CENTRE,CENTRE.add(farthest,3,0)),1e-6);
         assertEquals(1,FormationSky.inside(CENTRE,camera()),1e-6,"her camera");
-        assertEquals(1,FormationSky.inside(CENTRE,CENTRE.add(0,1.6,0)),1e-6);
-        assertEquals(0,FormationSky.inside(CENTRE,CENTRE.add(26,2,0)),1e-6,"from outside");
-        assertTrue(FormationSky.INSIDE1<=FormationSky.SKY_R-.5,"none of it is seen from outside its dome");
+        assertTrue(FormationSky.SKY_R-farthest>20,"its edge far beyond any of their cameras");
+        assertEquals(0,FormationSky.inside(CENTRE,CENTRE.add(FormationSky.INSIDE1+.5,2,0)),1e-6);
+        assertTrue(FormationSky.INSIDE1<=FormationSky.SKY_R-.5);
     }
     @Test void theSkyGlowsLowOverTheMountainsAndDeepensOverhead(){
         double glow=lum(FormationSky.skyRgb(FormationSky.GLOW_EL));
@@ -142,7 +165,7 @@ class FormationSkyTest {
             var me=FormationSky.meteor(ID,YAW,k);
             assertTrue(me.at()>=FormationSky.METEOR0-.9f,"not before the stars are out");
             assertTrue(Math.abs(Math.IEEEremainder(me.az()-f,Math.PI*2))<=Math.toRadians(65.01),"over the far side");
-            assertTrue(me.el()>=14&&me.el()<=30,"in her camera's sky: "+me.el());
+            assertTrue(me.el()>=11&&me.el()<=24,"in her camera's sky: "+me.el());
             assertTrue(me.life()>=.6f&&me.life()<=.85f);
             // falling
             assertTrue(FormationSky.meteorAt(me,me.length()).y<FormationSky.meteorAt(me,0).y,"it falls");

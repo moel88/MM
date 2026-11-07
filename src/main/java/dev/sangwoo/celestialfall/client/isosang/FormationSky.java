@@ -6,6 +6,7 @@ import dev.sangwoo.celestialfall.client.KagenoRenderer;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.client.kageno.Fx;
 import dev.sangwoo.celestialfall.client.vfx.FxLayer;
+import dev.sangwoo.celestialfall.isosang.IsosangRules;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
@@ -36,8 +37,9 @@ import static dev.sangwoo.celestialfall.client.isosang.IsosangSlash.*;
  * <li>fireflies of pale light drifting slowly round over the water along the shore ({@link #fireflies}).</li>
  * </ul>
  * Night falls from the crown on (the zenith first, the glow low over the mountains last) and lifts as the formation
- * ends (the horizon first). It is the formation's own world: seen from outside it (a camera more than {@link #INSIDE1}
- * blocks from its middle) none of it is drawn. Kept as the user tuned them: the mountains (the user's paintings), the
+ * ends (the horizon first). It is the formation's own world: only its caster and whoever stands in it see it
+ * ({@link #within}, 2.99.1: a passer-by sees the day as ever), and its sky lies far out (50 blocks) so that none of them
+ * ever sees its edge. Kept as the user tuned them: the mountains (the user's paintings), the
  * clouds over them, the stream under them, the still water and its darker flow, the dark navy smoke and mist at the
  * rim, the whirlpool. The dome, the moon and the stars are drawn on the ground pass before the clouds and the mountains
  * (so those stand before them; the effects keep no depth of their own), in draw calls of their own
@@ -63,23 +65,58 @@ final class FormationSky {
     /** Whether any of the night is up at {@code t}. */
     static boolean up(float t,float end){return t>NIGHT0&&t<end+DAWN0+DAWN_SPREAD+DAWN_FALL+.05f;}
     /**
-     * How much of it a camera sees (0 to 1): all of it within INSIDE0 blocks of the formation's middle (across the ground:
-     * her camera looks in from some 14 blocks out, more as she stands farther out), none from INSIDE1 (from outside it
-     * would be a dark bowl over the land).
+     * Who sees it (2.99.1, user request: "그럼 그냥 지나가는 사람에게는 안 거슬리려나?", "돔을 안 보이게 할 수 있어?", "일단은
+     * 그렇게 바꿔봐"): only its caster and whoever stands in the formation, by where their body is, not their camera (a
+     * passer-by walking near it sees the day as ever, and the formation itself as before): the one this client looks
+     * through (the camera's entity: the player, or whom they spectate) is its caster, or within its reach across the ground
+     * ({@link IsosangRules#FORMATION_RADIUS}) and from WITHIN_LOW under its ground to WITHIN_HIGH over it.
      */
+    static boolean within(Vec3d centre,Vec3d feet){
+        double dy=feet.y-centre.y;
+        return Math.hypot(feet.x-centre.x,feet.z-centre.z)<=IsosangRules.FORMATION_RADIUS&&dy>=WITHIN_LOW&&dy<=WITHIN_HIGH;
+    }
+    static final double WITHIN_LOW=-4,WITHIN_HIGH=12;
+    static boolean viewerIn(Fx c,Vec3d centre){
+        var e=c.mc.getCameraEntity();if(e==null)e=c.mc.player;if(e==null)return false;
+        return e.getUuid().equals(c.cast.caster())||within(centre,e.getLerpedPos(c.delta));
+    }
+    /**
+     * How much of it shows for this client (0 to 1) as the one it looks through steps in ({@code in}) or out: it comes and
+     * goes over PRESENCE seconds of the formation's clock (smoothly, so never a flicker at its edge), from nothing the first
+     * time this client draws the formation; asked more than once in a frame it moves once.
+     */
+    static float presence(UUID id,float sec,boolean in){
+        float[] st=PRESENCE_STATE.get(id);
+        if(st==null||sec<st[0]-.5f){st=new float[]{sec,0};PRESENCE_STATE.put(id,st);while(PRESENCE_STATE.size()>16)PRESENCE_STATE.remove(PRESENCE_STATE.keySet().iterator().next());}
+        float dt=Math.max(0,sec-st[0]);st[0]=sec;
+        st[1]=in?Math.min(1,st[1]+dt/PRESENCE):Math.max(0,st[1]-dt/PRESENCE);
+        return Ease.smooth(st[1],0,1);
+    }
+    private static final Map<UUID,float[]> PRESENCE_STATE=new LinkedHashMap<>();
+    static final float PRESENCE=.5f;
+    /** How much of it shows for this client now (as last drawn), for the checks. */
+    static float presenceNow(UUID id){float[] st=PRESENCE_STATE.get(id);return st==null?0:Ease.smooth(st[1],0,1);}
+    /**
+     * How much of it this client draws (0 to 1): as the one it looks through is in it ({@link #presence}), and only while
+     * its camera is well inside the sky (within INSIDE0 blocks of the formation's middle across the ground, none from
+     * INSIDE1: someone in it with their camera drawn far back still never comes near its edge; 2.99.0 had the camera's
+     * distance alone decide it).
+     */
+    static float seen(Fx c,Vec3d centre){return presence(c.cast.id(),c.sec,viewerIn(c,centre))*inside(centre,c.camera);}
     static float inside(Vec3d centre,Vec3d camera){
         return 1-Ease.smooth((float)Math.hypot(camera.x-centre.x,camera.z-centre.z),INSIDE0,INSIDE1);
     }
-    static final float INSIDE0=20,INSIDE1=25;
+    static final float INSIDE0=34,INSIDE1=44;
 
     // ───────────────────────────── the dome ─────────────────────────────
 
     /**
      * The sky: a sphere SKY_R blocks round its eye, SKY_EYE blocks over the formation's middle (about where her camera
-     * looks from), drawn from EL_MIN degrees under the eye's horizon (into the ground: the land beyond, as far as it
+     * looks from; 2.99.1: 50 blocks, was 26, so that no one who sees it ever comes near its edge), drawn from EL_MIN degrees
+     * under the eye's horizon (into the ground: the land beyond, as far as it
      * reaches, fades into it, SOFT) to the zenith, in rings at RINGS degrees and SKY_SEGS ways round.
      */
-    static final double SKY_R=26,SKY_EYE=4.5,EL_MIN=-16;
+    static final double SKY_R=50,SKY_EYE=4.5,EL_MIN=-16;
     static final double[] RINGS={-16,-10,-6,-3,-1,1,3,5,7,9,12,15,19,24,30,37,45,55,66,78,90};
     static final int SKY_SEGS=96;
     /** Blocks over which the dome and the stars fade into the world standing behind them (the far land into mist). */
@@ -93,11 +130,11 @@ final class FormationSky {
     /**
      * The sky's colours by elevation (degrees from its eye; its alpha SKY_ALPHA): a dusky mist under the horizon, the
      * glow brightest a little over it (GLOW_EL: just over the mountains' tops as her camera sees them), periwinkle, blue,
-     * a deep navy overhead.
+     * a deep navy overhead (2.99.1: at their heights for a sky 50 blocks out, so her camera sees them where it saw 2.99.0's).
      */
-    static final double[] STOP_EL={-16,-8,-3,0,3,6,9,13,18,25,33,45,62,90};
+    static final double[] STOP_EL={-16,-7.3,-3.1,-.6,1.9,4.4,6.9,10.2,14.4,20.2,26.9,36.9,51.3,90};
     static final int[] STOP_RGB={0x2c2e60,0x3b3e73,0x55588f,0x8183bb,0xaeaddb,0xb6b4e2,0x9ca1db,0x737fc9,0x515fb3,0x35449a,0x24327d,0x182464,0x111a51,0x0b1243};
-    static final double GLOW_EL=6;
+    static final double GLOW_EL=4.4;
     static final float SKY_ALPHA=.94f;
     static int skyRgb(double el){
         if(el<=STOP_EL[0])return STOP_RGB[0];
@@ -157,10 +194,11 @@ final class FormationSky {
      * The moon: MOON_D blocks across the ground from the formation's middle, MOON_AZ to the right of its far side (where
      * the mountain right of the far gap stands: it rises from behind it), its middle MOON_UP blocks up once risen (her
      * camera, some 14 blocks behind the middle and 5.4 up, sees it some 10° over the horizon, 18° right of the middle),
-     * MOON_R blocks round. It rises from under the ground (MOON_LOW) between MOON_RISE0 and MOON_RISE1 and, as the
+     * MOON_R blocks round (2.99.1: 40 blocks out, was 21.5, and as much bigger, so that no one in the formation comes near
+     * it; her camera sees it as before). It rises from under the ground (MOON_LOW) between MOON_RISE0 and MOON_RISE1 and, as the
      * formation ends, sinks a little as it fades.
      */
-    static final double MOON_AZ=Math.toRadians(30),MOON_D=21.5,MOON_UP=11.5,MOON_LOW=-2.8,MOON_R=2.3;
+    static final double MOON_AZ=Math.toRadians(24.53),MOON_D=40,MOON_UP=14.82,MOON_LOW=-4.2,MOON_R=3.55;
     static final float MOON_RISE0=1.3f,MOON_RISE1=3.9f;
     static Vec3d moon(Vec3d centre,float yaw,float t,float end){
         double az=forward(yaw)+MOON_AZ;
@@ -347,7 +385,7 @@ final class FormationSky {
      * far side's way, elevation in degrees}), a little brighter than the rest; once they are out, faint lines of light
      * drawn between them one after another from SWORD0 (pommel to point, then the guard), and they stay.
      */
-    static final double[][] SWORD_STARS={{0,27},{0,24.6},{-3.3,22.4},{0,22.4},{3.3,22.4},{0,17.4},{0,11.6}};
+    static final double[][] SWORD_STARS={{0,21.3},{0,19.3},{-2.7,17.5},{0,17.5},{2.7,17.5},{0,13.4},{0,8.6}};
     static final int[][] SWORD_LINES={{0,1},{1,3},{3,5},{5,6},{3,2},{3,4}};
     static final float SWORD0=3.9f,SWORD_STEP=.22f,SWORD_DRAW=.3f;
     static Vec3d swordStar(Vec3d centre,float yaw,int k){
@@ -395,7 +433,7 @@ final class FormationSky {
     static Meteor meteor(UUID id,float yaw,int k){
         int seed=(int)(id.getLeastSignificantBits()*7+id.getMostSignificantBits()*11)+977*(k+1);
         float at=METEOR0+METEOR_EVERY*k+1.8f*(float)(Ease.hash(seed)-.5);
-        double az=forward(yaw)+(Ease.hash(seed+1)-.5)*Math.toRadians(130),el=14+16*Ease.hash(seed+2);
+        double az=forward(yaw)+(Ease.hash(seed+1)-.5)*Math.toRadians(130),el=11+13*Ease.hash(seed+2);
         boolean left=Ease.hash(seed+3)<.5;double down=Math.toRadians(22+22*Ease.hash(seed+4));
         return new Meteor(at,.6f+.25f*(float)Ease.hash(seed+5),az,el,left?Math.PI+down:-down,.3+.15*Ease.hash(seed+6));
     }
@@ -447,9 +485,9 @@ final class FormationSky {
             }
         }
     }
-    static final double[] SHORE_R={SwordFormation.WATER_EDGE-.3,SwordFormation.WATER_EDGE+1.3,SwordFormation.WATER_EDGE+3.5,SwordFormation.WATER_EDGE+7,SKY_R+.5};
-    static final float[] SHORE_ALPHA={0,.5f,.68f,.8f,.88f};
-    static final int[] SHORE_RGB={0x23285a,0x262b5c,0x2d3164,0x34386c,0x3b3e73};
+    static final double[] SHORE_R={SwordFormation.WATER_EDGE-.3,SwordFormation.WATER_EDGE+1.3,SwordFormation.WATER_EDGE+3.5,SwordFormation.WATER_EDGE+7,30,SKY_R+.5};
+    static final float[] SHORE_ALPHA={0,.5f,.68f,.8f,.86f,.88f};
+    static final int[] SHORE_RGB={0x23285a,0x262b5c,0x2d3164,0x34386c,0x393c71,0x3b3e73};
 
     // ───────────────────────────── the water ─────────────────────────────
 
@@ -553,7 +591,8 @@ final class FormationSky {
      */
     static void fireflies(Fx c,EffectMesh m){
         float t=c.sec,end=SwordFormation.end(c.cast);Vec3d centre=SwordFormation.centre(c.cast);
-        float on=Ease.smooth(t,FIREFLIES0,FIREFLIES0+1.4f)*(1-Ease.smooth(t,end,end+.6f))*inside(centre,c.camera);if(on<=.01f)return;
+        // (asked every frame from the start: the fade of who sees the night moves on here even while none of it is up)
+        float on=Ease.smooth(t,FIREFLIES0,FIREFLIES0+1.4f)*(1-Ease.smooth(t,end,end+.6f))*seen(c,centre);if(on<=.01f)return;
         int s0=c.cast.id().hashCode()*3+17;
         for(int i=0;i<FIREFLIES;i++){
             int seed=s0+523*(i+1);
@@ -580,8 +619,8 @@ final class FormationSky {
      * land's veil blended.
      */
     static void sky(Fx c){
-        float t=c.sec,end=SwordFormation.end(c.cast);if(!up(t,end))return;
-        Vec3d centre=SwordFormation.centre(c.cast);float seen=inside(centre,c.camera);if(seen<=.005f)return;
+        float t=c.sec,end=SwordFormation.end(c.cast);Vec3d centre=SwordFormation.centre(c.cast);float seen=seen(c,centre);
+        if(!up(t,end)||seen<=.005f)return;
         Vec3d moon=moon(centre,SwordFormation.yaw(c.cast),t,end);
         float shine=moonLight(t,end)*moonShown(c,moon)*seen;
         draw(c,false,SOFT,1,m->dome(c,m,centre,t,end,seen,shine>.005f?moon:null));
@@ -593,8 +632,8 @@ final class FormationSky {
     static final float MOON_GAIN=1.2f;
     /** The light on the water (in the interlude after the mountains, before the swords stand over it). */
     static void water(Fx c){
-        float t=c.sec,end=SwordFormation.end(c.cast);if(!up(t,end))return;
-        Vec3d centre=SwordFormation.centre(c.cast);float seen=inside(centre,c.camera);if(seen<=.005f)return;
+        float t=c.sec,end=SwordFormation.end(c.cast);Vec3d centre=SwordFormation.centre(c.cast);float seen=seen(c,centre);
+        if(!up(t,end)||seen<=.005f)return;
         draw(c,true,.04f,1,m->water(c,m,centre,t,end,seen));
     }
     /**

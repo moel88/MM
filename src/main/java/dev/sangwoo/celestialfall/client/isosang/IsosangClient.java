@@ -394,6 +394,8 @@ public final class IsosangClient {
             :combo==IsosangRules.VOLLEY?SwordVolley.LIFE:combo==IsosangRules.LUNGE?SwordLunge.LIFE:combo==IsosangRules.CAGE?SwordCage.LIFE:KagenoSkills.of(IsosangRules.SKILL).lifetime();
     }
     /** How long this swing is drawn for (seconds): a formation that ended early only until its swords have gone (2.82.0). */
+    /** (2.99.1) How much of H's night (FormationSky) this client shows for the formation of swing {@code swing} as it last drew it (0 to 1), for the checks. */
+    public static float nightShown(UUID swing){return FormationSky.presenceNow(swing);}
     public static float lifeOf(StandClient.Cast c){
         float life=life(c.combo());
         if(c.combo()==IsosangRules.FORMATION){Float end=FORMATION_ENDS.get(c.id());if(end!=null)life=Math.min(life,end+SwordFormation.AFTER);}
