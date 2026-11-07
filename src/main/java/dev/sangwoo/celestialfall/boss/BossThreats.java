@@ -195,6 +195,14 @@ public final class BossThreats {
             out.add(new Threat(p,"isosangT",lu.start(),Math.max(now,hit),lu.start()+IsosangRules.lastBlow(IsosangRules.LUNGE),
                 Zone.ring(lu.at().subtract(0,1,0),IsosangRules.VOLLEY_SPOT+.9,-1.5,3),true,false,false,IsosangRules.total(IsosangRules.LUNGE),false,false));
         }
+        // (2.97.0) Y's swords coming down round its ring (its foe's feet until it is set): everything in it, unguardable,
+        // caging whom it strikes, until its last blow
+        var ca=dev.sangwoo.celestialfall.isosang.IsosangAttack.cageNow(p);
+        if(ca!=null&&ca.blows()<IsosangRules.blows(IsosangRules.CAGE)){
+            long hit=ca.start()+IsosangRules.blowAt(IsosangRules.CAGE,ca.blows());
+            out.add(new Threat(p,"isosangY",ca.start(),Math.max(now,hit),ca.start()+IsosangRules.lastBlow(IsosangRules.CAGE),
+                Zone.ring(ca.at(),IsosangRules.CAGE_RADIUS+.9,IsosangRules.CAGE_LOW,IsosangRules.CAGE_HIGH),false,false,true,IsosangRules.total(IsosangRules.CAGE),false,false));
+        }
         // (2.80.0) the empowered first's swords in flight: each a lane on along its way, reaching a body near it at once
         for(var sw:dev.sangwoo.celestialfall.isosang.IsosangAttack.swords(p)){
             float yaw=(float)Math.toDegrees(Math.atan2(-sw.dir().x,sw.dir().z));

@@ -28,7 +28,9 @@ the swords at the reach's edge, then onto the ground with no one in the crosshai
 MpClient.ISOSANGT_SCRIPT: on the sword, a dash through the watcher 20 blocks off in the crosshair, six swords of 2 and three
 slashes of 4 on it, a flight on to the formation's sword farthest from it; 2.96.4: again 3 ticks in refused, 9 ticks in kept
 and gone 14 ticks in from the far sword, a third so, each landing all ten blows; then onto the ground with no one in the
-crosshair), MP_ONLY=isosangg its G (2.83.0,
+crosshair), MP_ONLY=isosangy its Y (2.97.0, MpClient.ISOSANGY_SCRIPT: on the sword, six swords on the watcher 20 blocks
+off in the crosshair as it walks, their ring following it until set, thirteen blows of 40 in all, the watcher caged
+(incapacitated, 80% slower) from the first to 1.55 s; again under way and again too soon refused), MP_ONLY=isosangg its G (2.83.0,
 MpClient.ISOSANGG_SCRIPT: G with the watcher 30 blocks ahead (2.87.1: 21 past where its sword strikes, in the blast's
 62 x 47 blocks), struck 50 as its sword strikes; the caster's cutscene in its
 own space, the watcher's world left as it is with the landing drawn; G and the attack refused while it holds, G refused

@@ -462,7 +462,7 @@ public final class MpServer implements ModInitializer {
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"))||"isosangy".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -475,6 +475,8 @@ public final class MpServer implements ModInitializer {
     private long volleySeen=-1,vReadySeen=-1;private int volleyBlows;
     /** (2.96.0) The caster's T last logged: its start, its blows, when it is ready again. */
     private long lungeSeen=-1,tReadySeen=-1;private int lungeBlows;
+    /** (2.97.0) The caster's Y last logged: its start, its blows, when it is ready again; whether the watcher was caged, and where it stood a tick ago. */
+    private long cageSeen=-1,yReadySeen=-1;private int cageBlows;private boolean cagedSeen;private net.minecraft.util.math.Vec3d cageWatcherAt;
     private long sweepSeen=-1,rReadySeen=-1,formSeen=-1,hReadySeen=-1,gSeen=-1,gReadySeen=-1,zFrom=-1;private dev.sangwoo.celestialfall.isosang.IsosangRules.ZState zSeen;private net.minecraft.util.math.Vec3d gFrom;private float gHealth;private boolean formOver;private double formFloor;
     private void isosang(MinecraftServer server){
         long now=server.getOverworld().getTime();
@@ -573,6 +575,19 @@ public final class MpServer implements ModInitializer {
                 dev.sangwoo.celestialfall.isosang.IsosangRules.FORMATION_RADIUS+dev.sangwoo.celestialfall.isosang.IsosangRules.VOLLEY_BEYOND));}
         if(vo!=null){if(vo.blows()>volleyBlows){note(server,"caster's volley blow "+vo.blows()+" of 6 at "+now+" (its tick "+(now-vo.start())+")");volleyBlows=vo.blows();}watchUntil=Math.max(watchUntil,now+20);}
         long vr=dev.sangwoo.celestialfall.isosang.IsosangAttack.vReady(caster);if(vr!=vReadySeen){vReadySeen=vr;note(server,"caster's volley ready again at "+vr+" (now "+now+")");}
+        // (2.97.0) the caster's Y: as it begins (on whom, its ring against the watcher's feet), its blows as they land, as it
+        // is set (where, against the watcher), whether the watcher is caged (incapacitated) as that changes, and every tick
+        // through it the watcher's step (it walks: four fifths shorter while caged); when it is ready again
+        var ca=dev.sangwoo.celestialfall.isosang.IsosangAttack.cageNow(caster);
+        if(ca!=null&&ca.start()!=cageSeen){cageSeen=ca.start();cageBlows=0;cageWatcherAt=watcher.getPos();
+            note(server,String.format(java.util.Locale.ROOT,"caster's Y began at %d on %s, its ring at %.2f %.2f %.2f (%.2f from the watcher's feet); ready again at %d",
+                ca.start(),ca.target()==watcher.getId()?"the watcher":ca.target()<0?"no one":"entity "+ca.target(),ca.at().x,ca.at().y,ca.at().z,Math.hypot(ca.at().x-watcher.getX(),ca.at().z-watcher.getZ()),dev.sangwoo.celestialfall.isosang.IsosangAttack.yReady(caster)));}
+        if(ca!=null&&ca.blows()>cageBlows){cageBlows=ca.blows();note(server,String.format(java.util.Locale.ROOT,"caster's Y blow %d of %d landed at %d (+%d), its ring %.2f from the watcher's feet",ca.blows(),dev.sangwoo.celestialfall.isosang.IsosangRules.blows(dev.sangwoo.celestialfall.isosang.IsosangRules.CAGE),now,now-ca.start(),Math.hypot(ca.at().x-watcher.getX(),ca.at().z-watcher.getZ())));}
+        boolean cagedNow=dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher);
+        if(cagedNow!=cagedSeen){cagedSeen=cagedNow;note(server,"watcher "+(cagedNow?"caged (incapacitated)":"free")+" at "+now+(cageSeen>=0?" (+"+(now-cageSeen)+")":""));}
+        if(cageSeen>=0&&now-cageSeen<=45&&cageWatcherAt!=null){double step=Math.hypot(watcher.getX()-cageWatcherAt.x,watcher.getZ()-cageWatcherAt.z);
+            if(step>1e-4)note(server,String.format(java.util.Locale.ROOT,"watcher stepped %.3f blocks at +%d",step,now-cageSeen));cageWatcherAt=watcher.getPos();}
+        long yr=dev.sangwoo.celestialfall.isosang.IsosangAttack.yReady(caster);if(yr!=yReadySeen){yReadySeen=yr;note(server,"caster's Y ready again at "+yr+" (now "+now+")");}
         // (2.96.0) the caster's T: as it begins (whom its blows come down on and where, against the watcher's chest; where the
         // caster lands against the watcher; the swords it flies from and to, and (2.96.1) whether that one is on the other
         // side of the formation's middle from the one it began on, of how many there), its blows as they land, every tick through it how far off where the formation holds them the

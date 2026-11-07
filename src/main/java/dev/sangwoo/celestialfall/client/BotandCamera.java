@@ -92,6 +92,13 @@ public final class BotandCamera {
             STATE.yaw=face;
             if(locked())faceCamera();
         }
+        // (2.97.0) her Y's shot holds the screen: the game's camera turns round behind it onto the foe, so as it lets go
+        // the camera is behind her looking at the cage (IsosangClient.cageTurn; not in the first person, where there is no shot)
+        float cage=STATE.firstPerson()?Float.NaN:dev.sangwoo.celestialfall.client.isosang.IsosangClient.cageTurn(STATE.yaw,mc.getTickDelta());
+        if(!cinematic&&!mc.isPaused()&&!Float.isNaN(cage)){
+            STATE.yaw=cage;
+            if(locked())faceCamera();
+        }
         if(wasCinematic&&!cinematic){rightDrag=false;lastFrame=now;}
         wasCinematic=cinematic;
         // a teleport (more than 8 blocks a frame) puts the camera behind the player; (2.96.0) not a step Lee So-sang's
@@ -191,7 +198,8 @@ public final class BotandCamera {
         // (2.96.5) through her T it stays where it stood as the first began, then comes back to her (user request: "T쓸때
         // 카메라 무빙을 영상 처럼 바꿔줘")
         camera=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraHold(camera,delta);
-        return new CinematicDirector.Pose(camera,STATE.yaw,STATE.pitch,0);
+        // (2.97.0) her Y: round to her side, low behind her, back to her (the user's videos of it)
+        return dev.sangwoo.celestialfall.client.isosang.IsosangClient.cageCamera(new CinematicDirector.Pose(camera,STATE.yaw,STATE.pitch,0),delta);
     }
     /** How far right of the player the camera stands (blocks): the shift lock's, or (2.93.0) through Lee So-sang's formation its own (IsosangClient.cameraShoulder). */
     public static double shoulder(float delta){return Math.max(STATE.shoulder,dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraShoulder(delta));}

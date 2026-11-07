@@ -624,4 +624,50 @@ class IsosangRulesTest {
         assertTrue(G_GLOW<G_FACE&&G_FACE<G_SKY&&G_SKY<G_FALL&&G_FALL<G_STRIKE&&G_STRIKE<G_BACK&&G_BACK<G_GAME&&G_GAME<G_ERUPT&&G_ERUPT<G_CLEAR);
         assertEquals(G_IMPACT/20f,G_STRIKE,1e-6);
     }
+    @Test void ysSixSwordsComeDownTwoAtATimeAndStrikeThirteenTimesForty()throws Exception{
+        // (2.97.0) "거대한 검 6개를 적 위에 소환하고 2개씩 빠르게 적에게 떨궈서 원 모양으로 적을 가두고", the user's choice
+        // "합 40 · 20초": thirteen blows (the videos' hit counter, 0.55 to 0.9 s), forty in all
+        assertEquals(12,CAGE);assertEquals(6,CAGE_SWORDS);assertTrue(drawn(CAGE));assertFalse(valid(CAGE),"not a hit of the combo");
+        assertEquals(13,blows(CAGE));assertEquals(40,total(CAGE),1e-6);
+        for(int i=0;i<blows(CAGE);i++)assertTrue(damage(CAGE,i)>0);
+        assertEquals(11,blowAt(CAGE,0),"the first two swords strike 0.55 s in");assertEquals(18,lastBlow(CAGE),"the last blow 0.9 s in");
+        for(int i=1;i<blows(CAGE);i++)assertTrue(blowAt(CAGE,i)>=blowAt(CAGE,i-1),"in order");
+        // two at a time, each pair across the ring from one another, at the videos' 0.55, 0.65 and 0.76 s; the first blows
+        // land as the first two do
+        assertArrayEquals(new int[]{11,13,15},CAGE_DROPS);
+        for(int j=0;j<3;j++){int[] p=cagePair(j);assertEquals(CAGE_SWORDS/2,p[1]-p[0],"across the ring");assertEquals(j,cageDrop(p[0]));assertEquals(j,cageDrop(p[1]));assertEquals(CAGE_DROPS[j],cageLands(p[0]));}
+        assertEquals(CAGE_DROPS[0],blowAt(CAGE,0));assertEquals(CAGE_DROPS[0],blowAt(CAGE,1),"two blows as the first two strike");
+        // no guard takes it, no one is thrown; it holds her until her camera is back with her (1.25 s), its swords gone by
+        // 1.55 s, over at 1.6 s, ready again 20 s after that
+        assertTrue(unblockable(CAGE));
+        assertEquals(25,HOLD[CAGE]);assertEquals(32,LENGTH[CAGE]);assertEquals(31,CAGE_FREE);assertEquals(400,CAGE_COOLDOWN,"twenty seconds");
+        assertTrue(CAGE_PLANT<CAGE_DROPS[0],"its ring set before the first swords strike");
+        assertTrue(CAGE_FREE>lastBlow(CAGE)&&CAGE_FREE<=LENGTH[CAGE],"the cage stands past its last blow till the swords go");
+        assertEquals(1000+32+400,cageReady(1000,false),"its cooldown from when it is over");assertEquals(1032,cageReady(1000,true));
+        assertEquals(.8,CAGE_SLOW,1e-9,"80% slower (the user's choice)");
+        // only on the formation with every sword standing, over before they flare
+        assertFalse(cageTime(Z_FROM-.01));assertTrue(cageTime(Z_FROM));assertTrue(cageTime(H_END-CAGE_LENGTH/20.0));assertFalse(cageTime(H_END-CAGE_LENGTH/20.0+.05));
+        // its ring: round the foe, a little wider than they are, up to a player's height and a jump over its ground
+        assertTrue(caged(0,0,0,.3));assertTrue(caged(CAGE_RADIUS+.25,0,0,.3));assertFalse(caged(CAGE_RADIUS+.4,0,0,.3));
+        assertTrue(caged(1,1,1.2,.3),"jumping in it");assertFalse(caged(0,0,CAGE_HIGH+.1,.3));assertFalse(caged(0,0,CAGE_LOW-.1,.3));
+        // its sound (the user's video's, from Y's start): its first sound as the first two swords strike, back down to the
+        // formation's by its end
+        assertEquals(2.6,StarPlatinumRulesTest.seconds("isosang_y"),.03);
+    }
+    @Test void yLeapsHerOffHerSwordAndDownOnItAgainSmoothly(){
+        // (2.97.0) the videos: up off the pommel 0.1 s in, in the air while the swords show, down on it again by 0.52 s
+        assertEquals(0,cageLeap(0),1e-9);assertEquals(0,cageLeap(CAGE_LEAP_FROM),1e-9);assertEquals(0,cageLeap(CAGE_LEAP_LAND),1e-9);
+        assertEquals(0,cageLeap(CAGE_LEAP_LAND+3),1e-9);
+        assertTrue(cageLeap(7)>2.3&&cageLeap(7)<2.8,"high in the air while the swords show: "+cageLeap(7));
+        assertTrue(CAGE_LEAP_LAND/20<.53&&CAGE_LEAP_LAND<CAGE_DROPS[0],"down on her sword before the first swords strike");
+        double max=0,prev=0;
+        for(double a=0;a<=12;a+=1/6.0){double h=cageLeap(a);max=Math.max(max,h);assertTrue(Math.abs(h-prev)<.3,"no jump at "+a+": "+prev+" to "+h);prev=h;}
+        // landing softly on the pommel (no step down at the last moment)
+        assertTrue(cageLeap(CAGE_LEAP_LAND-.2)<.06,"soft at the pommel: "+cageLeap(CAGE_LEAP_LAND-.2));
+        assertEquals(CAGE_LEAP+CAGE_DRIFT,max,.02,"at most this high");
+        // her camera's times in order: round to her side, behind her as she comes down, back to her as it lets go of her
+        assertTrue(CAGE_SIDE_IN<CAGE_BEHIND0&&CAGE_BEHIND0<CAGE_BEHIND1&&CAGE_BEHIND1<CAGE_BACK0&&CAGE_BACK0<CAGE_BACK1);
+        assertTrue(CAGE_BEHIND1<=CAGE_DROPS[0]/20f,"behind her before the first swords strike");
+        assertEquals(HOLD[CAGE]/20f,CAGE_BACK0,.05f,"back to her as it lets go of her");assertEquals(LENGTH[CAGE]/20f,CAGE_BACK1,1e-6f);
+    }
 }

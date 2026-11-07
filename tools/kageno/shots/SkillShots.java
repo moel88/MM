@@ -1168,6 +1168,21 @@ public final class SkillShots implements ClientModInitializer {
                                     l.at().x,l.at().y,l.at().z,l.past().x,l.past().y,l.past().z,l.from(),l.to(),l.blows()),
                                 hp,dev.sangwoo.celestialfall.isosang.IsosangAttack.standsOn(p),Math.hypot(p.getX()-f.holds().x,p.getZ()-f.holds().z),p.getY()-f.centre().y,
                                 Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangAttack.tReady(p)-now)));});
+                        // (2.97.0) Y on H's sword: whom and where the crosshair picks as it is pressed (and the camera let go from
+                        // DAIM/PAIM as for T: Y's shot and its turn onto the foe take it), whether the server began it (its foe,
+                        // its ring), and by its end what it struck, the dummy's health and until when it was caged
+                        if(what.equals("KEY_Y")&&age==at){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cageAimNow(mc);
+                            if(aim!=null)log.append(String.format(Locale.ROOT,"  Y aims at %s (%.2f, %.2f, %.2f) at %d%n",aim.target()<0?"no one":aim.target()==dummyId?"the dummy":"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z,age));
+                            if(daimHeld||paimPoint!=null)log.append("  camera let go at ").append(age).append('\n');daimHeld=false;paimPoint=null;camKept=true;}
+                        if(what.equals("KEY_Y")&&(age==at+3||age==at+12||age==at+34))server(p->{var y=dev.sangwoo.celestialfall.isosang.IsosangAttack.cageNow(p);var d=p.getServerWorld().getEntityById(dummyId);
+                            var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);if(f==null)return;
+                            long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                            long caged=d instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dm?Math.max(0,dm.disabledUntil()-now):-1;
+                            log.append(String.format(Locale.ROOT,"  Y %s at %d: %s, dummy health %.1f, caged %d more ticks, on sword %d, %.2f up, ready in %d%n",age==at+3?"begun":"after",age,
+                                y==null?"none under way":String.format(Locale.ROOT,"begun %d ticks ago on %s, ring at (%.2f, %.2f, %.2f) (%.2f from the dummy), %d struck",now-y.start(),y.target()<0?"no one":y.target()==dummyId?"the dummy":"entity "+y.target(),
+                                    y.at().x,y.at().y,y.at().z,d==null?-1:Math.hypot(d.getX()-y.at().x,d.getZ()-y.at().z),y.blows()),
+                                hp,caged,dev.sangwoo.celestialfall.isosang.IsosangAttack.standsOn(p),p.getY()-f.centre().y,
+                                Math.max(0,dev.sangwoo.celestialfall.isosang.IsosangAttack.yReady(p)-now)));});
                         if(age==at){log.append("  key ").append(what.substring(4)).append(" at ").append(age).append('\n');key(code,true);if(what.equals("KEY_H"))lastH=age;
                             // 2.70.0: R with the stand arrow in hand: what the server sees as it is pressed (why it might refuse)
                             if(what.equals("KEY_R")&&mc.player.getMainHandStack().isOf(dev.sangwoo.celestialfall.meteor.MeteorRegistry.STAND_ARROW))server(p->log.append(String.format(Locale.ROOT,

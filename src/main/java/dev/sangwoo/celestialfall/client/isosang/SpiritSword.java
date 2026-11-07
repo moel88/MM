@@ -165,6 +165,16 @@ final class SpiritSword {
         x=x.normalize();Vec3d z=x.crossProduct(y).normalize();
         return new Vec3d[]{x,y,z};
     }
+    /**
+     * (2.97.0) Its frame pointing along {@code dir} with its guard's points along {@code across} (made square to it; Y's
+     * swords hang straight down, where the level guard of {@link #frame(Vec3d)} has no way): across, along, through.
+     */
+    static Vec3d[] frame(Vec3d dir,Vec3d across){
+        Vec3d y=dir.normalize(),x=across.subtract(y.multiply(across.dotProduct(y)));
+        if(x.lengthSquared()<1e-8)return frame(dir);
+        x=x.normalize();Vec3d z=x.crossProduct(y).normalize();
+        return new Vec3d[]{x,y,z};
+    }
     static Vec3d world(Vec3d grip,Vec3d[] f,double scale,Vec3d p){return grip.add(f[0].multiply(p.x*scale)).add(f[1].multiply(p.y*scale)).add(f[2].multiply(p.z*scale));}
     private static int rgb(Role r){
         return switch(r){
@@ -189,9 +199,10 @@ final class SpiritSword {
      * Its body (the blended pass): every face toward the camera, lit from above and brightest at its rim, heated toward
      * white ({@code heat}, 0 to 1) and inked toward the dark ({@code ink}).
      */
-    static void body(EffectMesh m,Vec3d camera,Vec3d grip,Vec3d dir,double scale,float alpha,float heat,float ink){
+    static void body(EffectMesh m,Vec3d camera,Vec3d grip,Vec3d dir,double scale,float alpha,float heat,float ink){body(m,camera,grip,frame(dir),scale,alpha,heat,ink);}
+    /** The same in frame {@code f} ({@link #frame(Vec3d,Vec3d)}: its guard's points the way it is told, 2.97.0). */
+    static void body(EffectMesh m,Vec3d camera,Vec3d grip,Vec3d[] f,double scale,float alpha,float heat,float ink){
         if(alpha<=.005f)return;
-        Vec3d[] f=frame(dir);
         for(var face:FACES){
             Vec3d n=f[0].multiply(face.n().x).add(f[1].multiply(face.n().y)).add(f[2].multiply(face.n().z));
             Vec3d[] w=new Vec3d[face.v().length];Vec3d c=Vec3d.ZERO;
@@ -211,9 +222,10 @@ final class SpiritSword {
      * Its light (the light pass): its outline white-hot with a blue glow round it, its inner lines pale, a halo along it
      * (2.80.3: the lines and the halo for a sword half the size, crisp so its point and its guard's points read sharp).
      */
-    static void glow(EffectMesh m,Vec3d grip,Vec3d dir,double scale,float alpha,float heat,float ink){
+    static void glow(EffectMesh m,Vec3d grip,Vec3d dir,double scale,float alpha,float heat,float ink){glow(m,grip,frame(dir),scale,alpha,heat,ink);}
+    /** The same in frame {@code f} (2.97.0). */
+    static void glow(EffectMesh m,Vec3d grip,Vec3d[] f,double scale,float alpha,float heat,float ink){
         float a=alpha*(1-.85f*ink);if(a<=.005f)return;
-        Vec3d[] f=frame(dir);
         for(var e:EDGES){
             Vec3d p=world(grip,f,scale,e.a()),q=world(grip,f,scale,e.b());
             if(e.outline()){m.line(p,q,.022*scale,0xffffff,(.6f+.3f*heat)*a);m.softLine(p,q,.17*scale,0x58a0ff,(.14f+.14f*heat)*a);}

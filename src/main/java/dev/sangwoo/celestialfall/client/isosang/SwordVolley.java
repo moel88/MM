@@ -153,10 +153,12 @@ final class SwordVolley {
      */
     static Aim aim(MinecraftClient mc){return aim(mc,false);}
     /** The same for T ({@code lunge}, 2.96.0: the same pick, while T may be used, IsosangRules.lungeTime). */
-    static Aim aim(MinecraftClient mc,boolean lunge){
+    static Aim aim(MinecraftClient mc,boolean lunge){return aim(mc,lunge?LUNGE:VOLLEY);}
+    /** The same for swing {@code combo}: H's basic attack, T, or (2.97.0) Y (IsosangRules.cageTime), while it may be used. */
+    static Aim aim(MinecraftClient mc,int combo){
         var me=mc.player;if(me==null||mc.world==null||mc.gameRenderer==null||!MapClient.enabled())return null;
         var own=IsosangClient.ownFormation();if(own==null||IsosangClient.stopped(own.id()))return null;
-        double ft=own.age(mc.getTickDelta())/20.0;if(lunge?!lungeTime(ft):!volleyTime(ft))return null;
+        double ft=own.age(mc.getTickDelta())/20.0;if(combo==LUNGE?!lungeTime(ft):combo==CAGE?!cageTime(ft):!volleyTime(ft))return null;
         var form=IsosangClient.formation(own.id());if(form==null)return null;Vec3d mid=form.centre();
         var cam=mc.gameRenderer.getCamera();Vec3d eye=me.getEyePos(),look=Vec3d.fromPolar(cam.getPitch(),cam.getYaw()),c=cam.getPos();
         LivingEntity best=null;double near=VOLLEY_AIM,out=FORMATION_RADIUS+VOLLEY_BEYOND+2;

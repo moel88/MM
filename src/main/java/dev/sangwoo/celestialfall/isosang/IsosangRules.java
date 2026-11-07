@@ -45,7 +45,10 @@ public final class IsosangRules {
      */
     private static final int[][] BLOWS={{},{6},{3,6},{2,7,11,17},{10},{2,4,7},{3},{IsosangRules.SWEEP_BLOW},{},{},{20,21,22,23,24,25},
         // (2.96.0) T: the dash through the foe, then the six swords, the three slashes among the last three (LUNGE_KIND)
-        {6,11,12,13,14,14,15,15,16,16}};
+        {6,11,12,13,14,14,15,15,16,16},
+        // (2.97.0) Y: the swords coming down two at a time (CAGE_DROPS) and the ink bursting up round the foe, thirteen
+        // blows in all from 0.55 s to 0.9 s (the videos' hit counter)
+        {11,11,12,12,13,14,15,15,15,16,17,18,18}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
@@ -53,7 +56,9 @@ public final class IsosangRules {
      */
     private static final float[][] DAMAGE={{},{6},{3,3},{1.5f,1.5f,1.5f,2.5f},{10},{3,3,3},{15},{IsosangRules.SWEEP_DAMAGE},{},{},{2,2,2,2,2,2},
         // (2.96.0) T: the user's choice, 30 in all: the dash 6, each sword 2, each slash 4
-        {6,2,2,2,2,4,2,4,2,4}};
+        {6,2,2,2,2,4,2,4,2,4},
+        // (2.97.0) Y: the user's choice, 40 in all over its thirteen blows: twelve of 3 and the last 4
+        {3,3,3,3,3,3,3,3,3,3,3,3,4}};
     /** The empowered combo's blows are this much harder (2.80.0, user request: "데미지 50% 더 강하고"). */
     public static final float EMPOWER=1.5f;
     /** The empowered hits (2.80.0): the first, three swords thrown; the fourth, a leap back and a giant sword thrown (2.80.1). */
@@ -66,11 +71,11 @@ public final class IsosangRules {
      * their stance (2.79.2, the user's video of the whole combo at half speed: the finisher begins 1.22 s after the third;
      * it was 1.5 s). The empowered first (2.80.0, the user's videos of E): the second follows its three swords 0.8 s in.
      */
-    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0,0};
+    public static final int[] STEP={0,11,10,25,0,16,0,0,0,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then (2.81.0: and R's; 2.82.0: H's, all of it; 2.83.0: G's cutscene). */
-    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD,IsosangRules.LUNGE_FREE};
+    public static final int[] HOLD={0,10,12,22,18,14,16,21,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_HOLD,IsosangRules.LUNGE_FREE,IsosangRules.CAGE_HOLD};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long (2.81.0: and R's; 2.82.0: and H's; 2.83.0: and G's). */
-    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH,IsosangRules.LUNGE_LENGTH};
+    public static final int[] LENGTH={0,18,18,25,32,22,30,24,826,IsosangRules.G_HOLD,IsosangRules.VOLLEY_LENGTH,IsosangRules.LUNGE_LENGTH,IsosangRules.CAGE_LENGTH};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -83,7 +88,7 @@ public final class IsosangRules {
      * Whether {@code kind} is a swing the clients draw: a hit, R's sweep (2.81.0), H's sword formation (2.82.0), G (2.83.0)
      * or H's basic attack (2.95.0, VOLLEY: its swords only, the body standing on in the formation's stance).
      */
-    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE||kind==VOLLEY||kind==LUNGE;}
+    public static boolean drawn(int kind){return valid(kind)||kind==SWEEP||kind==FORMATION||kind==ULTIMATE||kind==VOLLEY||kind==LUNGE||kind==CAGE;}
     /** The place of hit {@code kind} in the combo (1 to 4): the empowered first is the first, the empowered fourth the fourth. */
     public static int position(int kind){return kind==THROWS?1:kind==THRUST?4:kind;}
     /** The hit at {@code position} in the combo, empowered or not: only the first and the fourth change. */
@@ -200,8 +205,11 @@ public final class IsosangRules {
         if(combo==2)return Math.sqrt(forward*forward+side*side)<=SPIN_RADIUS+halfWidth;
         return forward>=near(combo,blow)-halfWidth&&forward<=reach(combo,blow)+halfWidth&&Math.abs(side)<=halfWidth(combo,blow)+halfWidth;
     }
-    /** Whether hit {@code combo} cannot be guarded: the finisher (either kind), as the other characters' fourth hits; and R's sweep (2.81.0, the user's choice). */
-    public static boolean unblockable(int combo){return position(combo)==4||combo==SWEEP;}
+    /**
+     * Whether hit {@code combo} cannot be guarded: the finisher (either kind), as the other characters' fourth hits; R's
+     * sweep (2.81.0, the user's choice); and Y's swords (2.97.0: they come down from above, round whom they cage).
+     */
+    public static boolean unblockable(int combo){return position(combo)==4||combo==SWEEP||combo==CAGE;}
 
     // ───────────────────────────── the empowered first: three swords thrown ─────────────────────────────
 
@@ -898,6 +906,78 @@ public final class IsosangRules {
         int[] far=oppositeSwords(swords,from);
         return far.length==0?(from+1)%swords.length:far[Math.floorMod(roll,far.length)];
     }
+
+    // ───────────────────────────── Y: the cage of swords ─────────────────────────────
+
+    /**
+     * Y (2.97.0, user request: "이번에는 Y스킬 거대한 검 6개를 적 위에 소환하고 2개씩 빠르게 적에게 떨궈서 원 모양으로 적을
+     * 가두고 잉크가 많이 튀는 스킬이야", the user's two videos of it (9e90441f and c6bb25f6, 60 fps) read on a sheet and
+     * confirmed: "맞음, 이대로"; and their answers: 40 in all with a 20 s cooldown ("합 40 · 20초"), whom it cages 80%
+     * slower and incapacitated while its swords stand round them ("80% 슬로우 + 무력화"), only on her formation's sword
+     * ("검진 위에서만 (영상처럼)"), the foe picked as H's basic attack and T pick it, the crosshair's point with none): she
+     * leaps up off her sword and reaches toward the foe, six giant swords of light show one after another in the air over
+     * it, points down, and as she comes down on her sword again they come down on it two at a time ({@link #CAGE_DROPS}),
+     * sticking in round it in a ring ({@link #CAGE_RADIUS}); ink bursts up out of the ground round it in columns and flies
+     * off in clumps, and the swords are gone at {@link #CAGE_LENGTH}. Thirteen blows (BLOWS: 0.55 s to 0.9 s, the videos'
+     * hit counter), twelve of 3 and the last 4, on everyone the ring stands round; no guard takes them (they come down
+     * from above), no one is thrown or staggered: from the first that strikes them they are caged until the swords go
+     * ({@link #CAGE_FREE}), incapacitated and {@link #CAGE_SLOW} slower. Until the swords come down their ring follows the
+     * foe ({@link #CAGE_PLANT}: set where it stands then). It holds her {@link #CAGE_HOLD} ticks (the videos: she stands
+     * on her sword, her hand out at the foe, until her camera comes back to her) and is ready again
+     * {@link #CAGE_COOLDOWN} after its swords are gone.
+     */
+    public static final int CAGE=12,CAGE_SWORDS=6;
+    /**
+     * Y's ticks: when it lets go of her (1.25 s: the videos' camera back behind her by 1.3 s), when its ring is set where
+     * the foe stands (a tick before the first two swords strike), when its swords are gone and the cage with them (1.55
+     * s), when it is over (1.6 s: the last of its light and ink gone), and the ticks it is not ready again after that
+     * (the user's choice: 20 s).
+     */
+    public static final int CAGE_HOLD=25,CAGE_PLANT=10,CAGE_FREE=31,CAGE_LENGTH=32,CAGE_COOLDOWN=400;
+    /** The ticks each two swords strike (the videos: 0.55, 0.65 and 0.76 s): the first and the fourth, the second and the fifth, the third and the sixth. */
+    public static final int[] CAGE_DROPS={11,13,15};
+    /** Which two swords come down at drop {@code j} (0 to 2): sword {@code j} and the one across the ring from it. */
+    public static int[] cagePair(int j){return new int[]{j,j+CAGE_SWORDS/2};}
+    /** The drop sword {@code k} comes down at (0 to 2). */
+    public static int cageDrop(int k){return k%(CAGE_SWORDS/2);}
+    /** The tick sword {@code k} strikes the ground. */
+    public static int cageLands(int k){return CAGE_DROPS[cageDrop(k)];}
+    /** How much slower whom it cages walk (the user's word: 80%). */
+    public static final double CAGE_SLOW=.8;
+    /**
+     * Its ring (blocks): how far out from its middle each sword stands in the ground (the videos: round the foe close by,
+     * a little wider than they are), and how far below and above its ground a body may stand and still be in it.
+     */
+    public static final double CAGE_RADIUS=1.25,CAGE_LOW=-1.5,CAGE_HIGH=3.0;
+    /** Whether a body ({@code dx}, {@code dz} level from the ring's middle, {@code dy} from its ground up to their feet, {@code halfWidth} across) is in Y's ring. */
+    public static boolean caged(double dx,double dz,double dy,double halfWidth){
+        return dy>=CAGE_LOW&&dy<=CAGE_HIGH&&Math.hypot(dx,dz)<=CAGE_RADIUS+halfWidth;
+    }
+    /** Whether Y may begin {@code t} seconds into her formation: every sword standing, and over before they flare (as H's basic attack). */
+    public static boolean cageTime(double t){return t>=Z_FROM&&t+CAGE_LENGTH/20.0<=H_END;}
+    /** The tick Y is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her): once its swords are gone, and its cooldown after. */
+    public static long cageReady(long start,boolean free){return start+CAGE_LENGTH+(free?0:CAGE_COOLDOWN);}
+    /**
+     * Her leap (the videos: up off the pommel 0.1 s in, reaching toward the foe in the air while the swords show, down on
+     * it again by 0.52 s): how high over the pommel it has her {@code a} ticks into Y (blocks), up over
+     * [{@link #CAGE_LEAP_FROM}, {@link #CAGE_LEAP_TOP}] slowing to the top, drifting {@link #CAGE_DRIFT} higher until
+     * {@link #CAGE_LEAP_DOWN}, then down onto the pommel by {@link #CAGE_LEAP_LAND}, quickest halfway and landing softly
+     * (the videos: a dive of a tenth of a second or so).
+     */
+    public static final double CAGE_LEAP=2.4,CAGE_DRIFT=.25,CAGE_LEAP_FROM=1.2,CAGE_LEAP_TOP=4.6,CAGE_LEAP_DOWN=7.8,CAGE_LEAP_LAND=10.4;
+    public static double cageLeap(double a){
+        if(a<=CAGE_LEAP_FROM||a>=CAGE_LEAP_LAND)return 0;
+        if(a<CAGE_LEAP_TOP){double u=(a-CAGE_LEAP_FROM)/(CAGE_LEAP_TOP-CAGE_LEAP_FROM);return CAGE_LEAP*(1-(1-u)*(1-u));}
+        if(a<CAGE_LEAP_DOWN){double u=(a-CAGE_LEAP_TOP)/(CAGE_LEAP_DOWN-CAGE_LEAP_TOP);return CAGE_LEAP+CAGE_DRIFT*Math.sin(u*Math.PI*.5);}
+        double u=(a-CAGE_LEAP_DOWN)/(CAGE_LEAP_LAND-CAGE_LEAP_DOWN);return (CAGE_LEAP+CAGE_DRIFT)*(1-u*u*(3-2*u));
+    }
+    /**
+     * (2.97.0) Her camera through Y (the videos): it swings round to her side so she and the foe are both seen
+     * ({@link #CAGE_SIDE_IN}), stands there while the swords show, goes round low behind her as she comes down
+     * ({@link #CAGE_BEHIND0} to {@link #CAGE_BEHIND1}), and comes back to her as it lets go of her ({@link #CAGE_BACK0} to
+     * {@link #CAGE_BACK1}), each eased (seconds into Y).
+     */
+    public static final float CAGE_SIDE_IN=.12f,CAGE_BEHIND0=.36f,CAGE_BEHIND1=.54f,CAGE_BACK0=1.22f,CAGE_BACK1=1.6f;
 
     // ───────────────────────────── G: the ultimate ─────────────────────────────
 
