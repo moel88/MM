@@ -1310,7 +1310,7 @@ final class SwordFormation {
         for(var b:layout(c.cast.id())){
             if(t<b.plant())continue;
             float open=(float)backOut(Ease.unit(t,b.plant(),b.plant()+.12f)),wilt=Ease.smooth(t,WILT0+.06f*(float)Ease.hash(b.seed()+70),WILT1);
-            double size=b.flower()*open*(1-.4*wilt);float a=(1-wilt);if(a<=.01f||size<=.01)continue;
+            double size=FLOWER*b.flower()*open*(1-.4*wilt);float a=(1-wilt);if(a<=.01f||size<=.01)continue;
             Vec3d f=foot(centre,yaw,b).add(0,.03,0);
             int petals=7;
             for(int j=0;j<petals;j++){
@@ -1326,9 +1326,20 @@ final class SwordFormation {
                     m.line(f,tip,.022*size,WHITE,.7f*a);m.line(l,tip,.012*size,PALE,.45f*a);m.line(r,tip,.012*size,PALE,.45f*a);
                 }
             }
-            if(light){m.softDisc(f.add(0,.15,0),.55*size,BLUE,.35f*a);glint8(m,f.add(0,.3*size,0),.18*size*(.6+.4*twinkle(t,b.seed())),WHITE,.6f*a);}
+            if(light){
+                m.softDisc(f.add(0,.15,0),.95*size,BLUE,.38f*a);m.softDisc(f.add(0,.2,0),.35*size,PALE,.4f*a);glint8(m,f.add(0,.3*size,0),.3*size*(.6+.4*twinkle(t,b.seed())),WHITE,.65f*a);
+                // (2.98.0) sparkles rising off its petals
+                for(int j=0;j<6;j++){
+                    int seed=b.seed()*17+j*5+1;float born=b.plant()+.05f+.4f*(float)Ease.hash(seed);float u=Ease.unit(t,born,born+.7f);if(u<=0||u>=1)continue;
+                    double az=Math.PI*2*Ease.hash(seed+1),r=.3*size+.25*u;
+                    Vec3d q=f.add(Math.cos(az)*r,.2+1.3*Ease.out(u,0,1),Math.sin(az)*r);
+                    glint8(m,facing(q,c.camera),.09*(1-.5*u),j%2==0?WHITE:PALE,.8f*a*(1-u));
+                }
+            }
         }
     }
+    /** How much bigger the crystal flowers are than 2.97's (2.98.0). */
+    static final double FLOWER=1.3;
     /** An ease that overshoots a little before it settles (a flower opening). */
     static double backOut(float u){double s=1.4;double x=u-1;return 1+(s+1)*x*x*x+s*x*x;}
     /**
@@ -1344,6 +1355,8 @@ final class SwordFormation {
         burst(m,centre,t);
         swordLight(c,m,t,centre,yaw);
         flowers(c,m,t,centre,yaw,true);
+        // (2.98.0) the moonlight and starlight over all of it
+        FormationLights.additive(c,m);
         // (2.93.0) Z: the sword she looks at (hers only) and her flights between them
         SwordStep.additive(c,m,t,centre,yaw);
         struck(c,m,t,false);
@@ -1456,27 +1469,39 @@ final class SwordFormation {
         float t=c.sec;if(t<SILVER1||t>=end(c.cast))return;
         Vec3d centre=centre(c.cast);float yaw=yaw(c.cast);
         for(var b:layout(c.cast.id())){
-            double period=4+3*Ease.hash(b.seed()+80),phase=period*Ease.hash(b.seed()+81),u=((t+phase)%period)/period;
-            if(u>.07)continue;float a=(float)Math.sin(Math.PI*u/.07);
+            double period=3+2*Ease.hash(b.seed()+80),phase=period*Ease.hash(b.seed()+81),u=((t+phase)%period)/period;
+            if(u>.08)continue;float a=(float)Math.sin(Math.PI*u/.08);
             Vec3d top=planted(centre,yaw,b),q=at(top,frame(down(b),spinAt(b,t)),p(0,S_GUARD+.4*Ease.hash(b.seed()+82),0));
-            glint8(m,q,.2,WHITE,.8f*a);
+            glint8(m,q,.3,WHITE,.85f*a);glint8(m,q,.55,PALE,.35f*a);
         }
     }
     /** Her own sword's blue aura as she leaps and calls the swords. */
     static void aura(Fx c,EffectMesh m,float t){
         float g=Ease.window(t,.1f,.9f,.06f,.15f);if(g<=.01f)return;
         var hb=blade(c,t);Vec3d guard=hb[0].add(hb[1].multiply(GUARD)),tip=hb[0].add(hb[1].multiply(TIP));
-        m.softLine(guard,tip,.3,AURA[1],.12f*g);m.softLine(guard,tip,.14,AURA[1],.45f*g);
-        m.line(guard,tip,.06,AURA[2],.85f*g);m.line(guard,tip,.027,AURA[3],.8f*g);
-        m.softDisc(tip,.2,AURA[3],.5f*g);
+        m.softLine(guard,tip,.55,AURA[1],.16f*g);m.softLine(guard,tip,.22,AURA[1],.5f*g);
+        m.line(guard,tip,.07,AURA[2],.9f*g);m.line(guard,tip,.03,AURA[3],.85f*g);
+        m.softDisc(tip,.45,AURA[3],.5f*g);
+        // (2.98.0) a spark running up it, again and again
+        double run=(t*2.4)%1;Vec3d q=guard.lerp(tip,run);glint8(m,facing(q,c.camera),.16*(float)Math.sin(Math.PI*run),WHITE,.8f*g);
     }
     /** The thread of lightning from her sword's point down to the ground as she leaps (the video: a white-blue bolt, flickering). */
     static void thread(Fx c,EffectMesh m,float t,Vec3d spot){
         float a=Ease.smooth(t,THREAD0-.02f,THREAD0+.02f)*(1-Ease.smooth(t,THREAD1-.08f,THREAD1));if(a<=.01f)return;
         var hb=blade(c,t);Vec3d tip=hb[0].add(hb[1].multiply(TIP)),ground=new Vec3d(tip.x,spot.y+.05,tip.z);
         if(tip.y-ground.y<.2)return;
-        bolt(m,tip,ground,c.cast.id().hashCode()+7,t,.35,.05,WHITE,AZURE,a);
-        m.softDisc(ground.add(0,.1,0),.7,BLUE,.45f*a);m.softDisc(tip,.25,PALE,.6f*a);
+        int seed=c.cast.id().hashCode()+7;
+        bolt(m,tip,ground,seed,t,.38,.075,WHITE,AZURE,a);
+        // (2.98.0) two forks off it, leaping to the ground round her, each flickering on and off
+        for(int k=0;k<2;k++){
+            int q=(int)Math.floor(t*15)+k*7;if(Ease.hash(seed+q*29)<.3)continue;
+            double u=.35+.35*Ease.hash(seed+q*31+1),az=Math.PI*2*Ease.hash(seed+q*37+2),r=.8+1.1*Ease.hash(seed+q*41+3);
+            Vec3d from=tip.lerp(ground,u),to=ground.add(Math.cos(az)*r,0,Math.sin(az)*r);
+            bolt(m,from,to,seed+q*53+k,t,.22,.04,PALE,AZURE,.75f*a);
+            m.softDisc(to.add(0,.1,0),.4,BLUE,.35f*a);
+        }
+        m.softDisc(ground.add(0,.1,0),1.3,BLUE,.5f*a);m.softDisc(ground.add(0,.1,0),.4,PALE,.55f*a);m.softDisc(tip,.45,PALE,.6f*a);
+        glint8(m,facing(ground.add(0,.15,0),c.camera),.6+.15*Math.sin(t*50),WHITE,.6f*a);
     }
     /**
      * A bolt of lightning from {@code a} to {@code b}: jagged, its kinks drawn anew some thirty times a second (a function of
@@ -1514,7 +1539,7 @@ final class SwordFormation {
                 Vec3d dir=new Vec3d(Math.cos(az)*Math.cos(el),Math.sin(el),Math.sin(az)*Math.cos(el)),side=new Vec3d(-Math.sin(az),0,Math.cos(az));
                 m.needle(centre.add(0,.03,0),centre.add(dir.multiply(len)),side,.22,.35,PALE,.8f*k);
             }
-            m.softDisc(centre.add(0,.6,0),2.4,BLUE,.42f*k);m.softDisc(centre.add(0,.4,0),.8,WHITE,.6f*k);
+            m.softDisc(centre.add(0,.6,0),4.2,BLUE,.42f*k);m.softDisc(centre.add(0,.5,0),1.6,AZURE,.4f*k);m.softDisc(centre.add(0,.4,0),.7,WHITE,.6f*k);
         }
         // (2.82.6: no ring of its own racing out over the ground: the ink's ripples run out from here)
     }
@@ -1529,39 +1554,53 @@ final class SwordFormation {
             Vec3d top=planted(centre,yaw,b).add(0,above(b,t),0),foot=foot(centre,yaw,b);var f=frame(down(b),spinAt(b,t));
             // shows in the sky
             float show=FxLib.kick(t,b.shows()+.02f,.1f);
-            if(show>.01f){Vec3d mid=at(top,f,p(0,S_LEN*.45,0));m.star(mid,.5,WHITE,.7f*show);m.softDisc(mid,.6,AZURE,.3f*show);}
+            if(show>.01f){Vec3d mid=at(top,f,p(0,S_LEN*.45,0));m.star(mid,1.1,PALE,.6f*show);m.star(mid,.45,WHITE,.75f*show);m.softDisc(mid,1.4,AZURE,.32f*show);}
             swordGlow(m,top,f,a,dark(b,t),sky(b,t),flare,ink);
             // the lightning it trails as it falls, from the sky down to its point, gone a moment after it strikes
             float from=b.plant()-FALL,trail=Ease.smooth(t,from,from+.03f)*(1-Ease.smooth(t,b.plant()+.06f,b.plant()+.2f));
             if(trail>.01f){
                 Vec3d point=at(top,f,p(0,S_LEN,0)),high=foot.add(0,b.sky()+3,0);
                 if(t>=b.plant())point=foot;
-                bolt(m,high,point,b.seed(),t,.3,.034,PALE,BLUE,.8f*trail);
+                bolt(m,high,point,b.seed(),t,.3,.055,PALE,BLUE,.85f*trail);
+                // (2.98.0) and a streak of light down its way
+                m.softLine(high,point,.9,BLUE,.22f*trail);m.softLine(high,point,.3,AZURE,.4f*trail);
             }
-            // as it strikes: a flash and a ring at its foot, a shaft of light from every fifth one
+            // as it strikes: a flash and a ring at its foot, a shaft of light from every third one (2.98.0: every fifth before,
+            // all of it smaller: the flash 1.1 blocks, the star 0.8, the ring 0.9)
             float k=FxLib.kick(t,b.plant(),.1f);
             if(k>.01f){
-                m.softDisc(foot.add(0,.3,0),1.1,BLUE,.45f*k);m.star(foot.add(0,.35,0),.8,WHITE,.7f*k);
-                float u=Ease.unit(t,b.plant(),b.plant()+.18f);if(u<1)groundBand(m,foot.add(0,.06,0),.15+.7*Ease.out(t,b.plant(),b.plant()+.18f),.08,PALE,.45f*(1-u),b.seed(),t);
+                m.softDisc(foot.add(0,.3,0),2.1,BLUE,.45f*k);m.star(foot.add(0,.35,0),1.5,PALE,.6f*k);m.star(foot.add(0,.35,0),.55,WHITE,.75f*k);
+                float u=Ease.unit(t,b.plant(),b.plant()+.25f);if(u<1)groundBand(m,foot.add(0,.06,0),.2+1.9*Ease.out(t,b.plant(),b.plant()+.25f),.1,PALE,.5f*(1-u),b.seed(),t);
             }
-            if(Math.floorMod(b.seed(),5)==0){
-                float s=Ease.smooth(t,b.plant(),b.plant()+.02f)*(1-Ease.smooth(t,b.plant()+.1f,b.plant()+.4f));
-                if(s>.01f){Vec3d up=foot.add(0,14,0);m.line(foot,up,.06,WHITE,.55f*s);m.softLine(foot,up,.45,CYAN,.25f*s);}
+            // (2.98.0) sparks flying up and out of its foot as it strikes
+            double sk=t-b.plant();
+            if(sk>=0&&sk<.4)for(int j=0;j<8;j++){
+                int seed=b.seed()*23+j*13;double az=Math.PI*2*Ease.hash(seed),out=2+3.5*Ease.hash(seed+1),up=3+4*Ease.hash(seed+2);
+                Vec3d q=FormationLights.spark(foot,az,out,up,sk),q0=FormationLights.spark(foot,az,out,up,Math.max(0,sk-.03));
+                m.needle(q0,q,.045,.4,j%3==0?WHITE:j%3==1?PALE:AZURE,.85f*(1-Ease.smooth((float)sk,.2f,.4f)));
+            }
+            if(Math.floorMod(b.seed(),3)==0){
+                float s=Ease.smooth(t,b.plant(),b.plant()+.02f)*(1-Ease.smooth(t,b.plant()+.12f,b.plant()+.5f));
+                if(s>.01f){Vec3d up=foot.add(0,18,0);m.line(foot,up,.07,WHITE,.6f*s);m.softLine(foot,up,.9,CYAN,.25f*s);m.softLine(foot,foot.add(0,10,0),2,BLUE,.14f*s);}
             }
             // standing: now and then a gleam runs down its edge from its guard to its point (2.82.1)
             if(t>SILVER1&&flare<=.01f&&ink<=.01f&&a>.5f){
-                double period=5.5+3.5*Ease.hash(b.seed()+84),u=((t+period*Ease.hash(b.seed()+85))%period)/GLEAM;
+                double period=3.6+2.6*Ease.hash(b.seed()+84),u=((t+period*Ease.hash(b.seed()+85))%period)/GLEAM;
                 if(u<1){
                     double y=S_GUARD+.05+(S_LEN-S_GUARD-.12)*Ease.smooth((float)u,0,1);float g=(float)Math.sin(Math.PI*u)*a;
-                    Vec3d g0=at(top,f,edge(y-.15)),g1=at(top,f,edge(y+.15)),g2=at(top,f,edge(y));
-                    m.softLine(g0,g1,.09*THIN,PALE,.5f*g);m.line(g0,g1,.016*THIN,WHITE,.75f*g);m.softDisc(g2,.12*THIN,WHITE,.35f*g);
+                    Vec3d g0=at(top,f,edge(y-.18)),g1=at(top,f,edge(y+.18)),g2=at(top,f,edge(y));
+                    m.softLine(g0,g1,.15*THIN,PALE,.6f*g);m.line(g0,g1,.022*THIN,WHITE,.85f*g);m.softDisc(g2,.18*THIN,WHITE,.4f*g);
+                    // (2.98.0) a star at its point as the gleam gets there
+                    if(u>.8)glint8(m,facing(at(top,f,p(0,S_LEN,0)),c.camera),.28*Math.sin(Math.PI*(u-.8)/.2),WHITE,.8f*a);
                 }
             }
             // as the formation ends: a four-pointed star of light lies on the ground at its foot, a pillar of light up it (the video)
             if(flare>.01f){
                 Vec3d g=foot.add(0,.05,0),x=Vec3d.fromPolar(0,(float)spinAt(b,t)),z=new Vec3d(-x.z,0,x.x);
-                groundStar(m,g,x,z,1.6,1.15,flare);
-                m.softTaper(foot,top.add(0,1.2,0),.95,.25,CYAN,.38f*flare);
+                groundStar(m,g,x,z,2.4,1.7,flare);
+                m.softTaper(foot,top.add(0,8,0),1.6,.4,CYAN,.28f*flare);m.line(foot,top.add(0,6,0),.04,WHITE,.5f*flare);
+                // (a star at its guard: pale with a small white heart, twenty-eight of them whiting out the picture else)
+                Vec3d gd=facing(at(top,f,p(0,S_GUARD,0)),c.camera);glint8(m,gd,.55,PALE,.55f*flare);glint8(m,gd,.22,WHITE,.65f*flare);
             }
         }
     }
@@ -1590,7 +1629,7 @@ final class SwordFormation {
             for(int id:e.getValue()){
                 if(!(world.getEntityById(id) instanceof LivingEntity le))continue;
                 Vec3d p=chest(c,le),way=p.subtract(centre).multiply(1,0,1);way=way.lengthSquared()<1e-4?c.f:way.normalize();
-                double size=e.getKey()==IsosangRules.FORMATION_IMPACT_AT?.95:.7;
+                double size=e.getKey()==IsosangRules.FORMATION_IMPACT_AT?1.35:.95;
                 if(ink)IsosangEmpower.burstInk(c,m,p,at,size,id*13+k);else IsosangEmpower.burst(c,m,p,way,at,size,id*13+k);
                 k++;
             }
@@ -1616,9 +1655,11 @@ final class SwordFormation {
         double fr=front(t);
         if(run>.01f&&fr>1){Vec3d m0=poolCentre(c.cast);for(int k=0;k<4;k++){double a=Math.PI*2*k/4+.8;f.light(m0.add(Math.cos(a)*fr,.4,Math.sin(a)*fr),0x4f7dff,4,FRONT_LIGHT*run);}}
         float mid=Math.max(FxLib.kick(t,IsosangRules.H_PLANT+.02f,.16f),.7f*FxLib.kick(t,IsosangRules.H_PLANT-.055f,.02f));if(mid>.01f)f.light(centre.add(0,1,0),0xb8d8ff,12,1.4f*mid);
-        for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.12f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,6,.7f*k);}
+        for(var b:layout(c.cast.id())){float k=FxLib.kick(t,b.plant(),.14f);if(k>.05f)f.light(foot(centre,yaw,b).add(0,.6,0),0x9fc8ff,9,1.0f*k);}
         float e=end(c.cast),flare=Ease.smooth(t,e,e+.04f)*(1-Ease.smooth(t,e+GLOW,e+INKED+.05f));
-        if(flare>.01f)f.light(centre.add(0,1,0),0x7fe6ff,14,1.3f*flare);
+        if(flare>.01f)f.light(centre.add(0,1,0),0x7fe6ff,20,1.7f*flare);
+        // (2.98.0) as she springs, the pillar in the middle, each five-second beat, the ring as it ends
+        FormationLights.frame(c,f);
         float stand=Ease.smooth(t,SILVER0,SILVER1)*(1-Ease.smooth(t,e,e+GONE));
         if(stand>.01f)f.light(centre.add(0,2.2,0),0x8fb4ff,12,.25f*stand);
         // fast as she leaps and the swords rain: the afterglow cut short, else they leave copies of themselves on the way;

@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.97.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.98.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.98.0 — 이소상 H: 달빛과 별빛으로 꾸민 검진
+
+- **처음:** 뛰어오를 때 발밑의 빛 고리·솟는 빛줄기·굵어진 번개와 번개 가지, 가운데가 터질 때 22블록 빛기둥과 불티, 검비의 별빛·빛줄기·번쩍임·불티·빛기둥(셋에 하나), 커진 수정 꽃과 떠오르는 반짝임, 은빛이 될 때 칼을 훑어 오르는 빛(가운데부터 바깥으로).
+- **서 있는 동안:** 떠오르는 별 44개, 검과 검을 잇는 별자리 같은 빛의 실, 더 자주·밝게 흐르는 칼날의 빛, 5초마다 칠 때 땅을 달리는 빛의 고리(서버의 5초 피해와 같은 때).
+- **끝:** 더 큰 땅의 별빛과 빛기둥, 테두리 너머까지 달리는 빛의 고리, 검마다 떠오르는 별.
+- **그대로:** 연기·안개·물·회오리·산·물줄기·구름(전에 조용하게 해 달라고 하신 것), 피해·시간·소리.
+- **접속자만 바꾸면 됩니다:** 서버는 2.97.x로 두어도 됩니다.
+
+[RELEASE_2.98.0_KO.md](RELEASE_2.98.0_KO.md)를 확인하세요. 2.97.1은 [RELEASE_2.97.1_KO.md](RELEASE_2.97.1_KO.md)입니다.
 
 # 보탠드 2.97.1 — 이소상 Y: 상대를 겨누는 검, 적은 먹, 다섯 배의 빛
 
