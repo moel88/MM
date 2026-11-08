@@ -355,7 +355,7 @@ final class FinaleLights {
 
     /**
      * Lines of speed as they are fired (2.101.9, user request: "연사를 하고 있다는 이펙트를 추가해봐 속도감이 느껴지게"): thin
-     * streaks of light racing on from among their places toward her foe, one after another as long as they are fired
+     * streaks of light racing on from among their places the way the swords there point, one after another as long as they are fired
      * ({@link #SPEED_LINES} over the rain, each from beside one of the swords there, a little off its line, {@link
      * #SPEED_LEN} long, shooting on at {@link #SPEED} blocks a second for {@link #SPEED_LIFE}), white at their heads and
      * blue behind.

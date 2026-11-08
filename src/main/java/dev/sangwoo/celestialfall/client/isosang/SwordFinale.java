@@ -1632,17 +1632,17 @@ final class SwordFinale {
      * her along the way from her to 2.101.3's, 0.58 as far, turned the same way: she where she was in its frame, as big
      * again and two thirds, as in the video. 2.101.9, user request: "카메라는 검의 진행 방향을 정면에서 바라보지 말고, 진행
      * 방향의 측후방에서 비스듬히 바라보는 3/4 측면 시점으로 설정해", "카메라를 검의 진행 방향과 평행하게 두거나 완전히 수직으로
-     * 두지 말 것", "그리고 카메라를 살짝 비스듬이 배치해": rolled {@link #BEHIND_ROLL} degrees, the frame turned 7 degrees
-     * clockwise, the user's choice "7° 기울임" of a still beside the level one. Its first preview turned it 17 degrees more
+     * 두지 말 것", "그리고 카메라를 살짝 비스듬이 배치해": rolled 7 degrees, the user's choice "7° 기울임" of a still beside the
+     * level one, and then, beside their video (level), "수평으로 바꿔 완성": level again, {@link #BEHIND_ROLL}. Its first preview turned it 17 degrees more
      * to her left and moved it round to her right, and the user: "카메라가 너무 옆을 봄", then shown that one beside one 18
      * degrees to her left (2.101.8's) and one straight behind her, "C로 해", and then their video of it, "아니 그냥 이거처럼
-     * 만드는게 힘들어?": straight behind her a little to her right and a little over her, looking 5 degrees to her right of
-     * the way she faces and 8 down, she a little left of and under the middle of its frame and the far ground a fifth of
+     * 만드는게 힘들어?": straight behind her a little to her right and a little over her, looking 6 degrees to her right of
+     * the way she faces and 8.5 down, she a little left of and under the middle of its frame and the far ground a fifth of
      * the way up it, as in the video at 3.55 s.) How far it comes on forward and up over the shot, and how many times as
      * far as she comes down what it looks at goes down after her.
      */
-    static final double[] BEHIND={-4.8,5.25,1.0},BEHIND_LOOK={10.98,3.02,2.38};
-    static final float BEHIND_ROLL=-7;
+    static final double[] BEHIND={-4.8,5.1,1.0},BEHIND_LOOK={10.94,2.74,2.59};
+    static final float BEHIND_ROLL=0;
     /** A roll for her behind camera tried in a film before it goes in (SkillShots "hroll"), else null. */
     static Float tunedRoll;
     /** Her behind camera's eye and what it looks at (as BEHIND and BEHIND_LOOK) tried in a film before they go in (SkillShots "hcam"), else null. */
