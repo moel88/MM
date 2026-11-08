@@ -213,7 +213,7 @@ class SwordFinaleTest {
         // a time, each place filled again as its sword is fired)
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
         var s=SwordFinale.shot(c,r,SwordFinale.FOLD1);
-        Vec3d foe=SwordFinale.foe(c,fr,null);double[] her=SwordFinale.herBox(fr);
+        Vec3d flow=SwordFinale.flow(fr);double[] her=SwordFinale.herBox(fr);
         var places=new java.util.ArrayList<double[]>();var lens=new java.util.ArrayList<Double>();
         for(var p:plans){
             if(p.steed())continue;
@@ -223,10 +223,13 @@ class SwordFinaleTest {
             assertTrue(p.readyMid().y-fr.spot().y>SwordFinale.SLOT_UP-.4&&point.y-fr.spot().y>.4,"off the ground: "+(p.readyMid().y-fr.spot().y));
             // its flat to her camera ("옆면이 드러나는")
             Vec3d[] f=SwordFormation.frame(p.aimDir(),p.face());Vec3d toEye=s.eye().subtract(p.readyMid()).normalize();
-            assertTrue(Math.abs(f[2].dotProduct(toEye))>.25,"its flat turned to her camera: "+f[2].dotProduct(toEye));
-            // aimed straight at her foe ("B: 모두 적을 겨눔"), unless that would point it up
-            double off=Math.toDegrees(Math.acos(MathHelper.clamp(p.aimDir().dotProduct(foe.subtract(p.readyMid()).normalize()),-1,1)));
-            assertTrue(off<.3||Math.abs(p.aimDir().y+SwordFinale.AIM_DOWN)<1e-6,"aimed at her foe: "+off);
+            assertTrue(Math.abs(f[2].dotProduct(toEye))>.12,"its flat turned to her camera: "+f[2].dotProduct(toEye));
+            // (2.101.9: "적을 바라보지 않게하자") all pointing much the same way, the photo's slant, each turned a little to where
+            // it strikes, not at her foe
+            double off=Math.toDegrees(Math.acos(MathHelper.clamp(p.aimDir().dotProduct(flow),-1,1)));
+            assertTrue(off<15,"pointing the way they all point: "+off);
+            double turn=Math.toDegrees(Math.acos(MathHelper.clamp(p.aimDir().dotProduct(p.foot().subtract(p.readyMid()).normalize()),-1,1)));
+            assertTrue(turn<35,"turning a little on to where it strikes: "+turn);
             if(p.appear()<=SwordFinale.FOLD1+SwordFinale.EMERGE_SPREAD+1e-4){
                 // (on her camera's frame as rolled)
                 double[] a=SwordFinale.onScreen(fr,p.readyMid()),q0=SwordFinale.onScreen(fr,pommel),q1=SwordFinale.onScreen(fr,point);places.add(a);
@@ -239,13 +242,18 @@ class SwordFinaleTest {
             double[] a=places.get(i),b=places.get(j);
             assertTrue(Math.hypot((a[0]-b[0])*16/9,a[1]-b[1])/2>.1,"two places close together: "+a[0]+","+a[1]+" and "+b[0]+","+b[1]);
         }
-        double[] f0=SwordFinale.onScreen(fr,foe);int far=0,all=0;
+        int far=0,all=0;
         for(double x=-.9;x<=.9;x+=.05)for(double y=-.85;y<SwordFinale.redLine(x)-.15;y+=.05){
-            if(x>her[0]-.05&&x<her[1]+.05&&y>her[2]-.05&&y<her[3]+.05||Math.hypot((x-f0[0])*16/9,y-f0[1])<SwordFinale.FOE_CLEAR+.05)continue;
+            if(x>her[0]-.05&&x<her[1]+.05&&y>her[2]-.05&&y<her[3]+.05)continue;
             double best=9;for(double[] a:places)best=Math.min(best,Math.hypot((a[0]-x)*16/9,a[1]-y)/2);
             all++;if(best>.3)far++;
         }
         assertTrue(far<=all/20,"evenly over all of it: "+far+" of "+all+" far from any");
+        // where they strike: all over the band (its nine thirds, each struck more than once)
+        int[] cells=new int[9];
+        for(var p:plans){if(p.steed())continue;Vec3d d=p.foot().subtract(fr.spot());
+            int a=(int)Math.min(2,Math.max(0,(d.dotProduct(fr.f())-SwordFinale.BAND_NEAR)/(SwordFinale.BAND_FAR-SwordFinale.BAND_NEAR)*3)),b=(int)Math.min(2,Math.max(0,(d.dotProduct(fr.r())+SwordFinale.BAND_HALF)/(2*SwordFinale.BAND_HALF)*3));cells[a*3+b]++;}
+        for(int k=0;k<9;k++)assertTrue(cells[k]>=3,"all over the band: "+java.util.Arrays.toString(cells));
         assertTrue(places.stream().filter(a->a[0]>0).count()>=4&&places.stream().filter(a->a[0]<-.4).count()>=4,"on both sides of the frame");
         // near ones big and long, far ones small; at different heights and depths
         assertTrue(java.util.Collections.max(lens)>1.6*java.util.Collections.min(lens),"near ones big and long, far ones small: "+lens);
