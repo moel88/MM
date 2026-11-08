@@ -1,15 +1,10 @@
 package dev.sangwoo.celestialfall.client.isosang;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
-import dev.sangwoo.celestialfall.client.StandClient;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.client.kageno.Fx;
 import dev.sangwoo.celestialfall.client.kageno.FxLib;
-import dev.sangwoo.celestialfall.client.vfx.FxFrame;
 import net.minecraft.util.math.Vec3d;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import static dev.sangwoo.celestialfall.client.isosang.IsosangSlash.*;
 import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
 
@@ -24,9 +19,9 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  * <li>the cutting edge at its head as it is drawn on (a white-hot streak and a star) and a flare of white heat down its
  * heart as it is cut ({@link #edge});</li>
  * <li>a bigger burst where it passes the foe ({@link #burst}), a ring of light running out on the ground under the foe
- * ({@link #ground}), a stronger light and jolt;</li>
- * <li>the last one, the finisher, the biggest of all, with a deep blue impact frame (as Y's last swords': every other T
- * in a row, {@link #finishes}).</li>
+ * ({@link #ground}), a stronger light and jolt ({@link #jolt});</li>
+ * <li>the last one, the finisher, the biggest of all (no impact frame: 2.102.1, user request: "화면 효과는 빼줘 R도 빼고 T도
+ * 빼", then "흔들림은 안 빼도 돼": 2.100.1's deep blue impact frame taken out, its jolts kept).</li>
  * </ul>
  * Their size, place, randomness and timing otherwise as the user tuned them (2.96.3 to 2.96.6); white only in their
  * hearts, at their heads and in the snap (blue the colour of them all); no extra lines like slashes beside them.
@@ -173,35 +168,4 @@ final class LungeSlashes {
     /** Slash {@code j}'s light on the foe: how far it reaches (blocks) and how bright (2.96.2 to 2.100.0: 8 and .7 each). */
     static double lightReach(int j){return j==LUNGE_SLASHES-1?15:11;}
     static float lightBright(int j){return j==LUNGE_SLASHES-1?1.3f:.95f;}
-
-    // ───────────────────────────── the finisher ─────────────────────────────
-
-    /**
-     * The impact frame as the last slash cuts (deep blue, Y's: SwordCage.CAGE_LOOK; GGrand.impact's few frames), for T
-     * {@code c}'s camera within 40 blocks of the foe (gone by 70), when this T {@link #finishes}.
-     */
-    static void frame(Fx c,FxFrame f,Vec3d foe){
-        int last=LUNGE_SLASHES-1;boolean fin=finishes(c.cast);
-        if(!fin||foe==null||!SwordLunge.cuts(c.cast.id(),last))return;
-        float imp=GGrand.impact(c.sec,lungeSlash(last));if(imp<=0)return;
-        float near=(float)Math.max(0,Math.min(1,(70-c.camera.distanceTo(foe))/30));
-        if(near>0)f.impact(IMPACT*near*imp,0,SwordCage.CAGE_LOOK);
-    }
-    static final float IMPACT=.72f;
-    /**
-     * Whether T {@code cast}'s last slash flashes the impact frame: one used on its own does; used again as she stands on
-     * the far sword (IsosangClient.chainedAfter, 0.7 s apart) every other one does, from the first ({@link #after}: else a
-     * flicker every 0.7 s). Decided once, as this client first draws it (the T before it still known then).
-     */
-    static boolean finishes(StandClient.Cast cast){
-        Boolean known=FINISH.get(cast.id());if(known!=null)return known;
-        var before=IsosangClient.chainedAfter(cast);
-        boolean v=after(before==null?null:FINISH.getOrDefault(before.id(),Boolean.TRUE));
-        if(FINISH.size()>256)FINISH.clear();
-        FINISH.put(cast.id(),v);return v;
-    }
-    /** Whether a T flashes, after one that did ({@code true}), did not ({@code false}), or none ({@code null}: on its own or the first of a row). */
-    static boolean after(Boolean before){return before==null||!before;}
-    private static final Map<UUID,Boolean> FINISH=new HashMap<>();
-    static void clear(){FINISH.clear();}
 }

@@ -437,8 +437,6 @@ final class SwordLunge {
             float kp=passes(c.cast.id())?FxLib.kick(t,blowAt(LUNGE,0)/20f,.15f):0;if(kp>.01f)f.light(foe,0xcfe4ff,9,.8f*kp);
             for(int j=0;j<LUNGE_SLASHES;j++){float ks=cuts(c.cast.id(),j)?FxLib.kick(t,lungeSlash(j),.2f):0;if(ks>.01f)f.light(foe,0x9fc8ff,LungeSlashes.lightReach(j),LungeSlashes.lightBright(j)*ks);}
         }
-        // (2.100.1) the last slash's impact frame
-        LungeSlashes.frame(c,f,foe);
         // quick throughout (the dash, the flight on, the slashes): short afterglow, else each leaves copies of itself
         if(t<LUNGE_LENGTH/20f)f.afterglow(t<land+.1f?.02f:.05f);
     }

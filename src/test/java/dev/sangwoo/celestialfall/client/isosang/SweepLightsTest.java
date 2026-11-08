@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * R's moonlight and starlight (2.102.0): the sword's stars lit in its shape where it is called and given up to it as it
  * forms; lightning over its edges only while it hangs; the guide on the ground drawn before it sweeps and each part gone as
  * its point passes; the moon's trace left where its point passes; sparks flung out and falling; petals drifting down; the
- * stars in the ink only over the darkened ground ahead and gone as it dries; the impact frame only as it crosses the front;
+ * stars in the ink only over the darkened ground ahead and gone as it dries; no impact frame but its shake kept (2.102.1);
  * all of it gone within its swing's life.
  */
 class SweepLightsTest {
@@ -104,13 +104,17 @@ class SweepLightsTest {
             assertEquals(0,SweepLights.groundShown(k,START+.05f+SweepLights.GROUND_DRY1),1e-6,"gone as the ink dries");
         }
     }
-    @Test void theImpactFrameFlashesOnlyAsItCrossesTheFrontAndFadesFarOff(){
-        assertEquals(0,SweepLights.impact(FRONT-.05f,5),1e-6);assertEquals(0,SweepLights.impact(FRONT+.2f,5),1e-6);
-        float best=0;for(float t=FRONT-.02f;t<FRONT+.15f;t+=.002f)best=Math.max(best,SweepLights.impact(t,5));
-        assertEquals(SweepLights.IMPACT,best,.02f,"full near");
-        assertEquals(0,SweepLights.impact(FRONT+.04f,75),1e-6,"none far off");
-        assertTrue(SweepLights.impact(FRONT+.04f,55)<SweepLights.impact(FRONT+.04f,20),"fading with the distance");
-        // the shockwave's rings run out from under its pommel as it crosses the front
+    @Test void itStillShakesAsItCrossesTheFrontAndItsShockwaveRunsOut(){
+        // (2.102.1, user request: "화면 효과는 빼줘 R도 빼고 T도 빼", then "흔들림은 안 빼도 돼") its impact frame went
+        // (SweepLights.frame only lights the world) but its shake stays: a little as the sword forms, most as it crosses the front
+        var slash=new IsosangSlash();
+        var cast=new dev.sangwoo.celestialfall.client.StandClient.Cast(java.util.UUID.randomUUID(),java.util.UUID.randomUUID(),null,IsosangRules.SKILL,IsosangRules.SWEEP,0,0,0,Vec3d.ZERO,0,java.util.List.of());
+        float formed=0,crossed=0;
+        for(float t=0;t<FRONT-.1f;t+=1/240f)formed=Math.max(formed,slash.shake(cast,t));
+        for(float t=FRONT-.02f;t<FRONT+.25f;t+=1/240f)crossed=Math.max(crossed,slash.shake(cast,t));
+        assertTrue(formed>.3f&&crossed>1.2f&&crossed>formed,"shaken as before: "+formed+" "+crossed);
+        assertTrue(slash.shake(cast,1.5f)<.01f,"settled by the time it is ink");
+        // the shockwave's rings run out on the ground from under its pommel as it crosses the front
         assertEquals(-1,SweepLights.shockRadius(FRONT-.02f),1e-9);
         assertTrue(SweepLights.shockRadius(FRONT+.3f)>SweepLights.shockRadius(FRONT+.1f));
     }

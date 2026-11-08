@@ -27,8 +27,8 @@ import static dev.sangwoo.celestialfall.client.isosang.IsosangSlash.*;
  * the left, each part going as its point passes there and lays its ring of ink ({@link #guide});</li>
  * <li>as it sweeps: a crescent moon riding its point and stardust left along its point's way, the moon's trace
  * ({@link #tipMoon}, {@link #trace}); starry sparks springing off its edge ({@link #sparks}); crystal petals shed off
- * it, drifting down and catching the light ({@link #petals}); as it crosses the front, a blue impact frame and rings of
- * light running out over the ground from under its pommel ({@link #frame}, {@link #shockwave});</li>
+ * it, drifting down and catching the light ({@link #petals}); as it crosses the front, rings of light running out over
+ * the ground from under its pommel ({@link #shockwave});</li>
  * <li>under whom it strikes: a ring of light on the ground and stars rising off them ({@link #struck}); where she comes
  * down in her crouch, a ring round her feet and moon dust ({@link #landing});</li>
  * <li>as it goes into ink: its last shine down its blade, motes of light rising off it and a small crescent moon rising
@@ -38,7 +38,9 @@ import static dev.sangwoo.celestialfall.client.isosang.IsosangSlash.*;
  * </ul>
  * None of what the user's videos set is changed (the giant sword, its sweep and timing, its crescent, fan, streaks and
  * ink, her body, the camera, the sound) but its head's glint, made smaller for the moon riding there; nothing white-hot
- * over the screen. Every one is a function of R's clock and of where the server put the sweep, the same for everyone.
+ * over the screen, and no impact frame (2.102.1, user request: "화면 효과는 빼줘 R도 빼고 T도 빼", then "흔들림은 안 빼도
+ * 돼": 2.102.0's blue impact frame taken out, R's shake kept). Every one is a function of R's clock and of where the server
+ * put the sweep, the same for everyone.
  */
 final class SweepLights {
     private SweepLights(){}
@@ -534,17 +536,11 @@ final class SweepLights {
         }
     }
 
-    // ───────────────────────────── light on the world, the impact frame ─────────────────────────────
+    // ───────────────────────────── light on the world ─────────────────────────────
 
-    /** The impact frame as it crosses the front (blue, as T's last slash and Y's last swords), a few frames, fading with a camera 40 to 70 blocks off. */
-    static float impact(float t,double distance){
-        float imp=GGrand.impact(t,FRONT);if(imp<=0)return 0;
-        return IMPACT*imp*(float)Math.max(0,Math.min(1,(70-distance)/30));
-    }
-    static final float IMPACT=.7f;
+    /** Its light on the world (no impact frame: 2.102.1). */
     static void frame(Fx c,FxFrame f){
         float t=c.sec;Vec3d pivot=GiantSweep.pivot(c.cast);
-        float imp=impact(t,c.camera.distanceTo(pivot));if(imp>0)f.impact(imp,0,SwordCage.CAGE_LOOK);
         // the stars before it is called, the lightning as it hangs (flickering), the rings as it crosses the front
         float con=Ease.window(t,CON0,CON_OUT1,.04f,.06f);if(con>.01f)f.light(pivot,0x9fb8ff,6,.35f*con);
         float e=charge(t);

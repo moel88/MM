@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * T's three slashes made bigger and grander (2.100.1, user request: "T스킬 3참격을 조금만 더 키우고 이펙트를 더 크고 멋있게
  * 바꿔줘 3참격에 신경을 엄청 써줘 멋있게"): their aura of their own outline, their lightning kept off their middle, the
- * snap as each is cut in a few frames, the last the grandest, and the impact frame every other T in a row.
+ * snap as each is cut in a few frames, the last the grandest (no impact frame: 2.102.1, user request: "화면 효과는 빼줘 R도
+ * 빼고 T도 빼", then "흔들림은 안 빼도 돼": its jolts kept).
  */
 class LungeSlashesTest {
     @Test void theAuraIsTheSlashsOwnOutlineSharpAtBothTipsFullestPastItsMiddle(){
@@ -52,13 +53,6 @@ class LungeSlashesTest {
         }
         // all of it gone while T is drawn
         assertTrue(IsosangRules.lungeSlash(last)+LungeSlashes.RING_LIFE<=SwordLunge.LIFE);
-        assertTrue(IsosangRules.lungeSlash(last)+.125f<=SwordLunge.LIFE,"its impact frame");
-    }
-    @Test void theImpactFrameComesOnItsOwnAndEveryOtherTInARow(){
-        assertTrue(LungeSlashes.after(null),"one on its own, or the first of a row");
-        Boolean before=null;boolean[] row=new boolean[6];
-        for(int i=0;i<row.length;i++){row[i]=LungeSlashes.after(before);before=row[i];}
-        assertArrayEquals(new boolean[]{true,false,true,false,true,false},row,"every other one in a row (0.7 s apart: else a flicker)");
     }
     @Test void itIsEatenFromBothTipsTowardItsMiddleAsItsBand(){
         assertEquals(0,LungeLights.eaten(0,true),1e-9);assertEquals(1,LungeLights.eaten(0,false),1e-9);

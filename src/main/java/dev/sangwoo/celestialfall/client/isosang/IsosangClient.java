@@ -1174,7 +1174,7 @@ public final class IsosangClient {
         SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();VOICES.clear();EMPOWERED.clear();CHARGED.clear();E_READY.clear();SWORDS.clear();SWEEPS.clear();R_READY.clear();
         FORMATIONS.clear();FORMATION_ENDS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();ULTIMATES.clear();ULTIMATE_ENDS.clear();G_READY.clear();world=null;heldR=false;
         PERCHES.clear();FLIGHTS.clear();Z_STATES.clear();PLACES.clear();
-        VOLLEYS.clear();VOLLEY_ENDS.clear();V_READY.clear();SwordVolley.clear();LungeSlashes.clear();
+        VOLLEYS.clear();VOLLEY_ENDS.clear();V_READY.clear();SwordVolley.clear();
         LUNGES.clear();RUSHES.clear();LUNGE_ENDS.clear();T_READY.clear();CHAIN_FROM.clear();letGo();
         CAGES.clear();LEAPS.clear();CAGE_ENDS.clear();Y_READY.clear();SwordCage.clear();cageLetGo();
         FINALES.clear();TAKEN.clear();FINALE_ENDS.clear();SwordFinale.clear();
