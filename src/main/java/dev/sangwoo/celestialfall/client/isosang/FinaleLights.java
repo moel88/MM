@@ -61,6 +61,7 @@ final class FinaleLights {
         seal(c,m,fr,t);
         fan(c,m,fr,plans,t);
         launch(c,m,fr,plans,t);
+        speedLines(c,m,plans,t);
         pillars(c,m,plans,t);
         gleams(c,m,plans,t);
         landing(c,m,fr,t);
@@ -328,11 +329,54 @@ final class FinaleLights {
         for(var p:plans){
             float s=t-p.launch();if(s<-.02f||s>=RELEASE||!SwordFinale.comes(c.cast,p.plant()))continue;
             // (2.101.7: at its point, drawn back: by her camera its middle is out at the frame's edge)
-            Vec3d o=SwordFinale.tipFrom(fr,p);float k=Ease.smooth(s,-.02f,0)*(1-Ease.smooth(s,.03f,RELEASE))*near(o,c.camera);if(k<=.01f)continue;
-            m.softDisc(o,.5,AZURE,.25f*k);glint8(m,o,.14*(1+2.5*s),(p.seed()&1)==0?WHITE:PALE,.7f*k);
+            Vec3d o=SwordFinale.tipFrom(fr,p),d=p.aimDir();float n=near(o,c.camera);
+            float k=Ease.smooth(s,-.02f,0)*(1-Ease.smooth(s,.03f,RELEASE))*n;
+            if(k>.01f){m.softDisc(o,.5,AZURE,.25f*k);glint8(m,o,.14*(1+2.5*s),(p.seed()&1)==0?WHITE:PALE,.7f*k);}
+            // (2.101.9, user request: "연사를 하고 있다는 이펙트를 추가해봐 속도감이 느껴지게") the shot: a sharp flash, a ring of
+            // air thrown out round it square to the way it goes, sparks shot on ahead of it
+            float f=FxLib.kick(t,p.launch(),.05f)*n;
+            if(f>.01f){m.softDisc(o,.42,BLUE,.32f*f);glint8(m,o,.2*f,WHITE,.8f*f);}
+            float u=Ease.unit(s,0,SHOT_RING);
+            if(u>0&&u<1){
+                Vec3d a=SwordFormation.perp(d,0),b=d.crossProduct(a).normalize();
+                FxLib.ringPlane(m,o.add(d.multiply(.2+.9*Ease.out(s,0,SHOT_RING))),a,b,.1+.55*Ease.out(s,0,SHOT_RING),.025*(1-u)+.008,PALE,.65f*(1-u)*n);
+            }
+            for(int i=0;i<SHOT_SPARKS;i++){
+                int seed=p.seed()*29+i*17+2301;double life=.06+.05*Ease.hash(seed);if(s<0||s>=life)continue;
+                Vec3d w=d.add(SwordFormation.perp(d,Math.PI*2*Ease.hash(seed+1)).multiply(.25*Ease.hash(seed+2))).normalize();
+                double speed=26+22*Ease.hash(seed+3);Vec3d head=o.add(w.multiply(speed*s)),tail=o.add(w.multiply(speed*Math.max(0,s-.025)));
+                float a=(1-(float)(s/life))*near(head,c.camera);if(a<=.01f)continue;
+                m.needle(tail,head,.035,.35,i%2==0?WHITE:PALE,.75f*a);
+            }
         }
     }
-    static final float RELEASE=.22f;
+    static final float RELEASE=.22f,SHOT_RING=.1f;
+    static final int SHOT_SPARKS=5;
+
+    /**
+     * Lines of speed as they are fired (2.101.9, user request: "연사를 하고 있다는 이펙트를 추가해봐 속도감이 느껴지게"): thin
+     * streaks of light racing on from among their places toward her foe, one after another as long as they are fired
+     * ({@link #SPEED_LINES} over the rain, each from beside one of the swords there, a little off its line, {@link
+     * #SPEED_LEN} long, shooting on at {@link #SPEED} blocks a second for {@link #SPEED_LIFE}), white at their heads and
+     * blue behind.
+     */
+    static void speedLines(Fx c,EffectMesh m,SwordFinale.Plan[] plans,float t){
+        float t0=SwordFinale.FIRE0-.03f,t1=t0;for(var p:plans)if(!p.steed())t1=Math.max(t1,p.launch());
+        if(t<t0||t>t1+SPEED_LIFE*1.3f||!SwordFinale.comes(c.cast,t0))return;
+        for(int i=0;i<SPEED_LINES;i++){
+            int seed=i*61+3301;float born=t0+(t1-t0)*(i+(float)Ease.hash(seed))/SPEED_LINES,life=SPEED_LIFE*(.7f+.6f*(float)Ease.hash(seed+1)),age=t-born;
+            if(age<0||age>=life)continue;
+            var p=plans[(int)(Ease.hash(seed+2)*plans.length)%plans.length];if(p.steed())p=plans[(p.k()+1)%plans.length];
+            Vec3d d=p.aimDir(),o=p.readyMid().add(SwordFormation.perp(d,Math.PI*2*Ease.hash(seed+3)).multiply(.3+.9*Ease.hash(seed+4))).add(d.multiply(-.6+1.2*Ease.hash(seed+5)));
+            double speed=SPEED*(.8+.4*Ease.hash(seed+6)),len=SPEED_LEN*(.6+.8*Ease.hash(seed+7));
+            Vec3d head=o.add(d.multiply(speed*age)),tail=head.subtract(d.multiply(len));
+            float a=Ease.smooth(age,0,.015f)*(1-Ease.smooth(age,life*.45f,life))*near(head,c.camera);if(a<=.01f)continue;
+            m.softTaper(tail,head,0,.05,BLUE,.3f*a);m.line(tail.lerp(head,.45),head,.012,i%3==0?WHITE:PALE,.7f*a);
+        }
+    }
+    static final int SPEED_LINES=150;
+    static final double SPEED=120,SPEED_LEN=3;
+    static final float SPEED_LIFE=.1f;
 
     /** Stardust shed along each sword's flight into the band, as a comet's (each mote from where the sword passed), drifting down, twinkling. */
     static void flightDust(Fx c,EffectMesh m,SwordFinale.Frame fr,SwordFinale.Plan[] plans,float t){

@@ -1001,6 +1001,12 @@ final class SwordFinale {
             // (its outline lit less than the formation's under its night: against the dusk the fan was a mass of white)
             SwordFormation.swordGlow(m,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.scale(),b.alpha()*near,0,GLOW_SKY,flare,0,b.from(),b.from()>0?FADE_IN:0);
             if(near>.01f&&(b.flying()||t>=p.launch()&&t<p.plant()+STREAK_FLY))streak(m,fr,p,t,new Blade(b.mid(),b.dir(),b.spin(),b.alpha()*near,true,b.scale()));
+            // (2.101.9: "속도감이 느껴지게") fired: fading copies of it a moment behind it along its flight
+            if(!p.steed()&&t>=p.launch()&&t<p.plant()&&near>.01f)for(int g=1;g<=GHOSTS;g++){
+                float at=t-g*GHOST_STEP;if(at<p.launch())break;
+                double u=along(p,at),gs=scaleAt(u);Vec3d gd=flightDir(fr,p,u),gm=flight(fr,p,u);
+                SwordFormation.swordGlow(m,gm.subtract(gd.multiply(SwordFormation.S_LEN*gs/2)),SwordFormation.frame(gd,b.spin()),gs,b.alpha()*near*GHOST_ALPHA/g,0,GLOW_SKY,.25f,0);
+            }
             if(!p.steed()&&t>=p.appear()&&t<p.appear()+.2f){
                 // (2.101.9) breaking out through her camera's screen: a little light and a ring where its point comes through
                 float k=FxLib.kick(t,p.appear()+.01f,.08f);
@@ -1124,6 +1130,9 @@ final class SwordFinale {
     /** A launched sword's point {@code t} seconds in (along its flight). */
     static Vec3d tip(Frame fr,Plan p,float t){return flightTip(fr,p,along(p,Math.min(t,p.plant())));}
     static final float STREAK_SWIRL=.045f,STREAK_FLY=.11f;
+    /** How many fading copies follow a sword fired into the band, how far behind each the next is (seconds along its flight), and how strongly the first shows. */
+    static final int GHOSTS=3;
+    static final float GHOST_STEP=.012f,GHOST_ALPHA=.45f;
     /** How strongly its swords' outlines are lit (SwordFormation.swordGlow's sky: 1 the formation's own under its night). */
     static final float GLOW_SKY=.5f;
     /** Her pose {@code t} seconds in. */
@@ -1382,6 +1391,8 @@ final class SwordFinale {
         float swirl=Ease.window(t,FINALE_LEAP,GATHER0+GATHER+.2f,.1f,.25f);if(swirl>.01f)f.light(chest(fr,t),0x8cbcff,10,.8f*swirl);
         float fan=Ease.window(t,GATHER0+GATHER,FINALE_LAUNCH+.1f,.1f,.1f);if(fan>.01f)f.light(fr.at(-HUB_BACK,FINALE_HOVER+HUB_UP+1,0),0x8cbcff,8,.6f*fan);
         for(var p:plans){float k=comes(c.cast,p.plant())?FxLib.kick(t,p.plant(),.14f):0;if(k>.05f)f.light(p.foot().add(0,.8,0),0x9fd4ff,8,.9f*k);}
+        // (2.101.9) each shot lighting round where it was fired, a moment: the rapid fire flickering
+        for(var p:plans){if(p.steed()||!comes(c.cast,p.plant()))continue;float k=FxLib.kick(t,p.launch(),.06f);if(k>.05f)f.light(tipFrom(fr,p),0xb4dcff,5,.55f*k);}
         if(comes(c.cast,FINALE_LAND)){float k=FxLib.kick(t,FINALE_LAND,.12f);if(k>.01f)f.light(fr.spot.add(0,.8,0),0x9fc8ff,6,.6f*k);}
         if(comes(c.cast,FINALE_BURST)){
             float b=FxLib.kick(t,FINALE_BURST,.3f);if(b>.01f)f.light(fr.at((BAND_NEAR+BAND_FAR)/2,1.5,0),0xa8d8ff,26,1.8f*b);
