@@ -151,7 +151,7 @@ class SwordFinaleTest {
                 // (2.101.8: "검들 칼날 끝 부분만 보이게 해주고", "아니 중앙은 왜 계속 안 채우는거야", their drawing: "빨간선 아래에
                 // 전부 골고루 배치하면 돼") it comes out of the air at its spot under the user's line, only its point drawn
                 assertTrue(po[1]<SwordFinale.redLine(po[0])-.04&&Math.abs(po[0])<.9&&po[1]>-.85,"where it comes out under the user's line, off the frame's sides and bottom: "+po[0]+" "+po[1]);
-                assertTrue(po[2]>SwordFinale.PORTAL_NEAR-.05&&po[2]<SwordFinale.PORTAL_FAR+.05,"out of the air "+po[2]+" blocks in front of the lens");
+                assertTrue(po[2]>SwordFinale.SCREEN_NEAR-.05&&po[2]<SwordFinale.SCREEN_FAR+.05,"through her camera's screen "+po[2]+" blocks in front of the lens (\"아니 카메라를 뚫고 나와야한다니까?\")");
                 assertTrue(p.shown()>=SwordFinale.SHOWN_MIN-1e-9&&p.shown()<=SwordFinale.SHOWN_MAX+1e-9,"only its point drawn: "+p.shown()+" blocks");
                 spots.add(po);
                 for(float t=SwordFinale.FOLD1;t<p.launch();t+=1/120f){

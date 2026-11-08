@@ -238,10 +238,11 @@ final class SwordFinale {
      * 2.101.7: "내가 원하는건 카메라에서 검 손잡이는 안 보이고 칼날 부분만 보이게 하고 날아가는거라고"; 2.101.8: "이제 검을
      * 연사하는 거 처럼 빨리 쏘면 돼 그리고 지금 검들 너무 많이 모여있고 검들 칼날 끝 부분만 보이게 해주고 2.43초 시점에 바로
      * 연사되게", then "테두리 제외 중앙으로 골고루 배치해줘", "정확히는 위 아래 테두리만 배치하지 말아줘", "아니 중앙은 왜 계속
-     * 안 채우는거야", and their drawing: "빨간선 아래에 전부 골고루 배치하면 돼"): as she sends them
+     * 안 채우는거야", their drawing: "빨간선 아래에 전부 골고루 배치하면 돼", then "아니 카메라를 뚫고 나와야한다니까?"): as
+     * she sends them
      * ({@link #FOLD0} to {@link #FOLD1}, before her camera cuts behind her) the fan folds, every sword going to wait by that
-     * camera, only its point out of the air in its frame, spread evenly over the frame under the line the user drew
-     * ({@link #SPOTS_27}), pointing in on the band ({@link #aimFor}). From FINALE_FIRE they are fired one
+     * camera, piercing it from behind, only its point out through its screen, spread evenly over the frame under the line
+     * the user drew ({@link #SPOTS_27}), pointing in on the band ({@link #aimFor}). From FINALE_FIRE they are fired one
      * after another, nearest first, one every {@link #FIRE_STEP} seconds (a little either way, {@link #FIRE_JITTER} of it):
      * each drawn back a little ({@link #AIM} seconds before it is fired, {@link #DRAW} blocks), then shot off that way out
      * of the screen into the scene,
@@ -255,16 +256,18 @@ final class SwordFinale {
     static final float FOLD0=2.16f,FOLD1=2.3f;
     static final float FIRE_STEP=.02f,FIRE_JITTER=.35f;
     /**
-     * Only its point in her camera's frame as it waits, out of the air (2.101.8, user request: "검들 칼날 끝 부분만 보이게
-     * 해주고", "지금 검들 너무 많이 모여있고", then "아니 중앙은 왜 계속 안 채우는거야" and their drawing, "빨간선 아래에
-     * 전부 골고루 배치하면 돼"; 2.101.7 had half of each in it, filling it): each comes out of the air where it waits (its
-     * spot on her behind camera's screen as the fan has folded, {@link #SPOTS_27}), {@link #PORTAL_NEAR} to {@link
-     * #PORTAL_FAR} blocks in front of the lens, only its last {@link #SHOWN_MIN} to {@link #SHOWN_MAX} blocks drawn (as much
-     * as shows {@link #TIP0} of the frame's height of it, to {@link #TIP_SPREAD} more), fading in over {@link #FADE_IN}
-     * from where it comes out (SwordFormation.sword's cut), a faint light there ({@link #portals}). They wait as her camera
-     * comes on a little ({@link #follow}): where they are on her screen.
+     * Only its point in her camera's frame as it waits, through her camera (2.101.8, user request: "검들 칼날 끝 부분만
+     * 보이게 해주고", "지금 검들 너무 많이 모여있고", then "아니 중앙은 왜 계속 안 채우는거야" and their drawing, "빨간선
+     * 아래에 전부 골고루 배치하면 돼", then "아니 카메라를 뚫고 나와야한다니까?"; 2.101.7 had half of each in it, filling it,
+     * and the first of 2.101.8's drawings had each come out of a ring of light out in the scene): each pierces her behind
+     * camera's screen from behind it (the rest of it behind her camera), its point out through the screen at its spot (as
+     * the fan has folded, {@link #SPOTS_27}), the screen {@link #SCREEN_NEAR} to {@link #SCREEN_FAR} blocks in front of the
+     * lens (square to the way the camera looks: SwordFormation.sword's cut, {@link #cut}), only its last {@link #SHOWN_MIN}
+     * to {@link #SHOWN_MAX} blocks drawn (as much as shows {@link #TIP0} of the frame's height of it, to {@link #TIP_SPREAD}
+     * more), fading in over {@link #FADE_IN} from the screen; shot, it comes out of her camera whole and flies into the
+     * scene. They wait as her camera comes on a little ({@link #follow}): where they are on her screen.
      */
-    static final double SHOWN_MIN=.45,SHOWN_MAX=1.2,TIP0=.09,TIP_SPREAD=.04,PORTAL_NEAR=1.6,PORTAL_FAR=2.5,FADE_IN=.2;
+    static final double SHOWN_MIN=.3,SHOWN_MAX=1,TIP0=.13,TIP_SPREAD=.05,SCREEN_NEAR=.8,SCREEN_FAR=1,FADE_IN=.12;
     /**
      * The line the user drew on a still of her behind camera's shot (2.101.8, tools/isosang/finale_layout.py traced it:
      * -1 to 1 across and up the screen, 16:9), and the waiting swords' spots spread evenly under it (kept a little off the
@@ -383,7 +386,7 @@ final class SwordFinale {
                 // "빨간선 아래에 전부 골고루 배치하면 돼") only its point out of the air at its spot under the user's line,
                 // aimed in at the band (on past it if it waits all but in line with where it aims)
                 double[] sp=spots[seat[j]];
-                portal=onScreen(fr,sp[0],sp[1],PORTAL_NEAR+(PORTAL_FAR-PORTAL_NEAR)*Ease.hash(seed+22));
+                portal=onScreen(fr,sp[0],sp[1],SCREEN_NEAR+(SCREEN_FAR-SCREEN_NEAR)*Ease.hash(seed+22));
                 aimAt=aimFor(fr,sp,aimAt,centre.y);
                 Vec3d d=aimAt.subtract(portal).normalize();
                 shown=shownFor(fr,portal,d,TIP0+TIP_SPREAD*Ease.hash(seed+23));
@@ -573,18 +576,19 @@ final class SwordFinale {
         return b[0].subtract(a[0]);
     }
     /**
-     * Where sword {@code p} comes out of the air {@code t} seconds in (2.101.8): its spot, as her camera comes on while it
-     * waits, staying where it was as it shoots out of it.
+     * Where sword {@code p} pierces her camera's screen {@code t} seconds in (2.101.8): its spot, as her camera comes on
+     * while it waits, staying where it was as it shoots out.
      */
     static Vec3d portal(Frame fr,Plan p,float t){return p.portal().add(follow(fr,Math.min(t,p.launch())));}
     /**
-     * How far along sword {@code p} (its own length from its pommel, before it is scaled) it is still in the air it comes
-     * out of {@code t} seconds in, at {@code pommel}, pointing {@code dir}, {@code scale} times its size: none before it
-     * waits there (the fan folding) and once it has struck; the rest of it, past where it comes out, drawn.
+     * How far along sword {@code p} (its own length from its pommel, before it is scaled) it is still behind her camera's
+     * screen {@code t} seconds in, at {@code pommel}, pointing {@code dir}, {@code scale} times its size: none before it
+     * waits there (the fan folding) and once it has struck; the rest of it, out through the screen, drawn.
      */
     static double cut(Frame fr,Plan p,Vec3d pommel,Vec3d dir,double scale,float t){
         if(p.portal()==null||t<FOLD1||t>=p.plant())return 0;
-        Vec3d n=p.aimDir();double dn=dir.dotProduct(n);if(dn<.2)return 0;
+        // (her camera's screen: square to the way it looks, which it keeps until she comes down after them)
+        Vec3d n=folded(fr)[1];double dn=dir.dotProduct(n);if(dn<.2)return 0;
         return MathHelper.clamp(portal(fr,p,t).subtract(pommel).dotProduct(n)/dn/scale,0,SwordFormation.S_LEN);
     }
     /** The way a sword pointed {@code d} stands {@code slant} radians below level (its point on the way {@code d} goes). */
@@ -739,24 +743,6 @@ final class SwordFinale {
         // (2.101.8) shot out of the air it waited in: the rest of it still in there until it is out
         return t>=p.launch()?b.cut(cut(fr,p,b.pommel(),d,sc,t)):b;
     }
-    /**
-     * Where the waiting swords come out of the air (2.101.8): a faint blue light and a thin ring round each (opening over
-     * {@link #PORTAL_OPEN} as her camera cuts behind her), a ring flung out as it shoots out of it, gone {@link
-     * #PORTAL_GONE} after.
-     */
-    static void portals(Fx c,EffectMesh m,Frame fr,Plan[] plans,Blade[] all,float t){
-        for(int j=0;j<plans.length;j++){
-            var p=plans[j];if(p.portal()==null||t<FOLD1||t>=p.launch()+PORTAL_GONE||!comes(c.cast,p.plant()))continue;
-            var b=all[j];float k=Ease.smooth(t,FOLD1,FOLD1+PORTAL_OPEN)*(1-Ease.smooth(t,p.launch()+.02f,p.launch()+PORTAL_GONE))*(b==null?1:b.alpha());
-            if(k<=.01f)continue;
-            Vec3d o=portal(fr,p,t),n=p.aimDir(),u=n.crossProduct(UP);u=u.lengthSquared()<1e-6?new Vec3d(1,0,0):u.normalize();Vec3d v=u.crossProduct(n).normalize();
-            m.softDisc(o,.14,AZURE,.28f*k);
-            m.ring(o,u,v,.075,16,1,.01,PALE,.5f*k,p.seed()*.37);
-            float s=t-p.launch();
-            if(s>=0){float q=1-s/PORTAL_GONE;m.ring(o,u,v,.075+1.1*s,20,1,.014*q,WHITE,.8f*q,0);m.softDisc(o,.26,AZURE,.35f*q);}
-        }
-    }
-    static final float PORTAL_OPEN=.08f,PORTAL_GONE=.15f;
     /** How fast it spins as it streams after her (degrees a second), and how it quivers as it strikes (degrees, its rate in radians a second, how fast it dies). */
     static final double SPIN=140,QUIVER=9,QUIVER_RATE=52,QUIVER_DECAY=.09;
     static final Vec3d UP=new Vec3d(0,1,0);
@@ -908,8 +894,6 @@ final class SwordFinale {
                 if(k>.01f){Vec3d g=p.planted().add(p.down().multiply(SwordFormation.S_LEN));m.softDisc(g.add(0,.3,0),1.2,BLUE,.35f*k);FxLib.ring(m,g.add(0,.05,0),.2+1.2*Ease.out(t,p.start(),p.start()+.25f),.06,PALE,.6f*k);}
             }
         }
-        // (2.101.8) a faint light where each waiting sword comes out of the air, a ring as it shoots out of it
-        portals(c,m,fr,plans,all,t);
         // the arc of light behind her as she rides round the sky
         trail(m,fr,t);
         // her sword swung across in the air
