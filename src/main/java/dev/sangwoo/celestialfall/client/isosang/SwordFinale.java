@@ -43,7 +43,7 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  * nearest first, and streams after her swirling round her;</li>
  * <li>she comes back at the camera and stops in the air over where she stood, on her sword; she swings her own sword
  * across in a blue arc ({@link #swing}) and it goes into light; the swords gather behind her back and spread there like
- * wings, points out ({@link #fan}); a white ring bursts round her; she raises two fingers before her face, her eyes
+ * wings, each lying level, its blade straight ahead (2.101.10: {@link #fanWay}); a white ring bursts round her; she raises two fingers before her face, her eyes
  * alight;</li>
  * <li>the fan folds, the swords swept back behind her; her camera cuts round behind her (2.101.9: {@link #BEHIND}), the
  * swords out of its frame behind it, swords of light among them ({@link #LIGHT}: more swords, 2.101.9), and they are
@@ -226,9 +226,9 @@ final class SwordFinale {
      */
     static final float LAG0=.03f,LAG=.4f;
     /**
-     * The fan behind her back as she stands in the air on her sword (the videos: the swords spread behind her like wings,
-     * points out): its hub at her upper back, rings of swords out round it from her left low over the top to her right
-     * low, each a little further back than the last, leaning a little back.
+     * The fan behind her back as she stands in the air on her sword (the videos: the swords spread behind her like wings;
+     * 2.101.10: each lying level, its blade straight ahead, {@link #fanWay}): its hub at her upper back, rings of swords
+     * round it from her left low over the top to her right low, each a little further back than the last.
      */
     static final double HUB_UP=1.3,HUB_BACK=.5,FAN_FROM=-84,FAN_TO=84,RING0=1.15,RING_STEP=.78;
     static final int RINGS=4,PER_RING=OWN/RINGS;
@@ -458,17 +458,24 @@ final class SwordFinale {
         for(int i=0;i<n;i++){double a=(i+.5)/n,b=(i*g+off)%1;out[i]=new double[]{BAND_NEAR+(BAND_FAR-BAND_NEAR)*a,(2*b-1)*BAND_HALF*.92};}
         return out;
     }
-    /** The way its own sword {@code j} points in the fan (out from her back, as a wing's feathers, leaning a little back). */
-    static Vec3d fanWay(Frame fr,int j){
-        double phi=slotAngle(slot(j));Vec3d radial=fr.r.multiply(Math.sin(phi)).add(0,Math.cos(phi),0);
-        return radial.subtract(fr.f.multiply(.2)).normalize();
-    }
-    /** Its middle there (rings round the fan's hub {@code hub}, each a little further back). */
+    /**
+     * The way its own sword {@code j} points in the fan (2.101.10, user request with a still of it: "여기서 검이 세워져있으면
+     * 안되고 눕히고 칼날 부분이 앞쪽", and "그냥 정면만 보게 바꿔"; until then each pointed out from her back as a wing's
+     * feather, standing up over her): lying level, its blade straight ahead, the way she faces.
+     */
+    static Vec3d fanWay(Frame fr,int j){return fr.f.normalize();}
+    /**
+     * Its middle there: rings round the fan's hub {@code hub} at her upper back, from her left low over the top to her right
+     * low, each a little further back, and all {@link #FAN_BACK} further back (so their points, ahead, are behind her front).
+     */
     static Vec3d fanPlace(Frame fr,Vec3d hub,int j){
         int s=slot(j);double phi=slotAngle(s),rho=RING0+RING_STEP*ring(s);
         Vec3d radial=fr.r.multiply(Math.sin(phi)).add(0,Math.cos(phi),0);
-        return hub.add(radial.multiply(rho)).subtract(fr.f.multiply(.12+.16*rho)).add(fanWay(fr,j).multiply(SwordFormation.S_LEN/2));
+        return hub.add(radial.multiply(rho)).subtract(fr.f.multiply(.12+.16*rho+FAN_BACK));
     }
+    static final double FAN_BACK=.4;
+    /** The guard's turn of its own sword {@code p} lying in the fan: its flat up (lying, "눕히고"). */
+    static double lying(Plan p){return flatTo(p.fanDir(),p.fanMid(),p.fanMid().add(0,10,0));}
     /**
      * Which of {@code to} each of {@code from} goes to: each a different one, the farthest any goes as short as may be
      * (each in turn its nearest left, the one with the farthest nearest first, then any two swapped while that shortens
@@ -775,7 +782,9 @@ final class SwordFinale {
     static double spinAt(Plan p,float t){
         if(p.steed())return p.spin()*(1-steedIn(p,t));
         if(!p.own())return p.face();
-        double s=p.spin()+SPIN*Math.max(0,Math.min(t,FOLD0)-p.start()-RISE);
+        // (spinning as it streams after her; 2.101.10: turned to lie flat as it comes into the fan, "눕히고")
+        double s=p.spin()+SPIN*Math.max(0,Math.min(t,p.gather())-p.start()-RISE);
+        s+=MathHelper.wrapDegrees(lying(p)-s)*Ease.smooth(t,p.gather(),p.gather()+GATHER);
         return t<=FOLD0?s:s+MathHelper.wrapDegrees(p.face()-s)*Ease.smooth(t,FOLD0,FOLD1);
     }
     /** Sword {@code p} {@code t} seconds in (null when it is not drawn). */
@@ -805,8 +814,7 @@ final class SwordFinale {
         if(!p.own()&&t<p.launch())return new Blade(m,p.aimDir(),spin,alpha,false,1);
         // pulled out: pointing down as it stood, until it turns up as it rises
         if(p.own()&&t<p.start()+RISE*.5f)return new Blade(m,p.down(),spin,alpha,false,1);
-        // in the fan: pointing out, as the wings' feathers; as the fan folds, turned to point straight ahead, the way it
-        // shoots, waiting
+        // in the fan: lying level, its blade straight ahead; as the fan folds, dipped to the way it shoots, waiting
         float fanned=p.gather()+GATHER;
         if(t>=fanned&&t<p.launch())return new Blade(m,slerp(p.fanDir(),p.aimDir(),Ease.smooth(t,FOLD0,FOLD1)),spin,alpha,false,sc);
         // flying: launched, the way it goes along its flight (shot off past her, dipping in); streaming after her, the way it goes;

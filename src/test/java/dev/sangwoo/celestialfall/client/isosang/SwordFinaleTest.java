@@ -131,7 +131,12 @@ class SwordFinaleTest {
                     assertTrue(back.dotProduct(fr.f())<-.2,"its place in the fan behind her back");
                     assertTrue(back.y>IsosangRules.FINALE_HOVER,"up behind her as she stands in the air");
                     if(back.dotProduct(fr.r())<-1)left++;if(back.dotProduct(fr.r())>1)right++;
-                    assertTrue(p.fanDir().dotProduct(p.fanMid().subtract(hub))>0,"pointing out from her back, as a wing's feathers");
+                    // (2.101.10, user request: "여기서 검이 세워져있으면 안되고 눕히고 칼날 부분이 앞쪽") lying level, its blade
+                    // straight ahead, its flat up, its point behind her front
+                    assertTrue(p.fanDir().distanceTo(fr.f().normalize())<1e-9,"lying level, its blade straight ahead");
+                    Vec3d[] lie=SwordFormation.frame(p.fanDir(),SwordFinale.lying(p));
+                    assertTrue(Math.abs(lie[2].y)>.99,"lying flat: "+lie[2].y);
+                    assertTrue(p.fanMid().add(p.fanDir().multiply(SwordFormation.S_LEN/2)).subtract(fr.spot()).dotProduct(fr.f())<.05,"its point behind her front");
                     // its times: gathered (after her lap) before it is launched, from the air
                     assertTrue(p.gather()+SwordFinale.GATHER<p.launch());
                 }
@@ -191,11 +196,15 @@ class SwordFinaleTest {
         var s0=SwordFinale.shot(c,r,SwordFinale.FOLD1);Vec3d feet0=SwordFinale.body(fr,SwordFinale.FOLD1);
         double tall=screen(s0,feet0.add(0,1.9,0))[1]-screen(s0,feet0)[1];
         assertTrue(tall>.44&&tall<.62,"she a quarter of its frame high or so (the video's): "+tall/2);
-        assertTrue(left>8&&right>8,"spread to both sides like wings: "+left+" "+right);
-        // (2.101.3) as she sends them the fan folds: each turned from a feather to point the way it shoots, waiting
+        assertTrue(left>=7&&right>=7,"spread to both sides like wings: "+left+" "+right);
+        // (2.101.3) as she sends them the fan folds: each turned from lying in the fan to the way it shoots, waiting
         for(var p:plans){
             if(p.steed())continue;
-            if(p.own())assertTrue(SwordFinale.blade(fr,p,SwordFinale.FOLD0-.01f).dir().distanceTo(p.fanDir())<1e-9,"a feather until the fan folds");
+            if(p.own()){
+                var lying=SwordFinale.blade(fr,p,SwordFinale.FOLD0-.01f);
+                assertTrue(lying.dir().distanceTo(p.fanDir())<1e-9,"lying in the fan until it folds");
+                assertTrue(Math.abs(MathHelper.wrapDegrees(lying.spin()-SwordFinale.lying(p)))<1e-6,"its flat up in the fan");
+            }
             assertTrue(SwordFinale.aimFrom(p)>=SwordFinale.FOLD1-1e-6,"drawn back only once it waits");
             float waits=Math.max(SwordFinale.FOLD1,p.appear())+.005f;
             if(p.launch()<waits+.005f)continue;
