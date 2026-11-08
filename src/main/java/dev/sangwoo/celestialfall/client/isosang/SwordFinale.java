@@ -195,7 +195,8 @@ final class SwordFinale {
      * request: "박히는 검들 개수는 줄여줘 28개 정도 박으면 될듯"; 2.101.0 had as many of light as its own, joining the swirl
      * out of bursts of blue, 56 standing in the band).
      */
-    static final int OWN=FORMATION_SWORDS,LIGHT=40,SWORDS=OWN+LIGHT;
+    // (2.101.9: none of light any more, the user's video: "이거처럼": its field has some thirty swords standing, her own)
+    static final int OWN=FORMATION_SWORDS,LIGHT=0,SWORDS=OWN+LIGHT;
     /**
      * One sword's way: its own (k &lt; OWN, the formation's sword k: where its pommel stood, its way down, its guard's turn)
      * or of light; whether it is the one she rides; when it is pulled out (or shows out of the light); its swirl after her
@@ -204,8 +205,9 @@ final class SwordFinale {
      * place in the wave); where it waits in the wave as her camera cuts behind her (its middle and the way it points: the
      * way it shoots off); when it is launched and where it comes down (the middle of it standing in the ground slanting,
      * grown, and the way it points); when it strikes and when it is gone; its seed; its guard's turn as it waits there
-     * (its flat to her camera: {@link #flatTo}); when it shows there (as her camera cuts, or a moment after the last of
-     * its place was fired: {@link #RELOAD}) and which place it is ({@link #slotSpots}).
+     * (its flat to her camera: {@link #flatTo}); when it shows there (the wedge's in it as her camera cuts behind her, one
+     * out of the right a moment before it is fired) and which of the wedge's places it is ({@link #slotSpots}; -1 for one
+     * out of the right, {@link #rightSpots}).
      */
     record Plan(int k,boolean own,boolean steed,Vec3d planted,Vec3d down,double spin,float start,float join,float lag,double orbitR,double orbitUp,double orbitA,double orbitW,
                 float gather,Vec3d fanMid,Vec3d fanDir,Vec3d readyMid,Vec3d aimDir,float launch,Vec3d foot,Vec3d stuckMid,Vec3d stuckDir,float plant,float vanish,int seed,
@@ -250,47 +252,48 @@ final class SwordFinale {
      * seconds. The server's blows fall as they come down (IsosangRules.BLOWS).
      */
     static final float FOLD0=2.16f,FOLD1=2.3f;
-    static final float FIRE_STEP=.006f,FIRE_JITTER=.35f;
+    // (2.101.9, the user's video: one about every 0.03 s from the moment the shot cuts in for some 0.85 s, the wedge
+    // thinning as they go; hers flung down last)
+    static final float FIRE_STEP=.027f,FIRE_JITTER=.35f;
     /**
      * Where they wait as her camera cuts behind her (2.101.9, user request: "카메라는 검의 진행 방향을 정면에서 바라보지
      * 말고, 진행 방향의 측후방에서 비스듬히 바라보는 3/4 측면 시점으로 설정해", "검의 끝부분만 보이는 정면 시점이 아니라 검날의
      * 전체 길이와 옆면이 드러나는 구도로", "가까운 검은 크고 길게, 멀리 있는 검은 작게", "여러 검이 화면의 서로 다른 높이와 깊이에",
-     * then "검이 너무 모여있어 내가 보낸 사진처럼 조금만 모여있게", "그냥 저 각도에서 방금 내가 표시한 범위에서 골고루 나오게
-     * 바꿔줘" and their answers: under the red line, all of it, about 20 at a time, each place filled again by a sword of
-     * light as its sword is fired, 67 in all; then "적을 바라보지게 않게하자": none aimed at her foe; 2.101.8's points only,
-     * out of her camera's screen, are gone, and the first preview's wall of them at the left of the frame): whole swords,
-     * their flats to her camera ({@link #flatTo}), in {@link #WAVE_SLOTS} places spread evenly over her frame under the
-     * user's line ({@link #RED_LINE}, {@link #SLOT_LINE} under it: Lloyd relaxation over it), each {@link #PLACE_GAP} clear
-     * of the others as swords pointing the way they all point ({@link #gap}), off her and wherever a sword would show as
-     * less than {@link #MIN_LEN} of the frame's height; each as deep as keeps it {@link #SLOT_UP} blocks off the ground, some
-     * way between {@link #SLOT_NEAR} and {@link #SLOT_FAR}; all pointing much the same way ({@link #flow}, each turned
-     * {@link #TO_MARK} of the way to where it strikes, at least {@link #AIM_DOWN} down) and striking an even lattice over the
-     * band ({@link #bandMarks}: each the one nearest the way they all point from where it waits, {@link #assign}). As her
-     * camera cuts behind her every place holds one of her own; from then they are fired at random, one every FIRE_STEP,
-     * each from one of the places whose sword has come out and waited (at random among those fired the fewest times), and
-     * {@link #RELOAD} after each is fired the next comes out through her camera's screen into its place (a little aside,
-     * {@link #SLOT_JITTER}, where that is clear of the other places): the rest of her own (gone into light as the fan
-     * folds) and those of light, at random. Any two waiting at once that would be in one another ({@link #SWORD_GAP}) both
-     * point the way they all point.
+     * "검이 너무 모여있어 내가 보낸 사진처럼 조금만 모여있게", "적을 바라보지게 않게하자", then their video of it: "아니 그냥
+     * 이거처럼 만드는게 힘들어?" and "영상 보면 오른쪽 빈 공간에서도 검이 몇개씩 발사 됨"): whole swords, their flats to her
+     * camera ({@link #flatTo}), a wedge of {@link #WAVE_SLOTS} at the left of her frame ({@link #WEDGE}) from beside her
+     * camera (a guard may be past the frame's edge: {@link #LEFT_IN}), spread evenly under the user's line
+     * ({@link #RED_LINE}, {@link #SLOT_LINE} under it: Lloyd relaxation), each {@link #PLACE_GAP} clear of the others
+     * ({@link #gap}), off her and wherever a sword would show as less than {@link #MIN_LEN} of the frame's height; each
+     * as deep as keeps it {@link #SLOT_UP} blocks off the ground, some way between {@link #SLOT_NEAR} and
+     * {@link #SLOT_FAR}; all pointing much the same way ({@link #flow}, each turned {@link #TO_MARK} of the way to where
+     * it strikes, at least {@link #AIM_DOWN} down) and striking an even lattice over the band ({@link #bandMarks}: each
+     * the one nearest the way it points from where it waits, {@link #assign}). The wedge is whole as her camera cuts
+     * behind her (folded out of the fan into it); from then they are fired at random, one every FIRE_STEP, the wedge
+     * thinning as they go, and among them the rest of her own out of the empty right of the frame ({@link #RIGHT},
+     * {@link #rightSpots}), each coming out through her camera's screen there a moment before it is shot straight at
+     * where it strikes. Any two of the wedge waiting at once that would be in one another ({@link #SWORD_GAP}) both point
+     * the way they all point.
      */
     static final int WAVE_SLOTS=20;
     /** How far across her camera's frame (as rolled) its places go at most: its left side, as the swords wait in the user's video (2.101.9: "이거처럼"). */
     static final double WEDGE=-.3;
-    /** How far past the frame's left edge a waiting sword's guard may be (its point always in the frame; on her camera's screen, -1 to 1). */
+    /** How far past the frame's edge a waiting sword's guard may be (its point always in the frame; on her camera's screen, -1 to 1). */
     static final double LEFT_IN=1.12;
-    static final double SLOT_LINE=.1,SLOT_NEAR=2.2,SLOT_FAR=5,SLOT_UP=2,SLOT_JITTER=.03,MIN_LEN=.07,AIM_DOWN=.08,FACE_JITTER=14,PLACE_GAP=.45,SWORD_GAP=.15;
-    static final float RELOAD=.015f;
+    /** How far across her camera's frame (as rolled) the places at its empty right begin (2.101.9: "오른쪽 빈 공간에서도"). */
+    static final double RIGHT=.45;
+    static final double SLOT_LINE=.1,SLOT_NEAR=2.2,SLOT_FAR=5,SLOT_UP=2,MIN_LEN=.07,AIM_DOWN=.08,FACE_JITTER=14,PLACE_GAP=.45,SWORD_GAP=.15;
     /**
      * How they come out through her camera's screen (2.101.9, user: "검이 화면을 뚫고 나오지 않음"; 2.101.8: "아니 카메라를
      * 뚫고 나와야한다니까?"): each shows behind her behind camera's screen, {@link #SCREEN} blocks in front of its lens (square
      * to the way it looks), its point at it, and comes out through it into its place along the line from the lens through
      * that over {@link #EMERGE} (fast, slowing into its place: {@link #outOf}), its part still behind the screen not drawn
-     * (faint over {@link #FADE_IN} from it); her own as her camera cuts behind her (one after another over its first
-     * {@link #EMERGE_SPREAD}), each of the rest RELOAD after the last of its place was fired; each fired once it has
-     * waited {@link #WAIT_OUT} in its place, the first {@link #FIRE0} (as soon as one has come out).
+     * (faint over {@link #FADE_IN} from it): those out of the right of the frame, each {@link #WAIT_OUT} before it is
+     * fired; the wedge is in its places whole as her camera cuts behind her (the user's video), the first fired
+     * {@link #FIRE0}.
      */
     static final double SCREEN=.9,FADE_IN=.12;
-    static final float EMERGE=.06f,EMERGE_SPREAD=.05f,WAIT_OUT=.015f,FIRE0=FINALE_LAUNCH+EMERGE+WAIT_OUT;
+    static final float EMERGE=.06f,WAIT_OUT=.015f,FIRE0=FINALE_LAUNCH+WAIT_OUT;
     /**
      * The line the user drew on a still of her behind camera's shot (2.101.8, tools/isosang/finale_layout.py traced it:
      * -1 to 1 across and up the screen, 16:9): the swords wait under it (2.101.8: "빨간선 아래에 전부 골고루 배치하면 돼").
@@ -344,58 +347,61 @@ final class SwordFinale {
         for(int r=0;r<OWN;r++){int k=near[r];pulls[k]=k==run.on()?FINALE_LEAP+.02f:PULL0+PULL_SPREAD*r/(OWN-1f)+.01f*(float)Ease.hash(k*31+5);}
         Vec3d hub=fr.at(-HUB_BACK,FINALE_HOVER+HUB_UP,0);
         int salt=run.form().hashCode()*31+13,her=run.on()>=0&&run.on()<OWN?run.on():-1;
-        // (2.101.9) the places they wait in as her camera cuts behind her, each holding one of her own then; fired at
-        // random from then ("무작위로 빠르게 쏘게"), each place filled again a moment after its sword is fired, by the rest
-        // of her own and those of light at random, until all are fired
+        // (2.101.9) the places they wait in as her camera cuts behind her, each holding one of her own then, fired at
+        // random from then ("무작위로 빠르게 쏘게"); the user's video ("이거처럼"): the wedge at the left of the frame whole as
+        // the shot cuts in, one fired about every 0.03 s, thinning as they go, and ("영상 보면 오른쪽 빈 공간에서도 검이 몇개씩
+        // 발사 됨") among them a few out of the empty right of the frame, each out through her camera's screen there and
+        // shot off at once into the band
         Vec3d flow=flow(fr);
-        int n=SWORDS-(her<0?0:1),slots=Math.min(WAVE_SLOTS,OWN-(her<0?0:1));
+        int n=SWORDS-(her<0?0:1),slots=Math.min(WAVE_SLOTS,n),rights=n-slots;
         double[][] spot=slotSpots(fr,slots,salt,flow);
-        var owns=new java.util.ArrayList<Integer>();for(int j=0;j<OWN;j++)if(j!=her)owns.add(j);
+        Vec3d middle=ground(mc,fr.at((BAND_NEAR+BAND_FAR)/2,0,0),fr.spot.y);
+        double[][] rightSpot=rightSpots(fr,rights,salt,middle);
+        var owns=new java.util.ArrayList<Integer>();for(int j=0;j<SWORDS;j++)if(j!=her)owns.add(j);
         owns.sort(Comparator.comparingDouble((Integer j)->Ease.hash(j*977+salt+40)));
-        var after=new java.util.ArrayList<Integer>(owns.subList(slots,owns.size()));for(int j=OWN;j<SWORDS;j++)after.add(j);
-        after.sort(Comparator.comparingDouble((Integer j)->Ease.hash(j*977+salt+42)));
-        float[] launches=new float[SWORDS],appears=new float[SWORDS],readyAt=new float[slots];int[] slotOf=new int[SWORDS],nth=new int[SWORDS],held=new int[slots],count=new int[slots];
-        Arrays.fill(slotOf,-1);
-        for(int k=0;k<slots;k++){held[k]=owns.get(k);appears[held[k]]=FOLD1+(k==0?0:EMERGE_SPREAD*(float)Ease.hash(salt*17+k*5));readyAt[k]=appears[held[k]]+EMERGE+WAIT_OUT;slotOf[held[k]]=k;}
-        int made=slots,next=0;
-        for(int i=0;i<n;i++){
+        float[] launches=new float[SWORDS],appears=new float[SWORDS];int[] slotOf=new int[SWORDS],rightOf=new int[SWORDS],held=new int[slots];
+        Arrays.fill(slotOf,-1);Arrays.fill(rightOf,-1);
+        // (the user's video: the wedge is there whole as the shot cuts in, folded out of the fan into it as she sends them)
+        for(int k=0;k<slots;k++){held[k]=owns.get(k);appears[held[k]]=FOLD1-EMERGE;slotOf[held[k]]=k;}
+        // which of the shots come out of the right: spread over them at random, never the first
+        boolean[] fromRight=new boolean[n];
+        for(int r=0;r<rights;r++){
+            int i=1+(int)Math.round((r+.5+.8*(Ease.hash(salt*23+r*5)-.5))*(n-2)/rights);i=Math.max(1,Math.min(n-1,i));
+            while(fromRight[i])i=i%(n-1)+1;
+            fromRight[i]=true;
+        }
+        for(int i=0,nr=0;i<n;i++){
             float t=FIRE0+FIRE_STEP*(i+(i==0?0:FIRE_JITTER*(2*(float)Ease.hash(salt*7+i)-1)));
-            // one of the places whose sword has waited long enough, at random among those fired the fewest times (else the
-            // one soonest ready, waited for)
+            if(fromRight[i]){int j=owns.get(slots+nr);rightOf[j]=nr++;launches[j]=t;appears[j]=t-EMERGE-WAIT_OUT;continue;}
+            // one of the wedge's places still holding its sword, at random
             int k=-1;double pick=1e9;
-            for(int q=0;q<slots;q++)if(held[q]>=0&&readyAt[q]<=t){double h=count[q]+.9*Ease.hash(salt*13+i*7+q*3);if(h<pick){pick=h;k=q;}}
-            if(k<0){float soon=Float.MAX_VALUE;for(int q=0;q<slots;q++)if(held[q]>=0&&readyAt[q]<soon){soon=readyAt[q];k=q;}t=Math.max(t,soon);}
-            launches[held[k]]=t;
-            if(made<n){int j=after.get(next++);held[k]=j;appears[j]=t+RELOAD;readyAt[k]=t+RELOAD+EMERGE+WAIT_OUT;slotOf[j]=k;nth[j]=++count[k];made++;}
-            else held[k]=-1;
+            for(int q=0;q<slots;q++)if(held[q]>=0){double h=Ease.hash(salt*13+i*7+q*3);if(h<pick){pick=h;k=q;}}
+            launches[held[k]]=t;held[k]=-1;
         }
         Vec3d eye=folded(fr)[0];double[] box=herBox(fr);
-        // (2.101.9: "적을 바라보지 않게하자") each in its place (a little aside of it when it fills it again), all pointing
-        // much the same way (FLOW: the photo's slant), each turned a little to where it strikes: an even lattice over the
-        // band, each the one nearest the way they all point from where it waits (assign)
-        Vec3d[] mids=new Vec3d[SWORDS];var waved=new java.util.ArrayList<Integer>();
+        // (2.101.9: "적을 바라보지 않게하자") each in its place, those of the wedge all pointing much the same way (flow:
+        // the video's), each turned a little to where it strikes: an even lattice over the band, each the one nearest the
+        // way it points from where it waits (assign); those out of the right straight at where they strike
+        Vec3d[] mids=new Vec3d[SWORDS],ways=new Vec3d[SWORDS];var waved=new java.util.ArrayList<Integer>();
         for(int j=0;j<SWORDS;j++){
-            if(j==her)continue;waved.add(j);double[] at=spot[slotOf[j]];int seed=j*977+salt;
-            if(nth[j]>0){
-                double[] a={at[0]+SLOT_JITTER*(2*Ease.hash(seed+30)-1),at[1]+SLOT_JITTER*(2*Ease.hash(seed+31)-1),at[2]*(1+.05*(2*Ease.hash(seed+32)-1))};
-                Vec3d m=onScreen(fr,a[0],a[1],a[2]);boolean clear=shows(fr,box,m,flow);
-                for(int q=0;q<slots&&clear;q++)if(q!=slotOf[j])clear=gap(m,flow,onScreen(fr,spot[q][0],spot[q][1],spot[q][2]),flow)>=PLACE_GAP-.1;
-                if(clear)mids[j]=m;
-            }
-            if(mids[j]==null)mids[j]=onScreen(fr,at[0],at[1],at[2]);
+            if(j==her)continue;waved.add(j);
+            double[] at=rightOf[j]>=0?rightSpot[rightOf[j]]:spot[slotOf[j]];mids[j]=onScreen(fr,at[0],at[1],at[2]);
+            ways[j]=rightOf[j]>=0?toward(mids[j],middle):flow;
         }
-        double[][] marks=bandMarks(waved.size(),salt);Vec3d[] marked=new Vec3d[marks.length],from=new Vec3d[waved.size()];
+        double[][] marks=bandMarks(waved.size(),salt);Vec3d[] marked=new Vec3d[marks.length],from=new Vec3d[waved.size()],fromWay=new Vec3d[waved.size()];
         for(int i=0;i<marks.length;i++)marked[i]=ground(mc,fr.at(marks[i][0],0,marks[i][1]),fr.spot.y);
-        for(int i=0;i<from.length;i++)from[i]=mids[waved.get(i)];
-        int[] markOf=assign(from,marked,flow);Vec3d[] feet=new Vec3d[SWORDS],aims=new Vec3d[SWORDS];
+        for(int i=0;i<from.length;i++){from[i]=mids[waved.get(i)];fromWay[i]=ways[waved.get(i)];}
+        int[] markOf=assign(from,marked,fromWay);Vec3d[] feet=new Vec3d[SWORDS],aims=new Vec3d[SWORDS];
         for(int i=0;i<from.length;i++){
-            int j=waved.get(i);feet[j]=marked[markOf[i]];aims[j]=aimed(flow,feet[j].subtract(mids[j]).normalize());
+            int j=waved.get(i);feet[j]=marked[markOf[i]];
+            if(rightOf[j]>=0){aims[j]=toward(mids[j],feet[j]);continue;}
+            aims[j]=aimed(flow,feet[j].subtract(mids[j]).normalize());
             // (turned to where it strikes it would not show whole in her frame, or would cross her: the way they all point)
             if(!shows(fr,box,mids[j],aims[j]))aims[j]=aimed(flow,flow);
         }
-        // (turned, any two waiting at once must not be in one another: each so turned the way they all point instead)
+        // (turned, any two of the wedge waiting at once must not be in one another: each so turned the way they all point instead)
         for(int a:waved)for(int b:waved){
-            if(a>=b||launches[a]<=appears[b]||launches[b]<=appears[a]||gap(mids[a],aims[a],mids[b],aims[b])>=SWORD_GAP)continue;
+            if(a>=b||rightOf[a]>=0||rightOf[b]>=0||launches[a]<=appears[b]||launches[b]<=appears[a]||gap(mids[a],aims[a],mids[b],aims[b])>=SWORD_GAP)continue;
             aims[a]=aimed(flow,flow);aims[b]=aimed(flow,flow);
         }
         Plan[] out=new Plan[SWORDS];
@@ -471,13 +477,13 @@ final class SwordFinale {
         return out;
     }
     /**
-     * Which of {@code to} each of {@code from} strikes: each a different one, all of them as near the way {@code flow} as
-     * may be (the sum of the squared turns off it least: each in turn its nearest left, the hardest first, then any two
+     * Which of {@code to} each of {@code from} strikes: each a different one, all of them as near the way each points
+     * ({@code way}) as may be (the sum of the squared turns off it least: each in turn its nearest left, the hardest first, then any two
      * swapped that turn less so).
      */
-    static int[] assign(Vec3d[] from,Vec3d[] to,Vec3d flow){
+    static int[] assign(Vec3d[] from,Vec3d[] to,Vec3d[] way){
         int n=from.length;double[][] cost=new double[n][n];
-        for(int i=0;i<n;i++)for(int j=0;j<n;j++){double a=Math.acos(MathHelper.clamp(to[j].subtract(from[i]).normalize().dotProduct(flow),-1,1));cost[i][j]=a*a;}
+        for(int i=0;i<n;i++)for(int j=0;j<n;j++){double a=Math.acos(MathHelper.clamp(to[j].subtract(from[i]).normalize().dotProduct(way[i]),-1,1));cost[i][j]=a*a;}
         int[] m=new int[n];boolean[] used=new boolean[n];double[] best=new double[n];Integer[] order=new Integer[n];
         for(int i=0;i<n;i++){order[i]=i;best[i]=1e9;for(int j=0;j<n;j++)best[i]=Math.min(best[i],cost[i][j]);}
         Arrays.sort(order,Comparator.comparingDouble(i->-best[i]));
@@ -494,14 +500,28 @@ final class SwordFinale {
      * deep each sword's middle is), spread evenly over where one may wait (under the user's line, off her, whole in the
      * frame and showing as a blade, pointing {@code flow}: {@link #shows}), by Lloyd relaxation from places picked at random.
      */
-    static double[][] slotSpots(Frame fr,int n,int salt,Vec3d flow){
+    static double[][] slotSpots(Frame fr,int n,int salt,Vec3d flow){return spread(fr,n,salt,-1,WEDGE,m->flow);}
+    /**
+     * {@code n} places at the empty right of her behind camera's frame, each for a sword pointing at {@code to} (the middle
+     * of the band) to come out through her camera's screen and be shot off at once (2.101.9: "영상 보면 오른쪽 빈 공간에서도
+     * 검이 몇개씩 발사 됨"): right of {@link #RIGHT} across it, under the user's line, spread as the wedge's.
+     */
+    static double[][] rightSpots(Frame fr,int n,int salt,Vec3d to){return n<=0?new double[0][]:spread(fr,n,salt*3+7,RIGHT,1,m->toward(m,to));}
+    /** The way from {@code from} to {@code to}, at least AIM_DOWN down. */
+    static Vec3d toward(Vec3d from,Vec3d to){Vec3d d=to.subtract(from).normalize();return aimed(d,d);}
+    /**
+     * {@code n} places on her behind camera's screen across from {@code x0} to {@code x1} under the user's line, each for a
+     * sword pointing {@code way} from it, spread evenly over where one may wait there (whole in the frame, a blade, clear
+     * of her: {@link #shows}), by Lloyd relaxation from places picked at random.
+     */
+    static double[][] spread(Frame fr,int n,int salt,double x0,double x1,java.util.function.Function<Vec3d,Vec3d> way){
         double[] box=herBox(fr);
         var grid=new java.util.ArrayList<double[]>();
         for(int gy=0;gy<40;gy++)for(int gx=0;gx<64;gx++){
             double x=-1+1.94*(gx+.5)/64,y=-.88+1.8*(gy+.5)/40;
-            if(y>redLine(x)-SLOT_LINE||x>WEDGE)continue;
+            if(y>redLine(x)-SLOT_LINE||x<x0||x>x1)continue;
             Vec3d m=onScreen(fr,x,y,slotDepth(fr,x,y,.7));
-            if(shows(fr,box,m,flow))grid.add(new double[]{x,y});
+            if(shows(fr,box,m,way.apply(m)))grid.add(new double[]{x,y});
         }
         double[][] c=new double[n][];
         for(int k=0;k<n;k++)c[k]=grid.get((int)(Ease.hash(salt*29+k*13)*grid.size())%grid.size()).clone();
@@ -520,8 +540,8 @@ final class SwordFinale {
                 double[] g=near.get(i);
                 for(double u:new double[]{.45+.55*Ease.hash(salt*31+k*7),.7,.2}){
                     double z=slotDepth(fr,g[0],g[1],u);Vec3d m=onScreen(fr,g[0],g[1],z);
-                    if(!shows(fr,box,m,flow))continue;
-                    boolean clear=true;for(int q=0;q<k&&clear;q++)clear=gap(m,flow,mids[q],flow)>=PLACE_GAP;
+                    if(!shows(fr,box,m,way.apply(m)))continue;
+                    boolean clear=true;for(int q=0;q<k&&clear;q++)clear=gap(m,way.apply(m),mids[q],way.apply(mids[q]))>=PLACE_GAP;
                     if(clear){out[k]=new double[]{g[0],g[1],z};mids[k]=m;break;}
                 }
             }
@@ -551,8 +571,8 @@ final class SwordFinale {
         Vec3d pommel=mid.subtract(d.multiply(SwordFormation.S_LEN/2));
         double[] a=onScreen(fr,pommel),g=onScreen(fr,pommel.add(d.multiply(SwordFormation.S_GUARD))),b=onScreen(fr,mid.add(d.multiply(SwordFormation.S_LEN/2)));
         if(a[2]<.5||b[2]<.5)return false;
-        // (its guard may be past the frame's left edge, the sword coming in from beside her camera as in the user's video)
-        if(g[0]<-LEFT_IN||g[0]>.98||Math.abs(g[1])>.96||g[1]>redLine(Math.max(-1,g[0])))return false;
+        // (its guard may be past the frame's edge, the sword coming in from beside her camera as in the user's video)
+        if(Math.abs(g[0])>LEFT_IN||Math.abs(g[1])>.96||g[1]>redLine(MathHelper.clamp(g[0],-1,1)))return false;
         if(Math.abs(b[0])>.98||Math.abs(b[1])>.96||b[1]>redLine(b[0]))return false;
         if(Math.hypot((b[0]-a[0])*16/9.0,b[1]-a[1])/2<MIN_LEN)return false;
         return !crosses(fr,box,pommel,d);
@@ -768,7 +788,7 @@ final class SwordFinale {
         return eye.add(to.multiply(l0+(1-l0)*(1-(1-u)*(1-u))));
     }
     /** Whether it is one of her own that fills one of its places only later (gone into light as the fan folds). */
-    static boolean refills(Plan p){return p.own()&&!p.steed()&&p.appear()>FOLD1+EMERGE_SPREAD+1e-4f;}
+    static boolean refills(Plan p){return p.own()&&!p.steed()&&p.appear()>FOLD1-EMERGE+1e-4f;}
     /**
      * How far along sword {@code p} (its own length from its pommel, before it is scaled) it is still behind her camera's
      * screen {@code t} seconds in, at {@code pommel}, pointing {@code dir}, {@code scale} times its size (hers never).
@@ -813,9 +833,10 @@ final class SwordFinale {
         }
         float fanned=p.gather()+GATHER;
         if(t>=FOLD0){
-            // folded out of the fan to behind her camera's screen as it cuts behind her, then out through it into its place
+            // folded out of the fan into its place by her camera as it cuts behind her (the user's video: the wedge whole
+            // in the shot's first frame)
             if(t>=FOLD1)return waiting(fr,p,t);
-            float u=Ease.smooth(t,FOLD0,FOLD1);Vec3d in=outOf(fr,p,0);
+            float u=Ease.smooth(t,FOLD0,FOLD1);Vec3d in=ready(fr,p,FOLD1);
             return u<=0?fanAt(p,t):bezier(fanAt(p,t),fanAt(p,t).subtract(p.fanDir().multiply(.5)),in.subtract(p.aimDir().multiply(.6)),in,u);
         }
         if(t>=fanned)return fanAt(p,t);

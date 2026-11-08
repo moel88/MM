@@ -97,10 +97,10 @@ class FinaleLightsTest {
             assertTrue(s0+FinaleLights.SHIMMER<=SwordFinale.FOLD0,"and run before the fan folds: "+s0);
         }
     }
-    @Test void aThirdOrSoOfTheSwordsShootPillarsAndTheirSparksSpringUpAndFall(){
+    @Test void noSwordShootsAPillarAndTheirSparksSpringUpAndFall(){
+        // (2.101.9, the user's video: "이거처럼": bursts of blue crystal as they strike, no pillars of light)
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);
-        int n=0;for(var p:plans)if(FinaleLights.pillar(p)){assertTrue(p.own(),"her own (those of light burst into light)");n++;}
-        assertTrue(n>=5&&n<=15,"a third or so: "+n);
+        for(var p:plans)assertFalse(FinaleLights.pillar(p),"no pillar of light");
         Vec3d o=Vec3d.ZERO,dir=new Vec3d(1,0,0);
         for(double up=3.5;up<=8;up+=1.5){
             double peak=up/12;

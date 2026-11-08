@@ -399,8 +399,8 @@ final class FinaleLights {
 
     // ───────────────────────────── as each strikes, as the band bursts ─────────────────────────────
 
-    /** Whether sword {@code p} shoots a pillar of light up as it strikes (every third or so of her own, as the formation's sword rain: those of light burst into light). */
-    static boolean pillar(SwordFinale.Plan p){return p.own()&&Math.floorMod(p.seed()*7+3,3)==0;}
+    /** Whether sword {@code p} shoots a pillar of light up as it strikes: none (2.101.9, the user's video: "이거처럼": its swords strike in bursts of blue crystal, no pillars; 2.101.2 to 2.101.8 had one every third or so). */
+    static boolean pillar(SwordFinale.Plan p){return false;}
     /** The pillar of light up out of its foot as it strikes (a moment, PILLAR blocks high, blue round a pale heart). */
     static void pillars(Fx c,EffectMesh m,SwordFinale.Plan[] plans,float t){
         for(var p:plans){

@@ -1023,15 +1023,16 @@ public final class IsosangRules {
      * up there on it: her sword swung across (FINALE_SWING0 to FINALE_SWING1), the white ring round her (FINALE_RING),
      * her two fingers raised before her face (FINALE_SEAL0 to FINALE_SEAL1), her camera cut behind her with the swords
      * waiting by it and fired at random from then (FINALE_LAUNCH: 2.101.9, user request: "그냥 검들 바로 쏘게 바꿔 ...
-     * 카메라 뒤로 이동하자마자 그리고 순서대로 나가는거 같은데 무작위로 빠르게 쏘게"; 2.101.8 fired them nearest first from
-     * 2.43 s) and coming down into the band (FINALE_PLANT0 to FINALE_PLANT1, hers last); she steps off it and comes down
+     * 카메라 뒤로 이동하자마자 그리고 순서대로 나가는거 같은데 무작위로 빠르게 쏘게", then their video: one about every 0.03 s
+     * from the cut for some 0.7 s; 2.101.8 fired them nearest first from 2.43 s) and coming down into the band
+     * (FINALE_PLANT0 to FINALE_PLANT1, hers last); she steps off it and comes down
      * onto the ground where she stood (FINALE_DESCEND to FINALE_LAND), it flung down into the band after the rest; the
      * band's flash (FINALE_BURST); her camera back to her (FINALE_BACK0 to FINALE_BACK1); the swords gone one by one
      * (FINALE_GONE0 to FINALE_GONE1).
      */
     public static final float FINALE_FLASH=.1f,FINALE_LEAP=.2f,FINALE_RIDE=.45f,FINALE_CREST=.98f,FINALE_LAP1=1.3f,
         FINALE_SWING0=1.38f,FINALE_SWING1=1.56f,FINALE_RING=1.6f,FINALE_SEAL0=1.62f,FINALE_SEAL1=2.25f,FINALE_LAUNCH=2.3f,
-        FINALE_PLANT0=2.44f,FINALE_PLANT1=3.2f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
+        FINALE_PLANT0=2.38f,FINALE_PLANT1=3.2f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
         FINALE_BACK0=3.62f,FINALE_BACK1=3.9f,FINALE_GONE0=4.15f,FINALE_GONE1=4.6f;
     /**
      * The band its swords come down in (blocks from where she stands, the way she looks as she presses it: the user's
