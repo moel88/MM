@@ -233,43 +233,45 @@ final class SwordFinale {
      * 나간다는 느낌으로 만들어줘"; video b again, frame by frame: as her camera cuts behind her the swords wait right by it,
      * big at its left edge from its top to its bottom with every point aimed on into the scene, and shoot one after another
      * as long white streaks out of the screen into the ground ahead past her, some as bright streaks in from past its right
-     * edge, in a few frames each; 2.101.6: "그냥 검을 중앙 부분에 모아줘 중앙이 비잖아 원본 영상도 중앙에서 나갈걸?", video b
-     * again: the swords fan in from its left edge, their points gathered on her in the middle of it, and each dives from
-     * there into the band; 2.101.7: "내가 원하는건 카메라에서 검 손잡이는 안 보이고 칼날 부분만 보이게 하고 날아가는거라고",
-     * "카메라에 검이 반정도만 들어고 검이 카메라를 대부분 차지하고 쏘게"): as she sends them ({@link #FOLD0} to {@link
-     * #FOLD1}, before her camera cuts behind her) the fan folds, every sword going to wait by that camera, only its blade
-     * in its frame, half of it, the swords filling most of the frame and pointing in on the middle of the band ({@link
-     * #bladeOnly}). Each is drawn back a little ({@link #AIM} seconds before it is launched, {@link
-     * #DRAW} blocks), then shoots off that way out of the screen into the scene, faster and faster (its way to the power
-     * {@link #STRIKE_EASE}), bending in to where it strikes, its point dipping into the ground a little steeper than it came (up to {@link #STEEPER} degrees
-     * more, at most {@link #SLANT_MAX} below level, never so much that it would go up: {@link #steeper}), {@link #FLIGHT}
-     * to FLIGHT+{@link #FLIGHT_SPREAD} seconds into the ground ({@link #STEED_FLIGHT} hers, from under her feet as she
-     * steps off it); it drives {@link #DRIVE} blocks further in than it stands and springs back over {@link #SETTLE}
-     * seconds. The swords strike when they did (the server's blows), each launched just before.
+     * edge, in a few frames each; 2.101.6: "그냥 검을 중앙 부분에 모아줘 중앙이 비잖아 원본 영상도 중앙에서 나갈걸?";
+     * 2.101.7: "내가 원하는건 카메라에서 검 손잡이는 안 보이고 칼날 부분만 보이게 하고 날아가는거라고"; 2.101.8: "이제 검을
+     * 연사하는 거 처럼 빨리 쏘면 돼 그리고 지금 검들 너무 많이 모여있고 검들 칼날 끝 부분만 보이게 해주고 2.43초 시점에 바로
+     * 연사되게", then "테두리 제외 중앙으로 골고루 배치해줘", "정확히는 위 아래 테두리만 배치하지 말아줘"): as she sends them
+     * ({@link #FOLD0} to {@link #FOLD1}, before her camera cuts behind her) the fan folds, every sword going to wait by that
+     * camera, only its point in its frame, in from its left and right (never its top or bottom), spread evenly up them and
+     * in toward its middle, pointing in on the middle of the band ({@link #tipOnly}). From FINALE_FIRE they are fired one
+     * after another, nearest first, one every {@link #FIRE_STEP} seconds (a little either way, {@link #FIRE_JITTER} of it):
+     * each drawn back a little ({@link #AIM} seconds before it is fired, {@link #DRAW} blocks), then shot off that way out
+     * of the screen into the scene,
+     * faster and faster (its way to the power {@link #STRIKE_EASE}), bending in to where it strikes, its point dipping into
+     * the ground a little steeper than it came (up to {@link #STEEPER} degrees more, at most {@link #SLANT_MAX} below level,
+     * never so much that it would go up: {@link #steeper}), {@link #FLIGHT} to FLIGHT+{@link #FLIGHT_SPREAD} seconds into
+     * the ground ({@link #STEED_FLIGHT} hers, from under her feet as she steps off it, last); it drives {@link #DRIVE}
+     * blocks further in than it stands and springs back over {@link #SETTLE} seconds. The server's blows fall as they come
+     * down (IsosangRules.BLOWS).
      */
     static final float FOLD0=2.16f,FOLD1=2.3f;
+    static final float FIRE_STEP=.02f,FIRE_JITTER=.35f;
     /**
-     * The way round where it points in on that each waiting sword comes from on her camera's screen (2.101.6, {@link
-     * #round}: 0 to the right and a quarter turn up): her left wing's from its left, {@link #LEFT0} degrees for those
-     * striking nearest to {@link #LEFT1} for the farthest (2.101.7: up to her upper left, as the video's swords there aim
-     * at her); her right wing's from its right, {@link #RIGHT0} to {@link #RIGHT1}; the fan's middle, within {@link
-     * #MID_WING} degrees of straight up, from under the band ({@link #UNDER0} to {@link #UNDER1} across it) for its near
-     * half and from over it ({@link #OVER0} to {@link #OVER1}) for its far half: they all point in on the band in the
-     * middle of the screen from every side, as the video's swords fan in onto her and dive into it (2.101.7, user request:
-     * "가려도 된다고 카메라를": they may cover her).
+     * Only its point in her camera's frame as it waits (2.101.8, user request: "검들 칼날 끝 부분만 보이게 해주고", "지금 검들
+     * 너무 많이 모여있고"; 2.101.7 had half of each in it, filling it, {@link #tipOnly}): poking in from the frame's edge
+     * {@link #POKE0} of its height (to {@link #POKE_SPREAD} more), its last {@link #SHOWN} blocks (its pointed end,
+     * S_POINT, and a little of its blade) as deep in front of the lens as puts them there, but no nearer than {@link
+     * #EDGE_NEAR} blocks nor farther than {@link #EDGE_FAR} (else those at the frame's sides, foreshortened least, would
+     * be thin needles out by her, and those under it, foreshortened most, big wedges by the lens), as much of it then as
+     * pokes in that far ({@link #SHOWN_MIN}, its pointed end, to {@link #SHOWN_MAX} blocks); its guard out past the edge
+     * by {@link #PAST_EDGE} of the frame, a ring {@link #GUARD_RING} round its blade where its guard is (its ends and
+     * knobs, however it is turned), its grip and pommel on out (or behind the lens). They wait as her camera comes on a
+     * little ({@link #follow}): where they are on her screen.
      */
-    static final double MID_WING=35,LEFT0=232,LEFT1=148,RIGHT0=-48,RIGHT1=34,UNDER0=250,UNDER1=290,OVER0=108,OVER1=48;
+    static final double SHOWN=.6,SHOWN_MIN=.36,SHOWN_MAX=1,POKE0=.08,POKE_SPREAD=.3,EDGE_NEAR=1,EDGE_FAR=2.6,PAST_EDGE=.06,GUARD_RING=.23;
     /**
-     * Only its blade in her camera's frame as it waits, half of it, the swords filling most of the frame (2.101.7, user
-     * request: "내가 원하는건 카메라에서 검 손잡이는 안 보이고 칼날 부분만 보이게 하고 날아가는거라고", "카메라에 검이
-     * 반정도만 들어고 검이 카메라를 대부분 차지하고 쏘게 가려도 된다고 카메라를", "그리고 중앙은 아직도 비어있네",
-     * {@link #bladeOnly}): its middle on the frame's edge, its point {@link #OUT0} of the way out from where it strikes to
-     * the edge (those striking nearest) to {@link #OUT_STEP} more ring by ring ({@link #OUT_SPREAD} either way), at the
-     * nearest {@link #EDGE_NEAR} blocks in front of the lens and at the farthest {@link #EDGE_FAR}; its guard out past the
-     * edge by {@link #PAST_EDGE} of the frame, a ring {@link #GUARD_RING} round its blade where its guard is (its ends and
-     * knobs, however it is turned), its grip and pommel on out (or behind the lens).
+     * Where up its side of the frame each waits (2.101.8, user request: "정확히는 위 아래 테두리만 배치하지 말아줘"): its
+     * points' edge crossings spread evenly over {@link #EDGE_SPAN} of the side either way of its middle (none at its top or
+     * bottom), {@link #EDGE_JITTER} of a share either way; each poking in its own way from POKE0 to POKE0+POKE_SPREAD of the
+     * frame's height, the next a {@link #GOLDEN} step on (so that their points spread evenly in toward the middle).
      */
-    static final double OUT0=.14,OUT_STEP=.02,OUT_SPREAD=.06,EDGE_NEAR=.25,EDGE_FAR=1.2,PAST_EDGE=.06,GUARD_RING=.23;
+    static final double EDGE_SPAN=.78,EDGE_JITTER=.3,GOLDEN=.6180339887;
     /**
      * How far from where it strikes toward the band's middle each waiting sword points (2.101.7, "그리고 중앙은 아직도
      * 비어있네"): so that their points close in on the middle of the band, not round its edges; each shoots off that way
@@ -281,8 +283,8 @@ final class SwordFinale {
     /** How far back from its point a sword's guard is (the root of its blade: its guard's ends swept toward the point). */
     static final double HILT=SwordFormation.S_LEN-SwordFormation.S_GUARD-SwordFormation.S_SWEEP;
     static final double STEEPER=18,SLANT_MAX=62,SLANT_JITTER=6;
-    static final float FLIGHT=.07f,FLIGHT_SPREAD=.04f,AIM=.1f,STEED_FLIGHT=.11f,SETTLE=.12f;
-    static final double DRAW=.35,DRIVE=.3,STRIKE_EASE=1.7;
+    static final float FLIGHT=.07f,FLIGHT_SPREAD=.04f,AIM=.07f,STEED_FLIGHT=.11f,SETTLE=.12f;
+    static final double DRAW=.2,DRIVE=.3,STRIKE_EASE=1.7;
     /**
      * How big the swords grow as they fly down into the band (2.101.1, user request: "그리고 박히는 검들은 더 커야해", their
      * choice: twice as big, growing as they fly; then "박히는 검들 1.5배로 더 키우고": half as big again, three times the
@@ -316,6 +318,18 @@ final class SwordFinale {
         Vec3d hub=fr.at(-HUB_BACK,FINALE_HOVER+HUB_UP,0);
         // (2.101.7) the band's middle on the ground: where the waiting swords point in on, pulled from where each strikes
         Vec3d centre=ground(mc,fr.at((BAND_NEAR+BAND_FAR)/2,0,0),fr.spot.y);
+        // (2.101.8) where each strikes (how far into the band and aside), found first: they are fired nearest first, and
+        // wait on her camera's frame's left (her left wing's) and right (her right wing's), each side's nearest striking lowest
+        double[] sides=new double[SWORDS],fws=new double[SWORDS],lefts=new double[SWORDS],rights=new double[SWORDS];
+        int her=-1,onLeft=0,onRight=0;
+        for(int j=0;j<SWORDS;j++){
+            int seed=j*977+run.form().hashCode()*31+13,s=slot(j);double phi=slotAngle(s);
+            if(j<OWN&&j==run.on()){her=j;sides[j]=(Ease.hash(seed+9)-.5)*.8;fws[j]=BAND_NEAR+.5;}
+            else{sides[j]=BAND_HALF*Math.sin(phi)*(.8+.2*Ease.hash(seed+8))+(Ease.hash(seed+9)-.5)*.9;fws[j]=BAND_NEAR+(BAND_FAR-BAND_NEAR)*((ring(s)+.15+.7*Ease.hash(seed+10))/RINGS);}
+            boolean left=phi<0;lefts[j]=left?fws[j]:1e9+j;rights[j]=left?1e9+j:fws[j];
+            if(j!=her){if(left)onLeft++;else onRight++;}
+        }
+        int[] fired=ranks(fws,her),leftRank=ranks(lefts,her),rightRank=ranks(rights,her);
         Plan[] out=new Plan[SWORDS];
         for(int j=0;j<SWORDS;j++){
             int seed=j*977+run.form().hashCode()*31+13;boolean own=j<OWN,steed=own&&j==run.on();
@@ -338,15 +352,15 @@ final class SwordFinale {
             Vec3d fanMid=fanPommel.add(fanDir.multiply(SwordFormation.S_LEN/2));
             // where it comes down: across the band as it stood across the fan, its ring how far out (hers, the one she
             // rides, in the near middle of it, flung there last as she steps off it)
-            double side,fw;
-            if(steed){side=(Ease.hash(seed+9)-.5)*.8;fw=BAND_NEAR+.5;}
-            else{side=BAND_HALF*Math.sin(phi)*(.8+.2*Ease.hash(seed+8))+(Ease.hash(seed+9)-.5)*.9;fw=BAND_NEAR+(BAND_FAR-BAND_NEAR)*((ring(s)+.15+.7*Ease.hash(seed+10))/RINGS);}
-            Vec3d foot=ground(mc,fr.at(fw,0,side),fr.spot.y);
+            Vec3d foot=ground(mc,fr.at(fws[j],0,sides[j]),fr.spot.y);
             float plant,launch;
             if(steed){launch=FINALE_DESCEND+.06f;plant=launch+STEED_FLIGHT;gather=launch;}
             else{
-                plant=Math.min(FINALE_PLANT1,FINALE_PLANT0+(FINALE_PLANT1-FINALE_PLANT0-.04f)*(float)((fw-BAND_NEAR)/(BAND_FAR-BAND_NEAR))+.04f*(float)Ease.hash(seed+12));
-                launch=plant-FLIGHT-FLIGHT_SPREAD*(float)Ease.hash(seed+13);
+                // (2.101.8, "이제 검을 연사하는 거 처럼 빨리 쏘면 돼", "2.43초 시점에 바로 연사되게") fired one after another
+                // from FINALE_FIRE, nearest first, one every FIRE_STEP seconds (the first right then)
+                int r=fired[j];
+                launch=FINALE_FIRE+FIRE_STEP*(r+(r==0?0:FIRE_JITTER*(2*(float)Ease.hash(seed+12)-1)));
+                plant=launch+FLIGHT+FLIGHT_SPREAD*(float)Ease.hash(seed+13);
             }
             // where it waits as the fan folds (2.101.7: by her camera behind her, aimed in at the band's middle side of
             // where it strikes; hers under her feet as she steps off it); it shoots off that way, bends in to where it
@@ -354,11 +368,15 @@ final class SwordFinale {
             Vec3d readyMid,aimAt=steed?foot:foot.lerp(centre,AIM_PULL);
             if(steed)readyMid=rideMid(fr,FINALE_DESCEND);
             else{
-                // (2.101.6) gathered in the middle of her camera's screen, pointing in on the band from every side (as
-                // the video's swords fan in onto her and dive in); (2.101.7) half of it in the frame, only its blade: its
-                // middle on the frame's edge, its hilt out past it, its point in near the band's middle
-                double h2=Ease.hash(seed+22),h3=Ease.hash(seed+23);
-                readyMid=bladeOnly(fr,aimAt,Math.toRadians(round(phi,ring(s),h2)),OUT0+OUT_STEP*ring(s)+OUT_SPREAD*(h3-.5));
+                // (2.101.8: "검들 칼날 끝 부분만 보이게 해주고", "지금 검들 너무 많이 모여있고", then "테두리 제외 중앙으로
+                // 골고루 배치해줘", "정확히는 위 아래 테두리만 배치하지 말아줘") only its point in the frame, poking in from
+                // its left edge (her left wing's) or its right (her right wing's), never its top or bottom: spread evenly up
+                // the side (EDGE_SPAN either way of its middle, those striking nearest lowest), each poking in its own way
+                // toward the middle (POKE0 to POKE0+POKE_SPREAD, neighbours never alike: a golden step each)
+                boolean left=phi<0;int r=left?leftRank[j]:rightRank[j],n=left?onLeft:onRight;
+                double ey=EDGE_SPAN*(2*(r+.5+EDGE_JITTER*(Ease.hash(seed+22)-.5))/n-1);
+                double poke=POKE0+POKE_SPREAD*((r*GOLDEN+(left?0:.5))%1);
+                readyMid=tipOnly(fr,aimAt,left?-1:1,ey,poke);
             }
             Vec3d aimDir=aimAt.subtract(readyMid).normalize();
             Vec3d stuckDir=steeper(readyMid,aimDir,foot,STEEPER+SLANT_JITTER*(2*Ease.hash(seed+20)-1));
@@ -453,7 +471,7 @@ final class SwordFinale {
     /** When it is drawn back to shoot (hers as she steps off it; never before the fan has folded). */
     static float aimFrom(Plan p){return p.steed()?FINALE_DESCEND:Math.max(FOLD1,p.launch()-AIM);}
     /** Where its middle is drawn back to as it is launched: from where it waits aimed through her (hers from under her feet as she steps off), back along the way it shoots. */
-    static Vec3d drawn(Frame fr,Plan p){return p.readyMid().subtract(p.aimDir().multiply(DRAW));}
+    static Vec3d drawn(Frame fr,Plan p){return (p.steed()?p.readyMid():p.readyMid().add(follow(fr,p.launch()))).subtract(p.aimDir().multiply(DRAW));}
     /** How far along its flight it is {@code t} seconds in (0 as it is launched to 1 as it strikes: faster and faster). */
     static double along(Plan p,float t){return Math.pow(Ease.unit(t,p.launch(),p.plant()),STRIKE_EASE);}
     /** How big it is {@code u} of the way along its flight (1 to GROW, with the way it has come). */
@@ -479,41 +497,54 @@ final class SwordFinale {
         Vec3d right=fw.crossProduct(UP).normalize();
         return new Vec3d[]{eye,fw,right,right.crossProduct(fw)};
     }
-    /**
-     * The way round where it strikes (degrees on her camera's screen, 0 to the right and a quarter turn up) that the
-     * sword at {@code phi} radians round the fan in ring {@code ring} waits and comes from (2.101.6): her left wing's
-     * from the left (the nearest striking lowest), her right wing's from the right, the fan's middle from under the band
-     * for its near half and over it for its far half, across as they stood across the fan ({@code jitter} 0 to 1, a few
-     * degrees either way).
-     */
-    static double round(double phi,int ring,double jitter){
-        double a=Math.toDegrees(phi),j=4*(2*jitter-1);
-        if(a<-MID_WING)return LEFT0+(LEFT1-LEFT0)*(ring+.4*(a-FAN_FROM)/(-MID_WING-FAN_FROM))/(RINGS-.6)+j;
-        if(a>MID_WING)return RIGHT0+(RIGHT1-RIGHT0)*(ring+.4*(FAN_TO-a)/(FAN_TO-MID_WING))/(RINGS-.6)+j;
-        double across=(a+MID_WING)/(2*MID_WING);
-        return ring<RINGS/2?UNDER0+(UNDER1-UNDER0)*across+6*(ring-.5)+j:OVER0+(OVER1-OVER0)*across+6*(ring-2.5)+j;
+    /** Each sword's rank by {@code key}, lowest first, but hers ({@code her}, -1 for none: none of the others' ranks). */
+    static int[] ranks(double[] key,int her){
+        Integer[] o=new Integer[key.length];for(int j=0;j<o.length;j++)o[j]=j;
+        Arrays.sort(o,Comparator.comparingDouble((Integer j)->key[j]));
+        int[] r=new int[key.length];int n=0;
+        for(int j:o)r[j]=j==her?-1:n++;
+        return r;
     }
     /**
-     * Where the sword aimed at {@code at} waits by her camera (its middle; 2.101.7): on the line from {@code at} that
-     * leaves her camera's frame (as the fan has folded) the way {@code round} radians round it on the screen (0 to the
-     * right, a quarter turn up: the way it comes from), its middle on the frame's edge: half of it in the frame, its blade
-     * from the edge in to its point, {@code out} of the way out from {@code at} to the edge (as deep as puts it there,
-     * EDGE_NEAR to EDGE_FAR blocks in front of the lens); its guard out past the edge ({@link #hiltOut}).
+     * Where the sword aimed at {@code at} waits by her camera (its middle; 2.101.8, user request: "검들 칼날 끝 부분만
+     * 보이게 해주고"): only its point in her camera's frame (as the fan has folded), poking in {@code poke} of the frame's
+     * height from where the edge is at ({@code ex}, {@code ey}) toward where it points in on: its last SHOWN blocks in the
+     * frame, the rest of it out past the edge (as deep in front of the lens as puts its point there, EDGE_NEAR to
+     * EDGE_FAR blocks); its guard out past the edge ({@link #hiltOut}).
      */
-    static Vec3d bladeOnly(Frame fr,Vec3d at,double round,double out){
+    static Vec3d tipOnly(Frame fr,Vec3d at,double ex,double ey,double poke){
         double[] f=onScreen(fr,at);
-        double dx=Math.cos(round)*9/16.0,dy=Math.sin(round),k=Double.MAX_VALUE;
-        if(Math.abs(dx)>1e-9)k=Math.min(k,(Math.signum(dx)-f[0])/dx);
-        if(Math.abs(dy)>1e-9)k=Math.min(k,(Math.signum(dy)-f[1])/dy);
-        double ex=f[0]+k*dx,ey=f[1]+k*dy,lo=EDGE_NEAR,hi=EDGE_FAR;
-        for(int i=0;i<30;i++){
-            double z=(lo+hi)/2;Vec3d mid=onScreen(fr,ex,ey,z);
-            double[] p=onScreen(fr,mid.add(at.subtract(mid).normalize().multiply(SwordFormation.S_LEN/2)));
-            if(((p[0]-f[0])*dx+(p[1]-f[1])*dy)/(dx*dx+dy*dy)/k<out)lo=z;else hi=z;
+        double ux=(f[0]-ex)*16/9.0,uy=f[1]-ey,ul=Math.hypot(ux,uy);ux/=ul;uy/=ul;
+        // as deep as puts its last SHOWN blocks that far in (EDGE_NEAR to EDGE_FAR blocks in front of the lens) ...
+        double lo=EDGE_NEAR,hi=EDGE_FAR;
+        for(int i=0;i<40;i++){
+            double z=(lo+hi)/2;Vec3d e=onScreen(fr,ex,ey,z);
+            if(poking(fr,e,at.subtract(e).normalize(),SHOWN,ex,ey,ux,uy)>poke)lo=z;else hi=z;
         }
-        Vec3d mid=onScreen(fr,ex,ey,lo),d=at.subtract(mid).normalize();
+        // ... and as much of it then as pokes in that far (SHOWN_MIN to SHOWN_MAX blocks)
+        Vec3d e=onScreen(fr,ex,ey,lo),d=at.subtract(e).normalize();
+        double a=SHOWN_MIN,b=SHOWN_MAX;
+        for(int i=0;i<40;i++){double l=(a+b)/2;if(poking(fr,e,d,l,ex,ey,ux,uy)>poke)b=l;else a=l;}
+        Vec3d mid=e.add(d.multiply(a-SwordFormation.S_LEN/2));
         double back=0;while(back<2&&!hiltOut(fr,mid.add(d.multiply(SwordFormation.S_LEN/2-HILT-back)),d))back+=.01;
         return mid.subtract(d.multiply(back));
+    }
+    /**
+     * How far in from the frame's edge at ({@code ex}, {@code ey}) the point of a sword crossing it at {@code e} pointing
+     * {@code d}, {@code shown} blocks of it in, is, the way ({@code ux}, {@code uy}) in from there (heights of the frame).
+     */
+    static double poking(Frame fr,Vec3d e,Vec3d d,double shown,double ex,double ey,double ux,double uy){
+        double[] p=onScreen(fr,e.add(d.multiply(shown)));
+        return ((p[0]-ex)*16/9.0*ux+(p[1]-ey)*uy)/2;
+    }
+    /**
+     * How far her camera behind her has come on since the fan folded {@code t} seconds in (it comes on a little and up as
+     * they fly, not turning until she comes down after them): the waiting swords come with it, where they are on her screen
+     * (2.101.8: only their points in its frame, else those left till last would slide out of it).
+     */
+    static Vec3d follow(Frame fr,float t){
+        Vec3d[] a=behind(fr,FOLD1),b=behind(fr,Math.min(t,FINALE_DESCEND));
+        return b[0].subtract(a[0]);
     }
     /**
      * Whether the guard of a sword at {@code guard} pointing {@code d} is out of her camera's frame (as the fan has
@@ -581,10 +612,11 @@ final class SwordFinale {
     /** Its middle {@code u} of the way along its flight (behind its point the way it goes, as big as it has grown). */
     static Vec3d flight(Frame fr,Plan p,double u){return flightTip(fr,p,u).subtract(flightDir(fr,p,u).multiply(SwordFormation.S_LEN*scaleAt(u)/2));}
     /** Where it waits aimed through her {@code t} seconds in, breathing a little until it is drawn back to shoot. */
-    static Vec3d ready(Plan p,float t){
+    static Vec3d ready(Frame fr,Plan p,float t){
         double s=p.seed(),k=1-Ease.smooth(t,aimFrom(p),p.launch());
-        // (2.101.7: only along its way, so that its hilt out of her camera's frame stays out of it)
-        return p.readyMid().add(p.aimDir().multiply(BREATHE*k*Math.sin(t*3.3+s*.7)));
+        // (2.101.7: only along its way, so that its hilt out of her camera's frame stays out of it; 2.101.8: as her camera
+        // comes on, with it)
+        return p.readyMid().add(follow(fr,Math.min(t,p.launch()))).add(p.aimDir().multiply(BREATHE*k*Math.sin(t*3.3+s*.7)));
     }
     /** Its middle {@code t} seconds in (null when it is not drawn), before the way it points is found from how it moves. */
     static Vec3d mid(Frame fr,Plan p,float t){
@@ -598,7 +630,7 @@ final class SwordFinale {
         if(t>=FOLD0){
             // folded out of the fan to wait behind her aimed through her, then drawn back a little to shoot
             float u=Ease.smooth(t,FOLD0,FOLD1);
-            Vec3d at=u<=0?fanAt(p,t):u>=1?ready(p,t):bezier(fanAt(p,t),fanAt(p,t).subtract(p.fanDir().multiply(.5)),p.readyMid().subtract(p.aimDir().multiply(.6)),ready(p,t),u);
+            Vec3d at=u<=0?fanAt(p,t):u>=1?ready(fr,p,t):bezier(fanAt(p,t),fanAt(p,t).subtract(p.fanDir().multiply(.5)),p.readyMid().subtract(p.aimDir().multiply(.6)),ready(fr,p,t),u);
             return at.subtract(p.aimDir().multiply(DRAW*Ease.smooth(t,aimFrom(p),p.launch())));
         }
         if(t>=fanned)return fanAt(p,t);

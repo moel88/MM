@@ -671,8 +671,8 @@ class IsosangRulesTest {
         assertEquals(HOLD[CAGE]/20f,CAGE_BACK0,.05f,"back to her as it lets go of her");assertEquals(LENGTH[CAGE]/20f,CAGE_BACK1,1e-6f);
     }
     @Test void hAgainEndsTheFormationWithFiveBlowsOfTwelveInTheBandAhead()throws Exception{
-        // (2.101.0) the user's answer "합 60": five blows of 12 as its swords come down into the band (2.6 to 3.4 s) and as
-        // the band flashes (3.5 s), no guard taking them
+        // (2.101.0) the user's answer "합 60": five blows of 12 as its swords come down into the band (2.101.8: fired one
+        // after another from 2.43 s, down from 2.5 s, hers last at 3.17 s) and as the band flashes (3.5 s), no guard taking them
         assertEquals(13,FINALE);assertTrue(drawn(FINALE));assertFalse(valid(FINALE),"not a hit of the combo");
         assertEquals(5,blows(FINALE));assertEquals(60,total(FINALE),1e-6);
         for(int i=0;i<blows(FINALE);i++){assertEquals(FINALE_DAMAGE,damage(FINALE,i),1e-6);if(i>0)assertTrue(blowAt(FINALE,i)>blowAt(FINALE,i-1),"in order");}
@@ -695,7 +695,7 @@ class IsosangRulesTest {
         // its times in order (2.101.1: she rides round, stops in the air, swings, raises her fingers, sends the swords and
         // comes down after them, by the time the last are down); it lets go of her as her camera comes back to her; its
         // swords gone by its end
-        float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_RIDE,FINALE_CREST,FINALE_LAP1,FINALE_SWING0,FINALE_SWING1,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_PLANT0,FINALE_DESCEND,FINALE_LAND,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
+        float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_RIDE,FINALE_CREST,FINALE_LAP1,FINALE_SWING0,FINALE_SWING1,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_FIRE,FINALE_PLANT0,FINALE_DESCEND,FINALE_LAND,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
         for(int i=1;i<ts.length;i++)assertTrue(ts[i]>ts[i-1],"in order: "+i);
         assertTrue(FINALE_DESCEND>FINALE_PLANT0&&FINALE_PLANT1<=FINALE_LAND&&FINALE_PLANT1<FINALE_BURST,"the swords sent from the air, she down after them");
         assertEquals(HOLD[FINALE]/20f,FINALE_BACK0,.1f,"lets go of her as her camera comes back to her");

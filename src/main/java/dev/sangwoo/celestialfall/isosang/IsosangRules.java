@@ -49,9 +49,10 @@ public final class IsosangRules {
         // (2.97.0) Y: the swords coming down two at a time (CAGE_DROPS) and the ink bursting up round the foe, thirteen
         // blows in all from 0.55 s to 0.9 s (the videos' hit counter)
         {11,11,12,12,13,14,15,15,15,16,17,18,18},
-        // (2.101.0) H again, the formation's finale: its swords coming down into the band ahead of her (2.6 to 3.4 s, the
-        // videos'), the last as the band flashes blue (3.5 s)
-        {52,56,60,64,70}};
+        // (2.101.0) H again, the formation's finale: its swords coming down into the band ahead of her, the last as the
+        // band flashes blue (3.5 s); (2.101.8, the swords fired one after another from 2.43 s: "2.43초 시점에 바로 연사되게")
+        // three as they rain down (from 2.52 s to 3.05 s) and one as hers comes down last (3.17 s)
+        {51,55,59,63,70}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
@@ -1019,15 +1020,17 @@ public final class IsosangRules {
      * flying up under her feet (FINALE_RIDE: 2.101.1) and rides it round a lap of the sky, at its crest far behind
      * where she stood (FINALE_CREST), coming back at the camera to stop in the air over where she stood (FINALE_LAP1);
      * up there on it: her sword swung across (FINALE_SWING0 to FINALE_SWING1), the white ring round her (FINALE_RING),
-     * her two fingers raised before her face (FINALE_SEAL0 to FINALE_SEAL1), the swords launched from behind her
-     * (FINALE_LAUNCH) and coming down into the band (FINALE_PLANT0 to FINALE_PLANT1); she steps off it and comes down
+     * her two fingers raised before her face (FINALE_SEAL0 to FINALE_SEAL1), her camera cut behind her with the swords
+     * waiting by it (FINALE_LAUNCH), fired one after another from there (FINALE_FIRE: 2.101.8, user request: "이제 검을
+     * 연사하는 거 처럼 빨리 쏘면 돼", "2.43초 시점에 바로 연사되게") and coming down into the band (FINALE_PLANT0 to
+     * FINALE_PLANT1, hers last); she steps off it and comes down
      * onto the ground where she stood (FINALE_DESCEND to FINALE_LAND), it flung down into the band after the rest; the
      * band's flash (FINALE_BURST); her camera back to her (FINALE_BACK0 to FINALE_BACK1); the swords gone one by one
      * (FINALE_GONE0 to FINALE_GONE1).
      */
     public static final float FINALE_FLASH=.1f,FINALE_LEAP=.2f,FINALE_RIDE=.45f,FINALE_CREST=.98f,FINALE_LAP1=1.3f,
         FINALE_SWING0=1.38f,FINALE_SWING1=1.56f,FINALE_RING=1.6f,FINALE_SEAL0=1.62f,FINALE_SEAL1=2.25f,FINALE_LAUNCH=2.3f,
-        FINALE_PLANT0=2.6f,FINALE_PLANT1=3.4f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
+        FINALE_FIRE=2.43f,FINALE_PLANT0=2.5f,FINALE_PLANT1=3.2f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
         FINALE_BACK0=3.62f,FINALE_BACK1=3.9f,FINALE_GONE0=4.15f,FINALE_GONE1=4.6f;
     /**
      * The band its swords come down in (blocks from where she stands, the way she looks as she presses it: the user's

@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.101.7** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.101.8** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.101.8 — 이소상 H 재입력: 2.43초부터 연사, 칼끝만 화면 좌우에서
+
+- **연사:** 첫 검이 2.43초에 나가고, 가까운 곳에 꽂힐 검부터 0.02초마다 하나씩 나가 2.5~3.05초에 꽂힙니다.
+- **칼끝만, 좌우에서:** 칼끝만 화면 좌우에서 들어와 안쪽으로 고르게 퍼집니다. 위·아래 테두리에는 없고, 손잡이는 화면 밖입니다.
+- **피해:** 그대로(합 60)이고, 꽂히는 때에 맞춰 2.55·2.75·2.95·3.15·3.5초에 들어갑니다.
+- **서버와 접속자 모두 바꾸세요:** 서버의 타격 때가 바뀌었습니다.
+
+[RELEASE_2.101.8_KO.md](RELEASE_2.101.8_KO.md)를 확인하세요. 2.101.7은 [RELEASE_2.101.7_KO.md](RELEASE_2.101.7_KO.md)입니다.
 
 # 보탠드 2.101.7 — 이소상 H 재입력: 가까워진 카메라, 반쯤만 화면에 들어와 화면을 덮는 검
 
