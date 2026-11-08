@@ -38,6 +38,8 @@ class SwordFinaleTest {
     }
 
     /** Where {@code q} is on shot {@code s}'s screen (-1 to 1 across and up it, 16:9) and how deep in front of it. */
+    /** How far every waiting sword stays from her on her camera's screen (in its heights: 2.101.6, gathered close round her). */
+    static final double CLEAR=.1;
     static double[] screen(SwordFinale.Shot s,Vec3d q){
         Vec3d fw=s.look().subtract(s.eye()).normalize(),right=fw.crossProduct(new Vec3d(0,1,0)).normalize(),up=right.crossProduct(fw),d=q.subtract(s.eye());
         double z=d.dotProduct(fw),v=Math.tan(Math.toRadians(s.fov()/2));
@@ -121,7 +123,7 @@ class SwordFinaleTest {
     }
     @Test void theyGatherBehindHerAsWingsAndComeDownSlantingIntoTheBandAheadGrown(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
-        int left=0,right=0,steeds=0,low=0,high=0;int[] wings=new int[3];
+        int left=0,right=0,steeds=0;var rounds=new java.util.ArrayList<Double>();
         Vec3d hub=fr.at(-SwordFinale.HUB_BACK,IsosangRules.FINALE_HOVER+SwordFinale.HUB_UP,0);
         for(var p:plans){
             if(p.steed())steeds++;
@@ -153,27 +155,23 @@ class SwordFinaleTest {
             else{
                 assertTrue(flight>=SwordFinale.FLIGHT-1e-6&&flight<=SwordFinale.FLIGHT+SwordFinale.FLIGHT_SPREAD+1e-6,"fast: "+flight);
                 assertTrue(p.aimDir().distanceTo(p.foot().subtract(p.readyMid()).normalize())<1e-9,"aimed at where it strikes");
-                // it waits right by her camera behind her: big at its left edge, just past its right edge, or (2.101.5)
-                // along the middle of its bottom or its top, every part of it well clear of the lens, behind her and up off
-                // the ground
+                // (2.101.6) it waits gathered in the middle of her camera's screen, pointing in on the band: its point a
+                // little way out from where it strikes, its blade on out toward the camera, every part of it clear of
+                // her and of the lens, behind her and up off the ground
                 var s=SwordFinale.shot(c,r,SwordFinale.FOLD1);double[] at=screen(s,p.readyMid());
-                var wing=SwordFinale.wing(SwordFinale.slotAngle(SwordFinale.slot(p.k())));wings[wing.ordinal()]++;
-                switch(wing){
-                    case RIGHT->assertTrue(at[0]>1&&at[0]<1.45&&Math.abs(at[1])<.8,"just past her camera's right edge: "+at[0]+" "+at[1]);
-                    case LEFT->assertTrue(at[0]>-1.15&&at[0]<-.5&&Math.abs(at[1])<.95,"at her camera's left edge: "+at[0]+" "+at[1]);
-                    case MIDDLE->{
-                        assertTrue(Math.abs(at[0]-.1)<.62&&(at[1]<-.55||at[1]>.5)&&Math.abs(at[1])<.95,"along the middle of her camera's bottom or top: "+at[0]+" "+at[1]);
-                        if(at[1]<0)low++;else high++;
-                    }
-                }
-                assertTrue(at[2]>2.3&&at[2]<5.1,"by it: "+at[2]);
+                double[] point=screen(s,p.readyMid().add(p.aimDir().multiply(SwordFormation.S_LEN/2))),strikes=screen(s,p.foot());
+                double out=Math.hypot((point[0]-strikes[0])*16/9,point[1]-strikes[1]);
+                assertTrue(out>SwordFinale.REACH0-.02&&out<SwordFinale.REACH0+SwordFinale.REACH+.02,"its point a little way out from where it strikes: "+out);
+                assertTrue(Math.abs(point[0])<.8&&Math.abs(point[1])<.8,"in the middle of it: "+point[0]+" "+point[1]);
+                double round=Math.toDegrees(Math.atan2(point[1]-strikes[1],(point[0]-strikes[0])*16/9));rounds.add(round<0?round+360:round);
+                assertTrue(at[2]>2.6&&at[2]<5.4,"by it: "+at[2]);
                 var w=SwordFinale.blade(fr,p,SwordFinale.aimFrom(p));
                 assertTrue(SwordFinale.toSegment(s.eye(),w.pommel().subtract(p.aimDir().multiply(SwordFinale.DRAW)),w.point())>1.2,"clear of the lens");
-                // never over her on the screen as it waits and is drawn back (2.101.5: the middle's over her head or under her feet)
+                // never over her on the screen as it waits and is drawn back (2.101.6: gathered in the middle, never on her)
                 for(float t:new float[]{SwordFinale.FOLD1,p.launch()}){
                     Vec3d feet=SwordFinale.body(fr,t);
                     double clear=apart(SwordFinale.shot(c,r,t),w.pommel().subtract(p.aimDir().multiply(SwordFinale.DRAW)),w.point(),feet,feet.add(0,1.9,0));
-                    assertTrue(clear>.2,"clear of her on her camera's screen: "+clear+" at "+t);
+                    assertTrue(clear>CLEAR,"clear of her on her camera's screen: "+clear+" at "+t);
                 }
                 Vec3d wait=p.readyMid().subtract(fr.spot());
                 assertTrue(wait.dotProduct(fr.f())<-2&&wait.y>1,"behind her, off the ground: "+wait.dotProduct(fr.f())+" "+wait.y);
@@ -204,11 +202,10 @@ class SwordFinaleTest {
             for(float t=p.launch()-.05f;t<p.plant()+.05f;t+=1/240f){double sc=SwordFinale.scale(p,t);assertTrue(sc>=prev-1e-9&&sc-prev<.4,"growing smoothly: "+prev+" to "+sc);prev=sc;}
         }
         assertEquals(1,steeds,"one sword under her feet: the one she stood on");
-        // (2.101.5, user request: "왜 가운데는 비고 양끝으로만 나가냐 가운데도 나가게 해줘") out of the middle of her camera's
-        // screen too, along both its bottom and its top, not only out of its edges
-        assertTrue(wings[SwordFinale.Wing.MIDDLE.ordinal()]>=10&&wings[SwordFinale.Wing.LEFT.ordinal()]>=6&&wings[SwordFinale.Wing.RIGHT.ordinal()]>=6,
-            "out of its left edge, its middle and past its right edge: "+wings[0]+" "+wings[1]+" "+wings[2]);
-        assertTrue(low>=4&&high>=4,"along its bottom and its top: "+low+" "+high);
+        // (2.101.6, user request: "그냥 검을 중앙 부분에 모아줘 중앙이 비잖아 원본 영상도 중앙에서 나갈걸?") gathered in the
+        // middle of her camera's screen, pointing in on the band from its left, over it, its right and under it
+        int[] sides=new int[4];for(double a:rounds)sides[(int)(((a+45)%360)/90)]++;
+        assertTrue(sides[0]>=4&&sides[1]>=4&&sides[2]>=4&&sides[3]>=4,"in on the band from every side (right, over, left, under): "+sides[0]+" "+sides[1]+" "+sides[2]+" "+sides[3]);
         assertTrue(left>8&&right>8,"spread to both sides like wings: "+left+" "+right);
         // (2.101.3) as she sends them the fan folds: each turned from a feather to point the way it shoots, waiting
         for(var p:plans){

@@ -233,16 +233,11 @@ final class SwordFinale {
      * 나간다는 느낌으로 만들어줘"; video b again, frame by frame: as her camera cuts behind her the swords wait right by it,
      * big at its left edge from its top to its bottom with every point aimed on into the scene, and shoot one after another
      * as long white streaks out of the screen into the ground ahead past her, some as bright streaks in from past its right
-     * edge, in a few frames each; 2.101.5: "왜 가운데는 비고 양끝으로만 나가냐 가운데도 나가게 해줘"): as she sends them
-     * ({@link #FOLD0} to {@link #FOLD1}) the fan folds, every sword going to wait round her camera behind her (on its
-     * screen, {@link #onScreen}, by the part of the fan it was in, {@link #wing}: her left wing's at its left edge, {@link
-     * #EDGE_L0} to EDGE_L0+{@link #EDGE_L} across it, {@link #DEPTH_L0} to DEPTH_L0+{@link #DEPTH_L} blocks deep; her right
-     * wing's just past its right edge, {@link #EDGE_R0} to EDGE_R0+{@link #EDGE_R}, {@link #DEPTH_R0} to DEPTH_R0+{@link
-     * #DEPTH_R} deep; the fan's middle, within {@link #MID_WING} degrees of straight up, along the middle of its bottom and
-     * its top, {@link #MID_X0} to MID_X0+{@link #MID_X} across it as they stood across the fan, those striking the band's
-     * near half along its bottom ({@link #MID_LOW0} up it, {@link #DEPTH_B0} to DEPTH_B0+{@link #DEPTH_B} deep) and its far
-     * half along its top ({@link #MID_TOP0} up it, {@link #DEPTH_T0} to DEPTH_T0+{@link #DEPTH_T} deep), clear of her and
-     * the band between; those striking near the band low on it, far high), its point aimed at where it strikes. Each is drawn back a little ({@link #AIM} seconds before it is launched, {@link
+     * edge, in a few frames each; 2.101.6: "그냥 검을 중앙 부분에 모아줘 중앙이 비잖아 원본 영상도 중앙에서 나갈걸?", video b
+     * again: the swords fan in from its left edge, their points gathered on her in the middle of it, and each dives from
+     * there into the band): as she sends them ({@link #FOLD0} to {@link #FOLD1}) the fan folds, every sword going to
+     * wait gathered in the middle of her camera's screen, pointing in on the band ({@link #converging}), its point aimed
+     * at where it strikes. Each is drawn back a little ({@link #AIM} seconds before it is launched, {@link
      * #DRAW} blocks), then shoots off that way out of the screen into the scene, faster and faster (its way to the power
      * {@link #STRIKE_EASE}), its point dipping into the ground a little steeper than it came (up to {@link #STEEPER} degrees
      * more, at most {@link #SLANT_MAX} below level, never so much that it would go up: {@link #steeper}), {@link #FLIGHT}
@@ -251,11 +246,21 @@ final class SwordFinale {
      * seconds. The swords strike when they did (the server's blows), each launched just before.
      */
     static final float FOLD0=2.27f,FOLD1=2.46f;
-    static final double MID_WING=35,EDGE_L0=-1.12,EDGE_L=.55,DEPTH_L0=2.4,DEPTH_L=2.6,EDGE_R0=1.06,EDGE_R=.22,DEPTH_R0=2.4,DEPTH_R=1.2;
-    static final double MID_X0=-.45,MID_X=1.1,MID_JITTER=.08,MID_LOW0=-.8,MID_LOW=.16,DEPTH_B0=2.9,DEPTH_B=.8,MID_TOP0=.6,MID_TOP=.2,DEPTH_T0=3,DEPTH_T=1.3;
-    /** Which part of the fan a slot at {@code phi} radians round it is in: her left wing, its middle (within {@link #MID_WING} degrees of straight up), her right wing. */
-    enum Wing{LEFT,MIDDLE,RIGHT}
-    static Wing wing(double phi){double a=Math.toDegrees(phi);return a<-MID_WING?Wing.LEFT:a>MID_WING?Wing.RIGHT:Wing.MIDDLE;}
+    /**
+     * Where they wait gathered in the middle of her camera's screen (2.101.6, {@link #converging}): each sword's point
+     * {@link #REACH0} to REACH0+{@link #REACH} of the screen's height out from where it strikes, round it the way the
+     * sword comes from ({@link #round}: her left wing's from its left, {@link #LEFT0} degrees for those striking nearest
+     * to {@link #LEFT1} for the farthest, 0 to the right and a quarter turn up; her right wing's from its right, {@link
+     * #RIGHT0} to {@link #RIGHT1}; the fan's middle, within {@link #MID_WING} degrees of straight up, from under the
+     * band ({@link #UNDER0} to {@link #UNDER1} across it) for its near half and from over it ({@link #OVER0} to {@link
+     * #OVER1}) for its far half), its blade on out the same way toward the camera: they all point in on the band in the
+     * middle of the screen, as the video's swords fan in onto her and dive into it, and none of them stands on her (up
+     * to her upper left, the way she is from the band, they leave clear). {@link #NEAR_DEPTH} blocks deep (those
+     * striking nearest: nearest the camera) and {@link #DEPTH_STEP} deeper ring by ring ({@link #DEPTH_SPREAD} either
+     * way).
+     */
+    static final double REACH0=.3,REACH=.1,MID_WING=35,LEFT0=232,LEFT1=172,RIGHT0=-48,RIGHT1=34,UNDER0=250,UNDER1=290,OVER0=88,OVER1=48;
+    static final double NEAR_DEPTH=2.9,DEPTH_STEP=.45,DEPTH_SPREAD=.3;
     static final double STEEPER=18,SLANT_MAX=62,SLANT_JITTER=6;
     static final float FLIGHT=.07f,FLIGHT_SPREAD=.04f,AIM=.1f,STEED_FLIGHT=.11f,SETTLE=.12f;
     static final double DRAW=.35,DRIVE=.3,STRIKE_EASE=1.7;
@@ -328,21 +333,12 @@ final class SwordFinale {
             Vec3d readyMid;
             if(steed)readyMid=rideMid(fr,FINALE_DESCEND);
             else{
-                // (2.101.4) round her camera behind her: her left wing's at its left edge (in it, big, as the video's), her
-                // right wing's just past its right edge (out of it until they shoot in, as the video's bright streaks from
-                // its right); (2.101.5) her wings' middle in the middle of it, along its bottom and its top (clear of her
-                // and the band between); those striking near the band low on it, far high
+                // (2.101.6) gathered in the middle of her camera's screen: each point a little way out from where it
+                // strikes, the way it comes from, its blade on out toward the camera, so that they all point in on the
+                // band in the middle of it (as the video's swords fan in onto her and dive in), those striking nearest
+                // nearest the camera
                 double h1=Ease.hash(seed+21),h2=Ease.hash(seed+22),h3=Ease.hash(seed+23);
-                readyMid=switch(wing(phi)){
-                    case RIGHT->onScreen(fr,EDGE_R0+EDGE_R*h1,-.55+.37*ring(s)+.15*(h2-.5),DEPTH_R0+DEPTH_R*h3);
-                    case LEFT->onScreen(fr,EDGE_L0+EDGE_L*h1,-.8+.53*ring(s)+.2*(h2-.5),DEPTH_L0+DEPTH_L*h3);
-                    case MIDDLE->{
-                        double across=MID_X0+MID_X*(Math.toDegrees(phi)+MID_WING)/(2*MID_WING)+MID_JITTER*(h1-.5);
-                        boolean high=ring(s)>=RINGS/2;
-                        yield high?onScreen(fr,across,MID_TOP0+MID_TOP*(ring(s)-RINGS/2)+MID_JITTER*(h2-.5),DEPTH_T0+DEPTH_T*h3)
-                            :onScreen(fr,across,MID_LOW0+MID_LOW*ring(s)+MID_JITTER*(h2-.5),DEPTH_B0+DEPTH_B*h3);
-                    }
-                };
+                readyMid=converging(fr,foot,Math.toRadians(round(phi,ring(s),h2)),REACH0+REACH*h1,NEAR_DEPTH+DEPTH_STEP*ring(s)+DEPTH_SPREAD*(h3-.5));
             }
             Vec3d aimDir=foot.subtract(readyMid).normalize();
             Vec3d stuckDir=steeper(readyMid,aimDir,foot,STEEPER+SLANT_JITTER*(2*Ease.hash(seed+20)-1));
@@ -448,11 +444,51 @@ final class SwordFinale {
      * fan has folded.
      */
     static Vec3d onScreen(Frame fr,double x,double y,double depth){
+        Vec3d[] c=folded(fr);double v=Math.tan(Math.toRadians(FOV_BEHIND/2)),h=v*16/9.0;
+        return c[0].add(c[1].multiply(depth)).add(c[2].multiply(x*depth*h)).add(c[3].multiply(y*depth*v));
+    }
+    /** Where {@code q} is on that screen ({@link #onScreen}'s: -1 to 1 across and up it) and how deep in front of it. */
+    static double[] onScreen(Frame fr,Vec3d q){
+        Vec3d[] c=folded(fr);double v=Math.tan(Math.toRadians(FOV_BEHIND/2)),h=v*16/9.0;
+        Vec3d d=q.subtract(c[0]);double z=d.dotProduct(c[1]);
+        return new double[]{d.dotProduct(c[2])/z/h,d.dotProduct(c[3])/z/v,z};
+    }
+    /** Her camera behind her as the fan has folded: its eye, the way it looks, its right and its up. */
+    static Vec3d[] folded(Frame fr){
         float u=Ease.unit(FOLD1,FINALE_LAUNCH,FINALE_BACK1);
         Vec3d eye=fr.at(BEHIND[0]+.8*u,BEHIND[1]+.3*u,BEHIND[2]),fw=fr.at(BEHIND_LOOK[0],BEHIND_LOOK[1],BEHIND_LOOK[2]).subtract(eye).normalize();
-        Vec3d right=fw.crossProduct(UP).normalize(),up=right.crossProduct(fw);
-        double v=Math.tan(Math.toRadians(FOV_BEHIND/2)),h=v*16/9.0;
-        return eye.add(fw.multiply(depth)).add(right.multiply(x*depth*h)).add(up.multiply(y*depth*v));
+        Vec3d right=fw.crossProduct(UP).normalize();
+        return new Vec3d[]{eye,fw,right,right.crossProduct(fw)};
+    }
+    /**
+     * The way round where it strikes (degrees on her camera's screen, 0 to the right and a quarter turn up) that the
+     * sword at {@code phi} radians round the fan in ring {@code ring} waits and comes from (2.101.6): her left wing's
+     * from the left (the nearest striking lowest), her right wing's from the right, the fan's middle from under the band
+     * for its near half and over it for its far half, across as they stood across the fan ({@code jitter} 0 to 1, a few
+     * degrees either way).
+     */
+    static double round(double phi,int ring,double jitter){
+        double a=Math.toDegrees(phi),j=4*(2*jitter-1);
+        if(a<-MID_WING)return LEFT0+(LEFT1-LEFT0)*(ring+.4*(a-FAN_FROM)/(-MID_WING-FAN_FROM))/(RINGS-.6)+j;
+        if(a>MID_WING)return RIGHT0+(RIGHT1-RIGHT0)*(ring+.4*(FAN_TO-a)/(FAN_TO-MID_WING))/(RINGS-.6)+j;
+        double across=(a+MID_WING)/(2*MID_WING);
+        return ring<RINGS/2?UNDER0+(UNDER1-UNDER0)*across+6*(ring-.5)+j:OVER0+(OVER1-OVER0)*across+6*(ring-2.5)+j;
+    }
+    /**
+     * Where the sword aimed at {@code foot} waits in the middle of her camera's screen (2.101.6): its middle {@code
+     * depth} blocks deep on that screen as the fan has folded, so that its point (aimed at {@code foot}) is {@code reach}
+     * of the screen's height out from where {@code foot} is on it, {@code round} radians round it (0 to the right, a
+     * quarter turn up); its blade on out the same way.
+     */
+    static Vec3d converging(Frame fr,Vec3d foot,double round,double reach,double depth){
+        double[] f=onScreen(fr,foot);
+        double tx=f[0]+reach*Math.cos(round)*9/16.0,ty=f[1]+reach*Math.sin(round),x=tx,y=ty;
+        for(int i=0;i<10;i++){
+            Vec3d mid=onScreen(fr,x,y,depth);
+            double[] tip=onScreen(fr,mid.add(foot.subtract(mid).normalize().multiply(SwordFormation.S_LEN/2)));
+            x+=tx-tip[0];y+=ty-tip[1];
+        }
+        return onScreen(fr,x,y,depth);
     }
     /** The way a sword pointed {@code d} stands {@code slant} radians below level (its point on the way {@code d} goes). */
     static Vec3d standing(Vec3d d,double slant){Vec3d level=new Vec3d(d.x,0,d.z).normalize();return level.multiply(Math.cos(slant)).add(0,-Math.sin(slant),0);}
