@@ -14,7 +14,7 @@ public final class IsosangCinema {
     /** (2.101.0) H again's cutscene (hers alone) comes after G's: the two never run together. */
     public static CinematicDirector.Pose camera(Vec3d vanilla,float yaw,float pitch,float delta){return FallingSword.cinematic()==null&&SwordFinale.cinematic()!=null?SwordFinale.camera(vanilla,yaw,pitch,delta):FallingSword.camera(vanilla,yaw,pitch,delta);}
     public static double fov(double vanilla,float delta){return FallingSword.cinematic()==null&&SwordFinale.cinematic()!=null?SwordFinale.fov(vanilla,delta):FallingSword.fov(vanilla,delta);}
-    public static float roll(float delta){return FallingSword.cinematic()==null&&SwordFinale.cinematic()!=null?0:FallingSword.roll(delta);}
+    public static float roll(float delta){return FallingSword.cinematic()==null&&SwordFinale.cinematic()!=null?SwordFinale.roll(delta):FallingSword.roll(delta);}
     /** (2.101.0) How deep H again's dusk is for the local player's camera (0 to 1): its cutscene's red dusk, the world darker into the distance. */
     public static float dusk(float delta){return SwordFinale.duskNow(delta);}
     /** How dark the world is for the local player's camera (0 to 1): black round their hand in their G's first shots. */

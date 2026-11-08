@@ -1527,10 +1527,14 @@ final class SwordFinale {
         Vec3d eye=clear(chest(fr,Math.min(t,FINALE_LAND)),s.eye());Vec3d d=s.look().subtract(eye);if(d.lengthSquared()<1e-6)d=fr.f;
         d=d.normalize();
         float sy=(float)Math.toDegrees(Math.atan2(-d.x,d.z)),sp=(float)-Math.toDegrees(Math.asin(MathHelper.clamp(d.y,-1,1)));
-        float back=Ease.smooth(t,FINALE_BACK0,FINALE_BACK1),roll=t>=FINALE_LAUNCH?(tunedRoll!=null?tunedRoll:BEHIND_ROLL):0;
+        float back=Ease.smooth(t,FINALE_BACK0,FINALE_BACK1),roll=rollAt(t);
         if(back<=0)return new CinematicDirector.Pose(eye,sy,sp,roll);
-        return new CinematicDirector.Pose(eye.lerp(vanilla,back),sy+MathHelper.wrapDegrees(yaw-sy)*back,sp+(pitch-sp)*back,roll*(1-back));
+        return new CinematicDirector.Pose(eye.lerp(vanilla,back),sy+MathHelper.wrapDegrees(yaw-sy)*back,sp+(pitch-sp)*back,roll);
     }
+    /** How far her camera is rolled {@code t} seconds in (degrees: behind her BEHIND_ROLL, none again as it comes back to her). */
+    static float rollAt(float t){return t<FINALE_LAUNCH?0:(tunedRoll!=null?tunedRoll:BEHIND_ROLL)*(1-Ease.smooth(t,FINALE_BACK0,FINALE_BACK1));}
+    /** The same for the local player's own H again's cutscene now (IsosangCinema.roll: the view and the billboards alike). */
+    static float roll(float delta){var c=cinematic();return c==null?0:rollAt(c.age(delta)/20f);}
     static double fov(double vanilla,float delta){
         var c=cinematic();if(c==null)return vanilla;
         float t=c.age(delta)/20f;double f=shot(c,t).fov();
