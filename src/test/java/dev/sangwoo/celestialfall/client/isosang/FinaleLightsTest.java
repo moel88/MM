@@ -94,7 +94,7 @@ class FinaleLightsTest {
             if(p.steed())continue;
             float s0=FinaleLights.shimmer(p);
             assertTrue(s0>=FinaleLights.fanned(p),"its shimmer once it is in the fan");
-            assertTrue(s0+FinaleLights.SHIMMER<=p.launch()-.01f,"and run before it flies: "+s0+" "+p.launch());
+            assertTrue(s0+FinaleLights.SHIMMER<=SwordFinale.FOLD0,"and run before the fan folds: "+s0);
         }
     }
     @Test void aThirdOrSoOfTheSwordsShootPillarsAndTheirSparksSpringUpAndFall(){

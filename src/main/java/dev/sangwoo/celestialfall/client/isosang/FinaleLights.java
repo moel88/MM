@@ -27,8 +27,8 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  * <li>up there: moon dust sprayed off her swing's arc ({@link #swingDust}), stars riding the white ring out
  * ({@link #ringStars}), motes drawn in to her two fingers ({@link #seal}); the fan behind her a starry halo: a star at
  * every pommel, its two inner rings laced together as a constellation, a shimmer running out along every blade from the
- * top down each side ({@link #fan}); as they fly, stars flung out of the fan's hub with them ({@link #launch}),
- * and stardust shed along each sword's flight as a comet ({@link #flightDust});</li>
+ * top down each side ({@link #fan}); as each shoots off, a small star where it shot from ({@link #launch}), and
+ * stardust shed along each sword's flight as a comet ({@link #flightDust});</li>
  * <li>as each strikes: every third a pillar of light ({@link #pillars}), starry sparks springing up out of its crystal
  * ({@link #sparks}), and a gleam running down it as it settles and now and then while it stands ({@link #gleams});</li>
  * <li>as the band bursts: a net of starlight drawn from the band's middle out between the hilts ({@link #net});</li>
@@ -60,7 +60,7 @@ final class FinaleLights {
         ringStars(c,m,fr,t);
         seal(c,m,fr,t);
         fan(c,m,fr,plans,t);
-        launch(c,m,fr,t);
+        launch(c,m,fr,plans,t);
         pillars(c,m,plans,t);
         gleams(c,m,plans,t);
         landing(c,m,fr,t);
@@ -292,7 +292,7 @@ final class FinaleLights {
         int[] lace=halo(plans);
         for(int i=0;i+1<lace.length;i++){
             var a=plans[lace[i]];var b=plans[lace[i+1]];
-            float on=Math.max(fanned(a),fanned(b))+.06f,off=Math.min(a.launch(),b.launch());
+            float on=Math.max(fanned(a),fanned(b))+.06f,off=SwordFinale.FOLD0;
             float drawn=Ease.out(t,on,on+.14f),gone=1-Ease.smooth(t,off-.06f,off+.01f);if(drawn<=0||gone<=0)continue;
             Vec3d p=fanPommel(a,t),q=fanPommel(b,t),e=p.lerp(q,drawn);
             float al=gone*Ease.smooth(t,on,on+.04f)*near(p.lerp(q,.5),c.camera);
@@ -300,8 +300,9 @@ final class FinaleLights {
         }
         for(var p:plans){
             if(p.steed())continue;
-            float on=fanned(p);if(t<on||t>=p.launch())continue;
-            float a=Ease.smooth(t,on,on+.08f)*(1-Ease.smooth(t,p.launch()-.04f,p.launch()));
+            float on=fanned(p);if(t<on||t>=SwordFinale.FOLD0+.02f)continue;
+            // (2.101.3: gone as the fan folds to wait aimed through her)
+            float a=Ease.smooth(t,on,on+.08f)*(1-Ease.smooth(t,SwordFinale.FOLD0-.04f,SwordFinale.FOLD0+.02f));
             Vec3d pommel=fanPommel(p,t),point=fanPoint(p,t);
             glint8(m,pommel,.09,(p.seed()&1)==0?WHITE:PALE,.7f*a*twinkle(t,p.seed())*near(pommel,c.camera));
             float s0=shimmer(p),u=Ease.unit(t,s0,s0+SHIMMER);
@@ -319,20 +320,18 @@ final class FinaleLights {
     }
 
     /**
-     * As they fly (FINALE_LAUNCH): stars flung out of the fan's hub across her back with them (2.101.2's first previews had
-     * a ring flung out there too: from behind her it framed her as a thin grey oval, so it is gone).
+     * As each sword shoots off (2.101.3: one after another, each just before it strikes): a small star where it shot from
+     * and a soft blue light, swelling a little as it goes (2.101.2's stars flung out of the fan's hub at FINALE_LAUNCH went
+     * with them all at once; 2.101.2's first previews had a ring there too, a thin grey oval round her from behind).
      */
-    static void launch(Fx c,EffectMesh m,SwordFinale.Frame fr,float t){
-        float at=FINALE_LAUNCH;if(t<at-.01f||t>=at+.55f)return;
-        Vec3d hub=fr.at(-SwordFinale.HUB_BACK,FINALE_HOVER+SwordFinale.HUB_UP,0);
-        float a=Ease.smooth(t,at-.01f,at+.01f);
-        for(int i=0;i<LAUNCH_STARS;i++){
-            int seed=i*37+2301;double ang=Math.PI*(-.05+1.1*(i+.5*Ease.hash(seed))/LAUNCH_STARS),r=.6+6.5*Ease.out(t,at,at+.5f)*(.8+.3*Ease.hash(seed+1));
-            Vec3d p=hub.add(fr.r().multiply(Math.cos(ang)*r)).add(0,Math.sin(ang)*r,0).add(fr.f().multiply(.6*Ease.unit(t,at,at+.5f)));
-            glint8(m,p,.1+.05*Ease.hash(seed+2),i%3==0?WHITE:i%3==1?PALE:LILAC,.8f*a*(1-Ease.smooth(t,at+.2f,at+.55f))*twinkle(t,seed)*near(p,c.camera));
+    static void launch(Fx c,EffectMesh m,SwordFinale.Frame fr,SwordFinale.Plan[] plans,float t){
+        for(var p:plans){
+            float s=t-p.launch();if(s<-.02f||s>=RELEASE||!SwordFinale.comes(c.cast,p.plant()))continue;
+            Vec3d o=SwordFinale.drawn(fr,p);float k=Ease.smooth(s,-.02f,0)*(1-Ease.smooth(s,.03f,RELEASE))*near(o,c.camera);if(k<=.01f)continue;
+            m.softDisc(o,.5,AZURE,.25f*k);glint8(m,o,.14*(1+2.5*s),(p.seed()&1)==0?WHITE:PALE,.7f*k);
         }
     }
-    static final int LAUNCH_STARS=14;
+    static final float RELEASE=.22f;
 
     /** Stardust shed along each sword's flight into the band, as a comet's (each mote from where the sword passed), drifting down, twinkling. */
     static void flightDust(Fx c,EffectMesh m,SwordFinale.Frame fr,SwordFinale.Plan[] plans,float t){
