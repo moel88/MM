@@ -695,7 +695,7 @@ class IsosangRulesTest {
         // its times in order (2.101.1: she rides round, stops in the air, swings, raises her fingers, sends the swords and
         // comes down after them, by the time the last are down); it lets go of her as her camera comes back to her; its
         // swords gone by its end
-        float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_RIDE,FINALE_CREST,FINALE_LAP1,FINALE_SWING0,FINALE_SWING1,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_FIRE,FINALE_PLANT0,FINALE_DESCEND,FINALE_LAND,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
+        float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_RIDE,FINALE_CREST,FINALE_LAP1,FINALE_SWING0,FINALE_SWING1,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_PLANT0,FINALE_DESCEND,FINALE_LAND,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
         for(int i=1;i<ts.length;i++)assertTrue(ts[i]>ts[i-1],"in order: "+i);
         assertTrue(FINALE_DESCEND>FINALE_PLANT0&&FINALE_PLANT1<=FINALE_LAND&&FINALE_PLANT1<FINALE_BURST,"the swords sent from the air, she down after them");
         assertEquals(HOLD[FINALE]/20f,FINALE_BACK0,.1f,"lets go of her as her camera comes back to her");

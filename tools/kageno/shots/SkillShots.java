@@ -1095,6 +1095,9 @@ public final class SkillShots implements ClientModInitializer {
                     // (2.87.5) "gblade=ROUND/LEFT/RIGHT": G's sky-shot blade widened so in this entry (GScene.tunedBlade), to try a shape before it goes in
                     {double[] shape=null;if(opts.containsKey("gblade")){String[] v=opts.get("gblade").split("/");shape=new double[3];for(int i=0;i<3;i++)shape[i]=i<v.length?Double.parseDouble(v[i].trim()):1;log.append("  G sky blade shaped ").append(opts.get("gblade")).append('\n');}
                      var tunedBlade=Class.forName("dev.sangwoo.celestialfall.client.isosang.GScene").getDeclaredField("tunedBlade");tunedBlade.setAccessible(true);tunedBlade.set(null,shape);}
+                    // (2.101.9) "hroll=DEG": H again's behind camera rolled so in this entry (SwordFinale.tunedRoll), to try a roll before it goes in
+                    {Float roll=opts.containsKey("hroll")?Float.valueOf(opts.get("hroll")):null;if(roll!=null)log.append("  H again's behind camera rolled ").append(roll).append('\n');
+                     var tunedRoll=Class.forName("dev.sangwoo.celestialfall.client.isosang.SwordFinale").getDeclaredField("tunedRoll");tunedRoll.setAccessible(true);tunedRoll.set(null,roll);}
                     // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
                     if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);

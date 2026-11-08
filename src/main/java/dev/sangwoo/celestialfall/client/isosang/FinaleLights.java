@@ -278,7 +278,7 @@ final class FinaleLights {
     /** The swords of the fan's two inner rings round her head and shoulders, by their angle round it (laced together: a halo). */
     static int[] halo(SwordFinale.Plan[] plans){
         List<Integer> l=new ArrayList<>();
-        for(var p:plans)if(!p.steed()&&SwordFinale.ring(SwordFinale.slot(p.k()))<2)l.add(p.k());
+        for(var p:plans)if(p.own()&&!p.steed()&&SwordFinale.ring(SwordFinale.slot(p.k()))<2)l.add(p.k());
         l.sort(Comparator.comparingDouble(k->SwordFinale.slotAngle(SwordFinale.slot(k))));
         return l.stream().mapToInt(Integer::intValue).toArray();
     }
@@ -299,7 +299,7 @@ final class FinaleLights {
             m.line(p,e,.02,i%2==0?PALE:LILAC,.5f*al);m.softLine(p,e,.12,AZURE,.12f*al);
         }
         for(var p:plans){
-            if(p.steed())continue;
+            if(p.steed()||!p.own())continue;
             float on=fanned(p);if(t<on||t>=SwordFinale.FOLD0+.02f)continue;
             // (2.101.3: gone as the fan folds to wait aimed through her)
             float a=Ease.smooth(t,on,on+.08f)*(1-Ease.smooth(t,SwordFinale.FOLD0-.04f,SwordFinale.FOLD0+.02f));
@@ -355,8 +355,8 @@ final class FinaleLights {
 
     // ───────────────────────────── as each strikes, as the band bursts ─────────────────────────────
 
-    /** Whether sword {@code p} shoots a pillar of light up as it strikes (every third or so, as the formation's sword rain). */
-    static boolean pillar(SwordFinale.Plan p){return Math.floorMod(p.seed()*7+3,3)==0;}
+    /** Whether sword {@code p} shoots a pillar of light up as it strikes (every third or so of her own, as the formation's sword rain: those of light burst into light). */
+    static boolean pillar(SwordFinale.Plan p){return p.own()&&Math.floorMod(p.seed()*7+3,3)==0;}
     /** The pillar of light up out of its foot as it strikes (a moment, PILLAR blocks high, blue round a pale heart). */
     static void pillars(Fx c,EffectMesh m,SwordFinale.Plan[] plans,float t){
         for(var p:plans){
@@ -411,13 +411,14 @@ final class FinaleLights {
         return since<off?9:((since-off)%period)/GLEAM;
     }
 
-    /** Each sword's two nearest by their hilts (each pair once). */
+    /** Each of her own swords' two nearest of them by their hilts (each pair once: those of light are gone by then). */
     static int[][] links(SwordFinale.Plan[] plans){
         List<int[]> out=new ArrayList<>();
         for(int i=0;i<plans.length;i++){
+            if(!plans[i].own())continue;
             Vec3d a=SwordFinale.stuck(plans[i])[0];int b0=-1,b1=-1;double d0=1e9,d1=1e9;
             for(int j=0;j<plans.length;j++){
-                if(j==i)continue;double d=a.squaredDistanceTo(SwordFinale.stuck(plans[j])[0]);
+                if(j==i||!plans[j].own())continue;double d=a.squaredDistanceTo(SwordFinale.stuck(plans[j])[0]);
                 if(d<d0){d1=d0;b1=b0;d0=d;b0=j;}else if(d<d1){d1=d;b1=j;}
             }
             for(int j:new int[]{b0,b1}){
@@ -444,6 +445,7 @@ final class FinaleLights {
             m.line(p,e,.03,(l[0]+l[1])%2==0?PALE:LILAC,.5f*al);m.softLine(p,e,.18,AZURE,.13f*al);
         }
         for(var p:plans){
+            if(!p.own())continue;
             Vec3d hilt=SwordFinale.stuck(p)[0];float on=at+(float)(hilt.distanceTo(mid)/NET_SPEED);
             float a=Ease.smooth(t,on,on+.05f)*going(p,t)*twinkle(t,p.seed()+7)*near(hilt,c.camera);
             glint8(m,hilt,.13,(p.seed()&1)==0?WHITE:PALE,.75f*a);
@@ -469,10 +471,10 @@ final class FinaleLights {
     }
     static final int LAND_DUST=12;
 
-    /** As each goes in light: a ring of light out round its foot, and a little crescent moon rising off its hilt, a star by it. */
+    /** As each of her own goes in light: a ring of light out round its foot, and a little crescent moon rising off its hilt, a star by it. */
     static void vanish(Fx c,EffectMesh m,SwordFinale.Plan[] plans,float t){
         for(var p:plans){
-            float s=t-p.vanish();if(s<0||s>=.8f||!SwordFinale.comes(c.cast,p.plant()))continue;
+            float s=t-p.vanish();if(!p.own()||s<0||s>=.8f||!SwordFinale.comes(c.cast,p.plant()))continue;
             float u=Ease.unit(s,0,.4f);
             if(u<1)FxLib.ring(m,p.foot().add(0,.05,0),.3+1.6*Ease.out(s,0,.35f),.06,AZURE,.5f*(1-u));
             float a=Ease.smooth(s,0,.06f)*(1-Ease.smooth(s,.35f,.8f));if(a<=.01f)continue;

@@ -34,7 +34,7 @@ class FinaleLightsTest {
                     var b=SwordFinale.inkBit(p,kind,i);double l=b.lands(floor);
                     assertTrue(l>.3&&l<SwordFinale.BIT_LIFE-.05,"up a while and down again before it is gone: "+l);
                     Vec3d q=b.at(l).subtract(p.foot());
-                    assertTrue(Math.hypot(q.x,q.z)<7,"lands round its foot: "+Math.hypot(q.x,q.z));
+                    assertTrue(Math.hypot(q.x,q.z)<7.5,"lands round its foot: "+Math.hypot(q.x,q.z));
                     along+=q.x*ahead.x+q.z*ahead.z;n++;
                     // its splash where it lands dries while it is drawn
                     if(kind!=1)assertTrue(b.born()+l+IsosangSlash.SPLAT_LIFE<=SwordFinale.LIFE+.05,"its splash gone while it is drawn");
@@ -91,7 +91,7 @@ class FinaleLightsTest {
             assertTrue(d<2.2,"neighbours: "+d);
         }
         for(var p:plans){
-            if(p.steed())continue;
+            if(p.steed()||!p.own())continue;
             float s0=FinaleLights.shimmer(p);
             assertTrue(s0>=FinaleLights.fanned(p),"its shimmer once it is in the fan");
             assertTrue(s0+FinaleLights.SHIMMER<=SwordFinale.FOLD0,"and run before the fan folds: "+s0);
@@ -99,7 +99,7 @@ class FinaleLightsTest {
     }
     @Test void aThirdOrSoOfTheSwordsShootPillarsAndTheirSparksSpringUpAndFall(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);
-        int n=0;for(var p:plans)if(FinaleLights.pillar(p))n++;
+        int n=0;for(var p:plans)if(FinaleLights.pillar(p)){assertTrue(p.own(),"her own (those of light burst into light)");n++;}
         assertTrue(n>=5&&n<=15,"a third or so: "+n);
         Vec3d o=Vec3d.ZERO,dir=new Vec3d(1,0,0);
         for(double up=3.5;up<=8;up+=1.5){
@@ -111,6 +111,7 @@ class FinaleLightsTest {
     @Test void eachGleamRunsWholeFromItsHiltAndOnlyWhileItStands(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);
         for(var p:plans){
+            if(!p.own())continue;
             double last=9;int runs=0;
             for(float t=p.plant();t<p.vanish()+.2f;t+=1/240f){
                 double u=FinaleLights.gleam(p,t);
@@ -130,7 +131,8 @@ class FinaleLightsTest {
             double d=SwordFinale.stuck(plans[l[0]])[0].distanceTo(SwordFinale.stuck(plans[l[1]])[0]);
             assertTrue(d<7,"neighbours: "+d);in.add(l[0]);in.add(l[1]);
         }
-        assertEquals(plans.length,in.size(),"every sword's hilt in it");
+        assertEquals(SwordFinale.OWN,in.size(),"every one of her own swords' hilt in it (those of light are gone by then)");
+        for(int[] l:links)assertTrue(plans[l[0]].own()&&plans[l[1]].own());
         for(var p:plans)assertTrue(FinaleLights.going(p,p.vanish()+.12f)<.01f,"each thread gone with its swords");
         assertTrue(IsosangRules.FINALE_GONE1+SwordFinale.FADE<SwordFinale.LIFE,"gone while it is drawn");
         assertTrue(Ease.hash(1)>=0);
