@@ -331,27 +331,35 @@ final class FinaleLights {
             // (2.101.7: at its point, drawn back: by her camera its middle is out at the frame's edge)
             Vec3d o=SwordFinale.tipFrom(fr,p),d=p.aimDir();float n=near(o,c.camera);
             float k=Ease.smooth(s,-.02f,0)*(1-Ease.smooth(s,.03f,RELEASE))*n;
-            if(k>.01f){m.softDisc(o,.5,AZURE,.25f*k);glint8(m,o,.14*(1+2.5*s),(p.seed()&1)==0?WHITE:PALE,.7f*k);}
-            // (2.101.9, user request: "연사를 하고 있다는 이펙트를 추가해봐 속도감이 느껴지게") the shot: a sharp flash, a ring of
-            // air thrown out round it square to the way it goes, sparks shot on ahead of it
-            float f=FxLib.kick(t,p.launch(),.05f)*n;
-            if(f>.01f){m.softDisc(o,.42,BLUE,.32f*f);glint8(m,o,.2*f,WHITE,.8f*f);}
-            float u=Ease.unit(s,0,SHOT_RING);
-            if(u>0&&u<1){
-                Vec3d a=SwordFormation.perp(d,0),b=d.crossProduct(a).normalize();
-                FxLib.ringPlane(m,o.add(d.multiply(.2+.9*Ease.out(s,0,SHOT_RING))),a,b,.1+.55*Ease.out(s,0,SHOT_RING),.025*(1-u)+.008,PALE,.65f*(1-u)*n);
+            if(k>.01f){m.softDisc(o,.8,AZURE,.32f*k);glint8(m,o,.22*(1+3*s),(p.seed()&1)==0?WHITE:PALE,.8f*k);}
+            // (2.101.9, user request: "연사를 하고 있다는 이펙트를 추가해봐 속도감이 느껴지게"; 2.101.10: "연사하는 이펙트를 더
+            // 강화해봐 연사한다는 느낌이 들게") the shot: a sharp flash, two rings of air thrown out round it square to the way
+            // it goes (a quick bright one and a wider late one), a cone of light shot on ahead of it, sparks
+            float f=FxLib.kick(t,p.launch(),.06f)*n;
+            if(f>.01f){m.softDisc(o,.75,BLUE,.45f*f);glint8(m,o,.34*f,WHITE,.95f*f);}
+            Vec3d a=SwordFormation.perp(d,0),b=d.crossProduct(a).normalize();
+            for(int r=0;r<2;r++){
+                float dur=SHOT_RING*(r==0?1:1.6f),u=Ease.unit(s,0,dur);if(u<=0||u>=1)continue;
+                double e=Ease.out(s,0,dur);
+                FxLib.ringPlane(m,o.add(d.multiply(r==0?.2+1.4*e:.05+.6*e)),a,b,r==0?.15+.9*e:.25+1.4*e,(r==0?.035:.05)*(1-u)+.008,r==0?PALE:AZURE,(r==0?.75f:.45f)*(1-u)*n);
+            }
+            for(int i=0;i<SHOT_CONE;i++){
+                int seed=p.seed()*41+i*13+911;double life=.07;if(s<0||s>=life)continue;
+                Vec3d w=d.add(SwordFormation.perp(d,Math.PI*2*Ease.hash(seed)).multiply(.06)).normalize();
+                Vec3d head=o.add(w.multiply(60*s+.3)),tail=o.add(w.multiply(Math.max(0,60*s-2.2)));
+                float al=(1-(float)(s/life))*near(head,c.camera);if(al>.01f)m.needle(tail,head,.03,.5,WHITE,.8f*al);
             }
             for(int i=0;i<SHOT_SPARKS;i++){
-                int seed=p.seed()*29+i*17+2301;double life=.06+.05*Ease.hash(seed);if(s<0||s>=life)continue;
-                Vec3d w=d.add(SwordFormation.perp(d,Math.PI*2*Ease.hash(seed+1)).multiply(.25*Ease.hash(seed+2))).normalize();
-                double speed=26+22*Ease.hash(seed+3);Vec3d head=o.add(w.multiply(speed*s)),tail=o.add(w.multiply(speed*Math.max(0,s-.025)));
-                float a=(1-(float)(s/life))*near(head,c.camera);if(a<=.01f)continue;
-                m.needle(tail,head,.035,.35,i%2==0?WHITE:PALE,.75f*a);
+                int seed=p.seed()*29+i*17+2301;double life=.07+.06*Ease.hash(seed);if(s<0||s>=life)continue;
+                Vec3d w=d.add(SwordFormation.perp(d,Math.PI*2*Ease.hash(seed+1)).multiply(.3*Ease.hash(seed+2))).normalize();
+                double speed=30+30*Ease.hash(seed+3);Vec3d head=o.add(w.multiply(speed*s)),tail=o.add(w.multiply(speed*Math.max(0,s-.03)));
+                float al=(1-(float)(s/life))*near(head,c.camera);if(al<=.01f)continue;
+                m.needle(tail,head,.04,.4,i%2==0?WHITE:PALE,.85f*al);
             }
         }
     }
-    static final float RELEASE=.22f,SHOT_RING=.1f;
-    static final int SHOT_SPARKS=5;
+    static final float RELEASE=.24f,SHOT_RING=.12f;
+    static final int SHOT_SPARKS=9,SHOT_CONE=3;
 
     /**
      * Lines of speed as they are fired (2.101.9, user request: "연사를 하고 있다는 이펙트를 추가해봐 속도감이 느껴지게"): thin
@@ -371,11 +379,11 @@ final class FinaleLights {
             double speed=SPEED*(.8+.4*Ease.hash(seed+6)),len=SPEED_LEN*(.6+.8*Ease.hash(seed+7));
             Vec3d head=o.add(d.multiply(speed*age)),tail=head.subtract(d.multiply(len));
             float a=Ease.smooth(age,0,.015f)*(1-Ease.smooth(age,life*.45f,life))*near(head,c.camera);if(a<=.01f)continue;
-            m.softTaper(tail,head,0,.05,BLUE,.3f*a);m.line(tail.lerp(head,.45),head,.012,i%3==0?WHITE:PALE,.7f*a);
+            m.softTaper(tail,head,0,.06,BLUE,.4f*a);m.line(tail.lerp(head,.45),head,.014,i%3==0?WHITE:PALE,.85f*a);
         }
     }
-    static final int SPEED_LINES=150;
-    static final double SPEED=120,SPEED_LEN=3;
+    static final int SPEED_LINES=360;
+    static final double SPEED=120,SPEED_LEN=4.5;
     static final float SPEED_LIFE=.1f;
 
     /** Stardust shed along each sword's flight into the band, as a comet's (each mote from where the sword passed), drifting down, twinkling. */
