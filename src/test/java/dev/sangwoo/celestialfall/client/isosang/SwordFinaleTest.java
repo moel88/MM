@@ -38,27 +38,13 @@ class SwordFinaleTest {
     }
 
     /** Where {@code q} is on shot {@code s}'s screen (-1 to 1 across and up it, 16:9) and how deep in front of it. */
-    /** How far every waiting sword stays from her on her camera's screen (in its heights: 2.101.6, gathered close round her). */
-    static final double CLEAR=.1;
     static double[] screen(SwordFinale.Shot s,Vec3d q){
         Vec3d fw=s.look().subtract(s.eye()).normalize(),right=fw.crossProduct(new Vec3d(0,1,0)).normalize(),up=right.crossProduct(fw),d=q.subtract(s.eye());
         double z=d.dotProduct(fw),v=Math.tan(Math.toRadians(s.fov()/2));
         return new double[]{d.dotProduct(right)/z/(v*16/9.0),d.dotProduct(up)/z/v,z};
     }
-    /**
-     * How far apart the segments {@code a0}-{@code a1} and {@code b0}-{@code b1} look on shot {@code s}'s screen (in its
-     * heights, across scaled as 16:9; only what is in front of it).
-     */
-    static double apart(SwordFinale.Shot s,Vec3d a0,Vec3d a1,Vec3d b0,Vec3d b1){
-        double[] p=screen(s,b0),q=screen(s,b1);
-        double bx=p[0]*16/9,by=p[1],dx=q[0]*16/9-bx,dy=q[1]-by,best=Double.MAX_VALUE;
-        for(int i=0;i<=60;i++){
-            double[] a=screen(s,a0.lerp(a1,i/60.0));if(a[2]<.2)continue;
-            double ax=a[0]*16/9,ay=a[1],k=Math.max(0,Math.min(1,((ax-bx)*dx+(ay-by)*dy)/(dx*dx+dy*dy)));
-            best=Math.min(best,Math.hypot(ax-bx-k*dx,ay-by-k*dy));
-        }
-        return best;
-    }
+    /** Whether {@code q} is out of shot {@code s}'s frame: past its edge, or behind its lens. */
+    static boolean outOf(SwordFinale.Shot s,Vec3d q){double[] a=screen(s,q);return a[2]<.05||Math.abs(a[0])>1||Math.abs(a[1])>1;}
     @Test void itRunsFromTheFormationsStanceToTheStanceOnTheGround(){
         var first=CLIP.frame(0);var last=CLIP.frame(CLIP.length());
         var on=Anim.joints(Anim.k(0,SwordFormation.H_ON),Anim.k(1,SwordFormation.H_ON)).frame(0);
@@ -123,7 +109,7 @@ class SwordFinaleTest {
     }
     @Test void theyGatherBehindHerAsWingsAndComeDownSlantingIntoTheBandAheadGrown(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
-        int left=0,right=0,steeds=0;var rounds=new java.util.ArrayList<Double>();
+        int left=0,right=0,steeds=0,central=0;var rounds=new java.util.ArrayList<Double>();
         Vec3d hub=fr.at(-SwordFinale.HUB_BACK,IsosangRules.FINALE_HOVER+SwordFinale.HUB_UP,0);
         for(var p:plans){
             if(p.steed())steeds++;
@@ -154,24 +140,38 @@ class SwordFinaleTest {
             if(p.steed())assertEquals(SwordFinale.STEED_FLIGHT,flight,1e-6f,"hers flung in as she steps off it");
             else{
                 assertTrue(flight>=SwordFinale.FLIGHT-1e-6&&flight<=SwordFinale.FLIGHT+SwordFinale.FLIGHT_SPREAD+1e-6,"fast: "+flight);
-                assertTrue(p.aimDir().distanceTo(p.foot().subtract(p.readyMid()).normalize())<1e-9,"aimed at where it strikes");
-                // (2.101.6) it waits gathered in the middle of her camera's screen, pointing in on the band: its point a
-                // little way out from where it strikes, its blade on out toward the camera, every part of it clear of
-                // her and of the lens, behind her and up off the ground
-                var s=SwordFinale.shot(c,r,SwordFinale.FOLD1);double[] at=screen(s,p.readyMid());
+                // (2.101.7) aimed in at the band's middle, pulled from where it strikes (AIM_PULL of the way)
+                Vec3d mid=SwordFinale.ground(null,fr.at((SwordFinale.BAND_NEAR+SwordFinale.BAND_FAR)/2,0,0),fr.spot().y);
+                assertTrue(p.aimDir().distanceTo(p.foot().lerp(mid,SwordFinale.AIM_PULL).subtract(p.readyMid()).normalize())<1e-9,"aimed in at the band's middle from where it strikes");
+                // (2.101.6) it waits gathered round the middle of her camera's screen, pointing in on the band;
+                // (2.101.7) only its blade in its frame: its hilt out past the edge (or behind the lens) all the time it
+                // waits and is drawn back (her camera coming on and turning down after her), its blade from the edge in
+                // to its point, never through the lens
+                var s=SwordFinale.shot(c,r,SwordFinale.FOLD1);
                 double[] point=screen(s,p.readyMid().add(p.aimDir().multiply(SwordFormation.S_LEN/2))),strikes=screen(s,p.foot());
-                double out=Math.hypot((point[0]-strikes[0])*16/9,point[1]-strikes[1]);
-                assertTrue(out>SwordFinale.REACH0-.02&&out<SwordFinale.REACH0+SwordFinale.REACH+.02,"its point a little way out from where it strikes: "+out);
-                assertTrue(Math.abs(point[0])<.8&&Math.abs(point[1])<.8,"in the middle of it: "+point[0]+" "+point[1]);
+                assertTrue(Math.abs(point[0])<.8&&Math.abs(point[1])<.8,"its point in the middle of it: "+point[0]+" "+point[1]);
                 double round=Math.toDegrees(Math.atan2(point[1]-strikes[1],(point[0]-strikes[0])*16/9));rounds.add(round<0?round+360:round);
-                assertTrue(at[2]>2.6&&at[2]<5.4,"by it: "+at[2]);
-                var w=SwordFinale.blade(fr,p,SwordFinale.aimFrom(p));
-                assertTrue(SwordFinale.toSegment(s.eye(),w.pommel().subtract(p.aimDir().multiply(SwordFinale.DRAW)),w.point())>1.2,"clear of the lens");
-                // never over her on the screen as it waits and is drawn back (2.101.6: gathered in the middle, never on her)
-                for(float t:new float[]{SwordFinale.FOLD1,p.launch()}){
-                    Vec3d feet=SwordFinale.body(fr,t);
-                    double clear=apart(SwordFinale.shot(c,r,t),w.pommel().subtract(p.aimDir().multiply(SwordFinale.DRAW)),w.point(),feet,feet.add(0,1.9,0));
-                    assertTrue(clear>CLEAR,"clear of her on her camera's screen: "+clear+" at "+t);
+                double edge=-1,shown=0;double[] before=null;
+                for(int i=0;i<=200;i++){
+                    Vec3d q=p.readyMid().add(p.aimDir().multiply(SwordFormation.S_LEN*(i/200.0-.5)));double[] a=screen(s,q);
+                    boolean in=a[2]>.05&&Math.abs(a[0])<=1&&Math.abs(a[1])<=1;
+                    if(in&&edge<0)edge=a[2];if(in&&before!=null)shown+=Math.hypot((a[0]-before[0])*16/9,a[1]-before[1]);before=in?a:null;
+                }
+                assertTrue(edge>SwordFinale.EDGE_NEAR-.05&&edge<SwordFinale.EDGE_FAR+.1,"its blade into the frame right by the lens: "+edge);
+                assertTrue(shown>.45,"a long blade in the frame: "+shown+" of its height");
+                // (2.101.7: "카메라에 검이 반정도만 들어고") half of it in the frame, its middle on the edge
+                int in=0;for(int i=0;i<=100;i++){double[] a=screen(s,p.readyMid().add(p.aimDir().multiply(SwordFormation.S_LEN*(i/100.0-.5))));if(a[2]>.05&&Math.abs(a[0])<=1&&Math.abs(a[1])<=1)in++;}
+                assertTrue(in>=35&&in<=62,"half of it in the frame: "+in+"%");
+                if(Math.abs(point[0])<.45&&Math.abs(point[1])<.45)central++;
+                for(float t=SwordFinale.FOLD1;t<p.launch();t+=1/120f){
+                    var st=SwordFinale.shot(c,r,t);var w=SwordFinale.blade(fr,p,t);
+                    double[] tip=screen(st,w.point());
+                    assertTrue(tip[2]>.05&&Math.abs(tip[0])<1&&Math.abs(tip[1])<1,"its point in the frame at "+t);
+                    Vec3d hilt=w.point().subtract(w.dir().multiply(SwordFinale.HILT)),ax=w.dir().crossProduct(new Vec3d(0,1,0)).normalize(),ay=ax.crossProduct(w.dir());
+                    for(int i=0;i<=6;i++)assertTrue(outOf(st,hilt.subtract(w.dir().multiply((SwordFormation.S_LEN-SwordFinale.HILT)*i/6))),"its hilt out of the frame at "+t);
+                    for(int i=0;i<8;i++){double th=i*Math.PI/4;assertTrue(outOf(st,hilt.add(ax.multiply(.22*Math.cos(th))).add(ay.multiply(.22*Math.sin(th)))),"its guard out of the frame at "+t);}
+                    // (they may cover her: 2.101.7, user request: "가려도 된다고 카메라를")
+                    assertTrue(SwordFinale.toSegment(st.eye(),w.pommel(),w.point())>.08,"never through the lens: "+SwordFinale.toSegment(st.eye(),w.pommel(),w.point())+" at "+t);
                 }
                 Vec3d wait=p.readyMid().subtract(fr.spot());
                 assertTrue(wait.dotProduct(fr.f())<-2&&wait.y>1,"behind her, off the ground: "+wait.dotProduct(fr.f())+" "+wait.y);
@@ -206,6 +206,11 @@ class SwordFinaleTest {
         // middle of her camera's screen, pointing in on the band from its left, over it, its right and under it
         int[] sides=new int[4];for(double a:rounds)sides[(int)(((a+45)%360)/90)]++;
         assertTrue(sides[0]>=4&&sides[1]>=4&&sides[2]>=4&&sides[3]>=4,"in on the band from every side (right, over, left, under): "+sides[0]+" "+sides[1]+" "+sides[2]+" "+sides[3]);
+        // (2.101.7: "그리고 중앙은 아직도 비어있네") many points in the middle of the frame, and she big in it, her camera near her
+        assertTrue(central>=12,"points in the middle of her camera's frame: "+central);
+        var s0=SwordFinale.shot(c,r,SwordFinale.FOLD1);Vec3d feet0=SwordFinale.body(fr,SwordFinale.FOLD1);
+        double tall=screen(s0,feet0.add(0,1.9,0))[1]-screen(s0,feet0)[1];
+        assertTrue(tall>.44&&tall<.62,"she a quarter of its frame high or so (the video's): "+tall/2);
         assertTrue(left>8&&right>8,"spread to both sides like wings: "+left+" "+right);
         // (2.101.3) as she sends them the fan folds: each turned from a feather to point the way it shoots, waiting
         for(var p:plans){
@@ -217,7 +222,8 @@ class SwordFinaleTest {
             assertTrue(w.mid().distanceTo(p.readyMid())<.08,"where it waits: "+w.mid().distanceTo(p.readyMid()));
             assertEquals(1,w.scale(),1e-9,"as big as it was until it shoots");
         }
-        assertTrue(SwordFinale.FOLD0<=IsosangRules.FINALE_LAUNCH&&SwordFinale.FOLD1>IsosangRules.FINALE_LAUNCH,"folding as she sends them, her camera cut behind her");
+        // (2.101.7) folded as she sends them, waiting by her camera as it cuts behind her (only their blades in its frame from its first frame)
+        assertTrue(SwordFinale.FOLD0>=IsosangRules.FINALE_SEAL1-.1f&&SwordFinale.FOLD1<=IsosangRules.FINALE_LAUNCH+1e-6,"folded as she sends them, by her camera's cut behind her");
     }
     @Test void herSwordComesUpUnderHerFeetAndCarriesHerRoundUntilSheStepsOff(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
@@ -276,7 +282,13 @@ class SwordFinaleTest {
                 assertTrue(s.eye().subtract(fr.spot()).dotProduct(fr.f())>1.5,"close in front of her as she raises her fingers");
                 assertTrue(s.eye().distanceTo(chest)<3,"close");
             }
-            if(t>=IsosangRules.FINALE_LAUNCH)assertTrue(s.eye().subtract(fr.spot()).dotProduct(fr.f())<-4,"behind her as they fly and come down");
+            if(t>=IsosangRules.FINALE_LAUNCH)assertTrue(s.eye().subtract(fr.spot()).dotProduct(fr.f())<-3.5,"behind her as they fly and come down");
+            // (2.101.7) near her, she in its frame as she comes down and lands
+            if(t>=IsosangRules.FINALE_LAUNCH){
+                if(t<IsosangRules.FINALE_DESCEND)assertTrue(s.eye().distanceTo(chest)<5.5,"near her up there: "+s.eye().distanceTo(chest));
+                double[] feet=screen(s,SwordFinale.body(fr,t)),head=screen(s,SwordFinale.body(fr,t).add(0,1.9,0));
+                assertTrue(feet[1]>-.75&&head[1]<.5&&Math.abs(feet[0])<.5,"she in its frame at "+t+": "+feet[1]+" "+head[1]);
+            }
             if(prev!=null&&!(t-1/60f<IsosangRules.FINALE_LAUNCH&&t>=IsosangRules.FINALE_LAUNCH))
                 assertTrue(s.eye().distanceTo(prev.eye())<.6,"no jump at "+t+": "+s.eye().distanceTo(prev.eye()));
             prev=s;

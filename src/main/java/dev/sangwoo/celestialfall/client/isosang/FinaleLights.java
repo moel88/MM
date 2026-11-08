@@ -312,22 +312,23 @@ final class FinaleLights {
             }
         }
     }
-    static final float FAN_SHIMMER=1.9f,FAN_SPREAD=.16f,SHIMMER=.2f;
-    /** When the shimmer starts running out along sword {@code p} in the fan: the top first and on down each side, never before it is spread there. */
+    static final float FAN_SHIMMER=1.78f,FAN_SPREAD=.16f,SHIMMER=.2f;
+    /** When the shimmer starts running out along sword {@code p} in the fan: the top first and on down each side, never before it is spread there, done before the fan folds. */
     static float shimmer(SwordFinale.Plan p){
         double phi=Math.abs(Math.toDegrees(SwordFinale.slotAngle(SwordFinale.slot(p.k()))));
-        return Math.max(FAN_SHIMMER+FAN_SPREAD*(float)(phi/84),fanned(p)+.04f);
+        return Math.min(Math.max(FAN_SHIMMER+FAN_SPREAD*(float)(phi/84),fanned(p)+.04f),SwordFinale.FOLD0-SHIMMER);
     }
 
     /**
-     * As each sword shoots off (2.101.3: one after another, each just before it strikes): a small star where it shot from
-     * and a soft blue light, swelling a little as it goes (2.101.2's stars flung out of the fan's hub at FINALE_LAUNCH went
+     * As each sword shoots off (2.101.3: one after another, each just before it strikes): a small star where its point shot
+     * from and a soft blue light, swelling a little as it goes (2.101.2's stars flung out of the fan's hub at FINALE_LAUNCH went
      * with them all at once; 2.101.2's first previews had a ring there too, a thin grey oval round her from behind).
      */
     static void launch(Fx c,EffectMesh m,SwordFinale.Frame fr,SwordFinale.Plan[] plans,float t){
         for(var p:plans){
             float s=t-p.launch();if(s<-.02f||s>=RELEASE||!SwordFinale.comes(c.cast,p.plant()))continue;
-            Vec3d o=SwordFinale.drawn(fr,p);float k=Ease.smooth(s,-.02f,0)*(1-Ease.smooth(s,.03f,RELEASE))*near(o,c.camera);if(k<=.01f)continue;
+            // (2.101.7: at its point, drawn back: by her camera its middle is out at the frame's edge)
+            Vec3d o=SwordFinale.tipFrom(fr,p);float k=Ease.smooth(s,-.02f,0)*(1-Ease.smooth(s,.03f,RELEASE))*near(o,c.camera);if(k<=.01f)continue;
             m.softDisc(o,.5,AZURE,.25f*k);glint8(m,o,.14*(1+2.5*s),(p.seed()&1)==0?WHITE:PALE,.7f*k);
         }
     }
