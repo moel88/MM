@@ -60,7 +60,7 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
 final class SwordFinale {
     private SwordFinale(){}
     /** How long it is drawn (seconds, IsosangClient.life): until the last of its swords' light and ink are gone. */
-    static final float LIFE=5.2f;
+    static final float LIFE=6.2f;
     /** How long her body takes to turn from her formation's way round to the band's (seconds, IsosangClient.finaleFacing). */
     static final float TURN=.14f;
 
@@ -507,23 +507,37 @@ final class SwordFinale {
 
     /**
      * The ink as each strikes (2.101.1, user request: "그리고 꽂힐때마다 잉크가 튀어야해"; the video: black ink flying up among
-     * the blue crystal where each comes down, the ground black round it): a splash of ink round its foot ({@link #SPLASH}
-     * across, lasting {@link #SPLASH_LIFE}) and {@link #SPLASH_RING} smaller ones by it, {@link #SPIKES} strokes of ink
-     * shooting up out of it and eaten from below, and pieces of ink flung up and out ({@link #CLUMPS} clumps,
-     * {@link #FLAKES} flakes, {@link #DROPS} drops, falling, each clump splashing where it lands).
+     * the blue crystal where each comes down, the ground black round it; 2.101.2, user request: "잉크가 더 많이 튀게
+     * 바꿔주고": far more of it): a big splash of ink round its foot ({@link #SPLASH} across, lasting {@link #SPLASH_LIFE}),
+     * a long one thrown on ahead the way it drove in and a short one back ({@link #THROWN}), {@link #SPLASH_RING} smaller
+     * ones flung out round it, {@link #SPIKES} tall strokes of ink shooting up out of it and a crown of {@link #CROWN}
+     * short ones flung out low round it, each eaten from below, and pieces of ink flung up and out, more of them the way it
+     * drove in ({@link #CLUMPS} clumps, {@link #FLAKES} flakes, {@link #DROPS} drops, falling, each clump and every drop
+     * of any size splashing where it lands).
      */
-    static final double SPLASH=2.6;
-    static final int SPLASH_RING=2,SPIKES=2,CLUMPS=2,FLAKES=3,DROPS=3;
-    static final float SPLASH_LIFE=1.6f;
+    static final double SPLASH=3.6;
+    static final int SPLASH_RING=6,SPIKES=4,CROWN=8,CLUMPS=8,FLAKES=10,DROPS=14;
+    static final float SPLASH_LIFE=2f;
+    /** How long a piece of ink flung off flies before it is gone (seconds: they are up and down again by then), the last of which it fades. */
+    static final float BIT_LIFE=1.45f,BIT_FADE=.25f;
+    /** The splashes thrown on ahead the way it drove in and back (of SPLASH across; how far out of its foot; how many times as long as wide). */
+    static final double[] THROWN={.62,1.6,2.4, .38,-.95,1.9};
+    /** How much more of the ink flung off goes the way it drove in. */
+    static final double AHEAD=.45;
+    /** The way sword {@code p} drove in, level (the way its slant leans: away from her). */
+    static Vec3d drove(Plan p){
+        Vec3d d=new Vec3d(p.stuckDir().x,0,p.stuckDir().z);
+        return d.lengthSquared()<1e-6?new Vec3d(1,0,0):d.normalize();
+    }
     /** Piece {@code i} of kind {@code kind} (0 clump, 1 flake, 2 drop) flung off as sword {@code p} strikes. */
     static SwordCage.Bit inkBit(Plan p,int kind,int i){
         int seed=p.seed()*31+kind*1009+i*67+5;
-        double a=Math.PI*2*Ease.hash(seed);Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a));
-        Vec3d from=p.foot().add(out.multiply(.15+.35*Ease.hash(seed+1))).add(0,.1+.35*Ease.hash(seed+2),0);
-        double speed=kind==0?1.6+2.6*Ease.hash(seed+3):kind==1?1.4+2.8*Ease.hash(seed+3):2.5+4*Ease.hash(seed+3);
-        double rise=kind==0?2.4+3*Ease.hash(seed+4):kind==1?3+3*Ease.hash(seed+4):3.5+4*Ease.hash(seed+4);
-        double size=kind==0?.13+.12*Ease.hash(seed+5):kind==1?.09+.08*Ease.hash(seed+5):.035+.04*Ease.hash(seed+5);
-        float born=p.plant()+.03f*(float)Ease.hash(seed+6);
+        double a=Math.PI*2*Ease.hash(seed);Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a)).add(drove(p).multiply(AHEAD)).normalize();
+        Vec3d from=p.foot().add(out.multiply(.15+.4*Ease.hash(seed+1))).add(0,.1+.4*Ease.hash(seed+2),0);
+        double speed=kind==0?2+1.8*Ease.hash(seed+3):kind==1?1.8+2.2*Ease.hash(seed+3):2.6+2.6*Ease.hash(seed+3);
+        double rise=kind==0?4+3*Ease.hash(seed+4):kind==1?4.4+3*Ease.hash(seed+4):4.6+3*Ease.hash(seed+4);
+        double size=kind==0?.28+.24*Ease.hash(seed+5):kind==1?.18+.16*Ease.hash(seed+5):.07+.07*Ease.hash(seed+5);
+        float born=p.plant()+.04f*(float)Ease.hash(seed+6);
         return new SwordCage.Bit(kind,from,out.multiply(speed).add(0,rise,0),born,size,1.5+3*Ease.hash(seed+7),seed);
     }
     /** A splash of ink {@code age} seconds after it struck (spreading in a blink, black a while, breaking up and gone by SPLASH_LIFE). */
@@ -548,14 +562,14 @@ final class SwordFinale {
         for(var p:plans)if(comes(c.cast,p.plant()))crystal(m,p,t,false);
         // the ink flung up as each strikes, falling (a clump breaks smaller as it flies)
         for(var p:plans){
-            if(t<p.plant()||t>=p.plant()+SwordCage.BIT_LIFE+.05f||!comes(c.cast,p.plant()))continue;
+            if(t<p.plant()||t>=p.plant()+BIT_LIFE+.05f||!comes(c.cast,p.plant()))continue;
             double floor=p.foot().y;
             for(int kind=0;kind<3;kind++){
                 int n=kind==0?CLUMPS:kind==1?FLAKES:DROPS;
                 for(int i=0;i<n;i++){
-                    var b=inkBit(p,kind,i);double s=t-b.born();if(s<0||s>=SwordCage.BIT_LIFE)continue;
+                    var b=inkBit(p,kind,i);double s=t-b.born();if(s<0||s>=BIT_LIFE)continue;
                     double l=b.lands(floor);if(s>=l)continue;
-                    Vec3d q=b.at(s);float a=(1-Ease.smooth((float)s,SwordCage.BIT_LIFE-SwordCage.BIT_FADE,SwordCage.BIT_LIFE))*Ease.smooth((float)s,0,.03f)*near(q,c.camera);
+                    Vec3d q=b.at(s);float a=(1-Ease.smooth((float)s,BIT_LIFE-BIT_FADE,BIT_LIFE))*Ease.smooth((float)s,0,.03f)*near(q,c.camera);
                     double size=b.size()*(kind==0?1-.35*Ease.smooth((float)s,.2f,.7f):1);
                     if(kind==0)blot(m,q,b.moving(s),size,b.seed(),INK,.95f*a);
                     else if(kind==1)flake(m,q,size,s,b.spin(),b.seed(),INK,.95f*a);
@@ -563,6 +577,7 @@ final class SwordFinale {
                 }
             }
         }
+        FinaleLights.alpha(c,m);
     }
     /**
      * The light under the ink: the flash and the ring at her feet as it begins; the streak up under her as she leaps; each
@@ -643,6 +658,7 @@ final class SwordFinale {
                 glint8(m,facing(q,c.camera),.22*(1-u),s%3==0?WHITE:s%3==1?PALE:CYAN,.8f*(1-u));
             }
         }
+        FinaleLights.additive(c,m);
     }
     /**
      * How strongly sword {@code b} flares with light (SwordFormation.sword's flare: a broad glow along it): its own swords
@@ -853,39 +869,80 @@ final class SwordFinale {
                 glint8(m,q,.18,Ease.hash(p.seed()+61)<.5?WHITE:PALE,.7f*twinkle(t,p.seed()));
             }
         }
+        FinaleLights.overlay(c,m);
     }
     /**
-     * The ink as each strikes (2.101.1: "그리고 꽂힐때마다 잉크가 튀어야해"): the ground black round its foot (a big splash and
-     * smaller ones by it), strokes of ink shooting up out of it, eaten from below, and a splash where each clump flung off
-     * comes down.
+     * The ink as each strikes (2.101.1: "그리고 꽂힐때마다 잉크가 튀어야해"; 2.101.2: "잉크가 더 많이 튀게"): the ground black
+     * round its foot (a big splash, a long one thrown on ahead the way it drove in and a short one back, smaller ones flung
+     * out round it a moment later), tall strokes of ink shooting up out of it and a crown of short ones flung out low round
+     * it, eaten from below, and a splash where each clump and each drop flung off comes down.
      */
     static void ink(Fx c){
         float t=c.sec;var plans=plans(c.cast);if(plans==null)return;
         for(var p:plans){
             if(t<p.plant()||!comes(c.cast,p.plant()))continue;
             float age=t-p.plant();Vec3d g=p.foot();double floor=g.y;
-            splash(new Vec3d(g.x,floor+.004+.001*(p.seed()&7),g.z),SPLASH*(.85+.35*Ease.hash(p.seed()+70)),Math.PI*2*Ease.hash(p.seed()+71),1.25,p.seed(),age-.01f,.92f);
+            Vec3d fw=drove(p);double way=Math.atan2(fw.z,fw.x);
+            splash(new Vec3d(g.x,floor+.004+.001*(p.seed()&7),g.z),SPLASH*(.85+.35*Ease.hash(p.seed()+70)),Math.PI*2*Ease.hash(p.seed()+71),1.25,p.seed(),age-.01f,.94f);
+            for(int i=0;i<2;i++){
+                double size=THROWN[3*i],out=THROWN[3*i+1],stretch=THROWN[3*i+2];Vec3d q=g.add(fw.multiply(out*(.85+.3*Ease.hash(p.seed()+72+i))));
+                splash(new Vec3d(q.x,floor+.0045+.0005*i,q.z),SPLASH*size,way+(Ease.hash(p.seed()+74+i)-.5)*.3,stretch,p.seed()+3+2*i,age-.03f-.02f*i,.9f);
+            }
             for(int i=0;i<SPLASH_RING;i++){
-                int seed=p.seed()*11+i*37+2;double a=Math.PI*2*Ease.hash(seed),r=.9+1.1*Ease.hash(seed+1);
-                Vec3d q=g.add(Math.cos(a)*r,0,Math.sin(a)*r);
-                splash(new Vec3d(q.x,floor+.002+.001*i,q.z),.6+.5*Ease.hash(seed+2),Math.PI*2*Ease.hash(seed+3),1.2,seed,age-.05f-.06f*(float)Ease.hash(seed+4),.85f);
+                int seed=p.seed()*11+i*37+2;double a=Math.PI*2*(i+.6*Ease.hash(seed))/SPLASH_RING,r=1.3+2.3*Ease.hash(seed+1);
+                // (more of them, and farther, the way it drove in)
+                Vec3d q=g.add(Math.cos(a)*r,0,Math.sin(a)*r).add(fw.multiply(.5*r*Math.max(0,Math.cos(a-way))));
+                splash(new Vec3d(q.x,floor+.002+.0004*i,q.z),.55+.75*Ease.hash(seed+2),a,1.2+.8*Ease.hash(seed+3),seed,age-.04f-.12f*(float)Ease.hash(seed+4),.88f);
             }
-            // where the flung clumps come down
-            for(int i=0;i<CLUMPS;i++){
-                var b=inkBit(p,0,i);double l=b.lands(floor);if(l>SwordCage.BIT_LIFE+.3)continue;
-                Vec3d q=b.at(l);splatAt(new Vec3d(q.x,floor+.003+.001*(i%4),q.z),b.size()*3,Math.PI*2*Ease.hash(b.seed()+9),1.3,b.seed(),(float)(t-b.born()-l),.8f);
+            // where the flung clumps and drops come down
+            for(int kind=0;kind<3;kind+=2){
+                int n=kind==0?CLUMPS:DROPS;
+                for(int i=0;i<n;i++){
+                    var b=inkBit(p,kind,i);double l=b.lands(floor);if(l>BIT_LIFE)continue;
+                    Vec3d q=b.at(l);
+                    splatAt(new Vec3d(q.x,floor+.003+.0005*(i%6)+(kind==0?.002:0),q.z),b.size()*(kind==0?3:4.5),Math.PI*2*Ease.hash(b.seed()+9),1.3,b.seed(),(float)(t-b.born()-l),kind==0?.85f:.8f);
+                }
             }
-            // the strokes of ink shooting up out of it, twice crossed, eaten from below
-            if(age<.6f)for(int i=0;i<SPIKES;i++){
-                int seed=p.seed()*17+i*101+3;double a=Math.PI*2*Ease.hash(seed);Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a));
-                double h=1.3+1.1*Ease.hash(seed+1),w=.24+.16*Ease.hash(seed+2),lean=.25+.35*Ease.hash(seed+3);
-                float rise=Ease.out(age,.01f,.07f),eaten=Ease.smooth(age,.16f,.5f);if(rise<=0||eaten>=1)continue;
-                Vec3d foot=new Vec3d(g.x,floor,g.z).add(out.multiply(.15));
-                Vec3d top=foot.add(0,h,0).add(out.multiply(lean*h)),to=foot.add(top.subtract(foot).multiply(rise));
-                IsosangSlash.strip(foot,to,new Vec3d(-out.z,0,out.x),w,4,seed&15,eaten,0,.95f);
-                IsosangSlash.strip(foot,to,out,w*.85,4,(seed+5)&15,eaten,0,.95f);
+            if(age>=.6f)continue;
+            // the tall strokes of ink shooting up out of it, twice crossed, eaten from below
+            for(int i=0;i<SPIKES;i++){
+                int seed=p.seed()*17+i*101+3;double a=Math.PI*2*(i+.5*Ease.hash(seed))/SPIKES;
+                Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a)).add(fw.multiply(.35)).normalize();
+                spike(g,floor,out,2.4+2*Ease.hash(seed+1),.42+.24*Ease.hash(seed+2),.2+.3*Ease.hash(seed+3),.15,seed,age,.01f,.07f,.18f,.52f);
             }
+            // the crown: short strokes flung out low all round it
+            for(int i=0;i<CROWN;i++){
+                int seed=p.seed()*19+i*89+7;double a=Math.PI*2*(i+.4*Ease.hash(seed))/CROWN;
+                Vec3d out=new Vec3d(Math.cos(a),0,Math.sin(a));
+                spike(g,floor,out,1+.8*Ease.hash(seed+1),.22+.12*Ease.hash(seed+2),1+.6*Ease.hash(seed+3),.35+.25*Ease.hash(seed+4),seed,age,.0f,.05f,.14f,.44f);
+            }
+            // a ring of ink racing out on the ground round it (a brush ring, eaten as it goes)
+            inkRing(g,floor+.006,p.seed(),age);
         }
+    }
+    /** The ring of ink racing out round a sword's foot {@code age} seconds after it struck: out to RING_OUT blocks in a blink, thinning, eaten from 0.3 s. */
+    static void inkRing(Vec3d g,double y,int seed,float age){
+        float drawn=Ease.out(age,0,.28f),eaten=Ease.smooth(age,.3f,.6f);if(drawn<=.01f||eaten>=1)return;
+        double r=.4+(RING_OUT-.4)*drawn,w=.34-.2*drawn;int n=33;
+        Vec3d[] in=new Vec3d[n],out=new Vec3d[n];float[] along=new float[n];double turn=Math.PI*2*Ease.hash(seed+77);
+        for(int i=0;i<n;i++){
+            double a=turn+Math.PI*2*i/(n-1),rr=r*(1+.07*Math.sin(3*a+seed));
+            in[i]=new Vec3d(g.x+Math.cos(a)*(rr-w/2),y,g.z+Math.sin(a)*(rr-w/2));out[i]=new Vec3d(g.x+Math.cos(a)*(rr+w/2),y,g.z+Math.sin(a)*(rr+w/2));along[i]=i/(float)(n-1);
+        }
+        dev.sangwoo.celestialfall.client.KagenoFire.inkRibbon(in,out,along,n,4,seed&15,eaten,0,.9f);
+    }
+    static final double RING_OUT=3.4;
+    /**
+     * A stroke of ink shooting up out of {@code g} {@code age} seconds after it struck: from {@code from} blocks out along
+     * {@code out} up {@code h} high, leaning out {@code lean} of its height, {@code w} wide, twice crossed; up between
+     * {@code rise0} and {@code rise1}, eaten from below between {@code eat0} and {@code eat1}.
+     */
+    static void spike(Vec3d g,double floor,Vec3d out,double h,double w,double lean,double from,int seed,float age,float rise0,float rise1,float eat0,float eat1){
+        float rise=Ease.out(age,rise0,rise1),eaten=Ease.smooth(age,eat0,eat1);if(rise<=0||eaten>=1)return;
+        Vec3d foot=new Vec3d(g.x,floor,g.z).add(out.multiply(from));
+        Vec3d top=foot.add(0,h,0).add(out.multiply(lean*h)),to=foot.add(top.subtract(foot).multiply(rise));
+        IsosangSlash.strip(foot,to,new Vec3d(-out.z,0,out.x),w,4,seed&15,eaten,0,.95f);
+        IsosangSlash.strip(foot,to,out,w*.85,4,(seed+5)&15,eaten,0,.95f);
     }
     /**
      * Lights: the flash as it begins, round her as she rides round with the swords after her, the fan, as each strikes, as
@@ -906,6 +963,7 @@ final class SwordFinale {
             if(imp>0&&near>0)f.impact(.7f*near*imp,0,SwordCage.CAGE_LOOK);
         }
         if(t>=FINALE_LEAP&&t<GATHER0+GATHER+.1f||t>=FINALE_SWING0&&t<FINALE_SWING1+.1f||t>=FINALE_LAUNCH-.05f&&t<FINALE_PLANT1+.1f)f.afterglow(.05f);
+        FinaleLights.frame(c,f);
     }
     /** A jolt as the swords strike (small each), harder as the band bursts; each over two frames. */
     static float shake(StandClient.Cast cast,float sec){
@@ -926,10 +984,32 @@ final class SwordFinale {
         Frame fr=frame(c.cast);
         // (in draw calls of their own, once: in the blended pass, as the formation's night is, KagenoFire.inkInterlude)
         if(dev.sangwoo.celestialfall.client.KagenoFire.crescentGain>.99f)dev.sangwoo.celestialfall.client.KagenoFire.inkInterlude(()->{
-            float blue=wash(c.sec);
-            FormationSky.draw(c,false,FormationSky.SOFT,1,m->duskDome(m,fr.spot,k,blue));
+            float blue=wash(c.sec),shine=k*moonLight(c.sec);Vec3d moon=duskMoon(fr,c.sec);
+            FormationSky.draw(c,false,FormationSky.SOFT,1,m->{duskDome(m,fr.spot,k,blue);if(shine>.005f)moonDisc(m,fr,moon,shine);});
+            // (2.101.2) the crescent moon in the dusk behind her, as the formation's in its night (FormationSky.moonLight)
+            if(shine>.005f)FormationSky.draw(c,true,FormationSky.SOFT,FormationSky.MOON_GAIN,m->FormationSky.moonLight(c,m,moon,MOON_SHINE*shine));
             FormationSky.draw(c,false,.35f,1,m->veil(m,fr.spot,k));
         });
+    }
+    /**
+     * The crescent moon in her cutscene's dusk (2.101.2, "엄청 멋있고 예쁘게": her sword's moon, as in the formation's
+     * night): behind her as she stops in the air (DUSK_MOON blocks back, up, and to her left: some 14° over her close
+     * camera's eye and 12° right of her, framed between the fan's swords spread behind her), rising a little through it;
+     * the formation's moon (FormationSky.MOON_R round, lit low on its left as the camera sees it, its halo and its star).
+     */
+    static Vec3d duskMoon(Frame fr,float t){
+        return fr.at(DUSK_MOON[0],DUSK_MOON[1]-DUSK_MOON_RISE*(1-Ease.smooth(t,FINALE_FLASH,FINALE_BACK0)),DUSK_MOON[2]);
+    }
+    static final double[] DUSK_MOON={-37,14.7,-8.5};
+    static final double DUSK_MOON_RISE=2;
+    /** How bright it is (0 to 1): coming after the blue flash, going with the dusk (SwordFinale.dusk does that). */
+    static float moonLight(float t){return Ease.smooth(t,FINALE_FLASH+.08f,FINALE_FLASH+.7f);}
+    static final float MOON_SHINE=.9f;
+    /** Its dark disc over the dusk (the dusk's own colour there a little darker: its unlit part ashen). */
+    static void moonDisc(EffectMesh m,Frame fr,Vec3d moon,float shine){
+        Vec3d e=fr.spot.add(0,FormationSky.SKY_EYE,0),d=moon.subtract(e).normalize();
+        double el=Math.toDegrees(Math.asin(MathHelper.clamp(d.y,-1,1)));
+        FormationSky.disc(m,moon,FormationSky.MOON_R*1.005,FormationSky.scale(duskRgb(el),.8),Math.min(1,.96f*shine),.03);
     }
     /** How deep its dusk is {@code t} seconds in (0 to 1). */
     static float dusk(StandClient.Cast c,float t){return Ease.smooth(t,FINALE_FLASH,FINALE_FLASH+.12f)*(1-Ease.smooth(t,FINALE_BACK0,FINALE_BACK1));}
