@@ -1153,6 +1153,9 @@ public final class IsosangClient {
     private static boolean gone(MinecraftClient mc,StandClient.Cast c){
         // (the user's 2.87.0 preview) G plays to its end whatever becomes of her (the server calls it off)
         if(c.combo()==IsosangRules.ULTIMATE)return false;
+        // (2.101.11) H again past its end: its swords stand on and go in their own time (FINALE_GONE0 to FINALE_GONE1, now
+        // after its end) whatever becomes of her; the server's finale is over, nothing calls it off now
+        if(c.combo()==IsosangRules.FINALE&&c.age(0)>=IsosangRules.FINALE_LENGTH)return false;
         var p=mc.world.getPlayerByUuid(c.caster());if(p==null)return false;
         if(c.combo()==IsosangRules.FORMATION)return !StandManager.isosang(p)||!p.isAlive()&&!FORMATION_ENDS.containsKey(c.id())&&p.deathTime>20;
         // (2.95.0) H's basic attack: its swords fade as the server calls it off (its user dead, VOLLEY_ENDS), or a little

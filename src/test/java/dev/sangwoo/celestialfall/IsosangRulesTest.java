@@ -687,19 +687,22 @@ class IsosangRulesTest {
         assertFalse(finaleIn(8,0,FINALE_HIGH+.1,.3));assertFalse(finaleIn(8,0,FINALE_LOW-.1,.3));
         // only on her formation, its swords standing, before they flare
         assertFalse(finaleTime(Z_FROM-.01));assertTrue(finaleTime(Z_FROM));assertTrue(finaleTime(H_END-.05));assertFalse(finaleTime(H_END));
-        // H ready again its cooldown after its swords are gone (none for a player the cooldowns are off for)
+        // H ready again its cooldown after it is over (none for a player the cooldowns are off for)
         assertEquals(1000+FINALE_LENGTH+H_COOLDOWN,finaleReady(1000,false));assertEquals(0,finaleReady(1000,true));
         // its three recordings (the user's three videos), each from just before its flash to its end
         assertEquals(3,FINALE_VARIANTS);
         for(int v=1;v<=3;v++){double sec=StarPlatinumRulesTest.seconds("isosang_hh_"+v);assertTrue(sec>4.5&&sec<5.05,"recording "+v+": "+sec);}
         // its times in order (2.101.1: she rides round, stops in the air, swings, raises her fingers, sends the swords and
-        // comes down after them, by the time the last are down); it lets go of her as her camera comes back to her; its
-        // swords gone by its end
+        // comes down after them, by the time the last are down); it lets go of her as her camera comes back to her
         float[] ts={FINALE_FLASH,FINALE_LEAP,FINALE_RIDE,FINALE_CREST,FINALE_LAP1,FINALE_SWING0,FINALE_SWING1,FINALE_RING,FINALE_SEAL0,FINALE_SEAL1,FINALE_LAUNCH,FINALE_PLANT0,FINALE_DESCEND,FINALE_LAND,FINALE_BURST,FINALE_BACK0,FINALE_BACK1,FINALE_GONE0,FINALE_GONE1};
         for(int i=1;i<ts.length;i++)assertTrue(ts[i]>ts[i-1],"in order: "+i);
         assertTrue(FINALE_DESCEND>FINALE_PLANT0&&FINALE_PLANT1<=FINALE_LAND&&FINALE_PLANT1<FINALE_BURST,"the swords sent from the air, she down after them");
         assertEquals(HOLD[FINALE]/20f,FINALE_BACK0,.1f,"lets go of her as her camera comes back to her");
-        assertTrue(FINALE_GONE1<=LENGTH[FINALE]/20f);
+        // (2.101.11, user request: "박힌 검은 2초 정도 더 박혀있다가 사라져도 될듯") its swords stand two seconds longer than
+        // they did (2.101.10: gone 4.15 to 4.6 s, by its end), on past its end now: its end, and its cooldown from then,
+        // where it was (only drawn on, SwordFinale.LIFE)
+        assertEquals(4.15f+2,FINALE_GONE0,1e-4f);assertEquals(4.6f+2,FINALE_GONE1,1e-4f);
+        assertEquals(96,LENGTH[FINALE],"its end where it was");assertTrue(FINALE_GONE0>LENGTH[FINALE]/20f);
     }
     @Test void hAgainRidesHerRoundALapOfTheSkyStopsHerUpThereAndBringsHerDownSmoothly(){
         // (2.101.1, user request: "영상은 칼을 타고 한바퀴를 돈 다음에 공중에서 검을 전면에 모두 꽂는거야 그리고 내려옴", the

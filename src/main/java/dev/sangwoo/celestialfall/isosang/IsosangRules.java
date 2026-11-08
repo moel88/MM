@@ -1001,8 +1001,9 @@ public final class IsosangRules {
      * band ahead of her ({@link #finaleIn}: the way she looks as she presses it), blue crystal flaring up where each
      * strikes, and the band flashes blue. Everyone in the band is struck as they come down (BLOWS, {@link #FINALE_DAMAGE}
      * each, 60 in all): no guard takes it, no one is thrown or staggered. It holds her until her camera is back with her
-     * ({@link #FINALE_HOLD}: nothing harms her, nothing else of hers may begin, as G); the swords stand a moment more and
-     * are gone ({@link #FINALE_LENGTH}). One of the three videos' recordings plays, at random ({@link #FINALE_VARIANTS},
+     * ({@link #FINALE_HOLD}: nothing harms her, nothing else of hers may begin, as G); a moment more and it is over
+     * ({@link #FINALE_LENGTH}; its swords stand on two seconds past it, only drawn: 2.101.11). One of the three videos'
+     * recordings plays, at random ({@link #FINALE_VARIANTS},
      * the server's roll). The formation is over as it begins; H's cooldown runs once it is over.
      */
     public static final int FINALE=13;
@@ -1010,7 +1011,9 @@ public final class IsosangRules {
     public static final float FINALE_DAMAGE=12;
     /**
      * Ticks it holds her (3.7 s: the videos' camera back to her 3.6 s after their flash, ours a tenth of a second in) and
-     * ticks until its swords are gone (4.8 s: the videos' swords gone one by one some 4.5 s after their flash).
+     * ticks until it is over (4.8 s: the videos' swords gone one by one some 4.5 s after their flash; 2.101.11, user
+     * request: "박힌 검은 2초 정도 더 박혀있다가 사라져도 될듯", its swords stand on two seconds past it now, only drawn,
+     * FINALE_GONE0: its end, and H's cooldown from then, where they were).
      */
     public static final int FINALE_HOLD=74,FINALE_LENGTH=96;
     /** How many recordings it has, one chosen at random each time (the user's three videos: "음성은 저렇게 3개고 랜덤으로 하나"). */
@@ -1028,12 +1031,14 @@ public final class IsosangRules {
      * (FINALE_PLANT0 to FINALE_PLANT1, hers last); she steps off it and comes down
      * onto the ground where she stood (FINALE_DESCEND to FINALE_LAND), it flung down into the band after the rest; the
      * band's flash (FINALE_BURST); her camera back to her (FINALE_BACK0 to FINALE_BACK1); the swords gone one by one
-     * (FINALE_GONE0 to FINALE_GONE1).
+     * (FINALE_GONE0 to FINALE_GONE1: 2.101.11, user request: "박힌 검은 2초 정도 더 박혀있다가 사라져도 될듯", two seconds
+     * later than 2.101.10's 4.15 to 4.6 s, so past its end now: only drawn on, its end and its cooldown from then where
+     * they were).
      */
     public static final float FINALE_FLASH=.1f,FINALE_LEAP=.2f,FINALE_RIDE=.45f,FINALE_CREST=.98f,FINALE_LAP1=1.3f,
         FINALE_SWING0=1.38f,FINALE_SWING1=1.56f,FINALE_RING=1.6f,FINALE_SEAL0=1.62f,FINALE_SEAL1=2.25f,FINALE_LAUNCH=2.3f,
         FINALE_PLANT0=2.38f,FINALE_PLANT1=3.2f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
-        FINALE_BACK0=3.62f,FINALE_BACK1=3.9f,FINALE_GONE0=4.15f,FINALE_GONE1=4.6f;
+        FINALE_BACK0=3.62f,FINALE_BACK1=3.9f,FINALE_GONE0=6.15f,FINALE_GONE1=6.6f;
     /**
      * The band its swords come down in (blocks from where she stands, the way she looks as she presses it: the user's
      * choice "앞쪽 검이 꽂히는 띠"): from just ahead of her out to FINALE_REACH, FINALE_HALF either side, and how far under
@@ -1132,7 +1137,7 @@ public final class IsosangRules {
     public static double finaleReal(double t,double pommel){return Math.max(0,Math.min(pommel,finaleDrawn(t,pommel)));}
     /** Whether it holds her up off the ground {@code t} seconds in (the server lets her float until she is down). */
     public static boolean finaleAloft(double t){return t>=0&&t<FINALE_LAND+.2f;}
-    /** The tick H is ready again after a finale begun at {@code start} ({@code free}: the cooldowns are off for her): once its swords are gone, and H's cooldown after. */
+    /** The tick H is ready again after a finale begun at {@code start} ({@code free}: the cooldowns are off for her): once it is over (FINALE_LENGTH, its swords standing on a while: 2.101.11), and H's cooldown after. */
     public static long finaleReady(long start,boolean free){return free?0:start+FINALE_LENGTH+H_COOLDOWN;}
 
     // ───────────────────────────── G: the ultimate ─────────────────────────────

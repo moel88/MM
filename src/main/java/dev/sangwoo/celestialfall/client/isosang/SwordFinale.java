@@ -53,7 +53,8 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  * #inkBit}), those of light bursting into light as they strike; she steps off her sword and comes down onto the ground
  * where she stood, her sword flung down into the band after the rest; the band flashes blue ({@link
  * IsosangRules#FINALE_BURST});</li>
- * <li>her camera comes back to her; the swords stand a moment more and are gone one by one in light.</li>
+ * <li>her camera comes back to her; the swords stand on a while (2.101.11: two seconds longer, past its end) and are
+ * gone one by one in light.</li>
  * </ul>
  * The formation's own swords are its swords: each is the formation's until it is pulled out (SwordFormation.pulled),
  * this one's from then, from the very place and pose it stood in. Every effect is a function of the swing's clock and
@@ -61,8 +62,11 @@ import static dev.sangwoo.celestialfall.isosang.IsosangRules.*;
  */
 final class SwordFinale {
     private SwordFinale(){}
-    /** How long it is drawn (seconds, IsosangClient.life): until the last of its swords' light and ink are gone. */
-    static final float LIFE=6.2f;
+    /**
+     * How long it is drawn (seconds, IsosangClient.life): until the last of its swords' light and ink are gone (2.101.11:
+     * two seconds longer with its swords, which now stand on past its end).
+     */
+    static final float LIFE=8.2f;
     /** How long her body takes to turn from her formation's way round to the band's (seconds, IsosangClient.finaleFacing). */
     static final float TURN=.14f;
 
