@@ -50,10 +50,10 @@ public final class IsosangRules {
         // blows in all from 0.55 s to 0.9 s (the videos' hit counter)
         {11,11,12,12,13,14,15,15,15,16,17,18,18},
         // (2.101.0) H again, the formation's finale: its swords coming down into the band ahead of her, the last as the
-        // band flashes blue (3.5 s); (2.101.9, the swords fired at random from her camera's cut at 2.3 s: "카메라 뒤로
-        // 이동하자마자", "무작위로 빠르게") three as they rain down (from about 2.39 s to 2.79 s) and one as hers comes down
-        // last (3.17 s)
-        {49,52,55,63,70}};
+        // band flashes blue (3.5 s); (2.101.9, the swords out through her camera's screen as it cuts behind her at 2.3 s
+        // and fired at random from 2.375 s: "카메라 뒤로 이동하자마자", "무작위로 빠르게") three as they rain down (from about
+        // 2.45 s to 2.85 s) and one as hers comes down last (3.17 s)
+        {50,53,56,63,70}};
     /**
      * Each blow's damage: 6, 6 (3 + 3), 7 (1.5 + 1.5 + 1.5 + 2.5) and 10, 29 for the whole combo (Kageno's 28); the
      * empowered first's three swords and fourth's thrust half as hard again as the first's cut and the fourth's slash (9
@@ -1031,7 +1031,7 @@ public final class IsosangRules {
      */
     public static final float FINALE_FLASH=.1f,FINALE_LEAP=.2f,FINALE_RIDE=.45f,FINALE_CREST=.98f,FINALE_LAP1=1.3f,
         FINALE_SWING0=1.38f,FINALE_SWING1=1.56f,FINALE_RING=1.6f,FINALE_SEAL0=1.62f,FINALE_SEAL1=2.25f,FINALE_LAUNCH=2.3f,
-        FINALE_PLANT0=2.37f,FINALE_PLANT1=3.2f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
+        FINALE_PLANT0=2.44f,FINALE_PLANT1=3.2f,FINALE_DESCEND=3.0f,FINALE_LAND=3.4f,FINALE_BURST=3.5f,
         FINALE_BACK0=3.62f,FINALE_BACK1=3.9f,FINALE_GONE0=4.15f,FINALE_GONE1=4.6f;
     /**
      * The band its swords come down in (blocks from where she stands, the way she looks as she presses it: the user's

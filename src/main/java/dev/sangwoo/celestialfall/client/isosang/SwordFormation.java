@@ -464,8 +464,14 @@ final class SwordFormation {
      */
     static void sword(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,float alpha,float dark,float flare,float ink){sword(m,camera,pommel,f,1,alpha,dark,flare,ink);}
     /** The same, the sword {@code scale} times its size (2.101.1: H again's swords grow twice as big as they fly down into the band). */
-    static void sword(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float flare,float ink){
-        if(alpha<=.005f)return;
+    static void sword(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float flare,float ink){sword(m,camera,pommel,f,scale,alpha,dark,flare,ink,0,0);}
+    /**
+     * The same, only its part from {@code from} along it (its own length from its pommel, 0 to S_LEN, before it is
+     * scaled) to its point, fading in over {@code fade} from there (2.101.8: H again's swords come out of the air by her
+     * camera, only their points showing).
+     */
+    static void sword(EffectMesh m,Vec3d camera,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float flare,float ink,double from,double fade){
+        if(alpha<=.005f||from>=S_LEN)return;
         for(var face:FACES){
             Vec3d n=f[0].multiply(face.n().x).add(f[1].multiply(face.n().y)).add(f[2].multiply(face.n().z));
             Vec3d[] w=new Vec3d[face.v().length];Vec3d c=Vec3d.ZERO;
@@ -479,8 +485,33 @@ final class SwordFormation {
             col=SpiritSword.mix(col,0x86ecff,.85*flare);
             col=SpiritSword.mix(col,INK,.95*ink);
             float a=alpha*(face.part()==Part.BLADE?.95f:.97f);
-            if(w.length==3)m.triangle(w[0],w[1],w[2],col,a);else m.quad(w[0],w[1],w[2],w[3],col,a);
+            if(from<=0){if(w.length==3)m.triangle(w[0],w[1],w[2],col,a);else m.quad(w[0],w[1],w[2],w[3],col,a);continue;}
+            // cut where it comes out of the air: faded in over FADE from there, whole on from that
+            fan(m,pommel,f,scale,clip(face.v(),from,from+Math.max(1e-4,fade)),col,a,from,fade);
+            fan(m,pommel,f,scale,clip(face.v(),from+Math.max(1e-4,fade),1e9),col,a,from,fade);
         }
+    }
+    /** The corners of the face with corners {@code v} (its own, unscaled) from {@code lo} to {@code hi} along the sword. */
+    static java.util.List<Vec3d> clip(Vec3d[] v,double lo,double hi){
+        var in=new java.util.ArrayList<Vec3d>(java.util.Arrays.asList(v));
+        for(int side=0;side<2&&!in.isEmpty();side++){
+            var out=new java.util.ArrayList<Vec3d>();double edge=side==0?lo:hi;
+            for(int i=0;i<in.size();i++){
+                Vec3d a=in.get(i),b=in.get((i+1)%in.size());
+                boolean ia=side==0?a.y>=edge:a.y<=edge,ib=side==0?b.y>=edge:b.y<=edge;
+                if(ia)out.add(a);
+                if(ia!=ib){double u=(edge-a.y)/(b.y-a.y);out.add(a.lerp(b,u));}
+            }
+            in=out;
+        }
+        return in;
+    }
+    /** A cut face's corners drawn as a fan, each as strongly as it has come out of the air ({@code from}, over {@code fade}). */
+    private static void fan(EffectMesh m,Vec3d pommel,Vec3d[] f,double scale,java.util.List<Vec3d> v,int col,float a,double from,double fade){
+        if(v.size()<3)return;
+        Vec3d[] w=new Vec3d[v.size()];float[] k=new float[v.size()];
+        for(int i=0;i<w.length;i++){w[i]=at(pommel,f,v.get(i).multiply(scale));k[i]=a*(float)MathHelper.clamp((v.get(i).y-from)/Math.max(1e-4,fade),0,1);}
+        for(int i=1;i+1<w.length;i++){m.vertex(w[0],col,k[0]);m.vertex(w[i],col,k[i]);m.vertex(w[i+1],col,k[i+1]);m.vertex(w[i+1],col,k[i+1]);}
     }
     /**
      * A sword's light (the light pass): white along its outline with a pale glow round it (the video: the swords stood in
@@ -489,22 +520,34 @@ final class SwordFormation {
      */
     static void swordGlow(EffectMesh m,Vec3d pommel,Vec3d[] f,float alpha,float dark,float sky,float flare,float ink){swordGlow(m,pommel,f,1,alpha,dark,sky,flare,ink);}
     /** The same, the sword {@code scale} times its size (its lines as much broader). */
-    static void swordGlow(EffectMesh m,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float sky,float flare,float ink){
-        float a=alpha*(1-ink);if(a<=.005f)return;
-        int edge=dark>.5f?AZURE:WHITE;float strong=.42f+.18f*sky+.5f*flare;double k=THIN*scale;
+    static void swordGlow(EffectMesh m,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float sky,float flare,float ink){swordGlow(m,pommel,f,scale,alpha,dark,sky,flare,ink,0,0);}
+    /** The same, only its part from {@code from} along it to its point, its light faint over {@code fade} from there (2.101.8). */
+    static void swordGlow(EffectMesh m,Vec3d pommel,Vec3d[] f,double scale,float alpha,float dark,float sky,float flare,float ink,double from,double fade){
+        float a=alpha*(1-ink);if(a<=.005f||from>=S_LEN)return;
+        int edge=dark>.5f?AZURE:WHITE;float strong=.42f+.18f*sky+.5f*flare;double k=THIN*scale,whole=from+Math.max(0,fade);
         for(var e:EDGES){
-            Vec3d p=at(pommel,f,e.a().multiply(scale)),q=at(pommel,f,e.b().multiply(scale));
-            if(e.outline()){m.line(p,q,(.014+.01*flare)*k,edge,Math.min(1,strong)*a);m.softLine(p,q,(.1+.25*flare)*k,dark>.5f?BLUE:PALE,(.13f+.04f*sky+.3f*flare)*a);}
-            else m.line(p,q,.009*k,PALE,(.2f+.08f*sky)*a*(1-dark));
+            for(int part=from>0?0:1;part<2;part++){
+                // (cut: the part coming out of the air faint, the rest whole)
+                double lo=part==0?from:Math.max(0,whole),hi=part==0?whole:1e9;
+                Vec3d ea=e.a(),eb=e.b();if(ea.y>eb.y){Vec3d x=ea;ea=eb;eb=x;}
+                if(eb.y<lo||ea.y>hi||eb.y-ea.y<1e-9&&(ea.y<lo||ea.y>hi))continue;
+                double ua=eb.y-ea.y<1e-9?0:MathHelper.clamp((lo-ea.y)/(eb.y-ea.y),0,1),ub=eb.y-ea.y<1e-9?1:MathHelper.clamp((hi-ea.y)/(eb.y-ea.y),0,1);
+                Vec3d p=at(pommel,f,ea.lerp(eb,ua).multiply(scale)),q=at(pommel,f,ea.lerp(eb,ub).multiply(scale));
+                float s=part==0?.4f:1;
+                if(e.outline()){m.line(p,q,(.014+.01*flare)*k,edge,Math.min(1,strong)*a*s);m.softLine(p,q,(.1+.25*flare)*k,dark>.5f?BLUE:PALE,(.13f+.04f*sky+.3f*flare)*a*s);}
+                else m.line(p,q,.009*k,PALE,(.2f+.08f*sky)*a*(1-dark)*s);
+            }
         }
-        Vec3d base=at(pommel,f,p(0,S_GUARD*scale,0)),tip=at(pommel,f,p(0,S_LEN*scale,0)),top=at(pommel,f,p(0,0,0));
+        double cut=Math.max(0,whole);
+        Vec3d base=at(pommel,f,p(0,Math.max(S_GUARD,cut)*scale,0)),tip=at(pommel,f,p(0,S_LEN*scale,0)),top=at(pommel,f,p(0,cut*scale,0));
         m.softLine(top,tip,.36*k,dark>.5f?BLUE:AZURE,(.04f+.03f*sky)*a);
         // its gems glint blue on the side turned to the camera (2.82.1)
         if(dark<.5f)for(int i=0;i<GEMS.size();i++){
+            if(GEMS.get(i).y<cut)continue;
             Vec3d g=at(pommel,f,GEMS.get(i).multiply(scale)),way=f[0].multiply(GEM_WAYS.get(i).x).add(f[1].multiply(GEM_WAYS.get(i).y)).add(f[2].multiply(GEM_WAYS.get(i).z));
             if(way.dotProduct(m.camera().subtract(g))>0)m.softDisc(g.add(way.multiply(.012*k)),.055*k,AZURE,(.32f+.2f*sky)*a);
         }
-        if(flare>.01f){m.softLine(top,tip,.9*k,CYAN,.5f*flare*a);m.line(base,tip,.05*k,WHITE,.85f*flare*a);m.softDisc(top,.45*k,CYAN,.5f*flare*a);}
+        if(flare>.01f){m.softLine(top,tip,.9*k,CYAN,.5f*flare*a);m.line(base,tip,.05*k,WHITE,.85f*flare*a);if(cut<=0)m.softDisc(top,.45*k,CYAN,.5f*flare*a);}
     }
 
     // ───────────────────────────── the ink mountains, the clouds, the mist ─────────────────────────────

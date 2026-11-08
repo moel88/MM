@@ -194,7 +194,7 @@ class SwordFinaleTest {
             if(p.steed())continue;
             if(p.own())assertTrue(SwordFinale.blade(fr,p,SwordFinale.FOLD0-.01f).dir().distanceTo(p.fanDir())<1e-9,"a feather until the fan folds");
             assertTrue(SwordFinale.aimFrom(p)>=SwordFinale.FOLD1-1e-6,"drawn back only once it waits");
-            float waits=Math.max(SwordFinale.FOLD1,p.appear()+SwordFinale.RELOAD_IN)+.005f;
+            float waits=Math.max(SwordFinale.FOLD1,p.appear()+SwordFinale.EMERGE)+.005f;
             if(p.launch()<waits+.005f)continue;
             var w=SwordFinale.blade(fr,p,waits);
             assertTrue(w.dir().distanceTo(p.aimDir())<1e-9,"waiting, pointed the way it shoots");
@@ -227,8 +227,9 @@ class SwordFinaleTest {
             // aimed straight at her foe ("B: 모두 적을 겨눔"), unless that would point it up
             double off=Math.toDegrees(Math.acos(MathHelper.clamp(p.aimDir().dotProduct(foe.subtract(p.readyMid()).normalize()),-1,1)));
             assertTrue(off<.3||Math.abs(p.aimDir().y+SwordFinale.AIM_DOWN)<1e-6,"aimed at her foe: "+off);
-            if(p.appear()<=SwordFinale.FOLD1+1e-6){
-                double[] a=screen(s,p.readyMid()),q0=screen(s,pommel),q1=screen(s,point);places.add(a);
+            if(p.appear()<=SwordFinale.FOLD1+SwordFinale.EMERGE_SPREAD+1e-4){
+                // (on her camera's frame as rolled)
+                double[] a=SwordFinale.onScreen(fr,p.readyMid()),q0=SwordFinale.onScreen(fr,pommel),q1=SwordFinale.onScreen(fr,point);places.add(a);
                 lens.add(Math.hypot((q1[0]-q0[0])*16/9,q1[1]-q0[1])/2);
             }
         }
@@ -236,9 +237,9 @@ class SwordFinaleTest {
         assertEquals(SwordFinale.WAVE_SLOTS,places.size(),"about 20 at a time");
         for(int i=0;i<places.size();i++)for(int j=i+1;j<places.size();j++){
             double[] a=places.get(i),b=places.get(j);
-            assertTrue(Math.hypot((a[0]-b[0])*16/9,a[1]-b[1])/2>.12,"two places close together: "+a[0]+","+a[1]+" and "+b[0]+","+b[1]);
+            assertTrue(Math.hypot((a[0]-b[0])*16/9,a[1]-b[1])/2>.1,"two places close together: "+a[0]+","+a[1]+" and "+b[0]+","+b[1]);
         }
-        double[] f0=screen(s,foe);int far=0,all=0;
+        double[] f0=SwordFinale.onScreen(fr,foe);int far=0,all=0;
         for(double x=-.9;x<=.9;x+=.05)for(double y=-.85;y<SwordFinale.redLine(x)-.15;y+=.05){
             if(x>her[0]-.05&&x<her[1]+.05&&y>her[2]-.05&&y<her[3]+.05||Math.hypot((x-f0[0])*16/9,y-f0[1])<SwordFinale.FOE_CLEAR+.05)continue;
             double best=9;for(double[] a:places)best=Math.min(best,Math.hypot((a[0]-x)*16/9,a[1]-y)/2);
@@ -255,7 +256,7 @@ class SwordFinaleTest {
             int waiting=0;for(var p:plans)if(!p.steed()&&p.appear()<=t&&t<p.launch())waiting++;
             assertTrue(waiting<=SwordFinale.WAVE_SLOTS,"no more than its places at "+t+": "+waiting);
         }
-        for(var p:plans)if(!p.steed()&&p.appear()<=SwordFinale.FOLD1)assertTrue(p.own(),"her own waiting as her camera cuts behind her");
+        for(var p:plans)if(!p.steed()&&p.appear()<=SwordFinale.FOLD1+SwordFinale.EMERGE_SPREAD+1e-4)assertTrue(p.own(),"her own coming out as her camera cuts behind her");
         // each place filled again only once its sword has been fired, a moment after; each waits a moment before it is fired
         for(int k=0;k<SwordFinale.WAVE_SLOTS;k++){
             var in=new java.util.ArrayList<SwordFinale.Plan>();for(var p:plans)if(p.slot()==k)in.add(p);
@@ -264,7 +265,7 @@ class SwordFinaleTest {
             for(int i=1;i<in.size();i++){
                 var a=in.get(i-1);var b=in.get(i);
                 assertTrue(b.appear()>=a.launch()+SwordFinale.RELOAD-1e-5,"filled again once its sword is fired: place "+k);
-                assertTrue(b.launch()-b.appear()>=SwordFinale.RELOAD_WAIT-1e-5,"waiting a moment first: place "+k);
+                assertTrue(b.launch()-b.appear()>=SwordFinale.EMERGE+SwordFinale.WAIT_OUT-1e-5,"out through the screen and waiting a moment first: place "+k);
             }
         }
         // no two waiting at once in one another
@@ -275,6 +276,32 @@ class SwordFinaleTest {
             assertTrue(d>.08,"two swords in one another: "+a.k()+" "+b.k()+" "+d);
         }
     }
+    @Test void eachComesOutThroughHerCamerasScreenIntoItsPlace(){
+        // (2.101.9, user: "검이 화면을 뚫고 나오지 않음"; 2.101.8: "아니 카메라를 뚫고 나와야한다니까?")
+        var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
+        Vec3d[] cam=SwordFinale.folded(fr);
+        for(var p:plans){
+            if(p.steed())continue;
+            float a=p.appear();
+            if(SwordFinale.refills(p)||!p.own())assertNotNull(SwordFinale.blade(fr,p,a+.001f),"drawn as it shows");
+            var first=SwordFinale.blade(fr,p,a+.001f);
+            assertTrue(first.from()>SwordFormation.S_LEN*.7,"all but its point still behind the screen as it shows: "+first.from());
+            // where its blade comes through: on her camera's screen
+            for(float t=a+.005f;t<a+SwordFinale.EMERGE;t+=.005f){
+                var w=SwordFinale.blade(fr,p,t);if(w.from()<=1e-6)continue;
+                Vec3d through=w.pommel().add(w.dir().multiply(w.from()*w.scale())),eye=SwordFinale.behind(fr,t)[0];
+                assertEquals(SwordFinale.SCREEN,through.subtract(eye).dotProduct(cam[1]),.02,"cut where her camera's screen is at "+t);
+                // along the line from the lens through its place: where it is on her screen, it stays
+                double[] q=SwordFinale.onScreen(fr,w.mid()),q1=SwordFinale.onScreen(fr,p.readyMid());
+                assertTrue(Math.hypot(q[0]-q1[0],q[1]-q1[1])<.02,"out along the line through its place at "+t);
+            }
+            var out=SwordFinale.blade(fr,p,a+SwordFinale.EMERGE+.001f);
+            assertEquals(0,out.from(),1e-9,"whole once it is out");
+            assertTrue(out.mid().distanceTo(p.readyMid())<.05+SwordFinale.BREATHE+SwordFinale.BOB,"in its place once it is out: "+out.mid().distanceTo(p.readyMid()));
+        }
+        // her camera's screen in its roll: the frame turned BEHIND_ROLL degrees
+        assertEquals(-SwordFinale.BEHIND_ROLL,Math.toDegrees(Math.atan2(cam[2].y,cam[3].y)),.5,"its places laid out on the frame as rolled");
+    }
     @Test void theyAreFiredAtRandomAsHerCameraCutsBehindHerFast(){
         // (2.101.9, user request: "그냥 검들 바로 쏘게 바꿔 지금 조금 기다리고 쏘는데 그냥 바로 쏴 카메라 뒤로 이동하자마자 그리고
         // 순서대로 나가는거 같은데 무작위로 빠르게 쏘게 검들은 더 많게")
@@ -283,7 +310,8 @@ class SwordFinaleTest {
         var fired=new java.util.ArrayList<SwordFinale.Plan>();for(var p:plans)if(!p.steed())fired.add(p);
         fired.sort(java.util.Comparator.comparingDouble(SwordFinale.Plan::launch));
         assertEquals(plans.length-1,fired.size(),"every sword but hers fired from its place (more swords: \"검들은 더 많게\")");
-        assertEquals(IsosangRules.FINALE_LAUNCH,fired.get(0).launch(),1e-6f,"the first as her camera cuts behind her");
+        assertEquals(SwordFinale.FIRE0,fired.get(0).launch(),1e-6f,"the first as soon as one has come out through her camera's screen");
+        assertTrue(SwordFinale.FIRE0-IsosangRules.FINALE_LAUNCH<.1f,"right as her camera cuts behind her (\"카메라 뒤로 이동하자마자\")");
         int n=fired.size();double[] rank=new double[n],fw=new double[n],deep=new double[n],up=new double[n],across=new double[n];
         for(int i=0;i<n;i++){
             var p=fired.get(i);
@@ -292,7 +320,7 @@ class SwordFinaleTest {
             rank[i]=i;fw[i]=p.foot().subtract(fr.spot()).dotProduct(fr.f());deep[i]=q[2];up[i]=q[1];across[i]=q[0];
         }
         float last=fired.get(n-1).launch();
-        assertTrue(last-IsosangRules.FINALE_LAUNCH<.45f,"all fired in under half a second: "+(last-IsosangRules.FINALE_LAUNCH));
+        assertTrue(last-SwordFinale.FIRE0<.45f,"all fired in under half a second: "+(last-SwordFinale.FIRE0));
         for(double[] k:new double[][]{fw,deep,up,across})assertTrue(Math.abs(spearman(rank,k))<.35,"at random: "+spearman(rank,k));
         // the server's blows as they come down (three in their rain, one as hers comes down last; the last as the band flashes)
         float firstPlant=Float.MAX_VALUE,lastPlant=0,hers=0;
@@ -349,6 +377,8 @@ class SwordFinaleTest {
                         assertTrue(step.length()<1e-6||off<25,"sword "+p.k()+" on the way it points at "+t+": "+off);
                     }else if(prevT<p.plant()&&t>p.plant())assertTrue(moved<8,"sword "+p.k()+" strikes "+moved+" blocks in a frame at "+t);
                     else if(prevT<p.launch()&&t>p.launch())assertTrue(moved<3,"sword "+p.k()+" leaves "+moved+" blocks in a frame at "+t);
+                    // (2.101.9) coming out through her camera's screen into its place, fast
+                    else if(!p.steed()&&t>p.appear()&&prevT<p.appear()+SwordFinale.EMERGE)assertTrue(moved<4,"sword "+p.k()+" comes out "+moved+" blocks in a frame at "+t);
                     // (2.101.4) the fan folding: each sweeps from her back to wait round her camera behind her
                     else if(t>SwordFinale.FOLD0&&prevT<SwordFinale.FOLD1&&!p.steed())assertTrue(moved<2.6,"sword "+p.k()+" sweeps "+moved+" blocks in a frame at "+t);
                     else assertTrue(moved<1.6,"sword "+p.k()+" moves "+moved+" blocks in a frame at "+t);

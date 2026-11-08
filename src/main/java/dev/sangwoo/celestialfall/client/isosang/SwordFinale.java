@@ -272,7 +272,18 @@ final class SwordFinale {
      */
     static final int WAVE_SLOTS=20;
     static final double SLOT_LINE=.1,SLOT_NEAR=2.2,SLOT_FAR=5,SLOT_UP=2,SLOT_JITTER=.03,FOE_CLEAR=.35,MIN_LEN=.07,AIM_DOWN=.08,FOE_SPREAD=5,FACE_JITTER=14;
-    static final float RELOAD=.02f,RELOAD_WAIT=.04f,RELOAD_IN=.04f;
+    static final float RELOAD=.015f;
+    /**
+     * How they come out through her camera's screen (2.101.9, user: "검이 화면을 뚫고 나오지 않음"; 2.101.8: "아니 카메라를
+     * 뚫고 나와야한다니까?"): each shows behind her behind camera's screen, {@link #SCREEN} blocks in front of its lens (square
+     * to the way it looks), its point at it, and comes out through it into its place along the line from the lens through
+     * that over {@link #EMERGE} (fast, slowing into its place: {@link #outOf}), its part still behind the screen not drawn
+     * (faint over {@link #FADE_IN} from it); her own as her camera cuts behind her (one after another over its first
+     * {@link #EMERGE_SPREAD}), each of the rest RELOAD after the last of its place was fired; each fired once it has
+     * waited {@link #WAIT_OUT} in its place, the first {@link #FIRE0} (as soon as one has come out).
+     */
+    static final double SCREEN=.9,FADE_IN=.12;
+    static final float EMERGE=.06f,EMERGE_SPREAD=.05f,WAIT_OUT=.015f,FIRE0=FINALE_LAUNCH+EMERGE+WAIT_OUT;
     /**
      * The line the user drew on a still of her behind camera's shot (2.101.8, tools/isosang/finale_layout.py traced it:
      * -1 to 1 across and up the screen, 16:9): the swords wait under it (2.101.8: "빨간선 아래에 전부 골고루 배치하면 돼").
@@ -345,18 +356,18 @@ final class SwordFinale {
         var after=new java.util.ArrayList<Integer>(owns.subList(slots,owns.size()));for(int j=OWN;j<SWORDS;j++)after.add(j);
         after.sort(Comparator.comparingDouble((Integer j)->Ease.hash(j*977+salt+42)));
         float[] launches=new float[SWORDS],appears=new float[SWORDS],readyAt=new float[slots];int[] slotOf=new int[SWORDS],nth=new int[SWORDS],held=new int[slots],count=new int[slots];
-        Arrays.fill(slotOf,-1);Arrays.fill(readyAt,FOLD1);
-        for(int k=0;k<slots;k++){held[k]=owns.get(k);appears[held[k]]=FOLD1;slotOf[held[k]]=k;}
+        Arrays.fill(slotOf,-1);
+        for(int k=0;k<slots;k++){held[k]=owns.get(k);appears[held[k]]=FOLD1+(k==0?0:EMERGE_SPREAD*(float)Ease.hash(salt*17+k*5));readyAt[k]=appears[held[k]]+EMERGE+WAIT_OUT;slotOf[held[k]]=k;}
         int made=slots,next=0;
         for(int i=0;i<n;i++){
-            float t=FINALE_LAUNCH+FIRE_STEP*(i+(i==0?0:FIRE_JITTER*(2*(float)Ease.hash(salt*7+i)-1)));
+            float t=FIRE0+FIRE_STEP*(i+(i==0?0:FIRE_JITTER*(2*(float)Ease.hash(salt*7+i)-1)));
             // one of the places whose sword has waited long enough, at random among those fired the fewest times (else the
             // one soonest ready, waited for)
             int k=-1;double pick=1e9;
             for(int q=0;q<slots;q++)if(held[q]>=0&&readyAt[q]<=t){double h=count[q]+.9*Ease.hash(salt*13+i*7+q*3);if(h<pick){pick=h;k=q;}}
             if(k<0){float soon=Float.MAX_VALUE;for(int q=0;q<slots;q++)if(held[q]>=0&&readyAt[q]<soon){soon=readyAt[q];k=q;}t=Math.max(t,soon);}
             launches[held[k]]=t;
-            if(made<n){int j=after.get(next++);held[k]=j;appears[j]=t+RELOAD;readyAt[k]=t+RELOAD+RELOAD_WAIT;slotOf[j]=k;nth[j]=++count[k];made++;}
+            if(made<n){int j=after.get(next++);held[k]=j;appears[j]=t+RELOAD;readyAt[k]=t+RELOAD+EMERGE+WAIT_OUT;slotOf[j]=k;nth[j]=++count[k];made++;}
             else held[k]=-1;
         }
         Vec3d eye=folded(fr)[0];double[] box=herBox(fr);
@@ -538,7 +549,10 @@ final class SwordFinale {
     }
 
     /** A sword as it is drawn: its middle, the way it points (pommel to point), its guard's turn, how strongly it shows, whether it flies (its light streaks behind it), how big it is. */
-    record Blade(Vec3d mid,Vec3d dir,double spin,float alpha,boolean flying,double scale){
+    record Blade(Vec3d mid,Vec3d dir,double spin,float alpha,boolean flying,double scale,double from){
+        Blade(Vec3d mid,Vec3d dir,double spin,float alpha,boolean flying,double scale){this(mid,dir,spin,alpha,flying,scale,0);}
+        /** The same, still behind her camera's screen as far as {@code from} along it (2.101.9: coming out through it). */
+        Blade cut(double from){return new Blade(mid,dir,spin,alpha,flying,scale,from);}
         Vec3d pommel(){return mid.subtract(dir.multiply(SwordFormation.S_LEN*scale/2));}
         Vec3d point(){return mid.add(dir.multiply(SwordFormation.S_LEN*scale/2));}
     }
@@ -606,7 +620,7 @@ final class SwordFinale {
      */
     static double scale(Plan p,float t){return t<p.launch()?1:scaleAt(along(p,t));}
     /** When it is drawn back to shoot (hers as she steps off it; never before the fan has folded: those fired at the cut not at all). */
-    static float aimFrom(Plan p){return p.steed()?FINALE_DESCEND:Math.max(Math.max(FOLD1,p.appear()),p.launch()-AIM);}
+    static float aimFrom(Plan p){return p.steed()?FINALE_DESCEND:Math.max(Math.max(FOLD1,p.appear()+EMERGE),p.launch()-AIM);}
     /** Where its middle is drawn back to as it is launched: from where it waits aimed through her (hers from under her feet as she steps off), back along the way it shoots. */
     static Vec3d drawn(Frame fr,Plan p){return p.readyMid().subtract(p.aimDir().multiply(DRAW));}
     /** How far along its flight it is {@code t} seconds in (0 as it is launched to 1 as it strikes: faster and faster). */
@@ -631,8 +645,10 @@ final class SwordFinale {
     /** Her camera behind her as the fan has folded (as it cuts behind her): its eye, the way it looks, its right and its up. */
     static Vec3d[] folded(Frame fr){
         Vec3d[] b=behind(fr,FOLD1);Vec3d eye=b[0],fw=b[1].subtract(eye).normalize();
-        Vec3d right=fw.crossProduct(UP).normalize();
-        return new Vec3d[]{eye,fw,right,right.crossProduct(fw)};
+        Vec3d right=fw.crossProduct(UP).normalize(),up=right.crossProduct(fw);
+        // (rolled as her camera is: its frame turned clockwise for a roll below nought)
+        double th=Math.toRadians(-rollAt(FOLD1));
+        return new Vec3d[]{eye,fw,right.multiply(Math.cos(th)).add(up.multiply(Math.sin(th))),up.multiply(Math.cos(th)).subtract(right.multiply(Math.sin(th)))};
     }
     /** The way a sword pointed {@code d} stands {@code slant} radians below level (its point on the way {@code d} goes). */
     static Vec3d standing(Vec3d d,double slant){Vec3d level=new Vec3d(d.x,0,d.z).normalize();return level.multiply(Math.cos(slant)).add(0,-Math.sin(slant),0);}
@@ -685,7 +701,37 @@ final class SwordFinale {
     }
     /** Its middle {@code u} of the way along its flight (behind its point the way it goes, as big as it has grown). */
     static Vec3d flight(Frame fr,Plan p,double u){return flightTip(fr,p,u).subtract(flightDir(fr,p,u).multiply(SwordFormation.S_LEN*scaleAt(u)/2));}
-    /** Where it waits in the wave {@code t} seconds in, breathing a little until it is drawn back to shoot. */
+    /**
+     * Where a sword of its places is {@code t} seconds in until it is fired: behind her camera's screen until it shows,
+     * coming out through it into its place, waiting there breathing, drawn back a little to shoot.
+     */
+    static Vec3d waiting(Frame fr,Plan p,float t){
+        if(t<p.appear())return outOf(fr,p,0);
+        if(t<p.appear()+EMERGE)return outOf(fr,p,(t-p.appear())/EMERGE);
+        return ready(fr,p,t).subtract(p.aimDir().multiply(DRAW*Ease.smooth(t,aimFrom(p),p.launch())));
+    }
+    /**
+     * Its middle {@code u} of the way out through her camera's screen (0 behind it, its point at it, to 1 in its place):
+     * along the line from the lens through its place, fast and slowing into it.
+     */
+    static Vec3d outOf(Frame fr,Plan p,double u){
+        Vec3d[] c=folded(fr);Vec3d eye=c[0],to=p.readyMid().subtract(eye);
+        double depth=to.dotProduct(c[1]),l0=(SCREEN-.02-p.aimDir().dotProduct(c[1])*SwordFormation.S_LEN/2)/depth;
+        return eye.add(to.multiply(l0+(1-l0)*(1-(1-u)*(1-u))));
+    }
+    /** Whether it is one of her own that fills one of its places only later (gone into light as the fan folds). */
+    static boolean refills(Plan p){return p.own()&&!p.steed()&&p.appear()>FOLD1+EMERGE_SPREAD+1e-4f;}
+    /**
+     * How far along sword {@code p} (its own length from its pommel, before it is scaled) it is still behind her camera's
+     * screen {@code t} seconds in, at {@code pommel}, pointing {@code dir}, {@code scale} times its size (hers never).
+     */
+    static double cut(Frame fr,Plan p,Vec3d pommel,Vec3d dir,double scale,float t){
+        if(p.steed()||t<FOLD0)return 0;
+        Vec3d n=folded(fr)[1];double dn=dir.dotProduct(n);if(dn<.2)return 0;
+        Vec3d screen=behind(fr,Math.max(t,FOLD1))[0].add(n.multiply(SCREEN));
+        return MathHelper.clamp(screen.subtract(pommel).dotProduct(n)/dn/scale,0,SwordFormation.S_LEN);
+    }
+    /** Where it waits in its place {@code t} seconds in, breathing a little until it is drawn back to shoot. */
     static Vec3d ready(Frame fr,Plan p,float t){
         double s=p.seed(),k=1-Ease.smooth(t,aimFrom(p),p.launch());
         return p.readyMid().add(p.aimDir().multiply(BREATHE*k*Math.sin(t*3.3+s*.7))).add(0,BOB*k*Math.sin(t*2.6+s*1.3),0);
@@ -695,9 +741,9 @@ final class SwordFinale {
      * her own all of it, but one that fills a place again later going into light as the fan folds and back as it shows.
      */
     static float showing(Plan p,float t){
-        if(!p.own())return Ease.smooth(t,p.appear(),p.appear()+RELOAD_IN);
-        if(p.steed()||p.appear()<=FOLD1)return 1;
-        return t<p.appear()?1-Ease.smooth(t,FOLD0,FOLD1):Ease.smooth(t,p.appear(),p.appear()+RELOAD_IN);
+        if(!p.own())return Ease.smooth(t,p.appear(),p.appear()+.03f);
+        if(!refills(p))return 1;
+        return t<p.appear()?1-Ease.smooth(t,FOLD0,FOLD1):Ease.smooth(t,p.appear(),p.appear()+.03f);
     }
     /** How long it takes to go (her own a while, one of light in a moment as it bursts into light). */
     static float fade(Plan p){return p.own()?FADE:LIGHT_FADE;}
@@ -709,20 +755,20 @@ final class SwordFinale {
         // (2.101.3) shot off past her body, faster and faster, dipping into the ground, never up (the video: long streaks)
         if(t>=p.launch())return flight(fr,p,along(p,t));
         if(p.steed())return steedMid(fr,p,t);
-        // (2.101.9) one of light: there in its place from as it shows until it is fired
-        if(!p.own())return ready(fr,p,t).subtract(p.aimDir().multiply(DRAW*Ease.smooth(t,aimFrom(p),p.launch())));
+        // (2.101.9) one of light: out through her camera's screen into its place from as it shows, until it is fired
+        if(!p.own())return waiting(fr,p,t);
         // her own that fill a place again later: into light where it is in the fan as the fan folds; nowhere until it shows
-        if(p.appear()>FOLD1&&t>=FOLD0){
+        if(refills(p)&&t>=FOLD0){
             if(t<FOLD1)return fanAt(p,t);
             if(t<p.appear())return null;
-            return ready(fr,p,t).subtract(p.aimDir().multiply(DRAW*Ease.smooth(t,aimFrom(p),p.launch())));
+            return waiting(fr,p,t);
         }
         float fanned=p.gather()+GATHER;
         if(t>=FOLD0){
-            // folded out of the fan to wait in the wave as her camera cuts behind her, then drawn back a little to shoot
-            float u=Ease.smooth(t,FOLD0,FOLD1);
-            Vec3d at=u<=0?fanAt(p,t):u>=1?ready(fr,p,t):bezier(fanAt(p,t),fanAt(p,t).subtract(p.fanDir().multiply(.5)),p.readyMid().subtract(p.aimDir().multiply(.6)),ready(fr,p,t),u);
-            return at.subtract(p.aimDir().multiply(DRAW*Ease.smooth(t,aimFrom(p),p.launch())));
+            // folded out of the fan to behind her camera's screen as it cuts behind her, then out through it into its place
+            if(t>=FOLD1)return waiting(fr,p,t);
+            float u=Ease.smooth(t,FOLD0,FOLD1);Vec3d in=outOf(fr,p,0);
+            return u<=0?fanAt(p,t):bezier(fanAt(p,t),fanAt(p,t).subtract(p.fanDir().multiply(.5)),in.subtract(p.aimDir().multiply(.6)),in,u);
         }
         if(t>=fanned)return fanAt(p,t);
         if(t>=p.gather()){
@@ -762,7 +808,7 @@ final class SwordFinale {
         if(p.steed())return p.spin()*(1-steedIn(p,t));
         if(!p.own())return p.face();
         double s=p.spin()+SPIN*Math.max(0,Math.min(t,FOLD0)-p.start()-RISE);
-        if(p.appear()>FOLD1)return t<p.appear()?s:p.face();
+        if(refills(p))return t<p.appear()?s:p.face();
         return t<=FOLD0?s:s+MathHelper.wrapDegrees(p.face()-s)*Ease.smooth(t,FOLD0,FOLD1);
     }
     /** Sword {@code p} {@code t} seconds in (null when it is not drawn). */
@@ -790,13 +836,16 @@ final class SwordFinale {
         }
         // one of light, waiting in its place: pointing the way it shoots; her own filling a place again, a feather going
         // into light as the fan folds, then the same
-        if(!p.own()&&t<p.launch())return new Blade(m,p.aimDir(),spin,alpha,false,1);
-        if(p.own()&&p.appear()>FOLD1&&t>=FOLD0&&t<p.launch())return new Blade(m,t<FOLD1?p.fanDir():p.aimDir(),spin,alpha,false,1);
+        if(!p.own()&&t<p.launch())return new Blade(m,p.aimDir(),spin,alpha,false,1).cut(cut(fr,p,m.subtract(p.aimDir().multiply(SwordFormation.S_LEN/2)),p.aimDir(),1,t));
+        if(refills(p)&&t>=FOLD0&&t<p.launch()){
+            Vec3d d=t<FOLD1?p.fanDir():p.aimDir();
+            return new Blade(m,d,spin,alpha,false,1).cut(t<FOLD1?0:cut(fr,p,m.subtract(d.multiply(SwordFormation.S_LEN/2)),d,1,t));
+        }
         // pulled out: pointing down as it stood, until it turns up as it rises
         if(p.own()&&t<p.start()+RISE*.5f)return new Blade(m,p.down(),spin,alpha,false,1);
         // in the fan: pointing out, as the wings' feathers; as the fan folds, turned to point the way it shoots, waiting
         float fanned=p.gather()+GATHER;
-        if(t>=fanned&&t<p.launch())return new Blade(m,slerp(p.fanDir(),p.aimDir(),Ease.smooth(t,FOLD0,FOLD1)),spin,alpha,false,sc);
+        if(t>=fanned&&t<p.launch()){var w=new Blade(m,slerp(p.fanDir(),p.aimDir(),Ease.smooth(t,FOLD0,FOLD1)),spin,alpha,false,sc);return w.cut(cut(fr,p,w.pommel(),w.dir(),sc,t));}
         // flying: launched, the way it goes along its flight (shot off past her, dipping in); streaming after her, the way it goes;
         // pulled out, turned up from pointing down as it rises, then after her into the swirl; gathering, turned from its
         // way after her out to the way it points in the fan (each turned smoothly, never flipping round where its way
@@ -828,7 +877,7 @@ final class SwordFinale {
         for(int j=0;j<plans.length;j++){
             var p=plans[j];
             // called off: what has not come down yet goes now
-            if(!Float.isNaN(end)&&t>=end&&p.plant()>end){var b=blade(fr,p,Math.min(t,end));if(b!=null&&t<end+.2f)out[j]=new Blade(b.mid(),b.dir(),b.spin(),b.alpha()*(1-Ease.smooth(t,end,end+.2f)),false,b.scale());continue;}
+            if(!Float.isNaN(end)&&t>=end&&p.plant()>end){var b=blade(fr,p,Math.min(t,end));if(b!=null&&t<end+.2f)out[j]=new Blade(b.mid(),b.dir(),b.spin(),b.alpha()*(1-Ease.smooth(t,end,end+.2f)),false,b.scale(),b.from());continue;}
             out[j]=blade(fr,p,t);
         }
         return out;
@@ -895,7 +944,7 @@ final class SwordFinale {
         for(int i:order){
             var b=all[i];if(b==null||b.alpha()<=.005f)continue;
             var p=plans[i];float flare=flare(p,b,t,false),a=b.alpha()*(p.own()?1:.88f)*clearOf(c,p,b,t);if(a<=.005f)continue;
-            SwordFormation.sword(m,c.camera,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.scale(),a,0,flare,0);
+            SwordFormation.sword(m,c.camera,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.scale(),a,0,flare,0,b.from(),b.from()>0?FADE_IN:0);
         }
         for(var p:plans)if(comes(c.cast,p.plant()))crystal(m,p,t,false);
         // the ink flung up as each strikes, falling (a clump breaks smaller as it flies)
@@ -950,14 +999,18 @@ final class SwordFinale {
             var b=all[j];var p=plans[j];if(b==null)continue;
             float flare=flare(p,b,t,true),near=clearOf(c,p,b,t);
             // (its outline lit less than the formation's under its night: against the dusk the fan was a mass of white)
-            SwordFormation.swordGlow(m,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.scale(),b.alpha()*near,0,GLOW_SKY,flare,0);
+            SwordFormation.swordGlow(m,b.pommel(),SwordFormation.frame(b.dir(),b.spin()),b.scale(),b.alpha()*near,0,GLOW_SKY,flare,0,b.from(),b.from()>0?FADE_IN:0);
             if(near>.01f&&(b.flying()||t>=p.launch()&&t<p.plant()+STREAK_FLY))streak(m,fr,p,t,new Blade(b.mid(),b.dir(),b.spin(),b.alpha()*near,true,b.scale()));
-            if(!p.own()||p.appear()>FOLD1&&t>=p.appear()){
-                // (2.101.9) showing in its place: a little burst of blue
-                float k=FxLib.kick(t,p.appear(),.09f);
-                if(k>.01f){Vec3d o=toward(b.mid(),c.camera,.2);m.softDisc(o,.8,BLUE,.3f*k);glint8(m,o,.28*k,PALE,.6f*k);}
+            if(!p.steed()&&t>=p.appear()&&t<p.appear()+.2f){
+                // (2.101.9) breaking out through her camera's screen: a little light and a ring where its point comes through
+                float k=FxLib.kick(t,p.appear()+.01f,.08f);
+                if(k>.01f){
+                    Vec3d o=outOf(fr,p,0).add(p.aimDir().multiply(SwordFormation.S_LEN/2));float u=Ease.unit(t,p.appear(),p.appear()+.12f);
+                    m.softDisc(o,.07,BLUE,.35f*k);glint8(m,o,.06*k,PALE,.7f*k);
+                    if(u<1)FxLib.ring(m,o,.02+.12*Ease.out(t,p.appear(),p.appear()+.1f),.008,PALE,.6f*(1-u));
+                }
             }
-            if(p.own()&&p.appear()>FOLD1&&t<FOLD1){
+            if(refills(p)&&t<FOLD1){
                 // going into light in the fan as it folds
                 float k=FxLib.kick(t,FOLD0+.07f,.1f);
                 if(k>.01f){Vec3d o=toward(b.mid(),c.camera,.2);m.softDisc(o,.9,BLUE,.3f*k);glint8(m,o,.3*k,PALE,.6f*k);}
@@ -1500,11 +1553,12 @@ final class SwordFinale {
      * 방향의 측후방에서 비스듬히 바라보는 3/4 측면 시점으로 설정해", "카메라를 검의 진행 방향과 평행하게 두거나 완전히 수직으로
      * 두지 말 것", "그리고 카메라를 살짝 비스듬이 배치해": turned 17 degrees more to her left and moved round to her right to
      * keep her where she was in its frame, so that the swords waiting at its left slant across it on away from it, some
-     * 30 to 65 degrees off the way it looks; rolled {@link #BEHIND_ROLL} degrees.) How far it comes on forward and up over
+     * 30 to 65 degrees off the way it looks; rolled {@link #BEHIND_ROLL} degrees, the frame turned 7 degrees clockwise:
+     * the user's choice "7° 기울임" of a still beside the level one.) How far it comes on forward and up over
      * the shot, and how many times as far as she comes down what it looks at goes down after her.
      */
     static final double[] BEHIND={-3.7,4.64,3.9},BEHIND_LOOK={11.15,2.44,-6.2};
-    static final float BEHIND_ROLL=0;
+    static final float BEHIND_ROLL=-7;
     /** A roll for her behind camera tried in a film before it goes in (SkillShots "hroll"), else null. */
     static Float tunedRoll;
     static final double BEHIND_ON=.46,BEHIND_UP=.17,BEHIND_TILT=1.6;
