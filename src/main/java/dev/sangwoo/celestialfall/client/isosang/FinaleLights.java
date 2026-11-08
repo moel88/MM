@@ -323,12 +323,13 @@ final class FinaleLights {
     /**
      * As each sword shoots off (2.101.3: one after another, each just before it strikes): a small star where its point shot
      * from and a soft blue light, swelling a little as it goes (2.101.2's stars flung out of the fan's hub at FINALE_LAUNCH went
-     * with them all at once; 2.101.2's first previews had a ring there too, a thin grey oval round her from behind).
+     * with them all at once; 2.101.2's first previews had a ring there too, a thin grey oval round her from behind). Since
+     * 2.101.10 they wait behind her camera, so this is seen by those watching her from elsewhere; her own camera sees each
+     * as it comes in past it (SwordFinale.seen, its streak and the fading copies after it, the speed lines).
      */
     static void launch(Fx c,EffectMesh m,SwordFinale.Frame fr,SwordFinale.Plan[] plans,float t){
         for(var p:plans){
             float s=t-p.launch();if(s<-.02f||s>=RELEASE||!SwordFinale.comes(c.cast,p.plant()))continue;
-            // (2.101.7: at its point, drawn back: by her camera its middle is out at the frame's edge)
             Vec3d o=SwordFinale.tipFrom(fr,p),d=p.aimDir();float n=near(o,c.camera);
             float k=Ease.smooth(s,-.02f,0)*(1-Ease.smooth(s,.03f,RELEASE))*n;
             if(k>.01f){m.softDisc(o,.8,AZURE,.32f*k);glint8(m,o,.22*(1+3*s),(p.seed()&1)==0?WHITE:PALE,.8f*k);}
@@ -363,12 +364,14 @@ final class FinaleLights {
 
     /**
      * Lines of speed as they are fired (2.101.9, user request: "연사를 하고 있다는 이펙트를 추가해봐 속도감이 느껴지게"): thin
-     * streaks of light racing on from among their places the way the swords there point, one after another as long as they are fired
-     * ({@link #SPEED_LINES} over the rain, each from beside one of the swords there, a little off its line, {@link
-     * #SPEED_LEN} long, shooting on at {@link #SPEED} blocks a second for {@link #SPEED_LIFE}), white at their heads and
-     * blue behind.
+     * streaks of light racing on from where they wait the way the swords there point (2.101.10: from behind her camera,
+     * straight ahead, in past it), one after another as long as they are fired ({@link #SPEED_LINES} over the rain, each
+     * from beside one of the swords there, a little off its line, {@link #SPEED_LEN} long, shooting on at {@link #SPEED}
+     * blocks a second for {@link #SPEED_LIFE}), white at their heads and blue behind; to her own cutscene's camera none of
+     * them behind its screen (SwordFinale.clipped).
      */
     static void speedLines(Fx c,EffectMesh m,SwordFinale.Plan[] plans,float t){
+        var fr=SwordFinale.frame(c.cast);boolean hers=SwordFinale.herCamera(c);
         float t0=SwordFinale.FIRE0-.03f,t1=t0;for(var p:plans)if(!p.steed())t1=Math.max(t1,p.launch());
         if(t<t0||t>t1+SPEED_LIFE*1.3f||!SwordFinale.comes(c.cast,t0))return;
         for(int i=0;i<SPEED_LINES;i++){
@@ -378,6 +381,7 @@ final class FinaleLights {
             Vec3d d=p.aimDir(),o=p.readyMid().add(SwordFormation.perp(d,Math.PI*2*Ease.hash(seed+3)).multiply(.3+.9*Ease.hash(seed+4))).add(d.multiply(-.6+1.2*Ease.hash(seed+5)));
             double speed=SPEED*(.8+.4*Ease.hash(seed+6)),len=SPEED_LEN*(.6+.8*Ease.hash(seed+7));
             Vec3d head=o.add(d.multiply(speed*age)),tail=head.subtract(d.multiply(len));
+            if(hers){Vec3d[] cl=SwordFinale.clipped(fr,tail,head,t);if(cl==null)continue;tail=cl[0];head=cl[1];}
             float a=Ease.smooth(age,0,.015f)*(1-Ease.smooth(age,life*.45f,life))*near(head,c.camera);if(a<=.01f)continue;
             m.softTaper(tail,head,0,.06,BLUE,.4f*a);m.line(tail.lerp(head,.45),head,.014,i%3==0?WHITE:PALE,.85f*a);
         }
