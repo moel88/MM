@@ -109,7 +109,7 @@ class SwordFinaleTest {
     }
     @Test void theyGatherBehindHerAsWingsAndComeDownSlantingIntoTheBandAheadGrown(){
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
-        int left=0,right=0,steeds=0;var edges=new java.util.ArrayList<double[]>();
+        int left=0,right=0,steeds=0;var spots=new java.util.ArrayList<double[]>();
         Vec3d hub=fr.at(-SwordFinale.HUB_BACK,IsosangRules.FINALE_HOVER+SwordFinale.HUB_UP,0);
         for(var p:plans){
             if(p.steed())steeds++;
@@ -140,37 +140,29 @@ class SwordFinaleTest {
             if(p.steed())assertEquals(SwordFinale.STEED_FLIGHT,flight,1e-6f,"hers flung in as she steps off it");
             else{
                 assertTrue(flight>=SwordFinale.FLIGHT-1e-6&&flight<=SwordFinale.FLIGHT+SwordFinale.FLIGHT_SPREAD+1e-6,"fast: "+flight);
-                // (2.101.7) aimed in at the band's middle, pulled from where it strikes (AIM_PULL of the way)
+                // (2.101.7) aimed in at the band's middle, pulled from where it strikes (AIM_PULL of the way), down; (2.101.8) one
+                // waiting all but in line with that on her screen aimed on into the band past there instead
                 Vec3d mid=SwordFinale.ground(null,fr.at((SwordFinale.BAND_NEAR+SwordFinale.BAND_FAR)/2,0,0),fr.spot().y);
-                assertTrue(p.aimDir().distanceTo(p.foot().lerp(mid,SwordFinale.AIM_PULL).subtract(p.readyMid()).normalize())<1e-9,"aimed in at the band's middle from where it strikes");
-                // (2.101.8: "검들 칼날 끝 부분만 보이게 해주고", "지금 검들 너무 많이 모여있고") only its point in her camera's
-                // frame, poking in from its edge, its hilt out past the edge (or behind the lens) all the time it waits and
-                // is drawn back, never through the lens
                 var s=SwordFinale.shot(c,r,SwordFinale.FOLD1);
-                double[] point=screen(s,p.readyMid().add(p.aimDir().multiply(SwordFormation.S_LEN/2)));
-                // (then "테두리 제외 중앙으로 골고루 배치해줘", "정확히는 위 아래 테두리만 배치하지 말아줘") in from its left
-                // or its right, never its top or bottom
-                assertTrue(Math.abs(point[0])>.55&&Math.abs(point[1])<.8,"its point in from the frame's left or right: "+point[0]+" "+point[1]);
-                double edge=-1,shown=0,blocks=0;double[] before=null;
-                for(int i=0;i<=400;i++){
-                    Vec3d q=p.readyMid().add(p.aimDir().multiply(SwordFormation.S_LEN*(i/400.0-.5)));double[] a=screen(s,q);
-                    boolean in=a[2]>.05&&Math.abs(a[0])<=1&&Math.abs(a[1])<=1;
-                    if(in){blocks+=SwordFormation.S_LEN/400;if(edge<0)edge=a[2];}
-                    if(in&&before!=null)shown+=Math.hypot((a[0]-before[0])*16/9,a[1]-before[1])/2;before=in?a:null;
-                }
-                assertTrue(edge>SwordFinale.EDGE_NEAR-.05&&edge<SwordFinale.EDGE_FAR+.1,"into the frame "+SwordFinale.EDGE_NEAR+" to "+SwordFinale.EDGE_FAR+" blocks in front of the lens: "+edge);
-                assertTrue(blocks>=SwordFinale.SHOWN_MIN-.03&&blocks<=SwordFinale.SHOWN_MAX+.03,"only its point in the frame: "+blocks+" blocks of it");
-                assertTrue(shown>SwordFinale.POKE0-.03&&shown<SwordFinale.POKE0+SwordFinale.POKE_SPREAD+.04,"poking in a little from its edge: "+shown+" of its height");
-                edges.add(point);
+                double[] po=screen(s,p.portal()),pulled=screen(s,p.foot().lerp(mid,SwordFinale.AIM_PULL));
+                boolean inLine=Math.hypot((pulled[0]-po[0])*16/9,pulled[1]-po[1])<SwordFinale.AIM_CLEAR;
+                if(!inLine)assertTrue(p.aimDir().distanceTo(p.foot().lerp(mid,SwordFinale.AIM_PULL).subtract(p.portal()).normalize())<1e-9,"aimed in at the band's middle from where it strikes");
+                assertTrue(p.aimDir().y<-.05,"aimed down into the band: "+p.aimDir().y);
+                // (2.101.8: "검들 칼날 끝 부분만 보이게 해주고", "아니 중앙은 왜 계속 안 채우는거야", their drawing: "빨간선 아래에
+                // 전부 골고루 배치하면 돼") it comes out of the air at its spot under the user's line, only its point drawn
+                assertTrue(po[1]<SwordFinale.redLine(po[0])-.04&&Math.abs(po[0])<.9&&po[1]>-.85,"where it comes out under the user's line, off the frame's sides and bottom: "+po[0]+" "+po[1]);
+                assertTrue(po[2]>SwordFinale.PORTAL_NEAR-.05&&po[2]<SwordFinale.PORTAL_FAR+.05,"out of the air "+po[2]+" blocks in front of the lens");
+                assertTrue(p.shown()>=SwordFinale.SHOWN_MIN-1e-9&&p.shown()<=SwordFinale.SHOWN_MAX+1e-9,"only its point drawn: "+p.shown()+" blocks");
+                spots.add(po);
                 for(float t=SwordFinale.FOLD1;t<p.launch();t+=1/120f){
                     var st=SwordFinale.shot(c,r,t);var w=SwordFinale.blade(fr,p,t);
-                    double[] tip=screen(st,w.point());
+                    assertEquals(SwordFormation.S_LEN-p.shown(),w.from(),t<SwordFinale.aimFrom(p)?.035:SwordFinale.DRAW+.035,"in the air but its point at "+t);
+                    Vec3d out=w.pommel().add(w.dir().multiply(w.from()*w.scale()));
+                    double[] tip=screen(st,w.point()),base=screen(st,out);
                     assertTrue(tip[2]>.05&&Math.abs(tip[0])<1&&Math.abs(tip[1])<1,"its point in the frame at "+t);
-                    Vec3d hilt=w.point().subtract(w.dir().multiply(SwordFinale.HILT)),ax=w.dir().crossProduct(new Vec3d(0,1,0)).normalize(),ay=ax.crossProduct(w.dir());
-                    for(int i=0;i<=6;i++)assertTrue(outOf(st,hilt.subtract(w.dir().multiply((SwordFormation.S_LEN-SwordFinale.HILT)*i/6))),"its hilt out of the frame at "+t);
-                    for(int i=0;i<8;i++){double th=i*Math.PI/4;assertTrue(outOf(st,hilt.add(ax.multiply(.22*Math.cos(th))).add(ay.multiply(.22*Math.sin(th)))),"its guard out of the frame at "+t);}
+                    if(t<SwordFinale.aimFrom(p))assertTrue(Math.hypot((tip[0]-base[0])*16/9,tip[1]-base[1])/2>.02,"its point shows as a point, not a dot, at "+t);
                     // (they may cover her: 2.101.7, user request: "가려도 된다고 카메라를")
-                    assertTrue(SwordFinale.toSegment(st.eye(),w.pommel(),w.point())>.08,"never through the lens: "+SwordFinale.toSegment(st.eye(),w.pommel(),w.point())+" at "+t);
+                    assertTrue(SwordFinale.toSegment(st.eye(),out,w.point())>.08,"never through the lens at "+t);
                 }
                 Vec3d wait=p.readyMid().subtract(fr.spot());
                 assertTrue(wait.dotProduct(fr.f())<-1&&wait.y>1,"behind her, off the ground: "+wait.dotProduct(fr.f())+" "+wait.y);
@@ -201,14 +193,17 @@ class SwordFinaleTest {
             for(float t=p.launch()-.05f;t<p.plant()+.05f;t+=1/240f){double sc=SwordFinale.scale(p,t);assertTrue(sc>=prev-1e-9&&sc-prev<.4,"growing smoothly: "+prev+" to "+sc);prev=sc;}
         }
         assertEquals(1,steeds,"one sword under her feet: the one she stood on");
-        // (2.101.8) half from the frame's left, half from its right
-        int fromLeft=0,fromRight=0;for(double[] a:edges)if(a[0]<0)fromLeft++;else fromRight++;
-        assertTrue(fromLeft>=12&&fromRight>=12,"from its left and its right: "+fromLeft+" "+fromRight);
-        // (2.101.8: "지금 검들 너무 많이 모여있고") spread round its edge, no two points close together; she big in it, her
-        // camera near her
-        for(int i=0;i<edges.size();i++)for(int j=i+1;j<edges.size();j++){
-            double[] a=edges.get(i),b=edges.get(j);
-            assertTrue(Math.hypot((a[0]-b[0])*16/9,a[1]-b[1])/2>.05,"two points close together: "+a[0]+","+a[1]+" and "+b[0]+","+b[1]);
+        // (2.101.8: "아니 중앙은 왜 계속 안 채우는거야", "빨간선 아래에 전부 골고루 배치하면 돼") spread evenly under the user's
+        // line: none close together, the middle of the frame filled, nowhere under the line far from one
+        for(int i=0;i<spots.size();i++)for(int j=i+1;j<spots.size();j++){
+            double[] a=spots.get(i),b=spots.get(j);
+            assertTrue(Math.hypot((a[0]-b[0])*16/9,a[1]-b[1])/2>.1,"two close together: "+a[0]+","+a[1]+" and "+b[0]+","+b[1]);
+        }
+        int middle=0;for(double[] a:spots)if(Math.abs(a[0])<.35&&Math.abs(a[1])<.4)middle++;
+        assertTrue(middle>=4,"the middle of the frame filled: "+middle);
+        for(double x=-.85;x<=.85;x+=.05)for(double y=-.8;y<SwordFinale.redLine(x)-.1;y+=.05){
+            double best=9;for(double[] a:spots)best=Math.min(best,Math.hypot((a[0]-x)*16/9,a[1]-y)/2);
+            assertTrue(best<.17,"under the line far from any: "+x+" "+y+" ("+best+")");
         }
         var s0=SwordFinale.shot(c,r,SwordFinale.FOLD1);Vec3d feet0=SwordFinale.body(fr,SwordFinale.FOLD1);
         double tall=screen(s0,feet0.add(0,1.9,0))[1]-screen(s0,feet0)[1];
