@@ -38,7 +38,9 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * fades into ink as it stops, the crescent lingers a moment and dries, the ink soaks in, and she rises.
  * <p>Its sweep stands where the server put it (IsosangClient.sweep: out toward the foe in the crosshair, or right in front
  * of its user), the body where its user is. Every effect is a function of the swing's clock, so it moves at the render
- * frame rate.
+ * frame rate. (2.102.0) Its moonlight and starlight are SweepLights' (its stars before it is called, the lightning as it
+ * hangs, the moon and the trace of its point, sparks, petals, the impact frame and the rings as it crosses the front,
+ * stars in its ink).
  */
 final class GiantSweep {
     private GiantSweep(){}
@@ -307,6 +309,7 @@ final class GiantSweep {
             }
         }
         int k=0;for(var e:struck(c)){float at=struckAt(c,e);IsosangEmpower.burstInk(c,m,IsosangEmpower.chestOf(c,e,at),at,.95,k++*13+7);}
+        SweepLights.alpha(c,m);
     }
     /**
      * The light: her sword's aura; the diamond flash and the lance of light the giant sword forms out of; its own edges and
@@ -325,8 +328,9 @@ final class GiantSweep {
         fan(c,m,t,feet,yaw);
         streaks(m,t,feet,yaw);
         int k=0;for(var e:struck(c)){float at=struckAt(c,e);IsosangEmpower.burst(c,m,IsosangEmpower.chestOf(c,e,at),moving(yaw,angle(at)),at,.95,k++*13+7);}
+        SweepLights.additive(c,m);
     }
-    /** Over the ink: the starlight on the crescent and a glint racing at its head. */
+    /** Over the ink: the starlight on the crescent and a glint racing at its head (2.102.0: smaller, a moon riding by it, SweepLights.tipMoon). */
     static void overlay(Fx c,EffectMesh m){
         float t=c.sec;Vec3d feet=feet(c.cast);float yaw=yaw(c.cast);
         for(var st:stars(ARC,t)){
@@ -337,8 +341,9 @@ final class GiantSweep {
         if(t>=ARC.t0()&&t<ARC.t1()+.08f){
             float a=Ease.smooth(t,ARC.t0(),ARC.t0()+.015f)*(1-Ease.smooth(t,ARC.t1()+.01f,ARC.t1()+.08f));
             Vec3d p=world(feet,yaw,point(ARC,IsosangRules.sweepAngle(t),RIBBON_OUT));
-            glint8(m,p,.55,WHITE,a);m.softDisc(p,.4,AZURE,.3f*a);
+            glint8(m,p,.34,WHITE,.85f*a);m.softDisc(p,.36,AZURE,.28f*a);
         }
+        SweepLights.overlay(c,m);
     }
     /** Her own sword's blue aura: as it is raised to call the giant sword, and flaring as she swings it round with it. */
     static void aura(Fx c,EffectMesh m,float t){
@@ -421,6 +426,7 @@ final class GiantSweep {
         float s=FxLib.kick(t,(float)IsosangRules.SWEEP_FRONT,.2f);if(s>.01f)f.light(world(feet(c.cast),yaw(c.cast),point(ARC,0,.6*IsosangRules.SWEEP_REACH)),0xb8d8ff,12,1.2f*s);
         // fast as it sweeps: short afterglow, else the blade and its crescent leave copies of themselves round its way
         if(t<LENGTH)f.afterglow(t>=IsosangRules.SWEEP_START-.02f&&t<FADE1?.05f:.3f);
+        SweepLights.frame(c,f);
     }
     /** Shake: a little as the sword forms, more as it crosses the front (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){return Math.max(.4f*bump(sec,FLASH+.02f,.08f),1.4f*bump(sec,(float)IsosangRules.SWEEP_FRONT,.12f));}
