@@ -274,6 +274,10 @@ final class SwordFinale {
      * point the way they all point.
      */
     static final int WAVE_SLOTS=20;
+    /** How far across her camera's frame (as rolled) its places go at most: its left side, as the swords wait in the user's video (2.101.9: "이거처럼"). */
+    static final double WEDGE=-.3;
+    /** How far past the frame's left edge a waiting sword's guard may be (its point always in the frame; on her camera's screen, -1 to 1). */
+    static final double LEFT_IN=1.12;
     static final double SLOT_LINE=.1,SLOT_NEAR=2.2,SLOT_FAR=5,SLOT_UP=2,SLOT_JITTER=.03,MIN_LEN=.07,AIM_DOWN=.08,FACE_JITTER=14,PLACE_GAP=.45,SWORD_GAP=.15;
     static final float RELOAD=.015f;
     /**
@@ -440,18 +444,18 @@ final class SwordFinale {
         return out;
     }
     /**
-     * The way they all point (2.101.9, user request: "적을 바라보지 않게하자", the other of the two ways shown them: all the
-     * same way, as in their photo, from the left of her behind camera's frame on into it to the right): {@link #FLOW}, on
-     * ahead of her a little to her right and down, fixed in her frame (the way that went through 1.15 across and 0.35 down
-     * her behind camera's screen as it was in the first preview of it, before it was turned less to the side: "카메라가 너무
-     * 옆을 봄"), so that turning her camera does not turn the way they go.
+     * The way they all point (2.101.9, user request: "적을 바라보지 않게하자", then their video, "아니 그냥 이거처럼 만드는게
+     * 힘들어?": in it the swords waiting at the left of the frame all point on to the right and down, the highest down
+     * most steeply, the lowest a little up, meeting a little right of her and below her on the ground ahead, nowhere near
+     * her foe, who is further off and over that; 3.55 s): through {@link #FLOW} on her behind camera's screen as it is
+     * before it is rolled.
      */
     static Vec3d flow(Frame fr){
-        double y=Math.toRadians(FLOW[0]),p=Math.toRadians(FLOW[1]);
-        return fr.f.multiply(Math.cos(p)*Math.cos(y)).add(fr.r.multiply(Math.cos(p)*Math.sin(y))).add(0,Math.sin(p),0).normalize();
+        Vec3d[] b=behind(fr,FOLD1);Vec3d eye=b[0],fw=b[1].subtract(eye).normalize(),right=fw.crossProduct(UP).normalize(),up=right.crossProduct(fw);
+        double v=Math.tan(Math.toRadians(FOV_BEHIND/2)),h=v*16/9.0;
+        return fw.add(right.multiply(FLOW[0]*h)).add(up.multiply(FLOW[1]*v)).normalize();
     }
-    /** The way they all point (degrees to her right of the way she faces, and up): fixed in her frame, not on her camera's screen. */
-    static final double[] FLOW={23.83,-11.93};
+    static final double[] FLOW={.15,-.3};
     /** How far each is turned from the way they all point to where it strikes (of the angle between). */
     static final double TO_MARK=.25;
     /** The way a sword points: {@code flow} turned TO_MARK of the way to {@code to} (where it strikes), at least AIM_DOWN down. */
@@ -494,8 +498,8 @@ final class SwordFinale {
         double[] box=herBox(fr);
         var grid=new java.util.ArrayList<double[]>();
         for(int gy=0;gy<40;gy++)for(int gx=0;gx<64;gx++){
-            double x=-.94+1.88*(gx+.5)/64,y=-.88+1.8*(gy+.5)/40;
-            if(y>redLine(x)-SLOT_LINE)continue;
+            double x=-1+1.94*(gx+.5)/64,y=-.88+1.8*(gy+.5)/40;
+            if(y>redLine(x)-SLOT_LINE||x>WEDGE)continue;
             Vec3d m=onScreen(fr,x,y,slotDepth(fr,x,y,.7));
             if(shows(fr,box,m,flow))grid.add(new double[]{x,y});
         }
@@ -547,7 +551,9 @@ final class SwordFinale {
         Vec3d pommel=mid.subtract(d.multiply(SwordFormation.S_LEN/2));
         double[] a=onScreen(fr,pommel),g=onScreen(fr,pommel.add(d.multiply(SwordFormation.S_GUARD))),b=onScreen(fr,mid.add(d.multiply(SwordFormation.S_LEN/2)));
         if(a[2]<.5||b[2]<.5)return false;
-        for(double[] q:new double[][]{g,b})if(Math.abs(q[0])>.98||Math.abs(q[1])>.96||q[1]>redLine(q[0]))return false;
+        // (its guard may be past the frame's left edge, the sword coming in from beside her camera as in the user's video)
+        if(g[0]<-LEFT_IN||g[0]>.98||Math.abs(g[1])>.96||g[1]>redLine(Math.max(-1,g[0])))return false;
+        if(Math.abs(b[0])>.98||Math.abs(b[1])>.96||b[1]>redLine(b[0]))return false;
         if(Math.hypot((b[0]-a[0])*16/9.0,b[1]-a[1])/2<MIN_LEN)return false;
         return !crosses(fr,box,pommel,d);
     }
@@ -1605,13 +1611,16 @@ final class SwordFinale {
      * her along the way from her to 2.101.3's, 0.58 as far, turned the same way: she where she was in its frame, as big
      * again and two thirds, as in the video. 2.101.9, user request: "카메라는 검의 진행 방향을 정면에서 바라보지 말고, 진행
      * 방향의 측후방에서 비스듬히 바라보는 3/4 측면 시점으로 설정해", "카메라를 검의 진행 방향과 평행하게 두거나 완전히 수직으로
-     * 두지 말 것", "그리고 카메라를 살짝 비스듬이 배치해": turned 17 degrees more to her left and moved round to her right to
-     * keep her where she was in its frame, so that the swords waiting at its left slant across it on away from it, some
-     * 30 to 65 degrees off the way it looks; rolled {@link #BEHIND_ROLL} degrees, the frame turned 7 degrees clockwise:
-     * the user's choice "7° 기울임" of a still beside the level one.) How far it comes on forward and up over
-     * the shot, and how many times as far as she comes down what it looks at goes down after her.
+     * 두지 말 것", "그리고 카메라를 살짝 비스듬이 배치해": rolled {@link #BEHIND_ROLL} degrees, the frame turned 7 degrees
+     * clockwise, the user's choice "7° 기울임" of a still beside the level one. Its first preview turned it 17 degrees more
+     * to her left and moved it round to her right, and the user: "카메라가 너무 옆을 봄", then shown that one beside one 18
+     * degrees to her left (2.101.8's) and one straight behind her, "C로 해", and then their video of it, "아니 그냥 이거처럼
+     * 만드는게 힘들어?": straight behind her a little to her right and a little over her, looking 5 degrees to her right of
+     * the way she faces and 8 down, she a little left of and under the middle of its frame and the far ground a fifth of
+     * the way up it, as in the video at 3.55 s.) How far it comes on forward and up over the shot, and how many times as
+     * far as she comes down what it looks at goes down after her.
      */
-    static final double[] BEHIND={-3.7,4.64,3.9},BEHIND_LOOK={11.15,2.44,-6.2};
+    static final double[] BEHIND={-4.8,5.25,1.0},BEHIND_LOOK={10.98,3.02,2.38};
     static final float BEHIND_ROLL=-7;
     /** A roll for her behind camera tried in a film before it goes in (SkillShots "hroll"), else null. */
     static Float tunedRoll;

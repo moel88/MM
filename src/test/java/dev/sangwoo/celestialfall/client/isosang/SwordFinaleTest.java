@@ -205,15 +205,22 @@ class SwordFinaleTest {
         // folded as she sends them, waiting as her camera cuts behind her
         assertTrue(SwordFinale.FOLD0>=IsosangRules.FINALE_SEAL1-.1f&&SwordFinale.FOLD1<=IsosangRules.FINALE_LAUNCH+1e-6,"folded as she sends them, by her camera's cut behind her");
     }
-    @Test void theyWaitWholeInPlacesSpreadEvenlyUnderTheUsersLineAllAimedAtHerFoe(){
+    @Test void theyWaitWholeInPlacesSpreadEvenlyUnderTheUsersLineAllOneWayNotAtHerFoe(){
         // (2.101.9, user request: "카메라는 검의 진행 방향을 정면에서 바라보지 말고, 진행 방향의 측후방에서 비스듬히 바라보는 3/4
         // 측면 시점으로", "검날의 전체 길이와 옆면이 드러나는 구도로", "가까운 검은 크고 길게, 멀리 있는 검은 작게", "여러 검이 화면의
         // 서로 다른 높이와 깊이에", then "검이 너무 모여있어 내가 보낸 사진처럼 조금만 모여있게", "그냥 저 각도에서 방금 내가 표시한
-        // 범위에서 골고루 나오게 바꿔줘" and their answers: under the red line, all of it; every sword aimed at her foe; about 20 at
-        // a time, each place filled again as its sword is fired)
+        // 범위에서 골고루 나오게 바꿔줘" and their answers: under the red line, all of it; about 20 at a time, each place filled
+        // again as its sword is fired; then "적을 바라보지게 않게하자" and "카메라가 너무 옆을 봄")
         var c=cast();var r=run();var plans=SwordFinale.plans(c,r,null);var fr=SwordFinale.frame(c,r);
         var s=SwordFinale.shot(c,r,SwordFinale.FOLD1);
         Vec3d flow=SwordFinale.flow(fr);double[] her=SwordFinale.herBox(fr);
+        // (2.101.9: "적을 바라보지게 않게하자", "C로 해" and their video, "아니 그냥 이거처럼 만드는게 힘들어?") framed as in the
+        // video at 3.55 s: she a little left of and under the middle of the frame, the far ground a fifth of the way up it;
+        // the way they all point meets a little right of her and below her, on the ground ahead
+        double[] at=SwordFinale.onScreen(fr,SwordFinale.body(fr,SwordFinale.FOLD1).add(0,.9,0));
+        assertTrue(Math.abs(at[0]+.23)<.06&&Math.abs(at[1]+.08)<.06,"she where she is in the video's frame: "+at[0]+" "+at[1]);
+        double[] meet=SwordFinale.onScreen(fr,s.eye().add(flow.multiply(1e4)));
+        assertTrue(meet[2]>0&&meet[0]>at[0]+.15&&meet[0]<.5&&meet[1]<at[1]-.1&&meet[1]>-.6,"meeting a little right of her and below her: "+meet[0]+" "+meet[1]);
         var places=new java.util.ArrayList<double[]>();var lens=new java.util.ArrayList<Double>();
         for(var p:plans){
             if(p.steed())continue;
@@ -240,10 +247,12 @@ class SwordFinaleTest {
         assertEquals(SwordFinale.WAVE_SLOTS,places.size(),"about 20 at a time");
         for(int i=0;i<places.size();i++)for(int j=i+1;j<places.size();j++){
             double[] a=places.get(i),b=places.get(j);
-            assertTrue(Math.hypot((a[0]-b[0])*16/9,a[1]-b[1])/2>.1,"two places close together: "+a[0]+","+a[1]+" and "+b[0]+","+b[1]);
+            // (2.101.9: closer than they were spread over all the frame, at its left as in the user's video, where they wait
+            // one over another; never on top of one another)
+            assertTrue(Math.hypot((a[0]-b[0])*16/9,a[1]-b[1])/2>.07,"two places close together: "+a[0]+","+a[1]+" and "+b[0]+","+b[1]);
         }
         int far=0,all=0;
-        for(double x=-.9;x<=.9;x+=.05)for(double y=-.85;y<SwordFinale.redLine(x)-.15;y+=.05){
+        for(double x=-.9;x<=SwordFinale.WEDGE;x+=.05)for(double y=-.85;y<SwordFinale.redLine(x)-.15;y+=.05){
             if(x>her[0]-.05&&x<her[1]+.05&&y>her[2]-.05&&y<her[3]+.05)continue;
             double best=9;for(double[] a:places)best=Math.min(best,Math.hypot((a[0]-x)*16/9,a[1]-y)/2);
             all++;if(best>.3)far++;
@@ -254,7 +263,9 @@ class SwordFinaleTest {
         for(var p:plans){if(p.steed())continue;Vec3d d=p.foot().subtract(fr.spot());
             int a=(int)Math.min(2,Math.max(0,(d.dotProduct(fr.f())-SwordFinale.BAND_NEAR)/(SwordFinale.BAND_FAR-SwordFinale.BAND_NEAR)*3)),b=(int)Math.min(2,Math.max(0,(d.dotProduct(fr.r())+SwordFinale.BAND_HALF)/(2*SwordFinale.BAND_HALF)*3));cells[a*3+b]++;}
         for(int k=0;k<9;k++)assertTrue(cells[k]>=3,"all over the band: "+java.util.Arrays.toString(cells));
-        assertTrue(places.stream().filter(a->a[0]>0).count()>=4&&places.stream().filter(a->a[0]<-.4).count()>=4,"on both sides of the frame");
+        // all at the left of the frame, from near its top to near its bottom, as in the video
+        assertTrue(places.stream().allMatch(a->a[0]<SwordFinale.WEDGE+.06),"all at the left of the frame");
+        assertTrue(places.stream().anyMatch(a->a[1]>.3)&&places.stream().anyMatch(a->a[1]<-.5),"from near its top to near its bottom");
         // near ones big and long, far ones small; at different heights and depths
         assertTrue(java.util.Collections.max(lens)>1.6*java.util.Collections.min(lens),"near ones big and long, far ones small: "+lens);
         double up0=9,up1=-9,z0=99,z1=-99;for(double[] a:places){up0=Math.min(up0,a[1]);up1=Math.max(up1,a[1]);z0=Math.min(z0,a[2]);z1=Math.max(z1,a[2]);}
