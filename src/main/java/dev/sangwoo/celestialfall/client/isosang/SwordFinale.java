@@ -256,19 +256,22 @@ final class SwordFinale {
      * 말고, 진행 방향의 측후방에서 비스듬히 바라보는 3/4 측면 시점으로 설정해", "검의 끝부분만 보이는 정면 시점이 아니라 검날의
      * 전체 길이와 옆면이 드러나는 구도로", "가까운 검은 크고 길게, 멀리 있는 검은 작게", "여러 검이 화면의 서로 다른 높이와 깊이에",
      * then "검이 너무 모여있어 내가 보낸 사진처럼 조금만 모여있게", "그냥 저 각도에서 방금 내가 표시한 범위에서 골고루 나오게
-     * 바꿔줘" and their answers: under the red line, all of it, every sword aimed at her foe, about 20 at a time, each place
-     * filled again by a sword of light as its sword is fired, 67 in all; 2.101.8's points only, out of her camera's
-     * screen, are gone, and the first preview's wall of them at the left of the frame): whole swords, their flats to her
-     * camera ({@link #flatTo}), in {@link #WAVE_SLOTS} places spread evenly over her frame under the user's line
-     * ({@link #RED_LINE}, {@link #SLOT_LINE} under it: Lloyd relaxation over it), off her and off her foe and wherever a
-     * sword aimed at her foe would show as less than {@link #MIN_LEN} of the frame's height; each as deep as keeps it
-     * {@link #SLOT_UP} blocks off the ground, some way between {@link #SLOT_NEAR} and {@link #SLOT_FAR}; each aimed
-     * straight at her foe ({@link #foe}, at least {@link #AIM_DOWN} down) and striking where that line meets the ground
-     * on through it (no further than {@link #FOE_SPREAD} from it, in the band). As her camera cuts behind her every place
-     * holds one of her own; from then they are fired at random, one every FIRE_STEP, each from one of the places whose
-     * sword has waited there {@link #RELOAD_WAIT} at least, and {@link #RELOAD} after each is fired the next shows in its
-     * place (a little aside, {@link #SLOT_JITTER}), showing over {@link #RELOAD_IN}: the rest of her own (gone into light
-     * as the fan folds) and those of light, at random.
+     * 바꿔줘" and their answers: under the red line, all of it, about 20 at a time, each place filled again by a sword of
+     * light as its sword is fired, 67 in all; then "적을 바라보지게 않게하자": none aimed at her foe; 2.101.8's points only,
+     * out of her camera's screen, are gone, and the first preview's wall of them at the left of the frame): whole swords,
+     * their flats to her camera ({@link #flatTo}), in {@link #WAVE_SLOTS} places spread evenly over her frame under the
+     * user's line ({@link #RED_LINE}, {@link #SLOT_LINE} under it: Lloyd relaxation over it), each {@link #PLACE_GAP} clear
+     * of the others as swords pointing the way they all point ({@link #gap}), off her and wherever a sword would show as
+     * less than {@link #MIN_LEN} of the frame's height; each as deep as keeps it {@link #SLOT_UP} blocks off the ground, some
+     * way between {@link #SLOT_NEAR} and {@link #SLOT_FAR}; all pointing much the same way ({@link #flow}, each turned
+     * {@link #TO_MARK} of the way to where it strikes, at least {@link #AIM_DOWN} down) and striking an even lattice over the
+     * band ({@link #bandMarks}: each the one nearest the way they all point from where it waits, {@link #assign}). As her
+     * camera cuts behind her every place holds one of her own; from then they are fired at random, one every FIRE_STEP,
+     * each from one of the places whose sword has come out and waited (at random among those fired the fewest times), and
+     * {@link #RELOAD} after each is fired the next comes out through her camera's screen into its place (a little aside,
+     * {@link #SLOT_JITTER}, where that is clear of the other places): the rest of her own (gone into light as the fan
+     * folds) and those of light, at random. Any two waiting at once that would be in one another ({@link #SWORD_GAP}) both
+     * point the way they all point.
      */
     static final int WAVE_SLOTS=20;
     static final double SLOT_LINE=.1,SLOT_NEAR=2.2,SLOT_FAR=5,SLOT_UP=2,SLOT_JITTER=.03,MIN_LEN=.07,AIM_DOWN=.08,FACE_JITTER=14,PLACE_GAP=.45,SWORD_GAP=.15;
@@ -438,15 +441,17 @@ final class SwordFinale {
     }
     /**
      * The way they all point (2.101.9, user request: "적을 바라보지 않게하자", the other of the two ways shown them: all the
-     * same way, as in their photo, from the left of the frame on into it to the right): through {@link #FLOW} on her
-     * behind camera's screen as it is before it is rolled, on to her right, away and down.
+     * same way, as in their photo, from the left of her behind camera's frame on into it to the right): {@link #FLOW}, on
+     * ahead of her a little to her right and down, fixed in her frame (the way that went through 1.15 across and 0.35 down
+     * her behind camera's screen as it was in the first preview of it, before it was turned less to the side: "카메라가 너무
+     * 옆을 봄"), so that turning her camera does not turn the way they go.
      */
     static Vec3d flow(Frame fr){
-        Vec3d[] b=behind(fr,FOLD1);Vec3d eye=b[0],fw=b[1].subtract(eye).normalize(),right=fw.crossProduct(UP).normalize(),up=right.crossProduct(fw);
-        double v=Math.tan(Math.toRadians(FOV_BEHIND/2)),h=v*16/9.0;
-        return fw.add(right.multiply(FLOW[0]*h)).add(up.multiply(FLOW[1]*v)).normalize();
+        double y=Math.toRadians(FLOW[0]),p=Math.toRadians(FLOW[1]);
+        return fr.f.multiply(Math.cos(p)*Math.cos(y)).add(fr.r.multiply(Math.cos(p)*Math.sin(y))).add(0,Math.sin(p),0).normalize();
     }
-    static final double[] FLOW={1.15,-.35};
+    /** The way they all point (degrees to her right of the way she faces, and up): fixed in her frame, not on her camera's screen. */
+    static final double[] FLOW={23.83,-11.93};
     /** How far each is turned from the way they all point to where it strikes (of the angle between). */
     static final double TO_MARK=.25;
     /** The way a sword points: {@code flow} turned TO_MARK of the way to {@code to} (where it strikes), at least AIM_DOWN down. */
@@ -774,7 +779,7 @@ final class SwordFinale {
         return p.readyMid().add(p.aimDir().multiply(BREATHE*k*Math.sin(t*3.3+s*.7))).add(0,BOB*k*Math.sin(t*2.6+s*1.3),0);
     }
     /**
-     * How much of it shows {@code t} seconds in as it comes: one of light from as it shows in its place (over RELOAD_IN);
+     * How much of it shows {@code t} seconds in as it comes: one of light from as it shows in its place (over 0.03 s);
      * her own all of it, but one that fills a place again later going into light as the fan folds and back as it shows.
      */
     static float showing(Plan p,float t){
@@ -1573,7 +1578,8 @@ final class SwordFinale {
         float u=Ease.unit(t,FINALE_LAUNCH,FINALE_BACK1);
         double down=BEHIND_TILT*(chest(fr,FINALE_DESCEND).y-chest(fr,Math.max(t,FINALE_DESCEND)).y);
         Vec3d on=fr.f.multiply(BEHIND_ON*u).add(0,BEHIND_UP*u,0);
-        return new Vec3d[]{fr.at(BEHIND[0],BEHIND[1],BEHIND[2]).add(on),fr.at(BEHIND_LOOK[0],BEHIND_LOOK[1]-down,BEHIND_LOOK[2]).add(on)};
+        double[] e=tunedBehind!=null?tunedBehind:new double[]{BEHIND[0],BEHIND[1],BEHIND[2],BEHIND_LOOK[0],BEHIND_LOOK[1],BEHIND_LOOK[2]};
+        return new Vec3d[]{fr.at(e[0],e[1],e[2]).add(on),fr.at(e[3],e[4]-down,e[5]).add(on)};
     }
     /** The lap's shot {@code t} seconds in: where it stands (eased from its start to its end), looking at her a moment late. */
     static Shot lap(Frame fr,float t){
@@ -1609,6 +1615,8 @@ final class SwordFinale {
     static final float BEHIND_ROLL=-7;
     /** A roll for her behind camera tried in a film before it goes in (SkillShots "hroll"), else null. */
     static Float tunedRoll;
+    /** Her behind camera's eye and what it looks at (as BEHIND and BEHIND_LOOK) tried in a film before they go in (SkillShots "hcam"), else null. */
+    static double[] tunedBehind;
     static final double BEHIND_ON=.46,BEHIND_UP=.17,BEHIND_TILT=1.6;
     static final double FOV_LAP=60,FOV_HOVER=54,FOV_CLOSE=50,FOV_BEHIND=74;
     static final float CLOSE0=1.5f;

@@ -1098,6 +1098,9 @@ public final class SkillShots implements ClientModInitializer {
                     // (2.101.9) "hroll=DEG": H again's behind camera rolled so in this entry (SwordFinale.tunedRoll), to try a roll before it goes in
                     {Float roll=opts.containsKey("hroll")?Float.valueOf(opts.get("hroll")):null;if(roll!=null)log.append("  H again's behind camera rolled ").append(roll).append('\n');
                      var tunedRoll=Class.forName("dev.sangwoo.celestialfall.client.isosang.SwordFinale").getDeclaredField("tunedRoll");tunedRoll.setAccessible(true);tunedRoll.set(null,roll);}
+                    // (2.101.9) "hcam=EF/EU/ER/LF/LU/LR": H again's behind camera's eye and what it looks at (blocks ahead of her, up, to her right) so in this entry (SwordFinale.tunedBehind)
+                    {double[] cam=null;if(opts.containsKey("hcam")){String[] v=opts.get("hcam").split("/");cam=new double[6];for(int i=0;i<6;i++)cam[i]=Double.parseDouble(v[i].trim());log.append("  H again's behind camera at ").append(opts.get("hcam")).append('\n');}
+                     var tunedBehind=Class.forName("dev.sangwoo.celestialfall.client.isosang.SwordFinale").getDeclaredField("tunedBehind");tunedBehind.setAccessible(true);tunedBehind.set(null,cam);}
                     // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
                     if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);
