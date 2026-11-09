@@ -54,6 +54,30 @@ uniform vec4 Grand;
 const vec2 projectionScale = vec2(.40066, -.86915);
 const vec2 eyeCenter = vec2(.546, .399);
 
+// (2.106.0) Glitter in the eye's gold light (GLights; user request: "마지막으로 G스킬 예쁘게 만들자"): tiny four-pointed
+// sparkles twinkling here and there in the lit banks in a ring round the eye as it burns (Grand.x, the cutscene's canopy),
+// each popping in and out in its own turn as the storm's clock runs (Grand.y). uv is the canopy's (cloudUV) along the ray.
+vec3 eyeGlitter(vec2 uv){
+ vec2 e=(uv-eyeCenter)*vec2(2.167,1.);
+ float er=length(e);
+ float near=smoothstep(.05,.15,er)*(1.-smoothstep(.3,.52,er));
+ if(near<=0.)return vec3(0.);
+ vec2 g=e*30.,c=floor(g);
+ float s=0.;
+ for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){
+  vec2 k=c+vec2(float(i),float(j));
+  vec3 h=fract(sin(vec3(k.x*127.1+k.y*311.7,k.x*269.5+k.y*183.3,k.x*419.2+k.y*371.9))*43758.5453);
+  if(h.z<.8)continue;
+  vec2 d=g-(k+.2+.6*h.xy);
+  float life=fract(Grand.y*(.8+.9*h.x)+h.y);
+  float tw=pow(sin(3.14159265*life),4.);
+  float core=exp(-dot(d,d)*60.);
+  float rays=exp(-abs(d.x)*40.-abs(d.y)*3.5)+exp(-abs(d.y)*40.-abs(d.x)*3.5);
+  s+=tw*(core+.45*rays)*(.6+.4*h.x);
+ }
+ return vec3(1.,.82,.5)*s*near*1.4;
+}
+
 vec2 cloudUV(vec3 p) {
     vec2 uv = .5 + projectionScale * p.xy / max(p.z, .5);
     vec2 d = uv - eyeCenter;
@@ -708,7 +732,11 @@ void main(){
       fragColor=vec4((fragColor.rgb*fragColor.a+vec3(.14,.18,.25)*shade*(1.-fragColor.a))/max(.0001,a),a);
     }
    }
-   else fragColor=marchCanopy(origin,ray,limit);
+   else{
+    fragColor=marchCanopy(origin,ray,limit);
+    // (2.106.0) glitter twinkling in the eye's gold light, on the banks lit there (GLights)
+    if(Mode==2 && Grand.x>0. && fragColor.a>.02 && ray.z>.05)fragColor.rgb+=eyeGlitter(.5+projectionScale*ray.xy/ray.z)*fragColor.a*Grand.x;
+   }
    // Steel has cleared at 4.78 s; the last sky vapour clears before camera return.
    fragColor.a*=Mode==3?1.-smoothstep(6.0,6.25,Age):1.-smoothstep(4.73,4.81,Age);
    return;

@@ -19,12 +19,28 @@ out vec4 fragColor;
 // (2.88.0) The inscriptions burn: molten gold in the carved channels, lit from the point up to Rune.y blocks,
 // a light running up through them (Rune.z, seconds), whitening as Rune.w rises. Rune.x is how strongly (0 none).
 uniform vec4 Rune;
-float runeGlow(float cavity,float y,float inside){
+// (2.106.0) Stars flaring along the burning inscriptions (GLights.runeStars, the same for the tests; user request:
+// "마지막으로 G스킬 예쁘게 만들자"): here and there a bright spot in the channels, each swelling and dying away in its turn as
+// the inscriptions' clock runs (Rune.z, faster while the sword stands in the ground). x across, y up from its point (blocks).
+float runeStars(float x,float y){
+ vec2 g=vec2(x,y)*1.6,c=floor(g);
+ float s=0.;
+ for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){
+  vec2 k=c+vec2(float(i),float(j));
+  vec3 h=fract(sin(vec3(k.x*127.1+k.y*311.7,k.x*269.5+k.y*183.3,k.x*419.2+k.y*371.9))*43758.5453);
+  if(h.z<.6)continue;
+  vec2 d=g-(k+.15+.7*h.xy);
+  float life=fract(Rune.z*(.35+.3*h.x)+h.y);
+  s+=pow(sin(3.14159265*life),6.)*exp(-dot(d,d)*7.);
+ }
+ return s;
+}
+float runeGlow(float cavity,float y,float inside,float x){
  if(Rune.x<=0.)return 0.;
  float groove=smoothstep(.25,.75,cavity)*inside;
  float lit=1.-smoothstep(Rune.y-1.,Rune.y+1.5,y);
  float run=fract((y-Rune.z*11.)/16.);
- float flow=.62+.26*sin(y*.55-Rune.z*6.5)+.55*exp(-pow((run-.5)*5.,2.));
+ float flow=.62+.26*sin(y*.55-Rune.z*6.5)+.55*exp(-pow((run-.5)*5.,2.))+1.6*runeStars(x,y);
  return Rune.x*groove*lit*flow;
 }
 vec3 runeLight(float rune){
@@ -69,7 +85,7 @@ void main(){
   float h=3.8*(1.-pow(1.-clamp(y/5.534,0.,1.),1.503));
   N=normalize(mix(Ng,fine,smoothstep(.20,.25,h-abs(x))*smoothstep(.35,.5,y)));
   cavityLight=1.-clamp((.8-relief.a)/.5,0.,1.)*.18;
-  rune=runeGlow(clamp((.8-relief.a)/.5,0.,1.),y,smoothstep(.12,.3,h-abs(x)));
+  rune=runeGlow(clamp((.8-relief.a)/.5,0.,1.),y,smoothstep(.12,.3,h-abs(x)),x);
  }else{
   albedo=vec3(.80,.47,.29);hotMask=.35;
  }

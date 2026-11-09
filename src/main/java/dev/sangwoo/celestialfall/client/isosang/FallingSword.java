@@ -384,6 +384,8 @@ final class FallingSword {
       }
 
       GGrand.additive(c, m);
+      // (2.106.0) made pretty: her moonlight and starlight in G's gold (GLights)
+      GLights.additive(c, m);
    }
 
    static void foot(Fx c, EffectMesh m, float t) {

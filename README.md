@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.105.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.106.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.106.0 — 이소상 G: 달빛과 별빛으로 꾸밈
+
+- **손:** 검은 공간에 별이 하나씩 떠 별밤이 되고, 손끝에 빛이 모이는 동안 금빛 별 가루가 돌며 빨려 듭니다. 두 손가락이 긋는 획에 작은 별이 남습니다.
+- **얼굴과 하늘:** 머리 옆에 금빛 초승달이 떠오르고, 폭풍의 금빛 눈 둘레에 작은 반짝임이, 검의 불타는 글씨에 별빛이 반짝입니다.
+- **떨어짐과 꽂힘:** 떨어지는 검의 날에서 별 가루가 혜성 꼬리처럼 남고, 꽂힌 검 발치의 땅에 금빛 원(고리 셋, 별 열둘, 달의 위상 여덟)이 그려져 심장 박동마다 밝아집니다. 박동마다 별빛이 검의 날을 타고 오릅니다.
+- **폭발 뒤:** 폭발의 땅 전체에 별 가루가 천천히 내려앉습니다.
+- **그대로:** 검·카메라·소리·피해·판정·타이밍. 화면 효과는 더하지 않았습니다. 접속자만 바꾸면 됩니다(서버는 2.105.0 그대로 두어도 됩니다).
+
+[RELEASE_2.106.0_KO.md](RELEASE_2.106.0_KO.md)를 확인하세요. 2.105.0은 [RELEASE_2.105.0_KO.md](RELEASE_2.105.0_KO.md)입니다.
 
 # 보탠드 2.105.0 — 이소상이 서 있는 자세: 뒷짐 지고 오른손을 내밂, 검은 쓸 때만
 
@@ -7,7 +17,7 @@
 - **그대로:** 모든 스킬의 동작·검격·이펙트·소리·카메라, 피해와 판정, 타이밍.
 - **접속자만 바꾸면 됩니다:** 서버는 2.104.0(또는 2.103.0·2.102.1·2.102.0) 그대로 두어도 됩니다.
 
-[RELEASE_2.105.0_KO.md](RELEASE_2.105.0_KO.md)를 확인하세요. 2.104.0은 [RELEASE_2.104.0_KO.md](RELEASE_2.104.0_KO.md)입니다.
+2.105.0의 자세한 내용은 [RELEASE_2.105.0_KO.md](RELEASE_2.105.0_KO.md)입니다.
 
 # 보탠드 2.104.0 — 이소상 모션: 팔꿈치와 무릎이 굽는 자연스러운 몸
 
