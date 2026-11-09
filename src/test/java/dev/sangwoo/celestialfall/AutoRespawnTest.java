@@ -115,6 +115,24 @@ class AutoRespawnTest {
         assertTrue(asks,"cancelled while DeathView is active");
     }
     /**
+     * (2.110.1, user request: "맞을때 화면 흔들리는 거 없애줘", the answer: Minecraft's tilt alone) On the map no blow
+     * tilts the view, alive or dead (GameRendererMixin asks MapClient.enabled: off the map and in one's vanilla mode it is
+     * Minecraft's); the skills' own shakes are left (CameraMixin still adds KagenoCamera.shake).
+     */
+    @Test void noBlowTiltsTheViewOnTheMap()throws Exception{
+        var mixin=new ClassNode();
+        try(var stream=AutoRespawnTest.class.getResourceAsStream("/dev/sangwoo/celestialfall/mixin/client/GameRendererMixin.class")){new ClassReader(stream).accept(mixin,0);}
+        var steady=mixin.methods.stream().filter(x->x.visibleAnnotations!=null&&x.visibleAnnotations.stream().anyMatch(a->String.valueOf(a.values).contains("tiltViewWhenHurt"))).findFirst().orElseThrow();
+        boolean map=false;
+        for(var i:steady.instructions)if(i instanceof MethodInsnNode c&&c.owner.endsWith("client/MapClient")&&c.name.equals("enabled"))map=true;
+        assertTrue(map,"cancelled on the map, alive too");
+        var camera=new ClassNode();
+        try(var stream=AutoRespawnTest.class.getResourceAsStream("/dev/sangwoo/celestialfall/mixin/client/CameraMixin.class")){new ClassReader(stream).accept(camera,0);}
+        boolean shakes=false;
+        for(var m:camera.methods)for(var i:m.instructions)if(i instanceof MethodInsnNode c&&c.owner.endsWith("kageno/KagenoCamera")&&c.name.equals("shake"))shakes=true;
+        assertTrue(shakes,"the skills' own shakes stay");
+    }
+    /**
      * (2.107.2, user request: "화면은 왜 확대되는데", then to take it away) Minecraft narrows a dead body's view
      * (GameRenderer.getFov: divided by (1-500/(min(deathTime+delta,20)+500))*2+1, some 7% at a second); DeathView
      * gives the same factor and GameRendererMixin multiplies the view back by it while dead, waiting to come back.

@@ -212,6 +212,14 @@
   - 편집: `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="시간" FILM_NOTES="…" film.py OUT/SUMMON 결과.mp4 0.5 12.4 "제목"`.
 - 멀티플레이 확인: 서버 규칙과 플래그가 새로 생겨 한다. `MP_ONLY=vanilla`(`MpClient.VANILLA_SCRIPT`): 시전자가 관찰자를 `execute as Watcher run botand vanilla`로 바꾸고(`WVANILLA`) 스타플래티나 평타 4타·강펀치·시간 정지를 쓴 뒤, 다시 끄고 평타 4타를 쓴다. 두 접속자에 'self: map …, game mode …, vanilla …'와 'the other (…): vanilla …, drawn with the rig …', 서버에 '…: vanilla …, map for them …, game mode …, health …'와 맞은 타('watcher punched by Star Platinum')가 남는다. 바닐라인 동안은 시전자의 주먹이 'landed on []'(맞은 사람 없음)이어야 한다.
 
+### 맞을 때 기울임 (2.110.1)
+- 맵에서는 맞아도 화면이 기울지 않는다(`CLAUDE.md`의 '맞을 때 화면이 기울지 않는다'). 고친 것이라 소리 없이 찍는다.
+- 촬영: 맨손으로 치는 더미(`dattack=1`)를 손이 닿지 않는 6블록에 두었다가 `DUMMYTO@40`으로 1.6블록 앞에 놓으면 4타 콤보를 친다(44·55·67·81틱, 4타에 날아감). 게임 카메라를 고정해 둔다(`pitch=22;dist=6`, `MOVE_OFF`). 배율 16(1틱에 21장 넘게).
+  - `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "UI;hud=1;len=150;dattack=1;dfw=6;drt=-1.6;dto=1.6;pitch=22;dist=6;then=MOVE_OFF@3/DUMMYTO@40/DUMMYBACK@118;save=30-140;slows=0:16" 960x540 16`(약 4분)
+  - 확인: `python3 -I tools/kageno/shots/horizon.py OUT/UI 틱 …`으로 맞는 동안(몸이 빨갛게 번쩍이는 10틱, 마인크래프트의 `hurtTime`) 먼 풀밭 띠의 윗변 높이와 기울기를 잰다. 마인크래프트의 기울임은 맞은 방향에 따라 기울기(옆으로 기욺)나 높이(앞뒤로 끄덕임)로 나온다(2.107.0에서 14.5°까지 쟀다). 2.110.1은 y 135·기울기 0.98~1.01° 그대로였다. 4타에 날아가는 동안의 변화(y 141까지)는 몸을 따라 오른 카메라다. `motion.csv`의 높이와 맞춰 본다.
+  - 편집: `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="시간" FILM_CLOCK_ZERO=1.9 FILM_NOTES="…" film.py OUT/UI 결과.mp4 1.9 5.1 "제목"`.
+- 멀티플레이 확인은 하지 않는다(접속자 화면만 바뀜).
+
 ### 운석
 - 촬영: `SHOTS_WORLD=월드폴더 python3 tools/kageno/shots/run_shots.py OUT "METEOR;…,SHOP;…" 1280x730 배율`
   - 맵 월드를 그대로 엽니다.
