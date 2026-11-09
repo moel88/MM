@@ -37,7 +37,8 @@ public abstract class MouseMixin implements MouseCapture {
     @Inject(method="onMouseButton",at=@At("HEAD"),cancellable=true)
     private void botand$buttons(long window,int button,int action,int modifiers,CallbackInfo ci) {
         if(dev.sangwoo.celestialfall.client.menu.MenuClient.mouse(window,button,action)){ci.cancel();return;}
-        if(window!=client.getWindow().getHandle()||!BotandCamera.gameplay())return;
+        // (2.107.0) dead, waiting to come back (DeathView): the right button still turns the camera (the others do nothing)
+        if(window!=client.getWindow().getHandle()||!BotandCamera.viewing())return;
         boolean down=action==GLFW.GLFW_PRESS;
         if(button==GLFW.GLFW_MOUSE_BUTTON_RIGHT){rightButtonClicked=down;BotandCamera.rightButton(down);ci.cancel();return;}
         if(button==GLFW.GLFW_MOUSE_BUTTON_LEFT)leftButtonClicked=down;
@@ -53,7 +54,8 @@ public abstract class MouseMixin implements MouseCapture {
         // over the player list with the cursor free, in play or with the chat open (2.73.0): the wheel scrolls the list
         if(window==client.getWindow().getHandle()&&(client.currentScreen==null||client.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen)
             &&dev.sangwoo.celestialfall.client.ui.PlayerPanel.wheel(vertical)){ci.cancel();return;}
-        if(window==client.getWindow().getHandle()&&BotandCamera.gameplay()) {
+        // (2.107.0) and dead, waiting to come back (DeathView): the wheel zooms, never the hotbar
+        if(window==client.getWindow().getHandle()&&BotandCamera.viewing()) {
             BotandCamera.scroll(vertical*client.options.getMouseWheelSensitivity().getValue());ci.cancel();
         }
     }

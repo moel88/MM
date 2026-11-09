@@ -144,7 +144,7 @@
   - 로그에 클라이언트가 받은 값(`long cooldowns told`)과 죽음·부활이 남습니다.
   - 보스에게 죽는 장면은 `BOSS@n`(`bfw`·`brt`)·`PHP@n`(`php=4`)·`BOSSANGRY@n`으로 찍습니다. 죠타로가 스타 핑거로 바로 죽입니다.
   - 화살 장면: `stand=none`·`GIVE_ARROW`·`RIG_STAR`·`KEY_R`. 각성은 예열 항목에서 `AWAKEN@5`로 해 두면 월드에 남습니다.
-  - 죽음 장면: `stand=kageno`·`pointer=1`·`KEY_ESCAPE@40`·`KEY_R@60`·`KEY_ENTER@80`·`MOVE_RESPAWN@120`·`CLICK@135`(재설정과 리스폰).
+  - 죽음 장면: `stand=kageno`·`pointer=1`·`KEY_ESCAPE@40`·`KEY_R@60`·`KEY_ENTER@80`·`MOVE_RESPAWN@120`·`CLICK@135`(재설정과 리스폰). 2.107.0부터 맵에는 사망 화면이 없어 `MOVE_RESPAWN`·`CLICK` 없이 서버가 5초 뒤 부활시킨다(아래 '죽음과 자동 부활').
   - 예열 두 항목을 앞에 둡니다(`화살 예열, 죽음 예열, 화살, 죽음`, 960x540 16).
   - 앞 항목의 칸은 촬영 도구가 항목을 준비할 때 지웁니다. 그래서 목록이 처음부터 비어 있습니다. 0.5초부터 씁니다.
   - 작은 쿨타임 목록은 `FILM_ZOOM`으로 확대해 보입니다.
@@ -158,6 +158,7 @@
   - `MOVE_대상@틱`은 마우스를 9틱 동안 옮깁니다. 대상: B0~B3 메뉴 버튼, D0 재설정·D1 취소, RESPAWN 부활, DONE 설정의 완료, OFF 빈 곳.
   - `CLICK@틱`은 왼쪽 버튼입니다.
   - 배율 28이면 리스폰·사망 직후에도 반복 프레임이 0입니다.
+  - 2.107.0부터 맵에는 사망 화면이 없습니다. 재설정한 뒤 `MOVE_RESPAWN`·`CLICK` 없이 5초 뒤 저절로 부활합니다(아래 '죽음과 자동 부활').
   - 로그에 열린 화면, 재설정 질문, 목록이 들어가고 나온 때, 죽음·리스폰, 채팅 줄이 남습니다.
 - 플레이어 목록:
   - `MATES@n`: 이름이 다른 가짜 플레이어 `mates`(9)명을 플레이어 40블록 뒤에 둡니다.
@@ -165,6 +166,20 @@
   - `WHEEL_DOWN@n`·`WHEEL_UP@n`: 마인크래프트의 마우스 휠 처리로 한 칸 굴립니다.
   - 로그에 'player list N listed, from row R'이 남습니다.
   - 자막은 `FILM_SKILL=UI FILM_CLOCK="장면 시간" FILM_CAPTION=below FILM_NOTES="시작-끝:설명|…"`로 넣습니다.
+
+### 죽음과 자동 부활 (2.107.0)
+- 맵에서 죽으면 사망 화면이 없고 서버가 5초(100틱) 뒤 부활시킨다(`CLAUDE.md`의 '죽으면 사망 화면 없이'). 그래서 아래 예전 항목의 `MOVE_RESPAWN`·`CLICK`(사망 화면의 부활 버튼)은 맵에서는 필요 없다. 죽인 뒤 100틱을 기다리면 된다.
+- 촬영: `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "UI;hud=1;len=180;hurt=100000;dfw=2;drt=4;pitch=22;dist=6;sweep=2400;sweept=70;slows=0:16/44:28/116:48;then=MOVE_OFF@3/HURT@30/FREECAM@40/RDOWN@44/SWEEP@45/RUP@118/WHEEL_DOWN@121/WHEEL_DOWN@124" 960x540 16`
+  - 배율: 줌 아웃과 부활 뒤에는 지형을 새로 그리느라 소프트웨어 렌더러가 1~2틱씩 프레임을 못 찍는다. 배율 16 하나로는 반복 1이 나와 `slows=0:16/44:28/116:48`로 찍었다(반복 0, 약 8분).
+  - `HURT@n`(`hurt=100000`): 서버가 플레이어에게 그만큼 피해를 준다(죽음).
+  - `FREECAM@n`: 그 틱부터 촬영 도구가 카메라의 방향·거리를 정하지 않는다(게임의 카메라 그대로, 진짜 마우스로 돌린다).
+  - `RDOWN@n`·`RUP@n`: 오른쪽 버튼을 누르고 뗀다(마인크래프트의 마우스 처리 `Mouse.onMouseButton`). 맵의 카메라는 오른쪽 버튼을 누른 동안 마우스로 돈다.
+  - `SWEEP@n`: 마우스를 `sweep` 픽셀(1200) 오른쪽으로(`sweepy`는 아래로) `sweept` 틱(40)에 걸쳐 부드럽게 움직인다. 매 프레임 마인크래프트의 커서 처리(`Mouse.onCursorPos`)로 조금씩 옮긴다. 기본 감도에서 1픽셀이 0.15°라 2400픽셀이 한 바퀴다.
+  - `WHEEL_DOWN@n`의 로그에 카메라 줌(목표 거리)이 바뀐 값이 남는다.
+  - `WHERE@n`: 클라이언트와 서버가 아는 플레이어의 자리·몸 방향·핫바 칸·체력·열린 화면·커서, 이 클라이언트가 가진 엔티티 수, 자기 몸이 아직 월드에 있는지(`theirs`, `removed`, `death time`), 서버가 몸을 월드에 두는지(`removed`, `in the world's players`)를 남긴다. 죽은 동안 행동이 막히는지 볼 때 `KEY_2`·`KEYDOWN_W`·`ATTACKDOWN`·`KEYDOWN_E`·`KEY_R` 앞뒤에 둔다.
+  - 로그: 'player died at N', 'player respawned at N'(N+100이어야 함), 'camera free', 'right button down (cursor captured)', 'sweep over (camera yaw …)', 'wheel …: the camera's zoom A -> B'. 서버 로그에 'Auto respawn: 이름 back to life after 100 ticks (respawned)'.
+  - 2.107.0의 확인: 죽은 지 1초가 지나도 더미와 자기 몸이 보여야 한다(마인크래프트는 1초에 몸을 빼고, 그러면 그 사람 화면에서 주변 엔티티까지 사라진다: 첫 시험에서 그랬다).
+  - 자막: `FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="죽은 뒤" FILM_CLOCK_ZERO=1.55 FILM_NOTES="시작-끝:설명|…"`.
 
 ### 운석
 - 촬영: `SHOTS_WORLD=월드폴더 python3 tools/kageno/shots/run_shots.py OUT "METEOR;…,SHOP;…" 1280x730 배율`
@@ -401,6 +416,10 @@
       4. `UNAWAKEN`·`NOSTAND` → 스탠드 화살.
       5. `NOSTAND`·뽑기 SSR.
     - 시전자 클라이언트는 다시 들어온 뒤 30틱 동안 월드 시간 패킷을 버립니다(봇 모드의 `mixin/MpLateTimeMixin`). 접속 때 알린 긴 쿨타임을 시계가 맞춰지기 전에 읽는 순서를 늘 만들기 위해서입니다.
+  - `death`(`DEATH_SCRIPT`, 2.107.0):
+    - 하는 것: 관찰자를 앞 2.5블록에 부르고(`HOME`) 시전자(카게노)가 `/kill`로 죽은 뒤 바로 부활을 요청합니다(`RESPAWN`, 옛 클라이언트의 부활 버튼처럼: 서버가 받지 않아야 함). 죽은 채 오른쪽 버튼을 누르고 마우스를 20틱 동안 틱마다 30픽셀 옮겨 카메라를 돌리고(`DRAG`), 휠을 두 번 내리고(`WHEELOUT`), 핫바 2·평타·E·W 걷기를 눌러 봅니다(모두 안 되어야 함). 서버가 죽은 지 100틱에 부활시킵니다. 다시 죽고 15틱 뒤 죽은 채 나갔다가(`LEAVE`) 5초 뒤 다시 들어옵니다: 들어온 때부터 100틱에 부활해야 합니다.
+    - 기록: 두 클라이언트는 뜬 화면(사망 화면이 없어야 함)을, 시전자는 체력·생사·핫바 칸·`DeathView`가 바뀔 때와 끌기 앞뒤의 카메라 방향·몸 방향, 휠 앞뒤의 줌을, 관찰자는 시전자의 몸(있는지, 쓰러져 있는지, 자리)이 바뀔 때를 남깁니다. 서버는 죽음(때·자리), 죽어 있는 동안 1초마다 몸이 월드에 있는지(`body in the world`, `removed`)와 자리, 부활(죽은 뒤 또는 죽은 채 들어온 뒤 몇 틱인지, 자리), 핫바 칸이 바뀔 때를 남깁니다. 시전자가 죽은 채 들어오면 서버는 집으로 옮기지 않습니다(쓰러진 자리 그대로).
+    - 관찰자 봇은 죽으면 40틱에 부활을 요청하는데, 2.107.0부터 서버는 100틱 전 요청을 받지 않으므로 모든 모드에서 죽은 사람은 100틱에 부활합니다(예전 대본의 `RESPAWN`은 그 전이면 아무 일도 하지 않습니다).
   - `swap`(`SWAP_SCRIPT`):
     - 하는 것:
       1. 스타플래티나로 비트다운(빗나감)·시간 정지·강펀치·스타 핑거·러시·흡입.

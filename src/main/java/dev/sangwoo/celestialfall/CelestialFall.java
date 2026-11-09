@@ -61,6 +61,7 @@ public final class CelestialFall implements ModInitializer {
         dev.sangwoo.celestialfall.menu.MenuServer.initialize();
         dev.sangwoo.celestialfall.menu.CharacterReset.initialize();
         LongCooldowns.initialize();
+        AutoRespawn.initialize();
         dev.sangwoo.celestialfall.gacha.GachaServer.initialize();
         dev.sangwoo.celestialfall.commerce.CommerceRegistry.initialize();
         dev.sangwoo.celestialfall.isosang.Isosang.initialize();

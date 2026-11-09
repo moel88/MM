@@ -93,7 +93,8 @@ public final class CombatClient {
         return speed!=null&&speed.getModifier(CombatManager.SLOW)!=null;
     }
     public static boolean connected(){return MapClient.enabled()&&ClientPlayNetworking.canSend(CombatManager.INPUT);}
-    public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(StandClient.locked()||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||dev.sangwoo.celestialfall.client.stand.StandInhale.localInhaling()||dev.sangwoo.celestialfall.client.stand.StandInhale.localHeld()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).locked(mc.world.getTime()));}
+    /** Nothing but walking goes through (and, dead and waiting to come back, DeathView, 2.107.0, not even that: only the view moves). */
+    public static boolean actionLocked(){var mc=MinecraftClient.getInstance();return MapClient.enabled()&&(DeathView.active()||StandClient.locked()||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||dev.sangwoo.celestialfall.client.stand.StandInhale.localInhaling()||dev.sangwoo.celestialfall.client.stand.StandInhale.localHeld()||HitStunClient.localStunned()||mc.player!=null&&mc.world!=null&&snapshot(mc.player.getUuid()).locked(mc.world.getTime()));}
     /** The articulated rig drives this player (on the ground and in a jump or fall; not for sneaking, swimming, gliding, sleeping or riding). */
     public static boolean animate(AbstractClientPlayerEntity p) {
         return MapClient.enabled()&&p.isAlive()&&!p.isSpectator()&&!p.isSneaking()&&!p.isInSneakingPose()&&!p.isSwimming()&&!p.isFallFlying()&&!p.isSleeping()&&!p.hasVehicle()

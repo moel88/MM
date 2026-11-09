@@ -24,7 +24,9 @@
     "BossChunkMixin",
     "BossSleepMixin",
     "FormationFloatMixin",
-    "FormationMoveMixin"
+    "FormationMoveMixin",
+    "AutoRespawnMixin",
+    "DeadBodyMixin"
   ],
   "injectors": {
     "defaultRequire": 1

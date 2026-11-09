@@ -437,10 +437,27 @@ public final class SkillShots implements ClientModInitializer {
         }
         if(k>=1)glideTo=null;
     }
-    private void button(boolean down){
+    private void button(boolean down){button(GLFW_MOUSE_BUTTON_LEFT,down);}
+    private void button(int which,boolean down){
         try{var m=net.minecraft.client.Mouse.class.getDeclaredMethod("onMouseButton",long.class,int.class,int.class,int.class);m.setAccessible(true);
-            m.invoke(mc.mouse,mc.getWindow().getHandle(),GLFW_MOUSE_BUTTON_LEFT,down?GLFW_PRESS:GLFW_RELEASE,0);}
+            m.invoke(mc.mouse,mc.getWindow().getHandle(),which,down?GLFW_PRESS:GLFW_RELEASE,0);}
         catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+    }
+    /**
+     * (2.107.0) "SWEEP@n": the mouse goes "sweep" pixels right (1200; "sweepy" down, 0) over "sweept" shot ticks (40),
+     * eased, a little each frame through Minecraft's own cursor handler, as a hand on the mouse would move it: with the
+     * right button held (or the cursor captured) the camera turns, 0.15° a pixel at the default sensitivity.
+     */
+    private void sweep(){
+        if(sweepAt<0||mc==null||phase!=4)return;
+        double k=Math.max(0,Math.min(1,(clock()-sweepAt)/opt("sweept",40)));k=k*k*(3-2*k);
+        double x=opt("sweep",1200)*k,y=opt("sweepy",0)*k,dx=x-sweepDone,dy=y-sweepDoneY;
+        if(Math.abs(dx)>1e-6||Math.abs(dy)>1e-6){
+            try{var m=net.minecraft.client.Mouse.class.getDeclaredMethod("onCursorPos",long.class,double.class,double.class);m.setAccessible(true);m.invoke(mc.mouse,mc.getWindow().getHandle(),mc.mouse.getX()+dx,mc.mouse.getY()+dy);}
+            catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+            sweepDone=x;sweepDoneY=y;
+        }
+        if(k>=1){sweepAt=-1;log.append(String.format(Locale.ROOT,"  sweep over at %d (camera yaw %.1f, pitch %.1f, distance %.2f)%n",age,BotandCamera.STATE.yaw,BotandCamera.STATE.pitch,BotandCamera.STATE.distance));}
     }
     /** The capture's pointer mark: an arrow about 20 pixels tall where the game's mouse is, and a ring spreading as it clicks. */
     private void pointer(net.minecraft.client.gui.DrawContext d){
@@ -963,7 +980,11 @@ public final class SkillShots implements ClientModInitializer {
     }
     /** (2.96.1) Whether the camera's way is left as the game leaves it (after KEY_T), not set back to the entry's each tick. */
     private boolean camKept;
-    private void camera(){float d=opt("dist",camDist);if(!camKept||phase!=4){BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);}BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;
+    /** (2.107.0) Whether the camera is the game's alone from "FREECAM@n" on: the shot sets neither its way nor its distance, so the real mouse moves it. */
+    private boolean camFree;
+    /** (2.107.0) "SWEEP@n": the shot tick the mouse began to sweep (-1 for none) and how far it has gone (pixels). */
+    private float sweepAt=-1;private double sweepDone,sweepDoneY;
+    private void camera(){if(camFree&&phase==4)return;float d=opt("dist",camDist);if(!camKept||phase!=4){BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);}BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;
         // "aimrock=1": with a rock within reach the camera looks at it from over the player's shoulder (a click aims where the camera looks)
         if(opts.containsKey("aimrock")&&phase==4&&mc.player!=null)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m&&m.squaredDistanceTo(mc.player)<49){
             var v=m.getPos().add(0,.55,0).subtract(mc.player.getEyePos());
@@ -1022,6 +1043,8 @@ public final class SkillShots implements ClientModInitializer {
         instance=this;
         ClientTickEvents.END_CLIENT_TICK.register(client->{mc=client;try{tick();}catch(Throwable t){fail(t);}});
         // 2.67.0: the world pass's projection and view of each frame (camera.csv), and the viewport and framebuffer then
+        // (2.107.0) "SWEEP@n": the mouse moved a little each frame (the camera turns with it from the next frame)
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(c->{try{sweep();}catch(Throwable t){fail(t);}});
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(c->{var pr=c.projectionMatrix();var v=c.matrixStack().peek().getPositionMatrix();
             int[] vp=new int[4];org.lwjgl.opengl.GL11.glGetIntegerv(org.lwjgl.opengl.GL11.GL_VIEWPORT,vp);
             worldPass=String.format(Locale.ROOT,"%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d",pr.m00(),pr.m11(),v.m11(),v.m12(),v.m21(),vp[2],vp[3],
@@ -1153,6 +1176,20 @@ public final class SkillShots implements ClientModInitializer {
                     // follows it until Z is pressed; it holds where it is after that
                     if(what.startsWith("ZAIM")){if(age==at){zaimSword=pickSword(Float.parseFloat(what.substring(4)));zaimAt=age;camKept=false;zaimYaw0=BotandCamera.STATE.yaw;zaimPitch0=BotandCamera.STATE.pitch;zaimYaw=zaimYaw0;zaimPitch=zaimPitch0;zaimHeld=true;
                             log.append(String.format(Locale.ROOT,"  aim at sword %d (on %d) at %d%n",zaimSword,dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),age));}continue;}
+                    // (2.107.0) "FREECAM@n": the camera left to the game from tick n (the real mouse turns and zooms it); "RDOWN@n"
+                    // and "RUP@n" press and let go of the right mouse button, and "SWEEP@n" moves the mouse, both through
+                    // Minecraft's own mouse handlers (dead, waiting to come back, only the view moves: DeathView)
+                    // (2.107.0) "WHERE@n": where the player is as their client and the server have them (the body's way, the
+                    // hotbar slot, health, the screen up, how many bodies this client holds, whether the server keeps the dead
+                    // body in the world)
+                    if(what.equals("WHERE")){if(age==at){var q=mc.player;
+                            log.append(String.format(Locale.ROOT,"  where at %d: client %.2f %.2f %.2f, body yaw %.1f, slot %d, health %.1f, screen %s, cursor %s, %d entities seen (theirs %s, removed %s, death time %d, pose %s)%n",age,q.getX(),q.getY(),q.getZ(),q.getYaw(),q.getInventory().selectedSlot,q.getHealth(),
+                                mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName(),mc.mouse.isCursorLocked()?"captured":"free",java.util.stream.StreamSupport.stream(mc.world.getEntities().spliterator(),false).count(),
+                                mc.world.getEntityById(q.getId())==q,q.getRemovalReason(),q.deathTime,q.getPose()));
+                            final int when=age;server(p->log.append(String.format(Locale.ROOT,"  where at %d: server %.2f %.2f %.2f, body yaw %.1f, slot %d, health %.1f, removed %s, in the world's players %s%n",when,p.getX(),p.getY(),p.getZ(),p.getYaw(),p.getInventory().selectedSlot,p.getHealth(),p.isRemoved(),p.getServerWorld().getPlayers().contains(p))));}continue;}
+                    if(what.equals("FREECAM")){if(age==at){camFree=true;log.append(String.format(Locale.ROOT,"  camera free at %d (yaw %.1f, pitch %.1f, distance %.2f)%n",age,BotandCamera.STATE.yaw,BotandCamera.STATE.pitch,BotandCamera.STATE.distance));}continue;}
+                    if(what.equals("RDOWN")||what.equals("RUP")){if(age==at){button(org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT,what.equals("RDOWN"));log.append("  right button ").append(what.equals("RDOWN")?"down":"up").append(" at ").append(age).append(mc.mouse.isCursorLocked()?" (cursor captured)":" (cursor free)").append('\n');}continue;}
+                    if(what.equals("SWEEP")){if(age==at){sweepAt=age;sweepDone=sweepDoneY=0;log.append(String.format(Locale.ROOT,"  sweep at %d (camera yaw %.1f, cursor %s)%n",age,BotandCamera.STATE.yaw,mc.mouse.isCursorLocked()?"captured":"free"));}continue;}
                     if(what.startsWith("KEY_")){int code=switch(what.substring(4)){case "TAB"->GLFW_KEY_TAB;case "ESCAPE"->GLFW_KEY_ESCAPE;case "R"->GLFW_KEY_R;case "ENTER"->GLFW_KEY_ENTER;case "UP"->GLFW_KEY_UP;case "DOWN"->GLFW_KEY_DOWN;case "Q"->GLFW_KEY_Q;case "T"->GLFW_KEY_T;case "Y"->GLFW_KEY_Y;case "G"->GLFW_KEY_G;case "H"->GLFW_KEY_H;case "2"->GLFW_KEY_2;case "M"->GLFW_KEY_M;case "Z"->GLFW_KEY_Z;default->throw new IllegalArgumentException(what);};
                         // (2.93.0) Z: which sword it aims at as it is pressed (the client's own reckoning), and the camera stops following it
                         if(what.equals("KEY_Z")&&age==at){log.append(String.format(Locale.ROOT,"  Z aims at sword %d (on %d, Z left %d) at %d%n",dev.sangwoo.celestialfall.client.isosang.SwordStep.aimedForFilm(),dev.sangwoo.celestialfall.client.isosang.SwordStep.perchNow(),
@@ -1258,10 +1295,12 @@ public final class SkillShots implements ClientModInitializer {
                     // "WHEEL_DOWN@n"/"WHEEL_UP@n" (2.73.0): a notch of the mouse wheel where the pointer is, through
                     // Minecraft's own mouse handler (over the player list it scrolls the list)
                     if(what.equals("WHEEL_DOWN")||what.equals("WHEEL_UP")){if(age==at){
+                            double zoom=BotandCamera.STATE.targetDistance;
                             try{var m=net.minecraft.client.Mouse.class.getDeclaredMethod("onMouseScroll",long.class,double.class,double.class);m.setAccessible(true);
                                 m.invoke(mc.mouse,mc.getWindow().getHandle(),0d,what.equals("WHEEL_UP")?1d:-1d);}catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
                             var sc=dev.sangwoo.celestialfall.client.ui.PlayerPanel.scroll();
-                            log.append("  wheel ").append(what.equals("WHEEL_UP")?"up":"down").append(" at ").append(age).append(String.format(Locale.ROOT,": the list goes to row %d%n",(int)sc[1]));}continue;}
+                            // (2.107.0) and the camera's zoom (where it goes), which the wheel sets in play and, dead, waiting to come back
+                            log.append("  wheel ").append(what.equals("WHEEL_UP")?"up":"down").append(" at ").append(age).append(String.format(Locale.ROOT,": the list goes to row %d, the camera's zoom %.2f -> %.2f%n",(int)sc[1],zoom,BotandCamera.STATE.targetDistance));}continue;}
                     if(what.equals("CLICK")){if(age==at){log.append("  click at ").append(age).append(" on ").append(mc.currentScreen==null?"-":mc.currentScreen.getClass().getSimpleName()).append('\n');clickAt=age;button(true);}if(age==at+1)button(false);continue;}
                     // 2.54.0: the attack (the left button) held down and let go, through Minecraft's own mouse handler
                     if(what.equals("ATTACKDOWN")||what.equals("ATTACKUP")){if(age==at){log.append("  attack ").append(what.equals("ATTACKDOWN")?"down":"up").append(" at ").append(age).append('\n');button(what.equals("ATTACKDOWN"));}
@@ -1455,7 +1494,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
                         +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;
+                        stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}

@@ -48,7 +48,8 @@
     "IsosangSkyMixin",
     "IsosangStageMixin",
     "IsosangStageParticlesMixin",
-    "IsosangStageBlockEntityMixin"
+    "IsosangStageBlockEntityMixin",
+    "DeathMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

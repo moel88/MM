@@ -259,6 +259,26 @@ public final class MpClient implements ClientModInitializer {
      * again until 100 ticks into the script: trace); the server logs the caster's as kept with the world and as each
      * skill keeps its own, its deaths, its stand and its awakening.
      */
+    /**
+     * Back to life by itself (2.107.0, MP_ONLY=death, user request: "죽으면 리스폰 화면이 뜨지 않고 ... 그 자리에서 5초 동안
+     * 화면만 움직일수 있게 하다가 자동 부활"): the caster, Kageno, with the watcher 2.5 blocks in front of it, is killed
+     * (/kill) and at once asks to come back (as an older client's respawn button: the server must hold it); dead, it
+     * turns its camera with the right button held and the mouse moved ("DRAG": Minecraft's own mouse handlers), zooms out
+     * with the wheel ("WHEELOUT") and tries the hotbar's 2, the attack, E and walking (none may go through); the server
+     * brings it back five seconds after it died. Killed again, it leaves the server dead and joins again five seconds
+     * later: the server brings it back five seconds after it is back. Both log every screen they are shown (no death
+     * screen may come), the caster its health, camera and slot as they change; the watcher the caster's body (lying dead
+     * where it fell through the five seconds, then back alive at the spawn); the server each death, where the body lies
+     * and whether it is still in the world each second, and each coming back.
+     */
+    private static final String[] DEATH_SCRIPT={
+        "20 HOME","40 KILL","42 RESPAWN",
+        "50 DRAG","80 WHEELOUT",
+        "90 2","95 M1","100 E","105 W+","125 W-",
+        "200 KILL","215 LEAVE",
+        "560 END"};
+    /** (2.107.0, MP_ONLY=death) The script tick the caster's right-button drag began (-1 for none), and its camera's way then. */
+    private int dragAt=-1;private float dragFrom;
     private static final String[] FRESH_SCRIPT={
         "10 NOSTAND","30 STANDK","50 LEAVE",
         "70 STAND","90 KILL","170 RESPAWN",
@@ -446,7 +466,7 @@ public final class MpClient implements ClientModInitializer {
     private static final String[] ISOSANGVOLLEY_SCRIPT={
         "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1",
         "200 DIST23","236 VAIM","240 VM1","296 VGROUND-50","302 VM1","380 END"};
-    private static final String[] STEPS=ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    private static final String[] STEPS=ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -471,6 +491,40 @@ public final class MpClient implements ClientModInitializer {
     }
     private void flag(String name,Object value){if(!Objects.equals(flags.put(name,value),value))note(name+" = "+value);}
     private void key(int key,boolean down){mc.keyboard.onKey(mc.getWindow().getHandle(),key,0,down?GLFW_PRESS:GLFW_RELEASE,0);if(down)held.add(key);else held.remove(key);}
+    /**
+     * (2.107.0) One of Minecraft's own mouse handlers, by its name here (dev) or its intermediary one (the bot mod runs
+     * remapped, with no refmap: names in strings are not remapped, as MpLateTimeMixin's are not).
+     */
+    private static java.lang.reflect.Method mouse(String named,String intermediary,Class<?>... types)throws ReflectiveOperationException{
+        java.lang.reflect.Method m;
+        try{m=net.minecraft.client.Mouse.class.getDeclaredMethod(named,types);}catch(NoSuchMethodException e){m=net.minecraft.client.Mouse.class.getDeclaredMethod(intermediary,types);}
+        m.setAccessible(true);return m;
+    }
+    /** (2.107.0) A mouse button through Minecraft's own mouse handler (the right one turns the map's camera while held). */
+    private void mouseButton(int button,boolean down){
+        try{mouse("onMouseButton","method_1601",long.class,int.class,int.class,int.class).invoke(mc.mouse,mc.getWindow().getHandle(),button,down?GLFW_PRESS:GLFW_RELEASE,0);}catch(ReflectiveOperationException e){fail(e);}
+    }
+    /**
+     * (2.107.0, MP_ONLY=death) Each tick: the caster's own death as its client has it (any screen it is shown, its
+     * health, whether it is dead, its slot: each change), its drag moving the mouse 30 pixels a tick through Minecraft's
+     * own cursor handler for 20 ticks and letting go (the camera's way before and after); the watcher's view of the
+     * caster's body (there or not, alive or lying dead, where: each change).
+     */
+    private void deathWatch(){
+        if(caster){
+            flag("my health",String.format(Locale.ROOT,"%.1f (%s)",mc.player.getHealth(),mc.player.isAlive()?"alive":"dead"));
+            flag("my slot",mc.player.getInventory().selectedSlot);
+            flag("death view",DeathView.active());
+            if(dragAt>=0&&age>dragAt&&age<=dragAt+20){
+                try{mouse("onCursorPos","method_1600",long.class,double.class,double.class).invoke(mc.mouse,mc.getWindow().getHandle(),mc.mouse.getX()+30,mc.mouse.getY());}catch(ReflectiveOperationException e){fail(e);}
+            }
+            if(dragAt>=0&&age==dragAt+21){mouseButton(GLFW_MOUSE_BUTTON_RIGHT,false);
+                note(String.format(Locale.ROOT,"right button up: the camera turned %.1f -> %.1f (body yaw %.1f, %s)",dragFrom,BotandCamera.STATE.yaw,mc.player.getYaw(),mc.player.isAlive()?"alive":"dead"));dragAt=-1;}
+            return;
+        }
+        var c=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
+        flag("caster's body",c==null?"none":String.format(Locale.ROOT,"%s at %.0f %.0f %.0f",c.isAlive()?"alive":"lying dead",c.getX(),c.getY(),c.getZ()));
+    }
     private void attack(boolean down){var k=InputUtil.Type.MOUSE.createFromCode(GLFW_MOUSE_BUTTON_LEFT);KeyBinding.setKeyPressed(k,down);if(down)KeyBinding.onKeyPressed(k);}
     private String name(UUID id){var p=mc.world.getPlayerByUuid(id);return p==null?id.toString().substring(0,8):p.getGameProfile().getName();}
     /** The watcher looks a little up at G's pillar from outside; otherwise both look slightly down at each other. */
@@ -495,7 +549,8 @@ public final class MpClient implements ClientModInitializer {
         BotandCamera.STATE.yaw=keepYaw;BotandCamera.STATE.pitch=keepPitch;
         return new float[]{yaw,pitch};
     }
-    private void face(){if(mc.player==null)return;BotandCamera.STATE.yaw=caster?0:180;BotandCamera.STATE.pitch=!caster&&!AtomicClient.CASTS.isEmpty()?-8:caster?casterPitch:12;}
+    // (2.107.0, MP_ONLY=death) dead, the caster's camera is its own mouse's (it turns it): never set back
+    private void face(){if(mc.player==null||ONLY.equals("death")&&caster&&!mc.player.isAlive())return;BotandCamera.STATE.yaw=caster?0:180;BotandCamera.STATE.pitch=!caster&&!AtomicClient.CASTS.isEmpty()?-8:caster?casterPitch:12;}
     /** The caster's camera pitch as it presses a key ("PITCHn", 2.81.1: all but level to reach a foe 25 blocks off with its crosshair). */
     private float casterPitch=12;
 
@@ -525,6 +580,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("isosangy"))yWatch();
                 if(ONLY.equals("isosanghh"))finaleWatch();
                 if(ONLY.equals("isosangz")||ONLY.equals("isosangdodge"))zWatch();
+                if(ONLY.equals("death"))deathWatch();
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -542,7 +598,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("stagger"))staggerWatch();
                     if(ONLY.equals("resist"))resistWatch();
                     if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -693,6 +749,13 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("FLEE")){if(down){command("execute at Caster run tp Watcher ~42 ~ ~2");command("execute at Caster run tp Caster ~40 ~ ~");}return;}
         if(step.equals("RETURN")){if(down){var b=boss();if(b==null)note("ERROR no boss");else{command("execute at "+b.getUuid()+" run tp Caster ~ ~ ~6");command("execute at "+b.getUuid()+" run tp Watcher ~2 ~ ~7");}}return;}
         if(step.startsWith("GUARD")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("guard"),"guard");else Files.deleteIfExists(OUT.resolve("guard"));}catch(Exception e){fail(e);}note("watcher's guard "+(step.endsWith("+")?"asked for":"let down"));}return;}
+        // (2.107.0, MP_ONLY=death) the right button held and the mouse moved 30 pixels a tick for 20 ticks, then let go
+        // (deathWatch moves it), and the wheel turned down twice, all through Minecraft's own mouse handlers
+        if(step.equals("DRAG")){if(down){dragAt=age;dragFrom=BotandCamera.STATE.yaw;mouseButton(GLFW_MOUSE_BUTTON_RIGHT,true);
+            note(String.format(Locale.ROOT,"right button down (cursor %s), camera yaw %.1f",mc.mouse.isCursorLocked()?"captured":"free",dragFrom));}return;}
+        if(step.equals("WHEELOUT")){if(down){double zoom=BotandCamera.STATE.targetDistance;
+            try{var m=mouse("onMouseScroll","method_1598",long.class,double.class,double.class);for(int i=0;i<2;i++)m.invoke(mc.mouse,mc.getWindow().getHandle(),0d,-1d);}catch(ReflectiveOperationException e){fail(e);}
+            note(String.format(Locale.ROOT,"wheel down twice: the camera's zoom %.2f -> %.2f, slot %d",zoom,BotandCamera.STATE.targetDistance,mc.player.getInventory().selectedSlot));}return;}
         String k=step.replaceAll("[+-]$","");boolean press=step.endsWith("+")||!step.endsWith("-")&&down;
         if(down&&press&&!k.equals("W"))face();
         if(down||!step.endsWith("+"))note((press?"press ":"release ")+k);
@@ -703,6 +766,7 @@ public final class MpClient implements ClientModInitializer {
             case "Q"->key(GLFW_KEY_Q,press);case "G"->key(GLFW_KEY_G,press);case "H"->key(GLFW_KEY_H,press);case "P"->key(GLFW_KEY_P,press);
             case "W"->key(GLFW_KEY_W,press);case "C"->key(GLFW_KEY_C,press);
             case "TAB"->key(GLFW_KEY_TAB,press);case "ESC"->key(GLFW_KEY_ESCAPE,press);case "ENTER"->key(GLFW_KEY_ENTER,press);
+            case "2"->key(GLFW_KEY_2,press);
             default->note("ERROR unknown step "+step);
         }
     }

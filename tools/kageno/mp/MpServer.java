@@ -80,7 +80,9 @@ public final class MpServer implements ModInitializer {
         // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had; 2.74.3 the same for MP_ONLY=fresh)
         if(caster(p)){if(!COOLDOWNS_ONLY&&!FRESH_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
             NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY&&!ISOSANG_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
-        home(p);
+        // (2.107.0, MP_ONLY=death) one who joins dead waits where it fell: its five seconds count from now
+        if(DEATH_ONLY&&!p.isAlive()){deadAt.put(p.getUuid(),p.getServer().getOverworld().getTime());note(p.getServer(),String.format(java.util.Locale.ROOT,"%s joined dead at tick %d at %.2f %.2f %.2f",p.getGameProfile().getName(),p.getServer().getOverworld().getTime(),p.getX(),p.getY(),p.getZ()));}
+        else home(p);
         note(p.getServer(),"joined "+p.getGameProfile().getName()+" kageno="+StandManager.kageno(p));
     }
     private void home(ServerPlayerEntity p){boolean c=caster(p);p.setVelocity(0,0,0);p.networkHandler.requestTeleport(.5,ground,c?.5:3,c?0:180,0);}
@@ -129,6 +131,7 @@ public final class MpServer implements ModInitializer {
         if(BOSS_ONLY&&!bossPlaced)placeBoss(server);
         if(BOSS_ONLY)boss(server);
         if(ARROW_ONLY||COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)arrow(server);
+        if(DEATH_ONLY)deaths(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -461,6 +464,28 @@ public final class MpServer implements ModInitializer {
     static final boolean STAGGER_ONLY="stagger".equals(System.getProperty("botand.mp.only"));
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
+    /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
+    static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
+    /** (2.107.0) The server tick each player was found dead (or joined dead), and the hotbar slot each was last seen with. */
+    private final Map<UUID,Long> deadAt=new HashMap<>();private final Map<UUID,Integer> slots=new HashMap<>();
+    /**
+     * Coming back to life by itself (2.107.0, MP_ONLY=death) as the server keeps it: each player's death (when, where),
+     * every second while dead whether its body is still in the world (Minecraft took the dead out a second after they
+     * died) and where it lies, its coming back (when, how long after it died or joined dead, where), and every change of
+     * its hotbar slot (alive or dead: none may come while dead).
+     */
+    private void deaths(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        for(var p:server.getPlayerManager().getPlayerList()){
+            String who=p.getGameProfile().getName();int slot=p.getInventory().selectedSlot;
+            Integer was=slots.put(p.getUuid(),slot);
+            if(was!=null&&was!=slot)note(server,String.format(java.util.Locale.ROOT,"%s slot %d -> %d at tick %d (%s)",who,was,slot,now,p.isAlive()?"alive":"dead"));
+            Long since=deadAt.get(p.getUuid());
+            if(!p.isAlive()&&since==null){deadAt.put(p.getUuid(),now);note(server,String.format(java.util.Locale.ROOT,"%s died at tick %d at %.2f %.2f %.2f",who,now,p.getX(),p.getY(),p.getZ()));}
+            else if(!p.isAlive()&&(now-since)%20==0)note(server,String.format(java.util.Locale.ROOT,"%s dead %d ticks: at %.2f %.2f %.2f, body in the world %s (removed %s), death time %d",who,now-since,p.getX(),p.getY(),p.getZ(),p.getServerWorld().getPlayers().contains(p),p.isRemoved(),p.deathTime));
+            else if(p.isAlive()&&since!=null){deadAt.remove(p.getUuid());note(server,String.format(java.util.Locale.ROOT,"%s alive again at tick %d, %d ticks after it died (or joined dead), at %.2f %.2f %.2f",who,now,now-since,p.getX(),p.getY(),p.getZ()));}
+        }
+    }
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
     static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"))||"isosangy".equals(System.getProperty("botand.mp.only"))||"isosanghh".equals(System.getProperty("botand.mp.only"));
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;

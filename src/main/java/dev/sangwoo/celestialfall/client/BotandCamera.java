@@ -39,8 +39,15 @@ public final class BotandCamera {
         var mc=MinecraftClient.getInstance();return mc.player!=null&&mc.world!=null&&CombatClient.connected()
             &&mc.getCameraEntity()==mc.player&&!mc.player.isSpectator();
     }
-    public static boolean gameplay(){var mc=MinecraftClient.getInstance();return !dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active()&&enabled()&&mc.currentScreen==null&&mc.getOverlay()==null&&mc.isWindowFocused()&&mc.player.isAlive();}
+    public static boolean gameplay(){return viewing()&&MinecraftClient.getInstance().player.isAlive();}
     public static boolean controls(){return gameplay()&&!CinematicDirector.isActive();}
+    /**
+     * Whether the camera is the player's to move: in play, or (2.107.0) dead waiting to be brought back (DeathView: the
+     * view turns, zooms and switches between the shift lock and the first person; the body neither turns nor walks).
+     */
+    public static boolean viewing(){var mc=MinecraftClient.getInstance();return !dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active()&&enabled()&&mc.currentScreen==null&&mc.getOverlay()==null&&mc.isWindowFocused()&&(mc.player.isAlive()||DeathView.active());}
+    /** The camera's own controls (turning, zoom, the shift lock, the first person): {@link #controls} and, dead, the view's alone. */
+    public static boolean viewControls(){return viewing()&&!CinematicDirector.isActive();}
     /**
      * Whether the movement keys walk the player as their own camera has them (relative to where it looks, the body turning
      * the way they go, the run kept): in play, and (2.92.0) while another's G's cutscene holds their screen (GArenaClient
@@ -68,11 +75,11 @@ public final class BotandCamera {
             if(previousPerspective==null)previousPerspective=mc.options.getPerspective();
             player=mc.player;world=mc.world;STATE.reset(mc.player.getYaw());lastFrame=0;lastPlayerPos=mc.player.getPos();rightDrag=false;
         }
-        while(LOCK.wasPressed())if(controls())STATE.shiftLock=!STATE.shiftLock;
+        while(LOCK.wasPressed())if(viewControls())STATE.shiftLock=!STATE.shiftLock;
         while(RUN.wasPressed())if(controls()&&!CombatClient.actionLocked())STATE.run=!STATE.run;
         // F5 uses the same zoom state, so it cannot leave the camera in front-view mode.
-        while(mc.options.togglePerspectiveKey.wasPressed())if(controls())STATE.targetDistance=STATE.targetDistance==0?OrbitCameraState.DEFAULT_DISTANCE:0;
-        if(!gameplay())rightDrag=false;
+        while(mc.options.togglePerspectiveKey.wasPressed())if(viewControls())STATE.targetDistance=STATE.targetDistance==0?OrbitCameraState.DEFAULT_DISTANCE:0;
+        if(!viewing())rightDrag=false;
         if(CombatClient.actionLocked()) {
             mc.player.clearActiveItem();mc.player.setSprinting(false);
             if(mc.currentScreen instanceof net.minecraft.client.gui.screen.ingame.HandledScreen<?>)mc.player.closeHandledScreen();
@@ -111,16 +118,17 @@ public final class BotandCamera {
     }
     public static void refreshCapture() {
         if(!enabled()||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return;
-        boolean capture=gameplay()&&(CinematicDirector.isActive()||STATE.captured(rightDrag));
+        boolean capture=viewing()&&(CinematicDirector.isActive()||STATE.captured(rightDrag));
         ((MouseCapture)MinecraftClient.getInstance().mouse).botand$capture(capture);
     }
-    public static void rightButton(boolean down){rightDrag=down&&controls();refreshCapture();}
+    public static void rightButton(boolean down){rightDrag=down&&viewControls();refreshCapture();}
     public static void look(double x,double y) {
-        if(!controls()||!STATE.captured(rightDrag))return;
+        if(!viewControls()||!STATE.captured(rightDrag))return;
         STATE.rotate(x*.15,y*.15);
+        // the body faces the camera (faceCamera: in play only; the dead lie as they fell)
         if(locked())faceCamera();
     }
-    public static void scroll(double vertical) {if(controls())STATE.scroll(vertical);}
+    public static void scroll(double vertical) {if(viewControls())STATE.scroll(vertical);}
     public static void faceCamera() {
         if(!controls())return;var p=MinecraftClient.getInstance().player;
         p.setYaw(STATE.yaw);p.setPitch(STATE.pitch);p.setHeadYaw(STATE.yaw);
@@ -151,7 +159,8 @@ public final class BotandCamera {
         var mc=MinecraftClient.getInstance();var p=mc.player;
         // (held by Star Platinum's inhale, 2.62.0: their keys still work, at a twentieth of their speed, "그냥 95% 슬로우";
         // the suction keeps them where it draws them, client/stand/StandInhale.drive)
-        if(StandClient.movementLocked()||dev.sangwoo.celestialfall.client.isosang.IsosangClient.movementLocked()||HitStunClient.localStunned()) {
+        // (2.107.0) and dead, waiting to be brought back (DeathView): no key moves them
+        if(StandClient.movementLocked()||dev.sangwoo.celestialfall.client.isosang.IsosangClient.movementLocked()||HitStunClient.localStunned()||DeathView.active()) {
             input.movementForward=input.movementSideways=0;input.jumping=input.sneaking=false;
             input.pressingForward=input.pressingBack=input.pressingLeft=input.pressingRight=false;
             // T held is aimed while its slashes are thrown (user request): the caster turns to where the camera looks.

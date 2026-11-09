@@ -56,6 +56,15 @@ public abstract class MinecraftClientMixin {
         if(local)mc.getSoundManager().pauseAll();
         ci.cancel();
     }
+    /**
+     * (2.107.0) Dead on the Botand map, with a server that brings its dead back (DeathView): closing a screen (the chat,
+     * the pause menu) leaves none open, where Minecraft would open its death screen or ask to come back at once.
+     */
+    @Redirect(method="setScreen",at=@At(value="INVOKE",target="Lnet/minecraft/client/network/ClientPlayerEntity;isDead()Z"))
+    private boolean botand$deathScreenOnClose(net.minecraft.client.network.ClientPlayerEntity player){return player.isDead()&&!dev.sangwoo.celestialfall.client.DeathView.handled();}
+    /** (2.107.0) and nor does the game open its death screen of itself each tick the player is dead with nothing open. */
+    @Redirect(method="tick",at=@At(value="INVOKE",target="Lnet/minecraft/client/network/ClientPlayerEntity;isDead()Z"))
+    private boolean botand$deathScreenEachTick(net.minecraft.client.network.ClientPlayerEntity player){return player.isDead()&&!dev.sangwoo.celestialfall.client.DeathView.handled();}
     @Inject(method="setScreen",at=@At("HEAD"),cancellable=true)
     private void celestialfall$blockInventory(Screen screen,CallbackInfo ci) {
         if(screen instanceof HandledScreen<?> && (CinematicDirector.isActive()||CombatClient.actionLocked())) {

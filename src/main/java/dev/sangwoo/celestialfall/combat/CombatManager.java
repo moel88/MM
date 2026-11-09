@@ -144,6 +144,8 @@ public final class CombatManager {
     }
     public static boolean actionLocked(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
+        // (2.107.0) dead, waiting to be brought back (AutoRespawn): only their view moves, nothing they do goes through
+        if(p.isDead())return true;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
             ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());

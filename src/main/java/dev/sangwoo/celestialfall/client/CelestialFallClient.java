@@ -43,6 +43,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.stand.StandArrowClient.initialize();
         CutsceneFlash.initialize();
         CombatClient.initialize();
+        DeathView.initialize();
         StandClient.initialize();
         // Lee So-sang's basic attack (2.77.0)
         dev.sangwoo.celestialfall.client.isosang.IsosangClient.initialize();
