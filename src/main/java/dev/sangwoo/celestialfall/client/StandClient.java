@@ -21,6 +21,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 public final class StandClient {
     private static final ItemStack SWORD=new ItemStack(CelestialFall.ATOMIC_SWORD);
     private static final ItemStack ISOSANG_SWORD=new ItemStack(dev.sangwoo.celestialfall.isosang.Isosang.SWORD);
+    private static final ItemStack X_CHARA_KNIFE=new ItemStack(dev.sangwoo.celestialfall.xchara.XChara.KNIFE);
     public record Target(UUID uuid,int entity,Vec3d position){}
     /** {@code aims}: T held's slashes, the way each was thrown (degrees, NaN before it leaves; the server's). */
     public record Cast(UUID id,UUID caster,Identifier dimension,int skill,int combo,long start,long serverNow,long received,Vec3d origin,float yaw,List<Target> targets,float[] aims){
@@ -46,15 +47,21 @@ public final class StandClient {
     public static boolean visible(PlayerEntity p){return StandManager.kageno(p)&&!p.isInvisible()&&!p.isSleeping();}
     /** Lee So-sang's player, seen (2.76.0): their sword drawn in their hand, as Kageno's is. */
     public static boolean isosang(PlayerEntity p){return StandManager.isosang(p)&&!p.isInvisible()&&!p.isSleeping();}
+    /** X Chara's player, seen (2.111.0): their knife drawn in their hand, as Kageno's sword is. */
+    public static boolean xChara(PlayerEntity p){return StandManager.xChara(p)&&!p.isInvisible()&&!p.isSleeping();}
     /**
      * The sword drawn in this player's hand whatever it holds: Kageno's, or Lee So-sang's (2.76.0); null if none.
      * (2.105.0) Lee So-sang's only while she uses it (a swing or a skill moving her body, IsosangSheath.drawn): her hand
      * is empty otherwise (EMPTY, not null: nothing is drawn in it, not what it holds), unless she is using what it holds
      * (eating, drinking: null, what she holds as the game draws it).
      */
-    public static ItemStack sword(PlayerEntity p){return visible(p)?SWORD:isosang(p)?(dev.sangwoo.celestialfall.client.isosang.IsosangSheath.drawn(p.getUuid())?ISOSANG_SWORD:p.isUsingItem()?null:ItemStack.EMPTY):null;}
+    public static ItemStack sword(PlayerEntity p){return visible(p)?SWORD:isosang(p)?(dev.sangwoo.celestialfall.client.isosang.IsosangSheath.drawn(p.getUuid())?ISOSANG_SWORD:p.isUsingItem()?null:ItemStack.EMPTY)
+        // (2.111.0) X Chara's knife, always in their hand (but while they use what they hold: eating, drinking)
+        :xChara(p)?(p.isUsingItem()?null:X_CHARA_KNIFE):null;}
     /** Lee So-sang's sword, as drawn in her hand while she uses it (2.105.0: from one's own eyes as it comes and goes, IsosangSheath.held). */
     public static ItemStack isosangSword(){return ISOSANG_SWORD;}
+    /** X Chara's knife, as drawn in their hand (2.111.0). */
+    public static ItemStack xCharaKnife(){return X_CHARA_KNIFE;}
     public static void initialize(){
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.sangwoo.celestialfall.client.kageno.KagenoClips::trackGuards);
         KagenoSword.initialize();KagenoFire.initialize();dev.sangwoo.celestialfall.client.atomic.AtomicShader.initialize();dev.sangwoo.celestialfall.client.vfx.Vfx.initialize();dev.sangwoo.celestialfall.client.vfx.FxLayer.initialize();

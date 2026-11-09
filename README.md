@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.110.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.111.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.111.0 — 새 캐릭터 엑스 차라와 그의 칼
+
+- **엑스 차라:** 새 캐릭터입니다(id `x_chara`). 카게노·이소상처럼 플레이어가 칼을 들고 직접 싸웁니다. 지금은 관리자 명령어로만 줍니다(`/botand progress stand <대상> x_chara`). 스킬은 보내 주시는 대로 하나씩 만듭니다(그때까지 평타는 맨손 콤보).
+- **칼:** 보내 주신 사진에서 잰 모양 그대로인 검은 칼입니다(칼등은 칼끝까지 곧고 날은 끝에서 휘어 올라 뾰족하게, 뒤꿈치 아래 모서리가 조금 앞으로, 가는 검은 막대 손잡이). 늘 오른손에 칼등이 위, 칼끝이 앞으로 듭니다.
+- **크기와 쥐기 (사용자 요청):** 손에서 막대 끝부터 칼끝까지 3블록입니다(실제 게임에서 찍은 후보 중 '2배 · 3블록'). 주먹이 손잡이 가운데를 쥡니다.
+- **서버와 접속자 모두 바꾸세요:** 2.110 서버는 `x_chara`를 모릅니다.
+
+[RELEASE_2.111.0_KO.md](RELEASE_2.111.0_KO.md)를 확인하세요. 2.110.1은 [RELEASE_2.110.1_KO.md](RELEASE_2.110.1_KO.md)입니다.
 
 # 보탠드 2.110.1 — 맞을 때 화면이 기울지 않음
 

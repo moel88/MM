@@ -86,6 +86,14 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             var torso=new org.joml.Quaternionf().rotationZYX(body.roll,body.yaw,body.pitch);var shift=dev.sangwoo.celestialfall.client.isosang.IsosangIdle.pivots(pose,w,half);
             for(int i=0;i<2;i++){var arm=i==0?rightArm:leftArm;var v=torso.transform(shift[i]);arm.pivotX+=v.x;arm.pivotY+=v.y;arm.pivotZ+=v.z;}
         }
+        else if(StandClient.xChara(player)&&!player.isUsingItem()&&rig&&"base".equals(CombatClient.state(player,animationProgress-player.age))
+            &&!CombatClient.snapshot(player.getUuid()).guard()){
+            // X Chara's knife (2.111.0): held a little forward at the side, the arm keeping a quarter of its walk's swing,
+            // as Lee So-sang held her sword from 2.76.0 to 2.104.0 (their skills to come will bring their own motion;
+            // punching and guarding keep the rig's arms)
+            arms="xchara";
+            rightArm.pitch=-.33f+rightArm.pitch*.25f;rightArm.yaw=-.06f;rightArm.roll=.04f;rightArm.getChild("elbow").pitch=-.12f;
+        }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
         float delta=animationProgress-player.age;
         if(delta>=0&&delta<=1.001f){

@@ -17,6 +17,8 @@ public final class StandManager {
     public static boolean starPlatinum(PlayerEntity p){return has(p,"star_platinum");}
     /** Lee So-sang's player on the map (2.76.0): a character who fights in person; no skills yet. */
     public static boolean isosang(PlayerEntity p){return has(p,"isosang");}
+    /** X Chara's player on the map (2.111.0): a character who fights in person with their knife; no skills yet. */
+    public static boolean xChara(PlayerEntity p){return has(p,"x_chara");}
     private static boolean has(PlayerEntity p,String stand){
         // (2.110.0) the map as it is for them: one in their vanilla mode has no stand nor character (VanillaMode)
         return p!=null&&MapGate.enabled(p)&&p.isAlive()&&!p.isSpectator()

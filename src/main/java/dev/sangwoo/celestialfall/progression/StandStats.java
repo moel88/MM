@@ -14,10 +14,13 @@ public final class StandStats {
         "star_platinum",new Definition("star_platinum","stand.botand.star_platinum",DEFAULT_HEALTH,"스타플래티나"),
         // 2.76.0: Lee So-sang (Jade Knight · Moon Scar), a character who fights in person, as Kageno does; given by the
         // admin command only for now, their skills to come one at a time as the user gives them (none yet)
-        "isosang",new Definition("isosang","stand.botand.isosang",DEFAULT_HEALTH,"이소상"));
+        "isosang",new Definition("isosang","stand.botand.isosang",DEFAULT_HEALTH,"이소상"),
+        // 2.111.0: X Chara, a character who fights in person with their knife, as Kageno and Lee So-sang do; given by the
+        // admin command only for now, their skills to come one at a time as the user gives them (none yet)
+        "x_chara",new Definition("x_chara","stand.botand.x_chara",DEFAULT_HEALTH,"엑스 차라"));
     private StandStats() {}
     public static Definition get(String id){return DEFINITIONS.getOrDefault(id,DEFINITIONS.get("none"));}
     public static boolean known(String id){return id!=null&&DEFINITIONS.containsKey(id);}
     /** Every stand id with "none" first, for the commands. */
-    public static String[] ids(){return new String[]{"none","kageno","star_platinum","isosang"};}
+    public static String[] ids(){return new String[]{"none","kageno","star_platinum","isosang","x_chara"};}
 }
