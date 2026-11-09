@@ -74,7 +74,7 @@ final class SwordCage {
         k(1.02,Y_POINT2),
         k(1.2,Y_LOWER),
         k(1.36,SwordFormation.H_ON),
-        k(CAGE_LENGTH/20f,STANCE)).after(IsosangSlash::grounded);
+        k(CAGE_LENGTH/20f,STANCE)).after(IsosangLimbs.natural(IsosangLimbs.CAGE));
     /** While her hand reaches out at the foe (seconds: in the air, and standing on the pommel), its light gathering. */
     static final float REACH0=.18f,REACH1=.46f,POINT0=.58f,POINT1=1.18f;
 

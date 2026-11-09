@@ -48,7 +48,7 @@ class SwordFinaleTest {
     static boolean outOf(SwordFinale.Shot s,Vec3d q){double[] a=screen(s,q);return a[2]<.05||Math.abs(a[0])>1||Math.abs(a[1])>1;}
     @Test void itRunsFromTheFormationsStanceToTheStanceOnTheGround(){
         var first=CLIP.frame(0);var last=CLIP.frame(CLIP.length());
-        var on=Anim.joints(Anim.k(0,SwordFormation.H_ON),Anim.k(1,SwordFormation.H_ON)).frame(0);
+        var on=IsosangLimbs.bend(Anim.joints(Anim.k(0,SwordFormation.H_ON),Anim.k(1,SwordFormation.H_ON)).frame(0),0);
         for(int j=0;j<6;j++){assertTrue(turn(first,on,j)<.5,"it starts as she stood on the pommel");assertTrue(turn(last,IsosangSlash.stance(),j)<.5,"it ends in the stance");}
         assertEquals(IsosangRules.LENGTH[IsosangRules.FINALE]/20f,CLIP.length(),1e-6);
         assertSame(CLIP,IsosangSlash.hit(IsosangRules.FINALE),"its swing is drawn with its own clip");
@@ -66,8 +66,9 @@ class SwordFinaleTest {
         for(double t=0;t+1/60.0<=CLIP.length();t+=1/60.0)
             for(int j=0;j<6;j++)assertTrue(turn(CLIP.frame((float)t),CLIP.frame((float)(t+1/60.0)),j)<60,"joint "+j+" flips at "+t);
         for(float t=0;t<=CLIP.length();t+=1/120f){
-            double[] f=IsosangSlash.feet(CLIP.frame(t));
-            assertTrue(f[0]>-.02&&f[1]>-.02,"a foot in the ground at "+t+": "+f[0]+" "+f[1]);
+            // (2.104.0: over what she stands on then, IsosangLimbs.FINALE: the pommel, her steed coming up under her, the ground)
+            double[] f=IsosangSlash.feet(CLIP.frame(t));double g=IsosangLimbs.FINALE.at(t);
+            assertTrue(f[0]-g>-.02&&f[1]-g>-.02,"a foot in the ground at "+t+": "+(f[0]-g)+" "+(f[1]-g));
         }
         // a crouch as she lands, her hand up before her face as she raises her fingers
         assertTrue(CLIP.frame(IsosangRules.FINALE_LAND).up()<-.2,"crouched as she lands");

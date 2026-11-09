@@ -173,11 +173,12 @@ final class SwordFormation {
     static final R6.Pose H_CALL2=w(.03,.04,0,-6,0,d(12,94),d(-18,108),d(16,-96),d(-66,10),d(-98,-10));
     static final R6.Pose H_DIVE=w(.04,0,-2,4,0,d(-18,64),d(-56,82),d(0,-82),d(-80,6),d(-88,-6));
     /** Down on the pommel (2.82.4): bowing a little into it, her feet together on it, her arms out for balance. */
-    static final R6.Pose H_LAND_ON=w(.03,0,-2,8,0,d(-22,64),d(-8,98),d(-12,-76),d(-85,7),d(-87,-7));
-    static final R6.Pose H_LAND_ON2=w(.02,0,-1,5,0,d(-8,76),d(4,102),d(-2,-82),d(-87,5),d(-88,-5));
+    // (2.104.0: her knees take the landing, down and up again: the body dips as her feet come onto the pommel)
+    static final R6.Pose H_LAND_ON=w(.03,-.03,-2,8,0,d(-22,64),d(-8,98),d(-12,-76),d(-85,7),d(-87,-7));
+    static final R6.Pose H_LAND_ON2=w(.02,-.08,-1,7,0,d(-8,76),d(4,102),d(-2,-82),d(-87,5),d(-88,-5));
     /** Her arms spread as the swords rain, up on the pommel, her feet together. */
-    static final R6.Pose H_CONDUCT_ON=w(.02,0,0,1,0,d(2,86),d(14,100),d(6,-88),d(-88,5),d(-89,-5));
-    static final R6.Pose H_CONDUCT_ON2=w(.02,0,0,-1,0,d(6,84),d(18,98),d(10,-86),d(-88,5),d(-89,-5));
+    static final R6.Pose H_CONDUCT_ON=w(.02,-.04,0,2,0,d(2,86),d(14,100),d(6,-88),d(-88,5),d(-89,-5));
+    static final R6.Pose H_CONDUCT_ON2=w(.02,-.01,0,-1,0,d(6,84),d(18,98),d(10,-86),d(-88,5),d(-89,-5));
     /** Up there: her feet together, her sword as she holds it. */
     static final R6.Pose H_ON=w(0,0,0,3,0,d(-62,14),d(18,6),d(-74,-16),d(-90,3),d(-90,-3));
     /** Standing there, shifting a little now and then. */
@@ -185,6 +186,8 @@ final class SwordFormation {
     /** Stepping off as it ends, dropping, landing in a crouch. */
     static final R6.Pose H_STEP=w(.02,0,0,-2,0,d(-50,30),d(10,20),d(-40,-50),d(-74,8),d(-96,-6));
     static final R6.Pose H_FALL=w(.02,0,0,2,0,d(-30,44),d(-6,40),d(-20,-70),d(-84,6),d(-88,-6));
+    /** (2.104.0) Her feet coming onto the ground, her legs reaching for it, before her knees take the drop. */
+    static final R6.Pose H_MEET=w(.03,-.03,0,5,0,d(-34,50),d(-10,70),d(-28,-64),12,-166);
     static final R6.Pose H_TOUCH=w(.05,-.26,0,12,0,d(-38,54),d(-12,82),d(-36,-56),24,-156);
     static final R6.Pose H_TOUCH2=w(.05,-.22,0,10,0,d(-44,40),d(-4,60),d(-48,-46),24,-156);
     /** How often she shifts as she stands there (seconds), and when she has settled into standing there after landing. */
@@ -212,10 +215,12 @@ final class SwordFormation {
         keys.add(k(IsosangRules.H_END,STANCE));
         keys.add(k(IsosangRules.H_DROP,H_STEP));
         keys.add(k(IsosangRules.H_DROP+.25,H_FALL));
-        keys.add(k(IsosangRules.H_DOWN,H_TOUCH,Anim.Ease.OUT));
-        keys.add(k(IsosangRules.H_DOWN+.1,H_TOUCH2));
+        // (2.104.0: her feet onto the ground as she comes down to it, and her knees taking the drop over the next 0.1 s, not in a frame)
+        keys.add(k(IsosangRules.H_DOWN,H_MEET,Anim.Ease.IN));
+        keys.add(k(IsosangRules.H_DOWN+.1,H_TOUCH,Anim.Ease.OUT));
+        keys.add(k(IsosangRules.H_DOWN+.19,H_TOUCH2));
         keys.add(k(LENGTH,STANCE));
-        return Anim.joints(keys.toArray(new Anim.Key[0])).after(IsosangSlash::grounded);
+        return Anim.joints(keys.toArray(new Anim.Key[0])).after(IsosangLimbs.natural(IsosangLimbs.FORMATION));
     }
 
     // ───────────────────────────── where it lies ─────────────────────────────

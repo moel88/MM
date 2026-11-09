@@ -39,8 +39,9 @@ class SwordCageTest {
     }
     @Test void neverAFootInThePommelAndHerHandOutAtTheFoe(){
         for(float t=0;t<=CLIP.length();t+=1/120f){
-            double[] f=IsosangSlash.feet(CLIP.frame(t));
-            assertTrue(f[0]>-.02&&f[1]>-.02,"a foot in the pommel at "+t+": "+f[0]+" "+f[1]);
+            // (2.104.0: over the pommel as her leap has it, IsosangLimbs.CAGE: her feet stay on it as she springs off and lands)
+            double[] f=IsosangSlash.feet(CLIP.frame(t));double g=IsosangLimbs.CAGE.at(t);
+            assertTrue(f[0]-g>-.02&&f[1]-g>-.02,"a foot in the pommel at "+t+": "+(f[0]-g)+" "+(f[1]-g));
         }
         // her free hand out ahead of her while she reaches (in the air, and on the pommel as the swords strike)
         for(float t:new float[]{.3f,.4f,.7f,1.0f}){

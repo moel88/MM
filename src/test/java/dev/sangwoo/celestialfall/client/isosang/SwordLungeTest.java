@@ -44,8 +44,9 @@ class SwordLungeTest {
     }
     @Test void neverAFootInTheGroundAndLowWhereSheLands(){
         for(float t=0;t<=CLIP.length();t+=1/120f){
-            double[] f=IsosangSlash.feet(CLIP.frame(t));
-            assertTrue(f[0]>-.02&&f[1]>-.02,"a foot in the ground at "+t+": "+f[0]+" "+f[1]);
+            // (2.104.0: over what she stands on then, IsosangLimbs.LUNGE: the pommel, the ground in front of the foe, the far pommel)
+            double[] f=IsosangSlash.feet(CLIP.frame(t));double g=IsosangLimbs.LUNGE.at(t);
+            assertTrue(f[0]-g>-.02&&f[1]-g>-.02,"a foot in the ground at "+t+": "+(f[0]-g)+" "+(f[1]-g));
         }
         // seen in a low crouch just in front of the foe (the video: down, her sword swept through)
         for(float t=IsosangRules.LUNGE_LAND/20f;t<IsosangRules.LUNGE_HOP/20f;t+=.01f)assertTrue(CLIP.frame(t).up()<-.2,"crouched where she lands at "+t+": "+CLIP.frame(t).up());

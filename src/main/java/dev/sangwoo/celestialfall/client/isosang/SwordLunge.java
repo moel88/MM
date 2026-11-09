@@ -65,8 +65,9 @@ final class SwordLunge {
     static final R6.Pose L_THROUGH=w(.1,-.32,24,20,4,d(-14,-72),d(-12,-90),d(-28,150),30,-150);
     static final R6.Pose L_KNEEL=w(.1,-.3,22,17,4,d(-16,-76),d(-14,-92),d(-30,150),30,-150);
     /** Down on the far pommel: her feet together, bowing a little into it, her arms out for balance (as she lands from H's leap). */
-    static final R6.Pose L_ON=w(.03,0,-2,9,0,d(-20,62),d(-6,96),d(-12,-74),d(-85,7),d(-87,-7));
-    static final R6.Pose L_ON2=w(.02,0,-1,5,0,d(-8,74),d(4,100),d(-2,-80),d(-87,5),d(-88,-5));
+    // (2.104.0: her knees take the landing, the body dipping as her feet come onto it and up again)
+    static final R6.Pose L_ON=w(.03,-.04,-2,9,0,d(-20,62),d(-6,96),d(-12,-74),d(-85,7),d(-87,-7));
+    static final R6.Pose L_ON2=w(.02,-.07,-1,6,0,d(-8,74),d(4,100),d(-2,-80),d(-87,5),d(-88,-5));
     static final Anim CLIP=Anim.joints(
         k(0,STANCE),
         k(.08,L_COIL,Anim.Ease.OUT),
@@ -77,7 +78,7 @@ final class SwordLunge {
         k((LUNGE_HOP+Z_TRAVEL)/20f,L_ON,Anim.Ease.OUT),
         k(.86,L_ON2),
         k(1.05,SwordFormation.H_ON),
-        k(LUNGE_LENGTH/20f,STANCE)).after(IsosangSlash::grounded);
+        k(LUNGE_LENGTH/20f,STANCE)).after(IsosangLimbs.natural(IsosangLimbs.LUNGE));
 
     // ───────────────────────────── where things are ─────────────────────────────
 

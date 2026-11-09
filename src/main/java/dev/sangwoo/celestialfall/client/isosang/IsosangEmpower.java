@@ -99,7 +99,7 @@ final class IsosangEmpower {
         k(.95,H1_LOWER),
         k(IsosangRules.LENGTH[IsosangRules.THROWS]/20f,STANCE))
         .stops(Anim.stop(blow(IsosangRules.THROWS,0),.02,.03),Anim.stop(blow(IsosangRules.THROWS,1),.02,.03),Anim.stop(blow(IsosangRules.THROWS,2),.025,.04))
-        .after(IsosangSlash::grounded);
+        .after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
 
     // ───────────────────────────── the empowered fourth: the giant sword ─────────────────────────────
 
@@ -134,7 +134,7 @@ final class IsosangEmpower {
         k(.9,G_RISE),
         k(IsosangRules.LENGTH[IsosangRules.THRUST]/20f,STANCE))
         .stops(Anim.stop(blow(IsosangRules.THRUST,0),.06,.1))
-        .after(IsosangSlash::grounded);
+        .after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
 
     /**
      * The giant sword (2.80.1, the user's video of the empowered fourth at a tenth of the speed: a sword of blue light at

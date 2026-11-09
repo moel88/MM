@@ -161,7 +161,7 @@ final class FallingSword {
       )
       .head(0.0F, 4.0F, 0.0F);
    static final Anim CLIP = Anim.joints(
-         Anim.k(0.0, IsosangSlash.STANCE),
+         Anim.k(0.0, IsosangSlash.G_STANCE),
          Anim.k(0.16, G_RAISE, Anim.Ease.OUT),
          Anim.k(0.3, G_RAISE),
          Anim.k(0.44, G_SWEEP, Anim.Ease.OUT),
@@ -173,7 +173,7 @@ final class FallingSword {
          Anim.k(2.8, G_CALL, Anim.Ease.OUT),
          Anim.k(3.3, G_CALL2),
          Anim.k(3.9, G_WATCH),
-         Anim.k(4.85F, IsosangSlash.STANCE)
+         Anim.k(4.85F, IsosangSlash.G_STANCE)
       )
       .after(IsosangSlash::grounded);
    static final double POINT = 5.534;

@@ -135,7 +135,7 @@ final class SwordFinale {
         k(FINALE_LAND,F_LAND,Anim.Ease.OUT),
         k(3.58,F_RISE),
         k(3.85,F_LOWER),
-        k(FINALE_LENGTH/20f,STANCE)).after(IsosangSlash::grounded);
+        k(FINALE_LENGTH/20f,STANCE)).after(IsosangLimbs.natural(IsosangLimbs.FINALE));
 
     /** Whether {@code e} holds nothing now (her sword gone into the light after she swings it up there, until her camera comes back to her). */
     static boolean emptyHanded(Entity e){

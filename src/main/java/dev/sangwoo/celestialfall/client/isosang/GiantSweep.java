@@ -83,7 +83,7 @@ final class GiantSweep {
         k(.88,R_HOLD),
         k(1.02,R_RISE),
         k(LENGTH,STANCE))
-        .stops(Anim.stop(IsosangRules.SWEEP_FRONT,.03,.05)).after(IsosangSlash::grounded);
+        .stops(Anim.stop(IsosangRules.SWEEP_FRONT,.03,.05)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
 
     // ───────────────────────────── where it stands ─────────────────────────────
 

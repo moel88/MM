@@ -39,7 +39,7 @@ public final class KagenoClips {
         if(cast.skill()!=M1&&!sword)return;
         var previous=animated(cast.caster());
         if(previous!=null||cast.combo()>1||sword){
-            var f=previous!=null?action(previous,0):sword?dev.sangwoo.celestialfall.client.isosang.IsosangSlash.stance():idle();
+            var f=previous!=null?action(previous,0):sword?dev.sangwoo.celestialfall.client.isosang.IsosangSlash.start(cast.combo()):idle();
             COMBO_STARTS.put(cast.id(),new R6.Frame(f.joints(),f.grip(),f.fw(),f.up(),f.rt(),
                 net.minecraft.util.math.MathHelper.wrapDegrees(f.yaw()),f.pitch(),f.roll()));
             while(COMBO_STARTS.size()>64)COMBO_STARTS.remove(COMBO_STARTS.keySet().iterator().next());
@@ -173,13 +173,14 @@ public final class KagenoClips {
      */
     public static Vec3d[] blade(Vec3d feet,float yaw,Pose p){
         Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);var q=torso(f,p);
-        Vec3d local=right.multiply(.3125).add(0,1.375-PIVOT,0).add(world(p.rArm,f,right).multiply(.625));
+        // (2.104.0) the hand as near the shoulder as the elbow's bend brings it (straight, 0.625 blocks)
+        Vec3d local=right.multiply(.3125).add(0,1.375-PIVOT,0).add(world(p.rArm,f,right).multiply(R6.armReach(p.rElbow)));
         return new Vec3d[]{pivot(feet,f,p).add(rotate(q,local)),rotate(q,world(p.blade,f,right)).normalize()};
     }
     /** World position of the free (left) hand for pose {@code p}, as {@link #blade} finds the sword hand. */
     public static Vec3d freeHand(Vec3d feet,float yaw,Pose p){
         Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);var q=torso(f,p);
-        Vec3d local=right.multiply(-.3125).add(0,1.375-PIVOT,0).add(world(p.lArm,f,right).multiply(.625));
+        Vec3d local=right.multiply(-.3125).add(0,1.375-PIVOT,0).add(world(p.lArm,f,right).multiply(R6.armReach(p.lElbow)));
         return pivot(feet,f,p).add(rotate(q,local));
     }
     /** World position of the free (left) shoulder for pose {@code p}, as {@link #freeHand} (2.83.0: Lee So-sang's G points with that hand). */

@@ -55,7 +55,8 @@ class SwordFormationTest {
     }
     @Test void herFeetNeverGoIntoWhatSheStandsOnAndAreOnItAsSheStands(){
         for(float t=0;t<=CLIP.length();t+=t<2.5f||t>IsosangRules.H_END-.5f?1/120f:1/4f){
-            double[] f=IsosangSlash.feet(CLIP.frame(t));
+            // (2.104.0: over what she stands on then, IsosangLimbs.FORMATION: the ground, the pommel struck under her)
+            double[] f=IsosangSlash.feet(CLIP.frame(t));double g=IsosangLimbs.FORMATION.at(t);f=new double[]{f[0]-g,f[1]-g};
             assertTrue(f[0]>-.02&&f[1]>-.02,"a foot in the ground at "+t+": "+f[0]+" "+f[1]);
             // on the ground before the leap and after she lands, on what she stands on up there, down again at the end
             boolean standing=t<.16f||t>.9f&&t<IsosangRules.H_DROP||t>IsosangRules.H_DOWN;

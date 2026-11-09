@@ -31,7 +31,9 @@ class FallingSwordTest {
     static StandClient.Cast cast(){return GGesture.REFERENCE_CAST;}
 
     @Test void itRunsFromTheStanceBackToIt(){
-        var stance=IsosangSlash.stance();
+        // (2.104.0: G keeps the R6 kit's limbs and its own stance, the user: "G스킬 제외")
+        var stance=dev.sangwoo.celestialfall.client.kageno.R6.solve(IsosangSlash.G_STANCE);
+        for(int j=0;j<6;j++)assertTrue(turn(IsosangSlash.start(IsosangRules.ULTIMATE),stance,j)<.01,"G begins from its own stance");
         var first=CLIP.frame(0);var last=CLIP.frame(CLIP.length());
         for(int j=0;j<6;j++){assertTrue(turn(first,stance,j)<.5,"G starts in the stance");assertTrue(turn(last,stance,j)<.5,"G ends in the stance");}
         assertEquals(IsosangRules.LENGTH[IsosangRules.ULTIMATE]/20f,CLIP.length(),1e-6);

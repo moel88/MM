@@ -137,7 +137,8 @@ public final class IsosangSlash implements Fx.Skill {
         for(var leg:new R6.Dir[]{p.rLeg,p.lLeg}){
             double xLeft=i==0?-HIP_SIDE:HIP_SIDE;
             var hip=q.transform(new Vector3f((float)xLeft,(float)-HIP_DOWN,0)).add(0,(float)(p.up+dev.sangwoo.celestialfall.client.kageno.KagenoClips.PIVOT),0);
-            out[i++]=hip.y+LEG*q.transform(new Vector3f((float)-leg.rt(),(float)leg.up(),(float)leg.fw())).y;
+            // (2.104.0) the foot as near the hip as the knee's bend brings it (straight: a leg's length)
+            out[i]=hip.y+R6.legReach(i==0?p.rKnee:p.lKnee)*q.transform(new Vector3f((float)-leg.rt(),(float)leg.up(),(float)leg.fw())).y;i++;
         }
         return out;
     }
@@ -146,12 +147,27 @@ public final class IsosangSlash implements Fx.Skill {
         return planted(R6.world(fw,up,yaw,pitch,roll,rArm,blade,lArm,d(-90,0),d(-90,0)),rAz,lAz);
     }
     /**
-     * Their stance between hits, as the body holds the sword when it is not swinging (MotionPlayerModel's "isosang" arm,
-     * the sword as the game holds an item): the arm a little forward, the blade forward and up a third of the way.
+     * How the game holds her sword between swings (2.76.0, MotionPlayerModel's "isosang" arm, radians: the arm's pitch,
+     * yaw and roll, and the elbow's bend; the sword as the game holds an item, its display turning it DISPLAY_TILT round
+     * the wrist): the arm a little forward, the blade forward and up.
      */
-    static final R6.Pose STANCE=w(0,0,0,0,0,d(-71,2),d(31,0),d(-86,-8),d(-90,3),d(-90,-3));
-    /** The stance solved, for a swing to start from (KagenoClips.begin). */
-    public static R6.Frame stance(){return R6.solve(STANCE);}
+    public static final float HOLD_PITCH=-.33f,HOLD_YAW=-.06f,HOLD_ROLL=.04f,HOLD_ELBOW=-.12f;
+    /**
+     * Their stance between hits: just as the game holds the sword (2.104.0: the hand where the hold's elbow puts it, the
+     * blade where the hold points it, so with the limbs bent as every clip's are, IsosangLimbs, a swing begins and ends in
+     * the very hold; before, its arm was straight and its sword some 6° lower than the hold's).
+     */
+    static final R6.Pose STANCE=holding(IsosangLimbs.hold());
+    /** G's stance (it keeps the R6 kit as it was: the user, "G스킬 제외"): the stance before 2.104.0. */
+    static final R6.Pose G_STANCE=w(0,0,0,0,0,d(-71,2),d(31,0),d(-86,-8),d(-90,3),d(-90,-3));
+    private static R6.Pose holding(R6.Frame hold){
+        var held=R6.poseOf(hold);R6.Pose s=w(0,0,0,0,0,d(-71,2),d(31,0),d(-86,-8),d(-90,3),d(-90,-3));
+        s.rArm=held.rArm;s.blade=held.blade;return s;
+    }
+    /** The stance solved, for a swing to start from (KagenoClips.begin): its limbs bent as every clip's are (2.104.0, IsosangLimbs), the game's hold. */
+    public static R6.Frame stance(){return IsosangLimbs.bend(R6.solve(STANCE),0);}
+    /** What swing {@code combo} starts from when nothing came before it (KagenoClips.begin): the stance, G's own (its R6 kit's). */
+    public static R6.Frame start(int combo){return combo==IsosangRules.ULTIMATE?R6.solve(G_STANCE):stance();}
     /**
      * The game draws the sword in the hand 12° further round the wrist than the reach of R6's grip (its display turns it
      * 12° about the hand's x, models/item/isosang_sword.json): the hand turns it back by this much while a swing drives it.
@@ -205,7 +221,7 @@ public final class IsosangSlash implements Fx.Skill {
         k(.38f,H1_HOLD),
         k(step(1),H1_HOLD),
         k(.72,H1_LOWER),
-        k(.9,STANCE)).stops(Anim.stop(blow(1,0),.03,.05)).after(IsosangSlash::grounded);
+        k(.9,STANCE)).stops(Anim.stop(blow(1,0),.03,.05)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
 
     // ───────────────────────────── 2 윤월 ─────────────────────────────
     // (2.79.2 draft, the user's videos from above and from the front, "처음에 뒤로 베고 앞으로 가서 베는거야 그래서 원처럼
@@ -251,7 +267,7 @@ public final class IsosangSlash implements Fx.Skill {
         k(blow(2,1),w(.36,-.38,16,10,3,d(-26,-84),d(-16,-60),d(-36,50),24,-150),Anim.Ease.OUT),
         k(.38,H2_RISE2),
         k(step(2),h2Back(4)),
-        k(.9,STANCE)).stops(Anim.stop(blow(2,0),.025,.04),Anim.stop(blow(2,1),.03,.05)).after(IsosangSlash::grounded);
+        k(.9,STANCE)).stops(Anim.stop(blow(2,0),.025,.04),Anim.stop(blow(2,1),.03,.05)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
 
     // ───────────────────────────── 3 관월 ─────────────────────────────
     // (2.79.2 draft, the user's videos from above and the front at a tenth of the speed, and the user's own words: "첫번째
@@ -308,7 +324,7 @@ public final class IsosangSlash implements Fx.Skill {
         k(.905,w(.4,-.28,-20,10,4,d(4,110),d(6,86),d(-46,-70),24,-160),Anim.Ease.OUT),
         k(1.02,w(.38,-.24,-18,8,3,d(6,104),d(10,88),d(-50,-64),22,-162)),
         // (2.79.2: back in the stance as the finisher may begin, 1.25 s, the user's video of the whole combo)
-        k(step(3),STANCE)).stops(Anim.stop(blow(3,0),.025,.03),Anim.stop(blow(3,1),.025,.03),Anim.stop(blow(3,2),.025,.03),Anim.stop(blow(3,3),.035,.05)).after(IsosangSlash::grounded);
+        k(step(3),STANCE)).stops(Anim.stop(blow(3,0),.025,.03),Anim.stop(blow(3,1),.025,.03),Anim.stop(blow(3,2),.025,.03),Anim.stop(blow(3,3),.035,.05)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
 
     // ───────────────────────────── 4 낙월 ─────────────────────────────
     /** The twirl: the arm up over the head, the blade level, turning round it (body-space), the head on the front. */
@@ -362,7 +378,7 @@ public final class IsosangSlash implements Fx.Skill {
         // up again unhurried, the sword raised and lowered (the combo is over)
         k(1.15,H4_RISE),
         k(1.35,H4_LOWER),
-        k(1.6,STANCE)).stops(Anim.stop(blow(4,0),.07,.12)).after(IsosangSlash::grounded);
+        k(1.6,STANCE)).stops(Anim.stop(blow(4,0),.07,.12)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
 
     @Override public Anim clip(int combo){return hit(combo);}
     /** Hit {@code combo}'s motion (2.80.0: the empowered first and fourth, IsosangEmpower). */

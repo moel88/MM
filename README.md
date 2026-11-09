@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.103.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.104.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.104.0 — 이소상 모션: 팔꿈치와 무릎이 굽는 자연스러운 몸
+
+- **팔다리가 굽습니다:** G를 뺀 이소상의 모든 스킬(평타 1~4타, E 강화 콤보, R, H, T, Y, H 재입력)에서 팔꿈치와 무릎이 사람처럼 굽습니다. 칼을 든 팔은 손의 자리와 칼의 방향을 그대로 둔 채 팔꿈치를 굽히고, 웅크릴 때 다리를 A자로 벌리던 것이 무릎을 굽히고 발을 몸 밑으로 모으는 자세가 되었습니다.
+- **도약과 착지:** 뛰어오르면 다리가 접히고, 검 위나 땅에 내려앉을 때 무릎으로 받습니다(R의 점프, H의 도약, Y의 도약, T의 착지, H 재입력의 타는 검과 내려오기).
+- **스킬의 시작과 끝:** 칼을 쥔 자세가 게임의 평소 쥔 자세와 똑같아져, 스킬이 시작하고 끝날 때 칼이 튀지 않습니다.
+- **그대로:** G, 검격·이펙트·소리·카메라, 피해와 판정, 타이밍.
+- **접속자만 바꾸면 됩니다:** 서버는 2.103.0(또는 2.102.1·2.102.0) 그대로 두어도 됩니다.
+
+[RELEASE_2.104.0_KO.md](RELEASE_2.104.0_KO.md)를 확인하세요. 2.103.0은 [RELEASE_2.103.0_KO.md](RELEASE_2.103.0_KO.md)입니다.
 
 # 보탠드 2.103.0 — 이소상 평타와 강화 평타: 달빛·별빛으로 꾸밈
 

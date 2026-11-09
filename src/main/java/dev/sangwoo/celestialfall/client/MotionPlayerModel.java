@@ -74,7 +74,9 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             // Lee So-sang's sword (2.76.0): held a little forward at the side, the arm keeping a quarter of its walk's
             // swing (their skills to come will bring their own motion; punching and guarding keep the rig's arms)
             arms="isosang";
-            rightArm.pitch=-.33f+rightArm.pitch*.25f;rightArm.yaw=-.06f;rightArm.roll=.04f;rightArm.getChild("elbow").pitch=-.12f;
+            // (2.104.0: the very hold her swings begin and end in, IsosangSlash.STANCE)
+            rightArm.pitch=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_PITCH+rightArm.pitch*.25f;rightArm.yaw=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_YAW;
+            rightArm.roll=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_ROLL;rightArm.getChild("elbow").pitch=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_ELBOW;
         }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
         float delta=animationProgress-player.age;

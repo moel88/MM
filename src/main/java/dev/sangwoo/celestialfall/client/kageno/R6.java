@@ -50,7 +50,15 @@ public final class R6 {
         public float headYaw,headPitch,headRoll;
         public Dir rArm=dir(-86,8),lArm=dir(-86,-8),rLeg=dir(-90,3),lLeg=dir(-90,-3);
         public Dir blade=dir(-40,-35);
-        public Pose copy(){Pose p=new Pose();p.fw=fw;p.up=up;p.rt=rt;p.yaw=yaw;p.pitch=pitch;p.roll=roll;p.headYaw=headYaw;p.headPitch=headPitch;p.headRoll=headRoll;p.rArm=rArm;p.lArm=lArm;p.rLeg=rLeg;p.lLeg=lLeg;p.blade=blade;return p;}
+        /**
+         * (2.104.0) How far each elbow and knee is bent (degrees, as the model's hinge takes them; 0 straight), as a solved
+         * frame read back by {@link #poseOf} has them: the arms and legs above then run from the shoulder to the hand and
+         * from the hip to the foot, the hand and the foot that much nearer ({@link #armReach}, {@link #legReach}). Authored
+         * keys leave them straight (the R6 kit's one-piece limbs); Lee So-sang's clips bend them as they are sampled.
+         */
+        public double rElbow,lElbow,rKnee,lKnee;
+        public Pose copy(){Pose p=new Pose();p.fw=fw;p.up=up;p.rt=rt;p.yaw=yaw;p.pitch=pitch;p.roll=roll;p.headYaw=headYaw;p.headPitch=headPitch;p.headRoll=headRoll;p.rArm=rArm;p.lArm=lArm;p.rLeg=rLeg;p.lLeg=lLeg;p.blade=blade;
+            p.rElbow=rElbow;p.lElbow=lElbow;p.rKnee=rKnee;p.lKnee=lKnee;return p;}
         /** Root translation relative to the cast facing: forward, up, right (blocks). */
         public Pose at(double fw,double up,double rt){Pose p=copy();p.fw=fw;p.up=up;p.rt=rt;return p;}
         /** Torso orientation: yaw turns to the character's left, pitch leans forward, roll tilts to the right. */
@@ -70,6 +78,7 @@ public final class R6 {
             p.yaw=a.yaw+(b.yaw-a.yaw)*t;p.pitch=a.pitch+(b.pitch-a.pitch)*t;p.roll=a.roll+(b.roll-a.roll)*t;
             p.headYaw=a.headYaw+(b.headYaw-a.headYaw)*t;p.headPitch=a.headPitch+(b.headPitch-a.headPitch)*t;p.headRoll=a.headRoll+(b.headRoll-a.headRoll)*t;
             p.rArm=Dir.lerp(a.rArm,b.rArm,t);p.lArm=Dir.lerp(a.lArm,b.lArm,t);p.rLeg=Dir.lerp(a.rLeg,b.rLeg,t);p.lLeg=Dir.lerp(a.lLeg,b.lLeg,t);p.blade=Dir.lerp(a.blade,b.blade,t);
+            p.rElbow=a.rElbow+(b.rElbow-a.rElbow)*t;p.lElbow=a.lElbow+(b.lElbow-a.lElbow)*t;p.rKnee=a.rKnee+(b.rKnee-a.rKnee)*t;p.lKnee=a.lKnee+(b.lKnee-a.lKnee)*t;
             return p;
         }
     }
@@ -99,6 +108,17 @@ public final class R6 {
     /** Solved pose ready for the Minecraft rig. */
     public record Frame(MotionPose joints,float grip,double fw,double up,double rt,float yaw,float pitch,float roll){}
 
+    /**
+     * The player model's segmented limbs (blocks, MotionRig): an arm from its shoulder pivot to its elbow hinge and on to
+     * the hand; a leg from its hip to its knee and on to the foot.
+     */
+    public static final double ARM_UPPER=4/16.0,ARM_LOWER=6/16.0,LEG_UPPER=6/16.0,LEG_LOWER=6/16.0;
+    /** How far the hand is from the shoulder pivot with the elbow bent {@code deg} degrees (straight: 0.625 blocks). */
+    public static double armReach(double deg){return reach(ARM_UPPER,ARM_LOWER,deg);}
+    /** How far the foot is from the hip with the knee bent {@code deg} degrees (straight: 0.75 blocks). */
+    public static double legReach(double deg){return reach(LEG_UPPER,LEG_LOWER,deg);}
+    static double reach(double a,double b,double deg){double c=Math.cos(Math.toRadians(deg));return Math.sqrt(Math.max(0,a*a+b*b+2*a*b*c));}
+
     /** Blend full rotations, avoiding twist flips when a limb crosses its forward axis. */
     static Frame blend(Frame a,Frame b,float t){
         MotionPose m=new MotionPose();float k=(float)Math.PI/180;
@@ -108,6 +128,8 @@ public final class R6 {
             q.slerp(new Quaternionf().rotationZYX(y[2]*k,y[1]*k,y[0]*k),t).normalize();
             m.joint[i]=euler(q);
         }
+        // (2.104.0) the elbows and knees across too (Lee So-sang's clips bend them)
+        for(int i=0;i<2;i++){m.elbow[i]=a.joints.elbow[i]+(b.joints.elbow[i]-a.joints.elbow[i])*t;m.knee[i]=a.joints.knee[i]+(b.joints.knee[i]-a.joints.knee[i])*t;}
         // Preserve deliberate full root turns, including M1's 360 degree spin.
         return new Frame(m,a.grip+(b.grip-a.grip)*t,
             a.fw+(b.fw-a.fw)*t,a.up+(b.up-a.up)*t,a.rt+(b.rt-a.rt)*t,
@@ -174,6 +196,12 @@ public final class R6 {
         return new Frame(m,grip,p.fw,p.up,p.rt,p.yaw,p.pitch,p.roll);
     }
 
+    /** (2.104.0) The turn of a limb along {@code d} with its front (the model's -z) toward {@code front}, both in body space. */
+    public static Quaternionf limbTurn(Dir d,Dir front){return limb(d,front);}
+    /** (2.104.0) The model's angles (pitch, yaw, roll in degrees) for a limb's turn. */
+    public static float[] angles(Quaternionf q){return euler(q);}
+    /** (2.104.0) The front of a limb swung untwisted from hanging down to {@code d} ({@link #swingFront}). */
+    public static Dir swing(Dir d){return swingFront(d.norm());}
     /** {@code f} with its legs along {@code rLeg} and {@code lLeg} (body space), swung without twisting as {@link #solve} swings them. */
     public static Frame legs(Frame f,Dir rLeg,Dir lLeg){
         MotionPose m=f.joints().copy();
@@ -184,7 +212,8 @@ public final class R6 {
     /** Where the blade points in body space for a solved frame (used by tests and effects). */
     public static Dir bladeOf(Frame f){
         float[] e=f.joints().joint[MotionPose.RIGHT_ARM];float k=(float)Math.PI/180;
-        var q=new Quaternionf().rotationZYX(e[2]*k,e[1]*k,e[0]*k).rotateX(-90*k).rotateY(180*k).rotateX(f.grip()*k).rotateY(-90*k);
+        // (2.104.0) the sword rides the forearm: the elbow's bend before the hand's (MotionPlayerModel.setArmAngle)
+        var q=new Quaternionf().rotationZYX(e[2]*k,e[1]*k,e[0]*k).rotateX(f.joints().elbow[0]*k).rotateX(-90*k).rotateY(180*k).rotateX(f.grip()*k).rotateY(-90*k);
         var v=q.transform(new Vector3f(0,1,0));
         return new Dir(-v.x,-v.y,-v.z);
     }
@@ -197,8 +226,18 @@ public final class R6 {
     public static Pose poseOf(Frame f){
         float[] h=f.joints.joint[MotionPose.HEAD];
         Pose p=pose().at(f.fw,f.up,f.rt).body(f.yaw,f.pitch,f.roll).head(h[1],h[0],h[2]);
-        p.rArm=direction(f.joints.joint[MotionPose.RIGHT_ARM]);p.lArm=direction(f.joints.joint[MotionPose.LEFT_ARM]);
-        p.rLeg=direction(f.joints.joint[MotionPose.RIGHT_LEG]);p.lLeg=direction(f.joints.joint[MotionPose.LEFT_LEG]);
+        // (2.104.0) each limb from its root to its end (shoulder to hand, hip to foot) with its bend, as the model draws it
+        float[] el=f.joints.elbow,kn=f.joints.knee;
+        p.rArm=reachOf(f.joints.joint[MotionPose.RIGHT_ARM],ARM_UPPER,ARM_LOWER,el[0]);p.lArm=reachOf(f.joints.joint[MotionPose.LEFT_ARM],ARM_UPPER,ARM_LOWER,el[1]);
+        p.rLeg=reachOf(f.joints.joint[MotionPose.RIGHT_LEG],LEG_UPPER,LEG_LOWER,kn[0]);p.lLeg=reachOf(f.joints.joint[MotionPose.LEFT_LEG],LEG_UPPER,LEG_LOWER,kn[1]);
+        p.rElbow=el[0];p.lElbow=el[1];p.rKnee=kn[0];p.lKnee=kn[1];
         p.blade=bladeOf(f);return p;
+    }
+    /** The way from a two-piece limb's root to its end (body space): its upper piece turned by {@code e}, the lower bent {@code bend} degrees at the hinge. */
+    static Dir reachOf(float[] e,double upper,double lower,float bend){
+        if(bend==0)return direction(e);
+        float k=(float)Math.PI/180;var q=new Quaternionf().rotationZYX(e[2]*k,e[1]*k,e[0]*k);
+        var v=q.transform(new Vector3f(0,(float)upper,0)).add(new Quaternionf(q).rotateX(bend*k).transform(new Vector3f(0,(float)lower,0)));
+        return new Dir(-v.x,-v.y,-v.z).norm();
     }
 }
