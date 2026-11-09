@@ -119,6 +119,11 @@
 - 1인칭은 `hud=1;dist=0.5`입니다. HUD를 숨긴 채(`hud`가 없거나 0) 찍으면 마인크래프트가 1인칭 손을 그리지 않아(F1과 같음) 칼도 안 보입니다(2.111.0 첫 촬영).
 - 오프라인 미리보기(`python3 tools/stand/preview_geo.py 모델 텍스처 출력.png "0,0,9.05,95;180,0,9.05,95" 700x700`: 칼 전체)는 모양을 고치는 동안만 씁니다.
 - 사용자 사진과 견줄 때는 사진의 칼을 칼등이 수평이 되게 돌려 칼등에서 날까지의 깊이를 칼등을 따라 잽니다. 칼끝 쪽은 뒤의 보라색 위라 어두운 기준(RGB 합 140)으로는 얕게 나와 300으로 잽니다(번짐을 감안해 두 값의 가운데).
+- G(검무, 2.112.0): `then=KEY_G@20`으로 G를 누릅니다. 상대는 가만히 선 더미(`dummy=1;dfw=5`: 컷씬 전체)와 가드를 올린 더미(`dguard=1`: '!!!' 동안 막힘)입니다. 이상한 공간은 게임 카메라에서만 보이므로 `orbit=`·`far=` 없이 `hud=1;dist=4.5;pitch=12`로 찍습니다(그러면 '!!!'와 현실의 타격은 시전자 뒤에서 보입니다). 막히는 장면은 더미가 시전자 몸에 가리지 않게 옆에서 `orbit=6.5/2.0/0/70/2.5/0/1.2`로 찍고, 묶음 맨 앞에 두면 이펙트 층의 셰이더를 데우는 몫도 합니다. 전체는 `len=270`(G 뒤 12.5초), 960×540 배율 20.
+  - 기록: `stand.csv`의 `xc_age`(G의 시계, 틱)·`xc_space`(이상한 공간이 왔는지)·`xc_ended`·`xc_how`(서버의 사건: 2 막힘, 3 끊김, 4 끝)·`xc_camera`(내 카메라가 공간에 있는지), 로그의 'x chara G (space,ended,how,camera) …'(바뀔 때마다)와 'hits N'·'dummy health'.
+  - 소리: 같은 목록을 `SHOTS_RECORD=1` 320x180 배율 1로 한 번 더 돌려 `python3 -I tools/xchara/shots/mux_g.py 소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4`로 붙입니다(이상한 공간의 소리(`xchara_g`)를 그 소리가 시작한 틱에 맞추고, 막힌 항목은 알림음에 맞춥니다).
+  - 몸이 거꾸로인지는 둘째 장면(`save=70-72`)의 화면 양 끝을 잘라 키워 봅니다. 훈련 더미는 GeckoLib 렌더러라 `KagenoStaggerMixin`이 닿지 않습니다: `TrainingDummyRenderer.applyRotations`에서 따로 돌립니다(2.112.0 첫 촬영에서 더미만 바로 서 있었다).
+  - 멀티플레이 확인: `MP_ONLY=xchara`(`MpClient.XCHARA_SCRIPT`): 관찰자 5블록 앞, 시전자 쿨타임 켬. 관찰자가 미리 가드를 올린 채 G(바로 막힘, 3분 쿨타임), 곧바로 G(거절), 쿨타임을 끄고(`NOCDON`) G를 누른 뒤 관찰자가 가드를 올림('!!!' 동안 막힘), G 뒤 `HITME`(시전자가 맞아 끊김), 마지막으로 끝까지. 서버 로그에 'caster's G began/over …(dealt, ready again)'·'its strange space'·관찰자 체력·끝난 뒤 5틱마다 관찰자가 날아간 거리, 두 접속자 로그에 '… G (began N): age, space/ended/how'·'its \"!!!\" at N'·'my camera in its strange space'·'my camera at N: …'·'held by a sword dance'가 남습니다.
 
 ### 카게노
 - `then=E@5/T@80/RUSH@81/…`처럼 스킬을 틱마다 씁니다. `DASH@n`은 대시 키입니다.

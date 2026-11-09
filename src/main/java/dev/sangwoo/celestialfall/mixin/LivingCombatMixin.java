@@ -40,6 +40,8 @@ public abstract class LivingCombatMixin {
         if(dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
         // Lee So-sang's G (2.83.0): nothing harms its user while its cutscene holds them
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
+        // X Chara's G (2.112.0): nothing but its own blows harms its two from its strange space on
+        if(dev.sangwoo.celestialfall.xchara.XCharaUltimate.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
         // Lee So-sang's H (2.94.0): the first blow to reach her in its formation does not, and she is moved onto another of
         // its swords (only one that would land: none the moment after a blow is kept from her anyway, nor fire with fire
         // resistance, as the rest of this method has it)
@@ -70,5 +72,7 @@ public abstract class LivingCombatMixin {
             dev.sangwoo.celestialfall.combat.HitCounter.landed(self,source);
         // a blow landing on one glowing before a skill with a cutscene cuts the skill short (2.109.0, CutsceneGlow)
         if(!self.getWorld().isClient)dev.sangwoo.celestialfall.combat.CutsceneGlow.struck(self,source);
+        // and on X Chara's G's user before its strange space, the G (2.112.0)
+        if(!self.getWorld().isClient)dev.sangwoo.celestialfall.xchara.XCharaUltimate.struck(self,source);
     }
 }

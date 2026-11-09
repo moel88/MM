@@ -141,7 +141,8 @@ public final class StandPresence {
     private static void render(WorldRenderContext c){
         StarPlatinumRenderer.frame();DRAWN.clear();
         var mc=MinecraftClient.getInstance();if(mc.world==null||c.consumers()==null)return;
-        if(ALL.isEmpty()){glow(mc,c,new ArrayList<>(),0);return;}
+        // (2.112.0) none in X Chara's G's strange space: only its two are there
+        if(ALL.isEmpty()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()){glow(mc,c,new ArrayList<>(),0);return;}
         float delta=c.tickDelta();var cam=c.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();frames++;
         for(var s:ALL.values()){
             s.drawn=false;
@@ -228,7 +229,7 @@ public final class StandPresence {
     static boolean shows(WorldRenderContext c,PlayerEntity p){
         boolean eyes=p==c.camera().getFocusedEntity()&&!c.camera().isThirdPerson();
         // (2.66.1: nor round its user while a beatdown's camera leaves them undrawn)
-        return !eyes&&!StandBeatdown.hidden(p)&&(c.frustum()==null||c.frustum().isVisible(p.getBoundingBox().expand(1)));
+        return !eyes&&!StandBeatdown.hidden(p)&&!dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()&&(c.frustum()==null||c.frustum().isVisible(p.getBoundingBox().expand(1)));
     }
     /** The aura's bearers, and every body glowing sky blue as it uses a skill with a cutscene (CutsceneFlash), drawn round them. */
     private static void glow(MinecraftClient mc,WorldRenderContext c,List<StandAuraLayer.Bearer> bearers,float flare){

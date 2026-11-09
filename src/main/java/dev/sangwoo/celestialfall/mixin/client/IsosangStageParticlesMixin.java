@@ -16,6 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class IsosangStageParticlesMixin {
     @Inject(method="renderParticles",at=@At("HEAD"),cancellable=true,require=0)
     private void botand$stageParticles(MatrixStack matrices,VertexConsumerProvider.Immediate vertices,LightmapTextureManager light,Camera camera,float tickDelta,CallbackInfo ci){
-        if(GStage.hidden())ci.cancel();
+        if(GStage.hidden()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden())ci.cancel();
     }
 }

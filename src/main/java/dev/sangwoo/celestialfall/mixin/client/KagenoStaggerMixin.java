@@ -30,5 +30,7 @@ public abstract class KagenoStaggerMixin {
         float lean=StandClient.stagger(entity,delta);if(lean>0)matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(lean));
         // Star Platinum's beatdown (2.64.0): the one struck turned as its cutscene shows them
         dev.sangwoo.celestialfall.client.stand.StandBeatdown.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
+        // X Chara's G (2.112.0): its two face each other in its strange space, upside down
+        dev.sangwoo.celestialfall.client.xchara.XCharaClient.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
     }
 }

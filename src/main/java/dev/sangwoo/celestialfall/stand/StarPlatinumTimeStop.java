@@ -258,7 +258,7 @@ public final class StarPlatinumTimeStop {
     private static boolean passedBy(LivingEntity e){
         // (2.110.0) one in their vanilla mode (VanillaMode) is not stopped
         if(e instanceof net.minecraft.entity.player.PlayerEntity q&&dev.sangwoo.celestialfall.map.VanillaMode.on(q))return true;
-        if(StarPlatinumBeatdown.involved(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.finaling(e)||BY_HELD.containsKey(e.getUuid())||BY_RESISTING.containsKey(e.getUuid()))return true;
+        if(StarPlatinumBeatdown.involved(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.finaling(e)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.held(e)||BY_HELD.containsKey(e.getUuid())||BY_RESISTING.containsKey(e.getUuid()))return true;
         if(e instanceof ServerPlayerEntity p){
             var own=BY_USER.get(p.getUuid());if(own!=null&&own.stopped)return true;
             if(KagenoManager.ignoresTimeStop(p,SOURCE))return true;

@@ -113,7 +113,7 @@ public final class StandArrow {
                 // cut short: dead, gone elsewhere, off the map, the arrow no longer in the hand it was raised in, or
                 // caught in another's cutscene or time stop (which hold them their own way)
                 boolean holding=p.getInventory().selectedSlot==s.slot&&p.getMainHandStack().isOf(MeteorRegistry.STAND_ARROW);
-                boolean caught=StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.holds(p)||dev.sangwoo.celestialfall.AtomicManager.immobilized(p);
+                boolean caught=StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.holds(p)||dev.sangwoo.celestialfall.AtomicManager.immobilized(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.held(p);
                 if(!p.isAlive()||p.isSpectator()||!MapGate.enabled(p)||!holding||caught||age<0||age>REVEAL+40){
                     it.remove();send(p,s,CUT);
                     CelestialFall.LOGGER.info("Stand arrow: {} was cut short at {} ticks (the arrow kept)",p.getEntityName(),age);

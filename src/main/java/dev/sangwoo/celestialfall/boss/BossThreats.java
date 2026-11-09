@@ -74,6 +74,13 @@ public final class BossThreats {
             isosang(p,now,out);
             glow(p,now,out);
         }
+        // (2.112.0) X Chara's G marking it: the "!!!" until its strange space; nothing to get out of (it is marked
+        // wherever it goes), only a guard up toward its user blocks it
+        var mark=dev.sangwoo.celestialfall.xchara.XCharaUltimate.marking(boss);
+        if(mark!=null){
+            var by=(ServerPlayerEntity)mark[0];long start=(Long)mark[1],at=start+dev.sangwoo.celestialfall.xchara.XCharaRules.WARN-1;
+            out.add(new Threat(by,"xchara_g",start,at,at,Zone.ring(boss.getPos(),256,-512,512),true,false,true,dev.sangwoo.celestialfall.xchara.XCharaRules.DAMAGE,false,false));
+        }
         for(var c:AtomicManager.columns(world)){
             double dx=boss.getX()-c[0],dz=boss.getZ()-c[2];
             if(dx*dx+dz*dz<(c[4]+6)*(c[4]+6))out.add(new Threat(null,"atomic",now-BossRules.REACTION,now,now+40,Zone.ring(new Vec3d(c[0],c[1],c[2]),c[4]+1.5,-2,c[4]*2.5),false,false,false,40,false,true));

@@ -35,6 +35,13 @@ class CooldownHudTest {
             for(String other:new String[]{"kageno","star_platinum","none"})assertFalse(CooldownHud.shows(slot,other),"slot "+slot+" for "+other);
         }
     }
+    @Test void xCharasSwordDanceIsShownOnlyToXChara(){
+        // (2.112.0) their G, '검무'
+        assertTrue(CooldownHud.shows(CooldownHud.XCHARA_G,"x_chara"));
+        for(String other:new String[]{"kageno","star_platinum","isosang","none"})assertFalse(CooldownHud.shows(CooldownHud.XCHARA_G,other),other);
+        // and none of the others' to X Chara but the dash
+        for(int slot=0;slot<CooldownHud.XCHARA_G;slot++)if(slot!=CooldownHud.DASH)assertFalse(CooldownHud.shows(slot,"x_chara"),"slot "+slot);
+    }
     @Test void theDashIsEveryones(){
         for(String stand:StandStats.ids())assertTrue(CooldownHud.shows(CooldownHud.DASH,stand),stand);
     }

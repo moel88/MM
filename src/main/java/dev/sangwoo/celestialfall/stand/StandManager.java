@@ -17,7 +17,7 @@ public final class StandManager {
     public static boolean starPlatinum(PlayerEntity p){return has(p,"star_platinum");}
     /** Lee So-sang's player on the map (2.76.0): a character who fights in person; no skills yet. */
     public static boolean isosang(PlayerEntity p){return has(p,"isosang");}
-    /** X Chara's player on the map (2.111.0): a character who fights in person with their knife; no skills yet. */
+    /** X Chara's player on the map (2.111.0): a character who fights in person with their knife; their G, the sword dance (2.112.0, XCharaUltimate). */
     public static boolean xChara(PlayerEntity p){return has(p,"x_chara");}
     private static boolean has(PlayerEntity p,String stand){
         // (2.110.0) the map as it is for them: one in their vanilla mode has no stand nor character (VanillaMode)
@@ -57,6 +57,8 @@ public final class StandManager {
             if(!"star_platinum".equals(ProgressManager.profile(p).stand())){StarPlatinumAttack.forget(p);StarPlatinumRush.forget(p);StarPlatinumInhale.forget(p);}
             // (2.77.0) Lee So-sang's sword's rest after a combo, as Star Platinum's punches'
             if(!"isosang".equals(ProgressManager.profile(p).stand()))dev.sangwoo.celestialfall.isosang.IsosangAttack.forget(p);
+            // (2.112.0) X Chara's G's cooldown
+            if(!"x_chara".equals(ProgressManager.profile(p).stand()))dev.sangwoo.celestialfall.xchara.XCharaUltimate.forget(p);
             // 2.74.3: and the long ones not theirs are gone at once (they begin in full when the stand is theirs again)
             dev.sangwoo.celestialfall.LongCooldowns.forgetOthers(p);
         }

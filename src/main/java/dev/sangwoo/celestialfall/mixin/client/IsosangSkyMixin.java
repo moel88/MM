@@ -19,10 +19,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class IsosangSkyMixin {
     @Inject(method="renderSky(Lnet/minecraft/client/util/math/MatrixStack;Lorg/joml/Matrix4f;FLnet/minecraft/client/render/Camera;ZLjava/lang/Runnable;)V",at=@At("HEAD"),cancellable=true)
     private void botand$ultimateSky(MatrixStack matrices,Matrix4f projection,float tickDelta,Camera camera,boolean thickFog,Runnable fog,CallbackInfo ci){
-        if(dev.sangwoo.celestialfall.client.isosang.GStage.sky(matrices,tickDelta)||IsosangCinema.dark(tickDelta)>.6f)ci.cancel();
+        if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()||dev.sangwoo.celestialfall.client.isosang.GStage.sky(matrices,tickDelta)||IsosangCinema.dark(tickDelta)>.6f)ci.cancel();
     }
     @Inject(method="renderClouds(Lnet/minecraft/client/util/math/MatrixStack;Lorg/joml/Matrix4f;FDDD)V",at=@At("HEAD"),cancellable=true)
     private void botand$ultimateClouds(MatrixStack matrices,Matrix4f projection,float tickDelta,double x,double y,double z,CallbackInfo ci){
-        if(dev.sangwoo.celestialfall.client.isosang.GStage.hidden()||IsosangCinema.dark(tickDelta)>.6f)ci.cancel();
+        if(dev.sangwoo.celestialfall.client.isosang.GStage.hidden()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()||IsosangCinema.dark(tickDelta)>.6f)ci.cancel();
     }
 }

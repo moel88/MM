@@ -22,6 +22,8 @@ public abstract class KeyboardMixin {
         if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.key(window,key,action,modifiers)){ci.cancel();return;}
         // (2.80.0) Lee So-sang's E (their inventory on I)
         if(dev.sangwoo.celestialfall.client.isosang.IsosangClient.key(window,key,action,modifiers)){ci.cancel();return;}
+        // (2.112.0) X Chara's G
+        if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.key(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.StandClient.key(window,key,action,modifiers)){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.stand.StandArrowClient.key(window,key,action,modifiers)){ci.cancel();return;}
         CombatClient.dashKey(window,key,scanCode,action);

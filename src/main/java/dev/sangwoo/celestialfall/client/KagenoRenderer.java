@@ -45,6 +45,14 @@ public final class KagenoRenderer {
             if(!dev.sangwoo.celestialfall.client.isosang.IsosangClient.shown(s,pos,camera,96))continue;
             casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
         }
+        // X Chara's G (2.112.0): drawn as the casts are, from its own list (its strange space seen from up to some 30 blocks off)
+        for(var s:dev.sangwoo.celestialfall.client.xchara.XCharaClient.CASTS.values()){
+            var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
+            float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
+            var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(delta);
+            if(pos.squaredDistanceTo(camera)>96*96)continue;
+            casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
+        }
         var primary=StandClient.visualCast();
         if(primary!=null&&AtomicClient.CASTS.isEmpty()&&HeavenClient.CASTS.isEmpty()){
             Vec3d focus=primary.origin().add(0,1.1,0);

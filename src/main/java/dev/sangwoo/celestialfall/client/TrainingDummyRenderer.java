@@ -31,6 +31,8 @@ public final class TrainingDummyRenderer extends software.bernie.geckolib.render
     @Override protected void applyRotations(TrainingDummyEntity d,MatrixStack matrices,float age,float yaw,float delta){
         super.applyRotations(d,matrices,age,yaw,delta);
         dev.sangwoo.celestialfall.client.stand.StandBeatdown.turn(d,delta,yaw,matrices);
+        // (2.112.0) X Chara's G's strange space: facing its user, upside down
+        dev.sangwoo.celestialfall.client.xchara.XCharaClient.turn(d,delta,yaw,matrices);
     }
     @Override public boolean hasLabel(TrainingDummyEntity d){return dispatcher.getSquaredDistanceToCamera(d)<32*32;}
     @Override protected void renderLabelIfPresent(TrainingDummyEntity d,Text text,MatrixStack matrices,VertexConsumerProvider vertices,int light) {

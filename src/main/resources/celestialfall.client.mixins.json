@@ -23,6 +23,7 @@
     "TitleMusicMixin",
     "StandHeldItemFeatureMixin",
     "BeatdownRenderMixin",
+    "XCharaSpaceMixin",
     "CutsceneFlashMixin",
     "KagenoCullingMixin",
     "StandFovMixin",

@@ -79,7 +79,7 @@ public final class MpServer implements ModInitializer {
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
         // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had; 2.74.3 the same for MP_ONLY=fresh)
         if(caster(p)){if(!COOLDOWNS_ONLY&&!FRESH_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
-            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY&&!ISOSANG_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         // (2.107.0, MP_ONLY=death) one who joins dead waits where it fell: its five seconds count from now
         if(DEATH_ONLY&&!p.isAlive()){deadAt.put(p.getUuid(),p.getServer().getOverworld().getTime());note(p.getServer(),String.format(java.util.Locale.ROOT,"%s joined dead at tick %d at %.2f %.2f %.2f",p.getGameProfile().getName(),p.getServer().getOverworld().getTime(),p.getX(),p.getY(),p.getZ()));}
         else home(p);
@@ -134,11 +134,12 @@ public final class MpServer implements ModInitializer {
         if(DEATH_ONLY)deaths(server);
         if(GLOW_ONLY)glows(server);
         if(VANILLA_ONLY)vanillas(server);
+        if(XCHARA_ONLY)xchara(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -525,6 +526,8 @@ public final class MpServer implements ModInitializer {
     static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"));
     /** (2.107.0) The server tick each player was found dead (or joined dead), and the hotbar slot each was last seen with. */
     private final Map<UUID,Long> deadAt=new HashMap<>();private final Map<UUID,Integer> slots=new HashMap<>();
     /**
@@ -544,6 +547,41 @@ public final class MpServer implements ModInitializer {
             else if(!p.isAlive()&&(now-since)%20==0)note(server,String.format(java.util.Locale.ROOT,"%s dead %d ticks: at %.2f %.2f %.2f, body in the world %s (removed %s), death time %d",who,now-since,p.getX(),p.getY(),p.getZ(),p.getServerWorld().getPlayers().contains(p),p.isRemoved(),p.deathTime));
             else if(p.isAlive()&&since!=null){deadAt.remove(p.getUuid());note(server,String.format(java.util.Locale.ROOT,"%s alive again at tick %d, %d ticks after it died (or joined dead), at %.2f %.2f %.2f",who,now,now-since,p.getX(),p.getY(),p.getZ()));}
         }
+    }
+    /**
+     * X Chara's G (2.112.0) as the server keeps it: each one's start (the one it marked, how far), its strange space,
+     * its end (with its ready tick and what it dealt), the watcher's health at each change (and its guard), whether the
+     * two are held (how far each moves a tick while it holds them) and where the watcher goes once it is over.
+     */
+    private Object[] danceSeen;private float danceHealth=-1;private net.minecraft.util.math.Vec3d danceCaster,danceWatcher;private long danceOver=-1,danceReady=Long.MIN_VALUE;private double danceMoved,danceWatcherMoved;
+    private void xchara(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        var d=dev.sangwoo.celestialfall.xchara.XCharaUltimate.describe(caster);
+        long ready=dev.sangwoo.celestialfall.xchara.XCharaUltimate.ready(caster);
+        if(d!=null&&(danceSeen==null||!d[0].equals(danceSeen[0]))){
+            note(server,String.format(java.util.Locale.ROOT,"caster's G began at %d, marking %s %.2f blocks off (watcher's guard %s)",(Long)d[0],(Integer)d[3]==watcher.getId()?"the watcher":"entity "+d[3],caster.distanceTo(watcher),dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));
+            danceCaster=caster.getPos();danceWatcher=watcher.getPos();danceMoved=danceWatcherMoved=0;
+        }
+        if(d!=null&&(Boolean)d[1]&&(danceSeen==null||!(Boolean)danceSeen[1]||!d[0].equals(danceSeen[0])))
+            note(server,String.format(java.util.Locale.ROOT,"caster's G: its strange space at %d (%d in); the caster held %s, the watcher held %s",now,now-(Long)d[0],dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(watcher)));
+        if(d!=null){
+            danceMoved=Math.max(danceMoved,caster.getPos().distanceTo(danceCaster));
+            if((Boolean)d[1])danceWatcherMoved=Math.max(danceWatcherMoved,watcher.getPos().distanceTo(danceWatcher));else danceWatcher=watcher.getPos();
+        }
+        if(d==null&&danceSeen!=null){
+            note(server,String.format(java.util.Locale.ROOT,"caster's G over at %d (%d in): dealt %.1f, ready again at %d (%.1f s); the caster moved %.3f blocks at most while held, the watcher %.3f in its strange space",
+                now,now-(Long)danceSeen[0],(Float)danceSeen[2],ready,(ready-now)/20.0,danceMoved,danceWatcherMoved));
+            danceOver=now;danceWatcher=watcher.getPos();
+        }
+        if(danceOver>=0&&now-danceOver<=40&&(now-danceOver)%5==0)
+            note(server,String.format(java.util.Locale.ROOT,"  +%d: the watcher %.2f blocks from where it stood (%.2f up), velocity %.2f %.2f %.2f",now-danceOver,
+                watcher.getPos().distanceTo(danceWatcher),watcher.getY()-danceWatcher.y,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z));
+        if(ready!=danceReady){note(server,"caster's G ready again at "+ready+" (now "+now+")");danceReady=ready;}
+        if(Math.abs(watcher.getHealth()-danceHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (guard %s)",danceHealth,watcher.getHealth(),now,dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));danceHealth=watcher.getHealth();}
+        danceSeen=d;
     }
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
     static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"))||"isosangy".equals(System.getProperty("botand.mp.only"))||"isosanghh".equals(System.getProperty("botand.mp.only"));

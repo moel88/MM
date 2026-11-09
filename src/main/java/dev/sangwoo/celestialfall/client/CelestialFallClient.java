@@ -47,6 +47,8 @@ public final class CelestialFallClient implements ClientModInitializer {
         StandClient.initialize();
         // Lee So-sang's basic attack (2.77.0)
         dev.sangwoo.celestialfall.client.isosang.IsosangClient.initialize();
+        // X Chara's G (2.112.0)
+        dev.sangwoo.celestialfall.client.xchara.XCharaClient.initialize();
         CooldownHud.initialize();
         // (2.108.0) after the cooldown list: its hit count is drawn over the list's boxes
         HitCounterHud.initialize();

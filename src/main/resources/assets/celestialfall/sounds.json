@@ -1084,5 +1084,22 @@
         "preload": true
       }
     ]
+  },
+  "xchara_g_warn": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_g_warn",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_g": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_g",
+        "stream": true
+      }
+    ]
   }
 }

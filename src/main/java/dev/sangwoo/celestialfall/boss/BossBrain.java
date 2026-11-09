@@ -144,7 +144,7 @@ public class BossBrain {
     protected boolean committed(long now){return false;}
     /** Free to do anything: nothing holds it. */
     protected boolean free(){
-        return boss.isAlive()&&!CombatManager.incapacitated(boss)&&!HitStun.stunned(boss)&&!KagenoManager.frozen(boss)&&!StarPlatinumBeatdown.involved(boss)&&!StarPlatinumTimeStop.holds(boss);
+        return boss.isAlive()&&!CombatManager.incapacitated(boss)&&!HitStun.stunned(boss)&&!KagenoManager.frozen(boss)&&!StarPlatinumBeatdown.involved(boss)&&!StarPlatinumTimeStop.holds(boss)&&!dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(boss);
     }
     /** Held where it is or kept from acting (for its poise). */
     private boolean held(){return boss.isAlive()&&(CombatManager.incapacitated(boss)||HitStun.stunned(boss));}

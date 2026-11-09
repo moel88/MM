@@ -498,7 +498,19 @@ public final class MpClient implements ClientModInitializer {
     private static final String[] ISOSANGVOLLEY_SCRIPT={
         "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1",
         "200 DIST23","236 VAIM","240 VM1","296 VGROUND-50","302 VM1","380 END"};
-    private static final String[] STEPS=ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * X Chara's G, the sword dance (2.112.0, MP_ONLY=xchara): the caster takes X Chara and its cooldown is on; the watcher
+     * 5 blocks in front of it. G against the watcher's guard ("GUARD+"): blocked as the "!!!" shows, its 3 minutes' cooldown
+     * on; G again (refused: its cooldown). The cooldowns off ("NOCDON"), G and the watcher's guard raised as the "!!!"
+     * shows: blocked then. G and the caster struck as the "!!!" shows ("HITME"): called off. G again on the watcher at full health: the whole of it, the strange space on both clients, its
+     * 40 blows (200 to 140), the watcher sent flying. Both log every sword dance they hear of (its moments as they change,
+     * whom it marks), the "!!!" they draw, whether their camera is in its strange space and where, whether they are held;
+     * the server its start, its strange space, its end, what it dealt, its ready tick, the watcher's health and flight.
+     */
+    private static final String[] XCHARA_SCRIPT={
+        "5 XCHARA","8 NOCDOFF","40 DIST5","45 HEAL","50 GUARD+","62 G","80 GUARD-","90 G",
+        "110 NOCDON","120 G","126 GUARD+","150 GUARD-","170 G","176 HITME","200 HEAL","205 DIST5","210 G","470 END"};
+    private static final String[] STEPS=ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -623,6 +635,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("isosanghh"))finaleWatch();
                 if(ONLY.equals("isosangz")||ONLY.equals("isosangdodge"))zWatch();
                 if(ONLY.equals("death"))deathWatch();
+                if(ONLY.equals("xchara"))xcharaWatch();
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -644,7 +657,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -723,6 +736,8 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("STANDK")){if(down)command("botand progress stand @s kageno");return;}
         // 2.77.0: the caster takes Lee So-sang (MP_ONLY=isosang)
         if(step.equals("ISOSANG")){if(down)command("botand progress stand @s isosang");return;}
+        // 2.112.0: the caster takes X Chara (MP_ONLY=xchara)
+        if(step.equals("XCHARA")){if(down)command("botand progress stand @s x_chara");return;}
         if(step.startsWith("PITCH")){if(down){casterPitch=Float.parseFloat(step.substring(5));note("caster's camera pitch "+casterPitch);}return;}
         // 2.93.0: Lee So-sang's Z: the camera onto a sword of the caster's formation ("ZAIMdeg"), and Z pressed where it looks
         if(step.startsWith("ZAIM")){if(down){var mids=dev.sangwoo.celestialfall.client.isosang.SwordStep.middles();int k=pickSword(Float.parseFloat(step.substring(4)));
@@ -1295,6 +1310,33 @@ public final class MpClient implements ClientModInitializer {
     }
     /** (2.97.0) Y's ticks seen (by swing and its tick), and the own Y's readiness last logged. */
     private final java.util.Set<String> ySeen=new java.util.HashSet<>();private long yReadySeen=-1;private boolean heldSeen;
+    /** (2.112.0) X Chara's G as this client has it: its moments last logged, whether its camera was in its strange space, whether it was held, the marks logged. */
+    private String xState="";private boolean xCamera,xHeld;private final java.util.Set<String> xSeen=new java.util.HashSet<>();
+    private void xcharaWatch(){
+        for(var p:mc.world.getPlayers()){
+            var d=dev.sangwoo.celestialfall.client.xchara.XCharaClient.of(p.getUuid());if(d==null)continue;
+            String desc=dev.sangwoo.celestialfall.client.xchara.XCharaClient.describe(p,0);if(desc==null)continue;
+            int comma=desc.indexOf(',');String key=d.cast.start()+":"+desc.substring(comma+1);
+            boolean me=d.targetId.equals(mc.player.getUuid());
+            if(!key.equals(xState)){xState=key;note(String.format(Locale.ROOT,"%s's G (began %d): age %s, space/ended/how %s; it marks %s",name(p.getUuid()),d.cast.start(),desc.substring(0,comma),desc.substring(comma+1),me?"me":"the other"));}
+            float t=d.age(0);int tick=(int)Math.floor(t);
+            // the "!!!" as this client draws it, every other tick while it shows (and the tick it goes)
+            if(tick>=0&&tick<=dev.sangwoo.celestialfall.xchara.XCharaRules.WARN+8&&xSeen.add(d.cast.start()+"/mark/"+tick)){
+                float shown=dev.sangwoo.celestialfall.client.xchara.SwordDance.markShown(d,t);
+                if(tick%2==0||shown<=0&&xSeen.add(d.cast.start()+"/markgone"))note(String.format(Locale.ROOT,"  its \"!!!\" at %d: %.2f",tick,shown));
+            }
+        }
+        var cine=dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic();
+        boolean cam=cine!=null;
+        if(cam!=xCamera){xCamera=cam;note(cam?String.format(Locale.ROOT,"my camera in its strange space (its age %.1f)",cine.age(0)):"my camera back");}
+        if(cine!=null){
+            int tick=(int)Math.floor(cine.age(0));var camera=mc.gameRenderer.getCamera().getPos();
+            if((tick==dev.sangwoo.celestialfall.xchara.XCharaRules.WARN+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.SHOT_B+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.SHOT_C+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.VANISH+2)&&xSeen.add(cine.cast.start()+"/cam/"+tick))
+                note(String.format(Locale.ROOT,"  my camera at %d: %.2f from where the caster stands, %.2f over its feet; the world hidden %s",tick,Math.hypot(camera.x-cine.from.x,camera.z-cine.from.z),camera.y-cine.from.y,dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()));
+        }
+        boolean held=dev.sangwoo.celestialfall.client.xchara.XCharaClient.holds(mc.player);
+        if(held!=xHeld){xHeld=held;note(held?"held by a sword dance":"free of the sword dance");}
+    }
     /**
      * Y as this client sees it (2.97.0): each one as it is heard (on whom, its ring against the watcher's feet, how late),
      * and every tick through it the ring as drawn against the watcher's feet, the caster's height drawn over its formation's

@@ -48,7 +48,7 @@ public final class StandSummon {
      */
     public static boolean toggle(ServerPlayerEntity p){
         if(dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)||StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.active(p)||StarPlatinumTimeStop.holds(p)
-            ||dev.sangwoo.celestialfall.combat.CutsceneGlow.glowing(p))return out(p);
+            ||dev.sangwoo.celestialfall.combat.CutsceneGlow.glowing(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p))return out(p);
         boolean out=!out(p)&&canBeOut(p);
         // (at its user's call: it is heard coming out or going back, 2.72.0)
         if(out!=out(p))((StandHolder)p).botand$callStand(out);

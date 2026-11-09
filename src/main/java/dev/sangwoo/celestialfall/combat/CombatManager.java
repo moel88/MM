@@ -88,7 +88,7 @@ public final class CombatManager {
      */
     public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p)&&!dev.sangwoo.celestialfall.stand.StandManager.isosang(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
     /** In a cutscene or a cast that holds the player: Kageno's skills, the old items', and Star Platinum's beatdown's (2.64.0, its user and the one struck). */
-    public static boolean cinematic(PlayerEntity p) { return dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||SpellManager.isCasting(p.getUuid())||AtomicManager.isCasting(p.getUuid())||HeavenManager.isCasting(p.getUuid())||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(p); }
+    public static boolean cinematic(PlayerEntity p) { return dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||SpellManager.isCasting(p.getUuid())||AtomicManager.isCasting(p.getUuid())||HeavenManager.isCasting(p.getUuid())||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p); }
     private static boolean valid(ServerPlayerEntity p) {
         // (2.77.0: nor while a hit of Lee So-sang's sword holds them: no guard or dash then, IsosangRules.HOLD)
         return dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()&&!p.hasVehicle()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()&&!cinematic(p)&&!HitStun.stunned(p)
@@ -139,7 +139,8 @@ public final class CombatManager {
     public static boolean busyOtherwise(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
-            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p))return true;
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
+            ||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p))return true;
         // (2.109.0) glowing before a skill with a cutscene is cast (CutsceneGlow): they may only walk
         if(CutsceneGlow.glowing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
@@ -151,7 +152,7 @@ public final class CombatManager {
         if(p.isDead())return true;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
             ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
-            ||CutsceneGlow.glowing(p))return true;
+            ||CutsceneGlow.glowing(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
     }
     /**

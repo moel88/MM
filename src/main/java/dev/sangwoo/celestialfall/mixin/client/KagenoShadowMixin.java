@@ -23,7 +23,7 @@ public abstract class KagenoShadowMixin {
         if(StandClient.cutsceneHidden(entity)||dev.sangwoo.celestialfall.client.stand.StandBeatdown.offset(entity,delta)!=null){ci.cancel();return;}
         // (2.83.0) nor anyone in Lee So-sang's G's own space, whose ground the world's is not (GStage): cancelled here,
         // before the push below (its pop at RETURN would not come; a second mixin cancelling first left the stack pushed)
-        if(dev.sangwoo.celestialfall.client.isosang.GStage.hidden()){ci.cancel();return;}
+        if(dev.sangwoo.celestialfall.client.isosang.GStage.hidden()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()){ci.cancel();return;}
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(entity.getUuid());
         if(cast==null)return;
         m.push();var offset=dev.sangwoo.celestialfall.client.kageno.KagenoClips.groundOffset(cast,delta);

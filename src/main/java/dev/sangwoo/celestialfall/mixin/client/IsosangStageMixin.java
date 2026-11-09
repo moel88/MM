@@ -25,18 +25,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class IsosangStageMixin {
     @Inject(method="renderLayer(Lnet/minecraft/client/render/RenderLayer;Lnet/minecraft/client/util/math/MatrixStack;DDDLorg/joml/Matrix4f;)V",at=@At("HEAD"),cancellable=true,require=0)
     private void botand$stageBlocks(RenderLayer layer,MatrixStack matrices,double x,double y,double z,Matrix4f projection,CallbackInfo ci){
-        if(GStage.hidden())ci.cancel();
+        if(GStage.hidden()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden())ci.cancel();
     }
     @Inject(method="renderWeather",at=@At("HEAD"),cancellable=true,require=0)
     private void botand$stageWeather(LightmapTextureManager manager,float tickDelta,double x,double y,double z,CallbackInfo ci){
-        if(GStage.hidden())ci.cancel();
+        if(GStage.hidden()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden())ci.cancel();
     }
     @Inject(method="renderWorldBorder",at=@At("HEAD"),cancellable=true,require=0)
     private void botand$stageBorder(Camera camera,CallbackInfo ci){
-        if(GStage.hidden())ci.cancel();
+        if(GStage.hidden()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden())ci.cancel();
     }
     @Inject(method="drawBlockOutline",at=@At("HEAD"),cancellable=true,require=0)
     private void botand$stageOutline(MatrixStack matrices,VertexConsumer vertices,Entity entity,double x,double y,double z,BlockPos pos,BlockState state,CallbackInfo ci){
-        if(GStage.hidden())ci.cancel();
+        if(GStage.hidden()||dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden())ci.cancel();
     }
 }
