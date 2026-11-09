@@ -86,12 +86,6 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             var torso=new org.joml.Quaternionf().rotationZYX(body.roll,body.yaw,body.pitch);var shift=dev.sangwoo.celestialfall.client.isosang.IsosangIdle.pivots(pose,w,half);
             for(int i=0;i<2;i++){var arm=i==0?rightArm:leftArm;var v=torso.transform(shift[i]);arm.pivotX+=v.x;arm.pivotY+=v.y;arm.pivotZ+=v.z;}
         }
-        else if(StandClient.xChara(player)&&dev.sangwoo.celestialfall.client.xchara.XCharaClient.raised(player,animationProgress-player.age)>0){
-            // X Chara's G (2.112.0): the knife raised upright as its strange space comes (the arm held out ahead: the knife,
-            // held as the game holds it, points up), down again for its second shot (XCharaSpace.raise)
-            arms="xchara_g";float w=dev.sangwoo.celestialfall.client.xchara.XCharaClient.raised(player,animationProgress-player.age);
-            rightArm.pitch=-.33f+(-1.62f+.33f)*w;rightArm.yaw=-.06f+.12f*w;rightArm.roll=.04f;rightArm.getChild("elbow").pitch=-.12f*(1-w);
-        }
         else if(StandClient.xChara(player)&&!player.isUsingItem()&&rig&&"base".equals(CombatClient.state(player,animationProgress-player.age))
             &&!CombatClient.snapshot(player.getUuid()).guard()){
             // X Chara's knife (2.111.0): held a little forward at the side, the arm keeping a quarter of its walk's swing,

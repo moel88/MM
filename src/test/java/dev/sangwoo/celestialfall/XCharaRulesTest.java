@@ -16,11 +16,12 @@ class XCharaRulesTest {
     static double video(double s){return (s-.45)*20;}
 
     @Test void itsMomentsAreTheVideos(){
-        // the "!!!" at 0.6 s, the strange space at 1.35 s, the two upside down at 1.75 s, the camera pulled back at 4.35 s,
-        // the two gone and the first blow at 7.4 s, the world back at 7.75 s, the 40th blow at 11.3 s, sent flying at 11.4 s
-        double[][] at={{MARK,.6},{WARN,1.35},{SHOT_B,1.75},{SHOT_C,4.35},{VANISH,7.4},{WORLD,7.75},{blowAt(HITS-1),11.3},{LAUNCH,11.4}};
+        // the "!!!" at 0.6 s, the strange space at 1.35 s (the two upside down from its first moment: 2.112.1), the camera
+        // pulled back at 4.35 s, the two gone and the first blow at 7.4 s, the world back at 7.75 s, the 40th blow at
+        // 11.3 s, sent flying at 11.4 s
+        double[][] at={{MARK,.6},{WARN,1.35},{SHOT_C,4.35},{VANISH,7.4},{WORLD,7.75},{blowAt(HITS-1),11.3},{LAUNCH,11.4}};
         for(var a:at)assertEquals(video(a[1]),a[0],1.01,"tick "+a[0]+" against the video's "+a[1]+" s");
-        assertTrue(MARK<WARN&&WARN<SHOT_B&&SHOT_B<SHOT_C&&SHOT_C<VANISH&&VANISH<WORLD&&WORLD<blowAt(HITS-1)&&blowAt(HITS-1)<LAUNCH);
+        assertTrue(MARK<WARN&&WARN<SHOT_C&&SHOT_C<VANISH&&VANISH<WORLD&&WORLD<blowAt(HITS-1)&&blowAt(HITS-1)<LAUNCH);
         assertEquals(LAUNCH,END,"it is over as they are sent flying");
     }
     @Test void fortyBlowsTenASecondSixtyInAll(){

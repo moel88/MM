@@ -1,4 +1,14 @@
-> **현재 통합본: Botand 2.112.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.112.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.112.1 — 엑스 차라 G 다듬기: 바로 거꾸로, 칼 골고루, 타격 대폭 강화, 공간 배경
+
+- **바로 거꾸로:** 칼을 세워 드는 장면을 없앴습니다. 이상한 공간이 오면 곧바로 둘이 서로 거꾸로 마주 보는 장면입니다.
+- **칼 골고루:** 카메라가 물러날 때 칼 22개가 영상처럼 시전자 둘레에 고르게 퍼져 상대를 겨눕니다(초승달이 아니라 고른 격자).
+- **타격:** 현실로 돌아와 상대에게 박히는 검무가 영상처럼 보라·자홍 꽃잎이 터지는 꽃이 됩니다(흰 고리, 흰 베기, 검은 가시, 빛줄기, 0.1초마다 겹쳐 폭풍처럼). 마지막 타는 더 크고 긴 자홍 줄기가 지납니다.
+- **공간 배경:** 별, 심연에서 솟는 보라 빛기둥, 먼 거대한 가시, 빛구름, 큰 고리, 솟는 빛 알갱이, 유성을 더했습니다.
+- **접속자만 바꾸면 됩니다:** 서버는 2.112.0 그대로 두어도 됩니다.
+
+[RELEASE_2.112.1_KO.md](RELEASE_2.112.1_KO.md)를 확인하세요. 2.112.0은 [RELEASE_2.112.0_KO.md](RELEASE_2.112.0_KO.md)입니다.
 
 # 보탠드 2.112.0 — 엑스 차라 G: 검무
 

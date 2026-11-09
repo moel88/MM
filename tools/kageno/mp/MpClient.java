@@ -1331,7 +1331,7 @@ public final class MpClient implements ClientModInitializer {
         if(cam!=xCamera){xCamera=cam;note(cam?String.format(Locale.ROOT,"my camera in its strange space (its age %.1f)",cine.age(0)):"my camera back");}
         if(cine!=null){
             int tick=(int)Math.floor(cine.age(0));var camera=mc.gameRenderer.getCamera().getPos();
-            if((tick==dev.sangwoo.celestialfall.xchara.XCharaRules.WARN+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.SHOT_B+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.SHOT_C+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.VANISH+2)&&xSeen.add(cine.cast.start()+"/cam/"+tick))
+            if((tick==dev.sangwoo.celestialfall.xchara.XCharaRules.WARN+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.WARN+10||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.SHOT_C+2||tick==dev.sangwoo.celestialfall.xchara.XCharaRules.VANISH+2)&&xSeen.add(cine.cast.start()+"/cam/"+tick))
                 note(String.format(Locale.ROOT,"  my camera at %d: %.2f from where the caster stands, %.2f over its feet; the world hidden %s",tick,Math.hypot(camera.x-cine.from.x,camera.z-cine.from.z),camera.y-cine.from.y,dev.sangwoo.celestialfall.client.xchara.XCharaClient.spaceHidden()));
         }
         boolean held=dev.sangwoo.celestialfall.client.xchara.XCharaClient.holds(mc.player);

@@ -265,7 +265,7 @@ public final class XCharaClient {
     }
     /**
      * The strange space's turn of the two's bodies (after the renderer's own, about their feet, local +Z behind them):
-     * each turned to face the other, upside down about its middle from the second shot (XCharaSpace.inverted).
+     * each turned to face the other, upside down about its middle from the strange space's first moment (XCharaSpace.inverted).
      */
     public static void turn(LivingEntity e,float delta,float bodyYaw,MatrixStack m){
         var d=cinematic();if(d==null||!d.has(e))return;
@@ -280,11 +280,6 @@ public final class XCharaClient {
     }
     /** The light the two are drawn in, in the strange space (full: it has no sun nor shade), or -1 for the world's own. */
     public static int light(Entity e){var d=cinematic();return d!=null&&d.has(e)?0xF000F0:-1;}
-    /** How far X Chara's user has raised the knife upright at {@code delta} (0 to 1): as the strange space comes (its first shot), down again for the second. */
-    public static float raised(PlayerEntity p,float delta){
-        var d=DANCES.get(p.getUuid());if(d==null||!d.inSpace()||d.stopped())return 0;
-        return XCharaSpace.raise(d.age(delta));
-    }
     /** Whether this client's player is held by a sword dance (no action of theirs goes through). */
     public static boolean locked(){var mc=MinecraftClient.getInstance();return mc.player!=null&&holds(mc.player);}
 

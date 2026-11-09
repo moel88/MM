@@ -10,9 +10,10 @@ package dev.sangwoo.celestialfall.xchara;
  * during the "!!!" calls it off and its cooldown runs, its sound cut from the video's.
  * <p>
  * The press marks the one looked at (within {@link #AIM_RANGE}) and the "!!!" shows over them; any tick before
- * {@link #WARN} that they hold a guard up toward its user, it is blocked. Past WARN both are in the strange space: its
- * user raises the knife ({@link #SHOT_B} before), the two hang upside down facing each other, the camera pulls back on the
- * knives round its user ({@link #SHOT_C}); at {@link #VANISH} the two are gone from it and its blows begin, one every
+ * {@link #WARN} that they hold a guard up toward its user, it is blocked. Past WARN both are in the strange space, the two
+ * hanging upside down facing each other from its first moment (2.112.1, user request: "시전자가 칼을 세워드는 저거 없애고
+ * 곧바로 서로 거꾸로 마주보는 컷씬부터 시작": 2.112.0 opened on its user raising the knife until the video's 1.75 s), the
+ * camera pulling back on the knives round its user ({@link #SHOT_C}); at {@link #VANISH} the two are gone from it and its blows begin, one every
  * {@link #EVERY} ticks, {@link #HITS} of them; at {@link #WORLD} the world is back, the one marked cut up where they stand;
  * the blows taken, they are sent flying at {@link #LAUNCH}, when it is over.
  */
@@ -25,8 +26,8 @@ public final class XCharaRules {
 
     /** The "!!!" over the one marked from this tick (the video's 0.6 s), until the strange space at WARN (its 1.35 s). */
     public static final int MARK=3,WARN=18;
-    /** The strange space's shots: its user raising the knife from WARN, the two upside down from SHOT_B (1.75 s), pulled back on the knives from SHOT_C (4.35 s). */
-    public static final int SHOT_B=26,SHOT_C=78;
+    /** The strange space's shots: the two upside down from WARN, pulled back on the knives from SHOT_C (the video's 4.35 s). */
+    public static final int SHOT_C=78;
     /** The two gone from the strange space and its first blow (7.4 s); the world back (7.75 s). */
     public static final int VANISH=139,WORLD=146;
     /** Its blows: one every EVERY ticks from VANISH (ten a second, the video's hit count: 1 at 7.4 s, 40 at 11.3 s). */
