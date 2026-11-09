@@ -467,7 +467,8 @@ final class IsosangEmpower {
         }else if(combo==IsosangRules.THRUST){
             if(!flies(c.cast))return;
             float at=arrive(c.cast);Vec3d tip=end(c.cast);
-            if(t>=at&&t<at+.5f){float a=Ease.smooth(t,at,at+.03f)*(1-Ease.smooth(t,at+.2f,at+.5f));crescentMoon(m,tip.add(0,.9,0),.42,Math.PI*.6,MOON,.8f*a);glint8(m,tip,.5,WHITE,.7f*a);}
+            // (2.103.0) its moon rides its point as it flies and rises over where it stops (EmpowerLights.giantMoon)
+            if(t>=at&&t<at+.5f){float a=Ease.smooth(t,at,at+.03f)*(1-Ease.smooth(t,at+.2f,at+.5f));glint8(m,tip,.5,WHITE,.7f*a);}
         }
     }
 
@@ -714,7 +715,8 @@ final class IsosangEmpower {
     static void flash(Fx c,EffectMesh m,float t){
         if(t>=.8f)return;
         Vec3d hand=hand(c);float a=Ease.smooth(t,0,.03f)*(1-Ease.smooth(t,.1f,.3f));
-        if(a>0){m.softDisc(hand,.9,BLUE,.4f*a);m.star(hand,.8,WHITE,a);m.star(hand,.45,PALE,a);crescentMoon(m,hand,.38,Math.PI*.55+t*2,MOON,.9f*a);}
+        // (2.103.0) its crescent moon rises out of the hand (EmpowerLights.eMoon)
+        if(a>0){m.softDisc(hand,.9,BLUE,.4f*a);m.star(hand,.8,WHITE,a);m.star(hand,.45,PALE,a);}
         var e=c.mc.world==null?null:c.mc.world.getPlayerByUuid(c.cast.caster());Vec3d feet=e==null?c.cast.origin():e.getLerpedPos(c.delta);
         Vec3d floor=feet.add(0,.04,0),u=new Vec3d(1,0,0),w=new Vec3d(0,0,1);
         for(int r=0;r<2;r++){float r0=r*.08f,ra=Ease.smooth(t,r0,r0+.04f)*(1-Ease.smooth(t,r0+.25f,r0+.6f));if(ra>0)FxLib.ringPlane(m,floor,u,w,.4+2.0*Ease.out(t,r0,r0+.5f),r==0?.08:.05,r==0?PALE:CYAN,.75f*ra);}

@@ -931,7 +931,7 @@ public final class IsosangSlash implements Fx.Skill {
         if(lunge(c.cast.combo())){SwordLunge.additive(c,m);return;}
         if(cage(c.cast.combo())){SwordCage.additive(c,m);return;}
         if(finale(c.cast.combo())){SwordFinale.additive(c,m);return;}
-        if(empowered(c.cast.combo())){IsosangEmpower.additive(c,m);return;}
+        if(empowered(c.cast.combo())){IsosangEmpower.additive(c,m);EmpowerLights.additive(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         aura(c,m,t,combo);
         for(var s:arcs(combo)){var sw=band(feet,yaw,s,t);if(sw!=null&&t<s.eat1())edgeGlow(m,sw,s.style(),edgeLit(s,t),inks(s,sw,t));}
@@ -942,6 +942,8 @@ public final class IsosangSlash implements Fx.Skill {
         if(combo==1)glint(c,m,t);
         if(combo==2)flare(c,m,t,feet,yaw);
         if(combo==4){twirl(c,m,t);point(c,m,t);dash(c,m,t);waveLight(c,m,t,feet,yaw);}
+        // (2.103.0) its petals' glints (SlashLights)
+        SlashLights.additive(c,m);
     }
     /**
      * The light the blade leaves across what it swept (2.79.2, the user's video of the whole combo: a pale see-through fan
@@ -968,10 +970,12 @@ public final class IsosangSlash implements Fx.Skill {
         if(lunge(c.cast.combo())){SwordLunge.alpha(c,m);return;}
         if(cage(c.cast.combo())){SwordCage.alpha(c,m);return;}
         if(finale(c.cast.combo())){SwordFinale.alpha(c,m);return;}
-        if(empowered(c.cast.combo())){IsosangEmpower.alpha(c,m);return;}
+        if(empowered(c.cast.combo())){IsosangEmpower.alpha(c,m);EmpowerLights.alpha(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         inkBursts(c,m,t,combo);
         airInk(c,m,t,combo,feet,yaw);
+        // (2.103.0) its petals (SlashLights)
+        SlashLights.alpha(c,m);
     }
     /**
      * Over the ink ribbons (2.77.5, user request "마지막으로 이펙트 더 예쁘게 꾸며줘": the moon's light and its stars, as the
@@ -986,7 +990,7 @@ public final class IsosangSlash implements Fx.Skill {
         if(lunge(c.cast.combo())){SwordLunge.overlay(c,m);return;}
         if(cage(c.cast.combo())){SwordCage.overlay(c,m);return;}
         if(finale(c.cast.combo())){SwordFinale.overlay(c,m);return;}
-        if(empowered(c.cast.combo())){IsosangEmpower.overlay(c,m);return;}
+        if(empowered(c.cast.combo())){IsosangEmpower.overlay(c,m);EmpowerLights.overlay(c,m);return;}
         float t=c.sec;int combo=c.cast.combo();Vec3d feet=anchor(c);float yaw=c.cast.yaw();
         for(var s:arcs(combo))for(var st:stars(s,t)){
             Vec3d p=world(feet,yaw,point(s,st.deg(),st.radius()));
@@ -995,6 +999,9 @@ public final class IsosangSlash implements Fx.Skill {
         }
         heads(m,t,combo,feet,yaw);
         if(combo==4)waveStars(m,t,feet,yaw);
+        // (2.103.0, user request: "이번에는 평타와 e스킬 강화 평타 예쁘게 바꿔줘") the moon's trace, the cuts' moons, hit 2's
+        // halo, hit 4's moon setting, the stars by the struck, the empowered blade's lightning (SlashLights)
+        SlashLights.overlay(c,m);
     }
     /**
      * The blade's blue aura while it cuts, brightest as it strikes: kept close round the blade (2.77.4, user request "지금
@@ -1104,17 +1111,11 @@ public final class IsosangSlash implements Fx.Skill {
         }
     }
     /**
-     * Hit 4's thrown slash (落月, the falling moon): a crescent moon riding its front as it flies, and stardust left behind
-     * along its path, drifting up and twinkling as it fades.
+     * Hit 4's thrown slash (落月, the falling moon): stardust left behind along its path, drifting up and twinkling as it
+     * fades. (The crescent moon riding its front is SlashLights.waveMoon's since 2.103.0: it sets as the slash goes to ink.)
      */
     static void waveStars(EffectMesh m,float t,Vec3d feet,float yaw){
         float at=blow(4,0),fly=IsosangRules.WAVE_TICKS/20f;
-        var sw=wave(feet,yaw,t);
-        if(sw!=null&&t<at+fly+.1f){
-            float a=Ease.smooth(t,at,at+.03f)*(1-Ease.smooth(t,at+fly-.05f,at+fly+.1f));
-            Vec3d front=sw.outer()[sw.n()/2].add(0,.3,0);
-            crescentMoon(m,front,.3,Math.PI*.62,MOON,.85f*a);glint8(m,front,.2,WHITE,.6f*a);m.softDisc(front,.45,AZURE,.25f*a);
-        }
         for(int k=0;k<28;k++){
             int seed=k*41+1307;float born=at+.03f+(fly-.04f)*(k+(float)Ease.hash(seed))/28,age=t-born,life=.35f+.25f*(float)Ease.hash(seed+1);
             if(age<0||age>=life)continue;
