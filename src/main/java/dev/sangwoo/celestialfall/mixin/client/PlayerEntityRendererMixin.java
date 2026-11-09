@@ -45,8 +45,10 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
      */
     @Inject(method="getArmPose",at=@At("RETURN"),cancellable=true)
     private static void botand$isosangSword(AbstractClientPlayerEntity player,net.minecraft.util.Hand hand,org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose> ci){
+        // (2.105.0: only while her sword is in her hand, IsosangSheath.drawn; empty-handed otherwise)
         if(hand==net.minecraft.util.Hand.MAIN_HAND&&ci.getReturnValue()==net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose.EMPTY
-            &&dev.sangwoo.celestialfall.client.StandClient.isosang(player)&&!dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(player))
+            &&dev.sangwoo.celestialfall.client.StandClient.isosang(player)&&!dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(player)
+            &&dev.sangwoo.celestialfall.client.isosang.IsosangSheath.drawn(player.getUuid()))
             ci.setReturnValue(net.minecraft.client.render.entity.model.BipedEntityModel.ArmPose.ITEM);
     }
     /** No name over a boss (2.69.0): its bar at the bottom of the screen has it. */

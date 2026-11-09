@@ -46,14 +46,20 @@ public abstract class HeldItemRendererMixin {
             vertices.draw();
             ci.cancel();return;
         }
-        if(dev.sangwoo.celestialfall.client.StandClient.isosang(player)){
-            // Lee So-sang's sword (2.76.0), as the game holds an item (its swing, the off hand as it is)
+        // (2.105.0) Lee So-sang using what she holds (eating, drinking) with her sword away: as the game draws it
+        float up=dev.sangwoo.celestialfall.client.StandClient.isosang(player)?dev.sangwoo.celestialfall.client.isosang.IsosangSheath.held(player.getUuid(),delta):0;
+        if(dev.sangwoo.celestialfall.client.StandClient.isosang(player)&&!(player.isUsingItem()&&up<=.001f)){
+            // Lee So-sang's sword (2.76.0), as the game holds an item (its swing, the off hand as it is); (2.105.0) only
+            // while she uses it: it comes up into the picture as it comes into her hand and goes down out of it as it
+            // goes (IsosangSheath.held: the game's own lowering and raising of a held item); nothing else in her hand
             float swing=player.getHandSwingProgress(delta);
-            // (2.80.0) glowing while their next combo is empowered (E)
-            dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=dev.sangwoo.celestialfall.client.isosang.IsosangClient.glow(player.getUuid(),delta);
-            dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.clock=player.age+delta;
-            renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.MAIN_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?0:swing,dev.sangwoo.celestialfall.client.StandClient.sword(player),0,matrices,vertices,light);
-            vertices.draw();
+            if(up>.001f){
+                // (2.80.0) glowing while their next combo is empowered (E)
+                dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=dev.sangwoo.celestialfall.client.isosang.IsosangClient.glow(player.getUuid(),delta);
+                dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.clock=player.age+delta;
+                renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.MAIN_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?0:swing,dev.sangwoo.celestialfall.client.StandClient.isosangSword(),1-up,matrices,vertices,light);
+                vertices.draw();
+            }
             dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=0;
             if(!player.getOffHandStack().isEmpty())renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?swing:0,player.getOffHandStack(),0,matrices,vertices,light);
             vertices.draw();

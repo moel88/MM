@@ -149,7 +149,8 @@ public final class IsosangSlash implements Fx.Skill {
     /**
      * How the game holds her sword between swings (2.76.0, MotionPlayerModel's "isosang" arm, radians: the arm's pitch,
      * yaw and roll, and the elbow's bend; the sword as the game holds an item, its display turning it DISPLAY_TILT round
-     * the wrist): the arm a little forward, the blade forward and up.
+     * the wrist): the arm a little forward, the blade forward and up. (2.105.0: at rest she stands empty-handed now,
+     * IsosangIdle; her swings still begin and end in this hold, STANCE, the body easing into it from her rest and back.)
      */
     public static final float HOLD_PITCH=-.33f,HOLD_YAW=-.06f,HOLD_ROLL=.04f,HOLD_ELBOW=-.12f;
     /**

@@ -24,6 +24,8 @@ public final class IsosangSwordRenderer extends GeoItemRenderer<IsosangSwordItem
         super(new Model());
         addRenderLayer(new GeoRenderLayer<>(this){
             @Override public void render(MatrixStack matrices,IsosangSwordItem item,BakedGeoModel model,RenderLayer type,VertexConsumerProvider buffers,VertexConsumer buffer,float delta,int light,int overlay){
+                // (2.105.0) where it is in the world, if it is drawn in its holder's hand there (IsosangSheath)
+                IsosangSheath.record(matrices);
                 RenderLayer glow=RenderLayer.getEntityTranslucentEmissive(GLOW);
                 getRenderer().reRender(model,matrices,buffers,item,glow,buffers.getBuffer(glow),delta,LightmapTextureManager.MAX_LIGHT_COORDINATE,overlay,1,1,1,1);
             }

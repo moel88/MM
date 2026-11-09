@@ -419,8 +419,9 @@ public final class ArrowStabPose {
      * for the left. As MiningPose.reach, except that the arm's turn about itself is taken from the elbow's hinge, not
      * from where the bent elbow sits: so it holds as the arm straightens out (where the bent elbow's place runs out,
      * the twist swung round in a frame: the rejected one's arms, laid out straight along the body as they land).
+     * (2.105.0: Lee So-sang's stance at rest, IsosangIdle, sets her arms with it too.)
      */
-    static float[] reach(Vector3f shoulder,Vector3f target,Vector3f pole,float side){
+    public static float[] reach(Vector3f shoulder,Vector3f target,Vector3f pole,float side){
         Vector3f d=new Vector3f(target).sub(shoulder);float dist=d.length();
         float c=(dist*dist-side*side-ELBOW*ELBOW-FIST*FIST)/(2*ELBOW*FIST);
         float bend=-(float)Math.acos(Math.max(-1,Math.min(1,c)));

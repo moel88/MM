@@ -7,7 +7,9 @@ import net.minecraft.util.Arm;
 
 public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPlayerEntity> {
     private boolean articulated;
-    public MotionPlayerModel(boolean slim) {super(MotionRig.player(slim),slim);}
+    /** How far each arm's middle is off its pivot (px): 1, or 0.5 for slim arms (2.105.0, Lee So-sang's stance turns her arms about their middles). */
+    private final float half;
+    public MotionPlayerModel(boolean slim) {super(MotionRig.player(slim),slim);half=slim?.5f:1;}
     @Override public void setAngles(AbstractClientPlayerEntity player,float limbAngle,float limbDistance,float animationProgress,float headYaw,float headPitch) {
         MotionRig.reset(this);super.setAngles(player,limbAngle,limbDistance,animationProgress,headYaw,headPitch);
         // Stopped in Star Platinum's time stop (2.67.0): the body holds the pose it was drawn in as time stopped. Its
@@ -71,12 +73,18 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         }
         else if(StandClient.isosang(player)&&!player.isUsingItem()&&rig&&"base".equals(CombatClient.state(player,animationProgress-player.age))
             &&!CombatClient.snapshot(player.getUuid()).guard()){
-            // Lee So-sang's sword (2.76.0): held a little forward at the side, the arm keeping a quarter of its walk's
-            // swing (their skills to come will bring their own motion; punching and guarding keep the rig's arms)
-            arms="isosang";
-            // (2.104.0: the very hold her swings begin and end in, IsosangSlash.STANCE)
-            rightArm.pitch=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_PITCH+rightArm.pitch*.25f;rightArm.yaw=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_YAW;
-            rightArm.roll=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_ROLL;rightArm.getChild("elbow").pitch=dev.sangwoo.celestialfall.client.isosang.IsosangSlash.HOLD_ELBOW;
+            // Lee So-sang at rest (2.105.0, user request: "왼쪽 팔을 굽어서 손을 엉덩이쪽에 가져다대서 뒷짐 지는 자세를 취하소
+            // 오른쪽손은 오른쪽으로 내밀어 이게 기본적으로 서 있는 자세고 검은 평타나 스킬을 쓸때만 나오게"): her left hand
+            // behind her, her right held out to the right, no sword (IsosangIdle, IsosangSheath); walking, her arms swing
+            // as anyone's, the stance easing out as she goes and back in as she stops. (2.76.0 to 2.104.0 she stood
+            // holding her sword a little forward at her side.)
+            arms="isosang";float d=animationProgress-player.age;
+            var pose=CombatClient.pose(player,d);float w=dev.sangwoo.celestialfall.client.isosang.IsosangIdle.weight(player.getUuid(),d);
+            dev.sangwoo.celestialfall.client.isosang.IsosangIdle.apply(pose,animationProgress,w,half);
+            MotionRig.apply(this,pose,headYaw,headPitch);
+            // each arm turning about its own middle (its pivot is a pixel off it): moved with the torso's turn
+            var torso=new org.joml.Quaternionf().rotationZYX(body.roll,body.yaw,body.pitch);var shift=dev.sangwoo.celestialfall.client.isosang.IsosangIdle.pivots(pose,w,half);
+            for(int i=0;i<2;i++){var arm=i==0?rightArm:leftArm;var v=torso.transform(shift[i]);arm.pivotX+=v.x;arm.pivotY+=v.y;arm.pivotZ+=v.z;}
         }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
         float delta=animationProgress-player.age;
@@ -93,6 +101,8 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             // between them fades too (the free arm popped to the combat stance as the guard's release ended). Into the
             // guard it fades fast, so the 0.1 s flourish keeps its snap.
             if(arms.equals("guard"))fade=Math.min(fade,1.2f);
+            // (2.105.0) Lee So-sang settles into her stance at rest more slowly than into a blow: her hand goes behind her
+            if(arms.equals("isosang"))fade=Math.max(fade,dev.sangwoo.celestialfall.client.isosang.IsosangIdle.SETTLE);
             // a blow is part of the two-handed hold, not a change of pose (the swing would fade every chop)
             PoseBlend.apply(player.getUuid(),this,java.util.List.of(source,!mining&&using,arms),fade,animationProgress);
         }

@@ -60,7 +60,9 @@ public final class KagenoRenderer {
         // stop (2.68.0) and the stand arrow (2.70.0) go with the state effects
         boolean punches=dev.sangwoo.celestialfall.client.stand.StandPunchFx.prepare(mc,delta,camera)|dev.sangwoo.celestialfall.client.stand.StandRushFx.prepare(mc,delta,camera)
             |dev.sangwoo.celestialfall.client.stand.StandInhaleFx.prepare(mc,delta,camera)|dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.prepare(mc,delta,camera)
-            |dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.prepare(mc,delta,camera)|dev.sangwoo.celestialfall.client.stand.StandArrowFx.prepare(mc,delta,camera);
+            |dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.prepare(mc,delta,camera)|dev.sangwoo.celestialfall.client.stand.StandArrowFx.prepare(mc,delta,camera)
+            // (2.105.0) Lee So-sang's sword coming into her hand and going back into the light
+            |dev.sangwoo.celestialfall.client.isosang.IsosangSheath.prepare(mc,delta,camera);
         boolean statusLayered=layer&&(KagenoStatusFx.showing(mc,delta,camera)||punches);
         var buffer=Tessellator.getInstance().getBuffer();
         try{
@@ -135,7 +137,7 @@ public final class KagenoRenderer {
         RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
         buffer.begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_COLOR);m=new EffectMesh(buffer,matrix,camera);
         for(var x:casts)KagenoSkills.of(x.cast.skill()).additive(x,m);
-        if(status){KagenoStatusFx.additive(mc,m,delta,camera,layered);dev.sangwoo.celestialfall.client.stand.StandPunchFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandRushFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandInhaleFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandArrowFx.additive(m);}
+        if(status){KagenoStatusFx.additive(mc,m,delta,camera,layered);dev.sangwoo.celestialfall.client.stand.StandPunchFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandRushFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandInhaleFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.additive(m);dev.sangwoo.celestialfall.client.stand.StandArrowFx.additive(m);dev.sangwoo.celestialfall.client.isosang.IsosangSheath.additive(m);}
         if(layered)dev.sangwoo.celestialfall.client.vfx.FxLayer.draw(buffer.end(),true,LAYER_GAIN,LAYER_SOFT);else BufferRenderer.drawWithGlobalProgram(buffer.end());
         RenderSystem.defaultBlendFunc();
         // Shader passes (fire, smoke, brush strokes) manage their own buffers.
@@ -172,7 +174,7 @@ public final class KagenoRenderer {
     private static void layer(MinecraftClient mc,List<Fx> casts,boolean status,org.joml.Matrix4f view,org.joml.Matrix4f matrix,Vec3d camera,float delta){
         var frame=new dev.sangwoo.celestialfall.client.vfx.FxFrame();
         for(var x:casts)KagenoSkills.of(x.cast.skill()).frame(x,frame);
-        if(status){KagenoStatusFx.frame(mc,frame,delta,camera);dev.sangwoo.celestialfall.client.stand.StandPunchFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandRushFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandInhaleFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandArrowFx.frame(frame,camera);}
+        if(status){KagenoStatusFx.frame(mc,frame,delta,camera);dev.sangwoo.celestialfall.client.stand.StandPunchFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandRushFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandInhaleFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.frame(frame,camera);dev.sangwoo.celestialfall.client.stand.StandArrowFx.frame(frame,camera);dev.sangwoo.celestialfall.client.isosang.IsosangSheath.frame(frame,camera);}
         var stack=new net.minecraft.client.util.math.MatrixStack();
         stack.peek().getPositionMatrix().set(view);stack.peek().getNormalMatrix().set(new org.joml.Matrix3f(view));
         var solids=dev.sangwoo.celestialfall.client.vfx.FxLayer.solids(stack,camera);

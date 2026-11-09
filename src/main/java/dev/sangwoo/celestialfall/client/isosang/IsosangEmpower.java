@@ -306,9 +306,13 @@ final class IsosangEmpower {
 
     // ───────────────────────────── E's flash ─────────────────────────────
 
-    /** Where the sword hand is as E is used (no motion drives the body then: the stance's right hand, the way the body faces). */
+    /**
+     * Where the sword hand is as E is used (no motion drives the body then: the stance's right hand, the way the body
+     * faces; 2.105.0: at rest, her open right hand held out to her right, IsosangIdle, as she is drawn).
+     */
     static Vec3d hand(Fx c){
         var e=c.mc.world==null?null:c.mc.world.getPlayerByUuid(c.cast.caster());
+        if(e!=null&&!IsosangSheath.drawn(e.getUuid()))return IsosangSheath.hand(e,c.delta);
         float yaw=e==null?c.cast.yaw():e.getBodyYaw();Vec3d feet=e==null?c.cast.origin():e.getLerpedPos(c.delta);
         return world(feet,yaw,v(.32,1.0,.36));
     }

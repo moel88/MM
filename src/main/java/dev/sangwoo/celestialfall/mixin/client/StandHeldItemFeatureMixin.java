@@ -40,6 +40,8 @@ public abstract class StandHeldItemFeatureMixin {
             // (2.80.0) glowing while their next combo is empowered (E): for this draw only (botand$drawn puts it back)
             dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=dev.sangwoo.celestialfall.client.isosang.IsosangClient.glow(holder.getUuid(),delta);
             dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.clock=holder.age+delta;
+            // (2.105.0) where it is drawn in the world: the light it comes and goes in is on it (IsosangSheath)
+            dev.sangwoo.celestialfall.client.isosang.IsosangSheath.recording(holder.getUuid());
             return;
         }
         if(!(entity instanceof PlayerEntity player)||!StandClient.visible(player)||arm!=player.getMainArm())return;
@@ -58,11 +60,13 @@ public abstract class StandHeldItemFeatureMixin {
     @Inject(method="renderItem",at=@At("RETURN"))
     private void botand$drawn(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
         dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=0;
+        dev.sangwoo.celestialfall.client.isosang.IsosangSheath.recording(null);
     }
     @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",
         at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;getMainHandStack()Lnet/minecraft/item/ItemStack;"))
     private ItemStack botand$standSword(LivingEntity entity){
-        // a stand user holding the meteor pickaxe holds the pickaxe, not the sword (Kageno's, or Lee So-sang's: 2.76.0)
+        // a stand user holding the meteor pickaxe holds the pickaxe, not the sword (Kageno's, or Lee So-sang's: 2.76.0);
+        // (2.105.0) Lee So-sang's hand is empty while her sword is away (StandClient.sword gives EMPTY)
         var sword=entity instanceof PlayerEntity player?StandClient.sword(player):null;
         return sword!=null&&!(entity instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder))?sword:entity.getMainHandStack();
     }

@@ -44,6 +44,8 @@ public final class CombatClient {
     private static final Map<UUID,Movement> MOVEMENT=new HashMap<>();
     private static final class Movement {
         double x,y,z;float phase,previousPhase,amount,previousAmount,forward,side,sprint,combat,guard,previousGuard;
+        /** (2.105.0) How fast the body goes over the ground, in the air too (0 still, 1 at walking pace or faster): Lee So-sang's stance at rest eases out with it. */
+        float travel,previousTravel;
         boolean ready,grounded=true;float smoothPressure;
         /** Vertical speed (blocks per tick), how airborne the body looks (0..1), the fastest fall since leaving the ground. */
         float vy,previousVy,air,previousAir,fall;
@@ -150,9 +152,10 @@ public final class CombatClient {
             m.grounded=ground;
             double distance=Math.hypot(dx,dz);if(distance>1.5)distance=0;
             double yaw=Math.toRadians(p.getYaw()),f=-Math.sin(yaw)*dx+Math.cos(yaw)*dz,side=Math.cos(yaw)*dx+Math.sin(yaw)*dz;
-            m.previousPhase=m.phase;m.previousAmount=m.amount;m.previousGuard=m.guard;
+            m.previousPhase=m.phase;m.previousAmount=m.amount;m.previousGuard=m.guard;m.previousTravel=m.travel;
             float speed=(float)Math.min(1,distance/.2);
             m.amount=approach(m.amount,p.isOnGround()?speed:0,.35f);
+            m.travel=approach(m.travel,speed,.35f);
             if(distance>.005) {m.forward=approach(m.forward,(float)(f/Math.max(distance,.001)),.35f);m.side=approach(m.side,(float)(side/Math.max(distance,.001)),.35f);}
             m.sprint=approach(m.sprint,p.isSprinting()?1:0,.25f);
             if(p.isOnGround())m.phase+=(float)(distance/(1.7+.6*m.sprint)*Math.PI*2);
@@ -165,6 +168,12 @@ public final class CombatClient {
     private static float approach(float a,float b,float step){return MathHelper.lerp(step,a,b);}
     /** How much a player is walking (0 still, 1 at walking pace or faster), eased over a few ticks like the walk cycle's stride. */
     public static float moving(UUID id,float delta){Movement m=MOVEMENT.get(id);return m==null?0:MathHelper.lerp(delta,m.previousAmount,m.amount);}
+    /**
+     * How fast a player goes over the ground now (0 still, 1 at walking pace or faster), eased as {@link #moving} is but
+     * not dropping to nothing in the air (2.105.0): Lee So-sang's stance at rest stays through a jump on the spot and
+     * does not come back in the middle of a running jump.
+     */
+    public static float travel(UUID id,float delta){Movement m=MOVEMENT.get(id);return m==null?0:MathHelper.lerp(delta,m.previousTravel,m.travel);}
     private static void sendLook(){var mc=MinecraftClient.getInstance();mc.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookAndOnGround(mc.player.getYaw(),mc.player.getPitch(),mc.player.isOnGround()));}
     /** Which part of the articulated motion plays now (a new value for every hit, dash and punch), so the model can crossfade between them. */
     public static Object state(AbstractClientPlayerEntity p,float delta) {
@@ -187,7 +196,11 @@ public final class CombatClient {
         if(m==null)m=new Movement();
         var reaction=HitStunClient.reaction(p);
         if(reaction!=null)return MotionClips.hitReaction((float)(now-reaction.hitAt()),reaction.strike());
-        MotionPose base=MotionClips.locomotion(MathHelper.lerp(delta,m.previousPhase,m.phase),MathHelper.lerp(delta,m.previousAmount,m.amount),m.forward,m.side,m.sprint,m.combat,p.age+delta);
+        // (2.105.0) Lee So-sang stands at rest in her own stance in a fight too (IsosangIdle), not in the fists-up one
+        float combat=StandClient.isosang(p)?0:m.combat;
+        MotionPose base=MotionClips.locomotion(MathHelper.lerp(delta,m.previousPhase,m.phase),MathHelper.lerp(delta,m.previousAmount,m.amount),m.forward,m.side,m.sprint,combat,p.age+delta);
+        // (2.105.0) and with her legs straight as she stands (user: "다리는 왜 구부리고 있어 펴")
+        if(StandClient.isosang(p))dev.sangwoo.celestialfall.client.isosang.IsosangIdle.straighten(base,MathHelper.lerp(delta,m.previousAmount,m.amount));
         // In the air the knees draw up while rising and the legs reach down while falling; a landing dips the hips.
         float air=MathHelper.lerp(delta,m.previousAir,m.air);
         if(air>.001f)base=MotionPose.blend(base,MotionClips.air(MathHelper.lerp(delta,m.previousVy,m.vy)/.42f,p.age+delta),air);
