@@ -86,6 +86,38 @@ class HitCounterTest {
         }
         assertTrue(opener,"the opening punch");
     }
+    /**
+     * The beatdown's own blows come further apart than a combo waits (its opening punch, then the cutscene's words, then
+     * the uppercut some 4 s on): it holds its user's count open from the opening punch to the landing (a first shot had
+     * it start again at the uppercut), and lets go if it is cut short; their client keeps it on screen meanwhile.
+     */
+    @Test void theBeatdownHoldsItsCountOpen()throws Exception{
+        int cut=dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEAT_CUT,up=dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEAT_UPPERCUT,
+            land=dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEAT_LAND,first=dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEAT_RUSH_FIRST,
+            last=dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEAT_RUSH_LAST,fin=dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEAT_FINAL;
+        assertTrue(up-cut>HitCounter.COMBO,"the uppercut comes too late for a combo by itself");
+        assertTrue(first-up<=HitCounter.COMBO&&fin-last<=HitCounter.COMBO,"the rest of its blows keep it going");
+        assertEquals(1,HitCounter.next(1,cut,up,1),"not held, it would start again at the uppercut");
+        assertEquals(2,HitCounter.next(1,Math.max(cut,cut+(land-cut)),up,1),"held from the opening punch to the landing, it goes on");
+        boolean holds=false;
+        for(var m:node("dev/sangwoo/celestialfall/stand/StarPlatinumAttack").methods){
+            var k=calls(m);int begin=index(k,"begin","dev/sangwoo/celestialfall/stand/StarPlatinumBeatdown"),struck=index(k,"struck","dev/sangwoo/celestialfall/combat/HitCounter"),hold=index(k,"hold","dev/sangwoo/celestialfall/combat/HitCounter");
+            if(begin>=0&&struck>begin&&hold>struck)holds=true;
+        }
+        assertTrue(holds,"held once the opening punch is counted (not before: an old count would run on)");
+        var end=node("dev/sangwoo/celestialfall/stand/StarPlatinumBeatdown").methods.stream().filter(m->m.name.equals("end")).findFirst().orElseThrow();
+        assertTrue(index(calls(end),"release","dev/sangwoo/celestialfall/combat/HitCounter")>=0,"let go when cut short");
+        // their client: on screen while held, though no blow comes; the hold's end begins its 2.5 s
+        dev.sangwoo.celestialfall.client.HitCounterHud.clear();
+        heard(1,1,land-cut,100);
+        assertEquals(100,comboAt(),0);assertEquals(0,since(100+(up-cut)-1),1e-6,"still there as the uppercut comes");
+        heard(2,1,land-up,100+(up-cut));
+        assertEquals(100,comboAt(),0,"the same combo");assertEquals(100+(up-cut),field("hitAt"),0);
+        heard(2,0,0,250);
+        assertEquals(100+(up-cut),field("hitAt"),0,"a hold let go is no hit: no flash");assertEquals(100,comboAt(),0);
+        assertEquals(.5f,since(260),1e-6,"its 2.5 s from the hold's end");
+        dev.sangwoo.celestialfall.client.HitCounterHud.clear();
+    }
     /** The server tells the count and how many of it came this tick; a 2.107 one tells only the count (one, then). */
     @Test void aComboBeginsWhenAllOfItCameNow(){
         dev.sangwoo.celestialfall.client.HitCounterHud.clear();
@@ -136,9 +168,17 @@ class HitCounterTest {
 
     // ---- helpers
 
-    private static void heard(int n,int added,double at)throws RuntimeException{
-        try{var m=dev.sangwoo.celestialfall.client.HitCounterHud.class.getDeclaredMethod("heard",int.class,int.class,double.class);m.setAccessible(true);m.invoke(null,n,added,at);}
+    private static void heard(int n,int added,double at)throws RuntimeException{heard(n,added,0,at);}
+    private static void heard(int n,int added,int hold,double at)throws RuntimeException{
+        try{var m=dev.sangwoo.celestialfall.client.HitCounterHud.class.getDeclaredMethod("heard",int.class,int.class,int.class,double.class);m.setAccessible(true);m.invoke(null,n,added,hold,at);}
         catch(ReflectiveOperationException e){throw new RuntimeException(e);}
+    }
+    private static double field(String name){
+        try{var f=dev.sangwoo.celestialfall.client.HitCounterHud.class.getDeclaredField(name);f.setAccessible(true);return f.getDouble(null);}
+        catch(ReflectiveOperationException e){throw new RuntimeException(e);}
+    }
+    private static float since(double now)throws Exception{
+        var m=dev.sangwoo.celestialfall.client.HitCounterHud.class.getDeclaredMethod("since",double.class);m.setAccessible(true);return (float)m.invoke(null,now);
     }
     private static double comboAt(){
         try{var f=dev.sangwoo.celestialfall.client.HitCounterHud.class.getDeclaredField("comboAt");f.setAccessible(true);return f.getDouble(null);}

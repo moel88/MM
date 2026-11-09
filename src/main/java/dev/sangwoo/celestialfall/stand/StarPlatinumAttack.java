@@ -349,8 +349,10 @@ public final class StarPlatinumAttack {
                 // (2.94.0) Lee So-sang's H's dodge keeps its blow from her, as any other's (IsosangAttack.dodges): no cutscene
                 else if(!e.isInvulnerableTo(source)&&!dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(e,source)&&StarPlatinumBeatdown.begin(p,e,s.start,s.yaw)){
                     struck.add(e);p.onAttacking(e);
-                    // it lands without harm (the cutscene's blows deal it): a hit all the same (2.108.0)
+                    // it lands without harm (the cutscene's blows deal it): a hit all the same (2.108.0), and the count is held
+                    // open through the cutscene's words to its landing (the uppercut comes some 4 s on)
                     dev.sangwoo.celestialfall.combat.HitCounter.struck(p,e);
+                    dev.sangwoo.celestialfall.combat.HitCounter.hold(p,BEAT_LAND-BEAT_CUT);
                     world.playSound(null,e.getX(),e.getY(),e.getZ(),SoundEvents.ENTITY_PLAYER_ATTACK_KNOCKBACK,SoundCategory.PLAYERS,.9f,.8f);
                 }
             }

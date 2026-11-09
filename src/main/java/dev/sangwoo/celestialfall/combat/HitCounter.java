@@ -28,8 +28,10 @@ import java.util.function.BooleanSupplier;
  * Star Platinum's stopped time keeps it for later (it counts as landed then; what it kept is not counted again as time
  * moves). A blow that lands without harm counts too ({@link #struck}: the beatdown's opening punch and its blows held
  * back at 1 health). The count runs on while each blow comes within {@link #COMBO} ticks of the one before and starts
- * again after ({@link #next}). It is told to the player who dealt it at the end of the tick ("kageno_hits_v1", its name
- * kept: a 2.107 client still shows Kageno's): the count, then how many of it came this tick.
+ * again after ({@link #next}); a skill whose own blows come further apart keeps it open meanwhile ({@link #hold}: the
+ * beatdown, whose opening punch lands some 4 s before the uppercut, the cutscene's words between). It is told to the
+ * player who dealt it at the end of the tick ("kageno_hits_v1", its name kept: a 2.107 client still shows Kageno's): the
+ * count, how many of it came this tick, and how many ticks on it is held open.
  */
 public final class HitCounter {
     public static final Identifier CHANNEL=new Identifier(CelestialFall.ID,"kageno_hits_v1");
@@ -37,7 +39,7 @@ public final class HitCounter {
     public static final int COMBO=50;
     /** The most a count tells (its display's digits). */
     public static final int MOST=9999;
-    private static final class Count {int hits,added;long last=Long.MIN_VALUE/2;boolean dirty;}
+    private static final class Count {int hits,added;long last=Long.MIN_VALUE/2,heldUntil=Long.MIN_VALUE/2;boolean dirty;}
     private static final Map<UUID,Count> COUNTS=new HashMap<>();
     /** How many hits a blow counts while {@link #weighing} runs it (1 but for Kageno's R's stored cut). */
     private static final ThreadLocal<Integer> WEIGHT=ThreadLocal.withInitial(()->1);
@@ -60,6 +62,22 @@ public final class HitCounter {
     }
     /** A blow {@code attacker} landed on {@code target} that dealt no harm: counted all the same. */
     public static void struck(ServerPlayerEntity attacker,LivingEntity target){count(attacker,target,1);}
+    /**
+     * {@code p}'s count stays open {@code ticks} on whatever comes between (its skill's own blows come further apart than
+     * {@link #COMBO}: the beatdown, from its opening punch to the landing). Counted on as its blows come; it may run out
+     * {@link #COMBO} ticks after the later of its last blow and the hold.
+     */
+    public static void hold(ServerPlayerEntity p,int ticks){
+        if(server==null||p instanceof dev.sangwoo.celestialfall.boss.BossPlayer)return;
+        long now=server.getTicks();var c=COUNTS.computeIfAbsent(p.getUuid(),u->new Count());
+        if(now+ticks>c.heldUntil){c.heldUntil=now+ticks;c.dirty=true;}
+    }
+    /** The hold on {@code p}'s count ends now (the skill holding it was cut short). */
+    public static void release(ServerPlayerEntity p){
+        if(server==null)return;
+        long now=server.getTicks();var c=COUNTS.get(p.getUuid());
+        if(c!=null&&c.heldUntil>now){c.heldUntil=now;c.dirty=true;}
+    }
     /** Runs {@code blow} with each hit it lands counting {@code n} (Kageno's R: its stored cut is R_CUTS slashes in one blow). */
     public static boolean weighing(int n,BooleanSupplier blow){
         int before=WEIGHT.get();WEIGHT.set(Math.max(1,n));
@@ -69,8 +87,8 @@ public final class HitCounter {
         if(p==target||target.getWorld().isClient||p instanceof dev.sangwoo.celestialfall.boss.BossPlayer||p.isRemoved())return;
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())||server==null)return;
         long now=server.getTicks();var c=COUNTS.computeIfAbsent(p.getUuid(),u->new Count());
-        if(now-c.last>COMBO||!c.dirty)c.added=0;
-        c.hits=next(c.hits,c.last,now,n);c.added=Math.min(c.hits,c.added+n);c.last=now;c.dirty=true;
+        // (held open, it runs out only that long after the hold)
+        c.hits=next(c.hits,Math.max(c.last,c.heldUntil),now,n);c.added=Math.min(c.hits,c.added+n);c.last=now;c.dirty=true;
     }
     /** At the end of the tick, each player whose count grew hears it once. */
     private static void tell(MinecraftServer s){
@@ -79,7 +97,9 @@ public final class HitCounter {
             c.dirty=false;
             var p=s.getPlayerManager().getPlayer(e.getKey());
             if(p==null||!ServerPlayNetworking.canSend(p,CHANNEL))continue;
-            var b=PacketByteBufs.create();b.writeVarInt(c.hits);b.writeVarInt(c.added);ServerPlayNetworking.send(p,CHANNEL,b);
+            var b=PacketByteBufs.create();b.writeVarInt(c.hits);b.writeVarInt(c.added);b.writeVarInt((int)Math.max(0,Math.min(Integer.MAX_VALUE,c.heldUntil-s.getTicks())));
+            ServerPlayNetworking.send(p,CHANNEL,b);
         }
+        for(var c:COUNTS.values())c.added=0;
     }
 }

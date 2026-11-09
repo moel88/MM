@@ -196,6 +196,8 @@ public final class StarPlatinumBeatdown {
     /** The cutscene ends: done (the one struck down where they came down) or cut short. Its cooldown runs from now. */
     private static void end(Beat b,long now,boolean cut){
         BY_USER.remove(b.user.getUuid());if(BY_VICTIM.get(b.victim.getUuid())==b)BY_VICTIM.remove(b.victim.getUuid());
+        // cut short, its user's hit count is held open no longer (2.108.0)
+        if(cut)dev.sangwoo.celestialfall.combat.HitCounter.release(b.user);
         var v=b.victim;
         if(!cut&&!b.down&&v.isAlive()&&!v.isRemoved()&&v.getWorld()==b.world)put(b);
         StarPlatinumAttack.beatdownOver(b.user,now);
