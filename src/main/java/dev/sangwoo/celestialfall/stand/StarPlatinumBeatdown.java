@@ -154,7 +154,11 @@ public final class StarPlatinumBeatdown {
         float amount=Math.min(last?b.damage-b.dealt:b.damage*share,v.getHealth()-1);
         boolean rush=age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST;
         if(amount>0)deal(b,amount,rush||!last&&age!=BEAT_UPPERCUT);
-        else if(v.isAlive())b.world.sendEntityDamage(v,b.world.getDamageSources().playerAttack(b.user));
+        else if(v.isAlive()){
+            b.world.sendEntityDamage(v,b.world.getDamageSources().playerAttack(b.user));
+            // held back at 1 health, the blow lands all the same: a hit (2.108.0)
+            dev.sangwoo.celestialfall.combat.HitCounter.struck(b.user,v);
+        }
         if(last){
             b.user.onAttacking(v);
             // its user's own hit feedback: the whole beatdown's damage, once

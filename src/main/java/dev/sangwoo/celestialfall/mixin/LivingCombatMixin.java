@@ -47,7 +47,11 @@ public abstract class LivingCombatMixin {
             &&dev.sangwoo.celestialfall.isosang.IsosangAttack.dodges(p,source)){cir.setReturnValue(false);return;}
         // stopped in Star Platinum's stopped time (2.67.0): the harm is kept and comes to them all at once as time moves
         // again (the blow counts as landed now)
-        if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.defer((LivingEntity)(Object)this,source,amount)){cir.setReturnValue(true);return;}
+        if(dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.defer((LivingEntity)(Object)this,source,amount)){
+            // (2.108.0) its hit counts now, as it lands
+            dev.sangwoo.celestialfall.combat.HitCounter.landed((LivingEntity)(Object)this,source);
+            cir.setReturnValue(true);return;
+        }
         if((Object)this instanceof ServerPlayerEntity p && CombatManager.block(p,source,amount))cir.setReturnValue(false);
     }
     /** Whether vanilla would let this blow land ({@code LivingEntity.damage}): not within the moment after one that was greater, not fire on one fire cannot hurt. */
@@ -57,6 +61,12 @@ public abstract class LivingCombatMixin {
     }
     @Inject(method="damage",at=@At("RETURN"))
     private void botand$interruptComboOnDamage(DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir) {
-        if(cir.getReturnValue())HitStun.attackerDamaged((LivingEntity)(Object)this);
+        if(!cir.getReturnValue())return;
+        var self=(LivingEntity)(Object)this;
+        HitStun.attackerDamaged(self);
+        // every blow a player lands counts for their hit count (2.108.0): once, a stopped one as it was kept (above), not
+        // again as stopped time gives it
+        if(!self.getWorld().isClient&&!dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.settling()&&!dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(self))
+            dev.sangwoo.celestialfall.combat.HitCounter.landed(self,source);
     }
 }

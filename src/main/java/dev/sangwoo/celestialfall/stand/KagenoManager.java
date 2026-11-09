@@ -24,7 +24,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 
 /** Server owns casts, hold duration, target membership, damage and all movement locks. */
 public final class KagenoManager {
-    public static final Identifier INPUT=CelestialFall.id("kageno_input_v1"),CAST=CelestialFall.id("kageno_cast_v1"),STOP=CelestialFall.id("kageno_stop_v1"),STATUS=CelestialFall.id("kageno_status_v1"),HITS=CelestialFall.id("kageno_hits_v1"),DAMAGE=CelestialFall.id("kageno_damage_v1");
+    public static final Identifier INPUT=CelestialFall.id("kageno_input_v1"),CAST=CelestialFall.id("kageno_cast_v1"),STOP=CelestialFall.id("kageno_stop_v1"),STATUS=CelestialFall.id("kageno_status_v1"),DAMAGE=CelestialFall.id("kageno_damage_v1");
     public static final class Cast {
         public final UUID id=UUID.randomUUID();public final ServerPlayerEntity player;public final ServerWorld world;
         public final Vec3d origin;public final float yaw,pitch;public final int skill,combo;public final long start;
@@ -51,7 +51,7 @@ public final class KagenoManager {
     }
     private static final class State {
         final ServerWorld world;State(ServerPlayerEntity p){world=p.getServerWorld();}
-        final long[] ready=new long[9];long press=-1,pulse=-1,lastCombo=-100,overUntil,lastHit=-1000,poseReady;int combo,window,packets,hits;float boost;
+        final long[] ready=new long[9];long press=-1,pulse=-1,lastCombo=-100,overUntil,poseReady;int combo,window,packets;float boost;
     }
     private record Mark(ServerPlayerEntity owner,LivingEntity target,long until){}
     private static final Map<ServerPlayerEntity,State> STATES=new HashMap<>();
@@ -283,9 +283,8 @@ public final class KagenoManager {
         boolean unblock=c.skill==R||c.skill==H||c.skill==Y||c.skill==E&&age==E_FINISH||c.skill==M1&&c.combo==4||c.skill==RUSH&&age==RUSH_FINISH;
         if(unblock)CombatManager.interrupt(e);
         e.timeUntilRegen=0;
-        if(CombatManager.damageWithoutKnockback(e,source,(float)(amount*multiplier))){
-            if(s!=null){long now=c.world.getTime();int n=KagenoRules.hits(c.skill,age);s.hits=now-s.lastHit>50?n:s.hits+n;s.lastHit=now;
-                if(ServerPlayNetworking.canSend(c.player,HITS)){var b=PacketByteBufs.create();b.writeVarInt(s.hits);ServerPlayNetworking.send(c.player,HITS,b);}}
+        // (its hits are counted as every player's are, 2.108.0: HitCounter; R's stored cut counts its R_CUTS slashes)
+        if(dev.sangwoo.celestialfall.combat.HitCounter.weighing(KagenoRules.hits(c.skill,age),()->CombatManager.damageWithoutKnockback(e,source,(float)(amount*multiplier)))){
             // Attacker-side hit feedback (red cumulative number and blood), as in the review's dummy demos.
             // (one stopped in Star Platinum's stopped time: shown as time moves again, with all that came to them, 2.67.0)
             if(!StarPlatinumTimeStop.deferFeedback(c.player,e,(float)(amount*multiplier),c.strikeYaw())&&ServerPlayNetworking.canSend(c.player,DAMAGE)){var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat((float)(amount*multiplier));b.writeFloat(c.strikeYaw());ServerPlayNetworking.send(c.player,DAMAGE,b);}

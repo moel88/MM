@@ -198,22 +198,7 @@ public final class KagenoRenderer {
     public static void hud(DrawContext draw,float delta){
         var mc=MinecraftClient.getInstance();if(mc.player==null||mc.world==null||!MapClient.enabled()||mc.options.hudHidden)return;
         int width=draw.getScaledWindowWidth(),height=draw.getScaledWindowHeight();
-        // Reference UI: "N Hits" at the left, a third down. It flashes red #F62223 on every hit and
-        // eases back to white in 0.25 s with a small drift and tilt; the purple timer below counts
-        // seconds since the first hit of the combo.
-        float since=(mc.world.getTime()-StandClient.hitTime+delta)/20f;
-        if(StandClient.visible(mc.player)&&StandClient.hitCount>0&&since<2.75f){
-            String text=StandClient.hitCount+(StandClient.hitCount==1?" Hit":" Hits");
-            float scale=Math.max(1.2f,height*.0315f/7f),alpha=1-Ease.smooth(since,2.5f,2.75f);int a=Math.max(8,(int)(alpha*255));
-            float k=Math.min(1,since/.25f);int r=(int)(246+(248-246)*k),g=(int)(34+(251-34)*k*k*.6f+(251-34)*k*.4f),b=(int)(35+(249-35)*k*k*.6f+(249-35)*k*.4f);
-            float pop=1-Ease.smooth(since,0,.37f);
-            var mat=draw.getMatrices();mat.push();mat.translate(width*.042f-pop*width*.0037f,height*.31f,0);
-            mat.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(-3*pop));mat.scale(scale,scale,1);
-            draw.drawText(mc.textRenderer,text,0,-4,(a<<24)|(r<<16)|(Math.min(255,g)<<8)|Math.min(255,b),true);mat.pop();
-            float combo=(mc.world.getTime()-StandClient.comboStart+delta)/20f;
-            mat.push();mat.translate(width*.042f,height*.31f+scale*9,0);mat.scale(scale*.55f,scale*.55f,1);
-            draw.drawText(mc.textRenderer,mc.player.getName().getString()+" : "+String.format(java.util.Locale.ROOT,"%.2f",Math.max(0,combo)),0,0,(a<<24)|0x9156e0,true);mat.pop();
-        }
+        // (2.108.0) the "N Hits" of the reference UI is every character's now: HitCounterHud
         // The skill cooldowns are CooldownHud's list (2.42.0); the old panel of keys and seconds left is gone.
         if(!StandClient.visible(mc.player)||mc.currentScreen!=null||CinematicDirector.isActive())return;
         var state=StandClient.STATES.get(mc.player.getUuid());long now=mc.world.getTime();

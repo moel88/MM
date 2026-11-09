@@ -814,7 +814,7 @@ public final class MpClient implements ClientModInitializer {
                 dev.sangwoo.celestialfall.client.integration.AtomicOverwhelm.renderedFrames()));
             quakePeak=0;overwhelmPeak=0;lightPeak=0;wallPeak=0;
         }
-        flag("atomic",AtomicClient.CASTS.size());flag("overdrive",StandClient.OVERDRIVE.size());flag("hits",StandClient.hitCount);
+        flag("atomic",AtomicClient.CASTS.size());flag("overdrive",StandClient.OVERDRIVE.size());flag("hits",dev.sangwoo.celestialfall.client.HitCounterHud.count);
         flag("health",Math.round(mc.player.getHealth()));
         // 2.45.0: the player list (its names, and whether Tab sent it away), the pause menu and its reset question, deaths and chat
         flag("player_list",mc.player.networkHandler.getListedPlayerListEntries().stream().map(e->e.getProfile().getName()).sorted().toList());

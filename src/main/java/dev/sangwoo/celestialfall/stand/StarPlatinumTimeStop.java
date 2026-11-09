@@ -140,6 +140,8 @@ public final class StarPlatinumTimeStop {
     }
     /** Whether {@code e} is stopped in someone's stopped time now. */
     public static boolean stopped(LivingEntity e){return e!=null&&!e.getWorld().isClient&&BY_HELD.containsKey(e.getUuid());}
+    /** Whether what a time stop kept is coming to whom it stopped now (settle): their hits were counted as they were dealt (HitCounter, 2.108.0). */
+    public static boolean settling(){return settling;}
     /**
      * Whether {@code e} resists a time stop (2.75.0, user request: "스타플래티나는 시간정지 면역이 2초 있게 만들어줘"): Star
      * Platinum's users (a boss of it too), whose first TS_RESIST ticks of another's stopped time it does not stop them.

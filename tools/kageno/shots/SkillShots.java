@@ -326,7 +326,7 @@ public final class SkillShots implements ClientModInitializer {
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;case "SUMMON"->300;default->DURATION[skill(name)]+20;};}
-    private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();
+    private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
         if("UI".equals(current)||mapShot()||"SUMMON".equals(current)&&("none".equals(opts.get("stand"))||opts.containsKey("cool")))logInterface();
@@ -340,6 +340,8 @@ public final class SkillShots implements ClientModInitializer {
         long dash=CombatClient.snapshot(mc.player.getUuid()).dashStart();
         if(dash!=dashLogged&&dash>0){if(dashLogged!=-1000||mc.world.getTime()-dash<40)log.append("  dash at ").append(dash).append('\n');dashLogged=dash;}
         var shown=CooldownHud.shown();if(!shown.equals(listLogged)){log.append("  list ").append(shown).append(" at ").append(mc.world.getTime()).append('\n');listLogged=shown;}
+        // (2.108.0) the hit count, as this client hears it (every character's)
+        if(dev.sangwoo.celestialfall.client.HitCounterHud.count!=hitsLogged){hitsLogged=dev.sangwoo.celestialfall.client.HitCounterHud.count;log.append(String.format(Locale.ROOT,"  hits %d at %d (world %d)%n",hitsLogged,age,mc.world.getTime()));}
         var gr=mc.gameRenderer;var f=net.minecraft.client.render.GameRenderer.class.getDeclaredField("fovMultiplier");f.setAccessible(true);
         if("SUMMON".equals(current))logStand();
         if("SUMMON".equals(current))logBoss();

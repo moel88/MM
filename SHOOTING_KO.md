@@ -186,6 +186,14 @@
   - 2.107.1의 확인: 죽는 순간과 죽어 있는 동안 화면(지평선)이 기울지 않는다(`WHERE`의 `death view true`). 몸은 죽은 지 20틱에 연기와 함께 사라진다(`WHERE`의 `theirs false, removed KILLED, death time 20`: 마인크래프트 그대로). 그 뒤에도 더미·슬라임은 보이고(`entities seen [idle_dummy, …]`, `me`가 빠짐) 서버는 몸을 월드에 둔다(`removed false, in the world's players true`). `WHERE`가 이 클라이언트가 가진 엔티티의 종류(`me`는 자기 몸)와 `death view`(`DeathView.active`)를 함께 남긴다.
   - 자막: `FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="죽은 뒤" FILM_CLOCK_ZERO=1.55 FILM_NOTES="시작-끝:설명|…"`.
 
+### 히트 수 (2.108.0)
+- 모든 캐릭터의 평타와 스킬이 맞히면 히트 수가 뜬다(`CLAUDE.md`의 '히트 수 표시'). 자리는 화면 왼쪽(높이 31%)이고 쿨타임 목록 첫 칸 위에 그려진다(컷씬에서도 같은 자리).
+- 촬영(2.108.0, 고친 것이라 소리 없음): 예열 넷(스타플래티나 평타·러시, 이소상 평타·R, 카게노 E·평타, 비트다운: `slows=0:2;save=0-1`로 빨리 돌리고 프레임은 남기지 않음) 뒤에 다섯 장면을 한 묶음으로 찍는다. 배율 8에 장면마다 `slows`로 앞부분만 빨리.
+  - `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "SUMMON;len=75;face=180;dummy=1;dfw=3;slows=0:2;save=0-1;then=KEY_Q@5/ATTACKDOWN@15/ATTACKUP@32/KEYDOWN_E@36/KEYUP_E@60,SUMMON;stand=isosang;len=95;face=180;dummy=1;dfw=3;slows=0:2;save=0-1;then=ATTACKDOWN@5/ATTACKUP@52/KEY_R@70,SUMMON;stand=kageno;len=110;face=180;dummy=1;dfw=3;slows=0:2;save=0-1;then=E@5/ATTACKDOWN@86/ATTACKUP@100,SUMMON;len=290;face=180;dummy=1;dfw=3;slows=0:2;save=0-1;then=KEY_Q@5/KEY_G@25,SUMMON;len=232;face=180;dummy=1;dfw=3;hud=1;cool=1;pitch=20;dist=5;slows=0:3/40:8;then=KEY_Q@10/KEYDOWN_E@45/KEYUP_E@132/ATTACKDOWN@136/ATTACKUP@178,SUMMON;stand=isosang;len=165;face=180;dummy=1;dfw=3;hud=1;cool=1;pitch=20;dist=5;slows=0:3/15:8;then=ATTACKDOWN@20/ATTACKUP@68/KEY_R@86,SUMMON;stand=kageno;len=190;face=180;dummy=1;dfw=3;hud=1;cool=1;pitch=20;dist=5;slows=0:3/15:8;then=E@20/ATTACKDOWN@99/ATTACKUP@135,SUMMON;stand=none;len=135;face=180;dummy=1;dfw=3;hud=1;cool=1;pitch=20;dist=5;slows=0:3/15:6;then=ATTACKDOWN@20/ATTACKUP@80,SUMMON;len=372;face=180;dummy=1;dfw=3;hud=1;slows=0:3/45:10;then=KEY_Q@10/KEY_G@50" 960x540 8`
+  - 장면: 스타플래티나 러시(E, 40타) → 평타 4타(44), 이소상 평타 4타(1·2·4·1타격) → R(9), 카게노 E(7타+마무리) → 평타 4타(12), 맨손 평타 4타, 스타플래티나 비트다운(컷씬 동안 화면 왼쪽에서 셈). `cool=1`이라 쿨타임 목록에 칸이 생겨 히트 수가 그 칸 위에 그려지는지 보인다. 비트다운은 긴 쿨타임이 접속할 때 처음 길이로 돌므로 `cool=1`을 빼고 찍는다.
+  - 로그: 히트 수가 바뀔 때마다 'hits N at 장면틱 (world 월드틱)'(`SkillShots`, `HitCounterHud.count`). 서버의 타(러시 'rush blow', 'punch landed', 'isosang hit', 더미 체력)와 맞춰 본다.
+- 멀티플레이 확인: 히트 수 패킷과 세는 곳이 바뀌어 한다. `MP_ONLY=isosang`(이소상 평타를 관찰자에게: 4타를 다 넣으면 8, 막힌 타는 세지 않음)과 `MP_ONLY=timestop`(시간 정지 안의 평타 4타와 강펀치: 넣을 때 5까지 세고 시간이 다시 흐를 때 늘지 않음). 두 클라이언트의 로그에 'hits = N'(`MpClient`의 flag)이 남는다.
+
 ### 운석
 - 촬영: `SHOTS_WORLD=월드폴더 python3 tools/kageno/shots/run_shots.py OUT "METEOR;…,SHOP;…" 1280x730 배율`
   - 맵 월드를 그대로 엽니다.

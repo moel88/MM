@@ -39,8 +39,6 @@ public final class StandClient {
     private static Object world,player;private static long nextPunch,lastThemeUntil;private static int ticks;
     private static UUID handedOff,cancelledPose;private static boolean holdingT;private static final Set<Integer> captured=new HashSet<>();
     private static SoundInstance theme;
-    /** In-game "N Hits" combo counter of the local player. */
-    public static int hitCount;public static long hitTime=-1000,comboStart=-1000;
     private StandClient(){}
     public static ItemStack sword(){return SWORD;}
     /** This client's tick count, the clock a cast's age is told against (Cast.received): Lee So-sang's swings use it too (2.77.0). */
@@ -80,7 +78,6 @@ public final class StandClient {
                 STATES.put(id,new Status(until,boost,ready,marks));});
         });
         ClientPlayNetworking.registerGlobalReceiver(KagenoManager.DAMAGE,(mc,h,b,r)->{int entity=b.readVarInt();float amount=b.readFloat(),yaw=b.readFloat();if(!Float.isFinite(amount)||amount<0||amount>10000)return;mc.execute(()->{if(MapClient.enabled())dev.sangwoo.celestialfall.client.kageno.HitFeedback.hit(mc,entity,amount,yaw);});});
-        ClientPlayNetworking.registerGlobalReceiver(KagenoManager.HITS,(mc,h,b,r)->{int n=b.readVarInt();mc.execute(()->{if(mc.world!=null){int count=Math.max(0,Math.min(9999,n));if(count<=1||count<hitCount)comboStart=mc.world.getTime();hitCount=count;hitTime=mc.world.getTime();}});});
         ClientTickEvents.START_CLIENT_TICK.register(StandClient::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((h,mc)->mc.execute(()->clear(mc)));
         WorldRenderEvents.START.register(c->dev.sangwoo.celestialfall.client.kageno.BodyGhost.world(true));
