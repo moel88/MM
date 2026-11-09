@@ -193,21 +193,41 @@ public final class StarPlatinumAttack {
         return true;
     }
     /**
-     * G: the beatdown starts now if it may (2.64.0), as the heavy punch does: the stand out and its user free, it ready
-     * again and no other of the stand's skills in flight; a punch in flight stops short and its blow takes over, and
-     * just after the rush it starts once the rush's fists are back in the guard. Returns whether it starts (now or then).
+     * G: the beatdown begins if it may (2.64.0), as the heavy punch does: the stand out and its user free, it ready
+     * again and no other of the stand's skills in flight; a punch in flight stops short. Since 2.109.0 its user glows
+     * first (CutsceneGlow) and its blow is thrown as the glow ends (beatdownGlowed: just after the rush, once the rush's
+     * fists are back in the guard). Returns whether it begins.
      */
     public static boolean beatdown(ServerPlayerEntity p){
+        if(!beatdownMay(p))return false;
+        // (2.109.0, user request: "빛나는 메커니즘을 바꾸자 몸이 하늘색으로 빛나고 빛이 끝나고 스킬이 시전되게", "G 누름 →
+        // 빛 → 여는 주먹") it glows first: its user glows sky blue half a second (CutsceneGlow) and its opening punch is
+        // thrown as the glow ends (beatdownGlowed). A punch in flight stops short now, so the stand is back in its guard by then.
+        var s=state(p);stop(p,s,p.getWorld().getTime());
+        return dev.sangwoo.celestialfall.combat.CutsceneGlow.begin(p,dev.sangwoo.celestialfall.combat.CutsceneGlow.BEATDOWN);
+    }
+    /** Whether the beatdown may be begun now (its glow at its key, its opening punch as the glow ends). */
+    private static boolean beatdownMay(ServerPlayerEntity p){
         // (not in its user's own stopped time, 2.67.0: whom it would strike stand stopped, and its cutscene is not of stopped
         // time; nor in another's that its user resists yet, 2.75.0)
         if(!able(p)||StarPlatinumTimeStop.stopping(p)||StarPlatinumTimeStop.resisting(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         if(skill(s.combo)&&now<s.start+LENGTH[s.combo])return false;
-        if(now<s.beatdownReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        return now>=s.beatdownReady||dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+    }
+    /** The beatdown once its glow is over (2.109.0, CutsceneGlow): its opening punch, as at its key before (just after the rush, once its fists are back in the guard). */
+    public static boolean beatdownGlowed(ServerPlayerEntity p){
+        if(!beatdownMay(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
         if(now<StarPlatinumRush.freeAt(p)){s.beatdownQueued=true;return true;}
         beginSkill(p,s,now,BEATDOWN);
         return true;
     }
+    /**
+     * The beatdown's glow was cut short (2.109.0, CutsceneGlow: a blow landed on its user as they glowed, "끊기고 쿨타임도
+     * 다시 흐름"): its cooldown runs in full from now, as for one whose blow struck no one.
+     */
+    public static void beatdownGlowCut(ServerPlayerEntity p){beatdownOver(p,p.getWorld().getTime());}
     /** The beatdown's cutscene is over (or cut short) at {@code end}: it is ready again a cooldown from then. */
     static void beatdownOver(ServerPlayerEntity p,long end){
         var s=state(p);

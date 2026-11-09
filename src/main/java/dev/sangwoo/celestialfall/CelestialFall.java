@@ -56,6 +56,7 @@ public final class CelestialFall implements ModInitializer {
         dev.sangwoo.celestialfall.training.TrainingDummies.initialize();
         dev.sangwoo.celestialfall.combat.CombatManager.initialize();
         dev.sangwoo.celestialfall.combat.HitCounter.initialize();
+        dev.sangwoo.celestialfall.combat.CutsceneGlow.initialize();
         dev.sangwoo.celestialfall.progression.ProgressManager.initialize();
         dev.sangwoo.celestialfall.stand.StandManager.initialize();
         dev.sangwoo.celestialfall.boss.Bosses.initialize();

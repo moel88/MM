@@ -132,6 +132,7 @@ public final class MpServer implements ModInitializer {
         if(BOSS_ONLY)boss(server);
         if(ARROW_ONLY||COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)arrow(server);
         if(DEATH_ONLY)deaths(server);
+        if(GLOW_ONLY)glows(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -141,6 +142,42 @@ public final class MpServer implements ModInitializer {
         idle=!busy;
     }
     private final Set<UUID> struck=new HashSet<>();private net.minecraft.entity.mob.HuskEntity behind;
+    /** The glows as the server keeps them (2.109.0): whose, since when, for which skill. */
+    private final Map<UUID,long[]> glowsSeen=new HashMap<>();
+    /**
+     * Every player's glow before a skill with a cutscene (2.109.0, MP_ONLY=glow, CutsceneGlow): when it begins (their
+     * speed against their base), every blow on them meanwhile, and when it ends: cast (the skill begun) or cut short,
+     * and the skill ready again how long after.
+     */
+    private void glows(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        for(var p:server.getPlayerManager().getPlayerList()){
+            int skill=dev.sangwoo.celestialfall.combat.CutsceneGlow.skill(p);var was=glowsSeen.get(p.getUuid());
+            String name=p.getGameProfile().getName();
+            if(skill>=0&&was==null){
+                glowsSeen.put(p.getUuid(),new long[]{now,skill});var speed=p.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);
+                note(server,String.format(java.util.Locale.ROOT,"%s glows for %s at tick %d (speed x%.2f)",name,glowName(skill),now,speed.getValue()/speed.getBaseValue()));
+                hurtNow(p);
+            }else if(skill>=0){
+                if(hurtNow(p))note(server,String.format(java.util.Locale.ROOT,"%s struck as it glows at tick %d (%d ticks in), health %.1f",name,now,now-was[0],p.getHealth()));
+            }else if(was!=null){
+                glowsSeen.remove(p.getUuid());int k=(int)was[1];
+                boolean cast=switch(k){
+                    case dev.sangwoo.celestialfall.combat.CutsceneGlow.KAGENO_H->KagenoManager.casts().stream().anyMatch(c->c.player==p&&c.skill==KagenoRules.H&&c.start>=was[0]);
+                    case dev.sangwoo.celestialfall.combat.CutsceneGlow.BEATDOWN->{var pu=dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punch(p);yield pu!=null&&pu.combo()==dev.sangwoo.celestialfall.stand.StarPlatinumRules.BEATDOWN&&pu.start()>=was[0];}
+                    case dev.sangwoo.celestialfall.combat.CutsceneGlow.ISOSANG_G->dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(p);
+                    default->false;};
+                long ready=switch(k){
+                    case dev.sangwoo.celestialfall.combat.CutsceneGlow.KAGENO_H->KagenoManager.ready(p,KagenoRules.H);
+                    case dev.sangwoo.celestialfall.combat.CutsceneGlow.BEATDOWN->dev.sangwoo.celestialfall.stand.StarPlatinumAttack.beatdownReady(p);
+                    case dev.sangwoo.celestialfall.combat.CutsceneGlow.ISOSANG_G->dev.sangwoo.celestialfall.isosang.IsosangAttack.gReady(p);
+                    default->0L;};
+                note(server,String.format(java.util.Locale.ROOT,"%s's glow for %s over at tick %d, %d ticks after it began: %s; ready again in %.1f s%s",name,glowName(k),now,now-was[0],cast?"CAST":"CUT SHORT",
+                    Math.max(0,ready-now)/20.0,dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?" (cooldowns off)":""));
+            }
+        }
+    }
+    private static String glowName(int skill){return switch(skill){case 0->"Kageno's H";case 1->"the beatdown";case 2->"Lee So-sang's G";default->"?";};}
     private net.minecraft.entity.Entity dummy;private long dummyGone;private final Map<UUID,Integer> hurtSeen=new HashMap<>();
     /**
      * Whether the player was hurt since the last server tick: a blow raises its hurt time back to 10, whichever way this
@@ -456,6 +493,8 @@ public final class MpServer implements ModInitializer {
     static final boolean COOLDOWNS_ONLY="cooldowns".equals(System.getProperty("botand.mp.only"));
     /** Only the beatdown's script (2.64.0, MP_ONLY=beatdown). */
     static final boolean BEATDOWN_ONLY="beatdown".equals(System.getProperty("botand.mp.only"));
+    /** (2.109.0) a skill with a cutscene glows first: only its check (MpClient.GLOW_SCRIPT). */
+    static final boolean GLOW_ONLY="glow".equals(System.getProperty("botand.mp.only"));
     /** Only the time stop's script (2.67.0, MP_ONLY=timestop). */
     static final boolean TIMESTOP_ONLY="timestop".equals(System.getProperty("botand.mp.only"));
     /** Only the script of Star Platinum's users resisting another's stopped time for two seconds (2.75.0, MP_ONLY=resist). */

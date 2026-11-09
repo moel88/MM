@@ -92,8 +92,8 @@ public final class StandClient {
         Cast cast=old==null?incoming:new Cast(old.id,old.caster,old.dimension,old.skill,old.combo,old.start,old.serverNow,old.received,old.origin,old.yaw,incoming.targets,incoming.aims);
         if(cast.age(0)<DURATION[cast.skill]){
             if(old==null){dev.sangwoo.celestialfall.client.kageno.KagenoClips.begin(cast);
-                // a skill with a cutscene (2.64.0, user request: "컷씬 나오는 스킬 사용할때는 시전자의 몸이 0.2초 동안 하늘색으로 변해")
-                if(cast.skill==H&&cast.age(0)<4)CutsceneFlash.flash(cast.caster);
+                // (a skill with a cutscene glows before it is cast since 2.109.0: the glow is the server's news, CutsceneGlow,
+                // as its key was pressed; 2.64.0 to 2.108.0 began it here)
                 if(cast.skill==H&&MinecraftClient.getInstance().player!=null&&cast.includes(MinecraftClient.getInstance().player.getUuid()))dev.sangwoo.celestialfall.client.integration.CinematicsBridge.nativeCutscene();}
             CASTS.put(cast.id,cast);if(old==null)KagenoAudio.begin(cast);
         }
@@ -157,7 +157,9 @@ public final class StandClient {
      */
     public static boolean skillSlowed(net.minecraft.entity.player.PlayerEntity p){
         var speed=p.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
-        return speed!=null&&(speed.getModifier(KagenoManager.R_SLOW)!=null||speed.getModifier(KagenoManager.E_SLOW)!=null||speed.getModifier(dev.sangwoo.celestialfall.stand.StarPlatinumRush.SLOW)!=null);
+        return speed!=null&&(speed.getModifier(KagenoManager.R_SLOW)!=null||speed.getModifier(KagenoManager.E_SLOW)!=null||speed.getModifier(dev.sangwoo.celestialfall.stand.StarPlatinumRush.SLOW)!=null
+            // (2.109.0) a skill with a cutscene's glow, before it is cast (CutsceneGlow)
+            ||speed.getModifier(dev.sangwoo.celestialfall.combat.CutsceneGlow.SLOW_ID)!=null);
     }
     /** Q shadow mark: some stand user's live mark sits on this entity (drawn as a black silhouette). */
     public static boolean shadowMarked(net.minecraft.entity.Entity e){

@@ -131,7 +131,22 @@ public final class KagenoManager {
             s.overUntil=now+600;s.boost=.05f;s.ready[Q]=s.overUntil+COOLDOWN[Q];status(p,s);return true;
         }
         if(action<0||action>H)return false;
-        s.press=-1;return begin(p,action);
+        s.press=-1;
+        // (2.109.0, user request: "빛나는 메커니즘을 바꾸자 몸이 하늘색으로 빛나고 빛이 끝나고 스킬이 시전되게") H glows
+        // first: its caster glows sky blue half a second (CutsceneGlow) and it is cast as the glow ends (glowed)
+        if(action==H)return ready(p,s,H,now)&&dev.sangwoo.celestialfall.combat.CutsceneGlow.begin(p,dev.sangwoo.celestialfall.combat.CutsceneGlow.KAGENO_H);
+        return begin(p,action);
+    }
+    /** H once its glow is over (2.109.0, CutsceneGlow): cast as at its key, if it still may be. */
+    public static boolean glowed(ServerPlayerEntity p){return begin(p,H);}
+    /**
+     * H's glow was cut short (2.109.0, CutsceneGlow: a blow landed on its caster as they glowed, "끊기고 쿨타임도 다시
+     * 흐름"): its cooldown runs in full from now (none for a player the cooldowns are off for).
+     */
+    public static void glowCut(ServerPlayerEntity p){
+        var s=STATES.computeIfAbsent(p,k->new State(k));long now=p.getWorld().getTime();
+        if(!NoCooldownState.enabled(p))s.ready[H]=Math.max(s.ready[H],now+COOLDOWN[H]);
+        status(p,s);
     }
     /**
      * An M1 combo whose next hit came too late breaks (user request, 2.43.0): the attack rests as after a fourth hit
@@ -381,4 +396,6 @@ public final class KagenoManager {
     public static void clear(MinecraftServer server){for(var c:new ArrayList<>(CASTS.values()))stop(c);for(var p:new ArrayList<>(STATES.keySet()))leave(p);}
     /** Clears the player's cooldowns (no-cooldown mode calls this every tick); the status sent twice a second tells their client. */
     public static void resetCooldown(ServerPlayerEntity p){var s=STATES.get(p);if(s!=null)Arrays.fill(s.ready,0);}
+    /** The tick this player's skill {@code slot} is ready again (0: ready, or none used; for the tools). */
+    public static long ready(PlayerEntity p,int slot){var s=p==null?null:STATES.get(p);return s==null||slot<0||slot>=s.ready.length?0:s.ready[slot];}
 }

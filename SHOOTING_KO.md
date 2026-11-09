@@ -195,6 +195,15 @@
   - 편집: 장면마다 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="시간" FILM_CLOCK_ZERO=시작초 FILM_NOTES="…" film.py 장면폴더 클립.mp4 시작초 끝초 "히트 수 — …"`로 만들고 `ffmpeg -f concat -c copy`로 잇는다(같은 설정이라 다시 인코딩하지 않음). 2.108.0: 스타플래티나 2.0~10.2초, 이소상 1.0~6.6초, 카게노 1.2~8.1초, 맨손 0.9~4.5초, 비트다운 2.3~17.6초.
 - 멀티플레이 확인: 히트 수 패킷과 세는 곳이 바뀌어 한다. `MP_ONLY=isosang`(이소상 평타를 관찰자에게: 4타를 다 넣으면 8, 막힌 타는 세지 않음), `MP_ONLY=timestop`(시간 정지 안의 평타 4타와 강펀치: 넣을 때 5까지 세고 시간이 다시 흐를 때 늘지 않음), `MP_ONLY=beatdown`(여는 주먹부터 마지막 강펀치까지 끊기지 않음). 두 클라이언트의 로그에 'hits = N'(`MpClient`의 flag)이 남는다.
 
+### 컷씬 스킬의 빛 (2.109.0)
+- 카게노 H·비트다운·이소상 G는 키를 누르면 0.5초 빛나고 빛이 끝나면 시전된다(`CLAUDE.md`의 '컷씬 스킬은 먼저 빛나고'). 고친 것이라 소리 없이 찍는다.
+- 촬영: 스킬마다 한 항목, 게임 카메라(플레이어 뒤)로 찍는다. 키를 누른 뒤 2틱부터 빛이 끝날 때까지 W를 눌러 80% 느리게 걷는 것도 보인다. 배율 40(빛과 시전 직후의 컷씬도 1틱에 20장 넘게).
+  - `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "SUMMON;stand=kageno;len=96;face=180;time=6000;dummy=1;dfw=3;then=ATTACKDOWN@2/ATTACKUP@3/KEY_H@50/KEYDOWN_W@52/KEYUP_W@60;save=42-94;slows=0:4/42:40,SUMMON;len=110;face=180;time=6000;dummy=1;dfw=3.2;then=KEY_Q@5/ATTACKDOWN@20/ATTACKUP@22/KEY_G@60/KEYDOWN_W@62/KEYUP_W@70;save=52-102;slows=0:4/52:40,SUMMON;stand=isosang;len=96;face=180;time=6000;gvar=1;then=ATTACKDOWN@2/ATTACKUP@3/KEY_G@50/KEYDOWN_W@52/KEYUP_W@60;save=42-90;slows=0:4/42:40,SUMMON;len=110;face=180;time=6000;hud=1;cool=1;lcd=0/0/0;dummy=1;dattack=1;dfw=6;dto=1.8;then=KEY_Q@5/LONGCD@20/KEY_G@60/DUMMYTO@61/DUMMYBACK@84;save=52-104;slows=0:4/52:40" 960x540 8`(약 12분)
+  - 끊김: 맨손으로 치는 더미(`dattack=1`)를 손이 닿지 않는 6블록에 두었다가, 빛이 시작된 다음 틱 `DUMMYTO`로 1.8블록 앞에 놓으면 바로 잽을 내 3틱 뒤 맞힌다(빛나는 동안). `cool=1`이라 쿨타임 목록에 '비트다운' 칸이 나오는 것이 보이고, 비트다운의 긴 쿨타임이 접속할 때 돌므로 `LONGCD`(`lcd=0/0/0`)로 먼저 비운다. `DUMMYBACK`으로 더미를 6블록으로 되돌려 콤보를 멈춘다.
+  - 로그: 빛이 바뀔 때마다 'glow 스킬 at 장면틱 (world 월드틱): server …, client …, speed …, flash …'(`SkillShots`: 서버의 `CutsceneGlow.skill`, 접속자의 `CutsceneFlash.localGlowing`, 이동 속도). 빛나는 동안 속도가 원래의 0.2배인지, 서버가 빛을 끝낸 틱(시전 또는 끊김)을 본다.
+  - 편집: 스킬마다 실제 속도(키 0.3초 전부터 시전 뒤까지)와 0.25배속(키 0.1초 전부터 0.7초 뒤까지) 두 클립을 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="키를 누른 뒤" FILM_CLOCK_ZERO=키의초`(0.25배속은 `FILM_SPEED=.25`)로 만들어 잇는다.
+- 멀티플레이 확인: 서버 규칙과 패킷이 새로 생겨 한다. `MP_ONLY=glow`(`MpClient.GLOW_SCRIPT`): 스킬마다 두 번, 먼저 관찰자에게 빛이 보이면 바로 치라고 하고(`JAB+`: 파일 OUT/jab, 관찰자가 빛이 시작되는 것을 보면 다음 틱에 공격) 끊겨 쿨타임이 도는지, 곧바로 한 번 더 눌러 거절되는지 본다. 그다음 쿨타임을 끄고(`NOCDON`) 치지 않아 빛 10틱 뒤 시전되는지 본다. 비트다운(관찰자 2.5블록 앞, 컷씬 끝까지), 카게노 H(관찰자가 그 안), 이소상 G(관찰자 30블록). 서버 로그에 '… glows for … at tick N (speed x0.20)'와 '…'s glow … over …: CAST/CUT SHORT; ready again in N s'가 남는다(맞은 타격은 그 틱 안에 끊어 'struck as it glows'는 보통 남지 않는다. 관찰자의 'try M1'이 그 타격이다). 두 접속자에 'the other's glow K begins here'·'gone after N ticks', 시전자에 'its own glow begins/ends (action locked, speed)'와 'cooldowns = […]'가 남는다. 2.109.0: 끊긴 세 번은 빛 5~6틱째, 시전한 세 번은 10틱.
+
 ### 운석
 - 촬영: `SHOTS_WORLD=월드폴더 python3 tools/kageno/shots/run_shots.py OUT "METEOR;…,SHOP;…" 1280x730 배율`
   - 맵 월드를 그대로 엽니다.

@@ -3,6 +3,7 @@ package dev.sangwoo.celestialfall.boss;
 import dev.sangwoo.celestialfall.AtomicManager;
 import dev.sangwoo.celestialfall.combat.CombatManager;
 import dev.sangwoo.celestialfall.combat.CombatState;
+import dev.sangwoo.celestialfall.combat.CutsceneGlow;
 import dev.sangwoo.celestialfall.isosang.IsosangRules;
 import dev.sangwoo.celestialfall.stand.KagenoManager;
 import dev.sangwoo.celestialfall.stand.KagenoRules;
@@ -71,6 +72,7 @@ public final class BossThreats {
             bare(p,now,out);
             kageno(p,now,out);
             isosang(p,now,out);
+            glow(p,now,out);
         }
         for(var c:AtomicManager.columns(world)){
             double dx=boss.getX()-c[0],dz=boss.getZ()-c[2];
@@ -104,6 +106,23 @@ public final class BossThreats {
             long next=Math.max(now,inhale+StarPlatinumRules.INHALE_CATCH);
             out.add(new Threat(p,"inhale",inhale,next,inhale+StarPlatinumRules.INHALE_LENGTH,Zone.lane(p.getPos(),MathHelper.wrapDegrees(p.getYaw()),StarPlatinumRules.NEAR,StarPlatinumRules.INHALE_REACH,StarPlatinumRules.INHALE_HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),
                 true,false,true,20,false,false));
+        }
+    }
+    /**
+     * A skill with a cutscene glowing before it is cast (2.109.0, CutsceneGlow): a blow cuts it short until its glow is
+     * over, so it is read as landing then (a boss strikes first if it can). Where it would reach as it is cast: Kageno's H
+     * whom it takes round its caster, the beatdown's opening punch the way its user faces; Lee So-sang's G strikes far
+     * off and is read once cast (IsosangRules), its glow only in its caster's reach (nothing to get out of: a guard is harmless).
+     */
+    private static void glow(ServerPlayerEntity p,long now,List<Threat> out){
+        int skill=CutsceneGlow.skill(p);if(skill<0)return;
+        long start=CutsceneGlow.startedAt(p),cast=start+CutsceneGlow.TICKS;if(now>cast)return;
+        Vec3d at=p.getPos();float yaw=MathHelper.wrapDegrees(p.getYaw());
+        switch(skill){
+            case CutsceneGlow.KAGENO_H->out.add(new Threat(p,"glow_h",start,cast,cast,Zone.ring(at,KagenoRules.HIGHEST_RADIUS,-2,4),false,false,true,30,false,false));
+            case CutsceneGlow.BEATDOWN->out.add(new Threat(p,"glow_beatdown",start,cast,cast,Zone.lane(at,yaw,StarPlatinumRules.NEAR,StarPlatinumRules.REACH_BIG,StarPlatinumRules.HALF_WIDTH,StarPlatinumRules.LOW,StarPlatinumRules.HIGH),false,true,true,60,false,false));
+            case CutsceneGlow.ISOSANG_G->out.add(new Threat(p,"glow_g",start,cast,cast,Zone.ring(at,4,-2,4),true,false,false,0,false,false));
+            default->{}
         }
     }
     /** A bare hand's swing (CombatManager): a ray of 3.15 blocks from the eye along the look. */

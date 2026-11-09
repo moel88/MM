@@ -68,5 +68,7 @@ public abstract class LivingCombatMixin {
         // again as stopped time gives it
         if(!self.getWorld().isClient&&!dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.settling()&&!dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.stopped(self))
             dev.sangwoo.celestialfall.combat.HitCounter.landed(self,source);
+        // a blow landing on one glowing before a skill with a cutscene cuts the skill short (2.109.0, CutsceneGlow)
+        if(!self.getWorld().isClient)dev.sangwoo.celestialfall.combat.CutsceneGlow.struck(self,source);
     }
 }

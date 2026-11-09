@@ -146,8 +146,6 @@ public final class StandBeatdown {
         for(var b:BEATS.values())if(b.voice!=null&&!b.voice.isDone())mc.getSoundManager().stop(b.voice);
         BEATS.clear();world=null;
     }
-    /** Its user used it (the blow is on its way): their body flashes sky blue, as every skill with a cutscene's does. */
-    static void used(UUID user){dev.sangwoo.celestialfall.client.CutsceneFlash.flash(user);}
     private static void start(MinecraftClient mc,Beat b){
         var old=BEATS.put(b.user,b);
         if(old!=null&&old.voice!=null)old.voice.fade();

@@ -191,7 +191,8 @@ public final class StandAttack {
                 user.punches.addLast(seen);while(user.punches.size()>3)user.punches.removeFirst();
                 if(combo==StarPlatinumRules.HEAVY)heavySound(mc,id,seen,before);
                 else if(combo==StarPlatinumRules.FINGER)fingerSound(mc,id,seen,before);
-                else if(combo==StarPlatinumRules.BEATDOWN){beatdownSound(mc,id,seen,before);StandBeatdown.used(id);}
+                // (the beatdown glows before its blow since 2.109.0: the glow is the server's news, CutsceneGlow)
+                else if(combo==StarPlatinumRules.BEATDOWN)beatdownSound(mc,id,seen,before);
                 else shout(mc,id,seen,before);
             }
             case StarPlatinumAttack.LANDED->{

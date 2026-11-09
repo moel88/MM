@@ -139,6 +139,8 @@ public final class CombatManager {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
             ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p))return true;
+        // (2.109.0) glowing before a skill with a cutscene is cast (CutsceneGlow): they may only walk
+        if(CutsceneGlow.glowing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;
         long n=p.getWorld().getTime();return e.state.locked(n)||e.state.attacking(n)||e.state.dashing(n)||e.state.guarding;
     }
@@ -147,7 +149,8 @@ public final class CombatManager {
         // (2.107.0) dead, waiting to be brought back (AutoRespawn): only their view moves, nothing they do goes through
         if(p.isDead())return true;
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
-            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p))return true;
+            ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
+            ||CutsceneGlow.glowing(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
     }
     /**

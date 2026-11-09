@@ -86,7 +86,7 @@ final class JotaroBrain extends BossBrain {
             }
         }else gapSince=-1;
         if(held>=4&&d<=PUNCH+.3){
-            if(ready(StarPlatinumAttack.beatdownReady(boss),now)&&held>=CONTACT[BEATDOWN]+2&&d<=BEAT_REACH&&(health<=.6f||random.nextFloat()<.45f)){start(Plan.BEATDOWN,t,now);return;}
+            if(ready(StarPlatinumAttack.beatdownReady(boss),now)&&held>=dev.sangwoo.celestialfall.combat.CutsceneGlow.TICKS+CONTACT[BEATDOWN]+2&&d<=BEAT_REACH&&(health<=.6f||random.nextFloat()<.45f)){start(Plan.BEATDOWN,t,now);return;}
             if(ready(StarPlatinumRush.ready(boss),now)){start(Plan.RUSH,t,now);return;}
             if(punchFree(now)){start(Plan.COMBO,t,now);return;}
         }
@@ -197,7 +197,8 @@ final class JotaroBrain extends BossBrain {
         }
         if(StarPlatinumBeatdown.casting(boss)){doing="비트다운";return;}
         var pu=StarPlatinumAttack.punch(boss);
-        boolean flying=pu!=null&&pu.combo()==which&&now<pu.start()+LENGTH[which];
+        // (2.109.0) the beatdown glows first (CutsceneGlow): its punch is thrown as the glow ends
+        boolean flying=pu!=null&&pu.combo()==which&&now<pu.start()+LENGTH[which]||which==BEATDOWN&&dev.sangwoo.celestialfall.combat.CutsceneGlow.glowing(boss);
         doing=which==HEAVY?"강펀치":which==FINGER?"스타 핑거":"비트다운";
         // walk up to them while the stand does it (the finger's held ones are slow)
         if(flat(t.getPos())>2.2)move=t.getPos().subtract(boss.getPos()).multiply(1,0,1).normalize();
@@ -262,8 +263,9 @@ final class JotaroBrain extends BossBrain {
 
     /**
      * A blow comes that his jab lands before (and the jab's stagger stops it, 2.68.0): a Star Platinum user winding up a
-     * heavy punch, a Star Finger, a beatdown or an inhale, a bare hand slow to swing, Kageno beginning a cast, right in
-     * front of him. He jabs first, and the combo goes on from it.
+     * heavy punch, a Star Finger, a beatdown or an inhale, a bare hand slow to swing, Kageno beginning a cast, one glowing
+     * before a skill with a cutscene (2.109.0, CutsceneGlow: a blow cuts it short), right in front of him. He jabs first,
+     * and the combo goes on from it.
      */
     @Override protected boolean strikeFirst(BossThreats.Threat t,int left,long now){
         var from=t.from();if(from==null||t.timeStop()||CounterStance.active(from))return false;
@@ -276,7 +278,9 @@ final class JotaroBrain extends BossBrain {
             return false;
         }
         String w=t.what();
-        boolean slow=w.equals("punch"+HEAVY)||w.equals("punch"+FINGER)||w.equals("punch"+BEATDOWN)||w.equals("inhale")||w.startsWith("kageno")||w.startsWith("bare");
+        boolean slow=w.equals("punch"+HEAVY)||w.equals("punch"+FINGER)||w.equals("punch"+BEATDOWN)||w.equals("inhale")||w.startsWith("kageno")||w.startsWith("bare")
+            // (2.109.0) a skill with a cutscene glowing before it is cast: a blow cuts it short (CutsceneGlow)
+            ||w.startsWith("glow");
         if(!slow||left<CONTACT[1]+1||plan!=Plan.NONE&&plan!=Plan.COMBO)return false;
         if(flat(from.getPos())>PUNCH+.4||!punchFree(now)||!StarPlatinumAttack.able(boss))return false;
         releaseKeys();if(guarding())guard(false,now);

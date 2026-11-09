@@ -47,7 +47,8 @@ public final class StandSummon {
      * nor while they call a time stop, stop time or stand stopped in it (2.67.0).
      */
     public static boolean toggle(ServerPlayerEntity p){
-        if(dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)||StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.active(p)||StarPlatinumTimeStop.holds(p))return out(p);
+        if(dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(p)||StarPlatinumBeatdown.involved(p)||StarPlatinumTimeStop.active(p)||StarPlatinumTimeStop.holds(p)
+            ||dev.sangwoo.celestialfall.combat.CutsceneGlow.glowing(p))return out(p);
         boolean out=!out(p)&&canBeOut(p);
         // (at its user's call: it is heard coming out or going back, 2.72.0)
         if(out!=out(p))((StandHolder)p).botand$callStand(out);

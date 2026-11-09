@@ -1162,17 +1162,38 @@ public final class IsosangAttack {
         if(!struck.isEmpty()){p.onAttacking(struck.get(0));send(p,f.id,FORMATION,f.start,f.yaw,LANDED,impact?0:1,struck,null,null,f);}
     }
     /**
-     * G (2.83.0, user request: "이번에는 G스킬 궁극기 시전자만 컷씬이 나오고 범위는 30블록 ..."): at once. Not while one is held
+     * G (2.83.0, user request: "이번에는 G스킬 궁극기 시전자만 컷씬이 나오고 범위는 30블록 ..."): since 2.109.0 its user
+     * glows first and it is cast as the glow ends (CutsceneGlow; at once before). Not while one is held
      * otherwise (a blow, a guard, a dash, a skill, a cutscene), while a hit, R or H of theirs holds them, while it is under
      * way, or before it is ready again ({@link IsosangRules#G_COOLDOWN} after the last one was over; none for a player the
      * cooldowns are off for).
      */
     public static boolean ultimate(ServerPlayerEntity p){
+        // (2.109.0, user request: "빛나는 메커니즘을 바꾸자 몸이 하늘색으로 빛나고 빛이 끝나고 스킬이 시전되게") it glows
+        // first: its user glows sky blue half a second (CutsceneGlow) and G is cast as the glow ends (ultimateGlowed)
+        return ultimateMay(p)&&dev.sangwoo.celestialfall.combat.CutsceneGlow.begin(p,dev.sangwoo.celestialfall.combat.CutsceneGlow.ISOSANG_G);
+    }
+    /** Whether G may be begun now (its glow at its key, its cast as the glow ends). */
+    private static boolean ultimateMay(ServerPlayerEntity p){
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
         if(casting(s,now)||now<s.gReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
-        if(holding(s.combo,s.start,now)||sweepHolds(s,now)||forming(s,now))return false;
+        return !(holding(s.combo,s.start,now)||sweepHolds(s,now)||forming(s,now));
+    }
+    /**
+     * G's glow was cut short (2.109.0, CutsceneGlow: a blow landed on its user as they glowed, "끊기고 쿨타임도 다시
+     * 흐름"): its cooldown runs in full from now (none for a player the cooldowns are off for), its user's client told.
+     */
+    public static void ultimateGlowCut(ServerPlayerEntity p){
+        var s=state(p);long now=p.getWorld().getTime();
+        if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.gReady=Math.max(s.gReady,now+G_COOLDOWN);
+        send(p,s.id,s.combo,s.start,s.yaw,RESTS,-1,null,null,null);
+    }
+    /** G once its glow is over (2.109.0, CutsceneGlow): cast as at its key before, if it still may be. */
+    public static boolean ultimateGlowed(ServerPlayerEntity p){
+        if(!ultimateMay(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
         s.queued=false;s.rQueued=false;
         boolean spent=s.empowered;
         s.combo=0;s.blows=0;s.empowered=false;

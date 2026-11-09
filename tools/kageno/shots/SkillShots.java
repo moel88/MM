@@ -326,7 +326,7 @@ public final class SkillShots implements ClientModInitializer {
     private int skill(String name){return switch(name){case "M1"->M1;case "E"->E;case "R"->R;case "T"->T;case "RUSH"->RUSH;case "Y"->Y;case "Q"->Q;case "H"->H;case "G"->G;case "PULSE"->PULSE;default->-1;};}
     private boolean mapShot(){return "METEOR".equals(current)||"SHOP".equals(current);}
     private int length(String name){if(opts.containsKey("len"))return (int)opt("len",60);return switch(name){case "METEOR"->300;case "SHOP"->400;case "BASE"->150;case "HUD"->400;case "UI"->300;case "F"->50;case "M1"->75;case "Q"->140;case "P"->390;case "G"->560;case "T"->110;case "RUSH"->90;case "GDUMMY"->560;case "STAND"->240;case "SUMMON"->300;default->DURATION[skill(name)]+20;};}
-    private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;
+    private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;private String glowLogged="";
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
         if("UI".equals(current)||mapShot()||"SUMMON".equals(current)&&("none".equals(opts.get("stand"))||opts.containsKey("cool")))logInterface();
@@ -342,6 +342,13 @@ public final class SkillShots implements ClientModInitializer {
         var shown=CooldownHud.shown();if(!shown.equals(listLogged)){log.append("  list ").append(shown).append(" at ").append(mc.world.getTime()).append('\n');listLogged=shown;}
         // (2.108.0) the hit count, as this client hears it (every character's)
         if(dev.sangwoo.celestialfall.client.HitCounterHud.count!=hitsLogged){hitsLogged=dev.sangwoo.celestialfall.client.HitCounterHud.count;log.append(String.format(Locale.ROOT,"  hits %d at %d (world %d)%n",hitsLogged,age,mc.world.getTime()));}
+        // (2.109.0) a skill with a cutscene's glow: the server's (from its key until it is cast or cut short, which skill)
+        // and this client's lock, and the speed the player walks at meanwhile (a fifth of their own)
+        {var server=mc.getServer();var sp=server==null?null:server.getPlayerManager().getPlayer(mc.player.getUuid());
+            int skill=sp==null?-1:dev.sangwoo.celestialfall.combat.CutsceneGlow.skill(sp);
+            String g=skill+"/"+dev.sangwoo.celestialfall.client.CutsceneFlash.localGlowing();
+            if(!g.equals(glowLogged)){glowLogged=g;log.append(String.format(Locale.ROOT,"  glow %s at %d (world %d): server %s, client %s, speed %.4f, flash %.2f%n",skill<0?"none":new String[]{"Kageno H","beatdown","Lee So-sang G"}[skill],age,mc.world.getTime(),
+                skill>=0,dev.sangwoo.celestialfall.client.CutsceneFlash.localGlowing(),mc.player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED),dev.sangwoo.celestialfall.client.CutsceneFlash.local(mc.getTickDelta())));}}
         var gr=mc.gameRenderer;var f=net.minecraft.client.render.GameRenderer.class.getDeclaredField("fovMultiplier");f.setAccessible(true);
         if("SUMMON".equals(current))logStand();
         if("SUMMON".equals(current))logBoss();
@@ -1472,6 +1479,13 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("PHP")){if(age==at)server(p->{p.setHealth((float)opt("php",40));log.append(String.format(Locale.ROOT,"  player health set to %.0f at %d%n",p.getHealth(),age));});continue;}
                     if(what.equals("UNMATE")){if(age==at)server(p->{if(mate!=null){for(var q:p.getServer().getPlayerManager().getPlayerList())q.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(mate.getUuid())));mate.discard();mate=null;log.append("  mate gone at ").append(age).append('\n');}});continue;}
                     if(what.equals("UNFAKE")){if(age==at)server(p->{if(fakePlayer!=null){p.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.PlayerRemoveS2CPacket(List.of(fakePlayer.getUuid())));fakePlayer.discard();fakePlayer=null;log.append("  fake gone at ").append(age).append('\n');}});continue;}
+                    // (2.109.0) "DUMMYTO@n": the training dummy put "dto" blocks (1.8) in front of the player (and "drt" to their
+                    // right), facing them, as it is: an attacking one (dattack=1) left out of its reach till then throws its
+                    // first jab at once (it lands WINDUP[1] ticks on), as a blow comes at one glowing before a skill with a cutscene
+                    if(what.equals("DUMMYTO")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
+                            var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dto",1.8f))).add(right.multiply(opt("drt",0)));
+                            l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);l.setHeadYaw(p.getYaw()+180);l.setBodyYaw(p.getYaw()+180);
+                            log.append(String.format(Locale.ROOT,"  dummy to %.2f blocks in front at %d (world %d)%n",opt("dto",1.8f),age,p.getWorld().getTime()));}});continue;}
                     // the training dummy back in front of the player (after the finisher threw it), whole again
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));

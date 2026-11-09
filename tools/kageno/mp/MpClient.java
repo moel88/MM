@@ -99,6 +99,23 @@ public final class MpClient implements ClientModInitializer {
      * health ("HURT": /damage, 150 of 200): its blows leave it at one health and the fall kills it as it comes down;
      * the watcher respawns.
      */
+    /**
+     * A skill with a cutscene glows first (2.109.0, MP_ONLY=glow, CutsceneGlow): its key glows its caster half a second
+     * (both clients log the glow they draw and how long; the caster its own lock and speed) and only then is it cast;
+     * a blow as it glows cuts it short and its cooldown runs from then. Each skill twice: first with the watcher asked to
+     * strike as it glows ("JAB+": the watcher's attack as it sees the glow begin: cut short, its cooldown on), then with
+     * the cooldowns off ("NOCDON") and no strike (cast as the glow ends): Star Platinum's beatdown (G, the watcher 2.5
+     * blocks in front, its whole cutscene), Kageno's H (the watcher in it), Lee So-sang's G (the watcher 30 blocks off).
+     * The server logs each glow's start and end, cast or cut, the blows on it, its speed and the cooldown after.
+     */
+    private static final String[] GLOW_SCRIPT={
+        "5 NOCDOFF","8 STAND","40 Q","90 HOME","95 HEAL","100 JAB+","110 G","130 JAB-","160 G",
+        "200 NOCDON","210 HOME","215 HEAL","230 G",
+        "560 NOCDOFF","570 STANDK","600 HOME","605 HEAL","610 JAB+","620 H","640 JAB-","660 H",
+        "700 NOCDON","710 HOME","715 HEAL","730 H",
+        "900 NOCDOFF","910 ISOSANG","940 HOME","945 HEAL","950 JAB+","960 G","980 JAB-","1000 G",
+        "1040 NOCDON","1050 DIST30","1055 HEAL","1070 G",
+        "1260 NOCDOFF","1300 END"};
     private static final String[] BEATDOWN_SCRIPT={
         "5 STAND","40 Q","90 HOME","100 HEAL","110 G",
         "400 HOME","405 HEAL","410 GUARD+","430 G","455 GUARD-",
@@ -468,7 +485,7 @@ public final class MpClient implements ClientModInitializer {
     private static final String[] ISOSANGVOLLEY_SCRIPT={
         "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1",
         "200 DIST23","236 VAIM","240 VM1","296 VGROUND-50","302 VM1","380 END"};
-    private static final String[] STEPS=ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    private static final String[] STEPS=ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -597,6 +614,7 @@ public final class MpClient implements ClientModInitializer {
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
                     measure();
+                    if(ONLY.equals("glow"))glowWatch();
                     for(String step:STEPS){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
@@ -609,8 +627,9 @@ public final class MpClient implements ClientModInitializer {
                     if(!mc.player.isAlive()){if(++deadFor==40){note("dead: respawn requested");mc.player.requestRespawn();}}else deadFor=0;
                     if(ONLY.equals("stagger"))staggerWatch();
                     if(ONLY.equals("resist"))resistWatch();
+                    if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -676,6 +695,9 @@ public final class MpClient implements ClientModInitializer {
         // and dying another way than the reset
         if(step.equals("LEAVE")){if(down){note("leave the server");resumeAt=age;phase=4;age=0;if(ONLY.equals("fresh")){late=true;lateFor=0;dropped.set(0);}mc.send(()->dev.sangwoo.celestialfall.client.title.TitlePortal.leaveMap(mc,true));}return;}
         if(step.equals("KILL")){if(down)command("kill @s");return;}
+        // (2.109.0, MP_ONLY=glow) the cooldowns off or on for the caster; the watcher asked to strike as the caster's glow begins (the file OUT/jab)
+        if(step.equals("NOCDON")||step.equals("NOCDOFF")){if(down)command("botand nocooldown "+(step.equals("NOCDON")?"on":"off"));return;}
+        if(step.equals("JAB+")||step.equals("JAB-")){if(down){try{if(step.equals("JAB+"))Files.writeString(OUT.resolve("jab"),"jab");else Files.deleteIfExists(OUT.resolve("jab"));}catch(Exception e){note("ERROR "+e);}note(step.equals("JAB+")?"the watcher asked to strike as the glow begins":"the watcher asked to strike no more");}return;}
         if(step.equals("SLAIN")){if(down)command("damage @s 1000 minecraft:player_attack by Watcher");return;}
         if(step.equals("DUMMY")){if(down){note("command botand dummy atomic 30");mc.player.networkHandler.sendChatCommand("botand dummy atomic 30");}return;}
         if(step.equals("STAND")){if(down){note("command botand progress stand @s star_platinum");mc.player.networkHandler.sendChatCommand("botand progress stand @s star_platinum");}return;}
@@ -1052,6 +1074,24 @@ public final class MpClient implements ClientModInitializer {
         }
     }
     private final Map<String,int[]> heavyHeard=new HashMap<>(),fingerHeard=new HashMap<>();private int heavies,guardUntil;
+    /** The glow's check (2.109.0): the other's glow as drawn here (its strength last tick, when it began, how many), this one's own. */
+    private float glowSeen;private int glowBegan,glowCount;private boolean ownGlow;
+    /**
+     * The glow's check (2.109.0, MP_ONLY=glow): the other player's glow as this client draws it (CutsceneFlash: when it
+     * begins and how long it shows), the watcher striking as it begins if the caster asks (the file OUT/jab); and this
+     * one's own glow: its client's lock, its speed against its base, its own flash.
+     */
+    private void glowWatch(){
+        net.minecraft.entity.player.PlayerEntity other=null;for(var p:mc.world.getPlayers())if(p!=mc.player)other=p;
+        float a=other==null?0:dev.sangwoo.celestialfall.client.CutsceneFlash.strength(other,0);
+        if(a>0&&glowSeen==0){glowCount++;glowBegan=age;note(String.format(Locale.ROOT,"the other's glow %d begins here (strength %.2f)",glowCount,a));
+            if(!caster&&Files.exists(OUT.resolve("jab"))){tries.put(age+1,"M1");note("strike asked: the attack at "+(age+1));}}
+        if(a==0&&glowSeen>0)note(String.format(Locale.ROOT,"the other's glow %d gone after %d ticks",glowCount,age-glowBegan));
+        glowSeen=a;
+        boolean mine=dev.sangwoo.celestialfall.client.CutsceneFlash.localGlowing();
+        if(mine!=ownGlow){ownGlow=mine;var speed=mc.player.getAttributeInstance(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED);
+            note(String.format(Locale.ROOT,"its own glow %s (action locked %s, speed x%.2f, its flash %.2f)",mine?"begins":"ends",CombatClient.actionLocked(),speed.getValue()/speed.getBaseValue(),dev.sangwoo.celestialfall.client.CutsceneFlash.local(0)));}
+    }
     /** The stagger's check (2.68.0): until when the watcher mashes its attack, its last health and strike, its walk. */
     private int mashUntil,mashRelease=-1,lastHurt;private long lastStrike=-1000;private boolean walking;
     private net.minecraft.util.math.Vec3d walkAt;private final List<Double> walkStaggered=new ArrayList<>(),walkFree=new ArrayList<>();
