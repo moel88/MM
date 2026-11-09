@@ -55,7 +55,7 @@ public final class AutoRespawn {
      * whose body goes a second after it falls as Minecraft's dead do, Bosses), connected, not one leaving the End (alive).
      */
     public static boolean waits(ServerPlayerEntity p){
-        return p.isDead()&&!p.notInAnyWorld&&!p.isDisconnected()&&p.getServer()!=null&&p.getServer().getPlayerManager().getPlayerList().contains(p)&&MapGate.enabled(p.getWorld());
+        return p.isDead()&&!p.notInAnyWorld&&!p.isDisconnected()&&p.getServer()!=null&&p.getServer().getPlayerManager().getPlayerList().contains(p)&&MapGate.enabled(p);
     }
     /** Server ticks {@code p} waits dead: {@link #DELAY}, none in a world with doImmediateRespawn. */
     public static int delay(ServerPlayerEntity p){return p.getWorld().getGameRules().getBoolean(GameRules.DO_IMMEDIATE_RESPAWN)?0:DELAY;}

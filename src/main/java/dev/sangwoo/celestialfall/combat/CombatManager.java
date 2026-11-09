@@ -53,7 +53,8 @@ public final class CombatManager {
             server.execute(()->input(player,action,a,b));
         });
         AttackEntityCallback.EVENT.register((player,world,hand,entity,hit)->{
-            if(!dev.sangwoo.celestialfall.map.MapGate.enabled(world))return dev.sangwoo.celestialfall.map.MapGate.botandItem(player.getStackInHand(hand))?ActionResult.FAIL:ActionResult.PASS;
+            // (2.110.0) off the map, or in one's vanilla mode (VanillaMode): Minecraft's own attack
+            if(!dev.sangwoo.celestialfall.map.MapGate.enabled(player))return dev.sangwoo.celestialfall.map.MapGate.botandItem(player.getStackInHand(hand))?ActionResult.FAIL:ActionResult.PASS;
             if(dev.sangwoo.celestialfall.stand.StandManager.kageno(player))return ActionResult.FAIL;
             // Lee So-sang: their sword's hits are the attack (2.77.0), whatever the hand holds
             if(dev.sangwoo.celestialfall.isosang.IsosangAttack.attacks(player)){

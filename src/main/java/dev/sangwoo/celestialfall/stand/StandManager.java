@@ -18,7 +18,8 @@ public final class StandManager {
     /** Lee So-sang's player on the map (2.76.0): a character who fights in person; no skills yet. */
     public static boolean isosang(PlayerEntity p){return has(p,"isosang");}
     private static boolean has(PlayerEntity p,String stand){
-        return p!=null&&MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()
+        // (2.110.0) the map as it is for them: one in their vanilla mode has no stand nor character (VanillaMode)
+        return p!=null&&MapGate.enabled(p)&&p.isAlive()&&!p.isSpectator()
             &&p instanceof StandHolder holder&&stand.equals(holder.botand$getStand());
     }
     public static void refresh(ServerPlayerEntity p){

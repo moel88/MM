@@ -34,7 +34,8 @@ public final class ProgressManager {
         var map=dev.sangwoo.celestialfall.map.MapState.get(p.getServer());
         boolean first=map.firstVisit(p.getUuid());
         double base=p.getAttributeBaseValue(EntityAttributes.GENERIC_MAX_HEALTH);
-        if(dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())) {
+        // (2.110.0) the map as it is for them: one in their vanilla mode (VanillaMode) has Minecraft's health
+        if(dev.sangwoo.celestialfall.map.MapGate.enabled(p)) {
             var hunger=new net.minecraft.nbt.NbtCompound();p.getHungerManager().writeNbt(hunger);
             map.remember(p.getUuid(),first&&base==200?20:base,hunger);
             setBaseHealth(p,StandStats.get(profile(p).stand()).health());

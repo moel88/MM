@@ -204,6 +204,14 @@
   - 편집: 스킬마다 실제 속도(키 0.3초 전부터 시전 뒤까지)와 0.25배속(키 0.1초 전부터 0.7초 뒤까지) 두 클립을 `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="키를 누른 뒤" FILM_CLOCK_ZERO=키의초`(0.25배속은 `FILM_SPEED=.25`)로 만들어 잇는다.
 - 멀티플레이 확인: 서버 규칙과 패킷이 새로 생겨 한다. `MP_ONLY=glow`(`MpClient.GLOW_SCRIPT`): 스킬마다 두 번, 먼저 관찰자에게 빛이 보이면 바로 치라고 하고(`JAB+`: 파일 OUT/jab, 관찰자가 빛이 시작되는 것을 보면 다음 틱에 공격) 끊겨 쿨타임이 도는지, 곧바로 한 번 더 눌러 거절되는지 본다. 그다음 쿨타임을 끄고(`NOCDON`) 치지 않아 빛 10틱 뒤 시전되는지 본다. 비트다운(관찰자 2.5블록 앞, 컷씬 끝까지), 카게노 H(관찰자가 그 안), 이소상 G(관찰자 30블록). 서버 로그에 '… glows for … at tick N (speed x0.20)'와 '…'s glow … over …: CAST/CUT SHORT; ready again in N s'가 남는다(맞은 타격은 그 틱 안에 끊어 'struck as it glows'는 보통 남지 않는다. 관찰자의 'try M1'이 그 타격이다). 두 접속자에 'the other's glow K begins here'·'gone after N ticks', 시전자에 'its own glow begins/ends (action locked, speed)'와 'cooldowns = […]'가 남는다. 2.109.0: 끊긴 세 번은 빛 5~6틱째, 시전한 세 번은 10틱.
 
+### 바닐라 크리에이티브 `/botand vanilla` (2.110.0)
+- 명령어를 친 사람만 크리에이티브와 마인크래프트 키·카메라·HUD·모션이 된다(`CLAUDE.md`의 '`/botand vanilla`'). 바뀐 소리가 없어 소리 없이 찍는다.
+- 촬영: 채팅창을 명령어가 쳐진 채로 열고(`CHAT@n`, 친 글은 `chat=…`) `KEY_ENTER`로 보낸다. 키는 `KEY_E`(인벤토리), `KEY_F5`(시점), `KEYDOWN_SPACE`/`KEYUP_SPACE`(두 번 눌러 비행)를 쓴다. 한 실행, 배율 8(1틱에 3장 넘게):
+  - `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "SUMMON;stand=isosang;len=250;face=180;time=6000;hud=1;chat=/botand vanilla;then=CHAT@24/KEY_ENTER@40/KEY_F5@58/KEYDOWN_W@66/KEYUP_W@90/KEYDOWN_SPACE@96/KEYUP_SPACE@97/KEYDOWN_SPACE@100/KEYUP_SPACE@114/KEY_E@120/KEY_ESCAPE@146/KEYDOWN_SPACE@154/KEYUP_SPACE@155/KEYDOWN_SPACE@158/KEYUP_SPACE@159/CHAT@180/KEY_ENTER@196/KEYDOWN_W@212/KEYUP_W@232;save=10-250;slows=0:8" 960x540 8`(약 4분)
+  - 로그: 채팅을 연 뒤 10틱마다 40틱 동안 'at N: map …, game mode …, vanilla …, inventory key …, perspective …'(`SkillShots`). 켠 뒤 맵 false·CREATIVE·vanilla true·FIRST_PERSON, 끈 뒤 맵 true·켜기 전 게임 모드(촬영은 SURVIVAL로 시작)인지 본다.
+  - 편집: `FILM_WIDTH=960 FILM_FPS=30 FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="시간" FILM_NOTES="…" film.py OUT/SUMMON 결과.mp4 0.5 12.4 "제목"`.
+- 멀티플레이 확인: 서버 규칙과 플래그가 새로 생겨 한다. `MP_ONLY=vanilla`(`MpClient.VANILLA_SCRIPT`): 시전자가 관찰자를 `execute as Watcher run botand vanilla`로 바꾸고(`WVANILLA`) 스타플래티나 평타 4타·강펀치·시간 정지를 쓴 뒤, 다시 끄고 평타 4타를 쓴다. 두 접속자에 'self: map …, game mode …, vanilla …'와 'the other (…): vanilla …, drawn with the rig …', 서버에 '…: vanilla …, map for them …, game mode …, health …'와 맞은 타('watcher punched by Star Platinum')가 남는다. 바닐라인 동안은 시전자의 주먹이 'landed on []'(맞은 사람 없음)이어야 한다.
+
 ### 운석
 - 촬영: `SHOTS_WORLD=월드폴더 python3 tools/kageno/shots/run_shots.py OUT "METEOR;…,SHOP;…" 1280x730 배율`
   - 맵 월드를 그대로 엽니다.

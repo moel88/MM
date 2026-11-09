@@ -98,7 +98,9 @@ public final class CombatClient {
     /** The articulated rig drives this player (on the ground and in a jump or fall; not for sneaking, swimming, gliding, sleeping or riding). */
     public static boolean animate(AbstractClientPlayerEntity p) {
         return MapClient.enabled()&&p.isAlive()&&!p.isSpectator()&&!p.isSneaking()&&!p.isInSneakingPose()&&!p.isSwimming()&&!p.isFallFlying()&&!p.isSleeping()&&!p.hasVehicle()
-            &&(p.isOnGround()||!p.isClimbing()&&!p.isTouchingWater())&&AtomicClient.actor(p.getUuid())==null&&HeavenClient.actor(p.getUuid())==null;
+            &&(p.isOnGround()||!p.isClimbing()&&!p.isTouchingWater())&&AtomicClient.actor(p.getUuid())==null&&HeavenClient.actor(p.getUuid())==null
+            // (2.110.0) one in their vanilla mode moves as Minecraft's body (VanillaMode, as their server tells)
+            &&!dev.sangwoo.celestialfall.map.VanillaMode.on(p);
     }
     public static boolean combatInput() {
         if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.active())return false;

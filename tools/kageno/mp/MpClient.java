@@ -116,6 +116,19 @@ public final class MpClient implements ClientModInitializer {
         "900 NOCDOFF","910 ISOSANG","940 HOME","945 HEAL","950 JAB+","960 G","980 JAB-","1000 G",
         "1040 NOCDON","1050 DIST30","1055 HEAL","1070 G",
         "1260 NOCDOFF","1300 END"};
+    /**
+     * Plain Minecraft for one player (2.110.0, MP_ONLY=vanilla, VanillaMode): the caster takes Star Platinum, brings it out
+     * and calls the watcher 2.5 blocks in front of it; the watcher is put in its vanilla mode ("WVANILLA": /execute as
+     * Watcher run botand vanilla) and the caster throws a whole combo at it, a heavy punch and (awakened) a time stop:
+     * none may reach it. The watcher's vanilla mode off again, a combo lands. Both log the map as their client has it,
+     * their game mode, their inventory key and view, and the other's vanilla mode and body (CombatClient.animate); the
+     * server each player's vanilla mode, game mode and health, every blow on the watcher and whether the time stop holds it.
+     */
+    private static final String[] VANILLA_SCRIPT={
+        "5 STAND","40 Q","90 HOME","95 HEAL","100 WVANILLA",
+        "140 HOME","150 M1+","190 M1-","220 R","260 AWAKEN","280 H",
+        "420 WVANILLA","440 HOME","445 HEAL","460 M1+","500 M1-",
+        "540 Q","580 END"};
     private static final String[] BEATDOWN_SCRIPT={
         "5 STAND","40 Q","90 HOME","100 HEAL","110 G",
         "400 HOME","405 HEAL","410 GUARD+","430 G","455 GUARD-",
@@ -485,7 +498,7 @@ public final class MpClient implements ClientModInitializer {
     private static final String[] ISOSANGVOLLEY_SCRIPT={
         "5 ISOSANG","40 DIST20","45 HEAL","60 H","100 VAIM","104 VM1","134 VAIM","136 VM1","170 VAIM","174 VM1",
         "200 DIST23","236 VAIM","240 VM1","296 VGROUND-50","302 VM1","380 END"};
-    private static final String[] STEPS=ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    private static final String[] STEPS=ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -615,6 +628,7 @@ public final class MpClient implements ClientModInitializer {
                     if(age%40==0&&held.isEmpty())face();
                     measure();
                     if(ONLY.equals("glow"))glowWatch();
+                    if(ONLY.equals("vanilla"))vanillaWatch();
                     for(String step:STEPS){String[] s=step.split(" ");int at=Integer.parseInt(s[0]);if(age==at)act(s[1],true);if(age==at+1&&!s[1].endsWith("+")&&!s[1].endsWith("-"))act(s[1],false);}
                 }else{
                     if((age%20==0||!AtomicClient.CASTS.isEmpty()&&age%5==0)&&StandClient.cinematic()==null)face();
@@ -628,8 +642,9 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("stagger"))staggerWatch();
                     if(ONLY.equals("resist"))resistWatch();
                     if(ONLY.equals("glow"))glowWatch();
+                    if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -696,6 +711,8 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("LEAVE")){if(down){note("leave the server");resumeAt=age;phase=4;age=0;if(ONLY.equals("fresh")){late=true;lateFor=0;dropped.set(0);}mc.send(()->dev.sangwoo.celestialfall.client.title.TitlePortal.leaveMap(mc,true));}return;}
         if(step.equals("KILL")){if(down)command("kill @s");return;}
         // (2.109.0, MP_ONLY=glow) the cooldowns off or on for the caster; the watcher asked to strike as the caster's glow begins (the file OUT/jab)
+        // (2.110.0, MP_ONLY=vanilla) the watcher's vanilla mode on or off, as it would type it (the caster's operator rights)
+        if(step.equals("WVANILLA")){if(down)command("execute as Watcher run botand vanilla");return;}
         if(step.equals("NOCDON")||step.equals("NOCDOFF")){if(down)command("botand nocooldown "+(step.equals("NOCDON")?"on":"off"));return;}
         if(step.equals("JAB+")||step.equals("JAB-")){if(down){try{if(step.equals("JAB+"))Files.writeString(OUT.resolve("jab"),"jab");else Files.deleteIfExists(OUT.resolve("jab"));}catch(Exception e){note("ERROR "+e);}note(step.equals("JAB+")?"the watcher asked to strike as the glow begins":"the watcher asked to strike no more");}return;}
         if(step.equals("SLAIN")){if(down)command("damage @s 1000 minecraft:player_attack by Watcher");return;}
@@ -1074,6 +1091,21 @@ public final class MpClient implements ClientModInitializer {
         }
     }
     private final Map<String,int[]> heavyHeard=new HashMap<>(),fingerHeard=new HashMap<>();private int heavies,guardUntil;
+    /** The vanilla mode's check (2.110.0): what this client last logged of itself and of the other. */
+    private String vanillaSelf="",vanillaOther="";
+    /**
+     * The vanilla mode's check (2.110.0, MP_ONLY=vanilla): this client's map, its player's game mode, vanilla mode, inventory
+     * key and view; the other player's vanilla mode as heard here and whether its body is drawn as Botand's (the rig).
+     */
+    private void vanillaWatch(){
+        var gm=mc.interactionManager==null?null:mc.interactionManager.getCurrentGameMode();
+        String self=String.format(Locale.ROOT,"map %s, game mode %s, vanilla %s, inventory key %s, view %s",dev.sangwoo.celestialfall.client.MapClient.enabled(),gm,
+            dev.sangwoo.celestialfall.map.VanillaMode.on(mc.player),mc.options.inventoryKey.getBoundKeyTranslationKey(),mc.options.getPerspective());
+        if(!self.equals(vanillaSelf)){vanillaSelf=self;note("self: "+self);}
+        net.minecraft.client.network.AbstractClientPlayerEntity other=null;for(var p:mc.world.getPlayers())if(p!=mc.player)other=p;
+        if(other!=null){String o=String.format(Locale.ROOT,"vanilla %s, drawn with the rig %s, stand out %s",dev.sangwoo.celestialfall.map.VanillaMode.on(other),CombatClient.animate(other),((dev.sangwoo.celestialfall.stand.StandHolder)other).botand$isStandOut());
+            if(!o.equals(vanillaOther)){vanillaOther=o;note("the other ("+other.getGameProfile().getName()+"): "+o);}}
+    }
     /** The glow's check (2.109.0): the other's glow as drawn here (its strength last tick, when it began, how many), this one's own. */
     private float glowSeen;private int glowBegan,glowCount;private boolean ownGlow;
     /**

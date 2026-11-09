@@ -37,13 +37,18 @@ public final class MapGate {
         }
         return world!=null&&world.isClient&&client.test(world);
     }
+    /**
+     * Whether the map is on for this player (2.110.0): their world's, and not their own vanilla mode (VanillaMode: plain
+     * Minecraft for them alone). On a client, the world as it heard and the player's flag as its server tells.
+     */
+    public static boolean enabled(PlayerEntity p){return p!=null&&enabled(p.getWorld())&&!VanillaMode.on(p);}
     /** The delivered one-third city, recognised by its bundled functions (its own fixes apply only to it). */
     public static boolean isCity(MinecraftServer server){return CITY.getOrDefault(server,false);}
     /** A Botand map: the delivered city, or a world whose data pack describes it (map/definition.json). */
     public static boolean isBotandMap(MinecraftServer server){return isCity(server)||DEFINED.containsKey(server);}
     public static Optional<MapDefinition> definition(MinecraftServer server){return Optional.ofNullable(DEFINED.get(server));}
     public static boolean require(PlayerEntity p) {
-        if(enabled(p.getWorld()))return true;
+        if(enabled(p))return true;
         if(!p.getWorld().isClient)p.sendMessage(Text.translatable("message.botand.map_only"),true);return false;
     }
     public static boolean botandItem(ItemStack stack) {
@@ -51,6 +56,7 @@ public final class MapGate {
             ||item==dev.sangwoo.celestialfall.loot.LootRegistry.CHEST_KEY||item==dev.sangwoo.celestialfall.commerce.CommerceRegistry.ROKAKAKA||dev.sangwoo.celestialfall.training.TrainingDummies.EGGS.containsValue(item);
     }
     public static void initialize() {
+        VanillaMode.initialize();
         MapWires.initialize();
         MapBackdrop.initialize();
         MapDecoration.initialize();
@@ -93,8 +99,11 @@ public final class MapGate {
         MapState.get(world.getServer()).designate(world.getRegistryKey().getValue().toString(),enabled);
         refresh(world.getServer());
     }
+    /** {@code p}'s map is on or off now for them alone (2.110.0, VanillaMode): their client told, their health and combat as the map's or Minecraft's. */
+    public static void refresh(ServerPlayerEntity p){sync(p,true);ProgressManager.joined(p);if(!enabled(p))CombatManager.leave(p);}
     private static void sync(ServerPlayerEntity p,boolean force) {
-        Sent current=new Sent(p.getWorld().getRegistryKey().getValue(),enabled(p.getWorld()),p.getId());
+        // (2.110.0) the map as it is for them: off for one in their vanilla mode (VanillaMode), the world's map or not
+        Sent current=new Sent(p.getWorld().getRegistryKey().getValue(),enabled(p),p.getId());
         if(!force&&current.equals(SENT.get(p.getUuid())))return;
         SENT.put(p.getUuid(),current);
         if(ServerPlayNetworking.canSend(p,STATE)) {

@@ -78,7 +78,7 @@ public final class KagenoManager {
         ServerPlayConnectionEvents.DISCONNECT.register((h,s)->leave(h.player));
         ServerLifecycleEvents.SERVER_STOPPED.register(s->{CASTS.clear();STATES.clear();MARKS.clear();});
     }
-    private static boolean valid(ServerPlayerEntity p){return MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&!p.isSleeping()&&!p.hasVehicle()&&ProgressManager.canUseKageno(p);}
+    private static boolean valid(ServerPlayerEntity p){return MapGate.enabled(p)&&p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&!p.isSleeping()&&!p.hasVehicle()&&ProgressManager.canUseKageno(p);}
     public static boolean busy(PlayerEntity p){
         if(!MapGate.enabled(p.getWorld()))return false;
         if(frozen(p))return true;
@@ -87,6 +87,8 @@ public final class KagenoManager {
     }
     public static boolean frozen(LivingEntity e){
         if(!MapGate.enabled(e.getWorld())||!e.isAlive()||e.isRemoved())return false;
+        // (2.110.0) one in their vanilla mode is never held where they are (VanillaMode)
+        if(e instanceof PlayerEntity q&&dev.sangwoo.celestialfall.map.VanillaMode.on(q))return false;
         if(e.getWorld().isClient)return clientFrozen.test(e);
         if(e instanceof PlayerEntity p&&AtomicManager.immobilized(p))return true;
         // Star Platinum's beatdown's cutscene holds its user and the one struck where they are (2.64.0)
@@ -176,7 +178,9 @@ public final class KagenoManager {
         return true;
     }
     private static List<LivingEntity> near(ServerWorld world,Vec3d origin,double radius,ServerPlayerEntity p,boolean sight){
+        // (2.110.0) not one in their vanilla mode (VanillaMode): nobody's skills take them
         return world.getEntitiesByClass(LivingEntity.class,new Box(origin,origin).expand(radius+1),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+            &&!(e instanceof PlayerEntity q&&dev.sangwoo.celestialfall.map.VanillaMode.on(q))
             &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)&&inside(e.getPos().squaredDistanceTo(origin),radius)&&(!sight||p.canSee(e)));
     }
     public static List<LivingEntity> radiusTargets(ServerPlayerEntity p,double radius){return near(p.getServerWorld(),p.getPos(),radius,p,false);}

@@ -85,7 +85,7 @@ public final class HitCounter {
     }
     private static void count(ServerPlayerEntity p,LivingEntity target,int n){
         if(p==target||target.getWorld().isClient||p instanceof dev.sangwoo.celestialfall.boss.BossPlayer||p.isRemoved())return;
-        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())||server==null)return;
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p)||server==null)return;
         long now=server.getTicks();var c=COUNTS.computeIfAbsent(p.getUuid(),u->new Count());
         // (held open, it runs out only that long after the hold)
         c.hits=next(c.hits,Math.max(c.last,c.heldUntil),now,n);c.added=Math.min(c.hits,c.added+n);c.last=now;c.dirty=true;

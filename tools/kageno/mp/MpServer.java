@@ -133,11 +133,12 @@ public final class MpServer implements ModInitializer {
         if(ARROW_ONLY||COOLDOWNS_ONLY||SWAP_ONLY||FRESH_ONLY)arrow(server);
         if(DEATH_ONLY)deaths(server);
         if(GLOW_ONLY)glows(server);
+        if(VANILLA_ONLY)vanillas(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -175,6 +176,23 @@ public final class MpServer implements ModInitializer {
                 note(server,String.format(java.util.Locale.ROOT,"%s's glow for %s over at tick %d, %d ticks after it began: %s; ready again in %.1f s%s",name,glowName(k),now,now-was[0],cast?"CAST":"CUT SHORT",
                     Math.max(0,ready-now)/20.0,dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?" (cooldowns off)":""));
             }
+        }
+    }
+    /** What the server last logged of each player's vanilla mode (2.110.0). */
+    private final Map<UUID,String> vanillaSeen=new HashMap<>();
+    /**
+     * Each player's vanilla mode as the server keeps it (2.110.0, MP_ONLY=vanilla, VanillaMode): on or off, their game
+     * mode, health and stand; every blow on them, and whether a time stop holds them.
+     */
+    private void vanillas(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        for(var p:server.getPlayerManager().getPlayerList()){
+            String name=p.getGameProfile().getName();
+            String v=String.format(java.util.Locale.ROOT,"vanilla %s, map for them %s, game mode %s, health %.1f of %.1f, stand out %s",dev.sangwoo.celestialfall.map.VanillaMode.on(p),MapGate.enabled(p),
+                p.interactionManager.getGameMode().getName(),p.getHealth(),p.getMaxHealth(),((StandHolder)p).botand$isStandOut());
+            if(!v.equals(vanillaSeen.put(p.getUuid(),v)))note(server,name+": "+v);
+            if(!caster(p)&&hurtNow(p))note(server,String.format(java.util.Locale.ROOT,"%s struck at tick %d (vanilla %s), health %.1f",name,now,dev.sangwoo.celestialfall.map.VanillaMode.on(p),p.getHealth()));
+            if(!caster(p)&&StarPlatinumTimeStop.stopped(p)&&now%20==0)note(server,name+" held by the time stop at tick "+now);
         }
     }
     private static String glowName(int skill){return switch(skill){case 0->"Kageno's H";case 1->"the beatdown";case 2->"Lee So-sang's G";default->"?";};}
@@ -495,6 +513,8 @@ public final class MpServer implements ModInitializer {
     static final boolean BEATDOWN_ONLY="beatdown".equals(System.getProperty("botand.mp.only"));
     /** (2.109.0) a skill with a cutscene glows first: only its check (MpClient.GLOW_SCRIPT). */
     static final boolean GLOW_ONLY="glow".equals(System.getProperty("botand.mp.only"));
+    /** (2.110.0) plain Minecraft for one player: only its check (MpClient.VANILLA_SCRIPT). */
+    static final boolean VANILLA_ONLY="vanilla".equals(System.getProperty("botand.mp.only"));
     /** Only the time stop's script (2.67.0, MP_ONLY=timestop). */
     static final boolean TIMESTOP_ONLY="timestop".equals(System.getProperty("botand.mp.only"));
     /** Only the script of Star Platinum's users resisting another's stopped time for two seconds (2.75.0, MP_ONLY=resist). */

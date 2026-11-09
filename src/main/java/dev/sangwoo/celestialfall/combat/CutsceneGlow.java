@@ -79,7 +79,7 @@ public final class CutsceneGlow {
      * it is cast once the glow is over. Returns whether the glow began.
      */
     public static boolean begin(ServerPlayerEntity p,int skill){
-        if(glowing(p)||!MapGate.enabled(p.getWorld()))return false;
+        if(glowing(p)||!MapGate.enabled(p))return false;
         GLOWS.put(p.getUuid(),new Glow(p,skill,p.getWorld().getTime(),p.getServerWorld()));
         slow(p,true);p.setSprinting(false);p.clearActiveItem();
         tell(p,BEGIN,skill);
@@ -114,7 +114,7 @@ public final class CutsceneGlow {
      */
     static boolean stopped(Glow g){
         var p=g.player;
-        if(!p.isAlive()||p.isRemoved()||p.getServerWorld()!=g.world||!MapGate.enabled(p.getWorld())||p.isSpectator()||p.isSleeping()||p.hasVehicle())return true;
+        if(!p.isAlive()||p.isRemoved()||p.getServerWorld()!=g.world||!MapGate.enabled(p)||p.isSpectator()||p.isSleeping()||p.hasVehicle())return true;
         if(!still(p,g.skill))return true;
         return dev.sangwoo.celestialfall.stand.KagenoManager.frozen(p)||CombatManager.incapacitated(p)||HitStun.stunned(p)||CombatManager.cinematic(p)
             ||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p);

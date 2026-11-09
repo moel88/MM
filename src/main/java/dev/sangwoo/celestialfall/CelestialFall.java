@@ -139,7 +139,7 @@ public final class CelestialFall implements ModInitializer {
                 })));
         });
         CommandRegistrationCallback.EVENT.register((dispatcher, access, environment) -> {
-            var botand=CommandManager.literal("botand").then(dev.sangwoo.celestialfall.map.MapGate.commands());
+            var botand=CommandManager.literal("botand").then(dev.sangwoo.celestialfall.map.MapGate.commands()).then(dev.sangwoo.celestialfall.map.VanillaMode.command());
             // Preserve admin permissions on every old command while allowing self-service progression.
             for(var node:dispatcher.getRoot().getChild("celestialfall").getChildren()) {
                 var alias=CommandManager.literal(node.getName()).requires(source->source.hasPermissionLevel(2));

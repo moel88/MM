@@ -13,6 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class BossPvpMixin {
     @Inject(method="shouldDamagePlayer",at=@At("HEAD"),cancellable=true)
     private void botand$boss(PlayerEntity other,CallbackInfoReturnable<Boolean> cir){
+        // (2.110.0) one in their vanilla mode (VanillaMode) neither harms nor is harmed by another player: every skill asks this
+        if(dev.sangwoo.celestialfall.map.VanillaMode.on((PlayerEntity)(Object)this)||dev.sangwoo.celestialfall.map.VanillaMode.on(other)){cir.setReturnValue(false);return;}
         boolean self=(Object)this instanceof BossPlayer,them=other instanceof BossPlayer;
         if(self||them)cir.setReturnValue(self!=them);
     }
