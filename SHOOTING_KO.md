@@ -169,7 +169,9 @@
 
 ### 죽음과 자동 부활 (2.107.0)
 - 맵에서 죽으면 사망 화면이 없고 서버가 5초(100틱) 뒤 부활시킨다(`CLAUDE.md`의 '죽으면 사망 화면 없이'). 그래서 아래 예전 항목의 `MOVE_RESPAWN`·`CLICK`(사망 화면의 부활 버튼)은 맵에서는 필요 없다. 죽인 뒤 100틱을 기다리면 된다.
-- 촬영: `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "UI;hud=1;len=180;hurt=100000;dfw=2;drt=4;pitch=22;dist=6;sweep=2400;sweept=70;slows=0:16/44:28/116:48;then=MOVE_OFF@3/HURT@30/FREECAM@40/RDOWN@44/SWEEP@45/RUP@118/WHEEL_DOWN@121/WHEEL_DOWN@124" 960x540 16`
+- 촬영(2.107.1): `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "UI;hud=1;len=160;hurt=100000;dfw=2;drt=4;pitch=22;dist=6;sweep=2400;sweept=60;slows=0:16/62:28/126:48;then=MOVE_OFF@3/HURT@30/WHERE@46/WHERE@56/FREECAM@62/RDOWN@64/SWEEP@65/WHERE@90/RUP@127/WHERE@128" 960x540 16`
+  - 31틱에 죽고, 몸이 쓰러져 51틱에 연기와 함께 사라질 때까지 카메라를 그대로 두었다가(기울지 않는 것과 연기가 보이게) 62틱부터 오른쪽 버튼을 누른 채 한 바퀴 돌린다. 131틱에 부활.
+  - 2.107.0의 촬영(휠 줌 포함): `UI;hud=1;len=180;hurt=100000;dfw=2;drt=4;pitch=22;dist=6;sweep=2400;sweept=70;slows=0:16/44:28/116:48;then=MOVE_OFF@3/HURT@30/FREECAM@40/RDOWN@44/SWEEP@45/RUP@118/WHEEL_DOWN@121/WHEEL_DOWN@124`
   - 배율: 줌 아웃과 부활 뒤에는 지형을 새로 그리느라 소프트웨어 렌더러가 1~2틱씩 프레임을 못 찍는다. 배율 16 하나로는 반복 1이 나와 `slows=0:16/44:28/116:48`로 찍었다(반복 0, 약 8분).
   - `HURT@n`(`hurt=100000`): 서버가 플레이어에게 그만큼 피해를 준다(죽음).
   - `FREECAM@n`: 그 틱부터 촬영 도구가 카메라의 방향·거리를 정하지 않는다(게임의 카메라 그대로, 진짜 마우스로 돌린다).
@@ -178,7 +180,8 @@
   - `WHEEL_DOWN@n`의 로그에 카메라 줌(목표 거리)이 바뀐 값이 남는다.
   - `WHERE@n`: 클라이언트와 서버가 아는 플레이어의 자리·몸 방향·핫바 칸·체력·열린 화면·커서, 이 클라이언트가 가진 엔티티 수, 자기 몸이 아직 월드에 있는지(`theirs`, `removed`, `death time`), 서버가 몸을 월드에 두는지(`removed`, `in the world's players`)를 남긴다. 죽은 동안 행동이 막히는지 볼 때 `KEY_2`·`KEYDOWN_W`·`ATTACKDOWN`·`KEYDOWN_E`·`KEY_R` 앞뒤에 둔다.
   - 로그: 'player died at N', 'player respawned at N'(N+100이어야 함), 'camera free', 'right button down (cursor captured)', 'sweep over (camera yaw …)', 'wheel …: the camera's zoom A -> B'. 서버 로그에 'Auto respawn: 이름 back to life after 100 ticks (respawned)'.
-  - 2.107.0의 확인: 죽은 지 1초가 지나도 더미와 자기 몸이 보여야 한다(마인크래프트는 1초에 몸을 빼고, 그러면 그 사람 화면에서 주변 엔티티까지 사라진다: 첫 시험에서 그랬다).
+  - 2.107.0의 확인: 죽은 지 1초가 지나도 더미가 보여야 한다(마인크래프트는 1초에 몸을 빼고, 그러면 그 사람 화면에서 주변 엔티티까지 사라진다: 첫 시험에서 그랬다).
+  - 2.107.1의 확인: 죽는 순간과 죽어 있는 동안 화면(지평선)이 기울지 않는다(`WHERE`의 `death view true`). 몸은 죽은 지 20틱에 연기와 함께 사라진다(`WHERE`의 `theirs false, removed KILLED, death time 20`: 마인크래프트 그대로). 그 뒤에도 더미·슬라임은 보이고(`entities seen [idle_dummy, …]`, `me`가 빠짐) 서버는 몸을 월드에 둔다(`removed false, in the world's players true`). `WHERE`가 이 클라이언트가 가진 엔티티의 종류(`me`는 자기 몸)와 `death view`(`DeathView.active`)를 함께 남긴다.
   - 자막: `FILM_SKILL=UI FILM_CAPTION=below FILM_CLOCK="죽은 뒤" FILM_CLOCK_ZERO=1.55 FILM_NOTES="시작-끝:설명|…"`.
 
 ### 운석
@@ -416,9 +419,9 @@
       4. `UNAWAKEN`·`NOSTAND` → 스탠드 화살.
       5. `NOSTAND`·뽑기 SSR.
     - 시전자 클라이언트는 다시 들어온 뒤 30틱 동안 월드 시간 패킷을 버립니다(봇 모드의 `mixin/MpLateTimeMixin`). 접속 때 알린 긴 쿨타임을 시계가 맞춰지기 전에 읽는 순서를 늘 만들기 위해서입니다.
-  - `death`(`DEATH_SCRIPT`, 2.107.0):
+  - `death`(`DEATH_SCRIPT`, 2.107.0, 2.107.1):
     - 하는 것: 관찰자를 앞 2.5블록에 부르고(`HOME`) 시전자(카게노)가 `/kill`로 죽은 뒤 바로 부활을 요청합니다(`RESPAWN`, 옛 클라이언트의 부활 버튼처럼: 서버가 받지 않아야 함). 죽은 채 오른쪽 버튼을 누르고 마우스를 20틱 동안 틱마다 30픽셀 옮겨 카메라를 돌리고(`DRAG`), 휠을 두 번 내리고(`WHEELOUT`), 핫바 2·평타·E·W 걷기를 눌러 봅니다(모두 안 되어야 함). 서버가 죽은 지 100틱에 부활시킵니다. 다시 죽고 15틱 뒤 죽은 채 나갔다가(`LEAVE`) 5초 뒤 다시 들어옵니다: 들어온 때부터 100틱에 부활해야 합니다.
-    - 기록: 두 클라이언트는 뜬 화면(사망 화면이 없어야 함)을, 시전자는 체력·생사·핫바 칸·`DeathView`가 바뀔 때와 끌기 앞뒤의 카메라 방향·몸 방향, 휠 앞뒤의 줌을, 관찰자는 시전자의 몸(있는지, 쓰러져 있는지, 자리)이 바뀔 때를 남깁니다. 서버는 죽음(때·자리), 죽어 있는 동안 1초마다 몸이 월드에 있는지(`body in the world`, `removed`)와 자리, 부활(죽은 뒤 또는 죽은 채 들어온 뒤 몇 틱인지, 자리), 핫바 칸이 바뀔 때를 남깁니다. 시전자가 죽은 채 들어오면 서버는 집으로 옮기지 않습니다(쓰러진 자리 그대로).
+    - 기록: 두 클라이언트는 뜬 화면(사망 화면이 없어야 함)을, 시전자는 체력·생사·핫바 칸·`DeathView`가 바뀔 때와 끌기 앞뒤의 카메라 방향·몸 방향, 휠 앞뒤의 줌을, 관찰자는 시전자의 몸(있는지, 쓰러져 있는지, 자리)이 바뀔 때를 남깁니다. 2.107.1부터 시전자는 자기 몸이 자기 월드에 있는지(`my body`: 죽은 지 20틱에 'gone (KILLED, death time 20)')와 관찰자가 보이는지(`the watcher`: 죽어 있는 동안 계속 'seen')를, 관찰자는 시전자의 죽은 몸이 사라질 때 마지막으로 본 죽은 시간('the caster's body went after death time N', 19~20)을 남깁니다. 다시 들어온 클라이언트는 상대 플레이어가 보이면 대본을 이어 갑니다('back in the game … (dead)'). 2.107.1 전에는 내 월드의 플레이어가 둘 이상인지로 봐서, 죽은 채 들어오면 제 몸이 1초 뒤 제 월드에서 빠져 부활할 때까지 이어 가지 못했습니다. 서버는 죽음(때·자리), 죽어 있는 동안 1초마다 몸이 월드에 있는지(`body in the world`, `removed`)와 자리, 부활(죽은 뒤 또는 죽은 채 들어온 뒤 몇 틱인지, 자리), 핫바 칸이 바뀔 때를 남깁니다. 시전자가 죽은 채 들어오면 서버는 집으로 옮기지 않습니다(쓰러진 자리 그대로).
     - 관찰자 봇은 죽으면 40틱에 부활을 요청하는데, 2.107.0부터 서버는 100틱 전 요청을 받지 않으므로 모든 모드에서 죽은 사람은 100틱에 부활합니다(예전 대본의 `RESPAWN`은 그 전이면 아무 일도 하지 않습니다).
   - `swap`(`SWAP_SCRIPT`):
     - 하는 것:

@@ -58,20 +58,61 @@ class AutoRespawnTest {
         assertTrue(index(calls,"respawnPlayer")>thread);
     }
     /**
-     * Minecraft takes the dead out of the world a second (20 ticks) after they die, on the server (LivingEntity) and on
-     * their own client (ClientPlayerEntity, of itself): the five seconds would show an emptied world, so DeadBodyMixin
-     * and ClientPlayerMixin keep the body until they come back.
+     * Minecraft takes the dead out of the world a second (20 ticks) after they die, on the server (LivingEntity, in its
+     * puff of smoke: status 60) and on their own client (ClientPlayerEntity, of itself). Taken out on the server, the five
+     * seconds would show an emptied world, so DeadBodyMixin keeps them in it (2.107.0); their body still goes as
+     * Minecraft's does (2.107.1, user request: "죽고 시체가 원래 처럼 소멸하는 건 똑같게 해줘"): the same second, the same
+     * puff ({@link AutoRespawn#VANISH}), and out of everyone else's world (AutoRespawn.hide).
      */
-    @Test void theDeadAreTakenOutASecondOnUnlessKept()throws Exception{
+    @Test void theDeadAreTakenOutASecondOnInAPuffOfSmoke()throws Exception{
         for(String owner:new String[]{"net/minecraft/entity/LivingEntity","net/minecraft/client/network/ClientPlayerEntity"}){
             var m=method(owner,"updatePostDeath","()V");boolean twenty=false,killed=false,removed=false;
             for(var i:m.instructions){
-                if(i instanceof IntInsnNode n&&n.operand==20)twenty=true;
+                if(i instanceof IntInsnNode n&&n.operand==AutoRespawn.VANISH)twenty=true;
                 if(i instanceof FieldInsnNode f&&f.name.equals("KILLED"))killed=true;
                 if(i instanceof MethodInsnNode c&&c.name.equals("remove"))removed=true;
             }
             assertTrue(twenty&&killed&&removed,owner+": out at 20 ticks, killed");
         }
+        assertEquals(20,AutoRespawn.VANISH,"Minecraft's second");
+        boolean puff=false;
+        for(var i:method("net/minecraft/entity/LivingEntity","updatePostDeath","()V").instructions)
+            if(i instanceof IntInsnNode n&&n.operand==net.minecraft.entity.EntityStatuses.ADD_DEATH_PARTICLES)puff=true;
+        assertTrue(puff,"the server's puff of smoke is the one DeadBodyMixin sends");
+    }
+    /**
+     * (2.107.1) Their own client takes their body out of their world as Minecraft does, a second on: no client mixin
+     * keeps it (2.107.0's ClientPlayerMixin did; not to come back).
+     */
+    @Test void theirOwnClientTakesTheBodyOutAsMinecraftDoes()throws Exception{
+        var client=JsonParser.parseReader(new InputStreamReader(AutoRespawnTest.class.getResourceAsStream("/celestialfall.client.mixins.json"),StandardCharsets.UTF_8)).getAsJsonObject();
+        String pkg=client.get("package").getAsString().replace('.','/');
+        for(var name:client.getAsJsonArray("client")){
+            try(var stream=AutoRespawnTest.class.getResourceAsStream("/"+pkg+"/"+name.getAsString().replace('.','/')+".class")){
+                assertNotNull(stream,name.getAsString());var node=new ClassNode();new ClassReader(stream).accept(node,0);
+                for(var m:node.methods)if(m.visibleAnnotations!=null)for(var a:m.visibleAnnotations)
+                    if(a.desc.contains("/injection/")&&String.valueOf(a.values).contains("updatePostDeath"))
+                        fail(name.getAsString()+"."+m.name+" keeps the body on their own client");
+            }
+        }
+    }
+    /**
+     * (2.107.1, user request: "화면이 기울어 지는 건 고치고") The roll of the view while dead is Minecraft's tiltViewWhenHurt
+     * (its death roll reads the death time): GameRendererMixin cancels it while dead, waiting to come back.
+     */
+    @Test void theDeathRollIsTheHurtTilt()throws Exception{
+        var m=method("net/minecraft/client/render/GameRenderer","tiltViewWhenHurt","(Lnet/minecraft/client/util/math/MatrixStack;F)V");
+        boolean deathTime=false;
+        for(var i:m.instructions){
+            if(i instanceof FieldInsnNode f&&f.name.equals("deathTime"))deathTime=true;
+        }
+        assertTrue(deathTime,"the death roll grows with the death time");
+        var mixin=new ClassNode();
+        try(var stream=AutoRespawnTest.class.getResourceAsStream("/dev/sangwoo/celestialfall/mixin/client/GameRendererMixin.class")){new ClassReader(stream).accept(mixin,0);}
+        var steady=mixin.methods.stream().filter(x->x.visibleAnnotations!=null&&x.visibleAnnotations.stream().anyMatch(a->String.valueOf(a.values).contains("tiltViewWhenHurt"))).findFirst().orElseThrow();
+        boolean asks=false;
+        for(var i:steady.instructions)if(i instanceof MethodInsnNode c&&c.owner.endsWith("client/DeathView")&&c.name.equals("active"))asks=true;
+        assertTrue(asks,"cancelled while DeathView is active");
     }
     @Test void theMixinsAreListed()throws Exception{
         var common=list("/celestialfall.mixins.json","mixins");

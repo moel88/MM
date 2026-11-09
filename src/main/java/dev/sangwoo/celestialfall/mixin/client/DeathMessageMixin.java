@@ -19,6 +19,8 @@ public abstract class DeathMessageMixin {
     private void botand$noDeathScreen(DeathMessageS2CPacket packet,CallbackInfo ci){
         var mc=MinecraftClient.getInstance();
         if(mc.player==null||packet.getEntityId()!=mc.player.getId()||!DeathView.handled())return;
+        // (2.107.1) dead to the view from now, before the health comes: no roll, no keys in between
+        DeathView.died(mc.player);
         if(mc.currentScreen!=null)mc.setScreen(null);
         ci.cancel();
     }

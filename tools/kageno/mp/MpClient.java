@@ -267,9 +267,11 @@ public final class MpClient implements ClientModInitializer {
      * with the wheel ("WHEELOUT") and tries the hotbar's 2, the attack, E and walking (none may go through); the server
      * brings it back five seconds after it died. Killed again, it leaves the server dead and joins again five seconds
      * later: the server brings it back five seconds after it is back. Both log every screen they are shown (no death
-     * screen may come), the caster its health, camera and slot as they change; the watcher the caster's body (lying dead
-     * where it fell through the five seconds, then back alive at the spawn); the server each death, where the body lies
-     * and whether it is still in the world each second, and each coming back.
+     * screen may come), the caster its health, camera and slot as they change, its own body in its world (gone a second
+     * on, as Minecraft's: 2.107.1) and the watcher (still there through the five seconds: the world goes on for it); the
+     * watcher the caster's body (falling dead where it fell, gone a second on in Minecraft's puff of smoke (2.107.1), then
+     * back alive at the spawn); the server each death, where the body is and whether it is still in the world each
+     * second, and each coming back.
      */
     private static final String[] DEATH_SCRIPT={
         "20 HOME","40 KILL","42 RESPAWN",
@@ -515,6 +517,10 @@ public final class MpClient implements ClientModInitializer {
             flag("my health",String.format(Locale.ROOT,"%.1f (%s)",mc.player.getHealth(),mc.player.isAlive()?"alive":"dead"));
             flag("my slot",mc.player.getInventory().selectedSlot);
             flag("death view",DeathView.active());
+            // (2.107.1) its own body in its own world (gone a second on, as Minecraft's), and the watcher (still told of)
+            flag("my body",mc.world.getEntityById(mc.player.getId())==mc.player?"in my world":"gone ("+mc.player.getRemovalReason()+", death time "+mc.player.deathTime+")");
+            var w=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
+            flag("the watcher",w==null?"not seen":String.format(Locale.ROOT,"seen at %.0f %.0f %.0f",w.getX(),w.getY(),w.getZ()));
             if(dragAt>=0&&age>dragAt&&age<=dragAt+20){
                 try{mouse("onCursorPos","method_1600",long.class,double.class,double.class).invoke(mc.mouse,mc.getWindow().getHandle(),mc.mouse.getX()+30,mc.mouse.getY());}catch(ReflectiveOperationException e){fail(e);}
             }
@@ -524,7 +530,13 @@ public final class MpClient implements ClientModInitializer {
         }
         var c=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
         flag("caster's body",c==null?"none":String.format(Locale.ROOT,"%s at %.0f %.0f %.0f",c.isAlive()?"alive":"lying dead",c.getX(),c.getY(),c.getZ()));
+        // (2.107.1) the death time it was last seen at, dead, before it went (Minecraft's dead go at 20)
+        if(c!=null&&!c.isAlive())bodyLast=c.deathTime;
+        else if(c==null&&bodyLast>=0){note("the caster's body went after death time "+bodyLast);bodyLast=-1;}
+        else if(c!=null)bodyLast=-1;
     }
+    /** (2.107.1, MP_ONLY=death) The death time the watcher last saw the caster's dead body at (-1: none seen dead). */
+    private int bodyLast=-1;
     private void attack(boolean down){var k=InputUtil.Type.MOUSE.createFromCode(GLFW_MOUSE_BUTTON_LEFT);KeyBinding.setKeyPressed(k,down);if(down)KeyBinding.onKeyPressed(k);}
     private String name(UUID id){var p=mc.world.getPlayerByUuid(id);return p==null?id.toString().substring(0,8):p.getGameProfile().getName();}
     /** The watcher looks a little up at G's pillar from outside; otherwise both look slightly down at each other. */
@@ -615,7 +627,8 @@ public final class MpClient implements ClientModInitializer {
                 if(mc.world!=null)trace();
                 if(mc.world==null||mc.player==null)return;
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());mc.setScreen(null);}
-                if(mc.world.getPlayers().size()>=2&&age>60){note("back in the game, the script at "+resumeAt);flags.clear();face();age=resumeAt;phase=2;traceUntil=resumeAt+100;}
+                // (2.107.1) the other one seen: one back dead has its own body gone from its world a second on (as Minecraft's)
+                if(mc.world.getPlayers().stream().anyMatch(q->q!=mc.player)&&age>60){note("back in the game, the script at "+resumeAt+(mc.player.isAlive()?"":" (dead)"));flags.clear();face();age=resumeAt;phase=2;traceUntil=resumeAt+100;}
             }
         }
     }

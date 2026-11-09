@@ -16,10 +16,4 @@ public abstract class ClientPlayerMixin {
     private void botand$run(ClientPlayerEntity player,boolean sprint){player.setSprinting(BotandCamera.enabled()?BotandCamera.sprinting():sprint);}
     @Inject(method="tickMovement",at=@At(value="INVOKE",target="Lnet/minecraft/client/input/Input;tick(ZF)V",shift=At.Shift.AFTER))
     private void botand$runAfterInput(CallbackInfo ci){if(BotandCamera.enabled())((ClientPlayerEntity)(Object)this).setSprinting(BotandCamera.sprinting());}
-    /**
-     * (2.107.0) Dead on the Botand map, waiting to be brought back (DeathView): their own body lies where it fell until
-     * then, as everyone else sees it (DeadBodyMixin), not taken out of their world a second after dying as Minecraft does.
-     */
-    @Inject(method="updatePostDeath",at=@At("HEAD"),cancellable=true)
-    private void botand$lieUntilBack(CallbackInfo ci){if(DeathView.active()){((ClientPlayerEntity)(Object)this).deathTime++;ci.cancel();}}
 }

@@ -79,8 +79,10 @@ public abstract class GameRendererMixin {
     private void botand$steadyCamera(MatrixStack matrices,float delta,CallbackInfo ci) {
         if(TitleMapCamera.active()||CinematicDirector.isActive()||(dev.sangwoo.celestialfall.client.BotandCamera.enabled()&&!dev.sangwoo.celestialfall.client.BotandCamera.STATE.firstPerson()))ci.cancel();
     }
+    // (2.107.1, user request: "화면이 기울어 지는 건 고치고") nor while dead, waiting to come back (DeathView): Minecraft
+    // rolls the view as the killing blow lands and keeps it rolled while the player is dead
     @Inject(method="tiltViewWhenHurt",at=@At("HEAD"),cancellable=true)
-    private void botand$steadyMenu(MatrixStack matrices,float delta,CallbackInfo ci){if(TitleMapCamera.active()||CinematicDirector.isActive())ci.cancel();}
+    private void botand$steadyMenu(MatrixStack matrices,float delta,CallbackInfo ci){if(TitleMapCamera.active()||CinematicDirector.isActive()||dev.sangwoo.celestialfall.client.DeathView.active())ci.cancel();}
     // GUI projection is already installed here; this also runs when F1 skips InGameHud.
     // World effects are finished; pause/chat/resource-reload screens remain usable.
     @Inject(method="render",at=@At(value="INVOKE",ordinal=0,

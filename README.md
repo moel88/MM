@@ -1,4 +1,13 @@
-> **현재 통합본: Botand 2.107.0** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+> **현재 통합본: Botand 2.107.1** — 2.31.2(업로드한 2.30.3 + Immersive Cinematics·Veil·Player Animator·GeckoLib) 기반. 설치와 빌드는 [INTEGRATION_2.31.2_KO.md](INTEGRATION_2.31.2_KO.md)를 따르세요. 메인 맵은 Cliffside의 벽만 남기고 모두 비운 뒤 섬을 2.5배(맵 1000×1000)로 키우고 벽을 회색 자연석으로 바꾼 Botand-Azure-Expanse-1.20.1-v1.5([MAP_EXPANSE_KO.md](MAP_EXPANSE_KO.md))입니다. 그 바탕인, 원래 보탠드 맵을 로블록스 보탠드 지도처럼 리워크한 Cliffside v1.4([MAP_CLIFFSIDE_KO.md](MAP_CLIFFSIDE_KO.md)), 원래 맵 v1.3과 해안 마을 Botand-Seaside-1.20.1-v2.0([MAP_SEASIDE_KO.md](MAP_SEASIDE_KO.md))도 그대로 쓸 수 있습니다. 새로 만들던 모래시계 섬([MAP_HOURGLASS_KO.md](MAP_HOURGLASS_KO.md))은 만들다 멈췄고, 그 맵에 쓰려고 새로 만든 블록(세계수, 네온, 홀로그램, 한글 간판 등)은 모드에서 뺐습니다.
+
+# 보탠드 2.107.1 — 죽을 때 화면이 기울지 않고, 시체는 마인크래프트처럼 1초 뒤 연기와 함께 사라짐
+
+- **화면이 기울지 않음:** 죽는 순간과 죽어 있는 동안 화면이 옆으로 기울지 않습니다(살아 있을 때 맞으면 살짝 기우는 것은 그대로).
+- **시체:** 쓰러지고 1초 뒤 마인크래프트의 연기와 함께 사라집니다. 마인크래프트와 같은 때, 같은 연기이고, 모든 사람의 화면에서 사라집니다.
+- **그대로:** 사망 화면 없이 그 자리에서 5초 동안 시점만 움직이고 5초 뒤 자동 부활. 주변의 다른 플레이어·몹은 5초 내내 보입니다.
+- **서버와 접속자 모두 2.107.1로 바꾸세요.** 다른 사람의 화면에서 몸이 사라지는 것은 서버가, 기울지 않는 것과 제 몸이 사라지는 것은 접속자가 합니다.
+
+[RELEASE_2.107.1_KO.md](RELEASE_2.107.1_KO.md)를 확인하세요. 2.107.0은 [RELEASE_2.107.0_KO.md](RELEASE_2.107.0_KO.md)입니다.
 
 # 보탠드 2.107.0 — 죽으면 사망 화면 없이 그 자리에서 5초, 그다음 자동 부활
 
