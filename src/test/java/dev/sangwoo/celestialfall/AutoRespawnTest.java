@@ -114,6 +114,32 @@ class AutoRespawnTest {
         for(var i:steady.instructions)if(i instanceof MethodInsnNode c&&c.owner.endsWith("client/DeathView")&&c.name.equals("active"))asks=true;
         assertTrue(asks,"cancelled while DeathView is active");
     }
+    /**
+     * (2.107.2, user request: "화면은 왜 확대되는데", then to take it away) Minecraft narrows a dead body's view
+     * (GameRenderer.getFov: divided by (1-500/(min(deathTime+delta,20)+500))*2+1, some 7% at a second); DeathView
+     * gives the same factor and GameRendererMixin multiplies the view back by it while dead, waiting to come back.
+     */
+    @Test void theDeathZoomIsTakenBackOut()throws Exception{
+        var m=method("net/minecraft/client/render/GameRenderer","getFov","(Lnet/minecraft/client/render/Camera;FZ)D");
+        boolean dead=false,time=false,cap=false;int fives=0;
+        for(var i:m.instructions){
+            if(i instanceof MethodInsnNode c&&c.name.equals("isDead"))dead=true;
+            if(i instanceof FieldInsnNode f&&f.name.equals("deathTime"))time=true;
+            if(i instanceof LdcInsnNode l&&Float.valueOf(20f).equals(l.cst))cap=true;
+            if(i instanceof LdcInsnNode l&&Float.valueOf(500f).equals(l.cst))fives++;
+        }
+        assertTrue(dead&&time&&cap&&fives==2,"Minecraft's narrowing of a dead body's view");
+        assertEquals(1,dev.sangwoo.celestialfall.client.DeathView.narrowing(0,0),1e-9,"none as they die");
+        assertEquals(1+2*(1-500/520.0),dev.sangwoo.celestialfall.client.DeathView.narrowing(20,0),1e-6,"some 7.7% a second on");
+        assertEquals(dev.sangwoo.celestialfall.client.DeathView.narrowing(19,1),dev.sangwoo.celestialfall.client.DeathView.narrowing(57,0.5f),0,"no further after");
+        for(int t=0;t<20;t++)assertTrue(dev.sangwoo.celestialfall.client.DeathView.narrowing(t+1,0)>dev.sangwoo.celestialfall.client.DeathView.narrowing(t,0),"closing in through the second");
+        var mixin=new ClassNode();
+        try(var stream=AutoRespawnTest.class.getResourceAsStream("/dev/sangwoo/celestialfall/mixin/client/GameRendererMixin.class")){new ClassReader(stream).accept(mixin,0);}
+        var fov=mixin.methods.stream().filter(x->x.visibleAnnotations!=null&&x.visibleAnnotations.stream().anyMatch(a->String.valueOf(a.values).contains("getFov"))).findFirst().orElseThrow();
+        boolean back=false;
+        for(var i:fov.instructions)if(i instanceof MethodInsnNode c&&c.owner.endsWith("client/DeathView")&&c.name.equals("unzoom"))back=true;
+        assertTrue(back,"multiplied back while dead");
+    }
     @Test void theMixinsAreListed()throws Exception{
         var common=list("/celestialfall.mixins.json","mixins");
         assertTrue(common.contains("AutoRespawnMixin")&&common.contains("DeadBodyMixin"));

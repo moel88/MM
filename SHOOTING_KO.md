@@ -169,6 +169,8 @@
 
 ### 죽음과 자동 부활 (2.107.0)
 - 맵에서 죽으면 사망 화면이 없고 서버가 5초(100틱) 뒤 부활시킨다(`CLAUDE.md`의 '죽으면 사망 화면 없이'). 그래서 아래 예전 항목의 `MOVE_RESPAWN`·`CLICK`(사망 화면의 부활 버튼)은 맵에서는 필요 없다. 죽인 뒤 100틱을 기다리면 된다.
+- 촬영(2.107.2, 확대 없음): `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "UI;hud=1;len=150;hurt=100000;dfw=2;drt=4;pitch=22;dist=6;slows=0:16/126:48;then=MOVE_OFF@3/HURT@30/WHERE@46/WHERE@56/WHERE@128" 960x540 16`
+  - 카메라를 죽은 뒤 부활까지 고정해 둔다(`FREECAM`을 쓰지 않음): 화면이 확대되면 더미가 커지고 지평선이 화면 가운데에서 멀어진다. 확인은 프레임마다 먼 풀밭 띠의 윗변을 열마다 찾아 그 높이(확대)와 기울기(기울어짐)를 잰다. 2.107.1은 죽은 지 1초에 지평선이 가운데에서 약 10% 멀어졌다(y 135 → 122, 960×540).
 - 촬영(2.107.1): `SHOTS_LANG=ko_kr python3 tools/kageno/shots/run_shots.py OUT "UI;hud=1;len=160;hurt=100000;dfw=2;drt=4;pitch=22;dist=6;sweep=2400;sweept=60;slows=0:16/62:28/126:48;then=MOVE_OFF@3/HURT@30/WHERE@46/WHERE@56/FREECAM@62/RDOWN@64/SWEEP@65/WHERE@90/RUP@127/WHERE@128" 960x540 16`
   - 31틱에 죽고, 몸이 쓰러져 51틱에 연기와 함께 사라질 때까지 카메라를 그대로 두었다가(기울지 않는 것과 연기가 보이게) 62틱부터 오른쪽 버튼을 누른 채 한 바퀴 돌린다. 131틱에 부활.
   - 2.107.0의 촬영(휠 줌 포함): `UI;hud=1;len=180;hurt=100000;dfw=2;drt=4;pitch=22;dist=6;sweep=2400;sweept=70;slows=0:16/44:28/116:48;then=MOVE_OFF@3/HURT@30/FREECAM@40/RDOWN@44/SWEEP@45/RUP@118/WHEEL_DOWN@121/WHEEL_DOWN@124`

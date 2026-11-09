@@ -64,7 +64,10 @@ public abstract class GameRendererMixin {
     private void celestialfall$fov(Camera camera,float delta,boolean changing,CallbackInfoReturnable<Double> cir) {
         if(dev.sangwoo.celestialfall.client.integration.CinematicsBridge.ownsCamera())return;
         if(TitleMapCamera.active()){cir.setReturnValue(TitleCameraTour.FOV);return;}
-        if(changing)cir.setReturnValue(CinematicDirector.fov(cir.getReturnValue(),delta));
+        // (2.107.2, user request: no zoom while dead) Minecraft narrows the view while its body lies dead; waiting to come
+        // back (DeathView) it is taken back out, as the roll is (tiltViewWhenHurt)
+        double fov=cir.getReturnValue()*dev.sangwoo.celestialfall.client.DeathView.unzoom(camera.getFocusedEntity(),delta);
+        cir.setReturnValue(changing?CinematicDirector.fov(fov,delta):fov);
     }
     @Inject(method="renderHand",at=@At("HEAD"),cancellable=true)
     private void celestialfall$hand(MatrixStack matrices,Camera camera,float delta,CallbackInfo ci) {
