@@ -43,6 +43,29 @@ public final class SwordDance implements Fx.Skill {
         if(space(d)){panels(d,m,t,true);knives(d,m,t,true);}
         if(world(d,t)){cuts(c,d,m,t,true);flight(c,d,m,t);}
     }
+    /** The blows' black, over all their light (2.112.3: its glow had turned it a dark purple): a batch of its own after the light, on the effect layer or not. */
+    @Override public void shaders(Fx c){
+        var d=dance(c);if(d==null||!world(d,c.age))return;float t=c.age;
+        if(!d.inSpace()||t<VANISH||t>=blowAt(HITS-1)+DanceBurst.LIFE)return;
+        float stop=d.stopped()?d.ended:Float.MAX_VALUE;
+        Vec3d mid=middle(c,d);int seed=(int)(d.cast.start()*31);
+        var frame=DanceBurst.frame(mid,c.camera);
+        var buf=net.minecraft.client.render.Tessellator.getInstance().getBuffer();
+        buf.begin(net.minecraft.client.render.VertexFormat.DrawMode.QUADS,net.minecraft.client.render.VertexFormats.POSITION_COLOR);
+        var m=new EffectMesh(buf,c.matrix,c.camera);
+        for(int k=0;k<HITS;k++){
+            float at=blowAt(k),s=t-at;
+            if(s<0||s>=DanceBurst.LIFE||at>stop)continue;
+            DanceBurst.black(m,frame,k,seed,s,k==HITS-1);
+        }
+        var built=buf.end();
+        if(dev.sangwoo.celestialfall.client.KagenoRenderer.layering())dev.sangwoo.celestialfall.client.vfx.FxLayer.draw(built,false,1,.35f);
+        else{
+            com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.render.GameRenderer::getPositionColorProgram);
+            com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+            net.minecraft.client.render.BufferRenderer.drawWithGlobalProgram(built);
+        }
+    }
     @Override public void frame(Fx c,FxFrame f){
         var d=dance(c);if(d==null)return;float t=c.age;
         // the cut into the strange space: none of the world's last frames left glowing on its plain ground (the "!!!")
@@ -181,7 +204,7 @@ public final class SwordDance implements Fx.Skill {
         // a violet glow about them while they are cut up
         if(light){
             float on=Math.min(1,(t-VANISH)/2f)*(1-XCharaSpace.smooth((t-Math.min(LAUNCH,stop))/6f));
-            if(on>0){m.softDisc(frame.o(),4.6*DanceBurst.SCALE,0x640eb0,.07f*on*frame.near());m.softDisc(frame.o(),7*DanceBurst.SCALE,0x30087c,.05f*on*frame.near());}
+            if(on>0){m.softDisc(frame.o(),4.6*DanceBurst.SCALE,0x8a18f0,.09f*on*frame.near());m.softDisc(frame.o(),7*DanceBurst.SCALE,0x4a0ca8,.06f*on*frame.near());}
         }
         for(int k=0;k<HITS;k++){
             float at=blowAt(k),s=t-at;
@@ -195,16 +218,16 @@ public final class SwordDance implements Fx.Skill {
         float s=t-LAUNCH;if(s<0||s>18)return;
         var e=target(c);if(e==null||!e.isAlive())return;
         Vec3d at=e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0);
-        if(s<5){m.softDisc(d.targetFrom.add(0,1,0),2.2+1.5*s/5,DanceBurst.PALE,.7f*(1-s/5));}
+        if(s<5){m.softDisc(d.targetFrom.add(0,1,0),2.2+1.5*s/5,DanceBurst.WHITE,.75f*(1-s/5));}
         if(s<9){
-            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.06,0),1+4.5*s/9,.12,0xa04cff,.8f*(1-s/9));
-            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.08,0),.6+7*s/9,.2,0x7a16d0,.5f*(1-s/9));
+            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.06,0),1+4.5*s/9,.12,0xf0e4ff,.8f*(1-s/9));
+            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.08,0),.6+7*s/9,.2,0x9a1cff,.5f*(1-s/9));
         }
         Vec3d way=d.f.multiply(FLY).add(0,FLY_UP,0).normalize();
         float fade=1-s/18;
-        m.glowLine(at.subtract(way.multiply(Math.min(7,.6+s*.9))),at,.3,0x8418d8,.85f*fade);
-        // a purple glow on them as they go (the video's: they fly off glowing; 2.112.2: deep purple)
-        m.softDisc(at,1.6,0x8418d8,.45f*fade);
-        m.softDisc(at,.7,0xdcc0ff,.4f*fade);
+        m.glowLine(at.subtract(way.multiply(Math.min(7,.6+s*.9))),at,.3,0x9a1cff,.85f*fade);
+        // a glow on them as they go (the video's: they fly off glowing; 2.112.3: its glowing purple, white at the heart)
+        m.softDisc(at,1.6,0x9a1cff,.45f*fade);
+        m.softDisc(at,.7,DanceBurst.WHITE,.45f*fade);
     }
 }
