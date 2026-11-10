@@ -584,7 +584,9 @@ public final class MpServer implements ModInitializer {
         danceSeen=d;
     }
     /** Only Lee So-sang's basic attack's script (2.77.0, MP_ONLY=isosang). */
-    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"))||"isosangy".equals(System.getProperty("botand.mp.only"))||"isosanghh".equals(System.getProperty("botand.mp.only"));
+    static final boolean ISOSANG_ONLY="isosang".equals(System.getProperty("botand.mp.only"))||"isosange".equals(System.getProperty("botand.mp.only"))||"isosangr".equals(System.getProperty("botand.mp.only"))||"isosangh".equals(System.getProperty("botand.mp.only"))||"isosangg".equals(System.getProperty("botand.mp.only"))||"isosangz".equals(System.getProperty("botand.mp.only"))||"isosangdodge".equals(System.getProperty("botand.mp.only"))||"isosangvolley".equals(System.getProperty("botand.mp.only"))||"isosangt".equals(System.getProperty("botand.mp.only"))||"isosangy".equals(System.getProperty("botand.mp.only"))||"isosanghh".equals(System.getProperty("botand.mp.only"))||"isosanggauge".equals(System.getProperty("botand.mp.only"));
+    /** (2.113.0) The caster's gauge and the watcher's slow last noted. */
+    private String gaugeNoted="",zoneSlowNoted="";
     private String hitSeen="";private int blowsSeen;private float watcherHealth=-1;private net.minecraft.util.math.Vec3d watcherAt;private long watchUntil;
     private String eSeen="";private net.minecraft.util.math.Vec3d thrustFrom,casterFrom;private long thrustAt,giantSeen=-1;
     /**
@@ -607,6 +609,16 @@ public final class MpServer implements ModInitializer {
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
         var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
         if(caster==null||watcher==null)return;
+        // (2.113.0) the caster's H gauge (and on H when it runs dry and the swords flare), the watcher's slow
+        {
+            int gu=dev.sangwoo.celestialfall.isosang.IsosangAttack.gauge(caster);double[] fg=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationGauge(caster);
+            String gs=gu+(fg==null?"":String.format(java.util.Locale.ROOT," %.2f %.2f",fg[0],fg[1]));
+            if(!gs.equals(gaugeNoted)){gaugeNoted=gs;note(server,"caster's H gauge: "+gu+"/"+dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL+(fg==null?"":String.format(java.util.Locale.ROOT,", on H: it runs dry %.2f ticks in and the swords flare %.2f ticks in",fg[0],fg[1]))+" (tick "+now+")");}
+            var sp=watcher.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);var mod=sp==null?null:sp.getModifier(dev.sangwoo.celestialfall.combat.CombatManager.SLOW);
+            String ws=mod==null?"none":String.format(java.util.Locale.ROOT,"%.2f",mod.getValue());
+            if(!ws.equals(zoneSlowNoted)){zoneSlowNoted=ws;var fo=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(caster);
+                note(server,"watcher's slow: "+ws+" (tick "+now+(fo==null?"":String.format(java.util.Locale.ROOT,", %.2f from the formation's middle",Math.hypot(watcher.getX()-fo.centre().x,watcher.getZ()-fo.centre().z)))+")");}
+        }
         var h=dev.sangwoo.celestialfall.isosang.IsosangAttack.hit(caster);
         String hit=h==null||h.combo()<1?"":h.combo()+"@"+h.start();
         if(!hit.equals(hitSeen)){

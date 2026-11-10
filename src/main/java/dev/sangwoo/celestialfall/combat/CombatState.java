@@ -32,6 +32,21 @@ public final class CombatState {
     public boolean locked(long now) { return broken(now)||disabled(now)||staggered(now); }
     /** Whether a slow is on its legs now ({@link #slow} of their speed taken away). */
     public boolean slowed(long now) { return now<slowUntil&&slow>0; }
+    /**
+     * (2.113.0) Slows on its legs from what only slows ({@code CombatManager.slow}: Lee So-sang's sword formation, its zone
+     * held a moment past each tick and its first blow's 3 s): each how much and until when, kept apart from {@link #slow}
+     * and from one another, so a stronger one running out gives way to a weaker one still on (the strongest on slows them).
+     */
+    public final double[] extraSlow=new double[4];public final long[] extraUntil=new long[4];
+    /** Puts {@code slow} on its legs until {@code ticks} from now: one as strong already on is drawn out, else it takes a free place (or the one that runs out first). */
+    public void extraSlow(long now,int ticks,double slow) {
+        for(int i=0;i<extraSlow.length;i++)if(extraUntil[i]>now&&Math.abs(extraSlow[i]-slow)<1e-9){extraUntil[i]=Math.max(extraUntil[i],now+ticks);return;}
+        int pick=0;
+        for(int i=0;i<extraSlow.length;i++){if(extraUntil[i]<=now){pick=i;break;}if(extraUntil[i]<extraUntil[pick])pick=i;}
+        extraSlow[pick]=slow;extraUntil[pick]=now+ticks;
+    }
+    /** The strongest of those slows still on at {@code now} (0 for none). */
+    public double extraSlow(long now) { double m=0;for(int i=0;i<extraSlow.length;i++)if(extraUntil[i]>now)m=Math.max(m,extraSlow[i]);return m; }
     public boolean dashing(long now) { return now>=dashStart && now<dashStart+DASH_TICKS; }
     public boolean attacking(long now) { return attack>0 && now<attackStart+DURATION[attack]; }
     public boolean requestAttack(long now) {

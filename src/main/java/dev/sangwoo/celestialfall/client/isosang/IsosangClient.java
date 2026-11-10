@@ -81,6 +81,11 @@ public final class IsosangClient {
     public static final Map<UUID,Formation> FORMATIONS=new HashMap<>();
     /** (2.82.0) When a formation ended early (seconds into its swing, the server's word): its swords go then. */
     private static final Map<UUID,Float> FORMATION_ENDS=new HashMap<>();
+    /**
+     * (2.113.0) Each formation's end as the server last told it (seconds into it: its swords flare as its gauge runs dry,
+     * IsosangRules.gaugeEnd; H_END while T is not used): its ending (the flare, her drop) comes then, as it did at H_END.
+     */
+    private static final Map<UUID,Float> FORMATION_PLANS=new HashMap<>();
     /** (2.82.0) The tick each player's H is ready again (the server's), and the formations whose end has been heard. */
     private static final Map<UUID,Long> H_READY=new HashMap<>();
     private static final Set<UUID> ENDED=new HashSet<>();
@@ -251,7 +256,11 @@ public final class IsosangClient {
                     finale=new FinaleRun(taken,formStart,mid,fy,on,Math.min(variant,IsosangRules.FINALE_VARIANTS-1),spot);
             }
             FinaleRun ends=finale;
-            mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck,empowered,charged,eReady,thrown,rReady,stands,hReady,laid,gReady,cast,zs,perched,vr,shower,tr,run,yr,ring,ends));
+            // (2.113.0) H's formation's end: the ticks into it its swords flare (none from a 2.112 server)
+            double formEnd=Double.NaN;
+            if(b.isReadable()&&b.readBoolean()){double e=b.readDouble();if(Double.isFinite(e)&&e>0&&e<=IsosangRules.H_END*20+1)formEnd=e;}
+            double fe=formEnd;
+            mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck,empowered,charged,eReady,thrown,rReady,stands,hReady,laid,gReady,cast,zs,perched,vr,shower,tr,run,yr,ring,ends,fe));
         });
         ClientTickEvents.START_CLIENT_TICK.register(IsosangClient::tick);
         // (2.80.0) the swords of light: the empowered first's thrown swords and the empowered fourth's giant sword
@@ -269,9 +278,15 @@ public final class IsosangClient {
     }
     private static void accept(MinecraftClient mc,UUID caster,Identifier dim,int type,UUID id,int combo,int blow,long start,long serverNow,Vec3d at,float yaw,long ready,List<StandClient.Target> struck,
                                boolean empowered,boolean charged,long eReady,Sword sword,long rReady,Sweep sweep,long hReady,Formation form,long gReady,Ultimate ult,
-                               IsosangRules.ZState z,Perch perch,long vReady,VolleyAim volley,long tReady,LungeRun lunge,long yReady,CageRing cage,FinaleRun finale){
+                               IsosangRules.ZState z,Perch perch,long vReady,VolleyAim volley,long tReady,LungeRun lunge,long yReady,CageRing cage,FinaleRun finale,double formEnd){
         if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;
         if(world!=mc.world)clear(mc);
+        // (2.113.0) the end of the formation the news is of (its own, or the one its user stands on: T moves it sooner)
+        if(!Double.isNaN(formEnd)){
+            UUID on=combo==IsosangRules.FORMATION?id:null;
+            if(on==null){var f=formationOf(caster);if(f!=null)on=f.id();}
+            if(on!=null)FORMATION_PLANS.put(on,(float)(formEnd/20));
+        }
         READY.put(caster,ready);CHARGED.put(caster,charged);E_READY.put(caster,eReady);R_READY.put(caster,rReady);H_READY.put(caster,hReady);G_READY.put(caster,gReady);
         V_READY.put(caster,vReady);T_READY.put(caster,tReady);Y_READY.put(caster,yReady);
         // (2.97.0) Y's ring: where the server has it now (set a tick before its first swords strike)
@@ -415,7 +430,11 @@ public final class IsosangClient {
      * Whether this swing's body clip still plays (it is the body's motion until then, unless it stopped short; E's flash
      * has none, nor (2.95.0) H's basic attack: its user stands on in the formation's stance, the formation's clip).
      */
-    static boolean animating(StandClient.Cast c){return IsosangRules.drawn(c.combo())&&c.combo()!=IsosangRules.VOLLEY&&c.age(0)<KagenoSkills.of(IsosangRules.SKILL).clip(c.combo()).length()*20+1;}
+    static boolean animating(StandClient.Cast c){
+        // (2.113.0) H's formation: until she is down after its swords flare, whenever its gauge ran dry
+        if(c.combo()==IsosangRules.FORMATION)return c.age(0)<(plannedEnd(c.id())+IsosangRules.H_TAIL)*20+1;
+        return IsosangRules.drawn(c.combo())&&c.combo()!=IsosangRules.VOLLEY&&c.age(0)<KagenoSkills.of(IsosangRules.SKILL).clip(c.combo()).length()*20+1;
+    }
     /**
      * How long a swing of this kind is drawn for (seconds, 2.82.0): H's formation its whole length and the ink and mist
      * after it; (2.95.0) H's basic attack until its last sword's light is out; every other its skill's (IsosangSlash.lifetime).
@@ -430,7 +449,7 @@ public final class IsosangClient {
     public static float nightShown(UUID swing){return FormationSky.presenceNow(swing);}
     public static float lifeOf(StandClient.Cast c){
         float life=life(c.combo());
-        if(c.combo()==IsosangRules.FORMATION){Float end=FORMATION_ENDS.get(c.id());if(end!=null)life=Math.min(life,end+SwordFormation.AFTER);}
+        if(c.combo()==IsosangRules.FORMATION)life=Math.min(life,flareAt(c.id())+SwordFormation.AFTER);
         if(c.combo()==IsosangRules.ULTIMATE){Float end=ULTIMATE_ENDS.get(c.id());if(end!=null)life=Math.min(life,end+FallingSword.GONE);}
         // (2.95.0) H's basic attack called off: until its swords have faded (SwordVolley.kept)
         if(c.combo()==IsosangRules.VOLLEY){Float end=VOLLEY_ENDS.get(c.id());if(end!=null)life=Math.min(life,end+.15f);}
@@ -743,6 +762,14 @@ public final class IsosangClient {
     static java.util.SortedMap<Long,int[]> formationStruck(UUID swing){var m=FORMATION_STRUCK.get(swing);return m==null?java.util.Collections.emptySortedMap():m;}
     /** When this swing's formation ended early (seconds into it, the server's word), or NaN if it has not (2.82.0). */
     public static float formationEnd(UUID swing){var e=FORMATION_ENDS.get(swing);return e==null?Float.NaN:e;}
+    /** (2.113.0) H's formation's body at {@code sec} seconds in, its ending as its gauge runs dry (SwordFormation.frame). */
+    public static dev.sangwoo.celestialfall.client.kageno.R6.Frame formationFrame(StandClient.Cast c,dev.sangwoo.celestialfall.client.kageno.Anim clip,float sec){return SwordFormation.frame(c,clip,sec);}
+    /** (2.113.0) Formation swing {@code swing}'s end as planned (seconds into it: its swords flare as its gauge runs dry). */
+    public static float plannedEnd(UUID swing){var e=FORMATION_PLANS.get(swing);return e==null?IsosangRules.H_END:Math.min(IsosangRules.H_END,e);}
+    /** (2.113.0) When its swords flare (seconds into it): as planned, or sooner if it ended early (its user taken away, H again). */
+    public static float flareAt(UUID swing){float p=plannedEnd(swing),e=formationEnd(swing);return Float.isNaN(e)?p:Math.min(p,e);}
+    /** (2.113.0) Whether it ends as planned (its swords flare and she drops as at H_END), not cut off before. */
+    public static boolean endsAsPlanned(UUID swing){float e=formationEnd(swing);return Float.isNaN(e)||e>=plannedEnd(swing)-1e-3f;}
     /**
      * How much higher than where it is this player's body is drawn now (blocks, 2.82.0): during H, as high over the
      * formation's ground as its plan has them (IsosangRules.planned: the leap, the hang, the dive onto the pommel of the
@@ -762,7 +789,7 @@ public final class IsosangClient {
         for(var c:SWINGS.values())if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(caster)&&!STOPPED.contains(c.id()))form=c;
         if(form==null)return 0;
         var f=FORMATIONS.get(form.id());var p=mc.world.getPlayerByUuid(caster);if(f==null||p==null)return 0;
-        double t=form.age(delta)/20.0;if(t<0||t>=IsosangRules.H_DOWN+.3)return 0;
+        double t=form.age(delta)/20.0;if(t<0||IsosangRules.ending(t,plannedEnd(form.id()))>=IsosangRules.H_DOWN+.3)return 0;
         return lift(planned(form.id(),t),p.getLerpedPos(delta).y-f.centre().y);
     }
     /**
@@ -858,7 +885,8 @@ public final class IsosangClient {
      * one pommel to the other over a low arc, and dropping from the last.
      */
     public static double raised(UUID id,double t){
-        double base=IsosangRules.raised(t);if(t<IsosangRules.H_PEAK||t>=IsosangRules.H_DOWN)return base;
+        // (2.113.0) she drops after its swords flare, whenever its gauge ran dry (IsosangRules.ending)
+        double end=plannedEnd(id),base=IsosangRules.raised(t,end);if(t<IsosangRules.H_PEAK||IsosangRules.ending(t,end)>=IsosangRules.H_DOWN)return base;
         // (2.96.0) T: down along the dash from the pommel she stood on, on the ground, up over Z's arc onto the far pommel
         double ra=rushAge(id,t*20);
         if(!Double.isNaN(ra)){var run=RUSHES.get(id).run();return base/IsosangRules.FORMATION_STAND*IsosangRules.lungeHeight(ra,pommel(id,run.from()),pommel(id,run.to()));}
@@ -933,7 +961,11 @@ public final class IsosangClient {
     public static double cameraPull(float delta){
         var mc=MinecraftClient.getInstance();if(mc.player==null||!MapClient.enabled())return 0;
         double pull=0;
-        for(var c:SWINGS.values())if(c.caster().equals(mc.player.getUuid()))pull=Math.max(pull,IsosangSlash.pull(c.combo(),c.age(delta)/20f));
+        // (2.113.0) H's formation on its ending's clock: the camera comes in again as she drops, whenever its gauge ran dry
+        for(var c:SWINGS.values())if(c.caster().equals(mc.player.getUuid())){
+            float sec=c.age(delta)/20f;if(c.combo()==IsosangRules.FORMATION)sec=(float)IsosangRules.ending(sec,plannedEnd(c.id()));
+            pull=Math.max(pull,IsosangSlash.pull(c.combo(),sec));
+        }
         return pull;
     }
     /**
@@ -947,7 +979,7 @@ public final class IsosangClient {
         double s=0;
         for(var c:SWINGS.values()){
             if(c.combo()!=IsosangRules.FORMATION||!c.caster().equals(mc.player.getUuid()))continue;
-            float t=c.age(delta)/20f,end=formationEnd(c.id()),off=Float.isNaN(end)?IsosangRules.H_END:Math.min(end,IsosangRules.H_END);
+            float t=c.age(delta)/20f,off=flareAt(c.id());
             s=Math.max(s,SHOULDER*dev.sangwoo.celestialfall.client.kageno.Ease.smooth(t,SHOULDER_IN,IsosangRules.Z_FROM)*(1-dev.sangwoo.celestialfall.client.kageno.Ease.smooth(t,off,off+SHOULDER_OUT)));
         }
         return s;
@@ -1067,7 +1099,7 @@ public final class IsosangClient {
             // of at once if it ended early: they fall as anyone would.
             if(c.combo()==IsosangRules.FORMATION&&c.caster().equals(p.getUuid())&&!STOPPED.contains(c.id())){
                 var f=FORMATIONS.get(c.id());double next=(Math.floor(c.age(0))+1)/20.0;
-                if(f==null||next>=IsosangRules.H_DOWN+.1)continue;
+                if(f==null||IsosangRules.ending(next,plannedEnd(c.id()))>=IsosangRules.H_DOWN+.1)continue;
                 // (2.93.0) Z: under the sword they stand on now, flying between two
                 Vec3d spot=spot(c.id(),f,next*20),v=spot.subtract(p.getPos()).multiply(1,0,1);
                 double vy=next<IsosangRules.H_LEAP?Math.min(0,p.getVelocity().y):spot.y+raised(c.id(),next)-p.getY();
@@ -1123,7 +1155,7 @@ public final class IsosangClient {
         // 2.82.0: H's formation lasts its whole length, lifeOf)
         SWINGS.values().removeIf(c->!c.dimension().equals(id)||c.age(0)>=(c.combo()==0?20:lifeOf(c)*20)||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.retainAll(SWINGS.keySet());EMPOWERED.retainAll(SWINGS.keySet());SWORDS.keySet().retainAll(SWINGS.keySet());SWEEPS.keySet().retainAll(SWINGS.keySet());
-        FORMATIONS.keySet().retainAll(SWINGS.keySet());FORMATION_ENDS.keySet().retainAll(SWINGS.keySet());ENDED.retainAll(SWINGS.keySet());FORMATION_STRUCK.keySet().retainAll(SWINGS.keySet());
+        FORMATIONS.keySet().retainAll(SWINGS.keySet());FORMATION_ENDS.keySet().retainAll(SWINGS.keySet());FORMATION_PLANS.keySet().retainAll(SWINGS.keySet());ENDED.retainAll(SWINGS.keySet());FORMATION_STRUCK.keySet().retainAll(SWINGS.keySet());
         PERCHES.keySet().retainAll(SWINGS.keySet());FLIGHTS.keySet().retainAll(SWINGS.keySet());PLACES.keySet().retainAll(SWINGS.keySet());
         ULTIMATES.keySet().retainAll(SWINGS.keySet());ULTIMATE_ENDS.keySet().retainAll(SWINGS.keySet());
         VOLLEYS.keySet().retainAll(SWINGS.keySet());VOLLEY_ENDS.keySet().retainAll(SWINGS.keySet());
@@ -1133,7 +1165,7 @@ public final class IsosangClient {
         // (2.82.0) H's formation ends (its whole length run, or the server's word that it ended early): its end's sound once
         for(var c:SWINGS.values()){
             if(c.combo()!=IsosangRules.FORMATION||ENDED.contains(c.id()))continue;
-            Float early=FORMATION_ENDS.get(c.id());float at=early!=null?early:IsosangRules.H_END,sec=c.age(0)/20f;
+            float at=flareAt(c.id()),sec=c.age(0)/20f;
             if(sec<at)continue;
             ENDED.add(c.id());
             var v=VOICES.get(c.id());if(v!=null)v.fade();
@@ -1172,7 +1204,7 @@ public final class IsosangClient {
     public static void clear(MinecraftClient mc){
         for(var v:VOICES.values())mc.getSoundManager().stop(v);
         SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();VOICES.clear();EMPOWERED.clear();CHARGED.clear();E_READY.clear();SWORDS.clear();SWEEPS.clear();R_READY.clear();
-        FORMATIONS.clear();FORMATION_ENDS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();ULTIMATES.clear();ULTIMATE_ENDS.clear();G_READY.clear();world=null;heldR=false;
+        FORMATIONS.clear();FORMATION_ENDS.clear();FORMATION_PLANS.clear();H_READY.clear();ENDED.clear();FORMATION_STRUCK.clear();ULTIMATES.clear();ULTIMATE_ENDS.clear();G_READY.clear();world=null;heldR=false;
         PERCHES.clear();FLIGHTS.clear();Z_STATES.clear();PLACES.clear();
         VOLLEYS.clear();VOLLEY_ENDS.clear();V_READY.clear();SwordVolley.clear();
         LUNGES.clear();RUSHES.clear();LUNGE_ENDS.clear();T_READY.clear();CHAIN_FROM.clear();letGo();

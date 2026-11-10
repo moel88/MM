@@ -42,6 +42,7 @@
   "subtitles.celestialfall.heaven_impact": "거대한 황금 검이 내려꽂힘",
   "message.celestialfall.cooldowns_reset": "%s명의 천외유성·아토믹·천문검 쿨타임을 초기화했습니다. 진행 중인 기술은 유지됩니다.",
   "message.celestialfall.nocooldown_on": "%s명의 상시 쿨타임 해제를 켰습니다. 월드에 저장됩니다.",
+  "message.celestialfall.gauge": "%1$s명의 이소상 H 게이지를 %2$s/%3$s칸으로 맞췄습니다.",
   "message.celestialfall.nocooldown_off": "%s명의 상시 쿨타임 해제를 껐습니다. 다음 시전부터 기본 쿨타임이 적용됩니다.",
   "message.celestialfall.nocooldown_status": "상시 쿨타임 해제: %s",
   "category.botand": "보탠드 모드",

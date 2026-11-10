@@ -741,4 +741,83 @@ class IsosangRulesTest {
         // soft onto the ground at the last
         assertTrue(finaleDrawn(FINALE_LAND-.02,pommel)<.2,"soft onto the ground: "+finaleDrawn(FINALE_LAND-.02,pommel));
     }
+
+    // ───────────────────────────── H's gauge (2.113.0) ─────────────────────────────
+
+    @Test void eachFoeABasicAttackStrikesFillsAnEighthOfHsGaugeAndEightFillIt(){
+        // the user's words: 12.5% a blow, 4 make 50%, the empowered combo's 4 more make 100%; their choice: once for each foe
+        assertEquals(8,GAUGE_FULL);
+        int g=0;
+        for(int hit=1;hit<=4;hit++)g=gaugeFilled(g,1);
+        assertEquals(GAUGE_FULL/2,g,"a combo's four hits on one foe: half of it");
+        assertFalse(gaugeFull(g));
+        for(int hit=1;hit<=4;hit++)g=gaugeFilled(g,1);
+        assertTrue(gaugeFull(g),"the empowered combo's four more: full");
+        // a hit striking two foes fills two; it never fills past full; nothing struck fills nothing
+        assertEquals(2,gaugeFilled(0,2));
+        assertEquals(GAUGE_FULL,gaugeFilled(7,3));
+        assertEquals(5,gaugeFilled(5,0));
+    }
+    @Test void onHItDrainsOverTheFormationsWholeStandingAndTTakesAFifthAtOnce(){
+        // the user's choice: a full gauge lasts H as long as before (its swords flaring at H_END)
+        assertEquals(H_END*20.0,GAUGE_TICKS,1e-9);
+        double empty=GAUGE_TICKS;
+        assertEquals(1,gaugeLeft(0,empty),1e-9);
+        assertEquals(.5,gaugeLeft(GAUGE_TICKS/2,empty),1e-9);
+        assertEquals(0,gaugeLeft(GAUGE_TICKS,empty),1e-9);
+        assertEquals(0,gaugeLeft(GAUGE_TICKS+40,empty),1e-9,"dry, not below empty");
+        // it drains smoothly: a tick takes the same share anywhere along it
+        double step=gaugeLeft(100,empty)-gaugeLeft(101,empty);
+        assertEquals(step,gaugeLeft(500,empty)-gaugeLeft(501,empty),1e-9);
+        // T at 10 s: the gauge runs dry a fifth sooner (8 s), so the formation ends 8 s sooner
+        double age=200,after=gaugeAfterT(empty);
+        assertEquals(gaugeLeft(age,empty)-GAUGE_T,gaugeLeft(age,after),1e-9,"20% taken at once");
+        assertEquals(after,gaugeEnd(age,after),1e-9);
+        assertEquals(H_END-8.064,gaugeEnd(age,after)/20,1e-4);
+        // T with less than a fifth left: the gauge runs dry at once, the formation ends once that T is over
+        double late=GAUGE_TICKS-60,dry=gaugeAfterT(empty);
+        assertEquals(0,gaugeLeft(late,dry),1e-9);
+        assertEquals(late+LUNGE_LENGTH,gaugeEnd(late,dry),1e-9,"not before T is over");
+    }
+    @Test void theFormationEndsAsItsGaugeRunsDryItsEndingAsItWasAtHEnd(){
+        // with T never used, all of it as it was (2.112): its strikes, her drop, its length
+        assertEquals(LENGTH[FORMATION],formationLength(H_END*20.0),1e-6);
+        for(long a=0;a<LENGTH[FORMATION];a++)assertEquals(formationStrikes(a),formationStrikes(a,H_END*20.0),"tick "+a);
+        for(double t=0;t<H_END+2;t+=.05){
+            assertEquals(raised(t),raised(t,H_END),1e-9,"t "+t);
+            assertEquals(planned(t),planned(t,H_END),1e-9,"t "+t);
+            assertEquals(onSword(t),onSword(t,H_END),"t "+t);
+        }
+        // ended at 25 s (T used twice): standing until then, no strike after, her drop after its flare as after H_END
+        double end=25;
+        assertEquals(FORMATION_STAND,raised(end-.01,end),1e-9);
+        assertEquals(raised(H_DROP+.1),raised(end+(H_DROP-H_END)+.1,end),1e-9,"she drops after its flare");
+        assertEquals(0,raised(end+H_TAIL+.01,end),1e-9,"down by its end");
+        assertTrue(onSword(end+.1,end)&&!onSword(end+(H_DOWN-H_END)+.01,end));
+        assertTrue(formationStrikes(420,end*20)&&!formationStrikes(520,end*20),"no strike after its swords flare");
+        assertEquals(end*20+H_TAIL*20,formationLength(end*20),1e-9);
+        // its ending's clock: as it was up to the end, then on from H_END
+        assertEquals(10,ending(10,end),1e-9);
+        assertEquals(H_END+.5,ending(end+.5,end),1e-9);
+        // her body comes down smoothly: no jump in a frame through the end
+        for(double t=end-.5;t<end+1.5;t+=1/60.0)assertTrue(Math.abs(planned(t+1/60.0,end)-planned(t,end))<.2,"t "+t);
+        // what may be used must be over before its swords flare (Z, T, Y, the volley; H again before them)
+        assertTrue(zTime(end-.5,end)&&!zTime(end-.1,end));
+        assertTrue(lungeTime(end-1.3,end)&&!lungeTime(end-1.2,end));
+        assertTrue(cageTime(end-1.65,end)&&!cageTime(end-1.5,end));
+        assertTrue(volleyTime(end-1.45,end)&&!volleyTime(end-1.3,end));
+        assertTrue(finaleTime(end-.05,end)&&!finaleTime(end,end));
+        assertTrue(dodgeTime(end-.5,end)&&!dodgeTime(end-.1,end));
+    }
+    @Test void theFormationSlowsWhoeverIsInItWhileItStandsAndItsFirstBlowMore(){
+        // the user's words: 50% in the formation while H stands, 70% for 3 s for whom its first blow strikes
+        assertEquals(.5,H_ZONE_SLOW,1e-9);
+        assertEquals(.7,H_IMPACT_SLOW,1e-9);
+        assertEquals(60,H_IMPACT_SLOW_TICKS);
+        double end=H_END*20.0;
+        assertFalse(zoneSlows(FORMATION_IMPACT_AT-1,end),"not before its swords strike");
+        assertTrue(zoneSlows(FORMATION_IMPACT_AT,end)&&zoneSlows(600,end));
+        assertFalse(zoneSlows((long)Math.ceil(end),end),"none once they flare");
+        assertTrue(H_ZONE_HOLD>=2,"held past a tick, so it does not flicker between ticks");
+    }
 }

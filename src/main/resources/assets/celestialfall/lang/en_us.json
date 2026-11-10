@@ -42,6 +42,7 @@
   "subtitles.celestialfall.heaven_impact": "Giant golden sword impacts",
   "message.celestialfall.cooldowns_reset": "Reset all three weapon cooldowns for %s player(s). Active abilities keep running.",
   "message.celestialfall.nocooldown_on": "Always-free cooldowns enabled for %s player(s), saved with this world.",
+  "message.celestialfall.gauge": "Set Lee So-sang's H gauge to %2$s of %3$s for %1$s player(s).",
   "message.celestialfall.nocooldown_off": "Always-free cooldowns disabled for %s player(s). Normal cooldowns apply on the next cast.",
   "message.celestialfall.nocooldown_status": "Always-free cooldowns: %s",
   "category.botand": "Botand",

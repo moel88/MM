@@ -112,4 +112,16 @@ class CombatStateTest {
         CombatState w=new CombatState();w.guard(true,0);for(int i=0;i<10&&!w.broken(i);i++)w.guardHit(10,i);
         assertTrue(w.broken(w.brokenAt));assertEquals(w.brokenAt+CombatState.BREAK_TICKS,w.brokenUntil,"one worn down too, from when it broke");
     }
+
+    @Test void aShortStrongerSlowGivesWayToAWeakerOneStillHeld(){
+        // (2.113.0) Lee So-sang's formation: its first blow slows 70% for 3 s, its zone 50%, held a moment past each tick
+        var s=new CombatState();
+        s.extraSlow(0,60,.7);
+        for(long t=0;t<100;t++){s.extraSlow(t,2,.5);assertEquals(t<60?.7:.5,s.extraSlow(t),1e-9,"tick "+t);}
+        // stepped out of it: gone two ticks after the last hold
+        assertEquals(.5,s.extraSlow(100),1e-9);
+        assertEquals(0,s.extraSlow(101),1e-9);
+        // apart from the slows of blows
+        assertFalse(s.slowed(50));
+    }
 }

@@ -79,7 +79,9 @@ public final class BossBar {
     public static float shown(){return alpha;}
     private static void draw(DrawContext d,String title,double now){
         int w=d.getScaledWindowWidth(),h=d.getScaledWindowHeight();
-        float bw=width(w),bh=BAR_HEIGHT,x=(w-bw)/2f,y=h-BAR_TOP;
+        // (2.113.0) a step up over Lee So-sang's H gauge while it shows (IsosangGaugeHud.room)
+        float lift=dev.sangwoo.celestialfall.client.isosang.IsosangGaugeHud.room();
+        float bw=width(w),bh=BAR_HEIGHT,x=(w-bw)/2f,y=h-BAR_TOP-lift;
         float a=(float)(alpha*alpha*(3-2*alpha));
         var m=d.getMatrices().peek().getPositionMatrix();
         float r=bh/2;
@@ -97,7 +99,7 @@ public final class BossBar {
         GachaArt.end(b);
         // a red light round it while the boss is angry, and its name warmed to red
         if(angry>.01f){var g=GachaArt.begin(d,true);GachaArt.glow(g,m,back,6,GachaArt.fade(0xffe0443c,a),.6f*angry);GachaArt.end(g);}
-        if(!title.isEmpty())GachaFont.text(title,w/2f,h-TITLE_BASE,TITLE_SIZE,GachaFont.Weight.BOLD).align(.5f).color(GachaArt.mix(0xfffaf6f2,0xffffb4aa,angry)).alpha(a)
+        if(!title.isEmpty())GachaFont.text(title,w/2f,h-TITLE_BASE-lift,TITLE_SIZE,GachaFont.Weight.BOLD).align(.5f).color(GachaArt.mix(0xfffaf6f2,0xffffb4aa,angry)).alpha(a)
             .shadow(0xc8000000,1.1f,0,.6f).spacing(.04f).draw(d);
         RenderSystem.enableDepthTest();RenderSystem.defaultBlendFunc();RenderSystem.setShaderColor(1,1,1,1);
     }

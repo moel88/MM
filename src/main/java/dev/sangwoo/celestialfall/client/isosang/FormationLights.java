@@ -72,8 +72,9 @@ final class FormationLights {
     static void landing(Fx c,EffectMesh m,float t){
         Vec3d spot=SwordFormation.spot(c.cast);
         alight(c,m,t,IsosangRules.H_LANDED,spot.add(0,IsosangRules.FORMATION_STAND+.03,0),1.1);
+        // (2.113.0) as she comes down after its swords flare, whenever its gauge ran dry (not if it was cut off)
         float e=SwordFormation.end(c.cast);
-        if(e>=IsosangRules.H_END-1e-3)alight(c,m,t,IsosangRules.H_DOWN,spot.add(0,.06,0),1.6);
+        if(IsosangClient.endsAsPlanned(c.cast.id()))alight(c,m,t,e+IsosangRules.H_DOWN-IsosangRules.H_END,spot.add(0,.06,0),1.6);
     }
     static void alight(Fx c,EffectMesh m,float t,float at,Vec3d g,double big){
         if(t<at-.01f||t>=at+.4f)return;

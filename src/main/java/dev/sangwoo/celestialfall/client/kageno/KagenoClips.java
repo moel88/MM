@@ -78,7 +78,10 @@ public final class KagenoClips {
     private static final Anim STILL=Anim.of(k(0,IDLE),k(.5,IDLE));
     public static Anim clip(int skill,int combo){var s=KagenoSkills.of(skill);var c=s==null?null:s.clip(combo);return c==null?STILL:c;}
     public static R6.Frame action(StandClient.Cast cast,float delta){
-        float sec=cast.age(delta)/20f;var frame=clip(cast.skill(),cast.combo()).frame(sec);
+        float sec=cast.age(delta)/20f;var anim=clip(cast.skill(),cast.combo());
+        // (2.113.0) Lee So-sang's H: its ending (the flare, her drop) as its gauge runs dry, whenever that is
+        var frame=cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.FORMATION
+            ?dev.sangwoo.celestialfall.client.isosang.IsosangClient.formationFrame(cast,anim,sec):anim.frame(sec);
         if(cast.skill()==R)frame=TimeWalkerSkill.walking(frame,walkWeight(cast,delta));
         else if(cast.skill()==E)frame=NeonThrustSkill.walking(frame,walkWeight(cast,delta));
         var start=COMBO_STARTS.get(cast.id());

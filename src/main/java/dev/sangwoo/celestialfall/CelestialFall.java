@@ -154,6 +154,8 @@ public final class CelestialFall implements ModInitializer {
             botand.then(dev.sangwoo.celestialfall.meteor.MeteorManager.commands());
             botand.then(dev.sangwoo.celestialfall.stand.StarPlatinum.commands());
             botand.then(dev.sangwoo.celestialfall.boss.Bosses.commands());
+            // (2.113.0) Lee So-sang's H gauge set (OP)
+            botand.then(dev.sangwoo.celestialfall.isosang.IsosangAttack.commands());
             dispatcher.register(botand);
         });
         LOGGER.info("Botand {} initialized",net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("celestialfall").map(m->m.getMetadata().getVersion().getFriendlyString()).orElse("?"));

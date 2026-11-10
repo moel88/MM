@@ -57,6 +57,11 @@ public final class IsosangAttack {
      */
     public static final Identifier INPUT=CelestialFall.id("isosang_attack_v1"),SKILL=CelestialFall.id("isosang_skill_v1"),EVENT=CelestialFall.id("isosang_attack_event_v2");
     /**
+     * (2.113.0) H's gauge, to its own player: how full it is (0 to IsosangRules.GAUGE_FULL), and on H the tick its formation
+     * began (-1 for none) and the ticks into it its gauge runs dry and its swords flare (IsosangRules.gaugeLeft, gaugeEnd).
+     */
+    public static final Identifier GAUGE=CelestialFall.id("isosang_gauge_v1");
+    /**
      * A hit starts; one of its blows lands (whom it struck); the attack rests until it is ready again; the hit in flight
      * stops short; (2.80.0) a sword of the empowered first is thrown (from where, which way and how far); E is used (the
      * next combo is empowered, the attack's rest gone); the empowerment is over without its combo having run (E's
@@ -122,6 +127,11 @@ public final class IsosangAttack {
         Cage cage;long yReady;
         /** (2.101.0) H again, the formation's finale, under way (null for none; H's ready tick is hReady's). */
         Finale finale;
+        /**
+         * (2.113.0) H's gauge (IsosangRules.GAUGE_FULL full lets H be used): how much of it is full, the hit whose foes it
+         * has counted ({@code gaugeHit}: its start tick) and whom (each foe once a hit).
+         */
+        int gauge;long gaugeHit=Long.MIN_VALUE;final Set<UUID> gaugeFoes=new HashSet<>();
     }
     /**
      * H again (2.101.0, IsosangRules.FINALE): its id and start, where she stands (level, on the formation's ground, under
@@ -205,6 +215,16 @@ public final class IsosangAttack {
          */
         long lungeAt=Long.MIN_VALUE/2;int lungeFrom=-1;Vec3d past=Vec3d.ZERO;
         final double[][] swords;
+        /**
+         * (2.113.0) H's gauge on it: the tick into it (fractional) its gauge runs dry (from full over GAUGE_TICKS; T takes its
+         * share at once, IsosangRules.gaugeAfterT) and the one its swords flare at, its end (as its gauge runs dry; a T under
+         * way holds it on until T is over, gaugeEnd; it never comes later). H_END while T is not used.
+         */
+        double emptyAge=IsosangRules.GAUGE_TICKS,endAge=IsosangRules.H_END*20.0;
+        /** Its end (seconds into it): its swords flare. */
+        double end(){return endAge/20;}
+        /** Whether it is over {@code age} ticks in: its swords flared and she has dropped (IsosangRules.formationLength). */
+        boolean over(long age){return age>=IsosangRules.formationLength(endAge)-1e-6;}
         Formation(UUID id,long start,Vec3d spot,float yaw){
             this.id=id;this.start=start;this.spot=spot;this.yaw=yaw;
             this.centre=spot.add(Vec3d.fromPolar(0,yaw).multiply(IsosangRules.FORMATION_STAND_BACK));
@@ -377,7 +397,7 @@ public final class IsosangAttack {
         return new UltimateNow(s.ult.start,s.ult.at,s.ult.strike);
     }
     /** Whether H's sword formation is under way for its user now (2.82.0): it holds them from its start to its end. */
-    private static boolean forming(State s,long now){var f=s.form;return f!=null&&now>=f.start&&now-f.start<LENGTH[FORMATION];}
+    private static boolean forming(State s,long now){var f=s.form;return f!=null&&now>=f.start&&!f.over(now-f.start);}
     /**
      * Whether this player is up on H's sword now (2.82.0; 2.82.4: from their leap, over where they stood): up over the ground with nothing under them, the server
      * must not take them for flying (ServerPlayNetworkHandler's floating check, FormationFloatMixin).
@@ -387,7 +407,7 @@ public final class IsosangAttack {
         // (2.101.0) H again: up on the pommel until she comes down onto the ground
         if(s.finale!=null&&IsosangRules.finaleAloft((p.getWorld().getTime()-s.finale.start)/20.0))return true;
         if(!forming(s,p.getWorld().getTime()))return false;
-        return onSword((p.getWorld().getTime()-s.form.start)/20.0);
+        return onSword((p.getWorld().getTime()-s.form.start)/20.0,s.form.end());
     }
     /**
      * Whether this player's formation carries them now (2.96.0): Z's flight or the dodge's, T's dash and its flight on, a
@@ -482,7 +502,14 @@ public final class IsosangAttack {
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** This player is Lee So-sang's no more: the attack's rest is gone, so it is ready if they are again; so are E's cooldown and its empowerment (2.80.0), and R's cooldown (2.81.0). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.gReady=0;s.yReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;s.tQueued=null;}}
+    public static void forget(PlayerEntity p){
+        var s=STATES.get(p.getUuid());
+        if(s!=null){
+            s.ready=0;s.eReady=0;s.rReady=0;s.hReady=0;s.gReady=0;s.yReady=0;s.charged=s.restart=s.rQueued=s.rHeld=false;s.tQueued=null;
+            // (2.113.0) and H's gauge is empty (it is theirs as Lee So-sang)
+            if(s.gauge>0&&p instanceof ServerPlayerEntity sp){s.gauge=0;gauge(sp,s);}
+        }
+    }
     /**
      * This player's cooldowns are off (/botand nocooldown, every tick: NoCooldownState): the attack's rest and E's
      * cooldown are gone; an empowerment they hold stays theirs (2.80.0).
@@ -679,6 +706,8 @@ public final class IsosangAttack {
         // (2.101.0) H again on her formation: its finale
         if(forming(s,now))return finale(p,s,now);
         if(finaling(s,now)||now<s.hReady&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
+        // (2.113.0) only with H's gauge full (its cooldown run too: the user's choice, "그대로 둠")
+        if(!IsosangRules.gaugeFull(s.gauge))return false;
         if(holding(s.combo,s.start,now)||sweepHolds(s,now))return false;
         unfold(p,s,now);
         return true;
@@ -697,10 +726,15 @@ public final class IsosangAttack {
         if(hit.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)y=hit.getPos().y;
         // (2.82.4: the formation's middle ahead of them, they on its outer ring where they stood)
         s.form=new Formation(UUID.randomUUID(),now,new Vec3d(at.x,y,at.z),MathHelper.wrapDegrees(p.getYaw()));
-        s.hReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+LENGTH[FORMATION]+H_COOLDOWN;
+        s.hReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:hReadyAfter(s.form);
+        // (2.113.0) H spends its gauge: on it, the gauge drains from full as its formation stands (Formation.emptyAge)
+        s.gauge=0;s.gaugeFoes.clear();s.gaugeHit=Long.MIN_VALUE;
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
         send(p,s.form.id,FORMATION,now,s.form.yaw,HIT,-1,null,null,null,s.form);
+        gauge(p,s);
     }
+    /** (2.113.0) The tick H is ready again after formation {@code f}: its cooldown from its end (its swords flared and she down). */
+    private static long hReadyAfter(Formation f){return f.start+Math.round(IsosangRules.formationLength(f.endAge))+H_COOLDOWN;}
     /**
      * H again on her formation (2.101.0, user request: "이번에는 H를 사용한 상태에서 H를 한 번 더 누르면 되는 스킬 ... H 영역에
      * 있던 모든 검이 전부 플레이어 뒤로 가고 앞으로 꽂는 스킬이야 이걸 쓰면 H가 해제돼", IsosangRules.FINALE): its finale, at
@@ -712,7 +746,7 @@ public final class IsosangAttack {
      */
     private static boolean finale(ServerPlayerEntity p,State s,long now){
         var f=s.form;
-        if(!IsosangRules.finaleTime((now-f.start)/20.0)||f.flying(now)||f.lunging(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return false;
+        if(!IsosangRules.finaleTime((now-f.start)/20.0,f.end())||f.flying(now)||f.lunging(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return false;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         float yaw=MathHelper.wrapDegrees(p.getYaw());
         int variant=riggedFinale>=0?Math.min(riggedFinale,FINALE_VARIANTS-1):p.getRandom().nextInt(FINALE_VARIANTS);riggedFinale=-1;
@@ -724,6 +758,8 @@ public final class IsosangAttack {
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
         send(p,s.finale.id,FINALE,now,yaw,HIT,-1,null,null,null,f,null,null,null,null,s.finale);
         send(p,f.id,FORMATION,f.start,f.yaw,STOPPED,-1,null,null,null,f);
+        // (2.113.0) H again empties its gauge at once ("게이지가 즉시 전부 줄어들고")
+        gauge(p,s);
         return true;
     }
     /**
@@ -766,7 +802,7 @@ public final class IsosangAttack {
     public static boolean cross(ServerPlayerEntity p,int k){
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();var f=s.form;
-        if(f==null||!forming(s,now)||!IsosangRules.zTime((now-f.start)/20.0))return false;
+        if(f==null||!forming(s,now)||!IsosangRules.zTime((now-f.start)/20.0,f.end()))return false;
         if(f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now)||k<0||k>=f.swords.length||k==f.on)return false;
         var next=IsosangRules.zUse(s.z,now,dev.sangwoo.celestialfall.NoCooldownState.enabled(p));if(next==null)return false;
         s.z=next;f.from=f.on;f.on=k;f.moved=now;
@@ -785,7 +821,7 @@ public final class IsosangAttack {
         if(!(e instanceof ServerPlayerEntity p)||e.getWorld().isClient||!p.isAlive())return false;
         var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld()||s.form==null)return false;
         long now=p.getWorld().getTime();var f=s.form;
-        if(f.dodged||!forming(s,now)||!IsosangRules.dodgeTime((now-f.start)/20.0)||!attacks(p))return false;
+        if(f.dodged||!forming(s,now)||!IsosangRules.dodgeTime((now-f.start)/20.0,f.end())||!attacks(p))return false;
         if(source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY))return false;
         var by=source.getAttacker();var through=source.getSource();
         if(by==null&&through==null||by==p||through==p)return false;
@@ -803,7 +839,7 @@ public final class IsosangAttack {
     private static void dodge(ServerPlayerEntity p,State s,long now){
         var f=s.form;if(f==null||!f.waiting)return;
         double t=(now-f.start)/20.0;
-        if(!IsosangRules.zTime(t)){if(t>=IsosangRules.Z_FROM)f.waiting=false;return;}
+        if(!IsosangRules.zTime(t,f.end())){if(t>=IsosangRules.Z_FROM)f.waiting=false;return;}
         if(f.flying(now)||KagenoManager.frozen(p)||volleyHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return;
         f.waiting=false;
         int k=IsosangRules.dodgeSword(f.on,p.getRandom().nextInt(f.swords.length-1),f.swords.length);
@@ -823,7 +859,7 @@ public final class IsosangAttack {
      * (IsosangRules.volleyReady; as soon as the last is over for a player the cooldowns are off for).
      */
     private static boolean volley(ServerPlayerEntity p,State s,long now,boolean aimed,int foe,Vec3d meets){
-        var f=s.form;if(f==null||!IsosangRules.volleyTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return false;
+        var f=s.form;if(f==null||!IsosangRules.volleyTime((now-f.start)/20.0,f.end())||f.flying(now)||sweepHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return false;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(s.volley!=null&&now<s.volley.start+VOLLEY_LENGTH||now<s.vReady&&!free)return false;
         Vec3d eye=p.getEyePos();LivingEntity target=null;Vec3d at;
@@ -880,7 +916,7 @@ public final class IsosangAttack {
         var s=state(p);long now=p.getWorld().getTime();var f=s.form;
         // (2.96.4) pressed while the one under way still holds her, a moment before it lets go: kept for then
         if(f!=null&&forming(s,now)&&lungeHolds(s,now)&&s.lunge.aim.start+HOLD[LUNGE]-now<=BUFFER){s.tQueued=new TPress(aimed,foe,meets);return true;}
-        if(f==null||!forming(s,now)||!IsosangRules.lungeTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return false;
+        if(f==null||!forming(s,now)||!IsosangRules.lungeTime((now-f.start)/20.0,f.end())||f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now)||cageHolds(s,now))return false;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(now<s.tReady&&!free)return false;
         Vec3d eye=p.getEyePos();LivingEntity target=null;Vec3d at;
@@ -924,8 +960,13 @@ public final class IsosangAttack {
         s.lunges.add(s.lunge);
         f.lungeAt=now;f.lungeFrom=f.on;f.past=past;f.from=f.on;f.on=onto;f.moved=now+IsosangRules.LUNGE_HOP;
         s.tReady=IsosangRules.lungeReady(now,free);
+        // (2.113.0) T takes its share of H's gauge at once ("T스킬을 쓰면 게이지가 20% 확 줄어들게"): the formation ends as it
+        // runs dry, but not before this T is over (its swords and slashes down, she on the far sword); H's cooldown from then
+        f.emptyAge=IsosangRules.gaugeAfterT(f.emptyAge);f.endAge=Math.min(f.endAge,IsosangRules.gaugeEnd(now-f.start,f.emptyAge));
+        if(!free)s.hReady=hReadyAfter(f);
         p.swingHand(Hand.MAIN_HAND,true);
         send(p,s.lunge.aim.id,LUNGE,now,s.lunge.aim.yaw,HIT,-1,null,null,null,f,null,s.lunge.aim,s.lunge);
+        gauge(p,s);
         return true;
     }
     /** Whether T holds this player now (2.96.0; 2.96.4: until they stand on the far sword, HOLD[LUNGE]; it held them all 1.25 s before). */
@@ -993,7 +1034,7 @@ public final class IsosangAttack {
     public static boolean cage(ServerPlayerEntity p,boolean aimed,int foe,Vec3d meets){
         if(!able(p))return false;
         var s=state(p);long now=p.getWorld().getTime();var f=s.form;
-        if(f==null||!forming(s,now)||!IsosangRules.cageTime((now-f.start)/20.0)||f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now))return false;
+        if(f==null||!forming(s,now)||!IsosangRules.cageTime((now-f.start)/20.0,f.end())||f.flying(now)||sweepHolds(s,now)||volleyHolds(s,now)||lungeHolds(s,now))return false;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(s.cage!=null&&now<s.cage.aim.start+CAGE_LENGTH||now<s.yReady&&!free)return false;
         Vec3d eye=p.getEyePos();LivingEntity target=null;Vec3d at;
@@ -1119,9 +1160,12 @@ public final class IsosangAttack {
      */
     private static void hold(ServerPlayerEntity p,State s,long now){
         var f=s.form;long age=now-f.start;
-        if(age>=LENGTH[FORMATION]){s.form=null;return;}
+        // (2.113.0) over once its swords have flared (as its gauge ran dry) and she has dropped
+        if(f.over(age)){s.form=null;gauge(p,s);return;}
         if(!attacks(p)||p.isSleeping()||p.hasVehicle()||CombatManager.cinematic(p)){end(p,s,now);return;}
-        if(formationStrikes(age))zone(p,f,age);
+        if(formationStrikes(age,f.endAge))zone(p,f,age);
+        // (2.113.0) whoever is in it walks slower while it stands ("H스킬 상태일때는 영역내에 있는 모든 적은 50% 둔화")
+        if(IsosangRules.zoneSlows(age,f.endAge))slowZone(p,f);
         // (2.94.0) H's dodge's move, kept until they were free to fly
         if(f.waiting)dodge(p,s,now);
         // (2.93.0) where it holds them: under the sword they stand on, Z's flight between two (their own client flies them;
@@ -1130,7 +1174,7 @@ public final class IsosangAttack {
         if(now<f.moved+IsosangRules.Z_TRAVEL+STRAY_GRACE)leave=Double.MAX_VALUE;
         // (a boss has no client to lift it: the server does, as the empowered fourth's leap back)
         if(p instanceof dev.sangwoo.celestialfall.boss.BossPlayer){
-            if(onSword(t)){double up=f.lunging(now)?IsosangRules.lungeHeight(now-f.lungeAt,FORMATION_STAND,FORMATION_STAND):IsosangRules.raised(t);p.setPosition(to.x,to.y+up,to.z);p.setVelocity(Vec3d.ZERO);}
+            if(onSword(t,f.end())){double up=f.lunging(now)?IsosangRules.lungeHeight(now-f.lungeAt,FORMATION_STAND,FORMATION_STAND):IsosangRules.raised(t,f.end());p.setPosition(to.x,to.y+up,to.z);p.setVelocity(Vec3d.ZERO);}
             else if(dx*dx+dz*dz>STRAY*STRAY)p.setPosition(to.x,at.y,to.z);
         }else if(dx*dx+dz*dz>leave*leave)p.networkHandler.requestTeleport(to.x,at.y,to.z,p.getYaw(),p.getPitch());
         p.fallDistance=0;
@@ -1155,6 +1199,9 @@ public final class IsosangAttack {
             e.timeUntilRegen=0;
             if(!CombatManager.damageWithoutKnockback(e,source,amount))continue;
             struck.add(e);
+            // (2.113.0) its first blow (as it is laid) leaves whom it strikes slower for a while ("처음 H(영역을 전개)꽂을때 적을
+            // 맞추면 3초동안 70% 둔화")
+            if(impact)CombatManager.slow(e,H_IMPACT_SLOW_TICKS,H_IMPACT_SLOW);
             if(!StarPlatinumTimeStop.deferFeedback(p,e,amount,f.yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
                 var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(amount);b.writeFloat(f.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);
             }
@@ -1248,6 +1295,7 @@ public final class IsosangAttack {
         s.tQueued=null;s.form=null;
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.hReady=Math.min(s.hReady,now+H_COOLDOWN);
         send(p,f.id,FORMATION,f.start,f.yaw,STOPPED,-1,null,null,null,f);
+        gauge(p,s);
     }
     /**
      * The empowerment is over (2.80.0): its combo broke, a hit of it stopped short, or they died or left the map before
@@ -1324,6 +1372,8 @@ public final class IsosangAttack {
             if(s.tQueued!=null&&!lungeHolds(s,now)){var q=s.tQueued;s.tQueued=null;lunge(p,q.aimed(),q.foe(),q.meets());}
             // (2.80.0) dead, or off the map: an empowerment held is spent (a character changed forgets it, StandManager)
             if(s.charged&&!attacks(p)&&"isosang".equals(dev.sangwoo.celestialfall.progression.ProgressManager.profile(p).stand())){s.empowered=false;spend(p,s,now);}
+            // (2.113.0) and H's gauge is emptied (dead, off the map, in their vanilla mode)
+            if(s.gauge>0&&!attacks(p)){s.gauge=0;gauge(p,s);}
             if(held(p)){stop(p,s,now);release(p,s,now);s.rQueued=false;continue;}
             settle(p,s,now);
             // (2.81.0) R kept for when the hit holding them lets go
@@ -1506,8 +1556,73 @@ public final class IsosangAttack {
             }
         }
         if(!struck.isEmpty()){p.onAttacking(struck.get(0));p.addExhaustion(.1f);}
+        // (2.113.0) a basic attack's hit fills H's gauge, once for each foe it strikes (the empowered ones too)
+        if(valid(combo)&&!struck.isEmpty())fill(p,start,struck);
         return struck;
     }
+    /**
+     * H's gauge fills (2.113.0, IsosangRules.GAUGE_FULL): the basic attack's hit begun at {@code start} struck these; each
+     * foe it had not struck yet fills one (the user's choice: "맞은 적 수만큼"; however many of its blows reach one, once).
+     * Not on H (it only drains then; its basic attack there is the volley anyway).
+     */
+    private static void fill(ServerPlayerEntity p,long start,List<LivingEntity> struck){
+        var s=STATES.get(p.getUuid());if(s==null||s.form!=null||!attacks(p))return;
+        if(s.gaugeHit!=start){s.gaugeHit=start;s.gaugeFoes.clear();}
+        int foes=0;for(var e:struck)if(s.gaugeFoes.add(e.getUuid()))foes++;
+        int was=s.gauge;s.gauge=IsosangRules.gaugeFilled(was,foes);
+        if(s.gauge!=was)gauge(p,s);
+    }
+    /**
+     * Whoever is in the formation walks slower while it stands (2.113.0, IsosangRules.H_ZONE_SLOW): every foe in it (as its
+     * blows find them: alive, the user's own aside, not a merchant, PvP's rule), held a little past this tick so it lifts
+     * as they step out or it ends. It does not stop what they do (it is no incapacitation).
+     */
+    private static void slowZone(ServerPlayerEntity p,Formation f){
+        var world=p.getServerWorld();
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(f.centre,f.centre).expand(FORMATION_RADIUS+2,FORMATION_HIGH+2,FORMATION_RADIUS+2),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+            if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
+            Vec3d d=e.getPos().subtract(f.centre);
+            if(formationOver(d.x,d.z,d.y,e.getWidth()*.5))CombatManager.slow(e,H_ZONE_HOLD,H_ZONE_SLOW);
+        }
+    }
+    /**
+     * Tells this player of their H's gauge (2.113.0, GAUGE): how full it is, and on H the tick its formation began and the
+     * ticks into it its gauge runs dry and its swords flare (its HUD drains it from them).
+     */
+    private static void gauge(ServerPlayerEntity p,State s){
+        if(!ServerPlayNetworking.canSend(p,GAUGE))return;
+        var f=s.form;var b=PacketByteBufs.create();
+        b.writeByte(s.gauge);b.writeLong(p.getWorld().getTime());
+        b.writeLong(f==null?-1:f.start);b.writeDouble(f==null?0:f.emptyAge);b.writeDouble(f==null?0:f.endAge);
+        ServerPlayNetworking.send(p,GAUGE,b);
+    }
+    /**
+     * (2.113.0) Sets this player's H gauge to {@code units} (0 to IsosangRules.GAUGE_FULL), not while they are on H (it
+     * drains then): /botand gauge (OP), for trying H out and for the checks and films. Returns whether it was set.
+     */
+    public static boolean setGauge(ServerPlayerEntity p,int units){
+        if(!attacks(p))return false;
+        var s=state(p);if(s.form!=null&&forming(s,p.getWorld().getTime()))return false;
+        s.gauge=Math.max(0,Math.min(IsosangRules.GAUGE_FULL,units));gauge(p,s);return true;
+    }
+    /** (2.113.0) /botand gauge &lt;targets&gt; [units] (OP): sets Lee So-sang's H gauge (full with no count). */
+    public static com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.server.command.ServerCommandSource> commands(){
+        return net.minecraft.server.command.CommandManager.literal("gauge").requires(s->s.hasPermissionLevel(2))
+            .then(net.minecraft.server.command.CommandManager.argument("targets",net.minecraft.command.argument.EntityArgumentType.players())
+                .executes(c->setGauges(c.getSource(),net.minecraft.command.argument.EntityArgumentType.getPlayers(c,"targets"),IsosangRules.GAUGE_FULL))
+                .then(net.minecraft.server.command.CommandManager.argument("units",com.mojang.brigadier.arguments.IntegerArgumentType.integer(0,IsosangRules.GAUGE_FULL))
+                    .executes(c->setGauges(c.getSource(),net.minecraft.command.argument.EntityArgumentType.getPlayers(c,"targets"),com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c,"units")))));
+    }
+    private static int setGauges(net.minecraft.server.command.ServerCommandSource source,java.util.Collection<ServerPlayerEntity> players,int units){
+        int n=0;for(var p:players)if(setGauge(p,units))n++;
+        int count=n;source.sendFeedback(()->net.minecraft.text.Text.translatable("message.celestialfall.gauge",count,units,IsosangRules.GAUGE_FULL),true);
+        return n;
+    }
+    /** (2.113.0) How full this player's H gauge is (0 to IsosangRules.GAUGE_FULL; the checks read it). */
+    public static int gauge(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.gauge;}
+    /** (2.113.0) Their formation's gauge on H as the checks read it: the ticks into it it runs dry and its swords flare (null for none). */
+    public static double[] formationGauge(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());var f=s==null?null:s.form;return f==null?null:new double[]{f.emptyAge,f.endAge};}
     /**
      * Tells every player near the user (and the user, and whoever was struck) of the event: the hit (its id, number,
      * start and way), the blow that landed (-1 for none) and whom it struck, and when the attack is ready again; since
@@ -1580,6 +1695,10 @@ public final class IsosangAttack {
                 b.writeUuid(finale.form);b.writeLong(finale.formStart);b.writeDouble(finale.centre.x);b.writeDouble(finale.centre.y);b.writeDouble(finale.centre.z);
                 b.writeFloat(finale.formYaw);b.writeByte(finale.on);b.writeByte(finale.variant);b.writeDouble(finale.spot.x);b.writeDouble(finale.spot.y);b.writeDouble(finale.spot.z);
             }
+            // (2.113.0, after what 2.101 to 2.112 sent) for H's formation the ticks into it its swords flare (its end: as its
+            // gauge runs dry; every viewer brings its ending then)
+            b.writeBoolean(form!=null);
+            if(form!=null)b.writeDouble(form.endAge);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

@@ -120,7 +120,7 @@ public final class R6 {
     static double reach(double a,double b,double deg){double c=Math.cos(Math.toRadians(deg));return Math.sqrt(Math.max(0,a*a+b*b+2*a*b*c));}
 
     /** Blend full rotations, avoiding twist flips when a limb crosses its forward axis. */
-    static Frame blend(Frame a,Frame b,float t){
+    public static Frame blend(Frame a,Frame b,float t){
         MotionPose m=new MotionPose();float k=(float)Math.PI/180;
         for(int i=0;i<6;i++){
             float[] x=a.joints.joint[i],y=b.joints.joint[i];

@@ -140,8 +140,23 @@ final class SwordFormation {
     /** How long a sword takes to fall from the sky to the ground. */
     static final float FALL=.22f;
 
-    /** When this formation ends (seconds into it): its whole length run, or the server's word that it ended early. */
-    static float end(StandClient.Cast c){float e=IsosangClient.formationEnd(c.id());return Float.isNaN(e)?IsosangRules.H_END:Math.min(IsosangRules.H_END,e);}
+    /**
+     * When this formation ends (seconds into it): its swords flare as its gauge runs dry (2.113.0, the server's word of it:
+     * IsosangClient.plannedEnd; H_END while T is not used), or as the server's word that it ended early has it.
+     */
+    static float end(StandClient.Cast c){return IsosangClient.flareAt(c.id());}
+    /**
+     * (2.113.0) Its body at {@code sec} seconds in: its clip, whose ending (the flare, her step off the pommel, the drop) comes
+     * after H_END, played on H's clock as its ending reads it (IsosangRules.ending: from its end on, H_END on), eased over
+     * END_BLEND from the stance she stood in as its swords flared.
+     */
+    public static dev.sangwoo.celestialfall.client.kageno.R6.Frame frame(StandClient.Cast c,Anim clip,float sec){
+        float end=IsosangClient.plannedEnd(c.id());
+        if(sec<end||end>=IsosangRules.H_END-1e-4f)return clip.frame(sec);
+        var to=clip.frame((float)IsosangRules.ending(sec,end));
+        return sec>=end+END_BLEND?to:dev.sangwoo.celestialfall.client.kageno.R6.blend(clip.frame(sec),to,Ease.smooth(sec,end,end+END_BLEND));
+    }
+    static final float END_BLEND=.15f;
     /** How far it has gone as it ends: 0 until then; through the flare, the ink and the breaking away (0 to 1). */
     static float going(StandClient.Cast c,float t){return Ease.smooth(t,end(c)+INKED,end(c)+GONE);}
     /**
@@ -1739,7 +1754,8 @@ final class SwordFormation {
         // fast as she leaps and the swords rain: the afterglow cut short, else they leave copies of themselves on the way;
         // all but none while the ink's lit edge sweeps in and the whirlpool swirls and spreads out (2.82.6: its copies
         // showed as rings beside it; 2.82.10: its front running out)
-        f.afterglow(t>=GATHER0-.02f&&t<SPREAD1+.08f?.01f:t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||t>=IsosangRules.H_DROP&&t<IsosangRules.H_DOWN+.1f?.08f:.3f);
+        float te=(float)IsosangRules.ending(t,IsosangClient.plannedEnd(c.cast.id()));
+        f.afterglow(t>=GATHER0-.02f&&t<SPREAD1+.08f?.01f:t>=.14f&&t<1.6f||t>=e-.05f&&t<e+GONE+.1f||te>=IsosangRules.H_DROP&&te<IsosangRules.H_DOWN+.1f?.08f:.3f);
     }
     /** Shake: the burst in the middle, the rain of swords crashing in, and a little as the formation ends (each over two frames). */
     static float shake(StandClient.Cast cast,float sec){

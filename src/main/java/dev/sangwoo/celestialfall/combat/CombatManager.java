@@ -193,6 +193,32 @@ public final class CombatManager {
         speed(p,s,now);sync(p,s);
     }
     /**
+     * Slows {@code target}'s legs for {@code ticks}, {@code slow} slower (2.113.0: Lee So-sang's sword formation, its zone and
+     * its first blow, IsosangRules.H_ZONE_SLOW and H_IMPACT_SLOW): only its legs, it is no incapacitation (whatever it does
+     * goes on), the game's lens kept still as for every slow of the combat's (CombatClient.slowed). A stronger slow on it
+     * stays as long as it lasts; one as strong is drawn out. A training dummy stands still anyway; a mob is slowed as an
+     * incapacitation slows it.
+     */
+    public static void slow(LivingEntity target,int ticks,double slow) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive()||ticks<=0||slow<=0)return;
+        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity)return;
+        long now=target.getWorld().getTime();
+        if(!(target instanceof ServerPlayerEntity p)) {
+            var attr=target.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null)return;
+            var held=MOB_SLOWS.get(target);var old=attr.getModifier(MOB_SLOW);boolean on=old!=null&&held!=null&&held>now;
+            if(on&&-old.getValue()>slow+1e-9)return;
+            boolean same=on&&Math.abs(old.getValue()+slow)<=1e-9;
+            if(!same){if(old!=null)attr.removeModifier(MOB_SLOW);attr.addTemporaryModifier(new EntityAttributeModifier(MOB_SLOW,"Botand incapacitation",-slow,EntityAttributeModifier.Operation.MULTIPLY_TOTAL));}
+            MOB_SLOWS.put(target,Math.max(same?held:now,now+ticks));
+            return;
+        }
+        // kept apart from the slows of blows (CombatState.slow): its zone's weaker slow, held each tick, must not draw out
+        // its first blow's stronger one past its 3 s
+        var s=state(p);
+        s.extraSlow(now,ticks,slow);
+        speed(p,s,now);
+    }
+    /**
      * Staggers whoever a basic attack's blow struck until {@code until} (2.68.0, {@link Stagger}): as an incapacitation,
      * only for that moment and with their legs {@link Stagger#SLOW} slower, without the dazed look. Whatever they were
      * doing is cut off as an incapacitation cuts it off. A training dummy stands still as long; a mob does nothing and
@@ -335,7 +361,8 @@ public final class CombatManager {
     private static void speed(ServerPlayerEntity p,CombatState s,long now) {
         var attr=p.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED);if(attr==null)return;
         // the strongest of what slows them: a broken guard, an incapacitating blow (2.60.0), the guard
-        double slow=Math.min(s.broken(now)?-.9:0,Math.min(s.slowed(now)?-s.slow:0,s.guarding?-.55:0));
+        // (2.113.0) and what only slows (Lee So-sang's sword formation, CombatState.extraSlow)
+        double slow=Math.min(Math.min(s.broken(now)?-.9:0,Math.min(s.slowed(now)?-s.slow:0,s.guarding?-.55:0)),-s.extraSlow(now));
         var old=attr.getModifier(SLOW);
         if(old!=null&&old.getValue()==slow)return;
         if(old!=null)attr.removeModifier(SLOW);

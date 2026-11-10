@@ -158,7 +158,8 @@ final class SwordVolley {
     static Aim aim(MinecraftClient mc,int combo){
         var me=mc.player;if(me==null||mc.world==null||mc.gameRenderer==null||!MapClient.enabled())return null;
         var own=IsosangClient.ownFormation();if(own==null||IsosangClient.stopped(own.id()))return null;
-        double ft=own.age(mc.getTickDelta())/20.0;if(combo==LUNGE?!lungeTime(ft):combo==CAGE?!cageTime(ft):!volleyTime(ft))return null;
+        // (2.113.0) over before its swords flare, whenever its gauge runs dry
+        double ft=own.age(mc.getTickDelta())/20.0,fe=IsosangClient.plannedEnd(own.id());if(combo==LUNGE?!lungeTime(ft,fe):combo==CAGE?!cageTime(ft,fe):!volleyTime(ft,fe))return null;
         var form=IsosangClient.formation(own.id());if(form==null)return null;Vec3d mid=form.centre();
         var cam=mc.gameRenderer.getCamera();Vec3d eye=me.getEyePos(),look=Vec3d.fromPolar(cam.getPitch(),cam.getYaw()),c=cam.getPos();
         LivingEntity best=null;double near=VOLLEY_AIM,out=FORMATION_RADIUS+VOLLEY_BEYOND+2;

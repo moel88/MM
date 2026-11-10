@@ -18,6 +18,8 @@ public abstract class InGameHudMixin {
         // undone here rather than at the icons' own return, so a mod that stops them early cannot leave the HUD moved
         if(botand$effectShift!=0){context.getMatrices().translate(botand$effectShift,0,0);botand$effectShift=0;}
         dev.sangwoo.celestialfall.client.BotandHud.render(context,delta);
+        // (2.113.0) Lee So-sang's H gauge, right over the hotbar (the boss bar steps up over it)
+        if(dev.sangwoo.celestialfall.client.BotandHud.enabled())dev.sangwoo.celestialfall.client.isosang.IsosangGaugeHud.render(context,delta);
         dev.sangwoo.celestialfall.client.boss.BossBar.render(context,delta);
     }
     /** The status effect icons step left of the player list while it shows (2.45.0). */

@@ -1505,6 +1505,8 @@ public final class SkillShots implements ClientModInitializer {
                             l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);l.setHeadYaw(p.getYaw()+180);l.setBodyYaw(p.getYaw()+180);
                             log.append(String.format(Locale.ROOT,"  dummy to %.2f blocks in front at %d (world %d)%n",opt("dto",1.8f),age,p.getWorld().getTime()));}});continue;}
                     // the training dummy back in front of the player (after the finisher threw it), whole again
+                    // (2.113.0) "GAUGE@n": Lee So-sang's H gauge full (as /botand gauge), so H may be used at once
+                    if(what.equals("GAUGE")){if(age==at){server(p->dev.sangwoo.celestialfall.isosang.IsosangAttack.setGauge(p,dev.sangwoo.celestialfall.isosang.IsosangRules.GAUGE_FULL));log.append("  gauge full at ").append(age).append('\n');}continue;}
                     if(what.equals("DUMMYBACK")){if(age==at)server(p->{var d=p.getServerWorld().getEntityById(dummyId);if(d instanceof net.minecraft.entity.LivingEntity l){
                             var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);var to=p.getPos().add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
                             l.setHealth(l.getMaxHealth());l.setVelocity(0,0,0);l.refreshPositionAndAngles(to.x,p.getY(),to.z,p.getYaw()+180,0);

@@ -506,8 +506,13 @@ public final class IsosangRules {
         return dy>=FORMATION_LOW&&dy<=FORMATION_HIGH&&Math.hypot(dx,dz)<=FORMATION_RADIUS+halfWidth;
     }
     /** Whether the formation strikes on its tick {@code age}: as the swords strike, then every FORMATION_EVERY ticks until it ends. */
-    public static boolean formationStrikes(long age){
-        return age==FORMATION_IMPACT_AT||age>FORMATION_IMPACT_AT&&(age-FORMATION_IMPACT_AT)%FORMATION_EVERY==0&&age<H_END*20;
+    public static boolean formationStrikes(long age){return formationStrikes(age,H_END*20.0);}
+    /**
+     * The same for a formation whose swords flare {@code endAge} ticks in (2.113.0: as its gauge runs dry, {@link #gaugeEnd};
+     * H_END with T never used).
+     */
+    public static boolean formationStrikes(long age,double endAge){
+        return age==FORMATION_IMPACT_AT||age>FORMATION_IMPACT_AT&&(age-FORMATION_IMPACT_AT)%FORMATION_EVERY==0&&age<endAge;
     }
     /** The damage of the formation's strike on its tick {@code age}. */
     public static float formationDamage(long age){return age==FORMATION_IMPACT_AT?FORMATION_IMPACT:FORMATION_TICK;}
@@ -537,8 +542,70 @@ public final class IsosangRules {
         if(t<H_DOWN){double u=(t-H_DROP)/(H_DOWN-H_DROP);return FORMATION_STAND*(1-u*u);}
         return 0;
     }
+    /** (2.113.0) {@link #planned} and {@link #raised} for a formation whose swords flare {@code end} seconds in: its drop comes then. */
+    public static double planned(double t,double end){return planned(ending(t,end));}
+    public static double raised(double t,double end){return raised(ending(t,end));}
+    /**
+     * H's clock as its ending reads it (2.113.0): {@code t} up to its end (as its swords flare, {@code end} seconds in: when
+     * its gauge runs dry), then on from H_END, so all its ending's own times (the swords' flare, H_DROP, H_DOWN, its length)
+     * come after the flare as they did after H_END, whenever the flare is.
+     */
+    public static double ending(double t,double end){return t<end?t:H_END+(t-end);}
+    /** How long the formation runs on after its swords flare (seconds: she drops and lands; LENGTH[FORMATION] is H_END and this). */
+    public static final double H_TAIL=LENGTH[FORMATION]/20.0-H_END;
+    /** The formation's whole length (ticks after its start, fractional) when its swords flare {@code endAge} ticks in. */
+    public static double formationLength(double endAge){return endAge+H_TAIL*20;}
+
+    // ───────────────────────────── H's gauge ─────────────────────────────
+
+    /**
+     * H's gauge (2.113.0, user request: "이소상 메커니즘을 추가하자 H를 사용하려면 조건이 필요하게 인벤창 바로 위에 영상처럼 검 모양
+     * 게이지를 추가해 이 게이지는 평타를 한 대 칠때마다 12.5%가 차 4대 치면 50%겠지? 그리고 강회 평타로 쿨타임 초기화해서 4대 또
+     * 치면 100%고 이런식으로 총 8대를 맞추면 게이지가 100%되고 검 게이지에 애니메이션과 불이 들어와 그럼 이제서야 H를 쓸 수 있어
+     * 게이지는 평타로만 채울 수 있고 다른 스킬로는 못 채워 H를 키면 게이지 애니메이션이 바뀌고 H 상태에서는 게이지가 서서히
+     * 줄어들고 다 줄어들면 H가 끝나 그리고 T스킬을 쓰면 게이지가 20% 확 줄어들게 바꿔줘+ H스킬 상태일때는 영역내에 있는 모든
+     * 적은 50% 둔화되고 처음 H(영역을 전개)꽂을때 적을 맞추면 3초동안 70% 둔화 그리고 다시 H(영역을 해제하고 수많은 검을
+     * 적에게 날림)를 누르면 게이지가 즉시 전부 줄어들고 H 스킬 나가게 바꿔"; asked, their answers: a full gauge lasts H as
+     * long as now ("약 40초 (지금과 같음)"), H's 60 s cooldown stays ("그대로 둠"), and a blow fills it once for each foe it
+     * strikes ("맞은 적 수만큼")). Each foe a basic attack's hit strikes (the four of a combo, the empowered ones too; once a
+     * hit however many of its blows reach that foe) fills one of {@link #GAUGE_FULL}; nothing else fills it. Full, H may
+     * be used (its cooldown run too); H empties it and, on H, it drains from full over {@link #GAUGE_TICKS}: dry, the
+     * formation ends (its swords flare and she drops as they did at H_END). T takes {@link #GAUGE_T} of it at once; H
+     * again empties it.
+     */
+    public static final int GAUGE_FULL=8;
+    /** How long a full gauge lasts on H (ticks): as long as H stood before it (its swords flare as it runs dry, H_END). */
+    public static final double GAUGE_TICKS=H_END*20.0;
+    /** How much of it T takes at once (the user's word: 20%). */
+    public static final double GAUGE_T=.2;
+    /** The gauge with {@code foes} more foes struck (it fills no more than full). */
+    public static int gaugeFilled(int units,int foes){return Math.max(0,Math.min(GAUGE_FULL,units+Math.max(0,foes)));}
+    /** Whether the gauge lets H be used. */
+    public static boolean gaugeFull(int units){return units>=GAUGE_FULL;}
+    /** How much of the gauge is left {@code age} ticks into H when it runs dry {@code emptyAge} ticks in (0 to 1). */
+    public static double gaugeLeft(double age,double emptyAge){return Math.max(0,Math.min(1,(emptyAge-age)/GAUGE_TICKS));}
+    /** When the gauge runs dry once T takes its share of it (ticks into H). */
+    public static double gaugeAfterT(double emptyAge){return emptyAge-GAUGE_T*GAUGE_TICKS;}
+    /**
+     * When the formation ends (its swords flare: ticks into H) once T used {@code age} ticks in takes its share of the gauge:
+     * as it runs dry, but not before that T is over (its swords and slashes all down, she on the far sword).
+     */
+    public static double gaugeEnd(double age,double emptyAge){return Math.max(emptyAge,age+LUNGE_LENGTH);}
+    /** How much slower whoever is in the formation walks while it stands (the user's word: 50%). */
+    public static final double H_ZONE_SLOW=.5;
+    /** How much slower its first blow leaves whom it strikes, and for how long (ticks; the user's word: 70% for 3 s). */
+    public static final double H_IMPACT_SLOW=.7;public static final int H_IMPACT_SLOW_TICKS=60;
+    /**
+     * Whether the formation slows whoever is in it on its tick {@code age} (swords flaring {@code endAge} ticks in): from as
+     * its swords strike until they flare. Each tick it holds them a little past it (H_ZONE_HOLD), so the slow lifts as they
+     * step out or it ends.
+     */
+    public static boolean zoneSlows(long age,double endAge){return age>=FORMATION_IMPACT_AT&&age<endAge;}
+    public static final int H_ZONE_HOLD=2;
     /** Whether she is up off the ground {@code t} seconds into H, in the leap or on the sword (held there: the server lets her float). */
     public static boolean onSword(double t){return t>=H_LEAP&&t<H_DOWN;}
+    /** (2.113.0) The same for a formation whose swords flare {@code end} seconds in (she drops after they do). */
+    public static boolean onSword(double t,double end){return onSword(ending(t,end));}
 
     // where the formation's swords lie (2.82.3: here, not with the effects, for the server to know the sword she stands on)
 
@@ -632,7 +699,9 @@ public final class IsosangRules {
      */
     public static final float Z_FROM=1.35f;
     /** Whether Z may move her {@code t} seconds into her formation (it would land before the swords flare). */
-    public static boolean zTime(double t){return t>=Z_FROM&&t+Z_TRAVEL/20.0<H_END;}
+    public static boolean zTime(double t){return zTime(t,H_END);}
+    /** (2.113.0) The same for a formation whose swords flare {@code end} seconds in (as its gauge runs dry). */
+    public static boolean zTime(double t,double end){return t>=Z_FROM&&t+Z_TRAVEL/20.0<end;}
     /**
      * Z's state for one user: the tick its window opened (its first move; -1 for none), how many moves it has had, and
      * the tick Z is ready again (as the server tells every viewer with each of its swings' news).
@@ -673,7 +742,9 @@ public final class IsosangRules {
      * (before Z_FROM) is kept from her at once, and she moves as they do; one as she flies, as she lands; one while
      * something holds her where she is (a time stop, a Kageno skill), as it lets go.
      */
-    public static boolean dodgeTime(double t){return t>=0&&t+Z_TRAVEL/20.0<H_END;}
+    public static boolean dodgeTime(double t){return dodgeTime(t,H_END);}
+    /** (2.113.0) The same for a formation whose swords flare {@code end} seconds in. */
+    public static boolean dodgeTime(double t,double end){return t>=0&&t+Z_TRAVEL/20.0<end;}
     /**
      * The sword H's dodge moves her onto: {@code roll} (at random, 0 to {@code swords}-2) over every sword of her formation
      * but the one she stands on ({@code on}).
@@ -774,7 +845,9 @@ public final class IsosangRules {
     public static float volleyArrives(int combo,int i){return combo==LUNGE?volleyStrikes(combo,i)-LUNGE_STICK:volleyArrives(i);}
     public static float volleyStrikes(int combo,int i){return combo==LUNGE?(LUNGE_SWORDS+i)/20f:volleyStrikes(i);}
     /** Whether the volley may begin {@code t} seconds into her formation: every sword planted (Z's from), and over before the swords flare. */
-    public static boolean volleyTime(double t){return t>=Z_FROM&&t+VOLLEY_LENGTH/20.0<=H_END;}
+    public static boolean volleyTime(double t){return volleyTime(t,H_END);}
+    /** (2.113.0) The same for a formation whose swords flare {@code end} seconds in. */
+    public static boolean volleyTime(double t,double end){return t>=Z_FROM&&t+VOLLEY_LENGTH/20.0<=end;}
     /**
      * The tick the volley is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her, it
      * is ready once this one is over).
@@ -835,7 +908,9 @@ public final class IsosangRules {
     public static final int LUNGE_SLASHES=3;
     public static float lungeSlash(int j){for(int b=0;b<LUNGE_KIND.length;b++)if(LUNGE_KIND[b]==2&&LUNGE_NTH[b]==j)return blowAt(LUNGE,b)/20f;return Float.NaN;}
     /** Whether T may begin {@code t} seconds into her formation (2.96.0): every sword standing, and over (on the far sword) before they flare. */
-    public static boolean lungeTime(double t){return t>=Z_FROM&&t+LUNGE_LENGTH/20.0<=H_END;}
+    public static boolean lungeTime(double t){return lungeTime(t,H_END);}
+    /** (2.113.0) The same for a formation whose swords flare {@code end} seconds in. */
+    public static boolean lungeTime(double t,double end){return t>=Z_FROM&&t+LUNGE_LENGTH/20.0<=end;}
     /** The tick T is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her): once she stands on the far sword, and its cooldown after (none for now, 2.96.4). */
     public static long lungeReady(long start,boolean free){return start+LUNGE_FREE+(free?0:LUNGE_COOLDOWN);}
     /**
@@ -961,7 +1036,9 @@ public final class IsosangRules {
         return dy>=CAGE_LOW&&dy<=CAGE_HIGH&&Math.hypot(dx,dz)<=CAGE_RADIUS+halfWidth;
     }
     /** Whether Y may begin {@code t} seconds into her formation: every sword standing, and over before they flare (as H's basic attack). */
-    public static boolean cageTime(double t){return t>=Z_FROM&&t+CAGE_LENGTH/20.0<=H_END;}
+    public static boolean cageTime(double t){return cageTime(t,H_END);}
+    /** (2.113.0) The same for a formation whose swords flare {@code end} seconds in. */
+    public static boolean cageTime(double t,double end){return t>=Z_FROM&&t+CAGE_LENGTH/20.0<=end;}
     /** The tick Y is ready again after one begun at {@code start} ({@code free}: the cooldowns are off for her): once its swords are gone, and its cooldown after. */
     public static long cageReady(long start,boolean free){return start+CAGE_LENGTH+(free?0:CAGE_COOLDOWN);}
     /**
@@ -1053,7 +1130,9 @@ public final class IsosangRules {
      * Whether it may begin {@code t} seconds into her formation: every sword standing (as Z, H's basic attack, T and Y), and
      * before they flare (H_END: it ends the formation then itself).
      */
-    public static boolean finaleTime(double t){return t>=Z_FROM&&t<H_END;}
+    public static boolean finaleTime(double t){return finaleTime(t,H_END);}
+    /** (2.113.0) The same for a formation whose swords flare {@code end} seconds in. */
+    public static boolean finaleTime(double t,double end){return t>=Z_FROM&&t<end;}
     /**
      * How high over the formation's ground her feet are on her lap (2.101.1, the user's word on our reading of their video:
      * "그녀 둘레 6블록", three to five blocks up): as she comes down onto her sword after her leap (FINALE_LAP_LOW), at its crest

@@ -63,7 +63,7 @@ public final class SwordStep {
      */
     static boolean ready(StandClient.Cast c,float t){
         var mc=MinecraftClient.getInstance();if(mc.world==null)return false;
-        if(!IsosangRules.zTime(t)||IsosangClient.flying(c.id(),t*20)>=0||!Float.isNaN(IsosangClient.formationEnd(c.id())))return false;
+        if(!IsosangRules.zTime(t,IsosangClient.plannedEnd(c.id()))||IsosangClient.flying(c.id(),t*20)>=0||!Float.isNaN(IsosangClient.formationEnd(c.id())))return false;
         return IsosangClient.zState(c.caster()).usable(mc.world.getTime());
     }
     /** The sword the local player looks at now for Z (-1 for none: no formation of theirs, Z not usable, none in sight). */
