@@ -11,12 +11,12 @@ import static dev.sangwoo.celestialfall.xchara.XCharaRules.*;
  * X Chara's G, the sword dance, drawn (2.112.0, through the effect layer, from its cast's clock: XCharaClient, the user's
  * video for every look). For everyone near: the "!!!" over the one marked, blinking red and white until the strange space
  * (gone at once if it is blocked, a flash of white light on them then); the blows on the one marked where they stand, ten a
- * second, each a burst of light about them (DanceBurst: 2.112.1, the video's flowers of violet and magenta petals, white
- * loops, slashes and ink spikes, overlapping in a storm), a violet glow about them while they are cut up; sent flying, a
- * burst, a ring on the ground and a violet trail after them. For its two in the strange space (and only there,
- * XCharaClient.cinematic): its depths (SpaceBackdrop: the abyss's glow, the violet spikes, far spikes, clouds, stars, the
- * ring, embers and streaks), the glowing pink panels flying through its first shot, and the knives round its user in
- * the pulled-back one, white with a violet glow, aimed at the one marked.
+ * second, each a burst of light about them (DanceBurst: 2.112.1, the video's flowers of petals, loops, slashes and ink
+ * spikes, overlapping in a storm; 2.112.2, bigger and deep purple), a deep purple glow about them while they are cut up;
+ * sent flying, a burst, rings on the ground and a purple trail after them. For its two in the strange space (and only there,
+ * XCharaClient.cinematic): on its plain dark ground (2.112.2: no spikes, nor the depths of 2.112.1), the glowing pink
+ * panels flying through its first shot, and the knives round its user in the pulled-back one, white with a violet glow,
+ * aimed at the one marked.
  */
 public final class SwordDance implements Fx.Skill {
     static final int RED=0xff2a2a,WHITE=0xffffff,INK=0x0e0820,VIOLET=0x9a3cff,LILAC=0xe2b8ff,PINK=0xff40d6,GLOW=0x7a30ff;
@@ -40,15 +40,17 @@ public final class SwordDance implements Fx.Skill {
     @Override public void additive(Fx c,EffectMesh m){
         var d=dance(c);if(d==null)return;float t=c.age;
         mark(c,d,m,t,true);
-        if(space(d)){SpaceBackdrop.draw(d,m,t);panels(d,m,t,true);knives(d,m,t,true);}
+        if(space(d)){panels(d,m,t,true);knives(d,m,t,true);}
         if(world(d,t)){cuts(c,d,m,t,true);flight(c,d,m,t);}
     }
     @Override public void frame(Fx c,FxFrame f){
-        var d=dance(c);if(d==null||!world(d,c.age))return;float t=c.age;
+        var d=dance(c);if(d==null)return;float t=c.age;
+        // the cut into the strange space: none of the world's last frames left glowing on its plain ground (the "!!!")
+        if(space(d)){if(t>=WARN&&t<WARN+3)f.afterglow(.01f);return;}
         if(!d.inSpace()||d.stopped()||t<VANISH||t>LAUNCH+12)return;
         var at=middle(c,d);
         float pulse=0;for(int k=0;k<HITS;k++){float s=t-blowAt(k);if(s>=0&&s<4)pulse=Math.max(pulse,(k==HITS-1?1.6f:1)*(1-s/4));}
-        f.light(at,0xc040ff,11,.8f+.75f*pulse);
+        f.light(at,0x8a2be2,14,.8f+.75f*pulse);
         // fast cuts: short afterglow, as the effects' other fast slashes
         if(t<LAUNCH+2)f.afterglow(.12f);
     }
@@ -179,7 +181,7 @@ public final class SwordDance implements Fx.Skill {
         // a violet glow about them while they are cut up
         if(light){
             float on=Math.min(1,(t-VANISH)/2f)*(1-XCharaSpace.smooth((t-Math.min(LAUNCH,stop))/6f));
-            if(on>0){m.softDisc(frame.o(),4.6,0x9a20ff,.13f*on*frame.near());m.softDisc(frame.o(),7,0x4a18c8,.07f*on*frame.near());}
+            if(on>0){m.softDisc(frame.o(),4.6*DanceBurst.SCALE,0x640eb0,.07f*on*frame.near());m.softDisc(frame.o(),7*DanceBurst.SCALE,0x30087c,.05f*on*frame.near());}
         }
         for(int k=0;k<HITS;k++){
             float at=blowAt(k),s=t-at;
@@ -193,16 +195,16 @@ public final class SwordDance implements Fx.Skill {
         float s=t-LAUNCH;if(s<0||s>18)return;
         var e=target(c);if(e==null||!e.isAlive())return;
         Vec3d at=e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0);
-        if(s<5){m.softDisc(d.targetFrom.add(0,1,0),2.2+1.5*s/5,WHITE,.85f*(1-s/5));}
+        if(s<5){m.softDisc(d.targetFrom.add(0,1,0),2.2+1.5*s/5,DanceBurst.PALE,.7f*(1-s/5));}
         if(s<9){
-            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.06,0),1+4.5*s/9,.12,0xc070ff,.8f*(1-s/9));
-            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.08,0),.6+7*s/9,.2,0xff50f0,.5f*(1-s/9));
+            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.06,0),1+4.5*s/9,.12,0xa04cff,.8f*(1-s/9));
+            dev.sangwoo.celestialfall.client.kageno.FxLib.ring(m,d.targetFrom.add(0,.08,0),.6+7*s/9,.2,0x7a16d0,.5f*(1-s/9));
         }
         Vec3d way=d.f.multiply(FLY).add(0,FLY_UP,0).normalize();
         float fade=1-s/18;
-        m.glowLine(at.subtract(way.multiply(Math.min(7,.6+s*.9))),at,.3,0xc050ff,.85f*fade);
-        // a magenta glow on them as they go (the video's: they fly off glowing)
-        m.softDisc(at,1.6,0xff40f0,.45f*fade);
-        m.softDisc(at,.7,WHITE,.4f*fade);
+        m.glowLine(at.subtract(way.multiply(Math.min(7,.6+s*.9))),at,.3,0x8418d8,.85f*fade);
+        // a purple glow on them as they go (the video's: they fly off glowing; 2.112.2: deep purple)
+        m.softDisc(at,1.6,0x8418d8,.45f*fade);
+        m.softDisc(at,.7,0xdcc0ff,.4f*fade);
     }
 }

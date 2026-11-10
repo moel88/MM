@@ -4,9 +4,10 @@ import net.minecraft.util.math.Vec3d;
 import static dev.sangwoo.celestialfall.xchara.XCharaRules.*;
 
 /**
- * X Chara's G's strange space (2.112.0, 2.112.1), laid out from the user's video: where its two hang, its camera's shots,
- * the knives round its user, the violet spikes rising out of the dark, the glowing pink panels flying through it and the
- * depths behind them all (SpaceBackdrop draws those). All of it is where its user stood ({@code from}) along the way they
+ * X Chara's G's strange space (2.112.0 to 2.112.2), laid out from the user's video: where its two hang, its camera's
+ * shots, the knives round its user and the glowing pink panels flying through it, on its plain dark ground (2.112.2, user
+ * request: "이상한 공간 배경 그냥 이펙트 없이 단색 공간으로 만들어 보고": the violet spikes of 2.112.0 and the depths of
+ * 2.112.1, stars, glows, a ring, embers, streaks, are gone). All of it is where its user stood ({@code from}) along the way they
  * faced the one marked ({@code f}, horizontal), the one marked across from them GAP away at their height (the video's two
  * at the edges of its side view: as far apart as fifteen times their height); every moment of it a function of its clock
  * ({@code t}, ticks from the press), the same on every client.
@@ -92,35 +93,6 @@ public final class XCharaSpace {
     public static double knifeSize(int k){return .9+.22*hash(k,4);}
     /** How strongly the knives show at {@code t}: there as the pulled-back shot cuts in, until the world is back. */
     public static float knives(float t){return t<SHOT_C||t>=WORLD?0:Math.min(1,(t-SHOT_C+1)/2f);}
-
-    // ───────────────────────────── the spikes ─────────────────────────────
-
-    /**
-     * The violet spikes rising out of the dark: {x, base y, z, height, half its width}, around the middle, none by the
-     * cameras or the two. Their bases deep under the frame, their points from under the two's feet to well over them
-     * (2.112.1: their bases had shown, a hard edge in the dark).
-     */
-    public static double[][] spikes(Vec3d from,float yaw){
-        Vec3d f=f(yaw),l=left(f),mid=middle(from,yaw);
-        var out=new java.util.ArrayList<double[]>();
-        for(int i=0;out.size()<SPIKES&&i<400;i++){
-            double a=hash(i,11)*Math.PI*2,rad=8+36*Math.sqrt(hash(i,12));
-            Vec3d p=mid.add(f.multiply(Math.cos(a)*rad)).add(l.multiply(Math.sin(a)*rad));
-            boolean near=false;
-            for(Vec3d keep:new Vec3d[]{mid.add(l.multiply(SIDE_B)),mid.add(l.multiply(SIDE_C)),from,targetFeet(from,yaw)})
-                if(Math.hypot(p.x-keep.x,p.z-keep.z)<4.5)near=true;
-            // nor between the side cameras and the two (they would stand across the frame)
-            Vec3d rel=p.subtract(mid);double across=rel.dotProduct(l),along=rel.dotProduct(f);
-            if(across>1&&across<SIDE_C+1&&Math.abs(along)<GAP*.5+2)near=true;
-            if(near)continue;
-            double base=from.y-16-8*hash(i,13),tip=from.y-3+15*hash(i,14);
-            out.add(new double[]{p.x,base,p.z,tip-base,.35+.6*hash(i,15)});
-        }
-        return out.toArray(new double[0][]);
-    }
-    public static final int SPIKES=46;
-    /** How strongly the spikes show at {@code t}: from the strange space until the world is back. */
-    public static float spikesShown(float t){return t<WARN||t>=WORLD?0:1;}
 
     // ───────────────────────────── the panels ─────────────────────────────
 

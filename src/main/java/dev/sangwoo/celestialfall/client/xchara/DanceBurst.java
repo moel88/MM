@@ -5,13 +5,14 @@ import net.minecraft.util.math.Vec3d;
 
 /**
  * One blow of X Chara's sword dance on the one marked, in the world (2.112.1, user request: "컷씬이 끝나고 적에게 박히는
- * 검무 이펙트를 영상처럼 엄청 대폭 상향해줘 지금은 너무 부족해"; 2.112.0 drew each a violet crescent with a few streaks).
- * A burst as the video's: a flower of light about them some four blocks either way and two and a half up and down, ten
- * a second, so that they overlap in a storm. Each: glowing petals shooting out from them (deep violet along the middle,
- * violet to magenta out to their tips, their edges glowing pink, white rims on some, a bright petal inside others), white
- * loops swept round them like a blade's trail, a white slash across them with a dark edge, dark ink spikes with a blue
- * edge, thin rays, shards flying off, a flash at the heart. The last blow's half again as big, with more of everything
- * and a long magenta streak through them (the video's 11.43 s).
+ * 검무 이펙트를 영상처럼 엄청 대폭 상향해줘 지금은 너무 부족해"; 2.112.0 drew each a violet crescent with a few streaks.
+ * 2.112.2, user request: "검무 박힐때 이펙트 더 크게 하고 진한 보라색으로 만들어줘": half again as big, deep purple).
+ * A burst as the video's: a flower of light about them some six blocks either way and less up and down, ten a second,
+ * so that they overlap in a storm. Each: petals shooting out from them (darkest purple along the middle, deep vivid
+ * purple out to their edges, a purple glow on their edges, lilac rims on some, a brighter purple petal inside others),
+ * lilac loops swept round them like a blade's trail, a pale slash across them with a purple glow and a dark edge, dark
+ * ink spikes with a purple edge, thin lilac rays, shards flying off, a pale flash at the heart. The last blow's bigger
+ * again, with more of everything and a long purple streak through them (the video's 11.43 s).
  * <p>
  * Like the video's, it is a picture of light facing whoever looks at it: the flower lies across the camera that draws it
  * ({@link #frame}), a little behind them from it so their body stays in front of its heart, each petal and stroke a blade
@@ -30,9 +31,20 @@ final class DanceBurst {
     static final float GROW=1.7f,IN=.35f;
     /** How far behind the one marked (from the camera) its heart is, so that their body stays in front of it. */
     static final double BEHIND=.55;
-    static final int WHITE=0xffffff,INK=0x0c0626;
-    /** A petal's colours from its base to its tip: down its middle deep indigo to violet, at its edges violet to magenta (the video's). */
-    static final int AXIS_BASE=0x2a10b0,AXIS_TIP=0x6a1ae8,RIM_BASE=0x9a20f0,RIM_TIP=0xff20e0;
+    static final int INK=0x0c0626;
+    /**
+     * A petal's colours from its base to its tip (2.112.2, deep purple: 2.112.1's ran indigo to magenta and paled to pink
+     * in the light): down its middle the darkest purple, at its edges a deep vivid purple.
+     */
+    static final int AXIS_BASE=0x28044a,AXIS_TIP=0x42087c,RIM_BASE=0x640eb0,RIM_TIP=0x8418d8;
+    /** Its light: the purple glow on its edges and round its strokes, the lilac of its lines and the pale of its brightest. */
+    static final int GLOW=0x7a16d0,LILAC=0xd4a0ff,PALE=0xecd4ff;
+    /** How big every blow is (2.112.2: half again as big as 2.112.1's), the last blow so much bigger again. */
+    static final double SCALE=1.5,LAST=1.4;
+    /** How big blow {@code k}'s burst is (the last of them, {@code last}). */
+    static double big(boolean last){return SCALE*(last?LAST:1);}
+    /** How many petals a blow has. */
+    static int petalCount(boolean last){return last?16:10;}
 
     /** The plane the flower lies in for this camera: its heart {@code o}, across ({@code u}) and up ({@code v}) the frame, toward the camera ({@code n}). */
     record Frame(Vec3d o,Vec3d u,Vec3d v,Vec3d n,float near){
@@ -57,17 +69,17 @@ final class DanceBurst {
     /** Draws blow {@code k}'s burst {@code s} ticks after it landed: its dark parts ({@code light} false) or its light. */
     static void draw(EffectMesh m,Frame fr,int k,int seed,float s,boolean light,boolean last){
         if(s<0||s>=LIFE)return;
-        double big=last?1.5:1;
-        petals(m,fr,k,seed,s,light,big,last?15:8);
+        double big=big(last);
+        petals(m,fr,k,seed,s,light,big,petalCount(last));
         if(light){
             loops(m,fr,k,seed,s,big,last?5:2);
             rays(m,fr,k,seed,s,big,last?6:3);
-            shards(m,fr,k,seed,s,big,last?12:6);
+            shards(m,fr,k,seed,s,big,last?14:8);
             heart(m,fr,s,big);
             if(last)streak(m,fr,k,seed,s);
         }
         slash(m,fr,k,seed,s,light,big,last?3:1);
-        ink(m,fr,k,seed,s,light,big,last?10:5);
+        ink(m,fr,k,seed,s,light,big,last?11:6);
     }
 
     // ───────────────────────────── its parts ─────────────────────────────
@@ -89,24 +101,24 @@ final class DanceBurst {
         double w=wide*(.3+.7*grow)*(1-.3*smooth((sp-2)/(PETAL_LIFE-2)));
         return new Petal(a,b,w,fade,h(k,j,seed,8)<.5&&sp<4,h(k,j,seed,9)<.5?1:-1,h(k,j,seed,10)<.4);
     }
-    /** The petals: their bodies ({@code light} false: deep violet down the middle, violet to magenta out to the tips) or their light (pink edges, white rims, bright petals inside). */
+    /** The petals: their bodies ({@code light} false: the darkest purple down the middle, deep purple out to the edges) or their light (purple glowing edges, lilac rims, brighter petals inside). */
     static void petals(EffectMesh m,Frame fr,int k,int seed,float s,boolean light,double big,int count){
         for(int j=0;j<count;j++){
             var p=petal(fr,k,j,seed,s,big,count);if(p==null)continue;
             if(!light){
-                lens(m,p.a(),p.b(),p.w(),AXIS_BASE,AXIS_TIP,RIM_BASE,RIM_TIP,.8f*p.fade(),.92f*p.fade());
+                lens(m,p.a(),p.b(),p.w(),AXIS_BASE,AXIS_TIP,RIM_BASE,RIM_TIP,.94f*p.fade(),.97f*p.fade());
                 continue;
             }
-            rim(m,p.a(),p.b(),p.w(),.28,0xff3ae8,.3f*p.fade());
+            rim(m,p.a(),p.b(),p.w(),.28,GLOW,.14f*p.fade());
             float since=s-(float)(.8*h(k,j,seed,6));
-            if(p.rimmed())edge(m,p.a(),p.b(),p.w(),p.rimSide(),.07*big,WHITE,.75f*p.fade()*Math.max(0,1-since/4));
+            if(p.rimmed())edge(m,p.a(),p.b(),p.w(),p.rimSide(),.07*big,LILAC,.55f*p.fade()*Math.max(0,1-since/4));
             if(p.inner()){
                 Vec3d d=p.b().subtract(p.a());
-                lens(m,p.a().add(d.multiply(.45)),p.b().subtract(d.multiply(.08)),p.w()*.48,0xa030ff,0xff40ec,0xff60f0,0xff90f6,.22f*p.fade(),.16f*p.fade());
+                lens(m,p.a().add(d.multiply(.45)),p.b().subtract(d.multiply(.08)),p.w()*.48,0x6410c0,0x9228e8,0x8420e0,0xa84cff,.12f*p.fade(),.08f*p.fade());
             }
         }
     }
-    /** The white loops: swept round the heart in a breath like a blade's trail, each two strands, eaten from their tail. */
+    /** The lilac loops: swept round the heart in a breath like a blade's trail, each two strands in a purple glow, eaten from their tail. */
     static void loops(EffectMesh m,Frame fr,int k,int seed,float s,double big,int count){
         for(int j=0;j<count;j++){
             float sl=s-(float)(.5*h(k,j,seed,20));if(sl<0||sl>=LOOP_LIFE)continue;
@@ -130,16 +142,16 @@ final class DanceBurst {
                         // the strand thins toward its tail end
                         float along=(float)((x-tail)/(head-tail));
                         if(strand==0){
-                            m.line(last,at,.34*big,0xff60f0,.38f*fade*along);
-                            m.line(last,at,.09*big,WHITE,.95f*fade*(.3f+.7f*along));
-                        }else m.line(last,at,.045*big,0xffe6ff,.65f*fade*along);
+                            m.line(last,at,.26*big,GLOW,.2f*fade*along);
+                            m.line(last,at,.075*big,LILAC,.75f*fade*(.3f+.7f*along));
+                        }else m.line(last,at,.045*big,0xb88cff,.4f*fade*along);
                     }
                     last=at;
                 }
             }
         }
     }
-    /** A white slash across them: a thick blade of white with a blue glow and a dark edge, there in a moment and gone. */
+    /** A slash across them: a thick pale blade with a purple glow and a dark edge, there in a moment and gone. */
     static void slash(EffectMesh m,Frame fr,int k,int seed,float s,boolean light,double big,int count){
         if(s>=SLASH_LIFE)return;
         float left=1-s/SLASH_LIFE,fade=in(s)*left*left*fr.near,out=1-cube(1-Math.min(1,s/.6f));
@@ -150,14 +162,14 @@ final class DanceBurst {
             Vec3d a=fr.o.add(off).subtract(dir.multiply(length*.5)),b=fr.o.add(off).add(dir.multiply(length*.5));
             if(!light){
                 Vec3d grow=dir.multiply(length*.04);
-                m.needle(a.subtract(grow),b.add(grow),width*1.35,.42,INK,.75f*fade);
+                m.needle(a.subtract(grow),b.add(grow),width*1.35,.42,INK,.8f*fade);
             }else{
-                m.needle(a,b,width*1.9,.42,0x48a8ff,.4f*fade);
-                m.needle(a,b,width,.42,WHITE,.95f*fade);
+                m.needle(a,b,width*1.9,.42,GLOW,.25f*fade);
+                m.needle(a,b,width*.6,.42,PALE,.75f*fade);
             }
         }
     }
-    /** The dark ink spikes: shooting out from the heart, a blue edge to them, thinning as they go. */
+    /** The dark ink spikes: shooting out from the heart, a purple edge to them, thinning as they go. */
     static void ink(EffectMesh m,Frame fr,int k,int seed,float s,boolean light,double big,int count){
         for(int j=0;j<count;j++){
             float si=s-(float)(.6*h(k,j,seed,40));if(si<0||si>=INK_LIFE)continue;
@@ -166,17 +178,17 @@ final class DanceBurst {
             float grow=1-(1-Math.min(1,si))*(1-Math.min(1,si)),fade=(1-smooth((si-1.5f)/(INK_LIFE-1.5f)))*fr.near;
             Vec3d a=fr.o.add(dir.multiply(start)),b=fr.o.add(dir.multiply(start+length*grow));
             if(!light)m.needle(a,b,width,.15,INK,.95f*fade);
-            else m.needle(a,b,width*1.45,.15,0x3050ff,.4f*fade);
+            else m.needle(a,b,width*1.45,.15,0x5a10b8,.3f*fade);
         }
     }
-    /** Thin rays of white and lilac through the burst, for a moment. */
+    /** Thin rays of lilac and purple through the burst, for a moment. */
     static void rays(EffectMesh m,Frame fr,int k,int seed,float s,double big,int count){
         if(s>=RAY_LIFE)return;
         float fade=in(s)*(1-s/RAY_LIFE)*fr.near;
         for(int j=0;j<count;j++){
             Vec3d dir=fr.out(2*Math.PI*h(k,j,seed,50),(h(k,j,seed,51)-.5)*.5);
             double length=(3.8+4*h(k,j,seed,52))*big,width=(.06+.05*h(k,j,seed,53))*big;
-            m.needle(fr.o.add(dir.multiply(.2)),fr.o.add(dir.multiply(.2+length)),width,.2,j%2==0?WHITE:0xe0b8ff,.85f*fade);
+            m.needle(fr.o.add(dir.multiply(.2)),fr.o.add(dir.multiply(.2+length)),width,.2,j%2==0?LILAC:0xa05cff,.5f*fade);
         }
     }
     /** Shards of light flying off the petals' tips. */
@@ -186,25 +198,25 @@ final class DanceBurst {
             Vec3d dir=fr.out(2*Math.PI*h(k,j,seed,61),(h(k,j,seed,62)-.5)*.7);
             double at=(1.2+(3.5+3*h(k,j,seed,63))*Math.sqrt(sh/SHARD_LIFE))*big;
             Vec3d p=fr.o.add(dir.multiply(at));
-            m.needle(p.subtract(dir.multiply(.28*big)),p.add(dir.multiply(.28*big)),.08*big,.6,j%3==0?WHITE:0xff7af2,.85f*in(sh)*(1-sh/SHARD_LIFE)*fr.near);
+            m.needle(p.subtract(dir.multiply(.28*big)),p.add(dir.multiply(.28*big)),.08*big,.6,j%3==0?PALE:0xa858ff,.85f*in(sh)*(1-sh/SHARD_LIFE)*fr.near);
         }
     }
-    /** The flash at the heart as it lands. */
+    /** The flash at the heart as it lands: pale, a lilac star, a purple glow. */
     static void heart(EffectMesh m,Frame fr,float s,double big){
         float in=in(s)*fr.near;
-        if(s<2.5f)m.softDisc(fr.o,(1.2+1.1*s/2.5)*big,WHITE,.8f*(1-s/2.5f)*in);
-        if(s<2)m.star(fr.o,1.5*big,0xffd0ff,.9f*(1-s/2)*in);
-        if(s<5)m.softDisc(fr.o,2.6*big,0xff40e8,.3f*(1-s/5)*in);
+        if(s<2.5f)m.softDisc(fr.o,(.8+.7*s/2.5)*big,PALE,.45f*(1-s/2.5f)*in);
+        if(s<2)m.star(fr.o,1.5*big,LILAC,.6f*(1-s/2)*in);
+        if(s<5)m.softDisc(fr.o,2*big,GLOW,.14f*(1-s/5)*in);
     }
-    /** The last blow's long magenta streak through them (the video's 11.43 s). */
+    /** The last blow's long purple streak through them (the video's 11.43 s). */
     static void streak(EffectMesh m,Frame fr,int k,int seed,float s){
         if(s>=6)return;
         float fade=in(s)*(1-s/6)*fr.near;
         Vec3d dir=fr.out(Math.toRadians(32),0);
-        double half=(8+3*smooth(s/1.2f))*(1-cube(1-Math.min(1,s/.8f)));
+        double half=(8+3*smooth(s/1.2f))*SCALE*(1-cube(1-Math.min(1,s/.8f)));
         Vec3d a=fr.o.subtract(dir.multiply(half)),b=fr.o.add(dir.multiply(half));
-        m.needle(a,b,1.3,.5,0xff40f0,.55f*fade);
-        m.needle(a,b,.32,.5,WHITE,.9f*fade);
+        m.needle(a,b,1.3*SCALE,.5,GLOW,.35f*fade);
+        m.needle(a,b,.32*SCALE,.5,LILAC,.7f*fade);
     }
 
     // ───────────────────────────── shapes ─────────────────────────────

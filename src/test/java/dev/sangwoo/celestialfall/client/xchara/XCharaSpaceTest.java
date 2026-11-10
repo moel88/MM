@@ -11,8 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * 서로 거꾸로 마주보는 컷씬부터 시작"; the one marked at the left, its user at the right, the both of them in the middle
  * of the frame's height); the camera pulled back the same way to a sixth of the frame in from its edges, the knives
  * spread evenly over a band round its user (2.112.1: "검들을 골고루 배치해줘"), all of them in the frame and aimed at the
- * one marked; the violet spikes kept off the cameras and from between them and the two, rising from deep under the frame;
- * the pink panels only through the first part of it.
+ * one marked; the pink panels only through the first part of it (its ground plain dark from 2.112.2: no spikes).
  */
 class XCharaSpaceTest {
     static final Vec3d FROM=new Vec3d(10.5,64,-3.5);
@@ -95,21 +94,6 @@ class XCharaSpaceTest {
             assertTrue(near<2.5,"a hole at "+ahead+", "+up+": "+near);
         }
         assertEquals(0,XCharaSpace.knives(SHOT_C-1));assertEquals(1,XCharaSpace.knives(SHOT_C+3));assertEquals(0,XCharaSpace.knives(WORLD));
-    }
-    @Test void theSpikesKeepOffTheCamerasAndFromBetweenThemAndTheTwo(){
-        var spikes=XCharaSpace.spikes(FROM,YAW);
-        assertEquals(XCharaSpace.SPIKES,spikes.length);
-        for(float t:new float[]{WARN+5,SHOT_C+5}){
-            var s=XCharaSpace.shot(FROM,YAW,t);
-            for(var sp:spikes){
-                assertTrue(Math.hypot(sp[0]-s.eye().x,sp[2]-s.eye().z)>4,"a spike by the camera");
-                assertTrue(sp[1]<FROM.y-15.9,"rising from deep under them");
-                double tip=sp[1]+sp[3];
-                assertTrue(tip>FROM.y-3.01&&tip<FROM.y+12.01,"its point from under their feet to well over them: "+(tip-FROM.y));
-            }
-        }
-        // the same on every client: steady
-        var again=XCharaSpace.spikes(FROM,YAW);for(int i=0;i<spikes.length;i++)assertArrayEquals(spikes[i],again[i]);
     }
     @Test void thePanelsFlyThroughTheFirstPartOfItOnly(){
         int seen=0;
