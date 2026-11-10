@@ -11,9 +11,10 @@ import static dev.sangwoo.celestialfall.xchara.XCharaRules.*;
  * X Chara's G, the sword dance, drawn (2.112.0, through the effect layer, from its cast's clock: XCharaClient, the user's
  * video for every look). For everyone near: the "!!!" over the one marked, blinking red and white until the strange space
  * (gone at once if it is blocked, a flash of white light on them then); the blows on the one marked where they stand, ten a
- * second, each a burst of light about them (DanceBurst: 2.112.1, the video's flowers of petals, loops, slashes and ink
- * spikes, overlapping in a storm; 2.112.2, bigger and deep purple), a deep purple glow about them while they are cut up;
- * sent flying, a burst, rings on the ground and a purple trail after them. For its two in the strange space (and only there,
+ * second, each light bursting out of their body where an unseen blade goes through it (DanceBurst: 2.112.4, the user's
+ * "그냥 이펙트만 터지게"; 2.112.1~2.112.3 drew the video's flowers), and everything out of their whole body as they are sent
+ * flying, a purple glow about them while they are cut up; sent flying, a burst, rings on the ground and a purple trail
+ * after them. For its two in the strange space (and only there,
  * XCharaClient.cinematic): on its plain dark ground (2.112.2: no spikes, nor the depths of 2.112.1), the glowing pink
  * panels flying through its first shot, and the knives round its user in the pulled-back one, white with a violet glow,
  * aimed at the one marked.
@@ -35,7 +36,6 @@ public final class SwordDance implements Fx.Skill {
         var d=dance(c);if(d==null)return;float t=c.age;
         mark(c,d,m,t,false);
         if(space(d)){panels(d,m,t,false);knives(d,m,t,false);}
-        if(world(d,t))cuts(c,d,m,t,false);
     }
     @Override public void additive(Fx c,EffectMesh m){
         var d=dance(c);if(d==null)return;float t=c.age;
@@ -43,21 +43,13 @@ public final class SwordDance implements Fx.Skill {
         if(space(d)){panels(d,m,t,true);knives(d,m,t,true);}
         if(world(d,t)){cuts(c,d,m,t,true);flight(c,d,m,t);}
     }
-    /** The blows' black, over all their light (2.112.3: its glow had turned it a dark purple): a batch of its own after the light, on the effect layer or not. */
+    /** The blows' black, over all their light (2.112.3: drawn before it, its glow turned it a dark purple): a batch of its own after the light, on the effect layer or not. */
     @Override public void shaders(Fx c){
         var d=dance(c);if(d==null||!world(d,c.age))return;float t=c.age;
-        if(!d.inSpace()||t<VANISH||t>=blowAt(HITS-1)+DanceBurst.LIFE)return;
-        float stop=d.stopped()?d.ended:Float.MAX_VALUE;
-        Vec3d mid=middle(c,d);int seed=(int)(d.cast.start()*31);
-        var frame=DanceBurst.frame(mid,c.camera);
+        if(!d.inSpace()||t<VANISH||t>=finaleAt(d)+DanceBurst.FINALE_LIFE)return;
         var buf=net.minecraft.client.render.Tessellator.getInstance().getBuffer();
         buf.begin(net.minecraft.client.render.VertexFormat.DrawMode.QUADS,net.minecraft.client.render.VertexFormats.POSITION_COLOR);
-        var m=new EffectMesh(buf,c.matrix,c.camera);
-        for(int k=0;k<HITS;k++){
-            float at=blowAt(k),s=t-at;
-            if(s<0||s>=DanceBurst.LIFE||at>stop)continue;
-            DanceBurst.black(m,frame,k,seed,s,k==HITS-1);
-        }
+        cuts(c,d,new EffectMesh(buf,c.matrix,c.camera),t,false);
         var built=buf.end();
         if(dev.sangwoo.celestialfall.client.KagenoRenderer.layering())dev.sangwoo.celestialfall.client.vfx.FxLayer.draw(built,false,1,.35f);
         else{
@@ -195,22 +187,40 @@ public final class SwordDance implements Fx.Skill {
         var e=target(c);
         return e!=null?e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0):d.targetFrom.add(0,1,0);
     }
+    /** Where the one marked stood while they were cut up, for each sword dance (what bursts out of them stays there as they are sent flying). */
+    private static final java.util.Map<XCharaClient.Dance,Vec3d> HELD=new java.util.WeakHashMap<>();
+    /** The one marked's feet: where they stand (held there), until everything bursts out of them; then where they stood. */
+    private static Vec3d feet(Fx c,XCharaClient.Dance d,float t){
+        var e=target(c);
+        if(t<finaleAt(d)&&e!=null){Vec3d at=e.getLerpedPos(c.delta);HELD.put(d,at);return at;}
+        Vec3d held=HELD.get(d);
+        return held!=null?held:e!=null?e.getLerpedPos(c.delta):d.targetFrom;
+    }
+    /** When everything bursts out of their whole body: as they are sent flying, or as they died under the blows. */
+    static float finaleAt(XCharaClient.Dance d){
+        return d.ended()&&d.how==dev.sangwoo.celestialfall.xchara.XCharaUltimate.END&&d.ended<LAUNCH?Math.max(VANISH,d.ended):LAUNCH;
+    }
+    /** The blows: their light ({@code light}) or their black (drawn after all the light). */
     private static void cuts(Fx c,XCharaClient.Dance d,EffectMesh m,float t,boolean light){
         if(!d.inSpace()||t<VANISH)return;
-        // called off, the cuts stop with it (those already made fade)
+        // called off, the blows stop with it (those already made fade), and nothing bursts out at the end
         float stop=d.stopped()?d.ended:Float.MAX_VALUE;
-        Vec3d mid=middle(c,d);int seed=(int)(d.cast.start()*31);
-        var frame=DanceBurst.frame(mid,c.camera);
-        // a violet glow about them while they are cut up
+        var e=target(c);double width=e!=null?e.getWidth():.6,height=e!=null?e.getHeight():1.8;
+        Vec3d feet=feet(c,d,t),mid=feet.add(0,height*.55,0);int seed=(int)(d.cast.start()*31);
+        // a purple glow about them while they are cut up
         if(light){
-            float on=Math.min(1,(t-VANISH)/2f)*(1-XCharaSpace.smooth((t-Math.min(LAUNCH,stop))/6f));
-            if(on>0){m.softDisc(frame.o(),4.6*DanceBurst.SCALE,0x8a18f0,.09f*on*frame.near());m.softDisc(frame.o(),7*DanceBurst.SCALE,0x4a0ca8,.06f*on*frame.near());}
+            float on=Math.min(1,(t-VANISH)/2f)*(1-XCharaSpace.smooth((t-Math.min(LAUNCH,stop))/6f))*DanceBurst.near(mid,c.camera);
+            if(on>0){m.softDisc(mid,2.4,0x8a18f0,.06f*on);m.softDisc(mid,3.6,0x4a0ca8,.04f*on);}
         }
         for(int k=0;k<HITS;k++){
             float at=blowAt(k),s=t-at;
             if(s<0||s>=DanceBurst.LIFE||at>stop)continue;
-            DanceBurst.draw(m,frame,k,seed,s,light,k==HITS-1);
+            var p=DanceBurst.pierce(k,seed,width,height);
+            if(light)DanceBurst.light(m,feet,p,k,seed,s,k==HITS-1,c.camera);
+            else DanceBurst.black(m,feet,p,k,seed,s,k==HITS-1,c.camera);
         }
+        float fin=finaleAt(d);
+        if(!d.stopped()&&t>=fin)DanceBurst.finale(m,mid,seed,t-fin,light,c.camera);
     }
     /** Sent flying: a burst where they stood and a violet trail after them as they go. */
     private static void flight(Fx c,XCharaClient.Dance d,EffectMesh m,float t){
