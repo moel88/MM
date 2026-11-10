@@ -36,12 +36,13 @@ public final class SwordDance implements Fx.Skill {
         var d=dance(c);if(d==null)return;float t=c.age;
         mark(c,d,m,t,false);
         if(space(d)){panels(d,m,t,false);knives(d,m,t,false);}
+        if(world(d,t))cuts(c,d,m,t,BODY);
     }
     @Override public void additive(Fx c,EffectMesh m){
         var d=dance(c);if(d==null)return;float t=c.age;
         mark(c,d,m,t,true);
         if(space(d)){panels(d,m,t,true);knives(d,m,t,true);}
-        if(world(d,t)){cuts(c,d,m,t,true);flight(c,d,m,t);}
+        if(world(d,t)){cuts(c,d,m,t,LIGHT);flight(c,d,m,t);}
     }
     /** The blows' black, over all their light (2.112.3: drawn before it, its glow turned it a dark purple): a batch of its own after the light, on the effect layer or not. */
     @Override public void shaders(Fx c){
@@ -49,7 +50,7 @@ public final class SwordDance implements Fx.Skill {
         if(!d.inSpace()||t<VANISH||t>=finaleAt(d)+DanceBurst.FINALE_LIFE)return;
         var buf=net.minecraft.client.render.Tessellator.getInstance().getBuffer();
         buf.begin(net.minecraft.client.render.VertexFormat.DrawMode.QUADS,net.minecraft.client.render.VertexFormats.POSITION_COLOR);
-        cuts(c,d,new EffectMesh(buf,c.matrix,c.camera),t,false);
+        cuts(c,d,new EffectMesh(buf,c.matrix,c.camera),t,BLACK);
         var built=buf.end();
         if(dev.sangwoo.celestialfall.client.KagenoRenderer.layering())dev.sangwoo.celestialfall.client.vfx.FxLayer.draw(built,false,1,.35f);
         else{
@@ -200,15 +201,17 @@ public final class SwordDance implements Fx.Skill {
     static float finaleAt(XCharaClient.Dance d){
         return d.ended()&&d.how==dev.sangwoo.celestialfall.xchara.XCharaUltimate.END&&d.ended<LAUNCH?Math.max(VANISH,d.ended):LAUNCH;
     }
-    /** The blows: their light ({@code light}) or their black (drawn after all the light). */
-    private static void cuts(Fx c,XCharaClient.Dance d,EffectMesh m,float t,boolean light){
+    /** The blows' three passes: their deep purple laid over the world (the blended pass), their light added on it, their black over all of it (after the light). */
+    static final int BODY=0,LIGHT=1,BLACK=2;
+    /** The blows, in one of their passes. */
+    private static void cuts(Fx c,XCharaClient.Dance d,EffectMesh m,float t,int pass){
         if(!d.inSpace()||t<VANISH)return;
         // called off, the blows stop with it (those already made fade), and nothing bursts out at the end
         float stop=d.stopped()?d.ended:Float.MAX_VALUE;
         var e=target(c);double width=e!=null?e.getWidth():.6,height=e!=null?e.getHeight():1.8;
         Vec3d feet=feet(c,d,t),mid=feet.add(0,height*.55,0);int seed=(int)(d.cast.start()*31);
         // a purple glow about them while they are cut up
-        if(light){
+        if(pass==LIGHT){
             float on=Math.min(1,(t-VANISH)/2f)*(1-XCharaSpace.smooth((t-Math.min(LAUNCH,stop))/6f))*DanceBurst.near(mid,c.camera);
             if(on>0){m.softDisc(mid,2.4,0x8a18f0,.06f*on);m.softDisc(mid,3.6,0x4a0ca8,.04f*on);}
         }
@@ -216,11 +219,13 @@ public final class SwordDance implements Fx.Skill {
             float at=blowAt(k),s=t-at;
             if(s<0||s>=DanceBurst.LIFE||at>stop)continue;
             var p=DanceBurst.pierce(k,seed,width,height);
-            if(light)DanceBurst.light(m,feet,p,k,seed,s,k==HITS-1,c.camera);
+            DanceBurst.cover(m,mid,k,seed,s,k==HITS-1,pass,c.camera);
+            if(pass==BODY)DanceBurst.body(m,feet,p,k,seed,s,k==HITS-1,c.camera);
+            else if(pass==LIGHT)DanceBurst.light(m,feet,p,k,seed,s,k==HITS-1,c.camera);
             else DanceBurst.black(m,feet,p,k,seed,s,k==HITS-1,c.camera);
         }
         float fin=finaleAt(d);
-        if(!d.stopped()&&t>=fin)DanceBurst.finale(m,mid,seed,t-fin,light,c.camera);
+        if(!d.stopped()&&t>=fin)DanceBurst.finale(m,mid,seed,t-fin,pass,c.camera);
     }
     /** Sent flying: a burst where they stood and a violet trail after them as they go. */
     private static void flight(Fx c,XCharaClient.Dance d,EffectMesh m,float t){

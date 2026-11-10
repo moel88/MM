@@ -10,8 +10,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * X Chara's G's blows in the world (2.112.4, user request: "그냥 꽃 모양은 포기하고 너가 창작해줄 수 없음? 수 많은 검이
  * 박혀서 몸에서 이펙트가 터지는거", then "검이 날아오면 안돼" and "꽂혀도 안돼 그냥 이펙트만 터지게"): no flower and no sword,
  * only light bursting out of the one marked's body where an unseen blade goes through it, the blades from all round them;
- * each eruption from their skin out along the blade's way, small (2.112.2's flowers were too big) and soon gone; at the
- * end everything out of their whole body, bigger; the user's glowing purple, glowing white and black.
+ * each eruption from their skin out along the blade's way and soon gone; at the end everything out of their whole body,
+ * bigger. 2.112.5 ("이펙트 크게 만들어주고 보라색을 더 진하게 만들어봐"): half again as big as 2.112.4's, a deep purple with
+ * white only in thin cores and flashes, and black.
  */
 class DanceBurstTest {
     /** A player's body, and where they stand. */
@@ -54,7 +55,7 @@ class DanceBurstTest {
     }
     @Test void itBurstsOutOfTheirBodyAlongTheBladesWaySmallAndIsSoonGone(){
         for(int k=0;k<HITS;k++){
-            boolean last=k==HITS-1;double big=last?DanceBurst.LAST:1;
+            boolean last=k==HITS-1;double big=DanceBurst.big(last);
             var p=DanceBurst.pierce(k,SEED,W,H);Vec3d out=FEET.add(p.out());
             boolean seen=false,thorn=false;
             for(float s=0;s<DanceBurst.LIFE+1;s+=1/6f){
@@ -64,7 +65,7 @@ class DanceBurstTest {
                     assertTrue(sp.a().distanceTo(out)<.06,"from their skin");
                     Vec3d d=sp.b().subtract(sp.a()).normalize();
                     assertTrue(d.dotProduct(p.way())>Math.cos(Math.toRadians(42)),"out of them along its way: "+Math.toDegrees(Math.acos(d.dotProduct(p.way())))+" degrees off");
-                    assertTrue(sp.b().distanceTo(out)<2.7*big,"not as big as 2.112.2's flowers (some six blocks either way): "+sp.b().distanceTo(out));
+                    assertTrue(sp.b().distanceTo(out)<2.7*big,"some one and a half to four blocks: "+sp.b().distanceTo(out));
                     assertTrue(s<DanceBurst.SPIKE_LIFE);
                 }
                 for(boolean drop:new boolean[]{false,true})for(int j=0;j<(drop?DanceBurst.DROPS:DanceBurst.SPARKS);j++){
@@ -103,23 +104,69 @@ class DanceBurstTest {
             Vec3d d=sp.b().subtract(c);az[j]=Math.atan2(d.z,d.x);
             assertNull(DanceBurst.finaleSpike(c,j,SEED,DanceBurst.SPIKE_LIFE),"gone in its time");
         }
-        assertTrue(farthest>2.2&&farthest<4.8,"bigger than a blow's, still not as 2.112.2's flowers: "+farthest);
+        assertTrue(farthest>3&&farthest<6.5,"bigger than a blow's: "+farthest);
         assertTrue(thorns>=4&&thorns<DanceBurst.FINALE_SPIKES/2,"black thorns among them: "+thorns);
         Arrays.sort(az);double gap=az[0]+2*Math.PI-az[az.length-1];
         for(int j=1;j<az.length;j++)gap=Math.max(gap,az[j]-az[j-1]);
         assertTrue(Math.toDegrees(gap)<100,"all round them: a gap of "+Math.toDegrees(gap));
         assertTrue(DanceBurst.FINALE_LIFE<(END+60-LAUNCH),"over before the cast stops drawing");
     }
-    @Test void itsColoursAreTheUsersGlowingPurpleGlowingWhiteAndBlack(){
-        // 2.112.3's (the user's "빛나는 보라 빛나는 흰색 검정")
-        for(int rgb:new int[]{DanceBurst.GLOW,DanceBurst.VIOLET}){
+    @Test void eachBlowCoversThemAndTheyStayCoveredWhileCutUp(){
+        // 2.112.5: "이펙트가 커서 캐릭터가 덮일정도로"
+        Vec3d mid=FEET.add(0,H*.55,0),cam=mid.add(-6,1.6,-8);
+        Vec3d at=DanceBurst.coverAt(mid,cam);
+        assertEquals(DanceBurst.COVER_FRONT,at.distanceTo(mid),1e-9);
+        assertTrue(at.distanceTo(cam)<mid.distanceTo(cam)-.7,"over them, toward the camera (in front of their body)");
+        assertTrue(DanceBurst.COVER>=Math.max(H*.55,H*.45)+.5,"its haze over their whole body, feet to head");
+        // the blows ten a second, the haze of one still there as the next comes
+        for(float t=blowAt(0)+.5f;t<blowAt(HITS-1);t+=.25f){
+            float sum=0;for(int k=0;k<HITS;k++)sum+=DanceBurst.coverHaze(t-blowAt(k));
+            assertTrue(sum>.6f,"covered at "+t+": "+sum);
+        }
+        assertEquals(0,DanceBurst.coverHaze(DanceBurst.COVER_LIFE),1e-9);
+        // its spikes across the frame, reaching out some four blocks
+        double far=0;
+        for(int k=0;k<HITS-1;k++)for(int j=0;j<DanceBurst.COVER_SPIKES;j++){
+            var sp=DanceBurst.coverSpike(at,cam,k,j,SEED,2,1);if(sp==null)continue;
+            Vec3d d=sp.b().subtract(sp.a()).normalize();
+            assertEquals(0,d.dotProduct(cam.subtract(at).normalize()),1e-9,"across the frame");
+            far=Math.max(far,sp.b().distanceTo(at));
+            assertTrue(sp.b().distanceTo(at)<DanceBurst.COVER_SPIKE+.4);
+            assertEquals(j<DanceBurst.COVER_THORNS,sp.rgb()==DanceBurst.INK,"its first spikes black thorns");
+        }
+        assertTrue(far>3.5,"some four blocks: "+far);
+        // and it thins to nothing in their own first person (the camera in their head)
+        assertEquals(0,DanceBurst.near(mid,mid.add(0,.1,0)),1e-9);
+    }
+    @Test void itIsBiggerThan2_112_4sAndADeepPurple(){
+        // half again as big ("이펙트 크게"), its spikes reaching some four blocks
+        assertEquals(1.5,DanceBurst.SIZE,1e-9);
+        double far=0;
+        for(int k=0;k<HITS-1;k++){
+            var p=DanceBurst.pierce(k,SEED,W,H);Vec3d out=FEET.add(p.out());
+            for(int j=DanceBurst.THORNS;j<DanceBurst.SPIKES;j++){var sp=DanceBurst.spike(out,p.way(),k,j,SEED,2,DanceBurst.big(false));if(sp!=null)far=Math.max(far,sp.b().distanceTo(out));}
+        }
+        assertTrue(far>3.5,"its longest spikes some four blocks: "+far);
+        // a deep purple ("보라색을 더 진하게"): purple (more blue than red, little green, violet to magenta), dark, still vivid
+        for(int rgb:new int[]{DanceBurst.DEEP,DanceBurst.PURPLE,DanceBurst.GLOW,DanceBurst.SPARK}){
             int r=rgb>>16&255,g=rgb>>8&255,b=rgb&255;
             assertTrue(b>r&&r>g&&g<r/2.0,"purple: "+Integer.toHexString(rgb));
             double hue=240+60.0*(r-g)/(b-g);
             assertTrue(hue>265&&hue<290,"violet to magenta: "+Integer.toHexString(rgb)+" "+hue);
-            assertTrue(b>=0xd0,"glowing, not dark: "+Integer.toHexString(rgb));
+            assertTrue(b>=0xb0,"vivid: "+Integer.toHexString(rgb));
         }
-        assertTrue(luma(DanceBurst.HOT)>luma(DanceBurst.VIOLET)&&luma(DanceBurst.VIOLET)>luma(DanceBurst.GLOW),"a hot light violet");
+        for(int rgb:new int[]{DanceBurst.DEEP,DanceBurst.PURPLE,DanceBurst.GLOW})assertTrue(luma(rgb)<70,"deep: "+Integer.toHexString(rgb));
+        assertTrue(luma(DanceBurst.DEEP)<luma(DanceBurst.PURPLE),"a deeper and a brighter purple");
+        // the white only in thin cores (some spikes, none of the thorns), and the black
+        int cores=0,spikes=0;
+        var p=DanceBurst.pierce(5,SEED,W,H);
+        for(int j=0;j<DanceBurst.SPIKES;j++){
+            var sp=DanceBurst.spike(FEET.add(p.out()),p.way(),5,j,SEED,2,1);if(sp==null)continue;
+            if(sp.rgb()==DanceBurst.INK){assertFalse(sp.core(),"no white down a thorn");continue;}
+            spikes++;if(sp.core())cores++;
+            assertTrue(sp.rgb()==DanceBurst.DEEP||sp.rgb()==DanceBurst.PURPLE,"its spikes purple, not white: "+Integer.toHexString(sp.rgb()));
+        }
+        assertTrue(cores>0&&cores<=spikes/2+1,"white cores down some: "+cores+" of "+spikes);
         assertEquals(0xffffff,DanceBurst.WHITE);
         assertTrue(luma(DanceBurst.INK)<12,"black: "+Integer.toHexString(DanceBurst.INK));
     }
