@@ -13,7 +13,7 @@ package dev.sangwoo.celestialfall.xchara;
  * <li>{@link #DELETE} (삭제): the finisher. A wind-up, then two great diagonal cuts crossing in an X in front of them;
  * the second sends whom it strikes flying ({@link #FLY}), and no guard takes either.</li>
  * </ol>
- * 28 in all, as Kageno's four (6, 3 + 3, 2 + 2 + 2, 4 + 6). Every blow staggers whom it strikes as any basic attack's
+ * 28 in all (6, 3 + 3, 2 + 2 + 2, 4 + 6: about Lee So-sang's four, 29). Every blow staggers whom it strikes as any basic attack's
  * does (Stagger.xchara), until the next could land at full speed. Each hit goes the way its user faced as it began and
  * holds them where they stand for {@link #HOLD} ticks. Pure timing and reach, shared by the server and the clients; ticks
  * of 1/20 s.
