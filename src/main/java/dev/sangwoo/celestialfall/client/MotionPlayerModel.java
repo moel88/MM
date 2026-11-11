@@ -93,6 +93,9 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             // punching and guarding keep the rig's arms)
             arms="xchara";
             rightArm.pitch=-.33f+rightArm.pitch*.25f;rightArm.yaw=-.06f;rightArm.roll=.04f;rightArm.getChild("elbow").pitch=-.12f;
+            // (2.115.0) their hack (Q): the other arm up, its forearm level, holding the panel over its palm (HackPose)
+            boolean leftFree=player.getMainArm()==net.minecraft.util.Arm.RIGHT;
+            dev.sangwoo.celestialfall.client.xchara.HackPose.apply(leftFree?leftArm:rightArm,leftFree,dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),animationProgress-player.age),animationProgress);
         }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
         float delta=animationProgress-player.age;

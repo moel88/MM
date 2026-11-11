@@ -86,6 +86,8 @@ public final class XCharaClient {
     /** When each player's G is ready again (the server's world time), as told. */
     private static final Map<UUID,Long> READY=new HashMap<>();
     private static Object world;
+    /** Whether Q is down from a press this client took for the hack (its repeats and its release are taken too). */
+    private static boolean qHeld;
     private XCharaClient(){}
 
     public static void initialize(){
@@ -183,7 +185,20 @@ public final class XCharaClient {
     /** G on the map is X Chara's player's sword dance: asked with the one the camera's middle looks at (or none: the server then takes the one its look meets). */
     public static boolean key(long window,int key,int action,int modifiers){
         var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
+        // (2.115.0) Q let go after a press this took
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Q&&action==org.lwjgl.glfw.GLFW.GLFW_RELEASE&&qHeld){qHeld=false;return true;}
         if(mc.currentScreen!=null||!MapClient.enabled()||mc.player==null||!StandManager.xChara(mc.player))return false;
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Q){
+            // (2.115.0) Q on the map is X Chara's player's hack, on and off (XCharaHack; Ctrl+Q still drops the stack, as the
+            // game has it, and Q alone drops nothing: Star Platinum's Q the same)
+            if(qHeld)return true;
+            if(action!=org.lwjgl.glfw.GLFW.GLFW_PRESS||(modifiers&org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL)!=0)return false;
+            qHeld=true;
+            if(CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                var b=PacketByteBufs.create();b.writeByte(Q);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+            }
+            return true;
+        }
         if(key!=org.lwjgl.glfw.GLFW.GLFW_KEY_G)return false;
         if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
             var target=aim(mc);

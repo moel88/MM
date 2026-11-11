@@ -545,7 +545,23 @@ public final class MpClient implements ClientModInitializer {
         "600 DIST6","605 HEAL","610 M1+","654 M1-",
         "720 DIST3","725 HEAL","740 M1+","758 GUARD+","784 M1-","800 GUARD-",
         "880 END"};
-    private static final String[] STEPS=ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * X Chara's Q, the hack (2.115.0, MP_ONLY=xcharaq): the caster takes X Chara. Q: on. Q: off. Q twice within 8 ticks:
+     * on once (the second is not heard). The whole combo into the watcher 3 blocks ahead with it on (its damage as ever:
+     * 6, 3 + 3, 2 + 2 + 2, 4 + 6). Another stand: off by itself; X Chara again: still off until Q. Slain with it on: off,
+     * and the new body comes back without it; Q on the new body: on. Both clients log each player's hack as they see it
+     * change (and whether the panel is drawn in their other hand) and the sounds they start for it; the server the
+     * caster's hack as it changes (with why it may or may not be on), and the combo as for xcharam1.
+     */
+    private static final String[] XCHARAQ_SCRIPT={
+        "5 XCHARA","8 NOCDOFF","40 DIST3","45 HEAL",
+        "60 Q","100 Q",
+        "140 Q","143 Q",
+        "175 HEAL","180 M1+","224 M1-",
+        "300 STAND","330 XCHARA","360 Q",
+        "400 SLAIN","560 Q",
+        "620 END"};
+    private static final String[] STEPS=ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -672,6 +688,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("death"))deathWatch();
                 if(ONLY.equals("xchara"))xcharaWatch();
                 if(ONLY.equals("xcharam1"))knifeWatch();
+                if(ONLY.equals("xcharaq")){knifeWatch();hackWatch();}
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -693,7 +710,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1401,6 +1418,26 @@ public final class MpClient implements ClientModInitializer {
         if(hits!=knifeHits){knifeHits=hits;note("my hit count "+hits);}
         boolean locked=dev.sangwoo.celestialfall.client.CombatClient.actionLocked();
         flag("action_locked",locked);
+    }
+    /** (2.115.0) X Chara's hack as this client has it: each player's state last logged, the sounds logged so far. */
+    private final Map<UUID,String> hackState=new HashMap<>();private int hackHeard;
+    /**
+     * X Chara's hack as this client sees it (2.115.0, MP_ONLY=xcharaq): each player's as it changes here (on or off, and
+     * whether the panel is drawn in their other hand), and every sound this client started for it.
+     */
+    private void hackWatch(){
+        for(var p:mc.world.getPlayers()){
+            String desc=dev.sangwoo.celestialfall.client.xchara.HackMode.describe(p,0);
+            boolean panel=dev.sangwoo.celestialfall.client.xchara.HackMode.panel(p)!=null,lit=dev.sangwoo.celestialfall.client.xchara.HackMode.look(p.getUuid(),0)!=null;
+            String key=(desc==null?"none":desc.substring(0,desc.indexOf(',')))+"/"+panel+"/"+lit;
+            if(!key.equals(hackState.get(p.getUuid()))){
+                hackState.put(p.getUuid(),key);
+                note(String.format(Locale.ROOT,"%s's hack here: %s (its look drawn %s, the panel in their other hand %s, their body %d)",name(p.getUuid()),desc==null?"not known":desc.startsWith("1")?"on":"off",lit,panel,p.getId()));
+            }
+        }
+        var heard=dev.sangwoo.celestialfall.client.xchara.HackMode.HEARD;
+        if(heard.size()<hackHeard)hackHeard=0;
+        for(;hackHeard<heard.size();hackHeard++)note("  hack sound: "+heard.get(hackHeard));
     }
     private void xcharaWatch(){
         for(var p:mc.world.getPlayers()){

@@ -9,10 +9,13 @@ import net.minecraft.registry.Registry;
  * a character who fights in person with their knife (the user's answer: their player holds it, as Kageno and Lee So-sang
  * hold their swords), given by the admin command for now (/botand progress stand <targets> x_chara). Their knife
  * (2.111.0), their G, the sword dance (2.112.0, XCharaUltimate), and their basic attack, the knife's four hits (2.114.0,
- * XCharaAttack); their other skills come as the user gives them.
+ * XCharaAttack), and their Q, the hack (2.115.0, XCharaHack: their knife lit and a panel in their other hand, which
+ * {@link #PANEL} is drawn as); their other skills come as the user gives them.
  */
 public final class XChara {
     public static final XCharaKnifeItem KNIFE=new XCharaKnifeItem();
+    /** The hack's panel (2.115.0): drawn in the other hand of X Chara's player while their hack is on (StandClient.panel); nobody has it in an inventory, and it does nothing of itself. */
+    public static final net.minecraft.item.Item PANEL=new net.minecraft.item.Item(new net.minecraft.item.Item.Settings().maxCount(1).rarity(net.minecraft.util.Rarity.EPIC).fireproof());
     private XChara(){}
-    public static void initialize(){Registry.register(Registries.ITEM,CelestialFall.id("x_chara_knife"),KNIFE);XCharaUltimate.initialize();XCharaAttack.initialize();}
+    public static void initialize(){Registry.register(Registries.ITEM,CelestialFall.id("x_chara_knife"),KNIFE);Registry.register(Registries.ITEM,CelestialFall.id("x_chara_panel"),PANEL);XCharaUltimate.initialize();XCharaAttack.initialize();XCharaHack.initialize();}
 }

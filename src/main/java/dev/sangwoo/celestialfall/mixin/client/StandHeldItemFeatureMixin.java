@@ -44,7 +44,16 @@ public abstract class StandHeldItemFeatureMixin {
             dev.sangwoo.celestialfall.client.isosang.IsosangSheath.recording(holder.getUuid());
             return;
         }
+        if(entity instanceof PlayerEntity holder&&dev.sangwoo.celestialfall.client.xchara.HackMode.isPanel(stack)){
+            // (2.115.0) X Chara's hack's panel in their other hand: its look for this draw, its place in the world kept (HackFx)
+            dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=dev.sangwoo.celestialfall.client.xchara.HackMode.look(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            dev.sangwoo.celestialfall.client.xchara.HackMode.recording(holder.getUuid());
+            return;
+        }
         if(entity instanceof PlayerEntity holder&&arm==holder.getMainArm()&&!StandClient.visible(holder)&&StandClient.xChara(holder)){
+            // (2.115.0) lit white within its purple rim while their hack is on (Q): for this draw only (botand$drawn puts it back)
+            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            dev.sangwoo.celestialfall.client.xchara.HackMode.recording(holder.getUuid());
             // X Chara's knife (2.114.0): turned in the hand as a hit drives it, about the middle of its rod (where the fist
             // holds it: its display puts the model's middle there); its display already turns it KnifeCombo.DISPLAY_TILT
             var swing=dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(holder.getUuid());
@@ -73,6 +82,8 @@ public abstract class StandHeldItemFeatureMixin {
     private void botand$drawn(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
         dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=0;
         dev.sangwoo.celestialfall.client.isosang.IsosangSheath.recording(null);
+        dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;
+        dev.sangwoo.celestialfall.client.xchara.HackMode.recording(null);
     }
     @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",
         at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;getMainHandStack()Lnet/minecraft/item/ItemStack;"))
@@ -81,5 +92,12 @@ public abstract class StandHeldItemFeatureMixin {
         // (2.105.0) Lee So-sang's hand is empty while her sword is away (StandClient.sword gives EMPTY)
         var sword=entity instanceof PlayerEntity player?StandClient.sword(player):null;
         return sword!=null&&!(entity instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder))?sword:entity.getMainHandStack();
+    }
+    /** (2.115.0) X Chara's hack's panel in their other hand, whatever that hand holds: only what is drawn. */
+    @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",
+        at=@At(value="INVOKE",target="Lnet/minecraft/entity/LivingEntity;getOffHandStack()Lnet/minecraft/item/ItemStack;"))
+    private ItemStack botand$hackPanel(LivingEntity entity){
+        var panel=entity instanceof PlayerEntity player?dev.sangwoo.celestialfall.client.xchara.HackMode.panel(player):null;
+        return panel!=null?panel:entity.getOffHandStack();
     }
 }

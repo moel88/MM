@@ -23,6 +23,12 @@ public final class XCharaRules {
     public static final int SKILL=14;
     /** The press asks for G (xchara_skill_v1's first byte). */
     public static final int G=1;
+    /** (2.115.0) The press asks for Q, the hack on or off (xchara_skill_v1's only byte then; XCharaHack). */
+    public static final int Q=2;
+    /** Server ticks from one Q heard to the next (a double tap cannot make it flicker; its coming and going are done in less: client/xchara/HackLook). */
+    public static final int HACK_RATE=8;
+    /** The hack after a Q: on if it was off and its user may have it on, off if it was on. */
+    public static boolean hackAfter(boolean on,boolean may){return !on&&may;}
 
     /** The "!!!" over the one marked from this tick (the video's 0.6 s), until the strange space at WARN (its 1.35 s). */
     public static final int MARK=3,WARN=18;

@@ -58,4 +58,13 @@ class XCharaRulesTest {
         assertTrue(x>12&&x<40,"thrown "+x+" blocks");
         assertTrue(top>1.5,"up "+top+" blocks");
     }
+    /** (2.115.0) Q, the hack: its own byte of the skill packet; on only for one who may have it, off from on whoever they are; a double tap is not heard twice. */
+    @Test void qTurnsTheHackOnAndOff(){
+        assertNotEquals(XCharaRules.G,XCharaRules.Q);
+        assertTrue(XCharaRules.hackAfter(false,true),"off, and they may: on");
+        assertFalse(XCharaRules.hackAfter(false,false),"off, and they may not: off still");
+        assertFalse(XCharaRules.hackAfter(true,true),"on: off");
+        assertFalse(XCharaRules.hackAfter(true,false),"on: off, whatever they may");
+        assertTrue(XCharaRules.HACK_RATE>=6&&XCharaRules.HACK_RATE<=10,"a double tap within some 0.4 s is one press");
+    }
 }

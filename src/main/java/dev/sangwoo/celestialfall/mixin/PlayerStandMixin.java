@@ -13,7 +13,8 @@ public abstract class PlayerStandMixin implements StandHolder,dev.sangwoo.celest
     /**
      * Whether the stand is out (bit 0) and whether its user called it so (bit 1: Q, 2.72.0, for the sound of it), one value
      * so the two come together; and (bit 2, 2.110.0) whether the player plays as plain Minecraft (VanillaMode), kept as the
-     * stand's bits change.
+     * stand's bits change; and (bit 3, 2.115.0) whether X Chara's hack is on (XCharaHack), kept the same way. A client that
+     * does not know a bit passes it by.
      */
     @Unique private static final TrackedData<Byte> BOTAND_STAND_OUT=DataTracker.registerData(PlayerEntity.class,TrackedDataHandlerRegistry.BYTE);
     @Inject(method="initDataTracker",at=@At("TAIL"))
@@ -24,12 +25,19 @@ public abstract class PlayerStandMixin implements StandHolder,dev.sangwoo.celest
     @Override public void botand$setStand(String stand){((PlayerEntity)(Object)this).getDataTracker().set(BOTAND_STAND,stand);}
     @Override public boolean botand$isStandOut(){return (((PlayerEntity)(Object)this).getDataTracker().get(BOTAND_STAND_OUT)&1)!=0;}
     @Override public boolean botand$standCalled(){return (((PlayerEntity)(Object)this).getDataTracker().get(BOTAND_STAND_OUT)&2)!=0;}
-    @Override public void botand$setStandOut(boolean out){((PlayerEntity)(Object)this).getDataTracker().set(BOTAND_STAND_OUT,(byte)((out?1:0)|vanillaBit()));}
-    @Override public void botand$callStand(boolean out){((PlayerEntity)(Object)this).getDataTracker().set(BOTAND_STAND_OUT,(byte)((out?3:2)|vanillaBit()));}
+    @Override public void botand$setStandOut(boolean out){((PlayerEntity)(Object)this).getDataTracker().set(BOTAND_STAND_OUT,(byte)((out?1:0)|kept()));}
+    @Override public void botand$callStand(boolean out){((PlayerEntity)(Object)this).getDataTracker().set(BOTAND_STAND_OUT,(byte)((out?3:2)|kept()));}
     @Override public boolean botand$isVanilla(){return vanillaBit()!=0;}
     @Override public void botand$setVanilla(boolean on){
         var tracker=((PlayerEntity)(Object)this).getDataTracker();int b=tracker.get(BOTAND_STAND_OUT);
         tracker.set(BOTAND_STAND_OUT,(byte)(on?b|4:b&~4));
     }
+    @Override public boolean botand$isHacking(){return (((PlayerEntity)(Object)this).getDataTracker().get(BOTAND_STAND_OUT)&8)!=0;}
+    @Override public void botand$setHacking(boolean on){
+        var tracker=((PlayerEntity)(Object)this).getDataTracker();int b=tracker.get(BOTAND_STAND_OUT);
+        tracker.set(BOTAND_STAND_OUT,(byte)(on?b|8:b&~8));
+    }
     @Unique private int vanillaBit(){return ((PlayerEntity)(Object)this).getDataTracker().get(BOTAND_STAND_OUT)&4;}
+    /** The bits that are not the stand's own (the vanilla mode's, the hack's), kept as the stand's change. */
+    @Unique private int kept(){return ((PlayerEntity)(Object)this).getDataTracker().get(BOTAND_STAND_OUT)&12;}
 }

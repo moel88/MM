@@ -12,4 +12,7 @@ public interface StandHolder {
     void botand$setStandOut(boolean out);
     /** Out or in at its user's call (Q): every client in sight hears it come out or go back (client/stand/StandCall). */
     void botand$callStand(boolean out);
+    /** Whether X Chara's hack is on (their Q, 2.115.0, XCharaHack): every player in sight sees their knife lit and the panel in their other hand. */
+    boolean botand$isHacking();
+    void botand$setHacking(boolean on);
 }

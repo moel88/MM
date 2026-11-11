@@ -1155,5 +1155,23 @@
         "preload": true
       }
     ]
+  },
+  "xchara_q_on": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_q_on",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_q_off": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_q_off",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

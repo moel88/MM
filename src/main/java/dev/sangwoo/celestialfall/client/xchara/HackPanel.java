@@ -1,0 +1,182 @@
+package dev.sangwoo.celestialfall.client.xchara;
+
+import dev.sangwoo.celestialfall.client.StandClient;
+import dev.sangwoo.celestialfall.xchara.XChara;
+import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.RotationAxis;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+import static dev.sangwoo.celestialfall.client.xchara.HackLook.*;
+
+/**
+ * The hacking panel in X Chara's other hand while their hack is on (2.115.0, user request: "다른 손에는 해킹 패널이 생겨",
+ * and the user's video: a dark flat slab within a glowing purple rim at their other hand, purple writing on it), drawn as
+ * the item in that hand (XChara.PANEL through HackMode.panel: so a hand in the world and one's own eyes both have it).
+ * <p>
+ * A thin slab, dark on its faces and purple on its sides, a rim of light round its face and a soft glow past it; on its
+ * face (what the video is too small to show, so the hacker's console): a title bar, a line filling as each line is
+ * typed, rows of writing typed a character at a time and moved up as each is done (HackLook: every moment a function
+ * of the clock), a cursor, two rows of keys lit as each character is struck, a faint line of light sweeping down it.
+ * In a hand in the world it floats over the palm, out to the side past the hand (the video: it reaches out from the
+ * hand), its far edge raised so that its face is turned up to its holder (and to the camera behind them), bobbing a
+ * little. From one's own eyes it lies low on the off hand's side, leaning back to face them. It opens from a line of
+ * light and folds back to one (HackLook.wide, deep, content, line).
+ */
+public final class HackPanel {
+    private HackPanel(){}
+    /** The hack it is drawn for: set by whoever draws it in a hand, for that one draw. */
+    public static HackLook.Frame frame;
+    /** Its width, its depth and its thickness (blocks). */
+    static final float W=.74f,D=.46f,T=.028f;
+    static final int SLAB=0x140a22,UNDER=0x0b0514,RIM=0xa635ff,HOT=0xe6c8ff,GLOW=0x8a14e8,TEXT=0xd4a6ff,KEY=0x7426cc,WHITE=0xffffff;
+    /** How far it floats out past the hand, over the palm and beyond the hand (blocks, in the hand's frame), and how it is turned there (degrees). */
+    static final float OUT=.30f,OVER=.16f,BEYOND=.06f,TURN=12,TILT=32;
+
+    public static void initialize(){BuiltinItemRendererRegistry.INSTANCE.register(XChara.PANEL,HackPanel::render);}
+    /** Whether anything of it is drawn for this hack (it is folded away a little before the rest of the hack is gone). */
+    static boolean shown(HackLook.Frame f){return f.on()||f.t()<.25f;}
+
+    private static void render(ItemStack stack,ModelTransformationMode mode,MatrixStack m,VertexConsumerProvider buffers,int light,int overlay){
+        boolean held=mode==ModelTransformationMode.THIRD_PERSON_LEFT_HAND||mode==ModelTransformationMode.THIRD_PERSON_RIGHT_HAND;
+        boolean eyes=mode==ModelTransformationMode.FIRST_PERSON_LEFT_HAND||mode==ModelTransformationMode.FIRST_PERSON_RIGHT_HAND;
+        var f=frame;
+        if(f==null){
+            // not in a hacking hand (nobody has it: a creative tab, a command): as it is, steady
+            if(held||eyes)return;
+            f=new HackLook.Frame(true,99,StandClient.ticks()/20f,0);
+        }
+        if(!shown(f))return;
+        boolean left=mode==ModelTransformationMode.THIRD_PERSON_LEFT_HAND||mode==ModelTransformationMode.FIRST_PERSON_LEFT_HAND;
+        m.push();m.translate(.5f,.5f,.5f);
+        if(held)inHand(m,left,f.clock());else if(eyes)inView(m,left);
+        else{m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));m.scale(1.2f,1.2f,1.2f);}
+        // (its coming on: it jumps a little sideways as it breaks in)
+        if(f.on()&&f.t()<.25f)m.translate((hash((int)Math.floor(f.t()*40),f.seed(),3)-.5f)*.05f*(1-smooth(f.t(),0,.25f)),0,0);
+        draw(m,buffers,f);
+        if(held)HackMode.recordPanel(m,W*.5f,D*.5f);
+        m.pop();
+    }
+    /**
+     * Into its place in a hand in the world, from the held item's frame there (its x across the arm, towards its
+     * holder's right; its y off the front of the arm, up from the palm of a forearm held level; its z back up the arm):
+     * out to the side past the hand, over the palm, a little beyond the hand; its outer end swung forward a little, its
+     * far edge raised.
+     */
+    static void inHand(MatrixStack m,boolean left,float clock){
+        float side=left?-1:1;
+        m.translate(side*OUT,OVER+.012f*(float)Math.sin(clock*3.1f),-BEYOND);
+        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side*TURN));
+        m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(TILT));
+        m.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(1.5f*(float)Math.sin(clock*2.3f)));
+    }
+    /** Into its place before one's own eyes, from the off hand's item's frame there (the view's: x right, y up, z towards the eyes): leaning back to face them, turned a little to the middle. */
+    static void inView(MatrixStack m,boolean left){
+        float side=left?-1:1;
+        m.translate(side*-.04f,.2f,-.06f);
+        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side*-14));
+        m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(54));
+        m.scale(.6f,.6f,.6f);
+    }
+
+    /** The panel about its middle: its width along x, its depth along z (its far edge at -z, the top of what is on it), its face up y. */
+    static void draw(MatrixStack m,VertexConsumerProvider buffers,HackLook.Frame f){
+        float wide=f.wide(),deep=f.deep(),hw=W*.5f*wide,hd=D*.5f*deep;
+        if(hw<=.003f)return;
+        var e=m.peek();Matrix4f pm=e.getPositionMatrix();Matrix3f nm=e.getNormalMatrix();
+        float clock=f.clock(),breath=.86f+.14f*(float)Math.sin(clock*3.8f),steady=f.on()?1:1-smooth(f.t(),.02f,.2f);
+        // the slab: dark faces, purple sides
+        VertexConsumer s=buffers.getBuffer(HackKnife.solid());
+        flat(s,pm,nm,-hw,-hd,hw,hd,0,SLAB,1);flat(s,pm,nm,-hw,-hd,hw,hd,-T,UNDER,1);
+        side(s,pm,nm,-hw,-hd,hw,-hd,RIM);side(s,pm,nm,hw,-hd,hw,hd,RIM);side(s,pm,nm,hw,hd,-hw,hd,RIM);side(s,pm,nm,-hw,hd,-hw,-hd,RIM);
+        VertexConsumer v=buffers.getBuffer(HackKnife.glowing());
+        float y=.003f,b=.014f;
+        // the rim of light round its face (and, dimmer, under it), and the glow past its sides
+        for(int k=0;k<2;k++){
+            float at=k==0?y:-T-y,a=k==0?1:.7f;
+            flat(v,pm,nm,-hw,-hd,hw,-hd+b,at,RIM,a);flat(v,pm,nm,-hw,hd-b,hw,hd,at,RIM,a);
+            flat(v,pm,nm,-hw,-hd+b,-hw+b,hd-b,at,RIM,a);flat(v,pm,nm,hw-b,-hd+b,hw,hd-b,at,RIM,a);
+        }
+        // (from a hair off its sides: touching them, it showed as a dotted line along each)
+        float g=.1f,ga=.5f*breath*steady,mid=-T*.5f,o=.004f,ow=hw+o,od=hd+o;
+        fade(v,pm,nm,-ow,-od,ow,-od,ow+g,-od-g,-ow-g,-od-g,mid,ga);fade(v,pm,nm,ow,od,-ow,od,-ow-g,od+g,ow+g,od+g,mid,ga);
+        fade(v,pm,nm,ow,-od,ow,od,ow+g,od+g,ow+g,-od-g,mid,ga);fade(v,pm,nm,-ow,od,-ow,-od,-ow-g,-od-g,-ow-g,od+g,mid,ga);
+        // the line of light it opens from and closes to
+        float line=f.line();
+        if(line>.004f){
+            flat(v,pm,nm,-hw*1.06f,-.04f,hw*1.06f,.04f,y*2,GLOW,.3f*line);flat(v,pm,nm,-hw,-.01f,hw,.01f,y*3,HOT,.85f*line);
+        }
+        float c=f.content();
+        if(c>.004f)content(v,pm,nm,f,c,wide,deep,y*2);
+    }
+    /** What is on its face: every place given as on the open panel, moved in with it as it opens ({@code wide}, {@code deep}). */
+    private static void content(VertexConsumer v,Matrix4f pm,Matrix3f nm,HackLook.Frame f,float c,float wide,float deep,float y){
+        float clock=f.clock();int seed=f.seed();
+        int n=lineAt(clock);float into=clock-n*LINE_EVERY,scroll=scrolled(clock),typed=typed(clock,seed);
+        float hw=W*.5f,hd=D*.5f;
+        // the title bar: a name's block, three small squares (the last one blinking)
+        rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.028f,-hw+.25f,-hd+.066f,y,TEXT,.9f*c);
+        for(int k=0;k<3;k++){
+            float x=hw-.15f+k*.045f,a=k==2?(.35f+.65f*smooth((float)Math.sin(clock*5.5f),-.2f,.2f)):.8f;
+            rect(v,pm,nm,wide,deep,x,-hd+.034f,x+.028f,-hd+.062f,y,k==2?HOT:RIM,a*c);
+        }
+        // the line filling as the line of writing is typed
+        float done=Math.min(1,into/TYPE);
+        rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,hw-.03f,-hd+.084f,y,KEY,.6f*c);
+        rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,-hw+.03f+(W-.06f)*done,-hd+.084f,y,HOT,.9f*c);
+        // the rows of writing: the last being typed, all moved up a row as it is done
+        float top=-hd+.098f,pitch=.046f,cw=.0235f,high=.028f,x0=-hw+.035f;
+        for(int i=0;i<ROWS;i++){
+            int line=n-(ROWS-1-i);float z=top+(i-scroll)*pitch,a=(i==ROWS-1?.95f:.5f+.13f*i)*c;
+            if(i==0)a*=1-scroll;
+            int len=length(line,seed),upto=i==ROWS-1?(int)Math.floor(typed):len;
+            int from=-1;
+            for(int k=0;k<=upto;k++){
+                boolean ink=k<upto&&glyph(line,k,seed);
+                if(ink&&from<0)from=k;
+                else if(!ink&&from>=0){rect(v,pm,nm,wide,deep,x0+from*cw,z,x0+k*cw-.007f,z+high,y,TEXT,a);from=-1;}
+            }
+            if(i==ROWS-1){
+                // the cursor: there while it types, blinking once the line is done
+                float blink=into<TYPE?1:.2f+.8f*smooth((float)Math.sin(clock*20),-.3f,.3f),x=x0+Math.min(upto,len)*cw;
+                rect(v,pm,nm,wide,deep,x,z,x+cw*.8f,z+high,y,WHITE,.9f*blink*c*(1-scroll));
+            }
+        }
+        // its keys, lit as each character is struck
+        float kw=.052f,kh=.034f,gap=.0105f,kx=-(KEYS_ACROSS*kw+(KEYS_ACROSS-1)*gap)*.5f,kz=hd-.03f-KEYS_DOWN*kh-(KEYS_DOWN-1)*gap;
+        for(int r=0;r<KEYS_DOWN;r++)for(int k=0;k<KEYS_ACROSS;k++){
+            float lit=keyLit(r*KEYS_ACROSS+k,clock,seed),x=kx+k*(kw+gap),z=kz+r*(kh+gap);
+            rect(v,pm,nm,wide,deep,x,z,x+kw,z+kh,y,HackKnife.mix(KEY,WHITE,lit),(.55f+.45f*lit)*c);
+        }
+        // a faint line of light sweeping down it
+        float sweep=(clock/2.2f-(float)Math.floor(clock/2.2f))*2-1;
+        rect(v,pm,nm,wide,deep,-hw+.014f,sweep*hd-.012f,hw-.014f,sweep*hd+.012f,y,WHITE,.07f*c);
+    }
+    /** A rectangle on its face (given as on the open panel), kept within its rim. */
+    private static void rect(VertexConsumer v,Matrix4f pm,Matrix3f nm,float wide,float deep,float x0,float z0,float x1,float z1,float y,int rgb,float a){
+        float hd=D*.5f-.014f;
+        z0=Math.max(-hd,Math.min(hd,z0));z1=Math.max(-hd,Math.min(hd,z1));
+        if(a<=.003f||x1<=x0||z1<=z0)return;
+        flat(v,pm,nm,x0*wide,z0*deep,x1*wide,z1*deep,y,rgb,a);
+    }
+    /** A level rectangle at height {@code y} (both faces). */
+    private static void flat(VertexConsumer v,Matrix4f pm,Matrix3f nm,float x0,float z0,float x1,float z1,float y,int rgb,float a){
+        HackKnife.raw(v,pm,nm,x0,y,z0,rgb,a);HackKnife.raw(v,pm,nm,x0,y,z1,rgb,a);HackKnife.raw(v,pm,nm,x1,y,z1,rgb,a);HackKnife.raw(v,pm,nm,x1,y,z0,rgb,a);
+        HackKnife.raw(v,pm,nm,x1,y,z0,rgb,a);HackKnife.raw(v,pm,nm,x1,y,z1,rgb,a);HackKnife.raw(v,pm,nm,x0,y,z1,rgb,a);HackKnife.raw(v,pm,nm,x0,y,z0,rgb,a);
+    }
+    /** One of the slab's sides, from its face down to its underside (both faces). */
+    private static void side(VertexConsumer v,Matrix4f pm,Matrix3f nm,float x0,float z0,float x1,float z1,int rgb){
+        HackKnife.raw(v,pm,nm,x0,0,z0,rgb,1);HackKnife.raw(v,pm,nm,x1,0,z1,rgb,1);HackKnife.raw(v,pm,nm,x1,-T,z1,rgb,1);HackKnife.raw(v,pm,nm,x0,-T,z0,rgb,1);
+        HackKnife.raw(v,pm,nm,x0,-T,z0,rgb,1);HackKnife.raw(v,pm,nm,x1,-T,z1,rgb,1);HackKnife.raw(v,pm,nm,x1,0,z1,rgb,1);HackKnife.raw(v,pm,nm,x0,0,z0,rgb,1);
+    }
+    /** The glow past one of its sides: from the side (two points) out to two points further, dying away (both faces). */
+    private static void fade(VertexConsumer v,Matrix4f pm,Matrix3f nm,float ax,float az,float bx,float bz,float cx,float cz,float dx,float dz,float y,float a){
+        if(a<=.003f)return;
+        HackKnife.raw(v,pm,nm,ax,y,az,GLOW,a);HackKnife.raw(v,pm,nm,bx,y,bz,GLOW,a);HackKnife.raw(v,pm,nm,cx,y,cz,GLOW,0);HackKnife.raw(v,pm,nm,dx,y,dz,GLOW,0);
+        HackKnife.raw(v,pm,nm,dx,y,dz,GLOW,0);HackKnife.raw(v,pm,nm,cx,y,cz,GLOW,0);HackKnife.raw(v,pm,nm,bx,y,bz,GLOW,a);HackKnife.raw(v,pm,nm,ax,y,az,GLOW,a);
+    }
+}

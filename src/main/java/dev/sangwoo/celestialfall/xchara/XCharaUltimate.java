@@ -81,6 +81,8 @@ public final class XCharaUltimate {
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,player,handler,buf,response)->{
             if(buf.readableBytes()<1||buf.readableBytes()>8)return;
             int skill=buf.readUnsignedByte();int target=buf.readableBytes()>0?buf.readVarInt():-1;
+            // (2.115.0) Q: the hack on or off (XCharaHack)
+            if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
             if(skill!=G)return;
             server.execute(()->{if(heard(player))cast(player,target);});
         });

@@ -136,6 +136,7 @@ public final class MpServer implements ModInitializer {
         if(VANILLA_ONLY)vanillas(server);
         if(XCHARA_ONLY&&!XCHARAM1_ONLY)xchara(server);
         if(XCHARAM1_ONLY)knife(server);
+        if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -529,9 +530,24 @@ public final class MpServer implements ModInitializer {
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
-    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's basic attack's script (2.114.0, MP_ONLY=xcharam1): its cooldowns on and no healing, as for its G. */
-    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's Q's script (2.115.0, MP_ONLY=xcharaq): as for the basic attack, and the caster's hack as it changes. */
+    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"));
+    private String hackSeen="";
+    /** The caster's hack as the server has it, whenever it (or their body, or their stand) changes: with whether they may have it on and whether their Q is heard. */
+    private void hack(MinecraftServer server){
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        if(caster==null)return;
+        boolean on=dev.sangwoo.celestialfall.xchara.XCharaHack.on(caster);
+        String stand=dev.sangwoo.celestialfall.progression.ProgressManager.profile(caster).stand();
+        String key=on+"/"+caster.getId()+"/"+stand+"/"+caster.isAlive();
+        if(key.equals(hackSeen))return;
+        hackSeen=key;
+        note(server,String.format(java.util.Locale.ROOT,"caster's hack %s at %d (stand %s, alive %s, body %d; may have it on %s, held %s)",on?"ON":"off",server.getOverworld().getTime(),stand,caster.isAlive(),caster.getId(),
+            dev.sangwoo.celestialfall.xchara.XCharaHack.may(caster),caster.isAlive()&&dev.sangwoo.celestialfall.xchara.XCharaHack.held(caster)));
+    }
     private String knifeSeen="";private int knifeBlows;private float knifeHealth=-1;private net.minecraft.util.math.Vec3d knifeWatcherAt,knifeThrownFrom;private long knifeUntil,knifeReady=Long.MIN_VALUE,knifeThrown=-1;
     /**
      * X Chara's basic attack (2.114.0) as the server keeps it: each of the caster's hits as it begins (which, the way

@@ -84,7 +84,8 @@ class VanillaModeTest {
         assertTrue(calls(method(node(MODE),"on"),"dev/sangwoo/celestialfall/map/VanillaHolder","botand$isVanilla"),"a client reads the flag");
         var mixin=node("dev/sangwoo/celestialfall/mixin/PlayerStandMixin");
         assertTrue(mixin.interfaces.contains("dev/sangwoo/celestialfall/map/VanillaHolder"));
-        assertTrue(calls(method(mixin,"botand$setStandOut"),"dev/sangwoo/celestialfall/mixin/PlayerStandMixin","vanillaBit")&&calls(method(mixin,"botand$callStand"),"dev/sangwoo/celestialfall/mixin/PlayerStandMixin","vanillaBit"),"the stand's bits keep it");
+        // (2.115.0: with the hack's bit, both kept as the stand's bits change: PlayerStandMixin.kept)
+        assertTrue(calls(method(mixin,"botand$setStandOut"),"dev/sangwoo/celestialfall/mixin/PlayerStandMixin","kept")&&calls(method(mixin,"botand$callStand"),"dev/sangwoo/celestialfall/mixin/PlayerStandMixin","kept"),"the stand's bits keep it");
     }
     /** What it says, in both languages. */
     @Test void itSaysSo()throws Exception{

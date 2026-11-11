@@ -1,0 +1,4 @@
+{
+  "parent": "builtin/entity",
+  "textures": {"particle": "celestialfall:item/x_chara_knife"}
+}

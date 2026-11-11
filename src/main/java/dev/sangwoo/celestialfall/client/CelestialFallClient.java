@@ -53,6 +53,9 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.xchara.XCharaClient.initialize();
         // and their knife's four hits (2.114.0)
         dev.sangwoo.celestialfall.client.xchara.KnifeClient.initialize();
+        // and their Q, the hack (2.115.0): the knife lit, the panel in the other hand
+        dev.sangwoo.celestialfall.client.xchara.HackMode.initialize();
+        dev.sangwoo.celestialfall.client.xchara.HackPanel.initialize();
         CooldownHud.initialize();
         // (2.108.0) after the cooldown list: its hit count is drawn over the list's boxes
         HitCounterHud.initialize();

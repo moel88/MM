@@ -68,8 +68,18 @@ public abstract class HeldItemRendererMixin {
         if(dev.sangwoo.celestialfall.client.StandClient.xChara(player)&&!player.isUsingItem()){
             // X Chara's knife (2.111.0), as the game holds an item (its swing, the off hand as it is)
             float swing=player.getHandSwingProgress(delta);
+            // (2.115.0) their hack (Q): the knife lit white within its purple rim, the panel in the other hand
+            var hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),delta);
+            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=hack;
             renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.MAIN_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?0:swing,dev.sangwoo.celestialfall.client.StandClient.xCharaKnife(),0,matrices,vertices,light);
-            if(!player.getOffHandStack().isEmpty())renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?swing:0,player.getOffHandStack(),0,matrices,vertices,light);
+            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=null;
+            var panel=dev.sangwoo.celestialfall.client.xchara.HackMode.panel(player);
+            if(panel!=null){
+                dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=hack;
+                renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,0,panel,0,matrices,vertices,light);
+                dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;
+            }
+            else if(!player.getOffHandStack().isEmpty())renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?swing:0,player.getOffHandStack(),0,matrices,vertices,light);
             vertices.draw();
             ci.cancel();return;
         }
