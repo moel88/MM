@@ -53,6 +53,14 @@ public final class Stagger {
         return dev.sangwoo.celestialfall.isosang.IsosangRules.staggerUntil(combo,blow,start,now,PAST,LAST);
     }
     /**
+     * X Chara's knife (2.114.0): blow {@code blow} of hit {@code combo} that started at {@code start} and lands {@code now}.
+     * The next blow is the hit's own next one, else the next hit's first, started as soon as it may (XCharaCombo.STEP);
+     * the fourth hit's last blow throws them and staggers them {@link #LAST} ticks.
+     */
+    public static long xchara(int combo,int blow,long start,long now){
+        return dev.sangwoo.celestialfall.xchara.XCharaCombo.staggerUntil(combo,blow,start,now,PAST,LAST);
+    }
+    /**
      * The same in E's empowered combo or not (2.80.0): a thrown sword holds them until the next sword could reach them,
      * the third hit's last blow until the empowered fourth's thrust could land.
      */

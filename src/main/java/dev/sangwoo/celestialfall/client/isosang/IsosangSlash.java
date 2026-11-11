@@ -76,7 +76,7 @@ public final class IsosangSlash implements Fx.Skill {
     static float blow(int combo,int i){return IsosangRules.blowAt(combo,i)/20f;}
     /** The second into hit {@code combo} the next may begin (IsosangRules.STEP): the next clip starts from this pose. */
     static float step(int combo){return IsosangRules.STEP[combo]/20f;}
-    static double[] d(double elevation,double azimuth){return new double[]{elevation,azimuth};}
+    public static double[] d(double elevation,double azimuth){return new double[]{elevation,azimuth};}
     /** A pose written in the world (R6.world): root forward and up, the torso's turn (left +), lean and roll, then the limbs and the blade. */
     static R6.Pose w(double fw,double up,float yaw,float pitch,float roll,double[] rArm,double[] blade,double[] lArm,double[] rLeg,double[] lLeg){
         return R6.world(fw,up,yaw,pitch,roll,rArm,blade,lArm,rLeg,lLeg);
@@ -89,7 +89,7 @@ public final class IsosangSlash implements Fx.Skill {
      * frame, right +; NaN keeps that leg as it is) just as far as it must for the foot to touch the ground, straight down
      * when the hip stands as high as a leg is long. A crouch is a wide stance, a lunge a long one.
      */
-    static R6.Pose planted(R6.Pose p,double rAz,double lAz){
+    public static R6.Pose planted(R6.Pose p,double rAz,double lAz){
         float k=(float)Math.PI/180;
         var q=new Quaternionf().rotationAxis(p.yaw*k,0,1,0).rotateAxis(p.pitch*k,1,0,0).rotateAxis(p.roll*k,0,0,1);
         R6.Pose o=p.copy();
@@ -130,7 +130,7 @@ public final class IsosangSlash implements Fx.Skill {
         return new R6.Dir(leg.rt()+(planted.rt()-leg.rt())*b,leg.up()+(planted.up()-leg.up())*b,leg.fw()+(planted.fw()-leg.fw())*b).norm();
     }
     /** How high each foot (right, left) of frame {@code f} stands over the ground (blocks; below it, negative). */
-    static double[] feet(R6.Frame f){
+    public static double[] feet(R6.Frame f){
         var p=R6.poseOf(f);float k=(float)Math.PI/180;
         var q=new Quaternionf().rotationAxis(p.yaw*k,0,1,0).rotateAxis(p.pitch*k,1,0,0).rotateAxis(p.roll*k,0,0,1);
         double[] out=new double[2];int i=0;
@@ -143,7 +143,7 @@ public final class IsosangSlash implements Fx.Skill {
         return out;
     }
     /** {@link #w}, its feet planted toward {@code rAz} and {@code lAz} ({@link #planted}). */
-    static R6.Pose w(double fw,double up,float yaw,float pitch,float roll,double[] rArm,double[] blade,double[] lArm,double rAz,double lAz){
+    public static R6.Pose w(double fw,double up,float yaw,float pitch,float roll,double[] rArm,double[] blade,double[] lArm,double rAz,double lAz){
         return planted(R6.world(fw,up,yaw,pitch,roll,rArm,blade,lArm,d(-90,0),d(-90,0)),rAz,lAz);
     }
     /**

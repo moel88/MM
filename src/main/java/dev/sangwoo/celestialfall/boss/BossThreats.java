@@ -72,6 +72,7 @@ public final class BossThreats {
             bare(p,now,out);
             kageno(p,now,out);
             isosang(p,now,out);
+            xchara(p,now,out);
             glow(p,now,out);
         }
         // (2.112.0) X Chara's G marking it: the "!!!" until its strange space; nothing to get out of (it is marked
@@ -254,6 +255,17 @@ public final class BossThreats {
             :Zone.lane(at,h.yaw(),IsosangRules.near(c,i),IsosangRules.reach(c,i),IsosangRules.halfWidth(c,i),IsosangRules.LOW,IsosangRules.HIGH);
         float damage=IsosangRules.total(c,dev.sangwoo.celestialfall.isosang.IsosangAttack.charged(p)||c>=IsosangRules.THROWS);
         out.add(new Threat(p,"isosang"+c,h.start(),hit,h.start()+IsosangRules.lastBlow(c),zone,!IsosangRules.unblockable(c),false,false,damage,false,false));
+    }
+    /** X Chara's knife (2.114.0): the next blow of the hit in flight, in its way ahead of them; the fourth takes no guard. */
+    private static void xchara(ServerPlayerEntity p,long now,List<Threat> out){
+        var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(p);
+        if(h==null||!dev.sangwoo.celestialfall.xchara.XCharaCombo.valid(h.combo())||h.blows()>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(h.combo()))return;
+        int c=h.combo(),i=h.blows();long hit=h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.blowAt(c,i);
+        if(now>hit)return;
+        Zone zone=Zone.lane(p.getPos(),h.yaw(),dev.sangwoo.celestialfall.xchara.XCharaCombo.near(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.reach(c,i),
+            dev.sangwoo.celestialfall.xchara.XCharaCombo.halfWidth(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.LOW,dev.sangwoo.celestialfall.xchara.XCharaCombo.HIGH);
+        out.add(new Threat(p,"xchara"+c,h.start(),hit,h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.lastBlow(c),zone,
+            !dev.sangwoo.celestialfall.xchara.XCharaCombo.unblockable(c),false,false,dev.sangwoo.celestialfall.xchara.XCharaCombo.total(c),false,false));
     }
     /** How far a dash has carried its dasher {@code ticks} ticks in (blocks; CombatState.dashSpeed, the whole dash after DASH_TICKS). */
     public static double dashDistance(int ticks){double d=0;for(int i=0;i<Math.min(ticks,CombatState.DASH_TICKS);i++)d+=CombatState.dashSpeed(i);return d;}

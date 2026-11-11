@@ -63,9 +63,11 @@ public final class CooldownHud {
     static final int ISOSANG=18,ISOSANG_E=19,ISOSANG_R=20,ISOSANG_H=21,ISOSANG_G=22,ISOSANG_Z=23,ISOSANG_VOLLEY=24,ISOSANG_T=25,ISOSANG_Y=26;
     /** X Chara's G, the sword dance (2.112.0), after Lee So-sang's. */
     static final int XCHARA_G=27;
+    /** X Chara's attack's rest after a combo (2.114.0). */
+    static final int XCHARA=28;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
@@ -79,7 +81,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -197,6 +199,10 @@ public final class CooldownHud {
         // (2.112.0) X Chara's G: from when it is over, blocked by a guard or called off (the server's word of when it is ready again)
         long dance=shows(XCHARA_G,stand)?dev.sangwoo.celestialfall.client.xchara.XCharaClient.ready(p.getUuid()):0;
         if(dance!=xcharaGSeen){show(XCHARA_G,xcharaGName(),dance-time,dev.sangwoo.celestialfall.xchara.XCharaRules.COOLDOWN,now);xcharaGSeen=dance;}
+        // (2.114.0) their knife: only its rest after a combo, as the others' (the server's ready tick, told with each hit's news)
+        boolean xchara=shows(XCHARA,stand);if(!xchara)dev.sangwoo.celestialfall.client.xchara.KnifeClient.forget(p.getUuid());
+        long knife=xchara?dev.sangwoo.celestialfall.client.xchara.KnifeClient.ready(p.getUuid()):0;
+        if(knife!=xcharaSeen){show(XCHARA,xcharaName(),knife-time,dev.sangwoo.celestialfall.xchara.XCharaCombo.REST,now);xcharaSeen=knife;}
         LIST.update(now);
     }
     /**
@@ -210,7 +216,7 @@ public final class CooldownHud {
         // (2.77.0) Lee So-sang's to theirs
         if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R||slot==ISOSANG_H||slot==ISOSANG_G||slot==ISOSANG_Z||slot==ISOSANG_VOLLEY||slot==ISOSANG_T||slot==ISOSANG_Y)return "isosang".equals(stand);
         // (2.112.0) X Chara's to theirs
-        if(slot==XCHARA_G)return "x_chara".equals(stand);
+        if(slot==XCHARA_G||slot==XCHARA)return "x_chara".equals(stand);
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -257,6 +263,8 @@ public final class CooldownHud {
     private static String isosangYName(){return "검의 감옥";}
     /** X Chara's G (2.112.0): the video's "Sword Dance". */
     private static String xcharaGName(){return "검무";}
+    /** X Chara's attack's name in the list (2.114.0; as Lee So-sang's). */
+    private static String xcharaName(){return "평타";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */
     private static String name(int slot,UUID me){
         if(slot!=T)return NAMES[slot];

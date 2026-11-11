@@ -38,6 +38,8 @@ public final class NoCooldownState extends PersistentState {
         SpellManager.resetCooldown(player);AtomicManager.resetCooldown(player);HeavenManager.resetCooldown(player);
         // (2.77.0) Lee So-sang's attack's rest; (2.80.0) and their E's cooldown, not the empowerment E gave
         dev.sangwoo.celestialfall.isosang.IsosangAttack.cool(player);
+        // (2.114.0) X Chara's knife's rest
+        dev.sangwoo.celestialfall.xchara.XCharaAttack.cool(player);
     }
     public static void tick(MinecraftServer server) {
         var state=get(server);if(state.players.isEmpty())return;

@@ -160,7 +160,7 @@ public final class BotandCamera {
         // (held by Star Platinum's inhale, 2.62.0: their keys still work, at a twentieth of their speed, "그냥 95% 슬로우";
         // the suction keeps them where it draws them, client/stand/StandInhale.drive)
         // (2.107.0) and dead, waiting to be brought back (DeathView): no key moves them
-        if(StandClient.movementLocked()||dev.sangwoo.celestialfall.client.isosang.IsosangClient.movementLocked()||HitStunClient.localStunned()||DeathView.active()) {
+        if(StandClient.movementLocked()||dev.sangwoo.celestialfall.client.isosang.IsosangClient.movementLocked()||dev.sangwoo.celestialfall.client.xchara.KnifeClient.movementLocked()||HitStunClient.localStunned()||DeathView.active()) {
             input.movementForward=input.movementSideways=0;input.jumping=input.sneaking=false;
             input.pressingForward=input.pressingBack=input.pressingLeft=input.pressingRight=false;
             // T held is aimed while its slashes are thrown (user request): the caster turns to where the camera looks.

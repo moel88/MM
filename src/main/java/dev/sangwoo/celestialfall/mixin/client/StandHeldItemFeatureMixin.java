@@ -44,6 +44,18 @@ public abstract class StandHeldItemFeatureMixin {
             dev.sangwoo.celestialfall.client.isosang.IsosangSheath.recording(holder.getUuid());
             return;
         }
+        if(entity instanceof PlayerEntity holder&&arm==holder.getMainArm()&&!StandClient.visible(holder)&&StandClient.xChara(holder)){
+            // X Chara's knife (2.114.0): turned in the hand as a hit drives it, about the middle of its rod (where the fist
+            // holds it: its display puts the model's middle there); its display already turns it KnifeCombo.DISPLAY_TILT
+            var swing=dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(holder.getUuid());
+            if(swing!=null){
+                var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                matrices.translate(0,-2/16f,2/16f);
+                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.xchara.KnifeCombo.DISPLAY_TILT));
+                matrices.translate(0,2/16f,-2/16f);
+            }
+            return;
+        }
         if(!(entity instanceof PlayerEntity player)||!StandClient.visible(player)||arm!=player.getMainArm())return;
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=dev.sangwoo.celestialfall.client.AtomicClient.poseCast(player.getUuid());

@@ -134,7 +134,8 @@ public final class MpServer implements ModInitializer {
         if(DEATH_ONLY)deaths(server);
         if(GLOW_ONLY)glows(server);
         if(VANILLA_ONLY)vanillas(server);
-        if(XCHARA_ONLY)xchara(server);
+        if(XCHARA_ONLY&&!XCHARAM1_ONLY)xchara(server);
+        if(XCHARAM1_ONLY)knife(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
@@ -343,7 +344,8 @@ public final class MpServer implements ModInitializer {
         // in front of the caster for the Star Finger)
         // (2.77.0: and in Lee So-sang's script, where it is sent 8 blocks away for the first three hits to strike no one)
         boolean standOut=server.getPlayerManager().getPlayerList().stream().anyMatch(q->caster(q)&&dev.sangwoo.celestialfall.stand.StandSummon.out(q));
-        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY))continue;
+        // (2.114.0: and in X Chara's basic attack's script, where it is sent 6 blocks away and thrown by the finisher)
+        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY||XCHARAM1_ONLY))continue;
             // (2.82.0: nor a player on Lee So-sang's sword formation, held up on its middle sword)
             if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
@@ -527,7 +529,55 @@ public final class MpServer implements ModInitializer {
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
-    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's basic attack's script (2.114.0, MP_ONLY=xcharam1): its cooldowns on and no healing, as for its G. */
+    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"));
+    private String knifeSeen="";private int knifeBlows;private float knifeHealth=-1;private net.minecraft.util.math.Vec3d knifeWatcherAt,knifeThrownFrom;private long knifeUntil,knifeReady=Long.MIN_VALUE,knifeThrown=-1;
+    /**
+     * X Chara's basic attack (2.114.0) as the server keeps it: each of the caster's hits as it begins (which, the way
+     * it goes, how far ahead the watcher stands, its guard), each of its blows as it lands, when the attack rests until,
+     * the watcher's health at each change (its guard, whether it is staggered), every move of the watcher of more than a
+     * hundredth of a block while a hit is in flight (a blow but the finisher's last throws no one: there should be none
+     * before it), and how far it has flown every five ticks after the finisher's last blow.
+     */
+    private void knife(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(caster);
+        String key=h==null||h.combo()==0?"":h.combo()+"@"+h.start();
+        if(!key.isEmpty()&&!key.equals(knifeSeen)){
+            var f=net.minecraft.util.math.Vec3d.fromPolar(0,h.yaw());var d=watcher.getPos().subtract(caster.getPos());
+            note(server,String.format(java.util.Locale.ROOT,"caster's hit %d began at %d (yaw %.0f): the watcher %.2f ahead, %.2f aside; its guard %s; the caster held by it %s",h.combo(),h.start(),h.yaw(),
+                d.dotProduct(f),d.dotProduct(new net.minecraft.util.math.Vec3d(-f.z,0,f.x)),dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(caster)));
+            knifeBlows=0;knifeUntil=now+dev.sangwoo.celestialfall.xchara.XCharaCombo.LENGTH[h.combo()];
+        }
+        if(key.isEmpty()&&!knifeSeen.isEmpty())note(server,"caster's combo over or stopped at "+now+" (was hit "+knifeSeen+")");
+        knifeSeen=key;
+        if(h!=null&&h.combo()>0&&h.blows()!=knifeBlows){
+            for(int i=knifeBlows;i<h.blows();i++)note(server,String.format(java.util.Locale.ROOT,"  hit %d's blow %d landed at %d (%d in)",h.combo(),i,now,now-h.start()));
+            knifeBlows=h.blows();
+        }
+        long ready=dev.sangwoo.celestialfall.xchara.XCharaAttack.ready(caster);
+        if(ready!=knifeReady){note(server,String.format(java.util.Locale.ROOT,"caster's attack rests until %d (now %d: %.2f s)",ready,now,(ready-now)/20.0));knifeReady=ready;}
+        if(Math.abs(watcher.getHealth()-knifeHealth)>.01f){
+            float lost=knifeHealth-watcher.getHealth();
+            note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (guard %s, staggered %s, the caster's health %.1f)",knifeHealth,watcher.getHealth(),now,
+                dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),dev.sangwoo.celestialfall.combat.CombatManager.staggered(watcher),caster.getHealth()));
+            // the finisher's last blow (6): how far it throws them
+            if(h!=null&&h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.DELETE&&h.blows()==2&&Math.abs(lost-6)<.01f){knifeThrown=now;knifeThrownFrom=knifeWatcherAt==null?watcher.getPos():knifeWatcherAt;}
+            knifeHealth=watcher.getHealth();
+        }
+        if(knifeWatcherAt!=null&&now<=knifeUntil&&knifeThrown<0&&watcher.getPos().distanceTo(knifeWatcherAt)>.01)
+            note(server,String.format(java.util.Locale.ROOT,"  the watcher moved %.3f at %d (a hit in flight)",watcher.getPos().distanceTo(knifeWatcherAt),now));
+        if(knifeThrown>=0&&(now-knifeThrown)%5==0){
+            note(server,String.format(java.util.Locale.ROOT,"  +%d after the last blow: the watcher %.2f blocks from where it stood (%.2f up)",now-knifeThrown,
+                watcher.getPos().distanceTo(knifeThrownFrom),watcher.getY()-knifeThrownFrom.y));
+            if(now-knifeThrown>=40)knifeThrown=-1;
+        }
+        knifeWatcherAt=watcher.getPos();
+    }
     /** (2.107.0) The server tick each player was found dead (or joined dead), and the hotbar slot each was last seen with. */
     private final Map<UUID,Long> deadAt=new HashMap<>();private final Map<UUID,Integer> slots=new HashMap<>();
     /**

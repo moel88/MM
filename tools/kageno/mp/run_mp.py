@@ -35,7 +35,10 @@ H again (2.101.0, MpClient.ISOSANGHH_SCRIPT: H with the watcher out of the forma
 the watcher 11/3 blocks off in its band: the formation over at once, its swords pulled from where they stood, the caster up her leap and down where she
 stood (as drawn and as the server holds her; 2.101.1: round her lap of the sky on her sword, drawn level against its
 plan on each client, and its 28 swords), five blows of 12, the recording each client plays, her H ready again only
-once its swords are gone), MP_ONLY=isosanggauge its H gauge (2.113.0, MpClient.ISOSANGGAUGE_SCRIPT: H refused with it
+once its swords are gone), MP_ONLY=xcharam1 X Chara's basic attack (2.114.0, MpClient.XCHARAM1_SCRIPT: the whole combo into
+the watcher (6, 3 + 3, 2 + 2 + 2, 4 + 6; thrown by the last blow only), its guard up, the combo broken and its rest, a hit
+stopped short as the caster is struck, the watcher 6 blocks ahead reached by the thrusts' knives of light only),
+MP_ONLY=isosanggauge its H gauge (2.113.0, MpClient.ISOSANGGAUGE_SCRIPT: H refused with it
 empty, filled one a foe struck by the combo and the empowered combo, H with the watcher in the formation (70% slower for
 3 s from its first blow, 50% while in it, the slow gone out of it), T three times (a fifth each: the formation's end
 sooner, told to the watcher's client too), the formation ending as it runs dry; H again emptying it at once; since

@@ -45,6 +45,14 @@ public final class KagenoRenderer {
             if(!dev.sangwoo.celestialfall.client.isosang.IsosangClient.shown(s,pos,camera,96))continue;
             casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
         }
+        // X Chara's knife's hits (2.114.0): drawn as the casts are, from their own list
+        for(var s:dev.sangwoo.celestialfall.client.xchara.KnifeClient.SWINGS.values()){
+            var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
+            float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
+            var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(delta);
+            if(pos.squaredDistanceTo(camera)>96*96)continue;
+            casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
+        }
         // X Chara's G (2.112.0): drawn as the casts are, from its own list (its strange space seen from up to some 30 blocks off)
         for(var s:dev.sangwoo.celestialfall.client.xchara.XCharaClient.CASTS.values()){
             var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
@@ -109,7 +117,7 @@ public final class KagenoRenderer {
     static final float LAYER_SOFT=.35f;
     /**
      * The passes of every skill in order: blended geometry, body afterimages, additive light, fire and smoke cells,
-     * brush strokes, brush crescents (plus their additive glow), ink ribbons (likewise), light over them and real blocks. {@code status} adds the guard and
+     * brush strokes, brush crescents (plus their additive glow), glitch ribbons and ink ribbons (likewise), light over them and real blocks. {@code status} adds the guard and
      * overdrive visuals and the blood; on the effect layer ({@code layered}) the geometry passes get soft edges and
      * the light runs hotter.
      */
@@ -157,6 +165,12 @@ public final class KagenoRenderer {
         RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
         KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
         if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
+        KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
+        // Glitch ribbons (2.114.0, X Chara's knife's cuts): blended, then their light added again on top as the crescents' is.
+        if(KagenoFire.beginGlitch(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).glitch(x);KagenoFire.endGlitch();}
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SrcFactor.SRC_ALPHA,com.mojang.blaze3d.platform.GlStateManager.DstFactor.ONE);
+        KagenoFire.crescentGain=.18f;if(layered)KagenoFire.hot(1.8f);
+        if(KagenoFire.beginGlitch(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).glitch(x);KagenoFire.endGlitch();}
         KagenoFire.crescentGain=1;KagenoFire.hot(0);RenderSystem.defaultBlendFunc();
         // Ink ribbons (2.77.0, Lee So-sang's slashes): blended, then their light added again on top as the crescents' is.
         if(KagenoFire.beginInk(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).ink(x);KagenoFire.endInk();}

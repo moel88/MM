@@ -285,6 +285,28 @@ public final class KagenoFire {
             cpoint(outer[i+1],along[i+1],1,code,erase,taper,alpha);cpoint(outer[i],along[i],1,code,erase,taper,alpha);
         }
     }
+    // ── Glitch ribbons (shader mode 18, 2.114.0): X Chara's knife's cuts, drawn in a pass of their own after the crescents ──
+    private static BufferBuilder glitches;private static Matrix4f glitchMatrix;
+    public static boolean beginGlitch(Matrix4f m,float age){if(shader==null)return false;glitches=begin(age,18);glitchMatrix=m;return true;}
+    public static void endGlitch(){if(glitches!=null){end(glitches);glitches=null;}}
+    /**
+     * A band of purple light that glitches, along a swept path (X Chara's knife's cuts): {@code inner[i]}..{@code outer[i]}
+     * across it (the outer edge the knife's point), {@code along[i]} from 0 at the tail to 1 at the head ({@code n}
+     * points). {@code style}: 0 a cut, 1 the finisher's, 2 a cut pasted again; {@code erase} the share eaten from the
+     * tail (a block at a time), {@code tear} how torn it is (0 whole, 1 torn right apart: strips shoved aside, blocks
+     * broken off, its colours split).
+     */
+    public static void glitchRibbon(Vec3d[] inner,Vec3d[] outer,float[] along,int n,int style,int seed,float erase,float tear,float alpha){
+        if(glitches==null||alpha<=0||erase>=1||n<2)return;int code=(style&15)*16+(seed&15);
+        for(int i=0;i+1<n;i++){
+            xpoint(inner[i],along[i],0,code,erase,tear,alpha);xpoint(inner[i+1],along[i+1],0,code,erase,tear,alpha);
+            xpoint(outer[i+1],along[i+1],1,code,erase,tear,alpha);xpoint(outer[i],along[i],1,code,erase,tear,alpha);
+        }
+    }
+    private static void xpoint(Vec3d p,float u,float v,int code,float erase,float tear,float alpha){
+        glitches.vertex(glitchMatrix,(float)p.x,(float)p.y,(float)p.z).texture(u,v)
+            .color(code&255,Math.max(0,Math.min(255,Math.round(erase*255))),Math.max(0,Math.min(255,Math.round(tear*255))),Math.max(0,Math.min(255,(int)(alpha*crescentGain*255)))).next();
+    }
     /**
      * Ink ribbons (2.77.0, Lee So-sang's slashes): the shader's mode 16, drawn in a pass of their own after the crescents.
      * {@link #inkRibbon} lays a band along a swept path as {@link #ribbon} does.

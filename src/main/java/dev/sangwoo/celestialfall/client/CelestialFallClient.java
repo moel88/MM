@@ -51,6 +51,8 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.isosang.IsosangGaugeHud.initialize();
         // X Chara's G (2.112.0)
         dev.sangwoo.celestialfall.client.xchara.XCharaClient.initialize();
+        // and their knife's four hits (2.114.0)
+        dev.sangwoo.celestialfall.client.xchara.KnifeClient.initialize();
         CooldownHud.initialize();
         // (2.108.0) after the cooldown list: its hit count is drawn over the list's boxes
         HitCounterHud.initialize();

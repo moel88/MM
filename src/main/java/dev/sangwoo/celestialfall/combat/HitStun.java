@@ -115,7 +115,9 @@ public final class HitStun {
         // a stand user struck lets go of whom the punches hold, and the combo stops (2.54.0), and the rush (2.57.0), and
         // the inhale lets go of whom it holds (2.61.0), and the time stop's call is cut short (2.67.0); Lee So-sang's sword's
         // hit in flight stops short (2.77.0)
-        if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);}
+        if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);
+            // (2.114.0) and X Chara's knife's
+            dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);}
     }
     public static void release(UUID victim) {
         Hold h=HELD.remove(victim);if(h==null)return;

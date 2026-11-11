@@ -17,6 +17,8 @@ public final class KagenoSkills {
         SKILLS[P]=new PoseSkill();
         // Lee So-sang's sword's four hits (2.77.0): drawn with the same passes, from their own swings (IsosangClient)
         SKILLS[dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL]=new dev.sangwoo.celestialfall.client.isosang.IsosangSlash();
+        // X Chara's knife's four hits (2.114.0): drawn with the same passes, from their own swings (KnifeClient)
+        SKILLS[dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL]=new dev.sangwoo.celestialfall.client.xchara.KnifeCombo();
         // X Chara's G (2.112.0): drawn with the same passes, from its own casts (XCharaClient)
         SKILLS[dev.sangwoo.celestialfall.xchara.XCharaRules.SKILL]=new dev.sangwoo.celestialfall.client.xchara.SwordDance();
     }

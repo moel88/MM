@@ -940,6 +940,63 @@ void main(){
   rgb=mix(vec3(.025,.04,.15),vec3(.06,.1,.32),smoothstep(.12,.5,dens));
   rgb=mix(rgb,vec3(.11,.18,.46),smoothstep(.55,.95,dens)*.6);
   alpha=clamp(dens*1.05,0.0,.62)*tint.a;
+ }else if(Mode==18){
+  // X Chara's knife's cuts (2.114.0, mine to make up: "언더테일에 나오는 차라가 해커의 능력을 사용"): a slash of purple
+  // light that glitches. uv.x tail(0)->head(1) along it, uv.y inner(0)->outer(1) across it (the outer edge the knife's
+  // point); tint.r = style*16+seed, tint.g = the share eaten from the tail, tint.b = how torn it is (0 whole, 1 torn
+  // right apart), tint.a = alpha. A crisp cut (an ink line on its cutting edge, a pale rim inside it, a purple body
+  // grading to deep purple, one thin white core, a thin line on its inner edge) broken as corrupted data is: strips of
+  // it shoved across and along it, square blocks breaking off its edges, dead blocks of black and white in it, a red
+  // copy of it showing past its outer edge and a cyan one past its inner edge (its colours split), scan lines down
+  // it; and it goes a block at a time from its tail. Style 0 a cut, 1 the finisher's (X Chara's red: crimson grading to dark wine), 2 a cut
+  // pasted again (a pale ghost of the first).
+  float code=floor(tint.r*255.0+.5),style=floor(code/16.0),sd=mod(code,16.0)*3.7;
+  float x=clamp(uv.x,0.0,1.0),y=uv.y,tear=tint.b,eat=tint.g;
+  // (the glitch changes ten times a second)
+  float tk=floor(Age*.5)+sd;
+  float strip=floor(x*13.0+hash(vec2(floor(x*5.0),tk))*3.0);
+  float h1=hash(vec2(strip,tk)),h2=hash(vec2(strip*1.7+3.1,tk+7.0));
+  float shove=(h1-.5)*step(.45,h2)*tear*.6;
+  float slide=(h2-.5)*step(.6,h1)*tear*.07;
+  float xs=clamp(x+slide,0.0,1.0);
+  // thin at the tail, widest near the head, narrowing at the head itself (the knife's point leads it)
+  float w=max((.10+.90*pow(xs,1.25))*(1.0-smoothstep(.88,1.0,xs)*.7),.02);
+  float d0=(1.0-y)/w,d=d0+shove;
+  float aa=min(max(fwidth(d0),.002)*1.2,.06);
+  vec2 grid=vec2(56.0,10.0);
+  vec2 cell=floor(vec2(xs,y)*grid),cc=(cell+.5)/grid;
+  float hc=hash(cell+vec2(sd,tk*1.3)),hc2=hash(cell*1.9+vec2(tk,sd));
+  float wc=max((.10+.90*pow(cc.x,1.25))*(1.0-smoothstep(.88,1.0,cc.x)*.7),.02);
+  float dc=(1.0-cc.y)/wc+shove;
+  float blocky=step(hc,.08+.78*tear);
+  float dd=mix(d,dc,blocky);
+  float body=mix((1.0-smoothstep(1.0-aa,1.0+aa,d))*smoothstep(-aa,aa,d),step(0.0,dc)*step(dc,1.0),blocky);
+  float front=eat*1.3-.14+hc2*.22;
+  float kept=1.0-step(cc.x,front)*step(.001,eat);
+  body*=kept;
+  vec3 ink=vec3(.05,.01,.12),rimc=vec3(.92,.44,1.0),mid=vec3(.60,.10,.94),deep=vec3(.30,.02,.62),hotc=vec3(1.0,.88,1.0);
+  vec3 red=vec3(1.0,.16,.24),cyan=vec3(.20,.92,1.0);
+  if(style>1.5){rimc=vec3(.96,.82,1.0);mid=vec3(.80,.56,1.0);deep=vec3(.52,.30,.92);}
+  else if(style>.5){rimc=vec3(1.0,.36,.40);mid=vec3(.86,.05,.20);deep=vec3(.40,.0,.26);hotc=vec3(1.0,.90,.88);}
+  rgb=mix(ink,rimc,smoothstep(.045,.045+aa*2.0,dd));
+  rgb=mix(rgb,mid,smoothstep(.11,.21,dd));
+  rgb=mix(rgb,deep,smoothstep(.45,.95,dd));
+  rgb*=1.0-(style>1.5?.26:.13)*step(.5,fract(y*grid.y));
+  float coreW=style>.5&&style<1.5?.032:.022;
+  float whiteCore=(1.0-smoothstep(coreW,coreW+aa*2.0,abs(dd-.19)))*smoothstep(.06,.4,xs);
+  rgb=mix(rgb,hotc,whiteCore);
+  float innerLine=(1.0-smoothstep(.0,aa*2.0+.012,abs(dd-.95)))*smoothstep(.1,.5,xs);
+  rgb=mix(rgb,rimc,innerLine*.7);
+  float dead=step(hc2,.04+.24*tear)*blocky;
+  rgb=mix(rgb,hc>.04+.39*tear?ink:vec3(1.0),dead);
+  float split=.03+.17*tear;
+  float outerF=step(-split,dd)*step(dd,0.0),innerF=step(1.0,dd)*step(dd,1.0+split);
+  float fringe=(outerF+innerF)*kept*smoothstep(0.0,.05,xs)*(1.0-smoothstep(.97,1.0,xs))*(1.0-body);
+  rgb=mix(rgb,outerF>.5?red:cyan,fringe);
+  float ember=step(front,cc.x)*step(cc.x,front+.05)*step(.001,eat)*body;
+  rgb=mix(rgb,style>.5&&style<1.5?vec3(1.0,.70,.66):vec3(1.0,.72,1.0),ember*.8);
+  rgb*=1.0+Hot*(whiteCore*.9+ember*.5+fringe*.25);
+  alpha=max(body,fringe*.9)*(style>1.5?.86:1.0)*tint.a;
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

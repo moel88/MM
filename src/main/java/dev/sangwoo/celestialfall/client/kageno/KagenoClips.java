@@ -36,10 +36,13 @@ public final class KagenoClips {
     public static void begin(StandClient.Cast cast){
         // (Lee So-sang's sword's hits too, 2.77.0: every one of them, the first from their stance)
         boolean sword=cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL;
-        if(cast.skill()!=M1&&!sword)return;
+        // (X Chara's knife's hits too, 2.114.0: the first from their hold of it)
+        boolean knife=cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL;
+        if(cast.skill()!=M1&&!sword&&!knife)return;
         var previous=animated(cast.caster());
-        if(previous!=null||cast.combo()>1||sword){
-            var f=previous!=null?action(previous,0):sword?dev.sangwoo.celestialfall.client.isosang.IsosangSlash.start(cast.combo()):idle();
+        if(previous!=null||cast.combo()>1||sword||knife){
+            var f=previous!=null?action(previous,0):sword?dev.sangwoo.celestialfall.client.isosang.IsosangSlash.start(cast.combo())
+                :knife?dev.sangwoo.celestialfall.client.xchara.KnifeCombo.stance():idle();
             COMBO_STARTS.put(cast.id(),new R6.Frame(f.joints(),f.grip(),f.fw(),f.up(),f.rt(),
                 net.minecraft.util.math.MathHelper.wrapDegrees(f.yaw()),f.pitch(),f.roll()));
             while(COMBO_STARTS.size()>64)COMBO_STARTS.remove(COMBO_STARTS.keySet().iterator().next());
@@ -73,6 +76,8 @@ public final class KagenoClips {
         for(var c:StandClient.CASTS.values())if(c.caster().equals(id)&&c.age(0)<clip(c.skill(),c.combo()).length()*20+1)best=c;
         // Lee So-sang's sword's hits (2.77.0): their swings drive the body the same way
         var swing=dev.sangwoo.celestialfall.client.isosang.IsosangClient.animated(id);
+        // X Chara's knife's hits (2.114.0): the same
+        if(swing==null)swing=dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(id);
         return swing!=null?swing:best;
     }
     private static final Anim STILL=Anim.of(k(0,IDLE),k(.5,IDLE));

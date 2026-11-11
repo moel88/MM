@@ -61,6 +61,11 @@ public final class CombatManager {
                 if(player instanceof ServerPlayerEntity p)dev.sangwoo.celestialfall.isosang.IsosangAttack.request(p);
                 return ActionResult.FAIL;
             }
+            // X Chara: their knife's hits are the attack (2.114.0), whatever the hand holds
+            if(dev.sangwoo.celestialfall.xchara.XCharaAttack.attacks(player)){
+                if(player instanceof ServerPlayerEntity p)dev.sangwoo.celestialfall.xchara.XCharaAttack.request(p);
+                return ActionResult.FAIL;
+            }
             // Star Platinum out: its punches are the attack (2.54.0), whatever the hand holds
             if(dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(player)){
                 if(player instanceof ServerPlayerEntity p)dev.sangwoo.celestialfall.stand.StarPlatinumAttack.request(p);
@@ -84,15 +89,17 @@ public final class CombatManager {
     }
     /**
      * The player fights with their own fists: no Kageno, Star Platinum not out (its punches are the attack then, 2.54.0),
-     * not Lee So-sang (their sword is, 2.77.0), hands empty.
+     * not Lee So-sang (their sword is, 2.77.0), not X Chara (their knife is, 2.114.0), hands empty.
      */
-    public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p)&&!dev.sangwoo.celestialfall.stand.StandManager.isosang(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
+    public static boolean bare(PlayerEntity p) { return !dev.sangwoo.celestialfall.stand.StandManager.kageno(p)&&!dev.sangwoo.celestialfall.stand.StarPlatinumAttack.punches(p)&&!dev.sangwoo.celestialfall.stand.StandManager.isosang(p)&&!dev.sangwoo.celestialfall.stand.StandManager.xChara(p)&& p.getMainHandStack().isEmpty()&&p.getOffHandStack().isEmpty(); }
     /** In a cutscene or a cast that holds the player: Kageno's skills, the old items', and Star Platinum's beatdown's (2.64.0, its user and the one struck). */
     public static boolean cinematic(PlayerEntity p) { return dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||SpellManager.isCasting(p.getUuid())||AtomicManager.isCasting(p.getUuid())||HeavenManager.isCasting(p.getUuid())||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p); }
     private static boolean valid(ServerPlayerEntity p) {
         // (2.77.0: nor while a hit of Lee So-sang's sword holds them: no guard or dash then, IsosangRules.HOLD)
         return dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()&&!p.hasVehicle()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()&&!cinematic(p)&&!HitStun.stunned(p)
-            &&!dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p);
+            &&!dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)
+            // (2.114.0: nor while a hit of X Chara's knife holds them)
+            &&!dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(p);
     }
     private static CombatState state(ServerPlayerEntity p) {
         var id=p.getWorld().getRegistryKey().getValue();var e=STATES.get(p.getUuid());
@@ -131,10 +138,11 @@ public final class CombatManager {
         s.dashYaw=p.getYaw();p.setSprinting(false);sound(p,SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,.35f,1.25f);sync(p,s);
         return true;
     }
-    public static boolean busy(PlayerEntity p) {return busyOtherwise(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p);}
+    public static boolean busy(PlayerEntity p) {return busyOtherwise(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(p);}
     /**
      * {@link #busy} but for a hit of Lee So-sang's sword holding them (2.77.0, IsosangAttack.busy): the sword asks this
-     * before its next hit, kept from a press while the last one holds them.
+     * before its next hit, kept from a press while the last one holds them. (2.114.0) Nor for a hit of X Chara's knife
+     * (XCharaAttack.busy), which asks it the same way.
      */
     public static boolean busyOtherwise(PlayerEntity p) {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
@@ -150,7 +158,7 @@ public final class CombatManager {
         if(!dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld()))return false;
         // (2.107.0) dead, waiting to be brought back (AutoRespawn): only their view moves, nothing they do goes through
         if(p.isDead())return true;
-        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
+        if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)||dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
             ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
             ||CutsceneGlow.glowing(p)||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p))return true;
         var e=STATES.get(p.getUuid());return e!=null&&e.entityId==p.getId()&&e.dimension.equals(p.getWorld().getRegistryKey().getValue())&&e.state.locked(p.getWorld().getTime());
@@ -188,7 +196,7 @@ public final class CombatManager {
         s.incapacitate(now,ticks,slowTicks,slow);
         dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
         dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);
-        dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);
+        dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);
         p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
         speed(p,s,now);sync(p,s);
     }
@@ -246,7 +254,7 @@ public final class CombatManager {
         s.stagger(now,until,Stagger.SLOW);
         dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);
         dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);
-        dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);
+        dev.sangwoo.celestialfall.stand.KagenoManager.disable(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);
         p.clearActiveItem();p.setSprinting(false);if(p.currentScreenHandler!=p.playerScreenHandler)p.closeHandledScreen();
         speed(p,s,now);sync(p,s);
     }

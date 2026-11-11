@@ -57,6 +57,8 @@ public final class KagenoCamera {
         all.addAll(dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWINGS.values());
         // (2.112.0) and X Chara's G's blows
         all.addAll(dev.sangwoo.celestialfall.client.xchara.XCharaClient.CASTS.values());
+        // (2.114.0) and their knife's hits
+        all.addAll(dev.sangwoo.celestialfall.client.xchara.KnifeClient.SWINGS.values());
         for(var c:all){
             var s=KagenoSkills.of(c.skill());if(s==null)continue;
             // Distance from the cast spot or from the caster, whichever is nearer (T held's caster ends 30 blocks away).

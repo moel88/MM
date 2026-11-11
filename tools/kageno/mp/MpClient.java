@@ -524,7 +524,28 @@ public final class MpClient implements ClientModInitializer {
     private static final String[] XCHARA_SCRIPT={
         "5 XCHARA","8 NOCDOFF","40 DIST5","45 HEAL","50 GUARD+","62 G","80 GUARD-","90 G",
         "110 NOCDON","120 G","126 GUARD+","150 GUARD-","170 G","176 HITME","200 HEAL","205 DIST5","210 G","470 END"};
-    private static final String[] STEPS=ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * X Chara's basic attack (2.114.0, MP_ONLY=xcharam1): the caster takes X Chara, its cooldowns on. The whole combo into
+     * the watcher 3 blocks ahead (the attack held: 6, 3 + 3, 2 + 2 + 2, 4 + 6; no blow but the last moves it, the last
+     * throws it). Again with the watcher's guard up (the first three hits kept off, the fourth through it). One hit and
+     * nothing more: the combo breaks and the attack rests (a press in the rest refused, one after it the first hit
+     * again). The caster struck in the middle of a hit: it stops short and rests. The watcher 6 blocks ahead: only the
+     * thrusts' knives of light reach it. Last the watcher's guard raised only once the second hit is in (18 ticks after
+     * the press): the thrusts kept off, the fourth hit through its guard (it takes none). The server leaves the watcher
+     * where the script puts it and where the finisher throws it (MpServer.restore). Both clients log every swing as they hear it (which hit, how late), each blow's
+     * struck as told, a swing stopped short, the sounds they start and the caster's hit count; the server each hit, its
+     * blows, the rest, the watcher's health, guard and moves.
+     */
+    private static final String[] XCHARAM1_SCRIPT={
+        "5 XCHARA","8 NOCDOFF",
+        "40 DIST3","45 HEAL","60 M1+","104 M1-",
+        "170 DIST3","175 HEAL","180 GUARD+","195 M1+","239 M1-","250 GUARD-",
+        "320 DIST3","325 HEAL","330 M1","370 M1","400 M1",
+        "470 DIST3","480 M1","482 HITME","488 M1","530 M1",
+        "600 DIST6","605 HEAL","610 M1+","654 M1-",
+        "720 DIST3","725 HEAL","740 M1+","758 GUARD+","784 M1-","800 GUARD-",
+        "880 END"};
+    private static final String[] STEPS=ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -650,6 +671,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("isosangz")||ONLY.equals("isosangdodge"))zWatch();
                 if(ONLY.equals("death"))deathWatch();
                 if(ONLY.equals("xchara"))xcharaWatch();
+                if(ONLY.equals("xcharam1"))knifeWatch();
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -671,7 +693,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1351,6 +1373,35 @@ public final class MpClient implements ClientModInitializer {
     private final java.util.Set<String> ySeen=new java.util.HashSet<>();private long yReadySeen=-1;private boolean heldSeen;
     /** (2.112.0) X Chara's G as this client has it: its moments last logged, whether its camera was in its strange space, whether it was held, the marks logged. */
     private String xState="";private boolean xCamera,xHeld;private final java.util.Set<String> xSeen=new java.util.HashSet<>();
+    /** (2.114.0) X Chara's basic attack as this client has it: the swing last logged, the sounds logged so far, the hit count last logged. */
+    private String knifeState="";private int knifeHeard,knifeHits=-1;private final java.util.Set<String> knifeSeen=new java.util.HashSet<>();
+    /**
+     * X Chara's basic attack as this client sees it (2.114.0, MP_ONLY=xcharam1): every swing as it is heard (whose, which
+     * hit, how many ticks into it, whether it stopped short), each blow's struck as the server told it, every sound this
+     * client started, its own hit count as its HUD has it, and for the watcher whether a blow holds it (its action locked).
+     */
+    private void knifeWatch(){
+        for(var p:mc.world.getPlayers()){
+            String desc=dev.sangwoo.celestialfall.client.xchara.KnifeClient.describe(p,0);if(desc==null)continue;
+            String[] v=desc.split(",");var cast=dev.sangwoo.celestialfall.client.xchara.KnifeClient.SWINGS.values().stream().filter(c->c.caster().equals(p.getUuid())).reduce((a,b)->b).orElse(null);
+            if(cast==null)continue;
+            String key=cast.id()+":"+v[2];
+            if(!key.equals(knifeState)){knifeState=key;note(String.format(Locale.ROOT,"%s's hit %s (began %d): heard %s ticks into it, stopped short %s, the body driven %s",name(p.getUuid()),v[0],cast.start(),v[1],v[2],
+                dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(p.getUuid())!=null));}
+            for(int i=0;i<dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(cast.combo());i++){
+                boolean me=cast.targets().stream().anyMatch(t->t.entity()==mc.player.getId());
+                if(cast.age(0)>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blowAt(cast.combo(),i)+3&&knifeSeen.add(cast.id()+"/"+i))
+                    note(String.format(Locale.ROOT,"  its blow %d: %d struck so far by the server's word (%s)",i,cast.targets().size(),me?"me among them":"not me"));
+            }
+        }
+        var heard=dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD;
+        if(heard.size()<knifeHeard)knifeHeard=0;
+        for(;knifeHeard<heard.size();knifeHeard++)note("  sound: "+heard.get(knifeHeard));
+        int hits=dev.sangwoo.celestialfall.client.HitCounterHud.count;
+        if(hits!=knifeHits){knifeHits=hits;note("my hit count "+hits);}
+        boolean locked=dev.sangwoo.celestialfall.client.CombatClient.actionLocked();
+        flag("action_locked",locked);
+    }
     private void xcharaWatch(){
         for(var p:mc.world.getPlayers()){
             var d=dev.sangwoo.celestialfall.client.xchara.XCharaClient.of(p.getUuid());if(d==null)continue;

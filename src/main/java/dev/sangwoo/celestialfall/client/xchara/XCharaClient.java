@@ -311,9 +311,11 @@ public final class XCharaClient {
     static final class Voice extends AbstractSoundInstance implements TickableSoundInstance {
         static final int FADE=3;
         private final java.util.function.Supplier<Float> loud;private int fading=-1;private boolean done;private float scale=1;
-        Voice(Identifier id,java.util.function.Supplier<Float> loud){
+        Voice(Identifier id,java.util.function.Supplier<Float> loud){this(id,loud,1);}
+        /** (2.114.0) At a pitch of its own: a blow of the knife's basic attack, each a little higher than the one before. */
+        Voice(Identifier id,java.util.function.Supplier<Float> loud,float pitch){
             super(id,SoundCategory.PLAYERS,net.minecraft.util.math.random.Random.create());
-            this.loud=loud;volume=loud.get();pitch=1;attenuationType=SoundInstance.AttenuationType.NONE;relative=true;x=y=z=0;
+            this.loud=loud;volume=loud.get();this.pitch=pitch;attenuationType=SoundInstance.AttenuationType.NONE;relative=true;x=y=z=0;
         }
         float full(){return volume;}
         void fade(){if(fading<0)fading=0;}
