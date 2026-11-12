@@ -1158,6 +1158,9 @@ public final class SkillShots implements ClientModInitializer {
                     // (2.101.9) "hcam=EF/EU/ER/LF/LU/LR": H again's behind camera's eye and what it looks at (blocks ahead of her, up, to her right) so in this entry (SwordFinale.tunedBehind)
                     {double[] cam=null;if(opts.containsKey("hcam")){String[] v=opts.get("hcam").split("/");cam=new double[6];for(int i=0;i<6;i++)cam[i]=Double.parseDouble(v[i].trim());log.append("  H again's behind camera at ").append(opts.get("hcam")).append('\n');}
                      var tunedBehind=Class.forName("dev.sangwoo.celestialfall.client.isosang.SwordFinale").getDeclaredField("tunedBehind");tunedBehind.setAccessible(true);tunedBehind.set(null,cam);}
+                    // (2.116.1) "panelfit=TILT/OUT/DOWN/AHEAD[/WIDE/DEEP]": X Chara's hack panel placed so by their hand in this entry (HackPanel.tuned), to try a placing before it goes in
+                    {float[] fit=null;if(opts.containsKey("panelfit")){String[] v=opts.get("panelfit").split("/");fit=new float[6];for(int i=0;i<6;i++)fit[i]=i<v.length?Float.parseFloat(v[i].trim()):1;log.append("  hack panel placed ").append(opts.get("panelfit")).append('\n');}
+                     var tunedPanel=Class.forName("dev.sangwoo.celestialfall.client.xchara.HackPanel").getDeclaredField("tuned");tunedPanel.setAccessible(true);tunedPanel.set(null,fit);}
                     // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
                     if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);

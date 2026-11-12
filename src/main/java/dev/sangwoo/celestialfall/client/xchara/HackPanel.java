@@ -23,13 +23,17 @@ import static dev.sangwoo.celestialfall.client.xchara.HackLook.*;
  * face (what the video is too small to show, so the hacker's console): a title bar, a line filling as each line is
  * typed, rows of writing typed a character at a time and moved up as each is done (HackLook: every moment a function
  * of the clock), a cursor, two rows of keys lit as each character is struck, a faint line of light sweeping down it.
- * In a hand in the world it floats by the hand of the arm that hangs out from the body (XCharaIdle, 2.116.0), out to
- * the side past the hand and a little ahead of it (the video: it reaches out from the hand of an arm hanging down), level
- * across, its far edge raised so that its face is turned up to its holder (and to the camera behind them), bobbing a
- * little. It goes where the hand goes and stays level as the body stands, whatever the arm does (a guard's raised
- * forearm, a hit's swing: the arm's own turn is undone, {@link #arm}); turned with the arm it stood on its edge in a
- * guard. (2.115.0 held it over the palm of a raised forearm, turning with it.) From one's own eyes it lies low on the
- * off hand's side, leaning back to face them. It opens from a line of
+ * In a hand in the world it is a screen floating by the hand of the arm that hangs out from the body (XCharaIdle), as
+ * the user's video has it (2.116.1, user: "패널이 영상 보면 방향이 저렇게 안되어 있어"; read again from the video's two
+ * cameras, in front and above the front right, the two agreeing on one slab): its long side, the way its writing runs,
+ * lies fore and aft; its short side rises out to the holder's side, the outer edge (the top of the writing) some 42°
+ * above the inner; its face is turned in and up, to its holder's eyes as they look down to that side, so the writing
+ * reads from behind them to ahead. It floats below and outside the hand, a gap between them, the hand over the lower
+ * half of it (its keys), a little ahead of the arm; bobbing a little. It goes where the hand goes and stands so as the
+ * body stands, whatever the arm does (a guard's raised forearm, a hit's swing: the arm's own turn is undone,
+ * {@link #arm}); turned with the arm it stood on its edge in a guard. (2.116.0 had it level across, its long side out to
+ * the side, its far edge raised: not the video's. 2.115.0 held it over the palm of a raised forearm.) From one's own eyes
+ * it lies low on the off hand's side, leaning back to face them. It opens from a line of
  * light and folds back to one (HackLook.wide, deep, content, line).
  */
 public final class HackPanel {
@@ -41,15 +45,31 @@ public final class HackPanel {
      * it in a hand in the world, for that one draw (null: as the arm stands with the panel out, XCharaIdle.PANEL_OUT).
      */
     public static Quaternionf arm;
-    /** Its width, its depth and its thickness (blocks). */
-    static final float W=.74f,D=.46f,T=.028f;
+    /**
+     * Its width (the way its writing runs), its depth and its thickness (blocks of the model). 2.116.1: measured again on
+     * the user's video with the slab seen as it stands there (its long side fore and aft, from above the front right; its
+     * short side across the view from in front): some 2.2 by 1.3 of the body's studs, a little longer than 2.115.0 read
+     * it lying level (0.74).
+     */
+    static final float W=.82f,D=.48f,T=.028f;
     static final int SLAB=0x140a22,UNDER=0x0b0514,RIM=0xa635ff,HOT=0xe6c8ff,GLOW=0x8a14e8,TEXT=0xd4a6ff,KEY=0x7426cc,WHITE=0xffffff;
     /**
-     * Where its middle floats from the end of the arm that holds it, the arm hanging out from the body (the middle of the
-     * front edge of the arm's end; blocks, level: out to the holder's side, up, ahead), and how it is turned there
-     * (degrees: its outer end swung forward, its far edge raised).
+     * Where its middle floats from the middle of the end of the arm that holds it, the arm hanging out from the body
+     * (blocks of the model, as the body stands: out to the holder's side, down, ahead), and how far its outer edge is
+     * raised above its inner one (degrees). From the user's video, the game filmed from the video's two cameras (level in
+     * front at the neck's height; above the front right, 36° round and 29° up) and the rim of light measured the same
+     * way in both: the short side rises 41° to 46° outward in the view from in front (the game's at 40° measured 40° to
+     * 44°), the middle some 0.24 out and 0.14 below the hand's end there, and ahead of it by what the view from above
+     * has (0.17 to 0.30: the hand's own place is the least sure of these).
      */
-    static final float OUT=.50f,UP=.11f,AHEAD=.035f,TURN=12,TILT=32;
+    static final float OUT=.22f,DOWN=.13f,AHEAD=.24f,TILT=42;
+    /** How far ahead of the middle of the arm's end the held item's frame is (HeldItemFeatureRenderer: the front edge of the arm's end, 2 px). */
+    static final float FRONT=.125f;
+    /**
+     * A placing to try before it goes in (the capture tool's "panelfit=TILT/OUT/DOWN/AHEAD/WIDE/DEEP": the last two
+     * stretch it, 1 as it is), null otherwise.
+     */
+    static volatile float[] tuned;
 
     public static void initialize(){BuiltinItemRendererRegistry.INSTANCE.register(XChara.PANEL,HackPanel::render);}
     /** Whether anything of it is drawn for this hack (it is folded away a little before the rest of the hack is gone). */
@@ -80,28 +100,36 @@ public final class HackPanel {
     /**
      * Into its place by a hand in the world, from the held item's frame there (its x across the arm, towards its holder's
      * right; its y off the front of the arm, ahead of an arm that hangs; its z back up the arm), the arm turned
-     * {@code arm} in the model (null: as it stands with the panel out): first level again, as if the arm hung unturned
-     * (its turn undone about the hand, then up from the frame's z to the panel's y); then out to the side past the hand,
-     * about as high as the fist of the arm standing out, a little ahead of it; its outer end swung forward a little,
-     * its far edge raised.
+     * {@code arm} in the model (null: as it stands with the panel out): first as the body stands again, as if the arm
+     * hung unturned (its turn undone about the hand, then up from the frame's z: x to the holder's right, y up, z
+     * behind); then to its middle, out to the side and down from the middle of the arm's end and ahead of it; then
+     * turned so that its width lies fore and aft and its far edge (the top of the writing) is the outer one, raised:
+     * its face in and up, to its holder (a quarter turn about the upright, the writing running ahead as its holder
+     * reads it from that side, then leaned about the fore-and-aft line).
      */
     static void inHand(MatrixStack m,boolean left,float clock,Quaternionf arm){
         float side=left?-1:1;
+        float[] fit=tuned;
+        float tilt=fit!=null?fit[0]:TILT,out=fit!=null?fit[1]:OUT,down=fit!=null?fit[2]:DOWN,ahead=fit!=null?fit[3]:AHEAD;
         Quaternionf turn=arm!=null?arm:new Quaternionf().rotationZ(side*XCharaIdle.PANEL_OUT*(float)Math.PI/180);
         m.multiply(new Quaternionf(HAND).conjugate().mul(new Quaternionf(turn).conjugate()).mul(HAND));
         m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));
-        m.translate(side*OUT,UP+.012f*(float)Math.sin(clock*3.1f),-AHEAD);
-        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side*TURN));
-        m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(TILT));
-        m.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(1.5f*(float)Math.sin(clock*2.3f)));
+        m.translate(side*out,-down+.012f*(float)Math.sin(clock*3.1f),FRONT-ahead);
+        m.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(side*(tilt+1.5f*(float)Math.sin(clock*2.3f))));
+        m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-side*90));
+        if(fit!=null&&fit.length>5)m.scale(fit[4],1,fit[5]);
     }
-    /** Into its place before one's own eyes, from the off hand's item's frame there (the view's: x right, y up, z towards the eyes): leaning back to face them, turned a little to the middle. */
+    /**
+     * Into its place before one's own eyes, from the off hand's item's frame there (the view's: x right, y up, z towards
+     * the eyes): leaning back to face them, turned a little to the middle (as large in the view as it was before 2.116.1
+     * made it longer: 0.56 of its size).
+     */
     static void inView(MatrixStack m,boolean left){
         float side=left?-1:1;
         m.translate(side*-.04f,.2f,-.06f);
         m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side*-14));
         m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(54));
-        m.scale(.6f,.6f,.6f);
+        m.scale(.56f,.56f,.56f);
     }
 
     /** The panel about its middle: its width along x, its depth along z (its far edge at -z, the top of what is on it), its face up y. */
@@ -150,7 +178,7 @@ public final class HackPanel {
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,hw-.03f,-hd+.084f,y,KEY,.6f*c);
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,-hw+.03f+(W-.06f)*done,-hd+.084f,y,HOT,.9f*c);
         // the rows of writing: the last being typed, all moved up a row as it is done
-        float top=-hd+.098f,pitch=.046f,cw=.0235f,high=.028f,x0=-hw+.035f;
+        float top=-hd+.098f,pitch=.048f,cw=.026f,high=.029f,x0=-hw+.035f;
         for(int i=0;i<ROWS;i++){
             int line=n-(ROWS-1-i);float z=top+(i-scroll)*pitch,a=(i==ROWS-1?.95f:.5f+.13f*i)*c;
             if(i==0)a*=1-scroll;
@@ -168,7 +196,7 @@ public final class HackPanel {
             }
         }
         // its keys, lit as each character is struck
-        float kw=.052f,kh=.034f,gap=.0105f,kx=-(KEYS_ACROSS*kw+(KEYS_ACROSS-1)*gap)*.5f,kz=hd-.03f-KEYS_DOWN*kh-(KEYS_DOWN-1)*gap;
+        float kw=.058f,kh=.035f,gap=.0105f,kx=-(KEYS_ACROSS*kw+(KEYS_ACROSS-1)*gap)*.5f,kz=hd-.03f-KEYS_DOWN*kh-(KEYS_DOWN-1)*gap;
         for(int r=0;r<KEYS_DOWN;r++)for(int k=0;k<KEYS_ACROSS;k++){
             float lit=keyLit(r*KEYS_ACROSS+k,clock,seed),x=kx+k*(kw+gap),z=kz+r*(kh+gap);
             rect(v,pm,nm,wide,deep,x,z,x+kw,z+kh,y,HackKnife.mix(KEY,WHITE,lit),(.55f+.45f*lit)*c);
