@@ -4,7 +4,6 @@ import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.KagenoFire;
 import dev.sangwoo.celestialfall.client.StandClient;
 import dev.sangwoo.celestialfall.client.isosang.IsosangLimbs;
-import dev.sangwoo.celestialfall.client.isosang.IsosangSlash;
 import dev.sangwoo.celestialfall.client.kageno.Anim;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.client.kageno.Fx;
@@ -55,8 +54,11 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
 public final class KnifeCombo implements Fx.Skill {
     /** How long a swing is drawn for (seconds): the finisher's motion and what its X leaves. */
     public static final float LIFE=2.2f;
-    /** The knife's display turns it this far round the wrist (models/item/x_chara_knife.json: its x rotation); the hand turns it on from there as a hit drives it. */
-    public static final float DISPLAY_TILT=-18;
+    /**
+     * The knife's display turns it this far round the wrist (models/item/x_chara_knife.json: its x rotation; none, 2.116.0:
+     * the knife is square to the arm that hangs straight, so level ahead); the hand turns it on from there as a hit drives it.
+     */
+    public static final float DISPLAY_TILT=0;
     /** Blocks along the knife from the fist: its blade's heel and its point (twice its model's, as a hand holds it). */
     static final double HEEL=.37,TIP=2.63;
     /** The body's afterimages' purple. */
@@ -69,22 +71,45 @@ public final class KnifeCombo implements Fx.Skill {
 
     // ───────────────────────────── the stance ─────────────────────────────
 
-    /** How the game holds the knife between hits, as a frame (MotionPlayerModel's "xchara" arm: Lee So-sang's old hold of her sword; the knife as its display turns it). */
+    /**
+     * How the game holds the knife between hits, as a frame (MotionPlayerModel's "xchara" arms, XCharaIdle, 2.116.0: the
+     * arm straight down, a little out from the body; the knife as its display turns it).
+     */
     static R6.Frame hold(){
         MotionPose m=new MotionPose();
-        m.joint[MotionPose.RIGHT_ARM]=new float[]{(float)Math.toDegrees(IsosangSlash.HOLD_PITCH),(float)Math.toDegrees(IsosangSlash.HOLD_YAW),(float)Math.toDegrees(IsosangSlash.HOLD_ROLL)};
-        m.elbow[0]=(float)Math.toDegrees(IsosangSlash.HOLD_ELBOW);
+        m.joint[MotionPose.RIGHT_ARM]=new float[]{0,0,XCharaIdle.KNIFE_OUT};
         return new R6.Frame(m,DISPLAY_TILT,0,0,0,0,0,0);
     }
-    /** Their stance between hits: just as the game holds the knife (the arm a little forward, the knife level ahead, its spine up). */
+    /**
+     * Their stance between hits: as they stand at rest (XCharaIdle: at attention, the knife's arm straight and a little
+     * out, the knife level ahead with its spine up, the other arm straight against the body, the legs straight and a
+     * little apart).
+     */
     static final R6.Pose STANCE=holding();
     private static R6.Pose holding(){
         var held=R6.poseOf(hold());
-        R6.Pose s=R6.world(0,0,0,0,0,d(-71,2),d(1,0),d(-86,-8),d(-90,3),d(-90,-3));
+        R6.Pose s=R6.world(0,0,0,0,0,d(-90,0),d(0,0),d(-90,0),d(-90+XCharaIdle.LEGS_OUT,90),d(-90+XCharaIdle.LEGS_OUT,-90));
         s.rArm=held.rArm;s.blade=held.blade;return s;
     }
-    /** The stance solved, for a hit to start from (KagenoClips.begin): its limbs bent as every clip's are. */
-    public static R6.Frame stance(){return IsosangLimbs.bend(R6.solve(STANCE),0);}
+    /** The stance as the model stands it: every limb straight (what a hit begins from and ends in: {@link #natural}). */
+    static final R6.Frame AT_REST=R6.solve(STANCE);
+    /** The stance solved, for a hit to start from (KagenoClips.begin). */
+    public static R6.Frame stance(){return new R6.Frame(AT_REST.joints().copy(),AT_REST.grip(),0,0,0,0,0,0);}
+    /** How long the first hit takes out of the stance's straight limbs into its own bent ones, and every hit takes back into them at its end (seconds). */
+    static final float OUT_OF_REST=.05f,INTO_REST=.15f;
+    /**
+     * The fix of hit {@code hit}'s frames: their limbs bent as a person's are (IsosangLimbs: the elbows and knees of the
+     * keys' one-piece limbs), and, where the hit stands in the stance (the first hit's beginning, every hit's end), the
+     * limbs straight as they stand at rest (2.116.0: at attention), eased into and out of.
+     */
+    static Anim.Fix natural(int hit){
+        Anim.Fix bent=IsosangLimbs.natural(IsosangLimbs.FLOOR);float end=LENGTH[hit]/20f;
+        return (sec,f)->{
+            R6.Frame b=bent.apply(sec,f);
+            float w=Math.max(hit==CUT?1-Ease.smooth(sec,0,OUT_OF_REST):0,Ease.smooth(sec,end-INTO_REST,end));
+            return w<=0?b:R6.blend(b,AT_REST,Math.min(1,w));
+        };
+    }
 
     // ───────────────────────────── 1 잘라내기 ─────────────────────────────
     // wound up over the right shoulder (twisted right, the weight back), then down across the front to the low left: the
@@ -106,7 +131,7 @@ public final class KnifeCombo implements Fx.Skill {
         k(.28f,H1_END),
         k(step(CUT),H1_END),
         k(.56f,w(.16,-.1,10,6,-1,d(-64,-20),d(-2,-14),d(-70,-40),6,-168)),
-        k(.7f,STANCE)).stops(Anim.stop(blow(CUT,0),.025,.04)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
+        k(.7f,STANCE)).stops(Anim.stop(blow(CUT,0),.025,.04)).after(natural(CUT));
 
     // ───────────────────────────── 2 복사·붙여넣기 ─────────────────────────────
     // from the low left the knife is drawn up to the left shoulder, its point back over it, then cut backhand level
@@ -132,7 +157,7 @@ public final class KnifeCombo implements Fx.Skill {
         k(blow(PASTE,1),H2_END,Anim.Ease.OUT),
         k(step(PASTE),H2_END),
         k(.6f,w(.24,-.08,-6,4,1,d(-50,50),d(6,30),d(-60,-10),12,-166)),
-        k(.75f,STANCE)).stops(Anim.stop(blow(PASTE,0),.02,.04)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
+        k(.75f,STANCE)).stops(Anim.stop(blow(PASTE,0),.02,.04)).after(natural(PASTE));
 
     // ───────────────────────────── 3 연타 ─────────────────────────────
     // the knife drawn back low by the right hip, its point at the foe, the body twisted right and low; three thrusts
@@ -157,7 +182,7 @@ public final class KnifeCombo implements Fx.Skill {
         k(.45,w(.82,-.32,20,21,-2,d(-24,-6),d(7,-2),d(-46,-136),8,-170)),
         k(step(FLOOD),H3_END),
         k(.75f,w(.3,-.1,2,5,0,d(-58,16),d(4,0),d(-74,-24),8,-169)),
-        k(.9f,STANCE)).stops(Anim.stop(blow(FLOOD,2),.03,.05)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
+        k(.9f,STANCE)).stops(Anim.stop(blow(FLOOD,2),.03,.05)).after(natural(FLOOD));
 
     // ───────────────────────────── 4 삭제 ─────────────────────────────
     // a step back, the knife raised high behind the right shoulder (held there, sinking: red gathers on it); the first
@@ -187,7 +212,7 @@ public final class KnifeCombo implements Fx.Skill {
         k(.64,H4_END),
         k(HOLD[DELETE]/20f,H4_END),
         k(1.05f,w(.36,-.14,-10,6,1,d(-62,40),d(-1,20),d(-72,-12),18,-166)),
-        k(1.3f,STANCE)).stops(Anim.stop(blow(DELETE,0),.02,.03),Anim.stop(blow(DELETE,1),.05,.07)).after(IsosangLimbs.natural(IsosangLimbs.FLOOR));
+        k(1.3f,STANCE)).stops(Anim.stop(blow(DELETE,0),.02,.03),Anim.stop(blow(DELETE,1),.05,.07)).after(natural(DELETE));
 
     @Override public Anim clip(int combo){return clipOf(combo);}
     static Anim clipOf(int hit){return switch(hit){case PASTE->H2;case FLOOD->H3;case DELETE->H4;default->H1;};}

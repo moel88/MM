@@ -5,9 +5,10 @@ package dev.sangwoo.celestialfall.client.xchara;
  * frame): every part of it a continuous function of the seconds since it last came on or went off, so that every frame
  * drawn is its own. Coming on (the video: 0.2 s of purple blocks breaking over the knife and the panel, then steady):
  * the knife's white flickers in over a sixth of a second under blocks of purple, its rim flares and settles, the panel
- * opens from a line of light (its width, then its depth, then what is on it), the other arm comes up to hold it. Going
+ * opens from a line of light (its width, then its depth, then what is on it), the other arm comes out from the body
+ * with it by its hand (2.116.0, XCharaIdle; 2.115.0 raised its forearm under it). Going
  * off (not in the video: its coming, backwards): the white breaks up and goes, the rim fades, what is on the panel
- * goes dark, it folds to a line and the line closes, the arm comes down.
+ * goes dark, it folds to a line and the line closes, the arm comes back against the body.
  */
 public final class HackLook {
     private HackLook(){}
@@ -53,7 +54,7 @@ public final class HackLook {
     public static float cells(boolean on,float t){
         return on?smooth(t,0,.04f)*(1-smooth(t,.12f,.30f))*.55f:smooth(t,0,.03f)*(1-smooth(t,.11f,.26f))*.6f;
     }
-    /** How far the other arm is up, holding the panel (0 as it hangs, 1 held). */
+    /** How far the other arm is out from the body, the panel by its hand (0 as it hangs against the body, 1 out: XCharaIdle). */
     public static float arm(boolean on,float t){return on?smooth(t,0,.28f):1-smooth(t,.05f,OFF);}
     /** Ease out past the mark and back (a little: 4%). */
     static float back(float x){x=Math.max(0,Math.min(1,x));float c=1.1f,u=x-1;return 1+(c+1)*u*u*u+c*u*u;}

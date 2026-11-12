@@ -11,6 +11,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.RotationAxis;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import static dev.sangwoo.celestialfall.client.xchara.HackLook.*;
 
 /**
@@ -22,20 +23,33 @@ import static dev.sangwoo.celestialfall.client.xchara.HackLook.*;
  * face (what the video is too small to show, so the hacker's console): a title bar, a line filling as each line is
  * typed, rows of writing typed a character at a time and moved up as each is done (HackLook: every moment a function
  * of the clock), a cursor, two rows of keys lit as each character is struck, a faint line of light sweeping down it.
- * In a hand in the world it floats over the palm, out to the side past the hand (the video: it reaches out from the
- * hand), its far edge raised so that its face is turned up to its holder (and to the camera behind them), bobbing a
- * little. From one's own eyes it lies low on the off hand's side, leaning back to face them. It opens from a line of
+ * In a hand in the world it floats by the hand of the arm that hangs out from the body (XCharaIdle, 2.116.0), out to
+ * the side past the hand and a little ahead of it (the video: it reaches out from the hand of an arm hanging down), level
+ * across, its far edge raised so that its face is turned up to its holder (and to the camera behind them), bobbing a
+ * little. It goes where the hand goes and stays level as the body stands, whatever the arm does (a guard's raised
+ * forearm, a hit's swing: the arm's own turn is undone, {@link #arm}); turned with the arm it stood on its edge in a
+ * guard. (2.115.0 held it over the palm of a raised forearm, turning with it.) From one's own eyes it lies low on the
+ * off hand's side, leaning back to face them. It opens from a line of
  * light and folds back to one (HackLook.wide, deep, content, line).
  */
 public final class HackPanel {
     private HackPanel(){}
     /** The hack it is drawn for: set by whoever draws it in a hand, for that one draw. */
     public static HackLook.Frame frame;
+    /**
+     * The turn of the arm whose hand it is drawn by, in the model (its shoulder's, then its elbow's): set by whoever draws
+     * it in a hand in the world, for that one draw (null: as the arm stands with the panel out, XCharaIdle.PANEL_OUT).
+     */
+    public static Quaternionf arm;
     /** Its width, its depth and its thickness (blocks). */
     static final float W=.74f,D=.46f,T=.028f;
     static final int SLAB=0x140a22,UNDER=0x0b0514,RIM=0xa635ff,HOT=0xe6c8ff,GLOW=0x8a14e8,TEXT=0xd4a6ff,KEY=0x7426cc,WHITE=0xffffff;
-    /** How far it floats out past the hand, over the palm and beyond the hand (blocks, in the hand's frame), and how it is turned there (degrees). */
-    static final float OUT=.30f,OVER=.16f,BEYOND=.06f,TURN=12,TILT=32;
+    /**
+     * Where its middle floats from the end of the arm that holds it, the arm hanging out from the body (the middle of the
+     * front edge of the arm's end; blocks, level: out to the holder's side, up, ahead), and how it is turned there
+     * (degrees: its outer end swung forward, its far edge raised).
+     */
+    static final float OUT=.50f,UP=.11f,AHEAD=.035f,TURN=12,TILT=32;
 
     public static void initialize(){BuiltinItemRendererRegistry.INSTANCE.register(XChara.PANEL,HackPanel::render);}
     /** Whether anything of it is drawn for this hack (it is folded away a little before the rest of the hack is gone). */
@@ -53,7 +67,7 @@ public final class HackPanel {
         if(!shown(f))return;
         boolean left=mode==ModelTransformationMode.THIRD_PERSON_LEFT_HAND||mode==ModelTransformationMode.FIRST_PERSON_LEFT_HAND;
         m.push();m.translate(.5f,.5f,.5f);
-        if(held)inHand(m,left,f.clock());else if(eyes)inView(m,left);
+        if(held)inHand(m,left,f.clock(),arm);else if(eyes)inView(m,left);
         else{m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));m.scale(1.2f,1.2f,1.2f);}
         // (its coming on: it jumps a little sideways as it breaks in)
         if(f.on()&&f.t()<.25f)m.translate((hash((int)Math.floor(f.t()*40),f.seed(),3)-.5f)*.05f*(1-smooth(f.t(),0,.25f)),0,0);
@@ -61,15 +75,22 @@ public final class HackPanel {
         if(held)HackMode.recordPanel(m,W*.5f,D*.5f);
         m.pop();
     }
+    /** The held item's frame from the arm's own (HeldItemFeatureRenderer: a quarter turn down, half round). */
+    private static final Quaternionf HAND=new Quaternionf().rotationX(-(float)Math.PI/2).rotateY((float)Math.PI);
     /**
-     * Into its place in a hand in the world, from the held item's frame there (its x across the arm, towards its
-     * holder's right; its y off the front of the arm, up from the palm of a forearm held level; its z back up the arm):
-     * out to the side past the hand, over the palm, a little beyond the hand; its outer end swung forward a little, its
-     * far edge raised.
+     * Into its place by a hand in the world, from the held item's frame there (its x across the arm, towards its holder's
+     * right; its y off the front of the arm, ahead of an arm that hangs; its z back up the arm), the arm turned
+     * {@code arm} in the model (null: as it stands with the panel out): first level again, as if the arm hung unturned
+     * (its turn undone about the hand, then up from the frame's z to the panel's y); then out to the side past the hand,
+     * about as high as the fist of the arm standing out, a little ahead of it; its outer end swung forward a little,
+     * its far edge raised.
      */
-    static void inHand(MatrixStack m,boolean left,float clock){
+    static void inHand(MatrixStack m,boolean left,float clock,Quaternionf arm){
         float side=left?-1:1;
-        m.translate(side*OUT,OVER+.012f*(float)Math.sin(clock*3.1f),-BEYOND);
+        Quaternionf turn=arm!=null?arm:new Quaternionf().rotationZ(side*XCharaIdle.PANEL_OUT*(float)Math.PI/180);
+        m.multiply(new Quaternionf(HAND).conjugate().mul(new Quaternionf(turn).conjugate()).mul(HAND));
+        m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));
+        m.translate(side*OUT,UP+.012f*(float)Math.sin(clock*3.1f),-AHEAD);
         m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(side*TURN));
         m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(TILT));
         m.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(1.5f*(float)Math.sin(clock*2.3f)));

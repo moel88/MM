@@ -87,13 +87,34 @@ class KnifeComboTest {
         }
     }
     @Test void theStanceIsTheGamesHoldOfTheKnife(){
-        // the arm a little forward, its elbow bent as the model's hold bends it, the knife level ahead (its display's tilt)
+        // (2.116.0) at attention: the arm straight down, a little out from the body, the knife square to it: level ahead
         var s=KnifeCombo.stance();var hold=KnifeCombo.hold();
-        assertTrue(turn(s,hold,2)<1.5,"the arm as the game holds it");
-        assertEquals(hold.joints().elbow[0],s.joints().elbow[0],1.5,"the elbow as the game bends it");
-        assertEquals(KnifeCombo.DISPLAY_TILT,s.grip(),1.5,"the knife as its display turns it");
+        assertTrue(turn(s,hold,2)<.05,"the arm as the game holds it");
+        assertEquals(0,s.joints().elbow[0],1e-4,"the elbow straight");
+        assertEquals(KnifeCombo.DISPLAY_TILT,s.grip(),.05,"the knife as its display turns it");
         var k=knife(CUT,0);
-        assertTrue(Math.abs(k[3].y)<.2&&k[3].z>.95,"the knife about level, pointing ahead: "+k[3]);
+        assertTrue(Math.abs(k[3].y)<.02&&k[3].z>.999,"the knife level, pointing ahead: "+k[3]);
+        var arm=R6.poseOf(s).rArm;
+        assertEquals(Math.sin(Math.toRadians(XCharaIdle.KNIFE_OUT)),arm.rt(),1e-3,"the arm a little out to the right");
+        assertEquals(0,arm.fw(),1e-3,"and neither forward nor back");
+    }
+    @Test void whereAHitStandsInTheStanceItsLimbsAreStraightAndBetweenTheyBend(){
+        // the first hit begins at attention and every hit ends there: no elbow or knee bent, eased out of and into
+        var first=KnifeCombo.clipOf(CUT).frame(0).joints();
+        for(int i=0;i<2;i++){assertEquals(0,first.elbow[i],1e-3);assertEquals(0,first.knee[i],1e-3);}
+        for(int hit=CUT;hit<=DELETE;hit++){
+            var a=KnifeCombo.clipOf(hit);var last=a.frame(a.length()).joints();
+            for(int i=0;i<2;i++){assertEquals(0,last.elbow[i],1e-3,"hit "+hit);assertEquals(0,last.knee[i],1e-3,"hit "+hit);}
+            // between, an elbow bends (the limbs are a person's)
+            float bent=0;
+            for(double t=.1;t<a.length()-.2;t+=1/60.0){var j=a.frame((float)t).joints();bent=Math.max(bent,Math.max(-j.elbow[0],-j.elbow[1]));}
+            assertTrue(bent>10,"hit "+hit+" bends an elbow "+bent);
+            // into the stance without a step: the last sixth of a second, frame by frame
+            for(double t=a.length()-KnifeCombo.INTO_REST-.02;t+1/120.0<=a.length();t+=1/120.0){
+                var j0=a.frame((float)t).joints();var j1=a.frame((float)(t+1/120.0)).joints();
+                for(int i=0;i<2;i++)assertTrue(Math.abs(j1.elbow[i]-j0.elbow[i])<4,"hit "+hit+" elbow "+i+" steps at "+t);
+            }
+        }
     }
     @Test void eachHitBeginsWhereTheOneBeforeStandsAsItHandsOver(){
         for(int hit=CUT;hit<DELETE;hit++){

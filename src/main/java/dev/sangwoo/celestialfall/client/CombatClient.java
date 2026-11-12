@@ -199,11 +199,14 @@ public final class CombatClient {
         if(m==null)m=new Movement();
         var reaction=HitStunClient.reaction(p);
         if(reaction!=null)return MotionClips.hitReaction((float)(now-reaction.hitAt()),reaction.strike());
-        // (2.105.0) Lee So-sang stands at rest in her own stance in a fight too (IsosangIdle), not in the fists-up one
-        float combat=StandClient.isosang(p)?0:m.combat;
+        // (2.105.0) Lee So-sang stands at rest in her own stance in a fight too (IsosangIdle), not in the fists-up one;
+        // (2.116.0) and X Chara in theirs, at attention (XCharaIdle)
+        float combat=StandClient.isosang(p)||StandClient.xChara(p)?0:m.combat;
         MotionPose base=MotionClips.locomotion(MathHelper.lerp(delta,m.previousPhase,m.phase),MathHelper.lerp(delta,m.previousAmount,m.amount),m.forward,m.side,m.sprint,combat,p.age+delta);
         // (2.105.0) and with her legs straight as she stands (user: "다리는 왜 구부리고 있어 펴")
         if(StandClient.isosang(p))dev.sangwoo.celestialfall.client.isosang.IsosangIdle.straighten(base,MathHelper.lerp(delta,m.previousAmount,m.amount));
+        // (2.116.0) X Chara at attention: the legs straight, a little apart (user: "다리와 팔과 손을 쭉 펴서 정자세로 있고 다리를 살짝 벌리고")
+        if(StandClient.xChara(p))dev.sangwoo.celestialfall.client.xchara.XCharaIdle.stand(base,MathHelper.lerp(delta,m.previousAmount,m.amount));
         // In the air the knees draw up while rising and the legs reach down while falling; a landing dips the hips.
         float air=MathHelper.lerp(delta,m.previousAir,m.air);
         if(air>.001f)base=MotionPose.blend(base,MotionClips.air(MathHelper.lerp(delta,m.previousVy,m.vy)/.42f,p.age+delta),air);

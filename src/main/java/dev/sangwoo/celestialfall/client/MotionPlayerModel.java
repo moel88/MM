@@ -57,6 +57,11 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
                 float d=animationProgress-player.age,body=net.minecraft.util.math.MathHelper.lerpAngleDegrees(d,player.prevBodyYaw,player.bodyYaw);
                 dev.sangwoo.celestialfall.client.kageno.KagenoClips.walkLegs(pose,CombatClient.pose(player,d),walking,frame.yaw()+dev.sangwoo.celestialfall.client.kageno.KagenoClips.facingTurn(stand,d,body));
             }
+            // (2.116.0) X Chara's hack's panel is carried through their knife's hits as it is held standing: that arm out
+            if(StandClient.xChara(player)){
+                var hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),animationProgress-player.age);
+                if(hack!=null)dev.sangwoo.celestialfall.client.xchara.XCharaIdle.carry(pose,player.getMainArm()==Arm.RIGHT,hack.arm());
+            }
             MotionRig.apply(this,pose,0,0);
         }
         else if(mining){
@@ -88,14 +93,19 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         }
         else if(StandClient.xChara(player)&&!player.isUsingItem()&&rig&&"base".equals(CombatClient.state(player,animationProgress-player.age))
             &&!CombatClient.snapshot(player.getUuid()).guard()){
-            // X Chara's knife (2.111.0): held a little forward at the side, the arm keeping a quarter of its walk's swing,
-            // as Lee So-sang held her sword from 2.76.0 to 2.104.0 (their skills to come will bring their own motion;
-            // punching and guarding keep the rig's arms)
-            arms="xchara";
-            rightArm.pitch=-.33f+rightArm.pitch*.25f;rightArm.yaw=-.06f;rightArm.roll=.04f;rightArm.getChild("elbow").pitch=-.12f;
-            // (2.115.0) their hack (Q): the other arm up, its forearm level, holding the panel over its palm (HackPose)
-            boolean leftFree=player.getMainArm()==net.minecraft.util.Arm.RIGHT;
-            dev.sangwoo.celestialfall.client.xchara.HackPose.apply(leftFree?leftArm:rightArm,leftFree,dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),animationProgress-player.age),animationProgress);
+            // X Chara at rest (2.116.0, user request: "다리와 팔과 손을 쭉 펴서 정자세로 있고 다리를 살짝 벌리고 검들고 있는 팔도
+            // 살짝 벌리고 있고 패널 부분 팔은 몸에 붙이고 있다가 패널 소환하면 팔 벌리게"): at attention, the arms straight, the
+            // knife's a little out from the body, the other against it and out as the hack's panel is called (XCharaIdle;
+            // the legs straight and a little apart come with the rig's pose, CombatClient.pose). (2.111.0 to 2.115.0 they
+            // held the knife a little forward at the side, the elbow bent, and the panel on a raised forearm.)
+            arms="xchara";float d=animationProgress-player.age;
+            var pose=CombatClient.pose(player,d);var hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),d);
+            dev.sangwoo.celestialfall.client.xchara.XCharaIdle.arms(pose,player.getMainArm()==Arm.RIGHT,
+                dev.sangwoo.celestialfall.client.xchara.XCharaIdle.weight(player.getUuid(),d),hack==null?0:hack.arm(),animationProgress);
+            for(int i=0;i<2;i++){
+                var arm=i==0?rightArm:leftArm;float[] a=pose.joint[dev.sangwoo.celestialfall.combat.MotionPose.RIGHT_ARM+i];
+                arm.pitch=MotionRig.rad(a[0]);arm.yaw=MotionRig.rad(a[1]);arm.roll=MotionRig.rad(a[2]);arm.getChild("elbow").pitch=MotionRig.rad(pose.elbow[i]);
+            }
         }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).
         float delta=animationProgress-player.age;
