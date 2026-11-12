@@ -45,7 +45,7 @@ class ClipPreviewDump {
         String out=System.getenv("BOTAND_CLIP_DUMP");
         if(out==null||out.isBlank())return;
         Path dir=Path.of(out);Files.createDirectories(dir);
-        for(int hit=CUT;valid(hit);hit++){
+        for(int hit=SLASH;valid(hit);hit++){
             Anim a=KnifeCombo.clipOf(hit);
             try(var w=new PrintWriter(Files.newBufferedWriter(dir.resolve("hit_"+hit+".csv")))){
                 w.println("t,yaw,pitch,roll,head,sR,eR,hR,sL,eL,hL,hipR,kR,fR,hipL,kL,fL,rod,heel,tip,blows="+blowsOf(hit)+",step="+STEP[hit]/20f+",hold="+HOLD[hit]/20f);

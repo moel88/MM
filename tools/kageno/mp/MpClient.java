@@ -525,16 +525,18 @@ public final class MpClient implements ClientModInitializer {
         "5 XCHARA","8 NOCDOFF","40 DIST5","45 HEAL","50 GUARD+","62 G","80 GUARD-","90 G",
         "110 NOCDON","120 G","126 GUARD+","150 GUARD-","170 G","176 HITME","200 HEAL","205 DIST5","210 G","470 END"};
     /**
-     * X Chara's basic attack (2.114.0, MP_ONLY=xcharam1): the caster takes X Chara, its cooldowns on. The whole combo into
-     * the watcher 3 blocks ahead (the attack held: 6, 3 + 3, 2 + 2 + 2, 4 + 6; no blow but the last moves it, the last
-     * throws it). Again with the watcher's guard up (the first three hits kept off, the fourth through it). One hit and
-     * nothing more: the combo breaks and the attack rests (a press in the rest refused, one after it the first hit
-     * again). The caster struck in the middle of a hit: it stops short and rests. The watcher 6 blocks ahead: only the
-     * thrusts' knives of light reach it. Last the watcher's guard raised only once the second hit is in (18 ticks after
-     * the press): the thrusts kept off, the fourth hit through its guard (it takes none). The server leaves the watcher
-     * where the script puts it and where the finisher throws it (MpServer.restore). Both clients log every swing as they hear it (which hit, how late), each blow's
-     * struck as told, a swing stopped short, the sounds they start and the caster's hit count; the server each hit, its
-     * blows, the rest, the watcher's health, guard and moves.
+     * X Chara's basic attack (2.114.0, MP_ONLY=xcharam1; since 2.118.0 the four swings are the same with the hack on or
+     * off, and this script, which leaves the hack off, swings the plain four: MP_ONLY=xcharaplain is the fuller check): the
+     * caster takes X Chara, its cooldowns on. The whole combo into the watcher 3 blocks ahead (the attack held: 6, 6, 6,
+     * 10; no blow but the lunge moves it, the lunge throws it). Again with the watcher's guard up (the first three kept
+     * off, the lunge through it). One hit and nothing more: the combo breaks and the attack rests (a press in the rest
+     * refused, one after it the first hit again). The caster struck in the middle of a hit: it stops short and rests.
+     * The watcher 6 blocks ahead: nothing reaches it (until 2.118.0 the hack's thrusts threw knives of light that far).
+     * Last the watcher's guard raised only once the second hit is in (18 ticks after the press): the chop kept off, the
+     * lunge through its guard (it takes none). The server leaves the watcher where the script puts it and where the
+     * lunge throws it (MpServer.restore). Both clients log every swing as they hear it (which hit, how late), its blow's
+     * struck as told, a swing stopped short, the sound they start and the caster's hit count; the server each hit, its
+     * blow, the rest, the watcher's health, guard and moves.
      */
     private static final String[] XCHARAM1_SCRIPT={
         "5 XCHARA","8 NOCDOFF",
@@ -547,8 +549,8 @@ public final class MpClient implements ClientModInitializer {
         "880 END"};
     /**
      * X Chara's Q, the hack (2.115.0, MP_ONLY=xcharaq): the caster takes X Chara. Q: on. Q: off. Q twice within 8 ticks:
-     * on once (the second is not heard). The whole combo into the watcher 3 blocks ahead with it on (its damage as ever:
-     * 6, 3 + 3, 2 + 2 + 2, 4 + 6). Another stand: off by itself; X Chara again: still off until Q. Slain with it on: off,
+     * on once (the second is not heard). The whole combo into the watcher 3 blocks ahead with it on (hits 1 to 4: 6, 6, 6,
+     * 10, the same swings as with it off, 2.118.0). Another stand: off by itself; X Chara again: still off until Q. Slain with it on: off,
      * and the new body comes back without it; Q on the new body: on. Both clients log each player's hack as they see it
      * change (and whether the panel is drawn in their other hand) and the sounds they start for it; the server the
      * caster's hack as it changes (with why it may or may not be on), and the combo as for xcharam1.
@@ -562,15 +564,16 @@ public final class MpClient implements ClientModInitializer {
         "400 SLAIN","560 Q",
         "620 END"};
     /**
-     * X Chara's plain swings and the hack between hits (2.117.0, MP_ONLY=xcharaplain): the caster takes X Chara, its hack
-     * off as it comes. The plain four into the watcher 3 blocks ahead (the attack held: hits 5 to 8, one blow each: 6, 6,
-     * 6, 10; no blow but the lunge moves it, the lunge throws it). Again with the watcher's guard up (the three cuts kept
-     * off, the lunge through it). The attack held and Q struck once the second swing has begun: the plain first and
-     * second, then the hack's third and fourth (2 + 2 + 2, 4 + 6). The hack on now: held again and Q struck once the
-     * hack's second has begun: the hack's first and second (6, 3 + 3), then the plain chop and lunge (6, 10). Last one
-     * swing and nothing more with the hack off: it breaks and rests. Both clients log every swing as they hear it (which
-     * hit: 1 to 4 the hack's, 5 to 8 plain), each blow's struck, the sounds they start (xchara_swing_* for the plain) and
-     * each player's hack as it changes; the server each hit, its blows, the rest, the watcher's health, guard and moves,
+     * X Chara's swings and the hack between hits (2.117.0, MP_ONLY=xcharaplain; 2.118.0: the same four swings with the
+     * hack on or off, one sound for all): the caster takes X Chara, its hack off as it comes. The plain four into the
+     * watcher 3 blocks ahead (the attack held: hits 5 to 8, one blow each: 6, 6, 6, 10; no blow but the lunge moves it,
+     * the lunge throws it). Again with the watcher's guard up (the three cuts kept off, the lunge through it). The
+     * attack held and Q struck once the second swing has begun: hits 5 and 6, then 3 and 4 (the hack on: the same chop
+     * and lunge, 6 and 10, told as the kind the clients draw a purple cut for). The hack on now: held again and Q struck
+     * once the second has begun: hits 1 and 2, then 7 and 8. Last one swing and nothing more with the hack off: it
+     * breaks and rests. Both clients log every swing as they hear it (which hit: 1 to 4 begun with the hack on, 5 to 8
+     * plain), its blow's struck, the sound they start (xchara_slash for every swing, two ticks before its blow) and
+     * each player's hack as it changes; the server each hit, its blow, the rest, the watcher's health, guard and moves,
      * and the caster's hack as it changes.
      */
     private static final String[] XCHARAPLAIN_SCRIPT={

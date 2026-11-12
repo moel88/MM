@@ -290,17 +290,17 @@ public final class KagenoFire {
     public static boolean beginGlitch(Matrix4f m,float age){if(shader==null)return false;glitches=begin(age,18);glitchMatrix=m;return true;}
     public static void endGlitch(){if(glitches!=null){end(glitches);glitches=null;}}
     /**
-     * A band of purple light that glitches, along a swept path (X Chara's knife's cuts): {@code inner[i]}..{@code outer[i]}
-     * across it (the outer edge the knife's point), {@code along[i]} from 0 at the tail to 1 at the head ({@code n}
-     * points). {@code style}: 0 a cut, 1 the finisher's, 2 a cut pasted again; {@code erase} the share eaten from the
-     * tail (a block at a time), {@code tear} how torn it is (0 whole, 1 torn right apart: strips shoved aside, blocks
-     * broken off, its colours split).
+     * X Chara's knife's cut along a swept path (the shader's mode 18; its name is from 2.114.0's glitching cuts, which
+     * 2.118.0 threw out for a clean purple slash): {@code inner[i]}..{@code outer[i]} across it (the outer edge the
+     * knife's point), {@code along[i]} from 0 at the tail to 1 at the head ({@code n} points). {@code style}: 0 a cut,
+     * 1 the lunge's lance (drawn about the band's middle line); {@code erase} the share eaten from the tail,
+     * {@code cool} how far it has cooled (0 as it is cut, 1 once it has narrowed to its edge and deepened).
      */
-    public static void glitchRibbon(Vec3d[] inner,Vec3d[] outer,float[] along,int n,int style,int seed,float erase,float tear,float alpha){
+    public static void glitchRibbon(Vec3d[] inner,Vec3d[] outer,float[] along,int n,int style,int seed,float erase,float cool,float alpha){
         if(glitches==null||alpha<=0||erase>=1||n<2)return;int code=(style&15)*16+(seed&15);
         for(int i=0;i+1<n;i++){
-            xpoint(inner[i],along[i],0,code,erase,tear,alpha);xpoint(inner[i+1],along[i+1],0,code,erase,tear,alpha);
-            xpoint(outer[i+1],along[i+1],1,code,erase,tear,alpha);xpoint(outer[i],along[i],1,code,erase,tear,alpha);
+            xpoint(inner[i],along[i],0,code,erase,cool,alpha);xpoint(inner[i+1],along[i+1],0,code,erase,cool,alpha);
+            xpoint(outer[i+1],along[i+1],1,code,erase,cool,alpha);xpoint(outer[i],along[i],1,code,erase,cool,alpha);
         }
     }
     private static void xpoint(Vec3d p,float u,float v,int code,float erase,float tear,float alpha){

@@ -9,7 +9,7 @@ usage: python3 -I tools/xchara/make_q_sounds.py [OUT]
                  as the panel folds to a line and the line goes out
 
 Each client plays one as it sees the hack change (client/xchara/HackMode: loud for its user, fading out to 40 blocks for
-the rest). Made of noise and tones only, with the parts of the knife's basic attack (make_m1_sounds.py: one palette for
+the rest). Made of noise and tones only, with the parts of the knife's basic attack (synth.py: one palette for
 the character), fixed seeds, mono 48 kHz; each brought to its loudness (quieter than a hit of the knife: it is a
 state, not a blow) under a limiter that keeps peaks below -1 dB.
 """
@@ -22,8 +22,8 @@ import numpy as np
 from scipy.io import wavfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import make_m1_sounds as M  # noqa: E402
-from make_m1_sounds import SR, band, blips, crush, finish, high, loudness, low, noise, norm, put, screen_off, smooth, square, t, tone  # noqa: E402
+import synth as M  # noqa: E402
+from synth import SR, band, blips, crush, finish, high, loudness, low, noise, norm, put, screen_off, smooth, square, t, tone  # noqa: E402
 
 M.LOUDNESS.update({'xchara_q_on': -18.5, 'xchara_q_off': -20.0})
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

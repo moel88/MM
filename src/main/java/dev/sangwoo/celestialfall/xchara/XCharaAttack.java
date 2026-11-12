@@ -30,22 +30,22 @@ import net.minecraft.util.math.Vec3d;
 import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
 
 /**
- * X Chara's basic attack, their knife's four hits (2.114.0; XCharaCombo for the timing and the reach). The attack key on
- * their client asks for a hit (xchara_attack_v1, no payload; a vanilla attack is taken the same way) and the server
+ * X Chara's basic attack, their knife's four swings (2.114.0; XCharaCombo for the timing and the reach). The attack key
+ * on their client asks for a hit (xchara_attack_v1, no payload; a vanilla attack is taken the same way) and the server
  * decides, as for Lee So-sang's sword (IsosangAttack): the next hit of the combo starts now, or when it may if that is
- * near (a press made a little early is kept), or not at all while the attack rests. A hit is the hack's (a hacker's
- * trick, with its effects) if their hack is on as it starts (Q, XCharaHack), and a plain swing of the knife if it is
- * off (2.117.0: XCharaCombo's hits 5 to 8); the combo goes on through either. Each hit goes the way its user faces
- * as it starts and holds them where they stand a moment (XCharaCombo.HOLD: no walking, guard, dash or other move,
- * CombatManager.busy); at each of its blows it strikes everyone in its way (XCharaCombo.lane, in sight) without knockback
- * and staggers them until the next blow could land (Stagger.xchara). The fourth takes no guard, and its last blow sends
- * whom it strikes flying the way the hit went. Every viewer is told when a hit starts, whom each blow struck, and when
+ * near (a press made a little early is kept), or not at all while the attack rests. The swings and their rules are the
+ * same with their hack on or off (2.118.0); a hit is told as one begun with the hack on (Q, XCharaHack: XCharaCombo's
+ * hits 1 to 4, which the clients draw with a purple cut and what it leaves on whom it strikes) or with it off (hits 5
+ * to 8, 2.117.0: the body and the knife only), and the combo goes on through either. Each hit goes the way its user
+ * faces as it starts and holds them where they stand a moment (XCharaCombo.HOLD: no walking, guard, dash or other
+ * move, CombatManager.busy); at its blow it strikes everyone in its way (XCharaCombo.lane, in sight) without knockback
+ * and staggers them until the next blow could land (Stagger.xchara). The fourth, the lunge, takes no guard and sends
+ * whom it strikes flying the way the hit went. Every viewer is told when a hit starts, whom its blow struck, and when
  * the attack rests or the hit stops short (xchara_attack_event_v1); the clients draw the body's motion and the cuts
  * (client/xchara/KnifeClient, KnifeCombo). A hit stops short when its user is struck, staggered, incapacitated, held in a
  * cutscene (their own G too), or is X Chara's no more; the attack then rests as after a broken combo.
  * <p>
- * Its sounds are the clients' (KnifeClient: each hit's own, made for it, and a blow's as it lands on someone); the
- * server plays none.
+ * Its sound is the clients' (KnifeClient: the one sound of every swing, the user's own, 2.118.0); the server plays none.
  */
 public final class XCharaAttack {
     /** The attack key (no payload); and every viewer's news. */
@@ -56,7 +56,7 @@ public final class XCharaAttack {
     static final int RATE=40;
     private static final class State {
         final ServerWorld world;State(ServerPlayerEntity p){world=p.getServerWorld();}
-        /** The hit in flight or the last one (1 to 8: the hack's four, the plain four; 0 for none), its id, when it began, the way it goes (degrees), and how many of its blows have landed. */
+        /** The hit in flight or the last one (1 to 8: the four begun with the hack on, the plain four; 0 for none), its id, when it began, the way it goes (degrees), and how many of its blows have landed. */
         int combo;UUID id=new UUID(0,0);long start=-1000;float yaw;int blows;
         /** A press kept for the next hit, and the tick the attack is ready again after a rest (0 for none). */
         boolean queued;long ready;
@@ -136,7 +136,8 @@ public final class XCharaAttack {
         if(last(s.combo)&&now>=s.ready&&now>=s.start+LENGTH[s.combo])s.combo=0;
     }
     private static void begin(ServerPlayerEntity p,State s,long now){
-        // (2.117.0) the hack off as it begins, a plain swing; on, the hack's hit: the combo goes on from the one to the other
+        // the hack off as it begins, a plain swing (2.117.0); on, the same swing drawn with its purple cut (2.118.0): the
+        // combo goes on from the one to the other
         s.combo=next(s.combo,!XCharaHack.on(p));s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
         // (the rest after the fourth hit: none for a player the cooldowns are off for, /botand nocooldown)
         if(last(s.combo))s.ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:rested(s.combo,now);
@@ -170,8 +171,8 @@ public final class XCharaAttack {
         send(p,s,STOPPED,-1,null);
     }
     /**
-     * One of the hit's blows lands: everyone in its way in front of its user, in sight, is struck without knockback and
-     * staggered until the next blow could land; the fourth takes no guard, and its last sends them flying.
+     * The hit's blow lands: everyone in its way in front of its user, in sight, is struck without knockback and staggered
+     * until the next blow could land; the fourth takes no guard and sends them flying.
      */
     private static void blow(ServerPlayerEntity p,State s,long now){
         int combo=s.combo,i=s.blows++;
@@ -189,7 +190,7 @@ public final class XCharaAttack {
             struck.add(e);
             // every blow staggers whom it strikes a moment (2.68.0's rule for basic attacks); one stopped in Star Platinum's
             // stopped time is staggered as time moves again
-            if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.xchara(combo,i,s.start,now,!XCharaHack.on(p)));
+            if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.xchara(combo,i,s.start,now));
             // the finisher's last cut throws them the way it went, told to a struck player's client once, through the
             // tracker; one stopped in a time stop is thrown as time moves again
             if(launches(combo,i)){

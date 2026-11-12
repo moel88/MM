@@ -581,8 +581,8 @@ public final class MpServer implements ModInitializer {
             float lost=knifeHealth-watcher.getHealth();
             note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (guard %s, staggered %s, the caster's health %.1f)",knifeHealth,watcher.getHealth(),now,
                 dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),dev.sangwoo.celestialfall.combat.CombatManager.staggered(watcher),caster.getHealth()));
-            // the finisher's last blow (6): how far it throws them
-            if(h!=null&&h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.DELETE&&h.blows()==2&&Math.abs(lost-6)<.01f){knifeThrown=now;knifeThrownFrom=knifeWatcherAt==null?watcher.getPos():knifeWatcherAt;}
+            // the lunge (10): how far it throws them
+            if(h!=null&&dev.sangwoo.celestialfall.xchara.XCharaCombo.last(h.combo())&&h.blows()==1&&Math.abs(lost-10)<.01f){knifeThrown=now;knifeThrownFrom=knifeWatcherAt==null?watcher.getPos():knifeWatcherAt;}
             knifeHealth=watcher.getHealth();
         }
         if(knifeWatcherAt!=null&&now<=knifeUntil&&knifeThrown<0&&watcher.getPos().distanceTo(knifeWatcherAt)>.01)

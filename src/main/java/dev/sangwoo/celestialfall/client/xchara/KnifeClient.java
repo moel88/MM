@@ -34,11 +34,13 @@ import net.minecraft.util.math.Vec3d;
  * everything drawn. A swing stopped short lets go of the body at once and draws nothing of the blows it never came to
  * ({@link #until}).
  * <p>
- * Its sounds are made for it (tools/xchara/make_m1_sounds.py: a knife's whooshes with a hacker's noises in them, no
- * recording): each hit's own (xchara_m1_1 to 4) is played a tick after the hit starts, so what is a tick short of a
- * blow in its file is heard as the blow lands; a blow that lands on someone is heard at once (xchara_m1_hit, a little
- * higher with every blow of the combo; the finisher's last its own, xchara_m1_hit_last). Loud for their user and whom
- * a blow struck, fading out to CARRY blocks for everyone else; a hit stopped short fades out over a few ticks.
+ * Its sound is the user's own (2.118.0: "이걸 보탠드 엑스 차라 평타 소리로 옮겨 Q활성화 비활성화 전부 똑같게"; taken out of
+ * their video from under its music, tools/xchara/extract_slash.py): one sound, xchara_slash, for every swing with the
+ * hack on or off, a hiss as the knife cuts and a tail falling after it (their "피슝"). It starts SOUND_BEFORE ticks
+ * before the swing's blow, as the knife is let go, so the hiss is at its fullest as the blow lands and the tail falls
+ * through the follow-through; a blow that lands on someone has no sound of its own (the video's has none). Loud for
+ * its user, fading out to CARRY blocks for everyone else; a hit stopped short fades out over a few ticks. (Until
+ * 2.118.0 the sounds were made up: each hit's own and a blow's as it landed.)
  */
 public final class KnifeClient {
     /** Every hit this client knows of, by its id: a cast of the knife's skill (XCharaCombo.SKILL), its combo the hit's number. */
@@ -53,17 +55,13 @@ public final class KnifeClient {
     static final int LATE=12;
     /** Each swing's sound as it plays (to fade it out if the swing stops short). */
     private static final Map<UUID,XCharaClient.Voice> VOICES=new HashMap<>();
-    /** A swing's sound starts this many ticks into it (its file starts there: make_m1_sounds.py's LEAD); how far its sounds carry (blocks). */
-    static final int SOUND_LEAD=1;static final double CARRY=40;
+    /** Every swing's sound; it starts this many ticks before the swing's blow lands; how far it carries (blocks). */
+    static final String SOUND="xchara_slash";static final int SOUND_BEFORE=2;static final double CARRY=40;
+    /** The tick into hit {@code combo} its sound starts on. */
+    static int soundAt(int combo){return Math.max(0,XCharaCombo.blowAt(combo,0)-SOUND_BEFORE);}
     /** For the capture tools: the sounds this client started, newest last (each "name hit/blow, ticks into its swing"). */
     public static final List<String> HEARD=new ArrayList<>();
     private static void heard(String line){HEARD.add(line);while(HEARD.size()>64)HEARD.remove(0);}
-    /** The pitch of a blow's sound as it lands, by hit and blow: a little higher with every blow of the combo; the finisher's first cut low. */
-    static final float[][] HIT_PITCH={{},{1f},{1.06f,1.12f},{1.2f,1.27f,1.35f},{.84f,1f},{1f},{1.06f},{.9f},{1f}};
-    /** A hit's own sound (a tick into it): the hack's (xchara_m1_1 to 4), or a plain swing's (xchara_swing_1 to 4, 2.117.0). */
-    static String swingSound(int combo){return (XCharaCombo.plain(combo)?"xchara_swing_":"xchara_m1_")+XCharaCombo.place(combo);}
-    /** A blow's sound as it lands on someone: the hack's or a plain swing's, the finisher's last its own. */
-    static String blowSound(int combo,int blow){return (XCharaCombo.plain(combo)?"xchara_swing_hit":"xchara_m1_hit")+(XCharaCombo.launches(combo,blow)?"_last":"");}
     private static int ticks,lastAsk=-100;
     private static Object world;
     private KnifeClient(){}
@@ -95,7 +93,6 @@ public final class KnifeClient {
             if(cast==null||told==null||blow<0||blow>=told.length)return;
             told[blow]=struck.stream().mapToInt(StandClient.Target::entity).toArray();
             if(!struck.isEmpty()){
-                landed(mc,cast,blow,struck);
                 var all=new ArrayList<>(cast.targets());for(var t:struck)if(all.stream().noneMatch(o->o.entity()==t.entity()))all.add(t);
                 SWINGS.put(id,new StandClient.Cast(cast.id(),cast.caster(),cast.dimension(),cast.skill(),cast.combo(),cast.start(),cast.serverNow(),cast.received(),cast.origin(),cast.yaw(),List.copyOf(all)));
             }
@@ -137,7 +134,7 @@ public final class KnifeClient {
         if(mc.player==null)return 0;
         return (float)(dev.sangwoo.celestialfall.CelestialFall.CONFIG.effectVolume*Math.max(0,1-mc.player.getPos().distanceTo(from)/CARRY));
     }
-    /** The hit's own sound: a tick into it (its file starts there), loud for its user, for everyone else from where its user is. */
+    /** The swing's sound: SOUND_BEFORE ticks before its blow, loud for its user, for everyone else from where its user is. */
     private static void voice(MinecraftClient mc,StandClient.Cast cast){
         if(mc.world==null||mc.player==null)return;
         UUID caster=cast.caster();Vec3d origin=cast.origin();
@@ -145,27 +142,14 @@ public final class KnifeClient {
             var m=MinecraftClient.getInstance();var user=m.world==null?null:m.world.getPlayerByUuid(caster);
             return loudness(m,user==null?origin:user.getPos());
         };
-        var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(swingSound(cast.combo())),loud);
+        var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(SOUND),loud);
         if(v.full()<=.01f)return;
-        // told of a tick or more into it: at once (a tick late at most is not heard as late; later, LATE has dropped it)
-        int wait=SOUND_LEAD-(int)Math.floor(cast.age(0));
+        // told of after it was to start: at once (a tick late is not heard as late; later, LATE has dropped the swing)
+        int wait=soundAt(cast.combo())-(int)Math.floor(cast.age(0));
         if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
         VOICES.put(cast.id(),v);
-        heard(String.format(java.util.Locale.ROOT,"%s, told %.0f ticks in, played %d later at %.2f",swingSound(cast.combo()),cast.age(0),Math.max(0,wait),v.full()));
+        heard(String.format(java.util.Locale.ROOT,"%s hit %d, told %.0f ticks in, played %d later at %.2f",SOUND,cast.combo(),cast.age(0),Math.max(0,wait),v.full()));
     }
-    /** A blow landing on someone: heard at once, from the nearer of its user and whom it struck (loud for both). */
-    private static void landed(MinecraftClient mc,StandClient.Cast cast,int blow,List<StandClient.Target> struck){
-        if(mc.world==null||mc.player==null||!XCharaCombo.valid(cast.combo()))return;
-        boolean mine=cast.caster().equals(mc.player.getUuid());Vec3d from=struck.get(0).position();
-        for(var t:struck){if(t.entity()==mc.player.getId())mine=true;if(t.position().squaredDistanceTo(mc.player.getPos())<from.squaredDistanceTo(mc.player.getPos()))from=t.position();}
-        var user=mc.world.getPlayerByUuid(cast.caster());
-        if(user!=null&&user.getPos().squaredDistanceTo(mc.player.getPos())<from.squaredDistanceTo(mc.player.getPos()))from=user.getPos();
-        float loud=mine?(float)dev.sangwoo.celestialfall.CelestialFall.CONFIG.effectVolume:loudness(mc,from);if(loud<=.01f)return;
-        boolean last=XCharaCombo.launches(cast.combo(),blow);String name=blowSound(cast.combo(),blow);
-        heard(String.format(java.util.Locale.ROOT,"%s hit %d blow %d, %.0f ticks in, at %.2f",name,cast.combo(),blow,cast.age(0),loud));
-        mc.getSoundManager().play(new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(name),()->loud,last?1:HIT_PITCH[cast.combo()][blow]));
-    }
-
     /** Whether this swing's body clip still plays (it is the body's motion until then, unless it stopped short). */
     static boolean animating(StandClient.Cast c){return c.age(0)<KnifeCombo.clipOf(c.combo()).length()*20+1;}
     /** The latest swing of this player whose body clip still plays and did not stop short (KagenoClips.animated), or null. */
