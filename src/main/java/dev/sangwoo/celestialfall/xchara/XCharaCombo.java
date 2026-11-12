@@ -52,18 +52,23 @@ public final class XCharaCombo {
     public static final int CLEAVE_STUN=60,CLEAVE_COOLDOWN=240;
     public static final double CLEAVE_SLOW=1,CLEAVE_HIGH=3.6;
     private static final double[] CLEAVE_REACH={.2,9.6,1.5};
-    /** When the cleave's panel is pressed, when the knife is full grown and in both hands, and when it is raised over their head, wound for the blow (ticks into it): what the clients draw to (GiantCleave). */
-    public static final int CLEAVE_PRESS=4,CLEAVE_GROWN=9,CLEAVE_RAISED=14;
+    /**
+     * When the cleave's panel is pressed, when both hands have the knife, when it is full grown, and when it is raised
+     * over their head, wound for the blow (ticks into it): what the clients draw to (GiantCleave). (2.123.0, user
+     * request: "검이 서서히 커지는 효과 넣어줘": the knife grows slowly now, from the press until it is nearly raised, where
+     * 2.122.0's was grown a quarter of a second after the press; the blow is four ticks later for it.)
+     */
+    public static final int CLEAVE_PRESS=4,CLEAVE_HELD=9,CLEAVE_GROWN=17,CLEAVE_RAISED=18;
     /** The tick into hit {@code n} its blow lands on (the same for either kind). */
-    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{20}};
+    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24}};
     /** Each blow's damage: 6, 6, 6, 10; 28 for the combo. */
     private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18}};
     /** Ticks from a hit's start before the next may start. */
     public static final int[] STEP={0,8,9,12,0,8,9,12,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,34};
+    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,38};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,40};
+    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,44};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */

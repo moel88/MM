@@ -44,7 +44,9 @@ class XCharaComboTest {
         assertEquals(HACK_SLASH,next(CLEAVE,false));assertEquals(SLASH,next(CLEAVE,true));
         // one blow, after the press, the growing and the leap, while it holds them; it lets go before its motion is over
         assertEquals(1,blows(CLEAVE));
-        assertTrue(CLEAVE_PRESS<CLEAVE_GROWN&&CLEAVE_GROWN<CLEAVE_RAISED&&CLEAVE_RAISED<blowAt(CLEAVE,0));
+        assertTrue(CLEAVE_PRESS<CLEAVE_HELD&&CLEAVE_HELD<CLEAVE_GROWN&&CLEAVE_GROWN<=CLEAVE_RAISED&&CLEAVE_RAISED<blowAt(CLEAVE,0));
+        // (2.123.0: "검이 서서히 커지는 효과") the knife grows for over half a second from the press, so the blow is at 1.2 s
+        assertTrue(CLEAVE_GROWN-CLEAVE_PRESS>=12,"it grows slowly");assertEquals(24,blowAt(CLEAVE,0));
         assertTrue(blowAt(CLEAVE,0)-CLEAVE_RAISED>=5&&blowAt(CLEAVE,0)<=24,"wound, then down: no leap (2.122.0)");
         assertTrue(blowAt(CLEAVE,0)<HOLD[CLEAVE]&&HOLD[CLEAVE]<=LENGTH[CLEAVE]);
         assertTrue(holding(CLEAVE,100,100)&&holding(CLEAVE,100,100+HOLD[CLEAVE]-1));assertFalse(holding(CLEAVE,100,100+HOLD[CLEAVE]));
