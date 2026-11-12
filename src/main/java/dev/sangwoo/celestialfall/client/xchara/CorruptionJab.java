@@ -360,8 +360,10 @@ public final class CorruptionJab {
         m.quad(p.subtract(a).subtract(b),p.add(a).subtract(b),p.add(a).add(b),p.subtract(a).add(b),rgb,alpha);
     }
     /** The blended pass: the X's pixels, its purple outline and its white. */
-    public static void alpha(EffectMesh m){
-        for(var x:shown)for(int y=0;y<DOWN;y++){
+    public static void alpha(EffectMesh m){for(var x:shown)alpha(m,x);}
+    /** One X's pixels (2.125.0: the X on the face of X Chara's double is the same, CloneFling). */
+    static void alpha(EffectMesh m,Shown x){
+        for(int y=0;y<DOWN;y++){
             int slip=slip(x.clock,y,x.seed);
             for(int i=0;i<ACROSS;i++){
                 int kind=CELLS[y][i];if(kind==0)continue;
@@ -371,14 +373,13 @@ public final class CorruptionJab {
         }
     }
     /** The light, added: its purple glow, and a little of its white's own. */
-    public static void additive(EffectMesh m){
-        for(var x:shown){
-            float breath=.85f+.15f*(float)Math.sin(x.clock*4.2f);
-            m.softDisc(x.at,x.cell*ACROSS*.75,GLOW,.26f*x.alpha*breath);
-            for(int y=0;y<DOWN;y++){
-                int slip=slip(x.clock,y,x.seed);
-                for(int i=0;i<ACROSS;i++)if(CELLS[y][i]==2)cell(m,x,i+slip-(ACROSS-1)*.5,(DOWN-1)*.5-y,.5,LILAC,.22f*x.alpha);
-            }
+    public static void additive(EffectMesh m){for(var x:shown)additive(m,x);}
+    static void additive(EffectMesh m,Shown x){
+        float breath=.85f+.15f*(float)Math.sin(x.clock*4.2f);
+        m.softDisc(x.at,x.cell*ACROSS*.75,GLOW,.26f*x.alpha*breath);
+        for(int y=0;y<DOWN;y++){
+            int slip=slip(x.clock,y,x.seed);
+            for(int i=0;i<ACROSS;i++)if(CELLS[y][i]==2)cell(m,x,i+slip-(ACROSS-1)*.5,(DOWN-1)*.5-y,.5,LILAC,.22f*x.alpha);
         }
     }
     /** A little purple light on the world round each X. */

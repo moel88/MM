@@ -723,6 +723,8 @@ public final class StandPunchFx {
             long until;boolean guard;
             // (2.124.0) one held by X Chara's jab has its X on their face for it: no stars over them
             if(dev.sangwoo.celestialfall.client.xchara.CorruptionJab.marked(e.getId())){DAZED_SINCE.remove(e.getId());continue;}
+            // (2.125.0) nor over one X Chara's double has thrown into its wall: the wall holds them
+            if(dev.sangwoo.celestialfall.client.xchara.CloneClient.carries(e)){DAZED_SINCE.remove(e.getId());continue;}
             if(e instanceof net.minecraft.entity.player.PlayerEntity p){
                 if(p==mc.getCameraEntity()&&!mc.gameRenderer.getCamera().isThirdPerson())continue;
                 var c=dev.sangwoo.celestialfall.client.CombatClient.snapshot(p.getUuid());

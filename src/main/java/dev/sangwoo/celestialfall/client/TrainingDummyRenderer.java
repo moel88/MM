@@ -16,6 +16,8 @@ public final class TrainingDummyRenderer extends software.bernie.geckolib.render
     @Override public Identifier getTexture(TrainingDummyEntity d){return SKIN;}
     /** The Atomic dummy holds the stand's sword through its Atomic, as the caster's held-item layer would draw it. */
     @Override public void render(TrainingDummyEntity d,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light) {
+        // (2.125.0) drawn again as X Chara's double of it: its bones posed for that (GeckoLib would leave them as its own drawing this frame had them)
+        if(dev.sangwoo.celestialfall.client.xchara.CloneClient.doubling(d)&&model instanceof dev.sangwoo.celestialfall.client.integration.GeckoDummyModel posed)posed.pose(d,delta);
         super.render(d,yaw,delta,matrices,vertices,light);
         var atomic=AtomicClient.poseCast(d.getUuid());if(atomic==null)return;
         matrices.push();
@@ -33,6 +35,8 @@ public final class TrainingDummyRenderer extends software.bernie.geckolib.render
         dev.sangwoo.celestialfall.client.stand.StandBeatdown.turn(d,delta,yaw,matrices);
         // (2.112.0) X Chara's G's strange space: facing its user, upside down
         dev.sangwoo.celestialfall.client.xchara.XCharaClient.turn(d,delta,yaw,matrices);
+        // (2.125.0) X Chara's double: the double's turn and lean, and the one seized turning over in the air
+        dev.sangwoo.celestialfall.client.xchara.CloneClient.turn(d,delta,yaw,matrices);
     }
     @Override public boolean hasLabel(TrainingDummyEntity d){return dispatcher.getSquaredDistanceToCamera(d)<32*32;}
     @Override protected void renderLabelIfPresent(TrainingDummyEntity d,Text text,MatrixStack matrices,VertexConsumerProvider vertices,int light) {

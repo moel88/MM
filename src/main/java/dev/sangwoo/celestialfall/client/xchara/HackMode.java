@@ -101,7 +101,10 @@ public final class HackMode {
     /** (2.121.0) A press of this player's panel this frame as HackPanel.press has it (their Y's, lime; their cleave's, violet), or null. */
     public static float[] press(UUID id,float delta){
         float[] heal=HealClient.press(id,delta);
-        return heal!=null?heal:GiantCleave.press(id,delta);
+        if(heal!=null)return heal;
+        float[] cleave=GiantCleave.press(id,delta);
+        // (2.125.0) their double's: pressed as it is called, lit again as it throws
+        return cleave!=null?cleave:CloneClient.press(id,delta);
     }
     /** This player's hack this frame, or null if nothing of it shows. */
     public static HackLook.Frame look(UUID id,float delta){

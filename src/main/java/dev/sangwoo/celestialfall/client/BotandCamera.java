@@ -193,6 +193,10 @@ public final class BotandCamera {
         // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
         double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);
         if(lift>1e-3)eye=eye.add(0,.8*lift,0);
+        // (2.125.0) seized by X Chara's double, their body is drawn up in the air, flung and in the wall while they are
+        // held where they stood: their camera goes with the body they see
+        var thrown=dev.sangwoo.celestialfall.client.xchara.CloneClient.offset(mc.player,delta);
+        if(thrown!=null)eye=eye.add(thrown);
         var offset=STATE.offset(STATE.distance,shoulder(delta));
         Vec3d desired=eye.add(offset.x(),offset.y(),offset.z());
         double fraction=clearFraction(eye,desired);

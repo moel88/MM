@@ -82,6 +82,12 @@ public final class BossThreats {
             var by=(ServerPlayerEntity)mark[0];long start=(Long)mark[1],at=start+dev.sangwoo.celestialfall.xchara.XCharaRules.WARN-1;
             out.add(new Threat(by,"xchara_g",start,at,at,Zone.ring(boss.getPos(),256,-512,512),true,false,true,dev.sangwoo.celestialfall.xchara.XCharaRules.DAMAGE,false,false));
         }
+        // (2.125.0) and their double's "!!!" on it, until the throw: a guard up toward its user blocks it, as G's
+        var doubled=dev.sangwoo.celestialfall.xchara.XCharaClone.marking(boss);
+        if(doubled!=null){
+            var by=(ServerPlayerEntity)doubled[0];long start=(Long)doubled[1],at=start+dev.sangwoo.celestialfall.xchara.CloneRules.THROW-1;
+            out.add(new Threat(by,"xchara_clone",start,at,at,Zone.ring(boss.getPos(),256,-512,512),true,false,true,dev.sangwoo.celestialfall.xchara.CloneRules.DAMAGE,false,false));
+        }
         for(var c:AtomicManager.columns(world)){
             double dx=boss.getX()-c[0],dz=boss.getZ()-c[2];
             if(dx*dx+dz*dz<(c[4]+6)*(c[4]+6))out.add(new Threat(null,"atomic",now-BossRules.REACTION,now,now+40,Zone.ring(new Vec3d(c[0],c[1],c[2]),c[4]+1.5,-2,c[4]*2.5),false,false,false,40,false,true));

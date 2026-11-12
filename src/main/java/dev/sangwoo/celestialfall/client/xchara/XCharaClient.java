@@ -216,9 +216,21 @@ public final class XCharaClient {
             // it off, the jab (XCharaAttack.jab): the server takes the one or the other by their hack. R is the map's use key
             // otherwise: X Chara's player's is their skill's, as Star Platinum's and Kageno's (the fruit is eaten with the
             // attack key)
+            // (2.125.0) with the hack on R is the double (XCharaClone): asked, as G, with the one the camera's middle looks
+            // at (the cleave, R's from 2.121.0, is H's now)
             if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                var target=HackMode.on(mc.player)?aim(mc):null;
                 BotandCamera.prepareInteraction();
-                var b=PacketByteBufs.create();b.writeByte(R);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+                var b=PacketByteBufs.create();b.writeByte(R);b.writeVarInt(target==null?-1:target.getId());ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+            }
+            return true;
+        }
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_H){
+            // (2.125.0, user request: "Q활성화 R스킬을 Q활성화 H스킬로 옮겨") H with the hack on, the cleave (XCharaAttack.cleave:
+            // the way they look as it begins); with it off, H is taken and does nothing yet
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                BotandCamera.prepareInteraction();
+                var b=PacketByteBufs.create();b.writeByte(H);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
             return true;
         }
@@ -272,6 +284,8 @@ public final class XCharaClient {
     /** Whether this one is held where they stand by a sword dance now (KagenoManager.frozen on this client): its user until it is over, the one marked from its strange space. */
     public static boolean holds(Entity e){
         if(e==null||!MapClient.enabled())return false;
+        // (2.125.0) and by their double: its user until it has thrown, the one marked from the throw until the wall lets them go
+        if(CloneClient.holds(e))return true;
         for(var d:DANCES.values()){
             float t=d.age(0);if(t<0||t>=d.over())continue;
             if(e.getUuid().equals(d.user))return true;
@@ -362,6 +376,8 @@ public final class XCharaClient {
             this.loud=loud;volume=loud.get();this.pitch=pitch;attenuationType=SoundInstance.AttenuationType.NONE;relative=true;x=y=z=0;
         }
         float full(){return volume;}
+        /** Whether it has begun to play (one played with a delay has not until then). */
+        boolean begun(){return begun&&!dropped;}
         /** Fades it out over FADE ticks; one that has not begun yet (played with a delay, 2.124.0: the jab's thrust) never begins. */
         void fade(){if(!begun){dropped=true;done=true;}if(fading<0)fading=0;}
         @Override public boolean canPlay(){return !dropped;}

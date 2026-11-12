@@ -18,8 +18,13 @@ public final class GeckoDummyModel extends GeoModel<TrainingDummyEntity> {
     @Override public Identifier getModelResource(TrainingDummyEntity d){return CelestialFall.id("geo/training_dummy.geo.json");}
     @Override public Identifier getTextureResource(TrainingDummyEntity d){return CelestialFall.id("textures/entity/training_dummy.png");}
     @Override public Identifier getAnimationResource(TrainingDummyEntity d){return CelestialFall.id("animations/training_dummy.animation.json");}
-    @Override public void setCustomAnimations(TrainingDummyEntity d,long id,AnimationState<TrainingDummyEntity> state){
-        float delta=state.getPartialTick();
+    @Override public void setCustomAnimations(TrainingDummyEntity d,long id,AnimationState<TrainingDummyEntity> state){pose(d,state.getPartialTick());}
+    /**
+     * Its bones from the combat pose sampler now. (2.125.0) Called by its renderer too when the dummy is drawn a second
+     * time in one frame, as X Chara's double of it: GeckoLib does not pose an animatable again in the frame it was just
+     * posed in.
+     */
+    public void pose(TrainingDummyEntity d,float delta){
         float body=MathHelper.lerpAngleDegrees(delta,d.prevBodyYaw,d.bodyYaw);
         float head=MathHelper.lerpAngleDegrees(delta,d.prevHeadYaw,d.headYaw);
         reference.setAngles(d,d.limbAnimator.getPos(delta),d.limbAnimator.getSpeed(delta),d.age+delta,MathHelper.wrapDegrees(head-body),d.getPitch(delta));

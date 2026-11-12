@@ -21,6 +21,8 @@ public final class KagenoSkills {
         SKILLS[dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL]=new dev.sangwoo.celestialfall.client.xchara.KnifeCombo();
         // X Chara's G (2.112.0): drawn with the same passes, from its own casts (XCharaClient)
         SKILLS[dev.sangwoo.celestialfall.xchara.XCharaRules.SKILL]=new dev.sangwoo.celestialfall.client.xchara.SwordDance();
+        // X Chara's double (2.125.0): drawn with the same passes, from its own casts (CloneClient)
+        SKILLS[dev.sangwoo.celestialfall.xchara.CloneRules.SKILL]=new dev.sangwoo.celestialfall.client.xchara.CloneFling();
     }
     public static Fx.Skill of(int skill){return skill>=0&&skill<SKILLS.length?SKILLS[skill]:null;}
 }

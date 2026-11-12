@@ -12,6 +12,10 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
     public MotionPlayerModel(boolean slim) {super(MotionRig.player(slim),slim);half=slim?.5f:1;}
     @Override public void setAngles(AbstractClientPlayerEntity player,float limbAngle,float limbDistance,float animationProgress,float headYaw,float headPitch) {
         MotionRig.reset(this);super.setAngles(player,limbAngle,limbDistance,animationProgress,headYaw,headPitch);
+        // X Chara's double of this player (2.125.0): drawn a second time beside its user, in the double's own pose (their
+        // own pose and its fades are left as they are: CloneClient.render)
+        var doubled=dev.sangwoo.celestialfall.client.xchara.CloneClient.doublePose(player);
+        if(doubled!=null){articulated=true;MotionRig.apply(this,doubled,0,0);overlays();return;}
         // Stopped in Star Platinum's time stop (2.67.0): the body holds the pose it was drawn in as time stopped. Its
         // own clocks go on here (the world's time a flinch or a daze is timed by, a guard or a blow cut off as it was
         // stopped), its body does not; as time moves again the pose it takes fades in from this one.
@@ -33,6 +37,9 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         var stab=dev.sangwoo.celestialfall.client.stand.StandArrowClient.frame(player,animationProgress-player.age);
         // Star Platinum's beatdown's cutscene (2.64.0): its user's body ("yare yare", a hand on the head) and the one struck's
         var beat=stab!=null?null:dev.sangwoo.celestialfall.client.stand.BeatdownPose.of(player,animationProgress-player.age);
+        // X Chara's double (2.125.0): seized by it, hanging in the air, flung, held in the wall
+        var flung=stab!=null||beat!=null?null:dev.sangwoo.celestialfall.client.xchara.CloneClient.struckPose(player,animationProgress-player.age);
+        if(flung!=null)beat=flung;
         // The meteor pickaxe in both hands (2.49.1): after a stand's own motion, before its idle arms.
         boolean mining=stab==null&&atomic==null&&stand==null&&dev.sangwoo.celestialfall.client.meteor.MiningPose.active(player,animationProgress-player.age);
         String arms="";
@@ -102,7 +109,8 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             arms="xchara";float d=animationProgress-player.age;
             var pose=CombatClient.pose(player,d);var hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),d);
             // (2.119.0) a press of the panel (their E, HealClient): its arm up in front of them, its hand tapping it, and they look down at it
-            float[] press=hack==null?null:dev.sangwoo.celestialfall.client.xchara.HealClient.press(player.getUuid(),d);
+            // (2.125.0) and their double's (CloneClient.press, through HackMode.press with the others')
+            float[] press=hack==null?null:dev.sangwoo.celestialfall.client.xchara.HackMode.press(player.getUuid(),d);
             dev.sangwoo.celestialfall.client.xchara.XCharaIdle.arms(pose,player.getMainArm()==Arm.RIGHT,
                 dev.sangwoo.celestialfall.client.xchara.XCharaIdle.weight(player.getUuid(),d),hack==null?0:hack.arm(),animationProgress,press==null?0:press[0],press==null?0:press[1]);
             for(int i=0;i<2;i++){
@@ -122,7 +130,7 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         if(delta>=0&&delta<=1.001f){
             Object source;float fade;
             if(stab!=null){source="stand-arrow";fade=3;}
-            else if(beat!=null){source="beatdown";fade=3;}
+            else if(beat!=null){source=flung!=null?"double":"beatdown";fade=3;}
             else if(atomic!=null){source="atomic";fade=3;}
             else if(stand!=null){source=stand.id();fade=1.6f;}
             else if(mining){source=dev.sangwoo.celestialfall.client.meteor.MiningPose.source(player);fade=3;}

@@ -27,6 +27,8 @@ public abstract class BeatdownRenderMixin {
         var offset=StandBeatdown.offset(e,delta);if(offset!=null)ci.setReturnValue(ci.getReturnValue().add(offset));
         // (2.112.0) X Chara's G's strange space: the one marked hangs across from its user
         var space=dev.sangwoo.celestialfall.client.xchara.XCharaClient.offset(e,delta);if(space!=null)ci.setReturnValue(ci.getReturnValue().add(space));
+        // (2.125.0) X Chara's double: the one seized is lifted, flung and held in the wall
+        var thrown=dev.sangwoo.celestialfall.client.xchara.CloneClient.offset(e,delta);if(thrown!=null)ci.setReturnValue(ci.getReturnValue().add(thrown));
     }
     /** No names over anyone's head while this client's camera is a beatdown's cutscene's (2.66.0: its close shots had the one struck's name fill the frame), as its HUD is hidden. */
     @Inject(method="render(Lnet/minecraft/entity/Entity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
@@ -46,6 +48,10 @@ public abstract class BeatdownRenderMixin {
         if(dev.sangwoo.celestialfall.client.isosang.SwordStep.hides(e)){ci.setReturnValue(false);return;}
         // (the user's 2.87.0 preview) she is drawn wherever the cutscene's camera looks, posed in its shot (GStage.staged)
         if(dev.sangwoo.celestialfall.client.isosang.GStage.staged(e)){ci.setReturnValue(true);return;}
+        // (2.125.0) X Chara's double: the one marked drawn again beside its user, and drawn where the throw has them
+        if(dev.sangwoo.celestialfall.client.xchara.CloneClient.doubling(e)){ci.setReturnValue(true);return;}
+        var thrown=dev.sangwoo.celestialfall.client.xchara.CloneClient.offset(e,1);
+        if(thrown!=null&&frustum.isVisible(e.getBoundingBox().offset(thrown).expand(1.5))){ci.setReturnValue(true);return;}
         var offset=StandBeatdown.offset(e,1);
         if(offset!=null&&frustum.isVisible(e.getBoundingBox().offset(offset).expand(1)))ci.setReturnValue(true);
     }

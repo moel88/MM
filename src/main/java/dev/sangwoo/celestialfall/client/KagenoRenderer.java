@@ -61,6 +61,14 @@ public final class KagenoRenderer {
             if(pos.squaredDistanceTo(camera)>96*96)continue;
             casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
         }
+        // X Chara's double (2.125.0): drawn as the casts are, from its own list
+        for(var s:dev.sangwoo.celestialfall.client.xchara.CloneClient.CASTS.values()){
+            var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
+            float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
+            var owner=mc.world.getPlayerByUuid(s.caster());Vec3d pos=owner==null?s.origin():owner.getLerpedPos(delta);
+            if(pos.squaredDistanceTo(camera)>96*96)continue;
+            casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
+        }
         var primary=StandClient.visualCast();
         if(primary!=null&&AtomicClient.CASTS.isEmpty()&&HeavenClient.CASTS.isEmpty()){
             Vec3d focus=primary.origin().add(0,1.1,0);
@@ -164,6 +172,7 @@ public final class KagenoRenderer {
         RenderSystem.defaultBlendFunc();
         // Shader passes (fire, smoke, brush strokes) manage their own buffers.
         for(var x:casts)KagenoSkills.of(x.cast.skill()).shaders(x);
+        dev.sangwoo.celestialfall.client.xchara.CloneFling.dust(matrix,camera);
         if(status){dev.sangwoo.celestialfall.client.stand.StandPunchFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandRushFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandInhaleFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandArrowFx.dust(matrix,camera);}
         if(KagenoFire.beginStrokes(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).strokes(x);KagenoFire.endStrokes();}
         if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}

@@ -12,10 +12,16 @@ public final class TrainingDummyModel extends BipedEntityModel<TrainingDummyEnti
         // Stopped in Star Platinum's time stop (2.67.0): it holds the pose it was drawn in as time stopped (MotionPlayerModel).
         if(dev.sangwoo.celestialfall.client.stand.StandTimeStop.stopped(d)&&PoseBlend.hold(d.getUuid(),this,animation))return;
         // Struck by Star Platinum's beatdown (2.64.0): its body as the cutscene has the one struck, as a player's would.
+        // X Chara's double of it (2.125.0): drawn a second time beside its user, in the double's own pose
+        var doubled=dev.sangwoo.celestialfall.client.xchara.CloneClient.doublePose(d);
+        if(doubled!=null){MotionRig.apply(this,doubled,0,0);hat.visible=false;return;}
         var beat=dev.sangwoo.celestialfall.client.stand.BeatdownPose.struckOf(d,delta);
+        // (2.125.0) seized by X Chara's double: hanging in the air, flung, held in the wall
+        boolean flung=false;
+        if(beat==null){beat=dev.sangwoo.celestialfall.client.xchara.CloneClient.struckPose(d,delta);flung=beat!=null;}
         if(beat!=null){
             MotionRig.apply(this,beat,0,0);hat.visible=false;
-            if(delta>=0&&delta<=1.001f)PoseBlend.apply(d.getUuid(),this,"beatdown",3,animation);
+            if(delta>=0&&delta<=1.001f)PoseBlend.apply(d.getUuid(),this,flung?"double":"beatdown",3,animation);
             return;
         }
         // The Atomic dummy's body plays the caster's Atomic as a player's would (user request, 2.38.2), fading in and out.

@@ -99,13 +99,20 @@ public final class SwordDance implements Fx.Skill {
             return;
         }
         float shown=markShown(d,t);if(shown<=0)return;
-        float pop=.6f+.4f*XCharaSpace.smooth((t-MARK)/1.5f);
-        Vec3d p=target.getLerpedPos(c.delta).add(0,target.getHeight()+1.15,0);
-        Vec3d n=c.camera.subtract(p);if(n.lengthSquared()<1e-6)return;n=n.normalize();
+        bangs(m,c.camera,target.getLerpedPos(c.delta).add(0,target.getHeight()+1.15,0),t-MARK,shown,light);
+    }
+    /**
+     * The "!!!" itself, its middle at {@code p}, facing the camera, {@code since} ticks after it came: popped in, red and
+     * white by turns every tenth of a second, a dark outline round each bar and dot (the blended pass), a soft glow of
+     * its colour round it (the light). (2.125.0: X Chara's double marks with the same, CloneFling.)
+     */
+    static void bangs(EffectMesh m,Vec3d camera,Vec3d p,float since,float shown,boolean light){
+        float pop=.6f+.4f*XCharaSpace.smooth(since/1.5f);
+        Vec3d n=camera.subtract(p);if(n.lengthSquared()<1e-6)return;n=n.normalize();
         Vec3d right=n.crossProduct(new Vec3d(0,1,0));if(right.lengthSquared()<1e-4)right=new Vec3d(1,0,0);right=right.normalize();
         Vec3d up=right.crossProduct(n).normalize();
         double s=2.2*pop;
-        boolean red=((int)Math.floor((t-MARK)/2))%2==0;
+        boolean red=((int)Math.floor(since/2))%2==0;
         if(light){
             // a soft glow round it, in its colour
             m.softDisc(p.add(up.multiply(.04*s)),.42*s,red?0xff3030:0xffffff,.35f*shown);

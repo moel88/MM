@@ -70,6 +70,8 @@ public abstract class PlayerEntityRendererMixin extends LivingEntityRenderer<Abs
     private void celestialfall$atomicActor(AbstractClientPlayerEntity player,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci) {
         botand$selectModel();
         botand$posed=false;
+        // (2.125.0) X Chara's double of this player: drawn a second time where the double stands, none of their own state in the way
+        if(dev.sangwoo.celestialfall.client.xchara.CloneClient.doubling(player)){matrices.push();botand$posed=true;return;}
         var atomic=dev.sangwoo.celestialfall.client.AtomicClient.cinematic();
         if(atomic!=null&&!atomic.caster.equals(player.getUuid())&&player.squaredDistanceTo(atomic.origin)<32*32){ci.cancel();return;}
         if(dev.sangwoo.celestialfall.client.StandClient.cutsceneHidden(player)){ci.cancel();return;}

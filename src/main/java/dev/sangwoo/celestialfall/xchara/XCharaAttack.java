@@ -168,6 +168,12 @@ public final class XCharaAttack {
         send(p,s,HIT,-1,null);
         return true;
     }
+    /** (2.125.0) Another skill of theirs began (the double, XCharaClone): the combo is over (the next hit is the first), no rest added. */
+    public static void skillUsed(ServerPlayerEntity p){
+        var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getServerWorld())return;
+        settle(p,s,p.getWorld().getTime());
+        if(valid(s.combo)&&!last(s.combo)&&!skill(s.combo)){s.combo=0;s.queued=false;}
+    }
     /** When the next hit may begin: at once with none in flight; the next of the combo its STEP after the hit before; the next combo once the fourth's motion is over (and its rest, s.ready). */
     private static long may(State s){
         if(!valid(s.combo))return Long.MIN_VALUE;

@@ -1164,5 +1164,32 @@
         "preload": true
       }
     ]
+  },
+  "xchara_clone": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_clone",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_clone_throw": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_clone_throw",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_clone_wall": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_clone_wall",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

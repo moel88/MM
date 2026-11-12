@@ -136,7 +136,7 @@ public final class MpServer implements ModInitializer {
         if(VANILLA_ONLY)vanillas(server);
         if(XCHARA_ONLY&&!XCHARAM1_ONLY||XCHARAE_ONLY)xchara(server);
         if(XCHARAM1_ONLY&&!XCHARAE_ONLY)knife(server);
-        if(XCHARAE_ONLY){xcharaE(server);xcharaR(server);}
+        if(XCHARAE_ONLY){xcharaE(server);xcharaR(server);xcharaClone(server);}
         if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -581,6 +581,40 @@ public final class MpServer implements ModInitializer {
             cleaveHeld=held;
         }
         cleaveAt=watcher.getPos();
+    }
+    private Object[] cloneSeen;private net.minecraft.util.math.Vec3d cloneWatcherAt;private double cloneMoved;private long cloneReady=Long.MIN_VALUE;
+    /**
+     * (2.125.0) X Chara's R with the hack on, the double: when it begins and whom it marks, when the one marked is seized
+     * (and where the wall's foot is), when they are in the wall (where they are then, what it dealt), when it is over and
+     * when it is ready again; how far the watcher moved while seized, before the wall.
+     */
+    private void xcharaClone(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        var d=dev.sangwoo.celestialfall.xchara.XCharaClone.describe(caster);
+        long ready=dev.sangwoo.celestialfall.xchara.XCharaClone.ready(caster);
+        if(d!=null&&(cloneSeen==null||!d[0].equals(cloneSeen[0])))
+            note(server,String.format(java.util.Locale.ROOT,"caster's double began at %d, marking %s %.2f blocks off (watcher's guard %s)",(Long)d[0],(Integer)d[4]==watcher.getId()?"the watcher":"entity "+d[4],caster.distanceTo(watcher),dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));
+        if(d!=null&&(Boolean)d[1]&&(cloneSeen==null||!(Boolean)cloneSeen[1]||!d[0].equals(cloneSeen[0]))){
+            var wall=(net.minecraft.util.math.Vec3d)d[5];
+            note(server,String.format(java.util.Locale.ROOT,"caster's double: the watcher seized at %d (%d in) at %.2f %.2f %.2f, %.2f blocks from the caster; the wall's foot %.2f %.2f %.2f, %.2f blocks behind it; the watcher held %s, shielded from a blow %s; the caster held %s",
+                now,now-(Long)d[0],watcher.getX(),watcher.getY(),watcher.getZ(),caster.distanceTo(watcher),wall.x,wall.y,wall.z,wall.distanceTo(watcher.getPos()),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(watcher),
+                dev.sangwoo.celestialfall.xchara.XCharaClone.shielded(watcher,server.getOverworld().getDamageSources().playerAttack(caster)),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster)));
+            cloneWatcherAt=watcher.getPos();cloneMoved=0;
+        }
+        if(d!=null&&(Boolean)d[1]&&!(Boolean)d[2]&&cloneWatcherAt!=null)cloneMoved=Math.max(cloneMoved,watcher.getPos().distanceTo(cloneWatcherAt));
+        if(d!=null&&(Boolean)d[2]&&(cloneSeen==null||!(Boolean)cloneSeen[2]||!d[0].equals(cloneSeen[0]))){
+            var wall=(net.minecraft.util.math.Vec3d)d[5];
+            note(server,String.format(java.util.Locale.ROOT,"caster's double: the watcher in the wall at %d (%d in): dealt %.1f, the watcher %.3f blocks from the wall's foot, facing %.0f (the caster %.0f); it moved %.3f blocks while seized; the caster held %s",
+                now,now-(Long)d[0],(Float)d[3],watcher.getPos().distanceTo(wall),net.minecraft.util.math.MathHelper.wrapDegrees(watcher.getYaw()),net.minecraft.util.math.MathHelper.wrapDegrees(caster.getYaw()),cloneMoved,dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster)));
+        }
+        if(d==null&&cloneSeen!=null)
+            note(server,String.format(java.util.Locale.ROOT,"caster's double over at %d (%d in): seized %s, in the wall %s, dealt %.1f; ready again at %d (%.1f s); the watcher held %s",
+                now,now-(Long)cloneSeen[0],cloneSeen[1],cloneSeen[2],(Float)cloneSeen[3],ready,(ready-now)/20.0,dev.sangwoo.celestialfall.stand.KagenoManager.frozen(watcher)));
+        if(ready!=cloneReady){note(server,"caster's double ready again at "+ready+" (now "+now+")");cloneReady=ready;}
+        cloneSeen=d;
     }
     private String hackSeen="";
     /** The caster's hack as the server has it, whenever it (or their body, or their stand) changes: with whether they may have it on and whether their Q is heard. */

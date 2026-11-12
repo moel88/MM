@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class KagenoStaggerMixin {
     @Inject(method="render(Lnet/minecraft/entity/LivingEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$cutsceneHidden(LivingEntity entity,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
-        if(StandClient.cutsceneHidden(entity))ci.cancel();
+        if(StandClient.cutsceneHidden(entity)&&!dev.sangwoo.celestialfall.client.xchara.CloneClient.doubling(entity))ci.cancel();
     }
     @Inject(method="render(Lnet/minecraft/entity/LivingEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
         at=@At(value="INVOKE",target="Lnet/minecraft/client/render/entity/LivingEntityRenderer;setupTransforms(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/client/util/math/MatrixStack;FFF)V",shift=At.Shift.AFTER))
@@ -32,5 +32,7 @@ public abstract class KagenoStaggerMixin {
         dev.sangwoo.celestialfall.client.stand.StandBeatdown.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
         // X Chara's G (2.112.0): its two face each other in its strange space, upside down
         dev.sangwoo.celestialfall.client.xchara.XCharaClient.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
+        // X Chara's double (2.125.0): the double's own turn and lean, and the one seized turning over in the air
+        dev.sangwoo.celestialfall.client.xchara.CloneClient.turn(entity,delta,net.minecraft.util.math.MathHelper.lerpAngleDegrees(delta,entity.prevBodyYaw,entity.bodyYaw),matrices);
     }
 }

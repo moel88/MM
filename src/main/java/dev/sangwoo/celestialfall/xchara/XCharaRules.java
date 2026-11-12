@@ -27,8 +27,10 @@ public final class XCharaRules {
     public static final int Q=2;
     /** (2.119.0) The press asks for the restore (xchara_skill_v1's only byte then; XCharaHeal): E's until 2.120, Y's from 2.121.0 (user request: "q활성화 e를 q활성화 y로 옮기고"). */
     public static final int Y=3;
-    /** (2.121.0) The press asks for R: with the hack on, the cleave (XCharaAttack.cleave, XCharaCombo.CLEAVE); (2.124.0) with it off, the jab (XCharaAttack.jab, XCharaCombo.JAB). */
+    /** The press asks for R: with the hack on, (2.125.0) the double (XCharaClone, CloneRules: the one in the crosshair follows the byte, as G's; 2.121.0 to 2.124.0 it was the cleave, now H's); (2.124.0) with it off, the jab (XCharaAttack.jab, XCharaCombo.JAB). */
     public static final int R=4;
+    /** (2.125.0) The press asks for H: with the hack on, the cleave (R's until 2.124: user request, "Q활성화 R스킬을 Q활성화 H스킬로 옮겨"); with it off, nothing yet. */
+    public static final int H=5;
     /**
      * E with the hack on, the restore (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에
      * 연두 이펙트 둘러지고 65힐"): its user presses their panel and is healed {@link #HEAL}. The press lands HEAL_AT
