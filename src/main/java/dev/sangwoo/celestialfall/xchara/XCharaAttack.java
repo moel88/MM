@@ -82,7 +82,7 @@ public final class XCharaAttack {
     /** Whether this player's attack is X Chara's knife: theirs, alive, on the map. */
     public static boolean attacks(PlayerEntity p){return p!=null&&StandManager.xChara(p);}
     /** Free to start a hit: nothing else holds them (a blow, a guard, a dash, a skill, a cutscene); a hit's own hold aside. */
-    public static boolean able(ServerPlayerEntity p){return attacks(p)&&!p.isSleeping()&&!p.hasVehicle()&&!CombatManager.busyOtherwise(p)&&!CombatManager.cinematic(p);}
+    public static boolean able(ServerPlayerEntity p){return attacks(p)&&!p.isSleeping()&&!p.hasVehicle()&&!CombatManager.busyOtherwise(p)&&!CombatManager.cinematic(p)&&!XCharaHeal.busy(p);}
     /** Whether one of this player's hits holds them now (XCharaCombo.HOLD): CombatManager.busy and actionLocked count it. */
     public static boolean busy(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());

@@ -56,18 +56,44 @@ public final class XCharaIdle {
      * has it out: HackLook.arm) out from the body, straight, a quarter of its swing. {@code time} is the breath's clock
      * (ticks).
      */
-    public static void arms(MotionPose pose,boolean rightHanded,float still,float held,float time){
+    public static void arms(MotionPose pose,boolean rightHanded,float still,float held,float time){arms(pose,rightHanded,still,held,time,0,0);}
+    /** The panel's arm up in front of them for a press of it (2.119.0, their E: HealClient): the upper arm this far forward, this far out, the elbow bent this far; and how far a tap brings the hand down (the upper arm, the elbow; degrees). */
+    static final float PRESS_FORWARD=44,PRESS_OUT=20,PRESS_ELBOW=62,TAP_ARM=6,TAP_ELBOW=14;
+    /** Each half of the arm (blocks: six pixels of the model). */
+    static final float HALF_ARM=.375f;
+    /**
+     * Where the hand of the arm up for a press is, {@code tap} of the way down on a tap (0 to 1): how far ahead of the
+     * shoulder and how far below it (blocks), from the upper arm's and the elbow's angles (HackPanel keeps the panel
+     * where it floats as the hand comes down on it by these).
+     */
+    static float[] pressHand(float tap){
+        double arm=Math.toRadians(PRESS_FORWARD-TAP_ARM*tap),fore=arm+Math.toRadians(PRESS_ELBOW-TAP_ELBOW*tap);
+        return new float[]{HALF_ARM*(float)(Math.sin(arm)+Math.sin(fore)),HALF_ARM*(float)(Math.cos(arm)+Math.cos(fore))};
+    }
+    /** How far they look down at the panel as they press it, and aside to its hand's side (degrees; the model's head). */
+    public static final float LOOK_DOWN=34,LOOK_ASIDE=16;
+    /**
+     * The same with a press of the panel (2.119.0, their E): by {@code lift} (0 to 1) the panel's arm comes from where
+     * it holds the panel up in front of them, the forearm about level ahead, and by {@code tap} (0 to 1) its hand comes
+     * down onto the panel (HackPanel brings the panel up to it by as much).
+     */
+    public static void arms(MotionPose pose,boolean rightHanded,float still,float held,float time,float lift,float tap){
         int knife=rightHanded?0:1,off=1-knife;float out=rightHanded?1:-1;
-        still=clamp(still);held=clamp(held);
+        still=clamp(still);held=clamp(held);lift=clamp(lift);tap=clamp(tap);
         float breath=(float)Math.sin(time*BREATH),other=(float)Math.sin(time*BREATH+1.3f);
         float[] k=pose.joint[MotionPose.RIGHT_ARM+knife];
         pose.joint[MotionPose.RIGHT_ARM+knife]=new float[]{k[0]*SWING,0,out*(KNIFE_OUT+KNIFE_BREATH*breath)};
         pose.elbow[knife]=0;
         float[] o=pose.joint[MotionPose.RIGHT_ARM+off];
         float pitch=o[0],yaw=MotionPose.lerp(o[1],0,still),roll=MotionPose.lerp(o[2],0,still),elbow=MotionPose.lerp(pose.elbow[off],0,still);
-        pose.joint[MotionPose.RIGHT_ARM+off]=new float[]{MotionPose.lerp(pitch,pitch*SWING,held),MotionPose.lerp(yaw,0,held),
-            MotionPose.lerp(roll,-out*(PANEL_OUT+PANEL_BREATH*other),held)};
-        pose.elbow[off]=MotionPose.lerp(elbow,0,held);
+        float[] at={MotionPose.lerp(pitch,pitch*SWING,held),MotionPose.lerp(yaw,0,held),MotionPose.lerp(roll,-out*(PANEL_OUT+PANEL_BREATH*other),held)};
+        float bend=MotionPose.lerp(elbow,0,held);
+        if(lift>0){
+            at[0]=MotionPose.lerp(at[0],-PRESS_FORWARD+TAP_ARM*tap,lift);at[1]=MotionPose.lerp(at[1],0,lift);at[2]=MotionPose.lerp(at[2],-out*PRESS_OUT,lift);
+            bend=MotionPose.lerp(bend,-PRESS_ELBOW+TAP_ELBOW*tap,lift);
+        }
+        pose.joint[MotionPose.RIGHT_ARM+off]=at;
+        pose.elbow[off]=bend;
     }
     /**
      * A hit of their knife with the panel held ({@code held}, HackLook.arm): the other arm of {@code pose} (a frame of

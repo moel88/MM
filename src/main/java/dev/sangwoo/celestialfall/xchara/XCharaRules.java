@@ -25,6 +25,21 @@ public final class XCharaRules {
     public static final int G=1;
     /** (2.115.0) The press asks for Q, the hack on or off (xchara_skill_v1's only byte then; XCharaHack). */
     public static final int Q=2;
+    /** (2.119.0) The press asks for E, the restore (xchara_skill_v1's only byte then; XCharaHeal). */
+    public static final int E=3;
+    /**
+     * E with the hack on, the restore (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에
+     * 연두 이펙트 둘러지고 65힐"): its user presses their panel and is healed {@link #HEAL}. The press lands HEAL_AT
+     * ticks in (the heal is then); it holds its user where they stand HEAL_HOLD ticks and is over at HEAL_LENGTH; its
+     * cooldown runs from its end, or from when it was stopped short (struck before the press landed: no heal). The
+     * numbers but the 65 are mine.
+     */
+    public static final float HEAL=65;
+    public static final int HEAL_AT=8,HEAL_HOLD=14,HEAL_LENGTH=18,HEAL_COOLDOWN=400;
+    /** When E is ready again after one begun at {@code start} that ran its course. */
+    public static long healReady(long start){return start+HEAL_LENGTH+HEAL_COOLDOWN;}
+    /** Whether E begun at {@code start} still holds its user at {@code now}. */
+    public static boolean healHolds(long start,long now){return now>=start&&now<start+HEAL_HOLD;}
     /** Server ticks from one Q heard to the next (a double tap cannot make it flicker; its coming and going are done in less: client/xchara/HackLook). */
     public static final int HACK_RATE=8;
     /** The hack after a Q: on if it was off and its user may have it on, off if it was on. */

@@ -716,6 +716,12 @@ public final class SkillShots implements ClientModInitializer {
         standLog.append(',').append(hack==null?",":hack);
         String hackKey=hack==null?"":hack.substring(0,hack.indexOf(','));
         if(!hackKey.equals(hackLogged)){if(hack!=null&&!hackLogged.isEmpty())log.append("  hack ").append(hackKey.equals("1")?"on":"off").append(" at ").append(age).append('\n');hackLogged=hackKey;}
+        // 2.119.0: X Chara's E (the restore): its age in ticks, whether its heal landed, whether it stopped short, and the
+        // player's health as this client knows it; a line in the log as it starts, heals and stops
+        var heal=dev.sangwoo.celestialfall.client.xchara.HealClient.describe(mc.player.getUuid(),mc.getTickDelta());
+        standLog.append(',').append(heal==null?",,":heal).append(',').append(String.format(Locale.ROOT,"%.1f",mc.player.getHealth()));
+        String healKey=heal==null?"":heal.substring(heal.indexOf(',')+1);
+        if(!healKey.equals(healLogged)){if(heal!=null)log.append("  heal ").append(healKey.equals("0,0")?"started":healKey.startsWith("1")?"landed":"stopped short").append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s, health %.1f)%n",heal.split(",")[0],mc.player.getHealth()));healLogged=healKey;}
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -813,6 +819,7 @@ public final class SkillShots implements ClientModInitializer {
     /** (2.114.0) X Chara's basic attack's swing last logged. */
     private String knifeLogged="";
     private String hackLogged="";
+    private String healLogged="";
     /** (2.75.0) last logged: the player resisting a time stop, stopped in one; the fake user the same. */
     private final boolean[] resistLogged=new boolean[4];
     private String arrowLogged="";
@@ -937,6 +944,8 @@ public final class SkillShots implements ClientModInitializer {
         int y=p.getServerWorld().getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,0,0);
         float yaw=facing(opt("face",0));
         p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
+        // "php=N" (2.119.0): the player starts the shot at N health (for X Chara's E, which heals them)
+        if(opt("php",0)>0)p.setHealth((float)opt("php",0));
         var d=p.getServerWorld().getEntityById(dummyId);
         // "dguard=1" (2.59.0): the training dummy that holds its guard up (for the heavy punch breaking it)
         // "dattack=1" (2.68.0): the training dummy that throws basic-attack combos at the player (its blows stagger them)
@@ -1548,9 +1557,9 @@ public final class SkillShots implements ClientModInitializer {
                         +"inhale,suction,strain,inhale_age,inhale_on,inhale_caught,inhale_blocked,inhale_suck,dummy_ahead,dummy_side,"
                         +"beat_age,beat_ended,beat_cut,beat_bars,beat_camera,flash,beat_grab,beat_upper,shown_ahead,shown_side,shown_up,beat_wind,beat_strike,wind_heavy,punch_heavy,glowed,beat_hidden,"
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
-                        +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour,xc_age,xc_space,xc_ended,xc_how,xc_camera,kc_hit,kc_age,kc_stopped,hk_on,hk_t\n"+standLog);
+                        +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour,xc_age,xc_space,xc_ended,xc_how,xc_camera,kc_hit,kc_age,kc_stopped,hk_on,hk_t,he_age,he_healed,he_stopped,player_health\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        hackLogged="";stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
+                        hackLogged="";healLogged="";stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}

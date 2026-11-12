@@ -117,7 +117,9 @@ public final class HitStun {
         // hit in flight stops short (2.77.0)
         if(entity instanceof ServerPlayerEntity p){dev.sangwoo.celestialfall.stand.StarPlatinumAttack.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumRush.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumInhale.struck(p);dev.sangwoo.celestialfall.stand.StarPlatinumTimeStop.struck(p);dev.sangwoo.celestialfall.isosang.IsosangAttack.struck(p);
             // (2.114.0) and X Chara's knife's
-            dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);}
+            dev.sangwoo.celestialfall.xchara.XCharaAttack.struck(p);
+            // (2.119.0) and their E, before its press lands
+            dev.sangwoo.celestialfall.xchara.XCharaHeal.struck(p);}
     }
     public static void release(UUID victim) {
         Hold h=HELD.remove(victim);if(h==null)return;

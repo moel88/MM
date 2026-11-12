@@ -46,6 +46,27 @@ public final class HackPanel {
      */
     public static Quaternionf arm;
     /**
+     * (2.119.0) A press of it for this one draw (their E, HealClient.press: null for none): how far its arm is up, how
+     * far the hand is down on it (the panel comes up to the hand by as much) and how lime it is lit.
+     */
+    public static float[] press;
+    /**
+     * Pressed, it floats under the hand of the arm brought up in front of them, its face up, the hand hovering over it:
+     * this far in from the hand's outside, this far below the hand and this far ahead of it, its outer edge raised this
+     * little (degrees). The hand comes down on it for a tap and it stays where it floats (XCharaIdle.pressHand).
+     */
+    static final float PRESS_OUT=.10f,PRESS_DOWN=.30f,PRESS_AHEAD=.14f,PRESS_TILT=8;
+    /** The lime of a press. */
+    static final int LIME=0x9dff3a;
+    /** Where it is by the hand, {@code lift} of the way into a press and {@code tap} of the way into a tap: {out, down, ahead (blocks), tilt (degrees)} from where it is carried ({@code out}, {@code down}, {@code ahead}, {@code tilt}). */
+    static float[] pressed(float out,float down,float ahead,float tilt,float lift,float tap){
+        if(lift<=0)return new float[]{out,down,ahead,tilt};
+        float[] rest=XCharaIdle.pressHand(0),at=XCharaIdle.pressHand(tap);
+        // the hand comes down (and a little back) on a tap: the panel keeps its place, so it is that much nearer the hand
+        float dip=at[1]-rest[1],back=rest[0]-at[0];
+        return new float[]{out+(PRESS_OUT-out)*lift,down+(PRESS_DOWN-down)*lift-dip*lift,ahead+(PRESS_AHEAD-ahead)*lift+back*lift,tilt+(PRESS_TILT-tilt)*lift};
+    }
+    /**
      * Its width (the way its writing runs), its depth and its thickness (blocks of the model). 2.116.1: measured again on
      * the user's video with the slab seen as it stands there (its long side fore and aft, from above the front right; its
      * short side across the view from in front): some 2.2 by 1.3 of the body's studs, a little longer than 2.115.0 read
@@ -114,7 +135,10 @@ public final class HackPanel {
         Quaternionf turn=arm!=null?arm:new Quaternionf().rotationZ(side*XCharaIdle.PANEL_OUT*(float)Math.PI/180);
         m.multiply(new Quaternionf(HAND).conjugate().mul(new Quaternionf(turn).conjugate()).mul(HAND));
         m.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));
-        m.translate(side*out,-down+.012f*(float)Math.sin(clock*3.1f),FRONT-ahead);
+        // (2.119.0) a press of it (their E): it floats under the hand brought up in front of them, and stays there as the hand taps it
+        float lift=press==null?0:Math.max(0,Math.min(1,press[0])),tap=press==null?0:Math.max(0,Math.min(1,press[1]));
+        float[] at=pressed(out,down,ahead,tilt,lift,tap);out=at[0];down=at[1];ahead=at[2];tilt=at[3];
+        m.translate(side*out,-down+.012f*(float)Math.sin(clock*3.1f)*(1-lift),FRONT-ahead);
         m.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(side*(tilt+1.5f*(float)Math.sin(clock*2.3f))));
         m.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-side*90));
         if(fit!=null&&fit.length>5)m.scale(fit[4],1,fit[5]);
@@ -144,6 +168,9 @@ public final class HackPanel {
         side(s,pm,nm,-hw,-hd,hw,-hd,RIM);side(s,pm,nm,hw,-hd,hw,hd,RIM);side(s,pm,nm,hw,hd,-hw,hd,RIM);side(s,pm,nm,-hw,hd,-hw,-hd,RIM);
         VertexConsumer v=buffers.getBuffer(HackKnife.glowing());
         float y=.003f,b=.014f;
+        // (2.119.0) pressed (their E), its rim and its glow turn lime for a moment
+        float lime=press==null?0:Math.max(0,Math.min(1,press[2]));
+        final int RIM=lime<=0?HackPanel.RIM:mix(HackPanel.RIM,LIME,lime);
         // the rim of light round its face (and, dimmer, under it), and the glow past its sides
         for(int k=0;k<2;k++){
             float at=k==0?y:-T-y,a=k==0?1:.7f;
@@ -161,6 +188,13 @@ public final class HackPanel {
         }
         float c=f.content();
         if(c>.004f)content(v,pm,nm,f,c,wide,deep,y*2);
+        // and a wash of lime over its face
+        if(lime>.004f)flat(v,pm,nm,-hw+b,-hd+b,hw-b,hd-b,y*4,LIME,.38f*lime);
+    }
+    /** A colour {@code t} of the way from {@code a} to {@code b}. */
+    static int mix(int a,int b,float t){
+        int r=Math.round(((a>>16)&255)+(((b>>16)&255)-((a>>16)&255))*t),g=Math.round(((a>>8)&255)+(((b>>8)&255)-((a>>8)&255))*t),bl=Math.round((a&255)+((b&255)-(a&255))*t);
+        return r<<16|g<<8|bl;
     }
     /** What is on its face: every place given as on the open panel, moved in with it as it opens ({@code wide}, {@code deep}). */
     private static void content(VertexConsumer v,Matrix4f pm,Matrix3f nm,HackLook.Frame f,float c,float wide,float deep,float y){

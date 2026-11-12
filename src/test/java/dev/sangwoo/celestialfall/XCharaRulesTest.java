@@ -67,4 +67,15 @@ class XCharaRulesTest {
         assertFalse(XCharaRules.hackAfter(true,false),"on: off, whatever they may");
         assertTrue(XCharaRules.HACK_RATE>=6&&XCharaRules.HACK_RATE<=10,"a double tap within some 0.4 s is one press");
     }
+    @Test void theRestoreHealsSixtyFiveAsThePressLandsAndItsCooldownRunsFromItsEnd(){
+        // (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에 연두 이펙트 둘러지고 65힐")
+        assertEquals(65,HEAL,1e-6,"the user's number");
+        assertEquals(3,E);assertNotEquals(G,E);assertNotEquals(Q,E);
+        // the press lands while it holds them, it lets go of them before it is over, and it is short (simple)
+        assertTrue(HEAL_AT>0&&HEAL_AT<HEAL_HOLD&&HEAL_HOLD<=HEAL_LENGTH&&HEAL_LENGTH<=20);
+        assertTrue(healHolds(100,100));assertTrue(healHolds(100,100+HEAL_HOLD-1));assertFalse(healHolds(100,100+HEAL_HOLD));assertFalse(healHolds(100,99));
+        // its cooldown: from its end, twenty seconds
+        assertEquals(400,HEAL_COOLDOWN);
+        assertEquals(100+HEAL_LENGTH+HEAL_COOLDOWN,healReady(100));
+    }
 }

@@ -54,6 +54,8 @@ public abstract class StandHeldItemFeatureMixin {
                 if(part.hasChild("elbow"))turn.rotateX(part.getChild("elbow").pitch);
                 dev.sangwoo.celestialfall.client.xchara.HackPanel.arm=turn;
             }
+            // (2.119.0) a press of it (their E): the hand down on it, lit lime
+            dev.sangwoo.celestialfall.client.xchara.HackPanel.press=dev.sangwoo.celestialfall.client.xchara.HealClient.press(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
             dev.sangwoo.celestialfall.client.xchara.HackMode.recording(holder.getUuid());
             return;
         }
@@ -89,7 +91,7 @@ public abstract class StandHeldItemFeatureMixin {
     private void botand$drawn(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
         dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=0;
         dev.sangwoo.celestialfall.client.isosang.IsosangSheath.recording(null);
-        dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.arm=null;
+        dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.press=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.arm=null;
         dev.sangwoo.celestialfall.client.xchara.HackMode.recording(null);
     }
     @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",

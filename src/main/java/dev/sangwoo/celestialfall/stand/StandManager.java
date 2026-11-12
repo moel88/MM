@@ -58,8 +58,8 @@ public final class StandManager {
             // (2.77.0) Lee So-sang's sword's rest after a combo, as Star Platinum's punches'
             if(!"isosang".equals(ProgressManager.profile(p).stand()))dev.sangwoo.celestialfall.isosang.IsosangAttack.forget(p);
             // (2.112.0) X Chara's G's cooldown
-            // (2.114.0) and their knife's rest after a combo
-            if(!"x_chara".equals(ProgressManager.profile(p).stand())){dev.sangwoo.celestialfall.xchara.XCharaUltimate.forget(p);dev.sangwoo.celestialfall.xchara.XCharaAttack.forget(p);}
+            // (2.114.0) and their knife's rest after a combo; (2.119.0) and their E's cooldown
+            if(!"x_chara".equals(ProgressManager.profile(p).stand())){dev.sangwoo.celestialfall.xchara.XCharaUltimate.forget(p);dev.sangwoo.celestialfall.xchara.XCharaAttack.forget(p);dev.sangwoo.celestialfall.xchara.XCharaHeal.forget(p);}
             // 2.74.3: and the long ones not theirs are gone at once (they begin in full when the stand is theirs again)
             dev.sangwoo.celestialfall.LongCooldowns.forgetOthers(p);
         }

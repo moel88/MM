@@ -100,11 +100,20 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             // held the knife a little forward at the side, the elbow bent, and the panel on a raised forearm.)
             arms="xchara";float d=animationProgress-player.age;
             var pose=CombatClient.pose(player,d);var hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),d);
+            // (2.119.0) a press of the panel (their E, HealClient): its arm up in front of them, its hand tapping it, and they look down at it
+            float[] press=hack==null?null:dev.sangwoo.celestialfall.client.xchara.HealClient.press(player.getUuid(),d);
             dev.sangwoo.celestialfall.client.xchara.XCharaIdle.arms(pose,player.getMainArm()==Arm.RIGHT,
-                dev.sangwoo.celestialfall.client.xchara.XCharaIdle.weight(player.getUuid(),d),hack==null?0:hack.arm(),animationProgress);
+                dev.sangwoo.celestialfall.client.xchara.XCharaIdle.weight(player.getUuid(),d),hack==null?0:hack.arm(),animationProgress,press==null?0:press[0],press==null?0:press[1]);
             for(int i=0;i<2;i++){
                 var arm=i==0?rightArm:leftArm;float[] a=pose.joint[dev.sangwoo.celestialfall.combat.MotionPose.RIGHT_ARM+i];
                 arm.pitch=MotionRig.rad(a[0]);arm.yaw=MotionRig.rad(a[1]);arm.roll=MotionRig.rad(a[2]);arm.getChild("elbow").pitch=MotionRig.rad(pose.elbow[i]);
+            }
+            if(press!=null&&press[0]>0){
+                float side=player.getMainArm()==Arm.RIGHT?1:-1;
+                // (the short way round: the head's yaw comes in any turn of the circle, and eased straight it span once round on the way)
+                head.pitch+=press[0]*net.minecraft.util.math.MathHelper.wrapDegrees(dev.sangwoo.celestialfall.client.xchara.XCharaIdle.LOOK_DOWN-(float)Math.toDegrees(head.pitch))*(float)Math.PI/180;
+                head.yaw+=press[0]*net.minecraft.util.math.MathHelper.wrapDegrees(side*dev.sangwoo.celestialfall.client.xchara.XCharaIdle.LOOK_ASIDE-(float)Math.toDegrees(head.yaw))*(float)Math.PI/180;
+                hat.copyTransform(head);
             }
         }
         // Crossfade whenever the pose comes from somewhere else than a moment ago (the first-person hand pass has no clock).

@@ -83,6 +83,8 @@ public final class XCharaUltimate {
             int skill=buf.readUnsignedByte();int target=buf.readableBytes()>0?buf.readVarInt():-1;
             // (2.115.0) Q: the hack on or off (XCharaHack)
             if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
+            // (2.119.0) E: the restore, with the hack on (XCharaHeal)
+            if(skill==E){server.execute(()->{if(heard(player))XCharaHeal.request(player);});return;}
             if(skill!=G)return;
             server.execute(()->{if(heard(player))cast(player,target);});
         });
@@ -145,6 +147,9 @@ public final class XCharaUltimate {
     /** G pressed by {@code p} with {@code targetId} in their crosshair (-1 none): the "!!!" over the one marked, if it may be. Returns whether it began. */
     public static boolean cast(ServerPlayerEntity p,int targetId){
         if(!StandManager.xChara(p)||p.isSpectator()||!p.isAlive())return false;
+        // (2.119.0, user request: "지금 G스킬은 Q 활성화 상태의 G스킬로 바꿔") the sword dance is the hack's G: with the hack
+        // off, G is not this skill (nothing yet)
+        if(!XCharaHack.on(p))return false;
         var world=p.getServerWorld();long now=world.getTime();
         if(involved(p)||marked(p)||now<ready(p)&&!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))return false;
         if(CombatManager.busy(p)||CombatManager.cinematic(p)||CombatManager.actionLocked(p)||StarPlatinumTimeStop.holds(p)||StarPlatinumTimeStop.active(p))return false;

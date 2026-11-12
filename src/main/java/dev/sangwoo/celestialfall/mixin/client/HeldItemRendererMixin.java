@@ -76,8 +76,9 @@ public abstract class HeldItemRendererMixin {
             var panel=dev.sangwoo.celestialfall.client.xchara.HackMode.panel(player);
             if(panel!=null){
                 dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=hack;
+                dev.sangwoo.celestialfall.client.xchara.HackPanel.press=dev.sangwoo.celestialfall.client.xchara.HealClient.press(player.getUuid(),delta);
                 renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,0,panel,0,matrices,vertices,light);
-                dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;
+                dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.press=null;
             }
             else if(!player.getOffHandStack().isEmpty())renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.OFF_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?swing:0,player.getOffHandStack(),0,matrices,vertices,light);
             vertices.draw();

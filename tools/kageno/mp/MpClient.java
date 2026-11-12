@@ -584,7 +584,25 @@ public final class MpClient implements ClientModInitializer {
         "440 DIST3","445 HEAL","450 M1+","464 Q","494 M1-",
         "560 DIST3","565 HEAL","570 M1","610 M1","640 M1",
         "700 END"};
-    private static final String[] STEPS=ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * X Chara's E with the hack on, the restore, and the hack's G (2.119.0, MP_ONLY=xcharae): the caster takes X Chara,
+     * its cooldowns on, its hack off as it comes. E, then G on the watcher 3 blocks ahead, with the hack off: neither is
+     * heard. Q: the hack on. The caster hurt 120 ("CHURT": /damage Caster 120), then E: the press, 65 healed 8 ticks in.
+     * E again at once: refused (its cooldown, 20 s from its end). Once it is over (440 ticks on) E and the caster struck
+     * by the watcher before the press lands ("HITME"): stopped short, no heal, the cooldown from then. Last G with the
+     * hack on and the watcher's guard up: the "!!!" and blocked (G is heard with the hack on). Both clients log the
+     * caster's E as they hear of it (started, healed how much, stopped short; its sound), the hack as it changes and the
+     * sword dance; the server the caster's health at each change, its E (when it began, whether it healed, when it is
+     * ready again), its hack and its G.
+     */
+    private static final String[] XCHARAE_SCRIPT={
+        "5 XCHARA","8 NOCDOFF","40 DIST3","45 HEAL",
+        "60 E","80 G",
+        "110 Q","130 CHURT","150 E","175 E",
+        "610 CHURT","630 E","633 HITME",
+        "690 GUARD+","700 G","740 GUARD-",
+        "800 END"};
+    private static final String[] STEPS=ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -712,6 +730,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("xchara"))xcharaWatch();
                 if(ONLY.equals("xcharam1"))knifeWatch();
                 if(ONLY.equals("xcharaq")||ONLY.equals("xcharaplain")){knifeWatch();hackWatch();}
+                if(ONLY.equals("xcharae")){hackWatch();healWatch();xcharaWatch();}
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -733,7 +752,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharae")?1100:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -866,6 +885,7 @@ public final class MpClient implements ClientModInitializer {
         if(step.startsWith("WALK")){if(down){try{if(step.endsWith("+"))Files.writeString(OUT.resolve("walk"),"walk");else Files.deleteIfExists(OUT.resolve("walk"));}catch(Exception e){fail(e);}note("watcher's walk "+(step.endsWith("+")?"asked for":"stopped"));}return;}
         // 2.64.0: the watcher at full health, or brought down to a quarter of it; its guard asked for
         // (2.94.0) the caster struck by the watcher (a blow from someone: Lee So-sang's H's dodge keeps the first from it)
+        if(step.equals("CHURT")){if(down)command("damage Caster 120 minecraft:generic");return;}
         if(step.equals("HITME")){if(down)command("damage Caster 4 minecraft:player_attack by Watcher");return;}
         if(step.equals("HEAL")||step.equals("HURT")){if(down){String c=step.equals("HEAL")?"effect give Watcher minecraft:instant_health 1 20 true":"damage Watcher 150 minecraft:generic";note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
         // 2.70.0: the stand arrow's steps (ARROW_SCRIPT)
@@ -1461,6 +1481,16 @@ public final class MpClient implements ClientModInitializer {
         var heard=dev.sangwoo.celestialfall.client.xchara.HackMode.HEARD;
         if(heard.size()<hackHeard)hackHeard=0;
         for(;hackHeard<heard.size();hackHeard++)note("  hack sound: "+heard.get(hackHeard));
+    }
+    private int healHeard;private float healHealth=-1;
+    /** X Chara's E as this client hears of it (2.119.0, MP_ONLY=xcharae): every line HealClient logged, and the caster's health here at each change. */
+    private void healWatch(){
+        var heard=dev.sangwoo.celestialfall.client.xchara.HealClient.HEARD;
+        if(heard.size()<healHeard)healHeard=0;
+        for(;healHeard<heard.size();healHeard++)note("  E here: "+heard.get(healHeard));
+        for(var p:mc.world.getPlayers())if(name(p.getUuid()).equals("Caster")&&Math.abs(p.getHealth()-healHealth)>.01f){
+            note(String.format(Locale.ROOT,"the caster's health here %.1f -> %.1f",healHealth,p.getHealth()));healHealth=p.getHealth();
+        }
     }
     private void xcharaWatch(){
         for(var p:mc.world.getPlayers()){

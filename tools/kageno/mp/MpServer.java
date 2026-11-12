@@ -134,8 +134,9 @@ public final class MpServer implements ModInitializer {
         if(DEATH_ONLY)deaths(server);
         if(GLOW_ONLY)glows(server);
         if(VANILLA_ONLY)vanillas(server);
-        if(XCHARA_ONLY&&!XCHARAM1_ONLY)xchara(server);
-        if(XCHARAM1_ONLY)knife(server);
+        if(XCHARA_ONLY&&!XCHARAM1_ONLY||XCHARAE_ONLY)xchara(server);
+        if(XCHARAM1_ONLY&&!XCHARAE_ONLY)knife(server);
+        if(XCHARAE_ONLY)xcharaE(server);
         if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -530,11 +531,27 @@ public final class MpServer implements ModInitializer {
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
-    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's basic attack's script (2.114.0, MP_ONLY=xcharam1): its cooldowns on and no healing, as for its G. */
-    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's Q's script (2.115.0, MP_ONLY=xcharaq; 2.117.0: or its plain swings', MP_ONLY=xcharaplain): as for the basic attack, and the caster's hack as it changes. */
-    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's E's script (2.119.0, MP_ONLY=xcharae): as for the hack's, and the caster's health and E. */
+    static final boolean XCHARAE_ONLY="xcharae".equals(System.getProperty("botand.mp.only"));
+    private String restoreSeen="";private float restoreHealth=-1;
+    /** The caster's E as the server keeps it (when it began, whether its heal landed, when it is ready again) and their health, at each change. */
+    private void xcharaE(MinecraftServer server){
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        if(caster==null)return;
+        long now=server.getOverworld().getTime();
+        if(Math.abs(caster.getHealth()-restoreHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at %d",restoreHealth,caster.getHealth(),now));restoreHealth=caster.getHealth();}
+        long[] e=dev.sangwoo.celestialfall.xchara.XCharaHeal.describe(caster);
+        String key=e==null?"none":e[0]+"/"+e[1]+"/"+e[2];
+        if(key.equals(restoreSeen))return;
+        restoreSeen=key;
+        if(e!=null)note(server,String.format(java.util.Locale.ROOT,"caster's E at %d: %s, healed %s, ready again at %d (%.2f s on); busy %s",now,e[0]<0?"none in flight":"began "+e[0],e[1]==1,e[2],(e[2]-now)/20.0,
+            dev.sangwoo.celestialfall.xchara.XCharaHeal.busy(caster)));
+    }
     private String hackSeen="";
     /** The caster's hack as the server has it, whenever it (or their body, or their stand) changes: with whether they may have it on and whether their Q is heard. */
     private void hack(MinecraftServer server){

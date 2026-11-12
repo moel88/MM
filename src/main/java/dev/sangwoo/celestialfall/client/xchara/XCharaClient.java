@@ -182,7 +182,7 @@ public final class XCharaClient {
 
     // ───────────────────────────── the key ─────────────────────────────
 
-    /** G on the map is X Chara's player's sword dance: asked with the one the camera's middle looks at (or none: the server then takes the one its look meets). */
+    /** X Chara's player's keys on the map: Q the hack, E and G its skills with it on (G the sword dance, asked with the one the camera's middle looks at, or none: the server then takes the one its look meets), I their inventory. */
     public static boolean key(long window,int key,int action,int modifiers){
         var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
         // (2.115.0) Q let go after a press this took
@@ -199,8 +199,22 @@ public final class XCharaClient {
             }
             return true;
         }
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_E){
+            // (2.119.0) E on the map is X Chara's player's skill key (their inventory on I, as the other characters'): with
+            // the hack on, the restore (XCharaHeal); with it off, nothing yet
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                var b=PacketByteBufs.create();b.writeByte(E);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+            }
+            return true;
+        }
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_I&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS){
+            if(!CombatClient.actionLocked())mc.setScreen(new net.minecraft.client.gui.screen.ingame.InventoryScreen(mc.player));
+            return true;
+        }
         if(key!=org.lwjgl.glfw.GLFW.GLFW_KEY_G)return false;
-        if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+        // (2.119.0, user request: "지금 G스킬은 Q 활성화 상태의 G스킬로 바꿔") the sword dance is the hack's G: asked only with
+        // the hack on (with it off, G is taken and does nothing yet)
+        if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
             var target=aim(mc);
             BotandCamera.prepareInteraction();
             var b=PacketByteBufs.create();b.writeByte(G);b.writeVarInt(target==null?-1:target.getId());ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
