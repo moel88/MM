@@ -59,7 +59,11 @@ public final class KnifeClient {
     public static final List<String> HEARD=new ArrayList<>();
     private static void heard(String line){HEARD.add(line);while(HEARD.size()>64)HEARD.remove(0);}
     /** The pitch of a blow's sound as it lands, by hit and blow: a little higher with every blow of the combo; the finisher's first cut low. */
-    static final float[][] HIT_PITCH={{},{1f},{1.06f,1.12f},{1.2f,1.27f,1.35f},{.84f,1f}};
+    static final float[][] HIT_PITCH={{},{1f},{1.06f,1.12f},{1.2f,1.27f,1.35f},{.84f,1f},{1f},{1.06f},{.9f},{1f}};
+    /** A hit's own sound (a tick into it): the hack's (xchara_m1_1 to 4), or a plain swing's (xchara_swing_1 to 4, 2.117.0). */
+    static String swingSound(int combo){return (XCharaCombo.plain(combo)?"xchara_swing_":"xchara_m1_")+XCharaCombo.place(combo);}
+    /** A blow's sound as it lands on someone: the hack's or a plain swing's, the finisher's last its own. */
+    static String blowSound(int combo,int blow){return (XCharaCombo.plain(combo)?"xchara_swing_hit":"xchara_m1_hit")+(XCharaCombo.launches(combo,blow)?"_last":"");}
     private static int ticks,lastAsk=-100;
     private static Object world;
     private KnifeClient(){}
@@ -68,7 +72,7 @@ public final class KnifeClient {
         ClientPlayNetworking.registerGlobalReceiver(XCharaAttack.EVENT,(mc,handler,b,response)->{
             UUID caster=b.readUuid();Identifier dim=b.readIdentifier();int type=b.readUnsignedByte();UUID id=b.readUuid();int combo=b.readUnsignedByte(),blow=b.readByte();
             long start=b.readLong(),serverNow=b.readLong();Vec3d at=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float yaw=b.readFloat();long ready=b.readLong();
-            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.STOPPED||combo>XCharaCombo.DELETE||!Float.isFinite(yaw))return;
+            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.STOPPED||combo>XCharaCombo.LUNGE||!Float.isFinite(yaw))return;
             var struck=new ArrayList<StandClient.Target>();
             for(int i=0;i<n;i++)struck.add(new StandClient.Target(b.readUuid(),b.readInt(),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble())));
             mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck));
@@ -141,13 +145,13 @@ public final class KnifeClient {
             var m=MinecraftClient.getInstance();var user=m.world==null?null:m.world.getPlayerByUuid(caster);
             return loudness(m,user==null?origin:user.getPos());
         };
-        var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id("xchara_m1_"+cast.combo()),loud);
+        var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(swingSound(cast.combo())),loud);
         if(v.full()<=.01f)return;
         // told of a tick or more into it: at once (a tick late at most is not heard as late; later, LATE has dropped it)
         int wait=SOUND_LEAD-(int)Math.floor(cast.age(0));
         if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
         VOICES.put(cast.id(),v);
-        heard(String.format(java.util.Locale.ROOT,"xchara_m1_%d, told %.0f ticks in, played %d later at %.2f",cast.combo(),cast.age(0),Math.max(0,wait),v.full()));
+        heard(String.format(java.util.Locale.ROOT,"%s, told %.0f ticks in, played %d later at %.2f",swingSound(cast.combo()),cast.age(0),Math.max(0,wait),v.full()));
     }
     /** A blow landing on someone: heard at once, from the nearer of its user and whom it struck (loud for both). */
     private static void landed(MinecraftClient mc,StandClient.Cast cast,int blow,List<StandClient.Target> struck){
@@ -157,9 +161,9 @@ public final class KnifeClient {
         var user=mc.world.getPlayerByUuid(cast.caster());
         if(user!=null&&user.getPos().squaredDistanceTo(mc.player.getPos())<from.squaredDistanceTo(mc.player.getPos()))from=user.getPos();
         float loud=mine?(float)dev.sangwoo.celestialfall.CelestialFall.CONFIG.effectVolume:loudness(mc,from);if(loud<=.01f)return;
-        boolean last=XCharaCombo.launches(cast.combo(),blow);
-        heard(String.format(java.util.Locale.ROOT,"%s hit %d blow %d, %.0f ticks in, at %.2f",last?"xchara_m1_hit_last":"xchara_m1_hit",cast.combo(),blow,cast.age(0),loud));
-        mc.getSoundManager().play(new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(last?"xchara_m1_hit_last":"xchara_m1_hit"),()->loud,last?1:HIT_PITCH[cast.combo()][blow]));
+        boolean last=XCharaCombo.launches(cast.combo(),blow);String name=blowSound(cast.combo(),blow);
+        heard(String.format(java.util.Locale.ROOT,"%s hit %d blow %d, %.0f ticks in, at %.2f",name,cast.combo(),blow,cast.age(0),loud));
+        mc.getSoundManager().play(new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(name),()->loud,last?1:HIT_PITCH[cast.combo()][blow]));
     }
 
     /** Whether this swing's body clip still plays (it is the body's motion until then, unless it stopped short). */

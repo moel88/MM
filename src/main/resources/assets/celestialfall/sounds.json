@@ -1156,6 +1156,60 @@
       }
     ]
   },
+  "xchara_swing_1": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_swing_1",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_swing_2": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_swing_2",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_swing_3": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_swing_3",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_swing_4": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_swing_4",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_swing_hit": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_swing_hit",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_swing_hit_last": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_swing_hit_last",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
   "xchara_q_on": {
     "sounds": [
       {

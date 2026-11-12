@@ -106,7 +106,7 @@ public final class KnifeCombo implements Fx.Skill {
         Anim.Fix bent=IsosangLimbs.natural(IsosangLimbs.FLOOR);float end=LENGTH[hit]/20f;
         return (sec,f)->{
             R6.Frame b=bent.apply(sec,f);
-            float w=Math.max(hit==CUT?1-Ease.smooth(sec,0,OUT_OF_REST):0,Ease.smooth(sec,end-INTO_REST,end));
+            float w=Math.max(place(hit)==1?1-Ease.smooth(sec,0,OUT_OF_REST):0,Ease.smooth(sec,end-INTO_REST,end));
             return w<=0?b:R6.blend(b,AT_REST,Math.min(1,w));
         };
     }
@@ -214,13 +214,178 @@ public final class KnifeCombo implements Fx.Skill {
         k(1.05f,w(.36,-.14,-10,6,1,d(-62,40),d(-1,20),d(-72,-12),18,-166)),
         k(1.3f,STANCE)).stops(Anim.stop(blow(DELETE,0),.02,.03),Anim.stop(blow(DELETE,1),.05,.07)).after(natural(DELETE));
 
+
+    // ══════════════════════════════ the plain swings (the hack off, 2.117.0) ══════════════════════════════
+    // (user request: "이번에는 Q 껐을때 평타를 만들어줘 이펙트 없이 그냥 휘두르기만해 그대신 모션을 좋게 만들어봐")
+    // Nothing is drawn for these but the body and the knife, so the body carries them. Each swing is wound up against
+    // the way it will go and let go from the ground up: the hips and the body turn and go forward first, the arm after
+    // them, the knife last, trailing the arm so that its edge leads; it is quickest as it lands, stopped a moment on the
+    // blow, carried on past it and slowly brought back a little (never frozen), where the next swing is already wound.
+    // The arm and the knife keep to one plane through a swing (Swing), so the knife's point draws a clean arc; the feet
+    // stand where they are put while the body moves over them (on), and step: one slides out as the first swing is
+    // wound, the other steps through with the second, the back one is gathered up under the third and shot back as it
+    // drops, the front one shoots out with the lunge. The free arm goes against the knife's all through; the head keeps
+    // to the front.
+
+    /**
+     * A swing's plane: the way the knife points as it lands and the way it is travelling there. {@link #at} is a way in
+     * that plane, so many degrees round from the first toward the second (behind the blow, negative). An arm and a knife
+     * both in the plane, the knife some way behind the arm, swing with the knife's edge leading the whole way (the hand
+     * holds it with its edge on the arm's side of it).
+     */
+    static final class Swing {
+        private final double[] a,w;
+        Swing(double[] ahead,double[] way){
+            a=vec(ahead);double[] t=vec(way);double dot=a[0]*t[0]+a[1]*t[1]+a[2]*t[2];
+            for(int i=0;i<3;i++)t[i]-=a[i]*dot;
+            double len=Math.sqrt(t[0]*t[0]+t[1]*t[1]+t[2]*t[2]);
+            w=new double[]{t[0]/len,t[1]/len,t[2]/len};
+        }
+        double[] at(double turn){
+            double c=Math.cos(Math.toRadians(turn)),s=Math.sin(Math.toRadians(turn));
+            double x=a[0]*c+w[0]*s,y=a[1]*c+w[1]*s,z=a[2]*c+w[2]*s;
+            return d(Math.toDegrees(Math.asin(Math.max(-1,Math.min(1,y)))),Math.toDegrees(Math.atan2(x,z)));
+        }
+        /** A way of the world (elevation, azimuth right of the front) as right, up, ahead. */
+        private static double[] vec(double[] way){
+            double e=Math.toRadians(way[0]),z=Math.toRadians(way[1]);
+            return new double[]{Math.cos(e)*Math.sin(z),Math.sin(e),Math.cos(e)*Math.cos(z)};
+        }
+    }
+    /**
+     * A pose written in the world as {@link dev.sangwoo.celestialfall.client.isosang.IsosangSlash#w} writes one, with
+     * the body also {@code rt} to the right (its weight over one foot or the other), standing on its feet where they are
+     * put: the right foot on the ground ({@code rr} right of, {@code rf} ahead of where their user stands), the left at
+     * ({@code lr}, {@code lf}) (IsosangLimbs.standingAt: the knees bent to them as the body comes down). Keys that keep a
+     * foot's place keep that foot still while the body moves over it; a foot whose place changes between two keys
+     * slides there along the ground (a low step).
+     */
+    static R6.Pose on(double rt,double fw,double up,float yaw,float pitch,float roll,double[] rArm,double[] blade,double[] lArm,double rr,double rf,double lr,double lf){
+        R6.Pose p=R6.world(fw,up,yaw,pitch,roll,rArm,blade,lArm,d(-90,0),d(-90,0));
+        p.rt=rt;
+        p.rLeg=IsosangLimbs.standingAt(p,0,rr,rf);p.lLeg=IsosangLimbs.standingAt(p,1,lr,lf);
+        return p;
+    }
+
+    // ───────────────────────────── plain 1: 가로베기 ─────────────────────────────
+    // the weight back onto the right leg, the left foot sliding out ahead, the knife swung out round the right side to
+    // behind the shoulder (the body turned right, sinking); then level across the front at chest height to the left,
+    // the body turning and driving forward over the front foot
+
+    /** Its plane: level across the front, dipping a little to the left. */
+    static final Swing S1=new Swing(d(-1,-2),d(-8,-92));
+    /** Its end: the knife out to the left, the body turned after it over the front foot (where the second takes it up). */
+    static final R6.Pose P1_END=on(-.07,.30,-.24,34,13,-4,S1.at(78),S1.at(55),d(-38,-150),.21,-.03,-.20,.40);
+    static final Anim P1=Anim.joints(
+        k(0,STANCE),
+        k(.05,on(.03,-.03,-.07,-15,-2,2,d(-42,74),S1.at(-58),d(-58,-18),.20,-.01,-.19,.12)),
+        k(.09,on(.06,-.06,-.13,-32,-4,4,S1.at(-90),S1.at(-120),d(-42,-20),.21,-.03,-.20,.33)),
+        // wound furthest: the knife level behind the right shoulder, the free hand out ahead
+        k(.115,on(.07,-.06,-.15,-37,-5,4,S1.at(-97),S1.at(-137),d(-34,-22),.21,-.03,-.20,.40)),
+        // let go: the hips first (the body turns and goes forward while the arm has hardly moved), then the arm, the knife last
+        k(.14f,on(.05,.01,-.17,-20,0,2,S1.at(-88),S1.at(-133),d(-38,-42),.21,-.03,-.20,.40)),
+        k(.17f,on(.01,.12,-.20,2,7,-1,S1.at(-36),S1.at(-88),d(-46,-90),.21,-.03,-.20,.40)),
+        // the blow: the blade straight ahead across the middle, the arm led on to the left
+        k(blow(SLASH,0),on(-.03,.22,-.23,18,11,-3,S1.at(34),S1.at(-6),d(-46,-124),.21,-.03,-.20,.40)),
+        k(.23f,on(-.06,.27,-.24,29,13,-4,S1.at(66),S1.at(38),d(-42,-144),.21,-.03,-.20,.40)),
+        // carried on past, then brought back a little
+        k(.30f,on(-.08,.31,-.25,38,14,-5,S1.at(87),S1.at(64),d(-36,-154),.21,-.03,-.20,.40)),
+        k(step(SLASH),P1_END),
+        k(.58f,on(-.03,.13,-.10,12,5,-1,d(-62,-30),d(-3,-20),d(-72,-60),.20,-.01,-.19,.14)),
+        k(.75f,STANCE)).stops(Anim.stop(blow(SLASH,0),.025,.04)).after(natural(SLASH));
+
+    // ───────────────────────────── plain 2: 올려베기 ─────────────────────────────
+    // the wrist turns the knife over and lets it down behind the left hip (the body sinking over the front foot), then
+    // it is ripped up backhand across the front to the high right: the right foot steps through and lands on the blow,
+    // the body rising with the cut and opening to the right, the knife ending out to the right and up, its flat to
+    // whoever looks from behind
+
+    /** Its end: the knife up and out to the right, the chest open (where the third takes it up). */
+    static final R6.Pose P2_END=on(.06,.58,-.12,-28,-4,3,d(60,104),d(34,92),d(-56,-48),.16,.84,-.20,.40);
+    static final Anim P2=Anim.joints(
+        k(0,P1_END),
+        // the knife turned over the arm, down and back behind the left hip
+        k(.04,on(-.08,.31,-.27,36,14,-5,d(-30,-80),d(-2,-86),d(-36,-146),.21,-.03,-.20,.40)),
+        k(.075,on(-.09,.33,-.30,38,15,-5,d(-36,-66),d(-7,-120),d(-32,-138),.20,.12,-.20,.40)),
+        k(.105,on(-.09,.34,-.31,38,16,-5,d(-36,-60),d(-8,-136),d(-30,-134),.19,.30,-.20,.40)),
+        // let go: up out of the legs, the hips turning first
+        k(.135f,on(-.07,.37,-.29,26,13,-3,d(-33,-52),d(-9,-129),d(-36,-122),.18,.52,-.20,.40)),
+        k(.17f,on(-.02,.44,-.24,7,9,0,d(-10,-14),d(-10,-80),d(-48,-100),.17,.76,-.20,.40)),
+        // the blow: the blade ahead across the middle at the chest, the arm led on up to the right
+        k(blow(RISE,0),on(.02,.51,-.19,-9,4,2,d(28,26),d(-6,-15),d(-56,-76),.16,.84,-.20,.40)),
+        k(.23f,on(.05,.55,-.15,-21,-1,3,d(50,62),d(10,22),d(-60,-60),.16,.84,-.20,.40)),
+        k(.30f,on(.07,.58,-.11,-32,-5,3,d(63,100),d(30,84),d(-58,-50),.16,.84,-.20,.40)),
+        k(step(RISE),P2_END),
+        k(.62f,on(.03,.28,-.07,-10,-1,1,d(-28,84),d(20,50),d(-72,-30),.19,.10,-.20,.38)),
+        k(.8f,STANCE)).stops(Anim.stop(blow(RISE,0),.025,.04)).after(natural(RISE));
+
+    // ───────────────────────────── plain 3: 내려찍기 ─────────────────────────────
+    // the knife swings on round the outside of the shoulder to behind it, the arm going up, the body rising tall under
+    // it and arching back with the back foot gathered up; then down from the high right through the middle, levelling
+    // off over the ground and drawn on across to the left hip, the body dropping into a deep stance as the back foot
+    // shoots back
+
+    /** Its plane: down through the middle, from the high right to the low left (a little off upright). */
+    static final Swing S3=new Swing(d(8,-5),d(-68,-90));
+    /** Its end: deep over the front foot, the knife low at the left (where the finisher takes it up). */
+    static final R6.Pose P3_END=on(-.04,.74,-.38,29,27,-4,d(-32,-60),d(-7,-28),d(-36,-150),.16,.84,-.22,.22);
+    static final Anim P3=Anim.joints(
+        k(0,P2_END),
+        k(.05,on(.06,.59,-.10,-31,-6,3,d(70,96),d(36,116),d(-40,-40),.16,.84,-.20,.44)),
+        k(.10,on(.07,.61,-.07,-34,-8,3,d(72,88),d(34,140),d(-22,-28),.16,.84,-.19,.50)),
+        // the top: the blade back behind the shoulder, the body tall, the free hand up ahead
+        k(.16,on(.07,.62,-.05,-35,-10,3,S3.at(-86),S3.at(-141),d(-4,-14),.16,.84,-.18,.56)),
+        k(.21,on(.07,.62,-.06,-36,-10,3,S3.at(-84),S3.at(-146),d(4,-10),.16,.84,-.18,.56)),
+        // let go: the body drops and turns, the arm after it, the knife last
+        k(.245f,on(.05,.65,-.13,-16,2,1,S3.at(-62),S3.at(-128),d(-10,-36),.16,.84,-.19,.46)),
+        k(.275f,on(.02,.69,-.21,2,11,-1,S3.at(-24),S3.at(-80),d(-26,-90),.16,.84,-.21,.32)),
+        // the blow: the blade down through the middle at the chest
+        k(blow(CHOP,0),on(-.01,.72,-.29,17,19,-3,S3.at(22),S3.at(-12),d(-36,-132),.16,.84,-.22,.22)),
+        // the cut levels off over the ground and is drawn on across to the left hip (the hand leading it there)
+        k(.33f,on(-.03,.74,-.36,26,25,-4,d(-38,-36),d(-2,-10),d(-38,-148),.16,.84,-.22,.22)),
+        k(.40f,on(-.05,.75,-.40,32,28,-4,d(-33,-66),d(-9,-34),d(-34,-156),.16,.84,-.22,.22)),
+        k(step(CHOP),P3_END),
+        k(.78f,on(-.02,.36,-.15,10,10,-1,d(-66,-6),d(-3,-8),d(-66,-70),.19,.20,-.20,.10)),
+        k(.95f,STANCE)).stops(Anim.stop(blow(CHOP,0),.05,.07)).after(natural(CHOP));
+
+    // ───────────────────────────── plain 4: 찌르기 ─────────────────────────────
+    // the weight drawn back onto the back leg, the body turned side-on, the knife pulled back low past the right hip
+    // with its point kept on the foe and the free hand out ahead; held; then the lunge: the back leg drives, the hips
+    // and the shoulder turn in, the arm goes out last (the hand turning over as it goes, the blade ending canted so
+    // its flat shows from behind), the front foot shooting out to land on the blow and the back foot dragged after it,
+    // the free arm thrown back; driven on a little past the blow, held out, then drawn back and up, stepping back
+
+    static final R6.Pose P4_BACK=on(-.08,.50,-.30,-38,8,3,d(-52,146),d(8,-8),d(2,-10),.16,.80,-.22,.22);
+    static final Anim P4=Anim.joints(
+        k(0,P3_END),
+        k(.10,on(-.06,.60,-.34,-14,16,0,d(-72,30),d(1,-17),d(-20,-40),.16,.84,-.22,.22)),
+        k(.20,P4_BACK),
+        // held, sinking a little more
+        k(.27,on(-.09,.47,-.32,-40,7,3,d(-50,150),d(8,-8),d(4,-8),.16,.80,-.22,.22)),
+        // the lunge
+        k(.31f,on(-.06,.58,-.33,-28,10,1,d(-54,128),d(8,-8),d(-2,-20),.15,.94,-.22,.23)),
+        k(.36f,on(-.02,.86,-.35,0,18,-2,d(-44,44),d(7,-7),d(-14,-96),.14,1.24,-.22,.38)),
+        // the blow: the whole body out behind the knife, still going
+        k(blow(LUNGE,0),on(.01,1.07,-.36,20,22,-3,d(-18,-10),d(6,-6),d(-22,-156),.14,1.42,-.22,.56)),
+        // furthest, then settled
+        k(.44f,on(.02,1.24,-.37,31,25,-3,d(-9,-26),d(5,-5),d(-26,-174),.14,1.50,-.22,.68)),
+        k(.56f,on(.02,1.20,-.36,28,23,-3,d(-10,-25),d(5,-5),d(-30,-168),.14,1.50,-.22,.68)),
+        k(HOLD[LUNGE]/20f,on(.02,1.18,-.35,26,22,-2,d(-13,-20),d(5,-5),d(-36,-160),.14,1.50,-.22,.68)),
+        // drawn back and up: the front foot steps back past the other, then that one
+        k(.88f,on(.01,.84,-.24,12,14,-1,d(-40,30),d(4,-4),d(-52,-90),.16,.96,-.22,.68)),
+        k(1.0f,on(0,.44,-.14,2,8,0,d(-58,52),d(2,-2),d(-66,-50),.19,.06,-.21,.66)),
+        k(1.13f,on(0,.14,-.05,-2,3,0,d(-70,70),d(1,0),d(-80,-20),.19,0,-.20,.28)),
+        k(1.25f,STANCE)).stops(Anim.stop(blow(LUNGE,0),.06,.08)).after(natural(LUNGE));
+
     @Override public Anim clip(int combo){return clipOf(combo);}
-    static Anim clipOf(int hit){return switch(hit){case PASTE->H2;case FLOOD->H3;case DELETE->H4;default->H1;};}
+    static Anim clipOf(int hit){return switch(hit){case PASTE->H2;case FLOOD->H3;case DELETE->H4;case SLASH->P1;case RISE->P2;case CHOP->P3;case LUNGE->P4;default->H1;};}
 
     @Override public float lifetime(){return LIFE;}
     @Override public boolean layered(){return true;}
     /** Faint: the knife arm trails a copy or two as it cuts, and the body is never hidden under them. */
     @Override public float afterimages(float sec){return .3f;}
+    /** None for a plain swing (the hack off, 2.117.0: no effects at all). */
+    @Override public float afterimages(Fx c){return plain(c.cast.combo())?0:afterimages(c.sec);}
     @Override public int afterimageColor(){return GHOST;}
 
     // ───────────────────────────── where things are ─────────────────────────────
@@ -314,6 +479,8 @@ public final class KnifeCombo implements Fx.Skill {
     /** How strongly a cut shows in its user's own first person: it passes right before their eyes, and must not blind them. */
     static final float FIRST_PERSON=.4f;
     @Override public void glitch(Fx c){
+        // (a plain swing, the hack off, 2.117.0: nothing is drawn but the body and the knife)
+        if(plain(c.cast.combo()))return;
         int hit=c.cast.combo();float t=c.sec,until=KnifeClient.until(c.cast.id());Cut[] cuts=cuts(hit);
         float own=c.mc.player!=null&&c.cast.caster().equals(c.mc.player.getUuid())&&c.mc.options.getPerspective().isFirstPerson()?FIRST_PERSON:1;
         for(int k=0;k<cuts.length;k++){
@@ -399,6 +566,7 @@ public final class KnifeCombo implements Fx.Skill {
     // ───────────────────────────── the passes ─────────────────────────────
 
     @Override public void alpha(Fx c,EffectMesh m){
+        if(plain(c.cast.combo()))return;
         impacts(c,m,false);
         switch(c.cast.combo()){
             case PASTE->paste(c,m,false);
@@ -408,6 +576,7 @@ public final class KnifeCombo implements Fx.Skill {
         }
     }
     @Override public void additive(Fx c,EffectMesh m){
+        if(plain(c.cast.combo()))return;
         aura(c,m);
         impacts(c,m,true);
         switch(c.cast.combo()){
@@ -654,6 +823,7 @@ public final class KnifeCombo implements Fx.Skill {
     // ───────────────────────────── light, shake ─────────────────────────────
 
     @Override public void frame(Fx c,FxFrame f){
+        if(plain(c.cast.combo()))return;
         int hit=c.cast.combo();float t=c.sec;
         // fast cuts: short afterglow, as the effects' other fast slashes (their bands would leave copies of themselves)
         boolean cutting=false;for(Cut s:cuts(hit))cutting|=t>=s.from()-.02f&&t<s.to()+.06f;
@@ -667,7 +837,7 @@ public final class KnifeCombo implements Fx.Skill {
     }
     static float bump(float sec,float at,float tau){return sec<at-.02f?0:Ease.smooth(sec,at-.02f,at+.015f)*(float)Math.exp(-Math.max(0,sec-at-.015f)/tau);}
     /** How hard each blow shakes the camera as it lands on someone (a cut that meets no one, a third of it). */
-    static final float[][] SHAKE={{},{.4f},{.3f,.35f},{.18f,.18f,.3f},{.5f,1.1f}};
+    static final float[][] SHAKE={{},{.4f},{.3f,.35f},{.18f,.18f,.3f},{.5f,1.1f},{.35f},{.35f},{.55f},{1.0f}};
     @Override public float shake(StandClient.Cast cast,float sec){
         int hit=cast.combo();if(!valid(hit))return 0;float v=0;
         for(int i=0;i<blows(hit);i++){

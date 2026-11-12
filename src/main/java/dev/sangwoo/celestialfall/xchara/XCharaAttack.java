@@ -33,7 +33,9 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
  * X Chara's basic attack, their knife's four hits (2.114.0; XCharaCombo for the timing and the reach). The attack key on
  * their client asks for a hit (xchara_attack_v1, no payload; a vanilla attack is taken the same way) and the server
  * decides, as for Lee So-sang's sword (IsosangAttack): the next hit of the combo starts now, or when it may if that is
- * near (a press made a little early is kept), or not at all while the attack rests. Each hit goes the way its user faces
+ * near (a press made a little early is kept), or not at all while the attack rests. A hit is the hack's (a hacker's
+ * trick, with its effects) if their hack is on as it starts (Q, XCharaHack), and a plain swing of the knife if it is
+ * off (2.117.0: XCharaCombo's hits 5 to 8); the combo goes on through either. Each hit goes the way its user faces
  * as it starts and holds them where they stand a moment (XCharaCombo.HOLD: no walking, guard, dash or other move,
  * CombatManager.busy); at each of its blows it strikes everyone in its way (XCharaCombo.lane, in sight) without knockback
  * and staggers them until the next blow could land (Stagger.xchara). The fourth takes no guard, and its last blow sends
@@ -54,7 +56,7 @@ public final class XCharaAttack {
     static final int RATE=40;
     private static final class State {
         final ServerWorld world;State(ServerPlayerEntity p){world=p.getServerWorld();}
-        /** The hit in flight or the last one (1 to 4, 0 for none), its id, when it began, the way it goes (degrees), and how many of its blows have landed. */
+        /** The hit in flight or the last one (1 to 8: the hack's four, the plain four; 0 for none), its id, when it began, the way it goes (degrees), and how many of its blows have landed. */
         int combo;UUID id=new UUID(0,0);long start=-1000;float yaw;int blows;
         /** A press kept for the next hit, and the tick the attack is ready again after a rest (0 for none). */
         boolean queued;long ready;
@@ -111,7 +113,7 @@ public final class XCharaAttack {
         long may=may(s);
         if(now<may){
             // (the fourth hit's motion runs on after its blows; the next combo waits for its rest, set as it began)
-            if(s.combo<DELETE){if(may-now<=BUFFER)s.queued=true;return s.queued;}
+            if(!last(s.combo)){if(may-now<=BUFFER)s.queued=true;return s.queued;}
             return false;
         }
         begin(p,s,now);
@@ -120,7 +122,7 @@ public final class XCharaAttack {
     /** When the next hit may begin: at once with none in flight; the next of the combo its STEP after the hit before; the next combo once the fourth's motion is over (and its rest, s.ready). */
     private static long may(State s){
         if(!valid(s.combo))return Long.MIN_VALUE;
-        return s.combo<DELETE?nextAt(s.combo,s.start):s.start+LENGTH[s.combo];
+        return last(s.combo)?s.start+LENGTH[s.combo]:nextAt(s.combo,s.start);
     }
     /** The combo broke (the next hit is late): the attack rests and starts again from the first hit; a rest over ends the combo. */
     private static void settle(ServerPlayerEntity p,State s,long now){
@@ -131,12 +133,13 @@ public final class XCharaAttack {
             if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.ready=Math.max(s.ready,rest);
             send(p,s,RESTS,-1,null);
         }
-        if(s.combo==DELETE&&now>=s.ready&&now>=s.start+LENGTH[s.combo])s.combo=0;
+        if(last(s.combo)&&now>=s.ready&&now>=s.start+LENGTH[s.combo])s.combo=0;
     }
     private static void begin(ServerPlayerEntity p,State s,long now){
-        s.combo=next(s.combo);s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
+        // (2.117.0) the hack off as it begins, a plain swing; on, the hack's hit: the combo goes on from the one to the other
+        s.combo=next(s.combo,!XCharaHack.on(p));s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
         // (the rest after the fourth hit: none for a player the cooldowns are off for, /botand nocooldown)
-        if(s.combo==DELETE)s.ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:rested(now);
+        if(last(s.combo))s.ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?now:rested(s.combo,now);
         p.clearActiveItem();p.setSprinting(false);p.swingHand(Hand.MAIN_HAND,true);CombatManager.interrupt(p);
         send(p,s,HIT,-1,null);
     }
@@ -160,7 +163,7 @@ public final class XCharaAttack {
     }
     /** The hit in flight stops short (or the combo is cut off between hits): the attack rests from now. */
     private static void stop(ServerPlayerEntity p,State s,long now){
-        boolean moving=valid(s.combo)&&now-s.start<LENGTH[s.combo],open=s.combo>=CUT&&s.combo<DELETE&&broken(s.combo,s.start,now)<0;
+        boolean moving=valid(s.combo)&&now-s.start<LENGTH[s.combo],open=valid(s.combo)&&!last(s.combo)&&broken(s.combo,s.start,now)<0;
         if(!moving&&!open&&!s.queued)return;
         s.queued=false;s.combo=0;s.blows=0;
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.ready=Math.max(s.ready,now+REST);
@@ -186,7 +189,7 @@ public final class XCharaAttack {
             struck.add(e);
             // every blow staggers whom it strikes a moment (2.68.0's rule for basic attacks); one stopped in Star Platinum's
             // stopped time is staggered as time moves again
-            if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.xchara(combo,i,s.start,now));
+            if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.xchara(combo,i,s.start,now,!XCharaHack.on(p)));
             // the finisher's last cut throws them the way it went, told to a struck player's client once, through the
             // tracker; one stopped in a time stop is thrown as time moves again
             if(launches(combo,i)){

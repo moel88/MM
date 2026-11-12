@@ -18,6 +18,16 @@ xchara_m1_4 (삭제): the wind-up (a stuttering tone climbing, noise swelling), 
 xchara_m1_hit: a blow landing: a click, a short thud, a crunch of bit-crushed noise and a blip falling.
 xchara_m1_hit_last: the finisher's last blow: the same heavier and lower, and a scatter of blips after it (pixels flying).
 
+The plain swings (the hack off, 2.117.0, user request: "이번에는 Q 껐을때 평타를 만들어줘 이펙트 없이 그냥 휘두르기만해
+그대신 모션을 좋게 만들어봐": no hacker's noises in these, a knife through the air and nothing else; XCharaCombo's hits
+5 to 8, their blows 4 / 4 / 6 / 8 ticks in):
+xchara_swing_1 (가로베기): one clean whoosh across.
+xchara_swing_2 (올려베기): the backhand's whoosh, rising and ending higher.
+xchara_swing_3 (내려찍기): the knife lifted (a faint breath of air), then a long heavy whoosh down, a low woof under it.
+xchara_swing_4 (찌르기): the knife drawn back (a faint breath), then a short hard thrust and the front foot stamping.
+xchara_swing_hit: a plain blow landing: a click, a thud and a slice of noise falling, nothing crushed.
+xchara_swing_hit_last: the lunge landing: the same heavier, lower and longer.
+
 Made from noise and tones only (fixed seeds), so there is nothing to license and every run makes the same files. Each is
 mono at 48 kHz, set to its own loudness (EBU R 128 / BS.1770, LOUDNESS) with only its peaks turned down under
 CEILING_DB, and written as OGG Vorbis by ffmpeg (on the PATH). OUT_DIR defaults to the mod's sounds folder.
@@ -37,12 +47,17 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'src/main/resourc
 
 # the swings sit a little under the blows; the finisher's last blow is the loudest thing in the combo
 LOUDNESS = {'xchara_m1_1': -18.0, 'xchara_m1_2': -18.0, 'xchara_m1_3': -18.0, 'xchara_m1_4': -16.5,
-            'xchara_m1_hit': -16.0, 'xchara_m1_hit_last': -14.5}
+            'xchara_m1_hit': -16.0, 'xchara_m1_hit_last': -14.5,
+            # the plain swings a little under the hack's (nothing but air in them); their blows as loud as the hack's
+            'xchara_swing_1': -19.0, 'xchara_swing_2': -19.0, 'xchara_swing_3': -18.0, 'xchara_swing_4': -18.0,
+            'xchara_swing_hit': -16.0, 'xchara_swing_hit_last': -14.5}
 CEILING_DB = -1.0
 # a swing's file starts this long into its hit (the client plays it a tick after the hit starts)
 LEAD = 1 / 20
 # when each hit's blows land (seconds into the hit: XCharaCombo.BLOWS)
 BLOWS = {1: [4 / 20], 2: [3 / 20, 6 / 20], 3: [3 / 20, 5 / 20, 7 / 20], 4: [7 / 20, 11 / 20]}
+# the plain swings' blows (XCharaCombo.BLOWS, hits 5 to 8)
+PLAIN = {1: 4 / 20, 2: 4 / 20, 3: 6 / 20, 4: 8 / 20}
 # the third hit's popups start closing this long into it and this far apart (KnifeCombo.WINDOWS_SHUT, WINDOW_STEP,
 # GlitchFx.WINDOW_SHUT); the finisher's X starts going out this long after its last blow, folds flat and goes out
 # (KnifeCombo.X_HOLD, GlitchFx.X_FOLD, X_OUT)
@@ -398,10 +413,91 @@ def landed_last():
     return finish(out, 'xchara_m1_hit_last', fade_out=.1)
 
 
+def breath(d, at, width, seed, f=900.0):
+    """A faint breath of air as the knife is moved without cutting (lifted, drawn back): soft noise swelling and gone."""
+    x = t(d)
+    return low(band(noise(len(x), seed), f * .5, f * 2.2), 2600) * bell(x, at, width, width * 1.3)
+
+
+def swing1():
+    """가로베기: one clean whoosh across."""
+    d = .5
+    at = PLAIN[1] - LEAD
+    out = whoosh(d, at, .05, .04, 380, 3300, 1100, 701, weight=.12)
+    return finish(out, 'xchara_swing_1')
+
+
+def swing2():
+    """올려베기: the backhand's whoosh, rising and ending higher."""
+    d = .5
+    at = PLAIN[2] - LEAD
+    out = whoosh(d, at, .046, .042, 520, 4300, 1900, 711, weight=.1)
+    return finish(out, 'xchara_swing_2')
+
+
+def swing3():
+    """내려찍기: the knife lifted (a faint breath), then a long heavy whoosh down with a low woof under it."""
+    d = .66
+    at = PLAIN[3] - LEAD
+    out = np.zeros(int(d * SR))
+    put(out, .16 * norm(breath(.2, .09, .04, 721)), .01)
+    put(out, whoosh(.56, .21, .062, .055, 240, 2700, 620, 722, weight=.6), at - .21)
+    # the blade stopped short of the ground: a small dull knock of the body's weight coming down
+    put(out, .16 * thud(.18, 150, 62, .045, 723), at + .03)
+    return finish(out, 'xchara_swing_3', fade_out=.06)
+
+
+def swing4():
+    """찌르기: the knife drawn back (a faint breath), then a short hard thrust and the front foot stamping."""
+    d = .7
+    at = PLAIN[4] - LEAD
+    out = np.zeros(int(d * SR))
+    put(out, .18 * norm(breath(.26, .1, .05, 731, 700)), .0)
+    put(out, whoosh(.36, .15, .03, .034, 900, 5200, 2300, 732, weight=.25), at - .15)
+    put(out, .3 * thud(.22, 140, 55, .05, 733), at - .012)
+    return finish(out, 'xchara_swing_4', fade_out=.06)
+
+
+def cut():
+    """A plain blow landing: a click, a thud, a slice of noise falling. Nothing crushed."""
+    d = .3
+    x = t(d)
+    n = len(x)
+    out = np.zeros(n)
+    click = high(noise(n, 801), 3500) * np.exp(-x / .0016)
+    out += .75 * norm(click)
+    out += .5 * thud(d, 210, 84, .04, 802)
+    knock = band(noise(n, 803), 320, 1500) * np.exp(-x / .02) * smooth(x / .001)
+    out += .7 * norm(knock)
+    slice_ = swept(noise(n, 804), 5200 * np.exp(-x / .03) + 1400, 2.4) * np.exp(-x / .028) * smooth(x / .001)
+    out += .9 * norm(slice_)
+    return finish(out, 'xchara_swing_hit', fade_out=.05)
+
+
+def cut_last():
+    """The lunge landing: heavier, lower and longer."""
+    d = .55
+    x = t(d)
+    n = len(x)
+    out = np.zeros(n)
+    click = high(noise(n, 811), 3000) * np.exp(-x / .002)
+    out += .75 * norm(click)
+    out += .75 * thud(d, 180, 56, .08, 812)
+    knock = band(noise(n, 813), 240, 1200) * np.exp(-x / .04) * smooth(x / .001)
+    out += .8 * norm(knock)
+    slice_ = swept(noise(n, 814), 4600 * np.exp(-x / .05) + 900, 2.2) * np.exp(-x / .05) * smooth(x / .001)
+    out += .9 * norm(slice_)
+    rush = low(noise(n, 815), 500, 2) * bell(x, .05, .03, .14)
+    out += .3 * norm(rush)
+    return finish(out, 'xchara_swing_hit_last', fade_out=.1)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     made = {'xchara_m1_1': hit1(), 'xchara_m1_2': hit2(), 'xchara_m1_3': hit3(), 'xchara_m1_4': hit4(),
-            'xchara_m1_hit': landed(), 'xchara_m1_hit_last': landed_last()}
+            'xchara_m1_hit': landed(), 'xchara_m1_hit_last': landed_last(),
+            'xchara_swing_1': swing1(), 'xchara_swing_2': swing2(), 'xchara_swing_3': swing3(), 'xchara_swing_4': swing4(),
+            'xchara_swing_hit': cut(), 'xchara_swing_hit_last': cut_last()}
     with tempfile.TemporaryDirectory() as tmp:
         for name, x in made.items():
             wav = os.path.join(tmp, name + '.wav')

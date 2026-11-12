@@ -257,6 +257,30 @@ public final class IsosangLimbs {
         V dn=to.unit();
         return reach(to,V.of(R6.swing(dn.dir())).off(dn).unit().plus(side.off(dn).times(KNEE_OUT)));
     }
+    /**
+     * {@link #stand} turned round, on the frame's own floor (2.117.0, X Chara's plain swings: feet that stay where they are
+     * put while the body moves over them): the straight way (body space) of leg {@code i} (0 right, 1 left) of pose
+     * {@code p} whose foot, drawn in under the hip as a crouch draws it, stands at ({@code right}, {@code ahead}) of the
+     * hit's frame (blocks from where its user stands). A point further off than the leg reaches from that hip is reached
+     * for as far as the leg goes (the foot short of it, on the way to it); with the hip as high as the leg is long the
+     * leg hangs straight.
+     */
+    public static R6.Dir standingAt(R6.Pose p,int i,double right,double ahead){
+        Quaterniond q=new Quaterniond().rotationAxis(Math.toRadians(p.yaw),0,1,0).rotateAxis(Math.toRadians(p.pitch),1,0,0).rotateAxis(Math.toRadians(p.roll),0,0,1);
+        double xLeft=i==0?-IsosangSlash.HIP_SIDE:IsosangSlash.HIP_SIDE;
+        Vector3d hip=q.transform(new Vector3d(xLeft,-IsosangSlash.HIP_DOWN,0)).add(-p.rt,p.up+KagenoClips.PIVOT,p.fw);
+        double hx=-right-hip.x,hz=ahead-hip.z,far=Math.hypot(hx,hz),height=hip.y;
+        double most=Math.sqrt(Math.max(0,LEG*LEG-height*height));
+        if(far<1e-6||most<1e-6)return body(q,new Vector3d(0,-1,0)).dir().norm();
+        Vector3d forward=q.transform(new Vector3d(0,0,1));forward.y=0;
+        if(forward.lengthSquared()<1e-8)forward.set(0,0,1);else forward.normalize();
+        // (as stand draws it: by how low the hip is and whether the foot is ahead or behind, less as the hip nears a leg's length)
+        double low=clamp((LEG-height)/(LEG*.5),0,1);
+        double draw=1-(1-lerp(DRAW_BACK,DRAW_FRONT,smooth((hx*forward.x+hz*forward.z)/Math.max(far,.05),-.6,.15)))*smooth(low,0,1);
+        double straight=smooth(height,LEG-.05,LEG+.1);draw=draw*(1-straight)+straight;
+        double out=Math.min(far/draw,most);
+        return body(q,new Vector3d(hx/far*out,-Math.sqrt(Math.max(0,LEG*LEG-out*out)),hz/far*out)).dir().norm();
+    }
     /** {@code l} with its knee bent {@code more} degrees further, its foot on the same line from the hip (tucked). */
     static Leg tucked(Leg l,double more){
         return reach(foot(l).unit().times(R6.legReach(Math.min(150,Math.toDegrees(l.bend)+more))),l.front);

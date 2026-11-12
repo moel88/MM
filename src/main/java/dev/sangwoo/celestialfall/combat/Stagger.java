@@ -61,6 +61,13 @@ public final class Stagger {
         return dev.sangwoo.celestialfall.xchara.XCharaCombo.staggerUntil(combo,blow,start,now,PAST,LAST);
     }
     /**
+     * The same with the kind of the next hit told (2.117.0: {@code plainNext}, their hack off as the blow lands; a hit's
+     * kind is chosen as it begins, and a plain swing lands later after it begins than the hack's hit in its place).
+     */
+    public static long xchara(int combo,int blow,long start,long now,boolean plainNext){
+        return dev.sangwoo.celestialfall.xchara.XCharaCombo.staggerUntil(combo,blow,start,now,PAST,LAST,plainNext);
+    }
+    /**
      * The same in E's empowered combo or not (2.80.0): a thrown sword holds them until the next sword could reach them,
      * the third hit's last blow until the empowered fourth's thrust could land.
      */
