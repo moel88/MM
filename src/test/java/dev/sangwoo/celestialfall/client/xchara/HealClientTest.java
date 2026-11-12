@@ -10,26 +10,33 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * X Chara's E with their hack on as drawn (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고
- * 몸에 연두 이펙트 둘러지고 65힐"): the press brings the panel's arm up in front of them and taps the panel twice, the
- * second tap as the server heals them, then back, nothing of it stepping from one frame to the next; stopped short it
+ * 몸에 연두 이펙트 둘러지고 65힐"): the press brings the panel's arm up in front of them and its hand down on the panel
+ * once, as its sound's press sounds, on it as the server heals them (2.120.0: the user's sound has one press), then back, nothing of it stepping from one frame to the next; stopped short it
  * goes back at once; the lime light round the body rises from the feet to over the head, winds round them and is gone
- * in a second; its sound is the mod's.
+ * in a second; its sound is the mod's (2.120.0: the user's, lifted out of their recording).
  */
 class HealClientTest {
     static final float NONE=Float.NaN;
 
-    @Test void thePressComesUpTapsTwiceAndGoesBack(){
-        assertEquals(HEAL_AT/20f,HealClient.TAP2,1e-6,"the second tap is the server's heal");
-        assertTrue(HealClient.TAP1<HealClient.TAP2&&HealClient.TAP1>.2f,"the first tap once the arm is up");
+    @Test void thePressComesUpComesDownOnceAsItsSoundPressesAndGoesBack(){
+        assertEquals(HEAL_AT/20f,HealClient.HEALS,1e-6,"the heal lands as the server heals them");
+        // the sound: played SOUND_AT ticks in, its press 10 ms into the file and its heal's tone 55 ms in
+        float sound=HealClient.SOUND_AT/20f;
+        assertEquals(sound+.010f,HealClient.PRESS,.006f,"the hand is down as the sound's press starts");
+        assertEquals(sound+.055f,HealClient.HEALS,.006f,"the heal's tone starts as the heal lands");
+        assertTrue(HealClient.PRESS>.25f&&HealClient.PRESS<HealClient.HEALS,"the press once the arm is up, before the heal");
         assertEquals(0,HealClient.lift(0,NONE),1e-6);assertEquals(1,HealClient.lift(.2f,NONE),1e-6);
-        assertEquals(1,HealClient.lift(HealClient.TAP1,NONE),1e-6,"up as it taps");assertEquals(1,HealClient.lift(HealClient.TAP2,NONE),1e-6);
+        assertEquals(1,HealClient.lift(HealClient.PRESS,NONE),1e-6,"up as it presses");assertEquals(1,HealClient.lift(HealClient.HEALS,NONE),1e-6);
         assertEquals(0,HealClient.lift(HEAL_LENGTH/20f,NONE),1e-6,"back as it is over");
-        assertEquals(1,HealClient.tap(HealClient.TAP1),1e-6);assertEquals(1,HealClient.tap(HealClient.TAP2),1e-6);
-        assertTrue(HealClient.tap((HealClient.TAP1+HealClient.TAP2)/2)<.5f,"the hand comes off it between the taps");
-        assertEquals(0,HealClient.tap(.1f),1e-6);assertEquals(0,HealClient.tap(.6f),1e-6);
-        // lit lime: a touch on the first tap, full on the press, gone before the arm is back
-        assertTrue(HealClient.lit(HealClient.TAP1)>.2f&&HealClient.lit(HealClient.TAP1)<.5f);
-        assertEquals(1,HealClient.lit(HealClient.TAP2),1e-6);assertEquals(0,HealClient.lit(1.05f),1e-6);
+        // one press: off the panel until the arm is up, down as the press sounds, on it through the heal, off it after
+        assertEquals(0,HealClient.tap(.2f),1e-6);assertEquals(0,HealClient.tap(HealClient.PRESS-.07f),1e-6);
+        assertEquals(1,HealClient.tap(HealClient.PRESS),1e-6);assertEquals(1,HealClient.tap(HealClient.HEALS),1e-6,"on it as the heal lands");
+        assertEquals(0,HealClient.tap(.6f),1e-6,"off it before the arm goes back");
+        int downs=0;float was=0;
+        for(float t=0;t<1.2f;t+=1/240f){float p=HealClient.tap(t);if(was<.5f&&p>=.5f)downs++;was=p;}
+        assertEquals(1,downs,"once");
+        // lit lime: from the hand's touch, full as the heal lands, gone before the arm is back
+        assertEquals(0,HealClient.lit(HealClient.PRESS),1e-6);assertEquals(1,HealClient.lit(HealClient.HEALS),1e-6);assertEquals(0,HealClient.lit(1.05f),1e-6);
         // nothing steps from one frame to the next
         float lift=0,tap=0,lit=0;
         for(float t=0;t<1.2f;t+=1/240f){
@@ -142,7 +149,9 @@ class HealClientTest {
         assertEquals(1,b[id+11],name+" mono");
         assertEquals(48000,(b[id+12]&255)|(b[id+13]&255)<<8|(b[id+14]&255)<<16|(b[id+15]&255)<<24,name+" at 48 kHz");
         float length=KnifeSoundsTest.seconds(b);
-        assertEquals(1.3f,length,.02f,name+" as long as make_e_sound.py makes it");
-        assertTrue(length>HealClient.TAP2+.5f&&length<=HealClient.TAP2+HealClient.EFFECT+.05f,"through the press and done as the light is");
+        assertEquals(.455f,length,.02f,name+" as long as extract_heal.py cuts it");
+        // played SOUND_AT ticks in: over once the heal's light is well up, before the light is gone
+        float end=HealClient.SOUND_AT/20f+length;
+        assertTrue(end>HealClient.HEALS+.3f&&end<=HealClient.HEALS+HealClient.EFFECT,"through the press and the heal");
     }
 }

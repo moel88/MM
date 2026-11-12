@@ -3,8 +3,8 @@ usage: python3 -I tools/xchara/shots/mux_e.py AUDIO_DIR FILM_DIR ENTRY START END
 
 As tools/xchara/shots/mux_slash.py, for the restore (AUDIO_DIR a run of tools/kageno/shots/run_shots.py with
 SHOTS_RECORD=1 over the same shot list in real time, FILM_DIR/ENTRY the slowed film run's folder of the same entry, the
-film showing ENTRY's clock from START to END seconds). Its one sound (xchara_e, tools/xchara/make_e_sound.py) plays as
-the client hears it start, and the runs hear of it a tick sooner or later than each other. So the sound is found in the
+film showing ENTRY's clock from START to END seconds). Its one sound (xchara_e, tools/xchara/extract_heal.py) plays
+HealClient.SOUND_AT ticks into it, and the runs hear of it a tick sooner or later than each other. So the sound is found in the
 sound run's recording by its own waveform near where its log puts it, and goes where the film run's E started (the
 first row of its stand.csv with one in it, he_age: its tick less that age).
 """
@@ -24,7 +24,7 @@ def started(stand):
     return None
 
 
-FIRST = {'lead': 0, 'file': 'xchara_e.ogg', 'sound': 'celestialfall:xchara_e', 'name': 'restore', 'start': started}
+FIRST = {'lead': 7, 'file': 'xchara_e.ogg', 'sound': 'celestialfall:xchara_e', 'name': 'restore', 'start': started}
 
 if __name__ == '__main__':
     main(FIRST)

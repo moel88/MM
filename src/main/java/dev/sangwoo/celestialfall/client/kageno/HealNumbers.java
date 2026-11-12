@@ -16,23 +16,36 @@ import java.util.UUID;
  * the total healed so far. Each regeneration tick replaces it in place at a new random spot and
  * tilt; ≈1.27 s after the last tick it accelerates away in a random direction while shrinking and
  * darkening (0.45 s), and the total starts over. 1 stud = 0.36 blocks.
+ * <p>
+ * (2.120.0) A heal given all at once is shown the same way when its skill says so ({@link #show}: X Chara's E, user
+ * request "힐 할때 카게노 패시브 처럼 몸에 초록색 숫자로 65 나오게"): the regeneration watch below only counts steps of
+ * up to one health.
  */
 public final class HealNumbers {
     private HealNumbers(){}
     private static final class Entry{float health=-1;double total;long updated=-1000;int serial;}
     private static final Map<UUID,Entry> ENTRIES=new HashMap<>();
     private static final float HOLD=1.27f,EXIT=.45f;
+    /** This player was healed {@code amount} at once at world time {@code now}: the number over their body shows it (added to a total still showing). */
+    public static void show(UUID id,double amount,long now){
+        var e=ENTRIES.computeIfAbsent(id,k->new Entry());
+        if((now-e.updated)/20f>HOLD+EXIT)e.total=0;
+        e.total+=amount;e.updated=now;e.serial++;
+    }
     public static void render(MinecraftClient mc,MatrixStack matrices,float delta,Vec3d camera){
         if(mc.world==null)return;long now=mc.world.getTime();var vertices=mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
         ENTRIES.keySet().removeIf(id->mc.world.getPlayerByUuid(id)==null);
         for(var p:mc.world.getPlayers()){
-            if(!StandClient.visible(p)||!p.isAlive())continue;
-            var e=ENTRIES.computeIfAbsent(p.getUuid(),k->new Entry());float h=p.getHealth();
-            if(e.health>=0&&h>e.health+.2f&&h-e.health<=1.01f){
+            if(!p.isAlive()||p.isInvisible()||p.isSleeping())continue;
+            // Kageno's passive is watched for in their health; anyone else has a number only when a skill shows one
+            boolean passive=StandClient.visible(p);
+            var e=passive?ENTRIES.computeIfAbsent(p.getUuid(),k->new Entry()):ENTRIES.get(p.getUuid());if(e==null)continue;
+            float h=p.getHealth();
+            if(passive&&e.health>=0&&h>e.health+.2f&&h-e.health<=1.01f){
                 if((now-e.updated)/20f>HOLD+EXIT)e.total=0;
                 e.total+=h-e.health;e.updated=now;e.serial++;
             }
-            e.health=h;
+            e.health=passive?h:-1;
             float age=(now-e.updated+delta)/20f;if(age>=HOLD+EXIT||e.total<=0||p.getPos().squaredDistanceTo(camera)>32*32)continue;
             int seed=p.getUuid().hashCode()*31+e.serial;
             Vec3d look=camera.subtract(p.getLerpedPos(delta)).multiply(1,0,1);if(look.lengthSquared()<1e-4)look=new Vec3d(0,0,1);look=look.normalize();

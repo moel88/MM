@@ -26,16 +26,20 @@ import static dev.sangwoo.celestialfall.xchara.XCharaRules.*;
  * E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에 연두 이펙트 둘러지고 65힐"; the server's XCharaHeal). Simple, as
  * asked, and mine to make up but for those three things:
  * <ul>
- * <li>The press: the arm that holds the panel comes up in front of them, the panel with it, and its hand taps the panel
- * twice (the second tap is the press: the heal lands on it); they look down at it; then the arm goes back to its place
- * ({@link #lift}, {@link #tap}: XCharaIdle.arms poses the arm, HackPanel brings the panel up to the hand as it taps
- * and lights its rim and keys lime).</li>
+ * <li>The press: the arm that holds the panel comes up in front of them, the panel with it, and its hand comes down on
+ * the panel once, as its sound's press sounds ({@link #PRESS}), and stays on it as the heal lands ({@link #HEALS}); they
+ * look down at it; then the arm goes back to its place ({@link #lift}, {@link #tap}: XCharaIdle.arms poses the arm,
+ * HackPanel brings the panel up under the hand and lights its rim and keys lime). (2.119.0 tapped twice, to a sound
+ * made up for it: one press now, as the user's sound has one.)</li>
  * <li>The lime light round the body as the heal lands ({@link #EFFECT} seconds): rings of lime rising round them from
  * their feet to over their head, small lime pixels winding up round them, a few plus signs rising, a ring running out
  * on the ground and a soft lime glow. It stays round them as they walk on. Drawn with the effects (KagenoRenderer);
  * its lime laid over what is behind it, its light added; everything a function of its own clock.</li>
- * <li>Its sound, made for it (tools/xchara/make_e_sound.py: two key taps and a soft chime rising): played as it starts,
- * faded out if it stops short.</li>
+ * <li>Its sound, the user's (2.120.0, "E스킬에 넣고": lifted out of their recording, tools/xchara/extract_heal.py: the
+ * press, "띡", and the heal's warbling tone): played {@link #SOUND_AT} ticks in, so the press sounds as the hand comes
+ * down and the heal's tone starts as the heal lands; not played if it stopped short before then, faded out if after.</li>
+ * <li>The number (2.120.0, "힐 할때 카게노 패시브 처럼 몸에 초록색 숫자로 65 나오게"): as the heal lands, what it gave in
+ * green over their body, as Kageno's passive shows its healing (kageno/HealNumbers.show).</li>
  * </ul>
  * Stopped short before the press lands (their user struck), the arm goes back at once and nothing more is drawn.
  */
@@ -55,8 +59,10 @@ public final class HealClient {
     private static Object world;
     /** Its lime, a deeper one for outlines, a pale one, and white. */
     static final int LIME=0x9dff3a,DEEP=0x2e8a12,PALE=0xdcffb0,WHITE=0xffffff;
-    /** The press's two taps (seconds into it; the second is the server's HEAL_AT), and how long the lime light shows after the heal (seconds). */
-    static final float TAP1=.27f,TAP2=HEAL_AT/20f,EFFECT=1.1f;
+    /** When the hand is down on the panel (seconds into it: as the sound's press starts), when the heal lands (the server's HEAL_AT), and how long the lime light shows after the heal (seconds). */
+    static final float PRESS=.36f,HEALS=HEAL_AT/20f,EFFECT=1.1f;
+    /** When its sound is played (ticks into it): the file starts 10 ms before the press and its heal's tone 55 ms in. Told of it later than SOUND_LATE ticks after that, a client plays nothing. */
+    static final int SOUND_AT=7,SOUND_LATE=2;
     /** How long one is kept (ticks): its press and the light after it. */
     static final float LIFE=HEAL_AT+EFFECT*20+4;
 
@@ -78,11 +84,16 @@ public final class HealClient {
         if(type==XCharaHeal.START){
             if(now-start>HEAL_LENGTH)return;
             var c=new Cast(now-start,StandClient.ticks());CASTS.put(user,c);
-            sound(mc,user,c);
+            if(c.told>=SOUND_AT)sound(mc,user,c);
             return;
         }
         var c=CASTS.get(user);if(c==null)return;
-        if(type==XCharaHeal.HEALED){c.healed=true;c.amount=healed;heard(String.format(java.util.Locale.ROOT,"healed %.1f, %.0f ticks in",healed,c.age(0)));}
+        if(type==XCharaHeal.HEALED){
+            c.healed=true;c.amount=healed;
+            // what it gave, in green over their body (as Kageno's passive shows its healing); nothing if it gave nothing
+            if(healed>.05f)dev.sangwoo.celestialfall.client.kageno.HealNumbers.show(user,healed,mc.world.getTime());
+            heard(String.format(java.util.Locale.ROOT,"healed %.1f, %.0f ticks in",healed,c.age(0)));
+        }
         else if(Float.isNaN(c.stopped)&&!c.healed){c.stopped=c.age(0);if(c.voice!=null)c.voice.fade();heard(String.format(java.util.Locale.ROOT,"stopped short %.0f ticks in",c.stopped));}
     }
     private static void heard(String line){HEARD.add(line);while(HEARD.size()>64)HEARD.remove(0);}
@@ -93,12 +104,14 @@ public final class HealClient {
             return p==null?0f:KnifeClient.loudness(m,p.getPos());
         };
         c.voice=new XCharaClient.Voice(CelestialFall.id("xchara_e"),loud);
-        heard(String.format(java.util.Locale.ROOT,"xchara_e, told %.0f ticks in, at %.2f",c.told,c.voice.full()));
-        if(c.voice.full()>.01f&&c.told<=2)mc.getSoundManager().play(c.voice);
+        heard(String.format(java.util.Locale.ROOT,"xchara_e, %.0f ticks in, told %.0f ticks in, at %.2f",c.age(0),c.told,c.voice.full()));
+        if(c.voice.full()>.01f&&c.told<=SOUND_AT+SOUND_LATE)mc.getSoundManager().play(c.voice);
     }
     private static void tick(MinecraftClient mc){
         if(mc.world==null||!MapClient.enabled()){if(world!=null||!CASTS.isEmpty())clear();return;}
         if(world!=mc.world){clear();world=mc.world;}
+        // its sound, once it is SOUND_AT ticks in (and not stopped short before)
+        for(var e:CASTS.entrySet()){var c=e.getValue();if(c.voice==null&&Float.isNaN(c.stopped)&&c.age(0)>=SOUND_AT)sound(mc,e.getKey(),c);}
         CASTS.entrySet().removeIf(e->{
             var c=e.getValue();float age=c.age(0);
             var p=mc.world.getPlayerByUuid(e.getKey());
@@ -131,11 +144,10 @@ public final class HealClient {
         float up=Ease.smooth(t,0,.2f)*(1-Ease.smooth(t,.6f,HEAL_LENGTH/20f));
         return Float.isNaN(stopped)?up:up*(1-Ease.smooth(t,stopped,stopped+.15f));
     }
-    /** How far the hand is down on the panel then (0 off it, 1 on it): two quick taps, the second the press. */
-    static float tap(float t){return Math.max(bump(t,TAP1),bump(t,TAP2));}
-    private static float bump(float t,float at){return Ease.smooth(t,at-.06f,at)*(1-Ease.smooth(t,at,at+.09f));}
-    /** How lime the panel is lit then: a touch on the first tap, full on the press, fading after. */
-    static float lit(float t){return Math.max(.35f*bump(t,TAP1),Ease.smooth(t,TAP2-.03f,TAP2)*(1-Ease.smooth(t,TAP2+.15f,TAP2+.6f)));}
+    /** How far the hand is down on the panel then (0 off it, 1 on it): down once as the press sounds, on it as the heal lands, off it soon after. */
+    static float tap(float t){return Ease.smooth(t,PRESS-.07f,PRESS)*(1-Ease.smooth(t,HEALS+.05f,HEALS+.16f));}
+    /** How lime the panel is lit then: from the hand's touch, full as the heal lands, fading after. */
+    static float lit(float t){return Ease.smooth(t,PRESS,HEALS)*(1-Ease.smooth(t,HEALS+.15f,HEALS+.6f));}
     /** This player's press this frame as {lift, tap, lit}, or null if they are not in one. */
     public static float[] press(UUID id,float delta){
         var c=CASTS.get(id);if(c==null)return null;
@@ -175,7 +187,7 @@ public final class HealClient {
         var out=new ArrayList<Shown>();
         for(var e:CASTS.entrySet()){
             var c=e.getValue();if(!c.healed)continue;
-            float s=c.age(delta)/20f-TAP2;if(s<0||s>=EFFECT)continue;
+            float s=c.age(delta)/20f-HEALS;if(s<0||s>=EFFECT)continue;
             var p=mc.world.getPlayerByUuid(e.getKey());if(p==null||p.isInvisible()||p.getPos().squaredDistanceTo(camera)>96*96)continue;
             out.add(new Shown(p.getLerpedPos(delta),p.getHeight(),s,(int)(e.getKey().getLeastSignificantBits()^c.received)));
         }
