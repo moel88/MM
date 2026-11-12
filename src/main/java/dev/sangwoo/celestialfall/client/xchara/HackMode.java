@@ -89,6 +89,20 @@ public final class HackMode {
         if(v.full()>.01f)mc.getSoundManager().play(v);
     }
 
+    /**
+     * (2.121.0) The panel's look this frame: their hack's, but folded away while both their hands hold the giant knife of
+     * their cleave and opened again after it (GiantCleave.panel), as the hack folds and opens it.
+     */
+    public static HackLook.Frame panelLook(UUID id,float delta){
+        var f=look(id,delta);if(f==null||!f.on())return f;
+        float[] cleave=GiantCleave.panel(id,delta);if(cleave==null)return f;
+        return new HackLook.Frame(cleave[0]>0,Math.max(0,cleave[1]),f.clock(),f.seed());
+    }
+    /** (2.121.0) A press of this player's panel this frame as HackPanel.press has it (their Y's, lime; their cleave's, violet), or null. */
+    public static float[] press(UUID id,float delta){
+        float[] heal=HealClient.press(id,delta);
+        return heal!=null?heal:GiantCleave.press(id,delta);
+    }
     /** This player's hack this frame, or null if nothing of it shows. */
     public static HackLook.Frame look(UUID id,float delta){
         var s=STATES.get(id);if(s==null)return null;
@@ -101,7 +115,7 @@ public final class HackMode {
         if(p==null||!StandClient.xChara(p)||p.isUsingItem())return null;
         // (the meteor pickaxe takes both hands: no panel then)
         if(p instanceof net.minecraft.client.network.AbstractClientPlayerEntity holder&&dev.sangwoo.celestialfall.client.meteor.MiningPose.holding(holder))return null;
-        var f=look(p.getUuid(),MinecraftClient.getInstance().getTickDelta());
+        var f=panelLook(p.getUuid(),MinecraftClient.getInstance().getTickDelta());
         return f!=null&&HackPanel.shown(f)?PANEL:null;
     }
     public static boolean isPanel(ItemStack stack){return stack!=null&&stack.isOf(XChara.PANEL);}

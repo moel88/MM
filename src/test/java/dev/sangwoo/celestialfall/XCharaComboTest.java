@@ -30,8 +30,38 @@ class XCharaComboTest {
             // the heavier the swing the longer it takes to land
             assertTrue(blowAt(first,0)<=blowAt(first+1,0)&&blowAt(first+1,0)<blowAt(first+2,0)&&blowAt(first+2,0)<blowAt(first+3,0));
         }
-        assertFalse(valid(0));assertFalse(valid(9));assertEquals(0,blows(0));assertEquals(0,blows(9));
+        // (2.121.0: 9 is the cleave, a skill of the pipeline with no place in the combo)
+        assertFalse(valid(0));assertTrue(valid(9));assertFalse(valid(10));assertEquals(0,blows(0));assertEquals(0,blows(10));
         assertFalse(plain(0));assertEquals(0,place(0));assertEquals(0,place(9));
+    }
+    @Test void theCleaveIsASkillOfThePipelineNoHitOfTheCombo(){
+        // (2.121.0, user request: "R키는 패널을 누르면 들고 있던 검이 엄청 거대해지고 그걸 양손으로 잡고 덤블링 한 번 돌고 크게
+        // 내려찍는 스킬 맞추면 못 움직이는 1초 무력화")
+        assertEquals(9,CLEAVE);assertTrue(skill(CLEAVE));assertTrue(valid(CLEAVE));
+        for(int hit=HACK_SLASH;hit<=LUNGE;hit++)assertFalse(skill(hit),"hit "+hit);
+        assertEquals(0,place(CLEAVE));assertFalse(last(CLEAVE));assertFalse(plain(CLEAVE));
+        // the combo starts over after it, with the hack on or off
+        assertEquals(HACK_SLASH,next(CLEAVE,false));assertEquals(SLASH,next(CLEAVE,true));
+        // one blow, after the press, the growing and the leap, while it holds them; it lets go before its motion is over
+        assertEquals(1,blows(CLEAVE));
+        assertTrue(CLEAVE_PRESS<CLEAVE_GROWN&&CLEAVE_GROWN<CLEAVE_LEAP&&CLEAVE_LEAP<blowAt(CLEAVE,0));
+        assertTrue(blowAt(CLEAVE,0)-CLEAVE_LEAP>=10,"time for a somersault");
+        assertTrue(blowAt(CLEAVE,0)<HOLD[CLEAVE]&&HOLD[CLEAVE]<=LENGTH[CLEAVE]);
+        assertTrue(holding(CLEAVE,100,100)&&holding(CLEAVE,100,100+HOLD[CLEAVE]-1));assertFalse(holding(CLEAVE,100,100+HOLD[CLEAVE]));
+        // a second that they cannot move or act in (the user's): the legs stopped wholly
+        assertEquals(20,CLEAVE_STUN);assertEquals(1,CLEAVE_SLOW,1e-9);
+        // unguardable, no throw, no stagger of the basic attack's (the incapacitation instead)
+        assertTrue(unblockable(CLEAVE));assertFalse(launches(CLEAVE,0));
+        assertEquals(500,staggerUntil(CLEAVE,0,476,500,2,6));
+        // heavier than any hit of the combo
+        assertTrue(damage(CLEAVE,0)>damage(LUNGE,0));assertEquals(damage(CLEAVE,0),total(CLEAVE),1e-6);
+        // a long lane ahead, as long as the grown knife; nothing behind
+        assertTrue(lane(CLEAVE,0,6.9,0,0,0));assertTrue(lane(CLEAVE,0,1,1.2,0,0));assertTrue(lane(CLEAVE,0,3,0,3.4,0));
+        assertFalse(lane(CLEAVE,0,7.2,0,0,0));assertFalse(lane(CLEAVE,0,3,1.5,0,0));assertFalse(lane(CLEAVE,0,-.5,0,0,0));assertFalse(lane(CLEAVE,0,3,0,3.8,0));
+        assertTrue(reach(CLEAVE,0)>reach(LUNGE,0)&&reach(CLEAVE,0)+2.5<=MAX_REACH+1e-9);
+        // its cooldown runs from its end; no combo is open after it and it is no break of one
+        assertEquals(100+LENGTH[CLEAVE]+CLEAVE_COOLDOWN,cleaveReady(100));assertEquals(240,CLEAVE_COOLDOWN);
+        assertEquals(-1,broken(CLEAVE,100,100000));
     }
     @Test void theHackOnOrOffTheyAreTheSameSwingsByEveryRule(){
         for(int place=1;place<=4;place++){

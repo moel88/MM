@@ -65,11 +65,13 @@ public final class CooldownHud {
     static final int XCHARA_G=27;
     /** X Chara's attack's rest after a combo (2.114.0). */
     static final int XCHARA=28;
-    /** (2.119.0) X Chara's E with the hack on, the restore: from when it is over (or stopped short). */
-    static final int XCHARA_E=29;
+    /** X Chara's Y with the hack on, the restore: from when it is over (or stopped short). (2.119.0: their E; Y from 2.121.0.) */
+    static final int XCHARA_Y=29;
+    /** (2.121.0) X Chara's R with the hack on, the cleave: from when it is over (or stopped short before its blow). */
+    static final int XCHARA_R=30;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaESeen,xcharaSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaYSeen,xcharaRSeen,xcharaSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
@@ -83,7 +85,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaESeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaYSeen=xcharaRSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -202,9 +204,12 @@ public final class CooldownHud {
         long dance=shows(XCHARA_G,stand)?dev.sangwoo.celestialfall.client.xchara.XCharaClient.ready(p.getUuid()):0;
         if(dance!=xcharaGSeen){show(XCHARA_G,xcharaGName(),dance-time,dev.sangwoo.celestialfall.xchara.XCharaRules.COOLDOWN,now);xcharaGSeen=dance;}
         // (2.119.0) their E: from when it is over (the server's word of when it is ready again, told as it starts)
-        long heal=shows(XCHARA_E,stand)?dev.sangwoo.celestialfall.client.xchara.HealClient.ready(p.getUuid()):0;
+        long heal=shows(XCHARA_Y,stand)?dev.sangwoo.celestialfall.client.xchara.HealClient.ready(p.getUuid()):0;
         if(shows(XCHARA,stand)==false)dev.sangwoo.celestialfall.client.xchara.HealClient.forget(p.getUuid());
-        if(heal!=xcharaESeen){show(XCHARA_E,xcharaEName(),heal-time,dev.sangwoo.celestialfall.xchara.XCharaRules.HEAL_COOLDOWN,now);xcharaESeen=heal;}
+        if(heal!=xcharaYSeen){show(XCHARA_Y,xcharaYName(),heal-time,dev.sangwoo.celestialfall.xchara.XCharaRules.HEAL_COOLDOWN,now);xcharaYSeen=heal;}
+        // (2.121.0) their R, the cleave: from when it is over (the server's ready tick, told with the knife's news)
+        long cleave=shows(XCHARA_R,stand)?dev.sangwoo.celestialfall.client.xchara.KnifeClient.cleaveReady(p.getUuid()):0;
+        if(cleave!=xcharaRSeen){show(XCHARA_R,xcharaRName(),cleave-time,dev.sangwoo.celestialfall.xchara.XCharaCombo.CLEAVE_COOLDOWN,now);xcharaRSeen=cleave;}
         // (2.114.0) their knife: only its rest after a combo, as the others' (the server's ready tick, told with each hit's news)
         boolean xchara=shows(XCHARA,stand);if(!xchara)dev.sangwoo.celestialfall.client.xchara.KnifeClient.forget(p.getUuid());
         long knife=xchara?dev.sangwoo.celestialfall.client.xchara.KnifeClient.ready(p.getUuid()):0;
@@ -222,7 +227,7 @@ public final class CooldownHud {
         // (2.77.0) Lee So-sang's to theirs
         if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R||slot==ISOSANG_H||slot==ISOSANG_G||slot==ISOSANG_Z||slot==ISOSANG_VOLLEY||slot==ISOSANG_T||slot==ISOSANG_Y)return "isosang".equals(stand);
         // (2.112.0) X Chara's to theirs
-        if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E)return "x_chara".equals(stand);
+        if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_Y||slot==XCHARA_R)return "x_chara".equals(stand);
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -269,7 +274,8 @@ public final class CooldownHud {
     private static String isosangYName(){return "검의 감옥";}
     /** X Chara's G (2.112.0): the video's "Sword Dance". */
     private static String xcharaGName(){return "검무";}
-    private static String xcharaEName(){return "복구";}
+    private static String xcharaYName(){return "복구";}
+    private static String xcharaRName(){return "거대 칼";}
     /** X Chara's attack's name in the list (2.114.0; as Lee So-sang's). */
     private static String xcharaName(){return "평타";}
     /** The skill's name; T's cooldown is shared with T held, so it is named after the one cast last. */

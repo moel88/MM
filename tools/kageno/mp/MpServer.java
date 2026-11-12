@@ -136,7 +136,7 @@ public final class MpServer implements ModInitializer {
         if(VANILLA_ONLY)vanillas(server);
         if(XCHARA_ONLY&&!XCHARAM1_ONLY||XCHARAE_ONLY)xchara(server);
         if(XCHARAM1_ONLY&&!XCHARAE_ONLY)knife(server);
-        if(XCHARAE_ONLY)xcharaE(server);
+        if(XCHARAE_ONLY){xcharaE(server);xcharaR(server);}
         if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -551,6 +551,35 @@ public final class MpServer implements ModInitializer {
         restoreSeen=key;
         if(e!=null)note(server,String.format(java.util.Locale.ROOT,"caster's E at %d: %s, healed %s, ready again at %d (%.2f s on); busy %s",now,e[0]<0?"none in flight":"began "+e[0],e[1]==1,e[2],(e[2]-now)/20.0,
             dev.sangwoo.celestialfall.xchara.XCharaHeal.busy(caster)));
+    }
+    private float cleaveHealth=-1;private String cleaveSeen="";private boolean cleaveHeld;private net.minecraft.util.math.Vec3d cleaveAt;private double cleaveMoved;
+    /**
+     * (2.121.0) X Chara's R with the hack on, the cleave: the caster's knife (which hit, when it began, its blows, when
+     * the cleave is ready again) at each change, the watcher's health at each change, and the watcher's incapacitation:
+     * when it comes and goes and how far the watcher moved through it (it holds W: "WALK+").
+     */
+    private void xcharaR(MinecraftServer server){
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(p->!caster(p)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        long now=server.getOverworld().getTime();
+        if(cleaveHealth<0)cleaveHealth=watcher.getHealth();
+        if(Math.abs(watcher.getHealth()-cleaveHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d",cleaveHealth,watcher.getHealth(),now));cleaveHealth=watcher.getHealth();}
+        var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(caster);long ready=dev.sangwoo.celestialfall.xchara.XCharaAttack.cleaveReady(caster);
+        String key=h==null?"none":h.combo()+"/"+h.start()+"/"+h.blows()+"/"+ready;
+        if(!key.equals(cleaveSeen)){
+            cleaveSeen=key;
+            if(h!=null)note(server,String.format(java.util.Locale.ROOT,"caster's knife at %d: hit %d began %d, %d blows landed; cleave ready at %d (%.2f s on); busy %s",now,h.combo(),h.start(),h.blows(),ready,(ready-now)/20.0,
+                dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(caster)));
+        }
+        boolean held=dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher);
+        if(held&&cleaveAt!=null)cleaveMoved+=watcher.getPos().distanceTo(cleaveAt);
+        if(held!=cleaveHeld){
+            if(held){cleaveMoved=0;note(server,String.format(java.util.Locale.ROOT,"watcher incapacitated at %d (speed %.4f)",now,watcher.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));}
+            else note(server,String.format(java.util.Locale.ROOT,"watcher free again at %d: moved %.3f blocks through it (speed %.4f)",now,cleaveMoved,watcher.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.GENERIC_MOVEMENT_SPEED)));
+            cleaveHeld=held;
+        }
+        cleaveAt=watcher.getPos();
     }
     private String hackSeen="";
     /** The caster's hack as the server has it, whenever it (or their body, or their stand) changes: with whether they may have it on and whether their Q is heard. */

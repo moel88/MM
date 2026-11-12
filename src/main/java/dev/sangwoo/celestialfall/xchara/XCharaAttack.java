@@ -60,6 +60,8 @@ public final class XCharaAttack {
         int combo;UUID id=new UUID(0,0);long start=-1000;float yaw;int blows;
         /** A press kept for the next hit, and the tick the attack is ready again after a rest (0 for none). */
         boolean queued;long ready;
+        /** (2.121.0) The tick the cleave (R with the hack on) is ready again (0 for at once). */
+        long cleaveReady;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -94,10 +96,17 @@ public final class XCharaAttack {
     public static Hit hit(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?null:new Hit(s.combo,s.start,s.yaw,s.blows);}
     /** The tick this player's attack is ready again after its rest (0 if it is not resting). */
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
+    /** (2.121.0) The tick this player's cleave is ready again (0 if it is). */
+    public static long cleaveReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.cleaveReady;}
+    /** (2.121.0) Whether this player's cleave is in flight now (its motion not over): their hack's key is not heard through it. */
+    public static boolean cleaving(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());
+        return s!=null&&s.world==p.getWorld()&&skill(s.combo)&&p.getWorld().getTime()<s.start+LENGTH[s.combo];
+    }
     /** This player is X Chara's no more: the attack's rest is gone, so it is ready if they are again (StandManager.forgetOthers). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)s.ready=0;}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;}}
     /** The attack's rest is gone (a player the cooldowns are off for, /botand nocooldown). */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null)s.ready=0;}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;}}
     private static State state(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());
         if(s==null||s.world!=p.getServerWorld()){s=new State(p);STATES.put(p.getUuid(),s);}
@@ -113,16 +122,34 @@ public final class XCharaAttack {
         long may=may(s);
         if(now<may){
             // (the fourth hit's motion runs on after its blows; the next combo waits for its rest, set as it began)
-            if(!last(s.combo)){if(may-now<=BUFFER)s.queued=true;return s.queued;}
+            if(!last(s.combo)&&!skill(s.combo)){if(may-now<=BUFFER)s.queued=true;return s.queued;}
             return false;
         }
         begin(p,s,now);
         return true;
     }
+    /**
+     * R with the hack on, the cleave (2.121.0, XCharaCombo.CLEAVE). Returns whether it began: with the hack on, nothing
+     * holding them (a hit of the knife's own holds too: it waits for no hit), and its cooldown over. It ends the combo
+     * (the next hit is the first) and adds no rest of its own.
+     */
+    public static boolean cleave(ServerPlayerEntity p){
+        if(!able(p)||!XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(valid(s.combo)&&now<(last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:s.start+HOLD[s.combo]))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(now<s.cleaveReady&&!free)return false;
+        s.combo=CLEAVE;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
+        s.cleaveReady=free?0:XCharaCombo.cleaveReady(now);
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s,HIT,-1,null);
+        return true;
+    }
     /** When the next hit may begin: at once with none in flight; the next of the combo its STEP after the hit before; the next combo once the fourth's motion is over (and its rest, s.ready). */
     private static long may(State s){
         if(!valid(s.combo))return Long.MIN_VALUE;
-        return last(s.combo)?s.start+LENGTH[s.combo]:nextAt(s.combo,s.start);
+        return last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:nextAt(s.combo,s.start);
     }
     /** The combo broke (the next hit is late): the attack rests and starts again from the first hit; a rest over ends the combo. */
     private static void settle(ServerPlayerEntity p,State s,long now){
@@ -134,6 +161,8 @@ public final class XCharaAttack {
             send(p,s,RESTS,-1,null);
         }
         if(last(s.combo)&&now>=s.ready&&now>=s.start+LENGTH[s.combo])s.combo=0;
+        // (the cleave over: no combo is open after it)
+        if(skill(s.combo)&&now>=s.start+LENGTH[s.combo])s.combo=0;
     }
     private static void begin(ServerPlayerEntity p,State s,long now){
         // the hack off as it begins, a plain swing (2.117.0); on, the same swing drawn with its purple cut (2.118.0): the
@@ -155,7 +184,8 @@ public final class XCharaAttack {
             var p=server.getPlayerManager().getPlayer(e.getKey());var s=e.getValue();
             if(p==null||p.getServerWorld()!=s.world){STATES.remove(e.getKey());continue;}
             long now=p.getWorld().getTime();
-            if(held(p)){stop(p,s,now);continue;}
+            // (the cleave is the hack's: the hack gone before its blow, it stops short)
+            if(held(p)||skill(s.combo)&&s.blows==0&&!XCharaHack.on(p)){stop(p,s,now);continue;}
             settle(p,s,now);
             if(s.queued&&now>=may(s)){if(able(p))begin(p,s,now);else s.queued=false;}
             if(!valid(s.combo))continue;
@@ -164,7 +194,16 @@ public final class XCharaAttack {
     }
     /** The hit in flight stops short (or the combo is cut off between hits): the attack rests from now. */
     private static void stop(ServerPlayerEntity p,State s,long now){
-        boolean moving=valid(s.combo)&&now-s.start<LENGTH[s.combo],open=valid(s.combo)&&!last(s.combo)&&broken(s.combo,s.start,now)<0;
+        boolean moving=valid(s.combo)&&now-s.start<LENGTH[s.combo],open=valid(s.combo)&&!last(s.combo)&&!skill(s.combo)&&broken(s.combo,s.start,now)<0;
+        if(skill(s.combo)){
+            // the cleave cut short: before its blow its cooldown runs from now (as every skill cut short); after it, it keeps
+            // the one set as it began. No rest of the basic attack's.
+            if(!moving)return;
+            if(s.blows==0)s.cleaveReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+CLEAVE_COOLDOWN;
+            s.queued=false;s.combo=0;s.blows=0;
+            send(p,s,STOPPED,-1,null);
+            return;
+        }
         if(!moving&&!open&&!s.queued)return;
         s.queued=false;s.combo=0;s.blows=0;
         if(!dev.sangwoo.celestialfall.NoCooldownState.enabled(p))s.ready=Math.max(s.ready,now+REST);
@@ -190,7 +229,12 @@ public final class XCharaAttack {
             struck.add(e);
             // every blow staggers whom it strikes a moment (2.68.0's rule for basic attacks); one stopped in Star Platinum's
             // stopped time is staggered as time moves again
-            if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.xchara(combo,i,s.start,now));
+            if(skill(combo)){
+                // the cleave: whom it strikes cannot move or act for a second (their legs stopped wholly; one stopped in a
+                // time stop takes it as time moves again, CombatManager)
+                CombatManager.incapacitate(e,CLEAVE_STUN,CLEAVE_STUN,CLEAVE_SLOW);
+            }
+            else if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.xchara(combo,i,s.start,now));
             // the finisher's last cut throws them the way it went, told to a struck player's client once, through the
             // tracker; one stopped in a time stop is thrown as time moves again
             if(launches(combo,i)){
@@ -222,6 +266,8 @@ public final class XCharaAttack {
             b.writeLong(s.start);b.writeLong(now);b.writeDouble(p.getX());b.writeDouble(p.getY());b.writeDouble(p.getZ());b.writeFloat(s.yaw);b.writeLong(s.ready);
             b.writeVarInt(struck==null?0:struck.size());
             if(struck!=null)for(var e:struck){b.writeUuid(e.getUuid());b.writeInt(e.getId());b.writeDouble(e.getX());b.writeDouble(e.getY());b.writeDouble(e.getZ());}
+            // (2.121.0) when the cleave is ready again (a 2.120 client stops reading before it)
+            b.writeLong(s.cleaveReady);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

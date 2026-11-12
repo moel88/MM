@@ -60,7 +60,8 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
             // (2.116.0) X Chara's hack's panel is carried through their knife's hits as it is held standing: that arm out
             if(StandClient.xChara(player)){
                 var hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),animationProgress-player.age);
-                if(hack!=null)dev.sangwoo.celestialfall.client.xchara.XCharaIdle.carry(pose,player.getMainArm()==Arm.RIGHT,hack.arm());
+                // (2.121.0: not through their cleave, which has that arm press the panel and then hold the knife, GiantCleave.fix)
+                if(hack!=null&&!dev.sangwoo.celestialfall.xchara.XCharaCombo.skill(stand.combo()))dev.sangwoo.celestialfall.client.xchara.XCharaIdle.carry(pose,player.getMainArm()==Arm.RIGHT,hack.arm());
             }
             MotionRig.apply(this,pose,0,0);
         }

@@ -170,6 +170,8 @@ public final class HackPanel {
         float y=.003f,b=.014f;
         // (2.119.0) pressed (their E), its rim and its glow turn lime for a moment
         float lime=press==null?0:Math.max(0,Math.min(1,press[2]));
+        // (2.121.0) their cleave's press lights it violet-white, not E's lime (a fourth number marks it)
+        final int LIME=press!=null&&press.length>3&&press[3]>0?0xf2d6ff:HackPanel.LIME;
         final int RIM=lime<=0?HackPanel.RIM:mix(HackPanel.RIM,LIME,lime);
         // the rim of light round its face (and, dimmer, under it), and the glow past its sides
         for(int k=0;k<2;k++){

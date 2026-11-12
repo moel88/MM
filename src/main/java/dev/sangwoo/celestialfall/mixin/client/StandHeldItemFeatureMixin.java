@@ -46,7 +46,7 @@ public abstract class StandHeldItemFeatureMixin {
         }
         if(entity instanceof PlayerEntity holder&&dev.sangwoo.celestialfall.client.xchara.HackMode.isPanel(stack)){
             // (2.115.0) X Chara's hack's panel in their other hand: its look for this draw, its place in the world kept (HackFx)
-            dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=dev.sangwoo.celestialfall.client.xchara.HackMode.look(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=dev.sangwoo.celestialfall.client.xchara.HackMode.panelLook(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
             // (2.116.0) it floats level by the hand whatever the arm does: the arm's own turn (its shoulder's, its elbow's) for it to undo
             if(((net.minecraft.client.render.entity.feature.FeatureRenderer<?,?>)(Object)this).getContextModel() instanceof net.minecraft.client.render.entity.model.BipedEntityModel<?> biped){
                 var part=arm==net.minecraft.util.Arm.RIGHT?biped.rightArm:biped.leftArm;
@@ -55,7 +55,7 @@ public abstract class StandHeldItemFeatureMixin {
                 dev.sangwoo.celestialfall.client.xchara.HackPanel.arm=turn;
             }
             // (2.119.0) a press of it (their E): the hand down on it, lit lime
-            dev.sangwoo.celestialfall.client.xchara.HackPanel.press=dev.sangwoo.celestialfall.client.xchara.HealClient.press(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            dev.sangwoo.celestialfall.client.xchara.HackPanel.press=dev.sangwoo.celestialfall.client.xchara.HackMode.press(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
             dev.sangwoo.celestialfall.client.xchara.HackMode.recording(holder.getUuid());
             return;
         }
@@ -66,10 +66,15 @@ public abstract class StandHeldItemFeatureMixin {
             // X Chara's knife (2.114.0): turned in the hand as a hit drives it, about the middle of its rod (where the fist
             // holds it: its display puts the model's middle there); its display already turns it KnifeCombo.DISPLAY_TILT
             var swing=dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(holder.getUuid());
-            if(swing!=null){
-                var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            // (2.121.0) their cleave's knife is grown huge (GiantCleave.scale), about the fist as it is turned
+            float giant=dev.sangwoo.celestialfall.client.xchara.GiantCleave.scale(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            if(swing!=null||giant!=1){
                 matrices.translate(0,-2/16f,2/16f);
-                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.xchara.KnifeCombo.DISPLAY_TILT));
+                if(swing!=null){
+                    var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                    matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.xchara.KnifeCombo.DISPLAY_TILT));
+                }
+                if(giant!=1)matrices.scale(giant,giant,giant);
                 matrices.translate(0,2/16f,-2/16f);
             }
             return;

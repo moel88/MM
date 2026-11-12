@@ -46,7 +46,9 @@ public final class XCharaHack {
     /** Whether nothing its user does goes through now (their Q is not heard). */
     public static boolean held(ServerPlayerEntity p){
         // (2.119.0) nor while they press the panel for their E (the hack going off would stop it short)
-        return CombatManager.incapacitated(p)||CutsceneGlow.glowing(p)||XCharaUltimate.involved(p)||StarPlatinumBeatdown.involved(p)||KagenoManager.frozen(p)||XCharaHeal.busy(p);
+        return CombatManager.incapacitated(p)||CutsceneGlow.glowing(p)||XCharaUltimate.involved(p)||StarPlatinumBeatdown.involved(p)||KagenoManager.frozen(p)||XCharaHeal.busy(p)
+            // (2.121.0) nor through their cleave (the giant knife is the hack's)
+            ||XCharaAttack.cleaving(p);
     }
     /** A Q from their client: heard at most once every HACK_RATE ticks. */
     static void request(ServerPlayerEntity p){

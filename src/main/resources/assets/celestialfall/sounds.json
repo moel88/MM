@@ -1137,5 +1137,14 @@
         "preload": true
       }
     ]
+  },
+  "xchara_r": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_r",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

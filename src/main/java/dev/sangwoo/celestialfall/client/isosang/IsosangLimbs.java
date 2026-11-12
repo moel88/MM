@@ -157,6 +157,27 @@ public final class IsosangLimbs {
     }
 
     /**
+     * (2.121.0, X Chara's cleave: both hands on the giant knife) Frame {@code f} with its free (left) arm reaching for a
+     * point of the body's space (blocks right of the body's middle, up from its feet, ahead of it; the left shoulder at
+     * -.3125, 1.375, 0): the hand on the point as far as the arm reaches, the elbow bent as that takes, down and out to
+     * the left.
+     */
+    public static R6.Frame leftHandAt(R6.Frame f,double rt,double up,double fw){
+        V v=new V(rt+.3125,up-1.375,fw);
+        // (nearly straight, the elbow's angle runs away with the reach: the last tenth of the arm's length is eased into,
+        // so a point a little out of reach leaves the arm a little bent and still, not snapping straight)
+        double most=ARM_UP+ARM_LO-.004,soft=most-.1,len=v.len();
+        double r=clamp(len<=soft?len:soft+(most-soft)*(1-Math.exp(-(len-soft)/(most-soft))),.2,most);V l=v.unit();
+        double th=Math.acos(clamp((r*r-ARM_UP*ARM_UP-ARM_LO*ARM_LO)/(2*ARM_UP*ARM_LO),-1,1));
+        V out=new V(-.55,-1,-.15).off(l);
+        V fold=(out.len()<1e-6?new V(0,1,0).off(l):out).unit().times(-1);
+        Arm a=arm(l,fold,th);
+        MotionPose m=f.joints().copy();
+        m.joint[MotionPose.LEFT_ARM]=R6.angles(R6.limbTurn(a.upper.dir(),a.front.dir()));
+        m.elbow[1]=(float)-Math.toDegrees(th);
+        return new R6.Frame(m,f.grip(),f.fw(),f.up(),f.rt(),f.yaw(),f.pitch(),f.roll());
+    }
+    /**
      * How far the sword arm's elbow is bent with its hand on the line {@code d} (degrees): a little as it holds the sword
      * (just as the game's hold bends it, {@link #hold}: the stance is that hold), the more the further it reaches across
      * her (to her left) or up, a little less straight out ahead.

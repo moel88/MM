@@ -51,6 +51,10 @@ public final class KnifeClient {
     private static final Map<UUID,Float> STOPPED=new HashMap<>();
     /** When each player's attack is ready again after its rest (the server's world time), as told. */
     private static final Map<UUID,Long> READY=new HashMap<>();
+    /** (2.121.0) When each player's cleave (R with the hack on) is ready again, as told. */
+    private static final Map<UUID,Long> CLEAVE_READY=new HashMap<>();
+    /** The cleave's sound (its own, played as it starts). */
+    static final String CLEAVE_SOUND="xchara_r";
     /** A swing told of later than this many ticks after it began is not drawn (it is nearly over). */
     static final int LATE=12;
     /** Each swing's sound as it plays (to fade it out if the swing stops short). */
@@ -58,7 +62,7 @@ public final class KnifeClient {
     /** Every swing's sound; it starts this many ticks before the swing's blow lands; how far it carries (blocks). */
     static final String SOUND="xchara_slash";static final int SOUND_BEFORE=2;static final double CARRY=40;
     /** The tick into hit {@code combo} its sound starts on. */
-    static int soundAt(int combo){return Math.max(0,XCharaCombo.blowAt(combo,0)-SOUND_BEFORE);}
+    static int soundAt(int combo){return XCharaCombo.skill(combo)?0:Math.max(0,XCharaCombo.blowAt(combo,0)-SOUND_BEFORE);}
     /** For the capture tools: the sounds this client started, newest last (each "name hit/blow, ticks into its swing"). */
     public static final List<String> HEARD=new ArrayList<>();
     private static void heard(String line){HEARD.add(line);while(HEARD.size()>64)HEARD.remove(0);}
@@ -70,9 +74,12 @@ public final class KnifeClient {
         ClientPlayNetworking.registerGlobalReceiver(XCharaAttack.EVENT,(mc,handler,b,response)->{
             UUID caster=b.readUuid();Identifier dim=b.readIdentifier();int type=b.readUnsignedByte();UUID id=b.readUuid();int combo=b.readUnsignedByte(),blow=b.readByte();
             long start=b.readLong(),serverNow=b.readLong();Vec3d at=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float yaw=b.readFloat();long ready=b.readLong();
-            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.STOPPED||combo>XCharaCombo.LUNGE||!Float.isFinite(yaw))return;
+            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.STOPPED||combo>XCharaCombo.CLEAVE||!Float.isFinite(yaw))return;
             var struck=new ArrayList<StandClient.Target>();
             for(int i=0;i<n;i++)struck.add(new StandClient.Target(b.readUuid(),b.readInt(),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble())));
+            // (2.121.0) when the cleave is ready again (a 2.120 server sends none)
+            long cleave=b.readableBytes()>=8?b.readLong():0;
+            mc.execute(()->CLEAVE_READY.put(caster,cleave));
             mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck));
         });
         ClientTickEvents.START_CLIENT_TICK.register(KnifeClient::tick);
@@ -113,7 +120,7 @@ public final class KnifeClient {
         if(mc.isPaused())return;
         ticks++;
         var dim=mc.world.getRegistryKey().getValue();
-        SWINGS.values().removeIf(c->!c.dimension().equals(dim)||c.age(0)>=KnifeCombo.LIFE*20||c.age(0)<0||gone(mc,c));
+        SWINGS.values().removeIf(c->!c.dimension().equals(dim)||c.age(0)>=KnifeCombo.life(c.combo())*20||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.keySet().retainAll(SWINGS.keySet());VOICES.keySet().retainAll(SWINGS.keySet());
         // held down, the attack key keeps asking (the server keeps a press made a little early for the next hit)
         if(mc.player!=null&&mc.currentScreen==null&&mc.options.attackKey.isPressed()&&attacks(mc.player))punch();
@@ -124,7 +131,7 @@ public final class KnifeClient {
     }
     public static void clear(){
         for(var v:VOICES.values())v.fade();
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();VOICES.clear();KnifeCombo.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();VOICES.clear();KnifeCombo.clear();world=null;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -142,13 +149,14 @@ public final class KnifeClient {
             var m=MinecraftClient.getInstance();var user=m.world==null?null:m.world.getPlayerByUuid(caster);
             return loudness(m,user==null?origin:user.getPos());
         };
-        var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(SOUND),loud);
+        String sound=XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
+        var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(sound),loud);
         if(v.full()<=.01f)return;
         // told of after it was to start: at once (a tick late is not heard as late; later, LATE has dropped the swing)
         int wait=soundAt(cast.combo())-(int)Math.floor(cast.age(0));
         if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
         VOICES.put(cast.id(),v);
-        heard(String.format(java.util.Locale.ROOT,"%s hit %d, told %.0f ticks in, played %d later at %.2f",SOUND,cast.combo(),cast.age(0),Math.max(0,wait),v.full()));
+        heard(String.format(java.util.Locale.ROOT,"%s hit %d, told %.0f ticks in, played %d later at %.2f",sound,cast.combo(),cast.age(0),Math.max(0,wait),v.full()));
     }
     /** Whether this swing's body clip still plays (it is the body's motion until then, unless it stopped short). */
     static boolean animating(StandClient.Cast c){return c.age(0)<KnifeCombo.clipOf(c.combo()).length()*20+1;}
@@ -192,8 +200,16 @@ public final class KnifeClient {
     }
     /** The tick this player's attack is ready again after its rest, as the server told it (0 if none). */
     public static long ready(UUID id){return READY.getOrDefault(id,0L);}
+    /** (2.121.0) The tick this player's cleave is ready again, as the server told it (0 if none). */
+    public static long cleaveReady(UUID id){return CLEAVE_READY.getOrDefault(id,0L);}
+    /** (2.121.0) This player's latest cleave this client still draws (in flight or stopped short), or null: GiantCleave's knife's size, press and panel. */
+    public static StandClient.Cast cleaveOf(UUID id){
+        StandClient.Cast best=null;
+        for(var c:SWINGS.values())if(c.caster().equals(id)&&XCharaCombo.skill(c.combo())&&c.age(0)<XCharaCombo.LENGTH[c.combo()]+2)best=c;
+        return best;
+    }
     /** Forgets this player's rest (their character is not X Chara now: the server forgot it too, StandManager). */
-    public static void forget(UUID id){READY.remove(id);}
+    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (XCharaCombo.HOLD): their keys do not walk them. The
      * server holds them as long (XCharaAttack.busy).

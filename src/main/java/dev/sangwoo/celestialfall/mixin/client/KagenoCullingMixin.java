@@ -16,5 +16,7 @@ public abstract class KagenoCullingMixin {
         var c=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(e.getUuid());if(c!=null&&c.skill()==KagenoRules.H&&c.age(0)<KagenoRules.DURATION[KagenoRules.H])ci.setReturnValue(true);
         // (2.101.1) Lee So-sang's H again: her body rides round the sky away from where she really is (IsosangClient.shift)
         else if(dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleOf(e.getUuid())!=null)ci.setReturnValue(true);
+        // (2.121.0) X Chara's cleave: the body is drawn high over where its user stands through its leap
+        else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.cleaveOf(e.getUuid())!=null)ci.setReturnValue(true);
     }
 }

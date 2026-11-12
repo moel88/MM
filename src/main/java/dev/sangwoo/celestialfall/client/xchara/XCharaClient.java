@@ -182,7 +182,7 @@ public final class XCharaClient {
 
     // ───────────────────────────── the key ─────────────────────────────
 
-    /** X Chara's player's keys on the map: Q the hack, E and G its skills with it on (G the sword dance, asked with the one the camera's middle looks at, or none: the server then takes the one its look meets), I their inventory. */
+    /** X Chara's player's keys on the map: Q the hack, R, Y and G its skills with it on (R the cleave, Y the restore, G the sword dance, asked with the one the camera's middle looks at, or none: the server then takes the one its look meets), I their inventory. */
     public static boolean key(long window,int key,int action,int modifiers){
         var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
         // (2.115.0) Q let go after a press this took
@@ -200,10 +200,24 @@ public final class XCharaClient {
             return true;
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_E){
-            // (2.119.0) E on the map is X Chara's player's skill key (their inventory on I, as the other characters'): with
-            // the hack on, the restore (XCharaHeal); with it off, nothing yet
+            // E on the map is X Chara's player's skill key (their inventory on I, as the other characters'). (2.121.0, user
+            // request: "q활성화 e를 q활성화 y로 옮기고") the restore went to Y: E is taken and does nothing yet
+            return true;
+        }
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Y){
+            // (2.121.0) Y with the hack on, the restore (XCharaHeal; E's in 2.119 and 2.120); with it off, nothing yet
             if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
-                var b=PacketByteBufs.create();b.writeByte(E);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+                var b=PacketByteBufs.create();b.writeByte(Y);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+            }
+            return true;
+        }
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R){
+            // (2.121.0) R with the hack on, the cleave (XCharaAttack.cleave: the way they look as it begins); with it off,
+            // nothing yet. R is the map's use key otherwise: X Chara's player's is their skill's, as Star Platinum's and
+            // Kageno's (the fruit is eaten with the attack key)
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                BotandCamera.prepareInteraction();
+                var b=PacketByteBufs.create();b.writeByte(R);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
             return true;
         }

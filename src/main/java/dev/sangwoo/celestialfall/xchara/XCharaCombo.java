@@ -34,16 +34,33 @@ public final class XCharaCombo {
     public static final int HACK_SLASH=1,HACK_RISE=2,HACK_CHOP=3,HACK_LUNGE=4;
     /** The four swings begun with the hack off (2.117.0): nothing drawn but the body and the knife. */
     public static final int SLASH=5,RISE=6,CHOP=7,LUNGE=8;
+    /**
+     * R with the hack on, the cleave (2.121.0, user request: "R키는 패널을 누르면 들고 있던 검이 엄청 거대해지고 그걸 양손으로
+     * 잡고 덤블링 한 번 돌고 크게 내려찍는 스킬 맞추면 못 움직이는 1초 무력화"): no hit of the combo but a skill of the
+     * knife's pipeline (as Star Platinum's heavy punch is of its punches'): they press the panel, the knife grows huge,
+     * they take it in both hands, turn one somersault and bring it down. Its one blow lands CLEAVE's BLOWS ticks in on
+     * everyone in its long lane ahead: unguardable, no knockback, no stagger; whoever it strikes cannot move or act for
+     * {@link #CLEAVE_STUN} ticks (an incapacitation that also stops their legs). Its cooldown ({@link #CLEAVE_COOLDOWN})
+     * runs from its end; cut short before the blow, from then. The damage, the reach, the times and the cooldown are
+     * mine (the user gave the motion and the second's incapacitation).
+     */
+    public static final int CLEAVE=9;
+    /** The cleave: its incapacitation (ticks; the legs stopped as long, wholly), its cooldown from its end (ticks: 12 s), and its reach {near, far, half width} and how high it reaches (blocks). */
+    public static final int CLEAVE_STUN=20,CLEAVE_COOLDOWN=240;
+    public static final double CLEAVE_SLOW=1,CLEAVE_HIGH=3.6;
+    private static final double[] CLEAVE_REACH={.2,7.0,1.3};
+    /** When the cleave's panel is pressed, when the knife is full grown and in both hands, when they leave the ground and when they land on the blow (ticks into it): what the clients draw to (GiantCleave). */
+    public static final int CLEAVE_PRESS=4,CLEAVE_GROWN=9,CLEAVE_LEAP=11;
     /** The tick into hit {@code n} its blow lands on (the same for either kind). */
-    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8}};
+    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24}};
     /** Each blow's damage: 6, 6, 6, 10; 28 for the combo. */
-    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10}};
+    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18}};
     /** Ticks from a hit's start before the next may start. */
-    public static final int[] STEP={0,8,9,12,0,8,9,12,0};
+    public static final int[] STEP={0,8,9,12,0,8,9,12,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,8,9,12,15,8,9,12,15};
+    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,36};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25};
+    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,42};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -62,14 +79,18 @@ public final class XCharaCombo {
      */
     private static final double[][] REACH={{},{-.5,3.5,2.3},{-.5,3.5,2.3},{-.3,4.0,1.3},{-.3,4.8,1.0}};
     /** As far as any blow of the attack reaches (blocks): who could be struck at all is looked for within this. */
-    public static final double MAX_REACH=4.8+2.5;
+    public static final double MAX_REACH=7.0+2.5;
 
-    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four). */
-    public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=LUNGE;}
+    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four) or the cleave (9). */
+    public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=CLEAVE;}
+    /** Whether {@code combo} is a skill of the pipeline, no hit of the combo: the cleave. */
+    public static boolean skill(int combo){return combo==CLEAVE;}
+    /** When the cleave is ready again: its cooldown after one begun at {@code start} is over. */
+    public static long cleaveReady(long start){return start+LENGTH[CLEAVE]+CLEAVE_COOLDOWN;}
     /** Whether hit {@code combo} is a plain swing (the hack off as it began). */
     public static boolean plain(int combo){return combo>=SLASH&&combo<=LUNGE;}
     /** Hit {@code combo}'s place in its combo (1 to 4; 0 for none). */
-    public static int place(int combo){return valid(combo)?(combo-1)%4+1:0;}
+    public static int place(int combo){return valid(combo)&&!skill(combo)?(combo-1)%4+1:0;}
     /** The hit at {@code place} (1 to 4), plain or begun with the hack on. */
     public static int hit(int place,boolean plain){return plain?SLASH+place-1:place;}
     /** Whether hit {@code combo} is its combo's last, the finisher. */
@@ -99,7 +120,7 @@ public final class XCharaCombo {
      * fourth hit ended it).
      */
     public static long broken(int combo,long start,long now){
-        if(!valid(combo)||last(combo))return -1;
+        if(!valid(combo)||last(combo)||skill(combo))return -1;
         long late=nextAt(combo,start)+GRACE;
         return now>late?late+1+REST:-1;
     }
@@ -113,26 +134,28 @@ public final class XCharaCombo {
      * lunge, which throws them, staggers them {@code last} ticks.
      */
     public static long staggerUntil(int combo,int blow,long start,long now,int past,int last){
+        if(skill(combo))return now;
         if(blow+1<blows(combo))return Math.max(now,start+blowAt(combo,blow+1))+past;
         if(last(combo))return now+last;
         return Math.max(now,nextAt(combo,start)+blowAt(next(combo),0))+past;
     }
     /** How near (blocks ahead of its user's feet, behind them below 0) hit {@code combo}'s blow {@code blow} begins to reach. */
-    public static double near(int combo,int blow){return REACH[place(combo)][0];}
+    public static double near(int combo,int blow){return reaches(combo)[0];}
     /** How far ahead of its user's feet hit {@code combo}'s blow {@code blow} reaches (blocks). */
-    public static double reach(int combo,int blow){return REACH[place(combo)][1];}
+    public static double reach(int combo,int blow){return reaches(combo)[1];}
     /** How far to either side of the way hit {@code combo}'s blow {@code blow} reaches (blocks). */
-    public static double halfWidth(int combo,int blow){return REACH[place(combo)][2];}
+    public static double halfWidth(int combo,int blow){return reaches(combo)[2];}
+    private static double[] reaches(int combo){return skill(combo)?CLEAVE_REACH:REACH[place(combo)];}
     /**
      * Whether a point (ahead along the hit, to its right and up from its user's feet, blocks) is in the way of hit
      * {@code combo}'s blow {@code blow}, for a body {@code halfWidth} across: a lane ahead.
      */
     public static boolean lane(int combo,int blow,double forward,double side,double height,double halfWidth){
-        if(height<LOW||height>HIGH)return false;
+        if(height<LOW||height>(skill(combo)?CLEAVE_HIGH:HIGH))return false;
         return forward>=near(combo,blow)-halfWidth&&forward<=reach(combo,blow)+halfWidth&&Math.abs(side)<=halfWidth(combo,blow)+halfWidth;
     }
     /** Whether hit {@code combo} cannot be guarded: the lunge, as the other characters' fourth hits. */
-    public static boolean unblockable(int combo){return last(combo);}
+    public static boolean unblockable(int combo){return last(combo)||skill(combo);}
     /** Whether hit {@code combo}'s blow {@code blow} sends whom it strikes flying: the lunge. */
     public static boolean launches(int combo,int blow){return last(combo)&&blow==blows(combo)-1;}
 }
