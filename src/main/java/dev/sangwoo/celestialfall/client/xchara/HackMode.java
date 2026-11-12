@@ -147,11 +147,13 @@ public final class HackMode {
     static void recordKnife(MatrixStack matrices){
         if(recording==null)return;
         Vec3d camera=MinecraftClient.getInstance().gameRenderer.getCamera().getPos();
-        Vec3d heel=world(matrices,HackKnife.rx(HackKnife.SPINE_X-HackKnife.DEPTH*.5),HackKnife.u(HackKnife.Y_HEEL),0,camera);
+        // (2.122.0: the blade as it is grown for their cleave, about its heel)
+        float k=XCharaKnifeRenderer.blade;
+        Vec3d heel=world(matrices,HackKnife.rx((HackKnife.SPINE_X-HackKnife.DEPTH*.5)*k),HackKnife.u(HackKnife.Y_HEEL),0,camera);
         var s=recorded(heel);if(s==null)return;
-        Vec3d tip=world(matrices,HackKnife.rx(HackKnife.SPINE_X),HackKnife.u(HackKnife.Y_TIP),0,camera);
-        Vec3d edge=world(matrices,HackKnife.rx(HackKnife.SPINE_X-HackKnife.DEPTH),HackKnife.u(HackKnife.Y_HEEL),0,camera);
-        Vec3d back=world(matrices,HackKnife.rx(HackKnife.SPINE_X),HackKnife.u(HackKnife.Y_HEEL),0,camera);
+        Vec3d tip=world(matrices,HackKnife.rx(HackKnife.SPINE_X*k),HackKnife.u(HackKnife.Y_HEEL+(HackKnife.Y_TIP-HackKnife.Y_HEEL)*k),0,camera);
+        Vec3d edge=world(matrices,HackKnife.rx((HackKnife.SPINE_X-HackKnife.DEPTH)*k),HackKnife.u(HackKnife.Y_HEEL),0,camera);
+        Vec3d back=world(matrices,HackKnife.rx(HackKnife.SPINE_X*k),HackKnife.u(HackKnife.Y_HEEL),0,camera);
         s.heel=heel;s.tip=tip;s.spine=back.subtract(edge);s.knifeFrame=frames;
     }
     /** The panel as it is being drawn (HackPanel, at its middle, its half extents open as given): kept for its holder the same way. */

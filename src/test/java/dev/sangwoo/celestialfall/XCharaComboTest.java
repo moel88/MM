@@ -44,20 +44,20 @@ class XCharaComboTest {
         assertEquals(HACK_SLASH,next(CLEAVE,false));assertEquals(SLASH,next(CLEAVE,true));
         // one blow, after the press, the growing and the leap, while it holds them; it lets go before its motion is over
         assertEquals(1,blows(CLEAVE));
-        assertTrue(CLEAVE_PRESS<CLEAVE_GROWN&&CLEAVE_GROWN<CLEAVE_LEAP&&CLEAVE_LEAP<blowAt(CLEAVE,0));
-        assertTrue(blowAt(CLEAVE,0)-CLEAVE_LEAP>=10,"time for a somersault");
+        assertTrue(CLEAVE_PRESS<CLEAVE_GROWN&&CLEAVE_GROWN<CLEAVE_RAISED&&CLEAVE_RAISED<blowAt(CLEAVE,0));
+        assertTrue(blowAt(CLEAVE,0)-CLEAVE_RAISED>=5&&blowAt(CLEAVE,0)<=24,"wound, then down: no leap (2.122.0)");
         assertTrue(blowAt(CLEAVE,0)<HOLD[CLEAVE]&&HOLD[CLEAVE]<=LENGTH[CLEAVE]);
         assertTrue(holding(CLEAVE,100,100)&&holding(CLEAVE,100,100+HOLD[CLEAVE]-1));assertFalse(holding(CLEAVE,100,100+HOLD[CLEAVE]));
-        // a second that they cannot move or act in (the user's): the legs stopped wholly
-        assertEquals(20,CLEAVE_STUN);assertEquals(1,CLEAVE_SLOW,1e-9);
+        // three seconds that they cannot move or act in (the user's: "무력화 시간을 3초로 늘려줘", a second in 2.121.0): the legs stopped wholly
+        assertEquals(60,CLEAVE_STUN);assertEquals(1,CLEAVE_SLOW,1e-9);
         // unguardable, no throw, no stagger of the basic attack's (the incapacitation instead)
         assertTrue(unblockable(CLEAVE));assertFalse(launches(CLEAVE,0));
         assertEquals(500,staggerUntil(CLEAVE,0,476,500,2,6));
         // heavier than any hit of the combo
         assertTrue(damage(CLEAVE,0)>damage(LUNGE,0));assertEquals(damage(CLEAVE,0),total(CLEAVE),1e-6);
         // a long lane ahead, as long as the grown knife; nothing behind
-        assertTrue(lane(CLEAVE,0,6.9,0,0,0));assertTrue(lane(CLEAVE,0,1,1.2,0,0));assertTrue(lane(CLEAVE,0,3,0,3.4,0));
-        assertFalse(lane(CLEAVE,0,7.2,0,0,0));assertFalse(lane(CLEAVE,0,3,1.5,0,0));assertFalse(lane(CLEAVE,0,-.5,0,0,0));assertFalse(lane(CLEAVE,0,3,0,3.8,0));
+        assertTrue(lane(CLEAVE,0,9.5,0,0,0));assertTrue(lane(CLEAVE,0,1,1.4,0,0));assertTrue(lane(CLEAVE,0,3,0,3.4,0));
+        assertFalse(lane(CLEAVE,0,9.8,0,0,0));assertFalse(lane(CLEAVE,0,3,1.7,0,0));assertFalse(lane(CLEAVE,0,-.5,0,0,0));assertFalse(lane(CLEAVE,0,3,0,3.8,0));
         assertTrue(reach(CLEAVE,0)>reach(LUNGE,0)&&reach(CLEAVE,0)+2.5<=MAX_REACH+1e-9);
         // its cooldown runs from its end; no combo is open after it and it is no break of one
         assertEquals(100+LENGTH[CLEAVE]+CLEAVE_COOLDOWN,cleaveReady(100));assertEquals(240,CLEAVE_COOLDOWN);

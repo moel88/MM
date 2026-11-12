@@ -148,6 +148,8 @@ public final class HackKnife {
         double half=THICK*.5;
         for(int i=0;i<n;i++){
             int j=(i+1)%n;double[] a=OUTLINE[i],b=OUTLINE[j],ma=MITER[i],mb=MITER[j];
+            // (the rod's three sides: its two lengths and its end; every other side is the blade's)
+            ofBlade=i>=1&&i<=n-3;
             float la=running(a[1],clock),lb=running(b[1],clock);
             int ca=mix(VIVID,WHITE,.8f*la),cb=mix(VIVID,WHITE,.8f*lb);
             // in the blade's plane: lilac by the knife, vivid purple, then the glow dying away
@@ -163,6 +165,7 @@ public final class HackKnife {
     }
     /** The blade's two flats, a hair off them: from the spine to the edge all along it (the outline's own points), and the heel's lean. */
     private static void flats(VertexConsumer v,Matrix4f pm,Matrix3f nm,int rgb){
+        ofBlade=true;
         int first=3,last=OUTLINE.length-3;
         for(int s=-1;s<=1;s+=2){
             double z=s*(THICK*.5+.012);
@@ -198,7 +201,7 @@ public final class HackKnife {
             if(HackLook.hash(blink,3,h.seed())<.12f)second=(int)(HackLook.hash(blink,4,h.seed())*CELLS.size());
         }
         for(int i=0;i<CELLS.size();i++){
-            var c=CELLS.get(i);
+            var c=CELLS.get(i);ofBlade=c.y()>=Y_HEEL;
             boolean show=changing&&showing(c,slot,h.seed(),share)||i==first||i==second;
             if(!show)continue;
             if(v==null)v=buffers.getBuffer(glowing());
@@ -215,8 +218,17 @@ public final class HackKnife {
         vertex(v,pm,nm,x-r,y-r,z,rgb,a);vertex(v,pm,nm,x+r,y-r,z,rgb,a);vertex(v,pm,nm,x+r,y+r,z,rgb,a);vertex(v,pm,nm,x-r,y+r,z,rgb,a);
         vertex(v,pm,nm,x-r,y+r,z,rgb,a);vertex(v,pm,nm,x+r,y+r,z,rgb,a);vertex(v,pm,nm,x+r,y-r,z,rgb,a);vertex(v,pm,nm,x-r,y-r,z,rgb,a);
     }
+    /**
+     * (2.122.0) Whether what is being drawn is the blade's (not the rod's): the blade grown on its own for their cleave
+     * (XCharaKnifeRenderer.blade) takes its white and its rim with it.
+     */
+    private static boolean ofBlade;
+    /** A point of the model as the grown blade has it: about its heel ({@code k} times; the rod's points stay). */
+    static double[] grown(double x,double y,double z,float k){return new double[]{x*k,Y_HEEL+(y-Y_HEEL)*k,z*k};}
     /** A vertex at a point of the model (its units), of one colour, unshaded. */
     private static void vertex(VertexConsumer v,Matrix4f pm,Matrix3f nm,double x,double y,double z,int rgb,float a){
+        float k=XCharaKnifeRenderer.blade;
+        if(ofBlade&&k!=1){double[] g=grown(x,y,z,k);x=g[0];y=g[1];z=g[2];}
         raw(v,pm,nm,rx(x),u(y),u(z),rgb,a);
     }
     /** A vertex at a point of the renderer's own space. */

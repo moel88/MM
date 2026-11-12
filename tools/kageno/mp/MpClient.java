@@ -605,8 +605,8 @@ public final class MpClient implements ClientModInitializer {
         "5 XCHARA","8 NOCDOFF","40 DIST3","45 HEAL",
         "60 R","75 Y","90 G",
         "110 Q","130 CHURT","150 Y","175 Y","185 E",
-        "210 R","231 WALK+","262 WALK-","270 DIST3","280 R",
-        "500 HEAL","505 GUARD+","515 R","560 GUARD-",
+        "210 R","226 WALK+","300 WALK-","310 DIST3","320 R",
+        "500 HEAL","505 GUARD+","515 R","600 GUARD-",
         "800 DIST3","810 R","815 HITME","840 R",
         "880 GUARD+","890 G","930 GUARD-",
         "980 END"};

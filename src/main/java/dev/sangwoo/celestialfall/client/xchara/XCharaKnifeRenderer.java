@@ -16,6 +16,24 @@ public final class XCharaKnifeRenderer extends GeoItemRenderer<XCharaKnifeItem> 
      * HeldItemRendererMixin) for that one draw, null otherwise.
      */
     public static HackLook.Frame hack;
+    /**
+     * (2.122.0) How many times its size the blade is drawn for this one draw, the rod as it is (their cleave: "손잡이는
+     * 상관없고 칼날 부분을 엄청 키워줘"): about its heel, so it still sits on the rod's end. Set as {@link #hack} is; 1
+     * otherwise.
+     */
+    public static float blade=1;
+    @Override public void renderRecursively(net.minecraft.client.util.math.MatrixStack matrices,XCharaKnifeItem item,software.bernie.geckolib.cache.object.GeoBone bone,net.minecraft.client.render.RenderLayer layer,
+        net.minecraft.client.render.VertexConsumerProvider buffers,net.minecraft.client.render.VertexConsumer buffer,boolean reRender,float delta,int light,int overlay,float red,float green,float blue,float alpha){
+        float k=blade;
+        if(k!=1&&"blade".equals(bone.getName())){
+            matrices.push();
+            matrices.translate(0,HackKnife.u(HackKnife.Y_HEEL)*(1-k),0);matrices.scale(k,k,k);
+            super.renderRecursively(matrices,item,bone,layer,buffers,buffer,reRender,delta,light,overlay,red,green,blue,alpha);
+            matrices.pop();
+            return;
+        }
+        super.renderRecursively(matrices,item,bone,layer,buffers,buffer,reRender,delta,light,overlay,red,green,blue,alpha);
+    }
     public XCharaKnifeRenderer(){
         super(new Model());
         addRenderLayer(new software.bernie.geckolib.renderer.layer.GeoRenderLayer<>(this){

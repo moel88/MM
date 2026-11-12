@@ -193,9 +193,6 @@ public final class BotandCamera {
         // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
         double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);
         if(lift>1e-3)eye=eye.add(0,.8*lift,0);
-        // (2.121.0) X Chara's cleave draws its user up through its leap: their camera rises with most of it
-        double leap=dev.sangwoo.celestialfall.client.xchara.GiantCleave.cameraLift(delta);
-        if(leap>1e-3)eye=eye.add(0,leap,0);
         var offset=STATE.offset(STATE.distance,shoulder(delta));
         Vec3d desired=eye.add(offset.x(),offset.y(),offset.z());
         double fraction=clearFraction(eye,desired);

@@ -3,45 +3,52 @@ package dev.sangwoo.celestialfall.client.xchara;
 import dev.sangwoo.celestialfall.client.kageno.KagenoClips;
 import dev.sangwoo.celestialfall.client.kageno.R6;
 import dev.sangwoo.celestialfall.combat.MotionPose;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import org.junit.jupiter.api.Test;
 import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * X Chara's R with their hack on, the cleave, as drawn (2.121.0, user request: "R키는 패널을 누르면 들고 있던 검이 엄청
- * 거대해지고 그걸 양손으로 잡고 덤블링 한 번 돌고 크게 내려찍는 스킬"): the panel is pressed, the knife grows huge and
- * shrinks back, the other hand is on its rod while it is huge, the body turns one whole somersault high enough that the
- * knife's point never meets the ground until the blow, and on the blow the knife lies along the ground ahead; nothing
+ * X Chara's R with their hack on, the cleave, as drawn (2.121.0; 2.122.0, user request: "덤블링을 돌지말고 그냥 제자리에서
+ * 거대한 검을 내려치게 하고 손잡이는 상관없고 칼날 부분을 엄청 키워줘 그리고 내려찍을때 바닥에 박히는 효과를 엄청 강하게
+ * 만들어주고"): the panel is pressed, the knife's blade grows huge (its rod a little) and shrinks back, the other hand is
+ * on its rod while it is huge, they stay on the ground where they stand, raise it over their head and bring it down, and
+ * on the blow the blade lies along the ground ahead with its edge sunk in it; the floor is heaved up along it; nothing
  * of it steps from one frame to the next.
  */
 class GiantCleaveTest {
     static final float NONE=Float.NaN;
     static Vec3d[] blade(float t){return KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(GiantCleave.CLIP.frame(t)));}
-    static Vec3d tip(float t){var hb=blade(t);return hb[0].add(hb[1].multiply(KnifeCombo.TIP*GiantCleave.scale(t)));}
+    static Vec3d tip(float t){var hb=blade(t);return hb[0].add(hb[1].multiply(GiantCleave.reach(t)));}
 
     @Test void itsTimesAreTheServers(){
         assertEquals(CLEAVE_PRESS/20f,GiantCleave.PRESS,1e-6);assertEquals(CLEAVE_GROWN/20f,GiantCleave.GROWN,1e-6);
-        assertEquals(CLEAVE_LEAP/20f,GiantCleave.LEAP,1e-6);assertEquals(blowAt(CLEAVE,0)/20f,GiantCleave.BLOW,1e-6);
+        assertEquals(CLEAVE_RAISED/20f,GiantCleave.RAISED,1e-6);assertEquals(blowAt(CLEAVE,0)/20f,GiantCleave.BLOW,1e-6);
         assertEquals(LENGTH[CLEAVE]/20f,GiantCleave.CLIP.length(),1e-4,"the clip is as long as the server holds its motion");
-        assertTrue(GiantCleave.PRESS<GiantCleave.GROWN&&GiantCleave.GROWN<GiantCleave.LEAP&&GiantCleave.LEAP<GiantCleave.BLOW);
-        assertTrue(GiantCleave.LIFE>GiantCleave.LENGTH_S,"what the blow leaves is drawn a little longer");
+        assertTrue(GiantCleave.PRESS<GiantCleave.GROWN&&GiantCleave.GROWN<GiantCleave.RAISED&&GiantCleave.RAISED<GiantCleave.BLOW);
+        assertTrue(GiantCleave.LIFE>GiantCleave.BLOW+GiantCleave.SCAR_LIFE-.01f&&GiantCleave.LIFE>GiantCleave.BLOW+GiantCleave.GROUND_LIFE-.01f,"what the blow leaves is drawn until it is gone");
         assertSame(GiantCleave.CLIP,KnifeCombo.clipOf(CLEAVE));assertEquals(GiantCleave.LIFE,KnifeCombo.life(CLEAVE),1e-6);
     }
-    @Test void theKnifeGrowsHugeAfterThePressAndShrinksBackAfterTheBlow(){
-        assertEquals(1,GiantCleave.scale(0),1e-6);assertEquals(1,GiantCleave.scale(GiantCleave.PRESS),1e-6,"not before the press");
-        assertEquals(GiantCleave.SCALE,GiantCleave.scale(GiantCleave.GROWN),1e-4,"grown as both hands hold it");
-        assertEquals(GiantCleave.SCALE,GiantCleave.scale(GiantCleave.BLOW),1e-4);assertEquals(GiantCleave.SCALE,GiantCleave.scale(GiantCleave.BLOW+.4f),1e-4,"huge a moment after the blow");
-        assertEquals(1,GiantCleave.scale(GiantCleave.LENGTH_S-.2f),1e-4,"its own size before they stand again");
-        assertTrue(GiantCleave.SCALE>=2.2f&&KnifeCombo.TIP*GiantCleave.SCALE>6,"huge: over six blocks from the fist");
+    @Test void theBladeGrowsHugeAndTheRodALittle(){
+        assertEquals(1,GiantCleave.scale(0),1e-6);assertEquals(1,GiantCleave.blade(GiantCleave.PRESS),1e-6,"not before the press");
+        assertEquals(GiantCleave.ROD,GiantCleave.scale(GiantCleave.GROWN),1e-4);assertEquals(GiantCleave.BLADE,GiantCleave.blade(GiantCleave.GROWN),1e-4,"grown as both hands hold it");
+        assertEquals(GiantCleave.BLADE,GiantCleave.blade(GiantCleave.BLOW+.5f),1e-4,"huge while it is in the ground");
+        assertEquals(1,GiantCleave.blade(GiantCleave.LENGTH_S-.15f),1e-4,"its own size before they stand again");assertEquals(1,GiantCleave.scale(GiantCleave.LENGTH_S-.15f),1e-4);
+        // (2.122.0: "손잡이는 상관없고 칼날 부분을 엄청 키워줘") the blade far more than the rod: four times what the hand holds, much more than 2.121.0's 2.5
+        assertTrue(GiantCleave.ROD*GiantCleave.BLADE>=3.8f,"the blade "+GiantCleave.ROD*GiantCleave.BLADE+" times");
+        assertTrue(GiantCleave.ROD<=1.8f&&GiantCleave.BLADE>=2,"the rod only a little: room for both hands");
+        assertTrue(GiantCleave.REACH>9&&GiantCleave.DEEP_BLADE>2,"a blade some nine blocks long and over two deep");
+        assertEquals(GiantCleave.REACH,GiantCleave.reach(GiantCleave.GROWN),1e-3);assertEquals(KnifeCombo.TIP,GiantCleave.reach(0),1e-6);
         float was=1,most=0;
-        for(float t=0;t<2.2f;t+=1/240f){float s=GiantCleave.scale(t);assertTrue(Math.abs(s-was)<.09f,"a step at "+t);was=s;most=Math.max(most,s);}
-        assertTrue(most>GiantCleave.SCALE*1.02f&&most<GiantCleave.SCALE*1.2f,"it swells a little over its size on the way: "+most);
+        for(float t=0;t<2.2f;t+=1/240f){float s=GiantCleave.blade(t);assertTrue(Math.abs(s-was)<.1f,"a step at "+t);was=s;most=Math.max(most,s);}
+        assertTrue(most>GiantCleave.BLADE*1.02f&&most<GiantCleave.BLADE*1.2f,"it swells a little over its size on the way: "+most);
         // stopped short: back at once from what it was
-        float cut=.9f;
-        assertEquals(GiantCleave.scale(cut),GiantCleave.scale(cut,cut),1e-6);assertEquals(1,GiantCleave.scale(cut+.12f,cut),1e-5);
-        assertEquals(GiantCleave.scale(.5f),GiantCleave.scale(.5f,NONE),1e-6);
+        float cut=.7f;
+        assertEquals(GiantCleave.blade(cut),GiantCleave.blade(cut,cut),1e-6);assertEquals(1,GiantCleave.blade(cut+.12f,cut),1e-5);assertEquals(1,GiantCleave.scale(cut+.12f,cut),1e-5);
+        // the glow's points go with the blade: about its heel
+        double[] heel=HackKnife.grown(0,HackKnife.Y_HEEL,0,2.5f),point=HackKnife.grown(1,HackKnife.Y_TIP,.1,2.5f);
+        assertEquals(HackKnife.Y_HEEL,heel[1],1e-9,"the heel stays on the rod's end");
+        assertEquals(HackKnife.Y_HEEL+2.5*HackKnife.BLADE,point[1],1e-6);assertEquals(2.5,point[0],1e-9);assertEquals(.25,point[2],1e-9);
     }
     @Test void thePanelIsPressedOnceThenFoldedAwayWhileBothHandsHoldTheKnife(){
         float[] at=GiantCleave.pressAt(GiantCleave.PRESS);
@@ -50,53 +57,95 @@ class GiantCleaveTest {
         int downs=0;float was=0;
         for(float t=0;t<1;t+=1/240f){float p=GiantCleave.pressAt(t)[1];if(was<.5f&&p>=.5f)downs++;was=p;}
         assertEquals(1,downs);
-        // the other hand: on the rod from the knife's growing until after the blow
         assertEquals(0,GiantCleave.grip(GiantCleave.PRESS),1e-6);assertEquals(1,GiantCleave.grip(GiantCleave.GROWN),1e-5);
-        assertEquals(1,GiantCleave.grip(GiantCleave.BLOW+.3f),1e-5);assertEquals(0,GiantCleave.grip(GiantCleave.LENGTH_S-.2f),1e-5);
-        // the panel is away while the hand is on the knife, and back before the end
+        assertEquals(1,GiantCleave.grip(GiantCleave.BLOW+.4f),1e-5);assertEquals(0,GiantCleave.grip(GiantCleave.LENGTH_S-.2f),1e-5);
         assertTrue(GiantCleave.PANEL_OFF<=GiantCleave.GRIP0+.02f&&GiantCleave.PANEL_OFF>GiantCleave.PRESS+.08f,"after the press, as the hand leaves it");
-        assertTrue(GiantCleave.PANEL_ON>=GiantCleave.FREE0&&GiantCleave.PANEL_ON+.3f<=GiantCleave.LENGTH_S,"open again before they stand");
+        assertTrue(GiantCleave.PANEL_ON>=GiantCleave.FREE0&&GiantCleave.PANEL_ON+.25f<=GiantCleave.LENGTH_S,"open again before they stand");
     }
     @Test void bothHandsAreOnTheRodWhileItIsHuge(){
         for(float t=GiantCleave.GRIP1+.01f;t<GiantCleave.FREE0;t+=1/120f){
             var p=R6.poseOf(GiantCleave.CLIP.frame(t));var hb=KagenoClips.blade(Vec3d.ZERO,0,p);
             Vec3d rod=hb[0].subtract(hb[1].multiply(GiantCleave.GRIP_BACK)),left=KagenoClips.freeHand(Vec3d.ZERO,0,p);
-            assertTrue(left.distanceTo(rod)<.13,"the other hand "+left.distanceTo(rod)+" off the rod at "+t);
+            assertTrue(left.distanceTo(rod)<.14,"the other hand "+left.distanceTo(rod)+" off the rod at "+t);
         }
-        assertTrue(GiantCleave.GRIP_BACK<KnifeCombo.HEEL*GiantCleave.SCALE,"on the rod behind the fist, within its length");
+        assertTrue(GiantCleave.GRIP_BACK<KnifeCombo.HEEL*GiantCleave.ROD,"on the rod behind the fist, within its length");
     }
-    @Test void oneWholeSomersaultHighEnoughThatTheKnifeClearsTheGround(){
-        // the turn: once round forward, between the leap and the blow
-        double turned=0;float was=GiantCleave.CLIP.frame(GiantCleave.LEAP).pitch();
-        for(float t=GiantCleave.LEAP;t<=GiantCleave.BLOW+1e-4f;t+=1/240f){
-            float p=GiantCleave.CLIP.frame(t).pitch();float d=MathHelper.wrapDegrees(p-was);
-            assertTrue(Math.abs(d)<9,"the turn steps at "+t+": "+d);
-            turned+=d;was=p;
+    @Test void theyStayWhereTheyStandRaiseItOverTheirHeadAndBringItDown(){
+        // (2.122.0: "덤블링을 돌지말고 그냥 제자리에서") no leap, no turn: on the ground, never once round
+        for(float t=0;t<=GiantCleave.LENGTH_S;t+=1/120f){
+            R6.Frame f=GiantCleave.CLIP.frame(t);
+            assertTrue(f.up()<.12&&f.up()>-.6,"off the ground at "+t+": "+f.up());
+            assertTrue(Math.abs(f.pitch())<35,"turned over at "+t+": "+f.pitch());
+            assertEquals(0,f.fw(),1e-6);assertEquals(0,f.rt(),1e-6);
         }
-        assertEquals(360,turned,30,"one whole turn forward: "+turned);
-        // the leap: high, and back down as the blow lands
-        double apex=0;for(float t=0;t<2.1f;t+=1/120f)apex=Math.max(apex,GiantCleave.raised(t));
-        assertTrue(apex>6.5&&apex<8,"the leap "+apex);
-        assertEquals(0,GiantCleave.raised(GiantCleave.BLOW),1e-6,"landed on the blow");assertEquals(0,GiantCleave.raised(GiantCleave.LEAP),1e-6);
-        // the knife's point goes once round in the air: straight down under them at some moment, never in the ground
-        boolean down=false,back=false,over=false;
-        for(float t=GiantCleave.LEAP+.06f;t<GiantCleave.BLOW-.03f;t+=1/240f){
-            var hb=blade(t);Vec3d tip=tip(t);
-            assertTrue(tip.y>.3,"the point in the ground at "+t+": "+tip.y);
-            if(hb[1].y<-.97)down=true;if(down&&hb[1].z<-.9)back=true;if(back&&hb[1].y>.97)over=true;
+        // grown, it stands upright before them; raised, it is over their head and a little back
+        assertTrue(blade(GiantCleave.GROWN)[1].y>.95,"upright as it is grown");
+        var top=blade(GiantCleave.RAISED);
+        assertTrue(top[1].y>.85&&top[1].z<-.2,"over their head and back: "+top[1]);
+        assertTrue(top[0].y>1.9,"the hands over their head: "+top[0].y);
+        // down the front: the blade goes only forward and down from the top to the blow, its point never in the ground before it
+        double was=Math.atan2(top[1].y,top[1].z);
+        for(float t=GiantCleave.RAISED+.1f;t<GiantCleave.BLOW-.01f;t+=1/240f){
+            var hb=blade(t);double a=Math.atan2(hb[1].y,hb[1].z);
+            assertTrue(a<=was+.02,"the blade goes back up at "+t);was=Math.min(was,a);
+            assertTrue(Math.abs(hb[1].x)<.2,"in the plane they face along");
         }
-        assertTrue(down&&back&&over,"down ahead, under, up behind and over the top");
+        for(float t=GiantCleave.GROW0;t<GiantCleave.BLOW-.04f;t+=1/240f)assertTrue(tip(t).y>.5,"the point in the ground at "+t+": "+tip(t).y);
+        // quickest as it lands
+        double before=tip(GiantCleave.BLOW-.06f).distanceTo(tip(GiantCleave.BLOW-.03f)),early=tip(GiantCleave.RAISED+.08f).distanceTo(tip(GiantCleave.RAISED+.11f));
+        assertTrue(before>early*1.5,"it speeds up into the blow: "+early+" then "+before);
     }
-    @Test void onTheBlowTheKnifeLiesAlongTheGroundAhead(){
+    @Test void onTheBlowTheBladeLiesAlongTheGroundWithItsEdgeSunkInIt(){
         Vec3d tip=tip(GiantCleave.BLOW);var hb=blade(GiantCleave.BLOW);
-        assertTrue(tip.y>-.3&&tip.y<.12,"its point on the ground: "+tip.y);
-        assertTrue(tip.z>6&&tip.z<reach(CLEAVE,0)+.4,"as far ahead as the server's lane: "+tip.z);
-        assertTrue(Math.abs(tip.x)<.45,"along the way they face");
-        assertTrue(hb[1].y<0&&hb[1].y>-.15,"nearly level");
-        // it came down from over their head: a tenth of a second before, it points well up
-        assertTrue(blade(GiantCleave.BLOW-.12f)[1].y>.4);
-        // and stays down until it shrinks
-        for(float t=GiantCleave.BLOW;t<GiantCleave.SHRINK0-.12f;t+=1/60f)assertTrue(tip(t).y<.2&&tip(t).y>-.5,"at "+t+": "+tip(t).y);
+        assertTrue(tip.z>9&&tip.z<reach(CLEAVE,0)+.6,"as far ahead as the server's lane: "+tip.z);
+        assertTrue(Math.abs(tip.x)<.5,"along the way they face");
+        assertTrue(hb[1].y<0&&hb[1].y>-.1,"level, its point a little down: "+hb[1].y);
+        // its spine is over the ground and its edge under it, a block or so: buried, not lying on top and not swallowed
+        double spine=hb[0].add(hb[1].multiply(GiantCleave.REACH*.5)).y,edge=spine-GiantCleave.DEEP_BLADE;
+        assertTrue(spine>.5&&spine<1.6,"its spine over the ground: "+spine);
+        assertTrue(edge<-.6&&edge>-1.8,"its edge sunk in the ground: "+edge);
+        // and it stays there until it shrinks
+        for(float t=GiantCleave.BLOW;t<GiantCleave.SHRINK0;t+=1/60f){
+            var b=blade(t);double sp=b[0].add(b[1].multiply(GiantCleave.REACH*.5)).y;
+            assertTrue(sp>.3&&sp<1.6&&Math.abs(b[1].y)<.12,"at "+t+": "+sp);
+        }
+        // the trench lies under the blade, as long as the lane
+        assertTrue(GiantCleave.SCAR1>=reach(CLEAVE,0)&&GiantCleave.SCAR0<1.2);
+    }
+    @Test void theFloorIsHeavedUpAlongTheBladeAndRipplesOut(){
+        // (2.122.0: "내려찍을때 바닥에 박히는 효과를 엄청 강하게") slabs thrown up at once along both sides, tipped away from the blade
+        double[] near=GiantCleave.heave(4,.9,.12f,.5,.5),other=GiantCleave.heave(4,-.9,.12f,.5,.5),far=GiantCleave.heave(4,1.7,.12f,.5,.5);
+        assertTrue(near[0]>.35&&near[0]<1,"a slab by the blade: "+near[0]);
+        assertTrue(near[1]>8&&other[1]<-8,"tipped away to either side");
+        assertTrue(far[0]<near[0]&&far[0]>.1,"lower further from it");
+        assertEquals(0,GiantCleave.heave(4,.9,0,.5,.5)[0],1e-9,"not before the blow");
+        // they stay up while the blade is in the ground and are back down by the end
+        assertTrue(GiantCleave.heave(4,.9,GiantCleave.SINK0,.5,.5)[0]>.25);
+        assertEquals(0,GiantCleave.heave(4,.9,GiantCleave.SINK1,.5,.5)[0],1e-6);
+        assertTrue(GiantCleave.SINK0>=GiantCleave.SHRINK0-GiantCleave.BLOW,"until the blade is out");
+        // nothing steps
+        double was=0;
+        for(float s=0;s<GiantCleave.GROUND_LIFE;s+=1/240f){double l=GiantCleave.heave(4,.9,s,.5,.5)[0];assertTrue(Math.abs(l-was)<.09,"a slab jumps at "+s);was=l;}
+        // further out a ripple runs away from the blade: there later than nearer, gone after
+        double early=GiantCleave.heave(4,3,.2f,.5,.5)[0],late=GiantCleave.heave(4,6,.2f,.5,.5)[0];
+        assertTrue(early>.1&&late<early,"the ripple at 3 blocks first: "+early+", "+late);
+        assertTrue(GiantCleave.heave(4,6,.4f,.5,.5)[0]>late);
+        assertEquals(0,GiantCleave.heave(4,3,1.5f,.5,.5)[0],.02);
+        assertEquals(0,GiantCleave.heave(-3,.5,.2f,.5,.5)[0],1e-9,"nothing behind them");assertEquals(0,GiantCleave.heave(4,9,.3f,.5,.5)[0],1e-9);
+        // pieces of it thrown: up from along the trench, down again, never under the ground, gone in two seconds
+        Vec3d f=new Vec3d(0,0,1),right=new Vec3d(-1,0,0);
+        for(int j=0;j<GiantCleave.CHUNKS;j++){
+            double top=0;
+            for(float s=0;s<2.2f;s+=1/60f){
+                var k=GiantCleave.chunk(Vec3d.ZERO,f,right,j,7,s,0);
+                if(s>=2.0f){assertNull(k,"gone");continue;}
+                if(k==null)continue;
+                assertTrue(k[1]>=-1e-6,"under the ground");assertTrue(k[3]<=.5+1e-9);top=Math.max(top,k[1]);
+                assertTrue(k[2]>-2&&k[2]<GiantCleave.SCAR1+4);
+            }
+            assertTrue(top>.9,"piece "+j+" thrown up: "+top);
+        }
+        assertTrue(GiantCleave.CHUNKS>=40&&GiantCleave.SPIKES>=20&&GiantCleave.CRACKS>=20,"much of it");
     }
     @Test void itBeginsAndEndsAsTheyStandAndNothingSteps(){
         R6.Frame first=GiantCleave.CLIP.frame(0),last=GiantCleave.CLIP.frame(GiantCleave.LENGTH_S);
@@ -110,18 +159,13 @@ class GiantCleaveTest {
         R6.Frame was=first;
         for(float t=1/240f;t<=GiantCleave.LENGTH_S;t+=1/240f){
             R6.Frame f=GiantCleave.CLIP.frame(t);
-            assertTrue(Math.abs(f.up()-was.up())<.26,"the body jumps at "+t+": "+(f.up()-was.up()));
+            assertTrue(Math.abs(f.up()-was.up())<.03,"the body jumps at "+t+": "+(f.up()-was.up()));
+            assertTrue(Math.abs(f.pitch()-was.pitch())<3,"the body tips at "+t);
             for(int i=0;i<2;i++){
                 assertTrue(Math.abs(f.joints().elbow[i]-was.joints().elbow[i])<14,"elbow "+i+" at "+t+": "+(f.joints().elbow[i]-was.joints().elbow[i]));
-                // (the push-off of the leap is the quickest a knee goes: a leg nearly straight is a few degrees of knee for
-                // every hundredth of a block, and the legs shoot straight as the feet leave the ground)
-                // (and as they touch down again, a moment before the blow)
-                boolean off=t>GiantCleave.LEAP&&t<GiantCleave.LEAP+.1f||t>GiantCleave.BLOW-.06f&&t<GiantCleave.BLOW+.01f;
-                assertTrue(Math.abs(f.joints().knee[i]-was.joints().knee[i])<(off?40:14),"knee "+i+" at "+t+": "+(f.joints().knee[i]-was.joints().knee[i]));
+                assertTrue(Math.abs(f.joints().knee[i]-was.joints().knee[i])<14,"knee "+i+" at "+t+": "+(f.joints().knee[i]-was.joints().knee[i]));
             }
             was=f;
         }
-        // the camera goes with the leap and comes back
-        assertTrue(GiantCleave.SCAR1>=reach(CLEAVE,0)&&GiantCleave.SCAR0<1.5,"the scar lies under the knife, as long as the lane");
     }
 }

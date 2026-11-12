@@ -68,6 +68,8 @@ public abstract class StandHeldItemFeatureMixin {
             var swing=dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(holder.getUuid());
             // (2.121.0) their cleave's knife is grown huge (GiantCleave.scale), about the fist as it is turned
             float giant=dev.sangwoo.celestialfall.client.xchara.GiantCleave.scale(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            // (2.122.0) and its blade much more, on its own (XCharaKnifeRenderer.blade: for this draw)
+            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.blade=dev.sangwoo.celestialfall.client.xchara.GiantCleave.blade(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
             if(swing!=null||giant!=1){
                 matrices.translate(0,-2/16f,2/16f);
                 if(swing!=null){
@@ -96,7 +98,7 @@ public abstract class StandHeldItemFeatureMixin {
     private void botand$drawn(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){
         dev.sangwoo.celestialfall.client.isosang.IsosangSwordRenderer.charge=0;
         dev.sangwoo.celestialfall.client.isosang.IsosangSheath.recording(null);
-        dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.press=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.arm=null;
+        dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=null;dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.blade=1;dev.sangwoo.celestialfall.client.xchara.HackPanel.frame=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.press=null;dev.sangwoo.celestialfall.client.xchara.HackPanel.arm=null;
         dev.sangwoo.celestialfall.client.xchara.HackMode.recording(null);
     }
     @Redirect(method="render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;ILnet/minecraft/entity/LivingEntity;FFFFFF)V",

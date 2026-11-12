@@ -37,30 +37,33 @@ public final class XCharaCombo {
     /**
      * R with the hack on, the cleave (2.121.0, user request: "R키는 패널을 누르면 들고 있던 검이 엄청 거대해지고 그걸 양손으로
      * 잡고 덤블링 한 번 돌고 크게 내려찍는 스킬 맞추면 못 움직이는 1초 무력화"): no hit of the combo but a skill of the
-     * knife's pipeline (as Star Platinum's heavy punch is of its punches'): they press the panel, the knife grows huge,
-     * they take it in both hands, turn one somersault and bring it down. Its one blow lands CLEAVE's BLOWS ticks in on
-     * everyone in its long lane ahead: unguardable, no knockback, no stagger; whoever it strikes cannot move or act for
+     * knife's pipeline (as Star Platinum's heavy punch is of its punches'): they press the panel, the knife's blade
+     * grows huge, they take it in both hands, raise it over their head and bring it down where they stand. (2.122.0,
+     * user request: "덤블링을 돌지말고 그냥 제자리에서 거대한 검을 내려치게 하고 손잡이는 상관없고 칼날 부분을 엄청 키워줘
+     * 그리고 내려찍을때 바닥에 박히는 효과를 엄청 강하게 만들어주고 무력화 시간을 3초로 늘려줘": 2.121.0 leapt and turned
+     * a somersault with it, and its incapacitation was a second.) Its one blow lands CLEAVE's BLOWS ticks in on everyone
+     * in its long lane ahead: unguardable, no knockback, no stagger; whoever it strikes cannot move or act for
      * {@link #CLEAVE_STUN} ticks (an incapacitation that also stops their legs). Its cooldown ({@link #CLEAVE_COOLDOWN})
      * runs from its end; cut short before the blow, from then. The damage, the reach, the times and the cooldown are
-     * mine (the user gave the motion and the second's incapacitation).
+     * mine (the user gave the motion and the incapacitation's length).
      */
     public static final int CLEAVE=9;
     /** The cleave: its incapacitation (ticks; the legs stopped as long, wholly), its cooldown from its end (ticks: 12 s), and its reach {near, far, half width} and how high it reaches (blocks). */
-    public static final int CLEAVE_STUN=20,CLEAVE_COOLDOWN=240;
+    public static final int CLEAVE_STUN=60,CLEAVE_COOLDOWN=240;
     public static final double CLEAVE_SLOW=1,CLEAVE_HIGH=3.6;
-    private static final double[] CLEAVE_REACH={.2,7.0,1.3};
-    /** When the cleave's panel is pressed, when the knife is full grown and in both hands, when they leave the ground and when they land on the blow (ticks into it): what the clients draw to (GiantCleave). */
-    public static final int CLEAVE_PRESS=4,CLEAVE_GROWN=9,CLEAVE_LEAP=11;
+    private static final double[] CLEAVE_REACH={.2,9.6,1.5};
+    /** When the cleave's panel is pressed, when the knife is full grown and in both hands, and when it is raised over their head, wound for the blow (ticks into it): what the clients draw to (GiantCleave). */
+    public static final int CLEAVE_PRESS=4,CLEAVE_GROWN=9,CLEAVE_RAISED=14;
     /** The tick into hit {@code n} its blow lands on (the same for either kind). */
-    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24}};
+    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{20}};
     /** Each blow's damage: 6, 6, 6, 10; 28 for the combo. */
     private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18}};
     /** Ticks from a hit's start before the next may start. */
     public static final int[] STEP={0,8,9,12,0,8,9,12,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,36};
+    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,34};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,42};
+    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,40};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -79,7 +82,7 @@ public final class XCharaCombo {
      */
     private static final double[][] REACH={{},{-.5,3.5,2.3},{-.5,3.5,2.3},{-.3,4.0,1.3},{-.3,4.8,1.0}};
     /** As far as any blow of the attack reaches (blocks): who could be struck at all is looked for within this. */
-    public static final double MAX_REACH=7.0+2.5;
+    public static final double MAX_REACH=9.6+2.5;
 
     /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four) or the cleave (9). */
     public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=CLEAVE;}
