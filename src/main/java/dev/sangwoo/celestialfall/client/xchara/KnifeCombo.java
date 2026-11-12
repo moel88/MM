@@ -351,9 +351,9 @@ public final class KnifeCombo implements Fx.Skill {
     // ───────────────────────────── plain 4: 찌르기 ─────────────────────────────
     // the weight drawn back onto the back leg, the body turned side-on, the knife pulled back low past the right hip
     // with its point kept on the foe and the free hand out ahead; held; then the lunge: the back leg drives, the hips
-    // and the shoulder turn in, the arm goes out last (the hand turning over as it goes, the blade ending canted so
-    // its flat shows from behind), the front foot shooting out to land on the blow and the back foot dragged after it,
-    // the free arm thrown back; driven on a little past the blow, held out, then drawn back and up, stepping back
+    // and the shoulder turn in, the arm goes out last (the hand turning over as it goes, the blade ending canted),
+    // the front foot shooting out to land on the blow and the back foot dragged after it, the free arm thrown back
+    // and out to the left; driven on a little past the blow, held out, then drawn back and up, stepping back
 
     static final R6.Pose P4_BACK=on(-.08,.50,-.30,-38,8,3,d(-52,146),d(8,-8),d(2,-10),.16,.80,-.22,.22);
     static final Anim P4=Anim.joints(
@@ -366,11 +366,11 @@ public final class KnifeCombo implements Fx.Skill {
         k(.31f,on(-.06,.58,-.33,-28,10,1,d(-54,128),d(8,-8),d(-2,-20),.15,.94,-.22,.23)),
         k(.36f,on(-.02,.86,-.35,0,18,-2,d(-44,44),d(7,-7),d(-14,-96),.14,1.24,-.22,.38)),
         // the blow: the whole body out behind the knife, still going
-        k(blow(LUNGE,0),on(.01,1.07,-.36,20,22,-3,d(-18,-10),d(6,-6),d(-22,-156),.14,1.42,-.22,.56)),
+        k(blow(LUNGE,0),on(.01,1.07,-.36,20,22,-3,d(-18,-10),d(6,-6),d(-16,-138),.14,1.42,-.22,.56)),
         // furthest, then settled
-        k(.44f,on(.02,1.24,-.37,31,25,-3,d(-9,-26),d(5,-5),d(-26,-174),.14,1.50,-.22,.68)),
-        k(.56f,on(.02,1.20,-.36,28,23,-3,d(-10,-25),d(5,-5),d(-30,-168),.14,1.50,-.22,.68)),
-        k(HOLD[LUNGE]/20f,on(.02,1.18,-.35,26,22,-2,d(-13,-20),d(5,-5),d(-36,-160),.14,1.50,-.22,.68)),
+        k(.44f,on(.02,1.24,-.37,31,25,-3,d(-9,-26),d(5,-5),d(-18,-132),.14,1.50,-.22,.68)),
+        k(.56f,on(.02,1.20,-.36,28,23,-3,d(-10,-25),d(5,-5),d(-22,-134),.14,1.50,-.22,.68)),
+        k(HOLD[LUNGE]/20f,on(.02,1.18,-.35,26,22,-2,d(-13,-20),d(5,-5),d(-28,-136),.14,1.50,-.22,.68)),
         // drawn back and up: the front foot steps back past the other, then that one
         k(.88f,on(.01,.84,-.24,12,14,-1,d(-40,30),d(4,-4),d(-52,-90),.16,.96,-.22,.68)),
         k(1.0f,on(0,.44,-.14,2,8,0,d(-58,52),d(2,-2),d(-66,-50),.19,.06,-.21,.66)),

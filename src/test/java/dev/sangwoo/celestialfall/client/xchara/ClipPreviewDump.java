@@ -19,7 +19,9 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
  * environment's BOTAND_CLIP_DUMP naming a folder, every hit's body is written there as points over its length
  * (hit_N.csv: a row every 1/120 s; the head, both arms' shoulder, elbow and hand, both legs' hip, knee and foot, the
  * knife's rod end, heel and point, each as right, up and forward of its user's feet in blocks, and the body's turn),
- * for tools/xchara/preview_clip.py to draw as stick figures from the side, the front, above and behind. The points are
+ * for tools/xchara/preview_clip.py to draw as stick figures from the side, from behind and from above, and for
+ * tools/xchara/clip_numbers.py to print as numbers (the blade's way, where it crosses the foe, how fast its point goes,
+ * whether its edge leads, where the feet stand). The points are
  * the model's own (the joints' angles through the rig's two-piece limbs: R6, MotionPose), so what is drawn is what the
  * game poses, without the game's camera, skin or lighting: its pictures are not game screens and are never sent as a
  * check of the game. Without the variable it does nothing.

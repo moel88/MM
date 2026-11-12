@@ -4,6 +4,7 @@ quickly. Its pictures are NOT game screens and are never sent as a check of the 
 
   BOTAND_CLIP_DUMP=DIR ./gradlew --offline test --tests '*ClipPreviewDump*'     writes DIR/hit_N.csv
   python3 -I tools/xchara/preview_clip.py DIR OUT.png HIT [STEP [FROM TO [COLUMNS]]]   draws hit N every STEP seconds
+  (tools/xchara/clip_numbers.py prints the same clips as numbers)
 
 Each cell is one moment, seen from the side (the user's right: they face right), from behind and above as the game's
 camera sees them, and from above (ahead is up). The knife is the thick dark line (its heel marked), its arm red, the

@@ -36,7 +36,9 @@ the watcher 11/3 blocks off in its band: the formation over at once, its swords 
 stood (as drawn and as the server holds her; 2.101.1: round her lap of the sky on her sword, drawn level against its
 plan on each client, and its 28 swords), five blows of 12, the recording each client plays, her H ready again only
 once its swords are gone), MP_ONLY=xcharaq X Chara's Q, the hack (2.115.0, MpClient.XCHARAQ_SCRIPT: on, off, a double tap heard once, the combo
-with it on, off by itself with another stand and when slain, on again on the new body), MP_ONLY=xcharam1 X Chara's basic attack (2.114.0, MpClient.XCHARAM1_SCRIPT: the whole combo into
+with it on, off by itself with another stand and when slain, on again on the new body), MP_ONLY=xcharaplain its plain swings (2.117.0,
+MpClient.XCHARAPLAIN_SCRIPT: the hack off: 6, 6, 6, 10, thrown by the lunge only; its guard up; the hack turned on and
+off between the hits of a combo: the next hit is the other kind's), MP_ONLY=xcharam1 X Chara's basic attack (2.114.0, MpClient.XCHARAM1_SCRIPT: the whole combo into
 the watcher (6, 3 + 3, 2 + 2 + 2, 4 + 6; thrown by the last blow only), its guard up, the combo broken and its rest, a hit
 stopped short as the caster is struck, the watcher 6 blocks ahead reached by the thrusts' knives of light only),
 MP_ONLY=isosanggauge its H gauge (2.113.0, MpClient.ISOSANGGAUGE_SCRIPT: H refused with it
