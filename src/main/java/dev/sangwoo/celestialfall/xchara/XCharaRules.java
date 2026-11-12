@@ -27,7 +27,7 @@ public final class XCharaRules {
     public static final int Q=2;
     /** (2.119.0) The press asks for the restore (xchara_skill_v1's only byte then; XCharaHeal): E's until 2.120, Y's from 2.121.0 (user request: "q활성화 e를 q활성화 y로 옮기고"). */
     public static final int Y=3;
-    /** (2.121.0) The press asks for R with the hack on, the cleave (XCharaAttack.cleave, XCharaCombo.CLEAVE). */
+    /** (2.121.0) The press asks for R: with the hack on, the cleave (XCharaAttack.cleave, XCharaCombo.CLEAVE); (2.124.0) with it off, the jab (XCharaAttack.jab, XCharaCombo.JAB). */
     public static final int R=4;
     /**
      * E with the hack on, the restore (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에

@@ -85,7 +85,8 @@ public final class XCharaUltimate {
             if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
             // (2.119.0) E: the restore, with the hack on (XCharaHeal)
             if(skill==Y){server.execute(()->{if(heard(player))XCharaHeal.request(player);});return;}
-            if(skill==R){server.execute(()->{if(heard(player))XCharaAttack.cleave(player);});return;}
+            // R: with the hack on the cleave (2.121.0), with it off the jab (2.124.0)
+            if(skill==R){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaAttack.cleave(player);else XCharaAttack.jab(player);});return;}
             if(skill!=G)return;
             server.execute(()->{if(heard(player))cast(player,target);});
         });

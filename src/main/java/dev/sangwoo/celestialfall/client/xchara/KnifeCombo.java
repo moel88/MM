@@ -261,12 +261,12 @@ public final class KnifeCombo implements Fx.Skill {
 
     @Override public Anim clip(int combo){return clipOf(combo);}
     /** The swing at hit {@code hit}'s place in the combo: the same with the hack on or off. */
-    static Anim clipOf(int hit){if(skill(hit))return GiantCleave.CLIP;return switch(place(hit)){case 2->P2;case 3->P3;case 4->P4;default->P1;};}
+    static Anim clipOf(int hit){if(hit==JAB)return CorruptionJab.CLIP;if(skill(hit))return GiantCleave.CLIP;return switch(place(hit)){case 2->P2;case 3->P3;case 4->P4;default->P1;};}
 
     /** (2.121.0) The cleave is drawn longer than a swing (what its blow leaves on the ground). */
     @Override public float lifetime(){return Math.max(LIFE,GiantCleave.LIFE);}
     /** How long hit {@code combo} is drawn for (seconds). */
-    static float life(int combo){return skill(combo)?GiantCleave.LIFE:LIFE;}
+    static float life(int combo){return combo==JAB?CorruptionJab.LIFE:skill(combo)?GiantCleave.LIFE:LIFE;}
     @Override public boolean layered(){return true;}
     /** None: the body is never copied behind itself (the hack's cut is the knife's own path, SlashFx). */
     @Override public float afterimages(float sec){return 0;}
@@ -372,18 +372,21 @@ public final class KnifeCombo implements Fx.Skill {
     /** The cut of a swing begun with the hack on (the effects' pass for X Chara's cuts: KagenoFire.glitchRibbon, the shader's mode 18). */
     @Override public void glitch(Fx c){
         // (a plain swing, the hack off, 2.117.0: nothing is drawn but the body and the knife)
+        if(c.cast.combo()==JAB)return;
         if(skill(c.cast.combo())){GiantCleave.cut(c);return;}
         if(plain(c.cast.combo()))return;
         SlashFx.cut(c);
     }
     /** (2.122.0) The cleave's ground: the floor heaved up along the knife and its pieces thrown. */
-    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(skill(c.cast.combo()))GiantCleave.solids(c,s);}
+    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==CLEAVE)GiantCleave.solids(c,s);}
     @Override public void alpha(Fx c,EffectMesh m){
+        if(c.cast.combo()==JAB){CorruptionJab.draw(c,m,false);return;}
         if(skill(c.cast.combo())){GiantCleave.draw(c,m,false);return;}
         if(plain(c.cast.combo()))return;
         SlashFx.draw(c,m,false);
     }
     @Override public void additive(Fx c,EffectMesh m){
+        if(c.cast.combo()==JAB){CorruptionJab.draw(c,m,true);return;}
         if(skill(c.cast.combo())){GiantCleave.draw(c,m,true);return;}
         if(plain(c.cast.combo()))return;
         SlashFx.draw(c,m,true);
@@ -392,6 +395,7 @@ public final class KnifeCombo implements Fx.Skill {
     // ───────────────────────────── light, shake ─────────────────────────────
 
     @Override public void frame(Fx c,FxFrame f){
+        if(c.cast.combo()==JAB){CorruptionJab.frame(c,f);return;}
         if(skill(c.cast.combo())){GiantCleave.frame(c,f);return;}
         if(plain(c.cast.combo()))return;
         SlashFx.frame(c,f);
@@ -401,7 +405,8 @@ public final class KnifeCombo implements Fx.Skill {
     /** How hard each swing's blow shakes the camera as it lands on someone, by its place in the combo (a cut that meets no one, a third of it). */
     static final float[] SHAKE={0,.35f,.35f,.55f,1.0f};
     @Override public float shake(StandClient.Cast cast,float sec){
-        int hit=cast.combo();if(skill(hit))return GiantCleave.shake(cast,sec);
+        int hit=cast.combo();if(hit==JAB)return CorruptionJab.shake(cast,sec);
+        if(skill(hit))return GiantCleave.shake(cast,sec);
         if(!valid(hit)||!KnifeClient.cameTo(cast,0))return 0;
         int[] told=KnifeClient.struck(cast.id(),0);
         return SHAKE[place(hit)]*(told!=null&&told.length>0?1:.33f)*bump(sec,blow(hit,0),.07f);

@@ -184,7 +184,8 @@ public final class CombatClient {
         var reaction=HitStunClient.reaction(p);
         if(reaction!=null)return "hit"+reaction.hitAt();
         if(s.broken(now))return "broken";
-        if(s.disabled(now))return "dazed"+s.disabledAt();
+        // (2.124.0: one held by X Chara's jab stands as they are under its X, not dazed)
+        if(s.disabled(now)&&!dev.sangwoo.celestialfall.client.xchara.CorruptionJab.marked(p.getId()))return "dazed"+s.disabledAt();
         if(s.dashAge(now)>=0&&s.dashAge(now)<CombatState.DASH_TICKS)return "dash"+s.dashStart();
         if(s.attack>0&&s.attack<=4&&s.attackAge(now)>=0&&s.attackAge(now)<CombatState.DURATION[s.attack])return "attack"+s.attackStart();
         return "base";
@@ -221,7 +222,7 @@ public final class CombatClient {
             for(int i=0;i<2;i++)broken.knee[i]=MathHelper.lerp(m.amount,broken.knee[i],base.knee[i]);
             return broken;
         }
-        if(s.disabled(now)) {
+        if(s.disabled(now)&&!dev.sangwoo.celestialfall.client.xchara.CorruptionJab.marked(p.getId())) {
             // incapacitated (2.60.0): dazed, the head and arms hanging, swaying, while the feet still walk
             MotionPose dazed=MotionClips.dazed((float)(now-s.disabledAt()),(float)(s.disabledUntil()-now));
             for(int i=4;i<6;i++)for(int j=0;j<3;j++)dazed.joint[i][j]=MathHelper.lerp(m.amount,dazed.joint[i][j],base.joint[i][j]);

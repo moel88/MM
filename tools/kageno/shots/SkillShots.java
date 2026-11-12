@@ -722,6 +722,10 @@ public final class SkillShots implements ClientModInitializer {
         standLog.append(',').append(heal==null?",,":heal).append(',').append(String.format(Locale.ROOT,"%.1f",mc.player.getHealth()));
         String healKey=heal==null?"":heal.substring(heal.indexOf(',')+1);
         if(!healKey.equals(healLogged)){if(heal!=null)log.append("  heal ").append(healKey.equals("0,0")?"started":healKey.startsWith("1")?"landed":"stopped short").append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s, health %.1f)%n",heal.split(",")[0],mc.player.getHealth()));healLogged=healKey;}
+        // 2.124.0: X Chara's jab: who has its X on their face ("entity:seconds on"); a line in the log as one is marked and as none is
+        String marks=dev.sangwoo.celestialfall.client.xchara.CorruptionJab.describe(mc.getTickDelta());
+        boolean marked=!marks.isEmpty()&&java.util.Arrays.stream(marks.split(" ")).anyMatch(k->dev.sangwoo.celestialfall.client.xchara.CorruptionJab.marked(Integer.parseInt(k.substring(0,k.indexOf(':')))));
+        if(marked!=marksLogged){log.append(marked?"  jab's X on ":"  jab's X gone ").append(marks).append(" at ").append(age).append('\n');marksLogged=marked;}
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -820,6 +824,8 @@ public final class SkillShots implements ClientModInitializer {
     private String knifeLogged="";
     private String hackLogged="";
     private String healLogged="";
+    /** (2.124.0) whether the jab's X was on someone as last logged. */
+    private boolean marksLogged;
     /** (2.75.0) last logged: the player resisting a time stop, stopped in one; the fake user the same. */
     private final boolean[] resistLogged=new boolean[4];
     private String arrowLogged="";
@@ -1559,7 +1565,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
                         +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour,xc_age,xc_space,xc_ended,xc_how,xc_camera,kc_hit,kc_age,kc_stopped,hk_on,hk_t,he_age,he_healed,he_stopped,player_health\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        hackLogged="";healLogged="";stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
+                        hackLogged="";healLogged="";marksLogged=false;stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}

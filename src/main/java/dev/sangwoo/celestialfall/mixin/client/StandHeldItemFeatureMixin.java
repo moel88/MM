@@ -61,7 +61,7 @@ public abstract class StandHeldItemFeatureMixin {
         }
         if(entity instanceof PlayerEntity holder&&arm==holder.getMainArm()&&!StandClient.visible(holder)&&StandClient.xChara(holder)){
             // (2.115.0) lit white within its purple rim while their hack is on (Q): for this draw only (botand$drawn puts it back)
-            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=dev.sangwoo.celestialfall.client.xchara.HackMode.knifeLook(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
             dev.sangwoo.celestialfall.client.xchara.HackMode.recording(holder.getUuid());
             // X Chara's knife (2.114.0): turned in the hand as a hit drives it, about the middle of its rod (where the fist
             // holds it: its display puts the model's middle there); its display already turns it KnifeCombo.DISPLAY_TILT
@@ -74,6 +74,9 @@ public abstract class StandHeldItemFeatureMixin {
                 matrices.translate(0,-2/16f,2/16f);
                 if(swing!=null){
                     var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                    // (2.124.0) their jab turns the knife once round in the hand, about the forearm (CorruptionJab.spin)
+                    float spin=dev.sangwoo.celestialfall.client.xchara.CorruptionJab.spin(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                    if(spin!=0)matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(spin));
                     matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.xchara.KnifeCombo.DISPLAY_TILT));
                 }
                 if(giant!=1)matrices.scale(giant,giant,giant);

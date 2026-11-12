@@ -37,7 +37,7 @@ stood (as drawn and as the server holds her; 2.101.1: round her lap of the sky o
 plan on each client, and its 28 swords), five blows of 12, the recording each client plays, her H ready again only
 once its swords are gone), MP_ONLY=xcharaq X Chara's Q, the hack (2.115.0, MpClient.XCHARAQ_SCRIPT: on, off, a double tap heard once, the combo
 with it on, off by itself with another stand and when slain, on again on the new body), MP_ONLY=xcharae its E with the hack on and the hack's G (2.119.0, MpClient.XCHARAE_SCRIPT: E and G not heard with the hack off, 65 healed
-as the press lands, refused in its cooldown, stopped short when struck before the press, G blocked by a guard with the hack on), MP_ONLY=xcharaplain its plain swings (2.117.0,
+as the press lands, refused in its cooldown, stopped short when struck before the press, G blocked by a guard with the hack on; 2.124.0: then R with the hack off, the jab: 13 off the walking watcher 14 ticks in, held 160 ticks without moving, its X on its face on both clients, refused in its cooldown, landing through a guard, stopped short when struck before its blow), MP_ONLY=xcharaplain its plain swings (2.117.0,
 MpClient.XCHARAPLAIN_SCRIPT: the hack off: 6, 6, 6, 10, thrown by the lunge only; its guard up; the hack turned on and
 off between the hits of a combo: the next hit is the other kind's), MP_ONLY=xcharam1 X Chara's basic attack (2.114.0, MpClient.XCHARAM1_SCRIPT: the whole combo into
 the watcher (6, 3 + 3, 2 + 2 + 2, 4 + 6; thrown by the last blow only), its guard up, the combo broken and its rest, a hit

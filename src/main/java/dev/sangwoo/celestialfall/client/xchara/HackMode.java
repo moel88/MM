@@ -110,6 +110,14 @@ public final class HackMode {
         if(!s.on&&t>=HackLook.OFF)return null;
         return new HackLook.Frame(s.on,t,now/20f,(int)(id.getLeastSignificantBits()^id.getMostSignificantBits()>>>17));
     }
+    /**
+     * (2.124.0) The knife's look this frame: their hack's, or, with the hack off, their jab's while it lights the knife
+     * (CorruptionJab.knife: the hack's knife for a moment, black again as its blow lands).
+     */
+    public static HackLook.Frame knifeLook(UUID id,float delta){
+        var jab=CorruptionJab.knife(id,delta);
+        return jab!=null?jab:look(id,delta);
+    }
     /** What is drawn in this player's other hand: the hack's panel while any of it shows (null: whatever the hand holds). */
     public static ItemStack panel(PlayerEntity p){
         if(p==null||!StandClient.xChara(p)||p.isUsingItem())return null;
@@ -170,8 +178,9 @@ public final class HackMode {
     static List<HackFx.Shown> shown(MinecraftClient mc,float delta,Vec3d camera){
         var out=new ArrayList<HackFx.Shown>();
         if(mc.world!=null)for(var e:STATES.entrySet()){
-            var s=e.getValue();var f=look(e.getKey(),delta);if(f==null)continue;
-            boolean knife=s.knifeFrame==frames&&s.heel!=null,panel=s.panelFrame==frames&&s.panel!=null;
+            // (2.124.0: the knife's own look, which their jab lights with the hack off)
+            var s=e.getValue();var hack=look(e.getKey(),delta);var f=hack!=null?hack:knifeLook(e.getKey(),delta);if(f==null)continue;
+            boolean knife=s.knifeFrame==frames&&s.heel!=null,panel=hack!=null&&s.panelFrame==frames&&s.panel!=null;
             if(!knife&&!panel)continue;
             if((knife?s.heel:s.panel).squaredDistanceTo(camera)>96*96)continue;
             out.add(new HackFx.Shown(f,knife?s.heel:null,s.tip,s.spine,panel?s.panel:null,s.across,s.along,s.face));

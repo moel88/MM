@@ -566,10 +566,11 @@ public final class MpServer implements ModInitializer {
         if(cleaveHealth<0)cleaveHealth=watcher.getHealth();
         if(Math.abs(watcher.getHealth()-cleaveHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d",cleaveHealth,watcher.getHealth(),now));cleaveHealth=watcher.getHealth();}
         var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(caster);long ready=dev.sangwoo.celestialfall.xchara.XCharaAttack.cleaveReady(caster);
-        String key=h==null?"none":h.combo()+"/"+h.start()+"/"+h.blows()+"/"+ready;
+        long jab=dev.sangwoo.celestialfall.xchara.XCharaAttack.jabReady(caster);
+        String key=h==null?"none":h.combo()+"/"+h.start()+"/"+h.blows()+"/"+ready+"/"+jab;
         if(!key.equals(cleaveSeen)){
             cleaveSeen=key;
-            if(h!=null)note(server,String.format(java.util.Locale.ROOT,"caster's knife at %d: hit %d began %d, %d blows landed; cleave ready at %d (%.2f s on); busy %s",now,h.combo(),h.start(),h.blows(),ready,(ready-now)/20.0,
+            if(h!=null)note(server,String.format(java.util.Locale.ROOT,"caster's knife at %d: hit %d began %d, %d blows landed; cleave ready at %d (%.2f s on), jab ready at %d (%.2f s on); busy %s",now,h.combo(),h.start(),h.blows(),ready,(ready-now)/20.0,jab,(jab-now)/20.0,
                 dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(caster)));
         }
         boolean held=dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher);

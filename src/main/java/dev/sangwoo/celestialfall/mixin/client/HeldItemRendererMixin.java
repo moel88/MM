@@ -70,7 +70,8 @@ public abstract class HeldItemRendererMixin {
             float swing=player.getHandSwingProgress(delta);
             // (2.115.0) their hack (Q): the knife lit white within its purple rim, the panel in the other hand
             var hack=dev.sangwoo.celestialfall.client.xchara.HackMode.look(player.getUuid(),delta);
-            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=hack;
+            // (2.124.0: or lit by their jab with the hack off, HackMode.knifeLook)
+            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=dev.sangwoo.celestialfall.client.xchara.HackMode.knifeLook(player.getUuid(),delta);
             renderFirstPersonItem(player,delta,player.getPitch(delta),net.minecraft.util.Hand.MAIN_HAND,player.preferredHand==net.minecraft.util.Hand.OFF_HAND?0:swing,dev.sangwoo.celestialfall.client.StandClient.xCharaKnife(),0,matrices,vertices,light);
             dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.hack=null;
             var panel=dev.sangwoo.celestialfall.client.xchara.HackMode.panel(player);

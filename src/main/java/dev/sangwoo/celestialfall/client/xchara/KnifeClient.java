@@ -53,8 +53,16 @@ public final class KnifeClient {
     private static final Map<UUID,Long> READY=new HashMap<>();
     /** (2.121.0) When each player's cleave (R with the hack on) is ready again, as told. */
     private static final Map<UUID,Long> CLEAVE_READY=new HashMap<>();
+    /** (2.124.0) When each player's jab (R with the hack off) is ready again, as told. */
+    private static final Map<UUID,Long> JAB_READY=new HashMap<>();
     /** The cleave's sound (its own, played as it starts). */
     static final String CLEAVE_SOUND="xchara_r";
+    /**
+     * (2.124.0) The jab's two sounds, the user's own out of their video (tools/xchara/extract_jab.py): the press's
+     * ("띡") as it starts, and the thrust's, started JAB_SOUND_BEFORE ticks before the blow so that its onset (that far
+     * into its file) is on the blow.
+     */
+    static final String JAB_PRESS_SOUND="xchara_jab_press",JAB_SOUND="xchara_jab";static final int JAB_SOUND_BEFORE=1;
     /** A swing told of later than this many ticks after it began is not drawn (it is nearly over). */
     static final int LATE=12;
     /** Each swing's sound as it plays (to fade it out if the swing stops short). */
@@ -62,7 +70,7 @@ public final class KnifeClient {
     /** Every swing's sound; it starts this many ticks before the swing's blow lands; how far it carries (blocks). */
     static final String SOUND="xchara_slash";static final int SOUND_BEFORE=2;static final double CARRY=40;
     /** The tick into hit {@code combo} its sound starts on. */
-    static int soundAt(int combo){return XCharaCombo.skill(combo)?0:Math.max(0,XCharaCombo.blowAt(combo,0)-SOUND_BEFORE);}
+    static int soundAt(int combo){return combo==XCharaCombo.JAB?XCharaCombo.blowAt(combo,0)-JAB_SOUND_BEFORE:XCharaCombo.skill(combo)?0:Math.max(0,XCharaCombo.blowAt(combo,0)-SOUND_BEFORE);}
     /** For the capture tools: the sounds this client started, newest last (each "name hit/blow, ticks into its swing"). */
     public static final List<String> HEARD=new ArrayList<>();
     private static void heard(String line){HEARD.add(line);while(HEARD.size()>64)HEARD.remove(0);}
@@ -74,12 +82,14 @@ public final class KnifeClient {
         ClientPlayNetworking.registerGlobalReceiver(XCharaAttack.EVENT,(mc,handler,b,response)->{
             UUID caster=b.readUuid();Identifier dim=b.readIdentifier();int type=b.readUnsignedByte();UUID id=b.readUuid();int combo=b.readUnsignedByte(),blow=b.readByte();
             long start=b.readLong(),serverNow=b.readLong();Vec3d at=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float yaw=b.readFloat();long ready=b.readLong();
-            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.STOPPED||combo>XCharaCombo.CLEAVE||!Float.isFinite(yaw))return;
+            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.STOPPED||combo>XCharaCombo.JAB||!Float.isFinite(yaw))return;
             var struck=new ArrayList<StandClient.Target>();
             for(int i=0;i<n;i++)struck.add(new StandClient.Target(b.readUuid(),b.readInt(),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble())));
             // (2.121.0) when the cleave is ready again (a 2.120 server sends none)
             long cleave=b.readableBytes()>=8?b.readLong():0;
-            mc.execute(()->CLEAVE_READY.put(caster,cleave));
+            // (2.124.0) and the jab (a 2.123 server sends none)
+            long jab=b.readableBytes()>=8?b.readLong():0;
+            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);});
             mc.execute(()->accept(mc,caster,dim,type,id,combo,blow,start,serverNow,at,yaw,ready,struck));
         });
         ClientTickEvents.START_CLIENT_TICK.register(KnifeClient::tick);
@@ -99,6 +109,8 @@ public final class KnifeClient {
             var cast=SWINGS.get(id);var told=STRUCK.get(id);
             if(cast==null||told==null||blow<0||blow>=told.length)return;
             told[blow]=struck.stream().mapToInt(StandClient.Target::entity).toArray();
+            // (2.124.0) the jab marks whom it struck: the X on their face while they are held
+            if(cast.combo()==XCharaCombo.JAB)CorruptionJab.mark(cast,struck);
             if(!struck.isEmpty()){
                 var all=new ArrayList<>(cast.targets());for(var t:struck)if(all.stream().noneMatch(o->o.entity()==t.entity()))all.add(t);
                 SWINGS.put(id,new StandClient.Cast(cast.id(),cast.caster(),cast.dimension(),cast.skill(),cast.combo(),cast.start(),cast.serverNow(),cast.received(),cast.origin(),cast.yaw(),List.copyOf(all)));
@@ -131,7 +143,7 @@ public final class KnifeClient {
     }
     public static void clear(){
         for(var v:VOICES.values())v.fade();
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();VOICES.clear();KnifeCombo.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();VOICES.clear();KnifeCombo.clear();CorruptionJab.clear();world=null;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -149,9 +161,15 @@ public final class KnifeClient {
             var m=MinecraftClient.getInstance();var user=m.world==null?null:m.world.getPlayerByUuid(caster);
             return loudness(m,user==null?origin:user.getPos());
         };
-        String sound=XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
+        boolean jab=cast.combo()==XCharaCombo.JAB;
+        String sound=jab?JAB_SOUND:XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
         var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(sound),loud);
         if(v.full()<=.01f)return;
+        // (2.124.0) the jab's press, as it starts (told of late, not at all: it is over)
+        if(jab&&cast.age(0)<3){
+            mc.getSoundManager().play(new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(JAB_PRESS_SOUND),loud));
+            heard(String.format(java.util.Locale.ROOT,"%s hit %d, told %.0f ticks in, played 0 later at %.2f",JAB_PRESS_SOUND,cast.combo(),cast.age(0),v.full()));
+        }
         // told of after it was to start: at once (a tick late is not heard as late; later, LATE has dropped the swing)
         int wait=soundAt(cast.combo())-(int)Math.floor(cast.age(0));
         if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
@@ -203,13 +221,18 @@ public final class KnifeClient {
     /** (2.121.0) The tick this player's cleave is ready again, as the server told it (0 if none). */
     public static long cleaveReady(UUID id){return CLEAVE_READY.getOrDefault(id,0L);}
     /** (2.121.0) This player's latest cleave this client still draws (in flight or stopped short), or null: GiantCleave's knife's size, press and panel. */
-    public static StandClient.Cast cleaveOf(UUID id){
+    public static StandClient.Cast cleaveOf(UUID id){return skillOf(id,XCharaCombo.CLEAVE);}
+    /** (2.124.0) This player's latest jab this client still draws (in flight or stopped short), or null: CorruptionJab's knife's look and its turn in the hand. */
+    public static StandClient.Cast jabOf(UUID id){return skillOf(id,XCharaCombo.JAB);}
+    private static StandClient.Cast skillOf(UUID id,int combo){
         StandClient.Cast best=null;
-        for(var c:SWINGS.values())if(c.caster().equals(id)&&XCharaCombo.skill(c.combo())&&c.age(0)<XCharaCombo.LENGTH[c.combo()]+2)best=c;
+        for(var c:SWINGS.values())if(c.caster().equals(id)&&c.combo()==combo&&c.age(0)<XCharaCombo.LENGTH[combo]+2)best=c;
         return best;
     }
+    /** (2.124.0) The tick this player's jab is ready again, as the server told it (0 if none). */
+    public static long jabReady(UUID id){return JAB_READY.getOrDefault(id,0L);}
     /** Forgets this player's rest (their character is not X Chara now: the server forgot it too, StandManager). */
-    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);}
+    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (XCharaCombo.HOLD): their keys do not walk them. The
      * server holds them as long (XCharaAttack.busy).

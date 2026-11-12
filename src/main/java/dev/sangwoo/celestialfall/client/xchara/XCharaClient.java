@@ -212,10 +212,11 @@ public final class XCharaClient {
             return true;
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R){
-            // (2.121.0) R with the hack on, the cleave (XCharaAttack.cleave: the way they look as it begins); with it off,
-            // nothing yet. R is the map's use key otherwise: X Chara's player's is their skill's, as Star Platinum's and
-            // Kageno's (the fruit is eaten with the attack key)
-            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+            // (2.121.0) R with the hack on, the cleave (XCharaAttack.cleave: the way they look as it begins); (2.124.0) with
+            // it off, the jab (XCharaAttack.jab): the server takes the one or the other by their hack. R is the map's use key
+            // otherwise: X Chara's player's is their skill's, as Star Platinum's and Kageno's (the fruit is eaten with the
+            // attack key)
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
                 BotandCamera.prepareInteraction();
                 var b=PacketByteBufs.create();b.writeByte(R);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
@@ -353,7 +354,7 @@ public final class XCharaClient {
     /** One of its sounds, its loudness kept as the listener moves (from a source), faded out over FADE ticks when stopped. */
     static final class Voice extends AbstractSoundInstance implements TickableSoundInstance {
         static final int FADE=3;
-        private final java.util.function.Supplier<Float> loud;private int fading=-1;private boolean done;private float scale=1;
+        private final java.util.function.Supplier<Float> loud;private int fading=-1;private boolean done,begun,dropped;private float scale=1;
         Voice(Identifier id,java.util.function.Supplier<Float> loud){this(id,loud,1);}
         /** (2.114.0) At a pitch of its own: a blow of the knife's basic attack, each a little higher than the one before. */
         Voice(Identifier id,java.util.function.Supplier<Float> loud,float pitch){
@@ -361,10 +362,13 @@ public final class XCharaClient {
             this.loud=loud;volume=loud.get();this.pitch=pitch;attenuationType=SoundInstance.AttenuationType.NONE;relative=true;x=y=z=0;
         }
         float full(){return volume;}
-        void fade(){if(fading<0)fading=0;}
+        /** Fades it out over FADE ticks; one that has not begun yet (played with a delay, 2.124.0: the jab's thrust) never begins. */
+        void fade(){if(!begun){dropped=true;done=true;}if(fading<0)fading=0;}
+        @Override public boolean canPlay(){return !dropped;}
         @Override public boolean shouldAlwaysPlay(){return true;}
         @Override public boolean isDone(){return done;}
         @Override public void tick(){
+            begun=true;
             if(fading>=0){fading++;scale=Math.max(0,1-fading/(float)FADE);if(fading>=FADE)done=true;}
             volume=Math.max(0,loud.get())*scale;
         }

@@ -721,6 +721,8 @@ public final class StandPunchFx {
         long now=mc.world.getTime();double clock=now+delta;
         for(var e:mc.world.getEntitiesByClass(LivingEntity.class,new net.minecraft.util.math.Box(camera,camera).expand(48),e->e.isAlive()&&!e.isSpectator())){
             long until;boolean guard;
+            // (2.124.0) one held by X Chara's jab has its X on their face for it: no stars over them
+            if(dev.sangwoo.celestialfall.client.xchara.CorruptionJab.marked(e.getId())){DAZED_SINCE.remove(e.getId());continue;}
             if(e instanceof net.minecraft.entity.player.PlayerEntity p){
                 if(p==mc.getCameraEntity()&&!mc.gameRenderer.getCamera().isThirdPerson())continue;
                 var c=dev.sangwoo.celestialfall.client.CombatClient.snapshot(p.getUuid());

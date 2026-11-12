@@ -1146,5 +1146,23 @@
         "preload": true
       }
     ]
+  },
+  "xchara_jab_press": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_jab_press",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_jab": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_jab",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

@@ -62,6 +62,8 @@ public final class XCharaAttack {
         boolean queued;long ready;
         /** (2.121.0) The tick the cleave (R with the hack on) is ready again (0 for at once). */
         long cleaveReady;
+        /** (2.124.0) The tick the jab (R with the hack off) is ready again (0 for at once). */
+        long jabReady;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -98,15 +100,17 @@ public final class XCharaAttack {
     public static long ready(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.ready;}
     /** (2.121.0) The tick this player's cleave is ready again (0 if it is). */
     public static long cleaveReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.cleaveReady;}
-    /** (2.121.0) Whether this player's cleave is in flight now (its motion not over): their hack's key is not heard through it. */
+    /** (2.121.0) Whether this player's cleave (or, 2.124.0, their jab) is in flight now (its motion not over): their hack's key is not heard through it. */
     public static boolean cleaving(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());
         return s!=null&&s.world==p.getWorld()&&skill(s.combo)&&p.getWorld().getTime()<s.start+LENGTH[s.combo];
     }
     /** This player is X Chara's no more: the attack's rest is gone, so it is ready if they are again (StandManager.forgetOthers). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;}}
     /** The attack's rest is gone (a player the cooldowns are off for, /botand nocooldown). */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;}}
+    /** (2.124.0) The tick this player's jab is ready again (0 if it is). */
+    public static long jabReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.jabReady;}
     private static State state(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());
         if(s==null||s.world!=p.getServerWorld()){s=new State(p);STATES.put(p.getUuid(),s);}
@@ -142,6 +146,24 @@ public final class XCharaAttack {
         if(now<s.cleaveReady&&!free)return false;
         s.combo=CLEAVE;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
         s.cleaveReady=free?0:XCharaCombo.cleaveReady(now);
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s,HIT,-1,null);
+        return true;
+    }
+    /**
+     * R with the hack off, the jab (2.124.0, XCharaCombo.JAB). Returns whether it began: with the hack off, nothing
+     * holding them (a hit of the knife's own holds too), and its cooldown over. As the cleave, it ends the combo and
+     * adds no rest of its own.
+     */
+    public static boolean jab(ServerPlayerEntity p){
+        if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(valid(s.combo)&&now<(last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:s.start+HOLD[s.combo]))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(now<s.jabReady&&!free)return false;
+        s.combo=JAB;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
+        s.jabReady=free?0:XCharaCombo.jabReady(now);
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
         send(p,s,HIT,-1,null);
         return true;
@@ -185,7 +207,7 @@ public final class XCharaAttack {
             if(p==null||p.getServerWorld()!=s.world){STATES.remove(e.getKey());continue;}
             long now=p.getWorld().getTime();
             // (the cleave is the hack's: the hack gone before its blow, it stops short)
-            if(held(p)||skill(s.combo)&&s.blows==0&&!XCharaHack.on(p)){stop(p,s,now);continue;}
+            if(held(p)||s.combo==CLEAVE&&s.blows==0&&!XCharaHack.on(p)){stop(p,s,now);continue;}
             settle(p,s,now);
             if(s.queued&&now>=may(s)){if(able(p))begin(p,s,now);else s.queued=false;}
             if(!valid(s.combo))continue;
@@ -199,7 +221,10 @@ public final class XCharaAttack {
             // the cleave cut short: before its blow its cooldown runs from now (as every skill cut short); after it, it keeps
             // the one set as it began. No rest of the basic attack's.
             if(!moving)return;
-            if(s.blows==0)s.cleaveReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+CLEAVE_COOLDOWN;
+            if(s.blows==0){
+                long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+cooldown(s.combo);
+                if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
+            }
             s.queued=false;s.combo=0;s.blows=0;
             send(p,s,STOPPED,-1,null);
             return;
@@ -218,8 +243,12 @@ public final class XCharaAttack {
         var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i);
         Vec3d f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x),at=p.getPos();
         List<LivingEntity> struck=new ArrayList<>();
-        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(MAX_REACH+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
-            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+        var inWay=world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(MAX_REACH+3),e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()
+            &&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity));
+        // (2.124.0) the jab is a thrust at one: the nearest of them only
+        if(single(combo))inWay.sort(java.util.Comparator.comparingDouble(e->e.squaredDistanceTo(p)));
+        for(var e:inWay){
+            if(single(combo)&&!struck.isEmpty())break;
             Vec3d d=e.getPos().subtract(at);
             if(!lane(combo,i,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
@@ -229,7 +258,11 @@ public final class XCharaAttack {
             struck.add(e);
             // every blow staggers whom it strikes a moment (2.68.0's rule for basic attacks); one stopped in Star Platinum's
             // stopped time is staggered as time moves again
-            if(skill(combo)){
+            if(combo==JAB){
+                // (2.124.0) the jab: whom it strikes stands there and can do nothing for eight seconds
+                CombatManager.incapacitate(e,JAB_STUN,JAB_STUN,JAB_SLOW);
+            }
+            else if(skill(combo)){
                 // the cleave: whom it strikes cannot move or act for a second (their legs stopped wholly; one stopped in a
                 // time stop takes it as time moves again, CombatManager)
                 CombatManager.incapacitate(e,CLEAVE_STUN,CLEAVE_STUN,CLEAVE_SLOW);
@@ -268,6 +301,8 @@ public final class XCharaAttack {
             if(struck!=null)for(var e:struck){b.writeUuid(e.getUuid());b.writeInt(e.getId());b.writeDouble(e.getX());b.writeDouble(e.getY());b.writeDouble(e.getZ());}
             // (2.121.0) when the cleave is ready again (a 2.120 client stops reading before it)
             b.writeLong(s.cleaveReady);
+            // (2.124.0) and the jab
+            b.writeLong(s.jabReady);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

@@ -30,9 +30,9 @@ class XCharaComboTest {
             // the heavier the swing the longer it takes to land
             assertTrue(blowAt(first,0)<=blowAt(first+1,0)&&blowAt(first+1,0)<blowAt(first+2,0)&&blowAt(first+2,0)<blowAt(first+3,0));
         }
-        // (2.121.0: 9 is the cleave, a skill of the pipeline with no place in the combo)
-        assertFalse(valid(0));assertTrue(valid(9));assertFalse(valid(10));assertEquals(0,blows(0));assertEquals(0,blows(10));
-        assertFalse(plain(0));assertEquals(0,place(0));assertEquals(0,place(9));
+        // (2.121.0: 9 is the cleave, 2.124.0: 10 the jab: skills of the pipeline with no place in the combo)
+        assertFalse(valid(0));assertTrue(valid(9));assertTrue(valid(10));assertFalse(valid(11));assertEquals(0,blows(0));assertEquals(0,blows(11));
+        assertFalse(plain(0));assertEquals(0,place(0));assertEquals(0,place(9));assertEquals(0,place(10));
     }
     @Test void theCleaveIsASkillOfThePipelineNoHitOfTheCombo(){
         // (2.121.0, user request: "R키는 패널을 누르면 들고 있던 검이 엄청 거대해지고 그걸 양손으로 잡고 덤블링 한 번 돌고 크게
@@ -64,6 +64,31 @@ class XCharaComboTest {
         // its cooldown runs from its end; no combo is open after it and it is no break of one
         assertEquals(100+LENGTH[CLEAVE]+CLEAVE_COOLDOWN,cleaveReady(100));assertEquals(240,CLEAVE_COOLDOWN);
         assertEquals(-1,broken(CLEAVE,100,100000));
+    }
+    @Test void theJabIsTheOtherSkillOfThePipeline(){
+        // (2.124.0, the user's video and words; "45초", "가드 불가", "13 (영상대로)", "8초동안 아무것도 못하고")
+        assertEquals(10,JAB);assertTrue(skill(JAB));assertTrue(valid(JAB));assertFalse(valid(JAB+1));
+        assertEquals(0,place(JAB));assertFalse(last(JAB));assertFalse(plain(JAB));
+        // it ends the combo: the hit after it is the first
+        assertEquals(HACK_SLASH,next(JAB,false));assertEquals(SLASH,next(JAB,true));
+        assertEquals(1,blows(JAB));assertEquals(14,blowAt(JAB,0),"the video's 0.7 s");
+        assertEquals(13,damage(JAB,0),1e-6);assertEquals(13,total(JAB),1e-6);
+        assertEquals(160,JAB_STUN);assertEquals(1,JAB_SLOW,1e-9,"eight seconds, standing where they are");
+        assertEquals(900,JAB_COOLDOWN);assertEquals(100+LENGTH[JAB]+JAB_COOLDOWN,jabReady(100),"45 s from its end");
+        assertEquals(JAB_COOLDOWN,cooldown(JAB));assertEquals(CLEAVE_COOLDOWN,cooldown(CLEAVE));assertEquals(0,cooldown(SLASH));
+        assertTrue(unblockable(JAB));assertFalse(launches(JAB,0));
+        assertEquals(500,staggerUntil(JAB,0,486,500,2,6),"no stagger of its own: the incapacitation holds them");
+        assertTrue(single(JAB),"a thrust at one");assertFalse(single(CLEAVE));assertFalse(single(LUNGE));
+        // what the clients draw to, in order, all before the blow; it holds them through the blow and lets go before it is over
+        assertTrue(JAB_LIT<JAB_TWIRL&&JAB_TWIRL<JAB_TWIRLED&&JAB_TWIRLED<JAB_DRAWN&&JAB_DRAWN<blowAt(JAB,0));
+        assertTrue(blowAt(JAB,0)<HOLD[JAB]&&HOLD[JAB]<=LENGTH[JAB]);
+        assertTrue(holding(JAB,100,100)&&holding(JAB,100,100+HOLD[JAB]-1));assertFalse(holding(JAB,100,100+HOLD[JAB]));
+        // a narrow lane ahead, shorter than the lunge's, no higher than a swing's (the cleave's reaches higher)
+        assertTrue(lane(JAB,0,4.1,0,0,0));assertTrue(lane(JAB,0,1,.9,0,0));assertTrue(lane(JAB,0,2,0,2.7,0));
+        assertFalse(lane(JAB,0,4.4,0,0,0));assertFalse(lane(JAB,0,2,1.2,0,0));assertFalse(lane(JAB,0,-.5,0,0,0));assertFalse(lane(JAB,0,2,0,3.0,0));
+        assertTrue(lane(CLEAVE,0,2,0,3.4,0),"the cleave's own height");
+        assertTrue(reach(JAB,0)<reach(LUNGE,0)&&reach(JAB,0)+2.5<=MAX_REACH+1e-9);
+        assertEquals(-1,broken(JAB,100,100000));
     }
     @Test void theHackOnOrOffTheyAreTheSameSwingsByEveryRule(){
         for(int place=1;place<=4;place++){
