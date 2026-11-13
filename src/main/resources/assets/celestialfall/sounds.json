@@ -1165,6 +1165,15 @@
       }
     ]
   },
+  "xchara_pull": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_pull",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
   "xchara_clone": {
     "sounds": [
       {

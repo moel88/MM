@@ -138,6 +138,7 @@ public final class MpServer implements ModInitializer {
         if(XCHARAM1_ONLY&&!XCHARAE_ONLY)knife(server);
         if(XCHARAE_ONLY){xcharaE(server);xcharaR(server);xcharaClone(server);}
         if(XCHARAT_ONLY){xcharaE(server);xcharaWeaken(server);}
+        if(XCHARAY_ONLY)xcharaPull(server);
         if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -532,15 +533,17 @@ public final class MpServer implements ModInitializer {
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
-    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's basic attack's script (2.114.0, MP_ONLY=xcharam1): its cooldowns on and no healing, as for its G. */
-    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's Q's script (2.115.0, MP_ONLY=xcharaq; 2.117.0: or its plain swings', MP_ONLY=xcharaplain): as for the basic attack, and the caster's hack as it changes. */
-    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's E's script (2.119.0, MP_ONLY=xcharae): as for the hack's, and the caster's health and E. */
     static final boolean XCHARAE_ONLY="xcharae".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's T's script (2.126.0, MP_ONLY=xcharat): as for the hack's and the basic attack's, and the caster's health, its E and its weakening. */
     static final boolean XCHARAT_ONLY="xcharat".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's Y's script (2.127.0, MP_ONLY=xcharay): as for the hack's, and the caster's pull and where the watcher is. */
+    static final boolean XCHARAY_ONLY="xcharay".equals(System.getProperty("botand.mp.only"));
     private long[] weakenSeen;private long weakenLeft,weakenReady=Long.MIN_VALUE,weakenCasterLeft;
     /**
      * (2.126.0) X Chara's T with the hack on, the weakening: when its "!!!" begins and whom it marks, when it is over
@@ -566,6 +569,38 @@ public final class MpServer implements ModInitializer {
         weakenCasterLeft=mine;
         if(ready!=weakenReady){note(server,"caster's weakening ready again at "+ready+" (now "+now+")");weakenReady=ready;}
         weakenSeen=d;weakenLeft=left;
+    }
+    private long[] pullSeen;private long pullReady=Long.MIN_VALUE;private float pullHealth=-1;private net.minecraft.util.math.Vec3d pullWas;
+    /**
+     * (2.127.0) X Chara's Y with the hack on, the pull: when its "!!!" begins and whom it marks (how far off, their
+     * guard), when it is over and how (1 pulled, 2 blocked, 3 called off), where the watcher is then from the caster,
+     * which way it faces, whether anything holds or disables it, its health; when the watcher is moved more than a
+     * block in a tick; when it is ready again.
+     */
+    private void xcharaPull(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        long[] d=dev.sangwoo.celestialfall.xchara.XCharaPull.describe(caster);
+        long ready=dev.sangwoo.celestialfall.xchara.XCharaPull.ready(caster);
+        double far=Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ());
+        if(pullWas!=null&&pullWas.distanceTo(watcher.getPos())>1)
+            note(server,String.format(java.util.Locale.ROOT,"the watcher moved %.2f blocks in a tick at %d: now (%.2f, %.2f, %.2f), %.2f from the caster, yaw %.0f",pullWas.distanceTo(watcher.getPos()),now,watcher.getX(),watcher.getY(),watcher.getZ(),far,watcher.getYaw()));
+        pullWas=watcher.getPos();
+        if(d!=null&&(pullSeen==null||d[0]!=pullSeen[0]))
+            note(server,String.format(java.util.Locale.ROOT,"caster's pull began at %d, marking %s %.2f blocks off (watcher's guard %s, yaw %.0f, health %.1f); the caster held %s, the watcher marked %s",d[0],d[1]==watcher.getId()?"the watcher":"entity "+d[1],far,
+                dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),watcher.getYaw(),watcher.getHealth(),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster),dev.sangwoo.celestialfall.xchara.XCharaPull.marked(watcher)));
+        if(d==null&&pullSeen!=null){
+            double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(caster);
+            note(server,String.format(java.util.Locale.ROOT,"caster's pull over at %d (%d in), how %s: the watcher %.2f from the caster at (%.2f, %.2f, %.2f), yaw %.0f, health %.1f, held %s, incapacitated %s, action locked %s; ready again at %d (%.1f s); the caster held %s; caster at (%.2f, %.2f, %.2f) yaw %.0f",now,now-pullSeen[0],
+                l==null?"?":(int)l[0]+String.format(java.util.Locale.ROOT," (from (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f))",l[2],l[3],l[4],l[5],l[6],l[7]),far,watcher.getX(),watcher.getY(),watcher.getZ(),watcher.getYaw(),watcher.getHealth(),
+                dev.sangwoo.celestialfall.stand.KagenoManager.frozen(watcher),dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher),dev.sangwoo.celestialfall.combat.CombatManager.actionLocked(watcher),
+                ready,(ready-now)/20.0,dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster),caster.getX(),caster.getY(),caster.getZ(),caster.getYaw()));
+        }
+        if(Math.abs(watcher.getHealth()-pullHealth)>.01f){if(pullHealth>=0)note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d",pullHealth,watcher.getHealth(),now));pullHealth=watcher.getHealth();}
+        if(ready!=pullReady){note(server,"caster's pull ready again at "+ready+" (now "+now+")");pullReady=ready;}
+        pullSeen=d;
     }
     private String restoreSeen="";private float restoreHealth=-1;
     /** The caster's E as the server keeps it (when it began, whether its heal landed, when it is ready again) and their health, at each change. */

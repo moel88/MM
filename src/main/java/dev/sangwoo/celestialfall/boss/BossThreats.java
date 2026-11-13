@@ -94,6 +94,12 @@ public final class BossThreats {
             var by=(ServerPlayerEntity)weakening[0];long start=(Long)weakening[1],at=start+dev.sangwoo.celestialfall.xchara.WeakenRules.APPLY-1;
             out.add(new Threat(by,"xchara_weaken",start,at,at,Zone.ring(boss.getPos(),256,-512,512),true,false,true,8,false,false));
         }
+        // (2.127.0) and their pull's "!!!" on it: a guard up toward its user blocks it too
+        var pulling=dev.sangwoo.celestialfall.xchara.XCharaPull.marking(boss);
+        if(pulling!=null){
+            var by=(ServerPlayerEntity)pulling[0];long start=(Long)pulling[1],at=start+dev.sangwoo.celestialfall.xchara.PullRules.PULL-1;
+            out.add(new Threat(by,"xchara_pull",start,at,at,Zone.ring(boss.getPos(),256,-512,512),true,false,true,8,false,false));
+        }
         for(var c:AtomicManager.columns(world)){
             double dx=boss.getX()-c[0],dz=boss.getZ()-c[2];
             if(dx*dx+dz*dz<(c[4]+6)*(c[4]+6))out.add(new Threat(null,"atomic",now-BossRules.REACTION,now,now+40,Zone.ring(new Vec3d(c[0],c[1],c[2]),c[4]+1.5,-2,c[4]*2.5),false,false,false,40,false,true));

@@ -656,7 +656,26 @@ public final class MpClient implements ClientModInitializer {
         "960 WLOW","975 WLOW",
         "1120 DIST3","1130 HITME",
         "1160 NOCDOFF","1180 END"};
-    private static final String[] STEPS=ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * X Chara's Y with the hack on, the pull (2.127.0, MP_ONLY=xcharay): the caster takes X Chara, its cooldowns on.
+     * The watcher 8 blocks ahead; Y with the hack off: not heard. Q. Y on the watcher: the "!!!" at once, pulled 7
+     * ticks in to 1.5 blocks before the caster, no harm, nothing holding it after, facing as it faced. Y again at
+     * once: refused (20 s from the pull). The cooldowns off: Y on the watcher's guard (blocked, not moved); Y and the
+     * caster struck as the "!!!" shows ("HITME": called off, not moved); Y from 10 blocks, from 3 and from 1 (put at
+     * 1.5 each time). Both clients log the casts as they hear of them, where the one pulled is and is drawn there, and
+     * the two sounds.
+     */
+    private static final String[] XCHARAY_SCRIPT={
+        "5 XCHARA","8 NOCDOFF","40 DIST8","45 HEAL",
+        "60 Y","80 Q",
+        "110 Y","130 Y",
+        "200 NOCDON","205 DIST8","210 GUARD+","225 Y","255 GUARD-",
+        "270 DIST8","285 Y","286 HITME",
+        "320 DIST10","335 Y",
+        "370 DIST3","385 Y",
+        "420 DIST1","435 Y",
+        "470 NOCDOFF","490 END"};
+    private static final String[] STEPS=ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -786,6 +805,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("xcharaq")||ONLY.equals("xcharaplain")){knifeWatch();hackWatch();}
                 if(ONLY.equals("xcharae")){hackWatch();healWatch();xcharaWatch();knifeWatch();cloneWatch();}
                 if(ONLY.equals("xcharat")){hackWatch();healWatch();knifeWatch();weakenWatch();}
+                if(ONLY.equals("xcharay")){hackWatch();pullWatch();}
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -807,7 +827,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1559,6 +1579,32 @@ public final class MpClient implements ClientModInitializer {
         if(held!=weakenHeld){weakenHeld=held;note("the weakening holds me here: "+held);}
         long ready=dev.sangwoo.celestialfall.client.xchara.WeakenClient.ready(mc.player.getUuid());
         Object was=flags.get("weaken_ready");if(was==null||(Long)was!=ready){flags.put("weaken_ready",ready);if(ready>Long.MIN_VALUE)note("my weakening ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
+    }
+    private String pullState="";private final Map<UUID,String> pullSounds=new HashMap<>();private boolean pullHeld;
+    /**
+     * (2.127.0, MP_ONLY=xcharay) X Chara's pull as this client has it: the casts it heard of as they change (and then
+     * where the other player is here, how far from me, and how far from there they are drawn), its two sounds begun,
+     * whether it holds this player, and its cooldown here.
+     */
+    private void pullWatch(){
+        String desc=dev.sangwoo.celestialfall.client.xchara.PullClient.describe(0);
+        String key=desc.replaceAll("@[0-9.]+,(-?[0-9]+),-?[0-9.]+,","@,$1,");
+        if(!key.equals(pullState)){
+            pullState=key;
+            var b=new StringBuilder();
+            for(var p:mc.world.getPlayers()){if(p==mc.player)continue;var off=dev.sangwoo.celestialfall.client.xchara.PullClient.offset(p,0);
+                b.append(String.format(Locale.ROOT,"; %s at (%.2f, %.2f, %.2f) here, %.2f from me, drawn %.2f from there, yaw %.0f",p.getName().getString(),p.getX(),p.getY(),p.getZ(),Math.hypot(p.getX()-mc.player.getX(),p.getZ()-mc.player.getZ()),off==null?0:off.length(),p.getYaw()));}
+            note("pull here: ["+desc+"]; I am at "+String.format(Locale.ROOT,"(%.2f, %.2f, %.2f), yaw %.0f",mc.player.getX(),mc.player.getY(),mc.player.getZ(),mc.player.getYaw())+b);
+        }
+        for(var p:mc.world.getPlayers()){
+            String sounds=dev.sangwoo.celestialfall.client.xchara.PullClient.sounds(p.getUuid());if(sounds==null||sounds.equals(pullSounds.get(p.getUuid())))continue;
+            pullSounds.put(p.getUuid(),sounds);
+            note("  "+name(p.getUuid())+"'s pull's sounds here (warning,burst; 1 begun, 0 asked for): "+sounds);
+        }
+        boolean held=dev.sangwoo.celestialfall.client.xchara.PullClient.holds(mc.player);
+        if(held!=pullHeld){pullHeld=held;note("the pull holds me here: "+held);}
+        long ready=dev.sangwoo.celestialfall.client.xchara.PullClient.ready(mc.player.getUuid());
+        Object was=flags.get("pull_ready");if(was==null||(Long)was!=ready){flags.put("pull_ready",ready);if(ready>Long.MIN_VALUE)note("my pull ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
     }
     private String factor(){
         for(var p:mc.world.getPlayers())if(p!=mc.player)return String.format(Locale.ROOT,"%.4f",dev.sangwoo.celestialfall.client.xchara.WeakenClient.factor(mc.player,p));

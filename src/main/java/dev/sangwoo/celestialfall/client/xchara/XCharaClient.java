@@ -208,8 +208,16 @@ public final class XCharaClient {
             }
             return true;
         }
-        // (2.126.0) Y, the restore's from 2.121 to 2.125, is taken and does nothing yet
-        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Y)return true;
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Y){
+            // (2.127.0) Y with the hack on, the pull (XCharaPull): asked, as G, R and T, with the one the camera's middle
+            // looks at; with it off, Y is taken and does nothing yet (the restore was Y's from 2.121 to 2.125)
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                var target=aim(mc);
+                BotandCamera.prepareInteraction();
+                var b=PacketByteBufs.create();b.writeByte(Y);b.writeVarInt(target==null?-1:target.getId());ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+            }
+            return true;
+        }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_T){
             // (2.126.0) T with the hack on, the weakening (XCharaWeaken): asked, as G and R, with the one the camera's middle
             // looks at; with it off, T is taken and does nothing yet. T is the game's chat key: X Chara's player opens the
@@ -301,7 +309,7 @@ public final class XCharaClient {
         // (2.125.0) and by their double: its user until it has thrown, the one marked from the throw until the wall lets them go
         if(CloneClient.holds(e))return true;
         // (2.126.0) and by their weakening: its user through its "!!!"
-        if(WeakenClient.holds(e))return true;
+        if(WeakenClient.holds(e)||PullClient.holds(e))return true;
         for(var d:DANCES.values()){
             float t=d.age(0);if(t<0||t>=d.over())continue;
             if(e.getUuid().equals(d.user))return true;

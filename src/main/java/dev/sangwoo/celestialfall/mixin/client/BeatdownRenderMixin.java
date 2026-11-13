@@ -29,11 +29,15 @@ public abstract class BeatdownRenderMixin {
         var space=dev.sangwoo.celestialfall.client.xchara.XCharaClient.offset(e,delta);if(space!=null)ci.setReturnValue(ci.getReturnValue().add(space));
         // (2.125.0) X Chara's double: the one seized is lifted, flung and held in the wall
         var thrown=dev.sangwoo.celestialfall.client.xchara.CloneClient.offset(e,delta);if(thrown!=null)ci.setReturnValue(ci.getReturnValue().add(thrown));
+        // (2.127.0) X Chara's pull: the one pulled is drawn where the server put them at once
+        var pulled=dev.sangwoo.celestialfall.client.xchara.PullClient.offset(e,delta);if(pulled!=null)ci.setReturnValue(ci.getReturnValue().add(pulled));
     }
     /** No names over anyone's head while this client's camera is a beatdown's cutscene's (2.66.0: its close shots had the one struck's name fill the frame), as its HUD is hidden. */
     @Inject(method="render(Lnet/minecraft/entity/Entity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$beatdownNames(Entity e,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
         if(StandBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null)ci.cancel();
+        // (2.127.0) nor over a body drawn again as X Chara's pull's flat silhouette
+        else if(dev.sangwoo.celestialfall.client.xchara.PullClient.silhouetting())ci.cancel();
     }
     @Inject(method="shouldRender",at=@At("HEAD"),cancellable=true)
     private void botand$beatdownSeen(Entity e,Frustum frustum,double x,double y,double z,CallbackInfoReturnable<Boolean> ci){
@@ -52,6 +56,8 @@ public abstract class BeatdownRenderMixin {
         if(dev.sangwoo.celestialfall.client.xchara.CloneClient.doubling(e)){ci.setReturnValue(true);return;}
         var thrown=dev.sangwoo.celestialfall.client.xchara.CloneClient.offset(e,1);
         if(thrown!=null&&frustum.isVisible(e.getBoundingBox().offset(thrown).expand(1.5))){ci.setReturnValue(true);return;}
+        var pulled=dev.sangwoo.celestialfall.client.xchara.PullClient.offset(e,1);
+        if(pulled!=null&&frustum.isVisible(e.getBoundingBox().offset(pulled).expand(1))){ci.setReturnValue(true);return;}
         var offset=StandBeatdown.offset(e,1);
         if(offset!=null&&frustum.isVisible(e.getBoundingBox().offset(offset).expand(1)))ci.setReturnValue(true);
     }

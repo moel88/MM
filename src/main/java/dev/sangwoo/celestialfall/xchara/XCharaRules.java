@@ -33,6 +33,8 @@ public final class XCharaRules {
     public static final int H=5;
     /** (2.126.0) The press asks for T: with the hack on, the weakening (XCharaWeaken, WeakenRules: the one in the crosshair follows the byte, as G's and R's); with it off, nothing yet. */
     public static final int T=6;
+    /** (2.127.0) The press asks for Y: with the hack on, the pull (XCharaPull, PullRules: the one in the crosshair follows the byte, as G's, R's and T's); with it off, nothing yet. */
+    public static final int Y=7;
     /**
      * E with the hack on, the restore (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에
      * 연두 이펙트 둘러지고 65힐"): its user presses their panel and is healed {@link #HEAL}. The press lands HEAL_AT

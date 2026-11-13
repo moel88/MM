@@ -107,7 +107,10 @@ public final class HackMode {
         if(cleave!=null)return cleave;
         var clone=CloneClient.press(id,delta);
         // (2.126.0) or for their weakening
-        return clone!=null?clone:WeakenClient.press(id,delta);
+        if(clone!=null)return clone;
+        var weaken=WeakenClient.press(id,delta);
+        // (2.127.0) or for their pull
+        return weaken!=null?weaken:PullClient.press(id,delta);
     }
     /** This player's hack this frame, or null if nothing of it shows. */
     public static HackLook.Frame look(UUID id,float delta){

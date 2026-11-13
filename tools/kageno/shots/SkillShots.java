@@ -737,6 +737,10 @@ public final class SkillShots implements ClientModInitializer {
         {String weak=dev.sangwoo.celestialfall.client.xchara.WeakenClient.describe(mc.getTickDelta());
          String weakKey=weak.replaceAll(":[0-9.]+","").replaceAll("@[0-9.]+","");
          if(!weakKey.equals(weakLogged)){log.append("  weakening (entity:seconds left, cast@age,how) [").append(weak).append("] at ").append(age).append('\n');weakLogged=weakKey;}}
+        // 2.127.0: X Chara's pull (Y with the hack on): this client's casts; a line in the log as a cast's state changes
+        {String pull=dev.sangwoo.celestialfall.client.xchara.PullClient.describe(mc.getTickDelta());
+         String pullKey=pull.replaceAll("@[0-9.]+,(-?[0-9]+),-?[0-9.]+,","@,$1,");
+         if(!pullKey.equals(pullLogged)){log.append("  pull (cast@age,how,seconds since the pull,drawn where it is) [").append(pull).append("] at ").append(age).append('\n');pullLogged=pullKey;}}
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -838,6 +842,7 @@ public final class SkillShots implements ClientModInitializer {
     /** (2.125.0) the double's state as last logged. */
     private String doubledLogged="";
     private String weakLogged="";
+    private String pullLogged="";
     /** (2.124.0) whether the jab's X was on someone as last logged. */
     private boolean marksLogged;
     /** (2.75.0) last logged: the player resisting a time stop, stopped in one; the fake user the same. */
@@ -1287,6 +1292,17 @@ public final class SkillShots implements ClientModInitializer {
                         if(what.equals("KEY_Y")&&age==at){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cageAimNow(mc);
                             if(aim!=null)log.append(String.format(Locale.ROOT,"  Y aims at %s (%.2f, %.2f, %.2f) at %d%n",aim.target()<0?"no one":aim.target()==dummyId?"the dummy":"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z,age));
                             if(daimHeld||paimPoint!=null)log.append("  camera let go at ").append(age).append('\n');daimHeld=false;paimPoint=null;camKept=true;}
+                        // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
+                        // from the player now, its health and whether anything holds it
+                        if(what.equals("KEY_Y")&&(age==at+2||age==at+8||age==at+14))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(p);var d=p.getServerWorld().getEntityById(dummyId);
+                            if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;
+                            long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                            long off=d instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dm?Math.max(0,dm.disabledUntil()-now):-1;
+                            log.append(String.format(Locale.ROOT,"  Y (pull) at %d (+%d): %s; %s; dummy %s, health %.1f, disabled %d more ticks, ready in %d%n",age,age-at,
+                                java.util.Arrays.toString(dev.sangwoo.celestialfall.xchara.XCharaPull.describe(p)),
+                                l==null?"none yet":String.format(Locale.ROOT,"last: how %d, %d ticks ago, from (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f)",(int)l[0],now-(long)l[1],l[2],l[3],l[4],l[5],l[6],l[7]),
+                                d==null?"gone":String.format(Locale.ROOT,"at (%.2f, %.2f, %.2f), %.2f from the player, yaw %.0f",d.getX(),d.getY(),d.getZ(),Math.hypot(d.getX()-p.getX(),d.getZ()-p.getZ()),d.getYaw()),hp,off,
+                                Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaPull.ready(p)-now)));});
                         if(what.equals("KEY_Y")&&(age==at+3||age==at+12||age==at+34))server(p->{var y=dev.sangwoo.celestialfall.isosang.IsosangAttack.cageNow(p);var d=p.getServerWorld().getEntityById(dummyId);
                             var f=dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p);if(f==null)return;
                             long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
@@ -1579,7 +1595,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
                         +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour,xc_age,xc_space,xc_ended,xc_how,xc_camera,kc_hit,kc_age,kc_stopped,hk_on,hk_t,he_age,he_healed,he_stopped,player_health,cl_age,cl_seized,cl_struck,cl_ended,cl_how\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        hackLogged="";healLogged="";weakLogged="";marksLogged=false;stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
+                        hackLogged="";healLogged="";weakLogged="";pullLogged="";marksLogged=false;stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}
