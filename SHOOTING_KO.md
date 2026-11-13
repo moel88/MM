@@ -163,7 +163,7 @@
 - Q를 켠 Y(끌어오기, 2.127.0): `SUMMON;stand=x_chara;face=180;dummy=1;dfw=6;then=KEY_Q@4/KEY_Y@30`(더미를 정면 6블록에: 화면 가운데가 보는 대상을 고릅니다). '!!!'는 31틱부터, 끌어오기는 37~38틱입니다. 로그의 `pull (cast@age,how,seconds since the pull,drawn where it is)`가 접속자가 들은 것(how 1 끌어옴, 2 막힘, 3 끊김), `Y (pull) at …`이 서버가 한 것(어디서 어디로, 더미가 플레이어에게서 몇 블록인지(1.50), 체력, 쿨타임)입니다.
   - 옆에서 `orbit=6.5/2.1/0/292/3/0/1.2`(시전자·'!!!'·옮겨지는 더미가 다 보임), 깜빡임을 가까이 `orbit=3.3/1.5/0/300/1.2/0/1.1`, 게임 카메라와 쿨타임 목록은 `hud=1;cool=1;pitch=12;dist=5`. 가드에 막히는 것은 `dguard=1`.
   - 끌려온 더미는 그 자리에 남습니다. 더미의 종류가 바뀌면 새로 놓으므로 항목 사이에 `dguard=1` 항목을 번갈아 둡니다(묶음 맨 앞의 데우기 항목도 `dguard=1;len=40;save=0-1`).
-  - 깜빡임은 60분의 1초 단위라 30fps 영상에는 한 프레임 걸러 보입니다. 느리게 보는 장면은 `FILM_SPEED=0.25`로 따로 만듭니다(소리 없음).
+  - 깜빡임은 60분의 1초 단위라 30fps 영상에는 한 프레임 걸러 보입니다. 느리게 보는 장면은 `FILM_SPEED=0.5`로 따로 만들고(배율 8로 찍으면 반복 프레임 0) 소리 없는 소리 줄을 붙여 다른 장면과 잇습니다.
   - 소리: 같은 목록을 `SHOTS_RECORD=1` 320x180 배율 1로 한 번 더 돌리고 `MUX_Y_TICK=30 python3 -I tools/xchara/shots/mux_pull.py 소리폴더 영상폴더 항목 시작초 끝초 영상.mp4 결과.mp4`(알림음 `xchara_g_warn`으로 자리를 맞춥니다. 끌어오는 소리 `xchara_pull`은 녹음에 함께 들어 있습니다).
   - 멀티플레이 확인: `MP_ONLY=xcharay`(`MpClient.XCHARAY_SCRIPT`): Q가 꺼진 채 Y(받지 않음), Q, 8블록 앞 관찰자에게 Y(7틱에 1.50블록 앞으로, 피해·붙잡힘 없음, 20초), 곧바로 Y(거절), 쿨타임을 끄고 가드 올린 관찰자에게 Y(막힘), Y 직후 `HITME`(끊김), 10·3·1블록에서 Y(모두 1.50블록으로). 두 접속자의 `pull here:` 줄에 상대가 몇 블록 앞에 있고 그려진 자리가 얼마나 어긋났는지(0.00), 소리 둘이 시작했는지가 남습니다.
 - 촬영이 'Failed to setup Minecraft … DownloadException'으로 시작하지 못하면(2.127.0): Loom의 버전 목록 캐시가 하루를 넘겨 다시 받으려다 실패한 것입니다. `curl -o ~/.gradle/caches/fabric-loom/version_manifest.json https://piston-meta.mojang.com/mc/game/version_manifest_v2.json`으로 받아 두고 `~/.gradle/caches/fabric-loom/`의 `*.lock` 파일을 지운 뒤 다시 돌립니다.
