@@ -102,6 +102,15 @@ class OverwriteSlamTest {
         }
         assertTrue(most<=OverwriteSlam.CUBES);
     }
+    @Test void noSquareOfLightRisesInTheBodysWayUp(){
+        assertTrue(OverwriteSlam.inTheWay(0,0,0,3,.3));assertTrue(OverwriteSlam.inTheWay(.8,1.5,0,3,.3));assertTrue(OverwriteSlam.inTheWay(-1,3.2,0,3,.3));
+        assertFalse(OverwriteSlam.inTheWay(2.5,1.5,0,3,.3));assertFalse(OverwriteSlam.inTheWay(0,5.5,0,3,.3));assertFalse(OverwriteSlam.inTheWay(0,-2.5,0,3,.3));
+        // (with no way forward, round where they stood)
+        assertTrue(OverwriteSlam.inTheWay(1,1,0,0,.2));assertFalse(OverwriteSlam.inTheWay(2,2,0,0,.2));
+        // most of the squares are left
+        int left=0;for(int j=0;j<OverwriteSlam.CUBES;j++){var q=OverwriteSlam.cube(j,1234,OverwriteSlam.LEAP+1f);if(q!=null&&!OverwriteSlam.inTheWay(q[0],q[1],0,3,Math.max(q[3],q[5])))left++;}
+        assertTrue(left>=20,"squares left: "+left);
+    }
     @Test void theBodyIsHeldToThePlanFromTheLeapUntilALittleAfterTheLanding(){
         assertEquals(0,OverwriteSlam.held(0),0);assertEquals(0,OverwriteSlam.held(SlamRules.LEAP),0);
         for(float a=SlamRules.LEAP+.01f;a<=SlamRules.LAND+4;a+=.5f)assertEquals(1,OverwriteSlam.held(a),0,"held at "+a);

@@ -429,13 +429,23 @@ public final class OverwriteSlam {
         float show=Ease.smooth(age,0,.1f)*(1-Ease.smooth(age,life-.22f,life))*(1-Ease.smooth(sec,END-.3f,END-.04f));
         return new double[]{Math.cos(a)*r,Math.sin(a)*r,up,hx,hy,hz,Math.PI*2*h(j,seed,12)+.6*age*(h(j,seed,13)-.5),show};
     }
+    /** How far from the body's way up (from where it stood to as far forward as it goes) no square of light rises (blocks, and half the square). */
+    static final double WAY_CLEAR=1.5;
+    /** Whether a square at ({@code x}, {@code z}) from where they stood, {@code half} wide, is in the body's way up ({@code aheadX}, {@code aheadZ}: as far forward as it goes). */
+    static boolean inTheWay(double x,double z,double aheadX,double aheadZ,double half){
+        double l2=aheadX*aheadX+aheadZ*aheadZ,t=l2<1e-9?0:Math.max(0,Math.min(1,(x*aheadX+z*aheadZ)/l2));
+        return Math.hypot(x-aheadX*t,z-aheadZ*t)<WAY_CLEAR+half;
+    }
     private static void drawCubes(Fx c,EffectMesh m,boolean light,float stop){
         if(c.sec<LEAP-.1f||c.sec>=END)return;
         var d=disc(c);if(d==null)return;
         Vec3d from=c.cast.origin();int seed=seed(c.cast);
         float cutOff=Float.isNaN(stop)?1:1-Ease.smooth(c.sec,stop,stop+.15f);if(cutOff<=0)return;
+        var way=info(c);double ax0=way==null?0:way.aheadX,az0=way==null?0:way.aheadZ;
         for(int j=0;j<CUBES;j++){
             var q=cube(j,seed,c.sec);if(q==null)continue;
+            // (2.128.4) none where the body rises: they go up the way it goes forward, and a square before it hides it
+            if(inTheWay(q[0],q[1],ax0,az0,Math.max(q[3],q[5])))continue;
             double x=from.x+q[0],z=from.z+q[1],top=d.top(x,z);if(Double.isNaN(top))continue;
             Vec3d mid=new Vec3d(x,top+q[2],z);
             float near=GlitchFx.near(mid,c.camera),show=(float)q[7]*cutOff;if(near<=0||show<=.01f)continue;
