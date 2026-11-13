@@ -171,7 +171,7 @@ class OverwriteSlamTest {
         // before the landing no point of the knife is under where they stood while they stand there
         for(float t=0;t<OverwriteSlam.LEAP;t+=1/60f){var hb=OverwriteSlam.blade(Vec3d.ZERO,0,t);assertTrue(hb[0].add(hb[1].multiply(KnifeCombo.TIP)).y>.05,"the point in the ground at "+t);}
         // the ground under the clip's feet is far below in the air, and the floor again as they land
-        assertEquals(0,OverwriteSlam.GROUND.at(0),0);assertEquals(0,OverwriteSlam.GROUND.at(OverwriteSlam.LAND),1e-9);assertTrue(OverwriteSlam.GROUND.at(2.5f)<-10);
+        assertEquals(0,OverwriteSlam.GROUND.at(0),0);assertEquals(0,OverwriteSlam.GROUND.at(OverwriteSlam.LAND),1e-9);assertTrue(OverwriteSlam.GROUND.at(2.5f)<-3.5);
     }
     @Test void theLandingsBurstAndItsCraterAreThereAndGone(){
         int seed=77;

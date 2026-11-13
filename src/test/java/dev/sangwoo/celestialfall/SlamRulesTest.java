@@ -49,7 +49,7 @@ class SlamRulesTest {
         }
         // half way up in the first quarter of the climb: off the ground at speed
         assertTrue(SlamRules.risen(SlamRules.LEAP+(SlamRules.RISEN-SlamRules.LEAP)*.25)>=.45);
-        assertEquals(12,SlamRules.RISE,0,"some twelve blocks, the video's roofs");
+        assertEquals(4,SlamRules.RISE,0,"the user's four blocks");
     }
     @Test void theBodysWayHasNoStepInIt(){
         double[] from={10,64,-5},land={16,66,3};double[] was=SlamRules.planned(0,from,SlamRules.RISE,land);

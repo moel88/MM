@@ -28,8 +28,8 @@ public final class SlamRules {
     private SlamRules(){}
     /** When the knife lights, when the circle comes, when they are down in their crouch, when they leave the ground, when they are as high as they go, when the dive begins (where it lands is settled), when it lands, when they are free, and when it is over (the circle gone). */
     public static final int LIT=1,CIRCLE=7,CROUCH=9,LEAP=22,RISEN=60,DIVE=62,LAND=68,FREE=80,END=91;
-    /** How high they rise over where they stood (blocks; less under a roof). */
-    public static final double RISE=12;
+    /** How high they rise over where they stood (blocks; less under a roof). The user's, 2.128.2: "너무 높게 뛰어오른다 4칸 정도만 오르게" (it was 12, what I took the video's height for). */
+    public static final double RISE=4;
     /** The circle: how far from where they stood the slam can come down (blocks, level). */
     public static final double RADIUS=10;
     /** Whom the landing strikes: within this far of it, level (blocks; and half their width), from this far under it to this far over it. */
