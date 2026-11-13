@@ -21,7 +21,7 @@ public final class XCharaRules {
     private XCharaRules(){}
     /** Its casts' place among the effects' skills (KagenoSkills: Kageno's 0 to 9, Lee So-sang's 15). */
     public static final int SKILL=14;
-    /** The press asks for G (xchara_skill_v1's first byte). */
+    /** The press asks for G (xchara_skill_v1's first byte): with the hack on the sword dance; (2.128.0) with it off the slam (XCharaAttack.slam, SlamRules). */
     public static final int G=1;
     /** (2.115.0) The press asks for Q, the hack on or off (xchara_skill_v1's only byte then; XCharaHack). */
     public static final int Q=2;
@@ -35,6 +35,8 @@ public final class XCharaRules {
     public static final int T=6;
     /** (2.127.0) The press asks for Y: with the hack on, the pull (XCharaPull, PullRules: the one in the crosshair follows the byte, as G's, R's and T's); with it off, nothing yet. */
     public static final int Y=7;
+    /** (2.128.0) No press: up in the air of their slam (G with the hack off, SlamRules), where the middle of their screen points, three doubles after the byte (XCharaAttack.aim). */
+    public static final int AIM=8;
     /**
      * E with the hack on, the restore (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에
      * 연두 이펙트 둘러지고 65힐"): its user presses their panel and is healed {@link #HEAL}. The press lands HEAL_AT

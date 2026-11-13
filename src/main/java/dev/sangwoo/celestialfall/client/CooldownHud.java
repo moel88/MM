@@ -77,9 +77,11 @@ public final class CooldownHud {
     static final int XCHARA_WEAKEN=33;
     /** (2.127.0) X Chara's Y with the hack on, the pull: twenty seconds from the pull (or from when it was blocked, or called off). */
     static final int XCHARA_PULL=34;
+    /** (2.128.0) X Chara's G with the hack off, the slam (SlamRules): 60 s from its end, or from when it was stopped short. The name is the video's, "Overwrite Slam". */
+    static final int XCHARA_SLAM=35;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaESeen,xcharaRSeen,xcharaJabSeen,xcharaSeen,xcharaCloneSeen,xcharaWeakenSeen,xcharaPullSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaESeen,xcharaRSeen,xcharaJabSeen,xcharaSlamSeen,xcharaSeen,xcharaCloneSeen,xcharaWeakenSeen,xcharaPullSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
@@ -93,7 +95,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaESeen=xcharaRSeen=xcharaCloneSeen=xcharaWeakenSeen=xcharaPullSeen=xcharaJabSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaESeen=xcharaRSeen=xcharaCloneSeen=xcharaWeakenSeen=xcharaPullSeen=xcharaJabSeen=xcharaSlamSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -226,6 +228,8 @@ public final class CooldownHud {
         long weaken=shows(XCHARA_WEAKEN,stand)?dev.sangwoo.celestialfall.client.xchara.WeakenClient.ready(p.getUuid()):0;
         if(weaken!=xcharaWeakenSeen){show(XCHARA_WEAKEN,"약화",weaken-time,dev.sangwoo.celestialfall.xchara.WeakenRules.COOLDOWN,now);xcharaWeakenSeen=weaken;}
         // (2.127.0) their Y with the hack on, the pull
+        long slam=shows(XCHARA_SLAM,stand)?dev.sangwoo.celestialfall.client.xchara.KnifeClient.slamReady(p.getUuid()):0;
+        if(slam!=xcharaSlamSeen){show(XCHARA_SLAM,"덮어쓰기 강타",slam-time,dev.sangwoo.celestialfall.xchara.SlamRules.COOLDOWN,now);xcharaSlamSeen=slam;}
         long pull=shows(XCHARA_PULL,stand)?dev.sangwoo.celestialfall.client.xchara.PullClient.ready(p.getUuid()):0;
         if(pull!=xcharaPullSeen){show(XCHARA_PULL,"끌어오기",pull-time,dev.sangwoo.celestialfall.xchara.PullRules.COOLDOWN,now);xcharaPullSeen=pull;}
         // (2.114.0) their knife: only its rest after a combo, as the others' (the server's ready tick, told with each hit's news)
@@ -245,7 +249,7 @@ public final class CooldownHud {
         // (2.77.0) Lee So-sang's to theirs
         if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R||slot==ISOSANG_H||slot==ISOSANG_G||slot==ISOSANG_Z||slot==ISOSANG_VOLLEY||slot==ISOSANG_T||slot==ISOSANG_Y)return "isosang".equals(stand);
         // (2.112.0) X Chara's to theirs
-        if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_R||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL)return "x_chara".equals(stand);
+        if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_R||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM)return "x_chara".equals(stand);
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**

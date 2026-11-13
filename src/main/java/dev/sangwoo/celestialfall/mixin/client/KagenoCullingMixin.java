@@ -18,5 +18,7 @@ public abstract class KagenoCullingMixin {
         else if(dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleOf(e.getUuid())!=null)ci.setReturnValue(true);
         // (2.121.0) X Chara's cleave: the body is drawn high over where its user stands through its leap
         else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.cleaveOf(e.getUuid())!=null)ci.setReturnValue(true);
+        // (2.128.0) X Chara's slam: the body is drawn up in the air over where its user stands, and down its dive
+        else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.slamOf(e.getUuid())!=null)ci.setReturnValue(true);
     }
 }

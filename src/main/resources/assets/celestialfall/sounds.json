@@ -1174,6 +1174,33 @@
       }
     ]
   },
+  "xchara_slam_lit": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_slam_lit",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_slam_leap": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_slam_leap",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
+  "xchara_slam_land": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_slam_land",
+        "stream": false,
+        "preload": true
+      }
+    ]
+  },
   "xchara_clone": {
     "sounds": [
       {

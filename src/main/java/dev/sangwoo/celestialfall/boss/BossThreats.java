@@ -280,6 +280,14 @@ public final class BossThreats {
         if(h==null||!dev.sangwoo.celestialfall.xchara.XCharaCombo.valid(h.combo())||h.blows()>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.blowAt(c,i);
         if(now>hit)return;
+        // (2.128.0) the slam: round where it comes down, once its dive has begun (no one knows before)
+        if(c==dev.sangwoo.celestialfall.xchara.XCharaCombo.SLAM){
+            Vec3d land=dev.sangwoo.celestialfall.xchara.XCharaAttack.landing(p);if(land==null)return;
+            out.add(new Threat(p,"xchara"+c,h.start()+dev.sangwoo.celestialfall.xchara.SlamRules.DIVE,hit,hit,
+                Zone.ring(land,dev.sangwoo.celestialfall.xchara.SlamRules.BLAST,dev.sangwoo.celestialfall.xchara.SlamRules.BLAST_LOW,dev.sangwoo.celestialfall.xchara.SlamRules.BLAST_HIGH),
+                false,false,false,dev.sangwoo.celestialfall.xchara.XCharaCombo.total(c),false,false));
+            return;
+        }
         Zone zone=Zone.lane(p.getPos(),h.yaw(),dev.sangwoo.celestialfall.xchara.XCharaCombo.near(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.reach(c,i),
             dev.sangwoo.celestialfall.xchara.XCharaCombo.halfWidth(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.LOW,dev.sangwoo.celestialfall.xchara.XCharaCombo.HIGH);
         out.add(new Threat(p,"xchara"+c,h.start(),hit,h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.lastBlow(c),zone,

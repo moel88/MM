@@ -78,16 +78,21 @@ public final class XCharaCombo {
     private static final double[] JAB_REACH={.2,4.2,1.0};
     /** When the jab's knife lights up, when its turn in the hand begins and is over, and when it is drawn back for the thrust (ticks into it): what the clients draw to. */
     public static final int JAB_LIT=1,JAB_TWIRL=3,JAB_TWIRLED=9,JAB_DRAWN=12;
+    /**
+     * G with the hack off, the slam (2.128.0; SlamRules for all of it): the third skill of the knife's pipeline. Its one
+     * blow is its landing, where it came down (not a lane ahead of where they stood: SlamRules.struck).
+     */
+    public static final int SLAM=11;
     /** The tick into hit {@code n} its blow lands on (the same for either kind). */
-    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24},{14}};
+    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24},{14},{SlamRules.LAND}};
     /** Each blow's damage: 6, 6, 6, 10; 28 for the combo. */
-    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18},{13}};
+    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18},{13},{SlamRules.DAMAGE}};
     /** Ticks from a hit's start before the next may start. */
-    public static final int[] STEP={0,8,9,12,0,8,9,12,0,0,0};
+    public static final int[] STEP={0,8,9,12,0,8,9,12,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,38,19};
+    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,38,19,SlamRules.FREE};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,44,24};
+    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,44,24,SlamRules.END};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -108,16 +113,16 @@ public final class XCharaCombo {
     /** As far as any blow of the attack reaches (blocks): who could be struck at all is looked for within this. */
     public static final double MAX_REACH=9.6+2.5;
 
-    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four), the cleave (9) or the jab (10). */
-    public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=JAB;}
-    /** Whether {@code combo} is a skill of the pipeline, no hit of the combo: the cleave or the jab. */
-    public static boolean skill(int combo){return combo==CLEAVE||combo==JAB;}
+    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four), the cleave (9), the jab (10) or the slam (11). */
+    public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=SLAM;}
+    /** Whether {@code combo} is a skill of the pipeline, no hit of the combo: the cleave, the jab or the slam. */
+    public static boolean skill(int combo){return combo==CLEAVE||combo==JAB||combo==SLAM;}
     /** When the cleave is ready again: its cooldown after one begun at {@code start} is over. */
     public static long cleaveReady(long start){return start+LENGTH[CLEAVE]+CLEAVE_COOLDOWN;}
     /** (2.124.0) When the jab is ready again: its cooldown after one begun at {@code start} is over. */
     public static long jabReady(long start){return start+LENGTH[JAB]+JAB_COOLDOWN;}
     /** A skill's cooldown from its end (ticks). */
-    public static int cooldown(int combo){return combo==JAB?JAB_COOLDOWN:combo==CLEAVE?CLEAVE_COOLDOWN:0;}
+    public static int cooldown(int combo){return combo==SLAM?SlamRules.COOLDOWN:combo==JAB?JAB_COOLDOWN:combo==CLEAVE?CLEAVE_COOLDOWN:0;}
     /** (2.124.0) Whether {@code combo}'s blow strikes one only, the nearest in its way: the jab. */
     public static boolean single(int combo){return combo==JAB;}
     /** Whether hit {@code combo} is a plain swing (the hack off as it began). */
@@ -178,12 +183,15 @@ public final class XCharaCombo {
     public static double reach(int combo,int blow){return reaches(combo)[1];}
     /** How far to either side of the way hit {@code combo}'s blow {@code blow} reaches (blocks). */
     public static double halfWidth(int combo,int blow){return reaches(combo)[2];}
-    private static double[] reaches(int combo){return combo==CLEAVE?CLEAVE_REACH:combo==JAB?JAB_REACH:REACH[place(combo)];}
+    private static final double[] SLAM_REACH={-SlamRules.BLAST,SlamRules.BLAST,SlamRules.BLAST};
+    private static double[] reaches(int combo){return combo==SLAM?SLAM_REACH:combo==CLEAVE?CLEAVE_REACH:combo==JAB?JAB_REACH:REACH[place(combo)];}
     /**
      * Whether a point (ahead along the hit, to its right and up from its user's feet, blocks) is in the way of hit
      * {@code combo}'s blow {@code blow}, for a body {@code halfWidth} across: a lane ahead.
      */
     public static boolean lane(int combo,int blow,double forward,double side,double height,double halfWidth){
+        // (2.128.0) the slam: round where it came down (its user stands there as it lands)
+        if(combo==SLAM)return SlamRules.struck(forward,height,side,halfWidth);
         if(height<LOW||height>(combo==CLEAVE?CLEAVE_HIGH:HIGH))return false;
         return forward>=near(combo,blow)-halfWidth&&forward<=reach(combo,blow)+halfWidth&&Math.abs(side)<=halfWidth(combo,blow)+halfWidth;
     }

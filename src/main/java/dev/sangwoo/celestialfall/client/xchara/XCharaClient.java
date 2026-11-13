@@ -263,8 +263,10 @@ public final class XCharaClient {
         if(key!=org.lwjgl.glfw.GLFW.GLFW_KEY_G)return false;
         // (2.119.0, user request: "지금 G스킬은 Q 활성화 상태의 G스킬로 바꿔") the sword dance is the hack's G: asked only with
         // the hack on (with it off, G is taken and does nothing yet)
-        if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
-            var target=aim(mc);
+        // (2.128.0) with the hack off G is the slam (XCharaAttack.slam): asked with no one (where it comes down is told
+        // from up in the air, OverwriteSlam.tellAim)
+        if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+            var target=HackMode.on(mc.player)?aim(mc):null;
             BotandCamera.prepareInteraction();
             var b=PacketByteBufs.create();b.writeByte(G);b.writeVarInt(target==null?-1:target.getId());ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
         }

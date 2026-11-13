@@ -79,8 +79,17 @@ public final class XCharaUltimate {
 
     public static void initialize(){
         ServerPlayNetworking.registerGlobalReceiver(INPUT,(server,player,handler,buf,response)->{
-            if(buf.readableBytes()<1||buf.readableBytes()>8)return;
-            int skill=buf.readUnsignedByte();int target=buf.readableBytes()>0?buf.readVarInt():-1;
+            if(buf.readableBytes()<1||buf.readableBytes()>25)return;
+            int skill=buf.readUnsignedByte();
+            // (2.128.0) up in the air of their slam: where the middle of their screen points (XCharaAttack.aim; told every
+            // tick there, and counted with no press)
+            if(skill==AIM){
+                if(buf.readableBytes()!=24)return;
+                var at=new Vec3d(buf.readDouble(),buf.readDouble(),buf.readDouble());
+                server.execute(()->XCharaAttack.aim(player,at));return;
+            }
+            if(buf.readableBytes()>7)return;
+            int target=buf.readableBytes()>0?buf.readVarInt():-1;
             // (2.115.0) Q: the hack on or off (XCharaHack)
             if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
             // (2.119.0) E: the restore, with the hack on (XCharaHeal)
@@ -95,7 +104,8 @@ public final class XCharaUltimate {
             // (2.125.0, user request: "Q활성화 R스킬을 Q활성화 H스킬로 옮겨") H with the hack on: the cleave; with it off, nothing yet
             if(skill==H){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaAttack.cleave(player);});return;}
             if(skill!=G)return;
-            server.execute(()->{if(heard(player))cast(player,target);});
+            // G: with the hack on the sword dance; (2.128.0) with it off the slam (XCharaAttack.slam)
+            server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))cast(player,target);else XCharaAttack.slam(player);});
         });
         ServerTickEvents.END_SERVER_TICK.register(XCharaUltimate::tick);
         ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{
@@ -130,6 +140,8 @@ public final class XCharaUltimate {
     public static boolean shielded(LivingEntity e,DamageSource source){
         // (2.125.0) and one seized by their double, in the air until the wall (XCharaClone)
         if(XCharaClone.shielded(e,source))return true;
+        // (2.128.0) and one in the air of their slam (drawn up there, over where they really stand)
+        if(XCharaAttack.airborne(e)&&!source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY))return true;
         return held(e)&&BLOW.get()!=e&&!source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY);
     }
     /** When this player's G is ready again (the server's world time; none is long ago). */
@@ -195,7 +207,7 @@ public final class XCharaUltimate {
         Vec3d eye=p.getEyePos(),chest=e.getPos().add(0,e.getHeight()*.55,0);
         if(eye.squaredDistanceTo(chest)>(AIM_RANGE+1.5)*(AIM_RANGE+1.5))return false;
         if(p.getWorld().raycast(new RaycastContext(eye,chest,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)return false;
-        if(involved(e)||marked(e)||StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||StarPlatinumTimeStop.holds(e))return false;
+        if(involved(e)||marked(e)||XCharaAttack.airborne(e)||StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||StarPlatinumTimeStop.holds(e))return false;
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.finaling(e))return false;
         if(e instanceof PlayerEntity q&&(dev.sangwoo.celestialfall.AtomicManager.immobilized(q)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(q)))return false;
         return true;

@@ -158,6 +158,8 @@ public final class KagenoClips {
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.LUNGE)return dev.sangwoo.celestialfall.client.isosang.IsosangClient.lungeFacing(cast,delta);
         // (2.101.0) H again: from her formation's facing round to the way she looked as she pressed it
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.FINALE)return dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleFacing(cast,delta);
+        // (2.128.0) X Chara's slam: turned to the way it dives
+        if(cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL&&cast.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SLAM)return dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.facing(cast,delta);
         return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.skill()==E?KagenoAim.thrust(cast,delta):cast.yaw();
     }
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */
@@ -228,6 +230,8 @@ public final class KagenoClips {
         Vec3d off=f.multiply(fr.fw()).add(left.multiply(-fr.rt()));
         // (2.101.1) Lee So-sang's body drawn away from where she is (H again's ride, Z's and T's flights): its shadow with it
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL)off=off.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(cast.caster(),delta));
+        // (2.128.0) and X Chara's through their slam (drawn up in the air and down its dive by their renderer's offset, BeatdownRenderMixin: their shadow goes under them)
+        if(cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL&&cast.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SLAM)off=off.add(dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.shift(cast,delta));
         return off;
     }
     public static R6.Frame idle(){return R6.solve(IDLE);}

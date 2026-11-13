@@ -101,6 +101,12 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * more), in "stance=idle" or "stance=hero". Its clock is the shot's own (client ticks from its start); film it with
  * "orbit=" centred on it (FW = sfw) and "fov=" for that camera. "STANCE_HERO@n" and "STANCE_IDLE@n" change its stance.
  *
+ * <p>X Chara's slam (2.128.0, G with the hack off: "stand=x_chara" and no KEY_Q): "KEY_G@n" starts it; "slamaim=FW[_RT[_UP]]"
+ * aims it at that point from where the player stands (blocks ahead, to the right and up: OverwriteSlam.aimAt) instead of
+ * at what the middle of the screen points at (a filming camera's middle is not the player's); the log gets the server's
+ * slam ("slam +N: server ...": how high it rises, where it comes down, where the player really is, the dummy's health)
+ * and how far from there this client draws the body, at a few ticks of it.
+ *
  * <p>"SUMMON" (2.51.0) films Star Platinum as a stand: the player is seen and has it as their stand, the training dummy
  * away, and it starts in. Its clock is the shot's own; "KEY_Q@n" taps Q through the real keyboard path (out, and back),
  * "KEYDOWN_W@n"/"KEYUP_W@n" (also A, S, D) walk. Each tick goes to NAME/stand.csv: the shot clock, whether the server has it
@@ -311,6 +317,7 @@ public final class SkillShots implements ClientModInitializer {
 
     public static void afterFrame(){if(instance!=null)try{instance.frame();}catch(Throwable t){instance.fail(t);}}
     private void fail(Throwable t){t.printStackTrace();try{Files.createDirectories(OUT);Files.writeString(OUT.resolve("error.txt"),phase+" "+current+" "+t+"\n"+log);}catch(Exception ignored){}mc.scheduleStop();phase=99;}
+    private net.minecraft.util.math.Vec3d slamFrom;
     private void server(Consumer<ServerPlayerEntity> f){mc.getServer().submit(()->f.accept(mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid()))).join();}
     private void key(int key,boolean down){mc.keyboard.onKey(mc.getWindow().getHandle(),key,0,down?GLFW_PRESS:GLFW_RELEASE,0);}
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
@@ -1292,6 +1299,24 @@ public final class SkillShots implements ClientModInitializer {
                         if(what.equals("KEY_Y")&&age==at){var aim=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cageAimNow(mc);
                             if(aim!=null)log.append(String.format(Locale.ROOT,"  Y aims at %s (%.2f, %.2f, %.2f) at %d%n",aim.target()<0?"no one":aim.target()==dummyId?"the dummy":"entity "+aim.target(),aim.point().x,aim.point().y,aim.point().z,age));
                             if(daimHeld||paimPoint!=null)log.append("  camera let go at ").append(age).append('\n');daimHeld=false;paimPoint=null;camKept=true;}
+                        // (2.128.0) X Chara's slam (G with the hack off): by the server, the one in flight (how high it rises, where
+                        // it comes down), where the player is from where they began, the dummy's health and how long it is held; and
+                        // how far from where they are this client draws them
+                        if(what.equals("KEY_G")&&age==at){slamFrom=mc.player.getPos();
+                            if(opts.containsKey("slamaim")){String[] v=opts.get("slamaim").split("[_x]");var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var r=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                                dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.aimAt=mc.player.getPos().add(f.multiply(Double.parseDouble(v[0]))).add(r.multiply(v.length>1?Double.parseDouble(v[1]):0)).add(0,v.length>2?Double.parseDouble(v[2]):0,0);
+                                log.append("  slam aimed at ").append(dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.aimAt).append('\n');}
+                            else dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.aimAt=null;}
+                        if(what.equals("KEY_G")&&slamFrom!=null&&(age==at+2||age==at+12||age==at+30||age==at+50||age==at+64||age==at+67||age==at+69||age==at+72||age==at+78||age==at+86||age==at+96)){final var from=slamFrom;final int a0=at;
+                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeSlam(p);var dm=p.getServerWorld().getEntityById(dummyId);
+                                long now=p.getWorld().getTime();float hp=dm instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                                long off=dm instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t?Math.max(0,t.disabledUntil()-now):-1;
+                                log.append(String.format(Locale.ROOT,"  slam +%d: server %s, player (%.2f, %.2f, %.2f) from the start, airborne %s, ready in %d, dummy hp %.1f held %d%n",age-a0,
+                                    d==null?"none":String.format(Locale.ROOT,"age %d rise %.2f land %s blows %d",now-(Long)d[0],(Double)d[1],d[2]==null?"-":String.format(Locale.ROOT,"(%.2f, %.2f, %.2f)",((net.minecraft.util.math.Vec3d)d[2]).x-from.x,((net.minecraft.util.math.Vec3d)d[2]).y-from.y,((net.minecraft.util.math.Vec3d)d[2]).z-from.z),(Integer)d[3]),
+                                    p.getX()-from.x,p.getY()-from.y,p.getZ()-from.z,dev.sangwoo.celestialfall.xchara.XCharaAttack.airborne(p),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.slamReady(p)-now),hp,off));});
+                            var sh=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),0);
+                            log.append(String.format(Locale.ROOT,"  slam +%d: client draws the body %s from where it is, knife %s, sounds %s%n",age-a0,sh==null?"nowhere else":String.format(Locale.ROOT,"(%.2f, %.2f, %.2f)",sh.x,sh.y,sh.z),
+                                dev.sangwoo.celestialfall.client.xchara.HackMode.knifeLook(mc.player.getUuid(),0)==null?"black":"lit",String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("slam")).toList())));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it
                         if(what.equals("KEY_Y")&&(age==at+2||age==at+8||age==at+14))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(p);var d=p.getServerWorld().getEntityById(dummyId);

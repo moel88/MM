@@ -189,6 +189,10 @@ public final class BotandCamera {
     public static CinematicDirector.Pose pose(float delta) {
         if(!enabled()||dev.sangwoo.celestialfall.client.integration.CinematicsBridge.ownsCamera())return null;var mc=MinecraftClient.getInstance();
         Vec3d eye=mc.player.getLerpedPos(delta).add(0,mc.player.getStandingEyeHeight(),0);
+        // (2.128.0) X Chara's slam draws their body up in the air and down its dive while they stand where they began: their
+        // camera goes with the body they see (in the first person too: they look from up there)
+        var slammed=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),delta);
+        if(slammed!=null)eye=eye.add(slammed);
         if(STATE.firstPerson())return new CinematicDirector.Pose(eye,STATE.yaw,STATE.pitch,0);
         // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
         double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);

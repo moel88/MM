@@ -125,7 +125,10 @@ public final class HackMode {
      */
     public static HackLook.Frame knifeLook(UUID id,float delta){
         var jab=CorruptionJab.knife(id,delta);
-        return jab!=null?jab:look(id,delta);
+        if(jab!=null)return jab;
+        // (2.128.0) or their slam's, lit from its start until it is over
+        var slam=OverwriteSlam.knife(id,delta);
+        return slam!=null?slam:look(id,delta);
     }
     /** What is drawn in this player's other hand: the hack's panel while any of it shows (null: whatever the hand holds). */
     public static ItemStack panel(PlayerEntity p){

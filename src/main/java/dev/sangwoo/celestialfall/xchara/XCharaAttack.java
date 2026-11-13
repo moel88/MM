@@ -52,6 +52,8 @@ public final class XCharaAttack {
     public static final Identifier INPUT=CelestialFall.id("xchara_attack_v1"),EVENT=CelestialFall.id("xchara_attack_event_v1");
     /** A hit starts; one of its blows lands (whom it struck); the attack rests until it is ready again; the hit in flight stops short. */
     public static final int HIT=0,LANDED=1,RESTS=2,STOPPED=3;
+    /** (2.128.0) The slam's dive begins: where it comes down is settled (told with every event from then). */
+    public static final int AIMED=4;
     /** At most this many presses a second are heard. */
     static final int RATE=40;
     private static final class State {
@@ -64,6 +66,12 @@ public final class XCharaAttack {
         long cleaveReady;
         /** (2.124.0) The tick the jab (R with the hack off) is ready again (0 for at once). */
         long jabReady;
+        /**
+         * (2.128.0) The slam (G with the hack off): the tick it is ready again (0 for at once); and of the one in flight,
+         * where its user stood as it began, how high they rise over it (blocks), where it comes down (null until its dive
+         * begins), and the last their client told of where the middle of its screen points (and the tick it did).
+         */
+        long slamReady;Vec3d from;double rise;Vec3d land,aim;long aimAt;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -106,11 +114,22 @@ public final class XCharaAttack {
         return s!=null&&s.world==p.getWorld()&&skill(s.combo)&&p.getWorld().getTime()<s.start+LENGTH[s.combo];
     }
     /** This player is X Chara's no more: the attack's rest is gone, so it is ready if they are again (StandManager.forgetOthers). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;}}
     /** The attack's rest is gone (a player the cooldowns are off for, /botand nocooldown). */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;}}
     /** (2.124.0) The tick this player's jab is ready again (0 if it is). */
     public static long jabReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.jabReady;}
+    /** (2.128.0) The tick this player's slam is ready again (0 if it is). */
+    public static long slamReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.slamReady;}
+    /** (2.128.0) Whether this one is in the air of their slam now (drawn up there, standing where they began): nothing harms them, and no one's skill takes them. */
+    public static boolean airborne(LivingEntity e){
+        var s=e==null||e.getWorld().isClient?null:STATES.get(e.getUuid());
+        return s!=null&&s.combo==SLAM&&s.world==e.getWorld()&&SlamRules.airborne(e.getWorld().getTime()-s.start);
+    }
+    /** (2.128.0) Where this player's slam in flight comes down, once its dive has begun (null before, or with none). */
+    public static Vec3d landing(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||s.combo!=SLAM?null:s.land;}
+    /** (2.128.0) For the multiplayer check: this player's slam in flight as {start, rise, where it comes down or null, blows landed}, or null. */
+    public static Object[] describeSlam(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||s.combo!=SLAM?null:new Object[]{s.start,s.rise,s.land,s.blows};}
     private static State state(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());
         if(s==null||s.world!=p.getServerWorld()){s=new State(p);STATES.put(p.getUuid(),s);}
@@ -168,6 +187,58 @@ public final class XCharaAttack {
         send(p,s,HIT,-1,null);
         return true;
     }
+    /**
+     * G with the hack off, the slam (2.128.0, XCharaCombo.SLAM, SlamRules). Returns whether it began: with the hack off,
+     * standing on the ground, nothing holding them (a hit of the knife's own holds too), and its cooldown over. As the
+     * cleave and the jab, it ends the combo and adds no rest of its own. How high they rise is settled now: SlamRules.RISE,
+     * or as far as nothing is over their head.
+     */
+    public static boolean slam(ServerPlayerEntity p){
+        if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p)||!p.isOnGround())return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(valid(s.combo)&&now<(last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:s.start+HOLD[s.combo]))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(now<s.slamReady&&!free)return false;
+        s.combo=SLAM;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
+        s.from=p.getPos();s.rise=SlamGround.headroom(p.getWorld(),p);s.land=null;s.aim=null;s.aimAt=0;
+        s.slamReady=free?0:SlamRules.ready(now);
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s,HIT,-1,null);
+        return true;
+    }
+    /**
+     * (2.128.0) Their client's word of where the middle of its screen points (xchara_skill_v1's AIM), up in the air of
+     * their slam before its dive: kept, the last of them, for when the dive begins.
+     */
+    public static void aim(ServerPlayerEntity p,Vec3d at){
+        var s=STATES.get(p.getUuid());if(s==null||s.combo!=SLAM||s.land!=null||s.world!=p.getWorld())return;
+        long age=p.getWorld().getTime()-s.start;
+        if(age<SlamRules.AIM_FROM-4||age>SlamRules.DIVE||!Double.isFinite(at.x)||!Double.isFinite(at.y)||!Double.isFinite(at.z))return;
+        s.aim=at;s.aimAt=p.getWorld().getTime();
+    }
+    /**
+     * The slam's dive begins: where it comes down. The ground the middle of their screen points at (their client's
+     * word, if it told within the last ticks; else where their look from up there meets the world; the sky, as far out
+     * the way they look as the circle goes), brought within the circle, on the floor found there (the first one down
+     * from there they can stand on; none, where they stood).
+     */
+    private static void dive(ServerPlayerEntity p,State s,long now){
+        var world=p.getServerWorld();Vec3d from=s.from;
+        Vec3d want=s.aim!=null&&now-s.aimAt<=8?s.aim
+            :SlamGround.aimed(world,p,from,new Vec3d(from.x,from.y+s.rise+p.getStandingEyeHeight(),from.z),p.getRotationVec(1));
+        s.land=SlamGround.landing(world,p,from,s.rise,want);
+        send(p,s,AIMED,-1,null);
+    }
+    /** The slam lands: its user is where it came down, from now. */
+    private static void touchDown(ServerPlayerEntity p,State s){
+        Vec3d to=s.land==null?s.from:s.land;
+        if(p.hasVehicle())p.stopRiding();
+        // (they face the way they dived, as every client drew them turning to it)
+        Vec3d d=to.subtract(s.from);float yaw=d.horizontalLengthSquared()<.25?p.getYaw():(float)Math.toDegrees(Math.atan2(-d.x,d.z));
+        p.networkHandler.requestTeleport(to.x,to.y,to.z,yaw,p.getPitch());p.setHeadYaw(yaw);p.setBodyYaw(yaw);
+        p.setVelocity(Vec3d.ZERO);p.fallDistance=0;p.velocityModified=true;
+    }
     /** (2.125.0) Another skill of theirs began (the double, XCharaClone): the combo is over (the next hit is the first), no rest added. */
     public static void skillUsed(ServerPlayerEntity p){
         var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getServerWorld())return;
@@ -217,6 +288,8 @@ public final class XCharaAttack {
             settle(p,s,now);
             if(s.queued&&now>=may(s)){if(able(p))begin(p,s,now);else s.queued=false;}
             if(!valid(s.combo))continue;
+            // (2.128.0) the slam's dive begins: where it comes down is settled, and told
+            if(s.combo==SLAM&&s.land==null&&s.blows==0&&now>=s.start+SlamRules.DIVE)dive(p,s,now);
             while(s.blows<blows(s.combo)&&now>=s.start+blowAt(s.combo,s.blows))blow(p,s,now);
         }
     }
@@ -229,7 +302,7 @@ public final class XCharaAttack {
             if(!moving)return;
             if(s.blows==0){
                 long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+cooldown(s.combo);
-                if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
+                if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
             }
             s.queued=false;s.combo=0;s.blows=0;
             send(p,s,STOPPED,-1,null);
@@ -246,6 +319,8 @@ public final class XCharaAttack {
      */
     private static void blow(ServerPlayerEntity p,State s,long now){
         int combo=s.combo,i=s.blows++;
+        // (2.128.0) the slam's blow is its landing: its user is where it came down as it strikes round them
+        if(combo==SLAM){if(s.land==null)dive(p,s,now);touchDown(p,s);}
         var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i);
         Vec3d f=Vec3d.fromPolar(0,s.yaw),right=new Vec3d(-f.z,0,f.x),at=p.getPos();
         List<LivingEntity> struck=new ArrayList<>();
@@ -256,7 +331,8 @@ public final class XCharaAttack {
         for(var e:inWay){
             if(single(combo)&&!struck.isEmpty())break;
             Vec3d d=e.getPos().subtract(at);
-            if(!lane(combo,i,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||!p.canSee(e))continue;
+            // (the slam strikes round where it landed, whichever way they are: seen from there or not)
+            if(!lane(combo,i,d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5)||combo!=SLAM&&!p.canSee(e))continue;
             if(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))continue;
             if(unblockable(combo))CombatManager.interrupt(e);
             e.timeUntilRegen=0;
@@ -264,7 +340,11 @@ public final class XCharaAttack {
             struck.add(e);
             // every blow staggers whom it strikes a moment (2.68.0's rule for basic attacks); one stopped in Star Platinum's
             // stopped time is staggered as time moves again
-            if(combo==JAB){
+            if(combo==SLAM){
+                // (2.128.0) the slam: whom it strikes can do nothing for a moment (the video's 0.45 s)
+                CombatManager.incapacitate(e,SlamRules.STUN,SlamRules.STUN,SlamRules.SLOW);
+            }
+            else if(combo==JAB){
                 // (2.124.0) the jab: whom it strikes stands there and can do nothing for eight seconds
                 CombatManager.incapacitate(e,JAB_STUN,JAB_STUN,JAB_SLOW);
             }
@@ -309,6 +389,11 @@ public final class XCharaAttack {
             b.writeLong(s.cleaveReady);
             // (2.124.0) and the jab
             b.writeLong(s.jabReady);
+            // (2.128.0) and the slam; and of one in flight how high it rises and, once its dive began, where it comes down
+            b.writeLong(s.slamReady);
+            boolean slam=s.combo==SLAM;
+            b.writeFloat(slam?(float)s.rise:0);b.writeBoolean(slam&&s.land!=null);
+            if(slam&&s.land!=null){b.writeDouble(s.land.x);b.writeDouble(s.land.y);b.writeDouble(s.land.z);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }
