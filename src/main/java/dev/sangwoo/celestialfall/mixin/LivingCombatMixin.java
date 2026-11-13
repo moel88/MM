@@ -33,6 +33,9 @@ public abstract class LivingCombatMixin {
     }
     @ModifyVariable(method="damage",at=@At("HEAD"),argsOnly=true)
     private float botand$shadowMark(float amount){return dev.sangwoo.celestialfall.stand.KagenoManager.incomingDamage((LivingEntity)(Object)this,amount);}
+    /** (2.126.0) X Chara's weakening: what one weakened deals is less, what they take more (XCharaWeaken.scale). */
+    @ModifyVariable(method="damage",at=@At("HEAD"),argsOnly=true)
+    private float botand$weakened(float amount,DamageSource source){return dev.sangwoo.celestialfall.xchara.XCharaWeaken.scale((LivingEntity)(Object)this,source,amount);}
     @Inject(method="damage",at=@At("HEAD"),cancellable=true)
     private void botand$guard(DamageSource source,float amount,CallbackInfoReturnable<Boolean> cir) {
         if((Object)this instanceof ServerPlayerEntity p && dev.sangwoo.celestialfall.AtomicManager.invulnerable(p) && !source.isIn(net.minecraft.registry.tag.DamageTypeTags.BYPASSES_INVULNERABILITY)){cir.setReturnValue(false);return;}

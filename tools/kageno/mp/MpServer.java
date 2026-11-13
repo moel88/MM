@@ -137,6 +137,7 @@ public final class MpServer implements ModInitializer {
         if(XCHARA_ONLY&&!XCHARAM1_ONLY||XCHARAE_ONLY)xchara(server);
         if(XCHARAM1_ONLY&&!XCHARAE_ONLY)knife(server);
         if(XCHARAE_ONLY){xcharaE(server);xcharaR(server);xcharaClone(server);}
+        if(XCHARAT_ONLY){xcharaE(server);xcharaWeaken(server);}
         if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -531,13 +532,41 @@ public final class MpServer implements ModInitializer {
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
-    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's basic attack's script (2.114.0, MP_ONLY=xcharam1): its cooldowns on and no healing, as for its G. */
-    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's Q's script (2.115.0, MP_ONLY=xcharaq; 2.117.0: or its plain swings', MP_ONLY=xcharaplain): as for the basic attack, and the caster's hack as it changes. */
-    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's E's script (2.119.0, MP_ONLY=xcharae): as for the hack's, and the caster's health and E. */
     static final boolean XCHARAE_ONLY="xcharae".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's T's script (2.126.0, MP_ONLY=xcharat): as for the hack's and the basic attack's, and the caster's health, its E and its weakening. */
+    static final boolean XCHARAT_ONLY="xcharat".equals(System.getProperty("botand.mp.only"));
+    private long[] weakenSeen;private long weakenLeft,weakenReady=Long.MIN_VALUE,weakenCasterLeft;
+    /**
+     * (2.126.0) X Chara's T with the hack on, the weakening: when its "!!!" begins and whom it marks, when it is over
+     * (and whether the watcher is weakened then, for how long), when the watcher's weakening ends, when it is ready
+     * again; whether the caster is held through it.
+     */
+    private void xcharaWeaken(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        long[] d=dev.sangwoo.celestialfall.xchara.XCharaWeaken.describe(caster);
+        long left=dev.sangwoo.celestialfall.xchara.XCharaWeaken.left(watcher),ready=dev.sangwoo.celestialfall.xchara.XCharaWeaken.ready(caster);
+        if(d!=null&&(weakenSeen==null||d[0]!=weakenSeen[0]))
+            note(server,String.format(java.util.Locale.ROOT,"caster's weakening began at %d, marking %s %.2f blocks off (watcher's guard %s); the caster held %s, the watcher marked %s",d[0],d[1]==watcher.getId()?"the watcher":"entity "+d[1],caster.distanceTo(watcher),
+                dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster),dev.sangwoo.celestialfall.xchara.XCharaWeaken.marked(watcher)));
+        if(d==null&&weakenSeen!=null)
+            note(server,String.format(java.util.Locale.ROOT,"caster's weakening over at %d (%d in): the watcher weakened %s (%d ticks left); ready again at %d (%.1f s); the caster held %s",now,now-weakenSeen[0],left>0,left,ready,(ready-now)/20.0,dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster)));
+        if(left>weakenLeft)note(server,"the watcher weakened at "+now+": "+left+" ticks of it (its body "+watcher.getId()+", alive "+watcher.isAlive()+")");
+        if(left==0&&weakenLeft>0)note(server,"the watcher's weakening over at "+now+" (it had "+weakenLeft+" ticks left the tick before; alive "+watcher.isAlive()+")");
+        long mine=dev.sangwoo.celestialfall.xchara.XCharaWeaken.left(caster);
+        if(mine>weakenCasterLeft)note(server,"the CASTER weakened at "+now+": "+mine+" ticks");
+        weakenCasterLeft=mine;
+        if(ready!=weakenReady){note(server,"caster's weakening ready again at "+ready+" (now "+now+")");weakenReady=ready;}
+        weakenSeen=d;weakenLeft=left;
+    }
     private String restoreSeen="";private float restoreHealth=-1;
     /** The caster's E as the server keeps it (when it began, whether its heal landed, when it is ready again) and their health, at each change. */
     private void xcharaE(MinecraftServer server){

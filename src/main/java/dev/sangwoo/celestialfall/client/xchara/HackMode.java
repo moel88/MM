@@ -104,7 +104,10 @@ public final class HackMode {
         if(heal!=null)return heal;
         float[] cleave=GiantCleave.press(id,delta);
         // (2.125.0) their double's: pressed as it is called, lit again as it throws
-        return cleave!=null?cleave:CloneClient.press(id,delta);
+        if(cleave!=null)return cleave;
+        var clone=CloneClient.press(id,delta);
+        // (2.126.0) or for their weakening
+        return clone!=null?clone:WeakenClient.press(id,delta);
     }
     /** This player's hack this frame, or null if nothing of it shows. */
     public static HackLook.Frame look(UUID id,float delta){

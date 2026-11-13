@@ -31,7 +31,7 @@ class CloneRulesTest {
         assertEquals(1000+COOLDOWN,ready(1000),"its cooldown runs from its end");
         // a skill of its own beside the knife's and G's, and a key of its own byte
         assertNotEquals(SKILL,XCharaCombo.SKILL);assertNotEquals(SKILL,XCharaRules.SKILL);
-        assertNotEquals(XCharaRules.H,XCharaRules.R);assertNotEquals(XCharaRules.H,XCharaRules.G);assertNotEquals(XCharaRules.H,XCharaRules.Y);assertNotEquals(XCharaRules.H,XCharaRules.Q);
+        assertNotEquals(XCharaRules.H,XCharaRules.R);assertNotEquals(XCharaRules.H,XCharaRules.G);assertNotEquals(XCharaRules.H,XCharaRules.E);assertNotEquals(XCharaRules.H,XCharaRules.Q);
     }
     @Test void aGuardBlocksItUntilTheThrowAsGs(){
         assertTrue(warning(0));assertTrue(warning(THROW-1));assertFalse(warning(THROW),"seized at the throw: no guard after");

@@ -182,7 +182,7 @@ public final class XCharaClient {
 
     // ───────────────────────────── the key ─────────────────────────────
 
-    /** X Chara's player's keys on the map: Q the hack, R, Y and G its skills with it on (R the cleave, Y the restore, G the sword dance, asked with the one the camera's middle looks at, or none: the server then takes the one its look meets), I their inventory. */
+    /** X Chara's player's keys on the map: Q the hack, E, R, T, H and G its skills with it on (E the restore, R the double, T the weakening, H the cleave, G the sword dance: R, T and G asked with the one the camera's middle looks at, or none: the server then takes the one its look meets), I their inventory, Enter their chat. */
     public static boolean key(long window,int key,int action,int modifiers){
         var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
         // (2.115.0) Q let go after a press this took
@@ -200,15 +200,29 @@ public final class XCharaClient {
             return true;
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_E){
-            // E on the map is X Chara's player's skill key (their inventory on I, as the other characters'). (2.121.0, user
-            // request: "q활성화 e를 q활성화 y로 옮기고") the restore went to Y: E is taken and does nothing yet
+            // E on the map is X Chara's player's skill key (their inventory on I, as the other characters'). (2.126.0, user
+            // request: "q활성화y를 다시 q활성화 e로 옮기고") E with the hack on, the restore again (XCharaHeal; E's in 2.119 and
+            // 2.120, Y's from 2.121 to 2.125); with it off, nothing yet
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                var b=PacketByteBufs.create();b.writeByte(E);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+            }
             return true;
         }
-        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Y){
-            // (2.121.0) Y with the hack on, the restore (XCharaHeal; E's in 2.119 and 2.120); with it off, nothing yet
+        // (2.126.0) Y, the restore's from 2.121 to 2.125, is taken and does nothing yet
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Y)return true;
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_T){
+            // (2.126.0) T with the hack on, the weakening (XCharaWeaken): asked, as G and R, with the one the camera's middle
+            // looks at; with it off, T is taken and does nothing yet. T is the game's chat key: X Chara's player opens the
+            // chat with Enter (below), as Star Platinum's and Lee So-sang's
             if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
-                var b=PacketByteBufs.create();b.writeByte(Y);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+                var target=aim(mc);
+                BotandCamera.prepareInteraction();
+                var b=PacketByteBufs.create();b.writeByte(T);b.writeVarInt(target==null?-1:target.getId());ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
+            return true;
+        }
+        if((key==org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER||key==org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER)&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS){
+            mc.setScreen(new net.minecraft.client.gui.screen.ChatScreen(""));
             return true;
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_R){
@@ -286,6 +300,8 @@ public final class XCharaClient {
         if(e==null||!MapClient.enabled())return false;
         // (2.125.0) and by their double: its user until it has thrown, the one marked from the throw until the wall lets them go
         if(CloneClient.holds(e))return true;
+        // (2.126.0) and by their weakening: its user through its "!!!"
+        if(WeakenClient.holds(e))return true;
         for(var d:DANCES.values()){
             float t=d.age(0);if(t<0||t>=d.over())continue;
             if(e.getUuid().equals(d.user))return true;

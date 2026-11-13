@@ -160,8 +160,16 @@ public final class GachaFont {
         vertex(buf,m,x,y0,0,v0,a);vertex(buf,m,x,y1,0,v1,b);vertex(buf,m,x+w,y1,1,v1,b);vertex(buf,m,x+w,y0,1,v0,a);
         BufferRenderer.drawWithGlobalProgram(buf.end());end();
     }
+    private static boolean inWorld;
+    /**
+     * (2.126.0) Text drawn in the world (words over a head: WeakenClient) rather than on the screen: tested against the
+     * world's depth, so a wall or a body before it hides it, and writing none of its own. Set before the draw and
+     * cleared after it.
+     */
+    public static void inWorld(boolean on){inWorld=on;if(!on){RenderSystem.depthMask(true);RenderSystem.enableDepthTest();}}
     private static void begin(Line l,boolean additive){
-        RenderSystem.enableBlend();RenderSystem.disableCull();RenderSystem.disableDepthTest();
+        RenderSystem.enableBlend();RenderSystem.disableCull();
+        if(inWorld){RenderSystem.enableDepthTest();RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);RenderSystem.depthMask(false);}else RenderSystem.disableDepthTest();
         if(additive)RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA,GlStateManager.DstFactor.ONE);else RenderSystem.defaultBlendFunc();
         RenderSystem.setShader(()->GachaShaders.tex(additive));RenderSystem.setShaderTexture(0,l.id);RenderSystem.setShaderColor(1,1,1,1);
     }

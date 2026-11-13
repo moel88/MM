@@ -17,5 +17,5 @@ public final class XChara {
     /** The hack's panel (2.115.0): drawn in the other hand of X Chara's player while their hack is on (StandClient.panel); nobody has it in an inventory, and it does nothing of itself. */
     public static final net.minecraft.item.Item PANEL=new net.minecraft.item.Item(new net.minecraft.item.Item.Settings().maxCount(1).rarity(net.minecraft.util.Rarity.EPIC).fireproof());
     private XChara(){}
-    public static void initialize(){Registry.register(Registries.ITEM,CelestialFall.id("x_chara_knife"),KNIFE);Registry.register(Registries.ITEM,CelestialFall.id("x_chara_panel"),PANEL);XCharaUltimate.initialize();XCharaAttack.initialize();XCharaHack.initialize();XCharaHeal.initialize();XCharaClone.initialize();}
+    public static void initialize(){Registry.register(Registries.ITEM,CelestialFall.id("x_chara_knife"),KNIFE);Registry.register(Registries.ITEM,CelestialFall.id("x_chara_panel"),PANEL);XCharaUltimate.initialize();XCharaAttack.initialize();XCharaHack.initialize();XCharaHeal.initialize();XCharaClone.initialize();XCharaWeaken.initialize();}
 }

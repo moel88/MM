@@ -30,6 +30,9 @@ public final class HitFeedback {
     public static void hit(MinecraftClient mc,int entity,float amount,float yaw,boolean blood){
         if(mc.world==null)return;long now=mc.world.getTime();var e=mc.world.getEntityById(entity);if(e==null)return;
         var n=NUMBERS.computeIfAbsent(entity,k->new Number());if((now-n.last)/20f>COMBO)n.total=0;
+        // (2.126.0) what X Chara's weakening makes of it (XCharaWeaken: dealt by one weakened x0.75, taken by one x1.25), as
+        // this client knows who is weakened: the number its dealer sees is what went in
+        amount*=dev.sangwoo.celestialfall.client.xchara.WeakenClient.factor(mc.player,e);
         n.total+=amount;n.last=now;n.pop++;
         if(!blood)return;
         if(BLOOD.size()>64)BLOOD.remove(0);

@@ -84,7 +84,9 @@ public final class XCharaUltimate {
             // (2.115.0) Q: the hack on or off (XCharaHack)
             if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
             // (2.119.0) E: the restore, with the hack on (XCharaHeal)
-            if(skill==Y){server.execute(()->{if(heard(player))XCharaHeal.request(player);});return;}
+            if(skill==E){server.execute(()->{if(heard(player))XCharaHeal.request(player);});return;}
+            // (2.126.0) T with the hack on: the weakening, asked with the one in the crosshair (XCharaWeaken); with it off, nothing yet
+            if(skill==T){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaWeaken.cast(player,target);});return;}
             // R: with the hack on the double (2.125.0: asked with the one in the crosshair, as G; the cleave was R's from
             // 2.121.0 and went to H), with it off the jab (2.124.0)
             if(skill==R){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaClone.cast(player,target);else XCharaAttack.jab(player);});return;}
@@ -119,9 +121,9 @@ public final class XCharaUltimate {
         return d!=null&&d.space;
     }
     /** Whether a sword dance has this one now: its user from the press, the one marked from the strange space on (until then they are free, to guard). */
-    public static boolean involved(LivingEntity e){return casting(e)||held(e)||XCharaClone.involved(e);}
+    public static boolean involved(LivingEntity e){return casting(e)||held(e)||XCharaClone.involved(e)||XCharaWeaken.casting(e);}
     /** Whether this one is marked by a sword dance's "!!!" now (not yet in its strange space). */
-    public static boolean marked(LivingEntity e){var d=e==null||e.getWorld().isClient?null:BY_TARGET.get(e.getUuid());return d!=null&&!d.space||XCharaClone.marked(e);}
+    public static boolean marked(LivingEntity e){var d=e==null||e.getWorld().isClient?null:BY_TARGET.get(e.getUuid());return d!=null&&!d.space||XCharaClone.marked(e)||XCharaWeaken.marked(e);}
     /** Whether harm from {@code source} is kept from {@code e}: it is in a sword dance's strange space or after it, and this is not its own blow (what bypasses invulnerability, /kill or the void, still reaches them). */
     public static boolean shielded(LivingEntity e,DamageSource source){
         // (2.125.0) and one seized by their double, in the air until the wall (XCharaClone)
@@ -135,7 +137,7 @@ public final class XCharaUltimate {
     /** For the multiplayer check: {@code user}'s sword dance now, as {start, whether its strange space has come, what its blows dealt, the one marked's id}, or null. */
     public static Object[] describe(PlayerEntity user){var d=user==null?null:BY_USER.get(user.getUuid());return d==null?null:new Object[]{d.start,d.space,d.dealt,d.target.getId()};}
     /** Its cooldown is gone once X Chara is not theirs (as every other stand's short ones are, StandManager.forgetOthers). */
-    public static void forget(ServerPlayerEntity p){READY.remove(p.getUuid());XCharaClone.forget(p);}
+    public static void forget(ServerPlayerEntity p){READY.remove(p.getUuid());XCharaClone.forget(p);XCharaWeaken.forget(p);}
 
     /**
      * A blow landed on {@code target} (LivingEntity.damage let it through): a sword dance's user struck before the strange
@@ -143,7 +145,7 @@ public final class XCharaUltimate {
      * poison, nor their own (as a glowing cutscene skill's, CutsceneGlow.struck).
      */
     public static void struck(LivingEntity target,DamageSource source){
-        XCharaClone.struck(target,source);
+        XCharaClone.struck(target,source);XCharaWeaken.struck(target,source);
         var d=target==null?null:BY_USER.get(target.getUuid());
         if(d==null||d.space||d.user!=target)return;
         if(source.getAttacker()==null&&source.getSource()==null||source.getAttacker()==target)return;

@@ -151,7 +151,8 @@ public final class StarPlatinumBeatdown {
      */
     private static void blow(Beat b,long age,float share){
         var v=b.victim;boolean last=age==BEAT_FINAL;
-        float amount=Math.min(last?b.damage-b.dealt:b.damage*share,v.getHealth()-1);
+        // (2.126.0: one weakened by X Chara takes more of every blow; what the blow may deal is counted before that)
+        float amount=Math.min(last?b.damage-b.dealt:b.damage*share,(v.getHealth()-1)/Math.max(.01f,dev.sangwoo.celestialfall.xchara.XCharaWeaken.factor(b.user,v)));
         boolean rush=age>=BEAT_RUSH_FIRST&&age<=BEAT_RUSH_LAST;
         if(amount>0)deal(b,amount,rush||!last&&age!=BEAT_UPPERCUT);
         else if(v.isAlive()){

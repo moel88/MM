@@ -732,6 +732,11 @@ public final class SkillShots implements ClientModInitializer {
         String doubledKey=doubled==null?"":doubled.substring(doubled.indexOf(',')+1);
         standLog.append(',').append(doubled==null?",,,,":doubled);
         if(!doubledKey.equals(doubledLogged)){if(doubled!=null)log.append("  double (seized,in the wall,ended,how) ").append(doubledKey).append(" at ").append(age).append(String.format(Locale.ROOT," (its age %s)%n",doubled.substring(0,doubled.indexOf(','))));doubledLogged=doubledKey;}
+        // 2.126.0: X Chara's weakening (T with the hack on): whom this client holds weakened and its casts; a line in the
+        // log as who is weakened or a cast's state changes (the seconds left are left out of what is compared)
+        {String weak=dev.sangwoo.celestialfall.client.xchara.WeakenClient.describe(mc.getTickDelta());
+         String weakKey=weak.replaceAll(":[0-9.]+","").replaceAll("@[0-9.]+","");
+         if(!weakKey.equals(weakLogged)){log.append("  weakening (entity:seconds left, cast@age,how) [").append(weak).append("] at ").append(age).append('\n');weakLogged=weakKey;}}
         standLog.append('\n');
         if(stop!=null){
             String[] v=stop.split(",");String phase=v[3].equals("1")?"cut short":v[1].equals("1")?"stopped":!v[2].equals("-1.000")?"moving":"called";
@@ -832,6 +837,7 @@ public final class SkillShots implements ClientModInitializer {
     private String healLogged="";
     /** (2.125.0) the double's state as last logged. */
     private String doubledLogged="";
+    private String weakLogged="";
     /** (2.124.0) whether the jab's X was on someone as last logged. */
     private boolean marksLogged;
     /** (2.75.0) last logged: the player resisting a time stop, stopped in one; the fake user the same. */
@@ -1573,7 +1579,7 @@ public final class SkillShots implements ClientModInitializer {
                         +"ts_age,ts_stopped,ts_ended,ts_cut,ts_still,ts_radius,ts_outer,ts_flash,ts_negative,ts_shell,ts_crack,ts_impact,world_gather,world,player_health,dummy_stopped,player_held,player_locked,player_staggered,dummy_staggered,dummy_strike,arrow_age,arrow_fate,arrow_glow,arrow_fallen,arrow_sink,arrow_cut,server_stand,arrows,awake,server_awake,call,h_ago,"
                         +"player_resisting,player_stopped,fake_resisting,fake_stopped,fake_x,fake_z,ts_kept,ts_auras,player_colour,fake_colour,xc_age,xc_space,xc_ended,xc_how,xc_camera,kc_hit,kc_age,kc_stopped,hk_on,hk_t,he_age,he_healed,he_stopped,player_health,cl_age,cl_seized,cl_struck,cl_ended,cl_how\n"+standLog);
                         standLog.setLength(0);punchLogged="";rushOn=false;rushBlows=0;fingerLongest=0;fingerLogged=dummyDisabled=false;inhaleOn=false;inhaleCaught="0";inhaleGuards=0;beatOn=beatEnded=false;dummyHealth=-1;
-                        hackLogged="";healLogged="";marksLogged=false;stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
+                        hackLogged="";healLogged="";weakLogged="";marksLogged=false;stopLogged="";stillLogged=false;keptLogged=0;playerHealth=-1;playerStaggered=dummyStaggeredLogged=false;arrowLogged="";playerDeadLogged=false;callLogged="";lastH=-1;zaimHeld=false;zaimSword=-1;daimHeld=false;paimPoint=null;camKept=false;camFree=false;sweepAt=-1;danceLogged="";knifeLogged="";
                         Files.writeString(OUT.resolve(folder).resolve("camera.csv"),"t,x,y,z,yaw,pitch,distance,clear,fov,proj_x,proj_y,view_11,view_12,view_21,viewport_w,viewport_h,main_bound\n"+cameraLog);cameraLog.setLength(0);}
                     if(AUDIO){Files.writeString(OUT.resolve(folder).resolve("sounds.csv"),"clock,nanos,sound\n"+soundRows);Files.writeString(OUT.resolve(folder).resolve("ticks.csv"),"clock,nanos\nmarker,"+markerNanos+"\n"+tickRows);}
                     if(swingRows.length()>0){Files.writeString(OUT.resolve(folder).resolve("isosang.csv"),"combo,start\n"+swingRows);swingRows.setLength(0);}
