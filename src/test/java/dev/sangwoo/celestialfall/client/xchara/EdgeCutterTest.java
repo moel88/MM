@@ -100,8 +100,8 @@ class EdgeCutterTest {
             assertTrue(a.distanceTo(b)<.02,"the same cut at "+t+": "+a+" and "+b);
         }
         // the body is drawn along the way while it is held to the plan, and let go once the server has them there
-        assertEquals(1,EdgeCutter.held(0),1e-6);assertEquals(1,EdgeCutter.held(CutterRules.DASH_TO+3),1e-6);assertEquals(0,EdgeCutter.held(CutterRules.DASH_TO+8),1e-6);
-        assertTrue(CutterRules.DASH_TO+8<=blowAt(CUTTER_DASH,2),"let go before the last cut");
+        assertEquals(1,EdgeCutter.held(0),1e-6);assertEquals(1,EdgeCutter.held(CutterRules.DASH_TO+5),1e-6);assertEquals(0,EdgeCutter.held(CutterRules.DASH_TO+10),1e-6);
+        assertTrue(CutterRules.DASH_TO+10<=blowAt(CUTTER_DASH,2),"let go before the last cut");
     }
     @Test void aCutShakesALittleAndTheLastTheMost(){
         assertTrue(EdgeCutter.SHAKE[2]>EdgeCutter.SHAKE[0]&&EdgeCutter.SHAKE[0]==EdgeCutter.SHAKE[1]&&EdgeCutter.SHAKE[2]<=1.0f);

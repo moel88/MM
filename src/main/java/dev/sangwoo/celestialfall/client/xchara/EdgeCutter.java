@@ -130,8 +130,8 @@ public final class EdgeCutter {
     static Vec3d planned(StandClient.Cast c,Vec3d to,float age){
         double[] p=CutterRules.planned(age,arr(c.origin()),arr(to));return new Vec3d(p[0],p[1],p[2]);
     }
-    /** How much the body is held to the plan {@code age} ticks in: all of it through the going; let go a little after (the server has taken them there by then). */
-    static float held(float age){return 1-Ease.smooth(age,CutterRules.DASH_TO+3,CutterRules.DASH_TO+8);}
+    /** How much the body is held to the plan {@code age} ticks in: all of it through the going; let go a little after (the server has taken them there by then, and another client has seen them come there: it draws them moved over some three ticks). */
+    static float held(float age){return 1-Ease.smooth(age,CutterRules.DASH_TO+5,CutterRules.DASH_TO+10);}
     /**
      * How far from where the cuts' user really is their body is drawn this frame (their renderer's offset,
      * BeatdownRenderMixin: their model, name and shadow's place go together): along the way forward, and where it ends

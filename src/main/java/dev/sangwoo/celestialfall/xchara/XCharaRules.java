@@ -25,7 +25,7 @@ public final class XCharaRules {
     public static final int G=1;
     /** (2.115.0) The press asks for Q, the hack on or off (xchara_skill_v1's only byte then; XCharaHack). */
     public static final int Q=2;
-    /** (2.119.0) The press asks for the restore (xchara_skill_v1's only byte then; XCharaHeal): E's until 2.120, Y's from 2.121.0 to 2.125 (user request: "q활성화 e를 q활성화 y로 옮기고"), E's again from 2.126.0 ("q활성화y를 다시 q활성화 e로 옮기고"). The byte is the same whichever key asks. */
+    /** (2.129.0: with the hack off this press is the three cuts', XCharaAttack.cutter, CutterRules.) (2.119.0) The press asks for the restore (xchara_skill_v1's only byte then; XCharaHeal): E's until 2.120, Y's from 2.121.0 to 2.125 (user request: "q활성화 e를 q활성화 y로 옮기고"), E's again from 2.126.0 ("q활성화y를 다시 q활성화 e로 옮기고"). The byte is the same whichever key asks. */
     public static final int E=3;
     /** The press asks for R: with the hack on, (2.125.0) the double (XCharaClone, CloneRules: the one in the crosshair follows the byte, as G's; 2.121.0 to 2.124.0 it was the cleave, now H's); (2.124.0) with it off, the jab (XCharaAttack.jab, XCharaCombo.JAB). */
     public static final int R=4;
