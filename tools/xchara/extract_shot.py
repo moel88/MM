@@ -10,7 +10,7 @@ What is in the recording (seconds into its sound, which runs about 0.25 s behind
                tones, pitch for pitch; the game's file laid on the recording agrees 0.80 at 0.600 s), once for the
                first knife at 0.39 and again for the second at 0.60 (the picture's two knives, 0.14 and 0.40 s), and
                again under the strikes at about 1.45 and 1.52 for the third and the fourth. It is not lifted again:
-               the knives play G's.
+               the knives play G's, louder (below: xchara_shot_appear).
   1.230        a knife's strike (the picture's "1 Hit", 0.94 s): a burst of noise from 150 Hz to over 16 kHz that comes
                on within a hundredth of a second, 15 to 25 dB over the music: a crack of some 0.04 s, a dip, and a
                softer swell after it until about a quarter of a second on, then gone within a tenth more
@@ -32,6 +32,11 @@ taken down, by how much of what sounds at each moment and pitch is the first str
 What cannot be told apart stays: music at the strike's moment as loud as noise, and the knives' coming-to-be tones
 under its tail where they are as loud (they are taken down with the music's held notes above 800 Hz: what holds one
 pitch for 40 ms and stands out of the noise around it).
+
+The knives' coming to be: G's own cut (xchara_g_warn.ogg, in the game's sounds) is as quiet as it was in G's video
+beside that skill's great sound (-36 LUFS; the two were cut with one gain), some 20 dB under every other sound of
+theirs. In this video it is about as loud as the strikes (within 3 dB of them from 1 to 4 kHz). So the knives play
+the same cut brought up to APPEAR_LUFS, nothing else done to it: xchara_shot_appear.
 
 xchara_shot_hit starts LEAD before the strike's onset; the client begins it that long before a knife is seen to land
 (BladeShot.HIT_SOUND_LEAD ticks) when the server's word comes in time, else as it comes. Mono 48 kHz, brought to its
@@ -55,6 +60,8 @@ LATER = (.236, .384)
 # where no effect plays (the music alone)
 QUIET = [(.03, .36), (.97, 1.20), (2.10, 2.60)]
 LUFS = -16.0
+# the knives' coming to be: G's own cut, brought to this loudness
+APPEAR_LUFS = -21.0
 OVER = 2.0
 LOW = 150.
 # the tones under its tail (the knives' coming to be, the music's notes): from this pitch up, what holds one pitch this long
@@ -122,6 +129,26 @@ def strike(x):
     return y[int(t0 * SR):int(END * SR)]
 
 
+def appear(out):
+    """The knives' coming to be: the game's own cut of the "!!!" (G's), louder."""
+    import subprocess
+    import tempfile
+    from scipy.io import wavfile
+    src = os.path.join(ROOT, 'src/main/resources/assets/celestialfall/sounds/xchara_g_warn.ogg')
+    with tempfile.TemporaryDirectory() as tmp:
+        wav = os.path.join(tmp, 'x.wav')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-ac', '1', '-ar', str(SR), wav], check=True)
+        _, g = wavfile.read(wav)
+    g = g.astype(float) / 32768
+    # (its file runs on a tenth of a second past its sound: cut where it has died away, faded)
+    env = np.array([np.abs(g[i:i + 480]).max() for i in range(0, len(g) - 480, 480)])
+    last = int(np.max(np.nonzero(env > env.max() * 10 ** (-30 / 20))[0]) + 2) * 480
+    g = g[:min(len(g), last)]
+    n = int(.012 * SR)
+    g[-n:] *= np.linspace(1, 0, n)
+    write(finish(g, APPEAR_LUFS), out, 'xchara_shot_appear')
+
+
 def main():
     video = sys.argv[1]
     out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, 'src/main/resources/assets/celestialfall/sounds')
@@ -141,6 +168,7 @@ def main():
     print('its level every 50 ms: ' + ' '.join(f'{v:.0f}' for v in e))
     os.makedirs(out, exist_ok=True)
     write(finish(y, LUFS), out, 'xchara_shot_hit')
+    appear(out)
 
 
 if __name__ == '__main__':

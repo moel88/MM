@@ -1245,5 +1245,14 @@
         "preload": true
       }
     ]
+  },
+  "xchara_shot_appear": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_shot_appear",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

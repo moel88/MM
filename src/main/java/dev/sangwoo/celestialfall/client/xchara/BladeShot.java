@@ -71,11 +71,13 @@ public final class BladeShot {
     public static final float LIFE=(float)(ShotRules.over(ShotRules.BLADES-1)/20+.55);
     /**
      * Its sounds, by the user's video: each knife's coming to be is the "!!!"'s own sound (G's: the video plays that
-     * very sound as each comes, the game's file laid on its recording agreeing 0.80; SOUND_PART of it, four of them
-     * one over another), and a knife's strike is the video's own (tools/xchara/extract_shot.py; its onset
+     * very sound as each comes, the game's file laid on its recording agreeing 0.80), the same cut brought up to the
+     * loudness it has in this video beside the strikes (xchara_shot_appear: G's file is some 20 dB under every other
+     * sound of theirs, as quiet as it was beside G's great sound), four of them one over another; and a knife's
+     * strike is the video's own (tools/xchara/extract_shot.py; its onset
      * HIT_SOUND_LEAD ticks into its file: started that much before the knife is seen to land when there is time).
      */
-    static final String SOUND="xchara_g_warn",HIT_SOUND="xchara_shot_hit";static final float SOUND_PART=.7f;
+    static final String SOUND="xchara_shot_appear",HIT_SOUND="xchara_shot_hit";static final float SOUND_PART=1;
     /** A knife not let go when the skill stopped short is gone over this long (ticks); one never told of after it was to go, after this many. */
     static final float VANISH=2.4f,UNTOLD=4;
     /** As one is let go it turns from the way it hung to its way over this long (ticks). */
