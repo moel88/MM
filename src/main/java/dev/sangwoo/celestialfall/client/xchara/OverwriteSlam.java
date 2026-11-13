@@ -63,6 +63,8 @@ public final class OverwriteSlam {
     /** The server's ticks, in seconds. */
     static final float LIT=SlamRules.LIT/20f,CIRCLE=SlamRules.CIRCLE/20f,CROUCH=SlamRules.CROUCH/20f,LEAP=SlamRules.LEAP/20f,RISEN=SlamRules.RISEN/20f,
         DIVE=SlamRules.DIVE/20f,LAND=SlamRules.LAND/20f,FREE=SlamRules.FREE/20f,END=SlamRules.END/20f;
+    /** The second spring, in the air (2.128.3: the rise is in two, SlamRules.LEAP2). */
+    static final float LEAP2=SlamRules.LEAP2/20f;
     /** How long one is drawn for (seconds): what the landing leaves on the ground is gone by then. */
     public static final float LIFE=LAND+2.7f;
 
@@ -233,10 +235,14 @@ public final class OverwriteSlam {
         // ahead, the legs left behind
         k(1.32,wound(3,OVERHEAD,d(82,172),d(-34,-46),d(-72,165),d(-66,-170),22)),
         k(1.50,wound(0,BEHIND,d(36,174),d(-22,-40),d(-64,168),d(-58,-172),30)),
-        k(1.80,wound(0,BEHIND,d(24,170),d(-16,-36),d(-62,170),d(-56,-172),34)),
-        k(2.05,wound(0,BEHIND,d(17,168),d(-18,-36),d(-66,172),d(-62,-174),36)),
-        // hanging at the top, wound up, the legs coming together behind them, the knife sinking toward level
-        k(2.25,wound(0,BEHIND,d(13,166),d(-22,-38),d(-76,176),d(-73,-178),38)),
+        // (still, a little up from the ground: the first spring is done) drawn in under them for the second
+        k(1.74,wound(2,BEHIND,d(25,170),d(-14,-36),d(-58,168),d(-52,-170),34)),
+        k(1.84,wound(4,BEHIND,d(24,170),d(-10,-34),d(-50,164),d(-46,-166),34)),
+        // the second spring, in the air: the legs thrown down straight under them, the free arm down with it
+        k(1.95,wound(-1,BEHIND,d(20,169),d(-52,-40),d(-86,120),d(-86,-120),36)),
+        k(2.08,wound(0,BEHIND,d(17,168),d(-44,-40),d(-84,150),d(-84,-150),36)),
+        // hanging at the top, wound up, the legs together behind them, the knife sinking toward level
+        k(2.30,wound(0,BEHIND,d(13,166),d(-22,-38),d(-76,176),d(-73,-178),38)),
         k(2.56,wound(0,BEHIND,d(9,165),d(-24,-38),d(-78,178),d(-75,-178),40)),
         k(2.90,wound(-1,BEHIND,d(3,165),d(-20,-36),d(-76,178),d(-73,-178),40)),
         // the drop: stretched up long, the knife swung up from behind to straight over the head, feet first
@@ -260,13 +266,14 @@ public final class OverwriteSlam {
         return -SlamRules.RISE*SlamRules.risen(Math.min(a,SlamRules.DIVE))*(1-SlamRules.dived(a))*Ease.smooth((float)a,SlamRules.LEAP,SlamRules.LEAP+4);
     };
     /**
-     * How much the legs tuck in the air: all of it wound up in the rise (the knees bent behind them), less hanging at
-     * the top, next to nothing as they stretch out to drop (the video's legs are straight then), all of it again as
-     * the ground comes up under them.
+     * How much the legs tuck in the air: all of it wound up over the first spring and while they are still (the knees
+     * bent behind them), next to none as the second spring throws the legs down straight, half hanging at the top,
+     * next to nothing as they stretch out to drop (the video's legs are straight then), all of it again as the ground
+     * comes up under them.
      */
     static double tuck(float sec){
-        double hang=.55,straight=.08;
-        double t=1+(hang-1)*Ease.smooth(sec,1.9f,2.25f)+(straight-hang)*Ease.smooth(sec,2.92f,3.1f);
+        double thrust=.12,hang=.55,straight=.08;
+        double t=1+(thrust-1)*Ease.smooth(sec,LEAP2-.02f,LEAP2+.1f)+(hang-thrust)*Ease.smooth(sec,2.08f,2.34f)+(straight-hang)*Ease.smooth(sec,2.92f,3.1f);
         return t+(1-t)*Ease.smooth(sec,LAND-.1f,LAND);
     }
     private static final Anim.Fix BENT=IsosangLimbs.natural(GROUND,OverwriteSlam::tuck);
@@ -579,6 +586,20 @@ public final class OverwriteSlam {
                     }
                 }else ring(m,g,3.2*Ease.out(l,0,.4f),.3,PURPLE,.8f*(1-l/.45f),1);
             }
+            // the second spring, in the air (2.128.3): a smaller ring where their feet were, left behind under them
+            float l2=c.sec-LEAP2;
+            if(l2>=0&&l2<.4f){
+                var first=info(c);double high=(first==null?SlamRules.RISE:first.rise)*SlamRules.FIRST;
+                Vec3d g=from.add(0,high,0);
+                if(light){
+                    ring(m,g,2.0*Ease.out(l2,0,.35f),.5,NEON,.6f*(1-l2/.4f),1);
+                    for(int j=0;j<6;j++){
+                        double a=Math.PI*2*(j+h(j,seed,64))/6,r=.4+.4*h(j,seed,65);
+                        Vec3d p=g.add(Math.cos(a)*r,0,Math.sin(a)*r);double top=(1.4+1.6*h(j,seed,66))*Ease.out(l2,0,.3f);
+                        m.softTaper(p.add(0,top*.3,0),p.add(0,top,0),.1,.02,LILAC,.5f*(1-l2/.4f));
+                    }
+                }else ring(m,g,2.0*Ease.out(l2,0,.35f),.2,PURPLE,.7f*(1-l2/.4f),1);
+            }
             // the dive: a streak of light down its line behind them
             var i=info(c);
             if(i!=null&&i.land!=null&&c.sec>DIVE&&c.sec<LAND+.25f&&light){
@@ -667,7 +688,7 @@ public final class OverwriteSlam {
     }
     /** How hard it shakes the camera: a knock as they leave the ground, hard as it lands (harder on someone). */
     static float shake(StandClient.Cast cast,float sec){
-        float leap=sec<KnifeClient.until(cast.id())||KnifeClient.until(cast.id())>LEAP?.35f*KnifeCombo.bump(sec,LEAP,.08f):0;
+        float leap=sec<KnifeClient.until(cast.id())||KnifeClient.until(cast.id())>LEAP?.35f*KnifeCombo.bump(sec,LEAP,.08f)+.22f*KnifeCombo.bump(sec,LEAP2,.08f):0;
         if(!KnifeClient.cameTo(cast,0))return leap;
         int[] told=KnifeClient.struck(cast.id(),0);
         return leap+(told!=null&&told.length>0?3.6f:3.0f)*KnifeCombo.bump(sec,LAND,.18f);

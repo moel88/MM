@@ -74,6 +74,8 @@ public final class KnifeClient {
      * ticks before its moment (its onset is that far into its file).
      */
     static final String SLAM_LIT_SOUND="xchara_slam_lit",SLAM_LEAP_SOUND="xchara_slam_leap",SLAM_LAND_SOUND="xchara_slam_land";static final int SLAM_SOUND_BEFORE=1;
+    /** How loud the leap's sound is at the second spring, of what it is at the first (the video's second rush is some 6 dB under its first). */
+    static final float SLAM_LEAP2_PART=.5f;
     /** The cleave's sound (its own, played as it starts). */
     static final String CLEAVE_SOUND="xchara_r";
     /**
@@ -203,10 +205,13 @@ public final class KnifeClient {
             // (2.128.0) the slam: the knife's lighting now, the leap's and the landing's at their moments (one told of
             // after a moment has none of that moment's sound)
             int age=(int)Math.floor(cast.age(0));var later=new ArrayList<XCharaClient.Voice>();
-            Object[][] cues={{SLAM_LIT_SOUND,0},{SLAM_LEAP_SOUND,dev.sangwoo.celestialfall.xchara.SlamRules.LEAP-SLAM_SOUND_BEFORE},{SLAM_LAND_SOUND,dev.sangwoo.celestialfall.xchara.SlamRules.LAND-SLAM_SOUND_BEFORE}};
+            // (2.128.3: the rise is in two; the leap's sound again at the second spring, at SLAM_LEAP2_PART of it: the
+            // video has a quieter rush there)
+            Object[][] cues={{SLAM_LIT_SOUND,0,1f},{SLAM_LEAP_SOUND,dev.sangwoo.celestialfall.xchara.SlamRules.LEAP-SLAM_SOUND_BEFORE,1f},
+                {SLAM_LEAP_SOUND,dev.sangwoo.celestialfall.xchara.SlamRules.LEAP2-SLAM_SOUND_BEFORE,SLAM_LEAP2_PART},{SLAM_LAND_SOUND,dev.sangwoo.celestialfall.xchara.SlamRules.LAND-SLAM_SOUND_BEFORE,1f}};
             for(var cue:cues){
                 int wait=(Integer)cue[1]-age;if(wait<-2)continue;
-                var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id((String)cue[0]),loud);
+                var v=XCharaClient.Voice.quieter(dev.sangwoo.celestialfall.CelestialFall.id((String)cue[0]),loud,(Float)cue[2]);
                 if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
                 later.add(v);
                 heard(String.format(java.util.Locale.ROOT,"%s hit %d, told %.0f ticks in, played %d later at %.2f",cue[0],cast.combo(),cast.age(0),Math.max(0,wait),v.full()));

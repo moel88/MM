@@ -41,14 +41,23 @@ class SlamRulesTest {
     }
     @Test void theyRiseStraightUpSlowingAndAreHighestAsTheDiveBegins(){
         assertEquals(0,SlamRules.risen(0),0);assertEquals(0,SlamRules.risen(SlamRules.LEAP),0);assertEquals(1,SlamRules.risen(SlamRules.RISEN),1e-9);assertEquals(1,SlamRules.risen(SlamRules.DIVE),1e-9);
-        double was=0,speed=Double.MAX_VALUE;
-        for(double a=SlamRules.LEAP;a<=SlamRules.RISEN;a+=.25){
-            double r=SlamRules.risen(a),v=r-was;assertTrue(v>=-1e-12,"they sink at "+a);
-            if(a>SlamRules.LEAP+.25)assertTrue(v<=speed+1e-9,"they speed up at "+a);
-            speed=v;was=r;
+        // (2.128.3, the user: "한번 상승하고 멈추고 다시 한 번 상승") in two: up FIRST of the way and still, then up again
+        assertTrue(SlamRules.LEAP<SlamRules.HELD&&SlamRules.HELD<SlamRules.LEAP2&&SlamRules.LEAP2<SlamRules.RISEN&&SlamRules.RISEN<SlamRules.DIVE);
+        assertEquals(SlamRules.FIRST,SlamRules.risen(SlamRules.HELD),1e-9);assertEquals(SlamRules.FIRST,SlamRules.risen(SlamRules.LEAP2),1e-9);
+        for(double a=SlamRules.HELD;a<=SlamRules.LEAP2;a+=.25)assertEquals(SlamRules.FIRST,SlamRules.risen(a),1e-9,"they are still between the two at "+a);
+        assertTrue(SlamRules.LEAP2-SlamRules.HELD>=6,"still long enough to be seen to stop");assertTrue(SlamRules.FIRST>.25&&SlamRules.FIRST<.6);
+        for(double[] leg:new double[][]{{SlamRules.LEAP,SlamRules.HELD},{SlamRules.LEAP2,SlamRules.RISEN}}){
+            double was=SlamRules.risen(leg[0]),speed=Double.MAX_VALUE;
+            for(double a=leg[0]+.25;a<=leg[1];a+=.25){
+                double r=SlamRules.risen(a),v=r-was;assertTrue(v>=-1e-12,"they sink at "+a);
+                assertTrue(v<=speed+1e-9,"they speed up at "+a);
+                speed=v;was=r;
+            }
+            // each spring is off at speed: half of it in its first quarter
+            double part=SlamRules.risen(leg[1])-SlamRules.risen(leg[0]);
+            assertTrue(SlamRules.risen(leg[0]+(leg[1]-leg[0])*.25)-SlamRules.risen(leg[0])>=.45*part);
         }
-        // half way up in the first quarter of the climb: off the ground at speed
-        assertTrue(SlamRules.risen(SlamRules.LEAP+(SlamRules.RISEN-SlamRules.LEAP)*.25)>=.45);
+        double before=0;for(double a=0;a<=SlamRules.DIVE;a+=.05){double r=SlamRules.risen(a);assertTrue(r>=before-1e-12&&r-before<.09,"a jump in the rise at "+a);before=r;}
         assertEquals(4,SlamRules.RISE,0,"the user's four blocks");
     }
     @Test void theBodysWayHasNoStepInIt(){

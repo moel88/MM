@@ -27,7 +27,15 @@ package dev.sangwoo.celestialfall.xchara;
 public final class SlamRules {
     private SlamRules(){}
     /** When the knife lights, when the circle comes, when they are down in their crouch, when they leave the ground, when they are as high as they go, when the dive begins (where it lands is settled), when it lands, when they are free, and when it is over (the circle gone). */
-    public static final int LIT=1,CIRCLE=7,CROUCH=9,LEAP=22,RISEN=60,DIVE=62,LAND=68,FREE=80,END=91;
+    public static final int LIT=1,CIRCLE=7,CROUCH=9,LEAP=22,RISEN=48,DIVE=62,LAND=68,FREE=80,END=91;
+    /**
+     * The rise is in two (2.128.3, the user: "원본 영상 보면 상승할때 한번 상승하고 멈추고 다시 한 번 상승하거든"; the
+     * video, measured again: off the ground at 1.07 s to a low height within a sixth of a second, held there, a
+     * second spring at about 1.85 s to the full height by 2.3 s, held until the dive): by {@link #HELD} they are
+     * {@link #FIRST} of the way up and stop; at {@link #LEAP2} they spring again, and are as high as they go by RISEN.
+     */
+    public static final int HELD=28,LEAP2=37;
+    public static final double FIRST=.4;
     /** How high they rise over where they stood (blocks; less under a roof). The user's, 2.128.2: "너무 높게 뛰어오른다 4칸 정도만 오르게" (it was 12, what I took the video's height for). */
     public static final double RISE=4;
     /** The circle: how far from where they stood the slam can come down (blocks, level). */
@@ -46,13 +54,16 @@ public final class SlamRules {
     private static double smooth(double x,double a,double b){double u=Math.max(0,Math.min(1,(x-a)/(b-a)));return u*u*(3-2*u);}
     /**
      * How much of their rise they have at {@code age} ticks (0 on the ground, 1 as high as they go): off the ground at
-     * LEAP at speed, slowing all the way up (the video's climb, still drifting up as the dive begins).
+     * LEAP at speed, slowing to a stop FIRST of the way up by HELD; still there until LEAP2; then up again at speed,
+     * slowing to a stop at the top by RISEN, and there until the dive.
      */
     public static double risen(double age){
         if(age<=LEAP)return 0;
-        double u=Math.min(1,(age-LEAP)/(RISEN-LEAP));
-        return 1-Math.pow(1-u,2.4);
+        if(age<=LEAP2)return FIRST*sprung((age-LEAP)/(HELD-LEAP));
+        return FIRST+(1-FIRST)*sprung((age-LEAP2)/(RISEN-LEAP2));
     }
+    /** A spring's way up, 0 to 1 over its time: off at speed, slowing all the way to a stop. */
+    private static double sprung(double u){return 1-Math.pow(1-Math.max(0,Math.min(1,u)),2.4);}
     /** How far along the dive they are at {@code age} ticks (0 at its top, 1 landed): gathering speed all the way down. */
     public static double dived(double age){
         if(age<=DIVE)return 0;if(age>=LAND)return 1;

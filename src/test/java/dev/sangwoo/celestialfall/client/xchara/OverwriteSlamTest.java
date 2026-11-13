@@ -152,7 +152,9 @@ class OverwriteSlamTest {
             assertTrue(wound[0].y>1.65,"the fist over the head at "+t+": "+wound[0].y);assertTrue(wound[0].z<-.1,"the fist behind them at "+t+": "+wound[0].z);
             assertTrue(wound[1].z<-.7&&wound[1].y>-.05,"the knife back behind them, not under level, at "+t+": "+wound[1]);
             assertTrue(Math.abs(f.pitch())<4,"the body upright, the waist not bent back, at "+t+": "+f.pitch());
-            assertTrue(p.rLeg.fw()<-.1&&p.lLeg.fw()<-.1,"the legs behind them at "+t);
+            // (the legs behind them, but as the second spring throws them down straight under them: 2.128.3)
+            if(t<OverwriteSlam.LEAP2+.03f||t>2.2f)assertTrue(p.rLeg.fw()<-.1&&p.lLeg.fw()<-.1,"the legs behind them at "+t);
+            else if(t>1.94f&&t<2.1f)assertTrue(p.rLeg.up()<-.97&&p.lLeg.up()<-.97,"the legs thrown down straight in the second spring at "+t);
             assertTrue(p.lArm.fw()>.3,"the free arm out ahead of them (the knife in the one hand) at "+t);
         }
         // the knife sinks further down their back the longer they are wound up (never coming up again before the drop)

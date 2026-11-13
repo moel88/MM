@@ -396,6 +396,8 @@ public final class XCharaClient {
         static final int FADE=3;
         private final java.util.function.Supplier<Float> loud;private int fading=-1;private boolean done,begun,dropped;private float scale=1;
         Voice(Identifier id,java.util.function.Supplier<Float> loud){this(id,loud,1);}
+        /** (2.128.3) A quieter one: {@code part} of what {@code loud} says (the slam's second spring). */
+        static Voice quieter(Identifier id,java.util.function.Supplier<Float> loud,float part){return new Voice(id,()->loud.get()*part,1);}
         /** (2.114.0) At a pitch of its own: a blow of the knife's basic attack, each a little higher than the one before. */
         Voice(Identifier id,java.util.function.Supplier<Float> loud,float pitch){
             super(id,SoundCategory.PLAYERS,net.minecraft.util.math.random.Random.create());
