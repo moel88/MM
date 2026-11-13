@@ -74,6 +74,11 @@ public final class XCharaAttack {
         long slamReady;Vec3d from;double rise;Vec3d land,aim;long aimAt;
         /** (2.128.4) How far forward of where they stood the top of its rise is ({x,z}: the way they faced, as far as they go). */
         double aheadX,aheadZ;
+        /**
+         * (2.129.0) The three cuts (E with the hack off): the tick they are ready again (0 for at once); and of one going
+         * forward first, where it ends (null: it cuts where they stand) and whether they have been taken there.
+         */
+        long cutterReady;Vec3d to;boolean arrived;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -116,11 +121,20 @@ public final class XCharaAttack {
         return s!=null&&s.world==p.getWorld()&&skill(s.combo)&&p.getWorld().getTime()<s.start+LENGTH[s.combo];
     }
     /** This player is X Chara's no more: the attack's rest is gone, so it is ready if they are again (StandManager.forgetOthers). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;}}
     /** The attack's rest is gone (a player the cooldowns are off for, /botand nocooldown). */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;}}
     /** (2.124.0) The tick this player's jab is ready again (0 if it is). */
     public static long jabReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.jabReady;}
+    /** (2.129.0) The tick this player's three cuts are ready again (0 if they are). */
+    public static long cutterReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.cutterReady;}
+    /** (2.129.0) Where this player's three cuts in flight are struck from: where their going forward ends until they are there, then where they stand. */
+    public static Vec3d cutsFrom(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());
+        return s!=null&&s.combo==CUTTER_DASH&&s.to!=null&&!s.arrived?s.to:p==null?null:p.getPos();
+    }
+    /** (2.129.0) For the multiplayer check: this player's three cuts in flight as {start, kind, where the going ends or null, blows landed}, or null. */
+    public static Object[] describeCutter(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!XCharaCombo.cutter(s.combo)?null:new Object[]{s.start,s.combo,s.to,s.blows};}
     /** (2.128.0) The tick this player's slam is ready again (0 if it is). */
     public static long slamReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.slamReady;}
     /** (2.128.0) Whether this one is in the air of their slam now (drawn up there, standing where they began): nothing harms them, and no one's skill takes them. */
@@ -211,6 +225,66 @@ public final class XCharaAttack {
         return true;
     }
     /**
+     * E with the hack off, the three cuts (2.129.0, XCharaCombo.CUTTER, CutterRules). Returns whether they began: with the
+     * hack off, nothing holding them (a hit of the knife's own holds too), and their cooldown over. Whether they go
+     * forward first is settled now: not with someone right ahead (CutterRules.CLOSE); else as far as CutterRules.dash
+     * lets them, to a floor they can stand on. As the other skills, it ends the combo and adds no rest of its own.
+     */
+    public static boolean cutter(ServerPlayerEntity p){
+        if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(valid(s.combo)&&now<(last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:s.start+HOLD[s.combo]))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(now<s.cutterReady&&!free)return false;
+        float yaw=MathHelper.wrapDegrees(p.getYaw());
+        s.from=p.getPos();s.to=goes(p,yaw);s.arrived=false;
+        s.combo=s.to==null?CUTTER:CUTTER_DASH;s.id=UUID.randomUUID();s.start=now;s.yaw=yaw;s.queued=false;s.blows=0;
+        s.cutterReady=free?0:CutterRules.ready(s.combo,now);
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s,HIT,-1,null);
+        return true;
+    }
+    /** Whom {@code p}'s knife may strike at all: alive, to be struck, no merchant, and (a player) one they may harm. */
+    private static boolean foe(ServerPlayerEntity p,LivingEntity e){
+        return e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)
+            &&!(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other));
+    }
+    /**
+     * Where the three cuts' going forward ends for {@code p} facing {@code yaw}, or null if they cut where they stand:
+     * the near side of the first one in their way (in sight) decides how far (CutterRules.dash), less where a block
+     * stands in the way; the floor there, a low step up or a drop they can take (CutterRules.UP, DOWN); none, nearer.
+     */
+    private static Vec3d goes(ServerPlayerEntity p,float yaw){
+        var world=p.getServerWorld();Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x),at=p.getPos();
+        double ahead=Double.NaN,most=CutterRules.DASH+CutterRules.REACH[1];
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(most+3),e->foe(p,e))){
+            Vec3d d=e.getPos().subtract(at);double half=e.getWidth()*.5,fw=d.dotProduct(f)-half;
+            if(fw<-2*half||fw>most||Math.abs(d.dotProduct(right))>CutterRules.PATH+half||d.y<LOW||d.y>HIGH||!p.canSee(e))continue;
+            if(Double.isNaN(ahead)||fw<ahead)ahead=Math.max(0,fw);
+        }
+        double clear=CutterRules.DASH;
+        for(double up:new double[]{CutterRules.UP+.05,1.0,p.getHeight()-.1}){
+            Vec3d a=at.add(0,up,0);
+            var hit=world.raycast(new net.minecraft.world.RaycastContext(a,a.add(f.multiply(CutterRules.DASH+.5)),net.minecraft.world.RaycastContext.ShapeType.COLLIDER,net.minecraft.world.RaycastContext.FluidHandling.NONE,p));
+            if(hit.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)clear=Math.min(clear,Math.max(0,hit.getPos().distanceTo(a)-.5));
+        }
+        for(double far=CutterRules.dash(ahead,clear);far>=CutterRules.LEAST;far-=.5){
+            double x=at.x+f.x*far,z=at.z+f.z*far;
+            double y=SlamGround.floor(world,p,x,z,at.y+CutterRules.UP,at.y-CutterRules.DOWN);
+            if(!Double.isNaN(y))return new Vec3d(x,y,z);
+            // (off the ground as they begin, with no floor under where it ends: as high as they are, if they fit there)
+            if(!p.isOnGround()&&world.isSpaceEmpty(p,p.getDimensions(net.minecraft.entity.EntityPose.STANDING).getBoxAt(x,at.y,z).contract(1e-4,0,1e-4)))return new Vec3d(x,at.y,z);
+        }
+        return null;
+    }
+    /** The three cuts' going forward is over: their user is where it ends, from now (looking as they look: the turn is their client's). */
+    private static void arrive(ServerPlayerEntity p,State s){
+        s.arrived=true;Vec3d to=s.to;
+        p.networkHandler.requestTeleport(to.x,to.y,to.z,0,0,java.util.EnumSet.of(net.minecraft.network.packet.s2c.play.PositionFlag.X_ROT,net.minecraft.network.packet.s2c.play.PositionFlag.Y_ROT));
+        p.setVelocity(Vec3d.ZERO);p.fallDistance=0;p.velocityModified=true;
+    }
+    /**
      * (2.128.0) Their client's word of where the middle of its screen points (xchara_skill_v1's AIM), up in the air of
      * their slam before its dive: kept, the last of them, for when the dive begins.
      */
@@ -293,6 +367,8 @@ public final class XCharaAttack {
             if(!valid(s.combo))continue;
             // (2.128.0) the slam's dive begins: where it comes down is settled, and told
             if(s.combo==SLAM&&s.land==null&&s.blows==0&&now>=s.start+SlamRules.DIVE)dive(p,s,now);
+            // (2.129.0) the three cuts' going forward is over: they are there
+            if(s.combo==CUTTER_DASH&&s.to!=null&&!s.arrived&&now>=s.start+CutterRules.DASH_TO)arrive(p,s);
             while(s.blows<blows(s.combo)&&now>=s.start+blowAt(s.combo,s.blows))blow(p,s,now);
         }
     }
@@ -305,7 +381,7 @@ public final class XCharaAttack {
             if(!moving)return;
             if(s.blows==0){
                 long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+cooldown(s.combo);
-                if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
+                if(XCharaCombo.cutter(s.combo))s.cutterReady=ready;else if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
             }
             s.queued=false;s.combo=0;s.blows=0;
             send(p,s,STOPPED,-1,null);
@@ -351,12 +427,13 @@ public final class XCharaAttack {
                 // (2.124.0) the jab: whom it strikes stands there and can do nothing for eight seconds
                 CombatManager.incapacitate(e,JAB_STUN,JAB_STUN,JAB_SLOW);
             }
-            else if(skill(combo)){
+            else if(skill(combo)&&!XCharaCombo.cutter(combo)){
                 // the cleave: whom it strikes cannot move or act for a second (their legs stopped wholly; one stopped in a
                 // time stop takes it as time moves again, CombatManager)
                 CombatManager.incapacitate(e,CLEAVE_STUN,CLEAVE_STUN,CLEAVE_SLOW);
             }
-            else if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,combo,Stagger.xchara(combo,i,s.start,now));
+            // (2.129.0: the three cuts' blows stagger as these do, drawn as a first strike's flinch and a last's)
+            else if(!KagenoManager.frozen(e)||StarPlatinumTimeStop.stopped(e))HitStun.stagger(p,e,XCharaCombo.cutter(combo)?(i==2?4:1):combo,Stagger.xchara(combo,i,s.start,now));
             // the finisher's last cut throws them the way it went, told to a struck player's client once, through the
             // tracker; one stopped in a time stop is thrown as time moves again
             if(launches(combo,i)){
@@ -398,8 +475,12 @@ public final class XCharaAttack {
             b.writeFloat(slam?(float)s.rise:0);
             // (2.128.4) and how far forward the top of its rise is
             b.writeFloat(slam?(float)s.aheadX:0);b.writeFloat(slam?(float)s.aheadZ:0);
-            b.writeBoolean(slam&&s.land!=null);
-            if(slam&&s.land!=null){b.writeDouble(s.land.x);b.writeDouble(s.land.y);b.writeDouble(s.land.z);}
+            // (2.129.0) of the three cuts going forward first, where that ends (in the slam's place: a hit is one or the other)
+            Vec3d land=slam?s.land:s.combo==CUTTER_DASH?s.to:null;
+            b.writeBoolean(land!=null);
+            if(land!=null){b.writeDouble(land.x);b.writeDouble(land.y);b.writeDouble(land.z);}
+            // (2.129.0) when the three cuts are ready again (a 2.128 client stops reading before it)
+            b.writeLong(s.cutterReady);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

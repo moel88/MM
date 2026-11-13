@@ -232,6 +232,8 @@ public final class KagenoClips {
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL)off=off.add(dev.sangwoo.celestialfall.client.isosang.IsosangClient.shift(cast.caster(),delta));
         // (2.128.0) and X Chara's through their slam (drawn up in the air and down its dive by their renderer's offset, BeatdownRenderMixin: their shadow goes under them)
         if(cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL&&cast.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SLAM)off=off.add(dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.shift(cast,delta));
+        // (2.129.0) and through their three cuts' going forward
+        if(cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL&&cast.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.CUTTER_DASH)off=off.add(dev.sangwoo.celestialfall.client.xchara.EdgeCutter.shift(cast,delta));
         return off;
     }
     public static R6.Frame idle(){return R6.solve(IDLE);}

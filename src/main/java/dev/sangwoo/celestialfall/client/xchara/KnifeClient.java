@@ -68,6 +68,18 @@ public final class KnifeClient {
         Slam(float rise,float aheadX,float aheadZ){this.rise=rise;this.aheadX=aheadX;this.aheadZ=aheadZ;}
     }
     private static final Map<UUID,Slam> SLAMS=new HashMap<>();
+    /** (2.129.0) When each player's three cuts (E with the hack off) are ready again, as told. */
+    private static final Map<UUID,Long> CUTTER_READY=new HashMap<>();
+    /** (2.129.0) Where each of the three cuts that goes forward first ends, by its id, as told as it began. */
+    private static final Map<UUID,Vec3d> DASHES=new HashMap<>();
+    /** Where the three cuts {@code id} go forward to (null: they cut where they stand, or none). */
+    public static Vec3d dash(UUID id){return DASHES.get(id);}
+    /**
+     * (2.129.0) The three cuts' sound, the user's own out of their video (tools/xchara/extract_cutter.py): one sound of
+     * three cuts a quarter of a second apart, started CUTTER_SOUND_BEFORE ticks before the first cut lands (its first
+     * onset is that far into its file).
+     */
+    static final String CUTTER_SOUND="xchara_cutter";static final int CUTTER_SOUND_BEFORE=1;
     /** What this client was told of slam {@code id} (null: none). */
     public static Slam slam(UUID id){return SLAMS.get(id);}
     /**
@@ -95,7 +107,7 @@ public final class KnifeClient {
     /** Every swing's sound; it starts this many ticks before the swing's blow lands; how far it carries (blocks). */
     static final String SOUND="xchara_slash";static final int SOUND_BEFORE=2;static final double CARRY=40;
     /** The tick into hit {@code combo} its sound starts on. */
-    static int soundAt(int combo){return combo==XCharaCombo.JAB?XCharaCombo.blowAt(combo,0)-JAB_SOUND_BEFORE:XCharaCombo.skill(combo)?0:Math.max(0,XCharaCombo.blowAt(combo,0)-SOUND_BEFORE);}
+    static int soundAt(int combo){return XCharaCombo.cutter(combo)?XCharaCombo.blowAt(combo,0)-CUTTER_SOUND_BEFORE:combo==XCharaCombo.JAB?XCharaCombo.blowAt(combo,0)-JAB_SOUND_BEFORE:XCharaCombo.skill(combo)?0:Math.max(0,XCharaCombo.blowAt(combo,0)-SOUND_BEFORE);}
     /** For the capture tools: the sounds this client started, newest last (each "name hit/blow, ticks into its swing"). */
     public static final List<String> HEARD=new ArrayList<>();
     private static void heard(String line){HEARD.add(line);while(HEARD.size()>64)HEARD.remove(0);}
@@ -107,7 +119,7 @@ public final class KnifeClient {
         ClientPlayNetworking.registerGlobalReceiver(XCharaAttack.EVENT,(mc,handler,b,response)->{
             UUID caster=b.readUuid();Identifier dim=b.readIdentifier();int type=b.readUnsignedByte();UUID id=b.readUuid();int combo=b.readUnsignedByte(),blow=b.readByte();
             long start=b.readLong(),serverNow=b.readLong();Vec3d at=new Vec3d(b.readDouble(),b.readDouble(),b.readDouble());float yaw=b.readFloat();long ready=b.readLong();
-            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.AIMED||combo>XCharaCombo.SLAM||!Float.isFinite(yaw))return;
+            int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.AIMED||combo>XCharaCombo.LAST||!Float.isFinite(yaw))return;
             var struck=new ArrayList<StandClient.Target>();
             for(int i=0;i<n;i++)struck.add(new StandClient.Target(b.readUuid(),b.readInt(),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble())));
             // (2.121.0) when the cleave is ready again (a 2.120 server sends none)
@@ -119,8 +131,12 @@ public final class KnifeClient {
             float rise=b.readableBytes()>=5?b.readFloat():0;
             // (2.128.4) and how far forward the top of its rise is
             float aheadX=b.readableBytes()>=9?b.readFloat():0,aheadZ=b.readableBytes()>=5?b.readFloat():0;
-            Vec3d land=b.readableBytes()>=25&&b.readBoolean()?new Vec3d(b.readDouble(),b.readDouble(),b.readDouble()):null;
-            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);});
+            Vec3d land=b.readableBytes()>=1&&b.readBoolean()&&b.readableBytes()>=24?new Vec3d(b.readDouble(),b.readDouble(),b.readDouble()):null;
+            // (2.129.0) and the three cuts (a 2.128 server sends none); of one going forward first, where that ends is in the slam's place
+            long cutter=b.readableBytes()>=8?b.readLong():0;
+            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);CUTTER_READY.put(caster,cutter);});
+            if(combo==XCharaCombo.CUTTER_DASH&&type==XCharaAttack.HIT&&land!=null&&Double.isFinite(land.x)&&Double.isFinite(land.y)&&Double.isFinite(land.z)
+                &&land.squaredDistanceTo(at)<=(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4)*(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4))mc.execute(()->DASHES.put(id,land));
             if(combo==XCharaCombo.SLAM)mc.execute(()->{
                 if(type==XCharaAttack.HIT&&Float.isFinite(rise)){
                     float far=(float)Math.hypot(aheadX,aheadZ),most=(float)dev.sangwoo.celestialfall.xchara.SlamRules.FORWARD,k=Float.isFinite(far)&&far>most?most/far:Float.isFinite(far)?1:0;
@@ -176,7 +192,7 @@ public final class KnifeClient {
         var dim=mc.world.getRegistryKey().getValue();
         SWINGS.values().removeIf(c->!c.dimension().equals(dim)||c.age(0)>=KnifeCombo.life(c.combo())*20||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.keySet().retainAll(SWINGS.keySet());VOICES.keySet().retainAll(SWINGS.keySet());
-        SLAMS.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());
+        SLAMS.keySet().retainAll(SWINGS.keySet());DASHES.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());
         // (2.128.0) up in the air of their own slam: where the middle of the screen points, told every tick until the dive's word comes
         if(mc.player!=null)OverwriteSlam.tellAim(mc);
         // held down, the attack key keeps asking (the server keeps a press made a little early for the next hit)
@@ -189,7 +205,7 @@ public final class KnifeClient {
     public static void clear(){
         for(var v:VOICES.values())v.fade();
         for(var l:MORE_VOICES.values())for(var v:l)v.fade();
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();VOICES.clear();MORE_VOICES.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -226,7 +242,7 @@ public final class KnifeClient {
             MORE_VOICES.put(cast.id(),later);
             return;
         }
-        String sound=jab?JAB_SOUND:XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
+        String sound=XCharaCombo.cutter(cast.combo())?CUTTER_SOUND:jab?JAB_SOUND:XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
         var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(sound),loud);
         if(v.full()<=.01f)return;
         // (2.124.0) the jab's press, as it starts (told of late, not at all: it is over)
@@ -266,6 +282,8 @@ public final class KnifeClient {
         var user=mc.world.getPlayerByUuid(c.caster());Vec3d at=user==null?c.origin():user.getPos();
         // (2.128.0) the slam strikes round where it comes down, not ahead of where its user stands
         if(c.combo()==XCharaCombo.SLAM){var info=SLAMS.get(c.id());if(info==null||info.land==null)return out;at=info.land;}
+        // (2.129.0) the three cuts after a going forward are struck from where that ended (their user is drawn there, and is there a tick or so on)
+        if(c.combo()==XCharaCombo.CUTTER_DASH){Vec3d to=DASHES.get(c.id());if(to!=null)at=to;}
         Vec3d f=Vec3d.fromPolar(0,c.yaw()),right=new Vec3d(-f.z,0,f.x);
         for(var e:mc.world.getEntitiesByClass(LivingEntity.class,new net.minecraft.util.math.Box(at,at).expand(XCharaCombo.MAX_REACH+3),
             e->e!=user&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
@@ -301,12 +319,20 @@ public final class KnifeClient {
         for(var c:SWINGS.values())if(c.caster().equals(id)&&c.combo()==XCharaCombo.SLAM&&c.age(0)<XCharaCombo.LENGTH[XCharaCombo.SLAM]+10)best=c;
         return best;
     }
+    /** (2.129.0) This player's latest three cuts this client still draws (in flight or stopped short), of either kind, or null. */
+    public static StandClient.Cast cutterOf(UUID id){
+        StandClient.Cast best=null;
+        for(var c:SWINGS.values())if(c.caster().equals(id)&&XCharaCombo.cutter(c.combo())&&c.age(0)<XCharaCombo.LENGTH[c.combo()]+2)best=c;
+        return best;
+    }
+    /** (2.129.0) The tick this player's three cuts are ready again, as the server told it (0 if none). */
+    public static long cutterReady(UUID id){return CUTTER_READY.getOrDefault(id,0L);}
     /** (2.128.0) The tick this player's slam is ready again, as the server told it (0 if none). */
     public static long slamReady(UUID id){return SLAM_READY.getOrDefault(id,0L);}
     /** (2.124.0) The tick this player's jab is ready again, as the server told it (0 if none). */
     public static long jabReady(UUID id){return JAB_READY.getOrDefault(id,0L);}
     /** Forgets this player's rest (their character is not X Chara now: the server forgot it too, StandManager). */
-    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);}
+    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);CUTTER_READY.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (XCharaCombo.HOLD): their keys do not walk them. The
      * server holds them as long (XCharaAttack.busy).

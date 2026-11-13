@@ -140,6 +140,7 @@ public final class MpServer implements ModInitializer {
         if(XCHARAT_ONLY){xcharaE(server);xcharaWeaken(server);}
         if(XCHARAY_ONLY)xcharaPull(server);
         if(XCHARASLAM_ONLY)xcharaSlam(server);
+        if(XCHARACUT_ONLY)xcharaCut(server);
         if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
             var last=logged.get(p.getUuid());
@@ -352,7 +353,7 @@ public final class MpServer implements ModInitializer {
         // (2.114.0: and in X Chara's basic attack's script, where it is sent 6 blocks away and thrown by the finisher)
         for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY||XCHARAM1_ONLY))continue;
             // (2.82.0: nor a player on Lee So-sang's sword formation, held up on its middle sword)
-            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&!(XCHARASLAM_ONLY&&c)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&!((XCHARASLAM_ONLY||XCHARACUT_ONLY)&&c)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
@@ -534,11 +535,11 @@ public final class MpServer implements ModInitializer {
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
-    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's basic attack's script (2.114.0, MP_ONLY=xcharam1): its cooldowns on and no healing, as for its G. */
-    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's Q's script (2.115.0, MP_ONLY=xcharaq; 2.117.0: or its plain swings', MP_ONLY=xcharaplain): as for the basic attack, and the caster's hack as it changes. */
-    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's E's script (2.119.0, MP_ONLY=xcharae): as for the hack's, and the caster's health and E. */
     static final boolean XCHARAE_ONLY="xcharae".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's T's script (2.126.0, MP_ONLY=xcharat): as for the hack's and the basic attack's, and the caster's health, its E and its weakening. */
@@ -547,6 +548,46 @@ public final class MpServer implements ModInitializer {
     static final boolean XCHARAY_ONLY="xcharay".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's slam's script (2.128.0, MP_ONLY=xcharaslam): as for the hack's, and the caster's slam and what it does to the watcher. */
     static final boolean XCHARASLAM_ONLY="xcharaslam".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's three cuts' script (2.129.0, MP_ONLY=xcharacut): as for the hack's, and the caster's cuts and what they do to the watcher. */
+    static final boolean XCHARACUT_ONLY="xcharacut".equals(System.getProperty("botand.mp.only"));
+    private String cutSeen="";private long cutReady;private float cutWatcher=-1,cutCaster=-1;private net.minecraft.util.math.Vec3d cutWas,cutWatcherWas;private long cutStag;
+    /**
+     * (2.129.0) X Chara's E with the hack off, the three cuts: when they begin (which kind, where a going forward
+     * ends, how far off the watcher is, its guard), each cut as it lands (the watcher's health), when they are over or
+     * stopped short; when the caster is moved more than a quarter of a block in a tick; how far the watcher is thrown
+     * (a tick's move of more than a quarter of a block, and where it comes to rest); either one's health as it changes;
+     * how long the watcher is staggered; when they are ready again.
+     */
+    private void xcharaCut(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeCutter(caster);
+        double far=Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ());
+        if(cutWas!=null&&cutWas.distanceTo(caster.getPos())>.25)
+            note(server,String.format(java.util.Locale.ROOT,"the caster moved %.2f blocks in a tick at %d%s: now %.2f from the watcher",cutWas.distanceTo(caster.getPos()),now,d==null?"":" ("+(now-(Long)d[0])+" ticks into their cuts)",far));
+        cutWas=caster.getPos();
+        if(cutWatcherWas!=null&&cutWatcherWas.distanceTo(watcher.getPos())>.25)
+            note(server,String.format(java.util.Locale.ROOT,"the watcher moved %.2f blocks in a tick at %d: now %.2f from the caster",cutWatcherWas.distanceTo(watcher.getPos()),now,far));
+        cutWatcherWas=watcher.getPos();
+        String key=d==null?"":d[0]+"/"+d[3];
+        if(!key.equals(cutSeen)){
+            if(d==null)note(server,String.format(java.util.Locale.ROOT,"caster's cuts over at %d; the watcher %.2f off, busy %s; ready again in %.1f s",now,far,
+                dev.sangwoo.celestialfall.combat.CombatManager.busy(caster),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.cutterReady(caster)-now)/20.0));
+            else{var to=(net.minecraft.util.math.Vec3d)d[2];
+                note(server,String.format(java.util.Locale.ROOT,"caster's cuts: began at %d (%d ticks in), kind %d, goes forward %s, blows %d; the watcher %.2f off (guard %s, health %.1f)",(Long)d[0],now-(Long)d[0],(Integer)d[1],
+                    to==null?"nowhere":String.format(java.util.Locale.ROOT,"%.2f blocks",Math.hypot(to.x-caster.getX(),to.z-caster.getZ())),(Integer)d[3],far,dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),watcher.getHealth()));}
+            cutSeen=key;
+        }
+        boolean stag=dev.sangwoo.celestialfall.combat.CombatManager.actionLocked(watcher);
+        if(stag&&cutStag==0)cutStag=now;
+        if(!stag&&cutStag!=0){note(server,"the watcher could not act for "+(now-cutStag)+" ticks (until "+now+")");cutStag=0;}
+        if(Math.abs(watcher.getHealth()-cutWatcher)>.01f){if(cutWatcher>=0)note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d",cutWatcher,watcher.getHealth(),now));cutWatcher=watcher.getHealth();}
+        if(Math.abs(caster.getHealth()-cutCaster)>.01f){if(cutCaster>=0)note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at %d",cutCaster,caster.getHealth(),now));cutCaster=caster.getHealth();}
+        long ready=dev.sangwoo.celestialfall.xchara.XCharaAttack.cutterReady(caster);
+        if(ready!=cutReady){note(server,"caster's cuts ready again at "+ready+" (now "+now+": "+String.format(java.util.Locale.ROOT,"%.1f",(ready-now)/20.0)+" s)");cutReady=ready;}
+    }
     private String slamSeen="";private long slamReady;private float slamWatcher=-1,slamCaster=-1;private net.minecraft.util.math.Vec3d slamWas;private boolean slamAir;private long slamOff;
     /**
      * (2.128.0) X Chara's G with the hack off, the slam: when one begins (how high it rises, how far off the watcher

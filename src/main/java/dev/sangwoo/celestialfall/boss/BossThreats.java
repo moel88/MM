@@ -288,7 +288,8 @@ public final class BossThreats {
                 false,false,false,dev.sangwoo.celestialfall.xchara.XCharaCombo.total(c),false,false));
             return;
         }
-        Zone zone=Zone.lane(p.getPos(),h.yaw(),dev.sangwoo.celestialfall.xchara.XCharaCombo.near(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.reach(c,i),
+        // (2.129.0) the three cuts going forward first: struck from where that ends
+        Zone zone=Zone.lane(dev.sangwoo.celestialfall.xchara.XCharaCombo.cutter(c)?dev.sangwoo.celestialfall.xchara.XCharaAttack.cutsFrom(p):p.getPos(),h.yaw(),dev.sangwoo.celestialfall.xchara.XCharaCombo.near(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.reach(c,i),
             dev.sangwoo.celestialfall.xchara.XCharaCombo.halfWidth(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.LOW,dev.sangwoo.celestialfall.xchara.XCharaCombo.HIGH);
         out.add(new Threat(p,"xchara"+c,h.start(),hit,h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.lastBlow(c),zone,
             !dev.sangwoo.celestialfall.xchara.XCharaCombo.unblockable(c),false,false,dev.sangwoo.celestialfall.xchara.XCharaCombo.total(c),false,false));

@@ -104,6 +104,10 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * <p>"slamfollow=1" (2.128.1): the "orbit=" camera goes with the slam's body as it is drawn, up its rise and down its dive
  * (to see the body's motion from near all the way).
  *
+ * <p>X Chara's three cuts (2.129.0, E with the hack off: "stand=x_chara" and no KEY_Q): "KEY_E@n" starts them; the log
+ * gets the server's ("cutter +N: server ...": which kind, where the going forward ends, the cuts landed, where the player
+ * really is, the dummy's health and how far it was thrown) and how far from there this client draws the body, tick by tick.
+ *
  * <p>X Chara's slam (2.128.0, G with the hack off: "stand=x_chara" and no KEY_Q): "KEY_G@n" starts it; "slamaim=FW[_RT[_UP]]"
  * aims it at that point from where the player stands (blocks ahead, to the right and up: OverwriteSlam.aimAt) instead of
  * at what the middle of the screen points at (a filming camera's middle is not the player's); the log gets the server's
@@ -328,6 +332,7 @@ public final class SkillShots implements ClientModInitializer {
     public static void afterFrame(){if(instance!=null)try{instance.frame();}catch(Throwable t){instance.fail(t);}}
     private void fail(Throwable t){t.printStackTrace();try{Files.createDirectories(OUT);Files.writeString(OUT.resolve("error.txt"),phase+" "+current+" "+t+"\n"+log);}catch(Exception ignored){}mc.scheduleStop();phase=99;}
     private net.minecraft.util.math.Vec3d slamFrom;
+    private net.minecraft.util.math.Vec3d cutFrom,cutDummy;
     private void server(Consumer<ServerPlayerEntity> f){mc.getServer().submit(()->f.accept(mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid()))).join();}
     private void key(int key,boolean down){mc.keyboard.onKey(mc.getWindow().getHandle(),key,0,down?GLFW_PRESS:GLFW_RELEASE,0);}
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
@@ -1327,6 +1332,20 @@ public final class SkillShots implements ClientModInitializer {
                             var sh=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),0);
                             log.append(String.format(Locale.ROOT,"  slam +%d: client draws the body %s from where it is, knife %s, sounds %s%n",age-a0,sh==null?"nowhere else":String.format(Locale.ROOT,"(%.2f, %.2f, %.2f)",sh.x,sh.y,sh.z),
                                 dev.sangwoo.celestialfall.client.xchara.HackMode.knifeLook(mc.player.getUuid(),0)==null?"black":"lit",String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("slam")).toList())));}
+                        // (2.129.0) X Chara's three cuts (E with the hack off): by the server, the one in flight (which kind, where its
+                        // going forward ends, how many cuts landed), where the player is from where they began, the dummy's health,
+                        // how far it is from where it stood, and how long it is staggered; and how far from where they are this
+                        // client draws them
+                        if(what.equals("KEY_E")&&age==at){cutFrom=mc.player.getPos();var dm=mc.world.getEntityById(dummyId);cutDummy=dm==null?null:dm.getPos();}
+                        if(what.equals("KEY_E")&&cutFrom!=null&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&age>at&&age<=at+40&&(age-at<=14||(age-at)%4==0)){final var from=cutFrom;final var stood=cutDummy;final int a0=at;
+                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeCutter(p);var dm=p.getServerWorld().getEntityById(dummyId);
+                                long now=p.getWorld().getTime();float hp=dm instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                                log.append(String.format(Locale.ROOT,"  cutter +%d: server %s, player (%.2f, %.2f, %.2f) from the start, ready in %d, dummy hp %.1f, %.2f from where it stood%n",age-a0,
+                                    d==null?"none":String.format(Locale.ROOT,"age %d kind %d to %s blows %d",now-(Long)d[0],(Integer)d[1],d[2]==null?"-":String.format(Locale.ROOT,"(%.2f, %.2f, %.2f)",((net.minecraft.util.math.Vec3d)d[2]).x-from.x,((net.minecraft.util.math.Vec3d)d[2]).y-from.y,((net.minecraft.util.math.Vec3d)d[2]).z-from.z),(Integer)d[3]),
+                                    p.getX()-from.x,p.getY()-from.y,p.getZ()-from.z,Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.cutterReady(p)-now),hp,dm==null||stood==null?Double.NaN:dm.getPos().distanceTo(stood)));});
+                            var sh=dev.sangwoo.celestialfall.client.xchara.EdgeCutter.offset(mc.player.getUuid(),0);
+                            log.append(String.format(Locale.ROOT,"  cutter +%d: client draws the body %s from where it is, swing %s, sounds %s%n",age-a0,sh==null?"nowhere else":String.format(Locale.ROOT,"(%.2f, %.2f, %.2f)",sh.x,sh.y,sh.z),
+                                dev.sangwoo.celestialfall.client.xchara.KnifeClient.describe(mc.player,0),String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("cutter")).toList())));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it
                         if(what.equals("KEY_Y")&&(age==at+2||age==at+8||age==at+14))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(p);var d=p.getServerWorld().getEntityById(dummyId);

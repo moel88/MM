@@ -92,8 +92,8 @@ public final class XCharaUltimate {
             int target=buf.readableBytes()>0?buf.readVarInt():-1;
             // (2.115.0) Q: the hack on or off (XCharaHack)
             if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
-            // (2.119.0) E: the restore, with the hack on (XCharaHeal)
-            if(skill==E){server.execute(()->{if(heard(player))XCharaHeal.request(player);});return;}
+            // (2.119.0) E: the restore, with the hack on (XCharaHeal); (2.129.0) with it off, the three cuts (XCharaAttack.cutter)
+            if(skill==E){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaHeal.request(player);else XCharaAttack.cutter(player);});return;}
             // (2.126.0) T with the hack on: the weakening, asked with the one in the crosshair (XCharaWeaken); with it off, nothing yet
             if(skill==T){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaWeaken.cast(player,target);});return;}
             // (2.127.0) Y with the hack on: the pull, asked with the one in the crosshair (XCharaPull); with it off, nothing yet

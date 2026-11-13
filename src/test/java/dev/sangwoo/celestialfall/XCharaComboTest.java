@@ -31,7 +31,7 @@ class XCharaComboTest {
             assertTrue(blowAt(first,0)<=blowAt(first+1,0)&&blowAt(first+1,0)<blowAt(first+2,0)&&blowAt(first+2,0)<blowAt(first+3,0));
         }
         // (2.121.0: 9 is the cleave, 2.124.0: 10 the jab: skills of the pipeline with no place in the combo)
-        assertFalse(valid(0));assertTrue(valid(9));assertTrue(valid(10));assertTrue(valid(11));assertFalse(valid(12));assertEquals(0,blows(0));assertEquals(0,blows(12));
+        assertFalse(valid(0));assertTrue(valid(9));assertTrue(valid(10));assertTrue(valid(11));assertTrue(valid(12));assertTrue(valid(13));assertFalse(valid(14));assertEquals(0,blows(0));assertEquals(0,blows(14));
         assertFalse(plain(0));assertEquals(0,place(0));assertEquals(0,place(9));assertEquals(0,place(10));
     }
     @Test void theCleaveIsASkillOfThePipelineNoHitOfTheCombo(){
@@ -67,7 +67,7 @@ class XCharaComboTest {
     }
     @Test void theJabIsTheOtherSkillOfThePipeline(){
         // (2.124.0, the user's video and words; "45초", "가드 불가", "13 (영상대로)", "8초동안 아무것도 못하고")
-        assertEquals(10,JAB);assertTrue(skill(JAB));assertTrue(valid(JAB));assertTrue(valid(SLAM));assertFalse(valid(SLAM+1));
+        assertEquals(10,JAB);assertTrue(skill(JAB));assertTrue(valid(JAB));assertTrue(valid(SLAM));assertTrue(cutter(SLAM+1));assertFalse(valid(LAST+1));
         assertEquals(0,place(JAB));assertFalse(last(JAB));assertFalse(plain(JAB));
         // it ends the combo: the hit after it is the first
         assertEquals(HACK_SLASH,next(JAB,false));assertEquals(SLASH,next(JAB,true));

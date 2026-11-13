@@ -1227,5 +1227,14 @@
         "preload": true
       }
     ]
+  },
+  "xchara_cutter": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_cutter",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }

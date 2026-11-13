@@ -33,6 +33,8 @@ public abstract class BeatdownRenderMixin {
         var pulled=dev.sangwoo.celestialfall.client.xchara.PullClient.offset(e,delta);if(pulled!=null)ci.setReturnValue(ci.getReturnValue().add(pulled));
         // (2.128.0) X Chara's slam: its user is drawn up in the air over where they stand, down its dive and where it came down
         var slammed=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(e.getUuid(),delta);if(slammed!=null)ci.setReturnValue(ci.getReturnValue().add(slammed));
+        // (2.129.0) X Chara's three cuts going forward first: drawn along the way while they stand where they began
+        var cutting=dev.sangwoo.celestialfall.client.xchara.EdgeCutter.offset(e.getUuid(),delta);if(cutting!=null)ci.setReturnValue(ci.getReturnValue().add(cutting));
     }
     /** No names over anyone's head while this client's camera is a beatdown's cutscene's (2.66.0: its close shots had the one struck's name fill the frame), as its HUD is hidden. */
     @Inject(method="render(Lnet/minecraft/entity/Entity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)

@@ -193,6 +193,9 @@ public final class BotandCamera {
         // camera goes with the body they see (in the first person too: they look from up there)
         var slammed=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),delta);
         if(slammed!=null)eye=eye.add(slammed);
+        // (2.129.0) and their three cuts' going forward
+        var cutting=dev.sangwoo.celestialfall.client.xchara.EdgeCutter.offset(mc.player.getUuid(),delta);
+        if(cutting!=null)eye=eye.add(cutting);
         if(STATE.firstPerson())return new CinematicDirector.Pose(eye,STATE.yaw,STATE.pitch,0);
         // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
         double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);

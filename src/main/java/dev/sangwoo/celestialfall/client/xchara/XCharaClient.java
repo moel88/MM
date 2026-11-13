@@ -202,8 +202,11 @@ public final class XCharaClient {
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_E){
             // E on the map is X Chara's player's skill key (their inventory on I, as the other characters'). (2.126.0, user
             // request: "q활성화y를 다시 q활성화 e로 옮기고") E with the hack on, the restore again (XCharaHeal; E's in 2.119 and
-            // 2.120, Y's from 2.121 to 2.125); with it off, nothing yet
-            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+            // 2.120, Y's from 2.121 to 2.125)
+            // (2.129.0) with the hack off E is the three cuts (XCharaAttack.cutter: the way they look as it begins); the
+            // server takes the one or the other by their hack
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                if(!HackMode.on(mc.player))BotandCamera.prepareInteraction();
                 var b=PacketByteBufs.create();b.writeByte(E);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
             return true;
