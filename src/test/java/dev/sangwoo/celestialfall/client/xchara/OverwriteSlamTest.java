@@ -146,14 +146,14 @@ class OverwriteSlamTest {
         // 내려 찍을때 어떤 자세가 나와야할까?") a chop with the whole body. Bowed deep before the leap
         assertTrue(OverwriteSlam.CLIP.frame(1.0f).pitch()>45,"bowed from the waist: "+OverwriteSlam.CLIP.frame(1.0f).pitch());
         // wound up through the rise and at the top: the fist over the head and behind it, the knife pointing back behind
-        // them, the back arched, both hands on the knife, the legs behind them
+        // them, in the one hand; the body upright (the user: "허리 그냥 뒤로 안 젖히게 바꾸고 칼도 한 손으로"), the legs behind them
         for(float t=1.5f;t<=2.9f;t+=.1f){
             Vec3d[] wound=OverwriteSlam.blade(Vec3d.ZERO,0,t);R6.Frame f=OverwriteSlam.CLIP.frame(t);R6.Pose p=R6.poseOf(f);
             assertTrue(wound[0].y>1.65,"the fist over the head at "+t+": "+wound[0].y);assertTrue(wound[0].z<-.1,"the fist behind them at "+t+": "+wound[0].z);
             assertTrue(wound[1].z<-.7&&wound[1].y>-.05,"the knife back behind them, not under level, at "+t+": "+wound[1]);
-            assertTrue(f.pitch()<-12,"the back arched at "+t+": "+f.pitch());
+            assertTrue(Math.abs(f.pitch())<4,"the body upright, the waist not bent back, at "+t+": "+f.pitch());
             assertTrue(p.rLeg.fw()<-.1&&p.lLeg.fw()<-.1,"the legs behind them at "+t);
-            assertEquals(1,OverwriteSlam.grip(t),0,"both hands on it at "+t);
+            assertTrue(p.lArm.fw()>.3,"the free arm out ahead of them (the knife in the one hand) at "+t);
         }
         // the knife sinks further down their back the longer they are wound up (never coming up again before the drop)
         double sunk=2;for(float t=1.5f;t<=2.9f;t+=.05f){double y=OverwriteSlam.blade(Vec3d.ZERO,0,t)[1].y;assertTrue(y<=sunk+.02,"the knife comes up again at "+t);sunk=y;}
@@ -164,7 +164,6 @@ class OverwriteSlamTest {
         // the blow: the trunk folds before the knife comes down (the body first, the knife last), and they land folded far over it
         assertTrue(OverwriteSlam.CLIP.frame(3.36f).pitch()>10&&OverwriteSlam.blade(Vec3d.ZERO,0,3.36f)[1].y>.3,"the trunk leads the knife into the blow");
         assertTrue(OverwriteSlam.CLIP.frame(OverwriteSlam.LAND+.1f).pitch()>35,"folded over the blow");
-        assertEquals(0,OverwriteSlam.grip(1.0f),0);assertEquals(0,OverwriteSlam.grip(OverwriteSlam.FREE+.2f),0);assertEquals(1,OverwriteSlam.grip(OverwriteSlam.LAND+.2f),0);
         // landed: low, the knife's point down in the ground ahead of them
         R6.Frame down=OverwriteSlam.CLIP.frame(OverwriteSlam.LAND+.08f);assertTrue(down.up()<-.3);
         Vec3d[] in=OverwriteSlam.blade(Vec3d.ZERO,0,OverwriteSlam.LAND+.08f);Vec3d tip=in[0].add(in[1].multiply(KnifeCombo.TIP));

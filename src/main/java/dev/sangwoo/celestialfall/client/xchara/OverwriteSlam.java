@@ -180,41 +180,41 @@ public final class OverwriteSlam {
         return on(fw,up,yaw,pitch,rArm,blade,lArm,rr,rf,lr,lf).head(yaw,-pitch*.3f,0);
     }
     /**
-     * In the air with both hands on the knife: the body leant {@code pitch} forward (arched back, under 0), the knife's
-     * arm by its way from its own shoulder in the body's frame ({right, up, forward}: over the head both hands meet
-     * only with the arm leant in toward the middle), the knife and the legs by their ways in the world; the eyes kept
-     * on where they come down ({@code look} degrees down).
+     * In the air, the knife swung over in one hand: the body leant {@code pitch} forward, the knife's arm by its way
+     * from its own shoulder in the body's frame ({right, up, forward}), the knife, the free arm and the legs by their
+     * ways in the world; the eyes kept on where they come down ({@code look} degrees down).
      */
-    private static R6.Pose wound(float pitch,double[] arm,double[] blade,double[] rLeg,double[] lLeg,float look){
-        R6.Pose p=air(0,pitch,d(60,0),blade,d(60,-30),rLeg,lLeg);
+    private static R6.Pose wound(float pitch,double[] arm,double[] blade,double[] lArm,double[] rLeg,double[] lLeg,float look){
+        R6.Pose p=air(0,pitch,d(60,0),blade,lArm,rLeg,lLeg);
         p.rArm=new R6.Dir(arm[0],arm[1],arm[2]).norm();
         return p.head(0,look-pitch,0);
     }
-    /** The knife's arm in the body's frame: up and ahead as the knife comes up, straight over the head, and back behind the head and the shoulder. */
-    private static final double[] AHEAD={-.12,.48,.36},OVERHEAD={-.26,.56,.02},BEHIND={-.28,.48,-.22},DOWN_AHEAD={-.20,.40,.34};
+    /** The knife's arm in the body's frame: up and ahead as the knife comes up, straight over the head, back behind the head and the shoulder, and ahead again into the blow. */
+    private static final double[] AHEAD={.08,.48,.36},OVERHEAD={.03,.60,.03},BEHIND={.06,.50,-.30},DOWN_AHEAD={.05,.40,.38};
     /**
      * The clip (the rise and the dive themselves are {@link #shift}'s: the clip is the body about its own feet).
      * 2.128.1, the user of 2.128.0's: "모션도 달라"; then, of what I read of the video again, "정확한 모션은 검을 어깨
      * 뒤까지 올려서 세게 내려치려는 모션으로 올라가는 거임", and "인체 구조상 도끼를 강하게 내려 찍을때 어떤 자세가
-     * 나와야할까?": it is a chop with the whole body, as an axe's.
+     * 나와야할까?"; and of the draft that came of it (both hands on the knife, the back arched): "저 자세에서 허리 그냥
+     * 뒤로 안 젖히게 바꾸고 칼도 한 손으로 들어 등 뒤로 넘기는건 똑같아".
      * <ol>
      * <li>standing, the knife held out before them, its point down, as it lights; then bowed deep from the waist, the
      * knees bent, the knife low and level before them (the video's);</li>
-     * <li>sprung up, and the wind up: the other hand takes the knife's rod ({@link #grip}), both arms bring it up before
-     * them, over the head and back behind the head and the shoulder, the elbows up; the chest opens and the back
-     * arches, the body a drawn bow, the knees bent and the legs left behind; they rise so, their eyes on where they
-     * will come down, and hang so at the top, the knife sinking back toward level behind them (never under it: it
-     * is held up behind the shoulder, as the video's);</li>
+     * <li>sprung up, and the wind up: the knife's arm brings it up before them, over the head and back behind the head
+     * and the shoulder, the elbow up, in the one hand; the body stays upright (the waist not bent back: the user's),
+     * the free arm out ahead of them for balance, the knees bent and the legs left behind; they rise so, their eyes
+     * on where they will come down, and hang so at the top, the knife sinking back toward level behind them (never
+     * under it: it is held up behind the shoulder, as the video's);</li>
      * <li>the drop: the body stretches up long, the knife swung up from behind to straight over the head (the video's
      * knife standing straight up as they fall, feet first: the chop on its way over), the legs coming down under
      * them;</li>
-     * <li>the blow as they land: the trunk folds forward first, the arms come over and straighten after it, the knife
+     * <li>the blow as they land: the trunk folds forward first, the arm comes over and straightens after it, the knife
      * last and fastest; landed deep, bent far over it, the knees bent, the whole weight on the knife in the ground
-     * before them; held; and up again, the other hand let go.</li>
+     * before them; held; and up again.</li>
      * </ol>
      * (2.128.0 crouched on its knees with the knife swept back, rose arched with one knee up and the knife out low,
-     * and dived head first with the knife thrust down ahead; 2.128.1's first drafts rose spread as a star, then stiff
-     * and upright with the knife in one hand: none of them a body about to strike.)
+     * and dived head first with the knife thrust down ahead; 2.128.1's drafts rose spread as a star, then stiff with
+     * the knife only cocked, then with both hands on it and the back arched: not gone back to.)
      */
     static final Anim CLIP=Anim.joints(
         k(0,KnifeCombo.STANCE),
@@ -227,26 +227,27 @@ public final class OverwriteSlam {
         k(.86,bowed(-.17,-.33,-2,54,d(-66,20),d(5,27),d(-66,-32),.23,.07,-.23,-.05)),
         k(1.04,bowed(-.18,-.37,-2,57,d(-67,20),d(6,28),d(-64,-34),.23,.07,-.23,-.05)),
         // sprung: the body coming up as they leave the ground, the knife coming up before them
-        k(LEAP,on(-.04,-.05,-2,30,d(-34,24),d(24,16),d(-40,-20),.20,.03,-.20,-.03)),
-        k(LEAP+.09f,wound(8,AHEAD,d(56,8),d(-80,125),d(-80,-115),10)),
-        // the wind up: over the head and back behind the shoulder, the back arching, the legs left behind
-        k(1.32,wound(-8,OVERHEAD,d(82,172),d(-70,165),d(-64,-170),22)),
-        k(1.50,wound(-18,BEHIND,d(36,174),d(-60,168),d(-54,-172),30)),
-        k(1.80,wound(-22,BEHIND,d(24,170),d(-58,170),d(-52,-172),34)),
-        k(2.05,wound(-20,BEHIND,d(17,168),d(-64,172),d(-60,-174),36)),
-        // hanging at the top, wound up, the legs coming together behind them, the knife sinking down their back
-        k(2.25,wound(-16,BEHIND,d(13,166),d(-74,176),d(-71,-178),38)),
-        k(2.56,wound(-15,BEHIND,d(9,165),d(-76,178),d(-73,-178),40)),
-        k(2.90,wound(-18,BEHIND,d(3,165),d(-73,178),d(-70,-178),40)),
+        k(LEAP,on(-.04,-.05,-2,30,d(-34,30),d(24,18),d(-52,-40),.20,.03,-.20,-.03)),
+        k(LEAP+.09f,wound(10,AHEAD,d(56,8),d(-50,-50),d(-80,125),d(-80,-115),10)),
+        // the wind up: over the head and back behind the shoulder in the one hand, the body upright, the free arm out
+        // ahead, the legs left behind
+        k(1.32,wound(3,OVERHEAD,d(82,172),d(-34,-46),d(-72,165),d(-66,-170),22)),
+        k(1.50,wound(0,BEHIND,d(36,174),d(-22,-40),d(-64,168),d(-58,-172),30)),
+        k(1.80,wound(0,BEHIND,d(24,170),d(-16,-36),d(-62,170),d(-56,-172),34)),
+        k(2.05,wound(0,BEHIND,d(17,168),d(-18,-36),d(-66,172),d(-62,-174),36)),
+        // hanging at the top, wound up, the legs coming together behind them, the knife sinking toward level
+        k(2.25,wound(0,BEHIND,d(13,166),d(-22,-38),d(-76,176),d(-73,-178),38)),
+        k(2.56,wound(0,BEHIND,d(9,165),d(-24,-38),d(-78,178),d(-75,-178),40)),
+        k(2.90,wound(-1,BEHIND,d(3,165),d(-20,-36),d(-76,178),d(-73,-178),40)),
         // the drop: stretched up long, the knife swung up from behind to straight over the head, feet first
-        k(3.06,wound(-7,OVERHEAD,d(84,172),d(-84,150),d(-84,-150),38)),
-        k(3.30,wound(3,OVERHEAD,d(84,8),d(-87,90),d(-87,-90),36)),
-        k(3.35,wound(15,DOWN_AHEAD,d(52,0),d(-78,50),d(-78,-50),30)),
+        k(3.06,wound(0,OVERHEAD,d(84,172),d(-40,-40),d(-85,150),d(-85,-150),38)),
+        k(3.30,wound(4,OVERHEAD,d(84,8),d(-56,-60),d(-87,90),d(-87,-90),36)),
+        k(3.35,wound(15,DOWN_AHEAD,d(52,0),d(-50,-90),d(-78,50),d(-78,-50),30)),
         // the blow: folded far over it, the knife in the ground ahead, the whole weight on it
-        k(LAND,bowed(.04,-.40,0,38,d(-50,-18),d(-24,0),d(-34,-110),.22,.30,-.22,-.26)),
-        k(LAND+.07f,bowed(.06,-.47,0,42,d(-52,-18),d(-25,0),d(-30,-116),.22,.30,-.22,-.26)),
-        k(LAND+.30f,bowed(.05,-.43,0,39,d(-50,-18),d(-24,0),d(-34,-110),.22,.30,-.22,-.26)),
-        k(FREE,bowed(.05,-.40,0,35,d(-50,-14),d(-23,0),d(-36,-108),.22,.30,-.22,-.26)),
+        k(LAND,bowed(.04,-.40,0,38,d(-54,4),d(-24,0),d(-34,-110),.22,.30,-.22,-.26)),
+        k(LAND+.07f,bowed(.06,-.47,0,42,d(-56,4),d(-25,0),d(-30,-116),.22,.30,-.22,-.26)),
+        k(LAND+.30f,bowed(.05,-.43,0,39,d(-54,4),d(-24,0),d(-34,-110),.22,.30,-.22,-.26)),
+        k(FREE,bowed(.05,-.40,0,35,d(-54,5),d(-23,0),d(-36,-108),.22,.30,-.22,-.26)),
         // up, the knife drawn out
         k(FREE+.2f,on(.03,-.18,0,10,d(-64,30),d(-6,0),d(-60,-60),.20,.16,-.20,-.12)),
         k(FREE+.4f,on(.01,-.05,0,3,d(-76,60),d(-1,0),d(-80,-20),.18,.04,-.18,-.03)),
@@ -259,34 +260,21 @@ public final class OverwriteSlam {
         return -SlamRules.RISE*SlamRules.risen(Math.min(a,SlamRules.DIVE))*(1-SlamRules.dived(a))*Ease.smooth((float)a,SlamRules.LEAP,SlamRules.LEAP+4);
     };
     /**
-     * How much the legs tuck in the air: all of it wound up in the rise (the knees bent behind them: the drawn bow),
-     * less hanging at the top, next to nothing as they stretch out to drop (the video's legs are straight then), all of
-     * it again as the ground comes up under them.
+     * How much the legs tuck in the air: all of it wound up in the rise (the knees bent behind them), less hanging at
+     * the top, next to nothing as they stretch out to drop (the video's legs are straight then), all of it again as
+     * the ground comes up under them.
      */
     static double tuck(float sec){
         double hang=.55,straight=.08;
         double t=1+(hang-1)*Ease.smooth(sec,1.9f,2.25f)+(straight-hang)*Ease.smooth(sec,2.92f,3.1f);
         return t+(1-t)*Ease.smooth(sec,LAND-.1f,LAND);
     }
-    /** How far down the knife's rod from the first hand the other hand holds it (blocks). */
-    static final double GRIP_BACK=.2;
-    /** How much the other hand is on the knife's rod: taken as they leave the ground, let go once they are free after the blow. */
-    static float grip(float sec){return Ease.smooth(sec,LEAP+.02f,LEAP+.2f)*(1-Ease.smooth(sec,FREE,FREE+.18f));}
     private static final Anim.Fix BENT=IsosangLimbs.natural(GROUND,OverwriteSlam::tuck);
-    /**
-     * A frame of the clip as it is drawn: its elbows and knees bent (IsosangLimbs), the stance's straight limbs at its
-     * beginning and its end (as the knife's hits), and through the chop the other hand on the knife's rod behind the
-     * first ({@link #grip}: that arm set by where the rod is, as the cleave's).
-     */
+    /** A frame of the clip as it is drawn: its elbows and knees bent (IsosangLimbs), the stance's straight limbs at its beginning and its end (as the knife's hits). */
     static R6.Frame fix(float sec,R6.Frame f){
         R6.Frame b=BENT.apply(sec,f);
         float rest=Math.max(1-Ease.smooth(sec,0,KnifeCombo.OUT_OF_REST),Ease.smooth(sec,END-KnifeCombo.INTO_REST,END));
-        if(rest>0)b=R6.blend(b,KnifeCombo.AT_REST,Math.min(1,rest));
-        float g=grip(sec);if(g<=0)return b;
-        R6.Pose p=R6.poseOf(b);double r=R6.armReach(p.rElbow);
-        double x=.3125+p.rArm.rt()*r-p.blade.rt()*GRIP_BACK,y=1.375+p.rArm.up()*r-p.blade.up()*GRIP_BACK,z=p.rArm.fw()*r-p.blade.fw()*GRIP_BACK;
-        R6.Frame both=IsosangLimbs.leftHandAt(b,x,y,z);
-        return g>=1?both:R6.blend(b,both,g);
+        return rest<=0?b:R6.blend(b,KnifeCombo.AT_REST,Math.min(1,rest));
     }
     /** The fist and the knife's way {@code sec} seconds in, for a body whose feet are at {@code feet} facing {@code yaw}. */
     static Vec3d[] blade(Vec3d feet,float yaw,float sec){return KagenoClips.blade(feet,yaw,R6.poseOf(CLIP.frame(sec)));}
