@@ -333,6 +333,7 @@ public final class SkillShots implements ClientModInitializer {
     private void fail(Throwable t){t.printStackTrace();try{Files.createDirectories(OUT);Files.writeString(OUT.resolve("error.txt"),phase+" "+current+" "+t+"\n"+log);}catch(Exception ignored){}mc.scheduleStop();phase=99;}
     private net.minecraft.util.math.Vec3d slamFrom;
     private net.minecraft.util.math.Vec3d cutFrom,cutDummy;
+    private net.minecraft.util.math.Vec3d shotFrom;
     private void server(Consumer<ServerPlayerEntity> f){mc.getServer().submit(()->f.accept(mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid()))).join();}
     private void key(int key,boolean down){mc.keyboard.onKey(mc.getWindow().getHandle(),key,0,down?GLFW_PRESS:GLFW_RELEASE,0);}
     /** The client's own clock of the newest local cast (falls back to the trigger tick). */
@@ -1346,6 +1347,25 @@ public final class SkillShots implements ClientModInitializer {
                             var sh=dev.sangwoo.celestialfall.client.xchara.EdgeCutter.offset(mc.player.getUuid(),0);
                             log.append(String.format(Locale.ROOT,"  cutter +%d: client draws the body %s from where it is, swing %s, sounds %s%n",age-a0,sh==null?"nowhere else":String.format(Locale.ROOT,"(%.2f, %.2f, %.2f)",sh.x,sh.y,sh.z),
                                 dev.sangwoo.celestialfall.client.xchara.KnifeClient.describe(mc.player,0),String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("cutter")).toList())));}
+                        // (2.130.0) X Chara's knives shot (Y with the hack off): "shotaim=FW[_RT[_UP]]" sends them at that point from
+                        // where the player stands ("shotaim=dummy": at the dummy's chest; a filming camera's middle is not the
+                        // player's); by the server, the skill in flight (the knives let go, the last aim it was told), how many
+                        // knives fly, the dummy's health and how long it is staggered; and each knife as this client draws it
+                        if(what.equals("KEY_Y")&&age==at&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)){shotFrom=mc.player.getPos();
+                            if(opts.containsKey("shotaim")){String o=opts.get("shotaim");var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var r=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                                if(o.equals("dummy")){var dm=mc.world.getEntityById(dummyId);dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt=dm==null?null:dm.getPos().add(0,dm.getHeight()*.55,0);}
+                                else{String[] v=o.split("[_x]");dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt=mc.player.getPos().add(f.multiply(Double.parseDouble(v[0]))).add(r.multiply(v.length>1?Double.parseDouble(v[1]):0)).add(0,v.length>2?Double.parseDouble(v[2]):0,0);}
+                                log.append("  knives aimed at ").append(dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt).append('\n');}
+                            else dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt=null;}
+                        if(what.equals("KEY_Y")&&shotFrom!=null&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)&&age>at&&age<=at+44&&(age-at<=30||(age-at)%4==0)){final int a0=at;
+                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeShot(p);var dm=p.getServerWorld().getEntityById(dummyId);
+                                long now=p.getWorld().getTime();float hp=dm instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                                log.append(String.format(Locale.ROOT,"  shot +%d: server %s, %d knives flying, ready in %d, dummy hp %.1f%n",age-a0,
+                                    d==null?"none":String.format(Locale.ROOT,"age %d let go %d aim %s",now-(Long)d[0],(Integer)d[1],d[2]==null?"-":d[2].toString()),
+                                    dev.sangwoo.celestialfall.xchara.XCharaShot.flying(p),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.shotReady(p)-now),hp));});
+                            StringBuilder ks=new StringBuilder();for(int k=0;k<4;k++)ks.append(" [").append(dev.sangwoo.celestialfall.client.xchara.BladeShot.describe(mc.player,k,0)).append(']');
+                            log.append(String.format(Locale.ROOT,"  shot +%d: client knives (shown,flying,head,grip xyz,struck,far,took)%s, sounds %s%n",age-a0,ks,
+                                String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("knife")).toList())));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it
                         if(what.equals("KEY_Y")&&(age==at+2||age==at+8||age==at+14))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(p);var d=p.getServerWorld().getEntityById(dummyId);

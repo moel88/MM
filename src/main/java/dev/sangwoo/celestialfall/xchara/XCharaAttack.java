@@ -79,6 +79,8 @@ public final class XCharaAttack {
          * forward first, where it ends (null: it cuts where they stand) and whether they have been taken there.
          */
         long cutterReady;Vec3d to;boolean arrived;
+        /** (2.130.0) The knives shot (Y with the hack off): the tick they are ready again (0 for at once). Of one in flight, where its user stood as it began is {@code from}, and the last their client told of where the middle of its screen points {@code aim} (the slam's fields: a hit is one or the other). */
+        long shotReady;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -121,13 +123,17 @@ public final class XCharaAttack {
         return s!=null&&s.world==p.getWorld()&&skill(s.combo)&&p.getWorld().getTime()<s.start+LENGTH[s.combo];
     }
     /** This player is X Chara's no more: the attack's rest is gone, so it is ready if they are again (StandManager.forgetOthers). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;}}
     /** The attack's rest is gone (a player the cooldowns are off for, /botand nocooldown). */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;}}
     /** (2.124.0) The tick this player's jab is ready again (0 if it is). */
     public static long jabReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.jabReady;}
     /** (2.129.0) The tick this player's three cuts are ready again (0 if they are). */
     public static long cutterReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.cutterReady;}
+    /** (2.130.0) The tick this player's knives shot are ready again (0 if they are). */
+    public static long shotReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.shotReady;}
+    /** (2.130.0) For the multiplayer check: this player's knives shot in flight as {start, knives let go, where the last told aim is or null}, or null. */
+    public static Object[] describeShot(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||s.combo!=SHOT?null:new Object[]{s.start,s.blows,s.aim};}
     /** (2.129.0) Where this player's three cuts in flight are struck from: where their going forward ends until they are there, then where they stand. */
     public static Vec3d cutsFrom(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());
@@ -245,6 +251,33 @@ public final class XCharaAttack {
         send(p,s,HIT,-1,null);
         return true;
     }
+    /**
+     * Y with the hack off, the four knives shot (2.130.0, XCharaCombo.SHOT, ShotRules). Returns whether it began: with the
+     * hack off, nothing holding them (a hit of the knife's own holds too), and its cooldown over. As the other skills,
+     * it ends the combo and adds no rest of its own. Its knives are let go at its "blows" ({@link #fire}).
+     */
+    public static boolean shot(ServerPlayerEntity p){
+        if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(valid(s.combo)&&now<(last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:s.start+HOLD[s.combo]))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(now<s.shotReady&&!free)return false;
+        s.combo=SHOT;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
+        s.from=p.getPos();s.aim=null;s.aimAt=0;
+        s.shotReady=free?0:ShotRules.ready(now);
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        send(p,s,HIT,-1,null);
+        return true;
+    }
+    /**
+     * Knife {@code k} of the knives shot is let go: at where the middle of their screen points (their client's word, if
+     * it told within the last ticks and it is no further than the knives fly; else where their look meets the world).
+     */
+    private static void fire(ServerPlayerEntity p,State s,int k,long now){
+        Vec3d want=s.aim!=null&&now-s.aimAt<=8?s.aim:XCharaShot.looked(p);
+        XCharaShot.fire(p,s.id,k,s.from,s.yaw,want);
+    }
     /** Whom {@code p}'s knife may strike at all: alive, to be struck, no merchant, and (a player) one they may harm. */
     private static boolean foe(ServerPlayerEntity p,LivingEntity e){
         return e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)
@@ -289,8 +322,15 @@ public final class XCharaAttack {
      * their slam before its dive: kept, the last of them, for when the dive begins.
      */
     public static void aim(ServerPlayerEntity p,Vec3d at){
-        var s=STATES.get(p.getUuid());if(s==null||s.combo!=SLAM||s.land!=null||s.world!=p.getWorld())return;
+        var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getWorld())return;
         long age=p.getWorld().getTime()-s.start;
+        // (2.130.0) their knives shot, until the last is let go: where each goes as it is (a point no further than they fly, and a little)
+        if(s.combo==SHOT){
+            if(age<0||age>ShotRules.FIRE[ShotRules.BLADES-1]||!Double.isFinite(at.x)||!Double.isFinite(at.y)||!Double.isFinite(at.z))return;
+            if(at.squaredDistanceTo(p.getEyePos())>(ShotRules.RANGE+8)*(ShotRules.RANGE+8))return;
+            s.aim=at;s.aimAt=p.getWorld().getTime();return;
+        }
+        if(s.combo!=SLAM||s.land!=null)return;
         if(age<SlamRules.AIM_FROM-4||age>SlamRules.DIVE||!Double.isFinite(at.x)||!Double.isFinite(at.y)||!Double.isFinite(at.z))return;
         s.aim=at;s.aimAt=p.getWorld().getTime();
     }
@@ -381,7 +421,7 @@ public final class XCharaAttack {
             if(!moving)return;
             if(s.blows==0){
                 long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+cooldown(s.combo);
-                if(XCharaCombo.cutter(s.combo))s.cutterReady=ready;else if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
+                if(s.combo==SHOT)s.shotReady=ready;else if(XCharaCombo.cutter(s.combo))s.cutterReady=ready;else if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
             }
             s.queued=false;s.combo=0;s.blows=0;
             send(p,s,STOPPED,-1,null);
@@ -398,6 +438,8 @@ public final class XCharaAttack {
      */
     private static void blow(ServerPlayerEntity p,State s,long now){
         int combo=s.combo,i=s.blows++;
+        // (2.130.0) the knives shot: this "blow" is a knife let go; whom it strikes is its own to find (XCharaShot)
+        if(combo==SHOT){fire(p,s,i,now);send(p,s,LANDED,i,null);return;}
         // (2.128.0) the slam's blow is its landing: its user is where it came down as it strikes round them
         if(combo==SLAM){if(s.land==null)dive(p,s,now);touchDown(p,s);}
         var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i);
@@ -481,6 +523,8 @@ public final class XCharaAttack {
             if(land!=null){b.writeDouble(land.x);b.writeDouble(land.y);b.writeDouble(land.z);}
             // (2.129.0) when the three cuts are ready again (a 2.128 client stops reading before it)
             b.writeLong(s.cutterReady);
+            // (2.130.0) and the knives shot (a 2.129 client stops reading before it)
+            b.writeLong(s.shotReady);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

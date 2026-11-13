@@ -96,8 +96,8 @@ public final class XCharaUltimate {
             if(skill==E){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaHeal.request(player);else XCharaAttack.cutter(player);});return;}
             // (2.126.0) T with the hack on: the weakening, asked with the one in the crosshair (XCharaWeaken); with it off, nothing yet
             if(skill==T){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaWeaken.cast(player,target);});return;}
-            // (2.127.0) Y with the hack on: the pull, asked with the one in the crosshair (XCharaPull); with it off, nothing yet
-            if(skill==Y){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaPull.cast(player,target);});return;}
+            // (2.127.0) Y with the hack on: the pull, asked with the one in the crosshair (XCharaPull); (2.130.0) with it off, the knives shot (XCharaAttack.shot)
+            if(skill==Y){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaPull.cast(player,target);else XCharaAttack.shot(player);});return;}
             // R: with the hack on the double (2.125.0: asked with the one in the crosshair, as G; the cleave was R's from
             // 2.121.0 and went to H), with it off the jab (2.124.0)
             if(skill==R){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaClone.cast(player,target);else XCharaAttack.jab(player);});return;}

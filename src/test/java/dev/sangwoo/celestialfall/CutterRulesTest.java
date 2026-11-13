@@ -31,7 +31,7 @@ class CutterRulesTest {
         assertFalse(cutter(SLAM)||cutter(JAB)||cutter(CLEAVE)||cutter(LUNGE));
         assertTrue(unblockable(CLEAVE)&&unblockable(JAB)&&unblockable(SLAM)&&unblockable(LUNGE)&&!unblockable(SLASH),"the others as they were");
         assertTrue(launches(LUNGE,0)&&!launches(CLEAVE,0)&&!launches(JAB,0));
-        assertEquals(LAST,CUTTER_DASH);assertFalse(valid(LAST+1));
+        assertEquals(13,CUTTER_DASH);assertFalse(valid(LAST+1));
         // the one that goes forward first is the same, LEAD ticks later
         for(int i=0;i<3;i++)assertEquals(blowAt(CUTTER,i)+CutterRules.LEAD,blowAt(CUTTER_DASH,i));
         assertEquals(HOLD[CUTTER]+CutterRules.LEAD,HOLD[CUTTER_DASH]);assertEquals(LENGTH[CUTTER]+CutterRules.LEAD,LENGTH[CUTTER_DASH]);

@@ -213,9 +213,10 @@ public final class XCharaClient {
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Y){
             // (2.127.0) Y with the hack on, the pull (XCharaPull): asked, as G, R and T, with the one the camera's middle
-            // looks at; with it off, Y is taken and does nothing yet (the restore was Y's from 2.121 to 2.125)
-            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
-                var target=aim(mc);
+            // looks at (the restore was Y's from 2.121 to 2.125); (2.130.0) with it off, the knives shot (XCharaAttack.shot:
+            // asked with no one; where each knife goes is told as they are let go, BladeShot.tellAim)
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                var target=HackMode.on(mc.player)?aim(mc):null;
                 BotandCamera.prepareInteraction();
                 var b=PacketByteBufs.create();b.writeByte(Y);b.writeVarInt(target==null?-1:target.getId());ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
