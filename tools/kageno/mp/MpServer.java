@@ -352,7 +352,8 @@ public final class MpServer implements ModInitializer {
         // (2.77.0: and in Lee So-sang's script, where it is sent 8 blocks away for the first three hits to strike no one)
         boolean standOut=server.getPlayerManager().getPlayerList().stream().anyMatch(q->caster(q)&&dev.sangwoo.celestialfall.stand.StandSummon.out(q));
         // (2.114.0: and in X Chara's basic attack's script, where it is sent 6 blocks away and thrown by the finisher)
-        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY||XCHARAM1_ONLY))continue;
+        // (2.130.0: and in X Chara's knives' script, where it stands 6 and 30 blocks off for them to fly to)
+        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY||XCHARAM1_ONLY||XCHARASHOT_ONLY))continue;
             // (2.82.0: nor a player on Lee So-sang's sword formation, held up on its middle sword)
             if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&!((XCHARASLAM_ONLY||XCHARACUT_ONLY||XCHARASHOT_ONLY)&&c)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
