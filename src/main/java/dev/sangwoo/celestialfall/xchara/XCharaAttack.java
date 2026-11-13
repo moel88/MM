@@ -72,6 +72,8 @@ public final class XCharaAttack {
          * begins), and the last their client told of where the middle of its screen points (and the tick it did).
          */
         long slamReady;Vec3d from;double rise;Vec3d land,aim;long aimAt;
+        /** (2.128.4) How far forward of where they stood the top of its rise is ({x,z}: the way they faced, as far as they go). */
+        double aheadX,aheadZ;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -202,6 +204,7 @@ public final class XCharaAttack {
         if(now<s.slamReady&&!free)return false;
         s.combo=SLAM;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
         s.from=p.getPos();s.rise=SlamGround.headroom(p.getWorld(),p);s.land=null;s.aim=null;s.aimAt=0;
+        Vec3d way=Vec3d.fromPolar(0,s.yaw);double far=SlamGround.forward(p.getWorld(),p,s.rise,way);s.aheadX=way.x*far;s.aheadZ=way.z*far;
         s.slamReady=free?0:SlamRules.ready(now);
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
         send(p,s,HIT,-1,null);
@@ -226,7 +229,7 @@ public final class XCharaAttack {
     private static void dive(ServerPlayerEntity p,State s,long now){
         var world=p.getServerWorld();Vec3d from=s.from;
         Vec3d want=s.aim!=null&&now-s.aimAt<=8?s.aim
-            :SlamGround.aimed(world,p,from,new Vec3d(from.x,from.y+s.rise+p.getStandingEyeHeight(),from.z),p.getRotationVec(1));
+            :SlamGround.aimed(world,p,from,new Vec3d(from.x+s.aheadX,from.y+s.rise+p.getStandingEyeHeight(),from.z+s.aheadZ),p.getRotationVec(1));
         s.land=SlamGround.landing(world,p,from,s.rise,want);
         send(p,s,AIMED,-1,null);
     }
@@ -392,7 +395,10 @@ public final class XCharaAttack {
             // (2.128.0) and the slam; and of one in flight how high it rises and, once its dive began, where it comes down
             b.writeLong(s.slamReady);
             boolean slam=s.combo==SLAM;
-            b.writeFloat(slam?(float)s.rise:0);b.writeBoolean(slam&&s.land!=null);
+            b.writeFloat(slam?(float)s.rise:0);
+            // (2.128.4) and how far forward the top of its rise is
+            b.writeFloat(slam?(float)s.aheadX:0);b.writeFloat(slam?(float)s.aheadZ:0);
+            b.writeBoolean(slam&&s.land!=null);
             if(slam&&s.land!=null){b.writeDouble(s.land.x);b.writeDouble(s.land.y);b.writeDouble(s.land.z);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }

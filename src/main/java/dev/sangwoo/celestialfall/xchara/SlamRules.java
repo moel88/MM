@@ -53,17 +53,33 @@ public final class SlamRules {
 
     private static double smooth(double x,double a,double b){double u=Math.max(0,Math.min(1,(x-a)/(b-a)));return u*u*(3-2*u);}
     /**
+     * They go forward as they rise (2.128.4, the user: "애초에 원본 영상은 올라가면서 앞으로 이동까지 함", and how it is
+     * to be: "그냥 G를 쓰면 앞으로 올라갔다가 내가 바라보는곳으로 떨어지면 된다고"): this far the way they faced as it
+     * began by the top of the rise (blocks; less where something is in the way: the server's word), {@link #FIRST_AHEAD}
+     * of it with the first spring, drifting {@link #DRIFT} of it on while they hang between the two.
+     */
+    public static final double FORWARD=3,FIRST_AHEAD=.36,DRIFT=.06;
+    /** Between the two springs they sink this much of the rise, gathering for the second (not held dead still in the air). */
+    public static final double DIP=.035;
+    /**
      * How much of their rise they have at {@code age} ticks (0 on the ground, 1 as high as they go): off the ground at
-     * LEAP at speed, slowing to a stop FIRST of the way up by HELD; still there until LEAP2; then up again at speed,
-     * slowing to a stop at the top by RISEN, and there until the dive.
+     * LEAP at speed, slowing to a stop FIRST of the way up by HELD; sinking a little from there until LEAP2; then up
+     * again at speed, slowing to a stop at the top by RISEN, and there until the dive.
      */
     public static double risen(double age){
         if(age<=LEAP)return 0;
-        if(age<=LEAP2)return FIRST*sprung((age-LEAP)/(HELD-LEAP));
-        return FIRST+(1-FIRST)*sprung((age-LEAP2)/(RISEN-LEAP2));
+        if(age<=LEAP2)return FIRST*sprung((age-LEAP)/(HELD-LEAP),2.4)-DIP*smooth(age,HELD-1,LEAP2);
+        return FIRST-DIP+(1-FIRST+DIP)*sprung((age-LEAP2)/(RISEN-LEAP2),2.4);
     }
-    /** A spring's way up, 0 to 1 over its time: off at speed, slowing all the way to a stop. */
-    private static double sprung(double u){return 1-Math.pow(1-Math.max(0,Math.min(1,u)),2.4);}
+    /** How much of their way forward they have gone at {@code age} ticks (0 where they stood, 1 as far as they go): with each spring, a slow drift between. */
+    public static double gone(double age){
+        if(age<=LEAP)return 0;
+        if(age<=LEAP2)return FIRST_AHEAD*sprung((age-LEAP)/(HELD-LEAP),1.7)+DRIFT*smooth(age,HELD-3,LEAP2);
+        double at=gone(LEAP2);
+        return at+(1-at)*sprung((age-LEAP2)/(RISEN-LEAP2),1.7);
+    }
+    /** A spring's way, 0 to 1 over its time: off at speed, slowing all the way to a stop (the more so the greater {@code power}). */
+    private static double sprung(double u,double power){return 1-Math.pow(1-Math.max(0,Math.min(1,u)),power);}
     /** How far along the dive they are at {@code age} ticks (0 at its top, 1 landed): gathering speed all the way down. */
     public static double dived(double age){
         if(age<=DIVE)return 0;if(age>=LAND)return 1;
@@ -71,15 +87,17 @@ public final class SlamRules {
         return .25*u+.75*u*u;
     }
     /**
-     * Where their feet are drawn at {@code age} ticks, {x,y,z}: where they stood ({@code from}) until the leap; over it
-     * by their rise ({@code rise} blocks) until the dive; down the straight line to where it lands ({@code land}; not
-     * yet told, null: they hang at the top) by LAND; and there after.
+     * Where their feet are drawn at {@code age} ticks, {x,y,z}: where they stood ({@code from}) until the leap; up by
+     * their rise ({@code rise} blocks) and forward by {@code ahead} ({x,z}: the way they faced, as far as they go)
+     * over the two springs until the dive; down the straight line from there to where it lands ({@code land}; not yet
+     * told, null: they hang at the top) by LAND; and there after.
      */
-    public static double[] planned(double age,double[] from,double rise,double[] land){
-        double top=from[1]+rise*risen(Math.min(age,DIVE));
-        if(age<=DIVE||land==null)return new double[]{from[0],top,from[2]};
+    public static double[] planned(double age,double[] from,double rise,double[] ahead,double[] land){
+        double up=Math.min(age,DIVE),g=gone(up);
+        double x=from[0]+ahead[0]*g,top=from[1]+rise*risen(up),z=from[2]+ahead[1]*g;
+        if(age<=DIVE||land==null)return new double[]{x,top,z};
         double d=dived(age);
-        return new double[]{from[0]+(land[0]-from[0])*d,top+(land[1]-top)*d,from[2]+(land[2]-from[2])*d};
+        return new double[]{x+(land[0]-x)*d,top+(land[1]-top)*d,z+(land[2]-z)*d};
     }
     /** A point brought within the circle about {@code from}, level: {x,z} at most RADIUS from it (short of it by {@code margin}). */
     public static double[] within(double fromX,double fromZ,double x,double z,double margin){

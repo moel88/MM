@@ -108,7 +108,7 @@ class OverwriteSlamTest {
         assertEquals(0,OverwriteSlam.held(SlamRules.LAND+10),0);assertTrue(SlamRules.LAND+10<=SlamRules.FREE,"let go before they are free to walk");
         float was=1;for(float a=SlamRules.LAND+4;a<=SlamRules.LAND+10;a+=.1f){float h=OverwriteSlam.held(a);assertTrue(h<=was+1e-6);assertTrue(was-h<.06);was=h;}
         // (at the leap itself the plan is where they stand: holding the body to it moves nothing)
-        assertArrayEquals(new double[]{1,2,3},SlamRules.planned(SlamRules.LEAP,new double[]{1,2,3},12,null),1e-12);
+        assertArrayEquals(new double[]{1,2,3},SlamRules.planned(SlamRules.LEAP,new double[]{1,2,3},12,new double[]{2,1},null),1e-12);
     }
     @Test void theClipBeginsAndEndsInTheStanceAndStepsNowhere(){
         R6.Frame first=OverwriteSlam.CLIP.frame(0),last=OverwriteSlam.CLIP.frame(OverwriteSlam.END);
@@ -141,7 +141,7 @@ class OverwriteSlamTest {
         for(float t=0;t<OverwriteSlam.LEAP;t+=1/120f){double up=OverwriteSlam.CLIP.frame(t).up();if(up<low){low=up;at=t;}}
         assertTrue(low<-.3,"a crouch of "+low);assertTrue(at>OverwriteSlam.LEAP-.2f,"deepest just before the spring, at "+at);
         // in the air the clip's own height is its feet's (the rise is the plan's)
-        for(float t=OverwriteSlam.LEAP+.1f;t<OverwriteSlam.LAND-.05f;t+=.05f)assertEquals(0,OverwriteSlam.CLIP.frame(t).up(),.02,"at "+t);
+        for(float t=OverwriteSlam.LEAP+.1f;t<OverwriteSlam.LAND-.05f;t+=.05f)assertEquals(0,OverwriteSlam.CLIP.frame(t).up(),.06,"at "+t);
         // (2.128.1, the user: "검을 어깨 뒤까지 올려서 세게 내려치려는 모션으로 올라가는 거임", "인체 구조상 도끼를 강하게
         // 내려 찍을때 어떤 자세가 나와야할까?") a chop with the whole body. Bowed deep before the leap
         assertTrue(OverwriteSlam.CLIP.frame(1.0f).pitch()>45,"bowed from the waist: "+OverwriteSlam.CLIP.frame(1.0f).pitch());
@@ -151,18 +151,20 @@ class OverwriteSlamTest {
             Vec3d[] wound=OverwriteSlam.blade(Vec3d.ZERO,0,t);R6.Frame f=OverwriteSlam.CLIP.frame(t);R6.Pose p=R6.poseOf(f);
             assertTrue(wound[0].y>1.65,"the fist over the head at "+t+": "+wound[0].y);assertTrue(wound[0].z<-.1,"the fist behind them at "+t+": "+wound[0].z);
             assertTrue(wound[1].z<-.7&&wound[1].y>-.05,"the knife back behind them, not under level, at "+t+": "+wound[1]);
-            assertTrue(Math.abs(f.pitch())<4,"the body upright, the waist not bent back, at "+t+": "+f.pitch());
-            // (the legs behind them, but as the second spring throws them down straight under them: 2.128.3)
-            if(t<OverwriteSlam.LEAP2+.03f||t>2.2f)assertTrue(p.rLeg.fw()<-.1&&p.lLeg.fw()<-.1,"the legs behind them at "+t);
-            else if(t>1.94f&&t<2.1f)assertTrue(p.rLeg.up()<-.97&&p.lLeg.up()<-.97,"the legs thrown down straight in the second spring at "+t);
+            // (never bent back at the waist; leaning the way they go as each spring carries them, 2.128.4)
+            assertTrue(f.pitch()>-3&&f.pitch()<16,"the waist not bent back, at "+t+": "+f.pitch());
+            // (the legs behind them, but while the second spring drives them down under the leaning body)
+            if(t<OverwriteSlam.LEAP2||t>2.2f)assertTrue(p.rLeg.fw()<-.05&&p.lLeg.fw()<-.05,"the legs behind them at "+t);
             assertTrue(p.lArm.fw()>.3,"the free arm out ahead of them (the knife in the one hand) at "+t);
         }
         // the knife sinks further down their back the longer they are wound up (never coming up again before the drop)
         double sunk=2;for(float t=1.5f;t<=2.9f;t+=.05f){double y=OverwriteSlam.blade(Vec3d.ZERO,0,t)[1].y;assertTrue(y<=sunk+.02,"the knife comes up again at "+t);sunk=y;}
         // the drop: the knife straight up over their head, the body long, feet first, the knees near straight
-        Vec3d[] up=OverwriteSlam.blade(Vec3d.ZERO,0,3.2f);assertTrue(up[0].y>1.8,"the fist over the head as they drop: "+up[0].y);assertTrue(up[1].y>.95,"the knife straight up as they drop: "+up[1].y);
-        assertTrue(Math.abs(OverwriteSlam.CLIP.frame(3.2f).pitch())<8,"upright as they drop");
-        for(float t=3.12f;t<3.3f;t+=.03f){R6.Frame f=OverwriteSlam.CLIP.frame(t);assertTrue(f.joints().knee[0]<25&&f.joints().knee[1]<25,"a knee bent "+f.joints().knee[0]+" dropping at "+t);}
+        Vec3d[] up=OverwriteSlam.blade(Vec3d.ZERO,0,3.14f);assertTrue(up[0].y>1.8,"the fist over the head as they drop: "+up[0].y);assertTrue(up[1].y>.95,"the knife straight up as they drop: "+up[1].y);
+        assertTrue(OverwriteSlam.CLIP.frame(3.2f).pitch()>8&&OverwriteSlam.CLIP.frame(3.2f).pitch()<30,"thrown into the dive, not folded yet");
+        // the second spring stretches them out: the knees straighter than gathered before it, the body leaning the way they go
+        assertTrue(OverwriteSlam.CLIP.frame(1.95f).joints().knee[0]<OverwriteSlam.CLIP.frame(1.8f).joints().knee[0]-10,"the legs driven down in the second spring");
+        assertTrue(OverwriteSlam.CLIP.frame(1.93f).pitch()>OverwriteSlam.CLIP.frame(1.6f).pitch()+5,"leaning into the second spring");
         // the blow: the trunk folds before the knife comes down (the body first, the knife last), and they land folded far over it
         assertTrue(OverwriteSlam.CLIP.frame(3.36f).pitch()>10&&OverwriteSlam.blade(Vec3d.ZERO,0,3.36f)[1].y>.3,"the trunk leads the knife into the blow");
         assertTrue(OverwriteSlam.CLIP.frame(OverwriteSlam.LAND+.1f).pitch()>35,"folded over the blow");

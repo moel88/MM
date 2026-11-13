@@ -23,6 +23,19 @@ public final class SlamGround {
         var hit=world.raycast(new RaycastContext(head,head.add(0,SlamRules.RISE+.5,0),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,who));
         return hit.getType()==HitResult.Type.MISS?SlamRules.RISE:Math.max(0,Math.min(SlamRules.RISE,hit.getPos().y-head.y-.3));
     }
+    /**
+     * How far forward {@code who} goes as they rise {@code rise} blocks, the way {@code dir} (level, a unit): SlamRules.FORWARD,
+     * less where something stands in the way at the heights they pass (2.128.4).
+     */
+    public static double forward(World world,Entity who,double rise,Vec3d dir){
+        double most=SlamRules.FORWARD;Vec3d at=who.getPos();
+        for(double up:new double[]{rise*SlamRules.FIRST+.2,rise*SlamRules.FIRST+who.getHeight(),rise+.2,rise+who.getHeight()}){
+            Vec3d a=at.add(0,up,0);
+            var hit=world.raycast(new RaycastContext(a,a.add(dir.multiply(SlamRules.FORWARD+.6)),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,who));
+            if(hit.getType()!=HitResult.Type.MISS)most=Math.min(most,Math.max(0,hit.getPos().distanceTo(a)-.6));
+        }
+        return most;
+    }
     /** The first floor at (x, z) from {@code high} down to {@code low} that {@code who} can stand on (its top's height), or NaN. */
     public static double floor(World world,Entity who,double x,double z,double high,double low){
         var pos=new BlockPos.Mutable(MathHelper.floor(x),MathHelper.floor(high),MathHelper.floor(z));

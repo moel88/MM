@@ -39,48 +39,52 @@ class SlamRulesTest {
         // the other two are as they were
         assertEquals(24,XCharaCombo.blowAt(XCharaCombo.CLEAVE,0));assertEquals(14,XCharaCombo.blowAt(XCharaCombo.JAB,0));
     }
-    @Test void theyRiseStraightUpSlowingAndAreHighestAsTheDiveBegins(){
+    @Test void theyRiseInTwoSpringsGoingForwardAndAreHighestAsTheDiveBegins(){
         assertEquals(0,SlamRules.risen(0),0);assertEquals(0,SlamRules.risen(SlamRules.LEAP),0);assertEquals(1,SlamRules.risen(SlamRules.RISEN),1e-9);assertEquals(1,SlamRules.risen(SlamRules.DIVE),1e-9);
-        // (2.128.3, the user: "한번 상승하고 멈추고 다시 한 번 상승") in two: up FIRST of the way and still, then up again
+        // (2.128.3, the user: "한번 상승하고 멈추고 다시 한 번 상승") in two: up FIRST of the way, then up again; (2.128.4,
+        // "전체적으로 부자연스러움") not held dead still between: they sink a little there, gathering
         assertTrue(SlamRules.LEAP<SlamRules.HELD&&SlamRules.HELD<SlamRules.LEAP2&&SlamRules.LEAP2<SlamRules.RISEN&&SlamRules.RISEN<SlamRules.DIVE);
-        assertEquals(SlamRules.FIRST,SlamRules.risen(SlamRules.HELD),1e-9);assertEquals(SlamRules.FIRST,SlamRules.risen(SlamRules.LEAP2),1e-9);
-        for(double a=SlamRules.HELD;a<=SlamRules.LEAP2;a+=.25)assertEquals(SlamRules.FIRST,SlamRules.risen(a),1e-9,"they are still between the two at "+a);
-        assertTrue(SlamRules.LEAP2-SlamRules.HELD>=6,"still long enough to be seen to stop");assertTrue(SlamRules.FIRST>.25&&SlamRules.FIRST<.6);
-        for(double[] leg:new double[][]{{SlamRules.LEAP,SlamRules.HELD},{SlamRules.LEAP2,SlamRules.RISEN}}){
-            double was=SlamRules.risen(leg[0]),speed=Double.MAX_VALUE;
-            for(double a=leg[0]+.25;a<=leg[1];a+=.25){
-                double r=SlamRules.risen(a),v=r-was;assertTrue(v>=-1e-12,"they sink at "+a);
-                assertTrue(v<=speed+1e-9,"they speed up at "+a);
-                speed=v;was=r;
-            }
-            // each spring is off at speed: half of it in its first quarter
-            double part=SlamRules.risen(leg[1])-SlamRules.risen(leg[0]);
-            assertTrue(SlamRules.risen(leg[0]+(leg[1]-leg[0])*.25)-SlamRules.risen(leg[0])>=.45*part);
-        }
-        double before=0;for(double a=0;a<=SlamRules.DIVE;a+=.05){double r=SlamRules.risen(a);assertTrue(r>=before-1e-12&&r-before<.09,"a jump in the rise at "+a);before=r;}
+        assertTrue(SlamRules.LEAP2-SlamRules.HELD>=6,"between the two long enough to be seen");assertTrue(SlamRules.FIRST>.25&&SlamRules.FIRST<.6);
+        double peak=0;for(double a=SlamRules.LEAP;a<=SlamRules.LEAP2;a+=.05)peak=Math.max(peak,SlamRules.risen(a));
+        assertTrue(peak>SlamRules.FIRST-.02&&peak<=SlamRules.FIRST+1e-9,"the first spring's top: "+peak);
+        assertEquals(SlamRules.FIRST-SlamRules.DIP,SlamRules.risen(SlamRules.LEAP2),1e-9,"sunk a little as the second begins");
+        assertTrue(SlamRules.DIP>.01&&SlamRules.DIP<.08,"a little: not a fall");
+        for(double a=SlamRules.HELD;a<SlamRules.LEAP2;a+=.25)assertTrue(SlamRules.risen(a+.25)<=SlamRules.risen(a)+1e-12,"between the two they do not rise, at "+a);
+        // the second spring: up all the way, slowing; each spring off at speed (half of it in its first quarter)
+        double was=SlamRules.risen(SlamRules.LEAP2),speed=Double.MAX_VALUE;
+        for(double a=SlamRules.LEAP2+.25;a<=SlamRules.RISEN;a+=.25){double r=SlamRules.risen(a),v=r-was;assertTrue(v>=-1e-12);assertTrue(v<=speed+1e-9,"it speeds up at "+a);speed=v;was=r;}
+        assertTrue(SlamRules.risen(SlamRules.LEAP+(SlamRules.HELD-SlamRules.LEAP)*.25)>=.42*SlamRules.FIRST);
+        assertTrue(SlamRules.risen(SlamRules.LEAP2+(SlamRules.RISEN-SlamRules.LEAP2)*.25)-SlamRules.risen(SlamRules.LEAP2)>=.45*(1-SlamRules.risen(SlamRules.LEAP2)));
+        double before=0;for(double a=0;a<=SlamRules.DIVE;a+=.05){double r=SlamRules.risen(a);assertTrue(Math.abs(r-before)<.09,"a jump in the rise at "+a);before=r;}
         assertEquals(4,SlamRules.RISE,0,"the user's four blocks");
+        // (2.128.4, the user: "올라가면서 앞으로 이동까지 함") forward as they rise: with each spring, never back, all of it by the top
+        assertEquals(0,SlamRules.gone(SlamRules.LEAP),0);assertEquals(1,SlamRules.gone(SlamRules.RISEN),1e-9);assertEquals(1,SlamRules.gone(SlamRules.DIVE),1e-9);
+        double g=0;for(double a=0;a<=SlamRules.DIVE;a+=.05){double n=SlamRules.gone(a);assertTrue(n>=g-1e-12&&n-g<.09,"the way forward at "+a);g=n;}
+        assertTrue(SlamRules.gone(SlamRules.HELD)>.3&&SlamRules.gone(SlamRules.LEAP2)<.55,"some of it with the first spring, most with the second");
+        assertTrue(SlamRules.FORWARD>=2&&SlamRules.FORWARD<=5&&SlamRules.FORWARD<SlamRules.RADIUS);
     }
     @Test void theBodysWayHasNoStepInIt(){
-        double[] from={10,64,-5},land={16,66,3};double[] was=SlamRules.planned(0,from,SlamRules.RISE,land);
+        double[] from={10,64,-5},land={16,66,3},ahead={SlamRules.FORWARD*.6,-SlamRules.FORWARD*.8};double[] was=SlamRules.planned(0,from,SlamRules.RISE,ahead,land);
         assertArrayEquals(from,was,1e-12);
         for(double a=0;a<=SlamRules.END;a+=1/3.0){
-            double[] p=SlamRules.planned(a,from,SlamRules.RISE,land);
+            double[] p=SlamRules.planned(a,from,SlamRules.RISE,ahead,land);
             double step=Math.sqrt(Math.pow(p[0]-was[0],2)+Math.pow(p[1]-was[1],2)+Math.pow(p[2]-was[2],2));
             // a third of a tick is a frame at 60 a second: the dive at its fastest is under four blocks of it
             assertTrue(step<3.6,"a step of "+step+" at "+a);was=p;
         }
-        // up over where they stood until the dive, where it came down from the landing on
-        double[] top=SlamRules.planned(SlamRules.DIVE,from,SlamRules.RISE,land);
-        assertEquals(from[0],top[0],1e-12);assertEquals(from[1]+SlamRules.RISE,top[1],1e-9);assertEquals(from[2],top[2],1e-12);
-        assertArrayEquals(land,SlamRules.planned(SlamRules.LAND,from,SlamRules.RISE,land),1e-9);assertArrayEquals(land,SlamRules.planned(SlamRules.END,from,SlamRules.RISE,land),1e-9);
+        // at the top they are up by their rise and forward by their way; where it came down from the landing on
+        double[] top=SlamRules.planned(SlamRules.DIVE,from,SlamRules.RISE,ahead,land);
+        assertEquals(from[0]+ahead[0],top[0],1e-9);assertEquals(from[1]+SlamRules.RISE,top[1],1e-9);assertEquals(from[2]+ahead[1],top[2],1e-9);
+        assertArrayEquals(land,SlamRules.planned(SlamRules.LAND,from,SlamRules.RISE,ahead,land),1e-9);assertArrayEquals(land,SlamRules.planned(SlamRules.END,from,SlamRules.RISE,ahead,land),1e-9);
         // the dive gathers speed all the way down, and never goes back
         double d=0,v=0;
         for(double a=SlamRules.DIVE;a<=SlamRules.LAND;a+=.25){double n=SlamRules.dived(a);assertTrue(n>=d);if(a>SlamRules.DIVE+.25)assertTrue(n-d>=v-1e-9,"it slows at "+a);v=n-d;d=n;}
         assertEquals(1,SlamRules.dived(SlamRules.LAND),0);
         // not yet told where it comes down: they hang at the top
-        assertArrayEquals(top,SlamRules.planned(SlamRules.DIVE+3,from,SlamRules.RISE,null),1e-9);
-        // under a roof they rise as far as there is room
-        assertEquals(from[1]+3,SlamRules.planned(SlamRules.DIVE,from,3,land)[1],1e-9);
+        assertArrayEquals(top,SlamRules.planned(SlamRules.DIVE+3,from,SlamRules.RISE,ahead,null),1e-9);
+        // under a roof they rise as far as there is room; with a wall before them they go no way forward
+        assertEquals(from[1]+3,SlamRules.planned(SlamRules.DIVE,from,3,ahead,land)[1],1e-9);
+        assertEquals(from[0],SlamRules.planned(SlamRules.DIVE,from,3,new double[]{0,0},land)[0],1e-12);
     }
     @Test void itComesDownWithinTheCircle(){
         assertEquals(10,SlamRules.RADIUS,0);

@@ -99,7 +99,7 @@ public final class OverwriteSlam {
 
     /** Where the body's feet are {@code age} ticks into slam {@code c} (SlamRules.planned, from where it began). */
     static Vec3d planned(StandClient.Cast c,KnifeClient.Slam info,float age){
-        return vec(SlamRules.planned(age,arr(c.origin()),info.rise,arr(info.land)));
+        return vec(SlamRules.planned(age,arr(c.origin()),info.rise,new double[]{info.aheadX,info.aheadZ},arr(info.land)));
     }
     /**
      * How much the body is held to the plan {@code age} ticks in: all of it from the leap; let go a little after the
@@ -228,27 +228,27 @@ public final class OverwriteSlam {
         k(.64,bowed(-.14,-.27,-3,46,d(-62,22),d(3,25),d(-70,-28),.22,.06,-.22,-.04)),
         k(.86,bowed(-.17,-.33,-2,54,d(-66,20),d(5,27),d(-66,-32),.23,.07,-.23,-.05)),
         k(1.04,bowed(-.18,-.37,-2,57,d(-67,20),d(6,28),d(-64,-34),.23,.07,-.23,-.05)),
-        // sprung: the body coming up as they leave the ground, the knife coming up before them
+        // sprung: the body coming up as they push off, the knife coming up before them
         k(LEAP,on(-.04,-.05,-2,30,d(-34,30),d(24,18),d(-52,-40),.20,.03,-.20,-.03)),
-        k(LEAP+.09f,wound(10,AHEAD,d(56,8),d(-50,-50),d(-80,125),d(-80,-115),10)),
-        // the wind up: over the head and back behind the shoulder in the one hand, the body upright, the free arm out
-        // ahead, the legs left behind
-        k(1.32,wound(3,OVERHEAD,d(82,172),d(-34,-46),d(-72,165),d(-66,-170),22)),
-        k(1.50,wound(0,BEHIND,d(36,174),d(-22,-40),d(-64,168),d(-58,-172),30)),
-        // (still, a little up from the ground: the first spring is done) drawn in under them for the second
-        k(1.74,wound(2,BEHIND,d(25,170),d(-14,-36),d(-58,168),d(-52,-170),34)),
-        k(1.84,wound(4,BEHIND,d(24,170),d(-10,-34),d(-50,164),d(-46,-166),34)),
-        // the second spring, in the air: the legs thrown down straight under them, the free arm down with it
-        k(1.95,wound(-1,BEHIND,d(20,169),d(-52,-40),d(-86,120),d(-86,-120),36)),
-        k(2.08,wound(0,BEHIND,d(17,168),d(-44,-40),d(-84,150),d(-84,-150),36)),
-        // hanging at the top, wound up, the legs together behind them, the knife sinking toward level
-        k(2.30,wound(0,BEHIND,d(13,166),d(-22,-38),d(-76,176),d(-73,-178),38)),
-        k(2.56,wound(0,BEHIND,d(9,165),d(-24,-38),d(-78,178),d(-75,-178),40)),
-        k(2.90,wound(-1,BEHIND,d(3,165),d(-20,-36),d(-76,178),d(-73,-178),40)),
-        // the drop: stretched up long, the knife swung up from behind to straight over the head, feet first
-        k(3.06,wound(0,OVERHEAD,d(84,172),d(-40,-40),d(-85,150),d(-85,-150),38)),
-        k(3.30,wound(4,OVERHEAD,d(84,8),d(-56,-60),d(-87,90),d(-87,-90),36)),
-        k(3.35,wound(15,DOWN_AHEAD,d(52,0),d(-50,-90),d(-78,50),d(-78,-50),30)),
+        // off the ground: stretched long out of the push, leaning the way they go, the legs left under and behind
+        k(LEAP+.07f,wound(16,AHEAD,d(50,8),d(-60,-40),d(-82,150),d(-84,-160),8)),
+        k(1.28,wound(10,OVERHEAD,d(82,172),d(-36,-44),d(-76,170),d(-70,-172),18)),
+        // the top of the first spring: slowing, the knees coming up under them, the knife gone over behind the shoulder
+        k(1.42,wound(5,BEHIND,d(38,174),d(-22,-40),d(-66,150),d(-58,-165),28)),
+        k(1.60,wound(3,BEHIND,d(28,171),d(-18,-38),d(-62,140),d(-54,-160),32).at(0,-.02,0)),
+        // sinking a little: gathered for the second, the knees drawn up, leaning into it
+        k(1.80,wound(8,BEHIND,d(24,170),d(-12,-34),d(-54,130),d(-48,-150),34).at(0,-.04,0)),
+        // the second spring: the legs driven down and back, the body stretched and leaning the way they go
+        k(1.93,wound(13,BEHIND,d(21,169),d(-48,-42),d(-84,165),d(-80,-170),34)),
+        k(2.08,wound(9,BEHIND,d(18,168),d(-40,-40),d(-80,172),d(-76,-175),36)),
+        // coming to the top: slowing, the body upright again, the legs swinging in under them
+        k(2.36,wound(2,BEHIND,d(13,166),d(-24,-38),d(-72,165),d(-66,-172),38).at(0,.03,0)),
+        k(2.62,wound(0,BEHIND,d(9,165),d(-22,-38),d(-70,160),d(-62,-170),40).at(0,-.03,0)),
+        k(2.90,wound(-1,BEHIND,d(4,165),d(-18,-36),d(-66,155),d(-60,-168),40).at(0,.02,0)),
+        // the dive: the knife swung up from behind to over the head, the body thrown into the way it dives, the legs trailing
+        k(3.06,wound(6,OVERHEAD,d(84,172),d(-40,-40),d(-74,170),d(-70,-172),36)),
+        k(3.22,wound(20,OVERHEAD,d(80,20),d(-56,-70),d(-66,176),d(-62,-176),30)),
+        k(3.35,wound(24,DOWN_AHEAD,d(58,0),d(-52,-90),d(-74,120),d(-72,-130),26)),
         // the blow: folded far over it, the knife in the ground ahead, the whole weight on it
         k(LAND,bowed(.04,-.40,0,38,d(-54,4),d(-24,0),d(-34,-110),.22,.30,-.22,-.26)),
         k(LAND+.07f,bowed(.06,-.47,0,42,d(-56,4),d(-25,0),d(-30,-116),.22,.30,-.22,-.26)),
@@ -272,8 +272,8 @@ public final class OverwriteSlam {
      * comes up under them.
      */
     static double tuck(float sec){
-        double thrust=.12,hang=.55,straight=.08;
-        double t=1+(thrust-1)*Ease.smooth(sec,LEAP2-.02f,LEAP2+.1f)+(hang-thrust)*Ease.smooth(sec,2.08f,2.34f)+(straight-hang)*Ease.smooth(sec,2.92f,3.1f);
+        double thrust=.35,hang=.6,dive=.4;
+        double t=1+(thrust-1)*Ease.smooth(sec,LEAP2-.02f,LEAP2+.1f)+(hang-thrust)*Ease.smooth(sec,2.08f,2.36f)+(dive-hang)*Ease.smooth(sec,2.95f,3.12f);
         return t+(1-t)*Ease.smooth(sec,LAND-.1f,LAND);
     }
     private static final Anim.Fix BENT=IsosangLimbs.natural(GROUND,OverwriteSlam::tuck);
@@ -589,8 +589,7 @@ public final class OverwriteSlam {
             // the second spring, in the air (2.128.3): a smaller ring where their feet were, left behind under them
             float l2=c.sec-LEAP2;
             if(l2>=0&&l2<.4f){
-                var first=info(c);double high=(first==null?SlamRules.RISE:first.rise)*SlamRules.FIRST;
-                Vec3d g=from.add(0,high,0);
+                var first=info(c);Vec3d g=first==null?from.add(0,SlamRules.RISE*SlamRules.FIRST,0):planned(c.cast,first,SlamRules.LEAP2);
                 if(light){
                     ring(m,g,2.0*Ease.out(l2,0,.35f),.5,NEON,.6f*(1-l2/.4f),1);
                     for(int j=0;j<6;j++){

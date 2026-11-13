@@ -63,7 +63,9 @@ public final class KnifeClient {
      */
     public static final class Slam {
         public final float rise;public Vec3d land;public float heard=Float.NaN;
-        Slam(float rise){this.rise=rise;}
+        /** (2.128.4) How far forward of where they stood the top of its rise is ({x,z}). */
+        public final float aheadX,aheadZ;
+        Slam(float rise,float aheadX,float aheadZ){this.rise=rise;this.aheadX=aheadX;this.aheadZ=aheadZ;}
     }
     private static final Map<UUID,Slam> SLAMS=new HashMap<>();
     /** What this client was told of slam {@code id} (null: none). */
@@ -115,10 +117,15 @@ public final class KnifeClient {
             // (2.128.0) and the slam; and of one in flight how high it rises and where it comes down (a 2.127 server sends none)
             long slam=b.readableBytes()>=8?b.readLong():0;
             float rise=b.readableBytes()>=5?b.readFloat():0;
+            // (2.128.4) and how far forward the top of its rise is
+            float aheadX=b.readableBytes()>=9?b.readFloat():0,aheadZ=b.readableBytes()>=5?b.readFloat():0;
             Vec3d land=b.readableBytes()>=25&&b.readBoolean()?new Vec3d(b.readDouble(),b.readDouble(),b.readDouble()):null;
             mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);});
             if(combo==XCharaCombo.SLAM)mc.execute(()->{
-                if(type==XCharaAttack.HIT&&Float.isFinite(rise))SLAMS.put(id,new Slam(Math.max(0,Math.min((float)dev.sangwoo.celestialfall.xchara.SlamRules.RISE,rise))));
+                if(type==XCharaAttack.HIT&&Float.isFinite(rise)){
+                    float far=(float)Math.hypot(aheadX,aheadZ),most=(float)dev.sangwoo.celestialfall.xchara.SlamRules.FORWARD,k=Float.isFinite(far)&&far>most?most/far:Float.isFinite(far)?1:0;
+                    SLAMS.put(id,new Slam(Math.max(0,Math.min((float)dev.sangwoo.celestialfall.xchara.SlamRules.RISE,rise)),aheadX*k,aheadZ*k));
+                }
                 var info=SLAMS.get(id);var cast=SWINGS.get(id);
                 if(info!=null&&info.land==null&&land!=null&&Double.isFinite(land.x)&&Double.isFinite(land.y)&&Double.isFinite(land.z)){
                     info.land=land;info.heard=cast==null?serverNow-start:cast.age(0);
