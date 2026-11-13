@@ -270,8 +270,11 @@ public final class SkillShots implements ClientModInitializer {
         var centre=self.castPos.add(f.multiply(fw)).add(right.multiply(rt)).add(0,cy,0);
         // ("slamfollow=1", 2.128.1) the camera goes with the body of X Chara's slam as it is drawn (up its rise, down its dive)
         if(self.opts.containsKey("slamfollow")){var mc=MinecraftClient.getInstance();
-            var off=mc.player==null?null:dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),mc.getTickDelta());
-            if(off!=null)centre=centre.add(off);}
+            if(mc.player!=null){
+                // (from where the player really is: the landing takes them to where they came down, and the camera stays with them)
+                centre=centre.add(mc.player.getLerpedPos(mc.getTickDelta()).subtract(self.castPos));
+                var off=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),mc.getTickDelta());
+                if(off!=null)centre=centre.add(off);}}
         double a=Math.toRadians(start+speed*Math.max(0,self.phase==4?self.clock():0)/20);
         var eye=centre.add(f.multiply(-Math.cos(a)*r)).add(right.multiply(Math.sin(a)*r)).add(0,up-cy,0);
         var v=centre.subtract(eye).normalize();
