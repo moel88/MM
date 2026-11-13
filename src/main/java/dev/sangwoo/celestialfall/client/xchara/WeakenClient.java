@@ -4,7 +4,6 @@ import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.MapClient;
 import dev.sangwoo.celestialfall.client.StandClient;
-import dev.sangwoo.celestialfall.client.gacha.GachaFont;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.client.kageno.FxLib;
 import dev.sangwoo.celestialfall.client.vfx.FxFrame;
@@ -18,7 +17,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -37,26 +35,36 @@ import static dev.sangwoo.celestialfall.xchara.WeakenRules.*;
  * <p>
  * What it draws, with the state effects (KagenoRenderer): the "!!!" over the one marked while it may still be blocked
  * (G's own, SwordDance.bangs, with G's warning sound as it starts: the user's "기존 !!!효과음 사용"), a pale flash on
- * them if their guard blocked it; on one weakened, all its time, purple arrows pointing down that come out round their
- * body and sink ({@link #arrow}: each a shape facing the viewer, a dark line round it, its purple laid over and not
- * added so it stays purple before a bright sky), a ring coming down them as it takes, a faint purple ring at their
- * feet, and the words "공격력 방어력이 25% 감소한다." in purple just over their head ({@link #text}: the map's own typeface,
- * drawn in the world facing the viewer). Its user's panel is pressed as it is called ({@link #press}). Everything is a
+ * them if their guard blocked it; on one weakened, all its time, purple motes scattering out of their body
+ * ({@link #mote}: each a little square facing the viewer, a dark line round it, its purple laid over and not added so
+ * it stays purple before a bright sky; 2.126.0 had arrows pointing down, the user then: "화살표 말고 바깥쪽으로 보라색
+ * 이펙트기 퍼져나가게"), a ring coming down them as it takes, a faint purple ring at their feet, and the words "공격력
+ * 방어력이 25% 감소한다." in purple over their head ({@link #text}: the game's pixel typeface, drawn in the world
+ * facing the viewer). Its user's panel is pressed as it is called ({@link #press}). Everything is a
  * function of its clock.
  */
 public final class WeakenClient {
     /** The words over the head of one weakened (the user's). */
     public static final String WORDS="공격력 방어력이 25% 감소한다.";
-    /** Its arrows: how many, how long each takes to sink (seconds), and how big (blocks: its length). Small and very many (the user: "화살표도 작게 만들도 나오는 빈도를 엄청 많게": 44 a second). */
-    static final int ARROWS=44;
-    static final float SINK=1f;
-    static final double ARROW=.2;
-    /** One sinks from this share of the body's height to this (1 the top of the head: they come out under the words, not across them), out this far from the body's middle (times its half width, and a little). */
-    static final double FROM=.96,TO=.1;
+    /**
+     * Its motes (2.126.1, the user: "그냥 안쪽에서 화살표 말고 바깥쪽으로 보라색 이펙트기 퍼져나가게", and of what I asked: no
+     * arrows at all, "흩어지는 보라 입자"): how many, how long each lives (seconds), how big (blocks across), and how far
+     * out from the body it goes (blocks, the least and the most).
+     */
+    static final int MOTES=84;
+    static final float LIFE=.95f;
+    static final double MOTE=.075,REACH_LEAST=.75,REACH_MOST=1.55;
     /** It comes over this long and goes over this long (seconds), on one weakened. */
     static final float IN=.18f,OUT=.45f;
-    /** The words' middle stands this far over the top of the head (blocks: just over it, under a name; the user: "글자를 머리 바로 위에 나오게 바꾸고 글씨도 조금만 더 작게"), their letters this big (a block to the em). */
-    static final double OVER=.2,EM=.18;
+    /**
+     * The words' middle stands this far over the top of the head (blocks: where the game draws a name, from 0.275 to
+     * 0.525 over it; the user, 2.126.1: "글자 좀만 낮춰 그냥 저 가만히 있는 더미 이름표랑 겹치게 해"), and a pixel of
+     * their letters is this big (blocks: the game's own pixel typeface, the user: "글자 폰트를 도트 처럼 만들어주고"; a
+     * name's is 0.025).
+     */
+    static final double OVER=.4,DOT=.016;
+    /** Their purple, and the deep purple line round them (the user: "더 보라색으로": the line is purple too, not black, so the small letters read purple). */
+    static final int WORD=0xa436ff,WORD_LINE=0x340a6e;
     /** The "!!!" stands this far over the head (G's and R's place: over the name, well clear of the words). */
     static final double BANGS=1.15;
     /** One being cast as this client heard of it. */
@@ -180,25 +188,28 @@ public final class WeakenClient {
         return pressAt(sec,d.stopped()?d.ended/20f:Float.NaN);
     }
 
-    // ───────────────────────────── the arrows ─────────────────────────────
+    // ───────────────────────────── the motes ─────────────────────────────
 
     private static float hash(int a,int b){int h=a*374761393+b*668265263;h=(h^(h>>>13))*1274126177;h^=h>>>16;return (h&0xffffff)/(float)0x1000000;}
     /**
-     * Arrow {@code k} of one weakened at {@code clock} seconds: {the angle round the body it is at (radians), how far out
-     * (times the body's half width), how high (a share of the body's height), how strongly it shows, its size (times
-     * ARROW)}. Each comes out at a place of its own round the body, sinks from over the head to the shins, quickening,
-     * and is gone; then it comes again somewhere else. They are spread over the time, so some are always on their way.
+     * Mote {@code k} of one weakened at {@code clock} seconds: {the angle round the body it goes out at (radians), how
+     * far out from the body's middle it starts (times the body's half width), how far it has gone out from there
+     * (blocks), how high (a share of the body's height), how strongly it shows, its size (times MOTE), how bright (0
+     * deep purple to 1 lilac)}. Each comes out of the body at a place and a height of its own, goes straight out from
+     * it, quick at first and slowing, sinking a little, and fades; then it comes again somewhere else. They are spread
+     * over the time, so many are always on their way out: a purple scattering off the body, all its time.
      */
-    static float[] arrow(int k,float clock,int seed){
-        float turn=clock/SINK+k/(float)ARROWS+hash(seed,k)*.31f;
+    static float[] mote(int k,float clock,int seed){
+        float turn=clock/LIFE+k/(float)MOTES+hash(seed,k)*.37f;
         int round=(int)Math.floor(turn);float u=turn-round;
         float angle=(float)(hash(seed+round*131,k*17+3)*Math.PI*2);
-        float out=1.25f+.55f*hash(seed+round*57,k*5+1);
-        // (sinking a little faster as it goes, as a thing let fall)
-        float high=(float)(FROM+(TO-FROM)*Math.pow(u,1.35));
-        float show=Ease.smooth(u,0,.14f)*(1-Ease.smooth(u,.72f,1));
-        float size=.8f+.45f*hash(seed+round*29,k*11+7);
-        return new float[]{angle,out,high,show,size};
+        float reach=(float)(REACH_LEAST+(REACH_MOST-REACH_LEAST)*hash(seed+round*57,k*5+1));
+        // out of the body (from within it: it is seen as it leaves), quick at first and slowing
+        float gone=1-(1-u)*(1-u);
+        float high=.12f+.83f*hash(seed+round*91,k*7+2)-.08f*u*u;
+        float show=Ease.smooth(u,0,.1f)*(1-Ease.smooth(u,.45f,1));
+        float size=.7f+.6f*hash(seed+round*29,k*11+7);
+        return new float[]{angle,.7f,reach*gone,high,show,size*(1-.35f*u),hash(seed+round*13,k*3+5)};
     }
     /** How strongly one weakened shows its weakening {@code on} seconds after this client knew of it, {@code left} seconds of it left. */
     static float shows(float on,float left){return left<=0?0:Ease.smooth(on,0,IN)*Ease.smooth(left,0,OUT);}
@@ -233,12 +244,12 @@ public final class WeakenClient {
         shown=out;marks=ms;
         return !out.isEmpty()||!ms.isEmpty();
     }
-    /** The blended pass: the arrows' dark lines and their purple, the "!!!"s' marks. */
+    /** The blended pass: the motes' purple, the "!!!"s' marks. */
     public static void alpha(EffectMesh m){
         for(var x:marks)if(x.shown>0)SwordDance.bangs(m,m.camera(),x.feet.add(0,x.height+x.over,0),x.t-MARK,x.shown,false);
-        for(var x:shown)arrows(m,x,false);
+        for(var x:shown)motes(m,x,false);
     }
-    /** The light, added: a little glow of each arrow, a trail over it, the ring coming down them as it takes, the ring at their feet, a blocked one's flash. */
+    /** The light, added: a little glow of each mote, the haze round the body, the ring coming down them as it takes, the ring at their feet, a blocked one's flash. */
     public static void additive(EffectMesh m){
         for(var x:marks){
             if(x.shown>0)SwordDance.bangs(m,m.camera(),x.feet.add(0,x.height+x.over,0),x.t-MARK,x.shown,true);
@@ -249,7 +260,7 @@ public final class WeakenClient {
             }
         }
         for(var x:shown){
-            arrows(m,x,true);
+            motes(m,x,true);
             // at their feet, a faint ring breathing
             float breath=.6f+.4f*(float)Math.sin(x.clock*3.1f);
             FxLib.ring(m,x.feet.add(0,.04,0),x.width*.5+.38,.05,GLOW,.34f*x.alpha*breath);
@@ -263,44 +274,38 @@ public final class WeakenClient {
             }
         }
     }
-    private static void arrows(EffectMesh m,Shown x,boolean light){
+    private static void motes(EffectMesh m,Shown x,boolean light){
         Vec3d mid=x.feet.add(0,x.height*.5,0);
-        for(int k=0;k<ARROWS;k++){
-            float[] a=arrow(k,x.clock,x.seed);if(a[3]<=0)continue;
-            double r=x.width*.5*a[1]+.12;
-            Vec3d p=x.feet.add(Math.cos(a[0])*r,x.height*a[2],Math.sin(a[0])*r);
+        for(int k=0;k<MOTES;k++){
+            float[] a=mote(k,x.clock,x.seed);if(a[4]<=0)continue;
+            double r=x.width*.5*a[1]+a[2];
+            Vec3d p=x.feet.add(Math.cos(a[0])*r,x.height*a[3],Math.sin(a[0])*r);
             float near=near(p,m.camera());if(near<=0)continue;
-            float show=a[3]*x.alpha*near;
+            float show=a[4]*x.alpha*near;
             Vec3d[] f=facing(m.camera(),p);
-            double s=ARROW*a[4];
+            double s=MOTE*a[5]*.5;
             if(light){
-                m.softDisc(p,s*.9,GLOW,.1f*show);
-                // (a thin trail over it, where it came from)
-                m.softTaper(p.add(f[1].multiply(s*.5)),p.add(f[1].multiply(s*1.9)),s*.16,.01,LILAC,.2f*show);
+                m.softDisc(p,s*3.2,GLOW,.16f*show);
+                // (a short streak behind it, back toward the body: it is going out)
+                Vec3d back=new Vec3d(-Math.cos(a[0]),0,-Math.sin(a[0])).multiply(Math.min(a[2],.28));
+                m.softTaper(p,p.add(back),s*.9,.005,a[6]>.5f?LILAC:GLOW,.3f*show);
             }else{
-                shape(m,p,f[0],f[1],s,.018,INK,.95f*show);
-                shape(m,p,f[0],f[1],s,0,PURPLE,show);
-                // (a lighter line down its middle)
-                m.quad(p.add(f[0].multiply(-s*.045)).add(f[1].multiply(s*.42)),p.add(f[0].multiply(s*.045)).add(f[1].multiply(s*.42)),
-                    p.add(f[0].multiply(s*.045)).add(f[1].multiply(-s*.2)),p.add(f[0].multiply(-s*.045)).add(f[1].multiply(-s*.2)),LILAC,.55f*show);
+                // a little square facing the viewer: a dark line round it, its purple laid over (not added: purple before a bright sky)
+                square(m,p,f[0],f[1],s+.012,INK,.8f*show);
+                square(m,p,f[0],f[1],s,a[6]>.72f?LILAC:a[6]>.3f?PURPLE:DEEP,show);
             }
         }
         if(light){
-            // the aura itself: a purple haze round the body, breathing, a little stronger low down (where the arrows sink to)
+            // the aura itself: a purple haze round the body, breathing
             float breath=.75f+.25f*(float)Math.sin(x.clock*2.4f);
-            m.softDisc(mid,x.width*.5+.7,GLOW,.2f*x.alpha*breath);
-            m.softDisc(x.feet.add(0,x.height*.22,0),x.width*.5+.5,DEEP,.22f*x.alpha*breath);
-            m.softDisc(x.feet.add(0,x.height*.85,0),x.width*.5+.4,GLOW,.14f*x.alpha*breath);
+            m.softDisc(mid,x.width*.5+.8,GLOW,.22f*x.alpha*breath);
+            m.softDisc(x.feet.add(0,x.height*.22,0),x.width*.5+.5,DEEP,.2f*x.alpha*breath);
+            m.softDisc(x.feet.add(0,x.height*.85,0),x.width*.5+.45,GLOW,.15f*x.alpha*breath);
         }
     }
-    /** An arrow pointing down, {@code s} long, its middle at {@code p}, in the plane of {@code right} and {@code up}, grown by {@code grow} all round (its dark line). */
-    private static void shape(EffectMesh m,Vec3d p,Vec3d right,Vec3d up,double s,double grow,int rgb,float alpha){
-        double shaft=s*.13+grow,head=s*.34+grow*1.5,top=s*.5+grow,neck=-s*.08+grow*.4,tip=-s*.5-grow*1.6;
-        // its shaft
-        m.quad(p.add(right.multiply(-shaft)).add(up.multiply(top)),p.add(right.multiply(shaft)).add(up.multiply(top)),
-            p.add(right.multiply(shaft)).add(up.multiply(neck-grow)),p.add(right.multiply(-shaft)).add(up.multiply(neck-grow)),rgb,alpha);
-        // its head
-        m.triangle(p.add(right.multiply(-head)).add(up.multiply(neck)),p.add(right.multiply(head)).add(up.multiply(neck)),p.add(up.multiply(tip)),rgb,alpha);
+    private static void square(EffectMesh m,Vec3d p,Vec3d right,Vec3d up,double h,int rgb,float alpha){
+        Vec3d r=right.multiply(h),u=up.multiply(h);
+        m.quad(p.subtract(r).add(u),p.add(r).add(u),p.add(r).subtract(u),p.subtract(r).subtract(u),rgb,alpha);
     }
     /** A little purple light on the world round one weakened. */
     public static void frame(FxFrame f,Vec3d camera){
@@ -310,42 +315,39 @@ public final class WeakenClient {
     // ───────────────────────────── the words ─────────────────────────────
 
     /**
-     * The words over the head of everyone weakened, in the world facing the viewer: the map's typeface in purple, a dark
-     * shadow under the letters and a little purple light round them. Just over their head (under their name); not over
-     * the viewer's own head in the first person. A little bigger from far off, so they can still be read.
+     * The words over the head of everyone weakened, in the world facing the viewer: the game's own pixel typeface (as a
+     * name's; the user: "글자 폰트를 도트 처럼"), a strong purple with a dark line round each letter. Where a name is drawn
+     * over the head, and over it; not over the viewer's own head in the first person. A little bigger from far off, so
+     * they can still be read.
      */
     public static void text(MinecraftClient mc,MatrixStack matrices,float delta,Vec3d camera){
         if(shown.isEmpty()||mc.world==null)return;
-        DrawContext d=null;
+        var vertices=mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
+        var words=net.minecraft.text.Text.literal(WORDS).asOrderedText();float wide=mc.textRenderer.getWidth(words);
         for(var w:WEAK.values()){
             if(!(mc.world.getEntityById(w.entity) instanceof LivingEntity e)||!e.getUuid().equals(w.id)||!e.isAlive())continue;
             if(e==mc.getCameraEntity()&&!mc.gameRenderer.getCamera().isThirdPerson())continue;
             float on=w.on(delta)/20f,left=w.left(delta)/20f,a=shows(on,left);if(a<=0)continue;
             Vec3d head=e.getLerpedPos(delta).add(0,e.getHeight(),0);
             double far=head.distanceTo(camera);if(far>64||far<.6)continue;
-            // (their foot stays just over the head as they grow with the distance)
-            Vec3d over=head.add(0,OVER*grown(far),0),toCamera=camera.subtract(over);
-            // drawn nearer the viewer along their line of sight, before the body: where they are on the screen is the same,
-            // and the head just under them does not cut them off for one looking down from above
+            // (their foot stays where it is over the head as they grow with the distance)
+            double half=DOT*4;
+            Vec3d over=head.add(0,OVER-half+half*grown(far),0),toCamera=camera.subtract(over);
+            // drawn nearer the viewer along their line of sight, before the body and the name: where they are on the screen is
+            // the same, and nothing behind them cuts them off
             double all=toCamera.length(),nearer=all<1e-2?0:Math.min(all*.5,e.getWidth()*.5+.3);
             Vec3d at=nearer<=0?over:over.add(toCamera.multiply(nearer/all));
             // (and smaller by as much as they are nearer, so they look the size they are where they stand)
             float seen=nearer<=0?1:(float)((all-nearer)/all);
-            if(d==null)d=new DrawContext(mc,mc.getBufferBuilders().getEntityVertexConsumers());
-            var ms=d.getMatrices();ms.push();
-            ms.peek().getPositionMatrix().set(matrices.peek().getPositionMatrix());
-            ms.translate(at.x,at.y,at.z);ms.multiply(mc.gameRenderer.getCamera().getRotation());
-            float size=28,s=(float)(EM/size*grown(far))*pop(on,w.fresh)*seen;
-            ms.scale(-s,-s,s);
             // (blinking a little as it goes, as a thing on a screen)
             float blink=left<OUT?((int)Math.floor(left*26)%2==0?1:.35f):1;
-            GachaFont.inWorld(true);
-            try{
-                GachaFont.text(WORDS,0,0,size,GachaFont.Weight.BOLD).align(.5f).gradient(0xffcf8cff,0xff9422e6).alpha(a*blink)
-                    .shadow(0xf2100420,1.6f,0,.6f).glow(0xff8a14e8,3.2f,.55f).draw(d);
-            }finally{GachaFont.inWorld(false);}
-            ms.pop();
+            int alpha=Math.max(8,(int)(a*blink*255))<<24;
+            matrices.push();matrices.translate(at.x,at.y,at.z);matrices.multiply(mc.gameRenderer.getCamera().getRotation());
+            float s=(float)(DOT*grown(far))*pop(on,w.fresh)*seen;matrices.scale(-s,-s,s);
+            mc.textRenderer.drawWithOutline(words,-wide/2,-4,alpha|WORD,alpha|WORD_LINE,matrices.peek().getPositionMatrix(),vertices,net.minecraft.client.render.LightmapTextureManager.MAX_LIGHT_COORDINATE);
+            matrices.pop();drew=true;
         }
+        if(drew)vertices.draw();
     }
     /** How much bigger the words are from {@code far} blocks off (1 near, up to 1.5 from 15 blocks: they stay readable). */
     static float grown(double far){return (float)Math.max(1,Math.min(1.5,far/10));}
