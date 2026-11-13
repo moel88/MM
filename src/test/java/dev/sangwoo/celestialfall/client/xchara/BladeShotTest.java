@@ -119,7 +119,7 @@ class BladeShotTest {
     @Test void itsSpineIsUpAcrossItsWay(){
         for(int k=0;k<4;k++){
             Vec3d dir=told(k,ahead(10),ShotRules.RANGE).dir,s=BladeShot.spine(dir,BladeShot.ROLL[k]);
-            assertEquals(1,s.length(),1e-6);assertEquals(0,s.dotProduct(dir),1e-6);assertTrue(s.y>.7,"up, rolled a little");
+            assertEquals(1,s.length(),1e-6);assertEquals(0,s.dotProduct(dir),1e-6);assertTrue(s.y>.6,"up, rolled (its flat partly to a camera behind and above)");
         }
         assertEquals(1,BladeShot.spine(new Vec3d(0,1,0),0).length(),1e-6,"straight up: still a spine");
     }

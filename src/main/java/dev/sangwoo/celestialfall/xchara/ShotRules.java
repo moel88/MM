@@ -8,8 +8,8 @@ package dev.sangwoo.celestialfall.xchara;
  * of the knife's pipeline (XCharaCombo.SHOT, XCharaAttack.shot), as the cleave, the jab, the slam and the three cuts;
  * its "blows" are its knives let go, not landing:
  * <ul>
- * <li>four knives lit as the hack's come to be about its user, one after another ({@link #APPEAR}: behind the
- * shoulder, over the head ahead, low ahead, over the head behind: {@link #SPOTS}), hang there, and are let go one
+ * <li>four knives lit as the hack's come to be about its user, one after another ({@link #APPEAR}: by the
+ * shoulder, over the head, low, and high on the other side: {@link #SPOTS}), hang there, and are let go one
  * after another ({@link #FIRE}), each straight at where its user looks as it goes (the point the middle of their
  * screen is on, their client's word: XCharaRules.AIM; without it, where their look meets the world);</li>
  * <li>a knife flies {@link #SPEED} blocks a tick as far as {@link #RANGE} or the first block, and strikes the first
@@ -45,10 +45,11 @@ public final class ShotRules {
     public static final int STAGGER=5,STAGGER_LAST=6;
     /**
      * Where each knife hangs, its grip {ahead, up, to the right} of where its user stood facing as it began (blocks):
-     * behind the right shoulder, over the head to the left, low to the left, high behind to the right (the video's
-     * four places; which side is mine).
+     * by the right shoulder, over the head to the left, low to the left, high to the right: about them, each blade's
+     * middle beside or over them. (The video's first and last hang behind its user; its knives are a third the length
+     * of ours, and ours behind them filled the game's camera, which looks on from there: the first capture.)
      */
-    public static final double[][] SPOTS={{-2.9,1.45,.8},{-1.2,2.75,-.45},{-.9,.55,-.95},{-2.7,3.15,.35}};
+    public static final double[][] SPOTS={{-1.3,1.5,1.15},{-1.2,2.7,-.55},{-1.0,.55,-1.15},{-1.4,3.05,.6}};
 
     /** Where knife {@code k}'s grip hangs for a user who stood at {@code feet} facing {@code yaw} (degrees, the game's): {x, y, z}. */
     public static double[] spot(double[] feet,float yaw,int k){

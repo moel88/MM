@@ -83,7 +83,7 @@ public final class BladeShot {
     /** A knife that has struck stays in them this long before it is gone (ticks); one at the end of its range thins out over its last blocks. */
     static final float STUCK=1.2f;static final double THIN=4;
     /** How far each knife is rolled about its length where it hangs (degrees: its flat a little to a camera behind its user, which sees it nearly point on). */
-    static final float[] ROLL={-32,28,38,-24};
+    static final float[] ROLL={-46,42,48,-40};
     /** The body: as it stood. */
     static final Anim CLIP=Anim.joints(k(0,KnifeCombo.STANCE),k(ShotRules.LENGTH/20f,KnifeCombo.STANCE)).after((sec,f)->KnifeCombo.AT_REST);
 

@@ -46,14 +46,15 @@ class ShotRulesTest {
         // facing -x (yaw 90): ahead is -x, the right is -z
         double[] b=ShotRules.spot(feet,90,2);
         assertEquals(10-ShotRules.SPOTS[2][0],b[0],1e-9);assertEquals(-5-ShotRules.SPOTS[2][2],b[2],1e-9);
-        boolean behind=false,over=false,low=false,left=false,right=false;
+        boolean over=false,low=false,left=false,right=false;
         for(double[] s:ShotRules.SPOTS){
             assertTrue(s[0]<0,"every grip behind the line of their chest: the blade reaches forward of it");
             assertTrue(s[0]+ShotRules.TIP<3,"none hangs far out ahead");
-            behind|=s[0]<-2;over|=s[1]>2.4;low|=s[1]<1;left|=s[2]<0;right|=s[2]>0;
+            assertTrue(s[0]>-1.6&&s[0]+ShotRules.TIP>1,"its blade's middle beside or over them, not behind (the game's camera is there)");
+            over|=s[1]>2.4;low|=s[1]<1;left|=s[2]<0;right|=s[2]>0;
             assertTrue(Math.hypot(s[2],Math.max(0,Math.min(1.8,s[1]))-s[1])>.3,"clear of their body's middle line");
         }
-        assertTrue(behind&&over&&low&&left&&right,"behind, over the head, low, and to both sides (the video's places)");
+        assertTrue(over&&low&&left&&right,"over the head, low, and to both sides");
     }
     @Test void eachFliesStraightAtThePointItIsSentAt(){
         double[] feet={0,64,0},eye={0,65.62,0},want={.5,65,12};
