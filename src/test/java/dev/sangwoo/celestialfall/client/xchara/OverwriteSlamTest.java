@@ -142,9 +142,23 @@ class OverwriteSlamTest {
         assertTrue(low<-.3,"a crouch of "+low);assertTrue(at>OverwriteSlam.LEAP-.2f,"deepest just before the spring, at "+at);
         // in the air the clip's own height is its feet's (the rise is the plan's)
         for(float t=OverwriteSlam.LEAP+.1f;t<OverwriteSlam.LAND-.05f;t+=.05f)assertEquals(0,OverwriteSlam.CLIP.frame(t).up(),.02,"at "+t);
-        // through the rise the knife is out to their right, about level; it goes up over their head before the dive
-        Vec3d[] rising=OverwriteSlam.blade(Vec3d.ZERO,0,2.0f);assertTrue(Math.abs(rising[1].y)<.4,"the knife about level in the rise");
-        Vec3d[] up=OverwriteSlam.blade(Vec3d.ZERO,0,3.04f);assertTrue(up[0].y>1.7,"the fist over the head before the dive: "+up[0].y);
+        // through the rise they are wound up to strike down: the fist up over the right shoulder and behind it, the knife
+        // pointing back and up (2.128.1, the user: "검을 어깨 뒤까지 올려서 세게 내려치려는 모션으로 올라가는 거임"); it
+        // stands straight up over their head as they drop
+        for(float t=1.3f;t<=2.9f;t+=.1f){
+            Vec3d[] wound=OverwriteSlam.blade(Vec3d.ZERO,0,t);
+            assertTrue(wound[0].y>1.6,"the fist over the shoulder at "+t+": "+wound[0].y);assertTrue(wound[0].z<.05,"the fist behind them at "+t+": "+wound[0].z);
+            assertTrue(wound[1].z<-.35&&wound[1].y>.3,"the knife back and up at "+t+": "+wound[1]);
+        }
+        Vec3d[] up=OverwriteSlam.blade(Vec3d.ZERO,0,3.1f);assertTrue(up[0].y>1.7,"the fist over the head before the dive: "+up[0].y);assertTrue(up[1].y>.95,"the knife straight up as they drop: "+up[1].y);
+        // (2.128.1, the video's body) bowed deep before the leap; the legs apart in the rise; upright with the legs
+        // together and straight as they hang and drop
+        assertTrue(OverwriteSlam.CLIP.frame(1.0f).pitch()>45,"bowed from the waist: "+OverwriteSlam.CLIP.frame(1.0f).pitch());
+        R6.Pose star=R6.poseOf(OverwriteSlam.CLIP.frame(1.56f)),hung=R6.poseOf(OverwriteSlam.CLIP.frame(2.56f));
+        assertTrue(Math.abs(star.rLeg.rt())>.3&&Math.abs(star.lLeg.rt())>.3&&star.rLeg.rt()*star.lLeg.rt()<0,"the legs apart in the rise");
+        assertTrue(Math.abs(hung.rLeg.rt())<.1&&Math.abs(hung.lLeg.rt())<.1&&hung.rLeg.up()<-.99&&hung.lLeg.up()<-.99,"the legs together and straight down as they hang");
+        assertTrue(Math.abs(OverwriteSlam.CLIP.frame(2.56f).pitch())<3&&Math.abs(OverwriteSlam.CLIP.frame(3.2f).pitch())<8,"upright as they hang and as they drop");
+        for(float t=2.3f;t<3.3f;t+=.05f){R6.Frame f=OverwriteSlam.CLIP.frame(t);assertTrue(f.joints().knee[0]<12&&f.joints().knee[1]<12,"a knee bent "+f.joints().knee[0]+" hanging at "+t);}
         // landed: low, the knife's point down in the ground ahead of them
         R6.Frame down=OverwriteSlam.CLIP.frame(OverwriteSlam.LAND+.08f);assertTrue(down.up()<-.3);
         Vec3d[] in=OverwriteSlam.blade(Vec3d.ZERO,0,OverwriteSlam.LAND+.08f);Vec3d tip=in[0].add(in[1].multiply(KnifeCombo.TIP));

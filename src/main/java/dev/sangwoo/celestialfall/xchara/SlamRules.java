@@ -31,7 +31,7 @@ public final class SlamRules {
     /** How high they rise over where they stood (blocks; less under a roof). */
     public static final double RISE=12;
     /** The circle: how far from where they stood the slam can come down (blocks, level). */
-    public static final double RADIUS=18;
+    public static final double RADIUS=10;
     /** Whom the landing strikes: within this far of it, level (blocks; and half their width), from this far under it to this far over it. */
     public static final double BLAST=3.5,BLAST_LOW=-1.5,BLAST_HIGH=3;
     /** What it deals (the user's), how long whom it strikes can do nothing (ticks: the video's 0.45 s; their legs stopped as long, wholly), and its cooldown from its end (ticks: the user's 60 s). */

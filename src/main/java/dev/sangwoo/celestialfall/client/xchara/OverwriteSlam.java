@@ -175,37 +175,53 @@ public final class OverwriteSlam {
     private static R6.Pose air(float yaw,float pitch,double[] rArm,double[] blade,double[] lArm,double[] rLeg,double[] lLeg){
         return R6.world(0,0,yaw,pitch,0,rArm,blade,lArm,rLeg,lLeg);
     }
+    /** Bowed: {@link #on}, the head going down with the body (not held level over it). */
+    private static R6.Pose bowed(double fw,double up,float yaw,float pitch,double[] rArm,double[] blade,double[] lArm,double rr,double rf,double lr,double lf){
+        return on(fw,up,yaw,pitch,rArm,blade,lArm,rr,rf,lr,lf).head(yaw,-pitch*.3f,0);
+    }
     /**
-     * The clip (the rise and the dive themselves are {@link #shift}'s: the clip is the body about its own feet). The
-     * knife brought up across them as it lights, their eyes on it; down into a crouch, the knife swept out low and back
-     * to the right; sprung up; rising with the body arched a little, the knife out low to the right, the free arm out,
-     * one knee drawn up; the knife taken up over the head as they come to the top; thrown forward and down, the knife
-     * driven down ahead of them; landed deep, the knife in the ground before them; and up again.
+     * The clip (the rise and the dive themselves are {@link #shift}'s: the clip is the body about its own feet), as the
+     * user's video has the body (2.128.1, "모션도 달라": what I read of it again, on a picture, they confirmed, "맞음,
+     * 이대로"). Standing, the knife held out before them, its point down, as it lights; bowed deep from the waist, the
+     * knees bent, the knife low and level before them; sprung up; rising wound up to strike down hard, the knife
+     * taken up to behind the right shoulder (the user, of my first reading's star, its knife out to the side: "정확한
+     * 모션은 검을 어깨 뒤까지 올려서 세게 내려치려는 모션으로 올라가는 거임": the video's camera is behind and above, and
+     * the knife that looked out to the side there points back at it), the chest open, the legs apart; hanging upright
+     * in the air, the legs together and straight, the knife still cocked behind the shoulder; the knife straight up
+     * over the head as they drop, standing, feet first; brought down as they land, deep, the knife in the ground before
+     * them;
+     * and up again. (2.128.0 crouched on its knees with the knife swept back, rose arched with one knee up, and dived
+     * head first with the knife thrust down ahead: not the video's.)
      */
     static final Anim CLIP=Anim.joints(
         k(0,KnifeCombo.STANCE),
-        k(.14,on(0,-.02,-5,1,d(-38,34),d(38,-20),d(-86,-10),.17,0,-.17,0)),
-        k(.30,on(0,-.03,-8,2,d(-26,30),d(52,-30),d(-84,-12),.17,0,-.17,0)),
-        // down into the crouch
-        k(CROUCH,on(-.02,-.14,-12,8,d(-52,66),d(10,56),d(-66,-30),.20,.06,-.21,-.10)),
-        k(.64,on(-.04,-.34,-18,17,d(-64,98),d(6,110),d(-52,-34),.23,.10,-.24,-.18)),
-        k(.90,on(-.05,-.40,-21,20,d(-66,106),d(5,126),d(-48,-30),.24,.12,-.25,-.20)),
-        k(1.04,on(-.05,-.43,-22,22,d(-67,108),d(5,130),d(-46,-28),.24,.12,-.25,-.20)),
-        // sprung: the legs straight under them as they leave the ground
-        k(LEAP,on(0,-.04,-8,0,d(-78,84),d(-10,112),d(-74,-40),.18,.03,-.18,-.05)),
-        k(LEAP+.09f,air(-4,-6,d(-72,72),d(-44,118),d(-70,-60),d(-88,10),d(-84,-10))),
-        // rising
-        k(1.45,air(-8,-10,d(-44,82),d(-14,104),d(-36,-78),d(-78,170),d(-52,-6))),
-        k(2.0,air(-10,-8,d(-40,84),d(-10,100),d(-32,-82),d(-74,172),d(-48,-8))),
-        k(2.55,air(-8,-4,d(-42,80),d(-8,96),d(-36,-80),d(-78,174),d(-54,-6))),
-        // the knife up over the head, its point back; the body arched under it
-        k(2.84,air(-4,-13,d(58,32),d(60,166),d(26,-44),d(-72,176),d(-66,-178))),
-        k(3.04,air(0,-18,d(74,20),d(50,176),d(48,-30),d(-66,178),d(-62,-178))),
-        // the dive
-        k(3.16,air(0,22,d(12,6),d(-28,0),d(-28,-74),d(-60,178),d(-70,-176))),
-        k(3.26,air(0,46,d(-44,4),d(-60,0),d(-20,-120),d(-42,178),d(-56,-178))),
-        k(3.35,air(0,44,d(-52,4),d(-48,0),d(-18,-126),d(-64,150),d(-70,-150))),
-        // landed: deep, the knife in the ground ahead
+        // the knife held out before them, its point down
+        k(.14,on(0,-.01,-3,1,d(-36,32),d(-12,20),d(-86,-10),.17,0,-.17,0)),
+        k(.30,on(0,-.02,-4,2,d(-32,30),d(-15,16),d(-85,-12),.17,0,-.17,0)),
+        // bowed deep from the waist, the knife low and level before them
+        k(CROUCH,on(-.04,-.08,-4,14,d(-44,28),d(-9,20),d(-80,-18),.19,.03,-.19,-.03)),
+        k(.64,bowed(-.14,-.27,-3,46,d(-62,22),d(3,25),d(-70,-28),.22,.06,-.22,-.04)),
+        k(.86,bowed(-.17,-.33,-2,54,d(-66,20),d(5,27),d(-66,-32),.23,.07,-.23,-.05)),
+        k(1.04,bowed(-.18,-.37,-2,57,d(-67,20),d(6,28),d(-64,-34),.23,.07,-.23,-.05)),
+        // sprung: the body coming up as they leave the ground, the knife already on its way up and back
+        k(LEAP,on(-.04,-.05,-6,31,d(-30,70),d(4,74),d(-52,-50),.20,.03,-.20,-.03)),
+        k(LEAP+.09f,air(-14,14,d(8,96),d(16,112),d(-24,-52),d(-76,100),d(-76,-96))),
+        // rising: wound up to strike down hard, the knife taken up to behind the right shoulder, the chest open and
+        // turned to it, the body arched, the free arm out ahead, the legs apart under them
+        k(1.32,air(-24,-5,d(44,122),d(30,146),d(6,-42),d(-60,108),d(-62,-96))),
+        k(1.56,air(-27,-8,d(48,126),d(33,150),d(10,-40),d(-57,110),d(-60,-98))),
+        k(1.80,air(-25,-6,d(46,124),d(31,148),d(7,-42),d(-59,108),d(-62,-96))),
+        // the legs coming in under them, the knife kept back
+        k(2.02,air(-18,-3,d(50,120),d(34,146),d(-30,-44),d(-76,98),d(-76,-94))),
+        // hanging upright, the legs together and straight, the knife still cocked behind the right shoulder
+        k(2.22,air(-12,0,d(54,116),d(36,142),d(-66,-36),d(-87,90),d(-87,-90))),
+        k(2.56,air(-12,-1,d(56,116),d(38,144),d(-72,-32),d(-88,90),d(-88,-90))),
+        k(2.90,air(-10,0,d(56,112),d(40,140),d(-70,-34),d(-88,90),d(-88,-90))),
+        // the knife straight up over the head; they drop standing, feet first
+        k(3.06,air(0,3,d(70,30),d(87,0),d(-70,-38),d(-88,90),d(-88,-90))),
+        k(3.30,air(0,5,d(71,28),d(86,0),d(-66,-40),d(-86,90),d(-86,-90))),
+        k(3.35,air(0,12,d(44,12),d(60,0),d(-56,-52),d(-80,90),d(-80,-90))),
+        // landed: the knife brought down, deep, in the ground ahead
         k(LAND,on(.04,-.36,0,26,d(-56,6),d(-22,0),d(-34,-110),.22,.30,-.22,-.26)),
         k(LAND+.07f,on(.06,-.43,0,29,d(-58,6),d(-23,0),d(-30,-116),.22,.30,-.22,-.26)),
         k(LAND+.30f,on(.05,-.39,0,26,d(-56,6),d(-22,0),d(-34,-110),.22,.30,-.22,-.26)),
@@ -221,7 +237,16 @@ public final class OverwriteSlam {
         // themselves to the air over a tenth of a second, not in a frame)
         return -SlamRules.RISE*SlamRules.risen(Math.min(a,SlamRules.DIVE))*(1-SlamRules.dived(a))*Ease.smooth((float)a,SlamRules.LEAP,SlamRules.LEAP+4);
     };
-    private static final Anim.Fix BENT=IsosangLimbs.natural(GROUND);
+    /**
+     * How much the legs tuck in the air: a little in the rise (its knees a little bent), next to nothing hanging
+     * upright and dropping (the video's legs are straight), all of it as the ground comes up under them.
+     */
+    static double tuck(float sec){
+        double star=.45,straight=.06;
+        double t=1+(star-1)*Ease.smooth(sec,LEAP+.1f,LEAP+.3f)+(straight-star)*Ease.smooth(sec,1.85f,2.2f);
+        return t+(1-t)*Ease.smooth(sec,LAND-.1f,LAND);
+    }
+    private static final Anim.Fix BENT=IsosangLimbs.natural(GROUND,OverwriteSlam::tuck);
     /** A frame of the clip as it is drawn: its elbows and knees bent (IsosangLimbs), the stance's straight limbs at its beginning and its end (as the knife's hits). */
     static R6.Frame fix(float sec,R6.Frame f){
         R6.Frame b=BENT.apply(sec,f);
@@ -355,7 +380,7 @@ public final class OverwriteSlam {
     // ───────────────────────────── the squares of light ─────────────────────────────
 
     /** How many squares of light rise off the circle through a slam, and their colours: their tops, their two kinds of side, and the glow about them. */
-    static final int CUBES=120;
+    static final int CUBES=80;
     static final int CUBE_TOP=0xffffff,CUBE_SIDE=0xfdeaff,CUBE_SHADE=0xf5d2fc,HALO=0xe860ff;
     /**
      * Square {@code j} of a slam {@code sec} seconds in: {how far east and south of where it began, how high over the

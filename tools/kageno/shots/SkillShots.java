@@ -101,6 +101,9 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
  * more), in "stance=idle" or "stance=hero". Its clock is the shot's own (client ticks from its start); film it with
  * "orbit=" centred on it (FW = sfw) and "fov=" for that camera. "STANCE_HERO@n" and "STANCE_IDLE@n" change its stance.
  *
+ * <p>"slamfollow=1" (2.128.1): the "orbit=" camera goes with the slam's body as it is drawn, up its rise and down its dive
+ * (to see the body's motion from near all the way).
+ *
  * <p>X Chara's slam (2.128.0, G with the hack off: "stand=x_chara" and no KEY_Q): "KEY_G@n" starts it; "slamaim=FW[_RT[_UP]]"
  * aims it at that point from where the player stands (blocks ahead, to the right and up: OverwriteSlam.aimAt) instead of
  * at what the middle of the screen points at (a filming camera's middle is not the player's); the log gets the server's
@@ -265,6 +268,10 @@ public final class SkillShots implements ClientModInitializer {
         double r=o[0],up=o[1],speed=o[2],start=o.length>3?o[3]:0,fw=o.length>4?o[4]:0,rt=o.length>5?o[5]:0,cy=o.length>6?o[6]:1;
         var f=net.minecraft.util.math.Vec3d.fromPolar(0,self.castYaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
         var centre=self.castPos.add(f.multiply(fw)).add(right.multiply(rt)).add(0,cy,0);
+        // ("slamfollow=1", 2.128.1) the camera goes with the body of X Chara's slam as it is drawn (up its rise, down its dive)
+        if(self.opts.containsKey("slamfollow")){var mc=MinecraftClient.getInstance();
+            var off=mc.player==null?null:dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(mc.player.getUuid(),mc.getTickDelta());
+            if(off!=null)centre=centre.add(off);}
         double a=Math.toRadians(start+speed*Math.max(0,self.phase==4?self.clock():0)/20);
         var eye=centre.add(f.multiply(-Math.cos(a)*r)).add(right.multiply(Math.sin(a)*r)).add(0,up-cy,0);
         var v=centre.subtract(eye).normalize();

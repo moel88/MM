@@ -41,6 +41,10 @@ public final class IsosangLimbs {
     public static final Ground FLOOR=sec->0;
     /** The fix of a clip whose ground is {@code ground}: every frame bent ({@link #bend}). */
     public static Anim.Fix natural(Ground ground){return (sec,f)->bend(f,supports(ground,sec));}
+    /** How much of the air's tuck her legs take at a second of the cast (1: all of it, as every clip of hers; 0: none, the legs as straight in the air as the key has them). */
+    @FunctionalInterface public interface Tuck{double at(float sec);}
+    /** {@link #natural}, the legs tucking in the air only as much as {@code tuck} says (X Chara's slam, 2.128.1: they hang up there with their legs straight). */
+    public static Anim.Fix natural(Ground ground,Tuck tuck){return (sec,f)->bend(f,supports(ground,sec),tuck.at(sec));}
     /**
      * How long her feet take to leave what she stood on (seconds): a foot springing off it, or what she stands on dropping
      * away from under her (H's leap goes up at 27 blocks a second), stays reaching for it, the leg straight, and only over
@@ -115,7 +119,9 @@ public final class IsosangLimbs {
      */
     public static R6.Frame bend(R6.Frame f,double ground){return bend(f,new double[]{ground});}
     /** {@link #bend} with what is under her now and lately ({@link #supports}: the first, now). */
-    static R6.Frame bend(R6.Frame f,double[] supports){
+    static R6.Frame bend(R6.Frame f,double[] supports){return bend(f,supports,1);}
+    /** {@link #bend}, the air's tuck taken {@code tuck} of the way (1: all of it). */
+    static R6.Frame bend(R6.Frame f,double[] supports,double tuck){
         R6.Pose p=R6.poseOf(f);
         MotionPose m=f.joints().copy();
         float grip=f.grip();
@@ -149,7 +155,7 @@ public final class IsosangLimbs {
         double airborne=0;
         for(double s:supports)airborne+=smooth(Math.min(feet[0],feet[1])-s,.08,.4)/supports.length;
         for(int i=0;i<2;i++){
-            Leg leg=leg(q,hips[i],legs[i],supports,airborne);
+            Leg leg=leg(q,hips[i],legs[i],supports,airborne*tuck);
             m.joint[i==0?MotionPose.RIGHT_LEG:MotionPose.LEFT_LEG]=R6.angles(R6.limbTurn(leg.upper.dir(),leg.front.dir()));
             m.knee[i]=(float)Math.toDegrees(leg.bend);
         }

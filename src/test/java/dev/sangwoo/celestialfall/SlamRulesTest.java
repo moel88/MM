@@ -74,10 +74,10 @@ class SlamRulesTest {
         assertEquals(from[1]+3,SlamRules.planned(SlamRules.DIVE,from,3,land)[1],1e-9);
     }
     @Test void itComesDownWithinTheCircle(){
-        assertEquals(18,SlamRules.RADIUS,0);
+        assertEquals(10,SlamRules.RADIUS,0);
         double[] in=SlamRules.within(0,0,5,-7,.5);assertEquals(5,in[0],0);assertEquals(-7,in[1],0);
-        double[] out=SlamRules.within(2,3,2+300,3,.5);assertEquals(2+17.5,out[0],1e-9);assertEquals(3,out[1],1e-9);
-        for(double a=0;a<7;a+=.3){double[] p=SlamRules.within(1,1,1+Math.cos(a)*90,1+Math.sin(a)*90,.5);assertEquals(17.5,Math.hypot(p[0]-1,p[1]-1),1e-9);}
+        double[] out=SlamRules.within(2,3,2+300,3,.5);assertEquals(2+9.5,out[0],1e-9);assertEquals(3,out[1],1e-9);
+        for(double a=0;a<7;a+=.3){double[] p=SlamRules.within(1,1,1+Math.cos(a)*90,1+Math.sin(a)*90,.5);assertEquals(9.5,Math.hypot(p[0]-1,p[1]-1),1e-9);}
         // nonsense is where they stood
         double[] bad=SlamRules.within(4,5,Double.NaN,Double.NaN,.5);assertEquals(4,bad[0],0);assertEquals(5,bad[1],0);
     }
@@ -88,7 +88,7 @@ class SlamRulesTest {
         // the pipeline asks it the same way whichever way the hit goes
         assertTrue(XCharaCombo.lane(XCharaCombo.SLAM,0,-3,-1,0,.3));assertFalse(XCharaCombo.lane(XCharaCombo.SLAM,0,4.2,0,0,.3));
         // far smaller than the circle: the circle is where it can come down, not whom it strikes
-        assertTrue(SlamRules.BLAST*4<SlamRules.RADIUS);
+        assertTrue(SlamRules.BLAST*2<SlamRules.RADIUS);
     }
     @Test void nothingHarmsThemInTheAirAndABlowStopsItOnlyBeforeTheLeap(){
         assertFalse(SlamRules.airborne(SlamRules.LEAP-1));assertTrue(SlamRules.airborne(SlamRules.LEAP));assertTrue(SlamRules.airborne(SlamRules.LAND-1));assertFalse(SlamRules.airborne(SlamRules.LAND));
