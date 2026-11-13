@@ -35,25 +35,27 @@ import static dev.sangwoo.celestialfall.xchara.WeakenRules.*;
  * <p>
  * What it draws, with the state effects (KagenoRenderer): the "!!!" over the one marked while it may still be blocked
  * (G's own, SwordDance.bangs, with G's warning sound as it starts: the user's "기존 !!!효과음 사용"), a pale flash on
- * them if their guard blocked it; on one weakened, all its time, purple motes scattering out of their body
- * ({@link #mote}: each a little square facing the viewer, a dark line round it, its purple laid over and not added so
- * it stays purple before a bright sky; 2.126.0 had arrows pointing down, the user then: "화살표 말고 바깥쪽으로 보라색
- * 이펙트기 퍼져나가게"), a ring coming down them as it takes, a faint purple ring at their feet, and the words "공격력
- * 방어력이 25% 감소한다." in purple over their head ({@link #text}: the game's pixel typeface, drawn in the world
- * facing the viewer). Its user's panel is pressed as it is called ({@link #press}). Everything is a
+ * them if their guard blocked it; on one weakened, all its time, a glitch on their body ({@link #tear},
+ * {@link #pixel}: purple bars torn across it and purple pixels flickering on it, changing many times a second, more
+ * in bursts and as it takes; its purple laid over and not added so it stays purple before a bright sky. 2.126.0 had
+ * arrows pointing down, 2.126.1 first purple motes going outward; the user then: "아니다 그냥 글리치 효과가 생기게",
+ * and of where: "몸과 글씨 둘 다"), and the words "공격력 방어력이 25% 감소한다." in purple over their head
+ * ({@link #text}: the game's pixel typeface, drawn in the world facing the viewer, glitching too: {@link #jolt},
+ * {@link #part}, {@link #strike}). Its user's panel is pressed as it is called ({@link #press}). Everything is a
  * function of its clock.
  */
 public final class WeakenClient {
     /** The words over the head of one weakened (the user's). */
     public static final String WORDS="공격력 방어력이 25% 감소한다.";
     /**
-     * Its motes (2.126.1, the user: "그냥 안쪽에서 화살표 말고 바깥쪽으로 보라색 이펙트기 퍼져나가게", and of what I asked: no
-     * arrows at all, "흩어지는 보라 입자"): how many, how long each lives (seconds), how big (blocks across), and how far
-     * out from the body it goes (blocks, the least and the most).
+     * Its glitch (2.126.1, the user: "아니다 그냥 글리치 효과가 생기게", "몸과 글씨 둘 다"): it changes this many times
+     * a second; it is in a burst or not for stretches this many a second (half of them bursts); how many bars may be
+     * torn across the body at once, how many pixels may flicker on it, and how big a pixel is (blocks: they sit on a
+     * grid of that, as the cells of a screen); how many bars may cross the words.
      */
-    static final int MOTES=84;
-    static final float LIFE=.95f;
-    static final double MOTE=.075,REACH_LEAST=.75,REACH_MOST=1.55;
+    static final float STEP_RATE=14,WINDOW_RATE=1.6f;
+    static final int BARS=6,PIXELS=18,STRIKES=3;
+    static final double PIXEL=.09;
     /** It comes over this long and goes over this long (seconds), on one weakened. */
     static final float IN=.18f,OUT=.45f;
     /**
@@ -65,6 +67,8 @@ public final class WeakenClient {
     static final double OVER=.4,DOT=.016;
     /** Their purple, and the deep purple line round them (the user: "더 보라색으로": the line is purple too, not black, so the small letters read purple). */
     static final int WORD=0xa436ff,WORD_LINE=0x340a6e;
+    /** The two colours the words split to as they glitch: a pink to one side, a blue violet to the other. */
+    static final int SPLIT_RIGHT=0xff4be0,SPLIT_LEFT=0x5a3cff;
     /** The "!!!" stands this far over the head (G's and R's place: over the name, well clear of the words). */
     static final double BANGS=1.15;
     /** One being cast as this client heard of it. */
@@ -188,28 +192,68 @@ public final class WeakenClient {
         return pressAt(sec,d.stopped()?d.ended/20f:Float.NaN);
     }
 
-    // ───────────────────────────── the motes ─────────────────────────────
+    // ───────────────────────────── the glitch ─────────────────────────────
 
     private static float hash(int a,int b){int h=a*374761393+b*668265263;h=(h^(h>>>13))*1274126177;h^=h>>>16;return (h&0xffffff)/(float)0x1000000;}
+    /** Which step of the glitch {@code clock} seconds is in: everything of it holds for a step and is other the next. */
+    static int step(float clock){return (int)Math.floor(clock*STEP_RATE);}
+    /** Whether the glitch of one weakened is in a burst at {@code clock} seconds: stretches of it, about half the time. */
+    static boolean burst(float clock,int seed){return hash(seed*31+7,(int)Math.floor(clock*WINDOW_RATE))<.5f;}
+    /** How much of the glitch shows (1 its usual): most as it takes, more in a burst, less between. */
+    static float often(float clock,int seed,boolean fresh){return fresh&&clock<.5f?2.2f:burst(clock,seed)?1.7f:1f;}
     /**
-     * Mote {@code k} of one weakened at {@code clock} seconds: {the angle round the body it goes out at (radians), how
-     * far out from the body's middle it starts (times the body's half width), how far it has gone out from there
-     * (blocks), how high (a share of the body's height), how strongly it shows, its size (times MOTE), how bright (0
-     * deep purple to 1 lilac)}. Each comes out of the body at a place and a height of its own, goes straight out from
-     * it, quick at first and slowing, sinking a little, and fades; then it comes again somewhere else. They are spread
-     * over the time, so many are always on their way out: a purple scattering off the body, all its time.
+     * Bar {@code j} torn across a body {@code height} high and {@code width} wide at {@code clock} seconds: {how high
+     * its middle is (of the height), how far to the side (blocks), its half width, its half height, its colour}, or
+     * null while it does not show. As the bars on the double's body (CloneFling.tear), all the weakening's time.
      */
-    static float[] mote(int k,float clock,int seed){
-        float turn=clock/LIFE+k/(float)MOTES+hash(seed,k)*.37f;
-        int round=(int)Math.floor(turn);float u=turn-round;
-        float angle=(float)(hash(seed+round*131,k*17+3)*Math.PI*2);
-        float reach=(float)(REACH_LEAST+(REACH_MOST-REACH_LEAST)*hash(seed+round*57,k*5+1));
-        // out of the body (from within it: it is seen as it leaves), quick at first and slowing
-        float gone=1-(1-u)*(1-u);
-        float high=.12f+.83f*hash(seed+round*91,k*7+2)-.08f*u*u;
-        float show=Ease.smooth(u,0,.1f)*(1-Ease.smooth(u,.45f,1));
-        float size=.7f+.6f*hash(seed+round*29,k*11+7);
-        return new float[]{angle,.7f,reach*gone,high,show,size*(1-.35f*u),hash(seed+round*13,k*3+5)};
+    static double[] tear(int j,float clock,int seed,double height,double width,float often){
+        int n=step(clock);
+        if(hash(seed+n*131,j*7+1)>=.36f*often)return null;
+        float c=hash(seed+n*17,j*7+5);
+        return new double[]{.06+.88*hash(seed+n*71,j*7+2),(hash(seed+n*37,j*7+4)-.5)*width*.9,width*(.3+.55*hash(seed+n*29,j*7+3)),
+            .02+.04*hash(seed+n*43,j*7+6),c<.5f?PURPLE:c<.72f?DEEP:c<.88f?LILAC:INK};
+    }
+    /**
+     * Pixel {@code j} flickering on that body: {how high (of the height), how far to the side (blocks), its half size
+     * (blocks), its colour}, or null while it does not show. On a grid, each changing at its own moments.
+     */
+    static double[] pixel(int j,float clock,int seed,double height,double width,float often){
+        int n=(int)Math.floor(clock*STEP_RATE*.7f+hash(seed,j*5));
+        if(hash(seed+n*113,j*5+1)>=.3f*often)return null;
+        double side=Math.round((hash(seed+n*59,j*5+2)-.5)*(width+.4)/PIXEL)*PIXEL;
+        double high=Math.max(.03,Math.min(.97,Math.round(hash(seed+n*67,j*5+3)*height/PIXEL)*PIXEL/height));
+        float c=hash(seed+n*19,j*5+4);
+        return new double[]{high,side,PIXEL*.5*(hash(seed+n*83,j*5+6)<.22f?2:1),c<.45f?PURPLE:c<.7f?DEEP:c<.9f?LILAC:INK};
+    }
+    /**
+     * How the words are thrown at {@code clock} seconds: {to the side, down (their pixels), how far their colours split
+     * to either side (pixels)}, or null while they stand as they are: most of the time, so they can be read. In a
+     * burst, most steps; and as it takes.
+     */
+    static float[] jolt(float clock,int seed,boolean fresh){
+        boolean taking=fresh&&clock<.4f;
+        if(!taking&&!burst(clock,seed))return null;
+        int n=step(clock);
+        if(!taking&&hash(seed+n*23,91)>=.6f)return null;
+        return new float[]{Math.round((hash(seed+n*41,92)-.5f)*8),Math.round((hash(seed+n*47,93)-.5f)*2.4f),1+Math.round(hash(seed+n*53,94)*2)};
+    }
+    /** Where word {@code k} of them is thrown of its own while they are thrown: {to the side, down (pixels)}; most stay with the rest. */
+    static float[] part(int k,float clock,int seed){
+        int n=step(clock);
+        if(hash(seed+n*61,k*3+95)>=.4f)return new float[]{0,0};
+        return new float[]{Math.round((hash(seed+n*73,k*3+96)-.5f)*10),Math.round((hash(seed+n*79,k*3+97)-.5f)*4)};
+    }
+    /**
+     * Bar {@code j} across the words while they are thrown: {where its middle is along them (-0.5 their left end to 0.5
+     * their right), how far down from their middle (pixels), its half width (pixels), its half height, its colour}, or
+     * null while it does not show.
+     */
+    static float[] strike(int j,float clock,int seed){
+        int n=step(clock);
+        if(hash(seed+n*89,j*5+98)>=.55f)return null;
+        float c=hash(seed+n*97,j*5+99);
+        return new float[]{(hash(seed+n*101,j*5+100)-.5f)*.9f,Math.round((hash(seed+n*103,j*5+101)-.5f)*8),6+22*hash(seed+n*107,j*5+102),
+            hash(seed+n*109,j*5+103)<.5f?.5f:1,c<.45f?PURPLE:c<.7f?LILAC:c<.85f?DEEP:INK};
     }
     /** How strongly one weakened shows its weakening {@code on} seconds after this client knew of it, {@code left} seconds of it left. */
     static float shows(float on,float left){return left<=0?0:Ease.smooth(on,0,IN)*Ease.smooth(left,0,OUT);}
@@ -244,12 +288,12 @@ public final class WeakenClient {
         shown=out;marks=ms;
         return !out.isEmpty()||!ms.isEmpty();
     }
-    /** The blended pass: the motes' purple, the "!!!"s' marks. */
+    /** The blended pass: the glitch on the bodies, the "!!!"s' marks. */
     public static void alpha(EffectMesh m){
         for(var x:marks)if(x.shown>0)SwordDance.bangs(m,m.camera(),x.feet.add(0,x.height+x.over,0),x.t-MARK,x.shown,false);
-        for(var x:shown)motes(m,x,false);
+        for(var x:shown)glitch(m,x,false);
     }
-    /** The light, added: a little glow of each mote, the haze round the body, the ring coming down them as it takes, the ring at their feet, a blocked one's flash. */
+    /** The light, added: a little glow of the glitch's bars and pixels, a flash as it takes, a blocked one's flash. */
     public static void additive(EffectMesh m){
         for(var x:marks){
             if(x.shown>0)SwordDance.bangs(m,m.camera(),x.feet.add(0,x.height+x.over,0),x.t-MARK,x.shown,true);
@@ -259,53 +303,30 @@ public final class WeakenClient {
                 FxLib.ring(m,x.feet.add(0,.05,0),.6+2.2*s,.07,0xbfe6ff,.8f*(1-s));
             }
         }
-        for(var x:shown){
-            motes(m,x,true);
-            // at their feet, a faint ring breathing
-            float breath=.6f+.4f*(float)Math.sin(x.clock*3.1f);
-            FxLib.ring(m,x.feet.add(0,.04,0),x.width*.5+.38,.05,GLOW,.34f*x.alpha*breath);
-            // as it takes: a ring coming down them, head to feet, and a flash
-            if(x.fresh&&x.on<.55f){
-                float s=x.on/.55f,down=(float)Math.pow(s,.8);
-                Vec3d at=x.feet.add(0,x.height*(1.05-1.0*down),0);
-                FxLib.ring(m,at,x.width*.5+.3+.25*Math.sin(s*Math.PI),.09,LILAC,.9f*(1-s));
-                FxLib.ring(m,at.add(0,.12,0),x.width*.5+.2+.2*Math.sin(s*Math.PI),.05,GLOW,.7f*(1-s));
-                m.softDisc(x.feet.add(0,x.height*.55,0),1.1+.8*s,GLOW,.5f*(1-s)*(1-s));
-            }
-        }
+        for(var x:shown)glitch(m,x,true);
     }
-    private static void motes(EffectMesh m,Shown x,boolean light){
-        Vec3d mid=x.feet.add(0,x.height*.5,0);
-        for(int k=0;k<MOTES;k++){
-            float[] a=mote(k,x.clock,x.seed);if(a[4]<=0)continue;
-            double r=x.width*.5*a[1]+a[2];
-            Vec3d p=x.feet.add(Math.cos(a[0])*r,x.height*a[3],Math.sin(a[0])*r);
-            float near=near(p,m.camera());if(near<=0)continue;
-            float show=a[4]*x.alpha*near;
-            Vec3d[] f=facing(m.camera(),p);
-            double s=MOTE*a[5]*.5;
-            if(light){
-                m.softDisc(p,s*3.2,GLOW,.16f*show);
-                // (a short streak behind it, back toward the body: it is going out)
-                Vec3d back=new Vec3d(-Math.cos(a[0]),0,-Math.sin(a[0])).multiply(Math.min(a[2],.28));
-                m.softTaper(p,p.add(back),s*.9,.005,a[6]>.5f?LILAC:GLOW,.3f*show);
-            }else{
-                // a little square facing the viewer: a dark line round it, its purple laid over (not added: purple before a bright sky)
-                square(m,p,f[0],f[1],s+.012,INK,.8f*show);
-                square(m,p,f[0],f[1],s,a[6]>.72f?LILAC:a[6]>.3f?PURPLE:DEEP,show);
-            }
+    /** The glitch on one weakened: bars torn across the body and pixels flickering on it, before it as the viewer sees it. */
+    private static void glitch(EffectMesh m,Shown x,boolean light){
+        Vec3d mid=x.feet.add(0,x.height*.5,0);float near=near(mid,m.camera());if(near<=0)return;
+        Vec3d[] f=facing(m.camera(),mid);float a=x.alpha*near,often=often(x.clock,x.seed,x.fresh);
+        Vec3d front=f[2].multiply(x.width*.5+.12);
+        for(int j=0;j<BARS;j++){
+            double[] b=tear(j,x.clock,x.seed,x.height,x.width,often);if(b==null)continue;
+            Vec3d p=x.feet.add(0,b[0]*x.height,0).add(f[0].multiply(b[1])).add(front);
+            int rgb=(int)b[4];
+            if(light){if(rgb!=INK)bar(m,p,f,b[2]*1.15,b[3]*2.4,GLOW,.2f*a);}
+            // (its purple laid over, not added: purple before a bright sky; a dark line round it)
+            else{bar(m,p,f,b[2]+.014,b[3]+.014,INK,.85f*a);bar(m,p,f,b[2],b[3],rgb,a);}
         }
-        if(light){
-            // the aura itself: a purple haze round the body, breathing
-            float breath=.75f+.25f*(float)Math.sin(x.clock*2.4f);
-            m.softDisc(mid,x.width*.5+.8,GLOW,.22f*x.alpha*breath);
-            m.softDisc(x.feet.add(0,x.height*.22,0),x.width*.5+.5,DEEP,.2f*x.alpha*breath);
-            m.softDisc(x.feet.add(0,x.height*.85,0),x.width*.5+.45,GLOW,.15f*x.alpha*breath);
+        for(int j=0;j<PIXELS;j++){
+            double[] b=pixel(j,x.clock,x.seed,x.height,x.width,often);if(b==null)continue;
+            Vec3d p=x.feet.add(0,b[0]*x.height,0).add(f[0].multiply(b[1])).add(front);
+            int rgb=(int)b[3];
+            if(light){if(rgb!=INK)m.softDisc(p,b[2]*2.6,GLOW,.14f*a);}
+            else{square(m,p,f,b[2]+.011,INK,.8f*a);square(m,p,f,b[2],rgb,a);}
         }
-    }
-    private static void square(EffectMesh m,Vec3d p,Vec3d right,Vec3d up,double h,int rgb,float alpha){
-        Vec3d r=right.multiply(h),u=up.multiply(h);
-        m.quad(p.subtract(r).add(u),p.add(r).add(u),p.add(r).subtract(u),p.subtract(r).subtract(u),rgb,alpha);
+        // as it takes: a purple flash on the body
+        if(light&&x.fresh&&x.on<.5f){float s=x.on/.5f;m.softDisc(mid,1.0+.8*s,GLOW,.5f*(1-s)*(1-s)*a);}
     }
     /** A little purple light on the world round one weakened. */
     public static void frame(FxFrame f,Vec3d camera){
@@ -318,12 +339,15 @@ public final class WeakenClient {
      * The words over the head of everyone weakened, in the world facing the viewer: the game's own pixel typeface (as a
      * name's; the user: "글자 폰트를 도트 처럼"), a strong purple with a dark line round each letter. Where a name is drawn
      * over the head, and over it; not over the viewer's own head in the first person. A little bigger from far off, so
-     * they can still be read.
+     * they can still be read. They glitch (the user: "글리치 효과가 생기게", "몸과 글씨 둘 다"): in bursts the whole
+     * line is thrown a few pixels aside for a step, some of its words farther of their own, its colours split to
+     * either side (a pink and a blue violet), bars across it; between, they stand as they are.
      */
     public static void text(MinecraftClient mc,MatrixStack matrices,float delta,Vec3d camera){
         if(shown.isEmpty()||mc.world==null)return;
         var vertices=mc.getBufferBuilders().getEntityVertexConsumers();boolean drew=false;
-        var words=net.minecraft.text.Text.literal(WORDS).asOrderedText();float wide=mc.textRenderer.getWidth(words);
+        var font=mc.textRenderer;String[] parts=WORDS.split(" ");
+        float wide=font.getWidth(WORDS),gap=font.getWidth(" ");int light=net.minecraft.client.render.LightmapTextureManager.MAX_LIGHT_COORDINATE;
         for(var w:WEAK.values()){
             if(!(mc.world.getEntityById(w.entity) instanceof LivingEntity e)||!e.getUuid().equals(w.id)||!e.isAlive())continue;
             if(e==mc.getCameraEntity()&&!mc.gameRenderer.getCamera().isThirdPerson())continue;
@@ -341,10 +365,39 @@ public final class WeakenClient {
             float seen=nearer<=0?1:(float)((all-nearer)/all);
             // (blinking a little as it goes, as a thing on a screen)
             float blink=left<OUT?((int)Math.floor(left*26)%2==0?1:.35f):1;
-            int alpha=Math.max(8,(int)(a*blink*255))<<24;
+            int alpha=Math.max(8,(int)(a*blink*255))<<24,faint=Math.max(8,(int)(a*blink*190))<<24;
+            float[] thrown=jolt(on,w.seed,w.fresh);
             matrices.push();matrices.translate(at.x,at.y,at.z);matrices.multiply(mc.gameRenderer.getCamera().getRotation());
             float s=(float)(DOT*grown(far))*pop(on,w.fresh)*seen;matrices.scale(-s,-s,s);
-            mc.textRenderer.drawWithOutline(words,-wide/2,-4,alpha|WORD,alpha|WORD_LINE,matrices.peek().getPositionMatrix(),vertices,net.minecraft.client.render.LightmapTextureManager.MAX_LIGHT_COORDINATE);
+            float x=-wide/2;
+            for(int k=0;k<parts.length;k++){
+                float px=x,py=-4;
+                if(thrown!=null){
+                    float[] own=part(k,on,w.seed);px+=thrown[0]+own[0];py+=thrown[1]+own[1];
+                    // its colours split to either side, behind it
+                    matrices.push();matrices.translate(0,0,.4f);var back=matrices.peek().getPositionMatrix();
+                    font.draw(parts[k],px+thrown[2],py,faint|SPLIT_RIGHT,false,back,vertices,net.minecraft.client.font.TextRenderer.TextLayerType.NORMAL,0,light);
+                    font.draw(parts[k],px-thrown[2],py,faint|SPLIT_LEFT,false,back,vertices,net.minecraft.client.font.TextRenderer.TextLayerType.NORMAL,0,light);
+                    matrices.pop();
+                }
+                font.drawWithOutline(net.minecraft.text.Text.literal(parts[k]).asOrderedText(),px,py,alpha|WORD,alpha|WORD_LINE,matrices.peek().getPositionMatrix(),vertices,light);
+                x+=font.getWidth(parts[k])+gap;
+            }
+            if(thrown!=null){
+                // bars across them, before them
+                matrices.push();matrices.translate(0,0,-.4f);var front=matrices.peek().getPositionMatrix();
+                var quads=vertices.getBuffer(net.minecraft.client.render.RenderLayer.getTextBackground());
+                for(int j=0;j<STRIKES;j++){
+                    float[] b=strike(j,on,w.seed);if(b==null)continue;
+                    float cx=b[0]*wide+thrown[0],cy=b[1]+thrown[1];int argb=alpha|(int)b[4];
+                    float x0=cx-b[2],x1=cx+b[2],y0=cy-b[3],y1=cy+b[3];
+                    quads.vertex(front,x0,y0,0).color(argb).light(light).next();quads.vertex(front,x0,y1,0).color(argb).light(light).next();
+                    quads.vertex(front,x1,y1,0).color(argb).light(light).next();quads.vertex(front,x1,y0,0).color(argb).light(light).next();
+                    quads.vertex(front,x1,y0,0).color(argb).light(light).next();quads.vertex(front,x1,y1,0).color(argb).light(light).next();
+                    quads.vertex(front,x0,y1,0).color(argb).light(light).next();quads.vertex(front,x0,y0,0).color(argb).light(light).next();
+                }
+                matrices.pop();
+            }
             matrices.pop();drew=true;
         }
         if(drew)vertices.draw();

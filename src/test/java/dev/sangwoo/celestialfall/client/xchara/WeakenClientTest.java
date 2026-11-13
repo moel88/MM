@@ -6,11 +6,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * X Chara's weakening as drawn (2.126.0, the user: "머리 위에 보라색 글씨로 공격력 방어력이 25% 감소한다. 라고 뜨게
- * 해주고 몸에도 보라색 … 아우라가 방출되게"; 2.126.1: "그냥 안쪽에서 화살표 말고 바깥쪽으로 보라색 이펙트기 퍼져나가게",
- * no arrows at all and "흩어지는 보라 입자"; "글자 좀만 낮춰 그냥 저 가만히 있는 더미 이름표랑 겹치게 해 그리고 글자
+ * 해주고 몸에도 보라색 … 아우라가 방출되게"; 2.126.1: "아니다 그냥 글리치 효과가 생기게", "몸과 글씨 둘 다";
+ * "글자 좀만 낮춰 그냥 저 가만히 있는 더미 이름표랑 겹치게 해 그리고 글자
  * 폰트를 도트 처럼 만들어주고 더 보라색으로"): the words are the user's, where a name is and in the game's pixel
- * typeface, a strong purple; the motes come out of the body and only ever go outward, many always on their way, none
- * stepping from one frame to the next; it shows all its time and goes as its time runs out; its user presses their
+ * typeface, a strong purple; the body glitches all its time (bars torn across it, pixels flickering on it), more in
+ * bursts and most as it takes; the words glitch in bursts and stand to be read between; it shows all its time and goes as its time runs out; its user presses their
  * panel as it is called.
  */
 class WeakenClientTest {
@@ -30,49 +30,77 @@ class WeakenClientTest {
         assertEquals(1,WeakenClient.grown(3),1e-6);assertEquals(1,WeakenClient.grown(10),1e-6);assertTrue(WeakenClient.grown(14)>1.3);assertEquals(1.5f,WeakenClient.grown(60),1e-6);
         for(double far=1;far<60;far+=.25)assertTrue(WeakenClient.grown(far+.25)>=WeakenClient.grown(far));
     }
-    @Test void theMotesComeOutOfTheBodyAndOnlyGoOutward(){
-        int seed=4711;
-        for(int k=0;k<WeakenClient.MOTES;k++){
-            float[] was=null;
-            for(float t=0;t<8;t+=1/240f){
-                float[] a=WeakenClient.mote(k,t,seed);
-                assertTrue(a[1]<1,"it starts within the body");
-                assertTrue(a[2]>=0&&a[2]<=WeakenClient.REACH_MOST+1e-4,"out no farther than its reach: "+a[2]);
-                assertTrue(a[3]>0&&a[3]<1,"between the feet and the top of the head: "+a[3]);
-                assertTrue(a[4]>=0&&a[4]<=1);assertTrue(a[5]>.4f&&a[5]<1.35f);assertTrue(a[6]>=0&&a[6]<=1);
-                if(was!=null){
-                    if(was[0]==a[0]){
-                        // on its way out: never back in (the user: "바깥쪽으로 … 퍼져나가게"), and no jump
-                        assertTrue(a[2]>=was[2]-1e-5,"mote "+k+" came back in at "+t);
-                        assertTrue(a[2]-was[2]<.03,"mote "+k+" jumped at "+t);
-                        assertTrue(Math.abs(a[3]-was[3])<.01,"mote "+k+" jumped up or down at "+t);
-                        assertTrue(Math.abs(a[4]-was[4])<.08,"mote "+k+" blinked at "+t);
-                    }else{
-                        // gone, and come again somewhere else: unseen as it does
-                        assertTrue(was[4]<.02&&a[4]<.02,"mote "+k+" moved while seen at "+t+": "+was[4]+" "+a[4]);
-                    }
-                }
-                was=a;
+    @Test void theBodyGlitchesAllItsTimeMoreInBurstsAndMostAsItTakes(){
+        int seed=4711;double height=1.8,width=.6;
+        // all its time something of it shows nearly always, and never so much that the body is covered
+        int steps=0,bare=0,bars=0,pixels=0,most=0;
+        for(float t=.6f;t<20;t+=1/WeakenClient.STEP_RATE/3){
+            float often=WeakenClient.often(t,seed,true);int here=0,dots=0;
+            for(int j=0;j<WeakenClient.BARS;j++){
+                double[] b=WeakenClient.tear(j,t,seed,height,width,often);if(b==null)continue;here++;
+                assertTrue(b[0]>0&&b[0]<1,"on the body, between the feet and the top of the head");
+                assertTrue(Math.abs(b[1])+b[2]<=width*1.35,"across the body, not far off it: "+b[1]+" "+b[2]);
+                assertTrue(b[2]>=width*.3&&b[3]>=.02&&b[3]<=.061,"a thin bar");
+                int c=(int)b[4];assertTrue(c==GlitchFx.PURPLE||c==GlitchFx.DEEP||c==GlitchFx.LILAC||c==GlitchFx.INK,"purple (or a dead black)");
+            }
+            for(int j=0;j<WeakenClient.PIXELS;j++){
+                double[] b=WeakenClient.pixel(j,t,seed,height,width,often);if(b==null)continue;dots++;
+                assertTrue(b[0]>0&&b[0]<1);assertTrue(Math.abs(b[1])<=width*.5+.3,"on the body: "+b[1]);
+                assertTrue(b[2]<=WeakenClient.PIXEL+1e-9,"small");
+                // on a grid, as the cells of a screen
+                assertEquals(0,Math.abs(b[1]/WeakenClient.PIXEL-Math.round(b[1]/WeakenClient.PIXEL)),1e-6);
+            }
+            steps++;if(here+dots==0)bare++;bars+=here;pixels+=dots;most=Math.max(most,here);
+        }
+        assertTrue(bare<steps*.04,"the glitch is there all its time: bare "+bare+" of "+steps);
+        double b=bars/(double)steps,p=pixels/(double)steps;
+        assertTrue(b>1.5&&b<3.5,"a few bars at a time: "+b);assertTrue(p>3&&p<9,"a few pixels at a time: "+p);
+        // it changes many times a second (a glitch), and holds between: the same within a step
+        assertTrue(WeakenClient.STEP_RATE>=10);
+        float at=5.01f/WeakenClient.STEP_RATE*WeakenClient.STEP_RATE;int n=WeakenClient.step(at);
+        assertEquals(n,WeakenClient.step(at+.2f/WeakenClient.STEP_RATE));assertEquals(n+1,WeakenClient.step(at+1/WeakenClient.STEP_RATE));
+        int changed=0;for(int k=0;k<200;k++){
+            String one="",next="";
+            for(int j=0;j<WeakenClient.BARS;j++){one+=java.util.Arrays.toString(WeakenClient.tear(j,k/WeakenClient.STEP_RATE+.01f,seed,height,width,1));next+=java.util.Arrays.toString(WeakenClient.tear(j,(k+1)/WeakenClient.STEP_RATE+.01f,seed,height,width,1));}
+            if(!one.equals(next))changed++;
+        }
+        assertTrue(changed>170,"other every step: "+changed);
+        // in bursts about half the time, more of it then; most of all as it takes; one this client only came near has no such start
+        int in=0,all=0;for(float t=0;t<200;t+=.05f){all++;if(WeakenClient.burst(t,seed))in++;}
+        assertTrue(in>all*.3&&in<all*.7,"bursts: "+in+" of "+all);
+        float burst=0,calm=0;for(float t=1;t<60;t+=.01f){if(WeakenClient.burst(t,seed))burst=WeakenClient.often(t,seed,true);else calm=WeakenClient.often(t,seed,true);}
+        assertTrue(burst>calm*1.5&&calm>.5f);assertTrue(WeakenClient.often(.1f,seed,true)>burst);assertTrue(WeakenClient.often(.1f,seed,false)<=burst);
+        // one's glitch is not another's
+        boolean other=false;for(float t=1;t<3&&!other;t+=.07f)for(int j=0;j<WeakenClient.BARS;j++)if(!java.util.Arrays.equals(WeakenClient.tear(j,t,1,height,width,1),WeakenClient.tear(j,t,2,height,width,1)))other=true;
+        assertTrue(other);
+    }
+    @Test void theWordsGlitchInBurstsAndStandToBeReadBetween(){
+        int seed=99;
+        // (the user: "몸과 글씨 둘 다") thrown a few pixels for a step at a time, in bursts; most of the time they stand as they are
+        int thrown=0,all=0,split=0,struck=0,apart=0;
+        for(float t=.5f;t<120;t+=1/WeakenClient.STEP_RATE/2){
+            all++;float[] j=WeakenClient.jolt(t,seed,true);
+            if(j==null){assertFalse(!WeakenClient.burst(t,seed)&&j!=null);continue;}
+            assertTrue(WeakenClient.burst(t,seed),"only in a burst");thrown++;
+            assertTrue(Math.abs(j[0])<=4&&Math.abs(j[1])<=2,"a few pixels: "+j[0]+" "+j[1]);
+            assertTrue(j[2]>=1&&j[2]<=3,"its colours split a pixel to three");if(j[2]>=2)split++;
+            for(int k=0;k<4;k++){float[] own=WeakenClient.part(k,t,seed);assertTrue(Math.abs(own[0])<=5&&Math.abs(own[1])<=2);if(own[0]!=0||own[1]!=0)apart++;}
+            for(int k=0;k<WeakenClient.STRIKES;k++){
+                float[] b=WeakenClient.strike(k,t,seed);if(b==null)continue;struck++;
+                assertTrue(Math.abs(b[0])<=.45f&&Math.abs(b[1])<=4&&b[2]>=6&&b[2]<=28&&b[3]<=1,"a thin bar across them");
             }
         }
-    }
-    @Test void theMotesAreSmallManyAllRoundAndGoWellOut(){
-        // small squares, many of them: a scattering, not a few big things
-        assertTrue(WeakenClient.MOTE<=.1);assertTrue(WeakenClient.MOTES/WeakenClient.LIFE>=60,"sixty and more a second come out");
-        assertTrue(WeakenClient.REACH_LEAST>=.6&&WeakenClient.REACH_MOST>=1.3,"well out from the body");
-        int seed=99;
-        for(float t=0;t<12;t+=.03f){
-            int seen=0;for(int k=0;k<WeakenClient.MOTES;k++)if(WeakenClient.mote(k,t,seed)[4]>.5f)seen++;
-            assertTrue(seen>=20,"only "+seen+" motes at "+t);
-        }
-        // they go out all round, at every height of the body, and fade well out from it
-        boolean[] side=new boolean[8],level=new boolean[4];
-        for(float t=0;t<12;t+=.1f)for(int k=0;k<WeakenClient.MOTES;k++){float[] a=WeakenClient.mote(k,t,seed);side[(int)(a[0]/(Math.PI*2)*8)%8]=true;level[Math.min(3,(int)(a[3]*4))]=true;}
-        for(boolean s:side)assertTrue(s);for(boolean l:level)assertTrue(l);
-        float far=0;for(float u=0;u<WeakenClient.LIFE;u+=.01f)for(int k=0;k<WeakenClient.MOTES;k++){float[] a=WeakenClient.mote(k,u,seed);if(a[4]>.3f)far=Math.max(far,a[2]);}
-        assertTrue(far>1,"seen a block and more out: "+far);
-        // one's motes are not another's
-        assertNotEquals(WeakenClient.mote(0,1,1)[0],WeakenClient.mote(0,1,2)[0]);
+        double share=thrown/(double)all;
+        assertTrue(share>.15&&share<.45,"thrown "+share+" of the time: to be read the rest");
+        assertTrue(split>thrown/3);assertTrue(struck>thrown);assertTrue(apart>thrown&&apart<thrown*3,"some words of their own, most with the rest");
+        // as it takes they are thrown every step, for a moment; one this client only came near is not
+        for(float t=0;t<.39f;t+=.01f)assertNotNull(WeakenClient.jolt(t,seed,true));
+        boolean still=false;for(float t=0;t<.39f;t+=.01f)if(WeakenClient.jolt(t,7,false)==null)still=true;
+        assertTrue(still);
+        // the colours they split to are of purple's two sides, a pink and a blue violet
+        assertTrue((WeakenClient.SPLIT_RIGHT>>16&255)>200&&(WeakenClient.SPLIT_RIGHT&255)>180&&(WeakenClient.SPLIT_RIGHT>>8&255)<120);
+        assertTrue((WeakenClient.SPLIT_LEFT&255)>230&&(WeakenClient.SPLIT_LEFT>>16&255)<130&&(WeakenClient.SPLIT_LEFT>>8&255)<120);
+        assertEquals(4,WeakenClient.WORDS.split(" ").length);
     }
     @Test void itShowsAllItsTimeAndGoesAsItRunsOut(){
         float all=LASTS/20f;
