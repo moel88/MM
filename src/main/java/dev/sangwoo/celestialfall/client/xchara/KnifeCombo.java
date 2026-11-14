@@ -377,8 +377,8 @@ public final class KnifeCombo implements Fx.Skill {
         if(plain(c.cast.combo()))return;
         SlashFx.cut(c);
     }
-    /** (2.122.0) The cleave's ground: the floor heaved up along the knife and its pieces thrown. */
-    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==CLEAVE)GiantCleave.solids(c,s);else if(c.cast.combo()==SLAM)OverwriteSlam.solids(c,s);}
+    /** (2.122.0) The cleave's ground: the floor heaved up along the knife and its pieces thrown; (2.128.0) the slam's where it lands; (2.132.1) the rain's round the one stabbed as the last volley lands. */
+    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==CLEAVE)GiantCleave.solids(c,s);else if(c.cast.combo()==SLAM)OverwriteSlam.solids(c,s);else if(c.cast.combo()==RAIN)RainFx.solids(c,s);}
     @Override public void alpha(Fx c,EffectMesh m){
         if(rain(c.cast.combo())){BladeRain.draw(c,m,false);return;}
         if(c.cast.combo()==KNIVES){CorruptionKnives.draw(c,m,false);return;}

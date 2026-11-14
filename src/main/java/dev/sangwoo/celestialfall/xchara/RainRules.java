@@ -18,8 +18,8 @@ package dev.sangwoo.celestialfall.xchara;
  * driven into the nearest one ahead ({@link #REACH}): {@link #STAB_DAMAGE}, no guard takes it, no knockback; they are
  * bound where they stand ({@link #BIND}: they can do nothing, their legs stopped). The knife stays in them: from
  * {@link #FIRST} a volley of knives lit as the hack lights them lands on them every tick, {@link #VOLLEYS} of them,
- * {@link #VOLLEY_DAMAGE} each (the clients draw {@link #PER} knives a volley come from every side: {@link #BLADES} in
- * all). At {@link #WITHDRAW} the knife is drawn out; they are free at {@link #HOLD} and it is over at {@link #LENGTH}.
+ * {@link #VOLLEY_DAMAGE} each (the clients draw {@link #PER} knives a volley, {@link #BLADES} in all, falling straight
+ * down like rain onto them and the wide ground round them: 2.132.1). At {@link #WITHDRAW} the knife is drawn out; they are free at {@link #HOLD} and it is over at {@link #LENGTH}.
  * A stab that meets no one ends {@link #MISS} ticks on; the one stabbed dead or gone, the rain ends there.</li>
  * </ul>
  * Its cooldown ({@link #COOLDOWN}) runs from its end; cut short before the stab (struck in the run, or before the knife
@@ -67,8 +67,8 @@ public final class RainRules {
     public static final double[] REACH={0,4.0,1.2};
     /** The one stabbed further than this from them (blocks), the rain ends (someone took them away). */
     public static final double LEASH=10;
-    /** How many knives the clients draw a volley, and in all. */
-    public static final int PER=4,BLADES=PER*VOLLEYS;
+    /** How many knives the clients draw a volley, and in all (2.132.1: four times 2.132.0's, "칼이 더 많이 떨어지게"; only the clients' drawing, the server's blows are the volleys). */
+    public static final int PER=16,BLADES=PER*VOLLEYS;
 
     /** How far along their way they have run {@code age} ticks into the run, with {@code far} blocks of it open (blocks): springing off, then at speed, slowing in over the last of it. */
     public static double ran(double age,double far){

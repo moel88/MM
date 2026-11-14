@@ -13,12 +13,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * X Chara's H with their hack off, the rain of knives, as drawn (2.132.0, the user's words: a run, a stab at whoever is
  * ahead, the knife kept in them while a great many knives lit as the hack lights them pour in from every side): the
  * run leans far forward and stands up again; the stab ends with the knife out ahead and stays there until the last
- * volley; the knives come from all round the one stabbed (none from where its user stands), hang, fly in and stand in
- * them a moment; nothing jumps.
+ * volley, borne on standing and straining with both hands on it (2.132.1); the knives come out of the sky straight
+ * down like rain, on the one stabbed and all over the ground round them (none where its user stands), and stand where
+ * they land a moment (2.132.1); nothing jumps.
  */
 class BladeRainTest {
     static final Vec3d FEET=new Vec3d(10,64,5),USER=new Vec3d(-2.7,0,0);static final float NEVER=Float.MAX_VALUE;static final int SEED=4242;
-    static BladeRain.Pose pose(int k,float age){return BladeRain.pose(k,SEED,age,NEVER,FEET,.3,1.8,USER);}
+    static BladeRain.Spot spot(int k){return BladeRain.spot(k,SEED,FEET,.3,USER);}
+    static double land(int k){return BladeRain.landY(spot(k),FEET,1.8,FEET.y);}
+    static BladeRain.Pose pose(int k,float age){return pose(k,age,NEVER);}
+    static BladeRain.Pose pose(int k,float age,float stop){return BladeRain.pose(k,SEED,age,stop,spot(k),land(k));}
 
     @Test void theRunLeansFarForwardAndStandsUpAgain(){
         var run=BladeRain.RUN;
@@ -50,14 +54,42 @@ class BladeRainTest {
             var b=KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(clip.frame(t)));
             assertTrue(b[1].z>.9,"the knife ahead at "+t+": "+b[1].z);assertTrue(Math.abs(b[1].y)<.25,"level");
             Vec3d tip=b[0].add(b[1].multiply(ShotRules.TIP));
-            assertTrue(tip.z>RainRules.KEEP+.6,"its point past the near side of the one they stopped short of at "+t+": "+tip.z);
+            assertTrue(tip.z>RainRules.KEEP+.6&&tip.z<RainRules.KEEP+1.3,"its point through the one they stopped short of at "+t+": "+tip.z);
             assertTrue(tip.y>.7&&tip.y<1.6,"at the body's height: "+tip.y);
-            assertTrue(clip.frame(t).pitch()>18,"the body leaning on it");
         }
-        // the free hand up over the shoulder through the rain, down as the last volley lands
-        float mid=(RainRules.FIRST+RainRules.LAST)/40f;
-        Vec3d up=KagenoClips.freeHand(Vec3d.ZERO,0,R6.poseOf(clip.frame(mid))),down=KagenoClips.freeHand(Vec3d.ZERO,0,R6.poseOf(clip.frame(RainRules.WITHDRAW/20f)));
-        assertTrue(up.y>1.5,"the free hand up: "+up.y);assertTrue(down.y<up.y-.5,"and down at the end: "+down.y);
+        // (2.132.1, user requests: "버틸때 양손으로 버티고 정자세로 서서 버텨", "서서 버티는데 버티고 있다는 자세를
+        // 만들어줘 힘 줘서 버티고 있다는") borne on through the rain standing and straining: square to them and leaning
+        // into the knife, the knees bent and set, the feet planted apart (the left behind to push from), the head down,
+        // both hands on the knife's rod, the body shaking with the strain
+        double shook=0;R6.Frame was=null;
+        for(float t=stab+.3f;t<=RainRules.WITHDRAW/20f;t+=1/60f){
+            var fr=clip.frame(t);var p=R6.poseOf(fr);
+            assertTrue(fr.pitch()>9&&fr.pitch()<21,"leaning into it at "+t+": "+fr.pitch());
+            assertTrue(Math.abs(fr.yaw())<5&&Math.abs(fr.roll())<3,"square to them at "+t+": "+fr.yaw()+", "+fr.roll());
+            assertTrue(fr.up()<-.07&&fr.up()>-.17,"standing, a little sunk at "+t+": "+fr.up());
+            assertTrue(p.rKnee>8&&p.rKnee<50&&p.lKnee>8&&p.lKnee<50,"the knees bent and set at "+t+": "+p.rKnee+", "+p.lKnee);
+            double[] r=KnifeComboTest.foot(fr,0),l=KnifeComboTest.foot(fr,1);
+            assertTrue(r[2]-l[2]>.35&&r[2]-l[2]<.8,"the left foot behind to push from at "+t+": "+r[2]+", "+l[2]);
+            assertTrue(r[0]-l[0]>.38&&r[0]-l[0]<.62,"planted apart at "+t+": "+(r[0]-l[0]));
+            assertTrue(p.headPitch+fr.pitch()>8,"the head down at them at "+t);
+            var b=KagenoClips.blade(Vec3d.ZERO,0,p);Vec3d rod=b[0].subtract(b[1].multiply(GiantCleave.GRIP_BACK));
+            assertTrue(KagenoClips.freeHand(Vec3d.ZERO,0,p).distanceTo(rod)<.04,"the other hand on the rod at "+t+": "+KagenoClips.freeHand(Vec3d.ZERO,0,p).distanceTo(rod));
+            assertTrue(b[0].y>.8&&b[0].y<1.15&&Math.abs(b[0].x)<.15,"the hands low before the middle of the body at "+t+": "+b[0]);
+            if(was!=null){
+                double d=Math.abs(fr.pitch()-was.pitch())+Math.abs(fr.roll()-was.roll());shook=Math.max(shook,d);
+                assertTrue(d<4,"shaking, not jumping at "+t+": "+d);
+            }
+            was=fr;
+        }
+        assertTrue(shook>.6,"the strain shakes them: "+shook);
+        assertTrue(BladeRain.strain(stab)==0&&BladeRain.strain(stab+.4f)>.5f&&BladeRain.strain(RainRules.WITHDRAW/20f+.1f)==0,"shaking only while they bear on it");
+        // the free arm thrown back as it goes in; off the rod again once it is torn out
+        var thrown=R6.poseOf(clip.frame(stab+.05f));var drawn=R6.poseOf(clip.frame(RainRules.WITHDRAW/20f+.12f));
+        for(var p:new R6.Pose[]{thrown,drawn}){
+            var b=KagenoClips.blade(Vec3d.ZERO,0,p);
+            assertTrue(KagenoClips.freeHand(Vec3d.ZERO,0,p).distanceTo(b[0].subtract(b[1].multiply(GiantCleave.GRIP_BACK)))>.5,"one hand on it");
+        }
+        assertEquals(0,BladeRain.both(stab),1e-6);assertEquals(1,BladeRain.both(stab+.3f),1e-6);assertEquals(1,BladeRain.both(RainRules.WITHDRAW/20f),1e-6);assertEquals(0,BladeRain.both(RainRules.WITHDRAW/20f+.1f),1e-6);
         // drawn out: the hand back
         var out=KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(clip.frame(RainRules.HOLD/20f)));
         assertTrue(out[0].z<in[0].z-.6);
@@ -96,62 +128,63 @@ class BladeRainTest {
         assertEquals(0,BladeRain.lunged(a,b,0).distanceTo(a),1e-9);assertEquals(0,BladeRain.lunged(a,b,RainRules.ARRIVE).distanceTo(b),1e-9);
         assertEquals(1,BladeRain.held(RainRules.ARRIVE,RainRules.ARRIVE));assertEquals(0,BladeRain.held(RainRules.ARRIVE+10,RainRules.ARRIVE));
     }
-    @Test void theKnivesComeFromAllRoundAndFromOverThemButNotFromWhereTheUserStands(){
-        int[] quarter=new int[4];int high=0;Vec3d u=USER.normalize();
+    @Test void theKnivesComeDownOnThemAndAllOverTheGroundRoundThemButNotWhereTheUserStands(){
+        // (2.132.1, user request: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로 떨어지게")
+        assertEquals(480,RainRules.BLADES,"four times as many as 2.132.0's");
+        int[] quarter=new int[4];int on=0;Vec3d user=FEET.add(USER);
         for(int k=0;k<RainRules.BLADES;k++){
-            Vec3d w=BladeRain.from(k,SEED,USER);
-            assertEquals(1,w.length(),1e-9);
-            double el=Math.toDegrees(Math.asin(w.y));
-            assertTrue(el>=BladeRain.LOWEST-1e-6&&el<=BladeRain.HIGHEST+1e-6,"over the ground: "+el);
-            Vec3d flat=new Vec3d(w.x,0,w.z).normalize();
-            if(flat.dotProduct(u)>Math.cos(Math.toRadians(BladeRain.CLEAR)))assertTrue(el>=BladeRain.OVER-1e-6,"none through where its user stands: knife "+k+" at "+el);
-            quarter[(int)Math.floor((Math.atan2(w.z,w.x)+Math.PI)/(Math.PI/2))%4]++;if(el>40)high++;
-            double out=BladeRain.out(k,SEED);assertTrue(out>=BladeRain.NEAR&&out<=BladeRain.FAR);
-            Vec3d aim=BladeRain.aim(k,SEED,.3,1.8);
-            assertTrue(Math.abs(aim.x)<=.3&&Math.abs(aim.z)<=.3&&aim.y>.3&&aim.y<1.6,"aimed into the body");
-            if(k>0){Vec3d was=BladeRain.from(k-1,SEED,USER);assertTrue(new Vec3d(w.x,0,w.z).normalize().dotProduct(new Vec3d(was.x,0,was.z).normalize())<.6,"each from far off the last");}
+            var s=spot(k);double dx=s.x()-FEET.x,dz=s.z()-FEET.z,r=Math.hypot(dx,dz);
+            if(s.body()){
+                on++;assertTrue(Math.abs(dx)<=.3&&Math.abs(dz)<=.3,"on them: "+dx+", "+dz);
+                assertEquals(FEET.y+1.8-BladeRain.BODY_DEEP,land(k),1e-9,"into their head and shoulders");
+                continue;
+            }
+            assertTrue(r>.5&&r<=BladeRain.ZONE+1e-6,"on the ground round them: "+r);
+            assertTrue(Math.hypot(s.x()-user.x,s.z()-user.z)>=BladeRain.CLEAR-1e-6,"none where its user stands: knife "+k);
+            assertEquals(FEET.y-BladeRain.GROUND_DEEP,land(k),1e-9,"into the ground");
+            quarter[(int)Math.floor((Math.atan2(dz,dx)+Math.PI)/(Math.PI/2))%4]++;
         }
-        for(int q:quarter)assertTrue(q>=16,"from every side: "+java.util.Arrays.toString(quarter));
-        assertTrue(high>=15,"and from over them: "+high);
-        assertEquals(BladeRain.from(5,SEED,USER),BladeRain.from(5,SEED,USER),"the same on every client");
+        assertEquals(RainRules.VOLLEYS,on,"one on them with each volley (as many as the server's blows)");
+        for(int q:quarter)assertTrue(q>=80,"all over the ground round them: "+java.util.Arrays.toString(quarter));
+        assertEquals(spot(5),spot(5),"the same on every client");
     }
-    @Test void eachComesHangsFliesInAndStandsInThemAMoment(){
-        for(int k:new int[]{0,1,31,62,119}){
+    @Test void eachComesOutOfTheSkyFallsStraightDownAndStandsWhereItLands(){
+        for(int k:new int[]{0,1,31,62,119,240,359,479}){
             float lands=(float)RainRules.landsAt(k),comes=lands-BladeRain.BEFORE;
             assertNull(pose(k,comes-.05f),"nothing of it before it comes");
-            Vec3d way=BladeRain.from(k,SEED,USER),target=FEET.add(BladeRain.aim(k,SEED,.3,1.8));
-            var hang=pose(k,comes+BladeRain.IN+.2f);
-            assertNotNull(hang);assertFalse(hang.flying());assertFalse(hang.in());assertEquals(1,hang.shown(),1e-4);
-            assertEquals(0,hang.dir().distanceTo(way.negate()),1e-9,"pointing at them");
-            double far=hang.tip().distanceTo(target);
-            assertEquals(BladeRain.out(k,SEED),far,.1,"out on the shell");
-            assertEquals(BladeRain.TIP,hang.tip().distanceTo(hang.grip()),1e-6);
-            // in flight: nearer and nearer, quicker and quicker, along its own line
+            var top=pose(k,comes+.01f);
+            assertNotNull(top);assertTrue(top.flying()&&!top.in());
+            double high=top.tip().y-land(k);
+            assertTrue(high>=BladeRain.SKY-.1&&high<=BladeRain.SKY+BladeRain.SKY_MORE,"out of the sky high over where it lands: "+high);
+            // straight down: point down, its line never off where it lands, quicker and quicker
             double last=Double.MAX_VALUE,step=0;
-            for(float t=lands-BladeRain.FLY+.2f;t<lands;t+=.2f){
+            for(float t=comes+.25f;t<lands;t+=.25f){
                 var p=pose(k,t);assertTrue(p.flying());
-                double d=p.tip().subtract(target).dotProduct(way);
-                assertTrue(d<last,"nearer");if(last!=Double.MAX_VALUE){assertTrue(last-d>=step-1e-6,"quicker");step=last-d;}
-                last=d;
-                assertEquals(0,p.tip().subtract(target).crossProduct(way).length(),1e-6,"on its line");
+                assertEquals(0,p.dir().distanceTo(BladeRain.DOWN),1e-9,"pointing straight down");
+                assertEquals(spot(k).x(),p.tip().x,1e-9);assertEquals(spot(k).z(),p.tip().z,1e-9);
+                double y=p.tip().y;assertTrue(y<last,"falling");
+                if(last!=Double.MAX_VALUE){assertTrue(last-y>=step-1e-6,"quicker and quicker");step=last-y;}
+                last=y;
             }
-            var in=pose(k,lands+.5f);
-            assertTrue(in.in()&&!in.flying());
-            assertEquals(-BladeRain.IN_DEEP,in.tip().subtract(target).dotProduct(way),1e-6,"its point in them");
-            assertTrue(in.shown()>.99f);
+            var in=pose(k,lands+1.5f);
+            assertTrue(in.in()&&!in.flying());assertEquals(land(k),in.tip().y,.01,"its point in where it landed");
+            assertEquals(spot(k).body(),in.body());
             assertNull(pose(k,lands+BladeRain.STUCK+.01f),"and gone");
         }
         // a great many at once through the rain
         int most=0;
         for(float t=RainRules.FIRST;t<=RainRules.LAST;t+=.5f){int n=0;for(int k=0;k<RainRules.BLADES;k++)if(pose(k,t)!=null)n++;most=Math.max(most,n);}
-        assertTrue(most>=40,"pouring: "+most+" at once");
+        assertTrue(most>=100,"pouring like rain: "+most+" at once");
+        // and wide: some out near the edge of the ground they come down on
+        double far=0;for(int k=0;k<RainRules.BLADES;k++){var s=spot(k);far=Math.max(far,Math.hypot(s.x()-FEET.x,s.z()-FEET.z));}
+        assertTrue(far>BladeRain.ZONE-.3,"out to the edge of it: "+far);
     }
-    @Test void aKnifeMovesNoFurtherInAFrameThanItFlies(){
+    @Test void aKnifeMovesNoFurtherInAFrameThanItFalls(){
         for(int k=0;k<RainRules.BLADES;k+=7){
             BladeRain.Pose last=null;
             for(float t=(float)RainRules.landsAt(k)-BladeRain.BEFORE;t<RainRules.landsAt(k)+BladeRain.STUCK;t+=1/3f){
                 var p=pose(k,t);
-                if(p!=null&&last!=null)assertTrue(p.tip().distanceTo(last.tip())<2.2,"knife "+k+" at "+t+": "+p.tip().distanceTo(last.tip()));
+                if(p!=null&&last!=null)assertTrue(p.tip().distanceTo(last.tip())<1.15,"knife "+k+" at "+t+": "+p.tip().distanceTo(last.tip()));
                 last=p;
             }
         }
@@ -160,11 +193,11 @@ class BladeRainTest {
         float stop=RainRules.FIRST+10.2f;
         for(int k=0;k<RainRules.BLADES;k++){
             float lands=(float)RainRules.landsAt(k),comes=lands-BladeRain.BEFORE;
-            var after=BladeRain.pose(k,SEED,stop+BladeRain.VANISH+.01f,stop,FEET,.3,1.8,USER);
+            var after=pose(k,stop+BladeRain.VANISH+.01f,stop);
             if(lands>stop)assertNull(after,"knife "+k+" not yet in is gone");
-            if(comes>=stop)assertNull(BladeRain.pose(k,SEED,comes+3,stop,FEET,.3,1.8,USER),"none comes after it stopped");
+            if(comes>=stop)assertNull(pose(k,comes+3,stop),"none comes after it stopped");
             if(lands>stop&&comes<stop){
-                BladeRain.Pose a=BladeRain.pose(k,SEED,stop+.5f,stop,FEET,.3,1.8,USER),b=BladeRain.pose(k,SEED,stop+1.5f,stop,FEET,.3,1.8,USER);
+                BladeRain.Pose a=pose(k,stop+.5f,stop),b=pose(k,stop+1.5f,stop);
                 if(a!=null&&b!=null){assertEquals(0,a.tip().distanceTo(b.tip()),.3,"it hangs where it was");assertTrue(b.shown()<a.shown());}
             }
         }
@@ -180,5 +213,21 @@ class BladeRainTest {
         var last=cues.get(cues.size()-1);
         assertEquals(BladeRain.STRIKE_SOUND,last[0]);assertEquals(RainRules.LAST-1,(Integer)last[1]);assertEquals(BladeRain.LAST_PART,(Float)last[2]);
         assertEquals("xchara_jab",BladeRain.STAB_SOUND);
+    }
+    /** (2.132.1) The screen inside the rain is for whoever stands in it (their body, not their camera), and for no one else; it comes and goes smoothly. */
+    @Test void theScreenInsideTheRainIsForWhoeverStandsInIt(){
+        Vec3d feet=new Vec3d(10,64,5),user=new Vec3d(10-(RainRules.KEEP+.3),64,5),camera=user.add(-6.5,1.8,0);
+        float mid=RainRules.FIRST+10;
+        assertEquals(1,RainFx.inside(user,feet,mid,NEVER),1e-6,"the user stands in the rain where they stab from");
+        assertEquals(1,RainFx.inside(feet,feet,mid,NEVER),1e-6,"so does the one stabbed");
+        assertTrue(camera.distanceTo(feet)>BladeRain.ZONE+.5,"(the user's camera is out of it: their body is what counts)");
+        assertEquals(0,RainFx.inside(new Vec3d(10,64,5+BladeRain.ZONE+.6),feet,mid,NEVER),1e-6,"one standing outside it gets none");
+        assertEquals(0,RainFx.inside(user.add(0,BladeRain.SKY+3,0),feet,mid,NEVER),1e-6,"nor one over the circle in the sky");
+        assertEquals(0,RainFx.inside(user,feet,RainRules.FIRST-BladeRain.BEFORE-.01f,NEVER),1e-6,"none before the first knife comes");
+        assertEquals(0,RainFx.inside(user,feet,RainRules.LAST+10.01f,NEVER),1e-6,"none a little after the last lands");
+        assertEquals(0,RainFx.inside(user,feet,RainRules.FIRST+15,RainRules.FIRST+4),1e-6,"stopped short, gone after it");
+        float prev=0,most=0;
+        for(float a=0;a<RainRules.LENGTH;a+=1/3f){float v=RainFx.inside(user,feet,a,NEVER);most=Math.max(most,Math.abs(v-prev));prev=v;}
+        assertTrue(most<=.11,"it comes and goes over frames at 60 fps, not at once: at most "+most+" a frame");
     }
 }

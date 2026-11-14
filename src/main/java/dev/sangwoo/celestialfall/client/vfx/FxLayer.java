@@ -261,6 +261,10 @@ public final class FxLayer {
             rgb3(compProg,"ImpactDeep",look.deep());rgb3(compProg,"ImpactShapes",look.shapes());rgb3(compProg,"ImpactPale",look.pale());
             rgb3(compProg,"ImpactShade",look.shade());rgb3(compProg,"ImpactHue",look.hue());
             f(compProg,"Chroma",CelestialFall.CONFIG.screenDistortion?frame.chroma():0);
+            // (2.132.1) inside X Chara's rain of knives: its tearing only with the screen's distortion on, its flash only with flashes on
+            f(compProg,"Rain",frame.rain());f(compProg,"RainBeat",frame.rainBeat());f(compProg,"RainFlash",flash?frame.rainFlash():0);
+            f(compProg,"RainTime",(float)(gameSeconds%600));f(compProg,"RainTear",CelestialFall.CONFIG.screenDistortion?1:0);
+            f2(compProg,"Screen",width,height);
             f2(compProg,"Focus",focus[0],focus[1]);
             triangle();
             GlStateManager._activeTexture(GL13.GL_TEXTURE0);

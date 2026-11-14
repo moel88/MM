@@ -160,6 +160,8 @@ public final class KagenoClips {
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.FINALE)return dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleFacing(cast,delta);
         // (2.128.0) X Chara's slam: turned to the way it dives
         if(cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL&&cast.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SLAM)return dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.facing(cast,delta);
+        // (2.132.1) X Chara's rain of knives: the stab turned square to the one it goes into
+        if(cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL&&cast.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.RAIN)return dev.sangwoo.celestialfall.client.xchara.BladeRain.facing(cast,delta);
         return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.skill()==E?KagenoAim.thrust(cast,delta):cast.yaw();
     }
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */

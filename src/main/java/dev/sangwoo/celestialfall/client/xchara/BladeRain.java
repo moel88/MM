@@ -1,6 +1,5 @@
 package dev.sangwoo.celestialfall.client.xchara;
 
-import dev.sangwoo.celestialfall.CelestialFall;
 import dev.sangwoo.celestialfall.client.EffectMesh;
 import dev.sangwoo.celestialfall.client.MapClient;
 import dev.sangwoo.celestialfall.client.StandClient;
@@ -12,20 +11,11 @@ import dev.sangwoo.celestialfall.client.kageno.R6;
 import dev.sangwoo.celestialfall.client.vfx.FxFrame;
 import dev.sangwoo.celestialfall.xchara.RainRules;
 import dev.sangwoo.celestialfall.xchara.ShotRules;
-import dev.sangwoo.celestialfall.xchara.XChara;
 import java.util.ArrayList;
 import java.util.UUID;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Matrix3f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 import static dev.sangwoo.celestialfall.client.isosang.IsosangSlash.d;
 import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
 import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
@@ -44,19 +34,22 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
  * <li>The stab ({@link #STAB}): taken up from the run as it is on screen; the knife brought round to the hip as the
  * last of the way is covered (RainRules.lunged, from where the run had them to where the server said), then driven in
  * from the ground up, the whole body behind it. It lights as the hack lights it as it goes in ({@link #knife}) and
- * stays in the one stabbed, the body leaning on it, the free hand thrown up over the shoulder: calling the knives.
- * As the last volley lands that hand comes down; the knife is drawn out, goes black, and they step back.</li>
- * <li>The rain ({@link #models}): RainRules.BLADES knives, the knife's own model lit as the hack lights it, half the
- * size it is in the hand, three a tick. Each comes to be out on a shell round the one stabbed (from every side and
- * from over them; none from where its user stands) under blocks of purple, hangs pointing at them a moment, draws
- * back a little and flies in, quicker and quicker, to stand in them a moment before it is gone. What the effects'
- * layer adds ({@link #draw}): a purple glow along each, a streak behind one in flight, a white spark and a few pixels
- * where each goes in, the knife's own burst every few volleys, and as the last lands a ring over the ground and the
- * bigger burst.</li>
+ * stays in the one stabbed. Then (2.132.1, user requests: "버틸때 양손으로 버티고 정자세로 서서 버텨", "서서 버티는데
+ * 버티고 있다는 자세를 만들어줘 힘 줘서 버티고 있다는") they come up onto it and bear on it standing, both hands on its rod
+ * ({@link #bracing}, {@link #gripped}), leaning into it and straining (bearing in and easing off by turns, shaking:
+ * {@link #strain}); the body turns to the one it goes into ({@link #facing}). As the last volley lands they bear in
+ * hardest; the other hand lets go, the knife is drawn out, goes black, and they step back.</li>
+ * <li>The rain (2.132.1, user requests: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로
+ * 떨어지게", "비가 떨어지는 범위를 넓게"): RainRules.BLADES knives lit as the hack lights them, half the size they are in
+ * the hand, sixteen a tick, falling straight down like rain out of a circle in the sky ({@link #pose}): one of each
+ * volley onto the one stabbed (as the server's blows), the rest all over the ground round them out to {@link #ZONE}
+ * ({@link #spot}; none where its user stands). Each stands where it lands a moment and is gone. They are drawn flat by
+ * the effects' layer (RainFx: the knife's own model is too many boxes for hundreds at once), with all the rest of what
+ * it adds ({@link #draw}), and the screen inside the rain.</li>
  * </ul>
- * Its sounds are ones the game has (the user's: "있는 소리 재사용"; {@link #voices}): the jab's thrust as the knife goes
- * in, the knives shot's coming and strike through the rain. No screen effect but the camera's shake. Everything is a
- * function of the skills' own clocks and what the server told.
+ * Its sounds are ones the game has (the user's: "있는 소리 재사용"; {@link #cues}): the jab's thrust as the knife goes
+ * in, the knives shot's coming and strike through the rain. Everything is a function of the skills' own clocks and
+ * what the server told.
  */
 public final class BladeRain {
     private BladeRain(){}
@@ -115,16 +108,34 @@ public final class BladeRain {
     }
     /** The feet as the stab stands: the right out ahead under the knife, the left behind. */
     private static final double RR=.15,RF=.92,LR=-.22,LF=-.34;
-    /** The knife in them: the body leaning on it over the front foot, the free hand up over the shoulder; {@code push} 0 easing off, 1 bearing in. */
-    private static R6.Pose leaning(double push,double[] lArm){
-        return on(.02,.62+.05*push,-.355-.015*push,(float)(27+3*push),(float)(23+2*push),-3,d(-10,-22-2*push),d(4,-4),lArm,RR,RF,LR,LF);
+    /**
+     * The feet as they bear on it (2.132.1, user requests: "버틸때 양손으로 버티고 정자세로 서서 버텨", then "서서 버티는데
+     * 버티고 있다는 자세를 만들어줘 힘 줘서 버티고 있다는"): standing braced, a little wider than at rest, the right
+     * ahead under the knife (its knee bent over it), the left back behind the hips to push from (its leg near straight):
+     * {right foot right, ahead, left foot right, ahead}.
+     */
+    static final double BR=.24,BF=.80,BL=-.27,BB=.06;
+    /**
+     * The knife in them, borne on with both hands and straining (2.132.1): standing, the knees a little bent and set,
+     * the body square to them and leaning into the knife, the head down, both hands on its rod low before the body (the
+     * other behind the knife's, {@link #gripped}), the knife level into them; {@code push} 0 easing off a little, 1
+     * bearing in hard (leaning further in and sinking a little, the arms driving out). The strain's shaking is
+     * {@link #shaking}.
+     */
+    static R6.Pose bracing(double push){
+        R6.Pose p=on(0,.50+.05*push,-.10-.025*push,(float)(1+1.5*push),(float)(12+4*push),0,d(-34+4*push,-30),d(-3,0),d(-38,28),BR,BF,BL,BB);
+        // (the head down at them: this far under level, whatever the body's lean)
+        p.headPitch=-p.pitch+(float)(13+3*push);
+        return p;
     }
     /**
      * The stab and the rain: from the run (whatever stride it is in: KagenoClips takes it up from the frame on screen)
      * the knife comes round the right side to the hip, its point on them, the body side-on over the back foot; then
      * the back leg drives, the hips and the shoulder turn in and the arm goes out last, in on STAB. It is driven a
-     * little further and borne on, the free hand thrown up over the left shoulder, until the last volley; that hand
-     * comes down with it; the knife is torn out back past the hip and they step away.
+     * little further, the free arm thrown back; then (2.132.1) they come up onto it: the back foot swung through and set
+     * down beside the front, the body rising square to them, the other hand coming onto the knife's rod; and they bear
+     * on it so, standing at attention with both hands on it, until the last volley. Then the other hand lets go, the
+     * knife is torn out back past the hip and they step away.
      */
     static final Anim STAB=stab();
     private static Anim stab(){
@@ -141,23 +152,65 @@ public final class BladeRain {
         keys.add(k(.315f,on(-.01,.38,-.35,-2,18,-2,d(-42,40),d(6,-6),d(-12,-92),RR,.82,LR,LF)));
         // in: the whole body out behind the knife
         keys.add(k(STAB_AT,on(.01,.54,-.36,19,22,-3,d(-16,-10),d(5,-5),d(-16,-136),RR,RF,LR,LF)));
-        // driven further, the free hand coming up
-        keys.add(k(STAB_AT+.05f,on(.02,.66,-.37,30,25,-3,d(-9,-24),d(4,-4),d(-4,-120),RR,RF,LR,LF)));
-        keys.add(k(STAB_AT+.20f,leaning(1,d(46,-96))));
-        keys.add(k(STAB_AT+.36f,leaning(.3,d(72,-76))));
-        // borne on through the rain: bearing in and easing off, the hand held up
-        float t=STAB_AT+.36f;boolean in=true;
-        while(t+.3f<LAST_AT-.1f){t+=.3f;keys.add(k(t,leaning(in?1:.2,in?d(66,-66):d(74,-80))));in=!in;}
-        // the last volley: the hand comes down with it, the body bearing in hardest
-        keys.add(k(LAST_AT-.08f,leaning(.6,d(64,-62))));
-        keys.add(k(LAST_AT+.04f,on(.02,.70,-.38,31,27,-3,d(-9,-25),d(4,-4),d(-22,-40),RR,RF,LR,LF)));
-        keys.add(k(OUT_AT,on(.02,.68,-.37,30,26,-3,d(-10,-24),d(4,-4),d(-34,-36),RR,RF,LR,LF)));
-        // torn out: the hips back first, the knife after them past the hip
-        keys.add(k(OUT_AT+.11f,on(-.03,.34,-.30,-12,12,1,d(-44,60),d(5,6),d(-40,-30),RR,RF,LR,LF)));
-        keys.add(k(hold,on(-.03,.14,-.17,-16,5,1,d(-52,100),d(6,30),d(-60,-24),.17,.50,-.21,-.30)));
-        keys.add(k(end-.14f,on(-.01,.04,-.07,-5,1,0,d(-76,60),d(3,20),d(-78,-14),.19,.14,-.20,-.10)));
+        // driven further, the free arm thrown back
+        keys.add(k(STAB_AT+.05f,on(.02,.66,-.37,30,25,-3,d(-9,-24),d(4,-4),d(-6,-112),RR,RF,LR,LF)));
+        // (2.132.1) braced on it: the back foot brought up along the ground to push from (the front drawn back a little
+        // under them), the body turning square to them and leaning in, the other hand coming round onto the rod
+        keys.add(k(STAB_AT+.13f,on(.01,.62,-.26,17,19,-2,d(-24,-27),d(1,-2),d(-20,-78),RR,.86,LR,-.12)));
+        keys.add(k(STAB_AT+.21f,on(0,.55,-.12,6,15,-1,d(-33,-29),d(-2,0),d(-34,-6),BR,.82,BL,.03)));
+        keys.add(k(STAB_AT+.29f,bracing(1)));
+        // borne on through the rain, straining: easing off a little and bearing in hard by turns
+        float t=STAB_AT+.29f;boolean in=false;
+        while(t+.3f<LAST_AT-.1f){t+=.3f;keys.add(k(t,bracing(in?1:.35)));in=!in;}
+        // the last volley: bearing in hardest
+        keys.add(k(LAST_AT-.08f,bracing(.4)));
+        keys.add(k(LAST_AT+.04f,bracing(1.6)));
+        keys.add(k(OUT_AT,bracing(1)));
+        // torn out: the other hand off it, the hips back first, the knife after them past the hip, the right foot stepping back
+        keys.add(k(OUT_AT+.11f,on(-.03,.36,-.24,-12,10,1,d(-44,60),d(5,6),d(-40,-30),.19,.16,BL,BB)));
+        keys.add(k(hold,on(-.03,.18,-.14,-14,4,1,d(-52,100),d(6,30),d(-60,-24),.18,.06,-.20,.22)));
+        keys.add(k(end-.14f,on(-.01,.04,-.06,-5,1,0,d(-76,60),d(3,20),d(-78,-14),.19,.02,-.20,.10)));
         keys.add(k(end,KnifeCombo.STANCE));
-        return Anim.joints(keys.toArray(new Anim.Key[0])).stops(Anim.stop(STAB_AT,.05,.07)).after(rested(end,false));
+        return Anim.joints(keys.toArray(new Anim.Key[0])).stops(Anim.stop(STAB_AT,.05,.07)).after(gripped(rested(end,false)));
+    }
+    /** How much of the other hand is on the knife's rod {@code sec} seconds into the stab (2.132.1): coming onto it as they come up onto it, off it as it is torn out. */
+    static float both(float sec){return Ease.smooth(sec,STAB_AT+.05f,STAB_AT+.27f)*(1-Ease.smooth(sec,OUT_AT+.01f,OUT_AT+.09f));}
+    /**
+     * A frame of the stab as it is drawn with the other hand on the knife's rod ({@link #both}): behind the knife's hand
+     * along the knife (GiantCleave.GRIP_BACK, as the grown knife's grip), that arm set by where the rod is
+     * (IsosangLimbs.leftHandAt).
+     */
+    /**
+     * How much they shake with the strain {@code sec} seconds into the stab (0 to 1): as they bear on it with both hands,
+     * harder as they bear in (the keys' pushes, every 0.3 seconds) and with the last volley, gone as it is torn out.
+     */
+    static float strain(float sec){
+        float on=both(sec);if(on<=0)return 0;
+        double since=(sec-(STAB_AT+.29f))/.6;double push=.5+.5*Math.cos(2*Math.PI*since);
+        return on*(float)(.65+.35*push)*(1+.5f*(float)KnifeCombo.bump(sec,LAST_AT,.12f));
+    }
+    /** Their body shaking with the strain {@code sec} seconds into the stab: small and quick, never the same twice (a few beats, none a whole number of the others), as {fw, up, rt, yaw, pitch, roll} to add to the frame. */
+    static double[] shaking(float sec){
+        float st=strain(sec);if(st<=0)return null;
+        double w=sec*2*Math.PI;
+        return new double[]{.005*st*Math.sin(w*9.3),.006*st*Math.sin(w*11.7+1),.004*st*Math.sin(w*8.1+2),
+            .9*st*Math.sin(w*10.3+.5),1.3*st*Math.sin(w*12.1+.2),.8*st*Math.sin(w*13.7+1.3)};
+    }
+    private static Anim.Fix gripped(Anim.Fix inner){
+        return (sec,f)->{
+            R6.Frame b=inner.apply(sec,f);
+            float g=both(sec);if(g<=0)return b;
+            double[] sh=shaking(sec);
+            if(sh!=null)b=new R6.Frame(b.joints(),b.grip(),b.fw()+sh[0],b.up()+sh[1],b.rt()+sh[2],(float)(b.yaw()+sh[3]),(float)(b.pitch()+sh[4]),(float)(b.roll()+sh[5]));
+            R6.Pose p=R6.poseOf(b);double r=R6.armReach(p.rElbow),l=R6.armReach(p.lElbow);
+            double x=.3125+p.rArm.rt()*r-p.blade.rt()*GiantCleave.GRIP_BACK,y=1.375+p.rArm.up()*r-p.blade.up()*GiantCleave.GRIP_BACK,z=p.rArm.fw()*r-p.blade.fw()*GiantCleave.GRIP_BACK;
+            if(g>=1)return IsosangLimbs.leftHandAt(b,x,y,z);
+            // (on its way there: the hand along the straight line from where the key has it to the rod, so it goes
+            // there and does not swing round)
+            double hx=-.3125+p.lArm.rt()*l,hy=1.375+p.lArm.up()*l,hz=p.lArm.fw()*l;
+            R6.Frame two=IsosangLimbs.leftHandAt(b,hx+(x-hx)*g,hy+(y-hy)*g,hz+(z-hz)*g);
+            return R6.blend(b,two,Ease.smooth(g,0,.35f));
+        };
     }
     static Anim clipOf(int combo){return combo==RUSH?RUN:STAB;}
 
@@ -204,6 +257,51 @@ public final class BladeRain {
         var mc=MinecraftClient.getInstance();var owner=mc.world==null?null:mc.world.getPlayerByUuid(c.caster());if(owner==null)return Vec3d.ZERO;
         return at.subtract(owner.getLerpedPos(delta)).multiply(w);
     }
+    /** The stab's body turns to the one it goes into at most this far from the run's way (degrees), over this many ticks from when this client knows whom (as the knife comes round to the hip). */
+    static final float TURN=40,TURN_TICKS=4;
+    /** Whom a stab goes into as this client knows it ({@code id}, -1: no one), and from when (ticks into it) its body turns to them from what turn ({@code from}, degrees left of the run's way). */
+    private record Aim(int id,float since,float from){}
+    private static final java.util.Map<UUID,Aim> AIMS=new java.util.LinkedHashMap<>();
+    /** The one in the stab's way from where it is made (the server's rule, XCharaCombo.lane: the nearest ahead), as this client finds them; -1: no one. */
+    static int inTheWay(StandClient.Cast c){
+        var mc=MinecraftClient.getInstance();var way=KnifeClient.rainWay(c.id());if(mc.world==null||way==null)return -1;
+        Vec3d at=way.to(),f=Vec3d.fromPolar(0,c.yaw()),right=new Vec3d(-f.z,0,f.x);var user=mc.world.getPlayerByUuid(c.caster());
+        int best=-1;double near=Double.MAX_VALUE;
+        for(var e:mc.world.getEntitiesByClass(LivingEntity.class,new net.minecraft.util.math.Box(at,at).expand(RainRules.REACH[1]+2),
+            e->e!=user&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity))){
+            Vec3d d=e.getPos().subtract(at);double ahead=d.dotProduct(f);
+            if(!dev.sangwoo.celestialfall.xchara.XCharaCombo.lane(RAIN,0,ahead,d.dotProduct(right),d.y,e.getWidth()*.5))continue;
+            if(ahead<near){near=ahead;best=e.getId();}
+        }
+        return best;
+    }
+    /** How far the stab's body is turned from the run's way {@code age} ticks in, as {@code a} has it (degrees, left +): to the one it goes into, at most TURN. */
+    private static float turnOf(StandClient.Cast c,Aim a,float age,float delta){
+        float want=0;
+        var mc=MinecraftClient.getInstance();var way=KnifeClient.rainWay(c.id());
+        if(a.id()>=0&&way!=null&&mc.world!=null&&mc.world.getEntityById(a.id()) instanceof LivingEntity e){
+            Vec3d to=e.getLerpedPos(delta).subtract(way.to());
+            if(to.horizontalLengthSquared()>=.25)want=net.minecraft.util.math.MathHelper.clamp(net.minecraft.util.math.MathHelper.wrapDegrees((float)Math.toDegrees(Math.atan2(-to.x,to.z))-c.yaw()),-TURN,TURN);
+        }
+        return a.from()+(want-a.from())*Ease.smooth(age,a.since(),a.since()+TURN_TICKS);
+    }
+    /**
+     * The way the stab's body is drawn facing (degrees, 2.132.1: they stand square to the one they bear on): the run's,
+     * turned to the one the knife goes into (at most TURN either way): as this client finds them in its way from its
+     * first frame (as the knife comes round to the hip), then as the server says (the knife is in a tick or so before
+     * that is heard; if it names another, or no one, the body turns on to them from where it was).
+     */
+    public static float facing(StandClient.Cast c,float delta){
+        if(c.combo()!=RAIN)return c.yaw();
+        float age=c.age(delta);Aim a=AIMS.get(c.id());
+        int[] told=KnifeClient.struck(c.id(),0);
+        if(told!=null){
+            int id=told.length==0?-1:told[0];
+            if(a==null||a.id()!=id){a=new Aim(id,a==null?0:age,a==null?0:turnOf(c,a,age,delta));AIMS.put(c.id(),a);}
+        }else if(a==null){a=new Aim(inTheWay(c),0,0);AIMS.put(c.id(),a);}
+        while(AIMS.size()>64)AIMS.remove(AIMS.keySet().iterator().next());
+        return c.yaw()+turnOf(c,a,age,delta);
+    }
     /** How far from where this player really is their body is drawn now, in their rain of knives (null: in none, or nowhere else): their own camera goes with it (BotandCamera). */
     public static Vec3d offset(UUID id,float delta){
         var c=KnifeClient.rainOf(id);if(c==null)return null;
@@ -229,57 +327,69 @@ public final class BladeRain {
     }
 
     // ───────────────────────────── the knives of the rain ─────────────────────────────
+    // (2.132.1, user requests: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로 떨어지게", then
+    // "비가 떨어지는 범위를 넓게 바꾸고": not flying in at the one stabbed from all round them any more but straight down out
+    // of the sky like rain, four times as many, on them and all over the wide ground round them)
 
     /** A knife of the rain is this much of the knife in the hand; so its point is this far from its grip (blocks). */
     static final double SIZE=.5,TIP=ShotRules.TIP*SIZE;
-    /** A knife comes to be this many ticks before it lands, takes IN to come, and flies the last FLY of them (drawn back BACK blocks just before). */
-    static final float BEFORE=7.5f,IN=2.4f,FLY=2.4f;static final double BACK=.35;
-    /** One that has landed stands in them this long (ticks), gone over the last GOING of it; one not yet landed as the rain stops short is gone over VANISH. */
-    static final float STUCK=6,GOING=2,VANISH=2;
-    /** How far out from the one stabbed a knife comes to be (blocks: its point), and how high and low about them (degrees over level). */
-    static final double NEAR=4.0,FAR=6.4;static final double LOWEST=4,HIGHEST=68;
-    /** No knife comes from within this of where its user stands, seen from the one stabbed, unless from this high over them (degrees). */
-    static final double CLEAR=42,OVER=38;
-    /** How far past the point it aims at a knife's point goes in (blocks). */
-    static final double IN_DEEP=.22;
+    /** A knife comes to be this many ticks before it lands (falling all of it), taking IN of them to come. */
+    static final float BEFORE=6,IN=1.5f;
+    /** One that has landed stands this long (ticks), gone over the last GOING of it; one not yet landed as the rain stops short is gone over VANISH. */
+    static final float STUCK=3,GOING=1.5f,VANISH=2;
+    /** How high over where it lands a knife comes to be (blocks: out of the circle in the sky, SKY), and how much higher at most. */
+    static final double SKY=10.5,SKY_MORE=1.0;
+    /** How far out from the middle of the one stabbed the knives come down (blocks: the ground round them, wide), none within CLEAR of where its user stands. */
+    static final double ZONE=8,CLEAR=1.6;
+    /** How deep a knife's point goes in where it lands: into the ground, into the one stabbed (from over them: their head and shoulders). */
+    static final double GROUND_DEEP=.3,BODY_DEEP=.38;
+    /** How fast a knife falls: so much of the way at once (it comes out of the sky already falling), the rest quicker and quicker. */
+    static final double FALL_START=.35;
     private static double h(int k,int seed,int salt){return GlitchFx.h(k,0,seed,salt);}
     /** A seed for this stab's knives (the same on every client: its start). */
     static int seed(StandClient.Cast c){return (int)(c.start()*31+17);}
+    /** Whether knife {@code k} comes down on the one stabbed (one of each volley: as many as the server's blows), or on the ground round them. */
+    static boolean onThem(int k){return k%RainRules.PER==0;}
+    /** Where knife {@code k} comes down, level ({@code x}, {@code z}), and whether on the one stabbed. */
+    public record Spot(double x,double z,boolean body){}
     /**
-     * The way knife {@code k} comes from, seen from the one stabbed (a unit vector, out from them): round them by the
-     * golden angle from one to the next (so each comes from far off the last), as high as chance has it between LOWEST
-     * and HIGHEST; one that would come from where its user stands ({@code user}: the level way from the one stabbed to
-     * them) comes from over them instead.
+     * Where knife {@code k} comes down round one standing at {@code feet} ({@code half} wide either way), its user
+     * {@code user} from them (level): on their head and shoulders for one of each volley; for the rest somewhere on the
+     * ground round them out to ZONE, evenly over it (one on from the last by the golden angle, as far out as its share of
+     * the ground has it), none on them nor within CLEAR of where its user stands (one that would be is moved round them,
+     * as far out, to just clear of it).
      */
-    static Vec3d from(int k,int seed,Vec3d user){
-        double az=k*2.39996323+h(k,seed,1)*.6,lo=Math.sin(Math.toRadians(LOWEST)),hi=Math.sin(Math.toRadians(HIGHEST));
-        double sin=lo+(hi-lo)*h(k,seed,2),cos=Math.sqrt(1-sin*sin);
-        double x=Math.cos(az),z=Math.sin(az);
+    static Spot spot(int k,int seed,Vec3d feet,double half,Vec3d user){
+        if(onThem(k))return new Spot(feet.x+(h(k,seed,1)-.5)*1.4*half,feet.z+(h(k,seed,2)-.5)*1.4*half,true);
+        double in=half+.25,a=k*2.39996323+h(k,seed,3)*.5,r=Math.sqrt(in*in+(ZONE*ZONE-in*in)*h(k,seed,4));
         if(user!=null&&user.horizontalLengthSquared()>1e-8){
-            Vec3d u=new Vec3d(user.x,0,user.z).normalize();
-            if(x*u.x+z*u.z>Math.cos(Math.toRadians(CLEAR))&&sin<Math.sin(Math.toRadians(OVER))){
-                sin=Math.sin(Math.toRadians(OVER+(HIGHEST-OVER)*h(k,seed,3)));cos=Math.sqrt(1-sin*sin);
+            // (one that would come down within CLEAR of where its user stands is moved round them, as far out as it was,
+            // to just clear of it)
+            double u=Math.hypot(user.x,user.z),au=Math.atan2(user.z,user.x),most=(r*r+u*u-CLEAR*CLEAR)/(2*r*u);
+            if(most<1){
+                double off=Math.acos(Math.max(-1,most)),turn=Math.atan2(Math.sin(a-au),Math.cos(a-au));
+                if(Math.abs(turn)<off)a=au+(turn<0?-off:off);
             }
         }
-        return new Vec3d(x*cos,sin,z*cos);
+        return new Spot(feet.x+Math.cos(a)*r,feet.z+Math.sin(a)*r,false);
     }
-    /** How far out knife {@code k}'s point comes to be (blocks). */
-    static double out(int k,int seed){return NEAR+(FAR-NEAR)*h(k,seed,4);}
-    /** The point of a body knife {@code k} aims at: about its middle, {feet} + this (for a body {@code half} wide and {@code height} high). */
-    static Vec3d aim(int k,int seed,double half,double height){
-        return new Vec3d((h(k,seed,5)-.5)*half*1.1,height*(.28+.56*h(k,seed,6)),(h(k,seed,7)-.5)*half*1.1);
-    }
-    /** One knife this frame: its grip (its model's origin), the way it points, how much of it shows, the seconds since it came to be, whether it flies, whether it has landed. */
-    public record Pose(Vec3d grip,Vec3d dir,float shown,float lit,boolean flying,boolean in){
+    /** How low knife {@code k}'s point comes (the y it stops at): into the top of the one stabbed ({@code height} tall), or into the ground at {@code ground}. */
+    static double landY(Spot s,Vec3d feet,double height,double ground){return s.body()?feet.y+height-BODY_DEEP:ground-GROUND_DEEP;}
+    /** How high over where it lands knife {@code k} comes to be (blocks). */
+    static double sky(int k,int seed){return SKY+SKY_MORE*h(k,seed,5);}
+    /** One knife this frame: its grip (its rod's middle), the way it points (straight down), how much of it shows, the seconds since it came to be, whether it falls, whether it has landed (and whether in the one stabbed). */
+    public record Pose(Vec3d grip,Vec3d dir,float shown,float lit,boolean flying,boolean in,boolean body){
         public Vec3d tip(){return grip.add(dir.multiply(TIP*size(shown)));}
     }
+    static final Vec3d DOWN=new Vec3d(0,-1,0);
     static double size(float shown){return .5+.5*shown;}
+    /** How far down from where it came to be a knife has fallen {@code u} of the way through its fall (0 to 1): already falling, quicker and quicker. */
+    static double fallen(double u){u=Math.max(0,Math.min(1,u));return FALL_START*u+(1-FALL_START)*u*u;}
     /**
-     * Knife {@code k} {@code age} ticks into a stab that stopped short {@code stopped} ticks in (anything past its end
-     * if it did not), for one stabbed whose feet are at {@code feet} (so wide and so high), the user {@code user} from
-     * them (level). Null while there is nothing of it to draw.
+     * Knife {@code k} {@code age} ticks into a stab that stopped short {@code stopped} ticks in (anything past its end if
+     * it did not), coming down at {@code s}, its point stopping at {@code land}. Null while there is nothing of it to draw.
      */
-    public static Pose pose(int k,int seed,float age,float stopped,Vec3d feet,double half,double height,Vec3d user){
+    public static Pose pose(int k,int seed,float age,float stopped,Spot s,double land){
         float lands=(float)RainRules.landsAt(k),comes=lands-BEFORE;
         if(age<comes||comes>=stopped)return null;
         boolean cut=lands>stopped;
@@ -288,16 +398,14 @@ public final class BladeRain {
         if(cut&&age>=stopped+VANISH||!cut&&age>=lands+STUCK)return null;
         float shown=Ease.smooth(t,comes,comes+IN)*(cut?1-Ease.smooth(age,stopped,stopped+VANISH):1-Ease.smooth(age,lands+STUCK-GOING,lands+STUCK));
         if(shown<=0)return null;
-        Vec3d way=from(k,seed,user),target=feet.add(aim(k,seed,half,height)),dir=way.negate();
-        // its point: out on the shell (drawn back a little before it goes), then in, quicker and quicker, to past the point it aims at
-        double far=out(k,seed)+BACK*Ease.smooth(t,lands-FLY-1.6f,lands-FLY)+.04*Math.sin(t*.9+k*1.7);
-        float u=Math.max(0,Math.min(1,(t-(lands-FLY))/FLY));
-        double at=far+(-IN_DEEP-far)*u*u;
+        double high=sky(k,seed),u=(t-comes)/BEFORE;
         boolean in=t>=lands;
-        // (in them it shivers a moment)
-        if(in){double s=(t-lands)/20.0;dir=dir.add(way.crossProduct(new Vec3d(0,1,0)).multiply(.05*Math.exp(-s/.06)*Math.sin(s*90))).normalize();}
-        Vec3d tip=target.add(way.multiply(at));
-        return new Pose(tip.subtract(dir.multiply(TIP*size(shown))),dir,shown,(t-comes)/20f,u>0&&!in,in);
+        double y=land+(in?0:high*(1-fallen(u)));
+        Vec3d dir=DOWN;
+        // (in where it landed it shivers a moment)
+        if(in){double sec=(t-lands)/20.0,a=k*1.7;dir=dir.add(new Vec3d(Math.cos(a),0,Math.sin(a)).multiply(.06*Math.exp(-sec/.05)*Math.sin(sec*95))).normalize();}
+        Vec3d tip=new Vec3d(s.x(),y,s.z());
+        return new Pose(tip.subtract(dir.multiply(TIP*size(shown))),dir,shown,(t-comes)/20f,!in,in,s.body());
     }
     /** The one the stab's knife is in, as this client was told (null: no one yet, or they are not here). */
     static LivingEntity stabbed(StandClient.Cast c){
@@ -305,145 +413,24 @@ public final class BladeRain {
         var mc=MinecraftClient.getInstance();
         return mc.world!=null&&mc.world.getEntityById(told[0]) instanceof LivingEntity e?e:null;
     }
-    private static float until(StandClient.Cast c){float u=KnifeClient.until(c.id());return u==Float.MAX_VALUE?Float.MAX_VALUE:u*20;}
+    /** When this one stopped short (ticks into it), or Float.MAX_VALUE: it did not. */
+    static float until(StandClient.Cast c){float u=KnifeClient.until(c.id());return u==Float.MAX_VALUE?Float.MAX_VALUE:u*20;}
     /** The level way from the one stabbed to the stab's user (where they stab from). */
-    private static Vec3d userFrom(StandClient.Cast c,Vec3d feet){
+    static Vec3d userFrom(StandClient.Cast c,Vec3d feet){
         var way=KnifeClient.rainWay(c.id());Vec3d at=way==null?c.origin():way.to();
         return new Vec3d(at.x-feet.x,0,at.z-feet.z);
     }
-    /** How far each knife is rolled about its length (degrees). */
-    private static float roll(int k,int seed){return (float)(h(k,seed,8)*360);}
-
-    private static XCharaKnifeRenderer renderer;private static ItemStack stack;
-    public static void initialize(){net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(BladeRain::models);}
-    /** The knives as the knife's own model, lit as the hack lights it (AFTER_ENTITIES). */
-    static void models(WorldRenderContext ctx){
-        var mc=MinecraftClient.getInstance();if(mc.world==null||KnifeClient.SWINGS.isEmpty()||ctx.consumers()==null||!MapClient.enabled())return;
-        Vec3d camera=ctx.camera().getPos();var matrices=ctx.matrixStack();float delta=ctx.tickDelta();
-        for(var c:KnifeClient.SWINGS.values()){
-            if(c.combo()!=RAIN||c.origin().squaredDistanceTo(camera)>128*128)continue;
-            var e=stabbed(c);if(e==null)continue;
-            float age=c.age(delta),stop=until(c);int seed=seed(c);
-            Vec3d feet=e.getLerpedPos(delta),user=userFrom(c,feet);double half=e.getWidth()*.5,height=e.getHeight();
-            for(int k=0;k<RainRules.BLADES;k++){
-                var p=pose(k,seed,age,stop,feet,half,height,user);if(p==null||p.shown()<=.02f)continue;
-                if(renderer==null){renderer=new XCharaKnifeRenderer();stack=new ItemStack(XChara.KNIFE);}
-                Vec3d y=p.dir(),s=BladeShot.spine(y,roll(k,seed)),x=s.negate(),z=x.crossProduct(y).normalize();
-                float scale=(float)(ShotRules.SCALE*SIZE*size(p.shown()));
-                matrices.push();
-                matrices.translate(p.grip().x-camera.x,p.grip().y-camera.y,p.grip().z-camera.z);
-                matrices.multiply(new Quaternionf().setFromNormalized(new Matrix3f(new Vector3f((float)x.x,(float)x.y,(float)x.z),new Vector3f((float)y.x,(float)y.y,(float)y.z),new Vector3f((float)z.x,(float)z.y,(float)z.z))));
-                matrices.scale(scale,scale,scale);
-                matrices.translate(-.5,-.51,-.5);
-                XCharaKnifeRenderer.hack=new HackLook.Frame(true,p.lit(),age/20f+k*1.3f,seed+k*13);
-                try{renderer.render(stack,ModelTransformationMode.NONE,matrices,ctx.consumers(),LightmapTextureManager.MAX_LIGHT_COORDINATE,OverlayTexture.DEFAULT_UV);}
-                finally{XCharaKnifeRenderer.hack=null;}
-                matrices.pop();
-            }
-        }
-    }
+    /** How far each knife is turned about its length (degrees: which way its spine faces). */
+    static float roll(int k,int seed){return (float)(h(k,seed,8)*360);}
 
     // ───────────────────────────── what the effects' layer adds ─────────────────────────────
 
-    /** The knife's burst on the one stabbed comes with every this many volleys (a smaller one); the last volley's is the big one. */
-    static final int BURST_EVERY=4;static final double BURST_SIZE=.6;
-    /** Everything of the stab and the rain but the body and the knives' models, in one pass (the blended bodies, or the light). */
-    static void draw(Fx c,EffectMesh m,boolean light){
-        if(c.cast.combo()!=RAIN)return;
-        float age=c.age,sec=c.sec,stop=until(c.cast);int seed=seed(c.cast);
-        var e=stabbed(c.cast);
-        // the stab: the knife's bigger burst on whom it went into
-        float s0=sec-STAB_AT;
-        if(s0>=0&&s0<SlashFx.SWIRL_LIFE&&KnifeClient.cameTo(c.cast,0))
-            for(var st:KnifeCombo.struck(c,0))SlashFx.burst(m,st.mid(),c.f,HACK_LUNGE,KnifeCombo.seed(c,0)+st.id(),s0,light,c.camera);
-        if(e==null)return;
-        Vec3d feet=e.getLerpedPos(c.delta),user=userFrom(c.cast,feet),mid=feet.add(0,e.getHeight()*.55,0);double half=e.getWidth()*.5,height=e.getHeight();
-        for(int k=0;k<RainRules.BLADES;k++){
-            float lands=(float)RainRules.landsAt(k);
-            var p=pose(k,seed,age,stop,feet,half,height,user);
-            if(p!=null){
-                float near=GlitchFx.near(p.grip(),c.camera)*p.shown();Vec3d tip=p.tip();
-                if(near>0){
-                    if(light){
-                        // a soft purple along it, a spark as it comes to be, a streak behind it in flight
-                        m.softLine(p.grip().subtract(p.dir().multiply(.15)),tip,.32,GlitchFx.GLOW,.2f*near);
-                        if(p.lit()<.12f)m.star(p.grip().add(p.dir().multiply(TIP*.5)),.34*(1-p.lit()/.12f)+.08,GlitchFx.LILAC,.75f*(1-p.lit()/.12f)*near);
-                        if(p.flying()){
-                            Vec3d tail=tip.subtract(p.dir().multiply(TIP+1.5));
-                            m.softTaper(tail,tip,.04,.42,GlitchFx.GLOW,.4f*near);m.softTaper(tail,tip,.015,.1,GlitchFx.WHITE,.65f*near);
-                        }
-                    }
-                    // a block or two of purple breaking over it as it comes (the hack's own coming on)
-                    if(p.lit()<.16f){
-                        int slot=(int)Math.floor(age/20f*16);var f=GlitchFx.facing(c.camera,p.grip());
-                        for(int j=0;j<3;j++){
-                            if(GlitchFx.h(j,slot,seed+k,31)>.55)continue;
-                            Vec3d at=p.grip().add(p.dir().multiply(TIP*GlitchFx.h(j,slot,seed+k,32))).add(f[0].multiply((GlitchFx.h(j,slot,seed+k,33)-.5)*.3)).add(f[1].multiply((GlitchFx.h(j,slot,seed+k,34)-.5)*.3));
-                            double sq=.03+.045*GlitchFx.h(j,slot,seed+k,35);
-                            if(light)GlitchFx.square(m,at,f,sq*1.8,GlitchFx.GLOW,.3f*near);else GlitchFx.square(m,at,f,sq,GlitchFx.h(j,slot,seed+k,36)<.6?GlitchFx.PURPLE:GlitchFx.DEEP,.95f*near);
-                        }
-                    }
-                }
-            }
-            // where it goes in: a white spark, a few pixels thrown back the way it came
-            float s=(age-lands)/20f;
-            if(s>=0&&s<.3f&&lands<=stop){
-                Vec3d way=from(k,seed,user),at=feet.add(aim(k,seed,half,height)).add(way.multiply(half*.6));
-                float near=GlitchFx.near(at,c.camera);
-                if(light&&s<.09f&&near>0)m.star(at,.3*(1-s/.09f)+.08,GlitchFx.LILAC,.7f*(1-s/.09f)*near);
-                GlitchFx.pixels(m,at,way,.7,3.2,.035,2,seed+k*7,s,light,c.camera);
-            }
-        }
-        // the knife's own burst on them every few volleys; the last volley's the big one, with a ring over the ground
-        for(int v=0;v<RainRules.VOLLEYS;v++){
-            boolean last=v==RainRules.VOLLEYS-1;if(!last&&v%BURST_EVERY!=0)continue;
-            float at=RainRules.volleyAt(v),s=(age-at)/20f;
-            if(s<0||at>stop)continue;
-            if(s<SlashFx.SWIRL_LIFE){
-                Vec3d way=from(v*RainRules.PER,seed,user).negate();
-                if(last)SlashFx.burst(m,mid,way,HACK_LUNGE,seed+v,s,light,c.camera);
-                else SlashFx.burst(m.scaled(SlashFx.burstAt(mid,c.camera),BURST_SIZE),mid,way,HACK_SLASH,seed+v,s,light,c.camera);
-            }
-            if(last&&s<.5f){
-                float fade=1-s/.5f,near=GlitchFx.near(mid,c.camera);
-                Vec3d ground=feet.add(0,.06,0),x=new Vec3d(1,0,0),z=new Vec3d(0,0,1);
-                if(light&&near>0){
-                    m.ring(ground,x,z,.5+3.6*Ease.smooth(s,0,.36f),48,1,.09,GlitchFx.GLOW,.75f*fade*near,0);
-                    m.ring(ground,x,z,.3+2.4*Ease.smooth(s,0,.3f),40,1,.04,GlitchFx.WHITE,.6f*fade*near,0);
-                }
-                GlitchFx.pixels(m,mid,new Vec3d(0,1,0),1,4.5,.05,26,seed+991,s,light,c.camera);
-            }
-        }
-    }
-    /** Its light on the world: purple on the one stabbed through the rain, pulsing with the volleys; little afterglow while the knives fly (their light would leave copies of them). */
-    static void frame(Fx c,FxFrame f){
-        if(c.cast.combo()!=RAIN)return;
-        var e=stabbed(c.cast);if(e==null)return;
-        float age=c.age,stop=until(c.cast),first=RainRules.FIRST-BEFORE,end=Math.min(RainRules.LAST,stop);
-        if(age<first||age>end+10)return;
-        Vec3d mid=e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0);
-        float on=Ease.smooth(age,first,first+4)*(1-Ease.smooth(age,end,end+10));
-        double beat=.5+.5*Math.sin(age*Math.PI*2);
-        f.light(mid,0x9a3cff,9,(float)(.55+.25*beat)*on);
-        float s=(age-RainRules.LAST)/20f;
-        if(s>=0&&s<.35f&&RainRules.LAST<=stop)f.light(mid,0xb060ff,14,1.2f*(1-s/.35f));
-        if(age<end+STUCK)f.afterglow(.06f);
-    }
-    /** How hard the stab shakes the camera as it goes in, each volley as it lands, and the last. */
-    static final float SHAKE_STAB=.8f,SHAKE_VOLLEY=.16f,SHAKE_LAST=1.3f;
-    static float shake(StandClient.Cast cast,float sec){
-        if(cast.combo()!=RAIN||!KnifeClient.cameTo(cast,0))return 0;
-        int[] told=KnifeClient.struck(cast.id(),0);boolean hit=told!=null&&told.length>0;
-        float sum=SHAKE_STAB*(hit?1:.33f)*KnifeCombo.bump(sec,STAB_AT,.07f);
-        if(!hit)return sum;
-        float stop=until(cast)/20f;
-        int near=Math.round(sec*20)-RainRules.FIRST;
-        for(int v=Math.max(0,near-6);v<=Math.min(RainRules.VOLLEYS-1,near+1);v++){
-            float at=RainRules.volleyAt(v)/20f;if(at>stop)continue;
-            sum+=(v==RainRules.VOLLEYS-1?SHAKE_LAST:SHAKE_VOLLEY)*KnifeCombo.bump(sec,at,v==RainRules.VOLLEYS-1?.09f:.04f);
-        }
-        return sum;
-    }
+    /** Everything of the run, the stab and the rain but the body and the knives' models, in one pass (the blended bodies, or the light): RainFx (2.132.1, made much stronger). */
+    static void draw(Fx c,EffectMesh m,boolean light){RainFx.draw(c,m,light);}
+    /** Its light on the world, and less afterglow where things go fast (RainFx). */
+    static void frame(Fx c,FxFrame f){RainFx.frame(c,f);}
+    /** How hard it shakes the camera (RainFx). */
+    static float shake(StandClient.Cast cast,float sec){return RainFx.shake(cast,sec);}
 
     // ───────────────────────────── its sounds ─────────────────────────────
 
@@ -467,16 +454,20 @@ public final class BladeRain {
         return out;
     }
 
-    /** For the capture tools: this player's latest run or stab as "combo,age,stopped,shiftx,shifty,shiftz,stabbed,knives shown,knives in", or null. */
+    /** For the capture tools: this player's latest run or stab as "combo,age,stopped,shiftx,shifty,shiftz,stabbed,knives shown,knives in,how much they are inside the rain (its screen)", or null. */
     public static String describe(net.minecraft.entity.player.PlayerEntity player,float delta){
         StandClient.Cast best=null;
         for(var c:KnifeClient.SWINGS.values())if(rain(c.combo())&&c.caster().equals(player.getUuid()))best=c;
         if(best==null)return null;
-        Vec3d s=shift(best,delta);var e=best.combo()==RAIN?stabbed(best):null;int shown=0,in=0;
+        Vec3d s=shift(best,delta);var e=best.combo()==RAIN?stabbed(best):null;int shown=0,in=0;float inside=0;
         if(e!=null){
             Vec3d feet=e.getLerpedPos(delta),user=userFrom(best,feet);
-            for(int k=0;k<RainRules.BLADES;k++){var p=pose(k,seed(best),best.age(delta),until(best),feet,e.getWidth()*.5,e.getHeight(),user);if(p!=null){shown++;if(p.in())in++;}}
+            inside=RainFx.inside(player.getLerpedPos(delta),feet,best.age(delta),until(best));
+            for(int k=0;k<RainRules.BLADES;k++){
+                var sp=spot(k,seed(best),feet,e.getWidth()*.5,user);
+                var p=pose(k,seed(best),best.age(delta),until(best),sp,landY(sp,feet,e.getHeight(),RainFx.ground(best,k,sp,feet.y)));if(p!=null){shown++;if(p.in())in++;}
+            }
         }
-        return String.format(java.util.Locale.ROOT,"%d,%.2f,%d,%.2f,%.2f,%.2f,%d,%d,%d",best.combo(),best.age(delta),KnifeClient.until(best.id())==Float.MAX_VALUE?0:1,s.x,s.y,s.z,e==null?-1:e.getId(),shown,in);
+        return String.format(java.util.Locale.ROOT,"%d,%.2f,%d,%.2f,%.2f,%.2f,%d,%d,%d,%.2f",best.combo(),best.age(delta),KnifeClient.until(best.id())==Float.MAX_VALUE?0:1,s.x,s.y,s.z,e==null?-1:e.getId(),shown,in,inside);
     }
 }
