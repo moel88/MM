@@ -1384,19 +1384,21 @@ public final class SkillShots implements ClientModInitializer {
                             StringBuilder ks=new StringBuilder();for(int k=0;k<3;k++)ks.append(" [").append(dev.sangwoo.celestialfall.client.xchara.CorruptionKnives.describe(mc.player,k,0)).append(']');
                             log.append(String.format(Locale.ROOT,"  knives +%d: client (shown,flying,tail xyz,struck,far,took)%s, sounds %s%n",age-a0,ks,
                                 String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("kni")).toList())));}
-                        // (2.132.0) X Chara's rain of knives (H with the hack off): by the server, the run or the stab in flight
-                        // (which, how far in, from where to where, blows landed, whom the knife is in), where the player really
-                        // is, the dummy's health and how long it is bound; and what this client draws of it
-                        if(what.equals("KEY_H")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)&&age>at&&age<=at+96&&(age-at<=24||(age-at)%4==0)){final int a0=at;
-                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeRain(p);var dm=p.getServerWorld().getEntityById(dummyId);
+                        // (2.132.0) X Chara's rain of knives (H with the hack off; 2.132.5: its call and its rain): by the server, the
+                        // call in flight (how far in, where it rains, whether it has called it) and the rain (how far in, its
+                        // middle, knives that met a body and of them those that struck), where the player really is, the
+                        // dummy's health; and what this client draws of it (the call, and the rain: its age, cut, knives falling
+                        // or standing, standing in bodies and of them told, told in all, drawn the last frame, microseconds)
+                        if(what.equals("KEY_H")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)&&age>at&&age<=at+700&&(age-at<=24||(age-at)%10==0)){final int a0=at;
+                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeCall(p),r=dev.sangwoo.celestialfall.xchara.XCharaRain.describe(p);var dm=p.getServerWorld().getEntityById(dummyId);
                                 long now=p.getWorld().getTime();float hp=dm instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
-                                long off=dm instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t?Math.max(0,t.disabledUntil()-now):-1;
-                                log.append(String.format(Locale.ROOT,"  rain +%d: server %s, player at %.2f %.2f %.2f, ready in %d, dummy hp %.1f bound %d%n",age-a0,
-                                    d==null?"none":String.format(Locale.ROOT,"age %d kind %d from %s to %s blows %d in %s",now-(Long)d[0],(Integer)d[1],d[2],d[3],(Integer)d[4],d[5]==null?"-":"someone"),
-                                    p.getX(),p.getY(),p.getZ(),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.rainReady(p)-now),hp,off));});
-                            log.append(String.format(Locale.ROOT,"  rain +%d: client (combo,age,stopped,shift xyz,stabbed,knives shown,in) %s, sounds %d%n",age-a0,
+                                log.append(String.format(Locale.ROOT,"  rain +%d: server call %s rain %s, player at %.2f %.2f %.2f, ready in %d, dummy hp %.1f%n",age-a0,
+                                    d==null?"none":String.format(Locale.ROOT,"age %d at %s called %s",now-(Long)d[0],d[1],d[2]),
+                                    r==null?"none":String.format(Locale.ROOT,"age %d middle %s met %d struck %d",(Long)r[2],r[1],(Integer)r[3],(Integer)r[4]),
+                                    p.getX(),p.getY(),p.getZ(),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.rainReady(p)-now),hp));});
+                            log.append(String.format(Locale.ROOT,"  rain +%d: client (call combo,age,stopped;rain age,cut,shown,standing in bodies,of them told,told,drawn,us) %s, sounds %d%n",age-a0,
                                 dev.sangwoo.celestialfall.client.xchara.BladeRain.describe(mc.player,0),
-                                dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("rain")||x.contains("xchara_jab")).count()));}
+                                dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("rain")||x.contains("slam_lit")).count()));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it
                         if(what.equals("KEY_Y")&&(age==at+2||age==at+8||age==at+14))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(p);var d=p.getServerWorld().getEntityById(dummyId);

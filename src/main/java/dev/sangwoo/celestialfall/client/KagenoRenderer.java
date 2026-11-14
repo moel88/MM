@@ -69,6 +69,14 @@ public final class KagenoRenderer {
             if(pos.squaredDistanceTo(camera)>96*96)continue;
             casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
         }
+        // X Chara's rain of knives as it rains (2.132.5): drawn as the casts are, from its own list, where it was called
+        // (its user goes where they will meanwhile)
+        for(var s:dev.sangwoo.celestialfall.client.xchara.RainClient.CASTS.values()){
+            var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
+            float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
+            if(s.origin().squaredDistanceTo(camera)>96*96)continue;
+            casts.add(KagenoStatusFx.context(mc,s,delta,s.origin(),camera,matrix,matrices,targets(mc,s,delta)));
+        }
         var primary=StandClient.visualCast();
         if(primary!=null&&AtomicClient.CASTS.isEmpty()&&HeavenClient.CASTS.isEmpty()){
             Vec3d focus=primary.origin().add(0,1.1,0);

@@ -57,15 +57,13 @@ public final class FxFrame {
     }
     /** Chromatic split in screen fractions per unit of distance from the focus. */
     public void chroma(float amount){if(amount>chroma)chroma=amount;}
-    private float rain,rainBeat,rainFlash;
+    private float rain;
     /**
-     * (2.132.1) The screen inside X Chara's rain of knives, 0..1 (the strongest wins): sunk into violet and dark at its
-     * edges, torn in sliding slices, streaked with light falling down it, scanned; {@code beat} 0..1 its pulse as the
-     * knives land (harder tearing, a brighter violet), {@code flash} 0..1 a white-violet flash of it (the last volley).
+     * (2.132.1) The screen inside X Chara's rain of knives, 0..1 (the strongest wins): 2.132.5, gently ("은은하게 30초
+     * 내내"): a violet air over it, its edges a little darker, thin light falling down it (2.132.1 to 2.132.4 tore it,
+     * beat with the volleys and flashed).
      */
-    public void rain(float amount,float beat,float flash){
-        if(amount>rain){rain=Math.min(1,amount);rainBeat=Math.max(0,Math.min(1,beat));rainFlash=Math.max(0,Math.min(1,flash));}
-    }
+    public void rain(float amount){if(amount>rain)rain=Math.min(1,amount);}
     /**
      * How long the afterglow lasts this frame, as a share of the usual (0.01..1, the shortest asked wins): something
      * flying fast would otherwise leave fading copies of itself behind it, side by side like extra strokes (2.82.6:
@@ -96,8 +94,6 @@ public final class FxFrame {
     public ImpactLook impactLook(){return impactLook;}
     public float chroma(){return chroma;}
     public float rain(){return rain;}
-    public float rainBeat(){return rainBeat;}
-    public float rainFlash(){return rainFlash;}
     public float afterglow(){return afterglow;}
     public int lightCount(){return lights.size();}
     public int decalCount(){return decals.size();}

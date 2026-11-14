@@ -261,12 +261,12 @@ public final class KnifeCombo implements Fx.Skill {
 
     @Override public Anim clip(int combo){return clipOf(combo);}
     /** The swing at hit {@code hit}'s place in the combo: the same with the hack on or off. */
-    static Anim clipOf(int hit){if(rain(hit))return BladeRain.clipOf(hit);if(hit==KNIVES)return CorruptionKnives.CLIP;if(hit==SHOT)return BladeShot.CLIP;if(cutter(hit))return EdgeCutter.clipOf(hit);if(hit==SLAM)return OverwriteSlam.CLIP;if(hit==JAB)return CorruptionJab.CLIP;if(skill(hit))return GiantCleave.CLIP;return switch(place(hit)){case 2->P2;case 3->P3;case 4->P4;default->P1;};}
+    static Anim clipOf(int hit){if(rain(hit))return BladeRain.CALL;if(hit==KNIVES)return CorruptionKnives.CLIP;if(hit==SHOT)return BladeShot.CLIP;if(cutter(hit))return EdgeCutter.clipOf(hit);if(hit==SLAM)return OverwriteSlam.CLIP;if(hit==JAB)return CorruptionJab.CLIP;if(skill(hit))return GiantCleave.CLIP;return switch(place(hit)){case 2->P2;case 3->P3;case 4->P4;default->P1;};}
 
     /** (2.121.0) The cleave is drawn longer than a swing (what its blow leaves on the ground). */
     @Override public float lifetime(){return Math.max(Math.max(Math.max(Math.max(LIFE,GiantCleave.LIFE),OverwriteSlam.LIFE),EdgeCutter.LIFE),Math.max(Math.max(BladeShot.LIFE,CorruptionKnives.LIFE),BladeRain.LIFE));}
     /** How long hit {@code combo} is drawn for (seconds). */
-    static float life(int combo){return combo==RAIN?BladeRain.LIFE:combo==RUSH?BladeRain.RUSH_LIFE:combo==KNIVES?CorruptionKnives.LIFE:combo==SHOT?BladeShot.LIFE:cutter(combo)?EdgeCutter.LIFE:combo==SLAM?OverwriteSlam.LIFE:combo==JAB?CorruptionJab.LIFE:skill(combo)?GiantCleave.LIFE:LIFE;}
+    static float life(int combo){return combo==RAIN?BladeRain.LIFE:combo==KNIVES?CorruptionKnives.LIFE:combo==SHOT?BladeShot.LIFE:cutter(combo)?EdgeCutter.LIFE:combo==SLAM?OverwriteSlam.LIFE:combo==JAB?CorruptionJab.LIFE:skill(combo)?GiantCleave.LIFE:LIFE;}
     @Override public boolean layered(){return true;}
     /** None: the body is never copied behind itself (the hack's cut is the knife's own path, SlashFx). */
     @Override public float afterimages(float sec){return 0;}
@@ -377,8 +377,8 @@ public final class KnifeCombo implements Fx.Skill {
         if(plain(c.cast.combo()))return;
         SlashFx.cut(c);
     }
-    /** (2.122.0) The cleave's ground: the floor heaved up along the knife and its pieces thrown; (2.128.0) the slam's where it lands; (2.132.1) the rain's round the one stabbed as the last volley lands. */
-    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==CLEAVE)GiantCleave.solids(c,s);else if(c.cast.combo()==SLAM)OverwriteSlam.solids(c,s);else if(c.cast.combo()==RAIN)RainFx.solids(c,s);}
+    /** (2.122.0) The cleave's ground: the floor heaved up along the knife and its pieces thrown; (2.128.0) the slam's where it lands. */
+    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==CLEAVE)GiantCleave.solids(c,s);else if(c.cast.combo()==SLAM)OverwriteSlam.solids(c,s);}
     @Override public void alpha(Fx c,EffectMesh m){
         if(rain(c.cast.combo())){BladeRain.draw(c,m,false);return;}
         if(c.cast.combo()==KNIVES){CorruptionKnives.draw(c,m,false);return;}

@@ -30,8 +30,9 @@ class XCharaComboTest {
             // the heavier the swing the longer it takes to land
             assertTrue(blowAt(first,0)<=blowAt(first+1,0)&&blowAt(first+1,0)<blowAt(first+2,0)&&blowAt(first+2,0)<blowAt(first+3,0));
         }
-        // (2.121.0: 9 is the cleave, 2.124.0: 10 the jab: skills of the pipeline with no place in the combo)
-        assertFalse(valid(0));assertTrue(valid(9));assertTrue(valid(10));assertTrue(valid(11));assertTrue(valid(12));assertTrue(valid(13));assertTrue(valid(14));assertTrue(valid(15));assertTrue(valid(16));assertTrue(valid(17));assertFalse(valid(18));assertEquals(0,blows(0));assertEquals(0,blows(18));
+        // (2.121.0: 9 is the cleave, 2.124.0: 10 the jab: skills of the pipeline with no place in the combo; 2.132.5: 16 the
+        // rain of knives' call, its last, the run and the stab of 2.132.0 to 2.132.4 gone)
+        assertFalse(valid(0));assertTrue(valid(9));assertTrue(valid(10));assertTrue(valid(11));assertTrue(valid(12));assertTrue(valid(13));assertTrue(valid(14));assertTrue(valid(15));assertTrue(valid(16));assertFalse(valid(17));assertEquals(0,blows(0));assertEquals(0,blows(17));
         assertFalse(plain(0));assertEquals(0,place(0));assertEquals(0,place(9));assertEquals(0,place(10));
     }
     @Test void theCleaveIsASkillOfThePipelineNoHitOfTheCombo(){

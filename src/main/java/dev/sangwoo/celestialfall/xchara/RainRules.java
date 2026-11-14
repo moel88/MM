@@ -1,105 +1,131 @@
 package dev.sangwoo.celestialfall.xchara;
 
 /**
- * X Chara's H with their hack off, the rain of knives (2.132.0, user request, no video: "q비활성화 h를 만들자 이건
- * 창작해야하는데 h를 쓰면 달려가다가 앞에 적이 있으면 적을 찌르고 수많은 q활성화 검들이 사방에서 날아와서 적을 맞추는
- * 스킬로 만들자", then "검들이 쏟아지는 수준으로 많이 날아와야해 그리고 달려간다음에 검이 다 쏟아질때까지 적을 찌르고
- * 있는거야"; they chose "합 70 · 60초", "가드 불가", the one stabbed "그 자리에 묶임" and its sounds "있는 소리 재사용").
- * Two skills of the knife's pipeline, one after the other:
+ * X Chara's H with their hack off, the rain of knives (2.132.0; 2.132.5, user request: "20블록으로 줄이고 떨어지는 칼들도
+ * 대폭 줄이고 떨어지는 속도도 줄여 진짜 비 처럼 만들어 그리고 적을 찌르는건 없애고 그냥 비만 떨어지게 비는 30초동안 계속
+ * 떨어져"; asked, they chose where it rains "쓴 자리에 고정", its harm "몸에 떨어진 칼마다 1", its user "자유롭게 움직이고
+ * 싸움" and the screen inside it "은은하게 30초 내내"). No run and no stab any more (2.132.0 to 2.132.4 had them): H calls
+ * the rain, and that is all of it.
  * <ul>
- * <li>{@link XCharaCombo#RUSH}, the run: from {@link #RUN_FROM} they run the way they faced, as far as {@link #RUN}
- * blocks (less where a block or a drop stands in the way), {@link #ran} blocks by each tick. Drawn, not walked (as the
- * three cuts' going forward: the server keeps them where they began and takes them to where it ends). Every tick of it
- * the server looks ahead of where they are drawn: with someone's near side within {@link #CATCH} blocks ahead (in a
- * lane {@link #PATH} to either side, in sight) the run is over and the stab begins. No one by {@link #RUN_TO}: they
- * come to a stop there and that is all of it (its cooldown runs).</li>
- * <li>{@link XCharaCombo#RAIN}, the stab and the rain: from where the run had them they go on to {@link #KEEP} short of
- * that one's near side (at most {@link #LUNGE} more; there by {@link #ARRIVE}), and at {@link #STAB} the knife is
- * driven into the nearest one ahead ({@link #REACH}): {@link #STAB_DAMAGE}, no guard takes it, no knockback; they are
- * bound where they stand ({@link #BIND}: they can do nothing, their legs stopped). The knife stays in them: from
- * {@link #FIRST} a volley of knives lit as the hack lights them lands on them every tick, {@link #VOLLEYS} of them,
- * {@link #VOLLEY_DAMAGE} each (the clients draw {@link #PER} knives a volley, {@link #BLADES} in all, falling
- * straight down like rain, one of each volley onto them, the rest over the ground 30 blocks round: 2.132.4; 2.132.3 had
- * them fly into them from all round, as 2.132.0's). At {@link #WITHDRAW} the knife is drawn out; they are free at {@link #HOLD} and it is over at {@link #LENGTH}.
- * A stab that meets no one ends {@link #MISS} ticks on; the one stabbed dead or gone, the rain ends there.</li>
+ * <li>The call ({@link XCharaCombo#RAIN}, a skill of the knife's pipeline): the knife raised to the sky, its user held
+ * where they stand {@link #HOLD} ticks, over at {@link #LENGTH}; at {@link #CALL} the rain is called (its user struck
+ * or held before that, it is not, and its cooldown runs from then).</li>
+ * <li>The rain (XCharaRain): fixed where its user stood as H was pressed, {@link #ZONE} blocks round. From
+ * {@link #OPEN} ticks after the call, for {@link #POUR} ticks (30 s), knives lit as the hack lights them come out of a
+ * circle in the sky ({@link #SKY} over its middle) one after another anywhere over it ({@link #spot}), {@link #PER} a
+ * tick at full (coming on over the first {@link #RAMP} ticks and dying away over the last), and fall straight down at
+ * {@link #SPEED} blocks a tick, as fast all the way as rain falls, until they meet a body or the ground. Each that
+ * meets a body strikes it once: {@link #DAMAGE} (no guard takes it, it comes down from over them; no knockback, no
+ * stagger); its user's own break on them and do nothing. Its user is free once the call is over: it rains on whatever
+ * they do.</li>
  * </ul>
- * Its cooldown ({@link #COOLDOWN}) runs from its end; cut short before the stab (struck in the run, or before the knife
- * is in), from then. With someone right ahead as H is pressed there is no run: the stab begins at once. Everything
- * here but the user's numbers (70 in all, 60 s, no guard, bound) is mine: the name, the times, the run's length and
- * speed, how near is caught, the knives' count and how they are split.
- * Pure timing and geometry, shared by the server and the clients; ticks of 1/20 s.
+ * Its cooldown ({@link #COOLDOWN}) runs from its end ({@link #END}, what came last having landed); the rain cut short
+ * (its user dead or gone, or X Chara's no more), from then. All here but the user's (20 blocks, 30 s, 1 for each knife
+ * that lands on a body, where it rains, its user free; 60 s and no guard from 2.132.0) is mine.
+ * Pure timing and geometry, shared by the server and the clients and the same on every machine (integer hashes,
+ * StrictMath); ticks of 1/20 s, counted from the call.
  */
 public final class RainRules {
     private RainRules(){}
-    // ───────────────────────────── the run ─────────────────────────────
-    /** The tick into the run they set off, how fast they run once up to speed (blocks a tick: 16 a second), over how many ticks they come up to it, and how far at most (blocks). */
-    public static final int RUN_FROM=1;
-    public static final double SPEED=.8,SPRING=3,RUN=8;
-    /** Over the last of the way (blocks) they slow to a stop where it ends. */
-    public static final double BRAKE=1.2;
-    /** The tick into the run it is over with no one met (they are where it ends), how long it holds them and how long it runs (ticks). */
-    public static final int RUN_TO=13,RUSH_HOLD=17,RUSH_LENGTH=21;
-    /** How far to either side of their way someone is in it (blocks, beyond half their own width), and how near ahead of where they are drawn someone's near side is caught (blocks). */
-    public static final double PATH=1.1,CATCH=5.3;
-    /** They stop this far short of the near side of the one caught (blocks: the knife's length is past it), going on at most LUNGE more from where the run had them. */
-    public static final double KEEP=2.9,LUNGE=CATCH-KEEP;
-    /** How far down from where they run the floor they come to may be, and how far up (blocks: a low step). */
-    public static final double DOWN=3,UP=.6;
+    // ───────────────────────────── the call ─────────────────────────────
+    /** The tick into the call the rain is called (the knife's light goes up into the sky), how long it holds its user, and how long it runs. */
+    public static final int CALL=8,HOLD=14,LENGTH=20;
 
-    // ───────────────────────────── the stab and the rain ─────────────────────────────
-    /** The tick into the stab they are where they stab from, and the tick the knife goes in. */
-    public static final int ARRIVE=5,STAB=7;
-    /** The tick the first volley lands, and how many (one a tick). */
-    public static final int FIRST=15,VOLLEYS=30;
-    /** The tick the last volley lands. */
-    public static final int LAST=FIRST+VOLLEYS-1;
-    /** The tick the knife is drawn out, how long it holds them, and when it is over. */
-    public static final int WITHDRAW=LAST+3,HOLD=LAST+7,LENGTH=LAST+14;
-    /** The stab's damage and each volley's: 10 + 30 × 2 = 70 (the user's). */
-    public static final float STAB_DAMAGE=10,VOLLEY_DAMAGE=2;
-    /** Its cooldown from its end (ticks: 60 s, the user's). */
-    public static final int COOLDOWN=1200;
-    /** How long the one stabbed is bound from the stab (ticks: until the last volley and a little), their legs stopped wholly. */
-    public static final int BIND=LAST-STAB+4;
-    public static final double BIND_SLOW=1;
-    /** A stab that met no one ends this many ticks after it. */
-    public static final int MISS=6;
-    /** Where the stab reaches: from how near ahead of their feet, how far, and how far to either side (blocks). */
-    public static final double[] REACH={0,4.0,1.2};
-    /** The one stabbed further than this from them (blocks), the rain ends (someone took them away). */
-    public static final double LEASH=10;
+    // ───────────────────────────── the rain ─────────────────────────────
+    /** The skill the clients draw a rain as (KagenoSkills: a cast of its own, as long as it rains). */
+    public static final int SKILL=16;
+    /** How far out from its middle it rains (blocks: the user's 20). */
+    public static final double ZONE=20;
     /**
-     * How many knives the clients draw a volley, and in all (only the clients' drawing, the server's blows are the
-     * volleys): 2.132.1 four times 2.132.0's, "칼이 더 많이 떨어지게"; 2.132.2 54 a volley over the ground 15 blocks round;
-     * 2.132.3 all of them into the one stabbed again, from all round ("2.132.0처럼 사방에서"), sixteen a volley (54 into
-     * one body would be a lump); 2.132.4 straight down like rain again over the ground 30 blocks round ("주변 30블록으로"),
-     * as thick on it as 2.132.2's: 216 a volley (one on the one stabbed, 215 on the ground, four times the ground).
+     * The ticks after the call the first knife comes out of the sky (its circle opening first), how long knives keep
+     * coming (the user's 30 s), and over how many ticks of each end of that it comes on and dies away.
      */
-    public static final int PER=216,BLADES=PER*VOLLEYS;
+    public static final int OPEN=6,POUR=600,RAMP=20;
+    /** How many knives come a tick at full (2.132.5, "떨어지는 칼들도 대폭 줄이고": some 350 in the air at once; 2.132.4 had some 2,270), and how many in all. */
+    public static final int PER=16,BLADES=PER*(POUR-RAMP);
+    /** How high over its middle a knife's point comes out of the sky (blocks), and how much higher at most. */
+    public static final double SKY=10,SKY_MORE=1;
+    /** How fast a knife falls (blocks a tick: 11 a second, as fast all the way; 2.132.4's came down at some 1.7 at the last, "떨어지는 속도도 줄여"). */
+    public static final double SPEED=.55;
+    /** How far under its middle the ground is looked for (blocks): over a deeper drop than this no knife comes. */
+    public static final double DEEP=12;
+    /** How near a body (level, blocks beyond its box) a knife's point comes down on it. */
+    public static final double GIRTH=.3;
+    /** What a knife does to a body it lands on (the user's: "몸에 떨어진 칼마다 1"). */
+    public static final float DAMAGE=1;
+    /** Its cooldown from its end (ticks: 60 s, the user's from 2.132.0). */
+    public static final int COOLDOWN=1200;
+    /** How long a knife falls from the sky to its middle's height at most (ticks); the ticks after the call it is over, what came last landed there (its cooldown runs from then). */
+    public static final int FALL=(int)Math.ceil((SKY+SKY_MORE)/SPEED),END=OPEN+POUR+FALL;
+    /** The ticks after the call the last knife that could fall furthest (to DEEP under its middle) has landed: the server looks no longer. */
+    public static final int LAST=OPEN+POUR+(int)Math.ceil((SKY+SKY_MORE+DEEP)/SPEED)+1;
 
-    /** How far along their way they have run {@code age} ticks into the run, with {@code far} blocks of it open (blocks): springing off, then at speed, slowing in over the last of it. */
-    public static double ran(double age,double far){
-        double u=Math.max(0,age-RUN_FROM),d=SPEED*(u<SPRING?u*u/(2*SPRING):u-SPRING/2);
-        if(far<=0)return 0;
-        double brake=Math.min(BRAKE,far);
-        if(d<=far-brake)return d;
-        return far-brake*Math.exp(-(d-(far-brake))/brake);
+    /**
+     * How many knives have come by {@code t} ticks after the call (0 to BLADES): PER a tick at full, coming on (the rate
+     * rising evenly) over the first RAMP ticks of the pour and dying away over the last.
+     */
+    public static double count(double t){
+        double u=t-OPEN;
+        if(u<=0)return 0;
+        if(u>=POUR)return BLADES;
+        if(u<RAMP)return PER*u*u/(2.0*RAMP);
+        if(u<=POUR-RAMP)return PER*(u-RAMP/2.0);
+        double v=POUR-u;return BLADES-PER*v*v/(2.0*RAMP);
     }
-    /** How much of the stab's last way they have gone {@code age} ticks into it (0 to 1): quick, slowing in; there by ARRIVE. */
-    public static double lunged(double age){
-        double u=Math.max(0,Math.min(1,age/ARRIVE));
-        return 1-(1-u)*(1-u);
+    /** The ticks after the call knife {@code k} comes out of the sky (the middle of its share of {@link #count}: one after another, never two at once). */
+    public static double comes(int k){
+        double n=k+.5,u;
+        if(n<=PER*RAMP/2.0)u=Math.sqrt(2.0*RAMP*n/PER);
+        else if(n<=BLADES-PER*RAMP/2.0)u=n/PER+RAMP/2.0;
+        else u=POUR-Math.sqrt(2.0*RAMP*Math.max(0,BLADES-n)/PER);
+        return OPEN+u;
     }
-    /** How much further they go as the stab begins, with the near side of the one caught {@code ahead} blocks ahead and {@code room} blocks of the way open (blocks). */
-    public static double advance(double ahead,double room){return Math.max(0,Math.min(Math.min(LUNGE,room),ahead-KEEP));}
-    /** The tick into the stab volley {@code v} lands on. */
-    public static int volleyAt(int v){return FIRST+v;}
-    /** The volley knife {@code k} is of, and the tick into the stab it is seen to land (a volley's knives spread over its tick). */
-    public static int volleyOf(int k){return k/PER;}
-    public static double landsAt(int k){return volleyAt(volleyOf(k))+(k%PER-(PER-1)/2.0)/PER;}
-    /** When it is ready again: its cooldown after a run begun at {@code start} that met no one, or after a stab begun at {@code start}, is over. */
-    public static long readyAfterRun(long start){return start+RUSH_LENGTH+COOLDOWN;}
-    public static long ready(long start){return start+LENGTH+COOLDOWN;}
-    /** All of it together. */
-    public static float total(){return STAB_DAMAGE+VOLLEYS*VOLLEY_DAMAGE;}
+    /** The knives that may be falling (or have just landed) at {@code t}: from those that came {@code back} ticks before it to the last that has come ([from, to) of their indices). */
+    public static int[] window(double t,double back){
+        int from=Math.max(0,(int)Math.floor(count(t-back))-1),to=Math.min(BLADES,(int)Math.ceil(count(t))+1);
+        return new int[]{from,Math.max(from,to)};
+    }
+    /** A hash of knife {@code k} of the rain seeded {@code seed} (0 to 1; integers only, so the same on every machine). */
+    public static double h(int k,int seed,int salt){
+        int x=k*0x9E3779B1+seed*0x85EBCA77+salt*0xC2B2AE3D;
+        x^=x>>>16;x*=0x7FEB352D;x^=x>>>15;x*=0x846CA68B;x^=x>>>16;
+        return (x>>>8)/(double)(1<<24);
+    }
+    /** The golden angle (radians): each knife comes down a turn of it on from the last. */
+    static final double GOLDEN=2.399963229728653;
+    /**
+     * Where knife {@code k} of the rain seeded {@code seed} comes down, level from its middle {x, z}: anywhere over it,
+     * evenly (as far out as a share of its ground drawn at random has it, a turn of the golden angle on from the last).
+     */
+    public static double[] spot(int k,int seed){
+        double a=k*GOLDEN+h(k,seed,3)*.5,r=ZONE*Math.sqrt(h(k,seed,4));
+        return new double[]{StrictMath.cos(a)*r,StrictMath.sin(a)*r};
+    }
+    /** How high over its middle knife {@code k}'s point comes out of the sky (blocks). */
+    public static double sky(int k,int seed){return SKY+SKY_MORE*h(k,seed,5);}
+    /** How high over its middle knife {@code k}'s point is {@code t} ticks after the call (it has fallen straight down at SPEED since it came; as high as it came, before). */
+    public static double point(int k,int seed,double t){return sky(k,seed)-Math.max(0,t-comes(k))*SPEED;}
+    /** The ticks after the call knife {@code k}'s point comes down to {@code y} over its middle. */
+    public static double reaches(int k,int seed,double y){return comes(k)+(sky(k,seed)-y)/SPEED;}
+    /** Whether a knife coming down at (x, z) comes down on a body standing over {@code minX..maxX}, {@code minZ..maxZ} (level): its point within GIRTH of its box. */
+    public static boolean over(double x,double z,double minX,double maxX,double minZ,double maxZ){
+        return x>=minX-GIRTH&&x<=maxX+GIRTH&&z>=minZ-GIRTH&&z<=maxZ+GIRTH;
+    }
+    /**
+     * Where a knife falling from {@code from} down to {@code to} over a tick (its point's heights) first meets a body
+     * {@code minY..maxY} high, the ground under it at {@code ground}: the height it strikes at (the top of the body, or
+     * where its point is if it is in it already), or NaN if it meets it not (it misses its height, or lands on what is
+     * over the body first, or no knife comes there: a NaN ground).
+     */
+    public static double meets(double from,double to,double minY,double maxY,double ground){
+        if(Double.isNaN(ground)||maxY<to||minY>from)return Double.NaN;
+        double at=Math.min(from,maxY);
+        return at>ground?at:Double.NaN;
+    }
+    /** A seed for a rain called at {@code tick} by one whose id's halves are {@code most} and {@code least}. */
+    public static int seed(long tick,long most,long least){return (int)(tick*31+17)^(int)(most>>>32)^(int)least;}
+    /** When it is ready again after a call begun at {@code start}: its cooldown after its rain's end is over. */
+    public static long ready(long start){return start+CALL+END+COOLDOWN;}
+    /** How many knives a body standing still {@code w} by {@code d} blocks (level) in the rain all through it is struck by, as many as come over it on the mean (for the user: what it does). */
+    public static double expected(double w,double d){return BLADES*(w+2*GIRTH)*(d+2*GIRTH)/(Math.PI*ZONE*ZONE);}
 }

@@ -56,6 +56,8 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.xchara.PullClient.initialize();
         // and their knife's four hits (2.114.0)
         dev.sangwoo.celestialfall.client.xchara.KnifeClient.initialize();
+        // (2.132.5) X Chara's rain of knives as it rains (its own news and casts)
+        dev.sangwoo.celestialfall.client.xchara.RainClient.initialize();
         dev.sangwoo.celestialfall.client.xchara.BladeShot.initialize();
         dev.sangwoo.celestialfall.client.xchara.HealClient.initialize();
         // and their Q, the hack (2.115.0): the knife lit, the panel in the other hand

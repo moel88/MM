@@ -129,7 +129,7 @@ public final class HackMode {
         // (2.128.0) or their slam's, lit from its start until it is over
         var slam=OverwriteSlam.knife(id,delta);
         if(slam!=null)return slam;
-        // (2.132.0) or their rain of knives' stab's, lit while the knife is in someone
+        // (2.132.0) or their rain of knives' (2.132.5: its call's, lit as it is raised to the sky)
         var rain=BladeRain.knife(id,delta);
         return rain!=null?rain:look(id,delta);
     }
