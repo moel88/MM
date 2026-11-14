@@ -37,7 +37,7 @@ class SlamRulesTest {
         assertFalse(XCharaCombo.single(XCharaCombo.SLAM),"everyone round where it lands");
         assertEquals(0,XCharaCombo.place(XCharaCombo.SLAM));assertEquals(-1,XCharaCombo.broken(XCharaCombo.SLAM,0,999),"it is no hit of the combo");
         // the other two are as they were
-        assertEquals(24,XCharaCombo.blowAt(XCharaCombo.CLEAVE,0));assertEquals(14,XCharaCombo.blowAt(XCharaCombo.JAB,0));
+        assertEquals(14,XCharaCombo.blowAt(XCharaCombo.JAB,0));
     }
     @Test void theyRiseInTwoSpringsGoingForwardAndAreHighestAsTheDiveBegins(){
         assertEquals(0,SlamRules.risen(0),0);assertEquals(0,SlamRules.risen(SlamRules.LEAP),0);assertEquals(1,SlamRules.risen(SlamRules.RISEN),1e-9);assertEquals(1,SlamRules.risen(SlamRules.DIVE),1e-9);

@@ -25,7 +25,7 @@ class ShotRulesTest {
         assertEquals(ShotRules.HOLD,HOLD[SHOT]);assertEquals(ShotRules.LENGTH,LENGTH[SHOT]);
         assertTrue(ShotRules.HOLD>ShotRules.FIRE[3],"held until the last has gone");assertTrue(ShotRules.LENGTH>=ShotRules.HOLD);
         // (the cleave, the jab, the slam and the cuts are as they were)
-        assertTrue(unblockable(CLEAVE));assertTrue(unblockable(JAB));assertFalse(unblockable(CUTTER));assertTrue(launches(CUTTER,2));
+        assertTrue(unblockable(JAB));assertFalse(unblockable(CUTTER));assertTrue(launches(CUTTER,2));
     }
     @Test void theyComeOneAfterAnotherAndGoOneAfterAnother(){
         for(int k=0;k<4;k++){

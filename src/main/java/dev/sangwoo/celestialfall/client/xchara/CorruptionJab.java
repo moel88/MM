@@ -61,7 +61,7 @@ public final class CorruptionJab {
 
     // ───────────────────────────── the knife ─────────────────────────────
 
-    static float stopped(StandClient.Cast c){return GiantCleave.stopped(c);}
+    static float stopped(StandClient.Cast c){return KnifeClient.stoppedAt(c);}
     /**
      * The knife's look {@code sec} seconds into a jab (stopped short {@code stop} seconds in, NaN: not), as the hack's
      * {on, seconds since it changed}, or null while it is its own black: lit from LIT as the hack comes on, black at

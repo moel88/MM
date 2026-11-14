@@ -593,68 +593,76 @@ public final class MpServer implements ModInitializer {
     private String cutSeen="";private long cutReady;private float cutWatcher=-1,cutCaster=-1;private net.minecraft.util.math.Vec3d cutWas,cutWatcherWas;private long cutStag;
     /** Only X Chara's delete slash's script (2.133.0, MP_ONLY=xcharaerase). */
     static final boolean XCHARAERASE_ONLY="xcharaerase".equals(System.getProperty("botand.mp.only"));
-    private String eraseSeen="",slashSeen="";private long eraseReady,goneAt;private float eraseWatcher=-1,eraseCaster=-1;private net.minecraft.util.math.Vec3d eraseWas,eraseWatcherWas;private boolean eraseGone,eraseAir,eraseCubeUp,eraseCarried,eraseGround=true;private double eraseFellFrom=Double.NaN;
+    private String eraseSeen="",marksSeen="";private long eraseReady;private float eraseWatcher=-1,eraseCaster=-1;private net.minecraft.util.math.Vec3d eraseWas;private boolean eraseCarried,eraseGround=true;private double eraseFellFrom=Double.NaN;private final Map<Integer,Boolean> eraseUp=new HashMap<>();
     /**
-     * (2.133.0) X Chara's H with the hack off, the delete slash: when its cast begins (how high they leap, how far off the
-     * watcher is) and when its slash is thrown; when the caster is in the air of it (nothing harms them then) and back on the
-     * ground; the slash as it lands (where from, where to, how far out, its ground's corner, whether the watcher is over
-     * it); when the watcher is deleted and back (and any move of it while deleted); the cube (its top every second while
-     * it stands, whether the watcher stands on it and is carried, who is on it) and its burst; the watcher off the ground
-     * and back on it (how far it fell, its health then: no harm from a fall off a cube); the caster's walk (a tick's move
-     * of more than a quarter of a block: none, its leap is drawn only); either one's health as it changes; when it is
-     * ready again.
+     * (2.133.0) X Chara's H with the hack on, the terrain delete: when its press begins and lands (where the caster stands,
+     * the point its client told it aims at, how far off the watcher is); its grounds as they are marked (each: what it is
+     * (where they look, under one near, at random), its corner, its top, how far its middle lies from the caster, whom it
+     * is under, whether the watcher or the caster is over it), and an error if any two overlap, if a random one has the
+     * caster on it or if one under the watcher has it off; each cube as it comes up (at the mark, in the ground) and as it
+     * is gone, and every second while they stand each one's top and how many are on it; the watcher on a cube and off it
+     * (its feet), off the ground and back on it (how far it fell, its health then: no harm from a fall off a cube); the
+     * caster's walk (a tick's move of more than a quarter of a block: none, the press holds them; on a cube they are
+     * carried up as the watcher is); either one's health as it changes; when it is ready again.
      */
     private void xcharaErase(MinecraftServer server){
         long now=server.getOverworld().getTime();
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
         var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
         if(caster==null||watcher==null)return;
-        Object[] cast=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeErase(caster),slash=dev.sangwoo.celestialfall.xchara.XCharaErase.describe(caster);
+        Object[] cast=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeErase(caster);
         String ck=cast==null?"":cast[0]+"/"+cast[3];
         if(!ck.equals(eraseSeen)){
-            if(cast!=null)note(server,String.format(java.util.Locale.ROOT,"caster's delete slash: began at %d (%d ticks in) where they stand (%s), leaps %.2f, slash thrown %s; the watcher %.2f off (health %.1f)",(Long)cast[0],now-(Long)cast[0],cast[1],(Double)cast[2],cast[3],
-                Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ()),watcher.getHealth()));
+            if(cast!=null){var aim=(net.minecraft.util.math.Vec3d)cast[2];
+                note(server,String.format(java.util.Locale.ROOT,"caster's terrain delete: began at %d (%d ticks in) where they stand (%s), aim told %s, pressed %s; the watcher %.2f off at %.2f %.2f %.2f (health %.1f)",(Long)cast[0],now-(Long)cast[0],cast[1],
+                    aim==null?"none":String.format(java.util.Locale.ROOT,"%.2f %.2f %.2f",aim.x,aim.y,aim.z),cast[3],Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ()),watcher.getX(),watcher.getY(),watcher.getZ(),watcher.getHealth()));}
             eraseSeen=ck;
         }
-        boolean air=dev.sangwoo.celestialfall.xchara.XCharaAttack.airborne(caster);
-        if(air!=eraseAir){note(server,"caster "+(air?"in the air of it":"on the ground")+" at "+now+(cast==null?"":" ("+(now-(Long)cast[0])+" ticks in)"));eraseAir=air;}
-        if(eraseWas!=null&&eraseWas.distanceTo(caster.getPos())>.25)note(server,String.format(java.util.Locale.ROOT,"the caster moved %.2f blocks in a tick at %d",eraseWas.distanceTo(caster.getPos()),now));
+        if(eraseWas!=null&&eraseWas.distanceTo(caster.getPos())>.25)note(server,String.format(java.util.Locale.ROOT,"the caster moved %.2f blocks in a tick at %d (feet %.2f)",eraseWas.distanceTo(caster.getPos()),now,caster.getY()));
         eraseWas=caster.getPos();
-        String sk=slash==null?"":String.valueOf(slash[0]);
-        if(!sk.equals(slashSeen)){
-            if(slash!=null){
-                var from=(net.minecraft.util.math.Vec3d)slash[1];var to=(net.minecraft.util.math.Vec3d)slash[2];int x0=(Integer)slash[5],z0=(Integer)slash[6];var wb=watcher.getBoundingBox();
-                note(server,String.format(java.util.Locale.ROOT,"caster's slash: thrown at %d from %.2f %.2f %.2f to %.2f %.2f %.2f (%.2f out from the caster), strikes at %d, its ground %d..%d x %d..%d; the watcher at %.2f %.2f %.2f, %s it",
-                    (Long)slash[0],from.x,from.y,from.z,to.x,to.y,to.z,Math.hypot(to.x-caster.getX(),to.z-caster.getZ()),(Long)slash[3],x0,x0+10,z0,z0+10,watcher.getX(),watcher.getY(),watcher.getZ(),
-                    dev.sangwoo.celestialfall.xchara.EraseRules.over(x0,z0,wb.minX,wb.maxX,wb.minZ,wb.maxZ)?"over":"off"));
-            }else note(server,"caster's slash gone at "+now);
-            slashSeen=sk;
+        Object[] call=dev.sangwoo.celestialfall.xchara.XCharaErase.describe(caster);
+        String mk=call==null?"":String.valueOf(call[0]);
+        if(!mk.equals(marksSeen)){
+            if(call!=null){
+                long marked=(Long)call[0];var from=(net.minecraft.util.math.Vec3d)call[1];@SuppressWarnings("unchecked") var gs=(java.util.List<Object[]>)call[3];
+                note(server,String.format(java.util.Locale.ROOT,"caster's grounds marked at %d (%s after the press began), where it stood %.2f %.2f %.2f: %d of them",marked,cast==null?"?":String.valueOf(marked-(Long)cast[0]),from.x,from.y,from.z,gs.size()));
+                var wb=watcher.getBoundingBox();var cb=caster.getBoundingBox();
+                for(int i=0;i<gs.size();i++){
+                    var g=gs.get(i);int x0=(Integer)g[0],z0=(Integer)g[1],kind=(Integer)g[3],under=(Integer)g[4];double top=(Double)g[2];
+                    double mx=x0+5,mz=z0+5;
+                    boolean wOver=dev.sangwoo.celestialfall.xchara.EraseRules.over(x0,z0,wb.minX,wb.maxX,wb.minZ,wb.maxZ),cOver=dev.sangwoo.celestialfall.xchara.EraseRules.over(x0,z0,cb.minX,cb.maxX,cb.minZ,cb.maxZ);
+                    note(server,String.format(java.util.Locale.ROOT,"  ground %d: %s, %d..%d x %d..%d, top %.2f, its middle %.2f from the caster, under %s; the watcher %s it, the caster %s it",
+                        i,kind==dev.sangwoo.celestialfall.xchara.EraseRules.LOOK?"where they look":kind==dev.sangwoo.celestialfall.xchara.EraseRules.PLAYER?"under one near":"at random",x0,x0+10,z0,z0+10,top,Math.hypot(mx-caster.getX(),mz-caster.getZ()),
+                        under<0?"no one":under==watcher.getId()?"the watcher":under==caster.getId()?"the caster":"entity "+under,wOver?"over":"off",cOver?"over":"off"));
+                    if(kind==dev.sangwoo.celestialfall.xchara.EraseRules.RANDOM&&cOver)note(server,"ERROR a random ground has the caster on it");
+                    if(kind==dev.sangwoo.celestialfall.xchara.EraseRules.PLAYER&&under==watcher.getId()&&!wOver)note(server,"ERROR the ground under the watcher has it off");
+                    for(int j=0;j<i;j++){var h=gs.get(j);if(dev.sangwoo.celestialfall.xchara.EraseRules.overlap(x0,z0,(Integer)h[0],(Integer)h[1]))note(server,"ERROR grounds "+j+" and "+i+" overlap");}
+                }
+            }else note(server,"caster's grounds gone at "+now);
+            marksSeen=mk;eraseUp.clear();
         }
-        if(slash!=null){
-            double top=(Double)slash[7];boolean up=!Double.isNaN(top);
-            if(up!=eraseCubeUp){note(server,up?String.format(java.util.Locale.ROOT,"the cube stands at %d, its top %.2f",now,top):"the cube is gone at "+now+" ("+slash[4]+" ticks after it struck)");eraseCubeUp=up;}
+        if(call!=null){
+            long t=(Long)call[2];@SuppressWarnings("unchecked") var gs=(java.util.List<Object[]>)call[3];
+            StringBuilder tops=new StringBuilder();
+            for(int i=0;i<gs.size();i++){
+                double top=(Double)gs.get(i)[5];boolean up=!Double.isNaN(top);Boolean was=eraseUp.get(i);
+                if(was==null||was!=up){note(server,up?String.format(java.util.Locale.ROOT,"  cube %d stands at %d (%d after the mark), its top %.2f",i,now,t,top):String.format(java.util.Locale.ROOT,"  cube %d gone at %d (%d after the mark)",i,now,t));eraseUp.put(i,up);}
+                tops.append(String.format(java.util.Locale.ROOT," [%d top %s on %d]",i,up?String.format(java.util.Locale.ROOT,"%.2f",top):"-",(Integer)gs.get(i)[6]));
+            }
+            if(t>=0&&t%20==0)note(server,String.format(java.util.Locale.ROOT,"  cubes at %d (%d after the mark):%s; the watcher's feet %.2f, on the ground %s; the caster's feet %.2f",now,t,tops,watcher.getY(),watcher.isOnGround(),caster.getY()));
             boolean carried=dev.sangwoo.celestialfall.xchara.XCharaErase.carried(watcher);
-            if(carried!=eraseCarried){note(server,String.format(java.util.Locale.ROOT,"the watcher %s the cube at %d, its feet %.2f (cube top %s)",carried?"on":"off",now,watcher.getY(),up?String.format(java.util.Locale.ROOT,"%.2f",top):"none"));eraseCarried=carried;}
-            if(up&&(Long)slash[4]%20==0)note(server,String.format(java.util.Locale.ROOT,"  cube top %.2f at %d (%d after it struck), on it %d; the watcher's feet %.2f, on the ground %s, %s",top,now,(Long)slash[4],(Integer)slash[8],watcher.getY(),watcher.isOnGround(),
-                watcher.networkHandler==null?"gone":"connected"));
-        }else{if(eraseCubeUp){note(server,"the cube is gone at "+now+" (no slash)");eraseCubeUp=false;}eraseCarried=false;}
+            if(carried!=eraseCarried){note(server,String.format(java.util.Locale.ROOT,"the watcher %s a cube at %d (%d after the mark), its feet %.2f",carried?"on":"off",now,t,watcher.getY()));eraseCarried=carried;}
+        }else eraseCarried=false;
         boolean ground=watcher.isOnGround();
         if(ground!=eraseGround){
             if(!ground)eraseFellFrom=watcher.getY();
             note(server,String.format(java.util.Locale.ROOT,"the watcher %s at %d, its feet %.2f%s, health %.1f",ground?"lands":"off the ground",now,watcher.getY(),ground&&!Double.isNaN(eraseFellFrom)?String.format(java.util.Locale.ROOT," (from %.2f: %.2f down)",eraseFellFrom,eraseFellFrom-watcher.getY()):"",watcher.getHealth()));
             eraseGround=ground;
         }
-        boolean gone=dev.sangwoo.celestialfall.xchara.XCharaErase.deleted(watcher);
-        if(gone!=eraseGone){
-            note(server,String.format(java.util.Locale.ROOT,"the watcher %s at %d%s, health %.1f, at %.2f %.2f %.2f",gone?"deleted":"back",now,gone?"":" ("+(now-goneAt)+" ticks gone)",watcher.getHealth(),watcher.getX(),watcher.getY(),watcher.getZ()));
-            if(gone)goneAt=now;eraseGone=gone;
-        }
-        if(gone&&eraseWatcherWas!=null&&Math.hypot(eraseWatcherWas.x-watcher.getX(),eraseWatcherWas.z-watcher.getZ())>.02)note(server,String.format(java.util.Locale.ROOT,"the watcher walked %.3f blocks in a tick while deleted, at %d",Math.hypot(eraseWatcherWas.x-watcher.getX(),eraseWatcherWas.z-watcher.getZ()),now));
-        eraseWatcherWas=watcher.getPos();
-        if(Math.abs(watcher.getHealth()-eraseWatcher)>.01f){if(eraseWatcher>=0)note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d%s",eraseWatcher,watcher.getHealth(),now,gone?" (deleted)":""));eraseWatcher=watcher.getHealth();}
+        if(Math.abs(watcher.getHealth()-eraseWatcher)>.01f){if(eraseWatcher>=0)note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d",eraseWatcher,watcher.getHealth(),now));eraseWatcher=watcher.getHealth();}
         if(Math.abs(caster.getHealth()-eraseCaster)>.01f){if(eraseCaster>=0)note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at %d",eraseCaster,caster.getHealth(),now));eraseCaster=caster.getHealth();}
         long ready=dev.sangwoo.celestialfall.xchara.XCharaAttack.eraseReady(caster);
-        if(ready!=eraseReady){note(server,"caster's delete slash ready again at "+ready+" (now "+now+": "+String.format(java.util.Locale.ROOT,"%.1f",(ready-now)/20.0)+" s)");eraseReady=ready;}
+        if(ready!=eraseReady){note(server,"caster's terrain delete ready again at "+ready+" (now "+now+": "+String.format(java.util.Locale.ROOT,"%.1f",(ready-now)/20.0)+" s)");eraseReady=ready;}
     }
     /**
      * (2.129.0) X Chara's E with the hack off, the three cuts: when they begin (which kind, where a going forward
@@ -806,8 +814,9 @@ public final class MpServer implements ModInitializer {
     private float cleaveHealth=-1;private String cleaveSeen="";private boolean cleaveHeld;private net.minecraft.util.math.Vec3d cleaveAt;private double cleaveMoved;
     /**
      * (2.121.0) X Chara's R with the hack on, the cleave: the caster's knife (which hit, when it began, its blows, when
-     * the cleave is ready again) at each change, the watcher's health at each change, and the watcher's incapacitation:
-     * when it comes and goes and how far the watcher moved through it (it holds W: "WALK+").
+     * the jab is ready again) at each change, the watcher's health at each change, and the watcher's incapacitation:
+     * when it comes and goes and how far the watcher moved through it (it holds W: "WALK+"). (2.133.0: the cleave is gone,
+     * H with the hack on the terrain delete with its own check, MP_ONLY=xcharaerase; this logs the jab's.)
      */
     private void xcharaR(MinecraftServer server){
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
@@ -816,12 +825,12 @@ public final class MpServer implements ModInitializer {
         long now=server.getOverworld().getTime();
         if(cleaveHealth<0)cleaveHealth=watcher.getHealth();
         if(Math.abs(watcher.getHealth()-cleaveHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d",cleaveHealth,watcher.getHealth(),now));cleaveHealth=watcher.getHealth();}
-        var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(caster);long ready=dev.sangwoo.celestialfall.xchara.XCharaAttack.cleaveReady(caster);
+        var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(caster);
         long jab=dev.sangwoo.celestialfall.xchara.XCharaAttack.jabReady(caster);
-        String key=h==null?"none":h.combo()+"/"+h.start()+"/"+h.blows()+"/"+ready+"/"+jab;
+        String key=h==null?"none":h.combo()+"/"+h.start()+"/"+h.blows()+"/"+jab;
         if(!key.equals(cleaveSeen)){
             cleaveSeen=key;
-            if(h!=null)note(server,String.format(java.util.Locale.ROOT,"caster's knife at %d: hit %d began %d, %d blows landed; cleave ready at %d (%.2f s on), jab ready at %d (%.2f s on); busy %s",now,h.combo(),h.start(),h.blows(),ready,(ready-now)/20.0,jab,(jab-now)/20.0,
+            if(h!=null)note(server,String.format(java.util.Locale.ROOT,"caster's knife at %d: hit %d began %d, %d blows landed; jab ready at %d (%.2f s on); busy %s",now,h.combo(),h.start(),h.blows(),jab,(jab-now)/20.0,
                 dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(caster)));
         }
         boolean held=dev.sangwoo.celestialfall.combat.CombatManager.incapacitated(watcher);

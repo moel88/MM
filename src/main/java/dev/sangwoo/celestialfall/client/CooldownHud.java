@@ -67,8 +67,7 @@ public final class CooldownHud {
     static final int XCHARA=28;
     /** X Chara's Y with the hack on, the restore: from when it is over (or stopped short). (2.119.0: their E; Y from 2.121.0.) */
     static final int XCHARA_E=29;
-    /** (2.121.0) X Chara's R with the hack on, the cleave: from when it is over (or stopped short before its blow). */
-    static final int XCHARA_R=30;
+    /** 30 was the cleave's (2.121.0 to 2.132.5, X Chara's R and then H with the hack on): gone in 2.133.0. */
     /** (2.124.0) X Chara's R with the hack off, the jab: 45 s from its end. */
     static final int XCHARA_JAB=31;
     /** (2.125.0) X Chara's R with the hack on, the double: 20 s from when the wall lets its one go (or from when it was blocked or called off). */
@@ -85,11 +84,11 @@ public final class CooldownHud {
     static final int XCHARA_SHOT=37;
     /** (2.131.0) X Chara's T with the hack off, the small knives thrown ('오염 나이프': 5 s from its end). */
     static final int XCHARA_KNIVES=38;
-    /** (2.133.0) X Chara's H with the hack off, the delete slash: 60 s from its end (2.132.0 to 2.132.5 this was the rain of knives'). */
+    /** (2.133.0) X Chara's H with the hack on, the terrain delete ('지형 삭제'): 60 s from its end (2.132.0 to 2.132.5 this was the rain of knives', H with the hack off). */
     static final int XCHARA_ERASE=39;
     private static final CooldownList LIST=new CooldownList();
     private static final long[] SEEN=new long[9];
-    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaESeen,xcharaRSeen,xcharaJabSeen,xcharaSlamSeen,xcharaCutterSeen,xcharaShotSeen,xcharaKnivesSeen,xcharaSeen,xcharaCloneSeen,xcharaWeakenSeen,xcharaPullSeen,xcharaEraseSeen;
+    private static long ticks,dashSeen,punchesSeen,barrageSeen,heavySeen,fingerSeen,inhaleSeen,beatdownSeen,timeStopSeen,atomicSeen,isosangSeen,isosangESeen,isosangRSeen,isosangHSeen,isosangGSeen,isosangZSeen,isosangVSeen,isosangTSeen,isosangYSeen,xcharaGSeen,xcharaESeen,xcharaJabSeen,xcharaSlamSeen,xcharaCutterSeen,xcharaShotSeen,xcharaKnivesSeen,xcharaSeen,xcharaCloneSeen,xcharaWeakenSeen,xcharaPullSeen,xcharaEraseSeen;
     private static boolean atomic;
     private static UUID owner;private static Object world;
     /** The world whose clock the server has set since it was made (2.74.3, WorldTimeMixin). */
@@ -103,7 +102,7 @@ public final class CooldownHud {
     }
     /** The list's clock on this frame (ticks). */
     static double clock(float delta){return ticks+delta;}
-    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaESeen=xcharaRSeen=xcharaCloneSeen=xcharaWeakenSeen=xcharaPullSeen=xcharaJabSeen=xcharaSlamSeen=xcharaCutterSeen=xcharaShotSeen=xcharaKnivesSeen=xcharaEraseSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
+    public static void clear(){LIST.clear();java.util.Arrays.fill(SEEN,0);dashSeen=punchesSeen=barrageSeen=heavySeen=fingerSeen=inhaleSeen=beatdownSeen=timeStopSeen=atomicSeen=isosangSeen=isosangESeen=isosangRSeen=isosangHSeen=isosangGSeen=isosangZSeen=isosangVSeen=isosangTSeen=isosangYSeen=xcharaGSeen=xcharaESeen=xcharaCloneSeen=xcharaWeakenSeen=xcharaPullSeen=xcharaJabSeen=xcharaSlamSeen=xcharaCutterSeen=xcharaShotSeen=xcharaKnivesSeen=xcharaEraseSeen=xcharaSeen=0;atomic=false;owner=null;world=null;}
     /**
      * The server has just set {@code world}'s clock (its time packet, WorldTimeMixin). Until it first does, a world just
      * joined counts from 0, and a ready tick read against it (the long cooldowns are told as the player joins: Fabric
@@ -226,8 +225,6 @@ public final class CooldownHud {
         if(shows(XCHARA,stand)==false)dev.sangwoo.celestialfall.client.xchara.HealClient.forget(p.getUuid());
         if(heal!=xcharaESeen){show(XCHARA_E,xcharaEName(),heal-time,dev.sangwoo.celestialfall.xchara.XCharaRules.HEAL_COOLDOWN,now);xcharaESeen=heal;}
         // (2.121.0) their R, the cleave: from when it is over (the server's ready tick, told with the knife's news)
-        long cleave=shows(XCHARA_R,stand)?dev.sangwoo.celestialfall.client.xchara.KnifeClient.cleaveReady(p.getUuid()):0;
-        if(cleave!=xcharaRSeen){show(XCHARA_R,xcharaRName(),cleave-time,dev.sangwoo.celestialfall.xchara.XCharaCombo.CLEAVE_COOLDOWN,now);xcharaRSeen=cleave;}
         long jab=shows(XCHARA_JAB,stand)?dev.sangwoo.celestialfall.client.xchara.KnifeClient.jabReady(p.getUuid()):0;
         if(jab!=xcharaJabSeen){show(XCHARA_JAB,xcharaJabName(),jab-time,dev.sangwoo.celestialfall.xchara.XCharaCombo.JAB_COOLDOWN,now);xcharaJabSeen=jab;}
         // (2.125.0) their R with the hack on, the double: from when it is over, blocked or called off (the server's word of when it is ready again)
@@ -247,7 +244,7 @@ public final class CooldownHud {
         if(knives!=xcharaKnivesSeen){show(XCHARA_KNIVES,"오염 나이프",knives-time,dev.sangwoo.celestialfall.xchara.KnivesRules.COOLDOWN,now);xcharaKnivesSeen=knives;}
         // (2.133.0) X Chara's H with the hack off, the delete slash: 60 s from its end
         long erase=shows(XCHARA_ERASE,stand)?dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseReady(p.getUuid()):0;
-        if(erase!=xcharaEraseSeen){show(XCHARA_ERASE,"삭제 베기",erase-time,dev.sangwoo.celestialfall.xchara.EraseRules.COOLDOWN,now);xcharaEraseSeen=erase;}
+        if(erase!=xcharaEraseSeen){show(XCHARA_ERASE,"지형 삭제",erase-time,dev.sangwoo.celestialfall.xchara.EraseRules.COOLDOWN,now);xcharaEraseSeen=erase;}
         long pull=shows(XCHARA_PULL,stand)?dev.sangwoo.celestialfall.client.xchara.PullClient.ready(p.getUuid()):0;
         if(pull!=xcharaPullSeen){show(XCHARA_PULL,"끌어오기",pull-time,dev.sangwoo.celestialfall.xchara.PullRules.COOLDOWN,now);xcharaPullSeen=pull;}
         // (2.114.0) their knife: only its rest after a combo, as the others' (the server's ready tick, told with each hit's news)
@@ -267,7 +264,7 @@ public final class CooldownHud {
         // (2.77.0) Lee So-sang's to theirs
         if(slot==ISOSANG||slot==ISOSANG_E||slot==ISOSANG_R||slot==ISOSANG_H||slot==ISOSANG_G||slot==ISOSANG_Z||slot==ISOSANG_VOLLEY||slot==ISOSANG_T||slot==ISOSANG_Y)return "isosang".equals(stand);
         // (2.112.0) X Chara's to theirs
-        if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_R||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE)return "x_chara".equals(stand);
+        if(slot==XCHARA_G||slot==XCHARA||slot==XCHARA_E||slot==XCHARA_JAB||slot==XCHARA_CLONE||slot==XCHARA_WEAKEN||slot==XCHARA_PULL||slot==XCHARA_SLAM||slot==XCHARA_CUTTER||slot==XCHARA_SHOT||slot==XCHARA_KNIVES||slot==XCHARA_ERASE)return "x_chara".equals(stand);
         return (slot<DASH?"kageno":"star_platinum").equals(stand);
     }
     /**
@@ -315,7 +312,6 @@ public final class CooldownHud {
     /** X Chara's G (2.112.0): the video's "Sword Dance". */
     private static String xcharaGName(){return "검무";}
     private static String xcharaEName(){return "복구";}
-    private static String xcharaRName(){return "거대 칼";}
     private static String xcharaJabName(){return "오염 찌르기";}
     /** X Chara's attack's name in the list (2.114.0; as Lee So-sang's). */
     private static String xcharaName(){return "평타";}

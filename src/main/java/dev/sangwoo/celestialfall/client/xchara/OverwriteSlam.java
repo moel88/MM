@@ -68,7 +68,7 @@ public final class OverwriteSlam {
     /** How long one is drawn for (seconds): what the landing leaves on the ground is gone by then. */
     public static final float LIFE=LAND+2.7f;
 
-    static float stopped(StandClient.Cast c){return GiantCleave.stopped(c);}
+    static float stopped(StandClient.Cast c){return KnifeClient.stoppedAt(c);}
     private static double h(int j,int seed,int salt){return GlitchFx.h(j,0,seed,salt);}
     static int seed(StandClient.Cast c){return (int)(c.start()*31+SLAM*7);}
     private static Vec3d vec(double[] p){return new Vec3d(p[0],p[1],p[2]);}

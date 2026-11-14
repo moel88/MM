@@ -182,7 +182,7 @@ public final class XCharaClient {
 
     // ───────────────────────────── the key ─────────────────────────────
 
-    /** X Chara's player's keys on the map: Q the hack, E, R, T, H and G its skills with it on (E the restore, R the double, T the weakening, H the cleave, G the sword dance: R, T and G asked with the one the camera's middle looks at, or none: the server then takes the one its look meets), I their inventory, Enter their chat. */
+    /** X Chara's player's keys on the map: Q the hack, E, R, T, Y, H and G its skills (with it on E the restore, R the double, T the weakening, Y the pull, H the terrain delete, G the sword dance: R, T, Y and G asked with the one the camera's middle looks at, or none: the server then takes the one its look meets; H with where it points), I their inventory, Enter their chat. */
     public static boolean key(long window,int key,int action,int modifiers){
         var mc=MinecraftClient.getInstance();if(window!=mc.getWindow().getHandle())return false;
         // (2.115.0) Q let go after a press this took
@@ -244,7 +244,7 @@ public final class XCharaClient {
             // otherwise: X Chara's player's is their skill's, as Star Platinum's and Kageno's (the fruit is eaten with the
             // attack key)
             // (2.125.0) with the hack on R is the double (XCharaClone): asked, as G, with the one the camera's middle looks
-            // at (the cleave, R's from 2.121.0, is H's now)
+            // at (the cleave, R's from 2.121.0, went to H and is gone since 2.133.0)
             if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
                 var target=HackMode.on(mc.player)?aim(mc):null;
                 BotandCamera.prepareInteraction();
@@ -253,12 +253,13 @@ public final class XCharaClient {
             return true;
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_H){
-            // (2.125.0, user request: "Q활성화 R스킬을 Q활성화 H스킬로 옮겨") H with the hack on, the cleave (XCharaAttack.cleave:
-            // the way they look as it begins); (2.132.0) with it off, the rain of knives (XCharaAttack.rain: the server
-            // tells them apart by the hack)
-            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+            // (2.133.0, user request: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해") H with the hack on, the terrain delete
+            // (XCharaAttack.erase): asked with where the middle of the screen points (ErasePress.aimPoint: the ground marked
+            // where they look). With the hack off H is nothing (the user's choice: left empty for now); taken all the same.
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&HackMode.on(mc.player)&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
                 BotandCamera.prepareInteraction();
-                var b=PacketByteBufs.create();b.writeByte(H);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+                Vec3d at=ErasePress.aimPoint(mc);
+                var b=PacketByteBufs.create();b.writeByte(H);b.writeDouble(at.x);b.writeDouble(at.y);b.writeDouble(at.z);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
             return true;
         }

@@ -35,30 +35,10 @@ public final class XCharaCombo {
     /** The four swings begun with the hack off (2.117.0): nothing drawn but the body and the knife. */
     public static final int SLASH=5,RISE=6,CHOP=7,LUNGE=8;
     /**
-     * R with the hack on, the cleave (2.121.0, user request: "R키는 패널을 누르면 들고 있던 검이 엄청 거대해지고 그걸 양손으로
-     * 잡고 덤블링 한 번 돌고 크게 내려찍는 스킬 맞추면 못 움직이는 1초 무력화"): no hit of the combo but a skill of the
-     * knife's pipeline (as Star Platinum's heavy punch is of its punches'): they press the panel, the knife's blade
-     * grows huge, they take it in both hands, raise it over their head and bring it down where they stand. (2.122.0,
-     * user request: "덤블링을 돌지말고 그냥 제자리에서 거대한 검을 내려치게 하고 손잡이는 상관없고 칼날 부분을 엄청 키워줘
-     * 그리고 내려찍을때 바닥에 박히는 효과를 엄청 강하게 만들어주고 무력화 시간을 3초로 늘려줘": 2.121.0 leapt and turned
-     * a somersault with it, and its incapacitation was a second.) Its one blow lands CLEAVE's BLOWS ticks in on everyone
-     * in its long lane ahead: unguardable, no knockback, no stagger; whoever it strikes cannot move or act for
-     * {@link #CLEAVE_STUN} ticks (an incapacitation that also stops their legs). Its cooldown ({@link #CLEAVE_COOLDOWN})
-     * runs from its end; cut short before the blow, from then. The damage, the reach, the times and the cooldown are
-     * mine (the user gave the motion and the incapacitation's length).
+     * 9 was the cleave's (2.121.0 to 2.132.5: R and then H with the hack on, the knife grown huge and brought down), gone in
+     * 2.133.0 (the user's: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해"): no hit or skill is 9 now ({@link #valid}).
      */
-    public static final int CLEAVE=9;
-    /** The cleave: its incapacitation (ticks; the legs stopped as long, wholly), its cooldown from its end (ticks: 12 s), and its reach {near, far, half width} and how high it reaches (blocks). */
-    public static final int CLEAVE_STUN=60,CLEAVE_COOLDOWN=240;
-    public static final double CLEAVE_SLOW=1,CLEAVE_HIGH=3.6;
-    private static final double[] CLEAVE_REACH={.2,9.6,1.5};
-    /**
-     * When the cleave's panel is pressed, when both hands have the knife, when it is full grown, and when it is raised
-     * over their head, wound for the blow (ticks into it): what the clients draw to (GiantCleave). (2.123.0, user
-     * request: "검이 서서히 커지는 효과 넣어줘": the knife grows slowly now, from the press until it is nearly raised, where
-     * 2.122.0's was grown a quarter of a second after the press; the blow is four ticks later for it.)
-     */
-    public static final int CLEAVE_PRESS=4,CLEAVE_HELD=9,CLEAVE_GROWN=17,CLEAVE_RAISED=18;
+    private static final int GONE=9;
     /**
      * R with the hack off, the jab (2.124.0, user request with their video of it: "이번에는 q비활성화 r 만들자 효과음은 띡
      * 소리 나고 찌르는 효과음이고 스킬은 영상 처럼 검이 잠시 q활성화 상태의 빛나는 검으로 변하고 적을 찔러 적의 얼굴에
@@ -104,25 +84,24 @@ public final class XCharaCombo {
      */
     public static final int KNIVES=15;
     /**
-     * H with the hack off, the delete slash (2.133.0; EraseRules for all of it): the seventh skill of the knife's
-     * pipeline, in the rain of knives' place (2.132.0 to 2.132.5: gone). Its one "blow", at EraseRules.SLASH, throws its
-     * upright slash from the knife up in the air to the ground they aim at (XCharaErase: whom it lands on it strikes and
-     * deletes; the cube of ground it lifts bursts on whoever stays on it), and strikes no one itself.
+     * H with the hack on, the terrain delete (2.133.0; EraseRules for all of it): the seventh skill of the knife's
+     * pipeline, in the cleave's place (gone). Its one "blow", at EraseRules.MARK, is the press of the panel: it marks four
+     * grounds (XCharaErase: each rises as a cube a second on and bursts on whoever stays on it), and strikes no one itself.
      */
     public static final int ERASE=16;
     /** The last of the hits and skills. */
     public static final int LAST=ERASE;
     /** The tick into hit {@code n} its blow lands on (the same for either kind). */
-    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24},{14},{SlamRules.LAND},cuts(0),cuts(CutterRules.LEAD),ShotRules.FIRE,KnivesRules.FIRE,{EraseRules.SLASH}};
+    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{},{14},{SlamRules.LAND},cuts(0),cuts(CutterRules.LEAD),ShotRules.FIRE,KnivesRules.FIRE,{EraseRules.MARK}};
     private static int[] cuts(int lead){return new int[]{lead+CutterRules.FIRST,lead+CutterRules.FIRST+CutterRules.EVERY,lead+CutterRules.FIRST+2*CutterRules.EVERY};}
     /** Each blow's damage: 6, 6, 6, 10; 28 for the combo. */
-    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18},{13},{SlamRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE},{KnivesRules.DAMAGE,KnivesRules.DAMAGE,KnivesRules.DAMAGE},{0}};
+    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{},{13},{SlamRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE},{KnivesRules.DAMAGE,KnivesRules.DAMAGE,KnivesRules.DAMAGE},{0}};
     /** Ticks from a hit's start before the next may start. */
     public static final int[] STEP={0,8,9,12,0,8,9,12,0,0,0,0,0,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,38,19,SlamRules.FREE,20,20+CutterRules.LEAD,ShotRules.HOLD,KnivesRules.HOLD,EraseRules.HOLD};
+    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,0,19,SlamRules.FREE,20,20+CutterRules.LEAD,ShotRules.HOLD,KnivesRules.HOLD,EraseRules.HOLD};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,44,24,SlamRules.END,27,27+CutterRules.LEAD,ShotRules.LENGTH,KnivesRules.LENGTH,EraseRules.LENGTH};
+    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,0,24,SlamRules.END,27,27+CutterRules.LEAD,ShotRules.LENGTH,KnivesRules.LENGTH,EraseRules.LENGTH};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -140,23 +119,21 @@ public final class XCharaCombo {
      * point is driven).
      */
     private static final double[][] REACH={{},{-.5,3.5,2.3},{-.5,3.5,2.3},{-.3,4.0,1.3},{-.3,4.8,1.0}};
-    /** As far as any blow of the attack reaches (blocks): who could be struck at all is looked for within this. */
-    public static final double MAX_REACH=9.6+2.5;
+    /** As far as any blow of the attack reaches (blocks; the lunge's 4.8, and more): who could be struck at all is looked for within this. */
+    public static final double MAX_REACH=4.8+2.5;
 
-    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four), the cleave (9), the jab (10), the slam (11), the three cuts (12, 13), the knives shot (14), the small knives thrown (15) or the delete slash (16). */
-    public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=LAST;}
-    /** Whether {@code combo} is a skill of the pipeline, no hit of the combo: the cleave, the jab or the slam. */
-    public static boolean skill(int combo){return combo==CLEAVE||combo==JAB||combo==SLAM||cutter(combo)||combo==SHOT||combo==KNIVES||erase(combo);}
-    /** (2.133.0) Whether {@code combo} is the delete slash. */
+    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four), the jab (10), the slam (11), the three cuts (12, 13), the knives shot (14), the small knives thrown (15) or the terrain delete (16); 9 (the cleave's) is none. */
+    public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=LAST&&combo!=GONE;}
+    /** Whether {@code combo} is a skill of the pipeline, no hit of the combo. */
+    public static boolean skill(int combo){return combo==JAB||combo==SLAM||cutter(combo)||combo==SHOT||combo==KNIVES||erase(combo);}
+    /** (2.133.0) Whether {@code combo} is the terrain delete. */
     public static boolean erase(int combo){return combo==ERASE;}
     /** (2.129.0) Whether {@code combo} is the three cuts, of either kind. */
     public static boolean cutter(int combo){return combo==CUTTER||combo==CUTTER_DASH;}
-    /** When the cleave is ready again: its cooldown after one begun at {@code start} is over. */
-    public static long cleaveReady(long start){return start+LENGTH[CLEAVE]+CLEAVE_COOLDOWN;}
     /** (2.124.0) When the jab is ready again: its cooldown after one begun at {@code start} is over. */
     public static long jabReady(long start){return start+LENGTH[JAB]+JAB_COOLDOWN;}
     /** A skill's cooldown from its end (ticks). */
-    public static int cooldown(int combo){return erase(combo)?EraseRules.COOLDOWN:combo==KNIVES?KnivesRules.COOLDOWN:combo==SHOT?ShotRules.COOLDOWN:cutter(combo)?CutterRules.COOLDOWN:combo==SLAM?SlamRules.COOLDOWN:combo==JAB?JAB_COOLDOWN:combo==CLEAVE?CLEAVE_COOLDOWN:0;}
+    public static int cooldown(int combo){return erase(combo)?EraseRules.COOLDOWN:combo==KNIVES?KnivesRules.COOLDOWN:combo==SHOT?ShotRules.COOLDOWN:cutter(combo)?CutterRules.COOLDOWN:combo==SLAM?SlamRules.COOLDOWN:combo==JAB?JAB_COOLDOWN:0;}
     /** (2.124.0) Whether {@code combo}'s blow strikes one only, the nearest in its way: the jab. */
     public static boolean single(int combo){return combo==JAB;}
     /** Whether hit {@code combo} is a plain swing (the hack off as it began). */
@@ -222,9 +199,9 @@ public final class XCharaCombo {
     private static final double[] SLAM_REACH={-SlamRules.BLAST,SlamRules.BLAST,SlamRules.BLAST};
     /** (2.130.0) The knives shot, as a boss reads them coming: a narrow way ahead as far as they fly. */
     private static final double[] SHOT_REACH={0,ShotRules.RANGE,1.0},KNIVES_REACH={0,KnivesRules.RANGE,1.0};
-    /** (2.133.0) The delete slash: as far out as it lands (its slash is XCharaErase's: XCharaAttack's blow strikes no one, and bosses read XCharaErase's). */
+    /** (2.133.0) The terrain delete: as far out as the one it marks where they look (its grounds are XCharaErase's: XCharaAttack's blow strikes no one, and bosses read XCharaErase's). */
     private static final double[] ERASE_REACH={0,EraseRules.REACH,EraseRules.SIDE*.5};
-    private static double[] reaches(int combo){return combo==ERASE?ERASE_REACH:combo==KNIVES?KNIVES_REACH:combo==SHOT?SHOT_REACH:cutter(combo)?CutterRules.REACH:combo==SLAM?SLAM_REACH:combo==CLEAVE?CLEAVE_REACH:combo==JAB?JAB_REACH:REACH[place(combo)];}
+    private static double[] reaches(int combo){return combo==ERASE?ERASE_REACH:combo==KNIVES?KNIVES_REACH:combo==SHOT?SHOT_REACH:cutter(combo)?CutterRules.REACH:combo==SLAM?SLAM_REACH:combo==JAB?JAB_REACH:REACH[place(combo)];}
     /**
      * Whether a point (ahead along the hit, to its right and up from its user's feet, blocks) is in the way of hit
      * {@code combo}'s blow {@code blow}, for a body {@code halfWidth} across: a lane ahead.
@@ -232,7 +209,7 @@ public final class XCharaCombo {
     public static boolean lane(int combo,int blow,double forward,double side,double height,double halfWidth){
         // (2.128.0) the slam: round where it came down (its user stands there as it lands)
         if(combo==SLAM)return SlamRules.struck(forward,height,side,halfWidth);
-        if(height<LOW||height>(combo==CLEAVE?CLEAVE_HIGH:HIGH))return false;
+        if(height<LOW||height>HIGH)return false;
         return forward>=near(combo,blow)-halfWidth&&forward<=reach(combo,blow)+halfWidth&&Math.abs(side)<=halfWidth(combo,blow)+halfWidth;
     }
     /** Whether hit {@code combo} cannot be guarded: the lunge, as the other characters' fourth hits, and the skills but the three cuts (2.129.0, the user's: "가드로 막힘") and the knives shot (2.130.0; the small knives thrown are, 2.131.0: "가드 불가"). */

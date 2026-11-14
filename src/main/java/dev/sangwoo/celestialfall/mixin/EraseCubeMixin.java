@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 /**
- * (2.133.0) X Chara's delete slash's cube of ground (EraseCubes): every body moving near it meets it as it meets a
+ * (2.133.0) X Chara's terrain delete's cubes of ground (EraseCubes): every body moving near it meets it as it meets a
  * block: its shape joins the shapes a move is kept out of (on the server and on each client alike), so they stand on
  * its top and cannot walk into its sides. It is no block: the map is not changed. If another mod has taken this place
  * the cube is only a picture (require 0).

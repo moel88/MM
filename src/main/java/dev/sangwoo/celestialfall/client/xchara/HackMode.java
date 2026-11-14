@@ -89,22 +89,16 @@ public final class HackMode {
         if(v.full()>.01f)mc.getSoundManager().play(v);
     }
 
-    /**
-     * (2.121.0) The panel's look this frame: their hack's, but folded away while both their hands hold the giant knife of
-     * their cleave and opened again after it (GiantCleave.panel), as the hack folds and opens it.
-     */
-    public static HackLook.Frame panelLook(UUID id,float delta){
-        var f=look(id,delta);if(f==null||!f.on())return f;
-        float[] cleave=GiantCleave.panel(id,delta);if(cleave==null)return f;
-        return new HackLook.Frame(cleave[0]>0,Math.max(0,cleave[1]),f.clock(),f.seed());
-    }
-    /** (2.121.0) A press of this player's panel this frame as HackPanel.press has it (their Y's, lime; their cleave's, violet), or null. */
+    /** The panel's look this frame: their hack's (2.121.0 to 2.132.5 it folded away while both hands held the cleave's giant knife, gone). */
+    public static HackLook.Frame panelLook(UUID id,float delta){return look(id,delta);}
+    /** (2.121.0) A press of this player's panel this frame as HackPanel.press has it (their E's, lime; the others', violet), or null. */
     public static float[] press(UUID id,float delta){
         float[] heal=HealClient.press(id,delta);
         if(heal!=null)return heal;
-        float[] cleave=GiantCleave.press(id,delta);
+        // (2.133.0) their terrain delete's: tapped as its grounds are marked
+        float[] erase=ErasePress.press(id,delta);
+        if(erase!=null)return erase;
         // (2.125.0) their double's: pressed as it is called, lit again as it throws
-        if(cleave!=null)return cleave;
         var clone=CloneClient.press(id,delta);
         // (2.126.0) or for their weakening
         if(clone!=null)return clone;
@@ -129,9 +123,7 @@ public final class HackMode {
         // (2.128.0) or their slam's, lit from its start until it is over
         var slam=OverwriteSlam.knife(id,delta);
         if(slam!=null)return slam;
-        // (2.133.0) or their delete slash's, lit from its start until they have landed and come up
-        var erase=EraseSlash.knife(id,delta);
-        return erase!=null?erase:look(id,delta);
+        return look(id,delta);
     }
     /** What is drawn in this player's other hand: the hack's panel while any of it shows (null: whatever the hand holds). */
     public static ItemStack panel(PlayerEntity p){

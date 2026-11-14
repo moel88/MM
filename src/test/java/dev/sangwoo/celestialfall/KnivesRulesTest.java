@@ -31,7 +31,7 @@ class KnivesRulesTest {
         // a basic attack's short stagger: until the next knife could come and a little, no incapacitation
         assertTrue(KnivesRules.STAGGER>KnivesRules.FIRE[1]-KnivesRules.FIRE[0]&&KnivesRules.STAGGER<=8);assertTrue(KnivesRules.STAGGER_LAST<=8);
         // (the other skills are as they were)
-        assertEquals(ShotRules.COOLDOWN,cooldown(SHOT));assertTrue(unblockable(CLEAVE));assertTrue(unblockable(JAB));assertFalse(unblockable(CUTTER));
+        assertEquals(ShotRules.COOLDOWN,cooldown(SHOT));assertTrue(unblockable(JAB));assertFalse(unblockable(CUTTER));
     }
     @Test void theyAreInTheHandThenLeaveItOneAfterAnother(){
         assertTrue(KnivesRules.APPEAR<KnivesRules.RAISED&&KnivesRules.RAISED<KnivesRules.FIRE[0],"they come to be, the hand is raised, then thrown");

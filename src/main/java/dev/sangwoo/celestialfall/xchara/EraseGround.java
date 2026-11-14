@@ -11,8 +11,8 @@ import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
 /**
- * The ground X Chara's delete slash lands on (2.133.0), found from the blocks as they are: the server finds it as the
- * slash goes (XCharaErase), and its user's client the same way for where it would land as they aim (EraseSlash).
+ * The grounds X Chara's terrain delete marks (2.133.0, EraseRules), found from the blocks as they are by the server
+ * (XCharaErase): where the middle of its user's screen points, under the ones near them, and at random places.
  */
 public final class EraseGround {
     private EraseGround(){}
@@ -34,9 +34,9 @@ public final class EraseGround {
         return Double.NaN;
     }
     /**
-     * The point a look from {@code eye} along {@code look} (unit) aims the slash of one who stood at {@code from} at:
-     * where it meets the world (a step out from a wall it meets, so the ground at its foot is found), or, meeting none
-     * (the sky), as far out the way it goes, level, as the slash reaches (EraseRules.REACH).
+     * The point a look from {@code eye} along {@code look} (unit) of one standing at {@code from} aims at: where it meets
+     * the world (a step out from a wall it meets, so the ground at its foot is found), or, meeting none (the sky), as far
+     * out the way it goes, level, as it may reach (EraseRules.REACH).
      */
     public static Vec3d aimed(World world,Entity who,Vec3d from,Vec3d eye,Vec3d look){
         var hit=world.raycast(new RaycastContext(eye,eye.add(look.multiply(96)),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,who));
@@ -45,16 +45,20 @@ public final class EraseGround {
         return flat.lengthSquared()<1e-6?from:from.add(flat.normalize().multiply(EraseRules.REACH));
     }
     /**
-     * Where the slash of one who stood at {@code from}, risen {@code rise} over it, lands for the point {@code want} aimed
-     * at: that point brought within EraseRules.REACH of where they stood (level), on the ground found there from a little
-     * over the point (no higher than they rose) down to EraseRules.FLOOR_UNDER under their feet; none there, at the height
-     * of their feet.
+     * The ground marked for the point {@code want} aimed at by one standing at {@code from}: that point brought within
+     * EraseRules.REACH of them (level), on the ground found there from a little over the point (no higher than
+     * EraseRules.FLOOR_OVER over their feet) down to EraseRules.FLOOR_UNDER under them; none there, at the height of
+     * their feet.
      */
-    public static Vec3d landing(World world,Vec3d from,double rise,Vec3d want){
+    public static Vec3d landing(World world,Vec3d from,Vec3d want){
         double[] xz=EraseRules.within(from.x,from.z,want.x,want.z);
         double wantY=Double.isFinite(want.y)?want.y:from.y,low=from.y-EraseRules.FLOOR_UNDER;
-        double high=Math.min(Math.max(wantY,low)+1.5,from.y+rise+1.5);
+        double high=Math.min(Math.max(wantY,low)+1.5,from.y+EraseRules.FLOOR_OVER+1.5);
         double y=at(world,xz[0],xz[1],high,low);
         return new Vec3d(xz[0],Double.isNaN(y)?from.y:y,xz[1]);
     }
+    /** The ground under one whose feet are at {@code feet} at (x, z): the top of the first block under them, no deeper than EraseRules.UNDER_THEM; NaN if none. */
+    public static double under(BlockView world,double x,double z,double feet){return at(world,x,z,feet+.5,feet-EraseRules.UNDER_THEM);}
+    /** The ground at a random place (x, z) near one whose feet are at {@code feet}: no higher than EraseRules.RANDOM_OVER over them, no deeper than EraseRules.RANDOM_UNDER under them; NaN if none. */
+    public static double near(BlockView world,double x,double z,double feet){return at(world,x,z,feet+EraseRules.RANDOM_OVER,feet-EraseRules.RANDOM_UNDER);}
 }

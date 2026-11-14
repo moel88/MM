@@ -24,7 +24,7 @@ class OverwriteSlamTest {
         assertEquals(SlamRules.DIVE/20f,OverwriteSlam.DIVE,1e-6);assertEquals(SlamRules.LAND/20f,OverwriteSlam.LAND,1e-6);assertEquals(SlamRules.END/20f,OverwriteSlam.END,1e-6);
         assertEquals(LENGTH[SLAM]/20f,OverwriteSlam.CLIP.length(),1e-4,"the clip is as long as the server holds its motion");
         assertSame(OverwriteSlam.CLIP,KnifeCombo.clipOf(SLAM));assertEquals(OverwriteSlam.LIFE,KnifeCombo.life(SLAM),1e-6);
-        assertSame(GiantCleave.CLIP,KnifeCombo.clipOf(CLEAVE));assertSame(CorruptionJab.CLIP,KnifeCombo.clipOf(JAB));
+        assertSame(ErasePress.CLIP,KnifeCombo.clipOf(ERASE));assertSame(CorruptionJab.CLIP,KnifeCombo.clipOf(JAB));
         assertTrue(OverwriteSlam.LIFE>=OverwriteSlam.LAND+OverwriteSlam.GROUND_LIFE,"what the landing does to the floor is drawn until it is gone");
         assertTrue(new KnifeCombo().lifetime()>=OverwriteSlam.LIFE);
     }

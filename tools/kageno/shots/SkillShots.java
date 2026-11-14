@@ -227,6 +227,8 @@ public final class SkillShots implements ClientModInitializer {
         net.minecraft.util.math.Vec3d dir(){double r=Math.toRadians(yaw);return new net.minecraft.util.math.Vec3d(-Math.sin(r),0,Math.cos(r));}
     }
     private final List<Actor> actors=new ArrayList<>();
+    /** (2.133.0) The shot's training dummies besides its one ("xdummy"), by entity id. */
+    private static final List<Integer> EXTRA_DUMMIES=new java.util.concurrent.CopyOnWriteArrayList<>();
     private static final Map<String,Integer> ACTOR_IDS=new ConcurrentHashMap<>();private static final Map<String,Actor> ACTORS=new ConcurrentHashMap<>();
     private static volatile String[] track;private static volatile boolean shake;private final StringBuilder shakeLog=new StringBuilder();
     /** "holds=1/0/..." (2.49.1): the entry's meteor shatter rolls in order, 1 holds together and 0 shatters (SkillShotsMeteorMixin). */
@@ -1010,6 +1012,15 @@ public final class SkillShots implements ClientModInitializer {
             var dummy=TrainingDummies.TYPES.get(kind).create(p.getServerWorld());dummy.refreshPositionAndAngles(baseX,y,baseZ+3,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
         }
         actors(p.getServerWorld(),y);
+        // "xdummy=FW_RT/FW_RT..." (2.133.0): more training dummies standing still at those points from where the player stands
+        // (for X Chara's terrain delete, whose grounds go under the ones near); gone with the next shot
+        for(int id:EXTRA_DUMMIES){var old=p.getServerWorld().getEntityById(id);if(old!=null)old.discard();}
+        EXTRA_DUMMIES.clear();
+        if(opts.containsKey("xdummy")){var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+            for(String one:opts.get("xdummy").split("/")){String[] v=one.split("_");
+                var at=new net.minecraft.util.math.Vec3d(baseX,y,baseZ).add(f.multiply(Double.parseDouble(v[0]))).add(right.multiply(v.length>1?Double.parseDouble(v[1]):0));
+                var more=TrainingDummies.TYPES.get(dev.sangwoo.celestialfall.training.DummyKind.IDLE).create(p.getServerWorld());
+                more.refreshPositionAndAngles(at.x,y,at.z,yaw+180,0);p.getServerWorld().spawnEntity(more);EXTRA_DUMMIES.add(more.getId());}}
         if(d instanceof net.minecraft.entity.LivingEntity l){
             var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
             boolean show=opt("dummy","STAND".equals(current)||"SUMMON".equals(current)?0:1)>0;var at=new net.minecraft.util.math.Vec3d(baseX,y,baseZ).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
@@ -1396,33 +1407,32 @@ public final class SkillShots implements ClientModInitializer {
                             StringBuilder ks=new StringBuilder();for(int k=0;k<3;k++)ks.append(" [").append(dev.sangwoo.celestialfall.client.xchara.CorruptionKnives.describe(mc.player,k,0)).append(']');
                             log.append(String.format(Locale.ROOT,"  knives +%d: client (shown,flying,tail xyz,struck,far,took)%s, sounds %s%n",age-a0,ks,
                                 String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("kni")).toList())));}
-                        // (2.133.0) X Chara's delete slash (H with the hack off): "eraseaim=dummy" (the ground at the dummy's feet) or
-                        // "eraseaim=FW[_RT[_UP]]" (that point from where the player stands) aims it there whatever the filming camera
-                        // shows (EraseSlash.aimAt; without it, the middle of the player's own screen)
+                        // (2.133.0) X Chara's terrain delete (H with the hack on): "eraseaim=dummy" (the ground at the dummy's feet)
+                        // or "eraseaim=FW[_RT[_UP]]" (that point from where the player stands) aims it there whatever the filming
+                        // camera shows (ErasePress.aimAt; without it, the middle of the player's own screen)
                         if(what.equals("KEY_H")&&age==at&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)){
                             if(opts.containsKey("eraseaim")){String o=opts.get("eraseaim");var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var r=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
-                                if(o.equals("dummy")){var sv=mc.getServer();var dm=sv==null?null:sv.getOverworld().getEntityById(dummyId);if(dm==null)dm=mc.world.getEntityById(dummyId);dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=dm==null?null:dm.getPos();}
-                                else{String[] v=o.split("[_x]");dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=mc.player.getPos().add(f.multiply(Double.parseDouble(v[0]))).add(r.multiply(v.length>1?Double.parseDouble(v[1]):0)).add(0,v.length>2?Double.parseDouble(v[2]):0,0);}
-                                log.append("  delete slash aimed at ").append(dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt).append('\n');}
-                            else dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=null;}
-                        // (2.133.0) X Chara's delete slash (H with the hack off): by the server, the cast in flight (how far in,
-                        // where they stood, how high they leap, whether it is thrown) and its slash (ticks since it struck,
-                        // where it lands, its ground's corner, its cube's top now, who is on it), whether the dummy is deleted
-                        // now, the dummy's health and where it is, and where the player really is; and what this client draws
-                        // of it (the cast: combo, age, stopped, how high the body is drawn; the slash: age, flight, ticks since
-                        // it struck, its cube's top, cut, deleted, blasted, faces; the dummy's silhouette and where it is here)
-                        if(what.equals("KEY_H")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)&&age>at&&age<=at+560&&(age-at<=44||(age-at)%5==0)){final int a0=at;
-                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeErase(p),r=dev.sangwoo.celestialfall.xchara.XCharaErase.describe(p);var dm=p.getServerWorld().getEntityById(dummyId);
-                                long now=p.getWorld().getTime();float hp=dm instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
-                                boolean gone=dm instanceof net.minecraft.entity.LivingEntity e&&dev.sangwoo.celestialfall.xchara.XCharaErase.deleted(e);
-                                log.append(String.format(Locale.ROOT,"  erase +%d: server cast %s slash %s, dummy deleted %s hp %.1f at %s, player at %.2f %.2f %.2f airborne %s, ready in %d%n",age-a0,
-                                    d==null?"none":String.format(Locale.ROOT,"age %d from %s rise %.2f thrown %s",now-(Long)d[0],d[1],(Double)d[2],d[3]),
-                                    r==null?"none":String.format(Locale.ROOT,"struck %d to %s corner %d %d cube %.2f on %d",(Long)r[4],r[2],(Integer)r[5],(Integer)r[6],(Double)r[7],(Integer)r[8]),
-                                    gone,hp,dm==null?"-":String.format(Locale.ROOT,"%.2f %.2f %.2f",dm.getX(),dm.getY(),dm.getZ()),
-                                    p.getX(),p.getY(),p.getZ(),dev.sangwoo.celestialfall.xchara.XCharaAttack.airborne(p),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.eraseReady(p)-now)));});
-                            var cd=mc.world.getEntityById(dummyId);
-                            log.append(String.format(Locale.ROOT,"  erase +%d: client (cast combo,age,stopped,height;slash age,fly,struck,cube,cut,deleted,blasted,faces) %s, dummy (since,hidden,silhouette) %s at %s, sounds %s%n",age-a0,
-                                dev.sangwoo.celestialfall.client.xchara.EraseSlash.describe(mc.player,0),cd==null?"-":dev.sangwoo.celestialfall.client.xchara.EraseClient.seen(cd,0),cd==null?"-":String.format(Locale.ROOT,"%.2f %.2f %.2f",cd.getX(),cd.getY(),cd.getZ()),
+                                if(o.equals("dummy")){var sv=mc.getServer();var dm=sv==null?null:sv.getOverworld().getEntityById(dummyId);if(dm==null)dm=mc.world.getEntityById(dummyId);dev.sangwoo.celestialfall.client.xchara.ErasePress.aimAt=dm==null?null:dm.getPos();}
+                                else{String[] v=o.split("[_x]");dev.sangwoo.celestialfall.client.xchara.ErasePress.aimAt=mc.player.getPos().add(f.multiply(Double.parseDouble(v[0]))).add(r.multiply(v.length>1?Double.parseDouble(v[1]):0)).add(0,v.length>2?Double.parseDouble(v[2]):0,0);}
+                                log.append("  terrain delete aimed at ").append(dev.sangwoo.celestialfall.client.xchara.ErasePress.aimAt).append('\n');}
+                            else dev.sangwoo.celestialfall.client.xchara.ErasePress.aimAt=null;}
+                        // (2.133.0) X Chara's terrain delete: by the server, the press (how far in, where they stood, the aim told,
+                        // whether it is pressed) and its grounds (ticks since the mark; each: kind, corner, top, whom it is under,
+                        // its cube's top now, how many on it), the dummies' health and where they are, where the player really
+                        // is; and what this client draws of it (EraseClient.describe: age, grounds, cubes' lift, cut, blasted,
+                        // faces; its grounds with where each "!!!" shows), and the sounds
+                        if(what.equals("KEY_H")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&age>at&&age<=at+560&&(age-at<=30||(age-at)%10==0)){final int a0=at;
+                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeErase(p),r=dev.sangwoo.celestialfall.xchara.XCharaErase.describe(p);
+                                long now=p.getWorld().getTime();
+                                StringBuilder gs=new StringBuilder();
+                                if(r!=null)for(Object o:(List<?>)r[3]){Object[] g=(Object[])o;gs.append(String.format(Locale.ROOT," [%s %d %d top %.2f under %d cube %.2f on %d]",(Integer)g[3]==0?"look":(Integer)g[3]==1?"near":"random",(Integer)g[0],(Integer)g[1],(Double)g[2],(Integer)g[4],(Double)g[5],(Integer)g[6]));}
+                                StringBuilder ds=new StringBuilder();var ids=new ArrayList<Integer>();ids.add(dummyId);ids.addAll(EXTRA_DUMMIES);
+                                for(int id:ids){var dm=p.getServerWorld().getEntityById(id);if(dm instanceof net.minecraft.entity.LivingEntity e)ds.append(String.format(Locale.ROOT," [%d hp %.1f at %.2f %.2f %.2f]",id,e.getHealth(),e.getX(),e.getY(),e.getZ()));}
+                                log.append(String.format(Locale.ROOT,"  erase +%d: server press %s grounds %s%s, dummies%s, player at %.2f %.2f %.2f, ready in %d%n",age-a0,
+                                    d==null?"none":String.format(Locale.ROOT,"age %d from %s aim %s pressed %s",now-(Long)d[0],d[1],d[2],d[3]),
+                                    r==null?"none":"+"+r[2],gs,ds,p.getX(),p.getY(),p.getZ(),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.eraseReady(p)-now)));});
+                            log.append(String.format(Locale.ROOT,"  erase +%d: client (age,grounds,lift,cut,blasted,faces) %s, %s, sounds %s%n",age-a0,
+                                dev.sangwoo.celestialfall.client.xchara.EraseClient.describe(mc.player,0),String.join(" | ",dev.sangwoo.celestialfall.client.xchara.EraseClient.all(0)),
                                 String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("erase")||x.contains("hit 16")).toList())));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it

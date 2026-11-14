@@ -32,7 +32,7 @@ class CorruptionJabTest {
         assertEquals(LENGTH[JAB]/20f,CorruptionJab.CLIP.length(),1e-4,"the clip is as long as the server holds its motion");
         assertTrue(CorruptionJab.LIT<CorruptionJab.TWIRL0&&CorruptionJab.TWIRL0<CorruptionJab.TWIRL1&&CorruptionJab.TWIRL1<CorruptionJab.DRAWN&&CorruptionJab.DRAWN<CorruptionJab.BLOW);
         assertSame(CorruptionJab.CLIP,KnifeCombo.clipOf(JAB));assertEquals(CorruptionJab.LIFE,KnifeCombo.life(JAB),1e-6);
-        assertSame(GiantCleave.CLIP,KnifeCombo.clipOf(CLEAVE),"the cleave is still the cleave");
+        assertSame(OverwriteSlam.CLIP,KnifeCombo.clipOf(SLAM),"the slam is still the slam");
         assertTrue(CorruptionJab.LIFE>=CorruptionJab.BLOW+CorruptionJab.BURST_LIFE,"what the blow leaves on their face is drawn until it is gone");
     }
     @Test void theKnifeIsTheHacksUntilTheBlowAndBlackAtOnceOnIt(){
@@ -197,7 +197,7 @@ class CorruptionJabTest {
     }
     @Test void itsSoundsAreThePresssAndTheThrustsOnTheBlow(){
         assertEquals(blowAt(JAB,0)-KnifeClient.JAB_SOUND_BEFORE,KnifeClient.soundAt(JAB),"the thrust's sound starts so that its onset is on the blow");
-        assertEquals(0,KnifeClient.soundAt(CLEAVE));assertEquals(blowAt(SLASH,0)-KnifeClient.SOUND_BEFORE,KnifeClient.soundAt(SLASH));
+        assertEquals(0,KnifeClient.soundAt(ERASE));assertEquals(blowAt(SLASH,0)-KnifeClient.SOUND_BEFORE,KnifeClient.soundAt(SLASH));
         assertNotEquals(KnifeClient.JAB_PRESS_SOUND,KnifeClient.JAB_SOUND);
         // a small shake as it lands, none before
         var cast=new StandClient.Cast(UUID.randomUUID(),UUID.randomUUID(),null,SKILL,JAB,0,0,0,Vec3d.ZERO,0,List.of());

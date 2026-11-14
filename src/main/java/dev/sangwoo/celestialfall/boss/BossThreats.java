@@ -276,19 +276,20 @@ public final class BossThreats {
     }
     /** X Chara's knife (2.114.0): the next blow of the hit in flight, in its way ahead of them; the fourth takes no guard. */
     private static void xchara(ServerPlayerEntity p,long now,List<Threat> out){
-        // (2.133.0) the delete slash thrown: its ground as it strikes (no guard takes it), then its cube as it bursts (whoever is on it)
+        // (2.133.0) the terrain delete's grounds marked: off each before it rises (it would carry them up: held), then its
+        // cube as it bursts (whoever is on it); no guard takes either
         for(var w:dev.sangwoo.celestialfall.xchara.XCharaErase.going(p)){
-            double half=dev.sangwoo.celestialfall.xchara.EraseRules.SIDE*.5;long struck=(long)w[3],burst=(long)w[4];
-            if(now<=struck)out.add(new Threat(p,"xchara_erase",now-1,struck,struck+1,
-                Zone.lane(new Vec3d(w[0],w[1],w[2]),0f,-half,half,half,-dev.sangwoo.celestialfall.xchara.EraseRules.STRUCK_UNDER,dev.sangwoo.celestialfall.xchara.EraseRules.STRUCK_OVER),
-                false,false,false,dev.sangwoo.celestialfall.xchara.EraseRules.DAMAGE,false,false));
-            else if(!Double.isNaN(w[5]))out.add(new Threat(p,"xchara_erase_burst",struck,burst,burst+1,
+            double half=dev.sangwoo.celestialfall.xchara.EraseRules.SIDE*.5;long rises=(long)w[3],burst=(long)w[4];
+            if(now<=rises)out.add(new Threat(p,"xchara_erase",now-1,rises,rises+1,
+                Zone.lane(new Vec3d(w[0],w[1],w[2]),0f,-half,half,half,-1.5,4),
+                false,false,true,dev.sangwoo.celestialfall.xchara.EraseRules.BURST_DAMAGE,false,false));
+            else if(!Double.isNaN(w[5]))out.add(new Threat(p,"xchara_erase_burst",rises,burst,burst+1,
                 Zone.lane(new Vec3d(w[0],w[5],w[2]),0f,-half,half,half,-dev.sangwoo.celestialfall.xchara.EraseRules.ON_UNDER,dev.sangwoo.celestialfall.xchara.EraseRules.ON_OVER),
                 false,false,false,dev.sangwoo.celestialfall.xchara.EraseRules.BURST_DAMAGE,false,false));
         }
         var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(p);
         if(h==null||!dev.sangwoo.celestialfall.xchara.XCharaCombo.valid(h.combo()))return;
-        // (2.133.0) the delete slash before it is thrown: no one knows where it lands until then (where its user looks up in the air)
+        // (2.133.0) the terrain delete before its grounds are marked: no one knows where they are until then
         if(h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.ERASE)return;
         if(h.blows()>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.blowAt(c,i);

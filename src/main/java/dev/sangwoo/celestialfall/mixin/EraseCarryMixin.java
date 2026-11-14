@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * (2.133.0) X Chara's delete slash's cube of ground: one standing on it is carried up as it rises, before they move this
+ * (2.133.0) X Chara's terrain delete's cubes of ground: one standing on it is carried up as it rises, before they move this
  * tick (EraseCubes.carry: the server carries everything but players, each client its own player; their move then stands
  * them on its top); and one who came off it (or fell as it burst) takes no harm from that fall (XCharaErase.spared: the
  * user's "덩어리에서 떨어지면 데미지 없음").

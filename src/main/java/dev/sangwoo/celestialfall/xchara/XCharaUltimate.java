@@ -88,6 +88,14 @@ public final class XCharaUltimate {
                 var at=new Vec3d(buf.readDouble(),buf.readDouble(),buf.readDouble());
                 server.execute(()->XCharaAttack.aim(player,at));return;
             }
+            // (2.133.0) H with the hack on: where the middle of their screen points as they press it (the terrain delete's ground
+            // looked at; none: their look is taken)
+            Vec3d told=null;
+            if(skill==H&&buf.readableBytes()==24){
+                var a=new Vec3d(buf.readDouble(),buf.readDouble(),buf.readDouble());
+                if(Double.isFinite(a.x)&&Double.isFinite(a.y)&&Double.isFinite(a.z))told=a;
+            }
+            final Vec3d aim=told;
             if(buf.readableBytes()>7)return;
             int target=buf.readableBytes()>0?buf.readVarInt():-1;
             // (2.115.0) Q: the hack on or off (XCharaHack)
@@ -101,8 +109,10 @@ public final class XCharaUltimate {
             // R: with the hack on the double (2.125.0: asked with the one in the crosshair, as G; the cleave was R's from
             // 2.121.0 and went to H), with it off the jab (2.124.0)
             if(skill==R){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaClone.cast(player,target);else XCharaAttack.jab(player);});return;}
-            // (2.125.0, user request: "Q활성화 R스킬을 Q활성화 H스킬로 옮겨") H with the hack on: the cleave; (2.132.0) with it off the rain of knives (XCharaAttack.rain)
-            if(skill==H){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaAttack.cleave(player);else XCharaAttack.erase(player);});return;}
+            // H with the hack on: the terrain delete (2.133.0, user request: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해": in the
+            // cleave's place, 2.125.0 to 2.132.5, gone), asked with where the middle of their screen points (XCharaAttack.erase,
+            // XCharaErase); with it off H is nothing (the user's choice: left empty for now)
+            if(skill==H){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaAttack.erase(player,aim);});return;}
             if(skill!=G)return;
             // G: with the hack on the sword dance; (2.128.0) with it off the slam (XCharaAttack.slam)
             server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))cast(player,target);else XCharaAttack.slam(player);});
@@ -140,11 +150,8 @@ public final class XCharaUltimate {
     public static boolean shielded(LivingEntity e,DamageSource source){
         // (2.125.0) and one seized by their double, in the air until the wall (XCharaClone)
         if(XCharaClone.shielded(e,source))return true;
-        // (2.128.0) and one in the air of their slam (drawn up there, over where they really stand; 2.133.0: or of their
-        // delete slash's leap)
+        // (2.128.0) and one in the air of their slam (drawn up there, over where they really stand)
         if(XCharaAttack.airborne(e)&&!source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY))return true;
-        // (2.133.0) and one deleted by a delete slash, until they are back
-        if(XCharaErase.deleted(e)&&!source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY))return true;
         return held(e)&&BLOW.get()!=e&&!source.isIn(DamageTypeTags.BYPASSES_INVULNERABILITY);
     }
     /** When this player's G is ready again (the server's world time; none is long ago). */
@@ -210,7 +217,7 @@ public final class XCharaUltimate {
         Vec3d eye=p.getEyePos(),chest=e.getPos().add(0,e.getHeight()*.55,0);
         if(eye.squaredDistanceTo(chest)>(AIM_RANGE+1.5)*(AIM_RANGE+1.5))return false;
         if(p.getWorld().raycast(new RaycastContext(eye,chest,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)return false;
-        if(involved(e)||marked(e)||XCharaAttack.airborne(e)||XCharaErase.deleted(e)||StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||StarPlatinumTimeStop.holds(e))return false;
+        if(involved(e)||marked(e)||XCharaAttack.airborne(e)||StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||StarPlatinumTimeStop.holds(e))return false;
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.finaling(e))return false;
         if(e instanceof PlayerEntity q&&(dev.sangwoo.celestialfall.AtomicManager.immobilized(q)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(q)))return false;
         return true;

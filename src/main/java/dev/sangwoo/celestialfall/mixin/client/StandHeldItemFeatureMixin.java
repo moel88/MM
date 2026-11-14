@@ -66,20 +66,13 @@ public abstract class StandHeldItemFeatureMixin {
             // X Chara's knife (2.114.0): turned in the hand as a hit drives it, about the middle of its rod (where the fist
             // holds it: its display puts the model's middle there); its display already turns it KnifeCombo.DISPLAY_TILT
             var swing=dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(holder.getUuid());
-            // (2.121.0) their cleave's knife is grown huge (GiantCleave.scale), about the fist as it is turned
-            float giant=dev.sangwoo.celestialfall.client.xchara.GiantCleave.scale(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
-            // (2.122.0) and its blade much more, on its own (XCharaKnifeRenderer.blade: for this draw)
-            dev.sangwoo.celestialfall.client.xchara.XCharaKnifeRenderer.blade=dev.sangwoo.celestialfall.client.xchara.GiantCleave.blade(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
-            if(swing!=null||giant!=1){
+            if(swing!=null){
                 matrices.translate(0,-2/16f,2/16f);
-                if(swing!=null){
-                    var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
-                    // (2.124.0) their jab turns the knife once round in the hand, about the forearm (CorruptionJab.spin)
-                    float spin=dev.sangwoo.celestialfall.client.xchara.CorruptionJab.spin(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
-                    if(spin!=0)matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(spin));
-                    matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.xchara.KnifeCombo.DISPLAY_TILT));
-                }
-                if(giant!=1)matrices.scale(giant,giant,giant);
+                var frame=dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(swing,net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                // (2.124.0) their jab turns the knife once round in the hand, about the forearm (CorruptionJab.spin)
+                float spin=dev.sangwoo.celestialfall.client.xchara.CorruptionJab.spin(holder.getUuid(),net.minecraft.client.MinecraftClient.getInstance().getTickDelta());
+                if(spin!=0)matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(spin));
+                matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(frame.grip()-dev.sangwoo.celestialfall.client.xchara.KnifeCombo.DISPLAY_TILT));
                 matrices.translate(0,2/16f,-2/16f);
             }
             return;

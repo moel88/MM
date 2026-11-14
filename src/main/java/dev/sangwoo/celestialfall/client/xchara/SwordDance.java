@@ -106,12 +106,14 @@ public final class SwordDance implements Fx.Skill {
      * white by turns every tenth of a second, a dark outline round each bar and dot (the blended pass), a soft glow of
      * its colour round it (the light). (2.125.0: X Chara's double marks with the same, CloneFling.)
      */
-    static void bangs(EffectMesh m,Vec3d camera,Vec3d p,float since,float shown,boolean light){
+    static void bangs(EffectMesh m,Vec3d camera,Vec3d p,float since,float shown,boolean light){bangs(m,camera,p,since,shown,light,1);}
+    /** (2.133.0) The same {@code scale} times as big (the terrain delete's giant "!!!" over the ground its user looked at, EraseFx). */
+    static void bangs(EffectMesh m,Vec3d camera,Vec3d p,float since,float shown,boolean light,double scale){
         float pop=.6f+.4f*XCharaSpace.smooth(since/1.5f);
         Vec3d n=camera.subtract(p);if(n.lengthSquared()<1e-6)return;n=n.normalize();
         Vec3d right=n.crossProduct(new Vec3d(0,1,0));if(right.lengthSquared()<1e-4)right=new Vec3d(1,0,0);right=right.normalize();
         Vec3d up=right.crossProduct(n).normalize();
-        double s=2.2*pop;
+        double s=2.2*pop*scale;
         boolean red=((int)Math.floor(since/2))%2==0;
         if(light){
             // a soft glow round it, in its colour

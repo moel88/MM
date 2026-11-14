@@ -596,6 +596,8 @@ public final class MpClient implements ClientModInitializer {
      * for 160 ticks, its X on its face on both clients for as long, the caster's knife lit by it until the blow. R again:
      * refused (45 s from its end). The cooldowns off, R on the watcher's guard: struck all the same. R and the caster
      * struck before the blow ("HITME"): stopped short.)
+     * (2.133.0: the cleave is gone; H with the hack on is the terrain delete, its own check MP_ONLY=xcharaerase; its H
+     * steps are out of this script.)
      * (2.125.0: the cleave is H's with the hack on, so every R above with the hack on is an H now. After the jab's part, Q
      * turns the hack on again and R is the double: on the watcher 5 blocks ahead, the "!!!", seized 17 ticks in, in the
      * wall 40 ticks in (20 off it, put at the wall's foot some 8 blocks behind where it stood, unable to move or act for
@@ -617,9 +619,9 @@ public final class MpClient implements ClientModInitializer {
         "5 XCHARA","8 NOCDOFF","40 DIST3","45 HEAL",
         "75 E","90 G",
         "110 Q","130 CHURT","150 E","175 E","185 Y",
-        "210 H","226 WALK+","300 WALK-","310 DIST3","320 H",
-        "500 HEAL","505 GUARD+","515 H","600 GUARD-",
-        "800 DIST3","810 H","815 HITME","840 H",
+        "226 WALK+","300 WALK-","310 DIST3",
+        "500 HEAL","505 GUARD+","600 GUARD-",
+        "800 DIST3",
         "880 GUARD+","890 G","930 GUARD-",
         "960 Q","975 DIST3","980 HEAL","990 WALK+","1000 R","1030 R","1200 WALK-",
         "1210 NOCDON","1215 DIST3","1220 GUARD+","1230 R","1260 GUARD-",
@@ -757,34 +759,34 @@ public final class MpClient implements ClientModInitializer {
         "440 DIST6","445 HEAL","455 T","463 HITME",
         "520 NOCDOFF","540 END"};
     /**
-     * X Chara's H with the hack off, the delete slash (2.133.0, MP_ONLY=xcharaerase): the caster takes X Chara, its
-     * cooldowns on. Q, and H with the hack on: the cleave, no slash. Q again. Then, the slash aimed at the watcher's feet
-     * 12 blocks ahead ("EAIMW": EraseSlash.aimAt): the caster leaps (drawn up on both clients, standing where it was on the
-     * server), the slash lands on the watcher and strikes it (100; gone from both clients' sight for half a second), and
-     * the ground under it rises as a cube carrying it up (its own client carries it; no kick for flying), the watcher
-     * standing on it until it bursts (healed first so it lives: 150 then) and falling off it unharmed; H refused meanwhile
-     * (its cooldown). The cooldowns off: the same, the watcher walking off the cube as it rises ("WALK+": a fall of eight
-     * blocks or so, no harm; nothing at its burst); H with Kageno taken before the slash goes (no slash at all); H and
-     * Kageno taken with the watcher up on the cube (the cube gone at once, the watcher falling unharmed); and H where the
-     * caster's camera looks ("PITCH29": no aim given, the middle of its screen), the slash landing where its client
-     * would have it. Both clients log the cast, the slash, the cube as they have them, whom they hide and when, the
-     * watcher's feet, and the sounds.
+     * X Chara's H with the hack on, the terrain delete (2.133.0, MP_ONLY=xcharaerase): the caster takes X Chara, its
+     * cooldowns on. H with the hack off: nothing (left empty). Q. A: the watcher 12 blocks ahead, the caster's aim 14
+     * blocks to its right ("EAIMS": ErasePress.aimAt), H: the press, its grounds marked two ticks in: where it looks, one
+     * under the watcher, two at random (none with the caster on it, none overlapping); a second on they rise as cubes,
+     * the watcher's carried up on its own client (no kick for flying); 15 s after they rise they burst: 150 on the
+     * watcher (healed all along), which falls from it unharmed. H at once: refused (its cooldown, 60 s from its end). The
+     * cooldowns off. B: the same, the watcher walking off its cube as it rises ("WALK+": a fall of some blocks, no harm;
+     * nothing at its burst). C: H and Kageno taken at once (before the press: no grounds). X Chara again, Q. D: aimed at
+     * the watcher's feet ("EAIMW": the ground where it looks under it, none of its own besides), carried up, and Kageno
+     * taken as it rises: the cubes gone at once, the watcher falling unharmed. X Chara again, Q. E: no one near (the
+     * watcher 30 blocks off), the middle of the caster's screen ("PITCH29"): where it looks (round the caster, who is
+     * carried up on it and falls unharmed at its burst) and three at random. Both clients log the press, the grounds
+     * (where each "!!!" shows), the cubes as they have them, the watcher's feet, and the sounds.
      */
     private static final String[] XCHARAERASE_SCRIPT={
         "5 XCHARA","8 NOCDOFF","40 DIST30","45 HEAL",
-        "60 Q","80 H","150 Q",
-        "170 DIST12","175 HEAL","180 EAIMW","190 H",
-        "260 H",
-        "470 HEAL",
-        "560 NOCDON",
-        "575 DIST12","580 HEAL","590 H",
-        "700 WALK+","740 WALK-",
-        "940 DIST10","945 HEAL","960 H","964 STANDK",
-        "990 XCHARA","995 NOCDON",
-        "1010 DIST12","1015 HEAL","1025 H","1150 STANDK",
-        "1180 XCHARA","1185 NOCDON",
-        "1200 EAIM-","1205 DIST30","1210 HEAL","1215 PITCH29","1225 H",
-        "1280 PITCH12","1290 NOCDOFF","1310 END"};
+        "60 H","80 Q",
+        "100 DIST12","105 HEAL","110 EAIMS","120 H",
+        "170 H",
+        "470 NOCDON",
+        "490 DIST12","495 HEAL","500 EAIMS","510 H",
+        "580 WALK+","620 WALK-",
+        "860 DIST12","865 HEAL","870 H","870 STANDK",
+        "890 XCHARA","895 NOCDON","905 Q",
+        "915 DIST12","920 HEAL","925 EAIMW","935 H","1040 STANDK",
+        "1060 XCHARA","1065 NOCDON","1075 Q",
+        "1085 EAIM-","1090 DIST30","1095 HEAL","1100 PITCH29","1110 H",
+        "1450 PITCH12","1460 NOCDOFF","1480 END"};
     private static final String[] STEPS=ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -941,7 +943,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xcharaerase")?1500:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1026,11 +1028,15 @@ public final class MpClient implements ClientModInitializer {
         // 2.112.0: the caster takes X Chara (MP_ONLY=xchara)
         if(step.equals("XCHARA")){if(down)command("botand progress stand @s x_chara");return;}
         if(step.startsWith("PITCH")){if(down){casterPitch=Float.parseFloat(step.substring(5));note("caster's camera pitch "+casterPitch);}return;}
-        // (2.133.0) X Chara's delete slash aimed at the watcher's feet as this client has them ("EAIMW"), or at the middle of the screen again ("EAIM-")
-        if(step.equals("EAIMW")||step.equals("EAIM-")){if(down){
+        // (2.133.0) X Chara's terrain delete aimed (ErasePress.aimAt): at the watcher's feet as this client has them
+        // ("EAIMW"), 14 blocks to the caster's right of the way to the watcher ("EAIMS"), or at the middle of the screen again ("EAIM-")
+        if(step.equals("EAIMW")||step.equals("EAIMS")||step.equals("EAIM-")){if(down){
             var w=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
-            dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=step.equals("EAIMW")&&w!=null?w.getPos():null;
-            note("delete slash aimed at "+(dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt==null?"the middle of the screen":dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt.toString()));}return;}
+            net.minecraft.util.math.Vec3d at=null;
+            if(w!=null&&step.equals("EAIMW"))at=w.getPos();
+            else if(w!=null&&step.equals("EAIMS")){var d=w.getPos().subtract(mc.player.getPos()).multiply(1,0,1).normalize();at=mc.player.getPos().add(-d.z*14,0,d.x*14);}
+            dev.sangwoo.celestialfall.client.xchara.ErasePress.aimAt=at;
+            note("terrain delete aimed at "+(at==null?"the middle of the screen":at.toString()));}return;}
         // 2.93.0: Lee So-sang's Z: the camera onto a sword of the caster's formation ("ZAIMdeg"), and Z pressed where it looks
         if(step.startsWith("ZAIM")){if(down){var mids=dev.sangwoo.celestialfall.client.isosang.SwordStep.middles();int k=pickSword(Float.parseFloat(step.substring(4)));
             if(k<0||mids==null)note("ERROR no sword to aim at");
@@ -1728,11 +1734,12 @@ public final class MpClient implements ClientModInitializer {
     }
     private final Map<String,String> eraseState=new HashMap<>();private int eraseHeard;private boolean eraseWalking;private net.minecraft.util.math.Vec3d eraseWalkAt;
     /**
-     * (2.133.0, MP_ONLY=xcharaerase) X Chara's delete slash as this client has it: each player's cast as it begins or
-     * stops short and, through its leap, how high this client draws them over where they stand; every slash it knows of
-     * as it comes and as whom it deleted changes (whose, how far in, how far it goes, where from, cut); whom it hides and
-     * when (EraseClient.seen); its sounds as they are started; and its cooldown here. The watcher walks to its left while
-     * the caster asks ("WALK+"), its steps logged a tick at a time (none while it is deleted).
+     * (2.133.0, MP_ONLY=xcharaerase) X Chara's terrain delete as this client has it: each player's press as it begins or
+     * stops short, and a tick at a time through it how far its panel's arm is up and its hand down and how lit the panel
+     * is; every call it knows of as it comes and as whom its bursts struck changes (whose, its grounds: what each is, its
+     * corner, its top, whom it is under, where its "!!!" shows; its cubes' lift, cut); its cubes here a second at a time
+     * and whether this client stands its own player on one; the caster's own aim as it presses; its sounds as they are
+     * started; and its cooldown here. The watcher walks to its left while the caster asks ("WALK+").
      */
     private void eraseWatch(){
         for(var p:mc.world.getPlayers()){
@@ -1740,48 +1747,41 @@ public final class MpClient implements ClientModInitializer {
             String key=c==null?"-":c.id()+"/"+(dev.sangwoo.celestialfall.client.xchara.KnifeClient.until(c.id())<1e6f);
             if(!key.equals(eraseState.get("cast "+p.getUuid()))){
                 eraseState.put("cast "+p.getUuid(),key);
-                if(c!=null)note(String.format(Locale.ROOT,"%s's delete slash here: %d ticks in%s, leaps %.2f",name(p.getUuid()),(int)Math.floor(c.age(0)),key.endsWith("true")?" (stopped short)":"",
-                    dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseRise(c.id())));
+                if(c!=null)note(String.format(Locale.ROOT,"%s's press here: %d ticks in%s",name(p.getUuid()),(int)Math.floor(c.age(0)),key.endsWith("true")?" (stopped short)":""));
             }
-            if(c!=null&&c.age(0)<=dev.sangwoo.celestialfall.xchara.EraseRules.LENGTH&&((int)Math.floor(c.age(0)))%2==0){
-                var off=dev.sangwoo.celestialfall.client.xchara.EraseSlash.offset(p.getUuid(),0);
-                note(String.format(Locale.ROOT,"  %s drawn %.2f over where it stands (%d ticks in; really at %.2f %.2f %.2f)",name(p.getUuid()),off==null?0:off.y,(int)Math.floor(c.age(0)),p.getX(),p.getY(),p.getZ()));
+            if(c!=null&&c.age(0)<=dev.sangwoo.celestialfall.xchara.EraseRules.LENGTH+2){
+                float[] pr=dev.sangwoo.celestialfall.client.xchara.ErasePress.press(p.getUuid(),0);
+                if(pr!=null)note(String.format(Locale.ROOT,"  %s's panel %d ticks in: arm %.2f, hand %.2f, lit %.2f",name(p.getUuid()),(int)Math.floor(c.age(0)),pr[0],pr[1],pr[2]));
             }
-            String seen=dev.sangwoo.celestialfall.client.xchara.EraseClient.seen(p,0);
-            String hid=seen.equals("-")?"-":seen.split(",")[1];
-            if(!hid.equals(eraseState.get("hid "+p.getUuid()))){eraseState.put("hid "+p.getUuid(),hid);if(!hid.equals("-"))note(String.format(Locale.ROOT,"%s %s here at world tick %d (since,hidden,silhouette %s)",name(p.getUuid()),hid.equals("1")?"hidden (deleted)":"seen again",mc.world.getTime(),seen));}
         }
         var lines=dev.sangwoo.celestialfall.client.xchara.EraseClient.all(0);
-        String all=String.join(" | ",lines.stream().map(l->l.replaceAll("age [0-9.]+","").replaceAll("struck -?[0-9]+","").replaceAll("cube [-0-9.]+","cube up")).toList());
-        if(!all.equals(eraseState.get("slashes"))){eraseState.put("slashes",all);note("slashes here: "+(lines.isEmpty()?"none":String.join(" | ",lines)));}
-        // its cube here, a second at a time: its top, and whether this client stands its own player on it
+        String all=String.join(" | ",lines.stream().map(l->l.replaceAll("age [0-9.]+","").replaceAll("lift [-0-9.]+","lift up")).toList());
+        if(!all.equals(eraseState.get("calls"))){eraseState.put("calls",all);note("terrain deletes here: "+(lines.isEmpty()?"none":String.join(" | ",lines)));}
+        // its cubes here, a second at a time: their tops, and whether this client stands its own player on one
         if(!lines.isEmpty()&&mc.world.getTime()%20==0){
             double on=dev.sangwoo.celestialfall.xchara.EraseCubes.on(mc.player);
             note(String.format(Locale.ROOT,"  cubes here: %s; me at feet %.2f, on the ground %s, on a cube %s",
                 String.join(", ",dev.sangwoo.celestialfall.xchara.EraseCubes.cubes(mc.world).stream().map(c->String.format(Locale.ROOT,"%d,%d top %.2f",c.x0(),c.z0(),c.top())).toList()),
                 mc.player.getY(),mc.player.isOnGround(),Double.isNaN(on)?"no":String.format(Locale.ROOT,"top %.2f",on)));
         }
-        // the caster's own: where the middle of its screen aims the slash as it is thrown, and where that lands it
+        // the caster's own: where the middle of its screen points as it presses (the point sent with H)
         if(caster){
             var c=dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseOf(mc.player.getUuid());
-            if(c!=null&&Math.floor(c.age(0))==dev.sangwoo.celestialfall.xchara.EraseRules.SLASH&&!String.valueOf(c.id()).equals(eraseState.get("aimed"))){
+            if(c!=null&&!String.valueOf(c.id()).equals(eraseState.get("aimed"))){
                 eraseState.put("aimed",String.valueOf(c.id()));
-                var at=dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimPoint(mc,c);
-                double rise=dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseRise(c.id());
-                var to=dev.sangwoo.celestialfall.xchara.EraseGround.landing(mc.world,c.origin(),rise>=0?rise:dev.sangwoo.celestialfall.xchara.EraseRules.JUMP,at);
-                note(String.format(Locale.ROOT,"my slash thrown here: aimed at %.2f %.2f %.2f, lands at %.2f %.2f %.2f by this client",at.x,at.y,at.z,to.x,to.y,to.z));
+                var at=dev.sangwoo.celestialfall.client.xchara.ErasePress.aimPoint(mc);
+                note(String.format(Locale.ROOT,"my press here: aimed at %.2f %.2f %.2f by this client",at.x,at.y,at.z));
             }
         }
         var heard=dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD;
         if(heard.size()<eraseHeard)eraseHeard=0;
-        for(;eraseHeard<heard.size();eraseHeard++)if(heard.get(eraseHeard).contains("erase")||heard.get(eraseHeard).contains("hit 16"))note("  delete slash's sound: "+heard.get(eraseHeard));
+        for(;eraseHeard<heard.size();eraseHeard++)if(heard.get(eraseHeard).contains("erase")||heard.get(eraseHeard).contains("hit 16"))note("  terrain delete's sound: "+heard.get(eraseHeard));
         long ready=dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseReady(mc.player.getUuid());
-        Object was=flags.get("erase_ready");if(was==null||(Long)was!=ready){flags.put("erase_ready",ready);if(ready>0)note("my delete slash ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
+        Object was=flags.get("erase_ready");if(was==null||(Long)was!=ready){flags.put("erase_ready",ready);if(ready>0)note("my terrain delete ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
         if(!caster){
             boolean walk=Files.exists(OUT.resolve("walk"));
             if(walk!=eraseWalking){eraseWalking=walk;key(GLFW_KEY_A,walk);eraseWalkAt=mc.player.getPos();note((walk?"press":"release")+" A (walk to its left, asked by the caster)");}
-            else if(eraseWalking){var p=mc.player.getPos();note(String.format(Locale.ROOT,"walked %.3f blocks%s%s",Math.hypot(p.x-eraseWalkAt.x,p.z-eraseWalkAt.z),
-                dev.sangwoo.celestialfall.client.xchara.EraseClient.hides(mc.player)?" (deleted here)":"",CombatClient.actionLocked()?" (its actions locked)":""));eraseWalkAt=p;}
+            else if(eraseWalking){var p=mc.player.getPos();note(String.format(Locale.ROOT,"walked %.3f blocks, feet %.2f%s",Math.hypot(p.x-eraseWalkAt.x,p.z-eraseWalkAt.z),p.y,CombatClient.actionLocked()?" (its actions locked)":""));eraseWalkAt=p;}
         }
     }
     private final Map<UUID,String> cutState=new HashMap<>();private int cutHeard;

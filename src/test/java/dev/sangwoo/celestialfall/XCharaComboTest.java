@@ -30,41 +30,17 @@ class XCharaComboTest {
             // the heavier the swing the longer it takes to land
             assertTrue(blowAt(first,0)<=blowAt(first+1,0)&&blowAt(first+1,0)<blowAt(first+2,0)&&blowAt(first+2,0)<blowAt(first+3,0));
         }
-        // (2.121.0: 9 is the cleave, 2.124.0: 10 the jab: skills of the pipeline with no place in the combo; 2.133.0: 16 the
-        // delete slash, its last, in the place of 2.132.5's rain of knives' call)
-        assertFalse(valid(0));assertTrue(valid(9));assertTrue(valid(10));assertTrue(valid(11));assertTrue(valid(12));assertTrue(valid(13));assertTrue(valid(14));assertTrue(valid(15));assertTrue(valid(16));assertFalse(valid(17));assertEquals(0,blows(0));assertEquals(0,blows(17));
+        // (2.124.0: 10 is the jab, a skill of the pipeline with no place in the combo; 2.133.0: 16 the terrain delete, its
+        // last, in the place of 2.132.5's rain of knives' call; 9, the cleave's from 2.121.0, is gone)
+        assertFalse(valid(0));assertFalse(valid(9));assertTrue(valid(10));assertTrue(valid(11));assertTrue(valid(12));assertTrue(valid(13));assertTrue(valid(14));assertTrue(valid(15));assertTrue(valid(16));assertFalse(valid(17));assertEquals(0,blows(0));assertEquals(0,blows(17));
         assertFalse(plain(0));assertEquals(0,place(0));assertEquals(0,place(9));assertEquals(0,place(10));
     }
-    @Test void theCleaveIsASkillOfThePipelineNoHitOfTheCombo(){
-        // (2.121.0, user request: "R키는 패널을 누르면 들고 있던 검이 엄청 거대해지고 그걸 양손으로 잡고 덤블링 한 번 돌고 크게
-        // 내려찍는 스킬 맞추면 못 움직이는 1초 무력화")
-        assertEquals(9,CLEAVE);assertTrue(skill(CLEAVE));assertTrue(valid(CLEAVE));
+    @Test void theCleaveIsGone(){
+        // (2.133.0, user request: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해": the cleave, 9, R and then H with the hack on from
+        // 2.121.0, is no hit or skill any more; its place in the event's ready times is read past)
+        assertFalse(valid(9));assertFalse(skill(9));assertEquals(0,blows(9));assertEquals(0,cooldown(9));
         for(int hit=HACK_SLASH;hit<=LUNGE;hit++)assertFalse(skill(hit),"hit "+hit);
-        assertEquals(0,place(CLEAVE));assertFalse(last(CLEAVE));assertFalse(plain(CLEAVE));
-        // the combo starts over after it, with the hack on or off
-        assertEquals(HACK_SLASH,next(CLEAVE,false));assertEquals(SLASH,next(CLEAVE,true));
-        // one blow, after the press, the growing and the leap, while it holds them; it lets go before its motion is over
-        assertEquals(1,blows(CLEAVE));
-        assertTrue(CLEAVE_PRESS<CLEAVE_HELD&&CLEAVE_HELD<CLEAVE_GROWN&&CLEAVE_GROWN<=CLEAVE_RAISED&&CLEAVE_RAISED<blowAt(CLEAVE,0));
-        // (2.123.0: "검이 서서히 커지는 효과") the knife grows for over half a second from the press, so the blow is at 1.2 s
-        assertTrue(CLEAVE_GROWN-CLEAVE_PRESS>=12,"it grows slowly");assertEquals(24,blowAt(CLEAVE,0));
-        assertTrue(blowAt(CLEAVE,0)-CLEAVE_RAISED>=5&&blowAt(CLEAVE,0)<=24,"wound, then down: no leap (2.122.0)");
-        assertTrue(blowAt(CLEAVE,0)<HOLD[CLEAVE]&&HOLD[CLEAVE]<=LENGTH[CLEAVE]);
-        assertTrue(holding(CLEAVE,100,100)&&holding(CLEAVE,100,100+HOLD[CLEAVE]-1));assertFalse(holding(CLEAVE,100,100+HOLD[CLEAVE]));
-        // three seconds that they cannot move or act in (the user's: "무력화 시간을 3초로 늘려줘", a second in 2.121.0): the legs stopped wholly
-        assertEquals(60,CLEAVE_STUN);assertEquals(1,CLEAVE_SLOW,1e-9);
-        // unguardable, no throw, no stagger of the basic attack's (the incapacitation instead)
-        assertTrue(unblockable(CLEAVE));assertFalse(launches(CLEAVE,0));
-        assertEquals(500,staggerUntil(CLEAVE,0,476,500,2,6));
-        // heavier than any hit of the combo
-        assertTrue(damage(CLEAVE,0)>damage(LUNGE,0));assertEquals(damage(CLEAVE,0),total(CLEAVE),1e-6);
-        // a long lane ahead, as long as the grown knife; nothing behind
-        assertTrue(lane(CLEAVE,0,9.5,0,0,0));assertTrue(lane(CLEAVE,0,1,1.4,0,0));assertTrue(lane(CLEAVE,0,3,0,3.4,0));
-        assertFalse(lane(CLEAVE,0,9.8,0,0,0));assertFalse(lane(CLEAVE,0,3,1.7,0,0));assertFalse(lane(CLEAVE,0,-.5,0,0,0));assertFalse(lane(CLEAVE,0,3,0,3.8,0));
-        assertTrue(reach(CLEAVE,0)>reach(LUNGE,0)&&reach(CLEAVE,0)+2.5<=MAX_REACH+1e-9);
-        // its cooldown runs from its end; no combo is open after it and it is no break of one
-        assertEquals(100+LENGTH[CLEAVE]+CLEAVE_COOLDOWN,cleaveReady(100));assertEquals(240,CLEAVE_COOLDOWN);
-        assertEquals(-1,broken(CLEAVE,100,100000));
+        assertEquals(0,HOLD[9]);assertEquals(0,LENGTH[9]);
     }
     @Test void theJabIsTheOtherSkillOfThePipeline(){
         // (2.124.0, the user's video and words; "45초", "가드 불가", "13 (영상대로)", "8초동안 아무것도 못하고")
@@ -76,18 +52,17 @@ class XCharaComboTest {
         assertEquals(13,damage(JAB,0),1e-6);assertEquals(13,total(JAB),1e-6);
         assertEquals(160,JAB_STUN);assertEquals(1,JAB_SLOW,1e-9,"eight seconds, standing where they are");
         assertEquals(900,JAB_COOLDOWN);assertEquals(100+LENGTH[JAB]+JAB_COOLDOWN,jabReady(100),"45 s from its end");
-        assertEquals(JAB_COOLDOWN,cooldown(JAB));assertEquals(CLEAVE_COOLDOWN,cooldown(CLEAVE));assertEquals(0,cooldown(SLASH));
+        assertEquals(JAB_COOLDOWN,cooldown(JAB));assertEquals(0,cooldown(SLASH));
         assertTrue(unblockable(JAB));assertFalse(launches(JAB,0));
         assertEquals(500,staggerUntil(JAB,0,486,500,2,6),"no stagger of its own: the incapacitation holds them");
-        assertTrue(single(JAB),"a thrust at one");assertFalse(single(CLEAVE));assertFalse(single(LUNGE));
+        assertTrue(single(JAB),"a thrust at one");assertFalse(single(SLAM));assertFalse(single(LUNGE));
         // what the clients draw to, in order, all before the blow; it holds them through the blow and lets go before it is over
         assertTrue(JAB_LIT<JAB_TWIRL&&JAB_TWIRL<JAB_TWIRLED&&JAB_TWIRLED<JAB_DRAWN&&JAB_DRAWN<blowAt(JAB,0));
         assertTrue(blowAt(JAB,0)<HOLD[JAB]&&HOLD[JAB]<=LENGTH[JAB]);
         assertTrue(holding(JAB,100,100)&&holding(JAB,100,100+HOLD[JAB]-1));assertFalse(holding(JAB,100,100+HOLD[JAB]));
-        // a narrow lane ahead, shorter than the lunge's, no higher than a swing's (the cleave's reaches higher)
+        // a narrow lane ahead, shorter than the lunge's, no higher than a swing's
         assertTrue(lane(JAB,0,4.1,0,0,0));assertTrue(lane(JAB,0,1,.9,0,0));assertTrue(lane(JAB,0,2,0,2.7,0));
         assertFalse(lane(JAB,0,4.4,0,0,0));assertFalse(lane(JAB,0,2,1.2,0,0));assertFalse(lane(JAB,0,-.5,0,0,0));assertFalse(lane(JAB,0,2,0,3.0,0));
-        assertTrue(lane(CLEAVE,0,2,0,3.4,0),"the cleave's own height");
         assertTrue(reach(JAB,0)<reach(LUNGE,0)&&reach(JAB,0)+2.5<=MAX_REACH+1e-9);
         assertEquals(-1,broken(JAB,100,100000));
     }

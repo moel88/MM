@@ -51,8 +51,6 @@ public final class KnifeClient {
     private static final Map<UUID,Float> STOPPED=new HashMap<>();
     /** When each player's attack is ready again after its rest (the server's world time), as told. */
     private static final Map<UUID,Long> READY=new HashMap<>();
-    /** (2.121.0) When each player's cleave (R with the hack on) is ready again, as told. */
-    private static final Map<UUID,Long> CLEAVE_READY=new HashMap<>();
     /** (2.124.0) When each player's jab (R with the hack off) is ready again, as told. */
     private static final Map<UUID,Long> JAB_READY=new HashMap<>();
     /** (2.128.0) When each player's slam (G with the hack off) is ready again, as told. */
@@ -88,17 +86,13 @@ public final class KnifeClient {
     private static final Map<UUID,Long> KNIVES_READY=new HashMap<>();
     /** (2.131.0) The tick this player's small knives are ready again, as the server told it (0 if none). */
     public static long knivesReady(UUID id){return KNIVES_READY.getOrDefault(id,0L);}
-    /** (2.133.0) When each player's delete slash (H with the hack off) is ready again, as told. */
+    /** (2.133.0) When each player's terrain delete (H with the hack on) is ready again, as told. */
     private static final Map<UUID,Long> ERASE_READY=new HashMap<>();
-    /** (2.133.0) The tick this player's delete slash is ready again, as the server told it (0 if none). */
+    /** (2.133.0) The tick this player's terrain delete is ready again, as the server told it (0 if none). */
     public static long eraseReady(UUID id){return ERASE_READY.getOrDefault(id,0L);}
-    /** (2.133.0) How high each delete slash's user leaps (blocks), as told as it began (the server's: less under a roof). */
-    private static final Map<UUID,Float> ERASE_RISE=new HashMap<>();
-    /** (2.133.0) How high delete slash {@code id}'s user leaps (blocks; 0 if this client was not told). */
-    public static float eraseRise(UUID id){return ERASE_RISE.getOrDefault(id,0f);}
-    /** For the tests: as if told that delete slash {@code id}'s user leaps {@code rise} blocks and (NaN: not) that it stopped short {@code stoppedAt} ticks in. */
-    static void told(UUID id,float rise,float stoppedAt){ERASE_RISE.put(id,rise);if(Float.isNaN(stoppedAt))STOPPED.remove(id);else STOPPED.put(id,stoppedAt);}
-    /** (2.133.0) This player's latest delete slash this client still draws (in flight or stopped short, a little past its end while its knife goes out; its slash is EraseClient's once it has gone), or null. */
+    /** For the tests: as if told that skill cast {@code id} (NaN: did not) stopped short {@code stoppedAt} ticks in. */
+    static void told(UUID id,float stoppedAt){if(Float.isNaN(stoppedAt))STOPPED.remove(id);else STOPPED.put(id,stoppedAt);}
+    /** (2.133.0) This player's latest terrain delete press this client still draws (in flight or stopped short, a little past its end), or null: ErasePress's arm and panel (its grounds are EraseClient's). */
     public static StandClient.Cast eraseOf(UUID id){
         StandClient.Cast best=null;
         for(var c:SWINGS.values())if(c.caster().equals(id)&&XCharaCombo.erase(c.combo())&&c.age(0)<XCharaCombo.LENGTH[c.combo()]+10)best=c;
@@ -114,8 +108,6 @@ public final class KnifeClient {
     static final String SLAM_LIT_SOUND="xchara_slam_lit",SLAM_LEAP_SOUND="xchara_slam_leap",SLAM_LAND_SOUND="xchara_slam_land";static final int SLAM_SOUND_BEFORE=1;
     /** How loud the leap's sound is at the second spring, of what it is at the first (the video's second rush is some 6 dB under its first). */
     static final float SLAM_LEAP2_PART=.5f;
-    /** The cleave's sound (its own, played as it starts). */
-    static final String CLEAVE_SOUND="xchara_r";
     /**
      * (2.124.0) The jab's two sounds, the user's own out of their video (tools/xchara/extract_jab.py): the press's
      * ("띡") as it starts, and the thrust's, started JAB_SOUND_BEFORE ticks before the blow so that its onset (that far
@@ -146,8 +138,8 @@ public final class KnifeClient {
             int n=b.readVarInt();if(n<0||n>512||type>XCharaAttack.AIMED||combo>XCharaCombo.LAST||!Float.isFinite(yaw))return;
             var struck=new ArrayList<StandClient.Target>();
             for(int i=0;i<n;i++)struck.add(new StandClient.Target(b.readUuid(),b.readInt(),new Vec3d(b.readDouble(),b.readDouble(),b.readDouble())));
-            // (2.121.0) when the cleave is ready again (a 2.120 server sends none)
-            long cleave=b.readableBytes()>=8?b.readLong():0;
+            // (2.121.0) when the cleave was ready again (a 2.120 server sends none): gone in 2.133.0, read past
+            if(b.readableBytes()>=8)b.readLong();
             // (2.124.0) and the jab (a 2.123 server sends none)
             long jab=b.readableBytes()>=8?b.readLong():0;
             // (2.128.0) and the slam; and of one in flight how high it rises and where it comes down (a 2.127 server sends none)
@@ -162,11 +154,9 @@ public final class KnifeClient {
             long shot=b.readableBytes()>=8?b.readLong():0;
             // (2.131.0) and the small knives thrown (a 2.130 server sends none)
             long knives=b.readableBytes()>=8?b.readLong():0;
-            // (2.132.0) and the rain of knives (a 2.131 server sends none); 2.133.0: the delete slash, in its place
+            // (2.132.0) and the rain of knives (a 2.131 server sends none); 2.133.0: the terrain delete, in its place
             long erase=b.readableBytes()>=8?b.readLong():0;
-            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);CUTTER_READY.put(caster,cutter);SHOT_READY.put(caster,shot);KNIVES_READY.put(caster,knives);ERASE_READY.put(caster,erase);});
-            // (2.133.0) how high the delete slash's user leaps, in the slam's place (as it begins)
-            if(combo==XCharaCombo.ERASE&&type==XCharaAttack.HIT&&Float.isFinite(rise))mc.execute(()->ERASE_RISE.put(id,Math.max(0,Math.min((float)dev.sangwoo.celestialfall.xchara.EraseRules.JUMP,rise))));
+            mc.execute(()->{JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);CUTTER_READY.put(caster,cutter);SHOT_READY.put(caster,shot);KNIVES_READY.put(caster,knives);ERASE_READY.put(caster,erase);});
             if(combo==XCharaCombo.CUTTER_DASH&&type==XCharaAttack.HIT&&land!=null&&Double.isFinite(land.x)&&Double.isFinite(land.y)&&Double.isFinite(land.z)
                 &&land.squaredDistanceTo(at)<=(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4)*(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4))mc.execute(()->DASHES.put(id,land));
             if(combo==XCharaCombo.SLAM)mc.execute(()->{
@@ -225,13 +215,11 @@ public final class KnifeClient {
         var dim=mc.world.getRegistryKey().getValue();
         SWINGS.values().removeIf(c->!c.dimension().equals(dim)||c.age(0)>=KnifeCombo.life(c.combo())*20||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.keySet().retainAll(SWINGS.keySet());VOICES.keySet().retainAll(SWINGS.keySet());
-        SLAMS.keySet().retainAll(SWINGS.keySet());ERASE_RISE.keySet().retainAll(SWINGS.keySet());DASHES.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());BladeShot.keep(SWINGS.keySet());
+        SLAMS.keySet().retainAll(SWINGS.keySet());DASHES.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());BladeShot.keep(SWINGS.keySet());
         // (2.128.0) up in the air of their own slam: where the middle of the screen points, told every tick until the dive's word comes
         if(mc.player!=null)OverwriteSlam.tellAim(mc);
         // (2.130.0) and while their own knives shot are not all gone: each goes at where they look as it is let go
         if(mc.player!=null)BladeShot.tellAim(mc);
-        // (2.133.0) and up in the air of their own delete slash, until it is thrown: the ground it lands on is where they look
-        if(mc.player!=null)EraseSlash.tellAim(mc);
         // held down, the attack key keeps asking (the server keeps a press made a little early for the next hit)
         if(mc.player!=null&&mc.currentScreen==null&&mc.options.attackKey.isPressed()&&attacks(mc.player))punch();
     }
@@ -242,7 +230,7 @@ public final class KnifeClient {
     public static void clear(){
         for(var v:VOICES.values())v.fade();
         for(var l:MORE_VOICES.values())for(var v:l)v.fade();
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();KNIVES_READY.clear();ERASE_READY.clear();ERASE_RISE.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();KNIVES_READY.clear();ERASE_READY.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -294,12 +282,11 @@ public final class KnifeClient {
             MORE_VOICES.put(cast.id(),later);
             return;
         }
-        // (2.133.0) the delete slash: sounds the game has, at their moments (EraseSlash.CUES: the slam's knife lighting and
-        // its leap, the knife's swing, the slam's landing boom and the double's wall breaking as the slash goes); one told
-        // of after a moment has none of that moment's sound. Whom its slash deletes sound of themselves (EraseClient).
+        // (2.133.0) the terrain delete's press: the panel's click as the hand taps it (ErasePress.CUES); one told of after
+        // its moment has none of it. Its grounds sound of themselves (EraseClient).
         if(XCharaCombo.erase(cast.combo())){
             int age=(int)Math.floor(cast.age(0));var later=new ArrayList<XCharaClient.Voice>();
-            for(var cue:EraseSlash.CUES){
+            for(var cue:ErasePress.CUES){
                 int wait=(Integer)cue[1]-age;if(wait<-2)continue;
                 var v=XCharaClient.Voice.quieter(dev.sangwoo.celestialfall.CelestialFall.id((String)cue[0]),loud,(Float)cue[2]);
                 if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
@@ -309,7 +296,7 @@ public final class KnifeClient {
             MORE_VOICES.put(cast.id(),later);
             return;
         }
-        String sound=cast.combo()==XCharaCombo.KNIVES?CorruptionKnives.SOUND:XCharaCombo.cutter(cast.combo())?CUTTER_SOUND:jab?JAB_SOUND:XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
+        String sound=cast.combo()==XCharaCombo.KNIVES?CorruptionKnives.SOUND:XCharaCombo.cutter(cast.combo())?CUTTER_SOUND:jab?JAB_SOUND:SOUND;
         var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(sound),loud);
         if(v.full()<=.01f)return;
         // (2.124.0) the jab's press, as it starts (told of late, not at all: it is over)
@@ -369,10 +356,8 @@ public final class KnifeClient {
     }
     /** The tick this player's attack is ready again after its rest, as the server told it (0 if none). */
     public static long ready(UUID id){return READY.getOrDefault(id,0L);}
-    /** (2.121.0) The tick this player's cleave is ready again, as the server told it (0 if none). */
-    public static long cleaveReady(UUID id){return CLEAVE_READY.getOrDefault(id,0L);}
-    /** (2.121.0) This player's latest cleave this client still draws (in flight or stopped short), or null: GiantCleave's knife's size, press and panel. */
-    public static StandClient.Cast cleaveOf(UUID id){return skillOf(id,XCharaCombo.CLEAVE);}
+    /** How far into cast {@code c} it stopped short (seconds), or NaN if it did not. */
+    static float stoppedAt(StandClient.Cast c){float u=until(c.id());return u==Float.MAX_VALUE?Float.NaN:u;}
     /** (2.124.0) This player's latest jab this client still draws (in flight or stopped short), or null: CorruptionJab's knife's look and its turn in the hand. */
     public static StandClient.Cast jabOf(UUID id){return skillOf(id,XCharaCombo.JAB);}
     private static StandClient.Cast skillOf(UUID id,int combo){
@@ -399,7 +384,7 @@ public final class KnifeClient {
     /** (2.124.0) The tick this player's jab is ready again, as the server told it (0 if none). */
     public static long jabReady(UUID id){return JAB_READY.getOrDefault(id,0L);}
     /** Forgets this player's rest (their character is not X Chara now: the server forgot it too, StandManager). */
-    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);CUTTER_READY.remove(id);SHOT_READY.remove(id);KNIVES_READY.remove(id);ERASE_READY.remove(id);}
+    public static void forget(UUID id){READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);CUTTER_READY.remove(id);SHOT_READY.remove(id);KNIVES_READY.remove(id);ERASE_READY.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (XCharaCombo.HOLD): their keys do not walk them. The
      * server holds them as long (XCharaAttack.busy).

@@ -24,13 +24,13 @@ class EdgeCutterTest {
     @Test void theClipsAreTheServers(){
         assertEquals(LENGTH[CUTTER]/20f,EdgeCutter.CLIP.length(),1e-4);assertEquals(LENGTH[CUTTER_DASH]/20f,EdgeCutter.CLIP_DASH.length(),1e-4);
         assertSame(EdgeCutter.CLIP,KnifeCombo.clipOf(CUTTER));assertSame(EdgeCutter.CLIP_DASH,KnifeCombo.clipOf(CUTTER_DASH));
-        assertSame(CorruptionJab.CLIP,KnifeCombo.clipOf(JAB),"the jab is still the jab");assertSame(GiantCleave.CLIP,KnifeCombo.clipOf(CLEAVE));assertSame(OverwriteSlam.CLIP,KnifeCombo.clipOf(SLAM));
+        assertSame(CorruptionJab.CLIP,KnifeCombo.clipOf(JAB),"the jab is still the jab");assertSame(ErasePress.CLIP,KnifeCombo.clipOf(ERASE));assertSame(OverwriteSlam.CLIP,KnifeCombo.clipOf(SLAM));
         assertEquals(EdgeCutter.LIFE,KnifeCombo.life(CUTTER),1e-6);assertEquals(EdgeCutter.LIFE,KnifeCombo.life(CUTTER_DASH),1e-6);
         assertTrue(EdgeCutter.LIFE>=lastBlow(CUTTER_DASH)/20f+SlashFx.SWIRL_LIFE,"what the last cut leaves is drawn until it is gone");
         assertEquals(CutterRules.LEAD/20f,EdgeCutter.LEAD,1e-6);
         // its sound starts so that its first rush is on the first cut
         assertEquals(blowAt(CUTTER,0)-KnifeClient.CUTTER_SOUND_BEFORE,KnifeClient.soundAt(CUTTER));assertEquals(blowAt(CUTTER_DASH,0)-KnifeClient.CUTTER_SOUND_BEFORE,KnifeClient.soundAt(CUTTER_DASH));
-        assertEquals(blowAt(JAB,0)-KnifeClient.JAB_SOUND_BEFORE,KnifeClient.soundAt(JAB));assertEquals(0,KnifeClient.soundAt(CLEAVE));
+        assertEquals(blowAt(JAB,0)-KnifeClient.JAB_SOUND_BEFORE,KnifeClient.soundAt(JAB));assertEquals(0,KnifeClient.soundAt(ERASE));
     }
     @Test void theyBeginAndEndInTheStanceAndNothingSteps(){
         for(Anim clip:new Anim[]{EdgeCutter.CLIP,EdgeCutter.CLIP_DASH}){

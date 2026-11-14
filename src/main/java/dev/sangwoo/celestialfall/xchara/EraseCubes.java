@@ -10,18 +10,18 @@ import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.World;
 
 /**
- * The cubes of ground X Chara's delete slash lifts (2.133.0, EraseRules), as something to stand on: no block (the map is
+ * The cubes of ground X Chara's terrain delete lifts (2.133.0, EraseRules), as something to stand on: no block (the map is
  * not changed), but every body moving near one, on the server and on each client, meets it as it meets a block (their
  * moves are kept out of it and they stand on its top: EraseCubeCollisionMixin), and one standing on it is carried up as
  * it rises ({@link #carry}: EraseCarryMixin; the server carries everything but players, each client its own player).
- * The server knows its cubes from its slashes (XCharaErase), each client from what it was told (EraseClient), each on
- * its own clock: both of them ticks after the slash struck, a whole number for the tick being run.
+ * The server knows its cubes from its calls (XCharaErase), each client from what it was told (EraseClient), each on
+ * its own clock: both of them ticks after the grounds were marked, a whole number for the tick being run.
  */
 public final class EraseCubes {
     private EraseCubes(){}
-    /** One cube as one side knows it now: its ground's corner, its ground's top where it struck, and ticks since it struck (this tick). */
+    /** One cube as one side knows it now: its ground's corner, its ground's top, and ticks since it was marked (this tick). */
     public record Cube(int x0,int z0,double top,long t){
-        /** Its top {@code tt} ticks after it struck (NaN once it has burst). */
+        /** Its top {@code tt} ticks after it was marked (NaN once it has burst). */
         public double topAt(double tt){double l=EraseRules.lift(tt);return Double.isNaN(l)?Double.NaN:top+l;}
         /** Its top now. */
         public double top(){return topAt(t);}

@@ -196,9 +196,6 @@ public final class BotandCamera {
         // (2.129.0) and their three cuts' going forward
         var cutting=dev.sangwoo.celestialfall.client.xchara.EdgeCutter.offset(mc.player.getUuid(),delta);
         if(cutting!=null)eye=eye.add(cutting);
-        // (2.133.0) and their delete slash's leap
-        var leaping=dev.sangwoo.celestialfall.client.xchara.EraseSlash.offset(mc.player.getUuid(),delta);
-        if(leaping!=null)eye=eye.add(leaping);
         if(STATE.firstPerson())return new CinematicDirector.Pose(eye,STATE.yaw,STATE.pitch,0);
         // (2.82.0) Lee So-sang's H draws her body up over where she is (the leap, the hop's arc): the camera rises with most of it
         double lift=dev.sangwoo.celestialfall.client.isosang.IsosangClient.lift(mc.player.getUuid(),delta);
@@ -214,7 +211,7 @@ public final class BotandCamera {
         lastClipFrame=frameId;
         Vec3d camera=eye.add(desired.subtract(eye).multiply(ratio));
         // Lee So-sang's finisher draws its user's camera back for the giant cut (2.77.1), as far as nothing is in the way
-        double pull=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraPull(delta)+dev.sangwoo.celestialfall.client.xchara.GiantCleave.cameraPull(delta);
+        double pull=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraPull(delta);
         if(pull>1e-3&&STATE.distance>.001){
             Vec3d back=desired.subtract(eye).normalize(),far=camera.add(back.multiply(pull));
             camera=camera.add(back.multiply(pull*clearFraction(camera,far)));
@@ -223,11 +220,10 @@ public final class BotandCamera {
         // 카메라 무빙을 영상 처럼 바꿔줘")
         camera=dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraHold(camera,delta);
         // (2.97.0) her Y: round to her side, low behind her, back to her (the user's videos of it)
-        // (2.121.0) X Chara's cleave: turned onto its leap and its wheel from out to their side
-        return dev.sangwoo.celestialfall.client.xchara.GiantCleave.camera(dev.sangwoo.celestialfall.client.isosang.IsosangClient.cageCamera(new CinematicDirector.Pose(camera,STATE.yaw,STATE.pitch,0),delta),delta);
+        return dev.sangwoo.celestialfall.client.isosang.IsosangClient.cageCamera(new CinematicDirector.Pose(camera,STATE.yaw,STATE.pitch,0),delta);
     }
     /** How far right of the player the camera stands (blocks): the shift lock's, or (2.93.0) through Lee So-sang's formation its own (IsosangClient.cameraShoulder). */
-    public static double shoulder(float delta){return Math.max(Math.max(STATE.shoulder,dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraShoulder(delta)),dev.sangwoo.celestialfall.client.xchara.GiantCleave.cameraShoulder(delta));}
+    public static double shoulder(float delta){return Math.max(STATE.shoulder,dev.sangwoo.celestialfall.client.isosang.IsosangClient.cameraShoulder(delta));}
     /** Swept camera volume rather than one centre ray: corners stay clear of walls. */
     private static double clearFraction(Vec3d eye,Vec3d end) {
         var mc=MinecraftClient.getInstance();double fraction=1,length=eye.distanceTo(end);

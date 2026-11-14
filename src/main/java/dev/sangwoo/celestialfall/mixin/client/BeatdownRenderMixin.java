@@ -35,22 +35,18 @@ public abstract class BeatdownRenderMixin {
         var slammed=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(e.getUuid(),delta);if(slammed!=null)ci.setReturnValue(ci.getReturnValue().add(slammed));
         // (2.129.0) X Chara's three cuts going forward first: drawn along the way while they stand where they began
         var cutting=dev.sangwoo.celestialfall.client.xchara.EdgeCutter.offset(e.getUuid(),delta);if(cutting!=null)ci.setReturnValue(ci.getReturnValue().add(cutting));
-        // (2.133.0) X Chara's delete slash: its user is drawn up in the air of its leap over where they stand
-        var leaping=dev.sangwoo.celestialfall.client.xchara.EraseSlash.offset(e.getUuid(),delta);if(leaping!=null)ci.setReturnValue(ci.getReturnValue().add(leaping));
     }
     /** No names over anyone's head while this client's camera is a beatdown's cutscene's (2.66.0: its close shots had the one struck's name fill the frame), as its HUD is hidden. */
     @Inject(method="render(Lnet/minecraft/entity/Entity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$beatdownNames(Entity e,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
         if(StandBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null)ci.cancel();
-        // (2.127.0) nor over a body drawn again as X Chara's pull's flat silhouette (2.133.0: or the delete slash's)
+        // (2.127.0) nor over a body drawn again as X Chara's pull's flat silhouette
         else if(dev.sangwoo.celestialfall.client.xchara.PullClient.silhouetting())ci.cancel();
     }
     @Inject(method="shouldRender",at=@At("HEAD"),cancellable=true)
     private void botand$beatdownSeen(Entity e,Frustum frustum,double x,double y,double z,CallbackInfoReturnable<Boolean> ci){
         // (2.66.0: not drawn while its shot is from their own eyes)
         if(StandBeatdown.hidden(e)){ci.setReturnValue(false);return;}
-        // (2.133.0) X Chara's delete slash: whom it deleted is gone from sight for half a second (its flat silhouettes are drawn again, EraseClient)
-        if(dev.sangwoo.celestialfall.client.xchara.EraseClient.hides(e)){ci.setReturnValue(false);return;}
         // (2.83.0) Lee So-sang's G's own space: nobody else is in it (GStage)
         if(dev.sangwoo.celestialfall.client.isosang.GStage.hides(e)){ci.setReturnValue(false);return;}
         // (2.112.0) X Chara's G's strange space: only its two in it, drawn where it shows them

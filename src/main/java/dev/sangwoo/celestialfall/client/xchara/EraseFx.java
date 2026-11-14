@@ -1,7 +1,6 @@
 package dev.sangwoo.celestialfall.client.xchara;
 
 import dev.sangwoo.celestialfall.client.EffectMesh;
-import dev.sangwoo.celestialfall.client.KagenoFire;
 import dev.sangwoo.celestialfall.client.kageno.Ease;
 import dev.sangwoo.celestialfall.client.kageno.Fx;
 import dev.sangwoo.celestialfall.client.kageno.FxLib;
@@ -17,30 +16,25 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 /**
- * X Chara's delete slash once it is thrown, drawn (2.133.0; EraseClient's casts, EraseZone's passes; the server's
- * XCharaErase, EraseRules). Everything of how it looks is mine but what the user asked for (an upright slash thrown
- * once that stands in the ground, the ten by ten it hits deleted as one piece, a ten-block cube of it rising and bursting
- * in a glitch, the ground back ten seconds on); everything is a function of the slash's own clock (ticks since it was
- * thrown), of where it went and of its seed, the same on every client.
+ * X Chara's terrain delete once its grounds are marked, drawn (2.133.0; EraseClient's casts, EraseZone's passes; the
+ * server's XCharaErase, EraseRules). Everything of how it looks is mine but what the user asked for (a giant "!!!" over
+ * the ground looked at and a "!!!" over each of the others, the ground rising as a cube ten blocks each way, glitching as
+ * one and bursting, the ground back ten seconds on); everything is a function of the call's own clock (ticks since the
+ * mark), of where its grounds are and of their seeds, the same on every client.
  * <ul>
- * <li>The slash ({@link #slash}, the glitch pass, KagenoFire.glitchRibbon style 2): a crescent in the plane the knife
- * came down in (their choice "내려찍는 면 그대로": seen from the side a crescent, from behind a thin upright blade; turned
- * {@link #ROLL} about its way so a little of its face shows behind it), its point leading, flying from the knife to the
- * ground with copies of itself behind; it drives into the ground ({@link #PLUNGE}) and stands there, its white edge
- * cooling, until it is eaten into pixels.</li>
- * <li>Where it lands ({@link #impact}): a flash, a ring along the ground, the ten by ten marked bright ({@link #square}),
- * pieces of the ground flung, pixels thrown up.</li>
+ * <li>The "!!!" ({@link #marks}, G's own, SwordDance.bangs): over the ground looked at a giant one ({@link #GIANT}), over
+ * the others one each (over the head of whom it is under, where they stood), each ground's ten by ten marked with
+ * crawling dashes ({@link #square}) until it rises, EraseRules.WARN on.</li>
+ * <li>As it breaks free ({@link #breaksFree}): a ring along the ground, a flash of its edges, pieces of the ground flung.</li>
  * <li>The cube ({@link #cube}, the blocks of that ground drawn as they are, rising with EraseRules.lift; where there is no
- * block, a dark void): glitching as one piece ({@link #tension}: a little as it rises, more and more toward its burst):
- * slices of it slipping aside ({@link #slice}), the whole of it shaking, for a frame now and then its blocks gone to a
- * dark void ({@link #flick}), its edges glowing purple and splitting red and cyan, bands of light running up its sides,
- * pixels of data flickering on it and, at the last, peeling off it.</li>
+ * block, the nearest of its column's): glitching as one piece ({@link #tension}: a little as it rises, more and more
+ * toward its burst): slices of it slipping aside ({@link #slice}), the whole of it shaking, for a frame now and then its
+ * blocks gone to a dark void ({@link #flick}), its edges glowing purple and splitting red and cyan, bands of light running
+ * up its sides, pixels of data flickering on it and, at the last, peeling off it.</li>
  * <li>Its burst ({@link #burst}): its blocks flung out in pieces ({@link #fragments}), pixels everywhere, purple spikes,
  * a white flash, rings in the air and along the ground.</li>
  * <li>Where it was ({@link #voidPlane}): a dark void on the ground edged in purple with a grid and flickering static,
  * from as it clears the ground until EraseRules.BACK, when a line of light sweeps over it and the ground is back.</li>
- * <li>Whom it deletes ({@link #victims}): a burst on them; while they are gone an outline of where they stand, blinking;
- * their pixels gathering back; torn bars across them as they are back.</li>
  * </ul>
  */
 final class EraseFx {
@@ -50,81 +44,34 @@ final class EraseFx {
     /** The void where there is no ground: its purple edge and its dark. */
     static final int VOID_EDGE=0x34106a,VOID=0x0b0418;
     private static double h(int j,int seed,int salt){return GlitchFx.h(j,0,seed,salt);}
-    /** Its moments (seconds after it struck): the cube rises, it bursts, the ground is back. */
+    /** Its moments (seconds after the mark): the cubes rise, they burst, the ground is back. */
     static final float RISE0=EraseRules.RISE_FROM/20f,BURST_S=EraseRules.BURST/20f,BACK_S=EraseRules.BACK/20f;
     /** How long it is drawn after the ground is back, and after it was cut short (seconds). */
     static final float AFTER=.6f,CUT_LIFE=.6f;
     /** Cut short: how fast what is left of it goes (ticks). */
     static final float CUT_FADE=5;
+    /** How much of call {@code c} is left {@code age} ticks after the mark (cut short, it goes over CUT_FADE). */
+    static float kept(EraseClient.Call c,float age){return c.cut==Float.MAX_VALUE?1:1-Ease.smooth(age,c.cut,c.cut+CUT_FADE);}
 
-    // ───────────────────────────── the slash ─────────────────────────────
+    // ───────────────────────────── the "!!!" ─────────────────────────────
 
-    /**
-     * The crescent: from its middle to a horn (blocks), how far its point leads its horns, how deep it is at its middle,
-     * how far it is turned about its way (degrees), how far it drives into the ground and over how many ticks, how fast it
-     * grows as it leaves the knife (ticks), how many points along it.
-     */
-    static final double HALF=4.8,BOW=2.4,THICK=1.6,ROLL=14,PLUNGE=1.6;
-    static final float PLUNGE_T=1.5f,GROW_T=2f;
-    static final int N=33;
-    private static float[] along(){float[] a=new float[N];for(int i=0;i<N;i++)a[i]=i/(float)(N-1);return a;}
-    private static final float[] ALONG=along();
-    /** Its copies behind it as it flies: how many, how far behind each (ticks), how strongly each shows. */
-    static final int COPIES=3;static final float COPY_LAG=.8f;static final float[] COPY_ALPHA={.42f,.24f,.12f};
-    /** Standing in the ground: its white cooling over this long, eaten into pixels from when to when (seconds after it struck). */
-    static final float COOL1=.25f,EAT0=.25f,EAT1=.6f;
-    /**
-     * Its frame from the knife {@code from} to the ground {@code to} (facing {@code yaw}, for a straight drop): its way
-     * (unit, the way it flies), the upright of its plane (world up turned ROLL about its heading: the crescent stands
-     * upright, horns up and down, however steeply it flies down, so it never sweeps back at its user's camera), the
-     * plane's side, and its heading (level, the way it is thrown: its cutting edge leads that way).
-     */
-    static Vec3d[] frame(Vec3d from,Vec3d to,float yaw){
-        Vec3d d=to.subtract(from);Vec3d way=d.lengthSquared()<1e-6?new Vec3d(0,-1,0):d.normalize();
-        Vec3d head=new Vec3d(d.x,0,d.z);if(head.lengthSquared()<1e-6)head=Vec3d.fromPolar(0,yaw);head=head.normalize();
-        Vec3d side=head.crossProduct(new Vec3d(0,1,0)).normalize();
-        double r=Math.toRadians(ROLL);
-        Vec3d up2=new Vec3d(0,1,0).multiply(Math.cos(r)).add(side.multiply(Math.sin(r))).normalize();
-        return new Vec3d[]{way,up2,head.crossProduct(up2).normalize(),head};
+    /** The giant "!!!" over the ground looked at, this many times G's (the user's "거대한 !!!"), and how high over its ground's top its middle is; a "!!!" over the others: how high over its middle, or over the head of whom it is under (blocks). */
+    static final double GIANT=4,GIANT_OVER=5.2,BANG_OVER=2.6,OVER_HEAD=.9;
+    /** Where ground {@code g}'s "!!!" shows: over the head of {@code under} (whom it is under, null: none) where they stand now; else over its middle, the giant one higher. */
+    static Vec3d bangOver(EraseClient.Ground g,LivingEntity under){
+        if(under!=null)return new Vec3d(under.getX(),under.getY()+under.getHeight()+OVER_HEAD,under.getZ());
+        return g.middle().add(0,g.looked()?GIANT_OVER:BANG_OVER,0);
     }
-    /** How much of its way it has flown {@code age} ticks after it was thrown (0 to 1): a little faster as it goes. */
-    static double flown(float age,int fly){
-        if(age<=0)return 0;if(age>=fly)return 1;
-        double u=age/fly;return .65*u+.35*u*u;
-    }
-    /** Where its point is {@code age} ticks after it was thrown: along its way from the knife, then driven into the ground. */
-    static Vec3d tip(EraseClient.Strike s,float age){
-        if(age<s.fly)return s.from.add(s.to.subtract(s.from).multiply(flown(age,s.fly)));
-        return s.to.add(s.way.multiply(PLUNGE*Ease.out(age-s.fly,0,PLUNGE_T)));
-    }
-    /** How grown it is {@code age} ticks after it was thrown (it leaves the knife small). */
-    static double grown(float age){return .3+.7*Ease.out(age,0,GROW_T);}
-    /** Its edges with its point at {@code tip}, grown {@code g}: {inner, outer} (the outer its cutting edge, leading). */
-    static Vec3d[][] crescent(EraseClient.Strike s,Vec3d tip,double g){
-        Vec3d c=tip.subtract(s.head.multiply(BOW*g));Vec3d[] in=new Vec3d[N],out=new Vec3d[N];
-        for(int i=0;i<N;i++){
-            double u=-1+2.0*i/(N-1),w=1-u*u;
-            out[i]=c.add(s.upright.multiply(HALF*g*u)).add(s.head.multiply(BOW*g*w));
-            in[i]=c.add(s.upright.multiply(HALF*g*u*.97)).add(s.head.multiply(BOW*g*w-THICK*g*Math.pow(w,.7)));
+    /** How much the "!!!" and the marked ground show {@code age} ticks after the mark: from it until the ground rises, gone over the few ticks round that. */
+    static float marked(float age){return age<0?0:1-Ease.smooth(age,EraseRules.WARN-1,EraseRules.WARN+3);}
+    /** The "!!!" over each ground and its ten by ten marked on the ground, {@code age} ticks after the mark. */
+    static void marks(Fx c,EraseClient.Call call,EffectMesh m,boolean light,float age){
+        float shown=marked(age)*kept(call,age);if(shown<=0)return;
+        float sec=age/20f;
+        for(var g:call.grounds){
+            square(m,g.x0,g.z0,g.top,sec,shown*Ease.smooth(age,0,1.5f),light,c.camera,g.looked());
+            SwordDance.bangs(m,c.camera,g.bang,age,shown,light,g.looked()?GIANT:1);
         }
-        return new Vec3d[][]{in,out};
-    }
-    /** How strongly what is left of it shows {@code age} ticks in (cut short: gone over CUT_FADE ticks). */
-    static float kept(EraseClient.Strike s,float age){return s.cut==Float.MAX_VALUE?1:1-Ease.smooth(age,s.cut,s.cut+CUT_FADE);}
-    /** The slash (the glitch pass): its copies behind it as it flies, and itself, flying and then standing in the ground until it is eaten. */
-    static void slash(Fx c){
-        var s=EraseClient.of(c.cast);if(s==null)return;
-        float age=c.age,since=(age-s.fly)/20f,fade=kept(s,age);
-        if(age<0||since>=EAT1+.02f||fade<=0)return;
-        int seed=s.seed&15;
-        float eat=Ease.smooth(since,EAT0,EAT1),cool=.6f*Ease.smooth(since,0,COOL1);
-        if(age<s.fly+1)for(int k=1;k<=COPIES;k++){
-            float a=age-COPY_LAG*k;if(a<0)continue;
-            var cr=crescent(s,tip(s,Math.min(a,s.fly)),grown(a));
-            KagenoFire.glitchRibbon(cr[0],cr[1],ALONG,N,2,(seed+k*5)&15,Math.min(1,.3f+.2f*k),.4f,COPY_ALPHA[k-1]*fade);
-        }
-        var cr=crescent(s,tip(s,age),grown(age));
-        KagenoFire.glitchRibbon(cr[0],cr[1],ALONG,N,2,seed,eat,cool,fade);
     }
 
     // ───────────────────────────── lines ─────────────────────────────
@@ -175,26 +122,21 @@ final class EraseFx {
             }
         }
     }
-    /** How long where it lands flashes (seconds after it struck). */
-    static final float IMPACT=.7f;
-    /** Where it lands, {@code sec} seconds after it struck: a flash, a ring along the ground, its ground marked bright until the cube rises, pixels thrown up. */
-    static void impact(Fx c,EraseClient.Strike s,EffectMesh m,boolean light,float sec){
-        if(sec<0||sec>=RISE0+.2f)return;
-        Vec3d at=s.to;float near=GlitchFx.near(at.add(0,1,0),c.camera);
-        if(light&&near>0&&sec<IMPACT){
-            if(sec<.16f)m.star(at.add(0,.6,0),1.4,WHITE,.85f*Ease.smooth(sec,0,.015f)*(1-sec/.16f)*near);
-            m.softDisc(at.add(0,.8,0),4.5,NEON,.3f*Ease.smooth(sec,0,.02f)*(1-Ease.smooth(sec,.08f,.6f))*near);
-        }
+    /** How long the ground breaking free flashes (seconds after it begins to rise). */
+    static final float FREE=.7f;
+    /** Ground {@code g} breaking free {@code sec} seconds after it begins to rise: a ring along the ground, a flash of its edges, pixels thrown up off it. */
+    static void breaksFree(Fx c,EraseClient.Ground g,EffectMesh m,boolean light,float sec){
+        if(sec<0||sec>=FREE)return;
+        Vec3d at=g.middle();float near=GlitchFx.near(at.add(0,1,0),c.camera);
+        if(light&&near>0)m.softDisc(at.add(0,.8,0),4.5,NEON,.3f*Ease.smooth(sec,0,.02f)*(1-Ease.smooth(sec,.08f,.6f))*near);
         float r=sec/.55f;
-        if(r<1){double rad=1+9*Ease.out(sec,0,.55f);
+        if(r<1){double rad=6+7*Ease.out(sec,0,.55f);
             if(light)FxLib.ring(m,at.add(0,.08,0),rad,.7,NEON,.45f*(1-r));else FxLib.ring(m,at.add(0,.08,0),rad,.25,PURPLE,.8f*(1-r));}
-        // the ground marked bright, handing over to the cube as it rises
-        float a=Ease.smooth(sec,0,.03f)*(1-Ease.smooth(sec,RISE0-.05f,RISE0+.15f));
-        square(m,s.x0,s.z0,s.top,sec,a,light,c.camera,false);
-        // pixels thrown up off its ground
+        // its edges flash as it lets go of the ground
+        square(m,g.x0,g.z0,g.top,sec,1-Ease.smooth(sec,.1f,.5f),light,c.camera,false);
         for(int k=0;k<6;k++){
-            Vec3d p=new Vec3d(s.x0+1.5+7*h(k,s.seed,11),s.top+.2,s.z0+1.5+7*h(k,s.seed,12));
-            GlitchFx.pixels(m,p,new Vec3d(0,1,0),.6,7,.08,10,s.seed+k*31,sec-.02f*k,light,c.camera);
+            Vec3d p=new Vec3d(g.x0+1.5+7*h(k,g.seed,11),g.top+.2,g.z0+1.5+7*h(k,g.seed,12));
+            GlitchFx.pixels(m,p,new Vec3d(0,1,0),.6,7,.08,10,g.seed+k*31,sec-.02f*k,light,c.camera);
         }
     }
 
@@ -206,10 +148,10 @@ final class EraseFx {
         Faces(int n,int base){this.n=n;this.base=base;dir=new byte[n];x=new byte[n];y=new byte[n];z=new byte[n];state=new BlockState[n];}
     }
     static final Direction[] DIRS={Direction.UP,Direction.DOWN,Direction.NORTH,Direction.SOUTH,Direction.WEST,Direction.EAST};
-    /** The world y of the lowest blocks of strike {@code s}'s cube: its ground's top block and the nine under it. */
-    static int base(EraseClient.Strike s){return (int)Math.ceil(s.top-1e-6)-EraseRules.SIDE;}
-    /** The faces of strike {@code s}'s cube, found from {@code world} as it is (its outside only: what shows). */
-    static Faces faces(EraseClient.Strike s,World world){
+    /** The world y of the lowest blocks of ground {@code s}'s cube: its ground's top block and the nine under it. */
+    static int base(EraseClient.Ground s){return (int)Math.ceil(s.top-1e-6)-EraseRules.SIDE;}
+    /** The faces of ground {@code s}'s cube, found from {@code world} as it is (its outside only: what shows). */
+    static Faces faces(EraseClient.Ground s,World world){
         int S=EraseRules.SIDE,base=base(s);
         var dirs=new ArrayList<int[]>();var states=new ArrayList<BlockState>();
         var pos=new BlockPos.Mutable();
@@ -252,7 +194,7 @@ final class EraseFx {
         return null;
     }
     /**
-     * How hard it glitches {@code tr} ticks after it struck (0 to 1): a little as it rises out of the ground, a trace
+     * How hard it glitches {@code tr} ticks after the mark (0 to 1): a little as it rises out of the ground, a trace
      * as it waits, more and more over its last five seconds.
      */
     static float tension(float tr){
@@ -261,7 +203,7 @@ final class EraseFx {
         float ramp=.06f+.94f*Ease.in(sec,BURST_S-5f,BURST_S);
         return Math.max(rising,ramp);
     }
-    /** How far layer {@code layer} of it (from its bottom) slips aside {@code sec} seconds after it struck: in steps of a twelfth of a second, now and then a few layers together. */
+    /** How far layer {@code layer} of it (from its bottom) slips aside {@code sec} seconds after the mark: in steps of a twelfth of a second, now and then a few layers together. */
     static Vec3d slice(int layer,float sec,int seed,float tension){
         int step=(int)Math.floor(sec*12);
         if(h(step,seed,91)>.07+.4*tension)return Vec3d.ZERO;
@@ -281,15 +223,15 @@ final class EraseFx {
         int step=(int)Math.floor(sec*20);
         return h(step,seed,99)<.006+.11*tension*tension;
     }
-    /** Where its least corner is drawn {@code tr} ticks after it struck (null: there is none now). */
-    static Vec3d corner(EraseClient.Strike s,float tr,Vec3d jit){
+    /** Where its least corner is drawn {@code tr} ticks after the mark (null: there is none now). */
+    static Vec3d corner(EraseClient.Ground s,float tr,Vec3d jit){
         double lift=EraseRules.lift(tr);if(Double.isNaN(lift)||tr<EraseRules.RISE_FROM)return null;
         return new Vec3d(s.x0+jit.x,base(s)+lift+.003+jit.y,s.z0+jit.z);
     }
-    /** Whether the cube is drawn now: risen and not burst, not cut short. */
-    static boolean showsCube(EraseClient.Strike s,float age,float tr){return tr>=EraseRules.RISE_FROM&&tr<EraseRules.BURST&&age<s.cut;}
+    /** Whether the cubes of call {@code c} are drawn now: risen and not burst, not cut short. */
+    static boolean showsCube(EraseClient.Call c,float age,float tr){return tr>=EraseRules.RISE_FROM&&tr<EraseRules.BURST&&age<c.cut;}
     /** Its blocks (the solids): each face on its outside drawn as its block shows it there, its layers slipping as it glitches. */
-    static void cube(FxSolids so,EraseClient.Strike s,float tr){
+    static void cube(FxSolids so,EraseClient.Ground s,float tr){
         var f=s.faces;if(f==null)return;
         float sec=tr/20f,tension=tension(tr);
         if(flick(sec,s.seed,tension))return;
@@ -328,7 +270,7 @@ final class EraseFx {
      * flicks), its edges glowing (and split red and cyan), bands of light running up its sides, pixels of data on it and,
      * near its burst, peeling off it; and the seam at the ground pixels pop from as it rises.
      */
-    static void cubeFx(Fx c,EraseClient.Strike s,EffectMesh m,boolean light,float tr){
+    static void cubeFx(Fx c,EraseClient.Ground s,EffectMesh m,boolean light,float tr){
         var f=s.faces;if(f==null)return;
         float sec=tr/20f,tension=tension(tr);Vec3d cam=c.camera;
         Vec3d jit=jitter(sec,s.seed,tension),o=corner(s,tr,jit);if(o==null)return;
@@ -409,7 +351,7 @@ final class EraseFx {
     /** Its burst's pieces: how many, and how long they fly (seconds). */
     static final int FRAGS=70;static final float FRAG_LIFE=1.8f;
     /** Its blocks flung out in pieces as it bursts (the solids): each a piece of one of its blocks, out from its middle and up, falling to the ground. */
-    static void fragments(FxSolids so,EraseClient.Strike s,float tr){
+    static void fragments(FxSolids so,EraseClient.Ground s,float tr){
         float t=(tr-EraseRules.BURST)/20f;var f=s.faces;
         if(f==null||t<0||t>=FRAG_LIFE)return;
         int stride=Math.max(1,f.n/FRAGS);double L=EraseRules.LIFT,S=EraseRules.SIDE;
@@ -428,7 +370,7 @@ final class EraseFx {
     /** How long its burst's light lasts (seconds). */
     static final float BURST_LIFE=1.2f;
     /** Its burst {@code t} seconds after: a white flash, purple spikes out every way, pixels everywhere, rings in the air and along the ground. */
-    static void burst(Fx c,EraseClient.Strike s,EffectMesh m,boolean light,float t){
+    static void burst(Fx c,EraseClient.Ground s,EffectMesh m,boolean light,float t){
         if(t<0||t>=BURST_LIFE)return;
         double S=EraseRules.SIDE,L=EraseRules.LIFT;Vec3d mid=new Vec3d(s.x0+S*.5,base(s)+L+S*.5,s.z0+S*.5);Vec3d cam=c.camera;
         float near=GlitchFx.near(mid,cam);
@@ -465,17 +407,17 @@ final class EraseFx {
 
     /** The ground is drawn back over this long before EraseRules.BACK (seconds): flickering, then a line of light sweeping over it. */
     static final float RESTORE=.6f,SWEEP=.45f;
-    /** How far over the void the sweep has come at {@code sec} seconds after it struck (0 to 1; behind it the ground is back). */
+    /** How far over the void the sweep has come at {@code sec} seconds after the mark (0 to 1; behind it the ground is back). */
     static float swept(float sec){return (float)Math.max(0,Math.min(1,(sec-(BACK_S-SWEEP-.05f))/SWEEP));}
-    /** Whether the void shows {@code sec} seconds after it struck: from as the cube clears the ground (its gap shows it) to the ground back, flickering before the sweep. */
+    /** Whether the void shows {@code sec} seconds after the mark: from as the cube clears the ground (its gap shows it) to the ground back, flickering before the sweep. */
     static boolean voidShows(float sec,float tr){
         if(sec<RISE0||sec>=BACK_S)return false;
         if(sec<BURST_S){double lift=EraseRules.lift(tr);if(!(lift>.06))return false;}
         if(sec>=BACK_S-RESTORE&&sec<BACK_S-SWEEP-.05f){int step=(int)Math.floor(sec*30);return step%3!=0;}
         return true;
     }
-    /** Where it was ({@code tr} ticks after it struck): a dark void on the ground, edged in purple, a grid, flickering static, a band of light going over it, and at the last the sweep that draws the ground back. */
-    static void voidPlane(Fx c,EraseClient.Strike s,EffectMesh m,boolean light,float tr){
+    /** Where it was ({@code tr} ticks after the mark): a dark void on the ground, edged in purple, a grid, flickering static, a band of light going over it, and at the last the sweep that draws the ground back. */
+    static void voidPlane(Fx c,EraseClient.Ground s,EffectMesh m,boolean light,float tr){
         float sec=tr/20f;if(!voidShows(sec,tr))return;
         double S=EraseRules.SIDE,y=s.top+.02,from=s.x0+S*swept(sec);
         if(from>=s.x0+S-1e-3)return;
@@ -520,76 +462,8 @@ final class EraseFx {
         }
     }
 
-    // ───────────────────────────── whom it deleted, whom the burst struck ─────────────────────────────
-
-    /** The outline of where one deleted stands blinks this often (a second), with this many pixels of them in it. */
-    static final float BLINK=16;static final int MOTES=7,GATHER=16;
-    /** One deleted, {@code s} seconds after: a burst as it strikes, the outline while they are gone, their pixels gathering back, torn bars as they are back. */
-    static void victims(Fx c,EraseClient.Strike w,EffectMesh m,boolean light){
-        if(w.deleted.isEmpty()||c.mc.world==null)return;
-        Vec3d cam=c.camera;float vanish=EraseClient.VANISH;Vec3d up=new Vec3d(0,1,0);
-        for(var g:w.deleted.values()){
-            float s=g.since(c.delta);if(s<0||s>=vanish+.3f)continue;
-            if(!(c.mc.world.getEntityById(g.entity()) instanceof LivingEntity e))continue;
-            boolean own=e==c.mc.getCameraEntity()&&!c.mc.gameRenderer.getCamera().isThirdPerson();
-            Vec3d feet=e.getLerpedPos(c.delta),mid=feet.add(0,e.getHeight()*.55,0);
-            int seed=g.entity()*7919+w.seed;
-            float near=GlitchFx.near(mid,cam);
-            var face=GlitchFx.facing(cam,mid);
-            if(s<.35f&&!own){
-                Vec3d at=mid.add(face[2].multiply(e.getWidth()*.5+.2));
-                if(light){
-                    if(s<.18f)m.star(at,1.2,WHITE,.9f*Ease.smooth(s,0,.02f)*(1-s/.18f)*near);
-                    m.softDisc(at,2.2,NEON,.3f*(1-Ease.smooth(s,.05f,.35f))*near);
-                }else for(int j=0;j<10;j++){
-                    double an=Math.PI*2*(j+.6*h(j,seed,21))/10;Vec3d dir=face[0].multiply(Math.cos(an)).add(face[1].multiply(Math.sin(an)));
-                    float life=.3f*(.6f+.4f*(float)h(j,seed,22));if(s>=life)continue;
-                    double len=(.8+1.4*h(j,seed,23))*Ease.out(s,0,.06f);float fade=Ease.smooth(s,0,.02f)*(1-Ease.smooth(s,life*.35f,life))*near;
-                    Vec3d a0=at.add(dir.multiply(.25)),a1=at.add(dir.multiply(.25+len));
-                    m.needle(a0,a1,.16,.22,INK,.85f*fade);m.needle(a0,a1,.1,.22,j%2==0?PURPLE:DEEP,.95f*fade);
-                }
-                GlitchFx.pixels(m,mid,up,.85,6,.07,24,seed,s,light,cam);
-            }
-            if(s>=.06f&&s<vanish&&!own&&near>0){
-                double hw=e.getWidth()*.5+.12,hh=e.getHeight()*.5+.08;Vec3d box=feet.add(0,e.getHeight()*.5,0);
-                boolean on=((int)Math.floor(s*BLINK))%2==0;
-                if(on)outline(m,box,face,hw,hh,light?GLOW:PURPLE,(light?.35f:.75f)*near,s);
-                int step=(int)Math.floor(s*12);
-                for(int j=0;j<MOTES;j++){
-                    if(h(j+step*17,seed,31)>.6)continue;
-                    Vec3d p=box.add(face[0].multiply((h(j+step*7,seed,32)-.5)*2*hw)).add(face[1].multiply((h(j+step*11,seed,33)-.5)*2*hh));
-                    double half=.05+.05*h(j,seed,34);int rgb=j%3==0?LILAC:PURPLE;
-                    if(light)GlitchFx.square(m,p,face,half*1.8,GLOW,.25f*near);
-                    else GlitchFx.square(m,p,face,half,rgb,.9f*near);
-                }
-            }
-            float back0=vanish-.12f;
-            if(s>=back0&&s<vanish&&!own&&near>0){
-                float k=(s-back0)/.12f;
-                for(int j=0;j<GATHER;j++){
-                    double an=Math.PI*2*(j+h(j,seed,41))/GATHER;
-                    Vec3d dir=face[0].multiply(Math.cos(an)).add(face[1].multiply(Math.sin(an)*1.4));
-                    Vec3d p=mid.add(dir.multiply((1.5+.4*h(j,seed,42))*(1-k*k)));
-                    double half=.06+.05*h(j,seed,43);int rgb=j%4==0?WHITE:j%2==0?LILAC:PURPLE;
-                    if(light)GlitchFx.square(m,p,face,half*1.9,rgb==WHITE?GLOW:rgb,.3f*near);
-                    else GlitchFx.square(m,p,face,half,rgb,near);
-                }
-            }
-            if(s>=vanish&&!own){
-                float b=s-vanish;
-                if(light&&b<.14f)m.softDisc(mid,1.3+1.2*b/.14f,LILAC,.5f*(1-b/.14f)*near);
-                float bs=b*2+1/30f;Vec3d front=face[2].multiply(e.getWidth()*.5+.14);
-                for(int j=0;j<PullClient.DASHES;j++){
-                    double[] q=PullClient.dash(j,bs,seed,e.getHeight(),e.getWidth());if(q==null)continue;
-                    Vec3d p=feet.add(0,q[0]*e.getHeight(),0).add(face[0].multiply(q[1])).add(front);
-                    if(light)GlitchFx.bar(m,p,face,q[2]*1.2,q[3]*2.6,GLOW,.22f*near);
-                    else GlitchFx.bar(m,p,face,q[2],q[3],(int)q[4],near);
-                }
-            }
-        }
-    }
-    /** Whom the burst struck, as this client heard of it: a white star and a burst of pixels on them. */
-    static void blasted(Fx c,EraseClient.Strike w,EffectMesh m,boolean light){
+    /** Whom ground {@code g}'s burst struck, as this client heard of it: a white star and a burst of pixels on them. */
+    static void blasted(Fx c,EraseClient.Ground w,EffectMesh m,boolean light){
         if(w.blasted.isEmpty()||c.mc.world==null)return;
         for(var en:w.blasted.entrySet()){
             float s=(c.age-en.getValue())/20f;if(s<0||s>=.5f)continue;
@@ -601,96 +475,86 @@ final class EraseFx {
             GlitchFx.pixels(m,mid,new Vec3d(0,1,0),.9,7,.08,20,en.getKey()*131+w.seed,s,light,c.camera);
         }
     }
-    /** A dashed outline of a box facing the camera: {@code hw} wide and {@code hh} high from its middle, its dashes crawling round it. */
-    private static void outline(EffectMesh m,Vec3d mid,Vec3d[] face,double hw,double hh,int rgb,float alpha,float s){
-        Vec3d r=face[0],up=face[1];
-        Vec3d[] c={mid.subtract(r.multiply(hw)).subtract(up.multiply(hh)),mid.add(r.multiply(hw)).subtract(up.multiply(hh)),mid.add(r.multiply(hw)).add(up.multiply(hh)),mid.subtract(r.multiply(hw)).add(up.multiply(hh))};
-        double wide=.035,dash=.16,crawl=s*1.2;
-        for(int e=0;e<4;e++){
-            Vec3d a=c[e],b=c[(e+1)%4],ab=b.subtract(a);double len=ab.length();if(len<1e-6)continue;Vec3d dir=ab.multiply(1/len);
-            Vec3d out=dir.crossProduct(face[2]).normalize().multiply(wide);
-            for(double t=-(crawl%(dash*2));t<len;t+=dash*2){
-                double t0=Math.max(0,t),t1=Math.min(len,t+dash);if(t1<=t0)continue;
-                Vec3d p0=a.add(dir.multiply(t0)),p1=a.add(dir.multiply(t1));
-                m.quad(p0.subtract(out),p1.subtract(out),p1.add(out),p0.add(out),rgb,alpha);
-            }
-        }
-    }
 
     // ───────────────────────────── the passes ─────────────────────────────
 
-    private static EraseClient.Strike of(Fx c){
-        var s=EraseClient.of(c.cast);if(s==null)return null;
-        if(s.faces==null&&c.age>=s.fly-1)s.faces=faces(s,c.mc.world);
-        return s;
+    private static EraseClient.Call of(Fx c){
+        var call=EraseClient.of(c.cast);if(call==null)return null;
+        if(c.age>=EraseRules.RISE_FROM-2)for(var g:call.grounds)if(g.faces==null)g.faces=faces(g,c.mc.world);
+        return call;
     }
-    /** Ticks since it struck, for the cube: a tick behind its clock (as the bodies on it are drawn between their last place and this tick's). */
-    static float cubeTicks(EraseClient.Strike s,float age){return age-s.fly-1;}
-    /** Everything but the slash itself, in one pass: where it lands, the cube's glitches, its burst, where it was, whom it struck. */
+    /** Ticks since the mark, for the cubes: a tick behind the call's clock (as the bodies on them are drawn between their last place and this tick's). */
+    static float cubeTicks(float age){return age-1;}
+    /** Everything but the cubes' blocks, in one pass: the "!!!", each ground breaking free, the cubes' glitches, their bursts, where they were, whom they struck. */
     static void zone(Fx c,EffectMesh m,boolean light){
-        var s=of(c);if(s==null)return;
-        float age=c.age,sec=(age-s.fly)/20f,tr=cubeTicks(s,age),fade=kept(s,age);
-        boolean cut=age>=s.cut;
-        if(!cut)impact(c,s,m,light,sec);
-        if(showsCube(s,age,tr))cubeFx(c,s,m,light,tr);
-        if(!cut)burst(c,s,m,light,(tr-EraseRules.BURST)/20f);
-        if(!cut)voidPlane(c,s,m,light,tr);
-        // cut short: the cube glitches out where it was
-        if(cut&&fade>0&&s.faces!=null){
-            float t=(age-s.cut)/20f;double S=EraseRules.SIDE,lift=EraseRules.lift(cubeTicks(s,s.cut));
-            if(!Double.isNaN(lift)&&cubeTicks(s,s.cut)>=EraseRules.RISE_FROM){
-                Vec3d mid=new Vec3d(s.x0+S*.5,base(s)+lift+S*.5,s.z0+S*.5);
-                for(int q=0;q<6;q++)GlitchFx.pixels(m,mid.add((h(q,s.seed,251)-.5)*S,(h(q,s.seed,252)-.5)*S,(h(q,s.seed,253)-.5)*S),new Vec3d(0,1,0),1,6,.1,14,s.seed+q*19,t,light,c.camera);
+        var call=of(c);if(call==null)return;
+        float age=c.age,tr=cubeTicks(age),fade=kept(call,age);
+        boolean cut=age>=call.cut;
+        marks(c,call,m,light,age);
+        for(var g:call.grounds){
+            if(!cut)breaksFree(c,g,m,light,(age-EraseRules.RISE_FROM)/20f);
+            if(showsCube(call,age,tr))cubeFx(c,g,m,light,tr);
+            if(!cut)burst(c,g,m,light,(tr-EraseRules.BURST)/20f);
+            if(!cut)voidPlane(c,g,m,light,tr);
+            // cut short: the cube glitches out where it was
+            if(cut&&fade>0&&g.faces!=null){
+                float t=(age-call.cut)/20f;double S=EraseRules.SIDE,lift=EraseRules.lift(cubeTicks(call.cut));
+                if(!Double.isNaN(lift)&&cubeTicks(call.cut)>=EraseRules.RISE_FROM){
+                    Vec3d mid=new Vec3d(g.x0+S*.5,base(g)+lift+S*.5,g.z0+S*.5);
+                    for(int q=0;q<6;q++)GlitchFx.pixels(m,mid.add((h(q,g.seed,251)-.5)*S,(h(q,g.seed,252)-.5)*S,(h(q,g.seed,253)-.5)*S),new Vec3d(0,1,0),1,6,.1,14,g.seed+q*19,t,light,c.camera);
+                }
             }
+            blasted(c,g,m,light);
         }
-        victims(c,s,m,light);
-        blasted(c,s,m,light);
     }
-    /** The solids: pieces of the ground flung where it lands, the cube's blocks, its burst's pieces. */
+    /** The solids: pieces of each ground flung as it breaks free, the cubes' blocks, their bursts' pieces. */
     static void solids(Fx c,FxSolids so){
-        var s=of(c);if(s==null)return;
-        float age=c.age,sec=(age-s.fly)/20f,tr=cubeTicks(s,age);
-        // pieces of the ground flung where it lands
-        if(sec>=0&&sec<1.4f&&age<s.cut){
-            BlockState st=so.ground(s.to.add(0,.2,0));
-            if(st!=null)for(int k=0;k<10;k++){
-                double an=Math.PI*2*(k+.5*h(k,s.seed,261))/10,out=2+3*h(k,s.seed,262);
-                Vec3d v0=new Vec3d(Math.cos(an)*out,5+4*h(k,s.seed,263),Math.sin(an)*out);
-                Vec3d p=FxSolids.flight(s.to.add(0,.25,0),v0,s.top+.15,sec);
-                double size=(.22+.2*h(k,s.seed,264))*(1-Ease.smooth(sec,1f,1.4f));
-                float spin=(float)((260+380*h(k,s.seed,265))*Math.min(sec,1f));
-                so.chunk(st,p,size,spin,spin*.7f,spin*.4f);
+        var call=of(c);if(call==null)return;
+        float age=c.age,sec=(age-EraseRules.RISE_FROM)/20f,tr=cubeTicks(age);
+        for(var g:call.grounds){
+            // pieces of the ground flung from its edges as it breaks free
+            if(sec>=0&&sec<1.4f&&age<call.cut){
+                BlockState st=so.ground(g.middle().add(0,.2,0));
+                if(st!=null)for(int k=0;k<10;k++){
+                    double an=Math.PI*2*(k+.5*h(k,g.seed,261))/10,out=2+3*h(k,g.seed,262);
+                    Vec3d edge=g.middle().add(Math.cos(an)*EraseRules.SIDE*.5,.25,Math.sin(an)*EraseRules.SIDE*.5);
+                    Vec3d v0=new Vec3d(Math.cos(an)*out,5+4*h(k,g.seed,263),Math.sin(an)*out);
+                    Vec3d p=FxSolids.flight(edge,v0,g.top+.15,sec);
+                    double size=(.22+.2*h(k,g.seed,264))*(1-Ease.smooth(sec,1f,1.4f));
+                    float spin=(float)((260+380*h(k,g.seed,265))*Math.min(sec,1f));
+                    so.chunk(st,p,size,spin,spin*.7f,spin*.4f);
+                }
             }
+            if(showsCube(call,age,tr))cube(so,g,tr);
+            if(age<call.cut)fragments(so,g,tr);
         }
-        if(showsCube(s,age,tr))cube(so,s,tr);
-        if(age<s.cut)fragments(so,s,tr);
     }
-    /** Its light on the world: as it flies, where it lands, the cube's glow (stronger as it nears its burst), its burst, the void's; little afterglow as it flies. */
+    /** Its light on the world: the marked grounds pulsing, each breaking free, the cubes' glow (stronger as they near their burst), their bursts, the voids'. */
     static void frame(Fx c,FxFrame fr){
-        var s=EraseClient.of(c.cast);if(s==null)return;
-        float age=c.age,sec=(age-s.fly)/20f,tr=cubeTicks(s,age);
-        if(age<s.fly+2)fr.afterglow(.05f);
-        if(age>=s.cut)return;
-        if(age<s.fly)fr.light(tip(s,age),0xa040ff,10,1.2f);
-        if(sec>=0&&sec<.7f)fr.light(s.to.add(0,1,0),0xb04cff,18,2.4f*(1-sec/.7f));
-        double S=EraseRules.SIDE;
-        if(showsCube(s,age,tr)){
-            double lift=EraseRules.lift(tr);float tension=tension(tr);
-            fr.light(new Vec3d(s.x0+S*.5,base(s)+lift+S*.5,s.z0+S*.5),0x8a2be2,16,(.5f+1.1f*tension)*(float)(.8+.2*Math.sin(tr/20f*(5+16*tension))));
+        var call=EraseClient.of(c.cast);if(call==null)return;
+        float age=c.age,tr=cubeTicks(age),sec=(age-EraseRules.RISE_FROM)/20f;
+        if(age>=call.cut)return;
+        double S=EraseRules.SIDE;float mark=marked(age);
+        for(var g:call.grounds){
+            if(mark>0)fr.light(g.middle().add(0,1.5,0),0xff3050,g.looked()?12:8,.7f*mark*(float)(.7+.3*Math.sin(age*Math.PI/2)));
+            if(sec>=0&&sec<.7f)fr.light(g.middle().add(0,1,0),0xb04cff,16,1.8f*(1-sec/.7f));
+            if(showsCube(call,age,tr)){
+                double lift=EraseRules.lift(tr);float tension=tension(tr);
+                fr.light(new Vec3d(g.x0+S*.5,base(g)+lift+S*.5,g.z0+S*.5),0x8a2be2,16,(.5f+1.1f*tension)*(float)(.8+.2*Math.sin(tr/20f*(5+16*tension))));
+            }
+            float t=(tr-EraseRules.BURST)/20f;
+            if(t>=0&&t<1f)fr.light(new Vec3d(g.x0+S*.5,base(g)+EraseRules.LIFT+S*.5,g.z0+S*.5),0xc45cff,32,3f*(1-t));
+            if(voidShows(tr/20f,tr))fr.light(new Vec3d(g.x0+S*.5,g.top+.5,g.z0+S*.5),0x6a0cb8,9,.45f);
         }
-        float t=(tr-EraseRules.BURST)/20f;
-        if(t>=0&&t<1f)fr.light(new Vec3d(s.x0+S*.5,base(s)+EraseRules.LIFT+S*.5,s.z0+S*.5),0xc45cff,32,3f*(1-t));
-        if(voidShows(tr/20f,tr))fr.light(new Vec3d(s.x0+S*.5,s.top+.5,s.z0+S*.5),0x6a0cb8,9,.45f);
     }
-    /** How hard it shakes the camera (KagenoCamera weighs it by how near it is): as it lands, as its cube begins to rise and a rumble as it does, hard as it bursts. */
-    static float shake(EraseClient.Strike s,float sec){
-        float age=sec*20,since=sec-s.fly/20f,v=0;
-        if(age>=s.cut)return 0;
-        v+=1.4f*KnifeCombo.bump(since,0,.14f);
-        v+=.3f*KnifeCombo.bump(since,RISE0,.1f);
-        if(since>=RISE0&&since<RISE0+EraseRules.RISE_TICKS/20f)v+=.12f;
-        v+=2.0f*KnifeCombo.bump(since,BURST_S+.05f,.16f);
-        v+=.2f*KnifeCombo.bump(since,BACK_S,.1f);
+    /** How hard it shakes the camera (KagenoCamera weighs it by how near its nearest ground is): as its cubes break free and a rumble as they rise, hard as they burst. */
+    static float shake(EraseClient.Call c,float sec){
+        float age=sec*20,v=0;
+        if(age>=c.cut)return 0;
+        v+=.4f*KnifeCombo.bump(sec,RISE0,.1f);
+        if(sec>=RISE0&&sec<RISE0+EraseRules.RISE_TICKS/20f)v+=.12f;
+        v+=2.0f*KnifeCombo.bump(sec,BURST_S+.05f,.16f);
+        v+=.2f*KnifeCombo.bump(sec,BACK_S,.1f);
         return v;
     }
 }

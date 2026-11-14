@@ -16,13 +16,9 @@ public abstract class KagenoCullingMixin {
         var c=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(e.getUuid());if(c!=null&&c.skill()==KagenoRules.H&&c.age(0)<KagenoRules.DURATION[KagenoRules.H])ci.setReturnValue(true);
         // (2.101.1) Lee So-sang's H again: her body rides round the sky away from where she really is (IsosangClient.shift)
         else if(dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleOf(e.getUuid())!=null)ci.setReturnValue(true);
-        // (2.121.0) X Chara's cleave: the body is drawn high over where its user stands through its leap
-        else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.cleaveOf(e.getUuid())!=null)ci.setReturnValue(true);
         // (2.128.0) X Chara's slam: the body is drawn up in the air over where its user stands, and down its dive
         else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.slamOf(e.getUuid())!=null)ci.setReturnValue(true);
         // (2.129.0) X Chara's three cuts: the body is drawn along its way forward from where its user stands
         else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.cutterOf(e.getUuid())!=null)ci.setReturnValue(true);
-        // (2.133.0) X Chara's delete slash: the body is drawn up in the air of its leap over where its user stands
-        else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseOf(e.getUuid())!=null&&!dev.sangwoo.celestialfall.client.xchara.EraseClient.hides(e))ci.setReturnValue(true);
     }
 }

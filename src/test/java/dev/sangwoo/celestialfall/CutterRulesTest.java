@@ -28,9 +28,9 @@ class CutterRulesTest {
             // its reach: a lane ahead, wide across the front
             assertTrue(lane(c,0,3,0,0,.3)&&lane(c,2,3.8,1.5,1,.3));assertFalse(lane(c,0,4.2,0,0,.3));assertFalse(lane(c,0,2,2.5,0,.3));assertFalse(lane(c,0,2,0,3.2,.3));
         }
-        assertFalse(cutter(SLAM)||cutter(JAB)||cutter(CLEAVE)||cutter(LUNGE));
-        assertTrue(unblockable(CLEAVE)&&unblockable(JAB)&&unblockable(SLAM)&&unblockable(LUNGE)&&!unblockable(SLASH),"the others as they were");
-        assertTrue(launches(LUNGE,0)&&!launches(CLEAVE,0)&&!launches(JAB,0));
+        assertFalse(cutter(SLAM)||cutter(JAB)||cutter(ERASE)||cutter(LUNGE));
+        assertTrue(unblockable(JAB)&&unblockable(SLAM)&&unblockable(LUNGE)&&!unblockable(SLASH),"the others as they were");
+        assertTrue(launches(LUNGE,0)&&!launches(SLAM,0)&&!launches(JAB,0));
         assertEquals(13,CUTTER_DASH);assertFalse(valid(LAST+1));
         // the one that goes forward first is the same, LEAD ticks later
         for(int i=0;i<3;i++)assertEquals(blowAt(CUTTER,i)+CutterRules.LEAD,blowAt(CUTTER_DASH,i));
@@ -47,7 +47,7 @@ class CutterRulesTest {
             long now=start+blowAt(c,2);
             assertEquals(now+Stagger.LAST,Stagger.xchara(c,2,start,now),"the last as the lunge's");
         }
-        assertEquals(500,staggerUntil(CLEAVE,0,0,500,2,6),"the cleave staggers no one, as before");
+        assertEquals(500,staggerUntil(SLAM,0,0,500,2,6),"the slam staggers no one, as before");
     }
     @Test void theyGoForwardOnlyWithNoOneRightAhead(){
         double none=Double.NaN;
