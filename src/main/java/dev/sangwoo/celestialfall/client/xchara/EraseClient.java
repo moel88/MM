@@ -214,11 +214,19 @@ public final class EraseClient {
 
     // ───────────────────────────── its sounds ─────────────────────────────
 
-    /** How loud something of slash {@code s} at {@code at} is for this client: loud for its user and for {@code entity} (-1: no one), fading out to CARRY blocks for the rest. */
+    /**
+     * How loud one of its sounds at {@code at} is here: full for the one it is about ({@code entity}); for its user, full
+     * as far out as it can land and a little ({@code REACH}+4: the cube's sounds from up on it too), then fading over
+     * CARRY as for everyone else (2.133.0: a cube left far behind, as the shots' warm-up's 200 blocks off, is not heard
+     * bursting at its user's ear).
+     */
     private static float loudness(MinecraftClient mc,Strike s,int entity,Vec3d at){
         if(mc.player==null||mc.world==null)return 0;
-        if(mc.player.getUuid().equals(s.owner)||mc.player.getId()==entity)return (float)CelestialFall.CONFIG.effectVolume;
-        return (float)(CelestialFall.CONFIG.effectVolume*Math.max(0,1-mc.player.getPos().distanceTo(at)/CARRY));
+        float full=(float)CelestialFall.CONFIG.effectVolume;
+        if(mc.player.getId()==entity)return full;
+        double d=mc.player.getPos().distanceTo(at);
+        if(mc.player.getUuid().equals(s.owner))d=Math.max(0,d-(EraseRules.REACH+4));
+        return (float)(full*Math.max(0,1-d/CARRY));
     }
     private static void play(MinecraftClient mc,String sound,float part,int later,Strike s,java.util.function.Supplier<Vec3d> at,String what){
         java.util.function.Supplier<Float> loud=()->s.cutBy(s.age(0))?0f:loudness(mc,s,-1,at.get());

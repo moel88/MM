@@ -781,10 +781,10 @@ public final class MpClient implements ClientModInitializer {
         "700 WALK+","740 WALK-",
         "940 DIST10","945 HEAL","960 H","964 STANDK",
         "990 XCHARA","995 NOCDON",
-        "1010 DIST12","1015 HEAL","1025 H","1100 STANDK",
-        "1130 XCHARA","1135 NOCDON",
-        "1150 EAIM-","1155 DIST30","1160 HEAL","1165 PITCH29","1175 H",
-        "1230 PITCH12","1240 NOCDOFF","1260 END"};
+        "1010 DIST12","1015 HEAL","1025 H","1150 STANDK",
+        "1180 XCHARA","1185 NOCDON",
+        "1200 EAIM-","1205 DIST30","1210 HEAL","1215 PITCH29","1225 H",
+        "1280 PITCH12","1290 NOCDOFF","1310 END"};
     private static final String[] STEPS=ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -1726,7 +1726,7 @@ public final class MpClient implements ClientModInitializer {
         long ready=ONLY.equals("xcharaknives")?dev.sangwoo.celestialfall.client.xchara.KnifeClient.knivesReady(mc.player.getUuid()):dev.sangwoo.celestialfall.client.xchara.KnifeClient.shotReady(mc.player.getUuid());
         Object was=flags.get("shot_ready");if(was==null||(Long)was!=ready){flags.put("shot_ready",ready);if(ready>0)note("my knives ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
     }
-    private final Map<String,String> eraseState=new HashMap<>();private int eraseHeard;private boolean eraseWalking;private Vec3d eraseWalkAt;
+    private final Map<String,String> eraseState=new HashMap<>();private int eraseHeard;private boolean eraseWalking;private net.minecraft.util.math.Vec3d eraseWalkAt;
     /**
      * (2.133.0, MP_ONLY=xcharaerase) X Chara's delete slash as this client has it: each player's cast as it begins or
      * stops short and, through its leap, how high this client draws them over where they stand; every slash it knows of
