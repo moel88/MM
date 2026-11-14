@@ -132,11 +132,13 @@ public final class BladeRain {
         var keys=new ArrayList<Anim.Key>();
         keys.add(k(0,strideA()));
         // the last strides: the knife round to the hip, the body turning side-on and sinking back
-        keys.add(k(.08f,on(-.04,.14,-.31,-30,20,2,d(-48,128),d(10,40),d(-6,-16),.16,.26,-.21,.52)));
-        keys.add(k(.14f,on(-.08,.08,-.32,-40,10,3,d(-50,150),d(7,-7),d(4,-8),RR,.40,LR,LF)));
-        // let go from the ground up: the hips first, the arm after them
-        keys.add(k(.175f,on(-.05,.18,-.33,-27,12,1,d(-54,128),d(7,-7),d(-2,-20),RR,.62,LR,LF)));
-        keys.add(k(.215f,on(-.01,.38,-.35,-2,18,-2,d(-42,40),d(6,-6),d(-12,-92),RR,.82,LR,LF)));
+        keys.add(k(.07f,on(-.02,.20,-.31,-22,34,1,d(-34,150),d(26,128),d(-8,-12),.16,.10,-.21,.54)));
+        keys.add(k(.14f,on(-.05,.13,-.31,-32,18,2,d(-48,140),d(12,56),d(-2,-12),.16,.30,-.21,.30)));
+        keys.add(k(.21f,on(-.08,.08,-.32,-40,10,3,d(-50,150),d(7,-7),d(4,-8),RR,.40,LR,LF)));
+        // a breath wound; then let go from the ground up: the hips first, the arm after them
+        keys.add(k(.245f,on(-.08,.07,-.33,-41,10,3,d(-50,152),d(7,-7),d(5,-8),RR,.40,LR,LF)));
+        keys.add(k(.275f,on(-.05,.18,-.33,-27,12,1,d(-54,128),d(7,-7),d(-2,-20),RR,.62,LR,LF)));
+        keys.add(k(.315f,on(-.01,.38,-.35,-2,18,-2,d(-42,40),d(6,-6),d(-12,-92),RR,.82,LR,LF)));
         // in: the whole body out behind the knife
         keys.add(k(STAB_AT,on(.01,.54,-.36,19,22,-3,d(-16,-10),d(5,-5),d(-16,-136),RR,RF,LR,LF)));
         // driven further, the free hand coming up
@@ -177,8 +179,19 @@ public final class BladeRain {
     /** Where the user of {@code c} (a run or a stab) is drawn {@code age} ticks in by its plan, or null with none told. */
     static Vec3d planned(StandClient.Cast c,float age){
         var way=KnifeClient.rainWay(c.id());if(way==null)return null;
-        return c.combo()==RUSH?ran(way.from(),way.to(),age):lunged(way.from(),way.to(),age);
+        if(c.combo()==RUSH)return ran(way.from(),way.to(),age);
+        Vec3d at=lunged(way.from(),way.to(),age);
+        // (the stab is heard of a tick or so after the run was caught: the body goes on along the run's own way and
+        // comes over to the stab's in its first ticks, where it would jump that tick's way ahead)
+        float w=Ease.smooth(age,TAKES0,TAKES1);
+        if(w<1){
+            var run=KnifeClient.ranBefore(c.id());var ran=run==null?null:KnifeClient.rainWay(run.id());
+            if(ran!=null)at=ran(ran.from(),ran.to(),run.age(0)-c.age(0)+age).lerp(at,w);
+        }
+        return at;
     }
+    /** Over which ticks of the stab the body comes over from the run's way to the stab's. */
+    static final float TAKES0=.5f,TAKES1=3.2f;
     /**
      * How far from where the user really is their body is drawn this frame (their renderer's offset, BeatdownRenderMixin:
      * their model, name and shadow's place go together): along the run, then the stab's last way, and where that ends
@@ -224,7 +237,7 @@ public final class BladeRain {
     /** One that has landed stands in them this long (ticks), gone over the last GOING of it; one not yet landed as the rain stops short is gone over VANISH. */
     static final float STUCK=6,GOING=2,VANISH=2;
     /** How far out from the one stabbed a knife comes to be (blocks: its point), and how high and low about them (degrees over level). */
-    static final double NEAR=4.4,FAR=6.8;static final double LOWEST=4,HIGHEST=74;
+    static final double NEAR=4.0,FAR=6.4;static final double LOWEST=4,HIGHEST=68;
     /** No knife comes from within this of where its user stands, seen from the one stabbed, unless from this high over them (degrees). */
     static final double CLEAR=42,OVER=38;
     /** How far past the point it aims at a knife's point goes in (blocks). */
@@ -377,8 +390,8 @@ public final class BladeRain {
             if(s>=0&&s<.3f&&lands<=stop){
                 Vec3d way=from(k,seed,user),at=feet.add(aim(k,seed,half,height)).add(way.multiply(half*.6));
                 float near=GlitchFx.near(at,c.camera);
-                if(light&&s<.09f&&near>0)m.star(at,.42*(1-s/.09f)+.1,GlitchFx.WHITE,.85f*(1-s/.09f)*near);
-                GlitchFx.pixels(m,at,way,.7,3.2,.035,3,seed+k*7,s,light,c.camera);
+                if(light&&s<.09f&&near>0)m.star(at,.3*(1-s/.09f)+.08,GlitchFx.LILAC,.7f*(1-s/.09f)*near);
+                GlitchFx.pixels(m,at,way,.7,3.2,.035,2,seed+k*7,s,light,c.camera);
             }
         }
         // the knife's own burst on them every few volleys; the last volley's the big one, with a ring over the ground
@@ -387,7 +400,7 @@ public final class BladeRain {
             float at=RainRules.volleyAt(v),s=(age-at)/20f;
             if(s<0||at>stop)continue;
             if(s<SlashFx.SWIRL_LIFE){
-                Vec3d way=from(v*RainRules.PER+1,seed,user).negate();
+                Vec3d way=from(v*RainRules.PER,seed,user).negate();
                 if(last)SlashFx.burst(m,mid,way,HACK_LUNGE,seed+v,s,light,c.camera);
                 else SlashFx.burst(m.scaled(SlashFx.burstAt(mid,c.camera),BURST_SIZE),mid,way,HACK_SLASH,seed+v,s,light,c.camera);
             }
@@ -442,7 +455,7 @@ public final class BladeRain {
      * another), the last volley's at LAST_PART.
      */
     static final String STAB_SOUND="xchara_jab",COME_SOUND="xchara_shot_appear",STRIKE_SOUND="xchara_shot_hit";
-    static final int COME_EVERY=3,STRIKE_EVERY=2;static final float COME_PART=.4f,STRIKE_PART=.34f,LAST_PART=.8f;
+    static final int COME_EVERY=3,STRIKE_EVERY=2;static final float COME_PART=.3f,STRIKE_PART=.25f,LAST_PART=.8f;
     /** The rain's sounds as {name, the tick into the stab it starts on, the part of its loudness}: what is played once the knife is in someone. */
     static java.util.List<Object[]> cues(){
         var out=new ArrayList<Object[]>();

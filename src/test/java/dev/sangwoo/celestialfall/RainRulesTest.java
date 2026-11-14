@@ -41,10 +41,10 @@ class RainRulesTest {
         assertTrue(RainRules.WITHDRAW>RainRules.LAST,"the knife is in until the last volley is");
         assertTrue(RainRules.HOLD>RainRules.WITHDRAW&&RainRules.LENGTH>RainRules.HOLD);
         assertTrue(RainRules.STAB+RainRules.MISS<RainRules.FIRST,"a stab that met no one is over before a volley would land");
-        assertEquals(90,RainRules.BLADES,"a great many: three a tick for a second and a half");
+        assertEquals(120,RainRules.BLADES,"a great many: four a tick for a second and a half");
         for(int k=0;k<RainRules.BLADES;k++){
             int v=RainRules.volleyOf(k);assertTrue(v>=0&&v<RainRules.VOLLEYS);
-            assertTrue(Math.abs(RainRules.landsAt(k)-RainRules.volleyAt(v))<.34,"each lands with its volley");
+            assertTrue(Math.abs(RainRules.landsAt(k)-RainRules.volleyAt(v))<.5,"each lands with its volley");
             if(k>0)assertTrue(RainRules.landsAt(k)>RainRules.landsAt(k-1),"one after another");
         }
     }

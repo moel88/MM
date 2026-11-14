@@ -96,6 +96,9 @@ public final class KnifeClient {
     public record Way(Vec3d from,Vec3d to){}
     private static final Map<UUID,Way> WAYS=new HashMap<>();
     public static Way rainWay(UUID id){return WAYS.get(id);}
+    /** (2.132.0) The run each stab of the rain of knives took over from, by the stab's id (none: it began with no run). */
+    private static final Map<UUID,StandClient.Cast> RAN=new HashMap<>();
+    public static StandClient.Cast ranBefore(UUID id){return RAN.get(id);}
     /** (2.132.0) This player's latest run or stab of the rain of knives this client still draws (in flight or stopped short; a little past its end, while its knife goes out), or null. */
     public static StandClient.Cast rainOf(UUID id){
         StandClient.Cast best=null;
@@ -194,7 +197,7 @@ public final class KnifeClient {
             KagenoClips.begin(cast);
             // (2.132.0) the rain's stab takes over from its run: the run lets go of the body here (the stab begins from
             // the frame of it on screen, KagenoClips.begin) and draws nothing more
-            if(combo==XCharaCombo.RAIN)for(var c:SWINGS.values())if(c.caster().equals(caster)&&c.combo()==XCharaCombo.RUSH&&!STOPPED.containsKey(c.id()))STOPPED.put(c.id(),Math.max(2,c.age(0)));
+            if(combo==XCharaCombo.RAIN)for(var c:SWINGS.values())if(c.caster().equals(caster)&&c.combo()==XCharaCombo.RUSH&&!STOPPED.containsKey(c.id())){STOPPED.put(c.id(),Math.max(2,c.age(0)));RAN.put(id,c);}
             SWINGS.put(id,cast);STRUCK.put(id,new int[XCharaCombo.blows(combo)][]);
             voice(mc,cast);
         }else if(type==XCharaAttack.LANDED){
@@ -229,7 +232,7 @@ public final class KnifeClient {
         var dim=mc.world.getRegistryKey().getValue();
         SWINGS.values().removeIf(c->!c.dimension().equals(dim)||c.age(0)>=KnifeCombo.life(c.combo())*20||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.keySet().retainAll(SWINGS.keySet());VOICES.keySet().retainAll(SWINGS.keySet());
-        SLAMS.keySet().retainAll(SWINGS.keySet());DASHES.keySet().retainAll(SWINGS.keySet());WAYS.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());BladeShot.keep(SWINGS.keySet());
+        SLAMS.keySet().retainAll(SWINGS.keySet());DASHES.keySet().retainAll(SWINGS.keySet());WAYS.keySet().retainAll(SWINGS.keySet());RAN.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());BladeShot.keep(SWINGS.keySet());
         // (2.128.0) up in the air of their own slam: where the middle of the screen points, told every tick until the dive's word comes
         if(mc.player!=null)OverwriteSlam.tellAim(mc);
         // (2.130.0) and while their own knives shot are not all gone: each goes at where they look as it is let go
@@ -244,7 +247,7 @@ public final class KnifeClient {
     public static void clear(){
         for(var v:VOICES.values())v.fade();
         for(var l:MORE_VOICES.values())for(var v:l)v.fade();
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();KNIVES_READY.clear();RAIN_READY.clear();WAYS.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();KNIVES_READY.clear();RAIN_READY.clear();WAYS.clear();RAN.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────

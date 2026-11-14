@@ -141,6 +141,7 @@ public final class MpServer implements ModInitializer {
         if(XCHARAY_ONLY)xcharaPull(server);
         if(XCHARASLAM_ONLY)xcharaSlam(server);
         if(XCHARACUT_ONLY)xcharaCut(server);
+        if(XCHARARAIN_ONLY)xcharaRain(server);
         if(XCHARASHOT_ONLY||XCHARAKNIVES_ONLY)xcharaShot(server);
         if(XCHARAQ_ONLY)hack(server);
         for(var p:server.getPlayerManager().getPlayerList()){
@@ -353,9 +354,9 @@ public final class MpServer implements ModInitializer {
         boolean standOut=server.getPlayerManager().getPlayerList().stream().anyMatch(q->caster(q)&&dev.sangwoo.celestialfall.stand.StandSummon.out(q));
         // (2.114.0: and in X Chara's basic attack's script, where it is sent 6 blocks away and thrown by the finisher)
         // (2.130.0: and in X Chara's knives' script, where it stands 6 and 30 blocks off for them to fly to)
-        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY||XCHARAM1_ONLY||XCHARASHOT_ONLY||XCHARAKNIVES_ONLY))continue;
+        for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY||XCHARAM1_ONLY||XCHARASHOT_ONLY||XCHARAKNIVES_ONLY||XCHARARAIN_ONLY))continue;
             // (2.82.0: nor a player on Lee So-sang's sword formation, held up on its middle sword)
-            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&!((XCHARASLAM_ONLY||XCHARACUT_ONLY||XCHARASHOT_ONLY)&&c)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&!((XCHARASLAM_ONLY||XCHARACUT_ONLY||XCHARASHOT_ONLY||XCHARARAIN_ONLY)&&c)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
@@ -590,6 +591,47 @@ public final class MpServer implements ModInitializer {
         if(ready!=shotReady){note(server,"caster's knives ready again at "+ready+" (now "+now+": "+String.format(java.util.Locale.ROOT,"%.1f",(ready-now)/20.0)+" s)");shotReady=ready;}
     }
     private String cutSeen="";private long cutReady;private float cutWatcher=-1,cutCaster=-1;private net.minecraft.util.math.Vec3d cutWas,cutWatcherWas;private long cutStag;
+    /** Only X Chara's rain of knives' script (2.132.0, MP_ONLY=xchararain). */
+    static final boolean XCHARARAIN_ONLY="xchararain".equals(System.getProperty("botand.mp.only"));
+    private String rainSeen="";private long rainReady,rainStag;private float rainWatcher=-1,rainCaster=-1;private net.minecraft.util.math.Vec3d rainWas,rainWatcherWas;private int rainHits;
+    /**
+     * (2.132.0) X Chara's H with the hack off, the rain of knives: when its run or its stab begins (from where to
+     * where, how far off the watcher is, its guard), each blow of the stab as it lands, when it is over or stopped
+     * short; when the caster is moved more than a quarter of a block in a tick; when the watcher is; the watcher's
+     * health as it changes (and how many times through one stab); how long the watcher can do nothing; when it is
+     * ready again.
+     */
+    private void xcharaRain(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeRain(caster);
+        double far=Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ());
+        if(rainWas!=null&&rainWas.distanceTo(caster.getPos())>.25)
+            note(server,String.format(java.util.Locale.ROOT,"the caster moved %.2f blocks in a tick at %d%s: now %.2f from the watcher",rainWas.distanceTo(caster.getPos()),now,d==null?"":" ("+(now-(Long)d[0])+" ticks into kind "+d[1]+")",far));
+        rainWas=caster.getPos();
+        if(rainWatcherWas!=null&&rainWatcherWas.distanceTo(watcher.getPos())>.25)
+            note(server,String.format(java.util.Locale.ROOT,"the watcher moved %.2f blocks in a tick at %d: now %.2f from the caster",rainWatcherWas.distanceTo(watcher.getPos()),now,far));
+        rainWatcherWas=watcher.getPos();
+        String key=d==null?"":d[0]+"/"+d[1]+"/"+((Integer)d[4]<=1?d[4]:(Integer)d[4]==31?31:2)+"/"+(d[5]!=null);
+        if(!key.equals(rainSeen)){
+            if(d==null)note(server,String.format(java.util.Locale.ROOT,"caster's rain over at %d (%d times the watcher's health changed through it); the watcher %.2f off, busy %s; ready again in %.1f s",now,rainHits,far,
+                dev.sangwoo.celestialfall.combat.CombatManager.busy(caster),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.rainReady(caster)-now)/20.0));
+            else{var from=(net.minecraft.util.math.Vec3d)d[2];var to=(net.minecraft.util.math.Vec3d)d[3];
+                if((Integer)d[4]==0)rainHits=0;
+                note(server,String.format(java.util.Locale.ROOT,"caster's rain: kind %d began at %d (%d ticks in), from %.2f to %.2f blocks ahead of where they stand, blows %d, the knife in %s; the watcher %.2f off (guard %s, health %.1f)",(Integer)d[1],(Long)d[0],now-(Long)d[0],
+                    Math.hypot(from.x-caster.getX(),from.z-caster.getZ()),Math.hypot(to.x-caster.getX(),to.z-caster.getZ()),(Integer)d[4],d[5]==null?"no one":"someone",far,dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher),watcher.getHealth()));}
+            rainSeen=key;
+        }
+        boolean stag=dev.sangwoo.celestialfall.combat.CombatManager.actionLocked(watcher);
+        if(stag&&rainStag==0)rainStag=now;
+        if(!stag&&rainStag!=0){note(server,"the watcher could not act for "+(now-rainStag)+" ticks (until "+now+")");rainStag=0;}
+        if(Math.abs(watcher.getHealth()-rainWatcher)>.01f){if(rainWatcher>=0&&watcher.getHealth()<rainWatcher){rainHits++;if(rainHits<=3||rainHits%10==0||rainHits>=30)note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (%d)",rainWatcher,watcher.getHealth(),now,rainHits));}rainWatcher=watcher.getHealth();}
+        if(Math.abs(caster.getHealth()-rainCaster)>.01f){if(rainCaster>=0)note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at %d",rainCaster,caster.getHealth(),now));rainCaster=caster.getHealth();}
+        long ready=dev.sangwoo.celestialfall.xchara.XCharaAttack.rainReady(caster);
+        if(ready!=rainReady){note(server,"caster's rain ready again at "+ready+" (now "+now+": "+String.format(java.util.Locale.ROOT,"%.1f",(ready-now)/20.0)+" s)");rainReady=ready;}
+    }
     /**
      * (2.129.0) X Chara's E with the hack off, the three cuts: when they begin (which kind, where a going forward
      * ends, how far off the watcher is, its guard), each cut as it lands (the watcher's health), when they are over or

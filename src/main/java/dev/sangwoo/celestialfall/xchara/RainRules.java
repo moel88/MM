@@ -39,17 +39,17 @@ public final class RainRules {
     /** The tick into the run it is over with no one met (they are where it ends), how long it holds them and how long it runs (ticks). */
     public static final int RUN_TO=13,RUSH_HOLD=17,RUSH_LENGTH=21;
     /** How far to either side of their way someone is in it (blocks, beyond half their own width), and how near ahead of where they are drawn someone's near side is caught (blocks). */
-    public static final double PATH=1.1,CATCH=4.8;
+    public static final double PATH=1.1,CATCH=5.3;
     /** They stop this far short of the near side of the one caught (blocks: the knife's length is past it), going on at most LUNGE more from where the run had them. */
-    public static final double KEEP=2.4,LUNGE=CATCH-KEEP;
+    public static final double KEEP=2.9,LUNGE=CATCH-KEEP;
     /** How far down from where they run the floor they come to may be, and how far up (blocks: a low step). */
     public static final double DOWN=3,UP=.6;
 
     // ───────────────────────────── the stab and the rain ─────────────────────────────
     /** The tick into the stab they are where they stab from, and the tick the knife goes in. */
-    public static final int ARRIVE=4,STAB=5;
+    public static final int ARRIVE=5,STAB=7;
     /** The tick the first volley lands, and how many (one a tick). */
-    public static final int FIRST=13,VOLLEYS=30;
+    public static final int FIRST=15,VOLLEYS=30;
     /** The tick the last volley lands. */
     public static final int LAST=FIRST+VOLLEYS-1;
     /** The tick the knife is drawn out, how long it holds them, and when it is over. */
@@ -64,11 +64,11 @@ public final class RainRules {
     /** A stab that met no one ends this many ticks after it. */
     public static final int MISS=6;
     /** Where the stab reaches: from how near ahead of their feet, how far, and how far to either side (blocks). */
-    public static final double[] REACH={0,3.6,1.2};
+    public static final double[] REACH={0,4.0,1.2};
     /** The one stabbed further than this from them (blocks), the rain ends (someone took them away). */
     public static final double LEASH=10;
     /** How many knives the clients draw a volley, and in all. */
-    public static final int PER=3,BLADES=PER*VOLLEYS;
+    public static final int PER=4,BLADES=PER*VOLLEYS;
 
     /** How far along their way they have run {@code age} ticks into the run, with {@code far} blocks of it open (blocks): springing off, then at speed, slowing in over the last of it. */
     public static double ran(double age,double far){
@@ -87,9 +87,9 @@ public final class RainRules {
     public static double advance(double ahead,double room){return Math.max(0,Math.min(Math.min(LUNGE,room),ahead-KEEP));}
     /** The tick into the stab volley {@code v} lands on. */
     public static int volleyAt(int v){return FIRST+v;}
-    /** The volley knife {@code k} is of, and the tick into the stab it is seen to land (the volley's three a third of a tick apart about its tick). */
+    /** The volley knife {@code k} is of, and the tick into the stab it is seen to land (a volley's knives spread over its tick). */
     public static int volleyOf(int k){return k/PER;}
-    public static double landsAt(int k){return volleyAt(volleyOf(k))+(k%PER-1)/3.0;}
+    public static double landsAt(int k){return volleyAt(volleyOf(k))+(k%PER-(PER-1)/2.0)/PER;}
     /** When it is ready again: its cooldown after a run begun at {@code start} that met no one, or after a stab begun at {@code start}, is over. */
     public static long readyAfterRun(long start){return start+RUSH_LENGTH+COOLDOWN;}
     public static long ready(long start){return start+LENGTH+COOLDOWN;}

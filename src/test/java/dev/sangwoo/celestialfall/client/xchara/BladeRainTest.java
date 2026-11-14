@@ -42,10 +42,10 @@ class BladeRainTest {
     }
     @Test void theKnifeGoesInAheadAndStaysThereUntilTheLastVolley(){
         var clip=BladeRain.STAB;float stab=RainRules.STAB/20f;
-        var wound=KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(clip.frame(.14f)));
+        var wound=KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(clip.frame(.21f)));
         var in=KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(clip.frame(stab+.02f)));
         assertTrue(in[0].z>wound[0].z+.8,"the hand driven out ahead: "+wound[0].z+" to "+in[0].z);
-        assertTrue(clip.frame(.14f).yaw()<-25&&clip.frame(stab).yaw()>10,"wound one way and driven round the other");
+        assertTrue(clip.frame(.21f).yaw()<-25&&clip.frame(stab).yaw()>10,"wound one way and driven round the other");
         for(float t=stab+.05f;t<=RainRules.WITHDRAW/20f;t+=.05f){
             var b=KagenoClips.blade(Vec3d.ZERO,0,R6.poseOf(clip.frame(t)));
             assertTrue(b[1].z>.9,"the knife ahead at "+t+": "+b[1].z);assertTrue(Math.abs(b[1].y)<.25,"level");
@@ -111,12 +111,12 @@ class BladeRainTest {
             assertTrue(Math.abs(aim.x)<=.3&&Math.abs(aim.z)<=.3&&aim.y>.3&&aim.y<1.6,"aimed into the body");
             if(k>0){Vec3d was=BladeRain.from(k-1,SEED,USER);assertTrue(new Vec3d(w.x,0,w.z).normalize().dotProduct(new Vec3d(was.x,0,was.z).normalize())<.6,"each from far off the last");}
         }
-        for(int q:quarter)assertTrue(q>=12,"from every side: "+java.util.Arrays.toString(quarter));
+        for(int q:quarter)assertTrue(q>=16,"from every side: "+java.util.Arrays.toString(quarter));
         assertTrue(high>=15,"and from over them: "+high);
         assertEquals(BladeRain.from(5,SEED,USER),BladeRain.from(5,SEED,USER),"the same on every client");
     }
     @Test void eachComesHangsFliesInAndStandsInThemAMoment(){
-        for(int k:new int[]{0,1,31,62,89}){
+        for(int k:new int[]{0,1,31,62,119}){
             float lands=(float)RainRules.landsAt(k),comes=lands-BladeRain.BEFORE;
             assertNull(pose(k,comes-.05f),"nothing of it before it comes");
             Vec3d way=BladeRain.from(k,SEED,USER),target=FEET.add(BladeRain.aim(k,SEED,.3,1.8));
@@ -144,7 +144,7 @@ class BladeRainTest {
         // a great many at once through the rain
         int most=0;
         for(float t=RainRules.FIRST;t<=RainRules.LAST;t+=.5f){int n=0;for(int k=0;k<RainRules.BLADES;k++)if(pose(k,t)!=null)n++;most=Math.max(most,n);}
-        assertTrue(most>=30,"pouring: "+most+" at once");
+        assertTrue(most>=40,"pouring: "+most+" at once");
     }
     @Test void aKnifeMovesNoFurtherInAFrameThanItFlies(){
         for(int k=0;k<RainRules.BLADES;k+=7){
