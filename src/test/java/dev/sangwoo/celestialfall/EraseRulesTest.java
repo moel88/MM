@@ -21,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class EraseRulesTest {
     @Test void itIsOneSkillOfTheKnifesPipelineItsBlowThePress(){
-        assertEquals(16,ERASE);assertEquals(ERASE,LAST);
-        assertTrue(valid(ERASE)&&!valid(ERASE+1));
+        assertEquals(16,ERASE);
+        assertTrue(valid(ERASE)&&!valid(LAST+1));
         assertFalse(valid(9),"the cleave's 9 is gone (the user's: \"기존 H는 삭제해\")");
         assertTrue(skill(ERASE)&&erase(ERASE)&&!erase(KNIVES)&&!erase(SLAM)&&!erase(SHOT));
         assertEquals(1,blows(ERASE),"its one blow is the press");assertEquals(EraseRules.MARK,blowAt(ERASE,0));

@@ -306,27 +306,33 @@ public final class WeakenClient {
         for(var x:shown)glitch(m,x,true);
     }
     /** The glitch on one weakened: bars torn across the body and pixels flickering on it, before it as the viewer sees it. */
-    private static void glitch(EffectMesh m,Shown x,boolean light){
-        Vec3d mid=x.feet.add(0,x.height*.5,0);float near=near(mid,m.camera());if(near<=0)return;
-        Vec3d[] f=facing(m.camera(),mid);float a=x.alpha*near,often=often(x.clock,x.seed,x.fresh);
-        Vec3d front=f[2].multiply(x.width*.5+.12);
+    private static void glitch(EffectMesh m,Shown x,boolean light){body(m,x.feet,x.height,x.width,x.clock,x.on,x.alpha,x.seed,x.fresh,light);}
+    /**
+     * The glitch on a body {@code height} high and {@code width} wide standing at {@code feet}, {@code clock} seconds
+     * into it and {@code on} seconds after this client knew of it (a flash on it then if {@code fresh}), as strongly as
+     * {@code alpha}: the weakening's; (2.134.0) the great X slash's on whom it glitched (XSlash) the same.
+     */
+    static void body(EffectMesh m,Vec3d feet,double height,double width,float clock,float on,float alpha,int seed,boolean fresh,boolean light){
+        Vec3d mid=feet.add(0,height*.5,0);float near=near(mid,m.camera());if(near<=0)return;
+        Vec3d[] f=facing(m.camera(),mid);float a=alpha*near,often=often(clock,seed,fresh);
+        Vec3d front=f[2].multiply(width*.5+.12);
         for(int j=0;j<BARS;j++){
-            double[] b=tear(j,x.clock,x.seed,x.height,x.width,often);if(b==null)continue;
-            Vec3d p=x.feet.add(0,b[0]*x.height,0).add(f[0].multiply(b[1])).add(front);
+            double[] b=tear(j,clock,seed,height,width,often);if(b==null)continue;
+            Vec3d p=feet.add(0,b[0]*height,0).add(f[0].multiply(b[1])).add(front);
             int rgb=(int)b[4];
             if(light){if(rgb!=INK)bar(m,p,f,b[2]*1.15,b[3]*2.4,GLOW,.2f*a);}
             // (its purple laid over, not added: purple before a bright sky; a dark line round it)
             else{bar(m,p,f,b[2]+.014,b[3]+.014,INK,.85f*a);bar(m,p,f,b[2],b[3],rgb,a);}
         }
         for(int j=0;j<PIXELS;j++){
-            double[] b=pixel(j,x.clock,x.seed,x.height,x.width,often);if(b==null)continue;
-            Vec3d p=x.feet.add(0,b[0]*x.height,0).add(f[0].multiply(b[1])).add(front);
+            double[] b=pixel(j,clock,seed,height,width,often);if(b==null)continue;
+            Vec3d p=feet.add(0,b[0]*height,0).add(f[0].multiply(b[1])).add(front);
             int rgb=(int)b[3];
             if(light){if(rgb!=INK)m.softDisc(p,b[2]*2.6,GLOW,.14f*a);}
             else{square(m,p,f,b[2]+.011,INK,.8f*a);square(m,p,f,b[2],rgb,a);}
         }
         // as it takes: a purple flash on the body
-        if(light&&x.fresh&&x.on<.5f){float s=x.on/.5f;m.softDisc(mid,1.0+.8*s,GLOW,.5f*(1-s)*(1-s)*a);}
+        if(light&&fresh&&on<.5f){float s=on/.5f;m.softDisc(mid,1.0+.8*s,GLOW,.5f*(1-s)*(1-s)*a);}
     }
     /** A little purple light on the world round one weakened. */
     public static void frame(FxFrame f,Vec3d camera){

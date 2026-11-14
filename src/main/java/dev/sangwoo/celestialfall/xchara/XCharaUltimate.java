@@ -111,8 +111,8 @@ public final class XCharaUltimate {
             if(skill==R){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaClone.cast(player,target);else XCharaAttack.jab(player);});return;}
             // H with the hack on: the terrain delete (2.133.0, user request: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해": in the
             // cleave's place, 2.125.0 to 2.132.5, gone), asked with where the middle of their screen points (XCharaAttack.erase,
-            // XCharaErase); with it off H is nothing (the user's choice: left empty for now)
-            if(skill==H){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaAttack.erase(player,aim);});return;}
+            // XCharaErase); (2.134.0) with it off the great X slash (XCharaAttack.xslash: the way they face as it begins)
+            if(skill==H){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaAttack.erase(player,aim);else XCharaAttack.xslash(player);});return;}
             if(skill!=G)return;
             // G: with the hack on the sword dance; (2.128.0) with it off the slam (XCharaAttack.slam)
             server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))cast(player,target);else XCharaAttack.slam(player);});

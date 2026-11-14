@@ -241,7 +241,7 @@ public class BossBrain {
     // ---- keys
 
     protected boolean dashReady(long now){var s=CombatManager.peek(boss);return s==null||now>=s.dashReady&&!s.dashing(now)&&!s.locked(now);}
-    protected boolean canGuard(long now){var s=CombatManager.peek(boss);return s==null||!s.locked(now)&&!s.dashing(now)&&!s.attacking(now);}
+    protected boolean canGuard(long now){var s=CombatManager.peek(boss);return s==null||!s.locked(now)&&!s.dashing(now)&&!s.attacking(now)&&!s.sealed(now);}
     protected boolean guarding(){var s=CombatManager.peek(boss);return s!=null&&s.guarding;}
     /** Dashes along {@code dir} (whatever way it faces). */
     protected boolean dash(Vec3d dir,long now){

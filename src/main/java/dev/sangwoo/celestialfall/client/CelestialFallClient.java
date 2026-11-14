@@ -59,6 +59,7 @@ public final class CelestialFallClient implements ClientModInitializer {
         // (2.132.5) X Chara's rain of knives as it rains (its own news and casts)
         dev.sangwoo.celestialfall.client.xchara.EraseClient.initialize();
         dev.sangwoo.celestialfall.client.xchara.BladeShot.initialize();
+        dev.sangwoo.celestialfall.client.xchara.XSlash.initialize();
         dev.sangwoo.celestialfall.client.xchara.HealClient.initialize();
         // and their Q, the hack (2.115.0): the knife lit, the panel in the other hand
         dev.sangwoo.celestialfall.client.xchara.HackMode.initialize();

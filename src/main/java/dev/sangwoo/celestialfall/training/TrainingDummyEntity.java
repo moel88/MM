@@ -162,6 +162,10 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
         long now=getWorld().getTime();combat.incapacitate(now,ticks,slowTicks,slow);getNavigation().stop();
         nextCombo=Math.max(nextCombo,combat.disabledUntil+12);syncCombat();
     }
+    /** (2.134.0) Glitched (CombatManager.seal, X Chara's great X slash): it raises no guard for {@code ticks} (its guard, if up, goes down now). */
+    public void seal(int ticks){if(combat.seal(getWorld().getTime(),ticks))syncCombat();}
+    /** (2.134.0) Until when it raises no guard (the server's; for the checks). */
+    public long sealedUntil(){return combat.sealedUntil;}
     /** Staggered by a basic attack's blow until {@code until} (2.68.0, CombatManager.stagger): it does nothing as long, {@code slow} slower. */
     public void stagger(long until,double slow){
         long now=getWorld().getTime();combat.stagger(now,until,slow);getNavigation().stop();
@@ -171,7 +175,7 @@ public final class TrainingDummyEntity extends PathAwareEntity implements Monste
     public void cut(long until,long to){if(!combat.cut(getWorld().getTime(),until,to))return;nextCombo=Math.min(nextCombo,combat.disabledUntil+12);syncCombat();}
     public void interruptCombat(){combat.cancel();getNavigation().stop();nextCombo=getWorld().getTime()+12;syncCombat();}
     public void resetTraining() {
-        HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;combat.disabledUntil=combat.slowUntil=combat.staggerUntil=0;
+        HitStun.disconnect(getUuid());combat.cancel();combat.pressure=0;combat.brokenUntil=0;combat.comboUntil=0;combat.disabledUntil=combat.slowUntil=combat.staggerUntil=combat.sealedUntil=0;
         nextCombo=getWorld().getTime()+20;getNavigation().stop();setTarget(null);setVelocity(Vec3d.ZERO);
         setHealth(getMaxHealth());clearStatusEffects();extinguish();timeUntilRegen=0;syncCombat();
     }

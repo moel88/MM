@@ -787,7 +787,33 @@ public final class MpClient implements ClientModInitializer {
         "1060 XCHARA","1065 NOCDON","1075 Q",
         "1085 EAIM-","1090 DIST30","1095 HEAL","1100 PITCH29","1110 H",
         "1450 PITCH12","1460 NOCDOFF","1480 END"};
-    private static final String[] STEPS=ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * X Chara's H with the hack off, the great X slash (2.134.0, MP_ONLY=xcharax): the caster takes X Chara, its cooldowns
+     * on (no healing on this check: the watcher's health tells what struck it). A: the watcher 10 blocks ahead, where the X
+     * left on the ground crosses, its guard up ("GUARD+"), H: the X goes 10 ticks in and strikes the watcher through its
+     * guard (40, no knockback), glitching it for 8 s (its guard down and refused; its HUD's "가드 불가"); a second after the
+     * X is gone as far as it goes, the X on the ground bursts under it (15). The watcher brought 2 blocks ahead, its guard
+     * key still held: the caster's basic attacks go through. H at once: refused (50 s from its end). Its glitch over (8 s
+     * from the strike), its guard comes back up of itself: a basic attack taken on it. The cooldowns off. B: the watcher 5
+     * blocks ahead, in the gap of the X on the ground near the caster: struck, nothing at the burst. C: the watcher on one
+     * arm of the X on the ground, 14 ahead and 2.5 to the right ("WPOS14/2.5"): struck, and burst on. D: H and the caster
+     * struck before the X goes ("HITME": stopped short, no X, no burst). E: the hack on, H: the terrain delete, no X. Both
+     * clients log the X they know of and whom they hold glitched, their own player's glitch and guard by the server's
+     * word, the sounds, and the cooldown here.
+     */
+    private static final String[] XCHARAX_SCRIPT={
+        "5 XCHARA","8 NOCDOFF","40 DIST30","45 HEAL",
+        "60 DIST10","65 HEAL","70 GUARD+","85 H",
+        "140 DIST2","150 M1","160 M1",
+        "175 H",
+        "300 M1",
+        "320 GUARD-","330 NOCDON",
+        "345 DIST5","350 HEAL","360 H",
+        "440 WPOS14/2.5","445 HEAL","455 H",
+        "540 DIST10","545 HEAL","555 H","557 HITME",
+        "600 DIST30","610 Q","620 H",
+        "660 Q","680 NOCDOFF","700 END"};
+    private static final String[] STEPS=ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -921,6 +947,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("xcharaslam")){hackWatch();slamWatch();}
                 if(ONLY.equals("xcharacut")){hackWatch();cutWatch();}
                 if(ONLY.equals("xcharaerase")){hackWatch();eraseWatch();}
+                if(ONLY.equals("xcharax")){hackWatch();xslashWatch();eraseWatch();}
                 if(ONLY.equals("xcharashot")||ONLY.equals("xcharaknives")){hackWatch();shotWatch();}
                 if(age%4==0)shot();
                 if(caster){
@@ -943,7 +970,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharax")?900:ONLY.equals("xcharaerase")?1700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1731,6 +1758,38 @@ public final class MpClient implements ClientModInitializer {
         for(;shotHeard<heard.size();shotHeard++)if(heard.get(shotHeard).contains("kni"))note("  knives' sound: "+heard.get(shotHeard));
         long ready=ONLY.equals("xcharaknives")?dev.sangwoo.celestialfall.client.xchara.KnifeClient.knivesReady(mc.player.getUuid()):dev.sangwoo.celestialfall.client.xchara.KnifeClient.shotReady(mc.player.getUuid());
         Object was=flags.get("shot_ready");if(was==null||(Long)was!=ready){flags.put("shot_ready",ready);if(ready>0)note("my knives ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
+    }
+    private String xslashKnown="";private int xslashHeard;private boolean xslashSealed,xslashGuard;private long xslashReadyHere=Long.MIN_VALUE;
+    /**
+     * (2.134.0, MP_ONLY=xcharax) X Chara's great X slash as this client has it: the X it knows of as they change (how far
+     * each goes, how many it struck, gone early) and whom it holds glitched; this client's own player's glitch by the
+     * server's word (what its HUD's "가드 불가" shows) and its guard; the sounds as they are started; and its cooldown here.
+     */
+    private void xslashWatch(){
+        String d=dev.sangwoo.celestialfall.client.xchara.XSlash.describe(0);
+        var kb=new StringBuilder();
+        for(String tok:d.split(" ")){if(tok.isEmpty())continue;kb.append(' ').append(tok.startsWith("x")?tok:tok.substring(0,tok.indexOf(':')));}
+        String key=kb.toString();
+        if(!key.equals(xslashKnown)){
+            xslashKnown=key;var b=new StringBuilder();
+            for(String tok:d.split(" ")){
+                if(tok.isEmpty())continue;
+                if(tok.startsWith("x")){b.append(" X (reach:struck) ").append(tok.substring(1));continue;}
+                int id=Integer.parseInt(tok.substring(0,tok.indexOf(':')));var e=mc.world.getEntityById(id);
+                b.append(" glitched ").append(e==null?"entity "+id:e==mc.player?"me":e.getName().getString()).append(' ').append(tok.substring(tok.indexOf(':')+1)).append(" s left");
+            }
+            note("X slash here:"+(b.length()==0?" nothing":b));
+        }
+        var snap=dev.sangwoo.celestialfall.client.CombatClient.snapshot(mc.player.getUuid());long now=mc.world.getTime();
+        boolean sealed=snap.sealed(now);
+        if(sealed!=xslashSealed){xslashSealed=sealed;note(String.format(Locale.ROOT,"I am glitched here (the server's word, as the HUD's \"가드 불가\" shows): %s, until %d (now %d)",sealed,snap.sealedUntil(),now));}
+        boolean guard=snap.guard();
+        if(guard!=xslashGuard){xslashGuard=guard;note("my guard by the server's word: "+guard+" (the guard key asked for: "+Files.exists(OUT.resolve("guard"))+")");}
+        var heard=dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD;
+        if(heard.size()<xslashHeard)xslashHeard=0;
+        for(;xslashHeard<heard.size();xslashHeard++)note("  sound: "+heard.get(xslashHeard));
+        long ready=dev.sangwoo.celestialfall.client.xchara.KnifeClient.xslashReady(mc.player.getUuid());
+        if(ready!=xslashReadyHere){xslashReadyHere=ready;if(ready>0)note("my X slash ready again at "+ready+" here (now "+now+": "+String.format(Locale.ROOT,"%.1f",(ready-now)/20.0)+" s)");}
     }
     private final Map<String,String> eraseState=new HashMap<>();private int eraseHeard;private boolean eraseWalking;private net.minecraft.util.math.Vec3d eraseWalkAt;
     /**

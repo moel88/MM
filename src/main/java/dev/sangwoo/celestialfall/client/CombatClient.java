@@ -24,11 +24,13 @@ public final class CombatClient {
      * blow staggers them (Stagger).
      */
     public record Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil,
-                           long brokenAt,long disabledUntil,long disabledAt,long staggerUntil) {
+                           long brokenAt,long disabledUntil,long disabledAt,long staggerUntil,long sealedUntil) {
         /** As before 2.60.0: the guard broken for BREAK_TICKS, never incapacitated. */
         public Snapshot(int serial,int attack,long attackStart,boolean guard,float pressure,long brokenUntil,long dashStart,long dashReady,float forward,float side,long combatUntil){
-            this(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenUntil-CombatState.BREAK_TICKS,0,-1000,0);
+            this(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenUntil-CombatState.BREAK_TICKS,0,-1000,0,0);
         }
+        /** (2.134.0) Glitched by X Chara's great X slash: no guard can be raised. */
+        public boolean sealed(double now){return now<sealedUntil;}
         public boolean broken(double now){return now<brokenUntil;}
         /** Incapacitated (2.60.0): no skill, attack, dash or guard. */
         public boolean disabled(double now){return now<disabledUntil;}
@@ -39,7 +41,7 @@ public final class CombatClient {
         public float attackAge(double now){return (float)(now-attackStart);}
         public float dashAge(double now){return (float)(now-dashStart);}
     }
-    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0,-1000,0,-1000,0);
+    public static final Snapshot EMPTY=new Snapshot(0,0,-1000,false,0,0,-1000,0,1,0,0,-1000,0,-1000,0,0);
     private static final Map<UUID,Snapshot> STATES=new HashMap<>();
     private static final Map<UUID,Movement> MOVEMENT=new HashMap<>();
     private static final class Movement {
@@ -72,7 +74,9 @@ public final class CombatClient {
             long brokenAt=more?b.readLong():brokenUntil-CombatState.BREAK_TICKS,disabledUntil=more?b.readLong():0,disabledAt=more?b.readLong():-1000;
             // 2.68.0: the stagger of a basic attack's blow (a server before it sends none)
             long staggerUntil=b.readableBytes()>=8?b.readLong():0;
-            Snapshot s=new Snapshot(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt,staggerUntil);
+            // 2.134.0: until when they are glitched and can raise no guard (a server before it sends none)
+            long sealedUntil=b.readableBytes()>=8?b.readLong():0;
+            Snapshot s=new Snapshot(serial,attack,attackStart,guard,pressure,brokenUntil,dashStart,dashReady,forward,side,combatUntil,brokenAt,disabledUntil,disabledAt,staggerUntil,sealedUntil);
             mc.execute(()->{if(MapClient.enabled()&&mc.world!=null&&mc.world.getRegistryKey().getValue().equals(dimension))STATES.put(id,s);});
         });
         ClientTickEvents.END_CLIENT_TICK.register(CombatClient::tick);

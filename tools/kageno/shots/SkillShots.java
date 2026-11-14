@@ -227,6 +227,8 @@ public final class SkillShots implements ClientModInitializer {
         net.minecraft.util.math.Vec3d dir(){double r=Math.toRadians(yaw);return new net.minecraft.util.math.Vec3d(-Math.sin(r),0,Math.cos(r));}
     }
     private final List<Actor> actors=new ArrayList<>();
+    /** (2.134.0) Whether the shot's H was pressed with the hack off (the great X slash, not the terrain delete). */
+    private static boolean xslashH;
     /** (2.133.0) The shot's training dummies besides its one ("xdummy"), by entity id. */
     private static final List<Integer> EXTRA_DUMMIES=new java.util.concurrent.CopyOnWriteArrayList<>();
     private static final Map<String,Integer> ACTOR_IDS=new ConcurrentHashMap<>();private static final Map<String,Actor> ACTORS=new ConcurrentHashMap<>();
@@ -1025,6 +1027,9 @@ public final class SkillShots implements ClientModInitializer {
             var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
             boolean show=opt("dummy","STAND".equals(current)||"SUMMON".equals(current)?0:1)>0;var at=new net.minecraft.util.math.Vec3d(baseX,y,baseZ).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
             // Hidden dummies wait far to the side (below the floor they would fall out of the world).
+            // "dfresh=1" (2.134.0): the dummy starts the entry as new, with nothing left of the last (X Chara's great X slash
+            // glitches it for 8 s, so a guard dummy struck in the warm-up entry would start the next with its guard down)
+            if(opt("dfresh",0)>0&&l instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity fresh)fresh.resetTraining();
             l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(show?at.x:at.x+70,y,at.z,yaw+180,0);l.setVelocity(0,0,0);
         }
     }
@@ -1421,7 +1426,24 @@ public final class SkillShots implements ClientModInitializer {
                         // its cube's top now, how many on it), the dummies' health and where they are, where the player really
                         // is; and what this client draws of it (EraseClient.describe: age, grounds, cubes' lift, cut, blasted,
                         // faces; its grounds with where each "!!!" shows), and the sounds
-                        if(what.equals("KEY_H")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&age>at&&age<=at+560&&(age-at<=30||(age-at)%10==0)){final int a0=at;
+                        // (2.134.0) X Chara's great X slash (H with the hack off): by the server, the cast (how far in, whether its X
+                        // went), its X (how far it went, how many it struck), each dummy's health, guard and how long it can
+                        // raise none; and what this client draws of it (XSlash.describe: each X, whom it holds glitched), the
+                        // player's own guard seal and the sounds
+                        if(what.equals("KEY_H")&&age==at)xslashH=!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player);
+                        if(what.equals("KEY_H")&&xslashH&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&age>at&&age<=at+280&&(age-at<=60||(age-at)%5==0)){final int a0=at;
+                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeXSlash(p);
+                                long now=p.getWorld().getTime();
+                                StringBuilder ds=new StringBuilder();var ids=new ArrayList<Integer>();ids.add(dummyId);ids.addAll(EXTRA_DUMMIES);
+                                for(int id:ids){var dm=p.getServerWorld().getEntityById(id);
+                                    if(dm instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity e)ds.append(String.format(Locale.ROOT," [%d hp %.1f guard %s sealed %d]",id,e.getHealth(),e.guarding(),Math.max(0,e.sealedUntil()-now)));}
+                                log.append(String.format(Locale.ROOT,"  xslash +%d: server cast %s, X %s, dummies%s, ready in %d%n",age-a0,
+                                    d==null?"none":String.format(Locale.ROOT,"age %d went %s",now-(Long)d[0],d[1]),dev.sangwoo.celestialfall.xchara.XCharaXSlash.describe(p),ds,
+                                    Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.xslashReady(p)-now)));});
+                            log.append(String.format(Locale.ROOT,"  xslash +%d: client %s, knife lit %s, sounds %s%n",age-a0,
+                                dev.sangwoo.celestialfall.client.xchara.XSlash.describe(0),dev.sangwoo.celestialfall.client.xchara.XSlash.knife(mc.player.getUuid(),0)!=null,
+                                String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("hit 17")||x.contains("whole")||x.contains("burst")||x.contains("strike")).toList())));}
+                        if(what.equals("KEY_H")&&!xslashH&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&age>at&&age<=at+560&&(age-at<=30||(age-at)%10==0)){final int a0=at;
                             server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeErase(p),r=dev.sangwoo.celestialfall.xchara.XCharaErase.describe(p);
                                 long now=p.getWorld().getTime();
                                 StringBuilder gs=new StringBuilder();

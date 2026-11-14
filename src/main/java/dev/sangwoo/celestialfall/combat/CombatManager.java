@@ -438,6 +438,19 @@ public final class CombatManager {
         p.getServerWorld().spawnParticles(ParticleTypes.CRIT,effect.x,effect.y,effect.z,24,.25,.22,.15,.07);
         return true;
     }
+    /**
+     * (2.134.0) Glitches whoever X Chara's great X slash struck: for {@code ticks} they can raise no guard (theirs, if up,
+     * goes down now); they walk, attack, dash and cast as ever. A training dummy the same; anything else has no guard.
+     */
+    public static void seal(LivingEntity target,int ticks) {
+        if(!dev.sangwoo.celestialfall.map.MapGate.enabled(target.getWorld())||!target.isAlive())return;
+        if(target instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity dummy){dummy.seal(ticks);return;}
+        if(!(target instanceof ServerPlayerEntity p))return;
+        long now=p.getWorld().getTime();var s=state(p);
+        if(s.seal(now,ticks)){speed(p,s,now);sync(p,s);}
+    }
+    /** (2.134.0) Until when this player is glitched and can raise no guard (0 if never). */
+    public static long sealedUntil(PlayerEntity p) {var e=p==null?null:STATES.get(p.getUuid());return e==null||e.entityId!=p.getId()?0:e.state.sealedUntil;}
     /** Whether this player holds their guard up now (and it is not broken). */
     public static boolean guarding(ServerPlayerEntity p) {var e=STATES.get(p.getUuid());return e!=null&&e.state.guarding&&!e.state.broken(p.getWorld().getTime());}
     public static boolean block(ServerPlayerEntity p,DamageSource source,float amount) {
@@ -465,6 +478,8 @@ public final class CombatManager {
             b.writeLong(s.brokenUntil);b.writeLong(s.dashStart);b.writeLong(s.dashReady);b.writeFloat(s.dashForward);b.writeFloat(s.dashSide);b.writeLong(s.combatUntil);
             // 2.60.0: when the guard broke, and the incapacitation (until when, since when); 2.68.0: the stagger's end
             b.writeLong(s.brokenAt);b.writeLong(s.disabledUntil);b.writeLong(s.disabledAt);b.writeLong(s.staggerUntil);
+            // 2.134.0: until when they are glitched and can raise no guard (X Chara's great X slash)
+            b.writeLong(s.sealedUntil);
             ServerPlayNetworking.send(viewer,STATE,b);
         }
     }

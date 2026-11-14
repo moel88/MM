@@ -956,8 +956,10 @@ void main(){
   vec3 ink=vec3(.05,.01,.12),rimc=vec3(.86,.54,1.0),mid=vec3(.58,.09,.88),deep=vec3(.30,.03,.58),hotc=vec3(1.0,.9,1.0);
   float body,d,aa,whiteCore;
   if(style>1.5){
-   // (2.133.0) X Chara's delete slash (H with their hack off): its giant blade going along the ground, a crescent
-   // standing across its way. uv.x from one horn (0) to the other (1); uv.y 0 at the inner edge, 1 at the outer.
+   // (2.133.0) X Chara's delete slash's giant blade, made for its first design (gone before it went out); from 2.134.0
+   // style 2 draws the arms of the great X slash (H with their hack off, client/xchara/XSlash: each of the X's two
+   // arms a crescent, and its edge toward the camera). Styles 3 and 4 are used by nothing now. uv.x from one horn (0)
+   // to the other (1); uv.y 0 at the inner edge, 1 at the outer.
    // Style 2 the blade: its shape is the geometry's (thin at the horns, deepest at the crown): an ink line on its
    // cutting edge (the crown's arc), a white core just in from it, lilac, a vivid purple going deep toward its inner
    // edge, which breaks into square pixels flickering off it (deleted data); faint scanlines across it. Style 3 the veil

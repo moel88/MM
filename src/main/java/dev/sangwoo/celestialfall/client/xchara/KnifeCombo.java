@@ -261,12 +261,12 @@ public final class KnifeCombo implements Fx.Skill {
 
     @Override public Anim clip(int combo){return clipOf(combo);}
     /** The swing at hit {@code hit}'s place in the combo: the same with the hack on or off. */
-    static Anim clipOf(int hit){if(erase(hit))return ErasePress.CLIP;if(hit==KNIVES)return CorruptionKnives.CLIP;if(hit==SHOT)return BladeShot.CLIP;if(cutter(hit))return EdgeCutter.clipOf(hit);if(hit==SLAM)return OverwriteSlam.CLIP;if(hit==JAB)return CorruptionJab.CLIP;return switch(place(hit)){case 2->P2;case 3->P3;case 4->P4;default->P1;};}
+    static Anim clipOf(int hit){if(hit==XSLASH)return XSlash.CLIP;if(erase(hit))return ErasePress.CLIP;if(hit==KNIVES)return CorruptionKnives.CLIP;if(hit==SHOT)return BladeShot.CLIP;if(cutter(hit))return EdgeCutter.clipOf(hit);if(hit==SLAM)return OverwriteSlam.CLIP;if(hit==JAB)return CorruptionJab.CLIP;return switch(place(hit)){case 2->P2;case 3->P3;case 4->P4;default->P1;};}
 
     /** The skills are drawn longer than a swing (what they leave). */
-    @Override public float lifetime(){return Math.max(Math.max(Math.max(Math.max(LIFE,CorruptionJab.LIFE),OverwriteSlam.LIFE),EdgeCutter.LIFE),Math.max(Math.max(BladeShot.LIFE,CorruptionKnives.LIFE),ErasePress.LIFE));}
+    @Override public float lifetime(){return Math.max(Math.max(Math.max(Math.max(LIFE,CorruptionJab.LIFE),OverwriteSlam.LIFE),EdgeCutter.LIFE),Math.max(Math.max(Math.max(BladeShot.LIFE,CorruptionKnives.LIFE),ErasePress.LIFE),XSlash.LIFE));}
     /** How long hit {@code combo} is drawn for (seconds). */
-    static float life(int combo){return combo==ERASE?ErasePress.LIFE:combo==KNIVES?CorruptionKnives.LIFE:combo==SHOT?BladeShot.LIFE:cutter(combo)?EdgeCutter.LIFE:combo==SLAM?OverwriteSlam.LIFE:combo==JAB?CorruptionJab.LIFE:LIFE;}
+    static float life(int combo){return combo==XSLASH?XSlash.LIFE:combo==ERASE?ErasePress.LIFE:combo==KNIVES?CorruptionKnives.LIFE:combo==SHOT?BladeShot.LIFE:cutter(combo)?EdgeCutter.LIFE:combo==SLAM?OverwriteSlam.LIFE:combo==JAB?CorruptionJab.LIFE:LIFE;}
     @Override public boolean layered(){return true;}
     /** None: the body is never copied behind itself (the hack's cut is the knife's own path, SlashFx). */
     @Override public float afterimages(float sec){return 0;}
@@ -373,6 +373,8 @@ public final class KnifeCombo implements Fx.Skill {
     @Override public void glitch(Fx c){
         // (a plain swing, the hack off, 2.117.0: nothing is drawn but the body and the knife)
         // (2.133.0: the terrain delete's press draws nothing here: its grounds are EraseZone's)
+        // (2.134.0) the great X slash: its X's two arms
+        if(c.cast.combo()==XSLASH){XSlash.glitch(c);return;}
         if(skill(c.cast.combo())||plain(c.cast.combo()))return;
         SlashFx.cut(c);
     }
@@ -380,6 +382,7 @@ public final class KnifeCombo implements Fx.Skill {
     @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==SLAM)OverwriteSlam.solids(c,s);}
     @Override public void alpha(Fx c,EffectMesh m){
         if(erase(c.cast.combo()))return;
+        if(c.cast.combo()==XSLASH){XSlash.draw(c,m,false);return;}
         if(c.cast.combo()==KNIVES){CorruptionKnives.draw(c,m,false);return;}
         if(c.cast.combo()==SHOT){BladeShot.draw(c,m,false);return;}
         if(cutter(c.cast.combo())){EdgeCutter.draw(c,m,false);return;}
@@ -390,6 +393,7 @@ public final class KnifeCombo implements Fx.Skill {
     }
     @Override public void additive(Fx c,EffectMesh m){
         if(erase(c.cast.combo()))return;
+        if(c.cast.combo()==XSLASH){XSlash.draw(c,m,true);return;}
         if(c.cast.combo()==KNIVES){CorruptionKnives.draw(c,m,true);return;}
         if(c.cast.combo()==SHOT){BladeShot.draw(c,m,true);return;}
         if(cutter(c.cast.combo())){EdgeCutter.draw(c,m,true);return;}
@@ -403,6 +407,7 @@ public final class KnifeCombo implements Fx.Skill {
 
     @Override public void frame(Fx c,FxFrame f){
         if(erase(c.cast.combo()))return;
+        if(c.cast.combo()==XSLASH){XSlash.frame(c,f);return;}
         if(c.cast.combo()==KNIVES){CorruptionKnives.frame(c,f);return;}
         if(c.cast.combo()==SHOT){BladeShot.frame(c,f);return;}
         if(cutter(c.cast.combo())){EdgeCutter.frame(c,f);return;}
@@ -416,7 +421,7 @@ public final class KnifeCombo implements Fx.Skill {
     /** How hard each swing's blow shakes the camera as it lands on someone, by its place in the combo (a cut that meets no one, a third of it). */
     static final float[] SHAKE={0,.35f,.35f,.55f,1.0f};
     @Override public float shake(StandClient.Cast cast,float sec){
-        int hit=cast.combo();if(erase(hit))return 0;if(hit==KNIVES)return CorruptionKnives.shake(cast,sec);if(hit==SHOT)return BladeShot.shake(cast,sec);if(cutter(hit))return EdgeCutter.shake(cast,sec);if(hit==SLAM)return OverwriteSlam.shake(cast,sec);
+        int hit=cast.combo();if(erase(hit))return 0;if(hit==XSLASH)return XSlash.shake(cast,sec);if(hit==KNIVES)return CorruptionKnives.shake(cast,sec);if(hit==SHOT)return BladeShot.shake(cast,sec);if(cutter(hit))return EdgeCutter.shake(cast,sec);if(hit==SLAM)return OverwriteSlam.shake(cast,sec);
         if(hit==JAB)return CorruptionJab.shake(cast,sec);
         if(!valid(hit)||!KnifeClient.cameTo(cast,0))return 0;
         int[] told=KnifeClient.struck(cast.id(),0);

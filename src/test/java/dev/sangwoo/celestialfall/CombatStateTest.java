@@ -113,6 +113,24 @@ class CombatStateTest {
         assertTrue(w.broken(w.brokenAt));assertEquals(w.brokenAt+CombatState.BREAK_TICKS,w.brokenUntil,"one worn down too, from when it broke");
     }
 
+    /**
+     * User request (2.134.0, X Chara's great X slash): "맞은 사람은 글리치에 걸리고 가드 못 하게", and of how long and what
+     * it stops: "8초 · 가드만 못 함". Glitched, no guard can be raised for its time (one up goes down now); they walk,
+     * attack and dash as ever. A shorter one does not cut a longer one short.
+     */
+    @Test void glitchedNoGuardCanBeRaisedTheRestAsEver() {
+        CombatState s=new CombatState();assertTrue(s.guard(true,10));assertTrue(s.guarding);
+        assertTrue(s.seal(20,160));assertFalse(s.guarding,"a guard up goes down");assertEquals(180,s.sealedUntil);
+        for(long t=20;t<180;t+=7){s.guard(true,t);assertFalse(s.guarding,"no guard at "+t);assertTrue(s.sealed(t));assertFalse(s.locked(t),"not held: only the guard is shut");}
+        assertFalse(s.sealed(180));assertTrue(s.guard(true,180),"its guard again once it is over");
+        CombatState a=new CombatState();a.seal(0,160);
+        assertTrue(a.requestAttack(5),"they attack");
+        CombatState d=new CombatState();d.seal(0,160);
+        assertTrue(d.dash(5,1,0),"and dash");
+        CombatState w=new CombatState();w.seal(0,160);assertFalse(w.seal(50,20),"a shorter one changes nothing");assertEquals(160,w.sealedUntil);
+        assertTrue(w.seal(100,160));assertEquals(260,w.sealedUntil,"a longer one draws it out");
+    }
+
     @Test void aShortStrongerSlowGivesWayToAWeakerOneStillHeld(){
         // (2.113.0) Lee So-sang's formation: its first blow slows 70% for 3 s, its zone 50%, held a moment past each tick
         var s=new CombatState();

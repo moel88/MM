@@ -123,6 +123,9 @@ public final class HackMode {
         // (2.128.0) or their slam's, lit from its start until it is over
         var slam=OverwriteSlam.knife(id,delta);
         if(slam!=null)return slam;
+        // (2.134.0) or their great X slash's, lit until its X goes
+        var x=XSlash.knife(id,delta);
+        if(x!=null)return x;
         return look(id,delta);
     }
     /** What is drawn in this player's other hand: the hack's panel while any of it shows (null: whatever the hand holds). */

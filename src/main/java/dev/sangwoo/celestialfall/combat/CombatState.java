@@ -17,9 +17,16 @@ public final class CombatState {
     public double slow;
     /** Until when a basic attack's blow staggers it (2.68.0, {@link Stagger}): an incapacitation without the dazed look. */
     public long staggerUntil;
+    /**
+     * (2.134.0) Until when it is glitched and can raise no guard (X Chara's great X slash: "맞은 사람은 글리치에 걸리고 가드
+     * 못 하게", "8초 · 가드만 못 함"): it walks, attacks, dashes and casts as ever; only its guard is shut.
+     */
+    public long sealedUntil;
     public boolean guarding, queued, hitDone;
     public float pressure, dashForward=1, dashSide,dashYaw;
     public boolean broken(long now) { return now<brokenUntil; }
+    /** (2.134.0) Glitched: no guard can be raised (the rest as ever). */
+    public boolean sealed(long now) { return now<sealedUntil; }
     /** Incapacitated (2.60.0, "무력화"): no skill, attack, dash or guard; walking only. */
     public boolean disabled(long now) { return now<disabledUntil; }
     /** Staggered by a basic attack's blow (2.68.0): walking only, slowly, for a moment. */
@@ -82,7 +89,7 @@ public final class CombatState {
     }
     public boolean guard(boolean hold,long now) {
         guardHeartbeat=now;
-        boolean next=hold&&!locked(now)&&!attacking(now)&&!dashing(now);
+        boolean next=hold&&!locked(now)&&!attacking(now)&&!dashing(now)&&!sealed(now);
         boolean changed=next!=guarding;guarding=next;
         if(next) {combatUntil=now+100;queued=false;}
         return changed;
@@ -94,6 +101,18 @@ public final class CombatState {
         if(pressure<100)return false;
         guarding=false;brokenUntil=now+BREAK_TICKS;brokenAt=now;attack=combo=0;queued=false;serial++;
         return true;
+    }
+    /**
+     * (2.134.0) Glitched for {@code ticks}: no guard can be raised as long (a guard up is let down now); a longer one
+     * already on stays. Returns whether anything changed.
+     */
+    public boolean seal(long now,int ticks) {
+        long until=now+Math.max(0,ticks);boolean changed=until>sealedUntil||guarding;
+        sealedUntil=Math.max(sealedUntil,until);
+        if(guarding){guarding=false;queued=false;}
+        combatUntil=Math.max(combatUntil,now+100);
+        if(changed)serial++;
+        return changed;
     }
     /** The guard broken outright by a blow no guard can take (2.59.0: Star Platinum's heavy punch), broken for {@code ticks}. */
     public void breakGuard(long now,int ticks) {

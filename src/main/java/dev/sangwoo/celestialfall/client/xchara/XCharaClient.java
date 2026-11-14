@@ -255,11 +255,13 @@ public final class XCharaClient {
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_H){
             // (2.133.0, user request: "지금 H를 q활성화 H를 바꾸고 기존 H는 삭제해") H with the hack on, the terrain delete
             // (XCharaAttack.erase): asked with where the middle of the screen points (ErasePress.aimPoint: the ground marked
-            // where they look). With the hack off H is nothing (the user's choice: left empty for now); taken all the same.
-            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&HackMode.on(mc.player)&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+            // where they look). (2.134.0) With the hack off, the great X slash (XCharaAttack.xslash: the way they look as it
+            // begins, the body turned to the crosshair first); the server takes the one or the other by their hack.
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
                 BotandCamera.prepareInteraction();
-                Vec3d at=ErasePress.aimPoint(mc);
-                var b=PacketByteBufs.create();b.writeByte(H);b.writeDouble(at.x);b.writeDouble(at.y);b.writeDouble(at.z);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+                var b=PacketByteBufs.create();b.writeByte(H);
+                if(HackMode.on(mc.player)){Vec3d at=ErasePress.aimPoint(mc);b.writeDouble(at.x);b.writeDouble(at.y);b.writeDouble(at.z);}
+                ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }
             return true;
         }

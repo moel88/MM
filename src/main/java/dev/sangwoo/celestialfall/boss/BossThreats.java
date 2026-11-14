@@ -287,10 +287,34 @@ public final class BossThreats {
                 Zone.lane(new Vec3d(w[0],w[5],w[2]),0f,-half,half,half,-dev.sangwoo.celestialfall.xchara.EraseRules.ON_UNDER,dev.sangwoo.celestialfall.xchara.EraseRules.ON_OVER),
                 false,false,false,dev.sangwoo.celestialfall.xchara.EraseRules.BURST_DAMAGE,false,false));
         }
+        // (2.134.0) the great X slash's X in flight (the rest of its way, as wide as it grows), then the X it left on the
+        // ground as it bursts (a band along each diagonal); no guard takes either
+        for(var w:dev.sangwoo.celestialfall.xchara.XCharaXSlash.going(p)){
+            Vec3d from=new Vec3d(w[0],w[1],w[2]);float yaw=(float)w[3];double reach=w[4];long fired=(long)w[5],burst=(long)w[6];
+            long gone=fired+(long)Math.ceil(dev.sangwoo.celestialfall.xchara.XSlashRules.flight(reach))+1;
+            if(now<=gone)out.add(new Threat(p,"xchara_xslash",fired-dev.sangwoo.celestialfall.xchara.XSlashRules.FIRE,fired,gone,
+                Zone.lane(from,yaw,0,reach,dev.sangwoo.celestialfall.xchara.XSlashRules.HALF,dev.sangwoo.celestialfall.xchara.XSlashRules.LOW,dev.sangwoo.celestialfall.xchara.XSlashRules.HIGH),
+                false,false,false,dev.sangwoo.celestialfall.xchara.XSlashRules.DAMAGE,false,false));
+            Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);
+            for(double[] d:dev.sangwoo.celestialfall.xchara.XSlashRules.diagonals(reach)){
+                Vec3d a=from.add(f.multiply(d[0])).add(right.multiply(d[1])),b=from.add(f.multiply(d[2])).add(right.multiply(d[3])),dd=b.subtract(a);
+                out.add(new Threat(p,"xchara_xslash_mark",fired,burst,burst+1,
+                    Zone.lane(a,(float)Math.toDegrees(Math.atan2(-dd.x,dd.z)),0,dd.horizontalLength(),dev.sangwoo.celestialfall.xchara.XSlashRules.BAND,dev.sangwoo.celestialfall.xchara.XSlashRules.MARK_LOW,dev.sangwoo.celestialfall.xchara.XSlashRules.MARK_HIGH),
+                    false,false,false,dev.sangwoo.celestialfall.xchara.XSlashRules.BURST_DAMAGE,false,false));
+            }
+        }
         var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(p);
         if(h==null||!dev.sangwoo.celestialfall.xchara.XCharaCombo.valid(h.combo()))return;
         // (2.133.0) the terrain delete before its grounds are marked: no one knows where they are until then
         if(h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.ERASE)return;
+        // (2.134.0) the great X slash before its X goes: the way ahead of them as far as it can fly (they stand where they are)
+        if(h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.XSLASH){
+            long fire=h.start()+dev.sangwoo.celestialfall.xchara.XSlashRules.FIRE;
+            if(h.blows()==0&&now<=fire)out.add(new Threat(p,"xchara_xslash",h.start(),fire,fire+(long)Math.ceil(dev.sangwoo.celestialfall.xchara.XSlashRules.flight(dev.sangwoo.celestialfall.xchara.XSlashRules.RANGE)),
+                Zone.lane(p.getPos(),h.yaw(),0,dev.sangwoo.celestialfall.xchara.XSlashRules.RANGE,dev.sangwoo.celestialfall.xchara.XSlashRules.HALF,dev.sangwoo.celestialfall.xchara.XSlashRules.LOW,dev.sangwoo.celestialfall.xchara.XSlashRules.HIGH),
+                false,false,false,dev.sangwoo.celestialfall.xchara.XSlashRules.DAMAGE,false,false));
+            return;
+        }
         if(h.blows()>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.blowAt(c,i);
         if(now>hit)return;
