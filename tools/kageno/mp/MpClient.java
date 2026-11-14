@@ -736,7 +736,27 @@ public final class MpClient implements ClientModInitializer {
         "410 DIST6","415 HEAL","425 Y","428 HITME",
         "480 DIST6","485 HEAL","495 Y","509 HITME",
         "570 NOCDOFF","590 END"};
-    private static final String[] STEPS=ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    /**
+     * X Chara's T with the hack off, the three small knives thrown (2.131.0, MP_ONLY=xcharaknives): the caster takes X
+     * Chara, its cooldowns on. Q, and T with the hack on and the watcher far off: the weakening's (no one to mark), no
+     * knives. Q again. T with the watcher 6 blocks ahead: three knives leave the hand 6, 8 and 10 ticks in, 4 each on
+     * the watcher, no knockback. T at once: refused (5 s from its end). The cooldowns off: T on the watcher's guard:
+     * no guard takes them (4 each all the same); T with the watcher 30 blocks off: the knives fly out and meet no one;
+     * T and the caster struck before the first knife goes ("HITME": stopped short, no knife flies); T and the caster
+     * struck after the first have gone: those fly on and strike, the rest are gone. Both clients log each knife as they
+     * hear of it and their sounds.
+     */
+    private static final String[] XCHARAKNIVES_SCRIPT={
+        "5 XCHARA","8 NOCDOFF","40 DIST30","45 HEAL",
+        "60 Q","80 T","130 Q",
+        "150 DIST6","155 HEAL","170 T",
+        "200 T",
+        "230 NOCDON","235 DIST6","240 HEAL","250 GUARD+","265 T","300 GUARD-",
+        "320 DIST30","335 T",
+        "380 DIST6","385 HEAL","395 T","398 HITME",
+        "440 DIST6","445 HEAL","455 T","463 HITME",
+        "520 NOCDOFF","540 END"};
+    private static final String[] STEPS=ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -869,7 +889,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("xcharay")){hackWatch();pullWatch();}
                 if(ONLY.equals("xcharaslam")){hackWatch();slamWatch();}
                 if(ONLY.equals("xcharacut")){hackWatch();cutWatch();}
-                if(ONLY.equals("xcharashot")){hackWatch();shotWatch();}
+                if(ONLY.equals("xcharashot")||ONLY.equals("xcharaknives")){hackWatch();shotWatch();}
                 if(age%4==0)shot();
                 if(caster){
                     if(age%40==0&&held.isEmpty())face();
@@ -1653,10 +1673,12 @@ public final class MpClient implements ClientModInitializer {
     private void shotWatch(){
         for(var p:mc.world.getPlayers()){
             StringBuilder s=new StringBuilder();boolean any=false;
-            for(int k=0;k<4;k++){
-                String d=dev.sangwoo.celestialfall.client.xchara.BladeShot.describe(p,k,0);if(d==null){s.setLength(0);break;}
-                String[] v=d.split(",");any=true;
-                s.append(' ').append(k).append(':').append(Float.parseFloat(v[0])<=0?"-":v[1].equals("1")?"flying":"hangs").append(v[6].equals("-1")?"":"/struck "+v[6]+" at "+v[7]+(v[8].equals("1")?" took":" not taken"));
+            // (2.131.0, MP_ONLY=xcharaknives: the three small knives thrown instead, as CorruptionKnives draws them)
+            boolean small=ONLY.equals("xcharaknives");
+            for(int k=0;k<(small?3:4);k++){
+                String d=small?dev.sangwoo.celestialfall.client.xchara.CorruptionKnives.describe(p,k,0):dev.sangwoo.celestialfall.client.xchara.BladeShot.describe(p,k,0);if(d==null){s.setLength(0);break;}
+                String[] v=d.split(",");any=true;int at=small?5:6;
+                s.append(' ').append(k).append(':').append(Float.parseFloat(v[0])<=0?"-":v[1].equals("1")?"flying":small?"in hand":"hangs").append(v[at].equals("-1")?"":"/struck "+v[at]+" at "+v[at+1]+(v[at+2].equals("1")?" took":" not taken"));
             }
             String key=any?s.toString():"";
             if(key.equals(shotState.getOrDefault(p.getUuid(),"")))continue;
@@ -1665,8 +1687,8 @@ public final class MpClient implements ClientModInitializer {
         }
         var heard=dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD;
         if(heard.size()<shotHeard)shotHeard=0;
-        for(;shotHeard<heard.size();shotHeard++)if(heard.get(shotHeard).contains("knife"))note("  knives' sound: "+heard.get(shotHeard));
-        long ready=dev.sangwoo.celestialfall.client.xchara.KnifeClient.shotReady(mc.player.getUuid());
+        for(;shotHeard<heard.size();shotHeard++)if(heard.get(shotHeard).contains("kni"))note("  knives' sound: "+heard.get(shotHeard));
+        long ready=ONLY.equals("xcharaknives")?dev.sangwoo.celestialfall.client.xchara.KnifeClient.knivesReady(mc.player.getUuid()):dev.sangwoo.celestialfall.client.xchara.KnifeClient.shotReady(mc.player.getUuid());
         Object was=flags.get("shot_ready");if(was==null||(Long)was!=ready){flags.put("shot_ready",ready);if(ready>0)note("my knives ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
     }
     private final Map<UUID,String> cutState=new HashMap<>();private int cutHeard;

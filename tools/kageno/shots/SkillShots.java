@@ -1366,6 +1366,24 @@ public final class SkillShots implements ClientModInitializer {
                             StringBuilder ks=new StringBuilder();for(int k=0;k<4;k++)ks.append(" [").append(dev.sangwoo.celestialfall.client.xchara.BladeShot.describe(mc.player,k,0)).append(']');
                             log.append(String.format(Locale.ROOT,"  shot +%d: client knives (shown,flying,head,grip xyz,struck,far,took)%s, sounds %s%n",age-a0,ks,
                                 String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("knife")).toList())));}
+                        // (2.131.0) X Chara's small knives thrown (T with the hack off): "shotaim=..." as the knives shot's; by the
+                        // server, the throw in flight (the knives gone, the last aim told), how many fly, the dummy's health;
+                        // and each knife as this client draws it
+                        if(what.equals("KEY_T")&&age==at&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)){shotFrom=mc.player.getPos();
+                            if(opts.containsKey("shotaim")){String o=opts.get("shotaim");var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var r=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                                if(o.equals("dummy")){var dm=mc.world.getEntityById(dummyId);dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt=dm==null?null:dm.getPos().add(0,dm.getHeight()*.55,0);}
+                                else{String[] v=o.split("[_x]");dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt=mc.player.getPos().add(f.multiply(Double.parseDouble(v[0]))).add(r.multiply(v.length>1?Double.parseDouble(v[1]):0)).add(0,v.length>2?Double.parseDouble(v[2]):0,0);}
+                                log.append("  small knives aimed at ").append(dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt).append('\n');}
+                            else dev.sangwoo.celestialfall.client.xchara.BladeShot.aimAt=null;}
+                        if(what.equals("KEY_T")&&shotFrom!=null&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)&&age>at&&age<=at+36&&(age-at<=22||(age-at)%4==0)){final int a0=at;
+                            server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeShot(p);var dm=p.getServerWorld().getEntityById(dummyId);
+                                long now=p.getWorld().getTime();float hp=dm instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
+                                log.append(String.format(Locale.ROOT,"  knives +%d: server %s, %d flying, ready in %d, dummy hp %.1f%n",age-a0,
+                                    d==null?"none":String.format(Locale.ROOT,"age %d gone %d aim %s",now-(Long)d[0],(Integer)d[1],d[2]==null?"-":d[2].toString()),
+                                    dev.sangwoo.celestialfall.xchara.XCharaShot.flying(p),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.knivesReady(p)-now),hp));});
+                            StringBuilder ks=new StringBuilder();for(int k=0;k<3;k++)ks.append(" [").append(dev.sangwoo.celestialfall.client.xchara.CorruptionKnives.describe(mc.player,k,0)).append(']');
+                            log.append(String.format(Locale.ROOT,"  knives +%d: client (shown,flying,tail xyz,struck,far,took)%s, sounds %s%n",age-a0,ks,
+                                String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("kni")).toList())));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it
                         if(what.equals("KEY_Y")&&(age==at+2||age==at+8||age==at+14))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(p);var d=p.getServerWorld().getEntityById(dummyId);
