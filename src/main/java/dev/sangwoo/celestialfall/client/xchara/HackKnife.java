@@ -63,12 +63,14 @@ public final class HackKnife {
     static final double[][] OUTLINE=outline();
     /** At each of its points, the way out of the knife there, as long as a band one unit wide needs it at that corner. */
     static final double[][] MITER=miters(OUTLINE);
-    static double[][] outline(){
+    static double[][] outline(){return outline(26);}
+    /** The same outline with {@code n} points along the edge (fewer for a knife seen small: the rain's, 2.132.2). */
+    static double[][] outline(int n){
         var p=new ArrayList<double[]>();
         p.add(new double[]{ROD_R,-Y_HEEL});p.add(new double[]{ROD_R,heelY(ROD_R)});
         p.add(new double[]{SPINE_X,Y_HEEL});p.add(new double[]{SPINE_X,Y_TIP});
         // back along the edge from the point to the heel's lower corner (closer together by the point, where it curves fast)
-        double corner=DEPTH*LEAN/BLADE;int n=26;
+        double corner=DEPTH*LEAN/BLADE;
         for(int k=1;k<=n;k++){
             double t=1-(1-corner)*Math.pow(k/(double)n,1.5),y=Y_HEEL+BLADE*t;
             p.add(new double[]{SPINE_X-depthAt(y),y});

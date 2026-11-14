@@ -129,8 +129,14 @@ class BladeRainTest {
         assertEquals(1,BladeRain.held(RainRules.ARRIVE,RainRules.ARRIVE));assertEquals(0,BladeRain.held(RainRules.ARRIVE+10,RainRules.ARRIVE));
     }
     @Test void theKnivesComeDownOnThemAndAllOverTheGroundRoundThemButNotWhereTheUserStands(){
-        // (2.132.1, user request: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로 떨어지게")
-        assertEquals(480,RainRules.BLADES,"four times as many as 2.132.0's");
+        // (2.132.1, user request: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로 떨어지게";
+        // 2.132.2: "범위를 더 크게 하고 검 크키도 조금만 더 키우자", "15블록으로")
+        assertEquals(1620,RainRules.BLADES,"as many more as the ground is wider (2.132.1's 480 over 8 blocks round)");
+        assertEquals(15,BladeRain.ZONE,1e-9,"wider: 15 blocks round (2.132.1: 8)");
+        assertEquals(.6,BladeRain.SIZE,1e-9,"a little bigger: .6 of the knife in the hand (2.132.1: .5)");
+        // as thick on the ground as 2.132.1's were (knives on the ground a volley over the ground they come down on)
+        double was=15/(Math.PI*(8*8-.55*.55)),now=(RainRules.PER-1)/(Math.PI*(BladeRain.ZONE*BladeRain.ZONE-.55*.55));
+        assertTrue(now>=was*.97,"as thick on the ground: "+now+" a square block a volley, 2.132.1 "+was);
         int[] quarter=new int[4];int on=0;Vec3d user=FEET.add(USER);
         for(int k=0;k<RainRules.BLADES;k++){
             var s=spot(k);double dx=s.x()-FEET.x,dz=s.z()-FEET.z,r=Math.hypot(dx,dz);
@@ -145,11 +151,11 @@ class BladeRainTest {
             quarter[(int)Math.floor((Math.atan2(dz,dx)+Math.PI)/(Math.PI/2))%4]++;
         }
         assertEquals(RainRules.VOLLEYS,on,"one on them with each volley (as many as the server's blows)");
-        for(int q:quarter)assertTrue(q>=80,"all over the ground round them: "+java.util.Arrays.toString(quarter));
+        for(int q:quarter)assertTrue(q>=330,"all over the ground round them: "+java.util.Arrays.toString(quarter));
         assertEquals(spot(5),spot(5),"the same on every client");
     }
     @Test void eachComesOutOfTheSkyFallsStraightDownAndStandsWhereItLands(){
-        for(int k:new int[]{0,1,31,62,119,240,359,479}){
+        for(int k:new int[]{0,1,31,62,119,240,359,479,700,1049,1350,1619}){
             float lands=(float)RainRules.landsAt(k),comes=lands-BladeRain.BEFORE;
             assertNull(pose(k,comes-.05f),"nothing of it before it comes");
             var top=pose(k,comes+.01f);
@@ -174,7 +180,7 @@ class BladeRainTest {
         // a great many at once through the rain
         int most=0;
         for(float t=RainRules.FIRST;t<=RainRules.LAST;t+=.5f){int n=0;for(int k=0;k<RainRules.BLADES;k++)if(pose(k,t)!=null)n++;most=Math.max(most,n);}
-        assertTrue(most>=100,"pouring like rain: "+most+" at once");
+        assertTrue(most>=400,"pouring like rain: "+most+" at once");
         // and wide: some out near the edge of the ground they come down on
         double far=0;for(int k=0;k<RainRules.BLADES;k++){var s=spot(k);far=Math.max(far,Math.hypot(s.x()-FEET.x,s.z()-FEET.z));}
         assertTrue(far>BladeRain.ZONE-.3,"out to the edge of it: "+far);
@@ -214,13 +220,31 @@ class BladeRainTest {
         assertEquals(BladeRain.STRIKE_SOUND,last[0]);assertEquals(RainRules.LAST-1,(Integer)last[1]);assertEquals(BladeRain.LAST_PART,(Float)last[2]);
         assertEquals("xchara_jab",BladeRain.STAB_SOUND);
     }
+    /** (2.132.2) The rain is wider than the user's camera is from the one stabbed: knives come down by cameras, and fade there, not cutting across the lens. */
+    @Test void aKnifeFadesByTheCameraNotAcrossTheLens(){
+        Vec3d camera=new Vec3d(0,66,0);
+        assertEquals(0,RainFx.near(new Vec3d(.5,60,0),new Vec3d(.5,70,0),camera),1e-6,"its line passing half a block from the lens: none of it");
+        assertEquals(0,RainFx.near(new Vec3d(1.1,64,0),new Vec3d(1.1,67,0),camera),1e-6);
+        assertEquals(0,RainFx.near(new Vec3d(1.4,64,0),new Vec3d(1.4,67,0),camera),1e-6);
+        assertEquals(1,RainFx.near(new Vec3d(4.6,60,0),new Vec3d(4.6,70,0),camera),1e-6,"four and a half blocks off: all of it");
+        assertEquals(1,RainFx.near(new Vec3d(0,71,0),new Vec3d(0,74,0),camera),1e-6,"over the camera by five: all of it (its line's nearest end)");
+        float last=0;
+        for(double x=0;x<=5;x+=.01){float v=RainFx.near(new Vec3d(x,60,0),new Vec3d(x,70,0),camera);assertTrue(v>=last-1e-6,"coming in as it is further off");last=v;}
+        // drawn round the knife's own outline, with fewer points: the same shape to the eye
+        double fine=Math.abs(HackKnife.area2(HackKnife.OUTLINE)),coarse=Math.abs(HackKnife.area2(RainFx.OUTLINE));
+        assertTrue(RainFx.OUTLINE.length<=16&&Math.abs(coarse/fine-1)<.02,"fewer points, the same shape: "+RainFx.OUTLINE.length+" points, "+coarse/fine+" of its area");
+        for(int i:new int[]{0,1,2,3})assertArrayEquals(HackKnife.OUTLINE[i],RainFx.OUTLINE[i],1e-12,"the rod and the spine's corners kept");
+        assertArrayEquals(HackKnife.OUTLINE[HackKnife.OUTLINE.length-1],RainFx.OUTLINE[RainFx.OUTLINE.length-1],1e-12);
+    }
     /** (2.132.1) The screen inside the rain is for whoever stands in it (their body, not their camera), and for no one else; it comes and goes smoothly. */
     @Test void theScreenInsideTheRainIsForWhoeverStandsInIt(){
-        Vec3d feet=new Vec3d(10,64,5),user=new Vec3d(10-(RainRules.KEEP+.3),64,5),camera=user.add(-6.5,1.8,0);
+        Vec3d feet=new Vec3d(10,64,5),user=new Vec3d(10-(RainRules.KEEP+.3),64,5);
         float mid=RainRules.FIRST+10;
         assertEquals(1,RainFx.inside(user,feet,mid,NEVER),1e-6,"the user stands in the rain where they stab from");
         assertEquals(1,RainFx.inside(feet,feet,mid,NEVER),1e-6,"so does the one stabbed");
-        assertTrue(camera.distanceTo(feet)>BladeRain.ZONE+.5,"(the user's camera is out of it: their body is what counts)");
+        // (2.132.2: the rain is wider now than the user's camera is from them, so it stands in it too; it is still their
+        // body that counts, and one just inside its edge is under it all)
+        assertEquals(1,RainFx.inside(new Vec3d(10,64,5+BladeRain.ZONE-1.6),feet,mid,NEVER),1e-6,"one just inside its edge is under it all");
         assertEquals(0,RainFx.inside(new Vec3d(10,64,5+BladeRain.ZONE+.6),feet,mid,NEVER),1e-6,"one standing outside it gets none");
         assertEquals(0,RainFx.inside(user.add(0,BladeRain.SKY+3,0),feet,mid,NEVER),1e-6,"nor one over the circle in the sky");
         assertEquals(0,RainFx.inside(user,feet,RainRules.FIRST-BladeRain.BEFORE-.01f,NEVER),1e-6,"none before the first knife comes");

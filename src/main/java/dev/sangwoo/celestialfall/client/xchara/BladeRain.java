@@ -40,8 +40,9 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
  * {@link #strain}); the body turns to the one it goes into ({@link #facing}). As the last volley lands they bear in
  * hardest; the other hand lets go, the knife is drawn out, goes black, and they step back.</li>
  * <li>The rain (2.132.1, user requests: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로
- * 떨어지게", "비가 떨어지는 범위를 넓게"): RainRules.BLADES knives lit as the hack lights them, half the size they are in
- * the hand, sixteen a tick, falling straight down like rain out of a circle in the sky ({@link #pose}): one of each
+ * 떨어지게", "비가 떨어지는 범위를 넓게"; 2.132.2: "범위를 더 크게 하고 검 크키도 조금만 더 키우자"): RainRules.BLADES
+ * knives lit as the hack lights them, {@link #SIZE} the size they are in the hand, RainRules.PER a tick, falling
+ * straight down like rain out of a circle in the sky ({@link #pose}): one of each
  * volley onto the one stabbed (as the server's blows), the rest all over the ground round them out to {@link #ZONE}
  * ({@link #spot}; none where its user stands). Each stands where it lands a moment and is gone. They are drawn flat by
  * the effects' layer (RainFx: the knife's own model is too many boxes for hundreds at once), with all the rest of what
@@ -331,16 +332,16 @@ public final class BladeRain {
     // "비가 떨어지는 범위를 넓게 바꾸고": not flying in at the one stabbed from all round them any more but straight down out
     // of the sky like rain, four times as many, on them and all over the wide ground round them)
 
-    /** A knife of the rain is this much of the knife in the hand; so its point is this far from its grip (blocks). */
-    static final double SIZE=.5,TIP=ShotRules.TIP*SIZE;
+    /** A knife of the rain is this much of the knife in the hand (2.132.2: .5 to .6, "검 크기도 조금만 더 키우자"); so its point is this far from its grip (blocks). */
+    static final double SIZE=.6,TIP=ShotRules.TIP*SIZE;
     /** A knife comes to be this many ticks before it lands (falling all of it), taking IN of them to come. */
     static final float BEFORE=6,IN=1.5f;
     /** One that has landed stands this long (ticks), gone over the last GOING of it; one not yet landed as the rain stops short is gone over VANISH. */
     static final float STUCK=3,GOING=1.5f,VANISH=2;
     /** How high over where it lands a knife comes to be (blocks: out of the circle in the sky, SKY), and how much higher at most. */
     static final double SKY=10.5,SKY_MORE=1.0;
-    /** How far out from the middle of the one stabbed the knives come down (blocks: the ground round them, wide), none within CLEAR of where its user stands. */
-    static final double ZONE=8,CLEAR=1.6;
+    /** How far out from the middle of the one stabbed the knives come down (blocks: the ground round them, wide; 2.132.2: 8 to 15, "범위를 더 크게", "15블록으로"), none within CLEAR of where its user stands. */
+    static final double ZONE=15,CLEAR=1.6;
     /** How deep a knife's point goes in where it lands: into the ground, into the one stabbed (from over them: their head and shoulders). */
     static final double GROUND_DEEP=.3,BODY_DEEP=.38;
     /** How fast a knife falls: so much of the way at once (it comes out of the sky already falling), the rest quicker and quicker. */

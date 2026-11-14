@@ -60,10 +60,12 @@ final class RainFx {
     // ───────────────────────────── shapes ─────────────────────────────
 
     /** A ring lying on the ground at {@code g}: its band laid over what is behind it (the blended pass), or its light (a thin white line in a purple glow). */
-    static void groundRing(EffectMesh m,Vec3d g,double r,double wide,float a,boolean light){
+    static void groundRing(EffectMesh m,Vec3d g,double r,double wide,float a,boolean light){groundRing(m,g,r,wide,a,light,0);}
+    /** The same with {@code n} sides (0: as many as its size has it). */
+    static void groundRing(EffectMesh m,Vec3d g,double r,double wide,float a,boolean light,int n){
         if(a<=0||r<=0)return;
-        if(light)FxLib.ringPlane(m,g,X,Z,r,wide*1.5,GLOW,.42f*a);
-        else DanceBurst.band(m,g,X,Z,r,wide,PURPLE,.85f*a);
+        if(light){if(n>0)FxLib.ringPlane(m,g,X,Z,r,wide*1.5,GLOW,.42f*a,n);else FxLib.ringPlane(m,g,X,Z,r,wide*1.5,GLOW,.42f*a);}
+        else{if(n>0)DanceBurst.band(m,g,X,Z,r,wide,PURPLE,.85f*a,n);else DanceBurst.band(m,g,X,Z,r,wide,PURPLE,.85f*a);}
     }
     /** A ring facing the camera round {@code p} (its light, or its band). */
     static void facingRing(EffectMesh m,Vec3d p,Vec3d camera,double r,double wide,int rgb,float a,boolean light){
@@ -379,7 +381,10 @@ final class RainFx {
     // ───────────────────────────── the knives ─────────────────────────────
     // (2.132.1, user request: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로 떨어지게":
     // straight down out of a circle in the sky, like rain, three times as many, on the one stabbed and the ground round
-    // them; drawn here, flat (the knife's own model is 604 boxes: hundreds of them at once would not keep the frame))
+    // them; drawn here, flat (the knife's own model is 604 boxes: hundreds of them at once would not keep the frame).
+    // 2.132.2, "범위를 더 크게 하고 검 크키도 조금만 더 키우자", "15블록으로": the ground 15 blocks round, the knives a little
+    // bigger and as many more as the ground is wider, drawn lighter: a coarser outline, each point worked out once, the
+    // rings where they land with fewer sides, and faded by the camera, which now stands in the rain)
 
     /** The ground each knife of a stab comes down on (its top's height), found once (the world under it as it first came). */
     private static final java.util.Map<java.util.UUID,double[]> GROUNDS=new java.util.LinkedHashMap<>();
@@ -403,6 +408,24 @@ final class RainFx {
     /** The rim round a knife of the rain, and its glow's reach past it, this many times the knife in the hand's (it is half that size and seen far off). */
     static final double RIM_MORE=2.2,GLOW_MORE=1.6;
     /**
+     * The outline a knife of the rain is drawn round: the knife's own (HackKnife), with ten points along its edge, not
+     * twenty-six (2.132.2: some five hundred of them at once, each seen small; the same shape to the eye).
+     */
+    static final double[][] OUTLINE=HackKnife.outline(10),MITER=HackKnife.miters(OUTLINE);
+    /** How many sides the ring is where a knife lands on the ground (small, and some three hundred at once). */
+    static final int LAND_SIDES=12;
+    /**
+     * How much of a knife of the rain shows by the camera (2.132.2: the rain is wider than the user's camera is from the
+     * one stabbed, so knives come down by it): none within NEAR0 of its line (its point to the top of its streak), all of
+     * it from NEAR1 on.
+     */
+    static final double NEAR0=1.5,NEAR1=4.5;
+    static float near(Vec3d tip,Vec3d top,Vec3d camera){
+        Vec3d d=top.subtract(tip);double l=d.lengthSquared(),u=l<1e-9?0:Math.max(0,Math.min(1,camera.subtract(tip).dotProduct(d)/l));
+        double far=camera.distanceTo(tip.add(d.multiply(u)));
+        return Ease.smooth((float)far,(float)NEAR0,(float)NEAR1);
+    }
+    /**
      * A knife of the rain as the hack lights it, drawn flat: its outline (HackKnife.OUTLINE, the model's measures) filled
      * white with a crisp purple rim (the blended pass), or a purple glow round it (the light); on two planes across each
      * other along it, so that it shows from every side.
@@ -410,41 +433,45 @@ final class RainFx {
     static void blade(EffectMesh m,BladeRain.Pose p,float roll,float a,boolean light){
         if(a<=0)return;
         double unit=ShotRules.SCALE*BladeRain.SIZE*BladeRain.size(p.shown())/16;
-        Vec3d y=p.dir(),sp=BladeShot.spine(y,roll),across=y.crossProduct(sp).normalize();
-        double[][] o=HackKnife.OUTLINE,mi=HackKnife.MITER;int n=o.length;
+        Vec3d y=p.dir(),sp=BladeShot.spine(y,roll),across=y.crossProduct(sp).normalize(),grip=p.grip();
+        double[][] o=OUTLINE,mi=MITER;int n=o.length;
+        // (2.132.2: each point of the outline worked out once a plane, not once for each quad it is in: some five hundred knives)
         for(int plane=0;plane<2;plane++){
             Vec3d x=plane==0?sp:across;
             if(light){
                 double r0=HackKnife.RIM*RIM_MORE,r1=r0+HackKnife.GLOW_REACH*GLOW_MORE;
+                Vec3d[] in=ring(grip,x,y,o,mi,r0,unit),out=ring(grip,x,y,o,mi,r1,unit);
                 for(int i=0;i<n;i++){
                     int j=(i+1)%n;
-                    Vec3d a0=at(p.grip(),x,y,o[i],mi[i],r0,unit),b0=at(p.grip(),x,y,o[j],mi[j],r0,unit),a1=at(p.grip(),x,y,o[i],mi[i],r1,unit),b1=at(p.grip(),x,y,o[j],mi[j],r1,unit);
-                    m.vertex(a0,GLOW,.5f*a);m.vertex(b0,GLOW,.5f*a);m.vertex(b1,GLOW,0);m.vertex(a1,GLOW,0);
+                    m.vertex(in[i],GLOW,.5f*a);m.vertex(in[j],GLOW,.5f*a);m.vertex(out[j],GLOW,0);m.vertex(out[i],GLOW,0);
                 }
                 continue;
             }
             // the white: the blade (a fan from inside it: it is convex, from the rod's top round the point to the heel) and the rod
-            Vec3d mid=at(p.grip(),x,y,new double[]{HackKnife.SPINE_X-HackKnife.DEPTH*.45,HackKnife.Y_HEEL+HackKnife.BLADE*.3},new double[]{0,0},0,unit);
+            Vec3d[] edge=ring(grip,x,y,o,mi,0,unit);
+            Vec3d mid=at(grip,x,y,new double[]{HackKnife.SPINE_X-HackKnife.DEPTH*.45,HackKnife.Y_HEEL+HackKnife.BLADE*.3},new double[]{0,0},0,unit);
             for(int i=1;i<n-2;i++){
-                Vec3d q0=at(p.grip(),x,y,o[i],mi[i],0,unit),q1=at(p.grip(),x,y,o[i+1],mi[i+1],0,unit);
-                m.vertex(mid,WHITE,.97f*a);m.vertex(q0,WHITE,.97f*a);m.vertex(q1,WHITE,.97f*a);m.vertex(mid,WHITE,.97f*a);
+                m.vertex(mid,WHITE,.97f*a);m.vertex(edge[i],WHITE,.97f*a);m.vertex(edge[i+1],WHITE,.97f*a);m.vertex(mid,WHITE,.97f*a);
             }
-            m.quad(at(p.grip(),x,y,o[0],mi[0],0,unit),at(p.grip(),x,y,o[1],mi[1],0,unit),at(p.grip(),x,y,o[n-2],mi[n-2],0,unit),at(p.grip(),x,y,o[n-1],mi[n-1],0,unit),WHITE,.97f*a);
+            m.quad(edge[0],edge[1],edge[n-2],edge[n-1],WHITE,.97f*a);
             // the rim: lilac by the knife, then vivid purple
-            double rl=HackKnife.RIM_LILAC*RIM_MORE,rv=HackKnife.RIM*RIM_MORE;
+            Vec3d[] lilac=ring(grip,x,y,o,mi,HackKnife.RIM_LILAC*RIM_MORE,unit),vivid=ring(grip,x,y,o,mi,HackKnife.RIM*RIM_MORE,unit);
             for(int i=0;i<n;i++){
                 int j=(i+1)%n;
-                Vec3d a0=at(p.grip(),x,y,o[i],mi[i],0,unit),b0=at(p.grip(),x,y,o[j],mi[j],0,unit);
-                Vec3d a1=at(p.grip(),x,y,o[i],mi[i],rl,unit),b1=at(p.grip(),x,y,o[j],mi[j],rl,unit);
-                Vec3d a2=at(p.grip(),x,y,o[i],mi[i],rv,unit),b2=at(p.grip(),x,y,o[j],mi[j],rv,unit);
-                m.quad(a0,b0,b1,a1,HackKnife.LILAC,a);m.quad(a1,b1,b2,a2,HackKnife.VIVID,a);
+                m.quad(edge[i],edge[j],lilac[j],lilac[i],HackKnife.LILAC,a);m.quad(lilac[i],lilac[j],vivid[j],vivid[i],HackKnife.VIVID,a);
             }
         }
     }
+    /** Every point of the outline (model units: across {@code x}, along {@code y}) in the world, pushed out {@code out} units along its miter. */
+    private static Vec3d[] ring(Vec3d grip,Vec3d x,Vec3d y,double[][] o,double[][] mi,double out,double unit){
+        Vec3d[] r=new Vec3d[o.length];
+        for(int i=0;i<o.length;i++)r[i]=at(grip,x,y,o[i],mi[i],out,unit);
+        return r;
+    }
     /** Where outline point {@code q} (model units: across {@code x}, along {@code y}) is in the world, pushed out {@code out} units along its miter. */
     private static Vec3d at(Vec3d grip,Vec3d x,Vec3d y,double[] q,double[] miter,double out,double unit){
-        double qx=q[0]+miter[0]*out,qy=q[1]+miter[1]*out;
-        return grip.add(x.multiply(qx*unit)).add(y.multiply(qy*unit));
+        double qx=(q[0]+miter[0]*out)*unit,qy=(q[1]+miter[1]*out)*unit;
+        return new Vec3d(grip.x+x.x*qx+y.x*qy,grip.y+x.y*qx+y.y*qy,grip.z+x.z*qx+y.z*qy);
     }
     /** The circle in the sky the knives come out of: this high over the feet of the one stabbed (blocks), its parts turning the other way to the one on the ground. */
     static final double SKY_UP=BladeRain.SKY+.55;
@@ -475,13 +502,13 @@ final class RainFx {
             var sp=BladeRain.spot(k,seed,feet,half,user);double ground=ground(c.cast,k,sp,feet.y),land=BladeRain.landY(sp,feet,height,ground);
             var p=BladeRain.pose(k,seed,age,stop,sp,land);
             if(p!=null){
-                Vec3d tip=p.tip(),mid=p.grip().add(p.dir().multiply(BladeRain.TIP*.5));
-                float near=GlitchFx.near(mid,c.camera)*p.shown();
+                Vec3d tip=p.tip(),mid=p.grip().add(p.dir().multiply(BladeRain.TIP*.5)),top=p.grip().add(0,p.flying()?2.8+1.2*h(k,seed,51):0,0);
+                float near=near(tip,top,c.camera)*p.shown();
                 if(near>0){
                     blade(m,p,BladeRain.roll(k,seed),near,light);
                     if(light){
                         // a long streak over it as it falls, a star as it comes out of the sky, aglow where it stands
-                        if(p.flying()){Vec3d top=p.grip().add(0,2.8+1.2*h(k,seed,51),0);m.softTaper(top,tip,.03,.34,GLOW,.42f*near);m.softTaper(top,p.grip(),.01,.08,WHITE,.6f*near);}
+                        if(p.flying()){m.softTaper(top,tip,.03,.34,GLOW,.42f*near);m.softTaper(top,p.grip(),.01,.08,WHITE,.6f*near);}
                         if(p.lit()<.1f){float a=1-p.lit()/.1f;m.star(mid,.6*a+.12,LILAC,.85f*a*near);}
                         if(p.in())m.softDisc(mid,.3,GLOW,.2f*near);
                     }
@@ -521,7 +548,7 @@ final class RainFx {
                 Vec3d at=new Vec3d(sp.x(),ground+.05,sp.z());
                 if(s>=0&&s<.3f){
                     float near=GlitchFx.near(at,c.camera),a=(1-s/.3f)*near;
-                    groundRing(m,at,.08+.62*Ease.out(s,0,.22f),.12,a,light);
+                    groundRing(m,at,.08+.62*Ease.out(s,0,.22f),.12,a,light,LAND_SIDES);
                     if(light&&s<.06f)m.star(at.add(0,.1,0),.36,LILAC,.6f*(1-s/.06f)*near);
                     GlitchFx.pixels(m,at.add(0,.06,0),UP,.85,2.8,.033,3,seed+k*7,s,light,c.camera);
                 }
