@@ -222,7 +222,7 @@ public final class EraseSlash {
     /** For the capture tools: a point the local player's slash is aimed at whatever their screen shows (a filming camera is not theirs); null, the screen's middle. */
     public static Vec3d aimAt;
     /** The point the middle of this client's screen aims slash {@code c} at now (EraseGround.aimed, from its camera). */
-    static Vec3d aimPoint(net.minecraft.client.MinecraftClient mc,StandClient.Cast c){
+    public static Vec3d aimPoint(net.minecraft.client.MinecraftClient mc,StandClient.Cast c){
         if(aimAt!=null)return aimAt;
         var cam=mc.gameRenderer.getCamera();
         return dev.sangwoo.celestialfall.xchara.EraseGround.aimed(mc.world,mc.player,c.origin(),cam.getPos(),Vec3d.fromPolar(cam.getPitch(),cam.getYaw()));

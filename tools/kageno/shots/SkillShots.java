@@ -1401,7 +1401,7 @@ public final class SkillShots implements ClientModInitializer {
                         // shows (EraseSlash.aimAt; without it, the middle of the player's own screen)
                         if(what.equals("KEY_H")&&age==at&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)){
                             if(opts.containsKey("eraseaim")){String o=opts.get("eraseaim");var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var r=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
-                                if(o.equals("dummy")){var dm=mc.world.getEntityById(dummyId);dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=dm==null?null:dm.getPos();}
+                                if(o.equals("dummy")){var sv=mc.getServer();var dm=sv==null?null:sv.getOverworld().getEntityById(dummyId);if(dm==null)dm=mc.world.getEntityById(dummyId);dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=dm==null?null:dm.getPos();}
                                 else{String[] v=o.split("[_x]");dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=mc.player.getPos().add(f.multiply(Double.parseDouble(v[0]))).add(r.multiply(v.length>1?Double.parseDouble(v[1]):0)).add(0,v.length>2?Double.parseDouble(v[2]):0,0);}
                                 log.append("  delete slash aimed at ").append(dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt).append('\n');}
                             else dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=null;}

@@ -183,6 +183,17 @@ public final class FxSolids {
         mc.getBlockRenderManager().renderBlockAsEntity(state,matrices,consumers,light,OverlayTexture.DEFAULT_UV);
         drawn++;
     }
-    void finish(){if(drawn>0)mc.getBufferBuilders().getEntityVertexConsumers().draw();}
+    /**
+     * Draws them, solid as the world is (2.133.0): depth written and tested, back faces culled. The effects' passes drawn
+     * before these (KagenoRenderer.effectPasses) leave the depth mask and culling off, and the layers here only turn off
+     * what they do not want, so without this a solid's faces did not hide one another: the delete slash's cube of ground
+     * showed its inside, its far walls drawn over its near ones. Left as the passes after these expect it.
+     */
+    void finish(){
+        if(drawn<=0)return;
+        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();com.mojang.blaze3d.systems.RenderSystem.depthMask(true);com.mojang.blaze3d.systems.RenderSystem.enableCull();
+        mc.getBufferBuilders().getEntityVertexConsumers().draw();
+        com.mojang.blaze3d.systems.RenderSystem.depthMask(false);com.mojang.blaze3d.systems.RenderSystem.disableCull();
+    }
     public int drawn(){return drawn;}
 }

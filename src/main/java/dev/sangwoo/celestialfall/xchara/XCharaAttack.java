@@ -407,7 +407,8 @@ public final class XCharaAttack {
         // (2.133.0) and their delete slash, up in the air until it is thrown
         if(s.combo==ERASE){
             if(age<EraseRules.AIM_FROM-4||age>EraseRules.SLASH||s.blows>0||!Double.isFinite(at.x)||!Double.isFinite(at.y)||!Double.isFinite(at.z))return;
-            if(at.squaredDistanceTo(s.from)>(EraseRules.REACH+40)*(EraseRules.REACH+40))return;
+            // a point as far as their screen's middle may reach (96 blocks from a camera a little off them): brought in to REACH as it lands, as their marker has it
+            if(at.squaredDistanceTo(s.from)>(EraseRules.REACH+100)*(EraseRules.REACH+100))return;
             s.aim=at;s.aimAt=p.getWorld().getTime();return;
         }
         if(s.combo!=SLAM||s.land!=null)return;

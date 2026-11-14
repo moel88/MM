@@ -75,16 +75,17 @@ final class EraseFx {
     static final float COOL1=.25f,EAT0=.25f,EAT1=.6f;
     /**
      * Its frame from the knife {@code from} to the ground {@code to} (facing {@code yaw}, for a straight drop): its way
-     * (unit), the upright of its plane (square to its way, upward, turned ROLL about the way) and the plane's side.
+     * (unit, the way it flies), the upright of its plane (world up turned ROLL about its heading: the crescent stands
+     * upright, horns up and down, however steeply it flies down, so it never sweeps back at its user's camera), the
+     * plane's side, and its heading (level, the way it is thrown: its cutting edge leads that way).
      */
     static Vec3d[] frame(Vec3d from,Vec3d to,float yaw){
         Vec3d d=to.subtract(from);Vec3d way=d.lengthSquared()<1e-6?new Vec3d(0,-1,0):d.normalize();
-        Vec3d up=new Vec3d(0,1,0).subtract(way.multiply(way.y));
-        if(up.lengthSquared()<1e-6)up=Vec3d.fromPolar(0,yaw);
-        up=up.normalize();Vec3d side=way.crossProduct(up).normalize();
+        Vec3d head=new Vec3d(d.x,0,d.z);if(head.lengthSquared()<1e-6)head=Vec3d.fromPolar(0,yaw);head=head.normalize();
+        Vec3d side=head.crossProduct(new Vec3d(0,1,0)).normalize();
         double r=Math.toRadians(ROLL);
-        Vec3d up2=up.multiply(Math.cos(r)).add(side.multiply(Math.sin(r))).normalize();
-        return new Vec3d[]{way,up2,way.crossProduct(up2).normalize()};
+        Vec3d up2=new Vec3d(0,1,0).multiply(Math.cos(r)).add(side.multiply(Math.sin(r))).normalize();
+        return new Vec3d[]{way,up2,head.crossProduct(up2).normalize(),head};
     }
     /** How much of its way it has flown {@code age} ticks after it was thrown (0 to 1): a little faster as it goes. */
     static double flown(float age,int fly){
@@ -100,11 +101,11 @@ final class EraseFx {
     static double grown(float age){return .3+.7*Ease.out(age,0,GROW_T);}
     /** Its edges with its point at {@code tip}, grown {@code g}: {inner, outer} (the outer its cutting edge, leading). */
     static Vec3d[][] crescent(EraseClient.Strike s,Vec3d tip,double g){
-        Vec3d c=tip.subtract(s.way.multiply(BOW*g));Vec3d[] in=new Vec3d[N],out=new Vec3d[N];
+        Vec3d c=tip.subtract(s.head.multiply(BOW*g));Vec3d[] in=new Vec3d[N],out=new Vec3d[N];
         for(int i=0;i<N;i++){
             double u=-1+2.0*i/(N-1),w=1-u*u;
-            out[i]=c.add(s.upright.multiply(HALF*g*u)).add(s.way.multiply(BOW*g*w));
-            in[i]=c.add(s.upright.multiply(HALF*g*u*.97)).add(s.way.multiply(BOW*g*w-THICK*g*Math.pow(w,.7)));
+            out[i]=c.add(s.upright.multiply(HALF*g*u)).add(s.head.multiply(BOW*g*w));
+            in[i]=c.add(s.upright.multiply(HALF*g*u*.97)).add(s.head.multiply(BOW*g*w-THICK*g*Math.pow(w,.7)));
         }
         return new Vec3d[][]{in,out};
     }

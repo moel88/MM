@@ -25,14 +25,19 @@ class EraseFxTest {
         var cast=new StandClient.Cast(id,owner,new Identifier("minecraft","overworld"),EraseRules.SKILL,0,1000,1000,0,to,yaw,List.of());
         return new EraseClient.Strike(id,owner,from,to,fly,EraseRules.corner(to.x),EraseRules.corner(to.z),cast);
     }
-    @Test void itsPlaneIsUprightAlongItsWayTurnedALittle(){
+    @Test void itStandsUprightOnItsHeadingTurnedALittleHoweverSteeplyItFlies(){
         var s=strike(new Vec3d(0,70,0),new Vec3d(0,64,12),5);
-        assertEquals(1,s.way.length(),1e-9);assertEquals(1,s.upright.length(),1e-9);assertEquals(1,s.side.length(),1e-9);
-        assertEquals(0,s.way.dotProduct(s.upright),1e-9,"square to its way");assertEquals(0,s.way.dotProduct(s.side),1e-9);
-        assertTrue(s.way.y<0&&s.way.z>0,"down and out the way it is thrown");
-        assertTrue(s.upright.y>.8,"upright (the plane the knife came down in), but for its turn");
-        double turn=Math.toDegrees(Math.asin(Math.abs(s.upright.x)));
-        assertEquals(EraseFx.ROLL,turn,.5,"turned about its way so a little of its face shows behind it");
+        assertEquals(1,s.way.length(),1e-9);assertEquals(1,s.upright.length(),1e-9);assertEquals(1,s.side.length(),1e-9);assertEquals(1,s.head.length(),1e-9);
+        assertTrue(s.way.y<0&&s.way.z>0,"it flies down and out the way it is thrown");
+        assertEquals(0,s.head.y,1e-9,"its heading level");assertTrue(s.head.z>.99,"the way it is thrown");
+        assertEquals(0,s.head.dotProduct(s.upright),1e-9,"square to its heading");assertEquals(0,s.head.dotProduct(s.side),1e-9);assertEquals(0,s.upright.dotProduct(s.side),1e-9);
+        double turn=Math.toDegrees(Math.acos(s.upright.y));
+        assertEquals(EraseFx.ROLL,turn,.5,"upright (the plane the knife came down in), turned about its heading so a little of its face shows behind it");
+        // as steep a drop as it gets: still upright, and neither horn swept back toward its user (behind where the knife let it go)
+        var steep=strike(new Vec3d(0,70,0),new Vec3d(0,64,2),3);
+        assertEquals(EraseFx.ROLL,Math.toDegrees(Math.acos(steep.upright.y)),.5);
+        var cr=EraseFx.crescent(steep,steep.from,1);
+        for(int i=0;i<EraseFx.N;i++)for(int k=0;k<2;k++)assertTrue(cr[k][i].z>steep.from.z-EraseFx.BOW-EraseFx.THICK,"no horn swept back past its bow at "+i);
     }
     @Test void itFliesFromTheKnifeToTheGroundInTheServersTicksAndStandsInIt(){
         var s=strike(new Vec3d(2,70,1),new Vec3d(5,64,15),5);
@@ -49,7 +54,7 @@ class EraseFxTest {
         // its point leads: the crescent's middle of its cutting edge is its point, its horns behind and to its upright
         var cr=EraseFx.crescent(s,stuck,1);
         assertEquals(0,cr[1][EraseFx.N/2].distanceTo(stuck),1e-9,"its cutting edge's middle at its point");
-        for(int i=0;i<EraseFx.N;i++)assertTrue(cr[1][i].subtract(cr[0][i]).dotProduct(s.way)>=-1e-9,"its cutting edge leading all along");
+        for(int i=0;i<EraseFx.N;i++)assertTrue(cr[1][i].subtract(cr[0][i]).dotProduct(s.head)>=-1e-9,"its cutting edge leading all along");
         Vec3d hornA=cr[1][0],hornB=cr[1][EraseFx.N-1];
         assertEquals(2*EraseFx.HALF,hornA.distanceTo(hornB),1e-6);
         assertTrue(hornB.y>s.to.y+3,"standing up out of the ground: its upper horn high over it");

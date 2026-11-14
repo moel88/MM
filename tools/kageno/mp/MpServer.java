@@ -593,12 +593,14 @@ public final class MpServer implements ModInitializer {
     private String cutSeen="";private long cutReady;private float cutWatcher=-1,cutCaster=-1;private net.minecraft.util.math.Vec3d cutWas,cutWatcherWas;private long cutStag;
     /** Only X Chara's delete slash's script (2.133.0, MP_ONLY=xcharaerase). */
     static final boolean XCHARAERASE_ONLY="xcharaerase".equals(System.getProperty("botand.mp.only"));
-    private String eraseSeen="",slashSeen="";private long eraseReady,goneAt;private float eraseWatcher=-1,eraseCaster=-1;private net.minecraft.util.math.Vec3d eraseWas,eraseWatcherWas;private boolean eraseGone,eraseAir;
+    private String eraseSeen="",slashSeen="";private long eraseReady,goneAt;private float eraseWatcher=-1,eraseCaster=-1;private net.minecraft.util.math.Vec3d eraseWas,eraseWatcherWas;private boolean eraseGone,eraseAir,eraseCubeUp,eraseCarried,eraseGround=true;private double eraseFellFrom=Double.NaN;
     /**
      * (2.133.0) X Chara's H with the hack off, the delete slash: when its cast begins (how high they leap, how far off the
-     * watcher is) and when its slash goes; when the caster is in the air of it (nothing harms them then) and back on the
-     * ground; the slash as it goes (where from, the way, how far it goes, how many it came over, where the watcher is
-     * from it); when the watcher is deleted and back (and any move of it while deleted); the caster's walk (a tick's move
+     * watcher is) and when its slash is thrown; when the caster is in the air of it (nothing harms them then) and back on the
+     * ground; the slash as it lands (where from, where to, how far out, its ground's corner, whether the watcher is over
+     * it); when the watcher is deleted and back (and any move of it while deleted); the cube (its top every second while
+     * it stands, whether the watcher stands on it and is carried, who is on it) and its burst; the watcher off the ground
+     * and back on it (how far it fell, its health then: no harm from a fall off a cube); the caster's walk (a tick's move
      * of more than a quarter of a block: none, its leap is drawn only); either one's health as it changes; when it is
      * ready again.
      */
@@ -610,7 +612,7 @@ public final class MpServer implements ModInitializer {
         Object[] cast=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeErase(caster),slash=dev.sangwoo.celestialfall.xchara.XCharaErase.describe(caster);
         String ck=cast==null?"":cast[0]+"/"+cast[3];
         if(!ck.equals(eraseSeen)){
-            if(cast!=null)note(server,String.format(java.util.Locale.ROOT,"caster's delete slash: began at %d (%d ticks in) where they stand (%s), leaps %.2f, slash gone %s; the watcher %.2f off (health %.1f)",(Long)cast[0],now-(Long)cast[0],cast[1],(Double)cast[2],cast[3],
+            if(cast!=null)note(server,String.format(java.util.Locale.ROOT,"caster's delete slash: began at %d (%d ticks in) where they stand (%s), leaps %.2f, slash thrown %s; the watcher %.2f off (health %.1f)",(Long)cast[0],now-(Long)cast[0],cast[1],(Double)cast[2],cast[3],
                 Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ()),watcher.getHealth()));
             eraseSeen=ck;
         }
@@ -618,21 +620,36 @@ public final class MpServer implements ModInitializer {
         if(air!=eraseAir){note(server,"caster "+(air?"in the air of it":"on the ground")+" at "+now+(cast==null?"":" ("+(now-(Long)cast[0])+" ticks in)"));eraseAir=air;}
         if(eraseWas!=null&&eraseWas.distanceTo(caster.getPos())>.25)note(server,String.format(java.util.Locale.ROOT,"the caster moved %.2f blocks in a tick at %d",eraseWas.distanceTo(caster.getPos()),now));
         eraseWas=caster.getPos();
-        String sk=slash==null?"":slash[0]+"/"+slash[5];
+        String sk=slash==null?"":String.valueOf(slash[0]);
         if(!sk.equals(slashSeen)){
             if(slash!=null){
-                var from=(net.minecraft.util.math.Vec3d)slash[1];var f=net.minecraft.util.math.Vec3d.fromPolar(0,(Float)slash[2]);var d=watcher.getPos().subtract(from);
-                note(server,String.format(java.util.Locale.ROOT,"caster's slash: went at %d, %d ticks in, from %.2f %.2f %.2f the way %.1f, goes %.1f, came over %d; the watcher %.2f ahead and %.2f aside of where it went",
-                    (Long)slash[0],(Long)slash[4],from.x,from.y,from.z,(Float)slash[2],(Double)slash[3],(Integer)slash[5],d.dotProduct(f),d.x*-f.z+d.z*f.x));
-            }
+                var from=(net.minecraft.util.math.Vec3d)slash[1];var to=(net.minecraft.util.math.Vec3d)slash[2];int x0=(Integer)slash[5],z0=(Integer)slash[6];var wb=watcher.getBoundingBox();
+                note(server,String.format(java.util.Locale.ROOT,"caster's slash: thrown at %d from %.2f %.2f %.2f to %.2f %.2f %.2f (%.2f out from the caster), strikes at %d, its ground %d..%d x %d..%d; the watcher at %.2f %.2f %.2f, %s it",
+                    (Long)slash[0],from.x,from.y,from.z,to.x,to.y,to.z,Math.hypot(to.x-caster.getX(),to.z-caster.getZ()),(Long)slash[3],x0,x0+10,z0,z0+10,watcher.getX(),watcher.getY(),watcher.getZ(),
+                    dev.sangwoo.celestialfall.xchara.EraseRules.over(x0,z0,wb.minX,wb.maxX,wb.minZ,wb.maxZ)?"over":"off"));
+            }else note(server,"caster's slash gone at "+now);
             slashSeen=sk;
+        }
+        if(slash!=null){
+            double top=(Double)slash[7];boolean up=!Double.isNaN(top);
+            if(up!=eraseCubeUp){note(server,up?String.format(java.util.Locale.ROOT,"the cube stands at %d, its top %.2f",now,top):"the cube is gone at "+now+" ("+slash[4]+" ticks after it struck)");eraseCubeUp=up;}
+            boolean carried=dev.sangwoo.celestialfall.xchara.XCharaErase.carried(watcher);
+            if(carried!=eraseCarried){note(server,String.format(java.util.Locale.ROOT,"the watcher %s the cube at %d, its feet %.2f (cube top %s)",carried?"on":"off",now,watcher.getY(),up?String.format(java.util.Locale.ROOT,"%.2f",top):"none"));eraseCarried=carried;}
+            if(up&&(Long)slash[4]%20==0)note(server,String.format(java.util.Locale.ROOT,"  cube top %.2f at %d (%d after it struck), on it %d; the watcher's feet %.2f, on the ground %s, %s",top,now,(Long)slash[4],(Integer)slash[8],watcher.getY(),watcher.isOnGround(),
+                watcher.networkHandler==null?"gone":"connected"));
+        }else{if(eraseCubeUp){note(server,"the cube is gone at "+now+" (no slash)");eraseCubeUp=false;}eraseCarried=false;}
+        boolean ground=watcher.isOnGround();
+        if(ground!=eraseGround){
+            if(!ground)eraseFellFrom=watcher.getY();
+            note(server,String.format(java.util.Locale.ROOT,"the watcher %s at %d, its feet %.2f%s, health %.1f",ground?"lands":"off the ground",now,watcher.getY(),ground&&!Double.isNaN(eraseFellFrom)?String.format(java.util.Locale.ROOT," (from %.2f: %.2f down)",eraseFellFrom,eraseFellFrom-watcher.getY()):"",watcher.getHealth()));
+            eraseGround=ground;
         }
         boolean gone=dev.sangwoo.celestialfall.xchara.XCharaErase.deleted(watcher);
         if(gone!=eraseGone){
             note(server,String.format(java.util.Locale.ROOT,"the watcher %s at %d%s, health %.1f, at %.2f %.2f %.2f",gone?"deleted":"back",now,gone?"":" ("+(now-goneAt)+" ticks gone)",watcher.getHealth(),watcher.getX(),watcher.getY(),watcher.getZ()));
             if(gone)goneAt=now;eraseGone=gone;
         }
-        if(gone&&eraseWatcherWas!=null&&eraseWatcherWas.distanceTo(watcher.getPos())>.02)note(server,String.format(java.util.Locale.ROOT,"the watcher moved %.3f blocks in a tick while deleted, at %d",eraseWatcherWas.distanceTo(watcher.getPos()),now));
+        if(gone&&eraseWatcherWas!=null&&Math.hypot(eraseWatcherWas.x-watcher.getX(),eraseWatcherWas.z-watcher.getZ())>.02)note(server,String.format(java.util.Locale.ROOT,"the watcher walked %.3f blocks in a tick while deleted, at %d",Math.hypot(eraseWatcherWas.x-watcher.getX(),eraseWatcherWas.z-watcher.getZ()),now));
         eraseWatcherWas=watcher.getPos();
         if(Math.abs(watcher.getHealth()-eraseWatcher)>.01f){if(eraseWatcher>=0)note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d%s",eraseWatcher,watcher.getHealth(),now,gone?" (deleted)":""));eraseWatcher=watcher.getHealth();}
         if(Math.abs(caster.getHealth()-eraseCaster)>.01f){if(eraseCaster>=0)note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at %d",eraseCaster,caster.getHealth(),now));eraseCaster=caster.getHealth();}

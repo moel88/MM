@@ -51,8 +51,8 @@ public final class EraseClient {
     /** One slash as this client knows it. */
     public static final class Strike {
         public final UUID id,owner;public final Vec3d from,to;public final int fly,x0,z0;public final double top;public final StandClient.Cast cast;public final int seed;
-        /** Its way (unit, from the knife to the ground), the upright of the plane it flies in (unit, square to its way, upward), and the plane's side (unit). */
-        public final Vec3d way,upright,side;
+        /** Its way (unit, from the knife to the ground), the upright of the plane it stands in (unit, world up turned a little about its heading), the plane's side (unit), and its heading (unit, level: its cutting edge leads that way). */
+        public final Vec3d way,upright,side,head;
         /** When it was cut short (ticks after it was thrown, on its clock; Float.MAX_VALUE: it was not). */
         public float cut=Float.MAX_VALUE;
         /** Whom it deleted, and whom its burst struck, by entity id, as this client heard of it. */
@@ -62,7 +62,7 @@ public final class EraseClient {
         Strike(UUID id,UUID owner,Vec3d from,Vec3d to,int fly,int x0,int z0,StandClient.Cast cast){
             this.id=id;this.owner=owner;this.from=from;this.to=to;this.fly=fly;this.x0=x0;this.z0=z0;top=to.y;this.cast=cast;
             seed=(int)(id.getLeastSignificantBits()^id.getMostSignificantBits()>>>11);
-            Vec3d[] f=EraseFx.frame(from,to,cast.yaw());way=f[0];upright=f[1];side=f[2];
+            Vec3d[] f=EraseFx.frame(from,to,cast.yaw());way=f[0];upright=f[1];side=f[2];head=f[3];
         }
         /** Ticks since it was thrown, on its clock. */
         public float age(float delta){return cast.age(delta);}

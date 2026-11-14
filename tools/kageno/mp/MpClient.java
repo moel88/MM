@@ -758,22 +758,33 @@ public final class MpClient implements ClientModInitializer {
         "520 NOCDOFF","540 END"};
     /**
      * X Chara's H with the hack off, the delete slash (2.133.0, MP_ONLY=xcharaerase): the caster takes X Chara, its
-     * cooldowns on. Q, and H with the hack on: the cleave, no slash. Q again. H with the watcher 12 blocks ahead, walking
-     * to its left as it comes: the caster leaps (drawn up on both clients, standing where it was on the server), the
-     * slash goes along the ground and deletes the watcher (100; gone from both clients' sight for half a second, its legs
-     * stopped; a /damage of 150 meanwhile doing nothing) and it is back where it was; H refused (its cooldown). The
-     * cooldowns off: H, and Kageno taken before the slash goes (no slash at all); H with the watcher 24 blocks ahead and
-     * Kageno taken just after the slash went (cut short before it gets there: the watcher untouched). Both clients log
-     * the cast and the slash as they hear of them, whom they hide and when, and the sounds.
+     * cooldowns on. Q, and H with the hack on: the cleave, no slash. Q again. Then, the slash aimed at the watcher's feet
+     * 12 blocks ahead ("EAIMW": EraseSlash.aimAt): the caster leaps (drawn up on both clients, standing where it was on the
+     * server), the slash lands on the watcher and strikes it (100; gone from both clients' sight for half a second), and
+     * the ground under it rises as a cube carrying it up (its own client carries it; no kick for flying), the watcher
+     * standing on it until it bursts (healed first so it lives: 150 then) and falling off it unharmed; H refused meanwhile
+     * (its cooldown). The cooldowns off: the same, the watcher walking off the cube as it rises ("WALK+": a fall of eight
+     * blocks or so, no harm; nothing at its burst); H with Kageno taken before the slash goes (no slash at all); H and
+     * Kageno taken with the watcher up on the cube (the cube gone at once, the watcher falling unharmed); and H where the
+     * caster's camera looks ("PITCH29": no aim given, the middle of its screen), the slash landing where its client
+     * would have it. Both clients log the cast, the slash, the cube as they have them, whom they hide and when, the
+     * watcher's feet, and the sounds.
      */
     private static final String[] XCHARAERASE_SCRIPT={
         "5 XCHARA","8 NOCDOFF","40 DIST30","45 HEAL",
         "60 Q","80 H","150 Q",
-        "170 DIST12","175 HEAL","190 H","209 WALK+","215 HURT","232 WALK-",
+        "170 DIST12","175 HEAL","180 EAIMW","190 H",
         "260 H",
-        "300 NOCDON","310 DIST10","315 HEAL","330 H","334 STANDK",
-        "360 XCHARA","365 NOCDON","380 DIST24","385 HEAL","400 H","418 STANDK",
-        "440 XCHARA","445 NOCDOFF","480 END"};
+        "470 HEAL",
+        "560 NOCDON",
+        "575 DIST12","580 HEAL","590 H",
+        "700 WALK+","740 WALK-",
+        "940 DIST10","945 HEAL","960 H","964 STANDK",
+        "990 XCHARA","995 NOCDON",
+        "1010 DIST12","1015 HEAL","1025 H","1100 STANDK",
+        "1130 XCHARA","1135 NOCDON",
+        "1150 EAIM-","1155 DIST30","1160 HEAL","1165 PITCH29","1175 H",
+        "1230 PITCH12","1240 NOCDOFF","1260 END"};
     private static final String[] STEPS=ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
@@ -930,7 +941,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xcharaerase")?700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharaerase")?1500:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1015,6 +1026,11 @@ public final class MpClient implements ClientModInitializer {
         // 2.112.0: the caster takes X Chara (MP_ONLY=xchara)
         if(step.equals("XCHARA")){if(down)command("botand progress stand @s x_chara");return;}
         if(step.startsWith("PITCH")){if(down){casterPitch=Float.parseFloat(step.substring(5));note("caster's camera pitch "+casterPitch);}return;}
+        // (2.133.0) X Chara's delete slash aimed at the watcher's feet as this client has them ("EAIMW"), or at the middle of the screen again ("EAIM-")
+        if(step.equals("EAIMW")||step.equals("EAIM-")){if(down){
+            var w=mc.world.getPlayers().stream().filter(q->q!=mc.player).findFirst().orElse(null);
+            dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=step.equals("EAIMW")&&w!=null?w.getPos():null;
+            note("delete slash aimed at "+(dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt==null?"the middle of the screen":dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt.toString()));}return;}
         // 2.93.0: Lee So-sang's Z: the camera onto a sword of the caster's formation ("ZAIMdeg"), and Z pressed where it looks
         if(step.startsWith("ZAIM")){if(down){var mids=dev.sangwoo.celestialfall.client.isosang.SwordStep.middles();int k=pickSword(Float.parseFloat(step.substring(4)));
             if(k<0||mids==null)note("ERROR no sword to aim at");
@@ -1736,8 +1752,26 @@ public final class MpClient implements ClientModInitializer {
             if(!hid.equals(eraseState.get("hid "+p.getUuid()))){eraseState.put("hid "+p.getUuid(),hid);if(!hid.equals("-"))note(String.format(Locale.ROOT,"%s %s here at world tick %d (since,hidden,silhouette %s)",name(p.getUuid()),hid.equals("1")?"hidden (deleted)":"seen again",mc.world.getTime(),seen));}
         }
         var lines=dev.sangwoo.celestialfall.client.xchara.EraseClient.all(0);
-        String all=String.join(" | ",lines.stream().map(l->l.replaceAll("age [0-9.]+","")).toList());
+        String all=String.join(" | ",lines.stream().map(l->l.replaceAll("age [0-9.]+","").replaceAll("struck -?[0-9]+","").replaceAll("cube [-0-9.]+","cube up")).toList());
         if(!all.equals(eraseState.get("slashes"))){eraseState.put("slashes",all);note("slashes here: "+(lines.isEmpty()?"none":String.join(" | ",lines)));}
+        // its cube here, a second at a time: its top, and whether this client stands its own player on it
+        if(!lines.isEmpty()&&mc.world.getTime()%20==0){
+            double on=dev.sangwoo.celestialfall.xchara.EraseCubes.on(mc.player);
+            note(String.format(Locale.ROOT,"  cubes here: %s; me at feet %.2f, on the ground %s, on a cube %s",
+                String.join(", ",dev.sangwoo.celestialfall.xchara.EraseCubes.cubes(mc.world).stream().map(c->String.format(Locale.ROOT,"%d,%d top %.2f",c.x0(),c.z0(),c.top())).toList()),
+                mc.player.getY(),mc.player.isOnGround(),Double.isNaN(on)?"no":String.format(Locale.ROOT,"top %.2f",on)));
+        }
+        // the caster's own: where the middle of its screen aims the slash as it is thrown, and where that lands it
+        if(caster){
+            var c=dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseOf(mc.player.getUuid());
+            if(c!=null&&Math.floor(c.age(0))==dev.sangwoo.celestialfall.xchara.EraseRules.SLASH&&!String.valueOf(c.id()).equals(eraseState.get("aimed"))){
+                eraseState.put("aimed",String.valueOf(c.id()));
+                var at=dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimPoint(mc,c);
+                double rise=dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseRise(c.id());
+                var to=dev.sangwoo.celestialfall.xchara.EraseGround.landing(mc.world,c.origin(),rise>=0?rise:dev.sangwoo.celestialfall.xchara.EraseRules.JUMP,at);
+                note(String.format(Locale.ROOT,"my slash thrown here: aimed at %.2f %.2f %.2f, lands at %.2f %.2f %.2f by this client",at.x,at.y,at.z,to.x,to.y,to.z));
+            }
+        }
         var heard=dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD;
         if(heard.size()<eraseHeard)eraseHeard=0;
         for(;eraseHeard<heard.size();eraseHeard++)if(heard.get(eraseHeard).contains("erase")||heard.get(eraseHeard).contains("hit 16"))note("  delete slash's sound: "+heard.get(eraseHeard));
