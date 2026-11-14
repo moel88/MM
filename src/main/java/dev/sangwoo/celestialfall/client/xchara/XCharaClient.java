@@ -224,10 +224,11 @@ public final class XCharaClient {
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_T){
             // (2.126.0) T with the hack on, the weakening (XCharaWeaken): asked, as G and R, with the one the camera's middle
-            // looks at; with it off, T is taken and does nothing yet. T is the game's chat key: X Chara's player opens the
+            // looks at; (2.131.0) with it off, the small knives thrown (XCharaAttack.knives: asked with no one; where each
+            // goes is told as it leaves the hand, BladeShot.tellAim). T is the game's chat key: X Chara's player opens the
             // chat with Enter (below), as Star Platinum's and Lee So-sang's
-            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
-                var target=aim(mc);
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                var target=HackMode.on(mc.player)?aim(mc):null;
                 BotandCamera.prepareInteraction();
                 var b=PacketByteBufs.create();b.writeByte(T);b.writeVarInt(target==null?-1:target.getId());ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }

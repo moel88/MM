@@ -84,6 +84,10 @@ public final class KnifeClient {
     private static final Map<UUID,Long> SHOT_READY=new HashMap<>();
     /** (2.130.0) The tick this player's knives shot are ready again, as the server told it (0 if none). */
     public static long shotReady(UUID id){return SHOT_READY.getOrDefault(id,0L);}
+    /** (2.131.0) When each player's small knives (T with the hack off) are ready again, as told. */
+    private static final Map<UUID,Long> KNIVES_READY=new HashMap<>();
+    /** (2.131.0) The tick this player's small knives are ready again, as the server told it (0 if none). */
+    public static long knivesReady(UUID id){return KNIVES_READY.getOrDefault(id,0L);}
     /** What this client was told of slam {@code id} (null: none). */
     public static Slam slam(UUID id){return SLAMS.get(id);}
     /**
@@ -140,7 +144,9 @@ public final class KnifeClient {
             long cutter=b.readableBytes()>=8?b.readLong():0;
             // (2.130.0) and the knives shot (a 2.129 server sends none)
             long shot=b.readableBytes()>=8?b.readLong():0;
-            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);CUTTER_READY.put(caster,cutter);SHOT_READY.put(caster,shot);});
+            // (2.131.0) and the small knives thrown (a 2.130 server sends none)
+            long knives=b.readableBytes()>=8?b.readLong():0;
+            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);CUTTER_READY.put(caster,cutter);SHOT_READY.put(caster,shot);KNIVES_READY.put(caster,knives);});
             if(combo==XCharaCombo.CUTTER_DASH&&type==XCharaAttack.HIT&&land!=null&&Double.isFinite(land.x)&&Double.isFinite(land.y)&&Double.isFinite(land.z)
                 &&land.squaredDistanceTo(at)<=(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4)*(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4))mc.execute(()->DASHES.put(id,land));
             if(combo==XCharaCombo.SLAM)mc.execute(()->{
@@ -213,7 +219,7 @@ public final class KnifeClient {
     public static void clear(){
         for(var v:VOICES.values())v.fade();
         for(var l:MORE_VOICES.values())for(var v:l)v.fade();
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();KNIVES_READY.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -265,7 +271,7 @@ public final class KnifeClient {
             MORE_VOICES.put(cast.id(),later);
             return;
         }
-        String sound=XCharaCombo.cutter(cast.combo())?CUTTER_SOUND:jab?JAB_SOUND:XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
+        String sound=cast.combo()==XCharaCombo.KNIVES?CorruptionKnives.SOUND:XCharaCombo.cutter(cast.combo())?CUTTER_SOUND:jab?JAB_SOUND:XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
         var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(sound),loud);
         if(v.full()<=.01f)return;
         // (2.124.0) the jab's press, as it starts (told of late, not at all: it is over)
@@ -355,7 +361,7 @@ public final class KnifeClient {
     /** (2.124.0) The tick this player's jab is ready again, as the server told it (0 if none). */
     public static long jabReady(UUID id){return JAB_READY.getOrDefault(id,0L);}
     /** Forgets this player's rest (their character is not X Chara now: the server forgot it too, StandManager). */
-    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);CUTTER_READY.remove(id);SHOT_READY.remove(id);}
+    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);CUTTER_READY.remove(id);SHOT_READY.remove(id);KNIVES_READY.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (XCharaCombo.HOLD): their keys do not walk them. The
      * server holds them as long (XCharaAttack.busy).

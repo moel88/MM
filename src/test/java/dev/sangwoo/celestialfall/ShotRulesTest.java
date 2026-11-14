@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ShotRulesTest {
     @Test void fourKnivesEightEachAGuardTakesFifteenSecondsFromItsEnd(){
-        assertTrue(valid(SHOT)&&skill(SHOT));assertEquals(0,place(SHOT),"no hit of the combo");assertEquals(SHOT,LAST);assertFalse(valid(SHOT+1));
+        assertTrue(valid(SHOT)&&skill(SHOT));assertEquals(0,place(SHOT),"no hit of the combo");assertEquals(14,SHOT);assertFalse(valid(LAST+1));
         assertEquals(4,ShotRules.BLADES);assertEquals(4,blows(SHOT),"its blows are its knives let go");
         assertEquals(32,total(SHOT),1e-6,"the user's 32 in all");
         for(int k=0;k<4;k++){assertEquals(8,damage(SHOT,k),1e-6);assertEquals(ShotRules.FIRE[k],blowAt(SHOT,k));}

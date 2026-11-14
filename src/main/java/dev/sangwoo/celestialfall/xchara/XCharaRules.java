@@ -31,11 +31,11 @@ public final class XCharaRules {
     public static final int R=4;
     /** (2.125.0) The press asks for H: with the hack on, the cleave (R's until 2.124: user request, "Q활성화 R스킬을 Q활성화 H스킬로 옮겨"); with it off, nothing yet. */
     public static final int H=5;
-    /** (2.126.0) The press asks for T: with the hack on, the weakening (XCharaWeaken, WeakenRules: the one in the crosshair follows the byte, as G's and R's); with it off, nothing yet. */
+    /** (2.126.0) The press asks for T: with the hack on, the weakening (XCharaWeaken, WeakenRules: the one in the crosshair follows the byte, as G's and R's); (2.131.0) with it off, the three small knives thrown (XCharaAttack.knives, KnivesRules). */
     public static final int T=6;
     /** (2.127.0) The press asks for Y: with the hack on, the pull (XCharaPull, PullRules: the one in the crosshair follows the byte, as G's, R's and T's); (2.130.0) with it off, the four knives shot (XCharaAttack.shot, ShotRules). */
     public static final int Y=7;
-    /** (2.128.0) No press: up in the air of their slam (G with the hack off, SlamRules), where the middle of their screen points, three doubles after the byte (XCharaAttack.aim). (2.130.0) And while their knives shot (Y with the hack off) are not all gone: where each goes as it is let go. */
+    /** (2.128.0) No press: up in the air of their slam (G with the hack off, SlamRules), where the middle of their screen points, three doubles after the byte (XCharaAttack.aim). (2.130.0) And while their knives shot (Y with the hack off) are not all gone: where each goes as it is let go. (2.131.0) And likewise until the last of their small knives (T with the hack off) has left the hand. */
     public static final int AIM=8;
     /**
      * E with the hack on, the restore (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에

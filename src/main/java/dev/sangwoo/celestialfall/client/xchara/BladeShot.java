@@ -109,7 +109,9 @@ public final class BladeShot {
                     blade.struck=entity;blade.far=Math.max(0,Math.min(ShotRules.RANGE,far));blade.took=took;
                     Vec3d point=blade.from.add(blade.dir.multiply(blade.far));
                     blade.mid=mc.world.getEntityById(entity) instanceof LivingEntity e?e.getLerpedPos(mc.getTickDelta()).add(0,e.getHeight()*.55,0):point;
-                    if(took)hitSound(mc,caster,id,k,blade,point);
+                    // (2.131.0: the small knives thrown strike with the same sound, at their own time: CorruptionKnives)
+                    var cast=KnifeClient.SWINGS.get(id);
+                    if(took&&cast!=null)hitSound(mc,caster,id,k,cast.combo()==XCharaCombo.KNIVES?CorruptionKnives.landed(blade,k)*20:landed(blade,k),point);
                 });
             }
         });
@@ -328,7 +330,7 @@ public final class BladeShot {
 
     /** The strike's sound's onset is this far into its file (ticks): started that much before the knife is seen to land when there is time. */
     static final int HIT_SOUND_LEAD=1;
-    private static void hitSound(MinecraftClient mc,UUID caster,UUID id,int k,Blade blade,Vec3d point){
+    private static void hitSound(MinecraftClient mc,UUID caster,UUID id,int k,float landed,Vec3d point){
         if(mc.player==null)return;
         var cast=KnifeClient.SWINGS.get(id);if(cast==null)return;
         java.util.function.Supplier<Float> loud=caster.equals(mc.player.getUuid())?()->(float)CelestialFall.CONFIG.effectVolume:()->{
@@ -337,7 +339,7 @@ public final class BladeShot {
         };
         var v=new XCharaClient.Voice(CelestialFall.id(HIT_SOUND),loud);
         if(v.full()<=.01f)return;
-        int wait=(int)Math.floor(landed(blade,k)-HIT_SOUND_LEAD-cast.age(0));
+        int wait=(int)Math.floor(landed-HIT_SOUND_LEAD-cast.age(0));
         if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
         KnifeClient.heard(String.format(java.util.Locale.ROOT,"%s knife %d, told %.0f ticks in, played %d later at %.2f",HIT_SOUND,k,cast.age(0),Math.max(0,wait),v.full()));
     }
@@ -362,8 +364,10 @@ public final class BladeShot {
     static void tellAim(MinecraftClient mc){
         if(mc.player==null||mc.world==null||!ClientPlayNetworking.canSend(XCharaUltimate.INPUT))return;
         StandClient.Cast mine=null;
-        for(var c:KnifeClient.SWINGS.values())if(c.combo()==XCharaCombo.SHOT&&c.caster().equals(mc.player.getUuid()))mine=c;
-        if(mine==null||KnifeClient.until(mine.id())!=Float.MAX_VALUE||mine.age(0)>ShotRules.FIRE[ShotRules.BLADES-1]+1)return;
+        // (2.131.0: and their small knives thrown, until the last has left the hand)
+        for(var c:KnifeClient.SWINGS.values())if((c.combo()==XCharaCombo.SHOT||c.combo()==XCharaCombo.KNIVES)&&c.caster().equals(mc.player.getUuid()))mine=c;
+        int last=mine==null?0:mine.combo()==XCharaCombo.KNIVES?dev.sangwoo.celestialfall.xchara.KnivesRules.FIRE[dev.sangwoo.celestialfall.xchara.KnivesRules.KNIVES-1]:ShotRules.FIRE[ShotRules.BLADES-1];
+        if(mine==null||KnifeClient.until(mine.id())!=Float.MAX_VALUE||mine.age(0)>last+1)return;
         Vec3d at=aimPoint(mc);
         var b=PacketByteBufs.create();b.writeByte(XCharaRules.AIM);b.writeDouble(at.x);b.writeDouble(at.y);b.writeDouble(at.z);
         ClientPlayNetworking.send(XCharaUltimate.INPUT,b);

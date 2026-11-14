@@ -94,8 +94,8 @@ public final class XCharaUltimate {
             if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
             // (2.119.0) E: the restore, with the hack on (XCharaHeal); (2.129.0) with it off, the three cuts (XCharaAttack.cutter)
             if(skill==E){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaHeal.request(player);else XCharaAttack.cutter(player);});return;}
-            // (2.126.0) T with the hack on: the weakening, asked with the one in the crosshair (XCharaWeaken); with it off, nothing yet
-            if(skill==T){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaWeaken.cast(player,target);});return;}
+            // (2.126.0) T with the hack on: the weakening, asked with the one in the crosshair (XCharaWeaken); (2.131.0) with it off, the small knives thrown (XCharaAttack.knives)
+            if(skill==T){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaWeaken.cast(player,target);else XCharaAttack.knives(player);});return;}
             // (2.127.0) Y with the hack on: the pull, asked with the one in the crosshair (XCharaPull); (2.130.0) with it off, the knives shot (XCharaAttack.shot)
             if(skill==Y){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaPull.cast(player,target);else XCharaAttack.shot(player);});return;}
             // R: with the hack on the double (2.125.0: asked with the one in the crosshair, as G; the cleave was R's from

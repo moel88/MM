@@ -1254,5 +1254,14 @@
         "preload": true
       }
     ]
+  },
+  "xchara_knives": {
+    "sounds": [
+      {
+        "name": "celestialfall:xchara_knives",
+        "stream": false,
+        "preload": true
+      }
+    ]
   }
 }
