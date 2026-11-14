@@ -103,19 +103,29 @@ public final class XCharaCombo {
      * strikes the first body it comes to (XCharaShot): no guard takes it (the user's: "가드 불가").
      */
     public static final int KNIVES=15;
+    /**
+     * H with the hack off, the rain of knives (2.132.0; RainRules for all of it): the seventh skill of the knife's
+     * pipeline, in two that follow one another. {@link #RUSH} is its run: no blow, drawn along its way until the server
+     * finds someone ahead of where it is drawn (XCharaAttack.rush) or it has run out. {@link #RAIN} is what follows a
+     * catch: its first blow the stab into the nearest one ahead, every blow after it a volley of knives on that one
+     * (XCharaAttack.pour): no guard takes any of it.
+     */
+    public static final int RUSH=16,RAIN=17;
     /** The last of the hits and skills. */
-    public static final int LAST=KNIVES;
+    public static final int LAST=RAIN;
     /** The tick into hit {@code n} its blow lands on (the same for either kind). */
-    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24},{14},{SlamRules.LAND},cuts(0),cuts(CutterRules.LEAD),ShotRules.FIRE,KnivesRules.FIRE};
+    private static final int[][] BLOWS={{},{4},{4},{6},{8},{4},{4},{6},{8},{24},{14},{SlamRules.LAND},cuts(0),cuts(CutterRules.LEAD),ShotRules.FIRE,KnivesRules.FIRE,{},rain()};
+    private static int[] rain(){int[] at=new int[1+RainRules.VOLLEYS];at[0]=RainRules.STAB;for(int v=0;v<RainRules.VOLLEYS;v++)at[1+v]=RainRules.volleyAt(v);return at;}
     private static int[] cuts(int lead){return new int[]{lead+CutterRules.FIRST,lead+CutterRules.FIRST+CutterRules.EVERY,lead+CutterRules.FIRST+2*CutterRules.EVERY};}
     /** Each blow's damage: 6, 6, 6, 10; 28 for the combo. */
-    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18},{13},{SlamRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE},{KnivesRules.DAMAGE,KnivesRules.DAMAGE,KnivesRules.DAMAGE}};
+    private static final float[][] DAMAGE={{},{6},{6},{6},{10},{6},{6},{6},{10},{18},{13},{SlamRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{CutterRules.DAMAGE,CutterRules.DAMAGE,CutterRules.DAMAGE},{ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE,ShotRules.DAMAGE},{KnivesRules.DAMAGE,KnivesRules.DAMAGE,KnivesRules.DAMAGE},{},rainDamage()};
+    private static float[] rainDamage(){float[] d=new float[1+RainRules.VOLLEYS];java.util.Arrays.fill(d,RainRules.VOLLEY_DAMAGE);d[0]=RainRules.STAB_DAMAGE;return d;}
     /** Ticks from a hit's start before the next may start. */
-    public static final int[] STEP={0,8,9,12,0,8,9,12,0,0,0,0,0,0,0,0};
+    public static final int[] STEP={0,8,9,12,0,8,9,12,0,0,0,0,0,0,0,0,0,0};
     /** Ticks a hit holds its user from its start: no walking, guard, dash or other move until then. */
-    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,38,19,SlamRules.FREE,20,20+CutterRules.LEAD,ShotRules.HOLD,KnivesRules.HOLD};
+    public static final int[] HOLD={0,8,9,12,15,8,9,12,15,38,19,SlamRules.FREE,20,20+CutterRules.LEAD,ShotRules.HOLD,KnivesRules.HOLD,RainRules.RUSH_HOLD,RainRules.HOLD};
     /** How long each hit runs (ticks) until its user is back in their stance: the clients draw its motion this long. */
-    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,44,24,SlamRules.END,27,27+CutterRules.LEAD,ShotRules.LENGTH,KnivesRules.LENGTH};
+    public static final int[] LENGTH={0,15,16,19,25,15,16,19,25,44,24,SlamRules.END,27,27+CutterRules.LEAD,ShotRules.LENGTH,KnivesRules.LENGTH,RainRules.RUSH_LENGTH,RainRules.LENGTH};
     /** A press this many ticks or fewer before the next hit may start is kept, and starts it then. */
     public static final int BUFFER=8;
     /** The next hit must start within this many ticks of when it may, or the combo breaks. */
@@ -136,10 +146,12 @@ public final class XCharaCombo {
     /** As far as any blow of the attack reaches (blocks): who could be struck at all is looked for within this. */
     public static final double MAX_REACH=9.6+2.5;
 
-    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four), the cleave (9), the jab (10), the slam (11), the three cuts (12, 13), the knives shot (14) or the small knives thrown (15). */
+    /** Whether {@code combo} is a hit (1 to 8: the four with the hack on, the plain four), the cleave (9), the jab (10), the slam (11), the three cuts (12, 13), the knives shot (14), the small knives thrown (15) or the rain of knives (16 its run, 17 its stab and rain). */
     public static boolean valid(int combo){return combo>=HACK_SLASH&&combo<=LAST;}
     /** Whether {@code combo} is a skill of the pipeline, no hit of the combo: the cleave, the jab or the slam. */
-    public static boolean skill(int combo){return combo==CLEAVE||combo==JAB||combo==SLAM||cutter(combo)||combo==SHOT||combo==KNIVES;}
+    public static boolean skill(int combo){return combo==CLEAVE||combo==JAB||combo==SLAM||cutter(combo)||combo==SHOT||combo==KNIVES||rain(combo);}
+    /** (2.132.0) Whether {@code combo} is the rain of knives: its run or its stab and rain. */
+    public static boolean rain(int combo){return combo==RUSH||combo==RAIN;}
     /** (2.129.0) Whether {@code combo} is the three cuts, of either kind. */
     public static boolean cutter(int combo){return combo==CUTTER||combo==CUTTER_DASH;}
     /** When the cleave is ready again: its cooldown after one begun at {@code start} is over. */
@@ -147,9 +159,9 @@ public final class XCharaCombo {
     /** (2.124.0) When the jab is ready again: its cooldown after one begun at {@code start} is over. */
     public static long jabReady(long start){return start+LENGTH[JAB]+JAB_COOLDOWN;}
     /** A skill's cooldown from its end (ticks). */
-    public static int cooldown(int combo){return combo==KNIVES?KnivesRules.COOLDOWN:combo==SHOT?ShotRules.COOLDOWN:cutter(combo)?CutterRules.COOLDOWN:combo==SLAM?SlamRules.COOLDOWN:combo==JAB?JAB_COOLDOWN:combo==CLEAVE?CLEAVE_COOLDOWN:0;}
+    public static int cooldown(int combo){return rain(combo)?RainRules.COOLDOWN:combo==KNIVES?KnivesRules.COOLDOWN:combo==SHOT?ShotRules.COOLDOWN:cutter(combo)?CutterRules.COOLDOWN:combo==SLAM?SlamRules.COOLDOWN:combo==JAB?JAB_COOLDOWN:combo==CLEAVE?CLEAVE_COOLDOWN:0;}
     /** (2.124.0) Whether {@code combo}'s blow strikes one only, the nearest in its way: the jab. */
-    public static boolean single(int combo){return combo==JAB;}
+    public static boolean single(int combo){return combo==JAB||combo==RAIN;}
     /** Whether hit {@code combo} is a plain swing (the hack off as it began). */
     public static boolean plain(int combo){return combo>=SLASH&&combo<=LUNGE;}
     /** Hit {@code combo}'s place in its combo (1 to 4; 0 for none). */
@@ -213,7 +225,9 @@ public final class XCharaCombo {
     private static final double[] SLAM_REACH={-SlamRules.BLAST,SlamRules.BLAST,SlamRules.BLAST};
     /** (2.130.0) The knives shot, as a boss reads them coming: a narrow way ahead as far as they fly. */
     private static final double[] SHOT_REACH={0,ShotRules.RANGE,1.0},KNIVES_REACH={0,KnivesRules.RANGE,1.0};
-    private static double[] reaches(int combo){return combo==KNIVES?KNIVES_REACH:combo==SHOT?SHOT_REACH:cutter(combo)?CutterRules.REACH:combo==SLAM?SLAM_REACH:combo==CLEAVE?CLEAVE_REACH:combo==JAB?JAB_REACH:REACH[place(combo)];}
+    /** (2.132.0) The rain of knives: its run as a boss reads it coming (as far as it runs and catches), and its stab. */
+    private static final double[] RUSH_REACH={0,RainRules.RUN+RainRules.CATCH,RainRules.PATH};
+    private static double[] reaches(int combo){return combo==RAIN?RainRules.REACH:combo==RUSH?RUSH_REACH:combo==KNIVES?KNIVES_REACH:combo==SHOT?SHOT_REACH:cutter(combo)?CutterRules.REACH:combo==SLAM?SLAM_REACH:combo==CLEAVE?CLEAVE_REACH:combo==JAB?JAB_REACH:REACH[place(combo)];}
     /**
      * Whether a point (ahead along the hit, to its right and up from its user's feet, blocks) is in the way of hit
      * {@code combo}'s blow {@code blow}, for a body {@code halfWidth} across: a lane ahead.

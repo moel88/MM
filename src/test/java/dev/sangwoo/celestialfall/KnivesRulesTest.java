@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class KnivesRulesTest {
     @Test void threeKnivesFourEachNoGuardTakesFiveSecondsFromItsEnd(){
-        assertTrue(valid(KNIVES)&&skill(KNIVES));assertEquals(0,place(KNIVES),"no hit of the combo");assertEquals(KNIVES,LAST);assertFalse(valid(KNIVES+1));
+        assertTrue(valid(KNIVES)&&skill(KNIVES));assertEquals(0,place(KNIVES),"no hit of the combo");assertEquals(15,KNIVES);assertFalse(valid(LAST+1));
         assertEquals(15,KNIVES);assertEquals(14,SHOT,"the knives shot keep their number");
         assertEquals(3,KnivesRules.KNIVES);assertEquals(3,blows(KNIVES),"its blows are its knives leaving the hand");
         assertEquals(12,total(KNIVES),1e-6,"the user's 12 in all");

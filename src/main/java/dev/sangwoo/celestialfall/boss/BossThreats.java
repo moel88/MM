@@ -277,9 +277,23 @@ public final class BossThreats {
     /** X Chara's knife (2.114.0): the next blow of the hit in flight, in its way ahead of them; the fourth takes no guard. */
     private static void xchara(ServerPlayerEntity p,long now,List<Threat> out){
         var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(p);
-        if(h==null||!dev.sangwoo.celestialfall.xchara.XCharaCombo.valid(h.combo())||h.blows()>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(h.combo()))return;
+        if(h==null||!dev.sangwoo.celestialfall.xchara.XCharaCombo.valid(h.combo()))return;
+        // (2.132.0) the rain of knives' run: it has no blow of its own; whoever is in its way ahead is caught and stabbed
+        // (no guard takes it), as soon as the run could be on them
+        if(h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.RUSH){
+            long over=h.start()+dev.sangwoo.celestialfall.xchara.RainRules.RUN_TO;if(now>over)return;
+            long at=Math.min(over,Math.max(now,h.start()))+dev.sangwoo.celestialfall.xchara.RainRules.STAB;
+            out.add(new Threat(p,"xchara"+h.combo(),h.start(),at,over+dev.sangwoo.celestialfall.xchara.RainRules.STAB,
+                Zone.lane(p.getPos(),h.yaw(),0,dev.sangwoo.celestialfall.xchara.RainRules.RUN+dev.sangwoo.celestialfall.xchara.RainRules.CATCH,dev.sangwoo.celestialfall.xchara.RainRules.PATH,
+                    dev.sangwoo.celestialfall.xchara.XCharaCombo.LOW,dev.sangwoo.celestialfall.xchara.XCharaCombo.HIGH),
+                false,false,true,dev.sangwoo.celestialfall.xchara.RainRules.total(),false,false));
+            return;
+        }
+        if(h.blows()>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.blowAt(c,i);
         if(now>hit)return;
+        // (2.132.0) the rain's volleys fall on the one the knife is in, no one else: nothing to read once the stab is made
+        if(c==dev.sangwoo.celestialfall.xchara.XCharaCombo.RAIN&&i>0)return;
         // (2.128.0) the slam: round where it comes down, once its dive has begun (no one knows before)
         if(c==dev.sangwoo.celestialfall.xchara.XCharaCombo.SLAM){
             Vec3d land=dev.sangwoo.celestialfall.xchara.XCharaAttack.landing(p);if(land==null)return;
@@ -289,7 +303,7 @@ public final class BossThreats {
             return;
         }
         // (2.129.0) the three cuts going forward first: struck from where that ends
-        Zone zone=Zone.lane(dev.sangwoo.celestialfall.xchara.XCharaCombo.cutter(c)?dev.sangwoo.celestialfall.xchara.XCharaAttack.cutsFrom(p):p.getPos(),h.yaw(),dev.sangwoo.celestialfall.xchara.XCharaCombo.near(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.reach(c,i),
+        Zone zone=Zone.lane(dev.sangwoo.celestialfall.xchara.XCharaCombo.cutter(c)?dev.sangwoo.celestialfall.xchara.XCharaAttack.cutsFrom(p):c==dev.sangwoo.celestialfall.xchara.XCharaCombo.RAIN?dev.sangwoo.celestialfall.xchara.XCharaAttack.stabsFrom(p):p.getPos(),h.yaw(),dev.sangwoo.celestialfall.xchara.XCharaCombo.near(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.reach(c,i),
             dev.sangwoo.celestialfall.xchara.XCharaCombo.halfWidth(c,i),dev.sangwoo.celestialfall.xchara.XCharaCombo.LOW,dev.sangwoo.celestialfall.xchara.XCharaCombo.HIGH);
         out.add(new Threat(p,"xchara"+c,h.start(),hit,h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.lastBlow(c),zone,
             !dev.sangwoo.celestialfall.xchara.XCharaCombo.unblockable(c),false,false,dev.sangwoo.celestialfall.xchara.XCharaCombo.total(c),false,false));

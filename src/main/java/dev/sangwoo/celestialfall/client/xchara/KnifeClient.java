@@ -88,6 +88,20 @@ public final class KnifeClient {
     private static final Map<UUID,Long> KNIVES_READY=new HashMap<>();
     /** (2.131.0) The tick this player's small knives are ready again, as the server told it (0 if none). */
     public static long knivesReady(UUID id){return KNIVES_READY.getOrDefault(id,0L);}
+    /** (2.132.0) When each player's rain of knives (H with the hack off) is ready again, as told. */
+    private static final Map<UUID,Long> RAIN_READY=new HashMap<>();
+    /** (2.132.0) The tick this player's rain of knives is ready again, as the server told it (0 if none). */
+    public static long rainReady(UUID id){return RAIN_READY.getOrDefault(id,0L);}
+    /** (2.132.0) The way of a run or a stab of the rain of knives as told as it began: the run's from where it began to where it ends with no one met; the stab's from where the run had its user to where they stab from. */
+    public record Way(Vec3d from,Vec3d to){}
+    private static final Map<UUID,Way> WAYS=new HashMap<>();
+    public static Way rainWay(UUID id){return WAYS.get(id);}
+    /** (2.132.0) This player's latest run or stab of the rain of knives this client still draws (in flight or stopped short; a little past its end, while its knife goes out), or null. */
+    public static StandClient.Cast rainOf(UUID id){
+        StandClient.Cast best=null;
+        for(var c:SWINGS.values())if(c.caster().equals(id)&&XCharaCombo.rain(c.combo())&&c.age(0)<XCharaCombo.LENGTH[c.combo()]+10)best=c;
+        return best;
+    }
     /** What this client was told of slam {@code id} (null: none). */
     public static Slam slam(UUID id){return SLAMS.get(id);}
     /**
@@ -146,7 +160,12 @@ public final class KnifeClient {
             long shot=b.readableBytes()>=8?b.readLong():0;
             // (2.131.0) and the small knives thrown (a 2.130 server sends none)
             long knives=b.readableBytes()>=8?b.readLong():0;
-            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);CUTTER_READY.put(caster,cutter);SHOT_READY.put(caster,shot);KNIVES_READY.put(caster,knives);});
+            // (2.132.0) and the rain of knives (a 2.131 server sends none); of one in flight where its way begins (where it ends is in the slam's place)
+            long rain=b.readableBytes()>=8?b.readLong():0;
+            Vec3d began=b.readableBytes()>=1&&b.readBoolean()&&b.readableBytes()>=24?new Vec3d(b.readDouble(),b.readDouble(),b.readDouble()):null;
+            mc.execute(()->{CLEAVE_READY.put(caster,cleave);JAB_READY.put(caster,jab);SLAM_READY.put(caster,slam);CUTTER_READY.put(caster,cutter);SHOT_READY.put(caster,shot);KNIVES_READY.put(caster,knives);RAIN_READY.put(caster,rain);});
+            if(XCharaCombo.rain(combo)&&type==XCharaAttack.HIT&&land!=null&&began!=null&&finite(land)&&finite(began)&&began.squaredDistanceTo(at)<=24*24&&land.squaredDistanceTo(began)<=16*16)
+                mc.execute(()->WAYS.put(id,new Way(began,land)));
             if(combo==XCharaCombo.CUTTER_DASH&&type==XCharaAttack.HIT&&land!=null&&Double.isFinite(land.x)&&Double.isFinite(land.y)&&Double.isFinite(land.z)
                 &&land.squaredDistanceTo(at)<=(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4)*(dev.sangwoo.celestialfall.xchara.CutterRules.DASH+4))mc.execute(()->DASHES.put(id,land));
             if(combo==XCharaCombo.SLAM)mc.execute(()->{
@@ -164,6 +183,7 @@ public final class KnifeClient {
         ClientTickEvents.START_CLIENT_TICK.register(KnifeClient::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((handler,mc)->mc.execute(KnifeClient::clear));
     }
+    private static boolean finite(Vec3d v){return Double.isFinite(v.x)&&Double.isFinite(v.y)&&Double.isFinite(v.z);}
     private static void accept(MinecraftClient mc,UUID caster,Identifier dim,int type,UUID id,int combo,int blow,long start,long serverNow,Vec3d at,float yaw,long ready,List<StandClient.Target> struck){
         if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;
         if(world!=mc.world){clear();world=mc.world;}
@@ -172,6 +192,9 @@ public final class KnifeClient {
             if(serverNow-start>LATE)return;
             var cast=new StandClient.Cast(id,caster,dim,XCharaCombo.SKILL,combo,start,serverNow,StandClient.ticks(),at,yaw,List.of());
             KagenoClips.begin(cast);
+            // (2.132.0) the rain's stab takes over from its run: the run lets go of the body here (the stab begins from
+            // the frame of it on screen, KagenoClips.begin) and draws nothing more
+            if(combo==XCharaCombo.RAIN)for(var c:SWINGS.values())if(c.caster().equals(caster)&&c.combo()==XCharaCombo.RUSH&&!STOPPED.containsKey(c.id()))STOPPED.put(c.id(),Math.max(2,c.age(0)));
             SWINGS.put(id,cast);STRUCK.put(id,new int[XCharaCombo.blows(combo)][]);
             voice(mc,cast);
         }else if(type==XCharaAttack.LANDED){
@@ -180,6 +203,8 @@ public final class KnifeClient {
             told[blow]=struck.stream().mapToInt(StandClient.Target::entity).toArray();
             // (2.124.0) the jab marks whom it struck: the X on their face while they are held
             if(cast.combo()==XCharaCombo.JAB)CorruptionJab.mark(cast,struck);
+            // (2.132.0) the rain's stab is in someone: the rain's sounds, at their moments from now
+            if(cast.combo()==XCharaCombo.RAIN&&blow==0&&!struck.isEmpty())rainVoices(mc,cast);
             if(!struck.isEmpty()){
                 var all=new ArrayList<>(cast.targets());for(var t:struck)if(all.stream().noneMatch(o->o.entity()==t.entity()))all.add(t);
                 SWINGS.put(id,new StandClient.Cast(cast.id(),cast.caster(),cast.dimension(),cast.skill(),cast.combo(),cast.start(),cast.serverNow(),cast.received(),cast.origin(),cast.yaw(),List.copyOf(all)));
@@ -204,7 +229,7 @@ public final class KnifeClient {
         var dim=mc.world.getRegistryKey().getValue();
         SWINGS.values().removeIf(c->!c.dimension().equals(dim)||c.age(0)>=KnifeCombo.life(c.combo())*20||c.age(0)<0||gone(mc,c));
         STRUCK.keySet().retainAll(SWINGS.keySet());STOPPED.keySet().retainAll(SWINGS.keySet());VOICES.keySet().retainAll(SWINGS.keySet());
-        SLAMS.keySet().retainAll(SWINGS.keySet());DASHES.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());BladeShot.keep(SWINGS.keySet());
+        SLAMS.keySet().retainAll(SWINGS.keySet());DASHES.keySet().retainAll(SWINGS.keySet());WAYS.keySet().retainAll(SWINGS.keySet());MORE_VOICES.keySet().retainAll(SWINGS.keySet());BladeShot.keep(SWINGS.keySet());
         // (2.128.0) up in the air of their own slam: where the middle of the screen points, told every tick until the dive's word comes
         if(mc.player!=null)OverwriteSlam.tellAim(mc);
         // (2.130.0) and while their own knives shot are not all gone: each goes at where they look as it is let go
@@ -219,7 +244,7 @@ public final class KnifeClient {
     public static void clear(){
         for(var v:VOICES.values())v.fade();
         for(var l:MORE_VOICES.values())for(var v:l)v.fade();
-        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();KNIVES_READY.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
+        SWINGS.clear();STRUCK.clear();STOPPED.clear();READY.clear();CLEAVE_READY.clear();JAB_READY.clear();SLAM_READY.clear();SLAMS.clear();CUTTER_READY.clear();SHOT_READY.clear();KNIVES_READY.clear();RAIN_READY.clear();WAYS.clear();DASHES.clear();VOICES.clear();MORE_VOICES.clear();BladeShot.clear();KnifeCombo.clear();CorruptionJab.clear();OverwriteSlam.clear();world=null;
     }
 
     // ───────────────────────────── sounds ─────────────────────────────
@@ -271,6 +296,18 @@ public final class KnifeClient {
             MORE_VOICES.put(cast.id(),later);
             return;
         }
+        // (2.132.0) the rain of knives: its run has no sound; its stab has the jab's thrust as the knife goes in (the
+        // rain's own come once it is in someone: rainVoices)
+        if(cast.combo()==XCharaCombo.RUSH)return;
+        if(cast.combo()==XCharaCombo.RAIN){
+            int wait=dev.sangwoo.celestialfall.xchara.RainRules.STAB-1-(int)Math.floor(cast.age(0));if(wait<-2)return;
+            var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(BladeRain.STAB_SOUND),loud);
+            if(v.full()<=.01f)return;
+            if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
+            VOICES.put(cast.id(),v);
+            heard(String.format(java.util.Locale.ROOT,"%s hit %d, told %.0f ticks in, played %d later at %.2f",BladeRain.STAB_SOUND,cast.combo(),cast.age(0),Math.max(0,wait),v.full()));
+            return;
+        }
         String sound=cast.combo()==XCharaCombo.KNIVES?CorruptionKnives.SOUND:XCharaCombo.cutter(cast.combo())?CUTTER_SOUND:jab?JAB_SOUND:XCharaCombo.skill(cast.combo())?CLEAVE_SOUND:SOUND;
         var v=new XCharaClient.Voice(dev.sangwoo.celestialfall.CelestialFall.id(sound),loud);
         if(v.full()<=.01f)return;
@@ -284,6 +321,24 @@ public final class KnifeClient {
         if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
         VOICES.put(cast.id(),v);
         heard(String.format(java.util.Locale.ROOT,"%s hit %d, told %.0f ticks in, played %d later at %.2f",sound,cast.combo(),cast.age(0),Math.max(0,wait),v.full()));
+    }
+    /** (2.132.0) The rain's sounds (BladeRain.cues), each at its moment from now: for its user as loud as they are, for everyone else from where its user is. One whose moment is past is not played. */
+    private static void rainVoices(MinecraftClient mc,StandClient.Cast cast){
+        if(mc.world==null||mc.player==null)return;
+        UUID caster=cast.caster();Vec3d origin=cast.origin();
+        java.util.function.Supplier<Float> loud=caster.equals(mc.player.getUuid())?()->(float)dev.sangwoo.celestialfall.CelestialFall.CONFIG.effectVolume:()->{
+            var m=MinecraftClient.getInstance();var user=m.world==null?null:m.world.getPlayerByUuid(caster);
+            return loudness(m,user==null?origin:user.getPos());
+        };
+        int age=(int)Math.floor(cast.age(0));var later=MORE_VOICES.computeIfAbsent(cast.id(),x->new ArrayList<>());
+        for(var cue:BladeRain.cues()){
+            int wait=(Integer)cue[1]-age;if(wait<-1)continue;
+            var v=XCharaClient.Voice.quieter(dev.sangwoo.celestialfall.CelestialFall.id((String)cue[0]),loud,(Float)cue[2]);
+            if(v.full()<=.005f)continue;
+            if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);
+            later.add(v);
+            heard(String.format(java.util.Locale.ROOT,"%s rain, told %.0f ticks in, played %d later at %.2f",cue[0],cast.age(0),Math.max(0,wait),v.full()));
+        }
     }
     /** Whether this swing's body clip still plays (it is the body's motion until then, unless it stopped short). */
     static boolean animating(StandClient.Cast c){return c.age(0)<KnifeCombo.clipOf(c.combo()).length()*20+1;}
@@ -361,7 +416,7 @@ public final class KnifeClient {
     /** (2.124.0) The tick this player's jab is ready again, as the server told it (0 if none). */
     public static long jabReady(UUID id){return JAB_READY.getOrDefault(id,0L);}
     /** Forgets this player's rest (their character is not X Chara now: the server forgot it too, StandManager). */
-    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);CUTTER_READY.remove(id);SHOT_READY.remove(id);KNIVES_READY.remove(id);}
+    public static void forget(UUID id){READY.remove(id);CLEAVE_READY.remove(id);JAB_READY.remove(id);SLAM_READY.remove(id);CUTTER_READY.remove(id);SHOT_READY.remove(id);KNIVES_READY.remove(id);RAIN_READY.remove(id);}
     /**
      * Whether a hit holds the local player where they stand now (XCharaCombo.HOLD): their keys do not walk them. The
      * server holds them as long (XCharaAttack.busy).

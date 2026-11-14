@@ -101,8 +101,8 @@ public final class XCharaUltimate {
             // R: with the hack on the double (2.125.0: asked with the one in the crosshair, as G; the cleave was R's from
             // 2.121.0 and went to H), with it off the jab (2.124.0)
             if(skill==R){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaClone.cast(player,target);else XCharaAttack.jab(player);});return;}
-            // (2.125.0, user request: "Q활성화 R스킬을 Q활성화 H스킬로 옮겨") H with the hack on: the cleave; with it off, nothing yet
-            if(skill==H){server.execute(()->{if(heard(player)&&XCharaHack.on(player))XCharaAttack.cleave(player);});return;}
+            // (2.125.0, user request: "Q활성화 R스킬을 Q활성화 H스킬로 옮겨") H with the hack on: the cleave; (2.132.0) with it off the rain of knives (XCharaAttack.rain)
+            if(skill==H){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaAttack.cleave(player);else XCharaAttack.rain(player);});return;}
             if(skill!=G)return;
             // G: with the hack on the sword dance; (2.128.0) with it off the slam (XCharaAttack.slam)
             server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))cast(player,target);else XCharaAttack.slam(player);});

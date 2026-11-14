@@ -254,8 +254,9 @@ public final class XCharaClient {
         }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_H){
             // (2.125.0, user request: "Q활성화 R스킬을 Q활성화 H스킬로 옮겨") H with the hack on, the cleave (XCharaAttack.cleave:
-            // the way they look as it begins); with it off, H is taken and does nothing yet
-            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&HackMode.on(mc.player)&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+            // the way they look as it begins); (2.132.0) with it off, the rain of knives (XCharaAttack.rain: the server
+            // tells them apart by the hack)
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
                 BotandCamera.prepareInteraction();
                 var b=PacketByteBufs.create();b.writeByte(H);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
             }

@@ -128,7 +128,10 @@ public final class HackMode {
         if(jab!=null)return jab;
         // (2.128.0) or their slam's, lit from its start until it is over
         var slam=OverwriteSlam.knife(id,delta);
-        return slam!=null?slam:look(id,delta);
+        if(slam!=null)return slam;
+        // (2.132.0) or their rain of knives' stab's, lit while the knife is in someone
+        var rain=BladeRain.knife(id,delta);
+        return rain!=null?rain:look(id,delta);
     }
     /** What is drawn in this player's other hand: the hack's panel while any of it shows (null: whatever the hand holds). */
     public static ItemStack panel(PlayerEntity p){

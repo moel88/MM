@@ -83,6 +83,13 @@ public final class XCharaAttack {
         long shotReady;
         /** (2.131.0) The small knives thrown (T with the hack off): the tick they are ready again (0 for at once); of one in flight {@code from} and {@code aim} as the knives shot's. */
         long knivesReady;
+        /**
+         * (2.132.0) The rain of knives (H with the hack off): the tick it is ready again (0 for at once). Of its run in
+         * flight: where they began ({@code from}), where it ends with no one met ({@code to}), how far that is
+         * ({@code far}) and whether they have been taken there ({@code arrived}). Of its stab: where the run had them as
+         * it began ({@code from}), where they stab from ({@code to}, {@code arrived}), and whom the knife is in.
+         */
+        long rainReady;double far;LivingEntity victim;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -125,9 +132,9 @@ public final class XCharaAttack {
         return s!=null&&s.world==p.getWorld()&&skill(s.combo)&&p.getWorld().getTime()<s.start+LENGTH[s.combo];
     }
     /** This player is X Chara's no more: the attack's rest is gone, so it is ready if they are again (StandManager.forgetOthers). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;s.rainReady=0;}}
     /** The attack's rest is gone (a player the cooldowns are off for, /botand nocooldown). */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;s.rainReady=0;}}
     /** (2.124.0) The tick this player's jab is ready again (0 if it is). */
     public static long jabReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.jabReady;}
     /** (2.129.0) The tick this player's three cuts are ready again (0 if they are). */
@@ -138,6 +145,15 @@ public final class XCharaAttack {
     public static Object[] describeShot(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||s.combo!=SHOT&&s.combo!=KNIVES?null:new Object[]{s.start,s.blows,s.aim};}
     /** (2.131.0) The tick this player's small knives are ready again (0 if they are). */
     public static long knivesReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.knivesReady;}
+    /** (2.132.0) The tick this player's rain of knives is ready again (0 if it is). */
+    public static long rainReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.rainReady;}
+    /** (2.132.0) Where this player's stab in flight is struck from: where they go on to until they are there, then where they stand. */
+    public static Vec3d stabsFrom(PlayerEntity p){
+        var s=p==null?null:STATES.get(p.getUuid());
+        return s!=null&&s.combo==RAIN&&s.to!=null&&!s.arrived?s.to:p==null?null:p.getPos();
+    }
+    /** (2.132.0) For the multiplayer check: this player's rain of knives in flight as {start, kind, from, to, blows landed, whom the knife is in or null}, or null. */
+    public static Object[] describeRain(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!XCharaCombo.rain(s.combo)?null:new Object[]{s.start,s.combo,s.from,s.to,s.blows,s.victim};}
     /** (2.129.0) Where this player's three cuts in flight are struck from: where their going forward ends until they are there, then where they stand. */
     public static Vec3d cutsFrom(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());
@@ -294,6 +310,125 @@ public final class XCharaAttack {
         return true;
     }
     /**
+     * H with the hack off, the rain of knives (2.132.0, XCharaCombo.RUSH and RAIN, RainRules). Returns whether it began:
+     * with the hack off, nothing holding them (a hit of the knife's own holds too), and its cooldown over. With someone
+     * right ahead its stab begins at once ({@link #strike}); else its run, as far as the way is open ({@link #rush}
+     * looks for someone ahead of it every tick). As the other skills, it ends the combo and adds no rest of its own.
+     */
+    public static boolean rain(ServerPlayerEntity p){
+        if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p))return false;
+        var s=state(p);long now=p.getWorld().getTime();
+        settle(p,s,now);
+        if(valid(s.combo)&&now<(last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:s.start+HOLD[s.combo]))return false;
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        if(now<s.rainReady&&!free)return false;
+        float yaw=MathHelper.wrapDegrees(p.getYaw());Vec3d f=Vec3d.fromPolar(0,yaw),at=p.getPos();
+        s.yaw=yaw;s.queued=false;s.victim=null;
+        p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
+        double ahead=ahead(p,at,f);
+        if(!Double.isNaN(ahead)){strike(p,s,now,at,ahead,open(p,at,f,RainRules.LUNGE));return true;}
+        // the run: as far as nothing stands in the way, to a floor they can stand on
+        double clear=open(p,at,f,RainRules.RUN);
+        s.from=at;s.to=at;s.far=0;s.arrived=false;
+        for(double far=clear;far>=.4;far-=.5){
+            double x=at.x+f.x*far,z=at.z+f.z*far,y=SlamGround.floor(p.getWorld(),p,x,z,at.y+RainRules.UP,at.y-RainRules.DOWN);
+            if(!Double.isNaN(y)){s.to=new Vec3d(x,y,z);s.far=far;break;}
+        }
+        s.combo=RUSH;s.id=UUID.randomUUID();s.start=now;s.blows=0;
+        s.rainReady=free?0:RainRules.readyAfterRun(now);
+        send(p,s,HIT,-1,null);
+        return true;
+    }
+    /** How far ahead of {@code at} the way {@code f} is open for {@code p} (no block in it), up to {@code most} blocks. */
+    private static double open(ServerPlayerEntity p,Vec3d at,Vec3d f,double most){
+        var world=p.getServerWorld();double clear=most;
+        for(double up:new double[]{RainRules.UP+.05,1.0,p.getHeight()-.1}){
+            Vec3d a=at.add(0,up,0);
+            var hit=world.raycast(new net.minecraft.world.RaycastContext(a,a.add(f.multiply(most+.5)),net.minecraft.world.RaycastContext.ShapeType.COLLIDER,net.minecraft.world.RaycastContext.FluidHandling.NONE,p));
+            if(hit.getType()!=net.minecraft.util.hit.HitResult.Type.MISS)clear=Math.min(clear,Math.max(0,hit.getPos().distanceTo(a)-.5));
+        }
+        return clear;
+    }
+    /** The near side of the nearest one in the run's way ahead of {@code at} (blocks; in sight, within RainRules.CATCH), or NaN. */
+    private static double ahead(ServerPlayerEntity p,Vec3d at,Vec3d f){
+        var world=p.getServerWorld();Vec3d right=new Vec3d(-f.z,0,f.x);double ahead=Double.NaN;
+        for(var e:world.getEntitiesByClass(LivingEntity.class,new Box(at,at).expand(RainRules.CATCH+3),e->foe(p,e))){
+            Vec3d d=e.getPos().subtract(at);double half=e.getWidth()*.5,fw=d.dotProduct(f)-half;
+            if(fw<-2*half||fw>RainRules.CATCH||Math.abs(d.dotProduct(right))>RainRules.PATH+half||d.y<LOW||d.y>HIGH||!p.canSee(e))continue;
+            if(Double.isNaN(ahead)||fw<ahead)ahead=Math.max(0,fw);
+        }
+        return ahead;
+    }
+    /** Where the run in flight has its user drawn {@code n} ticks in. */
+    private static Vec3d runs(State s,long n){
+        Vec3d f=Vec3d.fromPolar(0,s.yaw);double gone=RainRules.ran(n,s.far);
+        return new Vec3d(s.from.x+f.x*gone,s.from.y+(s.far>0?(s.to.y-s.from.y)*gone/s.far:0),s.from.z+f.z*gone);
+    }
+    /**
+     * A tick of the run: with someone ahead of where they are drawn the stab begins ({@link #strike}); with no one by
+     * RainRules.RUN_TO they are where it ends, from then.
+     */
+    private static void rush(ServerPlayerEntity p,State s,long now){
+        long n=now-s.start;if(n>RainRules.RUN_TO)return;
+        Vec3d f=Vec3d.fromPolar(0,s.yaw),at=runs(s,n);
+        double ahead=ahead(p,at,f);
+        if(!Double.isNaN(ahead)){strike(p,s,now,at,ahead,s.far-RainRules.ran(n,s.far));return;}
+        if(n>=RainRules.RUN_TO&&!s.arrived)arrive(p,s);
+    }
+    /**
+     * Someone is ahead: the stab begins, from {@code at} (where the run had its user drawn; where they stand, with no
+     * run), going on to RainRules.KEEP short of that one's near side ({@code ahead} blocks on) as far as {@code room}
+     * blocks of the way are open, to a floor they can stand on (none there, nearer; none at all, where they began).
+     */
+    private static void strike(ServerPlayerEntity p,State s,long now,Vec3d at,double ahead,double room){
+        var world=p.getServerWorld();Vec3d f=Vec3d.fromPolar(0,s.yaw),origin=p.getPos(),to=null;
+        double adv=RainRules.advance(ahead,Math.max(0,room)),back=at.subtract(origin).dotProduct(f);
+        for(double a=adv;to==null&&a>=-back-1e-6;a-=a>0&&a<.4?a:.4){
+            double x=at.x+f.x*a,z=at.z+f.z*a,y=SlamGround.floor(world,p,x,z,at.y+RainRules.UP,at.y-RainRules.DOWN);
+            if(!Double.isNaN(y))to=new Vec3d(x,y,z);
+            // (in the air as they began, with no floor under them: as high as they are, if they fit there)
+            else if(!p.isOnGround()&&world.isSpaceEmpty(p,p.getDimensions(net.minecraft.entity.EntityPose.STANDING).getBoxAt(x,at.y,z).contract(1e-4,0,1e-4)))to=new Vec3d(x,at.y,z);
+        }
+        if(to==null){to=origin;at=origin;}
+        boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
+        s.from=at;s.to=to;s.far=0;s.arrived=false;s.victim=null;
+        s.combo=RAIN;s.id=UUID.randomUUID();s.start=now;s.blows=0;
+        s.rainReady=free?0:RainRules.ready(now);
+        send(p,s,HIT,-1,null);
+    }
+    /** The rain stopped with the knife in someone: they are let go (bound until its last volley as it went in; free a few ticks from now instead). */
+    private static void unbind(State s,long now){
+        var e=s.victim;if(s.combo!=RAIN||e==null||!e.isAlive()||e.isRemoved())return;
+        long until=s.start+RainRules.STAB+RainRules.BIND;
+        if(now+4<until)CombatManager.cut(e,until,now+4);
+    }
+    /** The rain of knives is over before its time (its stab met no one; the one the knife was in is dead or gone): its cooldown runs from now. */
+    private static void rainOver(ServerPlayerEntity p,State s,long now){
+        s.rainReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+RainRules.COOLDOWN;
+        unbind(s,now);
+        s.queued=false;s.combo=0;s.blows=0;s.victim=null;
+        send(p,s,STOPPED,-1,null);
+    }
+    /**
+     * A volley of the rain lands on the one the knife is in (no one else, wherever they stand): no guard takes it, no
+     * knockback, no cry of pain but the first's and the last's (as a barrage's blows).
+     */
+    private static void pour(ServerPlayerEntity p,State s,int i,long now){
+        var e=s.victim;List<LivingEntity> struck=new ArrayList<>();
+        if(e!=null&&e.isAlive()&&!e.isRemoved()&&e.getWorld()==p.getWorld()&&!(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other))){
+            var source=p.getServerWorld().getDamageSources().playerAttack(p);float amount=damage(RAIN,i);
+            CombatManager.interrupt(e);e.timeUntilRegen=0;
+            boolean loud=i==1||i==blows(RAIN)-1;
+            if(loud?CombatManager.damageWithoutKnockback(e,source,amount):CombatManager.damageQuietly(e,source,amount)){
+                struck.add(e);
+                if(!StarPlatinumTimeStop.deferFeedback(p,e,amount,s.yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
+                    var b=PacketByteBufs.create();b.writeVarInt(e.getId());b.writeFloat(amount);b.writeFloat(s.yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,b);
+                }
+            }
+        }
+        send(p,s,LANDED,i,struck);
+    }
+    /**
      * Knife {@code k} of the knives shot is let go: at where the middle of their screen points (their client's word, if
      * it told within the last ticks and it is no further than the knives fly; else where their look meets the world).
      */
@@ -341,6 +476,7 @@ public final class XCharaAttack {
     /** The three cuts' going forward is over: their user is where it ends, from now (looking as they look: the turn is their client's). */
     private static void arrive(ServerPlayerEntity p,State s){
         s.arrived=true;Vec3d to=s.to;
+        if(to.squaredDistanceTo(p.getPos())<1e-6)return;
         p.networkHandler.requestTeleport(to.x,to.y,to.z,0,0,java.util.EnumSet.of(net.minecraft.network.packet.s2c.play.PositionFlag.X_ROT,net.minecraft.network.packet.s2c.play.PositionFlag.Y_ROT));
         p.setVelocity(Vec3d.ZERO);p.fallDistance=0;p.velocityModified=true;
     }
@@ -442,6 +578,14 @@ public final class XCharaAttack {
             if(s.combo==SLAM&&s.land==null&&s.blows==0&&now>=s.start+SlamRules.DIVE)dive(p,s,now);
             // (2.129.0) the three cuts' going forward is over: they are there
             if(s.combo==CUTTER_DASH&&s.to!=null&&!s.arrived&&now>=s.start+CutterRules.DASH_TO)arrive(p,s);
+            // (2.132.0) the rain of knives: its run looks for someone ahead; its stab's last way is over; and it ends
+            // before its time if the stab met no one, or the one the knife is in is dead or gone
+            if(s.combo==RUSH)rush(p,s,now);
+            if(s.combo==RAIN&&s.to!=null&&!s.arrived&&now>=s.start+RainRules.ARRIVE)arrive(p,s);
+            if(s.combo==RAIN&&s.blows>=1&&now<s.start+RainRules.WITHDRAW){
+                var in=s.victim;
+                if(in==null?now>=s.start+RainRules.STAB+RainRules.MISS:!in.isAlive()||in.isRemoved()||in.getWorld()!=p.getWorld()||in.squaredDistanceTo(p)>RainRules.LEASH*RainRules.LEASH){rainOver(p,s,now);continue;}
+            }
             while(s.blows<blows(s.combo)&&now>=s.start+blowAt(s.combo,s.blows))blow(p,s,now);
         }
     }
@@ -454,9 +598,10 @@ public final class XCharaAttack {
             if(!moving)return;
             if(s.blows==0){
                 long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+cooldown(s.combo);
-                if(s.combo==KNIVES)s.knivesReady=ready;else if(s.combo==SHOT)s.shotReady=ready;else if(XCharaCombo.cutter(s.combo))s.cutterReady=ready;else if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
+                if(XCharaCombo.rain(s.combo))s.rainReady=ready;else if(s.combo==KNIVES)s.knivesReady=ready;else if(s.combo==SHOT)s.shotReady=ready;else if(XCharaCombo.cutter(s.combo))s.cutterReady=ready;else if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
             }
-            s.queued=false;s.combo=0;s.blows=0;
+            unbind(s,now);
+            s.queued=false;s.combo=0;s.blows=0;s.victim=null;
             send(p,s,STOPPED,-1,null);
             return;
         }
@@ -474,6 +619,8 @@ public final class XCharaAttack {
         // (2.130.0) the knives shot: this "blow" is a knife let go; whom it strikes is its own to find (XCharaShot)
         // (2.131.0: and the small knives thrown, each leaving the hand)
         if(combo==SHOT||combo==KNIVES){fire(p,s,i,now);send(p,s,LANDED,i,null);return;}
+        // (2.132.0) the rain of knives: every blow after the stab is a volley on the one the knife is in
+        if(combo==RAIN&&i>0){pour(p,s,i,now);return;}
         // (2.128.0) the slam's blow is its landing: its user is where it came down as it strikes round them
         if(combo==SLAM){if(s.land==null)dive(p,s,now);touchDown(p,s);}
         var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i);
@@ -498,6 +645,11 @@ public final class XCharaAttack {
             if(combo==SLAM){
                 // (2.128.0) the slam: whom it strikes can do nothing for a moment (the video's 0.45 s)
                 CombatManager.incapacitate(e,SlamRules.STUN,SlamRules.STUN,SlamRules.SLOW);
+            }
+            else if(combo==RAIN){
+                // (2.132.0) the rain's stab: the knife is in them, and they are bound where they stand until the last volley
+                CombatManager.incapacitate(e,RainRules.BIND,RainRules.BIND,RainRules.BIND_SLOW);
+                s.victim=e;
             }
             else if(combo==JAB){
                 // (2.124.0) the jab: whom it strikes stands there and can do nothing for eight seconds
@@ -552,7 +704,8 @@ public final class XCharaAttack {
             // (2.128.4) and how far forward the top of its rise is
             b.writeFloat(slam?(float)s.aheadX:0);b.writeFloat(slam?(float)s.aheadZ:0);
             // (2.129.0) of the three cuts going forward first, where that ends (in the slam's place: a hit is one or the other)
-            Vec3d land=slam?s.land:s.combo==CUTTER_DASH?s.to:null;
+            // (2.132.0: and of the rain of knives, where its run ends with no one met, or where its stab is made from)
+            Vec3d land=slam?s.land:s.combo==CUTTER_DASH||XCharaCombo.rain(s.combo)?s.to:null;
             b.writeBoolean(land!=null);
             if(land!=null){b.writeDouble(land.x);b.writeDouble(land.y);b.writeDouble(land.z);}
             // (2.129.0) when the three cuts are ready again (a 2.128 client stops reading before it)
@@ -561,6 +714,12 @@ public final class XCharaAttack {
             b.writeLong(s.shotReady);
             // (2.131.0) and the small knives thrown (a 2.130 client stops reading before it)
             b.writeLong(s.knivesReady);
+            // (2.132.0) and the rain of knives (a 2.131 client stops reading before it); of one in flight, where its run
+            // began or where the run had its user as the stab began
+            b.writeLong(s.rainReady);
+            boolean rain=XCharaCombo.rain(s.combo)&&s.from!=null;
+            b.writeBoolean(rain);
+            if(rain){b.writeDouble(s.from.x);b.writeDouble(s.from.y);b.writeDouble(s.from.z);}
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

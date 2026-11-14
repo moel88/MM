@@ -22,5 +22,7 @@ public abstract class KagenoCullingMixin {
         else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.slamOf(e.getUuid())!=null)ci.setReturnValue(true);
         // (2.129.0) X Chara's three cuts: the body is drawn along its way forward from where its user stands
         else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.cutterOf(e.getUuid())!=null)ci.setReturnValue(true);
+        // (2.132.0) X Chara's rain of knives: the body is drawn along its run from where its user stands
+        else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.rainOf(e.getUuid())!=null)ci.setReturnValue(true);
     }
 }
