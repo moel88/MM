@@ -31,6 +31,9 @@ import net.minecraft.world.World;
  * them and is carried up as they rise, on this client's clock (ticks since the mark, a whole number for the tick being
  * run).
  * <p>
+ * Each ground's "!!!" shows over its middle, or over the head of whom it is under where they stood as it was marked (the
+ * server's word: this client's copy of them may lag, or be elsewhere).
+ * <p>
  * Its sounds are ones the game has, each once for the four (heard from the ground nearest this client): as the grounds are
  * marked, the "!!!"'s warning (G's own, as their T's and Y's; loud for its user and for whoever stands on one); as they
  * rise, the hack coming on; as they burst, the slam's landing boom, the double's wall breaking and the pull's burst; as
@@ -47,9 +50,11 @@ public final class EraseClient {
         final Map<Integer,Float> blasted=new LinkedHashMap<>();
         /** Its cube's faces as this client found them (EraseFx), once it is drawn. */
         EraseFx.Faces faces;
-        /** Where its "!!!" shows (set as this client hears of it): over the head of whom it is under, where they stood; else over its middle (EraseFx.BANG_OVER, the giant one higher). */
-        Vec3d bang;
-        Ground(int x0,int z0,double top,int kind,int under,int seed){this.x0=x0;this.z0=z0;this.top=top;this.kind=kind;this.under=under;this.seed=seed;bang=EraseFx.bangOver(this,null);}
+        /** The top of the head of whom it is under where they stood as it was marked (the server's word), or null. */
+        public final Vec3d head;
+        /** Where its "!!!" shows: over the head of whom it is under; else over its middle (EraseFx.BANG_OVER, the giant one higher). */
+        final Vec3d bang;
+        Ground(int x0,int z0,double top,int kind,int under,int seed,Vec3d head){this.x0=x0;this.z0=z0;this.top=top;this.kind=kind;this.under=under;this.seed=seed;this.head=head;bang=EraseFx.bangOver(this);}
         /** The middle of its ground, at its top. */
         public Vec3d middle(){return new Vec3d(x0+EraseRules.SIDE*.5,top,z0+EraseRules.SIDE*.5);}
         /** Whether this is the one its user looked at (the giant "!!!"). */
@@ -99,16 +104,15 @@ public final class EraseClient {
                 int seed0=(int)(id.getLeastSignificantBits()^id.getMostSignificantBits()>>>11);
                 for(int i=0;i<n;i++){
                     int x0=b.readInt(),z0=b.readInt();double top=b.readDouble();int kind=b.readUnsignedByte(),under=b.readVarInt();
-                    if(!Double.isFinite(top))return;
-                    grounds.add(new Ground(x0,z0,top,kind,under,seed0+i*7919));
+                    Vec3d head=b.readBoolean()?new Vec3d(b.readDouble(),b.readDouble(),b.readDouble()):null;
+                    if(!Double.isFinite(top)||head!=null&&!finite(head))return;
+                    grounds.add(new Ground(x0,z0,top,kind,under,seed0+i*7919,head));
                 }
                 if(!finite(from)||now<marked||now-marked>EraseRules.BACK+20)return;
                 mc.execute(()->{
                     if(!MapClient.enabled()||mc.world==null||!mc.world.getRegistryKey().getValue().equals(dim))return;
                     if(world!=mc.world){clear();world=mc.world;}
                     if(CALLS.containsKey(id))return;
-                    // the "!!!" over whom each is under, where they stand as this client hears of it
-                    for(var g:grounds)if(g.kind==EraseRules.PLAYER&&mc.world.getEntityById(g.under) instanceof net.minecraft.entity.LivingEntity e)g.bang=EraseFx.bangOver(g,e);
                     var cast=new StandClient.Cast(id,owner,dim,EraseRules.SKILL,0,marked,now,StandClient.ticks(),from,0,List.of());
                     var c=new Call(id,owner,from,cast,List.copyOf(grounds));
                     CALLS.put(id,c);CASTS.put(id,cast);

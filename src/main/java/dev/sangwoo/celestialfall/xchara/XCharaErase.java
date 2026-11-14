@@ -63,10 +63,14 @@ public final class XCharaErase {
     static final int LANDED=10;
     /** How far up and down from its user's feet one near may be (blocks). */
     static final double NEAR_HEIGHT=12;
-    /** One marked ground: its corner, its ground's top, what it is (EraseRules.LOOK, PLAYER, RANDOM), whom it is under (a PLAYER's: their entity id; -1), and who was on its cube a tick ago. */
+    /**
+     * One marked ground: its corner, its ground's top, what it is (EraseRules.LOOK, PLAYER, RANDOM), whom it is under (a
+     * PLAYER's: their entity id; -1) and the top of their head where they stood as it was marked (its "!!!" shows over it;
+     * null for the others), and who was on its cube a tick ago.
+     */
     static final class Ground {
-        final int x0,z0,kind,under;final double top;Set<UUID> riders=new HashSet<>();
-        Ground(int x0,int z0,double top,int kind,int under){this.x0=x0;this.z0=z0;this.top=top;this.kind=kind;this.under=under;}
+        final int x0,z0,kind,under;final double top;final Vec3d head;Set<UUID> riders=new HashSet<>();
+        Ground(int x0,int z0,double top,int kind,int under,Vec3d head){this.x0=x0;this.z0=z0;this.top=top;this.kind=kind;this.under=under;this.head=head;}
         /** Its cube {@code t} ticks after the mark, or null (burst). */
         EraseCubes.Cube cube(long t){return EraseRules.cube(t)?new EraseCubes.Cube(x0,z0,top,t):null;}
         /** The middle of its ground, at its top. */
@@ -117,13 +121,13 @@ public final class XCharaErase {
         // where they look: the giant "!!!"
         Vec3d at=EraseGround.landing(world,from,want);
         int lx=EraseRules.corner(at.x),lz=EraseRules.corner(at.z);
-        grounds.add(new Ground(lx,lz,at.y,EraseRules.LOOK,-1));taken.add(new int[]{lx,lz});
+        grounds.add(new Ground(lx,lz,at.y,EraseRules.LOOK,-1,null));taken.add(new int[]{lx,lz});
         // under the nearest ones (one on a ground marked already is lifted by it: the next one near is taken)
         for(var e:near(p,from)){
             if(grounds.size()>EraseRules.NEAR_ONES)break;
             double top=EraseGround.under(world,e.getX(),e.getZ(),e.getY());if(Double.isNaN(top))continue;
             int[] c=EraseRules.around(e.getX(),e.getZ(),taken);if(c==null)continue;
-            grounds.add(new Ground(c[0],c[1],top,EraseRules.PLAYER,e.getId()));taken.add(c);
+            grounds.add(new Ground(c[0],c[1],top,EraseRules.PLAYER,e.getId(),new Vec3d(e.getX(),e.getY()+e.getHeight(),e.getZ())));taken.add(c);
         }
         // the rest at random places near them, none with them on it
         var box=p.getBoundingBox();var random=world.getRandom();
@@ -134,7 +138,7 @@ public final class XCharaErase {
                 int x0=EraseRules.corner(xz[0]),z0=EraseRules.corner(xz[1]);
                 if(!EraseRules.free(x0,z0,taken)||EraseRules.over(x0,z0,box.minX,box.maxX,box.minZ,box.maxZ))continue;
                 double top=EraseGround.near(world,x0+EraseRules.SIDE*.5,z0+EraseRules.SIDE*.5,from.y);if(Double.isNaN(top))continue;
-                grounds.add(new Ground(x0,z0,top,EraseRules.RANDOM,-1));taken.add(new int[]{x0,z0});found=true;
+                grounds.add(new Ground(x0,z0,top,EraseRules.RANDOM,-1,null));taken.add(new int[]{x0,z0});found=true;
             }
             if(!found)break;
         }
@@ -298,8 +302,8 @@ public final class XCharaErase {
     /**
      * Tells every viewer near it (and its user, and {@code e}, wherever they are) of it: the kind, its id; marked: whose,
      * the world, when it was marked and the server's time now, where its user stood, and its grounds (each its corner,
-     * its top, what it is, whom it is under); someone struck by a burst: which ground's, whom, what it dealt; cut short:
-     * when.
+     * its top, what it is, whom it is under and, if anyone, the top of their head where they stood); someone struck by a
+     * burst: which ground's, whom, what it dealt; cut short: when.
      */
     private static void send(Call c,int type,LivingEntity e,int ground,float dealt){
         long now=c.world.getTime();
@@ -312,7 +316,10 @@ public final class XCharaErase {
                 b.writeUuid(c.owner);b.writeIdentifier(c.world.getRegistryKey().getValue());b.writeLong(c.marked);b.writeLong(now);
                 b.writeDouble(c.from.x);b.writeDouble(c.from.y);b.writeDouble(c.from.z);
                 b.writeVarInt(c.grounds.size());
-                for(var g:c.grounds){b.writeInt(g.x0);b.writeInt(g.z0);b.writeDouble(g.top);b.writeByte(g.kind);b.writeVarInt(g.under);}
+                for(var g:c.grounds){
+                    b.writeInt(g.x0);b.writeInt(g.z0);b.writeDouble(g.top);b.writeByte(g.kind);b.writeVarInt(g.under);
+                    b.writeBoolean(g.head!=null);if(g.head!=null){b.writeDouble(g.head.x);b.writeDouble(g.head.y);b.writeDouble(g.head.z);}
+                }
             }else if(type==BLASTED){
                 b.writeVarInt(ground);b.writeVarInt(e.getId());b.writeFloat(dealt);
             }else b.writeLong(now);

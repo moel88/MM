@@ -24,15 +24,20 @@ class EraseFxTest {
         var cast=new StandClient.Cast(id,owner,new Identifier("minecraft","overworld"),EraseRules.SKILL,0,1000,1000,0,new Vec3d(0,64,0),0,List.of());
         return new EraseClient.Call(id,owner,new Vec3d(0,64,0),cast,List.of(grounds));
     }
-    static EraseClient.Ground ground(double x,double z,double top,int kind){return new EraseClient.Ground(EraseRules.corner(x),EraseRules.corner(z),top,kind,-1,1234+kind);}
+    static EraseClient.Ground ground(double x,double z,double top,int kind){return new EraseClient.Ground(EraseRules.corner(x),EraseRules.corner(z),top,kind,-1,1234+kind,null);}
     @Test void theGiantBangsIsOverTheGroundLookedAtTheOthersOverTheirOwn(){
         var look=ground(0,12,64,EraseRules.LOOK);var near=ground(15,3,64,EraseRules.PLAYER);
         assertTrue(look.looked()&&!near.looked());
-        assertEquals(4,EraseFx.GIANT,1e-9,"giant: four times G's (the user's \"거대한 !!!\")");
+        assertEquals(6,EraseFx.GIANT,1e-9,"giant: six times G's (the user's \"거대한 !!!\")");
         Vec3d a=look.bang,b=near.bang;
         assertEquals(look.middle().x,a.x,1e-9);assertEquals(look.middle().z,a.z,1e-9);
         assertEquals(64+EraseFx.GIANT_OVER,a.y,1e-9,"over its ground, higher than the others");
-        assertEquals(64+EraseFx.BANG_OVER,b.y,1e-9);assertTrue(a.y>b.y);
+        assertEquals(64+EraseFx.BANG_OVER,b.y,1e-9,"no head told: over its middle");assertTrue(a.y>b.y);
+        // G's "!!!" is some 0.34 of its scale high under its middle: the giant one's foot well over its ground
+        assertTrue(EraseFx.GIANT_OVER-.155*2.2*EraseFx.GIANT>3,"its foot some blocks over the ground");
+        // one near: over the head the server told of, where they stood as it was marked (not this client's copy of them)
+        var under=new EraseClient.Ground(EraseRules.corner(15),EraseRules.corner(3),64,EraseRules.PLAYER,77,99,new Vec3d(15.3,64,3.4).add(0,1.8,0));
+        assertEquals(15.3,under.bang.x,1e-9);assertEquals(3.4,under.bang.z,1e-9);assertEquals(64+1.8+EraseFx.OVER_HEAD,under.bang.y,1e-9);
         // shown from the mark until the ground rises, gone over the few ticks round that, with no jump
         assertEquals(0,EraseFx.marked(-1),1e-9);assertEquals(1,EraseFx.marked(0),1e-9);assertEquals(1,EraseFx.marked(EraseRules.WARN-1),1e-9);
         assertEquals(0,EraseFx.marked(EraseRules.WARN+3),1e-9,"gone as it rises");

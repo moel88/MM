@@ -55,11 +55,15 @@ final class EraseFx {
 
     // ───────────────────────────── the "!!!" ─────────────────────────────
 
-    /** The giant "!!!" over the ground looked at, this many times G's (the user's "거대한 !!!"), and how high over its ground's top its middle is; a "!!!" over the others: how high over its middle, or over the head of whom it is under (blocks). */
-    static final double GIANT=4,GIANT_OVER=5.2,BANG_OVER=2.6,OVER_HEAD=.9;
-    /** Where ground {@code g}'s "!!!" shows: over the head of {@code under} (whom it is under, null: none) where they stand now; else over its middle, the giant one higher. */
-    static Vec3d bangOver(EraseClient.Ground g,LivingEntity under){
-        if(under!=null)return new Vec3d(under.getX(),under.getY()+under.getHeight()+OVER_HEAD,under.getZ());
+    /**
+     * The giant "!!!" over the ground looked at, this many times G's (the user's "거대한 !!!": some five blocks across, half
+     * its ground), and how high over its ground's top its middle is (its foot four blocks up); a "!!!" over the others: how
+     * high over its middle, or over the head of whom it is under (blocks).
+     */
+    static final double GIANT=6,GIANT_OVER=6,BANG_OVER=2.6,OVER_HEAD=.9;
+    /** Where ground {@code g}'s "!!!" shows: over the head of whom it is under where they stood as it was marked (the server's word); else over its middle, the giant one higher. */
+    static Vec3d bangOver(EraseClient.Ground g){
+        if(g.head!=null)return g.head.add(0,OVER_HEAD,0);
         return g.middle().add(0,g.looked()?GIANT_OVER:BANG_OVER,0);
     }
     /** How much the "!!!" and the marked ground show {@code age} ticks after the mark: from it until the ground rises, gone over the few ticks round that. */
