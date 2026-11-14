@@ -18,8 +18,9 @@ package dev.sangwoo.celestialfall.xchara;
  * driven into the nearest one ahead ({@link #REACH}): {@link #STAB_DAMAGE}, no guard takes it, no knockback; they are
  * bound where they stand ({@link #BIND}: they can do nothing, their legs stopped). The knife stays in them: from
  * {@link #FIRST} a volley of knives lit as the hack lights them lands on them every tick, {@link #VOLLEYS} of them,
- * {@link #VOLLEY_DAMAGE} each (the clients draw {@link #PER} knives a volley, {@link #BLADES} in all, flying
- * into them from all round: 2.132.3, as 2.132.0's; 2.132.1 and 2.132.2 had them fall straight down like rain). At {@link #WITHDRAW} the knife is drawn out; they are free at {@link #HOLD} and it is over at {@link #LENGTH}.
+ * {@link #VOLLEY_DAMAGE} each (the clients draw {@link #PER} knives a volley, {@link #BLADES} in all, falling
+ * straight down like rain, one of each volley onto them, the rest over the ground 30 blocks round: 2.132.4; 2.132.3 had
+ * them fly into them from all round, as 2.132.0's). At {@link #WITHDRAW} the knife is drawn out; they are free at {@link #HOLD} and it is over at {@link #LENGTH}.
  * A stab that meets no one ends {@link #MISS} ticks on; the one stabbed dead or gone, the rain ends there.</li>
  * </ul>
  * Its cooldown ({@link #COOLDOWN}) runs from its end; cut short before the stab (struck in the run, or before the knife
@@ -71,9 +72,10 @@ public final class RainRules {
      * How many knives the clients draw a volley, and in all (only the clients' drawing, the server's blows are the
      * volleys): 2.132.1 four times 2.132.0's, "칼이 더 많이 떨어지게"; 2.132.2 54 a volley over the ground 15 blocks round;
      * 2.132.3 all of them into the one stabbed again, from all round ("2.132.0처럼 사방에서"), sixteen a volley (54 into
-     * one body would be a lump).
+     * one body would be a lump); 2.132.4 straight down like rain again over the ground 30 blocks round ("주변 30블록으로"),
+     * as thick on it as 2.132.2's: 216 a volley (one on the one stabbed, 215 on the ground, four times the ground).
      */
-    public static final int PER=16,BLADES=PER*VOLLEYS;
+    public static final int PER=216,BLADES=PER*VOLLEYS;
 
     /** How far along their way they have run {@code age} ticks into the run, with {@code far} blocks of it open (blocks): springing off, then at speed, slowing in over the last of it. */
     public static double ran(double age,double far){

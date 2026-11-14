@@ -28,6 +28,18 @@ public final class EffectMesh {
     public void quad(Vec3d a, Vec3d b, Vec3d c, Vec3d d, int rgb, float alpha) {
         vertex(a, rgb, alpha); vertex(b, rgb, alpha); vertex(c, rgb, alpha); vertex(d, rgb, alpha);
     }
+    /**
+     * A vertex at (x, y, z) of colour {@code rgb} with {@code alpha} already as a byte (0 to 255), written without
+     * making anything on the way (2.132.4: X Chara's rain draws some three hundred thousand of these a frame).
+     */
+    public void vertex(double x, double y, double z, int rgb, int alpha) {
+        if(scale!=1){x=origin.x+(x-origin.x)*scale;y=origin.y+(y-origin.y)*scale;z=origin.z+(z-origin.z)*scale;}
+        float fx=(float)x,fy=(float)y,fz=(float)z;Matrix4f m=matrix;
+        buffer.vertex(m.m00()*fx+m.m10()*fy+m.m20()*fz+m.m30(),m.m01()*fx+m.m11()*fy+m.m21()*fz+m.m31(),m.m02()*fx+m.m12()*fy+m.m22()*fz+m.m32())
+            .color((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255, alpha).next();
+    }
+    /** An alpha (0 to 1) as the byte {@link #vertex(double,double,double,int,int)} takes. */
+    public static int alpha(float alpha){return Math.max(0, Math.min(255, (int)(alpha * 255)));}
     public void triangle(Vec3d a, Vec3d b, Vec3d c, int rgb, float alpha) { quad(a,b,c,c,rgb,alpha); }
     public void line(Vec3d a, Vec3d b, double width, int rgb, float alpha) {
         Vec3d direction = b.subtract(a);

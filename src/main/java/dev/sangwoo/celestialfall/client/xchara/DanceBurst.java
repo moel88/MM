@@ -333,8 +333,12 @@ final class DanceBurst {
     }
     /** A flat ring of one colour about {@code c} in the plane of {@code u} and {@code v} (units): {@code r} its middle, {@code width} across, soft at both edges. */
     static void band(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,double r,double width,int rgb,float alpha){
+        band(m,c,u,v,r,width,rgb,alpha,Math.max(24,Math.min(96,(int)(r*12))));
+    }
+    /** The same band with {@code n} sides (a small one of hundreds at once needs fewer). */
+    static void band(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,double r,double width,int rgb,float alpha,int n){
         if(alpha<=0||r<=0)return;
-        int n=Math.max(24,Math.min(96,(int)(r*12)));double ri=Math.max(0,r-width/2),ro=r+width/2;
+        double ri=Math.max(0,r-width/2),ro=r+width/2;
         for(int i=0;i<n;i++){
             double a0=i*Math.PI*2/n,a1=(i+1)*Math.PI*2/n;
             Vec3d d0=u.multiply(Math.cos(a0)).add(v.multiply(Math.sin(a0))),d1=u.multiply(Math.cos(a1)).add(v.multiply(Math.sin(a1)));
