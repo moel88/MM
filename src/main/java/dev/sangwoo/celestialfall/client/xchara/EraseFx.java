@@ -22,9 +22,9 @@ import net.minecraft.world.World;
  * one and bursting, the ground back ten seconds on); everything is a function of the call's own clock (ticks since the
  * mark), of where its grounds are and of their seeds, the same on every client.
  * <ul>
- * <li>The "!!!" ({@link #marks}, G's own, SwordDance.bangs): over the ground looked at a giant one ({@link #GIANT}), over
- * the others one each (over the head of whom it is under, where they stood), each ground's ten by ten marked with
- * crawling dashes ({@link #square}) until it rises, EraseRules.WARN on.</li>
+ * <li>The "!!!" ({@link #marks}, G's own, SwordDance.bangs): a giant one ({@link #GIANT}) over the ground looked at and
+ * over the head of each one near (where they stood; not in their own first person), one of G's size over each random
+ * place, each ground's ten by ten marked with crawling dashes ({@link #square}) until it rises, EraseRules.WARN on.</li>
  * <li>As it breaks free ({@link #breaksFree}): a ring along the ground, a flash of its edges, pieces of the ground flung.</li>
  * <li>The cube ({@link #cube}, the blocks of that ground drawn as they are, rising with EraseRules.lift; where there is no
  * block, the nearest of its column's): glitching as one piece ({@link #tension}: a little as it rises, more and more
@@ -56,16 +56,22 @@ final class EraseFx {
     // ───────────────────────────── the "!!!" ─────────────────────────────
 
     /**
-     * The giant "!!!" over the ground looked at, this many times G's (the user's "거대한 !!!": some five blocks across, half
-     * its ground), and how high over its ground's top its middle is (its foot four blocks up); a "!!!" over the others: how
-     * high over its middle, or over the head of whom it is under (blocks).
+     * The giant "!!!", this many times G's (the user's "거대한 !!!": some five blocks across, half a ground), over the ground
+     * looked at and over the head of whom each ground near is under (the user's "플레이어 있는 구역도 !!!크게"); how high
+     * over its ground's top the one looked at is (its foot four blocks up), how high over the head of whom it is under the
+     * other giant ones are (their foot half a block over it), and how high over its middle a random place's (G's size) is
+     * (blocks).
      */
-    static final double GIANT=6,GIANT_OVER=6,BANG_OVER=2.6,OVER_HEAD=.9;
+    static final double GIANT=6,GIANT_OVER=6,OVER_HEAD=2.6,BANG_OVER=2.6;
+    /** Whether ground {@code g}'s "!!!" is a giant one: over the ground looked at, or over one near (only a random place's is G's size). */
+    static boolean giant(EraseClient.Ground g){return g.looked()||g.kind==EraseRules.PLAYER;}
     /** Where ground {@code g}'s "!!!" shows: over the head of whom it is under where they stood as it was marked (the server's word); else over its middle, the giant one higher. */
     static Vec3d bangOver(EraseClient.Ground g){
         if(g.head!=null)return g.head.add(0,OVER_HEAD,0);
         return g.middle().add(0,g.looked()?GIANT_OVER:BANG_OVER,0);
     }
+    /** Whether {@code camera} is in the head ground {@code g}'s "!!!" is over (the first person of whom it is under): not drawn there, it would cover their screen as they look up. */
+    static boolean ownHead(EraseClient.Ground g,Vec3d camera){return g.head!=null&&camera.squaredDistanceTo(g.head)<1.2*1.2;}
     /** How much the "!!!" and the marked ground show {@code age} ticks after the mark: from it until the ground rises, gone over the few ticks round that. */
     static float marked(float age){return age<0?0:1-Ease.smooth(age,EraseRules.WARN-1,EraseRules.WARN+3);}
     /** The "!!!" over each ground and its ten by ten marked on the ground, {@code age} ticks after the mark. */
@@ -74,7 +80,7 @@ final class EraseFx {
         float sec=age/20f;
         for(var g:call.grounds){
             square(m,g.x0,g.z0,g.top,sec,shown*Ease.smooth(age,0,1.5f),light,c.camera,g.looked());
-            SwordDance.bangs(m,c.camera,g.bang,age,shown,light,g.looked()?GIANT:1);
+            if(!ownHead(g,c.camera))SwordDance.bangs(m,c.camera,g.bang,age,shown,light,giant(g)?GIANT:1);
         }
     }
 

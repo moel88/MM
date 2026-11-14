@@ -38,6 +38,13 @@ class EraseFxTest {
         // one near: over the head the server told of, where they stood as it was marked (not this client's copy of them)
         var under=new EraseClient.Ground(EraseRules.corner(15),EraseRules.corner(3),64,EraseRules.PLAYER,77,99,new Vec3d(15.3,64,3.4).add(0,1.8,0));
         assertEquals(15.3,under.bang.x,1e-9);assertEquals(3.4,under.bang.z,1e-9);assertEquals(64+1.8+EraseFx.OVER_HEAD,under.bang.y,1e-9);
+        // giant too (the user's "플레이어 있는 구역도 !!!크게"), its foot clear of their head; a random place's G's size
+        assertTrue(EraseFx.giant(look)&&EraseFx.giant(under)&&!EraseFx.giant(ground(-20,4,64,EraseRules.RANDOM)));
+        assertTrue(EraseFx.OVER_HEAD-.155*2.2*EraseFx.GIANT>.4,"its foot over their head");
+        // not in their own first person (their eyes just under the top of their head), but seen from behind them
+        assertTrue(EraseFx.ownHead(under,new Vec3d(15.3,64+1.62,3.4)));
+        assertFalse(EraseFx.ownHead(under,new Vec3d(15.3,64+3.5,3.4-4.5)),"their own camera behind them sees it");
+        assertFalse(EraseFx.ownHead(look,new Vec3d(0,64+1.62,12)),"none over the one looked at");
         // shown from the mark until the ground rises, gone over the few ticks round that, with no jump
         assertEquals(0,EraseFx.marked(-1),1e-9);assertEquals(1,EraseFx.marked(0),1e-9);assertEquals(1,EraseFx.marked(EraseRules.WARN-1),1e-9);
         assertEquals(0,EraseFx.marked(EraseRules.WARN+3),1e-9,"gone as it rises");
