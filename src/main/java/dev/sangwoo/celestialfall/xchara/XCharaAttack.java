@@ -84,11 +84,11 @@ public final class XCharaAttack {
         /** (2.131.0) The small knives thrown (T with the hack off): the tick they are ready again (0 for at once); of one in flight {@code from} and {@code aim} as the knives shot's. */
         long knivesReady;
         /**
-         * (2.132.0) The rain of knives (H with the hack off): the tick it is ready again (0 for at once). Of its call in
-         * flight (2.132.5: there is no run or stab now), where its user stood as it began is {@code from} (the knives
-         * shot's field): it rains there.
+         * (2.133.0) The delete slash (H with the hack off): the tick it is ready again (0 for at once). Of one in flight,
+         * where its user stood as it began is {@code from} and how high they leap over it {@code rise} (the slam's fields:
+         * a hit is one or the other): its slash goes from there.
          */
-        long rainReady;
+        long eraseReady;
         int window,presses;
     }
     private static final Map<UUID,State> STATES=new HashMap<>();
@@ -131,9 +131,9 @@ public final class XCharaAttack {
         return s!=null&&s.world==p.getWorld()&&skill(s.combo)&&p.getWorld().getTime()<s.start+LENGTH[s.combo];
     }
     /** This player is X Chara's no more: the attack's rest is gone, so it is ready if they are again (StandManager.forgetOthers). */
-    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;s.rainReady=0;}}
+    public static void forget(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;s.eraseReady=0;}}
     /** The attack's rest is gone (a player the cooldowns are off for, /botand nocooldown). */
-    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;s.rainReady=0;}}
+    public static void cool(PlayerEntity p){var s=STATES.get(p.getUuid());if(s!=null){s.ready=0;s.cleaveReady=0;s.jabReady=0;s.slamReady=0;s.cutterReady=0;s.shotReady=0;s.knivesReady=0;s.eraseReady=0;}}
     /** (2.124.0) The tick this player's jab is ready again (0 if it is). */
     public static long jabReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.jabReady;}
     /** (2.129.0) The tick this player's three cuts are ready again (0 if they are). */
@@ -144,10 +144,10 @@ public final class XCharaAttack {
     public static Object[] describeShot(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||s.combo!=SHOT&&s.combo!=KNIVES?null:new Object[]{s.start,s.blows,s.aim};}
     /** (2.131.0) The tick this player's small knives are ready again (0 if they are). */
     public static long knivesReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.knivesReady;}
-    /** (2.132.0) The tick this player's rain of knives is ready again (0 if it is). */
-    public static long rainReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.rainReady;}
-    /** (2.132.5) For the checks: this player's call of the rain of knives in flight as {start, where it rains, whether it has called it}, or null. */
-    public static Object[] describeCall(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!XCharaCombo.rain(s.combo)?null:new Object[]{s.start,s.from,s.blows>0};}
+    /** (2.133.0) The tick this player's delete slash is ready again (0 if it is). */
+    public static long eraseReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.eraseReady;}
+    /** (2.133.0) For the checks: this player's delete slash in flight as {start, where they stood, how high they leap, whether its slash has gone}, or null. */
+    public static Object[] describeErase(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!XCharaCombo.erase(s.combo)?null:new Object[]{s.start,s.from,s.rise,s.blows>0};}
     /** (2.129.0) Where this player's three cuts in flight are struck from: where their going forward ends until they are there, then where they stand. */
     public static Vec3d cutsFrom(PlayerEntity p){
         var s=p==null?null:STATES.get(p.getUuid());
@@ -157,10 +157,12 @@ public final class XCharaAttack {
     public static Object[] describeCutter(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||!XCharaCombo.cutter(s.combo)?null:new Object[]{s.start,s.combo,s.to,s.blows};}
     /** (2.128.0) The tick this player's slam is ready again (0 if it is). */
     public static long slamReady(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null?0:s.slamReady;}
-    /** (2.128.0) Whether this one is in the air of their slam now (drawn up there, standing where they began): nothing harms them, and no one's skill takes them. */
+    /** (2.128.0) Whether this one is in the air of their slam now (drawn up there, standing where they began): nothing harms them, and no one's skill takes them. (2.133.0: and of their delete slash's leap.) */
     public static boolean airborne(LivingEntity e){
         var s=e==null||e.getWorld().isClient?null:STATES.get(e.getUuid());
-        return s!=null&&s.combo==SLAM&&s.world==e.getWorld()&&SlamRules.airborne(e.getWorld().getTime()-s.start);
+        if(s==null||s.world!=e.getWorld())return false;
+        long age=e.getWorld().getTime()-s.start;
+        return s.combo==SLAM&&SlamRules.airborne(age)||s.combo==ERASE&&EraseRules.airborne(age);
     }
     /** (2.128.0) Where this player's slam in flight comes down, once its dive has begun (null before, or with none). */
     public static Vec3d landing(PlayerEntity p){var s=p==null?null:STATES.get(p.getUuid());return s==null||s.combo!=SLAM?null:s.land;}
@@ -304,33 +306,31 @@ public final class XCharaAttack {
         return true;
     }
     /**
-     * H with the hack off, the rain of knives' call (2.132.0; 2.132.5, XCharaCombo.RAIN, RainRules: no run and no stab
-     * now, "적을 찌르는건 없애고 그냥 비만 떨어지게"). Returns whether it began: with the hack off, nothing holding them (a hit
-     * of the knife's own holds too), and its cooldown over (it runs from its rain's end: none while it rains). Its one
-     * "blow" calls the rain where they stand as it begins (XCharaRain); before it, struck or held, it is not called. As
-     * the other skills, it ends the combo and adds no rest of its own.
+     * H with the hack off, the delete slash (2.133.0, XCharaCombo.ERASE, EraseRules). Returns whether it began: with the
+     * hack off, standing on the ground, nothing holding them (a hit of the knife's own holds too), and its cooldown over.
+     * As the other skills, it ends the combo and adds no rest of its own. How high they leap is settled now:
+     * EraseRules.JUMP, or as far as nothing is over their head. Its one "blow" sends its slash from where they stand as it
+     * begins (XCharaErase); before it, struck or held, it is not sent.
      */
-    public static boolean rain(ServerPlayerEntity p){
-        if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p))return false;
+    public static boolean erase(ServerPlayerEntity p){
+        if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p)||!p.isOnGround())return false;
         var s=state(p);long now=p.getWorld().getTime();
         settle(p,s,now);
         if(valid(s.combo)&&now<(last(s.combo)||skill(s.combo)?s.start+LENGTH[s.combo]:s.start+HOLD[s.combo]))return false;
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
-        // (not while one of theirs rains: its cooldown runs from its end, and with none it would be over first)
-        if(now<s.rainReady&&!free||XCharaRain.raining(p)&&!free)return false;
-        s.combo=RAIN;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
-        s.from=p.getPos();
-        s.rainReady=free?0:RainRules.ready(now);
+        if(now<s.eraseReady&&!free)return false;
+        s.combo=ERASE;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
+        s.from=p.getPos();s.rise=headroom(p);
+        s.eraseReady=free?0:EraseRules.ready(now);
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
         send(p,s,HIT,-1,null);
         return true;
     }
-    /** (2.132.5) This player's rain was cut short (they died, left the world or are X Chara's no more): its cooldown runs from now, told to every viewer. */
-    static void rainCut(ServerPlayerEntity p){
-        var s=STATES.get(p.getUuid());if(s==null||s.world!=p.getServerWorld())return;
-        long now=p.getWorld().getTime();
-        s.rainReady=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+RainRules.COOLDOWN;
-        send(p,s,RESTS,-1,null);
+    /** (2.133.0) How high {@code p} leaps for their delete slash: EraseRules.JUMP, less as far as something is over their head. */
+    private static double headroom(ServerPlayerEntity p){
+        Vec3d head=p.getPos().add(0,p.getHeight(),0);
+        var hit=p.getWorld().raycast(new net.minecraft.world.RaycastContext(head,head.add(0,EraseRules.JUMP+.5,0),net.minecraft.world.RaycastContext.ShapeType.COLLIDER,net.minecraft.world.RaycastContext.FluidHandling.NONE,p));
+        return hit.getType()==net.minecraft.util.hit.HitResult.Type.MISS?EraseRules.JUMP:Math.max(0,Math.min(EraseRules.JUMP,hit.getPos().y-head.y-.3));
     }
     /**
      * Knife {@code k} of the knives shot is let go: at where the middle of their screen points (their client's word, if
@@ -494,7 +494,7 @@ public final class XCharaAttack {
             if(!moving)return;
             if(s.blows==0){
                 long ready=dev.sangwoo.celestialfall.NoCooldownState.enabled(p)?0:now+cooldown(s.combo);
-                if(XCharaCombo.rain(s.combo))s.rainReady=ready;else if(s.combo==KNIVES)s.knivesReady=ready;else if(s.combo==SHOT)s.shotReady=ready;else if(XCharaCombo.cutter(s.combo))s.cutterReady=ready;else if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
+                if(XCharaCombo.erase(s.combo))s.eraseReady=ready;else if(s.combo==KNIVES)s.knivesReady=ready;else if(s.combo==SHOT)s.shotReady=ready;else if(XCharaCombo.cutter(s.combo))s.cutterReady=ready;else if(s.combo==SLAM)s.slamReady=ready;else if(s.combo==JAB)s.jabReady=ready;else s.cleaveReady=ready;
             }
             s.queued=false;s.combo=0;s.blows=0;
             send(p,s,STOPPED,-1,null);
@@ -514,8 +514,8 @@ public final class XCharaAttack {
         // (2.130.0) the knives shot: this "blow" is a knife let go; whom it strikes is its own to find (XCharaShot)
         // (2.131.0: and the small knives thrown, each leaving the hand)
         if(combo==SHOT||combo==KNIVES){fire(p,s,i,now);send(p,s,LANDED,i,null);return;}
-        // (2.132.5) the rain of knives' call: its "blow" calls the rain where they stood as it began (XCharaRain)
-        if(combo==RAIN){XCharaRain.start(p,s.id,s.from);send(p,s,LANDED,i,null);return;}
+        // (2.133.0) the delete slash: its "blow" sends its slash from where they stood as it began (XCharaErase)
+        if(combo==ERASE){XCharaErase.start(p,s.id,s.from,s.yaw);send(p,s,LANDED,i,null);return;}
         // (2.128.0) the slam's blow is its landing: its user is where it came down as it strikes round them
         if(combo==SLAM){if(s.land==null)dive(p,s,now);touchDown(p,s);}
         var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i);
@@ -590,7 +590,8 @@ public final class XCharaAttack {
             // (2.128.0) and the slam; and of one in flight how high it rises and, once its dive began, where it comes down
             b.writeLong(s.slamReady);
             boolean slam=s.combo==SLAM;
-            b.writeFloat(slam?(float)s.rise:0);
+            // (2.133.0: and how high the delete slash leaps, in the same place)
+            b.writeFloat(slam||s.combo==ERASE?(float)s.rise:0);
             // (2.128.4) and how far forward the top of its rise is
             b.writeFloat(slam?(float)s.aheadX:0);b.writeFloat(slam?(float)s.aheadZ:0);
             // (2.129.0) of the three cuts going forward first, where that ends (in the slam's place: a hit is one or the other)
@@ -603,9 +604,8 @@ public final class XCharaAttack {
             b.writeLong(s.shotReady);
             // (2.131.0) and the small knives thrown (a 2.130 client stops reading before it)
             b.writeLong(s.knivesReady);
-            // (2.132.0) and the rain of knives (a 2.131 client stops reading before it; 2.132.5: its run's and its stab's
-            // ways are gone, its rain is XCharaRain's)
-            b.writeLong(s.rainReady);
+            // (2.132.0) and the rain of knives (a 2.131 client stops reading before it); 2.133.0: the delete slash, in its place
+            b.writeLong(s.eraseReady);
             ServerPlayNetworking.send(viewer,EVENT,b);
         }
     }

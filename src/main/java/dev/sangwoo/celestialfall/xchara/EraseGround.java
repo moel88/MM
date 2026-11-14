@@ -6,15 +6,15 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.BlockView;
 
 /**
- * The ground a knife of X Chara's rain comes down on (2.132.5): the server (whether a knife meets a body before it) and
- * every client (where to draw it land) find it the same way, from the same blocks.
+ * The ground under X Chara's delete slash (2.133.0; first the rain of knives', 2.132.5): where the clients draw the
+ * blocks it comes over break into pixels, found from the blocks as they are.
  */
-public final class RainGround {
-    private RainGround(){}
+public final class EraseGround {
+    private EraseGround(){}
     /**
-     * The ground under a knife whose point comes out of the sky at {@code top} over (x, z): the top of the first block
-     * with something to stand on from there down to {@code bottom}; NaN if there is none (over a deeper drop) or if its
-     * point would come out inside it (the rain is over a roof or a hill higher than its sky: no knife comes there).
+     * The ground at (x, z) looked for from {@code top} down: the top of the first block with something to stand on from
+     * there down to {@code bottom}; NaN if there is none (over a deeper drop) or if it is over {@code top} (inside a wall
+     * or a hill higher than that).
      */
     public static double at(BlockView world,double x,double z,double top,double bottom){
         int hi=MathHelper.floor(top),lo=MathHelper.floor(bottom);

@@ -69,9 +69,8 @@ public final class KagenoRenderer {
             if(pos.squaredDistanceTo(camera)>96*96)continue;
             casts.add(KagenoStatusFx.context(mc,s,delta,pos,camera,matrix,matrices,targets(mc,s,delta)));
         }
-        // X Chara's rain of knives as it rains (2.132.5): drawn as the casts are, from its own list, where it was called
-        // (its user goes where they will meanwhile)
-        for(var s:dev.sangwoo.celestialfall.client.xchara.RainClient.CASTS.values()){
+        // X Chara's delete slash as it goes (2.133.0): drawn as the casts are, from its own list, from where its user stood
+        for(var s:dev.sangwoo.celestialfall.client.xchara.EraseClient.CASTS.values()){
             var skill=KagenoSkills.of(s.skill());if(skill==null)continue;
             float a=s.age(delta);if(a<0||a/20f>=skill.lifetime())continue;
             if(s.origin().squaredDistanceTo(camera)>96*96)continue;

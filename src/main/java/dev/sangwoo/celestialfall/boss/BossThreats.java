@@ -276,11 +276,23 @@ public final class BossThreats {
     }
     /** X Chara's knife (2.114.0): the next blow of the hit in flight, in its way ahead of them; the fourth takes no guard. */
     private static void xchara(ServerPlayerEntity p,long now,List<Threat> out){
+        // (2.133.0) the delete slash going: its way from its front on, reaching whoever is in it soon (no guard takes it)
+        for(var w:dev.sangwoo.celestialfall.xchara.XCharaErase.going(p)){
+            out.add(new Threat(p,"xchara_erase",now-1,now+1,now+1+(long)Math.ceil((w[5]-w[4])/dev.sangwoo.celestialfall.xchara.EraseRules.SPEED),
+                Zone.lane(new Vec3d(w[0],w[1],w[2]),(float)w[3],w[4]-1,w[5],dev.sangwoo.celestialfall.xchara.EraseRules.HALF,dev.sangwoo.celestialfall.xchara.EraseRules.LOW,dev.sangwoo.celestialfall.xchara.EraseRules.HIGH),
+                false,false,false,dev.sangwoo.celestialfall.xchara.EraseRules.DAMAGE,false,false));
+        }
         var h=dev.sangwoo.celestialfall.xchara.XCharaAttack.hit(p);
         if(h==null||!dev.sangwoo.celestialfall.xchara.XCharaCombo.valid(h.combo()))return;
-        // (2.132.5) the rain of knives' call strikes no one itself; its rain falls where it was called, a knife at a time
-        // and at random, as rain does (one a boss does not read: none of it can be dodged or guarded)
-        if(h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.RAIN)return;
+        // (2.133.0) the delete slash before it goes: its whole way from where its user stands, as it goes at its slash
+        if(h.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.ERASE){
+            if(h.blows()>0)return;
+            long go=h.start()+dev.sangwoo.celestialfall.xchara.EraseRules.SLASH;if(now>go)return;
+            out.add(new Threat(p,"xchara_erase",h.start(),go,go+dev.sangwoo.celestialfall.xchara.EraseRules.reached(dev.sangwoo.celestialfall.xchara.EraseRules.RANGE),
+                Zone.lane(p.getPos(),h.yaw(),0,dev.sangwoo.celestialfall.xchara.EraseRules.RANGE,dev.sangwoo.celestialfall.xchara.EraseRules.HALF,dev.sangwoo.celestialfall.xchara.EraseRules.LOW,dev.sangwoo.celestialfall.xchara.EraseRules.HIGH),
+                false,false,false,dev.sangwoo.celestialfall.xchara.EraseRules.DAMAGE,false,false));
+            return;
+        }
         if(h.blows()>=dev.sangwoo.celestialfall.xchara.XCharaCombo.blows(h.combo()))return;
         int c=h.combo(),i=h.blows();long hit=h.start()+dev.sangwoo.celestialfall.xchara.XCharaCombo.blowAt(c,i);
         if(now>hit)return;

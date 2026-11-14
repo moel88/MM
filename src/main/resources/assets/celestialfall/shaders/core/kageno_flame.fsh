@@ -955,40 +955,104 @@ void main(){
   float x=clamp(uv.x,0.0,1.0),y=uv.y,cool=tint.b,eat=tint.g;
   vec3 ink=vec3(.05,.01,.12),rimc=vec3(.86,.54,1.0),mid=vec3(.58,.09,.88),deep=vec3(.30,.03,.58),hotc=vec3(1.0,.9,1.0);
   float body,d,aa,whiteCore;
-  if(style>.5){
-   float w=max(pow(x,.7)*(1.0-smoothstep(.72,1.0,x)),.0)*(1.0-.45*cool)+.0005;
-   d=abs(2.0*y-1.0)/w;
-   aa=min(max(fwidth(d),.002)*1.2,.2);
-   body=1.0-smoothstep(1.0-aa,1.0+aa,d);
-   whiteCore=(1.0-smoothstep(.10,.10+aa*2.0,d))*smoothstep(.1,.4,x)*(1.0-cool);
-   rgb=mix(rimc,mid,smoothstep(.2,.42,d));
-   rgb=mix(rgb,deep,smoothstep(.5,.8,d));
-   rgb=mix(rgb,ink,smoothstep(.86,.86+aa*2.0,d));
-   rgb=mix(rgb,hotc,whiteCore);
+  if(style>1.5){
+   // (2.133.0) X Chara's delete slash (H with their hack off): its giant blade going along the ground, a crescent
+   // standing across its way. uv.x from one horn (0) to the other (1); uv.y 0 at the inner edge, 1 at the outer.
+   // Style 2 the blade: its shape is the geometry's (thin at the horns, deepest at the crown): an ink line on its
+   // cutting edge (the crown's arc), a white core just in from it, lilac, a vivid purple going deep toward its inner
+   // edge, which breaks into square pixels flickering off it (deleted data); faint scanlines across it. Style 3 the veil
+   // under it down to the ground: a see-through violet, fuller up toward the blade, columns of light running down it,
+   // dark rows, pixels of it missing as it goes. Style 4 the cut on the ground at its foot (uv.y 1 its leading edge): a
+   // bright line, a glow fading behind it. tint.g how much of it is gone, tint.b how far it has cooled (its white goes),
+   // tint.a its alpha.
+   float tm=Age*.05;
+   if(style<2.5){
+    d=1.0-y;
+    aa=min(max(fwidth(d),.002)*1.2,.06);
+    float cx=floor(x*170.0+sd*11.0);
+    // a row of it now and then slips sideways for a frame, as torn data
+    float slip=floor(tm*18.0),row=floor(d*7.0);
+    float shift=step(.86,hash(vec2(slip,row+sd)))*(hash(vec2(row,slip+sd))-.5)*.08;
+    // where its solid part ends in this column (eaten toward its cutting edge as it goes)
+    float reach=mix(.70+.22*hash(vec2(cx,sd+1.3)),.08+.14*hash(vec2(cx,sd+2.9)),eat);
+    float solid=(1.0-smoothstep(reach-.012,reach+.012,d))*smoothstep(-aa,aa,d);
+    // loose pixels beyond it, fewer the further in, changing a dozen times a second
+    float pc=hash(vec2(cx*1.7+floor(tm*12.0)*3.1,floor(d*14.0)+sd));
+    float loose=step(reach,d)*step(pc,.5*(1.0-(d-reach)/max(1.0-reach,.05)))*(1.0-smoothstep(.6,1.0,eat));
+    body=max(solid,loose*.85);
+    float dd=d+shift;
+    rgb=mix(ink,hotc,smoothstep(.022,.022+aa*2.0,dd));
+    whiteCore=(1.0-smoothstep(.10,.17,dd))*smoothstep(.022,.045,dd)*(1.0-cool);
+    rgb=mix(rgb,rimc,smoothstep(.12,.2,dd));
+    rgb=mix(rgb,mid,smoothstep(.2,.36,dd));
+    rgb=mix(rgb,deep,smoothstep(.46,.95,dd));
+    rgb=mix(rgb,hotc,whiteCore);
+    float scan=step(.5,fract(d*26.0-tm*3.0));
+    rgb*=mix(1.0,.84,scan*smoothstep(.16,.3,d));
+    rgb=mix(rgb,mix(mid,rimc,step(.7,pc)),loose*(1.0-solid));
+    rgb=mix(rgb,mix(rgb,deep,.55),cool*(1.0-whiteCore));
+    rgb*=1.0+Hot*whiteCore*.8;
+    alpha=body*tint.a*mix(1.0,.62,smoothstep(.35,1.0,d));
+   }else if(style<3.5){
+    float col=floor(x*150.0),hc=hash(vec2(col,sd+.7));
+    float run=fract(y*1.4+tm*(1.2+1.6*hc)+hc*7.3);
+    float streak=step(.62,hc)*smoothstep(0.0,.04,run)*(1.0-smoothstep(.04,.4,run));
+    float dark=step(.55,fract(y*20.0+tm*1.5));
+    float cell=hash(vec2(col*1.3,floor(y*16.0)+sd));
+    float up=smoothstep(.08,1.0,y);
+    body=1.0-step(cell,eat*1.1);
+    rgb=mix(deep,mid,up*.7);
+    rgb=mix(rgb,rimc,streak*.8);
+    rgb*=mix(1.0,.8,dark);
+    rgb*=1.0+Hot*streak*.3*(1.0-cool);
+    alpha=body*tint.a*(.05+.38*pow(up,1.4)+.35*streak*up);
+   }else{
+    d=1.0-y;
+    float line=1.0-smoothstep(.0,.08,d);
+    float glow=exp(-d*3.5)*(1.0-smoothstep(.7,1.0,d));
+    float px=hash(vec2(floor(x*140.0)+sd,floor(d*8.0)));
+    rgb=mix(hotc,rimc,smoothstep(.0,.1,d));
+    rgb=mix(rgb,mid,smoothstep(.1,.5,d));
+    body=max(line,glow*(.6+.4*px));
+    rgb*=1.0+Hot*line*.9*(1.0-cool);
+    alpha=tint.a*body*(1.0-eat);
+   }
   }else{
-   // thin at the tail, widest near the head, narrowing at the head itself (the knife's point leads it)
-   float w=max((.10+.90*pow(x,1.25))*(1.0-smoothstep(.86,1.0,x)*.75),.02)*(1.0-.5*cool);
-   d=(1.0-y)/w;
-   aa=min(max(fwidth(d),.002)*1.2,.06);
-   body=(1.0-smoothstep(1.0-aa,1.0+aa,d))*smoothstep(-aa,aa,d);
-   rgb=mix(ink,rimc,smoothstep(.05,.05+aa*2.0,d));
-   rgb=mix(rgb,mid,smoothstep(.12,.24,d));
-   rgb=mix(rgb,deep,smoothstep(.45,.95,d));
-   whiteCore=(1.0-smoothstep(.022,.022+aa*2.0,abs(d-.19)))*smoothstep(.06,.4,x)*(1.0-cool);
-   rgb=mix(rgb,hotc,whiteCore);
-   float hair=fbm(vec2(x*2.5+sd,d*26.0-sd));
-   rgb=mix(rgb,rimc,smoothstep(.62,.8,hair)*smoothstep(.26,.36,d)*(1.0-smoothstep(.6,.82,d))*.4*(1.0-cool));
+   if(style>.5){
+    float w=max(pow(x,.7)*(1.0-smoothstep(.72,1.0,x)),.0)*(1.0-.45*cool)+.0005;
+    d=abs(2.0*y-1.0)/w;
+    aa=min(max(fwidth(d),.002)*1.2,.2);
+    body=1.0-smoothstep(1.0-aa,1.0+aa,d);
+    whiteCore=(1.0-smoothstep(.10,.10+aa*2.0,d))*smoothstep(.1,.4,x)*(1.0-cool);
+    rgb=mix(rimc,mid,smoothstep(.2,.42,d));
+    rgb=mix(rgb,deep,smoothstep(.5,.8,d));
+    rgb=mix(rgb,ink,smoothstep(.86,.86+aa*2.0,d));
+    rgb=mix(rgb,hotc,whiteCore);
+   }else{
+    // thin at the tail, widest near the head, narrowing at the head itself (the knife's point leads it)
+    float w=max((.10+.90*pow(x,1.25))*(1.0-smoothstep(.86,1.0,x)*.75),.02)*(1.0-.5*cool);
+    d=(1.0-y)/w;
+    aa=min(max(fwidth(d),.002)*1.2,.06);
+    body=(1.0-smoothstep(1.0-aa,1.0+aa,d))*smoothstep(-aa,aa,d);
+    rgb=mix(ink,rimc,smoothstep(.05,.05+aa*2.0,d));
+    rgb=mix(rgb,mid,smoothstep(.12,.24,d));
+    rgb=mix(rgb,deep,smoothstep(.45,.95,d));
+    whiteCore=(1.0-smoothstep(.022,.022+aa*2.0,abs(d-.19)))*smoothstep(.06,.4,x)*(1.0-cool);
+    rgb=mix(rgb,hotc,whiteCore);
+    float hair=fbm(vec2(x*2.5+sd,d*26.0-sd));
+    rgb=mix(rgb,rimc,smoothstep(.62,.8,hair)*smoothstep(.26,.36,d)*(1.0-smoothstep(.6,.82,d))*.4*(1.0-cool));
+   }
+   // cooled, what is not ink or core sinks toward the deep purple
+   rgb=mix(rgb,mix(rgb,deep,.55),cool*(1.0-whiteCore));
+   float front=eat*1.32-.16+fbm(vec2(x*8.0+sd,y*4.0-sd))*.26;
+   float kept=mix(1.0,smoothstep(front-.004,front+.014,x),step(.001,eat));
+   body*=kept;
+   float ember=(1.0-smoothstep(.0,.05,x-front))*step(.001,eat)*kept;
+   rgb=mix(rgb,vec3(1.0,.72,1.0),ember*.75);
+   rgb*=1.0+Hot*(whiteCore*.8+ember*.4);
+   // a cut's inner part is see-through (a slab of solid purple was too much of it): its cutting edge carries it
+   alpha=body*tint.a*(style>.5?1.0:mix(1.0,.45,smoothstep(.3,1.0,d)));
   }
-  // cooled, what is not ink or core sinks toward the deep purple
-  rgb=mix(rgb,mix(rgb,deep,.55),cool*(1.0-whiteCore));
-  float front=eat*1.32-.16+fbm(vec2(x*8.0+sd,y*4.0-sd))*.26;
-  float kept=mix(1.0,smoothstep(front-.004,front+.014,x),step(.001,eat));
-  body*=kept;
-  float ember=(1.0-smoothstep(.0,.05,x-front))*step(.001,eat)*kept;
-  rgb=mix(rgb,vec3(1.0,.72,1.0),ember*.75);
-  rgb*=1.0+Hot*(whiteCore*.8+ember*.4);
-  // a cut's inner part is see-through (a slab of solid purple was too much of it): its cutting edge carries it
-  alpha=body*tint.a*(style>.5?1.0:mix(1.0,.45,smoothstep(.3,1.0,d)));
  }else if(Mode==7){
   // Dark violet smoke puff with ragged rim.
   vec2 flow=p*2.2+vec2(seed,-Age*.04);

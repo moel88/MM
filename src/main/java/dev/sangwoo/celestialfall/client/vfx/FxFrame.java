@@ -7,8 +7,8 @@ import java.util.List;
 
 /**
  * What the effects ask of the effect layer for one frame, collected from every layered cast: coloured point
- * lights on the world, ground decals, one light-shaft source, the impact frame, the chromatic split and (2.132.1) the
- * screen inside X Chara's rain of knives.
+ * lights on the world, ground decals, one light-shaft source, the impact frame and the chromatic split. (2.132.1 to
+ * 2.132.5 also had the screen inside X Chara's rain of knives: gone with it, 2.133.0.)
  * Pure Java (no GL), so the selection is testable.
  */
 public final class FxFrame {
@@ -57,13 +57,6 @@ public final class FxFrame {
     }
     /** Chromatic split in screen fractions per unit of distance from the focus. */
     public void chroma(float amount){if(amount>chroma)chroma=amount;}
-    private float rain;
-    /**
-     * (2.132.1) The screen inside X Chara's rain of knives, 0..1 (the strongest wins): 2.132.5, gently ("은은하게 30초
-     * 내내"): a violet air over it, its edges a little darker, thin light falling down it (2.132.1 to 2.132.4 tore it,
-     * beat with the volleys and flashed).
-     */
-    public void rain(float amount){if(amount>rain)rain=Math.min(1,amount);}
     /**
      * How long the afterglow lasts this frame, as a share of the usual (0.01..1, the shortest asked wins): something
      * flying fast would otherwise leave fading copies of itself behind it, side by side like extra strokes (2.82.6:
@@ -85,7 +78,7 @@ public final class FxFrame {
     public List<Decal> nearest(Vec3d camera){
         return decals.stream().sorted(Comparator.comparingDouble((Decal d)->d.center.squaredDistanceTo(camera))).limit(MAX_DECALS).toList();
     }
-    public boolean empty(){return lights.isEmpty()&&decals.isEmpty()&&shaftStrength<=0&&impact<=0&&chroma<=0&&rain<=0;}
+    public boolean empty(){return lights.isEmpty()&&decals.isEmpty()&&shaftStrength<=0&&impact<=0&&chroma<=0;}
     public Vec3d shaft(){return shaft;}
     public int shaftRgb(){return shaftRgb;}
     public float shaftStrength(){return shaftStrength;}
@@ -93,7 +86,6 @@ public final class FxFrame {
     public float impactMode(){return impactMode;}
     public ImpactLook impactLook(){return impactLook;}
     public float chroma(){return chroma;}
-    public float rain(){return rain;}
     public float afterglow(){return afterglow;}
     public int lightCount(){return lights.size();}
     public int decalCount(){return decals.size();}

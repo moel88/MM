@@ -21,12 +21,10 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import static dev.sangwoo.celestialfall.client.xchara.GlitchFx.*;
 import static dev.sangwoo.celestialfall.xchara.PullRules.*;
@@ -311,39 +309,18 @@ public final class PullClient {
 
     // ───────────────────────────── the silhouette ─────────────────────────────
 
-    private static boolean flat;
-    /** Whether a body is being drawn again as the pull's flat silhouette now (no name over it then: EntityRenderer.render). */
-    public static boolean silhouetting(){return flat;}
-    /** Every layer asked of it is the one flat colour: a body drawn through it is its silhouette. */
-    private static final class Flat implements VertexConsumerProvider,VertexConsumer {
-        final VertexConsumer to;final int r,g,b;double x,y,z;float ny;
-        Flat(VertexConsumer to,int rgb){this.to=to;r=rgb>>16&255;g=rgb>>8&255;b=rgb&255;}
-        @Override public VertexConsumer getBuffer(RenderLayer layer){return this;}
-        @Override public VertexConsumer vertex(double x,double y,double z){this.x=x;this.y=y;this.z=z;ny=0;return this;}
-        @Override public VertexConsumer color(int red,int green,int blue,int alpha){return this;}
-        @Override public VertexConsumer texture(float u,float v){return this;}
-        @Override public VertexConsumer overlay(int u,int v){return this;}
-        @Override public VertexConsumer light(int u,int v){return this;}
-        @Override public VertexConsumer normal(float nx,float ny,float nz){this.ny=ny;return this;}
-        @Override public void next(){
-            // (a little lighter where it faces up, so its form still reads: the video's is shaded so)
-            float shade=.88f+.12f*MathHelper.clamp(ny,-1,1);
-            to.vertex(x,y,z).color(Math.min(255,(int)(r*shade)),Math.min(255,(int)(g*shade)),Math.min(255,(int)(b*shade)),255).next();
-        }
-        @Override public void fixedColor(int red,int green,int blue,int alpha){}
-        @Override public void unfixColor(){}
-    }
+    /** Whether a body is being drawn again as a flat silhouette now (no name over it then: EntityRenderer.render; FlatBody's, the delete slash's too). */
+    public static boolean silhouetting(){return FlatBody.drawing();}
     /**
      * Draws the ones pulled as their flat purple silhouette, the frames they are it: each drawn again through their own
      * renderer where they are drawn, a little bigger, every layer of theirs the one colour (no texture, no light: the
      * shape of whatever they are). Not where a shader pack draws the world (as the effects' layer: the bars alone
      * there), and not this client's own body in the first person.
      */
-    @SuppressWarnings({"unchecked","rawtypes"})
     private static void render(WorldRenderContext ctx){
         var mc=MinecraftClient.getInstance();
         if(MARKS.isEmpty()||mc.world==null||!(ctx.consumers() instanceof VertexConsumerProvider.Immediate immediate)||!FxLayer.available())return;
-        float delta=ctx.tickDelta();Vec3d cam=ctx.camera().getPos();var dispatcher=mc.getEntityRenderDispatcher();
+        float delta=ctx.tickDelta();Vec3d cam=ctx.camera().getPos();
         boolean drew=false;
         for(var d:MARKS.values()){
             float s=d.since(delta);if(s<0||!solid(s))continue;
@@ -351,13 +328,7 @@ public final class PullClient {
             if(e==mc.getCameraEntity()&&!ctx.camera().isThirdPerson())continue;
             Vec3d at=feet(e,delta);
             if(at.squaredDistanceTo(cam)>96*96)continue;
-            var renderer=(net.minecraft.client.render.entity.EntityRenderer)dispatcher.getRenderer(e);
-            var m=ctx.matrixStack();double half=e.getHeight()*.5;
-            m.push();
-            m.translate(at.x-cam.x,at.y-cam.y+half,at.z-cam.z);m.scale(SWELL,SWELL,SWELL);m.translate(0,-half,0);
-            flat=true;
-            try{renderer.render(e,MathHelper.lerp(delta,e.prevYaw,e.getYaw()),delta,m,new Flat(immediate.getBuffer(RenderLayer.getDebugQuads()),FLAT),0xF000F0);}
-            finally{flat=false;m.pop();}
+            FlatBody.draw(mc,ctx.matrixStack(),immediate,cam,e,at,delta,FLAT,SWELL);
             drew=true;
         }
         if(drew)immediate.draw(RenderLayer.getDebugQuads());

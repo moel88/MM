@@ -22,5 +22,7 @@ public abstract class KagenoCullingMixin {
         else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.slamOf(e.getUuid())!=null)ci.setReturnValue(true);
         // (2.129.0) X Chara's three cuts: the body is drawn along its way forward from where its user stands
         else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.cutterOf(e.getUuid())!=null)ci.setReturnValue(true);
+        // (2.133.0) X Chara's delete slash: the body is drawn up in the air of its leap over where its user stands
+        else if(dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseOf(e.getUuid())!=null&&!dev.sangwoo.celestialfall.client.xchara.EraseClient.hides(e))ci.setReturnValue(true);
     }
 }

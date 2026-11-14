@@ -60,6 +60,8 @@ public final class KagenoCamera {
         all.addAll(dev.sangwoo.celestialfall.client.xchara.CloneClient.CASTS.values());
         // (2.114.0) and their knife's hits
         all.addAll(dev.sangwoo.celestialfall.client.xchara.KnifeClient.SWINGS.values());
+        // (2.133.0) and their delete slash as it goes (from where its front is)
+        all.addAll(dev.sangwoo.celestialfall.client.xchara.EraseClient.CASTS.values());
         for(var c:all){
             var s=KagenoSkills.of(c.skill());if(s==null)continue;
             // Distance from the cast spot or from the caster, whichever is nearer (T held's caster ends 30 blocks away).
@@ -69,6 +71,8 @@ public final class KagenoCamera {
             var sword=dev.sangwoo.celestialfall.client.isosang.IsosangClient.sweepPivot(c.id());if(sword!=null)dist=Math.min(dist,sword.distanceTo(mc.player.getPos()));
             // (2.95.0) or from where H's basic attack's swords come down, up to 30 blocks off
             var rain=dev.sangwoo.celestialfall.client.isosang.IsosangClient.volleyPoint(c.id());if(rain!=null)dist=Math.min(dist,rain.distanceTo(mc.player.getPos()));
+            // (2.133.0) or from where X Chara's delete slash's front is, up to 40 blocks off
+            var erase=dev.sangwoo.celestialfall.client.xchara.EraseClient.front(c.id(),delta);if(erase!=null)dist=Math.min(dist,erase.distanceTo(mc.player.getPos()));
             float reach=(float)Math.max(0,1-dist/40);
             var k=s.kick(c,c.age(delta)/20f);
             if(k!=null&&reach>0){if(kick==null)kick=new float[3];for(int i=0;i<3;i++)kick[i]+=k[i]*reach;}

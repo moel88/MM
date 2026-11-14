@@ -261,9 +261,6 @@ public final class FxLayer {
             rgb3(compProg,"ImpactDeep",look.deep());rgb3(compProg,"ImpactShapes",look.shapes());rgb3(compProg,"ImpactPale",look.pale());
             rgb3(compProg,"ImpactShade",look.shade());rgb3(compProg,"ImpactHue",look.hue());
             f(compProg,"Chroma",CelestialFall.CONFIG.screenDistortion?frame.chroma():0);
-            // (2.132.1) inside X Chara's rain of knives (2.132.5: gently, its air and the light falling down it only)
-            f(compProg,"Rain",frame.rain());f(compProg,"RainTime",(float)(gameSeconds%600));
-            f2(compProg,"Screen",width,height);
             f2(compProg,"Focus",focus[0],focus[1]);
             triangle();
             GlStateManager._activeTexture(GL13.GL_TEXTURE0);

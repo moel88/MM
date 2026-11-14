@@ -757,25 +757,24 @@ public final class MpClient implements ClientModInitializer {
         "440 DIST6","445 HEAL","455 T","463 HITME",
         "520 NOCDOFF","540 END"};
     /**
-     * X Chara's H with the hack off, the rain of knives (2.132.0; 2.132.5: no run or stab, a rain where it was called for
-     * 30 s, MP_ONLY=xchararain): the caster takes X Chara, its cooldowns on. Q, and H with the hack on: the cleave, no rain.
-     * Q again. H with the watcher 4 blocks ahead: the call, the rain where the caster stood (both clients draw it there),
-     * the watcher struck a knife at a time (1 each) as they land on it, the caster's own breaking on them harmlessly; the
-     * caster turns and walks out of it (it rains on where it was called); H refused while it rains; the rain over at its
-     * end, its cooldown from then. The cooldowns off: H with the watcher 4 blocks ahead, and the caster takes Kageno
-     * (X Chara's no more): cut short, both clients stop it. Both clients log the call and the rain as they hear of them
-     * (where it rains, how far in, the knives they draw, those standing in bodies and the server's word of them), and
-     * the sounds.
+     * X Chara's H with the hack off, the delete slash (2.133.0, MP_ONLY=xcharaerase): the caster takes X Chara, its
+     * cooldowns on. Q, and H with the hack on: the cleave, no slash. Q again. H with the watcher 12 blocks ahead, walking
+     * to its left as it comes: the caster leaps (drawn up on both clients, standing where it was on the server), the
+     * slash goes along the ground and deletes the watcher (100; gone from both clients' sight for half a second, its legs
+     * stopped; a /damage of 150 meanwhile doing nothing) and it is back where it was; H refused (its cooldown). The
+     * cooldowns off: H, and Kageno taken before the slash goes (no slash at all); H with the watcher 24 blocks ahead and
+     * Kageno taken just after the slash went (cut short before it gets there: the watcher untouched). Both clients log
+     * the cast and the slash as they hear of them, whom they hide and when, and the sounds.
      */
-    private static final String[] XCHARARAIN_SCRIPT={
+    private static final String[] XCHARAERASE_SCRIPT={
         "5 XCHARA","8 NOCDOFF","40 DIST30","45 HEAL",
         "60 Q","80 H","150 Q",
-        "170 DIST4","175 HEAL","190 H",
-        "230 TURN90","240 W+","340 W-",
-        "380 H",
-        "860 NOCDON","870 DIST4","875 HEAL","890 H","980 STANDK",
-        "1020 XCHARA","1030 NOCDOFF","1060 END"};
-    private static final String[] STEPS=ONLY.equals("xchararain")?XCHARARAIN_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+        "170 DIST12","175 HEAL","190 H","209 WALK+","215 HURT","232 WALK-",
+        "260 H",
+        "300 NOCDON","310 DIST10","315 HEAL","330 H","334 STANDK",
+        "360 XCHARA","365 NOCDON","380 DIST24","385 HEAL","400 H","418 STANDK",
+        "440 XCHARA","445 NOCDOFF","480 END"};
+    private static final String[] STEPS=ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -908,7 +907,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("xcharay")){hackWatch();pullWatch();}
                 if(ONLY.equals("xcharaslam")){hackWatch();slamWatch();}
                 if(ONLY.equals("xcharacut")){hackWatch();cutWatch();}
-                if(ONLY.equals("xchararain")){hackWatch();rainWatch();}
+                if(ONLY.equals("xcharaerase")){hackWatch();eraseWatch();}
                 if(ONLY.equals("xcharashot")||ONLY.equals("xcharaknives")){hackWatch();shotWatch();}
                 if(age%4==0)shot();
                 if(caster){
@@ -931,7 +930,7 @@ public final class MpClient implements ClientModInitializer {
                     if(ONLY.equals("glow"))glowWatch();
                     if(ONLY.equals("vanilla"))vanillaWatch();
                     if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))watcherStill();
-                    if(age>(ONLY.equals("xchararain")?1300:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
+                    if(age>(ONLY.equals("xcharaerase")?700:ONLY.equals("xcharacut")?760:ONLY.equals("xcharaslam")?1000:ONLY.equals("xcharay")?700:ONLY.equals("xcharat")?1500:ONLY.equals("xcharae")?2400:ONLY.equals("xcharaplain")?1000:ONLY.equals("xcharaq")?900:ONLY.equals("xcharam1")?1200:ONLY.equals("isosanggauge")?1000:ONLY.equals("xchara")?760:ONLY.equals("vanilla")?800:ONLY.equals("glow")?1500:ONLY.equals("isosangg")?700:ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh")?600:ONLY.equals("isosangh")||ONLY.equals("isosangz")?1300:ONLY.equals("isosangr")?1800:ONLY.equals("isosang")||ONLY.equals("isosange")?900:ONLY.equals("beatdown")?1600:ONLY.equals("timestop")||ONLY.equals("resist")?1000:ONLY.equals("stagger")?1400:ONLY.equals("boss")?2600:ONLY.equals("arrow")?1100:ONLY.equals("call")?900:ONLY.equals("cooldowns")?3400:ONLY.equals("swap")?1300:ONLY.equals("fresh")?1700:ONLY.equals("death")?1200:4400)){note("ERROR watcher timeout");phase=3;age=0;}
                 }
                 if(phase==2&&(mc.world==null||mc.player==null)){note("ERROR lost connection");phase=3;age=0;}
             }
@@ -1711,36 +1710,45 @@ public final class MpClient implements ClientModInitializer {
         long ready=ONLY.equals("xcharaknives")?dev.sangwoo.celestialfall.client.xchara.KnifeClient.knivesReady(mc.player.getUuid()):dev.sangwoo.celestialfall.client.xchara.KnifeClient.shotReady(mc.player.getUuid());
         Object was=flags.get("shot_ready");if(was==null||(Long)was!=ready){flags.put("shot_ready",ready);if(ready>0)note("my knives ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
     }
-    private final Map<String,String> rainState=new HashMap<>();private int rainHeard;
+    private final Map<String,String> eraseState=new HashMap<>();private int eraseHeard;private boolean eraseWalking;private Vec3d eraseWalkAt;
     /**
-     * (2.132.0; 2.132.5, MP_ONLY=xchararain) X Chara's rain of knives as this client has it: each player's call as it
-     * begins or stops short; every rain it knows of as it comes and every 50 ticks of it (whose, how far in, its middle,
-     * whether it was cut, the knives the server said met a body) and what it draws of the caster's (BladeRain.describe:
-     * the call, the rain's age, knives falling or standing, standing in bodies and of them told); its sounds as they are
-     * started; and its cooldown here.
+     * (2.133.0, MP_ONLY=xcharaerase) X Chara's delete slash as this client has it: each player's cast as it begins or
+     * stops short and, through its leap, how high this client draws them over where they stand; every slash it knows of
+     * as it comes and as whom it deleted changes (whose, how far in, how far it goes, where from, cut); whom it hides and
+     * when (EraseClient.seen); its sounds as they are started; and its cooldown here. The watcher walks to its left while
+     * the caster asks ("WALK+"), its steps logged a tick at a time (none while it is deleted).
      */
-    private void rainWatch(){
+    private void eraseWatch(){
         for(var p:mc.world.getPlayers()){
-            var c=dev.sangwoo.celestialfall.client.xchara.KnifeClient.rainOf(p.getUuid());
+            var c=dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseOf(p.getUuid());
             String key=c==null?"-":c.id()+"/"+(dev.sangwoo.celestialfall.client.xchara.KnifeClient.until(c.id())<1e6f);
-            if(!key.equals(rainState.get("call "+p.getUuid()))){
-                rainState.put("call "+p.getUuid(),key);
-                if(c!=null)note(String.format(Locale.ROOT,"%s's call here: %d ticks in%s, where they stand (%.2f, %.2f, %.2f) from where it began",name(p.getUuid()),(int)Math.floor(c.age(0)),key.endsWith("true")?" (stopped short)":"",
-                    p.getX()-c.origin().x,p.getY()-c.origin().y,p.getZ()-c.origin().z));
+            if(!key.equals(eraseState.get("cast "+p.getUuid()))){
+                eraseState.put("cast "+p.getUuid(),key);
+                if(c!=null)note(String.format(Locale.ROOT,"%s's delete slash here: %d ticks in%s, leaps %.2f",name(p.getUuid()),(int)Math.floor(c.age(0)),key.endsWith("true")?" (stopped short)":"",
+                    dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseRise(c.id())));
             }
+            if(c!=null&&c.age(0)<=dev.sangwoo.celestialfall.xchara.EraseRules.LENGTH&&((int)Math.floor(c.age(0)))%2==0){
+                var off=dev.sangwoo.celestialfall.client.xchara.EraseSlash.offset(p.getUuid(),0);
+                note(String.format(Locale.ROOT,"  %s drawn %.2f over where it stands (%d ticks in; really at %.2f %.2f %.2f)",name(p.getUuid()),off==null?0:off.y,(int)Math.floor(c.age(0)),p.getX(),p.getY(),p.getZ()));
+            }
+            String seen=dev.sangwoo.celestialfall.client.xchara.EraseClient.seen(p,0);
+            String hid=seen.equals("-")?"-":seen.split(",")[1];
+            if(!hid.equals(eraseState.get("hid "+p.getUuid()))){eraseState.put("hid "+p.getUuid(),hid);if(!hid.equals("-"))note(String.format(Locale.ROOT,"%s %s here at world tick %d (since,hidden,silhouette %s)",name(p.getUuid()),hid.equals("1")?"hidden (deleted)":"seen again",mc.world.getTime(),seen));}
         }
-        var lines=dev.sangwoo.celestialfall.client.xchara.RainClient.all(0);
+        var lines=dev.sangwoo.celestialfall.client.xchara.EraseClient.all(0);
         String all=String.join(" | ",lines.stream().map(l->l.replaceAll("age [0-9.]+","")).toList());
-        if(!all.equals(rainState.get("rains"))||age%50==0&&!lines.isEmpty()){
-            rainState.put("rains",all);
-            note("rains here: "+(lines.isEmpty()?"none":String.join(" | ",lines)));
-            for(var p:mc.world.getPlayers())if(name(p.getUuid()).equals("Caster"))note("  the caster's here: "+dev.sangwoo.celestialfall.client.xchara.BladeRain.describe(p,0));
-        }
+        if(!all.equals(eraseState.get("slashes"))){eraseState.put("slashes",all);note("slashes here: "+(lines.isEmpty()?"none":String.join(" | ",lines)));}
         var heard=dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD;
-        if(heard.size()<rainHeard)rainHeard=0;
-        for(;rainHeard<heard.size();rainHeard++)if(heard.get(rainHeard).contains("rain")||heard.get(rainHeard).contains("slam_lit"))note("  rain's sound: "+heard.get(rainHeard));
-        long ready=dev.sangwoo.celestialfall.client.xchara.KnifeClient.rainReady(mc.player.getUuid());
-        Object was=flags.get("rain_ready");if(was==null||(Long)was!=ready){flags.put("rain_ready",ready);if(ready>0)note("my rain ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
+        if(heard.size()<eraseHeard)eraseHeard=0;
+        for(;eraseHeard<heard.size();eraseHeard++)if(heard.get(eraseHeard).contains("erase")||heard.get(eraseHeard).contains("hit 16"))note("  delete slash's sound: "+heard.get(eraseHeard));
+        long ready=dev.sangwoo.celestialfall.client.xchara.KnifeClient.eraseReady(mc.player.getUuid());
+        Object was=flags.get("erase_ready");if(was==null||(Long)was!=ready){flags.put("erase_ready",ready);if(ready>0)note("my delete slash ready again at "+ready+" here (now "+mc.world.getTime()+": "+String.format(Locale.ROOT,"%.1f",(ready-mc.world.getTime())/20.0)+" s)");}
+        if(!caster){
+            boolean walk=Files.exists(OUT.resolve("walk"));
+            if(walk!=eraseWalking){eraseWalking=walk;key(GLFW_KEY_A,walk);eraseWalkAt=mc.player.getPos();note((walk?"press":"release")+" A (walk to its left, asked by the caster)");}
+            else if(eraseWalking){var p=mc.player.getPos();note(String.format(Locale.ROOT,"walked %.3f blocks%s%s",Math.hypot(p.x-eraseWalkAt.x,p.z-eraseWalkAt.z),
+                dev.sangwoo.celestialfall.client.xchara.EraseClient.hides(mc.player)?" (deleted here)":"",CombatClient.actionLocked()?" (its actions locked)":""));eraseWalkAt=p;}
+        }
     }
     private final Map<UUID,String> cutState=new HashMap<>();private int cutHeard;
     /**
