@@ -45,6 +45,8 @@ public final class CorruptionKnives {
     public static final float LIFE=(float)(KnivesRules.over(KnivesRules.KNIVES-1)/20+.6);
     /** Its sound: the user's video's own, as it begins. */
     static final String SOUND="xchara_knives";
+    /** How loud a small knife's strike is, of the knives shot's (the same sound: in the user's video the throw is the louder by some 4 dB, three strikes one over another the quieter). */
+    static final float HIT_PART=.6f;
     /** When each knife leaves the hand (seconds). */
     static float fire(int k){return KnivesRules.FIRE[k]/20f;}
     /** A knife not thrown when the skill stopped short is gone over this long (seconds). */

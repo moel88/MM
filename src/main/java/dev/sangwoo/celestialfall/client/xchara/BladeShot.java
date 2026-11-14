@@ -111,7 +111,7 @@ public final class BladeShot {
                     blade.mid=mc.world.getEntityById(entity) instanceof LivingEntity e?e.getLerpedPos(mc.getTickDelta()).add(0,e.getHeight()*.55,0):point;
                     // (2.131.0: the small knives thrown strike with the same sound, at their own time: CorruptionKnives)
                     var cast=KnifeClient.SWINGS.get(id);
-                    if(took&&cast!=null)hitSound(mc,caster,id,k,cast.combo()==XCharaCombo.KNIVES?CorruptionKnives.landed(blade,k)*20:landed(blade,k),point);
+                    if(took&&cast!=null){boolean small=cast.combo()==XCharaCombo.KNIVES;hitSound(mc,caster,id,k,small?CorruptionKnives.landed(blade,k)*20:landed(blade,k),small?CorruptionKnives.HIT_PART:1,point);}
                 });
             }
         });
@@ -330,14 +330,14 @@ public final class BladeShot {
 
     /** The strike's sound's onset is this far into its file (ticks): started that much before the knife is seen to land when there is time. */
     static final int HIT_SOUND_LEAD=1;
-    private static void hitSound(MinecraftClient mc,UUID caster,UUID id,int k,float landed,Vec3d point){
+    private static void hitSound(MinecraftClient mc,UUID caster,UUID id,int k,float landed,float part,Vec3d point){
         if(mc.player==null)return;
         var cast=KnifeClient.SWINGS.get(id);if(cast==null)return;
         java.util.function.Supplier<Float> loud=caster.equals(mc.player.getUuid())?()->(float)CelestialFall.CONFIG.effectVolume:()->{
             var m=MinecraftClient.getInstance();var user=m.world==null?null:m.world.getPlayerByUuid(caster);
             return Math.max(KnifeClient.loudness(m,point),KnifeClient.loudness(m,user==null?point:user.getPos()));
         };
-        var v=new XCharaClient.Voice(CelestialFall.id(HIT_SOUND),loud);
+        var v=XCharaClient.Voice.quieter(CelestialFall.id(HIT_SOUND),loud,part);
         if(v.full()<=.01f)return;
         int wait=(int)Math.floor(landed-HIT_SOUND_LEAD-cast.age(0));
         if(wait>0)mc.getSoundManager().play(v,wait);else mc.getSoundManager().play(v);

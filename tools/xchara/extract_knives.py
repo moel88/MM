@@ -50,7 +50,7 @@ ONSET, LEAD, END, FADE = .160, .010, .70, .52
 LATER = 2.46
 # where no effect plays (the music alone)
 QUIET = [(.03, .14), (.90, 2.58), (3.35, 3.68)]
-LUFS = -15.0
+LUFS = -13.0
 OVER = 1.5
 # the least a cell louder in the first use than in the second is turned down to
 LEAST = .2
