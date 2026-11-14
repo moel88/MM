@@ -21,5 +21,7 @@ public abstract class FormationFloatMixin {
     @Inject(method="tick",at=@At("HEAD"))
     private void botand$standOnSword(CallbackInfo ci){
         if(IsosangAttack.raised(player)){floating=false;floatingTicks=0;}
+        // (2.133.0) nor one standing on X Chara's delete slash's cube of ground for its 15 s (no block under them: it is the cube's shape)
+        else if(dev.sangwoo.celestialfall.xchara.XCharaErase.carried(player)){floating=false;floatingTicks=0;}
     }
 }

@@ -26,187 +26,246 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.world.World;
 
 /**
- * X Chara's delete slash as it goes (2.133.0; EraseRules for how far, how fast and how wide; XCharaAttack for the leap
- * that sends it, H with the hack off). Sent at the leap's top, it goes along the ground the way its user faced as they
- * pressed H, from where they stood, as far as {@link #reach} lets it; each tick it strikes everyone its front came over
- * (once each): a foe takes EraseRules.DAMAGE (no guard takes it, minecraft:bypasses_shield; no knockback; its user the
- * attacker) and is deleted for EraseRules.VANISH ticks ({@link #deleted}: nothing harms them, XCharaUltimate.shielded; they
- * can do nothing and their legs are stopped, an incapacitation). It is gone with its user (dead, left, elsewhere, X
- * Chara's no more). Every viewer within 128 blocks of where it went (and its user, and whom it deletes) is told as it goes,
- * of everyone it deletes (and until when), and if it is cut short (xchara_erase_event_v1); the clients draw it
- * (client/xchara/EraseClient, EraseFx).
+ * X Chara's delete slash once it is thrown (2.133.0; EraseRules for its rules, XCharaAttack for the leap that throws it,
+ * H with the hack off). It flies from the knife up in the air of the leap to the ground the middle of its user's screen
+ * pointed at (EraseGround: no further than EraseRules.REACH out, on the ground there) and stands in it; then:
+ * <ul>
+ * <li>everyone on the ground round it (EraseRules.SIDE each way) is struck for EraseRules.DAMAGE (no guard takes it,
+ * minecraft:bypasses_shield; no knockback; its user the attacker) and deleted for EraseRules.VANISH ticks
+ * ({@link #deleted}: nothing harms them, XCharaUltimate.shielded; they can do nothing and their legs are stopped);</li>
+ * <li>a cube of that ground rises (EraseRules.lift), something to stand on (EraseCubes: kept out of, stood on, carried up
+ * by; the map is not changed), and bursts at EraseRules.BURST: whoever is on it then is struck for
+ * EraseRules.BURST_DAMAGE. Whoever comes off it, or falls as it bursts, takes no harm from that fall
+ * ({@link #spared}).</li>
+ * </ul>
+ * It is gone with its user (dead, left, elsewhere, X Chara's no more), the cube with it. Every viewer within 128 blocks of
+ * where it lands (and its user, and whom it strikes) is told as it is thrown (from where to where, when it strikes, its
+ * ground), of everyone it deletes and everyone the burst strikes, and if it is cut short (xchara_erase_event_v1); the
+ * clients draw it (client/xchara/EraseClient, EraseFx) and stand their own player on its cube.
  */
 public final class XCharaErase {
     public static final Identifier EVENT=CelestialFall.id("xchara_erase_event_v1");
-    /** It goes; it deleted someone; it was cut short. */
-    public static final int WAVE=0,DELETED=1,CUT=2;
+    /** It is thrown; it deleted someone; the burst struck someone; it was cut short. */
+    public static final int THROWN=0,DELETED=1,BLASTED=2,CUT=3;
     /** Its harm: no guard takes it (minecraft:bypasses_shield), its user the attacker. */
     public static final RegistryKey<DamageType> DAMAGE=RegistryKey.of(RegistryKeys.DAMAGE_TYPE,CelestialFall.id("erase"));
-    /** How far its news carries (blocks from where it went). */
+    /** How far its news carries (blocks from where it lands). */
     static final double VIEW=128;
-    /** One slash as it goes: whose (its call's id its own), where from, the way, how far it goes, when it went, and whom it has come over. */
-    static final class Wave {
-        final UUID id,owner;final ServerWorld world;final Vec3d from;final float yaw;final double range;final long went;
-        final Set<UUID> over=new HashSet<>();
-        Wave(ServerPlayerEntity p,UUID id,Vec3d from,float yaw,double range,long went){this.id=id;owner=p.getUuid();world=p.getServerWorld();this.from=from;this.yaw=yaw;this.range=range;this.went=went;}
-        long age(){return world.getTime()-went;}
+    /** How long one who came off a cube is spared their fall (ticks, at most). */
+    static final int SPARED=200;
+    /** One slash: whose (its call's id its own), its world, from where (the knife) to where (the ground it lands on), when it was thrown and when it strikes, its ground's corner and top, and who was on its cube a tick ago. */
+    static final class Strike {
+        final UUID id,owner;final ServerWorld world;final Vec3d from,to;final long went,struck;final int x0,z0;final double top;
+        boolean landed;Set<UUID> riders=new HashSet<>();
+        Strike(ServerPlayerEntity p,UUID id,Vec3d from,Vec3d to,long went,long struck){
+            this.id=id;owner=p.getUuid();world=p.getServerWorld();this.from=from;this.to=to;this.went=went;this.struck=struck;
+            x0=EraseRules.corner(to.x);z0=EraseRules.corner(to.z);top=to.y;
+        }
+        long since(long now){return now-struck;}
+        /** Its cube now, or null (not struck yet, or burst). */
+        EraseCubes.Cube cube(long now){long t=since(now);return landed&&EraseRules.cube(t)?new EraseCubes.Cube(x0,z0,top,t):null;}
+        /** The middle of its ground, at its top. */
+        Vec3d middle(){return new Vec3d(x0+EraseRules.SIDE*.5,top,z0+EraseRules.SIDE*.5);}
     }
-    private static final List<Wave> WAVES=new ArrayList<>();
+    private static final List<Strike> STRIKES=new ArrayList<>();
     /** Who is deleted, until when (the server's time). */
     private static final Map<UUID,Long> GONE=new HashMap<>();
+    /** Who came off a cube (or fell as it burst), from when, until when their fall is spared at most. */
+    private static final Map<UUID,long[]> FALLING=new HashMap<>();
+    /** The server's cubes, for EraseCubes. */
+    static final EraseCubes.Side SIDE=new EraseCubes.Side(){
+        @Override public boolean any(){return !STRIKES.isEmpty();}
+        @Override public void cubes(World world,List<EraseCubes.Cube> out){
+            for(var s:STRIKES){if(s.world!=world)continue;var c=s.cube(world.getTime());if(c!=null)out.add(c);}
+        }
+    };
     private XCharaErase(){}
 
     public static void initialize(){
         ServerTickEvents.END_SERVER_TICK.register(XCharaErase::tick);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server->{WAVES.clear();GONE.clear();});
+        ServerLifecycleEvents.SERVER_STOPPED.register(server->{STRIKES.clear();GONE.clear();FALLING.clear();});
     }
 
-    /** {@code p}'s slash goes now (its call's id {@code id}), from {@code from} the way {@code yaw}. */
-    static void start(ServerPlayerEntity p,UUID id,Vec3d from,float yaw){
-        var w=new Wave(p,id,from,yaw,reach(p.getServerWorld(),p,from,yaw),p.getServerWorld().getTime());
-        WAVES.add(w);
-        send(w,WAVE,null,0,0);
-    }
     /**
-     * How far {@code p}'s slash from {@code from} the way {@code yaw} goes: EraseRules.RANGE, or as far as the first wall
-     * across its middle (a solid block both EraseRules.WALL_LOW and WALL_HIGH over their feet: a low step does not stop it)
-     * that is a wall across it ({@link #wide}: one pillar or a tree's trunk in its middle does not stop a slash sixteen
-     * blocks across; it goes on past it).
+     * {@code p}'s slash is thrown now (its call's id {@code id}): they stood at {@code from} and rose {@code rise} over
+     * it, facing {@code yaw}; {@code aim} is their client's last word of where the middle of its screen points (null:
+     * none of late, their look from up there is taken). It leaves the knife and lands on the ground found there.
      */
-    static double reach(ServerWorld world,ServerPlayerEntity p,Vec3d from,float yaw){
-        Vec3d f=Vec3d.fromPolar(0,yaw),right=new Vec3d(-f.z,0,f.x);
-        double at=0;
-        for(int i=0;i<EraseRules.WALL_LOOKS&&at<EraseRules.RANGE;i++){
-            Vec3d a=from.add(f.multiply(at));double left=EraseRules.RANGE-at;
-            double low=wall(world,p,a.add(0,EraseRules.WALL_LOW,0),f,left),high=wall(world,p,a.add(0,EraseRules.WALL_HIGH,0),f,left);
-            if(Double.isNaN(low)||Double.isNaN(high))return EraseRules.RANGE;
-            double d=at+Math.max(low,high);
-            if(d>=EraseRules.RANGE)return EraseRules.RANGE;
-            if(wide(world,from,f,right,d))return Math.max(EraseRules.NEAR,Math.min(EraseRules.RANGE,d-.3));
-            at=d+EraseRules.WALL_STEP;
-        }
-        return EraseRules.RANGE;
+    static void start(ServerPlayerEntity p,UUID id,Vec3d from,double rise,float yaw,Vec3d aim){
+        var world=p.getServerWorld();
+        Vec3d eye=from.add(0,rise+p.getStandingEyeHeight(),0);
+        Vec3d want=aim!=null?aim:EraseGround.aimed(world,p,from,eye,p.getRotationVec(1));
+        Vec3d to=EraseGround.landing(world,from,rise,want);
+        Vec3d knife=knife(from,rise,yaw);
+        long now=world.getTime();
+        var s=new Strike(p,id,knife,to,now,now+EraseRules.flight(knife.distanceTo(to)));
+        STRIKES.add(s);
+        send(s,THROWN,null,0,0);
     }
-    /** How far ahead of {@code a} the way {@code f} the first solid block is, within {@code most} (blocks; NaN: none). */
-    private static double wall(ServerWorld world,ServerPlayerEntity p,Vec3d a,Vec3d f,double most){
-        var hit=world.raycast(new RaycastContext(a,a.add(f.multiply(most+.5)),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
-        return hit.getType()==HitResult.Type.MISS?Double.NaN:hit.getPos().distanceTo(a);
-    }
-    /**
-     * Whether what stands {@code d} ahead of {@code from} in the slash's middle is a wall across it: solid both
-     * EraseRules.WALL_WIDE to its left and to its right too, at both heights (as deep as that or a little deeper: a wall
-     * standing slantwise to it).
-     */
-    private static boolean wide(ServerWorld world,Vec3d from,Vec3d f,Vec3d right,double d){
-        for(int side=-1;side<=1;side+=2){
-            boolean solid=false;
-            for(double deep:EraseRules.WALL_DEEP){
-                Vec3d c=from.add(f.multiply(d+deep)).add(right.multiply(side*EraseRules.WALL_WIDE));
-                if(solid(world,c.add(0,EraseRules.WALL_LOW,0))&&solid(world,c.add(0,EraseRules.WALL_HIGH,0))){solid=true;break;}
-            }
-            if(!solid)return false;
-        }
-        return true;
-    }
-    private static boolean solid(ServerWorld world,Vec3d at){
-        var pos=BlockPos.ofFloored(at);
-        return !world.getBlockState(pos).getCollisionShape(world,pos).isEmpty();
+    /** Where the slash leaves the knife: before their chest up in the air of the leap, the way they faced. */
+    public static Vec3d knife(Vec3d from,double rise,float yaw){
+        return from.add(Vec3d.fromPolar(0,yaw).multiply(EraseRules.KNIFE_AHEAD)).add(0,rise+EraseRules.KNIFE_UP,0);
     }
     /** Whether this one is deleted now: gone from sight, nothing harms them (XCharaUltimate.shielded), they can do nothing. */
     public static boolean deleted(LivingEntity e){
         if(e==null||e.getWorld().isClient)return false;
         Long until=GONE.get(e.getUuid());return until!=null&&e.getWorld().getTime()<until;
     }
-    /** For the checks: this player's latest slash as {when it went, where from, the way, how far it goes, ticks since, how many it came over}, or null. */
+    /** Whether this player is on a cube or over one, a jump or so up (no floating to be kicked for: FormationFloatMixin). */
+    public static boolean carried(ServerPlayerEntity p){
+        if(STRIKES.isEmpty())return false;
+        var box=p.getBoundingBox();double feet=p.getY();long now=p.getWorld().getTime();
+        for(var s:STRIKES){
+            if(s.world!=p.getWorld())continue;var c=s.cube(now);if(c==null||!c.over(box))continue;
+            double top=c.top();if(feet>=top-1&&feet<=top+8)return true;
+        }
+        return false;
+    }
+    /** Whether {@code e}'s fall now does it no harm: it came off a cube (or fell as it burst) and has not landed since (LivingCombatMixin: the fall's damage). */
+    public static boolean spared(LivingEntity e){
+        if(e==null||e.getWorld().isClient||FALLING.isEmpty())return false;
+        var f=FALLING.remove(e.getUuid());return f!=null&&e.getWorld().getTime()<=f[1];
+    }
+    /** For the checks: this player's latest slash as {when it was thrown, from, to, when it strikes, ticks since it struck, its ground's corner x, z, its cube's top now (NaN: none), who is on it}, or null. */
     public static Object[] describe(PlayerEntity p){
         if(p==null)return null;
         Object[] out=null;
-        for(var w:WAVES)if(w.owner.equals(p.getUuid()))out=new Object[]{w.went,w.from,w.yaw,w.range,w.age(),w.over.size()};
+        for(var s:STRIKES)if(s.owner.equals(p.getUuid())){
+            long now=s.world.getTime();var c=s.cube(now);
+            out=new Object[]{s.went,s.from,s.to,s.struck,s.since(now),s.x0,s.z0,c==null?Double.NaN:c.top(),s.riders.size()};
+        }
         return out;
     }
-    /** For a boss reading what comes at it (BossThreats): this player's slashes going now, as {from, the way, the front now (blocks ahead), how far it goes}. */
+    /**
+     * For a boss reading what comes at it (BossThreats): this player's slashes now, as {its ground's middle x, top, z,
+     * the tick it strikes, the tick its cube bursts, the cube's top now (NaN: none yet or no more)}.
+     */
     public static List<double[]> going(PlayerEntity p){
         var out=new ArrayList<double[]>();if(p==null)return out;
-        for(var w:WAVES)if(w.owner.equals(p.getUuid())){
-            double at=EraseRules.front(w.age(),w.range);if(Double.isNaN(at))continue;
-            out.add(new double[]{w.from.x,w.from.y,w.from.z,w.yaw,at,w.range});
+        for(var s:STRIKES)if(s.owner.equals(p.getUuid())){
+            var m=s.middle();var c=s.cube(s.world.getTime());
+            out.add(new double[]{m.x,m.y,m.z,s.struck,s.struck+EraseRules.BURST,c==null?Double.NaN:c.top()});
         }
         return out;
     }
 
     private static void tick(MinecraftServer server){
-        for(var it=WAVES.iterator();it.hasNext();){
-            var w=it.next();long t=w.age();
-            var p=server.getPlayerManager().getPlayer(w.owner);
-            if(p==null||p.getServerWorld()!=w.world||!p.isAlive()||p.isSpectator()||!StandManager.xChara(p)){
-                // its user dead, gone, elsewhere or X Chara's no more: it is gone with them
-                send(w,CUT,null,0,0);it.remove();continue;
+        for(var it=STRIKES.iterator();it.hasNext();){
+            var s=it.next();long now=s.world.getTime();
+            var p=server.getPlayerManager().getPlayer(s.owner);
+            if(p==null||p.getServerWorld()!=s.world||!p.isAlive()||p.isSpectator()||!StandManager.xChara(p)){
+                // its user dead, gone, elsewhere or X Chara's no more: it is gone with them, its cube with it (whoever was on it falls unharmed)
+                fell(s,now);send(s,CUT,null,0,0);it.remove();continue;
             }
-            if(t>EraseRules.reached(w.range)){it.remove();continue;}
-            double[] sw=EraseRules.sweep((int)t,w.range);
-            if(sw!=null)go(w,p,sw[0],sw[1]);
+            if(!s.landed&&now>=s.struck){s.landed=true;land(s,p,now);}
+            if(!s.landed)continue;
+            long t=s.since(now);
+            if(t>=EraseRules.BURST){burst(s,p,now);it.remove();continue;}
+            ride(s,now);
         }
-        if(!GONE.isEmpty()){
-            long most=Long.MIN_VALUE;for(var s:server.getWorlds()){most=Math.max(most,s.getTime());}
+        if(!GONE.isEmpty()||!FALLING.isEmpty()){
+            long most=Long.MIN_VALUE;for(var w:server.getWorlds())most=Math.max(most,w.getTime());
             final long now=most;GONE.values().removeIf(u->u<now-200);
+            // those who came off a cube: spared until they land (and a moment), or SPARED at most
+            FALLING.entrySet().removeIf(en->{
+                if(en.getValue()[1]<now)return true;
+                var who=entity(server,en.getKey());
+                return who==null||who.isOnGround()&&now-en.getValue()[0]>2&&!on(who);
+            });
         }
     }
+    private static LivingEntity entity(MinecraftServer server,UUID id){
+        var p=server.getPlayerManager().getPlayer(id);if(p!=null)return p;
+        for(var w:server.getWorlds()){if(w.getEntity(id) instanceof LivingEntity e)return e;}
+        return null;
+    }
+    private static boolean on(LivingEntity e){return !Double.isNaN(EraseCubes.on(e));}
     /** Whom {@code p}'s slash may strike at all: alive, to be struck, no merchant, not its user, and (a player) one they may harm. */
     private static boolean foe(ServerPlayerEntity p,LivingEntity e){
         return e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!(e instanceof dev.sangwoo.celestialfall.commerce.MerchantEntity)
             &&!(e instanceof PlayerEntity other&&!p.shouldDamagePlayer(other));
     }
-    /** The slash's front comes over {@code from} to {@code to} ahead this tick: everyone there it has not come over yet is struck. */
-    private static void go(Wave w,ServerPlayerEntity p,double from,double to){
-        Vec3d f=Vec3d.fromPolar(0,w.yaw),right=new Vec3d(-f.z,0,f.x),o=w.from;
-        Vec3d a=o.add(f.multiply(from)),b=o.add(f.multiply(to));
-        Box box=new Box(Math.min(a.x,b.x),o.y+EraseRules.LOW,Math.min(a.z,b.z),Math.max(a.x,b.x),o.y+EraseRules.HIGH,Math.max(a.z,b.z)).expand(EraseRules.HALF+2,1,EraseRules.HALF+2);
-        var bodies=w.world.getEntitiesByClass(LivingEntity.class,box,e->e!=p&&e.isAlive()&&!e.isSpectator()&&e.canHit()&&!w.over.contains(e.getUuid()));
-        long now=w.world.getTime();
-        for(var e:bodies){
-            Vec3d d=e.getPos().subtract(o);
-            if(!EraseRules.struck(d.dotProduct(f),d.dotProduct(right),d.y,e.getWidth()*.5,from,to))continue;
-            w.over.add(e.getUuid());
-            if(!foe(p,e)||deleted(e))continue;
-            var source=new DamageSource(w.world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(DAMAGE),p);
-            CombatManager.interrupt(e);
-            e.timeUntilRegen=0;
-            if(!CombatManager.damageWithoutKnockback(e,source,EraseRules.DAMAGE))continue;
+    /** The bodies over {@code s}'s ground, their feet from {@code low} to {@code high}. */
+    private static List<LivingEntity> over(Strike s,double low,double high){
+        Box box=new Box(s.x0,low-.5,s.z0,s.x0+EraseRules.SIDE,high+.5,s.z0+EraseRules.SIDE).expand(1,0,1);
+        return s.world.getEntitiesByClass(LivingEntity.class,box,e->e.isAlive()&&!e.isSpectator()&&EraseRules.over(s.x0,s.z0,e.getBoundingBox().minX,e.getBoundingBox().maxX,e.getBoundingBox().minZ,e.getBoundingBox().maxZ));
+    }
+    private static DamageSource source(Strike s,ServerPlayerEntity p){
+        return new DamageSource(s.world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(DAMAGE),p);
+    }
+    /** {@code e} struck for {@code amount} by {@code p}'s slash; its user's own hit feedback (the number and the blood), as their other skills'. Whether it went in. */
+    private static boolean strike(Strike s,ServerPlayerEntity p,LivingEntity e,float amount){
+        CombatManager.interrupt(e);
+        e.timeUntilRegen=0;
+        if(!CombatManager.damageWithoutKnockback(e,source(s,p),amount))return false;
+        float yaw=(float)Math.toDegrees(Math.atan2(-(e.getX()-s.from.x),e.getZ()-s.from.z));
+        if(!StarPlatinumTimeStop.deferFeedback(p,e,amount,yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
+            var buf=PacketByteBufs.create();buf.writeVarInt(e.getId());buf.writeFloat(amount);buf.writeFloat(yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,buf);
+        }
+        p.onAttacking(e);
+        return true;
+    }
+    /** The slash lands: everyone on its ground is struck and deleted. */
+    private static void land(Strike s,ServerPlayerEntity p,long now){
+        for(var e:over(s,s.top-EraseRules.STRUCK_UNDER,s.top+EraseRules.STRUCK_OVER)){
+            if(!EraseRules.struck(e.getY(),s.top)||!foe(p,e)||deleted(e))continue;
+            if(!strike(s,p,e,EraseRules.DAMAGE))continue;
             // deleted: nothing harms them, and they can do nothing (their legs stopped wholly) until they are back
             GONE.put(e.getUuid(),now+EraseRules.VANISH);
             CombatManager.incapacitate(e,EraseRules.VANISH,EraseRules.VANISH,1);
-            float yaw=w.yaw;
-            // its user's own hit feedback (the damage number and the blood), as their other skills'
-            if(!StarPlatinumTimeStop.deferFeedback(p,e,EraseRules.DAMAGE,yaw)&&ServerPlayNetworking.canSend(p,KagenoManager.DAMAGE)){
-                var buf=PacketByteBufs.create();buf.writeVarInt(e.getId());buf.writeFloat(EraseRules.DAMAGE);buf.writeFloat(yaw);ServerPlayNetworking.send(p,KagenoManager.DAMAGE,buf);
-            }
-            p.onAttacking(e);
-            send(w,DELETED,e,EraseRules.DAMAGE,EraseRules.VANISH);
+            send(s,DELETED,e,EraseRules.DAMAGE,EraseRules.VANISH);
         }
     }
+    /** Who is on the cube now: whoever was a tick ago and is no more came off it (their fall is spared). */
+    private static void ride(Strike s,long now){
+        var c=s.cube(now);if(c==null)return;double top=c.top();
+        Set<UUID> on=new HashSet<>();
+        for(var e:over(s,top-EraseRules.ON_UNDER,top+EraseRules.ON_OVER))if(EraseRules.on(e.getY(),top))on.add(e.getUuid());
+        for(var id:s.riders)if(!on.contains(id))FALLING.put(id,new long[]{now,now+SPARED});
+        s.riders=on;
+    }
+    /** Everyone on its cube now falls from it (it burst, or it is gone): their fall is spared. */
+    private static void fell(Strike s,long now){
+        var c=s.cube(now);
+        if(c!=null){double top=c.top();for(var e:over(s,top-EraseRules.ON_UNDER,top+EraseRules.ON_OVER))if(EraseRules.on(e.getY(),top))s.riders.add(e.getUuid());}
+        for(var id:s.riders)FALLING.put(id,new long[]{now,now+SPARED});
+        s.riders.clear();
+    }
+    /** The cube bursts: whoever is on it is struck, and falls from it unharmed. */
+    private static void burst(Strike s,ServerPlayerEntity p,long now){
+        double top=s.top+EraseRules.LIFT;
+        for(var e:over(s,top-EraseRules.ON_UNDER,top+EraseRules.ON_OVER)){
+            if(!EraseRules.on(e.getY(),top))continue;
+            s.riders.add(e.getUuid());
+            if(!foe(p,e)||deleted(e))continue;
+            if(strike(s,p,e,EraseRules.BURST_DAMAGE))send(s,BLASTED,e,EraseRules.BURST_DAMAGE,0);
+        }
+        for(var id:s.riders)FALLING.put(id,new long[]{now,now+SPARED});
+        s.riders.clear();
+    }
     /**
-     * Tells every viewer near it (within VIEW of where it went; its user and {@code e}, wherever they are) of it: the
-     * kind, its id; as it goes, whose, the world, when it went and the server's time now, where from, the way and how far;
-     * someone deleted: whom, what it dealt and for how many ticks; cut short: when.
+     * Tells every viewer near it (within VIEW of where it lands; its user and {@code e}, wherever they are) of it: the
+     * kind, its id; thrown: whose, the world, when it was thrown and the server's time now, from where to where, when it
+     * strikes, its ground's corner and top; someone deleted or struck by the burst: whom, what it dealt and for how many
+     * ticks (deleted); cut short: when.
      */
-    private static void send(Wave w,int type,LivingEntity e,float dealt,int ticks){
-        long now=w.world.getTime();
-        for(var viewer:w.world.getPlayers()){
-            if(!viewer.getUuid().equals(w.owner)&&viewer!=e&&viewer.squaredDistanceTo(w.from)>VIEW*VIEW)continue;
+    private static void send(Strike s,int type,LivingEntity e,float dealt,int ticks){
+        long now=s.world.getTime();
+        for(var viewer:s.world.getPlayers()){
+            if(!viewer.getUuid().equals(s.owner)&&viewer!=e&&viewer.squaredDistanceTo(s.to)>VIEW*VIEW)continue;
             if(!ServerPlayNetworking.canSend(viewer,EVENT))continue;
             var b=PacketByteBufs.create();
-            b.writeByte(type);b.writeUuid(w.id);
-            if(type==WAVE){
-                b.writeUuid(w.owner);b.writeIdentifier(w.world.getRegistryKey().getValue());b.writeLong(w.went);b.writeLong(now);
-                b.writeDouble(w.from.x);b.writeDouble(w.from.y);b.writeDouble(w.from.z);b.writeFloat(w.yaw);b.writeFloat((float)w.range);
-            }else if(type==DELETED){
+            b.writeByte(type);b.writeUuid(s.id);
+            if(type==THROWN){
+                b.writeUuid(s.owner);b.writeIdentifier(s.world.getRegistryKey().getValue());b.writeLong(s.went);b.writeLong(now);
+                b.writeDouble(s.from.x);b.writeDouble(s.from.y);b.writeDouble(s.from.z);b.writeDouble(s.to.x);b.writeDouble(s.to.y);b.writeDouble(s.to.z);
+                b.writeLong(s.struck);b.writeInt(s.x0);b.writeInt(s.z0);
+            }else if(type==DELETED||type==BLASTED){
                 b.writeVarInt(e.getId());b.writeFloat(dealt);b.writeVarInt(ticks);
             }else b.writeLong(now);
             ServerPlayNetworking.send(viewer,EVENT,b);

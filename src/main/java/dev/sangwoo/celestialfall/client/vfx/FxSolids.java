@@ -22,6 +22,7 @@ public final class FxSolids {
     private final MatrixStack matrices;
     private final Vec3d camera;
     private int drawn;
+    private final net.minecraft.util.math.random.Random random=net.minecraft.util.math.random.Random.create(42);
     FxSolids(MinecraftClient mc,MatrixStack matrices,Vec3d camera){this.mc=mc;this.matrices=matrices;this.camera=camera;}
 
     /**
@@ -150,6 +151,31 @@ public final class FxSolids {
         Vec3d[] p={a,b,c,d};float[] u={ua,ub,uc,ud},v={va,vb,vcc,vd};
         for(int i=0;i<4;i++)vc.vertex(entry.getPositionMatrix(),(float)(p[i].x-camera.x),(float)(p[i].y-camera.y),(float)(p[i].z-camera.z)).color(r,g,bl,1f).texture(u[i],v[i])
             .overlay(OverlayTexture.DEFAULT_UV).light(light).normal(entry.getNormalMatrix(),(float)n.x,(float)n.y,(float)n.z).next();
+    }
+    /**
+     * (2.133.0, X Chara's delete slash's cube of ground) One face of the block {@code state}, the way {@code dir}, drawn as
+     * the block whose least corner is at ({@code x}, {@code y}, {@code z}) would show it (the model's quads that face
+     * that way: what the world draws of it there), in its colour at {@code tintAt} (grass is green), lit as the world at
+     * {@code lit}.
+     */
+    public void face(BlockState state,BlockPos tintAt,BlockPos lit,net.minecraft.util.math.Direction dir,double x,double y,double z){
+        if(state==null)return;
+        var model=mc.getBlockRenderManager().getModel(state);
+        random.setSeed(42);
+        var quads=model.getQuads(state,dir,random);
+        if(quads.isEmpty())return;
+        var vc=mc.getBufferBuilders().getEntityVertexConsumers().getBuffer(net.minecraft.client.render.TexturedRenderLayers.getEntityCutout());
+        int light=WorldRenderer.getLightmapCoordinates(mc.world,lit);
+        matrices.push();
+        matrices.translate(x-camera.x,y-camera.y,z-camera.z);
+        var entry=matrices.peek();
+        for(var q:quads){
+            float r=1,g=1,b=1;
+            if(q.hasColor()){int c=mc.getBlockColors().getColor(state,mc.world,tintAt,q.getColorIndex());if(c!=-1){r=(c>>16&255)/255f;g=(c>>8&255)/255f;b=(c&255)/255f;}}
+            vc.quad(entry,q,r,g,b,light,OverlayTexture.DEFAULT_UV);
+        }
+        matrices.pop();
+        drawn++;
     }
     private void draw(BlockState state,BlockPos at){
         var consumers=mc.getBufferBuilders().getEntityVertexConsumers();

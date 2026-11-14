@@ -309,8 +309,9 @@ public final class XCharaAttack {
      * H with the hack off, the delete slash (2.133.0, XCharaCombo.ERASE, EraseRules). Returns whether it began: with the
      * hack off, standing on the ground, nothing holding them (a hit of the knife's own holds too), and its cooldown over.
      * As the other skills, it ends the combo and adds no rest of its own. How high they leap is settled now:
-     * EraseRules.JUMP, or as far as nothing is over their head. Its one "blow" sends its slash from where they stand as it
-     * begins (XCharaErase); before it, struck or held, it is not sent.
+     * EraseRules.JUMP, or as far as nothing is over their head. Up in the air their client tells where the middle of its
+     * screen points ({@link #aim}); its one "blow" throws its slash from the knife to the ground there (XCharaErase);
+     * before it, struck or held, it is not thrown.
      */
     public static boolean erase(ServerPlayerEntity p){
         if(!able(p)||XCharaHack.on(p)||XCharaHack.held(p)||CombatManager.actionLocked(p)||!p.isOnGround())return false;
@@ -320,7 +321,7 @@ public final class XCharaAttack {
         boolean free=dev.sangwoo.celestialfall.NoCooldownState.enabled(p);
         if(now<s.eraseReady&&!free)return false;
         s.combo=ERASE;s.id=UUID.randomUUID();s.start=now;s.yaw=MathHelper.wrapDegrees(p.getYaw());s.queued=false;s.blows=0;
-        s.from=p.getPos();s.rise=headroom(p);
+        s.from=p.getPos();s.rise=headroom(p);s.aim=null;s.aimAt=0;
         s.eraseReady=free?0:EraseRules.ready(now);
         p.clearActiveItem();p.setSprinting(false);CombatManager.interrupt(p);
         send(p,s,HIT,-1,null);
@@ -401,6 +402,12 @@ public final class XCharaAttack {
         if(s.combo==KNIVES){
             if(age<0||age>KnivesRules.FIRE[KnivesRules.KNIVES-1]||!Double.isFinite(at.x)||!Double.isFinite(at.y)||!Double.isFinite(at.z))return;
             if(at.squaredDistanceTo(p.getEyePos())>(KnivesRules.RANGE+8)*(KnivesRules.RANGE+8))return;
+            s.aim=at;s.aimAt=p.getWorld().getTime();return;
+        }
+        // (2.133.0) and their delete slash, up in the air until it is thrown
+        if(s.combo==ERASE){
+            if(age<EraseRules.AIM_FROM-4||age>EraseRules.SLASH||s.blows>0||!Double.isFinite(at.x)||!Double.isFinite(at.y)||!Double.isFinite(at.z))return;
+            if(at.squaredDistanceTo(s.from)>(EraseRules.REACH+40)*(EraseRules.REACH+40))return;
             s.aim=at;s.aimAt=p.getWorld().getTime();return;
         }
         if(s.combo!=SLAM||s.land!=null)return;
@@ -514,8 +521,8 @@ public final class XCharaAttack {
         // (2.130.0) the knives shot: this "blow" is a knife let go; whom it strikes is its own to find (XCharaShot)
         // (2.131.0: and the small knives thrown, each leaving the hand)
         if(combo==SHOT||combo==KNIVES){fire(p,s,i,now);send(p,s,LANDED,i,null);return;}
-        // (2.133.0) the delete slash: its "blow" sends its slash from where they stood as it began (XCharaErase)
-        if(combo==ERASE){XCharaErase.start(p,s.id,s.from,s.yaw);send(p,s,LANDED,i,null);return;}
+        // (2.133.0) the delete slash: its "blow" throws its slash from the knife up in the air to the ground the middle of their screen points at (XCharaErase)
+        if(combo==ERASE){XCharaErase.start(p,s.id,s.from,s.rise,s.yaw,s.aim!=null&&now-s.aimAt<=8?s.aim:null);send(p,s,LANDED,i,null);return;}
         // (2.128.0) the slam's blow is its landing: its user is where it came down as it strikes round them
         if(combo==SLAM){if(s.land==null)dive(p,s,now);touchDown(p,s);}
         var world=p.getServerWorld();var source=world.getDamageSources().playerAttack(p);float amount=damage(combo,i);

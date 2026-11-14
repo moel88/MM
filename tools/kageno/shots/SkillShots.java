@@ -959,6 +959,7 @@ public final class SkillShots implements ClientModInitializer {
     }
     private void reset(ServerPlayerEntity p){
         KagenoManager.clear(p.getServer());AtomicManager.clear(p.getServer());
+        double[] mapAt=null;
         if(WORLD!=null){
             var w=p.getServerWorld();
             // each entry starts with no meteors: the last one's rocks go without a sound or a crumble
@@ -972,7 +973,10 @@ public final class SkillShots implements ClientModInitializer {
             else at=new double[]{sp.getX()+.5,sp.getY(),sp.getZ()+.5,180,0};
             p.networkHandler.requestTeleport(at[0],at[1],at[2],(float)at[3],(float)at[4]);p.setYaw((float)at[3]);p.setHeadYaw((float)at[3]);p.setBodyYaw((float)at[3]);p.setPitch((float)at[4]);
             p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
-            return;
+            // (2.133.0) an entry with "stand=" on a map is a skill's: its stand, cooldowns and dummy as on the flat world, where
+            // it stands (X Chara's delete slash lifts a cube of the ground: the map's is grass, dirt and stone all the way down)
+            if(!opts.containsKey("stand"))return;
+            mapAt=at;
         }
         NoCooldownState.get(p.getServer()).set(p.getUuid(),!opts.containsKey("cool"));
         p.getItemCooldownManager().remove(CelestialFall.ATOMIC_SWORD);
@@ -989,9 +993,12 @@ public final class SkillShots implements ClientModInitializer {
         ((StandHolder)p).botand$setHacking(false);
         // "time=T" (2.52.0): the time of day for this entry on the flat world too (the stand's aura at night)
         if(opts.containsKey("time"))p.getServerWorld().setTimeOfDay((long)opt("time",6000));
-        int y=p.getServerWorld().getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,0,0);
-        float yaw=facing(opt("face",0));
-        p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
+        int y;float yaw;double baseX=.5,baseZ=.5;
+        if(mapAt==null){
+            y=p.getServerWorld().getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING,0,0);
+            yaw=facing(opt("face",0));
+            p.networkHandler.requestTeleport(.5,y,.5,yaw,0);p.setYaw(yaw);p.setHeadYaw(yaw);p.setBodyYaw(yaw);p.setHealth(p.getMaxHealth());p.setVelocity(0,0,0);
+        }else{y=(int)Math.floor(mapAt[1]);yaw=(float)mapAt[3];baseX=mapAt[0];baseZ=mapAt[2];}
         // "php=N" (2.119.0): the player starts the shot at N health (for X Chara's E, which heals them)
         if(opt("php",0)>0)p.setHealth((float)opt("php",0));
         var d=p.getServerWorld().getEntityById(dummyId);
@@ -1000,12 +1007,12 @@ public final class SkillShots implements ClientModInitializer {
         var kind=opt("dguard",0)>0?dev.sangwoo.celestialfall.training.DummyKind.GUARD:opt("dattack",0)>0?dev.sangwoo.celestialfall.training.DummyKind.ATTACK:dev.sangwoo.celestialfall.training.DummyKind.IDLE;
         if(d instanceof dev.sangwoo.celestialfall.training.TrainingDummyEntity t&&t.kind()!=kind){d.discard();d=null;}
         if(!(d instanceof net.minecraft.entity.LivingEntity)||!d.isAlive()){
-            var dummy=TrainingDummies.TYPES.get(kind).create(p.getServerWorld());dummy.refreshPositionAndAngles(.5,y,3.5,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
+            var dummy=TrainingDummies.TYPES.get(kind).create(p.getServerWorld());dummy.refreshPositionAndAngles(baseX,y,baseZ+3,180,0);p.getServerWorld().spawnEntity(dummy);dummyId=dummy.getId();d=dummy;
         }
         actors(p.getServerWorld(),y);
         if(d instanceof net.minecraft.entity.LivingEntity l){
             var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
-            boolean show=opt("dummy","STAND".equals(current)||"SUMMON".equals(current)?0:1)>0;var at=new net.minecraft.util.math.Vec3d(.5,y,.5).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
+            boolean show=opt("dummy","STAND".equals(current)||"SUMMON".equals(current)?0:1)>0;var at=new net.minecraft.util.math.Vec3d(baseX,y,baseZ).add(f.multiply(opt("dfw",3))).add(right.multiply(opt("drt",0)));
             // Hidden dummies wait far to the side (below the floor they would fall out of the world).
             l.setHealth(l.getMaxHealth());l.refreshPositionAndAngles(show?at.x:at.x+70,y,at.z,yaw+180,0);l.setVelocity(0,0,0);
         }
@@ -1058,13 +1065,18 @@ public final class SkillShots implements ClientModInitializer {
      * the shot's camera yaw), straight between the keys and held after the last; as a player would, so the game turns
      * the caster to it (T held's aim).
      */
-    private float turn(){
-        if(!opts.containsKey("turn")||phase<4)return 0;
+    private float turn(){return keyed("turn",0);}
+    /** (2.133.0) "pitches=AGE:DEG/...": the camera's pitch at those shot ticks, eased between them (the delete slash: down at its target as they leap, up at its cube as it rises). */
+    private float pitch(){return opts.containsKey("pitches")&&phase>=4?keyed("pitches",opt("pitch",camPitch)):opt("pitch",camPitch);}
+    /** A value keyed by shot ticks ("AGE:VAL/AGE:VAL/..."), held before the first and after the last, in a line between (pitches: eased). */
+    private float keyed(String name,float none){
+        if(!opts.containsKey(name)||phase<4)return none;
+        boolean ease=name.equals("pitches");
         float age=clock(),prev=0,from=0;boolean first=true;
-        for(String key:opts.get("turn").split("/")){
+        for(String key:opts.get(name).split("/")){
             String[] v=key.split(":");float at=Float.parseFloat(v[0].trim()),deg=Float.parseFloat(v[1].trim());
             if(first&&age<=at)return deg;
-            if(!first&&age<=at)return prev+(deg-prev)*Math.max(0,Math.min(1,(age-from)/Math.max(1e-3f,at-from)));
+            if(!first&&age<=at){float u=Math.max(0,Math.min(1,(age-from)/Math.max(1e-3f,at-from)));if(ease)u=u*u*(3-2*u);return prev+(deg-prev)*u;}
             first=false;prev=deg;from=at;
         }
         return prev;
@@ -1075,7 +1087,7 @@ public final class SkillShots implements ClientModInitializer {
     private boolean camFree;
     /** (2.107.0) "SWEEP@n": the shot tick the mouse began to sweep (-1 for none) and how far it has gone (pixels). */
     private float sweepAt=-1;private double sweepDone,sweepDoneY;
-    private void camera(){if(camFree&&phase==4)return;float d=opt("dist",camDist);if(!camKept||phase!=4){BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=opt("pitch",camPitch);}BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;
+    private void camera(){if(camFree&&phase==4)return;float d=opt("dist",camDist);if(!camKept||phase!=4){BotandCamera.STATE.yaw=camLook()+turn();BotandCamera.STATE.pitch=pitch();}BotandCamera.STATE.targetDistance=d;BotandCamera.STATE.distance=d;BotandCamera.STATE.collisionDistance=d;
         // "aimrock=1": with a rock within reach the camera looks at it from over the player's shoulder (a click aims where the camera looks)
         if(opts.containsKey("aimrock")&&phase==4&&mc.player!=null)for(var e:mc.world.getEntities())if(e instanceof dev.sangwoo.celestialfall.meteor.MeteorEntity m&&m.squaredDistanceTo(mc.player)<49){
             var v=m.getPos().add(0,.55,0).subtract(mc.player.getEyePos());
@@ -1384,23 +1396,33 @@ public final class SkillShots implements ClientModInitializer {
                             StringBuilder ks=new StringBuilder();for(int k=0;k<3;k++)ks.append(" [").append(dev.sangwoo.celestialfall.client.xchara.CorruptionKnives.describe(mc.player,k,0)).append(']');
                             log.append(String.format(Locale.ROOT,"  knives +%d: client (shown,flying,tail xyz,struck,far,took)%s, sounds %s%n",age-a0,ks,
                                 String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("kni")).toList())));}
+                        // (2.133.0) X Chara's delete slash (H with the hack off): "eraseaim=dummy" (the ground at the dummy's feet) or
+                        // "eraseaim=FW[_RT[_UP]]" (that point from where the player stands) aims it there whatever the filming camera
+                        // shows (EraseSlash.aimAt; without it, the middle of the player's own screen)
+                        if(what.equals("KEY_H")&&age==at&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)){
+                            if(opts.containsKey("eraseaim")){String o=opts.get("eraseaim");var f=net.minecraft.util.math.Vec3d.fromPolar(0,mc.player.getYaw());var r=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+                                if(o.equals("dummy")){var dm=mc.world.getEntityById(dummyId);dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=dm==null?null:dm.getPos();}
+                                else{String[] v=o.split("[_x]");dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=mc.player.getPos().add(f.multiply(Double.parseDouble(v[0]))).add(r.multiply(v.length>1?Double.parseDouble(v[1]):0)).add(0,v.length>2?Double.parseDouble(v[2]):0,0);}
+                                log.append("  delete slash aimed at ").append(dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt).append('\n');}
+                            else dev.sangwoo.celestialfall.client.xchara.EraseSlash.aimAt=null;}
                         // (2.133.0) X Chara's delete slash (H with the hack off): by the server, the cast in flight (how far in,
-                        // where they stood, how high they leap, whether its slash has gone) and its slash (how far in, how
-                        // far it goes, how many it came over), whether the dummy is deleted now, the dummy's health and where
-                        // the player really is; and what this client draws of it (the cast: combo, age, stopped, how high the
-                        // body is drawn; the slash: age, range, cut, deleted, columns, pixels drawn; the dummy's silhouette)
-                        if(what.equals("KEY_H")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)&&age>at&&age<=at+90&&(age-at<=44||(age-at)%5==0)){final int a0=at;
+                        // where they stood, how high they leap, whether it is thrown) and its slash (ticks since it struck,
+                        // where it lands, its ground's corner, its cube's top now, who is on it), whether the dummy is deleted
+                        // now, the dummy's health and where it is, and where the player really is; and what this client draws
+                        // of it (the cast: combo, age, stopped, how high the body is drawn; the slash: age, flight, ticks since
+                        // it struck, its cube's top, cut, deleted, blasted, faces; the dummy's silhouette and where it is here)
+                        if(what.equals("KEY_H")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&!dev.sangwoo.celestialfall.client.xchara.HackMode.on(mc.player)&&age>at&&age<=at+560&&(age-at<=44||(age-at)%5==0)){final int a0=at;
                             server(p->{if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;Object[] d=dev.sangwoo.celestialfall.xchara.XCharaAttack.describeErase(p),r=dev.sangwoo.celestialfall.xchara.XCharaErase.describe(p);var dm=p.getServerWorld().getEntityById(dummyId);
                                 long now=p.getWorld().getTime();float hp=dm instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;
                                 boolean gone=dm instanceof net.minecraft.entity.LivingEntity e&&dev.sangwoo.celestialfall.xchara.XCharaErase.deleted(e);
                                 log.append(String.format(Locale.ROOT,"  erase +%d: server cast %s slash %s, dummy deleted %s hp %.1f at %s, player at %.2f %.2f %.2f airborne %s, ready in %d%n",age-a0,
-                                    d==null?"none":String.format(Locale.ROOT,"age %d from %s rise %.2f slashed %s",now-(Long)d[0],d[1],(Double)d[2],d[3]),
-                                    r==null?"none":String.format(Locale.ROOT,"age %d range %.1f over %d",(Long)r[4],(Double)r[3],(Integer)r[5]),
+                                    d==null?"none":String.format(Locale.ROOT,"age %d from %s rise %.2f thrown %s",now-(Long)d[0],d[1],(Double)d[2],d[3]),
+                                    r==null?"none":String.format(Locale.ROOT,"struck %d to %s corner %d %d cube %.2f on %d",(Long)r[4],r[2],(Integer)r[5],(Integer)r[6],(Double)r[7],(Integer)r[8]),
                                     gone,hp,dm==null?"-":String.format(Locale.ROOT,"%.2f %.2f %.2f",dm.getX(),dm.getY(),dm.getZ()),
                                     p.getX(),p.getY(),p.getZ(),dev.sangwoo.celestialfall.xchara.XCharaAttack.airborne(p),Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaAttack.eraseReady(p)-now)));});
                             var cd=mc.world.getEntityById(dummyId);
-                            log.append(String.format(Locale.ROOT,"  erase +%d: client (cast combo,age,stopped,height;slash age,range,cut,deleted,columns,pixels) %s, dummy (since,hidden,silhouette) %s, sounds %s%n",age-a0,
-                                dev.sangwoo.celestialfall.client.xchara.EraseSlash.describe(mc.player,0),cd==null?"-":dev.sangwoo.celestialfall.client.xchara.EraseClient.seen(cd,0),
+                            log.append(String.format(Locale.ROOT,"  erase +%d: client (cast combo,age,stopped,height;slash age,fly,struck,cube,cut,deleted,blasted,faces) %s, dummy (since,hidden,silhouette) %s at %s, sounds %s%n",age-a0,
+                                dev.sangwoo.celestialfall.client.xchara.EraseSlash.describe(mc.player,0),cd==null?"-":dev.sangwoo.celestialfall.client.xchara.EraseClient.seen(cd,0),cd==null?"-":String.format(Locale.ROOT,"%.2f %.2f %.2f",cd.getX(),cd.getY(),cd.getZ()),
                                 String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("erase")||x.contains("hit 16")).toList())));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it

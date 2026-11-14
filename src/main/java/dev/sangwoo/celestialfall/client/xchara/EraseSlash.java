@@ -20,8 +20,8 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.ERASE;
 
 /**
  * X Chara's H with their hack off, the delete slash, its user drawn (2.133.0, user request: "5칸 정도 뛰어올라서 거대한
- * 참격을 바라보는 방향으로 날리고 참격을 맞은 블록은 픽셀로 산산이 부서지고 거기에 있던 플레이어는 0.5초 동안 글리치로
- * 사라졌다 나타나게"; the server's XCharaAttack.erase, EraseRules). A skill of the knife's pipeline (KnifeClient's swings,
+ * 참격을 바라보는 방향으로 날리고", "일단 공중에 떠올라서 참격을 세로로 날리면 바닥에 맞은 부분만 삭제되게"; the server's
+ * XCharaAttack.erase, EraseRules). A skill of the knife's pipeline (KnifeClient's swings,
  * XCharaCombo.ERASE; KnifeCombo hands it on here); the slash itself, once it has gone, is EraseClient's and EraseFx's (a
  * cast of its own).
  * <ul>
@@ -32,12 +32,13 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.ERASE;
  * go; at EraseRules.SLASH the knife chopped over the head and down at the ground ahead, the body folding after it; then
  * down, the legs stretching under them, landed deep, and up. Every client draws the body up there over where it stands
  * ({@link #shift}: EraseRules.risen of how high the server says it leaps); their own camera goes with it ({@link #offset}).</li>
- * <li>The chop: a purple cut along the knife's path ({@link #cut}, the hack's cut); as it comes down, a beam from the
- * knife's point to the ground ahead where the slash rises out of it, and a burst there ({@link #draw}).</li>
+ * <li>Up in the air their client tells the server where the middle of its screen points ({@link #tellAim}) and marks
+ * for them alone the ground it would land on ({@link #marker}: the ten by ten blocks, EraseFx.square).</li>
+ * <li>The chop: a purple cut along the knife's path ({@link #cut}, the hack's cut); as it comes down, the slash leaves the
+ * knife with a flash ({@link #draw}); its flight, where it lands and its cube are EraseClient's and EraseFx's.</li>
  * </ul>
  * Its sounds are ones the game has (KnifeClient's cues for it): the slam's knife lighting and its leap, the knife's own
- * swing, the slam's landing boom and the double's wall breaking as the slash goes. Everything of how it looks is mine;
- * everything is a function of the skill's own clock.
+ * swing. Everything of how it looks is mine; everything is a function of the skill's own clock.
  */
 public final class EraseSlash {
     private EraseSlash(){}
@@ -216,17 +217,52 @@ public final class EraseSlash {
         KagenoFire.glitchRibbon(e.inner(),e.outer(),e.along(),e.n(),0,14,eaten,cool,shown);
     }
 
+    // ───────────────────────────── where it lands ─────────────────────────────
+
+    /** For the capture tools: a point the local player's slash is aimed at whatever their screen shows (a filming camera is not theirs); null, the screen's middle. */
+    public static Vec3d aimAt;
+    /** The point the middle of this client's screen aims slash {@code c} at now (EraseGround.aimed, from its camera). */
+    static Vec3d aimPoint(net.minecraft.client.MinecraftClient mc,StandClient.Cast c){
+        if(aimAt!=null)return aimAt;
+        var cam=mc.gameRenderer.getCamera();
+        return dev.sangwoo.celestialfall.xchara.EraseGround.aimed(mc.world,mc.player,c.origin(),cam.getPos(),Vec3d.fromPolar(cam.getPitch(),cam.getYaw()));
+    }
+    /** Every tick: up in the air of the local player's own delete slash, until it is thrown, where the middle of the screen points is told to the server (XCharaAttack.aim). */
+    static void tellAim(net.minecraft.client.MinecraftClient mc){
+        var c=KnifeClient.eraseOf(mc.player.getUuid());if(c==null||!Float.isNaN(stopped(c))||mc.world==null)return;
+        float age=c.age(0);if(age<EraseRules.AIM_FROM-2||age>EraseRules.SLASH+1||!net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.sangwoo.celestialfall.xchara.XCharaUltimate.INPUT))return;
+        Vec3d at=aimPoint(mc,c);
+        var b=net.fabricmc.fabric.api.networking.v1.PacketByteBufs.create();b.writeByte(dev.sangwoo.celestialfall.xchara.XCharaRules.AIM);b.writeDouble(at.x);b.writeDouble(at.y);b.writeDouble(at.z);
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(dev.sangwoo.celestialfall.xchara.XCharaUltimate.INPUT,b);
+    }
+    /** From when to when their own screen marks the ground it would land on (seconds): up in the air until it is thrown. */
+    static final float MARK0=LEAVE,MARK1=SLASH;
+    /**
+     * The ground the local player's own slash would land on now, for its marker ({x of its corner, z of its corner, its
+     * top}): found from what the middle of the screen aims at as the server will find it. Null if this is not theirs, or
+     * not up in the air before it is thrown.
+     */
+    static double[] marker(Fx c){
+        if(c.mc.player==null||!c.cast.caster().equals(c.mc.player.getUuid())||c.sec<MARK0-.05f||c.sec>=MARK1+.06f||c.sec>=KnifeClient.until(c.cast.id()))return null;
+        double rise=KnifeClient.eraseRise(c.cast.id());if(!(rise>=0))rise=EraseRules.JUMP;
+        Vec3d to=dev.sangwoo.celestialfall.xchara.EraseGround.landing(c.mc.world,c.cast.origin(),rise,aimPoint(c.mc,c.cast));
+        return new double[]{EraseRules.corner(to.x),EraseRules.corner(to.z),to.y};
+    }
+    /** How strongly the marker shows {@code sec} seconds in: coming in as they leave the ground, gone as it is thrown. */
+    static float markShown(float sec){return Ease.smooth(sec,MARK0-.05f,MARK0+.08f)*(1-Ease.smooth(sec,MARK1,MARK1+.06f));}
+
     // ───────────────────────────── what the effects' layer adds ─────────────────────────────
 
     static final int NEON=0xc45cff,LILAC=GlitchFx.LILAC,WHITE=GlitchFx.WHITE,PURPLE=GlitchFx.PURPLE,INK=GlitchFx.INK,GLOW=GlitchFx.GLOW,DEEP=GlitchFx.DEEP;
-    /** Where cast {@code c}'s slash rises out of the ground ahead of where they stood (its first front, a little on). */
-    static Vec3d rises(StandClient.Cast c){return c.origin().add(Vec3d.fromPolar(0,c.yaw()).multiply(EraseRules.NEAR+.6));}
-    /** The beam of the slash sent: from how long before the blow until how long after (seconds). */
-    static final float BEAM0=.02f,BEAM1=.14f;
-    /** Everything of the user's part but the cut: the gathering, the leap's ring, the beam and the burst where the slash rises, the landing's ring (bodies laid over what is behind them, or their light). */
+    /** Where the slash leaves the knife (the server's: before their chest up in the air). */
+    static Vec3d release(StandClient.Cast c){
+        double rise=KnifeClient.eraseRise(c.id());if(!(rise>=0))rise=EraseRules.JUMP;
+        return dev.sangwoo.celestialfall.xchara.XCharaErase.knife(c.origin(),rise,c.yaw());
+    }
+    /** Everything of the user's part but the cut: the gathering, the leap's ring, their own marker, the flash as the slash leaves the knife, the landing's ring (bodies laid over what is behind them, or their light). */
     static void draw(Fx c,EffectMesh m,boolean light){
         float t=c.sec,until=KnifeClient.until(c.cast.id());int seed=seed(c.cast);
-        Vec3d from=c.cast.origin(),f=Vec3d.fromPolar(0,c.cast.yaw());
+        Vec3d from=c.cast.origin();
         // gathering to spring: light drawn onto the knife
         if(light&&t>=LIT&&t<LEAVE+.06f&&t<until){
             var hb=blade(body(c),c.cast.yaw(),t);Vec3d mid=hb[0].add(hb[1].multiply(1.5));
@@ -246,19 +282,20 @@ public final class EraseSlash {
                 }
             }else FxLib.ring(m,g,3.4*Ease.out(l,0,.4f),.3,PURPLE,.8f*a);
         }
-        // the slash sent: a beam from the knife's point down to where it rises out of the ground ahead, a burst there
+        // their own marker: the ground it would land on, as they aim (theirs alone)
+        double[] mk=marker(c);
+        if(mk!=null){float a=markShown(t);if(a>0)EraseFx.square(m,(int)mk[0],(int)mk[1],mk[2],t,a,light,c.camera,true);}
+        // the slash leaves the knife: a flash at it
         if(KnifeClient.cameTo(c.cast,0)){
-            float s=t-SLASH;Vec3d at=rises(c.cast);
-            if(s>=-BEAM0&&s<BEAM1){
-                var hb=blade(c.pos.add(0,height(c.cast,EraseRules.SLASH),0),c.cast.yaw(),Math.min(t,SLASH));
-                Vec3d tip=hb[0].add(hb[1].multiply(2.9));
-                float a=Ease.smooth(s,-BEAM0,0)*(1-Ease.smooth(s,.03f,BEAM1));
+            float s=t-SLASH;Vec3d at=release(c.cast);
+            if(s>=0&&s<.3f){
+                float near=GlitchFx.near(at,c.camera);
                 if(light){
-                    m.softTaper(tip,at.add(0,.2,0),.5,1.4,NEON,.5f*a);
-                    m.softTaper(tip,at.add(0,.2,0),.12,.4,WHITE,.85f*a);
-                }else m.needle(tip,at.add(0,.2,0),.22,.3,PURPLE,.9f*a);
+                    if(s<.12f)m.star(at,1.1,WHITE,.8f*Ease.smooth(s,0,.015f)*(1-s/.12f)*near);
+                    m.softDisc(at,2.0,NEON,.3f*(1-Ease.smooth(s,.04f,.3f))*near);
+                }
+                GlitchFx.pixels(m,at,Vec3d.fromPolar(0,c.cast.yaw()),.8,6,.07,14,seed+3,s,light,c.camera);
             }
-            if(s>=0&&s<.7f)burst(m,at,f,seed,s,light,c.camera);
         }
         // the landing: a ring at their feet, a few pixels
         float d=t-LAND;
@@ -269,34 +306,6 @@ public final class EraseSlash {
             GlitchFx.pixels(m,from.add(0,.2,0),new Vec3d(0,1,0),.9,5,.07,14,seed+7,d,light,c.camera);
         }
     }
-    /** The burst where the slash rises out of the ground, {@code s} seconds after the blow: a white star and flash, purple spikes up and out across the way, a ring along the ground, pixels thrown up. */
-    static void burst(EffectMesh m,Vec3d at,Vec3d f,int seed,float s,boolean light,Vec3d camera){
-        Vec3d right=new Vec3d(-f.z,0,f.x),up=new Vec3d(0,1,0);
-        float near=GlitchFx.near(at.add(0,1,0),camera);
-        if(light&&near>0){
-            if(s<.14f)m.softDisc(at.add(0,.8,0),2.4,WHITE,.7f*Ease.smooth(s,0,.02f)*(1-s/.14f)*near);
-            if(s<.22f)m.star(at.add(0,1,0),3.2,WHITE,.9f*Ease.smooth(s,0,.02f)*(1-s/.22f)*near);
-            m.softDisc(at.add(0,1.2,0),3.0,NEON,.14f*Ease.smooth(s,0,.03f)*(1-Ease.smooth(s,.12f,.6f))*near);
-        }
-        // rings along the ground: one fast and wide, one narrow and slow
-        for(int k=0;k<2;k++){
-            float u=s-.04f*k;if(u<=0||u>=.55f)continue;
-            double r=(k==0?7:4.5)*Ease.out(u,0,.55f);float a=1-u/.55f;
-            if(light)FxLib.ring(m,at.add(0,.08,0),r,.55,k==0?NEON:WHITE,.3f*a);
-            else FxLib.ring(m,at.add(0,.08,0),r,.4,k==0?PURPLE:LILAC,.8f*a);
-        }
-        // spikes up and out across the way (in the plane square to it), white, purple and dark by turns
-        if(s<.5f&&near>0)for(int j=0;j<16;j++){
-            double an=Math.toRadians(10+160*(j+.5*h(j,seed,71))/16);
-            Vec3d dir=right.multiply(Math.cos(an)).add(up.multiply(Math.sin(an))).add(f.multiply(.25*(h(j,seed,72)-.3))).normalize();
-            float life=.5f*(.6f+.4f*(float)h(j,seed,73));if(s>=life)continue;
-            double len=(2.2+3.6*h(j,seed,74))*Ease.out(s,0,.07f);float fade=Ease.smooth(s,0,.02f)*(1-Ease.smooth(s,life*.35f,life))*near;
-            Vec3d a0=at.add(dir.multiply(.3)),a1=at.add(dir.multiply(.3+len));int kind=j%3;
-            if(light){if(kind==0)m.needle(a0,a1,.16,.22,WHITE,.9f*fade);else if(kind==1)m.needle(a0,a1,.3,.22,NEON,.2f*fade);}
-            else if(kind!=0){m.needle(a0,a1,.24,.22,INK,.85f*fade);m.needle(a0,a1,.16,.22,kind==1?PURPLE:DEEP,.95f*fade);}
-        }
-        GlitchFx.pixels(m,at.add(0,.4,0),up,.8,11,.08,36,seed+3,s,light,camera);
-    }
     /** Its light on the world; and little afterglow through the chop (the knife would leave copies of itself down its path). */
     static void frame(Fx c,FxFrame fr){
         float t=c.sec,until=KnifeClient.until(c.cast.id());
@@ -306,16 +315,16 @@ public final class EraseSlash {
             fr.light(hb[0].add(hb[1].multiply(1.4)),0x8a2be2,5,.4f);
         }
         if(KnifeClient.cameTo(c.cast,0)){
-            float s=t-SLASH;Vec3d at=rises(c.cast).add(0,1,0);
-            if(s>=0&&s<.7f)fr.light(at,0xb04cff,24,2.6f*(1-s/.7f));
+            float s=t-SLASH;
+            if(s>=0&&s<.3f)fr.light(release(c.cast),0xb04cff,10,1.4f*(1-s/.3f));
         }
     }
-    /** How hard it shakes the camera: a knock as they leave the ground, hard as the slash goes, a little as they land. */
-    static final float SHAKE_LEAP=.3f,SHAKE_SLASH=1.4f,SHAKE_LAND=.45f;
+    /** How hard it shakes the camera: a knock as they leave the ground, a little as the slash leaves the knife and as they land (where it lands shakes from there: EraseZone). */
+    static final float SHAKE_LEAP=.3f,SHAKE_SLASH=.5f,SHAKE_LAND=.45f;
     static float shake(StandClient.Cast cast,float sec){
         float until=KnifeClient.until(cast.id()),v=0;
         if(LEAVE<until)v+=SHAKE_LEAP*KnifeCombo.bump(sec,LEAVE,.08f);
-        if(KnifeClient.cameTo(cast,0))v+=SHAKE_SLASH*KnifeCombo.bump(sec,SLASH,.16f);
+        if(KnifeClient.cameTo(cast,0))v+=SHAKE_SLASH*KnifeCombo.bump(sec,SLASH,.12f);
         if(LAND<until)v+=SHAKE_LAND*KnifeCombo.bump(sec,LAND,.1f);
         return v;
     }
@@ -325,14 +334,12 @@ public final class EraseSlash {
     /**
      * Its sounds, ones the game has (KnifeClient plays them at their moments): the slam's knife lighting as it starts (its
      * burst as the knife is lit), the slam's leap as they leave the ground, the knife's own swing two ticks before the
-     * chop (its "칙" on it), the slam's landing boom and the double's wall breaking (part of it) a tick before the slash
-     * goes (their onsets on it).
+     * chop (its "칙" on it). Where the slash lands and its cube are EraseClient's.
      */
-    static final String LIT_SOUND="xchara_slam_lit",LEAP_SOUND="xchara_slam_leap",SWING_SOUND="xchara_slash",BOOM_SOUND="xchara_slam_land",BREAK_SOUND="xchara_clone_wall";
-    static final float BREAK_PART=.7f,SWING_PART=1f;
+    static final String LIT_SOUND="xchara_slam_lit",LEAP_SOUND="xchara_slam_leap",SWING_SOUND="xchara_slash";
+    static final float SWING_PART=1f;
     /** Its cues: {sound, the tick it starts on, its part}. */
-    static final Object[][] CUES={{LIT_SOUND,0,1f},{LEAP_SOUND,EraseRules.LEAVE-1,1f},{SWING_SOUND,EraseRules.SLASH-2,SWING_PART},
-        {BOOM_SOUND,EraseRules.SLASH-1,1f},{BREAK_SOUND,EraseRules.SLASH-1,BREAK_PART}};
+    static final Object[][] CUES={{LIT_SOUND,0,1f},{LEAP_SOUND,EraseRules.LEAVE-1,1f},{SWING_SOUND,EraseRules.SLASH-2,SWING_PART}};
 
     /** For the capture tools: this player's latest delete slash as "combo,age,stopped,height", and of its slash (EraseClient), or "-". */
     public static String describe(net.minecraft.entity.player.PlayerEntity player,float delta){

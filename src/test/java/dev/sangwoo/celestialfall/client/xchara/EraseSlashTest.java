@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * X Chara's H with their hack off, the delete slash, its user as drawn (2.133.0, the user's: "5칸 정도 뛰어올라서 거대한
- * 참격을 바라보는 방향으로 날리고"): from the stance and back to it; sunk, sprung, wound at the top with the knife behind the
- * head, chopped down at the ground ahead as the slash goes, landed deep; no frame of it jumps and the knife's point keeps
+ * 참격을 바라보는 방향으로 날리고", "일단 공중에 떠올라서 참격을 세로로 날리면"): from the stance and back to it; sunk, sprung,
+ * wound at the top with the knife behind the head, chopped down as the slash is thrown, landed deep; no frame of it jumps and the knife's point keeps
  * off the ground; its knife lit through it; its body drawn up over where they stand as high as the server says, falling
  * back if it stops short in the air; its sounds at their moments.
  */
@@ -118,6 +118,7 @@ class EraseSlashTest {
             assertTrue((Float)cue[2]>0&&(Float)cue[2]<=1);
         }
         assertEquals(EraseRules.LEAVE-1,(int)(Integer)EraseSlash.CUES[1][1],"the leap's a tick before they leave");
-        assertEquals(EraseRules.SLASH-1,(int)(Integer)EraseSlash.CUES[3][1],"the boom's onset as the slash goes");
+        assertEquals(EraseRules.SLASH-2,(int)(Integer)EraseSlash.CUES[2][1],"the swing's \"칙\" on the chop");
+        assertEquals(3,EraseSlash.CUES.length,"where it lands is the slash's own (EraseClient)");
     }
 }

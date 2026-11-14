@@ -105,8 +105,9 @@ public final class XCharaCombo {
     public static final int KNIVES=15;
     /**
      * H with the hack off, the delete slash (2.133.0; EraseRules for all of it): the seventh skill of the knife's
-     * pipeline, in the rain of knives' place (2.132.0 to 2.132.5: gone). Its one "blow", at EraseRules.SLASH, sends its
-     * giant slash along the ground (XCharaErase: whom it comes over it strikes and deletes), and strikes no one itself.
+     * pipeline, in the rain of knives' place (2.132.0 to 2.132.5: gone). Its one "blow", at EraseRules.SLASH, throws its
+     * upright slash from the knife up in the air to the ground they aim at (XCharaErase: whom it lands on it strikes and
+     * deletes; the cube of ground it lifts bursts on whoever stays on it), and strikes no one itself.
      */
     public static final int ERASE=16;
     /** The last of the hits and skills. */
@@ -221,8 +222,8 @@ public final class XCharaCombo {
     private static final double[] SLAM_REACH={-SlamRules.BLAST,SlamRules.BLAST,SlamRules.BLAST};
     /** (2.130.0) The knives shot, as a boss reads them coming: a narrow way ahead as far as they fly. */
     private static final double[] SHOT_REACH={0,ShotRules.RANGE,1.0},KNIVES_REACH={0,KnivesRules.RANGE,1.0};
-    /** (2.133.0) The delete slash, as a boss reads it coming: its whole way along the ground (its slash is XCharaErase's: XCharaAttack's blow strikes no one). */
-    private static final double[] ERASE_REACH={0,EraseRules.RANGE,EraseRules.HALF};
+    /** (2.133.0) The delete slash: as far out as it lands (its slash is XCharaErase's: XCharaAttack's blow strikes no one, and bosses read XCharaErase's). */
+    private static final double[] ERASE_REACH={0,EraseRules.REACH,EraseRules.SIDE*.5};
     private static double[] reaches(int combo){return combo==ERASE?ERASE_REACH:combo==KNIVES?KNIVES_REACH:combo==SHOT?SHOT_REACH:cutter(combo)?CutterRules.REACH:combo==SLAM?SLAM_REACH:combo==CLEAVE?CLEAVE_REACH:combo==JAB?JAB_REACH:REACH[place(combo)];}
     /**
      * Whether a point (ahead along the hit, to its right and up from its user's feet, blocks) is in the way of hit

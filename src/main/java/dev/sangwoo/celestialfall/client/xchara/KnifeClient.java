@@ -230,6 +230,8 @@ public final class KnifeClient {
         if(mc.player!=null)OverwriteSlam.tellAim(mc);
         // (2.130.0) and while their own knives shot are not all gone: each goes at where they look as it is let go
         if(mc.player!=null)BladeShot.tellAim(mc);
+        // (2.133.0) and up in the air of their own delete slash, until it is thrown: the ground it lands on is where they look
+        if(mc.player!=null)EraseSlash.tellAim(mc);
         // held down, the attack key keeps asking (the server keeps a press made a little early for the next hit)
         if(mc.player!=null&&mc.currentScreen==null&&mc.options.attackKey.isPressed()&&attacks(mc.player))punch();
     }
