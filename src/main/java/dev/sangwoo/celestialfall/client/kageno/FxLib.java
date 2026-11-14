@@ -14,11 +14,7 @@ public final class FxLib {
     public static void ring(EffectMesh m,Vec3d c,double r,double width,int rgb,float alpha){ringPlane(m,c,new Vec3d(1,0,0),new Vec3d(0,0,1),r,width,rgb,alpha);}
     /** The same ring in the plane spanned by {@code u} and {@code v}. */
     public static void ringPlane(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,double r,double width,int rgb,float alpha){
-        ringPlane(m,c,u,v,r,width,rgb,alpha,Math.max(24,Math.min(96,(int)(r*10))));
-    }
-    /** The same ring with {@code n} sides (a small one of hundreds at once needs fewer). */
-    public static void ringPlane(EffectMesh m,Vec3d c,Vec3d u,Vec3d v,double r,double width,int rgb,float alpha,int n){
-        if(alpha<=0||r<=0)return;double ri=Math.max(0,r-width),ro=r+width*.18;
+        if(alpha<=0||r<=0)return;int n=Math.max(24,Math.min(96,(int)(r*10)));double ri=Math.max(0,r-width),ro=r+width*.18;
         for(int i=0;i<n;i++){
             double a0=i*Math.PI*2/n,a1=(i+1)*Math.PI*2/n;
             Vec3d d0=u.multiply(Math.cos(a0)).add(v.multiply(Math.sin(a0))),d1=u.multiply(Math.cos(a1)).add(v.multiply(Math.sin(a1)));

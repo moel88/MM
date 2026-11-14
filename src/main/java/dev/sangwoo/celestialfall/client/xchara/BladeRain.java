@@ -39,14 +39,14 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
  * ({@link #bracing}, {@link #gripped}), leaning into it and straining (bearing in and easing off by turns, shaking:
  * {@link #strain}); the body turns to the one it goes into ({@link #facing}). As the last volley lands they bear in
  * hardest; the other hand lets go, the knife is drawn out, goes black, and they step back.</li>
- * <li>The rain (2.132.1, user requests: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로
- * 떨어지게", "비가 떨어지는 범위를 넓게"; 2.132.2: "범위를 더 크게 하고 검 크키도 조금만 더 키우자"): RainRules.BLADES
- * knives lit as the hack lights them, {@link #SIZE} the size they are in the hand, RainRules.PER a tick, falling
- * straight down like rain out of a circle in the sky ({@link #pose}): one of each
- * volley onto the one stabbed (as the server's blows), the rest all over the ground round them out to {@link #ZONE}
- * ({@link #spot}; none where its user stands). Each stands where it lands a moment and is gone. They are drawn flat by
- * the effects' layer (RainFx: the knife's own model is too many boxes for hundreds at once), with all the rest of what
- * it adds ({@link #draw}), and the screen inside the rain.</li>
+ * <li>The rain (2.132.3, user requests: "칼이 너무 빠르게 떨어져", "그냥 저 칼이 다시 플레이어를 향하게 바꾸자", answered
+ * "2.132.0처럼 사방에서"; 2.132.1 had them fall straight down like rain, 2.132.2 over 15 blocks round): RainRules.BLADES
+ * knives lit as the hack lights them, {@link #SIZE} the size they are in the hand (2.132.2: "검 크기도 조금만 더
+ * 키우자"), RainRules.PER a tick, coming to be in the air all round the one stabbed ({@link #from}, {@link #out}: none
+ * from where its user stands unless from high), aimed at them, drawn back a little and flying in quicker and quicker
+ * ({@link #pose}), each standing in them a moment and gone. They are drawn flat by the effects' layer (RainFx: the
+ * knife's own model is too many boxes for hundreds at once), with all the rest of what it adds ({@link #draw}), and the
+ * screen inside the rain.</li>
  * </ul>
  * Its sounds are ones the game has (the user's: "있는 소리 재사용"; {@link #cues}): the jab's thrust as the knife goes
  * in, the knives shot's coming and strike through the rain. Everything is a function of the skills' own clocks and
@@ -328,69 +328,72 @@ public final class BladeRain {
     }
 
     // ───────────────────────────── the knives of the rain ─────────────────────────────
-    // (2.132.1, user requests: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로 떨어지게", then
-    // "비가 떨어지는 범위를 넓게 바꾸고": not flying in at the one stabbed from all round them any more but straight down out
-    // of the sky like rain, four times as many, on them and all over the wide ground round them)
+    // (2.132.3, user requests: "칼이 너무 빠르게 떨어져", then "그냥 저 칼이 다시 플레이어를 향하게 바꾸자", asked and
+    // answered "2.132.0처럼 사방에서": not raining straight down out of the sky over the wide ground any more (2.132.1,
+    // 2.132.2) but as 2.132.0's: coming to be in the air all round the one stabbed, aimed at them, and flying in. Slower
+    // than 2.132.0's, which darted in over an eighth of a second; still drawn flat (RainFx.blade), a little bigger, many)
 
     /** A knife of the rain is this much of the knife in the hand (2.132.2: .5 to .6, "검 크기도 조금만 더 키우자"); so its point is this far from its grip (blocks). */
     static final double SIZE=.6,TIP=ShotRules.TIP*SIZE;
-    /** A knife comes to be this many ticks before it lands (falling all of it), taking IN of them to come. */
-    static final float BEFORE=6,IN=1.5f;
-    /** One that has landed stands this long (ticks), gone over the last GOING of it; one not yet landed as the rain stops short is gone over VANISH. */
+    /**
+     * A knife comes to be this many ticks before it lands, taking IN of them to come, and flies the last FLY of them
+     * (2.132.3, "칼이 너무 빠르게 떨어져": 2.132.0's flew the last 2.4, darting in; these come on from standing and are
+     * at most some 1.7 blocks a tick, as they go in).
+     */
+    static final float BEFORE=7.5f,IN=1.5f,FLY=6f;
+    /** How it comes on as it flies: so much of the way gone {@code u} of the way through its flight, u to this power (quicker and quicker, from standing). */
+    static final double PACE=1.5;
+    /** One that has landed stands in them this long (ticks), gone over the last GOING of it; one not yet landed as the rain stops short is gone over VANISH. */
     static final float STUCK=3,GOING=1.5f,VANISH=2;
-    /** How high over where it lands a knife comes to be (blocks: out of the circle in the sky, SKY), and how much higher at most. */
-    static final double SKY=10.5,SKY_MORE=1.0;
-    /** How far out from the middle of the one stabbed the knives come down (blocks: the ground round them, wide; 2.132.2: 8 to 15, "범위를 더 크게", "15블록으로"), none within CLEAR of where its user stands. */
-    static final double ZONE=15,CLEAR=1.6;
-    /** How deep a knife's point goes in where it lands: into the ground, into the one stabbed (from over them: their head and shoulders). */
-    static final double GROUND_DEEP=.3,BODY_DEEP=.38;
-    /** How fast a knife falls: so much of the way at once (it comes out of the sky already falling), the rest quicker and quicker. */
-    static final double FALL_START=.35;
+    /** How far out from the point it aims at a knife's point comes to be (blocks), and how high and low about them (degrees over level). */
+    static final double NEAR=4.0,FAR=6.4;static final double LOWEST=4,HIGHEST=68;
+    /** No knife comes from within this of where its user stands, seen from the one stabbed, unless from this high over them (degrees). */
+    static final double CLEAR=42,OVER=38;
+    /** How far past the point it aims at a knife's point goes in (blocks). */
+    static final double IN_DEEP=.22;
     private static double h(int k,int seed,int salt){return GlitchFx.h(k,0,seed,salt);}
     /** A seed for this stab's knives (the same on every client: its start). */
     static int seed(StandClient.Cast c){return (int)(c.start()*31+17);}
-    /** Whether knife {@code k} comes down on the one stabbed (one of each volley: as many as the server's blows), or on the ground round them. */
+    /** Whether knife {@code k} is its volley's own (one of each volley, as many as the server's blows): it goes in with more. */
     static boolean onThem(int k){return k%RainRules.PER==0;}
-    /** Where knife {@code k} comes down, level ({@code x}, {@code z}), and whether on the one stabbed. */
-    public record Spot(double x,double z,boolean body){}
     /**
-     * Where knife {@code k} comes down round one standing at {@code feet} ({@code half} wide either way), its user
-     * {@code user} from them (level): on their head and shoulders for one of each volley; for the rest somewhere on the
-     * ground round them out to ZONE, evenly over it (one on from the last by the golden angle, as far out as its share of
-     * the ground has it), none on them nor within CLEAR of where its user stands (one that would be is moved round them,
-     * as far out, to just clear of it).
+     * The way knife {@code k} comes from, seen from the one stabbed (a unit vector, out from them): round them by the
+     * golden angle from one to the next (so each comes from far off the last), as high as chance has it between LOWEST
+     * and HIGHEST; one that would come from where its user stands ({@code user}: the level way from the one stabbed to
+     * them) comes from over them instead.
      */
-    static Spot spot(int k,int seed,Vec3d feet,double half,Vec3d user){
-        if(onThem(k))return new Spot(feet.x+(h(k,seed,1)-.5)*1.4*half,feet.z+(h(k,seed,2)-.5)*1.4*half,true);
-        double in=half+.25,a=k*2.39996323+h(k,seed,3)*.5,r=Math.sqrt(in*in+(ZONE*ZONE-in*in)*h(k,seed,4));
+    static Vec3d from(int k,int seed,Vec3d user){
+        double az=k*2.39996323+h(k,seed,1)*.6,lo=Math.sin(Math.toRadians(LOWEST)),hi=Math.sin(Math.toRadians(HIGHEST));
+        double sin=lo+(hi-lo)*h(k,seed,2),cos=Math.sqrt(1-sin*sin);
+        double x=Math.cos(az),z=Math.sin(az);
         if(user!=null&&user.horizontalLengthSquared()>1e-8){
-            // (one that would come down within CLEAR of where its user stands is moved round them, as far out as it was,
-            // to just clear of it)
-            double u=Math.hypot(user.x,user.z),au=Math.atan2(user.z,user.x),most=(r*r+u*u-CLEAR*CLEAR)/(2*r*u);
-            if(most<1){
-                double off=Math.acos(Math.max(-1,most)),turn=Math.atan2(Math.sin(a-au),Math.cos(a-au));
-                if(Math.abs(turn)<off)a=au+(turn<0?-off:off);
+            Vec3d u=new Vec3d(user.x,0,user.z).normalize();
+            if(x*u.x+z*u.z>Math.cos(Math.toRadians(CLEAR))&&sin<Math.sin(Math.toRadians(OVER))){
+                sin=Math.sin(Math.toRadians(OVER+(HIGHEST-OVER)*h(k,seed,3)));cos=Math.sqrt(1-sin*sin);
             }
         }
-        return new Spot(feet.x+Math.cos(a)*r,feet.z+Math.sin(a)*r,false);
+        return new Vec3d(x*cos,sin,z*cos);
     }
-    /** How low knife {@code k}'s point comes (the y it stops at): into the top of the one stabbed ({@code height} tall), or into the ground at {@code ground}. */
-    static double landY(Spot s,Vec3d feet,double height,double ground){return s.body()?feet.y+height-BODY_DEEP:ground-GROUND_DEEP;}
-    /** How high over where it lands knife {@code k} comes to be (blocks). */
-    static double sky(int k,int seed){return SKY+SKY_MORE*h(k,seed,5);}
-    /** One knife this frame: its grip (its rod's middle), the way it points (straight down), how much of it shows, the seconds since it came to be, whether it falls, whether it has landed (and whether in the one stabbed). */
-    public record Pose(Vec3d grip,Vec3d dir,float shown,float lit,boolean flying,boolean in,boolean body){
+    /** How far out knife {@code k}'s point comes to be (blocks). */
+    static double out(int k,int seed){return NEAR+(FAR-NEAR)*h(k,seed,4);}
+    /** The point of the one stabbed knife {@code k} aims at: about their middle, {feet} + this (for a body {@code half} wide and {@code height} high). */
+    static Vec3d aim(int k,int seed,double half,double height){
+        return new Vec3d((h(k,seed,5)-.5)*half*1.1,height*(.28+.56*h(k,seed,6)),(h(k,seed,7)-.5)*half*1.1);
+    }
+    /** One knife this frame: its grip (its rod's middle), the way it points, how much of it shows, the seconds since it came to be, whether it flies, whether it has landed. */
+    public record Pose(Vec3d grip,Vec3d dir,float shown,float lit,boolean flying,boolean in){
         public Vec3d tip(){return grip.add(dir.multiply(TIP*size(shown)));}
     }
-    static final Vec3d DOWN=new Vec3d(0,-1,0);
     static double size(float shown){return .5+.5*shown;}
-    /** How far down from where it came to be a knife has fallen {@code u} of the way through its fall (0 to 1): already falling, quicker and quicker. */
-    static double fallen(double u){u=Math.max(0,Math.min(1,u));return FALL_START*u+(1-FALL_START)*u*u;}
+    /** How much of the way in a knife has come {@code u} of the way through its flight (0 to 1): quicker and quicker, from standing. */
+    static double flown(double u){return Math.pow(Math.max(0,Math.min(1,u)),PACE);}
     /**
-     * Knife {@code k} {@code age} ticks into a stab that stopped short {@code stopped} ticks in (anything past its end if
-     * it did not), coming down at {@code s}, its point stopping at {@code land}. Null while there is nothing of it to draw.
+     * Knife {@code k} {@code age} ticks into a stab that stopped short {@code stopped} ticks in (anything past its end
+     * if it did not), for one stabbed whose feet are at {@code feet} (so wide and so high), the user {@code user} from
+     * them (level): coming to be out in the air, aimed at them, flying in quicker and quicker from standing, its point
+     * past where it aims, a moment shivering in them. Null while there is nothing of it to draw.
      */
-    public static Pose pose(int k,int seed,float age,float stopped,Spot s,double land){
+    public static Pose pose(int k,int seed,float age,float stopped,Vec3d feet,double half,double height,Vec3d user){
         float lands=(float)RainRules.landsAt(k),comes=lands-BEFORE;
         if(age<comes||comes>=stopped)return null;
         boolean cut=lands>stopped;
@@ -399,14 +402,15 @@ public final class BladeRain {
         if(cut&&age>=stopped+VANISH||!cut&&age>=lands+STUCK)return null;
         float shown=Ease.smooth(t,comes,comes+IN)*(cut?1-Ease.smooth(age,stopped,stopped+VANISH):1-Ease.smooth(age,lands+STUCK-GOING,lands+STUCK));
         if(shown<=0)return null;
-        double high=sky(k,seed),u=(t-comes)/BEFORE;
+        Vec3d way=from(k,seed,user),target=feet.add(aim(k,seed,half,height)),dir=way.negate();
+        // its point: out in the air, then in, quicker and quicker from standing, to past the point it aims at
+        double far=out(k,seed),u=(t-(lands-FLY))/FLY;
+        double at=far+(-IN_DEEP-far)*flown(u);
         boolean in=t>=lands;
-        double y=land+(in?0:high*(1-fallen(u)));
-        Vec3d dir=DOWN;
-        // (in where it landed it shivers a moment)
-        if(in){double sec=(t-lands)/20.0,a=k*1.7;dir=dir.add(new Vec3d(Math.cos(a),0,Math.sin(a)).multiply(.06*Math.exp(-sec/.05)*Math.sin(sec*95))).normalize();}
-        Vec3d tip=new Vec3d(s.x(),y,s.z());
-        return new Pose(tip.subtract(dir.multiply(TIP*size(shown))),dir,shown,(t-comes)/20f,!in,in,s.body());
+        // (in them it shivers a moment)
+        if(in){double s=(t-lands)/20.0;dir=dir.add(way.crossProduct(new Vec3d(0,1,0)).multiply(.05*Math.exp(-s/.06)*Math.sin(s*90))).normalize();}
+        Vec3d tip=target.add(way.multiply(at));
+        return new Pose(tip.subtract(dir.multiply(TIP*size(shown))),dir,shown,(t-comes)/20f,u>0&&!in,in);
     }
     /** The one the stab's knife is in, as this client was told (null: no one yet, or they are not here). */
     static LivingEntity stabbed(StandClient.Cast c){
@@ -465,8 +469,7 @@ public final class BladeRain {
             Vec3d feet=e.getLerpedPos(delta),user=userFrom(best,feet);
             inside=RainFx.inside(player.getLerpedPos(delta),feet,best.age(delta),until(best));
             for(int k=0;k<RainRules.BLADES;k++){
-                var sp=spot(k,seed(best),feet,e.getWidth()*.5,user);
-                var p=pose(k,seed(best),best.age(delta),until(best),sp,landY(sp,feet,e.getHeight(),RainFx.ground(best,k,sp,feet.y)));if(p!=null){shown++;if(p.in())in++;}
+                var p=pose(k,seed(best),best.age(delta),until(best),feet,e.getWidth()*.5,e.getHeight(),user);if(p!=null){shown++;if(p.in())in++;}
             }
         }
         return String.format(java.util.Locale.ROOT,"%d,%.2f,%d,%.2f,%.2f,%.2f,%d,%d,%d,%.2f",best.combo(),best.age(delta),KnifeClient.until(best.id())==Float.MAX_VALUE?0:1,s.x,s.y,s.z,e==null?-1:e.getId(),shown,in,inside);

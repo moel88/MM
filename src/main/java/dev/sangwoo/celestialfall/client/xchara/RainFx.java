@@ -34,11 +34,11 @@ import static dev.sangwoo.celestialfall.xchara.XCharaCombo.*;
  * <li>Borne on through the rain ({@link #held}): a circle of purple on the ground under them (rings, dashes and ticks
  * turning, a star in it, squares of the hack rising out of it), purple spiralling up round them, lightning crackling
  * along the knife and into them, both hands aglow, all of it beating with the volleys.</li>
- * <li>The rain ({@link #sky}, {@link #knives}): the ground's circle again in the sky over them, wide as the rain, turning
- * the other way; out of it the knives (BladeRain.spot, BladeRain.pose) fall straight down, white with a crisp purple
- * rim and a glow, a long streak over each as it falls, coming out of the sky in blocks of purple and a star; in the
- * ground a ring and pixels splashing up, on them a star, a ring, spikes thrown up and pixels; broken up into pixels as
- * each goes. Every few volleys the knife's own burst on them ({@link #bursts}).</li>
+ * <li>The rain ({@link #knives}, 2.132.3: as 2.132.0's, from all round): the knives (BladeRain.from, BladeRain.pose)
+ * come to be in the air round the one stabbed in blocks of purple and a star, aimed at them, white with a crisp purple
+ * rim and a glow, and fly in, a streak behind each; where each goes in a spark and pixels thrown back the way it came
+ * (its volley's own a star, a ring, spikes and pixels); broken up into pixels as each goes. Every few volleys the
+ * knife's own burst on them ({@link #bursts}).</li>
  * <li>The screen inside the rain ({@link #screen}): for whoever stands in it, violet, its edges dark, torn in slices,
  * streaked with light falling down it, scanned and beating with the volleys (FxFrame.rain, the layer's composite);
  * its colours split; an impact frame with each burst and a full one with the last volley. The one place in X Chara's
@@ -60,12 +60,10 @@ final class RainFx {
     // ───────────────────────────── shapes ─────────────────────────────
 
     /** A ring lying on the ground at {@code g}: its band laid over what is behind it (the blended pass), or its light (a thin white line in a purple glow). */
-    static void groundRing(EffectMesh m,Vec3d g,double r,double wide,float a,boolean light){groundRing(m,g,r,wide,a,light,0);}
-    /** The same with {@code n} sides (0: as many as its size has it). */
-    static void groundRing(EffectMesh m,Vec3d g,double r,double wide,float a,boolean light,int n){
+    static void groundRing(EffectMesh m,Vec3d g,double r,double wide,float a,boolean light){
         if(a<=0||r<=0)return;
-        if(light){if(n>0)FxLib.ringPlane(m,g,X,Z,r,wide*1.5,GLOW,.42f*a,n);else FxLib.ringPlane(m,g,X,Z,r,wide*1.5,GLOW,.42f*a);}
-        else{if(n>0)DanceBurst.band(m,g,X,Z,r,wide,PURPLE,.85f*a,n);else DanceBurst.band(m,g,X,Z,r,wide,PURPLE,.85f*a);}
+        if(light)FxLib.ringPlane(m,g,X,Z,r,wide*1.5,GLOW,.42f*a);
+        else DanceBurst.band(m,g,X,Z,r,wide,PURPLE,.85f*a);
     }
     /** A ring facing the camera round {@code p} (its light, or its band). */
     static void facingRing(EffectMesh m,Vec3d p,Vec3d camera,double r,double wide,int rgb,float a,boolean light){
@@ -379,32 +377,12 @@ final class RainFx {
     }
 
     // ───────────────────────────── the knives ─────────────────────────────
-    // (2.132.1, user request: "칼이 더 많이 떨어지게 바꾸고 적 방향으로 떨어지게 하지 말고 비 처럼 일자로 떨어지게":
-    // straight down out of a circle in the sky, like rain, three times as many, on the one stabbed and the ground round
-    // them; drawn here, flat (the knife's own model is 604 boxes: hundreds of them at once would not keep the frame).
-    // 2.132.2, "범위를 더 크게 하고 검 크키도 조금만 더 키우자", "15블록으로": the ground 15 blocks round, the knives a little
-    // bigger and as many more as the ground is wider, drawn lighter: a coarser outline, each point worked out once, the
-    // rings where they land with fewer sides, and faded by the camera, which now stands in the rain)
+    // (2.132.1 had them fall straight down out of a circle in the sky like rain; 2.132.2 over the ground 15 blocks round,
+    // the knives a little bigger. 2.132.3, "그냥 저 칼이 다시 플레이어를 향하게 바꾸자", answered "2.132.0처럼 사방에서":
+    // out of the air all round the one stabbed, aimed at them, flying in, slower than 2.132.0's. Drawn here, flat (the
+    // knife's own model is 604 boxes: hundreds of them at once would not keep the frame), lighter: a coarser outline,
+    // each point worked out once, faded by the camera)
 
-    /** The ground each knife of a stab comes down on (its top's height), found once (the world under it as it first came). */
-    private static final java.util.Map<java.util.UUID,double[]> GROUNDS=new java.util.LinkedHashMap<>();
-    /** The ground under where knife {@code k} of stab {@code c} comes down (a block's top near {@code near}, the height of the one stabbed's feet), found once and kept. */
-    static double ground(StandClient.Cast c,int k,BladeRain.Spot s,double near){
-        double[] g=GROUNDS.get(c.id());
-        if(g==null){g=new double[RainRules.BLADES];java.util.Arrays.fill(g,Double.NaN);GROUNDS.put(c.id(),g);while(GROUNDS.size()>16)GROUNDS.remove(GROUNDS.keySet().iterator().next());}
-        if(Double.isNaN(g[k]))g[k]=groundAt(s.x(),s.z(),near);
-        return g[k];
-    }
-    /** The top of the ground under (x, z) near the height {@code y}: the first solid top from a little over it down to a few blocks under it; y if there is none. */
-    static double groundAt(double x,double z,double y){
-        var w=net.minecraft.client.MinecraftClient.getInstance().world;if(w==null)return y;
-        int bx=MathHelper.floor(x),bz=MathHelper.floor(z),top=MathHelper.floor(y+1.5);
-        for(int by=top;by>=top-5;by--){
-            var pos=new BlockPos(bx,by,bz);var shape=w.getBlockState(pos).getCollisionShape(w,pos);
-            if(!shape.isEmpty()){double t=by+shape.getMax(net.minecraft.util.math.Direction.Axis.Y);if(t<=y+1.6)return t;}
-        }
-        return y;
-    }
     /** The rim round a knife of the rain, and its glow's reach past it, this many times the knife in the hand's (it is half that size and seen far off). */
     static final double RIM_MORE=2.2,GLOW_MORE=1.6;
     /**
@@ -412,12 +390,9 @@ final class RainFx {
      * twenty-six (2.132.2: some five hundred of them at once, each seen small; the same shape to the eye).
      */
     static final double[][] OUTLINE=HackKnife.outline(10),MITER=HackKnife.miters(OUTLINE);
-    /** How many sides the ring is where a knife lands on the ground (small, and some three hundred at once). */
-    static final int LAND_SIDES=12;
     /**
-     * How much of a knife of the rain shows by the camera (2.132.2: the rain is wider than the user's camera is from the
-     * one stabbed, so knives come down by it): none within NEAR0 of its line (its point to the top of its streak), all of
-     * it from NEAR1 on.
+     * How much of a knife of the rain shows by the camera (2.132.2: so many, and some come by it): none within NEAR0 of
+     * its line (its point to the end of its streak), all of it from NEAR1 on.
      */
     static final double NEAR0=1.5,NEAR1=4.5;
     static float near(Vec3d tip,Vec3d top,Vec3d camera){
@@ -473,24 +448,20 @@ final class RainFx {
         double qx=(q[0]+miter[0]*out)*unit,qy=(q[1]+miter[1]*out)*unit;
         return new Vec3d(grip.x+x.x*qx+y.x*qy,grip.y+x.y*qx+y.y*qy,grip.z+x.z*qx+y.z*qy);
     }
-    /** The circle in the sky the knives come out of: this high over the feet of the one stabbed (blocks), its parts turning the other way to the one on the ground. */
-    static final double SKY_UP=BladeRain.SKY+.55;
-    /** How much of it is there {@code sec} seconds into the stab: opening before the first knife comes, closing after the last. */
-    static float skyOn(float sec,float stopS){
-        float end=Math.min(LAST_AT,stopS);
-        return Ease.smooth(sec,STAB_AT+.05f,STAB_AT+.3f)*(1-Ease.smooth(sec,end+.05f,end+.4f));
-    }
-    /** The circle in the sky ({@code c} its middle): the ground's circle again, wider, turning the other way, a dark gap in the sky in it and its light beating as the knives pour out. */
-    static void sky(EffectMesh m,Vec3d c,float sec,float on,float beat,int seed,boolean light){
-        if(on<=0)return;
-        double scale=(BladeRain.ZONE+.7)/CIRCLE*(.6+.4*Ease.out(sec,STAB_AT+.05f,STAB_AT+.35f));
-        circle(m,c,-sec,on,scale,beat,seed+31,light);
-        if(light){FxLib.ringPlane(m,c,X,Z,(BladeRain.ZONE+.7)*1.25,.3,GLOW,.3f*on);m.softDisc(c.add(0,-.3,0),3.6,GLOW,.16f*on*(.8f+.4f*beat));}
+    /** How long the streak behind a flying knife is past its own length (blocks). */
+    static final double STREAK=1.5;
+    /** Which of the knives going into them shows a spark (one in so many: there are many at once). */
+    static final int SPARK_EVERY=4;
+    /** Two ways across {@code way} (unit vectors), for a ring round it. */
+    static Vec3d[] across(Vec3d way){
+        Vec3d u=way.crossProduct(UP);if(u.lengthSquared()<1e-6)u=X;u=u.normalize();
+        return new Vec3d[]{u,u.crossProduct(way).normalize()};
     }
     /**
-     * Each knife of the rain: coming out of the sky in blocks of purple with a star, falling straight down with a long
-     * streak over it, standing where it lands (in the ground, or in the one stabbed), broken up into pixels as it goes;
-     * where it lands on the ground a ring and pixels splashing up, on them a star, a ring, spikes thrown up and pixels.
+     * Each knife of the rain: coming to be in the air round the one stabbed in blocks of purple with a star, aimed at
+     * them, flying in with a streak behind it, standing in them a moment, broken up into pixels as it goes; where it
+     * goes in a spark (one in SPARK_EVERY) and pixels thrown back the way it came; its volley's own (one of each volley,
+     * the server's blow) a star, a ring round the way it came, spikes thrown back that way and pixels.
      */
     static void knives(Fx c,EffectMesh m,boolean light,net.minecraft.entity.LivingEntity e,float stop,int seed){
         float age=c.age;
@@ -499,20 +470,19 @@ final class RainFx {
             float lands=(float)RainRules.landsAt(k);
             if(age<lands-BladeRain.BEFORE-.5f)break;
             if(age>lands+BladeRain.STUCK+12)continue;
-            var sp=BladeRain.spot(k,seed,feet,half,user);double ground=ground(c.cast,k,sp,feet.y),land=BladeRain.landY(sp,feet,height,ground);
-            var p=BladeRain.pose(k,seed,age,stop,sp,land);
+            var p=BladeRain.pose(k,seed,age,stop,feet,half,height,user);
             if(p!=null){
-                Vec3d tip=p.tip(),mid=p.grip().add(p.dir().multiply(BladeRain.TIP*.5)),top=p.grip().add(0,p.flying()?2.8+1.2*h(k,seed,51):0,0);
-                float near=near(tip,top,c.camera)*p.shown();
+                Vec3d tip=p.tip(),mid=p.grip().add(p.dir().multiply(BladeRain.TIP*.5)),tail=p.flying()?tip.subtract(p.dir().multiply(BladeRain.TIP+STREAK)):p.grip();
+                float near=near(tip,tail,c.camera)*p.shown();
                 if(near>0){
                     blade(m,p,BladeRain.roll(k,seed),near,light);
                     if(light){
-                        // a long streak over it as it falls, a star as it comes out of the sky, aglow where it stands
-                        if(p.flying()){m.softTaper(top,tip,.03,.34,GLOW,.42f*near);m.softTaper(top,p.grip(),.01,.08,WHITE,.6f*near);}
-                        if(p.lit()<.1f){float a=1-p.lit()/.1f;m.star(mid,.6*a+.12,LILAC,.85f*a*near);}
-                        if(p.in())m.softDisc(mid,.3,GLOW,.2f*near);
+                        // a streak behind it as it flies, a star as it comes to be, aglow where it stands
+                        if(p.flying()){m.softTaper(tail,tip,.04,.42,GLOW,.4f*near);m.softTaper(tail,tip,.015,.1,WHITE,.65f*near);}
+                        if(p.lit()<.1f){float a=1-p.lit()/.1f;m.star(mid,.5*a+.1,LILAC,.8f*a*near);}
+                        if(p.in())m.softDisc(mid,.28,GLOW,.18f*near);
                     }
-                    // blocks of purple breaking over it as it comes out of the sky (the hack's own coming on)
+                    // blocks of purple breaking over it as it comes to be (the hack's own coming on)
                     if(p.lit()<.12f){
                         int slot=(int)Math.floor(age/20f*16);var f=GlitchFx.facing(c.camera,p.grip());
                         for(int j=0;j<4;j++){
@@ -527,35 +497,31 @@ final class RainFx {
             }
             if(lands>stop)continue;
             float s=(age-lands)/20f;
-            if(sp.body()){
-                // on them: a star and a glow, a ring round them, spikes thrown up, pixels
-                Vec3d at=new Vec3d(sp.x(),feet.y+height,sp.z());
+            Vec3d way=BladeRain.from(k,seed,user),at=feet.add(BladeRain.aim(k,seed,half,height)).add(way.multiply(half*.6));
+            if(BladeRain.onThem(k)){
+                // its volley's own: a star and a glow, a ring round the way it came, spikes thrown back that way, pixels
                 if(s>=0&&s<.36f){
                     float near=GlitchFx.near(at,c.camera);
                     if(light&&s<.1f&&near>0){float a=1-s/.1f;m.star(at,.5*a+.1,LILAC,.85f*a*near);m.softDisc(at,.45,GLOW,.36f*a*near);}
-                    if(s<.18f&&near>0){float a=(1-s/.18f)*near;double r=.15+.6*Ease.out(s,0,.16f);
-                        if(light)FxLib.ringPlane(m,at,X,Z,r,.08,GLOW,.55f*a);else DanceBurst.band(m,at,X,Z,r,.07,PURPLE,.85f*a);}
+                    if(s<.18f&&near>0){float a=(1-s/.18f)*near;double r=.15+.6*Ease.out(s,0,.16f);Vec3d[] f=across(way);
+                        if(light)FxLib.ringPlane(m,at,f[0],f[1],r,.08,GLOW,.55f*a);else DanceBurst.band(m,at,f[0],f[1],r,.07,PURPLE,.85f*a);}
                     if(s<.16f&&near>0)for(int j=0;j<3;j++){
-                        Vec3d dir=UP.add(DanceBurst.unit(k,j,seed,41).multiply(.7)).normalize();
+                        Vec3d dir=way.add(DanceBurst.unit(k,j,seed,41).multiply(.7)).normalize();
                         double len=(.45+.55*h(k*3+j,seed,42))*Ease.out(s,0,.05f);float a=(1-Ease.smooth(s,.04f,.16f))*near;
                         Vec3d a0=at.add(dir.multiply(.05)),a1=at.add(dir.multiply(.05+len));
                         if(light)m.needle(a0,a1,.1,.25,GLOW,.25f*a);else m.needle(a0,a1,.065,.25,j==0?INK:j==1?DEEP:PURPLE,.92f*a);
                     }
-                    GlitchFx.pixels(m,at,UP,.7,3.8,.04,5,seed+k*7,s,light,c.camera);
+                    GlitchFx.pixels(m,at,way,.7,3.8,.04,5,seed+k*7,s,light,c.camera);
                 }
-            }else{
-                // on the ground: a ring running out and pixels splashing up
-                Vec3d at=new Vec3d(sp.x(),ground+.05,sp.z());
-                if(s>=0&&s<.3f){
-                    float near=GlitchFx.near(at,c.camera),a=(1-s/.3f)*near;
-                    groundRing(m,at,.08+.62*Ease.out(s,0,.22f),.12,a,light,LAND_SIDES);
-                    if(light&&s<.06f)m.star(at.add(0,.1,0),.36,LILAC,.6f*(1-s/.06f)*near);
-                    GlitchFx.pixels(m,at.add(0,.06,0),UP,.85,2.8,.033,3,seed+k*7,s,light,c.camera);
-                }
+            }else if(s>=0&&s<.3f){
+                // the rest: a white spark on some, a few pixels thrown back the way it came
+                float near=GlitchFx.near(at,c.camera);
+                if(light&&k%SPARK_EVERY==2&&s<.09f&&near>0)m.star(at,.3*(1-s/.09f)+.08,LILAC,.7f*(1-s/.09f)*near);
+                GlitchFx.pixels(m,at,way,.7,3.2,.035,2,seed+k*7,s,light,c.camera);
             }
             // going: broken up into pixels where it stood
             float gs=(age-(lands+BladeRain.STUCK-BladeRain.GOING))/20f;
-            if(gs>=0&&gs<.35f){Vec3d stood=new Vec3d(sp.x(),land+BladeRain.TIP*.6,sp.z());GlitchFx.pixels(m,stood,UP,.9,2.2,.032,4,seed+k*11+5,gs,light,c.camera);}
+            if(gs>=0&&gs<.35f){Vec3d stood=feet.add(BladeRain.aim(k,seed,half,height)).add(way.multiply(BladeRain.TIP*.6));GlitchFx.pixels(m,stood,way,.9,2.2,.032,3,seed+k*11+5,gs,light,c.camera);}
         }
     }
     /** Every few volleys the knife's own burst on them (near its full size). */
@@ -563,7 +529,8 @@ final class RainFx {
         float age=c.age;Vec3d mid=e.getLerpedPos(c.delta).add(0,e.getHeight()*.55,0);
         for(int v=0;v<RainRules.VOLLEYS-1;v+=BURST_EVERY){
             float at=RainRules.volleyAt(v),s=(age-at)/20f;if(s<0||at>stop||s>=SlashFx.SWIRL_LIFE)continue;
-            SlashFx.burst(m.scaled(SlashFx.burstAt(mid,c.camera),BURST_SIZE),mid,BladeRain.DOWN,HACK_SLASH,seed+v,s,light,c.camera);
+            Vec3d way=BladeRain.from(v*RainRules.PER,seed,BladeRain.userFrom(c.cast,e.getLerpedPos(c.delta))).negate();
+            SlashFx.burst(m.scaled(SlashFx.burstAt(mid,c.camera),BURST_SIZE),mid,way,HACK_SLASH,seed+v,s,light,c.camera);
         }
     }
 
@@ -616,7 +583,6 @@ final class RainFx {
         var all=KnifeCombo.struck(c,0);if(all.isEmpty())return;
         var st=all.get(0);
         held(c,m,light,st,sec,stopS,seed);
-        sky(m,st.feet().add(0,SKY_UP,0),sec,skyOn(sec,stopS),beat(sec,stopS),seed,light);
         knives(c,m,light,e,stop,seed);
         bursts(c,m,light,e,stop,seed);
         float sl=(c.age-RainRules.LAST)/20f;
@@ -630,21 +596,22 @@ final class RainFx {
 
     /** The impact frames inside the rain: X Chara's purple (deep, its shapes white; then pale with dark shapes). */
     static final FxFrame.ImpactLook LOOK=new FxFrame.ImpactLook(0x16002e,0xfff4ff,0xf8eeff,0x12001f,0x6c18c8);
+    /** How far out from the one stabbed (level) and how high over their feet the screen inside the rain reaches (blocks): the air the knives come out of (2.132.3: all of it, out to BladeRain.FAR, and a little past), softly over the last block and a half. */
+    static final double INSIDE=BladeRain.FAR+1.6,INSIDE_UP=BladeRain.FAR+2;
     /**
      * How much one standing at {@code viewer} (their feet) is inside the rain {@code age} ticks into the stab (stopped
-     * short at {@code stop}), the one stabbed standing at {@code feet}: within the ground the knives come down on (ZONE
-     * of them, softly over its last block and a half) and under the circle in the sky; from as the first knife comes
-     * out of the sky until a little after the last lands. It is the body the screen sees from that is measured, not
-     * where its camera is (as Lee So-sang's H's night, 2.99.1): the user stands in the rain with their camera six and a
-     * half blocks back, out of it.
+     * short at {@code stop}), the one stabbed standing at {@code feet}: within the air the knives come out of (INSIDE of
+     * them level, INSIDE_UP over their feet); from as the first knife comes to be until a little after the last goes in.
+     * It is the body the screen sees from that is measured, not where its camera is (as Lee So-sang's H's night, 2.99.1):
+     * the user stands in it with their camera back out of it.
      */
     static float inside(Vec3d viewer,Vec3d feet,float age,float stop){
         float first=RainRules.FIRST-BladeRain.BEFORE,end=Math.min(RainRules.LAST,stop);
         float on=Ease.smooth(age,first,first+5)*(1-Ease.smooth(age,end+2,end+10));
         if(on<=0)return 0;
         float r=(float)Math.hypot(viewer.x-feet.x,viewer.z-feet.z),up=(float)(viewer.y-feet.y);
-        float in=1-Ease.smooth(r,(float)BladeRain.ZONE-1.5f,(float)BladeRain.ZONE+.5f);
-        float under=1-Ease.smooth(up,(float)SKY_UP-1,(float)SKY_UP+1);
+        float in=1-Ease.smooth(r,(float)INSIDE-1.5f,(float)INSIDE+.5f);
+        float under=1-Ease.smooth(up,(float)INSIDE_UP-1,(float)INSIDE_UP+1);
         return on*in*under;
     }
     /** An impact frame's strength {@code s} seconds after it starts, held {@code hold} (coming in over a frame, going over a few). */
