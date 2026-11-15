@@ -75,17 +75,17 @@ public final class XSlash {
     static final float ARM1_FROM=.185f,ARM1_TO=.27f,ARM2_FROM=.39f,ARM2_TO=.47f;
     /** The X is gone at the end of its way over this long (seconds); the burst's parts last this long. */
     static final float DISSOLVE=.14f,BURST_LIFE=.55f;
-    /** How long one is drawn for (seconds): its X on the ground bursts at the latest at burstAt(RANGE), and what the burst leaves. */
-    public static final float LIFE=XSlashRules.burstAt(XSlashRules.RANGE)/20f+BURST_LIFE+.15f;
+    /** How long one is drawn for (seconds): its X on the ground bursts at the latest at burstAt(RANGE), and what the burst leaves (2.135.0: its embers, thrown pieces and dust, XSlashLights.AFTER). */
+    public static final float LIFE=XSlashRules.burstAt(XSlashRules.RANGE)/20f+Math.max(BURST_LIFE,XSlashLights.AFTER)+.15f;
     static final int INK=GlitchFx.INK,DEEP=GlitchFx.DEEP,PURPLE=GlitchFx.PURPLE,GLOW=GlitchFx.GLOW,LILAC=GlitchFx.LILAC,WHITE=GlitchFx.WHITE;
-    /** Each arm's crescent: how far its cutting edge and its inner edge stand out from the line between its horns at its middle (of that line's length). */
-    static final double OUTER=.13,INNER=.05;
+    /** Each arm's crescent: how far its cutting edge and its inner edge stand out from the line between its horns at its middle (of that line's length; 2.135.0: a wider band, .13 and .05 until then). */
+    static final double OUTER=.155,INNER=.045;
     /** Samples along an arm; how wide its edge shows to the camera (blocks: an X seen from its side is a hairline). */
     static final int ARM_SAMPLES=26;static final double EDGE=.42;
     /** The X on the ground: its scar's half width, its white core's, its glow's (XSlashRules.BAND: as wide as it strikes), and how many samples along each diagonal. */
     static final double SCAR=.5,CORE=.09,GLOW_WIDE=XSlashRules.BAND;static final int GROUND_SAMPLES=32;
     /** The burst: a spike every this far along each diagonal (blocks), and how tall they are at most. */
-    static final double SPIKE_EVERY=.8,SPIKE_TALL=2.7;
+    static final double SPIKE_EVERY=.7,SPIKE_TALL=3.5;
 
     // ───────────────────────────── what the server told ─────────────────────────────
 
@@ -306,6 +306,25 @@ public final class XSlash {
         float t=c.sec,stop=KnifeClient.until(c.cast.id());if(stop==Float.MAX_VALUE)stop=Float.NaN;
         var w=way(c.cast);boolean gone=w.told()!=null&&w.told().gone;
         int seed=seed(c.cast);float own=KnifeCombo.own(c);
+        if(!gone){
+            // (2.135.0) the knife drinking in its light, the hack's ring at their feet, the cuts' sparks, the lock as it is whole
+            XSlashLights.gather(c,m,t,stop,seed,own,light);
+            XSlashLights.ring(c,m,w,t,stop,seed,own,light);
+            XSlashLights.sparks(c,m,w,t,stop,seed,own,light);
+            XSlashLights.lock(c,m,w,t,stop,own,light);
+            var x0=shape(t,w.reach(),stop);
+            if(x0!=null){
+                // the slash itself: its bloom and aura, the split of each cut, its head as it is drawn, glints along it, echo blades, spikes
+                if(light){
+                    XSlashLights.aura(c,m,w,x0,t,stop,own);XSlashLights.bloom(c,m,w,x0,t,stop,own);XSlashLights.split(c,m,w,x0,t,stop,seed,own);
+                    XSlashLights.head(c,m,w,x0,t,stop,own);XSlashLights.glints(c,m,w,x0,t,stop,seed,own);
+                }
+                XSlashLights.echoBlades(c,m,w,x0,t,stop,own,light);
+                XSlashLights.spikes(c,m,w,x0,t,stop,seed,own,light);
+                if(Float.isNaN(stop)||stop>=FIRE||t<stop)XSlashLights.tear(c,m,w,x0,t,seed,own,light);
+            }
+            if(light)XSlashLights.tipTrails(c,m,w,t,stop,own);
+        }
         // ── as each arm is whole, and as the two cross: a flash where it was cut
         if(light&&!gone&&(Float.isNaN(stop)||stop>=ARM1_TO)){
             for(int a=0;a<2;a++){
@@ -328,6 +347,8 @@ public final class XSlash {
         if(x!=null&&t>=FIRE){
             double fw=x[0],half=x[1],tall=x[2];float fade=(float)(1-x[4]);
             if(light){
+                // (2.135.0) echoes of it behind, lightning crawling over its arms
+                XSlashLights.echoes(c,m,w,t,stop,seed,own);XSlashLights.arcs(c,m,w,x,t,seed,own);
                 Vec3d mid=w.at(fw,0,tall);float near=GlitchFx.near(mid,c.camera);
                 m.softDisc(mid,half*.8,GLOW,.16f*fade*near);
                 double trail=Math.min(3.2,fw-XSlashRules.NEAR+.4);
@@ -341,19 +362,24 @@ public final class XSlash {
                 }
             }
             // pixels shed off its arms as it goes (flickering squares left behind it)
-            for(int j=0;j<18;j++){
+            for(int j=0;j<30;j++){
                 int a=j%2;double u=h(j,seed,31),back=1.2*h(j,seed,32);
                 float life=.18f,born=(float)(FIRE+.4*h(j,seed,33)),s=t-born;if(s<0||s>life)continue;
                 double at=Math.min(w.reach(),XSlashRules.head((born-FIRE)*20)),bh=XSlashRules.half(at),bt=XSlashRules.tall(at);
                 var sw=arm(w,at,bh,bt,a,1);int i=(int)Math.min(sw.n()-1,Math.round(u*(sw.n()-1)));
                 Vec3d p=sw.inner()[i].subtract(w.f().multiply(back+2*s));
-                float near=GlitchFx.near(p,c.camera);if(near<=0)continue;
-                var f=GlitchFx.facing(c.camera,p);double size=.07+.07*h(j,seed,34);
-                float blink=(int)Math.floor((t*30)+j)%3==0?.35f:1;
-                if(light)GlitchFx.square(m,p,f,size*2,GLOW,.25f*near*blink);
-                else{GlitchFx.square(m,p,f,size+.012,INK,.85f*near*blink);GlitchFx.square(m,p,f,size,j%3==0?LILAC:PURPLE,near*blink);}
+                float near=Ease.smooth((float)p.distanceTo(c.camera),1.6f,4.5f);if(near<=0)continue;
+                var f=GlitchFx.facing(c.camera,p);double size=.06+.08*h(j,seed,34);
+                float blink=(int)Math.floor((t*30)+j)%3==0?.35f:1;int rgb=j%7==3?GlitchFx.CYAN:j%7==5?GlitchFx.PINK:j%3==0?LILAC:PURPLE;
+                if(light)GlitchFx.square(m,p,f,size*2,rgb==LILAC||rgb==PURPLE?GLOW:rgb,.25f*near*blink);
+                else{GlitchFx.square(m,p,f,size+.012,INK,.85f*near*blink);GlitchFx.square(m,p,f,size,rgb,near*blink);}
             }
         }
+        // (2.135.0) as it goes, its wake, its horns grinding the floor, and where its way ends, its shards
+        XSlashLights.launch(c,m,w,t,seed,own,light);
+        XSlashLights.wakes(c,m,w,t,stop,own,light);
+        XSlashLights.hornSparks(c,m,w,t,seed,own,light);
+        XSlashLights.end(c,m,w,t,seed,own,light);
         float end=flown(w.reach());
         if(t>=end&&t<end+.6f){
             // where its way ends: all of it in pixels, thrown on ahead
@@ -365,12 +391,17 @@ public final class XSlash {
         }
         // ── the X on the ground
         mark(c,m,w,t,seed,light);
+        float since=t-burst(w.reach());
+        if((w.told()==null||!w.told().gone)&&since>=0&&since<=XSlashLights.AFTER)XSlashLights.burst(c,m,w,diagonals(w),grounds(c,w),t,seed,light);
         // ── on whom it struck
         if(w.told()!=null)for(var hit:w.told().hits){
             float s=t-hit.at();if(s<0||s>=SlashFx.SWIRL_LIFE)continue;
             var live=c.mc.world==null?null:c.mc.world.getEntityById(hit.entity());
             Vec3d mid=live!=null?live.getLerpedPos(c.delta).add(0,live.getHeight()*.55,0):null;if(mid==null)continue;
-            if(hit.by()==XCharaXSlash.BY_X)SlashFx.burst(m,mid,w.f(),XCharaCombo.HACK_LUNGE,seed+hit.entity()*7,s,light,c.camera);
+            if(hit.by()==XCharaXSlash.BY_X){
+                SlashFx.burst(m,mid,w.f(),XCharaCombo.HACK_LUNGE,seed+hit.entity()*7,s,light,c.camera);
+                if(hit.took())XSlashLights.struck(c,m,w,mid,hit.half(),hit.height(),s,seed+hit.entity()*13,light);
+            }
             else SlashFx.burst(m,mid,new Vec3d(0,1,0),XCharaCombo.HACK_SLASH,seed+hit.entity()*11+3,s,light,c.camera);
         }
     }
@@ -397,7 +428,7 @@ public final class XSlash {
         }
         return base;
     }
-    private static double[][] grounds(Fx c,Way w){
+    static double[][] grounds(Fx c,Way w){
         var t=w.told();
         if(t!=null&&t.ground!=null)return t.ground;
         var ds=diagonals(w);var out=new double[2][GROUND_SAMPLES+1];
@@ -481,6 +512,11 @@ public final class XSlash {
                 else m.quad(p.subtract(ax).subtract(az),p.add(ax).subtract(az),p.add(ax).add(az),p.subtract(ax).add(az),rgb,.9f*shown*near);
             }
         }
+        // (2.135.0) cracks out from it, data rising off it, its light running in to where its lines cross
+        float glowAll=(.55f+.45f*charge*pulse)*flicker;
+        XSlashLights.cracks(c,m,w,ds,g,t,shown,glowAll,seed,light);
+        XSlashLights.motes(c,m,w,ds,g,t,shown,charge,seed,light);
+        if(light)XSlashLights.converge(c,m,w,ds,g,t,seed);
         // ── it bursts: spikes up along it from where its lines cross, flashes, pixels thrown up, a ring
         float s=t-bang;if(s<0||s>=BURST_LIFE)return;
         Vec3d cross=ds[0][0].add(ds[0][1]).multiply(.5);
@@ -514,13 +550,17 @@ public final class XSlash {
             }
         }
         // the ring where its lines cross, and a flash there
-        float r=in(s)*(1-Ease.smooth(s,.15f,.5f));
+        float r=in(s)*(1-Ease.smooth(s,.15f,.5f)),r2=s<.07f?0:in(s-.07f)*(1-Ease.smooth(s,.2f,.5f));
         if(light){
-            FxLib.ringPlane(m,cross.add(0,.06,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.6+4.2*Ease.smooth(s,0,.4f),.1,WHITE,.6f*r*GlitchFx.near(cross,c.camera));
-            if(s<.14f){m.softDisc(cross.add(0,.9,0),2.2,GLOW,.5f*in(s)*(1-s/.14f));m.star(cross.add(0,.9,0),1.6,WHITE,.7f*in(s)*(1-s/.14f));}
-        }else DanceBurst.band(m,cross.add(0,.05,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.5+3.9*Ease.smooth(s,0,.4f),.22,PURPLE,.7f*r);
+            FxLib.ringPlane(m,cross.add(0,.06,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.6+6.4*Ease.out(s,0,.42f),.12,WHITE,.6f*r*GlitchFx.near(cross,c.camera));
+            FxLib.ringPlane(m,cross.add(0,.06,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.4+4.4*Ease.out(s-.07f,0,.4f),.1,LILAC,.45f*r2*GlitchFx.near(cross,c.camera));
+            if(s<.16f){m.softDisc(cross.add(0,1,0),3.2,GLOW,.55f*in(s)*(1-s/.16f));m.star(cross.add(0,1,0),2.1,WHITE,.65f*in(s)*(1-s/.16f));}
+        }else{
+            DanceBurst.band(m,cross.add(0,.05,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.5+6.1*Ease.out(s,0,.42f),.26,PURPLE,.7f*r);
+            DanceBurst.band(m,cross.add(0,.05,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.4+4.2*Ease.out(s-.07f,0,.4f),.18,LILAC,.55f*r2);
+        }
     }
-    private static double lerpGround(double[] g,double u){
+    static double lerpGround(double[] g,double u){
         double x=Math.max(0,Math.min(1,u))*GROUND_SAMPLES;int i=(int)Math.floor(x);if(i>=GROUND_SAMPLES)return g[GROUND_SAMPLES];
         return g[i]+(g[i+1]-g[i])*(x-i);
     }
@@ -539,23 +579,62 @@ public final class XSlash {
         float t=c.sec,stop=KnifeClient.until(c.cast.id());if(stop==Float.MAX_VALUE)stop=Float.NaN;
         var w=way(c.cast);if(w.told()!=null&&w.told().gone)return;
         if(t>=ARM1_FROM&&t<flown(w.reach())+.1f)fr.afterglow(.05f);
+        // (2.135.0) the knife as it drinks in its light; each cut as it lands
+        if(t>=LIT&&t<FIRE&&(Float.isNaN(stop)||t<stop)){
+            var hb=KnifeCombo.blade(c.pos,c.yaw,XCharaCombo.XSLASH,t);
+            fr.light(hb[0].add(hb[1].multiply(1.4)),0x9a3cff,4.5,.3f+.3f*Ease.smooth(t,LIT,XSlashLights.GATHERED));
+        }
+        for(int a=0;a<2;a++){
+            float at=a==0?CUT1:CUT2;if(!Float.isNaN(stop)&&stop<at)continue;
+            float bump=KnifeCombo.bump(t,at,.09f);if(bump>.01f)fr.light(armMiddle(w,XSlashRules.NEAR,XSlashRules.HALF0,XSlashRules.TALL0,a),0xb050ff,8,1.1f*bump);
+        }
         if(!Float.isNaN(stop)&&stop<FIRE)return;
         var x=shape(t,w.reach(),stop);
-        if(x!=null&&t>=FIRE)fr.light(w.at(x[0],0,x[2]),0x9a3cff,9,.9f*(float)(1-x[4]));
+        if(x!=null&&t>=FIRE)fr.light(w.at(x[0],0,x[2]),0x9a3cff,11,1.15f*(float)(1-x[4]));
+        float go=KnifeCombo.bump(t,FIRE,.1f);if(go>.01f)fr.light(w.at(XSlashRules.NEAR+.4,0,XSlashRules.TALL0),0xc070ff,10,1.4f*go);
         float b=burst(w.reach());
-        if(t>=flown(w.reach())&&t<b)fr.light(w.at(w.reach()*.55,0,.6),0x8a14e8,8,.25f+.45f*charge(t,w.reach())*pulse(t,w.reach()));
-        float s=t-b;if(s>=0&&s<.4f)fr.light(w.at((XSlashRules.NEAR+w.reach())*.5,0,.8),0xc070ff,14,1.4f*(1-s/.4f));
+        if(t>=flown(w.reach())&&t<b)fr.light(w.at(w.reach()*.55,0,.6),0x8a14e8,9,.3f+.6f*charge(t,w.reach())*pulse(t,w.reach()));
+        float s=t-b;
+        if(s>=0&&s<.5f){
+            fr.light(w.at((XSlashRules.NEAR+w.reach())*.5,0,1.2),0xc070ff,20,2.2f*(1-s/.5f));
+            for(double[] d:XSlashRules.diagonals(w.reach())){
+                fr.light(w.at(d[0],d[1],1),0xa040ff,9,1.1f*(1-s/.5f));fr.light(w.at(d[2],d[3],1),0xa040ff,9,1.1f*(1-s/.5f));
+            }
+        }
+        if(s>=0&&s<XSlashLights.AFTER)fr.light(w.at((XSlashRules.NEAR+w.reach())*.5,0,1),0x8a14e8,12,.4f*(1-Ease.smooth(s,.3f,XSlashLights.AFTER)));
     }
     /** Small shakes: at each cut, as the X goes, on whom it strikes, as its X on the ground bursts. */
     static float shake(StandClient.Cast cast,float sec){
         float stop=KnifeClient.until(cast.id());
-        float s=.12f*KnifeCombo.bump(sec,CUT1,.06f)+.12f*KnifeCombo.bump(sec,CUT2,.06f);
+        // (2.135.0) a little harder throughout: the cuts, the X going, whom it strikes, its burst
+        float s=.16f*KnifeCombo.bump(sec,CUT1,.06f)+.16f*KnifeCombo.bump(sec,CUT2,.06f);
         if(stop!=Float.MAX_VALUE&&stop<FIRE)return s;
         var w=way(cast);
-        s+=.3f*KnifeCombo.bump(sec,FIRE,.08f);
-        if(w.told()!=null)for(var hit:w.told().hits)if(hit.by()==XCharaXSlash.BY_X&&hit.took())s+=.45f*KnifeCombo.bump(sec,hit.at(),.07f);
-        if(w.told()==null||!w.told().gone)s+=.7f*KnifeCombo.bump(sec,burst(w.reach()),.1f);
+        s+=.42f*KnifeCombo.bump(sec,FIRE,.09f);
+        if(w.told()!=null)for(var hit:w.told().hits)if(hit.by()==XCharaXSlash.BY_X&&hit.took())s+=.5f*KnifeCombo.bump(sec,hit.at(),.07f);
+        if(w.told()==null||!w.told().gone)s+=1.0f*KnifeCombo.bump(sec,burst(w.reach()),.12f);
         return s;
+    }
+
+    /** (2.135.0) The ground under its X as it bursts (XSlashLights.solids). */
+    static void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids so){XSlashLights.solids(c,so,way(c.cast),c.sec);}
+    /** How strongly the body leaves purple copies of itself (BodyGhost's silhouettes, 2.135.0): through the cuts and the throw. */
+    static float afterimages(float sec){return Ease.smooth(sec,.16f,.2f)*(1-Ease.smooth(sec,.54f,.64f));}
+    /** Their colour. */
+    static final int AFTERIMAGE=0x9a3cff;
+    /** (2.135.0) Dust kicked up as the X goes and as its X on the ground bursts, for every great X slash this client draws (the effect layer's anime dust). */
+    public static void dust(org.joml.Matrix4f matrix,Vec3d camera){
+        if(TOLD.isEmpty()||!dev.sangwoo.celestialfall.client.vfx.FxLayer.available()||!KagenoFire.ready())return;
+        var mc=MinecraftClient.getInstance();if(mc.world==null)return;float delta=mc.getTickDelta();
+        List<Vec3d> dust=new ArrayList<>();List<float[]> puffs=new ArrayList<>();
+        for(var c:KnifeClient.SWINGS.values()){
+            if(c.combo()!=XCharaCombo.XSLASH)continue;
+            var w=way(c);if(w.told()==null||w.told().gone||w.told().ground==null)continue;
+            float stop=KnifeClient.until(c.id());if(stop!=Float.MAX_VALUE&&stop<FIRE)continue;
+            if(w.from().squaredDistanceTo(camera)>110*110)continue;
+            XSlashLights.dust(w,w.told().ground,c.age(delta)/20f,seed(c),dust,puffs);
+        }
+        if(!dust.isEmpty())KagenoFire.dust(matrix,camera,dust,puffs,(float)(mc.world.getTime()+delta));
     }
 
     // ───────────────────────────── sounds ─────────────────────────────

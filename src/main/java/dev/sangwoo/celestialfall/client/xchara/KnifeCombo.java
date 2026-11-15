@@ -270,6 +270,10 @@ public final class KnifeCombo implements Fx.Skill {
     @Override public boolean layered(){return true;}
     /** None: the body is never copied behind itself (the hack's cut is the knife's own path, SlashFx). */
     @Override public float afterimages(float sec){return 0;}
+    /** (2.135.0) The great X slash alone leaves copies of its user: purple silhouettes through its cuts and its throw (XSlash.afterimages). */
+    @Override public float afterimages(Fx c){return c.cast.combo()==XSLASH?XSlash.afterimages(c.sec):0;}
+    @Override public boolean afterimageSilhouette(Fx c){return c.cast.combo()==XSLASH;}
+    @Override public int afterimageColor(Fx c){return c.cast.combo()==XSLASH?XSlash.AFTERIMAGE:afterimageColor();}
 
     // ───────────────────────────── where things are ─────────────────────────────
 
@@ -379,7 +383,7 @@ public final class KnifeCombo implements Fx.Skill {
         SlashFx.cut(c);
     }
     /** (2.128.0) The slam's ground where it lands. */
-    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==SLAM)OverwriteSlam.solids(c,s);}
+    @Override public void solids(Fx c,dev.sangwoo.celestialfall.client.vfx.FxSolids s){if(c.cast.combo()==SLAM)OverwriteSlam.solids(c,s);else if(c.cast.combo()==XSLASH)XSlash.solids(c,s);}
     @Override public void alpha(Fx c,EffectMesh m){
         if(erase(c.cast.combo()))return;
         if(c.cast.combo()==XSLASH){XSlash.draw(c,m,false);return;}

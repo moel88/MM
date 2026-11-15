@@ -989,6 +989,19 @@ void main(){
     rgb=mix(rgb,mid,smoothstep(.2,.36,dd));
     rgb=mix(rgb,deep,smoothstep(.46,.95,dd));
     rgb=mix(rgb,hotc,whiteCore);
+    // (2.135.0, "참격을 멋있게 꾸며봐 집중적으로") light running along it out from its crown to its horns, a second fine
+    // edge inside its cutting edge, its crown hotter, and a glint running along its cutting edge
+    float crown=1.0-abs(x-.5)*2.0,outw=abs(x-.5)*2.0;
+    float lane=floor(dd*9.0),runp=fract(outw*4.5-tm*8.0+hash(vec2(lane,sd))*.7);
+    float flow=smoothstep(0.0,.06,runp)*(1.0-smoothstep(.06,.5,runp))*smoothstep(.13,.2,dd)*(1.0-smoothstep(.6,.78,dd))*(1.0-.75*cool);
+    float edge2=(1.0-smoothstep(.0,.02+aa,abs(dd-.42)))*smoothstep(.12,.45,crown)*(1.0-.65*cool);
+    float gx=fract(tm*1.7+sd*.13)*1.4-.2;
+    float glint=exp(-(gx-x)*(gx-x)*220.0)*(1.0-smoothstep(.02,.14,dd))*(1.0-cool);
+    rgb=mix(rgb,mix(rimc,hotc,.35),flow*.75);
+    rgb=mix(rgb,mix(rimc,hotc,.55),edge2*.85);
+    rgb=mix(rgb,hotc,glint*.9);
+    rgb*=1.0+.28*crown*(1.0-cool);
+    rgb*=1.0+Hot*(flow*.4+edge2*.5+glint);
     float scan=step(.5,fract(d*26.0-tm*3.0));
     rgb*=mix(1.0,.84,scan*smoothstep(.16,.3,d));
     rgb=mix(rgb,mix(mid,rimc,step(.7,pc)),loose*(1.0-solid));

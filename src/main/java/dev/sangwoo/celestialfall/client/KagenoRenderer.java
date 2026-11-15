@@ -184,7 +184,7 @@ public final class KagenoRenderer {
         RenderSystem.defaultBlendFunc();
         // Shader passes (fire, smoke, brush strokes) manage their own buffers.
         for(var x:casts)KagenoSkills.of(x.cast.skill()).shaders(x);
-        dev.sangwoo.celestialfall.client.xchara.CloneFling.dust(matrix,camera);
+        dev.sangwoo.celestialfall.client.xchara.CloneFling.dust(matrix,camera);dev.sangwoo.celestialfall.client.xchara.XSlash.dust(matrix,camera);
         if(status){dev.sangwoo.celestialfall.client.stand.StandPunchFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandRushFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandInhaleFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandBeatdownFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandTimeStopFx.dust(matrix,camera);dev.sangwoo.celestialfall.client.stand.StandArrowFx.dust(matrix,camera);}
         if(KagenoFire.beginStrokes(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).strokes(x);KagenoFire.endStrokes();}
         if(KagenoFire.beginCrescents(matrix,mc.world.getTime()+delta)){for(var x:casts)KagenoSkills.of(x.cast.skill()).crescents(x);KagenoFire.endCrescents();}
