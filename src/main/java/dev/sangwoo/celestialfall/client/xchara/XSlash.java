@@ -321,6 +321,9 @@ public final class XSlash {
                 }
                 XSlashLights.echoBlades(c,m,w,x0,t,stop,own,light);
                 XSlashLights.spikes(c,m,w,x0,t,stop,seed,own,light);
+                // (2.135.1) the sheet it sweeps as it flies, and a star where its arms cross
+                XSlashLights.sweep(c,m,w,x0,t,light,own);
+                if(light)XSlashLights.heartStar(c,m,w,x0,t,stop,own);
                 if(Float.isNaN(stop)||stop>=FIRE||t<stop)XSlashLights.tear(c,m,w,x0,t,seed,own,light);
             }
             if(light)XSlashLights.tipTrails(c,m,w,t,stop,own);

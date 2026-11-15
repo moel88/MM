@@ -121,6 +121,18 @@ class XSlashLightsTest {
         assertTrue(XSlash.OUTER-XSlash.INNER>=.1,"a wide band");
     }
 
+    /** (2.135.1) The sheet it sweeps as it flies: none as it goes, out to its full length once it is a couple of blocks on, never jumping. */
+    @Test void theSheetItSweepsGrowsAsItGoesAndNeverJumps(){
+        assertEquals(0,XSlashLights.sweepBack(XSlashRules.NEAR),1e-9);
+        assertEquals(XSlashLights.SWEEP_BACK,XSlashLights.sweepBack(XSlashRules.NEAR+2),1e-6);
+        assertEquals(XSlashLights.SWEEP_BACK,XSlashLights.sweepBack(XSlashRules.RANGE),1e-6);
+        double last=0;
+        for(double fw=XSlashRules.NEAR;fw<=XSlashRules.RANGE;fw+=.01){
+            double b=XSlashLights.sweepBack(fw);assertTrue(b>=last-1e-9,"growing");assertTrue(b-last<.03,"no jump at "+fw);last=b;
+        }
+        assertTrue(XSlashLights.SWEEP_BACK<XSlashRules.NEAR+2,"never reaching back past where it went from once grown");
+    }
+
     @Test void theLockClosesOnTheXAsItIsWholeAndSnapsAsItGoes(){
         float nan=Float.NaN;
         assertEquals(0,XSlashLights.lockShown(XSlashLights.LOCK0-.01f,nan),1e-6);

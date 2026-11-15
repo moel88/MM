@@ -371,6 +371,56 @@ final class XSlashLights {
         }
     }
 
+    /** (2.135.1) How far back the sheet it sweeps reaches behind each arm as it flies (blocks, once it is well away). */
+    static final double SWEEP_BACK=3.2;
+    /** How far back its sheet reaches when it is {@code fw} ahead: none as it goes, the whole of it once it is two blocks on. */
+    static double sweepBack(double fw){return SWEEP_BACK*Ease.smooth((float)(fw-XSlashRules.NEAR),0,2);}
+    /**
+     * (2.135.1) The sheet each arm sweeps as it flies: a see-through band from its cutting edge back along its way, bright
+     * at the arm and gone behind it (a deep purple veil blended, a purple glow and a lilac one from the middle of its band
+     * added), so its speed shows from the side and, from behind, it trails down toward the camera.
+     */
+    static void sweep(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,boolean light,float own){
+        if(t<FIRE)return;
+        float fade=(float)(x[3]*(1-x[4]))*own;double back=sweepBack(x[0]);if(fade<=.01f||back<=.05)return;
+        Vec3d off=w.f().multiply(-back);int n=18;
+        for(int a=0;a<2;a++){
+            for(int layer=0;layer<(light?2:1);layer++){
+                double k=layer==0?1:.45;int rgb=light?(layer==0?GLOW:LILAC):DEEP;
+                float strength=light?(layer==0?.22f:.12f):.2f;
+                Vec3d last=null;float lastA=0;
+                for(int i=0;i<=n;i++){
+                    double u=i/(double)n,s=Math.sin(Math.PI*u);
+                    Vec3d p=armPoint(w,x[0],x[1],x[2],a,u,k);
+                    float al=strength*fade*(float)(.15+.85*s)*GlitchFx.near(p,c.camera);
+                    if(last!=null&&(al>0||lastA>0)){
+                        m.vertex(last,rgb,lastA);m.vertex(p,rgb,al);m.vertex(p.add(off),rgb,0);m.vertex(last.add(off),rgb,0);
+                    }
+                    last=p;lastA=al;
+                }
+            }
+        }
+    }
+    /**
+     * (2.135.1, the light) A star where the arms cross once the X is whole: long thin rays along its own diagonals and a
+     * small upright cross turning slowly within its plane, a hot point at its middle, beating.
+     */
+    static void heartStar(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,float own){
+        float whole=Ease.smooth(drawnOf(1,t,stop),.85f,1);float fade=(float)(x[3]*(1-x[4]))*own*whole;if(fade<=.01f)return;
+        Vec3d hp=heart(w,x[0],x[1],x[2]);double sc=scale(x[1],x[2]);float near=GlitchFx.near(hp,c.camera)*fade;if(near<=0)return;
+        float beat=.78f+.22f*(float)Math.sin(t*31);
+        Vec3d d1=w.right().multiply(x[1]).add(0,x[2],0).normalize(),d2=w.right().multiply(-x[1]).add(0,x[2],0).normalize();
+        double long1=(1.6+.5*beat)*sc+.4;
+        for(Vec3d d:new Vec3d[]{d1,d2}){
+            m.softLine(hp.subtract(d.multiply(long1)),hp.add(d.multiply(long1)),.34*sc+.08,GLOW,.28f*near);
+            m.line(hp.subtract(d.multiply(long1*.85)),hp.add(d.multiply(long1*.85)),.03,WHITE,.6f*near*beat);
+        }
+        double turn=t*1.6,short1=(.75+.25*beat)*sc+.2;
+        Vec3d e1=w.right().multiply(Math.cos(turn)).add(0,Math.sin(turn),0),e2=w.right().multiply(-Math.sin(turn)).add(0,Math.cos(turn),0);
+        for(Vec3d e:new Vec3d[]{e1,e2})m.line(hp.subtract(e.multiply(short1)),hp.add(e.multiply(short1)),.025,LILAC,.5f*near);
+        m.softDisc(hp,.5*sc+.15,WHITE,.35f*near*beat);
+    }
+
     // ───────────────────────────── as the X is whole ─────────────────────────────
 
     /** The lock: corner marks closing on where the arms cross from {@link #LOCK0} until the X goes, then gone this soon. */

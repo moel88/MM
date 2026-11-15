@@ -983,8 +983,9 @@ void main(){
     float loose=step(reach,d)*step(pc,.5*(1.0-(d-reach)/max(1.0-reach,.05)))*(1.0-smoothstep(.6,1.0,eat));
     body=max(solid,loose*.85);
     float dd=d+shift;
-    rgb=mix(ink,hotc,smoothstep(.022,.022+aa*2.0,dd));
-    whiteCore=(1.0-smoothstep(.10,.17,dd))*smoothstep(.022,.045,dd)*(1.0-cool);
+    // (2.135.1) a firmer ink line on its cutting edge and a fuller white core inside it: its edge reads sharp from afar
+    rgb=mix(ink,hotc,smoothstep(.032,.032+aa*2.0,dd));
+    whiteCore=(1.0-smoothstep(.11,.19,dd))*smoothstep(.032,.055,dd)*(1.0-cool);
     rgb=mix(rgb,rimc,smoothstep(.12,.2,dd));
     rgb=mix(rgb,mid,smoothstep(.2,.36,dd));
     rgb=mix(rgb,deep,smoothstep(.46,.95,dd));
