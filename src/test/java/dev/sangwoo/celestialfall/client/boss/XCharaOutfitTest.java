@@ -4,7 +4,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.sangwoo.celestialfall.boss.BossKind;
 import dev.sangwoo.celestialfall.client.MotionPlayerModel;
-import dev.sangwoo.celestialfall.client.xchara.BossAura;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -18,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * the skin and of the outfit shines by itself: violet all over (faintly), its marks brightly, its eye red.
  */
 class XCharaOutfitTest {
+    /** The skin's red eye (the character's right): the head's front face is at 8..15, 8..15. */
+    static final int EYE_X=10,EYE_Y=13;
     static JsonObject json(){
         try(var in=XCharaOutfitTest.class.getResourceAsStream("/assets/celestialfall/bosses/xchara_outfit.json")){
             assertNotNull(in,"the outfit");return JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonObject();
@@ -32,16 +33,15 @@ class XCharaOutfitTest {
         assertFalse(k.comes(),"no timer of its own until the user says when");assertTrue(BossKind.JOTARO.comes());
         assertEquals(0,k.timeStopBelow,1e-6,"no time stop");
     }
-    @Test void itsSkinIsASlimPlayersWithOneRedEyeWhereTheLightIsPut(){
+    @Test void itsSkinIsASlimPlayersWithOneRedEye(){
         var skin=BossOutfitTest.image(TEX+"xchara.png");
         assertEquals(64,skin.getWidth());assertEquals(64,skin.getHeight(),"a player's skin");
         // slim arms: the right arm's front is three wide (44..46), nothing at 47; the last arm column of the classic layout is empty
         assertTrue((skin.getRGB(46,24)>>>24)>0,"the arm");assertEquals(0,skin.getRGB(54,24)>>>24,"a slim skin leaves the classic arm's last columns empty");
-        // the eye the light is on: the head's front face is at 8..15, 8..15; EYE_X, EYE_Y are from the head's middle and its chin
-        int x=8+(int)Math.floor(BossAura.EYE_X+4),y=8+(int)Math.floor(BossAura.EYE_Y+8);
+        // its red eye: the head's front face is at 8..15, 8..15, the character's right eye at 10, 13..14
+        int x=EYE_X,y=EYE_Y;
         int rgb=skin.getRGB(x,y),r=rgb>>16&255,g=rgb>>8&255;
         assertTrue(r>200&&g<120,"the red eye at "+x+","+y+": "+Integer.toHexString(rgb));
-        assertTrue(BossAura.EYE_X<0,"the character's right eye (the skin's red one)");assertTrue(BossAura.EYE_Z<-4,"just before the face");
         // and the other eye is not red
         int other=skin.getRGB(8+7-(x-8),y);assertFalse((other>>16&255)>200&&(other>>8&255)<120&&(other&255)<200,"only the one");
     }
@@ -87,7 +87,7 @@ class XCharaOutfitTest {
             assertEquals(name.endsWith("right")?-.5f:.5f,mid,1e-4,name+" about the slim arm's middle");
         }
     }
-    @Test void whatShinesIsVioletAllOverFaintlyItsMarksBrightlyItsEyeRed(){
+    @Test void whatShinesIsVioletAllOverFaintlyItsMarksBrightlyNotItsEye(){
         var skin=BossOutfitTest.image(TEX+"xchara.png");var glow=BossOutfitTest.image(TEX+"xchara_glow.png");
         assertEquals(skin.getWidth(),glow.getWidth());assertEquals(skin.getHeight(),glow.getHeight());
         int dim=0,bright=0,body=0;
@@ -99,8 +99,10 @@ class XCharaOutfitTest {
             if(Math.max(r,b)>170)bright++;else if(Math.max(r,b)<140)dim++;
         }
         assertTrue(dim>body*.7,"most of it only half as bright as its marks: "+dim+" of "+body);assertTrue(bright>=20,"its marks brightly: "+bright);
-        int ex=8+(int)Math.floor(BossAura.EYE_X+4),ey=8+(int)Math.floor(BossAura.EYE_Y+8),eye=glow.getRGB(ex,ey);
-        assertTrue((eye>>16&255)>220&&(eye>>8&255)<90&&(eye&255)<140,"its eye shines red: "+Integer.toHexString(eye));
+        // (2.137.1, "눈에서 빛나는 효과는 없애자") its eye shines no more than the rest: faintly, and not red
+        for(int ey:new int[]{EYE_Y,EYE_Y+1}){int eye=glow.getRGB(EYE_X,ey);
+            assertTrue(Math.max(eye>>16&255,eye&255)<140,"its eye only as faint as the rest: "+Integer.toHexString(eye));
+            assertTrue((eye>>16&255)<=(eye&255)+40,"violet, not red: "+Integer.toHexString(eye));}
         // the outfit's: black wherever the outfit is cut away, and its neon marks bright
         var outfit=BossOutfitTest.image(TEX+"xchara_outfit.png");var og=BossOutfitTest.image(TEX+"xchara_outfit_glow.png");
         assertEquals(outfit.getWidth(),og.getWidth());assertEquals(outfit.getHeight(),og.getHeight());

@@ -433,15 +433,16 @@ def paint(parts):
 
 # how much of everything shines by itself in the dark (the rest of its light is its marks')
 DIM = .5
-# the skin's colours that shine: its violet streaks, its purple marks, its red eye, its locket
+# the skin's colours that shine: its violet streaks, its purple marks, its locket (not its red eye: 2.137.1, the user's
+# '눈에서 빛나는 효과는 없애자': the eye is only as faint as the rest)
 SKIN_GLOW = {
     0x8f6fff: .95, 0x8f6eff: .95, 0xb189ff: .7, 0xb188ff: .7, 0x492a6a: .9, 0x5c317c: 1.0,
-    0xe50094: 1.0, 0xff4d79: 1.0, 0xffd3c2: .6, 0xfff7dc: .5, 0xffaaa8: .7,
+    0xffd3c2: .6, 0xfff7dc: .5, 0xffaaa8: .7,
 }
 
 
 def skin_glow(skin):
-    """What of the skin shines: the colours above at their strength, the red eye redder; the rest a faint purple."""
+    """What of the skin shines: the colours above at their strength; the rest (the red eye too) a faint purple."""
     out = Image.new('RGBA', skin.size, (0, 0, 0, 255))
     sp, op = skin.load(), out.load()
     for y in range(skin.size[1]):
@@ -452,9 +453,7 @@ def skin_glow(skin):
             key = (r << 16) | (g << 8) | b
             c = (r, g, b)
             base = mix(BLACK, mix(c, VIOLET, .72), DIM)
-            if key in (0xe50094, 0xff4d79):
-                c = RED
-            elif key in (0x492a6a, 0x5c317c):
+            if key in (0x492a6a, 0x5c317c):
                 c = NEON
             k = SKIN_GLOW.get(key)
             lit = shade(c, k) if k else base

@@ -1503,7 +1503,7 @@ public final class MpClient implements ClientModInitializer {
             flag("boss_skin",c.getSkinTexture().toString());
             var info=dev.sangwoo.celestialfall.client.boss.BossClient.info(c.getUuid());
             flag("boss_outfit",dev.sangwoo.celestialfall.client.boss.BossOutfit.model(info==null?"jotaro":info.kind())!=null);
-            // (2.137.0) X Chara: its slim model, its hack as this client sees it, its aura (strength, anger, whether its eye was drawn)
+            // (2.137.0) X Chara: its slim model, its hack as this client sees it, its aura (strength, anger)
             if(info!=null&&"xchara".equals(info.kind())){
                 flag("boss_model",c.getModel());flag("boss_hack",((dev.sangwoo.celestialfall.stand.StandHolder)c).botand$isHacking());
                 String aura=dev.sangwoo.celestialfall.client.xchara.BossAura.describe();flag("boss_aura",aura.isEmpty()?"-":aura.replaceAll("\\.\\d+",""));

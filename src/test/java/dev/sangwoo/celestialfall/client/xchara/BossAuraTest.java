@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * What is about X Chara the boss (2.137.0, user request: "몸에 전체적으로 글리치 아우라가 둘러져 있게 ... 눈에는 붉은색
  * 빛과 아우라"): the glitch stays round its body and never lies on it, its silhouettes are a little bigger than it and
  * split pink to one side and cyan to the other, what shines of it breathes and dips but never goes out, and the red
- * flame from its eye streams up and back without a jump.
+ * eye has no light of its own (2.137.1).
  */
 class BossAuraTest {
     static final double H=1.8,W=.6;
@@ -75,21 +75,6 @@ class BossAuraTest {
         }
         assertTrue(low>.25f,"never out: "+low);assertTrue(high<=1.25f,"never past its light: "+high);
         assertTrue(calm/n>.7&&calm/n<.95,"mostly lit: "+calm/n);assertTrue(angry>calm);
-    }
-    @Test void theFlameFromItsEyeStreamsUpAndBackWithoutAJump(){
-        for(float anger:new float[]{0,1}){
-            double[] root=BossAura.flame(0,3.3f,anger),end=BossAura.flame(BossAura.FLAME,3.3f,anger);
-            assertTrue(Math.hypot(root[0],root[1])<.06,"it starts at the eye's corner");
-            assertTrue(end[1]>.25&&end[2]>.08&&end[0]>.15,"and ends up, back and out to its side: "+end[0]+","+end[1]+","+end[2]);
-            assertTrue(end[1]<.9,"no longer than the head is high");
-            double worst=0;
-            for(int f=1;f<60*4;f++)for(int i=0;i<=BossAura.FLAME;i++){
-                double[] a=BossAura.flame(i,(f-1)/60f,anger),b=BossAura.flame(i,f/60f,anger);
-                worst=Math.max(worst,Math.sqrt((a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2])));
-            }
-            assertTrue(worst<.02,"it waves, a fiftieth of a block a frame at most: "+worst);assertTrue(worst>.001,"it does wave");
-        }
-        assertTrue(BossAura.flame(BossAura.FLAME,1,1)[1]>BossAura.flame(BossAura.FLAME,1,0)[1],"longer angry");
     }
     @Test void itsOwnLightShowsAThirdByDayAndAllOfItInTheDark(){
         float day=BossAura.byDark(0,15,1),night=BossAura.byDark(0,15,.2f),cave=BossAura.byDark(0,0,1),torch=BossAura.byDark(15,0,.2f);
