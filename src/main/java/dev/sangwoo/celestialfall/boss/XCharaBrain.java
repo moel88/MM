@@ -110,6 +110,8 @@ final class XCharaBrain extends BossBrain {
      */
     private float weight(Plan p,LivingEntity t,double d,boolean guard,long now){
         boolean sees=boss.canSee(t);
+        // (one its double has seized or marked takes no other "!!!" of its meanwhile: it would only wait on it)
+        if(p.hackMatters&&p.hack&&p!=Plan.ERASE&&(XCharaClone.held(t)||XCharaClone.marked(t)))return 0;
         float hp=boss.getHealth()/Math.max(1,boss.getMaxHealth());
         return switch(p){
             case COMBO->d<=WALK_IN&&knifeFree(now)?(d<=KNIFE?(guard?2.5f:5):(guard?1:2.5f)):0;

@@ -442,6 +442,9 @@ def stagger_line(t):
 # the boss's words for the moves it reads (BossThreats) and its own (JotaroBrain)
 MOVES = {'punch1': '평타', 'punch2': '평타', 'punch3': '평타', 'punch4': '평타 4타', 'punch5': '강펀치', 'punch6': '스타 핑거',
          'punch7': '비트다운', 'rush': '러시', 'inhale': '흡입', 'time_stop': '시간 정지', 'atomic': '아토믹'}
+# FILM_BOSS="엑스 차라/3000" (2.137.0): the boss the caption names and its whole health (Kujo Jotaro's if not said)
+BOSS_NAME, BOSS_HEALTH = (os.environ.get('FILM_BOSS', '죠타로/5000').split('/') + ['5000'])[:2]
+BOSS_HEALTH = int(BOSS_HEALTH)
 def boss_doing(d):
     """What the boss does, from boss.csv's words: its own plan, or how it answers a player's move (in brackets)."""
     if not d or d == '-': return ''
@@ -458,7 +461,7 @@ def boss_line(t):
     if i < 0: return None, None
     r, parts = rush[i][1], []
     if r.get('health'):
-        parts.append(('죠타로 화남' if r.get('angry') == '1' else '죠타로 중립(가만히 서 있음)'))
+        parts.append((BOSS_NAME + ' 화남' if r.get('angry') == '1' else BOSS_NAME + ' 중립(가만히 서 있음)'))
         doing = boss_doing(r.get('doing', ''))
         # held where he stands calling his time stop or in his beatdown's cutscene (the brain before 2.69.0's release
         # said only "묶임")
@@ -469,8 +472,8 @@ def boss_line(t):
         if doing and r.get('angry') == '1': parts.append(doing)
         who = r.get('target') or ''
         if who and r.get('angry') == '1': parts.append('대상 ' + ('나' if who == 'ShotsQA' else '동료'))
-        parts.append(f'보스 체력 {float(r["health"]):,.0f}/5,000')
-    elif r.get('boxes') and int(r['boxes']) > 0: parts.append(f'죠타로 처치 · 박스 {int(r["boxes"])}개')
+        parts.append(f'보스 체력 {float(r["health"]):,.0f}/{BOSS_HEALTH:,}')
+    elif r.get('boxes') and int(r['boxes']) > 0: parts.append(f'{BOSS_NAME} 처치 · 박스 {int(r["boxes"])}개')
     if r.get('player_health'): parts.append(f'내 체력 {float(r["player_health"]):.0f}')
     if r.get('mate_health'): parts.append(f'동료 체력 {float(r["mate_health"]):.0f}')
     color = (255, 170, 160) if r.get('angry') == '1' else (255, 255, 255)
