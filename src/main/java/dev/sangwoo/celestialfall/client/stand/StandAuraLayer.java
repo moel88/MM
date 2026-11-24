@@ -52,7 +52,8 @@ import org.lwjgl.opengl.GL30;
 public final class StandAuraLayer {
     private StandAuraLayer(){}
     /** Something wrapped in the aura this frame (a stand's body or its user's) or glowing sky blue, and how strongly (0 to 1). */
-    record Bearer(Entity body,int kind,float strength){
+    record Bearer(Entity body,int kind,float strength,boolean glitch){
+        Bearer(Entity body,int kind,float strength){this(body,kind,strength,false);}
         boolean stand(){return kind==STAND;}
     }
     /** The kinds of bearer, each its own mask: a stand, its user, a body glowing sky blue (CutsceneFlash). */
@@ -113,6 +114,8 @@ public final class StandAuraLayer {
         // where they are on screen: a box round them all with room for the glow and the flames, and the nearest stand
         float x0=Float.MAX_VALUE,y0=Float.MAX_VALUE,x1=-Float.MAX_VALUE,y1=-Float.MAX_VALUE;boolean whole=false;
         Bearer nearest=null;double best=Double.MAX_VALUE,stands=0,users=0;int standCount=0,userCount=0;boolean glows=false;
+        // (2.137.0) where the glitching ones are on the screen: within it the aura is torn across in bands (X Chara the boss)
+        float gx0=Float.MAX_VALUE,gy0=Float.MAX_VALUE,gx1=-Float.MAX_VALUE,gy1=-Float.MAX_VALUE;boolean glitch=false;
         for(var b:bearers){
             var e=b.body();var box=e.getBoundingBox().offset(e.getLerpedPos(delta).subtract(e.getPos()));
             box=b.kind()==GLOW?box.expand(GLOW_REACH+.2):box.expand(REACH+.2).stretch(0,LICK,0);
@@ -122,7 +125,9 @@ public final class StandAuraLayer {
                 if(v.w<.05f){whole=true;continue;}
                 float px=(v.x/v.w*.5f+.5f)*w,py=(v.y/v.w*.5f+.5f)*h;
                 x0=Math.min(x0,px);y0=Math.min(y0,py);x1=Math.max(x1,px);y1=Math.max(y1,py);
+                if(b.glitch()){gx0=Math.min(gx0,px);gy0=Math.min(gy0,py);gx1=Math.max(gx1,px);gy1=Math.max(gy1,py);glitch=true;}
             }
+            if(b.glitch()&&whole){gx0=0;gy0=0;gx1=w;gy1=h;}
             double away=e.getLerpedPos(delta).add(0,e.getHeight()*.5,0).distanceTo(cam);
             if(b.kind()==STAND){stands+=away;standCount++;}else if(b.kind()==USER){users+=away;userCount++;}
             double d=away-(b.stand()?1000:0);
@@ -181,6 +186,7 @@ public final class StandAuraLayer {
             i(auraProg,"MaskA",0);i(auraProg,"MaskB",1);i(auraProg,"Halo",2);i(auraProg,"Noise",3);i(auraProg,"MaskC",4);f(auraProg,"Glow",glows?1f:0f);
             f2(auraProg,"Texel",1f/w,1f/h);f(auraProg,"Scale",pixels);f2(auraProg,"Anchor",px,py);
             float[] phase=flow(seconds);f3(auraProg,"Phase",phase[0],phase[1],phase[2]);
+            GL20.glUniform4f(GL20.glGetUniformLocation(auraProg,"GlitchBox"),glitch?gx0:0,glitch?gy0:0,glitch?gx1:-1,glitch?gy1:-1);f(auraProg,"GlitchTime",(float)(seconds%600));
             f2(auraProg,"Gain",1f,USER_GAIN);f(auraProg,"Flare",MathHelper.clamp(flare,0,1));
             // which kind is nearer the camera (on average): the one behind keeps its glow off the other
             f(auraProg,"Front",userCount>0&&standCount>0&&users/userCount<stands/standCount?1f:0f);

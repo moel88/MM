@@ -32,11 +32,14 @@ public final class BossClient {
         ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->KNOWN.clear());
         BossBar.initialize();
         BossOutfit.initialize();
+        dev.sangwoo.celestialfall.client.xchara.BossAura.initialize();
     }
     public static boolean isBoss(UUID id){return id!=null&&KNOWN.containsKey(id);}
     public static boolean isBoss(Entity e){return e!=null&&KNOWN.containsKey(e.getUuid());}
     public static Info info(UUID id){return KNOWN.get(id);}
     public static Collection<Info> all(){return Collections.unmodifiableCollection(KNOWN.values());}
+    /** Whether this boss's skin is a slim-armed one (BossKind.slim: X Chara's). */
+    public static boolean slim(UUID id){var i=KNOWN.get(id);if(i==null)return false;var k=dev.sangwoo.celestialfall.boss.BossKind.byId(i.kind());return k!=null&&k.slim();}
     /** The skin a boss's body is drawn in (null for anyone else). */
     public static Identifier skin(UUID id){var i=KNOWN.get(id);return i==null?null:CelestialFall.id("textures/entity/boss/"+i.kind()+".png");}
 }

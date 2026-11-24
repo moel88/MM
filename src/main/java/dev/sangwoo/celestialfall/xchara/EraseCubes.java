@@ -63,7 +63,8 @@ public final class EraseCubes {
     public static double carry(LivingEntity e){
         var world=e.getWorld();if(!any(world))return 0;
         if(world.isClient){if(!(e instanceof PlayerEntity p)||!p.isMainPlayer())return 0;}
-        else if(e instanceof PlayerEntity)return 0;
+        // (2.137.0) a boss's body is a player nobody plays: the server carries it, as it carries a mob
+        else if(e instanceof PlayerEntity&&!(e instanceof dev.sangwoo.celestialfall.boss.BossPlayer))return 0;
         var box=e.getBoundingBox();double feet=e.getY(),up=0;
         for(var c:cubes(world)){
             if(!c.over(box))continue;

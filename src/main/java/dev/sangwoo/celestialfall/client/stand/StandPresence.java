@@ -235,6 +235,8 @@ public final class StandPresence {
     private static void glow(MinecraftClient mc,WorldRenderContext c,List<StandAuraLayer.Bearer> bearers,float flare){
         for(var g:dev.sangwoo.celestialfall.client.CutsceneFlash.glowing(mc,c.tickDelta()))
             if(shows(c,g.player()))bearers.add(new StandAuraLayer.Bearer(g.player(),StandAuraLayer.GLOW,g.strength()));
+        // (2.137.0) X Chara the boss is wrapped in it too, its glow torn across as a glitch (StandAuraLayer's Glitch)
+        dev.sangwoo.celestialfall.client.xchara.BossAura.bearers(mc,(e,k)->{if(e instanceof PlayerEntity p&&shows(c,p))bearers.add(new StandAuraLayer.Bearer(p,StandAuraLayer.USER,k,true));});
         StandAuraLayer.draw(c,bearers,(ticks-1d+c.tickDelta())/20,flare);
     }
 

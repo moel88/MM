@@ -19,7 +19,17 @@ public enum BossKind {
      * 현재 2분에서 2분30초로 올리자(죠타로 보스도 적용) 비트다운도 쿨타임 2분(죠타로 보스도 적용)으로"): his time stop two
      * and a half minutes and his beatdown two minutes, as a player's now.
      */
-    JOTARO("jotaro","쿠죠 죠타로","Kujo_Jotaro","star_platinum",5000,2500,5000,6,90*60*20);
+    JOTARO("jotaro","쿠죠 죠타로","Kujo_Jotaro","star_platinum",5000,2500,5000,6,90*60*20),
+    /**
+     * X Chara (2.137.0, user request: "이제 엑스차라 보스를 만들자 죠타로 처럼 스킨에 디테일이나 장식을 더 해서 꾸며주고
+     * 몸에 전체적으로 글리치 아우라가 둘러져 있게 만들어주고 밤에도 보랏빛으로 빛이나게 만들어줘 눈에는 붉은색 빛과
+     * 아우라를 추가해주고"; their answers: fighting and all at once, "체력 3000 나머지는 나중에", every skill with the hack
+     * on and off): X Chara's player's own knife and skills (XCharaBrain), 3000 health. What it gives and how often it
+     * comes are the user's to say yet: until then it gives what Jotaro does (5000 won, six boxes) and never comes of
+     * itself ({@link #every} 0: an operator brings it, /botand boss xchara spawn). Its body is the slim-armed model
+     * (the skin the user sent is one).
+     */
+    XCHARA("xchara","엑스 차라","X_Chara","x_chara",3000,0,5000,6,0);
 
     /** Its id (commands, packets, saved state), its name as the boss bar shows it, and its body's profile name (16 at most, ASCII). */
     public final String id,title,profile;
@@ -29,7 +39,7 @@ public enum BossKind {
     public final float health,timeStopBelow;
     /** The money whoever fells it gets, and how many boxes it leaves in a ring where it fell. */
     public final int reward,boxes;
-    /** Ticks from one of its comings to the next (the world's time). */
+    /** Ticks from one of its comings to the next (the world's time); 0: it never comes of itself. */
     public final long every;
     BossKind(String id,String title,String profile,String stand,float health,float timeStopBelow,int reward,int boxes,long every){
         this.id=id;this.title=title;this.profile=profile;this.stand=stand;this.health=health;this.timeStopBelow=timeStopBelow;this.reward=reward;this.boxes=boxes;this.every=every;
@@ -42,6 +52,10 @@ public enum BossKind {
         }
         return base;
     }
+    /** Whether it comes of itself, every so often. */
+    public boolean comes(){return every>0;}
+    /** Whether its body is the slim-armed player model (its skin's). */
+    public boolean slim(){return this==XCHARA;}
     /** Whether it may call its time stop with {@code health} left. */
     public boolean mayStopTime(float health){return timeStopBelow>0&&health<=timeStopBelow;}
     /** Its name with the subject particle (쿠죠 죠타로가) and with the object particle (쿠죠 죠타로를), as Korean takes them. */

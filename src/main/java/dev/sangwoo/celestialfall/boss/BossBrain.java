@@ -149,6 +149,8 @@ public class BossBrain {
     /** Held where it is or kept from acting (for its poise). */
     private boolean held(){return boss.isAlive()&&(CombatManager.incapacitated(boss)||HitStun.stunned(boss));}
 
+    /** Whether something of its own holds it where it stands this tick (a player's client holds their keys then; 2.137.0): it does not walk. */
+    protected boolean rooted(){return false;}
     /** Its own way of attacking whom it fights (a boss with no stand walks up and fights with its fists). */
     protected void attack(long now){
         double d=flat(target.getPos());
@@ -308,6 +310,7 @@ public class BossBrain {
         var f=Vec3d.fromPolar(0,yaw);var left=new Vec3d(f.z,0,-f.x);
         double fw=move.dotProduct(f),sd=move.dotProduct(left),len=Math.hypot(fw,sd);
         if(len>1){fw/=len;sd/=len;}
+        if(rooted()){fw=sd=0;jump=false;}
         boss.forwardSpeed=(float)fw;boss.sidewaysSpeed=(float)sd;
         var s=CombatManager.peek(boss);long now=boss.getWorld().getTime();
         boolean slowed=s!=null&&(s.locked(now)||s.guarding||s.slowed(now))||StarPlatinumRush.rushing(boss)||StarPlatinumInhale.inhaling(boss);

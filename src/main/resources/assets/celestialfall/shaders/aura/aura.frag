@@ -20,6 +20,8 @@ uniform vec2 Gain;           // the stands', their users'
 uniform float Flare;         // 0..1: bursting into its pose
 uniform float Front;         // 1 when the users are nearer the camera than the stands, 0 when the stands are
 uniform float Glow;          // 1 when any body glows sky blue
+uniform vec4 GlitchBox;      // the screen box (pixels) of those whose aura glitches (2.137.0, X Chara the boss); empty if x1<x0
+uniform float GlitchTime;    // seconds
 in vec2 texCoord;
 out vec4 fragColor;
 
@@ -27,7 +29,23 @@ vec3 tone(float heat){
     // deep violet out in the tongues, a brighter violet close to the body
     return mix(vec3(0.34,0.13,0.78),vec3(0.58,0.32,1.0),heat);
 }
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+// Within the glitch's box the aura is a failing screen's: in bands a tenth of a block high, some of them thrown
+// sideways 14 times a second (x: how far, pixels), and its light there split pink or cyan (y: -1, 0, 1); z: whether a
+// band is out altogether this step.
+vec3 glitch(vec2 px){
+    if(GlitchBox.z<GlitchBox.x||px.x<GlitchBox.x||px.x>GlitchBox.z||px.y<GlitchBox.y||px.y>GlitchBox.w)return vec3(0.0);
+    float band=floor(px.y/max(Scale*0.1,2.0)),stp=floor(GlitchTime*14.0);
+    float fit=step(0.66,hash(vec2(floor(GlitchTime/0.6),7.3)));
+    float r=hash(vec2(band,stp)),r2=hash(vec2(band*1.7+3.1,stp+11.0));
+    float on=step(0.8-0.3*fit,r);
+    return vec3(on*(r2-0.5)*Scale*(0.35+0.5*fit),on*sign(r2-0.5),step(0.94,hash(vec2(band+5.0,stp*1.3))));
+}
 vec4 aura(vec2 px){
+    vec3 gz=glitch(px);
+    // (its edges in blocks of pixels there, as a screen's)
+    if(GlitchBox.z>=GlitchBox.x&&px.x>=GlitchBox.x&&px.x<=GlitchBox.z&&px.y>=GlitchBox.y&&px.y<=GlitchBox.w){float cell=max(Scale*0.045,1.0);px=(floor(px/cell)+0.5)*cell;}
+    px.x+=gz.x;
     // the flames' pattern in blocks round the bearers, flowing upwards
     vec2 q=(px-Anchor)/max(Scale,1.0);
     float n1=texture(Noise,q*vec2(0.55,0.32)+vec2(0.0,-Phase.x)).r;
@@ -49,8 +67,11 @@ vec4 aura(vec2 px){
     float total=amount.x+amount.y;
     if(total<=0.002)return vec4(0.0);
     float heat=clamp(max(h0.x,h0.y)*1.4,0.0,1.0);
-    float cover=min(total,1.0)*0.72;
-    return vec4(tone(heat)*cover*1.25,cover);
+    float cover=min(total,1.0)*0.72*(1.0-gz.z);
+    vec3 col=tone(heat);
+    // a thrown band's light is split: pink one way, cyan the other
+    if(gz.y>0.5)col=mix(col,vec3(1.0,0.25,0.84),0.7);else if(gz.y<-0.5)col=mix(col,vec3(0.2,0.92,1.0),0.6);
+    return vec4(col*cover*1.25,cover);
 }
 vec4 sky(vec2 px){
     if(Glow<=0.0)return vec4(0.0);

@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** A boss's body wears its own skin (2.69.0, textures/entity/boss/KIND.png), on the classic, broad-armed model. */
+/** A boss's body wears its own skin (2.69.0, textures/entity/boss/KIND.png), on the classic, broad-armed model, or the slim-armed one if its skin is one (2.137.0, X Chara's). */
 @Mixin(AbstractClientPlayerEntity.class)
 public abstract class BossSkinMixin {
     @Inject(method="getSkinTexture",at=@At("HEAD"),cancellable=true)
@@ -18,6 +18,7 @@ public abstract class BossSkinMixin {
     }
     @Inject(method="getModel",at=@At("HEAD"),cancellable=true)
     private void botand$bossModel(CallbackInfoReturnable<String> cir){
-        if(BossClient.isBoss(((Entity)(Object)this).getUuid()))cir.setReturnValue("default");
+        var id=((Entity)(Object)this).getUuid();
+        if(BossClient.isBoss(id))cir.setReturnValue(BossClient.slim(id)?"slim":"default");
     }
 }

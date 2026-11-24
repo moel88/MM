@@ -225,10 +225,12 @@ public final class Bosses {
         long now=world.getTime();var state=BossState.get(server);
         for(var kind:BossKind.values()){
             var e=state.entry(kind);
-            // the first hour and a half counts from when the map first ran with the mod
-            if(e.next<=0){e.next=now+kind.every;state.changed();continue;}
             var up=live(kind);
             if(up!=null&&now%100==0&&up.isAlive()){e.health=up.getHealth();state.changed();}
+            // (2.137.0) one that never comes of itself: an operator brings it
+            if(!kind.comes())continue;
+            // the first hour and a half counts from when the map first ran with the mod
+            if(e.next<=0){e.next=now+kind.every;state.changed();continue;}
             if(now<e.next)continue;
             e.next=BossRules.nextAfter(e.next,kind.every,now);state.changed();
             // its time came: it comes, unless it is still up (one of each at a time)
@@ -293,9 +295,10 @@ public final class Bosses {
                 }))
                 .then(literal("timer").executes(c->{
                     var s=c.getSource();long left=BossState.get(s.getServer()).entry(kind).next-s.getServer().getOverworld().getTime();
-                    s.sendFeedback(()->Text.literal(kind.title+" 다음 등장까지 "+minutes(left)),false);return 1;
+                    s.sendFeedback(()->Text.literal(kind.comes()?kind.title+" 다음 등장까지 "+minutes(left):kind.topic()+" 아직 자동으로 나오지 않아요(명령어로만)."),false);return 1;
                 }).then(argument("minutes",IntegerArgumentType.integer(0,24*60)).executes(c->{
                     var s=c.getSource();int m=IntegerArgumentType.getInteger(c,"minutes");var state=BossState.get(s.getServer());
+                    if(!kind.comes()){s.sendError(Text.literal(kind.topic()+" 아직 자동으로 나오지 않아요(명령어로만)."));return 0;}
                     state.entry(kind).next=s.getServer().getOverworld().getTime()+Math.max(1,m*1200L);state.changed();
                     s.sendFeedback(()->Text.literal(kind.title+" 다음 등장까지 "+m+"분"),true);return 1;
                 }))));
@@ -319,7 +322,7 @@ public final class Bosses {
             var b=live(kind);var e=state.entry(kind);var spot=spot(server,kind);
             String where=spot==null?"위치 없음":String.format(Locale.ROOT,"(%.0f, %.0f, %.0f)",spot[0],spot[1],spot[2]);
             String up=b==null?"없음":String.format(Locale.ROOT,"체력 %.0f/%.0f, %s",b.getHealth(),b.getMaxHealth(),b.brain.describe());
-            source.sendFeedback(()->Text.literal(kind.title+": "+up+" · 위치 "+where+" · 다음 등장까지 "+minutes(e.next-now)),false);
+            source.sendFeedback(()->Text.literal(kind.title+": "+up+" · 위치 "+where+(kind.comes()?" · 다음 등장까지 "+minutes(e.next-now):" · 자동 등장 없음(명령어로만)")),false);
         }
         return LIVE.size();
     }

@@ -28,7 +28,8 @@ import net.minecraft.util.math.MathHelper;
 /**
  * A boss's outfit (2.69.0, user request for Kujo Jotaro: "옷이나 모자나 장식을 더 꾸며서 입체감있게"): boxes worn over
  * its skin that stand out of it, following its limbs. Each kind's outfit is bosses/KIND_outfit.json and its texture
- * textures/entity/boss/KIND_outfit.png (tools/boss/make_jotaro.py makes both). Its boxes hang off the body's own bones
+ * textures/entity/boss/KIND_outfit.png (tools/boss/make_jotaro.py makes both; X Chara's, 2.137.0, make_xchara.py,
+ * with KIND_outfit_glow.png and KIND_glow.png: what of the outfit and of the skin shines by itself). Its boxes hang off the body's own bones
  * (the head, the body, the arms and their forearms, the legs and their shins), whose places and turns it takes from the
  * player's model every frame; the coat's skirt flaps swing with the legs under them, flare out behind a running boss
  * and stir a little as it goes.
@@ -39,6 +40,8 @@ public final class BossOutfit {
         final ModelPart root,head,body,rightArm,leftArm,rightElbow,leftElbow,rightLeg,leftLeg,rightKnee,leftKnee;
         final List<ModelPart> flaps=new ArrayList<>();final List<String> swings=new ArrayList<>();
         public final Identifier texture;
+        /** What of it shines by itself (2.137.0: drawn again, added, at full light), and what of the skin under it does; null if nothing. */
+        public Identifier glow,skinGlow;
         Model(ModelPart root,Identifier texture,Map<String,String> swingOf){
             this.root=root;this.texture=texture;
             head=root.getChild("head");body=root.getChild("body");
@@ -80,7 +83,7 @@ public final class BossOutfit {
     static void initialize(){
         ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(new SimpleSynchronousResourceReloadListener(){
             @Override public Identifier getFabricId(){return CelestialFall.id("boss_outfits");}
-            @Override public void reload(ResourceManager manager){MODELS.clear();for(String kind:new String[]{"jotaro"}){var m=load(manager,kind);if(m!=null)MODELS.put(kind,m);}}
+            @Override public void reload(ResourceManager manager){MODELS.clear();for(String kind:new String[]{"jotaro","xchara"}){var m=load(manager,kind);if(m!=null)MODELS.put(kind,m);}}
         });
     }
     /** The outfit of a boss of {@code kind}, if it has one. */
@@ -90,7 +93,10 @@ public final class BossOutfit {
         var file=CelestialFall.id("bosses/"+kind+"_outfit.json");
         var resource=manager.getResource(file);if(resource.isEmpty())return null;
         try(var in=new InputStreamReader(resource.get().getInputStream(),StandardCharsets.UTF_8)){
-            return build(JsonParser.parseReader(in).getAsJsonObject(),CelestialFall.id("textures/entity/boss/"+kind+"_outfit.png"));
+            var model=build(JsonParser.parseReader(in).getAsJsonObject(),CelestialFall.id("textures/entity/boss/"+kind+"_outfit.png"));
+            var glow=CelestialFall.id("textures/entity/boss/"+kind+"_outfit_glow.png");if(manager.getResource(glow).isPresent())model.glow=glow;
+            var skin=CelestialFall.id("textures/entity/boss/"+kind+"_glow.png");if(manager.getResource(skin).isPresent())model.skinGlow=skin;
+            return model;
         }catch(Exception e){CelestialFall.LOGGER.warn("Could not read the outfit {}: {}",file,e.toString());return null;}
     }
     /** The outfit from its description: the bones as the player's model has them, each box on its bone. */

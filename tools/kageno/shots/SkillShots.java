@@ -539,10 +539,12 @@ public final class SkillShots implements ClientModInitializer {
      * whom he fights, how far from the player, where, which way he faces, whether his stand is out, his guard and dash,
      * the player's health and whether they are held, and the boxes he left; the log gets what he does each time it changes.
      */
+    /** "bkind=xchara" (2.137.0): which boss the BOSS commands and boss.csv are about (Kujo Jotaro if not said). */
+    private dev.sangwoo.celestialfall.boss.BossKind bossKind(){var k=dev.sangwoo.celestialfall.boss.BossKind.byId(opts.getOrDefault("bkind","jotaro"));return k==null?dev.sangwoo.celestialfall.boss.BossKind.JOTARO:k;}
     private void logBoss(){
         float t=clock()-mc.getTickDelta();
         server(p->{
-            var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+            var b=dev.sangwoo.celestialfall.boss.Bosses.live(bossKind());
             if(opt("pfull",0)>0&&p.getHealth()<70)p.setHealth(p.getMaxHealth());
             // "pfloor=N": the player's health kept at N or more (a low-health player the boss goes after, not killed)
             if(opt("pfloor",0)>0&&p.isAlive()&&p.getHealth()<opt("pfloor",0))p.setHealth((float)opt("pfloor",0));
@@ -1652,13 +1654,13 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.equals("BOSS")){if(age==at)server(p->{
                             var w=p.getServerWorld();var f=net.minecraft.util.math.Vec3d.fromPolar(0,p.getYaw());var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
                             var to=p.getPos().add(f.multiply(opt("bfw",7))).add(right.multiply(opt("brt",0)));
-                            var b=dev.sangwoo.celestialfall.boss.Bosses.spawn(w,dev.sangwoo.celestialfall.boss.BossKind.JOTARO,new net.minecraft.util.math.Vec3d(to.x,p.getY(),to.z),p.getYaw()+180,(float)opt("bhp",0));
+                            var b=dev.sangwoo.celestialfall.boss.Bosses.spawn(w,bossKind(),new net.minecraft.util.math.Vec3d(to.x,p.getY(),to.z),p.getYaw()+180,(float)opt("bhp",0));
                             log.append(String.format(Locale.ROOT,"  boss %s at (%.2f, %.2f) tick %d, health %.0f%n",b==null?"refused":"in",to.x,to.z,age,b==null?0:b.getHealth()));});continue;}
-                    if(what.equals("BOSSANGRY")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);if(b!=null)dev.sangwoo.celestialfall.boss.Bosses.provoke(b,p);log.append("  boss angered at ").append(age).append('\n');});continue;}
-                    if(what.equals("BOSSHP")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);if(b!=null)b.setHealth((float)opt("bhp2",2400));log.append("  boss health set at ").append(age).append('\n');});continue;}
-                    if(what.equals("BOSSKILL")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+                    if(what.equals("BOSSANGRY")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(bossKind());if(b!=null)dev.sangwoo.celestialfall.boss.Bosses.provoke(b,p);log.append("  boss angered at ").append(age).append('\n');});continue;}
+                    if(what.equals("BOSSHP")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(bossKind());if(b!=null)b.setHealth((float)opt("bhp2",2400));log.append("  boss health set at ").append(age).append('\n');});continue;}
+                    if(what.equals("BOSSKILL")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(bossKind());
                             if(b!=null){b.timeUntilRegen=0;boolean ok=b.damage(p.getDamageSources().playerAttack(p),b.getHealth()+50);log.append("  boss felled ").append(ok?"":"(refused) ").append("at ").append(age).append(String.format(Locale.ROOT," (player money %d)%n",ProgressManager.profile(p).money()));}});continue;}
-                    if(what.equals("UNBOSS")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);if(b!=null)dev.sangwoo.celestialfall.boss.Bosses.remove(b);log.append("  boss off at ").append(age).append('\n');});continue;}
+                    if(what.equals("UNBOSS")){if(age==at)server(p->{var b=dev.sangwoo.celestialfall.boss.Bosses.live(bossKind());if(b!=null)dev.sangwoo.celestialfall.boss.Bosses.remove(b);log.append("  boss off at ").append(age).append('\n');});continue;}
                     // "MATE@n" (2.69.0): a second player on the server, "mfw" blocks (5) ahead of the player and "mrt" (3) to their
                     // right, facing the boss, with "mhp" health (60): a body hurt, staggered and thrown as a player's is, that
                     // plays nothing (its client is nobody's); never under "mfloor" (20). "MATEHP@n" sets its health to "mhp2",

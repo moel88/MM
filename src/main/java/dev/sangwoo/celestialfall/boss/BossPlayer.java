@@ -27,7 +27,7 @@ public final class BossPlayer extends ServerPlayerEntity {
         super(world.getServer(),world,new GameProfile(id,kind.profile));
         this.kind=kind;
         new BossConnection(this);
-        brain=kind==BossKind.JOTARO?new JotaroBrain(this):new BossBrain(this);
+        brain=kind==BossKind.JOTARO?new JotaroBrain(this):kind==BossKind.XCHARA?new XCharaBrain(this):new BossBrain(this);
     }
     public BossBrain brain(){return brain;}
     public Vec3d home(){return home;}
@@ -70,4 +70,13 @@ public final class BossPlayer extends ServerPlayerEntity {
     @Override public void increaseStat(Stat<?> stat,int amount){}
     @Override public void resetStat(Stat<?> stat){}
     @Override public boolean canFoodHeal(){return false;}
+    /**
+     * (2.137.0) Whoever comes to see it is told which way its head is turned: the game tells a player's head only as
+     * it turns, so a boss standing still was drawn with its head as it was made (to the south, backwards on a body
+     * facing north) until it looked elsewhere.
+     */
+    @Override public void onStartedTrackingBy(ServerPlayerEntity player){
+        super.onStartedTrackingBy(player);
+        player.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.EntitySetHeadYawS2CPacket(this,(byte)net.minecraft.util.math.MathHelper.floor(getHeadYaw()*256f/360f)));
+    }
 }

@@ -187,6 +187,16 @@ public final class MpClient implements ClientModInitializer {
      * not in it); the server logs him (whom he goes after, what he does, each blow on him), both players' health and
      * money and the boxes.
      */
+    /**
+     * X Chara the boss (2.137.0), on its own (MP_ONLY=xcharaboss): it stands before either client joins (each must be
+     * shown it: its slim skin, its outfit, its aura); the caster strikes it and it fights the two for 30 seconds with
+     * its knife and its skills, Q on and off (the server logs what it does each time that changes and every change of
+     * the players' health; both clients log the casts and the events of its skills they hear); then it is killed (its
+     * reward and its boxes) and the watcher opens a box.
+     */
+    private static final String[] XCHARABOSS_SCRIPT={
+        "5 STAND","40 Q","80 BOSSHERE","100 HITBOSS",
+        "700 BOSSKILL","740 OPENBOX","800 END"};
     private static final String[] BOSS_SCRIPT={
         "5 STAND","40 Q","60 WLOW","80 BOSSHERE","100 HITBOSS",
         "420 BOSSDMG2700",
@@ -813,7 +823,7 @@ public final class MpClient implements ClientModInitializer {
         "540 DIST10","545 HEAL","555 H","557 HITME",
         "600 DIST30","610 Q","620 H",
         "660 Q","680 NOCDOFF","700 END"};
-    private static final String[] STEPS=ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    private static final String[] STEPS=ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("xcharaboss")?XCHARABOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -929,7 +939,7 @@ public final class MpClient implements ClientModInitializer {
                 if(mc.currentScreen!=null){flag("screen",mc.currentScreen.getClass().getName());if(!interfaceStep())mc.setScreen(null);}
                 observe();
                 if(traceUntil>0&&age<=traceUntil)trace();
-                if(ONLY.equals("boss"))bossWatch();
+                if(ONLY.equals("boss")||ONLY.equals("xcharaboss"))bossWatch();
                 if(ONLY.equals("arrow"))arrowWatch();
                 if(ONLY.equals("isosanggauge")||ONLY.equals("isosang")||ONLY.equals("isosange")||ONLY.equals("isosangr")||ONLY.equals("isosangh")||ONLY.equals("isosangg")||ONLY.equals("isosangz")||ONLY.equals("isosangdodge")||ONLY.equals("isosangvolley")||ONLY.equals("isosangt")||ONLY.equals("isosangy")||ONLY.equals("isosanghh"))isosangWatch();
                 if(ONLY.equals("isosangvolley"))volleyWatch();
@@ -1128,7 +1138,7 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("RIGSTAR")||step.equals("RIGDIE")){if(down){try{Files.writeString(OUT.resolve("rig"),step.equals("RIGDIE")?"death":"star_platinum");}catch(Exception e){fail(e);}note("next arrow asked to "+(step.equals("RIGDIE")?"kill":"awaken Star Platinum"));}return;}
         // 2.69.0: the boss's steps (BOSS_SCRIPT)
         if(step.equals("WLOW")){if(down)command("damage Watcher 120 minecraft:generic");return;}
-        if(step.equals("BOSSHERE")){if(down)command("execute at Caster rotated 90 0 positioned ^ ^ ^3 rotated 270 0 run botand boss jotaro spawn here");return;}
+        if(step.equals("BOSSHERE")){if(down)command("execute at Caster rotated 90 0 positioned ^ ^ ^3 rotated 270 0 run botand boss "+(ONLY.equals("xcharaboss")?"xchara":"jotaro")+" spawn here");return;}
         if(step.equals("HITBOSS")){
             // the camera (and so the punch) on him, then the attack for a tick
             if(down){var b=boss();if(b==null){note("ERROR no boss to strike");return;}
@@ -1491,7 +1501,13 @@ public final class MpClient implements ClientModInitializer {
         var b=boss();
         if(b instanceof net.minecraft.client.network.AbstractClientPlayerEntity c){
             flag("boss_skin",c.getSkinTexture().toString());
-            flag("boss_outfit",dev.sangwoo.celestialfall.client.boss.BossOutfit.model("jotaro")!=null);
+            var info=dev.sangwoo.celestialfall.client.boss.BossClient.info(c.getUuid());
+            flag("boss_outfit",dev.sangwoo.celestialfall.client.boss.BossOutfit.model(info==null?"jotaro":info.kind())!=null);
+            // (2.137.0) X Chara: its slim model, its hack as this client sees it, its aura (strength, anger, whether its eye was drawn)
+            if(info!=null&&"xchara".equals(info.kind())){
+                flag("boss_model",c.getModel());flag("boss_hack",((dev.sangwoo.celestialfall.stand.StandHolder)c).botand$isHacking());
+                String aura=dev.sangwoo.celestialfall.client.xchara.BossAura.describe();flag("boss_aura",aura.isEmpty()?"-":aura.replaceAll("\\.\\d+",""));
+            }
             flag("boss_angry",list.stream().anyMatch(i->i.id().equals(c.getUuid())&&i.angry()));
             flag("boss_stand_out",((dev.sangwoo.celestialfall.stand.StandHolder)c).botand$isStandOut());
             flag("boss_health_tenths",Math.round(c.getHealth()/c.getMaxHealth()*10));

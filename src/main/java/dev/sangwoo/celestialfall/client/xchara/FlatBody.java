@@ -22,8 +22,8 @@ final class FlatBody {
     static boolean drawing(){return drawing;}
     /** Every layer asked of it is the one flat colour: a body drawn through it is its silhouette. */
     private static final class Flat implements VertexConsumerProvider,VertexConsumer {
-        final VertexConsumer to;final int r,g,b;double x,y,z;float ny;
-        Flat(VertexConsumer to,int rgb){this.to=to;r=rgb>>16&255;g=rgb>>8&255;b=rgb&255;}
+        final VertexConsumer to;final int r,g,b,a;double x,y,z;float ny;
+        Flat(VertexConsumer to,int rgb,float alpha){this.to=to;r=rgb>>16&255;g=rgb>>8&255;b=rgb&255;a=Math.max(0,Math.min(255,Math.round(alpha*255)));}
         @Override public VertexConsumer getBuffer(RenderLayer layer){return this;}
         @Override public VertexConsumer vertex(double x,double y,double z){this.x=x;this.y=y;this.z=z;ny=0;return this;}
         @Override public VertexConsumer color(int red,int green,int blue,int alpha){return this;}
@@ -33,7 +33,7 @@ final class FlatBody {
         @Override public VertexConsumer normal(float nx,float ny,float nz){this.ny=ny;return this;}
         @Override public void next(){
             float shade=.88f+.12f*MathHelper.clamp(ny,-1,1);
-            to.vertex(x,y,z).color(Math.min(255,(int)(r*shade)),Math.min(255,(int)(g*shade)),Math.min(255,(int)(b*shade)),255).next();
+            to.vertex(x,y,z).color(Math.min(255,(int)(r*shade)),Math.min(255,(int)(g*shade)),Math.min(255,(int)(b*shade)),a).next();
         }
         @Override public void fixedColor(int red,int green,int blue,int alpha){}
         @Override public void unfixColor(){}
@@ -43,13 +43,16 @@ final class FlatBody {
      * about its middle (so it covers the body), into {@code immediate}'s debug quads (the caller draws them).
      */
     @SuppressWarnings({"unchecked","rawtypes"})
-    static void draw(MinecraftClient mc,MatrixStack m,VertexConsumerProvider.Immediate immediate,Vec3d cam,LivingEntity e,Vec3d at,float delta,int rgb,float swell){
+    static void draw(MinecraftClient mc,MatrixStack m,VertexConsumerProvider.Immediate immediate,Vec3d cam,LivingEntity e,Vec3d at,float delta,int rgb,float swell){draw(mc,m,immediate,cam,e,at,delta,rgb,swell,1);}
+    /** The same, as solid as {@code alpha} (2.137.0, X Chara the boss's silhouettes behind it). */
+    @SuppressWarnings({"unchecked","rawtypes"})
+    static void draw(MinecraftClient mc,MatrixStack m,VertexConsumerProvider.Immediate immediate,Vec3d cam,LivingEntity e,Vec3d at,float delta,int rgb,float swell,float alpha){
         var renderer=(EntityRenderer)mc.getEntityRenderDispatcher().getRenderer(e);
         double half=e.getHeight()*.5;
         m.push();
         m.translate(at.x-cam.x,at.y-cam.y+half,at.z-cam.z);m.scale(swell,swell,swell);m.translate(0,-half,0);
         drawing=true;
-        try{renderer.render(e,MathHelper.lerp(delta,e.prevYaw,e.getYaw()),delta,m,new Flat(immediate.getBuffer(RenderLayer.getDebugQuads()),rgb),0xF000F0);}
+        try{renderer.render(e,MathHelper.lerp(delta,e.prevYaw,e.getYaw()),delta,m,new Flat(immediate.getBuffer(RenderLayer.getDebugQuads()),rgb,alpha),0xF000F0);}
         finally{drawing=false;m.pop();}
     }
 }

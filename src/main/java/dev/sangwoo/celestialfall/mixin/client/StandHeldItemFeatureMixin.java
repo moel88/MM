@@ -19,6 +19,8 @@ public abstract class StandHeldItemFeatureMixin {
         else if(dev.sangwoo.celestialfall.client.isosang.GStage.emptyHanded(entity))ci.cancel();
         // (2.101.0) her H again: her sword gone into the light with the rest from her leap until her camera comes back to her
         else if(dev.sangwoo.celestialfall.client.isosang.IsosangCinema.emptyHanded(entity))ci.cancel();
+        // (2.137.0) nor in X Chara the boss's silhouettes behind it: its three-block knife would be drawn thrice
+        else if(dev.sangwoo.celestialfall.client.xchara.BossAura.silhouette())ci.cancel();
     }
     @Inject(method="renderItem",at=@At(value="INVOKE",target="Lnet/minecraft/client/render/item/HeldItemRenderer;renderItem(Lnet/minecraft/entity/LivingEntity;Lnet/minecraft/item/ItemStack;Lnet/minecraft/client/render/model/json/ModelTransformationMode;ZLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V"))
     private void botand$thrustGrip(LivingEntity entity,ItemStack stack,net.minecraft.client.render.model.json.ModelTransformationMode mode,net.minecraft.util.Arm arm,net.minecraft.client.util.math.MatrixStack matrices,net.minecraft.client.render.VertexConsumerProvider vertices,int light,org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci){

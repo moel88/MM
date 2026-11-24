@@ -68,9 +68,9 @@ public final class MpServer implements ModInitializer {
      */
     private void placeBoss(MinecraftServer server){
         bossPlaced=true;var w=server.getOverworld();
-        var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+        var b=dev.sangwoo.celestialfall.boss.Bosses.live(BOSS_KIND);
         String how="brought back by the mod";
-        if(b==null){how="new";b=dev.sangwoo.celestialfall.boss.Bosses.spawn(w,dev.sangwoo.celestialfall.boss.BossKind.JOTARO,new net.minecraft.util.math.Vec3d(.5,ground,-7.5),0,dev.sangwoo.celestialfall.boss.BossKind.JOTARO.health);}
+        if(b==null){how="new";b=dev.sangwoo.celestialfall.boss.Bosses.spawn(w,BOSS_KIND,new net.minecraft.util.math.Vec3d(.5,ground,-7.5),0,BOSS_KIND.health);}
         note(server,b==null?"ERROR no boss":String.format(java.util.Locale.ROOT,"boss %s (%s) at %.1f %.1f %.1f health %.0f (in the player list: %s)",b.getUuid(),how,b.getX(),b.getY(),b.getZ(),b.getHealth(),server.getPlayerManager().getPlayerList().contains(b)));
     }
     private static boolean caster(ServerPlayerEntity p){return p.getGameProfile().getName().equals("Caster");}
@@ -535,7 +535,9 @@ public final class MpServer implements ModInitializer {
     /** Only the stagger's script (2.68.0, MP_ONLY=stagger). */
     static final boolean STAGGER_ONLY="stagger".equals(System.getProperty("botand.mp.only"));
     /** Only the boss's script (2.69.0, MP_ONLY=boss). */
-    static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"));
+    static final boolean BOSS_ONLY="boss".equals(System.getProperty("botand.mp.only"))||"xcharaboss".equals(System.getProperty("botand.mp.only"));
+    /** Which boss (2.137.0): X Chara for MP_ONLY=xcharaboss, Kujo Jotaro else. */
+    static final dev.sangwoo.celestialfall.boss.BossKind BOSS_KIND="xcharaboss".equals(System.getProperty("botand.mp.only"))?dev.sangwoo.celestialfall.boss.BossKind.XCHARA:dev.sangwoo.celestialfall.boss.BossKind.JOTARO;
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
@@ -1261,7 +1263,7 @@ public final class MpServer implements ModInitializer {
      */
     private void boss(MinecraftServer server){
         long now=server.getOverworld().getTime();var w=server.getOverworld();
-        var b=dev.sangwoo.celestialfall.boss.Bosses.live(dev.sangwoo.celestialfall.boss.BossKind.JOTARO);
+        var b=dev.sangwoo.celestialfall.boss.Bosses.live(BOSS_KIND);
         String seen;
         if(b==null)seen="none";
         else{var t=b.brain().target();seen=String.format(java.util.Locale.ROOT,"%s angry=%s target=%s doing=%s",b.getUuid().toString().substring(0,8),b.brain().angry(),t==null?"-":t.getName().getString(),b.brain().doing().isEmpty()?"-":b.brain().doing());}
