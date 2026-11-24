@@ -25,5 +25,12 @@ public final class BossOutfitFeature extends FeatureRenderer<AbstractClientPlaye
             if(model.skinGlow!=null)getContextModel().render(matrices,buffers.getBuffer(RenderLayer.getEyes(model.skinGlow)),0xF000F0,net.minecraft.client.render.OverlayTexture.DEFAULT_UV,Math.min(1,k),Math.min(1,k),Math.min(1,k),1);
             if(model.glow!=null)model.root().render(matrices,buffers.getBuffer(RenderLayer.getEyes(model.glow)),0xF000F0,net.minecraft.client.render.OverlayTexture.DEFAULT_UV,Math.min(1,k),Math.min(1,k),Math.min(1,k),1);
         }
+        // (2.137.2, "눈만 네온으로 빛나게") its red eye as neon: at full light by day and by night (not byDark), breathing
+        // with the rest of its light; drawn twice, so it is brighter than the red under it even in daylight
+        if(model.neon!=null){
+            float n=Math.min(1,dev.sangwoo.celestialfall.client.xchara.BossAura.shine(player,tickDelta));
+            var neon=buffers.getBuffer(RenderLayer.getEyes(model.neon));
+            for(int i=0;i<2;i++)getContextModel().render(matrices,neon,0xF000F0,net.minecraft.client.render.OverlayTexture.DEFAULT_UV,n,n,n,1);
+        }
     }
 }

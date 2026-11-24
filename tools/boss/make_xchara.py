@@ -17,6 +17,7 @@ It writes, under src/main/resources/assets/celestialfall (or OUT_DIR, leaving th
   textures/entity/boss/xchara_glow.png         what of the skin shines by itself (drawn again, added, at full light):
                                                its violet streaks, its purple marks, the red eye, the locket; and
                                                all of it a faint purple, so its body shows purple in the dark
+  textures/entity/boss/xchara_eye_glow.png      its red eye's neon (2.137.2)
   textures/entity/boss/xchara_outfit.png       the outfit's texture, 2 pixels to the model's pixel (declared 64 x 64)
   textures/entity/boss/xchara_outfit_glow.png  what of the outfit shines (the same layout)
   bosses/xchara_outfit.json                    the outfit's boxes: bone, pivot, rotation, box, uv, swing
@@ -461,6 +462,22 @@ def skin_glow(skin):
     return out
 
 
+# (2.137.2, the user's '눈만 네온으로 빛나게 바꿀까', red neon, only the red eye) the skin's red eye: its two pixels
+# (the head's front face at 8..15, 8..15) and the neon they shine with, drawn at full light by day and by night
+EYE = ((10, 13), (10, 14))
+EYE_NEON = ((255, 34, 70), (255, 70, 96))
+
+
+def eye_glow(skin):
+    """What of the skin shines as neon, whatever the light: only its red eye."""
+    out = Image.new('RGBA', skin.size, (0, 0, 0, 255))
+    for (x, y), c in zip(EYE, EYE_NEON):
+        r, g, b, a = skin.getpixel((x, y))
+        assert a and r > 200 and g < 120, 'the red eye is where it was'
+        out.putpixel((x, y), c + (255,))
+    return out
+
+
 def main():
     out = sys.argv[1] if len(sys.argv) > 1 else ASSETS
     pack(PARTS)
@@ -470,6 +487,7 @@ def main():
     skin = Image.open(os.path.join(HERE, 'xchara_skin.png')).convert('RGBA')
     skin.save(os.path.join(tex, 'xchara.png'))
     skin_glow(skin).save(os.path.join(tex, 'xchara_glow.png'))
+    eye_glow(skin).save(os.path.join(tex, 'xchara_eye_glow.png'))
     img, glow = paint(PARTS)
     img.save(os.path.join(tex, 'xchara_outfit.png'))
     glow.save(os.path.join(tex, 'xchara_outfit_glow.png'))

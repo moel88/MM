@@ -42,6 +42,8 @@ public final class BossOutfit {
         public final Identifier texture;
         /** What of it shines by itself (2.137.0: drawn again, added, at full light), and what of the skin under it does; null if nothing. */
         public Identifier glow,skinGlow;
+        /** What of the skin shines as neon whatever the light (2.137.2: X Chara's red eye); null if nothing. */
+        public Identifier neon;
         Model(ModelPart root,Identifier texture,Map<String,String> swingOf){
             this.root=root;this.texture=texture;
             head=root.getChild("head");body=root.getChild("body");
@@ -96,6 +98,7 @@ public final class BossOutfit {
             var model=build(JsonParser.parseReader(in).getAsJsonObject(),CelestialFall.id("textures/entity/boss/"+kind+"_outfit.png"));
             var glow=CelestialFall.id("textures/entity/boss/"+kind+"_outfit_glow.png");if(manager.getResource(glow).isPresent())model.glow=glow;
             var skin=CelestialFall.id("textures/entity/boss/"+kind+"_glow.png");if(manager.getResource(skin).isPresent())model.skinGlow=skin;
+            var neon=CelestialFall.id("textures/entity/boss/"+kind+"_eye_glow.png");if(manager.getResource(neon).isPresent())model.neon=neon;
             return model;
         }catch(Exception e){CelestialFall.LOGGER.warn("Could not read the outfit {}: {}",file,e.toString());return null;}
     }

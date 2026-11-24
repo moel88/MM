@@ -45,6 +45,15 @@ class XCharaOutfitTest {
         // and the other eye is not red
         int other=skin.getRGB(8+7-(x-8),y);assertFalse((other>>16&255)>200&&(other>>8&255)<120&&(other&255)<200,"only the one");
     }
+    @Test void onlyItsRedEyeShinesAsNeon(){
+        // (2.137.2, "눈만 네온으로 빛나게", red neon, the red eye only) its two pixels, bright red; nothing else
+        var neon=BossOutfitTest.image(TEX+"xchara_eye_glow.png");assertEquals(64,neon.getWidth());assertEquals(64,neon.getHeight());
+        for(int y=0;y<64;y++)for(int x=0;x<64;x++){
+            int c=neon.getRGB(x,y)&0xffffff;boolean eye=x==EYE_X&&(y==EYE_Y||y==EYE_Y+1);
+            if(eye)assertTrue((c>>16&255)==255&&(c>>8&255)<110&&(c&255)<120,"its eye is red neon at "+x+","+y+": "+Integer.toHexString(c));
+            else assertEquals(0,c,"nothing else shines as neon, at "+x+","+y);
+        }
+    }
     @Test void noTwoPartsShareTheTextureAndEveryPartShowsSomething(){
         var j=json();var tex=j.getAsJsonArray("texture");int tw=tex.get(0).getAsInt(),th=tex.get(1).getAsInt();
         var img=BossOutfitTest.image(TEX+"xchara_outfit.png");
