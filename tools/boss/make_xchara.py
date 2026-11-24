@@ -465,7 +465,7 @@ def skin_glow(skin):
 # (2.137.2, the user's '눈만 네온으로 빛나게 바꿀까', red neon, only the red eye) the skin's red eye: its two pixels
 # (the head's front face at 8..15, 8..15) and the neon they shine with, drawn at full light by day and by night
 EYE = ((10, 13), (10, 14))
-EYE_NEON = ((255, 34, 70), (255, 70, 96))
+EYE_NEON = ((255, 6, 22), (255, 22, 34))
 
 
 def eye_glow(skin):
