@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * 글리치에 걸리고 가드 못 하게"): the knife lit until the X goes, black at once as it does; two cuts, the forehand down
  * from the high right to the low left and the backhand down from the high left to the low right, out of the stance and
  * back into it with nothing of the body jumping; the free hand sent out ahead as the X goes; the X standing crossed
- * where it was cut, then flying as far and as big as the server's, gone where its way ends; its arms crescents from
- * horn to horn; the X on the ground on the server's diagonals, burned in as the X goes over it, whole until it bursts.
+ * where it was cut, then flying as far and as big as the server's, gone where its way ends; its arms blades pointed
+ * at both horns (2.136.0); the X on the ground on the server's diagonals, burned in as the X goes over it, whole until it bursts.
  */
 class XSlashTest {
     static final Vec3d STOOD=new Vec3d(3,64,-2);static final float YAW=30;
@@ -114,7 +114,7 @@ class XSlashTest {
         assertEquals(0,XSlash.cut(1,XSlash.ARM1_TO),1e-9);assertEquals(1,XSlash.cut(1,XSlash.ARM2_TO),1e-9);
         assertTrue(XSlash.ARM1_FROM<XSlash.CUT1&&XSlash.CUT1<XSlash.ARM1_TO&&XSlash.ARM2_FROM<XSlash.CUT2&&XSlash.CUT2<XSlash.ARM2_TO&&XSlash.ARM2_TO<=XSlash.FIRE,"with the knife's cuts, both whole as it goes");
     }
-    @Test void itsArmsAreCrescentsFromHornToHorn(){
+    @Test void itsArmsAreBladesPointedAtBothHorns(){
         var w=XSlash.way(cast());double fw=8,half=XSlashRules.HALF,tall=XSlashRules.TALL;
         for(int a=0;a<2;a++){
             var sw=XSlash.arm(w,fw,half,tall,a,1);int n=sw.n();
@@ -123,20 +123,22 @@ class XSlashTest {
             Vec3d d0=first.subtract(STOOD),d1=last.subtract(STOOD);
             assertEquals(fw,d0.dotProduct(w.f()),1e-6);assertEquals(fw,d1.dotProduct(w.f()),1e-6);
             assertEquals(a==0?half:-half,d0.dotProduct(w.right()),1e-6);assertEquals(2*tall,d0.y,1e-6);
-            assertEquals(a==0?-half:half,d1.dotProduct(w.right()),1e-6);assertEquals(0,d1.y,1e-6,"its lower horn at the ground");
+            assertEquals(a==0?-half:half,d1.dotProduct(w.right()),1e-6);assertEquals(0,d1.y,1e-6,"its foot at the ground");
             assertEquals(0,sw.inner()[0].distanceTo(first),1e-9,"pointed at its horns");assertEquals(0,sw.inner()[n-1].distanceTo(last),1e-9);
-            // its cutting edge bowed up and out: at its middle it stands over the inner edge, and the band is widest there
-            Vec3d om=sw.outer()[n/2],im=sw.inner()[n/2];
-            assertTrue(om.y>im.y,"its cutting edge over");
+            // a lens: its cutting edge over the line between its horns, its back under it, deepest at its belly
+            Vec3d om=sw.outer()[n/2],im=sw.inner()[n/2],line=first.lerp(last,.5);
+            assertTrue(om.y>line.y&&im.y<line.y,"its cutting edge over the line, its back under");
             double widest=0;int at=0;for(int i=0;i<n;i++){double t=sw.outer()[i].distanceTo(sw.inner()[i]);if(t>widest){widest=t;at=i;}}
-            assertTrue(Math.abs(at-n/2)<=1,"widest at its middle");assertTrue(widest>.6&&widest<1.5,"a crescent, not a bar: "+widest);
-            // drawn halfway, it reaches halfway along
+            assertTrue(Math.abs(at-n/2)<=1,"deepest at its middle");assertTrue(widest>1.6&&widest<2.8,"a great blade, not a bar: "+widest);
+            for(int i=0;i<n;i++)assertTrue(sw.inner()[i].y>=STOOD.y-1e-9&&sw.outer()[i].y>=STOOD.y-1e-9,"none of it under the ground");
+            // drawn halfway, it reaches halfway along, a lens still (pointed where the knife is)
             var halfway=XSlash.arm(w,fw,half,tall,a,.5f);assertEquals(.5f,halfway.along()[halfway.n()-1],1e-6);
+            assertEquals(0,halfway.inner()[halfway.n()-1].distanceTo(halfway.outer()[halfway.n()-1]),1e-9);
         }
-        // the two cross in the middle
+        // the two cross in the middle, as an X: each blade's line straight from horn to horn
         var a0=XSlash.arm(w,fw,half,tall,0,1);Vec3d mid=w.at(fw,0,tall);
-        double near=Double.MAX_VALUE;for(var p:a0.inner())near=Math.min(near,p.distanceTo(mid));
-        assertTrue(near<1.2,"through its middle: "+near);
+        Vec3d c=a0.inner()[a0.n()/2].lerp(a0.outer()[a0.n()/2],.5);
+        assertTrue(c.distanceTo(mid)<.2,"through its middle: "+c.distanceTo(mid));
     }
     @Test void theXOnTheGroundLiesOnTheServersDiagonals(){
         var w=XSlash.way(cast());var ds=XSlash.diagonals(w);var raw=XSlashRules.diagonals(w.reach());

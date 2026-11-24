@@ -49,10 +49,11 @@ import static dev.sangwoo.celestialfall.client.kageno.Anim.k;
  * <li>The body ({@link #CLIP}): the knife wound up behind the right shoulder, a forehand cut down from the high right
  * to the low left, turned over and wound up over the left shoulder, a backhand cut down from the high left to the low
  * right, and as it is done the free hand thrust out ahead, palm first, sending the X.</li>
- * <li>The X ({@link #glitch}): each cut leaves a great crescent of X Chara's purple where the knife went (the shader's
- * blade of mode 18, its ink line on its cutting edge, a white core, its inner edge breaking into pixels), the two
- * standing crossed before them; let go, it flies level along the server's way, growing as the server's grows, streaks
- * of light behind it, and breaks into pixels where its way ends.</li>
+ * <li>The X ({@link #glitch}; from 2.136.0 XBlade's, the slash made anew: "참격을 여기서 갈아엎고 최대로 멋있게
+ * 만들어줘"): each cut leaves a great blade where the knife went, a lens pointed at both its horns, a tear of black
+ * rimmed in X Chara's neon purple, the two standing crossed before them; let go, it flies level along the server's
+ * way, growing as the server's grows, its horns swept back and a wake streaming off it, and breaks up where its way
+ * ends.</li>
  * <li>The X on the ground ({@link #draw}): the two diagonals of the way it went over, each a purple scar with a white
  * core and a soft glow as wide as it strikes (XSlashRules.BAND), burned in as the X goes over it, pixels flickering
  * on it, pulsing faster and brighter until it bursts: spikes of purple shot up along it from where its lines cross,
@@ -78,10 +79,8 @@ public final class XSlash {
     /** How long one is drawn for (seconds): its X on the ground bursts at the latest at burstAt(RANGE), and what the burst leaves (2.135.0: its embers, thrown pieces and dust, XSlashLights.AFTER). */
     public static final float LIFE=XSlashRules.burstAt(XSlashRules.RANGE)/20f+Math.max(BURST_LIFE,XSlashLights.AFTER)+.15f;
     static final int INK=GlitchFx.INK,DEEP=GlitchFx.DEEP,PURPLE=GlitchFx.PURPLE,GLOW=GlitchFx.GLOW,LILAC=GlitchFx.LILAC,WHITE=GlitchFx.WHITE;
-    /** Each arm's crescent: how far its cutting edge and its inner edge stand out from the line between its horns at its middle (of that line's length; 2.135.0: a wider band, .13 and .05 until then). */
-    static final double OUTER=.155,INNER=.045;
-    /** Samples along an arm; how wide its edge shows to the camera (blocks: an X seen from its side is a hairline). */
-    static final int ARM_SAMPLES=26;static final double EDGE=.42;
+    /** Each arm's blade (2.136.0, XBlade: a lens pointed at both horns, its cutting edge the upper one): how far its cutting edge and its back edge stand off the line between its horns at its belly (of that line's length). */
+    static final double OUTER=XBlade.OUTER,INNER=XBlade.INNER;
     /** The X on the ground: its scar's half width, its white core's, its glow's (XSlashRules.BAND: as wide as it strikes), and how many samples along each diagonal. */
     static final double SCAR=.5,CORE=.09,GLOW_WIDE=XSlashRules.BAND;static final int GROUND_SAMPLES=32;
     /** The burst: a spike every this far along each diagonal (blocks), and how tall they are at most. */
@@ -260,22 +259,12 @@ public final class XSlash {
     static float cut(int a,float sec){return a==0?Ease.smooth(sec,ARM1_FROM,ARM1_TO):Ease.smooth(sec,ARM2_FROM,ARM2_TO);}
     /**
      * Arm {@code a} of an X {@code fw} ahead, {@code half} wide and {@code tall} high (half of each), drawn as far as
-     * {@code upTo} (0 to 1, from where its cut began): a crescent from horn to horn, its cutting edge bowed up and out.
-     * The first from the high right to the low left (the forehand's way), the second from the high left to the low right.
+     * {@code upTo} (0 to 1, from where its cut began), whole open and flat (XBlade.arm: a lens from horn to horn, its
+     * cutting edge the upper one). The first from the high right to the low left (the forehand's way), the second
+     * from the high left to the low right.
      */
-    static KnifeCombo.Swept arm(Way w,double fw,double half,double tall,int a,float upTo){
-        double sx=a==0?half:-half,sy=2*tall,ex=-sx,ey=0;
-        double nx=a==0?-tall:tall,ny=half,nl=Math.hypot(nx,ny);nx/=nl;ny/=nl;
-        double len=Math.hypot(ex-sx,ey-sy),outer=OUTER*len,inner=INNER*len;
-        int n=Math.max(2,(int)Math.ceil(ARM_SAMPLES*upTo)+1);
-        Vec3d[] in=new Vec3d[n],out=new Vec3d[n];float[] along=new float[n];
-        for(int i=0;i<n;i++){
-            double t=upTo*i/(n-1.0),cx=sx+(ex-sx)*t,cy=sy+(ey-sy)*t,s=Math.sin(Math.PI*t);
-            in[i]=w.at(fw,cx+nx*inner*s,cy+ny*inner*s);out[i]=w.at(fw,cx+nx*outer*s,cy+ny*outer*s);along[i]=(float)t;
-        }
-        return new KnifeCombo.Swept(in,out,along,n);
-    }
-    /** The middle of an X's arm {@code a}, where its cutting edge stands furthest out. */
+    static KnifeCombo.Swept arm(Way w,double fw,double half,double tall,int a,float upTo){return XBlade.arm(w,fw,half,tall,a,upTo,1,0);}
+    /** The middle of an X's arm {@code a}'s blade. */
     static Vec3d armMiddle(Way w,double fw,double half,double tall,int a){
         double nx=a==0?-tall:tall,ny=half,nl=Math.hypot(nx,ny),len=2*Math.hypot(half,tall),b=(OUTER+INNER)*.5*len;
         return w.at(fw,nx/nl*b,tall+ny/nl*b);
@@ -284,21 +273,8 @@ public final class XSlash {
     // ───────────────────────────── the X ─────────────────────────────
 
     static int seed(StandClient.Cast c){return (int)(c.start()*31+17);}
-    /** The X's two arms (the effects' pass for X Chara's cuts: the shader's blade, mode 18 style 2), each also turned to the camera along its cutting edge. */
-    static void glitch(Fx c){
-        float t=c.sec,stop=KnifeClient.until(c.cast.id());if(stop==Float.MAX_VALUE)stop=Float.NaN;
-        var w=way(c.cast);if(w.told()!=null&&w.told().gone)return;
-        var x=shape(t,w.reach(),stop);if(x==null)return;
-        float own=KnifeCombo.own(c),eat=(float)x[4],cool=Ease.smooth(eat,0,1);int seed=seed(c.cast);
-        for(int a=0;a<2;a++){
-            float p=cut(a,Float.isNaN(stop)?t:Math.min(t,stop));if(p<=.01f)continue;
-            float shown=(float)x[3]*own*Ease.smooth(t,a==0?ARM1_FROM:ARM2_FROM,(a==0?ARM1_FROM:ARM2_FROM)+.02f);
-            var sw=arm(w,x[0],x[1],x[2],a,p);
-            KagenoFire.glitchRibbon(sw.inner(),sw.outer(),sw.along(),sw.n(),2,seed+a,eat,cool,shown);
-            var e=KnifeCombo.edge(sw,c.camera,EDGE);
-            KagenoFire.glitchRibbon(e.inner(),e.outer(),e.along(),e.n(),2,seed+a+4,eat,cool,shown*.85f);
-        }
-    }
+    /** The X's blades (the effects' pass for X Chara's cuts: XBlade.ribbons, the shader's mode 18 styles 3 to 6). */
+    static void glitch(Fx c){XBlade.ribbons(c);}
     static double h(int j,int seed,int salt){return GlitchFx.h(j,0,seed,salt);}
     static float in(float s){return s<=0?0:Math.min(1,s/.02f);}
     /** Everything of it but the arms themselves, in one pass (the blended bodies, or the light). */
@@ -313,20 +289,10 @@ public final class XSlash {
             XSlashLights.sparks(c,m,w,t,stop,seed,own,light);
             XSlashLights.lock(c,m,w,t,stop,own,light);
             var x0=shape(t,w.reach(),stop);
-            if(x0!=null){
-                // the slash itself: its bloom and aura, the split of each cut, its head as it is drawn, glints along it, echo blades, spikes
-                if(light){
-                    XSlashLights.aura(c,m,w,x0,t,stop,own);XSlashLights.bloom(c,m,w,x0,t,stop,own);XSlashLights.split(c,m,w,x0,t,stop,seed,own);
-                    XSlashLights.head(c,m,w,x0,t,stop,own);XSlashLights.glints(c,m,w,x0,t,stop,seed,own);
-                }
-                XSlashLights.echoBlades(c,m,w,x0,t,stop,own,light);
-                XSlashLights.spikes(c,m,w,x0,t,stop,seed,own,light);
-                // (2.135.1) the sheet it sweeps as it flies, and a star where its arms cross
-                XSlashLights.sweep(c,m,w,x0,t,light,own);
-                if(light)XSlashLights.heartStar(c,m,w,x0,t,stop,own);
-                if(Float.isNaN(stop)||stop>=FIRE||t<stop)XSlashLights.tear(c,m,w,x0,t,seed,own,light);
-            }
-            if(light)XSlashLights.tipTrails(c,m,w,t,stop,own);
+            // each cut's head as the knife draws it
+            if(light&&x0!=null)XSlashLights.head(c,m,w,x0,t,stop,own);
+            // (2.136.0) what stands about the new blades: the lines of the cuts, the star at its heart, its trails
+            XBlade.draw(c,m,w,t,stop,own,light);
         }
         // ── as each arm is whole, and as the two cross: a flash where it was cut
         if(light&&!gone&&(Float.isNaN(stop)||stop>=ARM1_TO)){
@@ -349,23 +315,8 @@ public final class XSlash {
         // ── the X in flight: streaks of light behind it, a soft glow, pixels shed off it, and where its way ends, all of it in pixels
         if(x!=null&&t>=FIRE){
             double fw=x[0],half=x[1],tall=x[2];float fade=(float)(1-x[4]);
-            if(light){
-                // (2.135.0) echoes of it behind, lightning crawling over its arms
-                XSlashLights.echoes(c,m,w,t,stop,seed,own);XSlashLights.arcs(c,m,w,x,t,seed,own);
-                Vec3d mid=w.at(fw,0,tall);float near=GlitchFx.near(mid,c.camera);
-                m.softDisc(mid,half*.8,GLOW,.16f*fade*near);
-                double trail=Math.min(3.2,fw-XSlashRules.NEAR+.4);
-                for(int a=0;a<2;a++){
-                    var sw=arm(w,fw,half,tall,a,1);
-                    for(int i=1;i<sw.n()-1;i+=2){
-                        Vec3d p=sw.outer()[i];float k=(float)Math.sin(Math.PI*sw.along()[i]);
-                        m.softLine(p,p.subtract(w.f().multiply(trail*(.55+.45*k))),.16+.12*k,GLOW,.34f*k*fade*GlitchFx.near(p,c.camera));
-                        if(i%4==1)m.line(p,p.subtract(w.f().multiply(trail*.6*k)),.035,LILAC,.5f*k*fade*GlitchFx.near(p,c.camera));
-                    }
-                }
-            }
-            // pixels shed off its arms as it goes (flickering squares left behind it)
-            for(int j=0;j<30;j++){
+            // pixels shed off its blades' torn backs as it goes (flickering squares left behind it)
+            for(int j=0;j<22;j++){
                 int a=j%2;double u=h(j,seed,31),back=1.2*h(j,seed,32);
                 float life=.18f,born=(float)(FIRE+.4*h(j,seed,33)),s=t-born;if(s<0||s>life)continue;
                 double at=Math.min(w.reach(),XSlashRules.head((born-FIRE)*20)),bh=XSlashRules.half(at),bt=XSlashRules.tall(at);
@@ -378,9 +329,8 @@ public final class XSlash {
                 else{GlitchFx.square(m,p,f,size+.012,INK,.85f*near*blink);GlitchFx.square(m,p,f,size,rgb,near*blink);}
             }
         }
-        // (2.135.0) as it goes, its wake, its horns grinding the floor, and where its way ends, its shards
+        // (2.135.0) as it goes, its horns grinding the floor, and where its way ends, its shards
         XSlashLights.launch(c,m,w,t,seed,own,light);
-        XSlashLights.wakes(c,m,w,t,stop,own,light);
         XSlashLights.hornSparks(c,m,w,t,seed,own,light);
         XSlashLights.end(c,m,w,t,seed,own,light);
         float end=flown(w.reach());

@@ -96,43 +96,6 @@ class XSlashLightsTest {
         }
     }
 
-    /** The slash itself (the user's "참격을 멋있게 꾸며봐 집중적으로"): echo blades just outside its cutting edge, spikes out of it never long, all of it as big as the X. */
-    @Test void theSlashItselfItsEchoBladesAndSpikes(){
-        var w=way(XSlashRules.RANGE);
-        for(int a=0;a<2;a++){
-            Vec3d edge=XSlashLights.armPoint(w,10,XSlashRules.HALF,XSlashRules.TALL,a,.5,1);
-            for(double bow:XSlashLights.ECHO_BOW){
-                Vec3d e=XSlashLights.bowPoint(w,10,XSlashRules.HALF,XSlashRules.TALL,a,.5,bow);
-                assertTrue(e.subtract(edge).dotProduct(XSlashLights.armNormal(w,XSlashRules.HALF,XSlashRules.TALL,a))>.2,"outside its cutting edge");
-                assertTrue(e.distanceTo(edge)<1.2,"close outside it");
-            }
-            assertEquals(0,XSlashLights.bowPoint(w,10,5,2.8,a,.3,XSlash.OUTER).distanceTo(XSlashLights.armPoint(w,10,5,2.8,a,.3,1)),1e-9);
-            assertEquals(0,XSlashLights.bowPoint(w,10,5,2.8,a,.3,XSlash.INNER).distanceTo(XSlashLights.armPoint(w,10,5,2.8,a,.3,0)),1e-9);
-        }
-        assertEquals(1,XSlashLights.scale(XSlashRules.HALF,XSlashRules.TALL),1e-9);
-        assertTrue(XSlashLights.scale(XSlashRules.HALF0,XSlashRules.TALL0)<.6,"smaller on the X where it stands crossed");
-        for(int i=0;i<XSlashLights.SPIKES;i++){
-            double last=XSlashLights.spikeLength(0,i,SEED,0,1);
-            for(float t=1/240f;t<2;t+=1/240f){
-                double len=XSlashLights.spikeLength(0,i,SEED,t,1);assertTrue(len>0&&len<=1.9,"spike "+i+" at "+t+": "+len);
-                last=len;
-            }
-        }
-        assertTrue(XSlash.OUTER-XSlash.INNER>=.1,"a wide band");
-    }
-
-    /** (2.135.1) The sheet it sweeps as it flies: none as it goes, out to its full length once it is a couple of blocks on, never jumping. */
-    @Test void theSheetItSweepsGrowsAsItGoesAndNeverJumps(){
-        assertEquals(0,XSlashLights.sweepBack(XSlashRules.NEAR),1e-9);
-        assertEquals(XSlashLights.SWEEP_BACK,XSlashLights.sweepBack(XSlashRules.NEAR+2),1e-6);
-        assertEquals(XSlashLights.SWEEP_BACK,XSlashLights.sweepBack(XSlashRules.RANGE),1e-6);
-        double last=0;
-        for(double fw=XSlashRules.NEAR;fw<=XSlashRules.RANGE;fw+=.01){
-            double b=XSlashLights.sweepBack(fw);assertTrue(b>=last-1e-9,"growing");assertTrue(b-last<.03,"no jump at "+fw);last=b;
-        }
-        assertTrue(XSlashLights.SWEEP_BACK<XSlashRules.NEAR+2,"never reaching back past where it went from once grown");
-    }
-
     @Test void theLockClosesOnTheXAsItIsWholeAndSnapsAsItGoes(){
         float nan=Float.NaN;
         assertEquals(0,XSlashLights.lockShown(XSlashLights.LOCK0-.01f,nan),1e-6);
@@ -147,7 +110,6 @@ class XSlashLightsTest {
 
     @Test void flyingItsWakeAndHornSparksAreWhereTheXIs(){
         var w=way(XSlashRules.RANGE);
-        assertTrue(XSlashLights.ECHOES*XSlashLights.ECHO_GAP<=.12f,"its echoes close behind it");
         double fl=XSlashRules.flight(XSlashRules.RANGE)/20;
         for(int k=0;k<2;k++)for(int j=0;j<XSlashLights.HORN_SPARKS;j++){
             float born=XSlashLights.hornBorn(w,k,j,SEED);

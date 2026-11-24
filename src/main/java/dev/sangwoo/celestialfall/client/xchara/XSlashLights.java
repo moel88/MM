@@ -15,24 +15,24 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 /**
- * The great X slash made grand (2.135.0, user request: "이제 이걸 엄청 멋있게 만들어봐", of the X slash of 2.134.0):
- * everything it does drawn bigger and with more to it, in X Chara's purple and glitch, without a screen effect (the
- * user took the impact frames off Lee So-sang's R and T: "화면 효과는 빼줘"). What it is, where and when, is the
- * server's as before (XSlashRules); its sounds are as before. Mine, all of it:
+ * What stands about the great X slash (2.135.0, user request: "이제 이걸 엄청 멋있게 만들어봐", of the X slash of 2.134.0):
+ * in X Chara's purple and glitch, without a screen effect (the user took the impact frames off Lee So-sang's R and T:
+ * "화면 효과는 빼줘"). What it is, where and when, is the server's as before (XSlashRules); its sounds are as before.
+ * The slash itself is XBlade's from 2.136.0 ("참격을 여기서 갈아엎고 최대로 멋있게 만들어줘"): what 2.135.0 and 2.135.1
+ * hung on the old crescents (the split lines, the bloom and aura, the echo blades, the spikes, the glints, the swept
+ * sheet, the star, the torn bars, the echoes, the lightning, the rings of its wake) is gone from here. What is left,
+ * mine, all of it:
  * <ul>
  * <li>as the knife lights, pixels of data drawn in from round them into the blade, faster and faster, and a glint up
  * it ({@link #gather}); a ring of the hack's at their feet, ticking round, flaring as each cut lands, thrown out as the X
  * goes ({@link #ring});</li>
- * <li>each cut split into pink and cyan to either side as it is drawn, as a glitch does ({@link #split}), sparks flung
- * off its cutting edge as the cut's head passes ({@link #spark}); a soft purple bloom over each arm all its life
- * ({@link #bloom}), a white-hot heart where they cross;</li>
+ * <li>sparks flung off each cut's cutting edge as the cut's head passes ({@link #spark}), the cut's head hot as the
+ * knife draws it ({@link #head});</li>
  * <li>as the X is whole, corner marks closing on where its arms cross, turned and tightening as a lock does
- * ({@link #lock}), bars of it torn sideways for a moment ({@link #tear});</li>
- * <li>as it goes, two rings blown out in its plane where it went from, one on the ground, streaks rushing back past its
- * user, a flash in the palm that sent it, pixels thrown on ({@link #launch});</li>
- * <li>flying, echoes of it a few hundredths of a second behind in pink, cyan and purple ({@link #echoes}), lightning
- * crawling over its arms ({@link #arcs}), a ring left in its wake every few blocks ({@link #wakes}), sparks ground off
- * its lower horns on the floor ({@link #hornSpark});</li>
+ * ({@link #lock});</li>
+ * <li>as it goes, a ring blown out in its plane where it went from, streaks rushing back past its user, a flash in the
+ * palm that sent it, pixels thrown on ({@link #launch});</li>
+ * <li>flying, sparks ground off its feet on the floor ({@link #hornSpark});</li>
  * <li>where its way ends, broken into shards of purple tumbling on and down ({@link #shard}), a flash and a ring;</li>
  * <li>on whom it strikes, an X struck across them ({@link #struck}), bars of them torn, pixels shattered off;</li>
  * <li>the X on the ground cracks out to either side as it is burned in ({@link #crack}), data rising off it more and
@@ -67,7 +67,7 @@ final class XSlashLights {
     static Vec3d armPoint(XSlash.Way w,double fw,double half,double tall,int a,double t,double k){
         double sx=a==0?half:-half,sy=2*tall,ex=-sx,ey=0;
         double nx=a==0?-tall:tall,ny=half,nl=Math.hypot(nx,ny);nx/=nl;ny/=nl;
-        double len=Math.hypot(ex-sx,ey-sy),b=(XSlash.INNER+(XSlash.OUTER-XSlash.INNER)*k)*len,s=Math.sin(Math.PI*t);
+        double len=Math.hypot(ex-sx,ey-sy),b=(XSlash.INNER+(XSlash.OUTER-XSlash.INNER)*k)*len,s=Math.pow(Math.max(0,Math.sin(Math.PI*t)),XBlade.BELLY);
         return w.at(fw,sx+(ex-sx)*t+nx*b*s,sy+(ey-sy)*t+ny*b*s);
     }
     /** The way arm {@code a}'s cutting edge bows out (unit, in the X's plane). */
@@ -176,32 +176,6 @@ final class XSlashLights {
 
     // ───────────────────────────── the cuts ─────────────────────────────
 
-    /** Each cut's split colours: shown as it is cut and this long after (seconds), this far to either side of its cutting edge (blocks). */
-    static final float SPLIT_AFTER=.16f;static final double SPLIT=.1;
-    /** How strongly arm {@code a}'s split shows {@code sec} seconds in. */
-    static float split(int a,float sec){
-        float from=a==0?XSlash.ARM1_FROM:XSlash.ARM2_FROM,to=a==0?XSlash.ARM1_TO:XSlash.ARM2_TO;
-        return Ease.smooth(sec,from,from+.025f)*(1-Ease.smooth(sec,to,to+SPLIT_AFTER));
-    }
-    /** (The light) each cut's cutting edge again, in pink to one side and cyan to the other, jumping a little and dropping out now and then. */
-    static void split(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,int seed,float own){
-        Vec3d side=GlitchFx.facing(c.camera,w.at(x[0],0,x[2]))[0];int step=(int)Math.floor(t*30);
-        for(int a=0;a<2;a++){
-            float s=split(a,t)*own*(float)(x[3]*(1-x[4]));if(s<=.01f)continue;
-            float p=XSlash.cut(a,Float.isNaN(stop)?t:Math.min(t,stop));if(p<=.02f)continue;
-            var sw=XSlash.arm(w,x[0],x[1],x[2],a,p);
-            for(int k=0;k<2;k++){
-                if(h(step*2+k,seed+a,22)<.18)continue;
-                double off=SPLIT*(1+.7*(h(step*2+k,seed+a,21)-.5));
-                Vec3d o=side.multiply(k==0?-off:off).add(0,(h(step+k*5,seed+a,23)-.5)*.05,0);
-                int rgb=k==0?PINK:CYAN;
-                for(int i=0;i+1<sw.n();i++){
-                    float kk=(float)Math.sin(Math.PI*sw.along()[i]);
-                    m.line(sw.outer()[i].add(o),sw.outer()[i+1].add(o),.05+.06*kk,rgb,.42f*s*(.35f+.65f*kk)*GlitchFx.near(sw.outer()[i],c.camera));
-                }
-            }
-        }
-    }
     /** Sparks flung off each cut's cutting edge as its head passes. */
     static final int CUT_SPARKS=16;
     /** When spark {@code j} of arm {@code a} flies off: as the cut's head (XSlash.cut) reaches its place. */
@@ -235,23 +209,6 @@ final class XSlashLights {
             else m.line(q,p,.042,j%3==0?LILAC:PURPLE,.9f*fa);
         }
     }
-    /** (The light) a soft purple bloom over each arm, as wide as its band and more, all its life; and a white-hot heart where they cross. */
-    static void bloom(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,float own){
-        float fade=(float)(x[3]*(1-x[4]))*own;if(fade<=.01f)return;
-        for(int a=0;a<2;a++){
-            float p=XSlash.cut(a,Float.isNaN(stop)?t:Math.min(t,stop));if(p<=.02f)continue;
-            var sw=XSlash.arm(w,x[0],x[1],x[2],a,p);
-            for(int i=0;i+2<sw.n();i+=2){
-                Vec3d m0=sw.inner()[i].lerp(sw.outer()[i],.6),m1=sw.inner()[i+2].lerp(sw.outer()[i+2],.6);
-                double wide=Math.max(.25,sw.inner()[i+1].distanceTo(sw.outer()[i+1])*2.3);
-                m.softLine(m0,m1,wide,GLOW,.14f*fade*GlitchFx.near(m0,c.camera));
-            }
-        }
-        if(XSlash.cut(1,Float.isNaN(stop)?t:Math.min(t,stop))>.6f){
-            Vec3d hp=heart(w,x[0],x[1],x[2]);float near=GlitchFx.near(hp,c.camera)*fade,beat=.75f+.25f*(float)Math.sin(t*42);
-            m.softDisc(hp,1.1+.25*beat,GLOW,.22f*near);m.softDisc(hp,.45,LILAC,.3f*near*beat);m.star(hp,.42,WHITE,.3f*near*beat);
-        }
-    }
 
     // ───────────────────────────── the slash itself ─────────────────────────────
     // (2.135.0, the user's "참격을 멋있게 꾸며봐 집중적으로": the X itself, above all)
@@ -260,57 +217,7 @@ final class XSlashLights {
     static double scale(double half,double tall){return Math.hypot(half,tall)/Math.hypot(XSlashRules.HALF,XSlashRules.TALL);}
     /** How far the cut of arm {@code a} has been drawn {@code sec} seconds in (stopped short {@code stop} seconds in, NaN: not). */
     static float drawnOf(int a,float sec,float stop){return XSlash.cut(a,Float.isNaN(stop)?sec:Math.min(sec,stop));}
-    /** A point of arm {@code a} bowed out {@code bow} of its horns' line's length at its crown (its band from XSlash.INNER to XSlash.OUTER), {@code t} along it. */
-    static Vec3d bowPoint(XSlash.Way w,double fw,double half,double tall,int a,double t,double bow){
-        return armPoint(w,fw,half,tall,a,t,(bow-XSlash.INNER)/(XSlash.OUTER-XSlash.INNER));
-    }
 
-    /** Echo blades: thin arcs of light just outside each arm's cutting edge, bowed out further, each a little later and a little behind it (bow, seconds later, blocks behind full grown). */
-    static final double[] ECHO_BOW={.19,.225};static final float[] ECHO_LAG={.035f,.07f};static final double[] ECHO_BACK={.45,.9};
-    static void echoBlades(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,float own,boolean light){
-        float fade=(float)(x[3]*(1-x[4]))*own;if(fade<=.01f)return;
-        double sc=scale(x[1],x[2]),fly=t<FIRE?.3:1;
-        for(int a=0;a<2;a++)for(int b=0;b<ECHO_BOW.length;b++){
-            float p=drawnOf(a,t-ECHO_LAG[b],stop);if(p<=.03f)continue;
-            double fw=x[0]-ECHO_BACK[b]*sc*fly;int n=22;Vec3d last=null;
-            for(int i=0;i<=n;i++){
-                double u=p*i/(double)n;Vec3d q=bowPoint(w,fw,x[1],x[2],a,u,ECHO_BOW[b]);
-                if(last!=null){
-                    double s=Math.sin(Math.PI*u),wide=(.03+.11*s)*sc;
-                    float al=fade*(float)(.25+.75*s)*(b==0?1:.65f)*GlitchFx.near(q,c.camera);
-                    if(light){m.softLine(last,q,wide*5,GLOW,.2f*al);m.line(last,q,wide*.45,b==0?WHITE:LILAC,.55f*al);}
-                    else m.line(last,q,wide,b==0?LILAC:PURPLE,.7f*al);
-                }
-                last=q;
-            }
-        }
-    }
-    /** Spikes of energy out of each arm's cutting edge: how many to an arm. */
-    static final int SPIKES=18;
-    /** How long spike {@code i} of arm {@code a} is {@code sec} seconds in, for an X {@code sc} of full grown (blocks): longer at the crown, swaying, a few long ones flicking out. */
-    static double spikeLength(int a,int i,int seed,float sec,double sc){
-        double u=(i+.5)/SPIKES,s=Math.sin(Math.PI*u);
-        double sway=.62+.38*Math.sin(sec*34+Math.PI*2*h(i,seed+a,181));
-        double flick=h((int)Math.floor(sec*12)*SPIKES+i,seed+a,182)<.18?1.7:1;
-        return (.34+.74*h(i,seed+a,183))*sway*flick*(.35+.65*s)*sc;
-    }
-    static void spikes(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,int seed,float own,boolean light){
-        float fade=(float)(x[3]*(1-x[4]))*own;if(fade<=.01f)return;
-        double sc=scale(x[1],x[2]);
-        for(int a=0;a<2;a++){
-            float p=drawnOf(a,t,stop);if(p<=.03f)continue;
-            Vec3d n=armNormal(w,x[1],x[2],a),along=armWay(w,x[1],x[2],a);
-            Vec3d dir=n.multiply(.88).subtract(along.multiply(.32)).normalize();
-            for(int i=0;i<SPIKES;i++){
-                double u=(i+.5)/SPIKES;if(u>p)break;
-                double s=Math.sin(Math.PI*u),len=spikeLength(a,i,seed,t,sc),wide=(.22+.16*s)*sc;
-                Vec3d base=armPoint(w,x[0],x[1],x[2],a,u,.96),tip=base.add(dir.multiply(len));
-                float al=fade*Ease.smooth((float)(p-u),0,.04f)*GlitchFx.near(base,c.camera);if(al<=0)continue;
-                if(light){m.needle(base,tip,along,wide*2.4,.18,GLOW,.3f*al);m.needle(base,tip,along,wide*.3,.18,WHITE,.6f*al);}
-                else{m.needle(base,tip,along,wide*1.3,.18,INK,.65f*al);m.needle(base,tip,along,wide,.18,i%3==0?LILAC:PURPLE,.92f*al);}
-            }
-        }
-    }
     /** (The light) where each cut's head is as it is drawn: a hot flare and a streak along the way it goes. */
     static void head(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,float own){
         double sc=scale(x[1],x[2]);
@@ -325,101 +232,7 @@ final class XSlashLights {
             m.softLine(hp.subtract(dir.multiply(1.1*sc)),hp.add(dir.multiply(.45*sc)),.32*sc,LILAC,.5f*al);
         }
     }
-    /** (The light) glints running along each arm's cutting edge once it is whole, two to an arm, each with a short tail. */
-    static void glints(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,int seed,float own){
-        float fade=(float)(x[3]*(1-x[4]))*own;if(fade<=.01f)return;
-        double sc=scale(x[1],x[2]);
-        for(int a=0;a<2;a++){
-            if(drawnOf(a,t,stop)<.98f)continue;
-            for(int k=0;k<2;k++){
-                double ph=t*1.9+k*.5+.3*h(k,seed+a,191);ph-=Math.floor(ph);
-                double u=-.1+1.2*ph;if(u<.03||u>.97)continue;
-                Vec3d gp=armPoint(w,x[0],x[1],x[2],a,u,1);
-                float al=fade*(float)Math.sin(Math.PI*u)*GlitchFx.near(gp,c.camera);
-                m.softDisc(gp,.55*sc+.2,LILAC,.32f*al);m.star(gp,.38*sc+.12,WHITE,.62f*al);
-                Vec3d last=gp;
-                for(int i=1;i<=6;i++){double ub=u-.028*i;if(ub<0)break;Vec3d q=armPoint(w,x[0],x[1],x[2],a,ub,1);m.softLine(last,q,.2*sc*(1-i/7.0),WHITE,.38f*al*(1-i/7f));last=q;}
-            }
-        }
-    }
-    /** (The light) a soft purple aura just outside each arm's cutting edge. */
-    static void aura(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,float own){
-        float fade=(float)(x[3]*(1-x[4]))*own;if(fade<=.01f)return;double sc=scale(x[1],x[2]);
-        for(int a=0;a<2;a++){
-            float p=drawnOf(a,t,stop);if(p<=.03f)continue;Vec3d n=armNormal(w,x[1],x[2],a);
-            int nn=16;Vec3d last=null;
-            for(int i=0;i<=nn;i++){
-                double u=p*i/(double)nn,s=Math.sin(Math.PI*u);Vec3d q=armPoint(w,x[0],x[1],x[2],a,u,1).add(n.multiply(.3*sc*s));
-                if(last!=null)m.softLine(last,q,(.3+1.2*s)*sc,GLOW,.15f*fade*(float)(.3+.7*s)*GlitchFx.near(q,c.camera));
-                last=q;
-            }
-        }
-    }
-    /** (The light) the trails its two upper horns leave as it flies. */
-    static void tipTrails(Fx c,EffectMesh m,XSlash.Way w,float t,float stop,float own){
-        if(t<FIRE)return;
-        double[] now=XSlash.shape(t,w.reach(),stop);if(now==null)return;
-        float fade=(float)(1-now[4])*own;if(fade<=.01f)return;
-        for(int k=0;k<2;k++){
-            double side=k==0?1:-1;Vec3d last=null;
-            for(int i=0;i<=8;i++){
-                float ti=Math.max(FIRE,t-.16f*i/8f);double[] x=XSlash.shape(ti,w.reach(),stop);if(x==null)break;
-                Vec3d q=w.at(x[0],side*x[1],2*x[2]);
-                if(last!=null&&last.squaredDistanceTo(q)>1e-6){float al=fade*(1-i/8f)*GlitchFx.near(q,c.camera);m.softLine(last,q,.42*(1-i/9.0),GLOW,.3f*al);m.line(last,q,.035,LILAC,.55f*al);}
-                last=q;
-            }
-        }
-    }
 
-    /** (2.135.1) How far back the sheet it sweeps reaches behind each arm as it flies (blocks, once it is well away). */
-    static final double SWEEP_BACK=3.2;
-    /** How far back its sheet reaches when it is {@code fw} ahead: none as it goes, the whole of it once it is two blocks on. */
-    static double sweepBack(double fw){return SWEEP_BACK*Ease.smooth((float)(fw-XSlashRules.NEAR),0,2);}
-    /**
-     * (2.135.1) The sheet each arm sweeps as it flies: a see-through band from its cutting edge back along its way, bright
-     * at the arm and gone behind it (a deep purple veil blended, a purple glow and a lilac one from the middle of its band
-     * added), so its speed shows from the side and, from behind, it trails down toward the camera.
-     */
-    static void sweep(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,boolean light,float own){
-        if(t<FIRE)return;
-        float fade=(float)(x[3]*(1-x[4]))*own;double back=sweepBack(x[0]);if(fade<=.01f||back<=.05)return;
-        Vec3d off=w.f().multiply(-back);int n=18;
-        for(int a=0;a<2;a++){
-            for(int layer=0;layer<(light?2:1);layer++){
-                double k=layer==0?1:.45;int rgb=light?(layer==0?GLOW:LILAC):DEEP;
-                float strength=light?(layer==0?.22f:.12f):.2f;
-                Vec3d last=null;float lastA=0;
-                for(int i=0;i<=n;i++){
-                    double u=i/(double)n,s=Math.sin(Math.PI*u);
-                    Vec3d p=armPoint(w,x[0],x[1],x[2],a,u,k);
-                    float al=strength*fade*(float)(.15+.85*s)*GlitchFx.near(p,c.camera);
-                    if(last!=null&&(al>0||lastA>0)){
-                        m.vertex(last,rgb,lastA);m.vertex(p,rgb,al);m.vertex(p.add(off),rgb,0);m.vertex(last.add(off),rgb,0);
-                    }
-                    last=p;lastA=al;
-                }
-            }
-        }
-    }
-    /**
-     * (2.135.1, the light) A star where the arms cross once the X is whole: long thin rays along its own diagonals and a
-     * small upright cross turning slowly within its plane, a hot point at its middle, beating.
-     */
-    static void heartStar(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,float stop,float own){
-        float whole=Ease.smooth(drawnOf(1,t,stop),.85f,1);float fade=(float)(x[3]*(1-x[4]))*own*whole;if(fade<=.01f)return;
-        Vec3d hp=heart(w,x[0],x[1],x[2]);double sc=scale(x[1],x[2]);float near=GlitchFx.near(hp,c.camera)*fade;if(near<=0)return;
-        float beat=.78f+.22f*(float)Math.sin(t*31);
-        Vec3d d1=w.right().multiply(x[1]).add(0,x[2],0).normalize(),d2=w.right().multiply(-x[1]).add(0,x[2],0).normalize();
-        double long1=(1.6+.5*beat)*sc+.4;
-        for(Vec3d d:new Vec3d[]{d1,d2}){
-            m.softLine(hp.subtract(d.multiply(long1)),hp.add(d.multiply(long1)),.34*sc+.08,GLOW,.28f*near);
-            m.line(hp.subtract(d.multiply(long1*.85)),hp.add(d.multiply(long1*.85)),.03,WHITE,.6f*near*beat);
-        }
-        double turn=t*1.6,short1=(.75+.25*beat)*sc+.2;
-        Vec3d e1=w.right().multiply(Math.cos(turn)).add(0,Math.sin(turn),0),e2=w.right().multiply(-Math.sin(turn)).add(0,Math.cos(turn),0);
-        for(Vec3d e:new Vec3d[]{e1,e2})m.line(hp.subtract(e.multiply(short1)),hp.add(e.multiply(short1)),.025,LILAC,.5f*near);
-        m.softDisc(hp,.5*sc+.15,WHITE,.35f*near*beat);
-    }
 
     // ───────────────────────────── as the X is whole ─────────────────────────────
 
@@ -450,35 +263,12 @@ final class XSlashLights {
         float shut=KnifeCombo.bump(t,FIRE-.015f,.05f);
         if(light&&shut>.02f)m.star(o,.55,WHITE,.5f*shut*near);
     }
-    /** Bars of the X torn sideways for a moment as it is whole (seconds). */
-    static final float TEAR0=.455f,TEAR1=.565f;
-    static void tear(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,int seed,float own,boolean light){
-        float a=Ease.smooth(t,TEAR0,TEAR0+.015f)*(1-Ease.smooth(t,TEAR1-.04f,TEAR1))*own*(float)(1-x[4]);if(a<=.01f)return;
-        int step=(int)Math.floor(t*30);
-        for(int i=0;i<7;i++){
-            int key=step*7+i;if(h(key,seed,41)<.28)continue;
-            double up=(.1+1.8*h(key,seed,42))*x[2],side=(h(key,seed,43)-.5)*1.3*x[1];
-            double wide=(.3+.8*h(key,seed,44))*x[1]/XSlashRules.HALF0,high=.035+.05*h(key,seed,45);
-            Vec3d p=w.at(x[0]-.06,side,up),r=w.right().multiply(wide),u=new Vec3d(0,high,0);
-            double cpick=h(key,seed,46);int rgb=cpick<.35?PURPLE:cpick<.55?PINK:cpick<.72?CYAN:cpick<.86?LILAC:INK;
-            float near=GlitchFx.near(p,c.camera)*a;
-            if(light){if(rgb!=INK)m.quad(p.subtract(r).subtract(u.multiply(2.5)),p.add(r).subtract(u.multiply(2.5)),p.add(r).add(u.multiply(2.5)),p.subtract(r).add(u.multiply(2.5)),rgb==LILAC?GLOW:rgb,.22f*near);}
-            else m.quad(p.subtract(r).subtract(u),p.add(r).subtract(u),p.add(r).add(u),p.subtract(r).add(u),rgb,.85f*near);
-        }
-    }
 
     // ───────────────────────────── as it goes ─────────────────────────────
 
     static void launch(Fx c,EffectMesh m,XSlash.Way w,float t,int seed,float own,boolean light){
         float s=t-FIRE;if(s<0||s>.45f)return;
         Vec3d ctr=heart(w,XSlashRules.NEAR+.4,XSlashRules.HALF0,XSlashRules.TALL0);
-        // a ring blown out in its plane where it went from
-        if(s<.24f){
-            double rad=1.1+2.1*Ease.out(s,0,.22f);
-            float fa=in(s,.02f)*(1-Ease.smooth(s,.06f,.24f))*own*GlitchFx.near(ctr,c.camera);
-            if(light){circle(m,ctr,w.right(),UP,rad,.04,WHITE,.4f*fa);DanceBurst.band(m,ctr,w.right(),UP,rad,.45,GLOW,.14f*fa);}
-            else DanceBurst.band(m,ctr,w.right(),UP,rad,.14,PURPLE,.5f*fa);
-        }
         // streaks rushing back past them
         if(light)for(int j=0;j<14;j++){
             float born=.035f*(float)h(j,seed,51),sj=s-born,life=(float)(.13+.08*h(j,seed,52));if(sj<0||sj>=life)continue;
@@ -500,60 +290,6 @@ final class XSlashLights {
 
     // ───────────────────────────── flying ─────────────────────────────
 
-    /** Echoes of the flying X behind it: how many, how far apart (seconds), their colours. */
-    static final int ECHOES=4;static final float ECHO_GAP=.028f;
-    static final int[] ECHO_RGB={PINK,CYAN,LILAC,PURPLE};
-    /** (The light) its cutting edges a few hundredths of a second ago, each jumping a little to the side. */
-    static void echoes(Fx c,EffectMesh m,XSlash.Way w,float t,float stop,int seed,float own){
-        int step=(int)Math.floor(t*30);
-        for(int k=1;k<=ECHOES;k++){
-            float tk=t-k*ECHO_GAP;if(tk<FIRE)break;
-            double[] x=XSlash.shape(tk,w.reach(),stop);if(x==null)continue;
-            float fa=(float)(1-x[4])*own*(.46f-.085f*k);if(fa<=.01f)continue;
-            Vec3d off=w.right().multiply((h(step+k*7,seed,61)-.5)*.32);
-            for(int a=0;a<2;a++){
-                var sw=XSlash.arm(w,x[0],x[1],x[2],a,1);
-                for(int i=0;i+2<sw.n();i+=2){
-                    float kk=(float)Math.sin(Math.PI*sw.along()[i+1]);
-                    m.softLine(sw.outer()[i].add(off),sw.outer()[i+2].add(off),.17+.12*kk,ECHO_RGB[k-1],fa*(.3f+.7f*kk)*GlitchFx.near(sw.outer()[i],c.camera));
-                }
-            }
-        }
-    }
-    /** (The light) lightning crawling over its arms, two to each, new every 1/24 second. */
-    static void arcs(Fx c,EffectMesh m,XSlash.Way w,double[] x,float t,int seed,float own){
-        int step=(int)Math.floor(t*24);float fa=(float)(1-x[4])*own;if(fa<=.01f)return;
-        for(int a=0;a<2;a++){
-            Vec3d n=armNormal(w,x[1],x[2],a);
-            for(int k=0;k<2;k++){
-                int key=step*4+a*2+k;if(h(key,seed,71)<.22)continue;
-                double u0=.08+.6*h(key,seed,72),u1=Math.min(.95,u0+.15+.25*h(key,seed,73));
-                Vec3d p0=armPoint(w,x[0],x[1],x[2],a,u0,.6+.4*h(key,seed,74)),p1=armPoint(w,x[0],x[1],x[2],a,u1,.6+.4*h(key,seed,75));
-                Vec3d last=p0;
-                for(int i=1;i<=6;i++){
-                    double q=i/6.0,bow=Math.sin(Math.PI*q);
-                    Vec3d p=p0.lerp(p1,q).add(n.multiply(i==6?0:(h(key*13+i,seed,76)-.5)*.55*bow)).add(w.f().multiply(i==6?0:(h(key*17+i,seed,77)-.5)*.3*bow));
-                    float near=GlitchFx.near(p,c.camera)*fa;
-                    m.softLine(last,p,.15,LILAC,.3f*near);m.line(last,p,.028,WHITE,.75f*near);
-                    last=p;
-                }
-            }
-        }
-    }
-    /** A ring left in its wake every this many blocks of its way. */
-    static final double WAKE_EVERY=4.5;
-    static void wakes(Fx c,EffectMesh m,XSlash.Way w,float t,float stop,float own,boolean light){
-        if(!Float.isNaN(stop)&&stop<FIRE)return;
-        double reach=w.reach();
-        for(int k=1;;k++){
-            double fw=XSlashRules.NEAR+WAKE_EVERY*k;if(fw>reach-.4)break;
-            float at=FIRE+(float)XSlashRules.reached(fw)/20f,s=t-at;if(s<0||s>.26f)continue;
-            double half=XSlashRules.half(fw),tall=XSlashRules.tall(fw),g=.55+.6*Ease.out(s,0,.24f);
-            Vec3d ctr=w.at(fw,0,tall);float fa=in(s,.015f)*(1-Ease.smooth(s,.06f,.26f))*own*GlitchFx.near(ctr,c.camera);if(fa<=0)continue;
-            if(light)ellipse(m,ctr,w.right(),UP,half*g,tall*g,.035,LILAC,.28f*fa,false);
-            else ellipse(m,ctr,w.right(),UP,half*g,tall*g,.07,PURPLE,.3f*fa,false);
-        }
-    }
     /** Sparks ground off each of its lower horns on the floor as it flies (k 0: the left, 1: the right). */
     static final int HORN_SPARKS=22;
     static float hornBorn(XSlash.Way w,int k,int j,int seed){
@@ -615,14 +351,16 @@ final class XSlashLights {
                 m.triangle(p0,p1,p2,sh.rgb(),.92f*near);
             }
         }
-        // a flash where it ends, and a ring blown out in its plane
+        // a flash where it ends, and (2.136.0) the X itself once more in lines of light, blown a little wider
         Vec3d o=heart(w,w.reach(),XSlashRules.half(w.reach()),XSlashRules.tall(w.reach()));float near=GlitchFx.near(o,c.camera)*own;
         if(light){
             if(s<.14f){m.softDisc(o,2.3,GLOW,.45f*in(s,.015f)*(1-s/.14f)*near);m.star(o,1.0,WHITE,.55f*in(s,.015f)*(1-s/.14f)*near);}
             if(s<.3f){double g=1+.5*Ease.out(s,0,.28f);float fa=in(s,.015f)*(1-Ease.smooth(s,.08f,.3f))*near;
-                Vec3d mid=w.at(w.reach(),0,XSlashRules.tall(w.reach()));
-                ellipse(m,mid,w.right(),UP,XSlashRules.half(w.reach())*g,XSlashRules.tall(w.reach())*g,.04,LILAC,.25f*fa,false);
-                ellipse(m,mid,w.right(),UP,XSlashRules.half(w.reach())*g,XSlashRules.tall(w.reach())*g,.45,GLOW,.1f*fa,true);}
+                double hh=XSlashRules.half(w.reach())*g,tt=XSlashRules.tall(w.reach())*g;
+                for(int a=0;a<2;a++){
+                    Vec3d d=w.right().multiply(a==0?hh:-hh).add(0,tt,0);
+                    m.softLine(o.subtract(d),o.add(d),.5,GLOW,.3f*fa);m.line(o.subtract(d),o.add(d),.05,WHITE,.75f*fa);
+                }}
         }
     }
 

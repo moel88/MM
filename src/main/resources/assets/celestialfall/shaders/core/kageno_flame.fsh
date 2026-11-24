@@ -956,17 +956,11 @@ void main(){
   vec3 ink=vec3(.05,.01,.12),rimc=vec3(.86,.54,1.0),mid=vec3(.58,.09,.88),deep=vec3(.30,.03,.58),hotc=vec3(1.0,.9,1.0);
   float body,d,aa,whiteCore;
   if(style>1.5){
-   // (2.133.0) X Chara's delete slash's giant blade, made for its first design (gone before it went out); from 2.134.0
-   // style 2 draws the arms of the great X slash (H with their hack off, client/xchara/XSlash: each of the X's two
-   // arms a crescent, and its edge toward the camera). Styles 3 and 4 are used by nothing now. uv.x from one horn (0)
-   // to the other (1); uv.y 0 at the inner edge, 1 at the outer.
-   // Style 2 the blade: its shape is the geometry's (thin at the horns, deepest at the crown): an ink line on its
-   // cutting edge (the crown's arc), a white core just in from it, lilac, a vivid purple going deep toward its inner
-   // edge, which breaks into square pixels flickering off it (deleted data); faint scanlines across it. Style 3 the veil
-   // under it down to the ground: a see-through violet, fuller up toward the blade, columns of light running down it,
-   // dark rows, pixels of it missing as it goes. Style 4 the cut on the ground at its foot (uv.y 1 its leading edge): a
-   // bright line, a glow fading behind it. tint.g how much of it is gone, tint.b how far it has cooled (its white goes),
-   // tint.a its alpha.
+   // X Chara's great X slash (H with their hack off, client/xchara/XSlash). uv.x from one horn (0) to the other (1);
+   // uv.y 0 at the back edge, 1 at the cutting edge. Style 2 was its arms from 2.134.0 to 2.135.1 (a crescent: an ink
+   // line on its cutting edge, a white core, lilac, purple going deep toward its inner edge breaking into pixels) and
+   // is drawn by nothing now; from 2.136.0 its blades are styles 3 to 6 below (client/xchara/XBlade): 3 the blade, 4
+   // its wake, 5 a flat copy of its shape in one colour, 6 its halo. tint.g how much of it is gone, tint.a its alpha.
    float tm=Age*.05;
    if(style<2.5){
     d=1.0-y;
@@ -1010,28 +1004,122 @@ void main(){
     rgb*=1.0+Hot*whiteCore*.8;
     alpha=body*tint.a*mix(1.0,.62,smoothstep(.35,1.0,d));
    }else if(style<3.5){
-    float col=floor(x*150.0),hc=hash(vec2(col,sd+.7));
-    float run=fract(y*1.4+tm*(1.2+1.6*hc)+hc*7.3);
-    float streak=step(.62,hc)*smoothstep(0.0,.04,run)*(1.0-smoothstep(.04,.4,run));
-    float dark=step(.55,fract(y*20.0+tm*1.5));
-    float cell=hash(vec2(col*1.3,floor(y*16.0)+sd));
-    float up=smoothstep(.08,1.0,y);
-    body=1.0-step(cell,eat*1.1);
-    rgb=mix(deep,mid,up*.7);
-    rgb=mix(rgb,rimc,streak*.8);
-    rgb*=mix(1.0,.8,dark);
-    rgb*=1.0+Hot*streak*.3*(1.0-cool);
-    alpha=body*tint.a*(.05+.38*pow(up,1.4)+.35*streak*up);
-   }else{
+    // (2.136.0, user request: "참격을 여기서 갈아엎고 최대로 멋있게 만들어줘") Style 3 the great X's blade, made anew: a
+    // long lens pointed at both ends (the geometry's), its cutting edge (uv.y 1) an ink line, a white-hot core under it
+    // whose depth breathes, lilac, a vivid purple going to indigo toward its back, brush hairs of light and of ink
+    // streaming along it the way it was cut, and its back torn into long tongues leaning back from that way, each
+    // tongue's edge a hot magenta line, loose pixels beyond. tint.g how much of it is gone (eaten toward its cutting
+    // edge, cells of it dropping out), tint.b how fresh it is (1 as it is cut: all of it white for a moment, whole to
+    // its back edge; 0 once it has settled), tint.a its alpha.
     d=1.0-y;
-    float line=1.0-smoothstep(.0,.08,d);
-    float glow=exp(-d*3.5)*(1.0-smoothstep(.7,1.0,d));
-    float px=hash(vec2(floor(x*140.0)+sd,floor(d*8.0)));
-    rgb=mix(hotc,rimc,smoothstep(.0,.1,d));
-    rgb=mix(rgb,mid,smoothstep(.1,.5,d));
-    body=max(line,glow*(.6+.4*px));
-    rgb*=1.0+Hot*line*.9*(1.0-cool);
-    alpha=tint.a*body*(1.0-eat);
+    aa=min(max(fwidth(d),.002)*1.2,.05);
+    float fresh=tint.b;
+    float flowx=x*6.0-tm*7.5;
+    // a stretch of it now and then slips across itself for a frame, as torn data
+    float gs=floor(tm*20.0),bandx=floor(x*14.0+sd);
+    float slip=step(.9,hash(vec2(gs,bandx+sd)))*(hash(vec2(bandx,gs+sd))-.5)*.16*(1.0-fresh);
+    float dd=d+slip*smoothstep(.0,.1,d);
+    // where it ends toward its back: a skyline of long tongues, leaning back from the way of the cut
+    float sx=flowx+dd*7.0;
+    float sky=.6*noise(vec2(sx*.8+sd,3.7))+.3*noise(vec2(sx*1.9,sd+9.1))+.1*noise(vec2(sx*4.3,sd+1.3));
+    float reach=.5+.62*sky;
+    reach=mix(reach,1.05,fresh*.85);
+    reach*=1.0-eat*1.12;
+    float cell=hash(vec2(floor(x*64.0)+sd,floor(dd*9.0)));
+    float kept=1.0-step(cell,eat*1.25-.08);
+    float solid=(1.0-smoothstep(reach-.006-aa,reach+.006+aa,dd))*smoothstep(-aa,aa,d)*kept;
+    // loose pixels beyond its tongues, fewer the further off, changing a dozen times a second
+    float cx=floor(x*170.0+sd*11.0);
+    float pc=hash(vec2(cx*1.7+floor(tm*12.0)*3.1,floor(dd*14.0)+sd));
+    float loose=step(reach,dd)*step(pc,.3*(1.0-smoothstep(.0,.22,dd-reach)))*(1.0-fresh)*(1.0-smoothstep(.5,1.0,eat));
+    body=max(solid,loose*.85);
+    vec3 mag=vec3(1.0,.26,.9),voidc=vec3(.035,.0,.09);
+    float cw=.07+.025*noise(vec2(flowx*1.9+sd,1.3))+.09*fresh;
+    // its cutting edge: ink, a white-hot core, lilac, a vivid purple
+    rgb=mix(ink,hotc,smoothstep(.028,.028+aa*2.0,dd));
+    whiteCore=(1.0-smoothstep(cw,cw+.03+aa,dd))*smoothstep(.028,.042,dd);
+    rgb=mix(rgb,rimc,smoothstep(cw,cw+.04,dd));
+    rgb=mix(rgb,mid,smoothstep(cw+.05,cw+.16,dd));
+    rgb=mix(rgb,deep,smoothstep(cw+.3,cw+.75,dd));
+    // fresh, its body a hot violet going to magenta toward its back (not pale)
+    rgb=mix(rgb,mix(vec3(.66,.10,1.0),vec3(.86,.10,.82),smoothstep(.3,1.0,dd)),fresh*.6*smoothstep(cw+.04,cw+.2,dd));
+    // light streaming along its purple
+    float glowHair=smoothstep(.55,.72,noise(vec2(flowx*1.6+sd*2.0,dd*30.0)))*smoothstep(cw+.03,cw+.1,dd);
+    rgb=mix(rgb,mix(rimc,hotc,.3),glowHair*.55);
+    // then the void: the purple ends in teeth of flame licking down into black
+    float teeth=.5*noise(vec2(flowx*3.4+sd*2.0,7.1))+.3*noise(vec2(flowx*8.0,sd+2.2))+.2*noise(vec2(flowx*17.0,sd+5.0));
+    float glowEnd=cw+.15+.24*teeth*teeth+1.1*pow(fresh,1.4);
+    float inVoid=smoothstep(glowEnd-.012,glowEnd+.012,dd);
+    float toothLip=(1.0-smoothstep(.0,.035,abs(dd-glowEnd)))*(1.0-fresh);
+    rgb=mix(rgb,mag,toothLip*.8);
+    // the void's own: faint rows, a few hairs of light running along it, pixels of colour blinking in it
+    vec3 vc=voidc*(1.0+.5*step(.5,fract(dd*30.0-tm*2.0)));
+    float hair=noise(vec2(flowx*1.3+sd,dd*36.0+sd*3.0));
+    float lightHair=smoothstep(.7,.8,hair)*(1.0-smoothstep(.75,.98,dd));
+    vc=mix(vc,mid,lightHair*.75);
+    float vpx=hash(vec2(floor(x*120.0)+floor(tm*10.0)*7.3,floor(dd*18.0)+sd));
+    vc=mix(vc,vpx>.992?vec3(.3,.95,1.0):vpx>.984?mag:rimc,step(.975,vpx));
+    // a vein of light through the void, a crack running the blade's length, branching, flickering
+    float vy=.6+.16*(noise(vec2(flowx*1.7+sd*1.3,2.9))-.5)+.07*(noise(vec2(flowx*5.3,sd+4.4))-.5);
+    float vw=.012+.012*noise(vec2(flowx*3.0,sd+6.1));
+    float vein=(1.0-smoothstep(vw,vw+.012+aa,abs(dd-vy)))*(.55+.45*noise(vec2(flowx*2.3+sd,tm*9.0)));
+    float veinGlow=exp(-abs(dd-vy)*16.0)*.45;
+    vc=mix(vc,mid,veinGlow);
+    vc=mix(vc,mix(rimc,hotc,.5),vein);
+    rgb=mix(rgb,vc,inVoid*(1.0-fresh*.9));
+    // its back edge: each tongue's lip a hot magenta line, white at its very edge
+    float lip=(1.0-smoothstep(.0,.06,reach-dd))*step(dd,reach)*(1.0-fresh)*inVoid;
+    rgb=mix(rgb,mix(mid,mag,.6),lip);
+    float lipW=(1.0-smoothstep(.0,.016,reach-dd))*step(dd,reach)*(1.0-fresh)*inVoid;
+    rgb=mix(rgb,hotc,lipW*.85);
+    // a glint running along its cutting edge
+    float gx=fract(tm*1.9+sd*.13)*1.5-.25;
+    float glint=exp(-(gx-x)*(gx-x)*260.0)*(1.0-smoothstep(.02,.2,dd));
+    rgb=mix(rgb,hotc,glint*.9);
+    rgb=mix(rgb,mix(mag,rimc,step(.6,pc)),loose*(1.0-solid));
+    rgb*=1.0+Hot*(whiteCore*1.1+toothLip*.5+lip*.6+lipW*.6+glint+glowHair*.3*(1.0-inVoid)+vein*.8*inVoid*(1.0-fresh));
+    alpha=body*tint.a;
+   }else if(style<4.5){
+    // Style 4 its wake: the sheet streaming back from its cutting edge as it flies (uv.y 1 at that edge, 0 at the
+    // sheet's back end; uv.x along the arm): streaks side by side, each its own length and strength, bunched, their
+    // light running back along them; a bright line at the edge, a few streaks white, a few ink; see-through.
+    d=1.0-y;
+    float col=floor(x*150.0+sd*7.0),hc=hash(vec2(col,sd+.7)),hc2=hash(vec2(col*1.9,sd+3.1));
+    float len=.22+.78*hc*hc;
+    float run=clamp(d/len,0.0,1.0);
+    float streak=pow(1.0-run,1.5);
+    float bunch=smoothstep(.28,.66,noise(vec2(x*11.0+sd,tm*2.5+sd)));
+    float dash=.55+.45*noise(vec2(col*.37+sd,d*7.0+tm*16.0));
+    float film=pow(1.0-d,2.2)*.2;
+    float a=streak*(.2+.8*bunch)*dash;
+    rgb=mix(deep,mid,streak);
+    rgb=mix(rgb,rimc,pow(streak,2.5)*step(.6,hc2));
+    rgb=mix(rgb,hotc,pow(streak,4.0)*step(.86,hc2));
+    float darkS=step(hc2,.1)*streak;
+    rgb=mix(rgb,ink,darkS);
+    float front=1.0-smoothstep(.0,.05,d);
+    rgb=mix(rgb,hotc,front*.8);
+    float cellw=hash(vec2(floor(x*60.0)+sd,floor(d*7.0)));
+    body=1.0-step(cellw,eat*1.2-.05);
+    rgb*=1.0+Hot*(front*.6+pow(streak,4.0)*step(.86,hc2)*.5);
+    alpha=body*tint.a*max(max(a*.8,film),max(front*.7,darkS*.75));
+   }else if(style<5.5){
+    // Style 5 a flat copy of the blade's shape in one colour (its echoes, split pink and cyan as it is cut and left
+    // behind it as it flies): the lens whole, soft toward its back; the colour by its seed (0 purple, 1 pink, 2 cyan,
+    // 3 ink).
+    d=1.0-y;
+    float sdi=mod(code,16.0);
+    rgb=sdi<.5?mid:sdi<1.5?vec3(1.0,.3,.85):sdi<2.5?vec3(.25,.9,1.0):ink;
+    body=smoothstep(.0,.03,d)*(1.0-smoothstep(.12,.5,d));
+    float cellg=hash(vec2(floor(x*40.0)+sd,floor(d*5.0)+floor(tm*15.0)));
+    body*=1.0-step(cellg,.12+eat);
+    alpha=body*tint.a;
+   }else{
+    // Style 6 its halo: a soft purple glow about the blade (uv.y across it, the blade's own band at its middle).
+    float d2=abs(2.0*y-1.0);
+    rgb=mix(deep,mid,pow(1.0-d2,1.5));
+    body=pow(1.0-d2,1.6)*(.8+.2*noise(vec2(x*9.0-tm*5.0,sd)));
+    alpha=body*tint.a*(1.0-eat);
    }
   }else{
    if(style>.5){
