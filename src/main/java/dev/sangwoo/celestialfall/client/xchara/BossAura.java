@@ -75,7 +75,8 @@ public final class BossAura {
      * always there, round all of it; the other two come and go, one to either side, further in a fit.
      */
     static float[] rim(int which,float clock,int seed,float strength){
-        int s=step(clock);float fit=fit(clock,seed);
+        // (the fit as the step began: a silhouette holds through its step)
+        int s=step(clock);float fit=fit((s+.01f)/STEP_RATE,seed);
         double show=h(s,which,seed,33);
         if(which==0){
             if(show>.9)return null;
@@ -114,7 +115,7 @@ public final class BossAura {
      * side and reaches outward.
      */
     static double[] bar(int j,float clock,int seed,double height,double width){
-        int s=step(clock);float fit=fit(clock,seed);
+        int s=step(clock);float fit=fit((s+.01f)/STEP_RATE,seed);
         if(h(s,j,seed,61)>.22+.5*fit)return null;
         double side=h(s,j,seed,62)<.5?-1:1,len=.1+.34*h(s,j,seed,63)*(.5+fit),y=height*(.04+.94*h(s,j,seed,64));
         double from=width*.5-.04;
@@ -272,11 +273,11 @@ public final class BossAura {
         // drawn EYE_NEAR nearer the viewer along their sight, as much smaller: where it was on the screen, clear of
         // the face (the effect layer melts whatever lies close before a surface)
         double keep=(far-EYE_NEAR)/far;Vec3d cam=m.camera(),eye=cam.add(e.at.subtract(cam).multiply(keep));grow*=keep;
-        m.softDisc(eye,.5*k*grow,EYE_RED,.5f*a*flicker);
-        m.softDisc(eye,.2*k*grow,EYE_RED,a);
-        m.softDisc(eye,.075*grow,EYE_HOT,a);
+        m.softDisc(eye,.34*k*grow,EYE_RED,.4f*a*flicker);
+        m.softDisc(eye,.14*k*grow,EYE_RED,a);
+        m.softDisc(eye,.06*grow,EYE_HOT,a);
         Vec3d r=facing(cam,eye)[0];
-        m.softLine(eye.subtract(r.multiply(.42*k*grow)),eye.add(r.multiply(.42*k*grow)),.06*grow,EYE_RED,.85f*a*flicker);
+        m.softLine(eye.subtract(r.multiply(.34*k*grow)),eye.add(r.multiply(.34*k*grow)),.05*grow,EYE_RED,.85f*a*flicker);
         m.softLine(eye.subtract(r.multiply(.16*grow)),eye.add(r.multiply(.16*grow)),.03*grow,EYE_HOT,.8f*a);
         Vec3d back=e.front.multiply(-1),last=null;
         for(int i=0;i<=FLAME;i++){

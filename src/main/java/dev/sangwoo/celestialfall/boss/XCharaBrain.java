@@ -45,7 +45,8 @@ import net.minecraft.util.math.Vec3d;
  */
 final class XCharaBrain extends BossBrain {
     /** How near whom it fights it starts each (blocks between their feet): a little inside each reach. */
-    static final double KNIFE=3.0,JAB_REACH=3.5,CUTTER_REACH=5.4,CAST_REACH=10.5,ERASE_NEAR=7.5,ERASE_REACH=17,XSLASH_NEAR=2.5,XSLASH_FAR=14.5,SLAM_NEAR=3,SLAM_FAR=9.2,KNIVES_NEAR=3.5,KNIVES_FAR=16,SHOT_NEAR=5,SHOT_FAR=20;
+    /** (WALK_IN: from how far it will walk in to use its knife.) */
+    static final double WALK_IN=7.5,KNIFE=3.0,JAB_REACH=3.5,CUTTER_REACH=5.4,CAST_REACH=10.5,ERASE_NEAR=7.5,ERASE_REACH=17,XSLASH_NEAR=2.5,XSLASH_FAR=14.5,SLAM_NEAR=3,SLAM_FAR=9.2,KNIVES_NEAR=3.5,KNIVES_FAR=16,SHOT_NEAR=5,SHOT_FAR=20;
     /** Ticks between two of its Q (a player's are heard no oftener than XCharaRules.HACK_RATE; a little more: the switch shows), and its rest after a skill. */
     static final int HACK_EVERY=XCharaRules.HACK_RATE+2,REST_LEAST=8,REST_MORE=14;
     /** It restores itself below this share of its health. */
@@ -80,7 +81,9 @@ final class XCharaBrain extends BossBrain {
         if(plan==Plan.NONE){choose(now);if(plan==Plan.NONE)return;}
         if(plan==Plan.COMBO)combo(now);else skill(now);
     }
-    private void start(Plan p,LivingEntity on,long now){plan=p;mark=on;planStart=now;pressed=false;}
+    /** Since when it walks in for a combo, and whether it has come within its knife's reach. */
+    private long walkSince;private boolean closed;
+    private void start(Plan p,LivingEntity on,long now){plan=p;mark=on;planStart=now;pressed=false;walkSince=now;closed=false;}
     private void end(long now,boolean rest){
         if(rest&&plan!=Plan.COMBO&&plan!=Plan.NONE)restUntil=now+REST_LEAST+random.nextInt(REST_MORE);
         plan=Plan.NONE;pressed=false;mark=null;
@@ -109,16 +112,16 @@ final class XCharaBrain extends BossBrain {
         boolean sees=boss.canSee(t);
         float hp=boss.getHealth()/Math.max(1,boss.getMaxHealth());
         return switch(p){
-            case COMBO->d<=KNIFE&&knifeFree(now)?(guard?2.5f:5):0;
-            case JAB->ready(XCharaAttack.jabReady(boss),now)&&d<=JAB_REACH?(guard?6:4):0;
-            case CUTTER->ready(XCharaAttack.cutterReady(boss),now)&&d<=CUTTER_REACH&&!guard?2.5f:0;
+            case COMBO->d<=WALK_IN&&knifeFree(now)?(d<=KNIFE?(guard?2.5f:5):(guard?1:2.5f)):0;
+            case JAB->ready(XCharaAttack.jabReady(boss),now)&&d<=WALK_IN?(d<=JAB_REACH?(guard?6:4):(guard?3:2)):0;
+            case CUTTER->ready(XCharaAttack.cutterReady(boss),now)&&d<=WALK_IN+1&&!guard?(d<=CUTTER_REACH?2.5f:1.5f):0;
             case KNIVES->ready(XCharaAttack.knivesReady(boss),now)&&d>=KNIVES_NEAR&&d<=KNIVES_FAR&&sees?(d>7?3:2):0;
             case SHOT->ready(XCharaAttack.shotReady(boss),now)&&d>=SHOT_NEAR&&d<=SHOT_FAR&&sees&&!guard?2:0;
             case SLAM->ready(XCharaAttack.slamReady(boss),now)&&d>=SLAM_NEAR&&d<=SLAM_FAR&&boss.isOnGround()?2.5f:0;
             case XSLASH->ready(XCharaAttack.xslashReady(boss),now)&&d>=XSLASH_NEAR&&d<=XSLASH_FAR&&sees?(guard?6:3):0;
             case ERASE->ready(XCharaAttack.eraseReady(boss),now)&&d>=ERASE_NEAR&&d<=ERASE_REACH?1.5f:0;
             case DANCE->ready(XCharaUltimate.ready(boss),now)&&d<=CAST_REACH&&sees&&!guard?(hp<.5f?4:2.5f):0;
-            case CLONE->ready(XCharaClone.ready(boss),now)&&d<=CAST_REACH&&sees&&!guard?2.5f:0;
+            case CLONE->ready(XCharaClone.ready(boss),now)&&!XCharaClone.going(boss)&&d<=CAST_REACH&&sees&&!guard?2.5f:0;
             case WEAKEN->ready(XCharaWeaken.ready(boss),now)&&d<=CAST_REACH&&sees&&!guard&&!XCharaWeaken.weakened(t)?2:0;
             case PULL->ready(XCharaPull.ready(boss),now)&&d>=4.5&&d<=CAST_REACH&&sees&&!guard?3:0;
             default->0;
@@ -162,8 +165,14 @@ final class XCharaBrain extends BossBrain {
         boolean mine=h!=null&&h.start()>=planStart&&XCharaCombo.valid(h.combo())&&!XCharaCombo.skill(h.combo());
         int place=mine?XCharaCombo.place(h.combo()):0;
         boolean flying=mine&&now<h.start()+XCharaCombo.LENGTH[h.combo()],holding=mine&&XCharaCombo.holding(h.combo(),h.start(),now);
-        if(!flying&&(d>KNIFE+.9||now<XCharaAttack.ready(boss)||now-planStart>12&&place==0)){end(now,false);return;}
         if(CounterStance.active(t)){end(now,false);return;}
+        // not begun and out of reach: it walks in (two seconds at most), as a player would to cut
+        if(!mine&&!closed&&d>KNIFE-.4){
+            if(now-walkSince>40||now<XCharaAttack.ready(boss)){end(now,false);return;}
+            face(t,60);goTo(t.getPos(),now,true);planStart=now;doing="접근 평타";return;
+        }
+        closed=true;
+        if(!flying&&(d>KNIFE+.9||now<XCharaAttack.ready(boss)||now-planStart>12&&place==0)){end(now,false);return;}
         face(t,60);
         if(d>2.5)move=t.getPos().subtract(boss.getPos()).multiply(1,0,1).normalize();
         else if(d<1.3)move=boss.getPos().subtract(t.getPos()).multiply(1,0,1).normalize().multiply(.6);

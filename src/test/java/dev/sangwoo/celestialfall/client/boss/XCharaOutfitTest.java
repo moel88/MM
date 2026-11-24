@@ -95,7 +95,7 @@ class XCharaOutfitTest {
             int s=skin.getRGB(x,y),g=glow.getRGB(x,y),r=g>>16&255,gr=g>>8&255,b=g&255;
             if((s>>>24)==0){assertEquals(0,g&0xffffff,"nothing shines where there is no skin, at "+x+","+y);continue;}
             body++;assertTrue(r+gr+b>0,"all of it shows a little in the dark, at "+x+","+y);
-            assertTrue(b>=gr,"violet or red, never green, at "+x+","+y);
+            assertTrue(gr<=Math.max(r,b),"violet, red or the locket's gold, never green, at "+x+","+y);
             if(Math.max(r,b)>170)bright++;else if(Math.max(r,b)<140)dim++;
         }
         assertTrue(dim>body*.7,"most of it only half as bright as its marks: "+dim+" of "+body);assertTrue(bright>=20,"its marks brightly: "+bright);

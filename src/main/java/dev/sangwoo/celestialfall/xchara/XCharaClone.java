@@ -92,6 +92,8 @@ public final class XCharaClone {
         if(e==null||e.getWorld().isClient)return false;
         var d=BY_USER.get(e.getUuid());return d!=null&&userHeld(d.age());
     }
+    /** Whether this player's is still going (from the press until the wall lets its target go): none other of theirs may begin (2.137.0, the boss asks). */
+    public static boolean going(PlayerEntity p){return p!=null&&BY_USER.containsKey(p.getUuid());}
     /** Whether this one is seized by one now: from the throw until the wall lets them go. */
     public static boolean held(LivingEntity e){
         if(e==null||e.getWorld().isClient)return false;
