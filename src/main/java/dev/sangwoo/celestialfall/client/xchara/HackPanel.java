@@ -76,9 +76,9 @@ public final class HackPanel {
     static final float W=.82f,D=.48f,T=.028f;
     /**
      * (2.137.3) The word on its face (HackLook.WORD, user: "overwrite라는 글씨가 보라색으로"): its purple, where its
-     * first dot's corner is (from the face's middle across, from its far edge down), a dot's width and height (the word
-     * as wide as the face within its rim, its letters a little taller than their dots are wide), and how many of the
-     * rows of writing are left under it.
+     * upper left corner is (from the face's middle across, from its far edge down), and how many of the rows of writing
+     * are left under it. (2.137.6, user: "폰트를 패널에 맞게 예쁘게") Its letters are PanelFont's: strokes of one
+     * width in a console's cut-cornered shapes, as wide together as the face within its rim.
      */
     static final int WORD_PURPLE=0xa635ff,WRITTEN=2;
     /**
@@ -88,9 +88,11 @@ public final class HackPanel {
      */
     static final int WORD_LIT=0xc27aff,WORD_GLOW_HOT=0xb648ff;
     static final float WORD_GLOW_NEAR=.011f,WORD_GLOW_NEAR_A=.62f,WORD_GLOW_FAR=.03f,WORD_GLOW_FAR_A=.44f;
-    static final float WORD_DOT_W=(W-.07f)/WORD_COLS,WORD_DOT_H=.0165f,WORD_X=-W*.5f+.035f,WORD_Z=.098f;
+    static final float WORD_X=-W*.5f+.035f,WORD_Z=.098f;
     /** Where the middle of the word lies along its depth, of half its depth from its middle (towards its far edge: negative). */
-    static final float WORD_ALONG=(-D*.5f+WORD_Z+WORD_ROWS*WORD_DOT_H*.5f)/(D*.5f);
+    static final float WORD_ALONG=(-D*.5f+WORD_Z+PanelFont.HEIGHT*.5f)/(D*.5f);
+    /** The edges of the word's strokes, and of the two bands of light about them: [letter][stroke]. */
+    private static final PanelFont.Sides[][] WORD_BODY=PanelFont.edges(0),WORD_NEAR=PanelFont.edges(WORD_GLOW_NEAR),WORD_FAR=PanelFont.edges(WORD_GLOW_FAR);
     static final int SLAB=0x140a22,UNDER=0x0b0514,RIM=0xa635ff,HOT=0xe6c8ff,GLOW=0x8a14e8,TEXT=0xd4a6ff,KEY=0x7426cc,WHITE=0xffffff;
     /**
      * Where its middle floats from the middle of the end of the arm that holds it, the arm hanging out from the body
@@ -236,18 +238,23 @@ public final class HackPanel {
         // (2.137.3) the word on it, in purple: OVERWRITE across its face, a letter at a time as it comes on (each pale
         // as it comes). (2.137.4, user: "overwrite가 네온으로 빛나게") As neon: the light about its strokes is
         // drawn before this (wordGlow)
-        float x0=-hw+.035f,wx=WORD_X,wz=-hd+WORD_Z,dw=WORD_DOT_W,dh=WORD_DOT_H;
+        float x0=-hw+.035f,wx=WORD_X,wz=-hd+WORD_Z,tall=PanelFont.HEIGHT;
         // (2.137.5, user: "글씨가 입체로 나오면 안돼") Flat: one colour to a stroke, no paler core within it (that read
-        // as a raised tube), in the one plane with its light and the rest of the face
-        for(int r=0;r<WORD_ROWS;r++)for(int k=0;k<WORD_COLS;k++){
-            if(!wordDot(k,r,f))continue;
-            float hot=Math.max(0,1-letterAge(k/6,f.on(),f.t())/WORD_FLASH);
-            float ax=wx+k*dw,az=wz+r*dh,bx=ax+dw,bz=az+dh;
-            // a hair over its neighbours: no seam between two dots of a stroke
-            rect(v,pm,nm,wide,deep,ax-.0006f,az-.0006f,bx+.0006f,bz+.0006f,y,HackKnife.mix(WORD_LIT,HOT,hot),(.94f+.06f*hum(clock))*c);
+        // as a raised tube), in the one plane with its light and the rest of the face. (2.137.6) Its strokes are
+        // PanelFont's, each run a patch between its two edges
+        for(int l=0;l<PanelFont.WORD.length;l++){
+            if(!wordLetter(l,f))continue;
+            float hot=Math.max(0,1-letterAge(l,f.on(),f.t())/WORD_FLASH),a=(.94f+.06f*hum(clock))*c;
+            int rgb=HackKnife.mix(WORD_LIT,HOT,hot);
+            PanelFont.Path[] paths=PanelFont.WORD[l].paths();
+            for(int k=0;k<paths.length;k++){
+                PanelFont.Sides e=WORD_BODY[l][k];
+                for(int i=0;i<paths[k].spans();i++)
+                    patch(v,pm,nm,wide,deep,wx+e.lx()[i],wz+e.ly()[i],wx+e.lx()[i+1],wz+e.ly()[i+1],wx+e.rx()[i+1],wz+e.ry()[i+1],wx+e.rx()[i],wz+e.ry()[i],y,rgb,a);
+            }
         }
         // the rows of writing under it: the last being typed, moved up a row as it is done (the one above going as it does)
-        float top=wz+WORD_ROWS*dh+.0265f,pitch=.048f,cw=.026f,high=.029f,ceiling=wz+WORD_ROWS*dh+.01f;
+        float top=wz+tall+.0265f,pitch=.048f,cw=.026f,high=.029f,ceiling=wz+tall+.01f;
         for(int i=ROWS-WRITTEN;i<ROWS;i++){
             int line=n-(ROWS-1-i);float z=top+(i-(ROWS-WRITTEN)-scroll)*pitch,a=(i==ROWS-1?.95f:.6f)*c;
             if(i==ROWS-WRITTEN)a*=1-scroll;
@@ -274,30 +281,35 @@ public final class HackPanel {
         float sweep=(clock/2.2f-(float)Math.floor(clock/2.2f))*2-1;
         rect(v,pm,nm,wide,deep,-hw+.014f,sweep*hd-.012f,hw-.014f,sweep*hd+.012f,y,WHITE,.07f*c);
     }
-    /** Whether the word has a dot there that is typed by now. */
-    static boolean wordDot(int col,int row,HackLook.Frame f){return dot(col,row)&&letterAge(col/6,f.on(),f.t())>=0;}
+    /** Whether letter {@code l} of the word is typed by now. */
+    static boolean wordLetter(int l,HackLook.Frame f){return l>=0&&l<PanelFont.WORD.length&&letterAge(l,f.on(),f.t())>=0;}
     /** The hum of its neon (0 to 1): a slow breath, a fast faint buzz on it. */
     static float hum(float clock){return .5f+.36f*(float)Math.sin(clock*3.8f)+.14f*(float)Math.sin(clock*47f);}
     /**
      * (2.137.4, user: "overwrite가 네온으로 빛나게") The light about the word, added (premultiplied: the layer adds
-     * colour whatever the alpha): from every side of a dot with no dot beside it, a tight bright band and a wide soft
-     * one, each dying away outward, mitred where two open sides meet; and a faint wash over the dots themselves. A
-     * letter just typed burns brighter.
+     * colour whatever the alpha): from both edges of every stroke and past its open ends, a tight bright band and a
+     * wide soft one, each dying away outward, mitred at the strokes' corners (PanelFont.sides). A letter just typed
+     * burns brighter.
      */
     private static void wordGlow(VertexConsumer v,Matrix4f pm,Matrix3f nm,HackLook.Frame f,float c,float wide,float deep,float y){
-        float hw=W*.5f,hd=D*.5f,wx=WORD_X,wz=-hd+WORD_Z,dw=WORD_DOT_W,dh=WORD_DOT_H,hum=.86f+.14f*hum(f.clock());
-        for(int r=0;r<WORD_ROWS;r++)for(int k=0;k<WORD_COLS;k++){
-            if(!wordDot(k,r,f))continue;
-            float hot=Math.max(0,1-letterAge(k/6,f.on(),f.t())/WORD_FLASH),lit=(1+.9f*hot)*hum*c;
-            float ax=wx+k*dw,az=wz+r*dh,bx=ax+dw,bz=az+dh;
-            boolean left=!wordDot(k-1,r,f),right=!wordDot(k+1,r,f),up=!wordDot(k,r-1,f),down=!wordDot(k,r+1,f);
+        float wx=WORD_X,wz=-D*.5f+WORD_Z,hum=.86f+.14f*hum(f.clock());
+        for(int l=0;l<PanelFont.WORD.length;l++){
+            if(!wordLetter(l,f))continue;
+            float hot=Math.max(0,1-letterAge(l,f.on(),f.t())/WORD_FLASH),lit=(1+.9f*hot)*hum*c;
+            PanelFont.Path[] paths=PanelFont.WORD[l].paths();
             for(int band=0;band<2;band++){
-                float reach=band==0?WORD_GLOW_NEAR:WORD_GLOW_FAR,a=(band==0?WORD_GLOW_NEAR_A:WORD_GLOW_FAR_A)*lit;
-                int rgb=band==0?WORD_GLOW_HOT:GLOW;
-                if(up)beam(v,pm,nm,wide,deep,ax,az,bx,az,bx+(right?reach:0),az-reach,ax-(left?reach:0),az-reach,y,rgb,a);
-                if(down)beam(v,pm,nm,wide,deep,bx,bz,ax,bz,ax-(left?reach:0),bz+reach,bx+(right?reach:0),bz+reach,y,rgb,a);
-                if(left)beam(v,pm,nm,wide,deep,ax,bz,ax,az,ax-reach,az-(up?reach:0),ax-reach,bz+(down?reach:0),y,rgb,a);
-                if(right)beam(v,pm,nm,wide,deep,bx,az,bx,bz,bx+reach,bz+(down?reach:0),bx+reach,az-(up?reach:0),y,rgb,a);
+                float a=(band==0?WORD_GLOW_NEAR_A:WORD_GLOW_FAR_A)*lit;int rgb=band==0?WORD_GLOW_HOT:GLOW;
+                for(int k=0;k<paths.length;k++){
+                    PanelFont.Path p=paths[k];PanelFont.Sides in=WORD_BODY[l][k],out=(band==0?WORD_NEAR:WORD_FAR)[l][k];
+                    int n=p.spans();
+                    for(int i=0;i<n;i++){
+                        beam(v,pm,nm,wide,deep,wx+in.lx()[i],wz+in.ly()[i],wx+in.lx()[i+1],wz+in.ly()[i+1],wx+out.lx()[i+1],wz+out.ly()[i+1],wx+out.lx()[i],wz+out.ly()[i],y,rgb,a);
+                        beam(v,pm,nm,wide,deep,wx+in.rx()[i+1],wz+in.ry()[i+1],wx+in.rx()[i],wz+in.ry()[i],wx+out.rx()[i],wz+out.ry()[i],wx+out.rx()[i+1],wz+out.ry()[i+1],y,rgb,a);
+                    }
+                    if(p.closed())continue;
+                    if(!p.joinedFrom())beam(v,pm,nm,wide,deep,wx+in.rx()[0],wz+in.ry()[0],wx+in.lx()[0],wz+in.ly()[0],wx+out.lx()[0],wz+out.ly()[0],wx+out.rx()[0],wz+out.ry()[0],y,rgb,a);
+                    if(!p.joinedTo())beam(v,pm,nm,wide,deep,wx+in.lx()[n],wz+in.ly()[n],wx+in.rx()[n],wz+in.ry()[n],wx+out.rx()[n],wz+out.ry()[n],wx+out.lx()[n],wz+out.ly()[n],y,rgb,a);
+                }
             }
         }
     }
@@ -308,6 +320,13 @@ public final class HackPanel {
         ax*=wide;bx*=wide;cx*=wide;dx*=wide;az*=deep;bz*=deep;cz*=deep;dz*=deep;
         HackKnife.raw(v,pm,nm,ax,y,az,lit,1);HackKnife.raw(v,pm,nm,bx,y,bz,lit,1);HackKnife.raw(v,pm,nm,cx,y,cz,0,1);HackKnife.raw(v,pm,nm,dx,y,dz,0,1);
         HackKnife.raw(v,pm,nm,dx,y,dz,0,1);HackKnife.raw(v,pm,nm,cx,y,cz,0,1);HackKnife.raw(v,pm,nm,bx,y,bz,lit,1);HackKnife.raw(v,pm,nm,ax,y,az,lit,1);
+    }
+    /** A four-cornered patch of one colour on its face (its corners in turn, given as on the open panel; both faces). */
+    private static void patch(VertexConsumer v,Matrix4f pm,Matrix3f nm,float wide,float deep,float ax,float az,float bx,float bz,float cx,float cz,float dx,float dz,float y,int rgb,float a){
+        if(a<=.003f)return;
+        ax*=wide;bx*=wide;cx*=wide;dx*=wide;az*=deep;bz*=deep;cz*=deep;dz*=deep;
+        HackKnife.raw(v,pm,nm,ax,y,az,rgb,a);HackKnife.raw(v,pm,nm,bx,y,bz,rgb,a);HackKnife.raw(v,pm,nm,cx,y,cz,rgb,a);HackKnife.raw(v,pm,nm,dx,y,dz,rgb,a);
+        HackKnife.raw(v,pm,nm,dx,y,dz,rgb,a);HackKnife.raw(v,pm,nm,cx,y,cz,rgb,a);HackKnife.raw(v,pm,nm,bx,y,bz,rgb,a);HackKnife.raw(v,pm,nm,ax,y,az,rgb,a);
     }
     /** A rectangle on its face (given as on the open panel), kept within its rim. */
     private static void rect(VertexConsumer v,Matrix4f pm,Matrix3f nm,float wide,float deep,float x0,float z0,float x1,float z1,float y,int rgb,float a){

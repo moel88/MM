@@ -87,26 +87,9 @@ public final class HackLook {
     }
     /**
      * (2.137.3, user request: "엑스차라 q활성화 패널에 overwrite라는 글씨가 보라색으로 나오게 바꿔줘") The word on the
-     * panel, in purple across its face: its letters as dots, five across and seven down, a column between two letters.
+     * panel, in purple across its face. Its letters are PanelFont's (2.137.6: strokes, no longer dots).
      */
     public static final String WORD="OVERWRITE";
-    /** Its dots across (five to a letter, one between) and down. */
-    public static final int WORD_COLS=WORD.length()*6-1,WORD_ROWS=7;
-    private static final String[][] LETTERS={
-        {"O",".###.","#...#","#...#","#...#","#...#","#...#",".###."},
-        {"V","#...#","#...#","#...#","#...#","#...#",".#.#.","..#.."},
-        {"E","#####","#....","#....","####.","#....","#....","#####"},
-        {"R","####.","#...#","#...#","####.","#.#..","#..#.","#...#"},
-        {"W","#...#","#...#","#...#","#.#.#","#.#.#","##.##","#...#"},
-        {"I","#####","..#..","..#..","..#..","..#..","..#..","#####"},
-        {"T","#####","..#..","..#..","..#..","..#..","..#..","..#.."}};
-    /** Whether the word has a dot at this column (0 its left) and row (0 its top). */
-    public static boolean dot(int col,int row){
-        if(col<0||col>=WORD_COLS||row<0||row>=WORD_ROWS||col%6==5)return false;
-        char c=WORD.charAt(col/6);
-        for(String[] l:LETTERS)if(l[0].charAt(0)==c)return l[1+row].charAt(col%6)=='#';
-        return false;
-    }
     /** The word is typed as the panel comes on: its first letter this long after, one more every WORD_STEP (seconds), each lit pale for WORD_FLASH as it comes. */
     public static final float WORD_FROM=.19f,WORD_STEP=.03f,WORD_FLASH=.12f;
     /** How long letter {@code i} of the word has been there (seconds; negative: not yet). Going off, all of it is there until the panel's face goes dark. */

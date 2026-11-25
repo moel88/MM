@@ -133,28 +133,16 @@ class HackPanelTest {
     /** (2.137.3, user: "overwrite라는 글씨가 보라색으로 나오게") The word OVERWRITE is on its face, in purple. */
     @Test void theWordOverwriteIsOnItsFaceInPurple(){
         assertEquals("OVERWRITE",HackLook.WORD);
-        assertEquals(53,HackLook.WORD_COLS,"nine letters of five dots, a column between");
-        // every letter has dots in every row's reach: its first and last columns, its top and bottom rows; the column between is empty
-        for(int l=0;l<9;l++){
-            boolean left=false,right=false,top=false,bottom=false;
-            for(int r=0;r<7;r++){left|=HackLook.dot(l*6,r);right|=HackLook.dot(l*6+4,r);assertFalse(HackLook.dot(l*6+5,r),"a gap after letter "+l);}
-            for(int k=0;k<5;k++){top|=HackLook.dot(l*6+k,0);bottom|=HackLook.dot(l*6+k,6);}
-            assertTrue(left&&right&&top&&bottom,"letter "+l+" fills its five by seven");
-        }
-        // the same letter is the same dots (the two Es, the two Rs), different letters are not
-        java.util.function.IntFunction<String> shape=l->{var b=new StringBuilder();for(int r=0;r<7;r++)for(int k=0;k<5;k++)b.append(HackLook.dot(l*6+k,r)?'#':'.');return b.toString();};
-        for(int a=0;a<9;a++)for(int b=a+1;b<9;b++)
-            assertEquals(HackLook.WORD.charAt(a)==HackLook.WORD.charAt(b),shape.apply(a).equals(shape.apply(b)),"letters "+a+" and "+b);
-        assertEquals(".###.#...##...##...##...##...#.###.",shape.apply(0),"an O");
-        assertEquals("#####..#....#....#....#....#....#..",shape.apply(7),"a T");
+        // (2.137.6) its letters are PanelFont's strokes: nine of them, as wide together as the face within its rim
+        assertEquals(9,PanelFont.WORD.length);
+        assertEquals(HackPanel.W-.07f,PanelFont.WIDTH,1e-6,"the face within its rim");
         // it lies within the face's rim, between the line under the title and the keys, as wide as the face
-        float hw=HackPanel.W*.5f,hd=HackPanel.D*.5f,x0=HackPanel.WORD_X,x1=x0+HackLook.WORD_COLS*HackPanel.WORD_DOT_W,z0=-hd+HackPanel.WORD_Z,z1=z0+7*HackPanel.WORD_DOT_H;
+        float hw=HackPanel.W*.5f,hd=HackPanel.D*.5f,x0=HackPanel.WORD_X,x1=x0+PanelFont.WIDTH,z0=-hd+HackPanel.WORD_Z,z1=z0+PanelFont.HEIGHT;
         assertTrue(x0>=-hw+.03f&&x1<=hw-.03f,"within the rim");
         assertTrue(x1-x0>HackPanel.W*.85f,"across the face: "+(x1-x0));
         assertTrue(z0>-hd+.084f,"under the title's line");
         float keys=hd-.03f-HackLook.KEYS_DOWN*.035f-(HackLook.KEYS_DOWN-1)*.0105f;
         assertTrue(z1+.0265f+(HackPanel.WRITTEN-1)*.048f+.029f<keys,"its rows of writing above the keys");
-        assertTrue(HackPanel.WORD_DOT_H>=HackPanel.WORD_DOT_W,"its letters no flatter than wide");
         // purple: more blue than red, far more of both than green
         int c=HackPanel.WORD_PURPLE,r=(c>>16)&255,g=(c>>8)&255,b=c&255;
         assertTrue(b>r&&r>g*2&&b>200,"purple: "+Integer.toHexString(c));
@@ -173,7 +161,7 @@ class HackPanelTest {
         assertTrue(((lit>>8)&255)>((rim>>8)&255)+40&&(lit&255)>=((lit>>16)&255)&&((lit>>16)&255)>((lit>>8)&255)+40,"a lit purple");
         // its light: a tight bright band within a wide soft one, the wide one within the face's rim and short of the title
         assertTrue(HackPanel.WORD_GLOW_NEAR<HackPanel.WORD_GLOW_FAR&&HackPanel.WORD_GLOW_NEAR_A>HackPanel.WORD_GLOW_FAR_A);
-        assertTrue(HackPanel.WORD_GLOW_FAR>HackPanel.WORD_DOT_W*1.5f,"reaching past the gap between two letters");
+        assertTrue(HackPanel.WORD_GLOW_FAR>PanelFont.GAP*1.5f,"reaching past the gap between two letters");
         float hw=HackPanel.W*.5f,hd=HackPanel.D*.5f;
         assertTrue(HackPanel.WORD_X-HackPanel.WORD_GLOW_FAR>=-hw+.004f,"within the face");
         assertTrue(-hd+HackPanel.WORD_Z-HackPanel.WORD_GLOW_FAR>-hd+.066f,"under the title bar");
@@ -181,10 +169,11 @@ class HackPanelTest {
         float low=1,high=0,step=0,last=HackPanel.hum(0);
         for(int i=1;i<=2400;i++){float h=HackPanel.hum(i/240f);low=Math.min(low,h);high=Math.max(high,h);step=Math.max(step,Math.abs(h-last));last=h;}
         assertTrue(low>=0&&high<=1&&step<.06f,"hum "+low+" to "+high+", step "+step);
-        // only the dots typed by now are lit
+        // only the letters typed by now are lit
         var on=new HackLook.Frame(true,HackLook.WORD_FROM+HackLook.WORD_STEP*1.5f,0,1);
-        assertTrue(HackPanel.wordDot(1,0,on)&&HackPanel.wordDot(6,0,on),"O and V are there");
-        assertFalse(HackPanel.wordDot(12,0,on),"E not yet");
+        assertTrue(HackPanel.wordLetter(0,on)&&HackPanel.wordLetter(1,on),"O and V are there");
+        assertFalse(HackPanel.wordLetter(2,on),"E not yet");
+        assertFalse(HackPanel.wordLetter(9,on)||HackPanel.wordLetter(-1,on),"nine letters");
         assertTrue(HackPanel.WORD_ALONG<0&&HackPanel.WORD_ALONG>-1,"the word lies in the far half of the face");
     }
     @Test void itIsFoldedAwayALittleBeforeTheRestOfTheHackIsGone(){
