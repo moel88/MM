@@ -21,7 +21,8 @@ import static dev.sangwoo.celestialfall.client.xchara.HackLook.*;
  * <p>
  * A thin slab, dark on its faces and purple on its sides, a rim of light round its face and a soft glow past it; on its
  * face (what the video is too small to show, so the hacker's console): a title bar, a line filling as each line is
- * typed, rows of writing typed a character at a time and moved up as each is done (HackLook: every moment a function
+ * typed, the word OVERWRITE in purple across it (2.137.3, the user's), under it rows of writing typed a character
+ * at a time and moved up as each is done (HackLook: every moment a function
  * of the clock), a cursor, two rows of keys lit as each character is struck, a faint line of light sweeping down it.
  * In a hand in the world it is a screen floating by the hand of the arm that hangs out from the body (XCharaIdle), as
  * the user's video has it (2.116.1, user: "패널이 영상 보면 방향이 저렇게 안되어 있어"; read again from the video's two
@@ -73,6 +74,14 @@ public final class HackPanel {
      * it lying level (0.74).
      */
     static final float W=.82f,D=.48f,T=.028f;
+    /**
+     * (2.137.3) The word on its face (HackLook.WORD, user: "overwrite라는 글씨가 보라색으로"): its purple, where its
+     * first dot's corner is (from the face's middle across, from its far edge down), a dot's width and height (the word
+     * as wide as the face within its rim, its letters a little taller than their dots are wide), and how many of the
+     * rows of writing are left under it.
+     */
+    static final int WORD_PURPLE=0xa635ff,WRITTEN=2;
+    static final float WORD_DOT_W=(W-.07f)/WORD_COLS,WORD_DOT_H=.0165f,WORD_X=-W*.5f+.035f,WORD_Z=.098f;
     static final int SLAB=0x140a22,UNDER=0x0b0514,RIM=0xa635ff,HOT=0xe6c8ff,GLOW=0x8a14e8,TEXT=0xd4a6ff,KEY=0x7426cc,WHITE=0xffffff;
     /**
      * Where its middle floats from the middle of the end of the arm that holds it, the arm hanging out from the body
@@ -213,17 +222,35 @@ public final class HackPanel {
         float done=Math.min(1,into/TYPE);
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,hw-.03f,-hd+.084f,y,KEY,.6f*c);
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,-hw+.03f+(W-.06f)*done,-hd+.084f,y,HOT,.9f*c);
-        // the rows of writing: the last being typed, all moved up a row as it is done
-        float top=-hd+.098f,pitch=.048f,cw=.026f,high=.029f,x0=-hw+.035f;
-        for(int i=0;i<ROWS;i++){
-            int line=n-(ROWS-1-i);float z=top+(i-scroll)*pitch,a=(i==ROWS-1?.95f:.5f+.13f*i)*c;
-            if(i==0)a*=1-scroll;
+        // (2.137.3) the word on it, in purple: OVERWRITE across its face, a letter at a time as it comes on (each pale
+        // as it comes), a soft light under it
+        float x0=-hw+.035f,wx=WORD_X,wz=-hd+WORD_Z,dw=WORD_DOT_W,dh=WORD_DOT_H,breath=.9f+.1f*(float)Math.sin(clock*3.8f);
+        for(int pass=0;pass<2;pass++)for(int r=0;r<WORD_ROWS;r++){
+            int from=-1;
+            for(int k=0;k<=WORD_COLS;k++){
+                float age=k<WORD_COLS?letterAge(k/6,f.on(),f.t()):-1;
+                boolean ink=age>=0&&dot(k,r);
+                // (a run of dots ends with its letter: each letter has its own light)
+                if(ink&&from<0)from=k;
+                if(from>=0&&(!ink||k%6==4)){
+                    int to=ink?k+1:k;float since=letterAge(from/6,f.on(),f.t()),hot=Math.max(0,1-since/WORD_FLASH);
+                    if(pass==0)rect(v,pm,nm,wide,deep,wx+from*dw-.007f,wz+r*dh-.007f,wx+to*dw+.007f,wz+(r+1)*dh+.007f,y,GLOW,(.22f+.3f*hot)*breath*c);
+                    else rect(v,pm,nm,wide,deep,wx+from*dw,wz+r*dh,wx+to*dw,wz+(r+1)*dh,y*1.5f,HackKnife.mix(WORD_PURPLE,HOT,hot),c);
+                    from=-1;
+                }
+            }
+        }
+        // the rows of writing under it: the last being typed, moved up a row as it is done (the one above going as it does)
+        float top=wz+WORD_ROWS*dh+.0265f,pitch=.048f,cw=.026f,high=.029f,ceiling=wz+WORD_ROWS*dh+.01f;
+        for(int i=ROWS-WRITTEN;i<ROWS;i++){
+            int line=n-(ROWS-1-i);float z=top+(i-(ROWS-WRITTEN)-scroll)*pitch,a=(i==ROWS-1?.95f:.6f)*c;
+            if(i==ROWS-WRITTEN)a*=1-scroll;
             int len=length(line,seed),upto=i==ROWS-1?(int)Math.floor(typed):len;
             int from=-1;
             for(int k=0;k<=upto;k++){
                 boolean ink=k<upto&&glyph(line,k,seed);
                 if(ink&&from<0)from=k;
-                else if(!ink&&from>=0){rect(v,pm,nm,wide,deep,x0+from*cw,z,x0+k*cw-.007f,z+high,y,TEXT,a);from=-1;}
+                else if(!ink&&from>=0){rect(v,pm,nm,wide,deep,x0+from*cw,Math.max(z,ceiling),x0+k*cw-.007f,z+high,y,TEXT,a);from=-1;}
             }
             if(i==ROWS-1){
                 // the cursor: there while it types, blinking once the line is done
