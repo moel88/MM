@@ -19,4 +19,5 @@ Minecraft Java 1.20.1 / Fabric Loader 0.16.14 / Fabric API 0.92.2+1.20.1 / Java 
 
 ## 확인
 
+- 테스트 1106개 통과(`HackPanelTest.theWordGlowsAsNeon`을 납작한 획에 맞게 고침).
 - 실제 게임 사진(낮·밤, 1인칭·가까이·게임 카메라, 소프트웨어 렌더링). 모습만 바뀌어 영상은 찍지 않았습니다.
