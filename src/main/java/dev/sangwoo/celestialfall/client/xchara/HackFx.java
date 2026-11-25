@@ -95,6 +95,10 @@ public final class HackFx {
             if(s.panel!=null){
                 float near=near(s.panel,m.camera());
                 m.softDisc(s.panel.add(s.face.multiply(.04)),.2+s.across.length()*.9,GLOW,.14f*w*breath*near);
+                // (2.137.4) the neon word on it: its light blooming off the face, along where it is written
+                float word=s.f.content()*near*(.16f+.03f*breath);
+                Vec3d line=s.panel.add(s.along.multiply(HackPanel.WORD_ALONG)).add(s.face.multiply(.03));
+                if(word>.004f)m.softLine(line.subtract(s.across.multiply(.86)),line.add(s.across.multiply(.86)),.2,GLOW,word);
             }
             burst(m,s,true);
         }

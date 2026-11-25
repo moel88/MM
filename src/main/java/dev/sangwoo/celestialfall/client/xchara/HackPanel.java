@@ -21,7 +21,7 @@ import static dev.sangwoo.celestialfall.client.xchara.HackLook.*;
  * <p>
  * A thin slab, dark on its faces and purple on its sides, a rim of light round its face and a soft glow past it; on its
  * face (what the video is too small to show, so the hacker's console): a title bar, a line filling as each line is
- * typed, the word OVERWRITE in purple across it (2.137.3, the user's), under it rows of writing typed a character
+ * typed, the word OVERWRITE in purple neon across it (2.137.3, 2.137.4, the user's), under it rows of writing typed a character
  * at a time and moved up as each is done (HackLook: every moment a function
  * of the clock), a cursor, two rows of keys lit as each character is struck, a faint line of light sweeping down it.
  * In a hand in the world it is a screen floating by the hand of the arm that hangs out from the body (XCharaIdle), as
@@ -81,7 +81,16 @@ public final class HackPanel {
      * rows of writing are left under it.
      */
     static final int WORD_PURPLE=0xa635ff,WRITTEN=2;
+    /**
+     * (2.137.4, user: "overwrite가 네온으로 빛나게") The word as neon: the pale core of its tubes and how far in from a
+     * stroke's sides it lies (of a dot), and the light about them: a tight bright band and a wide soft one (how far each
+     * reaches, blocks of the model, and how strong at the stroke).
+     */
+    static final int WORD_CORE=0xecd2ff,WORD_GLOW_HOT=0xb648ff;
+    static final float WORD_CORE_IN=.3f,WORD_GLOW_NEAR=.011f,WORD_GLOW_NEAR_A=.62f,WORD_GLOW_FAR=.03f,WORD_GLOW_FAR_A=.44f;
     static final float WORD_DOT_W=(W-.07f)/WORD_COLS,WORD_DOT_H=.0165f,WORD_X=-W*.5f+.035f,WORD_Z=.098f;
+    /** Where the middle of the word lies along its depth, of half its depth from its middle (towards its far edge: negative). */
+    static final float WORD_ALONG=(-D*.5f+WORD_Z+WORD_ROWS*WORD_DOT_H*.5f)/(D*.5f);
     static final int SLAB=0x140a22,UNDER=0x0b0514,RIM=0xa635ff,HOT=0xe6c8ff,GLOW=0x8a14e8,TEXT=0xd4a6ff,KEY=0x7426cc,WHITE=0xffffff;
     /**
      * Where its middle floats from the middle of the end of the arm that holds it, the arm hanging out from the body
@@ -175,8 +184,10 @@ public final class HackPanel {
         VertexConsumer s=buffers.getBuffer(HackKnife.solid());
         flat(s,pm,nm,-hw,-hd,hw,hd,0,SLAB,1);flat(s,pm,nm,-hw,-hd,hw,hd,-T,UNDER,1);
         side(s,pm,nm,-hw,-hd,hw,-hd,RIM);side(s,pm,nm,hw,-hd,hw,hd,RIM);side(s,pm,nm,hw,hd,-hw,hd,RIM);side(s,pm,nm,-hw,hd,-hw,-hd,RIM);
-        VertexConsumer v=buffers.getBuffer(HackKnife.glowing());
         float y=.003f,b=.014f;
+        // (2.137.4) the neon light about the word on it, added (before the rest of its face: the word's tubes go over it)
+        if(f.content()>.004f)wordGlow(buffers.getBuffer(HackKnife.lit()),pm,nm,f,f.content(),wide,deep,y*1.2f);
+        VertexConsumer v=buffers.getBuffer(HackKnife.glowing());
         // (2.119.0) pressed (their E), its rim and its glow turn lime for a moment
         float lime=press==null?0:Math.max(0,Math.min(1,press[2]));
         // (2.121.0) their cleave's press lights it violet-white, not E's lime (a fourth number marks it)
@@ -223,21 +234,21 @@ public final class HackPanel {
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,hw-.03f,-hd+.084f,y,KEY,.6f*c);
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,-hw+.03f+(W-.06f)*done,-hd+.084f,y,HOT,.9f*c);
         // (2.137.3) the word on it, in purple: OVERWRITE across its face, a letter at a time as it comes on (each pale
-        // as it comes), a soft light under it
-        float x0=-hw+.035f,wx=WORD_X,wz=-hd+WORD_Z,dw=WORD_DOT_W,dh=WORD_DOT_H,breath=.9f+.1f*(float)Math.sin(clock*3.8f);
-        for(int pass=0;pass<2;pass++)for(int r=0;r<WORD_ROWS;r++){
-            int from=-1;
-            for(int k=0;k<=WORD_COLS;k++){
-                float age=k<WORD_COLS?letterAge(k/6,f.on(),f.t()):-1;
-                boolean ink=age>=0&&dot(k,r);
-                // (a run of dots ends with its letter: each letter has its own light)
-                if(ink&&from<0)from=k;
-                if(from>=0&&(!ink||k%6==4)){
-                    int to=ink?k+1:k;float since=letterAge(from/6,f.on(),f.t()),hot=Math.max(0,1-since/WORD_FLASH);
-                    if(pass==0)rect(v,pm,nm,wide,deep,wx+from*dw-.007f,wz+r*dh-.007f,wx+to*dw+.007f,wz+(r+1)*dh+.007f,y,GLOW,(.22f+.3f*hot)*breath*c);
-                    else rect(v,pm,nm,wide,deep,wx+from*dw,wz+r*dh,wx+to*dw,wz+(r+1)*dh,y*1.5f,HackKnife.mix(WORD_PURPLE,HOT,hot),c);
-                    from=-1;
-                }
+        // as it comes). (2.137.4, user: "overwrite가 네온으로 빛나게") As neon: its strokes tubes of purple, a pale
+        // core down the middle of each, the light about them drawn before this (wordGlow)
+        float x0=-hw+.035f,wx=WORD_X,wz=-hd+WORD_Z,dw=WORD_DOT_W,dh=WORD_DOT_H;
+        for(int pass=0;pass<2;pass++)for(int r=0;r<WORD_ROWS;r++)for(int k=0;k<WORD_COLS;k++){
+            if(!wordDot(k,r,f))continue;
+            float hot=Math.max(0,1-letterAge(k/6,f.on(),f.t())/WORD_FLASH);
+            float ax=wx+k*dw,az=wz+r*dh,bx=ax+dw,bz=az+dh;
+            if(pass==0){
+                // the tube: a hair over its neighbours, no seam between two dots of a stroke
+                rect(v,pm,nm,wide,deep,ax-.0006f,az-.0006f,bx+.0006f,bz+.0006f,y*1.5f,HackKnife.mix(WORD_PURPLE,HOT,hot),c);
+            }else{
+                // its core: in from every side with no dot beside it, so it runs unbroken down a stroke
+                float ix=dw*WORD_CORE_IN,iz=dh*WORD_CORE_IN;
+                rect(v,pm,nm,wide,deep,ax+(wordDot(k-1,r,f)?-.0006f:ix),az+(wordDot(k,r-1,f)?-.0006f:iz),bx-(wordDot(k+1,r,f)?-.0006f:ix),bz-(wordDot(k,r+1,f)?-.0006f:iz),
+                    y*1.8f,HackKnife.mix(WORD_CORE,WHITE,hot),(.92f+.08f*hum(clock))*c);
             }
         }
         // the rows of writing under it: the last being typed, moved up a row as it is done (the one above going as it does)
@@ -267,6 +278,41 @@ public final class HackPanel {
         // a faint line of light sweeping down it
         float sweep=(clock/2.2f-(float)Math.floor(clock/2.2f))*2-1;
         rect(v,pm,nm,wide,deep,-hw+.014f,sweep*hd-.012f,hw-.014f,sweep*hd+.012f,y,WHITE,.07f*c);
+    }
+    /** Whether the word has a dot there that is typed by now. */
+    static boolean wordDot(int col,int row,HackLook.Frame f){return dot(col,row)&&letterAge(col/6,f.on(),f.t())>=0;}
+    /** The hum of its neon (0 to 1): a slow breath, a fast faint buzz on it. */
+    static float hum(float clock){return .5f+.36f*(float)Math.sin(clock*3.8f)+.14f*(float)Math.sin(clock*47f);}
+    /**
+     * (2.137.4, user: "overwrite가 네온으로 빛나게") The light about the word, added (premultiplied: the layer adds
+     * colour whatever the alpha): from every side of a dot with no dot beside it, a tight bright band and a wide soft
+     * one, each dying away outward, mitred where two open sides meet; and a faint wash over the dots themselves. A
+     * letter just typed burns brighter.
+     */
+    private static void wordGlow(VertexConsumer v,Matrix4f pm,Matrix3f nm,HackLook.Frame f,float c,float wide,float deep,float y){
+        float hw=W*.5f,hd=D*.5f,wx=WORD_X,wz=-hd+WORD_Z,dw=WORD_DOT_W,dh=WORD_DOT_H,hum=.86f+.14f*hum(f.clock());
+        for(int r=0;r<WORD_ROWS;r++)for(int k=0;k<WORD_COLS;k++){
+            if(!wordDot(k,r,f))continue;
+            float hot=Math.max(0,1-letterAge(k/6,f.on(),f.t())/WORD_FLASH),lit=(1+.9f*hot)*hum*c;
+            float ax=wx+k*dw,az=wz+r*dh,bx=ax+dw,bz=az+dh;
+            boolean left=!wordDot(k-1,r,f),right=!wordDot(k+1,r,f),up=!wordDot(k,r-1,f),down=!wordDot(k,r+1,f);
+            for(int band=0;band<2;band++){
+                float reach=band==0?WORD_GLOW_NEAR:WORD_GLOW_FAR,a=(band==0?WORD_GLOW_NEAR_A:WORD_GLOW_FAR_A)*lit;
+                int rgb=band==0?WORD_GLOW_HOT:GLOW;
+                if(up)beam(v,pm,nm,wide,deep,ax,az,bx,az,bx+(right?reach:0),az-reach,ax-(left?reach:0),az-reach,y,rgb,a);
+                if(down)beam(v,pm,nm,wide,deep,bx,bz,ax,bz,ax-(left?reach:0),bz+reach,bx+(right?reach:0),bz+reach,y,rgb,a);
+                if(left)beam(v,pm,nm,wide,deep,ax,bz,ax,az,ax-reach,az-(up?reach:0),ax-reach,bz+(down?reach:0),y,rgb,a);
+                if(right)beam(v,pm,nm,wide,deep,bx,az,bx,bz,bx+reach,bz+(down?reach:0),bx+reach,az-(up?reach:0),y,rgb,a);
+            }
+        }
+    }
+    /** Light from an edge (two points, given as on the open panel) out to two points further, dying away, added (both faces). */
+    private static void beam(VertexConsumer v,Matrix4f pm,Matrix3f nm,float wide,float deep,float ax,float az,float bx,float bz,float cx,float cz,float dx,float dz,float y,int rgb,float a){
+        if(a<=.003f)return;
+        int lit=HackKnife.mix(0,rgb,Math.min(1,a));
+        ax*=wide;bx*=wide;cx*=wide;dx*=wide;az*=deep;bz*=deep;cz*=deep;dz*=deep;
+        HackKnife.raw(v,pm,nm,ax,y,az,lit,1);HackKnife.raw(v,pm,nm,bx,y,bz,lit,1);HackKnife.raw(v,pm,nm,cx,y,cz,0,1);HackKnife.raw(v,pm,nm,dx,y,dz,0,1);
+        HackKnife.raw(v,pm,nm,dx,y,dz,0,1);HackKnife.raw(v,pm,nm,cx,y,cz,0,1);HackKnife.raw(v,pm,nm,bx,y,bz,lit,1);HackKnife.raw(v,pm,nm,ax,y,az,lit,1);
     }
     /** A rectangle on its face (given as on the open panel), kept within its rim. */
     private static void rect(VertexConsumer v,Matrix4f pm,Matrix3f nm,float wide,float deep,float x0,float z0,float x1,float z1,float y,int rgb,float a){

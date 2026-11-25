@@ -165,6 +165,28 @@ class HackPanelTest {
         assertTrue(HackLook.letterAge(8,true,99)>HackLook.WORD_FLASH,"steady, its own purple");
         assertTrue(HackLook.letterAge(0,false,.01f)>HackLook.WORD_FLASH,"all of it until the face goes dark");
     }
+    /** (2.137.4, user: "overwrite가 네온으로 빛나게") The word is neon: a pale core in purple tubes, light about them. */
+    @Test void theWordGlowsAsNeon(){
+        // its core is paler than its tube and still of its purple (more blue than red, red more than green)
+        int core=HackPanel.WORD_CORE,tube=HackPanel.WORD_PURPLE;
+        assertTrue(((core>>8)&255)>((tube>>8)&255)+80&&(core&255)>=((core>>16)&255)&&((core>>16)&255)>((core>>8)&255),"a pale purple core");
+        assertTrue(HackPanel.WORD_CORE_IN>.15f&&HackPanel.WORD_CORE_IN<.45f,"a core within its tube, the tube showing either side");
+        // its light: a tight bright band within a wide soft one, the wide one within the face's rim and short of the title
+        assertTrue(HackPanel.WORD_GLOW_NEAR<HackPanel.WORD_GLOW_FAR&&HackPanel.WORD_GLOW_NEAR_A>HackPanel.WORD_GLOW_FAR_A);
+        assertTrue(HackPanel.WORD_GLOW_FAR>HackPanel.WORD_DOT_W*1.5f,"reaching past the gap between two letters");
+        float hw=HackPanel.W*.5f,hd=HackPanel.D*.5f;
+        assertTrue(HackPanel.WORD_X-HackPanel.WORD_GLOW_FAR>=-hw+.004f,"within the face");
+        assertTrue(-hd+HackPanel.WORD_Z-HackPanel.WORD_GLOW_FAR>-hd+.066f,"under the title bar");
+        // its hum is small and steady enough: never dark, no step between two frames
+        float low=1,high=0,step=0,last=HackPanel.hum(0);
+        for(int i=1;i<=2400;i++){float h=HackPanel.hum(i/240f);low=Math.min(low,h);high=Math.max(high,h);step=Math.max(step,Math.abs(h-last));last=h;}
+        assertTrue(low>=0&&high<=1&&step<.06f,"hum "+low+" to "+high+", step "+step);
+        // only the dots typed by now are lit
+        var on=new HackLook.Frame(true,HackLook.WORD_FROM+HackLook.WORD_STEP*1.5f,0,1);
+        assertTrue(HackPanel.wordDot(1,0,on)&&HackPanel.wordDot(6,0,on),"O and V are there");
+        assertFalse(HackPanel.wordDot(12,0,on),"E not yet");
+        assertTrue(HackPanel.WORD_ALONG<0&&HackPanel.WORD_ALONG>-1,"the word lies in the far half of the face");
+    }
     @Test void itIsFoldedAwayALittleBeforeTheRestOfTheHackIsGone(){
         assertTrue(HackPanel.shown(new HackLook.Frame(true,0,0,1)));
         assertTrue(HackPanel.shown(new HackLook.Frame(false,.2f,0,1)));
