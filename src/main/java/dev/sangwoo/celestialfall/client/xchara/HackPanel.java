@@ -82,12 +82,12 @@ public final class HackPanel {
      */
     static final int WORD_PURPLE=0xa635ff,WRITTEN=2;
     /**
-     * (2.137.4, user: "overwrite가 네온으로 빛나게") The word as neon: the pale core of its tubes and how far in from a
-     * stroke's sides it lies (of a dot), and the light about them: a tight bright band and a wide soft one (how far each
-     * reaches, blocks of the model, and how strong at the stroke).
+     * (2.137.4, user: "overwrite가 네온으로 빛나게") The word as neon: the lit colour of its strokes (2.137.5, user:
+     * "글씨가 입체로 나오면 안돼": one flat colour, no paler core within a stroke) and the light about them: a tight
+     * bright band and a wide soft one (how far each reaches, blocks of the model, and how strong at the stroke).
      */
-    static final int WORD_CORE=0xecd2ff,WORD_GLOW_HOT=0xb648ff;
-    static final float WORD_CORE_IN=.3f,WORD_GLOW_NEAR=.011f,WORD_GLOW_NEAR_A=.62f,WORD_GLOW_FAR=.03f,WORD_GLOW_FAR_A=.44f;
+    static final int WORD_LIT=0xc27aff,WORD_GLOW_HOT=0xb648ff;
+    static final float WORD_GLOW_NEAR=.011f,WORD_GLOW_NEAR_A=.62f,WORD_GLOW_FAR=.03f,WORD_GLOW_FAR_A=.44f;
     static final float WORD_DOT_W=(W-.07f)/WORD_COLS,WORD_DOT_H=.0165f,WORD_X=-W*.5f+.035f,WORD_Z=.098f;
     /** Where the middle of the word lies along its depth, of half its depth from its middle (towards its far edge: negative). */
     static final float WORD_ALONG=(-D*.5f+WORD_Z+WORD_ROWS*WORD_DOT_H*.5f)/(D*.5f);
@@ -185,8 +185,8 @@ public final class HackPanel {
         flat(s,pm,nm,-hw,-hd,hw,hd,0,SLAB,1);flat(s,pm,nm,-hw,-hd,hw,hd,-T,UNDER,1);
         side(s,pm,nm,-hw,-hd,hw,-hd,RIM);side(s,pm,nm,hw,-hd,hw,hd,RIM);side(s,pm,nm,hw,hd,-hw,hd,RIM);side(s,pm,nm,-hw,hd,-hw,-hd,RIM);
         float y=.003f,b=.014f;
-        // (2.137.4) the neon light about the word on it, added (before the rest of its face: the word's tubes go over it)
-        if(f.content()>.004f)wordGlow(buffers.getBuffer(HackKnife.lit()),pm,nm,f,f.content(),wide,deep,y*1.2f);
+        // (2.137.4) the neon light about the word on it, added (before the rest of its face: the word's strokes go over it, in the one plane)
+        if(f.content()>.004f)wordGlow(buffers.getBuffer(HackKnife.lit()),pm,nm,f,f.content(),wide,deep,y*2);
         VertexConsumer v=buffers.getBuffer(HackKnife.glowing());
         // (2.119.0) pressed (their E), its rim and its glow turn lime for a moment
         float lime=press==null?0:Math.max(0,Math.min(1,press[2]));
@@ -234,22 +234,17 @@ public final class HackPanel {
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,hw-.03f,-hd+.084f,y,KEY,.6f*c);
         rect(v,pm,nm,wide,deep,-hw+.03f,-hd+.078f,-hw+.03f+(W-.06f)*done,-hd+.084f,y,HOT,.9f*c);
         // (2.137.3) the word on it, in purple: OVERWRITE across its face, a letter at a time as it comes on (each pale
-        // as it comes). (2.137.4, user: "overwrite가 네온으로 빛나게") As neon: its strokes tubes of purple, a pale
-        // core down the middle of each, the light about them drawn before this (wordGlow)
+        // as it comes). (2.137.4, user: "overwrite가 네온으로 빛나게") As neon: the light about its strokes is
+        // drawn before this (wordGlow)
         float x0=-hw+.035f,wx=WORD_X,wz=-hd+WORD_Z,dw=WORD_DOT_W,dh=WORD_DOT_H;
-        for(int pass=0;pass<2;pass++)for(int r=0;r<WORD_ROWS;r++)for(int k=0;k<WORD_COLS;k++){
+        // (2.137.5, user: "글씨가 입체로 나오면 안돼") Flat: one colour to a stroke, no paler core within it (that read
+        // as a raised tube), in the one plane with its light and the rest of the face
+        for(int r=0;r<WORD_ROWS;r++)for(int k=0;k<WORD_COLS;k++){
             if(!wordDot(k,r,f))continue;
             float hot=Math.max(0,1-letterAge(k/6,f.on(),f.t())/WORD_FLASH);
             float ax=wx+k*dw,az=wz+r*dh,bx=ax+dw,bz=az+dh;
-            if(pass==0){
-                // the tube: a hair over its neighbours, no seam between two dots of a stroke
-                rect(v,pm,nm,wide,deep,ax-.0006f,az-.0006f,bx+.0006f,bz+.0006f,y*1.5f,HackKnife.mix(WORD_PURPLE,HOT,hot),c);
-            }else{
-                // its core: in from every side with no dot beside it, so it runs unbroken down a stroke
-                float ix=dw*WORD_CORE_IN,iz=dh*WORD_CORE_IN;
-                rect(v,pm,nm,wide,deep,ax+(wordDot(k-1,r,f)?-.0006f:ix),az+(wordDot(k,r-1,f)?-.0006f:iz),bx-(wordDot(k+1,r,f)?-.0006f:ix),bz-(wordDot(k,r+1,f)?-.0006f:iz),
-                    y*1.8f,HackKnife.mix(WORD_CORE,WHITE,hot),(.92f+.08f*hum(clock))*c);
-            }
+            // a hair over its neighbours: no seam between two dots of a stroke
+            rect(v,pm,nm,wide,deep,ax-.0006f,az-.0006f,bx+.0006f,bz+.0006f,y,HackKnife.mix(WORD_LIT,HOT,hot),(.94f+.06f*hum(clock))*c);
         }
         // the rows of writing under it: the last being typed, moved up a row as it is done (the one above going as it does)
         float top=wz+WORD_ROWS*dh+.0265f,pitch=.048f,cw=.026f,high=.029f,ceiling=wz+WORD_ROWS*dh+.01f;

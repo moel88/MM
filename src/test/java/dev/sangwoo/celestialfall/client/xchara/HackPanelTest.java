@@ -167,10 +167,10 @@ class HackPanelTest {
     }
     /** (2.137.4, user: "overwrite가 네온으로 빛나게") The word is neon: a pale core in purple tubes, light about them. */
     @Test void theWordGlowsAsNeon(){
-        // its core is paler than its tube and still of its purple (more blue than red, red more than green)
-        int core=HackPanel.WORD_CORE,tube=HackPanel.WORD_PURPLE;
-        assertTrue(((core>>8)&255)>((tube>>8)&255)+80&&(core&255)>=((core>>16)&255)&&((core>>16)&255)>((core>>8)&255),"a pale purple core");
-        assertTrue(HackPanel.WORD_CORE_IN>.15f&&HackPanel.WORD_CORE_IN<.45f,"a core within its tube, the tube showing either side");
+        // (2.137.5) flat: a stroke is one colour, brighter than the panel's purple and still purple (more blue than red,
+        // red more than green), short of white
+        int lit=HackPanel.WORD_LIT,rim=HackPanel.WORD_PURPLE;
+        assertTrue(((lit>>8)&255)>((rim>>8)&255)+40&&(lit&255)>=((lit>>16)&255)&&((lit>>16)&255)>((lit>>8)&255)+40,"a lit purple");
         // its light: a tight bright band within a wide soft one, the wide one within the face's rim and short of the title
         assertTrue(HackPanel.WORD_GLOW_NEAR<HackPanel.WORD_GLOW_FAR&&HackPanel.WORD_GLOW_NEAR_A>HackPanel.WORD_GLOW_FAR_A);
         assertTrue(HackPanel.WORD_GLOW_FAR>HackPanel.WORD_DOT_W*1.5f,"reaching past the gap between two letters");
