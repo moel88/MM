@@ -37,6 +37,8 @@ public final class XCharaRules {
     public static final int Y=7;
     /** (2.128.0) No press: up in the air of their slam (G with the hack off, SlamRules), where the middle of their screen points, three doubles after the byte (XCharaAttack.aim). (2.130.0) And while their knives shot (Y with the hack off) are not all gone: where each goes as it is let go. (2.131.0) And likewise until the last of their small knives (T with the hack off) has left the hand. */
     public static final int AIM=8;
+    /** (2.138.0) The press asks for Z, the teleport (XCharaBlink, BlinkRules): the hack on or off alike, the only byte. */
+    public static final int Z=9;
     /**
      * E with the hack on, the restore (2.119.0, user request: "Q활성화 E스킬부터 만들자 간단하게 패널 누르는 모션 나오고 몸에
      * 연두 이펙트 둘러지고 65힐"): its user presses their panel and is healed {@link #HEAL}. The press lands HEAL_AT

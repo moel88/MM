@@ -99,7 +99,9 @@ public final class CombatManager {
         return dev.sangwoo.celestialfall.map.MapGate.enabled(p.getWorld())&&p.isAlive()&&!p.isSpectator()&&!p.hasVehicle()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()&&!cinematic(p)&&!HitStun.stunned(p)
             &&!dev.sangwoo.celestialfall.isosang.IsosangAttack.busy(p)
             // (2.114.0: nor while a hit of X Chara's knife holds them; 2.119.0: nor their E)
-            &&!dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(p)&&!dev.sangwoo.celestialfall.xchara.XCharaHeal.busy(p);
+            &&!dev.sangwoo.celestialfall.xchara.XCharaAttack.busy(p)&&!dev.sangwoo.celestialfall.xchara.XCharaHeal.busy(p)
+            // (2.138.0: nor while their teleport is on its way)
+            &&!dev.sangwoo.celestialfall.xchara.XCharaBlink.casting(p);
     }
     private static CombatState state(ServerPlayerEntity p) {
         var id=p.getWorld().getRegistryKey().getValue();var e=STATES.get(p.getUuid());
@@ -149,6 +151,8 @@ public final class CombatManager {
         if(HitStun.stunned(p)||dev.sangwoo.celestialfall.stand.KagenoManager.busy(p)||dev.sangwoo.celestialfall.stand.StarPlatinumRush.rushing(p)
             ||dev.sangwoo.celestialfall.stand.StarPlatinumInhale.inhaling(p)||dev.sangwoo.celestialfall.stand.StarPlatinumBeatdown.involved(p)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(p)
             ||dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(p))return true;
+        // (2.138.0) X Chara's teleport on its way (the fifth of a second before it moves them): they may only walk
+        if(dev.sangwoo.celestialfall.xchara.XCharaBlink.casting(p))return true;
         // (2.109.0) glowing before a skill with a cutscene is cast (CutsceneGlow): they may only walk
         if(CutsceneGlow.glowing(p))return true;
         var e=STATES.get(p.getUuid());if(e==null)return false;

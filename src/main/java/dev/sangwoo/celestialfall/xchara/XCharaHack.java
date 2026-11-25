@@ -49,7 +49,9 @@ public final class XCharaHack {
         return CombatManager.incapacitated(p)||CutsceneGlow.glowing(p)||XCharaUltimate.involved(p)||StarPlatinumBeatdown.involved(p)||KagenoManager.frozen(p)||XCharaHeal.busy(p)
             // (2.121.0) nor through a skill of their knife (XCharaAttack.cleaving: the cleave's then, gone in 2.133.0; the
             // terrain delete's press and the knife's others since)
-            ||XCharaAttack.cleaving(p);
+            ||XCharaAttack.cleaving(p)
+            // (2.138.0) nor while their teleport is on its way
+            ||XCharaBlink.casting(p);
     }
     /** A Q from their client: heard at most once every HACK_RATE ticks. */
     static void request(ServerPlayerEntity p){

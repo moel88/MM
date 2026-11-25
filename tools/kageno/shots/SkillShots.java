@@ -1460,6 +1460,13 @@ public final class SkillShots implements ClientModInitializer {
                                 String.join(" | ",dev.sangwoo.celestialfall.client.xchara.KnifeClient.HEARD.stream().filter(x->x.contains("erase")||x.contains("hit 16")).toList())));}
                         // (2.127.0) X Chara's pull: by the server, how the last one went, where from and to, and where the dummy is
                         // from the player now, its health and whether anything holds it
+                        // (2.138.0) X Chara's Z, the teleport: where the server has the player, its last move and when it is ready again
+                        if(what.equals("KEY_Z")&&dev.sangwoo.celestialfall.stand.StandManager.xChara(mc.player)&&(age==at+1||age==at+3||age==at+5||age==at+6||age==at+10))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaBlink.last(p);
+                            long now=p.getWorld().getTime();
+                            log.append(String.format(Locale.ROOT,"  Z (teleport) at %d (+%d): casting %b; player at (%.2f, %.2f, %.2f) yaw %.0f; %s; ready in %d; client %s%n",age,age-at,
+                                dev.sangwoo.celestialfall.xchara.XCharaBlink.casting(p),p.getX(),p.getY(),p.getZ(),p.getYaw(),
+                                l==null?"none yet":String.format(Locale.ROOT,"last: how %d, %d ticks ago, from (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f), %.2f on",(int)l[0],now-(long)l[1],l[2],l[3],l[4],l[5],l[6],l[7],Math.hypot(l[5]-l[2],l[7]-l[4])),
+                                Math.max(0,dev.sangwoo.celestialfall.xchara.XCharaBlink.ready(p)-now),dev.sangwoo.celestialfall.client.xchara.BlinkClient.describe(0)));});
                         if(what.equals("KEY_Y")&&(age==at+2||age==at+8||age==at+14))server(p->{double[] l=dev.sangwoo.celestialfall.xchara.XCharaPull.last(p);var d=p.getServerWorld().getEntityById(dummyId);
                             if(!dev.sangwoo.celestialfall.stand.StandManager.xChara(p))return;
                             long now=p.getWorld().getTime();float hp=d instanceof net.minecraft.entity.LivingEntity e?e.getHealth():Float.NaN;

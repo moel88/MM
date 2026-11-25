@@ -379,7 +379,9 @@ public final class XCharaAttack {
     private static void arrive(ServerPlayerEntity p,State s){
         s.arrived=true;Vec3d to=s.to;
         if(to.squaredDistanceTo(p.getPos())<1e-6)return;
-        p.networkHandler.requestTeleport(to.x,to.y,to.z,0,0,java.util.EnumSet.of(net.minecraft.network.packet.s2c.play.PositionFlag.X_ROT,net.minecraft.network.packet.s2c.play.PositionFlag.Y_ROT));
+        // (2.138.0: their own look asked for, the turn left relative, so the packet's turn is none. Asked for 0, as it was
+        // from 2.129.0, the server had them look south and their client was turned by as much)
+        p.networkHandler.requestTeleport(to.x,to.y,to.z,p.getYaw(),p.getPitch(),java.util.EnumSet.of(net.minecraft.network.packet.s2c.play.PositionFlag.X_ROT,net.minecraft.network.packet.s2c.play.PositionFlag.Y_ROT));
         p.setVelocity(Vec3d.ZERO);p.fallDistance=0;p.velocityModified=true;
     }
     /**

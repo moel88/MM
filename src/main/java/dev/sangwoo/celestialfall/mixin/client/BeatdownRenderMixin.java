@@ -31,6 +31,8 @@ public abstract class BeatdownRenderMixin {
         var thrown=dev.sangwoo.celestialfall.client.xchara.CloneClient.offset(e,delta);if(thrown!=null)ci.setReturnValue(ci.getReturnValue().add(thrown));
         // (2.127.0) X Chara's pull: the one pulled is drawn where the server put them at once
         var pulled=dev.sangwoo.celestialfall.client.xchara.PullClient.offset(e,delta);if(pulled!=null)ci.setReturnValue(ci.getReturnValue().add(pulled));
+        // (2.138.0) X Chara's teleport: its user is drawn where the server put them at once
+        var blinked=dev.sangwoo.celestialfall.client.xchara.BlinkClient.offset(e,delta);if(blinked!=null)ci.setReturnValue(ci.getReturnValue().add(blinked));
         // (2.128.0) X Chara's slam: its user is drawn up in the air over where they stand, down its dive and where it came down
         var slammed=dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.offset(e.getUuid(),delta);if(slammed!=null)ci.setReturnValue(ci.getReturnValue().add(slammed));
         // (2.129.0) X Chara's three cuts going forward first: drawn along the way while they stand where they began
@@ -62,6 +64,8 @@ public abstract class BeatdownRenderMixin {
         if(thrown!=null&&frustum.isVisible(e.getBoundingBox().offset(thrown).expand(1.5))){ci.setReturnValue(true);return;}
         var pulled=dev.sangwoo.celestialfall.client.xchara.PullClient.offset(e,1);
         if(pulled!=null&&frustum.isVisible(e.getBoundingBox().offset(pulled).expand(1))){ci.setReturnValue(true);return;}
+        var blinked=dev.sangwoo.celestialfall.client.xchara.BlinkClient.offset(e,1);
+        if(blinked!=null&&frustum.isVisible(e.getBoundingBox().offset(blinked).expand(1))){ci.setReturnValue(true);return;}
         var offset=StandBeatdown.offset(e,1);
         if(offset!=null&&frustum.isVisible(e.getBoundingBox().offset(offset).expand(1)))ci.setReturnValue(true);
     }

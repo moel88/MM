@@ -100,6 +100,8 @@ public final class XCharaUltimate {
             int target=buf.readableBytes()>0?buf.readVarInt():-1;
             // (2.115.0) Q: the hack on or off (XCharaHack)
             if(skill==Q){server.execute(()->{if(heard(player))XCharaHack.request(player);});return;}
+            // (2.138.0) Z: the teleport, the hack on or off alike (XCharaBlink)
+            if(skill==Z){server.execute(()->{if(heard(player))XCharaBlink.cast(player);});return;}
             // (2.119.0) E: the restore, with the hack on (XCharaHeal); (2.129.0) with it off, the three cuts (XCharaAttack.cutter)
             if(skill==E){server.execute(()->{if(!heard(player))return;if(XCharaHack.on(player))XCharaHeal.request(player);else XCharaAttack.cutter(player);});return;}
             // (2.126.0) T with the hack on: the weakening, asked with the one in the crosshair (XCharaWeaken); (2.131.0) with it off, the small knives thrown (XCharaAttack.knives)
@@ -161,7 +163,7 @@ public final class XCharaUltimate {
     /** For the multiplayer check: {@code user}'s sword dance now, as {start, whether its strange space has come, what its blows dealt, the one marked's id}, or null. */
     public static Object[] describe(PlayerEntity user){var d=user==null?null:BY_USER.get(user.getUuid());return d==null?null:new Object[]{d.start,d.space,d.dealt,d.target.getId()};}
     /** Its cooldown is gone once X Chara is not theirs (as every other stand's short ones are, StandManager.forgetOthers). */
-    public static void forget(ServerPlayerEntity p){READY.remove(p.getUuid());XCharaClone.forget(p);XCharaWeaken.forget(p);XCharaPull.forget(p);}
+    public static void forget(ServerPlayerEntity p){READY.remove(p.getUuid());XCharaClone.forget(p);XCharaWeaken.forget(p);XCharaPull.forget(p);XCharaBlink.forget(p);}
 
     /**
      * A blow landed on {@code target} (LivingEntity.damage let it through): a sword dance's user struck before the strange

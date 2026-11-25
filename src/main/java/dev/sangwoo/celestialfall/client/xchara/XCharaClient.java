@@ -211,6 +211,16 @@ public final class XCharaClient {
             }
             return true;
         }
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Z){
+            // (2.138.0, user request: "Z 스킬 만들자 q활성화 비활성화 공통 스킬이고") Z on the map is X Chara's player's
+            // teleport (XCharaBlink), the hack on or off alike: the way the middle of their screen looks as they press it (the
+            // body turned to the crosshair first, the server told so before the press)
+            if(action==org.lwjgl.glfw.GLFW.GLFW_PRESS&&CombatClient.combatInput()&&ClientPlayNetworking.canSend(XCharaUltimate.INPUT)){
+                BotandCamera.prepareInteraction();
+                var b=PacketByteBufs.create();b.writeByte(Z);ClientPlayNetworking.send(XCharaUltimate.INPUT,b);
+            }
+            return true;
+        }
         if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_Y){
             // (2.127.0) Y with the hack on, the pull (XCharaPull): asked, as G, R and T, with the one the camera's middle
             // looks at (the restore was Y's from 2.121 to 2.125); (2.130.0) with it off, the knives shot (XCharaAttack.shot:

@@ -11,6 +11,7 @@ import dev.sangwoo.celestialfall.xchara.XCharaClone;
 import dev.sangwoo.celestialfall.xchara.XCharaCombo;
 import dev.sangwoo.celestialfall.xchara.XCharaHack;
 import dev.sangwoo.celestialfall.xchara.XCharaHeal;
+import dev.sangwoo.celestialfall.xchara.XCharaBlink;
 import dev.sangwoo.celestialfall.xchara.XCharaPull;
 import dev.sangwoo.celestialfall.xchara.XCharaRules;
 import dev.sangwoo.celestialfall.xchara.XCharaUltimate;
@@ -34,6 +35,7 @@ import net.minecraft.util.math.Vec3d;
  * it); with the hack on, the double, the weakening, the pull (and the knife as they land before it), the terrain
  * delete (under them) and the sword dance. It turns its hack on or off for the one it picked (Q, no oftener than a
  * player may), and rests a moment between skills, circling out of reach.</li>
+ * <li>(2.138.0) On one who stands off it closes with its teleport (Z, five blocks the way it looks), the hack on or off.</li>
  * <li>Hurt, with nobody near enough to stop it (or the one it fights held), it turns the hack on and restores
  * itself (its E, 65 at a time).</li>
  * <li>What comes at it it answers as every boss does (BossBrain: out of the way, behind its guard); what is slow to
@@ -47,6 +49,8 @@ final class XCharaBrain extends BossBrain {
     /** How near whom it fights it starts each (blocks between their feet): a little inside each reach. */
     /** (WALK_IN: from how far it will walk in to use its knife.) */
     static final double WALK_IN=7.5,KNIFE=3.0,JAB_REACH=3.5,CUTTER_REACH=5.4,CAST_REACH=10.5,ERASE_NEAR=7.5,ERASE_REACH=17,XSLASH_NEAR=2.5,XSLASH_FAR=14.5,SLAM_NEAR=3,SLAM_FAR=9.2,KNIVES_NEAR=3.5,KNIVES_FAR=16,SHOT_NEAR=5,SHOT_FAR=20;
+    /** (2.138.0) From how far off it teleports toward whom it fights (blocks: it comes down short of them). */
+    static final double BLINK_NEAR=6.8,BLINK_FAR=13;
     /** Ticks between two of its Q (a player's are heard no oftener than XCharaRules.HACK_RATE; a little more: the switch shows), and its rest after a skill. */
     static final int HACK_EVERY=XCharaRules.HACK_RATE+2,REST_LEAST=8,REST_MORE=14;
     /** It restores itself below this share of its health. */
@@ -154,6 +158,9 @@ final class XCharaBrain extends BossBrain {
         if(d>WAIT+2.5){
             face(t,35);goTo(t.getPos(),now,d>5);
             var toward=t.getPos().subtract(boss.getPos()).multiply(1,0,1);
+            // (2.138.0) its teleport, to close on one who stands off: the way it looks, once it looks at them
+            if(d>=BLINK_NEAR&&d<=BLINK_FAR&&ready(XCharaBlink.ready(boss),now)&&boss.canSee(t)&&random.nextFloat()<.25f
+                &&Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees((float)Math.toDegrees(Math.atan2(-toward.x,toward.z))-boss.getYaw()))<12&&XCharaBlink.cast(boss)){doing="순간이동";return;}
             if(d>11&&dashReady(now)&&random.nextFloat()<.2f&&room(toward.normalize(),5.4))dash(toward.normalize(),now);
             doing="접근";
         }else{keepAway(t,WAIT,now);doing="견제";}

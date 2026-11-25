@@ -139,6 +139,7 @@ public final class MpServer implements ModInitializer {
         if(XCHARAE_ONLY){xcharaE(server);xcharaR(server);xcharaClone(server);}
         if(XCHARAT_ONLY){xcharaE(server);xcharaWeaken(server);}
         if(XCHARAY_ONLY)xcharaPull(server);
+        if(XCHARAZ_ONLY)xcharaBlink(server);
         if(XCHARASLAM_ONLY)xcharaSlam(server);
         if(XCHARACUT_ONLY)xcharaCut(server);
         if(XCHARAERASE_ONLY)xcharaErase(server);
@@ -541,17 +542,19 @@ public final class MpServer implements ModInitializer {
     /** Only the script of coming back to life by itself (2.107.0, MP_ONLY=death). */
     static final boolean DEATH_ONLY="death".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's G's script (2.112.0, MP_ONLY=xchara). */
-    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARA_ONLY="xchara".equals(System.getProperty("botand.mp.only"))||"xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaz".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's basic attack's script (2.114.0, MP_ONLY=xcharam1): its cooldowns on and no healing, as for its G. */
-    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAM1_ONLY="xcharam1".equals(System.getProperty("botand.mp.only"))||"xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaz".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's Q's script (2.115.0, MP_ONLY=xcharaq; 2.117.0: or its plain swings', MP_ONLY=xcharaplain): as for the basic attack, and the caster's hack as it changes. */
-    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
+    static final boolean XCHARAQ_ONLY="xcharaq".equals(System.getProperty("botand.mp.only"))||"xcharaplain".equals(System.getProperty("botand.mp.only"))||"xcharae".equals(System.getProperty("botand.mp.only"))||"xcharat".equals(System.getProperty("botand.mp.only"))||"xcharay".equals(System.getProperty("botand.mp.only"))||"xcharaz".equals(System.getProperty("botand.mp.only"))||"xcharaslam".equals(System.getProperty("botand.mp.only"))||"xcharacut".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's E's script (2.119.0, MP_ONLY=xcharae): as for the hack's, and the caster's health and E. */
     static final boolean XCHARAE_ONLY="xcharae".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's T's script (2.126.0, MP_ONLY=xcharat): as for the hack's and the basic attack's, and the caster's health, its E and its weakening. */
     static final boolean XCHARAT_ONLY="xcharat".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's Y's script (2.127.0, MP_ONLY=xcharay): as for the hack's, and the caster's pull and where the watcher is. */
     static final boolean XCHARAY_ONLY="xcharay".equals(System.getProperty("botand.mp.only"));
+    /** Only X Chara's Z's script (2.138.0, MP_ONLY=xcharaz): as for the hack's, and the caster's teleport and where the two are. */
+    static final boolean XCHARAZ_ONLY="xcharaz".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's slam's script (2.128.0, MP_ONLY=xcharaslam): as for the hack's, and the caster's slam and what it does to the watcher. */
     static final boolean XCHARASLAM_ONLY="xcharaslam".equals(System.getProperty("botand.mp.only"));
     /** Only X Chara's three cuts' script (2.129.0, MP_ONLY=xcharacut): as for the hack's, and the caster's cuts and what they do to the watcher. */
@@ -841,6 +844,35 @@ public final class MpServer implements ModInitializer {
         if(Math.abs(watcher.getHealth()-pullHealth)>.01f){if(pullHealth>=0)note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d",pullHealth,watcher.getHealth(),now));pullHealth=watcher.getHealth();}
         if(ready!=pullReady){note(server,"caster's pull ready again at "+ready+" (now "+now+")");pullReady=ready;}
         pullSeen=d;
+    }
+    private boolean blinkSeen;private long blinkReady=Long.MIN_VALUE,blinkBegan;private double[] blinkLast;private float blinkHealth=-1;private net.minecraft.util.math.Vec3d blinkWas;
+    /**
+     * (2.138.0) X Chara's Z, the teleport: when it begins (where the caster stands, which way they look, their hack),
+     * when it is over and how (1 moved, 2 called off), from where to where and how far, where the caster really is
+     * then and how far from the watcher; when the caster is moved more than a block in a tick; the caster's health
+     * as it changes; when it is ready again.
+     */
+    private void xcharaBlink(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        boolean on=dev.sangwoo.celestialfall.xchara.XCharaBlink.casting(caster);
+        long ready=dev.sangwoo.celestialfall.xchara.XCharaBlink.ready(caster);
+        double far=Math.hypot(watcher.getX()-caster.getX(),watcher.getZ()-caster.getZ());
+        if(blinkWas!=null&&blinkWas.distanceTo(caster.getPos())>1)
+            note(server,String.format(java.util.Locale.ROOT,"the caster moved %.2f blocks in a tick at %d: now (%.2f, %.2f, %.2f), %.2f from the watcher, yaw %.0f",blinkWas.distanceTo(caster.getPos()),now,caster.getX(),caster.getY(),caster.getZ(),far,caster.getYaw()));
+        blinkWas=caster.getPos();
+        if(on&&!blinkSeen){blinkBegan=now;
+            note(server,String.format(java.util.Locale.ROOT,"caster's teleport began at %d: at (%.2f, %.2f, %.2f) yaw %.0f, hack %s, the watcher %.2f off; busy %s, held %s",now,caster.getX(),caster.getY(),caster.getZ(),caster.getYaw(),
+                dev.sangwoo.celestialfall.xchara.XCharaHack.on(caster),far,dev.sangwoo.celestialfall.combat.CombatManager.busy(caster),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster)));}
+        double[] l=dev.sangwoo.celestialfall.xchara.XCharaBlink.last(caster);
+        if(l!=null&&(blinkLast==null||l[1]!=blinkLast[1]))
+            note(server,String.format(java.util.Locale.ROOT,"caster's teleport over at %d (%d in), how %d: from (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f), %.2f on; the caster at (%.2f, %.2f, %.2f) yaw %.0f, %.2f from the watcher, health %.1f; ready again at %d (%.1f s)",now,now-blinkBegan,(int)l[0],
+                l[2],l[3],l[4],l[5],l[6],l[7],Math.hypot(l[5]-l[2],l[7]-l[4]),caster.getX(),caster.getY(),caster.getZ(),caster.getYaw(),far,caster.getHealth(),ready,(ready-now)/20.0));
+        blinkLast=l;blinkSeen=on;
+        if(Math.abs(caster.getHealth()-blinkHealth)>.01f){if(blinkHealth>=0)note(server,String.format(java.util.Locale.ROOT,"caster health %.1f -> %.1f at %d (teleport on its way %s)",blinkHealth,caster.getHealth(),now,on));blinkHealth=caster.getHealth();}
+        if(ready!=blinkReady){note(server,"caster's teleport ready again at "+ready+" (now "+now+")");blinkReady=ready;}
     }
     private String restoreSeen="";private float restoreHealth=-1;
     /** The caster's E as the server keeps it (when it began, whether its heal landed, when it is ready again) and their health, at each change. */
