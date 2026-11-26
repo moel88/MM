@@ -8,6 +8,8 @@ public final class CinematicHud {
     private CinematicHud() {}
     public static void render(float delta) {
         var mc=MinecraftClient.getInstance();
+        // (2.143.0) the samurai's G: its flat frames over the screen, and the white the world comes back through
+        dev.sangwoo.celestialfall.client.samurai.SamuraiInk.render(delta);
         // (2.87.0) Lee So-sang's G: a moment of black as its cutscene cuts back to the game, under the HUD (the videos')
         float black=dev.sangwoo.celestialfall.client.isosang.IsosangCinema.afterBlack(delta);
         if(black>.003f&&!CinematicDirector.isActive()){
@@ -22,6 +24,8 @@ public final class CinematicHud {
         if(dev.sangwoo.celestialfall.client.stand.StandBeatdown.cinematic()!=null)letterbox(mc,c,dev.sangwoo.celestialfall.client.stand.StandBeatdown.bars(delta));
         // (Kageno's: nothing over it but its hit count, below as every cutscene's)
         else if(StandClient.cinematic()!=null){}
+        // (the samurai's G, 2.143.0: its own frames are drawn above)
+        else if(dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null){}
         else if(HeavenClient.cinematic()!=null)HeavenHud.render(c,delta);
         else if(AtomicClient.cinematic()!=null)AtomicHud.render(c,delta);
         // Lee So-sang's G (2.83.0): its frame dims as its cutscene ends, as the videos'
@@ -33,7 +37,8 @@ public final class CinematicHud {
         }
         else CelestialHud.render(c,delta);
         // every cutscene shows its viewer's hit count, where the HUD has it (2.108.0: Kageno's H's alone did)
-        HitCounterHud.render(c,delta);
+        // (not over the samurai's G's flat frames, 2.143.0: nothing is on them but their ink)
+        if(!dev.sangwoo.celestialfall.client.samurai.SamuraiClient.flat())HitCounterHud.render(c,delta);
         c.draw();
     }
     /** Black bars {@code bar} of the screen's height each at the top and the bottom, to the window's own pixel (not the GUI's coarser one) as they slide. */

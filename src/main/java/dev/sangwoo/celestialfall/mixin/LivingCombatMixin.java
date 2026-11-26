@@ -45,6 +45,8 @@ public abstract class LivingCombatMixin {
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
         // X Chara's G (2.112.0): nothing but its own blows harms its two from its strange space on
         if(dev.sangwoo.celestialfall.xchara.XCharaUltimate.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
+        // the samurai's G (2.143.0): nothing but its own blows harms its two through its cutscene
+        if(dev.sangwoo.celestialfall.samurai.SamuraiUltimate.shielded((LivingEntity)(Object)this,source)){cir.setReturnValue(false);return;}
         // Lee So-sang's H (2.94.0): the first blow to reach her in its formation does not, and she is moved onto another of
         // its swords (only one that would land: none the moment after a blow is kept from her anyway, nor fire with fire
         // resistance, as the rest of this method has it)
@@ -77,5 +79,7 @@ public abstract class LivingCombatMixin {
         if(!self.getWorld().isClient)dev.sangwoo.celestialfall.combat.CutsceneGlow.struck(self,source);
         // and on X Chara's G's user before its strange space, the G (2.112.0)
         if(!self.getWorld().isClient)dev.sangwoo.celestialfall.xchara.XCharaUltimate.struck(self,source);
+        // and on the samurai's G's user before its cutscene, the G (2.143.0)
+        if(!self.getWorld().isClient)dev.sangwoo.celestialfall.samurai.SamuraiUltimate.struck(self,source);
     }
 }

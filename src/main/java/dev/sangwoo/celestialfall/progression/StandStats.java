@@ -13,22 +13,27 @@ import java.util.Map;
 public final class StandStats {
     /** The health of each character (the user's numbers). */
     public static final double NONE_HEALTH=350,KAGENO_HEALTH=325,STAR_PLATINUM_HEALTH=400,ISOSANG_HEALTH=300,X_CHARA_HEALTH=375;
+    /** (2.143.0) The test samurai's (mine: Kageno's, the other one who fights with a katana). */
+    public static final double SAMURAI_HEALTH=325;
     /** {@code korean}: the name the Korean screens write (the menu, the shop); "없음" for no stand. */
     public record Definition(String id,String translation,double health,String korean) {}
-    private static final Map<String,Definition> DEFINITIONS=Map.of(
-        "none",new Definition("none","stand.botand.none",NONE_HEALTH,"없음"),
-        "kageno",new Definition("kageno","stand.botand.kageno",KAGENO_HEALTH,"카게노"),
+    private static final Map<String,Definition> DEFINITIONS=Map.ofEntries(
+        Map.entry("none",new Definition("none","stand.botand.none",NONE_HEALTH,"없음")),
+        Map.entry("kageno",new Definition("kageno","stand.botand.kageno",KAGENO_HEALTH,"카게노")),
         // 2.51.0: a stand that comes out (Q) and floats beside its user; no skills yet
-        "star_platinum",new Definition("star_platinum","stand.botand.star_platinum",STAR_PLATINUM_HEALTH,"스타플래티나"),
+        Map.entry("star_platinum",new Definition("star_platinum","stand.botand.star_platinum",STAR_PLATINUM_HEALTH,"스타플래티나")),
         // 2.76.0: Lee So-sang (Jade Knight · Moon Scar), a character who fights in person, as Kageno does; given by the
         // admin command only for now, their skills to come one at a time as the user gives them (none yet)
-        "isosang",new Definition("isosang","stand.botand.isosang",ISOSANG_HEALTH,"이소상"),
+        Map.entry("isosang",new Definition("isosang","stand.botand.isosang",ISOSANG_HEALTH,"이소상")),
         // 2.111.0: X Chara, a character who fights in person with their knife, as Kageno and Lee So-sang do; given by the
         // admin command only for now, their skills to come one at a time as the user gives them (none yet)
-        "x_chara",new Definition("x_chara","stand.botand.x_chara",X_CHARA_HEALTH,"엑스 차라"));
+        Map.entry("x_chara",new Definition("x_chara","stand.botand.x_chara",X_CHARA_HEALTH,"엑스 차라")),
+        // 2.143.0: the samurai, a test character (user request: "그냥 테스트용 사무라이 캐릭터 G스킬이고"): given by the admin
+        // command only; their one skill is G (samurai/SamuraiUltimate)
+        Map.entry("samurai",new Definition("samurai","stand.botand.samurai",SAMURAI_HEALTH,"사무라이")));
     private StandStats() {}
     public static Definition get(String id){return DEFINITIONS.getOrDefault(id,DEFINITIONS.get("none"));}
     public static boolean known(String id){return id!=null&&DEFINITIONS.containsKey(id);}
     /** Every stand id with "none" first, for the commands. */
-    public static String[] ids(){return new String[]{"none","kageno","star_platinum","isosang","x_chara"};}
+    public static String[] ids(){return new String[]{"none","kageno","star_platinum","isosang","x_chara","samurai"};}
 }

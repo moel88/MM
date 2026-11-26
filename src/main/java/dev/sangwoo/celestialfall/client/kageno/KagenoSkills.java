@@ -5,7 +5,7 @@ import static dev.sangwoo.celestialfall.stand.KagenoRules.*;
 /** Skill id → rebuilt visual implementation. */
 public final class KagenoSkills {
     private KagenoSkills(){}
-    private static final Fx.Skill[] SKILLS=new Fx.Skill[17];
+    private static final Fx.Skill[] SKILLS=new Fx.Skill[18];
     static {
         SKILLS[M1]=new ComboSkill();
         SKILLS[E]=new NeonThrustSkill();
@@ -25,6 +25,8 @@ public final class KagenoSkills {
         SKILLS[dev.sangwoo.celestialfall.xchara.CloneRules.SKILL]=new dev.sangwoo.celestialfall.client.xchara.CloneFling();
         // X Chara's delete slash as it goes (2.133.0): drawn with the same passes, from its own casts (EraseClient)
         SKILLS[dev.sangwoo.celestialfall.xchara.EraseRules.SKILL]=new dev.sangwoo.celestialfall.client.xchara.EraseZone();
+        // the samurai's G (2.143.0): drawn with the same passes, from its own casts (SamuraiClient)
+        SKILLS[dev.sangwoo.celestialfall.samurai.SamuraiRules.SKILL]=new dev.sangwoo.celestialfall.client.samurai.OneFlash();
     }
     public static Fx.Skill of(int skill){return skill>=0&&skill<SKILLS.length?SKILLS[skill]:null;}
 }

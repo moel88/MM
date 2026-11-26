@@ -78,6 +78,8 @@ public final class KagenoClips {
         var swing=dev.sangwoo.celestialfall.client.isosang.IsosangClient.animated(id);
         // X Chara's knife's hits (2.114.0): the same
         if(swing==null)swing=dev.sangwoo.celestialfall.client.xchara.KnifeClient.animated(id);
+        // the samurai's G (2.143.0): its clip drives its user's body all through it
+        if(swing==null)swing=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.animated(id);
         return swing!=null?swing:best;
     }
     private static final Anim STILL=Anim.of(k(0,IDLE),k(.5,IDLE));
@@ -160,6 +162,8 @@ public final class KagenoClips {
         if(cast.skill()==dev.sangwoo.celestialfall.isosang.IsosangRules.SKILL&&cast.combo()==dev.sangwoo.celestialfall.isosang.IsosangRules.FINALE)return dev.sangwoo.celestialfall.client.isosang.IsosangClient.finaleFacing(cast,delta);
         // (2.128.0) X Chara's slam: turned to the way it dives
         if(cast.skill()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SKILL&&cast.combo()==dev.sangwoo.celestialfall.xchara.XCharaCombo.SLAM)return dev.sangwoo.celestialfall.client.xchara.OverwriteSlam.facing(cast,delta);
+        // (2.143.0) the samurai's G: the one marked before its dash, back the way they came after it
+        if(cast.skill()==dev.sangwoo.celestialfall.samurai.SamuraiRules.SKILL)return dev.sangwoo.celestialfall.client.samurai.SamuraiClient.facing(cast,delta);
         return cast.skill()==RUSH?RushAim.facing(cast,delta):cast.skill()==E?KagenoAim.thrust(cast,delta):cast.yaw();
     }
     /** Cast facing of each caster's latest body clip and when it was last shown (world ticks). */

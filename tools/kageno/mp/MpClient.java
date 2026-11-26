@@ -531,6 +531,19 @@ public final class MpClient implements ClientModInitializer {
      * whom it marks), the "!!!" they draw, whether their camera is in its strange space and where, whether they are held;
      * the server its start, its strange space, its end, what it dealt, its ready tick, the watcher's health and flight.
      */
+    /**
+     * The samurai's G, the one flash (2.143.0, MP_ONLY=samurai), as X Chara's G's script: the caster takes the samurai and
+     * its cooldown is on; the watcher 5 blocks in front of it. G against the watcher's guard ("GUARD+"): blocked, its 3
+     * minutes' cooldown on; G again (refused: its cooldown). The cooldowns off ("NOCDON"), G and the watcher's guard
+     * raised before its dash: blocked then. G and the caster struck before its dash ("HITME"): called off. G again on the
+     * watcher at full health: the whole of it, its cutscene on both clients, its eight blows (70 in all), the watcher
+     * thrown up. Both log every G they hear of (its moments as they change, whom it marks), the part of its cutscene
+     * their camera is in as it changes, and whether they are held; the server its start, its cutscene, its end, what it
+     * dealt, its ready tick, the watcher's health and flight.
+     */
+    private static final String[] SAMURAI_SCRIPT={
+        "5 SAMURAI","8 NOCDOFF","40 DIST5","45 HEAL","50 GUARD+","62 G","80 GUARD-","90 G",
+        "110 NOCDON","120 G","126 GUARD+","150 GUARD-","170 G","176 HITME","200 HEAL","205 DIST5","210 G","420 END"};
     private static final String[] XCHARA_SCRIPT={
         "5 XCHARA","8 NOCDOFF","40 DIST5","45 HEAL","50 GUARD+","62 G","80 GUARD-","90 G",
         "110 NOCDON","120 G","126 GUARD+","150 GUARD-","170 G","176 HITME","200 HEAL","205 DIST5","210 G","470 END"};
@@ -847,7 +860,7 @@ public final class MpClient implements ClientModInitializer {
         "540 DIST10","545 HEAL","555 H","557 HITME",
         "600 DIST30","610 Q","620 H",
         "660 Q","680 NOCDOFF","700 END"};
-    private static final String[] STEPS=ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharaz")?XCHARAZ_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("xcharaboss")?XCHARABOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
+    private static final String[] STEPS=ONLY.equals("samurai")?SAMURAI_SCRIPT:ONLY.equals("xcharax")?XCHARAX_SCRIPT:ONLY.equals("xcharaerase")?XCHARAERASE_SCRIPT:ONLY.equals("xcharaknives")?XCHARAKNIVES_SCRIPT:ONLY.equals("xcharashot")?XCHARASHOT_SCRIPT:ONLY.equals("xcharacut")?XCHARACUT_SCRIPT:ONLY.equals("xcharaslam")?XCHARASLAM_SCRIPT:ONLY.equals("xcharay")?XCHARAY_SCRIPT:ONLY.equals("xcharaz")?XCHARAZ_SCRIPT:ONLY.equals("xcharat")?XCHARAT_SCRIPT:ONLY.equals("xcharae")?XCHARAE_SCRIPT:ONLY.equals("xcharaplain")?XCHARAPLAIN_SCRIPT:ONLY.equals("xcharaq")?XCHARAQ_SCRIPT:ONLY.equals("xcharam1")?XCHARAM1_SCRIPT:ONLY.equals("isosanggauge")?ISOSANGGAUGE_SCRIPT:ONLY.equals("xchara")?XCHARA_SCRIPT:ONLY.equals("vanilla")?VANILLA_SCRIPT:ONLY.equals("glow")?GLOW_SCRIPT:ONLY.equals("death")?DEATH_SCRIPT:ONLY.equals("isosanghh")?ISOSANGHH_SCRIPT:ONLY.equals("isosangy")?ISOSANGY_SCRIPT:ONLY.equals("isosangt")?ISOSANGT_SCRIPT:ONLY.equals("isosangvolley")?ISOSANGVOLLEY_SCRIPT:ONLY.equals("isosangdodge")?ISOSANGDODGE_SCRIPT:ONLY.equals("isosangz")?ISOSANGZ_SCRIPT:ONLY.equals("isosangg")?ISOSANGG_SCRIPT:ONLY.equals("isosangh")?ISOSANGH_SCRIPT:ONLY.equals("isosangr")?ISOSANGR_SCRIPT:ONLY.equals("isosange")?ISOSANGE_SCRIPT:ONLY.equals("isosang")?ISOSANG_SCRIPT:ONLY.equals("resist")?RESIST_SCRIPT:ONLY.equals("fresh")?FRESH_SCRIPT:ONLY.equals("swap")?SWAP_SCRIPT:ONLY.equals("cooldowns")?COOLDOWNS_SCRIPT:ONLY.equals("call")?CALL_SCRIPT:ONLY.equals("beatdown")?BEATDOWN_SCRIPT:ONLY.equals("timestop")?TIMESTOP_SCRIPT:ONLY.equals("stagger")?STAGGER_SCRIPT:ONLY.equals("boss")?BOSS_SCRIPT:ONLY.equals("xcharaboss")?XCHARABOSS_SCRIPT:ONLY.equals("arrow")?ARROW_SCRIPT:SCRIPT;
     /** Walking speed windows (script ticks, inclusive) and the lens's FOV windows (script ticks) logged by the caster. */
     private static final int[][] SPEED={{282,312},{330,360},{3340,3375}},LENS={{126,142},{312,340},{3320,3400}};
     private final ExecutorService writer=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"mp-writer");t.setDaemon(true);return t;});
@@ -975,6 +988,7 @@ public final class MpClient implements ClientModInitializer {
                 if(ONLY.equals("isosangz")||ONLY.equals("isosangdodge"))zWatch();
                 if(ONLY.equals("death"))deathWatch();
                 if(ONLY.equals("xchara"))xcharaWatch();
+                if(ONLY.equals("samurai"))samuraiWatch();
                 if(ONLY.equals("xcharam1"))knifeWatch();
                 if(ONLY.equals("xcharaq")||ONLY.equals("xcharaplain")){knifeWatch();hackWatch();}
                 if(ONLY.equals("xcharae")){hackWatch();healWatch();xcharaWatch();knifeWatch();cloneWatch();}
@@ -1108,6 +1122,8 @@ public final class MpClient implements ClientModInitializer {
         if(step.equals("NOCOOL")){if(down)command("botand nocooldown on @s");return;}
         // 2.112.0: the caster takes X Chara (MP_ONLY=xchara)
         if(step.equals("XCHARA")){if(down)command("botand progress stand @s x_chara");return;}
+        // (2.143.0) the test samurai
+        if(step.equals("SAMURAI")){if(down)command("botand progress stand @s samurai");return;}
         if(step.startsWith("PITCH")){if(down){casterPitch=Float.parseFloat(step.substring(5));note("caster's camera pitch "+casterPitch);}return;}
         // (2.133.0) X Chara's terrain delete aimed (ErasePress.aimAt): at the watcher's feet as this client has them
         // ("EAIMW"), 14 blocks to the caster's right of the way to the watcher ("EAIMS"), or at the middle of the screen again ("EAIM-")
@@ -2063,6 +2079,28 @@ public final class MpClient implements ClientModInitializer {
         for(var p:mc.world.getPlayers())if(name(p.getUuid()).equals("Caster")&&Math.abs(p.getHealth()-healHealth)>.01f){
             note(String.format(Locale.ROOT,"the caster's health here %.1f -> %.1f",healHealth,p.getHealth()));healHealth=p.getHealth();
         }
+    }
+    private String sState="",sPart="";private boolean sHeld;
+    /** The samurai's G as this client hears of it (2.143.0, MP_ONLY=samurai): each one's moments as they change and whom it marks, the part of its cutscene this client's camera is in as it changes (and where the camera is then), and whether this player is held. */
+    private void samuraiWatch(){
+        for(var p:mc.world.getPlayers()){
+            var d=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.of(p.getUuid());if(d==null)continue;
+            String desc=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.describe(p,0);if(desc==null)continue;
+            String[] part=desc.split(",");String key=d.cast.start()+":"+part[1]+","+part[2]+","+part[3];
+            boolean me=d.targetId.equals(mc.player.getUuid());
+            if(!key.equals(sState)){sState=key;note(String.format(Locale.ROOT,"%s's G (began %d): age %s, scene/ended/how %s,%s,%s; it marks %s",name(p.getUuid()),d.cast.start(),part[0],part[1],part[2],part[3],me?"me":"the other"));}
+        }
+        var cine=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic();
+        String now=cine==null?"":dev.sangwoo.celestialfall.client.samurai.SamuraiScene.part(cine.age(0)/20f).name();
+        if(!now.equals(sPart)){
+            sPart=now;
+            if(cine==null)note("my camera back");
+            else{var camera=mc.gameRenderer.getCamera().getPos();
+                note(String.format(Locale.ROOT,"my camera in its cutscene: %s (its age %.1f), %.2f from the one marked, %.2f over their feet; the world hidden %s",now,cine.age(0),
+                    Math.hypot(camera.x-cine.hold.x,camera.z-cine.hold.z),camera.y-cine.hold.y,dev.sangwoo.celestialfall.client.samurai.SamuraiClient.flat()));}
+        }
+        boolean held=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.holds(mc.player);
+        if(held!=sHeld){sHeld=held;note(held?"held by the samurai's G":"free of the samurai's G");}
     }
     private void xcharaWatch(){
         for(var p:mc.world.getPlayers()){

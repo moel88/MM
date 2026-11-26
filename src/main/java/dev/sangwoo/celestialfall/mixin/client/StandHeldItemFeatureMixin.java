@@ -81,6 +81,12 @@ public abstract class StandHeldItemFeatureMixin {
             }
             return;
         }
+        // (2.143.0) the samurai's sword through their G: turned in the hand as its clip has the blade
+        if(entity instanceof PlayerEntity holder&&arm==holder.getMainArm()&&!StandClient.visible(holder)&&dev.sangwoo.celestialfall.client.samurai.SamuraiClient.armed(holder)){
+            var flash=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.animated(holder.getUuid());
+            if(flash!=null)matrices.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(dev.sangwoo.celestialfall.client.kageno.KagenoClips.action(flash,net.minecraft.client.MinecraftClient.getInstance().getTickDelta()).grip()));
+            return;
+        }
         if(!(entity instanceof PlayerEntity player)||!StandClient.visible(player)||arm!=player.getMainArm())return;
         var cast=dev.sangwoo.celestialfall.client.kageno.KagenoClips.animated(player.getUuid());
         var atomic=dev.sangwoo.celestialfall.client.AtomicClient.poseCast(player.getUuid());

@@ -68,6 +68,8 @@ public final class CelestialFall implements ModInitializer {
         dev.sangwoo.celestialfall.commerce.CommerceRegistry.initialize();
         dev.sangwoo.celestialfall.isosang.Isosang.initialize();
         dev.sangwoo.celestialfall.xchara.XChara.initialize();
+        // (2.143.0) the samurai, a test character: their G
+        dev.sangwoo.celestialfall.samurai.SamuraiUltimate.initialize();
         dev.sangwoo.celestialfall.meteor.MeteorRegistry.initialize();
         dev.sangwoo.celestialfall.stand.StarPlatinum.initialize();
         dev.sangwoo.celestialfall.loot.LootRegistry.initialize();

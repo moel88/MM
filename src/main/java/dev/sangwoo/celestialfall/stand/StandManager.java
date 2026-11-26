@@ -19,6 +19,8 @@ public final class StandManager {
     public static boolean isosang(PlayerEntity p){return has(p,"isosang");}
     /** X Chara's player on the map (2.111.0): a character who fights in person with their knife; their G, the sword dance (2.112.0, XCharaUltimate), and their knife's four hits (2.114.0, XCharaAttack). */
     public static boolean xChara(PlayerEntity p){return has(p,"x_chara");}
+    /** The samurai's player on the map (2.143.0): a test character who fights in person; their G, the one flash (samurai/SamuraiUltimate). */
+    public static boolean samurai(PlayerEntity p){return has(p,"samurai");}
     private static boolean has(PlayerEntity p,String stand){
         // (2.110.0) the map as it is for them: one in their vanilla mode has no stand nor character (VanillaMode)
         return p!=null&&MapGate.enabled(p)&&p.isAlive()&&!p.isSpectator()
@@ -60,6 +62,8 @@ public final class StandManager {
             // (2.112.0) X Chara's G's cooldown
             // (2.114.0) and their knife's rest after a combo; (2.119.0) and their E's cooldown
             if(!"x_chara".equals(ProgressManager.profile(p).stand())){dev.sangwoo.celestialfall.xchara.XCharaUltimate.forget(p);dev.sangwoo.celestialfall.xchara.XCharaAttack.forget(p);dev.sangwoo.celestialfall.xchara.XCharaHeal.forget(p);}
+            // (2.143.0) the samurai's G's cooldown
+            if(!"samurai".equals(ProgressManager.profile(p).stand()))dev.sangwoo.celestialfall.samurai.SamuraiUltimate.forget(p);
             // 2.74.3: and the long ones not theirs are gone at once (they begin in full when the stand is theirs again)
             dev.sangwoo.celestialfall.LongCooldowns.forgetOthers(p);
         }

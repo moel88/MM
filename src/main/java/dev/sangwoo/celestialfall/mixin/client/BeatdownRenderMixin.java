@@ -27,6 +27,8 @@ public abstract class BeatdownRenderMixin {
         var offset=StandBeatdown.offset(e,delta);if(offset!=null)ci.setReturnValue(ci.getReturnValue().add(offset));
         // (2.112.0) X Chara's G's strange space: the one marked hangs across from its user
         var space=dev.sangwoo.celestialfall.client.xchara.XCharaClient.offset(e,delta);if(space!=null)ci.setReturnValue(ci.getReturnValue().add(space));
+        // (2.143.0) the samurai's G: its user where the server put them at once (beyond the one marked in its side shots), the one marked where they are held
+        var flash=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.offset(e,delta);if(flash!=null)ci.setReturnValue(ci.getReturnValue().add(flash));
         // (2.125.0) X Chara's double: the one seized is lifted, flung and held in the wall
         var thrown=dev.sangwoo.celestialfall.client.xchara.CloneClient.offset(e,delta);if(thrown!=null)ci.setReturnValue(ci.getReturnValue().add(thrown));
         // (2.127.0) X Chara's pull: the one pulled is drawn where the server put them at once
@@ -41,7 +43,7 @@ public abstract class BeatdownRenderMixin {
     /** No names over anyone's head while this client's camera is a beatdown's cutscene's (2.66.0: its close shots had the one struck's name fill the frame), as its HUD is hidden. */
     @Inject(method="render(Lnet/minecraft/entity/Entity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",at=@At("HEAD"),cancellable=true)
     private void botand$beatdownNames(Entity e,float yaw,float delta,MatrixStack matrices,VertexConsumerProvider vertices,int light,CallbackInfo ci){
-        if(StandBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null)ci.cancel();
+        if(StandBeatdown.cinematic()!=null||dev.sangwoo.celestialfall.client.xchara.XCharaClient.cinematic()!=null||dev.sangwoo.celestialfall.client.samurai.SamuraiClient.cinematic()!=null)ci.cancel();
         // (2.127.0) nor over a body drawn again as X Chara's pull's flat silhouette
         else if(dev.sangwoo.celestialfall.client.xchara.PullClient.silhouetting())ci.cancel();
     }
@@ -54,6 +56,9 @@ public abstract class BeatdownRenderMixin {
         // (2.112.0) X Chara's G's strange space: only its two in it, drawn where it shows them
         if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.hides(e)){ci.setReturnValue(false);return;}
         if(dev.sangwoo.celestialfall.client.xchara.XCharaClient.staged(e)){ci.setReturnValue(true);return;}
+        // (2.143.0) the samurai's G's cutscene: nobody in its flat frames (its two are drawn there as flat shapes), its two wherever it shows them otherwise
+        if(dev.sangwoo.celestialfall.client.samurai.SamuraiClient.hides(e)){ci.setReturnValue(false);return;}
+        if(dev.sangwoo.celestialfall.client.samurai.SamuraiClient.staged(e)){ci.setReturnValue(true);return;}
         // (2.93.0) Lee So-sang's Z: she is the orb of light as she flies from one of her formation's swords to another (SwordStep)
         if(dev.sangwoo.celestialfall.client.isosang.SwordStep.hides(e)){ci.setReturnValue(false);return;}
         // (the user's 2.87.0 preview) she is drawn wherever the cutscene's camera looks, posed in its shot (GStage.staged)

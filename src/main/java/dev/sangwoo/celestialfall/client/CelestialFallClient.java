@@ -51,6 +51,8 @@ public final class CelestialFallClient implements ClientModInitializer {
         dev.sangwoo.celestialfall.client.isosang.IsosangGaugeHud.initialize();
         // X Chara's G (2.112.0)
         dev.sangwoo.celestialfall.client.xchara.XCharaClient.initialize();
+        // (2.143.0) the samurai's G
+        dev.sangwoo.celestialfall.client.samurai.SamuraiClient.initialize();
         dev.sangwoo.celestialfall.client.xchara.CloneClient.initialize();
         dev.sangwoo.celestialfall.client.xchara.WeakenClient.initialize();
         dev.sangwoo.celestialfall.client.xchara.PullClient.initialize();

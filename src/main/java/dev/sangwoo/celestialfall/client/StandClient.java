@@ -57,7 +57,9 @@ public final class StandClient {
      */
     public static ItemStack sword(PlayerEntity p){return visible(p)?SWORD:isosang(p)?(dev.sangwoo.celestialfall.client.isosang.IsosangSheath.drawn(p.getUuid())?ISOSANG_SWORD:p.isUsingItem()?null:ItemStack.EMPTY)
         // (2.111.0) X Chara's knife, always in their hand (but while they use what they hold: eating, drinking)
-        :xChara(p)?(p.isUsingItem()?null:X_CHARA_KNIFE):null;}
+        :xChara(p)?(p.isUsingItem()?null:X_CHARA_KNIFE)
+        // (2.143.0) the samurai's sword (Kageno's katana), through their G only
+        :dev.sangwoo.celestialfall.client.samurai.SamuraiClient.armed(p)?SWORD:null;}
     /** Lee So-sang's sword, as drawn in her hand while she uses it (2.105.0: from one's own eyes as it comes and goes, IsosangSheath.held). */
     public static ItemStack isosangSword(){return ISOSANG_SWORD;}
     /** X Chara's knife, as drawn in their hand (2.111.0). */
@@ -146,7 +148,7 @@ public final class StandClient {
         var c=action(mc.player.getUuid());if(c==null||c.skill!=P)return;
         cancelledPose=c.id;send(POSE_CANCEL);CASTS.remove(c.id);KagenoAudio.stop(c.id);
     }
-    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||dev.sangwoo.celestialfall.client.xchara.XCharaClient.holds(e)||dev.sangwoo.celestialfall.client.stand.StandArrowClient.holds(e)||dev.sangwoo.celestialfall.client.stand.StandBeatdown.holds(e)||dev.sangwoo.celestialfall.client.stand.StandTimeStop.holds(e)||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0)+(c.skill==RUSH?TRAP_LEAD:0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
+    public static boolean frozen(LivingEntity e){return e.isAlive()&&MapClient.enabled()&&(AtomicClient.locked(e.getUuid())||dev.sangwoo.celestialfall.client.xchara.XCharaClient.holds(e)||dev.sangwoo.celestialfall.client.samurai.SamuraiClient.holds(e)||dev.sangwoo.celestialfall.client.stand.StandArrowClient.holds(e)||dev.sangwoo.celestialfall.client.stand.StandBeatdown.holds(e)||dev.sangwoo.celestialfall.client.stand.StandTimeStop.holds(e)||CASTS.values().stream().anyMatch(c->(KagenoRules.frozen(c.skill,c.age(0))&&(c.skill!=R&&c.caster.equals(e.getUuid())||c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))||KagenoRules.trapped(c.skill,c.age(0)+(c.skill==RUSH?TRAP_LEAD:0))&&c.targets.stream().anyMatch(t->t.uuid.equals(e.getUuid())))));}
     /**
      * Ticks by which a T+ target's own client lets go before the server's spin cut: this clock runs behind the
      * server's by the packet's way here, and a target still held when the cut's throw arrives would lose it.
@@ -206,6 +208,8 @@ public final class StandClient {
             float in=Math.max(0,Math.min(1,(a-KagenoRules.R_GRAY)/1.33f)),out=1-Math.max(0,Math.min(1,(a-KagenoRules.R_COLOR)/2.67f));
             best=Math.max(best,Math.min(in,out));
         }
+        // (2.143.0) the samurai's G's cutscene: its grey part
+        best=Math.max(best,dev.sangwoo.celestialfall.client.samurai.SamuraiClient.grey(delta));
         return best;
     }
     public static boolean monochrome(){var p=MinecraftClient.getInstance().player;return p!=null&&p.isAlive()&&CASTS.values().stream().anyMatch(c->c.skill==R&&KagenoRules.frozen(R,c.age(0))&&c.includes(p.getUuid()));}

@@ -223,6 +223,8 @@ public final class XCharaUltimate {
         if(p.getWorld().raycast(new RaycastContext(eye,chest,RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p)).getType()!=HitResult.Type.MISS)return false;
         if(involved(e)||marked(e)||XCharaAttack.airborne(e)||StarPlatinumBeatdown.involved(e)||StarPlatinumTimeStop.stopped(e)||StarPlatinumTimeStop.holds(e))return false;
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e)||dev.sangwoo.celestialfall.isosang.IsosangAttack.finaling(e))return false;
+        // (2.143.0) nor one in the samurai's G
+        if(dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(e))return false;
         if(e instanceof PlayerEntity q&&(dev.sangwoo.celestialfall.AtomicManager.immobilized(q)||dev.sangwoo.celestialfall.stand.StandArrow.stabbing(q)))return false;
         return true;
     }

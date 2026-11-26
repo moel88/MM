@@ -97,6 +97,8 @@ public final class KagenoManager {
         if(dev.sangwoo.celestialfall.isosang.IsosangAttack.casting(e))return true;
         // X Chara's G (2.112.0) holds its user from the press, and the one it marked from its strange space on
         if(dev.sangwoo.celestialfall.xchara.XCharaUltimate.involved(e))return true;
+        // the samurai's G (2.143.0) holds its user from the press, and the one it marked from its cutscene until they are thrown up
+        if(dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(e))return true;
         // Star Platinum's time stop (2.67.0) holds its user as they call it, and whom it stopped until time moves again
         if(StarPlatinumTimeStop.holds(e))return true;
         // a stand arrow in their chest (2.70.0) holds them until its choice is made (and for one it rejects, until they die)

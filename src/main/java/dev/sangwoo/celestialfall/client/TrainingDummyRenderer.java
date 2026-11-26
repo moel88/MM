@@ -35,6 +35,8 @@ public final class TrainingDummyRenderer extends software.bernie.geckolib.render
         dev.sangwoo.celestialfall.client.stand.StandBeatdown.turn(d,delta,yaw,matrices);
         // (2.112.0) X Chara's G's strange space: facing its user, upside down
         dev.sangwoo.celestialfall.client.xchara.XCharaClient.turn(d,delta,yaw,matrices);
+        // (2.143.0) the samurai's G: bent over and thrown about by its cuts
+        dev.sangwoo.celestialfall.client.samurai.SamuraiClient.turn(d,delta,yaw,matrices);
         // (2.125.0) X Chara's double: the double's turn and lean, and the one seized turning over in the air
         dev.sangwoo.celestialfall.client.xchara.CloneClient.turn(d,delta,yaw,matrices);
     }

@@ -81,7 +81,7 @@ public final class MpServer implements ModInitializer {
         // (2.67.0: the time stop's own check keeps the caster's cooldowns, to see a second H refused)
         // (2.73.0, MP_ONLY=cooldowns: the caster keeps its cooldowns, and coming back keeps the stand it had; 2.74.3 the same for MP_ONLY=fresh)
         if(caster(p)){if(!COOLDOWNS_ONLY&&!FRESH_ONLY||casterJoins++==0)ProgressManager.set(p,new ProgressProfile(1,0,0,ARROW_ONLY?"none":"kageno",10,0));
-            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
+            NoCooldownState.get(p.getServer()).set(p.getUuid(),!TIMESTOP_ONLY&&!COOLDOWNS_ONLY&&!SWAP_ONLY&&!FRESH_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY);p.getServer().getPlayerManager().addToOperators(p.getGameProfile());}
         // (2.107.0, MP_ONLY=death) one who joins dead waits where it fell: its five seconds count from now
         if(DEATH_ONLY&&!p.isAlive()){deadAt.put(p.getUuid(),p.getServer().getOverworld().getTime());note(p.getServer(),String.format(java.util.Locale.ROOT,"%s joined dead at tick %d at %.2f %.2f %.2f",p.getGameProfile().getName(),p.getServer().getOverworld().getTime(),p.getX(),p.getY(),p.getZ()));}
         else home(p);
@@ -137,6 +137,7 @@ public final class MpServer implements ModInitializer {
         if(GLOW_ONLY)glows(server);
         if(VANILLA_ONLY)vanillas(server);
         if(XCHARA_ONLY&&!XCHARAM1_ONLY||XCHARAE_ONLY)xchara(server);
+        if(SAMURAI_ONLY)samurai(server);
         if(XCHARAM1_ONLY&&!XCHARAE_ONLY)knife(server);
         if(XCHARAE_ONLY){xcharaE(server);xcharaR(server);xcharaClone(server);}
         if(XCHARAT_ONLY){xcharaE(server);xcharaWeaken(server);}
@@ -152,7 +153,7 @@ public final class MpServer implements ModInitializer {
             var last=logged.get(p.getUuid());
             if(last==null||last.squaredDistanceTo(p.getPos())>1){logged.put(p.getUuid(),p.getPos());note(server,String.format(java.util.Locale.ROOT,"pos %s %.2f %.2f %.2f",p.getGameProfile().getName(),p.getX(),p.getY(),p.getZ()));}
             // (the beatdown's own check, 2.64.0: its damage is the point, so nobody is healed but by the script's HEAL)
-            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!XCHARAX_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
+            if(p.isAlive()&&p.getHealth()<p.getMaxHealth()&&!BEATDOWN_ONLY&&!VANILLA_ONLY&&!TIMESTOP_ONLY&&!RESIST_ONLY&&!ARROW_ONLY&&!ISOSANG_ONLY&&!XCHARA_ONLY&&!SAMURAI_ONLY&&!XCHARAX_ONLY&&(!BOSS_ONLY||caster(p)))p.setHealth(p.getMaxHealth());
         }
         idle=!busy;
     }
@@ -360,7 +361,7 @@ public final class MpServer implements ModInitializer {
         // (2.130.0: and in X Chara's knives' script, where it stands 6 and 30 blocks off for them to fly to)
         for(var p:server.getPlayerManager().getPlayerList()){boolean c=caster(p);if(!c&&(standOut||ISOSANG_ONLY||XCHARAM1_ONLY||XCHARASHOT_ONLY||XCHARAKNIVES_ONLY||XCHARAERASE_ONLY||XCHARAX_ONLY))continue;
             // (2.82.0: nor a player on Lee So-sang's sword formation, held up on its middle sword)
-            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&!((XCHARASLAM_ONLY||XCHARACUT_ONLY||XCHARASHOT_ONLY||XCHARAERASE_ONLY)&&c)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
+            if(p.isOnGround()&&!dev.sangwoo.celestialfall.stand.StandSummon.out(p)&&!thrownLately(p,server)&&dev.sangwoo.celestialfall.isosang.IsosangAttack.formationNow(p)==null&&!((XCHARASLAM_ONLY||XCHARACUT_ONLY||XCHARASHOT_ONLY||XCHARAERASE_ONLY)&&c)&&!dev.sangwoo.celestialfall.samurai.SamuraiUltimate.involved(p)&&p.squaredDistanceTo(.5,ground,c?.5:3)>1.2*1.2)home(p);}
     }
     private final Map<UUID,Long> thrown=new HashMap<>();private final Map<UUID,Long> flying=new HashMap<>();private int rushBlows;private float rushDamage;
     private boolean thrownLately(ServerPlayerEntity p,MinecraftServer server){Long at=thrown.get(p.getUuid());return at!=null&&server.getOverworld().getTime()-at<200;}
@@ -1047,6 +1048,43 @@ public final class MpServer implements ModInitializer {
      * two are held (how far each moves a tick while it holds them) and where the watcher goes once it is over.
      */
     private Object[] danceSeen;private float danceHealth=-1;private net.minecraft.util.math.Vec3d danceCaster,danceWatcher;private long danceOver=-1,danceReady=Long.MIN_VALUE;private double danceMoved,danceWatcherMoved;
+    /** Only the samurai's G's script (2.143.0, MP_ONLY=samurai). */
+    static final boolean SAMURAI_ONLY="samurai".equals(System.getProperty("botand.mp.only"));
+    private Object[] flashSeen;private net.minecraft.util.math.Vec3d flashCaster,flashWatcher;private double flashMoved,flashWatcherMoved;private long flashOver=-1,flashReady=Long.MIN_VALUE;private float flashHealth=-1;
+    /** The samurai's G as the server has it: its start, its cutscene (where its user was put), its end and what it dealt, when it is ready again, how far the two moved while held, the watcher's health as it changes and its flight after. */
+    private void samurai(MinecraftServer server){
+        long now=server.getOverworld().getTime();
+        var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
+        var watcher=server.getPlayerManager().getPlayerList().stream().filter(q->!caster(q)).findFirst().orElse(null);
+        if(caster==null||watcher==null)return;
+        var d=dev.sangwoo.celestialfall.samurai.SamuraiUltimate.describe(caster);
+        long ready=dev.sangwoo.celestialfall.samurai.SamuraiUltimate.ready(caster);
+        if(d!=null&&(flashSeen==null||!d[0].equals(flashSeen[0]))){
+            note(server,String.format(java.util.Locale.ROOT,"caster's G began at %d, marking %s %.2f blocks off (watcher's guard %s)",(Long)d[0],(Integer)d[3]==watcher.getId()?"the watcher":"entity "+d[3],caster.distanceTo(watcher),dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));
+            flashCaster=caster.getPos();flashWatcher=watcher.getPos();flashMoved=flashWatcherMoved=0;
+        }
+        if(d!=null&&(Boolean)d[1]&&(flashSeen==null||!(Boolean)flashSeen[1]||!d[0].equals(flashSeen[0]))){
+            note(server,String.format(java.util.Locale.ROOT,"caster's G: its cutscene at %d (%d in); the caster put %.2f blocks from the watcher (%.2f from where it stood), held %s, the watcher held %s",now,now-(Long)d[0],
+                caster.distanceTo(watcher),caster.getPos().distanceTo(flashCaster),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(caster),dev.sangwoo.celestialfall.stand.KagenoManager.frozen(watcher)));
+            flashCaster=caster.getPos();flashMoved=0;
+        }
+        if(d!=null){
+            flashMoved=Math.max(flashMoved,caster.getPos().distanceTo(flashCaster));
+            if((Boolean)d[1]&&dev.sangwoo.celestialfall.samurai.SamuraiUltimate.held(watcher))flashWatcherMoved=Math.max(flashWatcherMoved,watcher.getPos().distanceTo(flashWatcher));
+            else if(!(Boolean)d[1])flashWatcher=watcher.getPos();
+        }
+        if(d==null&&flashSeen!=null){
+            note(server,String.format(java.util.Locale.ROOT,"caster's G over at %d (%d in): dealt %.1f, ready again at %d (%.1f s); the caster moved %.3f blocks at most while held, the watcher %.3f while held in its cutscene",
+                now,now-(Long)flashSeen[0],(Float)flashSeen[2],ready,(ready-now)/20.0,flashMoved,flashWatcherMoved));
+            flashOver=now;
+        }
+        if(d!=null&&flashSeen!=null&&d[0].equals(flashSeen[0])&&(now-(Long)d[0])>=dev.sangwoo.celestialfall.samurai.SamuraiRules.LAUNCH&&(now-(Long)d[0])<=dev.sangwoo.celestialfall.samurai.SamuraiRules.LAUNCH+40&&(now-(Long)d[0]-dev.sangwoo.celestialfall.samurai.SamuraiRules.LAUNCH)%5==0)
+            note(server,String.format(java.util.Locale.ROOT,"  thrown +%d: the watcher %.2f blocks from where it was held (%.2f up), velocity %.2f %.2f %.2f",now-(Long)d[0]-dev.sangwoo.celestialfall.samurai.SamuraiRules.LAUNCH,
+                watcher.getPos().distanceTo(flashWatcher),watcher.getY()-flashWatcher.y,watcher.getVelocity().x,watcher.getVelocity().y,watcher.getVelocity().z));
+        if(ready!=flashReady){note(server,"caster's G ready again at "+ready+" (now "+now+")");flashReady=ready;}
+        if(Math.abs(watcher.getHealth()-flashHealth)>.01f){note(server,String.format(java.util.Locale.ROOT,"watcher health %.1f -> %.1f at %d (guard %s)",flashHealth,watcher.getHealth(),now,dev.sangwoo.celestialfall.combat.CombatManager.guarding(watcher)));flashHealth=watcher.getHealth();}
+        flashSeen=d;
+    }
     private void xchara(MinecraftServer server){
         long now=server.getOverworld().getTime();
         var caster=server.getPlayerManager().getPlayerList().stream().filter(MpServer::caster).findFirst().orElse(null);
