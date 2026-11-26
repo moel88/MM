@@ -231,6 +231,8 @@ public final class SkillShots implements ClientModInitializer {
     private static boolean xslashH;
     /** (2.133.0) The shot's training dummies besides its one ("xdummy"), by entity id. */
     private static final List<Integer> EXTRA_DUMMIES=new java.util.concurrent.CopyOnWriteArrayList<>();
+    /** The blocks a shot's wall ("wall=FW") took the place of, to put back with the next shot. */
+    private static final Map<net.minecraft.util.math.BlockPos,net.minecraft.block.BlockState> WALL_WAS=new java.util.LinkedHashMap<>();
     private static final Map<String,Integer> ACTOR_IDS=new ConcurrentHashMap<>();private static final Map<String,Actor> ACTORS=new ConcurrentHashMap<>();
     private static volatile String[] track;private static volatile boolean shake;private final StringBuilder shakeLog=new StringBuilder();
     /** "holds=1/0/..." (2.49.1): the entry's meteor shatter rolls in order, 1 holds together and 0 shatters (SkillShotsMeteorMixin). */
@@ -1020,6 +1022,18 @@ public final class SkillShots implements ClientModInitializer {
         // (for X Chara's terrain delete, whose grounds go under the ones near); gone with the next shot
         for(int id:EXTRA_DUMMIES){var old=p.getServerWorld().getEntityById(id);if(old!=null)old.discard();}
         EXTRA_DUMMIES.clear();
+        // "wall=FW" (2.138.1): a stone wall five wide and four high FW blocks in front of the player, square to the way
+        // they face (for X Chara's Z, which stops before a wall); "wallrt=R" puts it R blocks to their right, "pane=1"
+        // makes it of glass panes. It is gone with the next shot (the blocks that were there put back).
+        for(var was:WALL_WAS.entrySet())p.getServerWorld().setBlockState(was.getKey(),was.getValue());
+        WALL_WAS.clear();
+        if(opts.containsKey("wall")){var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
+            var block=opt("pane",0)>0?net.minecraft.block.Blocks.GLASS_PANE.getDefaultState():net.minecraft.block.Blocks.STONE_BRICKS.getDefaultState();
+            for(int side=-2;side<=2;side++)for(int up=0;up<4;up++){
+                var at=new net.minecraft.util.math.Vec3d(baseX,y,baseZ).add(f.multiply(opt("wall",3))).add(right.multiply(opt("wallrt",0)+side));
+                var pos=net.minecraft.util.math.BlockPos.ofFloored(at.x,y+up,at.z);
+                if(!WALL_WAS.containsKey(pos))WALL_WAS.put(pos,p.getServerWorld().getBlockState(pos));
+                p.getServerWorld().setBlockState(pos,block);}}
         if(opts.containsKey("xdummy")){var f=net.minecraft.util.math.Vec3d.fromPolar(0,yaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
             for(String one:opts.get("xdummy").split("/")){String[] v=one.split("_");
                 var at=new net.minecraft.util.math.Vec3d(baseX,y,baseZ).add(f.multiply(Double.parseDouble(v[0]))).add(right.multiply(v.length>1?Double.parseDouble(v[1]):0));

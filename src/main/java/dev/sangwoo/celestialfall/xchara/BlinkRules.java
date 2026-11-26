@@ -31,6 +31,8 @@ public final class BlinkRules {
     public static final int AFTER=10,LEFT=10;
     /** A step up they are put onto and a drop they are put down (blocks); how much nearer each try is when there is no place for them; how near a block in the way they come. */
     public static final double UP=.6,DOWN=4,NEARER=.5,SHORT=.4;
+    /** How finely the way is looked along for something in it (blocks: far under a body's width, so nothing is stepped over). */
+    public static final double LOOK=.05;
 
     /** Whether it is on its way at {@code age} ticks: pressed, not yet moved (nothing else of theirs begins meanwhile). */
     public static boolean casting(long age){return age>=0&&age<GO;}
@@ -38,6 +40,27 @@ public final class BlinkRules {
     public static long ready(long end){return end+COOLDOWN;}
     /** The way {@code yaw} looks (degrees), level, as a unit {x, z}. */
     public static double[] way(float yaw){double r=Math.toRadians(yaw);return new double[]{-Math.sin(r),Math.cos(r)};}
+    /**
+     * How far along their way a body goes with nothing in it (2.138.1, user request: "벽통과는 못하게"): the furthest
+     * of 0 to {@code most} blocks on that it can be at, and at every place before it ({@code free}: whether the whole
+     * body, as wide as it is, has room that far on). Looked at every {@link #LOOK} from where they stand, so nothing a
+     * body could not pass is passed; where it first has no room, the last free place is found to a hair. With no room
+     * where they stand, 0.
+     */
+    public static double clearAlong(java.util.function.DoublePredicate free,double most){
+        if(most<=0||!free.test(0))return 0;
+        double at=0;
+        while(at<most){
+            double next=Math.min(most,at+LOOK);
+            if(!free.test(next)){
+                double lo=at,hi=next;
+                for(int i=0;i<6;i++){double mid=(lo+hi)/2;if(free.test(mid))lo=mid;else hi=mid;}
+                return lo;
+            }
+            at=next;
+        }
+        return most;
+    }
     /** How far on they go when the way is clear for {@code clear} blocks (to the nearest block in the way): REACH at most, short of the block, never back. */
     public static double reach(double clear){return Math.max(0,Math.min(REACH,clear-SHORT));}
 }

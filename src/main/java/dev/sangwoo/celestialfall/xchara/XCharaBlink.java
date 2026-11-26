@@ -23,10 +23,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
 import static dev.sangwoo.celestialfall.xchara.BlinkRules.*;
 
 /**
@@ -34,7 +33,7 @@ import static dev.sangwoo.celestialfall.xchara.BlinkRules.*;
  * (xchara_skill_v1 with {@link XCharaRules#Z}: XCharaUltimate takes the press), the hack on or off alike. From the
  * press their body flickers purple on every client; at {@link BlinkRules#GO} they are put up to
  * {@link BlinkRules#REACH} blocks on, level, the way they looked as they pressed ({@link #goes}): short of a block in
- * the way, on the floor there (a low step up, a drop), or as high as they are with none under them. Until then they
+ * the way (their whole body's way: no wall is gone through), on the floor there (a low step up, a drop), or as high as they are with none under them. Until then they
  * walk as ever and a blow does not call it off (the user's answer); nothing else of theirs begins meanwhile
  * ({@link #casting}: CombatManager.busy). Held where they are as it would move them (a cutscene, stopped time, another's
  * hold), it is called off. Its cooldown runs from the move, or from when it was called off.
@@ -117,27 +116,32 @@ public final class XCharaBlink {
         }
     }
     /**
-     * Where {@code p} is put for a teleport the way {@code yaw}: level from their feet, as far as their body goes clear
-     * of a block (at their shins, their middle and their head), REACH at most; on the floor there (a step of UP up, a
-     * drop of DOWN), else as high as they are if they fit there; with no place for them, nearer by NEARER at a time;
-     * none at all, where they stand.
+     * Where {@code p} is put for a teleport the way {@code yaw}: level from their feet, as far as their whole body goes
+     * with no block in it ({@link #room}: as wide and as tall as they are, looked at all along the way, so no wall and
+     * no corner of one is gone through; 2.138.1), REACH at most and SHORT of what stops it; on the floor there (a step
+     * of UP up, a drop of DOWN), else as high as they are if they fit there; with no place for them, nearer by NEARER
+     * at a time; none at all, where they stand.
      */
     static Vec3d goes(ServerPlayerEntity p,float yaw){
         var world=p.getServerWorld();double[] w=way(yaw);Vec3d f=new Vec3d(w[0],0,w[1]),at=p.getPos();
-        double clear=REACH+SHORT;
-        for(double up:new double[]{UP+.05,1.0,p.getHeight()-.1}){
-            Vec3d a=at.add(0,up,0);
-            var hit=world.raycast(new RaycastContext(a,a.add(f.multiply(REACH+SHORT)),RaycastContext.ShapeType.COLLIDER,RaycastContext.FluidHandling.NONE,p));
-            if(hit.getType()!=HitResult.Type.MISS)clear=Math.min(clear,hit.getPos().distanceTo(a));
-        }
-        for(double far=reach(clear);far>=NEARER*.5;far-=NEARER){
+        var dims=p.getDimensions(EntityPose.STANDING);double half=dims.width/2;
+        // (on the ground a low step in the way is gone over, as walking goes over it: the body is looked at from that high)
+        double low=p.isOnGround()?UP:0;
+        double free=clearAlong(far->room(world,p,dims.getBoxAt(at.x+f.x*far,at.y,at.z+f.z*far).contract(1e-3,0,1e-3).withMinY(at.y+low+1e-3)),REACH+SHORT-half);
+        for(double far=reach(free+half);far>=NEARER*.5;far-=NEARER){
             double x=at.x+f.x*far,z=at.z+f.z*far;
             // (in the air as it moves them, the floor is theirs only if it is at their feet: they are not put down a drop)
             double y=SlamGround.floor(world,p,x,z,at.y+UP,at.y-(p.isOnGround()?DOWN:.1));
-            if(!Double.isNaN(y))return new Vec3d(x,y,z);
-            if(world.isSpaceEmpty(p,p.getDimensions(EntityPose.STANDING).getBoxAt(x,at.y,z).contract(1e-4,0,1e-4)))return new Vec3d(x,at.y,z);
+            if(!Double.isNaN(y)&&room(world,p,dims.getBoxAt(x,y+.001,z).contract(1e-3,0,1e-3)))return new Vec3d(x,y,z);
+            if(room(world,p,dims.getBoxAt(x,at.y,z).contract(1e-3,0,1e-3)))return new Vec3d(x,at.y,z);
         }
         return at;
+    }
+    /** Whether a body has room in {@code box}: no block's shape in it, nor a cube of ground a terrain delete lifted (bodies it goes through). */
+    private static boolean room(ServerWorld world,ServerPlayerEntity p,Box box){
+        if(world.getBlockCollisions(p,box).iterator().hasNext())return false;
+        if(EraseCubes.any(world))for(var c:EraseCubes.cubes(world)){var b=c.box();if(b!=null&&b.intersects(box))return false;}
+        return true;
     }
     /** It moved them or was called off: its cooldown runs from now. */
     private static void end(Cast d,int type){

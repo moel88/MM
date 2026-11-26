@@ -682,7 +682,9 @@ public final class MpClient implements ClientModInitializer {
      * blocks ahead. Z with the hack off: 4 ticks in the caster is 5 blocks on (3 from the watcher), 15 s from then. Z
      * again at once: refused. The cooldowns off, Q: Z with the hack on, the same. Z from 3 blocks: through the watcher
      * (2 past it). Z and the caster struck as it flickers ("HITME": it goes all the same). Z walking ("W+": moved
-     * from where they walked to). A wall 3 blocks ahead ("WALL+": three wide, three high): Z stops short of it. Both
+     * from where they walked to). A wall 3 blocks ahead ("WALL+": three wide, three high): Z stops short of it. (2.138.1)
+     * A row of glass panes 2 blocks ahead ("PANE+"): stopped before it. A pillar whose corner only the side of their
+     * body would cut ("POST+": the middle of their body passes it by 0.1): stopped before it too. Both
      * clients log the casts as they hear of them, where the caster is and is drawn, and its sound.
      */
     private static final String[] XCHARAZ_SCRIPT={
@@ -693,7 +695,9 @@ public final class MpClient implements ClientModInitializer {
         "230 DIST8","245 Z","246 HITME",
         "280 DIST8","292 W+","295 Z","306 W-",
         "330 DIST8","335 WALL+","350 Z","375 WALL-",
-        "390 Q","400 NOCDOFF","420 END"};
+        "400 DIST8","405 PANE+","420 Z","445 PANE-",
+        "470 DIST8","475 POST+","490 Z","515 POST-",
+        "530 Q","540 NOCDOFF","560 END"};
     private static final String[] XCHARAY_SCRIPT={
         "5 XCHARA","8 NOCDOFF","40 DIST8","45 HEAL",
         "60 Y","80 Q",
@@ -1067,8 +1071,19 @@ public final class MpClient implements ClientModInitializer {
         // (2.109.0, MP_ONLY=glow) the cooldowns off or on for the caster; the watcher asked to strike as the caster's glow begins (the file OUT/jab)
         // (2.110.0, MP_ONLY=vanilla) the watcher's vanilla mode on or off, as it would type it (the caster's operator rights)
         if(step.equals("WVANILLA")){if(down)command("execute as Watcher run botand vanilla");return;}
-        // (2.138.0) a wall three wide and three high, three blocks before the caster the way they look, and gone again
-        if(step.equals("WALL+")||step.equals("WALL-")){if(down){String c="execute as Caster at @s rotated ~ 0 run fill ^-1 ^ ^3 ^1 ^2 ^3 "+(step.endsWith("+")?"minecraft:stone":"minecraft:air");note("command "+c);mc.player.networkHandler.sendChatCommand(c);}return;}
+        // (2.138.0) a wall three wide and three high, three blocks before the caster the way they look, and gone again.
+        // (2.138.1) The caster is first stood on the middle of their block, looking south, so the wall is square to
+        // them, and it is taken away where it was put (the caster has moved since). "PANE+": a row of glass panes two
+        // blocks before them (the thinnest wall). "POST+": the caster stood 0.1 from their block's east edge and a
+        // pillar one block wide in the next column three blocks on: the middle of their body passes it by 0.1, their
+        // side would cut 0.2 into its corner.
+        if(step.equals("WALL+")||step.equals("PANE+")||step.equals("POST+")){if(down){
+            var q=mc.player;int bx=net.minecraft.util.math.MathHelper.floor(q.getX()),by=net.minecraft.util.math.MathHelper.floor(q.getY()+.01),bz=net.minecraft.util.math.MathHelper.floor(q.getZ());
+            boolean post=step.startsWith("POST"),pane=step.startsWith("PANE");int n=pane?2:3;
+            command(String.format(Locale.ROOT,"tp Caster %.2f %.2f %.2f 0 0",bx+(post?.9:.5),q.getY(),bz+.5));
+            wallPut=post?new int[]{bx+1,by,bz+n,bx+1,by+2,bz+n}:new int[]{bx-1,by,bz+n,bx+1,by+2,bz+n};
+            command(String.format(Locale.ROOT,"fill %d %d %d %d %d %d %s",wallPut[0],wallPut[1],wallPut[2],wallPut[3],wallPut[4],wallPut[5],pane?"minecraft:glass_pane":"minecraft:stone"));}return;}
+        if(step.equals("WALL-")||step.equals("PANE-")||step.equals("POST-")){if(down&&wallPut!=null){command(String.format(Locale.ROOT,"fill %d %d %d %d %d %d minecraft:air",wallPut[0],wallPut[1],wallPut[2],wallPut[3],wallPut[4],wallPut[5]));wallPut=null;}return;}
         if(step.equals("NOCDON")||step.equals("NOCDOFF")){if(down)command("botand nocooldown "+(step.equals("NOCDON")?"on":"off"));return;}
         if(step.equals("JAB+")||step.equals("JAB-")){if(down){try{if(step.equals("JAB+"))Files.writeString(OUT.resolve("jab"),"jab");else Files.deleteIfExists(OUT.resolve("jab"));}catch(Exception e){note("ERROR "+e);}note(step.equals("JAB+")?"the watcher asked to strike as the glow begins":"the watcher asked to strike no more");}return;}
         if(step.equals("SLAIN")){if(down)command("damage @s 1000 minecraft:player_attack by Watcher");return;}
@@ -1504,6 +1519,7 @@ public final class MpClient implements ClientModInitializer {
      * logs each strike of its own its client starts; while the caster asks it to walk (the file OUT/walk) it holds W and
      * measures its speed on the ground, staggered and free apart.
      */
+    private int[] wallPut;
     private void command(String c){note("command "+c);mc.player.networkHandler.sendChatCommand(c);}
     /** The boss's body as this client has it (2.69.0), if any. */
     private net.minecraft.entity.player.PlayerEntity boss(){
