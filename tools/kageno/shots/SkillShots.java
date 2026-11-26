@@ -279,7 +279,8 @@ public final class SkillShots implements ClientModInitializer {
         var f=net.minecraft.util.math.Vec3d.fromPolar(0,self.castYaw);var right=new net.minecraft.util.math.Vec3d(-f.z,0,f.x);
         var centre=self.castPos.add(f.multiply(fw)).add(right.multiply(rt)).add(0,cy,0);
         // ("slamfollow=1", 2.128.1) the camera goes with the body of X Chara's slam as it is drawn (up its rise, down its dive)
-        if(self.opts.containsKey("slamfollow")){var mc=MinecraftClient.getInstance();
+        // ("follow=1", 2.141.0: the same for anyone walking or running: the camera keeps its place beside them)
+        if(self.opts.containsKey("slamfollow")||self.opts.containsKey("follow")){var mc=MinecraftClient.getInstance();
             if(mc.player!=null){
                 // (from where the player really is: the landing takes them to where they came down, and the camera stays with them)
                 centre=centre.add(mc.player.getLerpedPos(mc.getTickDelta()).subtract(self.castPos));
@@ -1563,7 +1564,7 @@ public final class SkillShots implements ClientModInitializer {
                     if(what.startsWith("GIVE_")){if(age==at)server(p->{
                             var stack=switch(what.substring(5)){case "PICKAXE"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.PICKAXE);case "FRAGMENTS"->new net.minecraft.item.ItemStack(dev.sangwoo.celestialfall.meteor.MeteorRegistry.FRAGMENT,3);case "STICK"->new net.minecraft.item.ItemStack(net.minecraft.item.Items.STICK);default->throw new IllegalArgumentException(what);};
                             p.getInventory().offerOrDrop(stack);p.currentScreenHandler.sendContentUpdates();log.append("  given ").append(what.substring(5)).append(" at ").append(age).append('\n');});continue;}
-                    if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;case "A"->GLFW_KEY_A;case "S"->GLFW_KEY_S;case "D"->GLFW_KEY_D;case "Y"->GLFW_KEY_Y;case "R"->GLFW_KEY_R;case "SPACE"->GLFW_KEY_SPACE;case "F"->GLFW_KEY_F;default->throw new IllegalArgumentException(what);};
+                    if(what.startsWith("KEYDOWN_")||what.startsWith("KEYUP_")){boolean down=what.startsWith("KEYDOWN_");int code=switch(what.substring(what.indexOf('_')+1)){case "E"->GLFW_KEY_E;case "W"->GLFW_KEY_W;case "A"->GLFW_KEY_A;case "S"->GLFW_KEY_S;case "D"->GLFW_KEY_D;case "Y"->GLFW_KEY_Y;case "R"->GLFW_KEY_R;case "SPACE"->GLFW_KEY_SPACE;case "F"->GLFW_KEY_F;case "CTRL"->GLFW_KEY_LEFT_CONTROL;default->throw new IllegalArgumentException(what);};
                         if(age==at){log.append("  key ").append(what).append(" at ").append(age).append('\n');key(code,down);}continue;}
                     if(what.startsWith("STANCE_")){if(age==at)server(p->{int stance=dev.sangwoo.celestialfall.stand.StarPlatinumStance.NAMES.indexOf(what.substring(7).toLowerCase(Locale.ROOT));
                             for(var f:p.getServerWorld().getEntitiesByClass(dev.sangwoo.celestialfall.stand.StarPlatinumEntity.class,p.getBoundingBox().expand(64),e->true))f.setStance(stance);

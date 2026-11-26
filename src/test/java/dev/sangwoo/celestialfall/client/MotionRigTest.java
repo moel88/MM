@@ -115,4 +115,39 @@ class MotionRigTest {
         }
         Files.writeString(out.resolve("idle.json"),new Gson().toJson(idleParts));
     }
+    /** The body's own motions (2.141.0) as the model draws them, sampled for review: build/botand-motion/base.json (clip -> frames -> parts -> quads). */
+    @Test void exportTheBodysOwnMotionsForReview() throws Exception {
+        Map<String,Object> clips=new LinkedHashMap<>();var model=new MotionPlayerModel(false);
+        String[] names={"stand","walk","run","back","strafe","dash_f","dash_b","dash_l","dash_r","hit1","hit2","hit3","hit4","stance"};
+        for(String clip:names) {
+            List<Object> frames=new ArrayList<>();
+            for(int f=0;f<24;f++) {
+                float u=f/24f,phase=u*(float)Math.PI*2;MotionPose p;
+                switch(clip) {
+                    case "stand":p=MotionClips.locomotion(0,0,0,0,0,0,u*74);break;
+                    case "walk":p=MotionClips.locomotion(phase,1,1,0,0,0,0);break;
+                    case "run":p=MotionClips.locomotion(phase,1,1,0,1,0,0);break;
+                    case "back":p=MotionClips.locomotion(phase,1,-1,0,0,0,0);break;
+                    case "strafe":p=MotionClips.locomotion(phase,1,0,1,0,0,0);break;
+                    case "dash_f":p=MotionClips.dash(u*CombatState.DASH_TICKS,1,0);break;
+                    case "dash_b":p=MotionClips.dash(u*CombatState.DASH_TICKS,-1,0);break;
+                    case "dash_l":p=MotionClips.dash(u*CombatState.DASH_TICKS,0,-1);break;
+                    case "dash_r":p=MotionClips.dash(u*CombatState.DASH_TICKS,0,1);break;
+                    case "stance":p=MotionClips.stance(0);break;
+                    default:{int strike=clip.charAt(3)-'0';p=MotionClips.attack(strike,u*CombatState.DURATION[strike]);}
+                }
+                MotionRig.reset(model);MotionRig.apply(model,p,0,0);model.overlays();
+                MatrixStack matrix=new MatrixStack();matrix.translate(0,1.5,0);matrix.scale(1,-1,1);
+                List<Object> parts=new ArrayList<>();
+                for(ModelPart part:new ModelPart[]{model.head,model.body,model.rightArm,model.leftArm,model.rightLeg,model.leftLeg}) {
+                    var capture=new AtomicRigTest.Capture();part.render(matrix,capture,0,0);
+                    for(float[] vertex:capture.vertices)for(float v:vertex)assertTrue(Float.isFinite(v),clip+" frame "+f);
+                    parts.add(capture.vertices);
+                }
+                frames.add(parts);
+            }
+            clips.put(clip,frames);
+        }
+        Path out=Path.of("build/botand-motion");Files.createDirectories(out);Files.writeString(out.resolve("base.json"),new Gson().toJson(clips));
+    }
 }

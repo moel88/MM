@@ -143,7 +143,8 @@ class IsosangIdleTest {
     @Test void sheStandsStraightLeggedButStillStepsAndLands(){
         // (the user: "다리는 왜 구부리고 있어 펴") the rig's own standing knees are bent; hers are straight
         var stand=dev.sangwoo.celestialfall.combat.MotionClips.locomotion(0,0,1,0,0,0,0);
-        assertTrue(stand.knee[0]>15,"the rig stands everyone a little bent: "+stand.knee[0]);
+        // (2.141.0: the rig itself stands everyone straight-legged now, as she has stood since 2.105.0)
+        assertEquals(0,stand.knee[0],1e-3f,"the rig stands everyone straight-legged");
         IsosangIdle.straighten(stand,0);
         for(int i=0;i<2;i++){
             assertEquals(0,stand.knee[i],1e-4f,"the knee straight");

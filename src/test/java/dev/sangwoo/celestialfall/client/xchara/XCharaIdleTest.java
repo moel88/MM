@@ -31,9 +31,9 @@ class XCharaIdleTest {
     }
 
     @Test void standingTheLegsAreStraightALittleApartAndTheFeetOnTheGround(){
-        // the rig stands everyone with bent knees, the feet a quarter of a pixel off the ground
-        var bent=rig(0,0,0);
-        assertTrue(bent.knee[0]>15,"the rig's own standing knees are bent: "+bent.knee[0]);
+        // (2.141.0: the rig itself stands everyone straight-legged now; theirs are set a little apart on top of it)
+        var straight=rig(0,0,0);
+        assertEquals(0,straight.knee[0],1e-3,"the rig's own standing knees are straight");
         var p=rig(0,0,0);XCharaIdle.stand(p,0);
         for(int i=0;i<2;i++){
             float[] leg=p.joint[MotionPose.RIGHT_LEG+i];
