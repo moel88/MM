@@ -16,11 +16,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
+    // (2.142.0) Minecraft finds what the crosshair is on from the player's eye along their look: the player is turned onto
+    // the point under the crosshair for that reckoning alone, and back (2.141.0 and before left them turned: in the shift
+    // lock the body faced the ground or the foe under the crosshair each frame, not the way the camera looks)
+    @org.spongepowered.asm.mixin.Unique private boolean botand$aimed;
+    @org.spongepowered.asm.mixin.Unique private float botand$yaw,botand$pitch,botand$head;
     @Inject(method="updateTargetedEntity",at=@At("HEAD"))
     private void botand$aim(float delta,CallbackInfo ci) {
         var mc=net.minecraft.client.MinecraftClient.getInstance();
-        if(dev.sangwoo.celestialfall.client.BotandCamera.controls()&&(dev.sangwoo.celestialfall.client.BotandCamera.locked()||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed()))
-            dev.sangwoo.celestialfall.client.BotandCamera.aim();
+        if(dev.sangwoo.celestialfall.client.BotandCamera.controls()&&(dev.sangwoo.celestialfall.client.BotandCamera.locked()||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed())){
+            botand$aimed=true;botand$yaw=mc.player.getYaw();botand$pitch=mc.player.getPitch();botand$head=mc.player.headYaw;
+            dev.sangwoo.celestialfall.client.BotandCamera.target();
+        }
+    }
+    @Inject(method="updateTargetedEntity",at=@At("RETURN"))
+    private void botand$aimed(float delta,CallbackInfo ci) {
+        if(!botand$aimed)return;botand$aimed=false;
+        var p=net.minecraft.client.MinecraftClient.getInstance().player;
+        if(p!=null){p.setYaw(botand$yaw);p.setPitch(botand$pitch);p.setHeadYaw(botand$head);}
     }
     // Vanilla builds the view matrix from yaw/pitch, not Camera.rotation. Apply the
     // same roll here before its X/Y rotations; CameraMixin also rotates billboard axes.

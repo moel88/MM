@@ -106,6 +106,8 @@ public final class BotandCamera {
             STATE.yaw=cage;
             if(locked())faceCamera();
         }
+        // (2.142.0) the shift lock as Roblox's: the body faces where the camera looks at once, each frame drawn
+        if(!cinematic&&!mc.isPaused())lockBody();
         if(wasCinematic&&!cinematic){rightDrag=false;lastFrame=now;}
         wasCinematic=cinematic;
         // a teleport (more than 8 blocks a frame) puts the camera behind the player; (2.96.0) not a step Lee So-sang's
@@ -133,7 +135,35 @@ public final class BotandCamera {
         if(!controls())return;var p=MinecraftClient.getInstance().player;
         p.setYaw(STATE.yaw);p.setPitch(STATE.pitch);p.setHeadYaw(STATE.yaw);
     }
-    /** Resolve shoulder-camera parallax back to an eye-origin aim ray; never grants extra reach. */
+    /**
+     * Whether the player is doing something aimed (a guard, a blow, the attack or use key down, an aimed skill): the body
+     * then faces what the crosshair is on ({@link #aim}), locked or not.
+     */
+    private static boolean acting() {
+        var mc=MinecraftClient.getInstance();var s=CombatClient.snapshot(mc.player.getUuid());
+        return s.guard()||s.attack()>0||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed()||StandClient.aimingThrust()||CutsceneFlash.localGlowing()
+            ||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||dev.sangwoo.celestialfall.client.stand.StandInhale.localInhaling();
+    }
+    /**
+     * (2.142.0, user request: "쉬프트락도 로블록스처럼 바꿔봐 지금 쉬프트락 이상해") The shift lock's body, as Roblox's: it
+     * faces the way the camera looks, rigidly, every frame drawn (the tick before is set to the same, so nothing is eased
+     * between ticks and the body never trails the camera), whichever way it walks: the legs step sideways and back
+     * (MotionClips.locomotion). 2.141.0 and before turned it each frame onto whatever was under the crosshair (the ground by
+     * its feet with the camera looking down: half a turn to the right; a foe walked past) and let Minecraft turn the body
+     * toward the way it walked. Doing something aimed it still faces the foe under the crosshair ({@link #aim}).
+     */
+    private static void lockBody() {
+        if(!locked()||!controls())return;var p=MinecraftClient.getInstance().player;
+        if(acting())aim();else faceCamera();
+        p.prevYaw=p.getYaw();p.prevPitch=p.getPitch();p.prevHeadYaw=p.headYaw;
+        if(CombatClient.animate(p))p.prevBodyYaw=p.bodyYaw=p.getYaw();
+    }
+    /**
+     * The player faces the foe the crosshair is on (the shift lock's camera stands to their right, so that is not quite
+     * the way the camera looks), or with none there the way the camera looks. (2.142.0: 2.141.0 and before faced the point
+     * of the ground or wall under the crosshair too, which with the lock's camera looking down turned the body far round to
+     * the right; what Minecraft itself targets is still found from that point: {@link #target}.)
+     */
     public static void aim() {
         if(!controls())return;var mc=MinecraftClient.getInstance();var p=mc.player;
         if(HitStunClient.aimCapturedTarget())return;
@@ -141,7 +171,25 @@ public final class BotandCamera {
         var block=mc.world.raycast(new RaycastContext(start,end,RaycastContext.ShapeType.OUTLINE,RaycastContext.FluidHandling.NONE,p));
         if(block.getType()!=HitResult.Type.MISS)end=block.getPos();
         var entity=net.minecraft.entity.projectile.ProjectileUtil.raycast(p,start,end,new Box(start,end).expand(1),e->e!=p&&e.canHit()&&!e.isSpectator(),start.squaredDistanceTo(end));
+        if(entity==null){faceCamera();return;}
+        face(entity.getPos());
+    }
+    /**
+     * Resolve shoulder-camera parallax back to an eye-origin aim ray, for Minecraft's own targeting (the block or entity
+     * under the crosshair: GameRendererMixin turns the player so for that reckoning alone and back); never grants extra reach.
+     */
+    public static void target() {
+        if(!controls())return;var mc=MinecraftClient.getInstance();var p=mc.player;
+        if(HitStunClient.aimCapturedTarget())return;
+        var pose=pose(1);Vec3d start=pose.position(),end=start.add(Vec3d.fromPolar(STATE.pitch,STATE.yaw).multiply(64));
+        var block=mc.world.raycast(new RaycastContext(start,end,RaycastContext.ShapeType.OUTLINE,RaycastContext.FluidHandling.NONE,p));
+        if(block.getType()!=HitResult.Type.MISS)end=block.getPos();
+        var entity=net.minecraft.entity.projectile.ProjectileUtil.raycast(p,start,end,new Box(start,end).expand(1),e->e!=p&&e.canHit()&&!e.isSpectator(),start.squaredDistanceTo(end));
         if(entity!=null)end=entity.getPos();
+        face(end);
+    }
+    private static void face(Vec3d end) {
+        var p=MinecraftClient.getInstance().player;
         Vec3d direction=end.subtract(p.getEyePos());
         // A camera pressed against a wall must not aim back through the player.
         if(direction.dotProduct(Vec3d.fromPolar(STATE.pitch,STATE.yaw))<=.05){faceCamera();return;}
@@ -176,9 +224,9 @@ public final class BotandCamera {
         // E's thrusts are aimed (user request): the caster faces where the camera looks and walks relative to it; so
         // does Star Platinum's user while it rushes (2.57.0, user request: "방향전환 걷기는 다 되지만") and inhales (2.61.0).
         // (2.109.0) and so does one glowing before a skill with a cutscene (CutsceneFlash): it goes the way they look as it is cast
-        boolean facing=locked()||s.guard()||s.attack()>0||mc.options.attackKey.isPressed()||mc.options.useKey.isPressed()||StandClient.aimingThrust()||CutsceneFlash.localGlowing()
-            ||dev.sangwoo.celestialfall.client.stand.StandRush.localRushing()||dev.sangwoo.celestialfall.client.stand.StandInhale.localInhaling();
-        if(facing)aim();
+        // (2.142.0) in the shift lock the body faces the way the camera looks (Roblox's), not what is under the crosshair
+        if(acting())aim();
+        else if(locked())faceCamera();
         else if(Math.hypot(forward,side)>.01) {
             p.setYaw(OrbitCameraState.turn(p.getYaw(),OrbitCameraState.movementYaw(STATE.yaw,forward,side),36));
             p.setHeadYaw(p.getYaw());p.setPitch(0);

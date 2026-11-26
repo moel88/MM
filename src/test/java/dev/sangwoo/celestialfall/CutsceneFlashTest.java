@@ -93,7 +93,9 @@ class CutsceneFlashTest {
         assertTrue(calls(method("dev/sangwoo/celestialfall/stand/StandSummon","toggle"),GLOW,"glowing"),"the stand stays as it is");
         // their client: actions locked (only walking), the body facing the camera, the lens held still through the slow walk
         assertTrue(calls(method("dev/sangwoo/celestialfall/client/CombatClient","actionLocked"),"dev/sangwoo/celestialfall/client/CutsceneFlash","localGlowing"));
-        assertTrue(calls(method("dev/sangwoo/celestialfall/client/BotandCamera","input"),"dev/sangwoo/celestialfall/client/CutsceneFlash","localGlowing"));
+        // (2.142.0: what is "doing something aimed" is BotandCamera.acting, which input and the shift lock's body both ask)
+        assertTrue(calls(method("dev/sangwoo/celestialfall/client/BotandCamera","acting"),"dev/sangwoo/celestialfall/client/CutsceneFlash","localGlowing"));
+        assertTrue(calls(method("dev/sangwoo/celestialfall/client/BotandCamera","input"),"dev/sangwoo/celestialfall/client/BotandCamera","acting"));
         assertTrue(reads(method("dev/sangwoo/celestialfall/client/StandClient","skillSlowed"),GLOW,"SLOW_ID"));
     }
     /** The clients glow as the server tells (its key), and no more as the skill is cast (2.64.0 to 2.108.0's way). */

@@ -168,7 +168,11 @@ public final class CombatClient {
             if(p.isOnGround())m.phase+=(float)(distance/(1.7+.6*m.sprint)*Math.PI*2);
             Snapshot s=snapshot(p.getUuid());m.combat=approach(m.combat,now<s.combatUntil?1:0,.18f);m.guard=approach(m.guard,s.guard?1:0,.45f);
             m.smoothPressure=approach(m.smoothPressure,s.pressure,.25f);
-            if(animate(p)) {p.prevBodyYaw=p.bodyYaw;p.bodyYaw=MathHelper.lerpAngleDegrees(.4f,p.bodyYaw,p.getYaw());}
+            // (2.142.0) the body faces the way the player does, whichever way they walk (Roblox's characters: no head
+            // turning on a body left behind, no body turned the way it sidesteps): the legs step sideways and back
+            // (MotionClips.locomotion's forward and side are by this same yaw). 2.141.0 and before eased it 40% a tick
+            // toward that and left Minecraft turning it toward the way walked, so a sidestep stood about 45° round.
+            if(animate(p))p.bodyYaw=p.getYaw();
         }
         if(ticks%100==0){MOVEMENT.keySet().retainAll(alive);STATES.keySet().retainAll(alive);}
     }
