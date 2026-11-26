@@ -46,6 +46,25 @@ public final class OrbitCameraState {
         return new float[]{(float)(Math.cos(angle)*forward+Math.sin(angle)*side),
             (float)(Math.cos(angle)*side-Math.sin(angle)*forward)};
     }
+    /** Blocks: nearer than this along the crosshair's line, the body looks at the line that far out ({@link #sight}). */
+    public static final double SIGHT_NEAR=8;
+    /**
+     * The point the player looks at so that their own sight (from {@code eye}) meets what the crosshair is on (2.142.1): the
+     * camera at {@code cam} looks along unit {@code look} and its centre line meets something at {@code hit}; the point is
+     * {@code hit}, or, nearer than {@code near} past where that line is abreast of the eye, the line's point that far out.
+     * So a skill the server aims by the player's sight lands on the crosshair (the shift lock's camera stands .65 of a
+     * block to their right), and the body is never turned far from the camera's way by ground at its feet: its heading by
+     * at most atan(shoulder/near), however steeply the camera looks down ({@code near} is blocks along the ground). In the first person, and with the lock off, the line goes through the eye: the camera's own way.
+     */
+    public static double[] sight(double[] cam,double[] look,double[] eye,double[] hit,double near){
+        double abreast=Math.max(0,(eye[0]-cam[0])*look[0]+(eye[1]-cam[1])*look[1]+(eye[2]-cam[2])*look[2]);
+        double far=(hit[0]-cam[0])*look[0]+(hit[1]-cam[1])*look[1]+(hit[2]-cam[2])*look[2];
+        // near is measured along the ground: looking steeply down the line is followed further, so the body's heading
+        // (not only its line of sight) stays within atan(shoulder/near) of the camera's
+        double flat=Math.max(.05,Math.hypot(look[0],look[2]));
+        double out=Math.max(far,abreast+near/flat);
+        return new double[]{cam[0]+look[0]*out,cam[1]+look[1]*out,cam[2]+look[2]*out};
+    }
     public static float movementYaw(float cameraYaw,float forward,float side){return wrap(cameraYaw-(float)Math.toDegrees(Math.atan2(side,forward)));}
     public static float turn(float from,float to,float maximum){return from+(float)clamp(wrap(to-from),-maximum,maximum);}
     public static float wrap(float angle){angle%=360;if(angle>=180)angle-=360;if(angle< -180)angle+=360;return angle;}

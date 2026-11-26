@@ -359,6 +359,19 @@ public final class SkillShots implements ClientModInitializer {
     private final Set<UUID> castsLogged=new HashSet<>();private long dashLogged=-1000;private List<String> listLogged=List.of();private int hitsLogged;private String glowLogged="";
     /** One row of motion.csv for this client tick, and for M1 the hits whose sound has just started (sound.csv). */
     private void logTick()throws Exception{
+        // (2.142.1) "sightlog=1": tick by tick, where the crosshair is (the camera's centre line on the blocks), where the
+        // server's sight for this player lands (from their eye the way the server has them looking), and Lee So-sang's
+        // thrown swords' ends: the skills the server aims by the player's sight go where the shift lock's crosshair is
+        if(opts.containsKey("sightlog")&&mc.player!=null&&mc.world!=null&&mc.getServer()!=null&&age%2==0){
+            var cam=mc.gameRenderer.getCamera();net.minecraft.util.math.Vec3d c=cam.getPos(),look=net.minecraft.util.math.Vec3d.fromPolar(cam.getPitch(),cam.getYaw());
+            var hit=mc.world.raycast(new net.minecraft.world.RaycastContext(c,c.add(look.multiply(64)),net.minecraft.world.RaycastContext.ShapeType.COLLIDER,net.minecraft.world.RaycastContext.FluidHandling.NONE,mc.player));
+            net.minecraft.util.math.Vec3d cross=hit.getPos();var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());String server="-";
+            if(sp!=null){net.minecraft.util.math.Vec3d eye=sp.getEyePos(),l=sp.getRotationVec(1);var sh=sp.getWorld().raycast(new net.minecraft.world.RaycastContext(eye,eye.add(l.multiply(64)),net.minecraft.world.RaycastContext.ShapeType.COLLIDER,net.minecraft.world.RaycastContext.FluidHandling.NONE,sp));
+                server=String.format(Locale.ROOT,"%.2f %.2f %.2f (%.2f from the crosshair's), yaw %.1f pitch %.1f",sh.getPos().x,sh.getPos().y,sh.getPos().z,sh.getPos().distanceTo(cross),sp.getYaw(),sp.getPitch());}
+            StringBuilder sw=new StringBuilder();
+            for(var e:dev.sangwoo.celestialfall.client.isosang.IsosangClient.SWORDS.values())for(var w:e)if(w!=null){net.minecraft.util.math.Vec3d end=w.from().add(w.dir().multiply(w.end()));
+                sw.append(String.format(Locale.ROOT," [%.2f %.2f %.2f: %.2f from the crosshair's%s]",end.x,end.y,end.z,end.distanceTo(cross),w.landed()?", landed":""));}
+            log.append(String.format(Locale.ROOT,"  sight at %d: crosshair on %.2f %.2f %.2f (camera yaw %.1f pitch %.1f); server's sight on %s; body yaw %.1f; swords%s%n",age,cross.x,cross.y,cross.z,cam.getYaw(),cam.getPitch(),server,mc.player.bodyYaw,sw.length()==0?" -":sw));}
         // (2.140.0) each character's health: the player's as their client has it and as the server has it, once the entry has settled
         if(age==14&&mc.player!=null&&mc.getServer()!=null){var sp=mc.getServer().getPlayerManager().getPlayer(mc.player.getUuid());
             log.append(String.format(Locale.ROOT,"  health at %d: client %.1f / %.1f (stand %s); server %s%n",age,mc.player.getHealth(),mc.player.getMaxHealth(),dev.sangwoo.celestialfall.client.ProgressClient.profile.stand(),

@@ -154,25 +154,38 @@ public final class BotandCamera {
      */
     private static void lockBody() {
         if(!locked()||!controls())return;var p=MinecraftClient.getInstance().player;
-        if(acting())aim();else faceCamera();
+        if(acting())aim();else face(sight(false));
         p.prevYaw=p.getYaw();p.prevPitch=p.getPitch();p.prevHeadYaw=p.headYaw;
         if(CombatClient.animate(p))p.prevBodyYaw=p.bodyYaw=p.getYaw();
     }
     /**
      * The player faces the foe the crosshair is on (the shift lock's camera stands to their right, so that is not quite
-     * the way the camera looks), or with none there the way the camera looks. (2.142.0: 2.141.0 and before faced the point
-     * of the ground or wall under the crosshair too, which with the lock's camera looking down turned the body far round to
-     * the right; what Minecraft itself targets is still found from that point: {@link #target}.)
+     * the way the camera looks), or with none there what the crosshair is on ({@link #sight}). (2.142.0: 2.141.0 and
+     * before faced the very point of the ground or wall under the crosshair, which with the lock's camera looking down
+     * turned the body far round to the right. 2.142.1: 2.142.0 faced the camera's own way with no foe there, and the skills
+     * the server aims by the player's sight went .65 of a block to the left of the crosshair.)
      */
     public static void aim() {
-        if(!controls())return;var mc=MinecraftClient.getInstance();var p=mc.player;
+        if(!controls())return;
         if(HitStunClient.aimCapturedTarget())return;
-        var pose=pose(1);Vec3d start=pose.position(),end=start.add(Vec3d.fromPolar(STATE.pitch,STATE.yaw).multiply(64));
+        face(sight(true));
+    }
+    /**
+     * Where the player looks for their sight to meet what the crosshair is on (OrbitCameraState.sight): the block or body
+     * on the camera's centre line, no nearer than SIGHT_NEAR blocks out along it (the ground at their feet does not turn
+     * them round: at most 4.6 degrees from the camera's way); {@code foe}: a body there is looked at where the line meets
+     * it, however near (doing something aimed, {@link #acting}).
+     */
+    private static Vec3d sight(boolean foe) {
+        var mc=MinecraftClient.getInstance();var p=mc.player;
+        var pose=pose(1);Vec3d start=pose.position(),look=Vec3d.fromPolar(STATE.pitch,STATE.yaw),end=start.add(look.multiply(64));
         var block=mc.world.raycast(new RaycastContext(start,end,RaycastContext.ShapeType.OUTLINE,RaycastContext.FluidHandling.NONE,p));
         if(block.getType()!=HitResult.Type.MISS)end=block.getPos();
         var entity=net.minecraft.entity.projectile.ProjectileUtil.raycast(p,start,end,new Box(start,end).expand(1),e->e!=p&&e.canHit()&&!e.isSpectator(),start.squaredDistanceTo(end));
-        if(entity==null){faceCamera();return;}
-        face(entity.getPos());
+        if(entity!=null){if(foe)return entity.getPos();end=entity.getPos();}
+        Vec3d eye=p.getEyePos();
+        double[] at=OrbitCameraState.sight(new double[]{start.x,start.y,start.z},new double[]{look.x,look.y,look.z},new double[]{eye.x,eye.y,eye.z},new double[]{end.x,end.y,end.z},OrbitCameraState.SIGHT_NEAR);
+        return new Vec3d(at[0],at[1],at[2]);
     }
     /**
      * Resolve shoulder-camera parallax back to an eye-origin aim ray, for Minecraft's own targeting (the block or entity
@@ -225,8 +238,9 @@ public final class BotandCamera {
         // does Star Platinum's user while it rushes (2.57.0, user request: "방향전환 걷기는 다 되지만") and inhales (2.61.0).
         // (2.109.0) and so does one glowing before a skill with a cutscene (CutsceneFlash): it goes the way they look as it is cast
         // (2.142.0) in the shift lock the body faces the way the camera looks (Roblox's), not what is under the crosshair
+        // (2.142.1: its sight on what the crosshair is on, no nearer than SIGHT_NEAR blocks out: within 4.6 degrees of the camera's way)
         if(acting())aim();
-        else if(locked())faceCamera();
+        else if(locked())face(sight(false));
         else if(Math.hypot(forward,side)>.01) {
             p.setYaw(OrbitCameraState.turn(p.getYaw(),OrbitCameraState.movementYaw(STATE.yaw,forward,side),36));
             p.setHeadYaw(p.getYaw());p.setPitch(0);
