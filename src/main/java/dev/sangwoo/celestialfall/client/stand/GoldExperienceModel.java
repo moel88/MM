@@ -18,6 +18,11 @@ public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
         ANIMATION=CelestialFall.id("animations/entity/gold_experience.animation.json");
     private final GoldExperiencePoses poses=new GoldExperiencePoses();
     private final float[] pose=new float[6];
+    /**
+     * For trying a build before it goes into the generator (the filming tool's "goldfit=BULK/HEAD"): the body drawn
+     * BULK times as wide and deep, the head HEAD times its size. Null but while a trial is filmed.
+     */
+    static float[] tuned;
 
     @Override public Identifier getModelResource(GoldExperienceEntity e){return MODEL;}
     @Override public Identifier getTextureResource(GoldExperienceEntity e){return TEXTURE;}
@@ -36,6 +41,9 @@ public final class GoldExperienceModel extends GeoModel<GoldExperienceEntity> {
             bone.setRotY(rest.getRotY()-(float)Math.toRadians(pose[1]));
             bone.setRotZ(rest.getRotZ()+(float)Math.toRadians(pose[2]));
             bone.setPosX(pose[3]);bone.setPosY(pose[4]);bone.setPosZ(pose[5]);
+            float[] fit=tuned;
+            if("root".equals(bone.getName())){float w=fit==null?1:fit[0];bone.setScaleX(w);bone.setScaleY(1);bone.setScaleZ(w);}
+            else if("head".equals(bone.getName())){float w=fit==null?1:fit[1]/fit[0],h=fit==null?1:fit[1];bone.setScaleX(w);bone.setScaleY(h);bone.setScaleZ(w);}
         }
     }
 }

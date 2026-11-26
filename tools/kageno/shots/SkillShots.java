@@ -1283,6 +1283,9 @@ public final class SkillShots implements ClientModInitializer {
                     // (2.116.1) "panelfit=TILT/OUT/DOWN/AHEAD[/WIDE/DEEP]": X Chara's hack panel placed so by their hand in this entry (HackPanel.tuned), to try a placing before it goes in
                     {float[] fit=null;if(opts.containsKey("panelfit")){String[] v=opts.get("panelfit").split("/");fit=new float[6];for(int i=0;i<6;i++)fit[i]=i<v.length?Float.parseFloat(v[i].trim()):1;log.append("  hack panel placed ").append(opts.get("panelfit")).append('\n');}
                      var tunedPanel=Class.forName("dev.sangwoo.celestialfall.client.xchara.HackPanel").getDeclaredField("tuned");tunedPanel.setAccessible(true);tunedPanel.set(null,fit);}
+                    // (2.146.2) "goldfit=BULK/HEAD": Gold Experience drawn with its body BULK times as wide and its head HEAD times its size in this entry (GoldExperienceModel.tuned), to try a build before it goes in
+                    {float[] fit=null;if(opts.containsKey("goldfit")){String[] v=opts.get("goldfit").split("/");fit=new float[]{Float.parseFloat(v[0].trim()),v.length>1?Float.parseFloat(v[1].trim()):1};log.append("  gold experience fitted ").append(opts.get("goldfit")).append('\n');}
+                     var tunedGold=Class.forName("dev.sangwoo.celestialfall.client.stand.GoldExperienceModel").getDeclaredField("tuned");tunedGold.setAccessible(true);tunedGold.set(null,fit);}
                     // "clearchat=1" (2.70.0): the chat emptied (none of the last entries' lines in this one's picture)
                     if(opts.containsKey("clearchat")&&!"0".equals(opts.get("clearchat")))mc.inGameHud.getChatHud().clear(false);
                     server(this::reset);
