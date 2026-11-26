@@ -83,11 +83,14 @@ def inked(c, face, u, v, col, strength=.35, width=1.0, ink=LINE):
 # off the sheet's front view against 40 units: 11 across the shoulders, 4 at the waist, 5 across the hips, the thigh 2.6
 # narrowing to 2 at the knee, the calf 2.6 and the ankle 1.2, the thigh and the lower leg the same length. So: the hips
 # 5.2 (they were 6.5), the legs parting at 20.3, the knees up at 12, thin legs set closer together.
+# 2.145.2 (the user's "애가 젓가락이 됐는데"): the sheet's widths carried over as they are make a stick of a model built
+# of boxes (the drawing's curves and shading carry its thin limbs; boxes have neither). The lengths stay; the widths
+# go half way back: the hips 5.9, the thigh 3.0 to 2.3, the lower leg 2.95 to 2.0, the waist 4.8, the upper arm 2.2.
 ANKLE_Y, KNEE_Y, CROTCH_Y, HIP_Y = 2.4, 12.0, 20.3, 21.7
 BELT_Y, VEST_Y, SHOULDER_Y = 23.2, 28.4, 32.7          # the belt's lower edge, the vest's, the top of the shoulders
 CHIN_Y, BROW_Y = 33.7, 36.0                              # the face: from the chin to the helmet's rim over the brow
 ELBOW_Y, WRIST_Y = 25.4, 19.7
-ARM_X, LEG_X = -4.45, -1.35
+ARM_X, LEG_X = -4.45, -1.55
 ROOT_BONE = bone('root', None, (0, 0, 0))
 HIPS = bone('hips', 'root', (0, HIP_Y + .4, 0))
 TORSO = bone('torso', 'hips', (0, BELT_Y + .9, 0))
@@ -119,21 +122,21 @@ def badge(b, at, w, h, axis, out, kind):
     puck(b, up, w * .68, h * .68, .26, axis, out, 'bug', part=kind, layer=1, full=(at, (w / 2, h / 2)))
 
 
-# hips: a narrow pelvis under the belt (2.145.1, after the user's "골반과 다리가 너무 크다": 5.2 across, as the sheet's
-# is against its shoulders), the orange piece hanging in front a tab that narrows
-rounded(HIPS, (-2.6, CROTCH_Y, -1.6), (5.2, BELT_Y + .1 - CROTCH_Y, 3.2), 'body', .5, part='pelvis')
-box(HIPS, (-1.0, BELT_Y - 1.9, -2.15), (2.0, 1.95, .55), 'armor', part='cod')
-box(HIPS, (-.65, CROTCH_Y - .2, -2.1), (1.3, BELT_Y - 1.8 - CROTCH_Y + .2, .45), 'armor', part='cod')
-rounded(HIPS, (-2.8, BELT_Y, -1.85), (5.6, .9, 3.7), 'armor', .45, part='belt')
+# hips: a narrow pelvis under the belt (after the user's "골반과 다리가 너무 크다" and then "젓가락": 5.9 across), the
+# orange piece hanging in front a tab that narrows
+rounded(HIPS, (-2.95, CROTCH_Y, -1.75), (5.9, BELT_Y + .1 - CROTCH_Y, 3.5), 'body', .5, part='pelvis')
+box(HIPS, (-1.1, BELT_Y - 1.9, -2.3), (2.2, 1.95, .55), 'armor', part='cod')
+box(HIPS, (-.7, CROTCH_Y - .2, -2.25), (1.4, BELT_Y - 1.8 - CROTCH_Y + .2, .45), 'armor', part='cod')
+rounded(HIPS, (-3.15, BELT_Y, -2.0), (6.3, .9, 4.0), 'armor', .45, part='belt')
 
 # torso: a long smooth waist, narrowest a third of the way up, widening to the ribs under the vest. Nothing stands out
 # of it (2.145.1, the user's "복근이 없어야하고": the belly's muscles and the long muscles of the back, boxes of their
 # own until then, are gone; the belly is painted smooth)
 WAIST = VEST_Y - BELT_Y - .8              # the bare waist's height, from the belt's top to the vest
-rounded(TORSO, (-2.32, BELT_Y + .8, -1.5), (4.64, WAIST * .3, 3.0), 'body', .5, part='abdomen')
-rounded(TORSO, (-2.1, BELT_Y + .8 + WAIST * .28, -1.35), (4.2, WAIST * .28, 2.7), 'body', .48, part='waist')
-rounded(TORSO, (-2.4, BELT_Y + .8 + WAIST * .54, -1.5), (4.8, WAIST * .26, 3.0), 'body', .5, part='midribs')
-rounded(TORSO, (-2.75, BELT_Y + .8 + WAIST * .78, -1.65), (5.5, WAIST * .27, 3.3), 'body', .55, part='lowribs')
+rounded(TORSO, (-2.6, BELT_Y + .8, -1.6), (5.2, WAIST * .3, 3.2), 'body', .5, part='abdomen')
+rounded(TORSO, (-2.4, BELT_Y + .8 + WAIST * .28, -1.5), (4.8, WAIST * .28, 3.0), 'body', .48, part='waist')
+rounded(TORSO, (-2.65, BELT_Y + .8 + WAIST * .54, -1.6), (5.3, WAIST * .26, 3.2), 'body', .52, part='midribs')
+rounded(TORSO, (-2.95, BELT_Y + .8 + WAIST * .78, -1.75), (5.9, WAIST * .27, 3.5), 'body', .55, part='lowribs')
 
 # chest: the vest (its breast plates standing out in front, a plate over the shoulder blades), the yoke over the
 # shoulders and a low collar round the neck; a ladybird on each breast
@@ -143,7 +146,7 @@ for side in (-1, 1):
 box(CHEST, (-3.0, VEST_Y + .3, 2.05), (6.0, 3.5, .45), 'armor', part='backplate')
 rounded(CHEST, (-3.6, SHOULDER_Y - .85, -1.75), (7.2, .85, 3.5), 'armor', .42, part='yoke')
 rounded(NECK, (-1.7, SHOULDER_Y - .1, -1.6), (3.4, .5, 3.3), 'armor', .5, part='collar')
-rounded(NECK, (-1.05, SHOULDER_Y - .5, -1.05), (2.1, CHIN_Y + .7 - SHOULDER_Y + .5, 2.2), 'body', .38, part='neck')
+rounded(NECK, (-1.15, SHOULDER_Y - .5, -1.15), (2.3, CHIN_Y + .7 - SHOULDER_Y + .5, 2.4), 'body', .42, part='neck')
 for side in (-1, 1):
     badge(CHEST, (1.85 * side, VEST_Y + 1.2, -2.75), 1.8, 2.0, 'z', -1, 'bug')
 
@@ -207,22 +210,22 @@ mirrored(right_wing)
 def right_arm():
     top = SHOULDER_Y - .1
     arm = bone('right_arm', CHEST, (ARM_X + .5, top - 1.0, 0.0))
-    rounded(arm, (ARM_X - 1.2, top - 2.6, -1.6), (2.4, 2.6, 3.2), 'armor', .46, part='cap')
-    upper = top - 2.5 - ELBOW_Y
-    rounded(arm, (ARM_X - .93, ELBOW_Y + upper * .45, -1.1), (1.86, upper * .55 + .1, 2.2), 'body', .42, part='upperarm')
-    rounded(arm, (ARM_X - .83, ELBOW_Y - .2, -1.0), (1.66, upper * .45 + .3, 2.0), 'body', .38, part='upperarm')
+    rounded(arm, (ARM_X - 1.25, top - 2.65, -1.7), (2.5, 2.65, 3.4), 'armor', .5, part='cap')
+    upper = top - 2.55 - ELBOW_Y
+    rounded(arm, (ARM_X - 1.12, ELBOW_Y + upper * .45, -1.3), (2.24, upper * .55 + .1, 2.6), 'body', .46, part='upperarm')
+    rounded(arm, (ARM_X - 1.02, ELBOW_Y - .2, -1.18), (2.04, upper * .45 + .3, 2.36), 'body', .42, part='upperarm')
     fore = bone('right_forearm', arm, (ARM_X, ELBOW_Y, 0.0))
-    rounded(fore, (ARM_X - 1.12, ELBOW_Y - .9, -1.25), (2.24, 1.1, 2.5), 'cuff', .46, part='cuff')
-    badge(fore, (ARM_X, ELBOW_Y - .4, 1.25), 1.45, 1.45, 'z', 1, 'dome')
-    guard = ELBOW_Y - .9 - WRIST_Y - .4
-    rounded(fore, (ARM_X - 1.12, WRIST_Y + .4 + guard * .45, -1.22), (2.24, guard * .55, 2.44), 'armor', .5, part='guard')
-    rounded(fore, (ARM_X - .97, WRIST_Y + .4, -1.08), (1.94, guard * .45 + .05, 2.16), 'armor', .42, part='guard')
-    rounded(fore, (ARM_X - 1.02, WRIST_Y - .05, -1.13), (2.04, .5, 2.26), 'cuff', .44, part='wrist')
+    rounded(fore, (ARM_X - 1.3, ELBOW_Y - .92, -1.45), (2.6, 1.15, 2.9), 'cuff', .5, part='cuff')
+    badge(fore, (ARM_X, ELBOW_Y - .4, 1.45), 1.6, 1.6, 'z', 1, 'dome')
+    guard = ELBOW_Y - .92 - WRIST_Y - .4
+    rounded(fore, (ARM_X - 1.28, WRIST_Y + .4 + guard * .45, -1.4), (2.56, guard * .55, 2.8), 'armor', .53, part='guard')
+    rounded(fore, (ARM_X - 1.14, WRIST_Y + .4, -1.26), (2.28, guard * .45 + .05, 2.52), 'armor', .46, part='guard')
+    rounded(fore, (ARM_X - 1.18, WRIST_Y - .05, -1.3), (2.36, .5, 2.6), 'cuff', .47, part='wrist')
     hand = bone('right_hand', fore, (ARM_X, WRIST_Y, 0.0))
-    box(hand, (ARM_X - .8, WRIST_Y - 2.2, -.72), (1.6, 2.25, 1.44), 'body', part='palm')
-    box(hand, (ARM_X - .75, WRIST_Y - 3.75, -.67), (1.5, 1.6, 1.26), 'body', part='fingers')
-    box(hand, (ARM_X - .5, WRIST_Y - 2.55, -1.1), (1.0, 1.45, .4), 'body', part='thumb')
-    badge(hand, (ARM_X - .8, WRIST_Y - 1.15, 0.0), 1.25, 1.5, 'x', -1, 'bug')
+    box(hand, (ARM_X - .9, WRIST_Y - 2.3, -.8), (1.8, 2.35, 1.6), 'body', part='palm')
+    box(hand, (ARM_X - .85, WRIST_Y - 3.9, -.75), (1.7, 1.65, 1.4), 'body', part='fingers')
+    box(hand, (ARM_X - .6, WRIST_Y - 2.65, -1.2), (1.1, 1.5, .42), 'body', part='thumb')
+    badge(hand, (ARM_X - .9, WRIST_Y - 1.2, 0.0), 1.4, 1.65, 'x', -1, 'bug')
 
 
 mirrored(right_arm)
@@ -230,7 +233,7 @@ mirrored(right_arm)
 
 SHIN = (  # the lower leg, from the top down: where it starts and ends between the knee (1) and the ankle (0), its width, its
           # depth, how far its middle sits behind the leg's: widest under the knee where the calf swells behind, narrow at the ankle
-    (.96, .64, 2.5, 2.75, .12), (.66, .36, 2.28, 2.4, .08), (.38, .14, 1.96, 2.05, .03))
+    (.96, .64, 2.95, 3.15, .12), (.66, .36, 2.72, 2.8, .08), (.38, .14, 2.36, 2.4, .03))
 
 
 def right_leg():
@@ -239,24 +242,24 @@ def right_leg():
     # long as the thigh that swells under the knee and narrows to a thin ankle, its guard painted on it
     leg = bone('right_leg', HIPS, (LEG_X, HIP_Y, 0.0))
     thigh = HIP_Y + .3 - KNEE_Y
-    for k, (lo, hi, w, d) in enumerate(((.72, 1.0, 2.6, 3.0), (.44, .74, 2.46, 2.85), (.2, .46, 2.18, 2.55), (0, .22, 1.88, 2.25))):
+    for k, (lo, hi, w, d) in enumerate(((.72, 1.0, 3.0, 3.3), (.44, .74, 2.9, 3.2), (.2, .46, 2.64, 2.95), (0, .22, 2.34, 2.65))):
         rounded(leg, (LEG_X - w / 2, KNEE_Y + thigh * lo, -d / 2 + .05), (w, thigh * (hi - lo), d), 'body', .5 - .03 * k, part='thigh', low=k)
-    badge(leg, (LEG_X - 1.3, HIP_Y - .55, -.25), 1.7, 1.9, 'x', -1, 'bug')
+    badge(leg, (LEG_X - 1.5, HIP_Y - .55, -.3), 2.0, 2.2, 'x', -1, 'bug')
     shin = bone('right_shin', leg, (LEG_X, KNEE_Y, 0.0))
-    rounded(shin, (LEG_X - 1.13, KNEE_Y - 1.0, -1.22), (2.26, 1.75, 2.6), 'brown', .5, part='kneecuff')
-    badge(shin, (LEG_X, KNEE_Y - .2, -1.22), 1.9, 2.5, 'z', -1, 'dome')
+    rounded(shin, (LEG_X - 1.32, KNEE_Y - 1.0, -1.42), (2.64, 1.75, 3.0), 'brown', .54, part='kneecuff')
+    badge(shin, (LEG_X, KNEE_Y - .2, -1.42), 2.2, 2.7, 'z', -1, 'dome')
     calf = KNEE_Y - 1.0 - ANKLE_Y
     for k, (hi, lo, w, d, back) in enumerate(SHIN):
         rounded(shin, (LEG_X - w / 2, ANKLE_Y + calf * lo, -d / 2 + back), (w, calf * (hi - lo) + (.3 if k == 0 else 0), d), 'armor', .5 - .04 * k,
                 part='shin', piece=k)
-    rounded(shin, (LEG_X - .82, ANKLE_Y - .15, -.88), (1.64, calf * .16 + .15, 1.8), 'brown', .4, part='boot')
+    rounded(shin, (LEG_X - 1.02, ANKLE_Y - .15, -1.05), (2.04, calf * .16 + .15, 2.15), 'brown', .44, part='boot')
     foot = bone('right_foot', shin, (LEG_X, ANKLE_Y, 0.0))
-    badge(foot, (LEG_X - .9, 2.05, .15), 1.15, 1.25, 'x', -1, 'bug')
-    box(foot, (LEG_X - .9, .85, -1.25), (1.8, 1.5, 2.45), 'shoe', part='upper')
-    box(foot, (LEG_X - .86, 0, .2), (1.72, .85, 1.0), 'purple', part='heel')
-    for k, (w, z0, d, top) in enumerate(((1.72, -2.9, 1.65, 1.7), (1.26, -3.95, 1.05, 1.28), (.74, -4.7, .75, .9))):
-        box(foot, (LEG_X - w / 2, .38, z0), (w, top - .38, d), 'shoe', part='toe', piece=k)
-        box(foot, (LEG_X - w / 2 - .04, 0, z0), (w + .08, .38, d), 'purple', part='sole', piece=k)
+    badge(foot, (LEG_X - 1.1, 2.05, .2), 1.25, 1.35, 'x', -1, 'bug')
+    box(foot, (LEG_X - 1.08, .88, -1.4), (2.16, 1.55, 2.85), 'shoe', part='upper')
+    box(foot, (LEG_X - 1.03, 0, .3), (2.06, .88, 1.15), 'purple', part='heel')
+    for k, (w, z0, d, top) in enumerate(((2.06, -3.15, 1.75, 1.8), (1.5, -4.35, 1.2, 1.32), (.86, -5.15, .8, .92))):
+        box(foot, (LEG_X - w / 2, .4, z0), (w, top - .4, d), 'shoe', part='toe', piece=k)
+        box(foot, (LEG_X - w / 2 - .04, 0, z0), (w + .08, .4, d), 'purple', part='sole', piece=k)
 
 
 mirrored(right_leg)
@@ -264,9 +267,9 @@ mirrored(right_leg)
 
 def right_ring():
     # a silver ring hanging from the belt in front of the hip, turned out a little, swung a little forward
-    ring = bone('right_ring', HIPS, (-2.0, BELT_Y + .1, -2.0), (-9, 28, 6))
-    box(ring, (-2.9, BELT_Y - 3.0, -2.2), (1.8, 3.1, .3), 'silver', part='ring', faces=('north', 'south'),
-        at=(-2.0, BELT_Y - 1.5, -2.2), r=(.86, 1.42))
+    ring = bone('right_ring', HIPS, (-2.3, BELT_Y + .1, -2.2), (-9, 28, 6))
+    box(ring, (-3.35, BELT_Y - 3.5, -2.4), (2.1, 3.6, .3), 'silver', part='ring', faces=('north', 'south'),
+        at=(-2.3, BELT_Y - 1.75, -2.4), r=(1.0, 1.66))
 
 
 mirrored(right_ring)
@@ -292,13 +295,13 @@ def hide(name, at, width, pieces, across, tilt, tone_, teeth):
 
 
 # a hide tied round the hips behind: longest in the middle, its end torn into big points
-for i, (cx, w, pieces, pale, teeth) in enumerate(((-1.85, 2.0, (2.6, 2.3), 0, (2, .15)), (0.0, 2.2, (3.2, 3.2), 0, (2, .6)),
-                                                   (1.85, 2.0, (2.8, 2.1), 1, (2, .35)))):
-    hide(f'hide_{i}', (cx, BELT_Y + .2, 1.9 + .04 * (i == 1)), w, pieces, 'x', (7, 0, 0), pale, teeth)
+for i, (cx, w, pieces, pale, teeth) in enumerate(((-2.1, 2.25, (2.7, 2.4), 0, (2, .15)), (0.0, 2.4, (3.3, 3.4), 0, (2, .6)),
+                                                   (2.1, 2.25, (2.9, 2.2), 1, (2, .35)))):
+    hide(f'hide_{i}', (cx, BELT_Y + .2, 2.05 + .04 * (i == 1)), w, pieces, 'x', (7, 0, 0), pale, teeth)
 
 
 def right_hide():
-    hide('hide_right', (-2.85, BELT_Y + .2, .7), 2.2, (2.4, 1.9), 'z', (0, 0, 5), 0, (2, .8))
+    hide('hide_right', (-3.2, BELT_Y + .2, .85), 2.4, (2.5, 2.0), 'z', (0, 0, 5), 0, (2, .8))
 
 
 mirrored(right_hide)
@@ -329,7 +332,7 @@ def body(c, face, u, v, p, n):
     if part in ('abdomen', 'waist', 'midribs', 'lowribs'):
         if face == 'north':
             # a smooth belly: light down its middle, falling off to the flanks; no muscles drawn on it
-            t += .05 - .16 * (abs(x) / 2.4) ** 2
+            t += .05 - .16 * (abs(x) / 2.8) ** 2
             if y > VEST_Y - .45:
                 t -= .3                                         # the vest's shadow
             if y < BELT_Y + 1.15:
@@ -568,7 +571,7 @@ def armor(c, face, u, v, p, n):
         if inner:
             return inked(c, face, u, v, ramp(BROWN, tone(n, u, v, .4, face)), .3, ink=BROWN[0])
         if face == 'south':
-            a, b = (abs(x) + LEG_X) / .78, (f - .66) / .3
+            a, b = (abs(x) + LEG_X) / .95, (f - .66) / .3
             rr = a * a + b * b
             if rr < 1:
                 col = ramp(BODY[1:], .72 - .3 * rr + .1 * b)
@@ -576,13 +579,13 @@ def armor(c, face, u, v, p, n):
             if f < .3:
                 return ramp(BROWN, tone(n, u, v, .4, face))
         if face == 'north':
-            s = slots(abs(x), y, [(-LEG_X, ANKLE_Y + calf * g) for g in (.2, .4, .6, .8)], .8, .4)
+            s = slots(abs(x), y, [(-LEG_X, ANKLE_Y + calf * g) for g in (.2, .4, .6, .8)], .95, .44)
             t += .08
         if face in ('up', 'down'):
             t -= .15
     elif part == 'cod':
         if face == 'north':
-            s = slots(x, y, ((0, BELT_Y - .65), (0, BELT_Y - 1.35), (0, BELT_Y - 2.25)), .7, .36)
+            s = slots(x, y, ((0, BELT_Y - .65), (0, BELT_Y - 1.35), (0, BELT_Y - 2.25)), .8, .4)
             t -= .25 * max(0, v - .7) * 3
     elif part == 'belt':
         t += .08
@@ -739,9 +742,9 @@ POSES = {
         'chest': {'rot': (-3, 8, -7)},
         'neck': {'rot': (4, -4, 2)},
         'head': {'rot': (9, -10, 3)},
-        'left_arm': {'reach': ((3.5, BELT_Y + .3, -1.0), (1, -.25, .55))},
+        'left_arm': {'reach': ((3.9, BELT_Y + .3, -1.1), (1, -.25, .55))},
         'left_hand': {'rot': (0, 0, 55)},
-        'right_arm': {'reach': ((-4.7, CROTCH_Y - 3.0, -2.6), (-1, .1, .4))},
+        'right_arm': {'reach': ((-5.0, CROTCH_Y - 3.0, -2.8), (-1, .1, .4))},
         'right_hand': {'rot': (-8, 0, 10)},
         # the knees apart, the shins crossing under it, the right in front, the toes pointing down
         'right_leg': {'rot': (-20, 0, 24)}, 'right_shin': {'rot': (26, 0, -50)}, 'right_foot': {'rot': (36, 0, 0)},

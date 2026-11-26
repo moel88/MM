@@ -84,7 +84,7 @@ class GoldExperienceModelTest {
         }
         var uv=bones.get("hide_1_1").getAsJsonArray("cubes").get(0).getAsJsonObject().getAsJsonObject("uv").getAsJsonObject("south");
         int x=uv.getAsJsonArray("uv").get(0).getAsInt(),y=uv.getAsJsonArray("uv").get(1).getAsInt(),w=uv.getAsJsonArray("uv_size").get(0).getAsInt(),h=uv.getAsJsonArray("uv_size").get(1).getAsInt();
-        int clear=0,solid=0;for(int i=0;i<w;i++){if(tex.getRGB(x+i,y+h-2)>>>24==0)clear++;else solid++;}
+        int clear=0,solid=0;for(int i=0;i<w;i++){if(tex.getRGB(x+i,y+h-4)>>>24==0)clear++;else solid++;}
         assertTrue(clear>0&&solid>0,"the hide's end is torn into teeth: "+clear+" clear, "+solid+" there");
         for(int i=0;i<w;i++)assertEquals(255,tex.getRGB(x+i,y+1)>>>24,"its top is whole");
     }
@@ -100,7 +100,7 @@ class GoldExperienceModelTest {
             else if(Math.abs(r-g)<22&&b>=g&&g>150)silver++;
         }
         assertTrue(cream>all*.2,"cream "+cream+" of "+all);assertTrue(orange>all*.1,"orange "+orange+" of "+all);
-        assertTrue(purple>all*.015,"purple "+purple+" of "+all);assertTrue(silver>all*.015,"silver "+silver+" of "+all);
+        assertTrue(purple>all*.015,"purple "+purple+" of "+all);assertTrue(silver>all*.012,"silver "+silver+" of "+all);
     }
     @Test void everyBoneMovesSmoothlyFrameToFrame()throws Exception{
         int moving=0;
