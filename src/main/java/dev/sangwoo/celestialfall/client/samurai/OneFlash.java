@@ -88,7 +88,7 @@ public final class OneFlash implements Fx.Skill {
     @Override public void overFlash(Fx c,EffectMesh m,boolean additive){
         if(additive)return;
         var v=view(c);if(v==null||!v.world())return;
-        float s=v.sec;if(!v.d.inScene()||s<SamuraiScene.CLOSE-.02f||s>=SamuraiScene.FLASH||!v.live(SamuraiScene.CLOSE))return;
+        float s=v.sec;if(!v.d.inScene()||s<SamuraiScene.DASH||s>=SamuraiScene.FLASH||!v.live(SamuraiScene.DASH))return;
         // the blade's white crescents: what it swept in the last moments, as strong as it is fast
         if(s<SamuraiKata.NOTO-.06f)sweep(v,m,s,false);
         // the white spikes beside the ink (its light side)
@@ -135,8 +135,8 @@ public final class OneFlash implements Fx.Skill {
             float lit=noto(s);
             if(lit>0){var hb=SamuraiKata.blade(v.feet,v.facing,s);f.light(hb[0].add(hb[1].multiply(SamuraiKata.TIP)),0xf4f8ff,7,1.2f*lit);}
         }
-        if(v.d.inScene()&&!v.d.stopped()&&s>=SamuraiScene.WORLD&&s<SamuraiScene.WORLD+.7f){
-            float u=(s-SamuraiScene.WORLD)/.7f;
+        if(v.d.inScene()&&!v.d.stopped()&&s>=SamuraiKata.SNAP&&s<SamuraiKata.SNAP+.7f){
+            float u=(s-SamuraiKata.SNAP)/.7f;
             f.light(v.hold.add(0,1.2,0),0xffffff,16,2.6f*(1-u));
             f.shaft(v.hold.add(0,3,0),0xffffff,.8f*(1-u));
         }
@@ -147,13 +147,14 @@ public final class OneFlash implements Fx.Skill {
         if(a>=0&&a<.3f&&d.runs(SamuraiKata.BURST*20))v=Math.max(v,1.2f*(1-a/.3f));
         if(!d.inScene()||d.stopped())return v;
         for(float at:SLASH_SEC){a=sec-at;if(a>=0&&a<.15f)v=Math.max(v,.9f*(1-a/.15f));}
-        a=sec-SamuraiScene.WORLD;if(a>=0&&a<.45f)v=Math.max(v,2.2f*(1-a/.45f));
+        for(float[] cut:SamuraiKata.CUTS){a=sec-cut[0];if(a>=0&&a<.14f)v=Math.max(v,.45f*cut[1]*(1-a/.14f));}
+        a=sec-SamuraiKata.SNAP;if(a>=0&&a<.45f)v=Math.max(v,2.2f*(1-a/.45f));
         return v;
     }
     /** The cutscene's camera's jolts at {@code sec}: {yaw, pitch, roll} degrees (each comes in over a frame or two and dies away). */
     static float[] jolt(float sec){
         float yaw=0,pitch=0,roll=0;
-        float[][] hits={{SamuraiScene.CLOSE,1.5f},{1.53f,.6f},{1.76f,.7f},{2.09f,.8f},{SamuraiKata.CLICK,1.2f},{SLASH_SEC[0],1.6f},{SLASH_SEC[1],1.8f},{SLASH_SEC[2],1.8f},{SLASH_SEC[3],2.2f}};
+        float[][] hits={{SamuraiScene.CLOSE,1.5f},{1.535f,.9f},{1.69f,.6f},{1.89f,.8f},{SamuraiKata.WHIRL,1.5f},{2.49f,.7f},{SamuraiKata.FLICK,.5f},{SamuraiKata.CLICK,1.1f},{SLASH_SEC[0],1.6f},{SLASH_SEC[1],1.8f},{SLASH_SEC[2],1.8f},{SLASH_SEC[3],2.2f}};
         for(int k=0;k<hits.length;k++){
             float a=sec-hits[k][0];if(a<0||a>.3f)continue;
             float e=FxLib.kick(sec,hits[k][0],.05f)*hits[k][1];
@@ -164,23 +165,49 @@ public final class OneFlash implements Fx.Skill {
 
     // ───────────────────────────── before the dash ─────────────────────────────
 
-    /** The quick strokes round its user's feet as they stand over the sword: {when, the way out from the feet (degrees right of ahead), how long}. */
-    static final float[][] FLICKS={{0f,-128,2.3f},{.03f,-140,1.6f},{.42f,-158,2.2f},{.45f,170,1.5f},{.5f,-120,2.6f},{.53f,150,1.2f}};
-    static final float FLICK_LIFE=.09f;
-    private static void before(View v,EffectMesh m,boolean light){
-        float s=v.sec;if(s>=SamuraiKata.BURST+.05f||!v.live(0))return;
-        Vec3d feet=v.d.from;
-        for(int k=0;k<FLICKS.length;k++){
-            float a=s-FLICKS[k][0];if(a<0||a>=FLICK_LIFE)continue;
-            float u=a/FLICK_LIFE,on=1-u*u;
-            Vec3d way=dir(v,FLICKS[k][1]);
-            Vec3d p=feet.add(way.multiply(.35+.5*u)).add(0,.12+.06*(k%3),0),q=p.add(way.multiply(FLICKS[k][2]*(.5+.5*u))).add(0,.18,0);
-            if(light)m.needle(p,q,.3,.35,PALE,.25f*on);else m.needle(p,q,.11,.3,WHITE,.95f*on);
+    /** The ring of ink brushed on the ground round its user as they sink over the sword: its radius, how far round it goes, and when its brush goes round (seconds). */
+    static final double ENSO=1.55,ENSO_ROUND=Math.toRadians(332);
+    static final float ENSO_FROM=.06f,ENSO_TO=.5f;
+    /** How far round the ring's brush has gone at {@code sec} (0 to 1), and how much of the ring is there at all (it is scattered by the dash). */
+    static float ensoDrawn(float sec){return SamuraiScene.smooth((sec-ENSO_FROM)/(ENSO_TO-ENSO_FROM));}
+    static float ensoThere(float sec){return 1-SamuraiScene.smooth((sec-(SamuraiScene.DASH-.04f))/.1f);}
+    /** The brush's width {@code u} of the way round (blocks): set down full, drawn thin, lifted to nothing. */
+    static double ensoWidth(double u){return .3*(.18+.82*Math.pow(Math.sin(Math.PI*Math.pow(u,.62)),.8));}
+    /** A point of the ring {@code u} of the way round, {@code off} blocks out from its line. */
+    private static Vec3d enso(View v,double u,double off){
+        double a=Math.toRadians(-150)+ENSO_ROUND*u,r=ENSO+off+.05*Math.sin(u*9.2);
+        return v.d.from.add(v.face.multiply(Math.cos(a)*r)).add(v.hand.multiply(Math.sin(a)*r)).add(0,.035,0);
+    }
+    /** The ring's band from {@code u0} to {@code u1} of the way round, {@code part} of its brush's width, one colour. */
+    private static void ensoBand(View v,EffectMesh m,double u0,double u1,double part,int rgb,float alpha){
+        if(alpha<=0||u1<=u0)return;int n=Math.max(2,(int)(54*(u1-u0)));
+        for(int i=0;i<n;i++){
+            double a=u0+(u1-u0)*i/n,b=u0+(u1-u0)*(i+1)/n,wa=ensoWidth(a)*part*.5,wb=ensoWidth(b)*part*.5;
+            m.quad(enso(v,a,-wa),enso(v,a,wa),enso(v,b,wb),enso(v,b,-wb),rgb,alpha);
         }
-        // the air stirred along the ground about them
-        if(!light){
-            float on=Math.min(1,s/.2f)*(1-SamuraiScene.smooth((s-.5f)/.15f));
-            for(int k=0;k<3;k++)arc(m,feet.add(0,.06+.03*k,0),new Vec3d(1,0,0),new Vec3d(0,0,1),1.1+.45*k,s*(1.6+.5*k)+k*2.1,1.6,.035,WHITE,.3f*on,14);
+    }
+    /** Before the dash: the ring's brush head and its pale line (the ink itself is over the light: black), flecks lifting off it, red once the sword is broken out. */
+    private static void before(View v,EffectMesh m,boolean light){
+        float s=v.sec;if(s>=SamuraiScene.DASH+.08f||!v.live(0))return;
+        float drawn=ensoDrawn(s),there=ensoThere(s);if(drawn<=0||there<=0)return;
+        float red=SamuraiScene.smooth((s-SamuraiKata.BURST)/.05f);
+        if(light){
+            // the brush's head, wet; and the ring lit red from within once the sword is out
+            if(drawn<1)m.softDisc(enso(v,drawn,0).add(0,.05,0),.5,PALE,.5f);
+            if(red>0){FxLib.ring(m,v.d.from.add(0,.05,0),ENSO,.55,RED,.5f*red*there);m.softDisc(v.d.from.add(0,.3,0),2.2,RED,.2f*red*there);}
+        }else{
+            // a pale line down the middle of the wet ink, gone as it dries; the head
+            float wet=1-SamuraiScene.smooth((s-ENSO_TO)/.25f);
+            if(wet>0)ensoBand(v,m,Math.max(0,drawn-.35),drawn,.16,WHITE,.8f*wet);
+            if(red>0)ensoBand(v,m,0,1,.22,0xff4a56,.9f*red*there);
+            // flecks lifted off the ring, turning red and quicker with the sword out
+            for(int k=0;k<18;k++){
+                float born=.14f+.045f*k,life=.55f;float a=((s-born)%life+life)%life;if(s<born)continue;
+                double u=SamuraiScene.hash(k,301),rise=(1.1+1.2*SamuraiScene.hash(k,302))*(a/life)*(1+1.4*red),size=.035+.035*SamuraiScene.hash(k,303);
+                Vec3d p=enso(v,u,0).add(0,rise,0).add(v.hand.multiply(.12*Math.sin(a*9+k)));
+                Vec3d x=m.camera().subtract(p).crossProduct(UP);if(x.lengthSquared()<1e-6)continue;x=x.normalize().multiply(size);
+                if(red>.5f)m.quad(p.add(x),p.add(0,size*1.7,0),p.subtract(x),p.subtract(0,size*1.7,0),0xe01426,.9f*(1-a/life)*there);
+            }
         }
     }
     /** A level way out from its user: {@code degrees} to the right of the way they face. */
@@ -243,6 +270,14 @@ public final class OneFlash implements Fx.Skill {
                     m.softDisc(v.d.from.add(Math.cos(ang)*r,.25+.25*u,Math.sin(ang)*r),.7+.5*u,0xeef0f2,.75f*on);
                 }
             }
+        }
+        // the sword broken an inch out of its scabbard: a glint at its guard, and a red line across the eye through it
+        if(a<.16f&&light){
+            float u=a/.16f,on=(1-u)*Math.min(1,a/.02f);
+            var hb=SamuraiKata.blade(v.feet,v.facing,s);Vec3d guard=hb[0].add(hb[1].multiply(SamuraiKata.GUARD));
+            glint(m,guard,1.1*(1-u*.5),WHITE,on,20);
+            m.softLine(guard.subtract(right.multiply(5)),guard.add(right.multiply(5)),.09,RED,.8f*on);
+            m.softLine(guard.subtract(right.multiply(2.2)),guard.add(right.multiply(2.2)),.05,WHITE,.8f*on);
         }
         // the sign before them: the character for death, gold, a red glow behind it
         float sg=a-.03f;
@@ -316,30 +351,53 @@ public final class OneFlash implements Fx.Skill {
 
     // ───────────────────────────── the flourish ─────────────────────────────
 
+    /** The blade's point in its user's frame at {@code sec} of the clip: {ahead, up, to their right}. */
+    static float[] tipBy(float sec){
+        Vec3d t=SamuraiKata.tip(Vec3d.ZERO,0,sec);return new float[]{(float)t.z,(float)t.y,(float)-t.x};
+    }
     /**
-     * The flourish's stars: {when, how long, ahead of its user, up, to their right, how big, whether it splits into
-     * colours}. Its user faces the close shot: their right is the frame's left, where the one marked stands behind them.
+     * The cuts' stars, off the blade's point as each cut goes through its middle (SamuraiKata.CUTS): {when, how long,
+     * ahead of its user, up, to their right, how big, whether it splits into colours}: one at the cut's middle (the big
+     * cuts' split the light), a small one a moment before it and one after along the blade's path.
      */
-    static final float[][] STARS={
-        {1.25f,.07f,.3f,1.9f,-.7f,.3f,0},{1.36f,.07f,.9f,.25f,.95f,.85f,1},{1.4f,.08f,.8f,.3f,1.1f,.45f,0},{1.5f,.07f,.7f,.2f,1.3f,.35f,0},{1.53f,.08f,.9f,.15f,.6f,.4f,0},
-        {1.56f,.07f,.4f,2.4f,-1.1f,1.0f,1},{1.6f,.06f,.3f,2.5f,-.3f,.28f,0},{1.66f,.08f,.3f,2.5f,.1f,.4f,0},{1.7f,.07f,.3f,2.35f,.25f,.45f,0},{1.7f,.07f,.3f,2.4f,-.3f,.45f,0},
-        {1.76f,.07f,.5f,1.0f,2.0f,1.05f,1},{1.8f,.06f,.4f,1.3f,1.5f,.35f,0},{1.86f,.07f,.3f,2.5f,1.8f,.95f,1},{1.9f,.07f,.3f,2.6f,2.1f,.35f,0},
-        {2.09f,.08f,.6f,1.25f,1.6f,1.15f,1},{2.14f,.06f,.5f,1.7f,1.2f,.28f,0},{2.19f,.08f,.5f,1.9f,1.3f,1.0f,1},{2.26f,.07f,.4f,1.75f,.9f,.5f,0},
-        {2.29f,.09f,.5f,1.5f,-1.2f,1.3f,1},{2.86f,.09f,.5f,1.1f,-.95f,1.2f,1},{2.96f,.08f,.5f,1.7f,.2f,.6f,0},{2.96f,.08f,.5f,1.55f,-.6f,.5f,0},
-        {3.0f,.1f,.5f,1.35f,.15f,.7f,0},{3.04f,.1f,.5f,1.3f,-.9f,.6f,0},{3.1f,.08f,.5f,1.5f,-.8f,.5f,0},{3.15f,.07f,.5f,1.4f,-.95f,.35f,0}};
+    static final float[][] STARS=stars();
+    private static float[][] stars(){
+        var out=new java.util.ArrayList<float[]>();
+        for(float[] c:SamuraiKata.CUTS){
+            float[] at=tipBy(c[0]),was=tipBy(c[0]-.03f),will=tipBy(c[0]+.03f);
+            out.add(new float[]{c[0]-.01f,.09f,at[0],at[1],at[2],.35f+.6f*c[1],c[1]>=1.1f?1:0});
+            out.add(new float[]{c[0]-.03f,.06f,was[0],was[1],was[2],.3f*c[1],0});
+            out.add(new float[]{c[0]+.035f,.07f,will[0],will[1],will[2],.38f*c[1],0});
+        }
+        return out.toArray(new float[0][]);
+    }
     /**
-     * The black ink spiked up behind the blade: {when, how long, ahead of its user, up (its foot), to their right, how
-     * wide, how tall}.
+     * The black ink spiked up behind the blade at each cut: {when, how long, ahead of its user, up (its foot), to their
+     * right, how wide, how tall}: to the side the blade's point went through, behind them (never before their body).
      */
-    static final float[][] INKS={
-        {1.2f,.08f,-.3f,.9f,-.7f,.42f,2.6f},{1.39f,.06f,-.25f,1.1f,-.25f,.45f,2.4f},{1.62f,.07f,-.4f,.3f,-.95f,.55f,2.4f},{1.79f,.07f,-.15f,.7f,.8f,.5f,2.7f},
-        {1.96f,.08f,-.25f,.2f,-.45f,.95f,3.0f},{2.06f,.06f,.05f,.2f,1.05f,.45f,2.6f},{2.12f,.08f,-.3f,.2f,-1.0f,1.0f,3.1f},{2.22f,.07f,-.3f,.3f,-1.05f,.85f,2.8f},
-        {2.39f,.07f,-.3f,1.0f,-.3f,.6f,2.4f},{2.49f,.06f,-.2f,.5f,1.4f,.42f,2.0f},{2.56f,.07f,-.3f,.9f,-.55f,.6f,2.0f},{2.79f,.07f,-.3f,1.1f,-.3f,.65f,2.3f},{2.96f,.08f,-.3f,1.0f,-.65f,.8f,2.5f}};
+    static final float[][] INKS=inks();
+    private static float[][] inks(){
+        float[][] out=new float[SamuraiKata.CUTS.length][];
+        for(int k=0;k<out.length;k++){
+            float[] c=SamuraiKata.CUTS[k],at=tipBy(c[0]);
+            out[k]=new float[]{c[0]+.015f,.075f,-.4f,Math.max(.12f,at[1]*.3f),at[2]*.75f,.42f*c[1],2f+.6f*c[1]};
+        }
+        return out;
+    }
+    /** A cut's line: through where the blade's point is at its middle, along the way the point goes there (the world; its user's feet and facing as drawn): {a point of it, its way}. */
+    private static Vec3d[] cutLine(View v,float at){
+        Vec3d p=SamuraiKata.tip(v.feet,v.facing,at),way=SamuraiKata.tip(v.feet,v.facing,at+.012f).subtract(SamuraiKata.tip(v.feet,v.facing,at-.012f));
+        return new Vec3d[]{p,way.lengthSquared()<1e-8?v.hand:way.normalize()};
+    }
+    /** How long a cut's white line, its ink and its red stay (seconds). */
+    static final float LINE_WHITE=.13f,LINE_INK=.2f,LINE_RED=.34f;
 
     private static void flourish(Fx c,View v,EffectMesh m,boolean light){
-        float s=v.sec;if(!v.d.inScene()||s<SamuraiScene.CLOSE-.02f||s>=SamuraiScene.FLASH+.3f||!v.live(SamuraiScene.CLOSE))return;
+        float s=v.sec;if(!v.d.inScene()||s<SamuraiScene.DASH||s>=SamuraiScene.FLASH+.3f||!v.live(SamuraiScene.DASH))return;
         if(v.cine&&s>=SamuraiScene.FLASH)return;
         float out=1-SamuraiScene.smooth((s-SamuraiScene.FLASH)/.25f);
+        // the red edge beyond the blade's crescent, a moment longer than its white
+        if(!light&&s<SamuraiKata.NOTO)band(v,m,s,s-.13f,SWEEP_TO-.02,SWEEP_TO+RED_EDGE,0xe01426,.9f*out);
         Vec3d mid=v.d.spot.lerp(v.hold,.4).add(0,1,0);int seed=(int)(v.d.cast.start()*31);
         // the wind turning about the two: thin white arcs on a dome, thick with the dash's arrival and thinning
         if(!light){
@@ -367,6 +425,53 @@ public final class OneFlash implements Fx.Skill {
             if(g[6]>0){if(light)split(m,p,size,on);else{star(m,p,size,WHITE,on,0);m.softDisc(p,size*.3,WHITE,on);}}
             else if(light)m.softDisc(p,size*.45,WHITE,.4f*on);
             else star(m,p,size,WHITE,on,k%2==0?0:14);
+        }
+        // each cut's line, left in the air where the blade's point went through: white and thin for a moment, red after it
+        for(int k=0;k<SamuraiKata.CUTS.length;k++){
+            float[] g=SamuraiKata.CUTS[k];float a=s-g[0];if(a<0||a>=LINE_RED)continue;
+            Vec3d[] line=cutLine(v,g[0]);double half=2.6*g[1]+.6;
+            Vec3d from=line[0].subtract(line[1].multiply(half)),to=line[0].add(line[1].multiply(half*.8));
+            if(light){
+                float red=(1-a/LINE_RED)*Math.min(1,a/.03f);
+                m.softLine(from,to,.16,RED,.7f*red*out);
+                if(a<LINE_WHITE)m.softLine(from,to,.5*g[1],PALE,.35f*(1-a/LINE_WHITE)*out);
+            }else if(a<LINE_WHITE){
+                float u=a/LINE_WHITE;
+                m.needle(from,to,(.05+.13*g[1])*(1-u*u)+.012,.55,WHITE,(1-u*u*u)*out);
+            }
+        }
+        // the whirl: a ring thrown out level from them as the blade goes round
+        float wh=s-(SamuraiKata.WHIRL-.04f);
+        if(wh>=0&&wh<.34f&&v.live(SamuraiKata.WHIRL)){
+            float u=wh/.34f;Vec3d at=v.feet.add(0,1.25,0);
+            double r=1.1+3.2*(1-(1-u)*(1-u));
+            if(light)FxLib.ring(m,at,r,.7,RED,.4f*(1-u)*out);
+            else{FxLib.ring(m,at,r,.13*(1-u)+.015,WHITE,(1-u*u)*out);FxLib.ring(m,at.add(0,-.5,0),r*.72,.05*(1-u)+.01,WHITE,.7f*(1-u)*out);}
+        }
+        // the one marked cut by the whirl: red off them along the blade's way
+        spray(v,m,light,SamuraiKata.WHIRL,97,out);
+        // landed: the dust thrown out along the ground
+        float ld=s-2.47f;
+        if(ld>=0&&ld<.36f&&!light){
+            float u=ld/.36f,on=(1-u)*Math.min(1,ld/.03f)*out;Vec3d g=v.feet.add(0,.1,0);
+            for(int k=0;k<6;k++)arc(m,g.add(0,.04*k,0),new Vec3d(1,0,0),new Vec3d(0,0,1),.7+2.4*u+.25*k,k*1.1+u*2,1.7+.5*(k%3),.06+.04*(k%2),WHITE,.8f*on,18);
+            for(int k=0;k<9;k++){double ang=k*.7+2,r=.6+2.1*u;m.softDisc(g.add(Math.cos(ang)*r,.14,Math.sin(ang)*r),.55,0xf4f6f8,.28f*on);}
+        }
+        // the blood flicked off the blade: drops thrown from its point down to the ground, where they lie a moment
+        float fl=s-SamuraiKata.FLICK;
+        if(fl>=0&&fl<.8f&&!light&&v.live(SamuraiKata.FLICK)){
+            Vec3d[] line=cutLine(v,SamuraiKata.FLICK);double floor=v.feet.y+.03;
+            for(int k=0;k<16;k++){
+                double fast=5+7*SamuraiScene.hash(k,331),lift=1.2*(SamuraiScene.hash(k,332)-.3);
+                Vec3d vel=line[1].multiply(fast).add(v.hand.multiply(1.6*(SamuraiScene.hash(k,333)-.5))).add(0,lift,0);
+                Vec3d from=line[0].subtract(line[1].multiply(.5*SamuraiScene.hash(k,334)));
+                // (it falls until it lands)
+                double fall=14,vy=vel.y,h=from.y-floor,land=(vy+Math.sqrt(vy*vy+2*fall*h))/fall,t=Math.min(fl,land);
+                Vec3d at=from.add(vel.x*t,vy*t-.5*fall*t*t,vel.z*t);
+                float on=(1-SamuraiScene.smooth((fl-.5f)/.3f))*out;double size=.04+.05*SamuraiScene.hash(k,335);
+                if(fl<land){Vec3d tail=at.subtract(vel.add(0,-fall*t,0).normalize().multiply(.22));m.needle(tail,at,size*1.6,.8,0xc00a1a,.95f*on);}
+                else m.quad(at.add(size*2,0,0),at.add(0,0,size*1.4),at.add(-size*2,0,0),at.add(0,0,-size*1.4),0xa00814,.9f*on);
+            }
         }
         // the sword laid at the scabbard's mouth: light off the blade, glints running down it, and the flash as it goes home
         float lit=noto(s);
@@ -416,7 +521,7 @@ public final class OneFlash implements Fx.Skill {
             }
         }
         // sheathed: the wind swept out along the ground from them
-        float sw=s-3.0f;
+        float sw=s-(SamuraiKata.CLICK+.01f);
         if(sw>=0&&sw<.34f&&!light){
             float u=sw/.34f,on=(1-u)*Math.min(1,sw/.04f);
             Vec3d g=v.feet.add(0,.12,0);
@@ -427,45 +532,75 @@ public final class OneFlash implements Fx.Skill {
             }
         }
     }
-    /** How strongly the light off the blade shows at {@code sec} as it lies at the scabbard's mouth (0 outside it). */
+    /** How strongly the light off the blade shows at {@code sec} as it is laid at the scabbard's mouth and slid home (0 outside it). */
     static float noto(float sec){
-        if(sec<2.3f||sec>=SamuraiKata.CLICK+.02f)return 0;
-        return SamuraiScene.smooth((sec-2.3f)/.07f)*(1-SamuraiScene.smooth((sec-(SamuraiKata.CLICK-.05f))/.07f))*(sec<2.4f?1.3f:1);
+        float from=SamuraiKata.NOTO-.07f;
+        if(sec<from||sec>=SamuraiKata.CLICK+.02f)return 0;
+        return SamuraiScene.smooth((sec-from)/.07f)*(1-SamuraiScene.smooth((sec-(SamuraiKata.CLICK-.05f))/.07f))*(sec<SamuraiKata.NOTO+.03f?1.3f:1);
+    }
+    /**
+     * Red off the one marked as a cut goes through them at {@code at}: drops thrown along the way the blade's point went,
+     * falling; a red light on them.
+     */
+    private static void spray(View v,EffectMesh m,boolean light,float at,int seed,float out){
+        float a=v.sec-at;if(a<0||a>=.42f||!v.live(at))return;
+        Vec3d[] line=cutLine(v,at);Vec3d mid=v.hold.add(0,1.1,0);float u=a/.42f;
+        if(light){m.softDisc(mid,1.3,RED,.55f*(1-u)*(1-u)*out);return;}
+        for(int k=0;k<14;k++){
+            double fast=2.5+6*SamuraiScene.hash(k,seed),t=a;
+            Vec3d vel=line[1].multiply(fast).add(0,1.5+2.5*SamuraiScene.hash(k,seed+1),0).add(v.face.multiply(1.5*(SamuraiScene.hash(k,seed+2)-.5)));
+            Vec3d p=mid.add(vel.multiply(t)).add(0,-7*t*t,0);
+            m.softDisc(p,.07+.1*SamuraiScene.hash(k,seed+3),0xb00818,.9f*(1-u*u)*out);
+        }
     }
     /** Where along the blade's line its crescents are (blocks from the hand: their inner edge at the blade, and their outer), and how far back in time they trail (seconds). */
     static final double SWEEP_FROM=.8,SWEEP_TO=1.75;
     static final float SWEEP_TRAIL=.085f;
+    /** The ink that follows a crescent: how long after the blade it begins and ends (seconds), and the red edge beyond the crescent's outer edge (blocks). */
+    static final float INK_AFTER=.06f,INK_UNTIL=.2f;
+    static final double RED_EDGE=.11;
     /**
      * The blade's crescent now: the band its line swept in the last moments, one flat white, as deep as the blade at its
      * front and drawn out to a point behind; only as strong as the blade's point is fast (a held blade leaves none).
      */
     private static void sweep(View v,EffectMesh m,float s,boolean light){
+        if(!light)band(v,m,s,s-SWEEP_TRAIL,SWEEP_FROM,SWEEP_TO,WHITE,1);
+    }
+    /**
+     * The band the blade's line swept between {@code s} (its front) and {@code back} (its tail, drawn out to a point at
+     * its outer edge), from {@code from} to {@code to} blocks along the blade; as strong as the blade's point was fast
+     * over it.
+     */
+    private static void band(View v,EffectMesh m,float s,float back,double from,double to,int rgb,float alpha){
         int n=18;Vec3d[] in=new Vec3d[n+1],outer=new Vec3d[n+1];
-        float start=Math.max(SamuraiScene.CLOSE-.06f,s-SWEEP_TRAIL);if(start>=s)return;
+        float start=Math.max(SamuraiScene.DASH+.005f,back);if(start>=s)return;
         for(int i=0;i<=n;i++){
             float ts=s-(s-start)*i/n;
             var hb=SamuraiKata.blade(v.feet,v.facing,ts);
-            // a crescent: as deep as SWEEP_FROM to SWEEP_TO at the blade, drawn out to a point at its outer edge behind
-            double u=i/(double)n,from=SWEEP_FROM+(SWEEP_TO-SWEEP_FROM)*(1-Math.pow(1-u,1.6));
-            in[i]=hb[0].add(hb[1].multiply(from));outer[i]=hb[0].add(hb[1].multiply(SWEEP_TO));
+            double u=i/(double)n,f=from+(to-from)*(1-Math.pow(1-u,1.6));
+            in[i]=hb[0].add(hb[1].multiply(f));outer[i]=hb[0].add(hb[1].multiply(to));
         }
         double speed=outer[0].distanceTo(outer[n])/Math.max(1e-3,s-start);
-        float strong=SamuraiScene.smooth((float)((speed-9)/16));if(strong<=0)return;
-        for(int i=0;i<n;i++){
-            // one flat white all along (its shape draws it out to a point: nothing of it half there)
-            if(!light){m.vertex(in[i],WHITE,strong);m.vertex(outer[i],WHITE,strong);m.vertex(outer[i+1],WHITE,strong);m.vertex(in[i+1],WHITE,strong);}
-        }
+        float strong=SamuraiScene.smooth((float)((speed-9)/16))*alpha;if(strong<=0)return;
+        for(int i=0;i<n;i++){m.vertex(in[i],rgb,strong);m.vertex(outer[i],rgb,strong);m.vertex(outer[i+1],rgb,strong);m.vertex(in[i+1],rgb,strong);}
     }
     /** What is drawn over all its light: the burst's sign, and its black (the ink spiked up behind the blade through the flourish, the strokes' and the stars' dark hearts before it). */
     private static void black(Fx c,View v,EffectMesh m){
         float s=v.sec;
-        // before the dash: a dark stroke beside each white one, and black stars in the burst
-        if(s<SamuraiKata.BURST+.05f&&v.live(0)){
-            for(int k=0;k<FLICKS.length;k++){
-                float a=s-FLICKS[k][0]-.02f;if(a<0||a>=FLICK_LIFE)continue;
-                float u=a/FLICK_LIFE;Vec3d way=dir(v,FLICKS[k][1]+7);
-                Vec3d p=v.d.from.add(way.multiply(.5+.5*u)).add(0,.1,0);
-                m.needle(p,p.add(way.multiply(FLICKS[k][2]*(.6+.5*u))).add(0,.1,0),.07,.3,INK,.9f*(1-u*u));
+        // before the dash: the ring of ink, as far round as its brush has gone, and the flecks lifting off it
+        if(s<SamuraiScene.DASH+.08f&&v.live(0)){
+            float drawn=ensoDrawn(s),there=ensoThere(s);
+            if(drawn>0&&there>0){
+                ensoBand(v,m,0,drawn,1,INK,.96f*there);
+                // dry-brush streaks at its tail
+                if(drawn>=1)for(int k=0;k<5;k++)ensoBand(v,m,.9+.012*k,1.02+.03*SamuraiScene.hash(k,311),.12,INK,.8f*there);
+                if(s<SamuraiKata.BURST+.03f)for(int k=0;k<18;k++){
+                    float born=.14f+.045f*k,life=.55f;float a=((s-born)%life+life)%life;if(s<born)continue;
+                    double u=SamuraiScene.hash(k,301),rise=(1.1+1.2*SamuraiScene.hash(k,302))*(a/life),size=.035+.035*SamuraiScene.hash(k,303);
+                    Vec3d p=enso(v,u,0).add(0,rise,0).add(v.hand.multiply(.12*Math.sin(a*9+k)));
+                    Vec3d x=c.camera.subtract(p).crossProduct(UP);if(x.lengthSquared()<1e-6)continue;x=x.normalize().multiply(size);
+                    m.quad(p.add(x),p.add(0,size*1.7,0),p.subtract(x),p.subtract(0,size*1.7,0),INK,.9f*(1-a/life));
+                }
             }
         }
         // the burst's sign over its light: the character for death, gold on a deep red
@@ -494,6 +629,14 @@ public final class OneFlash implements Fx.Skill {
         if(cut>=0&&cut<.09f){
             Vec3d across=v.hand.multiply(-1),mid=v.hold.add(0,1.05,0).add(across.multiply(-.16)),way=across.multiply(.62).add(0,.78,0);
             m.needle(mid.subtract(way.multiply(3.2)),mid.add(way.multiply(3.2)),.13,.45,INK,.95f*(1-cut/.09f));
+        }
+        // the ink that follows the blade's crescent: a brush's stroke along its outer edge where the blade was a moment ago; and a line of it beside each cut's line
+        if(s<SamuraiKata.NOTO)band(v,m,s-INK_AFTER,s-INK_UNTIL,SWEEP_TO-.24,SWEEP_TO+.1,INK,.92f);
+        for(int k=0;k<SamuraiKata.CUTS.length;k++){
+            float[] g=SamuraiKata.CUTS[k];float a=s-g[0]-.02f;if(a<0||a>=LINE_INK)continue;
+            Vec3d[] line=cutLine(v,g[0]);double half=2.4*g[1]+.5;float u=a/LINE_INK;
+            Vec3d off=line[1].crossProduct(c.camera.subtract(line[0])).normalize().multiply(.07+.05*g[1]);
+            m.needle(line[0].subtract(line[1].multiply(half)).add(off),line[0].add(line[1].multiply(half*.9)).add(off),(.04+.07*g[1])*(1-u),.5,INK,.95f*(1-u*u));
         }
         for(int k=0;k<INKS.length;k++){
             float[] g=INKS[k];float a=s-g[0];if(a<0||a>=g[1])continue;
@@ -574,6 +717,25 @@ public final class OneFlash implements Fx.Skill {
         // the light along the horizon
         m.sheet(o.add(away.multiply(260)).add(0,.15,0),across.multiply(420),new Vec3d(0,.4,0),WHITE,.55f);
         m.sheet(o.add(away.multiply(260)).add(0,.15,0),across.multiply(420),new Vec3d(0,5,0),WHITE,.08f);
+        // a red moon low over the horizon behind the one marked; after the last cut a line of the dark through it, its halves slid apart
+        {
+            Vec3d moon=o.add(away.multiply(150)).add(0,27,0).add(across.multiply(-14));double r=24;
+            float split=SamuraiScene.smooth((v.sec-SLASH_SEC[3])/.09f);
+            Vec3d slip=across.multiply(.5).add(0,.866,0).multiply(4.2*split);
+            int n=40;
+            for(int half=0;half<2;half++){
+                Vec3d centre=moon.add(slip.multiply(half==0?1:-1));
+                for(int i=0;i<n/2;i++){
+                    // (each half a fan about the moon's middle, on its own side of the cut's line)
+                    double a0=Math.atan2(.866,.5)+Math.PI*half+Math.PI*i/(n/2.0),a1=a0+Math.PI/(n/2.0);
+                    Vec3d p0=centre.add(across.multiply(Math.cos(a0)*r)).add(0,Math.sin(a0)*r,0),p1=centre.add(across.multiply(Math.cos(a1)*r)).add(0,Math.sin(a1)*r,0);
+                    m.quad(centre,p0,p1,centre,0xb20c1a,1);
+                    Vec3d q0=centre.add(across.multiply(Math.cos(a0)*(r+.7))).add(0,Math.sin(a0)*(r+.7),0),q1=centre.add(across.multiply(Math.cos(a1)*(r+.7))).add(0,Math.sin(a1)*(r+.7),0);
+                    m.quad(p0,q0,q1,p1,0xff5060,1);
+                }
+            }
+            if(split>0)m.line(moon.subtract(across.multiply(.5*40).add(0,.866*40,0)),moon.add(across.multiply(.5*40).add(0,.866*40,0)),.5*split,WHITE,split*(1-SamuraiScene.smooth((v.sec-SLASH_SEC[3]-.1f)/.12f)));
+        }
         // lines across, further and further off; and lines away from the eye
         double[] depths={-9,-6.2,-3.4,-1.2,1.5,5,10,18,30,48,75};
         for(double z:depths){
@@ -655,9 +817,36 @@ public final class OneFlash implements Fx.Skill {
 
     // ───────────────────────────── the world back ─────────────────────────────
 
-    /** The pillar of light where the one marked stood as the world comes back, rings and wind along the ground from it, red in it for a moment. */
+    /**
+     * The last inch of the sword pushed home (SamuraiKata.SNAP): a ring and a glint at the scabbard's mouth; and at that
+     * the pillar of light where the one marked stands, rings and wind along the ground from it, red in it for a moment,
+     * and red petals thrown up out of it that drift down after.
+     */
     private static void pillar(View v,EffectMesh m,boolean light){
-        float s=v.sec,a=s-SamuraiScene.WORLD;if(a<0||a>=.85f||!v.d.inScene()||v.d.stopped())return;
+        float s=v.sec,a=s-SamuraiKata.SNAP;if(a<0||a>=1.5f||!v.d.inScene()||v.d.stopped())return;
+        // at the mouth
+        if(a<.2f){
+            float u=a/.2f;
+            var hb=SamuraiKata.blade(v.feet,v.facing,s);Vec3d mouth=hb[0].add(hb[1].multiply(SamuraiKata.GUARD));
+            Vec3d n=m.camera().subtract(mouth).normalize(),right=n.crossProduct(UP).normalize(),up=right.crossProduct(n).normalize();
+            if(light){glint(m,mouth,.9*(1-u),WHITE,1-u,0);m.softLine(mouth.subtract(right.multiply(3.5)),mouth.add(right.multiply(3.5)),.08,PALE,.6f*(1-u));}
+            else FxLib.ringPlane(m,mouth,right,up,.15+.6*u,.06*(1-u)+.01,WHITE,1-u*u);
+        }
+        // the petals: thrown up and out of where the one marked stands, turning, drifting down
+        if(!light){
+            float on=(1-SamuraiScene.smooth((a-1.05f)/.45f))*Math.min(1,a/.04f);
+            for(int k=0;k<34;k++){
+                double ang=SamuraiScene.hash(k,401)*6.283,out=1.2+3.6*SamuraiScene.hash(k,402),up=4.5+5.5*SamuraiScene.hash(k,403);
+                // (thrown: slowing; then falling slowly, swaying)
+                double t=a,slow=1-Math.exp(-t*3.2),x=out*slow,y=up*slow*.55-1.1*Math.max(0,t-.35)*Math.max(0,t-.35)*2.2-.5*Math.max(0,t-.35);
+                Vec3d p=v.hold.add(Math.cos(ang)*x+.25*Math.sin(t*5+k),1+y,Math.sin(ang)*x+.25*Math.cos(t*4.3+k*1.7));
+                if(p.y<v.hold.y+.05)continue;
+                double size=.07+.06*SamuraiScene.hash(k,404),turn=t*(5+6*SamuraiScene.hash(k,405))+k;
+                Vec3d e1=new Vec3d(Math.cos(turn),Math.sin(turn)*.6,Math.sin(turn)*.5).normalize().multiply(size),e2=new Vec3d(-Math.sin(turn)*.5,.5,Math.cos(turn)).normalize().multiply(size*1.7);
+                m.quad(p.add(e1),p.add(e2),p.subtract(e1),p.subtract(e2),k%4==0?0xff5a6a:0xd8101e,.95f*on);
+            }
+        }
+        if(a>=.85f)return;
         Vec3d g=v.hold.add(0,.08,0);
         float u=a/.85f,on=(1-u)*(1-u),first=Math.max(0,1-a/.2f);
         double width=.25+1.5*first;

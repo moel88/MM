@@ -184,6 +184,26 @@ public final class IsosangLimbs {
         return new R6.Frame(m,f.grip(),f.fw(),f.up(),f.rt(),f.yaw(),f.pitch(),f.roll());
     }
     /**
+     * (2.144.0, the samurai: a hand set on a hilt at the hip, a blade slid home along its scabbard) Frame {@code f} with
+     * its sword arm's hand at a point of the body's space (as {@link #leftHandAt}'s; the right shoulder at .3125, 1.375,
+     * 0), as far as the arm reaches, and the blade along {@code blade} (body space): the elbow bent as that takes, the
+     * forearm folded toward the side the blade leaves the hand (as {@link #bend} folds it), the wrist taking the rest.
+     */
+    public static R6.Frame swordHandAt(R6.Frame f,double rt,double up,double fw,R6.Dir blade){
+        V v=new V(rt-.3125,up-1.375,fw);
+        double most=ARM_UP+ARM_LO-.004,soft=most-.1,len=v.len();
+        double r=clamp(len<=soft?len:soft+(most-soft)*(1-Math.exp(-(len-soft)/(most-soft))),.2,most);V d=v.unit(),b=V.of(blade).unit();
+        double th=Math.acos(clamp((r*r-ARM_UP*ARM_UP-ARM_LO*ARM_LO)/(2*ARM_UP*ARM_LO),-1,1));
+        V side=b.off(d);
+        V fold=(side.len()<1e-4?new V(0,1,0).off(d):side).unit();
+        Arm a=arm(d,fold,th);
+        MotionPose m=f.joints().copy();
+        m.joint[MotionPose.RIGHT_ARM]=R6.angles(R6.limbTurn(a.upper.dir(),a.front.dir()));
+        m.elbow[0]=(float)-Math.toDegrees(th);
+        float grip=(float)-Math.toDegrees(Math.atan2(b.dot(a.lower),b.dot(a.lowerFront)));
+        return new R6.Frame(m,grip,f.fw(),f.up(),f.rt(),f.yaw(),f.pitch(),f.roll());
+    }
+    /**
      * How far the sword arm's elbow is bent with its hand on the line {@code d} (degrees): a little as it holds the sword
      * (just as the game's hold bends it, {@link #hold}: the stance is that hold), the more the further it reaches across
      * her (to her left) or up, a little less straight out ahead.

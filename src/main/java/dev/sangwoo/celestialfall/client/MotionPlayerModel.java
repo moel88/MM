@@ -39,6 +39,8 @@ public final class MotionPlayerModel extends PlayerEntityModel<AbstractClientPla
         var beat=stab!=null?null:dev.sangwoo.celestialfall.client.stand.BeatdownPose.of(player,animationProgress-player.age);
         // X Chara's double (2.125.0): seized by it, hanging in the air, flung, held in the wall
         var flung=stab!=null||beat!=null?null:dev.sangwoo.celestialfall.client.xchara.CloneClient.struckPose(player,animationProgress-player.age);
+        // The samurai's G (2.144.0): the one marked, cut and held
+        if(stab==null&&beat==null&&flung==null)flung=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.struckPose(player,animationProgress-player.age);
         if(flung!=null)beat=flung;
         // The meteor pickaxe in both hands (2.49.1): after a stand's own motion, before its idle arms.
         boolean mining=stab==null&&atomic==null&&stand==null&&dev.sangwoo.celestialfall.client.meteor.MiningPose.active(player,animationProgress-player.age);

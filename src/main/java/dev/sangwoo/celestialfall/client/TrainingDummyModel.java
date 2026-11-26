@@ -19,6 +19,7 @@ public final class TrainingDummyModel extends BipedEntityModel<TrainingDummyEnti
         // (2.125.0) seized by X Chara's double: hanging in the air, flung, held in the wall
         boolean flung=false;
         if(beat==null){beat=dev.sangwoo.celestialfall.client.xchara.CloneClient.struckPose(d,delta);flung=beat!=null;}
+        if(beat==null){beat=dev.sangwoo.celestialfall.client.samurai.SamuraiClient.struckPose(d,delta);flung=beat!=null;}
         if(beat!=null){
             MotionRig.apply(this,beat,0,0);hat.visible=false;
             if(delta>=0&&delta<=1.001f)PoseBlend.apply(d.getUuid(),this,flung?"double":"beatdown",3,animation);

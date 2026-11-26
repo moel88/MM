@@ -97,10 +97,10 @@ public final class SamuraiClient {
 
     /** Its sounds (ones the map has: Kageno's sword's four, the clash): {seconds on its clock, the sound, its loudness, its pitch}. */
     static final Object[][] CUES={
-        {SamuraiScene.DASH,"kageno_m1_4",1f,1f},{1.5f,"kageno_m1_1",.8f,1.05f},{1.76f,"kageno_m1_2",.8f,1.1f},{2.05f,"kageno_m1_3",.85f,1f},
+        {SamuraiScene.DASH,"kageno_m1_4",1f,1f},{1.5f,"kageno_m1_1",.85f,1.05f},{1.66f,"kageno_m1_2",.7f,1.18f},{1.86f,"kageno_m1_2",.85f,1.04f},{SamuraiKata.WHIRL-.04f,"kageno_m1_3",.95f,.96f},{SamuraiKata.FLICK-.03f,"kageno_m1_1",.55f,1.3f},
         {SamuraiScene.FLASH,"kageno_m1_4",1f,.82f},
         {SLASH_SEC[0],"kageno_m1_1",1f,.95f},{SLASH_SEC[1],"kageno_m1_2",1f,1f},{SLASH_SEC[2],"kageno_m1_3",1f,1.05f},{SLASH_SEC[3],"kageno_m1_4",1f,1.1f},
-        {SamuraiScene.WORLD,"clash",1f,1f}};
+        {SamuraiKata.SNAP-.02f,"clash",1f,1f}};
 
     public static void initialize(){
         ClientPlayNetworking.registerGlobalReceiver(SamuraiUltimate.EVENT,(mc,handler,b,response)->{
@@ -322,6 +322,13 @@ public final class SamuraiClient {
             float mid=e.getHeight()*.5f;
             m.translate(0,mid,0);m.multiply(RotationAxis.NEGATIVE_Z.rotationDegrees(reel[0]*d.side));m.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(reel[2]));m.translate(0,-mid,0);
         }
+    }
+    /** The limbs of {@code e} this frame if a G holds them as the one marked (SamuraiStruck), or null. */
+    public static dev.sangwoo.celestialfall.combat.MotionPose struckPose(LivingEntity e,float delta){
+        if(FLASHES.isEmpty())return null;
+        var d=ofTarget(e);if(d==null||!d.inScene()||!e.isAlive())return null;
+        float t=d.age(delta);if(t<DASH||t>=LAUNCH||!d.runs(t))return null;
+        return SamuraiStruck.at(t/20f);
     }
     /** Whether this client's player is held by a G (no action of theirs goes through). */
     public static boolean locked(){var mc=MinecraftClient.getInstance();return mc.player!=null&&holds(mc.player);}
